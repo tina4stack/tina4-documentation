@@ -12,7 +12,6 @@ $scssDefault = $scss->compileString(file_get_contents("./src/templates/documenta
 file_put_contents("./src/public/css/default.css", $scssDefault);
 
 \Tina4\Get::add("/", function (\Tina4\Response $response) {
-
     return $response(\Tina4\renderTemplate("documentation/index.twig"));
 });
 
