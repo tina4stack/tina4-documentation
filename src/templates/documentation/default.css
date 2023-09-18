@@ -1,3 +1,47 @@
+:root {
+  --color-blue: #030fb7;
+  --color-navy: #1e245c;
+  --color-black: #000000;
+  --color-light-grey: #f2f2f2;
+  --ff-main: "Arimo", sans-serif;
+  --ff-headings: "Poppins", sans-serif;
+  --border-radius-base: 8px;
+}
+.container {
+  scroll-behavior: smooth;
+  scroll-padding-top: 20px;
+}
+body {
+  color: var(--color-black);
+  font-family: var(--ff-main);
+}
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-navy);
+  font-family: var(--ff-headings);
+  font-weight: 600;
+}
+.hljs-copy-wrapper {
+  border-radius: var(--border-radius-base);
+}
+.hljs {
+  background: var(--color-navy);
+}
+a.logo {
+  display: block;
+  width: 100%;
+  margin: 0 auto;
+  background: var(--color-navy);
+  text-align: center;
+}
+a.logo svg {
+  width: 200px;
+}
+.help-segment {
+  background: var(--color-light-grey);
+  padding: 2%;
+  margin-bottom: 90px;
+  border-radius: 8px;
+}
 .help-segment .help-requirements {
   margin: 10pt;
   float: right;
@@ -62,7 +106,7 @@
   background-color: transparent;
 }
 .sidenav::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
   height: 10px;
   background-color: transparent;
 }
@@ -73,7 +117,7 @@
 .sidenav::-webkit-scrollbar-thumb {
   border-radius: 12px;
   box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.3);
-  background-color: #006883;
+  background-color: var(--color-navy);
 }
 .sidenav .wrapper {
   width: 100%;
@@ -111,7 +155,7 @@ img {
   background-color: transparent;
 }
 .container::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
   height: 10px;
   background-color: transparent;
 }
@@ -122,7 +166,7 @@ img {
 .container::-webkit-scrollbar-thumb {
   border-radius: 12px;
   box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.3);
-  background-color: #006883;
+  background-color: var(--color-navy);
 }
 @media (max-width: 800px) {
   img {
@@ -196,7 +240,7 @@ img {
     background-color: transparent;
   }
   .sidenav .help-navigation::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
     height: 10px;
     background-color: transparent;
   }
@@ -207,7 +251,7 @@ img {
   .sidenav .help-navigation::-webkit-scrollbar-thumb {
     border-radius: 12px;
     box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.3);
-    background-color: #006883;
+    background-color: var(--color-navy);
   }
   .sidenav .help-navigation p a {
     text-decoration: none;

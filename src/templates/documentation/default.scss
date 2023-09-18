@@ -1,4 +1,59 @@
+// VARIABLED
+:root {
+  //--color-blue: #263486;
+  --color-blue: #030fb7;
+  --color-navy: #1e245c;
+  --color-black: #000000;
+  --color-light-grey: #f2f2f2;
+  --ff-main: 'Arimo', sans-serif;
+  --ff-headings: 'Poppins', sans-serif;
+  --border-radius-base: 8px;
+}
+
+// GLOBAL
+.container {
+  scroll-behavior: smooth;
+  scroll-padding-top: 20px;
+}
+
+body {
+  color: var(--color-black);
+  font-family: var(--ff-main);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-navy);
+  font-family: var(--ff-headings);
+  font-weight: 600;
+}
+
+// HIGHLIGHT JS
+.hljs-copy-wrapper {
+  border-radius: var(--border-radius-base);
+}
+
+.hljs {
+  background: var(--color-navy);
+}
+
+a.logo {
+  display: block;
+  width: 100%;
+  margin: 0 auto;
+  background: var(--color-navy);
+  text-align: center;
+
+  svg {
+    width: 200px;
+  }
+}
+
 .help-segment {
+  background: var(--color-light-grey);
+  padding: 2%;
+  margin-bottom: 90px;
+  border-radius: 8px;
+
   .help-requirements {
     margin: 10pt;
     float: right;
@@ -65,53 +120,48 @@
   flex-direction: column;
   width: 300px;
   overflow-y: scroll;
-
   &::-webkit-scrollbar-track {
     box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
     border-radius: 10px;
     background-color: transparent;
   }
-
   &::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
     height: 10px;
     background-color: transparent;
   }
-
   &::-webkit-scrollbar-button {
     width: 0; //for horizontal scrollbar
     height: 0; //for vertical scrollbar
   }
-
   &::-webkit-scrollbar-thumb {
     border-radius: 12px;
     box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.3);
-    background-color: #006883;
-
-}
-.wrapper{
-  width: 100%;
-  margin: 10px;
-}
-
-.help-navigation {
-  p {
-    margin-top: 5px;
-    margin-bottom: 10px;
-    word-wrap: break-word;
-
-    a {
-      text-decoration: none;
-      font-weight: bold;
-      display: inline;
-      font-size: 16px;
-      color: #5399ba;
-    }
-    span{
-      font-size: 14px;
-    }
+    background-color: var(--color-navy);
   }
-}}
+  .wrapper{
+    width: 100%;
+    margin: 10px;
+  }
+
+  .help-navigation {
+    p {
+      margin-top: 5px;
+      margin-bottom: 10px;
+      word-wrap: break-word;
+
+      a {
+        text-decoration: none;
+        font-weight: bold;
+        display: inline;
+        font-size: 16px;
+        color: #5399ba;
+      }
+      span{
+        font-size: 14px;
+      }
+    }
+  }}
 img {
   margin-bottom: 1rem;
   margin-left: 11px;
@@ -129,7 +179,7 @@ img {
     background-color: transparent;
   }
   &::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
     height: 10px;
     background-color: transparent;
   }
@@ -140,7 +190,7 @@ img {
   &::-webkit-scrollbar-thumb {
     border-radius: 12px;
     box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.3);
-    background-color: #006883;
+    background-color: var(--color-navy);
   }
 }
 $mediaMaxWidth: 1260px;
@@ -213,40 +263,36 @@ $mediaMinWidth: 480px;
       transition-timing-function: ease-in-out;
       transition-delay: 1s;
       overflow-y: scroll;
-
       &::-webkit-scrollbar-track {
         box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
         border-radius: 10px;
         background-color: transparent;
       }
-
       &::-webkit-scrollbar {
-        width: 6px;
+        width: 8px;
         height: 10px;
         background-color: transparent;
       }
-
       &::-webkit-scrollbar-button {
         width: 0; //for horizontal scrollbar
         height: 0; //for vertical scrollbar
       }
-
       &::-webkit-scrollbar-thumb {
         border-radius: 12px;
         box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.3);
-        background-color: #006883;
+        background-color: var(--color-navy);
       }
       p{
-      a {
-        text-decoration: none;
-        font-weight: bold;
-        display: inline-block;
-        font-size: 16px;
-        color: #5399ba;
-      }
-      span{
-        font-size: 14px;
-      }}
+        a {
+          text-decoration: none;
+          font-weight: bold;
+          display: inline-block;
+          font-size: 16px;
+          color: #5399ba;
+        }
+        span{
+          font-size: 14px;
+        }}
     }
   }
   .logo{
@@ -291,9 +337,9 @@ code {
 table {
   border: 1px solid black;
   th {
-      border-bottom: 2px solid black;
-      border-right: 1px solid black ;
-      padding: 2px;
+    border-bottom: 2px solid black;
+    border-right: 1px solid black ;
+    padding: 2px;
   }
   td {
     padding: 2px;
@@ -302,6 +348,3 @@ table {
 
   }
 }
-
-
-
