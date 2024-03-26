@@ -4160,12 +4160,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/tina4stack/tina4-php.git",
-                "reference": "de5136eec04387816dc23342081b76c1a6c14853"
+                "reference": "b4ef8a1d3d8d17b521d45bbbed3e243d1d87aaf2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/tina4stack/tina4-php/zipball/de5136eec04387816dc23342081b76c1a6c14853",
-                "reference": "de5136eec04387816dc23342081b76c1a6c14853",
+                "url": "https://api.github.com/repos/tina4stack/tina4-php/zipball/b4ef8a1d3d8d17b521d45bbbed3e243d1d87aaf2",
+                "reference": "b4ef8a1d3d8d17b521d45bbbed3e243d1d87aaf2",
                 "shasum": ""
             },
             "require": {
@@ -4240,7 +4240,7 @@
                 "issues": "https://github.com/tina4stack/tina4-php/issues",
                 "source": "https://github.com/tina4stack/tina4-php/tree/master"
             },
-            "time": "2024-03-26T19:22:37+00:00"
+            "time": "2024-03-26T19:51:04+00:00"
         },
         {
             "name": "tina4stack/tina4php-core",
