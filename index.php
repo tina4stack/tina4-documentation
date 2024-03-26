@@ -15,4 +15,5 @@ file_put_contents("./src/public/css/tina4-docs.css", $scssDefault);
     return $response(\Tina4\renderTemplate("documentation/index.twig"));
 });
 
+
 echo new \Tina4\Tina4Php($config);
