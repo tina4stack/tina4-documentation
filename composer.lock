@@ -1316,12 +1316,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Roave/SecurityAdvisories.git",
-                "reference": "98cbbfa55bafb0368a60a5fd6206f07c9dd782eb"
+                "reference": "430219a8462bb5c66c1a0c118239e9c3ab5179db"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/98cbbfa55bafb0368a60a5fd6206f07c9dd782eb",
-                "reference": "98cbbfa55bafb0368a60a5fd6206f07c9dd782eb",
+                "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/430219a8462bb5c66c1a0c118239e9c3ab5179db",
+                "reference": "430219a8462bb5c66c1a0c118239e9c3ab5179db",
                 "shasum": ""
             },
             "conflict": {
@@ -1732,7 +1732,7 @@
                 "pimcore/demo": "<10.3",
                 "pimcore/ecommerce-framework-bundle": "<1.0.10",
                 "pimcore/perspective-editor": "<1.5.1",
-                "pimcore/pimcore": "<11.1.1",
+                "pimcore/pimcore": "<11.1.6.1-dev|>=11.2,<11.2.2",
                 "pixelfed/pixelfed": "<0.11.11",
                 "plotly/plotly.js": "<2.25.2",
                 "pocketmine/bedrock-protocol": "<8.0.2",
@@ -2051,7 +2051,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2024-03-25T20:04:17+00:00"
+            "time": "2024-03-26T20:04:27+00:00"
         },
         {
             "name": "scssphp/scssphp",
@@ -4160,12 +4160,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/tina4stack/tina4-php.git",
-                "reference": "b4ef8a1d3d8d17b521d45bbbed3e243d1d87aaf2"
+                "reference": "3d3c8abdd042e0f9acb7eeab695bcc8bb87a2124"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/tina4stack/tina4-php/zipball/b4ef8a1d3d8d17b521d45bbbed3e243d1d87aaf2",
-                "reference": "b4ef8a1d3d8d17b521d45bbbed3e243d1d87aaf2",
+                "url": "https://api.github.com/repos/tina4stack/tina4-php/zipball/3d3c8abdd042e0f9acb7eeab695bcc8bb87a2124",
+                "reference": "3d3c8abdd042e0f9acb7eeab695bcc8bb87a2124",
                 "shasum": ""
             },
             "require": {
@@ -4240,7 +4240,7 @@
                 "issues": "https://github.com/tina4stack/tina4-php/issues",
                 "source": "https://github.com/tina4stack/tina4-php/tree/master"
             },
-            "time": "2024-03-26T19:51:04+00:00"
+            "time": "2024-03-26T20:07:02+00:00"
         },
         {
             "name": "tina4stack/tina4php-core",
