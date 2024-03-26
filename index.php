@@ -16,4 +16,5 @@ file_put_contents("./src/public/css/tina4-docs.css", $scssDefault);
 });
 
 
+
 echo new \Tina4\Tina4Php($config);
