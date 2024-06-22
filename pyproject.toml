@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Tina4 Documentation"
 authors = ["Andre van Zuydam <andrevanzuydam@gmail.com>"]
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.10"
