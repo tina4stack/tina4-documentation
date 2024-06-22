@@ -77,7 +77,7 @@ NodeJs can be installed and added to path from the following link, our tina4js p
 
 [Download NodeJs](https://nodejs.org/en/download/prebuilt-installer)
 
-# MacOS
+## MacOS
 
 MacOS is pretty straight forward if you are prepared to install **homebrew** package manager. Using homebrew you can quickly provision PHP, Python, NodeJs & Ruby. 
 
@@ -85,7 +85,7 @@ MacOS is pretty straight forward if you are prepared to install **homebrew** pac
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-## OpenSSL
+### OpenSSL
 
 You will need openssl libraries to be installed
 
@@ -93,7 +93,7 @@ You will need openssl libraries to be installed
 brew install openssl
 ```
 
-## PHP
+### PHP
 
 The following will install PHP, Composer & XDebug
 
@@ -103,7 +103,7 @@ brew install composer
 pecl install xdebug
 ```
 
-# Linux
+## Linux
 
 Most of our deployments are to Linux servers, we are in the process of documenting this for development.
 Our preferred flavour of Linux is Ubuntu, we can confirm though that Tina4 plays nice with most flavours.
