@@ -6,3 +6,5 @@
 /secrets/
 /vendor/
 /cache/
+/site/
+/venv/
