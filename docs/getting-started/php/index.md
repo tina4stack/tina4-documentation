@@ -18,12 +18,12 @@ Any file changes you effect will be applied immediately and you can refresh your
 
 Here are some useful links to get started with the basics
 
-- [Static Website using Twig/Jinja]()
-- [HTML Forms & Tokens]()
-- [Using .env for Settings]()
-- [Creating Routes & REST Endpoints]()
-- [Connecting to a Database]()
-- [Open API Documentation with Swagger]()
+- [Static Website using Twig/Jinja](/getting-started/php/-Basics/a-static-website-with-twig)
+- [HTML Forms & Tokens](/getting-started/php/-Basics/b-html-forms-and-tokens)
+- [Using .env for Settings](/getting-started/php/-Basics/d-using-env-for-settings)
+- [Creating Routes & REST Endpoints](/getting-started/php/-Basics/c-creating-routes-and-rest-points/)
+- [Connecting to a Database](/getting-started/php/-Basics/e-connecting-to-a-database/)
+- [API Documentation with Swagger]()
 - [Integrating external APIs]()
 - [Using the ORM]()
 - [Creating Database Migrations]()

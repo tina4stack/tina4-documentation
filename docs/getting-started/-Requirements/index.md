@@ -99,7 +99,7 @@ The following will install PHP, Composer & XDebug
 
 ```cmd
 brew install php
-brew install composer
+brew install composer   
 pecl install xdebug
 ```
 

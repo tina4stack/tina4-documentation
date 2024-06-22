@@ -37,6 +37,43 @@ We will use the navigation on every page
 </nav>
 ```
 
+## Create the Home Page
+
+The home page we name `index.twig` so this file is loaded first on the webserver. Notice how we include the `navigation.twig` and set the title variable.
+
+**index.twig**
+```html
+{% set title="Home Page" %}
+{%  extends "base.twig" %}
+{% block content %}
+<h1> {{ title }}</h1>
+{%  include "navigation.twig" %}
+<h2>Wonderful Content</h2>
+<p>
+    Here is some content about the page
+</p>
+{% endblock %}
+```
+
+## Create the About Us Page
+
+The about us page we name `about-us.twig` so this file will be loaded when we hit up `/about-us` route on the webserver.
+
+**about-us.twig**
+```html
+{% set title="About Us" %}
+{%  extends "base.twig" %}
+{% block content %}
+<h1> {{ title }}</h1>
+{%  include "navigation.twig" %}
+<h2>Wonderful Content</h2>
+<p>
+    Here is some content about the page
+</p>
+{% endblock %}
+```
+
+
 ## Reference Documentation & Help
 
 - **TWIG** - [Twig Documentation](https://twig.symfony.com/doc/)
