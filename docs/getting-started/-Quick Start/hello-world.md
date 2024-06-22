@@ -2,6 +2,7 @@
 
 In the `src/templates` folder create an `index.twig` folder with the following content:
 
+**index.twig**
 ```html
 <!DOCTYPE html>
 <html>
@@ -17,7 +18,8 @@ In the `src/templates` folder create an `index.twig` folder with the following c
 ```
 
 We use Twig on PHP and Jinja2 on Python so your basic functionality should remain the same.
-All static elements will be served from `src/public` and html paths are relative to that folder.
 
-Example: `/images/logo.png` will resolve to `/src/public/images/logo.png`
+>- All static elements will be served from `src/public` and html paths are relative to that folder.
+>- Example: `<img src="/images/logo.png">` will resolve to `./src/public/images/logo.png`
+>- A file called `about-us.twig` will be able to be resolved at [http://localhost:7145/about-us](http://localhost:7145/about-us)
 
