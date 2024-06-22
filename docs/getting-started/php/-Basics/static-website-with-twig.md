@@ -25,8 +25,17 @@ Create a basic template to inherit your pages from, in the `src/templates/base.t
 >- Notice the use of the `block` and `title` where we can inject content
 >- Use the reference documentation to learn and understand Twig templating
 
-## Create a Navigation 
+## Create a Navigation Page
 
+We will use the navigation on every page 
+
+**navigation.twig**
+```html
+<nav>
+    <a href="/">Home Page</a>
+    <a href="/about-us">About Us</a>
+</nav>
+```
 
 ## Reference Documentation & Help
 
