@@ -54,5 +54,28 @@ $config = new \Tina4\Config(static function (\Tina4\Config $config){
 echo new \Tina4\Tina4Php($config);
 ```
 
+## Execute a statement
+
+```php
+$DBA->exec("insert into user(first_name, last_name, email) values(?, ?, ?)", "User", "User", "user@user.com");
+```
+
+## Query the database
+
+```php 
+$user = $DBA->fetchOne("select * from user");
+
+print_r ($user->asArray());
+print_r ($user->asObject());
+print_r ($user->asResult());
+
+$users = $DBA->fetch("select * from user");
+
+print_r ($users->asArray());
+print_r ($users->asObject());
+print_r ($usesr->asResult());
+```
+
+
 ## Hot Tips
 >- Extend `\Tina4\Data` for a class that needs a database connection
