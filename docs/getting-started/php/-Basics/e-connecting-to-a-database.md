@@ -54,4 +54,5 @@ $config = new \Tina4\Config(static function (\Tina4\Config $config){
 echo new \Tina4\Tina4Php($config);
 ```
 
+## Hot Tips
 >- Extend `\Tina4\Data` for a class that needs a database connection

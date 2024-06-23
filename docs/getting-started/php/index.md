@@ -23,7 +23,7 @@ Here are some useful links to get started with the basics
 - [Using .env for Settings](/getting-started/php/-Basics/d-using-env-for-settings)
 - [Creating Routes & REST Endpoints](/getting-started/php/-Basics/c-creating-routes-and-rest-points/)
 - [Connecting to a Database](/getting-started/php/-Basics/e-connecting-to-a-database/)
-- [API Documentation with Swagger]()
+- [API Documentation with Swagger](/getting-started/php/-Basics/f-annotating-api-end-points/)
 - [Integrating external APIs]()
 - [Using the ORM]()
 - [Creating Database Migrations]()

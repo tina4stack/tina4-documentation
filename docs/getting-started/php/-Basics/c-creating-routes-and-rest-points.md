@@ -60,3 +60,22 @@ The following POST route responds with the posted data.  You will need to post a
 ```
 
 You can use the `sign-up.twig` form in [Html forms and tokens](/getting-started/php/-Basics/b-html-forms-and-tokens/) to test the POST route
+
+## Routes with inline parameters
+
+Routes are very useful if you can pass "data" to them in a request. Inline parameters are described by using `{}` braces.
+
+Consider the following route declaration:
+
+```php
+\Tina4\Get::add("/api/members/{id}", function($id, \Tina4\Response $response, \Tina4\Request $request) {
+    
+    return $response("Looking for member {$id}");
+});
+```
+
+The `{id}` is the inline param. For example a person calling the end point as `/api/members/10` would result in the `$id` variable being populated with `10`.
+
+## Hot Tips 
+>- Response objects take three variable inputs, content, response code and content type.
+>- Look at advanced topics for dynamic route examples.

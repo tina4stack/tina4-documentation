@@ -50,4 +50,6 @@ export ENVIRONMENT="development"
 
 The above implies that the following file `.env.development` will be used for the project.
 
+## Hot Tips
 >- Don't save your production .env in your git repo
+>- Use arrays as you would in PHP in the .env

@@ -69,3 +69,7 @@ We can add the dump the request variable to see the result
 </html>
 ```
 
+## Hot Tips
+>- Consider using our tina4helper.js to submit forms, see advanced topics about this and set onsubmit="return false" on the forms.
+>- Keep your GET route and POST route consistently named and redirect the POST route on execution to a GET route.
+>- Replace the generic 403 and 404 pages with your own custom pages to keep your users engaged.

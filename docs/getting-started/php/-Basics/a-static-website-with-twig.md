@@ -22,8 +22,7 @@ Create a basic template to inherit your pages from, in the `src/templates/base.t
 </body>
 </html>
 ```
->- Notice the use of the `block` and `title` where we can inject content
->- Use the reference documentation to learn and understand Twig templating
+
 
 ## Create a Navigation Page
 
@@ -78,3 +77,7 @@ The about us page we name `about-us.twig` so this file will be loaded when we hi
 
 - **TWIG** - [Twig Documentation](https://twig.symfony.com/doc/)
 - **Jinja** - [Jinja Documentation](https://jinja.palletsprojects.com/en/3.1.x/)
+
+## Hot Tips
+>- Notice the use of the `block` and `title` where we can inject content
+>- Use the reference documentation to learn and understand Twig templating
