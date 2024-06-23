@@ -158,8 +158,24 @@ td, th {
 /* For section-index only */
 .wy-menu-vertical .current-section p {
     background-color: #e3e3e3;
-    color: #404040;
 }
+
+.wy-menu-vertical a {
+    color: #1f1d1d !important;
+}
+
+.wy-menu-vertical a:hover {
+    background: #e3e3e3 !important;
+    color: #1f1d1d !important;
+}
+
+.wy-menu-vertical header, .wy-menu-vertical p.caption {
+    border-top: 1px solid #1a1d20 !important;
+    border-bottom: 1px solid #1a1d20 !important;
+    background: #dddddd !important;
+    color: #1a1d20 !important;
+}
+
 
 /*
  * The second step of above amendment: Here we make sure the items are aligned
@@ -215,4 +231,9 @@ blockquote {
 
 blockquote ul {
     margin-bottom: 5px !important;
+}
+
+.wy-nav-side {
+    background: #dddddd !important;
+    color: #31373c !important;
 }
