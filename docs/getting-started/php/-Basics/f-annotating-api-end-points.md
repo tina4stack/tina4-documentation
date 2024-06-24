@@ -23,6 +23,7 @@ There are a number of annotations that can be used to annotate end points effect
 |--------------|----------------------------------------------------------------------------------------------------------------------------|
 | @secure      | Secures any end point requiring it to be authed with a formToken or Basic Auth                                             |
 | @description | Describe the end point that is being used and what it does                                                                 |
+| @summary     | Summary of what the end point does                                                                                         |
 | @tags        | Comma separated list of tags for the end point, end points will be grouped  <br/> in the documentation by these categories |
 | @params      | Free form inputs to be passed as query parameters on the URL                                                               |
 | @queryParams | Same as @params                                                                                                            |
@@ -33,13 +34,14 @@ There are a number of annotations that can be used to annotate end points effect
 In the example below we have annotated the "sign up" end point, feel free to copy and paste the code to test the swagger documentation.
 
 ```php
+/*
  * @description Sign up a user to the system
  * @tags users,sign up
  * @example {"firstName": "Name", "lastName": "Last Name", "email": "Email"}
  * @params limit,skip
+ * @summary Signs up a user
  */
 \Tina4\Post::add("/sign-up", function(\Tina4\Response $response, \Tina4\Request $request) {
-
 
     return $response($request);
 });
