@@ -1,6 +1,6 @@
 # SASS & CSS compilation
 
-By default any files placed in the `scr/scss` folder will be compiled to the `src/public/css/default.css` file.
+By default, any files placed in the `scr/scss` folder will be compiled to the `src/public/css/default.css` file.
 
 ## File naming structure.
 

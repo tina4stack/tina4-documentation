@@ -119,4 +119,27 @@ Once you hit up the website or run the application a CRUD route will be created 
 
 Browse to here [http://127.0.0.1:7145/api/cars/landing](http://127.0.0.1:7145/api/cars/landing) to see the results.
 
+## Selecting data using ORM
 
+The ORM class can also be used to select data based on the table that is being modeled.
+The following will select data from the `car` table.
+
+```php
+$cars =  (new Car())->select("*");
+```
+
+What if we wanted cars with features?  The filter method chained from the select method allows you to add variables to the main ORM class
+if you want the data to be returned with its foreign keys.
+
+```php
+$cars =  (new Car())->select("*")->filter(function (Car $record){
+                            $record->features = (new Feature())->select()
+                                                ->where("car_id = ?", [$record->id]);
+                        });
+
+```
+
+## Hot Tips
+>- The `select` method on the ORM class is paginated, make sure your code accommodates this.
+>- Checkout the `\Tina4\SQL()` class for more information about querying the database.
+>- Use ? params to prevent SQL injection from request variables.
