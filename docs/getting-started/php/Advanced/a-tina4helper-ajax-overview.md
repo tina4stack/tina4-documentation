@@ -78,8 +78,26 @@ Posts data to a URL and puts the response in an HTML tag using its `id`
 
 Saves a form data to Post end point and puts the response in an HTML tag using its `id`
 
-```javascript
-saveForm(formName, targetURL, targetElement, callback = null)
+```html
+<form id="sign-up" onsubmit="return false">
+    ...normal inputs ...
+    <button onclick="signUp()">Sign Up</button>
+</form>
+<div id="sign-up-message"></div>
+
+<script>
+    //will put the result in a div or HTML tag called "sign-up-message"
+    function signUp() {
+        saveForm("sign-up", "/api/users/register", "sign-up-message", callback = null)
+    }
+
+    function signUp2() {
+        saveForm("sign-up", "/api/users/register", "sign-up-message", function (data) {
+            console.log('Result of sign-up', data);
+        });
+    }
+</script>
+
 ```
 
 
