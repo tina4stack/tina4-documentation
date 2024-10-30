@@ -1,76 +1,99 @@
 # Static Website with Twig/Jinja
 
-Before you begin understand that we prefer to use a template engine to render HTML.  Not only does this allow us to make reusable pieces of code but it also allows us to
-build static pages and cache website efficiently.  All of this is done for you out of the box.  You don't even have to install the renderers. By default any file that is placed
-in the templates folder with a `.twig` extension will be rendered.
+##   **1. Adding Twig Templates**
+### **Creating a Basic Template (`base.twig`)**
 
+A base template can be used to define the common layout of your pages, which makes maintaining a consistent design easier. Create a file named `base.twig` in the `src/templates` folder.
 
-## Base Template
-
-Create a basic template to inherit your pages from, in the `src/templates/base.twig`.
-
-**base.twig**
-```html
+```bash
+<!-- src/templates/base.twig -->
 <!DOCTYPE html>
 <html>
 <head>
-<title>{{ title }}</title>
+    <title>{{ title }}</title>
 </head>
 <body>
-{% block content %}
-{% endblock %}
+    {% block content %}
+    {% endblock %}
 </body>
 </html>
 ```
 
+In `base.twig`, the `{% block content %}` tag defines a section that child templates can override. The `{{ title }}` variable will be used to set the page's title dynamically.
 
-## Create a Navigation Page
 
-We will use the navigation on every page 
+## **2. Adding Navigation (`navigation.twig`)**
 
-**navigation.twig**
-```html
+Since navigation is a common part of multiple pages, create a reusable navigation bar. This template will be included in other pages as needed.
+
+
+```bash
+<!-- src/templates/navigation.twig -->
 <nav>
     <a href="/">Home Page</a>
     <a href="/about-us">About Us</a>
 </nav>
 ```
 
-## Create the Home Page
+## **3. Creating Dynamic Pages**
 
-The home page we name `index.twig` so this file is loaded first on the webserver. Notice how we include the `navigation.twig` and set the title variable.
+###  **Home Page (`index.twig`)**
 
-**index.twig**
-```html
-{% set title="Home Page" %}
-{%  extends "base.twig" %}
+The home page (`index.twig`) extends `base.twig` and includes `navigation.twig` to create a consistent layout. The title is set using a Twig/Jinja2 variable.
+
+
+```bash
+<!-- src/templates/index.twig -->
+{% set title = "Home Page" %}
+{% extends "base.twig" %}
+
 {% block content %}
-<h1> {{ title }}</h1>
-{%  include "navigation.twig" %}
+<h1>{{ title }}</h1>
+{% include "navigation.twig" %}
 <h2>Wonderful Content</h2>
-<p>
-    Here is some content about the page
-</p>
+<p>Here is some content about the page</p>
 {% endblock %}
 ```
 
-## Create the About Us Page
+### **About Us Page (`about-us.twig`)**
 
-The about us page we name `about-us.twig` so this file will be loaded when we hit up `/about-us` route on the webserver.
+The About Us page (`about-us.twig`) is structured similarly to the home page. It also extends `base.twig` and includes `navigation.twig`
 
-**about-us.twig**
-```html
-{% set title="About Us" %}
-{%  extends "base.twig" %}
+
+```bash
+<!-- src/templates/about-us.twig -->
+{% set title = "About Us" %}
+{% extends "base.twig" %}
+
 {% block content %}
-<h1> {{ title }}</h1>
-{%  include "navigation.twig" %}
+<h1>{{ title }}</h1>
+{% include "navigation.twig" %}
 <h2>Wonderful Content</h2>
-<p>
-    Here is some content about the page
-</p>
+<p>Here is some content about the page</p>
 {% endblock %}
 ```
+##  **4. Static Website and Caching**
+
+One of the benefits of using Tina4 with Twig templating is the ability to build efficient static pages and cache website content automatically.
+
+All Twig files in the `src/templates` directory are rendered out of the box without needing to install extra renderers. This helps with building reusable pieces of code and improves the site's performance by caching static HTML files.
+
+
+##  **5. Final Project Structure**
+
+After following these steps, your project should have a structure similar to this:
+
+    project-folder/ 
+    			├── src/ 
+    				│ └── templates/ 
+    							│├── base.twig 
+    							│├── index.twig 
+    							│├── about-us.twig 
+    							│└── navigation.twig 
+    			├── app.py 
+    			└── other project files...
+
+
 
 
 ## Reference Documentation & Help

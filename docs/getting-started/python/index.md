@@ -1,84 +1,192 @@
 # Installation
 
-This assumes you have python3 or above installed. You can find the python downloads [here](https://www.python.org/downloads/).
-We recommend using the relevant package managers for your operating system if you're unsure what to download and install.
+This assumes you have Python 3 or above installed. You can find Python downloads [here](https://www.python.org/downloads/). We recommend using the appropriate package managers for your operating system if you're unsure what to download and install.
 
-## Introduction to python virtual environments
 
-The python virtual environment allows you to build and test different configurations of python without destroying your main system.
-It may take some effort to understand how this works however it makes replicating your development environment and solutions on different computers.
+### **Install Poetry**
 
-The virtual environment works from within a folder on your project and should be added to your `.gitignore`
+Poetry is a package manager that helps manage project dependencies. Install it by running:
 
-Below are the commands you can run in your project folder to activate a virtual environment:
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+```
 
-*Windows*
-```cmd
+
+For Windows, use:
+```bash
+(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | py -
+```
+
+Then add the following path to your system PATH:
+```bash
+%APPDATA%\pypoetry\venv\Scripts
+```
+
+[//]: # (### **Install Jurigged &#40;for Hot Reloading&#41;**)
+
+[//]: # (Jurigged enables hot reloading while developing your Tina4 Python project:)
+
+[//]: # ()
+[//]: # (```bash)
+
+[//]: # (pip install jurigged)
+
+[//]: # (```)
+
+## **Introduction to Python Virtual Environments**
+
+
+The Python virtual environment allows you to build and test different configurations without affecting your main system. Though it may take some effort to understand initially, using a virtual environment ensures that you can easily replicate your development environment on different computers, maintaining consistency.
+
+
+The virtual environment operates within a project folder and should be added to your `.gitignore` file. Below are the commands to create and activate a virtual environment within your project folder:
+
+
+ **Windows**
+
+```bash
 python -m venv .venv
 .\.venv\Scripts\activate
 ```
 
-*MacOs/Linux*
+ **MacOS/Linux**
+
 ```bash
 python3 -m venv .venv
 source ./.venv/bin/activate
 ```
 
-After you have activated your python virtual environment you can install the poetry package manager.
-A package manager is a good way to maintain dependencies on your projects.  Poetry makes it practical to 
-manage and deploy your projects.  You can read all about it [here](https://python-poetry.org)
 
-On your virtual environment you can install poetry using pip and then initialize your project
 
-```cmd
-pip install poetry
+## **Initialize a Poetry Project**
+
+After activating your Python virtual environment, initialize a Poetry project in your current folder:
+
+```bash
 poetry init
 ```
 
-Installing `tina4_python` is easy with poetry.
+Alternatively, if you want to create a new project folder from scratch, you can do the following:
 
-```cmd
-poetry add tina4_python
+1. Create a new project:
+
+```bash
+poetry new project-name 
 ```
 
-If you decide not to use poetry which is definitely not recommended, you can install `tina4_python` using pip.
+2. Navigate to the project folder:
 
-```cmd
-pip install tina4_python
+```bash
+cd project-name
 ```
 
-After this all that is required is an `app.py` file in the root of your project with the following line of code:
+3. Add the necessary dependencies:
 
-**app.py**
-```python
-import tina4_python
+
+```bash
+poetry add tina4_python 
+poetry add jurigged
 ```
 
-You could also do the following:
+## **Running Tina4 Python**
 
-```cmd
-echo "import tina4_python" > app.py
+
+Create an entry point for Tina4 called `app.py` in the root of your project folder and add the following content:
+
+```bash
+from tina4_python import *
 ```
 
-Next to initialize your project you run the `app.py` and it will initialize the default application layout for you
-and run a webservice.  We run our python project using poetry.
+Alternatively, you can create the file using this command:
 
-```cmd
+
+```bash
+echo "from tina4_python import *" > app.py
+```
+
+To initialize your project, run `app.py` to create the default application layout and start a web service. Below are different ways to run your Tina4 Python server:
+
+
+### **Normal Server**
+
+```bash
 poetry run python app.py
 ```
 
-You should have a webservice running at [http://localhost:7145](http://localhost:7145) and the following folder structure would have been created:
 
-- secrets
-- src
-  - app
-  - orm
-  - public
-    - css
-    - images
-    - js
-    - swagger
-  - routes
-  - scss
-  - templates
-    - errors
+### **Server with Hot Reloading**
+
+```bash
+poetry run jurigged app.py
+```
+
+### **Server on a Specific Port**
+
+```bash
+poetry run python app.py 7777
+```
+
+### **Server without Auto Start**
+
+```bash
+poetry run python app.py manual
+```
+
+### **Server with Alternate Language (e.g., French)**
+
+
+```bash
+poetry run python app.py fr
+```
+
+## **Project Structure and Overview**
+
+The basic Tina4 Python project uses an autoloader methodology from the `src` folder. All necessary source folders are created there, and they are run from `__init__.py`.
+
+If you are developing on Tina4, make sure to copy the `public` folder from `tina4_python` into `src` to use its assets properly.
+
+Once initialized, you should have a web service running at [http://localhost:7145](http://localhost:7145). The following folder structure will also be created:
+
+
+
+-   secrets
+-   src
+-   app
+-   orm
+-   public
+    -   css
+    -   images
+    -   js
+    -   swagger
+-   routes
+-   scss
+-   templates
+    -   errors
+
+
+
+This structure provides a foundation to start building your application, including directories for routes, templates, and static assets.
+
+
+### **Installation without Poetry**
+
+If you choose not to use Poetry (which is not recommended), you can alternatively install Tina4 Python using `pip`:
+
+
+```bash
+pip install tina4_python 
+pip install jurigged
+```
+
+After this, create an `app.py` file with the following content:
+
+```bash
+import tina4_python
+```
+
+Run the server using:
+
+```bash
+python app.py
+```
+
