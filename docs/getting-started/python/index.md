@@ -94,14 +94,14 @@ poetry add jurigged
 Create an entry point for Tina4 called `app.py` in the root of your project folder and add the following content:
 
 ```bash
-from tina4_python import *
+import tina4_python
 ```
 
 Alternatively, you can create the file using this command:
 
 
 ```bash
-echo "from tina4_python import *" > app.py
+echo "import tina4_python" > app.py
 ```
 
 To initialize your project, run `app.py` to create the default application layout and start a web service. Below are different ways to run your Tina4 Python server:
