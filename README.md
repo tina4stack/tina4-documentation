@@ -16,13 +16,19 @@ source ./venv/bin/activate
 pip install mkdocs
 pip install --upgrade pip
 ```
+Windows
+
+```bash
+python -m venv venv
+```
+
 
 Running
 ```bash
-mkdocs serve
+poetry run mkdocs serve
 ```
 Building
 ```bash
-mkdocs build
+poetry run mkdocs build
 ```
 

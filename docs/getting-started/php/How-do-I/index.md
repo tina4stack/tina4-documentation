@@ -3,7 +3,11 @@
 All the answers to those questions you want to ask, the ultimate Tina4 PHP cheat sheet.
 
 ## make a GET end point?
+```php
+\Tina4\Get::add("/some/end/point", function () {
 
+});
+```
 ## redirect to another page?
 
 ## debug to a specific log file?
