@@ -2,7 +2,7 @@
 
 Database migrations help you keep track of your database changes.  We keep track of migrations in the database using the `tina4_migration` table which will be created the first time you run migrations on your database.
 Our methodology is a forward-only migration, once a migration has been flagged as passed you should not be changing the files in your code repository.
-
+Migrations are transactional so if you add multiple lines of SQL in to a single migration make sure that it makes sense.  For example, you would need to put create table statements in a different migration file from the migration that adds the data as the create table statements would need to `pass` first.
 ## Getting started with migrations
 
 First you need a database connection, once you have that you can implement migrations. Consider the following code in `src/__init__.py`:
