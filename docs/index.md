@@ -5,6 +5,17 @@ Tina4 is the result and culmination of more than 15 years of working with script
 
 Whilst not being a framework it is a structural paradigm for developers to follow in writing their code, keeping the language the hero and the code maintainable.
 
+## Quick Start
+Use one of the following docker methods to try out Tina4 without having to install anything to your system
+
+<!--codeinclude-->
+[Python](./code-snippets/docker-run-python.sh) block:ok_ok
+<!--/codeinclude-->
+
+<!--codeinclude-->
+[PHP](./code-snippets/docker-run-php.sh) inside_block:hello_world
+<!--/codeinclude-->
+
 ## Philosophy
 As we work out solutions for various languages where possible we have included libraries which add low impact to the code.  To this end our "framework" attempts to use and follow these basic principles.
 
@@ -25,3 +36,16 @@ As we work out solutions for various languages where possible we have included l
 
 Tina4 is heavily opinionated, whilst it does not define how you should use it with a language, if you don't understand the paradigm you'd be best off using a framework.
 
+## Phusion Passenger ® & Virtualmin
+
+Tina4 is written to run seemlessly with Phusion Passenger & Virtualmin, you can read more about this under advanced topics when it comes to deployment strategies and architecture.
+
+- [Phusion Passenger](https://www.phusionpassenger.com/)
+- [Virtualmin](https://www.virtualmin.com/)
+
+## Sponsors
+
+Without our sponsors working on open source projects would not be possible
+
+- [Jetbrains - Essential tools for developers](https://www.jetbrains.com/?from=Tina4)
+- [Code Infinity - We are agile!](https://codeinfinity.co.za)

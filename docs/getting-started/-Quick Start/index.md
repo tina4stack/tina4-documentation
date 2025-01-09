@@ -67,7 +67,7 @@ docker run -v $(pwd):/app tina4stack/python:latest poetry init
 docker run -v $(pwd):/app tina4stack/python:latest poetry add tina4-python
 ```
 Create an application entry point as `app.py` with the following contents
-```app.py
+```bash title="app.py"
 import tina4_python
 ```
 Run the application, notice that the webserver needs to run on `0.0.0.0`
