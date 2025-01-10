@@ -1,4 +1,4 @@
-## Dynamic routes
+# Dynamic routes
 
 There is a way you can create routes dynamically using code.  The `Route` class is used to create these routes.
 

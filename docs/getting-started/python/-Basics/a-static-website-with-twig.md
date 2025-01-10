@@ -9,13 +9,12 @@ in the templates folder with a `.twig` extension will be rendered.
 
 Create a basic template to inherit your pages from, in the `src/templates/base.twig`.
 
-**base.twig**
-```html
+```html title="src/templates/base.twig"
 <!DOCTYPE html>
-<html>
-<head>
-<title>{{ title }}</title>
-</head>
+<html lang="en">
+    <head>
+        <title>{{ title }}</title>
+    </head>
 <body>
 {% block content %}
 {% endblock %}
@@ -28,8 +27,7 @@ Create a basic template to inherit your pages from, in the `src/templates/base.t
 
 We will use the navigation on every page 
 
-**navigation.twig**
-```html
+```html title="src/templates/navigation.twig"
 <nav>
     <a href="/">Home Page</a>
     <a href="/about-us">About Us</a>
@@ -40,8 +38,8 @@ We will use the navigation on every page
 
 The home page we name `index.twig` so this file is loaded first on the webserver. Notice how we include the `navigation.twig` and set the title variable.
 
-**index.twig**
-```html
+
+```html title="src/templates/index.twig"
 {% set title="Home Page" %}
 {%  extends "base.twig" %}
 {% block content %}
@@ -58,8 +56,7 @@ The home page we name `index.twig` so this file is loaded first on the webserver
 
 The about us page we name `about-us.twig` so this file will be loaded when we hit up `/about-us` route on the webserver.
 
-**about-us.twig**
-```html
+```html title="src/templates/about-us.twig"
 {% set title="About Us" %}
 {%  extends "base.twig" %}
 {% block content %}

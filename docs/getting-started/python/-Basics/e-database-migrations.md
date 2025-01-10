@@ -31,3 +31,7 @@ Inside the file you can have one or more SQL statements separated by a `;`.
 When you start up your project the migrations will run and whether they fail or pass will be stored in the database. You can easily see
 the state of a migration by the console output when you run the project.  You can then fix the migration and re-run the project to get the migration working.
 
+## Hot Tips
+
+>- Migrations are transaction based, so if one fails the transaction rolls back and the database is unaffected.  You can see the errors on the console or in the `tina4_migration` table on why it failed.
+>- If a migration fails the application will immediately terminate so nothing else can break.
