@@ -4,14 +4,12 @@ In the `src/templates` folder create an `index.twig` folder with the following c
 
 ```html title="index.twig"
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Tina4 - Hello Tina</title>
+    <title>Tina4 - Hello Tina</title>
 </head>
 <body>
-
-<h1>Hello World!</h1>
-
+    <h1>Hello World!</h1>
 </body>
 </html>
 ```
