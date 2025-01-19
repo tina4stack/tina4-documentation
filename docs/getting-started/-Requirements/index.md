@@ -62,22 +62,23 @@ Building native applications in an efficient manner is readily available in the 
 The default Python installation from the application store on windows is 100% for your use as we recommend making virtual environments to run on for each project you create.
 On windows a virtual environment can be created and activated relative to your project folder.
 
-*Windows*
-```cmd
+```cmd title="Windows"
 python -m venv .venv
 .\.venv\Scripts\activate
 ```
 
-*MacOs/Linux*
-```bash
+```bash title="MacOS"
 python3 -m venv .venv
 source ./.venv/bin/activate
 ```
 
-
-
 Notice the `(.venv)` prefix on the command prompt, if it does not show you are probably not running relative to an environment.
 We use the **poetry** package manager for python. 
+
+!!! tip "We highly recommend installing Poetry"
+    Install the Poetry package management tool for your Python project.
+    `pip install poetry`
+    Poetry will take care of your virtual environments for you.
 
 
 ### NodeJs

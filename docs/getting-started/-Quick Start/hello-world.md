@@ -2,8 +2,7 @@
 
 In the `src/templates` folder create an `index.twig` folder with the following content:
 
-**index.twig**
-```html
+```html title="index.twig"
 <!DOCTYPE html>
 <html>
 <head>
