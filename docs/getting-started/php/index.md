@@ -2,6 +2,8 @@
 
 This assumes you have OpenSSL, PHP and composer already installed. Look into [requirements](/getting-started/-Requirements/) to configure your environment correctly.
 
+## Using Composer
+
 From your project root run the following
 ```bash
 composer require tina4stack/tina4php
@@ -14,7 +16,7 @@ Once you click on the link your project folders will be initialized.
 You can then modify your `composer.json` file to change the default port where your project will run.
 Any file changes you effect will be applied immediately and you can refresh your browser to see changes.
 
-# Basics
+## Basics
 
 Here are some useful links to get started with the basics
 

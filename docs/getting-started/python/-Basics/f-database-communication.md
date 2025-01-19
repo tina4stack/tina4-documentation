@@ -191,3 +191,20 @@ if result is True:
 
 ###  delete
 
+Deletes data from a table without you having to write SQL statement
+
+```python
+"""
+Delete data based on table name and filter provided - single or multiple filters
+:param str table_name: Name of table
+:param str filter: Expression for deleting records
+:return: bool
+"""
+```
+
+```python
+from . import dba
+
+dba.delete("test_record", [{"id": 1},{"id": 2}])
+```
+

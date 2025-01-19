@@ -69,3 +69,7 @@
     font-size: 12px;
     text-decoration: underline;
 }
+
+h2 {
+    border-bottom: 1px solid #2c9ad9;
+}
