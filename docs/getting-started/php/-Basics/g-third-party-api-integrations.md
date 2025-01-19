@@ -11,9 +11,7 @@ Consider this fun [Cat API](https://cataas.com/doc.html) which we want to implem
 We can put our `CATApi.php` file in the `src/app` folder. We create a `CAT_API_KEY` variable in the .env file and give it a value.
 Notice that the `baseURL` has been set to the base API url based on the documentation.
 
-**CATApi.php**
-```php
-<?php
+```php title="CATApi.php"
 
 class CATApi extends \Tina4\Api {
 
@@ -37,8 +35,7 @@ sendRequest returns the following so we can check for an error if returned and r
 
 Our code will look like this now:
 
-```php
-<?php
+```php title="CATApi.php"
 
 class CATApi extends \Tina4\Api {
 
@@ -72,8 +69,7 @@ In order to test we can make a quick GET router
 
 Under `src/routes` make a `cats.php` file and add the following code.
 
-```php
-<?php
+```php title="src/routes/cats.php"
 
 \Tina4\Get::any("/get/cats", function(\Tina4\Response $response) {
 

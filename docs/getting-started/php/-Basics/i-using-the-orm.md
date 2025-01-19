@@ -46,9 +46,7 @@ $cars = $car->select()->asArray(); //selects first 10 cars from the database
 
 If we want the Cars ORM to be permanent we can add a Class declaration in the `src/orm` folder.
 
-**Car.php**
-```php
-<?php
+```php title="src/orm/Car.php"
 
 class Car extends \Tina4\ORM
 {

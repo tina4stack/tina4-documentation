@@ -26,9 +26,8 @@ You could also do the following:
 Notice that you have to encode the `$cars` variable to get the same result and the headers will probably not be correct.
 In order to test these routes or end points, create a file under `src/routes` called `cars.php` and paste the above code in that file:
 
-**cars.php**
-```php
-<?php
+```php title="cars.php"
+
 \Tina4\Get::add("/api/cars", function(\Tina4\Response $response) {
     $cars = ["BMW", "Honda", "Toyota"];
 
@@ -52,7 +51,7 @@ Notice that the first end point has the correct headers and displays the JSON da
 
 The following POST route responds with the posted data.  You will need to post a form token to this route to get the response otherwise you will get a 403 forbidden response.
 
-```php
+```php title="cars.php"
 \Tina4\Post::add("/sign-up", function(\Tina4\Response $response, \Tina4\Request $request) {
     
     return $response($request);
@@ -67,7 +66,7 @@ Routes are very useful if you can pass "data" to them in a request. Inline param
 
 Consider the following route declaration:
 
-```php
+```php title="cars.php"
 \Tina4\Get::add("/api/members/{id}", function($id, \Tina4\Response $response, \Tina4\Request $request) {
     
     return $response("Looking for member {$id}");

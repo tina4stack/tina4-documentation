@@ -7,8 +7,7 @@ Tokens have an expiry time as well so will be invalidated if they expire.
 
 Consider the following sign up form which can be placed under `src/templates`. If you hit the Sign Up button the form submits but you get a `403 error`. This means we need to add a form token.
 
-**sign-up.twig**
-```html
+```html title="sign-up.twig"
 <!DOCTYPE html>
 <html>
 <head>
@@ -29,8 +28,7 @@ Consider the following sign up form which can be placed under `src/templates`. I
 We can modify the form as follows, once we submit it the screen should show the form again.  Tina4 submits the post request to the server and if we haven't defined a post route it will render the same screen again but with the input
 from the form passed in a request variable. We can validate this by dumping the `request` variable.
 
-**sign-up.twig**
-```html
+```html title="sign-up.twig"
 <!DOCTYPE html>
 <html>
 <head>
@@ -51,7 +49,7 @@ from the form passed in a request variable. We can validate this by dumping the 
 
 We can add the dump the request variable to see the result
 
-```html
+```html title="sign-up.twig"
 <!DOCTYPE html>
 <html>
 <head>

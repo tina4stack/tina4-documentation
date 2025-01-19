@@ -10,12 +10,12 @@ We provide default support for `kafka` and `rabbitmq`
 ### Configuration
 We start with a queue configuration
 
-```
+```python
 from tina4_python.Queue import Config, Queue, Producer, Consumer
 
 config = Config()
-    config.litequeue_database_name = "test_queue.db"
-    # config.queue_type = "litequeue,rabbitmq,kafka"
+config.litequeue_database_name = "test_queue.db"
+# config.queue_type = "litequeue,rabbitmq,kafka"
 ``` 
 
 ### Queue and Producer
@@ -36,7 +36,7 @@ Typically, our consumer will run in a separate thread / or file or even differen
 The consumer has a call_back to process the messages from the queue. The example below is of a manual acknowledgement which is the most complicated form we support.
 
 ```python
-from tina4_python.Queue import Config, Queue, Producer, Consumer
+from tina4_python.Queue import Config, Queue, Consumer
 
 config = Config()
 config.litequeue_database_name = "test_queue.db"
@@ -73,5 +73,37 @@ The configuration would be as below and you can add extra config keys depending 
 config = Config()
 config.queue_type = "rabbitmq"
 config.rabbitmq_config = {"host": "localhost", "port": 5672}
+```
+
+## Kafka Queue
+
+You need to install a Kafka library and this assumes you have Kafka running successfully.
+
+```bash
+poetry add confluent-kafka
+```
+
+### Configuration
+
+The configuration would be as below and you can add extra config keys depending on what is needed.
+
+```python
+config = Config()
+config.queue_type = "kafka"
+
+# producer minimal config
+config.kafka_config  = {
+    # User-specific properties that you must set
+    'bootstrap.servers': 'localhost:9092',
+}
+
+# consumer minimal config
+config.kafka_config  = {
+    # User-specific properties that you must set
+    'bootstrap.servers': 'localhost:9092',
+    'group.id': 'default-queue',
+    'auto.offset.reset': 'earliest'
+}
+
 ```
 

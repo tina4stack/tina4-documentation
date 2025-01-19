@@ -8,9 +8,7 @@ the core methods.
 
 A custom authentication has the following layout:
 
-**ExampleAuth.php**
-```php
-<?php
+```php title="ExampleAuth.php"
 
 class ExampleAuth extends \Tina4\Auth
 {
@@ -33,10 +31,7 @@ class ExampleAuth extends \Tina4\Auth
 
 The auth helper needs to be instantiated in `index.php`
 
-**index.php**
-```php
-<?php
-
+```php title="index.php"
 require_once "./vendor/autoload.php";
 
 $config = new \Tina4\Config(static function (\Tina4\Config $config){

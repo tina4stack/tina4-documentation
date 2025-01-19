@@ -1,5 +1,7 @@
 # Tina4 - This is not a framework
 
+
+
 ## Overview
 Tina4 is the result and culmination of more than 15 years of working with scripted languages where strong typing and coding practices have been left entirely to each developer who writes the code.
 
@@ -9,15 +11,11 @@ Whilst not being a framework it is a structural paradigm for developers to follo
 Use one of the following docker methods to try out Tina4 without having to install anything to your system
 
 <!--codeinclude-->
-```bash
 [Python](./code-snippets/docker-run-python.sh)
-``` 
 <!--/codeinclude-->
 
 <!--codeinclude-->
-```bash
-[PHP](./code-snippets/docker-run-php.sh) 
-```
+[PHP](./code-snippets/docker-run-php.sh)
 <!--/codeinclude-->
 
 ## Philosophy

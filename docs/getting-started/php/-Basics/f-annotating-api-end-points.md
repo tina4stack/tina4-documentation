@@ -7,8 +7,8 @@ Start by changing the `.env` to describe your API end point.
 ## Setting the .env variables
 Use the following reference to see where to change your API description.
 
-**.env**
-```dotenv
+
+```dotenv title=".env"
 [Open API]
 SWAGGER_TITLE=Project Name
 SWAGGER_DESCRIPTION=Description of your project
