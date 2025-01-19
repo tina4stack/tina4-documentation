@@ -1,7 +1,5 @@
 # Tina4 - This is not a framework
 
-
-
 ## Overview
 Tina4 is the result and culmination of more than 15 years of working with scripted languages where strong typing and coding practices have been left entirely to each developer who writes the code.
 
@@ -53,7 +51,7 @@ Without our sponsors working on open source projects would not be possible
 - [Code Infinity - We are agile!](https://codeinfinity.co.za)
 
 
-!!! tip "Quotes from our users"  
+!!! quote "Quotes from our users"  
     - if python frameworks are bread, tina4_python is sliced bread
     - Tina4php, the framework that gets out of your way so you can just code
 

@@ -6,6 +6,7 @@ theme:
     - content.code.select
     - content.code.annotate
     - navigation.footer
+    - navigation.tabs
   palette:
     primary: custom
   custom_dir: custom_theme/
