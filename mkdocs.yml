@@ -6,7 +6,6 @@ theme:
     - content.code.select
     - content.code.annotate
     - navigation.footer
-    - navigation.tabs
     - search.suggest
   palette:
     primary: custom
