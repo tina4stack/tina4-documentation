@@ -1,5 +1,6 @@
 site_name: Tina4 Documentation
 theme:
+  favicon: /img/favicon.ico
   name: material
   features:
     - content.code.copy
