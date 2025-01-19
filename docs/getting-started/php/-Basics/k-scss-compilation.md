@@ -12,6 +12,6 @@ Consider naming your scss files as follows to order the compilation correctly:
 3_additional.scss
 ```
 
-## Hot tips
->- Scss files are built on page load
->- Currently, there is no support for Less, pull requests will be considered.
+!!! tip "Hot Tips"
+    - Scss files are built on page load
+    - Currently, there is no support for Less, pull requests will be considered.

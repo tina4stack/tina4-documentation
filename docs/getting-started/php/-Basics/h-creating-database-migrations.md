@@ -51,8 +51,8 @@ Click the "Create Migration" button to create the migration. You should see a mi
 Use this URL [http://localhost:7145/migrate](http://localhost:7145/migrate) to run the migration you have just created.
 The status of the migrations will be present on this end point.
 
-## Hot Tips
->- You can call the `/migrate` end point from your CI tool to run migrations on deployment.
->- The migrations are stored in a `tina4_migration` table where their pass status is recorded.
->- Stored procedures should be migrated by themselves, one file per stored procedure.
->- Multiple SQL statements are separated by `;`
+!!! tip "Hot Tips"
+    - You can call the `/migrate` end point from your CI tool to run migrations on deployment.
+    - The migrations are stored in a `tina4_migration` table where their pass status is recorded.
+    - Stored procedures should be migrated by themselves, one file per stored procedure.
+    - Multiple SQL statements are separated by `;`

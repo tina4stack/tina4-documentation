@@ -56,6 +56,6 @@ And then if we open up the end point to test we should get this:
 ![](/img/example-test-end-point.png)
 
 
-## Hot Tips
->- Any end point which is not a GET is annotated automatically with `@secure` 
->- Use .env `API_KEY` variable to setup a quick Bearer token to secure your API.
+!!! tip "Hot Tips"
+    - Any end point which is not a GET is annotated automatically with `@secure` 
+    - Use .env `API_KEY` variable to setup a quick Bearer token to secure your API.

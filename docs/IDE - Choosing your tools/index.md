@@ -4,18 +4,17 @@ We have debated this a lot as a team which IDE is the best to use.
 Being very opinionated if we have a choice we make use of the tools that JetBrains provides as they have a solid offering and workflow for most languages.
 For Pascal, we recommend RAD Studio, the community edition is free to download.
 
-The following should be considered when choosing an IDE:
-
-- Git integration - built in source revision and code comparison
-- Code Inspection - ability to navigate method and follow code paths
-- Code Completion - assist in coding, showing methods and properties with their parameters
-- Code Syntax & Errors - fix basic syntax and coding errors
-- Code Refactoring - refining redundancies and improving code
-- Debugging - stepping through code to figure out errors and logic errors
-- Terminal - built in terminal support
-- Docker - containerization support and management
-- Database Support - built in connecting to databases
-- Deployment - built in deployment and server browsing
+!!! hint "The following should be considered when choosing an IDE"
+    - Git integration - built in source revision and code comparison
+    - Code Inspection - ability to navigate method and follow code paths
+    - Code Completion - assist in coding, showing methods and properties with their parameters
+    - Code Syntax & Errors - fix basic syntax and coding errors
+    - Code Refactoring - refining redundancies and improving code
+    - Debugging - stepping through code to figure out errors and logic errors
+    - Terminal - built in terminal support
+    - Docker - containerization support and management
+    - Database Support - built in connecting to databases
+    - Deployment - built in deployment and server browsing
 
 If you were wondering, each JetBrains has all of the above built in for your convenience.
 

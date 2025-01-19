@@ -77,5 +77,5 @@ print_r ($usesr->asResult());
 ```
 
 
-## Hot Tips
->- Extend `\Tina4\Data` for a class that needs a database connection
+!!! tip "Hot Tips"
+    - Extend `\Tina4\Data` for a class that needs a database connection

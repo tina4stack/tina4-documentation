@@ -51,6 +51,6 @@ echo new \Tina4\Tina4Php($config);
 
 ```
 
-## Hot Tips
->- You can also check the token payload if you use a JWT token
->- If want a quick authentication mechanism use the `API_KEY` global in `.env` to create a quick bearer auth mechanism.
+!!! tip "Hot Tips"
+    - You can also check the token payload if you use a JWT token
+    - If want a quick authentication mechanism use the `API_KEY` global in `.env` to create a quick bearer auth mechanism.

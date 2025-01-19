@@ -26,6 +26,8 @@ If you decide not to use poetry which is definitely not recommended, you can ins
 pip install tina4_python
 ```
 
+## Setting up the `app.py`
+
 After this all that is required is an `app.py` file in the root of your project with the following line of code:
 
 ```python title="app.py"
@@ -45,18 +47,23 @@ and run a webservice.  We run our python project using poetry.
 poetry run python app.py
 ```
 
+## Folder structure and layout
+
 You should have a webservice running at [http://localhost:7145](http://localhost:7145) and the following folder structure would have been created:
 
+**Project Folder**
+
 - secrets
+- migrations (create if needed)
 - src
-  - app
-  - orm
-  - public
-    - css
-    - images
-    - js
-    - swagger
-  - routes
-  - scss
-  - templates
-    - errors
+      - app : `classes go here`
+      - orm : `database ORM classes go here`
+      - public : `any public files to be served - treated as /`
+        - css
+        - images
+        - js
+        - swagger
+      - routes : `routing logic goes here`
+      - scss: `scss files go here and are compiled to public/css`
+      - templates : ` jinja2/twig templates go here`
+        - errors : ` error pages for 404 & 403 go here and can be customized `

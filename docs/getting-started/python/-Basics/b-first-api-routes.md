@@ -1,4 +1,4 @@
-# Basic routing
+# Basic Routing
 
 Unlike PHP the python routes need you to manually include the files that you add.
 We do this in the `__init__.py` file under the `src` folder.
@@ -70,3 +70,22 @@ async def get_hello_world(request, response):
 
 
 ```
+
+## Redirecting
+
+Consider that POST routes used in a web application need redirects we have this built into the response object
+
+
+```python title="src/routes/api.py"
+@post("/login")
+async def get_login_page(request, response):
+    # check the database for a user and password
+    if Users.validate_login(request):
+        return response.redirect("/dashboard")
+    else:
+        return response.redirect("/login")
+```
+
+!!! tip "Hot Tips"
+    - Routes can be secured with the `API_KEY` by annotating `@secure()` below the route declaration
+    - All POST routes are secured primarily by a `formToken`

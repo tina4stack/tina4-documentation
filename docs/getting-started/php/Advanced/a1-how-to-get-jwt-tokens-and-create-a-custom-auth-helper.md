@@ -24,6 +24,6 @@ $payload = (new \Tina4\Auth())->getPayload($token);
 $payload = (new \Tina4\Auth())->getPayload($token, true);
 ```
 
-## Hot Tips
->- Tokens do expire! So even if the payload is valid it may be the token is not valid.
->- Increase the time tokens are valid for by using the `TINA4_TOKEN_MINUTES` variable in your `.env` file.
+!!! tip "Hot Tips"
+    - Tokens do expire! So even if the payload is valid it may be the token is not valid.
+    - Increase the time tokens are valid for by using the `TINA4_TOKEN_MINUTES` variable in your `.env` file.

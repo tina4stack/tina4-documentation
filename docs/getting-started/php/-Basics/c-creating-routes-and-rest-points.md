@@ -76,6 +76,6 @@ Consider the following route declaration:
 
 The `{id}` is the inline param. For example a person calling the end point as `/api/members/10` would result in the `$id` variable being populated with `10`.
 
-## Hot Tips 
->- Response objects take three variable inputs, content, response code and content type.
->- Look at advanced topics for dynamic route examples.
+!!! tip "Hot Tips"
+    - Response objects take three variable inputs, content, response code and content type.
+    - Look at advanced topics for dynamic route examples.

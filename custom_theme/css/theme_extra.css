@@ -12,6 +12,8 @@
     padding: 2px 5px;
 }
 
+
+
 /**
  * Make code blocks display as blocks and give them the appropriate
  * font size and padding.
@@ -28,13 +30,28 @@
     font-size: 12px;
 }
 
+.rst-content div[class^=highlight] pre {
+    padding: 0 !important;
+    border: 0  !important;
+}
+
+.rst-content div[class^=highlight], .rst-content pre.literal-block {
+    border: 1px solid #b3b3b3 !important;
+}
+
+.rst-content .admonition {
+    padding-top: 0 !important;
+}
+
 /**
  * Fix code colors
  *
  * https://github.com/mkdocs/mkdocs/issues/2027
  */
 .rst-content code {
+
     color: #E74C3C;
+    background: none !important;
 }
 
 .rst-content pre code {

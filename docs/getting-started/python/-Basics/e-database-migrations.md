@@ -7,7 +7,7 @@ Migrations are transactional so if you add multiple lines of SQL in to a single 
 
 First you need a database connection, once you have that you can implement migrations. Consider the following code in `src/__init__.py`:
 
-```python
+```python title="src/__init__.py"
 from tina4_python.Migration import migrate
 from tina4_python.Database import Database
 
@@ -28,10 +28,23 @@ Migrations are plain SQL statements that modify the data stored in a text file w
 
 Inside the file you can have one or more SQL statements separated by a `;`.
 
+```sql title="/migrations/00001_my_first_table_migration.sql"
+create table test_user (	
+    date_created timestamp,
+    email varchar(255) default 'test@test.com',
+    first_name varchar(255) default '',
+    id integer default 1  not null,
+    last_name varchar(255) default '',
+    title varchar(255) default 'Mr',
+    primary key (id)
+);
+```
+
 When you start up your project the migrations will run and whether they fail or pass will be stored in the database. You can easily see
 the state of a migration by the console output when you run the project.  You can then fix the migration and re-run the project to get the migration working.
 
-## Hot Tips
+![Migration log](migration_log.png)
 
->- Migrations are transaction based, so if one fails the transaction rolls back and the database is unaffected.  You can see the errors on the console or in the `tina4_migration` table on why it failed.
->- If a migration fails the application will immediately terminate so nothing else can break.
+!!! tip "Hot Tips"
+    - Migrations are transaction based, so if one fails the transaction rolls back and the database is unaffected.  You can see the errors on the console or in the `tina4_migration` table on why it failed.
+    - If a migration fails the application will immediately terminate so nothing else can break.

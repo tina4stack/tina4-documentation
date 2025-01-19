@@ -1,4 +1,4 @@
-# Database connections
+# Database Connections
 
 The database abstraction was designed to work with all basic Python database connections.
 You need knowledge of which package to install then you can supply the connection string to get connected.

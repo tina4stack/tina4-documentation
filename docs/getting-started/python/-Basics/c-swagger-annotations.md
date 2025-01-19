@@ -1,4 +1,4 @@
-# Swagger annotations
+# Swagger Annotations
 
 Swagger is a great UI to quickly document your APIs.  Tina4 makes it easy to do this documentation easily.
 

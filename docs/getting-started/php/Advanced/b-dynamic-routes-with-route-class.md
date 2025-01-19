@@ -17,5 +17,5 @@ Route::get($path,
 
 This methodology is used in the CRUD router.
 
-## Hot tips
->- Path variables are added to the `$request` object as an array of `inlineParams`
+!!! tip "Hot Tips"
+    - Path variables are added to the `$request` object as an array of `inlineParams`

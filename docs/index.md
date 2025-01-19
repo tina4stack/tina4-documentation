@@ -9,11 +9,15 @@ Whilst not being a framework it is a structural paradigm for developers to follo
 Use one of the following docker methods to try out Tina4 without having to install anything to your system
 
 <!--codeinclude-->
-[Python](./code-snippets/docker-run-python.sh) block:ok_ok
+```bash
+[Python](./code-snippets/docker-run-python.sh)
+``` 
 <!--/codeinclude-->
 
 <!--codeinclude-->
-[PHP](./code-snippets/docker-run-php.sh) inside_block:hello_world
+```bash
+[PHP](./code-snippets/docker-run-php.sh) 
+```
 <!--/codeinclude-->
 
 ## Philosophy
@@ -49,3 +53,9 @@ Without our sponsors working on open source projects would not be possible
 
 - [Jetbrains - Essential tools for developers](https://www.jetbrains.com/?from=Tina4)
 - [Code Infinity - We are agile!](https://codeinfinity.co.za)
+
+
+!!! tip "Quotes from our users"  
+    - if python frameworks are bread, tina4_python is sliced bread
+    - Tina4php, the framework that gets out of your way so you can just code
+

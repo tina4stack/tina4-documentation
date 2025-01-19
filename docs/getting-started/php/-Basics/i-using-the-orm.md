@@ -139,9 +139,9 @@ $cars =  (new Car())->select("*")->filter(function (Car $record){
 
 ```
 
-## Hot Tips
->- The `select` method on the ORM class is paginated, make sure your code accommodates this.
->- Checkout the `\Tina4\SQL()` class for more information about querying the database.
->- Use ? params to prevent SQL injection from request variables.
->- if you already have a database, use the `bin/tina4` command to create your ORM objects automatically.
->- The resulting crud router can be documented for swagger like any other route, see annotating api end points
+!!! tip "Hot Tips"
+    - The `select` method on the ORM class is paginated, make sure your code accommodates this.
+    - Checkout the `\Tina4\SQL()` class for more information about querying the database.
+    - Use ? params to prevent SQL injection from request variables.
+    - if you already have a database, use the `bin/tina4` command to create your ORM objects automatically.
+    - The resulting crud router can be documented for swagger like any other route, see annotating api end points

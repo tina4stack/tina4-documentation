@@ -86,6 +86,6 @@ Under `src/routes` make a `cats.php` file and add the following code.
 
 What happens when you hit up [http://localhost:7145/get/cats](http://localhost:7145/get/cats)?
 
-## Hot Tips
->- Extend and use `\Tina4\Api` as all the work to retrieve REST data has already been done for you
->- Data is returned in object form and the data has already been decoded for you so you can use it directly in your code
+!!! tip "Hot Tips"
+    - Extend and use `\Tina4\Api` as all the work to retrieve REST data has already been done for you
+    - Data is returned in object form and the data has already been decoded for you so you can use it directly in your code

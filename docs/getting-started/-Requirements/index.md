@@ -118,8 +118,7 @@ Most of our deployments are to Linux servers, we are in the process of documenti
 Our preferred flavour of Linux is Ubuntu, we can confirm though that Tina4 plays nice with most flavours.
 We simply look at the ease of installation on most platforms and Ubuntu's package management seems to be the easiest to use.
 
-## Hot Tips
-
->- Consider which IDE you are using and which shell, On windows for example you will find different results between `cmd` and `power shell`
->- Tina4 will run under XAMP and WAMP but why add the extra overhead?
->- Use Docker environments for your database engines.
+!!! tip "Hot Tips"
+    - Consider which IDE you are using and which shell, On windows for example you will find different results between `cmd` and `power shell`
+    - Tina4 will run under XAMP and WAMP but why add the extra overhead?
+    - Use Docker environments for your database engines.
