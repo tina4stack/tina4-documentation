@@ -75,3 +75,14 @@ poetry add jurigged --group dev
 poetry add poetry-plugin-export
 poetry export -f requirements.txt --output requirements.txt
 ```
+
+### How do implement logging in my application
+
+```python
+from tina4_python import Debug
+
+Debug.info("This is information")
+Debug.debug("This is debugging")
+Debug.error("This is an error")
+Debug.warning("This is a warning")
+```
