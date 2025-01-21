@@ -68,3 +68,10 @@ Make sure jurigged is installed as a dev dependency in your project
 ```bash
 poetry add jurigged --group dev
 ```
+
+### How do I export the Poetry packages to requirements.txt
+
+```bash
+poetry add poetry-plugin-export
+poetry export -f requirements.txt --output requirements.txt
+```
