@@ -90,5 +90,5 @@ Debug.warning("This is a warning")
 ### How do I get a fresh formToken for my form
 
 ```twig
-{{  "Login"~RANDOM() | formToken }}
+{{  ("SomeValue"~RANDOM()) | formToken }}
 ```

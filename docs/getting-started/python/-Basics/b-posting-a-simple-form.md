@@ -26,7 +26,7 @@ Using a filter, notice the use of `RANDOM` to refresh the output of the filter. 
 ```twig title="login.twig"
 <form name="login" method="post">
     <input type="name" value="" placeholder="Some value to post">
-    {{  "Login"~RANDOM() | formToken }}
+    {{  ("Login"~RANDOM()) | formToken }}
     <button>Submit</button>
 </form>
 ```
