@@ -61,3 +61,10 @@ async def post_route(request, response):
    
     return response("OK")
 ```
+
+### How do I get hot code reloading
+
+Make sure jurigged is installed as a dev dependency in your project
+```bash
+poetry add jurigged --group dev
+```

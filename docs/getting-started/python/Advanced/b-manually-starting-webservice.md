@@ -1,6 +1,6 @@
 # Manual Control of the Webservice
 
-Tina4 automatically creates a webservice on prot 7145, sometimes you need to run on a different port and manually control the start of the webservice.
+Tina4 automatically creates a webservice on port 7145, sometimes you need to run on a different port and manually control the start of the webservice.
 This is achieved by running the application with a stop param
 
 ## Running the application with "stop"
