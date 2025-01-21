@@ -86,3 +86,9 @@ Debug.debug("This is debugging")
 Debug.error("This is an error")
 Debug.warning("This is a warning")
 ```
+
+### How do I get a fresh formToken for my form
+
+```twig
+{{  "Login"~RANDOM() | formToken }}
+```
