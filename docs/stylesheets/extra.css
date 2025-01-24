@@ -1,15 +1,113 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,600;1,400;1,600&display=swap');
+
+/* Tina4 Colours */
+:root {
+    --t4-blue-dark: #1E245C;
+    --t4-blue-medium: #2A3382;
+    --t4-blue-light: #3B48B7;
+    --t4-blue-bright: #0b37ad;
+    --t4-blue-brighter: #3447EB;
+    --t4-headings-ff: "Poppins";
+}
+
 :root, [data-md-color-scheme=default] {
-    --md-primary-fg-color:        #0b37ad;
-    --md-footer-bg-color:         #0b37ad;
+    --md-primary-fg-color: var(--t4-blue-bright);
+    --md-footer-bg-color: var(--t4-blue-bright);
     --md-primary-fg-color--light: #ECB7B7;
-    --md-primary-fg-color--dark:  #0b37ad;
-    --md-default-fg-color:        #0b37ad;
+    --md-primary-fg-color--dark: #0b37ad;
+    --md-default-fg-color: #000000;
+    --md-accent-fg-color: var(--t4-blue-brighter);
+}
+
+/* Typography starts her */
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--t4-headings-ff), sans-serif;
+    font-weight: 600 !important;
+    color: var(--t4-blue-medium);
+}
+
+.md-typeset h1 {
+    font-weight: 600 !important;
+    color: var(--t4-blue-medium);
+}
+
+h2, h3, h4 {
+    color: var(--t4-blue-medium);
+}
+
+.md-typeset a {
+    color: var(--t4-blue-bright);
+    word-break: break-word;
+}
+
+.md-typeset a:focus, .md-typeset a:hover {
+    color: var(--t4-blue-brighter);
+}
+
+/* Header, Nav & Sidenav starts here */
+@media screen and (max-width: 76.2344em) {
+    .md-nav--primary .md-nav__title {
+        background-color: var(--t4-blue-medium);
+        color: white;
+        font-family: var(--t4-headings-ff), sans-serif;
+    }
+}
+
+
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+    height: 40px;
+}
+
+.md-header__ellipsis *, .md-nav.md-nav--secondary .md-nav__title {
+ font-family: var(--t4-headings-ff), sans-serif;
+}
+
+.md-nav__title {
+    padding: 0;
+
+    .logo {
+        display: block;
+    }
+}
+
+.md-nav__toggle.md-toggle + .md-nav__link span {
+    font-weight: 600;
+}
+
+.md-nav__item--section > .md-nav__link[for] {
+    color: var(--t4-blue-medium);
+    font-family: var(--t4-headings-ff), sans-serif;
+    font-weight: 600;
+}
+
+@media screen and (max-width: 76.2344em) {
+    .md-nav--primary .md-nav__title[for=__drawer] {
+        background-color: var(--t4-blue-dark);
+    }
+}
+
+@media screen and (min-width: 76.25em) {
+    .md-nav__item--section {
+        display: block;
+        margin: 1.8em 0;
+    }
+}
+
+.md-nav__title {
+    color: var(--t4-blue-medium);
+}
+
+/* List style starts her */
+.md-typeset [type=checkbox]:checked + .task-list-indicator:before {
+    background-color: #3DCC4B;
 }
 
 /* Tab style starts here */
-.tabbed-set {
+.md-typeset .tabbed-set {
     position: relative;
     display: flex;
+    flex-flow: row wrap;
     flex-wrap: wrap;
     margin: 1em 0;
     border-radius: 0.1rem;
@@ -34,7 +132,6 @@
 
 .tabbed-set .tabbed-content {
     width: 100%;
-    display: none;
     box-shadow: 0 -.05rem #ddd;
 }
 
@@ -43,9 +140,8 @@
     opacity: 0;
 }
 
-.tabbed-set input:checked:nth-child(n+1) + label {
-    color: #2c9ad9;
-    border-color: #2c9ad9;
+.js .md-typeset .tabbed-labels:before {
+    background: var(--t4-blue-brighter);
 }
 
 @media screen {
@@ -70,6 +166,39 @@
     text-decoration: underline;
 }
 
-h2 {
-    border-bottom: 1px solid #2c9ad9;
+/* Code block starts here */
+.highlight {
+    border: .075rem solid #00000029;
+    border-radius: .2rem;
+}
+
+.highlight span.filename {
+    background-color: #e5e5e547;
+    border-bottom: none;
+    border-top-left-radius: .1rem;
+    border-top-right-radius: .1rem;
+    display: flow-root;
+    font-size: 0.9em;
+    font-weight: 700;
+    margin: 0;
+    padding: .6617647059em 1.1764705882em;
+    position: relative;
+    font-family: var(--t4-headings-ff), sans-serif;
+    text-decoration: none;
+}
+
+@media screen and (max-width: 44.9844em) {
+    .md-content__inner>.highlight {
+        margin: 1em 0;
+        padding-left: 10px;
+    }
+
+    .md-nav.md-nav--primary > .md-nav__title {
+        height: unset;
+        padding: 0;
+    }
+}
+
+.md-typeset code {
+    background-color: transparent;
 }

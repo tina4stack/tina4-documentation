@@ -1,7 +1,10 @@
 site_name: Tina4 Documentation
+copyright: Copyright &copy; 2025 Tina4
 theme:
   favicon: /img/favicon.ico
   name: material
+  font:
+    text: Roboto
   features:
     - content.code.copy
     - content.code.select
@@ -13,8 +16,16 @@ theme:
   palette:
     primary: custom
   custom_dir: custom_theme/
+
 extra:
   generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/tina4stack/
+      name: Tina4 Github
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/VN5WKXnKbX/
+      name: Tina4 Discord
 extra_css:
   - stylesheets/extra.css
 plugins:
@@ -58,6 +69,8 @@ markdown_extensions:
   - pymdownx.snippets
   - pymdownx.striphtml
   - pymdownx.superfences
-  - pymdownx.tabbed
-  - pymdownx.tasklist
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
   - pymdownx.tilde

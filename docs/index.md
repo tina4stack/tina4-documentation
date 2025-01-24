@@ -19,7 +19,7 @@ Use one of the following docker methods to try out Tina4 without having to insta
 ## Philosophy
 As we work out solutions for various languages where possible we have included libraries which add low impact to the code.  To this end our "framework" attempts to use and follow these basic principles.
 
-!!! note "Principals of an efficient coding environment"
+!!! note "Principle of an efficient coding environment"
     - Green coding - the best code is no code
     - Use of IDE vs Text Editors - good tools are essential for good code
     - Use of a source code repository - the ability to track code changes and work effictively in a team 

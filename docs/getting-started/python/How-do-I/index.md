@@ -92,3 +92,20 @@ or
 poetry add hypercorn
 poetry run hypercorn app:app
 ```
+
+### How do implement logging in my application
+
+```python
+from tina4_python import Debug
+
+Debug.info("This is information")
+Debug.debug("This is debugging")
+Debug.error("This is an error")
+Debug.warning("This is a warning")
+```
+
+### How do I get a fresh formToken for my form
+
+```twig
+{{  ("SomeValue"~RANDOM()) | formToken }}
+```
