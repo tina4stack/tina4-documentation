@@ -75,3 +75,20 @@ poetry add jurigged --group dev
 poetry add poetry-plugin-export
 poetry export -f requirements.txt --output requirements.txt
 ```
+
+### How do I run Tina4 under hypercorn, uvicorn or other similar webserver
+
+```python title="app.py"
+# change the import
+from tina4_python import app
+```
+
+```bash
+pip install hypercorn
+hypercorn app:app
+
+or 
+
+poetry add hypercorn
+poetry run hypercorn app:app
+```
