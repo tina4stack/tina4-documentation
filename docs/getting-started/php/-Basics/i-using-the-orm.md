@@ -1,6 +1,6 @@
 # Using the ORM
 
-The principal of ORM is to map a code based object or class to a database entity.
+The principle of ORM is to map a code based object or class to a database entity.
 In most frameworks this effort is black-boxed and overcomplicated.  Essentially with Tina4's ORM we have tried to 
 remove the complexity whilst retaining what one would expect from an ORM.
 
