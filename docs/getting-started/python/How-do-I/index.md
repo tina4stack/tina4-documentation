@@ -92,3 +92,15 @@ Debug.warning("This is a warning")
 ```twig
 {{  ("SomeValue"~RANDOM()) | formToken }}
 ```
+
+### How do I manipulate the DatabaseResult set with a method/ function filter
+
+```python
+def change_me(record):
+    record["value"] = "Something Else"
+    return record
+
+result = dba.fetch("select * from users")
+print (result.to_list(change_me))
+
+```
