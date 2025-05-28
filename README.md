@@ -11,24 +11,30 @@ Installation
 MacOS / Linux
 
 ```bash
-python3 -m venv venv
+python3 -m venv .venv
 source ./venv/bin/activate
-pip install mkdocs
-pip install --upgrade pip
+pip install uv
+uv sync
+
 ```
 Windows
 
-```bash
-python -m venv venv
+```bash  
+python -m venv .venv
+.venv\Scripts\activate
+pip install uv
+uv sync
 ```
 
 
 Running
 ```bash
-poetry run mkdocs serve
+uv run mkdocs serve
+
 ```
 Building
 ```bash
-poetry run mkdocs build
+uv run mkdocs build
+
 ```
 
