@@ -66,31 +66,31 @@ async def post_route(request, response):
 
 Make sure jurigged is installed as a dev dependency in your project
 ```bash
-poetry add jurigged --group dev
+python -m jurigged app.py
 ```
 
-### How do I export the Poetry packages to requirements.txt
-
+Then run your app with hot reload using:
 ```bash
-poetry add poetry-plugin-export
-poetry export -f requirements.txt --output requirements.txt
+uv run --reload app.py
+```
+--reload watches for code changes and reloads the server automatically.
+
+# Install and lock dependencies
+```bash
+uv pip install -r pyproject.toml
 ```
 
-### How do I run Tina4 under hypercorn, uvicorn or other similar webserver
-
+### How do I run Tina4 under hypercorn, uvicorn or other ASGI servers?
+Expose the ASGI `app` in `app.py`:
 ```python title="app.py"
 # change the import
 from tina4_python import app
 ```
 
+Then install and run with:
 ```bash
-pip install hypercorn
+uv pip install hypercorn
 hypercorn app:app
-
-or 
-
-poetry add hypercorn
-poetry run hypercorn app:app
 ```
 
 ### How do implement logging in my application

@@ -1,0 +1,525 @@
+INFO: 2025-06-03 13:19:55,152: Language: en
+INFO: 2025-06-03 13:19:55,167: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\AppData\Local\Programs\Python\Python313\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 13:19:55,317: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxMzoyMTo1NS4zMTUzNzUifQ.eLWWj9-t12aAyPqRxsvUwvEuUVNDmIzHj2NP4-4KnQb8_xPRHObFvHla9O8lvlOfk0A7G6ECiq_pwAO8fmVRbeVo92bPTteLpeBWh1IY8zJZXULn0dJdDSPb441Vgt1UoNnTIw9LTVCfzt80jO2s9fWdBytAFNYkGCiQujvTgJICuS0DdqbZ3tSOTWIC1-oO_-pvkWttTwFScpWwhTh9gW9bX0P-iTFAK0_qDqmb1j37rn1pPF7Rxv6U8i2_8tspxa7N-Tv02-5iDocHXBsKw9GkPdqodU-PSKug79vX7AiiRot5WySQ8b6L6aBHbsDWfBigK7YbpoHFNaCmZdTezg
+DEBUG: 2025-06-03 13:19:55,319: VALID TOKEN False
+DEBUG: 2025-06-03 13:19:55,320: VALID TOKEN True
+DEBUG: 2025-06-03 13:19:55,321: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T13:21:55.315375'}
+DEBUG: 2025-06-03 13:19:55,376: Compiling scss
+DEBUG: 2025-06-03 13:19:55,379: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 13:19:55,379: Adding a route: /swagger
+INFO: 2025-06-03 13:19:55,381: Starting webserver on 7145
+DEBUG: 2025-06-03 13:19:58,679: GET Resolving URL: /?
+DEBUG: 2025-06-03 13:19:58,682: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 13:19:58,683: Initializing Twig on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+INFO: 2025-06-03 13:19:58,704: Twig Initialized on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:19:58,734: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 13:19:58,736: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 13:19:58,737: Matching route /swagger to /
+DEBUG: 2025-06-03 13:19:58,740: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:19:58,839: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 13:19:58,841: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 13:19:58,842: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:19:58,845: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+DEBUG: 2025-06-03 13:20:02,230: GET Resolving URL: /favicon.ico?
+DEBUG: 2025-06-03 13:20:02,231: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /favicon.ico? GET
+DEBUG: 2025-06-03 13:20:02,232: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:20:02,233: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\favicon.ico
+DEBUG: 2025-06-03 13:21:03,288: GET Resolving URL: /?
+DEBUG: 2025-06-03 13:21:03,289: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 13:21:03,290: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:21:03,291: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 13:21:03,292: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 13:21:03,293: Matching route /swagger to /
+DEBUG: 2025-06-03 13:21:03,294: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:21:03,455: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 13:21:03,456: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 13:21:03,457: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:21:03,459: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+INFO: 2025-06-03 13:23:20,405: Language: en
+INFO: 2025-06-03 13:23:20,408: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\PycharmProjects\tina4-documentation\.venv\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 13:23:20,505: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxMzoyNToyMC41MDAxOTUifQ.uW3aKi6sKkhqVyb7eQaQPmFyrpe889cFPdFkDTqa_6q6Xk5_63ZAaJxJOvv8eCM3CHr6061bSuoGJOEAY3qJ_09e1aURCl2CKovPCeXakDJ-kUVkelHr170tEVJs0WFFGH9IyVXZOS_CU-dFMTIANFQytcqI7IcGPSFjw81K9-i3gN4IUfK8_ahZPp-JJSkyYigSsUY2Ri2Hz5JWusDGDXD9u04NZuP13a8bWe1Z3mSxvataCJPBW9ODk9omvqOvIBRP_gjWIvpqq5Nid-6ULEzFNYPmmnSurmx2aMDOGaU9Vv1_JTDNzw38CxxEQu_7tSy0-J-dykn4ixKusL183Q
+DEBUG: 2025-06-03 13:23:20,512: VALID TOKEN False
+DEBUG: 2025-06-03 13:23:20,513: VALID TOKEN True
+DEBUG: 2025-06-03 13:23:20,514: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T13:25:20.500195'}
+DEBUG: 2025-06-03 13:23:20,518: Compiling scss
+DEBUG: 2025-06-03 13:23:20,521: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 13:23:20,522: Adding a route: /swagger
+INFO: 2025-06-03 13:23:20,523: Starting webserver on 7145
+DEBUG: 2025-06-03 13:23:29,694: Session expired, starting a new one
+DEBUG: 2025-06-03 13:23:29,719: GET Resolving URL: /?
+DEBUG: 2025-06-03 13:23:29,731: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 13:23:29,764: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:23:29,799: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 13:23:29,819: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 13:23:29,835: Matching route /swagger to /
+DEBUG: 2025-06-03 13:23:29,840: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:23:29,883: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 13:23:29,884: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 13:23:29,885: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:23:29,892: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+INFO: 2025-06-03 13:23:33,438: Server stopped.
+INFO: 2025-06-03 13:23:41,933: Server stopped.
+INFO: 2025-06-03 13:23:53,653: Language: en
+INFO: 2025-06-03 13:23:53,656: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\PycharmProjects\tina4-documentation\.venv\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 13:23:53,746: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxMzoyNTo1My43NDA5NzUifQ.cQvM4cp6iiTqsqa44dGTNIuxuCit8wU6v0mZPvZmKEStl-x6RsvjyJenFrNUXN-tZllaz4U3PPFC_18byifLhXwwuiG3wcg0ZNerQiKQLrdQmlZXSYNHroZnpvtxp1NKk1NCMGJtTgjadZhbQiL5rnXD12T9Z-jL2cfgwIIP5vwcuDkqldwUFPsbIhez_TSLILMXn5ezwnw5oHIM_AZRN91lN7Gx3yFW5-O_OzVlLEI5YAOzf2HRu4uPbnoy7pMvVlLL4Xv2a_Fsu3a4UrO6m-DEg5x5e3cHer_Fj_z662UdHNe84-uigjsnma8p7JYSb8TkMjtaYCsEJjSc8EzDOg
+DEBUG: 2025-06-03 13:23:53,748: VALID TOKEN False
+DEBUG: 2025-06-03 13:23:53,749: VALID TOKEN True
+DEBUG: 2025-06-03 13:23:53,750: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T13:25:53.740975'}
+DEBUG: 2025-06-03 13:23:53,755: Compiling scss
+DEBUG: 2025-06-03 13:23:53,759: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 13:23:53,760: Adding a route: /swagger
+INFO: 2025-06-03 13:23:53,762: Starting webserver on 7145
+DEBUG: 2025-06-03 13:24:03,793: GET Resolving URL: /?
+DEBUG: 2025-06-03 13:24:03,794: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 13:24:03,795: Initializing Twig on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+INFO: 2025-06-03 13:24:03,807: Twig Initialized on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:24:03,820: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 13:24:03,823: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 13:24:03,832: Matching route /swagger to /
+DEBUG: 2025-06-03 13:24:03,837: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:24:03,949: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 13:24:03,950: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 13:24:03,952: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:24:03,953: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+INFO: 2025-06-03 13:25:21,276: Language: en
+INFO: 2025-06-03 13:25:21,280: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\PycharmProjects\tina4-documentation\.venv\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 13:25:21,375: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxMzoyNzoyMS4zNzA3MjMifQ.NCIR2_vKUpPnu6GZd14gp8csYeENB1DmrdrBCTbkdltcoTEblExBYEhVZDeTQ1js7knWHFnYw0FmngATV-VA-UuwGa6UnpK-tfbDB4yD6cekFFZ4X-XasBfy1ezxHjZ0IIM3zUEmO41s8DATRWRp1cUyCE7ewa1GHeNk6UEPrUcFCVb5VEVsZ5fqji1ikEpUEwPUTOy4os9KBGw5EcpMYrlT45oBb4rEvq376xbXonZsplK2f5WvgtRLs4BPsV1xo3khBOkxdKN9C4eauUZTBq8uiW9tB3FN4QnTQFcVCjMzjHF_Qyb0SvwvVgA1euZHOVuBSvEbFHfA9WmFDZGqDw
+DEBUG: 2025-06-03 13:25:21,379: VALID TOKEN False
+DEBUG: 2025-06-03 13:25:21,381: VALID TOKEN True
+DEBUG: 2025-06-03 13:25:21,382: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T13:27:21.370723'}
+DEBUG: 2025-06-03 13:25:21,389: Compiling scss
+DEBUG: 2025-06-03 13:25:21,393: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 13:25:21,395: Adding a route: /swagger
+INFO: 2025-06-03 13:25:21,398: Starting webserver on 7145
+DEBUG: 2025-06-03 13:25:23,620: GET Resolving URL: /?
+DEBUG: 2025-06-03 13:25:23,671: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 13:25:23,673: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:25:23,676: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 13:25:23,677: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 13:25:23,685: Matching route /swagger to /
+DEBUG: 2025-06-03 13:25:23,690: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:25:23,809: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 13:25:23,819: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 13:25:23,822: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:25:23,824: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+DEBUG: 2025-06-03 13:25:41,077: GET Resolving URL: /?
+DEBUG: 2025-06-03 13:25:41,079: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 13:25:41,105: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:25:41,107: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 13:25:41,108: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 13:25:41,109: Matching route /swagger to /
+DEBUG: 2025-06-03 13:25:41,111: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:25:41,174: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 13:25:41,388: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 13:25:41,393: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:25:41,406: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+DEBUG: 2025-06-03 13:25:44,929: GET Resolving URL: /favicon.ico?
+DEBUG: 2025-06-03 13:25:44,930: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /favicon.ico? GET
+DEBUG: 2025-06-03 13:25:44,932: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:25:44,934: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\favicon.ico
+DEBUG: 2025-06-03 13:27:17,644: Session expired, starting a new one
+DEBUG: 2025-06-03 13:27:17,679: GET Resolving URL: /?
+DEBUG: 2025-06-03 13:27:17,684: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 13:27:17,689: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:27:17,711: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 13:27:17,769: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 13:27:17,785: Matching route /swagger to /
+DEBUG: 2025-06-03 13:27:17,799: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:27:17,863: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 13:27:17,873: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 13:27:17,874: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:27:17,876: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+INFO: 2025-06-03 13:42:36,814: Language: en
+INFO: 2025-06-03 13:42:36,816: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\PycharmProjects\tina4-documentation\.venv\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 13:42:36,915: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxMzo0NDozNi45MTEwMzUifQ.WuDlFum0punRNioVqua4T8QBNapiaI72XOFCm2bRnQy_0nY_hhXOdxkSMFZakSEYRhSXf0vo3ML4EFNnfjmhN39kK6P57EgGC5WDIVGN_R8OSKgQlh2swyRxixhGis8QYKK89V525-38PfdPQ0_v9LUrQvpkokwHLNiuVnxh0GFTITQDMxysOcrU-iRPJ9edfwjy-IgNl0tqdtHNL6dU47nLX3ec1CU9wlukfjLOa6A6WMQFRShBVS9TnDlbVpZgM45HLI0FxtCFcXl5M8RrOOqYAv6oOf1mda3TW9PlbgrHYYut4gBB4Ekag5TA-sD6iqmWc0devUM9mBVlCMg3IQ
+DEBUG: 2025-06-03 13:42:36,918: VALID TOKEN False
+DEBUG: 2025-06-03 13:42:36,920: VALID TOKEN True
+DEBUG: 2025-06-03 13:42:36,921: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T13:44:36.911035'}
+DEBUG: 2025-06-03 13:42:36,925: Compiling scss
+DEBUG: 2025-06-03 13:42:36,928: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 13:42:36,929: Adding a route: /swagger
+INFO: 2025-06-03 13:42:36,931: Starting webserver on 7145
+DEBUG: 2025-06-03 13:42:39,355: Session expired, starting a new one
+DEBUG: 2025-06-03 13:42:39,464: GET Resolving URL: /?
+DEBUG: 2025-06-03 13:42:39,471: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 13:42:39,473: Initializing Twig on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+INFO: 2025-06-03 13:42:39,496: Twig Initialized on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:42:39,511: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 13:42:39,514: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 13:42:39,515: Matching route /swagger to /
+DEBUG: 2025-06-03 13:42:39,517: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:42:39,568: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 13:42:39,577: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 13:42:39,578: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:42:39,580: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+INFO: 2025-06-03 13:49:02,418: Language: en
+INFO: 2025-06-03 13:49:02,419: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\AppData\Local\Programs\Python\Python313\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 13:49:02,500: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxMzo1MTowMi40OTY1MTkifQ.L3ZfNt18TWl2m4yXTssrPYskD1mvE2-aoUb3C466VjDXA78WLieQo_5DEDdmC-aA2PT6tIDBW8FYbKAcLKJ2klurtUtw5rSGFIMfD_6Yj-oaFQ4GZdz4H3UUt4QmuZUvEmhLcY0zZ7buwMHwJ8_5VGQAgP9UQWcSK6FUmiAIU9L7LKgxvapiw7QxCB0we3mPlcJ-QjQfe6KIVP9VvzBYJLgFciCeLW04IzRr8zWjClmOVFv_IKI9DyvT8Bed7A7GLhjtDGXaqWQt0dDQUVM8nP_650usyb5OfV8Kcxgn-AF2Wqo-r1RT5iR4hbcBvM-C8KnMLYFt-uSh1ghxAcOYVw
+DEBUG: 2025-06-03 13:49:02,505: VALID TOKEN False
+DEBUG: 2025-06-03 13:49:02,506: VALID TOKEN True
+DEBUG: 2025-06-03 13:49:02,508: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T13:51:02.496519'}
+DEBUG: 2025-06-03 13:49:02,510: Compiling scss
+DEBUG: 2025-06-03 13:49:02,514: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 13:49:02,514: Adding a route: /swagger
+INFO: 2025-06-03 13:49:02,516: Starting webserver on 7145
+DEBUG: 2025-06-03 13:49:06,099: Session expired, starting a new one
+DEBUG: 2025-06-03 13:49:06,179: GET Resolving URL: /?
+DEBUG: 2025-06-03 13:49:06,192: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 13:49:06,204: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:49:06,231: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 13:49:06,242: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 13:49:06,251: Matching route /swagger to /
+DEBUG: 2025-06-03 13:49:06,253: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:49:06,313: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 13:49:06,319: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 13:49:06,320: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:49:06,321: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+INFO: 2025-06-03 13:59:04,769: Server stopped.
+DEBUG: 2025-06-03 13:59:04,770: Adding a route: /
+INFO: 2025-06-03 13:59:05,994: Language: en
+INFO: 2025-06-03 13:59:05,995: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\AppData\Local\Programs\Python\Python313\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 13:59:06,058: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxNDowMTowNi4wNTU3NDYifQ.Bmmb719cB7rtxM3pR1Bu3oi9H7c6v7gT1MXfm7PPJe9O_hMx4fKdj5HiGggpEeQ6ScI9Xc32EePLe7SJPLhKrZMCIW64H1EsYwawDYGUhOMsXw27IHgn_KYicEX8AZJt47Oya817v8udPooLGMvcX3CSBA6Nw8wwc7K_7N9qOZ24WWEPlqFGh61N5o3jHfjsFblCMXUmhcA9CTFS2P-cqLe_ozD9jyuQON21ffXj1CiNck3NMmlT4IRZDaOJYXCgsXEKEu9ws0mGgl8QTSlCNefPhXbGsXZC_PiFbqo1ALwgVrdkgfaR2k9VLVFeTrJnB80C6R7Xc-08gvWaF0eseA
+DEBUG: 2025-06-03 13:59:06,059: VALID TOKEN False
+DEBUG: 2025-06-03 13:59:06,060: VALID TOKEN True
+DEBUG: 2025-06-03 13:59:06,062: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T14:01:06.055746'}
+DEBUG: 2025-06-03 13:59:06,065: Compiling scss
+DEBUG: 2025-06-03 13:59:06,068: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 13:59:06,069: Adding a route: /swagger
+INFO: 2025-06-03 13:59:06,072: Starting webserver on 7145
+DEBUG: 2025-06-03 13:59:10,817: Session expired, starting a new one
+DEBUG: 2025-06-03 13:59:10,825: GET Resolving URL: /?
+DEBUG: 2025-06-03 13:59:10,837: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 13:59:10,852: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:59:10,869: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 13:59:10,880: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 13:59:10,882: Matching route /swagger to /
+DEBUG: 2025-06-03 13:59:10,885: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:59:10,995: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 13:59:11,001: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 13:59:11,027: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 13:59:11,033: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+INFO: 2025-06-03 14:24:15,411: Server stopped.
+INFO: 2025-06-03 15:01:41,450: Language: en
+INFO: 2025-06-03 15:01:41,453: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\PycharmProjects\tina4-documentation\.venv\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 15:01:41,549: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxNTowMzo0MS41NDYyNDYifQ.KfaFiVDgWPWmJwyREhJs5-VgDWak8IXwEC0Hjvury4i_EKfJUSjWXcwGzNfjfnvvVfiLCtS9sXlacp5D5UoDAhm007tG4cQPzHac4dCTL_Ddds9J9Xmv00BApvRTGp3DbuXhqiswG7DKI_v5Lx9mAOAbtulFb2cAFGUuHVu5Hb0bbeKUemd7HdQN15XveOzusrl0uCSYar1zH3bYlGkowYDFNs5yG3Aahyoy_8GYw56QvlkFjqriXr_F5yI6EtPm5K48uGnZEmjU1YGxGVqLVJXvGHphdeJ7eeV4Sg1nsM8dKehJ31r5bxUfzFGW_vCug2AmHhWB1gTH-f-wrMEtHQ
+DEBUG: 2025-06-03 15:01:41,554: VALID TOKEN False
+DEBUG: 2025-06-03 15:01:41,557: VALID TOKEN True
+DEBUG: 2025-06-03 15:01:41,559: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T15:03:41.546246'}
+DEBUG: 2025-06-03 15:01:41,564: Compiling scss
+DEBUG: 2025-06-03 15:01:41,568: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 15:01:41,570: Adding a route: /swagger
+INFO: 2025-06-03 15:01:41,574: Starting webserver on 7145
+DEBUG: 2025-06-03 15:01:43,493: Session expired, starting a new one
+DEBUG: 2025-06-03 15:01:43,516: GET Resolving URL: /?
+DEBUG: 2025-06-03 15:01:43,521: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 15:01:43,530: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:01:43,534: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 15:01:43,536: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 15:01:43,539: Matching route /swagger to /
+DEBUG: 2025-06-03 15:01:43,543: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:01:43,592: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 15:01:43,596: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 15:01:43,598: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:01:43,601: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+DEBUG: 2025-06-03 15:04:43,948: Session expired, starting a new one
+DEBUG: 2025-06-03 15:04:43,953: GET Resolving URL: /?
+DEBUG: 2025-06-03 15:04:43,955: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 15:04:43,958: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:04:43,959: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 15:04:43,960: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 15:04:43,961: Matching route /swagger to /
+DEBUG: 2025-06-03 15:04:43,962: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:04:44,001: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 15:04:44,004: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 15:04:44,008: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:04:44,010: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+INFO: 2025-06-03 15:33:44,549: Language: en
+INFO: 2025-06-03 15:33:44,552: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\AppData\Local\Programs\Python\Python313\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 15:33:44,650: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxNTozNTo0NC42NDU4MTEifQ.vUTj44cecmo8NTD1vuCCQG6VgFke6yaXso2GCbNSOSTMXw0q0nFuAIqJS57S5huF-pZgF76DFVW2GkJkzcLFnV_EoCgcQ6rGmGd-j3Wfc0yc8h08L6B7CsQuD8PmXUk-euYhA7clkgafSiTqfIRFJGWjCUdB0ImV0V7y05fom1bEl_q_inX1nPAqwG5aZbWtPZFlFTkEbJ4fB3FFtgAsNoEFDGUsxjLOKLNp6PvvdOhsCwHbf7VKsD1hdIsQZvPjPlzjBhy_cO-e1l3hTC2b3_XWSr4GCd3CiUTSbIuxWyEUqyP-i4buGM22g80UR3URA9MuU_fkeX8nZSYdnaPDgw
+DEBUG: 2025-06-03 15:33:44,660: VALID TOKEN False
+DEBUG: 2025-06-03 15:33:44,661: VALID TOKEN True
+DEBUG: 2025-06-03 15:33:44,662: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T15:35:44.645811'}
+DEBUG: 2025-06-03 15:33:44,667: Compiling scss
+DEBUG: 2025-06-03 15:33:44,672: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 15:33:44,673: Adding a route: /swagger
+INFO: 2025-06-03 15:33:44,676: Starting webserver on 7145
+INFO: 2025-06-03 15:36:05,941: Server stopped.
+INFO: 2025-06-03 15:36:10,432: Language: en
+INFO: 2025-06-03 15:36:10,434: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\AppData\Local\Programs\Python\Python313\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 15:36:10,512: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxNTozODoxMC41MDk3NTcifQ.LpU5vMhsDtlox1vvcWr-zGxFBqrUPP2C7BdAE5BP-o2dLPKkq46t9VBXZiEWSzRwu8qx4KIy5uMyxwp2AM_LeDpy_ldQnqOWHRWf533fRDmKjO-zZEc4hdvDIrqtiSxZaVm5rClqzQKNZJdwXCPqoLpnDMV44hWfrm-bKf9l_CwQa21WfFNzykLjirJbNZYJ6OUxgnqEvu9QtzAkVBmHZyBpUBs2Aegx90Zmz5K2OH6zIIA6O-9NixnpkwdEW3KMlIfImaURBL9hKhjwjKoSFlPI-AbKU78gKnkUq7jV-gper-VwGcqd1X3669G_w90nUl_iQ0wOPZxrNL5JmGwLAg
+DEBUG: 2025-06-03 15:36:10,513: VALID TOKEN False
+DEBUG: 2025-06-03 15:36:10,514: VALID TOKEN True
+DEBUG: 2025-06-03 15:36:10,515: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T15:38:10.509757'}
+DEBUG: 2025-06-03 15:36:10,519: Compiling scss
+DEBUG: 2025-06-03 15:36:10,522: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 15:36:10,523: Adding a route: /swagger
+INFO: 2025-06-03 15:36:10,524: Starting webserver on 7145
+DEBUG: 2025-06-03 15:36:13,105: Cannot load session, starting a new one
+DEBUG: 2025-06-03 15:36:13,112: GET Resolving URL: /?
+DEBUG: 2025-06-03 15:36:13,113: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 15:36:13,114: Initializing Twig on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+INFO: 2025-06-03 15:36:13,144: Twig Initialized on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:36:13,160: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 15:36:13,162: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 15:36:13,163: Matching route /swagger to /
+DEBUG: 2025-06-03 15:36:13,166: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:36:13,240: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 15:36:13,242: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 15:36:13,248: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:36:13,253: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+INFO: 2025-06-03 15:36:19,130: Server stopped.
+INFO: 2025-06-03 15:37:10,495: Language: en
+INFO: 2025-06-03 15:37:10,496: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\AppData\Local\Programs\Python\Python313\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 15:37:10,572: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxNTozOToxMC41Njg1MTEifQ.P78vKppf9W6EJZwy2L9muXYgV4feOZO51GIoYTUNgLWH0wjC_03961B9HmsimeU2rLZYpX8-q7EA9TdVozX1mREMpdU8kjeH0qdVTP76xBCGsksRMS2FDFSF1Omo-3HEzwEhlylCY9PipdiNH1h2NjFL8hAQ0DLPibaWf94hAMMitaQNcxiPeo7VLBK2pweq97A0-WnirKICMAvOc6pFkJrYI5C0F-V-Z8_fI8eXtqRPo-3gHOcU2W0wICkhYd-H64owD91PBF20s7aSIPZbilrlTmh8lBShQSkSOq3VsjW49GY9yqwX9FhTWv3t-tsOnc7SttXoafyJB7PFJKrYAA
+DEBUG: 2025-06-03 15:37:10,574: VALID TOKEN False
+DEBUG: 2025-06-03 15:37:10,574: VALID TOKEN True
+DEBUG: 2025-06-03 15:37:10,575: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T15:39:10.568511'}
+DEBUG: 2025-06-03 15:37:10,578: Compiling scss
+DEBUG: 2025-06-03 15:37:10,580: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 15:37:10,581: Adding a route: /swagger
+INFO: 2025-06-03 15:37:10,582: Starting webserver on 7145
+DEBUG: 2025-06-03 15:37:13,015: GET Resolving URL: /?
+DEBUG: 2025-06-03 15:37:13,017: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 15:37:13,018: Initializing Twig on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+INFO: 2025-06-03 15:37:13,030: Twig Initialized on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:37:13,044: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 15:37:13,047: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 15:37:13,050: Matching route /swagger to /
+DEBUG: 2025-06-03 15:37:13,055: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:37:13,116: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 15:37:13,117: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 15:37:13,118: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:37:13,121: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+INFO: 2025-06-03 15:37:26,784: Language: en
+INFO: 2025-06-03 15:37:26,788: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\PycharmProjects\tina4-documentation\.venv\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 15:37:26,881: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxNTozOToyNi44NzYzMDgifQ.QgO6DWGWsiD4gqU7D6K1yOD_kdJVVtrxy6mDhjuI9C-AdTibuIDyfdF5qiXRoos2f5TnI1fv1KYcvGiI_JDvk9TSUeopxflTrO98yz6mDmgbuPg5ucYkw0GakiWKtzdQQ6vxGhQacLq3HU-oCXfyUm51ZwxdoqOM0eDtvbKJqHqd34EGiNKhx6UyUSomjOON23-JJS-tRqiasQGUhkFp_utqWtRNauBMQypph5detBN1R7h0hkMlIxmCqvwzNQtbdjIyckGLjFW7tBDKclHsIKrUCazigt8rf--zEVFTHGtUGv2DNM-IfHxFGAqfU7fReHYvLGloH4INeWj-f5yj4Q
+DEBUG: 2025-06-03 15:37:26,886: VALID TOKEN False
+DEBUG: 2025-06-03 15:37:26,888: VALID TOKEN True
+DEBUG: 2025-06-03 15:37:26,889: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T15:39:26.876308'}
+DEBUG: 2025-06-03 15:37:26,892: Compiling scss
+DEBUG: 2025-06-03 15:37:26,897: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 15:37:26,899: Adding a route: /swagger
+INFO: 2025-06-03 15:37:26,901: Starting webserver on 7145
+DEBUG: 2025-06-03 15:37:28,715: GET Resolving URL: /?
+DEBUG: 2025-06-03 15:37:28,716: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 15:37:28,718: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:37:28,719: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 15:37:28,728: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 15:37:28,730: Matching route /swagger to /
+DEBUG: 2025-06-03 15:37:28,732: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:37:28,825: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 15:37:28,828: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 15:37:28,829: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:37:28,831: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+INFO: 2025-06-03 15:54:34,974: Server stopped.
+INFO: 2025-06-03 15:54:36,388: Language: en
+INFO: 2025-06-03 15:54:36,390: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\AppData\Local\Programs\Python\Python313\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 15:54:36,460: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxNTo1NjozNi40NTUyNDkifQ.OeCVLKs8fSCWhMVNtGfe6MGbqvhGDDL2rEQTgPfs754tCGCY9NIY1yUsiDsHcbQmz8TS_fALn3qSPu2LWGxbENZRIWQP7VnvXEuaEfEcp4mdYzpF4hIEFGgbSaWIamz09VZXg7MUVCfRER62u5THgvUdsAKpfcK-8aMsuogXN390qGuyUQYNaTCpV40O57g2cLfuV0fnvz23Mw1XBjMvIDNsmJqaFP-hf_nDwAH-hhes1_Psdg-jEN_a-BJQdlq_5f8U_w8IgSwDKZl026AsUX4J8KjqnAq0dxMtp0G7JOLNYbGyWQ47mzbjKwiWBHAYNLj0ALl0jhTSjbzRwaVq9w
+DEBUG: 2025-06-03 15:54:36,461: VALID TOKEN False
+DEBUG: 2025-06-03 15:54:36,462: VALID TOKEN True
+DEBUG: 2025-06-03 15:54:36,463: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T15:56:36.455249'}
+DEBUG: 2025-06-03 15:54:36,468: Compiling scss
+DEBUG: 2025-06-03 15:54:36,471: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 15:54:36,472: Adding a route: /swagger
+INFO: 2025-06-03 15:54:36,474: Starting webserver on 7145
+DEBUG: 2025-06-03 15:54:38,577: Session expired, starting a new one
+DEBUG: 2025-06-03 15:54:38,586: GET Resolving URL: /?
+DEBUG: 2025-06-03 15:54:38,587: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 15:54:38,589: Initializing Twig on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+INFO: 2025-06-03 15:54:38,602: Twig Initialized on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:54:38,629: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 15:54:38,630: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 15:54:38,631: Matching route /swagger to /
+DEBUG: 2025-06-03 15:54:38,632: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:54:38,771: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 15:54:38,773: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 15:54:38,774: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:54:38,776: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+INFO: 2025-06-03 15:55:02,815: Server stopped.
+INFO: 2025-06-03 15:57:22,422: Language: en
+INFO: 2025-06-03 15:57:22,425: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\PycharmProjects\tina4-documentation\.venv\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 15:57:22,487: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxNTo1OToyMi40ODQxMDgifQ.vb8zACCb9ZReLZEi0ktMuBPi6Kc0wj3Ja8ehW-Al_mX7gg28t9Gyo4_PDOYXVrbCoIyXHgvQqp2cbsGcs1FexcgdAXVizf8X9wmHaU_k5bfnZmA3MMAmYjQ1xHd8ozolOAcjvi0fIYXj268uUsutH9YetK5cFejmNyizdrLFz8FEsLJi_bO8MYX8xfw3RYaQBoYROMXweIpTflANEN5CsjdpjBO0CVUOqvRCU6mpcz-XNEGhKLyUErG6ukEXIu5DeLxrjvHrONWtBaNRRT3pPYS-4yHC_9LWynuwZjf5tJVHhvI9jkbcECelCwpn3-UInyacDCX1NW9KwnsCc4NGvg
+DEBUG: 2025-06-03 15:57:22,488: VALID TOKEN False
+DEBUG: 2025-06-03 15:57:22,489: VALID TOKEN True
+DEBUG: 2025-06-03 15:57:22,491: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T15:59:22.484108'}
+DEBUG: 2025-06-03 15:57:22,494: Compiling scss
+DEBUG: 2025-06-03 15:57:22,498: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 15:57:22,499: Adding a route: /swagger
+INFO: 2025-06-03 15:57:22,500: Starting webserver on 7145
+DEBUG: 2025-06-03 15:57:25,629: Session expired, starting a new one
+DEBUG: 2025-06-03 15:57:25,638: GET Resolving URL: /?
+DEBUG: 2025-06-03 15:57:25,646: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 15:57:25,652: Initializing Twig on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+INFO: 2025-06-03 15:57:25,668: Twig Initialized on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:57:25,693: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 15:57:25,697: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 15:57:25,699: Matching route /swagger to /
+DEBUG: 2025-06-03 15:57:25,701: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:57:25,755: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 15:57:25,757: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 15:57:25,759: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:57:25,761: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+DEBUG: 2025-06-03 15:57:59,765: GET Resolving URL: /?
+DEBUG: 2025-06-03 15:57:59,769: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 15:57:59,783: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:57:59,796: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 15:57:59,799: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 15:57:59,800: Matching route /swagger to /
+DEBUG: 2025-06-03 15:57:59,803: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:57:59,855: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 15:57:59,859: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 15:57:59,862: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:57:59,864: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+INFO: 2025-06-03 15:58:56,932: Language: en
+INFO: 2025-06-03 15:58:56,934: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\AppData\Local\Programs\Python\Python313\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 15:58:57,000: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxNjowMDo1Ni45OTc3NzMifQ.Pi5A_2YPeyC51kGeKRaf8R1Jye3L-HbTHcBbEFdhNK78VPfz0yR-8rXg1AmpSpxK1uX2bAsta4CKH0L3CpIVmZvTlXcKr_1vE3XHAAruCYRNaYBKvs1qgeOjKoqh4VRgLUa86tmkeCdI4_1fXj5ukHTvc9ick6tLfoCLfEfM6U3h4lwfGqrRoQH7pjeaGOTXhtH4tZ3tzZk4Hz-2YA7WfnbhWGaoch0q_bG2D6oMzS3yuHJNvzFC8CGgMLFSFiRmrDYKuCfODKugYoZr_qv4CNKs9OIaUP-V1dQiLz4JFov2sa9O99brdxInBKneUXJISC54u8_ztYO-AOIL10tKXg
+DEBUG: 2025-06-03 15:58:57,001: VALID TOKEN False
+DEBUG: 2025-06-03 15:58:57,002: VALID TOKEN True
+DEBUG: 2025-06-03 15:58:57,003: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T16:00:56.997773'}
+DEBUG: 2025-06-03 15:58:57,007: Compiling scss
+DEBUG: 2025-06-03 15:58:57,010: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 15:58:57,010: Adding a route: /swagger
+INFO: 2025-06-03 15:58:57,012: Starting webserver on 7145
+DEBUG: 2025-06-03 15:59:00,754: GET Resolving URL: /?
+DEBUG: 2025-06-03 15:59:00,757: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 15:59:00,762: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:59:00,770: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 15:59:00,782: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 15:59:00,788: Matching route /swagger to /
+DEBUG: 2025-06-03 15:59:00,791: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:59:00,836: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 15:59:00,839: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 15:59:00,840: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 15:59:00,843: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+INFO: 2025-06-03 15:59:15,718: Server stopped.
+INFO: 2025-06-03 15:59:58,780: Language: en
+INFO: 2025-06-03 15:59:58,782: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\AppData\Local\Programs\Python\Python313\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 15:59:58,849: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxNjowMTo1OC44NDY0NjgifQ.lqcUZ-jRYfiDCiScBpIGxtAz5PbJ5cK-KryRonEdDaQKYGg7F-naIXbqVypAvXz76e1DXSOyVVB3IiooA-1vgB5ExKWl5q08FdUlt_tW5gk5PVy6G0MEKIp7JFhGQA-atmao6VPVn3ePXWb81nCAcHbuAAOkWTVumOGXT4Q1rjUCIdnDusTdbCmaWOrtyPA7wb85jri7E8SpZeXLe9vPMhB0MY4P5qqnRM9KfCVd1b-chO0Ulwtz5b7DA7qhDlJHfETX5cMiP7SnSrNnPHAyYsOhrjbS53mZ1PE5MtkGXQQhQbWdLyJb5goZBkb69cXRdvWAhBHXe739LDgPJWOk1Q
+DEBUG: 2025-06-03 15:59:58,850: VALID TOKEN False
+DEBUG: 2025-06-03 15:59:58,851: VALID TOKEN True
+DEBUG: 2025-06-03 15:59:58,852: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T16:01:58.846468'}
+DEBUG: 2025-06-03 15:59:58,855: Compiling scss
+DEBUG: 2025-06-03 15:59:58,859: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 15:59:58,860: Adding a route: /swagger
+INFO: 2025-06-03 15:59:58,862: Starting webserver on 7145
+DEBUG: 2025-06-03 16:02:24,782: GET Resolving URL: /?
+DEBUG: 2025-06-03 16:02:24,784: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 16:02:24,785: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 16:02:24,786: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 16:02:24,788: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 16:02:24,790: Matching route /swagger to /
+DEBUG: 2025-06-03 16:02:24,791: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 16:02:24,834: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 16:02:24,835: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 16:02:24,850: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 16:02:24,855: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+DEBUG: 2025-06-03 16:02:24,874: GET Resolving URL: /favicon.ico?
+DEBUG: 2025-06-03 16:02:24,881: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /favicon.ico? GET
+DEBUG: 2025-06-03 16:02:24,884: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 16:02:24,886: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\favicon.ico
+INFO: 2025-06-03 16:02:45,518: Server stopped.
+INFO: 2025-06-03 16:03:22,596: Language: en
+INFO: 2025-06-03 16:03:22,597: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\PycharmProjects\tina4-documentation\.venv\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 16:03:22,657: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxNjowNToyMi42NTU1NjYifQ.HM8T3ICx1Ub_z_Wvvlto3-OqS8iF56buqqL9dO0jaeeVdPfYXeLikFUMXWj1t-otSS8pwQt30e93ZDXcnWSWzzp3p3BxVTVZuJiBtPPlNKWyowXJT36xkNaDRWepgIFfIil9tJyTK8uzbuG-LJPL_RQKGCJbB6RmBOOOOcM47fNUJxLBwhauID9yK_C-D5jLA9ieSoi3hvssz4MRZwpW9-gQsnHZenMkkVJpdLknj365N76pWyvHOHLHUn9T4sAVy9EUrNlPNpYvh13M0nCN-ZtGeUSj2ACpCFRpgCvJP5bDYwTRHH6t1P9ytflYjI2apvT1k0Z5YJ0WeSLuvaLKKA
+DEBUG: 2025-06-03 16:03:22,659: VALID TOKEN False
+DEBUG: 2025-06-03 16:03:22,661: VALID TOKEN True
+DEBUG: 2025-06-03 16:03:22,662: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T16:05:22.655566'}
+DEBUG: 2025-06-03 16:03:22,666: Compiling scss
+DEBUG: 2025-06-03 16:03:22,669: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 16:03:22,671: Adding a route: /swagger
+INFO: 2025-06-03 16:03:22,673: Starting webserver on 7145
+DEBUG: 2025-06-03 16:03:24,124: Session expired, starting a new one
+DEBUG: 2025-06-03 16:03:24,135: GET Resolving URL: /?
+DEBUG: 2025-06-03 16:03:24,138: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 16:03:24,140: Initializing Twig on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+INFO: 2025-06-03 16:03:24,170: Twig Initialized on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 16:03:24,189: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 16:03:24,195: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 16:03:24,198: Matching route /swagger to /
+DEBUG: 2025-06-03 16:03:24,200: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 16:03:24,255: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 16:03:24,256: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 16:03:24,262: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 16:03:24,267: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+INFO: 2025-06-03 16:03:45,343: Language: en
+INFO: 2025-06-03 16:03:45,345: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\AppData\Local\Programs\Python\Python313\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 16:03:45,406: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxNjowNTo0NS40MDM3NzMifQ.vjbpP_-dk1NcxgDUh_6WtquAbrB0-ZOzO_0XQ_Cyb7qZ4HGVqu1SaKIIQw31YAMfeDxzs2DdLR3h32UT4djv3tEyE86FCxcz2yC2kZZYq-nCvX2Dw7uiqezz9wXrA_88mLiDY6UxG6jAdAmftI0YDpcf0LkFTw3cGwug5bYxs9sYCUxsfJRYLaPZ-zUCavPcPPT9Y7FwaTLlOxjBclVLetLRbtuxhXQqA_X__M6XeKlwbl0tNyFFX7OeT8Avk0cS9dSttx0WIy1p82nFcz0G8rMWu_RwP2XKgswIKaE3f6Tel81uqqx2uaL9JPtHxZJ2PiD7_L76tXM2iWWTUpDE3g
+DEBUG: 2025-06-03 16:03:45,407: VALID TOKEN False
+DEBUG: 2025-06-03 16:03:45,407: VALID TOKEN True
+DEBUG: 2025-06-03 16:03:45,408: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T16:05:45.403773'}
+DEBUG: 2025-06-03 16:03:45,411: Compiling scss
+DEBUG: 2025-06-03 16:03:45,414: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 16:03:45,415: Adding a route: /swagger
+INFO: 2025-06-03 16:03:45,416: Starting webserver on 7145
+DEBUG: 2025-06-03 16:03:50,385: GET Resolving URL: /?
+DEBUG: 2025-06-03 16:03:50,386: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 16:03:50,387: Initializing Twig on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+INFO: 2025-06-03 16:03:50,411: Twig Initialized on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 16:03:50,424: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 16:03:50,425: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 16:03:50,426: Matching route /swagger to /
+DEBUG: 2025-06-03 16:03:50,427: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 16:03:50,481: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 16:03:50,482: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 16:03:50,483: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 16:03:50,486: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+INFO: 2025-06-03 16:04:01,250: Server stopped.
+INFO: 2025-06-03 16:04:03,712: Language: en
+INFO: 2025-06-03 16:04:03,714: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\AppData\Local\Programs\Python\Python313\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 16:04:03,789: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxNjowNjowMy43ODYwNzEifQ.PMmc-Rm6KzpPMvvT71js7OBhsdlny_OwpRsd1fzOFLMLYYODkHquqJHXnHmi_EukMiMRg9k8uUiG-cJkN1Ixj8muPu-Cw05SbwnKmDisB5rDPJ22STm-sZQ2ir2dTII09Ee4N3aF4N3bAtFPhOhKRuwQf1diMT77OLYna535lpVspZnOHBSLG_QUpFLz4vRAbBBUBznyeK68GeIUPBnhkTifz8SEOEUM4r5eKHCXgbn32zY_IUN_vvDXsLUUyOx4TeBuria4VglT69MUk0pTwqT0GorbY_pbL0CDGKG7z3Y_SbCgfECnduUF3NzKljPAdUOhBO2EcKmXJYMBHC4odw
+DEBUG: 2025-06-03 16:04:03,791: VALID TOKEN False
+DEBUG: 2025-06-03 16:04:03,792: VALID TOKEN True
+DEBUG: 2025-06-03 16:04:03,792: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T16:06:03.786071'}
+DEBUG: 2025-06-03 16:04:03,795: Compiling scss
+DEBUG: 2025-06-03 16:04:03,799: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 16:04:03,800: Adding a route: /swagger
+INFO: 2025-06-03 16:04:03,801: Starting webserver on 7145
+INFO: 2025-06-03 16:06:47,506: Server stopped.
+INFO: 2025-06-03 16:06:48,487: Language: en
+INFO: 2025-06-03 16:06:48,489: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\AppData\Local\Programs\Python\Python313\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 16:06:48,599: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxNjowODo0OC41OTM4MTUifQ.ZxwDTAa2ZKz6HYvn_toIAO1k1AAdtokC_9NoVrQQILu_Fo6Y5EPPQlqqqUS0AYK1MdXM8j5B2u7De_YN40nv0TCRvZAJpvRhWo7zO6-QAfBVDALmDoyY4LHLhFme05vdFev24Vo5QLKK2KQop3YRfwEs0CRhBzDYv96_zZPYTqFQ4YJblMtcu4LythSAu5o3G_aL0Fu6Knv6J3n45RtXb-im9KfQvd41CYr1sI7Y3O8OZjOmjA6k2HJoFc4Kl0FF2t0Cmb-3M77JATBxMIXis1S8B0Ez4iqGlmNRnjr8c8ZJAw5WnaielEs3EHmmKW6TWvp17gyZrogBwfRUufep4A
+DEBUG: 2025-06-03 16:06:48,601: VALID TOKEN False
+DEBUG: 2025-06-03 16:06:48,603: VALID TOKEN True
+DEBUG: 2025-06-03 16:06:48,604: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T16:08:48.593815'}
+DEBUG: 2025-06-03 16:06:48,611: Compiling scss
+DEBUG: 2025-06-03 16:06:48,615: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 16:06:48,616: Adding a route: /swagger
+INFO: 2025-06-03 16:06:48,619: Starting webserver on 7145
+DEBUG: 2025-06-03 16:06:50,386: Session expired, starting a new one
+DEBUG: 2025-06-03 16:06:50,405: GET Resolving URL: /?
+DEBUG: 2025-06-03 16:06:50,418: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 16:06:50,422: Initializing Twig on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+INFO: 2025-06-03 16:06:50,439: Twig Initialized on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 16:06:50,451: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 16:06:50,453: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 16:06:50,455: Matching route /swagger to /
+DEBUG: 2025-06-03 16:06:50,456: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 16:06:50,504: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 16:06:50,505: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 16:06:50,506: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 16:06:50,508: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+INFO: 2025-06-03 16:08:06,582: Server stopped.
+INFO: 2025-06-03 16:16:31,388: Language: en
+INFO: 2025-06-03 16:16:31,390: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python, library path: C:\Users\makho\AppData\Local\Programs\Python\Python313\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 16:16:31,465: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxNjoxODozMS40NjIxODUifQ.URVHNupoGMBycYM5He5dclOrqhf6H7C2KAoeP4NqTAzDl_TuuXCRUQ0uoJt2mQGfzmgTvmXfKf_WfA0-ZkBtFK-Df5stOmULOBvphAob93BNVDEFrZlKDyquQx5vONqq1YL1dl22ke-fW2uy6tMedl2CDzNYevtfuM9Sq_1SAP_bTlmcKEjF-gDdiutp47pV4C4v0pSG_l-2KnGKzB6zrosJat_22VyPJXS_wJUD3s0--76PYip7zeYV_n5nWX2mifeeazf4yFap_EXQ5KZtxYRM-tAsuXJhLFCS1ySPXJ18nGpFrGae259U9ILajWrop4MiCHkkdI1ZXrzJqF-AOw
+DEBUG: 2025-06-03 16:16:31,466: VALID TOKEN False
+DEBUG: 2025-06-03 16:16:31,466: VALID TOKEN True
+DEBUG: 2025-06-03 16:16:31,467: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T16:18:31.462185'}
+DEBUG: 2025-06-03 16:16:31,473: Compiling scss
+DEBUG: 2025-06-03 16:16:31,477: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 16:16:31,477: Adding a route: /swagger
+INFO: 2025-06-03 16:16:31,479: Starting webserver on 7145
+DEBUG: 2025-06-03 16:16:33,191: Session expired, starting a new one
+DEBUG: 2025-06-03 16:16:33,198: GET Resolving URL: /?
+DEBUG: 2025-06-03 16:16:33,200: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /? GET
+DEBUG: 2025-06-03 16:16:33,204: Initializing Twig on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+INFO: 2025-06-03 16:16:33,222: Twig Initialized on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 16:16:33,230: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\
+DEBUG: 2025-06-03 16:16:33,232: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 16:16:33,235: Matching route /swagger to /
+DEBUG: 2025-06-03 16:16:33,270: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 16:16:33,358: GET Resolving URL: /images/404.png?
+DEBUG: 2025-06-03 16:16:33,359: Root Path C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python /images/404.png? GET
+DEBUG: 2025-06-03 16:16:33,360: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\templates
+DEBUG: 2025-06-03 16:16:33,361: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\public\images\404.png
+INFO: 2025-06-03 16:30:19,788: Server stopped.

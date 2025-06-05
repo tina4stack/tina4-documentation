@@ -1,0 +1,12 @@
+INFO: 2025-06-03 15:57:54,657: Language: en
+INFO: 2025-06-03 15:57:54,658: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation\docs\getting-started\python\src\routes, library path: C:\Users\makho\AppData\Local\Programs\Python\Python313\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 15:57:54,761: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxNTo1OTo1NC43NTk2MzEifQ.fO-QqtqX-9pevLt0LaTn5ObzQ3hwbeT7UJkhcLtdN99VVyFsykoasgUJ_vN0v3S70uFZV32Ha_PxJBcA56kJosBaY_GIM9E1J7iCTedlgqRpgGKMSFMmhPbgewm36duAaN60jJAXvkd8fQpVaVqJDwE2g3nKOwSuoRqiZJXJ-b199cI2P5q_E9uzCZbnJ4e_QT2D6--sjdwMIOLWqHV81xLCqW1ujQBGWgBLwpuJdeU0zHJk5RtSwGvwdCEhlxaURjoa1GQyGCyUWADSPQHVr5K2V7Gi8mv29S1Kfq_8j-uPhBqBZurC2Gs9qeIafOZ2sI8oqmIafNtJROaJN6n4_g
+DEBUG: 2025-06-03 15:57:54,763: VALID TOKEN False
+DEBUG: 2025-06-03 15:57:54,764: VALID TOKEN True
+DEBUG: 2025-06-03 15:57:54,765: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T15:59:54.759631'}
+DEBUG: 2025-06-03 15:57:54,802: Compiling scss
+DEBUG: 2025-06-03 15:57:54,805: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 15:57:54,805: Adding a route: /swagger
+INFO: 2025-06-03 15:57:54,807: Starting webserver on 7145
+INFO: 2025-06-03 15:59:15,715: Server stopped.
+DEBUG: 2025-06-03 15:59:15,716: Adding a route: /

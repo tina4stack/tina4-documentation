@@ -1,0 +1,31 @@
+INFO: 2025-06-03 10:36:52,632: Language: en
+INFO: 2025-06-03 10:36:52,634: Assuming root path: C:\Users\makho\PycharmProjects\tina4-documentation, library path: C:\Users\makho\AppData\Local\Programs\Python\Python313\Lib\site-packages\tina4_python
+DEBUG: 2025-06-03 10:36:52,779: TEST TOKEN eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiVGluYTQiLCJleHBpcmVzIjoiMjAyNS0wNi0wM1QxMDozODo1Mi43NzcwMjIifQ.bE-S9krUDyfvfbxOQ8QlZB9puUaMPbMVfUL1Y6xMNGx3iLUJdpjz3hPX3vHSGX2v1FWr4b6Dv4zEOofoxvc8WMnT79z2V-azHUKFiFnaEO6-VbO2YUg-s246tGWjBYPwscGZ3fymEmNlvfuKb-EfF_kwFqxfamaoxpBiUX6oDrCxb7y9z_EUWv6Y2OzKTH-Wz7AmUpzCIkBOK3D8XGEj4_c_Wf54PpLiISiYRgn2rsPMc66_hF2rNbZAq6w865Gf-yS2vJ8CkI511LhVmkpQwb8T_3wl2ShBAdtqwCb_kSIwhXcC6pTfdQvCvjNeVX_wVjg-2wXYtuNQmfzhwXAH8A
+DEBUG: 2025-06-03 10:36:52,780: VALID TOKEN False
+DEBUG: 2025-06-03 10:36:52,781: VALID TOKEN True
+DEBUG: 2025-06-03 10:36:52,782: PAYLOAD {'name': 'Tina4', 'expires': '2025-06-03T10:38:52.777022'}
+WARNING: 2025-06-03 10:36:52,785: Missing src/routes folder
+WARNING: 2025-06-03 10:36:52,787: Missing scss folder
+DEBUG: 2025-06-03 10:36:52,788: Adding a route: /swagger/swagger.json
+DEBUG: 2025-06-03 10:36:52,788: Adding a route: /swagger
+INFO: 2025-06-03 10:36:52,790: Starting webserver on 7145
+DEBUG: 2025-06-03 10:37:00,383: GET Resolving URL: /?
+DEBUG: 2025-06-03 10:37:00,386: Root Path C:\Users\makho\PycharmProjects\tina4-documentation /? GET
+DEBUG: 2025-06-03 10:37:00,388: Initializing Twig on C:\Users\makho\PycharmProjects\tina4-documentation\src\templates
+INFO: 2025-06-03 10:37:00,408: Twig Initialized on C:\Users\makho\PycharmProjects\tina4-documentation\src\templates
+ERROR: 2025-06-03 10:37:00,417: Error rendering twig file errors/403.twig 'errors/403.twig' not found in search path: 'C:\\Users\\makho\\PycharmProjects\\tina4-documentation\\src\\templates'
+DEBUG: 2025-06-03 10:37:00,419: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\src\public\
+DEBUG: 2025-06-03 10:37:00,420: Matching route /swagger/swagger.json to /
+DEBUG: 2025-06-03 10:37:00,421: Matching route /swagger to /
+DEBUG: 2025-06-03 10:37:00,422: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\src\templates
+ERROR: 2025-06-03 10:37:00,423: Error rendering twig file errors/404.twig 'errors/404.twig' not found in search path: 'C:\\Users\\makho\\PycharmProjects\\tina4-documentation\\src\\templates'
+DEBUG: 2025-06-03 10:37:00,515: GET Resolving URL: /favicon.ico?
+DEBUG: 2025-06-03 10:37:00,516: Root Path C:\Users\makho\PycharmProjects\tina4-documentation /favicon.ico? GET
+DEBUG: 2025-06-03 10:37:00,518: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\src\templates
+ERROR: 2025-06-03 10:37:00,521: Error rendering twig file errors/403.twig 'errors/403.twig' not found in search path: 'C:\\Users\\makho\\PycharmProjects\\tina4-documentation\\src\\templates'
+DEBUG: 2025-06-03 10:37:00,522: Attempting to serve static file: C:\Users\makho\PycharmProjects\tina4-documentation\src\public\favicon.ico
+DEBUG: 2025-06-03 10:37:00,523: Matching route /swagger/swagger.json to /favicon.ico
+DEBUG: 2025-06-03 10:37:00,524: Matching route /swagger to /favicon.ico
+DEBUG: 2025-06-03 10:37:00,528: Twig found on C:\Users\makho\PycharmProjects\tina4-documentation\src\templates
+ERROR: 2025-06-03 10:37:00,529: Error rendering twig file errors/404.twig 'errors/404.twig' not found in search path: 'C:\\Users\\makho\\PycharmProjects\\tina4-documentation\\src\\templates'
+INFO: 2025-06-03 10:39:58,928: Server stopped.
