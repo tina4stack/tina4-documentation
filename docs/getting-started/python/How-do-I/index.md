@@ -62,20 +62,28 @@ async def post_route(request, response):
     return response("OK")
 ```
 
-### How do I get hot code reloading
+### How do I get hot code reloading?
 
-Make sure jurigged is installed as a dev dependency in your project
+Make sure you install **Jurigged** as a development dependency in your project.
+
+### Installing Jurigged
+
+First, install `Jurigged` using pip:
+
+```bash
+pip install jurigged
+```
+
+To enable hot reloading, run your Python app with `Jurigged` like this:
 ```bash
 python -m jurigged app.py
 ```
+reload watches for code changes and reloads the server automatically.
 
-Then run your app with hot reload using:
-```bash
-uv run --reload app.py
-```
---reload watches for code changes and reloads the server automatically.
+# Install and lock dependencies with UV
 
-# Install and lock dependencies
+To install and lock project dependencies using `uv`:
+
 ```bash
 uv pip install -r pyproject.toml
 ```
