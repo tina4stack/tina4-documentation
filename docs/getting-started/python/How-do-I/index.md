@@ -64,28 +64,37 @@ async def post_route(request, response):
 
 ### How do I get hot code reloading?
 
-Make sure you install **Jurigged** as a development dependency in your project.
+Use Jurigged during development to watch for code changes and reload your app automatically.
 
-### Installing Jurigged
+### Installing Jurigged with `uv`
 
-First, install `Jurigged` using pip:
+1. Initialize your project (only once)
 
 ```bash
-pip install jurigged
+uv init
 ```
 
-To enable hot reloading, run your Python app with `Jurigged` like this:
+2. Add Jurigged as a development dependency
+
 ```bash
-python -m jurigged app.py
+uv add --dev jurigged
+```
+
+3. Run your app with hot reload
+
+```bash
+uv run -m jurigged app.py
+
 ```
 reload watches for code changes and reloads the server automatically.
 
-# Install and lock dependencies with UV
+# How do I deploy the application for production?
 
-To install and lock project dependencies using `uv`:
+Before deploying your app to production, make sure you install only production dependencies by running:
 
 ```bash
-uv pip install -r pyproject.toml
+uv sync --no-dev
+
 ```
 
 ### How do I run Tina4 under hypercorn, uvicorn or other ASGI servers?
