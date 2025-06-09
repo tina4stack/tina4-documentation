@@ -90,23 +90,33 @@ reload watches for code changes and reloads the server automatically.
 
 # How do I deploy the application for production?
 
-Before deploying your app to production, make sure you install only production dependencies by running:
+When deploying your app to production:
 
 ```bash
 uv sync --no-dev
 
 ```
 
+# How to generate a requirements.txt using UV?
+
+```bash
+uv pip freeze > requirements.txt
+
+```
+This will generate a compatible file for tools and environments that require it.
+
 ### How do I run Tina4 under hypercorn, uvicorn or other ASGI servers?
-Expose the ASGI `app` in `app.py`:
+
+1. Expose the ASGI `app` in `app.py`:
 ```python title="app.py"
 # change the import
 from tina4_python import app
 ```
 
-Then install and run with:
+2. Then install and run with:
+
 ```bash
-uv pip install hypercorn
+uv add hypercorn
 hypercorn app:app
 ```
 
