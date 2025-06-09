@@ -62,35 +62,62 @@ async def post_route(request, response):
     return response("OK")
 ```
 
-### How do I get hot code reloading
+### How do I get hot code reloading?
 
-Make sure jurigged is installed as a dev dependency in your project
+Use Jurigged during development to watch for code changes and reload your app automatically.
+
+### Installing Jurigged with `uv`
+
+1. Initialize your project (only once)
+
 ```bash
-poetry add jurigged --group dev
+uv init
 ```
 
-### How do I export the Poetry packages to requirements.txt
+2. Add Jurigged as a development dependency
 
 ```bash
-poetry add poetry-plugin-export
-poetry export -f requirements.txt --output requirements.txt
+uv add --dev jurigged
 ```
 
-### How do I run Tina4 under hypercorn, uvicorn or other similar webserver
+3. Run your app with hot reload
 
+```bash
+uv run -m jurigged app.py
+
+```
+reload watches for code changes and reloads the server automatically.
+
+# How do I deploy the application for production?
+
+When deploying your app to production:
+
+```bash
+uv sync --no-dev
+
+```
+
+# How to generate a requirements.txt using UV?
+
+```bash
+uv pip freeze > requirements.txt
+
+```
+This will generate a compatible file for tools and environments that require it.
+
+### How do I run Tina4 under hypercorn, uvicorn or other ASGI servers?
+
+1. Expose the ASGI `app` in `app.py`:
 ```python title="app.py"
 # change the import
 from tina4_python import app
 ```
 
+2. Then install and run with:
+
 ```bash
-pip install hypercorn
+uv add hypercorn
 hypercorn app:app
-
-or 
-
-poetry add hypercorn
-poetry run hypercorn app:app
 ```
 
 ### How do implement logging in my application

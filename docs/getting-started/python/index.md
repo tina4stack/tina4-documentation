@@ -3,48 +3,61 @@
 This assumes you have python3 or above installed. You can find the python downloads [here](https://www.python.org/downloads/).
 We recommend using the relevant package managers for your operating system if you're unsure what to download and install.
 
-## Installing Poetry
 
-We recommend allowing Poetry to manage your virtual environments for you.
-Python virtual environment allows you to build and test different configurations of python without destroying your main system.
-It may take some effort to understand how this works however it makes replicating your development environment and solutions on different computers.
+## Using UV for Project Setup
 
-```cmd
-pip install poetry
+ We recommend using [UV](https://docs.astral.sh/uv/) as your package manager and virtual environment tool.
+ UV is a fast, modern replacement for tools like `pip`, `virtualenv`, and `poetry`.It simplifies dependency management and speeds up installs dramatically.
+
+Install UV:
+
+```bash
+pip install uv
 ```
 
-Installing `tina4_python` is easy with poetry.
+Create a virtual environment and install `tina_4python`:
 
-```cmd
-poetry init
-poetry add tina4_python
+```bash
+uv venv       # Create a virtual environment
+uv pip install tina4_python
 ```
 
-If you decide not to use poetry which is definitely not recommended, you can install `tina4_python` using pip.
+Optional (if supported): You can also use UV’s `add` command:
+```bash
+uv add tina4_python
+```
 
-```cmd
+If you decide not to use UV which is less recommended, you can install `tina4_python` using `pip`.
+
+```bash
 pip install tina4_python
 ```
 
 ## Setting up the `app.py`
 
-After this all that is required is an `app.py` file in the root of your project with the following line of code:
+After installation, create an `app.py` file in the root of your project with the following content:
 
 ```python title="app.py"
 import tina4_python
 ```
+Alternatively, use the command line to create the file with UTF-8 encoding:
 
-You could also do the following:
+```bash
+Set-Content -Path app.py -Value 'import tina4_python' -Encoding utf8
 
-```cmd
+
+```
+
+For macOS/Linux:
+
+```bash
 echo import tina4_python > app.py
 ```
 
-Next to initialize your project you run the `app.py` and it will initialize the default application layout for you
-and run a webservice.  We run our python project using poetry.
+To initialize your project and run the default Tina4 web application, use:
 
-```cmd
-poetry run python app.py
+```bash
+uv run app.py
 ```
 
 ## Folder structure and layout
