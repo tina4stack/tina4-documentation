@@ -75,7 +75,7 @@ Tina4 is written to run seemlessly with Phusion Passenger & Virtualmin, you can 
 Without our sponsors working on open source projects would not be possible
 
 - [Jetbrains - Essential tools for developers](https://www.jetbrains.com/?from=Tina4)
-- [Code Infinity - We are agile!](https://codeinfinity.co.za)
+- [Code Infinity - Innovate, Code, Empower](https://codeinfinity.co.za)
 
 
 !!! quote "Quotes from our users"  

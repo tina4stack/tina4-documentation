@@ -6,7 +6,7 @@ in the templates folder with a `.twig` extension will be rendered.
 
 
 ## Base Template
-
+ 1
 Create a basic template to inherit your pages from, in the `src/templates/base.twig`.
 
 ```html title="src/templates/base.twig"
