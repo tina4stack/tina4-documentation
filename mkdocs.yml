@@ -99,10 +99,10 @@ nav:
               - SASS & CSS compilation: getting-started/php/-Basics/k-scss-compilation.md
           - Advanced:
               - AJAX support through Tina4Helper.js: getting-started/php/Advanced/a-tina4helper-ajax-overview.md
-              - How do I run a daemon service in Tina4: getting-started/php/Advanced/a0-run-a-tina4service.md
               - How to get JWT Tokens and create a custom authentication: getting-started/php/Advanced/a1-how-to-get-jwt-tokens-and-create-a-custom-auth-helper.md
               - Dynamic Routes: getting-started/php/Advanced/b-dynamic-routes-with-route-class.md
               - Middleware and Triggers: getting-started/php/Advanced/c-middleware-and-triggers.md
+              - Services: getting-started/php/Advanced/services.md
               - Writing modules and components: getting-started/php/Advanced/d-writing-modules-and-components.md
               - Self Deployment git hook triggers: getting-started/php/Advanced/e-self-deployment-git-hook-triggers.md
               - Reports with Report Manager and built in Report Engine: getting-started/php/Advanced/f-wsiwyg-reporting-with-report-manager.md
