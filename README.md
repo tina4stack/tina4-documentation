@@ -1,52 +1,66 @@
 ---
 description: >-
   An introduction to the Tina4 mindset and code bases across the various
-  language sets
+  language sets, using MkDocs for documentation.
 ---
 
-# Introduction
+# Tina4 Documentation Setup
 
-The Tina4 documentation is powered by mkdocs which runs in a python environment. The following instructions can be used
-to setup your python environment. This can be used to either serve a local copy of your documentation or build a static
-html site of your documentation.
+This guide will help you set up a local environment to serve or build Tina4 documentation using **MkDocs** and **UV**, with steps tested on **Windows**, and guidance for macOS/Linux.
 
-Please visit www.python.org to download the version of python for your operating system.
+---
 
-Installation
+##  1. Install Chocolatey (Windows Only)
 
-MacOS / Linux
+Open **PowerShell as Administrator**, then paste and run:
+
+```powershell
+Set-ExecutionPolicy Bypass -Scope Process -Force; `
+[System.Net.ServicePointManager]::SecurityProtocol = `
+[System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
+iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+```
+# 2. Install UV
+On Windows:
+```bash
+choco install uv -y
+```
+# On macOS/Linux:
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+# After installation, confirm UV is working:
+```bash
+uv --version
+```
+
+UV will automatically install Python 3.12+ when syncing the project environment.
+You do not need to install Python manually.
+
+# 3. Sync Environment
+From the root of the repo (where uv.lock is located), run:
 
 ```bash
-
 uv sync
-
 ```
-Windows
-
-Setup and activate your python virtual environment
-
-```bash  
-py -m venv .venv
-.venv/Scripts/activate
-```
-Install and sync the uv python package manager as per the ```uv.lock``` file.
-```
-py -m pip install uv
-py -m uv sync
-```
+This installs MkDocs and all required plugins/themes.
 
 
-Running
+# 4. Preview Docs Locally
+Start the local development server:
 
-This will create a local webserver to view the pages on your browser while developing or as a means to view them.
 ```bash
 uv run mkdocs serve
 
 ```
-Building
+Then open: http://127.0.0.1:8000
 
-This will build a static html site in the /site folder.
+# 5. (Optional) Build Static Site
+This step is optional. It's handled by CI/CD, but you can build locally to preview the final HTML:
+
 ```bash
 uv run mkdocs build
-
 ```
+This will generate a static site in the `/site` directory.
+
+
