@@ -10,19 +10,9 @@ This guide will help you set up a local environment to serve or build Tina4 docu
 
 ---
 
-##  Prerequisites
+##  1. Install Chocolatey (Windows Only)
 
-You’ll need:
-
-- **Python 3.8+** installed
-- **[Chocolatey](https://chocolatey.org/)** (for Windows users)
-- **PowerShell (as Admin)** on Windows
-
----
-
-##  1. Install Chocolatey (Windows only)
-
-Open PowerShell **as Administrator** and run the following to install Chocolatey:
+Open **PowerShell as Administrator**, then paste and run:
 
 ```powershell
 Set-ExecutionPolicy Bypass -Scope Process -Force; `
@@ -32,7 +22,7 @@ iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocola
 ```
 # 2. Install UV
 On Windows:
-```powershell
+```bash
 choco install uv -y
 ```
 # On macOS/Linux:
@@ -44,78 +34,33 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv --version
 ```
 
-# 3. Create & Set Up Project Folder
-Choose or create your documentation project folder:
+UV will automatically install Python 3.12+ when syncing the project environment.
+You do not need to install Python manually.
 
-```powershell
-mkdir C:\Users\YourName\PycharmProjects\mkdocs-test
-cd C:\Users\YourName\PycharmProjects\mkdocs-test
+# 3. Sync Environment
+From the root of the repo (where uv.lock is located), run:
+
+```bash
+uv sync
 ```
-Replace YourName with your Windows username.
+This installs MkDocs and all required plugins/themes.
 
-# 4. Create Virtual Environment Using UV
-From inside your project folder:
 
-```powershell
-uv venv
-```
-This creates a .venv folder and sets up your Python virtual environment.
+# 4. Preview Docs Locally
+Start the local development server:
 
-## Enable Script Execution (One-Time Setup)
-Still inside PowerShell:
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass                       
-```
-Select Y if prompted.
+```bash
+uv run mkdocs serve
 
-# 5. Activate the Virtual Environment
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-# 6. Install MkDocs & Theme Dependencies
-
-```powershell
-uv pip install mkdocs mkdocs-material
-```
-# 7. Initialize MkDocs Project
-Run:
-
-```powershell
-mkdocs new 
-```
-This will create a basic project structure with a mkdocs.yml file and a docs/ folder containing index.md.
-
-# 8. Serve Documentation Locally
-To preview your docs in the browser:
-```powershell
-mkdocs serve
 ```
 Then open: http://127.0.0.1:8000
 
-# 9. Build Static Site
-To generate the HTML files for deployment:
+# 5. (Optional) Build Static Site
+This step is optional. It's handled by CI/CD, but you can build locally to preview the final HTML:
 
-```powershell 
-mkdocs build
+```bash
+uv run mkdocs build
 ```
-Output will be in the site/ folder.
+This will generate a static site in the `/site` directory.
 
-# 10. Troubleshooting
-#### If uv or mkdocs commands aren't recognized:
-
-- Make sure your virtual environment is activated.
-
--  Run: .venv\Scripts\Activate.ps1 again.
-
-#### If PowerShell blocks script execution:
-
-- Run: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-
-# 11. Test Installation Checklist
-- Chocolatey installed
-- UV installed (uv --version)
-- Virtual environment created and activated
-- MkDocs + theme installed
-- mkdocs serve runs and shows docs in the browser
 
