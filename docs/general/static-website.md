@@ -9,8 +9,8 @@ Tina4 simplifies static website creation through its built-in Twig templating en
 - **SEO Boost**: Clean, semantic HTML with metadata, supporting fast loads and search visibility.
 
 ## Prerequisites
-- Tina4 Python installed (see [Getting Started](/get-started)).
-- Project structure (auto-created via `tina4 init myproject`):
+- Tina4 Python or PHP installed (see [Getting Started](/get-started)).
+- Project structure (auto-created when you open the project in your browser for the first time):
   ```
   myproject/
   ├── src/
