@@ -75,12 +75,12 @@ async def create_user(request, response):
     return response({"created": data.get("name")})
 
 @put("/users/{id}")
-async def update_user(request, response, id: str):
+async def update_user(id: str, request, response):
     data = await request.body()
     return response(f"Updated user {id} with {data}")
 
 @delete("/users/{id}")
-async def delete_user(request, response, id: str):
+async def delete_user(id: str, request, response):
     return response(f"Deleted user {id}")
 ```
 
