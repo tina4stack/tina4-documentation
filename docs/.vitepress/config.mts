@@ -27,6 +27,8 @@ export default defineConfig({
                             {text: 'Static Website', link: '/python/static-website.md'},
                             {text: 'CSS', link: '/python/css.md'},
                             {text: 'Basic Routing', link: '/python/basic-routing.md'},
+                            {text: 'Posting FormData', link:'/python/posting-form-data.md'},
+                            {text: 'Javascript - tina4Helper.js', link:'/python/tina4helper.md'}
                         ]
                     },
                     {
@@ -36,6 +38,7 @@ export default defineConfig({
                             {text: 'Static Website', link: '/php/static-website.md'},
                             {text: 'CSS', link: '/php/css.md'},
                             {text: 'Basic Routing', link: '/php/basic-routing.md'},
+                            {text: 'Javascript - tina4Helper.js', link:'/php/tina4helper.md'}
                         ]
                     },
                     {
