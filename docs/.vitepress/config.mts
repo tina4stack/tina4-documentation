@@ -7,6 +7,7 @@ export default defineConfig({
     head: [
         ['link', {rel: 'icon', href: '/favicon.ico', type: 'image/x-icon'}],
     ],
+    ignoreDeadLinks: true,
     themeConfig: {
         nav: [
             {text: 'Home', link: '/'},
