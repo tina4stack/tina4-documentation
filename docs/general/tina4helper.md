@@ -1,4 +1,4 @@
-# tina4helper.js – The Official Tina4 JavaScript Helper
+# Tina4 JavaScript Helper
 
 `tina4helper.js` is the **lightweight, zero-dependency JavaScript companion** that turns any Tina4 Python (or PHP) project into a **fast, secure, SPA-like experience** — with **automatic CSRF protection**, form handling, file uploads, and partial page updates.
 
