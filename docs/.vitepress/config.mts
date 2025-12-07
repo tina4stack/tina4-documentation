@@ -9,6 +9,9 @@ export default defineConfig({
     ],
     ignoreDeadLinks: true,
     themeConfig: {
+        search: {
+            provider: 'local'
+        },
         nav: [
             {text: 'Home', link: '/'},
             {text: 'Python', link: '/python/index.md'},
