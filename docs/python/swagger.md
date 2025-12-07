@@ -31,8 +31,8 @@ Apply above routes:
 ```python
 @get("/example")
 @description("Example route")
-async def example_route(request):
-    return {"message": "Hello"}
+async def example_route(request, response):
+    return response({"message": "Hello"})
 ```
 
 Path params auto-detected; request bodies for POST/PUT/PATCH if examples given.
