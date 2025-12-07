@@ -50,6 +50,43 @@ Path params auto-detected; request bodies for POST/PUT/PATCH if examples given.
 
 Routes without annotations skipped. Responses: 200 (with example), 400, 404; 401 if secure. Operation IDs auto-generated (e.g., `get_users` for GET `/users`). See `swagger.py` for generation details.
 
+```python
+from tina4_python import post
+from tina4_python import description, summary, secure, tags, params, example, example_response
+
+@post("/users")
+@description("Create a new user with provided details")
+@summary("User creation endpoint")
+@secure()
+@tags(["users", "auth"])
+@params(["referral_code", "plan=basic"])
+@example({"name": "Alice", "email": "alice@example.com", "age": 30})
+@example_response({"id": 1, "name": "Alice", "status": "active"})
+async def create_user(request, response):
+    # Implementation: Process request.body and create user
+    return response({"message": "User created"})
+```
+
+```python
+from tina4_python import post
+from tina4_python import describe
+
+@post("/users")
+@describe(
+    description="Create a new user with provided details",
+    summary="User creation endpoint",
+    secure=True,
+    tags=["users", "auth"],
+    params=["referral_code", "plan=basic"],
+    example={"name": "Alice", "email": "alice@example.com", "age": 30},
+    example_response={"id": 1, "name": "Alice", "status": "active"}
+)
+async def create_user(request, response):
+    # Implementation: Process request.body and create user
+    return response({"message": "User created"})
+
+```
+
 ::: tip 🔥 Hot Tips 
 - You can change the Swagger endpoint by setting the environment variable `SWAGGER_ROUTE` eg. `/my-swagger`
   :::
