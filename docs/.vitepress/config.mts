@@ -36,7 +36,7 @@ export default defineConfig({
                     {
                         text: 'PHP', link: '/php/index.md',
                         items: [ // Sub-items
-                            {text: 'Installation', link: '/php/installation.md'},
+                            {text: 'Setting up a project', link: '/php/installation.md'},
                             {text: 'Static Website', link: '/php/static-website.md'},
                             {text: 'CSS/SCSS', link: '/php/css.md'},
                             {text: 'Basic Routing', link: '/php/basic-routing.md'},

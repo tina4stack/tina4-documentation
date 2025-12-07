@@ -1,13 +1,5 @@
 # Installation Guide for Tina4 PHP
 
-Tina4 PHP is the original lightweight toolkit for building web applications, APIs, and real-time services in PHP—offering simplicity like Slim or Lumen, with built-in features comparable to Laravel's routing and templating but without the overhead. This guide covers setup using Composer, the standard PHP dependency manager, for reproducible environments.
-
-## Prerequisites
-- **PHP Version**: PHP 7.4 or higher (8.0+ recommended for performance and security).
-- **Composer**: The PHP dependency manager (install via [getcomposer.org](https://getcomposer.org/)).
-- **OpenSSL**: Required for secure operations; typically included in PHP installations.
-- **Environment Configuration**: Ensure PHP is on your PATH for CLI access. For production, consider servers like Apache/Nginx; development uses PHP's built-in server.
-
 Tina4 PHP runs seamlessly on your local machine with an enhanced version of the PHP webserver which simulates a production environment.
 
 ## Installation with Composer
