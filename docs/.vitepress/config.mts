@@ -2,7 +2,7 @@ import {defineConfig} from 'vitepress'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-    title: "Lightweight Routing and Templating for Fast Web Apps for Python and PHP",
+    title: "Not a framework!",
     description: "Tina4 - This is not a framework",
     head: [
         ['link', {rel: 'icon', href: '/favicon.ico', type: 'image/x-icon'}],
