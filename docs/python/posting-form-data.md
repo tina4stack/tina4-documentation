@@ -229,7 +229,7 @@ async def process_login(request, response):
 
 ## Hot Tips
 
-::: tip Form Best Practices
+::: tip 🔥 Hot Tips
 - Append `~RANDOM()` to filters for dynamic tokens
 - Redirect after successful POST (Post/Redirect/Get pattern)
 - Use `request.body` for form data, `request.params` for query

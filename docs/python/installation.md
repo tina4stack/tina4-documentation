@@ -1,72 +1,38 @@
-# Installation Guide for Tina4 Python
+# Project Setup
 
-Tina4 Python is a lightweight ASGI toolkit for web apps, APIs, and real-time services—prioritizing simplicity like Flask with async capabilities akin to FastAPI. This guide focuses on UV for fast, efficient setup (handling virtual environments and dependencies), with alternatives like pip and Poetry. UV streamlines workflows, similar to how Rye or Hatch enhance modern Python projects.
+Use `uv` for efficient dependency management (install via `pip install uv` if needed). Alternatives like `pip` or `poetry` work but require adjusted commands.
 
-## Prerequisites
-- **Python Version**: 3.8+ (3.10+ recommended for async performance).
-- **UV Installation**: Install globally via `pip install uv` (or from [official docs](https://docs.astral.sh/uv/) for Rust-based speed).
-- **Optional**: For Poetry, install via `pip install poetry`.
+## Initialization
 
-UV creates isolated environments automatically, reducing boilerplate compared to manual `venv` in Flask setups.
-
-## Recommended: Installation with UV
-UV is ideal for quick, reproducible environments—faster than pip, with automatic venv management like Poetry but lighter.
-
-1. **Initialize the Project Environment**:
-   ```bash
-   uv init myproject  # Creates pyproject.toml, sets up venv automatically
-   cd myproject
-   ```
-
-2. **Add Tina4**:
-   ```bash
-   uv add tina4-python  # Installs tina4-python and locks dependencies
-   ```
-
-3. **Initialize and Start the Project**:
-   ```bash
-   uv run tina4 init .  # Scaffolds app.py, templates/, etc. in current folder
-   uv run tina4 start   # Launches dev server at http://localhost:7145 with hot-reloading
-   ```
-
-This mirrors FastAPI's `uvicorn main:app --reload` but with Tina4's minimalism. UV ensures deps are pinned in `uv.lock` for consistency.
-
-## Alternative: Installation with pip
-For basic setups without UV:
+Create a new project, add Tina4, initialize structure, and start the server:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # Or .venv\Scripts\activate on Windows
-pip install tina4-python
-tina4 init myproject
-cd myproject
-python app.py
+uv init <project-name>
+cd <project-name>
+uv add tina4-python
+uv run tina4 init .
+uv run tina4 start
 ```
 
-## Alternative: Installation with Poetry
-For declarative management like npm in Node.js:
+- `uv init`: Creates the project directory with a virtual environment.
+- `uv add`: Installs `tina4-python` as a dependency.
+- `tina4 init .`: Sets up Tina4 folders (e.g., `src/routes`, `src/templates`) and files in the current directory.
+- `tina4 start`: Launches the development webserver.
 
-1. Initialize:
-   ```bash
-   poetry new myproject
-   cd myproject
-   ```
+## Default Webserver
 
-2. Add and Install:
-   ```bash
-   poetry add tina4-python
-   poetry install
-   ```
+Access the server at `http://localhost:7145`. Customize the listening address/port as the first argument:
 
-3. Run Commands:
-   ```bash
-   poetry run tina4 init .
-   poetry run tina4 start
-   ```
+```bash
+# Loopback on port 8001
+uv run tina4 start 8001
 
-Poetry's `poetry.lock` ensures reproducibility, akin to FastAPI's dependency pinning.
+# All interfaces on port 8001
+uv run tina4 start 0.0.0.0:8001
+```
 
-## Verification
-Access `http://localhost:7145/`. Edit `app.py` to test routing—changes hot-reload via Jurigged. You will need to install jurigged manually: `uv pip install jurigged` or add to dev dependencies `uv add jurigged --group=dev`. 
+## Debugging
 
-This UV-centric approach minimizes steps, promoting rapid iteration like leading micro-frameworks. Explore [Basic Routing](basic-routing.md) for routing examples.
+Debug level defaults to `All` for development. Set `TINA4_DEBUG_LEVEL=Info` environment variable for production to reduce verbosity.
+
+Logs rotate automatically in the `logs/` directory to prevent excessive storage use.

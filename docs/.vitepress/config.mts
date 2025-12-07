@@ -23,12 +23,13 @@ export default defineConfig({
                     {
                         text: 'Python', link: '/python/index.md',
                         items: [ // Sub-items
-                            {text: 'Installation', link: '/python/installation.md'},
+                            {text: 'Setting up a project', link: '/python/installation.md'},
                             {text: 'Static Website', link: '/python/static-website.md'},
-                            {text: 'CSS', link: '/python/css.md'},
+                            {text: 'CSS/SCSS', link: '/python/css.md'},
                             {text: 'Basic Routing', link: '/python/basic-routing.md'},
-                            {text: 'Posting FormData', link:'/python/posting-form-data.md'},
-                            {text: 'Javascript - tina4Helper.js', link:'/python/tina4helper.md'}
+                            {text: 'Posting Form Data', link:'/python/posting-form-data.md'},
+                            {text: 'Javascript - tina4Helper.js', link:'/python/tina4helper.md'},
+                            {text: 'Swagger', link:'/python/swagger.md'}
                         ]
                     },
                     {
@@ -36,7 +37,7 @@ export default defineConfig({
                         items: [ // Sub-items
                             {text: 'Installation', link: '/php/installation.md'},
                             {text: 'Static Website', link: '/php/static-website.md'},
-                            {text: 'CSS', link: '/php/css.md'},
+                            {text: 'CSS/SCSS', link: '/php/css.md'},
                             {text: 'Basic Routing', link: '/php/basic-routing.md'},
                             {text: 'Javascript - tina4Helper.js', link:'/php/tina4helper.md'}
                         ]

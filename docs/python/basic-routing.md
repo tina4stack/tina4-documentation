@@ -10,7 +10,7 @@ title: Let's get route to it
 - Path parameters are **auto-injected** in the exact order they appear in the URL  
 - Use type hints: `{id:int}`, `{price:float}`, `{path:path}` – Tina4 converts them automatically  
 - `request` and `response` are **automatically added** as the last arguments if you don’t declare them  
-- Save files in a `routes/` folder or name them `*_route.py` → **auto-discovered**, zero config needed  
+- Save files in a `routes/` folder  → **auto-discovered**, zero config needed  
 - Stack decorators freely: `@get("/users") @post("/users")` works on the same function  
 - Use `@description("...")` for beautiful Swagger docs  
 :::
@@ -59,7 +59,7 @@ async def get_user_int(id: int, request, response):
     return response({"user_id": id, "type": type(id).__name__})
 
 # Multiple parameters + path (greedy)
-@get("/files/{filepath:path}")
+@get("/files/{filepath:str}")
 async def serve_file(filepath: str, request, response):
     return response.file(filepath)
 ```
@@ -131,12 +131,12 @@ async def profile(request, response):
 ## Response Helpers
 
 ```python
-return response("plain text")                    # text/plain
-return response({"json": "yes"})                 # application/json
-return response.html("<h1>Hello</h1>")           # text/html
-return response.redirect("/login")               # 302
-return response.file("uploads/report.pdf")       # send/file download
+return response({"json": "yes"})                        # application/json
+return response("<h1>Hello</h1>")                       # text/html
+return response.redirect("/login")                      # 302
+return response.file("report.pdf", "uploads")           # send/file download
 return response.render("index.twig", {"title": "Home"})
+return response("plain text", HTTP_OK, TEXT_PLAIN)      # text/plain
 ```
 
 With custom status:
@@ -171,19 +171,19 @@ Tina4 automatically loads routes from:
 
 ## Summary Table
 
-| Feature                | Syntax Example                              | Notes                                      |
-|------------------------|---------------------------------------------|--------------------------------------------|
-| Route                  | `@get("/path")`                             | Must be `async def`                        |
-| Path Params            | `/users/{id:int}`                           | Auto-injected + conversion                 |
-| Query Params           | `request.params.get("q")`                   | Dict-like                                  |
-| Middleware             | `@middleware(MyClass)`                      | `before_route` / `after_route`             |
-| Description            | `@description("Text")`                      | Populates Swagger UI                       |
-| Secured                | `@secured()`                                | Built-in auth guard                        |
-| Responses              | `response.json()`, `.html()`, `.file()` etc.| All via injected `response`                |
-| WebSockets             | `@get("/ws")` + `Websocket(request)`        | Full async support                         |
-| Auto-discovery         | Drop file in `routes/`                      | No config needed                           |
+| Feature                | Syntax Example                       | Notes                                      |
+|------------------------|--------------------------------------|--------------------------------------------|
+| Route                  | `@get("/path")`                      | Must be `async def`                        |
+| Path Params            | `/users/{id:int}`                    | Auto-injected + conversion                 |
+| Query Params           | `request.params.get("q")`            | Dict-like                                  |
+| Middleware             | `@middleware(MyClass)`               | `before_route` / `after_route`             |
+| Description            | `@description("Text")`               | Populates Swagger UI                       |
+| Secured                | `@secured()`                         | Built-in auth guard                        |
+| Responses              | `response.json()` `.file()` etc.     | All via injected `response`                |
+| WebSockets             | `@get("/ws")` + `Websocket(request)` | Full async support                         |
+| Auto-discovery         | Drop file in `routes/`               | No config needed                           |
 
-::: tip 🔥 Hot Tips – Remember These!
+::: tip 🔥 Hot Tips 
 - Prefer **explicit `request, response` arguments** – they are auto-injected only when needed
 - Use **`response.file()`** for serving uploads (root is project folder by default)
 - Return early in `before_route` middleware to **block** the request
