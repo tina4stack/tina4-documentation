@@ -35,7 +35,7 @@ export default defineConfig({
                             {text: 'CSS/SCSS', link: '/python/css.md'},
                             {text: 'Database', link: '/python/database.md'},
                             {text: 'ORM', link: '/python/orm.md'},
-                            {text: 'CRUD', link: '/python/orm.md'},
+                            {text: 'CRUD', link: '/python/crud.md'},
                             {text: 'OpenAPI & Swagger UI', link:'/python/swagger.md'}
                         ]
                     },
