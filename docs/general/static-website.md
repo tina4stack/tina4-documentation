@@ -18,7 +18,6 @@ Tina4 automatically renders templates from `src/templates`, matching routes with
   │       ├── base.twig   # Shared layout
   │       └── index.twig  # Home page (/ route)
   │       └── cars.twig  # Home page (/cars route)
-  └── static/             # CSS, JS, images (served automatically)
   ```
 
 ## Step 1: Create the Base Layout (base.twig)

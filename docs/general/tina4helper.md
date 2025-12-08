@@ -8,9 +8,6 @@ Just include it once:
 <script src="/js/tina4helper.js"></script>
 ```
 
-**That’s it.** No build tools. No React. No Vue. Pure Tina4 magic.
-
-
 ---
 
 ### Features at a Glance
