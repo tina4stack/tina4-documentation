@@ -3,6 +3,7 @@
 <nav class="tina4-menu">
     <a href="#installation">Installation</a> •
     <a href="#basic-routing">Routing</a> •  
+    <a href="#middleware">Middleware</a> •  
     <a href="#static-websites">Static Websites</a> •
     <a href="#templates">Templates</a> •
     <a href="#session-handling">Sessions</a> •
@@ -56,6 +57,31 @@ async def post_api(request, response):
 @post("/register") 
 async def post_register(request, response):
     return response.redirect("/welcome")
+```
+
+### Middleware
+```python
+class RunSomething:
+
+    @staticmethod
+    def before_something(request, response):
+        response.content += "Before"
+        return request, response
+
+    @staticmethod
+    def after_something(request, response):
+        response.content += "After"
+        return request, response
+
+    @staticmethod
+    def before_and_after_something(request, response):
+        response.content += "[Before / After Something]"
+        return request, response
+
+@middleware(RunSomething)
+@get("/middleware")
+async def get_middleware(request, response):
+    return response("Route") # Before[Before / After Something]Route[Before / After Something]After
 ```
 
 ### Static Websites {#static-websites}

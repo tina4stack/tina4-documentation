@@ -36,7 +36,8 @@ export default defineConfig({
                             {text: 'Database', link: '/python/database.md'},
                             {text: 'ORM', link: '/python/orm.md'},
                             {text: 'CRUD', link: '/python/crud.md'},
-                            {text: 'OpenAPI & Swagger UI', link:'/python/swagger.md'}
+                            {text: 'OpenAPI & Swagger UI', link:'/python/swagger.md'},
+                            {text: 'Queues', link:'/python/queues.md'}
                         ]
                     },
                     {

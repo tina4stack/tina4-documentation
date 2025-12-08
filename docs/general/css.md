@@ -2,7 +2,7 @@
 
 Tina4 handles SCSS compilation out-of-the-box, but with zero configuration needed. Place files in `src/scss`, and they compile to `src/public/css/default.css` during runtime or build, ensuring efficient and nested styling.
 
-::: tip SCSS in Tina4
+::: tip 🔥 Hot Tips
 - **Automatic Compilation**: No extra tools or watchers—SCSS from `src/scss` merges into a single `default.css`, reducing HTTP requests like Webpack bundling.
 - **Modular Design**: Use variables, nesting, and mixins for cleaner code, akin to Bootstrap's Sass setup.
 - **Hot-Reloading**: Changes in SCSS reload instantly in dev mode, boosting workflow.

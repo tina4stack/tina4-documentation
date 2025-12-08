@@ -1,7 +1,7 @@
 # Tina4-Python ORM – The Most Beautiful ORM You've Ever Seen
 **This is not a 4ramework – this is love**
 
-::: tip Hot Tips
+::: tip 🔥 Hot Tips
 - You **never** need the ORM — raw `Database` is perfect for 90% of cases
 - But when you want it… it feels like writing plain Python classes
 - Zero boilerplate — no `__init__`, no `save()` method to write
