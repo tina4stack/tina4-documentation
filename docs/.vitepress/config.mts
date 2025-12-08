@@ -2,7 +2,7 @@ import {defineConfig} from 'vitepress'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-    title: "Not a framework!",
+    title: "Code First, Magic Second.",
     description: "Tina4 - This is not a framework",
     head: [
         ['link', {rel: 'icon', href: '/favicon.ico', type: 'image/x-icon'}],
