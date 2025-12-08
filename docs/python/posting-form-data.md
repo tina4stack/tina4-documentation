@@ -223,7 +223,7 @@ async def process_login(request, response):
 
 ```twig
 <form method="POST" action="/login">
-    {{ form_token({"form": "login"}) }}
+    {{ ("Login" ~ RANDOM()) | form_token }}
     
     {% if error %}
         <p class="error">{{ error }}</p>
