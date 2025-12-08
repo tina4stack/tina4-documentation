@@ -1,12 +1,13 @@
 # Adding CSS to Your Static Website with SCSS
 
-Enhance your Twig-based static site in Tina4 projects by incorporating SCSS for modular, maintainable styles—automatically compiled to CSS. Tina4 handles SCSS compilation out-of-the-box, similar to Laravel Mix or Flask-Assets, but with zero configuration needed. Place files in `src/scss`, and they compile to `src/public/css/default.css` during runtime or build, ensuring efficient, nested styling like in leading frameworks (e.g., Sass in Rails or Vue CLI).
+Tina4 handles SCSS compilation out-of-the-box, but with zero configuration needed. Place files in `src/scss`, and they compile to `src/public/css/default.css` during runtime or build, ensuring efficient and nested styling.
 
-## Why SCSS in Tina4?
+::: tip SCSS in Tina4
 - **Automatic Compilation**: No extra tools or watchers—SCSS from `src/scss` merges into a single `default.css`, reducing HTTP requests like Webpack bundling.
 - **Modular Design**: Use variables, nesting, and mixins for cleaner code, akin to Bootstrap's Sass setup.
-- **Hot-Reloading**: Changes in SCSS reload instantly in dev mode, boosting workflow like Vite's HMR.
+- **Hot-Reloading**: Changes in SCSS reload instantly in dev mode, boosting workflow.
 - **Static Serving**: Compiled CSS serves from `/css/default.css`, integrable with CDNs for production-scale sites.
+:::
 
 ## Updated Project Structure
 ```
@@ -15,10 +16,10 @@ myproject/
 ├── src/
 │   ├── scss/               # SCSS source files (e.g., _variables.scss, main.scss)
 │   ├── templates/          # Twig files (as before)
-│   └── public/             # Auto-generated/compiled assets
+│   └── public/             # Public assets
 │       └── css/            # Compiled output
 │           └── default.css # Merged CSS file
-└── static/                 # Other static files (images, JS)
+
 ```
 
 ## Step 1: Add SCSS Files
@@ -58,10 +59,9 @@ Update `base.twig` to reference the compiled CSS:
 ...
 ```
 
-- **Path Note**: Tina4 serves `src/public` at root (e.g., `/css/`), making it accessible like Flask's static folder.
+- **Path Note**: Tina4 serves `src/public` at root (e.g., `/css/`), making it accessible.
 
 ## Step 3: Develop and Deploy
-- Run `python app.py` or `composer start` —SCSS compiles on start/reload; view changes live.
 - For production: Compilation happens automatically; we recommend committing the compiled CSS to source control for versioning and ease of deployment.
 - Custom Builds: If needed, extend with a script for ahead-of-time compilation, but Tina4's runtime handling suffices for most static sites.
 
