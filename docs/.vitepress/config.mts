@@ -28,12 +28,15 @@ export default defineConfig({
                         text: 'Python', link: '/python/index.md',
                         items: [ // Sub-items
                             {text: 'Setting up a project', link: '/python/installation.md'},
-                            {text: 'Static Website', link: '/python/static-website.md'},
-                            {text: 'CSS/SCSS', link: '/python/css.md'},
                             {text: 'Basic Routing', link: '/python/basic-routing.md'},
-                            {text: 'Posting Form Data', link:'/python/posting-form-data.md'},
-                            {text: 'Javascript - tina4Helper.js', link:'/python/tina4helper.md'},
-                            {text: 'Swagger', link:'/python/swagger.md'}
+                            {text: 'Static Website', link: '/python/static-website.md'},
+                            {text: 'Forms & Tokens', link:'/python/posting-form-data.md'},
+                            {text: 'AJAX - tina4helper.js', link:'/python/tina4helper.md'},
+                            {text: 'CSS/SCSS', link: '/python/css.md'},
+                            {text: 'Database', link: '/python/database.md'},
+                            {text: 'ORM', link: '/python/orm.md'},
+                            {text: 'CRUD', link: '/python/orm.md'},
+                            {text: 'OpenAPI & Swagger UI', link:'/python/swagger.md'}
                         ]
                     },
                     {
@@ -41,9 +44,9 @@ export default defineConfig({
                         items: [ // Sub-items
                             {text: 'Setting up a project', link: '/php/installation.md'},
                             {text: 'Static Website', link: '/php/static-website.md'},
+                            {text: 'AJAX - tina4helper.js', link:'/python/tina4helper.md'},
                             {text: 'CSS/SCSS', link: '/php/css.md'},
                             {text: 'Basic Routing', link: '/php/basic-routing.md'},
-                            {text: 'Javascript - tina4Helper.js', link:'/php/tina4helper.md'}
                         ]
                     },
                     {

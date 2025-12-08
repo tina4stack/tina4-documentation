@@ -1,5 +1,14 @@
 # Posting Forms
 
+::: tip 🔥 Hot Tips
+- Append `~RANDOM()` to filters for dynamic tokens
+- Redirect after successful POST (Post/Redirect/Get pattern)
+- Use `request.body` for form data, `request.params` for query
+- `@noauth()` only for trusted public endpoints
+- Tokens auto-refresh via `FreshToken` header
+  :::
+
+
 If you're used to posting forms in the traditional manner to the web service, pay attention to the following:
 
 * All `POST`, `PUT`, `PATCH`, and `DELETE` requests are **secured by default**
@@ -226,15 +235,5 @@ async def process_login(request, response):
     <button>Login</button>
 </form>
 ```
-
-## Hot Tips
-
-::: tip 🔥 Hot Tips
-- Append `~RANDOM()` to filters for dynamic tokens
-- Redirect after successful POST (Post/Redirect/Get pattern)
-- Use `request.body` for form data, `request.params` for query
-- `@noauth()` only for trusted public endpoints
-- Tokens auto-refresh via `FreshToken` header
-  :::
 
 

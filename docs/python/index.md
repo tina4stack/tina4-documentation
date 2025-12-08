@@ -1,22 +1,24 @@
 # Tina4 Python – Quick Reference
 
 <nav class="tina4-menu">
-  <a href="#installation">Installation</a> •
-  <a href="#static-websites">Static Websites</a> •
-  <a href="#scss-stylesheets">SCSS</a> •
-  <a href="#environments">Environments</a> •
-  <a href="#basic-routing">Routing</a> •
-  <a href="#authentication">Auth</a> •
-  <a href="#html-forms-and-tokens">Forms & Tokens</a> •
-  <a href="#swagger">Swagger</a> •
-  <a href="#databases">Databases</a> •
-  <a href="#database-results">Database Results</a> •    
-  <a href="#migrations">Migrations</a> •
-  <a href="#orm">ORM</a> •
-  <a href="#crud">CRUD</a> •
-  <a href="#inline-testing">Testing</a> •
-  <a href="#wsdl">WDSL</a> •
-  <a href="#consuming-rest-apis">REST Client</a>
+    <a href="#installation">Installation</a> •
+    <a href="#basic-routing">Routing</a> •  
+    <a href="#static-websites">Static Websites</a> •
+    <a href="#templates">Templates</a> •
+    <a href="#session-handling">Sessions</a> •
+    <a href="#scss-stylesheets">SCSS</a> •
+    <a href="#environments">Environments</a> •
+    <a href="#authentication">Authentication</a> •
+    <a href="#html-forms-and-tokens">Forms & Tokens</a> •
+    <a href="#swagger">OpenAPI</a> •
+    <a href="#databases">Databases</a> •
+    <a href="#database-results">Database Results</a> •    
+    <a href="#migrations">Migrations</a> •
+    <a href="#orm">ORM</a> •
+    <a href="#crud">CRUD</a> •
+    <a href="#inline-testing">Testing</a> •
+    <a href="#wsdl">WDSL</a> •
+    <a href="#consuming-rest-apis">REST Client</a>
 </nav>
 
 <style>
@@ -31,9 +33,29 @@
 
 ```bash
 pip install tina4-python
-tina4-python initialize my-project
+tina4 init my-project
 cd my-project
-python index.py
+tina4 start
+```
+
+### Basic Routing {#basic-routing}
+
+```python
+from tina4_python import get, post
+
+@get("/")
+async def get_home(request, response):
+    return response("<h1>Hello Tina4 Python</h1>")
+
+# post requires a formToken in body or Bearer auth
+@post("/api")
+async def post_api(request, response):
+    return response({"data": request.params})
+
+# redirect after post
+@post("/register") 
+async def post_register(request, response):
+    return response.redirect("/welcome")
 ```
 
 ### Static Websites {#static-websites}
@@ -43,6 +65,45 @@ Put `.twig` files in `./src/templates` • assets in `./src/public`
 ```twig
 <!-- src/templates/index.twig -->
 <h1>Hello Static World</h1>
+```
+
+### Template Rendering {#templates}
+
+Put `.twig` files in `./src/templates` • assets in `./src/public`
+
+```twig
+<!-- src/templates/index.twig -->
+<h1>Hello {{name}}</h1>
+```
+
+```python
+from tina4_python import get, post
+
+@get("/")
+async def get_home(request, response):
+    return response.render("index.twig", {"name": "World!"})
+
+```
+
+### Sessions {#session-handling}
+
+The default session handling is SessionFileHandler, override `TINA4_SESSION_HANDLER` in .env
+
+```python
+@get("/session/set")
+async def get_session_set(request, response):
+    request.session.set("name", "Joe")
+    request.session.set("info", {"info": ["one", "two", "three"]})
+    return response("Session Set!")
+
+
+@get("/session/get")
+async def get_session_set(request, response):
+    name = request.session.get("name")
+    info = request.session.get("info")
+
+    return response({"name": name, "info": info})
+
 ```
 
 ### SCSS Stylesheets {#scss-stylesheets}
@@ -59,47 +120,33 @@ body {
 ```
 
 ### Environments {#environments}
-
+Default development environment can be found in `.env`
 ```
-DEBUG=True
-ENVIRONMENT=development
-DB_TYPE=sqlite
-DB_NAME=./app.db
+PROJECT_NAME="My Project"
+VERSION=1.0.0
+TINA4_LANGUAGE=en
+TINA4_DEBUG_LEVEL=ALL
+API_KEY=ABC1234
+TINA4_TOKEN_LIMIT=1
+DATABASE_NAME=sqlite3:test.db
 ```
 
 ```python
 import os
 
-api_key = os.getenv("API_KEY", "default")
-```
-
-### Basic Routing {#basic-routing}
-
-```python
-from tina4_python import get, post
-
-
-@get("/")
-async def home(request, response):
-    return response("<h1>Hello Tina4 Python</h1>")
-
-
-@post("/api")
-async def api(request, response):
-    return response({"data": request.params})
+api_key = os.getenv("API_KEY", "ABC1234")
 ```
 
 ### Authentication {#authentication}
 
+Pass `Authorization: Bearer API_KEY` to secured routes in requests. See `.env` for default `API_KEY`.
 ```python
 from tina4_python import get, post, noauth, secured
-
 
 @post("/login")
 @noauth()
 async def login(request, response):
     return response("Logged in", cookies={"session": "abc123"})
-
 
 @get("/protected")
 @secured()
@@ -151,7 +198,6 @@ json = result.to_json()
 
 ```
 
-
 ### Migrations {#migrations}
 
 ```bash
@@ -176,8 +222,10 @@ tina4 migrate
 ```python
 from tina4_python import ORM
 
+
 class User(ORM):
     table_name = "users"
+
 
 User({"name": "Alice"}).save()
 User().load("id = ?", 1)
@@ -201,6 +249,7 @@ async def dashboard(request, response):
 ```python
 from tina4python import tests
 
+
 @tests(
     assert_equal((7, 7), 1),
     assert_equal((-1, 1), -1),
@@ -215,9 +264,11 @@ def divide(a: int, b: int) -> float:
 Run: `tina4 test`
 
 ### WSDL {#wsdl}
+
 ```python
 from tina4_python.WSDL import WSDL, wsdl_operation
 from typing import List
+
 
 class Calculator(WSDL):
     SERVICE_URL = "http://localhost:7145/calculator"
@@ -226,20 +277,18 @@ class Calculator(WSDL):
         return {"Result": a + b}
 
     def SumList(self, Numbers: List[int]):
-
         return {
             "Numbers": Numbers,
             "Total": sum(Numbers),
             "Error": None
         }
 
+
 @wsdl("/calculator")
 async def wsdl_cis(request, response):
-
-    return response.wsdl(Calculator(request))    
+    return response.wsdl(Calculator(request))
 
 ```
-
 
 ### Consuming REST APIs {#consuming-rest-apis}
 

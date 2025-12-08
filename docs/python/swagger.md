@@ -1,4 +1,4 @@
-# Swagger Annotations
+# Swagger & Swagger UI
 
 Tina4 Python integrates Swagger for OpenAPI 3.0.3 compliant API documentation. The `/swagger` endpoint serves an interactive UI, and `/swagger.json` provides the JSON spec. Annotations via decorators add metadata to routes for enhanced docs.
 

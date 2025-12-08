@@ -1,10 +1,12 @@
 # Project Setup
-
-Use `uv` for efficient dependency management (install via `pip install uv` if needed). Alternatives like `pip` or `poetry` work but require adjusted commands.
+::: tip 🔥 Hot Tips
+- Use `uv` for efficient dependency management. 
+- Use a good IDE like PyCharm or IntelliJ
+:::
 
 ## Initialization
 
-Create a new project, add Tina4, initialize structure, and start the server:
+Create a new project folder, add Tina4, initialize structure, and start the server:
 
 ```bash
 uv init <project-name>
@@ -34,5 +36,5 @@ uv run tina4 start 0.0.0.0:8001
 ## Debugging
 
 Debug level defaults to `All` for development. Set `TINA4_DEBUG_LEVEL=Info` environment variable for production to reduce verbosity.
-
 Logs rotate automatically in the `logs/` directory to prevent excessive storage use.
+

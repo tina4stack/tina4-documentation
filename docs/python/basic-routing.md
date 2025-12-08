@@ -1,10 +1,10 @@
 ---
-title: Let's get route to it
+title: Routing
 ---
 
-# Let's get route to it
+# Routing
 
-::: tip 🔥 Hot Tips – Read This First!
+::: tip 🔥 Hot Tips 
 - You **don’t need** `app = Tina4()` in route files – just import `get`, `post`, etc. directly  
 - All route handlers **must be `async def`** – Tina4 is 100% async-native  
 - Path parameters are **auto-injected** in the exact order they appear in the URL  
@@ -12,11 +12,10 @@ title: Let's get route to it
 - `request` and `response` are **automatically added** as the last arguments if you don’t declare them  
 - Save files in a `routes/` folder  → **auto-discovered**, zero config needed  
 - Stack decorators freely: `@get("/users") @post("/users")` works on the same function  
-- Use `@description("...")` for beautiful Swagger docs  
+- Use `@describe("...")` for beautiful Swagger docs  
 :::
 
-The routing system in **Tina4 Python** is decorator-driven, fully async-ready, and designed for clarity and speed — comparable to FastAPI but with even less boilerplate.
-
+The routing system in **Tina4 Python** is decorator-driven, fully async-ready, and designed for clarity and speed.
 Routes are defined using imported method decorators directly — no app instance required in route files.
 
 ## Core Imports
@@ -24,7 +23,7 @@ Routes are defined using imported method decorators directly — no app instance
 ```python
 from tina4_python import get, post, put, delete, patch, options
 from tina4_python import middleware, description, secured
-from tina4_python import HTTP_OK, HTTP_BAD_REQUEST
+from tina4_python import HTTP_OK, HTTP_FORBIDDEN, HTTP_BAD_REQUEST
 ```
 
 ## Basic Route Definition
@@ -114,7 +113,7 @@ async def protected_route(request, response):
 
 ```python
 @get("/api/users")
-@description("Retrieve the full list of users")
+@description("Retrieve the full list of users") # see the full list under Swagger link
 async def list_users(request, response):
     return response({"users": [...]})
 ```

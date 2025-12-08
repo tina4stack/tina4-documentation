@@ -1,27 +1,21 @@
 # Getting Started with Tina4
 
-## Python Setup
+## Python 3.12 > 
 
-Install and initialize your project with these quick commands from your terminal:
+From your project folder install and initialize your project with these quick commands from your terminal:
 ```bash
 # Install the package
 pip install tina4-python jurigged
 # Create a new project
-tina4 init myproject
-# Navigate into your project
-cd myproject
+tina4 init .
 # Launch the development server (with hot-reloading enabled)
 python -m jurigged app.py
 ```
 Access your app at `http://localhost:7145`
 
-## PHP Setup
+## PHP 8.0 >
 Set up a Tina4 PHP project just as easily, inspired by Laravel's elegance but with a lighter footprint:
 ```bash
-# Create a new project directory
-mkdir myproject
-# Navigate into your project
-cd myproject
 # Install the Tina4 PHP package
 composer require tina4stack/tina4php
 # Initialize the project structure
