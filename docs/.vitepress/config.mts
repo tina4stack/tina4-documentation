@@ -37,7 +37,8 @@ export default defineConfig({
                             {text: 'ORM', link: '/python/orm.md'},
                             {text: 'CRUD', link: '/python/crud.md'},
                             {text: 'OpenAPI & Swagger UI', link:'/python/swagger.md'},
-                            {text: 'Queues', link:'/python/queues.md'}
+                            {text: 'Queues', link:'/python/queues.md'},
+                            {text: 'WSDL', link:'/python/wsdl.md'}
                         ]
                     },
                     {
