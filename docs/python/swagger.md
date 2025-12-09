@@ -1,5 +1,8 @@
 # Swagger & Swagger UI
 
+::: tip 🔥 Hot Tips
+- You can change the Swagger endpoint by setting the environment variable `SWAGGER_ROUTE` eg. `/my-swagger`
+  :::
 Tina4 Python integrates Swagger for OpenAPI 3.0.3 compliant API documentation. The `/swagger` endpoint serves an interactive UI, and `/swagger.json` provides the JSON spec. Annotations via decorators add metadata to routes for enhanced docs.
 
 ### Configuration
@@ -86,7 +89,3 @@ async def create_user(request, response):
     return response({"message": "User created"})
 
 ```
-
-::: tip 🔥 Hot Tips 
-- You can change the Swagger endpoint by setting the environment variable `SWAGGER_ROUTE` eg. `/my-swagger`
-  :::

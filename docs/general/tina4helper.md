@@ -1,7 +1,11 @@
 # Tina4 JavaScript Helper
 
-`tina4helper.js` is the **lightweight, zero-dependency JavaScript companion** that turns any Tina4 Python (or PHP) project into a **fast, secure, SPA-like experience** — with **automatic CSRF protection**, form handling, file uploads, and partial page updates.
-
+::: tip 🔥 Hot Tips
+- tina4helper.js does not require jquery or other libraries to work!  
+- Use `saveForm` to post data from a html form to a REST end point, this includes files.
+- Add the latest boostrap to your page to get nice messages and alerts.
+- Include `formToken` in every form for direct posts.
+:::
 Just include it once:
 
 ```html
@@ -150,13 +154,6 @@ Supports:
 Now your entire site feels like a modern SPA — **with zero JavaScript framework overhead**.
 
 ---
-
-## Hot Tips – tina4helper.js Best Practices
-
-::: tip 🔥 Hot Tips – Remember These!
-- Always use `saveForm()` — it handles tokens, files, and feedback
-- Include `formToken` in every form
-  :::
 
 ### One-liner CRUD Example
 

@@ -29,11 +29,13 @@ export default defineConfig({
                         items: [ // Sub-items
                             {text: 'Setting up a project', link: '/python/installation.md'},
                             {text: 'Basic Routing', link: '/python/basic-routing.md'},
+                            {text: 'Middleware', link: '/python/middleware.md'},
                             {text: 'Static Website', link: '/python/static-website.md'},
                             {text: 'Forms & Tokens', link:'/python/posting-form-data.md'},
                             {text: 'AJAX - tina4helper.js', link:'/python/tina4helper.md'},
                             {text: 'CSS/SCSS', link: '/python/css.md'},
                             {text: 'Database', link: '/python/database.md'},
+                            {text: 'Migrations', link: '/python/migrations.md'},
                             {text: 'ORM', link: '/python/orm.md'},
                             {text: 'CRUD', link: '/python/crud.md'},
                             {text: 'OpenAPI & Swagger UI', link:'/python/swagger.md'},
