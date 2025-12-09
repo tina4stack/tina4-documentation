@@ -17,52 +17,60 @@ export default defineConfig({
             {text: 'Python', link: '/python/index.md'},
             {text: 'PHP', link: '/php/index.md'}
         ],
-        sidebar: [
-            {
-                text: 'Documentation',
-                items: [
-                    {
-                        text: 'Get Started', link: '/get-started.md',
-                    },
-                    {
-                        text: 'Python', link: '/python/index.md',
-                        items: [ // Sub-items
-                            {text: 'Setting up a project', link: '/python/installation.md'},
-                            {text: 'Basic Routing', link: '/python/basic-routing.md'},
-                            {text: 'Middleware', link: '/python/middleware.md'},
-                            {text: 'Static Website', link: '/python/static-website.md'},
-                            {text: 'Forms & Tokens', link:'/python/posting-form-data.md'},
-                            {text: 'AJAX - tina4helper.js', link:'/python/tina4helper.md'},
-                            {text: 'CSS/SCSS', link: '/python/css.md'},
-                            {text: 'Database', link: '/python/database.md'},
-                            {text: 'Migrations', link: '/python/migrations.md'},
-                            {text: 'ORM', link: '/python/orm.md'},
-                            {text: 'CRUD', link: '/python/crud.md'},
-                            {text: 'OpenAPI & Swagger UI', link:'/python/swagger.md'},
-                            {text: 'Queues', link:'/python/queues.md'},
-                            {text: 'WSDL', link:'/python/wsdl.md'}
-                        ]
-                    },
-                    {
-                        text: 'PHP', link: '/php/index.md',
-                        items: [ // Sub-items
-                            {text: 'Setting up a project', link: '/php/installation.md'},
-                            {text: 'Static Website', link: '/php/static-website.md'},
-                            {text: 'AJAX - tina4helper.js', link:'/python/tina4helper.md'},
-                            {text: 'CSS/SCSS', link: '/php/css.md'},
-                            {text: 'Basic Routing', link: '/php/basic-routing.md'},
-                        ]
-                    },
-                    {
-                        text: "How Tos", link: "how-tos.md",
-                        items: [{text: 'Install PHP on Mac', link: '/php/php-on-mac.md'},
-                            {text: 'Install PHP on Windows', link: '/php/php-on-windows.md'}],
-
-                    },
-                    {text: 'Comparisons', link: '/comparisons.md'}
-                ]
-            }
-        ],
+        sidebar: {
+            // Python-specific sidebar for /python/ paths
+            '/python/': [
+                {
+                    text: 'Python Documentation',
+                    items: [
+                        { text: 'Setting up a project', link: '/python/installation.md' },
+                        { text: 'Basic Routing', link: '/python/basic-routing.md' },
+                        { text: 'Middleware', link: '/python/middleware.md' },
+                        { text: 'Static Website', link: '/python/static-website.md' },
+                        { text: 'Forms & Tokens', link: '/python/posting-form-data.md' },
+                        { text: 'AJAX - tina4helper.js', link: '/python/tina4helper.md' },
+                        { text: 'CSS/SCSS', link: '/python/css.md' },
+                        { text: 'Database', link: '/python/database.md' },
+                        { text: 'Migrations', link: '/python/migrations.md' },
+                        { text: 'ORM', link: '/python/orm.md' },
+                        { text: 'CRUD', link: '/python/crud.md' },
+                        { text: 'OpenAPI & Swagger UI', link: '/python/swagger.md' },
+                        { text: 'Queues', link: '/python/queues.md' },
+                        { text: 'WSDL', link: '/python/wsdl.md' }
+                    ]
+                }
+            ],
+            // PHP-specific sidebar for /php/ paths
+            '/php/': [
+                {
+                    text: 'PHP Documentation',
+                    items: [
+                        { text: 'Setting up a project', link: '/php/installation.md' },
+                        { text: 'Static Website', link: '/php/static-website.md' },
+                        { text: 'AJAX - tina4helper.js', link: '/python/tina4helper.md' }, // Shared, adjust path if needed
+                        { text: 'CSS/SCSS', link: '/php/css.md' },
+                        { text: 'Basic Routing', link: '/php/basic-routing.md' }
+                    ]
+                },
+                {
+                    text: 'How Tos',
+                    items: [
+                        { text: 'Install PHP on Mac', link: '/php/php-on-mac.md' },
+                        { text: 'Install PHP on Windows', link: '/php/php-on-windows.md' }
+                    ]
+                }
+            ],
+            // Root sidebar for other paths (e.g., Home, Get Started)
+            '/': [
+                {
+                    text: 'Documentation',
+                    items: [
+                        { text: 'Get Started', link: '/get-started.md' },
+                        { text: 'Comparisons', link: '/comparisons.md' }
+                    ]
+                }
+            ]
+        },
         socialLinks: [
             {icon: 'github', link: 'https://github.com/tina4stack'},
             {
