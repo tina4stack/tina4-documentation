@@ -26,19 +26,19 @@ Tina4Python stands out for its "zero-configuration" ethos, blending Flask's ease
 
 Tina4PHP, the original, is a routing and Twig-based system for quick websites/APIs—lightweight like Slim but with more built-ins, avoiding Laravel's complexity.
 
-| Feature                  | Tina4PHP                             | Slim                               | Laravel                            | Symfony                            |
-|--------------------------|--------------------------------------|------------------------------------|------------------------------------|------------------------------------|
-| **Type**                | Lightweight toolkit (not a framework) | Micro-framework                   | Full-stack framework              | Modular full-stack                |
-| **Routing**             | Simple, logical folder structure     | PSR-7 compliant, middleware       | Expressive, middleware            | Configurable, bundles             |
-| **Templating**          | Built-in Twig (secure, flexible)     | None (use Twig externally)        | Blade (simple PHP)                | Twig (default)                    |
-| **Database/ORM/CRUD**   | Lightweight abstractions (multiple DBs) | None (use PDO/Eloquent)           | Eloquent ORM, migrations          | Doctrine ORM, migrations          |
-| **API Docs**            | Basic (extendable)                   | None (use Swagger-PHP)            | Built-in API resources            | None (use bundles)                |
-| **Async/WebSockets**    | Basic support (via extensions)       | No (use Ratchet)                  | Queues, broadcasting (WebSockets) | Messenger for async               |
-| **Auth/Security**       | Session/cookie handling, middleware  | None (use middleware)             | Built-in auth, Sanctum            | Security bundle                   |
-| **Hot-Reloading**       | Dev server with reload               | None (use external)               | Artisan serve (no reload)         | None (use external)               |
-| **Performance/Size**    | High (lightweight, fast boot)        | Very lightweight                  | Heavier (many features)           | Modular, configurable             |
-| **Use Cases**           | Quick APIs/sites, minimal code       | Slim APIs, microservices          | Complex apps, rapid dev           | Enterprise, reusable components   |
-| **Learning Curve**      | Easy (lightweight, familiar)         | Beginner-friendly                 | Moderate (ecosystem)              | Steeper (components)              |
+| Feature                  | Tina4PHP                                                           | Slim                               | Laravel                            | Symfony                            |
+|--------------------------|--------------------------------------------------------------------|------------------------------------|------------------------------------|------------------------------------|
+| **Type**                | Lightweight toolkit (not a framework)                              | Micro-framework                   | Full-stack framework              | Modular full-stack                |
+| **Routing**             | Simple folder based routing in Twig, Expressive, middleware | PSR-7 compliant, middleware       | Expressive, middleware            | Configurable, bundles             |
+| **Templating**          | Built-in Twig (secure, flexible)                                   | None (use Twig externally)        | Blade (simple PHP)                | Twig (default)                    |
+| **Database/ORM/CRUD**   | Lightweight abstractions (multiple DBs)                            | None (use PDO/Eloquent)           | Eloquent ORM, migrations          | Doctrine ORM, migrations          |
+| **API Docs**            | Basic (extendable)                                                 | None (use Swagger-PHP)            | Built-in API resources            | None (use bundles)                |
+| **Async/WebSockets**    | Basic support (via extensions)                                     | No (use Ratchet)                  | Queues, broadcasting (WebSockets) | Messenger for async               |
+| **Auth/Security**       | Session/cookie handling, middleware                                | None (use middleware)             | Built-in auth, Sanctum            | Security bundle                   |
+| **Hot-Reloading**       | Dev server with reload                                             | None (use external)               | Artisan serve (no reload)         | None (use external)               |
+| **Performance/Size**    | High (lightweight, fast boot)                                      | Very lightweight                  | Heavier (many features)           | Modular, configurable             |
+| **Use Cases**           | Quick APIs/sites, minimal code                                     | Slim APIs, microservices          | Complex apps, rapid dev           | Enterprise, reusable components   |
+| **Learning Curve**      | Easy (lightweight, familiar)                                       | Beginner-friendly                 | Moderate (ecosystem)              | Steeper (components)              |
 
 Tina4PHP excels in speed and simplicity for PHP devs seeking Laravel-like tools without bloat—great for APIs or sites where "10x less code" matters.
 
