@@ -2,15 +2,16 @@
 
 <nav class="tina4-menu">
     <a href="#installation">Installation</a> •
-    <a href="#basic-routing">Routing</a> •  
-    <a href="#middleware">Middleware</a> •  
     <a href="#static-websites">Static Websites</a> •
+    <a href="#basic-routing">Routing</a> •  
+    <a href="#middleware">Middleware</a> •
     <a href="#templates">Templates</a> •
     <a href="#session-handling">Sessions</a> •
     <a href="#scss-stylesheets">SCSS</a> •
     <a href="#environments">Environments</a> •
     <a href="#authentication">Authentication</a> •
     <a href="#html-forms-and-tokens">Forms & Tokens</a> •
+    <a href="#ajax">AJAX</a> •
     <a href="#swagger">OpenAPI</a> •
     <a href="#databases">Databases</a> •
     <a href="#database-results">Database Results</a> •    
@@ -18,7 +19,7 @@
     <a href="#orm">ORM</a> •
     <a href="#crud">CRUD</a> •
     <a href="#inline-testing">Testing</a> •
-    <a href="#wsdl">WDSL</a> •
+    <a href="#wsdl">WSDL</a> •
     <a href="#consuming-rest-apis">REST Client</a>
 </nav>
 
@@ -37,6 +38,15 @@ pip install tina4-python
 tina4 init my-project
 cd my-project
 tina4 start
+```
+
+### Static Websites {#static-websites}
+<!-- tina4php also allows .html perhaps consider for tina4python -->
+Put `.twig` files in `./src/templates` • assets in `./src/public`
+
+```twig
+<!-- src/templates/index.twig -->
+<h1>Hello Static World</h1>
 ```
 
 ### Basic Routing {#basic-routing}
@@ -82,15 +92,6 @@ class RunSomething:
 @get("/middleware")
 async def get_middleware(request, response):
     return response("Route") # Before[Before / After Something]Route[Before / After Something]After
-```
-
-### Static Websites {#static-websites}
-
-Put `.twig` files in `./src/templates` • assets in `./src/public`
-
-```twig
-<!-- src/templates/index.twig -->
-<h1>Hello Static World</h1>
 ```
 
 ### Template Rendering {#templates}
@@ -190,7 +191,13 @@ async def secret(request, response):
 </form>
 ```
 
-### Swagger {#swagger}
+### AJAX and tina4helper.js {#ajax}
+
+Tina4 ships with a small javascript library, in the bin folder, to assist with the heavy lifting of ajax calls.
+
+[More details](tina4helper.md) on available features.
+
+### OpenAPI and Swagger UI {#swagger}
 
 Visit `http://localhost:7145/swagger`
 
@@ -211,7 +218,7 @@ dba = Database("sqlite3:data.db")
 ```
 
 ### Database Results {#database-results}
-
+<!-- @todo there are probably a number of parity issues to look at, and also how we document this. For example in php asResult is actually an SQL function. Perhaps this is not an issue. -->
 ```python
 result = dba.fetch("select * from test_record order by id", limit=3, skip=1)
 
