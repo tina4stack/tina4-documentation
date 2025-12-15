@@ -18,9 +18,13 @@
     <a href="#migrations">Migrations</a> •
     <a href="#orm">ORM</a> •
     <a href="#crud">CRUD</a> •
+    <a href="#consuming-rest-apis">REST Client</a> •
     <a href="#inline-testing">Testing</a> •
-    <a href="#wsdl">WSDL</a> •
-    <a href="#consuming-rest-apis">REST Client</a>
+    <a href="#services">Services</a> •
+    <a href="#threads">Threads</a> •
+    <a href="#queues">Queues</a> •
+    <a href="#wsdl">WSDL</a>
+
 </nav>
 
 <style>
@@ -211,6 +215,7 @@ global $DBA;
 $DBA = new \Tina4\DataSQLite3("database/myDatabase.db", "username", "my-password", "d/m/Y");
 ```
 Follow the links for more on [Available Connections](database.md#connections), [Core Methods](database.md#core-methods), [Usage](database.md#usage) and [Full transaction control](database.md#transactions).
+
 ### Database Results {#database-results}
 Database objects all return a DataResult object, which can then be returned in a number of formats.
 ```php
@@ -245,78 +250,89 @@ or as a route
 
 ### ORM {#orm}
 
+Once you have run your migrations, creating the tables, ORM makes database interactions seamless.
 ```php
-class User extends \Tina4\ORM {
-    public $tableName = "users";
+class User extends Tina4\ORM
+{
+    public $tableName = 'user';
+    
+    public $id;
+    public $email;
 }
 
-$user = new User(["name" => "Alice"]);
+$user = new User(["email" => "my-email@email.com"]);
 $user->save();
 $user = (new User())->load("id = ?", 1);
 ```
-
+ORM functionality is quite extensive and needs more study of the [Advanced Detail](orm.md) to get the full value from ORM.
 ### CRUD {#crud}
-
+With a single line of code, Tina 4 can generate a fully functional CRUD system, screens and all.
 ```php
-\Tina4\Get("/users/dashboard", function (\Tina4\Request $request, \Tina4\Response $response) {
-    $users = (new User())->select("id, name, email");
-    return $response(\Tina4\renderTemplate("users/dashboard.twig", ["crud" => $users->asCrud($request)]));
-});
+(new User())->generateCrud("/my-crud-templates")
 ```
+[More details](crud.md) on how CRUD works, where it puts the generated files is worth some investigation.
 
-```twig
-{{ crud }}
+### Consuming REST APIs {#consuming-rest-apis}
+Getting data from a public api is as simple as one line of code.
+```php
+$api = (new \Tina4\Api())->sendRequest("https://api.example.com", "GET");
 ```
+[More details](rest-api.md) are available on sending a post data body, authorizations and other finer controls of sending api requests.
 
 ### Inline Testing {#inline-testing}
 
+Documentation coming soon . . .
+
+### Services {#services}
+
+Create the required process
 ```php
-/**
- * @test assertEqual(7,7) 1
- * @test assertEqual(-1,1) -1
- * @test assertThrows(ZeroDivisionError) 5,0
- */
-function divide($a, $b) {
-    if ($b == 0) {
-        throw new Exception("division by zero");
+class MyProcess extends \Tina4\Process
+{
+    public function canRun(): bool
+    {
+        // Include any selection criteria you need, or just return true
+        return true;
     }
-    return $a / $b;
+    
+    public function run(): void
+    {
+        // Do whatever you want here
+    }
 }
 ```
+Add the process to the service
+```php
+    $service = (new \Tina4\Service());
+    $service->addProcess(new MyProcess("Unique Process Name")); 
+```
+Create the service on the server by creating and registering an appropriate script. 
 
-Run: `composer test`
+There are a number of special cases that [Need Investigating](services.md) for getting the full value out of services, and should be studied in conjunction with threads.
+
+### Threads {#threads}
+
+ Create the thread code as required
+```php
+Tina4\Thread::addTrigger('myNewProcess', function () {
+    // Do whatever you want to do here
+});
+```
+Call the thread as required
+```php
+// Starts a new php thread running the code as declared above
+Tina4\Thread::trigger('myNewProcess');
+```
+Please read [More Details](threads.md) on Threads, their restrictions and usage ideas.
+
+### Queues {#queues}
+
+Services and Threads together can be used to replicate queues, but stand alone queues are not implemented in Tina4 Php.
 
 ### WSDL {#wsdl}
 
-Note: WSDL support may require additional configuration or packages.
+This is not available in Tina4 Php.
 
-```php
-class Calculator {
-    public function Add($a, $b) {
-        return ["Result" => $a + $b];
-    }
-
-    public function SumList($Numbers) {
-        return [
-            "Numbers" => $Numbers,
-            "Total" => array_sum($Numbers),
-            "Error" => null
-        ];
-    }
-}
-
-\Tina4\Post("/calculator", function (\Tina4\Request $request, \Tina4\Response $response) {
-    return $response->wsdl(new Calculator());
-});
-```
-
-### Consuming REST APIs {#consuming-rest-apis}
-
-```php
-$api = new \Tina4\Api("https://api.example.com", ["Authorization" => "Bearer xyz"]);
-$result = $api->get("/users/42");
-echo $result["body"];
-```
 
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">↑ Back to top</a>

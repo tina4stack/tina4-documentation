@@ -35,7 +35,8 @@ export default defineConfig({
                         { text: 'Database', link: '/python/database.md' },
                         { text: 'Migrations', link: '/python/migrations.md' },
                         { text: 'ORM', link: '/python/orm.md' },
-                        { text: 'CRUD', link: '/python/crud.md' }
+                        { text: 'CRUD', link: '/python/crud.md' },
+                        { text: 'Rest Api', link: '/python/rest-api.md' }
                     ]
                 },
                 {
@@ -61,7 +62,10 @@ export default defineConfig({
                         { text: 'AJAX - tina4helper.js', link: '/php/tina4helper.md' },
                         { text: 'OpenAPI & Swagger UI', link: '/php/swagger.md' },
                         { text: 'Database', link: '/php/database.md' },
-                        { text: 'Migrations', link: '/php/migrations.md' }
+                        { text: 'Migrations', link: '/php/migrations.md' },
+                        { text: 'ORM', link: '/php/orm.md' },
+                        { text: 'CRUD', link: '/php/crud.md' },
+                        { text: 'Rest Api', link: '/php/rest-api.md' }
                     ]
                 },
                 {

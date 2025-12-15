@@ -18,9 +18,13 @@
     <a href="#migrations">Migrations</a> •
     <a href="#orm">ORM</a> •
     <a href="#crud">CRUD</a> •
+    <a href="#consuming-rest-apis">REST Client</a> •
     <a href="#inline-testing">Testing</a> •
-    <a href="#wsdl">WSDL</a> •
-    <a href="#consuming-rest-apis">REST Client</a>
+    <a href="#services">Services</a> •
+    <a href="#threads">Threads</a> •
+    <a href="#queues">Queues</a> •
+    <a href="#wsdl">WSDL</a>
+
 </nav>
 
 <style>
@@ -252,9 +256,15 @@ tina4 migrate
 
 ### ORM {#orm}
 
+
+<!--
+    @todo this implies that on first use the table will be created and the field "name"
+    will be added to the class definition, this does not match the detailed docs and
+    does not make sense
+-->
+
 ```python
 from tina4_python import ORM
-
 
 class User(ORM):
     table_name = "users"
@@ -277,6 +287,16 @@ async def dashboard(request, response):
 {{ crud }}
 ```
 
+### Consuming REST APIs {#consuming-rest-apis}
+
+```python
+from tina4_python import Api
+
+api = Api("https://api.example.com", auth_header="Bearer xyz")
+result = api.get("/users/42")
+print(result["body"])
+```
+
 ### Inline Testing {#inline-testing}
 
 ```python
@@ -295,6 +315,20 @@ def divide(a: int, b: int) -> float:
 ```
 
 Run: `tina4 test`
+
+### Services {#services}
+
+Due to the nature of python, services are not necessary.
+
+### Threads {#threads}
+
+Due to the nature of python, threads are not necessary.
+
+### Queues {#queues}
+<!-- @todo this documentation is still required -->
+Documentation pending . . .
+
+[Full details](queues.md) of queues are available though
 
 ### WSDL {#wsdl}
 
@@ -323,15 +357,6 @@ async def wsdl_cis(request, response):
 
 ```
 
-### Consuming REST APIs {#consuming-rest-apis}
-
-```python
-from tina4_python import Api
-
-api = Api("https://api.example.com", auth_header="Bearer xyz")
-result = api.get("/users/42")
-print(result["body"])
-```
 
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">↑ Back to top</a>
