@@ -23,18 +23,25 @@ export default defineConfig({
                 {
                     text: 'Python Documentation',
                     items: [
+                        { text: 'Quick reference', link: '/python/index.md' },
                         { text: 'Setting up a project', link: '/python/installation.md' },
+                        { text: 'Static Website', link: '/python/static-website.md' },
                         { text: 'Basic Routing', link: '/python/basic-routing.md' },
                         { text: 'Middleware', link: '/python/middleware.md' },
-                        { text: 'Static Website', link: '/python/static-website.md' },
+                        { text: 'CSS/SCSS', link: '/python/css.md' },
                         { text: 'Forms & Tokens', link: '/python/posting-form-data.md' },
                         { text: 'AJAX - tina4helper.js', link: '/python/tina4helper.md' },
-                        { text: 'CSS/SCSS', link: '/python/css.md' },
+                        { text: 'OpenAPI & Swagger UI', link: '/python/swagger.md' },
                         { text: 'Database', link: '/python/database.md' },
                         { text: 'Migrations', link: '/python/migrations.md' },
                         { text: 'ORM', link: '/python/orm.md' },
                         { text: 'CRUD', link: '/python/crud.md' },
-                        { text: 'OpenAPI & Swagger UI', link: '/python/swagger.md' },
+                        { text: 'Rest Api', link: '/python/rest-api.md' }
+                    ]
+                },
+                {
+                    text: 'Python Only',
+                    items: [
                         { text: 'Queues', link: '/python/queues.md' },
                         { text: 'WSDL', link: '/python/wsdl.md' }
                     ]
@@ -45,11 +52,27 @@ export default defineConfig({
                 {
                     text: 'PHP Documentation',
                     items: [
+                        { text: 'Quick reference', link: '/php/index.md' },
                         { text: 'Setting up a project', link: '/php/installation.md' },
                         { text: 'Static Website', link: '/php/static-website.md' },
-                        { text: 'AJAX - tina4helper.js', link: '/python/tina4helper.md' }, // Shared, adjust path if needed
+                        { text: 'Basic Routing', link: '/php/basic-routing.md' },
+                        { text: 'Middleware', link: '/php/middleware.md' },
                         { text: 'CSS/SCSS', link: '/php/css.md' },
-                        { text: 'Basic Routing', link: '/php/basic-routing.md' }
+                        { text: 'Forms & Tokens', link: '/php/posting-form-data.md' },
+                        { text: 'AJAX - tina4helper.js', link: '/php/tina4helper.md' },
+                        { text: 'OpenAPI & Swagger UI', link: '/php/swagger.md' },
+                        { text: 'Database', link: '/php/database.md' },
+                        { text: 'Migrations', link: '/php/migrations.md' },
+                        { text: 'ORM', link: '/php/orm.md' },
+                        { text: 'CRUD', link: '/php/crud.md' },
+                        { text: 'Rest Api', link: '/php/rest-api.md' }
+                    ]
+                },
+                {
+                    text: 'Php Only',
+                    items: [
+                        { text: 'Services', link: '/php/services.md' },
+                        { text: 'Threads', link: '/php/threads.md' }
                     ]
                 },
                 {

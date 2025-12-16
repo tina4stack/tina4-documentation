@@ -2,24 +2,29 @@
 
 <nav class="tina4-menu">
     <a href="#installation">Installation</a> •
-    <a href="#basic-routing">Routing</a> •  
-    <a href="#middleware">Middleware</a> •  
     <a href="#static-websites">Static Websites</a> •
+    <a href="#basic-routing">Routing</a> •  
+    <a href="#middleware">Middleware</a> •
     <a href="#templates">Templates</a> •
     <a href="#session-handling">Sessions</a> •
     <a href="#scss-stylesheets">SCSS</a> •
     <a href="#environments">Environments</a> •
     <a href="#authentication">Authentication</a> •
     <a href="#html-forms-and-tokens">Forms & Tokens</a> •
+    <a href="#ajax">AJAX</a> •
     <a href="#swagger">OpenAPI</a> •
     <a href="#databases">Databases</a> •
     <a href="#database-results">Database Results</a> •    
     <a href="#migrations">Migrations</a> •
     <a href="#orm">ORM</a> •
     <a href="#crud">CRUD</a> •
+    <a href="#consuming-rest-apis">REST Client</a> •
     <a href="#inline-testing">Testing</a> •
-    <a href="#wsdl">WDSL</a> •
-    <a href="#consuming-rest-apis">REST Client</a>
+    <a href="#services">Services</a> •
+    <a href="#threads">Threads</a> •
+    <a href="#queues">Queues</a> •
+    <a href="#wsdl">WSDL</a>
+
 </nav>
 
 <style>
@@ -37,6 +42,15 @@ pip install tina4-python
 tina4 init my-project
 cd my-project
 tina4 start
+```
+
+### Static Websites {#static-websites}
+<!-- tina4php also allows .html perhaps consider for tina4python -->
+Put `.twig` files in `./src/templates` • assets in `./src/public`
+
+```twig
+<!-- src/templates/index.twig -->
+<h1>Hello Static World</h1>
 ```
 
 ### Basic Routing {#basic-routing}
@@ -82,15 +96,6 @@ class RunSomething:
 @get("/middleware")
 async def get_middleware(request, response):
     return response("Route") # Before[Before / After Something]Route[Before / After Something]After
-```
-
-### Static Websites {#static-websites}
-
-Put `.twig` files in `./src/templates` • assets in `./src/public`
-
-```twig
-<!-- src/templates/index.twig -->
-<h1>Hello Static World</h1>
 ```
 
 ### Template Rendering {#templates}
@@ -190,7 +195,13 @@ async def secret(request, response):
 </form>
 ```
 
-### Swagger {#swagger}
+### AJAX and tina4helper.js {#ajax}
+
+Tina4 ships with a small javascript library, in the bin folder, to assist with the heavy lifting of ajax calls.
+
+[More details](tina4helper.md) on available features.
+
+### OpenAPI and Swagger UI {#swagger}
 
 Visit `http://localhost:7145/swagger`
 
@@ -211,7 +222,7 @@ dba = Database("sqlite3:data.db")
 ```
 
 ### Database Results {#database-results}
-
+<!-- @todo there are probably a number of parity issues to look at, and also how we document this. For example in php asResult is actually an SQL function. Perhaps this is not an issue. -->
 ```python
 result = dba.fetch("select * from test_record order by id", limit=3, skip=1)
 
@@ -245,9 +256,15 @@ tina4 migrate
 
 ### ORM {#orm}
 
+
+<!--
+    @todo this implies that on first use the table will be created and the field "name"
+    will be added to the class definition, this does not match the detailed docs and
+    does not make sense
+-->
+
 ```python
 from tina4_python import ORM
-
 
 class User(ORM):
     table_name = "users"
@@ -270,6 +287,16 @@ async def dashboard(request, response):
 {{ crud }}
 ```
 
+### Consuming REST APIs {#consuming-rest-apis}
+
+```python
+from tina4_python import Api
+
+api = Api("https://api.example.com", auth_header="Bearer xyz")
+result = api.get("/users/42")
+print(result["body"])
+```
+
 ### Inline Testing {#inline-testing}
 
 ```python
@@ -288,6 +315,20 @@ def divide(a: int, b: int) -> float:
 ```
 
 Run: `tina4 test`
+
+### Services {#services}
+
+Due to the nature of python, services are not necessary.
+
+### Threads {#threads}
+
+Due to the nature of python, threads are not necessary.
+
+### Queues {#queues}
+<!-- @todo this documentation is still required -->
+Documentation pending . . .
+
+[Full details](queues.md) of queues are available though
 
 ### WSDL {#wsdl}
 
@@ -316,15 +357,6 @@ async def wsdl_cis(request, response):
 
 ```
 
-### Consuming REST APIs {#consuming-rest-apis}
-
-```python
-from tina4_python import Api
-
-api = Api("https://api.example.com", auth_header="Bearer xyz")
-result = api.get("/users/42")
-print(result["body"])
-```
 
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">↑ Back to top</a>
