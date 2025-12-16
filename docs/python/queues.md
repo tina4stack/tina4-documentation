@@ -2,9 +2,10 @@
 
 ::: tip 🔥 Hot Tips
 - Default to `litequeue` for local, lightweight queuing—no external services needed.
-- For production, configure RabbitMQ, Kafka, or MongoDB backends via `Config` for scalability.
-- Always handle callbacks for async delivery/consumption errors.
-- Install backends separately: e.g., `uv add litequeue` or `uv add pika` for RabbitMQ.
+- For production, configure RabbitMQ, Kafka, or mongo-queue-service backends via `Config`.
+- Handle delivery errors in callbacks (especially for Kafka/RabbitMQ).
+- Install backends separately: e.g., `uv add litequeue`, `uv add pika` for RabbitMQ, `uv add confluent-kafka` for Kafka, `uv add mongo-queue pymongo` for Mongo.
+- Use `prefix` in `Config` for namespacing topics/queues across environments.
   :::
 
 ## Basic Initialization
@@ -12,117 +13,167 @@
 Create a queue with default litequeue backend:
 
 ```python
-from tina4_python.queue import Queue, Config
+from tina4_python.Queue import Queue, Config
 
-config = Config()  # Defaults to litequeue with queue.db
+config = Config()  # Defaults to litequeue with 'queue.db'
 queue = Queue(config=config, topic="my-queue")
 ```
 
-For RabbitMQ (requires running server):
+For RabbitMQ:
 
 ```python
 config = Config()
 config.queue_type = "rabbitmq"
-config.rabbitmq_config = {"host": "localhost", "port": 5672}  # Add username/password if needed
+config.rabbitmq_config = {
+    "host": "localhost",
+    "port": 5672,
+    "username": "guest",  # Optional
+    "password": "guest"
+}
+queue = Queue(config=config, topic="my-queue")
+```
+
+For Mongo (mongo-queue-service):
+
+```python
+config = Config()
+config.queue_type = "mongo-queue-service"
+config.mongo_queue_config = {
+    "host": "localhost",
+    "port": 27017
+    # username/password if needed
+}
+queue = Queue(config=config, topic="my-queue")
+```
+
+For Kafka:
+
+```python
+config = Config()
+config.queue_type = "kafka"
+config.kafka_config = {
+    "bootstrap.servers": "localhost:9092",
+    "group.id": "my-group"
+}
 queue = Queue(config=config, topic="my-queue")
 ```
 
 ## Producing Messages
 
-Send a message synchronously:
+Synchronous produce (returns Message or Exception):
 
 ```python
+from tina4_python.Queue import Message
+
 response = queue.produce("Hello, queue!", user_id="user123")
+
 if isinstance(response, Message):
-    print(f"Produced: {response.message_id} with status {response.status}")
+    print(f"Produced ID: {response.message_id}, data: {response.data}")
 else:
     print(f"Error: {response}")
 ```
 
-With delivery callback:
+With delivery callback (async confirm for supported backends):
 
 ```python
-def delivery_cb(producer, err, msg):
+def delivery_callback(producer, err, msg):
     if err:
-        print(f"Delivery error: {err}")
+        print(f"Delivery failed: {err}")
     else:
-        print(f"Delivered: {msg.message_id}")
+        print(f"Delivered ID: {msg.message_id}")
 
-queue.produce("Async message", user_id="user456", delivery_callback=delivery_cb)
+queue.produce("Async message", user_id="user456", delivery_callback=delivery_callback)
 ```
+
+Note: Kafka produce is async-only and returns None (callback always used).
 
 ## Consuming Messages
 
-Consume once (blocking if empty):
+`consume()` returns a generator yielding messages:
 
 ```python
-def consumer_cb(consumer, err, msg):
-    if err:
-        print(f"Consume error: {err}")
-    else:
-        print(f"Consumed: {msg.data} from {msg.user_id} with status {msg.status}")
-
-queue.consume(acknowledge=True, consumer_callback=consumer_cb)
+for msg in queue.consume(acknowledge=True):
+    print(f"Consumed: {msg.data} (user_id: {msg.user_id}, status: {msg.status})")
+    # Process msg here; ack happens immediately if acknowledge=True
 ```
 
-Run continuous consumer loop:
+Single pull (non-blocking on empty):
 
 ```python
-from tina4_python.queue import Consumer
-
-consumer = Consumer(queue, consumer_callback=consumer_cb, acknowledge=True)
-consumer.run(sleep=0.5)  # Polls every 0.5s; stops on KeyboardInterrupt
+gen = queue.consume(acknowledge=True)
+try:
+    msg = next(gen)
+    print(msg.data)
+except StopIteration:
+    print("No message available")
 ```
 
-## Producer/Consumer Wrappers
+## Producer Wrapper
 
-For decoupled usage:
+Decoupled producer:
 
 ```python
-from tina4_python.queue import Producer, Consumer
+from tina4_python.Queue import Producer
 
-producer = Producer(queue, delivery_callback=delivery_cb)
-producer.produce("Wrapped produce", user_id="wrapped_user")
+producer = Producer(queue, delivery_callback=delivery_callback)
+response = producer.produce("Wrapped message", user_id="wrapped_user")
+```
 
-# Consumer as above
+## Continuous Consumer
+
+Use `Consumer` wrapper for polling single or multiple queues:
+
+```python
+from tina4_python.Queue import Consumer
+
+consumer = Consumer(queue, acknowledge=True, poll_interval=0.5)
+
+for msg in consumer.messages():
+    print(f"Received: {msg.data}")
+    # Process indefinitely; Ctrl+C to stop
+```
+
+Or blocking run (logs by default, customize as needed):
+
+```python
+consumer.run_forever()  # Logs received messages
 ```
 
 ## Multi-Queue Consumer
 
 ::: tip 🔥 Hot Tips
-- Use the `Consumer` wrapper to poll multiple queues in a single loop.
-- Pass a list of `Queue` instances to handle different topics or backends.
-- Customize `sleep` for polling frequency; lower values increase responsiveness but CPU usage.
+- `Consumer` supports list of queues (mixed backends/topics).
+- Polls sequentially; adjust `poll_interval` for latency vs CPU.
+- Shared processing logic via one loop.
   :::
 
-## Initialization
-
-Create multiple queues and a shared consumer:
-
 ```python
-from tina4_python.queue import Queue, Config, Consumer
-
-config = Config()  # Shared config, e.g., litequeue backend
-
 queue1 = Queue(config=config, topic="topic-one")
 queue2 = Queue(config=config, topic="topic-two")
 
-def consumer_cb(consumer, err, msg):
-    if err:
-        print(f"Error: {err}")
-    else:
-        print(f"Consumed from {msg.user_id}: {msg.data}")
+consumer = Consumer([queue1, queue2], acknowledge=True, poll_interval=0.5)
 
-consumer = Consumer([queue1, queue2], consumer_callback=consumer_cb, acknowledge=True)
+for msg in consumer.messages():
+    print(f"From {msg.topic if hasattr(msg, 'topic') else 'unknown'}: {msg.data}")
 ```
 
-## Running the Consumer
-
-Start the loop to consume from all queues:
+## Error Handling Example
 
 ```python
-consumer.run(sleep=0.5)  # Polls every 0.5s; Ctrl+C to stop
+try:
+    queue.produce(None)  # Raises Exception
+except Exception as e:
+    print(f"Produce error: {e}")
+
+# Empty consume yields nothing
+for msg in queue.consume():
+    pass  # No messages -> loop exits immediately
 ```
 
-- The consumer iterates over each queue in sequence per cycle.
-- Produce to individual queues as usual; messages are processed via the shared callback.
+## Prefix Namespacing
+
+```python
+config.prefix = "dev"
+queue = Queue(config=config, topic="my-queue")  # Internal name: "dev_my-queue"
+print(queue.get_prefix())  # "dev_"
+```
