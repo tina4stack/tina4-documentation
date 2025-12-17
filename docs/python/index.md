@@ -43,6 +43,7 @@ tina4 init my-project
 cd my-project
 tina4 start
 ```
+[More details](installation.md) around project setup and some customizations.
 
 ### Static Websites {#static-websites}
 <!-- tina4php also allows .html perhaps consider for tina4python -->
@@ -52,6 +53,7 @@ Put `.twig` files in `./src/templates` • assets in `./src/public`
 <!-- src/templates/index.twig -->
 <h1>Hello Static World</h1>
 ```
+[More details](static-website.md) on static website routing.
 
 ### Basic Routing {#basic-routing}
 
@@ -72,6 +74,7 @@ async def post_api(request, response):
 async def post_register(request, response):
     return response.redirect("/welcome")
 ```
+Follow the links for , this [basic routing](basic-routing.md#basic-routing) and [dynamic routing](basic-routing.md#dynamic-routing) with variables.
 
 ### Middleware
 ```python
@@ -97,6 +100,7 @@ class RunSomething:
 async def get_middleware(request, response):
     return response("Route") # Before[Before / After Something]Route[Before / After Something]After
 ```
+Follow the links for more on [Middleware Declaration](middleware.md#declare) and [Linking to Routes](middleware.md#routes).
 
 ### Template Rendering {#templates}
 
@@ -149,6 +153,7 @@ body {
   color: white;
 }
 ```
+[More details](css.md) on css and scss.
 
 ### Environments {#environments}
 Default development environment can be found in `.env`
@@ -194,6 +199,7 @@ async def secret(request, response):
     <button>Save</button>
 </form>
 ```
+[More Details](posting-form-data.md) on posting form data.
 
 ### AJAX and tina4helper.js {#ajax}
 
@@ -211,6 +217,7 @@ async def users(request, response):
     """Returns all users"""
     return response(User().select("*"))
 ```
+Follow the links for more on [Configuration](swagger.md#config), [Usage](swagger.md#usage) and [Decorators](swagger.md#decorators).
 
 ### Databases {#databases}
 
@@ -220,6 +227,7 @@ from tina4_python.Database import Database
 # dba = Database("<driver>:<hostname>/<port>:database_name", username, password)
 dba = Database("sqlite3:data.db") 
 ```
+Follow the links for more on [Available Connections](database.md#connections), [Core Methods](database.md#core-methods), [Usage](database.md#usage) and [Full transaction control](database.md#transactions).
 
 ### Database Results {#database-results}
 <!-- @todo there are probably a number of parity issues to look at, and also how we document this. For example in php asResult is actually an SQL function. Perhaps this is not an issue. -->
@@ -234,6 +242,7 @@ csv = result.to_csv()
 json = result.to_json()
 
 ```
+Looking at detailed [Usage](database.md#usage) will improve deeper understanding.
 
 ### Migrations {#migrations}
 
@@ -253,9 +262,8 @@ CREATE TABLE users
 ```bash
 tina4 migrate
 ```
-
+[Migrations](migrations.md) do have some limitations and considerations when used extensively.
 ### ORM {#orm}
-
 
 <!--
     @todo this implies that on first use the table will be created and the field "name"
@@ -273,6 +281,7 @@ class User(ORM):
 User({"name": "Alice"}).save()
 User().load("id = ?", 1)
 ```
+ORM functionality is quite extensive and needs more study of the [Advanced Detail](orm.md) to get the full value from ORM.
 
 ### CRUD {#crud}
 
@@ -286,6 +295,7 @@ async def dashboard(request, response):
 ```twig
 {{ crud }}
 ```
+[More details](crud.md) on how CRUD works, where it puts the generated files is worth some investigation.
 
 ### Consuming REST APIs {#consuming-rest-apis}
 
@@ -296,6 +306,7 @@ api = Api("https://api.example.com", auth_header="Bearer xyz")
 result = api.get("/users/42")
 print(result["body"])
 ```
+[More details](rest-api.md) are available on sending a post data body, authorizations and other finer controls of sending api requests.
 
 ### Inline Testing {#inline-testing}
 
@@ -356,7 +367,7 @@ async def wsdl_cis(request, response):
     return response.wsdl(Calculator(request))
 
 ```
-
+[More Details](wsdl.md) are available for WSDL
 
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">↑ Back to top</a>

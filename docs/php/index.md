@@ -108,9 +108,7 @@ Put `.twig` files in `./src/templates` • assets in `./public`. Render the temp
 
 ### Sessions {#session-handling}
 
-<!-- @todo not sure what session handling modifications are available in tina4php -->
-
-The default session handling is done at the time of authentication
+Sessions are started by default in the Tina4\Auth constructor.
 
 ### SCSS Stylesheets {#scss-stylesheets}
 
@@ -166,7 +164,7 @@ A valid bearer token or Tina4 formed JWT token are valid authorizations
 Form tokens can be added using a Tina4 twig filter
 ```twig
 <form method="POST" action="submit">
-    {{ "emailForm" | formToken | raw }}
+    {{ "emailForm" | formToken }}
     <input name="email">
     <button>Save</button>
 </form>
@@ -179,6 +177,7 @@ Renders out this form with "emailForm" sent via the JWT payload
     <button>Save</button>
 </form>
 ```
+[More Details](posting-form-data.md) on posting form data.
 
 ### AJAX and tina4helper.js {#ajax}
 
@@ -228,23 +227,22 @@ $array = $dataResult->asObject();
 Looking at detailed [Usage](database.md#usage) will improve deeper understanding.
 
 ### Migrations {#migrations}
-Migrations are available as cli commands. Any valid SQL is usually acceptable
+Migrations are available as cli commands. This command will create a migration file in the migrations folder. Just add your sql.
 ```bash
 
-composer migrate:create
+composer migrate:create my-first-migration
 ```
-or as routes. Any valid SQL is usually acceptable
-```
-/migrate/create
-```
-A number of migration creations can be made before executing the migrations.
+A number of migration creations can be made before executing the migrations. Once all creations are finished, just run them.
 ```bash
 
 composer migrate
 ```
-or as a route
+
+Alternatively you can spin up the webserver and do the same from the browser.
 ```
-/migrate
+http://localhost:7145/migrate/create
+
+http://localhost:7145/migrate
 ```
 [Migrations](migrations.md) do have some limitations and considerations when used extensively.
 
@@ -265,6 +263,7 @@ $user->save();
 $user = (new User())->load("id = ?", 1);
 ```
 ORM functionality is quite extensive and needs more study of the [Advanced Detail](orm.md) to get the full value from ORM.
+
 ### CRUD {#crud}
 With a single line of code, Tina 4 can generate a fully functional CRUD system, screens and all.
 ```php

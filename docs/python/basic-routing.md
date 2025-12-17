@@ -2,7 +2,7 @@
 title: Routing
 ---
 
-# Routing
+# Routing {#basic-routing}
 
 ::: tip 🔥 Hot Tips 
 - You **don’t need** `app = Tina4()` in route files – just import `get`, `post`, etc. directly  
@@ -45,7 +45,7 @@ async def users_handler(request, response):
     return response({"created": True})
 ```
 
-## Route Parameters (Dynamic Paths)
+## Route Parameters (Dynamic Paths) {#dynamic-routing}
 
 ```python
 @get("/users/{id}")
