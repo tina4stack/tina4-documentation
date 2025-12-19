@@ -329,9 +329,49 @@ Please read [More Details](threads.md) on Threads, their restrictions and usage 
 Services and Threads together can be used to replicate queues, but stand alone queues are not implemented in Tina4 Php.
 
 ### WSDL {#wsdl}
+Declare your WSDL definition
+```php
+class Calculator extends \Tina4\WSDL {
+    protected array $returnSchemas = [
+        "Add" => ["Result" => "int"],
+        "SumList" => [
+            "Numbers" => "array<int>",
+            "Total" => "int",
+            "Error" => "?string"
+        ]
+    ];
 
-This is not available in Tina4 Php.
+    public function Add(int $a, int $b): array {
+        return ["Result" => $a + $b];
+    }
 
+    /**
+     * @param int[] $Numbers
+     */
+    public function SumList(array $Numbers): array {
+        return [
+            "Numbers" => $Numbers,
+            "Total" => array_sum($Numbers),
+            "Error" => null
+        ];
+    }
+}
+```
+Add your WSDL routes
+```php
+\Tina4\Get::add("/calculator", function (\Tina4\Request $request, \Tina4\Response $response) {
+    $calculator = new Calculator($request);
+    $handle = $calculator->handle();
+    return $response($handle, HTTP_OK, APPLICATION_XML);
+});
+
+\Tina4\Post::add("/calculator", function (\Tina4\Response $response, \Tina4\Request $request) {
+    $calculator = new Calculator($request);
+    $handle = $calculator->handle();
+    return $response($handle, HTTP_OK, APPLICATION_XML);
+});
+```
+[More Details](wsdl.md) are available for WSDL
 
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">↑ Back to top</a>
