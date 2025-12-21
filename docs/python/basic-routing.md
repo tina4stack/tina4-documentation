@@ -146,6 +146,8 @@ return response("Not found", HTTP_NOT_FOUND)
 
 ## WebSockets
 
+You can add a websocket endpoint as a `@get` route, this requires `simple-websocket`, add with `uv add simple-websocket`
+
 ```python
 from tina4_python.Websocket import Websocket
 
