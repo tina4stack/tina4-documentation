@@ -21,6 +21,7 @@
     <a href="#consuming-rest-apis">REST Client</a> •
     <a href="#inline-testing">Testing</a> •
     <a href="#services">Services</a> •
+    <a href="#websockets">Websockets</a>
     <a href="#threads">Threads</a> •
     <a href="#queues">Queues</a> •
     <a href="#wsdl">WSDL</a>
@@ -319,6 +320,26 @@ Run: `tina4 test`
 ### Services {#services}
 
 Due to the nature of python, services are not necessary.
+
+### Websockets {#websockets}
+
+Requires `simple-websocket`, add with `uv add simple-websocket`
+
+```python
+from tina4_python.Websocket import Websocket
+
+@get("/ws/chat")
+async def chat_ws(request, response):
+    ws = await Websocket(request).connection()
+    try:
+        while True:
+            data = await ws.receive()
+            await ws.send(f"Echo: {data}")
+    finally:
+        await ws.close()
+    return response("")
+```
+Have a look at out PubSub example under [Websockets](websockets.md)
 
 ### Threads {#threads}
 
