@@ -1,7 +1,10 @@
-### Basic Middleware {#declare}
+# Middleware
 
-### Linking to Routes {#routes}
-
-### Middleware chaining {#chaining}
-
-### Variable chaining {#variables}
+## Basic Middleware {#declare}
+Documentation coming soon . . .
+## Linking to Routes {#routes}
+Documentation coming soon . . .
+## Middleware chaining {#chaining}
+Documentation coming soon . . .
+## Variable chaining {#variables}
+Documentation coming soon . . .

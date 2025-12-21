@@ -1,4 +1,4 @@
-# Tina4-Python – Database Class
+# Tina4-Python – Database Class {#connections}
 
 ::: tip 🔥 Hot Tips
 - Instantiate `dba` in the `./src/__init__.py`,  include with `from . import dba`
@@ -31,7 +31,7 @@ dba = Database("pymssql:localhost/1433:mydb", "sa", "Password123")
 dba = Database("firebird.driver:localhost/3050:/path/db.fdb", "sysdba", "masterkey")
 ```
 
-## Core Methods
+## Core Methods {#core-methods}
 
 | Method                               | Description                                          | Returns                     |
 |--------------------------------------|------------------------------------------------------|-----------------------------|
@@ -61,7 +61,7 @@ result.to_crud()        # makes a CRUD screen
 result.to_csv()         # generates CSV from the result
 ```
 
-## Examples
+## Examples {#usage}
 
 ```python
 db = Database("sqlite3::memory:")
@@ -100,7 +100,7 @@ result = db.fetch(
 db.close()
 ```
 
-## Transactions
+## Transactions {#transactions}
 
 ```python
 db.start_transaction()

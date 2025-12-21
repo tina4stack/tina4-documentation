@@ -1,7 +1,10 @@
-### Connection {#connections}
+# Working with Databases
 
-### Core Methods {#core-methods} 
-
-### Usage {#usage}
-
-### Full Transaction Control {#transactions}
+## Connection {#connections}
+Documentation coming soon . . .
+## Core Methods {#core-methods} 
+Documentation coming soon . . .
+## Usage {#usage}
+Documentation coming soon . . .
+## Full Transaction Control {#transactions}
+Documentation coming soon . . .

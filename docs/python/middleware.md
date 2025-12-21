@@ -1,4 +1,4 @@
-# Middleware
+# Middleware {#declare}
 
 ::: tip 🔥 Hot Tips
 - Middleware classes modify requests/responses before or after route handling.
@@ -48,7 +48,7 @@ class MiddleWare:
 - Methods run based on prefixes: `before_` before route, `after_` after, `before_and_after_` both.
 - Useful for headers (e.g., CORS), authentication, or content changes.
 
-## Attaching Middleware to Routes
+## Attaching Middleware to Routes {#routes}
 
 Import and apply `@middleware` decorator before route decorators. Fires all matching methods by default.
 
