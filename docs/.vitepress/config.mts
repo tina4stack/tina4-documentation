@@ -36,14 +36,16 @@ export default defineConfig({
                         { text: 'Migrations', link: '/python/migrations.md' },
                         { text: 'ORM', link: '/python/orm.md' },
                         { text: 'CRUD', link: '/python/crud.md' },
-                        { text: 'Rest Api', link: '/python/rest-api.md' }
+                        { text: 'Rest Api', link: '/python/rest-api.md' },
+                        { text: 'Queues', link: '/python/queues.md' },
+                        { text: 'WSDL', link: '/python/wsdl.md' },
                     ]
                 },
                 {
                     text: 'Python Only',
                     items: [
-                        { text: 'Queues', link: '/python/queues.md' },
-                        { text: 'WSDL', link: '/python/wsdl.md' }
+
+                        { text: 'Websockets', link: '/python/websockets.md'}
                     ]
                 }
             ],
