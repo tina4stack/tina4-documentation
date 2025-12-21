@@ -280,8 +280,23 @@ $api = (new \Tina4\Api())->sendRequest("https://api.example.com", "GET");
 
 ### Inline Testing {#inline-testing}
 
-Documentation coming soon . . .
+Tina4 allows testing to be added to functions without having to set up a test suite.
+```php
+    /**
+     * @tests Cris
+     * assert(2,5)==7,"2+5 not equal 7"
+     */
+    public function addTwoNumbers($number1, $number2)
+    {
+        return $number1 + $number2;
+    }
+```
+After making changes you can run the tests
+```bash
 
+composer test
+```
+[Limitations](tests.md) and 
 ### Services {#services}
 
 Create the required process
