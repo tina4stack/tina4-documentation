@@ -108,9 +108,7 @@ Put `.twig` files in `./src/templates` • assets in `./public`. Render the temp
 
 ### Sessions {#session-handling}
 
-<!-- @todo not sure what session handling modifications are available in tina4php -->
-
-The default session handling is done at the time of authentication
+Sessions are started by default in the Tina4\Auth constructor.
 
 ### SCSS Stylesheets {#scss-stylesheets}
 
@@ -166,7 +164,7 @@ A valid bearer token or Tina4 formed JWT token are valid authorizations
 Form tokens can be added using a Tina4 twig filter
 ```twig
 <form method="POST" action="submit">
-    {{ "emailForm" | formToken | raw }}
+    {{ "emailForm" | formToken }}
     <input name="email">
     <button>Save</button>
 </form>
@@ -179,6 +177,7 @@ Renders out this form with "emailForm" sent via the JWT payload
     <button>Save</button>
 </form>
 ```
+[More Details](posting-form-data.md) on posting form data.
 
 ### AJAX and tina4helper.js {#ajax}
 
@@ -217,6 +216,11 @@ $DBA = new \Tina4\DataSQLite3("database/myDatabase.db", "username", "my-password
 Follow the links for more on [Available Connections](database.md#connections), [Core Methods](database.md#core-methods), [Usage](database.md#usage) and [Full transaction control](database.md#transactions).
 
 ### Database Results {#database-results}
+Returning a single row is as easy as 
+```php
+$dataResult = $DBA->fetchOne("select * from test_record order by id");
+```
+
 Database objects all return a DataResult object, which can then be returned in a number of formats.
 ```php
 // fetch($sql, $noOfRecords, $offset)
@@ -228,23 +232,22 @@ $array = $dataResult->asObject();
 Looking at detailed [Usage](database.md#usage) will improve deeper understanding.
 
 ### Migrations {#migrations}
-Migrations are available as cli commands. Any valid SQL is usually acceptable
+Migrations are available as cli commands. This command will create a migration file in the migrations folder. Just add your sql.
 ```bash
 
-composer migrate:create
+composer migrate:create my-first-migration
 ```
-or as routes. Any valid SQL is usually acceptable
-```
-/migrate/create
-```
-A number of migration creations can be made before executing the migrations.
+A number of migration creations can be made before executing the migrations. Once all creations are finished, just run them.
 ```bash
 
 composer migrate
 ```
-or as a route
+
+Alternatively you can spin up the webserver and do the same from the browser.
 ```
-/migrate
+http://localhost:7145/migrate/create
+
+http://localhost:7145/migrate
 ```
 [Migrations](migrations.md) do have some limitations and considerations when used extensively.
 
@@ -265,6 +268,7 @@ $user->save();
 $user = (new User())->load("id = ?", 1);
 ```
 ORM functionality is quite extensive and needs more study of the [Advanced Detail](orm.md) to get the full value from ORM.
+
 ### CRUD {#crud}
 With a single line of code, Tina 4 can generate a fully functional CRUD system, screens and all.
 ```php
@@ -281,8 +285,23 @@ $api = (new \Tina4\Api())->sendRequest("https://api.example.com", "GET");
 
 ### Inline Testing {#inline-testing}
 
-Documentation coming soon . . .
+Tina4 allows testing to be added to functions without having to set up a test suite.
+```php
+    /**
+     * @tests Cris
+     * assert(2,5)==7,"2+5 not equal 7"
+     */
+    public function addTwoNumbers($number1, $number2)
+    {
+        return $number1 + $number2;
+    }
+```
+After making changes you can run the tests
+```bash
 
+composer test
+```
+[Limitations](tests.md) and 
 ### Services {#services}
 
 Create the required process
@@ -330,9 +349,49 @@ Please read [More Details](threads.md) on Threads, their restrictions and usage 
 Services and Threads together can be used to replicate queues, but stand alone queues are not implemented in Tina4 Php.
 
 ### WSDL {#wsdl}
+Declare your WSDL definition
+```php
+class Calculator extends \Tina4\WSDL {
+    protected array $returnSchemas = [
+        "Add" => ["Result" => "int"],
+        "SumList" => [
+            "Numbers" => "array<int>",
+            "Total" => "int",
+            "Error" => "?string"
+        ]
+    ];
 
-This is not available in Tina4 Php.
+    public function Add(int $a, int $b): array {
+        return ["Result" => $a + $b];
+    }
 
+    /**
+     * @param int[] $Numbers
+     */
+    public function SumList(array $Numbers): array {
+        return [
+            "Numbers" => $Numbers,
+            "Total" => array_sum($Numbers),
+            "Error" => null
+        ];
+    }
+}
+```
+Add your WSDL routes
+```php
+\Tina4\Get::add("/calculator", function (\Tina4\Request $request, \Tina4\Response $response) {
+    $calculator = new Calculator($request);
+    $handle = $calculator->handle();
+    return $response($handle, HTTP_OK, APPLICATION_XML);
+});
+
+\Tina4\Post::add("/calculator", function (\Tina4\Response $response, \Tina4\Request $request) {
+    $calculator = new Calculator($request);
+    $handle = $calculator->handle();
+    return $response($handle, HTTP_OK, APPLICATION_XML);
+});
+```
+[More Details](wsdl.md) are available for WSDL
 
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">↑ Back to top</a>

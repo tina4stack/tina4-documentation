@@ -1,4 +1,4 @@
-# Swagger & Swagger UI
+# Swagger & Swagger UI {#config}
 
 ::: tip 🔥 Hot Tips
 - You can change the Swagger endpoint by setting the environment variable `SWAGGER_ROUTE` eg. `/my-swagger`
@@ -20,7 +20,7 @@ Set environment variables for OpenAPI info:
 
 Servers include current host and local dev. Security schemes: Bearer (JWT) and Basic for secure routes.
 
-### Import and Usage
+### Import and Usage {#usage}
 
 Import decorators directly for cleaner usage without prefix:
 
@@ -40,7 +40,7 @@ async def example_route(request, response):
 
 Path params auto-detected; request bodies for POST/PUT/PATCH if examples given.
 
-### Decorators
+### Decorators {#decorators}
 
 - **`@description(text: str)`**: Operation description.
 - **`@summary(text: str)`**: Short summary.
