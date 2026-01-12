@@ -216,6 +216,11 @@ $DBA = new \Tina4\DataSQLite3("database/myDatabase.db", "username", "my-password
 Follow the links for more on [Available Connections](database.md#connections), [Core Methods](database.md#core-methods), [Usage](database.md#usage) and [Full transaction control](database.md#transactions).
 
 ### Database Results {#database-results}
+Returning a single row is as easy as 
+```php
+$dataResult = $DBA->fetchOne("select * from test_record order by id");
+```
+
 Database objects all return a DataResult object, which can then be returned in a number of formats.
 ```php
 // fetch($sql, $noOfRecords, $offset)
