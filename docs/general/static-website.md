@@ -8,9 +8,11 @@
 
 Tina4 automatically renders templates from `src/templates`, matching routes with the filenames. For example, `index.twig` serves at `/`, and `cars.twig` at `/cars`. 
 
+It is important to note that routes will take precedence over templates.
+
 ## Prerequisites
 - Tina4 Python or PHP installed (see [Getting Started](/get-started)).
-- Project structure (auto-created when you open the project in your browser for the first time):
+- Project structure (auto-created when initialize the project):
   ```
   myproject/
   ├── src/
@@ -61,7 +63,7 @@ Add files like `./src/templates/index.twig` (auto-served at `/`) and `./src/temp
 
 {% block content %}
     <h2>Hello, World!</h2>
-    <p>Explore our static site built with Tina4 Python and Twig—fast, simple, and auto-rendered.</p>
+    <p>Explore our static site built with Tina4 and Twig—fast, simple, and auto-rendered.</p>
 {% endblock %}
 ```
 
