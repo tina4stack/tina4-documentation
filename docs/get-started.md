@@ -13,6 +13,8 @@ python -m jurigged app.py
 ```
 Access your app at `http://localhost:7145`
 
+Take a deeper dive into the [documentation](/python/index.md)
+
 ## PHP 8.0 >
 Set up a Tina4 PHP project just as easily, inspired by Laravel's elegance but with a lighter footprint:
 ```bash
@@ -24,3 +26,5 @@ composer exec tina4 initialize:run
 composer start
 ```
 Access your app at `http://localhost:7145`
+
+Take a deeper dive into the [documentation](/php/index.md)
