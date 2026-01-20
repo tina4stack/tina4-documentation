@@ -379,13 +379,7 @@ class Calculator extends \Tina4\WSDL {
 ```
 Add your WSDL routes
 ```php
-\Tina4\Get::add("/calculator", function (\Tina4\Request $request, \Tina4\Response $response) {
-    $calculator = new Calculator($request);
-    $handle = $calculator->handle();
-    return $response($handle, HTTP_OK, APPLICATION_XML);
-});
-
-\Tina4\Post::add("/calculator", function (\Tina4\Response $response, \Tina4\Request $request) {
+\Tina4\Any::add("/calculator", function (\Tina4\Request $request, \Tina4\Response $response) {
     $calculator = new Calculator($request);
     $handle = $calculator->handle();
     return $response($handle, HTTP_OK, APPLICATION_XML);
