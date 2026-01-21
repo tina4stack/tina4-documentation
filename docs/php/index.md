@@ -71,7 +71,7 @@ Put `.html` or `.twig` files in `./src/templates` • assets in `./public`
     \Tina4\redirect("/welcome");
 });
 ```
-Follow the links for , this [basic routing](basic-routing.md#basic-routing) and [dynamic routing](basic-routing.md#dynamic-routing) with variables.
+Follow the links for , this [basic routing](basic-routing.md#basic-routing), [dynamic routing](basic-routing.md#dynamic-routing) with variables and [different response types](basic-routing.md#response-options).
 
 ### Middleware {#middleware}
 

@@ -86,7 +86,7 @@ async def admin_dashboard(request, response):
 ```
 
 Put files in `routes/admin_routes.py` → auto-loaded.
-
+<!-- I think this section should be removed from here and just a link added to the middle ware documenation. It does not belong here and makes the page busy. I suggest an entry like the further reading in php } -->
 ## Middleware
 
 ```python
@@ -108,7 +108,7 @@ class AuthMiddleware:
 async def protected_route(request, response):
     return response("Top secret data")
 ```
-
+<!-- Same comment as for middleware, I think this section should be replaced with a link -->
 ## Metadata & Swagger
 
 ```python
