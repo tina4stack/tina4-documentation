@@ -88,7 +88,7 @@ Follow the links for , this [basic routing](basic-routing.md#basic-routing), [dy
     return $response("This is my route");
 })::middleware(["MyMiddleware"]);
 ```
-Follow the links for more on [Middleware Declaration](middleware.md#declare), [Linking to Routes](middleware.md#routes), [Middleware Chaining](middleware.md#chaining) and [Variable Modification](middleware.md#variables)
+Follow the links for more on [Middleware Declaration](middleware.md#declare), [Linking to Routes](middleware.md#routes), [Middleware Chaining](middleware.md#chaining) and [Middleware With Dynamic Routes](middleware.md#dynamic).
 
 ### Template Rendering {#templates}
 
