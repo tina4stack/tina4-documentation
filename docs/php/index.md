@@ -163,7 +163,7 @@ A valid bearer token or Tina4 formed JWT token are valid authorizations
 
 Form tokens can be added using a Tina4 twig filter
 ```twig
-<form method="POST" action="submit">
+<form method="POST" action="/process-form">
     {{ "emailForm" | formToken }}
     <input name="email">
     <button>Save</button>
@@ -171,13 +171,15 @@ Form tokens can be added using a Tina4 twig filter
 ```
 Renders out this form with "emailForm" sent via the JWT payload
 ```html
-<form method="POST" action="submit">
+<form method="POST" action="/process-form">
     <input type="hidden" name="formToken" value="ey...">
     <input name="email">
     <button>Save</button>
 </form>
 ```
-[More Details](posting-form-data.md) on posting form data.
+[More details](posting-form-data.md) on posting form data, how to [secure your routes](posting-form-data.md#secure-routes), working with 
+[Tina4 tokens](posting-form-data.md#form-tokens), [uploading files](posting-form-data.md#upload-files), how to [handle errors](posting-form-data.md#handle-errors)
+and a [full login example](posting-form-data.md#login-example).
 
 ### AJAX and tina4helper.js {#ajax}
 
