@@ -200,7 +200,9 @@ async def secret(request, response):
     <button>Save</button>
 </form>
 ```
-[More Details](posting-form-data.md) on posting form data.
+[More details](posting-form-data.md) on posting form data, [basic form handling](posting-form-data#basic-forms), how to [generate form tokens](posting-form-data#form-tokens),
+dealing with [file uploads](posting-form-data#file-uploads), [returning errors](posting-form-data#error-handling), [disabling route auth](posting-form-data#disabling-auth)
+and a [full login example](posting-form-data#full-example).
 
 ### AJAX and tina4helper.js {#ajax}
 

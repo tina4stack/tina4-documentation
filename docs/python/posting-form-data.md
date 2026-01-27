@@ -14,14 +14,15 @@ If you're used to posting forms in the traditional manner to the web service, pa
 * All `POST`, `PUT`, `PATCH`, and `DELETE` requests are **secured by default**
 * You **must** pass a `formToken` input value to be validated (CSRF protection)
 
-Tina4 Python makes this **simple and automatic** — no manual validation required in your routes.
+Tina4 Php makes this **simple and automatic** — no manual validation required in your routes.
 
+<!-- @todo this implies that there is a single token stored in session that is used for validation for every request. It that really how it works? -->
 ::: tip Secure by Default
 Tina4 generates a unique, signed token per session and validates it on every write request.  
 Invalid tokens return a `403 Forbidden` automatically.
 :::
 
-## 1. Basic Form Handling
+## 1. Basic Form Handling {#basic-forms}
 
 ### Route Setup
 
@@ -67,7 +68,7 @@ async def submit_contact(request, response):
 </form>
 ```
 
-## 2. Generating Form Tokens: Three Ways
+## 2. Generating Form Tokens: Three Ways {#form-tokens}
 
 There are **three ways** to get a `formToken` in Tina4 Python (aligned with PHP for consistency):
 
@@ -122,7 +123,7 @@ fetch('/api/save', {
 });
 ```
 
-## 3. File Uploads with Forms
+## 3. File Uploads with Forms {#file-uploads}
 
 Add `enctype="multipart/form-data"` and handle via `request.files`.
 
@@ -145,7 +146,7 @@ async def handle_upload(request, response):
     return response("Files uploaded!")
 ```
 
-## 4. Validation & Error Handling
+## 4. Validation & Error Handling {#error-handling}
 
 Return errors and old input on failure.
 
@@ -180,7 +181,7 @@ In Twig:
 {% endif %}
 ```
 
-## 5. Disabling Protection (`@noauth()`)
+## 5. Disabling Protection (`@noauth()`) {#disabling-auth}
 
 **Rarely needed** — only for public webhooks.
 
@@ -198,7 +199,7 @@ Use `@noauth()` **only** for non-user endpoints like webhooks.
 Never on login/register forms!
 :::
 
-## Example: Full Login Flow
+## Example: Full Login Flow {#full-example}
 
 ### Route
 
@@ -218,7 +219,7 @@ async def process_login(request, response):
     
     return response.render("login.twig", {"error": "Invalid credentials"})
 ```
-
+<!-- @todo it is not obvious where the old is coming from. I know it is further up, but if someone jumps here for a working solution it might be confusing -->
 ### Template
 
 ```twig
