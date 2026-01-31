@@ -177,3 +177,11 @@ config.prefix = "dev"
 queue = Queue(config=config, topic="my-queue")  # Internal name: "dev_my-queue"
 print(queue.get_prefix())  # "dev_"
 ```
+
+## Batches
+
+You can offload the queue faster by using batches, the callback method is still invoked for every item in the queue.
+
+```python
+queue1 = Queue(config=config, topic="topic-one", batch_size=10)
+```
