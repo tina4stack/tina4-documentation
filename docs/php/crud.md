@@ -16,12 +16,12 @@
 
 ```php
 <?php
-// The path 'crud/catalog' is used for both the route names and template folder structure
-(new Catalog())->generateCrud("crud/catalog");
+// The path '/crud/catalog' is used for both the route names and template folder structure
+(new Catalog())->generateCrud("/crud/catalog");
 ```
 So let's look at what just happenend.
-* A landing route `crud/catalog/landing` has been created which loads the browser based screens.
-* The single route `crud/catalog` to run the browser screens, or as an api is created. This handles all operations.
+* A landing route `/crud/catalog/landing` has been created which loads the browser based screens.
+* The single route `/crud/catalog` to run the browser screens, or as an api is created. This handles all operations.
 * The screen templates are created in the `templates/crud/catalog` folder. The first file `grid.twig` is the display page. The second file `form.twig` is the editing modal.
 * Both files extend the `public/components/base.twig` file.
 * These templates are created from the templates found in the `public/components`.
