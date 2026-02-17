@@ -16,7 +16,7 @@
 
 ```php
 <?php
-// The path 'crud/catalog' is used for both the route names and template folder structure
+// The path '/crud/catalog' is used for both the route names and template folder structure
 (new Catalog())->generateCrud("/crud/catalog");
 ```
 So let's look at what just happenend.
