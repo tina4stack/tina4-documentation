@@ -282,7 +282,7 @@ With a single line of code, Tina 4 can generate a fully functional CRUD system, 
 ### Consuming REST APIs {#consuming-rest-apis}
 Getting data from a public api is as simple as one line of code.
 ```php
-$api = (new \Tina4\Api())->sendRequest("https://api.example.com", "GET");
+$api = (new \Tina4\Api("https://api.example.com"))->sendRequest("/my-route", "GET");
 ```
 [More details](rest-api.md) are available on sending a post data body, authorizations and other finer controls of sending api requests.
 
