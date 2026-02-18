@@ -330,7 +330,8 @@ Add the process to the service
 ```
 Create the service on the server by creating and registering an appropriate script. 
 
-There are a number of special cases that [Need Investigating](services.md) for getting the full value out of services, and should be studied in conjunction with threads.
+[Further reading](services.md) is required for getting the full value out of services, and should 
+be studied in conjunction with [threads](threads.md).
 
 ### Threads {#threads}
 
@@ -349,7 +350,7 @@ Please read [More Details](threads.md) on Threads, their restrictions and usage 
 
 ### Queues {#queues}
 
-Services and Threads together can be used to replicate queues, but stand alone queues are not implemented in Tina4 Php.
+[Services](services.md) and [Threads](threads.md) together can be used to replicate queues, but stand alone queues are not implemented in Tina4 Php.
 
 ### WSDL {#wsdl}
 Declare your WSDL definition
