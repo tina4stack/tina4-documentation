@@ -14,7 +14,7 @@ If you're used to posting forms in the traditional manner to the web service, pa
 * All `POST`, `PUT`, `PATCH`, and `DELETE` requests are **secured by default**
 * You **must** pass a `formToken` input value to be validated (CSRF protection)
 
-Tina4 Php makes this **simple and automatic** — no manual validation required in your routes.
+Tina4 Python makes this **simple and automatic** — no manual validation required in your routes.
 
 <!-- @todo this implies that there is a single token stored in session that is used for validation for every request. It that really how it works? -->
 ::: tip Secure by Default
