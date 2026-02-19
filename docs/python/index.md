@@ -233,7 +233,6 @@ dba = Database("sqlite3:data.db")
 Follow the links for more on [Available Connections](database.md#connections), [Core Methods](database.md#core-methods), [Usage](database.md#usage) and [Full transaction control](database.md#transactions).
 
 ### Database Results {#database-results}
-<!-- @todo there are probably a number of parity issues to look at, and also how we document this. For example in php asResult is actually an SQL function. Perhaps this is not an issue. -->
 ```python
 result = dba.fetch("select * from test_record order by id", limit=3, skip=1)
 
