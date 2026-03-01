@@ -1,5 +1,12 @@
 # Tina4 Python – Quick Reference
 
+::: tip 🔥 Hot Tips
+- Routes go in `src/routes/`, templates in `src/templates/`, static files in `src/public/`
+- GET routes are public by default; POST/PUT/PATCH/DELETE require a token
+- Return a `dict` from `response()` and the framework auto-sets `application/json`
+- Use `uv run tina4 start` to launch the dev server on port 7145
+  :::
+
 <nav class="tina4-menu">
     <a href="#installation">Installation</a> •
     <a href="#static-websites">Static Websites</a> •

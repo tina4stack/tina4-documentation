@@ -6,7 +6,7 @@
 - Assumes lightweight ORM support; define models extending a base for `select()`.
   :::
 
-## Example Usage
+## Example Usage {#example}
 
 Define a route to fetch data and generate CRUD:
 
@@ -25,7 +25,7 @@ Render in Twig template (`users/dashboard.twig`):
 {{ crud }}  {# Outputs full CRUD HTML: table, search, pagination #}
 ```
 
-## How It Works
+## How It Works {#how-it-works}
 
 - `User().select(...)`: Executes query via ORM, returns DatabaseResult with `.crud` property.
 - `to_crud(request)`:
@@ -35,7 +35,7 @@ Render in Twig template (`users/dashboard.twig`):
 - Twig: `{{ crud }}` inserts the generated HTML interface.
 - AJAX/JSON: Handles `?search=...&limit=...&offset=...` for data refresh.
 
-## Customization
+## Customization {#customization}
 
 - Pass options: `to_crud(request, {"primary_key": "user_id", "limit": 50})`.
 - Edit `crud/users.twig` for table-specific UI tweaks.

@@ -7,7 +7,7 @@
 - Works with SQLite, PostgreSQL, MySQL, MSSQL, Firebird — all the same  
   :::
 
-## Quick Start – 8 lines
+## Quick Start – 8 lines {#quick-start}
 
 ```python
 from tina4_python import ORM, orm, Database
@@ -35,7 +35,7 @@ user.load("email = ?", ["alice@example.com"])
 print(user.name)               # → Alice Wonder
 ```
 
-## Field Types
+## Field Types {#field-types}
 
 | Field Type               | Python type | SQL example                         | Notes                             |
 |--------------------------|-------------|-------------------------------------|-----------------------------------|
@@ -60,7 +60,7 @@ created_at = DateTimeField()
 status = IntegerField(default=1)
 ```
 
-## Foreign Keys – Beautiful & Simple
+## Foreign Keys – Beautiful & Simple {#foreign-keys}
 
 ```python
 from tina4_python.FieldTypes import ForeignKeyField
@@ -82,7 +82,7 @@ post.load("id = ?", [1])
 print(post.title)
 ```
 
-## Core Methods
+## Core Methods {#core-methods}
 
 | Method                 | Example                     | What it does                       | Returns          |
 |------------------------|-----------------------------|------------------------------------|------------------|
@@ -94,7 +94,7 @@ print(post.title)
 | `.create_table()`      | `User().create_table()`     | Auto-create table                  |                  |
 | `.to_dict()`           | `user.to_dict()`            | Convert instance to dict           | `dict`           |
 
-## Migrations – One command
+## Migrations – One command {#migrations}
 
 ```python
 from tina4_python.Migration import migrate
@@ -102,7 +102,7 @@ from tina4_python.Migration import migrate
 migrate(Database("sqlite3:test.db"))  # creates/updates all ORM tables
 ```
 
-## Full Example – Real Project Ready
+## Full Example – Real Project Ready {#full-example}
 
 ```python
 from tina4_python import ORM, orm, Database
@@ -139,7 +139,7 @@ for a in result.records:
     print(a["title"])
 ```
 
-## Summary – The Tina4 ORM Philosophy
+## Summary – The Tina4 ORM Philosophy {#summary}
 
 - **No `__init__` needed**
 - **No `save()` method to write**

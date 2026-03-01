@@ -22,7 +22,7 @@ Tina4 generates a unique, signed token per session and validates it on every wri
 Invalid tokens return a `403 Forbidden` automatically.
 :::
 
-## 1. Basic Form Handling {#basic-forms}
+## Basic Form Handling {#basic-forms}
 
 ### Route Setup
 
@@ -68,7 +68,7 @@ async def submit_contact(request, response):
 </form>
 ```
 
-## 2. Generating Form Tokens: Three Ways {#form-tokens}
+## Generating Form Tokens: Three Ways {#form-tokens}
 
 There are **three ways** to get a `formToken` in Tina4 Python (aligned with PHP for consistency):
 
@@ -123,7 +123,7 @@ fetch('/api/save', {
 });
 ```
 
-## 3. File Uploads with Forms {#file-uploads}
+## File Uploads with Forms {#file-uploads}
 
 Add `enctype="multipart/form-data"` and handle via `request.files`.
 
@@ -158,7 +158,7 @@ async def handle_upload(request, response):
     return response("Files uploaded!")
 ```
 
-## 4. Validation & Error Handling {#error-handling}
+## Validation & Error Handling {#error-handling}
 
 Return errors and old input on failure.
 
@@ -193,7 +193,7 @@ In Twig:
 {% endif %}
 ```
 
-## 5. Disabling Protection (`@noauth()`) {#disabling-auth}
+## Disabling Protection (`@noauth()`) {#disabling-auth}
 
 **Rarely needed** — only for public webhooks.
 

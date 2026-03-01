@@ -9,7 +9,7 @@ Websockets enable full-duplex, real-time communication over a single TCP connect
 - Use a tool like `websocat` to test your connections
   :::
 
-## Implementation of a PubSub system
+## Implementation of a PubSub system {#pubsub}
 
 Define a websocket route in `src/routes/websocket.py` to handle connections, subscriptions, and messages:
 
@@ -68,7 +68,7 @@ async def chat_ws(request, response):
 - Message handling: Parses JSON for actions like `subscribe`, `unsubscribe`, or `publish` to manage topics and broadcast data.
 - Cleanup: Removes disconnected subscribers and closes the connection.
 
-## Client Usage
+## Client Usage {#client}
 
 Connect from a Python client using the `websockets` library and send JSON actions. Include a Bearer token in the Authorization header for secured routes (obtain token via default `API_KEY` in `.env`):
 
@@ -101,6 +101,6 @@ asyncio.run(chat_client())
 - Subscribe to topics for receiving updates.
 - Publish data to broadcast to all subscribers on a topic.
 
-## Debugging
+## Debugging {#debugging}
 
 Enable debug logging with `Debug.info()` for incoming messages. Set `TINA4_DEBUG_LEVEL=Info` to control verbosity, as in general setup.

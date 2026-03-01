@@ -5,7 +5,7 @@
   :::
 Tina4 Python integrates Swagger for OpenAPI 3.0.3 compliant API documentation. The `/swagger` endpoint serves an interactive UI, and `/swagger.json` provides the JSON spec. Annotations via decorators add metadata to routes for enhanced docs.
 
-### Configuration
+## Configuration {#configuration}
 
 Set environment variables for OpenAPI info:
 
@@ -20,7 +20,7 @@ Set environment variables for OpenAPI info:
 
 Servers include current host and local dev. Security schemes: Bearer (JWT) and Basic for secure routes.
 
-### Import and Usage {#usage}
+## Import and Usage {#usage}
 
 Import decorators directly for cleaner usage without prefix:
 
@@ -40,7 +40,7 @@ async def example_route(request, response):
 
 Path params auto-detected; request bodies for POST/PUT/PATCH if examples given.
 
-### Decorators {#decorators}
+## Decorators {#decorators}
 
 - **`@description(text: str)`**: Operation description.
 - **`@summary(text: str)`**: Short summary.

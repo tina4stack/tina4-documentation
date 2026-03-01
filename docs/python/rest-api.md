@@ -8,7 +8,7 @@
 - `request.body` is already parsed — JSON comes in as a `dict`, no manual decoding needed
   :::
 
-## 1. A Simple GET Endpoint {#simple-get}
+## A Simple GET Endpoint {#simple-get}
 
 ```python
 from tina4_python.Router import get
@@ -21,7 +21,7 @@ async def api_status(request, response):
 - Returns JSON automatically because the argument is a `dict`
 - GET routes are **public by default** — no token required
 
-## 2. Path Parameters {#path-params}
+## Path Parameters {#path-params}
 
 Use `{name}` in the route path. The value is injected as a function argument:
 
@@ -54,7 +54,7 @@ async def get_file(path, request, response):
     return response.file(path, root_path="src/public/uploads")
 ```
 
-## 3. POST with a JSON Body {#post-json}
+## POST with a JSON Body {#post-json}
 
 POST routes **require a valid token by default** (CSRF/auth protection). The request body is automatically parsed based on `Content-Type`.
 
@@ -94,7 +94,7 @@ curl -X POST http://localhost:7145/api/users \
 | `multipart/form-data`               | `dict` (files in `request.files`) |
 | `text/plain`                        | `str`               |
 
-## 4. PUT, PATCH, DELETE {#other-methods}
+## PUT, PATCH, DELETE {#other-methods}
 
 ```python
 from tina4_python.Router import put, patch, delete
@@ -137,7 +137,7 @@ async def delete_user(id, request, response):
     return response({"deleted": True})
 ```
 
-## 5. Authentication {#auth}
+## Authentication {#auth}
 
 ### How it works
 
@@ -194,7 +194,7 @@ async def stripe_webhook(request, response):
     return response({"received": True})
 ```
 
-## 6. Request Headers {#headers}
+## Request Headers {#headers}
 
 Headers are a plain `dict` with **lowercased keys**:
 
@@ -212,7 +212,7 @@ async def debug_headers(request, response):
     })
 ```
 
-## 7. Custom Response Headers {#response-headers}
+## Custom Response Headers {#response-headers}
 
 Use `Response.add_header()` before returning:
 
@@ -226,7 +226,7 @@ async def get_data(request, response):
     return response({"data": [1, 2, 3]})
 ```
 
-## 8. Status Codes {#status-codes}
+## Status Codes {#status-codes}
 
 Pass the HTTP status code as the second argument to `response()`:
 
@@ -238,7 +238,7 @@ return response({"error": "Not found"}, 404)      # Not Found
 return response({"error": "Server error"}, 500)   # Internal Error
 ```
 
-## 9. Serving Files {#files}
+## Serving Files {#files}
 
 `Response.file()` serves a file with automatic MIME type detection and directory traversal protection:
 
@@ -248,7 +248,7 @@ async def download(filename, request, response):
     return response.file(filename, root_path="src/public/downloads")
 ```
 
-## 10. CORS {#cors}
+## CORS {#cors}
 
 Tina4 sends permissive CORS headers automatically on every response:
 
@@ -260,7 +260,7 @@ Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept, Au
 
 OPTIONS pre-flight requests are handled automatically.
 
-## 11. Swagger Documentation {#swagger}
+## Swagger Documentation {#swagger}
 
 Add metadata to your routes and they appear in the Swagger UI at `/swagger`:
 

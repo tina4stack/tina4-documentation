@@ -7,7 +7,7 @@
 - Migration files stored in `./migrations` and contain editable SQL.
   :::
 
-## Creating a Migration
+## Creating a Migration {#creating}
 
 Tina4 migrations are created by calling `tina4 migrate:create`. Provide a description for the migration.
 
@@ -28,7 +28,7 @@ uv run tina4 migrate:create "Create users table"
 
 Migrations can also auto-generate SQL when initializing an ORM object if the table doesn't exist—it logs the CREATE TABLE SQL to the console, which you can copy into a migration file.
 
-## Running Migrations
+## Running Migrations {#running}
 
 Run pending migrations via `uv run tina4 migrate`.
 
@@ -37,7 +37,7 @@ Run pending migrations via `uv run tina4 migrate`.
 - Updates status in `tina4_migration` table.
 - On failure, rolls back, logs error, and exits.
 
-## Migrations as Part of Startup
+## Migrations as Part of Startup {#startup}
 
 After declaring your database handle in code (e.g., `app.py`), call `migrate` to run migrations on startup.
 
@@ -49,7 +49,7 @@ dba = Database("sqlite3:test.db")  # Example connection
 migrate(dba)  # Runs all pending migrations
 ```
 
-## ORM Integration
+## ORM Integration {#orm}
 
 Define models extending `tina4_python.ORM`. Fields require type classes with optional parameters.
 
@@ -70,7 +70,7 @@ class Car(ORM):
 - Supported field types include: IntegerField, StringField, TextField, DateField, etc. (import from `tina4_python.FieldTypes`).
 - Parameters: primary_key, auto_increment, default_value, etc.
 
-## Database Configuration
+## Database Configuration {#database-config}
 
 Configure connections directly in code or via environment variables for flexibility.
 
