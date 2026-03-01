@@ -18,6 +18,9 @@ hero:
     - theme: alt
       text: PHP
       link: /php/index.md
+    - theme: alt
+      text: Delphi
+      link: /delphi/index.md
 
 
 features:

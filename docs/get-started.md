@@ -28,3 +28,16 @@ composer start
 Access your app at `http://localhost:7145`
 
 Take a deeper dive into the [documentation](/php/index.md)
+
+## Delphi 10.4+
+Install the Tina4 Delphi component package in your IDE:
+```bash
+# Clone the repository
+git clone https://github.com/tina4stack/tina4delphi.git
+# Open the Tina4DelphiProject project group in the IDE
+# Build and install Tina4Delphi (runtime package)
+# Build and install Tina4DelphiDesign (design-time package)
+# Components appear in the "Tina4" tool palette
+```
+
+Take a deeper dive into the [documentation](/delphi/index.md)

@@ -15,7 +15,8 @@ export default defineConfig({
         nav: [
             {text: 'Home', link: '/'},
             {text: 'Python', link: '/python/index.md'},
-            {text: 'PHP', link: '/php/index.md'}
+            {text: 'PHP', link: '/php/index.md'},
+            {text: 'Delphi', link: '/delphi/index.md'}
         ],
         sidebar: {
             // Python-specific sidebar for /python/ paths
@@ -82,6 +83,22 @@ export default defineConfig({
                     items: [
                         { text: 'Install PHP on Mac', link: '/php/php-on-mac.md' },
                         { text: 'Install PHP on Windows', link: '/php/php-on-windows.md' }
+                    ]
+                }
+            ],
+            // Delphi-specific sidebar for /delphi/ paths
+            '/delphi/': [
+                {
+                    text: 'Delphi Documentation',
+                    items: [
+                        { text: 'Quick reference', link: '/delphi/index.md' },
+                        { text: 'Setting up a project', link: '/delphi/installation.md' },
+                        { text: 'REST Client', link: '/delphi/rest-client.md' },
+                        { text: 'JSON Adapter', link: '/delphi/json-adapter.md' },
+                        { text: 'HTML Renderer', link: '/delphi/html-render.md' },
+                        { text: 'Page Navigation', link: '/delphi/html-pages.md' },
+                        { text: 'Twig Templates', link: '/delphi/twig.md' },
+                        { text: 'Core Utilities', link: '/delphi/core.md' }
                     ]
                 }
             ],
