@@ -21,8 +21,9 @@ Routes are defined using imported method decorators directly — no app instance
 ## Core Imports
 
 ```python
-from tina4_python import get, post, put, delete, patch, options
-from tina4_python import middleware, description, secured
+from tina4_python.Router import get, post, put, delete, patch
+from tina4_python.Router import middleware, secured
+from tina4_python import description
 from tina4_python import HTTP_OK, HTTP_FORBIDDEN, HTTP_BAD_REQUEST
 ```
 
@@ -40,9 +41,7 @@ Stack multiple HTTP methods on one handler:
 @get("/users")
 @post("/users")
 async def users_handler(request, response):
-    if request.method == "GET":
-        return response({"users": [...]})
-    return response({"created": True})
+    return response({"users": []})
 ```
 
 ## Route Parameters (Dynamic Paths) {#dynamic-routing}
@@ -71,7 +70,7 @@ async def serve_file(filepath: str, request, response):
 @get("/search")
 async def search(request, response):
     q = request.params.get("q", "world")
-    page = request.params.get("page", 1, type=int)
+    page = int(request.params.get("page", 1))
     return response(f"Searching '{q}' – page {page}")
 ```
 
@@ -94,13 +93,13 @@ class AuthMiddleware:
     @staticmethod
     def before_route(request, response):
         if request.headers.get("authorization") != "Bearer secret123":
-            response.status = 401
+            response.http_code = 401
             return request, response  # stops chain
         return request, response
 
     @staticmethod
     def after_route(request, response):
-        response.add_header("X-Powered-By", "Tina4")
+        Response.add_header("X-Powered-By", "Tina4")
         return request, response
 
 @middleware(AuthMiddleware)
@@ -124,7 +123,7 @@ async def list_users(request, response):
 @secured()
 @get("/profile")
 async def profile(request, response):
-    return response({"user": request.user})
+    return response({"message": "Welcome to your profile"})
 ```
 
 ## Response Helpers
@@ -180,7 +179,7 @@ Tina4 automatically loads routes from:
 | Middleware             | `@middleware(MyClass)`               | `before_route` / `after_route`             |
 | Description            | `@description("Text")`               | Populates Swagger UI                       |
 | Secured                | `@secured()`                         | Built-in auth guard                        |
-| Responses              | `response.json()` `.file()` etc.     | All via injected `response`                |
+| Responses              | `response()` `.file()` `.redirect()`  | All via injected `response`                |
 | WebSockets             | `@get("/ws")` + `Websocket(request)` | Full async support                         |
 | Auto-discovery         | Drop file in `routes/`               | No config needed                           |
 

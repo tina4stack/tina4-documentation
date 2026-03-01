@@ -38,8 +38,8 @@ dba = Database("firebird.driver:localhost/3050:/path/db.fdb", "sysdba", "masterk
 | `execute(sql, params=None)`          | Run any SQL (CREATE, DROP, INSERT, …)               | `Result`                    |
 | `execute_many(sql, params_list)`     | Bulk insert/update                                   | `Result`                    |
 | `insert(table, data)`                | Smart insert (auto-increment, returns IDs)           | `Result`                    |
-| `update(table, data, where=None)`    | Update by PK or custom WHERE                         | `bool`                      |
-| `delete(table, where)`              | Delete by PK or custom WHERE                         | `bool`                      |
+| `update(table, data, primary_key="id")` | Update by PK                                      | `bool`                      |
+| `delete(table, filter=None)`        | Delete by filter dict                                | `bool`                      |
 | `fetch(sql, params=None, **options)` | SELECT with pagination & search                      | `Result`                    |
 | `fetch_one(sql, params=None)`        | Return single row as dict                            | `dict` or `None`            |
 | `table_exists(table_name)`           | Check if table exists                                | `bool`                      |
@@ -54,11 +54,11 @@ Every query returns a `Result` with these properties:
 result.records          # list[dict] or list[tuple]
 result.count            # int
 result.error            # None or error message
-result.last_insert_id   # after INSERT
 result.to_json()        # → JSON string
-result.to_dict()        # → list[dict]
-result.to_crud()        # makes a CRUD screen
-result.to_csv()         # generates CSV from the result
+result.to_array()       # → list of records
+result.to_paginate()    # → pagination dict with totals
+result.to_crud(request) # → CRUD HTML interface
+result.to_csv()         # → CSV string
 ```
 
 ## Examples {#usage}

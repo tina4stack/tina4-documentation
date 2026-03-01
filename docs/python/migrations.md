@@ -56,8 +56,7 @@ Define models extending `tina4_python.ORM`. Fields require type classes with opt
 ```python
 # src/app/models.py
 
-from tina4_python import ORM
-from tina4_python.FieldTypes import IntegerField, StringField
+from tina4_python import ORM, IntegerField, StringField
 
 class Car(ORM):
     table_name = "car"  # Optional, inferred as snake_case from class name

@@ -137,12 +137,24 @@ Add `enctype="multipart/form-data"` and handle via `request.files`.
 ```
 
 ```python
+import base64
+import os
+
 @post("/upload")
 async def handle_upload(request, response):
-    files = request.files.getlist("avatar")  # List for multiple
-    for file in files:
-        await file.save(f"public/uploads/{file.filename}")
-    
+    uploaded = request.files.get("avatar")
+    if uploaded is None:
+        return response("No file uploaded", 400)
+
+    # Multiple files come as a list, single file as a dict
+    file_list = uploaded if isinstance(uploaded, list) else [uploaded]
+
+    for file in file_list:
+        file_bytes = base64.b64decode(file["content"])
+        save_path = os.path.join("src", "public", "uploads", file["file_name"])
+        with open(save_path, "wb") as f:
+            f.write(file_bytes)
+
     return response("Files uploaded!")
 ```
 
@@ -214,7 +226,7 @@ async def process_login(request, response):
     password = request.body["password"]
     
     if await validate_user(username, password):
-        request.session["user"] = username
+        request.session.set("user", username)
         return response.redirect("/dashboard")
     
     return response.render("login.twig", {"error": "Invalid credentials"})

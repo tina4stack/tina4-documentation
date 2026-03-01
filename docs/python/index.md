@@ -59,7 +59,7 @@ Put `.twig` files in `./src/templates` • assets in `./src/public`
 ### Basic Routing {#basic-routing}
 
 ```python
-from tina4_python import get, post
+from tina4_python.Router import get, post
 
 @get("/")
 async def get_home(request, response):
@@ -71,11 +71,11 @@ async def post_api(request, response):
     return response({"data": request.params})
 
 # redirect after post
-@post("/register") 
+@post("/register")
 async def post_register(request, response):
     return response.redirect("/welcome")
 ```
-Follow the links for , this [basic routing](basic-routing.md#basic-routing) and [dynamic routing](basic-routing.md#dynamic-routing) with variables.
+Follow the links for [basic routing](basic-routing.md#basic-routing) and [dynamic routing](basic-routing.md#dynamic-routing) with variables.
 
 ### Middleware
 ```python
@@ -113,12 +113,11 @@ Put `.twig` files in `./src/templates` • assets in `./src/public`
 ```
 
 ```python
-from tina4_python import get, post
+from tina4_python.Router import get
 
 @get("/")
 async def get_home(request, response):
     return response.render("index.twig", {"name": "World!"})
-
 ```
 
 ### Sessions {#session-handling}
@@ -178,17 +177,17 @@ api_key = os.getenv("API_KEY", "ABC1234")
 
 Pass `Authorization: Bearer API_KEY` to secured routes in requests. See `.env` for default `API_KEY`.
 ```python
-from tina4_python import get, post, noauth, secured
+from tina4_python.Router import get, post, noauth, secured
 
 @post("/login")
 @noauth()
 async def login(request, response):
-    return response("Logged in", cookies={"session": "abc123"})
+    return response("Logged in")
 
 @get("/protected")
 @secured()
 async def secret(request, response):
-    return f"Hi {request.cookies.get('username', 'guest')}!"
+    return response("Welcome!")
 ```
 
 ### HTML Forms and Tokens {#html-forms-and-tokens}
@@ -215,9 +214,12 @@ Tina4 ships with a small javascript library, in the bin folder, to assist with t
 Visit `http://localhost:7145/swagger`
 
 ```python
-@get("/users", "Get all users")
+from tina4_python.Router import get
+from tina4_python import description
+
+@get("/users")
+@description("Get all users")
 async def users(request, response):
-    """Returns all users"""
     return response(User().select("*"))
 ```
 Follow the links for more on [Configuration](swagger.md#config), [Usage](swagger.md#usage) and [Decorators](swagger.md#decorators).
@@ -236,13 +238,10 @@ Follow the links for more on [Available Connections](database.md#connections), [
 ```python
 result = dba.fetch("select * from test_record order by id", limit=3, skip=1)
 
-alist = result.to_list()
 array = result.to_array()
-dictionary = result.to_dict()
 paginated = result.to_paginate()
-csv = result.to_csv()
-json = result.to_json()
-
+csv_data = result.to_csv()
+json_data = result.to_json()
 ```
 Looking at detailed [Usage](database.md#usage) will improve deeper understanding.
 
@@ -274,14 +273,16 @@ tina4 migrate
 -->
 
 ```python
-from tina4_python import ORM
+from tina4_python.ORM import ORM, IntegerField, StringField
 
 class User(ORM):
-    table_name = "users"
-
+    id   = IntegerField(primary_key=True, auto_increment=True)
+    name = StringField()
 
 User({"name": "Alice"}).save()
-User().load("id = ?", 1)
+
+user = User()
+user.load("id = ?", [1])
 ```
 ORM functionality is quite extensive and needs more study of the [Advanced Detail](orm.md) to get the full value from ORM.
 
@@ -313,7 +314,7 @@ print(result["body"])
 ### Inline Testing {#inline-testing}
 
 ```python
-from tina4python import tests
+from tina4_python import tests
 
 
 @tests(
