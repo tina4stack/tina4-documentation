@@ -18,7 +18,7 @@ Define a websocket route in `src/routes/websocket.py` to handle connections, sub
 
 import json
 from collections import defaultdict
-from tina4_python import get,secured
+from tina4_python import get,secured,Debug
 from tina4_python.Websocket import Websocket
 
 subscribers = defaultdict(set)
