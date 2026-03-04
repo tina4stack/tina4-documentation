@@ -45,7 +45,7 @@ export default defineConfig({
                 {
                     text: 'Python Only',
                     items: [
-
+                        { text: 'Development Mode', link: '/python/development.md'},
                         { text: 'Websockets', link: '/python/websockets.md'}
                     ]
                 }
