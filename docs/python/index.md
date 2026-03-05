@@ -31,7 +31,8 @@
     <a href="#websockets">Websockets</a>
     <a href="#threads">Threads</a> •
     <a href="#queues">Queues</a> •
-    <a href="#wsdl">WSDL</a>
+    <a href="#wsdl">WSDL</a> •
+    <a href="#localization">Localization</a>
 
 </nav>
 
@@ -429,6 +430,24 @@ async def wsdl_cis(request, response):
 
 ```
 [More Details](wsdl.md) are available for WSDL
+
+### Localization (i18n) {#localization}
+
+Set `TINA4_LANGUAGE` in `.env` to change framework language. Supported: `en`, `fr`, `af`.
+
+```python
+from tina4_python.Localization import localize
+
+_ = localize()
+print(_("Server stopped."))  # "Bediener gestop." (af)
+```
+
+Translations use Python's `gettext` module. Falls back to English for unsupported languages.
+
+```python
+from tina4_python.Localization import AVAILABLE_LANGUAGES
+# ['en', 'fr', 'af']
+```
 
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">↑ Back to top</a>
