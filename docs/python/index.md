@@ -129,7 +129,25 @@ async def get_home(request, response):
 
 ### Sessions {#session-handling}
 
-The default session handling is SessionFileHandler, override `TINA4_SESSION_HANDLER` in .env
+The default session handling is SessionFileHandler, override `TINA4_SESSION_HANDLER` in `.env`
+
+| Handler | Backend | Required package |
+|---------|---------|-----------------|
+| `SessionFileHandler` (default) | File system | — |
+| `SessionRedisHandler` | Redis | `redis` |
+| `SessionValkeyHandler` | Valkey | `valkey` |
+| `SessionMongoHandler` | MongoDB | `pymongo` |
+
+```env
+TINA4_SESSION_HANDLER=SessionMongoHandler
+TINA4_SESSION_MONGO_HOST=localhost
+TINA4_SESSION_MONGO_PORT=27017
+TINA4_SESSION_MONGO_URI=
+TINA4_SESSION_MONGO_USERNAME=
+TINA4_SESSION_MONGO_PASSWORD=
+TINA4_SESSION_MONGO_DB=tina4_sessions
+TINA4_SESSION_MONGO_COLLECTION=sessions
+```
 
 ```python
 @get("/session/set")
@@ -366,10 +384,23 @@ Have a look at out PubSub example under [Websockets](websockets.md)
 Due to the nature of python, threads are not necessary.
 
 ### Queues {#queues}
-<!-- @todo this documentation is still required -->
-Documentation pending . . .
 
-[Full details](queues.md) of queues are available though
+Supports litequeue (default/SQLite), RabbitMQ, Kafka, and MongoDB backends.
+
+```python
+from tina4_python.Queue import Queue, Producer, Consumer
+
+# Produce a message
+queue = Queue(topic="emails")
+Producer(queue).produce({"to": "alice@example.com", "subject": "Welcome"})
+
+# Consume messages
+consumer = Consumer(queue)
+for msg in consumer.messages():
+    print(msg.data)
+```
+
+[Full details](queues.md) on backend configuration, batching, multi-queue consumers, and error handling.
 
 ### WSDL {#wsdl}
 
