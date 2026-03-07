@@ -14,11 +14,34 @@ export default defineConfig({
         },
         nav: [
             {text: 'Home', link: '/'},
+            {text: 'JavaScript', link: '/javascript/index.md'},
             {text: 'Python', link: '/python/index.md'},
             {text: 'PHP', link: '/php/index.md'},
             {text: 'Delphi', link: '/delphi/index.md'}
         ],
         sidebar: {
+            // JavaScript-specific sidebar for /javascript/ paths
+            '/javascript/': [
+                {
+                    text: 'JavaScript Documentation',
+                    items: [
+                        { text: 'Quick reference', link: '/javascript/index.md' },
+                        { text: 'Setting up a project', link: '/javascript/installation.md' },
+                        { text: 'Signals', link: '/javascript/signals.md' },
+                        { text: 'HTML Templates', link: '/javascript/html-templates.md' },
+                        { text: 'Web Components', link: '/javascript/components.md' },
+                        { text: 'Routing', link: '/javascript/routing.md' },
+                        { text: 'API (Fetch)', link: '/javascript/api.md' },
+                        { text: 'PWA', link: '/javascript/pwa.md' },
+                    ]
+                },
+                {
+                    text: 'Integration',
+                    items: [
+                        { text: 'Backend Integration', link: '/javascript/backend-integration.md' },
+                    ]
+                }
+            ],
             // Python-specific sidebar for /python/ paths
             '/python/': [
                 {

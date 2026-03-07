@@ -13,6 +13,9 @@ hero:
       text: Get Started
       link: get-started.md
     - theme: alt
+      text: JavaScript
+      link: /javascript/index.md
+    - theme: alt
       text: Python
       link: /python/index.md
     - theme: alt
@@ -24,6 +27,8 @@ hero:
 
 
 features:
+    - title: Sub-3KB Reactive Frontend
+      details: Build reactive UIs with signals, tagged template literals, and Web Components—all under 3KB gzipped. No virtual DOM, no build complexity.
     - title: Lightning-Fast ASGI Routing
       details: Effortless Python ASGI routing for high-performance web apps, supporting any server like Uvicorn—build scalable APIs in minutes.
     - title: Seamless WebSocket Integration
@@ -35,10 +40,10 @@ features:
     - title: Instant Swagger API Docs
       details: Automatically document your Python & PHP APIs with Swagger at /swagger, enhancing developer experience like FastAPI for quick onboarding.
     - title: Hot-Reloading Development
-      details: Accelerate Python & PHP web dev with hot-reloading—edit code and see changes instantly, boosting productivity for modern apps.
+      details: Accelerate Python, PHP & JavaScript web dev with hot-reloading—edit code and see changes instantly, boosting productivity for modern apps.
     - title: Full Async Capabilities
       details: Leverage async/await in Python for efficient I/O, ideal for high-concurrency apps comparable to Starlette but with minimal setup.
     - title: Built-in JWT Authentication
-      details: Secure your Python & PHP web apps with JWT, sessions, and middleware—easy authentication like Express.js, tailored for robust security.
+      details: Secure your Python, PHP & JavaScript web apps with JWT, sessions, and middleware—easy authentication tailored for robust security.
 ---
 
