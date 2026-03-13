@@ -17,7 +17,8 @@ export default defineConfig({
             {text: 'JavaScript', link: '/javascript/index.md'},
             {text: 'Python', link: '/python/index.md'},
             {text: 'PHP', link: '/php/index.md'},
-            {text: 'Delphi', link: '/delphi/index.md'}
+            {text: 'Delphi', link: '/delphi/index.md'},
+            {text: 'Ruby', link: '/ruby/index.md'}
         ],
         sidebar: {
             // JavaScript-specific sidebar for /javascript/ paths
@@ -122,6 +123,34 @@ export default defineConfig({
                         { text: 'Page Navigation', link: '/delphi/html-pages.md' },
                         { text: 'Twig Templates', link: '/delphi/twig.md' },
                         { text: 'Core Utilities', link: '/delphi/core.md' }
+                    ]
+                }
+            ],
+            // Ruby-specific sidebar for /ruby/ paths
+            '/ruby/': [
+                {
+                    text: 'Ruby Documentation',
+                    items: [
+                        { text: 'Quick reference', link: '/ruby/index.md' },
+                        { text: 'Setting up a project', link: '/ruby/installation.md' },
+                        { text: 'Static Website', link: '/ruby/static-website.md' },
+                        { text: 'Routing', link: '/ruby/basic-routing.md' },
+                        { text: 'Middleware', link: '/ruby/middleware.md' },
+                        { text: 'CSS/SCSS', link: '/ruby/css.md' },
+                        { text: 'Forms & Tokens', link: '/ruby/posting-form-data.md' },
+                        { text: 'AJAX - tina4helper.js', link: '/ruby/tina4helper.md' },
+                        { text: 'OpenAPI & Swagger UI', link: '/ruby/swagger.md' },
+                        { text: 'Database', link: '/ruby/database.md' },
+                        { text: 'Migrations', link: '/ruby/migrations.md' },
+                        { text: 'ORM', link: '/ruby/orm.md' },
+                        { text: 'CRUD', link: '/ruby/crud.md' },
+                        { text: 'Rest Api', link: '/ruby/rest-api.md' },
+                    ]
+                },
+                {
+                    text: 'Ruby Only',
+                    items: [
+                        { text: 'Development Mode', link: '/ruby/development.md' },
                     ]
                 }
             ],

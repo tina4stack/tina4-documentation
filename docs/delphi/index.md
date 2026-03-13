@@ -171,7 +171,7 @@ var B64 := FileToBase64('C:\photos\avatar.jpg');
 
 ### Working with Claude AI {#claude-ai}
 
-Tina4 Delphi ships with an MCP (Model Context Protocol) server that gives [Claude Code](https://claude.com/claude-code) the ability to compile, run, and syntax-check Pascal code directly from the CLI.
+Tina4 Delphi ships with an MCP (Model Context Protocol) server that gives [Claude Code](https://claude.com/claude-code) the ability to compile, run, preview, and interact with Pascal/Delphi applications directly from the CLI.
 
 **Install the MCP server:**
 
@@ -181,7 +181,7 @@ cd claude-pascal-mcp
 uv sync
 ```
 
-**Add it to your Claude Code settings** (`.claude/settings.json` or project-level):
+**Add it to your Claude Code settings** (`.mcp.json` or project-level):
 
 ```json
 {
@@ -196,13 +196,36 @@ uv sync
 
 **What Claude can do with the MCP server:**
 
-- **Compile Pascal** – Claude compiles your `.pas` files and reads compiler errors directly
-- **Run Pascal** – compile and execute programs, capturing stdout/stderr
-- **Syntax check** – fast syntax-only validation without linking
-- **Parse forms** – read `.dfm`, `.fmx`, or `.lfm` form files and understand component structure
-- **Auto-detect compilers** – finds Free Pascal (`fpc`), Delphi 32-bit (`dcc32`), and Delphi 64-bit (`dcc64`) on your system
+- **Compile Pascal** – compile single-file code or full Delphi projects (DPR + PAS + DFM)
+- **Project Templates** – generate proper Delphi project structure with components and event handlers
+- **Run Programs** – compile and execute console programs, capturing stdout/stderr
+- **Launch GUI Apps** – compile and run VCL/FMX applications in the background
+- **Live Preview** – see running desktop apps through Claude's preview panel via an HTTP bridge
+- **Click Buttons** – interact with controls by enumerating child windows and sending clicks directly
+- **Move & Resize** – reposition and resize application windows programmatically
+- **Type & Send Keys** – enter text and send keyboard shortcuts to running apps
+- **Parse Forms** – read `.dfm`, `.fmx`, or `.lfm` form files and understand component structure
+- **Auto-detect Compilers** – finds Free Pascal, Delphi 7 (dcc32), and RAD Studio (dcc64)
+- **Specify Compiler Path** – use any compiler by passing its full path
 
-This means Claude can write Delphi code, compile it to verify correctness, fix errors, and run test programs – all without leaving the conversation.
+**Preview Bridge** – Claude can see your running desktop app through its built-in preview panel. Add this to `.claude/launch.json`:
+
+```json
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pascal-preview",
+      "runtimeExecutable": "/path/to/.venv/Scripts/pythonw.exe",
+      "runtimeArgs": ["-m", "pascal_mcp.preview_bridge"],
+      "port": 18080,
+      "autoPort": true
+    }
+  ]
+}
+```
+
+This means Claude can write Delphi code, compile it, launch the app, see it running, click buttons, verify behavior, and fix issues — all without leaving the conversation.
 
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">&uarr; Back to top</a>
