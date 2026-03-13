@@ -24,6 +24,9 @@ hero:
     - theme: alt
       text: Delphi
       link: /delphi/index.md
+    - theme: alt
+      text: Ruby
+      link: /ruby/index.md
 
 
 features:
