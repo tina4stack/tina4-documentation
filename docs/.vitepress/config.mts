@@ -158,6 +158,8 @@ export default defineConfig({
                     text: 'Ruby Only',
                     items: [
                         { text: 'Development Mode', link: '/ruby/development.md' },
+                        { text: 'GraphQL', link: '/ruby/graphql.md' },
+                        { text: 'Queues', link: '/ruby/queues.md' },
                     ]
                 }
             ],

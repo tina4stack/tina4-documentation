@@ -2,9 +2,10 @@
 
 ::: tip 🔥 Hot Tips
 - Routes go in `routes/`, templates in `templates/`, static files in `public/`
-- GET routes are public by default; use `secure_get`, `secure_post` etc. to require auth
+- GET routes are public by default; POST/PUT/PATCH/DELETE require a token (use `auth: false` to make public)
 - Return a `Hash` or `Array` from a route block and it auto-detects as JSON
 - Run `tina4 start` to launch the dev server on port 7145
+- Auto-generate a full GraphQL API from your ORM classes with `schema.from_orm(User)`
 :::
 
 <nav class="tina4-menu">
@@ -29,6 +30,7 @@
     <a href="#inline-testing">Testing</a> •
     <a href="#websockets">Websockets</a> •
     <a href="#queues">Queues</a> •
+    <a href="#graphql">GraphQL</a> •
     <a href="#wsdl">WSDL</a> •
     <a href="#localization">Localization</a>
 </nav>
@@ -318,6 +320,24 @@ consumer.each do |msg|
   puts msg.data
 end
 ```
+
+### GraphQL {#graphql}
+
+Zero-dependency GraphQL with ORM auto-schema generation.
+
+```ruby
+gql = Tina4::GraphQL.new
+gql.schema.from_orm(User)
+gql.register_route("/graphql")
+```
+
+POST queries to `/graphql`, or visit it in a browser for the GraphiQL IDE.
+
+```graphql
+{ users(limit: 5) { id name email } }
+```
+
+[Full details](graphql.md) on manual schema definition, mutations, variables, fragments, and programmatic usage.
 
 ### WSDL {#wsdl}
 
