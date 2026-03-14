@@ -31,7 +31,7 @@ Incoming data is found in the `$request` variable which must be declared in the 
 ## Dynamic Routing {#dynamic-routing}  
 Path parameters can be included to provide dynamic routing, included in the order they are listed in the path.
 ```php
-\Tina4\Get::add("/api/catalog/{categoryId}/{productId"}, 
+\Tina4\Get::add("/api/catalog/{categoryId}/{productId}",
     function ($categoryId, $productId, \Tina4\Response $response) {
     
     return $response("<h1>This is a dynamic route</h1>");

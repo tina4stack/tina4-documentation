@@ -144,7 +144,7 @@ Return errors and old input on failure.
     if (!isset($data["email"])){
         $errors["email"] = "Email is required";
     }
-    if (!isset($data["password"]) && strlen($data["password"] < 8)){
+    if (!isset($data["password"]) || strlen($data["password"]) < 8){
         $errors["password"] = "Password must be at least 8 characters";
     }
 

@@ -104,6 +104,8 @@ export default defineConfig({
                         { text: 'Localization', link: '/php/localization.md' },
                         { text: 'Services', link: '/php/services.md' },
                         { text: 'Threads', link: '/php/threads.md' },
+                        { text: 'Queues', link: '/php/queues.md' },
+                        { text: 'WSDL', link: '/php/wsdl.md' },
                         { text: 'Testing', link: '/php/tests.md' }
                     ]
                 },

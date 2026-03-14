@@ -88,7 +88,7 @@ Should the response have been limited from the original ORM, or you actually wan
 ```php
 /**
  * @example_response {"email":"get@nowhere.com","name":"John Smith"}
- * /
+ */
 ```
 
 ### @example_request

@@ -63,7 +63,7 @@ $user = (new User())->load("id = ?", [456]);
 $user->email = "different@email.com";
 $user->save();
 ```
-Delete and object
+Delete an object
 ```php
 $user->delete("id = ?", [12])
 ```

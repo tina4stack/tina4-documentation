@@ -350,7 +350,20 @@ Please read [More Details](threads.md) on Threads, their restrictions and usage 
 
 ### Queues {#queues}
 
-[Services](services.md) and [Threads](threads.md) together can be used to replicate queues, but stand alone queues are not implemented in Tina4 Php.
+Tina4 includes a full queue system with multiple backends: LiteQueue (SQLite), MongoDB, RabbitMQ, and Kafka. Install `tina4stack/tina4php-queue` and use a unified API for producing and consuming messages.
+
+```php
+use Tina4\Queue;
+
+$queue = new Queue(topic: 'my-events');
+$queue->produce('Hello World', userId: 'user123');
+
+foreach ($queue->consume() as $message) {
+    echo $message->data;
+}
+```
+
+Please read [More Details](queues.md) on Queues, their backends and configuration.
 
 ### WSDL {#wsdl}
 Declare your WSDL definition
