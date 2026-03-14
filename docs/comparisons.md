@@ -44,6 +44,8 @@ Tina4PHP is a lightweight PHP toolkit designed for rapid API and web development
 
 ### Performance Benchmarks
 
+#### Third-Party Benchmark (PHP-Frameworks-Bench)
+
 The following numbers come from the [PHP-Frameworks-Bench](https://github.com/myaaghubi/PHP-Frameworks-Bench) project (PHP 8.4.3, OPcache off, measuring minimum bootstrap cost — routing only, no database or templating):
 
 | Framework | Requests/sec | Peak Memory |
@@ -53,18 +55,42 @@ The following numbers come from the [PHP-Frameworks-Bench](https://github.com/my
 | **Symfony 7.0** | 262 rps | 4.20 MB |
 | **Laravel 11.0** | 63 rps | 16.19 MB |
 
-**Where does Tina4PHP fit?** Tina4PHP was not included in the above benchmark suite, but its architecture places it in the Slim/CodeIgniter performance tier. With a full deployment under 8 MB and minimal bootstrap overhead (no service container resolution, no middleware stack negotiation), Tina4PHP boots fast. Its dependency on Twig adds slight overhead compared to raw Slim, but it avoids the heavy abstractions that slow Laravel and Symfony bootstrapping.
+#### Our Own Benchmarks (Cross-Language)
 
-**Key takeaway:** If raw throughput on a "hello world" route matters, Slim wins. But Tina4PHP delivers comparable lightweight performance while including ORM, templating, OpenAPI docs, and more — features that Slim requires you to bolt on yourself (adding their own overhead).
+We ran our own benchmarks across all Tina4 variants and competing frameworks. Three endpoints were tested: plain text (`/hello`), JSON serialization (`/json`), and SQLite query + JSON (`/db`). Each test ran 200 sequential requests after a 10-request warmup, using PHP 8.4.8, Python 3.14, and Ruby 3.3.10 on Windows.
+
+| Framework | Hello (req/s) | JSON (req/s) | DB+JSON (req/s) | p95 Latency | Install Size |
+|---|---|---|---|---|---|
+| **Tina4 Python** | 71.8 | 74.6 | 68.2 | 3.8 ms | 1.4 MB |
+| **Slim 4** | 51.5 | 53.3 | 52.7 | 31.4 ms | 691 KB |
+| **Symfony 7** | 41.2 | 41.9 | 37.2 | 37.2 ms | 7.4 MB |
+| **Tina4 Ruby** | 37.0 | 37.6 | 37.3 | 16.3 ms | 4.5 KB |
+| **Tina4 PHP** | 12.0 | 12.5 | 12.7 | 136.0 ms | 8.6 MB |
+| **Laravel 12** | 2.1 | 2.1 | 2.0 | 524.8 ms | 55.1 MB |
+
+::: warning Methodology Notes
+- PHP frameworks used PHP's built-in development server (single-threaded). Behind nginx + PHP-FPM, all PHP numbers would be significantly higher. The relative ordering between PHP frameworks is what matters most.
+- Tina4 Python uses Hypercorn (ASGI, async), Tina4 Ruby uses Puma (threaded) — both are production-grade servers, which gives them a natural advantage over the single-threaded PHP dev server.
+- Laravel's `artisan serve` spawns child PHP processes which loaded Xdebug despite the parent having it disabled, inflating its numbers. Even without Xdebug, Laravel's ~120 MB bootstrap and middleware stack make it the slowest to respond.
+- The benchmark source code is available in the [tina4-documentation](https://github.com/tina4stack/tina4-documentation) repository under `benchmark/`.
+:::
+
+**Key takeaways:**
+
+- **Tina4 Python is the fastest Tina4 variant** — ASGI async with Hypercorn delivers sub-4ms p95 latency
+- **Slim wins the PHP race** — minimal bootstrap at 51 req/s, but ships with zero features
+- **Tina4 PHP trades some speed for batteries-included** — ORM, Twig, SCSS, OpenAPI, WSDL all initialized per request adds overhead vs. raw Slim, but you get a complete toolkit in 8.6 MB
+- **Symfony is competitive** — 41 req/s with a robust feature set, though at 7.4 MB it ships less than Tina4 out of the box
+- **Laravel pays for its weight** — 55 MB install, heavy middleware stack, and service container resolution result in the slowest bootstrap of any framework tested
 
 ### Package Size and Dependencies
 
 | Framework | Fresh Install Size (vendor) | Core Dependencies |
 |---|---|---|
-| **Tina4PHP** | ~8 MB | Twig, PhpFastCache, Latte, SCSS compiler, and Tina4 ecosystem modules |
-| **Laravel 12** | ~80-120 MB | 70+ packages (Symfony components, Monolog, Flysystem, etc.) |
-| **Symfony 7** (skeleton) | ~30-50 MB | Modular — depends on selected components |
-| **Slim 4** | ~2-5 MB | PSR-7 implementation + a few interfaces |
+| **Tina4PHP** | **8.6 MB** (measured) | Twig, PhpFastCache, SCSS compiler, and Tina4 ecosystem modules |
+| **Laravel 12** | **55.1 MB** (measured) | 70+ packages (Symfony components, Monolog, Flysystem, etc.) |
+| **Symfony 7** (skeleton) | **7.4 MB** (measured) | Modular — depends on selected components |
+| **Slim 4** | **691 KB** (measured) | PSR-7 implementation + a few interfaces |
 | **CodeIgniter 4** | ~25-30 MB | Self-contained with few external deps |
 
 Tina4PHP occupies a unique position: it is nearly as small as Slim but ships with a full feature set that rivals Laravel. You do not need to hunt for, evaluate, and wire together third-party packages for common needs.
