@@ -96,10 +96,15 @@ export default defineConfig({
                     ]
                 },
                 {
-                    text: 'Php Only',
+                    text: 'PHP Only',
                     items: [
+                        { text: 'Caching', link: '/php/caching.md' },
+                        { text: 'Sessions', link: '/php/sessions.md' },
+                        { text: 'GraphQL', link: '/php/graphql.md' },
+                        { text: 'Localization', link: '/php/localization.md' },
                         { text: 'Services', link: '/php/services.md' },
-                        { text: 'Threads', link: '/php/threads.md' }
+                        { text: 'Threads', link: '/php/threads.md' },
+                        { text: 'Testing', link: '/php/tests.md' }
                     ]
                 },
                 {
