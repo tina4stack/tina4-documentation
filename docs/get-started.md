@@ -1,6 +1,19 @@
 # Getting Started with Tina4
 
-## Python 3.12 > 
+## JavaScript (tina4js)
+
+Build reactive frontends with signals, Web Components, and client-side routing — all under 3KB gzipped:
+```bash
+npx tina4 create my-app
+cd my-app
+npm install
+npm run dev
+```
+Access your app at `http://localhost:5173`
+
+Take a deeper dive into the [documentation](/javascript/index.md)
+
+## Python 3.12+
 
 From your project folder install and initialize your project with these quick commands from your terminal:
 ```bash
@@ -15,7 +28,22 @@ Access your app at `http://localhost:7145`
 
 Take a deeper dive into the [documentation](/python/index.md)
 
-## PHP 8.0 >
+## Ruby 3.1+
+
+Get a full-stack Ruby app running with built-in ORM, migrations, and Twig templating:
+```bash
+gem install tina4
+tina4 init my-project
+cd my-project
+bundle install
+tina4 start
+```
+Access your app at `http://localhost:7145`
+
+Take a deeper dive into the [documentation](/ruby/index.md)
+
+## PHP 8.0+
+
 Set up a Tina4 PHP project just as easily, inspired by Laravel's elegance but with a lighter footprint:
 ```bash
 # Install the Tina4 PHP package
@@ -30,6 +58,7 @@ Access your app at `http://localhost:7145`
 Take a deeper dive into the [documentation](/php/index.md)
 
 ## Delphi 10.4+
+
 Install the Tina4 Delphi component package in your IDE:
 ```bash
 # Clone the repository

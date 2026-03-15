@@ -27,6 +27,9 @@ hero:
     - theme: alt
       text: Ruby
       link: /ruby/index.md
+    - theme: alt
+      text: Comparisons
+      link: /comparisons.md
 
 
 features:
