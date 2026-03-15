@@ -29,6 +29,10 @@ dba = Database("pymssql:localhost/1433:mydb", "sa", "Password123")
 
 # Firebird
 dba = Database("firebird.driver:localhost/3050:/path/db.fdb", "sysdba", "masterkey")
+
+# MongoDB (pip install pymongo)
+dba = Database("pymongo:localhost/27017:mydb")
+dba = Database("pymongo:localhost/27017:mydb", "user", "password")  # with auth
 ```
 
 ## Core Methods {#core-methods}
@@ -117,5 +121,67 @@ except:
 Database("sqlite3:test.db").execute("INSERT INTO logs (msg) VALUES (?)", ["Hello Tina4"])
 ```
 
-That’s it.  
+That’s it.
 No models. No config files. No nonsense.
+
+## MongoDB {#mongodb}
+
+MongoDB uses the same SQL API as all other engines. The `SQLToMongo` module translates SQL to MongoDB queries transparently — no new API to learn.
+
+```python
+db = Database("pymongo:localhost/27017:myapp")
+
+# Works exactly like any other engine
+db.execute("CREATE TABLE users (id INTEGER)")  # creates collection
+db.insert("users", {"id": 1, "name": "Alice", "email": "alice@test.com"})
+
+result = db.fetch("SELECT * FROM users WHERE name = ?", ["Alice"])
+print(result.records)  # → [{‘id’: 1, ‘name’: ‘Alice’, ‘email’: ‘alice@test.com’}]
+
+db.execute("UPDATE users SET name = ? WHERE id = ?", ["Bob", 1])
+db.execute("DELETE FROM users WHERE id = ?", [1])
+```
+
+### Supported WHERE operators
+
+| SQL | MongoDB |
+|-----|---------|
+| `=` | Direct match |
+| `!=`, `<>` | `$ne` |
+| `>`, `>=`, `<`, `<=` | `$gt`, `$gte`, `$lt`, `$lte` |
+| `LIKE ‘%text%’` | `$regex` (case-insensitive) |
+| `IN (a, b, c)` | `$in` |
+| `NOT IN (a, b)` | `$nin` |
+| `IS NULL` | `None` |
+| `IS NOT NULL` | `$ne: None` |
+| `BETWEEN a AND b` | `$gte` + `$lte` |
+| `AND` / `OR` | `$and` / `$or` |
+
+### Pagination & search
+
+```python
+result = db.fetch(
+    "SELECT * FROM users",
+    limit=10,
+    skip=20,
+    search="alice",
+    search_columns=["name", "email"]
+)
+print(result.total_count)  # total matching documents
+```
+
+### RETURNING emulation
+
+```python
+result = db.execute(
+    "INSERT INTO users (id, name) VALUES (?, ?) RETURNING *",
+    [1, "Alice"]
+)
+print(result.records)  # → [{‘id’: 1, ‘name’: ‘Alice’}]
+```
+
+::: warning Limitations
+- **JOINs are not supported** — MongoDB is document-based. Use embedded documents or application-level joins.
+- **CREATE TABLE** maps to collection creation — column definitions are ignored (MongoDB is schema-less).
+- **Migrations** will create/drop collections but column-level DDL (ALTER TABLE) is a no-op.
+:::
