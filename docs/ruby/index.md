@@ -46,7 +46,7 @@
 ### Installation {#installation}
 
 ```bash
-gem install tina4
+gem install tina4ruby
 tina4 init my-project
 cd my-project
 bundle install

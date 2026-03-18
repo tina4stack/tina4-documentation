@@ -10,14 +10,14 @@
 Create a new project with the CLI:
 
 ```bash
-gem install tina4
+gem install tina4ruby
 tina4 init my-project
 cd my-project
 bundle install
 tina4 start
 ```
 
-- `gem install tina4`: Installs the Tina4 gem globally.
+- `gem install tina4ruby`: Installs the Tina4 gem globally.
 - `tina4 init my-project`: Creates project structure with folders (`routes/`, `templates/`, `public/`, `migrations/`) and starter files.
 - `bundle install`: Installs dependencies from the generated `Gemfile`.
 - `tina4 start`: Launches the development web server.

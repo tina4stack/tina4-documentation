@@ -32,7 +32,7 @@ Take a deeper dive into the [documentation](/python/index.md)
 
 Get a full-stack Ruby app running with built-in ORM, migrations, and Twig templating:
 ```bash
-gem install tina4
+gem install tina4ruby
 tina4 init my-project
 cd my-project
 bundle install
