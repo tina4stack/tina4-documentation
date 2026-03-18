@@ -6,6 +6,8 @@ export default defineConfig({
     description: "Tina4 - This is not a framework",
     head: [
         ['link', {rel: 'icon', href: '/favicon.ico', type: 'image/x-icon'}],
+        ['script', {async: '', src: 'https://www.googletagmanager.com/gtag/js?id=G-FZRRSBE9M0'}],
+        ['script', {}, "window.dataLayer = window.dataLayer || [];\nfunction gtag(){dataLayer.push(arguments);}\ngtag('js', new Date());\ngtag('config', 'G-FZRRSBE9M0');"],
     ],
     ignoreDeadLinks: true,
     themeConfig: {
