@@ -36,6 +36,13 @@ export default defineConfig({
                         { text: 'Routing', link: '/javascript/routing.md' },
                         { text: 'API (Fetch)', link: '/javascript/api.md' },
                         { text: 'PWA', link: '/javascript/pwa.md' },
+                        { text: 'WebSocket', link: '/javascript/websocket.md' },
+                    ]
+                },
+                {
+                    text: 'Examples',
+                    items: [
+                        { text: 'Gallery', link: '/javascript/gallery.md' },
                     ]
                 },
                 {
