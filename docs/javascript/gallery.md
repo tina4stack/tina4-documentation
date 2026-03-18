@@ -4,9 +4,9 @@ Live interactive demos showing tina4js in real-world scenarios. Each example is 
 
 <style>
 .gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
   margin: 2rem 0;
 }
 .gallery-card {
@@ -19,7 +19,7 @@ Live interactive demos showing tina4js in real-world scenarios. Each example is 
 .gallery-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
 .gallery-card iframe {
   width: 100%;
-  height: 320px;
+  height: 480px;
   border: none;
   display: block;
   background: #0f172a;
