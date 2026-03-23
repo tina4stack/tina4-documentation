@@ -176,6 +176,177 @@ const view = html`
 document.getElementById('root')!.appendChild(view);
 ```
 
+## Real-World Example: Live Notifications
+
+```ts
+import { ws, signal, html } from 'tina4js';
+
+const socket = ws.connect('wss://api.example.com/notifications');
+const notifications = signal([]);
+const unreadCount = signal(0);
+
+// Pipe notifications into state
+socket.pipe(notifications, (msg, current) => {
+  const notification = { ...msg, read: false, time: new Date() };
+  return [notification, ...current].slice(0, 50); // keep last 50
+});
+
+// Update unread count reactively
+socket.on('message', () => {
+  unreadCount.value++;
+});
+
+function markAllRead() {
+  notifications.value = notifications.value.map(n => ({ ...n, read: true }));
+  unreadCount.value = 0;
+  socket.send({ type: 'mark-read' });
+}
+
+const view = html`
+  <div class="notifications">
+    <div class="header">
+      <h3>Notifications ${() => unreadCount.value > 0
+        ? html`<span class="badge">${unreadCount}</span>`
+        : null}</h3>
+      <button @click=${markAllRead}>Mark all read</button>
+    </div>
+    <ul>
+      ${() => notifications.value.map(n => html`
+        <li class=${() => n.read ? 'read' : 'unread'}>
+          <strong>${n.title}</strong>
+          <p>${n.body}</p>
+          <time>${n.time.toLocaleTimeString()}</time>
+        </li>
+      `)}
+    </ul>
+  </div>
+`;
+```
+
+## Real-World Example: Live Dashboard Metrics
+
+```ts
+import { ws, signal, computed, html } from 'tina4js';
+
+const socket = ws.connect('wss://api.example.com/metrics', {
+  reconnect: true,
+  reconnectDelay: 2000,
+});
+
+const metrics = signal({ cpu: 0, memory: 0, requests: 0, errors: 0 });
+const history = signal([]);
+
+// Update metrics on every message
+socket.pipe(metrics, (msg) => msg);
+
+// Keep a rolling history of the last 60 data points
+socket.on('message', (data) => {
+  history.value = [...history.value.slice(-59), {
+    ...data,
+    timestamp: Date.now(),
+  }];
+});
+
+const errorRate = computed(() => {
+  const m = metrics.value;
+  return m.requests > 0 ? ((m.errors / m.requests) * 100).toFixed(1) : '0.0';
+});
+
+const view = html`
+  <div class="dashboard">
+    <div class="status-bar">
+      ${() => socket.connected.value
+        ? html`<span class="online">Live</span>`
+        : html`<span class="offline">Reconnecting (${socket.reconnectCount})...</span>`}
+    </div>
+    <div class="grid">
+      <div class="metric">
+        <label>CPU</label>
+        <span>${() => metrics.value.cpu}%</span>
+      </div>
+      <div class="metric">
+        <label>Memory</label>
+        <span>${() => metrics.value.memory}%</span>
+      </div>
+      <div class="metric">
+        <label>Requests/s</label>
+        <span>${() => metrics.value.requests}</span>
+      </div>
+      <div class="metric">
+        <label>Error Rate</label>
+        <span>${errorRate}%</span>
+      </div>
+    </div>
+  </div>
+`;
+```
+
+## Real-World Example: Collaborative Editing
+
+```ts
+import { ws, signal, html, batch } from 'tina4js';
+
+const socket = ws.connect('wss://api.example.com/collab/doc-123');
+const content = signal('');
+const cursors = signal({});  // { [userId]: { line, col, name, color } }
+
+// Handle different message types
+socket.on('message', (msg) => {
+  batch(() => {
+    switch (msg.type) {
+      case 'content':
+        content.value = msg.text;
+        break;
+      case 'cursor':
+        cursors.value = {
+          ...cursors.value,
+          [msg.userId]: { line: msg.line, col: msg.col, name: msg.name, color: msg.color },
+        };
+        break;
+      case 'user-left':
+        const c = { ...cursors.value };
+        delete c[msg.userId];
+        cursors.value = c;
+        break;
+    }
+  });
+});
+
+// Send edits to server
+function onEdit(e) {
+  const text = e.target.value;
+  content.value = text;
+  socket.send({ type: 'edit', text });
+}
+
+// Send cursor position
+function onCursorMove(e) {
+  socket.send({
+    type: 'cursor',
+    line: e.target.selectionStart,
+    col: e.target.selectionEnd,
+  });
+}
+
+const view = html`
+  <div class="editor">
+    <div class="collaborators">
+      ${() => Object.values(cursors.value).map(c => html`
+        <span style="color: ${c.color}">${c.name}</span>
+      `)}
+    </div>
+    <textarea .value=${content}
+              @input=${onEdit}
+              @click=${onCursorMove}
+              @keyup=${onCursorMove}
+              ?disabled=${() => !socket.connected.value}></textarea>
+    <div ?hidden=${() => socket.connected.value} class="overlay">
+      Reconnecting...
+    </div>
+  </div>
+`;
+```
+
 ## Integrating with Tina4 Backend
 
 If you're using tina4-python or tina4-php with WebSocket support, connect like this:
@@ -185,12 +356,23 @@ import { ws, api } from 'tina4js';
 
 api.configure({ baseUrl: '/api', auth: true });
 
-const token = localStorage.getItem('token');
+const token = localStorage.getItem('tina4_token');
 const socket = ws.connect(`wss://myapp.com/ws?token=${token}`);
 
+// Handle server push events
 socket.on('message', (msg) => {
-  // handle server push events
+  switch (msg.event) {
+    case 'order.created':
+      // refresh order list
+      break;
+    case 'user.updated':
+      // update user profile
+      break;
+  }
 });
+
+// Send actions
+socket.send({ action: 'subscribe', channel: 'orders' });
 ```
 
 ## Bundle Size
