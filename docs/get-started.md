@@ -11,7 +11,7 @@ npm run dev
 ```
 Access your app at `http://localhost:5173`
 
-Take a deeper dive into the [documentation](/javascript/index.md)
+Take a deeper dive into the [documentation](/js/index.md)
 
 ## Python 3.12+
 

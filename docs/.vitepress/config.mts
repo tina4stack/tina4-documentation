@@ -16,39 +16,39 @@ export default defineConfig({
         },
         nav: [
             {text: 'Home', link: '/'},
-            {text: 'JavaScript', link: '/javascript/index.md'},
+            {text: 'JavaScript', link: '/js/index.md'},
             {text: 'Python', link: '/python/index.md'},
             {text: 'PHP', link: '/php/index.md'},
             {text: 'Delphi', link: '/delphi/index.md'},
             {text: 'Ruby', link: '/ruby/index.md'}
         ],
         sidebar: {
-            // JavaScript-specific sidebar for /javascript/ paths
-            '/javascript/': [
+            // JavaScript-specific sidebar for /js/ paths
+            '/js/': [
                 {
                     text: 'JavaScript Documentation',
                     items: [
-                        { text: 'Quick reference', link: '/javascript/index.md' },
-                        { text: 'Setting up a project', link: '/javascript/installation.md' },
-                        { text: 'Signals', link: '/javascript/signals.md' },
-                        { text: 'HTML Templates', link: '/javascript/html-templates.md' },
-                        { text: 'Web Components', link: '/javascript/components.md' },
-                        { text: 'Routing', link: '/javascript/routing.md' },
-                        { text: 'API (Fetch)', link: '/javascript/api.md' },
-                        { text: 'PWA', link: '/javascript/pwa.md' },
-                        { text: 'WebSocket', link: '/javascript/websocket.md' },
+                        { text: 'Quick reference', link: '/js/index.md' },
+                        { text: 'Setting up a project', link: '/js/installation.md' },
+                        { text: 'Signals', link: '/js/signals.md' },
+                        { text: 'HTML Templates', link: '/js/html-templates.md' },
+                        { text: 'Web Components', link: '/js/components.md' },
+                        { text: 'Routing', link: '/js/routing.md' },
+                        { text: 'API (Fetch)', link: '/js/api.md' },
+                        { text: 'PWA', link: '/js/pwa.md' },
+                        { text: 'WebSocket', link: '/js/websocket.md' },
                     ]
                 },
                 {
                     text: 'Examples',
                     items: [
-                        { text: 'Gallery', link: '/javascript/gallery.md' },
+                        { text: 'Gallery', link: '/js/gallery.md' },
                     ]
                 },
                 {
                     text: 'Integration',
                     items: [
-                        { text: 'Backend Integration', link: '/javascript/backend-integration.md' },
+                        { text: 'Backend Integration', link: '/js/backend-integration.md' },
                     ]
                 }
             ],

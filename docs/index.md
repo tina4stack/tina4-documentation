@@ -14,7 +14,7 @@ hero:
       link: get-started.md
     - theme: alt
       text: JavaScript
-      link: /javascript/index.md
+      link: /js/index.md
     - theme: alt
       text: Python
       link: /python/index.md
