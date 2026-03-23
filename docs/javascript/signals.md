@@ -55,7 +55,7 @@ console.log(total.value); // 230
 
 Computed values are:
 - **Read-only** — you cannot set `.value` on a computed
-- **Lazy** — only recalculated when read after a dependency changes
+- **Eager** — recomputed immediately when a dependency changes (uses `effect` internally)
 - **Chainable** — computed values can depend on other computed values
 
 ## Effects {#effects}

@@ -28,15 +28,15 @@ Route handlers receive a `params` object with the matched parameter values.
 
 ```ts
 router.start({
-  target: '#root',     // CSS selector for mount point
-  mode: 'hash',        // 'hash' (default) or 'history'
+  target: '#root',     // CSS selector for mount point (required)
+  mode: 'history',     // 'history' (default) or 'hash'
 });
 ```
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `target` | `'#root'` | CSS selector of the DOM element to render into |
-| `mode` | `'hash'` | `'hash'` uses `#/path`, `'history'` uses HTML5 History API |
+| `target` | *(required)* | CSS selector of the DOM element to render into |
+| `mode` | `'history'` | `'history'` uses HTML5 History API, `'hash'` uses `#/path` |
 
 ### Hash Mode vs History Mode
 
@@ -114,7 +114,7 @@ route('/private', {
 Listen for route changes:
 
 ```ts
-const unsubscribe = router.on('change', (path) => {
+const unsubscribe = router.on('change', ({ path, params, pattern, durationMs }) => {
   console.log(`Navigated to: ${path}`);
   // Track page views, update title, etc.
 });
@@ -197,5 +197,5 @@ route('*', () => html`
 `);
 
 // Start
-router.start({ target: '#root', mode: 'hash' });
+router.start({ target: '#root', mode: 'history' });
 ```

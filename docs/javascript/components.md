@@ -199,8 +199,8 @@ class ColorPicker extends Tina4Element {
   render() {
     return html`
       <div>
-        <button @click=${() => this.emit('color-change', { color: 'red' })}>Red</button>
-        <button @click=${() => this.emit('color-change', { color: 'blue' })}>Blue</button>
+        <button @click=${() => this.emit('color-change', { detail: { color: 'red' } })}>Red</button>
+        <button @click=${() => this.emit('color-change', { detail: { color: 'blue' } })}>Blue</button>
       </div>
     `;
   }
@@ -219,7 +219,7 @@ html`
 `;
 ```
 
-`this.emit(name, detail)` dispatches a `CustomEvent` with `bubbles: true` and `composed: true` so it crosses Shadow DOM boundaries.
+`this.emit(name, options)` dispatches a `CustomEvent` with `bubbles: true` and `composed: true` so it crosses Shadow DOM boundaries. Pass `{ detail: data }` to attach data to the event.
 
 ## Slots {#slots}
 

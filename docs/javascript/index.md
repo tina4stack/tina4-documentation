@@ -121,7 +121,7 @@ route('/admin', {
 });
 route('*', () => html`<h1>404</h1>`);
 
-router.start({ target: '#root', mode: 'hash' });
+router.start({ target: '#root', mode: 'history' });
 
 // Navigate programmatically
 navigate('/user/42');
@@ -136,7 +136,7 @@ import { api } from 'tina4js';
 api.configure({ baseUrl: '/api', auth: true });
 
 const users = await api.get('/users');
-const user  = await api.get('/users/{id}', { id: 42 });
+const user  = await api.get('/users/42');
 await api.post('/users', { name: 'Andre' });
 await api.put('/users/42', { name: 'Updated' });
 await api.delete('/users/42');
@@ -184,7 +184,7 @@ npx tina4 build --target python
 
 | Module | Raw | Gzipped |
 |--------|-----|---------|
-| Core (signals + html + component) | 4.5 KB | 1.51 KB |
+| Core (signals + html + component) | 4.6 KB | 1.51 KB |
 | Router | 0.14 KB | 0.12 KB |
 | API | 3.5 KB | 1.49 KB |
 | PWA | 3.0 KB | 1.16 KB |

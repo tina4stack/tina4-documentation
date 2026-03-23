@@ -117,6 +117,28 @@ html`
 cls.value = 'inactive'; // class updates
 ```
 
+## Property Bindings {#property-bindings}
+
+Use the `.` prefix to set DOM properties (not HTML attributes). This is useful for binding input values reactively and injecting raw HTML:
+
+```ts
+const name = signal('');
+
+// Two-way input binding
+html`<input .value=${name} @input=${(e: Event) => {
+  name.value = (e.target as HTMLInputElement).value;
+}}>`;
+
+// Raw HTML injection (bypasses XSS escaping)
+const rawHtml = '<strong>Bold</strong>';
+html`<div .innerHTML=${rawHtml}></div>`;
+```
+
+| Binding | What it does |
+|---------|-------------|
+| `.value=${signal}` | Keeps input value in sync with signal |
+| `.innerHTML=${str}` | Sets raw HTML content (use with trusted content only) |
+
 ## Conditional Rendering {#conditionals}
 
 Use a function that returns `html` or `null`:
@@ -243,4 +265,5 @@ Only `html` tagged templates create actual DOM elements.
 | `${() => expr}` | Dynamic expression | `${() => show.value ? 'Yes' : 'No'}` |
 | `@event=${fn}` | Event handler | `@click=${handler}` |
 | `?attr=${bool}` | Boolean attribute | `?disabled=${isDisabled}` |
+| `.prop=${val}` | Property binding | `.value=${signal}`, `.innerHTML=${rawHtml}` |
 | `attr="${signal}"` | Reactive attribute | `class="${cls}"` |
