@@ -309,7 +309,7 @@ end
 
 ### Queues {#queues}
 
-Supports litequeue (default/SQLite), RabbitMQ, and Kafka backends.
+Supports litequeue (default/SQLite), RabbitMQ, Kafka, and MongoDB backends.
 
 ```ruby
 queue = Tina4::Queue.new(topic: "emails")
