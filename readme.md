@@ -1,5 +1,13 @@
 # Tina4 Documentation
 
+This repository contains the legacy documentation site for Tina4.
+
+**For the complete, up-to-date documentation, see the [Tina4 Book](https://github.com/tina4stack/tina4-book)** — 5 books covering Python, PHP, Ruby, Node.js, and tina4-js.
+
+**Join the community on [Discord](https://discord.gg/pKPUbNDTRa)**
+
+---
+
 This repository contains the documentation for both the Tina4 PHP and Python projects
 
 ## How to get running
