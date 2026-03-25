@@ -97,9 +97,9 @@ The `\Tina4\ORMCache` class is used internally by the ORM. When `TINA4_CACHE_ON`
   `"orm" . md5($sqlStatement)`
 - On a cache hit the database is skipped entirely.
 - On a cache miss the query runs and the result is stored for **60 seconds**.
-- Any `save()` or `delete()` invalidates the relevant cache entry by setting it to `null`.
+- Any `save()` invalidates the relevant cache entry by setting it to `null`.
 
-When `TINA4_CACHE_ON` is `false`, `ORMCache::get()` always returns `null` and `ORMCache::set()` is a no-op, so the ORM falls through to the database every time.
+When `TINA4_CACHE_ON` is `false`, `ORMCache::get()` always returns `null` and `ORMCache::set()` returns `true`, so the ORM falls through to the database every time.
 
 You do not need to interact with `ORMCache` directly — the ORM handles it automatically.
 
