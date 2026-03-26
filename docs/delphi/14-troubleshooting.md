@@ -1,5 +1,7 @@
 # Chapter 14: Troubleshooting
 
+<div v-pre>
+
 ## When Things Go Wrong
 
 The app compiles. It launches. You click the button to fetch users. Nothing happens. No error message. No crash. Just silence. The UI sits there. You check the endpoint -- it is correct. You check the auth -- it is set. You add a `ShowMessage` after the REST call and discover the status code is 0. Zero. The request never completed. You look at the SSL DLLs and realize you put 32-bit DLLs in System32 and 64-bit DLLs in SysWOW64. Backwards.
@@ -606,7 +608,7 @@ ShowMessage(Pages.TwigTemplatePath);
 ShowMessage(BoolToStr(DirectoryExists(Pages.TwigTemplatePath), True));
 ```
 
-**Cause 2**: Template syntax error. A missing `&#123;% endif %&#125;` or unmatched braces.
+**Cause 2**: Template syntax error. A missing `{% endif %}` or unmatched braces.
 
 **Fix**: Test with a minimal template:
 
@@ -633,7 +635,7 @@ Renderer.Twig.Text := '<h1>{{ title }}</h1>';
 
 ### Includes Failing
 
-**Problem**: `&#123;% include 'header.html' %&#125;` does not work. The template renders without the included content.
+**Problem**: `{% include 'header.html' %}` does not work. The template renders without the included content.
 
 **Cause**: `TwigTemplatePath` is not set or points to the wrong directory.
 
@@ -815,3 +817,6 @@ Most Tina4 Delphi issues fall into five categories:
 5. **Threading** -- synchronous calls blocking UI, missing TThread.Synchronize
 
 When something does not work, start with the diagnostic checklist for the component involved. Check the status code. Log the response. Verify the field names. Nine times out of ten, the fix is in this chapter.
+
+
+</div>

@@ -171,11 +171,11 @@ The `pop()` method reads the value and deletes it from the session in one step. 
 ### Flash Messages in Templates
 
 ```html
-&#123;% if flash_message %&#125;
-    <div class="alert alert-&#123;&#123; flash_type &#125;&#125;">
-        &#123;&#123; flash_message &#125;&#125;
+{% if flash_message %}
+    <div class="alert alert-{{ flash_type }}">
+        {{ flash_message }}
     </div>
-&#123;% endif %&#125;
+{% endif %}
 ```
 
 ---

@@ -1,5 +1,7 @@
 # Chapter 7: Authentication
 
+<div v-pre>
+
 ## 1. Locking the Door
 
 Every endpoint built so far is public. Anyone with the URL can read, create, update, delete. That works for a tutorial. A real application needs to know who is making a request and whether they are allowed.
@@ -459,18 +461,18 @@ Include the CSRF token in every form:
 
 ```html
 <form method="POST" action="/profile/update">
-    &#123;&#123; form_token() &#125;&#125;
+    {{ form_token() }}
 
     <div class="form-group">
         <label for="name">Name</label>
-        <input type="text" name="name" id="name" value="&#123;&#123; user.name &#125;&#125;">
+        <input type="text" name="name" id="name" value="{{ user.name }}">
     </div>
 
     <button type="submit">Update Profile</button>
 </form>
 ```
 
-`&#123;&#123; form_token() &#125;&#125;` renders a hidden input:
+`{{ form_token() }}` renders a hidden input:
 
 ```html
 <input type="hidden" name="_token" value="abc123randomtoken456">
@@ -911,3 +913,6 @@ Router::put("/api/profile/password", function ($request, $response) {
 **Problem:** Tokens in URLs like `/api/profile?token=eyJ...` leak through browser history, server logs, and Referer headers.
 
 **Fix:** Always send tokens in the `Authorization` header. The only exception: WebSocket connections where the upgrade request cannot carry custom headers. Use a short-lived token for that case.
+
+
+</div>

@@ -286,13 +286,13 @@ end;
 ```html
 <div style="font-family: Arial, sans-serif; padding: 20px;">
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-    <h2 style="color: #2c3e50; margin: 0;">&#123;&#123; firstName &#125;&#125; &#123;&#123; lastName &#125;&#125;</h2>
+    <h2 style="color: #2c3e50; margin: 0;">{{ firstName }} {{ lastName }}</h2>
     <div>
-      <button onclick="App:EditContact('&#123;&#123; id &#125;&#125;')"
+      <button onclick="App:EditContact('{{ id }}')"
               style="background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-right: 5px; cursor: pointer;">
         Edit
       </button>
-      <button onclick="App:DeleteContact('&#123;&#123; id &#125;&#125;')"
+      <button onclick="App:DeleteContact('{{ id }}')"
               style="background: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
         Delete
       </button>
@@ -304,28 +304,28 @@ end;
       <tr>
         <td style="padding: 8px; color: #666; width: 120px;"><strong>Email</strong></td>
         <td style="padding: 8px;">
-          &#123;% if email %&#125;
-            <a href="mailto:&#123;&#123; email &#125;&#125;">&#123;&#123; email &#125;&#125;</a>
-          &#123;% else %&#125;
+          {% if email %}
+            <a href="mailto:{{ email }}">{{ email }}</a>
+          {% else %}
             <span style="color: #ccc;">Not set</span>
-          &#123;% endif %&#125;
+          {% endif %}
         </td>
       </tr>
       <tr>
         <td style="padding: 8px; color: #666;"><strong>Phone</strong></td>
-        <td style="padding: 8px;">&#123;&#123; phone|default('Not set') &#125;&#125;</td>
+        <td style="padding: 8px;">{{ phone|default('Not set') }}</td>
       </tr>
       <tr>
         <td style="padding: 8px; color: #666;"><strong>Company</strong></td>
-        <td style="padding: 8px;">&#123;&#123; company|default('Not set') &#125;&#125;</td>
+        <td style="padding: 8px;">{{ company|default('Not set') }}</td>
       </tr>
       <tr>
         <td style="padding: 8px; color: #666;"><strong>Notes</strong></td>
-        <td style="padding: 8px;">&#123;&#123; notes|default('No notes')|nl2br &#125;&#125;</td>
+        <td style="padding: 8px;">{{ notes|default('No notes')|nl2br }}</td>
       </tr>
       <tr>
         <td style="padding: 8px; color: #666;"><strong>Created</strong></td>
-        <td style="padding: 8px;">&#123;&#123; createdAt|date('F j, Y') &#125;&#125;</td>
+        <td style="padding: 8px;">{{ createdAt|date('F j, Y') }}</td>
       </tr>
     </table>
   </div>
@@ -387,45 +387,45 @@ end;
 ```html
 <div style="font-family: Arial, sans-serif; padding: 20px;">
   <h2 style="color: #2c3e50;">
-    &#123;% if id %&#125;Edit Contact&#123;% else %&#125;New Contact&#123;% endif %&#125;
+    {% if id %}Edit Contact{% else %}New Contact{% endif %}
   </h2>
 
   <form name="contactForm">
-    &#123;% if id %&#125;
-      <input type="hidden" name="id" value="&#123;&#123; id &#125;&#125;">
-    &#123;% endif %&#125;
+    {% if id %}
+      <input type="hidden" name="id" value="{{ id }}">
+    {% endif %}
 
     <div style="margin-bottom: 15px;">
       <label style="display: block; color: #666; margin-bottom: 4px;">First Name *</label>
-      <input type="text" name="firstName" value="&#123;&#123; firstName|default('') &#125;&#125;"
+      <input type="text" name="firstName" value="{{ firstName|default('') }}"
              class="form-control" placeholder="Enter first name"
              style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
     </div>
 
     <div style="margin-bottom: 15px;">
       <label style="display: block; color: #666; margin-bottom: 4px;">Last Name *</label>
-      <input type="text" name="lastName" value="&#123;&#123; lastName|default('') &#125;&#125;"
+      <input type="text" name="lastName" value="{{ lastName|default('') }}"
              class="form-control" placeholder="Enter last name"
              style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
     </div>
 
     <div style="margin-bottom: 15px;">
       <label style="display: block; color: #666; margin-bottom: 4px;">Email</label>
-      <input type="email" name="email" value="&#123;&#123; email|default('') &#125;&#125;"
+      <input type="email" name="email" value="{{ email|default('') }}"
              class="form-control" placeholder="name@example.com"
              style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
     </div>
 
     <div style="margin-bottom: 15px;">
       <label style="display: block; color: #666; margin-bottom: 4px;">Phone</label>
-      <input type="text" name="phone" value="&#123;&#123; phone|default('') &#125;&#125;"
+      <input type="text" name="phone" value="{{ phone|default('') }}"
              class="form-control" placeholder="+27 21 555 0100"
              style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
     </div>
 
     <div style="margin-bottom: 15px;">
       <label style="display: block; color: #666; margin-bottom: 4px;">Company</label>
-      <input type="text" name="company" value="&#123;&#123; company|default('') &#125;&#125;"
+      <input type="text" name="company" value="{{ company|default('') }}"
              class="form-control" placeholder="Company name"
              style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
     </div>
@@ -434,13 +434,13 @@ end;
       <label style="display: block; color: #666; margin-bottom: 4px;">Notes</label>
       <textarea name="notes" rows="4" class="form-control"
                 placeholder="Additional notes..."
-                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">&#123;&#123; notes|default('') &#125;&#125;</textarea>
+                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">{{ notes|default('') }}</textarea>
     </div>
 
     <div style="display: flex; gap: 10px;">
       <button type="submit" class="btn btn-primary"
               style="background: #1abc9c; color: white; border: none; padding: 10px 24px; border-radius: 4px; cursor: pointer;">
-        &#123;% if id %&#125;Save Changes&#123;% else %&#125;Create Contact&#123;% endif %&#125;
+        {% if id %}Save Changes{% else %}Create Contact{% endif %}
       </button>
       <button type="button" onclick="App:CancelForm()"
               style="background: #95a5a6; color: white; border: none; padding: 10px 24px; border-radius: 4px; cursor: pointer;">
@@ -1317,10 +1317,10 @@ Add the category field to `contact-form.html`:
   <select name="category" class="form-control"
           style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
     <option value="">-- Select --</option>
-    <option value="Work" &#123;% if category == 'Work' %&#125;selected&#123;% endif %&#125;>Work</option>
-    <option value="Personal" &#123;% if category == 'Personal' %&#125;selected&#123;% endif %&#125;>Personal</option>
-    <option value="Client" &#123;% if category == 'Client' %&#125;selected&#123;% endif %&#125;>Client</option>
-    <option value="Vendor" &#123;% if category == 'Vendor' %&#125;selected&#123;% endif %&#125;>Vendor</option>
+    <option value="Work" {% if category == 'Work' %}selected{% endif %}>Work</option>
+    <option value="Personal" {% if category == 'Personal' %}selected{% endif %}>Personal</option>
+    <option value="Client" {% if category == 'Client' %}selected{% endif %}>Client</option>
+    <option value="Vendor" {% if category == 'Vendor' %}selected{% endif %}>Vendor</option>
   </select>
 </div>
 ```

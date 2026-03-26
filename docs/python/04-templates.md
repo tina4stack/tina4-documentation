@@ -1,10 +1,12 @@
 # Chapter 4: Templates
 
+<div v-pre>
+
 ## 1. Beyond JSON -- Rendering HTML
 
 Every route so far returns JSON. That works for APIs. But web applications need HTML -- product listings, dashboards, login forms, email templates. Tina4 uses the **Frond** template engine for this.
 
-Frond is a zero-dependency template engine built from scratch. Its syntax is compatible with Twig, Jinja2, and Nunjucks. If you know any of those, you know Frond. If you do not, the syntax is three things: `&#123;&#123; &#125;&#125;` for output, `&#123;% %&#125;` for logic, `&#123;# #&#125;` for comments.
+Frond is a zero-dependency template engine built from scratch. Its syntax is compatible with Twig, Jinja2, and Nunjucks. If you know any of those, you know Frond. If you do not, the syntax is three things: `{{ }}` for output, `{% %}` for logic, `{# #}` for comments.
 
 Picture an online store. A product catalog page. Items in a grid. Featured products highlighted. Prices formatted. Layout inherited from a shared template. That is what this chapter builds.
 
@@ -31,10 +33,10 @@ Create `src/templates/about.html`:
 ```html
 <!DOCTYPE html>
 <html>
-<head><title>&#123;&#123; title &#125;&#125;</title></head>
+<head><title>{{ title }}</title></head>
 <body>
-    <h1>&#123;&#123; title &#125;&#125;</h1>
-    <p>&#123;&#123; company &#125;&#125; was founded in &#123;&#123; founded &#125;&#125;.</p>
+    <h1>{{ title }}</h1>
+    <p>{{ company }} was founded in {{ founded }}.</p>
 </body>
 </html>
 ```
@@ -49,11 +51,11 @@ The `@template` decorator maps a URL to a template file. The function returns a 
 
 ### Basic Output
 
-Use `&#123;&#123; &#125;&#125;` to output a variable:
+Use `{{ }}` to output a variable:
 
 ```html
-<h1>Hello, &#123;&#123; name &#125;&#125;!</h1>
-<p>Your balance is &#123;&#123; balance &#125;&#125;.</p>
+<h1>Hello, {{ name }}!</h1>
+<p>Your balance is {{ balance }}.</p>
 ```
 
 With data `{"name": "Alice", "balance": 150.50}`, this renders:
@@ -68,9 +70,9 @@ With data `{"name": "Alice", "balance": 150.50}`, this renders:
 Dot notation for dictionaries and object attributes:
 
 ```html
-<p>&#123;&#123; user.name &#125;&#125;</p>
-<p>&#123;&#123; user.address.city &#125;&#125;</p>
-<p>&#123;&#123; order.items.0.name &#125;&#125;</p>
+<p>{{ user.name }}</p>
+<p>{{ user.address.city }}</p>
+<p>{{ order.items.0.name }}</p>
 ```
 
 With data:
@@ -100,19 +102,19 @@ Renders:
 Frond escapes HTML characters in output by default. XSS attacks die here:
 
 ```html
-<p>&#123;&#123; user_input &#125;&#125;</p>
+<p>{{ user_input }}</p>
 ```
 
 With `{"user_input": "<script>alert('hacked')</script>"}`, this renders:
 
-```html
+```text
 <p>&lt;script&gt;alert(&#39;hacked&#39;)&lt;/script&gt;</p>
 ```
 
 The script tag is escaped. Displayed as text. Never executes. If you need raw HTML (and you trust the source), use the `|safe` filter:
 
 ```html
-<div>&#123;&#123; trusted_html | safe &#125;&#125;</div>
+<div>{{ trusted_html | safe }}</div>
 ```
 
 ---
@@ -122,58 +124,58 @@ The script tag is escaped. Displayed as text. Never executes. If you need raw HT
 Filters transform output. The pipe `|` applies them:
 
 ```html
-&#123;&#123; name | upper &#125;&#125;          &#123;# ALICE #&#125;
-&#123;&#123; name | lower &#125;&#125;          &#123;# alice #&#125;
-&#123;&#123; name | capitalize &#125;&#125;     &#123;# Alice #&#125;
-&#123;&#123; name | title &#125;&#125;          &#123;# Alice Smith #&#125;
-&#123;&#123; bio | trim &#125;&#125;            &#123;# Removes leading/trailing whitespace #&#125;
+{{ name | upper }}          {# ALICE #}
+{{ name | lower }}          {# alice #}
+{{ name | capitalize }}     {# Alice #}
+{{ name | title }}          {# Alice Smith #}
+{{ bio | trim }}            {# Removes leading/trailing whitespace #}
 ```
 
 ### Number Formatting
 
 ```html
-&#123;&#123; "%.2f"|format(price) &#125;&#125;              &#123;# 79.99 #&#125;
-&#123;&#123; "{:,}"|format(large_number) &#125;&#125;       &#123;# 1,234,567 #&#125;
-&#123;&#123; percentage | round(1) &#125;&#125;             &#123;# 85.3 #&#125;
+{{ "%.2f"|format(price) }}              {# 79.99 #}
+{{ "{:,}"|format(large_number) }}       {# 1,234,567 #}
+{{ percentage | round(1) }}             {# 85.3 #}
 ```
 
 ### String Filters
 
 ```html
-&#123;&#123; text | replace("old", "new") &#125;&#125;      &#123;# Replace substring #&#125;
-&#123;&#123; title | striptags &#125;&#125;                  &#123;# Remove HTML tags #&#125;
-&#123;&#123; content | nl2br &#125;&#125;                   &#123;# Convert newlines to <br> #&#125;
-&#123;&#123; slug | url_encode &#125;&#125;                 &#123;# URL-encode a string #&#125;
-&#123;&#123; items | join(", ") &#125;&#125;                &#123;# Join list with separator #&#125;
+{{ text | replace("old", "new") }}      {# Replace substring #}
+{{ title | striptags }}                  {# Remove HTML tags #}
+{{ content | nl2br }}                   {# Convert newlines to <br> #}
+{{ slug | url_encode }}                 {# URL-encode a string #}
+{{ items | join(", ") }}                {# Join list with separator #}
 ```
 
 ### Collection Filters
 
 ```html
-&#123;&#123; items | length &#125;&#125;          &#123;# Number of items #&#125;
-&#123;&#123; items | first &#125;&#125;           &#123;# First item #&#125;
-&#123;&#123; items | last &#125;&#125;            &#123;# Last item #&#125;
-&#123;&#123; items | sort &#125;&#125;            &#123;# Sort ascending #&#125;
-&#123;&#123; items | reverse &#125;&#125;         &#123;# Reverse order #&#125;
-&#123;&#123; items | unique &#125;&#125;          &#123;# Remove duplicates #&#125;
-&#123;&#123; items | slice(0, 3) &#125;&#125;     &#123;# First 3 items #&#125;
-&#123;&#123; items | batch(3) &#125;&#125;        &#123;# Group into batches of 3 #&#125;
+{{ items | length }}          {# Number of items #}
+{{ items | first }}           {# First item #}
+{{ items | last }}            {# Last item #}
+{{ items | sort }}            {# Sort ascending #}
+{{ items | reverse }}         {# Reverse order #}
+{{ items | unique }}          {# Remove duplicates #}
+{{ items | slice(0, 3) }}     {# First 3 items #}
+{{ items | batch(3) }}        {# Group into batches of 3 #}
 ```
 
 ### Date Formatting
 
 ```html
-&#123;&#123; created_at | date("Y-m-d") &#125;&#125;        &#123;# 2026-03-22 #&#125;
-&#123;&#123; created_at | date("d M Y") &#125;&#125;        &#123;# 22 Mar 2026 #&#125;
-&#123;&#123; created_at | date("H:i:s") &#125;&#125;        &#123;# 14:30:00 #&#125;
+{{ created_at | date("Y-m-d") }}        {# 2026-03-22 #}
+{{ created_at | date("d M Y") }}        {# 22 Mar 2026 #}
+{{ created_at | date("H:i:s") }}        {# 14:30:00 #}
 ```
 
 ### Encoding Filters
 
 ```html
-&#123;&#123; data | json_encode &#125;&#125;                &#123;# {"key": "value"} #&#125;
-&#123;&#123; text | base64encode &#125;&#125;               &#123;# Base64 encoded #&#125;
-&#123;&#123; encoded | base64decode &#125;&#125;            &#123;# Base64 decoded #&#125;
+{{ data | json_encode }}                {# {"key": "value"} #}
+{{ text | base64encode }}               {# Base64 encoded #}
+{{ encoded | base64decode }}            {# Base64 decoded #}
 ```
 
 ### Chaining Filters
@@ -181,11 +183,11 @@ Filters transform output. The pipe `|` applies them:
 Filters chain left to right:
 
 ```html
-&#123;&#123; name | trim | lower | capitalize &#125;&#125;
-&#123;# "  alice smith  " → "alice smith" → "Alice smith" #&#125;
+{{ name | trim | lower | capitalize }}
+{# "  alice smith  " → "alice smith" → "Alice smith" #}
 
-&#123;&#123; items | sort | reverse | first &#125;&#125;
-&#123;# Sort, reverse, take first = largest item #&#125;
+{{ items | sort | reverse | first }}
+{# Sort, reverse, take first = largest item #}
 ```
 
 ### The default Filter
@@ -193,9 +195,9 @@ Filters chain left to right:
 A fallback when a variable is empty or undefined:
 
 ```html
-&#123;&#123; username | default("Guest") &#125;&#125;
-&#123;&#123; bio | default("No bio provided.") &#125;&#125;
-&#123;&#123; theme | default("light") &#125;&#125;
+{{ username | default("Guest") }}
+{{ bio | default("No bio provided.") }}
+{{ theme | default("light") }}
 ```
 
 ---
@@ -205,40 +207,40 @@ A fallback when a variable is empty or undefined:
 ### if / elif / else
 
 ```html
-&#123;% if user.role == "admin" %&#125;
+{% if user.role == "admin" %}
     <span class="badge">Admin</span>
-&#123;% elif user.role == "moderator" %&#125;
+{% elif user.role == "moderator" %}
     <span class="badge">Moderator</span>
-&#123;% else %&#125;
+{% else %}
     <span class="badge">Member</span>
-&#123;% endif %&#125;
+{% endif %}
 ```
 
 Comparisons and logical operators:
 
 ```html
-&#123;% if price > 100 and in_stock %&#125;
+{% if price > 100 and in_stock %}
     <p>Premium item, available now!</p>
-&#123;% endif %&#125;
+{% endif %}
 
-&#123;% if not user.verified %&#125;
+{% if not user.verified %}
     <p>Please verify your email.</p>
-&#123;% endif %&#125;
+{% endif %}
 
-&#123;% if not items %&#125;
+{% if not items %}
     <p>Your cart is empty.</p>
-&#123;% endif %&#125;
+{% endif %}
 ```
 
 ### for Loops
 
 ```html
-&#123;% for product in products %&#125;
+{% for product in products %}
     <div class="product-card">
-        <h3>&#123;&#123; product.name &#125;&#125;</h3>
-        <p>$&#123;&#123; "%.2f"|format(product.price) &#125;&#125;</p>
+        <h3>{{ product.name }}</h3>
+        <p>${{ "%.2f"|format(product.price) }}</p>
     </div>
-&#123;% endfor %&#125;
+{% endfor %}
 ```
 
 Inside a for loop, the `loop` variable gives you context:
@@ -253,24 +255,24 @@ Inside a for loop, the `loop` variable gives you context:
 
 ```html
 <ol>
-&#123;% for item in items %&#125;
-    <li class="&#123;&#123; 'first' if loop.first else '' &#125;&#125; &#123;&#123; 'last' if loop.last else '' &#125;&#125;">
-        &#123;&#123; loop.index &#125;&#125;. &#123;&#123; item.name &#125;&#125;
+{% for item in items %}
+    <li class="{{ 'first' if loop.first else '' }} {{ 'last' if loop.last else '' }}">
+        {{ loop.index }}. {{ item.name }}
     </li>
-&#123;% endfor %&#125;
+{% endfor %}
 </ol>
 ```
 
 ### for / else
 
-The `&#123;% else %&#125;` block inside `&#123;% for %&#125;` runs when the list is empty:
+The `{% else %}` block inside `{% for %}` runs when the list is empty:
 
 ```html
-&#123;% for product in products %&#125;
-    <div class="product-card">&#123;&#123; product.name &#125;&#125;</div>
-&#123;% else %&#125;
+{% for product in products %}
+    <div class="product-card">{{ product.name }}</div>
+{% else %}
     <p>No products found.</p>
-&#123;% endfor %&#125;
+{% endfor %}
 ```
 
 ### set -- Local Variables
@@ -278,10 +280,10 @@ The `&#123;% else %&#125;` block inside `&#123;% for %&#125;` runs when the list
 Create or update a variable inside a template:
 
 ```html
-&#123;% set greeting = "Hello" %&#125;
-&#123;% set full_name = user.first_name ~ " " ~ user.last_name %&#125;
+{% set greeting = "Hello" %}
+{% set full_name = user.first_name ~ " " ~ user.last_name %}
 
-<p>&#123;&#123; greeting &#125;&#125;, &#123;&#123; full_name &#125;&#125;!</p>
+<p>{{ greeting }}, {{ full_name }}!</p>
 ```
 
 The `~` operator concatenates strings.
@@ -302,9 +304,9 @@ Create `src/templates/base.html`:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>&#123;% block title %&#125;My Store&#123;% endblock %&#125;</title>
+    <title>{% block title %}My Store{% endblock %}</title>
     <link rel="stylesheet" href="/css/tina4.css">
-    &#123;% block head %&#125;&#123;% endblock %&#125;
+    {% block head %}{% endblock %}
 </head>
 <body>
     <nav>
@@ -314,7 +316,7 @@ Create `src/templates/base.html`:
     </nav>
 
     <main>
-        &#123;% block content %&#125;&#123;% endblock %&#125;
+        {% block content %}{% endblock %}
     </main>
 
     <footer>
@@ -322,7 +324,7 @@ Create `src/templates/base.html`:
     </footer>
 
     <script src="/js/frond.js"></script>
-    &#123;% block scripts %&#125;&#123;% endblock %&#125;
+    {% block scripts %}{% endblock %}
 </body>
 </html>
 ```
@@ -332,37 +334,37 @@ Create `src/templates/base.html`:
 Create `src/templates/home.html`:
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block title %&#125;Home - My Store&#123;% endblock %&#125;
+{% block title %}Home - My Store{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
     <h1>Welcome to My Store</h1>
     <p>Browse our collection of quality products.</p>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 When Frond renders `home.html`:
 
-1. It sees `&#123;% extends "base.html" %&#125;` and loads the base template.
-2. The `&#123;% block title %&#125;` in `home.html` replaces the one in `base.html`.
-3. The `&#123;% block content %&#125;` in `home.html` replaces the one in `base.html`.
+1. It sees `{% extends "base.html" %}` and loads the base template.
+2. The `{% block title %}` in `home.html` replaces the one in `base.html`.
+3. The `{% block content %}` in `home.html` replaces the one in `base.html`.
 4. Blocks not overridden (`head`, `scripts`) keep their default content (empty here).
 
 ### Calling Parent Blocks
 
-Use `&#123;&#123; parent() &#125;&#125;` to include the parent block's content:
+Use `{{ parent() }}` to include the parent block's content:
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block head %&#125;
-    &#123;&#123; parent() &#125;&#125;
+{% block head %}
+    {{ parent() }}
     <link rel="stylesheet" href="/css/products.css">
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
-This keeps whatever the parent had in `&#123;% block head %&#125;` and adds the extra stylesheet.
+This keeps whatever the parent had in `{% block head %}` and adds the extra stylesheet.
 
 ---
 
@@ -373,19 +375,19 @@ This keeps whatever the parent had in `&#123;% block head %&#125;` and adds the 
 Pull in another template file:
 
 ```html
-&#123;% include "partials/header.html" %&#125;
+{% include "partials/header.html" %}
 
 <main>
     <h1>Products</h1>
 </main>
 
-&#123;% include "partials/footer.html" %&#125;
+{% include "partials/footer.html" %}
 ```
 
 Pass variables to included templates:
 
 ```html
-&#123;% include "partials/product-card.html" with {"product": featured_product} %&#125;
+{% include "partials/product-card.html" with {"product": featured_product} %}
 ```
 
 ### macro -- Reusable Template Functions
@@ -395,36 +397,36 @@ Macros are functions for templates. Define once, use everywhere:
 Create `src/templates/macros/forms.html`:
 
 ```html
-&#123;% macro input(name, label, type="text", value="", required=false) %&#125;
+{% macro input(name, label, type="text", value="", required=false) %}
     <div class="form-group">
-        <label for="&#123;&#123; name &#125;&#125;">&#123;&#123; label &#125;&#125;&#123;% if required %&#125; *&#123;% endif %&#125;</label>
-        <input type="&#123;&#123; type &#125;&#125;" name="&#123;&#123; name &#125;&#125;" id="&#123;&#123; name &#125;&#125;"
-               value="&#123;&#123; value &#125;&#125;" &#123;&#123; "required" if required else "" &#125;&#125;>
+        <label for="{{ name }}">{{ label }}{% if required %} *{% endif %}</label>
+        <input type="{{ type }}" name="{{ name }}" id="{{ name }}"
+               value="{{ value }}" {{ "required" if required else "" }}>
     </div>
-&#123;% endmacro %&#125;
+{% endmacro %}
 
-&#123;% macro textarea(name, label, value="", rows=4) %&#125;
+{% macro textarea(name, label, value="", rows=4) %}
     <div class="form-group">
-        <label for="&#123;&#123; name &#125;&#125;">&#123;&#123; label &#125;&#125;</label>
-        <textarea name="&#123;&#123; name &#125;&#125;" id="&#123;&#123; name &#125;&#125;" rows="&#123;&#123; rows &#125;&#125;">&#123;&#123; value &#125;&#125;</textarea>
+        <label for="{{ name }}">{{ label }}</label>
+        <textarea name="{{ name }}" id="{{ name }}" rows="{{ rows }}">{{ value }}</textarea>
     </div>
-&#123;% endmacro %&#125;
+{% endmacro %}
 
-&#123;% macro button(text, type="submit", class="btn-primary") %&#125;
-    <button type="&#123;&#123; type &#125;&#125;" class="btn &#123;&#123; class &#125;&#125;">&#123;&#123; text &#125;&#125;</button>
-&#123;% endmacro %&#125;
+{% macro button(text, type="submit", class="btn-primary") %}
+    <button type="{{ type }}" class="btn {{ class }}">{{ text }}</button>
+{% endmacro %}
 ```
 
 Use them:
 
 ```html
-&#123;% import "macros/forms.html" as forms %&#125;
+{% import "macros/forms.html" as forms %}
 
 <form method="POST" action="/api/contact">
-    &#123;&#123; forms.input("name", "Your Name", required=true) &#125;&#125;
-    &#123;&#123; forms.input("email", "Email Address", type="email", required=true) &#125;&#125;
-    &#123;&#123; forms.textarea("message", "Your Message", rows=6) &#125;&#125;
-    &#123;&#123; forms.button("Send Message") &#125;&#125;
+    {{ forms.input("name", "Your Name", required=true) }}
+    {{ forms.input("email", "Email Address", type="email", required=true) }}
+    {{ forms.textarea("message", "Your Message", rows=6) }}
+    {{ forms.button("Send Message") }}
 </form>
 ```
 
@@ -434,13 +436,13 @@ Consistent markup. Change the macro once and every form in your application upda
 
 ## 8. Comments
 
-Use `&#123;# #&#125;` for template comments. Stripped from output:
+Use `{# #}` for template comments. Stripped from output:
 
 ```html
-&#123;# This comment will not appear in the HTML source #&#125;
+{# This comment will not appear in the HTML source #}
 <p>Visible content</p>
 
-&#123;#
+{#
     Multi-line comments work too.
     Use them to document template logic.
 #}
@@ -457,23 +459,23 @@ The `tina4.css` file is Tina4's built-in CSS utility framework. It ships with ev
 Some common classes:
 
 ```html
-&#123;# Grid layout #&#125;
+{# Grid layout #}
 <div class="grid grid-cols-3 gap-4">
     <div class="card">Item 1</div>
     <div class="card">Item 2</div>
     <div class="card">Item 3</div>
 </div>
 
-&#123;# Flex layout #&#125;
+{# Flex layout #}
 <div class="flex justify-between items-center">
     <h1>Title</h1>
     <button class="btn btn-primary">Action</button>
 </div>
 
-&#123;# Spacing #&#125;
+{# Spacing #}
 <div class="p-4 m-2">Padded and margined</div>
 
-&#123;# Typography #&#125;
+{# Typography #}
 <p class="text-lg text-gray-600">Large gray text</p>
 ```
 
@@ -520,82 +522,82 @@ products = [
 Create `src/templates/macros/catalog.html`:
 
 ```html
-&#123;% macro product_card(product) %&#125;
-    <div class="product-card &#123;&#123; 'featured' if product.featured else '' &#125;&#125;">
-        &#123;% if product.featured %&#125;
+{% macro product_card(product) %}
+    <div class="product-card {{ 'featured' if product.featured else '' }}">
+        {% if product.featured %}
             <span class="featured-badge">Featured</span>
-        &#123;% endif %&#125;
-        <h3><a href="/catalog/&#123;&#123; product.id &#125;&#125;">&#123;&#123; product.name &#125;&#125;</a></h3>
-        <p class="category">&#123;&#123; product.category &#125;&#125;</p>
-        <p class="price">$&#123;&#123; "%.2f"|format(product.price) &#125;&#125;</p>
-        &#123;% if product.in_stock %&#125;
+        {% endif %}
+        <h3><a href="/catalog/{{ product.id }}">{{ product.name }}</a></h3>
+        <p class="category">{{ product.category }}</p>
+        <p class="price">${{ "%.2f"|format(product.price) }}</p>
+        {% if product.in_stock %}
             <span class="badge badge-success">In Stock</span>
-        &#123;% else %&#125;
+        {% else %}
             <span class="badge badge-danger">Out of Stock</span>
-        &#123;% endif %&#125;
+        {% endif %}
     </div>
-&#123;% endmacro %&#125;
+{% endmacro %}
 ```
 
 Create `src/templates/catalog.html`:
 
 ```html
-&#123;% extends "base.html" %&#125;
-&#123;% import "macros/catalog.html" as catalog %&#125;
+{% extends "base.html" %}
+{% import "macros/catalog.html" as catalog %}
 
-&#123;% block title %&#125;&#123;&#123; page_title | default("Product Catalog") &#125;&#125;&#123;% endblock %&#125;
+{% block title %}{{ page_title | default("Product Catalog") }}{% endblock %}
 
-&#123;% block content %&#125;
-    <h1>&#123;&#123; page_title | default("Product Catalog") &#125;&#125;</h1>
+{% block content %}
+    <h1>{{ page_title | default("Product Catalog") }}</h1>
 
     <div class="category-filters">
-        <a href="/catalog" class="&#123;&#123; 'active' if active_category is not defined else '' &#125;&#125;">All</a>
-        &#123;% for cat in categories %&#125;
-            <a href="/catalog?category=&#123;&#123; cat &#125;&#125;"
-               class="&#123;&#123; 'active' if active_category == cat else '' &#125;&#125;">&#123;&#123; cat &#125;&#125;</a>
-        &#123;% endfor %&#125;
+        <a href="/catalog" class="{{ 'active' if active_category is not defined else '' }}">All</a>
+        {% for cat in categories %}
+            <a href="/catalog?category={{ cat }}"
+               class="{{ 'active' if active_category == cat else '' }}">{{ cat }}</a>
+        {% endfor %}
     </div>
 
-    <p class="stats">Showing &#123;&#123; products | length &#125;&#125; product&#123;&#123; "s" if products|length != 1 else "" &#125;&#125;</p>
+    <p class="stats">Showing {{ products | length }} product{{ "s" if products|length != 1 else "" }}</p>
 
     <div class="product-grid">
-        &#123;% for product in products %&#125;
-            &#123;&#123; catalog.product_card(product) &#125;&#125;
-        &#123;% else %&#125;
+        {% for product in products %}
+            {{ catalog.product_card(product) }}
+        {% else %}
             <p>No products found in this category.</p>
-        &#123;% endfor %&#125;
+        {% endfor %}
     </div>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 Create `src/templates/product_detail.html`:
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block title %&#125;&#123;&#123; product.name &#125;&#125; - My Store&#123;% endblock %&#125;
+{% block title %}{{ product.name }} - My Store{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
     <a href="/catalog">&larr; Back to catalog</a>
 
     <div class="product-detail">
-        <h1>&#123;&#123; product.name &#125;&#125;</h1>
-        <p class="category">&#123;&#123; product.category &#125;&#125;</p>
-        <p class="price">$&#123;&#123; "%.2f"|format(product.price) &#125;&#125;</p>
-        &#123;% if product.in_stock %&#125;
+        <h1>{{ product.name }}</h1>
+        <p class="category">{{ product.category }}</p>
+        <p class="price">${{ "%.2f"|format(product.price) }}</p>
+        {% if product.in_stock %}
             <span class="badge badge-success">In Stock</span>
-        &#123;% else %&#125;
+        {% else %}
             <span class="badge badge-danger">Out of Stock</span>
-        &#123;% endif %&#125;
-        &#123;% if product.featured %&#125;
+        {% endif %}
+        {% if product.featured %}
             <span class="featured-badge">Featured</span>
-        &#123;% endif %&#125;
+        {% endif %}
         <div class="description">
             <h2>Description</h2>
-            <p>&#123;&#123; product.description | default("No description available.") &#125;&#125;</p>
+            <p>{{ product.description | default("No description available.") }}</p>
         </div>
     </div>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 Create `src/routes/catalog.py`:
@@ -662,58 +664,61 @@ async def product_detail(id, request, response):
 
 **Cause:** Template tags produce whitespace on the line they occupy.
 
-**Fix:** Use whitespace control with `&#123;%-` and `-%&#125;` to strip whitespace around tags:
+**Fix:** Use whitespace control with `{%-` and `-%}` to strip whitespace around tags:
 
 ```html
-&#123;%- for item in items -%&#125;
-    <li>&#123;&#123; item.name &#125;&#125;</li>
-&#123;%- endfor -%&#125;
+{%- for item in items -%}
+    <li>{{ item.name }}</li>
+{%- endfor -%}
 ```
 
 ### 2. Variable not defined error
 
 **Problem:** Frond raises an error when a variable does not exist in the context.
 
-**Cause:** You used `&#123;&#123; user.name &#125;&#125;` but did not pass `user` in the template data.
+**Cause:** You used `{{ user.name }}` but did not pass `user` in the template data.
 
-**Fix:** Use the `|default` filter: `&#123;&#123; user.name | default("Guest") &#125;&#125;`. Or check first: `&#123;% if user is defined %&#125;&#123;&#123; user.name &#125;&#125;&#123;% endif %&#125;`.
+**Fix:** Use the `|default` filter: `{{ user.name | default("Guest") }}`. Or check first: `{% if user is defined %}{{ user.name }}{% endif %}`.
 
 ### 3. Extends must be the first tag
 
-**Problem:** `&#123;% extends "base.html" %&#125;` has no effect and the page renders without the layout.
+**Problem:** `{% extends "base.html" %}` has no effect and the page renders without the layout.
 
-**Cause:** `&#123;% extends %&#125;` must be the first tag in the template. Any text, HTML, or tags before it cause Frond to treat the template as standalone.
+**Cause:** `{% extends %}` must be the first tag in the template. Any text, HTML, or tags before it cause Frond to treat the template as standalone.
 
-**Fix:** Move `&#123;% extends "base.html" %&#125;` to the first line. No content before it.
+**Fix:** Move `{% extends "base.html" %}` to the first line. No content before it.
 
 ### 4. Macro not found
 
-**Problem:** `&#123;&#123; forms.input(...) &#125;&#125;` produces an error about `forms` being undefined.
+**Problem:** `{{ forms.input(...) }}` produces an error about `forms` being undefined.
 
-**Cause:** You forgot the `&#123;% import %&#125;` statement, or the import path is wrong.
+**Cause:** You forgot the `{% import %}` statement, or the import path is wrong.
 
-**Fix:** Add `&#123;% import "macros/forms.html" as forms %&#125;` at the top of the template (after `&#123;% extends %&#125;` if using inheritance). The path is relative to `src/templates/`.
+**Fix:** Add `{% import "macros/forms.html" as forms %}` at the top of the template (after `{% extends %}` if using inheritance). The path is relative to `src/templates/`.
 
 ### 5. Filter produces wrong type
 
-**Problem:** `&#123;&#123; "%.2f"|format(price) &#125;&#125;` shows an error instead of a formatted number.
+**Problem:** `{{ "%.2f"|format(price) }}` shows an error instead of a formatted number.
 
 **Cause:** The variable `price` is a string, not a number. Filters expect specific types.
 
-**Fix:** Pass correct types from your route handler. Use `float(price)` in Python before passing to the template, or convert in the template: `&#123;&#123; "%.2f"|format(price|float) &#125;&#125;`.
+**Fix:** Pass correct types from your route handler. Use `float(price)` in Python before passing to the template, or convert in the template: `{{ "%.2f"|format(price|float) }}`.
 
 ### 6. Escaped HTML when you want raw output
 
 **Problem:** Your HTML content shows as text with visible `<tags>` instead of rendering.
 
-**Cause:** Frond auto-escapes all `&#123;&#123; &#125;&#125;` output to prevent XSS.
+**Cause:** Frond auto-escapes all `{{ }}` output to prevent XSS.
 
-**Fix:** Use the `|safe` filter: `&#123;&#123; trusted_html | safe &#125;&#125;`. Only use this with content you trust -- never with user input.
+**Fix:** Use the `|safe` filter: `{{ trusted_html | safe }}`. Only use this with content you trust -- never with user input.
 
 ### 7. Include file path wrong
 
-**Problem:** `&#123;% include "header.html" %&#125;` gives a "template not found" error even though the file exists.
+**Problem:** `{% include "header.html" %}` gives a "template not found" error even though the file exists.
 
-**Cause:** The path in `&#123;% include %&#125;` is relative to `src/templates/`, not the current template file.
+**Cause:** The path in `{% include %}` is relative to `src/templates/`, not the current template file.
 
-**Fix:** Use the full path from the templates root: `&#123;% include "partials/header.html" %&#125;` for a file at `src/templates/partials/header.html`.
+**Fix:** Use the full path from the templates root: `{% include "partials/header.html" %}` for a file at `src/templates/partials/header.html`.
+
+
+</div>

@@ -288,19 +288,19 @@ Router::get("/profile", function ($request, $response) {
 ### In Templates
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block content %&#125;
-    &#123;% if flash %&#125;
-        <div class="alert alert-&#123;&#123; flash.type &#125;&#125;">
-            &#123;&#123; flash.message &#125;&#125;
+{% block content %}
+    {% if flash %}
+        <div class="alert alert-{{ flash.type }}">
+            {{ flash.message }}
         </div>
-    &#123;% endif %&#125;
+    {% endif %}
 
     <h1>Profile</h1>
-    <p>Name: &#123;&#123; user.name &#125;&#125;</p>
-    <p>Email: &#123;&#123; user.email &#125;&#125;</p>
-&#123;% endblock %&#125;
+    <p>Name: {{ user.name }}</p>
+    <p>Email: {{ user.email }}</p>
+{% endblock %}
 ```
 
 The alert appears once. Refresh the page. Gone.
@@ -315,13 +315,13 @@ $request->session["_flash"] = [
 ```
 
 ```html
-&#123;% if flash %&#125;
-    &#123;% for msg in flash %&#125;
-        <div class="alert alert-&#123;&#123; msg.type &#125;&#125;">
-            &#123;&#123; msg.message &#125;&#125;
+{% if flash %}
+    {% for msg in flash %}
+        <div class="alert alert-{{ msg.type }}">
+            {{ msg.message }}
         </div>
-    &#123;% endfor %&#125;
-&#123;% endif %&#125;
+    {% endfor %}
+{% endif %}
 ```
 
 ---
