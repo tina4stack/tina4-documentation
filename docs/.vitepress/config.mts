@@ -140,6 +140,7 @@ export default defineConfig({
                 {
                     text: 'Guides',
                     items: [
+                        {text: 'CLI Reference', link: '/general/cli.md'},
                         {text: 'tina4-css', link: '/general/tina4-css.md'},
                         {text: 'CSS Guide', link: '/general/css.md'},
                         {text: 'Static Websites', link: '/general/static-website.md'},
