@@ -1,6 +1,10 @@
 # Tina4 Documentation
 
-Documentation site for the Tina4 framework (Python, Node.js, PHP, Ruby, Delphi, and tina4-js).
+**v2 Documentation** — This repository contains the v2 documentation site for the Tina4 framework (Python, Node.js, PHP, Ruby, Delphi, and tina4-js).
+
+**For v3 documentation, see the [Tina4 Book](https://github.com/tina4stack/tina4-book)** — 5 books covering Python, PHP, Ruby, Node.js, and tina4-js.
+
+**Join the community on [Discord](https://discord.gg/pKPUbNDTRa)**
 
 ## How to get running
 
