@@ -257,11 +257,11 @@ var Page := HTMLPages1.Pages.Add;
 Page.PageName := 'dashboard';
 Page.TwigContent.Text :=
   '<div class="header">' +
-  '  <h1>Welcome, &#123;&#123; userName &#125;&#125;</h1>' +
-  '  <span>Role: &#123;&#123; userRole &#125;&#125;</span>' +
-  '  &#123;% if notificationCount > 0 %&#125;' +
-  '    <span class="badge">&#123;&#123; notificationCount &#125;&#125; new</span>' +
-  '  &#123;% endif %&#125;' +
+  '  <h1>Welcome, {{ userName }}</h1>' +
+  '  <span>Role: {{ userRole }}</span>' +
+  '  {% if notificationCount > 0 %}' +
+  '    <span class="badge">{{ notificationCount }} new</span>' +
+  '  {% endif %}' +
   '</div>';
 ```
 

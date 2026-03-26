@@ -407,15 +407,15 @@ begin
   var PageDash := HTMLPages1.Pages.Add;
   PageDash.PageName := 'dashboard';
   PageDash.IsDefault := True;
-  PageDash.TwigContent.Text := '&#123;% include "pages/dashboard.html" %&#125;';
+  PageDash.TwigContent.Text := '{% include "pages/dashboard.html" %}';
 
   var PageProducts := HTMLPages1.Pages.Add;
   PageProducts.PageName := 'products';
-  PageProducts.TwigContent.Text := '&#123;% include "pages/products.html" %&#125;';
+  PageProducts.TwigContent.Text := '{% include "pages/products.html" %}';
 
   var PageSettings := HTMLPages1.Pages.Add;
   PageSettings.PageName := 'settings';
-  PageSettings.TwigContent.Text := '&#123;% include "pages/settings.html" %&#125;';
+  PageSettings.TwigContent.Text := '{% include "pages/settings.html" %}';
 
   // Load data when pages change
   HTMLPages1.OnAfterNavigate := HandlePageNavigate;

@@ -65,7 +65,7 @@ begin
     Variables.Add('name', 'World');
 
     Memo1.Lines.Text := Twig.Render(
-      '<h1>Hello &#123;&#123; name &#125;&#125;!</h1>', Variables);
+      '<h1>Hello {{ name }}!</h1>', Variables);
     // Output: <h1>Hello World!</h1>
   finally
     Variables.Free;
@@ -622,8 +622,8 @@ Tina4HTMLRender1.SetTwigVariable('messageCount', '5');
 // Set the Twig template -- it renders to HTML automatically
 Tina4HTMLRender1.Twig.Text :=
   '<div class="header">' +
-  '  <h1>&#123;&#123; title &#125;&#125;</h1>' +
-  '  <p>Welcome back, &#123;&#123; userName &#125;&#125;! You have &#123;&#123; messageCount &#125;&#125; new messages.</p>' +
+  '  <h1>{{ title }}</h1>' +
+  '  <p>Welcome back, {{ userName }}! You have {{ messageCount }} new messages.</p>' +
   '</div>';
 ```
 

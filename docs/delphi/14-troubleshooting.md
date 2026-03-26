@@ -611,7 +611,7 @@ ShowMessage(BoolToStr(DirectoryExists(Pages.TwigTemplatePath), True));
 **Fix**: Test with a minimal template:
 
 ```pascal
-Renderer.Twig.Text := '<p>&#123;&#123; name &#125;&#125;</p>';
+Renderer.Twig.Text := '<p>{{ name }}</p>';
 // If this works, the issue is in your complex template
 ```
 
@@ -623,12 +623,12 @@ Renderer.Twig.Text := '<p>&#123;&#123; name &#125;&#125;</p>';
 
 ```pascal
 // WRONG -- template renders before variables are set
-Renderer.Twig.Text := '<h1>&#123;&#123; title &#125;&#125;</h1>';
+Renderer.Twig.Text := '<h1>{{ title }}</h1>';
 Renderer.SetTwigVariable('title', 'Hello');
 
 // RIGHT -- set variables first
 Renderer.SetTwigVariable('title', 'Hello');
-Renderer.Twig.Text := '<h1>&#123;&#123; title &#125;&#125;</h1>';
+Renderer.Twig.Text := '<h1>{{ title }}</h1>';
 ```
 
 ### Includes Failing

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Syncs tina4-book chapters into the VitePress docs site.
-# Escapes all Twig/template syntax for VitePress/Vue compatibility.
+# Escapes Twig/Vue template syntax for VitePress/Vue compatibility.
 # Usage: ./scripts/sync-books.sh [/path/to/tina4-book]
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -17,9 +17,16 @@ echo "Syncing from: $BOOK_ROOT"
 echo "Into docs at: $DOCS_ROOT"
 echo ""
 
-# Escape all Twig/Vue template syntax for VitePress.
-# VitePress compiles markdown as Vue SFC templates, so we must escape
-# {{ }}, {% %}, {# #} everywhere to prevent Vue compiler errors.
+# Escape Twig/Vue template syntax for VitePress.
+#
+# VitePress compiles markdown as Vue SFC templates. The {{ }} and {% %}
+# syntax used in Twig examples conflicts with Vue's template compiler.
+#
+# Strategy:
+# - OUTSIDE code fences: escape {{ }}, {% %}, {# #} with HTML entities
+# - INSIDE html/twig/jinja/unlabeled code fences: escape (Vue parses these)
+# - INSIDE other code fences (pascal, javascript, python, etc.): LEAVE ALONE
+#   (markdown-it already escapes these into <code> blocks safely)
 escape_twig() {
   python3 -c "
 import sys
@@ -28,23 +35,50 @@ content = sys.stdin.read()
 lines = content.split('\n')
 result = []
 in_fence = False
+fence_lang = ''
+
+# Languages where {{ }} is safe inside code fences (markdown-it escapes them)
+SAFE_LANGS = {
+    'pascal', 'delphi', 'javascript', 'js', 'typescript', 'ts',
+    'python', 'py', 'php', 'ruby', 'rb', 'bash', 'sh', 'shell',
+    'sql', 'json', 'yaml', 'yml', 'toml', 'ini', 'xml', 'css',
+    'scss', 'sass', 'less', 'go', 'rust', 'java', 'kotlin', 'swift',
+    'c', 'cpp', 'csharp', 'cs', 'lua', 'perl', 'r', 'dart', 'elixir',
+    'haskell', 'diff', 'graphql', 'dockerfile', 'makefile', 'text', 'txt',
+    'env', 'conf', 'log', 'csv', 'md', 'markdown', 'plaintext',
+}
+
+def escape_line(line):
+    line = line.replace('{{', '&#123;&#123;')
+    line = line.replace('}}', '&#125;&#125;')
+    line = line.replace('{%', '&#123;%')
+    line = line.replace('%}', '%&#125;')
+    line = line.replace('{#', '&#123;#')
+    line = line.replace('#}', '#&#125;')
+    return line
 
 for line in lines:
     stripped = line.strip()
     if stripped.startswith('\`\`\`'):
-        in_fence = not in_fence
+        if not in_fence:
+            in_fence = True
+            fence_lang = stripped[3:].strip().split()[0].lower() if len(stripped) > 3 else ''
+        else:
+            in_fence = False
+            fence_lang = ''
         result.append(line)
         continue
 
-    # Escape ALL template syntax everywhere (inside and outside code fences)
-    # Use HTML entities so they render correctly in the browser
-    if '{{' in line or '{%' in line or '{#' in line:
-        line = line.replace('{{', '&#123;&#123;')
-        line = line.replace('}}', '&#125;&#125;')
-        line = line.replace('{%', '&#123;%')
-        line = line.replace('%}', '%&#125;')
-        line = line.replace('{#', '&#123;#')
-        line = line.replace('#}', '#&#125;')
+    has_template = '{{' in line or '{%' in line or '{#' in line
+
+    if has_template:
+        if in_fence:
+            # Only escape in HTML-like code fences where Vue parses the content
+            if fence_lang not in SAFE_LANGS:
+                line = escape_line(line)
+        else:
+            # Always escape outside code fences
+            line = escape_line(line)
 
     result.append(line)
 
