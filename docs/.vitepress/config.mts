@@ -100,6 +100,7 @@ export default defineConfig({
             {text: 'PHP', link: '/php/index.md'},
             {text: 'Ruby', link: '/ruby/index.md'},
             {text: 'Delphi', link: '/delphi/index.md'},
+            {text: 'v2 Docs', link: '/v2/index.md'},
         ],
         sidebar: {
             '/js/': buildChapterSidebar('js', 'tina4-js', [
@@ -122,6 +123,16 @@ export default defineConfig({
             ]),
             '/ruby/': buildChapterSidebar('ruby', 'Ruby'),
             '/nodejs/': buildChapterSidebar('nodejs', 'Node.js'),
+            '/v2/': [
+                {
+                    text: 'v2 Documentation',
+                    items: [
+                        {text: 'Overview', link: '/v2/index.md'},
+                        {text: 'PHP Quick Reference', link: '/v2/php/index.md'},
+                        {text: 'Python Quick Reference', link: '/v2/python/index.md'},
+                    ]
+                }
+            ],
             '/delphi/': buildChapterSidebar('delphi', 'Delphi', [
                 {
                     text: 'Reference',
