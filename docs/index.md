@@ -5,51 +5,53 @@ layout: home
 hero:
   name: "Tina4"
   text: "Documentation"
-  tagline: This is not a framework
-  image: 
+  tagline: This is not a framework - v3
+  image:
     src: './logo.svg'
   actions:
     - theme: brand
       text: Get Started
       link: get-started.md
     - theme: alt
-      text: JavaScript
+      text: tina4-js
       link: /js/index.md
     - theme: alt
       text: Python
       link: /python/index.md
     - theme: alt
+      text: Node.js
+      link: /nodejs/index.md
+    - theme: alt
       text: PHP
       link: /php/index.md
     - theme: alt
-      text: Delphi
-      link: /delphi/index.md
-    - theme: alt
       text: Ruby
       link: /ruby/index.md
+    - theme: alt
+      text: Delphi
+      link: /delphi/index.md
     - theme: alt
       text: Comparisons
       link: /comparisons.md
 
 
 features:
+    - title: Four Languages, One API
+      details: Python, Node.js, PHP, and Ruby share the same project structure, CLI commands, template syntax, and .env variables. Learn one, know all four.
     - title: Sub-3KB Reactive Frontend
-      details: Build reactive UIs with signals, tagged template literals, and Web Components—all under 3KB gzipped. No virtual DOM, no build complexity.
-    - title: Lightning-Fast ASGI Routing
-      details: Effortless Python ASGI routing for high-performance web apps, supporting any server like Uvicorn—build scalable APIs in minutes.
-    - title: Seamless WebSocket Integration
-      details: Real-time communication made simple with built-in WebSocket support in this Python framework, perfect for chat apps and live updates.
-    - title: Powerful Twig Templating
-      details: Render dynamic HTML securely using Twig engine in Python & PHP with advanced features for full-stack development.
+      details: Signals, tagged template literals, and Web Components. The entire frontend framework fits under 3KB gzipped. No virtual DOM. No build step. No complexity.
+    - title: Zero-Dependency Node.js
+      details: Tina4 Node.js ships with zero runtime dependencies. No native addons, no node-gyp, no platform binaries. SQLite runs through Node 22's built-in module.
+    - title: Routing in Every Language
+      details: Define a route. Return a response. The framework handles the rest. ASGI in Python, HTTP in Node.js, PHP, and Ruby. Same patterns across all four.
+    - title: Built-in WebSocket Support
+      details: Real-time communication across all backends. Connect a client, send a message, receive a response. Chat apps, live dashboards, notifications -- all handled.
+    - title: Twig Templating Everywhere
+      details: One template engine across Python, Node.js, PHP, and Ruby. Variables, loops, inheritance, macros. Write your layout once and render it in any language.
     - title: One-Line CRUD Generation
-      details: Auto-generate CRUD interfaces and database migrations for SQLite, PostgreSQL, or MySQL—Python ORM simplicity without the normal complexity.
-    - title: Instant Swagger API Docs
-      details: Automatically document your Python & PHP APIs with Swagger at /swagger, enhancing developer experience like FastAPI for quick onboarding.
-    - title: Hot-Reloading Development
-      details: Accelerate Python, PHP & JavaScript web dev with hot-reloading—edit code and see changes instantly, boosting productivity for modern apps.
-    - title: Full Async Capabilities
-      details: Leverage async/await in Python for efficient I/O, ideal for high-concurrency apps comparable to Starlette but with minimal setup.
-    - title: Built-in JWT Authentication
-      details: Secure your Python, PHP & JavaScript web apps with JWT, sessions, and middleware—easy authentication tailored for robust security.
+      details: Define an ORM model. The framework generates CRUD interfaces and migrations for SQLite, PostgreSQL, or MySQL. No boilerplate. No ceremony.
+    - title: Swagger at /swagger
+      details: Add a description decorator to your route. Visit /swagger. Your API documentation appears -- typed, grouped, and ready for your team to use.
+    - title: JWT Authentication Built In
+      details: Token-based auth, session management, and middleware. GET routes are public. POST, PUT, PATCH, and DELETE require a bearer token. Security by default.
 ---
-

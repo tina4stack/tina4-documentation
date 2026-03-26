@@ -1,8 +1,11 @@
 # Getting Started with Tina4
 
-## JavaScript (tina4js)
+Pick your language. Run the commands. Your app starts in under a minute.
 
-Build reactive frontends with signals, Web Components, and client-side routing — all under 3KB gzipped:
+## JavaScript (tina4-js)
+
+A reactive frontend in four lines. Signals handle state. Web Components handle structure. The whole framework weighs under 3KB.
+
 ```bash
 npx tina4 create my-app
 cd my-app
@@ -15,7 +18,8 @@ Take a deeper dive into the [documentation](/js/index.md)
 
 ## Python 3.12+
 
-From your project folder install and initialize your project with these quick commands from your terminal:
+Install the package, scaffold the project, start the server. Hot-reloading watches your files and rebuilds on every save.
+
 ```bash
 # Install the package
 pip install tina4-python jurigged
@@ -28,9 +32,27 @@ Access your app at `http://localhost:7145`
 
 Take a deeper dive into the [documentation](/python/index.md)
 
+## Node.js 22+
+
+Zero runtime dependencies. No native addons, no node-gyp. TypeScript works out of the box.
+
+```bash
+# Install the package
+npm install tina4-nodejs
+# Create a new project
+tina4 init my-project
+cd my-project
+# Launch the development server
+tina4 start
+```
+Access your app at `http://localhost:7145`
+
+Take a deeper dive into the [documentation](/nodejs/index.md)
+
 ## Ruby 3.1+
 
-Get a full-stack Ruby app running with built-in ORM, migrations, and Twig templating:
+ORM, migrations, and Twig templating included. One gem gives you the full stack.
+
 ```bash
 gem install tina4ruby
 tina4 init my-project
@@ -44,7 +66,8 @@ Take a deeper dive into the [documentation](/ruby/index.md)
 
 ## PHP 8.0+
 
-Set up a Tina4 PHP project just as easily, inspired by Laravel's elegance but with a lighter footprint:
+Composer pulls the package. The CLI scaffolds the project. The built-in server handles the rest.
+
 ```bash
 # Install the Tina4 PHP package
 composer require tina4stack/tina4php
@@ -59,7 +82,8 @@ Take a deeper dive into the [documentation](/php/index.md)
 
 ## Delphi 10.4+
 
-Install the Tina4 Delphi component package in your IDE:
+Design-time components for FireMonkey. Drop them on your form, configure in the Object Inspector, compile and run.
+
 ```bash
 # Clone the repository
 git clone https://github.com/tina4stack/tina4delphi.git

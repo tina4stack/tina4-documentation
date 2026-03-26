@@ -155,60 +155,60 @@ Filters transform values using the pipe `|` operator. They can be chained:
 
 | Filter | Description | Example |
 |---|---|---|
-| `upper` | Uppercase | `{{ 'hello'\|upper }}` &rarr; `HELLO` |
-| `lower` | Lowercase | `{{ 'HELLO'\|lower }}` &rarr; `hello` |
-| `capitalize` | Capitalize first letter | `{{ 'hello'\|capitalize }}` &rarr; `Hello` |
-| `title` | Title case | `{{ 'hello world'\|title }}` &rarr; `Hello World` |
-| `trim` | Remove whitespace | `{{ ' hi '\|trim }}` &rarr; `hi` |
-| `nl2br` | Newlines to `<br>` | `{{ text\|nl2br }}` |
-| `striptags` | Remove HTML tags | `{{ html\|striptags }}` |
-| `replace` | Replace values | `{{ 'hello'\|replace({'e': 'a'}) }}` |
-| `split` | Split into array | `{{ 'a,b,c'\|split(',') }}` |
-| `slug` | URL-friendly slug | `{{ 'Hello World'\|slug }}` &rarr; `hello-world` |
-| `spaceless` | Remove whitespace between tags | `{{ html\|spaceless }}` |
-| `u` | Unicode string | `{{ text\|u }}` |
+| `upper` | Uppercase | `<span v-pre>{{ 'hello'\|upper }}</span>` &rarr; `HELLO` |
+| `lower` | Lowercase | `<span v-pre>{{ 'HELLO'\|lower }}</span>` &rarr; `hello` |
+| `capitalize` | Capitalize first letter | `<span v-pre>{{ 'hello'\|capitalize }}</span>` &rarr; `Hello` |
+| `title` | Title case | `<span v-pre>{{ 'hello world'\|title }}</span>` &rarr; `Hello World` |
+| `trim` | Remove whitespace | `<span v-pre>{{ ' hi '\|trim }}</span>` &rarr; `hi` |
+| `nl2br` | Newlines to `<br>` | `<span v-pre>{{ text\|nl2br }}</span>` |
+| `striptags` | Remove HTML tags | `<span v-pre>{{ html\|striptags }}</span>` |
+| `replace` | Replace values | `<span v-pre>{{ 'hello'\|replace({'e': 'a'}) }}</span>` |
+| `split` | Split into array | `<span v-pre>{{ 'a,b,c'\|split(',') }}</span>` |
+| `slug` | URL-friendly slug | `<span v-pre>{{ 'Hello World'\|slug }}</span>` &rarr; `hello-world` |
+| `spaceless` | Remove whitespace between tags | `<span v-pre>{{ html\|spaceless }}</span>` |
+| `u` | Unicode string | `<span v-pre>{{ text\|u }}</span>` |
 
 ### Number Filters {#number-filters}
 
 | Filter | Description | Example |
 |---|---|---|
-| `abs` | Absolute value | `{{ -5\|abs }}` &rarr; `5` |
-| `number_format` | Format number | `{{ 1234.5\|number_format(2, '.', ',') }}` |
-| `format_number` | Format with decimals | `{{ 1234\|format_number }}` |
-| `format_currency` | Format as currency | `{{ 1234\|format_currency('USD') }}` |
+| `abs` | Absolute value | `<span v-pre>{{ -5\|abs }}</span>` &rarr; `5` |
+| `number_format` | Format number | `<span v-pre>{{ 1234.5\|number_format(2, '.', ',') }}</span>` |
+| `format_number` | Format with decimals | `<span v-pre>{{ 1234\|format_number }}</span>` |
+| `format_currency` | Format as currency | `<span v-pre>{{ 1234\|format_currency('USD') }}</span>` |
 
 ### Array Filters {#array-filters}
 
 | Filter | Description | Example |
 |---|---|---|
-| `length` | Length of array/string | `{{ items\|length }}` |
-| `first` | First element | `{{ items\|first }}` |
-| `last` | Last element | `{{ items\|last }}` |
-| `join` | Join into string | `{{ items\|join(', ') }}` |
-| `keys` | Get array keys | `{{ obj\|keys }}` |
-| `merge` | Merge arrays | `{{ arr1\|merge(arr2) }}` |
-| `sort` | Sort array | `{{ items\|sort }}` |
-| `reverse` | Reverse array/string | `{{ items\|reverse }}` |
-| `shuffle` | Randomize order | `{{ items\|shuffle }}` |
-| `slice` | Extract portion | `{{ items\|slice(1, 3) }}` |
-| `batch` | Split into chunks | `{{ items\|batch(3) }}` |
-| `column` | Extract column | `{{ users\|column('name') }}` |
-| `filter` | Filter with callback | `{{ items\|filter }}` |
-| `find` | Find value | `{{ items\|find }}` |
-| `map` | Map with callback | `{{ items\|map }}` |
-| `reduce` | Reduce to single value | `{{ items\|reduce }}` |
-| `min` | Minimum value | `{{ items\|min }}` |
-| `max` | Maximum value | `{{ items\|max }}` |
+| `length` | Length of array/string | `<span v-pre>{{ items\|length }}</span>` |
+| `first` | First element | `<span v-pre>{{ items\|first }}</span>` |
+| `last` | Last element | `<span v-pre>{{ items\|last }}</span>` |
+| `join` | Join into string | `<span v-pre>{{ items\|join(', ') }}</span>` |
+| `keys` | Get array keys | `<span v-pre>{{ obj\|keys }}</span>` |
+| `merge` | Merge arrays | `<span v-pre>{{ arr1\|merge(arr2) }}</span>` |
+| `sort` | Sort array | `<span v-pre>{{ items\|sort }}</span>` |
+| `reverse` | Reverse array/string | `<span v-pre>{{ items\|reverse }}</span>` |
+| `shuffle` | Randomize order | `<span v-pre>{{ items\|shuffle }}</span>` |
+| `slice` | Extract portion | `<span v-pre>{{ items\|slice(1, 3) }}</span>` |
+| `batch` | Split into chunks | `<span v-pre>{{ items\|batch(3) }}</span>` |
+| `column` | Extract column | `<span v-pre>{{ users\|column('name') }}</span>` |
+| `filter` | Filter with callback | `<span v-pre>{{ items\|filter }}</span>` |
+| `find` | Find value | `<span v-pre>{{ items\|find }}</span>` |
+| `map` | Map with callback | `<span v-pre>{{ items\|map }}</span>` |
+| `reduce` | Reduce to single value | `<span v-pre>{{ items\|reduce }}</span>` |
+| `min` | Minimum value | `<span v-pre>{{ items\|min }}</span>` |
+| `max` | Maximum value | `<span v-pre>{{ items\|max }}</span>` |
 
 ### Date Filters {#date-filters}
 
 | Filter | Description | Example |
 |---|---|---|
-| `date` | Format date | `{{ post.created\|date('Y-m-d') }}` |
-| `date_modify` | Modify date | `{{ date\|date_modify('+1 day') }}` |
-| `format_date` | Format date (alias) | `{{ date\|format_date }}` |
-| `format_datetime` | Format datetime (alias) | `{{ date\|format_datetime }}` |
-| `format_time` | Format time | `{{ date\|format_time }}` |
+| `date` | Format date | `<span v-pre>{{ post.created\|date('Y-m-d') }}</span>` |
+| `date_modify` | Modify date | `<span v-pre>{{ date\|date_modify('+1 day') }}</span>` |
+| `format_date` | Format date (alias) | `<span v-pre>{{ date\|format_date }}</span>` |
+| `format_datetime` | Format datetime (alias) | `<span v-pre>{{ date\|format_datetime }}</span>` |
+| `format_time` | Format time | `<span v-pre>{{ date\|format_time }}</span>` |
 
 </div>
 
@@ -238,20 +238,20 @@ Date format uses PHP-style specifiers that are automatically converted:
 
 | Filter | Description | Example |
 |---|---|---|
-| `escape` / `e` | Escape HTML entities | `{{ html\|escape }}` |
-| `raw` | No escaping | `{{ html\|raw }}` |
-| `url_encode` | URL encode | `{{ text\|url_encode }}` |
-| `json_encode` | Encode to JSON | `{{ data\|json_encode }}` |
-| `json_decode` | Decode from JSON | `{{ json\|json_decode }}` |
-| `convert_encoding` | Convert charset | `{{ text\|convert_encoding('UTF-8') }}` |
-| `data_uri` | Create data URI | `{{ content\|data_uri }}` |
+| `escape` / `e` | Escape HTML entities | `<span v-pre>{{ html\|escape }}</span>` |
+| `raw` | No escaping | `<span v-pre>{{ html\|raw }}</span>` |
+| `url_encode` | URL encode | `<span v-pre>{{ text\|url_encode }}</span>` |
+| `json_encode` | Encode to JSON | `<span v-pre>{{ data\|json_encode }}</span>` |
+| `json_decode` | Decode from JSON | `<span v-pre>{{ json\|json_decode }}</span>` |
+| `convert_encoding` | Convert charset | `<span v-pre>{{ text\|convert_encoding('UTF-8') }}</span>` |
+| `data_uri` | Create data URI | `<span v-pre>{{ content\|data_uri }}</span>` |
 
 ### Other Filters {#other-filters}
 
 | Filter | Description |
 |---|---|
-| `default` | Fallback value: `{{ name\|default('Guest') }}` |
-| `format` | String formatting: `{{ 'Hi %s'\|format(name) }}` |
+| `default` | Fallback value: `<span v-pre>{{ name\|default('Guest') }}</span>` |
+| `format` | String formatting: `<span v-pre>{{ 'Hi %s'\|format(name) }}</span>` |
 | `plural` | Plural form |
 | `singular` | Singular form |
 
@@ -260,8 +260,8 @@ Date format uses PHP-style specifiers that are automatically converted:
 | Function | Description | Example |
 |---|---|---|
 | `range` | Generate number/letter sequence | `{% for i in range(1, 10) %}` |
-| `dump` | Debug output | `{{ dump(variable) }}` |
-| `date` | Create/format dates | `{{ date('now', 'Y-m-d') }}` |
+| `dump` | Debug output | `<span v-pre>{{ dump(variable) }}</span>` |
+| `date` | Create/format dates | `<span v-pre>{{ date('now', 'Y-m-d') }}</span>` |
 
 </div>
 

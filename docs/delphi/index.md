@@ -1,5 +1,13 @@
 # Tina4 Delphi – Quick Reference
 
+::: tip 🔥 Hot Tips
+- Drop components on your form, configure in Object Inspector, and you're ready to go
+- `TTina4REST` + `TTina4RESTRequest` = one-line API calls with automatic MemTable population
+- Use `SendHttpRequest` from `Tina4Core` for quick one-off REST calls without components
+- `TTina4HTMLRender` renders HTML with CSS directly on an FMX canvas — including native form controls
+- Twig templates work in both `TTina4HTMLRender` and `TTina4HTMLPages` for dynamic content
+:::
+
 <nav class="tina4-menu">
     <a href="#installation">Installation</a> •
     <a href="#quick-wins">Quick Wins</a> •

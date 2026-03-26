@@ -1,6 +1,6 @@
 # Tina4 JavaScript – Quick Reference
 
-::: tip Sub-3KB reactive framework
+::: tip 🔥 Sub-3KB reactive framework
 - Signals for state, `html` tagged templates for rendering, Web Components for reuse
 - Client-side routing with `{param}` syntax matching tina4-php/python
 - Fetch API wrapper with Bearer + formToken auth compatible with tina4 backends

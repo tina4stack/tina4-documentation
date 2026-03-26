@@ -1,4 +1,82 @@
 import {defineConfig} from 'vitepress'
+import {readdirSync} from 'fs'
+import {join, dirname} from 'path'
+import {fileURLToPath} from 'url'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+// Title overrides for chapter filenames that don't auto-title well
+const TITLE_OVERRIDES: Record<string, string> = {
+    'orm': 'ORM',
+    'cli': 'CLI & Scaffolding',
+    'crud': 'CRUD',
+    'pwa': 'PWA',
+    'graphql': 'GraphQL',
+    'websocket': 'WebSocket',
+    'wsdl': 'WSDL',
+    'what-is-tina4': 'What Is Tina4?',
+    'request-response': 'Request & Response',
+    'sessions-cookies': 'Sessions & Cookies',
+    'dev-tools': 'Development Tools',
+    'vibe-coding-with-ai': 'Vibe Coding with AI',
+    'complete-app': 'Building a Complete App',
+    'choosing-your-language': 'Choosing Your Language',
+    'environment-variables': 'Environment Variables',
+    'swagger': 'OpenAPI & Swagger',
+    'html-templates': 'HTML Templates',
+    'backend-integration': 'Backend Integration',
+    'rest-api': 'REST API',
+}
+
+function chapterTitle(filename: string): string {
+    const stem = filename
+        .replace(/^\d+-/, '')
+        .replace(/\.md$/, '')
+
+    if (TITLE_OVERRIDES[stem]) return TITLE_OVERRIDES[stem]
+
+    return stem
+        .replace(/-/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase())
+}
+
+function buildChapterSidebar(section: string, label: string, extras?: object[]): object[] {
+    const dir = join(__dirname, '..', section)
+    let chapters: object[] = []
+
+    try {
+        chapters = readdirSync(dir)
+            .filter(f => /^\d+-.+\.md$/.test(f))
+            .sort()
+            .map(f => ({
+                text: chapterTitle(f),
+                link: `/${section}/${f}`
+            }))
+    } catch {
+        // directory may not exist yet
+    }
+
+    const sidebar: object[] = [
+        {
+            text: `${label} Quick Reference`,
+            items: [{text: 'Quick Reference', link: `/${section}/index.md`}]
+        }
+    ]
+
+    if (chapters.length > 0) {
+        sidebar.push({
+            text: `${label} Book`,
+            collapsed: false,
+            items: chapters
+        })
+    }
+
+    if (extras && extras.length > 0) {
+        sidebar.push(...extras)
+    }
+
+    return sidebar
+}
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -16,169 +94,65 @@ export default defineConfig({
         },
         nav: [
             {text: 'Home', link: '/'},
-            {text: 'JavaScript', link: '/js/index.md'},
+            {text: 'tina4-js', link: '/js/index.md'},
             {text: 'Python', link: '/python/index.md'},
+            {text: 'Node.js', link: '/nodejs/index.md'},
             {text: 'PHP', link: '/php/index.md'},
+            {text: 'Ruby', link: '/ruby/index.md'},
             {text: 'Delphi', link: '/delphi/index.md'},
-            {text: 'Ruby', link: '/ruby/index.md'}
         ],
         sidebar: {
-            // JavaScript-specific sidebar for /js/ paths
-            '/js/': [
-                {
-                    text: 'JavaScript Documentation',
-                    items: [
-                        { text: 'Quick reference', link: '/js/index.md' },
-                        { text: 'Setting up a project', link: '/js/installation.md' },
-                        { text: 'Signals', link: '/js/signals.md' },
-                        { text: 'HTML Templates', link: '/js/html-templates.md' },
-                        { text: 'Web Components', link: '/js/components.md' },
-                        { text: 'Routing', link: '/js/routing.md' },
-                        { text: 'API (Fetch)', link: '/js/api.md' },
-                        { text: 'PWA', link: '/js/pwa.md' },
-                        { text: 'WebSocket', link: '/js/websocket.md' },
-                    ]
-                },
+            '/js/': buildChapterSidebar('js', 'tina4-js', [
                 {
                     text: 'Examples',
                     items: [
-                        { text: 'Gallery', link: '/js/gallery.md' },
-                    ]
-                },
-                {
-                    text: 'Integration',
-                    items: [
-                        { text: 'Backend Integration', link: '/js/backend-integration.md' },
+                        {text: 'Gallery', link: '/js/gallery.md'},
                     ]
                 }
-            ],
-            // Python-specific sidebar for /python/ paths
-            '/python/': [
-                {
-                    text: 'Python Documentation',
-                    items: [
-                        { text: 'Quick reference', link: '/python/index.md' },
-                        { text: 'Setting up a project', link: '/python/installation.md' },
-                        { text: 'Static Website', link: '/python/static-website.md' },
-                        { text: 'Routing', link: '/python/basic-routing.md' },
-                        { text: 'Middleware', link: '/python/middleware.md' },
-                        { text: 'CSS/SCSS', link: '/python/css.md' },
-                        { text: 'Forms & Tokens', link: '/python/posting-form-data.md' },
-                        { text: 'AJAX - tina4helper.js', link: '/python/tina4helper.md' },
-                        { text: 'OpenAPI & Swagger UI', link: '/python/swagger.md' },
-                        { text: 'Database', link: '/python/database.md' },
-                        { text: 'Migrations', link: '/python/migrations.md' },
-                        { text: 'ORM', link: '/python/orm.md' },
-                        { text: 'CRUD', link: '/python/crud.md' },
-                        { text: 'Rest Api', link: '/python/rest-api.md' },
-                        { text: 'Queues', link: '/python/queues.md' },
-                        { text: 'WSDL', link: '/python/wsdl.md' },
-                    ]
-                },
-                {
-                    text: 'Python Only',
-                    items: [
-                        { text: 'Development Mode', link: '/python/development.md'},
-                        { text: 'Websockets', link: '/python/websockets.md'}
-                    ]
-                }
-            ],
-            // PHP-specific sidebar for /php/ paths
-            '/php/': [
-                {
-                    text: 'PHP Documentation',
-                    items: [
-                        { text: 'Quick reference', link: '/php/index.md' },
-                        { text: 'Setting up a project', link: '/php/installation.md' },
-                        { text: 'Static Website', link: '/php/static-website.md' },
-                        { text: 'Routing', link: '/php/basic-routing.md' },
-                        { text: 'Middleware', link: '/php/middleware.md' },
-                        { text: 'CSS/SCSS', link: '/php/css.md' },
-                        { text: 'Forms & Tokens', link: '/php/posting-form-data.md' },
-                        { text: 'AJAX - tina4helper.js', link: '/php/tina4helper.md' },
-                        { text: 'OpenAPI & Swagger UI', link: '/php/swagger.md' },
-                        { text: 'Database', link: '/php/database.md' },
-                        { text: 'Migrations', link: '/php/migrations.md' },
-                        { text: 'ORM', link: '/php/orm.md' },
-                        { text: 'CRUD', link: '/php/crud.md' },
-                        { text: 'Rest Api', link: '/php/rest-api.md' }
-                    ]
-                },
-                {
-                    text: 'PHP Only',
-                    items: [
-                        { text: 'Caching', link: '/php/caching.md' },
-                        { text: 'Sessions', link: '/php/sessions.md' },
-                        { text: 'GraphQL', link: '/php/graphql.md' },
-                        { text: 'Localization', link: '/php/localization.md' },
-                        { text: 'Services', link: '/php/services.md' },
-                        { text: 'Threads', link: '/php/threads.md' },
-                        { text: 'Queues', link: '/php/queues.md' },
-                        { text: 'WSDL', link: '/php/wsdl.md' },
-                        { text: 'Testing', link: '/php/tests.md' }
-                    ]
-                },
+            ]),
+            '/python/': buildChapterSidebar('python', 'Python'),
+            '/php/': buildChapterSidebar('php', 'PHP', [
                 {
                     text: 'How Tos',
                     items: [
-                        { text: 'Install PHP on Mac', link: '/php/php-on-mac.md' },
-                        { text: 'Install PHP on Windows', link: '/php/php-on-windows.md' }
+                        {text: 'Install PHP on Mac', link: '/php/php-on-mac.md'},
+                        {text: 'Install PHP on Windows', link: '/php/php-on-windows.md'}
                     ]
                 }
-            ],
-            // Delphi-specific sidebar for /delphi/ paths
-            '/delphi/': [
+            ]),
+            '/ruby/': buildChapterSidebar('ruby', 'Ruby'),
+            '/nodejs/': buildChapterSidebar('nodejs', 'Node.js'),
+            '/delphi/': buildChapterSidebar('delphi', 'Delphi', [
                 {
-                    text: 'Delphi Documentation',
+                    text: 'Reference',
                     items: [
-                        { text: 'Quick reference', link: '/delphi/index.md' },
-                        { text: 'Setting up a project', link: '/delphi/installation.md' },
-                        { text: 'REST Client', link: '/delphi/rest-client.md' },
-                        { text: 'JSON Adapter', link: '/delphi/json-adapter.md' },
-                        { text: 'HTML Renderer', link: '/delphi/html-render.md' },
-                        { text: 'Page Navigation', link: '/delphi/html-pages.md' },
-                        { text: 'Twig Templates', link: '/delphi/twig.md' },
-                        { text: 'Core Utilities', link: '/delphi/core.md' }
+                        {text: 'Installation', link: '/delphi/installation.md'},
+                        {text: 'REST Client', link: '/delphi/rest-client.md'},
+                        {text: 'JSON Adapter', link: '/delphi/json-adapter.md'},
+                        {text: 'HTML Renderer', link: '/delphi/html-render.md'},
+                        {text: 'Page Navigation', link: '/delphi/html-pages.md'},
+                        {text: 'Twig Templates', link: '/delphi/twig.md'},
+                        {text: 'Core Utilities', link: '/delphi/core.md'}
                     ]
                 }
-            ],
-            // Ruby-specific sidebar for /ruby/ paths
-            '/ruby/': [
+            ]),
+            '/general/': buildChapterSidebar('general', 'Understanding Tina4', [
                 {
-                    text: 'Ruby Documentation',
+                    text: 'Guides',
                     items: [
-                        { text: 'Quick reference', link: '/ruby/index.md' },
-                        { text: 'Setting up a project', link: '/ruby/installation.md' },
-                        { text: 'Static Website', link: '/ruby/static-website.md' },
-                        { text: 'Routing', link: '/ruby/basic-routing.md' },
-                        { text: 'Middleware', link: '/ruby/middleware.md' },
-                        { text: 'CSS/SCSS', link: '/ruby/css.md' },
-                        { text: 'Forms & Tokens', link: '/ruby/posting-form-data.md' },
-                        { text: 'AJAX - tina4helper.js', link: '/ruby/tina4helper.md' },
-                        { text: 'OpenAPI & Swagger UI', link: '/ruby/swagger.md' },
-                        { text: 'Database', link: '/ruby/database.md' },
-                        { text: 'Migrations', link: '/ruby/migrations.md' },
-                        { text: 'ORM', link: '/ruby/orm.md' },
-                        { text: 'CRUD', link: '/ruby/crud.md' },
-                        { text: 'Rest Api', link: '/ruby/rest-api.md' },
-                    ]
-                },
-                {
-                    text: 'Ruby Only',
-                    items: [
-                        { text: 'Development Mode', link: '/ruby/development.md' },
-                        { text: 'GraphQL', link: '/ruby/graphql.md' },
-                        { text: 'Queues', link: '/ruby/queues.md' },
+                        {text: 'tina4-css', link: '/general/tina4-css.md'},
+                        {text: 'CSS Guide', link: '/general/css.md'},
+                        {text: 'Static Websites', link: '/general/static-website.md'},
+                        {text: 'tina4helper.js', link: '/general/tina4helper.md'}
                     ]
                 }
-            ],
-            // Root sidebar for other paths (e.g., Home, Get Started)
+            ]),
             '/': [
                 {
                     text: 'Documentation',
                     items: [
-                        { text: 'Get Started', link: '/get-started.md' },
-                        { text: 'Comparisons', link: '/comparisons.md' }
+                        {text: 'Get Started', link: '/get-started.md'},
+                        {text: 'Comparisons', link: '/comparisons.md'}
                     ]
                 }
             ]
