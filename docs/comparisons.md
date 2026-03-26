@@ -39,8 +39,7 @@ Benchmarks from the [Carbonah benchmark suite](https://github.com/tina4stack/car
 | fastapi | 131.6ms | 13 MB | 26.4ms | 5.3ms | 79.5ms |
 | flask | 75.8ms | 5 MB | 26.9ms | 5.5ms | 80.7ms |
 
-**Key finding:** Runtime performance is nearly identical across all Python frameworks -- the framework adds negligible overhead. Cold-start (import) time and install size are where frameworks diverge most. tina4python loads instantly (0.0ms) because its import is deferred; Starlette is similarly lean at 0.3ms. We compare to find where we can improve, not to attack competitors.
-
+**Key finding:** Runtime performance is nearly identical across all Python frameworks -- the framework adds negligible overhead. Cold-start (import) time and install size are where frameworks diverge most. tina4python loads instantly (0.0ms) because its import is deferred; Starlette is similarly lean at 0.3ms. 
 To reproduce: clone [Carbonah](https://github.com/tina4stack/carbonah), run `setup.sh`, then the runner in `tests/python-benchmarks/`.
 
 ### Out-of-the-Box Features (38 features tested)
@@ -268,8 +267,7 @@ Benchmarks from the [Carbonah benchmark suite](https://github.com/tina4stack/car
 | symfony | 3.7ms | 10 MB | 6.9ms | 3.1ms | 57.3ms |
 | plain | 0.0ms | 0 MB | 8.7ms | 5.4ms | 70.7ms |
 
-**Key finding:** tina4php v3 cut autoload time from 11ms to 1.1ms and install size from 11 MB to 4 MB. Runtime performance is nearly identical across all PHP frameworks -- the framework adds negligible overhead. Autoload time and install size are where frameworks diverge most. We compare to find where we can improve, not to attack competitors.
-
+**Key finding:** tina4php v3 cut autoload time from 11ms to 1.1ms and install size from 11 MB to 4 MB. Runtime performance is nearly identical across all PHP frameworks -- the framework adds negligible overhead. Autoload time and install size are where frameworks diverge most. 
 To reproduce: clone [Carbonah](https://github.com/tina4stack/carbonah), run `setup.sh`, then the runner in `tests/php-benchmarks/`.
 
 ### Package Size and Dependencies
@@ -399,8 +397,7 @@ Benchmarks from the [Carbonah benchmark suite](https://github.com/tina4stack/car
 | tina4ruby | 594.2ms | 14 MB | 8.0ms | 11.6ms | 45.1ms |
 | plain | 2.8ms | 0 MB | 8.3ms | 12.4ms | 45.3ms |
 
-**Key finding:** Runtime performance is nearly identical across all Ruby frameworks once loaded -- the framework adds negligible overhead. However, tina4ruby's 594ms cold start is significantly higher than competitors and is an area we are actively investigating for improvement. Once past the import phase, tina4ruby's routing and templating performance is competitive with the field. We compare to find where we can improve, not to attack competitors.
-
+**Key finding:** Runtime performance is nearly identical across all Ruby frameworks once loaded -- the framework adds negligible overhead. However, tina4ruby's 594ms cold start is significantly higher than competitors and is an area we are actively investigating for improvement. Once past the import phase, tina4ruby's routing and templating performance is competitive with the field. 
 To reproduce: clone [Carbonah](https://github.com/tina4stack/carbonah), run `setup.sh`, then the runner in `tests/ruby-benchmarks/`.
 
 ### Out-of-the-Box Features (32 features tested)
@@ -535,8 +532,7 @@ Benchmarks from the [Carbonah benchmark suite](https://github.com/tina4stack/car
 | hapi | 67.0ms | 2 MB | 3.6ms | 4.5ms | 50.3ms |
 | fastify | 56.4ms | 13 MB | 4.0ms | 5.3ms | 53.6ms |
 
-**Key finding:** tina4-nodejs loads in 0.0ms with just 1 MB on disk -- zero runtime dependencies means zero import cost. Runtime performance is nearly identical across all Node.js frameworks -- the framework adds negligible overhead. NestJS v3 has improved substantially (import dropped from 600ms to 108ms). We compare to find where we can improve, not to attack competitors.
-
+**Key finding:** tina4-nodejs loads in 0.0ms with just 1 MB on disk -- zero runtime dependencies means zero import cost. Runtime performance is nearly identical across all Node.js frameworks -- the framework adds negligible overhead. NestJS v3 has improved substantially (import dropped from 600ms to 108ms). 
 To reproduce: clone [Carbonah](https://github.com/tina4stack/carbonah), run `setup.sh`, then the runner in `tests/nodejs-benchmarks/`.
 
 ### Feature Comparison

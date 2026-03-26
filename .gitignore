@@ -131,3 +131,5 @@ dist
 .pnp.*
 
 /docs/.vitepress/cache/
+docs/docs/
+benchmark/results/
