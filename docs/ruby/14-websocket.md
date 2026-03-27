@@ -481,12 +481,12 @@ const ws = frond.ws("/ws/notifications/42", {
 Create `src/templates/chat.html`:
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block title %&#125;Chat - &#123;&#123; room &#125;&#125;&#123;% endblock %&#125;
+{% block title %}Chat - {{ room }}{% endblock %}
 
-&#123;% block content %&#125;
-    <h1>Chat Room: &#123;&#123; room &#125;&#125;</h1>
+{% block content %}
+    <h1>Chat Room: {{ room }}</h1>
     <p id="status">Connecting...</p>
     <p id="online">Online: 0</p>
 
@@ -499,7 +499,7 @@ Create `src/templates/chat.html`:
     </form>
 
     <script>
-        const room = "&#123;&#123; room &#125;&#125;";
+        const room = "{{ room }}";
         const ws = new WebSocket("ws://" + location.host + "/ws/livechat/" + room);
         const messagesDiv = document.getElementById("messages");
         let username = prompt("Enter your username:") || "Anonymous";
@@ -542,7 +542,7 @@ Create `src/templates/chat.html`:
             }
         });
     </script>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 Create the route:

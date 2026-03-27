@@ -301,19 +301,19 @@ The `getFlash()` method reads the value and removes it in one step. The next req
 ### In Templates
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block content %&#125;
-    &#123;% if flash_message %&#125;
-        <div class="alert alert-&#123;&#123; flash_type &#125;&#125;">
-            &#123;&#123; flash_message &#125;&#125;
+{% block content %}
+    {% if flash_message %}
+        <div class="alert alert-{{ flash_type }}">
+            {{ flash_message }}
         </div>
-    &#123;% endif %&#125;
+    {% endif %}
 
     <h1>Profile</h1>
-    <p>Name: &#123;&#123; user.name &#125;&#125;</p>
-    <p>Email: &#123;&#123; user.email &#125;&#125;</p>
-&#123;% endblock %&#125;
+    <p>Name: {{ user.name }}</p>
+    <p>Email: {{ user.email }}</p>
+{% endblock %}
 ```
 
 The alert appears once. Refresh the page. Gone.

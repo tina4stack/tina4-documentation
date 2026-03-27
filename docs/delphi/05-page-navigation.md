@@ -287,21 +287,21 @@ Page.TwigContent.LoadFromFile('C:\MyApp\templates\report.html');
 
 **report.html:**
 ```
-&#123;% extends 'layout.html' %&#125;
+{% extends 'layout.html' %}
 
-&#123;% block title %&#125;Monthly Report&#123;% endblock %&#125;
+{% block title %}Monthly Report{% endblock %}
 
-&#123;% block content %&#125;
-  <h1>Report for &#123;&#123; month &#125;&#125;</h1>
+{% block content %}
+  <h1>Report for {{ month }}</h1>
   <table>
-    &#123;% for row in data %&#125;
+    {% for row in data %}
     <tr>
-      <td>&#123;&#123; row.name &#125;&#125;</td>
-      <td>&#123;&#123; row.value &#125;&#125;</td>
+      <td>{{ row.name }}</td>
+      <td>{{ row.value }}</td>
     </tr>
-    &#123;% endfor %&#125;
+    {% endfor %}
   </table>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 **layout.html:**
@@ -321,8 +321,8 @@ Page.TwigContent.LoadFromFile('C:\MyApp\templates\report.html');
     <a href="#settings">Settings</a>
   </div>
   <div style="padding: 20px;">
-    <title>&#123;% block title %&#125;&#123;% endblock %&#125;</title>
-    &#123;% block content %&#125;&#123;% endblock %&#125;
+    <title>{% block title %}{% endblock %}</title>
+    {% block content %}{% endblock %}
   </div>
 </body>
 </html>

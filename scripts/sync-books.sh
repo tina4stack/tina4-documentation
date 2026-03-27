@@ -37,16 +37,8 @@ result = []
 in_fence = False
 fence_lang = ''
 
-# Languages where {{ }} is safe inside code fences (markdown-it escapes them)
-SAFE_LANGS = {
-    'pascal', 'delphi', 'javascript', 'js', 'typescript', 'ts',
-    'python', 'py', 'php', 'ruby', 'rb', 'bash', 'sh', 'shell',
-    'sql', 'json', 'yaml', 'yml', 'toml', 'ini', 'xml', 'css',
-    'scss', 'sass', 'less', 'go', 'rust', 'java', 'kotlin', 'swift',
-    'c', 'cpp', 'csharp', 'cs', 'lua', 'perl', 'r', 'dart', 'elixir',
-    'haskell', 'diff', 'graphql', 'dockerfile', 'makefile', 'text', 'txt',
-    'env', 'dotenv', 'conf', 'log', 'csv', 'md', 'markdown', 'plaintext',
-}
+# All code fences are safe — markdown-it escapes content into <code> blocks
+# before Vue sees it. No need to escape {{ }} inside any code fence.
 
 def escape_line(line):
     \"\"\"Escape template syntax with HTML entities for code fences\"\"\"
@@ -81,10 +73,8 @@ while i < len(lines):
 
     if has_template:
         if in_fence:
-            if fence_lang not in SAFE_LANGS:
-                result.append(escape_line(lines[i]))
-            else:
-                result.append(lines[i])
+            # All code fences are safe — markdown-it handles escaping
+            result.append(lines[i])
         else:
             # Prose line with template syntax: wrap in v-pre div
             # Collect consecutive non-blank lines that are part of this paragraph

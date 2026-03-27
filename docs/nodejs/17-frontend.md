@@ -62,8 +62,8 @@ Tina4 ships two frontend tools: **tina4css** (a utility CSS framework) and **fro
 
 ```html
 <div id="app">
-    <h1>&#123;&#123; title &#125;&#125;</h1>
-    <p>Count: &#123;&#123; count &#125;&#125;</p>
+    <h1>{{ title }}</h1>
+    <p>Count: {{ count }}</p>
     <button onclick="increment()">+1</button>
 </div>
 
@@ -123,11 +123,11 @@ ws.send(JSON.stringify({ type: "message", text: "Hello!" }));
 Create `src/templates/product-manager.html`:
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block title %&#125;Product Manager&#123;% endblock %&#125;
+{% block title %}Product Manager{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
     <h1>Product Manager</h1>
 
     <div id="app">
@@ -177,7 +177,7 @@ Create `src/templates/product-manager.html`:
 
         loadProducts();
     </script>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 ---

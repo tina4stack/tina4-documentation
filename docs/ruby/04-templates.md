@@ -15,7 +15,7 @@ This chapter covers every feature of the template engine.
 Output a variable with double curly braces:
 
 ```html
-<h1>Hello, &#123;&#123; name &#125;&#125;!</h1>
+<h1>Hello, {{ name }}!</h1>
 ```
 
 Route handler:
@@ -33,7 +33,7 @@ Create `src/templates/welcome.html`:
 <html>
 <head><title>Welcome</title></head>
 <body>
-    <h1>Hello, &#123;&#123; name &#125;&#125;!</h1>
+    <h1>Hello, {{ name }}!</h1>
 </body>
 </html>
 ```
@@ -64,7 +64,7 @@ response.render("profile.html", data)
 ```
 
 ```html
-<p>&#123;&#123; user.name &#125;&#125; lives in &#123;&#123; user.address.city &#125;&#125;, &#123;&#123; user.address.country &#125;&#125;.</p>
+<p>{{ user.name }} lives in {{ user.address.city }}, {{ user.address.country }}.</p>
 ```
 
 **Output:**
@@ -82,9 +82,9 @@ Basic expressions work inside `{{ }}`:
 </div>
 
 ```html
-<p>Total: $&#123;&#123; price * quantity &#125;&#125;</p>
-<p>Discounted: $&#123;&#123; price * 0.9 &#125;&#125;</p>
-<p>Full name: &#123;&#123; first_name ~ " " ~ last_name &#125;&#125;</p>
+<p>Total: ${{ price * quantity }}</p>
+<p>Discounted: ${{ price * 0.9 }}</p>
+<p>Full name: {{ first_name ~ " " ~ last_name }}</p>
 ```
 
 The `~` operator concatenates strings.
@@ -105,9 +105,9 @@ Create `src/templates/base.twig`:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>&#123;% block title %&#125;My App&#123;% endblock %&#125;</title>
+    <title>{% block title %}My App{% endblock %}</title>
     <link rel="stylesheet" href="/css/tina4.css">
-    &#123;% block head %&#125;&#123;% endblock %&#125;
+    {% block head %}{% endblock %}
 </head>
 <body>
     <nav>
@@ -117,7 +117,7 @@ Create `src/templates/base.twig`:
     </nav>
 
     <main>
-        &#123;% block content %&#125;&#123;% endblock %&#125;
+        {% block content %}{% endblock %}
     </main>
 
     <footer>
@@ -125,7 +125,7 @@ Create `src/templates/base.twig`:
     </footer>
 
     <script src="/js/frond.js"></script>
-    &#123;% block scripts %&#125;&#123;% endblock %&#125;
+    {% block scripts %}{% endblock %}
 </body>
 </html>
 ```
@@ -137,15 +137,15 @@ Four blocks: `title`, `head`, `content`, `scripts`. Child templates override onl
 Create `src/templates/about.twig`:
 
 ```html
-&#123;% extends "base.twig" %&#125;
+{% extends "base.twig" %}
 
-&#123;% block title %&#125;About Us&#123;% endblock %&#125;
+{% block title %}About Us{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
     <h1>About Us</h1>
-    <p>We have been building things since &#123;&#123; founded_year &#125;&#125;.</p>
-    <p>Our team has &#123;&#123; team_size &#125;&#125; members across &#123;&#123; office_count &#125;&#125; offices.</p>
-&#123;% endblock %&#125;
+    <p>We have been building things since {{ founded_year }}.</p>
+    <p>Our team has {{ team_size }} members across {{ office_count }} offices.</p>
+{% endblock %}
 ```
 
 Route handler:
@@ -171,17 +171,17 @@ end
 Add to a block instead of replacing it:
 
 ```html
-&#123;% extends "base.twig" %&#125;
+{% extends "base.twig" %}
 
-&#123;% block head %&#125;
-    &#123;&#123; parent() &#125;&#125;
+{% block head %}
+    {{ parent() }}
     <link rel="stylesheet" href="/css/contact-form.css">
-&#123;% endblock %&#125;
+{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
     <h1>Contact Us</h1>
     <form>...</form>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 The `head` block now contains everything from the base plus the extra stylesheet.
@@ -200,7 +200,7 @@ Create `src/templates/partials/header.twig`:
 
 ```html
 <header>
-    <div class="logo">&#123;&#123; site_name | default("My App") &#125;&#125;</div>
+    <div class="logo">{{ site_name | default("My App") }}</div>
     <nav>
         <a href="/">Home</a>
         <a href="/products">Products</a>
@@ -212,30 +212,30 @@ Create `src/templates/partials/header.twig`:
 Create `src/templates/partials/product-card.twig`:
 
 ```html
-<div class="product-card&#123;&#123; product.featured ? ' featured' : '' &#125;&#125;">
-    <h3>&#123;&#123; product.name &#125;&#125;</h3>
-    <p class="price">$&#123;&#123; product.price | number_format(2) &#125;&#125;</p>
-    &#123;% if product.in_stock %&#125;
+<div class="product-card{{ product.featured ? ' featured' : '' }}">
+    <h3>{{ product.name }}</h3>
+    <p class="price">${{ product.price | number_format(2) }}</p>
+    {% if product.in_stock %}
         <span class="badge-success">In Stock</span>
-    &#123;% else %&#125;
+    {% else %}
         <span class="badge-danger">Out of Stock</span>
-    &#123;% endif %&#125;
+    {% endif %}
 </div>
 ```
 
 Use them in a page:
 
 ```html
-&#123;% extends "base.twig" %&#125;
+{% extends "base.twig" %}
 
-&#123;% block content %&#125;
-    &#123;% include "partials/header.twig" %&#125;
+{% block content %}
+    {% include "partials/header.twig" %}
 
     <h1>Products</h1>
-    &#123;% for product in products %&#125;
-        &#123;% include "partials/product-card.twig" %&#125;
-    &#123;% endfor %&#125;
-&#123;% endblock %&#125;
+    {% for product in products %}
+        {% include "partials/product-card.twig" %}
+    {% endfor %}
+{% endblock %}
 ```
 
 The `product` variable is available inside the included template because it exists in the current scope (the for loop).
@@ -245,13 +245,13 @@ The `product` variable is available inside the included template because it exis
 Pass specific variables with `with`:
 
 ```html
-&#123;% include "partials/header.twig" with {"site_name": "Cool Store"} %&#125;
+{% include "partials/header.twig" with {"site_name": "Cool Store"} %}
 ```
 
 Use `only` to isolate the included template from the parent scope:
 
 ```html
-&#123;% include "partials/header.twig" with {"site_name": "Cool Store"} only %&#125;
+{% include "partials/header.twig" with {"site_name": "Cool Store"} only %}
 ```
 
 With `only`, the included template sees `site_name` and nothing else.
@@ -268,9 +268,9 @@ Loop through arrays with `{% for %}`:
 
 ```html
 <ul>
-&#123;% for item in items %&#125;
-    <li>&#123;&#123; item &#125;&#125;</li>
-&#123;% endfor %&#125;
+{% for item in items %}
+    <li>{{ item }}</li>
+{% endfor %}
 </ul>
 ```
 
@@ -293,13 +293,13 @@ Inside a for loop, Frond provides a special `loop` variable:
         <tr><th>#</th><th>Name</th><th>Price</th></tr>
     </thead>
     <tbody>
-    &#123;% for product in products %&#125;
-        <tr class="&#123;&#123; loop.index is odd ? 'row-light' : 'row-dark' &#125;&#125;">
-            <td>&#123;&#123; loop.index &#125;&#125;</td>
-            <td>&#123;&#123; product.name &#125;&#125;</td>
-            <td>$&#123;&#123; product.price | number_format(2) &#125;&#125;</td>
+    {% for product in products %}
+        <tr class="{{ loop.index is odd ? 'row-light' : 'row-dark' }}">
+            <td>{{ loop.index }}</td>
+            <td>{{ product.name }}</td>
+            <td>${{ product.price | number_format(2) }}</td>
         </tr>
-    &#123;% endfor %&#125;
+    {% endfor %}
     </tbody>
 </table>
 ```
@@ -313,13 +313,13 @@ Handle empty lists with `{% else %}`:
 </div>
 
 ```html
-&#123;% for product in products %&#125;
+{% for product in products %}
     <div class="product-card">
-        <h3>&#123;&#123; product.name &#125;&#125;</h3>
+        <h3>{{ product.name }}</h3>
     </div>
-&#123;% else %&#125;
+{% else %}
     <p>No products found.</p>
-&#123;% endfor %&#125;
+{% endfor %}
 ```
 
 If `products` is empty or undefined, the `else` block renders instead.
@@ -327,10 +327,10 @@ If `products` is empty or undefined, the `else` block renders instead.
 ### Looping Over Key-Value Pairs
 
 ```html
-&#123;% for key, value in metadata %&#125;
-    <dt>&#123;&#123; key &#125;&#125;</dt>
-    <dd>&#123;&#123; value &#125;&#125;</dd>
-&#123;% endfor %&#125;
+{% for key, value in metadata %}
+    <dt>{{ key }}</dt>
+    <dd>{{ value }}</dd>
+{% endfor %}
 ```
 
 ---
@@ -340,13 +340,13 @@ If `products` is empty or undefined, the `else` block renders instead.
 ### if / elseif / else
 
 ```html
-&#123;% if user.role == "admin" %&#125;
+{% if user.role == "admin" %}
     <a href="/admin">Admin Panel</a>
-&#123;% elseif user.role == "editor" %&#125;
+{% elseif user.role == "editor" %}
     <a href="/editor">Editor Dashboard</a>
-&#123;% else %&#125;
+{% else %}
     <a href="/profile">My Profile</a>
-&#123;% endif %&#125;
+{% endif %}
 ```
 
 ### Ternary Operator
@@ -354,8 +354,8 @@ If `products` is empty or undefined, the `else` block renders instead.
 Inline conditionals:
 
 ```html
-<span class="&#123;&#123; is_active ? 'text-green' : 'text-gray' &#125;&#125;">
-    &#123;&#123; is_active ? 'Active' : 'Inactive' &#125;&#125;
+<span class="{{ is_active ? 'text-green' : 'text-gray' }}">
+    {{ is_active ? 'Active' : 'Inactive' }}
 </span>
 ```
 
@@ -364,9 +364,9 @@ Inline conditionals:
 Use `is defined` to check if a variable exists:
 
 ```html
-&#123;% if error_message is defined %&#125;
-    <div class="alert alert-danger">&#123;&#123; error_message &#125;&#125;</div>
-&#123;% endif %&#125;
+{% if error_message is defined %}
+    <div class="alert alert-danger">{{ error_message }}</div>
+{% endif %}
 ```
 
 ### Truthiness
@@ -374,11 +374,11 @@ Use `is defined` to check if a variable exists:
 These values are false: `false`, `nil`, `0`, `""` (empty string), `[]` (empty array). Everything else is true.
 
 ```html
-&#123;% if items %&#125;
-    <p>&#123;&#123; items | length &#125;&#125; items found.</p>
-&#123;% else %&#125;
+{% if items %}
+    <p>{{ items | length }} items found.</p>
+{% else %}
     <p>No items.</p>
-&#123;% endif %&#125;
+{% endif %}
 ```
 
 ---
@@ -388,7 +388,7 @@ These values are false: `false`, `nil`, `0`, `""` (empty string), `[]` (empty ar
 Filters transform values. Apply them with the `|` (pipe) character:
 
 ```html
-&#123;&#123; name | upper &#125;&#125;
+{{ name | upper }}
 ```
 
 The most useful filters:
@@ -428,8 +428,8 @@ The most useful filters:
 ### Date Filter
 
 ```html
-<p>Published: &#123;&#123; created_at | date("F j, Y") &#125;&#125;</p>
-<p>Time: &#123;&#123; created_at | date("H:i") &#125;&#125;</p>
+<p>Published: {{ created_at | date("F j, Y") }}</p>
+<p>Time: {{ created_at | date("H:i") }}</p>
 ```
 
 With a timestamp or date string:
@@ -443,8 +443,8 @@ With a timestamp or date string:
 Provide a fallback when a variable is nil or undefined:
 
 ```html
-<p>&#123;&#123; subtitle | default("No subtitle") &#125;&#125;</p>
-<p>&#123;&#123; user.nickname | default(user.name) | default("Anonymous") &#125;&#125;</p>
+<p>{{ subtitle | default("No subtitle") }}</p>
+<p>{{ user.nickname | default(user.name) | default("Anonymous") }}</p>
 ```
 
 ### The `escape` and `raw` Filters
@@ -456,15 +456,15 @@ All `{{ }}` output is auto-escaped for HTML safety. This blocks XSS attacks.
 </div>
 
 ```html
-&#123;&#123; user_input &#125;&#125;
-&#123;# If user_input is "<script>alert('xss')</script>", outputs:
+{{ user_input }}
+{# If user_input is "<script>alert('xss')</script>", outputs:
    &lt;script&gt;alert('xss')&lt;/script&gt; #}
 ```
 
 When you trust the content and need raw HTML:
 
 ```html
-&#123;&#123; trusted_html | raw &#125;&#125;
+{{ trusted_html | raw }}
 ```
 
 Use `raw` with caution. Only on content you control. Never on user input.
@@ -474,8 +474,8 @@ Use `raw` with caution. Only on content you control. Never on user input.
 Filters chain left to right:
 
 ```html
-&#123;&#123; name | trim | lower | capitalize &#125;&#125;
-&#123;# "  ALICE SMITH  " -> "Alice smith" #&#125;
+{{ name | trim | lower | capitalize }}
+{# "  ALICE SMITH  " -> "Alice smith" #}
 ```
 
 ---
@@ -489,24 +489,24 @@ Macros are reusable template functions. Components you define once and call many
 Create `src/templates/macros.twig`:
 
 ```html
-&#123;% macro button(text, url, style) %&#125;
-    <a href="&#123;&#123; url | default('#') &#125;&#125;" class="btn btn-&#123;&#123; style | default('primary') &#125;&#125;">
-        &#123;&#123; text &#125;&#125;
+{% macro button(text, url, style) %}
+    <a href="{{ url | default('#') }}" class="btn btn-{{ style | default('primary') }}">
+        {{ text }}
     </a>
-&#123;% endmacro %&#125;
+{% endmacro %}
 
-&#123;% macro alert(message, type) %&#125;
-    <div class="alert alert-&#123;&#123; type | default('info') &#125;&#125;">
-        &#123;&#123; message &#125;&#125;
+{% macro alert(message, type) %}
+    <div class="alert alert-{{ type | default('info') }}">
+        {{ message }}
     </div>
-&#123;% endmacro %&#125;
+{% endmacro %}
 
-&#123;% macro input(name, label, type, value) %&#125;
+{% macro input(name, label, type, value) %}
     <div class="form-group">
-        <label for="&#123;&#123; name &#125;&#125;">&#123;&#123; label | default(name | capitalize) &#125;&#125;</label>
-        <input type="&#123;&#123; type | default('text') &#125;&#125;" id="&#123;&#123; name &#125;&#125;" name="&#123;&#123; name &#125;&#125;" value="&#123;&#123; value | default('') &#125;&#125;">
+        <label for="{{ name }}">{{ label | default(name | capitalize) }}</label>
+        <input type="{{ type | default('text') }}" id="{{ name }}" name="{{ name }}" value="{{ value | default('') }}">
     </div>
-&#123;% endmacro %&#125;
+{% endmacro %}
 ```
 
 ### Using Macros
@@ -514,22 +514,22 @@ Create `src/templates/macros.twig`:
 Import macros in your template:
 
 ```html
-&#123;% from "macros.twig" import button, alert, input %&#125;
+{% from "macros.twig" import button, alert, input %}
 
-&#123;% extends "base.twig" %&#125;
+{% extends "base.twig" %}
 
-&#123;% block content %&#125;
-    &#123;&#123; alert("Your profile has been updated.", "success") &#125;&#125;
+{% block content %}
+    {{ alert("Your profile has been updated.", "success") }}
 
     <form method="POST" action="/profile">
-        &#123;&#123; input("name", "Full Name", "text", user.name) &#125;&#125;
-        &#123;&#123; input("email", "Email Address", "email", user.email) &#125;&#125;
-        &#123;&#123; input("phone", "Phone Number", "tel", user.phone) &#125;&#125;
+        {{ input("name", "Full Name", "text", user.name) }}
+        {{ input("email", "Email Address", "email", user.email) }}
+        {{ input("phone", "Phone Number", "tel", user.phone) }}
 
-        &#123;&#123; button("Save Changes", "", "primary") &#125;&#125;
-        &#123;&#123; button("Cancel", "/dashboard", "secondary") &#125;&#125;
+        {{ button("Save Changes", "", "primary") }}
+        {{ button("Cancel", "/dashboard", "secondary") }}
     </form>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 **Expected output** (simplified):
@@ -575,11 +575,11 @@ When you need to output literal `{{ }}` or `{% %}` (for Vue.js or Angular templa
 </div>
 
 ```html
-&#123;% raw %&#125;
+{% raw %}
     <div id="app">
-        &#123;&#123; message &#125;&#125;
+        {{ message }}
     </div>
-&#123;% endraw %&#125;
+{% endraw %}
 ```
 
 <div v-pre>
@@ -597,11 +597,11 @@ Outputs the literal text `{{ message }}` without processing it as a Frond expres
 Strip whitespace between HTML tags:
 
 ```html
-&#123;% spaceless %&#125;
+{% spaceless %}
     <div>
         <span>Hello</span>
     </div>
-&#123;% endspaceless %&#125;
+{% endspaceless %}
 ```
 
 **Output:**
@@ -621,9 +621,9 @@ Useful for inline elements where whitespace creates unwanted gaps.
 Override auto-escaping for a block:
 
 ```html
-&#123;% autoescape false %&#125;
-    &#123;&#123; trusted_html &#125;&#125;
-&#123;% endautoescape %&#125;
+{% autoescape false %}
+    {{ trusted_html }}
+{% endautoescape %}
 ```
 
 Everything inside outputs without HTML escaping. Equivalent to `| raw` on every variable, but more convenient for large blocks of trusted content.
@@ -633,9 +633,9 @@ Everything inside outputs without HTML escaping. Equivalent to `| raw` on every 
 Template comments stay invisible in the output:
 
 ```html
-&#123;# This comment will not appear in the HTML output #&#125;
+{# This comment will not appear in the HTML output #}
 
-&#123;#
+{#
     Multi-line comments work too.
     Use them to document template logic.
 #}
@@ -762,7 +762,7 @@ Create `src/templates/catalog-base.twig`:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>&#123;% block title %&#125;Product Catalog&#123;% endblock %&#125;</title>
+    <title>{% block title %}Product Catalog{% endblock %}</title>
     <link rel="stylesheet" href="/css/tina4.css">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; background: #f8f9fa; }
@@ -788,10 +788,10 @@ Create `src/templates/catalog-base.twig`:
     </style>
 </head>
 <body>
-    &#123;% block content %&#125;&#123;% endblock %&#125;
+    {% block content %}{% endblock %}
 
     <script src="/js/frond.js"></script>
-    &#123;% block scripts %&#125;&#123;% endblock %&#125;
+    {% block scripts %}{% endblock %}
 </body>
 </html>
 ```
@@ -799,68 +799,68 @@ Create `src/templates/catalog-base.twig`:
 Create `src/templates/catalog-macros.twig`:
 
 ```html
-&#123;% macro productCard(product) %&#125;
-    <div class="product-card&#123;&#123; product.featured ? ' featured' : '' &#125;&#125;">
+{% macro productCard(product) %}
+    <div class="product-card{{ product.featured ? ' featured' : '' }}">
         <p class="product-name">
-            &#123;&#123; product.name &#125;&#125;
-            &#123;% if product.featured %&#125;
+            {{ product.name }}
+            {% if product.featured %}
                 <span class="badge badge-featured">Featured</span>
-            &#123;% endif %&#125;
+            {% endif %}
         </p>
-        <p class="product-category">&#123;&#123; product.category &#125;&#125;</p>
+        <p class="product-category">{{ product.category }}</p>
         <p class="product-price">
-            $&#123;&#123; product.price | number_format(2) &#125;&#125;
-            &#123;% if product.in_stock %&#125;
+            ${{ product.price | number_format(2) }}
+            {% if product.in_stock %}
                 <span class="badge badge-stock">In Stock</span>
-            &#123;% else %&#125;
+            {% else %}
                 <span class="badge badge-nostock">Out of Stock</span>
-            &#123;% endif %&#125;
+            {% endif %}
         </p>
     </div>
-&#123;% endmacro %&#125;
+{% endmacro %}
 
-&#123;% macro categoryFilter(categories, active) %&#125;
+{% macro categoryFilter(categories, active) %}
     <div class="filters">
-        <a href="/catalog" class="filter-btn&#123;&#123; active is not defined or active == '' ? ' active' : '' &#125;&#125;">All</a>
-        &#123;% for cat in categories %&#125;
-            <a href="/catalog?category=&#123;&#123; cat &#125;&#125;" class="filter-btn&#123;&#123; active == cat ? ' active' : '' &#125;&#125;">&#123;&#123; cat &#125;&#125;</a>
-        &#123;% endfor %&#125;
+        <a href="/catalog" class="filter-btn{{ active is not defined or active == '' ? ' active' : '' }}">All</a>
+        {% for cat in categories %}
+            <a href="/catalog?category={{ cat }}" class="filter-btn{{ active == cat ? ' active' : '' }}">{{ cat }}</a>
+        {% endfor %}
     </div>
-&#123;% endmacro %&#125;
+{% endmacro %}
 ```
 
 Create `src/templates/catalog.twig`:
 
 ```html
-&#123;% extends "catalog-base.twig" %&#125;
+{% extends "catalog-base.twig" %}
 
-&#123;% from "catalog-macros.twig" import productCard, categoryFilter %&#125;
+{% from "catalog-macros.twig" import productCard, categoryFilter %}
 
-&#123;% block title %&#125;&#123;&#123; active_category | default("All") &#125;&#125; Products - Catalog&#123;% endblock %&#125;
+{% block title %}{{ active_category | default("All") }} Products - Catalog{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
     <div class="header">
         <h1>Product Catalog</h1>
-        <p>&#123;&#123; products | length &#125;&#125; product&#123;&#123; products | length != 1 ? 's' : '' &#125;&#125;&#123;% if active_category %&#125; in &#123;&#123; active_category &#125;&#125;&#123;% endif %&#125;</p>
+        <p>{{ products | length }} product{{ products | length != 1 ? 's' : '' }}{% if active_category %} in {{ active_category }}{% endif %}</p>
     </div>
 
     <div class="container">
-        &#123;&#123; categoryFilter(categories, active_category) &#125;&#125;
+        {{ categoryFilter(categories, active_category) }}
 
-        &#123;% if products | length > 0 %&#125;
+        {% if products | length > 0 %}
             <div class="product-grid">
-                &#123;% for product in products %&#125;
-                    &#123;&#123; productCard(product) &#125;&#125;
-                &#123;% endfor %&#125;
+                {% for product in products %}
+                    {{ productCard(product) }}
+                {% endfor %}
             </div>
-        &#123;% else %&#125;
+        {% else %}
             <div class="empty-state">
                 <h2>No products found</h2>
                 <p>Try a different category or <a href="/catalog">view all products</a>.</p>
             </div>
-        &#123;% endif %&#125;
+        {% endif %}
     </div>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 Create `src/routes/catalog.rb`:

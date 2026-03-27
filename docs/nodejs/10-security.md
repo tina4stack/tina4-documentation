@@ -106,7 +106,7 @@ Tina4 blocks this with form tokens.
 
 ```twig
 <form method="POST" action="/api/profile">
-    &#123;&#123; form_token() &#125;&#125;
+    {{ form_token() }}
     <input type="text" name="name" placeholder="Your name">
     <button type="submit">Save</button>
 </form>
@@ -311,12 +311,12 @@ The `meta.noAuth` flag opens this route to unauthenticated requests. The handler
 ### The Login Form
 
 ```twig
-&#123;% extends "base.twig" %&#125;
-&#123;% block content %&#125;
+{% extends "base.twig" %}
+{% block content %}
 <div class="container mt-5" style="max-width: 400px;">
     <h2>Login</h2>
     <form id="loginForm">
-        &#123;&#123; form_token() &#125;&#125;
+        {{ form_token() }}
         <div class="mb-3">
             <label for="email">Email</label>
             <input type="email" name="email" id="email" class="form-control"
@@ -343,7 +343,7 @@ function handleLogin(result) {
     }
 }
 </script>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 ### Protected Pages — Checking the Session
@@ -675,14 +675,14 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 ```
 
 ```twig
-&#123;# src/templates/contact.twig #&#125;
-&#123;% extends "base.twig" %&#125;
-&#123;% block title %&#125;Contact Us&#123;% endblock %&#125;
-&#123;% block content %&#125;
+{# src/templates/contact.twig #}
+{% extends "base.twig" %}
+{% block title %}Contact Us{% endblock %}
+{% block content %}
 <div class="container mt-5" style="max-width: 500px;">
-    <h2>&#123;&#123; title &#125;&#125;</h2>
+    <h2>{{ title }}</h2>
     <form id="contactForm">
-        &#123;&#123; form_token() &#125;&#125;
+        {{ form_token() }}
         <div class="mb-3">
             <label for="name">Name</label>
             <input type="text" name="name" id="name" class="form-control"
@@ -705,7 +705,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
         <div id="contactMsg" class="mt-3"></div>
     </form>
 </div>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 The form is public. The CSRF token is present. The `noAuth: true` export opens the route. The middleware validates the token. The database stores the message. The user sees confirmation.
