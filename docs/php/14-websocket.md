@@ -51,7 +51,7 @@ Define WebSocket handlers with `Router::websocket()`:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::websocket("/ws/echo", function ($connection, $event, $data) {
     if ($event === "message") {
@@ -95,7 +95,7 @@ Fires when a client connects:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::websocket("/ws/notifications", function ($connection, $event, $data) {
     if ($event === "open") {
@@ -164,7 +164,7 @@ All three events in one handler:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::websocket("/ws/chat", function ($connection, $event, $data) {
     switch ($event) {
@@ -262,7 +262,7 @@ The client receives the close event. Use this for kicking users, enforcing authe
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::websocket("/ws/announcements", function ($connection, $event, $data) {
     if ($event === "open") {
@@ -332,7 +332,7 @@ Different WebSocket paths are walls. Clients connected to `/ws/chat/room-1` neve
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::websocket("/ws/chat/{room}", function ($connection, $event, $data) {
     $room = $connection->params["room"];
@@ -394,7 +394,7 @@ Create `src/routes/chat-ws.php`:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 $chatUsers = [];
 
@@ -475,7 +475,7 @@ WebSocket pushes notifications to users in real time:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 use Tina4\Queue;
 
 // WebSocket handler for notifications
@@ -631,12 +631,12 @@ A full chat page using templates and WebSocket.
 Create `src/templates/chat.html`:
 
 ```html
-{% extends "base.html" %}
+&#123;% extends "base.html" %&#125;
 
-{% block title %}Chat - {{ room }}{% endblock %}
+&#123;% block title %&#125;Chat - &#123;&#123; room &#125;&#125;&#123;% endblock %&#125;
 
-{% block content %}
-    <h1>Chat Room: {{ room }}</h1>
+&#123;% block content %&#125;
+    <h1>Chat Room: &#123;&#123; room &#125;&#125;</h1>
     <p id="status">Connecting...</p>
     <p id="online">Online: 0</p>
 
@@ -655,7 +655,7 @@ Create `src/templates/chat.html`:
 
     <script src="/js/frond.js"></script>
     <script>
-        const room = "{{ room }}";
+        const room = "&#123;&#123; room &#125;&#125;";
         const ws = frond.ws("/ws/livechat/" + room);
         const messagesDiv = document.getElementById("messages");
         const statusEl = document.getElementById("status");
@@ -715,14 +715,14 @@ Create `src/templates/chat.html`:
             ws.send(JSON.stringify({ type: "typing" }));
         });
     </script>
-{% endblock %}
+&#123;% endblock %&#125;
 ```
 
 Create the route to serve the page:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::get("/chat/{room}", function ($request, $response) {
     $room = $request->params["room"];
@@ -769,7 +769,7 @@ Create `src/routes/chat-room.php`:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 $roomUsers = [];
 
@@ -841,12 +841,12 @@ Router::get("/room/{roomName}", function ($request, $response) {
 Create `src/templates/room.html`:
 
 ```html
-{% extends "base.html" %}
+&#123;% extends "base.html" %&#125;
 
-{% block title %}Room: {{ room }}{% endblock %}
+&#123;% block title %&#125;Room: &#123;&#123; room &#125;&#125;&#123;% endblock %&#125;
 
-{% block content %}
-    <h1>Room: {{ room }}</h1>
+&#123;% block content %&#125;
+    <h1>Room: &#123;&#123; room &#125;&#125;</h1>
     <p id="online" style="color: #666;">Online: 0</p>
 
     <div id="messages" style="border: 1px solid #ddd; height: 400px; overflow-y: auto; padding: 12px; margin-bottom: 12px; border-radius: 8px; background: #fafafa;">
@@ -863,7 +863,7 @@ Create `src/templates/room.html`:
 
     <script src="/js/frond.js"></script>
     <script>
-        const room = "{{ room }}";
+        const room = "&#123;&#123; room &#125;&#125;";
         const username = prompt("Choose a username:") || "Anonymous";
         const ws = frond.ws("/ws/room/" + room);
         const msgs = document.getElementById("messages");
@@ -902,14 +902,43 @@ Create `src/templates/room.html`:
             }
         });
     </script>
-{% endblock %}
+&#123;% endblock %&#125;
 ```
 
 Open `http://localhost:7146/room/test` in two browser tabs. Set different usernames. Send messages from one tab and watch them appear in both. Close one tab and verify the "left the room" message appears.
 
 ---
 
-## 14. Gotchas
+## 14. Scaling with a Backplane
+
+When you run a single server instance, `broadcast()` reaches every connected client. But in production you often run multiple instances behind a load balancer. Each instance only knows about its own connections. A message broadcast on instance A never reaches clients connected to instance B.
+
+A backplane solves this. It relays WebSocket messages across all instances using a shared pub/sub channel. Tina4 supports Redis as a backplane out of the box.
+
+### Configuration
+
+Set two environment variables in your `.env`:
+
+```dotenv
+TINA4_WS_BACKPLANE=redis
+TINA4_WS_BACKPLANE_URL=redis://localhost:6379
+```
+
+When `TINA4_WS_BACKPLANE` is set, every `broadcast()` call publishes the message to Redis. Every instance subscribes to the same channel and forwards the message to its local connections. No code changes required -- your existing WebSocket routes work as before.
+
+### Requirements
+
+The Redis backplane requires a Redis client package as an optional dependency:
+
+```bash
+composer require predis/predis
+```
+
+If `TINA4_WS_BACKPLANE` is not set (the default), Tina4 broadcasts only to local connections. This is fine for single-instance deployments.
+
+---
+
+## 15. Gotchas
 
 ### 1. WebSocket Needs a Persistent Server
 

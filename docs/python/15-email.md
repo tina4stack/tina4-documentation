@@ -1,7 +1,5 @@
 # Chapter 13: Email with Messenger
 
-<div v-pre>
-
 ## 1. Every App Sends Email
 
 Signup confirmations. Password resets. Weekly digests. Attachments, HTML templates, reliable delivery. Every application needs email. Nobody enjoys implementing it. SMTP configuration. Plain text fallbacks. Attachment encoding. Connection timeouts. The details pile up fast.
@@ -397,45 +395,45 @@ Create `src/templates/emails/welcome.html`:
 </head>
 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f5f5; padding: 20px;">
     <div style="background: #1a1a2e; color: white; padding: 24px; text-align: center; border-radius: 8px 8px 0 0;">
-        <h1 style="margin: 0; font-size: 24px;">Welcome, {{ name }}!</h1>
+        <h1 style="margin: 0; font-size: 24px;">Welcome, &#123;&#123; name &#125;&#125;!</h1>
     </div>
     <div style="background: white; padding: 24px; border-radius: 0 0 8px 8px;">
-        <p>Hi {{ name }},</p>
+        <p>Hi &#123;&#123; name &#125;&#125;,</p>
         <p>Your account has been created successfully. Here are your details:</p>
 
         <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
             <tr>
                 <td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">Email</td>
-                <td style="padding: 8px; border-bottom: 1px solid #eee;">{{ email }}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">&#123;&#123; email &#125;&#125;</td>
             </tr>
             <tr>
                 <td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">Account ID</td>
-                <td style="padding: 8px; border-bottom: 1px solid #eee;">#{{ user_id }}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">#&#123;&#123; user_id &#125;&#125;</td>
             </tr>
             <tr>
                 <td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">Signed Up</td>
-                <td style="padding: 8px; border-bottom: 1px solid #eee;">{{ signed_up_at }}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">&#123;&#123; signed_up_at &#125;&#125;</td>
             </tr>
         </table>
 
         <p>Get started by exploring:</p>
         <ul>
-            <li><a href="{{ base_url }}/products" style="color: #1a1a2e;">Our product catalog</a></li>
-            <li><a href="{{ base_url }}/profile" style="color: #1a1a2e;">Your profile settings</a></li>
+            <li><a href="&#123;&#123; base_url &#125;&#125;/products" style="color: #1a1a2e;">Our product catalog</a></li>
+            <li><a href="&#123;&#123; base_url &#125;&#125;/profile" style="color: #1a1a2e;">Your profile settings</a></li>
         </ul>
 
-        {% if promo_code %}
+        &#123;% if promo_code %&#125;
             <div style="background: #d4edda; padding: 16px; border-radius: 4px; margin: 16px 0;">
-                <strong>Special offer!</strong> Use code <code>{{ promo_code }}</code> for 10% off your first order.
+                <strong>Special offer!</strong> Use code <code>&#123;&#123; promo_code &#125;&#125;</code> for 10% off your first order.
             </div>
-        {% endif %}
+        &#123;% endif %&#125;
 
-        <p>Cheers,<br>The {{ app_name }} Team</p>
+        <p>Cheers,<br>The &#123;&#123; app_name &#125;&#125; Team</p>
     </div>
 
     <div style="text-align: center; padding: 12px; color: #888; font-size: 12px;">
-        <p>You received this because you signed up at {{ app_name }}.</p>
-        <p><a href="{{ base_url }}/unsubscribe?token={{ unsubscribe_token }}" style="color: #888;">Unsubscribe</a></p>
+        <p>You received this because you signed up at &#123;&#123; app_name &#125;&#125;.</p>
+        <p><a href="&#123;&#123; base_url &#125;&#125;/unsubscribe?token=&#123;&#123; unsubscribe_token &#125;&#125;" style="color: #888;">Unsubscribe</a></p>
     </div>
 </body>
 </html>
@@ -617,25 +615,25 @@ Create `src/templates/emails/contact-notification.html`:
         <table style="width: 100%; border-collapse: collapse;">
             <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; width: 100px;">From</td>
-                <td style="padding: 10px; border-bottom: 1px solid #eee;">{{ name }} ({{ email }})</td>
+                <td style="padding: 10px; border-bottom: 1px solid #eee;">&#123;&#123; name &#125;&#125; (&#123;&#123; email &#125;&#125;)</td>
             </tr>
             <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Subject</td>
-                <td style="padding: 10px; border-bottom: 1px solid #eee;">{{ subject }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #eee;">&#123;&#123; subject &#125;&#125;</td>
             </tr>
             <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Date</td>
-                <td style="padding: 10px; border-bottom: 1px solid #eee;">{{ submitted_at }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #eee;">&#123;&#123; submitted_at &#125;&#125;</td>
             </tr>
         </table>
 
         <div style="margin-top: 16px; padding: 16px; background: #f8f9fa; border-radius: 4px;">
             <h3 style="margin-top: 0;">Message</h3>
-            <p style="white-space: pre-wrap;">{{ message }}</p>
+            <p style="white-space: pre-wrap;">&#123;&#123; message &#125;&#125;</p>
         </div>
 
         <p style="margin-top: 16px; color: #888; font-size: 12px;">
-            Reply directly to this email to respond to {{ name }} at {{ email }}.
+            Reply directly to this email to respond to &#123;&#123; name &#125;&#125; at &#123;&#123; email &#125;&#125;.
         </p>
     </div>
 </body>
@@ -645,20 +643,20 @@ Create `src/templates/emails/contact-notification.html`:
 Create `src/templates/contact.html`:
 
 ```html
-{% extends "base.html" %}
+&#123;% extends "base.html" %&#125;
 
-{% block title %}Contact Us{% endblock %}
+&#123;% block title %&#125;Contact Us&#123;% endblock %&#125;
 
-{% block content %}
+&#123;% block content %&#125;
     <h1>Contact Us</h1>
 
-    {% if flash %}
+    &#123;% if flash %&#125;
         <div style="padding: 12px; border-radius: 4px; margin-bottom: 16px;
-            {% if flash.type == 'success' %}background: #d4edda; color: #155724;{% endif %}
-            {% if flash.type == 'error' %}background: #f8d7da; color: #721c24;{% endif %}">
-            {{ flash.message }}
+            &#123;% if flash.type == 'success' %&#125;background: #d4edda; color: #155724;&#123;% endif %&#125;
+            &#123;% if flash.type == 'error' %&#125;background: #f8d7da; color: #721c24;&#123;% endif %&#125;">
+            &#123;&#123; flash.message &#125;&#125;
         </div>
-    {% endif %}
+    &#123;% endif %&#125;
 
     <form method="POST" action="/contact" style="max-width: 500px;">
         <div style="margin-bottom: 12px;">
@@ -690,7 +688,7 @@ Create `src/templates/contact.html`:
             Send Message
         </button>
     </form>
-{% endblock %}
+&#123;% endblock %&#125;
 ```
 
 Create `src/routes/contact.py`:
@@ -840,7 +838,11 @@ The HTML response includes the success flash message.
 
 ### 6. Email Template Variables Not Substituted
 
+<div v-pre>
+
 **Problem:** The email body shows `{{ name }}` literally instead of the user's name.
+
+</div>
 
 **Cause:** You passed the raw template file content instead of rendering it through the template engine. The template engine was not invoked.
 
@@ -853,6 +855,3 @@ The HTML response includes the success flash message.
 **Cause:** The SMTP server is unreachable from your network, the port is blocked by a firewall, or the hostname is wrong.
 
 **Fix:** Test SMTP connectivity: `telnet smtp.example.com 587`. Verify the hostname, port, and encryption settings. Check that your firewall allows outbound connections on the SMTP port. If you are behind a corporate firewall, port 587 or 465 might be blocked -- ask your network administrator.
-
-
-</div>

@@ -1,7 +1,5 @@
 # Chapter 15: Frontend with tina4css
 
-<div v-pre>
-
 ## 1. The Problem with Frontend Toolchains
 
 Your client wants a dashboard. You know the drill. Install Node.js. Run `npm install`. Wait for 200MB of `node_modules` to download. Configure webpack or Vite. Set up PostCSS. Add a CSS framework. Maybe Tailwind with its purge config. Pray nothing breaks when you upgrade a dependency six months from now.
@@ -498,7 +496,7 @@ Create `src/templates/admin/layout.html`:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Admin Dashboard{% endblock %}</title>
+    <title>&#123;% block title %&#125;Admin Dashboard&#123;% endblock %&#125;</title>
     <link rel="stylesheet" href="/css/tina4.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -577,45 +575,45 @@ Create `src/templates/admin/layout.html`:
             .stats-grid { grid-template-columns: 1fr; }
         }
     </style>
-    {% block extra_css %}{% endblock %}
+    &#123;% block extra_css %&#125;&#123;% endblock %&#125;
 </head>
 <body>
     <div class="app-wrapper">
         <aside class="sidebar">
             <div class="sidebar-header">Admin Panel</div>
             <ul class="sidebar-nav">
-                <li><a href="/admin" class="{% if active_page == 'dashboard' %}active{% endif %}">Dashboard</a></li>
-                <li><a href="/admin/users" class="{% if active_page == 'users' %}active{% endif %}">Users</a></li>
-                <li><a href="/admin/products" class="{% if active_page == 'products' %}active{% endif %}">Products</a></li>
+                <li><a href="/admin" class="&#123;% if active_page == 'dashboard' %&#125;active&#123;% endif %&#125;">Dashboard</a></li>
+                <li><a href="/admin/users" class="&#123;% if active_page == 'users' %&#125;active&#123;% endif %&#125;">Users</a></li>
+                <li><a href="/admin/products" class="&#123;% if active_page == 'products' %&#125;active&#123;% endif %&#125;">Products</a></li>
                 <li>
-                    <a href="/admin/orders" class="{% if active_page == 'orders' %}active{% endif %}">
+                    <a href="/admin/orders" class="&#123;% if active_page == 'orders' %&#125;active&#123;% endif %&#125;">
                         Orders
-                        {% if pending_orders > 0 %}
-                            <span class="badge badge-warning">{{ pending_orders }}</span>
-                        {% endif %}
+                        &#123;% if pending_orders > 0 %&#125;
+                            <span class="badge badge-warning">&#123;&#123; pending_orders &#125;&#125;</span>
+                        &#123;% endif %&#125;
                     </a>
                 </li>
-                <li><a href="/admin/settings" class="{% if active_page == 'settings' %}active{% endif %}">Settings</a></li>
+                <li><a href="/admin/settings" class="&#123;% if active_page == 'settings' %&#125;active&#123;% endif %&#125;">Settings</a></li>
             </ul>
         </aside>
 
         <div class="main-content">
             <div class="topbar">
-                <span class="topbar-title">{% block page_title %}Dashboard{% endblock %}</span>
+                <span class="topbar-title">&#123;% block page_title %&#125;Dashboard&#123;% endblock %&#125;</span>
                 <div class="topbar-actions">
-                    <span>Welcome, {{ user_name | default("Admin") }}</span>
+                    <span>Welcome, &#123;&#123; user_name | default("Admin") &#125;&#125;</span>
                     <button class="btn btn-sm btn-outline-danger">Logout</button>
                 </div>
             </div>
 
             <div class="content-area">
-                {% block content %}{% endblock %}
+                &#123;% block content %&#125;&#123;% endblock %&#125;
             </div>
         </div>
     </div>
 
     <script src="/js/frond.js"></script>
-    {% block extra_js %}{% endblock %}
+    &#123;% block extra_js %&#125;&#123;% endblock %&#125;
 </body>
 </html>
 ```
@@ -625,22 +623,22 @@ Create `src/templates/admin/layout.html`:
 Create `src/templates/admin/dashboard.html`:
 
 ```html
-{% extends "admin/layout.html" %}
+&#123;% extends "admin/layout.html" %&#125;
 
-{% block title %}Dashboard - Admin{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
+&#123;% block title %&#125;Dashboard - Admin&#123;% endblock %&#125;
+&#123;% block page_title %&#125;Dashboard&#123;% endblock %&#125;
 
-{% block content %}
+&#123;% block content %&#125;
     <div class="stats-grid">
-        {% for stat in stats %}
+        &#123;% for stat in stats %&#125;
             <div class="stat-card">
-                <div class="stat-value">{{ stat.value }}</div>
-                <div class="stat-label">{{ stat.label }}</div>
-                <div class="stat-change {{ stat.direction }}">
-                    {{ stat.direction == "up" ? "+" : "" }}{{ stat.change }}% from last month
+                <div class="stat-value">&#123;&#123; stat.value &#125;&#125;</div>
+                <div class="stat-label">&#123;&#123; stat.label &#125;&#125;</div>
+                <div class="stat-change &#123;&#123; stat.direction &#125;&#125;">
+                    &#123;&#123; stat.direction == "up" ? "+" : "" &#125;&#125;&#123;&#123; stat.change &#125;&#125;% from last month
                 </div>
             </div>
-        {% endfor %}
+        &#123;% endfor %&#125;
     </div>
 
     <div class="row">
@@ -658,22 +656,22 @@ Create `src/templates/admin/dashboard.html`:
                             </tr>
                         </thead>
                         <tbody>
-                            {% for order in recent_orders %}
+                            &#123;% for order in recent_orders %&#125;
                                 <tr>
-                                    <td>#{{ order.id }}</td>
-                                    <td>{{ order.customer }}</td>
-                                    <td>${{ order.total | number_format(2) }}</td>
+                                    <td>#&#123;&#123; order.id &#125;&#125;</td>
+                                    <td>&#123;&#123; order.customer &#125;&#125;</td>
+                                    <td>$&#123;&#123; order.total | number_format(2) &#125;&#125;</td>
                                     <td>
-                                        {% if order.status == "completed" %}
+                                        &#123;% if order.status == "completed" %&#125;
                                             <span class="badge badge-success">Completed</span>
-                                        {% elseif order.status == "pending" %}
+                                        &#123;% elseif order.status == "pending" %&#125;
                                             <span class="badge badge-warning">Pending</span>
-                                        {% elseif order.status == "cancelled" %}
+                                        &#123;% elseif order.status == "cancelled" %&#125;
                                             <span class="badge badge-danger">Cancelled</span>
-                                        {% endif %}
+                                        &#123;% endif %&#125;
                                     </td>
                                 </tr>
-                            {% endfor %}
+                            &#123;% endfor %&#125;
                         </tbody>
                     </table>
                 </div>
@@ -701,27 +699,27 @@ Create `src/templates/admin/dashboard.html`:
                 <div class="card-body">
                     <p><strong>CPU:</strong></p>
                     <div class="progress" style="margin-bottom: 12px;">
-                        <div class="progress-bar bg-success" style="width: {{ cpu_usage }}%">
-                            {{ cpu_usage }}%
+                        <div class="progress-bar bg-success" style="width: &#123;&#123; cpu_usage &#125;&#125;%">
+                            &#123;&#123; cpu_usage &#125;&#125;%
                         </div>
                     </div>
                     <p><strong>Memory:</strong></p>
                     <div class="progress" style="margin-bottom: 12px;">
-                        <div class="progress-bar bg-info" style="width: {{ memory_usage }}%">
-                            {{ memory_usage }}%
+                        <div class="progress-bar bg-info" style="width: &#123;&#123; memory_usage &#125;&#125;%">
+                            &#123;&#123; memory_usage &#125;&#125;%
                         </div>
                     </div>
                     <p><strong>Disk:</strong></p>
                     <div class="progress">
-                        <div class="progress-bar bg-warning" style="width: {{ disk_usage }}%">
-                            {{ disk_usage }}%
+                        <div class="progress-bar bg-warning" style="width: &#123;&#123; disk_usage &#125;&#125;%">
+                            &#123;&#123; disk_usage &#125;&#125;%
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-{% endblock %}
+&#123;% endblock %&#125;
 ```
 
 ### The Dashboard Route
@@ -730,7 +728,7 @@ Create `src/routes/admin.php`:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::get("/admin", function ($request, $response) {
     $stats = [
@@ -903,12 +901,12 @@ A users management page. Data loads via AJAX using frond.js.
 Create `src/templates/admin/users.html`:
 
 ```html
-{% extends "admin/layout.html" %}
+&#123;% extends "admin/layout.html" %&#125;
 
-{% block title %}Users - Admin{% endblock %}
-{% block page_title %}User Management{% endblock %}
+&#123;% block title %&#125;Users - Admin&#123;% endblock %&#125;
+&#123;% block page_title %&#125;User Management&#123;% endblock %&#125;
 
-{% block content %}
+&#123;% block content %&#125;
     <div class="card">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <span>All Users</span>
@@ -966,9 +964,9 @@ Create `src/templates/admin/users.html`:
     </div>
 
     <div id="alertArea" style="margin-top: 16px;"></div>
-{% endblock %}
+&#123;% endblock %&#125;
 
-{% block extra_js %}
+&#123;% block extra_js %&#125;
 <script>
     function loadUsers() {
         frond.get("/api/users", function (data) {
@@ -1020,7 +1018,7 @@ Create `src/templates/admin/users.html`:
     // Load users on page load
     loadUsers();
 </script>
-{% endblock %}
+&#123;% endblock %&#125;
 ```
 
 Create the route for the users page:
@@ -1099,17 +1097,25 @@ Visit `http://localhost:7146/admin/products` and see:
 
 ## 12. Solution
 
+<div v-pre>
+
 The solution follows the same patterns shown in sections 7 and 10. Create the layout template extending the base layout from section 7. Create the dashboard page template with stat cards using `{% for stat in stats %}`. Create the products page template using the AJAX pattern from section 10, but for products instead of users.
+
+</div>
 
 For the products page, use auto-CRUD on the Product model (`$autoCrud = true`) so the API endpoints are available at `/api/products`. Load the table with `frond.get("/api/products", ...)` and handle form submission with `frond.post("/api/products", ...)`.
 
+<div v-pre>
+
 For the dark mode toggle, add the JavaScript from section 8 to the base layout template inside the `{% block extra_js %}` block.
+
+</div>
 
 The key route handlers are:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::get("/admin", function ($request, $response) {
     $product = new Product();
@@ -1227,6 +1233,3 @@ frond.post("/api/products", {
 ```
 
 This tag is included in all the examples above but is easy to forget when creating templates from scratch.
-
-
-</div>

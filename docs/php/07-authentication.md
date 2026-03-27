@@ -1,7 +1,5 @@
 # Chapter 7: Authentication
 
-<div v-pre>
-
 ## 1. Locking the Door
 
 Every endpoint built so far is public. Anyone with the URL can read, create, update, delete. That works for a tutorial. A real application needs to know who is making a request and whether they are allowed.
@@ -131,7 +129,7 @@ $isCorrect = Auth::checkPassword("my-secure-password", $storedHash);
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 use Tina4\Auth;
 use Tina4\Database;
 
@@ -194,7 +192,7 @@ Client sends credentials. Server validates them. Server returns a JWT.
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 use Tina4\Auth;
 use Tina4\Database;
 
@@ -310,7 +308,7 @@ function authMiddleware($request, $response, $next) {
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::get("/api/profile", function ($request, $response) {
     return $response->json([
@@ -461,18 +459,22 @@ Include the CSRF token in every form:
 
 ```html
 <form method="POST" action="/profile/update">
-    {{ form_token() }}
+    &#123;&#123; form_token() &#125;&#125;
 
     <div class="form-group">
         <label for="name">Name</label>
-        <input type="text" name="name" id="name" value="{{ user.name }}">
+        <input type="text" name="name" id="name" value="&#123;&#123; user.name &#125;&#125;">
     </div>
 
     <button type="submit">Update Profile</button>
 </form>
 ```
 
+<div v-pre>
+
 `{{ form_token() }}` renders a hidden input:
+
+</div>
 
 ```html
 <input type="hidden" name="_token" value="abc123randomtoken456">
@@ -482,7 +484,7 @@ Include the CSRF token in every form:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 use Tina4\Auth;
 
 Router::post("/profile/update", function ($request, $response) {
@@ -545,7 +547,7 @@ Access session data through `$request->session`:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::post("/login-form", function ($request, $response) {
     // After validating credentials...
@@ -698,7 +700,7 @@ Create `src/routes/auth.php`:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 use Tina4\Auth;
 use Tina4\Database;
 
@@ -913,6 +915,3 @@ Router::put("/api/profile/password", function ($request, $response) {
 **Problem:** Tokens in URLs like `/api/profile?token=eyJ...` leak through browser history, server logs, and Referer headers.
 
 **Fix:** Always send tokens in the `Authorization` header. The only exception: WebSocket connections where the upgrade request cannot carry custom headers. Use a short-lived token for that case.
-
-
-</div>

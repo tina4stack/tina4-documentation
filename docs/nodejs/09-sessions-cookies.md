@@ -10,11 +10,35 @@ Sessions and cookies give the server memory. They teach it to remember who is ma
 
 ## 2. How Sessions Work
 
-A user visits your site for the first time. Tina4 generates a unique session ID, stores it in a cookie on the user's browser, and creates a server-side storage entry keyed by that ID. Every subsequent request carries the cookie. Tina4 looks up the session data and attaches it to `req.session`.
+Sessions are auto-started. Every route handler receives `req.session` ready to use. No manual setup required.
+
+A user visits your site for the first time. Tina4 generates a unique session ID, stores it in a cookie named `tina4_session` (`HttpOnly`, `SameSite=Lax`) on the user's browser, and creates a server-side storage entry keyed by that ID. Every subsequent request carries the cookie. Tina4 looks up the session data and attaches it to `req.session`.
 
 ---
 
-## 3. File Sessions (Default)
+## 3. The Session API
+
+Access session data through `req.session`. It is available in every route handler with zero configuration.
+
+### Full API Reference
+
+| Method | Description |
+|--------|-------------|
+| `req.session.set(key, value)` | Store a value |
+| `req.session.get(key, default)` | Retrieve a value (with optional default) |
+| `req.session.delete(key)` | Remove a key |
+| `req.session.has(key)` | Check if a key exists |
+| `req.session.clear()` | Remove all session data |
+| `req.session.destroy()` | Destroy the session entirely |
+| `req.session.save()` | Persist session data (auto-called after response) |
+| `req.session.regenerate()` | Generate a new session ID, preserve data |
+| `req.session.flash(key, value)` | Set flash data (one-time read) |
+| `req.session.getFlash(key)` | Read and remove flash data |
+| `req.session.all()` | Get all session data as an object |
+
+---
+
+## 4. File Sessions (Default)
 
 Tina4 stores sessions in files out of the box. Zero configuration.
 
@@ -22,8 +46,8 @@ Tina4 stores sessions in files out of the box. Zero configuration.
 import { Router } from "tina4-nodejs";
 
 Router.get("/visit-counter", async (req, res) => {
-    const count = (req.session.visit_count ?? 0) + 1;
-    req.session.visit_count = count;
+    const count = (req.session.get("visit_count", 0)) + 1;
+    req.session.set("visit_count", count);
 
     return res.json({
         visit_count: count,
@@ -42,12 +66,12 @@ curl http://localhost:7148/visit-counter -c cookies.txt -b cookies.txt
 
 ---
 
-## 4. Redis Sessions
+## 5. Redis Sessions
 
 For production deployments with multiple servers:
 
 ```dotenv
-TINA4_SESSION_HANDLER=redis
+TINA4_SESSION_BACKEND=redis
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
 TINA4_SESSION_PASSWORD=your-redis-password
@@ -57,23 +81,23 @@ Your code stays exactly the same. `req.session` works identically.
 
 ---
 
-## 5. MongoDB and Valkey Sessions
+## 6. MongoDB and Valkey Sessions
 
 ```dotenv
 # MongoDB
-TINA4_SESSION_HANDLER=mongodb
+TINA4_SESSION_BACKEND=mongodb
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=27017
 
 # Valkey
-TINA4_SESSION_HANDLER=valkey
+TINA4_SESSION_BACKEND=valkey
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
 ```
 
 ---
 
-## 6. Database Sessions
+## 7. Database Sessions
 
 ```dotenv
 TINA4_SESSION_BACKEND=database
@@ -83,7 +107,7 @@ Stores sessions in the `tina4_session` table using your existing database connec
 
 ---
 
-## 7. Reading and Writing Session Data
+## 8. Reading and Writing Session Data
 
 ```typescript
 import { Router } from "tina4-nodejs";
@@ -91,30 +115,30 @@ import { Router } from "tina4-nodejs";
 Router.post("/api/preferences", async (req, res) => {
     const body = req.body;
 
-    req.session.language = body.language ?? "en";
-    req.session.theme = body.theme ?? "light";
-    req.session.items_per_page = parseInt(body.items_per_page ?? "20", 10);
+    req.session.set("language", body.language ?? "en");
+    req.session.set("theme", body.theme ?? "light");
+    req.session.set("items_per_page", parseInt(body.items_per_page ?? "20", 10));
 
     return res.json({
         message: "Preferences saved",
         preferences: {
-            language: req.session.language,
-            theme: req.session.theme,
-            items_per_page: req.session.items_per_page
+            language: req.session.get("language"),
+            theme: req.session.get("theme"),
+            items_per_page: req.session.get("items_per_page")
         }
     });
 });
 
 Router.get("/api/preferences", async (req, res) => {
     return res.json({
-        language: req.session.language ?? "en",
-        theme: req.session.theme ?? "light",
-        items_per_page: req.session.items_per_page ?? 20
+        language: req.session.get("language", "en"),
+        theme: req.session.get("theme", "light"),
+        items_per_page: req.session.get("items_per_page", 20)
     });
 });
 
 Router.post("/api/session/clear", async (req, res) => {
-    req.session = {};
+    req.session.clear();
     return res.json({ message: "Session cleared" });
 });
 ```
@@ -125,11 +149,7 @@ Router.post("/api/session/clear", async (req, res) => {
 Router.post("/api/cart/add", async (req, res) => {
     const body = req.body;
 
-    if (!req.session.cart) {
-        req.session.cart = [];
-    }
-
-    const cart = req.session.cart;
+    const cart = req.session.get("cart", []);
     const existingIndex = cart.findIndex(item => item.product_id === parseInt(body.product_id, 10));
 
     if (existingIndex >= 0) {
@@ -143,7 +163,7 @@ Router.post("/api/cart/add", async (req, res) => {
         });
     }
 
-    req.session.cart = cart;
+    req.session.set("cart", cart);
 
     const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -157,36 +177,37 @@ Router.post("/api/cart/add", async (req, res) => {
 
 ---
 
-## 7. Flash Messages
+## 9. Flash Messages
 
-Flash messages exist for exactly one request:
+Flash messages exist for exactly one read:
 
 ```typescript
 Router.post("/profile/update", async (req, res) => {
     // Update profile logic here...
 
-    req.session._flash = {
-        type: "success",
-        message: "Profile updated successfully"
-    };
+    req.session.flash("message", "Profile updated successfully");
+    req.session.flash("message_type", "success");
 
     return res.redirect("/profile");
 });
 
 Router.get("/profile", async (req, res) => {
-    const flash = req.session._flash ?? null;
-    delete req.session._flash;
+    const flashMessage = req.session.getFlash("message");
+    const flashType = req.session.getFlash("message_type") ?? "info";
 
     return res.html("profile.html", {
         user: { name: "Alice", email: "alice@example.com" },
-        flash
+        flash_message: flashMessage,
+        flash_type: flashType
     });
 });
 ```
 
+The `getFlash()` method reads the value and removes it in one step. The next request will not see it.
+
 ---
 
-## 8. Setting and Reading Cookies
+## 10. Setting and Reading Cookies
 
 ```typescript
 Router.post("/api/set-language", async (req, res) => {
@@ -220,15 +241,22 @@ Router.get("/api/get-language", async (req, res) => {
 
 ---
 
-## 9. Session Security
+## 11. Session Security
 
 ```dotenv
-TINA4_SESSION_LIFETIME=3600
-TINA4_SESSION_NAME=tina4_session
+TINA4_SESSION_TTL=3600
 TINA4_SESSION_SECURE=true
 TINA4_SESSION_HTTPONLY=true
 TINA4_SESSION_SAMESITE=Lax
 ```
+
+`TINA4_SESSION_SAMESITE` controls cross-site cookie behavior:
+
+| Value | Behavior |
+|-------|----------|
+| `Strict` | Never sent with cross-site requests. Safest. Breaks some flows (clicking links from email). |
+| `Lax` | Sent with top-level navigations (clicking links) but not cross-site API calls. Good default. |
+| `None` | Always sent. Requires `TINA4_SESSION_SECURE=true`. Only for cross-site cookie access. |
 
 ### Session Regeneration
 
@@ -237,15 +265,26 @@ After login, regenerate the session ID to prevent session fixation:
 ```typescript
 Router.post("/login", async (req, res) => {
     // Validate credentials...
-    req.sessionRegenerate();
-    req.session.user_id = user.id;
+    req.session.regenerate();
+    req.session.set("user_id", user.id);
     return res.redirect("/dashboard");
+});
+```
+
+### Destroy a Session
+
+To completely destroy a session (not just clear its data):
+
+```typescript
+Router.post("/logout", async (req, res) => {
+    req.session.destroy();
+    return res.redirect("/login");
 });
 ```
 
 ---
 
-## 10. Exercise: Build a Shopping Cart with Session Storage
+## 12. Exercise: Build a Shopping Cart with Session Storage
 
 Build a shopping cart stored entirely in session data.
 
@@ -261,7 +300,7 @@ Build a shopping cart stored entirely in session data.
 
 ---
 
-## 11. Solution
+## 13. Solution
 
 Create `src/routes/cart.ts`:
 
@@ -269,7 +308,7 @@ Create `src/routes/cart.ts`:
 import { Router } from "tina4-nodejs";
 
 function getCart(session: any): any[] {
-    return session.cart ?? [];
+    return session.get("cart", []);
 }
 
 function cartResponse(cart: any[]) {
@@ -312,7 +351,7 @@ Router.post("/api/cart/add", async (req, res) => {
         });
     }
 
-    req.session.cart = cart;
+    req.session.set("cart", cart);
     return res.json(cartResponse(cart));
 });
 
@@ -336,7 +375,7 @@ Router.put("/api/cart/{product_id:int}", async (req, res) => {
         cart[index].quantity = quantity;
     }
 
-    req.session.cart = cart;
+    req.session.set("cart", cart);
     return res.json(cartResponse(cart));
 });
 
@@ -350,19 +389,19 @@ Router.delete("/api/cart/{product_id:int}", async (req, res) => {
     }
 
     cart.splice(index, 1);
-    req.session.cart = cart;
+    req.session.set("cart", cart);
     return res.json(cartResponse(cart));
 });
 
 Router.delete("/api/cart", async (req, res) => {
-    req.session.cart = [];
+    req.session.set("cart", []);
     return res.json(cartResponse([]));
 });
 ```
 
 ---
 
-## 12. Gotchas
+## 14. Gotchas
 
 ### 1. Sessions Do Not Work with curl Without Cookie Flags
 
@@ -378,7 +417,7 @@ Router.delete("/api/cart", async (req, res) => {
 
 ### 4. Flash Messages Show Twice
 
-**Fix:** Always clear the flash message immediately after reading: `delete req.session._flash`.
+**Fix:** Use `req.session.getFlash("message")` to read flash data. It reads and deletes in one step. Do not use `req.session.get()` for flash messages.
 
 ### 5. Large Session Data Causes Slow Requests
 
@@ -390,4 +429,4 @@ Router.delete("/api/cart", async (req, res) => {
 
 ### 7. Session Fixation
 
-**Fix:** Call `req.sessionRegenerate()` after successful login.
+**Fix:** Call `req.session.regenerate()` after successful login.

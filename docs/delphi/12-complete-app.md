@@ -1080,37 +1080,37 @@ end;
 The inline HTML strings above work but become unwieldy. For production applications, use Twig template files. Here is the dashboard page as a Twig template:
 
 ```html
-{# templates/dashboard.html #}
-{% extends 'layout.html' %}
+&#123;# templates/dashboard.html #&#125;
+&#123;% extends 'layout.html' %&#125;
 
-{% block title %}Dashboard{% endblock %}
+&#123;% block title %&#125;Dashboard&#123;% endblock %&#125;
 
-{% block content %}
+&#123;% block content %&#125;
 <div style="display: flex; gap: 20px; margin-bottom: 30px;">
-  {% for stat in stats %}
-  <div style="flex: 1; background: {{ stat.color }}; color: white;
+  &#123;% for stat in stats %&#125;
+  <div style="flex: 1; background: &#123;&#123; stat.color &#125;&#125;; color: white;
     padding: 20px; border-radius: 8px;">
-    <p style="font-size: 14px; margin: 0; opacity: 0.8;">{{ stat.label }}</p>
+    <p style="font-size: 14px; margin: 0; opacity: 0.8;">&#123;&#123; stat.label &#125;&#125;</p>
     <p style="font-size: 36px; margin: 5px 0 0 0; font-weight: bold;">
-      {{ stat.value }}
+      &#123;&#123; stat.value &#125;&#125;
     </p>
   </div>
-  {% endfor %}
+  &#123;% endfor %&#125;
 </div>
 
 <div id="notificationArea" style="display: none;
   padding: 10px; border-radius: 4px; margin-bottom: 20px;">
 </div>
-{% endblock %}
+&#123;% endblock %&#125;
 ```
 
 ```html
-{# templates/layout.html #}
+&#123;# templates/layout.html #&#125;
 <div style="font-family: Arial; padding: 20px;">
   <div style="display: flex; justify-content: space-between;
     align-items: center; margin-bottom: 30px; padding-bottom: 15px;
     border-bottom: 2px solid #ecf0f1;">
-    <h1 style="margin: 0; color: #2c3e50;">{% block title %}{% endblock %}</h1>
+    <h1 style="margin: 0; color: #2c3e50;">&#123;% block title %&#125;&#123;% endblock %&#125;</h1>
     <div>
       <span onclick="App:NavigateTo('dashboard')"
         style="margin-right: 15px; color: #7f8c8d; cursor: pointer;">Dashboard</span>
@@ -1122,7 +1122,7 @@ The inline HTML strings above work but become unwieldy. For production applicati
         style="color: #e74c3c; cursor: pointer;">Logout</span>
     </div>
   </div>
-  {% block content %}{% endblock %}
+  &#123;% block content %&#125;&#123;% endblock %&#125;
 </div>
 ```
 

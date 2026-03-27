@@ -10,7 +10,9 @@ Chapter 7 introduced sessions for authentication. This chapter goes deeper. Sess
 
 ## 2. How Sessions Work
 
-When a user visits your site for the first time, Tina4 generates a unique session ID (a long random string), stores it in a cookie on the user's browser, and creates a server-side storage entry keyed by that ID. On every subsequent request, the browser sends the cookie, Tina4 looks up the session data, and makes it available via `request.session`.
+Sessions are auto-started. Every route handler receives `request.session` ready to use. No manual setup required.
+
+When a user visits your site for the first time, Tina4 generates a unique session ID (a long random string), stores it in a cookie named `tina4_session` (`HttpOnly`, `SameSite=Lax`) on the user's browser, and creates a server-side storage entry keyed by that ID. On every subsequent request, the browser sends the cookie, Tina4 looks up the session data, and makes it available via `request.session`.
 
 The flow looks like this:
 
@@ -27,14 +29,36 @@ The session data is stored server-side. The browser only has the session ID -- i
 
 ---
 
-## 3. File Sessions (Default)
+## 3. The Session API
+
+Access session data through `request.session`. It is available in every route handler with zero configuration.
+
+### Full API Reference
+
+| Method | Description |
+|--------|-------------|
+| `request.session.set(key, value)` | Store a value |
+| `request.session.get(key, default)` | Retrieve a value (with optional default) |
+| `request.session.delete(key)` | Remove a key |
+| `request.session.has?(key)` | Check if a key exists |
+| `request.session.clear` | Remove all session data |
+| `request.session.destroy` | Destroy the session entirely |
+| `request.session.save` | Persist session data (auto-called after response) |
+| `request.session.regenerate` | Generate a new session ID, preserve data |
+| `request.session.flash(key, value)` | Set flash data (one-time read) |
+| `request.session.flash(key)` | Read and remove flash data |
+| `request.session.all` | Get all session data as a hash |
+
+---
+
+## 4. File Sessions (Default)
 
 Out of the box, Tina4 stores sessions in files. No configuration needed.
 
 ```ruby
 Tina4::Router.get("/visit-counter") do |request, response|
-  count = (request.session["visit_count"] || 0) + 1
-  request.session["visit_count"] = count
+  count = (request.session.get("visit_count", 0)) + 1
+  request.session.set("visit_count", count)
 
   response.json({
     visit_count: count,
@@ -63,12 +87,12 @@ The `-c cookies.txt` flag tells curl to save cookies to a file, and `-b cookies.
 
 ---
 
-## 4. Redis Sessions
+## 5. Redis Sessions
 
 For production deployments with multiple servers (behind a load balancer), you need a shared session store. Redis is the most common choice.
 
 ```dotenv
-TINA4_SESSION_HANDLER=redis
+TINA4_SESSION_BACKEND=redis
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
 TINA4_SESSION_PASSWORD=your-redis-password
@@ -78,10 +102,10 @@ That is the only change. Your code stays exactly the same. `request.session` wor
 
 ---
 
-## 5. MongoDB Sessions
+## 6. MongoDB Sessions
 
 ```dotenv
-TINA4_SESSION_HANDLER=mongodb
+TINA4_SESSION_BACKEND=mongodb
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=27017
 TINA4_SESSION_DATABASE=myapp
@@ -90,17 +114,17 @@ TINA4_SESSION_COLLECTION=sessions
 
 ---
 
-## 6. Valkey Sessions
+## 7. Valkey Sessions
 
 ```dotenv
-TINA4_SESSION_HANDLER=valkey
+TINA4_SESSION_BACKEND=valkey
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
 ```
 
 ---
 
-## 7. Database Sessions
+## 8. Database Sessions
 
 ```dotenv
 TINA4_SESSION_BACKEND=database
@@ -110,7 +134,7 @@ Stores sessions in the `tina4_session` table using your existing database connec
 
 ---
 
-## 8. Reading and Writing Session Data
+## 9. Reading and Writing Session Data
 
 Session data is a simple key-value store. You read and write it through `request.session`:
 
@@ -119,16 +143,16 @@ Session data is a simple key-value store. You read and write it through `request
 Tina4::Router.post("/api/preferences") do |request, response|
   body = request.body
 
-  request.session["language"] = body["language"] || "en"
-  request.session["theme"] = body["theme"] || "light"
-  request.session["items_per_page"] = (body["items_per_page"] || 20).to_i
+  request.session.set("language", body["language"] || "en")
+  request.session.set("theme", body["theme"] || "light")
+  request.session.set("items_per_page", (body["items_per_page"] || 20).to_i)
 
   response.json({
     message: "Preferences saved",
     preferences: {
-      language: request.session["language"],
-      theme: request.session["theme"],
-      items_per_page: request.session["items_per_page"]
+      language: request.session.get("language"),
+      theme: request.session.get("theme"),
+      items_per_page: request.session.get("items_per_page")
     }
   })
 end
@@ -136,9 +160,9 @@ end
 # Read from session
 Tina4::Router.get("/api/preferences") do |request, response|
   response.json({
-    language: request.session["language"] || "en",
-    theme: request.session["theme"] || "light",
-    items_per_page: request.session["items_per_page"] || 20
+    language: request.session.get("language", "en"),
+    theme: request.session.get("theme", "light"),
+    items_per_page: request.session.get("items_per_page", 20)
   })
 end
 
@@ -166,9 +190,7 @@ Sessions can hold arrays and nested structures:
 Tina4::Router.post("/api/cart/add") do |request, response|
   body = request.body
 
-  request.session["cart"] ||= []
-
-  cart = request.session["cart"]
+  cart = request.session.get("cart", [])
 
   cart << {
     product_id: body["product_id"].to_i,
@@ -178,7 +200,7 @@ Tina4::Router.post("/api/cart/add") do |request, response|
     added_at: Time.now.iso8601
   }
 
-  request.session["cart"] = cart
+  request.session.set("cart", cart)
 
   total = cart.sum { |item| item[:price] * item[:quantity] }
 
@@ -192,7 +214,7 @@ end
 
 ---
 
-## 8. Flash Messages
+## 10. Flash Messages
 
 Flash messages are session data that lives for one request. Set a flash before redirecting. The next request reads it. Then it vanishes.
 
@@ -204,10 +226,8 @@ Tina4::Router.post("/profile/update") do |request, response|
 
   # Update the profile (database logic here)
 
-  request.session["_flash"] = {
-    type: "success",
-    message: "Profile updated successfully"
-  }
+  request.session.flash("message", "Profile updated successfully")
+  request.session.flash("message_type", "success")
 
   response.redirect("/profile")
 end
@@ -217,37 +237,40 @@ end
 
 ```ruby
 Tina4::Router.get("/profile") do |request, response|
-  flash = request.session["_flash"]
-  request.session.delete("_flash")
+  flash_message = request.session.flash("message")
+  flash_type = request.session.flash("message_type") || "info"
 
   response.render("profile.html", {
     user: { name: "Alice", email: "alice@example.com" },
-    flash: flash
+    flash_message: flash_message,
+    flash_type: flash_type
   })
 end
 ```
 
+Calling `request.session.flash(key)` with only a key reads the value and removes it in one step.
+
 ### Using Flash Messages in Templates
 
 ```html
-{% extends "base.html" %}
+&#123;% extends "base.html" %&#125;
 
-{% block content %}
-    {% if flash %}
-        <div class="alert alert-{{ flash.type }}">
-            {{ flash.message }}
+&#123;% block content %&#125;
+    &#123;% if flash_message %&#125;
+        <div class="alert alert-&#123;&#123; flash_type &#125;&#125;">
+            &#123;&#123; flash_message &#125;&#125;
         </div>
-    {% endif %}
+    &#123;% endif %&#125;
 
     <h1>Profile</h1>
-    <p>Name: {{ user.name }}</p>
-    <p>Email: {{ user.email }}</p>
-{% endblock %}
+    <p>Name: &#123;&#123; user.name &#125;&#125;</p>
+    <p>Email: &#123;&#123; user.email &#125;&#125;</p>
+&#123;% endblock %&#125;
 ```
 
 ---
 
-## 9. Setting and Reading Cookies
+## 11. Setting and Reading Cookies
 
 Cookies are small pieces of data stored in the browser. Unlike sessions, the data is stored client-side.
 
@@ -304,7 +327,7 @@ end
 
 ---
 
-## 10. Remember Me Functionality
+## 12. Remember Me Functionality
 
 The "remember me" pattern uses a long-lived cookie to re-authenticate users after their session expires.
 
@@ -323,8 +346,8 @@ Tina4::Router.post("/login") do |request, response|
     return response.json({ error: "Invalid email or password" }, 401)
   end
 
-  request.session["user_id"] = user["id"]
-  request.session["user_name"] = user["name"]
+  request.session.set("user_id", user["id"])
+  request.session.set("user_name", user["name"])
 
   if body["remember_me"]
     remember_token = SecureRandom.hex(32)
@@ -352,17 +375,24 @@ end
 
 ---
 
-## 11. Session Security
+## 13. Session Security
 
 ### Configuration Options
 
 ```dotenv
-TINA4_SESSION_LIFETIME=3600
-TINA4_SESSION_NAME=tina4_session
+TINA4_SESSION_TTL=3600
 TINA4_SESSION_SECURE=true
 TINA4_SESSION_HTTPONLY=true
 TINA4_SESSION_SAMESITE=Lax
 ```
+
+`TINA4_SESSION_SAMESITE` controls cross-site cookie behavior:
+
+| Value | Behavior |
+|-------|----------|
+| `Strict` | Never sent with cross-site requests. Safest. Breaks some flows (clicking links from email). |
+| `Lax` | Sent with top-level navigations (clicking links) but not cross-site API calls. Good default. |
+| `None` | Always sent. Requires `TINA4_SESSION_SECURE=true`. Only for cross-site cookie access. |
 
 ### Session Regeneration
 
@@ -372,17 +402,28 @@ After a user logs in, regenerate the session ID to prevent session fixation atta
 Tina4::Router.post("/login") do |request, response|
   # Validate credentials...
 
-  request.session_regenerate
+  request.session.regenerate
 
-  request.session["user_id"] = user["id"]
+  request.session.set("user_id", user["id"])
 
   response.redirect("/dashboard")
 end
 ```
 
+### Destroy a Session
+
+To completely destroy a session (not just clear its data):
+
+```ruby
+Tina4::Router.post("/logout") do |request, response|
+  request.session.destroy
+  response.redirect("/login")
+end
+```
+
 ---
 
-## 12. Exercise: Build a Shopping Cart with Session Storage
+## 14. Exercise: Build a Shopping Cart with Session Storage
 
 Build a shopping cart that stores items in the session. No database needed -- the cart lives entirely in session data.
 
@@ -426,13 +467,13 @@ curl -X DELETE http://localhost:7147/api/cart -b cookies.txt -c cookies.txt
 
 ---
 
-## 13. Solution
+## 15. Solution
 
 Create `src/routes/cart.rb`:
 
 ```ruby
 def get_cart(session)
-  session["cart"] || []
+  session.get("cart", [])
 end
 
 def cart_response(cart)
@@ -480,7 +521,7 @@ Tina4::Router.post("/api/cart/add") do |request, response|
     }
   end
 
-  request.session["cart"] = cart
+  request.session.set("cart", cart)
 
   response.json(cart_response(cart))
 end
@@ -509,7 +550,7 @@ Tina4::Router.put("/api/cart/{product_id:int}") do |request, response|
     cart[index][:quantity] = quantity
   end
 
-  request.session["cart"] = cart
+  request.session.set("cart", cart)
 
   response.json(cart_response(cart))
 end
@@ -526,14 +567,14 @@ Tina4::Router.delete("/api/cart/{product_id:int}") do |request, response|
   end
 
   cart.delete_at(index)
-  request.session["cart"] = cart
+  request.session.set("cart", cart)
 
   response.json(cart_response(cart))
 end
 
 # Clear cart
 Tina4::Router.delete("/api/cart") do |request, response|
-  request.session["cart"] = []
+  request.session.set("cart", [])
 
   response.json(cart_response([]))
 end
@@ -555,7 +596,7 @@ end
 
 ---
 
-## 14. Gotchas
+## 16. Gotchas
 
 ### 1. Sessions Do Not Work with curl Without Cookie Flags
 
@@ -587,7 +628,7 @@ end
 
 **Cause:** You read the flash message but did not clear it from the session.
 
-**Fix:** Always clear the flash message immediately after reading it: `request.session.delete("_flash")`.
+**Fix:** Use `request.session.flash("message")` to read flash data. It reads and deletes in one step. Do not use `request.session.get()` for flash messages.
 
 ### 5. Large Session Data Causes Slow Requests
 
@@ -611,4 +652,4 @@ end
 
 **Cause:** The session ID is not regenerated after login.
 
-**Fix:** Call `request.session_regenerate` after successful login.
+**Fix:** Call `request.session.regenerate` after successful login.

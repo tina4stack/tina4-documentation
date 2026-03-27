@@ -16,7 +16,7 @@ The fastest cache is at the HTTP response level. The `ResponseCache` middleware 
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::get("/api/products", function ($request, $response) {
     // This handler runs 12 database queries and takes 800ms
@@ -256,7 +256,7 @@ The most common caching pattern. Also called lazy loading:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 use Tina4\Database;
 use function Tina4\cache_get;
 use function Tina4\cache_set;
@@ -336,7 +336,7 @@ Identical queries return cached results instead of hitting the database:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 use Tina4\Database;
 
 Router::get("/api/categories", function ($request, $response) {
@@ -399,7 +399,7 @@ Clear the cache when the underlying data changes:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 use Tina4\Database;
 use function Tina4\cache_set;
 use function Tina4\cache_delete;
@@ -509,7 +509,7 @@ Monitor cache performance. Verify that caching helps:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 use function Tina4\cache_stats;
 
 Router::get("/api/cache/stats", function ($request, $response) {
@@ -547,7 +547,7 @@ For maximum performance, layer multiple cache strategies:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 use Tina4\Database;
 use function Tina4\cache_get;
 use function Tina4\cache_set;
@@ -655,7 +655,7 @@ Create `src/routes/store-cached.php`:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 use function Tina4\cache_get;
 use function Tina4\cache_set;
 use function Tina4\cache_delete;

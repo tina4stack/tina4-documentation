@@ -102,14 +102,14 @@ Create `src/templates/emails/welcome.html`:
 <body>
     <div class="container">
         <div class="header">
-            <h1>Welcome, {{ name }}!</h1>
+            <h1>Welcome, &#123;&#123; name &#125;&#125;!</h1>
         </div>
         <p>Thanks for signing up. Your account is ready to go.</p>
         <p style="text-align: center;">
-            <a href="{{ login_url }}" class="btn">Log In to Your Account</a>
+            <a href="&#123;&#123; login_url &#125;&#125;" class="btn">Log In to Your Account</a>
         </p>
         <div class="footer">
-            <p>&copy; {{ year }} My Store. All rights reserved.</p>
+            <p>&copy; &#123;&#123; year &#125;&#125; My Store. All rights reserved.</p>
         </div>
     </div>
 </body>

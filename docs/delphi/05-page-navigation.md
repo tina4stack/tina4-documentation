@@ -1,7 +1,5 @@
 # Chapter 5: Page Navigation
 
-<div v-pre>
-
 ## A Single-Page App Inside Your Desktop App
 
 Your application has a dashboard, a user management page, a settings page, and a reports page. In a traditional Delphi app, you create four forms and show/hide them. With `TTina4HTMLPages`, you create four pages inside one HTML renderer and navigate between them with anchor links -- the same way a single-page web app works.
@@ -206,7 +204,11 @@ Each `TTina4Page` in the collection has these properties:
 | `Pages` | `TTina4PageCollection` | Collection of pages (design-time editable) |
 | `Renderer` | `TTina4HTMLRender` | The HTML renderer that displays the active page |
 | `ActivePage` | `string` | Name of the currently displayed page (read/write) |
+<div v-pre>
+
 | `TwigTemplatePath` | `string` | Base path for Twig `{% include %}` / `{% extends %}` |
+
+</div>
 
 ---
 
@@ -269,7 +271,11 @@ Page.TwigContent.Text :=
 
 ### File-Based Templates
 
+<div v-pre>
+
 For complex pages, use files with `{% include %}` and `{% extends %}`:
+
+</div>
 
 ```pascal
 HTMLPages1.TwigTemplatePath := 'C:\MyApp\templates';
@@ -281,21 +287,21 @@ Page.TwigContent.LoadFromFile('C:\MyApp\templates\report.html');
 
 **report.html:**
 ```
-{% extends 'layout.html' %}
+&#123;% extends 'layout.html' %&#125;
 
-{% block title %}Monthly Report{% endblock %}
+&#123;% block title %&#125;Monthly Report&#123;% endblock %&#125;
 
-{% block content %}
-  <h1>Report for {{ month }}</h1>
+&#123;% block content %&#125;
+  <h1>Report for &#123;&#123; month &#125;&#125;</h1>
   <table>
-    {% for row in data %}
+    &#123;% for row in data %&#125;
     <tr>
-      <td>{{ row.name }}</td>
-      <td>{{ row.value }}</td>
+      <td>&#123;&#123; row.name &#125;&#125;</td>
+      <td>&#123;&#123; row.value &#125;&#125;</td>
     </tr>
-    {% endfor %}
+    &#123;% endfor %&#125;
   </table>
-{% endblock %}
+&#123;% endblock %&#125;
 ```
 
 **layout.html:**
@@ -315,8 +321,8 @@ Page.TwigContent.LoadFromFile('C:\MyApp\templates\report.html');
     <a href="#settings">Settings</a>
   </div>
   <div style="padding: 20px;">
-    <title>{% block title %}{% endblock %}</title>
-    {% block content %}{% endblock %}
+    <title>&#123;% block title %&#125;&#123;% endblock %&#125;</title>
+    &#123;% block content %&#125;&#123;% endblock %&#125;
   </div>
 </body>
 </html>
@@ -1244,8 +1250,9 @@ Page.HTMLContent.Text := GetSharedStyles + '<div>Page content</div>';
 | Guard navigation | `OnBeforeNavigate` -- set `Allow := False` to block |
 | Post-navigation | `OnAfterNavigate` -- load data, update UI |
 | Twig in pages | Set `TwigContent` + `SetTwigVariable` |
+<div v-pre>
+
 | File templates | Set `TwigTemplatePath` for `{% include %}`/`{% extends %}` |
 | Page priority | `TwigContent` (if set) overrides `HTMLContent` |
-
 
 </div>

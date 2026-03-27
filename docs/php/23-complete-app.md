@@ -1,7 +1,5 @@
 # Chapter 21: Building a Complete App
 
-<div v-pre>
-
 ## 1. Putting It All Together
 
 Twenty chapters. Routing, templates, databases, ORM, authentication, middleware, queues, WebSocket, caching, frontend, GraphQL, testing, dev tools, CLI scaffolding, deployment. Now all of it works together in one application.
@@ -210,7 +208,7 @@ Create `src/routes/auth.php`:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 use Tina4\Auth;
 
 /**
@@ -432,7 +430,7 @@ Create `src/routes/tasks.php`:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::group("/api", function () {
 
@@ -660,7 +658,7 @@ Create `src/templates/app/layout.html`:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}TaskFlow{% endblock %}</title>
+    <title>&#123;% block title %&#125;TaskFlow&#123;% endblock %&#125;</title>
     <link rel="stylesheet" href="/css/tina4.css">
     <script>
         (function() {
@@ -722,29 +720,29 @@ Create `src/templates/app/layout.html`:
             .stats-row { grid-template-columns: 1fr 1fr; }
         }
     </style>
-    {% block extra_css %}{% endblock %}
+    &#123;% block extra_css %&#125;&#123;% endblock %&#125;
 </head>
 <body>
     <div class="app">
         <aside class="sidebar">
             <div class="sidebar-brand">TaskFlow</div>
             <ul class="sidebar-nav">
-                <li><a href="/admin" class="{% if page == 'dashboard' %}active{% endif %}">Dashboard</a></li>
-                <li><a href="/admin/tasks" class="{% if page == 'tasks' %}active{% endif %}">All Tasks</a></li>
-                <li><a href="/admin/my-tasks" class="{% if page == 'my-tasks' %}active{% endif %}">My Tasks</a></li>
+                <li><a href="/admin" class="&#123;% if page == 'dashboard' %&#125;active&#123;% endif %&#125;">Dashboard</a></li>
+                <li><a href="/admin/tasks" class="&#123;% if page == 'tasks' %&#125;active&#123;% endif %&#125;">All Tasks</a></li>
+                <li><a href="/admin/my-tasks" class="&#123;% if page == 'my-tasks' %&#125;active&#123;% endif %&#125;">My Tasks</a></li>
             </ul>
         </aside>
         <div class="main">
             <div class="topbar">
-                <div class="topbar-left">{% block page_title %}Dashboard{% endblock %}</div>
+                <div class="topbar-left">&#123;% block page_title %&#125;Dashboard&#123;% endblock %&#125;</div>
                 <div class="topbar-right">
                     <button class="btn btn-sm btn-outline-secondary" onclick="toggleTheme()">Theme</button>
-                    <span id="userName">{{ user_name | default("User") }}</span>
+                    <span id="userName">&#123;&#123; user_name | default("User") &#125;&#125;</span>
                     <button class="btn btn-sm btn-outline-danger" onclick="logout()">Logout</button>
                 </div>
             </div>
             <div class="content">
-                {% block content %}{% endblock %}
+                &#123;% block content %&#125;&#123;% endblock %&#125;
             </div>
         </div>
     </div>
@@ -761,7 +759,7 @@ Create `src/templates/app/layout.html`:
             window.location.href = "/login";
         }
     </script>
-    {% block extra_js %}{% endblock %}
+    &#123;% block extra_js %&#125;&#123;% endblock %&#125;
 </body>
 </html>
 ```
@@ -769,12 +767,12 @@ Create `src/templates/app/layout.html`:
 Create `src/templates/app/dashboard.html`:
 
 ```html
-{% extends "app/layout.html" %}
+&#123;% extends "app/layout.html" %&#125;
 
-{% block title %}Dashboard - TaskFlow{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
+&#123;% block title %&#125;Dashboard - TaskFlow&#123;% endblock %&#125;
+&#123;% block page_title %&#125;Dashboard&#123;% endblock %&#125;
 
-{% block content %}
+&#123;% block content %&#125;
     <div class="stats-row">
         <div class="stat-card">
             <div class="value" id="statTotal">--</div>
@@ -845,9 +843,9 @@ Create `src/templates/app/dashboard.html`:
     </div>
 
     <div id="alertArea" style="position: fixed; top: 80px; right: 24px; width: 300px; z-index: 1000;"></div>
-{% endblock %}
+&#123;% endblock %&#125;
 
-{% block extra_js %}
+&#123;% block extra_js %&#125;
 <script>
     function loadStats() {
         frond.get("/api/dashboard/stats", function (data) {
@@ -918,7 +916,7 @@ Create `src/templates/app/dashboard.html`:
         loadTasks();
     }, 30000);
 </script>
-{% endblock %}
+&#123;% endblock %&#125;
 ```
 
 ### Dashboard Stats Route
@@ -927,7 +925,7 @@ Create `src/routes/dashboard.php`:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 /**
  * @secured
@@ -1026,7 +1024,11 @@ $task->delete();
 broadcastTaskUpdate("deleted", ["id" => $request->params["id"]]);
 ```
 
+<div v-pre>
+
 Add WebSocket client code to the dashboard template. Add this inside the `{% block extra_js %}` block:
+
+</div>
 
 ```javascript
 // WebSocket connection for real-time updates
@@ -1585,6 +1587,3 @@ Your `vendor/` directory is small. Your `composer.lock` has one entry. When PHP 
 Simple does not mean limited. TaskFlow has authentication, real-time WebSocket, email, caching, GraphQL, and a test suite. It deploys in a Docker container. It handles thousands of concurrent users. All of this runs on under 5,000 lines of framework code.
 
 Build things. Ship them. Keep it simple.
-
-
-</div>

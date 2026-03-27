@@ -303,7 +303,7 @@ Create a file in `src/gallery/`:
 // title: Product Search
 // description: Search products by name and category
 
-use Tina4Router;
+use Tina4\Router;
 
 Router::get("/gallery/product-search", function ($request, $response) {
     $q = $request->query["q"] ?? "";
@@ -390,7 +390,7 @@ Create `src/routes/orders.php` with this intentionally broken code:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::get("/api/orders/summary", function ($request, $response) {
     $product = new Product();
@@ -441,7 +441,7 @@ The fixed route:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::get("/api/orders/summary", function ($request, $response) {
     $product = new Product();

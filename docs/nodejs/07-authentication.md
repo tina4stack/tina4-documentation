@@ -264,8 +264,8 @@ For form-based applications, include a CSRF token in every form:
 
 ```html
 <form method="POST" action="/profile/update">
-    {{ form_token() }}
-    <input type="text" name="name" value="{{ user.name }}">
+    &#123;&#123; form_token() &#125;&#125;
+    <input type="text" name="name" value="&#123;&#123; user.name &#125;&#125;">
     <button type="submit">Update Profile</button>
 </form>
 ```

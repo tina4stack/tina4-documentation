@@ -87,12 +87,32 @@ $queue = new Queue(topic: 'emails');
 $queue->produce('invoices', ["order_id" => 101, "format" => "pdf"]);
 ```
 
+### Push with Priority
+
+Jobs default to priority 0 (normal). Higher numbers are popped first:
+
+```php
+// Normal priority (default)
+$queue->push(["to" => "alice@example.com", "subject" => "Newsletter"]);
+
+// High priority -- processed before normal jobs
+$queue->push(["to" => "alice@example.com", "subject" => "Password Reset"], priority: 10);
+```
+
 ### Queue Size
 
 Check how many pending messages are in the queue:
 
 ```php
 $count = $queue->size();
+```
+
+Pass a status string to count jobs in a specific state:
+
+```php
+$failed = $queue->size("failed");
+$completed = $queue->size("completed");
+$reserved = $queue->size("reserved");
 ```
 
 ---
@@ -166,6 +186,22 @@ foreach ($queue->consume('emails') as $job) {
 }
 ```
 
+### Retry with Delay
+
+If a job fails but you want to retry it after a cooldown instead of marking it as failed:
+
+```php
+foreach ($queue->consume('emails') as $job) {
+    try {
+        sendEmail($job->payload['to'], $job->payload['subject'], $job->payload['body']);
+        $job->complete();
+    } catch (\Throwable $e) {
+        // Retry after 30 seconds instead of failing immediately
+        $job->retry(30);
+    }
+}
+```
+
 ### Manual Pop
 
 For more control, pop a single message:
@@ -209,8 +245,13 @@ When you receive a job from `consume` or `pop`, you have three methods:
 - `$job->complete()` -- mark the job as done
 - `$job->fail($reason)` -- mark the job as failed with a reason string
 - `$job->reject($reason)` -- alias for `fail`
+- `$job->retry($delaySeconds)` -- re-queue the job after a delay (in seconds). The job goes back to PENDING after the delay elapses.
 
-Always call one of these. If you do not, the job stays reserved.
+### Job Properties
+
+- `$job->topic` -- the topic this job belongs to. Useful when consuming from multiple topics.
+
+Always call `complete`, `fail`, or `retry` on every job. If you do not, the job stays reserved.
 
 ---
 
@@ -309,6 +350,8 @@ Switching backends is a config change, not a code change.
 
 ```dotenv
 # No config needed -- file is the default
+# Optionally set a custom storage path (defaults to ./queue)
+TINA4_QUEUE_PATH=./data/queue
 ```
 
 ### RabbitMQ

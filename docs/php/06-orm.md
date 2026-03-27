@@ -92,7 +92,7 @@ echo $product->id; // Auto-generated: 1, 2, 3, ...
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::post("/api/products", function ($request, $response) {
     $body = $request->body;
@@ -277,7 +277,7 @@ Fifth argument: LIMIT. Sixth: OFFSET.
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::get("/api/products", function ($request, $response) {
     $product = new Product();
@@ -910,7 +910,7 @@ Create `src/routes/blog.php`:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 // List published posts with author
 Router::get("/api/blog/posts", function ($request, $response) {

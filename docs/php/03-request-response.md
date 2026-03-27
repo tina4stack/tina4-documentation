@@ -6,7 +6,7 @@ Every route handler receives two arguments. `$request` tells you what the client
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::get("/echo", function ($request, $response) {
     return $response->json([
@@ -125,7 +125,7 @@ A diagnostic route that dumps everything:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::post("/debug/request", function ($request, $response) {
     return $response->json([
@@ -393,7 +393,7 @@ Uploaded files arrive via `$request->files`. Each file is an object with metadat
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::post("/api/upload", function ($request, $response) {
     if (empty($request->files["image"])) {
@@ -431,7 +431,7 @@ The file sits in a temporary location. Move it somewhere permanent:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::post("/api/upload", function ($request, $response) {
     if (empty($request->files["image"])) {
@@ -528,7 +528,7 @@ Send files to the client with `$response->file()`:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::get("/api/reports/{filename}", function ($request, $response) {
     $filename = $request->params["filename"];
@@ -558,7 +558,7 @@ One endpoint. Multiple formats. Check the `Accept` header:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::get("/api/products/{id:int}", function ($request, $response) {
     $id = $request->params["id"];
@@ -720,7 +720,7 @@ Create `src/routes/images.php`:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::post("/api/images", function ($request, $response) {
     // Check if a file was uploaded

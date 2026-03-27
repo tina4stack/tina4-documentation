@@ -6,7 +6,7 @@ Your app sends welcome emails on signup. Generates PDF invoices. Resizes uploade
 
 Queues move slow work to a background process. The HTTP handler drops a job onto a queue and responds to the user in under 100 milliseconds. A separate consumer picks up the job and does the work at its own pace. The user sees "Welcome! Check your email." The email arrives 5 seconds later.
 
-Tina4's queue system works out of the box with a lite backend. No Redis. No RabbitMQ. No external services. Add jobs and process them.
+Tina4's queue system works out of the box with a file-based backend. No Redis. No RabbitMQ. No external services. Add jobs and process them.
 
 ---
 
@@ -45,9 +45,9 @@ Meanwhile, in the background:
 
 ---
 
-## 3. Lite Queue (Default)
+## 3. File Queue (Default)
 
-Tina4's queue system uses the lite backend by default. No configuration needed.
+The file-based backend is the default. No configuration needed.
 
 ### Creating a Queue and Pushing a Job
 
@@ -73,12 +73,32 @@ queue = Queue.new(topic: "emails")
 queue.produce("invoices", { order_id: 101, format: "pdf" })
 ```
 
+### Push with Priority
+
+Jobs default to priority 0 (normal). Higher numbers are popped first:
+
+```ruby
+# Normal priority (default)
+queue.push({ to: "alice@example.com", subject: "Newsletter" })
+
+# High priority -- processed before normal jobs
+queue.push({ to: "alice@example.com", subject: "Password Reset" }, priority: 10)
+```
+
 ### Queue Size
 
 Check how many pending messages are in the queue:
 
 ```ruby
 count = queue.size
+```
+
+Pass a status string to count jobs in a specific state:
+
+```ruby
+failed = queue.size("failed")
+completed = queue.size("completed")
+reserved = queue.size("reserved")
 ```
 
 ---
@@ -141,6 +161,22 @@ queue.consume("emails") do |job|
 end
 ```
 
+### Retry with Delay
+
+If a job fails but you want to retry it after a cooldown instead of marking it as failed:
+
+```ruby
+queue.consume("emails") do |job|
+  begin
+    send_email(job.payload[:to], job.payload[:subject], job.payload[:body])
+    job.complete
+  rescue => e
+    # Retry after 30 seconds instead of failing immediately
+    job.retry(30)
+  end
+end
+```
+
 ### Manual Pop
 
 For more control, pop a single message:
@@ -184,8 +220,13 @@ When you receive a job from `consume` or `pop`, you have three methods:
 - `job.complete` -- mark the job as done
 - `job.fail(reason)` -- mark the job as failed with a reason string
 - `job.reject(reason)` -- alias for `fail`
+- `job.retry(delay_seconds)` -- re-queue the job after a delay (in seconds). The job goes back to PENDING after the delay elapses.
 
-Always call one of these. If you do not, the job stays reserved.
+### Job Properties
+
+- `job.topic` -- the topic this job belongs to. Useful when consuming from multiple topics.
+
+Always call `complete`, `fail`, or `retry` on every job. If you do not, the job stays reserved.
 
 ---
 
@@ -276,10 +317,12 @@ Four jobs are queued in under 5 milliseconds. The user gets an instant response.
 
 Switching backends is a config change, not a code change.
 
-### Default: Lite
+### Default: File
 
 ```dotenv
-# No config needed -- lite is the default
+# No config needed -- file is the default
+# Optionally set a custom storage path (defaults to ./queue)
+TINA4_QUEUE_PATH=./data/queue
 ```
 
 ### RabbitMQ
@@ -494,11 +537,11 @@ After the consumer has retried a job to `bad@example.com` three times, `queue.de
 
 **Fix:** Monitor dead letters with `queue.dead_letters`. Set up an alert when the count exceeds a threshold. Investigate, fix, then call `queue.retry_failed` or `queue.purge("failed")`.
 
-### 5. Lite backend for production
+### 5. File backend for production
 
-**Problem:** Multiple workers cause contention on the lite backend.
+**Problem:** Multiple workers cause contention on the file backend.
 
-**Cause:** The lite backend is designed for single-worker setups.
+**Cause:** The file backend is designed for single-worker setups.
 
 **Fix:** For production with multiple workers, switch to RabbitMQ, Kafka, or MongoDB via the `TINA4_QUEUE_BACKEND` environment variable.
 

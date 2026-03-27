@@ -49,6 +49,7 @@ SAFE_LANGS = {
 }
 
 def escape_line(line):
+    \"\"\"Escape template syntax with HTML entities for code fences\"\"\"
     line = line.replace('{{', '&#123;&#123;')
     line = line.replace('}}', '&#125;&#125;')
     line = line.replace('{%', '&#123;%')
@@ -57,8 +58,14 @@ def escape_line(line):
     line = line.replace('#}', '#&#125;')
     return line
 
-for line in lines:
-    stripped = line.strip()
+# Process paragraphs: collect consecutive non-blank prose lines containing
+# template syntax and wrap each group in <div v-pre>...</div>
+
+i = 0
+while i < len(lines):
+    stripped = lines[i].strip()
+
+    # Track code fences
     if stripped.startswith('\`\`\`'):
         if not in_fence:
             in_fence = True
@@ -66,21 +73,35 @@ for line in lines:
         else:
             in_fence = False
             fence_lang = ''
-        result.append(line)
+        result.append(lines[i])
+        i += 1
         continue
 
-    has_template = '{{' in line or '{%' in line or '{#' in line
+    has_template = '{{' in lines[i] or '{%' in lines[i] or '{#' in lines[i]
 
     if has_template:
         if in_fence:
-            # Only escape in HTML-like code fences where Vue parses the content
             if fence_lang not in SAFE_LANGS:
-                line = escape_line(line)
+                result.append(escape_line(lines[i]))
+            else:
+                result.append(lines[i])
         else:
-            # Always escape outside code fences
-            line = escape_line(line)
+            # Prose line with template syntax: wrap in v-pre div
+            # Collect consecutive non-blank lines that are part of this paragraph
+            para_lines = []
+            while i < len(lines) and lines[i].strip() != '' and not lines[i].strip().startswith('\`\`\`'):
+                para_lines.append(lines[i])
+                i += 1
+            result.append('<div v-pre>')
+            result.append('')
+            result.extend(para_lines)
+            result.append('')
+            result.append('</div>')
+            continue
+    else:
+        result.append(lines[i])
 
-    result.append(line)
+    i += 1
 
 print('\n'.join(result), end='')
 "
@@ -98,6 +119,9 @@ sync_book() {
   fi
 
   mkdir -p "$dest"
+
+  # Remove old numbered chapter files before syncing (preserves index.md and other non-chapter files)
+  rm -f "$dest"/[0-9]*.md
 
   local count=0
   for chapter in "$src"/[0-9]*.md; do

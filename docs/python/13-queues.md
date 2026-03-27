@@ -12,21 +12,21 @@ Picture a store that sends order confirmations, generates invoices, and syncs in
 
 ## 2. Queue Configuration
 
-Tina4 Python includes a built-in queue that requires zero additional setup. The default backend is SQLite.
+Tina4 Python includes a built-in queue that requires zero additional setup. The default backend is file-based.
 
-### Default (SQLite Queue)
+### Default (File Queue)
 
-The SQLite queue works out of the box with no extra configuration:
+The file queue works out of the box with no extra configuration:
 
 ```dotenv
-# No TINA4_QUEUE_BACKEND needed -- sqlite is the default
+# No TINA4_QUEUE_BACKEND needed -- file is the default
 ```
 
 The first time you push a message, Tina4 automatically creates the queue storage.
 
 ### Switching to RabbitMQ
 
-When your application outgrows the SQLite queue (millions of messages, multiple services, pub/sub patterns), switch to RabbitMQ:
+When your application outgrows the file queue (millions of messages, multiple services, pub/sub patterns), switch to RabbitMQ:
 
 ```dotenv
 TINA4_QUEUE_BACKEND=rabbitmq
@@ -67,7 +67,7 @@ Install the driver:
 uv add pymongo
 ```
 
-The key point: your code stays the same. The `Queue` class, `push`, `pop`, and `consume` work identically whether the backend is SQLite, RabbitMQ, Kafka, or MongoDB. The backend is configured via environment variables.
+The key point: your code stays the same. The `Queue` class, `push`, `pop`, and `consume` work identically whether the backend is file, RabbitMQ, Kafka, or MongoDB. The backend is configured via environment variables.
 
 ---
 
@@ -88,7 +88,7 @@ message_id = queue.push({
 
 The `topic` argument names the queue. The payload is any dictionary that can be serialized to JSON.
 
-> **Backend configuration:** The queue backend is selected via environment variables, not constructor parameters. Set `TINA4_QUEUE_BACKEND` to `sqlite` (default), `rabbitmq`, `kafka`, or `mongodb`. For the SQLite backend, the `DATABASE_URL` environment variable controls the database path. See Section 2 and Section 8 for full details.
+> **Backend configuration:** The queue backend is selected via environment variables, not constructor parameters. Set `TINA4_QUEUE_BACKEND` to `file` (default), `rabbitmq`, `kafka`, or `mongodb`. For the file backend, the `TINA4_QUEUE_PATH` environment variable controls the storage directory (default: data/queue). See Section 2 and Section 8 for full details.
 
 ### Convenience Method: produce
 
@@ -277,10 +277,10 @@ The user gets an instant response. The email, invoice, and warehouse sync happen
 
 Switching backends is a config change, not a code change.
 
-### Development: SQLite (default)
+### Development: File (default)
 
 ```dotenv
-# No config needed -- sqlite is the default
+# No config needed -- file is the default
 ```
 
 ### Production: RabbitMQ
@@ -503,13 +503,13 @@ After the consumer has retried a job to `bad@example.com` three times, `queue.de
 
 **Fix:** Monitor dead letters with `queue.dead_letters()`. Set up an alert when the count exceeds a threshold. Investigate the root cause, fix it, then call `queue.retry_failed()` or `queue.purge("failed")`.
 
-### 5. SQLite for production
+### 5. File backend for production
 
-**Problem:** Multiple workers cause lock contention on SQLite.
+**Problem:** Multiple workers cause contention on file-based queue storage.
 
-**Cause:** SQLite supports one writer at a time.
+**Cause:** File-based storage supports one writer at a time.
 
-**Fix:** For production with multiple workers, switch to RabbitMQ, Kafka, or MongoDB via the `TINA4_QUEUE_BACKEND` environment variable. SQLite is fine for development and single-worker setups.
+**Fix:** For production with multiple workers, switch to RabbitMQ, Kafka, or MongoDB via the `TINA4_QUEUE_BACKEND` environment variable. The file backend is fine for development and single-worker setups.
 
 ### 6. Environment-specific topic collision
 

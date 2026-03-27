@@ -267,7 +267,7 @@ The generated route file:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::group("/api", function () {
 

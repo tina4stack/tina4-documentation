@@ -377,7 +377,36 @@ Router.get("/room/{roomName}", async (req, res) => {
 
 ---
 
-## 12. Gotchas
+## 12. Scaling with a Backplane
+
+When you run a single server instance, `broadcast()` reaches every connected client. But in production you often run multiple instances behind a load balancer. Each instance only knows about its own connections. A message broadcast on instance A never reaches clients connected to instance B.
+
+A backplane solves this. It relays WebSocket messages across all instances using a shared pub/sub channel. Tina4 supports Redis as a backplane out of the box.
+
+### Configuration
+
+Set two environment variables in your `.env`:
+
+```dotenv
+TINA4_WS_BACKPLANE=redis
+TINA4_WS_BACKPLANE_URL=redis://localhost:6379
+```
+
+When `TINA4_WS_BACKPLANE` is set, every `broadcast()` call publishes the message to Redis. Every instance subscribes to the same channel and forwards the message to its local connections. No code changes required -- your existing WebSocket routes work as before.
+
+### Requirements
+
+The Redis backplane requires a Redis client package as an optional dependency:
+
+```bash
+npm install ioredis
+```
+
+If `TINA4_WS_BACKPLANE` is not set (the default), Tina4 broadcasts only to local connections. This is fine for single-instance deployments.
+
+---
+
+## 13. Gotchas
 
 ### 1. WebSocket Needs a Persistent Server
 

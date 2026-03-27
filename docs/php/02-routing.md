@@ -10,7 +10,7 @@ The simplest possible route:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::get("/hello", function ($request, $response) {
     return $response->json(["message" => "Hello, World!"]);
@@ -33,7 +33,7 @@ Five methods. Five static calls on the `Route` class.
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::get("/products", function ($request, $response) {
     return $response->json(["action" => "list all products"]);
@@ -113,7 +113,7 @@ Curly braces capture values from the URL.
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::get("/users/{id}/posts/{postId}", function ($request, $response) {
     $userId = $request->params["id"];
@@ -142,7 +142,7 @@ Add a colon and a type to enforce constraints:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::get("/orders/{id:int}", function ($request, $response) {
     $id = $request->params["id"]; // This is now an integer
@@ -189,7 +189,7 @@ Here is a complete example showing the most commonly used typed parameters toget
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 // Integer parameter -- only digits match, auto-cast to integer
 Router::get("/products/{id:int}", function ($request, $response) {
@@ -259,7 +259,7 @@ Key-value pairs after the `?` in a URL. Access them through `$request->query`:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::get("/search", function ($request, $response) {
     $q = $request->query["q"] ?? "";
@@ -293,7 +293,7 @@ Shared prefix. No repetition.
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::group("/api/v1", function () {
 
@@ -338,7 +338,7 @@ Groups nest:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 Router::group("/api", function () {
     Router::group("/v1", function () {
@@ -383,7 +383,7 @@ Pass the middleware name as the third argument:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 function logRequest($request, $response, $next) {
     $start = microtime(true);
@@ -410,7 +410,7 @@ A gate that checks for an API key:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 function requireApiKey($request, $response, $next) {
     $apiKey = $request->headers["X-API-Key"] ?? "";
@@ -451,7 +451,7 @@ Third argument to `Router::group()`. Every route inside inherits it.
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 function requireAuth($request, $response, $next) {
     $token = $request->headers["Authorization"] ?? "";
@@ -502,7 +502,7 @@ When your application has global authentication, `@noauth` exempts specific rout
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 /**
  * @noauth
@@ -523,7 +523,7 @@ The `@noauth` decorator tells Tina4 to skip authentication for this route, even 
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 /**
  * @secured
@@ -644,15 +644,15 @@ Define this last. Tina4 matches routes in registration order -- first match wins
 You can also create a custom 404 template at `src/templates/errors/404.twig`:
 
 ```html
-{% extends "base.html" %}
+&#123;% extends "base.html" %&#125;
 
-{% block title %}Not Found{% endblock %}
+&#123;% block title %&#125;Not Found&#123;% endblock %&#125;
 
-{% block content %}
+&#123;% block content %&#125;
     <h1>404 - Page Not Found</h1>
     <p>The page you are looking for does not exist.</p>
     <a href="/">Go back home</a>
-{% endblock %}
+&#123;% endblock %&#125;
 ```
 
 Tina4 uses this template for any unmatched route when the file exists.
@@ -818,7 +818,7 @@ Create `src/routes/product-api.php`:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 // In-memory product store (resets on server restart)
 $products = [

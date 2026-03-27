@@ -6,17 +6,19 @@ JWT tokens handle APIs. Traditional web applications need more. A shopping cart 
 
 Picture an e-commerce site. A customer adds three items to their cart. Navigates to a product page. Comes back to the cart. Without sessions, the cart is empty every time. Sessions give the server memory. Each browser gets its own state, preserved across requests.
 
+Sessions are auto-started. Every route handler receives `request.session` ready to use. No manual setup. No configuration required for the default file backend.
+
 ---
 
 ## 2. Session Configuration
 
-Set the session backend in `.env`:
+The default backend is file-based sessions. They work out of the box with no additional dependencies.
+
+To change the backend, set `TINA4_SESSION_BACKEND` in `.env`:
 
 ```dotenv
-TINA4_SESSION_HANDLER=file
+TINA4_SESSION_BACKEND=file
 ```
-
-That is the default. File-based sessions work out of the box with no additional dependencies.
 
 ### Available Backends
 
@@ -31,7 +33,7 @@ That is the default. File-based sessions work out of the box with no additional 
 ### Redis Configuration
 
 ```dotenv
-TINA4_SESSION_HANDLER=redis
+TINA4_SESSION_BACKEND=redis
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
 TINA4_SESSION_PASSWORD=
@@ -46,7 +48,7 @@ uv add redis
 ### MongoDB Configuration
 
 ```dotenv
-TINA4_SESSION_HANDLER=mongodb
+TINA4_SESSION_BACKEND=mongodb
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=27017
 TINA4_SESSION_DATABASE=tina4_sessions
@@ -55,23 +57,54 @@ TINA4_SESSION_DATABASE=tina4_sessions
 ### Valkey Configuration
 
 ```dotenv
-TINA4_SESSION_HANDLER=valkey
+TINA4_SESSION_BACKEND=valkey
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
 ```
 
+### Database Sessions
+
+```dotenv
+TINA4_SESSION_BACKEND=database
+```
+
+Stores sessions in the `tina4_session` table using your existing database connection (`DATABASE_URL`). The table is auto-created on first use.
+
 ### Session Lifetime
 
 ```dotenv
-TINA4_SESSION_LIFETIME=3600       # 1 hour (default)
-TINA4_SESSION_NAME=tina4_session  # Cookie name for session ID
+TINA4_SESSION_TTL=3600  # 1 hour in seconds (default)
 ```
+
+### Session Cookie
+
+The session cookie is named `tina4_session`. It is `HttpOnly` and `SameSite=Lax` by default. Tina4 manages it automatically -- you never need to set or read it yourself.
 
 ---
 
-## 3. Reading and Writing Session Data
+## 3. The Session API
 
-Access session data through `request.session`. It behaves like a Python dictionary:
+Access session data through `request.session`. It is available in every route handler with zero configuration.
+
+### Full API Reference
+
+| Method | Description |
+|--------|-------------|
+| `request.session.set(key, value)` | Store a value |
+| `request.session.get(key, default)` | Retrieve a value (with optional default) |
+| `request.session.delete(key)` | Remove a key |
+| `request.session.has(key)` | Check if a key exists |
+| `request.session.clear()` | Remove all session data |
+| `request.session.destroy()` | Destroy the session entirely |
+| `request.session.save()` | Persist session data (auto-called after response) |
+| `request.session.regenerate()` | Generate a new session ID, preserve data |
+| `request.session.flash(key, value)` | Set flash data (one-time read) |
+| `request.session.flash(key)` | Read and remove flash data |
+| `request.session.all()` | Get all session data as a dictionary |
+
+---
+
+## 4. Reading and Writing Session Data
 
 ### Writing to the Session
 
@@ -81,10 +114,10 @@ from tina4_python.core.router import post
 @post("/login-form")
 async def login_form(request, response):
     # After validating credentials...
-    request.session["user_id"] = 42
-    request.session["user_name"] = "Alice"
-    request.session["role"] = "admin"
-    request.session["logged_in"] = True
+    request.session.set("user_id", 42)
+    request.session.set("user_name", "Alice")
+    request.session.set("role", "admin")
+    request.session.set("logged_in", True)
 
     return response.redirect("/dashboard")
 ```
@@ -100,8 +133,8 @@ async def dashboard(request, response):
         return response.redirect("/login")
 
     return response.render("dashboard.html", {
-        "user_name": request.session["user_name"],
-        "role": request.session["role"]
+        "user_name": request.session.get("user_name"),
+        "role": request.session.get("role")
     })
 ```
 
@@ -109,10 +142,7 @@ async def dashboard(request, response):
 
 ```python
 # Delete a single key
-del request.session["temp_data"]
-
-# Or use pop with a default
-request.session.pop("temp_data", None)
+request.session.delete("temp_data")
 
 # Clear all session data (logout)
 @post("/logout")
@@ -124,8 +154,8 @@ async def logout(request, response):
 ### Checking if a Key Exists
 
 ```python
-if "user_id" in request.session:
-    user_id = request.session["user_id"]
+if request.session.has("user_id"):
+    user_id = request.session.get("user_id")
 else:
     user_id = None
 
@@ -133,11 +163,17 @@ else:
 user_id = request.session.get("user_id", None)
 ```
 
+### Getting All Session Data
+
+```python
+all_data = request.session.all()
+```
+
 ---
 
-## 4. Flash Messages
+## 5. Flash Messages
 
-Flash messages are session values that are automatically deleted after they are read once. They are perfect for showing success or error messages after a redirect.
+Flash messages are session values that exist for exactly one read. Set them before a redirect. Read them on the next request. They vanish automatically after being read.
 
 ### Setting a Flash Message
 
@@ -146,19 +182,19 @@ Flash messages are session values that are automatically deleted after they are 
 async def submit_contact(request, response):
     # Process the form...
 
-    request.session["flash_message"] = "Your message has been sent!"
-    request.session["flash_type"] = "success"
+    request.session.flash("message", "Your message has been sent!")
+    request.session.flash("message_type", "success")
 
     return response.redirect("/contact")
 ```
 
-### Reading and Clearing a Flash Message
+### Reading a Flash Message
 
 ```python
 @get("/contact")
 async def contact_page(request, response):
-    flash_message = request.session.pop("flash_message", None)
-    flash_type = request.session.pop("flash_type", "info")
+    flash_message = request.session.flash("message")
+    flash_type = request.session.flash("message_type") or "info"
 
     return response.render("contact.html", {
         "flash_message": flash_message,
@@ -166,21 +202,21 @@ async def contact_page(request, response):
     })
 ```
 
-The `pop()` method reads the value and deletes it from the session in one step. The next time the user visits `/contact`, the flash message will be gone.
+Calling `request.session.flash(key)` with only a key reads the value and removes it in one step. The next time the user visits `/contact`, the flash message will be gone.
 
 ### Flash Messages in Templates
 
 ```html
-{% if flash_message %}
-    <div class="alert alert-{{ flash_type }}">
-        {{ flash_message }}
+&#123;% if flash_message %&#125;
+    <div class="alert alert-&#123;&#123; flash_type &#125;&#125;">
+        &#123;&#123; flash_message &#125;&#125;
     </div>
-{% endif %}
+&#123;% endif %&#125;
 ```
 
 ---
 
-## 5. Cookies
+## 6. Cookies
 
 Cookies are small data fragments stored in the browser. Unlike sessions, cookies travel with every request and are visible to JavaScript (unless `httpOnly` is set).
 
@@ -259,7 +295,7 @@ The rule: sensitive data or data the client should not see goes in sessions. Non
 
 ---
 
-## 6. Remember Me
+## 7. Remember Me
 
 The "remember me" pattern extends the session lifetime when the user checks a box on the login form:
 
@@ -279,14 +315,14 @@ async def login_form(request, response):
     )
 
     if user is None or not Auth.check_password(body.get("password", ""), user["password_hash"]):
-        request.session["flash_message"] = "Invalid email or password"
-        request.session["flash_type"] = "error"
+        request.session.flash("message", "Invalid email or password")
+        request.session.flash("message_type", "error")
         return response.redirect("/login")
 
     # Set session data
-    request.session["user_id"] = user["id"]
-    request.session["user_name"] = user["name"]
-    request.session["logged_in"] = True
+    request.session.set("user_id", user["id"])
+    request.session.set("user_name", user["name"])
+    request.session.set("logged_in", True)
 
     # Handle "remember me"
     remember = body.get("remember_me") == "on"
@@ -323,16 +359,16 @@ async def remember_me_middleware(request, response, next_handler):
             )
 
             if user:
-                request.session["user_id"] = user["id"]
-                request.session["user_name"] = user["name"]
-                request.session["logged_in"] = True
+                request.session.set("user_id", user["id"])
+                request.session.set("user_name", user["name"])
+                request.session.set("logged_in", True)
 
     return await next_handler(request, response)
 ```
 
 ---
 
-## 7. Session Security
+## 8. Session Security
 
 ### Regenerate Session ID After Login
 
@@ -346,25 +382,44 @@ async def login_form(request, response):
     # Regenerate session ID (prevents session fixation)
     request.session.regenerate()
 
-    request.session["user_id"] = user["id"]
-    request.session["logged_in"] = True
+    request.session.set("user_id", user["id"])
+    request.session.set("logged_in", True)
 
     return response.redirect("/dashboard")
 ```
 
+### Destroy a Session
+
+To completely destroy a session (not just clear its data):
+
+```python
+@post("/logout")
+async def logout(request, response):
+    request.session.destroy()
+    return response.redirect("/login")
+```
+
 ### Secure Cookie Settings
 
-Always use these settings for the session cookie in production:
+The session cookie (`tina4_session`) is `HttpOnly` and `SameSite=Lax` by default. For production, ensure HTTPS:
 
 ```dotenv
 TINA4_SESSION_SECURE=true     # Only send over HTTPS
-TINA4_SESSION_HTTPONLY=true   # Not accessible via JavaScript
-TINA4_SESSION_SAMESITE=Lax   # Prevent CSRF via cross-site requests
+TINA4_SESSION_HTTPONLY=true   # Not accessible via JavaScript (default)
+TINA4_SESSION_SAMESITE=Lax   # Prevent CSRF via cross-site requests (default)
 ```
+
+`TINA4_SESSION_SAMESITE` controls cross-site cookie behavior:
+
+| Value | Behavior |
+|-------|----------|
+| `Strict` | Never sent with cross-site requests. Safest. Breaks some flows (clicking links from email). |
+| `Lax` | Sent with top-level navigations (clicking links) but not cross-site API calls. Good default. |
+| `None` | Always sent. Requires `TINA4_SESSION_SECURE=true`. Only for cross-site cookie access. |
 
 ---
 
-## 8. Exercise: Build a Shopping Cart
+## 9. Exercise: Build a Shopping Cart
 
 Build a shopping cart using sessions.
 
@@ -381,7 +436,7 @@ Build a shopping cart using sessions.
 | `POST` | `/cart/clear` | Clear the entire cart |
 | `GET` | `/cart/api` | Get cart as JSON (for AJAX) |
 
-2. The cart is stored in `request.session["cart"]` as a list of dictionaries
+2. The cart is stored in the session via `request.session.set("cart", [...])`
 3. Each cart item has: `product_id`, `name`, `price`, `quantity`
 4. Adding an existing product increments its quantity
 5. The cart page shows items, quantities, line totals, and a grand total
@@ -434,7 +489,7 @@ curl -X POST http://localhost:7145/cart/clear -c cookies.txt -b cookies.txt
 
 ---
 
-## 9. Solution
+## 10. Solution
 
 Create `src/routes/cart.py`:
 
@@ -455,7 +510,7 @@ def get_cart(session):
 
 
 def save_cart(session, cart):
-    session["cart"] = cart
+    session.set("cart", cart)
 
 
 def calculate_totals(cart):
@@ -469,8 +524,8 @@ def calculate_totals(cart):
 async def view_cart(request, response):
     cart = get_cart(request.session)
     cart, grand_total = calculate_totals(cart)
-    flash_message = request.session.pop("flash_message", None)
-    flash_type = request.session.pop("flash_type", "info")
+    flash_message = request.session.flash("message")
+    flash_type = request.session.flash("message_type") or "info"
 
     return response.render("cart.html", {
         "cart": cart,
@@ -513,8 +568,8 @@ async def add_to_cart(request, response):
         if item["product_id"] == product_id:
             item["quantity"] += quantity
             save_cart(request.session, cart)
-            request.session["flash_message"] = f"Updated {product['name']} quantity"
-            request.session["flash_type"] = "success"
+            request.session.flash("message", f"Updated {product['name']} quantity")
+            request.session.flash("message_type", "success")
             return response.json({"message": f"Updated {product['name']} quantity", "cart": cart})
 
     # Add new item
@@ -526,8 +581,8 @@ async def add_to_cart(request, response):
     })
     save_cart(request.session, cart)
 
-    request.session["flash_message"] = f"Added {product['name']} to cart"
-    request.session["flash_type"] = "success"
+    request.session.flash("message", f"Added {product['name']} to cart")
+    request.session.flash("message_type", "success")
 
     return response.json({"message": f"Added {product['name']}", "cart": cart}, 201)
 
@@ -544,11 +599,11 @@ async def update_cart(request, response):
         if item["product_id"] == product_id:
             if quantity < 1:
                 cart.remove(item)
-                request.session["flash_message"] = f"Removed {item['name']} from cart"
+                request.session.flash("message", f"Removed {item['name']} from cart")
             else:
                 item["quantity"] = quantity
-                request.session["flash_message"] = f"Updated {item['name']} quantity to {quantity}"
-            request.session["flash_type"] = "success"
+                request.session.flash("message", f"Updated {item['name']} quantity to {quantity}")
+            request.session.flash("message_type", "success")
             save_cart(request.session, cart)
             return response.json({"message": "Cart updated", "cart": cart})
 
@@ -564,8 +619,8 @@ async def remove_from_cart(request, response):
         if item["product_id"] == product_id:
             cart.remove(item)
             save_cart(request.session, cart)
-            request.session["flash_message"] = f"Removed {item['name']} from cart"
-            request.session["flash_type"] = "success"
+            request.session.flash("message", f"Removed {item['name']} from cart")
+            request.session.flash("message_type", "success")
             return response.json({"message": f"Removed {item['name']}", "cart": cart})
 
     return response.json({"error": "Product not in cart"}, 404)
@@ -574,8 +629,8 @@ async def remove_from_cart(request, response):
 @post("/cart/clear")
 async def clear_cart(request, response):
     save_cart(request.session, [])
-    request.session["flash_message"] = "Cart cleared"
-    request.session["flash_type"] = "info"
+    request.session.flash("message", "Cart cleared")
+    request.session.flash("message_type", "info")
     return response.json({"message": "Cart cleared", "cart": []})
 ```
 
@@ -594,7 +649,7 @@ async def clear_cart(request, response):
 
 ---
 
-## 10. Gotchas
+## 11. Gotchas
 
 ### 1. Session lost between requests
 
@@ -610,7 +665,7 @@ async def clear_cart(request, response):
 
 **Cause:** Sessions are serialized to JSON (or pickled). Complex Python objects cannot be serialized directly.
 
-**Fix:** Convert objects to strings or dictionaries before storing: `request.session["login_time"] = datetime.now().isoformat()`.
+**Fix:** Convert objects to strings or dictionaries before storing: `request.session.set("login_time", datetime.now().isoformat())`.
 
 ### 3. Cookie not sent on cross-origin requests
 
@@ -634,7 +689,7 @@ async def clear_cart(request, response):
 
 **Cause:** Another application on the same domain uses the same session cookie name.
 
-**Fix:** Set a unique session name: `TINA4_SESSION_NAME=myapp_session` in `.env`.
+**Fix:** The session cookie name (`tina4_session`) is managed by Tina4. If you need to change it, set `TINA4_SESSION_NAME=myapp_session` in `.env`.
 
 ### 6. Secure cookies on localhost
 
@@ -648,6 +703,6 @@ async def clear_cart(request, response):
 
 **Problem:** A flash message appears on the page, but when you refresh, it shows again.
 
-**Cause:** You read the flash message from the session but did not remove it. Using `request.session.get()` reads without deleting.
+**Cause:** You read the flash message but did not remove it. Using `request.session.get()` reads without deleting.
 
-**Fix:** Use `request.session.pop("flash_message", None)` instead of `request.session.get()`. The `pop()` method reads and deletes in one step.
+**Fix:** Use `request.session.flash("message")` to read flash data. It reads and deletes in one step. Do not use `request.session.get()` for flash messages.

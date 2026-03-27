@@ -1,7 +1,5 @@
 # Chapter 7: Authentication
 
-<div v-pre>
-
 ## 1. Locking the Door
 
 Every endpoint you have built is public. Anyone with the URL can read, create, update, and delete data. Fine for a tutorial. Reckless for production. A real application needs to know who is making a request and whether they have permission.
@@ -430,18 +428,22 @@ In your template, include the CSRF token in every form:
 
 ```html
 <form method="POST" action="/profile/update">
-    {{ form_token() }}
+    &#123;&#123; form_token() &#125;&#125;
 
     <div class="form-group">
         <label for="name">Name</label>
-        <input type="text" name="name" id="name" value="{{ user.name }}">
+        <input type="text" name="name" id="name" value="&#123;&#123; user.name &#125;&#125;">
     </div>
 
     <button type="submit">Update Profile</button>
 </form>
 ```
 
+<div v-pre>
+
 `{{ form_token() }}` renders a hidden input field:
+
+</div>
 
 ```html
 <input type="hidden" name="_token" value="abc123randomtoken456">
@@ -852,6 +854,3 @@ end
 **Cause:** Query parameters are visible in many places where headers are not.
 
 **Fix:** Always send tokens in the `Authorization` header, never in the URL. The only exception is WebSocket connections, where the initial HTTP upgrade request cannot carry custom headers -- use a short-lived token for that case.
-
-
-</div>

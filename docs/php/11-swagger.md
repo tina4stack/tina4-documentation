@@ -87,7 +87,7 @@ Doc-block comments above route definitions:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 /**
  * List all products
@@ -421,7 +421,7 @@ All annotation features together:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 /**
  * List all users
@@ -566,7 +566,7 @@ Create `src/routes/user-api-documented.php`:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 
 /**
  * Update a user

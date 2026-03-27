@@ -597,20 +597,20 @@ Create `src/templates/emails/task-assigned.html`:
         <h2 style="margin: 0;">New Task Assigned</h2>
     </div>
     <div style="padding: 20px; background: white;">
-        <p>Hi {{ assignee_name }},</p>
-        <p><strong>{{ creator_name }}</strong> assigned you a new task:</p>
+        <p>Hi &#123;&#123; assignee_name &#125;&#125;,</p>
+        <p><strong>&#123;&#123; creator_name &#125;&#125;</strong> assigned you a new task:</p>
 
         <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; border-left: 4px solid #1a1a2e;">
-            <h3 style="margin-top: 0;">{{ task_title }}</h3>
-            <p>{{ task_description }}</p>
+            <h3 style="margin-top: 0;">&#123;&#123; task_title &#125;&#125;</h3>
+            <p>&#123;&#123; task_description &#125;&#125;</p>
             <table style="width: 100%;">
-                <tr><td><strong>Priority:</strong></td><td>{{ task_priority }}</td></tr>
-                <tr><td><strong>Due:</strong></td><td>{{ task_due_date }}</td></tr>
+                <tr><td><strong>Priority:</strong></td><td>&#123;&#123; task_priority &#125;&#125;</td></tr>
+                <tr><td><strong>Due:</strong></td><td>&#123;&#123; task_due_date &#125;&#125;</td></tr>
             </table>
         </div>
 
         <p style="margin-top: 16px;">
-            <a href="{{ task_url }}" style="background: #1a1a2e; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+            <a href="&#123;&#123; task_url &#125;&#125;" style="background: #1a1a2e; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
                 View Task
             </a>
         </p>
@@ -626,11 +626,11 @@ Create `src/templates/emails/task-assigned.html`:
 Create `src/templates/dashboard.html`:
 
 ```html
-{% extends "base.html" %}
+&#123;% extends "base.html" %&#125;
 
-{% block title %}TaskFlow Dashboard{% endblock %}
+&#123;% block title %&#125;TaskFlow Dashboard&#123;% endblock %&#125;
 
-{% block content %}
+&#123;% block content %&#125;
 <h1>Dashboard</h1>
 
 <div id="stats" class="row mb-4">
@@ -733,7 +733,7 @@ Create `src/templates/dashboard.html`:
         }
     });
 </script>
-{% endblock %}
+&#123;% endblock %&#125;
 ```
 
 ---

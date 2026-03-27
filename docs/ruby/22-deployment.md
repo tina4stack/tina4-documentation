@@ -6,6 +6,8 @@ The app works on `localhost:7147`. Now it needs to run 24/7 on a real server. Ha
 
 This chapter covers everything for a production deployment. Environment configuration. Docker packaging. Web server setup. SSL. Scaling. Monitoring. Graceful shutdown.
 
+When you run `tina4 init`, the framework generates a production-ready `Dockerfile` and `.dockerignore` in your project root. The Dockerfile uses a multi-stage build: the first stage installs gem dependencies and the second stage copies only the runtime artifacts into a slim image. You do not need to write a Dockerfile from scratch -- the generated one is a solid starting point that you can customise as needed.
+
 ---
 
 ## 2. Production .env Configuration

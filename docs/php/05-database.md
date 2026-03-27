@@ -96,7 +96,7 @@ Access the database through the global `Tina4\Database` class:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 use Tina4\Database;
 
 Router::get("/api/test-db", function ($request, $response) {
@@ -245,7 +245,7 @@ $db->execute("CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY, message T
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 use Tina4\Database;
 
 Router::get("/api/products", function ($request, $response) {
@@ -310,7 +310,7 @@ The database driver handles escaping. Your input never touches the SQL string.
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 use Tina4\Database;
 
 Router::get("/api/products/search", function ($request, $response) {
@@ -360,7 +360,7 @@ Multiple operations that must succeed or fail together:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 use Tina4\Database;
 
 Router::post("/api/orders", function ($request, $response) {
@@ -461,7 +461,7 @@ if ($db->tableExists("products")) {
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 use Tina4\Database;
 
 Router::get("/api/schema", function ($request, $response) {
@@ -844,7 +844,7 @@ Create `src/routes/notes.php`:
 
 ```php
 <?php
-use Tina4Router;
+use Tina4\Router;
 use Tina4\Database;
 
 // List all notes with optional filters
