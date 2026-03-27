@@ -315,7 +315,7 @@ Private and public keys for RS256 JWT signing. In `.gitignore`. Generated once, 
 
 One file controls everything. Not YAML. Not TOML. Not JSON config objects. A `.env` file at the project root. Key-value pairs. Plain text.
 
-```env
+```dotenv
 # .env
 TINA4_DEBUG=true
 TINA4_PORT=7145
@@ -337,7 +337,7 @@ The constructor wins. Always. The `.env` file is second. The hardcoded default i
 
 ### Example: Priority Chain in Practice
 
-```env
+```dotenv
 # .env
 TINA4_PORT=8080
 ```
@@ -367,7 +367,7 @@ Environment variables are strings. Booleans do not exist in `.env` files. Tina4 
 
 Everything else is `false`. Empty strings. Unset variables. Typos. If it is not on the list, it is `false`.
 
-```env
+```dotenv
 TINA4_DEBUG=true
 TINA4_DEBUG=True
 TINA4_DEBUG=1
@@ -377,7 +377,7 @@ TINA4_DEBUG=on
 
 All equivalent. All enable debug mode.
 
-```env
+```dotenv
 TINA4_DEBUG=false
 TINA4_DEBUG=0
 TINA4_DEBUG=no

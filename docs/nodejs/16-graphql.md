@@ -170,7 +170,7 @@ curl -X POST http://localhost:7148/graphql \
 
 ## 8. Auto-Generating Schema from ORM Models
 
-```env
+```dotenv
 TINA4_GRAPHQL_AUTO_SCHEMA=true
 ```
 

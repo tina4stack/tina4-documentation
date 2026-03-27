@@ -6,7 +6,7 @@ Every piece of Tina4 configuration lives in one file. A `.env` at the root of yo
 
 A `.env` file is plain text. Key-value pairs. Nothing more.
 
-```env
+```dotenv
 # This is a comment
 DATABASE_URL=sqlite:///data/app.db
 TINA4_DEBUG=true
@@ -40,7 +40,7 @@ The `.env` file holds secrets. Database passwords. JWT keys. API tokens. It belo
 
 Commit a `.env.example` instead. Placeholder values. A map for the next developer:
 
-```env
+```dotenv
 # .env.example -- copy to .env and fill in real values
 DATABASE_URL=sqlite:///data/app.db
 TINA4_DEBUG=false
@@ -68,7 +68,7 @@ Three levels. Strict order. No exceptions.
 
 ### Example
 
-```env
+```dotenv
 # .env
 TINA4_PORT=8080
 ```
@@ -120,7 +120,7 @@ Environment variables are strings. The `.env` file has no concept of `true` or `
 
 Write whichever style your team prefers:
 
-```env
+```dotenv
 # All of these enable debug mode
 TINA4_DEBUG=true
 TINA4_DEBUG=1
@@ -154,7 +154,7 @@ Three variables control the server. Port, host, debug mode. Everything else flow
 
 **Connection string formats:**
 
-```env
+```dotenv
 # SQLite (default -- no credentials needed)
 DATABASE_URL=sqlite:///data/app.db
 
@@ -181,7 +181,7 @@ Seven database engines. One variable. The driver is selected by the URL scheme. 
 
 **Gotcha:** Special characters in your database password -- `@`, `#`, `:`, `/` -- will break URL parsing. URL-encode them (`@` becomes `%40`) or split the credentials out:
 
-```env
+```dotenv
 DATABASE_URL=postgresql://hostname:5432/mydb
 DATABASE_USERNAME=admin
 DATABASE_PASSWORD=p@ss#word/123
@@ -242,7 +242,7 @@ Rotation, compression, and cleanup happen without intervention. The framework ma
 
 **Example for production:**
 
-```env
+```dotenv
 CORS_ORIGINS=https://myapp.com,https://admin.myapp.com
 CORS_METHODS=GET,POST,PUT,DELETE
 CORS_HEADERS=Content-Type,Authorization,X-Request-ID
@@ -324,14 +324,14 @@ Five backends. File-based works for single-server deployments. Redis or Valkey f
 
 **Development -- start simple:**
 
-```env
+```dotenv
 # Database queue -- works out of the box, no additional services needed
 TINA4_QUEUE_BACKEND=database
 ```
 
 **Production -- add resilience:**
 
-```env
+```dotenv
 TINA4_QUEUE_BACKEND=rabbitmq
 RABBITMQ_URL=amqp://user:password@rabbitmq-host:5672/vhost
 QUEUE_FALLBACK_DRIVER=database
@@ -407,7 +407,7 @@ The `.broken` system turns unhandled exceptions into infrastructure signals. An 
 
 Getting started? One line:
 
-```env
+```dotenv
 TINA4_DEBUG=true
 ```
 
@@ -426,7 +426,7 @@ One line. A working development environment. Add variables when you need them. N
 
 ## Minimal .env for Production
 
-```env
+```dotenv
 TINA4_DEBUG=false
 DATABASE_URL=postgresql://app_user:strong_password@db-host:5432/myapp
 JWT_SECRET=a-very-long-random-string-at-least-32-characters
@@ -445,7 +445,7 @@ Ten lines. A production application. Debug disabled. Real database. Signed token
 
 Copy this to your `.env.example` as a starting point:
 
-```env
+```dotenv
 # =============================================================================
 # Tina4 Environment Configuration
 # Copy this file to .env and fill in your values

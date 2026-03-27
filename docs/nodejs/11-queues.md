@@ -195,27 +195,27 @@ Switching backends is a config change, not a code change.
 
 ### Default: File
 
-```env
+```dotenv
 # No config needed -- file is the default
 ```
 
 ### RabbitMQ
 
-```env
+```dotenv
 TINA4_QUEUE_BACKEND=rabbitmq
 TINA4_QUEUE_URL=amqp://user:pass@localhost:5672
 ```
 
 ### Kafka
 
-```env
+```dotenv
 TINA4_QUEUE_BACKEND=kafka
 TINA4_QUEUE_URL=localhost:9092
 ```
 
 ### MongoDB
 
-```env
+```dotenv
 TINA4_QUEUE_BACKEND=mongodb
 TINA4_QUEUE_URL=mongodb://user:pass@localhost:27017/tina4
 ```

@@ -12,7 +12,7 @@ This chapter covers everything for a production deployment. Environment configur
 
 Create a production `.env`:
 
-```env
+```dotenv
 # Core
 TINA4_DEBUG=false
 TINA4_LOG_LEVEL=WARNING
@@ -348,7 +348,7 @@ tail -f logs/puma.stdout.log
 
 Enable metrics in `.env`:
 
-```env
+```dotenv
 TINA4_METRICS=true
 ```
 

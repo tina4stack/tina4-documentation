@@ -25,22 +25,22 @@ Tina4 Python is ASGI-compliant and async-focused. It targets APIs and full-stack
 | **Hot-Reloading** | Jurigged (code hot-patch) | Uvicorn --reload | External tools | External tools | No | No |
 | **GraphQL** | Built-in | No | No | No | No | No |
 
-### Performance Benchmarks (Carbonah v3)
+### HTTP Throughput Benchmarks (Python 3.13.5)
 
-Benchmarks from the [Carbonah benchmark suite](https://github.com/tina4stack/carbonah). Hardware: Apple MacBook Pro (M-series), macOS. Subprocess-isolated, warm page cache, SQLite in-memory, 1,000 iterations per operation, 3 runs averaged. Python 3.13.5, tina4python v3.8.3.
+Hardware: Apple MacBook Pro (M-series), macOS. Tools: hey (5,000 requests, 50 concurrent), wrk (4 threads, 50 connections, 10s), ab (5,000 requests, 50 concurrent). Three runs averaged. Four endpoints: JSON response, 100-item list, SQLite query (20 rows), template rendering (20 items). Benchmark script: [github.com/tina4stack/tina4-documentation/benchmark/](https://github.com/tina4stack/tina4-documentation/benchmark/)
 
-| Framework | Import ms | Size | Routing/1k | Template/1k | JSON/1k |
-|---|---|---|---|---|---|
-| tina4python | 0.0ms | 11 MB | 26.5ms | 5.5ms | 83.2ms |
-| plain | 4.4ms | 1 MB | 24.6ms | 5.2ms | 78.2ms |
-| starlette | 0.3ms | 3 MB | 25.4ms | 5.2ms | 79.5ms |
-| django | 88.5ms | 35 MB | 25.4ms | 5.1ms | 77.0ms |
-| bottle | 32.1ms | 1 MB | 25.1ms | 5.2ms | 80.6ms |
-| fastapi | 131.6ms | 13 MB | 26.4ms | 5.3ms | 79.5ms |
-| flask | 75.8ms | 5 MB | 26.9ms | 5.5ms | 80.7ms |
+tina4python runs on uvicorn (ASGI). FastAPI also runs on uvicorn. Flask uses its built-in dev server (single-threaded). Django uses its built-in dev server (single-threaded). Flask and Django dev server numbers are NOT production-representative.
 
-**Key finding:** Runtime performance is nearly identical across all Python frameworks -- the framework adds negligible overhead. Cold-start (import) time and install size are where frameworks diverge most. tina4python loads instantly (0.0ms) because its import is deferred; Starlette is similarly lean at 0.3ms. 
-To reproduce: clone [Carbonah](https://github.com/tina4stack/carbonah), run `setup.sh`, then the runner in `tests/python-benchmarks/`.
+**Ordered by peak wrk throughput (req/s):**
+
+| Framework | json hey | json wrk | json ab | list hey | list wrk | list ab | db hey | db wrk | db ab | tpl hey | tpl wrk | tpl ab |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| FastAPI | 12,488 | 12,927 | 9,947 | 2,739 | 2,811 | 2,607 | 6,709 | 6,928 | 5,939 | 12,137 | 12,578 | 9,817 |
+| tina4python | 9,890 | 10,267 | 8,158 | 5,930 | 7,259 | 6,003 | 7,603 | 8,717 | 6,974 | 9,547 | 9,963 | 7,888 |
+| Django | 2,832 | 644 | 2,768 | 1,996 | 218 | 2,889 | 1,541 | 221 | 3,423 | 1,559 | 256 | 3,418 |
+| Flask | 2,839 | 373 | 0 | 1,369 | 0 | 0 | 1,498 | 459 | 0 | 1,394 | 0 | 0 |
+
+**Key finding:** FastAPI leads JSON throughput (12,927 wrk req/s vs tina4python's 10,267), but tina4python is more consistent across endpoint types -- it handles list and database workloads better relative to its JSON speed. Both run on uvicorn, making the comparison fair. Flask and Django numbers reflect their single-threaded development servers; behind gunicorn/uvicorn they would perform significantly better.
 
 ### Out-of-the-Box Features (38 features tested)
 
@@ -254,21 +254,17 @@ Tina4 PHP is a lightweight PHP toolkit for rapid API and web development. It shi
 
 *CodeIgniter 4 repo has ~5,400 stars; the legacy CI3 repo has ~18,200 stars.*
 
-### Performance Benchmarks (Carbonah v3)
+### HTTP Throughput Benchmarks (PHP 8.5)
 
-Benchmarks from the [Carbonah benchmark suite](https://github.com/tina4stack/carbonah). Hardware: Apple MacBook Pro (M-series), macOS. Subprocess-isolated, warm page cache, SQLite in-memory, 1,000 iterations per operation, 3 runs averaged. PHP 8.5, tina4php v3.8.3. Note: tina4 PHP v3 uses its own built-in server rather than PHP's built-in dev server.
+Hardware: Apple MacBook Pro (M-series), macOS. Tools: hey (5,000 requests, 50 concurrent), wrk (4 threads, 50 connections, 10s), ab (5,000 requests, 50 concurrent). Three runs averaged. Four endpoints: JSON response, 100-item list, SQLite query (20 rows), template rendering (20 items). Benchmark script: [github.com/tina4stack/tina4-documentation/benchmark/](https://github.com/tina4stack/tina4-documentation/benchmark/)
 
-| Framework | Autoload ms | Size | Routing/1k | Template/1k | JSON/1k |
-|---|---|---|---|---|---|
-| tina4php | 1.1ms | 4 MB | 6.5ms | 2.9ms | 57.0ms |
-| laravel | 15.1ms | 77 MB | 6.5ms | 2.9ms | 54.1ms |
-| cakephp | 16.4ms | 0 MB | 6.6ms | 3.0ms | 56.7ms* |
-| slim | 0.0ms | 49 MB | 7.0ms | 3.0ms | 56.2ms |
-| symfony | 3.7ms | 10 MB | 6.9ms | 3.1ms | 57.3ms |
-| plain | 0.0ms | 0 MB | 8.7ms | 5.4ms | 70.7ms |
+tina4php runs its own built-in server. Laravel was not installed for this run. Numbers were inconsistent -- the server showed instability under sustained concurrent load. This is an area under active investigation.
 
-**Key finding:** tina4php v3 cut autoload time from 11ms to 1.1ms and install size from 11 MB to 4 MB. Runtime performance is nearly identical across all PHP frameworks -- the framework adds negligible overhead. Autoload time and install size are where frameworks diverge most. 
-To reproduce: clone [Carbonah](https://github.com/tina4stack/carbonah), run `setup.sh`, then the runner in `tests/php-benchmarks/`.
+| Framework | json hey | json wrk | json ab | list hey | list wrk | list ab | db hey | db wrk | db ab | tpl hey | tpl wrk | tpl ab |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| tina4php | 12,234\* | 2,784\* | 0\* | 10,881\* | 2,288\* | 9,132\* | 25,424\* | 2,418\* | 38,284\* | 25,537\* | 3,807\* | 39,532\* |
+
+\*Numbers varied significantly between runs (e.g., 35K one run, 700 the next). The tina4php built-in server needs optimization for sustained concurrent load. These numbers should not be used for comparison until the stability issue is resolved.
 
 ### Package Size and Dependencies
 
@@ -384,21 +380,20 @@ Tina4 Ruby is a lightweight Ruby web toolkit with built-in ORM, GraphQL, JWT aut
 | **Auth/Security** | Built-in JWT + bcrypt | None | has_secure_password | None | None |
 | **GraphQL** | Built-in | No | No | No | No |
 
-### Performance Benchmarks (Carbonah v3)
+### HTTP Throughput Benchmarks (Ruby 4.0.1)
 
-Benchmarks from the [Carbonah benchmark suite](https://github.com/tina4stack/carbonah). Hardware: Apple MacBook Pro (M-series), macOS. Subprocess-isolated, warm page cache, SQLite in-memory, 1,000 iterations per operation, 3 runs averaged. Ruby 4.0.1, tina4ruby v3.2.1.
+Hardware: Apple MacBook Pro (M-series), macOS. Tools: hey (5,000 requests, 50 concurrent), wrk (4 threads, 50 connections, 10s), ab (5,000 requests, 50 concurrent). Three runs averaged. Four endpoints: JSON response, 100-item list, SQLite query (20 rows), template rendering (20 items). Benchmark script: [github.com/tina4stack/tina4-documentation/benchmark/](https://github.com/tina4stack/tina4-documentation/benchmark/)
 
-| Framework | Import ms | Size | Routing/1k | Template/1k | JSON/1k |
-|---|---|---|---|---|---|
-| rails | 166.3ms | 67 MB | 7.3ms | 10.9ms | 42.0ms |
-| sinatra | 82.2ms | 3 MB | 7.5ms | 11.6ms | 43.4ms |
-| hanami | 37.8ms | 27 MB | 7.6ms | 11.3ms | 42.8ms |
-| roda | 26.6ms | 2 MB | 7.6ms | 11.8ms | 44.3ms |
-| tina4ruby | 594.2ms | 14 MB | 8.0ms | 11.6ms | 45.1ms |
-| plain | 2.8ms | 0 MB | 8.3ms | 12.4ms | 45.3ms |
+tina4ruby runs on Puma (threaded). Sinatra runs on WEBrick (single-threaded).
 
-**Key finding:** Runtime performance is nearly identical across all Ruby frameworks once loaded -- the framework adds negligible overhead. However, tina4ruby's 594ms cold start is significantly higher than competitors and is an area we are actively investigating for improvement. Once past the import phase, tina4ruby's routing and templating performance is competitive with the field. 
-To reproduce: clone [Carbonah](https://github.com/tina4stack/carbonah), run `setup.sh`, then the runner in `tests/ruby-benchmarks/`.
+**Ordered by peak wrk throughput (req/s):**
+
+| Framework | json hey | json wrk | json ab | list hey | list wrk | list ab | db hey | db wrk | db ab | tpl hey | tpl wrk | tpl ab |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| tina4ruby | 18,241 | 19,844 | 16,193 | 11,540 | 11,909 | 10,405 | 13,289 | 13,852 | 11,877 | 14,907 | 15,668 | 13,143 |
+| Sinatra | 7,890 | 8,169 | 7,680 | 6,072 | 6,233 | 5,916 | 6,240 | 6,376 | 6,207 | 7,181 | 7,491 | 7,064 |
+
+**Key finding:** tina4ruby outperforms Sinatra by roughly 2x across all endpoints. However, this advantage comes from Puma's multi-threaded server vs Sinatra's single-threaded WEBrick. For a fair comparison, Sinatra should be tested behind Puma as well.
 
 ### Out-of-the-Box Features (32 features tested)
 
@@ -518,22 +513,21 @@ Tina4 Node.js is the newest member of the Tina4 family. It runs on Node.js 22+ w
 | **Migrations** | Built-in | None | None | None | None |
 | **Auto-CRUD** | Yes (from ORM models) | No | No | No | No |
 
-### Performance Benchmarks (Carbonah v3)
+### HTTP Throughput Benchmarks (Node.js v24.9.0)
 
-Benchmarks from the [Carbonah benchmark suite](https://github.com/tina4stack/carbonah). Hardware: Apple MacBook Pro (M-series), macOS. Subprocess-isolated, warm page cache, SQLite in-memory, 1,000 iterations per operation, 3 runs averaged. Node.js v24.9.0, all v3 builds.
+Hardware: Apple MacBook Pro (M-series), macOS. Tools: hey (5,000 requests, 50 concurrent), wrk (4 threads, 50 connections, 10s), ab (5,000 requests, 50 concurrent). Three runs averaged. Four endpoints: JSON response, 100-item list, SQLite query (20 rows), template rendering (20 items). Benchmark script: [github.com/tina4stack/tina4-documentation/benchmark/](https://github.com/tina4stack/tina4-documentation/benchmark/)
 
-| Framework | Import ms | Size | Routing/1k | Template/1k | JSON/1k |
-|---|---|---|---|---|---|
-| tina4nodejs | 0.0ms | 1 MB | 3.3ms | 4.2ms | 42.7ms |
-| plain | 2.3ms | 0 MB | 4.1ms | 4.2ms | 42.5ms |
-| koa | 27.6ms | 2 MB | 3.2ms | 4.3ms | 43.3ms |
-| nest | 108.4ms | 22 MB | 3.8ms | 4.3ms | 43.5ms |
-| express | 41.3ms | 4 MB | 4.0ms | 5.0ms | 45.7ms |
-| hapi | 67.0ms | 2 MB | 3.6ms | 4.5ms | 50.3ms |
-| fastify | 56.4ms | 13 MB | 4.0ms | 5.3ms | 53.6ms |
+tina4nodejs uses cluster mode (8 workers). Express and Fastify run single-process.
 
-**Key finding:** tina4-nodejs loads in 0.0ms with just 1 MB on disk -- zero runtime dependencies means zero import cost. Runtime performance is nearly identical across all Node.js frameworks -- the framework adds negligible overhead. NestJS v3 has improved substantially (import dropped from 600ms to 108ms). 
-To reproduce: clone [Carbonah](https://github.com/tina4stack/carbonah), run `setup.sh`, then the runner in `tests/nodejs-benchmarks/`.
+**Ordered by peak wrk throughput (req/s):**
+
+| Framework | json hey | json wrk | json ab | list hey | list wrk | list ab | db hey | db wrk | db ab | tpl hey | tpl wrk | tpl ab |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| tina4nodejs | 64,564 | 138,086 | 33,584 | 78,474 | 150,125 | 43,466 | 70,789 | 148,987 | 41,314 | 79,958 | 153,648 | 47,114 |
+| Fastify | 82,610 | 108,203 | 52,172 | 36,698 | 36,067 | 26,633 | 52,473 | 52,912 | 34,596 | 74,405 | 75,640 | 44,480 |
+| Express | 54,499 | 65,461 | 38,944 | 29,746 | 30,121 | 23,126 | 39,644 | 38,870 | 28,184 | 52,172 | 52,809 | 34,385 |
+
+**Key finding:** tina4nodejs leads wrk throughput (153,648 peak req/s) thanks to cluster mode distributing load across 8 CPU cores. Fastify wins single-process JSON throughput on hey (82,610 vs 64,564). For a fair single-process comparison, tina4nodejs would need to be tested without clustering. Express trails both but remains solid for single-process workloads.
 
 ### Feature Comparison
 
@@ -636,6 +630,25 @@ app.listen(3000);
 Choose Tina4 Node.js when you want zero runtime dependencies, need a built-in ORM with multiple database engines, or already use Tina4 in another language and want the same project structure.
 
 Choose Express or Fastify when you need the largest ecosystem and hiring pool, require specific npm middleware, or need a framework with years of production use behind it.
+
+---
+
+## Cross-Language Performance Summary
+
+Peak wrk throughput (req/s) per framework, using the highest-performing endpoint from each. wrk tests sustained throughput with 4 threads and 50 connections over 10 seconds.
+
+| Framework | Peak wrk req/s | Language | Server |
+|---|---|---|---|
+| tina4nodejs | 153,648 | Node.js 24 | cluster (8 workers) |
+| Fastify | 108,203 | Node.js 24 | single process |
+| Express | 65,461 | Node.js 24 | single process |
+| tina4ruby | 19,844 | Ruby 4.0 | Puma (threaded) |
+| FastAPI | 12,927 | Python 3.13 | uvicorn |
+| tina4python | 10,267 | Python 3.13 | uvicorn |
+| Sinatra | 8,169 | Ruby 4.0 | WEBrick |
+| tina4php | unstable | PHP 8.5 | built-in (investigating) |
+
+Node.js dominates raw throughput thanks to V8's JIT compilation and non-blocking I/O. tina4nodejs's cluster mode multiplies this further across cores. Ruby and Python frameworks cluster in the 8K-20K range, which is typical for interpreted languages with the GIL (Python) or GVL (Ruby). PHP results are excluded from ranking due to server instability under concurrent load.
 
 ---
 

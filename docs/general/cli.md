@@ -286,7 +286,7 @@ Downloads the complete documentation book for your detected language.
 
 The `.env` file in your project root configures the framework:
 
-```env
+```dotenv
 PROJECT_NAME="My Project"
 VERSION=1.0.0
 TINA4_DEBUG_LEVEL=ALL

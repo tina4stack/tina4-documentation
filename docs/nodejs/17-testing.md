@@ -227,7 +227,7 @@ export class ProductModelTest extends Test {
 
 Tina4 creates a test database (`data/test.db`) when running tests. Each test class gets a clean database. No leftover data from previous runs.
 
-```env
+```dotenv
 # In .env.test (optional)
 DATABASE_URL=sqlite:///data/test.db
 ```

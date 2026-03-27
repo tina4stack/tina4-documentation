@@ -479,7 +479,7 @@ Open `http://localhost:7147/products`. You see:
 
 Open `.env` at the project root:
 
-```env
+```dotenv
 TINA4_DEBUG=true
 ```
 
@@ -514,7 +514,7 @@ tina4 serve --port 8080
 
 Or add it to your `.env` file:
 
-```env
+```dotenv
 TINA4_DEBUG=true
 TINA4_PORT=8080
 ```
@@ -1001,7 +1001,7 @@ end
 
 **Fix:** Stop the other process, or change the port:
 
-```env
+```dotenv
 TINA4_PORT=8080
 ```
 

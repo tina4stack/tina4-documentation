@@ -40,7 +40,7 @@ The token has three parts separated by dots: header, payload, and signature. The
 
 By default, tokens expire after 60 minutes. Configure this in `.env`:
 
-```env
+```dotenv
 TINA4_TOKEN_EXPIRES_IN=60
 ```
 
@@ -90,7 +90,7 @@ Tina4 Python uses **HS256** (HMAC-SHA256) for JWT signing. It uses only the stan
 
 Set the secret key in `.env`:
 
-```env
+```dotenv
 SECRET=my-super-secret-key-at-least-32-chars
 ```
 
@@ -506,7 +506,7 @@ Tina4 supports server-side sessions for storing per-user state between requests.
 
 Set the session backend in `.env`:
 
-```env
+```dotenv
 # File-based sessions (default)
 TINA4_SESSION_HANDLER=file
 
@@ -563,7 +563,7 @@ async def logout(request, response):
 
 ### Session Options
 
-```env
+```dotenv
 TINA4_SESSION_LIFETIME=3600       # Session lifetime in seconds (default: 3600)
 TINA4_SESSION_NAME=tina4_session  # Cookie name for the session ID
 ```

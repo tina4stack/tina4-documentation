@@ -12,7 +12,7 @@ Picture an e-commerce site. A customer adds three items to their cart. Navigates
 
 Set the session backend in `.env`:
 
-```env
+```dotenv
 TINA4_SESSION_HANDLER=file
 ```
 
@@ -30,7 +30,7 @@ That is the default. File-based sessions work out of the box with no additional 
 
 ### Redis Configuration
 
-```env
+```dotenv
 TINA4_SESSION_HANDLER=redis
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -45,7 +45,7 @@ uv add redis
 
 ### MongoDB Configuration
 
-```env
+```dotenv
 TINA4_SESSION_HANDLER=mongodb
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=27017
@@ -54,7 +54,7 @@ TINA4_SESSION_DATABASE=tina4_sessions
 
 ### Valkey Configuration
 
-```env
+```dotenv
 TINA4_SESSION_HANDLER=valkey
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -62,7 +62,7 @@ TINA4_SESSION_PORT=6379
 
 ### Session Lifetime
 
-```env
+```dotenv
 TINA4_SESSION_LIFETIME=3600       # 1 hour (default)
 TINA4_SESSION_NAME=tina4_session  # Cookie name for session ID
 ```
@@ -356,7 +356,7 @@ async def login_form(request, response):
 
 Always use these settings for the session cookie in production:
 
-```env
+```dotenv
 TINA4_SESSION_SECURE=true     # Only send over HTTPS
 TINA4_SESSION_HTTPONLY=true   # Not accessible via JavaScript
 TINA4_SESSION_SAMESITE=Lax   # Prevent CSRF via cross-site requests

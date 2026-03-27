@@ -86,7 +86,7 @@ CORS controls which domains can call your API. When React at `http://localhost:3
 
 Tina4 provides `CorsMiddleware`. Configure in `.env`:
 
-```env
+```dotenv
 TINA4_CORS_ORIGINS=http://localhost:3000,https://myapp.com
 TINA4_CORS_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS
 TINA4_CORS_HEADERS=Content-Type,Authorization,X-API-Key
@@ -130,7 +130,7 @@ The `OPTIONS` request returns `204 No Content` with those headers. The browser c
 
 During development:
 
-```env
+```dotenv
 TINA4_CORS_ORIGINS=*
 ```
 
@@ -148,7 +148,7 @@ Prevents a single client from flooding your API. Tracks requests per IP. Returns
 
 Configure in `.env`:
 
-```env
+```dotenv
 TINA4_RATE_LIMIT=60
 TINA4_RATE_WINDOW=60
 ```
@@ -220,7 +220,7 @@ It sets the following headers by default:
 
 Override any header via environment variables in `.env`:
 
-```env
+```dotenv
 TINA4_FRAME_OPTIONS=SAMEORIGIN
 TINA4_CSP=default-src 'self'; script-src 'self' https://cdn.example.com
 TINA4_HSTS=max-age=63072000; includeSubDomains; preload
@@ -311,7 +311,7 @@ function ipWhitelist($request, $response) {
 
 Configure in `.env`:
 
-```env
+```dotenv
 ALLOWED_IPS=127.0.0.1,10.0.0.5,192.168.1.100
 ```
 
@@ -644,7 +644,7 @@ function maintenanceMode($request, $response) {
 
 Add to `.env`:
 
-```env
+```dotenv
 MAINTENANCE_MODE=true
 ```
 
@@ -815,7 +815,7 @@ Build API key middleware:
 
 ### Setup
 
-```env
+```dotenv
 API_KEYS=key-alpha-001,key-beta-002,key-gamma-003
 ```
 

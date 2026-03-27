@@ -371,10 +371,11 @@ startServer({port:7148,debug:false});
 APP
     run_framework "tina4nodejs" 7148 "npx tsx /tmp/bench_tina4node.ts"
 
-    # Express
-    cat > /tmp/bench_express.mjs << 'APP'
-import express from "express";
-import Database from "better-sqlite3";
+    # Express (CommonJS — NODE_PATH resolves packages)
+    local EXPRESS_NM="$BASE_DIR/carbonah/tests/node-benchmarks/frameworks/express/node_modules"
+    cat > /tmp/bench_express.js << 'APP'
+const express = require("express");
+const Database = require("better-sqlite3");
 
 const db = new Database(":memory:");
 db.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT)");
@@ -393,12 +394,13 @@ app.get("/bench/template", (req, res) => {
 });
 app.listen(7230, "127.0.0.1");
 APP
-    run_framework "Express" 7230 "NODE_PATH=/Users/andrevanzuydam/IdeaProjects/carbonah/tests/node-benchmarks/frameworks/express/node_modules node /tmp/bench_express.mjs"
+    run_framework "Express" 7230 "NODE_PATH=$EXPRESS_NM node /tmp/bench_express.js"
 
-    # Fastify
-    cat > /tmp/bench_fastify.mjs << 'APP'
-import Fastify from "fastify";
-import Database from "better-sqlite3";
+    # Fastify (CommonJS — NODE_PATH resolves packages)
+    local FASTIFY_NM="$BASE_DIR/carbonah/tests/node-benchmarks/frameworks/fastify/node_modules"
+    cat > /tmp/bench_fastify.js << 'APP'
+const Fastify = require("fastify");
+const Database = require("better-sqlite3");
 
 const db = new Database(":memory:");
 db.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT)");
@@ -417,7 +419,7 @@ app.get("/bench/template", async (req, reply) => {
 });
 app.listen({port:7231,host:"127.0.0.1"});
 APP
-    run_framework "Fastify" 7231 "NODE_PATH=/Users/andrevanzuydam/IdeaProjects/carbonah/tests/node-benchmarks/frameworks/fastify/node_modules node /tmp/bench_fastify.mjs"
+    run_framework "Fastify" 7231 "NODE_PATH=$FASTIFY_NM node /tmp/bench_fastify.js"
 }
 
 # ── PHP ──────────────────────────────────────────────────────────────

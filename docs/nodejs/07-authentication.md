@@ -36,7 +36,7 @@ const token = Auth.getToken(payload, secret);
 
 Configure in `.env`:
 
-```env
+```dotenv
 TINA4_TOKEN_EXPIRES_IN=60
 ```
 
@@ -77,7 +77,7 @@ Tina4 Node.js uses **HS256** (HMAC-SHA256) for JWT signing. It uses only the sta
 
 Set the secret key in `.env`:
 
-```env
+```dotenv
 SECRET=my-super-secret-key-at-least-32-chars
 ```
 

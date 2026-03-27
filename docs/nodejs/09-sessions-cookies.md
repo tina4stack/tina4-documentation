@@ -46,7 +46,7 @@ curl http://localhost:7148/visit-counter -c cookies.txt -b cookies.txt
 
 For production deployments with multiple servers:
 
-```env
+```dotenv
 TINA4_SESSION_HANDLER=redis
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -59,7 +59,7 @@ Your code stays exactly the same. `req.session` works identically.
 
 ## 5. MongoDB and Valkey Sessions
 
-```env
+```dotenv
 # MongoDB
 TINA4_SESSION_HANDLER=mongodb
 TINA4_SESSION_HOST=localhost
@@ -75,7 +75,7 @@ TINA4_SESSION_PORT=6379
 
 ## 6. Database Sessions
 
-```env
+```dotenv
 TINA4_SESSION_BACKEND=database
 ```
 
@@ -222,7 +222,7 @@ Router.get("/api/get-language", async (req, res) => {
 
 ## 9. Session Security
 
-```env
+```dotenv
 TINA4_SESSION_LIFETIME=3600
 TINA4_SESSION_NAME=tina4_session
 TINA4_SESSION_SECURE=true

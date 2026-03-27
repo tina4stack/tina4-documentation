@@ -14,7 +14,7 @@ Tina4's `Messenger` class absorbs that complexity. Configure via `.env`. Create 
 
 All email configuration lives in `.env`:
 
-```env
+```dotenv
 TINA4_MAIL_SMTP_HOST=smtp.example.com
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=your-email@example.com
@@ -38,7 +38,7 @@ TINA4_MAIL_FROM_NAME=My Store
 
 **Gmail:**
 
-```env
+```dotenv
 TINA4_MAIL_SMTP_HOST=smtp.gmail.com
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=your-email@gmail.com
@@ -50,7 +50,7 @@ Note: Gmail requires an "App Password" (not your regular password) when two-fact
 
 **Mailgun:**
 
-```env
+```dotenv
 TINA4_MAIL_SMTP_HOST=smtp.mailgun.org
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=postmaster@mg.yourdomain.com
@@ -60,7 +60,7 @@ TINA4_MAIL_SMTP_ENCRYPTION=tls
 
 **SendGrid:**
 
-```env
+```dotenv
 TINA4_MAIL_SMTP_HOST=smtp.sendgrid.net
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=apikey
@@ -275,7 +275,7 @@ result = mailer.send(
 
 Tina4's Messenger can also read emails via IMAP:
 
-```env
+```dotenv
 TINA4_MAIL_IMAP_HOST=imap.example.com
 TINA4_MAIL_IMAP_PORT=993
 TINA4_MAIL_IMAP_USERNAME=support@example.com
@@ -375,7 +375,7 @@ This is invaluable for testing email functionality without configuring a real SM
 
 If you need to test real email delivery during development, override the interception:
 
-```env
+```dotenv
 TINA4_MAIL_INTERCEPT=false
 ```
 

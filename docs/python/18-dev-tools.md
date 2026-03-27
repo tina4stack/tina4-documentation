@@ -12,7 +12,7 @@ Tina4's dev tools are not an afterthought. They are built into the framework fro
 
 The dev dashboard is available when `TINA4_DEBUG=true` in your `.env`:
 
-```env
+```dotenv
 TINA4_DEBUG=true
 ```
 

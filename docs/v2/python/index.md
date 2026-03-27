@@ -139,7 +139,7 @@ The default session handling is SessionFileHandler, override `TINA4_SESSION_HAND
 | `SessionValkeyHandler` | Valkey | `valkey` |
 | `SessionMongoHandler` | MongoDB | `pymongo` |
 
-```env
+```dotenv
 TINA4_SESSION_HANDLER=SessionMongoHandler
 TINA4_SESSION_MONGO_HOST=localhost
 TINA4_SESSION_MONGO_PORT=27017

@@ -32,7 +32,7 @@ http://localhost:7148/swagger/json
 
 For production:
 
-```env
+```dotenv
 TINA4_SWAGGER=true
 ```
 
@@ -150,7 +150,7 @@ The Swagger UI puts a "Try it out" button on every endpoint. Click it and the UI
 
 ## 9. Customizing the Swagger Info Block
 
-```env
+```dotenv
 TINA4_SWAGGER_TITLE=My Store API
 TINA4_SWAGGER_DESCRIPTION=API for managing products, orders, and users
 TINA4_SWAGGER_VERSION=1.0.0

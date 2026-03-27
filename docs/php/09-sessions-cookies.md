@@ -74,7 +74,7 @@ The `-c` flag saves cookies. The `-b` flag sends them back. This simulates brows
 
 Change the storage path:
 
-```env
+```dotenv
 TINA4_SESSION_PATH=/path/to/session/files
 ```
 
@@ -86,7 +86,7 @@ File sessions work for single-server deployments. Simplest option. No extra soft
 
 Multiple servers behind a load balancer need a shared session store. Redis is the standard choice.
 
-```env
+```dotenv
 TINA4_SESSION_HANDLER=redis
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -106,7 +106,7 @@ That is the only change. Your code stays identical. `$request->session` works th
 
 Sharing a Redis instance with other applications:
 
-```env
+```dotenv
 TINA4_SESSION_HANDLER=redis
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -119,7 +119,7 @@ TINA4_SESSION_PREFIX=myapp:sess:
 
 Already running MongoDB:
 
-```env
+```dotenv
 TINA4_SESSION_HANDLER=mongodb
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=27017
@@ -135,7 +135,7 @@ TTL indexes handle expired session cleanup.
 
 Valkey is the open-source Redis fork. Wire-compatible. Same client library:
 
-```env
+```dotenv
 TINA4_SESSION_HANDLER=valkey
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -145,7 +145,7 @@ TINA4_SESSION_PORT=6379
 
 ## 7. Database Sessions
 
-```env
+```dotenv
 TINA4_SESSION_BACKEND=database
 ```
 
@@ -494,7 +494,7 @@ The database holds the hash. The cookie holds the raw token. If the database is 
 
 ### Configuration Options
 
-```env
+```dotenv
 TINA4_SESSION_LIFETIME=3600       # Expires after 1 hour of inactivity
 TINA4_SESSION_NAME=tina4_session  # Cookie name
 TINA4_SESSION_SECURE=true         # HTTPS only

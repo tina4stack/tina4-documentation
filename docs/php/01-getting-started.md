@@ -497,7 +497,7 @@ The `tina4.css` file is Tina4's built-in CSS utility framework. Layout utilities
 
 Open `.env` at the project root:
 
-```env
+```dotenv
 TINA4_DEBUG=true
 ```
 
@@ -532,7 +532,7 @@ tina4 serve --port 8080
 
 Or add it to your `.env` file:
 
-```env
+```dotenv
 TINA4_DEBUG=true
 TINA4_PORT=8080
 ```
@@ -1039,7 +1039,7 @@ Router::get("/store", function ($request, $response) {
 
 **Fix:** Stop the other process, or change the port:
 
-```env
+```dotenv
 TINA4_PORT=8080
 ```
 

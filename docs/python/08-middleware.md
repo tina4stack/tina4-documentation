@@ -20,7 +20,7 @@ CORS (Cross-Origin Resource Sharing) controls which websites can call your API f
 
 Configure via `.env`:
 
-```env
+```dotenv
 TINA4_CORS_ORIGINS=https://app.example.com,https://admin.example.com
 TINA4_CORS_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS
 TINA4_CORS_HEADERS=Content-Type,Authorization,X-Request-ID
@@ -32,7 +32,7 @@ With these settings, only `app.example.com` and `admin.example.com` can make cro
 
 For development, you can allow all origins:
 
-```env
+```dotenv
 TINA4_CORS_ORIGINS=*
 ```
 
@@ -63,7 +63,7 @@ The rate limiter prevents abuse by limiting how many requests a single IP can ma
 
 Configure via `.env`:
 
-```env
+```dotenv
 TINA4_RATE_LIMIT=60
 TINA4_RATE_WINDOW=60
 ```

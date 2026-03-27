@@ -10,7 +10,7 @@ Tina4's `Messenger` class handles SMTP configuration, HTML templates, attachment
 
 ## 2. Messenger Configuration via .env
 
-```env
+```dotenv
 TINA4_MAIL_SMTP_HOST=smtp.example.com
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=your-email@example.com
@@ -23,14 +23,14 @@ TINA4_MAIL_FROM_NAME=My Store
 ### Common Provider Configurations
 
 **Gmail:**
-```env
+```dotenv
 TINA4_MAIL_SMTP_HOST=smtp.gmail.com
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_ENCRYPTION=tls
 ```
 
 **SendGrid:**
-```env
+```dotenv
 TINA4_MAIL_SMTP_HOST=smtp.sendgrid.net
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=apikey
@@ -135,7 +135,7 @@ const result = await mailer.send(
 
 ## 8. Reading Inbox via IMAP
 
-```env
+```dotenv
 TINA4_MAIL_IMAP_HOST=imap.example.com
 TINA4_MAIL_IMAP_PORT=993
 TINA4_MAIL_IMAP_USERNAME=support@example.com

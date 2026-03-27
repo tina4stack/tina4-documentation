@@ -16,7 +16,7 @@ Tina4 speaks to five database engines: SQLite, PostgreSQL, MySQL, Microsoft SQL 
 
 When you scaffold a project with `tina4 init`, Tina4 drops a SQLite database at `data/app.db`. The default `.env` includes:
 
-```env
+```dotenv
 TINA4_DEBUG=true
 ```
 
@@ -28,7 +28,7 @@ SQLite support uses Node's built-in `node:sqlite` module (Node 22+). No native C
 
 Set `DATABASE_URL` in `.env` to use a different engine:
 
-```env
+```dotenv
 # SQLite (explicit)
 DATABASE_URL=sqlite:///data/app.db
 
@@ -47,7 +47,7 @@ DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
 
 ### Separate Credentials
 
-```env
+```dotenv
 DATABASE_URL=postgres://localhost:5432/myapp
 DATABASE_USERNAME=myuser
 DATABASE_PASSWORD=secretpassword
@@ -570,7 +570,7 @@ This means you can write PostgreSQL stored procedures in your migration files wi
 
 Enable query caching in `.env`:
 
-```env
+```dotenv
 TINA4_DB_CACHE=true
 ```
 

@@ -43,7 +43,7 @@ Three parts separated by dots: header, payload, signature. The signature ensures
 
 Tokens expire after 60 minutes by default. Configure in `.env`:
 
-```env
+```dotenv
 TINA4_TOKEN_EXPIRES_IN=60
 ```
 
@@ -95,7 +95,7 @@ Tina4 PHP uses **HS256** (HMAC-SHA256) for JWT signing. It uses only the standar
 
 Set the secret key in `.env`:
 
-```env
+```dotenv
 SECRET=my-super-secret-key-at-least-32-chars
 ```
 
@@ -517,7 +517,7 @@ Server-side sessions store per-user state between requests. Use JWTs for API aut
 
 Set the backend in `.env`:
 
-```env
+```dotenv
 # File-based sessions (default)
 TINA4_SESSION_DRIVER=file
 
@@ -575,7 +575,7 @@ Router::post("/logout", function ($request, $response) {
 
 ### Session Options
 
-```env
+```dotenv
 TINA4_SESSION_LIFETIME=3600       # Expires after 1 hour of inactivity
 TINA4_SESSION_NAME=tina4_session  # Cookie name for the session ID
 ```

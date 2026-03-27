@@ -40,7 +40,7 @@ The token has three parts separated by dots: header, payload, and signature. The
 
 By default, tokens expire after 60 minutes. Configure this in `.env`:
 
-```env
+```dotenv
 TINA4_TOKEN_EXPIRES_IN=60
 ```
 
@@ -93,7 +93,7 @@ Tina4 Ruby supports two JWT algorithms, auto-detected based on your configuratio
 - **HS256** (HMAC-SHA256) -- set `SECRET` in `.env`. Uses the standard library. Zero dependencies.
 - **RS256** (RSA) -- place RSA keys in the `secrets/` folder. Requires the `jwt` gem.
 
-```env
+```dotenv
 # .env -- HS256 mode (recommended, simplest setup)
 SECRET=my-super-secret-key-at-least-32-chars
 ```

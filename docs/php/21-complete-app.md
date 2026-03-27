@@ -70,7 +70,7 @@ composer install
 
 Update `.env`:
 
-```env
+```dotenv
 TINA4_DEBUG=true
 JWT_SECRET=taskflow-dev-secret-change-in-production
 JWT_EXPIRY=86400
@@ -1106,7 +1106,7 @@ if ($task->assignedTo && $task->assignedTo !== $userId) {
 
 Configure email in `.env`:
 
-```env
+```dotenv
 TINA4_MAIL_HOST=smtp.example.com
 TINA4_MAIL_PORT=587
 TINA4_MAIL_USER=notifications@example.com

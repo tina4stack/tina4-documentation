@@ -16,7 +16,7 @@ Picture a notes application. Users create, edit, and delete notes. Those notes n
 
 Set your database connection in `.env`:
 
-```env
+```dotenv
 DATABASE_URL=sqlite:///data/app.db
 ```
 

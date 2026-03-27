@@ -79,7 +79,7 @@ end
 
 Out of the box, Tina4 caches to the filesystem. No configuration needed:
 
-```env
+```dotenv
 TINA4_CACHE_BACKEND=file
 TINA4_CACHE_PATH=data/cache
 ```
@@ -88,7 +88,7 @@ TINA4_CACHE_PATH=data/cache
 
 For production with multiple servers:
 
-```env
+```dotenv
 TINA4_CACHE_BACKEND=redis
 TINA4_CACHE_HOST=localhost
 TINA4_CACHE_PORT=6379
@@ -99,7 +99,7 @@ TINA4_CACHE_PREFIX=myapp:cache:
 
 For single-process development (fastest, but lost on restart):
 
-```env
+```dotenv
 TINA4_CACHE_BACKEND=memory
 ```
 
@@ -109,7 +109,7 @@ TINA4_CACHE_BACKEND=memory
 
 Enable automatic query caching:
 
-```env
+```dotenv
 TINA4_DB_CACHE=true
 ```
 

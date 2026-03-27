@@ -45,7 +45,7 @@ SAFE_LANGS = {
     'scss', 'sass', 'less', 'go', 'rust', 'java', 'kotlin', 'swift',
     'c', 'cpp', 'csharp', 'cs', 'lua', 'perl', 'r', 'dart', 'elixir',
     'haskell', 'diff', 'graphql', 'dockerfile', 'makefile', 'text', 'txt',
-    'env', 'conf', 'log', 'csv', 'md', 'markdown', 'plaintext',
+    'env', 'dotenv', 'conf', 'log', 'csv', 'md', 'markdown', 'plaintext',
 }
 
 def escape_line(line):
@@ -102,7 +102,7 @@ sync_book() {
   local count=0
   for chapter in "$src"/[0-9]*.md; do
     [ -f "$chapter" ] || continue
-    escape_twig < "$chapter" > "$dest/$(basename "$chapter")"
+    escape_twig < "$chapter" | sed 's/^```env$/```dotenv/' > "$dest/$(basename "$chapter")"
     count=$((count + 1))
   done
 
