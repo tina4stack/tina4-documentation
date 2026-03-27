@@ -188,11 +188,11 @@ Renders out this form with "emailForm" sent via the JWT payload
 [Tina4 tokens](posting-form-data.md#form-tokens), [uploading files](posting-form-data.md#upload-files), how to [handle errors](posting-form-data.md#handle-errors)
 and a [full login example](posting-form-data.md#login-example).
 
-### AJAX and tina4helper.js {#ajax}
+### AJAX and frond.js {#ajax}
 
-Tina4 ships with a small javascript library, in the bin folder, to assist with the heavy lifting of ajax calls.
+Tina4 ships with frond.js, a small zero-dependency JavaScript library for AJAX calls, form submissions, and real-time WebSocket connections.
 
-[More details](tina4helper.md) on available features.
+[More details](/general/frond) on available features.
 
 ### OpenAPI and Swagger UI {#swagger}
 

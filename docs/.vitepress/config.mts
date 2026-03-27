@@ -94,6 +94,7 @@ export default defineConfig({
         },
         nav: [
             {text: 'Home', link: '/'},
+            {text: 'Introduction', link: '/general/01-what-is-tina4.md'},
             {text: 'tina4-js', link: '/js/index.md'},
             {text: 'Python', link: '/python/index.md'},
             {text: 'Node.js', link: '/nodejs/index.md'},
@@ -210,7 +211,7 @@ export default defineConfig({
                         {text: 'tina4-css', link: '/general/tina4-css.md'},
                         {text: 'CSS Guide', link: '/general/css.md'},
                         {text: 'Static Websites', link: '/general/static-website.md'},
-                        {text: 'tina4helper.js', link: '/general/tina4helper.md'}
+                        {text: 'frond.js', link: '/general/frond.md'}
                     ]
                 }
             ]),

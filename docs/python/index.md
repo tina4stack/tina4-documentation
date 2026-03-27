@@ -229,11 +229,11 @@ async def secret(request, response):
 dealing with [file uploads](posting-form-data#file-uploads), [returning errors](posting-form-data#error-handling), [disabling route auth](posting-form-data#disabling-auth)
 and a [full login example](posting-form-data#full-example).
 
-### AJAX and tina4helper.js {#ajax}
+### AJAX and frond.js {#ajax}
 
-Tina4 ships with a small javascript library, in the bin folder, to assist with the heavy lifting of ajax calls.
+Tina4 ships with frond.js, a small zero-dependency JavaScript library for AJAX calls, form submissions, and real-time WebSocket connections.
 
-[More details](tina4helper.md) on available features.
+[More details](/general/frond) on available features.
 
 ### OpenAPI and Swagger UI {#swagger}
 

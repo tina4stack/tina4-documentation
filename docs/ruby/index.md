@@ -193,11 +193,11 @@ end
 ```
 [More details](posting-form-data.md) on posting form data.
 
-### AJAX and tina4helper.js {#ajax}
+### AJAX and frond.js {#ajax}
 
-Tina4 ships with a small javascript library to assist with AJAX calls.
+Tina4 ships with frond.js, a small zero-dependency JavaScript library for AJAX calls, form submissions, and real-time WebSocket connections.
 
-[More details](tina4helper.md) on available features.
+[More details](/general/frond) on available features.
 
 ### OpenAPI and Swagger UI {#swagger}
 

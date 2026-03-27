@@ -26,7 +26,7 @@ Tina4 CSS ships with every Tina4 framework. Your `base.twig` template should inc
 <link rel="stylesheet" href="/css/tina4.min.css">
 <link rel="stylesheet" href="/css/default.css">
 <script src="/js/tina4.js"></script>
-<script src="/js/tina4helper.js"></script>
+<script src="/js/frond.min.js"></script>
 ```
 
 ::: info
