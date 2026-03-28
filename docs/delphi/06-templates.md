@@ -13,11 +13,7 @@ HTML := '<div class="card">' +
 
 Six lines. Two bugs waiting to happen. One missing quote away from a broken layout. And when the designer changes the card to include a phone number, you are back in the Pascal editor, escaping quotes and hoping the HTML is still valid.
 
-<div v-pre>
-
 Twig templates fix this. Write HTML in HTML files. Drop in variables with `{{ name }}`. Add loops with `{% for %}`. Inherit layouts with `{% extends %}`. The template engine handles the rest. Your Pascal code passes data in; the template decides how to display it.
-
-</div>
 
 TTina4Twig is a Twig-compatible engine built directly into the Tina4 Delphi component library. It supports variables, control structures, filters, functions, template inheritance, macros, and integration with the HTML renderer. Every feature documented here works at design time and runtime.
 
@@ -52,11 +48,7 @@ begin
 end;
 ```
 
-<div v-pre>
-
 The constructor takes a template path. This is the root directory where Twig looks for template files referenced by `{% include %}` and `{% extends %}` tags. Every file reference is relative to this path.
-
-</div>
 
 ### Render from a String
 
@@ -117,11 +109,7 @@ Access object properties with dot notation:
 
 ### Setting Variables Inside Templates
 
-<div v-pre>
-
 Use `{% set %}` to define variables directly in a template:
-
-</div>
 
 ```
 {% set greeting = 'Hello' %}
@@ -133,11 +121,7 @@ Use `{% set %}` to define variables directly in a template:
 <p>Total: {{ total }}</p>
 ```
 
-<div v-pre>
-
 The `~` operator concatenates strings. Variables set with `{% set %}` are scoped to the current template block.
-
-</div>
 
 ---
 
@@ -303,21 +287,13 @@ The `with` clause passes variables to the included template. Without it, the inc
 
 ### Setting the Template Path in Pascal
 
-<div v-pre>
-
 For `{% extends %}` and `{% include %}` to resolve correctly, set the template path:
-
-</div>
 
 ```pascal
 Twig := TTina4Twig.Create('C:\MyApp\templates');
 ```
 
-<div v-pre>
-
 All template references are relative to this path. If `dashboard.html` says `{% extends 'base.html' %}`, Twig looks for `C:\MyApp\templates\base.html`.
-
-</div>
 
 ---
 
@@ -382,8 +358,6 @@ Filters transform output values. Chain them with the pipe `|` operator:
 
 | Filter | What it does | Example |
 |---|---|---|
-<div v-pre>
-
 | `upper` | Uppercase | `{{ 'hello'\|upper }}` produces `HELLO` |
 | `lower` | Lowercase | `{{ 'HELLO'\|lower }}` produces `hello` |
 | `capitalize` | First letter uppercase | `{{ 'hello world'\|capitalize }}` produces `Hello world` |
@@ -396,8 +370,6 @@ Filters transform output values. Chain them with the pipe `|` operator:
 | `slug` | URL-friendly slug | `{{ 'Hello World!'\|slug }}` produces `hello-world` |
 | `spaceless` | Remove whitespace between HTML tags | `{{ '<p> hi </p>'\|spaceless }}` |
 | `u` | Unicode string wrapper | `{{ text\|u }}` |
-
-</div>
 
 **Practical example -- building a navigation menu:**
 
@@ -414,14 +386,10 @@ Filters transform output values. Chain them with the pipe `|` operator:
 
 | Filter | What it does | Example |
 |---|---|---|
-<div v-pre>
-
 | `abs` | Absolute value | `{{ -42\|abs }}` produces `42` |
 | `number_format` | Format with decimals, separators | `{{ 1234.5\|number_format(2, '.', ',') }}` produces `1,234.50` |
 | `format_number` | Locale-aware number format | `{{ 1234\|format_number }}` |
 | `format_currency` | Format as currency | `{{ 1234.50\|format_currency('USD') }}` produces `$1,234.50` |
-
-</div>
 
 **Practical example -- product pricing:**
 
@@ -441,8 +409,6 @@ Filters transform output values. Chain them with the pipe `|` operator:
 
 | Filter | What it does | Example |
 |---|---|---|
-<div v-pre>
-
 | `length` | Count elements | `{{ items\|length }}` |
 | `first` | First element | `{{ items\|first }}` |
 | `last` | Last element | `{{ items\|last }}` |
@@ -461,8 +427,6 @@ Filters transform output values. Chain them with the pipe `|` operator:
 | `reduce` | Reduce to single value | `{{ items\|reduce }}` |
 | `min` | Smallest value | `{{ prices\|min }}` |
 | `max` | Largest value | `{{ prices\|max }}` |
-
-</div>
 
 **Practical example -- rendering a product grid:**
 
@@ -489,15 +453,11 @@ Filters transform output values. Chain them with the pipe `|` operator:
 
 | Filter | What it does | Example |
 |---|---|---|
-<div v-pre>
-
 | `date` | Format a date | `{{ order.created\|date('Y-m-d') }}` |
 | `date_modify` | Shift a date | `{{ order.created\|date_modify('+30 days') }}` |
 | `format_date` | Format date (alias) | `{{ order.created\|format_date }}` |
 | `format_datetime` | Format date and time | `{{ order.created\|format_datetime }}` |
 | `format_time` | Format time only | `{{ order.created\|format_time }}` |
-
-</div>
 
 **Date format specifiers** (PHP-style, auto-converted by Tina4):
 
@@ -543,8 +503,6 @@ Filters transform output values. Chain them with the pipe `|` operator:
 
 | Filter | What it does | Example |
 |---|---|---|
-<div v-pre>
-
 | `escape` / `e` | Escape HTML entities | `{{ userInput\|escape }}` |
 | `raw` | Output without escaping | `{{ trustedHtml\|raw }}` |
 | `url_encode` | URL-encode a string | `{{ query\|url_encode }}` |
@@ -552,8 +510,6 @@ Filters transform output values. Chain them with the pipe `|` operator:
 | `json_decode` | Decode from JSON | `{{ jsonString\|json_decode }}` |
 | `convert_encoding` | Convert character encoding | `{{ text\|convert_encoding('UTF-8') }}` |
 | `data_uri` | Create a data URI | `{{ imageData\|data_uri }}` |
-
-</div>
 
 **Practical example -- building a search URL:**
 
@@ -571,14 +527,10 @@ Filters transform output values. Chain them with the pipe `|` operator:
 
 | Filter | What it does | Example |
 |---|---|---|
-<div v-pre>
-
 | `default` | Fallback value if empty/null | `{{ name\|default('Guest') }}` |
 | `format` | Printf-style formatting | `{{ 'Hello %s, you have %d items'\|format(name, count) }}` |
 | `plural` | Pluralize a word | `{{ 'item'\|plural }}` produces `items` |
 | `singular` | Singularize a word | `{{ 'items'\|singular }}` produces `item` |
-
-</div>
 
 ```
 <p>You have {{ count }} {{ 'item'|plural }} in your cart.</p>
@@ -594,13 +546,9 @@ Functions work like filters but are called directly:
 
 | Function | What it does | Example |
 |---|---|---|
-<div v-pre>
-
 | `range()` | Generate a sequence | `{% for i in range(1, 10) %}` |
 | `dump()` | Debug output of a variable | `{{ dump(user) }}` |
 | `date()` | Create or format a date | `{{ date('now', 'Y-m-d') }}` |
-
-</div>
 
 ```
 {# Generate page numbers #}
@@ -626,15 +574,11 @@ Functions work like filters but are called directly:
 
 | Category | Operators | Example |
 |---|---|---|
-<div v-pre>
-
 | Comparison | `==`, `!=`, `<`, `>`, `<=`, `>=` | `{% if price > 100 %}` |
 | Logical | `and`, `or`, `not` | `{% if active and verified %}` |
 | String | `~` (concat), `in`, `starts with`, `ends with`, `matches` | `{{ first ~ ' ' ~ last }}` |
 | Math | `+`, `-`, `*`, `/`, `%`, `**` | `{{ price * quantity }}` |
 | Range | `..` | `{% for i in 1..10 %}` |
-
-</div>
 
 **String operators in action:**
 
@@ -1226,11 +1170,7 @@ end;
 
 ## Common Gotchas
 
-<div v-pre>
-
 **Template path resolution.** Every `{% extends %}` and `{% include %}` path is relative to the path you pass to `TTina4Twig.Create()`. If you pass an empty string, file-based template references will fail silently. Always set a real path:
-
-</div>
 
 ```pascal
 // Wrong -- includes and extends will not find files
@@ -1240,11 +1180,7 @@ Twig := TTina4Twig.Create('');
 Twig := TTina4Twig.Create('C:\MyApp\templates');
 ```
 
-<div v-pre>
-
 **Variable scope in for loops.** Variables set inside a `{% for %}` block do not persist outside the loop. This trips people up when trying to accumulate a total:
-
-</div>
 
 ```
 {# This does NOT work as expected #}
@@ -1280,11 +1216,7 @@ finally
 end;
 ```
 
-<div v-pre>
-
 **Whitespace in templates.** Twig preserves whitespace exactly as written in the template. If you see extra blank lines in your output, your template has extra blank lines. Use `{%-` and `-%}` to trim whitespace around tags:
-
-</div>
 
 ```
 {%- for item in items -%}

@@ -204,11 +204,7 @@ Each `TTina4Page` in the collection has these properties:
 | `Pages` | `TTina4PageCollection` | Collection of pages (design-time editable) |
 | `Renderer` | `TTina4HTMLRender` | The HTML renderer that displays the active page |
 | `ActivePage` | `string` | Name of the currently displayed page (read/write) |
-<div v-pre>
-
 | `TwigTemplatePath` | `string` | Base path for Twig `{% include %}` / `{% extends %}` |
-
-</div>
 
 ---
 
@@ -271,11 +267,7 @@ Page.TwigContent.Text :=
 
 ### File-Based Templates
 
-<div v-pre>
-
 For complex pages, use files with `{% include %}` and `{% extends %}`:
-
-</div>
 
 ```pascal
 HTMLPages1.TwigTemplatePath := 'C:\MyApp\templates';
@@ -1250,9 +1242,5 @@ Page.HTMLContent.Text := GetSharedStyles + '<div>Page content</div>';
 | Guard navigation | `OnBeforeNavigate` -- set `Allow := False` to block |
 | Post-navigation | `OnAfterNavigate` -- load data, update UI |
 | Twig in pages | Set `TwigContent` + `SetTwigVariable` |
-<div v-pre>
-
 | File templates | Set `TwigTemplatePath` for `{% include %}`/`{% extends %}` |
 | Page priority | `TwigContent` (if set) overrides `HTMLContent` |
-
-</div>

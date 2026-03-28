@@ -16,7 +16,7 @@ The default backend is file-based sessions. They work out of the box with no add
 
 To change the backend, set `TINA4_SESSION_BACKEND` in `.env`:
 
-```dotenv
+```env
 TINA4_SESSION_BACKEND=file
 ```
 
@@ -32,7 +32,7 @@ TINA4_SESSION_BACKEND=file
 
 ### Redis Configuration
 
-```dotenv
+```env
 TINA4_SESSION_BACKEND=redis
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -47,7 +47,7 @@ uv add redis
 
 ### MongoDB Configuration
 
-```dotenv
+```env
 TINA4_SESSION_BACKEND=mongodb
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=27017
@@ -56,7 +56,7 @@ TINA4_SESSION_DATABASE=tina4_sessions
 
 ### Valkey Configuration
 
-```dotenv
+```env
 TINA4_SESSION_BACKEND=valkey
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -64,7 +64,7 @@ TINA4_SESSION_PORT=6379
 
 ### Database Sessions
 
-```dotenv
+```env
 TINA4_SESSION_BACKEND=database
 ```
 
@@ -72,7 +72,7 @@ Stores sessions in the `tina4_session` table using your existing database connec
 
 ### Session Lifetime
 
-```dotenv
+```env
 TINA4_SESSION_TTL=3600  # 1 hour in seconds (default)
 ```
 
@@ -403,7 +403,7 @@ async def logout(request, response):
 
 The session cookie (`tina4_session`) is `HttpOnly` and `SameSite=Lax` by default. For production, ensure HTTPS:
 
-```dotenv
+```env
 TINA4_SESSION_SECURE=true     # Only send over HTTPS
 TINA4_SESSION_HTTPONLY=true   # Not accessible via JavaScript (default)
 TINA4_SESSION_SAMESITE=Lax   # Prevent CSRF via cross-site requests (default)

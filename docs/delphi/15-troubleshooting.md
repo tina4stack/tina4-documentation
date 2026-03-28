@@ -606,11 +606,7 @@ ShowMessage(Pages.TwigTemplatePath);
 ShowMessage(BoolToStr(DirectoryExists(Pages.TwigTemplatePath), True));
 ```
 
-<div v-pre>
-
 **Cause 2**: Template syntax error. A missing `{% endif %}` or unmatched braces.
-
-</div>
 
 **Fix**: Test with a minimal template:
 
@@ -637,11 +633,7 @@ Renderer.Twig.Text := '<h1>{{ title }}</h1>';
 
 ### Includes Failing
 
-<div v-pre>
-
 **Problem**: `{% include 'header.html' %}` does not work. The template renders without the included content.
-
-</div>
 
 **Cause**: `TwigTemplatePath` is not set or points to the wrong directory.
 

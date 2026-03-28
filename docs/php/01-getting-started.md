@@ -477,8 +477,6 @@ Open `http://localhost:7146/products`. You see:
 The chain is short:
 
 1. `$response->render("products.html", ["products" => $products])` tells Frond to render `src/templates/products.html`.
-<div v-pre>
-
 2. Frond sees `{% extends "base.html" %}` and loads the base template.
 3. The `{% block content %}` in `products.html` replaces the same block in `base.html`.
 4. `{{ product.name }}` outputs the value, auto-escaped for HTML safety.
@@ -486,8 +484,6 @@ The chain is short:
 6. `{% for product in products %}` loops through the array.
 7. `{% if product.in_stock %}` renders the correct badge.
 8. `{{ products | length }}` returns the count.
-
-</div>
 
 ### About tina4css
 
@@ -499,7 +495,7 @@ The `tina4.css` file is Tina4's built-in CSS utility framework. Layout utilities
 
 Open `.env` at the project root:
 
-```dotenv
+```env
 TINA4_DEBUG=true
 ```
 
@@ -534,7 +530,7 @@ tina4 serve --port 8080
 
 Or add it to your `.env` file:
 
-```dotenv
+```env
 TINA4_DEBUG=true
 TINA4_PORT=8080
 ```
@@ -1041,7 +1037,7 @@ Router::get("/store", function ($request, $response) {
 
 **Fix:** Stop the other process, or change the port:
 
-```dotenv
+```env
 TINA4_PORT=8080
 ```
 

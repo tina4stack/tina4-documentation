@@ -143,7 +143,7 @@ The middleware function itself is defined as a named function in any auto-loaded
 
 v3 uses the same `DATABASE_URL` environment variable, but the format is standardised:
 
-```dotenv
+```env
 # SQLite (default if DATABASE_URL is not set)
 DATABASE_URL=sqlite:///data/app.db
 

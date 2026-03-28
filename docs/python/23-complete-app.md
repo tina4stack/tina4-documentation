@@ -68,7 +68,7 @@ uv sync
 
 Update `.env`:
 
-```dotenv
+```env
 TINA4_DEBUG=true
 SECRET=taskflow-dev-secret-change-in-production
 TINA4_TOKEN_EXPIRES_IN=1440

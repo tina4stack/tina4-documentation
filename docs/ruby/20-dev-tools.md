@@ -10,7 +10,7 @@ Tina4's dev tools are not an afterthought. They ship with the framework from day
 
 ## 2. Enabling the Dev Dashboard
 
-```dotenv
+```env
 TINA4_DEBUG=true
 ```
 

@@ -314,7 +314,7 @@ async def delete_user(request, response):
 
 Control Swagger behavior in `.env`:
 
-```dotenv
+```env
 # Swagger is only available when debug mode is on (default behavior)
 TINA4_DEBUG=true
 

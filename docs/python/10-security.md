@@ -88,14 +88,10 @@ Tina4 blocks this with form tokens.
 
 ### How It Works
 
-<div v-pre>
-
 1. Your template renders a hidden token using `{{ form_token() }}`.
 2. The browser submits the token with the form data.
 3. The `CsrfMiddleware` validates the token before the route handler runs.
 4. Invalid or missing tokens receive a `403 Forbidden` response.
-
-</div>
 
 ### The Template
 
@@ -107,11 +103,7 @@ Tina4 blocks this with form tokens.
 </form>
 ```
 
-<div v-pre>
-
 The `{{ form_token() }}` call generates a hidden input field containing a signed JWT. The token is bound to the current session — a token from one session cannot be used in another.
-
-</div>
 
 ### The Middleware
 
@@ -164,7 +156,7 @@ Three scenarios skip CSRF checks automatically:
 
 For internal microservices behind a firewall — where no browser ever touches the API — you can disable CSRF entirely:
 
-```dotenv
+```env
 TINA4_CSRF=false
 ```
 
@@ -176,11 +168,7 @@ Leave it enabled for anything a browser can reach. The cost is one hidden field 
 
 A form token alone prevents cross-site forgery. But what if someone steals a token from a form? Session binding stops them.
 
-<div v-pre>
-
 When `{{ form_token() }}` generates a token, it embeds the current session ID in the JWT payload. The CSRF middleware checks that the session ID in the token matches the session ID of the request. A token stolen from one session cannot be replayed in another.
-
-</div>
 
 This happens automatically. No configuration. No extra code.
 
@@ -211,7 +199,7 @@ Every response from Tina4 carries security headers. The `SecurityHeadersMiddlewa
 
 Strict Transport Security tells the browser to always use HTTPS. Disabled by default (it breaks local development on HTTP). Enable it in production:
 
-```dotenv
+```env
 TINA4_HSTS=31536000
 ```
 
@@ -221,7 +209,7 @@ This sets a one-year HSTS policy with `includeSubDomains`. Once a browser sees t
 
 Override any header via environment variables:
 
-```dotenv
+```env
 TINA4_FRAME_OPTIONS=DENY
 TINA4_CSP=default-src 'self'; script-src 'self' https://cdn.example.com
 TINA4_REFERRER_POLICY=no-referrer
@@ -443,7 +431,7 @@ Brute-force login attempts. Credential stuffing. API abuse. Rate limiting stops 
 
 Tina4 includes a sliding-window rate limiter that tracks requests per IP address. It activates automatically.
 
-```dotenv
+```env
 TINA4_RATE_LIMIT=100
 TINA4_RATE_WINDOW=60
 ```
@@ -485,7 +473,7 @@ When your frontend runs on a different origin than your API (common in developme
 
 Tina4 handles CORS automatically. The relevant security settings:
 
-```dotenv
+```env
 TINA4_CORS_ORIGINS=*
 TINA4_CORS_CREDENTIALS=true
 ```
@@ -498,7 +486,7 @@ Two rules to remember:
 
 Production CORS:
 
-```dotenv
+```env
 TINA4_CORS_ORIGINS=https://app.example.com,https://admin.example.com
 TINA4_CORS_CREDENTIALS=true
 ```
@@ -549,7 +537,7 @@ Before you deploy, verify:
 
 **Fix:** Move scripts to external `.js` files (the right approach) or relax the CSP:
 
-```dotenv
+```env
 TINA4_CSP=default-src 'self'; script-src 'self' 'unsafe-inline'
 ```
 
@@ -568,14 +556,10 @@ Prefer external scripts. Inline scripts are an XSS vector.
 Build a public contact form that:
 
 1. Does not require login (`@noauth()`).
-<div v-pre>
-
 2. Validates CSRF tokens (form includes `{{ form_token() }}`).
 3. Rate-limits submissions to 3 per minute per IP.
 4. Stores messages in the database.
 5. Returns a success message.
-
-</div>
 
 ### Solution
 

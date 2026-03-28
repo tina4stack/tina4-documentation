@@ -12,7 +12,7 @@ Tina4's `Messenger` class owns all of this. Configure via `.env`. Create an inst
 
 All email configuration lives in `.env`:
 
-```dotenv
+```env
 TINA4_MAIL_SMTP_HOST=smtp.example.com
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=your-email@example.com

@@ -101,11 +101,7 @@ This works with any callable property. Arguments are evaluated as expressions, s
 
 ### Expressions
 
-<div v-pre>
-
 Basic expressions work inside `{{ }}`:
-
-</div>
 
 ```html
 <p>Total: ${{ price * quantity }}</p>
@@ -186,11 +182,7 @@ Router.get("/about", async (req, res) => {
 });
 ```
 
-<div v-pre>
-
 ### Using `{{ parent() }}`
-
-</div>
 
 Add to a block rather than replace it:
 
@@ -212,11 +204,7 @@ Add to a block rather than replace it:
 
 ## 4. Includes
 
-<div v-pre>
-
 Break templates into reusable pieces with `{% include %}`:
-
-</div>
 
 Create `src/templates/partials/header.twig`:
 
@@ -276,11 +264,7 @@ Use `only` to isolate the included template from the parent scope:
 
 ## 5. For Loops
 
-<div v-pre>
-
 Loop through arrays with `{% for %}`:
-
-</div>
 
 ```html
 <ul>
@@ -322,11 +306,7 @@ Inside a for loop, Frond provides a special `loop` variable:
 
 ### Empty Lists
 
-<div v-pre>
-
 Handle empty lists with `{% else %}`:
-
-</div>
 
 ```html
 {% for product in products %}
@@ -424,11 +404,7 @@ Filters transform values. Apply them with the `|` (pipe) character.
 
 ### The `escape` and `raw` Filters
 
-<div v-pre>
-
 All `{{ }}` output is auto-escaped for HTML safety. If you trust the content and need raw HTML:
-
-</div>
 
 ```html
 {{ trusted_html | raw }}
@@ -498,17 +474,9 @@ Create `src/templates/macros.twig`:
 
 ## 9. Special Tags
 
-<div v-pre>
-
 ### {% raw %} -- Literal Output
 
-</div>
-
-<div v-pre>
-
 When you need to output literal `{{ }}` (for a Vue.js template, for example):
-
-</div>
 
 ```html
 {% raw %}
@@ -742,41 +710,21 @@ Router.get("/catalog", async (req, res) => {
 
 ## 13. Gotchas
 
-<div v-pre>
-
 ### 1. `{% extends %}` Must Be the First Tag
-
-</div>
 
 **Problem:** Template inheritance does not work. The page renders without the base layout.
 
-<div v-pre>
-
 **Cause:** `{% extends "base.twig" %}` must be the first tag in the template. No exceptions.
-
-</div>
-
-<div v-pre>
 
 **Fix:** Make `{% extends %}` the absolute first thing in the file.
 
-</div>
-
 ### 2. Undefined Variables Show Nothing
-
-<div v-pre>
 
 **Problem:** `{{ username }}` renders as empty instead of showing an error.
 
-</div>
-
 **Cause:** Frond outputs nothing for undefined variables. By design.
 
-<div v-pre>
-
 **Fix:** Use the `default` filter: `{{ username | default("Guest") }}`.
-
-</div>
 
 ### 3. Auto-Escaping Prevents HTML Output
 
@@ -784,43 +732,23 @@ Router.get("/catalog", async (req, res) => {
 
 **Cause:** Auto-escaping converts `<` to `&lt;` for security.
 
-<div v-pre>
-
 **Fix:** For trusted content, use `{{ content | raw }}`. Never use `raw` on user-supplied input.
-
-</div>
 
 ### 4. Variable Scope in Includes
 
-<div v-pre>
-
 **Problem:** A variable defined inside a `{% for %}` loop is not accessible after the loop ends.
-
-</div>
 
 **Cause:** Loop variables are scoped to the loop.
 
-<div v-pre>
-
 **Fix:** Use `{% set %}` before the loop to accumulate values.
-
-</div>
 
 ### 5. Macro Arguments Are Positional
 
-<div v-pre>
-
 **Problem:** Calling `{{ button("Click", style="danger") }}` does not work.
-
-</div>
 
 **Cause:** Frond macros use positional arguments, not keyword arguments.
 
-<div v-pre>
-
 **Fix:** Pass arguments in the order defined: `{{ button("Click", "/url", "danger") }}`.
-
-</div>
 
 ### 6. Template File Extension Does Not Matter
 
@@ -832,16 +760,8 @@ Router.get("/catalog", async (req, res) => {
 
 ### 7. Filters Are Not JavaScript Functions
 
-<div v-pre>
-
 **Problem:** You try `{{ items | count }}` or `{{ name | toUpperCase }}` and get an error.
-
-</div>
 
 **Cause:** Frond filters follow Twig conventions, not JavaScript conventions.
 
-<div v-pre>
-
 **Fix:** Use `{{ items | length }}` instead of `count`. Use `{{ name | upper }}` instead of `toUpperCase`.
-
-</div>

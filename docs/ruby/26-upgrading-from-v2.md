@@ -360,7 +360,7 @@ mv templates/* src/templates/
 
 Switch to URL-format database connection:
 
-```dotenv
+```env
 # Old
 # DATABASE_TYPE=sqlite
 # DATABASE_PATH=data/app.db

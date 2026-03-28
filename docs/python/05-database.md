@@ -16,7 +16,7 @@ Picture a notes application. Users create, edit, and delete notes. Those notes n
 
 Set your database connection in `.env`:
 
-```dotenv
+```env
 DATABASE_URL=sqlite:///data/app.db
 ```
 
@@ -104,6 +104,10 @@ The Firebird adapter tries `firebird-driver` (the modern package) first and fall
 ### Lowercase Column Names
 
 Firebird returns column names in uppercase by default. Tina4 normalises them to lowercase automatically, so `result["first_name"]` works regardless of how the column was defined in the schema.
+
+### Firebird Migration Support
+
+As of 3.10.8, the migration runner handles Firebird correctly. It uses a generator (sequence) for auto-increment IDs instead of `AUTOINCREMENT`, and emits `VARCHAR(4096)` instead of `TEXT` (which Firebird does not support as a column type). If you are upgrading from an earlier version, no changes to existing migrations are needed -- the runner detects the engine automatically.
 
 ---
 
@@ -549,7 +553,7 @@ This means you can write PostgreSQL stored procedures in your migration files wi
 
 Expensive queries that return the same result on every call deserve caching. Tina4 builds it in. Enable query caching via environment variables in your `.env`:
 
-```dotenv
+```env
 TINA4_DB_CACHE=true
 TINA4_DB_CACHE_TTL=30
 ```

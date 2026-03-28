@@ -75,7 +75,7 @@ Tina4 Node.js uses **HS256** (HMAC-SHA256) for JWT signing. It uses only the sta
 
 Set the secret key in `.env`:
 
-```dotenv
+```env
 SECRET=my-super-secret-key-at-least-32-chars
 ```
 

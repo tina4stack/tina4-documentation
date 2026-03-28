@@ -12,7 +12,7 @@ Tina4's dev tools are not an afterthought. They are built into the framework fro
 
 Enable debug mode in your `.env`:
 
-```dotenv
+```env
 TINA4_DEBUG=true
 ```
 
@@ -277,7 +277,7 @@ Hot reload is only active when `TINA4_DEBUG=true`. In production (`TINA4_DEBUG=f
 
 If hot reload interferes with your workflow (e.g., you are filling out a form and do not want it to reset), disable it in `.env`:
 
-```dotenv
+```env
 TINA4_LIVE_RELOAD=false
 ```
 
@@ -492,7 +492,7 @@ Router::get("/api/orders/summary", function ($request, $response) {
 
 **Fix:** Add to your `.env`:
 
-```dotenv
+```env
 TINA4_DEBUG=true
 ```
 

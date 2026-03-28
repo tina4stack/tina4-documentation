@@ -16,7 +16,7 @@ Configure your `.env` for production. Development defaults optimize for debuggin
 
 Create a production `.env`:
 
-```dotenv
+```env
 # Core
 TINA4_DEBUG=false
 TINA4_LOG_LEVEL=WARNING
@@ -435,7 +435,7 @@ No data corruption. No dropped requests during deployments.
 
 Set the maximum time to wait for in-flight requests in `.env`:
 
-```dotenv
+```env
 TINA4_SHUTDOWN_TIMEOUT=30
 ```
 
@@ -535,7 +535,7 @@ Environment variables set via `docker run -e` or `docker-compose environment:` t
 
 FrankenPHP handles SSL automatically. Just set your domain:
 
-```dotenv
+```env
 TINA4_HOST=yourdomain.com
 ```
 
@@ -607,7 +607,7 @@ volumes:
 
 FrankenPHP runs multiple worker threads by default. Configure the count in `.env`:
 
-```dotenv
+```env
 TINA4_WORKERS=4
 ```
 
@@ -666,7 +666,7 @@ Use a load balancer (Traefik, nginx, or a cloud load balancer) in front of the c
 
 In production, send logs to a centralized service:
 
-```dotenv
+```env
 TINA4_LOG_FORMAT=json
 ```
 
@@ -837,7 +837,7 @@ volumes:
 
 ### .env.production
 
-```dotenv
+```env
 TINA4_DEBUG=false
 TINA4_LOG_LEVEL=WARNING
 TINA4_CACHE_TEMPLATES=true
@@ -883,7 +883,7 @@ CORS_ORIGINS=https://yourdomain.com
 
 **Fix:** For low-to-medium traffic (under 100 concurrent users), SQLite works fine. For higher traffic, switch to PostgreSQL or MySQL:
 
-```dotenv
+```env
 DATABASE_URL=postgres://user:pass@localhost:5432/myapp
 ```
 
@@ -958,7 +958,7 @@ The `start-period` tells Docker to ignore health check failures during the first
 
 **Fix:** Set `CORS_ORIGINS` to include all domains that need access:
 
-```dotenv
+```env
 CORS_ORIGINS=https://yourdomain.com,https://admin.yourdomain.com
 ```
 

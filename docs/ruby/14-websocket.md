@@ -680,7 +680,7 @@ A backplane solves this. It relays WebSocket messages across all instances using
 
 Set two environment variables in your `.env`:
 
-```dotenv
+```env
 TINA4_WS_BACKPLANE=redis
 TINA4_WS_BACKPLANE_URL=redis://localhost:6379
 ```

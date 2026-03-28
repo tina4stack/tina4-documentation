@@ -66,7 +66,7 @@ If a `before_*` method returns a response with status >= 400, the handler is ski
 
 Cross-Origin Resource Sharing (CORS) is the browser mechanism that controls which domains can call your API. Tina4 provides a built-in `CorsMiddleware` that handles this. Configure it in `.env`:
 
-```dotenv
+```env
 TINA4_CORS_ORIGINS=http://localhost:3000,https://myapp.com
 TINA4_CORS_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS
 TINA4_CORS_HEADERS=Content-Type,Authorization,Accept
@@ -96,7 +96,7 @@ end
 
 Rate limiting prevents a single client from overwhelming your API. Configure it in `.env`:
 
-```dotenv
+```env
 TINA4_RATE_LIMIT=60
 TINA4_RATE_WINDOW=60
 ```
@@ -179,7 +179,7 @@ It sets the following headers by default:
 
 Override any header via environment variables in `.env`:
 
-```dotenv
+```env
 TINA4_FRAME_OPTIONS=SAMEORIGIN
 TINA4_CSP=default-src 'self'; script-src 'self' https://cdn.example.com
 TINA4_HSTS=max-age=63072000; includeSubDomains; preload
@@ -592,7 +592,7 @@ Build a middleware called `validate_api_key` that:
 
 Add this to your `.env`:
 
-```dotenv
+```env
 API_KEYS=key-alpha-001,key-beta-002,key-gamma-003
 ```
 

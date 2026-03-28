@@ -348,7 +348,7 @@ Switching backends is a config change, not a code change.
 
 ### Default: File
 
-```dotenv
+```env
 # No config needed -- file is the default
 # Optionally set a custom storage path (defaults to ./queue)
 TINA4_QUEUE_PATH=./data/queue
@@ -356,21 +356,21 @@ TINA4_QUEUE_PATH=./data/queue
 
 ### RabbitMQ
 
-```dotenv
+```env
 TINA4_QUEUE_BACKEND=rabbitmq
 TINA4_QUEUE_URL=amqp://user:pass@localhost:5672
 ```
 
 ### Kafka
 
-```dotenv
+```env
 TINA4_QUEUE_BACKEND=kafka
 TINA4_QUEUE_URL=localhost:9092
 ```
 
 ### MongoDB
 
-```dotenv
+```env
 TINA4_QUEUE_BACKEND=mongodb
 TINA4_QUEUE_URL=mongodb://user:pass@localhost:27017/tina4
 ```

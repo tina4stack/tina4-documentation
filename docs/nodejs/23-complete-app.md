@@ -61,7 +61,7 @@ npm install
 
 Update `.env`:
 
-```dotenv
+```env
 TINA4_DEBUG=true
 TINA4_JWT_SECRET=taskflow-dev-secret-change-in-production
 TINA4_JWT_EXPIRY=86400

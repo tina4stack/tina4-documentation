@@ -497,8 +497,6 @@ Open `http://localhost:7148/products`. You should see:
 ### How Template Rendering Works
 
 1. `res.html("products.html", { products })` tells Frond to render `src/templates/products.html` with the given data.
-<div v-pre>
-
 2. Frond sees `{% extends "base.html" %}` and loads the base template.
 3. The `{% block content %}` in `products.html` replaces the same block in `base.html`.
 4. `{{ product.name }}` outputs the value, auto-escaped for HTML safety.
@@ -506,8 +504,6 @@ Open `http://localhost:7148/products`. You should see:
 6. `{% for product in products %}` loops through the array.
 7. `{% if product.inStock %}` conditionally renders the stock badge.
 8. `{{ products | length }}` returns the count of items in the array.
-
-</div>
 
 ### About tina4css
 
@@ -519,7 +515,7 @@ The `tina4.css` file in the base template is Tina4's built-in CSS utility framew
 
 Open the `.env` file at the root of your project:
 
-```dotenv
+```env
 TINA4_DEBUG=true
 ```
 
@@ -554,7 +550,7 @@ tina4 serve --port 8080
 
 Or add it to your `.env` file:
 
-```dotenv
+```env
 TINA4_DEBUG=true
 TINA4_PORT=8080
 ```
@@ -1085,7 +1081,7 @@ Router.get("/store", async (req, res) => {
 
 **Fix:** Stop the other process, or change the port:
 
-```dotenv
+```env
 TINA4_PORT=8080
 ```
 

@@ -36,7 +36,7 @@ This is a quick-reference for the 20 most important `.env` variables in Tina4 Py
 
 ## Minimal .env for Development
 
-```dotenv
+```env
 TINA4_DEBUG=true
 ```
 
@@ -46,7 +46,7 @@ That is it. Every other variable has a sensible default. Debug mode enables the 
 
 ## Minimal .env for Production
 
-```dotenv
+```env
 SECRET=your-long-random-secret-here
 DATABASE_URL=postgresql://user:password@db-host:5432/myapp
 TINA4_CORS_ORIGINS=https://myapp.com,https://www.myapp.com

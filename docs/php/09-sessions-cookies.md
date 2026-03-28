@@ -104,7 +104,7 @@ File sessions work for single-server deployments. Simplest option. No extra soft
 
 Multiple servers behind a load balancer need a shared session store. Redis is the standard choice.
 
-```dotenv
+```env
 TINA4_SESSION_BACKEND=redis
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -124,7 +124,7 @@ That is the only change. Your code stays identical. `$request->session` works th
 
 Sharing a Redis instance with other applications:
 
-```dotenv
+```env
 TINA4_SESSION_BACKEND=redis
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -137,7 +137,7 @@ TINA4_SESSION_PREFIX=myapp:sess:
 
 Already running MongoDB:
 
-```dotenv
+```env
 TINA4_SESSION_BACKEND=mongodb
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=27017
@@ -153,7 +153,7 @@ TTL indexes handle expired session cleanup.
 
 Valkey is the open-source Redis fork. Wire-compatible. Same client library:
 
-```dotenv
+```env
 TINA4_SESSION_BACKEND=valkey
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -163,7 +163,7 @@ TINA4_SESSION_PORT=6379
 
 ## 8. Database Sessions
 
-```dotenv
+```env
 TINA4_SESSION_BACKEND=database
 ```
 
@@ -488,7 +488,7 @@ The database holds the hash. The cookie holds the raw token. If the database is 
 
 ### Configuration Options
 
-```dotenv
+```env
 TINA4_SESSION_TTL=3600            # Expires after 1 hour of inactivity
 TINA4_SESSION_SECURE=true         # HTTPS only
 TINA4_SESSION_HTTPONLY=true       # JavaScript cannot access the cookie (default)

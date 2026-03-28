@@ -466,13 +466,13 @@ matches = Auth.check_password(hashed, "my-secret-password")  # True
 
 JWT uses HMAC-SHA256. Set the signing key in `.env`:
 
-```dotenv
+```env
 SECRET=your-long-random-secret-key
 ```
 
 Token lifetime defaults to 60 minutes. Override with:
 
-```dotenv
+```env
 TINA4_TOKEN_LIMIT=120
 ```
 
@@ -484,7 +484,7 @@ v2 had basic file-based sessions. v3 supports pluggable backends.
 
 Set the backend in `.env`:
 
-```dotenv
+```env
 TINA4_SESSION_BACKEND=file
 ```
 
@@ -500,7 +500,7 @@ Available backends:
 
 Session cookies default to `SameSite=Lax`. Override with:
 
-```dotenv
+```env
 TINA4_SESSION_SAMESITE=Strict
 ```
 

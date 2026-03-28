@@ -4,11 +4,7 @@
 
 Every route so far returns JSON. That works for APIs. But web applications need HTML -- product listings, dashboards, login forms, email templates. Tina4 uses the **Frond** template engine for this.
 
-<div v-pre>
-
 Frond is a zero-dependency template engine built from scratch. Its syntax is compatible with Twig, Jinja2, and Nunjucks. If you know any of those, you know Frond. If you do not, the syntax is three things: `{{ }}` for output, `{% %}` for logic, `{# #}` for comments.
-
-</div>
 
 Picture an online store. A product catalog page. Items in a grid. Featured products highlighted. Prices formatted. Layout inherited from a shared template. That is what this chapter builds.
 
@@ -54,11 +50,7 @@ The `@template` decorator is stacked above `@get` (or `@post`, etc.). When the h
 
 ### Basic Output
 
-<div v-pre>
-
 Use `{{ }}` to output a variable:
-
-</div>
 
 ```html
 <h1>Hello, {{ name }}!</h1>
@@ -284,11 +276,7 @@ Inside a for loop, the `loop` variable gives you context:
 
 ### for / else
 
-<div v-pre>
-
 The `{% else %}` block inside `{% for %}` runs when the list is empty:
-
-</div>
 
 ```html
 {% for product in products %}
@@ -369,22 +357,14 @@ Create `src/templates/home.html`:
 
 When Frond renders `home.html`:
 
-<div v-pre>
-
 1. It sees `{% extends "base.html" %}` and loads the base template.
 2. The `{% block title %}` in `home.html` replaces the one in `base.html`.
 3. The `{% block content %}` in `home.html` replaces the one in `base.html`.
 4. Blocks not overridden (`head`, `scripts`) keep their default content (empty here).
 
-</div>
-
 ### Calling Parent Blocks
 
-<div v-pre>
-
 Use `{{ parent() }}` to include the parent block's content:
-
-</div>
 
 ```html
 {% extends "base.html" %}
@@ -395,11 +375,7 @@ Use `{{ parent() }}` to include the parent block's content:
 {% endblock %}
 ```
 
-<div v-pre>
-
 This keeps whatever the parent had in `{% block head %}` and adds the extra stylesheet.
-
-</div>
 
 ---
 
@@ -471,11 +447,7 @@ Consistent markup. Change the macro once and every form in your application upda
 
 ## 8. Comments
 
-<div v-pre>
-
 Use `{# #}` for template comments. Stripped from output:
-
-</div>
 
 ```html
 {# This comment will not appear in the HTML source #}
@@ -703,11 +675,7 @@ async def product_detail(id, request, response):
 
 **Cause:** Template tags produce whitespace on the line they occupy.
 
-<div v-pre>
-
 **Fix:** Use whitespace control with `{%-` and `-%}` to strip whitespace around tags:
-
-</div>
 
 ```html
 {%- for item in items -%}
@@ -719,106 +687,46 @@ async def product_detail(id, request, response):
 
 **Problem:** Frond raises an error when a variable does not exist in the context.
 
-<div v-pre>
-
 **Cause:** You used `{{ user.name }}` but did not pass `user` in the template data.
-
-</div>
-
-<div v-pre>
 
 **Fix:** Use the `|default` filter: `{{ user.name | default("Guest") }}`. Or check first: `{% if user is defined %}{{ user.name }}{% endif %}`.
 
-</div>
-
 ### 3. Extends must be the first tag
-
-<div v-pre>
 
 **Problem:** `{% extends "base.html" %}` has no effect and the page renders without the layout.
 
-</div>
-
-<div v-pre>
-
 **Cause:** `{% extends %}` must be the first tag in the template. Any text, HTML, or tags before it cause Frond to treat the template as standalone.
-
-</div>
-
-<div v-pre>
 
 **Fix:** Move `{% extends "base.html" %}` to the first line. No content before it.
 
-</div>
-
 ### 4. Macro not found
-
-<div v-pre>
 
 **Problem:** `{{ forms.input(...) }}` produces an error about `forms` being undefined.
 
-</div>
-
-<div v-pre>
-
 **Cause:** You forgot the `{% import %}` statement, or the import path is wrong.
-
-</div>
-
-<div v-pre>
 
 **Fix:** Add `{% import "macros/forms.html" as forms %}` at the top of the template (after `{% extends %}` if using inheritance). The path is relative to `src/templates/`.
 
-</div>
-
 ### 5. Filter produces wrong type
-
-<div v-pre>
 
 **Problem:** `{{ "%.2f"|format(price) }}` shows an error instead of a formatted number.
 
-</div>
-
 **Cause:** The variable `price` is a string, not a number. Filters expect specific types.
 
-<div v-pre>
-
 **Fix:** Pass correct types from your route handler. Use `float(price)` in Python before passing to the template, or convert in the template: `{{ "%.2f"|format(price|float) }}`.
-
-</div>
 
 ### 6. Escaped HTML when you want raw output
 
 **Problem:** Your HTML content shows as text with visible `<tags>` instead of rendering.
 
-<div v-pre>
-
 **Cause:** Frond auto-escapes all `{{ }}` output to prevent XSS.
-
-</div>
-
-<div v-pre>
 
 **Fix:** Use the `|safe` filter: `{{ trusted_html | safe }}`. Only use this with content you trust -- never with user input.
 
-</div>
-
 ### 7. Include file path wrong
-
-<div v-pre>
 
 **Problem:** `{% include "header.html" %}` gives a "template not found" error even though the file exists.
 
-</div>
-
-<div v-pre>
-
 **Cause:** The path in `{% include %}` is relative to `src/templates/`, not the current template file.
 
-</div>
-
-<div v-pre>
-
 **Fix:** Use the full path from the templates root: `{% include "partials/header.html" %}` for a file at `src/templates/partials/header.html`.
-
-</div>

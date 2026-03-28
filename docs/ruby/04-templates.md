@@ -98,11 +98,7 @@ This works for any callable value -- `Proc`, `lambda`, or `method` objects. Argu
 
 ### Expressions
 
-<div v-pre>
-
 Basic expressions work inside `{{ }}`:
-
-</div>
 
 ```html
 <p>Total: ${{ price * quantity }}</p>
@@ -185,11 +181,7 @@ end
 
 **Browser output:** A full HTML page with the nav, the "About Us" content, and the footer. The `<title>` tag reads "About Us". The `head` and `scripts` blocks stay empty -- the child did not override them.
 
-<div v-pre>
-
 ### Using `{{ parent() }}`
-
-</div>
 
 Add to a block instead of replacing it:
 
@@ -213,11 +205,7 @@ The `head` block now contains everything from the base plus the extra stylesheet
 
 ## 4. Includes
 
-<div v-pre>
-
 Break templates into reusable pieces with `{% include %}`:
-
-</div>
 
 Create `src/templates/partials/header.twig`:
 
@@ -283,11 +271,7 @@ With `only`, the included template sees `site_name` and nothing else.
 
 ## 5. For Loops
 
-<div v-pre>
-
 Loop through arrays with `{% for %}`:
-
-</div>
 
 ```html
 <ul>
@@ -329,11 +313,7 @@ Inside a for loop, Frond provides a special `loop` variable:
 
 ### Empty Lists
 
-<div v-pre>
-
 Handle empty lists with `{% else %}`:
-
-</div>
 
 ```html
 {% for product in products %}
@@ -472,11 +452,7 @@ Provide a fallback when a variable is nil or undefined:
 
 ### The `escape` and `raw` Filters
 
-<div v-pre>
-
 All `{{ }}` output is auto-escaped for HTML safety. This blocks XSS attacks.
-
-</div>
 
 ```html
 {{ user_input }}
@@ -585,17 +561,9 @@ Import macros in your template:
 
 ## 9. Special Tags
 
-<div v-pre>
-
 ### {% raw %} -- Literal Output
 
-</div>
-
-<div v-pre>
-
 When you need to output literal `{{ }}` or `{% %}` (for Vue.js or Angular templates):
-
-</div>
 
 ```html
 {% raw %}
@@ -605,17 +573,9 @@ When you need to output literal `{{ }}` or `{% %}` (for Vue.js or Angular templa
 {% endraw %}
 ```
 
-<div v-pre>
-
 Outputs the literal text `{{ message }}` without processing it as a Frond expression.
 
-</div>
-
-<div v-pre>
-
 ### {% spaceless %} -- Remove Whitespace
-
-</div>
 
 Strip whitespace between HTML tags:
 
@@ -635,11 +595,7 @@ Strip whitespace between HTML tags:
 
 Useful for inline elements where whitespace creates unwanted gaps.
 
-<div v-pre>
-
 ### {% autoescape %} -- Control Escaping
-
-</div>
 
 Override auto-escaping for a block:
 
@@ -937,41 +893,21 @@ end
 
 ## 13. Gotchas
 
-<div v-pre>
-
 ### 1. `{% extends %}` Must Be the First Tag
-
-</div>
 
 **Problem:** Template inheritance does not work. The page renders without the base layout.
 
-<div v-pre>
-
 **Cause:** `{% extends "base.twig" %}` must be the first tag in the template. Any text, whitespace, or comment before it breaks inheritance.
-
-</div>
-
-<div v-pre>
 
 **Fix:** Make `{% extends %}` the absolute first thing in the file. Move `{% from %}` imports after the extends tag.
 
-</div>
-
 ### 2. Undefined Variables Show Nothing
-
-<div v-pre>
 
 **Problem:** `{{ username }}` renders as empty instead of raising an error.
 
-</div>
-
 **Cause:** Frond outputs nothing for undefined variables. By design. But it can hide bugs.
 
-<div v-pre>
-
 **Fix:** Use the `default` filter: `{{ username | default("Guest") }}`. Or check with `{% if username is defined %}`.
-
-</div>
 
 ### 3. Auto-Escaping Prevents HTML Output
 
@@ -979,43 +915,23 @@ end
 
 **Cause:** Auto-escaping converts `<` to `&lt;` and `>` to `&gt;` for security.
 
-<div v-pre>
-
 **Fix:** Trusted content gets `{{ content | raw }}`. Never use `raw` on user-supplied input.
-
-</div>
 
 ### 4. Variable Scope in Includes
 
-<div v-pre>
-
 **Problem:** A variable defined inside a `{% for %}` loop vanishes after the loop ends.
-
-</div>
 
 **Cause:** Loop variables are scoped to the loop. They do not leak into the outer scope.
 
-<div v-pre>
-
 **Fix:** Use `{% set %}` before the loop and update inside it. Or restructure to keep logic within the loop.
-
-</div>
 
 ### 5. Macro Arguments Are Positional
 
-<div v-pre>
-
 **Problem:** `{{ button("Click", style="danger") }}` does not work as expected.
-
-</div>
 
 **Cause:** Frond macros use positional arguments. Order matters.
 
-<div v-pre>
-
 **Fix:** Pass arguments in the order they are defined: `{{ button("Click", "/url", "danger") }}`. Many optional arguments? Consider passing a single object.
-
-</div>
 
 ### 6. Template File Extension Does Not Matter
 
@@ -1027,16 +943,8 @@ end
 
 ### 7. Filters Are Not Ruby Methods
 
-<div v-pre>
-
 **Problem:** `{{ items | count }}` or `{{ name | upcase }}` raises an error.
-
-</div>
 
 **Cause:** Frond filters follow Twig conventions, not Ruby conventions.
 
-<div v-pre>
-
 **Fix:** Use `{{ items | length }}` not `count`. Use `{{ name | upper }}` not `upcase`. Use `{{ text | lower }}` not `downcase`. See the filter table in section 7.
-
-</div>

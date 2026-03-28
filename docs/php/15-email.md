@@ -14,7 +14,7 @@ Tina4's `Messenger` class handles all of it. Configure via `.env`. Create an ins
 
 All email configuration lives in `.env`:
 
-```dotenv
+```env
 TINA4_MAIL_SMTP_HOST=smtp.example.com
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=your-email@example.com
@@ -38,7 +38,7 @@ TINA4_MAIL_FROM_NAME=My Store
 
 **Gmail:**
 
-```dotenv
+```env
 TINA4_MAIL_SMTP_HOST=smtp.gmail.com
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=your-email@gmail.com
@@ -50,7 +50,7 @@ Note: Gmail requires an "App Password" (not your regular password) when two-fact
 
 **Mailgun:**
 
-```dotenv
+```env
 TINA4_MAIL_SMTP_HOST=smtp.mailgun.org
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=postmaster@mg.yourdomain.com
@@ -60,7 +60,7 @@ TINA4_MAIL_SMTP_ENCRYPTION=tls
 
 **SendGrid:**
 
-```dotenv
+```env
 TINA4_MAIL_SMTP_HOST=smtp.sendgrid.net
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=apikey
@@ -284,7 +284,7 @@ $result = $mailer->send(
 
 Tina4's Messenger reads emails via IMAP:
 
-```dotenv
+```env
 TINA4_MAIL_IMAP_HOST=imap.example.com
 TINA4_MAIL_IMAP_PORT=993
 TINA4_MAIL_IMAP_USERNAME=support@example.com
@@ -391,7 +391,7 @@ Test email without configuring a real SMTP server. Inspect the output without po
 
 To test real email delivery during development:
 
-```dotenv
+```env
 TINA4_MAIL_INTERCEPT=false
 ```
 
@@ -856,11 +856,7 @@ The HTML response includes the success flash message.
 
 ### 6. Email Template Variables Not Substituted
 
-<div v-pre>
-
 **Problem:** The email body shows `{{ name }}` instead of the user's name.
-
-</div>
 
 **Cause:** You passed the raw template file content instead of rendering it through Frond. The template engine never ran.
 
