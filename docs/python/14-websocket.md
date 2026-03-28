@@ -629,12 +629,12 @@ Here is a full chat page using templates and WebSocket:
 Create `src/templates/chat.html`:
 
 ```html
-{% extends "base.html" %}
+&#123;% extends "base.html" %&#125;
 
-{% block title %}Chat - {{ room }}{% endblock %}
+&#123;% block title %&#125;Chat - &#123;&#123; room &#125;&#125;&#123;% endblock %&#125;
 
-{% block content %}
-    <h1>Chat Room: {{ room }}</h1>
+&#123;% block content %&#125;
+    <h1>Chat Room: &#123;&#123; room &#125;&#125;</h1>
     <p id="status">Connecting...</p>
     <p id="online">Online: 0</p>
 
@@ -653,7 +653,7 @@ Create `src/templates/chat.html`:
 
     <script src="/js/frond.js"></script>
     <script>
-        const room = "{{ room }}";
+        const room = "&#123;&#123; room &#125;&#125;";
         const ws = frond.ws("/ws/livechat/" + room);
         const messagesDiv = document.getElementById("messages");
         const statusEl = document.getElementById("status");
@@ -713,7 +713,7 @@ Create `src/templates/chat.html`:
             ws.send(JSON.stringify({ type: "typing" }));
         });
     </script>
-{% endblock %}
+&#123;% endblock %&#125;
 ```
 
 Create the route to serve the page:
@@ -836,12 +836,12 @@ async def room_page(request, response):
 Create `src/templates/room.html`:
 
 ```html
-{% extends "base.html" %}
+&#123;% extends "base.html" %&#125;
 
-{% block title %}Room: {{ room }}{% endblock %}
+&#123;% block title %&#125;Room: &#123;&#123; room &#125;&#125;&#123;% endblock %&#125;
 
-{% block content %}
-    <h1>Room: {{ room }}</h1>
+&#123;% block content %&#125;
+    <h1>Room: &#123;&#123; room &#125;&#125;</h1>
     <p id="online" style="color: #666;">Online: 0</p>
 
     <div id="messages" style="border: 1px solid #ddd; height: 400px; overflow-y: auto; padding: 12px; margin-bottom: 12px; border-radius: 8px; background: #fafafa;">
@@ -858,7 +858,7 @@ Create `src/templates/room.html`:
 
     <script src="/js/frond.js"></script>
     <script>
-        const room = "{{ room }}";
+        const room = "&#123;&#123; room &#125;&#125;";
         const username = prompt("Choose a username:") || "Anonymous";
         const ws = frond.ws("/ws/room/" + room);
         const msgs = document.getElementById("messages");
@@ -897,7 +897,7 @@ Create `src/templates/room.html`:
             }
         });
     </script>
-{% endblock %}
+&#123;% endblock %&#125;
 ```
 
 Open `http://localhost:7145/room/test` in two browser tabs. Set different usernames. Send messages from one tab and watch them appear in both. Close one tab and verify the "left the room" message appears.
@@ -914,7 +914,7 @@ A backplane solves this. It relays WebSocket messages across all instances using
 
 Set two environment variables in your `.env`:
 
-```env
+```dotenv
 TINA4_WS_BACKPLANE=redis
 TINA4_WS_BACKPLANE_URL=redis://localhost:6379
 ```

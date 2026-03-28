@@ -45,7 +45,7 @@ Do not use `ResponseCache` on POST/PUT/DELETE routes, user-specific endpoints, o
 
 ## 3. Memory Cache (Default)
 
-```env
+```dotenv
 TINA4_CACHE_BACKEND=memory
 ```
 
@@ -55,7 +55,7 @@ The fastest option. Data lives in memory. Server restart wipes it clean.
 
 ## 4. Redis Cache
 
-```env
+```dotenv
 TINA4_CACHE_BACKEND=redis
 TINA4_CACHE_HOST=localhost
 TINA4_CACHE_PORT=6379
@@ -66,7 +66,7 @@ TINA4_CACHE_PREFIX=myapp:cache:
 
 ## 5. File Cache
 
-```env
+```dotenv
 TINA4_CACHE_BACKEND=file
 TINA4_CACHE_PATH=/path/to/cache/directory
 ```
@@ -121,7 +121,7 @@ Router.get("/api/products/{id:int}", async (req, res) => {
 
 ## 7. Database Query Caching
 
-```env
+```dotenv
 TINA4_DB_CACHE=true
 TINA4_DB_CACHE_TTL=300
 ```

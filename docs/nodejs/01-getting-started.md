@@ -365,7 +365,7 @@ Create `src/templates/base.html`:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}My Store{% endblock %}</title>
+    <title>&#123;% block title %&#125;My Store&#123;% endblock %&#125;</title>
     <link rel="stylesheet" href="/css/tina4.css">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
@@ -386,7 +386,7 @@ Create `src/templates/base.html`:
         <a href="/products">Products</a>
     </nav>
     <div class="container">
-        {% block content %}{% endblock %}
+        &#123;% block content %&#125;&#123;% endblock %&#125;
     </div>
     <script src="/js/frond.js"></script>
 </body>
@@ -400,31 +400,31 @@ This base layout defines two blocks (`title` and `content`) that child templates
 Create `src/templates/products.html`:
 
 ```html
-{% extends "base.html" %}
+&#123;% extends "base.html" %&#125;
 
-{% block title %}Products - My Store{% endblock %}
+&#123;% block title %&#125;Products - My Store&#123;% endblock %&#125;
 
-{% block content %}
+&#123;% block content %&#125;
     <h1>Our Products</h1>
-    <p>Showing {{ products | length }} product{{ products | length != 1 ? "s" : "" }}</p>
+    <p>Showing &#123;&#123; products | length &#125;&#125; product&#123;&#123; products | length != 1 ? "s" : "" &#125;&#125;</p>
 
-    {% if products | length > 0 %}
-        {% for product in products %}
+    &#123;% if products | length > 0 %&#125;
+        &#123;% for product in products %&#125;
             <div class="product-card">
-                <h3>{{ product.name }}</h3>
-                <p>{{ product.description }}</p>
-                <p class="price">${{ product.price | number_format(2) }}</p>
-                {% if product.inStock %}
+                <h3>&#123;&#123; product.name &#125;&#125;</h3>
+                <p>&#123;&#123; product.description &#125;&#125;</p>
+                <p class="price">$&#123;&#123; product.price | number_format(2) &#125;&#125;</p>
+                &#123;% if product.inStock %&#125;
                     <span class="badge badge-success">In Stock</span>
-                {% else %}
+                &#123;% else %&#125;
                     <span class="badge badge-danger">Out of Stock</span>
-                {% endif %}
+                &#123;% endif %&#125;
             </div>
-        {% endfor %}
-    {% else %}
+        &#123;% endfor %&#125;
+    &#123;% else %&#125;
         <p>No products available at the moment.</p>
-    {% endif %}
-{% endblock %}
+    &#123;% endif %&#125;
+&#123;% endblock %&#125;
 ```
 
 ### Create the Route That Renders the Template
@@ -497,6 +497,8 @@ Open `http://localhost:7148/products`. You should see:
 ### How Template Rendering Works
 
 1. `res.html("products.html", { products })` tells Frond to render `src/templates/products.html` with the given data.
+<div v-pre>
+
 2. Frond sees `{% extends "base.html" %}` and loads the base template.
 3. The `{% block content %}` in `products.html` replaces the same block in `base.html`.
 4. `{{ product.name }}` outputs the value, auto-escaped for HTML safety.
@@ -504,6 +506,8 @@ Open `http://localhost:7148/products`. You should see:
 6. `{% for product in products %}` loops through the array.
 7. `{% if product.inStock %}` conditionally renders the stock badge.
 8. `{{ products | length }}` returns the count of items in the array.
+
+</div>
 
 ### About tina4css
 
@@ -515,7 +519,7 @@ The `tina4.css` file in the base template is Tina4's built-in CSS utility framew
 
 Open the `.env` file at the root of your project:
 
-```env
+```dotenv
 TINA4_DEBUG=true
 ```
 
@@ -550,7 +554,7 @@ tina4 serve --port 8080
 
 Or add it to your `.env` file:
 
-```env
+```dotenv
 TINA4_DEBUG=true
 TINA4_PORT=8080
 ```
@@ -948,7 +952,7 @@ Create `src/templates/store-layout.html`:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Store{% endblock %}</title>
+    <title>&#123;% block title %&#125;Store&#123;% endblock %&#125;</title>
     <link rel="stylesheet" href="/css/tina4.css">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
@@ -967,10 +971,10 @@ Create `src/templates/store-layout.html`:
 </head>
 <body>
     <header>
-        <h1>{% block header %}Store{% endblock %}</h1>
+        <h1>&#123;% block header %&#125;Store&#123;% endblock %&#125;</h1>
     </header>
     <div class="container">
-        {% block content %}{% endblock %}
+        &#123;% block content %&#125;&#123;% endblock %&#125;
     </div>
     <script src="/js/frond.js"></script>
 </body>
@@ -980,29 +984,29 @@ Create `src/templates/store-layout.html`:
 Create `src/templates/store.html`:
 
 ```html
-{% extends "store-layout.html" %}
+&#123;% extends "store-layout.html" %&#125;
 
-{% block title %}Our Store{% endblock %}
-{% block header %}Our Store{% endblock %}
+&#123;% block title %&#125;Our Store&#123;% endblock %&#125;
+&#123;% block header %&#125;Our Store&#123;% endblock %&#125;
 
-{% block content %}
-    <p class="stats">{{ products | length }} products, {{ featured_count }} featured</p>
+&#123;% block content %&#125;
+    <p class="stats">&#123;&#123; products | length &#125;&#125; products, &#123;&#123; featured_count &#125;&#125; featured</p>
 
     <div class="product-grid">
-        {% for product in products %}
-            <div class="product-card{{ product.featured ? ' featured' : '' }}">
+        &#123;% for product in products %&#125;
+            <div class="product-card&#123;&#123; product.featured ? ' featured' : '' &#125;&#125;">
                 <p class="product-name">
-                    {{ product.name }}
-                    {% if product.featured %}
+                    &#123;&#123; product.name &#125;&#125;
+                    &#123;% if product.featured %&#125;
                         <span class="featured-badge">Featured</span>
-                    {% endif %}
+                    &#123;% endif %&#125;
                 </p>
-                <p class="product-category">{{ product.category }}</p>
-                <p class="product-price">${{ product.price | number_format(2) }}</p>
+                <p class="product-category">&#123;&#123; product.category &#125;&#125;</p>
+                <p class="product-price">$&#123;&#123; product.price | number_format(2) &#125;&#125;</p>
             </div>
-        {% endfor %}
+        &#123;% endfor %&#125;
     </div>
-{% endblock %}
+&#123;% endblock %&#125;
 ```
 
 Create `src/routes/store.ts`:
@@ -1081,7 +1085,7 @@ Router.get("/store", async (req, res) => {
 
 **Fix:** Stop the other process, or change the port:
 
-```env
+```dotenv
 TINA4_PORT=8080
 ```
 

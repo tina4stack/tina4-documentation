@@ -13,7 +13,11 @@ HTML := '<div class="card">' +
 
 Six lines. Two bugs waiting to happen. One missing quote away from a broken layout. And when the designer changes the card to include a phone number, you are back in the Pascal editor, escaping quotes and hoping the HTML is still valid.
 
+<div v-pre>
+
 Twig templates fix this. Write HTML in HTML files. Drop in variables with `{{ name }}`. Add loops with `{% for %}`. Inherit layouts with `{% extends %}`. The template engine handles the rest. Your Pascal code passes data in; the template decides how to display it.
+
+</div>
 
 TTina4Twig is a Twig-compatible engine built directly into the Tina4 Delphi component library. It supports variables, control structures, filters, functions, template inheritance, macros, and integration with the HTML renderer. Every feature documented here works at design time and runtime.
 
@@ -48,7 +52,11 @@ begin
 end;
 ```
 
+<div v-pre>
+
 The constructor takes a template path. This is the root directory where Twig looks for template files referenced by `{% include %}` and `{% extends %}` tags. Every file reference is relative to this path.
+
+</div>
 
 ### Render from a String
 
@@ -109,7 +117,11 @@ Access object properties with dot notation:
 
 ### Setting Variables Inside Templates
 
+<div v-pre>
+
 Use `{% set %}` to define variables directly in a template:
+
+</div>
 
 ```
 {% set greeting = 'Hello' %}
@@ -121,7 +133,11 @@ Use `{% set %}` to define variables directly in a template:
 <p>Total: {{ total }}</p>
 ```
 
+<div v-pre>
+
 The `~` operator concatenates strings. Variables set with `{% set %}` are scoped to the current template block.
+
+</div>
 
 ---
 
@@ -226,24 +242,24 @@ This is where Twig saves you from copy-pasting the same header and footer into 3
 <!DOCTYPE html>
 <html>
 <head>
-  <title>{% block title %}My App{% endblock %}</title>
+  <title>&#123;% block title %&#125;My App&#123;% endblock %&#125;</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
     .header { background: #2c3e50; color: white; padding: 15px; }
     .content { padding: 20px; }
     .footer { border-top: 1px solid #ccc; padding: 10px; color: #666; }
   </style>
-  {% block head %}{% endblock %}
+  &#123;% block head %&#125;&#123;% endblock %&#125;
 </head>
 <body>
   <div class="header">
-    <h1>{% block header %}My Application{% endblock %}</h1>
+    <h1>&#123;% block header %&#125;My Application&#123;% endblock %&#125;</h1>
   </div>
   <div class="content">
-    {% block content %}{% endblock %}
+    &#123;% block content %&#125;&#123;% endblock %&#125;
   </div>
   <div class="footer">
-    {% block footer %}&copy; 2026 My Company{% endblock %}
+    &#123;% block footer %&#125;&copy; 2026 My Company&#123;% endblock %&#125;
   </div>
 </body>
 </html>
@@ -252,16 +268,16 @@ This is where Twig saves you from copy-pasting the same header and footer into 3
 ### Child Template (dashboard.html)
 
 ```html
-{% extends 'base.html' %}
+&#123;% extends 'base.html' %&#125;
 
-{% block title %}Dashboard - My App{% endblock %}
+&#123;% block title %&#125;Dashboard - My App&#123;% endblock %&#125;
 
-{% block header %}Dashboard{% endblock %}
+&#123;% block header %&#125;Dashboard&#123;% endblock %&#125;
 
-{% block content %}
-  <h2>Welcome, {{ userName }}</h2>
-  <p>You have {{ messageCount }} new messages.</p>
-{% endblock %}
+&#123;% block content %&#125;
+  <h2>Welcome, &#123;&#123; userName &#125;&#125;</h2>
+  <p>You have &#123;&#123; messageCount &#125;&#125; new messages.</p>
+&#123;% endblock %&#125;
 ```
 
 The child template only defines the blocks it wants to override. Everything else comes from the base. Change the footer in `base.html` and every page that extends it picks up the change.
@@ -287,13 +303,21 @@ The `with` clause passes variables to the included template. Without it, the inc
 
 ### Setting the Template Path in Pascal
 
+<div v-pre>
+
 For `{% extends %}` and `{% include %}` to resolve correctly, set the template path:
+
+</div>
 
 ```pascal
 Twig := TTina4Twig.Create('C:\MyApp\templates');
 ```
 
+<div v-pre>
+
 All template references are relative to this path. If `dashboard.html` says `{% extends 'base.html' %}`, Twig looks for `C:\MyApp\templates\base.html`.
+
+</div>
 
 ---
 
@@ -358,6 +382,8 @@ Filters transform output values. Chain them with the pipe `|` operator:
 
 | Filter | What it does | Example |
 |---|---|---|
+<div v-pre>
+
 | `upper` | Uppercase | `{{ 'hello'\|upper }}` produces `HELLO` |
 | `lower` | Lowercase | `{{ 'HELLO'\|lower }}` produces `hello` |
 | `capitalize` | First letter uppercase | `{{ 'hello world'\|capitalize }}` produces `Hello world` |
@@ -370,6 +396,8 @@ Filters transform output values. Chain them with the pipe `|` operator:
 | `slug` | URL-friendly slug | `{{ 'Hello World!'\|slug }}` produces `hello-world` |
 | `spaceless` | Remove whitespace between HTML tags | `{{ '<p> hi </p>'\|spaceless }}` |
 | `u` | Unicode string wrapper | `{{ text\|u }}` |
+
+</div>
 
 **Practical example -- building a navigation menu:**
 
@@ -386,10 +414,14 @@ Filters transform output values. Chain them with the pipe `|` operator:
 
 | Filter | What it does | Example |
 |---|---|---|
+<div v-pre>
+
 | `abs` | Absolute value | `{{ -42\|abs }}` produces `42` |
 | `number_format` | Format with decimals, separators | `{{ 1234.5\|number_format(2, '.', ',') }}` produces `1,234.50` |
 | `format_number` | Locale-aware number format | `{{ 1234\|format_number }}` |
 | `format_currency` | Format as currency | `{{ 1234.50\|format_currency('USD') }}` produces `$1,234.50` |
+
+</div>
 
 **Practical example -- product pricing:**
 
@@ -409,6 +441,8 @@ Filters transform output values. Chain them with the pipe `|` operator:
 
 | Filter | What it does | Example |
 |---|---|---|
+<div v-pre>
+
 | `length` | Count elements | `{{ items\|length }}` |
 | `first` | First element | `{{ items\|first }}` |
 | `last` | Last element | `{{ items\|last }}` |
@@ -427,6 +461,8 @@ Filters transform output values. Chain them with the pipe `|` operator:
 | `reduce` | Reduce to single value | `{{ items\|reduce }}` |
 | `min` | Smallest value | `{{ prices\|min }}` |
 | `max` | Largest value | `{{ prices\|max }}` |
+
+</div>
 
 **Practical example -- rendering a product grid:**
 
@@ -453,11 +489,15 @@ Filters transform output values. Chain them with the pipe `|` operator:
 
 | Filter | What it does | Example |
 |---|---|---|
+<div v-pre>
+
 | `date` | Format a date | `{{ order.created\|date('Y-m-d') }}` |
 | `date_modify` | Shift a date | `{{ order.created\|date_modify('+30 days') }}` |
 | `format_date` | Format date (alias) | `{{ order.created\|format_date }}` |
 | `format_datetime` | Format date and time | `{{ order.created\|format_datetime }}` |
 | `format_time` | Format time only | `{{ order.created\|format_time }}` |
+
+</div>
 
 **Date format specifiers** (PHP-style, auto-converted by Tina4):
 
@@ -503,6 +543,8 @@ Filters transform output values. Chain them with the pipe `|` operator:
 
 | Filter | What it does | Example |
 |---|---|---|
+<div v-pre>
+
 | `escape` / `e` | Escape HTML entities | `{{ userInput\|escape }}` |
 | `raw` | Output without escaping | `{{ trustedHtml\|raw }}` |
 | `url_encode` | URL-encode a string | `{{ query\|url_encode }}` |
@@ -510,6 +552,8 @@ Filters transform output values. Chain them with the pipe `|` operator:
 | `json_decode` | Decode from JSON | `{{ jsonString\|json_decode }}` |
 | `convert_encoding` | Convert character encoding | `{{ text\|convert_encoding('UTF-8') }}` |
 | `data_uri` | Create a data URI | `{{ imageData\|data_uri }}` |
+
+</div>
 
 **Practical example -- building a search URL:**
 
@@ -527,10 +571,14 @@ Filters transform output values. Chain them with the pipe `|` operator:
 
 | Filter | What it does | Example |
 |---|---|---|
+<div v-pre>
+
 | `default` | Fallback value if empty/null | `{{ name\|default('Guest') }}` |
 | `format` | Printf-style formatting | `{{ 'Hello %s, you have %d items'\|format(name, count) }}` |
 | `plural` | Pluralize a word | `{{ 'item'\|plural }}` produces `items` |
 | `singular` | Singularize a word | `{{ 'items'\|singular }}` produces `item` |
+
+</div>
 
 ```
 <p>You have {{ count }} {{ 'item'|plural }} in your cart.</p>
@@ -546,9 +594,13 @@ Functions work like filters but are called directly:
 
 | Function | What it does | Example |
 |---|---|---|
+<div v-pre>
+
 | `range()` | Generate a sequence | `{% for i in range(1, 10) %}` |
 | `dump()` | Debug output of a variable | `{{ dump(user) }}` |
 | `date()` | Create or format a date | `{{ date('now', 'Y-m-d') }}` |
+
+</div>
 
 ```
 {# Generate page numbers #}
@@ -574,11 +626,15 @@ Functions work like filters but are called directly:
 
 | Category | Operators | Example |
 |---|---|---|
+<div v-pre>
+
 | Comparison | `==`, `!=`, `<`, `>`, `<=`, `>=` | `{% if price > 100 %}` |
 | Logical | `and`, `or`, `not` | `{% if active and verified %}` |
 | String | `~` (concat), `in`, `starts with`, `ends with`, `matches` | `{{ first ~ ' ' ~ last }}` |
 | Math | `+`, `-`, `*`, `/`, `%`, `**` | `{{ price * quantity }}` |
 | Range | `..` | `{% for i in 1..10 %}` |
+
+</div>
 
 **String operators in action:**
 
@@ -702,15 +758,15 @@ templates/
 <body>
   <div class="container">
     <div class="header">
-      <h1>{% block header %}{{ companyName|default('My Company') }}{% endblock %}</h1>
+      <h1>&#123;% block header %&#125;&#123;&#123; companyName|default('My Company') &#125;&#125;&#123;% endblock %&#125;</h1>
     </div>
     <div class="content">
-      {% block content %}{% endblock %}
+      &#123;% block content %&#125;&#123;% endblock %&#125;
     </div>
     <div class="footer">
-      {% block footer %}
-        &copy; {{ date('now', 'Y') }} {{ companyName|default('My Company') }}. All rights reserved.
-      {% endblock %}
+      &#123;% block footer %&#125;
+        &copy; &#123;&#123; date('now', 'Y') &#125;&#125; &#123;&#123; companyName|default('My Company') &#125;&#125;. All rights reserved.
+      &#123;% endblock %&#125;
     </div>
   </div>
 </body>
@@ -720,42 +776,42 @@ templates/
 ### notification.html
 
 ```html
-{% extends 'email/base.html' %}
+&#123;% extends 'email/base.html' %&#125;
 
-{% block header %}Notification{% endblock %}
+&#123;% block header %&#125;Notification&#123;% endblock %&#125;
 
-{% block content %}
-  <h2>Hello {{ customerName|default('Customer') }},</h2>
-  <p>{{ message }}</p>
+&#123;% block content %&#125;
+  <h2>Hello &#123;&#123; customerName|default('Customer') &#125;&#125;,</h2>
+  <p>&#123;&#123; message &#125;&#125;</p>
 
-  {% if actionUrl %}
+  &#123;% if actionUrl %&#125;
     <p style="text-align: center; margin: 30px 0;">
-      <a href="{{ actionUrl }}" class="btn">{{ actionText|default('View Details') }}</a>
+      <a href="&#123;&#123; actionUrl &#125;&#125;" class="btn">&#123;&#123; actionText|default('View Details') &#125;&#125;</a>
     </p>
-  {% endif %}
+  &#123;% endif %&#125;
 
-  {% if notes|length > 0 %}
+  &#123;% if notes|length > 0 %&#125;
     <h3>Additional Notes:</h3>
     <ul>
-      {% for note in notes %}
-        <li>{{ note }}</li>
-      {% endfor %}
+      &#123;% for note in notes %&#125;
+        <li>&#123;&#123; note &#125;&#125;</li>
+      &#123;% endfor %&#125;
     </ul>
-  {% endif %}
-{% endblock %}
+  &#123;% endif %&#125;
+&#123;% endblock %&#125;
 ```
 
 ### order-confirm.html
 
 ```html
-{% extends 'email/base.html' %}
+&#123;% extends 'email/base.html' %&#125;
 
-{% block header %}Order Confirmation{% endblock %}
+&#123;% block header %&#125;Order Confirmation&#123;% endblock %&#125;
 
-{% block content %}
-  <h2>Thank you, {{ customerName }}!</h2>
-  <p>Your order <strong>#{{ orderId }}</strong> has been confirmed.</p>
-  <p>Placed on: {{ orderDate|date('F j, Y') }}</p>
+&#123;% block content %&#125;
+  <h2>Thank you, &#123;&#123; customerName &#125;&#125;!</h2>
+  <p>Your order <strong>#&#123;&#123; orderId &#125;&#125;</strong> has been confirmed.</p>
+  <p>Placed on: &#123;&#123; orderDate|date('F j, Y') &#125;&#125;</p>
 
   <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
     <thead>
@@ -767,39 +823,39 @@ templates/
       </tr>
     </thead>
     <tbody>
-      {% for item in items %}
+      &#123;% for item in items %&#125;
         <tr style="border-bottom: 1px solid #eee;">
-          <td style="padding: 10px;">{{ item.name }}</td>
-          <td style="padding: 10px; text-align: right;">{{ item.quantity }}</td>
-          <td style="padding: 10px; text-align: right;">{{ item.price|format_currency('USD') }}</td>
-          <td style="padding: 10px; text-align: right;">{{ item.total|format_currency('USD') }}</td>
+          <td style="padding: 10px;">&#123;&#123; item.name &#125;&#125;</td>
+          <td style="padding: 10px; text-align: right;">&#123;&#123; item.quantity &#125;&#125;</td>
+          <td style="padding: 10px; text-align: right;">&#123;&#123; item.price|format_currency('USD') &#125;&#125;</td>
+          <td style="padding: 10px; text-align: right;">&#123;&#123; item.total|format_currency('USD') &#125;&#125;</td>
         </tr>
-      {% endfor %}
+      &#123;% endfor %&#125;
     </tbody>
     <tfoot>
       <tr>
         <td colspan="3" style="padding: 10px; text-align: right;"><strong>Subtotal:</strong></td>
-        <td style="padding: 10px; text-align: right;">{{ subtotal|format_currency('USD') }}</td>
+        <td style="padding: 10px; text-align: right;">&#123;&#123; subtotal|format_currency('USD') &#125;&#125;</td>
       </tr>
       <tr>
-        <td colspan="3" style="padding: 10px; text-align: right;">Tax ({{ taxRate }}%):</td>
-        <td style="padding: 10px; text-align: right;">{{ tax|format_currency('USD') }}</td>
+        <td colspan="3" style="padding: 10px; text-align: right;">Tax (&#123;&#123; taxRate &#125;&#125;%):</td>
+        <td style="padding: 10px; text-align: right;">&#123;&#123; tax|format_currency('USD') &#125;&#125;</td>
       </tr>
-      {% if discount > 0 %}
+      &#123;% if discount > 0 %&#125;
         <tr style="color: #e74c3c;">
           <td colspan="3" style="padding: 10px; text-align: right;">Discount:</td>
-          <td style="padding: 10px; text-align: right;">-{{ discount|format_currency('USD') }}</td>
+          <td style="padding: 10px; text-align: right;">-&#123;&#123; discount|format_currency('USD') &#125;&#125;</td>
         </tr>
-      {% endif %}
+      &#123;% endif %&#125;
       <tr style="font-size: 1.2em; font-weight: bold;">
         <td colspan="3" style="padding: 10px; text-align: right;">Total:</td>
-        <td style="padding: 10px; text-align: right;">{{ grandTotal|format_currency('USD') }}</td>
+        <td style="padding: 10px; text-align: right;">&#123;&#123; grandTotal|format_currency('USD') &#125;&#125;</td>
       </tr>
     </tfoot>
   </table>
 
-  <p>Estimated delivery: {{ orderDate|date_modify('+5 days')|date('l, F j, Y') }}</p>
-{% endblock %}
+  <p>Estimated delivery: &#123;&#123; orderDate|date_modify('+5 days')|date('l, F j, Y') &#125;&#125;</p>
+&#123;% endblock %&#125;
 ```
 
 ### Pascal Code to Render
@@ -848,26 +904,26 @@ Build a product catalog report with categories, pricing, inventory status, filte
 ### report-catalog.html
 
 ```html
-{% macro statusBadge(quantity) %}
-  {% if quantity > 10 %}
-    <span style="color: #27ae60; font-weight: bold;">In Stock ({{ quantity }})</span>
-  {% elseif quantity > 0 %}
-    <span style="color: #f39c12; font-weight: bold;">Low Stock ({{ quantity }})</span>
-  {% else %}
+&#123;% macro statusBadge(quantity) %&#125;
+  &#123;% if quantity > 10 %&#125;
+    <span style="color: #27ae60; font-weight: bold;">In Stock (&#123;&#123; quantity &#125;&#125;)</span>
+  &#123;% elseif quantity > 0 %&#125;
+    <span style="color: #f39c12; font-weight: bold;">Low Stock (&#123;&#123; quantity &#125;&#125;)</span>
+  &#123;% else %&#125;
     <span style="color: #e74c3c; font-weight: bold;">Out of Stock</span>
-  {% endif %}
-{% endmacro %}
+  &#123;% endif %&#125;
+&#123;% endmacro %&#125;
 
-{% macro priceCell(price, discount) %}
-  {% if discount > 0 %}
-    <span style="text-decoration: line-through; color: #999;">{{ price|format_currency('USD') }}</span>
+&#123;% macro priceCell(price, discount) %&#125;
+  &#123;% if discount > 0 %&#125;
+    <span style="text-decoration: line-through; color: #999;">&#123;&#123; price|format_currency('USD') &#125;&#125;</span>
     <span style="color: #e74c3c; font-weight: bold;">
-      {{ (price - discount)|format_currency('USD') }}
+      &#123;&#123; (price - discount)|format_currency('USD') &#125;&#125;
     </span>
-  {% else %}
-    {{ price|format_currency('USD') }}
-  {% endif %}
-{% endmacro %}
+  &#123;% else %&#125;
+    &#123;&#123; price|format_currency('USD') &#125;&#125;
+  &#123;% endif %&#125;
+&#123;% endmacro %&#125;
 
 <!DOCTYPE html>
 <html>
@@ -884,20 +940,20 @@ Build a product catalog report with categories, pricing, inventory status, filte
   </style>
 </head>
 <body>
-  <h1>{{ reportTitle|default('Product Catalog') }}</h1>
-  <p>Generated: {{ date('now', 'F j, Y \\a\\t h:i A') }}</p>
-  <p>Total products: {{ products|length }}</p>
+  <h1>&#123;&#123; reportTitle|default('Product Catalog') &#125;&#125;</h1>
+  <p>Generated: &#123;&#123; date('now', 'F j, Y \\a\\t h:i A') &#125;&#125;</p>
+  <p>Total products: &#123;&#123; products|length &#125;&#125;</p>
 
   <div class="summary">
     <strong>Price Range:</strong>
-    {{ products|column('price')|min|format_currency('USD') }} -
-    {{ products|column('price')|max|format_currency('USD') }}
+    &#123;&#123; products|column('price')|min|format_currency('USD') &#125;&#125; -
+    &#123;&#123; products|column('price')|max|format_currency('USD') &#125;&#125;
   </div>
 
-  {% for category in categories %}
-    <h2>{{ category.name|title }}</h2>
+  &#123;% for category in categories %&#125;
+    <h2>&#123;&#123; category.name|title &#125;&#125;</h2>
 
-    {% set categoryProducts = products|filter %}
+    &#123;% set categoryProducts = products|filter %&#125;
 
     <table>
       <thead>
@@ -910,29 +966,29 @@ Build a product catalog report with categories, pricing, inventory status, filte
         </tr>
       </thead>
       <tbody>
-        {% for product in category.products %}
+        &#123;% for product in category.products %&#125;
           <tr>
-            <td>{{ loop.index }}</td>
+            <td>&#123;&#123; loop.index &#125;&#125;</td>
             <td>
-              <strong>{{ product.name }}</strong>
-              {% if product.description %}
-                <br><small style="color: #666;">{{ product.description|striptags|slice(0, 80) }}...</small>
-              {% endif %}
+              <strong>&#123;&#123; product.name &#125;&#125;</strong>
+              &#123;% if product.description %&#125;
+                <br><small style="color: #666;">&#123;&#123; product.description|striptags|slice(0, 80) &#125;&#125;...</small>
+              &#123;% endif %&#125;
             </td>
-            <td>{{ product.sku|upper }}</td>
-            <td>{{ priceCell(product.price, product.discount|default(0)) }}</td>
-            <td>{{ statusBadge(product.stock) }}</td>
+            <td>&#123;&#123; product.sku|upper &#125;&#125;</td>
+            <td>&#123;&#123; priceCell(product.price, product.discount|default(0)) &#125;&#125;</td>
+            <td>&#123;&#123; statusBadge(product.stock) &#125;&#125;</td>
           </tr>
-        {% endfor %}
+        &#123;% endfor %&#125;
       </tbody>
     </table>
-  {% endfor %}
+  &#123;% endfor %&#125;
 
   <div class="summary">
     <h3>Report Summary</h3>
-    <p>Categories: {{ categories|length }}</p>
-    <p>Total Products: {{ products|length }}</p>
-    <p>Products in stock: {{ products|column('stock')|filter|length }}</p>
+    <p>Categories: &#123;&#123; categories|length &#125;&#125;</p>
+    <p>Total Products: &#123;&#123; products|length &#125;&#125;</p>
+    <p>Products in stock: &#123;&#123; products|column('stock')|filter|length &#125;&#125;</p>
   </div>
 </body>
 </html>
@@ -1021,10 +1077,10 @@ end;
     .grand-total { font-size: 1.3em; font-weight: bold; color: #2c3e50; }
     .terms { margin-top: 30px; padding: 15px; background: #f9f9f9; border-radius: 4px; }
   </style>
-  {% block head %}{% endblock %}
+  &#123;% block head %&#125;&#123;% endblock %&#125;
 </head>
 <body>
-  {% block invoice %}{% endblock %}
+  &#123;% block invoice %&#125;&#123;% endblock %&#125;
 </body>
 </html>
 ```
@@ -1032,42 +1088,42 @@ end;
 **invoice.html:**
 
 ```html
-{% extends 'invoice-base.html' %}
+&#123;% extends 'invoice-base.html' %&#125;
 
-{% macro addressBlock(label, addr) %}
+&#123;% macro addressBlock(label, addr) %&#125;
   <div class="address-block">
-    <h3>{{ label }}</h3>
+    <h3>&#123;&#123; label &#125;&#125;</h3>
     <p>
-      <strong>{{ addr.name }}</strong><br>
-      {{ addr.street }}<br>
-      {{ addr.city }}, {{ addr.state }} {{ addr.zip }}<br>
-      {% if addr.country %}{{ addr.country }}<br>{% endif %}
-      {% if addr.phone %}Tel: {{ addr.phone }}{% endif %}
+      <strong>&#123;&#123; addr.name &#125;&#125;</strong><br>
+      &#123;&#123; addr.street &#125;&#125;<br>
+      &#123;&#123; addr.city &#125;&#125;, &#123;&#123; addr.state &#125;&#125; &#123;&#123; addr.zip &#125;&#125;<br>
+      &#123;% if addr.country %&#125;&#123;&#123; addr.country &#125;&#125;<br>&#123;% endif %&#125;
+      &#123;% if addr.phone %&#125;Tel: &#123;&#123; addr.phone &#125;&#125;&#123;% endif %&#125;
     </p>
   </div>
-{% endmacro %}
+&#123;% endmacro %&#125;
 
-{% block invoice %}
+&#123;% block invoice %&#125;
   <div class="invoice-header">
     <div class="company-info">
-      <h1>{{ company.name }}</h1>
-      <p>{{ company.address }}<br>
-         {{ company.city }}, {{ company.state }} {{ company.zip }}<br>
-         {{ company.email }}</p>
+      <h1>&#123;&#123; company.name &#125;&#125;</h1>
+      <p>&#123;&#123; company.address &#125;&#125;<br>
+         &#123;&#123; company.city &#125;&#125;, &#123;&#123; company.state &#125;&#125; &#123;&#123; company.zip &#125;&#125;<br>
+         &#123;&#123; company.email &#125;&#125;</p>
     </div>
     <div class="invoice-meta">
       <h2>INVOICE</h2>
       <p>
-        <strong>Invoice #:</strong> {{ invoiceNumber }}<br>
-        <strong>Date:</strong> {{ invoiceDate|date('F j, Y') }}<br>
-        <strong>Due Date:</strong> {{ invoiceDate|date_modify('+30 days')|date('F j, Y') }}
+        <strong>Invoice #:</strong> &#123;&#123; invoiceNumber &#125;&#125;<br>
+        <strong>Date:</strong> &#123;&#123; invoiceDate|date('F j, Y') &#125;&#125;<br>
+        <strong>Due Date:</strong> &#123;&#123; invoiceDate|date_modify('+30 days')|date('F j, Y') &#125;&#125;
       </p>
     </div>
   </div>
 
   <div class="addresses">
-    {{ addressBlock('Bill To', billing) }}
-    {{ addressBlock('Ship To', shipping) }}
+    &#123;&#123; addressBlock('Bill To', billing) &#125;&#125;
+    &#123;&#123; addressBlock('Ship To', shipping) &#125;&#125;
   </div>
 
   <table>
@@ -1080,33 +1136,33 @@ end;
       </tr>
     </thead>
     <tbody>
-      {% for item in lineItems %}
+      &#123;% for item in lineItems %&#125;
         <tr>
-          <td>{{ item.description }}</td>
-          <td style="text-align: right;">{{ item.quantity }}</td>
-          <td style="text-align: right;">{{ item.unitPrice|format_currency('USD') }}</td>
-          <td style="text-align: right;">{{ item.lineTotal|format_currency('USD') }}</td>
+          <td>&#123;&#123; item.description &#125;&#125;</td>
+          <td style="text-align: right;">&#123;&#123; item.quantity &#125;&#125;</td>
+          <td style="text-align: right;">&#123;&#123; item.unitPrice|format_currency('USD') &#125;&#125;</td>
+          <td style="text-align: right;">&#123;&#123; item.lineTotal|format_currency('USD') &#125;&#125;</td>
         </tr>
-      {% endfor %}
+      &#123;% endfor %&#125;
     </tbody>
     <tfoot>
       <tr class="totals">
         <td colspan="3" style="text-align: right; padding-top: 15px;"><strong>Subtotal:</strong></td>
-        <td style="text-align: right; padding-top: 15px;">{{ subtotal|format_currency('USD') }}</td>
+        <td style="text-align: right; padding-top: 15px;">&#123;&#123; subtotal|format_currency('USD') &#125;&#125;</td>
       </tr>
-      {% if discount > 0 %}
+      &#123;% if discount > 0 %&#125;
         <tr class="totals" style="color: #27ae60;">
-          <td colspan="3" style="text-align: right;">Discount ({{ discountPercent }}%):</td>
-          <td style="text-align: right;">-{{ discount|format_currency('USD') }}</td>
+          <td colspan="3" style="text-align: right;">Discount (&#123;&#123; discountPercent &#125;&#125;%):</td>
+          <td style="text-align: right;">-&#123;&#123; discount|format_currency('USD') &#125;&#125;</td>
         </tr>
-      {% endif %}
+      &#123;% endif %&#125;
       <tr class="totals">
-        <td colspan="3" style="text-align: right;">Tax ({{ taxRate }}%):</td>
-        <td style="text-align: right;">{{ tax|format_currency('USD') }}</td>
+        <td colspan="3" style="text-align: right;">Tax (&#123;&#123; taxRate &#125;&#125;%):</td>
+        <td style="text-align: right;">&#123;&#123; tax|format_currency('USD') &#125;&#125;</td>
       </tr>
       <tr class="totals grand-total">
         <td colspan="3" style="text-align: right;">Total Due:</td>
-        <td style="text-align: right;">{{ grandTotal|format_currency('USD') }}</td>
+        <td style="text-align: right;">&#123;&#123; grandTotal|format_currency('USD') &#125;&#125;</td>
       </tr>
     </tfoot>
   </table>
@@ -1114,11 +1170,11 @@ end;
   <div class="terms">
     <h3>Payment Terms</h3>
     <p>Payment is due within 30 days of the invoice date.
-       Please reference invoice #{{ invoiceNumber }} with your payment.</p>
-    <p>Bank: {{ company.bank|default('First National Bank') }}<br>
-       Account: {{ company.account|default('Contact us for details') }}</p>
+       Please reference invoice #&#123;&#123; invoiceNumber &#125;&#125; with your payment.</p>
+    <p>Bank: &#123;&#123; company.bank|default('First National Bank') &#125;&#125;<br>
+       Account: &#123;&#123; company.account|default('Contact us for details') &#125;&#125;</p>
   </div>
-{% endblock %}
+&#123;% endblock %&#125;
 ```
 
 **Pascal code to render the invoice:**
@@ -1170,7 +1226,11 @@ end;
 
 ## Common Gotchas
 
+<div v-pre>
+
 **Template path resolution.** Every `{% extends %}` and `{% include %}` path is relative to the path you pass to `TTina4Twig.Create()`. If you pass an empty string, file-based template references will fail silently. Always set a real path:
+
+</div>
 
 ```pascal
 // Wrong -- includes and extends will not find files
@@ -1180,7 +1240,11 @@ Twig := TTina4Twig.Create('');
 Twig := TTina4Twig.Create('C:\MyApp\templates');
 ```
 
+<div v-pre>
+
 **Variable scope in for loops.** Variables set inside a `{% for %}` block do not persist outside the loop. This trips people up when trying to accumulate a total:
+
+</div>
 
 ```
 {# This does NOT work as expected #}
@@ -1216,7 +1280,11 @@ finally
 end;
 ```
 
+<div v-pre>
+
 **Whitespace in templates.** Twig preserves whitespace exactly as written in the template. If you see extra blank lines in your output, your template has extra blank lines. Use `{%-` and `-%}` to trim whitespace around tags:
+
+</div>
 
 ```
 {%- for item in items -%}

@@ -64,7 +64,7 @@ CORS (Cross-Origin Resource Sharing) controls which domains can call your API fr
 
 Tina4 provides both a function-based `cors()` middleware and a class-based `CorsMiddleware`. Configure via `.env`:
 
-```env
+```dotenv
 TINA4_CORS_ORIGINS=http://localhost:3000,https://myapp.com
 TINA4_CORS_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS
 TINA4_CORS_HEADERS=Content-Type,Authorization
@@ -73,7 +73,7 @@ TINA4_CORS_MAX_AGE=86400
 
 For development, allow all origins:
 
-```env
+```dotenv
 TINA4_CORS_ORIGINS=*
 ```
 
@@ -101,7 +101,7 @@ Preflight `OPTIONS` requests return `204 No Content` with the correct CORS heade
 
 The rate limiter prevents a single client from flooding your API. It uses a sliding-window algorithm that tracks requests per IP in memory. Configure via `.env`:
 
-```env
+```dotenv
 TINA4_RATE_LIMIT=60
 TINA4_RATE_WINDOW=60
 ```
@@ -169,7 +169,7 @@ It sets the following headers by default:
 
 Override any header via environment variables in `.env`:
 
-```env
+```dotenv
 TINA4_FRAME_OPTIONS=SAMEORIGIN
 TINA4_CSP=default-src 'self'; script-src 'self' https://cdn.example.com
 TINA4_HSTS=max-age=63072000; includeSubDomains; preload

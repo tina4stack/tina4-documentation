@@ -12,7 +12,7 @@ When you run `tina4 init`, the framework generates a production-ready `Dockerfil
 
 ## 2. Production .env Configuration
 
-```env
+```dotenv
 # Core
 TINA4_DEBUG=false
 TINA4_LOG_LEVEL=WARNING
@@ -123,14 +123,14 @@ docker compose up -d
 
 For multi-core utilization, Tina4 supports Node.js cluster mode:
 
-```env
+```dotenv
 TINA4_CLUSTER=true
 TINA4_CLUSTER_WORKERS=4
 ```
 
 Or set workers to `auto` to match CPU cores:
 
-```env
+```dotenv
 TINA4_CLUSTER_WORKERS=auto
 ```
 
@@ -297,7 +297,7 @@ echo "Deployment complete"
 
 Use cluster mode with more workers:
 
-```env
+```dotenv
 TINA4_CLUSTER=true
 TINA4_CLUSTER_WORKERS=8
 ```
@@ -306,7 +306,7 @@ TINA4_CLUSTER_WORKERS=8
 
 Run multiple instances behind a load balancer. Use Redis for shared sessions, cache, and queues:
 
-```env
+```dotenv
 TINA4_SESSION_HANDLER=redis
 TINA4_CACHE_BACKEND=redis
 TINA4_QUEUE_BACKEND=rabbitmq

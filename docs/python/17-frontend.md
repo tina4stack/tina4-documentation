@@ -571,7 +571,7 @@ Create `src/templates/base.html`:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Dashboard{% endblock %}</title>
+    <title>&#123;% block title %&#125;Dashboard&#123;% endblock %&#125;</title>
     <link rel="stylesheet" href="/css/tina4.css">
 </head>
 <body>
@@ -592,7 +592,7 @@ Create `src/templates/base.html`:
     <div class="container-fluid mt-4">
         <div class="row">
             <div class="col-md-2">
-                {% block sidebar %}
+                &#123;% block sidebar %&#125;
                 <div class="list-group">
                     <a href="/admin" class="list-group-item list-group-item-action">Overview</a>
                     <a href="/admin/products" class="list-group-item list-group-item-action">Products</a>
@@ -601,10 +601,10 @@ Create `src/templates/base.html`:
                     <a href="/admin/reports" class="list-group-item list-group-item-action">Reports</a>
                     <a href="/admin/settings" class="list-group-item list-group-item-action">Settings</a>
                 </div>
-                {% endblock %}
+                &#123;% endblock %&#125;
             </div>
             <div class="col-md-10">
-                {% block content %}{% endblock %}
+                &#123;% block content %&#125;&#123;% endblock %&#125;
             </div>
         </div>
     </div>
@@ -624,7 +624,7 @@ Create `src/templates/base.html`:
             document.documentElement.setAttribute("data-theme", savedTheme);
         }
     </script>
-    {% block scripts %}{% endblock %}
+    &#123;% block scripts %&#125;&#123;% endblock %&#125;
 </body>
 </html>
 ```
@@ -634,11 +634,11 @@ Create `src/templates/base.html`:
 Create `src/templates/dashboard.html`:
 
 ```html
-{% extends "base.html" %}
+&#123;% extends "base.html" %&#125;
 
-{% block title %}Dashboard - Admin{% endblock %}
+&#123;% block title %&#125;Dashboard - Admin&#123;% endblock %&#125;
 
-{% block content %}
+&#123;% block content %&#125;
     <h1>Dashboard</h1>
 
     <div class="row mb-4">
@@ -646,7 +646,7 @@ Create `src/templates/dashboard.html`:
             <div class="card">
                 <div class="card-body">
                     <h6 class="card-subtitle text-muted">Total Products</h6>
-                    <h2 class="card-title">{{ stats.total_products }}</h2>
+                    <h2 class="card-title">&#123;&#123; stats.total_products &#125;&#125;</h2>
                 </div>
             </div>
         </div>
@@ -654,7 +654,7 @@ Create `src/templates/dashboard.html`:
             <div class="card">
                 <div class="card-body">
                     <h6 class="card-subtitle text-muted">Total Orders</h6>
-                    <h2 class="card-title">{{ stats.total_orders }}</h2>
+                    <h2 class="card-title">&#123;&#123; stats.total_orders &#125;&#125;</h2>
                 </div>
             </div>
         </div>
@@ -662,7 +662,7 @@ Create `src/templates/dashboard.html`:
             <div class="card">
                 <div class="card-body">
                     <h6 class="card-subtitle text-muted">Revenue</h6>
-                    <h2 class="card-title">${{ stats.revenue }}</h2>
+                    <h2 class="card-title">$&#123;&#123; stats.revenue &#125;&#125;</h2>
                 </div>
             </div>
         </div>
@@ -670,7 +670,7 @@ Create `src/templates/dashboard.html`:
             <div class="card">
                 <div class="card-body">
                     <h6 class="card-subtitle text-muted">Active Users</h6>
-                    <h2 class="card-title">{{ stats.active_users }}</h2>
+                    <h2 class="card-title">&#123;&#123; stats.active_users &#125;&#125;</h2>
                 </div>
             </div>
         </div>
@@ -691,16 +691,16 @@ Create `src/templates/dashboard.html`:
                             </tr>
                         </thead>
                         <tbody>
-                            {% for order in recent_orders %}
+                            &#123;% for order in recent_orders %&#125;
                             <tr>
-                                <td>#{{ order.id }}</td>
-                                <td>{{ order.customer }}</td>
-                                <td>${{ order.amount }}</td>
+                                <td>#&#123;&#123; order.id &#125;&#125;</td>
+                                <td>&#123;&#123; order.customer &#125;&#125;</td>
+                                <td>$&#123;&#123; order.amount &#125;&#125;</td>
                                 <td>
-                                    <span class="badge bg-{{ order.badge }}">{{ order.status }}</span>
+                                    <span class="badge bg-&#123;&#123; order.badge &#125;&#125;">&#123;&#123; order.status &#125;&#125;</span>
                                 </td>
                             </tr>
-                            {% endfor %}
+                            &#123;% endfor %&#125;
                         </tbody>
                     </table>
                 </div>
@@ -717,7 +717,7 @@ Create `src/templates/dashboard.html`:
             </div>
         </div>
     </div>
-{% endblock %}
+&#123;% endblock %&#125;
 ```
 
 ### Dashboard Route
@@ -878,11 +878,11 @@ The base template and dashboard route are shown in sections 8 and above. Here is
 Create `src/templates/products.html`:
 
 ```html
-{% extends "base.html" %}
+&#123;% extends "base.html" %&#125;
 
-{% block title %}Products - Admin{% endblock %}
+&#123;% block title %&#125;Products - Admin&#123;% endblock %&#125;
 
-{% block content %}
+&#123;% block content %&#125;
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Products</h1>
         <a href="/admin/products/new" class="btn btn-primary">Add Product</a>
@@ -893,14 +893,14 @@ Create `src/templates/products.html`:
             <form class="row g-3" method="GET" action="/admin/products">
                 <div class="col-md-4">
                     <input type="text" class="form-control" name="search"
-                           placeholder="Search products..." value="{{ search }}">
+                           placeholder="Search products..." value="&#123;&#123; search &#125;&#125;">
                 </div>
                 <div class="col-md-3">
                     <select class="form-control" name="category">
                         <option value="">All Categories</option>
-                        {% for cat in categories %}
-                        <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>{{ cat }}</option>
-                        {% endfor %}
+                        &#123;% for cat in categories %&#125;
+                        <option value="&#123;&#123; cat &#125;&#125;" &#123;% if cat == selected_category %&#125;selected&#123;% endif %&#125;>&#123;&#123; cat &#125;&#125;</option>
+                        &#123;% endfor %&#125;
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -925,31 +925,31 @@ Create `src/templates/products.html`:
                         </tr>
                     </thead>
                     <tbody>
-                        {% for product in products %}
+                        &#123;% for product in products %&#125;
                         <tr>
-                            <td>{{ product.id }}</td>
-                            <td>{{ product.name }}</td>
-                            <td>{{ product.category }}</td>
-                            <td>${{ product.price }}</td>
+                            <td>&#123;&#123; product.id &#125;&#125;</td>
+                            <td>&#123;&#123; product.name &#125;&#125;</td>
+                            <td>&#123;&#123; product.category &#125;&#125;</td>
+                            <td>$&#123;&#123; product.price &#125;&#125;</td>
                             <td>
-                                {% if product.in_stock %}
+                                &#123;% if product.in_stock %&#125;
                                 <span class="badge bg-success">In Stock</span>
-                                {% else %}
+                                &#123;% else %&#125;
                                 <span class="badge bg-danger">Out of Stock</span>
-                                {% endif %}
+                                &#123;% endif %&#125;
                             </td>
                             <td>
-                                <a href="/admin/products/{{ product.id }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                <a href="/admin/products/&#123;&#123; product.id &#125;&#125;" class="btn btn-sm btn-outline-primary">Edit</a>
                                 <button class="btn btn-sm btn-outline-danger">Delete</button>
                             </td>
                         </tr>
-                        {% endfor %}
+                        &#123;% endfor %&#125;
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
-{% endblock %}
+&#123;% endblock %&#125;
 ```
 
 Add the route:

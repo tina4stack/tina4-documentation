@@ -62,8 +62,8 @@ Tina4 ships two frontend tools: **tina4css** (a utility CSS framework) and **fro
 
 ```html
 <div id="app">
-    <h1>{{ title }}</h1>
-    <p>Count: {{ count }}</p>
+    <h1>&#123;&#123; title &#125;&#125;</h1>
+    <p>Count: &#123;&#123; count &#125;&#125;</p>
     <button onclick="increment()">+1</button>
 </div>
 
@@ -123,11 +123,11 @@ ws.send(JSON.stringify({ type: "message", text: "Hello!" }));
 Create `src/templates/product-manager.html`:
 
 ```html
-{% extends "base.html" %}
+&#123;% extends "base.html" %&#125;
 
-{% block title %}Product Manager{% endblock %}
+&#123;% block title %&#125;Product Manager&#123;% endblock %&#125;
 
-{% block content %}
+&#123;% block content %&#125;
     <h1>Product Manager</h1>
 
     <div id="app">
@@ -177,7 +177,7 @@ Create `src/templates/product-manager.html`:
 
         loadProducts();
     </script>
-{% endblock %}
+&#123;% endblock %&#125;
 ```
 
 ---
@@ -208,7 +208,7 @@ src/public/css/custom.css  → /css/custom.css
 
 Tina4 is the API backend. Point your frontend build tool's output to `src/public/`:
 
-```env
+```dotenv
 # Vue
 VITE_OUTPUT_DIR=../my-tina4-project/src/public
 
@@ -218,7 +218,7 @@ BUILD_PATH=../my-tina4-project/src/public
 
 Or use CORS to run them on separate ports during development:
 
-```env
+```dotenv
 CORS_ORIGINS=http://localhost:3000,http://localhost:5173
 ```
 

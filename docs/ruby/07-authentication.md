@@ -98,7 +98,7 @@ Tina4 Ruby supports two JWT algorithms, auto-detected based on your configuratio
 - **HS256** (HMAC-SHA256) -- set `SECRET` in `.env`. Uses the standard library. Zero dependencies.
 - **RS256** (RSA) -- RSA keys are auto-generated in the `.keys/` folder. Requires the `jwt` gem (included by default).
 
-```env
+```dotenv
 # .env -- HS256 mode (recommended, simplest setup)
 SECRET=my-super-secret-key-at-least-32-chars
 ```
@@ -431,18 +431,22 @@ In your template, include the CSRF token in every form:
 
 ```html
 <form method="POST" action="/profile/update">
-    {{ form_token() }}
+    &#123;&#123; form_token() &#125;&#125;
 
     <div class="form-group">
         <label for="name">Name</label>
-        <input type="text" name="name" id="name" value="{{ user.name }}">
+        <input type="text" name="name" id="name" value="&#123;&#123; user.name &#125;&#125;">
     </div>
 
     <button type="submit">Update Profile</button>
 </form>
 ```
 
+<div v-pre>
+
 `{{ form_token() }}` renders a hidden input field:
+
+</div>
 
 ```html
 <input type="hidden" name="_token" value="abc123randomtoken456">

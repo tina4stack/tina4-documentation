@@ -14,7 +14,7 @@ When you run `tina4 init`, the framework generates a production-ready `Dockerfil
 
 Create a production `.env`:
 
-```env
+```dotenv
 # Core
 TINA4_DEBUG=false
 TINA4_LOG_LEVEL=WARNING
@@ -350,7 +350,7 @@ tail -f logs/puma.stdout.log
 
 Enable metrics in `.env`:
 
-```env
+```dotenv
 TINA4_METRICS=true
 ```
 

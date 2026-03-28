@@ -76,7 +76,7 @@ Check the cache for the key. If it exists, use the cached value. If not, compute
 
 Out of the box, Tina4 caches in-process memory. No configuration needed:
 
-```env
+```dotenv
 TINA4_CACHE_BACKEND=memory
 ```
 
@@ -84,7 +84,7 @@ TINA4_CACHE_BACKEND=memory
 
 For production with multiple servers:
 
-```env
+```dotenv
 TINA4_CACHE_BACKEND=redis
 TINA4_CACHE_URL=redis://localhost:6379
 ```
@@ -93,7 +93,7 @@ TINA4_CACHE_URL=redis://localhost:6379
 
 For persistence across restarts without Redis:
 
-```env
+```dotenv
 TINA4_CACHE_BACKEND=file
 TINA4_CACHE_DIR=data/cache
 ```
@@ -104,7 +104,7 @@ TINA4_CACHE_DIR=data/cache
 
 Enable automatic query caching:
 
-```env
+```dotenv
 TINA4_DB_CACHE=true
 ```
 

@@ -201,7 +201,7 @@ $db = new \Tina4\DataSQLite3("data/app.db");
 
 **v3:**
 
-```env
+```dotenv
 DATABASE_URL=sqlite:///data/app.db
 ```
 
@@ -216,7 +216,7 @@ $db = new Database("sqlite:///data/app.db");
 
 All drivers use the same `Database` class. The URL scheme selects the driver:
 
-```env
+```dotenv
 # SQLite
 DATABASE_URL=sqlite:///data/app.db
 
@@ -395,16 +395,20 @@ v3 adds the ability to call methods on array or object values inside templates:
 
 ```html
 <!-- Call a method on an object -->
-<p>{{ user.getName() }}</p>
+<p>&#123;&#123; user.getName() &#125;&#125;</p>
 
 <!-- Call with arguments -->
-<p>{{ translator.t("welcome_message") }}</p>
+<p>&#123;&#123; translator.t("welcome_message") &#125;&#125;</p>
 
 <!-- Chain with filters -->
-<p>{{ user.getName()|upper }}</p>
+<p>&#123;&#123; user.getName()|upper &#125;&#125;</p>
 ```
 
+<div v-pre>
+
 This is new in v3. v2 only supported property access (`{{ user.name }}`), not method calls.
+
+</div>
 
 ---
 

@@ -91,7 +91,7 @@ The `-c cookies.txt` flag tells curl to save cookies to a file, and `-b cookies.
 
 For production deployments with multiple servers (behind a load balancer), you need a shared session store. Redis is the most common choice.
 
-```env
+```dotenv
 TINA4_SESSION_BACKEND=redis
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -104,7 +104,7 @@ That is the only change. Your code stays exactly the same. `request.session` wor
 
 ## 6. MongoDB Sessions
 
-```env
+```dotenv
 TINA4_SESSION_BACKEND=mongodb
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=27017
@@ -116,7 +116,7 @@ TINA4_SESSION_COLLECTION=sessions
 
 ## 7. Valkey Sessions
 
-```env
+```dotenv
 TINA4_SESSION_BACKEND=valkey
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -126,7 +126,7 @@ TINA4_SESSION_PORT=6379
 
 ## 8. Database Sessions
 
-```env
+```dotenv
 TINA4_SESSION_BACKEND=database
 ```
 
@@ -253,19 +253,19 @@ Calling `request.session.flash(key)` with only a key reads the value and removes
 ### Using Flash Messages in Templates
 
 ```html
-{% extends "base.html" %}
+&#123;% extends "base.html" %&#125;
 
-{% block content %}
-    {% if flash_message %}
-        <div class="alert alert-{{ flash_type }}">
-            {{ flash_message }}
+&#123;% block content %&#125;
+    &#123;% if flash_message %&#125;
+        <div class="alert alert-&#123;&#123; flash_type &#125;&#125;">
+            &#123;&#123; flash_message &#125;&#125;
         </div>
-    {% endif %}
+    &#123;% endif %&#125;
 
     <h1>Profile</h1>
-    <p>Name: {{ user.name }}</p>
-    <p>Email: {{ user.email }}</p>
-{% endblock %}
+    <p>Name: &#123;&#123; user.name &#125;&#125;</p>
+    <p>Email: &#123;&#123; user.email &#125;&#125;</p>
+&#123;% endblock %&#125;
 ```
 
 ---
@@ -379,7 +379,7 @@ end
 
 ### Configuration Options
 
-```env
+```dotenv
 TINA4_SESSION_TTL=3600
 TINA4_SESSION_SAMESITE=Lax
 ```

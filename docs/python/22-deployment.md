@@ -16,7 +16,7 @@ The first step is configuring your `.env` for production. Development defaults a
 
 Create a production `.env`:
 
-```env
+```dotenv
 # Core
 TINA4_DEBUG=false
 TINA4_LOG_LEVEL=WARNING
@@ -112,7 +112,7 @@ uv run python app.py
 
 You can fine-tune uvicorn through environment variables:
 
-```env
+```dotenv
 TINA4_WORKERS=4
 TINA4_WORKER_TIMEOUT=30
 TINA4_KEEP_ALIVE=5
@@ -329,7 +329,7 @@ Tina4 handles this when it receives a `SIGTERM` signal (the standard shutdown si
 
 ### Configuring Shutdown Timeout
 
-```env
+```dotenv
 TINA4_SHUTDOWN_TIMEOUT=30
 ```
 

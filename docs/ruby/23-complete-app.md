@@ -68,7 +68,7 @@ bundle install
 
 Update `.env`:
 
-```env
+```dotenv
 TINA4_DEBUG=true
 JWT_SECRET=taskflow-dev-secret-change-in-production
 JWT_EXPIRY=86400

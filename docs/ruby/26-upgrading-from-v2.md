@@ -281,8 +281,8 @@ end
 
 ```html
 <!-- src/templates/profile.html -->
-<h1>{{ user.name }}</h1>
-<p>{{ user.t("welcome_message") }}</p>
+<h1>&#123;&#123; user.name &#125;&#125;</h1>
+<p>&#123;&#123; user.t("welcome_message") &#125;&#125;</p>
 ```
 
 The template engine detects that `user.t` is callable and invokes it with `"welcome_message"` as the argument. This opens up translation helpers, formatting functions, and computed properties directly in templates.
@@ -360,7 +360,7 @@ mv templates/* src/templates/
 
 Switch to URL-format database connection:
 
-```env
+```dotenv
 # Old
 # DATABASE_TYPE=sqlite
 # DATABASE_PATH=data/app.db

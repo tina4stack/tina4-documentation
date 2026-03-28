@@ -38,7 +38,7 @@ The token has three parts separated by dots: header, payload, and signature. The
 
 By default, tokens expire after 60 minutes. Configure this in `.env`:
 
-```env
+```dotenv
 TINA4_TOKEN_EXPIRES_IN=60
 ```
 
@@ -88,7 +88,7 @@ Tina4 Python uses **HS256** (HMAC-SHA256) for JWT signing. It uses only the stan
 
 Set the secret key in `.env`:
 
-```env
+```dotenv
 SECRET=my-super-secret-key-at-least-32-chars
 ```
 
@@ -443,18 +443,22 @@ In your template, include the CSRF token in every form:
 
 ```html
 <form method="POST" action="/profile/update">
-    {{ form_token() }}
+    &#123;&#123; form_token() &#125;&#125;
 
     <div class="form-group">
         <label for="name">Name</label>
-        <input type="text" name="name" id="name" value="{{ user.name }}">
+        <input type="text" name="name" id="name" value="&#123;&#123; user.name &#125;&#125;">
     </div>
 
     <button type="submit">Update Profile</button>
 </form>
 ```
 
+<div v-pre>
+
 `{{ form_token() }}` renders a hidden input field:
+
+</div>
 
 ```html
 <input type="hidden" name="_token" value="abc123randomtoken456">
@@ -502,7 +506,7 @@ Tina4 supports server-side sessions for storing per-user state between requests.
 
 Set the session backend in `.env`:
 
-```env
+```dotenv
 # File-based sessions (default)
 TINA4_SESSION_BACKEND=file
 
@@ -559,7 +563,7 @@ async def logout(request, response):
 
 ### Session Options
 
-```env
+```dotenv
 TINA4_SESSION_LIFETIME=3600       # Session lifetime in seconds (default: 3600)
 TINA4_SESSION_NAME=tina4_session  # Cookie name for the session ID
 ```

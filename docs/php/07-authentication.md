@@ -41,7 +41,7 @@ Three parts separated by dots: header, payload, signature. The signature ensures
 
 Tokens expire after 60 minutes by default. Configure in `.env`:
 
-```env
+```dotenv
 TINA4_TOKEN_LIMIT=60
 ```
 
@@ -93,7 +93,7 @@ Tina4 PHP uses **HS256** (HMAC-SHA256) for JWT signing. It uses only the standar
 
 Set the secret key in `.env`:
 
-```env
+```dotenv
 SECRET=my-super-secret-key-at-least-32-chars
 ```
 
@@ -465,18 +465,22 @@ Include the CSRF token in every form:
 
 ```html
 <form method="POST" action="/profile/update">
-    {{ form_token() }}
+    &#123;&#123; form_token() &#125;&#125;
 
     <div class="form-group">
         <label for="name">Name</label>
-        <input type="text" name="name" id="name" value="{{ user.name }}">
+        <input type="text" name="name" id="name" value="&#123;&#123; user.name &#125;&#125;">
     </div>
 
     <button type="submit">Update Profile</button>
 </form>
 ```
 
+<div v-pre>
+
 `{{ form_token() }}` renders a hidden input:
+
+</div>
 
 ```html
 <input type="hidden" name="_token" value="abc123randomtoken456">
@@ -521,7 +525,7 @@ Server-side sessions store per-user state between requests. Use JWTs for API aut
 
 Set the backend in `.env`:
 
-```env
+```dotenv
 # File-based sessions (default)
 TINA4_SESSION_DRIVER=file
 
@@ -579,7 +583,7 @@ Router::post("/logout", function ($request, $response) {
 
 ### Session Options
 
-```env
+```dotenv
 TINA4_SESSION_LIFETIME=3600       # Expires after 1 hour of inactivity
 TINA4_SESSION_NAME=tina4_session  # Cookie name for the session ID
 ```

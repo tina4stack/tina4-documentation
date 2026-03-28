@@ -481,12 +481,12 @@ const ws = frond.ws("/ws/notifications/42", {
 Create `src/templates/chat.html`:
 
 ```html
-{% extends "base.html" %}
+&#123;% extends "base.html" %&#125;
 
-{% block title %}Chat - {{ room }}{% endblock %}
+&#123;% block title %&#125;Chat - &#123;&#123; room &#125;&#125;&#123;% endblock %&#125;
 
-{% block content %}
-    <h1>Chat Room: {{ room }}</h1>
+&#123;% block content %&#125;
+    <h1>Chat Room: &#123;&#123; room &#125;&#125;</h1>
     <p id="status">Connecting...</p>
     <p id="online">Online: 0</p>
 
@@ -499,7 +499,7 @@ Create `src/templates/chat.html`:
     </form>
 
     <script>
-        const room = "{{ room }}";
+        const room = "&#123;&#123; room &#125;&#125;";
         const ws = new WebSocket("ws://" + location.host + "/ws/livechat/" + room);
         const messagesDiv = document.getElementById("messages");
         let username = prompt("Enter your username:") || "Anonymous";
@@ -542,7 +542,7 @@ Create `src/templates/chat.html`:
             }
         });
     </script>
-{% endblock %}
+&#123;% endblock %&#125;
 ```
 
 Create the route:
@@ -680,7 +680,7 @@ A backplane solves this. It relays WebSocket messages across all instances using
 
 Set two environment variables in your `.env`:
 
-```env
+```dotenv
 TINA4_WS_BACKPLANE=redis
 TINA4_WS_BACKPLANE_URL=redis://localhost:6379
 ```
