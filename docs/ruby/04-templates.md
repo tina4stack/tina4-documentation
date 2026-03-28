@@ -881,7 +881,7 @@ Tina4::Router.get("/catalog") do |request, response|
   categories = all_products.map { |p| p[:category] }.uniq.sort
 
   # Filter by category if specified
-  active_category = request.query["category"] || ""
+  active_category = request.params["category"] || ""
   products = if active_category.empty?
                all_products
              else

@@ -957,8 +957,8 @@ Add the route:
 ```python
 @get("/admin/products")
 async def admin_products(request, response):
-    search = request.query.get("search", "")
-    selected_category = request.query.get("category", "")
+    search = request.params.get("search", "")
+    selected_category = request.params.get("category", "")
 
     products = [
         {"id": 1, "name": "Wireless Keyboard", "category": "Electronics", "price": "79.99", "in_stock": True},

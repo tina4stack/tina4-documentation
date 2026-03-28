@@ -643,7 +643,7 @@ products = [
 
 @get("/catalog")
 async def catalog_page(request, response):
-    category = request.query.get("category")
+    category = request.params.get("category")
     categories = sorted(set(p["category"] for p in products))
 
     if category:

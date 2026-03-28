@@ -274,8 +274,8 @@ Router::group("/api", function () {
     // List all orders
     Router::get("/orders", function ($request, $response) {
         $order = new Order();
-        $page = (int) ($request->query["page"] ?? 1);
-        $perPage = (int) ($request->query["per_page"] ?? 20);
+        $page = (int) ($request->params["page"] ?? 1);
+        $perPage = (int) ($request->params["per_page"] ?? 20);
         $offset = ($page - 1) * $perPage;
 
         $orders = $order->select("*", "", [], "created_at DESC", $perPage, $offset);

@@ -127,6 +127,8 @@ curl http://localhost:7145/users/5/posts/99
 
 Notice `user_id` came back as the string `"5"`, not the integer `5`. Path parameters are strings by default. In Python, path parameters are passed as function arguments -- the parameter names in the function signature must match the `{name}` placeholders in the route pattern.
 
+> **Auto-casting:** Tina4 automatically casts path parameter values that are purely numeric to integers. For example, requesting `/users/42/posts/99` will pass `id` as the integer `42` and `post_id` as the integer `99` to your handler -- no explicit `:int` type hint required. The `:int` type hint adds validation (rejecting non-numeric values with a 404), but the auto-casting happens regardless.
+
 ### Typed Parameters
 
 Enforce a type by adding a colon and the type after the parameter name:
@@ -241,16 +243,16 @@ The `:int` and `:float` types act as both a constraint and a converter. If the U
 
 ## 4. Query Parameters
 
-Query parameters are the key-value pairs after the `?` in a URL. Access them through `request.query`:
+Query parameters are the key-value pairs after the `?` in a URL. Access them through `request.params`:
 
 ```python
 from tina4_python.core.router import get
 
 @get("/search")
 async def search(request, response):
-    q = request.query.get("q", "")
-    page = int(request.query.get("page", 1))
-    limit = int(request.query.get("limit", 10))
+    q = request.params.get("q", "")
+    page = int(request.params.get("page", 1))
+    limit = int(request.params.get("limit", 10))
 
     return response.json({
         "query": q,
@@ -268,7 +270,7 @@ curl "http://localhost:7145/search?q=keyboard&page=2&limit=20"
 {"query":"keyboard","page":2,"limit":20,"offset":20}
 ```
 
-If a query parameter is missing, `request.query.get("key")` returns `None`. Use `.get()` with a default value.
+If a query parameter is missing, `request.params.get("key")` returns `None`. Use `.get()` with a default value.
 
 ---
 
@@ -780,7 +782,7 @@ next_id = 6
 # List all products, optionally filter by category
 @get("/api/products")
 async def list_products(request, response):
-    category = request.query.get("category")
+    category = request.params.get("category")
 
     if category is not None:
         filtered = [p for p in products if p["category"].lower() == category.lower()]

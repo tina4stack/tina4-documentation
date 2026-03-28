@@ -316,8 +316,8 @@ use Tina4\Database;
 Router::get("/api/products/search", function ($request, $response) {
     $db = Database::getConnection();
 
-    $q = $request->query["q"] ?? "";
-    $maxPrice = (float) ($request->query["max_price"] ?? 99999);
+    $q = $request->params["q"] ?? "";
+    $maxPrice = (float) ($request->params["max_price"] ?? 99999);
 
     if (empty($q)) {
         return $response->json(["error" => "Query parameter 'q' is required"], 400);
@@ -851,8 +851,8 @@ use Tina4\Database;
 Router::get("/api/notes", function ($request, $response) {
     $db = Database::getConnection();
 
-    $tag = $request->query["tag"] ?? "";
-    $search = $request->query["search"] ?? "";
+    $tag = $request->params["tag"] ?? "";
+    $search = $request->params["search"] ?? "";
 
     $sql = "SELECT * FROM notes";
     $params = [];

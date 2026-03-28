@@ -263,9 +263,9 @@ Tina4::Router.group("/api/tasks", middleware: "auth_middleware") do
     db = Tina4::Database.connection
     user_id = request.user["user_id"]
 
-    status = request.query["status"]
-    priority = request.query["priority"]
-    assigned = request.query["assigned_to_me"]
+    status = request.params["status"]
+    priority = request.params["priority"]
+    assigned = request.params["assigned_to_me"]
 
     sql = "SELECT t.*, u1.name AS creator_name, u2.name AS assignee_name FROM tasks t LEFT JOIN users u1 ON t.created_by = u1.id LEFT JOIN users u2 ON t.assigned_to = u2.id"
     conditions = []

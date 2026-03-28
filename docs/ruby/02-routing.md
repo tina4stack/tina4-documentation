@@ -127,6 +127,8 @@ curl http://localhost:7147/users/5/posts/99
 
 Notice: `user_id` came back as the string `"5"`, not the integer `5`. Path parameters are strings by default.
 
+> **Auto-casting:** Tina4 automatically casts path parameter values that are purely numeric to integers. For example, requesting `/users/42/posts/99` will give you `request.params[:id]` as the integer `42` and `request.params[:post_id]` as the integer `99` -- no explicit `:int` type hint required. The `:int` type hint adds validation (rejecting non-numeric values with a 404), but the auto-casting happens regardless.
+
 ### Typed Parameters
 
 Enforce a type with a colon after the parameter name:
@@ -240,13 +242,13 @@ The `:int` and `:float` types act as both a constraint and a converter. If the U
 
 ## 4. Query Parameters
 
-Query parameters are key-value pairs after the `?` in a URL. Access them through `request.query`:
+Query parameters are key-value pairs after the `?` in a URL. Access them through `request.params`:
 
 ```ruby
 Tina4::Router.get("/search") do |request, response|
-  q = request.query["q"] || ""
-  page = (request.query["page"] || 1).to_i
-  limit = (request.query["limit"] || 10).to_i
+  q = request.params["q"] || ""
+  page = (request.params["page"] || 1).to_i
+  limit = (request.params["limit"] || 10).to_i
 
   response.json({
     query: q,
@@ -265,7 +267,7 @@ curl "http://localhost:7147/search?q=keyboard&page=2&limit=20"
 {"query":"keyboard","page":2,"limit":20,"offset":20}
 ```
 
-Missing query parameter? `request.query["key"]` returns `nil`. Use `||` to provide defaults.
+Missing query parameter? `request.params["key"]` returns `nil`. Use `||` to provide defaults.
 
 ---
 
@@ -769,7 +771,7 @@ $next_id = 6
 
 # List all products, optionally filter by category
 Tina4::Router.get("/api/products") do |request, response|
-  category = request.query["category"]
+  category = request.params["category"]
 
   if category
     filtered = $products.select { |p| p[:category].downcase == category.downcase }

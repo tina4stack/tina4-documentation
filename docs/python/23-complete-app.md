@@ -312,10 +312,10 @@ from tina4_python.cache import cache_get, cache_set, cache_delete
 
 @get("/api/tasks", middleware=["auth_middleware"])
 async def list_tasks(request, response):
-    status = request.query.get("status")
-    assigned_to = request.query.get("assigned_to")
-    page = int(request.query.get("page", 1))
-    limit = int(request.query.get("limit", 20))
+    status = request.params.get("status")
+    assigned_to = request.params.get("assigned_to")
+    page = int(request.params.get("page", 1))
+    limit = int(request.params.get("limit", 20))
     offset = (page - 1) * limit
 
     task = Task()

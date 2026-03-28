@@ -137,9 +137,9 @@ Router::get("/api/products/{id:int}", function ($request, $response) {
  * @query int $limit Items per page (default: 20, max: 100)
  */
 Router::get("/api/products/search", function ($request, $response) {
-    $q = $request->query["q"] ?? "";
-    $page = (int) ($request->query["page"] ?? 1);
-    $limit = min((int) ($request->query["limit"] ?? 20), 100);
+    $q = $request->params["q"] ?? "";
+    $page = (int) ($request->params["page"] ?? 1);
+    $limit = min((int) ($request->params["limit"] ?? 20), 100);
 
     return $response->json([
         "query" => $q,
@@ -435,8 +435,8 @@ use Tina4\Router;
  * @example response {"users": [{"id": 1, "name": "Alice", "email": "alice@example.com", "role": "admin"}, {"id": 2, "name": "Bob", "email": "bob@example.com", "role": "user"}], "total": 42, "page": 1, "pages": 3}
  */
 Router::get("/api/users", function ($request, $response) {
-    $page = (int) ($request->query["page"] ?? 1);
-    $limit = (int) ($request->query["limit"] ?? 20);
+    $page = (int) ($request->params["page"] ?? 1);
+    $limit = (int) ($request->params["limit"] ?? 20);
 
     return $response->json([
         "users" => [
@@ -611,8 +611,8 @@ Router::put("/api/users/{id:int}", function ($request, $response) {
  */
 Router::get("/api/users/{id:int}/orders", function ($request, $response) {
     $id = $request->params["id"];
-    $status = $request->query["status"] ?? null;
-    $page = (int) ($request->query["page"] ?? 1);
+    $status = $request->params["status"] ?? null;
+    $page = (int) ($request->params["page"] ?? 1);
 
     if ($id > 100) {
         return $response->json(["error" => "User not found"], 404);

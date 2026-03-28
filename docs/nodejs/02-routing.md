@@ -157,6 +157,8 @@ curl http://localhost:7148/users/5/posts/99
 
 Notice `user_id` came back as the string `"5"`, not the integer `5`. Path parameters are strings by default.
 
+> **Auto-casting:** Tina4 automatically casts path parameter values that are purely numeric to numbers. For example, requesting `/users/42/posts/99` will give you `req.params.id` as the number `42` and `req.params.postId` as the number `99` -- no explicit `:int` type hint required. The `:int` type hint adds validation (rejecting non-numeric values with a 404), but the auto-casting happens regardless.
+
 ### Typed Parameters
 
 Enforce a type by adding a colon and the type after the parameter name:

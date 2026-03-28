@@ -109,7 +109,7 @@ All correct. All runnable. First try.
 
 **You:** "Add pagination to the posts list"
 
-**Claude adds** `request.query.get("page", 1)` handling and `to_dict()` with limit/offset -- because CLAUDE.md told it exactly how Tina4 pagination works.
+**Claude adds** `request.params.get("page", 1)` handling and `to_dict()` with limit/offset -- because CLAUDE.md told it exactly how Tina4 pagination works.
 
 **You:** "Cache the post list for 5 minutes"
 

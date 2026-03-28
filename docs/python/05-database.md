@@ -674,8 +674,8 @@ from tina4_python.database.connection import Database
 @get("/api/notes")
 async def list_notes(request, response):
     db = Database()
-    category = request.query.get("category")
-    pinned = request.query.get("pinned")
+    category = request.params.get("category")
+    pinned = request.params.get("pinned")
 
     sql = "SELECT * FROM notes"
     params = {}

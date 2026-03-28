@@ -107,7 +107,7 @@ This means 60 requests per 60 seconds per IP. Apply it:
 Tina4::Router.group("/api/public", middleware: "RateLimiter") do
 
   Tina4::Router.get("/search") do |request, response|
-    q = request.query["q"] || ""
+    q = request.params["q"] || ""
     response.json({ query: q, results: [] })
   end
 

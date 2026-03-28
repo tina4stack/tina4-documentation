@@ -441,11 +441,11 @@ Router::group("/api", function () {
     Router::get("/tasks", function ($request, $response) {
         $userId = $request->user["user_id"];
 
-        $status = $request->query["status"] ?? "";
-        $priority = $request->query["priority"] ?? "";
-        $assigned = $request->query["assigned"] ?? "";
-        $page = (int) ($request->query["page"] ?? 1);
-        $perPage = (int) ($request->query["per_page"] ?? 20);
+        $status = $request->params["status"] ?? "";
+        $priority = $request->params["priority"] ?? "";
+        $assigned = $request->params["assigned"] ?? "";
+        $page = (int) ($request->params["page"] ?? 1);
+        $perPage = (int) ($request->params["per_page"] ?? 20);
 
         $conditions = [];
         $params = [];

@@ -94,7 +94,7 @@ The cache key includes the full URL with query parameters. `/api/products?page=1
 
 ```php
 Router::get("/api/products", function ($request, $response) {
-    $page = (int) ($request->query["page"] ?? 1);
+    $page = (int) ($request->params["page"] ?? 1);
     $limit = 20;
     $offset = ($page - 1) * $limit;
 
@@ -553,7 +553,7 @@ use function Tina4\cache_get;
 use function Tina4\cache_set;
 
 Router::get("/api/catalog", function ($request, $response) {
-    $page = (int) ($request->query["page"] ?? 1);
+    $page = (int) ($request->params["page"] ?? 1);
     $cacheKey = "catalog:page:" . $page;
 
     // Layer 1: Check application cache
@@ -677,9 +677,9 @@ function getProductStore() {
 
 // List products with caching
 Router::get("/api/store/products", function ($request, $response) {
-    $category = $request->query["category"] ?? null;
-    $page = (int) ($request->query["page"] ?? 1);
-    $limit = (int) ($request->query["limit"] ?? 20);
+    $category = $request->params["category"] ?? null;
+    $page = (int) ($request->params["page"] ?? 1);
+    $limit = (int) ($request->params["limit"] ?? 20);
 
     // Build cache key from query parameters
     $cacheKey = "store:products:" . md5(json_encode([

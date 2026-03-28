@@ -575,13 +575,13 @@ Before jumping into the exercises, let's consolidate how route handlers work in 
 
 ### Reading Query Parameters
 
-Query parameters are the key-value pairs after the `?` in a URL. Access them through `request.query`:
+Query parameters are the key-value pairs after the `?` in a URL. Access them through `request.params`:
 
 ```ruby
 # URL: /api/search?q=laptop&page=2
-request.query["q"]                  # "laptop"
-request.query["page"]               # "2" (always a string)
-request.query["sort"] || "name"     # "name" (default -- param was not sent)
+request.params["q"]                  # "laptop"
+request.params["page"]               # "2" (always a string)
+request.params["sort"] || "name"     # "name" (default -- param was not sent)
 ```
 
 ### Reading URL Path Parameters
@@ -672,8 +672,8 @@ books = [
 
 Tina4::Router.get("/api/books") do |request, response|
   # List all books. Supports ?author= filter and ?sort=year.
-  author = request.query["author"] || ""
-  sort_by = request.query["sort"] || ""
+  author = request.params["author"] || ""
+  sort_by = request.params["sort"] || ""
 
   result = books
 
@@ -824,7 +824,7 @@ Create `src/routes/greet.rb`:
 
 ```ruby
 Tina4::Router.get("/api/greet") do |request, response|
-  name = request.query["name"] || "Stranger"
+  name = request.params["name"] || "Stranger"
   hour = Time.now.hour
 
   time_of_day = if hour >= 5 && hour < 12

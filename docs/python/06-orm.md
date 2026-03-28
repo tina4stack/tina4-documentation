@@ -205,7 +205,7 @@ async def delete_note(request, response):
 ```python
 @get("/api/notes")
 async def list_notes(request, response):
-    category = request.query.get("category")
+    category = request.params.get("category")
 
     if category:
         result = Note.select(
@@ -503,7 +503,7 @@ async def published_posts(request, response):
 
 @get("/api/posts/recent")
 async def recent_posts(request, response):
-    days = int(request.query.get("days", 7))
+    days = int(request.params.get("days", 7))
     posts = BlogPost.recent(days)
     return response.json({"posts": [p.to_dict() for p in posts]})
 ```

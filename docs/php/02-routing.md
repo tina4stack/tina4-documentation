@@ -136,6 +136,8 @@ curl http://localhost:7146/users/5/posts/99
 
 Notice: `user_id` came back as the string `"5"`, not the integer `5`. Path parameters are strings by default.
 
+> **Auto-casting:** Tina4 automatically casts path parameter values that are purely numeric to integers. For example, requesting `/users/42/posts/99` will give you `$request->params["id"]` as the integer `42` and `$request->params["postId"]` as the integer `99` -- no explicit `:int` type hint required. The `:int` type hint adds validation (rejecting non-numeric values with a 404), but the auto-casting happens regardless.
+
 ### Typed Parameters
 
 Add a colon and a type to enforce constraints:
@@ -255,16 +257,16 @@ The `:int` and `:float` types act as both a constraint and a converter. If the U
 
 ## 4. Query Parameters
 
-Key-value pairs after the `?` in a URL. Access them through `$request->query`:
+Key-value pairs after the `?` in a URL. Access them through `$request->params`:
 
 ```php
 <?php
 use Tina4\Router;
 
 Router::get("/search", function ($request, $response) {
-    $q = $request->query["q"] ?? "";
-    $page = (int) ($request->query["page"] ?? 1);
-    $limit = (int) ($request->query["limit"] ?? 10);
+    $q = $request->params["q"] ?? "";
+    $page = (int) ($request->params["page"] ?? 1);
+    $limit = (int) ($request->params["limit"] ?? 10);
 
     return $response->json([
         "query" => $q,
@@ -833,7 +835,7 @@ $nextId = 6;
 
 // List all products, optionally filter by category
 Router::get("/api/products", function ($request, $response) use (&$products) {
-    $category = $request->query["category"] ?? null;
+    $category = $request->params["category"] ?? null;
 
     if ($category !== null) {
         $filtered = array_values(array_filter(

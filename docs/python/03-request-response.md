@@ -71,7 +71,7 @@ curl http://localhost:7145/users/5/posts/hello-world
 {"user_id":5,"slug":"hello-world"}
 ```
 
-### request.query
+### request.params
 
 Query string parameters as a dictionary:
 
@@ -79,9 +79,9 @@ Query string parameters as a dictionary:
 @get("/search")
 async def search(request, response):
     return response.json({
-        "q": request.query.get("q", ""),
-        "page": int(request.query.get("page", 1)),
-        "sort": request.query.get("sort", "relevance")
+        "q": request.params.get("q", ""),
+        "page": int(request.params.get("page", 1)),
+        "sort": request.params.get("sort", "relevance")
     })
 ```
 
@@ -694,7 +694,7 @@ async def submit_contact(request, response):
 
 @get("/api/contact/submissions")
 async def list_submissions(request, response):
-    status = request.query.get("status")
+    status = request.params.get("status")
 
     if status:
         filtered = [s for s in submissions if s["status"] == status]
@@ -748,7 +748,7 @@ async def list_submissions(request, response):
 
 **Cause:** GET requests carry no body by convention. Browsers and curl do not send one.
 
-**Fix:** Use `request.query` for GET parameters. The body is only populated for POST, PUT, and PATCH requests.
+**Fix:** Use `request.params` for GET parameters. The body is only populated for POST, PUT, and PATCH requests.
 
 ### 2. Forgetting to parse Content-Type
 

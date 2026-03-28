@@ -265,13 +265,13 @@ The fifth argument is LIMIT, the sixth is OFFSET.
 Tina4::Router.get("/api/products") do |request, response|
   product = Product.new
 
-  category = request.query["category"] || ""
-  min_price = (request.query["min_price"] || 0).to_f
-  max_price = (request.query["max_price"] || 999999).to_f
-  page = (request.query["page"] || 1).to_i
-  per_page = (request.query["per_page"] || 20).to_i
-  sort = request.query["sort"] || "name"
-  order = (request.query["order"] || "ASC").upcase
+  category = request.params["category"] || ""
+  min_price = (request.params["min_price"] || 0).to_f
+  max_price = (request.params["max_price"] || 999999).to_f
+  page = (request.params["page"] || 1).to_i
+  per_page = (request.params["per_page"] || 20).to_i
+  sort = request.params["sort"] || "name"
+  order = (request.params["order"] || "ASC").upcase
 
   # Build filter
   conditions = []

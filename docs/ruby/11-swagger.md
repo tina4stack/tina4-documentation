@@ -120,9 +120,9 @@ end
 # @query int $page Page number (default: 1)
 # @query int $limit Items per page (default: 20, max: 100)
 Tina4::Router.get("/api/products/search") do |request, response|
-  q = request.query["q"] || ""
-  page = (request.query["page"] || 1).to_i
-  limit = [(request.query["limit"] || 20).to_i, 100].min
+  q = request.params["q"] || ""
+  page = (request.params["page"] || 1).to_i
+  limit = [(request.params["limit"] || 20).to_i, 100].min
 
   response.json({
     query: q,
@@ -287,8 +287,8 @@ Here is a full example showing all the annotation features together:
 # @response 200 {"users": [{"id": "int", "name": "string", "email": "string", "role": "string"}], "total": "int", "page": "int", "pages": "int"}
 # @example response {"users": [{"id": 1, "name": "Alice", "email": "alice@example.com", "role": "admin"}], "total": 42, "page": 1, "pages": 3}
 Tina4::Router.get("/api/users") do |request, response|
-  page = (request.query["page"] || 1).to_i
-  limit = (request.query["limit"] || 20).to_i
+  page = (request.params["page"] || 1).to_i
+  limit = (request.params["limit"] || 20).to_i
 
   response.json({
     users: [
@@ -410,8 +410,8 @@ end
 # @example response {"orders": [{"id": 101, "product": "Wireless Keyboard", "quantity": 2, "total": 159.98, "status": "shipped"}], "total": 5, "page": 1}
 Tina4::Router.get("/api/users/{id:int}/orders") do |request, response|
   id = request.params["id"]
-  status = request.query["status"]
-  page = (request.query["page"] || 1).to_i
+  status = request.params["status"]
+  page = (request.params["page"] || 1).to_i
 
   if id > 100
     return response.json({ error: "User not found" }, 404)

@@ -106,7 +106,7 @@ All correct. All runnable. First try.
 
 **You:** "Add pagination to the posts list"
 
-**Claude adds** `$request->query['page']` handling and `toArray(page: $page, perPage: 10)` -- because CLAUDE.md told it how Tina4 pagination works.
+**Claude adds** `$request->params['page']` handling and `toArray(page: $page, perPage: 10)` -- because CLAUDE.md told it how Tina4 pagination works.
 
 **You:** "Cache the post list for 5 minutes"
 

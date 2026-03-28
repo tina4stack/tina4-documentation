@@ -358,10 +358,10 @@ Tina4::Router.get("/api/products") do |request, response|
   query = Tina4::QueryBuilder.from("products", db: db)
 
   # Apply filters from query string
-  category = request.query["category"]
-  min_price = request.query["min_price"]
-  max_price = request.query["max_price"]
-  search = request.query["search"]
+  category = request.params["category"]
+  min_price = request.params["min_price"]
+  max_price = request.params["max_price"]
+  search = request.params["search"]
 
   query = query.where("category = ?", [category]) if category
   query = query.where("price >= ?", [min_price.to_f]) if min_price
@@ -369,8 +369,8 @@ Tina4::Router.get("/api/products") do |request, response|
   query = query.where("name LIKE ?", ["%#{search}%"]) if search
 
   # Pagination
-  page = (request.query["page"] || 1).to_i
-  per_page = (request.query["per_page"] || 20).to_i
+  page = (request.params["page"] || 1).to_i
+  per_page = (request.params["per_page"] || 20).to_i
   offset = (page - 1) * per_page
 
   total = query.count
@@ -471,29 +471,29 @@ Tina4::Router.get("/api/products/search") do |request, response|
   query = Tina4::QueryBuilder.from("products", db: db)
 
   # Text search
-  q = request.query["q"]
+  q = request.params["q"]
   query = query.where("name LIKE ?", ["%#{q}%"]) if q && !q.empty?
 
   # Category filter
-  category = request.query["category"]
+  category = request.params["category"]
   query = query.where("category = ?", [category]) if category && !category.empty?
 
   # Price range
-  min_price = request.query["min_price"]
+  min_price = request.params["min_price"]
   query = query.where("price >= ?", [min_price.to_f]) if min_price
 
-  max_price = request.query["max_price"]
+  max_price = request.params["max_price"]
   query = query.where("price <= ?", [max_price.to_f]) if max_price
 
   # In-stock filter
-  in_stock = request.query["in_stock"]
+  in_stock = request.params["in_stock"]
   query = query.where("in_stock = ?", [in_stock.to_i]) if in_stock
 
   # Total count before pagination
   total = query.count
 
   # Sorting
-  sort = request.query["sort"] || "name_asc"
+  sort = request.params["sort"] || "name_asc"
   order = case sort
           when "price_asc"  then "price ASC"
           when "price_desc" then "price DESC"
@@ -503,8 +503,8 @@ Tina4::Router.get("/api/products/search") do |request, response|
           end
 
   # Pagination
-  page = (request.query["page"] || 1).to_i
-  per_page = (request.query["per_page"] || 20).to_i
+  page = (request.params["page"] || 1).to_i
+  per_page = (request.params["per_page"] || 20).to_i
   offset = (page - 1) * per_page
 
   results = query

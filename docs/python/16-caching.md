@@ -94,7 +94,7 @@ By default, the cache key includes the full URL with query parameters. `/api/pro
 ```python
 @get("/api/products", middleware=["ResponseCache:300"])
 async def list_products(request, response):
-    page = int(request.query.get("page", 1))
+    page = int(request.params.get("page", 1))
     limit = 20
     offset = (page - 1) * limit
 
@@ -530,7 +530,7 @@ import math
 
 @get("/api/catalog", middleware=["ResponseCache:60"])
 async def get_catalog(request, response):
-    page = int(request.query.get("page", 1))
+    page = int(request.params.get("page", 1))
     cache_key = f"catalog:page:{page}"
 
     # Layer 1: Check application cache
@@ -652,9 +652,9 @@ def get_product_store():
 
 @get("/api/store/products")
 async def list_store_products(request, response):
-    category = request.query.get("category")
-    page = int(request.query.get("page", 1))
-    limit = int(request.query.get("limit", 20))
+    category = request.params.get("category")
+    page = int(request.params.get("page", 1))
+    limit = int(request.params.get("limit", 20))
 
     # Build cache key from query parameters
     key_data = json.dumps({"category": category, "page": page, "limit": limit})

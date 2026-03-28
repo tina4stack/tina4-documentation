@@ -64,9 +64,9 @@ Query string parameters as a hash:
 
 ```ruby
 # Request: /search?q=keyboard&page=2&sort=price
-request.query["q"]    # "keyboard"
-request.query["page"] # "2"
-request.query["sort"] # "price"
+request.params["q"]    # "keyboard"
+request.params["page"] # "2"
+request.params["sort"] # "price"
 ```
 
 ### body
@@ -126,7 +126,7 @@ Tina4::Router.post("/debug/request") do |request, response|
     method: request.method,
     path: request.path,
     params: request.params,
-    query: request.query,
+    query: request.params,
     body: request.body,
     headers: request.headers,
     ip: request.ip,

@@ -282,13 +282,13 @@ use Tina4\Router;
 Router::get("/api/products", function ($request, $response) {
     $product = new Product();
 
-    $category = $request->query["category"] ?? "";
-    $minPrice = (float) ($request->query["min_price"] ?? 0);
-    $maxPrice = (float) ($request->query["max_price"] ?? 999999);
-    $page = (int) ($request->query["page"] ?? 1);
-    $perPage = (int) ($request->query["per_page"] ?? 20);
-    $sort = $request->query["sort"] ?? "name";
-    $order = strtoupper($request->query["order"] ?? "ASC");
+    $category = $request->params["category"] ?? "";
+    $minPrice = (float) ($request->params["min_price"] ?? 0);
+    $maxPrice = (float) ($request->params["max_price"] ?? 999999);
+    $page = (int) ($request->params["page"] ?? 1);
+    $perPage = (int) ($request->params["per_page"] ?? 20);
+    $sort = $request->params["sort"] ?? "name";
+    $order = strtoupper($request->params["order"] ?? "ASC");
 
     // Build filter
     $conditions = [];
