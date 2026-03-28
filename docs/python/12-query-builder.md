@@ -259,7 +259,7 @@ async def list_users(request, response):
         .count()
 
     return response({
-        "users": result.to_array(),
+        "users": result.to_list(),
         "total": total,
         "page": page,
         "per_page": per_page,
@@ -300,7 +300,7 @@ Four methods execute the query against the database.
 
 ### get() — Multiple rows
 
-Returns a `DatabaseResult` object. Use `.records` for the list of dicts, `.to_array()` for a plain list, or iterate directly.
+Returns a `DatabaseResult` object. Use `.records` for the list of dicts, `.to_list()` for a plain list, or iterate directly.
 
 ```python
 result = QueryBuilder.from_table("users", db) \
@@ -401,7 +401,7 @@ async def search_products(request, response):
     qb.order_by("name ASC")
     qb.limit(20)
 
-    return response(qb.get().to_array())
+    return response(qb.get().to_list())
 ```
 
 This is where QueryBuilder shines. Without it, you would be concatenating SQL fragments with `if` checks and tracking parameter positions manually.
@@ -433,8 +433,7 @@ Use QueryBuilder when you need joins across tables, aggregations, complex filter
 
 ```python
 # ORM — single model operations
-user = User()
-user.load("id = ?", [1])
+user = User.find(1)
 user.name = "Alice"
 user.save()
 
@@ -639,7 +638,7 @@ async def search_products(request, response):
     total = count_qb.count()
 
     return response({
-        "products": result.to_array(),
+        "products": result.to_list(),
         "total": total,
         "page": page,
         "per_page": per_page,

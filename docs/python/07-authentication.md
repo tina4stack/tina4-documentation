@@ -142,7 +142,7 @@ async def register(request, response):
     db = Database()
 
     # Check if email already exists
-    existing = db.fetch_one("SELECT id FROM users WHERE email = :email", {"email": body["email"]})
+    existing = db.fetch_one("SELECT id FROM users WHERE email = ?", [body["email"]])
     if existing is not None:
         return response.json({"error": "Email already registered"}, 409)
 
@@ -150,16 +150,12 @@ async def register(request, response):
     password_hash = Auth.hash_password(body["password"])
 
     # Create the user
-    db.execute(
-        "INSERT INTO users (name, email, password_hash) VALUES (:name, :email, :hash)",
-        {
-            "name": body["name"],
-            "email": body["email"],
-            "hash": password_hash
-        }
+    result = db.execute(
+        "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+        [body["name"], body["email"], password_hash]
     )
 
-    user = db.fetch_one("SELECT id, name, email FROM users WHERE id = last_insert_rowid()")
+    user = db.fetch_one("SELECT id, name, email FROM users WHERE id = ?", [result.last_id])
 
     return response.json({
         "message": "Registration successful",
@@ -203,8 +199,8 @@ async def login(request, response):
 
     # Find the user
     user = db.fetch_one(
-        "SELECT id, name, email, password_hash FROM users WHERE email = :email",
-        {"email": body["email"]}
+        "SELECT id, name, email, password_hash FROM users WHERE email = ?",
+        [body["email"]]
     )
 
     if user is None:
@@ -510,20 +506,20 @@ Set the session backend in `.env`:
 
 ```dotenv
 # File-based sessions (default)
-TINA4_SESSION_HANDLER=file
+TINA4_SESSION_BACKEND=file
 
 # Redis
-TINA4_SESSION_HANDLER=redis
+TINA4_SESSION_BACKEND=redis
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
 
 # MongoDB
-TINA4_SESSION_HANDLER=mongodb
+TINA4_SESSION_BACKEND=mongodb
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=27017
 
 # Valkey
-TINA4_SESSION_HANDLER=valkey
+TINA4_SESSION_BACKEND=valkey
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
 ```
@@ -701,18 +697,18 @@ async def register(request, response):
 
     db = Database()
 
-    existing = db.fetch_one("SELECT id FROM users WHERE email = :email", {"email": body["email"]})
+    existing = db.fetch_one("SELECT id FROM users WHERE email = ?", [body["email"]])
     if existing is not None:
         return response.json({"error": "Email already registered"}, 409)
 
     password_hash = Auth.hash_password(body["password"])
 
-    db.execute(
-        "INSERT INTO users (name, email, password_hash) VALUES (:name, :email, :hash)",
-        {"name": body["name"], "email": body["email"], "hash": password_hash}
+    result = db.execute(
+        "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+        [body["name"], body["email"], password_hash]
     )
 
-    user = db.fetch_one("SELECT id, name, email, role, created_at FROM users WHERE id = last_insert_rowid()")
+    user = db.fetch_one("SELECT id, name, email, role, created_at FROM users WHERE id = ?", [result.last_id])
 
     return response.json({"message": "Registration successful", "user": user}, 201)
 
@@ -728,8 +724,8 @@ async def login(request, response):
     db = Database()
 
     user = db.fetch_one(
-        "SELECT id, name, email, password_hash, role FROM users WHERE email = :email",
-        {"email": body["email"]}
+        "SELECT id, name, email, password_hash, role FROM users WHERE email = ?",
+        [body["email"]]
     )
 
     if user is None or not Auth.check_password(body["password"], user["password_hash"]):
@@ -760,8 +756,8 @@ async def get_profile(request, response):
     db = Database()
 
     user = db.fetch_one(
-        "SELECT id, name, email, role, created_at FROM users WHERE id = :id",
-        {"id": request.user["user_id"]}
+        "SELECT id, name, email, role, created_at FROM users WHERE id = ?",
+        [request.user["user_id"]]
     )
 
     if user is None:
@@ -779,26 +775,22 @@ async def update_profile(request, response):
 
     if body.get("email"):
         existing = db.fetch_one(
-            "SELECT id FROM users WHERE email = :email AND id != :id",
-            {"email": body["email"], "id": user_id}
+            "SELECT id FROM users WHERE email = ? AND id != ?",
+            [body["email"], user_id]
         )
         if existing is not None:
             return response.json({"error": "Email already in use by another account"}, 409)
 
-    current = db.fetch_one("SELECT * FROM users WHERE id = :id", {"id": user_id})
+    current = db.fetch_one("SELECT * FROM users WHERE id = ?", [user_id])
 
     db.execute(
-        "UPDATE users SET name = :name, email = :email WHERE id = :id",
-        {
-            "name": body.get("name", current["name"]),
-            "email": body.get("email", current["email"]),
-            "id": user_id
-        }
+        "UPDATE users SET name = ?, email = ? WHERE id = ?",
+        [body.get("name", current["name"]), body.get("email", current["email"]), user_id]
     )
 
     updated = db.fetch_one(
-        "SELECT id, name, email, role, created_at FROM users WHERE id = :id",
-        {"id": user_id}
+        "SELECT id, name, email, role, created_at FROM users WHERE id = ?",
+        [user_id]
     )
 
     return response.json({"message": "Profile updated", "user": updated})
@@ -817,7 +809,7 @@ async def change_password(request, response):
     if len(body["new_password"]) < 8:
         return response.json({"error": "New password must be at least 8 characters"}, 400)
 
-    user = db.fetch_one("SELECT password_hash FROM users WHERE id = :id", {"id": user_id})
+    user = db.fetch_one("SELECT password_hash FROM users WHERE id = ?", [user_id])
 
     if not Auth.check_password(body["current_password"], user["password_hash"]):
         return response.json({"error": "Current password is incorrect"}, 401)
@@ -825,8 +817,8 @@ async def change_password(request, response):
     new_hash = Auth.hash_password(body["new_password"])
 
     db.execute(
-        "UPDATE users SET password_hash = :hash WHERE id = :id",
-        {"hash": new_hash, "id": user_id}
+        "UPDATE users SET password_hash = ? WHERE id = ?",
+        [new_hash, user_id]
     )
 
     return response.json({"message": "Password changed successfully"})

@@ -73,6 +73,29 @@ response.render("profile.html", data)
 Alice lives in Cape Town, South Africa.
 ```
 
+### Method Calls on Values
+
+If a Hash value is a `Proc` or `lambda`, you can call it directly in a template expression:
+
+```ruby
+data = {
+  user: {
+    name: "Alice",
+    t: ->(key) { I18n.t(key) },
+    greet: ->(greeting) { "#{greeting}, Alice!" }
+  }
+}
+
+response.render("page.twig", data)
+```
+
+```html
+<p>{{ user.t("welcome_message") }}</p>
+<p>{{ user.greet("Hello") }}</p>
+```
+
+This works for any callable value -- `Proc`, `lambda`, or `method` objects. Arguments are parsed from the parenthesized expression.
+
 ### Expressions
 
 <div v-pre>

@@ -357,6 +357,10 @@ Rolling back last migration...
   1 migration rolled back
 ```
 
+### Migration Table Auto-Upgrade
+
+If your project was created with an earlier version of Tina4, the `tina4_migration` tracking table may use the older v2 schema. Running `tina4 migrate` automatically detects the old layout and adds the missing `migration_id`, `batch`, and `executed_at` columns, backfilling existing data. No manual intervention is needed.
+
 ### Status
 
 ```bash

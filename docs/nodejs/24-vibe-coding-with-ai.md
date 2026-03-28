@@ -21,11 +21,12 @@ With Tina4, there is one cache. One queue. One ORM. One template engine. No ambi
 const data = await cacheGet("products");
 
 // There is only one way to queue in Tina4
-await Queue.produce("emails", { to: "user@test.com" });
+const queue = new Queue({ topic: "emails" });
+queue.push({ to: "user@test.com" });
 
 // There is only one way to send email in Tina4
 const mail = new Messenger();
-await mail.send("user@test.com", "Welcome", "<h1>Welcome!</h1>");
+await mail.send({ to: "user@test.com", subject: "Welcome", body: "<h1>Welcome!</h1>", html: true });
 ```
 
 Zero dependencies means zero confusion for AI.
@@ -117,8 +118,8 @@ TypeScript makes AI coding even more reliable:
 
 ```typescript
 // The AI knows the exact types
-import { Router, Database, Auth, Queue, Messenger, cacheGet, cacheSet } from "tina4-nodejs";
-import { BaseModel } from "tina4-nodejs";
+import { Router, Auth, Queue, Messenger, cacheGet, cacheSet } from "tina4-nodejs";
+import { BaseModel, Database } from "tina4-nodejs/orm";
 
 // Type declarations guide the AI
 export class Product extends BaseModel {

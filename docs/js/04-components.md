@@ -217,7 +217,7 @@ class PageSection extends Tina4Element {
     return html`
       <section>
         <h2>${this.prop('title')}</h2>
-        <slot></slot>
+        <p>This content is rendered directly into the page DOM.</p>
       </section>
     `;
   }
@@ -229,6 +229,7 @@ When `shadow` is `false`:
 - `static styles` is ignored (no Shadow DOM to scope them)
 - The component renders its content directly as children of the custom element
 - Global CSS applies to the component's internal elements
+- `<slot>` elements do not work -- slots are a Shadow DOM feature. If you need content projection, use Shadow DOM (`static shadow = true`)
 - This is useful for layout components that need to inherit page styles
 
 ---
@@ -324,10 +325,11 @@ Called when the component is removed from the DOM. Use it for cleanup:
 ```typescript
 class LiveClock extends Tina4Element {
   private intervalId = 0;
+  private time = signal(new Date().toLocaleTimeString());
 
   onMount() {
     this.intervalId = window.setInterval(() => {
-      this.requestUpdate();
+      this.time.value = new Date().toLocaleTimeString();
     }, 1000);
   }
 
@@ -336,7 +338,7 @@ class LiveClock extends Tina4Element {
   }
 
   render() {
-    return html`<span>${new Date().toLocaleTimeString()}</span>`;
+    return html`<span>${this.time}</span>`;
   }
 }
 ```

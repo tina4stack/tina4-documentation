@@ -12,7 +12,7 @@ Every POST, PUT, PATCH, and DELETE route requires a valid `Authorization: Bearer
 
 ```typescript
 // src/routes/api/orders/post.ts
-import type { Tina4Request, Tina4Response } from "@tina4/core";
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
     // This handler ONLY runs if the request carries a valid Bearer token.
@@ -48,7 +48,7 @@ Some endpoints need to accept unauthenticated writes — webhooks, registration 
 
 ```typescript
 // src/routes/api/webhooks/stripe/post.ts
-import type { Tina4Request, Tina4Response } from "@tina4/core";
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export const meta = { noAuth: true };
 
@@ -64,7 +64,7 @@ Admin dashboards, user profiles, account settings — some pages need protection
 
 ```typescript
 // src/routes/api/admin/users/get.ts
-import type { Tina4Request, Tina4Response } from "@tina4/core";
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export const meta = { secured: true };
 
@@ -259,8 +259,8 @@ Authentication, sessions, tokens, and security converge in the login flow. Here 
 
 ```typescript
 // src/routes/api/login/post.ts
-import type { Tina4Request, Tina4Response } from "@tina4/core";
-import { getToken, checkPassword } from "@tina4/core";
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
+import { getToken, checkPassword } from "tina4-nodejs";
 
 export const meta = { noAuth: true };
 
@@ -288,16 +288,17 @@ export default async function (req: Tina4Request, res: Tina4Response) {
     }
 
     // Generate token with user claims
+    const secret = process.env.SECRET || "tina4-default-secret";
     const token: string = getToken({
         sub: user.id,
         email: user.email,
         role: user.role,
-    });
+    }, secret);
 
     // Store user in session
-    req.session.user_id = user.id;
-    req.session.email = user.email;
-    req.session.role = user.role;
+    req.session.set("user_id", user.id);
+    req.session.set("email", user.email);
+    req.session.set("role", user.role);
 
     return res.json({
         token,
@@ -350,18 +351,18 @@ function handleLogin(result) {
 
 ```typescript
 // src/routes/dashboard/get.ts
-import type { Tina4Request, Tina4Response } from "@tina4/core";
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
-    const userId: string | undefined = req.session.user_id;
+    const userId: string | undefined = req.session.get("user_id");
 
     if (!userId) {
         return res.redirect("/login");
     }
 
     return res.render("dashboard.twig", {
-        email: req.session.email,
-        role: req.session.role,
+        email: req.session.get("email"),
+        role: req.session.get("role"),
     });
 }
 ```
@@ -370,7 +371,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 
 ```typescript
 // src/routes/api/logout/post.ts
-import type { Tina4Request, Tina4Response } from "@tina4/core";
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export const meta = { noAuth: true };
 
@@ -396,10 +397,10 @@ When a session expires mid-use, the user should:
 
 ```typescript
 // src/routes/account/settings/get.ts
-import type { Tina4Request, Tina4Response } from "@tina4/core";
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
-    const userId: string | undefined = req.session.user_id;
+    const userId: string | undefined = req.session.get("user_id");
 
     if (!userId) {
         // Remember where they wanted to go
@@ -415,8 +416,8 @@ The login handler reads the `redirect` parameter after successful authentication
 
 ```typescript
 // src/routes/api/login/post.ts
-import type { Tina4Request, Tina4Response } from "@tina4/core";
-import { getToken, checkPassword } from "@tina4/core";
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
+import { getToken, checkPassword } from "tina4-nodejs";
 
 export const meta = { noAuth: true };
 
@@ -485,8 +486,8 @@ For login routes, consider a stricter limit:
 
 ```typescript
 // src/routes/api/login/post.ts
-import type { Tina4Request, Tina4Response } from "@tina4/core";
-import { getToken, checkPassword } from "@tina4/core";
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
+import { getToken, checkPassword } from "tina4-nodejs";
 
 export const meta = { noAuth: true };
 
@@ -622,7 +623,7 @@ Build a public contact form that:
 
 ```typescript
 // src/routes/contact/get.ts
-import type { Tina4Request, Tina4Response } from "@tina4/core";
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
     return res.render("contact.twig", { title: "Contact Us" });
@@ -631,7 +632,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 
 ```typescript
 // src/routes/api/contact/post.ts
-import type { Tina4Request, Tina4Response } from "@tina4/core";
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export const meta = { noAuth: true };
 

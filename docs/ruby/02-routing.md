@@ -168,8 +168,6 @@ Supported types:
 | `int` | Digits only | Integer | `{id:int}` matches `42` but not `abc` |
 | `float` | Decimal numbers | Float | `{price:float}` matches `19.99` |
 | `path` | All remaining path segments (catch-all) | String | `{slug:path}` matches `docs/api/auth` |
-| `alpha` | Letters only | String | `{slug:alpha}` matches `hello` but not `hello123` |
-| `alphanumeric` | Letters and digits | String | `{code:alphanumeric}` matches `abc123` |
 
 The `{name}` form (no type) matches any single path segment and returns it as a string.
 

@@ -48,16 +48,16 @@ TINA4_SWAGGER=true
 Raw OpenAPI spec:
 
 ```
-http://localhost:7146/swagger/json
+http://localhost:7146/swagger/openapi.json
 ```
 
 ```bash
-curl http://localhost:7146/swagger/json
+curl http://localhost:7146/swagger/openapi.json
 ```
 
 ```json
 {
-  "openapi": "3.0.0",
+  "openapi": "3.0.3",
   "info": {
     "title": "My Store API",
     "version": "1.0.0"
@@ -137,9 +137,9 @@ Router::get("/api/products/{id:int}", function ($request, $response) {
  * @query int $limit Items per page (default: 20, max: 100)
  */
 Router::get("/api/products/search", function ($request, $response) {
-    $q = $request->params["q"] ?? "";
-    $page = (int) ($request->params["page"] ?? 1);
-    $limit = min((int) ($request->params["limit"] ?? 20), 100);
+    $q = $request->query["q"] ?? "";
+    $page = (int) ($request->query["page"] ?? 1);
+    $limit = min((int) ($request->query["limit"] ?? 20), 100);
 
     return $response->json([
         "query" => $q,
@@ -345,18 +345,16 @@ Tina4 auto-detects auth requirements from `@secured` and `@noauth` annotations.
 Configure in `.env`:
 
 ```dotenv
-TINA4_SWAGGER_TITLE=My Store API
-TINA4_SWAGGER_DESCRIPTION=API for managing products, orders, and users
-TINA4_SWAGGER_VERSION=1.0.0
-TINA4_SWAGGER_CONTACT_EMAIL=api@mystore.com
-TINA4_SWAGGER_LICENSE=MIT
+SWAGGER_TITLE=My Store API
+SWAGGER_DESCRIPTION=API for managing products, orders, and users
+SWAGGER_VERSION=1.0.0
 ```
 
 This appears in the Swagger UI header and the OpenAPI spec:
 
 ```json
 {
-  "openapi": "3.0.0",
+  "openapi": "3.0.3",
   "info": {
     "title": "My Store API",
     "description": "API for managing products, orders, and users",
@@ -375,7 +373,7 @@ This appears in the Swagger UI header and the OpenAPI spec:
 
 ## 10. Generating Client SDKs from the Spec
 
-The OpenAPI spec at `/swagger/json` feeds code generation tools. Client libraries in any language.
+The OpenAPI spec at `/swagger/openapi.json` feeds code generation tools. Client libraries in any language.
 
 ### Using OpenAPI Generator
 
@@ -384,13 +382,13 @@ npm install -g @openapitools/openapi-generator-cli
 
 # TypeScript client
 openapi-generator-cli generate \
-  -i http://localhost:7146/swagger/json \
+  -i http://localhost:7146/swagger/openapi.json \
   -g typescript-fetch \
   -o ./frontend/api-client
 
 # Python client
 openapi-generator-cli generate \
-  -i http://localhost:7146/swagger/json \
+  -i http://localhost:7146/swagger/openapi.json \
   -g python \
   -o ./python-client
 ```
@@ -435,8 +433,8 @@ use Tina4\Router;
  * @example response {"users": [{"id": 1, "name": "Alice", "email": "alice@example.com", "role": "admin"}, {"id": 2, "name": "Bob", "email": "bob@example.com", "role": "user"}], "total": 42, "page": 1, "pages": 3}
  */
 Router::get("/api/users", function ($request, $response) {
-    $page = (int) ($request->params["page"] ?? 1);
-    $limit = (int) ($request->params["limit"] ?? 20);
+    $page = (int) ($request->query["page"] ?? 1);
+    $limit = (int) ($request->query["limit"] ?? 20);
 
     return $response->json([
         "users" => [
@@ -611,8 +609,8 @@ Router::put("/api/users/{id:int}", function ($request, $response) {
  */
 Router::get("/api/users/{id:int}/orders", function ($request, $response) {
     $id = $request->params["id"];
-    $status = $request->params["status"] ?? null;
-    $page = (int) ($request->params["page"] ?? 1);
+    $status = $request->query["status"] ?? null;
+    $page = (int) ($request->query["page"] ?? 1);
 
     if ($id > 100) {
         return $response->json(["error" => "User not found"], 404);

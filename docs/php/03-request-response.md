@@ -67,9 +67,16 @@ Query string parameters. An associative array:
 
 ```php
 // Request: /search?q=keyboard&page=2&sort=price
-$request->params["q"]    // "keyboard"
-$request->params["page"] // "2"
-$request->params["sort"] // "price"
+$request->query["q"]    // "keyboard"
+$request->query["page"] // "2"
+$request->query["sort"] // "price"
+```
+
+The `queryParam()` helper provides a default value when a key is missing:
+
+```php
+$request->queryParam("q")              // "keyboard"
+$request->queryParam("missing", "N/A") // "N/A"
 ```
 
 ### body
@@ -84,12 +91,21 @@ $request->body["price"] // 9.99
 
 ### headers
 
-Request headers as an associative array. Original casing preserved:
+Request headers as an associative array. Keys are normalised to **lowercase**:
 
 ```php
-$request->headers["Content-Type"]  // "application/json"
-$request->headers["Authorization"] // "Bearer eyJhbGci..."
-$request->headers["X-Custom"]      // "my-value"
+$request->headers["content-type"]  // "application/json"
+$request->headers["authorization"] // "Bearer eyJhbGci..."
+$request->headers["x-custom"]      // "my-value"
+```
+
+The `header()` helper method is the preferred way to read a single header. It accepts any casing and handles the lowercase lookup for you:
+
+```php
+$request->header("Content-Type")  // "application/json"
+$request->header("Authorization") // "Bearer eyJhbGci..."
+$request->header("X-Custom")      // "my-value"
+$request->header("Missing")       // null
 ```
 
 ### ip
@@ -132,7 +148,7 @@ Router::post("/debug/request", function ($request, $response) {
         "method" => $request->method,
         "path" => $request->path,
         "params" => $request->params,
-        "query" => $request->params,
+        "query" => $request->query,
         "body" => $request->body,
         "headers" => $request->headers,
         "ip" => $request->ip,
@@ -156,12 +172,12 @@ curl -X POST "http://localhost:7146/debug/request?page=1" \
   "query": {"page": "1"},
   "body": {"name": "test"},
   "headers": {
-    "Content-Type": "application/json",
-    "X-Custom": "hello",
-    "Host": "localhost:7146",
-    "User-Agent": "curl/8.4.0",
-    "Accept": "*/*",
-    "Content-Length": "16"
+    "content-type": "application/json",
+    "x-custom": "hello",
+    "host": "localhost:7146",
+    "user-agent": "curl/8.4.0",
+    "accept": "*/*",
+    "content-length": "16"
   },
   "ip": "127.0.0.1",
   "cookies": {}
@@ -568,7 +584,7 @@ Router::get("/api/products/{id:int}", function ($request, $response) {
         "price" => 79.99
     ];
 
-    $accept = $request->headers["Accept"] ?? "application/json";
+    $accept = $request->header("Accept") ?? "application/json";
 
     if (strpos($accept, "text/html") !== false) {
         return $response->render("product-detail.html", ["product" => $product]);

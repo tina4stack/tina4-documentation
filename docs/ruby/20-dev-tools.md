@@ -188,13 +188,13 @@ Create `src/routes/buggy.rb`:
 
 ```ruby
 Tina4::Router.get("/api/orders/{id:int}/total") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
   id = request.params["id"]
 
-  order = db.fetch_one("SELECT * FROM orders WHERE id = :id", { id: id })
+  order = db.fetch_one("SELECT * FROM orders WHERE id = ?", [id])
 
   # Bug: order might be nil, causing a NoMethodError
-  items = db.fetch("SELECT * FROM order_items WHERE order_id = :id", { id: order["id"] })
+  items = db.fetch("SELECT * FROM order_items WHERE order_id = ?", [order["id"]])
 
   total = items.sum { |item| item["price"] * item["quantity"] }
 
@@ -225,16 +225,16 @@ Fix:
 
 ```ruby
 Tina4::Router.get("/api/orders/{id:int}/total") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
   id = request.params["id"]
 
-  order = db.fetch_one("SELECT * FROM orders WHERE id = :id", { id: id })
+  order = db.fetch_one("SELECT * FROM orders WHERE id = ?", [id])
 
   if order.nil?
     return response.json({ error: "Order not found", id: id }, 404)
   end
 
-  items = db.fetch("SELECT * FROM order_items WHERE order_id = :id", { id: order["id"] })
+  items = db.fetch("SELECT * FROM order_items WHERE order_id = ?", [order["id"]])
 
   total = items.sum { |item| item["price"] * item["quantity"] }
 

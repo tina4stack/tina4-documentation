@@ -57,7 +57,7 @@ tina4 serve
 ```
 
 ```
-  Tina4 Node.js v3.0.0
+  Tina4 Node.js v3.10.3
   Server running at http://0.0.0.0:7148
   Debug mode: ON
   Live reload: ON
@@ -84,7 +84,7 @@ tina4 generate model Product
 Creates `src/orm/Product.ts`:
 
 ```typescript
-import { BaseModel } from "tina4-nodejs";
+import { BaseModel } from "tina4-nodejs/orm";
 
 export class Product extends BaseModel {
     static tableName = "products";
@@ -215,41 +215,38 @@ Ready for deployment:
 
 ## 11. Custom CLI Commands
 
-Create custom commands by adding files to `src/commands/`:
+Create custom seed scripts as standalone TypeScript files:
 
 ```typescript
-// src/commands/seed-products.ts
-import { Command, Database } from "tina4-nodejs";
+// scripts/seed-products.ts
+import { Database } from "tina4-nodejs/orm";
 
-export default class SeedProducts extends Command {
-    static command = "seed:products";
-    static description = "Seed the database with sample products";
+async function seedProducts() {
+    const db = Database.getConnection();
 
-    async run() {
-        const db = Database.getConnection();
+    const products = [
+        { name: "Keyboard", price: 79.99 },
+        { name: "Mouse", price: 29.99 },
+        { name: "Monitor", price: 399.99 }
+    ];
 
-        const products = [
-            { name: "Keyboard", price: 79.99 },
-            { name: "Mouse", price: 29.99 },
-            { name: "Monitor", price: 399.99 }
-        ];
-
-        for (const p of products) {
-            await db.execute(
-                "INSERT INTO products (name, price) VALUES (:name, :price)",
-                p
-            );
-        }
-
-        console.log(`Seeded ${products.length} products`);
+    for (const p of products) {
+        await db.execute(
+            "INSERT INTO products (name, price) VALUES (:name, :price)",
+            p
+        );
     }
+
+    console.log(`Seeded ${products.length} products`);
 }
+
+seedProducts();
 ```
 
 Run it:
 
 ```bash
-tina4 seed:products
+npx tsx scripts/seed-products.ts
 ```
 
 ---

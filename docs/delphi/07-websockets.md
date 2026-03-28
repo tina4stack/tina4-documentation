@@ -20,7 +20,7 @@ The WebSocket client handles the full RFC 6455 protocol:
 - **Auto-reconnect** -- configurable reconnection with backoff when the connection drops
 - **Ping/pong keepalive** -- automatic heartbeat to detect dead connections
 - **Text and binary messages** -- handle both message types
-- **Event-driven** -- OnOpen, OnMessage, OnClose, OnError callbacks
+- **Event-driven** -- OnConnected, OnMessage, OnDisconnected, OnError callbacks
 
 ### Component Setup
 
@@ -28,7 +28,7 @@ Drop a `TTina4WebSocketClient` on your form from the Tina4 palette, or create it
 
 ```pascal
 uses
-  Tina4WebSocket;
+  Tina4WebSocketClient;
 
 var
   WSClient: TTina4WebSocketClient;
@@ -62,9 +62,9 @@ begin
   Tina4WebSocket1.AutoReconnect := True;
   Tina4WebSocket1.ReconnectInterval := 5000;
 
-  Tina4WebSocket1.OnOpen := WebSocketOpen;
+  Tina4WebSocket1.OnConnected := WebSocketConnected;
   Tina4WebSocket1.OnMessage := WebSocketMessage;
-  Tina4WebSocket1.OnClose := WebSocketClose;
+  Tina4WebSocket1.OnDisconnected := WebSocketDisconnected;
   Tina4WebSocket1.OnError := WebSocketError;
 
   Tina4WebSocket1.Connect;
@@ -74,7 +74,7 @@ end;
 ### Event Handlers
 
 ```pascal
-procedure TForm1.WebSocketOpen(Sender: TObject);
+procedure TForm1.WebSocketConnected(Sender: TObject);
 begin
   TThread.Synchronize(nil, procedure
   begin
@@ -91,7 +91,7 @@ begin
   end);
 end;
 
-procedure TForm1.WebSocketClose(Sender: TObject; const ACode: Integer;
+procedure TForm1.WebSocketDisconnected(Sender: TObject; const ACode: Integer;
   const AReason: string);
 begin
   TThread.Synchronize(nil, procedure
@@ -149,7 +149,7 @@ end;
 ```pascal
 procedure TForm1.SafeSend(const AMessage: string);
 begin
-  if Tina4WebSocket1.Connected then
+  if Tina4WebSocket1.IsConnected then
     Tina4WebSocket1.Send(AMessage)
   else
     ShowMessage('Not connected to server');
@@ -180,7 +180,7 @@ Connected -> Connection Lost -> Wait 5s -> Reconnect Attempt 1
 ### Handling Reconnection in Code
 
 ```pascal
-procedure TForm1.WebSocketOpen(Sender: TObject);
+procedure TForm1.WebSocketConnected(Sender: TObject);
 begin
   TThread.Synchronize(nil, procedure
   begin
@@ -199,7 +199,7 @@ begin
 end;
 ```
 
-The OnOpen event fires every time the connection opens -- including after a reconnect. Use it to re-subscribe to channels or re-authenticate.
+The OnConnected event fires every time the connection opens -- including after a reconnect. Use it to re-subscribe to channels or re-authenticate.
 
 ---
 
@@ -290,7 +290,7 @@ end;
 procedure TForm1.FormDestroy(Sender: TObject);
 begin
   Tina4WebSocket1.AutoReconnect := False;
-  if Tina4WebSocket1.Connected then
+  if Tina4WebSocket1.IsConnected then
     Tina4WebSocket1.Disconnect;
 end;
 ```
@@ -324,7 +324,7 @@ uses
   System.SysUtils, System.Types, System.Classes, System.JSON,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.StdCtrls, FMX.Edit,
   FMX.Memo, FMX.Layouts,
-  Tina4WebSocket, Tina4HTMLRender, Tina4Core;
+  Tina4WebSocketClient, Tina4HTMLRender, Tina4Core;
 
 type
   TFormChat = class(TForm)
@@ -373,9 +373,9 @@ begin
   Tina4WebSocket1.ReconnectInterval := 3000;
   Tina4WebSocket1.PingInterval := 25000;
 
-  Tina4WebSocket1.OnOpen := OnWSOpen;
+  Tina4WebSocket1.OnConnected := OnWSOpen;
   Tina4WebSocket1.OnMessage := OnWSMessage;
-  Tina4WebSocket1.OnClose := OnWSClose;
+  Tina4WebSocket1.OnDisconnected := OnWSClose;
   Tina4WebSocket1.OnError := OnWSError;
 
   ButtonSend.Enabled := False;
@@ -388,7 +388,7 @@ end;
 procedure TFormChat.FormDestroy(Sender: TObject);
 begin
   Tina4WebSocket1.AutoReconnect := False;
-  if Tina4WebSocket1.Connected then
+  if Tina4WebSocket1.IsConnected then
     Tina4WebSocket1.Disconnect;
   FChatHistory.Free;
   FOnlineUsers.Free;
@@ -516,7 +516,7 @@ end;
 procedure TFormChat.ButtonSendClick(Sender: TObject);
 begin
   if EditMessage.Text.Trim.IsEmpty then Exit;
-  if not Tina4WebSocket1.Connected then Exit;
+  if not Tina4WebSocket1.IsConnected then Exit;
 
   var Msg := TJSONObject.Create;
   try
@@ -614,7 +614,7 @@ uses
   System.SysUtils, System.Types, System.Classes, System.JSON,
   System.Generics.Collections, FMX.Types, FMX.Controls, FMX.Forms,
   FMX.StdCtrls, FMX.Layouts,
-  Tina4WebSocket, Tina4HTMLRender, Tina4Core;
+  Tina4WebSocketClient, Tina4HTMLRender, Tina4Core;
 
 type
   TPriceInfo = record
@@ -662,9 +662,9 @@ begin
   Tina4WebSocket1.ReconnectInterval := 5000;
   Tina4WebSocket1.PingInterval := 20000;
 
-  Tina4WebSocket1.OnOpen := OnWSOpen;
+  Tina4WebSocket1.OnConnected := OnWSOpen;
   Tina4WebSocket1.OnMessage := OnWSMessage;
-  Tina4WebSocket1.OnClose := OnWSClose;
+  Tina4WebSocket1.OnDisconnected := OnWSClose;
   Tina4WebSocket1.OnError := OnWSError;
 
   LabelStatus.Text := 'Disconnected';
@@ -674,14 +674,14 @@ end;
 procedure TFormPriceFeed.FormDestroy(Sender: TObject);
 begin
   Tina4WebSocket1.AutoReconnect := False;
-  if Tina4WebSocket1.Connected then
+  if Tina4WebSocket1.IsConnected then
     Tina4WebSocket1.Disconnect;
   FPrices.Free;
 end;
 
 procedure TFormPriceFeed.ButtonConnectClick(Sender: TObject);
 begin
-  if Tina4WebSocket1.Connected then
+  if Tina4WebSocket1.IsConnected then
   begin
     Tina4WebSocket1.AutoReconnect := False;
     Tina4WebSocket1.Disconnect;
@@ -885,7 +885,7 @@ uses
   System.Generics.Collections,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.StdCtrls, FMX.Layouts,
   FMX.Objects,
-  Tina4WebSocket, Tina4HTMLRender, Tina4Core;
+  Tina4WebSocketClient, Tina4HTMLRender, Tina4Core;
 
 type
   TNotification = record
@@ -935,9 +935,9 @@ begin
   Tina4WebSocket1.AutoReconnect := True;
   Tina4WebSocket1.ReconnectInterval := 5000;
   Tina4WebSocket1.PingInterval := 30000;
-  Tina4WebSocket1.OnOpen := OnWSOpen;
+  Tina4WebSocket1.OnConnected := OnWSOpen;
   Tina4WebSocket1.OnMessage := OnWSMessage;
-  Tina4WebSocket1.OnClose := OnWSClose;
+  Tina4WebSocket1.OnDisconnected := OnWSClose;
 
   // Timer checks for notifications older than 10 seconds
   TimerFade.Interval := 2000;
@@ -955,7 +955,7 @@ end;
 procedure TFormNotifications.FormDestroy(Sender: TObject);
 begin
   Tina4WebSocket1.AutoReconnect := False;
-  if Tina4WebSocket1.Connected then
+  if Tina4WebSocket1.IsConnected then
     Tina4WebSocket1.Disconnect;
   FNotifications.Free;
 end;
@@ -1048,7 +1048,7 @@ begin
       FNotifications[I] := Notif;
 
       // Notify the server
-      if Tina4WebSocket1.Connected then
+      if Tina4WebSocket1.IsConnected then
       begin
         var Msg := TJSONObject.Create;
         try
@@ -1192,7 +1192,7 @@ end;
 
 **Thread safety with shared data.** If your message handler writes to a `TList` or `TDictionary` that the UI thread also reads, you need synchronization. The simplest approach is to do everything inside `TThread.Synchronize`. For high-frequency messages, consider a thread-safe queue.
 
-**Reconnect re-subscription.** When auto-reconnect opens a new connection, the server does not remember your subscriptions from the previous connection. Always re-subscribe in the `OnOpen` handler:
+**Reconnect re-subscription.** When auto-reconnect opens a new connection, the server does not remember your subscriptions from the previous connection. Always re-subscribe in the `OnConnected` handler:
 
 ```pascal
 procedure TForm1.OnWSOpen(Sender: TObject);
@@ -1230,7 +1230,7 @@ end;
 procedure TForm1.FormDestroy(Sender: TObject);
 begin
   Tina4WebSocket1.AutoReconnect := False;  // Stop reconnection first
-  if Tina4WebSocket1.Connected then
+  if Tina4WebSocket1.IsConnected then
     Tina4WebSocket1.Disconnect;
 end;
 ```

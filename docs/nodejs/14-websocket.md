@@ -33,7 +33,7 @@ tina4 serve
 ```
 
 ```
-  Tina4 Node.js v3.0.0
+  Tina4 Node.js v3.10.3
   HTTP server running at http://0.0.0.0:7148
   WebSocket server running at ws://0.0.0.0:7148
 ```

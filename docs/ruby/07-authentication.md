@@ -36,20 +36,27 @@ The token has three parts separated by dots: header, payload, and signature. The
 
 ### Token Expiry
 
-By default, tokens expire after 60 minutes. Configure this in `.env`:
+By default, tokens expire after 1 hour (3600 seconds). Configure the expiry when generating the token:
 
-```dotenv
-TINA4_TOKEN_EXPIRES_IN=60
+```ruby
+# Default: 1 hour
+token = Tina4::Auth.get_token(payload)
+
+# Custom: 24 hours
+token = Tina4::Auth.get_token(payload, expires_in: 86400)
+
+# Custom: 7 days
+token = Tina4::Auth.get_token(payload, expires_in: 604800)
 ```
 
-The value is in **minutes**. Common settings:
+The `expires_in` value is in **seconds**. Common settings:
 
 | Value | Duration |
 |-------|----------|
-| `15` | 15 minutes |
-| `60` | 1 hour (default) |
-| `1440` | 24 hours |
-| `10080` | 7 days |
+| `900` | 15 minutes |
+| `3600` | 1 hour (default) |
+| `86400` | 24 hours |
+| `604800` | 7 days |
 
 ### Validating a Token
 
@@ -89,14 +96,14 @@ If the token cannot be decoded, `get_payload` returns `nil`.
 Tina4 Ruby supports two JWT algorithms, auto-detected based on your configuration:
 
 - **HS256** (HMAC-SHA256) -- set `SECRET` in `.env`. Uses the standard library. Zero dependencies.
-- **RS256** (RSA) -- place RSA keys in the `secrets/` folder. Requires the `jwt` gem.
+- **RS256** (RSA) -- RSA keys are auto-generated in the `.keys/` folder. Requires the `jwt` gem (included by default).
 
 ```dotenv
 # .env -- HS256 mode (recommended, simplest setup)
 SECRET=my-super-secret-key-at-least-32-chars
 ```
 
-If `SECRET` is set, Tina4 uses HS256. If RSA keys exist in `secrets/` instead, Tina4 uses RS256 (and you need to add the `jwt` gem to your Gemfile). If neither is configured, Tina4 falls back to generating a random key at `secrets/jwt.key` on first run.
+If `SECRET` is set and no RSA keys exist in `.keys/`, Tina4 uses HS256. If RSA keys exist in `.keys/` instead, Tina4 uses RS256. If neither is configured, Tina4 auto-generates RSA keys in `.keys/` on first run.
 
 Keep this key secret. If someone gets it, they can forge tokens.
 
@@ -113,7 +120,7 @@ hash = Tina4::Auth.hash_password("my-secure-password")
 # Returns: "$2a$12$abc123...long-hash-string..."
 ```
 
-In HS256 mode, this uses PBKDF2 from the standard library. In RS256 mode, it uses BCrypt (via the `bcrypt` gem). Each hash includes a random salt, so hashing the same password twice produces different results.
+This uses BCrypt (via the `bcrypt` gem, included by default). Each hash includes a random salt, so hashing the same password twice produces different results.
 
 ### Checking a Password
 
@@ -138,10 +145,10 @@ Tina4::Router.post("/api/register") do |request, response|
     return response.json({ error: "Password must be at least 8 characters" }, 400)
   end
 
-  db = Tina4::Database.connection
+  db = Tina4.database
 
   # Check if email already exists
-  existing = db.fetch_one("SELECT id FROM users WHERE email = :email", { email: body["email"] })
+  existing = db.fetch_one("SELECT id FROM users WHERE email = ?", [body["email"]])
   unless existing.nil?
     return response.json({ error: "Email already registered" }, 409)
   end
@@ -151,12 +158,8 @@ Tina4::Router.post("/api/register") do |request, response|
 
   # Create the user
   db.execute(
-    "INSERT INTO users (name, email, password_hash) VALUES (:name, :email, :hash)",
-    {
-      name: body["name"],
-      email: body["email"],
-      hash: password_hash
-    }
+    "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+    [body["name"], body["email"], password_hash]
   )
 
   user = db.fetch_one("SELECT id, name, email FROM users WHERE id = last_insert_rowid()")
@@ -196,12 +199,12 @@ Tina4::Router.post("/api/login") do |request, response|
     return response.json({ error: "Email and password are required" }, 400)
   end
 
-  db = Tina4::Database.connection
+  db = Tina4.database
 
   # Find the user
   user = db.fetch_one(
-    "SELECT id, name, email, password_hash FROM users WHERE email = :email",
-    { email: body["email"] }
+    "SELECT id, name, email, password_hash FROM users WHERE email = ?",
+    [body["email"]]
   )
 
   if user.nil?
@@ -630,9 +633,9 @@ Tina4::Router.post("/api/register") do |request, response|
     return response.json({ errors: errors }, 400)
   end
 
-  db = Tina4::Database.connection
+  db = Tina4.database
 
-  existing = db.fetch_one("SELECT id FROM users WHERE email = :email", { email: body["email"] })
+  existing = db.fetch_one("SELECT id FROM users WHERE email = ?", [body["email"]])
   unless existing.nil?
     return response.json({ error: "Email already registered" }, 409)
   end
@@ -640,8 +643,8 @@ Tina4::Router.post("/api/register") do |request, response|
   hash = Tina4::Auth.hash_password(body["password"])
 
   db.execute(
-    "INSERT INTO users (name, email, password_hash) VALUES (:name, :email, :hash)",
-    { name: body["name"], email: body["email"], hash: hash }
+    "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+    [body["name"], body["email"], hash]
   )
 
   user = db.fetch_one("SELECT id, name, email, role, created_at FROM users WHERE id = last_insert_rowid()")
@@ -657,11 +660,11 @@ Tina4::Router.post("/api/login") do |request, response|
     return response.json({ error: "Email and password are required" }, 400)
   end
 
-  db = Tina4::Database.connection
+  db = Tina4.database
 
   user = db.fetch_one(
-    "SELECT id, name, email, password_hash, role FROM users WHERE email = :email",
-    { email: body["email"] }
+    "SELECT id, name, email, password_hash, role FROM users WHERE email = ?",
+    [body["email"]]
   )
 
   if user.nil? || !Tina4::Auth.check_password(body["password"], user["password_hash"])
@@ -684,11 +687,11 @@ end
 
 # Get current user profile
 Tina4::Router.get("/api/profile", middleware: "auth_middleware") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
 
   user = db.fetch_one(
-    "SELECT id, name, email, role, created_at FROM users WHERE id = :id",
-    { id: request.user["user_id"] }
+    "SELECT id, name, email, role, created_at FROM users WHERE id = ?",
+    [request.user["user_id"]]
   )
 
   if user.nil?
@@ -700,34 +703,30 @@ end
 
 # Update profile
 Tina4::Router.put("/api/profile", middleware: "auth_middleware") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
   body = request.body
   user_id = request.user["user_id"]
 
   if body["email"]
     existing = db.fetch_one(
-      "SELECT id FROM users WHERE email = :email AND id != :id",
-      { email: body["email"], id: user_id }
+      "SELECT id FROM users WHERE email = ? AND id != ?",
+      [body["email"], user_id]
     )
     unless existing.nil?
       return response.json({ error: "Email already in use by another account" }, 409)
     end
   end
 
-  current = db.fetch_one("SELECT * FROM users WHERE id = :id", { id: user_id })
+  current = db.fetch_one("SELECT * FROM users WHERE id = ?", [user_id])
 
   db.execute(
-    "UPDATE users SET name = :name, email = :email WHERE id = :id",
-    {
-      name: body["name"] || current["name"],
-      email: body["email"] || current["email"],
-      id: user_id
-    }
+    "UPDATE users SET name = ?, email = ? WHERE id = ?",
+    [body["name"] || current["name"], body["email"] || current["email"], user_id]
   )
 
   updated = db.fetch_one(
-    "SELECT id, name, email, role, created_at FROM users WHERE id = :id",
-    { id: user_id }
+    "SELECT id, name, email, role, created_at FROM users WHERE id = ?",
+    [user_id]
   )
 
   response.json({ message: "Profile updated", user: updated })
@@ -735,7 +734,7 @@ end
 
 # Change password
 Tina4::Router.put("/api/profile/password", middleware: "auth_middleware") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
   body = request.body
   user_id = request.user["user_id"]
 
@@ -747,7 +746,7 @@ Tina4::Router.put("/api/profile/password", middleware: "auth_middleware") do |re
     return response.json({ error: "New password must be at least 8 characters" }, 400)
   end
 
-  user = db.fetch_one("SELECT password_hash FROM users WHERE id = :id", { id: user_id })
+  user = db.fetch_one("SELECT password_hash FROM users WHERE id = ?", [user_id])
 
   unless Tina4::Auth.check_password(body["current_password"], user["password_hash"])
     return response.json({ error: "Current password is incorrect" }, 401)
@@ -756,8 +755,8 @@ Tina4::Router.put("/api/profile/password", middleware: "auth_middleware") do |re
   new_hash = Tina4::Auth.hash_password(body["new_password"])
 
   db.execute(
-    "UPDATE users SET password_hash = :hash WHERE id = :id",
-    { hash: new_hash, id: user_id }
+    "UPDATE users SET password_hash = ? WHERE id = ?",
+    [new_hash, user_id]
   )
 
   response.json({ message: "Password changed successfully" })
@@ -803,7 +802,7 @@ end
 
 **Problem:** Tokens that worked yesterday now return 401.
 
-**Cause:** The default token lifetime is 60 minutes (`TINA4_TOKEN_EXPIRES_IN=60`). After that, the token is invalid even if the signature is correct.
+**Cause:** The default token lifetime is 1 hour (3600 seconds). After that, the token is invalid even if the signature is correct.
 
 **Fix:** Issue a new token at login. If your application needs long-lived sessions, use refresh tokens: a short-lived access token (15 minutes) paired with a long-lived refresh token (7 days) that can be used to get a new access token without re-entering credentials.
 
@@ -811,7 +810,7 @@ end
 
 **Problem:** Tokens generated on one server are invalid on another, or tokens stop working after a deployment.
 
-**Cause:** Each server generated its own random `secrets/jwt.key` file. Or the key file was deleted/regenerated during deployment.
+**Cause:** Each server generated its own RSA keys in `.keys/`. Or the key files were deleted/regenerated during deployment.
 
 **Fix:** Set `SECRET` in `.env` explicitly and use the same value across all servers. Store it in your deployment secrets manager (not in version control). If the key changes, all existing tokens become invalid and users must log in again.
 

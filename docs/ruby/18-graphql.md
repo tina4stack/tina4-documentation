@@ -56,18 +56,18 @@ Create your GraphQL schema in `src/routes/graphql.rb`:
 
 ```ruby
 Tina4::GraphQL.query("products") do |args|
-  db = Tina4::Database.connection
+  db = Tina4.database
   products = db.fetch("SELECT * FROM products ORDER BY name")
   products
 end
 
 Tina4::GraphQL.query("product") do |args|
-  db = Tina4::Database.connection
-  db.fetch_one("SELECT * FROM products WHERE id = :id", { id: args["id"].to_i })
+  db = Tina4.database
+  db.fetch_one("SELECT * FROM products WHERE id = ?", [args["id"].to_i])
 end
 
 Tina4::GraphQL.query("users") do |args|
-  db = Tina4::Database.connection
+  db = Tina4.database
   db.fetch("SELECT id, name, email, role FROM users ORDER BY name")
 end
 ```
@@ -99,8 +99,8 @@ The client asked for `id`, `name`, and `price` only. The response contains exact
 
 ```ruby
 Tina4::GraphQL.query("product") do |args|
-  db = Tina4::Database.connection
-  db.fetch_one("SELECT * FROM products WHERE id = :id", { id: args["id"].to_i })
+  db = Tina4.database
+  db.fetch_one("SELECT * FROM products WHERE id = ?", [args["id"].to_i])
 end
 ```
 
@@ -130,7 +130,7 @@ Mutations are write operations. Define them with `Tina4::GraphQL.mutation`:
 
 ```ruby
 Tina4::GraphQL.mutation("createProduct") do |args|
-  db = Tina4::Database.connection
+  db = Tina4.database
 
   db.execute(
     "INSERT INTO products (name, category, price) VALUES (:name, :category, :price)",
@@ -141,22 +141,22 @@ Tina4::GraphQL.mutation("createProduct") do |args|
 end
 
 Tina4::GraphQL.mutation("updateProduct") do |args|
-  db = Tina4::Database.connection
+  db = Tina4.database
   id = args["id"].to_i
 
   db.execute(
-    "UPDATE products SET name = :name, price = :price WHERE id = :id",
-    { name: args["name"], price: args["price"].to_f, id: id }
+    "UPDATE products SET name = ?, price = ? WHERE id = ?",
+    [args["name"], args["price"].to_f, id]
   )
 
-  db.fetch_one("SELECT * FROM products WHERE id = :id", { id: id })
+  db.fetch_one("SELECT * FROM products WHERE id = ?", [id])
 end
 
 Tina4::GraphQL.mutation("deleteProduct") do |args|
-  db = Tina4::Database.connection
+  db = Tina4.database
   id = args["id"].to_i
 
-  db.execute("DELETE FROM products WHERE id = :id", { id: id })
+  db.execute("DELETE FROM products WHERE id = ?", [id])
 
   { deleted: true, id: id }
 end
@@ -186,11 +186,11 @@ curl -X POST http://localhost:7147/graphql \
 
 ```ruby
 Tina4::GraphQL.query("users") do |args|
-  db = Tina4::Database.connection
+  db = Tina4.database
   users = db.fetch("SELECT id, name, email FROM users ORDER BY name")
 
   users.each do |user|
-    user["posts"] = db.fetch("SELECT id, title FROM posts WHERE user_id = :id", { id: user["id"] })
+    user["posts"] = db.fetch("SELECT id, title FROM posts WHERE user_id = ?", [user["id"]])
   end
 
   users
@@ -230,8 +230,8 @@ Tina4::GraphQL.query("me") do |args, context|
     raise "Authentication required"
   end
 
-  db = Tina4::Database.connection
-  db.fetch_one("SELECT id, name, email, role FROM users WHERE id = :id", { id: context[:user]["user_id"] })
+  db = Tina4.database
+  db.fetch_one("SELECT id, name, email, role FROM users WHERE id = ?", [context[:user]["user_id"]])
 end
 ```
 
@@ -278,30 +278,30 @@ Create `src/routes/graphql_blog.rb`:
 
 ```ruby
 Tina4::GraphQL.query("posts") do |args|
-  db = Tina4::Database.connection
+  db = Tina4.database
   posts = db.fetch("SELECT * FROM posts WHERE published = 1 ORDER BY created_at DESC")
 
   posts.each do |post|
-    post["user"] = db.fetch_one("SELECT id, name, email FROM users WHERE id = :id", { id: post["user_id"] })
+    post["user"] = db.fetch_one("SELECT id, name, email FROM users WHERE id = ?", [post["user_id"]])
   end
 
   posts
 end
 
 Tina4::GraphQL.query("post") do |args|
-  db = Tina4::Database.connection
-  post = db.fetch_one("SELECT * FROM posts WHERE id = :id", { id: args["id"].to_i })
+  db = Tina4.database
+  post = db.fetch_one("SELECT * FROM posts WHERE id = ?", [args["id"].to_i])
 
   return nil if post.nil?
 
-  post["user"] = db.fetch_one("SELECT id, name, email FROM users WHERE id = :id", { id: post["user_id"] })
-  post["comments"] = db.fetch("SELECT * FROM comments WHERE post_id = :id ORDER BY created_at", { id: post["id"] })
+  post["user"] = db.fetch_one("SELECT id, name, email FROM users WHERE id = ?", [post["user_id"]])
+  post["comments"] = db.fetch("SELECT * FROM comments WHERE post_id = ? ORDER BY created_at", [post["id"]])
 
   post
 end
 
 Tina4::GraphQL.mutation("createPost") do |args|
-  db = Tina4::Database.connection
+  db = Tina4.database
 
   db.execute(
     "INSERT INTO posts (user_id, title, body, published) VALUES (:user_id, :title, :body, :published)",
@@ -312,7 +312,7 @@ Tina4::GraphQL.mutation("createPost") do |args|
 end
 
 Tina4::GraphQL.mutation("addComment") do |args|
-  db = Tina4::Database.connection
+  db = Tina4.database
 
   db.execute(
     "INSERT INTO comments (post_id, author_name, body) VALUES (:post_id, :author_name, :body)",

@@ -149,7 +149,7 @@ tina4 serve
   | | | | | | | (_| |__   _|
   |_| |_|_| |_|\__,_|  |_|
 
-  Tina4 Node.js v3.2.1
+  Tina4 Node.js v3.10.3
   Server running at http://0.0.0.0:7148
   Debug mode: ON
   Database: sqlite:///data/app.db
@@ -169,7 +169,7 @@ curl http://localhost:7148/health
   "status": "ok",
   "database": "connected",
   "uptime_seconds": 12,
-  "version": "3.2.1",
+  "version": "3.10.3",
   "framework": "tina4-nodejs"
 }
 ```
@@ -612,10 +612,9 @@ This overlay lives only in debug mode. Production never sees it.
 The `app.ts` file is the entry point:
 
 ```typescript
-import { Tina4 } from "tina4-nodejs";
+import { startServer } from "tina4-nodejs";
 
-const app = new Tina4();
-app.start();
+startServer();
 ```
 
 That is the entire file. Tina4 discovers routes, models, and templates from the `src/` directory. You register nothing manually.
@@ -633,7 +632,7 @@ npx tsx app.ts
   | | | | | | | (_| |__   _|
   |_| |_|_| |_|\__,_|  |_|
 
-  Tina4 Node.js v3.2.1
+  Tina4 Node.js v3.10.3
   Server running at http://0.0.0.0:7148
 ```
 

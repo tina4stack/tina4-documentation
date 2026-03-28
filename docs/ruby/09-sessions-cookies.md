@@ -335,11 +335,11 @@ The "remember me" pattern uses a long-lived cookie to re-authenticate users afte
 # @noauth
 Tina4::Router.post("/login") do |request, response|
   body = request.body
-  db = Tina4::Database.connection
+  db = Tina4.database
 
   user = db.fetch_one(
-    "SELECT id, name, email, password_hash FROM users WHERE email = :email",
-    { email: body["email"] }
+    "SELECT id, name, email, password_hash FROM users WHERE email = ?",
+    [body["email"]]
   )
 
   if user.nil? || !Tina4::Auth.check_password(body["password"], user["password_hash"])
@@ -353,8 +353,8 @@ Tina4::Router.post("/login") do |request, response|
     remember_token = SecureRandom.hex(32)
 
     db.execute(
-      "UPDATE users SET remember_token = :token WHERE id = :id",
-      { token: Digest::SHA256.hexdigest(remember_token), id: user["id"] }
+      "UPDATE users SET remember_token = ? WHERE id = ?",
+      [Digest::SHA256.hexdigest(remember_token), user["id"]]
     )
 
     response.cookie("remember_me", remember_token, {
@@ -381,8 +381,6 @@ end
 
 ```dotenv
 TINA4_SESSION_TTL=3600
-TINA4_SESSION_SECURE=true
-TINA4_SESSION_HTTPONLY=true
 TINA4_SESSION_SAMESITE=Lax
 ```
 

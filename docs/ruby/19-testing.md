@@ -177,7 +177,7 @@ require "tina4"
 
 RSpec.describe Product do
   before(:each) do
-    db = Tina4::Database.connection
+    db = Tina4.database
     db.execute("DELETE FROM products")
   end
 
@@ -252,7 +252,7 @@ RSpec.describe Product do
     p2.price = 29.99
     p2.save
 
-    results = product.select("*", "category = :cat", { cat: "Electronics" })
+    results = Product.where("category = ?", ["Electronics"])
 
     expect(results.length).to eq(1)
     expect(results[0].name).to eq("Electronics Item")
@@ -409,7 +409,7 @@ RSpec.describe "Notes API" do
   let(:client) { Tina4::TestClient.new }
 
   before(:each) do
-    db = Tina4::Database.connection
+    db = Tina4.database
     db.execute("DELETE FROM notes")
   end
 

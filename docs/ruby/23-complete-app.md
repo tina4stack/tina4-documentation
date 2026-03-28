@@ -207,13 +207,13 @@ Tina4::Router.post("/api/auth/register") do |request, response|
 
   return response.json({ errors: errors }, 400) unless errors.empty?
 
-  db = Tina4::Database.connection
-  existing = db.fetch_one("SELECT id FROM users WHERE email = :email", { email: body["email"] })
+  db = Tina4.database
+  existing = db.fetch_one("SELECT id FROM users WHERE email = ?", [body["email"]])
   return response.json({ error: "Email already registered" }, 409) unless existing.nil?
 
   hash = Tina4::Auth.hash_password(body["password"])
-  db.execute("INSERT INTO users (name, email, password_hash) VALUES (:name, :email, :hash)",
-    { name: body["name"], email: body["email"], hash: hash })
+  db.execute("INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+    [body["name"], body["email"], hash])
 
   user = db.fetch_one("SELECT id, name, email, role FROM users WHERE id = last_insert_rowid()")
   response.json({ message: "Registration successful", user: user }, 201)
@@ -223,8 +223,8 @@ end
 Tina4::Router.post("/api/auth/login") do |request, response|
   body = request.body
 
-  db = Tina4::Database.connection
-  user = db.fetch_one("SELECT * FROM users WHERE email = :email", { email: body["email"] })
+  db = Tina4.database
+  user = db.fetch_one("SELECT * FROM users WHERE email = ?", [body["email"]])
 
   if user.nil? || !Tina4::Auth.check_password(body["password"] || "", user["password_hash"])
     return response.json({ error: "Invalid email or password" }, 401)
@@ -242,9 +242,9 @@ Tina4::Router.post("/api/auth/login") do |request, response|
 end
 
 Tina4::Router.get("/api/profile", middleware: "auth_middleware") do |request, response|
-  db = Tina4::Database.connection
-  user = db.fetch_one("SELECT id, name, email, role, created_at FROM users WHERE id = :id",
-    { id: request.user["user_id"] })
+  db = Tina4.database
+  user = db.fetch_one("SELECT id, name, email, role, created_at FROM users WHERE id = ?",
+    [request.user["user_id"]])
   response.json(user)
 end
 ```
@@ -260,7 +260,7 @@ Tina4::Router.group("/api/tasks", middleware: "auth_middleware") do
 
   # List tasks with filters
   Tina4::Router.get("") do |request, response|
-    db = Tina4::Database.connection
+    db = Tina4.database
     user_id = request.user["user_id"]
 
     status = request.params["status"]
@@ -295,10 +295,10 @@ Tina4::Router.group("/api/tasks", middleware: "auth_middleware") do
 
   # Get single task
   Tina4::Router.get("/{id:int}") do |request, response|
-    db = Tina4::Database.connection
+    db = Tina4.database
     id = request.params["id"]
 
-    task = db.fetch_one("SELECT t.*, u1.name AS creator_name, u2.name AS assignee_name FROM tasks t LEFT JOIN users u1 ON t.created_by = u1.id LEFT JOIN users u2 ON t.assigned_to = u2.id WHERE t.id = :id", { id: id })
+    task = db.fetch_one("SELECT t.*, u1.name AS creator_name, u2.name AS assignee_name FROM tasks t LEFT JOIN users u1 ON t.created_by = u1.id LEFT JOIN users u2 ON t.assigned_to = u2.id WHERE t.id = ?", [id])
 
     if task.nil?
       return response.json({ error: "Task not found" }, 404)
@@ -316,25 +316,17 @@ Tina4::Router.group("/api/tasks", middleware: "auth_middleware") do
       return response.json({ error: "Title is required" }, 400)
     end
 
-    db = Tina4::Database.connection
+    db = Tina4.database
     db.execute(
-      "INSERT INTO tasks (title, description, status, priority, created_by, assigned_to, due_date) VALUES (:title, :description, :status, :priority, :created_by, :assigned_to, :due_date)",
-      {
-        title: body["title"],
-        description: body["description"] || "",
-        status: body["status"] || "todo",
-        priority: body["priority"] || "medium",
-        created_by: user_id,
-        assigned_to: body["assigned_to"],
-        due_date: body["due_date"]
-      }
+      "INSERT INTO tasks (title, description, status, priority, created_by, assigned_to, due_date) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [body["title"], body["description"] || "", body["status"] || "todo", body["priority"] || "medium", user_id, body["assigned_to"], body["due_date"]]
     )
 
     task = db.fetch_one("SELECT * FROM tasks WHERE id = last_insert_rowid()")
 
     # Queue notification if assigned to someone else
     if body["assigned_to"] && body["assigned_to"].to_i != user_id
-      assignee = db.fetch_one("SELECT name, email FROM users WHERE id = :id", { id: body["assigned_to"] })
+      assignee = db.fetch_one("SELECT name, email FROM users WHERE id = ?", [body["assigned_to"]])
       if assignee
         Tina4::Queue.produce("send-email", {
           to: assignee["email"],
@@ -350,11 +342,11 @@ Tina4::Router.group("/api/tasks", middleware: "auth_middleware") do
 
   # Update task
   Tina4::Router.put("/{id:int}") do |request, response|
-    db = Tina4::Database.connection
+    db = Tina4.database
     id = request.params["id"]
     body = request.body
 
-    existing = db.fetch_one("SELECT * FROM tasks WHERE id = :id", { id: id })
+    existing = db.fetch_one("SELECT * FROM tasks WHERE id = ?", [id])
     return response.json({ error: "Task not found" }, 404) if existing.nil?
 
     completed_at = existing["completed_at"]
@@ -365,36 +357,36 @@ Tina4::Router.group("/api/tasks", middleware: "auth_middleware") do
     end
 
     db.execute(
-      "UPDATE tasks SET title = :title, description = :description, status = :status, priority = :priority, assigned_to = :assigned_to, due_date = :due_date, completed_at = :completed_at, updated_at = CURRENT_TIMESTAMP WHERE id = :id",
-      {
-        title: body["title"] || existing["title"],
-        description: body["description"] || existing["description"],
-        status: body["status"] || existing["status"],
-        priority: body["priority"] || existing["priority"],
-        assigned_to: body.key?("assigned_to") ? body["assigned_to"] : existing["assigned_to"],
-        due_date: body["due_date"] || existing["due_date"],
-        completed_at: completed_at,
-        id: id
-      }
+      "UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, assigned_to = ?, due_date = ?, completed_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      [
+        body["title"] || existing["title"],
+        body["description"] || existing["description"],
+        body["status"] || existing["status"],
+        body["priority"] || existing["priority"],
+        body.key?("assigned_to") ? body["assigned_to"] : existing["assigned_to"],
+        body["due_date"] || existing["due_date"],
+        completed_at,
+        id
+      ]
     )
 
     # Invalidate cache
-    Tina4::Cache.delete_pattern("dashboard:*")
+    Tina4.cache_clear
 
-    task = db.fetch_one("SELECT * FROM tasks WHERE id = :id", { id: id })
+    task = db.fetch_one("SELECT * FROM tasks WHERE id = ?", [id])
     response.json(task)
   end
 
   # Delete task
   Tina4::Router.delete("/{id:int}") do |request, response|
-    db = Tina4::Database.connection
+    db = Tina4.database
     id = request.params["id"]
 
-    existing = db.fetch_one("SELECT * FROM tasks WHERE id = :id", { id: id })
+    existing = db.fetch_one("SELECT * FROM tasks WHERE id = ?", [id])
     return response.json({ error: "Task not found" }, 404) if existing.nil?
 
-    db.execute("DELETE FROM tasks WHERE id = :id", { id: id })
-    Tina4::Cache.delete_pattern("dashboard:*")
+    db.execute("DELETE FROM tasks WHERE id = ?", [id])
+    Tina4.cache_clear
 
     response.json(nil, 204)
   end
@@ -412,22 +404,27 @@ Create `src/routes/dashboard.rb`:
 Tina4::Router.get("/api/dashboard/stats", middleware: "auth_middleware") do |request, response|
   user_id = request.user["user_id"]
 
-  stats = Tina4::Cache.fetch("dashboard:stats:#{user_id}", ttl: 60) do
-    db = Tina4::Database.connection
+  cache_key = "dashboard:stats:#{user_id}"
+  stats = Tina4.cache_get(cache_key)
 
-    total = db.fetch_one("SELECT COUNT(*) AS count FROM tasks WHERE assigned_to = :id OR created_by = :id", { id: user_id })
-    todo = db.fetch_one("SELECT COUNT(*) AS count FROM tasks WHERE (assigned_to = :id OR created_by = :id) AND status = 'todo'", { id: user_id })
-    in_progress = db.fetch_one("SELECT COUNT(*) AS count FROM tasks WHERE (assigned_to = :id OR created_by = :id) AND status = 'in_progress'", { id: user_id })
-    done = db.fetch_one("SELECT COUNT(*) AS count FROM tasks WHERE (assigned_to = :id OR created_by = :id) AND status = 'done'", { id: user_id })
-    overdue = db.fetch_one("SELECT COUNT(*) AS count FROM tasks WHERE (assigned_to = :id OR created_by = :id) AND due_date < date('now') AND status != 'done'", { id: user_id })
+  if stats.nil?
+    db = Tina4.database
 
-    {
+    total = db.fetch_one("SELECT COUNT(*) AS count FROM tasks WHERE assigned_to = ? OR created_by = ?", [user_id, user_id])
+    todo = db.fetch_one("SELECT COUNT(*) AS count FROM tasks WHERE (assigned_to = ? OR created_by = ?) AND status = 'todo'", [user_id, user_id])
+    in_progress = db.fetch_one("SELECT COUNT(*) AS count FROM tasks WHERE (assigned_to = ? OR created_by = ?) AND status = 'in_progress'", [user_id, user_id])
+    done = db.fetch_one("SELECT COUNT(*) AS count FROM tasks WHERE (assigned_to = ? OR created_by = ?) AND status = 'done'", [user_id, user_id])
+    overdue = db.fetch_one("SELECT COUNT(*) AS count FROM tasks WHERE (assigned_to = ? OR created_by = ?) AND due_date < date('now') AND status != 'done'", [user_id, user_id])
+
+    stats = {
       total: total["count"],
       todo: todo["count"],
       in_progress: in_progress["count"],
       done: done["count"],
       overdue: overdue["count"]
     }
+
+    Tina4.cache_set(cache_key, stats, 60)
   end
 
   response.json(stats)
@@ -544,7 +541,7 @@ Use the Dockerfile and docker-compose.yml from Chapter 20 with the TaskFlow-spec
 
 **Problem:** Dashboard stats are stale after task updates.
 
-**Fix:** Invalidate cache in every write operation: `Tina4::Cache.delete_pattern("dashboard:*")`.
+**Fix:** Invalidate cache in every write operation: `Tina4.cache_clear`.
 
 ### 3. Queue Worker Not Processing Emails
 

@@ -314,22 +314,22 @@ A set of routes sharing a common prefix belongs in a group. `Router.group()` eli
 ```typescript
 import { Router } from "tina4-nodejs";
 
-Router.group("/api/v1", () => {
+Router.group("/api/v1", (group) => {
 
-    Router.get("/users", async (req, res) => {
+    group.get("/users", async (req, res) => {
         return res.json({ users: [] });
     });
 
-    Router.get("/users/{id:int}", async (req, res) => {
+    group.get("/users/{id:int}", async (req, res) => {
         const id = req.params.id;
         return res.json({ user: { id, name: "Alice" } });
     });
 
-    Router.post("/users", async (req, res) => {
+    group.post("/users", async (req, res) => {
         return res.status(201).json({ created: true });
     });
 
-    Router.get("/products", async (req, res) => {
+    group.get("/products", async (req, res) => {
         return res.json({ products: [] });
     });
 });
@@ -350,15 +350,15 @@ Groups nest:
 ```typescript
 import { Router } from "tina4-nodejs";
 
-Router.group("/api", () => {
-    Router.group("/v1", () => {
-        Router.get("/status", async (req, res) => {
+Router.group("/api", (api) => {
+    api.group("/v1", (v1) => {
+        v1.get("/status", async (req, res) => {
             return res.json({ version: "1.0" });
         });
     });
 
-    Router.group("/v2", () => {
-        Router.get("/status", async (req, res) => {
+    api.group("/v2", (v2) => {
+        v2.get("/status", async (req, res) => {
             return res.json({ version: "2.0" });
         });
     });
@@ -394,24 +394,20 @@ Pass middleware as the third argument to any route method:
 ```typescript
 import { Router } from "tina4-nodejs";
 
-async function logRequest(req, res, next) {
+function logRequest(req, res, next) {
     const start = Date.now();
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-
-    const result = await next(req, res);
-
+    next();
     const duration = Date.now() - start;
     console.log(`  Completed in ${duration}ms`);
-
-    return result;
 }
 
 Router.get("/api/data", async (req, res) => {
     return res.json({ data: [1, 2, 3] });
-}, "logRequest");
+}, [logRequest]);
 ```
 
-The middleware function receives `req`, `res`, and `next`. Call `next(req, res)` to continue to the route handler. Skip the call and the handler never runs -- the chain stops. A locked gate for unauthorized requests.
+The middleware function receives `req`, `res`, and `next`. Call `next()` to continue to the next middleware or route handler. Skip the call and the handler never runs -- the chain stops. A locked gate for unauthorized requests.
 
 ### Blocking Middleware
 
@@ -420,19 +416,20 @@ Middleware that checks for an API key:
 ```typescript
 import { Router } from "tina4-nodejs";
 
-async function requireApiKey(req, res, next) {
+function requireApiKey(req, res, next) {
     const apiKey = req.headers["x-api-key"] ?? "";
 
     if (apiKey !== "my-secret-key") {
-        return res.status(401).json({ error: "Invalid API key" });
+        res({ error: "Invalid API key" }, 401);
+        return;
     }
 
-    return next(req, res);
+    next();
 }
 
 Router.get("/api/secret", async (req, res) => {
     return res.json({ secret: "The answer is 42" });
-}, "requireApiKey");
+}, [requireApiKey]);
 ```
 
 ```bash
@@ -458,17 +455,17 @@ Apply middleware to an entire group:
 ```typescript
 import { Router } from "tina4-nodejs";
 
-Router.group("/api/admin", () => {
+Router.group("/api/admin", (group) => {
 
-    Router.get("/dashboard", async (req, res) => {
+    group.get("/dashboard", async (req, res) => {
         return res.json({ page: "admin dashboard" });
     });
 
-    Router.get("/users", async (req, res) => {
+    group.get("/users", async (req, res) => {
         return res.json({ page: "user management" });
     });
 
-}, "requireAuth");
+}, [requireAuth]);
 ```
 
 ### Multiple Middleware
@@ -478,7 +475,7 @@ Chain multiple middleware by passing an array:
 ```typescript
 Router.get("/api/important", async (req, res) => {
     return res.json({ data: "important stuff" });
-}, ["logRequest", "requireApiKey", "requireAuth"]);
+}, [logRequest, requireApiKey, requireAuth]);
 ```
 
 Middleware runs in order: `logRequest` first, then `requireApiKey`, then `requireAuth`, then the route handler.
@@ -494,7 +491,7 @@ Tina4 provides two special decorators for controlling authentication on routes.
 When your application has global authentication middleware, `@noauth` marks specific routes as public:
 
 ```typescript
-import { Router, noauth } from "tina4-nodejs";
+import { Router } from "tina4-nodejs";
 
 /**
  * @noauth
@@ -958,13 +955,13 @@ Not found (Status: `404 Not Found`):
 
 **Fix:** `await` all async operations inside handlers. All Tina4 route handlers should be `async` functions.
 
-### 6. Middleware Function Must Be a Named Function
+### 6. Middleware Must Be Passed as Function References in an Array
 
-**Problem:** Passing an anonymous arrow function as middleware causes an error.
+**Problem:** Passing a middleware function name as a string causes an error.
 
-**Cause:** Tina4 expects middleware referenced by function name (a string), not as an inline closure.
+**Cause:** Tina4 expects middleware as an array of function references, not as strings.
 
-**Fix:** Define your middleware as a named function and pass the name as a string: `"myMiddleware"`, not `(req, res, next) => { ... }`.
+**Fix:** Pass middleware as an array of function references: `[myMiddleware]`, not `"myMiddleware"`.
 
 ### 7. Group Prefix Must Start with a Slash
 

@@ -19,9 +19,10 @@ Picture an online store. A product catalog page. Items in a grid. Featured produ
 The shortest path to a rendered template:
 
 ```python
-from tina4_python.core.router import template
+from tina4_python.core.router import get, template
 
-@template("/about", "about.html")
+@template("about.html")
+@get("/about")
 async def about_page(request, response):
     return {
         "title": "About Us",
@@ -45,7 +46,7 @@ Create `src/templates/about.html`:
 
 Visit `http://localhost:7145/about` and the rendered page appears.
 
-The `@template` decorator maps a URL to a template file. The function returns a dictionary. Those values become template variables. You can also use `response.render()` in any route handler -- `@template` is shorthand.
+The `@template` decorator is stacked above `@get` (or `@post`, etc.). When the handler returns a dictionary, the decorator passes that dict to `response.render()` with the named template. If the handler returns something other than a dict (like an already-built Response), it is passed through unchanged. You can also use `response.render()` directly in any route handler -- `@template` is shorthand.
 
 ---
 
@@ -102,6 +103,18 @@ Renders:
 <p>Cape Town</p>
 <p>Keyboard</p>
 ```
+
+### Method Calls and Slicing
+
+Frond supports calling methods on values directly in templates. If a dictionary value is callable, you can invoke it with arguments:
+
+```html
+{{ user.t("greeting") }}       {# calls user.t("greeting") #}
+{{ text[:10] }}                {# slice syntax -- first 10 characters #}
+{{ items[2:5] }}               {# slice from index 2 to 5 #}
+```
+
+Operators inside quoted function arguments (like `+`, `-`, `*`) are handled correctly and will not break the expression parser.
 
 ### Auto-Escaping
 

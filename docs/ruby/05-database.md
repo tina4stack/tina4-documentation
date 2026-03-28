@@ -106,7 +106,7 @@ In your route handlers, access the database via the `Tina4::Database` class:
 
 ```ruby
 Tina4::Router.get("/api/test-db") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
 
   result = db.fetch("SELECT 1 + 1 AS answer")
 
@@ -122,7 +122,7 @@ curl http://localhost:7147/api/test-db
 {"answer": 2}
 ```
 
-`Tina4::Database.connection` returns the active database connection. You call methods like `fetch`, `execute`, and `fetch_one` on this object.
+`Tina4.database` returns the active database connection. You call methods like `fetch`, `execute`, and `fetch_one` on this object.
 
 ---
 
@@ -131,7 +131,7 @@ curl http://localhost:7147/api/test-db
 ### fetch -- Get Multiple Rows
 
 ```ruby
-db = Tina4::Database.connection
+db = Tina4.database
 
 # Returns an array of hashes
 products = db.fetch("SELECT * FROM products WHERE price > 50")
@@ -251,7 +251,7 @@ db.execute("CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY, message TEX
 
 ```ruby
 Tina4::Router.get("/api/products") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
 
   products = db.fetch("SELECT * FROM products ORDER BY name")
 
@@ -291,15 +291,15 @@ db.fetch("SELECT * FROM products WHERE name = '#{user_input}'")
 Instead, use parameterised queries. Pass parameters as the second argument:
 
 ```ruby
-db = Tina4::Database.connection
+db = Tina4.database
 
-# Named parameters
+# Positional parameters with ?
 product = db.fetch_one(
-  "SELECT * FROM products WHERE id = :id",
-  { id: 42 }
+  "SELECT * FROM products WHERE id = ?",
+  [42]
 )
 
-# Positional parameters
+# Multiple parameters
 products = db.fetch(
   "SELECT * FROM products WHERE price BETWEEN ? AND ? ORDER BY price",
   [10.00, 100.00]
@@ -312,7 +312,7 @@ The database driver handles escaping. Your input is never part of the SQL string
 
 ```ruby
 Tina4::Router.get("/api/products/search") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
 
   q = request.params["q"] || ""
   max_price = (request.params["max_price"] || 99999).to_f
@@ -322,8 +322,8 @@ Tina4::Router.get("/api/products/search") do |request, response|
   end
 
   products = db.fetch(
-    "SELECT * FROM products WHERE name LIKE :query AND price <= :max_price ORDER BY name",
-    { query: "%#{q}%", max_price: max_price }
+    "SELECT * FROM products WHERE name LIKE ? AND price <= ? ORDER BY name",
+    ["%#{q}%", max_price]
   )
 
   response.json({
@@ -358,54 +358,44 @@ Multiple operations must succeed or fail together. Transactions enforce that con
 
 ```ruby
 Tina4::Router.post("/api/orders") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
   body = request.body
 
   begin
-    db.start_transaction
-
-    # Create the order
-    db.execute(
-      "INSERT INTO orders (customer_id, total, status) VALUES (:customer_id, :total, 'pending')",
-      { customer_id: body["customer_id"], total: body["total"] }
-    )
-
-    # Get the new order ID
-    order = db.fetch_one("SELECT last_insert_rowid() AS id")
-    order_id = order["id"]
-
-    # Create order items
-    body["items"].each do |item|
-      db.execute(
-        "INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (:order_id, :product_id, :qty, :price)",
-        {
-          order_id: order_id,
-          product_id: item["product_id"],
-          qty: item["quantity"],
-          price: item["price"]
-        }
+    db.transaction do |tx|
+      # Create the order
+      tx.execute(
+        "INSERT INTO orders (customer_id, total, status) VALUES (?, ?, 'pending')",
+        [body["customer_id"], body["total"]]
       )
 
-      # Decrease stock
-      db.execute(
-        "UPDATE products SET stock = stock - :qty WHERE id = :product_id",
-        { qty: item["quantity"], product_id: item["product_id"] }
-      )
+      # Get the new order ID
+      order = tx.fetch_one("SELECT last_insert_rowid() AS id")
+      order_id = order["id"]
+
+      # Create order items
+      body["items"].each do |item|
+        tx.execute(
+          "INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)",
+          [order_id, item["product_id"], item["quantity"], item["price"]]
+        )
+
+        # Decrease stock
+        tx.execute(
+          "UPDATE products SET stock = stock - ? WHERE id = ?",
+          [item["quantity"], item["product_id"]]
+        )
+      end
     end
-
-    db.commit
 
     response.json({ order_id: order_id, status: "created" }, 201)
   rescue => e
-    db.rollback
     response.json({ error: "Order failed: #{e.message}" }, 500)
   end
 end
 ```
 
-If any step fails, `rollback` undoes everything. The database never sits in a half-finished state.
-
-**Critical:** You must call `commit` to save changes. Forget it, and the transaction rolls back when the connection closes.
+If any step inside the block fails, the transaction is automatically rolled back. If the block completes without error, the transaction is automatically committed. The database never sits in a half-finished state.
 
 ---
 
@@ -413,11 +403,11 @@ If any step fails, `rollback` undoes everything. The database never sits in a ha
 
 Tina4 provides methods to inspect your database structure at runtime:
 
-### get_tables
+### tables
 
 ```ruby
-db = Tina4::Database.connection
-tables = db.get_tables
+db = Tina4.database
+tables = db.tables
 ```
 
 Returns an array of table names:
@@ -426,10 +416,10 @@ Returns an array of table names:
 ["orders", "order_items", "products", "users"]
 ```
 
-### get_columns
+### columns
 
 ```ruby
-columns = db.get_columns("products")
+columns = db.columns("products")
 ```
 
 Returns an array of column definitions:
@@ -455,12 +445,12 @@ end
 
 ```ruby
 Tina4::Router.get("/api/schema") do |request, response|
-  db = Tina4::Database.connection
-  tables = db.get_tables
+  db = Tina4.database
+  tables = db.tables
 
   schema = {}
   tables.each do |table|
-    schema[table] = db.get_columns(table)
+    schema[table] = db.columns(table)
   end
 
   response.json({ tables: schema })
@@ -474,18 +464,18 @@ end
 Insert or update many rows efficiently:
 
 ```ruby
-db = Tina4::Database.connection
+db = Tina4.database
 
-products = [
-  { name: "Widget A", price: 9.99 },
-  { name: "Widget B", price: 14.99 },
-  { name: "Widget C", price: 19.99 },
-  { name: "Widget D", price: 24.99 }
+params_list = [
+  ["Widget A", 9.99],
+  ["Widget B", 14.99],
+  ["Widget C", 19.99],
+  ["Widget D", 24.99]
 ]
 
 db.execute_many(
-  "INSERT INTO products (name, price) VALUES (:name, :price)",
-  products
+  "INSERT INTO products (name, price) VALUES (?, ?)",
+  params_list
 )
 ```
 
@@ -500,7 +490,7 @@ Tina4 provides shorthand methods so you do not have to write SQL for simple oper
 ### insert
 
 ```ruby
-db = Tina4::Database.connection
+db = Tina4.database
 
 # Insert a single row
 db.insert("products", {
@@ -521,16 +511,16 @@ db.insert("products", [
 
 ```ruby
 # Update rows matching a filter
-db.update("products", { price: 39.99, in_stock: 1 }, "id = :id", { id: 7 })
+db.update("products", { price: 39.99, in_stock: 1 }, { id: 7 })
 ```
 
-The third argument is the WHERE clause, and the fourth is the parameters for it.
+The second argument is the data to set, and the third is a filter hash for the WHERE clause. Each key-value pair becomes an `AND` condition.
 
 ### delete
 
 ```ruby
 # Delete rows matching a filter
-db.delete("products", "id = :id", { id: 7 })
+db.delete("products", { id: 7 })
 ```
 
 These helpers generate SQL for you. Convenient for simple CRUD. Raw queries still own complex joins, subqueries, and aggregations.
@@ -721,7 +711,7 @@ You can also control caching per-query:
 products = db.fetch("SELECT * FROM products", [], false) # third arg = use cache
 
 # Clear the entire cache
-db.clear_cache
+db.cache_clear
 ```
 
 ---
@@ -829,23 +819,24 @@ Create `src/routes/notes.rb`:
 ```ruby
 # List all notes with optional filters
 Tina4::Router.get("/api/notes") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
 
   tag = request.params["tag"] || ""
   search = request.params["search"] || ""
 
   sql = "SELECT * FROM notes"
-  params = {}
+  params = []
   conditions = []
 
   unless tag.empty?
-    conditions << "tag = :tag"
-    params[:tag] = tag
+    conditions << "tag = ?"
+    params << tag
   end
 
   unless search.empty?
-    conditions << "(title LIKE :search OR content LIKE :search)"
-    params[:search] = "%#{search}%"
+    conditions << "(title LIKE ? OR content LIKE ?)"
+    params << "%#{search}%"
+    params << "%#{search}%"
   end
 
   sql += " WHERE #{conditions.join(' AND ')}" unless conditions.empty?
@@ -861,10 +852,10 @@ end
 
 # Get a single note
 Tina4::Router.get("/api/notes/{id:int}") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
   id = request.params["id"]
 
-  note = db.fetch_one("SELECT * FROM notes WHERE id = :id", { id: id })
+  note = db.fetch_one("SELECT * FROM notes WHERE id = ?", [id])
 
   if note.nil?
     response.json({ error: "Note not found", id: id }, 404)
@@ -875,7 +866,7 @@ end
 
 # Create a note
 Tina4::Router.post("/api/notes") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
   body = request.body
 
   # Validate
@@ -888,12 +879,8 @@ Tina4::Router.post("/api/notes") do |request, response|
   end
 
   db.execute(
-    "INSERT INTO notes (title, content, tag) VALUES (:title, :content, :tag)",
-    {
-      title: body["title"],
-      content: body["content"],
-      tag: body["tag"] || "general"
-    }
+    "INSERT INTO notes (title, content, tag) VALUES (?, ?, ?)",
+    [body["title"], body["content"], body["tag"] || "general"]
   )
 
   note = db.fetch_one("SELECT * FROM notes WHERE id = last_insert_rowid()")
@@ -903,43 +890,43 @@ end
 
 # Update a note
 Tina4::Router.put("/api/notes/{id:int}") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
   id = request.params["id"]
   body = request.body
 
-  existing = db.fetch_one("SELECT * FROM notes WHERE id = :id", { id: id })
+  existing = db.fetch_one("SELECT * FROM notes WHERE id = ?", [id])
 
   if existing.nil?
     return response.json({ error: "Note not found", id: id }, 404)
   end
 
   db.execute(
-    "UPDATE notes SET title = :title, content = :content, tag = :tag, updated_at = CURRENT_TIMESTAMP WHERE id = :id",
-    {
-      title: body["title"] || existing["title"],
-      content: body["content"] || existing["content"],
-      tag: body["tag"] || existing["tag"],
-      id: id
-    }
+    "UPDATE notes SET title = ?, content = ?, tag = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+    [
+      body["title"] || existing["title"],
+      body["content"] || existing["content"],
+      body["tag"] || existing["tag"],
+      id
+    ]
   )
 
-  note = db.fetch_one("SELECT * FROM notes WHERE id = :id", { id: id })
+  note = db.fetch_one("SELECT * FROM notes WHERE id = ?", [id])
 
   response.json(note)
 end
 
 # Delete a note
 Tina4::Router.delete("/api/notes/{id:int}") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
   id = request.params["id"]
 
-  existing = db.fetch_one("SELECT * FROM notes WHERE id = :id", { id: id })
+  existing = db.fetch_one("SELECT * FROM notes WHERE id = ?", [id])
 
   if existing.nil?
     return response.json({ error: "Note not found", id: id }, 404)
   end
 
-  db.execute("DELETE FROM notes WHERE id = :id", { id: id })
+  db.execute("DELETE FROM notes WHERE id = ?", [id])
 
   response.json(nil, 204)
 end
@@ -1008,13 +995,13 @@ end
 
 ## 14. Gotchas
 
-### 1. Forgetting commit
+### 1. Forgetting the transaction block
 
-**Problem:** You call `start_transaction`, run your queries, but the changes disappear on the next request.
+**Problem:** You run multiple related queries but they are not atomic -- some succeed while others fail, leaving the database in an inconsistent state.
 
-**Cause:** Without `commit`, the transaction is rolled back when the connection closes.
+**Cause:** Without wrapping them in a `transaction` block, each query is committed independently.
 
-**Fix:** Always call `db.commit` after your transaction succeeds. Use a `begin/rescue` block with `db.rollback` in the rescue.
+**Fix:** Use `db.transaction { |tx| ... }` to wrap related operations. The block automatically commits on success and rolls back on any exception.
 
 ### 2. Connection String Formats
 
@@ -1042,11 +1029,11 @@ end
 
 ### 4. Parameterised Queries with LIKE
 
-**Problem:** `WHERE name LIKE :q` with `{ q: "%search%" }` works, but `WHERE name LIKE '%:q%'` does not.
+**Problem:** `WHERE name LIKE ?` with `["%search%"]` works, but `WHERE name LIKE '%?%'` does not.
 
 **Cause:** Parameters inside quotes are treated as literal text, not as placeholders.
 
-**Fix:** Include the `%` wildcards in the parameter value, not in the SQL: `{ q: "%#{search}%" }`. The SQL should be `WHERE name LIKE :q`.
+**Fix:** Include the `%` wildcards in the parameter value, not in the SQL: `["%#{search}%"]`. The SQL should be `WHERE name LIKE ?`.
 
 ### 5. Boolean Values in SQLite
 

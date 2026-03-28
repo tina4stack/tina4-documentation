@@ -15,7 +15,7 @@ ORM models live in `src/orm/`. Every `.ts` file in that directory is auto-loaded
 Create `src/orm/Product.ts`:
 
 ```typescript
-import { BaseModel } from "tina4-nodejs";
+import { BaseModel } from "tina4-nodejs/orm";
 
 export class Product extends BaseModel {
     static tableName = "products";
@@ -44,7 +44,7 @@ That is a complete model. Here is what each piece does:
 When your TypeScript property names do not match the database column names, use `fieldMapping` to define the translation:
 
 ```typescript
-import { BaseModel } from "tina4-nodejs";
+import { BaseModel } from "tina4-nodejs/orm";
 
 export class User extends BaseModel {
     static tableName = "user_accounts";
@@ -63,6 +63,40 @@ export class User extends BaseModel {
 ```
 
 With this mapping, `user.firstName` reads from and writes to the `fname` column in the database. The ORM handles the conversion in both directions -- on `load()`, `save()`, `select()`, `toDict()`, and `toObject()`. This takes priority over the default `camelCase` to `snake_case` conversion. Useful when working with legacy databases or third-party schemas where you cannot rename the columns.
+
+### Automatic Field Mapping with autoMap
+
+If your database columns follow `snake_case` and your TypeScript properties follow `camelCase`, you can skip writing `fieldMapping` entirely. Set `static autoMap = true` and Tina4 generates the mapping for you:
+
+```typescript
+import { BaseModel } from "tina4-nodejs/orm";
+
+export class Order extends BaseModel {
+    static tableName = "orders";
+    static primaryKey = "id";
+    static autoMap = true;
+
+    id!: number;
+    customerName!: string;   // maps to customer_name
+    orderTotal!: number;     // maps to order_total
+    createdAt!: string;      // maps to created_at
+}
+```
+
+Explicit `fieldMapping` entries always take priority over `autoMap`. Use both together when most columns follow the convention but a few do not.
+
+### Utility Exports: snakeToCamel and camelToSnake
+
+The ORM package exports two helper functions for case conversion:
+
+```typescript
+import { snakeToCamel, camelToSnake } from "tina4-nodejs/orm";
+
+snakeToCamel("created_at");   // "createdAt"
+camelToSnake("createdAt");    // "created_at"
+```
+
+These are the same functions the ORM uses internally. Useful when building dynamic queries or transforming API payloads.
 
 ---
 
@@ -278,7 +312,7 @@ A user has many posts. Define the relationship as a static property:
 Create `src/orm/User.ts`:
 
 ```typescript
-import { BaseModel } from "tina4-nodejs";
+import { BaseModel } from "tina4-nodejs/orm";
 
 export class User extends BaseModel {
     static tableName = "users";
@@ -297,7 +331,7 @@ export class User extends BaseModel {
 Create `src/orm/Post.ts`:
 
 ```typescript
-import { BaseModel } from "tina4-nodejs";
+import { BaseModel } from "tina4-nodejs/orm";
 
 export class Post extends BaseModel {
     static tableName = "posts";
@@ -366,7 +400,7 @@ const users = await user.select("*", "", {}, "", 0, 0, ["posts", "posts.comments
 If your model has a `deletedAt` property, Tina4 supports soft delete:
 
 ```typescript
-import { BaseModel } from "tina4-nodejs";
+import { BaseModel } from "tina4-nodejs/orm";
 
 export class Post extends BaseModel {
     static tableName = "posts";
@@ -393,7 +427,7 @@ With `softDelete = true`:
 Add `static autoCrud = true` and Tina4 generates REST endpoints for you:
 
 ```typescript
-import { BaseModel } from "tina4-nodejs";
+import { BaseModel } from "tina4-nodejs/orm";
 
 export class Product extends BaseModel {
     static tableName = "products";
@@ -445,7 +479,7 @@ Build a blog with three models: User, Post, and Comment. Use relationships, eage
 Create `src/orm/User.ts`:
 
 ```typescript
-import { BaseModel } from "tina4-nodejs";
+import { BaseModel } from "tina4-nodejs/orm";
 
 export class User extends BaseModel {
     static tableName = "users";
@@ -463,7 +497,7 @@ export class User extends BaseModel {
 Create `src/orm/Post.ts`:
 
 ```typescript
-import { BaseModel } from "tina4-nodejs";
+import { BaseModel } from "tina4-nodejs/orm";
 
 export class Post extends BaseModel {
     static tableName = "posts";
@@ -483,7 +517,7 @@ export class Post extends BaseModel {
 Create `src/orm/Comment.ts`:
 
 ```typescript
-import { BaseModel } from "tina4-nodejs";
+import { BaseModel } from "tina4-nodejs/orm";
 
 export class Comment extends BaseModel {
     static tableName = "comments";

@@ -45,6 +45,8 @@ DATABASE_URL=mssql://localhost:1433/myapp
 DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
 ```
 
+The Firebird adapter requires the `node-firebird` package (`npm install node-firebird`). SQL dialect differences are handled automatically: `LIMIT`/`OFFSET` is translated to `ROWS X TO Y`, boolean values are converted to integers, and `ILIKE` is converted to `LOWER() LIKE LOWER()`.
+
 ### Separate Credentials
 
 ```dotenv
@@ -79,7 +81,7 @@ curl http://localhost:7148/health
   "status": "ok",
   "database": "connected",
   "uptime_seconds": 3,
-  "version": "3.0.0",
+  "version": "3.10.3",
   "framework": "tina4-nodejs"
 }
 ```
@@ -91,7 +93,8 @@ curl http://localhost:7148/health
 In your route handlers, access the database via the `Database` class:
 
 ```typescript
-import { Router, Database } from "tina4-nodejs";
+import { Router } from "tina4-nodejs";
+import { Database } from "tina4-nodejs/orm";
 
 Router.get("/api/test-db", async (req, res) => {
     const db = Database.getConnection();
@@ -237,7 +240,8 @@ await db.execute("CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY, messa
 ### Full Example: A Simple Query Route
 
 ```typescript
-import { Router, Database } from "tina4-nodejs";
+import { Router } from "tina4-nodejs";
+import { Database } from "tina4-nodejs/orm";
 
 Router.get("/api/products", async (req, res) => {
     const db = Database.getConnection();
@@ -283,7 +287,8 @@ const products = await db.fetch(
 ### A Safe Search Endpoint
 
 ```typescript
-import { Router, Database } from "tina4-nodejs";
+import { Router } from "tina4-nodejs";
+import { Database } from "tina4-nodejs/orm";
 
 Router.get("/api/products/search", async (req, res) => {
     const db = Database.getConnection();
@@ -331,7 +336,8 @@ curl "http://localhost:7148/api/products/search?q=key&max_price=100"
 When you need multiple operations to succeed or fail together, use transactions:
 
 ```typescript
-import { Router, Database } from "tina4-nodejs";
+import { Router } from "tina4-nodejs";
+import { Database } from "tina4-nodejs/orm";
 
 Router.post("/api/orders", async (req, res) => {
     const db = Database.getConnection();
@@ -644,7 +650,8 @@ tina4 migrate
 Create `src/routes/notes.ts`:
 
 ```typescript
-import { Router, Database } from "tina4-nodejs";
+import { Router } from "tina4-nodejs";
+import { Database } from "tina4-nodejs/orm";
 
 Router.get("/api/notes", async (req, res) => {
     const db = Database.getConnection();

@@ -18,7 +18,7 @@ Tina4 gives it nothing to guess about. One ORM. One queue. One template engine. 
 
 ```ruby
 # There is only one way to cache in Tina4
-cached = Tina4::Cache.fetch("products", ttl: 300) { db.fetch("SELECT * FROM products") }
+cached = Tina4.cache_get("products") || Tina4.cache_set("products", db.fetch("SELECT * FROM products"), 300)
 
 # There is only one way to queue in Tina4
 Tina4::Queue.produce("emails", { to: "user@test.com", subject: "Welcome" })
@@ -139,9 +139,11 @@ Ruby's expressiveness makes AI-generated code particularly clean:
 
 ```ruby
 Tina4::Router.get("/api/products") do |request, response|
-  products = Tina4::Cache.fetch("products:all", ttl: 300) do
-    db = Tina4::Database.connection
-    db.fetch("SELECT * FROM products ORDER BY name")
+  products = Tina4.cache_get("products:all")
+  if products.nil?
+    db = Tina4.database
+    products = db.fetch("SELECT * FROM products ORDER BY name")
+    Tina4.cache_set("products:all", products, 300)
   end
 
   response.json({ products: products, count: products.length })
@@ -235,7 +237,7 @@ All using correct Tina4 conventions:
 
 ```ruby
 Tina4::Router.get("/api/posts") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
 
   # Check if user is authenticated (optional)
   user_id = nil

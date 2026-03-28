@@ -77,6 +77,28 @@ return res.html("profile.html", data);
 Alice lives in Cape Town, South Africa.
 ```
 
+### Method Calls on Objects
+
+If an object value is a function, Frond calls it automatically when accessed via dot notation. You can also call methods with arguments:
+
+```typescript
+const data = {
+    user: {
+        name: "Alice",
+        t: (key: string) => translations[key] ?? key
+    }
+};
+
+return res.html("page.html", data);
+```
+
+```html
+<p>{{ user.name }}</p>
+<p>{{ user.t("welcome_message") }}</p>
+```
+
+This works with any callable property. Arguments are evaluated as expressions, so you can pass variables, strings, or numbers.
+
 ### Expressions
 
 <div v-pre>

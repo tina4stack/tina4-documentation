@@ -52,9 +52,7 @@ The file-based backend is the default. No configuration needed.
 ### Creating a Queue and Pushing a Job
 
 ```ruby
-require "tina4/queue"
-
-queue = Queue.new(topic: "emails")
+queue = Tina4::Queue.new(topic: "emails")
 
 # Push a job
 queue.push({
@@ -69,7 +67,7 @@ queue.push({
 The `produce` method pushes to a specific topic without creating a separate Queue instance:
 
 ```ruby
-queue = Queue.new(topic: "emails")
+queue = Tina4::Queue.new(topic: "emails")
 queue.produce("invoices", { order_id: 101, format: "pdf" })
 ```
 
@@ -93,12 +91,10 @@ Check how many pending messages are in the queue:
 count = queue.size
 ```
 
-Pass a status string to count jobs in a specific state:
+Pass a status keyword to count jobs in a specific state:
 
 ```ruby
-failed = queue.size("failed")
-completed = queue.size("completed")
-reserved = queue.size("reserved")
+failed = queue.size(status: "failed")
 ```
 
 ---
@@ -111,7 +107,7 @@ Tina4::Router.post("/api/register") do |request, response|
 
   user_id = 42 # Simulated
 
-  queue = Queue.new(topic: "emails")
+  queue = Tina4::Queue.new(topic: "emails")
 
   queue.push({
     user_id: user_id,
@@ -147,9 +143,7 @@ curl -X POST http://localhost:7147/api/register \
 The `consume` method yields jobs one at a time via a block. Each job must be explicitly completed or failed:
 
 ```ruby
-require "tina4/queue"
-
-queue = Queue.new(topic: "emails")
+queue = Tina4::Queue.new(topic: "emails")
 
 queue.consume("emails") do |job|
   begin
@@ -172,7 +166,7 @@ queue.consume("emails") do |job|
     job.complete
   rescue => e
     # Retry after 30 seconds instead of failing immediately
-    job.retry(30)
+    job.retry(queue: queue, delay_seconds: 30)
   end
 end
 ```
@@ -220,7 +214,7 @@ When you receive a job from `consume` or `pop`, you have three methods:
 - `job.complete` -- mark the job as done
 - `job.fail(reason)` -- mark the job as failed with a reason string
 - `job.reject(reason)` -- alias for `fail`
-- `job.retry(delay_seconds)` -- re-queue the job after a delay (in seconds). The job goes back to PENDING after the delay elapses.
+- `job.retry(queue: queue, delay_seconds: 30)` -- re-queue the job after a delay (in seconds). The job goes back to PENDING after the delay elapses. You must pass the `queue` reference.
 
 ### Job Properties
 
@@ -239,9 +233,6 @@ The default `max_retries` is 3. When a job's attempt count reaches `max_retries`
 ### Retrying Failed Jobs
 
 ```ruby
-# Retry a specific job by ID
-queue.retry(job_id)
-
 # Retry all failed jobs (skips those that exceeded max_retries)
 queue.retry_failed
 ```
@@ -280,7 +271,7 @@ Tina4::Router.post("/api/orders") do |request, response|
   body = request.body
   order_id = 101
 
-  queue = Queue.new(topic: "emails")
+  queue = Tina4::Queue.new(topic: "emails")
 
   queue.push({
     order_id: order_id,
@@ -356,26 +347,24 @@ Your code does not change. The same `queue.push` and `queue.consume` calls work 
 
 ---
 
-## 10. Producer and Consumer Classes
+## 10. Separate Producer and Consumer Patterns
 
-Ruby also provides `Producer` and `Consumer` classes for more structured usage:
+Use separate `Tina4::Queue` instances in different files or services for clarity:
 
 ```ruby
-require "tina4/queue"
+# Producer side (e.g., in a route handler)
+queue = Tina4::Queue.new(topic: "emails")
+queue.push({ to: "alice@example.com", subject: "Hello" })
 
-# Producer side
-producer = Producer.new(topic: "emails")
-producer.push({ to: "alice@example.com", subject: "Hello" })
-
-# Consumer side
-consumer = Consumer.new(topic: "emails")
-consumer.consume("emails") do |job|
+# Consumer side (e.g., in a worker script)
+queue = Tina4::Queue.new(topic: "emails")
+queue.consume("emails") do |job|
   process(job)
   job.complete
 end
 ```
 
-These are thin wrappers around `Queue` that make intent clearer when your producers and consumers are in separate files or services.
+The same `Tina4::Queue` class handles both producing and consuming. Separate instances in different files make intent clearer.
 
 ---
 
@@ -419,9 +408,7 @@ curl -X POST http://localhost:7147/api/emails/retry
 Create `src/routes/email_queue.rb`:
 
 ```ruby
-require "tina4/queue"
-
-queue = Queue.new(topic: "emails")
+queue = Tina4::Queue.new(topic: "emails")
 
 # @noauth
 Tina4::Router.post("/api/emails/send") do |request, response|
@@ -470,9 +457,7 @@ end
 Create a separate consumer file `src/workers/email_worker.rb`:
 
 ```ruby
-require "tina4/queue"
-
-queue = Queue.new(topic: "emails")
+queue = Tina4::Queue.new(topic: "emails")
 
 queue.consume("emails") do |job|
   payload = job.payload

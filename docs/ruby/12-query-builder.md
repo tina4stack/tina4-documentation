@@ -353,7 +353,7 @@ This is invaluable for debugging. If a query returns unexpected results, print t
 
 ```ruby
 Tina4::Router.get("/api/products") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
 
   query = Tina4::QueryBuilder.from("products", db: db)
 
@@ -397,7 +397,7 @@ curl "http://localhost:7147/api/products?category=Electronics&min_price=50&page=
 
 ```ruby
 Tina4::Router.get("/api/dashboard/summary") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
 
   # Total users
   total_users = Tina4::QueryBuilder.from("users", db: db).count
@@ -466,7 +466,7 @@ Create `src/routes/product_search.rb`:
 
 ```ruby
 Tina4::Router.get("/api/products/search") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
 
   query = Tina4::QueryBuilder.from("products", db: db)
 
@@ -526,7 +526,7 @@ end
 
 ```ruby
 Tina4::Router.get("/api/products/stats") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
 
   stats = Tina4::QueryBuilder.from("products", db: db)
     .select("category", "COUNT(*) AS product_count", "ROUND(AVG(price), 2) AS avg_price")

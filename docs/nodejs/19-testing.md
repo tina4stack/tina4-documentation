@@ -11,18 +11,15 @@ npm test
 ```
 Running tests...
 
-  ProductTest
-    [PASS] test_create_product
-    [PASS] test_load_product
-    [PASS] test_update_product
-    [PASS] test_delete_product
+  add
+    + add([[5, 3]]) == 8
+    + add([[null]]) raises Error
 
-  AuthTest
-    [PASS] test_login_with_valid_credentials
-    [PASS] test_login_with_invalid_password
-    [PASS] test_protected_route_without_token
+  isEven
+    + isEven([[4]]) is truthy
+    + isEven([[3]]) is falsy
 
-  7 tests, 7 passed, 0 failed (0.34s)
+  4 tests: 4 passed, 0 failed, 0 errors
 ```
 
 Tina4 ships an inline testing framework. No external packages. No Jest configuration. No setup ceremony.
@@ -31,108 +28,89 @@ Tina4 ships an inline testing framework. No external packages. No Jest configura
 
 ## 2. Your First Test
 
-Tests live in the `tests/` directory. The test runner is `tests/run-all.ts`.
+Tina4's testing framework uses a decorator-style pattern. You attach test assertions directly to functions using `tests()`, `assertEqual()`, `assertThrows()`, `assertTrue()`, and `assertFalse()`. Then call `runAllTests()` to execute them all.
 
-Create `tests/BasicTest.ts`:
+Create `tests/basic.ts`:
 
 ```typescript
-import { Test } from "tina4-nodejs";
+import { tests, assertEqual, assertThrows, assertTrue, assertFalse, runAllTests } from "tina4-nodejs";
 
-export class BasicTest extends Test {
-    async testAddition() {
-        this.assertEqual(2 + 2, 4, "Basic addition should work");
-    }
+// Define a function and attach inline tests
+const add = tests(
+    assertEqual([5, 3], 8),
+    assertEqual([0, 0], 0),
+    assertThrows(Error, [null]),
+)(function add(a: number, b: number | null = null): number {
+    if (b === null) throw new Error("b required");
+    return a + b;
+});
 
-    async testStringConcatenation() {
-        const result = "Hello" + " " + "World";
-        this.assertEqual(result, "Hello World", "String concatenation should work");
-    }
+const isEven = tests(
+    assertTrue([4]),
+    assertFalse([3]),
+)(function isEven(n: number): boolean {
+    return n % 2 === 0;
+});
 
-    async testArrayLength() {
-        const items = [1, 2, 3];
-        this.assertEqual(items.length, 3, "Array should have 3 items");
-    }
-
-    async testBooleanLogic() {
-        this.assertTrue(true, "true should be true");
-        this.assertFalse(false, "false should be false");
-    }
-}
+// Run all registered tests
+runAllTests();
 ```
 
 Run it:
 
 ```bash
-npm test
+npx tsx tests/basic.ts
 ```
 
 ```
-Running tests...
+  add
+    + add([[5, 3]]) == 8
+    + add([[0, 0]]) == 0
+    + add([[null]]) raises Error
 
-  BasicTest
-    [PASS] testAddition
-    [PASS] testStringConcatenation
-    [PASS] testArrayLength
-    [PASS] testBooleanLogic
+  isEven
+    + isEven([[4]]) is truthy
+    + isEven([[3]]) is falsy
 
-  4 tests, 4 passed, 0 failed (0.01s)
+  5 tests: 5 passed, 0 failed, 0 errors
 ```
+
+The `tests()` function takes assertion objects and returns a decorator. The decorator wraps the function, registers it in the test registry, and returns the original function unchanged. The function works normally in production code -- the tests are only executed when you call `runAllTests()`.
 
 ---
 
-## 3. Assertion Methods
+## 3. Assertion Functions
 
-| Method | Description |
-|--------|-------------|
-| `assertEqual(actual, expected, message)` | Values are equal |
-| `assertNotEqual(actual, expected, message)` | Values are not equal |
-| `assertTrue(value, message)` | Value is truthy |
-| `assertFalse(value, message)` | Value is falsy |
-| `assertNull(value, message)` | Value is null |
-| `assertNotNull(value, message)` | Value is not null |
-| `assertContains(haystack, needle, message)` | String or array contains value |
-| `assertThrows(fn, message)` | Function throws an error |
+| Function | Description |
+|----------|-------------|
+| `assertEqual(args, expected)` | Call function with `args` array, expect `expected` return value |
+| `assertThrows(ErrorClass, args)` | Call function with `args` array, expect it to throw an instance of `ErrorClass` |
+| `assertTrue(args)` | Call function with `args` array, expect a truthy return value |
+| `assertFalse(args)` | Call function with `args` array, expect a falsy return value |
+
+Each assertion specifies the arguments to pass and the expected outcome. The `args` parameter is always an array of arguments.
 
 ---
 
-## 4. Testing Routes with testGet() and testPost()
+## 4. Testing Business Logic
 
 ```typescript
-import { Test } from "tina4-nodejs";
+import { tests, assertEqual, assertThrows, runAllTests } from "tina4-nodejs";
 
-export class ProductApiTest extends Test {
-    async testListProducts() {
-        const response = await this.testGet("/api/products");
-
-        this.assertEqual(response.status, 200, "Should return 200");
-        this.assertNotNull(response.body.products, "Should have products array");
+const calculateDiscount = tests(
+    assertEqual([100, 10], 90),
+    assertEqual([50, 0], 50),
+    assertEqual([200, 50], 100),
+    assertThrows(Error, [100, -5]),
+    assertThrows(Error, [100, 101]),
+)(function calculateDiscount(price: number, discountPercent: number): number {
+    if (discountPercent < 0 || discountPercent > 100) {
+        throw new Error("Discount must be between 0 and 100");
     }
+    return price - (price * discountPercent / 100);
+});
 
-    async testCreateProduct() {
-        const response = await this.testPost("/api/products", {
-            name: "Test Widget",
-            category: "Testing",
-            price: 9.99
-        });
-
-        this.assertEqual(response.status, 201, "Should return 201");
-        this.assertEqual(response.body.name, "Test Widget", "Name should match");
-        this.assertEqual(response.body.price, 9.99, "Price should match");
-    }
-
-    async testGetProductNotFound() {
-        const response = await this.testGet("/api/products/99999");
-
-        this.assertEqual(response.status, 404, "Should return 404");
-        this.assertContains(response.body.error, "not found", "Error message should mention not found");
-    }
-
-    async testCreateProductValidation() {
-        const response = await this.testPost("/api/products", {});
-
-        this.assertEqual(response.status, 400, "Should return 400 for missing name");
-    }
-}
+runAllTests();
 ```
 
 ---
@@ -140,204 +118,159 @@ export class ProductApiTest extends Test {
 ## 5. Testing with Authentication
 
 ```typescript
-import { Test, Auth } from "tina4-nodejs";
+import { tests, assertEqual, assertTrue, runAllTests } from "tina4-nodejs";
+import { Auth } from "tina4-nodejs";
 
-export class AuthTest extends Test {
-    private token: string = "";
+const secret = "test-secret";
 
-    async setup() {
-        // Register and login to get a token
-        await this.testPost("/api/register", {
-            name: "Test User",
-            email: "test@example.com",
-            password: "securePass123"
-        });
+const createAndVerifyToken = tests(
+    assertTrue([{ userId: 1, role: "admin" }]),
+)(function createAndVerifyToken(payload: Record<string, unknown>): boolean {
+    const token = Auth.getToken(payload, secret);
+    const decoded = Auth.validToken(token, secret);
+    return decoded !== null && decoded.userId === payload.userId;
+});
 
-        const loginResponse = await this.testPost("/api/login", {
-            email: "test@example.com",
-            password: "securePass123"
-        });
+const verifyPasswordHash = tests(
+    assertTrue(["securePass123"]),
+    assertTrue(["another-password"]),
+)(function verifyPasswordHash(password: string): boolean {
+    const hash = Auth.hashPassword(password);
+    return Auth.checkPassword(password, hash);
+});
 
-        this.token = loginResponse.body.token;
-    }
-
-    async testProfileWithToken() {
-        const response = await this.testGet("/api/profile", {
-            headers: { Authorization: `Bearer ${this.token}` }
-        });
-
-        this.assertEqual(response.status, 200, "Should return 200 with valid token");
-        this.assertEqual(response.body.email, "test@example.com", "Should return correct email");
-    }
-
-    async testProfileWithoutToken() {
-        const response = await this.testGet("/api/profile");
-
-        this.assertEqual(response.status, 401, "Should return 401 without token");
-    }
-}
+runAllTests();
 ```
 
 ---
 
-## 6. Testing ORM Models
+## 6. Resetting Tests Between Files
+
+When running tests across multiple files, use `resetTests()` to clear the registry:
 
 ```typescript
-import { Test } from "tina4-nodejs";
-import { Product } from "../src/orm/Product";
+import { resetTests, tests, assertEqual, runAllTests } from "tina4-nodejs";
 
-export class ProductModelTest extends Test {
-    async testCreateAndLoad() {
-        const product = new Product();
-        product.name = "Test Product";
-        product.price = 29.99;
-        product.category = "Testing";
-        await product.save();
+// Clear any previously registered tests
+resetTests();
 
-        this.assertNotNull(product.id, "Should have an ID after save");
+// Register and run fresh tests
+const multiply = tests(
+    assertEqual([3, 4], 12),
+    assertEqual([0, 5], 0),
+)(function multiply(a: number, b: number): number {
+    return a * b;
+});
 
-        const loaded = new Product();
-        await loaded.load(product.id);
-
-        this.assertEqual(loaded.name, "Test Product", "Name should match");
-        this.assertEqual(loaded.price, 29.99, "Price should match");
-
-        await product.delete();
-    }
-
-    async testSoftDelete() {
-        const product = new Product();
-        product.name = "Deletable";
-        product.price = 1.00;
-        await product.save();
-        const id = product.id;
-
-        await product.delete();
-
-        const loaded = new Product();
-        await loaded.load(id);
-        this.assertNull(loaded.id, "Soft-deleted product should not be loadable");
-    }
-}
+runAllTests();
 ```
 
 ---
 
-## 7. Test Database Isolation
+## 7. Runner Options
 
-Tina4 creates a test database (`data/test.db`) when running tests. Each test class gets a clean database. No leftover data from previous runs.
-
-```dotenv
-# In .env.test (optional)
-DATABASE_URL=sqlite:///data/test.db
-```
-
----
-
-## 8. Setup and Teardown
+`runAllTests()` accepts an options object:
 
 ```typescript
-export class MyTest extends Test {
-    async setup() {
-        // Runs before each test
-    }
+// Quiet mode -- no console output, just returns the results
+const results = runAllTests({ quiet: true });
+console.log(`${results.passed} passed, ${results.failed} failed`);
 
-    async teardown() {
-        // Runs after each test
-    }
-
-    async setupOnce() {
-        // Runs once before all tests in this class
-    }
-
-    async teardownOnce() {
-        // Runs once after all tests in this class
-    }
-}
+// Fail fast -- stop on the first failure
+runAllTests({ failfast: true });
 ```
+
+The returned `TestResults` object contains:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `passed` | number | Number of assertions that passed |
+| `failed` | number | Number of assertions that failed |
+| `errors` | number | Number of unexpected errors |
+| `details` | array | Array of `{ name, status, message? }` objects |
 
 ---
 
-## 9. Running Specific Tests
+## 8. Running Tests
+
+The project test runner lives at `test/run-all.ts`. Run all tests with:
 
 ```bash
-npm test -- --filter ProductTest
-npm test -- --filter testCreateProduct
+npm test
+```
+
+Or run a specific test file directly:
+
+```bash
+npx tsx tests/basic.ts
 ```
 
 ---
 
-## 10. Exercise: Write Tests for a Notes API
+## 9. Exercise: Write Tests for Utility Functions
 
-Write a test class that covers: creating a note, listing notes, getting a single note, updating a note, deleting a note, and validation errors.
+Write inline tests for the following functions:
+
+1. A `slugify` function that converts `"Hello World"` to `"hello-world"`
+2. A `clamp` function that constrains a number between a min and max
+3. A `parsePrice` function that extracts a number from `"$19.99"` and throws on invalid input
 
 ---
 
-## 11. Solution
+## 10. Solution
 
 ```typescript
-import { Test } from "tina4-nodejs";
+import { tests, assertEqual, assertThrows, runAllTests } from "tina4-nodejs";
 
-export class NotesApiTest extends Test {
-    private noteId: number = 0;
+const slugify = tests(
+    assertEqual(["Hello World"], "hello-world"),
+    assertEqual(["  Multiple   Spaces  "], "multiple-spaces"),
+    assertEqual(["UPPERCASE"], "uppercase"),
+    assertEqual(["already-slugged"], "already-slugged"),
+)(function slugify(input: string): string {
+    return input.trim().toLowerCase().replace(/\s+/g, "-");
+});
 
-    async testCreateNote() {
-        const response = await this.testPost("/api/notes", {
-            title: "Test Note",
-            content: "This is a test note",
-            tag: "testing"
-        });
-        this.assertEqual(response.status, 201);
-        this.assertEqual(response.body.title, "Test Note");
-        this.noteId = response.body.id;
-    }
+const clamp = tests(
+    assertEqual([5, 0, 10], 5),
+    assertEqual([-5, 0, 10], 0),
+    assertEqual([15, 0, 10], 10),
+    assertEqual([0, 0, 0], 0),
+)(function clamp(value: number, min: number, max: number): number {
+    return Math.min(Math.max(value, min), max);
+});
 
-    async testListNotes() {
-        const response = await this.testGet("/api/notes");
-        this.assertEqual(response.status, 200);
-        this.assertTrue(response.body.count >= 1, "Should have at least one note");
-    }
+const parsePrice = tests(
+    assertEqual(["$19.99"], 19.99),
+    assertEqual(["$0.50"], 0.5),
+    assertThrows(Error, ["not-a-price"]),
+    assertThrows(Error, [""]),
+)(function parsePrice(input: string): number {
+    const match = input.match(/\$?([\d.]+)/);
+    if (!match) throw new Error("Invalid price format");
+    const value = parseFloat(match[1]);
+    if (isNaN(value)) throw new Error("Invalid price format");
+    return value;
+});
 
-    async testGetNote() {
-        const response = await this.testGet(`/api/notes/${this.noteId}`);
-        this.assertEqual(response.status, 200);
-        this.assertEqual(response.body.title, "Test Note");
-    }
-
-    async testUpdateNote() {
-        const response = await this.testPut(`/api/notes/${this.noteId}`, {
-            title: "Updated Note"
-        });
-        this.assertEqual(response.status, 200);
-        this.assertEqual(response.body.title, "Updated Note");
-    }
-
-    async testDeleteNote() {
-        const response = await this.testDelete(`/api/notes/${this.noteId}`);
-        this.assertEqual(response.status, 204);
-    }
-
-    async testCreateNoteValidation() {
-        const response = await this.testPost("/api/notes", {});
-        this.assertEqual(response.status, 400);
-        this.assertNotNull(response.body.errors);
-    }
-
-    async testGetNotFound() {
-        const response = await this.testGet("/api/notes/99999");
-        this.assertEqual(response.status, 404);
-    }
-}
+runAllTests();
 ```
 
 ---
 
-## 12. Gotchas
+## 11. Gotchas
 
-### 1. Tests Must Extend Test Class -- `export class MyTest extends Test`.
-### 2. Test Methods Must Start with "test" -- `testCreateProduct`, not `createProductTest`.
-### 3. All Tests Are Async -- Use `async` and `await` for all test methods.
-### 4. Test Order Is Not Guaranteed -- Do not depend on test execution order.
-### 5. Database State Leaks Between Tests -- Use `setup()` and `teardown()` to clean up.
-### 6. Missing Assertions -- A test without assertions passes silently. Always assert.
-### 7. Test Files Must Export Classes -- `export class MyTest extends Test`, not a default export.
+### 1. The `tests()` Decorator Returns the Original Function
+The wrapped function works identically in production. Tests only run when you call `runAllTests()`.
+
+### 2. Arguments Are Passed as an Array
+`assertEqual([5, 3], 8)` means "call the function with arguments `5` and `3`, expect `8`". The first argument is always an array.
+
+### 3. Named Functions Are Required for Readable Output
+Anonymous functions show up as "anonymous" in test output. Use named function expressions.
+
+### 4. Call `resetTests()` Between Separate Test Files
+Without resetting, tests from previously imported modules accumulate in the registry.
+
+### 5. `runAllTests()` Returns Results
+Use the return value for CI integration: check `results.failed === 0` to determine the exit code.

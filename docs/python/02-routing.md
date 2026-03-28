@@ -170,8 +170,6 @@ Supported types:
 | `int` | Digits only | Integer | `{id:int}` matches `42` but not `abc` |
 | `float` | Decimal numbers | Float | `{price:float}` matches `19.99` |
 | `path` | All remaining path segments (catch-all) | String | `{slug:path}` matches `docs/api/auth` |
-| `alpha` | Letters only | String | `{slug:alpha}` matches `hello` but not `hello123` |
-| `alphanumeric` | Letters and digits | String | `{code:alphanumeric}` matches `abc123` |
 
 The `{name}` form (no type) matches any single path segment and returns it as a string.
 
@@ -279,29 +277,29 @@ If a query parameter is missing, `request.params.get("key")` returns `None`. Use
 A set of routes sharing a common prefix belongs in a `group()`:
 
 ```python
-from tina4_python.core.router import get, post, group
+from tina4_python.core.router import Router, get, post
 
-@group("/api/v1")
-def api_v1():
+Router.group("/api/v1", lambda: [
+    Router.get("/users", list_users),
+    Router.get("/users/{id:int}", get_user),
+    Router.post("/users", create_user),
+    Router.get("/products", list_products),
+])
 
-    @get("/users")
-    async def list_users(request, response):
-        return response.json({"users": []})
+async def list_users(request, response):
+    return response.json({"users": []})
 
-    @get("/users/{id:int}")
-    async def get_user(id, request, response):
-        return response.json({"user": {"id": id, "name": "Alice"}})
+async def get_user(id, request, response):
+    return response.json({"user": {"id": id, "name": "Alice"}})
 
-    @post("/users")
-    async def create_user(request, response):
-        return response.json({"created": True}, 201)
+async def create_user(request, response):
+    return response.json({"created": True}, 201)
 
-    @get("/products")
-    async def list_products(request, response):
-        return response.json({"products": []})
+async def list_products(request, response):
+    return response.json({"products": []})
 ```
 
-These routes register as `/api/v1/users`, `/api/v1/users/{id}`, and `/api/v1/products`. Short paths inside the group. Tina4 prepends the prefix.
+These routes register as `/api/v1/users`, `/api/v1/users/{id}`, and `/api/v1/products`. Short paths inside the group. Tina4 prepends the prefix. `Router.group()` is a classmethod that takes a prefix, a callback, and an optional middleware list.
 
 ```bash
 curl http://localhost:7145/api/v1/users
@@ -322,22 +320,22 @@ curl http://localhost:7145/api/v1/products
 Groups nest:
 
 ```python
-from tina4_python.core.router import get, group
+from tina4_python.core.router import Router
 
-@group("/api")
-def api():
+async def v1_status(request, response):
+    return response.json({"version": "1.0"})
 
-    @group("/v1")
-    def v1():
-        @get("/status")
-        async def v1_status(request, response):
-            return response.json({"version": "1.0"})
+async def v2_status(request, response):
+    return response.json({"version": "2.0"})
 
-    @group("/v2")
-    def v2():
-        @get("/status")
-        async def v2_status(request, response):
-            return response.json({"version": "2.0"})
+Router.group("/api", lambda: [
+    Router.group("/v1", lambda: [
+        Router.get("/status", v1_status),
+    ]),
+    Router.group("/v2", lambda: [
+        Router.get("/status", v2_status),
+    ]),
+])
 ```
 
 ```bash
@@ -364,30 +362,28 @@ Middleware is code that runs before or after your route handler. Authentication.
 
 ### Middleware on a Single Route
 
-Attach middleware with the `@middleware` decorator:
+Attach middleware with the `@middleware` decorator. Middleware classes use `before_*` and `after_*` methods:
 
 ```python
 from tina4_python.core.router import get, middleware
 import time
 
-async def log_request(request, response, next_handler):
-    start = time.time()
-    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {request.method} {request.path}")
+class LogRequest:
+    def before_request(self, request, response):
+        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {request.method} {request.path}")
+        return request, response
 
-    result = await next_handler(request, response)
+    def after_request(self, request, response):
+        print(f"  Completed: {response.status_code}")
+        return request, response
 
-    duration = round((time.time() - start) * 1000, 2)
-    print(f"  Completed in {duration}ms")
-
-    return result
-
+@middleware(LogRequest)
 @get("/api/data")
-@middleware(log_request)
 async def get_data(request, response):
     return response.json({"data": [1, 2, 3]})
 ```
 
-The middleware function receives `request`, `response`, and `next_handler`. Call `await next_handler(request, response)` to continue to the route handler. Skip that call and the handler never runs -- the chain stops cold. Useful for blocking unauthorized requests.
+Middleware classes have `before_*` methods (called before the handler) and `after_*` methods (called after). If a `before_*` method sets `response.status_code` to 400 or above, the handler is skipped entirely. Useful for blocking unauthorized requests.
 
 ### Blocking Middleware
 
@@ -396,16 +392,15 @@ Middleware that checks for an API key:
 ```python
 from tina4_python.core.router import get, middleware
 
-async def require_api_key(request, response, next_handler):
-    api_key = request.headers.get("X-API-Key", "")
+class RequireApiKey:
+    def before_check(self, request, response):
+        api_key = request.headers.get("x-api-key", "")
+        if api_key != "my-secret-key":
+            return request, response.json({"error": "Invalid API key"}, 401)
+        return request, response
 
-    if api_key != "my-secret-key":
-        return response.json({"error": "Invalid API key"}, 401)
-
-    return await next_handler(request, response)
-
+@middleware(RequireApiKey)
 @get("/api/secret")
-@middleware(require_api_key)
 async def secret_data(request, response):
     return response.json({"secret": "The answer is 42"})
 ```
@@ -430,16 +425,16 @@ curl http://localhost:7145/api/secret -H "X-API-Key: my-secret-key"
 
 ### Multiple Middleware
 
-Chain multiple middleware as arguments:
+Chain multiple middleware classes as arguments:
 
 ```python
+@middleware(LogRequest, RequireApiKey)
 @get("/api/important")
-@middleware(log_request, require_api_key)
 async def important_data(request, response):
     return response.json({"data": "important stuff"})
 ```
 
-Middleware runs left to right: `log_request` first, then `require_api_key`, then the route handler. If any middleware skips `next_handler`, the chain stops there.
+Middleware runs left to right: `LogRequest` first, then `RequireApiKey`, then the route handler. If any middleware's `before_*` method returns a response with status 400+, the chain stops and the handler is skipped.
 
 ---
 
@@ -959,8 +954,8 @@ async def secret(request, response):
 
 ### 7. Group prefix must start with a slash
 
-**Problem:** `@group("api/v1")` produces routes that do not match.
+**Problem:** `Router.group("api/v1", ...)` produces routes that do not match.
 
 **Cause:** The group prefix should start with `/` for consistency.
 
-**Fix:** Start group prefixes with `/`: `@group("/api/v1")`.
+**Fix:** Start group prefixes with `/`: `Router.group("/api/v1", ...)`.

@@ -27,7 +27,7 @@ $payload = [
 $token = Auth::getToken($payload, $secret);
 ```
 
-`getToken()` signs the payload with HS256 (HMAC-SHA256) using the provided secret (or the `SECRET` env var if omitted). Returns a JWT string:
+`getToken()` signs the payload with HS256 (HMAC-SHA256) using the provided secret. The `$secret` parameter is **required**. Returns a JWT string:
 
 ```
 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo0MiwiZW1haWwiOiJhbGljZUBleGFtcGxlLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTcxMTExMjYwMCwiZXhwIjoxNzExMTE2MjAwfQ.abc123signature
@@ -42,10 +42,10 @@ Three parts separated by dots: header, payload, signature. The signature ensures
 Tokens expire after 60 minutes by default. Configure in `.env`:
 
 ```dotenv
-TINA4_TOKEN_EXPIRES_IN=60
+TINA4_TOKEN_LIMIT=60
 ```
 
-Value in **minutes**:
+Value in **minutes** (default: 60):
 
 | Value | Duration |
 |-------|----------|
@@ -68,10 +68,10 @@ $payload = Auth::validToken($token, $secret);
 ### Reading the Payload
 
 ```php
-$payload = Auth::getPayload($token, $secret);
+$payload = Auth::getPayload($token);
 ```
 
-Returns the decoded payload **without validation** -- it just decodes the token:
+Returns the decoded payload **without validation** -- it just decodes the token. Note that `getPayload()` takes only the token string -- no secret is needed because it does not verify the signature:
 
 ```php
 [
@@ -97,7 +97,13 @@ Set the secret key in `.env`:
 SECRET=my-super-secret-key-at-least-32-chars
 ```
 
-The `secret` parameter on `getToken()`, `validToken()`, and `getPayload()` is optional -- if omitted, Tina4 reads from the `SECRET` env var. If neither is set, Tina4 falls back to generating a random key at `secrets/jwt.key` on first run.
+The `$secret` parameter is **required** on `getToken()` and `validToken()`. Pass it explicitly -- there is no automatic fallback. Read it from your `.env` in your route handler:
+
+```php
+$secret = $_ENV["SECRET"] ?? getenv("SECRET");
+```
+
+`getPayload()` does not take a secret at all -- it decodes without verifying.
 
 Guard this key. Anyone who has it can forge tokens.
 
@@ -285,7 +291,7 @@ A reusable gate:
 use Tina4\Auth;
 
 function authMiddleware($request, $response, $next) {
-    $authHeader = $request->headers["Authorization"] ?? "";
+    $authHeader = $request->header("Authorization") ?? "";
 
     if (empty($authHeader) || !str_starts_with($authHeader, "Bearer ")) {
         return $response->json(["error" => "Authorization header required"], 401);
@@ -416,7 +422,7 @@ use Tina4\Auth;
 
 function requireRole($role) {
     return function ($request, $response, $next) use ($role) {
-        $authHeader = $request->headers["Authorization"] ?? "";
+        $authHeader = $request->header("Authorization") ?? "";
         if (empty($authHeader) || !str_starts_with($authHeader, "Bearer ")) {
             return $response->json(["error" => "Authorization required"], 401);
         }
@@ -675,7 +681,7 @@ Create `src/routes/middleware.php`:
 use Tina4\Auth;
 
 function authMiddleware($request, $response, $next) {
-    $authHeader = $request->headers["Authorization"] ?? "";
+    $authHeader = $request->header("Authorization") ?? "";
 
     if (empty($authHeader) || !str_starts_with($authHeader, "Bearer ")) {
         return $response->json(["error" => "Authorization required. Send: Authorization: Bearer <token>"], 401);
@@ -866,7 +872,7 @@ Router::put("/api/profile/password", function ($request, $response) {
 
 **Problem:** Tokens that worked yesterday return 401 today.
 
-**Cause:** Default lifetime is 60 minutes (`TINA4_TOKEN_EXPIRES_IN=60`). After that, the token is invalid.
+**Cause:** Default lifetime is 60 minutes (`TINA4_TOKEN_LIMIT=60`). After that, the token is invalid.
 
 **Fix:** Issue a new token at login. For long-lived sessions, use refresh tokens: a short-lived access token (15 minutes) paired with a long-lived refresh token (7 days).
 

@@ -403,7 +403,7 @@ Create `src/routes/admin_products.rb`:
 
 ```ruby
 Tina4::Router.get("/admin/products") do |request, response|
-  db = Tina4::Database.connection
+  db = Tina4.database
   products = db.fetch("SELECT * FROM products ORDER BY name")
 
   response.render("admin-products.html", {

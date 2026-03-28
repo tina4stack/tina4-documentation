@@ -294,42 +294,45 @@ You can mix function-based and class-based middleware freely. They run in the or
 Apply middleware to all routes in a group:
 
 ```python
-from tina4_python.core.router import get, post, group, middleware
+from tina4_python.core.router import Router, get, post, middleware
 
-@group("/api/v1")
-@middleware(TimingMiddleware, SecurityHeaders)
 def api_v1():
 
+    @middleware(TimingMiddleware, SecurityHeaders)
     @get("/users")
     async def list_users(request, response):
         return response.json({"users": []})
 
+    @middleware(TimingMiddleware, SecurityHeaders)
     @post("/users")
     async def create_user(request, response):
         return response.json({"created": True}, 201)
 
+    @middleware(TimingMiddleware, SecurityHeaders)
     @get("/products")
     async def list_products(request, response):
         return response.json({"products": []})
+
+Router.group("/api/v1", api_v1, middleware=[TimingMiddleware, SecurityHeaders])
 ```
 
 Every route inside the group now has `TimingMiddleware` and `SecurityHeaders` applied. You can still add route-specific middleware on top:
 
 ```python
-@group("/api/v1")
-@middleware(RequestIdMiddleware)
 def api_v1():
 
     @get("/public")
     async def public_endpoint(request, response):
-        # Only RequestIdMiddleware runs
+        # Only group middleware runs
         return response.json({"public": True})
 
     @middleware(AuthMiddleware)
     @post("/admin")
     async def admin_endpoint(request, response):
-        # RequestIdMiddleware + AuthMiddleware both run
+        # Group middleware + AuthMiddleware both run
         return response.json({"admin": True})
+
+Router.group("/api/v1", api_v1, middleware=[RequestIdMiddleware])
 ```
 
 Group middleware always runs before route-specific middleware. This means authentication checks at the group level cannot be bypassed by individual routes.
@@ -516,10 +519,8 @@ class JwtAuthMiddleware:
 Apply it to a group of protected routes:
 
 ```python
-from tina4_python.core.router import get, post, group, middleware
+from tina4_python.core.router import Router, get, post, middleware
 
-@group("/api/protected")
-@middleware(JwtAuthMiddleware)
 def protected_routes():
 
     @get("/profile")
@@ -530,6 +531,8 @@ def protected_routes():
     async def update_settings(request, response):
         user_id = request.user["sub"]
         return response({"updated": True, "user_id": user_id})
+
+Router.group("/api/protected", protected_routes, middleware=[JwtAuthMiddleware])
 ```
 
 The middleware short-circuits with 401 if the token is missing or invalid. The route handler never runs. If the token is valid, the decoded payload is available as `request.user`.
@@ -552,8 +555,8 @@ async def api_key_middleware(request, response, next_handler):
 
     db = Database()
     key_record = db.fetch_one(
-        "SELECT id, name, rate_limit, is_active FROM api_keys WHERE key_value = :key",
-        {"key": api_key}
+        "SELECT id, name, rate_limit, is_active FROM api_keys WHERE key_value = ?",
+        [api_key]
     )
 
     if key_record is None:
@@ -564,8 +567,8 @@ async def api_key_middleware(request, response, next_handler):
 
     # Update last used timestamp
     db.execute(
-        "UPDATE api_keys SET last_used_at = :now, request_count = request_count + 1 WHERE id = :id",
-        {"now": datetime.now().isoformat(), "id": key_record["id"]}
+        "UPDATE api_keys SET last_used_at = ?, request_count = request_count + 1 WHERE id = ?",
+        [datetime.now().isoformat(), key_record["id"]]
     )
 
     # Attach key info to request
@@ -681,8 +684,8 @@ async def api_key_middleware(request, response, next_handler):
 
     db = Database()
     key_record = db.fetch_one(
-        "SELECT id, name, is_active FROM api_keys WHERE key_value = :key",
-        {"key": api_key}
+        "SELECT id, name, is_active FROM api_keys WHERE key_value = ?",
+        [api_key]
     )
 
     if key_record is None:
@@ -692,8 +695,8 @@ async def api_key_middleware(request, response, next_handler):
         return response.json({"error": "API key has been deactivated"}, 403)
 
     db.execute(
-        "UPDATE api_keys SET last_used_at = :now, request_count = request_count + 1 WHERE id = :id",
-        {"now": datetime.now().isoformat(), "id": key_record["id"]}
+        "UPDATE api_keys SET last_used_at = ?, request_count = request_count + 1 WHERE id = ?",
+        [datetime.now().isoformat(), key_record["id"]]
     )
 
     request.api_key_id = key_record["id"]
@@ -710,8 +713,8 @@ async def create_api_key(request, response):
     key_value = f"tk_{secrets.token_hex(24)}"
 
     db.execute(
-        "INSERT INTO api_keys (name, key_value) VALUES (:name, :key)",
-        {"name": name, "key": key_value}
+        "INSERT INTO api_keys (name, key_value) VALUES (?, ?)",
+        [name, key_value]
     )
 
     key = db.fetch_one("SELECT * FROM api_keys WHERE id = last_insert_rowid()")
@@ -733,11 +736,11 @@ async def deactivate_api_key(request, response):
     db = Database()
     key_id = request.params["id"]
 
-    existing = db.fetch_one("SELECT id FROM api_keys WHERE id = :id", {"id": key_id})
+    existing = db.fetch_one("SELECT id FROM api_keys WHERE id = ?", [key_id])
     if existing is None:
         return response.json({"error": "API key not found"}, 404)
 
-    db.execute("UPDATE api_keys SET is_active = 0 WHERE id = :id", {"id": key_id})
+    db.execute("UPDATE api_keys SET is_active = 0 WHERE id = ?", [key_id])
     return response.json({"message": "API key deactivated"})
 
 

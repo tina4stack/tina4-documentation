@@ -19,7 +19,7 @@ There are two entry points.
 Import `QueryBuilder` from the ORM package and call the static `from()` factory:
 
 ```typescript
-import { QueryBuilder } from "tina4-nodejs";
+import { QueryBuilder } from "tina4-nodejs/orm";
 
 const users = QueryBuilder.from("users", db)
     .select("id", "name", "email")
@@ -412,7 +412,7 @@ The QueryBuilder pairs naturally with route handlers and `res.json()`:
 
 ```typescript
 // src/routes/api/products/get.ts
-import { QueryBuilder } from "tina4-nodejs";
+import { QueryBuilder } from "tina4-nodejs/orm";
 import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
@@ -449,7 +449,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 
 ```typescript
 // src/routes/api/users/[id]/get.ts
-import { QueryBuilder } from "tina4-nodejs";
+import { QueryBuilder } from "tina4-nodejs/orm";
 import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
@@ -469,7 +469,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 
 ```typescript
 // src/routes/api/dashboard/get.ts
-import { QueryBuilder } from "tina4-nodejs";
+import { QueryBuilder } from "tina4-nodejs/orm";
 import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
@@ -559,7 +559,7 @@ Query parameters for `/api/reports/revenue`:
 Create `src/routes/api/reports/revenue/get.ts`:
 
 ```typescript
-import { QueryBuilder } from "tina4-nodejs";
+import { QueryBuilder } from "tina4-nodejs/orm";
 import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
@@ -601,7 +601,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 Create `src/routes/api/reports/top-customers/get.ts`:
 
 ```typescript
-import { QueryBuilder } from "tina4-nodejs";
+import { QueryBuilder } from "tina4-nodejs/orm";
 import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
@@ -633,7 +633,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 Create `src/routes/api/reports/summary/get.ts`:
 
 ```typescript
-import { QueryBuilder } from "tina4-nodejs";
+import { QueryBuilder } from "tina4-nodejs/orm";
 import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export default async function (req: Tina4Request, res: Tina4Response) {

@@ -198,9 +198,9 @@ async def upload(request, response):
     file = request.files["document"]
 
     return response.json({
-        "filename": file.filename,
-        "content_type": file.content_type,
-        "size": len(file.content)
+        "filename": file["filename"],
+        "content_type": file["type"],
+        "size": file["size"]
     })
 ```
 
@@ -225,18 +225,18 @@ async def upload_and_save(request, response):
 
     # Validate file type
     allowed = ["image/jpeg", "image/png", "image/webp"]
-    if file.content_type not in allowed:
-        return response.json({"error": f"File type {file.content_type} not allowed"}, 400)
+    if file["type"] not in allowed:
+        return response.json({"error": f"File type {file['type']} not allowed"}, 400)
 
     # Save to public directory
     import os
-    save_path = os.path.join("src", "public", "images", file.filename)
+    save_path = os.path.join("src", "public", "images", file["filename"])
     with open(save_path, "wb") as f:
-        f.write(file.content)
+        f.write(file["content"])
 
     return response.json({
         "message": "Photo uploaded",
-        "url": f"/images/{file.filename}"
+        "url": f"/images/{file['filename']}"
     }, 201)
 ```
 
@@ -349,12 +349,12 @@ async def download_report(request, response):
 
 Tina4 auto-detects the content type from the file extension. The browser displays or downloads the file based on content type.
 
-To force a download (instead of inline display):
+To force a download (instead of inline display), pass a `download_name` to set the `Content-Disposition` header:
 
 ```python
 @get("/download/data")
 async def download_data(request, response):
-    return response.file("data/export.csv", download=True, filename="sales-data.csv")
+    return response.file("data/export.csv", download_name="sales-data.csv")
 ```
 
 ### Setting Status Codes
@@ -420,32 +420,32 @@ Set cookies on the response:
 @post("/api/login")
 async def login(request, response):
     # Set a session cookie
-    return response.cookie("session_id", "abc123", {
-        "httponly": True,
-        "secure": True,
-        "max_age": 3600,
-        "path": "/"
-    }).json({"message": "Logged in"})
+    return response.cookie("session_id", "abc123",
+        path="/",
+        max_age=3600,
+        http_only=True,
+        secure=True,
+        same_site="Lax"
+    ).json({"message": "Logged in"})
 
 @post("/api/logout")
 async def logout(request, response):
     # Delete a cookie by setting max_age to 0
-    return response.cookie("session_id", "", {
-        "max_age": 0,
-        "path": "/"
-    }).json({"message": "Logged out"})
+    return response.cookie("session_id", "",
+        path="/",
+        max_age=0
+    ).json({"message": "Logged out"})
 ```
 
-Cookie options:
+Cookie keyword arguments:
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `httponly` | bool | Cookie not accessible via JavaScript |
-| `secure` | bool | Cookie only sent over HTTPS |
-| `max_age` | int | Lifetime in seconds (0 = delete) |
-| `path` | string | URL path scope |
-| `domain` | string | Domain scope |
-| `samesite` | string | "Strict", "Lax", or "None" |
+| Argument | Type | Default | Description |
+|----------|------|---------|-------------|
+| `path` | str | `"/"` | URL path scope |
+| `max_age` | int | `3600` | Lifetime in seconds (0 = delete) |
+| `http_only` | bool | `True` | Cookie not accessible via JavaScript |
+| `secure` | bool | `False` | Cookie only sent over HTTPS |
+| `same_site` | str | `"Lax"` | "Strict", "Lax", or "None" |
 
 ---
 
@@ -526,37 +526,37 @@ async def upload_file(request, response):
     file = request.files["file"]
 
     # Check file type
-    if file.content_type not in ALLOWED_TYPES:
+    if file["type"] not in ALLOWED_TYPES:
         return response.json({
-            "error": f"File type '{file.content_type}' not allowed",
+            "error": f"File type '{file['type']}' not allowed",
             "allowed": list(ALLOWED_TYPES.keys())
         }, 400)
 
     # Check file size
-    if len(file.content) > MAX_FILE_SIZE:
+    if file["size"] > MAX_FILE_SIZE:
         return response.json({
             "error": f"File too large. Maximum size is {MAX_FILE_SIZE // (1024 * 1024)} MB",
-            "size": len(file.content)
+            "size": file["size"]
         }, 400)
 
     # Generate a unique filename
-    ext = ALLOWED_TYPES[file.content_type]
+    ext = ALLOWED_TYPES[file["type"]]
     unique_name = f"{uuid.uuid4().hex}{ext}"
 
     # Save the file
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     save_path = os.path.join(UPLOAD_DIR, unique_name)
     with open(save_path, "wb") as f:
-        f.write(file.content)
+        f.write(file["content"])
 
     return response.json({
         "message": "File uploaded successfully",
         "file": {
-            "original_name": file.filename,
+            "original_name": file["filename"],
             "saved_as": unique_name,
             "url": f"/uploads/{unique_name}",
-            "size": len(file.content),
-            "content_type": file.content_type
+            "size": file["size"],
+            "content_type": file["type"]
         }
     }, 201)
 ```
@@ -778,9 +778,9 @@ async def list_submissions(request, response):
 
 **Problem:** You called `response.cookie()` but the cookie does not appear in the browser.
 
-**Cause:** If you set `secure: True`, the cookie is only sent over HTTPS. On `http://localhost`, the browser ignores it.
+**Cause:** If you set `secure=True`, the cookie is only sent over HTTPS. On `http://localhost`, the browser ignores it.
 
-**Fix:** During development on HTTP, set `"secure": False`. Enable `"secure": True` only in production where HTTPS is configured.
+**Fix:** During development on HTTP, set `secure=False` (the default). Enable `secure=True` only in production where HTTPS is configured.
 
 ### 6. Large file uploads fail silently
 

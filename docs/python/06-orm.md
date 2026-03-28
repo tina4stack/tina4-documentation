@@ -92,7 +92,20 @@ class User(ORM):
     email_address = StringField(required=True)
 ```
 
-With this mapping, `user.first_name` reads from and writes to the `fname` column in the database. The ORM handles the conversion in both directions -- on `load()`, `save()`, `select()`, and `to_dict()`. This is useful when working with legacy databases or third-party schemas where you cannot rename the columns.
+With this mapping, `user.first_name` reads from and writes to the `fname` column in the database. The ORM handles the conversion in both directions -- on `find()`, `save()`, `select()`, and `to_dict()`. This is useful when working with legacy databases or third-party schemas where you cannot rename the columns.
+
+### auto_map and Case Conversion Utilities
+
+The `auto_map` flag exists on the ORM base class for cross-language parity with the PHP and Node.js versions. In Python it is a no-op because Python convention already uses `snake_case`, which typically matches database column names.
+
+For cases where you need to convert between naming conventions (for example, when serialising to a camelCase JSON API), two utility functions are available:
+
+```python
+from tina4_python.orm.model import snake_to_camel, camel_to_snake
+
+snake_to_camel("first_name")   # "firstName"
+camel_to_snake("firstName")    # "first_name"
+```
 
 ---
 
@@ -140,11 +153,10 @@ To update an existing record:
 
 ```python
 @put("/api/notes/{id:int}")
-async def update_note(request, response):
-    note = Note()
-    note.load("id = :id", {"id": request.params["id"]})
+async def update_note(id, request, response):
+    note = Note.find(id)
 
-    if note.id is None:
+    if note is None:
         return response.json({"error": "Note not found"}, 404)
 
     body = request.body
@@ -162,24 +174,27 @@ async def update_note(request, response):
     return response.json({"message": "Note updated", "note": note.to_dict()})
 ```
 
-### load -- Fetch One Record
+### find -- Fetch One Record
 
 ```python
 from tina4_python.core.router import get
 from src.orm.note import Note
 
 @get("/api/notes/{id:int}")
-async def get_note(request, response):
-    note = Note()
-    note.load("id = :id", {"id": request.params["id"]})
+async def get_note(id, request, response):
+    note = Note.find(id)
 
-    if note.id is None:
+    if note is None:
         return response.json({"error": "Note not found"}, 404)
 
     return response.json(note.to_dict())
 ```
 
-`load()` takes a WHERE clause and parameters. It populates the model instance with the first matching row. If no row matches, the primary key remains `None`.
+`find()` takes a primary key value and returns a model instance, or `None` if no row matches. For queries by other columns, use `where()`:
+
+```python
+notes, count = Note.where("category = ?", ["work"])
+```
 
 ### delete -- Remove a Record
 
@@ -188,11 +203,10 @@ from tina4_python.core.router import delete as delete_route
 from src.orm.note import Note
 
 @delete_route("/api/notes/{id:int}")
-async def delete_note(request, response):
-    note = Note()
-    note.load("id = :id", {"id": request.params["id"]})
+async def delete_note(id, request, response):
+    note = Note.find(id)
 
-    if note.id is None:
+    if note is None:
         return response.json({"error": "Note not found"}, 404)
 
     note.delete()
@@ -208,36 +222,30 @@ async def list_notes(request, response):
     category = request.params.get("category")
 
     if category:
-        result = Note.select(
-            "category = :category",
-            {"category": category},
-            order_by="created_at DESC"
-        )
+        notes, count = Note.where("category = ?", [category])
     else:
-        result = Note.select(order_by="pinned DESC, created_at DESC")
+        notes, count = Note.all()
 
-    notes = [note.to_dict() for note in result]
-
-    return response.json({"notes": notes, "count": len(notes)})
+    return response.json({
+        "notes": [note.to_dict() for note in notes],
+        "count": count
+    })
 ```
 
-`select()` returns a list of model instances. You can pass a filter, parameters, ordering, and pagination:
+`where()` takes a WHERE clause with `?` placeholders and a list of parameters. It returns a tuple of `(instances, total_count)`. `all()` fetches all records. Both support pagination:
 
 ```python
 # With pagination
-result = Note.select(
-    order_by="created_at DESC",
-    limit=20,
-    offset=40
-)
+notes, count = Note.where("category = ?", ["work"], limit=20, offset=40)
 
-# Paginated result with metadata
-paginated = Note.to_paginate(
-    limit=20,
-    offset=0,
-    order_by="created_at DESC"
+# Fetch all with pagination
+notes, count = Note.all(limit=20, offset=0)
+
+# SQL-first query -- full control over the SQL
+notes, count = Note.select(
+    "SELECT * FROM notes WHERE pinned = ? ORDER BY created_at DESC",
+    [1], limit=20, offset=0
 )
-# paginated = {"data": [...], "total": 150, "page": 1, "per_page": 20, ...}
 ```
 
 ---
@@ -249,22 +257,17 @@ paginated = Note.to_paginate(
 Convert a model instance to a dictionary:
 
 ```python
-note = Note()
-note.load("id = :id", {"id": 1})
+note = Note.find(1)
 
 data = note.to_dict()
 # {"id": 1, "title": "Shopping List", "content": "Milk, eggs", "category": "personal", "pinned": False, "created_at": "2026-03-22 14:30:00", "updated_at": "2026-03-22 14:30:00"}
 ```
 
-You can include or exclude specific fields:
+The `include` parameter is used to include relationship data (see Eager Loading below):
 
 ```python
-# Only include these fields
-data = note.to_dict(include=["id", "title", "category"])
-# {"id": 1, "title": "Shopping List", "category": "personal"}
-
-# Exclude sensitive fields
-data = note.to_dict(exclude=["updated_at"])
+# Include relationships in the dict
+data = note.to_dict(include=["comments"])
 ```
 
 ### to_json
@@ -321,11 +324,10 @@ Now use `has_many` to get an author's posts:
 
 ```python
 @get("/api/authors/{id:int}")
-async def get_author(request, response):
-    author = Author()
-    author.load("id = :id", {"id": request.params["id"]})
+async def get_author(id, request, response):
+    author = Author.find(id)
 
-    if author.id is None:
+    if author is None:
         return response.json({"error": "Author not found"}, 404)
 
     posts = author.has_many(BlogPost, "author_id")
@@ -365,11 +367,10 @@ A post belongs to an author:
 
 ```python
 @get("/api/posts/{id:int}")
-async def get_post(request, response):
-    post = BlogPost()
-    post.load("id = :id", {"id": request.params["id"]})
+async def get_post(id, request, response):
+    post = BlogPost.find(id)
 
-    if post.id is None:
+    if post is None:
         return response.json({"error": "Post not found"}, 404)
 
     author = post.belongs_to(Author, "author_id")
@@ -478,18 +479,17 @@ class BlogPost(ORM):
 
     @classmethod
     def published(cls):
-        return cls.select("status = :status", {"status": "published"}, order_by="created_at DESC")
+        return cls.where("status = ?", ["published"])
 
     @classmethod
     def drafts(cls):
-        return cls.select("status = :status", {"status": "draft"}, order_by="created_at DESC")
+        return cls.where("status = ?", ["draft"])
 
     @classmethod
     def recent(cls, days=7):
-        return cls.select(
-            "created_at > datetime('now', :days)",
-            {"days": f"-{days} days"},
-            order_by="created_at DESC"
+        return cls.where(
+            "created_at > datetime('now', ?)",
+            [f"-{days} days"]
         )
 ```
 
@@ -622,7 +622,7 @@ class BlogPost(ORM):
 
     @classmethod
     def published(cls):
-        return cls.select("status = :status", {"status": "published"}, order_by="created_at DESC")
+        return cls.where("status = ?", ["published"])
 ```
 
 Create `src/orm/comment.py`:
@@ -667,16 +667,15 @@ async def create_author(request, response):
 
 @get("/api/authors/{id:int}")
 async def get_author(request, response):
-    author = Author()
-    author.load("id = :id", {"id": request.params["id"]})
+    author = Author.find(request.params["id"])
 
-    if author.id is None:
+    if author is None:
         return response.json({"error": "Author not found"}, 404)
 
-    posts = author.has_many(BlogPost, "author_id")
+    posts, count = BlogPost.where("author_id = ?", [author.id])
 
     data = author.to_dict()
-    data["posts"] = [p.to_dict(include=["id", "title", "slug", "status", "created_at"]) for p in posts]
+    data["posts"] = [p.to_dict() for p in posts]
 
     return response.json(data)
 
@@ -686,9 +685,8 @@ async def create_post(request, response):
     body = request.body
 
     # Verify author exists
-    author = Author()
-    author.load("id = :id", {"id": body.get("author_id")})
-    if author.id is None:
+    author = Author.find(body.get("author_id"))
+    if author is None:
         return response.json({"error": "Author not found"}, 404)
 
     blog_post = BlogPost()
@@ -721,18 +719,17 @@ async def list_posts(request, response):
 
 
 @get("/api/posts/{id:int}")
-async def get_post(request, response):
-    blog_post = BlogPost()
-    blog_post.load("id = :id", {"id": request.params["id"]})
+async def get_post(id, request, response):
+    blog_post = BlogPost.find(id)
 
-    if blog_post.id is None:
+    if blog_post is None:
         return response.json({"error": "Post not found"}, 404)
 
     author = blog_post.belongs_to(Author, "author_id")
     comments = blog_post.has_many(Comment, "post_id")
 
     data = blog_post.to_dict()
-    data["author"] = author.to_dict(include=["id", "name", "email"]) if author else None
+    data["author"] = author.to_dict() if author else None
     data["comments"] = [c.to_dict() for c in comments]
     data["comment_count"] = len(comments)
 
@@ -740,11 +737,10 @@ async def get_post(request, response):
 
 
 @post("/api/posts/{id:int}/comments")
-async def add_comment(request, response):
-    blog_post = BlogPost()
-    blog_post.load("id = :id", {"id": request.params["id"]})
+async def add_comment(id, request, response):
+    blog_post = BlogPost.find(id)
 
-    if blog_post.id is None:
+    if blog_post is None:
         return response.json({"error": "Post not found"}, 404)
 
     comment = Comment()
@@ -773,13 +769,13 @@ async def add_comment(request, response):
 
 **Fix:** Always call `save()` after modifying properties.
 
-### 2. load() returns None silently
+### 2. find() returns None
 
-**Problem:** You call `note.load(...)` but the note object has all None fields, and you do not get an error.
+**Problem:** You call `Note.find(id)` but get `None` instead of a note object.
 
-**Cause:** `load()` does not raise an exception when no row matches. It just leaves the object empty.
+**Cause:** `find()` returns `None` when no row matches the given primary key.
 
-**Fix:** Always check the primary key after `load()`: `if note.id is None: return 404`.
+**Fix:** Always check for `None` after `find()`: `if note is None: return 404`. Use `find_or_fail()` if you want a `ValueError` raised instead.
 
 ### 3. Circular imports with relationships
 
@@ -795,7 +791,7 @@ async def add_comment(request, response):
 
 **Cause:** `to_dict()` includes all fields by default.
 
-**Fix:** Use the `include` or `exclude` parameter: `user.to_dict(exclude=["password_hash"])`. Make this a habit for any model with sensitive fields.
+**Fix:** Build the response dict manually, omitting sensitive fields: `{"id": user.id, "name": user.name, "email": user.email}`. Or create a helper method on your model class that returns only safe fields.
 
 ### 5. Validation only runs on validate()
 

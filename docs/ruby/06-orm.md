@@ -54,7 +54,7 @@ Use the appropriate field declaration for your data types:
 Fields are nullable by default. To require a value:
 
 ```ruby
-string_field :name, required: true
+string_field :name, nullable: false
 string_field :description  # nullable by default
 ```
 
@@ -224,40 +224,32 @@ Returns an array of Product objects with all records.
 ### Filtering
 
 ```ruby
-product = Product.new
-
 # Simple filter
-electronics = product.select("*", "category = :category", { category: "Electronics" })
+electronics = Product.where("category = ?", ["Electronics"])
 
 # Multiple conditions
-affordable = product.select("*", "price < :max_price AND in_stock = :in_stock", {
-  max_price: 100,
-  in_stock: 1
-})
+affordable = Product.where("price < ? AND in_stock = ?", [100, 1])
 ```
 
 ### Ordering
 
 ```ruby
-product = Product.new
-sorted = product.select("*", "", {}, "price DESC")
+sorted = Product.all(order_by: "price DESC")
 ```
 
-The fourth argument is the ORDER BY clause.
+The `order_by` keyword argument is an ORDER BY clause.
 
 ### Pagination
 
 ```ruby
-product = Product.new
-
 page = 1
 per_page = 10
 offset = (page - 1) * per_page
 
-products = product.select("*", "", {}, "name ASC", per_page, offset)
+products = Product.all(order_by: "name ASC", limit: per_page, offset: offset)
 ```
 
-The fifth argument is LIMIT, the sixth is OFFSET.
+The `limit` and `offset` keyword arguments control pagination.
 
 ### A Full List Endpoint with Filters
 
@@ -275,16 +267,16 @@ Tina4::Router.get("/api/products") do |request, response|
 
   # Build filter
   conditions = []
-  params = {}
+  params = []
 
   unless category.empty?
-    conditions << "category = :category"
-    params[:category] = category
+    conditions << "category = ?"
+    params << category
   end
 
-  conditions << "price >= :min_price AND price <= :max_price"
-  params[:min_price] = min_price
-  params[:max_price] = max_price
+  conditions << "price >= ? AND price <= ?"
+  params << min_price
+  params << max_price
 
   filter = conditions.join(" AND ")
 
@@ -295,7 +287,8 @@ Tina4::Router.get("/api/products") do |request, response|
 
   offset = (page - 1) * per_page
 
-  products = product.select("*", filter, params, "#{sort} #{order}", per_page, offset)
+  sql = "SELECT * FROM products WHERE #{filter} ORDER BY #{sort} #{order}"
+  products = Product.select(sql, params, limit: per_page, offset: offset)
 
   results = products.map(&:to_h)
 
@@ -738,8 +731,7 @@ Create `src/routes/blog.rb`:
 ```ruby
 # List published posts with author
 Tina4::Router.get("/api/blog/posts") do |request, response|
-  post = Post.new
-  posts = post.select("*", "published = :published", { published: 1 }, "created_at DESC", 0, 0, ["user"])
+  posts = Post.select("SELECT * FROM posts WHERE published = ? ORDER BY created_at DESC", [1], include: ["user"])
 
   results = posts.map(&:to_h)
 
@@ -845,7 +837,64 @@ end
 
 ---
 
-## 15. Gotchas
+## 15. Field Name Mapping
+
+By default, Tina4 Ruby expects both field names and database columns to use `snake_case`. If your database uses `camelCase` columns (common when sharing a database with a JavaScript or Java backend), enable `auto_map` on your model:
+
+```ruby
+class Product < Tina4::ORM
+  integer_field :id, primary_key: true
+  string_field :product_name
+  float_field :unit_price
+
+  table_name "products"
+
+  auto_map true
+end
+```
+
+With `auto_map true`, Tina4 automatically translates between `snake_case` Ruby attributes and `camelCase` database columns (`product_name` maps to `productName`).
+
+You can also use the conversion helpers directly:
+
+```ruby
+Tina4.snake_to_camel("product_name")  # => "productName"
+Tina4.camel_to_snake("productName")   # => "product_name"
+```
+
+---
+
+## 16. Auto-CRUD with `Tina4::CRUD.to_crud`
+
+Beyond the `auto_crud true` declaration on models (section 12), Tina4 provides `Tina4::CRUD.to_crud` for generating a complete HTML CRUD interface -- a searchable, paginated table with create/edit/delete forms -- from a SQL query or ORM model:
+
+```ruby
+Tina4::Router.get("/admin/products") do |request, response|
+  response.html(Tina4::CRUD.to_crud(request, {
+    title: "Manage Products",
+    model: Product,
+    fields: [:id, :name, :category, :price, :in_stock]
+  }))
+end
+```
+
+You can also use a raw SQL query instead of a model:
+
+```ruby
+Tina4::Router.get("/admin/orders") do |request, response|
+  response.html(Tina4::CRUD.to_crud(request, {
+    title: "Orders",
+    sql: "SELECT id, customer_name, total, status FROM orders",
+    primary_key: "id"
+  }))
+end
+```
+
+`to_crud` automatically registers the supporting REST API routes (list, get, create, update, delete) for the interface.
+
+---
+
+## 17. Gotchas
 
 ### 1. Table Naming Convention
 

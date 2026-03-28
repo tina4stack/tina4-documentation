@@ -8,16 +8,19 @@ A Delphi IDE. Two packages installed. One form. In ten minutes you will have a r
 
 ## 1. What Is Tina4 Delphi
 
-Tina4 Delphi is a design-time component library for Delphi 10.4+ (FireMonkey / FMX). Six components, each solving one problem:
+Tina4 Delphi is a design-time component library for Delphi 10.4+ (FireMonkey / FMX). Nine components, each solving one problem:
 
 - **TTina4REST** for REST client configuration -- base URL, auth, headers
 - **TTina4RESTRequest** for declarative REST calls -- link an endpoint, a MemTable, and execute
 - **TTina4JSONAdapter** for static JSON to MemTable binding -- no HTTP required
 - **TTina4HTMLRender** for rendering HTML with CSS on an FMX canvas -- forms, tables, images, events
 - **TTina4HTMLPages** for SPA-style page navigation inside your desktop app
-- **TTina4Twig** for Twig-compatible template rendering
+- **TTina4WebSocketClient** for real-time WebSocket communication with auto-reconnect and ping/pong keepalive
+- **TTina4SocketServer** for raw TCP socket server functionality
+- **TTina4WebServer** for hosting an embedded HTTP web server
+- **TTina4Route** for declarative URL routing
 
-Plus a core utility unit (`Tina4Core.pas`) with standalone functions for HTTP, JSON, database, encoding, and shell commands.
+Plus a core utility unit (`Tina4Core.pas`) with standalone functions for HTTP, JSON, database, encoding, and shell commands. There is also `TTina4Twig`, a plain `TObject` class (not a design-time component) for Twig-compatible template rendering.
 
 ### What It Is Not
 
@@ -62,11 +65,11 @@ Right-click **Tina4Delphi** in the Project Manager and select **Build**. This co
 
 Right-click **Tina4DelphiDesign** and select **Build**, then **Install**. You should see a confirmation dialog:
 
-> Package Tina4DelphiDesign has been installed. The following new component(s) have been registered: TTina4REST, TTina4RESTRequest, TTina4JSONAdapter, TTina4HTMLRender, TTina4HTMLPages, TTina4Twig.
+> Package Tina4DelphiDesign has been installed. The following new component(s) have been registered: TTina4REST, TTina4RESTRequest, TTina4JSONAdapter, TTina4HTMLRender, TTina4HTMLPages, TTina4WebSocketClient, TTina4SocketServer, TTina4WebServer, TTina4Route.
 
 ### Step 5: Verify
 
-Open the Tool Palette. Search for "Tina4". All six components should appear under the **Tina4** category. If they do not, check that the output directories for both packages are on your IDE's library path.
+Open the Tool Palette. Search for "Tina4". All nine components should appear under the **Tina4Delphi** category. If they do not, check that the output directories for both packages are on your IDE's library path.
 
 ---
 
@@ -112,7 +115,12 @@ Here is the full inventory. Each gets its own chapter, but knowing the landscape
 | `TTina4JSONAdapter` | Binds static JSON to a MemTable | Offline data, config files |
 | `TTina4HTMLRender` | Renders HTML + CSS on an FMX canvas | Reports, dashboards, forms |
 | `TTina4HTMLPages` | SPA navigation between pages | Multi-page desktop apps |
-| `TTina4Twig` | Twig template engine | Dynamic HTML generation |
+| `TTina4WebSocketClient` | WebSocket client with auto-reconnect and keepalive | Real-time data feeds, chat |
+| `TTina4SocketServer` | Raw TCP socket server | Custom protocol servers |
+| `TTina4WebServer` | Embedded HTTP web server | Local dashboards, APIs |
+| `TTina4Route` | Declarative URL routing | REST endpoint definitions |
+
+Additionally, `TTina4Twig` is a plain `TObject` class (not a design-time component) that provides a Twig-compatible template engine for dynamic HTML generation.
 
 And the standalone utility functions in `Tina4Core.pas`:
 

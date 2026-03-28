@@ -223,8 +223,7 @@ async def register(request, response):
         return response({"error": "Name, email, and password are required"}, 400)
 
     # Check for existing user
-    existing = User()
-    results = existing.select("*", "email = :email", {"email": body["email"]})
+    results, count = User.where("email = ?", [body["email"]])
     if results:
         return response({"error": "Email already registered"}, 409)
 
@@ -250,8 +249,7 @@ async def login(request, response):
     if not body.get("email") or not body.get("password"):
         return response({"error": "Email and password are required"}, 400)
 
-    user = User()
-    results = user.select("*", "email = :email", {"email": body["email"]})
+    results, count = User.where("email = ?", [body["email"]])
 
     if not results:
         return response({"error": "Invalid credentials"}, 401)
@@ -318,19 +316,17 @@ async def list_tasks(request, response):
     limit = int(request.params.get("limit", 20))
     offset = (page - 1) * limit
 
-    task = Task()
     where = "1=1"
-    params = {}
+    params = []
 
     if status:
-        where += " AND status = :status"
-        params["status"] = status
+        where += " AND status = ?"
+        params.append(status)
     if assigned_to:
-        where += " AND assigned_to = :assigned_to"
-        params["assigned_to"] = int(assigned_to)
+        where += " AND assigned_to = ?"
+        params.append(int(assigned_to))
 
-    tasks = task.select("*", where, params, order_by="created_at DESC",
-                        limit=limit, offset=offset)
+    tasks, total = Task.where(where, params, limit=limit, offset=offset)
 
     return response({
         "tasks": [t.to_dict() for t in tasks],
@@ -343,23 +339,20 @@ async def list_tasks(request, response):
 async def get_task(request, response):
     task_id = request.params["task_id"]
 
-    task = Task()
-    task.load(task_id)
+    task = Task.find(task_id)
 
-    if not task.id:
+    if task is None:
         return response({"error": "Task not found"}, 404)
 
     # Load creator and assignee names
-    creator = User()
-    creator.load(task.created_by)
+    creator = User.find(task.created_by)
 
     result = task.to_dict()
-    result["creator_name"] = creator.name if creator.id else "Unknown"
+    result["creator_name"] = creator.name if creator else "Unknown"
 
     if task.assigned_to:
-        assignee = User()
-        assignee.load(task.assigned_to)
-        result["assignee_name"] = assignee.name if assignee.id else "Unassigned"
+        assignee = User.find(task.assigned_to)
+        result["assignee_name"] = assignee.name if assignee else "Unassigned"
 
     return response(result)
 
@@ -399,10 +392,9 @@ async def update_task(request, response):
     task_id = request.params["task_id"]
     body = request.body
 
-    task = Task()
-    task.load(task_id)
+    task = Task.find(task_id)
 
-    if not task.id:
+    if task is None:
         return response({"error": "Task not found"}, 404)
 
     if "title" in body:
@@ -443,10 +435,9 @@ async def update_task(request, response):
 async def delete_task(request, response):
     task_id = request.params["task_id"]
 
-    task = Task()
-    task.load(task_id)
+    task = Task.find(task_id)
 
-    if not task.id:
+    if task is None:
         return response({"error": "Task not found"}, 404)
 
     task.delete()
@@ -554,14 +545,12 @@ from tina4_python.core.router import template
 
 async def notify_assignee(task):
     """Send email notification when a task is assigned."""
-    assignee = User()
-    assignee.load(task.assigned_to)
+    assignee = User.find(task.assigned_to)
 
-    if not assignee.id:
+    if assignee is None:
         return
 
-    creator = User()
-    creator.load(task.created_by)
+    creator = User.find(task.created_by)
 
     html_body = template("emails/task-assigned.html",
         assignee_name=assignee.name,
@@ -569,7 +558,7 @@ async def notify_assignee(task):
         task_description=task.description or "No description",
         task_priority=task.priority,
         task_due_date=task.due_date or "No due date",
-        creator_name=creator.name if creator.id else "Unknown",
+        creator_name=creator.name if creator else "Unknown",
         task_url=f"http://localhost:7145/admin#task-{task.id}"
     )
 

@@ -103,18 +103,16 @@ from tina4_python.graphql import GraphQL
 # Resolve the "products" query
 @GraphQL.resolve("Query", "products")
 async def resolve_products(root, args):
-    product = Product()
-    products = product.select("*", order_by="name ASC")
+    products, count = Product.where("1=1")
     return [p.to_dict() for p in products]
 
 
 # Resolve the "product" query
 @GraphQL.resolve("Query", "product")
 async def resolve_product(root, args):
-    product = Product()
-    product.load(args["id"])
+    product = Product.find(args["id"])
 
-    if not product.id:
+    if product is None:
         return None
 
     return product.to_dict()
@@ -267,10 +265,9 @@ async def resolve_create_product(root, args):
 
 @GraphQL.resolve("Mutation", "updateProduct")
 async def resolve_update_product(root, args):
-    product = Product()
-    product.load(args["id"])
+    product = Product.find(args["id"])
 
-    if not product.id:
+    if product is None:
         return None
 
     input_data = args["input"]
@@ -289,10 +286,9 @@ async def resolve_update_product(root, args):
 
 @GraphQL.resolve("Mutation", "deleteProduct")
 async def resolve_delete_product(root, args):
-    product = Product()
-    product.load(args["id"])
+    product = Product.find(args["id"])
 
-    if not product.id:
+    if product is None:
         return {"success": False, "message": "Product not found"}
 
     product.delete()
@@ -301,8 +297,7 @@ async def resolve_delete_product(root, args):
 
 @GraphQL.resolve("Query", "productsByCategory")
 async def resolve_products_by_category(root, args):
-    product = Product()
-    products = product.select("*", "category = :category", {"category": args["category"]})
+    products, count = Product.where("category = ?", [args["category"]])
     return [p.to_dict() for p in products]
 ```
 
@@ -424,47 +419,41 @@ Add resolvers for the nested types:
 ```python
 @GraphQL.resolve("Query", "posts")
 async def resolve_posts(root, args):
-    post = Post()
-    posts = post.select("*", "published = :pub", {"pub": 1}, order_by="created_at DESC")
+    posts, count = Post.where("published = ?", [1])
     return [p.to_dict() for p in posts]
 
 
 @GraphQL.resolve("Query", "post")
 async def resolve_post(root, args):
-    post = Post()
-    post.load(args["id"])
-    return post.to_dict() if post.id else None
+    post = Post.find(args["id"])
+    return post.to_dict() if post else None
 
 
 # Resolve Post.author (nested field)
 @GraphQL.resolve("Post", "author")
 async def resolve_post_author(post, args):
-    user = User()
-    user.load(post["user_id"])
-    return user.to_dict()
+    user = User.find(post["user_id"])
+    return user.to_dict() if user else None
 
 
 # Resolve Post.comments (nested field)
 @GraphQL.resolve("Post", "comments")
 async def resolve_post_comments(post, args):
-    comment = Comment()
-    comments = comment.select("*", "post_id = :post_id", {"post_id": post["id"]})
+    comments, count = Comment.where("post_id = ?", [post["id"]])
     return [c.to_dict() for c in comments]
 
 
 # Resolve Post.commentCount (computed field)
 @GraphQL.resolve("Post", "commentCount")
 async def resolve_post_comment_count(post, args):
-    comment = Comment()
-    results = comment.select("count(*) as cnt", "post_id = :post_id", {"post_id": post["id"]})
-    return int(results[0].cnt) if results else 0
+    comments, count = Comment.where("post_id = ?", [post["id"]])
+    return count
 
 
 # Resolve User.posts (nested field)
 @GraphQL.resolve("User", "posts")
 async def resolve_user_posts(user, args):
-    post = Post()
-    posts = post.select("*", "user_id = :user_id", {"user_id": user["id"]})
+    posts, count = Post.where("user_id = ?", [user["id"]])
     return [p.to_dict() for p in posts]
 ```
 
@@ -677,62 +666,51 @@ from tina4_python.graphql import GraphQL
 
 @GraphQL.resolve("Query", "posts")
 async def resolve_posts(root, args):
-    post = Post()
-    posts = post.select("*", "published = :pub", {"pub": 1}, order_by="created_at DESC")
+    posts, count = Post.where("published = ?", [1])
     return [p.to_dict() for p in posts]
 
 
 @GraphQL.resolve("Query", "post")
 async def resolve_post(root, args):
-    post = Post()
-    post.load(args["id"])
-    return post.to_dict() if post.id else None
+    post = Post.find(args["id"])
+    return post.to_dict() if post else None
 
 
 @GraphQL.resolve("Query", "user")
 async def resolve_user(root, args):
-    user = User()
-    user.load(args["id"])
-    return user.to_dict() if user.id else None
+    user = User.find(args["id"])
+    return user.to_dict() if user else None
 
 
 @GraphQL.resolve("Post", "author")
 async def resolve_post_author(post, args):
-    user = User()
-    user.load(post["user_id"])
-    return user.to_dict()
+    user = User.find(post["user_id"])
+    return user.to_dict() if user else None
 
 
 @GraphQL.resolve("Post", "comments")
 async def resolve_post_comments(post, args):
-    comment = Comment()
-    comments = comment.select("*", "post_id = :post_id",
-        {"post_id": post["id"]}, order_by="created_at ASC")
+    comments, count = Comment.where("post_id = ?", [post["id"]])
     return [c.to_dict() for c in comments]
 
 
 @GraphQL.resolve("Post", "commentCount")
 async def resolve_post_comment_count(post, args):
-    comment = Comment()
-    results = comment.select("count(*) as cnt", "post_id = :post_id",
-        {"post_id": post["id"]})
-    return int(results[0].cnt) if results else 0
+    comments, count = Comment.where("post_id = ?", [post["id"]])
+    return count
 
 
 @GraphQL.resolve("User", "posts")
 async def resolve_user_posts(user, args):
-    post = Post()
-    posts = post.select("*", "user_id = :user_id",
-        {"user_id": user["id"]}, order_by="created_at DESC")
+    posts, count = Post.where("user_id = ?", [user["id"]])
     return [p.to_dict() for p in posts]
 
 
 @GraphQL.resolve("Mutation", "createPost")
 async def resolve_create_post(root, args):
-    user = User()
-    user.load(args["userId"])
+    user = User.find(args["userId"])
 
-    if not user.id:
+    if user is None:
         raise Exception("User not found")
 
     post = Post()
@@ -747,10 +725,9 @@ async def resolve_create_post(root, args):
 
 @GraphQL.resolve("Mutation", "addComment")
 async def resolve_add_comment(root, args):
-    post = Post()
-    post.load(args["postId"])
+    post = Post.find(args["postId"])
 
-    if not post.id:
+    if post is None:
         raise Exception("Post not found")
 
     comment = Comment()
@@ -816,9 +793,8 @@ async def resolve_add_comment(root, args):
 ```python
 @GraphQL.resolve("Post", "author")
 async def resolve_post_author(post, args):
-    user = User()
-    user.load(post["user_id"])  # Use the foreign key from the parent
-    return user.to_dict()
+    user = User.find(post["user_id"])  # Use the foreign key from the parent
+    return user.to_dict() if user else None
 ```
 
 ### 4. Mutation Input Not Parsed
@@ -930,8 +906,8 @@ from tina4_python.core.router import get, post
 class UserService(WSDL):
     @wsdl_operation({"Name": str, "Email": str, "Active": bool})
     def GetUser(self, user_id: int):
-        user = User()
-        if user.load("id = ?", [user_id]):
+        user = User.find(user_id)
+        if user:
             return {
                 "Name": user.name,
                 "Email": user.email,

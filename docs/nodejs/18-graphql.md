@@ -308,7 +308,7 @@ Tina4 includes a built-in SOAP 1.1 / WSDL 1.1 engine. Zero external dependencies
 Create a class that extends `WSDLService`. Each method you want to expose gets the `@WSDLOp` decorator with `input` and `output` type maps.
 
 ```typescript
-import { WSDLService, WSDLOp } from "@tina4/core";
+import { WSDLService, WSDLOp } from "tina4-nodejs";
 
 class Calculator extends WSDLService {
   serviceName = "Calculator";
@@ -436,7 +436,7 @@ Response:
 A user lookup service with multiple operations:
 
 ```typescript
-import { WSDLService, WSDLOp } from "@tina4/core";
+import { WSDLService, WSDLOp } from "tina4-nodejs";
 
 class UserService extends WSDLService {
   serviceName = "UserService";

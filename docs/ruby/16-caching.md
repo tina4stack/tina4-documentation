@@ -32,56 +32,52 @@ The `"ResponseCache:300"` middleware caches the response for 300 seconds (5 minu
 
 ## 3. The Direct Cache API
 
-For custom caching, use the `Tina4::Cache` API directly:
+For custom caching, use the `Tina4` cache API directly:
 
 ```ruby
 # Store a value
-Tina4::Cache.set("products:featured", featured_products, ttl: 300)
+Tina4.cache_set("products:featured", featured_products, ttl: 300)
 
 # Retrieve a value
-cached = Tina4::Cache.get("products:featured")
-
-# Check if a key exists
-if Tina4::Cache.exists?("products:featured")
-  # Use cached data
-end
+cached = Tina4.cache_get("products:featured")
 
 # Delete a cached value
-Tina4::Cache.delete("products:featured")
+Tina4.cache_delete("products:featured")
 
 # Clear all cache
-Tina4::Cache.clear
+Tina4.cache_clear
 ```
 
-### Fetch-or-Compute Pattern
+### Manual Fetch-or-Compute Pattern
 
 The most common caching pattern -- check the cache, compute if missing, store and return:
 
 ```ruby
 Tina4::Router.get("/api/products") do |request, response|
-  products = Tina4::Cache.fetch("products:all", ttl: 300) do
-    # This block only runs if the cache is empty
-    db = Tina4::Database.connection
-    db.fetch("SELECT * FROM products ORDER BY name")
+  products = Tina4.cache_get("products:all")
+
+  if products.nil?
+    db = Tina4.database
+    products = db.fetch("SELECT * FROM products ORDER BY name")
+    Tina4.cache_set("products:all", products, ttl: 300)
   end
 
   response.json({ products: products, count: products.length })
 end
 ```
 
-`Tina4::Cache.fetch` checks the cache for the key. If it exists, returns the cached value. If not, runs the block, stores the result, and returns it. The `ttl` (time to live) is in seconds.
+Check the cache for the key. If it exists, use the cached value. If not, compute the value, store it with a TTL (time to live in seconds), and return it.
 
 ---
 
 ## 4. Cache Backends
 
-### File Cache (Default)
+### Memory Cache (Default)
 
-Out of the box, Tina4 caches to the filesystem. No configuration needed:
+Out of the box, Tina4 caches in-process memory. No configuration needed:
 
 ```dotenv
-TINA4_CACHE_BACKEND=file
-TINA4_CACHE_PATH=data/cache
+TINA4_CACHE_BACKEND=memory
 ```
 
 ### Redis Cache
@@ -90,17 +86,16 @@ For production with multiple servers:
 
 ```dotenv
 TINA4_CACHE_BACKEND=redis
-TINA4_CACHE_HOST=localhost
-TINA4_CACHE_PORT=6379
-TINA4_CACHE_PREFIX=myapp:cache:
+TINA4_CACHE_URL=redis://localhost:6379
 ```
 
-### Memory Cache
+### File Cache
 
-For single-process development (fastest, but lost on restart):
+For persistence across restarts without Redis:
 
 ```dotenv
-TINA4_CACHE_BACKEND=memory
+TINA4_CACHE_BACKEND=file
+TINA4_CACHE_DIR=data/cache
 ```
 
 ---
@@ -123,15 +118,8 @@ When enabled, `fetch` and `fetch_one` calls are cached. The cache is automatical
 
 ```ruby
 # After updating products
-Tina4::Cache.delete("products:all")
-Tina4::Cache.delete("products:featured")
-```
-
-### Pattern-Based Invalidation
-
-```ruby
-# Delete all product-related caches
-Tina4::Cache.delete_pattern("products:*")
+Tina4.cache_delete("products:all")
+Tina4.cache_delete("products:featured")
 ```
 
 ### Automatic Invalidation in Route Handlers
@@ -140,14 +128,15 @@ Tina4::Cache.delete_pattern("products:*")
 Tina4::Router.post("/api/products") do |request, response|
   body = request.body
 
-  db = Tina4::Database.connection
+  db = Tina4.database
   db.insert("products", {
     name: body["name"],
     price: body["price"].to_f
   })
 
-  # Invalidate all product caches
-  Tina4::Cache.delete_pattern("products:*")
+  # Invalidate product caches
+  Tina4.cache_delete("products:all")
+  Tina4.cache_delete("products:featured")
 
   response.json({ message: "Product created, cache cleared" }, 201)
 end
@@ -180,13 +169,11 @@ Monitor your cache performance:
 
 ```ruby
 Tina4::Router.get("/api/cache/stats") do |request, response|
-  stats = Tina4::Cache.stats
+  stats = Tina4.cache_stats
 
   response.json({
     backend: stats[:backend],
-    keys: stats[:key_count],
-    memory_mb: stats[:memory_mb],
-    hit_rate: stats[:hit_rate],
+    size: stats[:size],
     hits: stats[:hits],
     misses: stats[:misses]
   })
@@ -235,9 +222,12 @@ Create `src/routes/cached_products.rb`:
 
 ```ruby
 Tina4::Router.get("/api/products") do |request, response|
-  products = Tina4::Cache.fetch("products:all", ttl: 300) do
-    db = Tina4::Database.connection
-    db.fetch("SELECT * FROM products ORDER BY name")
+  products = Tina4.cache_get("products:all")
+
+  if products.nil?
+    db = Tina4.database
+    products = db.fetch("SELECT * FROM products ORDER BY name")
+    Tina4.cache_set("products:all", products, ttl: 300)
   end
 
   response.json({ products: products, count: products.length, cached: true })
@@ -246,13 +236,17 @@ end
 Tina4::Router.get("/api/products/{id:int}") do |request, response|
   id = request.params["id"]
 
-  product = Tina4::Cache.fetch("products:#{id}", ttl: 600) do
-    db = Tina4::Database.connection
-    db.fetch_one("SELECT * FROM products WHERE id = :id", { id: id })
-  end
+  product = Tina4.cache_get("products:#{id}")
 
   if product.nil?
-    return response.json({ error: "Product not found" }, 404)
+    db = Tina4.database
+    product = db.fetch_one("SELECT * FROM products WHERE id = ?", [id])
+
+    if product.nil?
+      return response.json({ error: "Product not found" }, 404)
+    end
+
+    Tina4.cache_set("products:#{id}", product, ttl: 600)
   end
 
   response.json(product)
@@ -260,11 +254,11 @@ end
 
 Tina4::Router.post("/api/products") do |request, response|
   body = request.body
-  db = Tina4::Database.connection
+  db = Tina4.database
 
   db.insert("products", { name: body["name"], price: body["price"].to_f })
 
-  Tina4::Cache.delete_pattern("products:*")
+  Tina4.cache_delete("products:all")
 
   product = db.fetch_one("SELECT * FROM products WHERE id = last_insert_rowid()")
   response.json(product, 201)
@@ -273,30 +267,31 @@ end
 Tina4::Router.put("/api/products/{id:int}") do |request, response|
   id = request.params["id"]
   body = request.body
-  db = Tina4::Database.connection
+  db = Tina4.database
 
-  db.update("products", { name: body["name"], price: body["price"].to_f }, "id = :id", { id: id })
+  db.update("products", { name: body["name"], price: body["price"].to_f }, { id: id })
 
-  Tina4::Cache.delete("products:#{id}")
-  Tina4::Cache.delete("products:all")
+  Tina4.cache_delete("products:#{id}")
+  Tina4.cache_delete("products:all")
 
-  product = db.fetch_one("SELECT * FROM products WHERE id = :id", { id: id })
+  product = db.fetch_one("SELECT * FROM products WHERE id = ?", [id])
   response.json(product)
 end
 
 Tina4::Router.delete("/api/products/{id:int}") do |request, response|
   id = request.params["id"]
-  db = Tina4::Database.connection
+  db = Tina4.database
 
-  db.delete("products", "id = :id", { id: id })
+  db.delete("products", { id: id })
 
-  Tina4::Cache.delete_pattern("products:*")
+  Tina4.cache_delete("products:#{id}")
+  Tina4.cache_delete("products:all")
 
   response.json(nil, 204)
 end
 
 Tina4::Router.get("/api/cache/stats") do |request, response|
-  response.json(Tina4::Cache.stats)
+  response.json(Tina4.cache_stats)
 end
 ```
 
@@ -332,7 +327,7 @@ end
 
 **Problem:** When a popular cache key expires, hundreds of requests simultaneously hit the database.
 
-**Fix:** Use `Tina4::Cache.fetch` which handles locking -- only one request computes the value while others wait.
+**Fix:** Use a mutex or similar locking mechanism around your cache-miss computation to ensure only one request computes the value while others wait.
 
 ### 6. Caching User-Specific Data
 

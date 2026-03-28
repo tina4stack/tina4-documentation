@@ -308,25 +308,25 @@ Your queue code does not change at all. The same `queue.push()` and `queue.consu
 
 ---
 
-## 9. Producer and Consumer Classes
+## 9. Produce and Consume Across Topics
 
-Python also provides `Producer` and `Consumer` classes for more structured usage:
+The `Queue` class provides `produce()` and `consume()` methods for cross-topic messaging:
 
 ```python
-from tina4_python.queue import Producer, Consumer
+from tina4_python.queue import Queue
 
-# Producer side
-producer = Producer(topic="emails")
-producer.push({"to": "alice@example.com", "subject": "Hello"})
+queue = Queue(topic="default")
 
-# Consumer side
-consumer = Consumer(topic="emails")
-for job in consumer.consume("emails"):
+# Produce onto a specific topic
+queue.produce("emails", {"to": "alice@example.com", "subject": "Hello"})
+
+# Consume from a specific topic
+for job in queue.consume("emails"):
     process(job)
     job.complete()
 ```
 
-These are thin wrappers around `Queue` that make intent clearer when your producers and consumers are in separate files or services.
+The `produce()` method pushes a job onto any named topic. The `consume()` method yields all available jobs from a topic as a generator.
 
 ---
 

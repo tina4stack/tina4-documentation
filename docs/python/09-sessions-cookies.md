@@ -310,8 +310,8 @@ async def login_form(request, response):
     db = Database()
 
     user = db.fetch_one(
-        "SELECT id, name, email, password_hash FROM users WHERE email = :email",
-        {"email": body.get("email")}
+        "SELECT id, name, email, password_hash FROM users WHERE email = ?",
+        [body.get("email")]
     )
 
     if user is None or not Auth.check_password(body.get("password", ""), user["password_hash"]):
@@ -354,8 +354,8 @@ async def remember_me_middleware(request, response, next_handler):
             payload = Auth.get_payload(remember_token)
             db = Database()
             user = db.fetch_one(
-                "SELECT id, name FROM users WHERE id = :id",
-                {"id": payload["user_id"]}
+                "SELECT id, name FROM users WHERE id = ?",
+                [payload["user_id"]]
             )
 
             if user:

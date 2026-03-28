@@ -20,13 +20,11 @@ This is a quick-reference for the 20 most important `.env` variables in Tina4 Ru
 | `TINA4_CSP` | `default-src 'self'` | `Content-Security-Policy` header. |
 | `TINA4_RATE_LIMIT` | `100` | Maximum requests per window per IP. |
 | `TINA4_RATE_WINDOW` | `60` | Rate limit window in seconds. |
-| `TINA4_SESSION_BACKEND` | `file` | Session storage. Options: `file`, `redis`, `valkey`, `mongo`, `database`. |
 | `TINA4_SESSION_TTL` | `3600` | Session expiry in seconds. |
 | `TINA4_SESSION_SAMESITE` | `Lax` | SameSite cookie attribute. Options: `Strict`, `Lax`, `None`. |
 | `TINA4_WS_BACKPLANE` | _(none)_ | WebSocket backplane type. Set to `redis` for multi-instance broadcasts. |
 | `TINA4_WS_BACKPLANE_URL` | `redis://localhost:6379` | Connection URL for the WebSocket backplane. |
 | `TINA4_LOG_LEVEL` | `ERROR` | Minimum log level. Options: `ALL`, `DEBUG`, `INFO`, `WARNING`, `ERROR`. |
-| `TINA4_TOKEN_LIMIT` | `60` | JWT token lifetime in minutes. |
 | `SMTP_HOST` | _(none)_ | SMTP server hostname. |
 | `SMTP_PORT` | `587` | SMTP server port. |
 | `SMTP_USERNAME` | _(none)_ | SMTP authentication username. |

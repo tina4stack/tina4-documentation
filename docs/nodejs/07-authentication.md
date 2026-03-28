@@ -28,26 +28,24 @@ const payload = {
 const token = Auth.getToken(payload, secret);
 ```
 
-`getToken()` signs the payload with HS256 (HMAC-SHA256) and returns a JWT string. The `secret` parameter is optional -- if omitted, Tina4 reads from the `SECRET` env var.
+`getToken()` signs the payload with HS256 (HMAC-SHA256) and returns a JWT string. The `secret` parameter is required -- pass your secret key directly or read it from the `SECRET` env var.
 
 > **Legacy aliases:** `Auth.getToken()` and the standalone `getToken()` function still work. Use the primary name in new code.
 
 ### Token Expiry
 
-Configure in `.env`:
+Pass the expiry time as the third argument to `getToken()` in **seconds**:
 
-```dotenv
-TINA4_TOKEN_EXPIRES_IN=60
+```typescript
+const token = Auth.getToken(payload, secret, 3600); // 1 hour (default)
 ```
-
-The value is in **minutes**:
 
 | Value | Duration |
 |-------|----------|
-| `15` | 15 minutes |
-| `60` | 1 hour (default) |
-| `1440` | 24 hours |
-| `10080` | 7 days |
+| `900` | 15 minutes |
+| `3600` | 1 hour (default) |
+| `86400` | 24 hours |
+| `604800` | 7 days |
 
 ### Validating a Token
 
@@ -108,7 +106,8 @@ const isCorrect = await Auth.checkPassword("my-secure-password", storedHash);
 ### Registration Example
 
 ```typescript
-import { Router, Auth, Database } from "tina4-nodejs";
+import { Router, Auth } from "tina4-nodejs";
+import { Database } from "tina4-nodejs/orm";
 
 Router.post("/api/register", async (req, res) => {
     const body = req.body;
@@ -146,7 +145,8 @@ Router.post("/api/register", async (req, res) => {
 ## 4. The Login Flow
 
 ```typescript
-import { Router, Auth, Database } from "tina4-nodejs";
+import { Router, Auth } from "tina4-nodejs";
+import { Database } from "tina4-nodejs/orm";
 
 /**
  * @noauth
@@ -173,11 +173,12 @@ Router.post("/api/login", async (req, res) => {
         return res.status(401).json({ error: "Invalid email or password" });
     }
 
+    const secret = process.env.SECRET || "tina4-default-secret";
     const token = Auth.getToken({
         user_id: user.id,
         email: user.email,
         name: user.name
-    });
+    }, secret);
 
     return res.json({
         message: "Login successful",
@@ -196,23 +197,26 @@ Router.post("/api/login", async (req, res) => {
 ```typescript
 import { Auth } from "tina4-nodejs";
 
-async function authMiddleware(req, res, next) {
+function authMiddleware(req, res, next) {
     const authHeader = req.headers["authorization"] ?? "";
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        return res.status(401).json({ error: "Authorization header required" });
+        res({ error: "Authorization header required" }, 401);
+        return;
     }
 
     const token = authHeader.substring(7);
+    const secret = process.env.SECRET || "tina4-default-secret";
 
-    const payload = Auth.validToken(token);
+    const payload = Auth.validToken(token, secret);
     if (payload === null) {
-        return res.status(401).json({ error: "Invalid or expired token" });
+        res({ error: "Invalid or expired token" }, 401);
+        return;
     }
 
-    req.user = payload;
+    (req as any).user = payload;
 
-    return next(req, res);
+    next();
 }
 ```
 
@@ -223,35 +227,39 @@ import { Router } from "tina4-nodejs";
 
 Router.get("/api/profile", async (req, res) => {
     return res.json({
-        user_id: req.user.user_id,
-        email: req.user.email,
-        name: req.user.name
+        user_id: (req as any).user.user_id,
+        email: (req as any).user.email,
+        name: (req as any).user.name
     });
-}, "authMiddleware");
+}, [authMiddleware]);
 ```
 
 ### Role-Based Authorization
 
 ```typescript
 function requireRole(role: string) {
-    return async function (req, res, next) {
+    return function (req, res, next) {
         const authHeader = req.headers["authorization"] ?? "";
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return res.status(401).json({ error: "Authorization required" });
+            res({ error: "Authorization required" }, 401);
+            return;
         }
 
         const token = authHeader.substring(7);
-        const payload = Auth.validToken(token);
+        const secret = process.env.SECRET || "tina4-default-secret";
+        const payload = Auth.validToken(token, secret);
         if (payload === null) {
-            return res.status(401).json({ error: "Invalid or expired token" });
+            res({ error: "Invalid or expired token" }, 401);
+            return;
         }
 
         if ((payload.role ?? "") !== role) {
-            return res.status(403).json({ error: `Forbidden. Required role: ${role}` });
+            res({ error: `Forbidden. Required role: ${role}` }, 403);
+            return;
         }
 
-        req.user = payload;
-        return next(req, res);
+        (req as any).user = payload;
+        next();
     };
 }
 ```
@@ -305,20 +313,24 @@ Build a complete authentication system with registration, login, profile viewing
 Create `src/routes/auth.ts`:
 
 ```typescript
-import { Router, Auth, Database } from "tina4-nodejs";
+import { Router, Auth } from "tina4-nodejs";
+import { Database } from "tina4-nodejs/orm";
 
-async function authMiddleware(req, res, next) {
+function authMiddleware(req, res, next) {
     const authHeader = req.headers["authorization"] ?? "";
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        return res.status(401).json({ error: "Authorization required. Send: Authorization: Bearer <token>" });
+        res({ error: "Authorization required. Send: Authorization: Bearer <token>" }, 401);
+        return;
     }
     const token = authHeader.substring(7);
-    const payload = Auth.validToken(token);
+    const secret = process.env.SECRET || "tina4-default-secret";
+    const payload = Auth.validToken(token, secret);
     if (payload === null) {
-        return res.status(401).json({ error: "Invalid or expired token. Please login again." });
+        res({ error: "Invalid or expired token. Please login again." }, 401);
+        return;
     }
     req.user = payload;
-    return next(req, res);
+    next();
 }
 
 /**
@@ -373,12 +385,13 @@ Router.post("/api/login", async (req, res) => {
         return res.status(401).json({ error: "Invalid email or password" });
     }
 
+    const secret = process.env.SECRET || "tina4-default-secret";
     const token = Auth.getToken({
         user_id: user.id,
         email: user.email,
         name: user.name,
         role: user.role
-    });
+    }, secret);
 
     return res.json({
         message: "Login successful",
@@ -399,7 +412,7 @@ Router.get("/api/profile", async (req, res) => {
     }
 
     return res.json(user);
-}, "authMiddleware");
+}, [authMiddleware]);
 
 Router.put("/api/profile", async (req, res) => {
     const db = Database.getConnection();
@@ -416,7 +429,7 @@ Router.put("/api/profile", async (req, res) => {
     const updated = await db.fetchOne("SELECT id, name, email, role, created_at FROM users WHERE id = :id", { id: userId });
 
     return res.json({ message: "Profile updated", user: updated });
-}, "authMiddleware");
+}, [authMiddleware]);
 
 Router.put("/api/profile/password", async (req, res) => {
     const db = Database.getConnection();
@@ -441,7 +454,7 @@ Router.put("/api/profile/password", async (req, res) => {
     await db.execute("UPDATE users SET password_hash = :hash WHERE id = :id", { hash: newHash, id: userId });
 
     return res.json({ message: "Password changed successfully" });
-}, "authMiddleware");
+}, [authMiddleware]);
 ```
 
 ---

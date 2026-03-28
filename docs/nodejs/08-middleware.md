@@ -17,8 +17,8 @@ Tina4 Node.js supports two styles of middleware:
 **Function-based middleware** receives `req`, `res`, and `next`. Call `next()` to continue. Skip it to short-circuit.
 
 ```typescript
-async function passthrough(req, res, next) {
-    return next(req, res);
+function passthrough(req, res, next) {
+    next();
 }
 ```
 
@@ -82,18 +82,15 @@ Apply using the function-based form:
 ```typescript
 import { Router, cors } from "tina4-nodejs";
 
-const app = Router();
-app.use(cors());   // applies to all routes
+Router.get("/api/products", async (req, res) => {
+    return res.json({ products: [] });
+}, [cors()]);
 ```
 
-Or apply the class-based form to specific groups:
+Or apply the class-based form globally via `Router.use()`:
 
 ```typescript
-Router.group("/api", () => {
-    Router.get("/products", async (req, res) => {
-        return res.json({ products: [] });
-    });
-}, "CorsMiddleware");
+Router.use(CorsMiddleware);
 ```
 
 Preflight `OPTIONS` requests return `204 No Content` with the correct CORS headers. The browser caches the preflight based on `TINA4_CORS_MAX_AGE`.
@@ -112,11 +109,7 @@ TINA4_RATE_WINDOW=60
 60 requests per 60 seconds per IP. Apply it:
 
 ```typescript
-Router.group("/api/public", () => {
-    Router.get("/search", async (req, res) => {
-        return res.json({ results: [] });
-    });
-}, "RateLimiterMiddleware");
+Router.use(RateLimiterMiddleware);
 ```
 
 When a client exceeds the limit, they receive a `429 Too Many Requests` response with rate limit headers:
@@ -126,16 +119,6 @@ X-RateLimit-Limit: 60
 X-RateLimit-Remaining: 0
 X-RateLimit-Reset: 1711113060
 Retry-After: 42
-```
-
-Custom limits per group:
-
-```typescript
-Router.group("/api/public", () => {
-    Router.get("/search", async (req, res) => {
-        return res.json({ results: [] });
-    });
-}, "RateLimiterMiddleware:30");
 ```
 
 ## 5. Built-in RequestLogger
@@ -216,61 +199,61 @@ Order matters. CORS handles `OPTIONS` preflight first. The rate limiter only cou
 ### Request Logging
 
 ```typescript
-async function logRequest(req, res, next) {
+function logRequest(req, res, next) {
     const start = Date.now();
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} from ${req.ip}`);
-
-    const result = await next(req, res);
-
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} from ${req.socket?.remoteAddress}`);
+    next();
     const duration = Date.now() - start;
     console.log(`  Completed in ${duration}ms`);
-
-    return result;
 }
 ```
 
 ### Request Timing
 
 ```typescript
-async function addTiming(req, res, next) {
+function addTiming(req, res, next) {
     const start = Date.now();
-    const result = await next(req, res);
-    const duration = Date.now() - start;
-    res.header("X-Response-Time", `${duration}ms`);
-    return result;
+    res.raw.on("finish", () => {
+        const duration = Date.now() - start;
+        res.header("X-Response-Time", `${duration}ms`);
+    });
+    next();
 }
 ```
 
 ### IP Whitelist
 
 ```typescript
-async function ipWhitelist(req, res, next) {
+function ipWhitelist(req, res, next) {
     const allowedIps = (process.env.ALLOWED_IPS ?? "127.0.0.1").split(",");
+    const clientIp = req.socket?.remoteAddress ?? "";
 
-    if (!allowedIps.includes(req.ip)) {
-        return res.status(403).json({ error: "Access denied", your_ip: req.ip });
+    if (!allowedIps.includes(clientIp)) {
+        res({ error: "Access denied", your_ip: clientIp }, 403);
+        return;
     }
 
-    return next(req, res);
+    next();
 }
 ```
 
 ### Request Validation
 
 ```typescript
-async function requireJson(req, res, next) {
+function requireJson(req, res, next) {
     if (["POST", "PUT", "PATCH"].includes(req.method)) {
         const contentType = req.headers["content-type"] ?? "";
 
         if (!contentType.includes("application/json")) {
-            return res.status(415).json({
+            res({
                 error: "Content-Type must be application/json",
                 received: contentType
-            });
+            }, 415);
+            return;
         }
     }
 
-    return next(req, res);
+    next();
 }
 ```
 
@@ -320,7 +303,8 @@ class JwtAuthMiddleware {
         }
 
         const token = authHeader.slice(7);
-        const payload = Auth.validToken(token);
+        const secret = process.env.SECRET || "tina4-default-secret";
+        const payload = Auth.validToken(token, secret);
 
         if (!payload) {
             res(JSON.stringify({ error: "Invalid or expired token" }), 401);
@@ -336,16 +320,7 @@ class JwtAuthMiddleware {
 Apply it to protected routes:
 
 ```typescript
-Router.group("/api/protected", () => {
-    Router.get("/profile", async (req, res) => {
-        return res.json({ user: (req as any).user });
-    });
-
-    Router.post("/settings", async (req, res) => {
-        const userId = (req as any).user.sub;
-        return res.json({ updated: true, user_id: userId });
-    });
-}, "JwtAuthMiddleware");
+Router.use(JwtAuthMiddleware);
 ```
 
 ### Request ID Middleware (Class-Based)
@@ -375,7 +350,7 @@ Single middleware:
 ```typescript
 Router.get("/api/data", async (req, res) => {
     return res.json({ data: [1, 2, 3] });
-}, "logRequest");
+}, [logRequest]);
 ```
 
 Multiple middleware:
@@ -383,7 +358,7 @@ Multiple middleware:
 ```typescript
 Router.post("/api/data", async (req, res) => {
     return res.status(201).json({ created: true });
-}, ["logRequest", "requireJson"]);
+}, [logRequest, requireJson]);
 ```
 
 ---
@@ -391,20 +366,20 @@ Router.post("/api/data", async (req, res) => {
 ## 8. Route Groups with Shared Middleware
 
 ```typescript
-Router.group("/api/public", () => {
-    Router.get("/products", async (req, res) => {
+Router.group("/api/public", (group) => {
+    group.get("/products", async (req, res) => {
         return res.json({ products: [] });
     });
-    Router.get("/categories", async (req, res) => {
+    group.get("/categories", async (req, res) => {
         return res.json({ categories: [] });
     });
-}, ["CorsMiddleware", "RateLimiter:30"]);
+}, [cors()]);
 
-Router.group("/api/admin", () => {
-    Router.get("/users", async (req, res) => {
+Router.group("/api/admin", (group) => {
+    group.get("/users", async (req, res) => {
         return res.json({ users: [] });
     });
-}, ["logRequest", "ipWhitelist", "authMiddleware"]);
+}, [logRequest, authMiddleware]);
 ```
 
 ---
@@ -417,7 +392,7 @@ Middleware executes from outer to inner:
 Router.get("/api/test", async (req, res) => {
     console.log("Handler");
     return res.json({ ok: true });
-}, ["middlewareA", "middlewareB", "middlewareC"]);
+}, [middlewareA, middlewareB, middlewareC]);
 ```
 
 Output:
@@ -441,31 +416,34 @@ Group middleware always runs before route middleware.
 When middleware does not call `next`, the chain dies:
 
 ```typescript
-async function requireAuth(req, res, next) {
+function requireAuth(req, res, next) {
     const token = req.headers["authorization"] ?? "";
 
     if (!token) {
-        return res.status(401).json({ error: "Authentication required" });
+        res({ error: "Authentication required" }, 401);
+        return;
     }
 
-    return next(req, res);
+    next();
 }
 ```
 
 ### Maintenance Mode
 
 ```typescript
-async function maintenanceMode(req, res, next) {
+function maintenanceMode(req, res, next) {
     const isMaintenanceMode = process.env.MAINTENANCE_MODE === "true";
 
     if (isMaintenanceMode) {
         if (req.path === "/health") {
-            return next(req, res);
+            next();
+            return;
         }
-        return res.status(503).json({ error: "Service is undergoing maintenance", retry_after: 300 });
+        res({ error: "Service is undergoing maintenance", retry_after: 300 }, 503);
+        return;
     }
 
-    return next(req, res);
+    next();
 }
 ```
 
@@ -474,12 +452,11 @@ async function maintenanceMode(req, res, next) {
 ## 11. Modifying Requests in Middleware
 
 ```typescript
-async function addRequestId(req, res, next) {
-    const { randomUUID } = await import("crypto");
-    req.requestId = randomUUID();
-    const result = await next(req, res);
-    res.header("X-Request-Id", req.requestId);
-    return result;
+function addRequestId(req, res, next) {
+    const { randomUUID } = require("crypto");
+    (req as any).requestId = randomUUID();
+    res.header("X-Request-Id", (req as any).requestId);
+    next();
 }
 ```
 
@@ -490,22 +467,22 @@ async function addRequestId(req, res, next) {
 ```typescript
 import { Router } from "tina4-nodejs";
 
-Router.group("/api/v1", () => {
-    Router.get("/products", async (req, res) => {
+Router.group("/api/v1", (group) => {
+    group.get("/products", async (req, res) => {
         return res.json({ products: [
             { id: 1, name: "Widget", price: 9.99 },
             { id: 2, name: "Gadget", price: 19.99 }
         ]});
     });
 
-    Router.post("/products", async (req, res) => {
+    group.post("/products", async (req, res) => {
         return res.status(201).json({
             id: 3,
             name: req.body.name ?? "Unknown",
             price: parseFloat(req.body.price ?? 0)
         });
     });
-}, ["addRequestId", "logRequest", "CorsMiddleware", "requireApiKey"]);
+}, [addRequestId, logRequest, cors(), requireApiKey]);
 ```
 
 ---
@@ -528,55 +505,57 @@ Build `validateApiKey` middleware that checks `X-API-Key` header against `API_KE
 ```typescript
 import { Router } from "tina4-nodejs";
 
-async function validateApiKey(req, res, next) {
+function validateApiKey(req, res, next) {
     const apiKey = req.headers["x-api-key"] ?? "";
 
     if (!apiKey) {
-        return res.status(401).json({ error: "API key required" });
+        res({ error: "API key required" }, 401);
+        return;
     }
 
     const validKeys = (process.env.API_KEYS ?? "").split(",").map(k => k.trim());
 
     if (!validKeys.includes(apiKey)) {
-        return res.status(403).json({ error: "Invalid API key" });
+        res({ error: "Invalid API key" }, 403);
+        return;
     }
 
-    req.apiKey = apiKey;
-    return next(req, res);
+    (req as any).apiKey = apiKey;
+    next();
 }
 
-Router.group("/api/partner", () => {
-    Router.get("/data", async (req, res) => {
+Router.group("/api/partner", (group) => {
+    group.get("/data", async (req, res) => {
         return res.json({
-            authenticated_with: req.apiKey,
+            authenticated_with: (req as any).apiKey,
             data: [{ id: 1, value: "alpha" }, { id: 2, value: "beta" }]
         });
     });
 
-    Router.get("/stats", async (req, res) => {
+    group.get("/stats", async (req, res) => {
         return res.json({
-            authenticated_with: req.apiKey,
+            authenticated_with: (req as any).apiKey,
             stats: { total_requests: 1423, avg_response_ms: 42 }
         });
     });
-}, "validateApiKey");
+}, [validateApiKey]);
 ```
 
 ---
 
 ## 15. Gotchas
 
-### 1. Middleware Must Be a Named Function
+### 1. Middleware Must Be Passed as Function References
 
-**Fix:** Define as a named function and pass the name as a string.
+**Fix:** Pass middleware as function references in an array: `[myMiddleware]`, not `"myMiddleware"`.
 
-### 2. Forgetting to Return next()
+### 2. Forgetting to Call next()
 
-**Fix:** Always `return await next(req, res)`.
+**Fix:** Always call `next()` to continue the chain. The `next()` function takes no arguments.
 
 ### 3. Middleware Order Matters
 
-**Fix:** Put `addRequestId` before `logRequest`: `["addRequestId", "logRequest"]`.
+**Fix:** Put `addRequestId` before `logRequest`: `[addRequestId, logRequest]`.
 
 ### 4. CORS Preflight Returns 404
 

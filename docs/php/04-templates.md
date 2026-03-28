@@ -78,6 +78,18 @@ return $response->render("profile.html", $data);
 Alice lives in Cape Town, South Africa.
 ```
 
+### Method Calls on Values
+
+When a variable is an object or an array containing a callable, you can call methods directly in dot notation:
+
+```html
+<p>{{ user.getName() }}</p>
+<p>{{ translator.t("welcome_message") }}</p>
+<p>{{ cart.total() }}</p>
+```
+
+Arguments are passed as normal function arguments. This works on both objects (calls the method) and arrays (calls the callable stored at that key).
+
 ### Expressions
 
 <div v-pre>

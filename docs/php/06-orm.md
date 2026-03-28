@@ -44,6 +44,26 @@ A complete model. Here is what each piece does:
 - **`$primaryKey`** -- The primary key column. Defaults to `"id"`.
 - **Default values** -- Properties like `$category = "Uncategorized"` apply when creating new records without specifying those fields.
 
+### Auto-Mapping with `$autoMap`
+
+By default, you must declare every property or use `$fieldMapping` to map database columns to PHP properties. Setting `$autoMap = true` lets Tina4 auto-generate mappings from `snake_case` database columns to `camelCase` properties:
+
+```php
+class Product extends ORM
+{
+    public string $tableName = "products";
+    public string $primaryKey = "id";
+    public bool $autoMap = true;
+
+    public int $id;
+    public string $productName;   // auto-maps to "product_name"
+    public float $unitPrice;      // auto-maps to "unit_price"
+    public bool $inStock;         // auto-maps to "in_stock"
+}
+```
+
+With `$autoMap = true`, when Tina4 loads data from the database, it automatically converts `snake_case` column names to `camelCase` property names using the built-in `snakeToCamel()` helper (and `camelToSnake()` when saving). Explicit `$fieldMapping` entries always take precedence over auto-mapped ones.
+
 ---
 
 ## 3. Field Types

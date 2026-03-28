@@ -418,12 +418,12 @@ This single chain:
 
 ```php
 <?php
-use Tina4\Route;
+use Tina4\Router;
 use Tina4\Request;
 use Tina4\Response;
 use Tina4\QueryBuilder;
 
-Route::get("/api/products", function (Request $request, Response $response) {
+Router::get("/api/products", function (Request $request, Response $response) {
     global $db;
 
     $qb = QueryBuilder::from("products", $db)
@@ -443,30 +443,30 @@ Route::get("/api/products", function (Request $request, Response $response) {
 Build queries conditionally based on request parameters:
 
 ```php
-Route::get("/api/products/search", function (Request $request, Response $response) {
+Router::get("/api/products/search", function (Request $request, Response $response) {
     global $db;
 
     $qb = QueryBuilder::from("products", $db)
         ->select("id", "name", "price", "category")
         ->where("active = ?", [1]);
 
-    if (!empty($request->params["category"])) {
-        $qb->where("category = ?", [$request->params["category"]]);
+    if (!empty($request->query["category"])) {
+        $qb->where("category = ?", [$request->query["category"]]);
     }
 
-    if (!empty($request->params["min_price"])) {
-        $qb->where("price >= ?", [(float)$request->params["min_price"]]);
+    if (!empty($request->query["min_price"])) {
+        $qb->where("price >= ?", [(float)$request->query["min_price"]]);
     }
 
-    if (!empty($request->params["max_price"])) {
-        $qb->where("price <= ?", [(float)$request->params["max_price"]]);
+    if (!empty($request->query["max_price"])) {
+        $qb->where("price <= ?", [(float)$request->query["max_price"]]);
     }
 
-    $sortBy = $request->params["sort"] ?? "name ASC";
+    $sortBy = $request->query["sort"] ?? "name ASC";
     $qb->orderBy($sortBy);
 
-    $limit = (int)($request->params["limit"] ?? 25);
-    $offset = (int)($request->params["page"] ?? 0) * $limit;
+    $limit = (int)($request->query["limit"] ?? 25);
+    $offset = (int)($request->query["page"] ?? 0) * $limit;
     $qb->limit($limit, $offset);
 
     $result = $qb->get();
@@ -682,7 +682,7 @@ Create `src/routes/productSearch.php`:
 
 ```php
 <?php
-use Tina4\Route;
+use Tina4\Router;
 use Tina4\Request;
 use Tina4\Response;
 use Tina4\QueryBuilder;
@@ -699,7 +699,7 @@ use Tina4\QueryBuilder;
  * @queryParam page int Page number (default 0)
  * @example /api/products/search?category=books&min_price=20&sort=price ASC
  */
-Route::get("/api/products/search", function (Request $request, Response $response) {
+Router::get("/api/products/search", function (Request $request, Response $response) {
     global $db;
 
     try {
@@ -708,47 +708,47 @@ Route::get("/api/products/search", function (Request $request, Response $respons
             ->where("active = ?", [1]);
 
         // Category filter
-        if (!empty($request->params["category"])) {
-            $qb->where("category = ?", [$request->params["category"]]);
+        if (!empty($request->query["category"])) {
+            $qb->where("category = ?", [$request->query["category"]]);
         }
 
         // Price range
-        if (!empty($request->params["min_price"])) {
-            $qb->where("price >= ?", [(float)$request->params["min_price"]]);
+        if (!empty($request->query["min_price"])) {
+            $qb->where("price >= ?", [(float)$request->query["min_price"]]);
         }
-        if (!empty($request->params["max_price"])) {
-            $qb->where("price <= ?", [(float)$request->params["max_price"]]);
+        if (!empty($request->query["max_price"])) {
+            $qb->where("price <= ?", [(float)$request->query["max_price"]]);
         }
 
         // Name search
-        if (!empty($request->params["search"])) {
-            $qb->where("name LIKE ?", ["%" . $request->params["search"] . "%"]);
+        if (!empty($request->query["search"])) {
+            $qb->where("name LIKE ?", ["%" . $request->query["search"] . "%"]);
         }
 
         // Sorting
-        $sort = $request->params["sort"] ?? "name ASC";
+        $sort = $request->query["sort"] ?? "name ASC";
         $qb->orderBy($sort);
 
         // Pagination
-        $limit = (int)($request->params["limit"] ?? 10);
-        $page = (int)($request->params["page"] ?? 0);
+        $limit = (int)($request->query["limit"] ?? 10);
+        $page = (int)($request->query["page"] ?? 0);
         $qb->limit($limit, $page * $limit);
 
         // Get total count (separate query)
         $countQb = QueryBuilder::from("products", $db)
             ->where("active = ?", [1]);
 
-        if (!empty($request->params["category"])) {
-            $countQb->where("category = ?", [$request->params["category"]]);
+        if (!empty($request->query["category"])) {
+            $countQb->where("category = ?", [$request->query["category"]]);
         }
-        if (!empty($request->params["min_price"])) {
-            $countQb->where("price >= ?", [(float)$request->params["min_price"]]);
+        if (!empty($request->query["min_price"])) {
+            $countQb->where("price >= ?", [(float)$request->query["min_price"]]);
         }
-        if (!empty($request->params["max_price"])) {
-            $countQb->where("price <= ?", [(float)$request->params["max_price"]]);
+        if (!empty($request->query["max_price"])) {
+            $countQb->where("price <= ?", [(float)$request->query["max_price"]]);
         }
-        if (!empty($request->params["search"])) {
-            $countQb->where("name LIKE ?", ["%" . $request->params["search"] . "%"]);
+        if (!empty($request->query["search"])) {
+            $countQb->where("name LIKE ?", ["%" . $request->query["search"] . "%"]);
         }
 
         $total = $countQb->count();

@@ -91,7 +91,8 @@ await cacheDelete("product:42");
 ### Cache-Aside Pattern
 
 ```typescript
-import { Router, Database, cacheGet, cacheSet } from "tina4-nodejs";
+import { Router, cacheGet, cacheSet } from "tina4-nodejs";
+import { Database } from "tina4-nodejs/orm";
 
 Router.get("/api/products/{id:int}", async (req, res) => {
     const id = req.params.id;

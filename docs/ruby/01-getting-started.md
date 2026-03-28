@@ -107,7 +107,7 @@ Creating Tina4 project in ./my-store ...
   Created src/locales/
   Created data/
   Created logs/
-  Created secrets/
+  Created .keys/
   Created tests/
 
 Project created! Next steps:
@@ -205,7 +205,7 @@ my-store/
 │       └── en.json
 ├── data/                   # SQLite databases (gitignored)
 ├── logs/                   # Log files (gitignored)
-├── secrets/                # JWT keys (gitignored)
+├── .keys/                  # JWT keys (gitignored)
 └── tests/                  # Your test files
 ```
 
@@ -495,7 +495,7 @@ The defaults that matter:
 | `DATABASE_URL` | `sqlite:///data/app.db` | SQLite database in `data/` |
 | `TINA4_LOG_LEVEL` | `ALL` | All log messages output |
 | `CORS_ORIGINS` | `*` | All origins allowed (fine for dev) |
-| `TINA4_RATE_LIMIT` | `60` | 60 requests per minute per IP |
+| `TINA4_RATE_LIMIT` | `100` | 100 requests per minute per IP |
 
 **Log levels** control how much output Tina4 produces:
 
@@ -528,7 +528,7 @@ Restart the server. It now runs on 8080.
 1. **CLI flag** (highest priority): `tina4 serve --port 8080`
 2. **`.env` file**: `TINA4_PORT=8080`
 3. **Environment variable**: `PORT=8080`
-4. **Framework default** (Python: 7145, PHP: 7146, Ruby: 7144, Node.js: 7143)
+4. **Framework default** (Python: 7145, PHP: 7146, Ruby: 7147, Node.js: 7143)
 
 The CLI reads your `.env` file and checks for `TINA4_PORT` (and falls back to `PORT`). The resolved port is passed to the Ruby server. All three methods work -- use whichever fits your workflow.
 

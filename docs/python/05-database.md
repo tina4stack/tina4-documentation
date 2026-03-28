@@ -89,6 +89,22 @@ The `pool` parameter controls how many database connections are maintained:
 
 Pooled connections are thread-safe. Each query is dispatched to the next available connection in the pool. This eliminates contention when multiple route handlers query the database simultaneously.
 
+### Extra Driver Options via **kwargs
+
+Any additional keyword arguments passed to `Database()` are forwarded to the underlying driver's `connect()` call. This is useful for engine-specific options like character set or timeout:
+
+```python
+db = Database("firebird://localhost:3050//data/legacy.fdb", charset="ISO8859_1")
+```
+
+### Firebird Dual-Driver Support
+
+The Firebird adapter tries `firebird-driver` (the modern package) first and falls back to the legacy `fdb` package if `firebird-driver` is not installed. Install whichever is available for your environment -- the adapter handles the difference internally.
+
+### Lowercase Column Names
+
+Firebird returns column names in uppercase by default. Tina4 normalises them to lowercase automatically, so `result["first_name"]` works regardless of how the column was defined in the schema.
+
 ---
 
 ## 4. Running Queries
@@ -163,13 +179,12 @@ print(len(result))  # number of records in this result set
 #### Conversion Methods
 
 ```python
-result.to_json()      # JSON string of all records
-result.to_csv()       # CSV string with column headers
-result.to_array()     # plain list of dictionaries
-result.to_paginate()  # {"records": [...], "count": 42, "limit": 10, "offset": 0}
+result.to_list()              # plain list of dictionaries (same as result.records)
+result.to_paginate()          # {"data": [...], "total": 42, "page": 1, "per_page": 20, ...}
+result.to_paginate(page=2, per_page=10)  # custom page and page size
 ```
 
-`to_paginate()` is designed for building paginated API responses. It bundles the records with the total count, limit, and offset in a single dictionary.
+`to_list()` returns the records as a plain list. `to_paginate(page=1, per_page=20)` is designed for building paginated API responses. It bundles the records with the total count, page, per_page, total_pages, has_next, and has_prev in a single dictionary.
 
 #### Schema Metadata with column_info()
 
@@ -202,11 +217,11 @@ This is useful for building dynamic forms, generating documentation, or validati
 
 ```python
 @get("/api/notes/{id:int}")
-async def get_note(request, response):
+async def get_note(id, request, response):
     db = Database()
     note = db.fetch_one(
-        "SELECT id, title, content, created_at FROM notes WHERE id = :id",
-        {"id": request.params["id"]}
+        "SELECT id, title, content, created_at FROM notes WHERE id = ?",
+        [id]
     )
 
     if note is None:
@@ -231,17 +246,17 @@ async def create_note(request, response):
     if not body.get("title"):
         return response.json({"error": "Title is required"}, 400)
 
-    db.execute(
-        "INSERT INTO notes (title, content) VALUES (:title, :content)",
-        {"title": body["title"], "content": body.get("content", "")}
+    result = db.execute(
+        "INSERT INTO notes (title, content) VALUES (?, ?)",
+        [body["title"], body.get("content", "")]
     )
 
-    note = db.fetch_one("SELECT * FROM notes WHERE id = last_insert_rowid()")
+    note = db.fetch_one("SELECT * FROM notes WHERE id = ?", [result.last_id])
 
     return response.json({"message": "Note created", "note": note}, 201)
 ```
 
-`execute()` runs an INSERT, UPDATE, or DELETE statement and returns the number of affected rows.
+`execute()` runs an INSERT, UPDATE, or DELETE statement and returns a `DatabaseResult` with `affected_rows` and `last_id` properties.
 
 ---
 
@@ -254,15 +269,15 @@ Never concatenate user input into SQL strings. Parameterised queries are the wal
 db.fetch(f"SELECT * FROM notes WHERE title = '{user_input}'")
 
 # CORRECT -- parameterised query
-db.fetch("SELECT * FROM notes WHERE title = :title", {"title": user_input})
+db.fetch("SELECT * FROM notes WHERE title = ?", [user_input])
 ```
 
-Named parameters use the `:name` syntax. Pass a dictionary of values as the second argument:
+Positional parameters use the `?` placeholder. Pass a list of values as the second argument:
 
 ```python
 db.fetch(
-    "SELECT * FROM notes WHERE category = :category AND created_at > :since",
-    {"category": "work", "since": "2026-03-01"}
+    "SELECT * FROM notes WHERE category = ? AND created_at > ?",
+    ["work", "2026-03-01"]
 )
 ```
 
@@ -289,14 +304,14 @@ async def transfer_funds(request, response):
     try:
         # Deduct from sender
         db.execute(
-            "UPDATE accounts SET balance = balance - :amount WHERE id = :id AND balance >= :amount",
-            {"amount": amount, "id": from_account}
+            "UPDATE accounts SET balance = balance - ? WHERE id = ? AND balance >= ?",
+            [amount, from_account, amount]
         )
 
         # Check if deduction succeeded
         sender = db.fetch_one(
-            "SELECT balance FROM accounts WHERE id = :id",
-            {"id": from_account}
+            "SELECT balance FROM accounts WHERE id = ?",
+            [from_account]
         )
 
         if sender is None:
@@ -305,8 +320,8 @@ async def transfer_funds(request, response):
 
         # Credit receiver
         db.execute(
-            "UPDATE accounts SET balance = balance + :amount WHERE id = :id",
-            {"amount": amount, "id": to_account}
+            "UPDATE accounts SET balance = balance + ? WHERE id = ?",
+            [amount, to_account]
         )
 
         db.commit()
@@ -342,12 +357,12 @@ async def import_notes(request, response):
         return response.json({"error": "No notes provided"}, 400)
 
     params_list = [
-        {"title": note["title"], "content": note.get("content", "")}
+        [note["title"], note.get("content", "")]
         for note in notes
     ]
 
     db.execute_many(
-        "INSERT INTO notes (title, content) VALUES (:title, :content)",
+        "INSERT INTO notes (title, content) VALUES (?, ?)",
         params_list
     )
 
@@ -375,29 +390,30 @@ Tina4 provides shorthand methods that cut the boilerplate:
 ### insert
 
 ```python
-last_id = db.insert("notes", {
+result = db.insert("notes", {
     "title": "Quick Note",
     "content": "Created with insert helper"
 })
+# result.last_id contains the new row's ID
 ```
 
-Returns the last inserted ID.
+Returns a `DatabaseResult`. Access `result.last_id` for the inserted row's ID.
 
 ### update
 
 ```python
-affected = db.update("notes", {"title": "Updated Title", "content": "New content"}, "id = :id", {"id": 1})
+result = db.update("notes", {"title": "Updated Title", "content": "New content"}, "id = ?", [1])
 ```
 
-The third argument is the WHERE clause, the fourth is its parameters. Returns the number of affected rows.
+The third argument is the WHERE clause, the fourth is a list of parameter values. Returns a `DatabaseResult` with `affected_rows`.
 
 ### delete
 
 ```python
-affected = db.delete("notes", "id = :id", {"id": 1})
+result = db.delete("notes", "id = ?", [1])
 ```
 
-Returns the number of deleted rows.
+Returns a `DatabaseResult` with `affected_rows`.
 
 These helpers eliminate boilerplate INSERT/UPDATE/DELETE SQL. For complex queries, `execute()` is always there.
 
@@ -531,39 +547,34 @@ This means you can write PostgreSQL stored procedures in your migration files wi
 
 ## 10. Query Caching
 
-Expensive queries that return the same result on every call deserve caching. Tina4 builds it in:
+Expensive queries that return the same result on every call deserve caching. Tina4 builds it in. Enable query caching via environment variables in your `.env`:
 
-```python
-from tina4_python.database.connection import Database
-
-db = Database()
-
-# Cache this query result for 300 seconds (5 minutes)
-categories = db.fetch(
-    "SELECT DISTINCT category, COUNT(*) as count FROM notes GROUP BY category",
-    cache_ttl=300
-)
+```dotenv
+TINA4_DB_CACHE=true
+TINA4_DB_CACHE_TTL=30
 ```
 
-The first call runs the SQL and caches the result. Subsequent calls within the TTL skip the database entirely.
+When caching is enabled, all `fetch()` and `fetch_one()` calls are automatically cached. The `TINA4_DB_CACHE_TTL` value (in seconds) controls how long results are kept. Write operations (`execute()`, `insert()`, `update()`, `delete()`) automatically invalidate the entire cache.
 
-To invalidate the cache when data changes:
+To manually clear the cache (e.g., after external data changes):
 
 ```python
 @post("/api/notes")
 async def create_note(request, response):
     db = Database()
-    db.execute(
-        "INSERT INTO notes (title, content, category) VALUES (:title, :content, :category)",
-        {"title": request.body["title"], "content": request.body.get("content", ""), "category": request.body.get("category", "general")}
+    result = db.execute(
+        "INSERT INTO notes (title, content, category) VALUES (?, ?, ?)",
+        [request.body["title"], request.body.get("content", ""), request.body.get("category", "general")]
     )
 
-    # Clear cached queries that might be stale
-    db.clear_cache()
+    # Cache is auto-invalidated on writes, but you can also clear manually:
+    db.cache_clear()
 
-    note = db.fetch_one("SELECT * FROM notes WHERE id = last_insert_rowid()")
+    note = db.fetch_one("SELECT * FROM notes WHERE id = ?", [result.last_id])
     return response.json({"note": note}, 201)
 ```
+
+You can check cache performance with `db.cache_stats()` which returns hits, misses, size, and TTL.
 
 ---
 
@@ -678,12 +689,12 @@ async def list_notes(request, response):
     pinned = request.params.get("pinned")
 
     sql = "SELECT * FROM notes"
-    params = {}
+    params = []
     conditions = []
 
     if category:
-        conditions.append("category = :category")
-        params["category"] = category
+        conditions.append("category = ?")
+        params.append(category)
 
     if pinned == "true":
         conditions.append("pinned = 1")
@@ -702,8 +713,7 @@ async def list_notes(request, response):
 async def list_categories(request, response):
     db = Database()
     categories = db.fetch(
-        "SELECT category, COUNT(*) as count FROM notes GROUP BY category ORDER BY count DESC",
-        cache_ttl=60
+        "SELECT category, COUNT(*) as count FROM notes GROUP BY category ORDER BY count DESC"
     )
     return response.json({"categories": categories})
 
@@ -712,8 +722,8 @@ async def list_categories(request, response):
 async def get_note(request, response):
     db = Database()
     note = db.fetch_one(
-        "SELECT * FROM notes WHERE id = :id",
-        {"id": request.params["id"]}
+        "SELECT * FROM notes WHERE id = ?",
+        [request.params["id"]]
     )
 
     if note is None:
@@ -730,18 +740,13 @@ async def create_note(request, response):
     if not body.get("title"):
         return response.json({"error": "Title is required"}, 400)
 
-    db.execute(
-        "INSERT INTO notes (title, content, category, pinned) VALUES (:title, :content, :category, :pinned)",
-        {
-            "title": body["title"],
-            "content": body.get("content", ""),
-            "category": body.get("category", "general"),
-            "pinned": 1 if body.get("pinned") else 0
-        }
+    result = db.execute(
+        "INSERT INTO notes (title, content, category, pinned) VALUES (?, ?, ?, ?)",
+        [body["title"], body.get("content", ""), body.get("category", "general"), 1 if body.get("pinned") else 0]
     )
 
-    note = db.fetch_one("SELECT * FROM notes WHERE id = last_insert_rowid()")
-    db.clear_cache()
+    note = db.fetch_one("SELECT * FROM notes WHERE id = ?", [result.last_id])
+    db.cache_clear()
 
     return response.json({"message": "Note created", "note": note}, 201)
 
@@ -752,26 +757,26 @@ async def update_note(request, response):
     note_id = request.params["id"]
     body = request.body
 
-    existing = db.fetch_one("SELECT * FROM notes WHERE id = :id", {"id": note_id})
+    existing = db.fetch_one("SELECT * FROM notes WHERE id = ?", [note_id])
     if existing is None:
         return response.json({"error": "Note not found"}, 404)
 
     db.execute(
         """UPDATE notes
-           SET title = :title, content = :content, category = :category,
-               pinned = :pinned, updated_at = CURRENT_TIMESTAMP
-           WHERE id = :id""",
-        {
-            "title": body.get("title", existing["title"]),
-            "content": body.get("content", existing["content"]),
-            "category": body.get("category", existing["category"]),
-            "pinned": 1 if body.get("pinned", existing["pinned"]) else 0,
-            "id": note_id
-        }
+           SET title = ?, content = ?, category = ?,
+               pinned = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?""",
+        [
+            body.get("title", existing["title"]),
+            body.get("content", existing["content"]),
+            body.get("category", existing["category"]),
+            1 if body.get("pinned", existing["pinned"]) else 0,
+            note_id
+        ]
     )
 
-    updated = db.fetch_one("SELECT * FROM notes WHERE id = :id", {"id": note_id})
-    db.clear_cache()
+    updated = db.fetch_one("SELECT * FROM notes WHERE id = ?", [note_id])
+    db.cache_clear()
 
     return response.json({"message": "Note updated", "note": updated})
 
@@ -781,12 +786,12 @@ async def delete_note(request, response):
     db = Database()
     note_id = request.params["id"]
 
-    existing = db.fetch_one("SELECT * FROM notes WHERE id = :id", {"id": note_id})
+    existing = db.fetch_one("SELECT * FROM notes WHERE id = ?", [note_id])
     if existing is None:
         return response.json({"error": "Note not found"}, 404)
 
-    db.execute("DELETE FROM notes WHERE id = :id", {"id": note_id})
-    db.clear_cache()
+    db.execute("DELETE FROM notes WHERE id = ?", [note_id])
+    db.cache_clear()
 
     return response.json(None, 204)
 ```
@@ -930,11 +935,11 @@ Every row gets `role = "member"` and `active = 1`. The field map generates the r
 
 ### 3. String vs integer comparison
 
-**Problem:** `WHERE id = :id` does not find the row even though the ID exists.
+**Problem:** `WHERE id = ?` does not find the row even though the ID exists.
 
 **Cause:** Path parameters come as strings by default. If `id` is `"5"` (string) and the column is an integer, some databases handle this differently.
 
-**Fix:** Use typed path parameters (`{id:int}`) so the value is already an integer, or explicitly cast: `{"id": int(request.params["id"])}`.
+**Fix:** Use typed path parameters (`{id:int}`) so the value is already an integer, or explicitly cast: `[int(request.params["id"])]`.
 
 ### 4. Connection not closed
 
@@ -974,4 +979,4 @@ Every row gets `role = "member"` and `active = 1`. The field map generates the r
 
 **Cause:** You used f-strings or string concatenation to build SQL queries with user input: `f"WHERE name = '{name}'"`.
 
-**Fix:** Always use parameterised queries: `"WHERE name = :name", {"name": name}`. This is the single most important security practice for database code. Tina4 will handle escaping and quoting for you.
+**Fix:** Always use parameterised queries: `"WHERE name = ?", [name]`. This is the single most important security practice for database code. Tina4 will handle escaping and quoting for you.

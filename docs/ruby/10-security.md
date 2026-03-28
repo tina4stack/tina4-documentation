@@ -583,7 +583,6 @@ Tina4::Router.post("/api/contact").no_auth do |request, response|
     email: email,
     message: message
   })
-  db.commit
 
   response.call({ success: true, message: "Thank you for your message" })
 end

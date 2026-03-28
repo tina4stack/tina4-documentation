@@ -55,7 +55,8 @@ Jobs default to priority 0 (normal). Higher numbers are popped first:
 queue.push({ to: "alice@example.com", subject: "Newsletter" });
 
 // High priority -- processed before normal jobs
-queue.push({ to: "alice@example.com", subject: "Password Reset" }, { priority: 10 });
+// push(payload, delay, priority) -- delay 0, priority 10
+queue.push({ to: "alice@example.com", subject: "Password Reset" }, 0, 10);
 ```
 
 ### Queue Size
@@ -66,12 +67,10 @@ Check how many pending messages are in the queue:
 const count = queue.size();
 ```
 
-Pass a status string to count jobs in a specific state:
+Pass the topic and a status string to count jobs in a specific state:
 
 ```typescript
-const failed = queue.size("failed");
-const completed = queue.size("completed");
-const reserved = queue.size("reserved");
+const failed = queue.size(undefined, "failed");
 ```
 
 ---

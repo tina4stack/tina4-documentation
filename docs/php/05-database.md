@@ -41,6 +41,10 @@ DATABASE_URL=mssql://localhost:1433/myapp
 DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
 ```
 
+### Firebird: Dual-Driver Support
+
+The Firebird adapter works with either the `ibase_*` or `fbird_*` PHP functions. It auto-detects which set is available at connection time. If you have `ext-interbase` installed, it uses `ibase_*`. If you have the newer `fbird_*` functions, it uses those instead. No configuration needed -- install whichever extension is available for your platform and the adapter picks it up.
+
 ### Separate Credentials
 
 Keep credentials out of the connection string. Better for production:
@@ -79,14 +83,11 @@ curl http://localhost:7146/health
 ```json
 {
   "status": "ok",
-  "database": "connected",
-  "uptime_seconds": 3,
   "version": "3.0.0",
+  "uptime": 3.14,
   "framework": "tina4-php"
 }
 ```
-
-If the database is unreachable, you see `"database": "disconnected"` with an error message.
 
 ---
 

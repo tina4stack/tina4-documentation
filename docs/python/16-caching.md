@@ -267,8 +267,8 @@ async def get_product(request, response):
     # 2. Cache miss -- fetch from database
     db = Database.get_connection()
     product = db.fetch_one(
-        "SELECT id, name, category, price, in_stock FROM products WHERE id = :id",
-        {"id": product_id}
+        "SELECT id, name, category, price, in_stock FROM products WHERE id = ?",
+        [product_id]
     )
 
     if product is None:
@@ -341,8 +341,8 @@ The cache key is derived from the SQL query and its parameters. Different querie
 
 ```python
 # These are cached separately:
-db.fetch_all("SELECT * FROM products WHERE category = :cat", {"cat": "Electronics"})
-db.fetch_all("SELECT * FROM products WHERE category = :cat", {"cat": "Fitness"})
+db.fetch_all("SELECT * FROM products WHERE category = ?", ["Electronics"])
+db.fetch_all("SELECT * FROM products WHERE category = ?", ["Fitness"])
 ```
 
 ### When to Use DB Cache
@@ -395,8 +395,8 @@ async def update_product(request, response):
     db = Database.get_connection()
 
     db.execute(
-        "UPDATE products SET name = :name, price = :price WHERE id = :id",
-        {"name": body["name"], "price": body["price"], "id": product_id}
+        "UPDATE products SET name = ?, price = ? WHERE id = ?",
+        [body["name"], body["price"], product_id]
     )
 
     # Invalidate the cache for this product
@@ -406,7 +406,7 @@ async def update_product(request, response):
     cache_delete("products:all")
     cache_delete("products:featured")
 
-    updated = db.fetch_one("SELECT * FROM products WHERE id = :id", {"id": product_id})
+    updated = db.fetch_one("SELECT * FROM products WHERE id = ?", [product_id])
 
     return response(updated)
 ```
@@ -425,11 +425,11 @@ async def update_product(request, response):
     db = Database.get_connection()
 
     db.execute(
-        "UPDATE products SET name = :name, price = :price WHERE id = :id",
-        {"name": body["name"], "price": body["price"], "id": product_id}
+        "UPDATE products SET name = ?, price = ? WHERE id = ?",
+        [body["name"], body["price"], product_id]
     )
 
-    updated = db.fetch_one("SELECT * FROM products WHERE id = :id", {"id": product_id})
+    updated = db.fetch_one("SELECT * FROM products WHERE id = ?", [product_id])
 
     # Write the new data directly to cache (instead of deleting)
     cache_set(f"product:{product_id}", updated, ttl=600)
@@ -550,8 +550,8 @@ async def get_catalog(request, response):
            JOIN categories c ON p.category_id = c.id
            WHERE p.active = 1
            ORDER BY p.created_at DESC
-           LIMIT :limit OFFSET :offset""",
-        {"limit": limit, "offset": offset}
+           LIMIT ? OFFSET ?""",
+        [limit, offset]
     )
 
     total = db.fetch_one("SELECT COUNT(*) as count FROM products WHERE active = 1")

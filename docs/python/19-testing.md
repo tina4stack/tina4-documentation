@@ -195,8 +195,7 @@ class ProductTest(Test):
         product.price = 29.99
         product.save()
 
-        loaded = Product()
-        loaded.load(product.id)
+        loaded = Product.find(product.id)
 
         assert_equal(loaded.name, "Load Test Widget", "Name should match")
         assert_equal(loaded.category, "Testing", "Category should match")
@@ -214,8 +213,7 @@ class ProductTest(Test):
         product.price = 15.00
         product.save()
 
-        reloaded = Product()
-        reloaded.load(product_id)
+        reloaded = Product.find(product_id)
 
         assert_equal(reloaded.name, "Updated Widget", "Name should be updated")
         assert_equal(reloaded.price, 15.00, "Price should be updated")
@@ -229,10 +227,9 @@ class ProductTest(Test):
         product_id = product.id
         product.delete()
 
-        gone = Product()
-        gone.load(product_id)
+        gone = Product.find(product_id)
 
-        assert_true(not gone.id, "Deleted product should not be loadable")
+        assert_true(gone is None, "Deleted product should not be loadable")
 
     def test_select_with_filter(self):
         p1 = Product()
@@ -247,12 +244,11 @@ class ProductTest(Test):
         p2.price = 20.00
         p2.save()
 
-        product = Product()
-        results = product.select("*", "category = :cat", {"cat": "FilterCat"})
+        products, count = Product.where("category = ?", ["FilterCat"])
 
-        assert_true(len(results) >= 2, "Should find at least 2 FilterCat products")
+        assert_true(len(products) >= 2, "Should find at least 2 FilterCat products")
 
-        names = [p.name for p in results]
+        names = [p.name for p in products]
         assert_true("Filter Test A" in names, "Should include Filter Test A")
         assert_true("Filter Test B" in names, "Should include Filter Test B")
 ```
@@ -493,25 +489,21 @@ class UserTest(Test):
     def tear_down(self):
         # Runs after each test
         if self.user_id:
-            user = User()
-            user.load(self.user_id)
-            if user.id:
+            user = User.find(self.user_id)
+            if user:
                 user.delete()
 
     def test_user_exists(self):
-        user = User()
-        user.load(self.user_id)
+        user = User.find(self.user_id)
         assert_not_none(user.id, "User should exist")
         assert_equal(user.name, "Test User", "Name should match")
 
     def test_update_user(self):
-        user = User()
-        user.load(self.user_id)
+        user = User.find(self.user_id)
         user.name = "Updated Name"
         user.save()
 
-        reloaded = User()
-        reloaded.load(self.user_id)
+        reloaded = User.find(self.user_id)
         assert_equal(reloaded.name, "Updated Name", "Name should be updated")
 ```
 
@@ -703,14 +695,12 @@ def test_delete_product(self):
 
     product.delete()
 
-    check = Product()
-    check.load(product.id)
-    assert_true(not check.id, "Product should be deleted")
+    check = Product.find(product.id)
+    assert_true(check is None, "Product should be deleted")
 
 # Bad: depends on data from another test or the dev database
 def test_delete_product(self):
-    product = Product()
-    product.load(1)  # Assumes product with ID 1 exists
+    product = Product.find(1)  # Assumes product with ID 1 exists
     product.delete()
 ```
 
@@ -814,8 +804,7 @@ class UserModelTest(Test):
         user.name = "New Name"
         user.save()
 
-        reloaded = User()
-        reloaded.load(user_id)
+        reloaded = User.find(user_id)
         assert_equal(reloaded.name, "New Name", "Name should be updated")
 
     def test_delete_user(self):
@@ -827,9 +816,8 @@ class UserModelTest(Test):
         user_id = user.id
         user.delete()
 
-        gone = User()
-        gone.load(user_id)
-        assert_true(not gone.id, "Deleted user should not exist")
+        gone = User.find(user_id)
+        assert_true(gone is None, "Deleted user should not exist")
 
     def test_select_users(self):
         for i in range(3):
@@ -838,10 +826,9 @@ class UserModelTest(Test):
             user.email = f"select-test-{i}-{uuid.uuid4().hex[:8]}@example.com"
             user.save()
 
-        user = User()
-        results = user.select("*")
+        users, count = User.where("1=1")
 
-        assert_true(len(results) >= 3, "Should have at least 3 users")
+        assert_true(len(users) >= 3, "Should have at least 3 users")
 ```
 
 ### tests/test_auth_flow.py

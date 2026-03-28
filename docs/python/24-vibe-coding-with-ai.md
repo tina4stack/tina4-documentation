@@ -161,9 +161,8 @@ async def products_page(request, response):
 ```python
 @get("/api/profile", middleware=["auth_middleware"])
 async def get_profile(request, response):
-    user = User()
-    user.load(request.user_id)
-    return response(user.safe_dict())
+    user = User.find(request.user_id)
+    return response(user.safe_dict()) if user else response({"error": "User not found"}, 404)
 ```
 
 ### WebSocket Handlers

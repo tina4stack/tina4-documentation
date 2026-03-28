@@ -70,11 +70,11 @@ Router.post("/api/contact", async (req, res) => {
     const body = req.body;
     const mailer = new Messenger();
 
-    const result = await mailer.send(
-        body.email,
-        "Contact Form Submission",
-        `Name: ${body.name}\nEmail: ${body.email}\nMessage:\n${body.message}`
-    );
+    const result = await mailer.send({
+        to: body.email,
+        subject: "Contact Form Submission",
+        body: `Name: ${body.name}\nEmail: ${body.email}\nMessage:\n${body.message}`
+    });
 
     if (result.success) {
         return res.json({ message: "Email sent successfully" });
@@ -88,12 +88,13 @@ Router.post("/api/contact", async (req, res) => {
 ## 5. Sending HTML Email with Text Fallback
 
 ```typescript
-const result = await mailer.send(
-    "alice@example.com",
-    "Welcome to My Store!",
-    htmlBody,
-    { textBody: textBody }
-);
+const result = await mailer.send({
+    to: "alice@example.com",
+    subject: "Welcome to My Store!",
+    body: htmlBody,
+    html: true,
+    text: textBody
+});
 ```
 
 ---
@@ -101,17 +102,15 @@ const result = await mailer.send(
 ## 6. Adding Attachments
 
 ```typescript
-const result = await mailer.send(
-    "accounting@example.com",
-    "Monthly Invoice #1042",
-    "<h2>Invoice #1042</h2><p>Please find the invoice attached.</p>",
-    {
-        attachments: [
-            "/path/to/invoices/invoice-1042.pdf",
-            { path: "/tmp/export.csv", name: "my-store-export.csv" }
-        ]
-    }
-);
+const result = await mailer.send({
+    to: "accounting@example.com",
+    subject: "Monthly Invoice #1042",
+    body: "<h2>Invoice #1042</h2><p>Please find the invoice attached.</p>",
+    html: true,
+    attachments: [
+        "/path/to/invoices/invoice-1042.pdf"
+    ]
+});
 ```
 
 ---
@@ -119,16 +118,15 @@ const result = await mailer.send(
 ## 7. CC and BCC
 
 ```typescript
-const result = await mailer.send(
-    "alice@example.com",
-    "Team Meeting Notes",
-    "<p>Here are the notes.</p>",
-    {
-        cc: ["bob@example.com", "charlie@example.com"],
-        bcc: ["manager@example.com"],
-        replyTo: "alice@example.com"
-    }
-);
+const result = await mailer.send({
+    to: "alice@example.com",
+    subject: "Team Meeting Notes",
+    body: "<p>Here are the notes.</p>",
+    html: true,
+    cc: ["bob@example.com", "charlie@example.com"],
+    bcc: ["manager@example.com"],
+    replyTo: "alice@example.com"
+});
 ```
 
 ---
@@ -176,7 +174,8 @@ Override with `TINA4_MAIL_INTERCEPT=false` if you need real delivery in debug mo
 Create `src/templates/emails/welcome.html` with Frond template syntax, then render and send:
 
 ```typescript
-import { Router, Messenger, Frond } from "tina4-nodejs";
+import { Router, Messenger } from "tina4-nodejs";
+import { Frond } from "tina4-nodejs/frond";
 
 Router.post("/api/register", async (req, res) => {
     const body = req.body;
@@ -192,7 +191,12 @@ Router.post("/api/register", async (req, res) => {
     });
 
     const mailer = new Messenger();
-    const result = await mailer.send(body.email, `Welcome to My Store, ${body.name}!`, htmlBody);
+    const result = await mailer.send({
+        to: body.email,
+        subject: `Welcome to My Store, ${body.name}!`,
+        body: htmlBody,
+        html: true
+    });
 
     return res.status(201).json({ message: "Registration successful", email_sent: result.success, user_id: userId });
 });
@@ -203,11 +207,14 @@ Router.post("/api/register", async (req, res) => {
 ## 11. Sending Email via Queues
 
 ```typescript
-import { Router, Queue, Messenger, Frond } from "tina4-nodejs";
+import { Router, Queue, Messenger } from "tina4-nodejs";
+import { Frond } from "tina4-nodejs/frond";
+
+const emailQueue = new Queue({ topic: "emails" });
 
 Router.post("/api/register", async (req, res) => {
     const userId = 42;
-    await Queue.produce("emails", {
+    emailQueue.push({
         template: "emails/welcome.html",
         to: req.body.email,
         subject: `Welcome to My Store, ${req.body.name}!`,
@@ -216,16 +223,18 @@ Router.post("/api/register", async (req, res) => {
     return res.status(201).json({ message: "Registration successful", user_id: userId });
 });
 
-Queue.consume("emails", async (job) => {
-    const { template, to, subject, data } = job.payload;
-    const htmlBody = await Frond.render(template, data);
+emailQueue.process(async (job) => {
+    const { template, to, subject, data } = job.payload as any;
+    const frond = new Frond("src/templates");
+    const htmlBody = frond.render(template, data);
     const mailer = new Messenger();
-    const result = await mailer.send(to, subject, htmlBody);
+    const result = await mailer.send({ to, subject, body: htmlBody, html: true });
     if (!result.success) {
-        console.log(`Email failed: ${result.error}`);
-        return false;
+        console.log(`Email failed: ${result.message}`);
+        job.fail(result.message);
+        return;
     }
-    return true;
+    job.complete();
 });
 ```
 
@@ -242,7 +251,8 @@ Create `GET /contact` page, `POST /contact` endpoint that validates, sends email
 Create `src/routes/contact.ts`:
 
 ```typescript
-import { Router, Messenger, Frond } from "tina4-nodejs";
+import { Router, Messenger } from "tina4-nodejs";
+import { Frond } from "tina4-nodejs/frond";
 
 Router.get("/contact", async (req, res) => {
     const flash = req.session._flash ?? null;
@@ -270,7 +280,13 @@ Router.post("/contact", async (req, res) => {
 
     const mailer = new Messenger();
     const adminEmail = process.env.ADMIN_EMAIL ?? "admin@example.com";
-    const result = await mailer.send(adminEmail, `Contact Form: ${body.subject}`, htmlBody, { replyTo: body.email });
+    const result = await mailer.send({
+        to: adminEmail,
+        subject: `Contact Form: ${body.subject}`,
+        body: htmlBody,
+        html: true,
+        replyTo: body.email
+    });
 
     req.session._flash = result.success
         ? { type: "success", message: "Thank you for your message!" }

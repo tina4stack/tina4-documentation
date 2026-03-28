@@ -119,12 +119,12 @@ src/templates/errors/500.html
 ## 8. Logging
 
 ```typescript
-import { Logger } from "tina4-nodejs";
+import { Log } from "tina4-nodejs";
 
-Logger.debug("Debug message");
-Logger.info("Info message");
-Logger.warning("Warning message");
-Logger.error("Error message");
+Log.debug("Debug message");
+Log.info("Info message");
+Log.warning("Warning message");
+Log.error("Error message");
 ```
 
 Log levels are controlled by `TINA4_LOG_LEVEL` in `.env`:
