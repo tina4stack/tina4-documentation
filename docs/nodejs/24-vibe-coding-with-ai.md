@@ -223,4 +223,4 @@ Convention over configuration means the AI knows where things go. Zero dependenc
 
 You describe the intent. The AI writes the code. You review and refine. Tina4 is the ground the partnership stands on.
 
-*This is not a framework. This is a partnership.*
+*This Is Now A 4Framework. This is a partnership.*
