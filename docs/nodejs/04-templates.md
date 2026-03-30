@@ -379,6 +379,31 @@ Handle empty lists with `{% else %}`:
 &#123;% endif %&#125;
 ```
 
+### set -- Local Variables
+
+Create or update a variable inside a template:
+
+```html
+&#123;% set greeting = "Hello" %&#125;
+&#123;% set full_name = user.first_name ~ " " ~ user.last_name %&#125;
+&#123;% set total = price * quantity %&#125;
+&#123;% set discount = total - rebate %&#125;
+
+<p>&#123;&#123; greeting &#125;&#125;, &#123;&#123; full_name &#125;&#125;!</p>
+<p>Total: &#123;&#123; total &#125;&#125;, After discount: &#123;&#123; discount &#125;&#125;</p>
+```
+
+The `~` operator concatenates strings. Arithmetic operators (`+`, `-`, `*`, `/`, `//`, `%`, `**`) work in `set` and expressions.
+
+When combining filters with arithmetic, assign the filtered values first:
+
+```html
+&#123;% set dr = account.dr|default(0) %&#125;
+&#123;% set cr = account.cr|default(0) %&#125;
+&#123;% set balance = dr - cr %&#125;
+<p>Balance: &#123;&#123; balance &#125;&#125;</p>
+```
+
 ---
 
 ## 7. Filters
@@ -435,6 +460,24 @@ All `{{ }}` output is auto-escaped for HTML safety. If you trust the content and
 ```
 
 Use `raw` with caution. Apply it only to content you control. Never to user input.
+
+### Encoding Filters
+
+```html
+&#123;&#123; data | json_encode &#125;&#125;                &#123;# {"key": "value"} #&#125;
+&#123;&#123; data | to_json &#125;&#125;                    &#123;# Same as json_encode, safe output #&#125;
+&#123;&#123; text | js_escape &#125;&#125;                  &#123;# Escaped for JavaScript strings #&#125;
+&#123;&#123; text | base64encode &#125;&#125;               &#123;# Base64 encoded #&#125;
+&#123;&#123; encoded | base64decode &#125;&#125;            &#123;# Base64 decoded #&#125;
+```
+
+### Form Token Filters
+
+```html
+&#123;&#123; form_token() &#125;&#125;                     &#123;# Hidden input with CSRF token #&#125;
+&#123;&#123; formTokenValue("context") &#125;&#125;         &#123;# Raw JWT token string #&#125;
+&#123;&#123; form_token_value("context") &#125;&#125;       &#123;# Alias for formTokenValue #&#125;
+```
 
 ### Chaining Filters
 
