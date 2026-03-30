@@ -81,7 +81,7 @@ function buildChapterSidebar(section: string, label: string, extras?: object[]):
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
     title: "Simple. Fast. Human.",
-    description: "Tina4 - This is not a framework",
+    description: "Tina4 - This Is Now A 4Framework",
     head: [
         ['link', {rel: 'icon', href: '/favicon.ico', type: 'image/x-icon'}],
         ['script', {async: '', src: 'https://www.googletagmanager.com/gtag/js?id=G-FZRRSBE9M0'}],
