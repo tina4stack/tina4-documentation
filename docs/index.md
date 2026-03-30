@@ -5,7 +5,7 @@ layout: home
 hero:
   name: "Tina4"
   text: "Documentation"
-  tagline: This is not a framework - v3
+  tagline: This Is Now A 4Framework
   image:
     src: './logo.svg'
   actions:
