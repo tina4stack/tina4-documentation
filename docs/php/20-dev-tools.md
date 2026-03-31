@@ -2,15 +2,15 @@
 
 ## 1. Debugging at 2am
 
-2am. Your production monitoring pings you. A 500 error on the checkout endpoint. You pull up the dev dashboard. Find the failing request in the request inspector. See the full stack trace with source code context. Line 47 of `src/routes/checkout.php` -- a null reference on the shipping address because the user did not fill in the form. Add a null check. Push the fix. Back to sleep. Total time: 30 seconds.
+2am. Production monitoring pings you. A 500 error on checkout. You pull up the dev dashboard. The request inspector shows the failing request. The stack trace points to line 47 of `src/routes/checkout.php` -- a null reference on the shipping address because the user skipped the form field. You add a null check. Push the fix. Back to sleep. Total time: 30 seconds.
 
-Tina4's dev tools are not an afterthought. They are built into the framework from day one. When `TINA4_DEBUG=true`, you get a full development dashboard, an error overlay with source code, hot reload, a request inspector, a SQL query runner, and more. No additional packages.
+Tina4's dev tools ship with the framework from day one. When `TINA4_DEBUG=true`, you get a development dashboard, an error overlay with source code, hot reload, a request inspector with replay, a SQL query runner, a queue monitor, and system info -- all without installing extra packages.
 
 ---
 
 ## 2. Enabling the Dev Dashboard
 
-Enable debug mode in your `.env`:
+Set `TINA4_DEBUG=true` in your `.env`:
 
 ```dotenv
 TINA4_DEBUG=true
@@ -22,7 +22,7 @@ Restart your server and navigate to:
 http://localhost:7146/__dev
 ```
 
-You are in the dev dashboard. No token or additional environment variables are needed -- the dashboard is a dev-only feature that only runs when debug mode is on. In production, set `TINA4_DEBUG=false` and the entire dashboard disappears.
+No token or additional environment variables needed. The dashboard runs only when debug mode is on. Set `TINA4_DEBUG=false` in production and the entire dashboard disappears.
 
 ---
 

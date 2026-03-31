@@ -441,6 +441,17 @@ if db.table_exists?("products")
 end
 ```
 
+Returns `true` if the table exists, `false` otherwise.
+
+### driver_name
+
+```ruby
+db.driver_name
+# "sqlite", "postgres", "mysql", "mssql", or "firebird"
+```
+
+Returns a lowercase string identifying the active database engine. This matters when you write engine-specific SQL in a multi-database setup.
+
 ### A Schema Info Endpoint
 
 ```ruby
@@ -993,7 +1004,130 @@ end
 
 ---
 
-## 14. Gotchas
+## 14. Seeder -- Generating Test Data
+
+Testing with an empty database tells you nothing. Testing with hand-typed rows is slow and brittle. The `FakeData` class generates realistic test data. `seed_orm` and `seed_table` insert it in bulk.
+
+### FakeData
+
+```ruby
+fake = Tina4::FakeData.new
+
+fake.name        # "Grace Lopez"
+fake.email       # "bob.anderson123@demo.net"
+fake.phone       # "+1 (547) 382-9104"
+fake.sentence    # "Magna exercitation lorem ipsum dolor sit."
+fake.paragraph   # Three sentences of filler text
+fake.integer     # 7342
+fake.numeric     # 481.29
+fake.date        # "2023-07-14"
+fake.uuid        # "a3f1b2c4-d5e6-f7a8-b9c0-d1e2f3a4b5c6"
+fake.address     # "742 Oak Avenue"
+fake.boolean     # 0 or 1
+fake.city        # "Tokyo"
+fake.country     # "Germany"
+fake.company     # "TechGlobal Inc"
+fake.url         # "https://example.com/some-random-slug"
+fake.password    # "xK9mPq2nRt5vWz8a"
+```
+
+Every method draws from built-in word banks -- no network calls, no external packages.
+
+### Deterministic Output
+
+Pass a seed to get reproducible results. The same seed produces the same sequence every time:
+
+```ruby
+fake = Tina4::FakeData.new(seed: 42)
+fake.name   # Always the same name with seed 42
+fake.email  # Always the same email with seed 42
+```
+
+Deterministic data means deterministic assertions. This matters for tests.
+
+### Seeding with ORM
+
+`seed_orm` combines `FakeData` with your ORM models. It reads the model's field definitions and generates appropriate data for each column:
+
+```ruby
+Tina4.seed_orm(User, count: 100)
+```
+
+This inserts 100 rows into the `users` table. `FakeData` inspects each column name and type to generate matching data -- email columns get email addresses, phone columns get phone numbers, name columns get names.
+
+### Overrides
+
+Static values or custom generators apply through the `overrides` hash:
+
+```ruby
+Tina4.seed_orm(User, count: 50, overrides: {
+  role: "member",
+  active: 1,
+  email: ->(fake) { fake.email }
+})
+```
+
+Every row gets `role = "member"` and `active = 1`. Lambda values receive the `FakeData` instance for custom generation.
+
+### Seeding a Raw Table
+
+When you have no ORM class, use `seed_table` with a column map:
+
+```ruby
+Tina4.seed_table("users", {
+  name: :string,
+  email: :string,
+  phone: :string,
+  bio: :text,
+  age: :integer
+}, count: 100)
+```
+
+The column types tell `FakeData` what kind of data to generate for each field.
+
+### Batch Seeding
+
+Seed multiple tables in order with `seed_batch`. Pass `clear: true` to delete existing records first (in reverse order, respecting foreign keys):
+
+```ruby
+Tina4.seed_batch([
+  { orm_class: User, count: 20 },
+  { orm_class: Order, count: 100, overrides: { status: "pending" } }
+], clear: true)
+```
+
+### Seed Files
+
+Place seed scripts in a `seeds/` folder. Each file is a Ruby script that runs `seed_orm` or `seed_table`:
+
+```ruby
+# seeds/001_users.rb
+Tina4.seed_orm(User, count: 50, seed: 1)
+
+# seeds/002_orders.rb
+Tina4.seed_orm(Order, count: 200, overrides: {
+  status: ->(f) { f.choice(%w[pending shipped delivered]) }
+})
+```
+
+Run all seed files:
+
+```ruby
+Tina4.seed(seed_folder: "seeds")
+```
+
+Files run in alphabetical order. Prefix with numbers to control sequence. Files starting with `_` are skipped.
+
+### When to Use It
+
+- Populating a development database with realistic data
+- Writing integration tests that need rows in the database
+- Load testing with thousands of records
+- Demos and screenshots that look real without using real data
+
+---
+
+## 15. Gotchas
 
 ### 1. Forgetting the transaction block
 
@@ -1058,3 +1192,11 @@ end
 **Cause:** `fetch` always returns an array. An empty result is `[]`, not `nil`. Only `fetch_one` returns `nil` when no row matches.
 
 **Fix:** Check with `if result.empty?` or `if result.length == 0`.
+
+### 8. SQL Injection Through String Interpolation
+
+**Problem:** Your application is vulnerable to SQL injection attacks.
+
+**Cause:** You used string interpolation to build SQL queries with user input: `"WHERE name = '#{name}'"`.
+
+**Fix:** Use parameterised queries: `"WHERE name = ?", [name]`. This is the single most important security practice for database code. Tina4 handles escaping and quoting for you.

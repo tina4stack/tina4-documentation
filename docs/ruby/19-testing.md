@@ -82,7 +82,83 @@ bundle exec rspec tests/
 
 ---
 
-## 3. Testing Routes
+## 3. RSpec Matchers Reference
+
+RSpec provides matchers for every comparison you need. Here are the ones you will use most:
+
+### Equality
+
+```ruby
+expect(result).to eq(42)             # value equality
+expect(result).not_to eq(0)          # value inequality
+expect(result).to eql(42)            # type + value equality
+expect(object).to equal(other)       # identity (same object)
+```
+
+### Truthiness
+
+```ruby
+expect(true).to be_truthy            # truthy (not nil, not false)
+expect(nil).to be_falsy              # falsy (nil or false)
+expect(nil).to be_nil                # exactly nil
+expect("hello").not_to be_nil        # not nil
+expect(true).to be true              # exactly true
+expect(false).to be false            # exactly false
+```
+
+### Comparison
+
+```ruby
+expect(10).to be > 5                 # greater than
+expect(3).to be < 10                 # less than
+expect(5).to be >= 5                 # greater or equal
+expect(5).to be <= 5                 # less or equal
+expect(5).to be_between(1, 10)       # range check
+```
+
+### Strings
+
+```ruby
+expect("Hello World").to include("World")          # substring
+expect("Hello World").to start_with("Hello")       # prefix
+expect("Hello World").to end_with("World")         # suffix
+expect("user@example.com").to match(/@/)           # regex match
+```
+
+### Collections
+
+```ruby
+expect([1, 2, 3]).to include(2)                    # contains element
+expect([1, 2, 3]).to have_attributes(length: 3)    # size check
+expect([]).to be_empty                             # empty check
+expect([3, 1, 2]).to contain_exactly(1, 2, 3)      # exact elements, any order
+```
+
+### Exceptions
+
+```ruby
+expect { Integer("not-a-number") }.to raise_error(ArgumentError)
+expect { 10 / 0 }.to raise_error(ZeroDivisionError)
+expect { safe_operation }.not_to raise_error
+```
+
+### Floating Point
+
+```ruby
+expect(9.99).to be_within(0.01).of(10.0)           # approximate equality
+```
+
+### Type Checking
+
+```ruby
+expect("hello").to be_a(String)
+expect(42).to be_an(Integer)
+expect([]).to be_an(Array)
+```
+
+---
+
+## 4. Testing Routes
 
 The `Tina4::TestClient` lets you make HTTP requests to your routes without starting a server:
 
@@ -170,7 +246,7 @@ result.headers     # Response headers hash
 
 ---
 
-## 4. Testing ORM Models
+## 5. Testing ORM Models
 
 ```ruby
 require "tina4"
@@ -262,7 +338,7 @@ end
 
 ---
 
-## 5. Testing Authentication
+## 6. Testing Authentication
 
 ```ruby
 require "tina4"
@@ -326,7 +402,7 @@ end
 
 ---
 
-## 6. Test Database Isolation
+## 7. Test Database Isolation
 
 Use a separate test database to avoid polluting development data:
 
@@ -358,7 +434,49 @@ end
 
 ---
 
-## 7. Running Tests
+## 8. Setup and Teardown
+
+RSpec's `before` and `after` hooks handle test fixture management. Use them to create and clean up test data:
+
+```ruby
+RSpec.describe "User Management" do
+  let(:client) { Tina4::TestClient.new }
+
+  before(:each) do
+    # Runs before every test
+    @user = User.new(name: "Test User", email: "test@example.com")
+    @user.save
+    @user_id = @user.id
+  end
+
+  after(:each) do
+    # Runs after every test, regardless of pass/fail
+    User.find(@user_id)&.delete rescue nil
+  end
+
+  it "loads the user" do
+    loaded = User.find(@user_id)
+    expect(loaded.name).to eq("Test User")
+  end
+
+  it "updates the user" do
+    user = User.find(@user_id)
+    user.name = "Updated Name"
+    user.save
+
+    reloaded = User.find(@user_id)
+    expect(reloaded.name).to eq("Updated Name")
+  end
+end
+```
+
+`before(:each)` runs before every test method. `after(:each)` runs after every test method, regardless of whether the test passed or failed. This keeps tests isolated -- each test starts with a clean state.
+
+Use `before(:all)` and `after(:all)` for expensive setup that applies to the entire describe block (like creating a database). But prefer `before(:each)` for data -- shared state between tests causes flaky results.
+
+---
+
+## 9. Running Tests
 
 ```bash
 # Run all tests
@@ -378,7 +496,88 @@ bundle exec rspec tests/ --format documentation
 
 ---
 
-## 8. Exercise: Write Tests for a Notes API
+## 10. Testing Best Practices
+
+### Test One Thing Per Test
+
+Each test should verify one behavior. If it fails, you know exactly what broke.
+
+```ruby
+# Good: each test verifies one thing
+it "returns 201 on create" do
+  result = client.post("/api/products", { name: "Widget", price: 9.99 })
+  expect(result.status).to eq(201)
+end
+
+it "returns the created product" do
+  result = client.post("/api/products", { name: "Widget", price: 9.99 })
+  expect(result.json["name"]).to eq("Widget")
+end
+
+# Avoid: testing multiple unrelated things in one test
+it "does everything" do
+  # Creates, reads, updates, deletes, checks auth, validates input...
+  # When this fails, you do not know which part broke
+end
+```
+
+### Use Descriptive Test Names
+
+```ruby
+# Good: tells you what the test verifies
+it "returns 404 when product does not exist" do
+  # ...
+end
+
+# Bad: vague name
+it "works" do
+  # ...
+end
+```
+
+### Isolate Tests
+
+Each test should create its own data and clean up after itself. Never depend on data from another test or from the development database.
+
+```ruby
+# Good: creates its own data
+it "deletes a product" do
+  product = Product.new(name: "Temporary", price: 1.00)
+  product.save
+
+  product.delete
+
+  check = Product.find(product.id)
+  expect(check).to be_nil
+end
+```
+
+### Code Coverage
+
+RSpec integrates with `simplecov` for coverage reports:
+
+```ruby
+# Add to Gemfile
+gem "simplecov", require: false, group: :test
+
+# Add to spec/spec_helper.rb (before any other require)
+require "simplecov"
+SimpleCov.start
+```
+
+```bash
+bundle exec rspec
+```
+
+```
+Coverage report generated. 88.5% covered.
+```
+
+Open `coverage/index.html` in your browser for a visual breakdown of which lines are covered.
+
+---
+
+## 11. Exercise: Write Tests for a Notes API
 
 Write a comprehensive test suite for the Notes API from Chapter 5.
 
@@ -398,7 +597,7 @@ Test these scenarios:
 
 ---
 
-## 9. Solution
+## 12. Solution
 
 Create `tests/notes_spec.rb`:
 
@@ -510,7 +709,7 @@ end
 
 ---
 
-## 10. Gotchas
+## 13. Gotchas
 
 ### 1. Tests Share Database State
 

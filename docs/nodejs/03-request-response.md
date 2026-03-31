@@ -348,6 +348,46 @@ return res
 
 Uploaded files arrive via `req.files`. Each file is an object with metadata and a temporary path.
 
+### Multiple File Uploads
+
+Handle multiple files from a single form field:
+
+```typescript
+Router.post("/api/gallery", async (req, res) => {
+    const files = req.files?.photos;
+
+    if (!files) {
+        return res.status(400).json({ error: "No files uploaded" });
+    }
+
+    // files can be a single file or an array
+    const fileList = Array.isArray(files) ? files : [files];
+
+    const results = [];
+    for (const file of fileList) {
+        const ext = extname(file.name);
+        const savedName = `gallery_${randomUUID()}${ext}`;
+        const dest = join(process.cwd(), "src/public/uploads", savedName);
+        await rename(file.tmpPath, dest);
+        results.push({
+            original: file.name,
+            saved: savedName,
+            size: file.size,
+            url: `/uploads/${savedName}`,
+        });
+    }
+
+    return res.status(201).json({ uploaded: results, count: results.length });
+});
+```
+
+```bash
+curl -X POST http://localhost:7148/api/gallery \
+  -F "photos=@/path/to/photo1.jpg" \
+  -F "photos=@/path/to/photo2.jpg" \
+  -F "photos=@/path/to/photo3.jpg"
+```
+
 ### Handling a Single File Upload
 
 ```typescript
@@ -463,9 +503,30 @@ return res.file(filepath, "Q1-2026-Sales-Report.pdf");
 
 ---
 
-## 9. Content Negotiation
+## 9. XML Responses
 
-Check the `Accept` header to return different formats:
+Return XML when your API needs to serve legacy clients or SOAP integrations:
+
+```typescript
+Router.get("/api/products/{id:int}.xml", async (req, res) => {
+    const product = { id: req.params.id, name: "Wireless Keyboard", price: 79.99 };
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<product>
+    <id>${product.id}</id>
+    <name>${product.name}</name>
+    <price>${product.price}</price>
+</product>`;
+
+    return res.header("Content-Type", "application/xml").text(xml);
+});
+```
+
+---
+
+## 10. Content Negotiation
+
+Check the `Accept` header to return different formats from the same endpoint:
 
 ```typescript
 import { Router } from "tina4-nodejs";
@@ -480,6 +541,11 @@ Router.get("/api/products/{id:int}", async (req, res) => {
         return res.html("product-detail.html", { product });
     }
 
+    if (accept.includes("application/xml")) {
+        const xml = `<?xml version="1.0"?><product><id>${id}</id><name>${product.name}</name><price>${product.price}</price></product>`;
+        return res.header("Content-Type", "application/xml").text(xml);
+    }
+
     if (accept.includes("text/plain")) {
         return res.text(`Product #${id}: ${product.name} - $${product.price}`);
     }
@@ -490,7 +556,7 @@ Router.get("/api/products/{id:int}", async (req, res) => {
 
 ---
 
-## 10. Input Validation
+## 11. Input Validation
 
 Tina4 includes a `Validator` class for declarative input validation. Chain rules together and check the result. If validation fails, use `res.error()` to return a structured error envelope.
 
@@ -558,7 +624,7 @@ This sets the limit to 50 MB.
 
 ---
 
-## 11. Exercise: Build an Image Upload API
+## 12. Exercise: Build an Image Upload API
 
 Build an API that handles image uploads and serves them back.
 
@@ -579,7 +645,7 @@ Rules:
 
 ---
 
-## 12. Solution
+## 13. Solution
 
 Create `src/routes/images.ts`:
 
@@ -670,7 +736,7 @@ Router.get("/api/images/{filename}", async (req, res) => {
 
 ---
 
-## 13. Gotchas
+## 14. Gotchas
 
 ### 1. Forgetting `return`
 

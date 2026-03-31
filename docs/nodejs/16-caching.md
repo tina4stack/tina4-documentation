@@ -132,45 +132,100 @@ Identical queries with identical parameters return cached results. The cache key
 
 ## 8. Cache Invalidation Strategies
 
-### Time-Based Expiry (TTL)
+Cache invalidation is the hard problem. Stale data is worse than no cache. Three strategies solve it.
+
+### Strategy 1: Time-Based Expiry (TTL)
+
+Set a TTL and let the cache expire on its own:
 
 ```typescript
 await cacheSet("products:featured", featuredProducts, 600);
 ```
 
-### Event-Based Invalidation
+After 600 seconds, the next request misses the cache, fetches from the database, and repopulates. Simple. Works for data that tolerates staleness -- product catalogs, configuration, public content.
+
+### Strategy 2: Event-Based Invalidation
+
+Delete the cache entry when the underlying data changes:
 
 ```typescript
 Router.put("/api/products/{id:int}", async (req, res) => {
-    // Update database...
+    // Update the database
+    const product = Product.findById(req.params.id);
+    product.name = req.body.name ?? product.name;
+    product.save();
+
+    // Invalidate related cache entries
     await cacheDelete(`product:${req.params.id}`);
     await cacheDelete("products:all");
-    // ...
+    await cacheDelete("products:featured");
+
+    return res.json(product.toDict());
 });
 ```
 
-### Write-Through Cache
+The next read triggers a fresh database query. No stale data. More code -- every write must know which cache keys to invalidate.
+
+### Strategy 3: Write-Through Cache
+
+Update the cache at the same time you update the database:
 
 ```typescript
 Router.put("/api/products/{id:int}", async (req, res) => {
-    // Update database...
-    const updated = await db.fetchOne("SELECT * FROM products WHERE id = :id", { id });
-    await cacheSet(`product:${id}`, updated, 600);
-    return res.json(updated);
+    const product = Product.findById(req.params.id);
+    product.name = req.body.name ?? product.name;
+    product.save();
+
+    // Write the fresh data to cache immediately
+    await cacheSet(`product:${req.params.id}`, product.toDict(), 600);
+
+    return res.json(product.toDict());
 });
 ```
+
+The next read hits the cache immediately -- no database roundtrip. Best for high-traffic data that changes often. The tradeoff: every write does extra work.
+
+### Choosing a Strategy
+
+| Strategy | Best For | Tradeoff |
+|----------|----------|----------|
+| TTL | Read-heavy, tolerates staleness | Stale data for up to TTL duration |
+| Event-based | Consistency matters | Every write must invalidate |
+| Write-through | High traffic, frequent updates | Every write does cache work |
+
+Combine them. Use TTL as a safety net (entries expire even if invalidation misses). Use event-based invalidation for immediate consistency on critical data.
 
 ---
 
 ## 9. TTL Management
 
-| Data Type | Suggested TTL |
-|-----------|---------------|
-| Static config | 3600 (1 hour) |
-| Product catalog | 300 (5 min) |
-| User profile | 60 (1 min) |
-| Search results | 120 (2 min) |
-| Shopping cart | 0 (no cache) |
+### Suggested TTLs by Data Type
+
+| Data Type | Suggested TTL | Rationale |
+|-----------|---------------|-----------|
+| Static config | 3600 (1 hour) | Rarely changes |
+| Product catalog | 300 (5 min) | Updates a few times per day |
+| User profile | 60 (1 min) | Users expect quick updates |
+| Dashboard stats | 30 (30 sec) | Frequently changing aggregates |
+| Search results | 120 (2 min) | Expensive queries, tolerable staleness |
+| Shopping cart | 0 (no cache) | Must be real-time |
+
+### Dynamic TTL
+
+Set TTL based on data characteristics:
+
+```typescript
+Router.get("/api/products/{id:int}", async (req, res) => {
+    const product = Product.findById(req.params.id);
+
+    // Popular products change more often -- shorter TTL
+    const ttl = product.views > 1000 ? 60 : 300;
+
+    await cacheSet(`product:${product.id}`, product.toDict(), ttl);
+
+    return res.json(product.toDict());
+});
+```
 
 ---
 

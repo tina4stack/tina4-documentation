@@ -115,7 +115,7 @@ const result = await mailer.send({
 
 ---
 
-## 7. CC and BCC
+## 7. CC, BCC, and Reply-To
 
 ```typescript
 const result = await mailer.send({
@@ -125,13 +125,45 @@ const result = await mailer.send({
     html: true,
     cc: ["bob@example.com", "charlie@example.com"],
     bcc: ["manager@example.com"],
-    replyTo: "alice@example.com"
+    replyTo: "no-reply@example.com",
 });
 ```
 
+The `replyTo` field sets the address that receives replies. Use it when the sending address (`from`) is a no-reply address but you want replies to reach a real inbox.
+
 ---
 
-## 8. Reading Inbox via IMAP
+## 8. Custom Headers
+
+Add custom headers to any email:
+
+```typescript
+const result = await mailer.send({
+    to: "alice@example.com",
+    subject: "Monthly Report",
+    body: "<h1>Report</h1>",
+    html: true,
+    headers: {
+        "X-Priority": "1",
+        "X-Mailer": "TaskFlow/1.0",
+        "List-Unsubscribe": "<mailto:unsubscribe@example.com>",
+    },
+});
+```
+
+Custom headers pass through to the SMTP server as-is. Common uses:
+
+| Header | Purpose |
+|--------|---------|
+| `X-Priority` | Email priority (1=high, 3=normal, 5=low) |
+| `X-Mailer` | Identifies the sending application |
+| `List-Unsubscribe` | One-click unsubscribe link (required for bulk email) |
+| `X-Entity-Ref-ID` | Prevents threading in some email clients |
+| `References` | Controls email threading |
+
+---
+
+## 9. Reading Inbox via IMAP
 
 ```dotenv
 TINA4_MAIL_IMAP_HOST=imap.example.com
@@ -152,16 +184,56 @@ Router.get("/api/inbox", async (req, res) => {
         subject: email.subject,
         date: email.date,
         preview: email.textBody.substring(0, 200),
-        has_attachments: email.attachments.length > 0
+        has_attachments: email.attachments.length > 0,
     }));
 
     return res.json({ messages, count: messages.length });
 });
 ```
 
+### Search Emails
+
+```typescript
+const results = await mailer.search("invoice", { limit: 10 });
+```
+
+Search scans subject lines and body text. Returns matching emails ordered by date.
+
+### Unread Count
+
+```typescript
+const unread = await mailer.getUnreadCount();
+```
+
+### Mark as Read / Unread
+
+```typescript
+await mailer.markRead(emailId);
+await mailer.markUnread(emailId);
+```
+
+### Delete an Email
+
+```typescript
+await mailer.deleteEmail(emailId);
+```
+
+### List Folders
+
+```typescript
+const folders = await mailer.getFolders();
+// ["INBOX", "Sent", "Drafts", "Trash", "Spam"]
+```
+
+### Read from a Specific Folder
+
+```typescript
+const sent = await mailer.getInbox({ folder: "Sent", limit: 10 });
+```
+
 ---
 
-## 9. Dev Mode: Email Interception
+## 10. Dev Mode: Email Interception
 
 When `TINA4_DEBUG=true`, Tina4 catches all outgoing emails and holds them in the dev dashboard. Navigate to `/__dev` to inspect them. No email reaches a real inbox during development.
 
@@ -169,7 +241,7 @@ Override with `TINA4_MAIL_INTERCEPT=false` if you need real delivery in debug mo
 
 ---
 
-## 10. Using Templates for Email Content
+## 11. Using Templates for Email Content
 
 Create `src/templates/emails/welcome.html` with Frond template syntax, then render and send:
 
@@ -204,7 +276,7 @@ Router.post("/api/register", async (req, res) => {
 
 ---
 
-## 11. Sending Email via Queues
+## 12. Sending Email via Queues
 
 ```typescript
 import { Router, Queue, Messenger } from "tina4-nodejs";
@@ -240,13 +312,13 @@ emailQueue.process(async (job) => {
 
 ---
 
-## 12. Exercise: Build a Contact Form with Email Notification
+## 13. Exercise: Build a Contact Form with Email Notification
 
 Create `GET /contact` page, `POST /contact` endpoint that validates, sends email, and shows a flash message.
 
 ---
 
-## 13. Solution
+## 14. Solution
 
 Create `src/routes/contact.ts`:
 
@@ -298,7 +370,7 @@ Router.post("/contact", async (req, res) => {
 
 ---
 
-## 14. Gotchas
+## 15. Gotchas
 
 ### 1. Gmail Blocks "Less Secure" Apps
 

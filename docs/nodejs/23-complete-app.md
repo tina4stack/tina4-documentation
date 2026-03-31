@@ -120,6 +120,24 @@ DROP TABLE IF EXISTS tasks;
 tina4 migrate
 ```
 
+```
+Running migrations...
+  [UP] 20260322000100_create_users_table.sql
+  [UP] 20260322000200_create_tasks_table.sql
+
+  2 migrations applied
+```
+
+Verify the database:
+
+```bash
+curl http://localhost:7148/health
+```
+
+```json
+{"status": "ok", "database": "connected"}
+```
+
 ---
 
 ## 4. Step 2: Define Models
@@ -298,6 +316,36 @@ Router.get("/api/profile", async (req, res) => {
     );
     return res.json(user);
 }, [authMiddleware]);
+```
+
+Test the auth routes:
+
+```bash
+# Register
+curl -X POST http://localhost:7148/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Alice", "email": "alice@example.com", "password": "securePass123"}'
+```
+
+```json
+{"message": "Registration successful", "user": {"id": 1, "name": "Alice", "email": "alice@example.com", "role": "user"}}
+```
+
+```bash
+# Login
+curl -X POST http://localhost:7148/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "alice@example.com", "password": "securePass123"}'
+```
+
+```json
+{"message": "Login successful", "token": "eyJhbGciOiJIUzI1NiIs...", "user": {"id": 1, "name": "Alice", "email": "alice@example.com", "role": "user"}}
+```
+
+Save the token for subsequent requests:
+
+```bash
+export TOKEN="eyJhbGciOiJIUzI1NiIs..."
 ```
 
 ---
@@ -486,6 +534,42 @@ Router.delete("/api/tasks/{id:int}", async (req, res) => {
 
     return res.status(204).json(null);
 }, [authMiddleware]);
+```
+
+Test the task routes:
+
+```bash
+# Create a task
+curl -X POST http://localhost:7148/api/tasks \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"title": "Set up CI pipeline", "priority": "high", "due_date": "2026-04-01"}'
+```
+
+```json
+{"id": 1, "title": "Set up CI pipeline", "status": "todo", "priority": "high", "created_by": 1, "due_date": "2026-04-01"}
+```
+
+```bash
+# List tasks
+curl http://localhost:7148/api/tasks \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{"tasks": [{"id": 1, "title": "Set up CI pipeline", "status": "todo", "priority": "high", "creator_name": "Alice"}], "count": 1}
+```
+
+```bash
+# Update task status
+curl -X PUT http://localhost:7148/api/tasks/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"status": "done"}'
+```
+
+```json
+{"id": 1, "title": "Set up CI pipeline", "status": "done", "completed_at": "2026-03-22T14:30:00.000Z"}
 ```
 
 ---
@@ -679,4 +763,98 @@ TaskFlow exercises every major Tina4 feature:
 - **Testing** -- Full test suite
 - **Deployment** -- Docker with Nginx
 
-All of this in a single npm package. Zero dependencies. One framework doing the work of twelve.
+All of this in a single npm package. Zero extra dependencies. One framework doing the work of twelve.
+
+---
+
+## 14. The Complete Project Structure
+
+```
+taskflow/
+├── .env
+├── .env.example
+├── .gitignore
+├── package.json
+├── package-lock.json
+├── tsconfig.json
+├── app.ts
+├── Dockerfile
+├── docker-compose.yml
+├── src/
+│   ├── routes/
+│   │   ├── auth.ts                # Registration, login
+│   │   ├── tasks.ts               # Task CRUD
+│   │   ├── dashboard.ts           # Dashboard stats + page
+│   │   ├── middleware.ts          # Auth middleware
+│   │   ├── queue-consumers.ts     # Email notification consumer
+│   │   └── ws-tasks.ts            # WebSocket event handlers
+│   ├── orm/
+│   │   ├── User.ts                # User model with relationships
+│   │   └── Task.ts                # Task model with relationships
+│   ├── migrations/
+│   │   ├── 20260322000100_create_users_table.sql
+│   │   └── 20260322000200_create_tasks_table.sql
+│   ├── templates/
+│   │   ├── base.html              # Base layout
+│   │   ├── dashboard.html         # Dashboard page
+│   │   ├── emails/
+│   │   │   └── task-assigned.html # Assignment notification
+│   │   └── errors/
+│   │       ├── 404.html
+│   │       └── 500.html
+│   ├── public/
+│   │   ├── css/
+│   │   │   └── tina4.css
+│   │   └── js/
+│   │       ├── tina4.min.js
+│   │       └── frond.min.js
+│   └── locales/
+│       └── en.json
+├── data/
+│   └── app.db
+├── dist/                          # Production build output
+├── logs/
+├── secrets/
+└── tests/
+    └── TaskFlowTest.ts
+```
+
+Every file has a purpose. Every directory follows the convention. A new developer looks at this structure and knows where to find things.
+
+---
+
+## 15. What to Build Next
+
+TaskFlow is a solid foundation. Here are ideas for extending it.
+
+**Features:**
+- **Task comments** -- Add a Comment model with a `taskId` foreign key. Display comments on the task detail page.
+- **File attachments** -- Let users upload files to tasks. Store them in `data/uploads/` and serve them via a route.
+- **Team management** -- Add a Team model. Users belong to teams. Tasks are scoped to teams.
+- **Task labels/tags** -- Many-to-many relationship between tasks and labels for categorization.
+- **Due date reminders** -- Use the queue system to schedule reminder emails 24 hours before a task's due date.
+- **Activity log** -- Record every change to a task (who changed what, when) for audit trails.
+- **Search** -- Full-text search across task titles and descriptions.
+- **Calendar view** -- Render tasks on a calendar based on their due dates.
+- **Mobile API** -- The API already works for mobile apps. Add push notification support via Firebase Cloud Messaging.
+
+**Technical improvements:**
+- **Rate limiting per user** -- Replace the global rate limiter with per-user limits.
+- **Database upgrade** -- Switch from SQLite to PostgreSQL for better concurrency.
+- **CI/CD pipeline** -- Add GitHub Actions to run tests on every push.
+- **API documentation** -- Generate OpenAPI/Swagger docs from your route annotations.
+- **Internationalization** -- Add `src/locales/` files for multiple languages.
+
+---
+
+## 16. Closing Thoughts -- The Tina4 Philosophy
+
+You built a complete application. User auth. CRUD. Real-time updates. Email. Caching. Tests. Deployment. Your project has one dependency: `tina4-nodejs`.
+
+No separate ORM package. No template engine package. No authentication library. No WebSocket server. No caching library. No testing framework. No CLI tool. No CSS framework. No JavaScript helpers. All built in.
+
+**One framework. Zero extra dependencies. Everything you need.**
+
+The same patterns work in PHP, Python, and Ruby. Same project structure. Same CLI commands. Same `.env` variables. Same template syntax. Learn Tina4 once. Use it everywhere.
+
+Build things. Ship them. Keep it simple.

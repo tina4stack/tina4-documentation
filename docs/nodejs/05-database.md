@@ -412,9 +412,104 @@ if (await db.tableExists("products")) {
 }
 ```
 
+### getDatabaseType()
+
+Identify the connected database engine at runtime:
+
+```typescript
+const dbType = db.getDatabaseType();
+// Returns: "sqlite", "postgresql", "mysql", or "mssql"
+```
+
+Useful when you need database-specific SQL syntax or want to display the engine in a status page.
+
+### Schema Info Endpoint
+
+Combine schema inspection methods to build an introspection API:
+
+```typescript
+import { Router } from "tina4-nodejs";
+import { Database } from "tina4-nodejs/orm";
+
+Router.get("/api/schema", async (req, res) => {
+    const db = Database.getConnection();
+
+    const tables = await db.getTables();
+    const schema: Record<string, any> = {};
+
+    for (const table of tables) {
+        schema[table] = await db.getColumns(table);
+    }
+
+    return res.json({
+        database_type: db.getDatabaseType(),
+        tables: schema,
+        table_count: tables.length,
+    });
+});
+```
+
+This endpoint returns the full database schema -- every table and every column with its type and constraints. Useful for debugging, admin dashboards, and auto-generating documentation.
+
 ---
 
-## 8. Batch Operations with executeMany()
+## 8. FakeData Seeder
+
+Tina4 includes a `FakeData` generator for populating tables with realistic test data:
+
+```typescript
+import { FakeData } from "tina4-nodejs";
+
+const fake = new FakeData();
+
+fake.name();       // "Alice Johnson"
+fake.email();      // "alice.johnson@example.com"
+fake.phone();      // "+1-555-0142"
+fake.address();    // "742 Evergreen Terrace, Springfield"
+fake.company();    // "Acme Corp"
+fake.sentence();   // "The quick brown fox jumps over the lazy dog."
+fake.paragraph();  // Multiple sentences of lorem text
+fake.number(1, 100);   // Random integer between 1 and 100
+fake.decimal(0, 1000); // Random decimal
+fake.boolean();    // true or false
+fake.date("2024-01-01", "2026-12-31"); // Random date in range
+fake.uuid();       // "a1b2c3d4-e5f6-..."
+```
+
+### Seeding a Table
+
+```typescript
+import { Database } from "tina4-nodejs/orm";
+import { FakeData } from "tina4-nodejs";
+
+const db = Database.getConnection();
+const fake = new FakeData();
+
+for (let i = 0; i < 50; i++) {
+    db.execute(
+        "INSERT INTO users (name, email, company) VALUES (:name, :email, :company)",
+        {
+            name: fake.name(),
+            email: fake.email(),
+            company: fake.company(),
+        }
+    );
+}
+
+console.log("Seeded 50 users");
+```
+
+Run it as a script:
+
+```bash
+npx tsx scripts/seed-users.ts
+```
+
+FakeData generates consistent-looking data without external packages. Use it for development, demos, and test setup.
+
+---
+
+## 9. Batch Operations with executeMany()
 
 Insert or update many rows efficiently:
 
@@ -436,7 +531,7 @@ await db.executeMany(
 
 ---
 
-## 9. Helper Methods: insert(), update(), delete()
+## 10. Helper Methods: insert(), update(), delete()
 
 ### insert()
 
@@ -470,7 +565,7 @@ await db.delete("products", "id = :id", { id: 7 });
 
 ---
 
-## 10. Migrations
+## 11. Migrations
 
 Migrations are versioned SQL scripts. They evolve your database schema over time. Each migration runs once. Never again.
 
@@ -572,7 +667,7 @@ This means you can write PostgreSQL stored procedures in your migration files wi
 
 ---
 
-## 11. Query Caching
+## 12. Query Caching
 
 Enable query caching in `.env`:
 
@@ -592,7 +687,7 @@ await db.clearCache();
 
 ---
 
-## 12. Exercise: Build a Notes App
+## 13. Exercise: Build a Notes App
 
 Build a notes application backed by SQLite. Create the database table via a migration and build a full CRUD API.
 
@@ -612,7 +707,7 @@ Build a notes application backed by SQLite. Create the database table via a migr
 
 ---
 
-## 13. Solution
+## 14. Solution
 
 ### Migration
 
@@ -779,7 +874,7 @@ Router.delete("/api/notes/{id:int}", async (req, res) => {
 
 ---
 
-## 14. Gotchas
+## 15. Gotchas
 
 ### 1. Forgetting await
 

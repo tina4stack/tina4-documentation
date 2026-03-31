@@ -1,8 +1,10 @@
 # Chapter 3: Request & Response
 
-## 1. The Two Objects You Always Get
+## 1. The Two Objects You Use Everywhere
 
-Every route handler in Tina4 receives two arguments: `request` and `response`. The request carries what the client sent. The response is how you answer. Together, they are the entire HTTP conversation.
+Every route handler receives two arguments: `request` and `response`. The request carries what the client sent. The response builds what you send back. These two objects handle every HTTP scenario you will face.
+
+A file-sharing service shows the pattern. A user uploads a document. You validate the file type. You check the session. You return success JSON or an error page. Every step flows through `request` and `response`.
 
 ```ruby
 Tina4::Router.get("/echo") do |request, response|
@@ -22,25 +24,35 @@ curl http://localhost:7147/echo
 {"method":"GET","path":"/echo","your_ip":"127.0.0.1"}
 ```
 
-The pattern for every route: inspect the request, build the response, return it.
+The pattern holds for every route: inspect the request, build the response, return it.
 
 ---
 
 ## 2. The Request Object
 
-The `request` object opens everything the client sent. Here is the complete inventory.
+The `request` object opens every piece of the incoming HTTP request. Headers, body, cookies, files, IP address -- all accessible through named properties.
 
 ### method
 
-The HTTP method as an uppercase string: `"GET"`, `"POST"`, `"PUT"`, `"PATCH"`, or `"DELETE"`.
+The HTTP method arrives as an uppercase string:
 
 ```ruby
-request.method # "GET"
+Tina4::Router.get("/api/check") do |request, response|
+  response.json({ method: request.method })
+end
+```
+
+```bash
+curl http://localhost:7147/api/check
+```
+
+```json
+{"method":"GET"}
 ```
 
 ### path
 
-The URL path without query parameters:
+The URL path strips query parameters:
 
 ```ruby
 # Request to /api/users?page=2
@@ -49,7 +61,7 @@ request.path # "/api/users"
 
 ### params
 
-Path parameters from the URL pattern (see Chapter 2):
+Path parameters from the URL pattern (see Chapter 2). The parameter names match the `{name}` placeholders in the route:
 
 ```ruby
 # Route: /users/{id}/posts/{post_id}
@@ -60,7 +72,7 @@ request.params["post_id"] # "42"
 
 ### query
 
-Query string parameters as a hash:
+Query string parameters live in the same `params` hash:
 
 ```ruby
 # Request: /search?q=keyboard&page=2&sort=price
@@ -71,7 +83,7 @@ request.params["sort"] # "price"
 
 ### body
 
-The parsed request body. JSON requests become a hash. Form submissions contain the form fields:
+The parsed request body. JSON requests become a hash. Form submissions contain the form fields. GET requests produce `nil`:
 
 ```ruby
 # POST with {"name": "Widget", "price": 9.99}
@@ -91,17 +103,15 @@ request.headers["X-Custom"]      # "my-value"
 
 ### ip
 
-The client's IP address:
+The client's IP address. Tina4 respects `X-Forwarded-For` and `X-Real-IP` headers behind a reverse proxy:
 
 ```ruby
 request.ip # "127.0.0.1"
 ```
 
-Tina4 respects `X-Forwarded-For` and `X-Real-IP` headers behind a reverse proxy.
-
 ### cookies
 
-Cookies the client sent:
+A hash of cookies the client sent:
 
 ```ruby
 request.cookies["session_id"]  # "abc123"
@@ -166,7 +176,7 @@ curl -X POST "http://localhost:7147/debug/request?page=1" \
 
 ## 3. The Response Object
 
-The `response` object is your toolkit for sending data back. Every method returns the response, so you can chain calls.
+The `response` object builds HTTP responses. Every route handler must return one. Methods chain, so you can set headers, cookies, and content in a single expression.
 
 ### json -- JSON Response
 
@@ -251,6 +261,38 @@ Custom filename:
 response.file("/path/to/report.pdf", "monthly-report-march-2026.pdf")
 ```
 
+This sets the `Content-Disposition: attachment` header with your chosen filename.
+
+### xml -- XML Response
+
+Return XML content:
+
+```ruby
+Tina4::Router.get("/api/feed") do |request, response|
+  response.xml("<feed><entry><title>Hello</title></entry></feed>")
+end
+```
+
+Sets `Content-Type: application/xml; charset=utf-8`.
+
+### error -- Error Envelope
+
+Return a structured error response:
+
+```ruby
+Tina4::Router.post("/api/things") do |request, response|
+  response.error("VALIDATION_FAILED", "Name is required", 400)
+end
+```
+
+This produces:
+
+```json
+{"error":true,"code":"VALIDATION_FAILED","message":"Name is required","status":400}
+```
+
+Three arguments: an error code string, a human-readable message, and the HTTP status code. Clients check `error: true` and switch on the `code` field. Use this pattern across your API for consistent error handling.
+
 ---
 
 ## 4. Status Codes
@@ -268,8 +310,9 @@ Every response method accepts a status code. The ones you will use most:
 | `401` | Unauthorized | Missing or invalid authentication. |
 | `403` | Forbidden | Authenticated but not allowed. |
 | `404` | Not Found | Resource does not exist. |
-| `409` | Conflict | Duplicate or conflicting data. |
-| `422` | Unprocessable Entity | Valid JSON but fails business rules. |
+| `409` | Conflict | Duplicate or conflicting data. Two users claim the same username. |
+| `413` | Payload Too Large | Body exceeds `TINA4_MAX_UPLOAD_SIZE`. |
+| `422` | Unprocessable Entity | Valid JSON but fails business rules. The data parses but the logic rejects it. |
 | `500` | Internal Server Error | Something broke on the server. |
 
 Set the status with chaining:
@@ -284,7 +327,7 @@ Equivalent to `response.json({ id: 7, created: true }, 201)`. Some developers pr
 
 ## 5. Custom Headers
 
-Set response headers with the `header` method:
+Add custom headers with the `header` method. Chain calls before the final response:
 
 ```ruby
 Tina4::Router.get("/api/data") do |request, response|
@@ -383,7 +426,7 @@ response
 
 ## 7. File Uploads
 
-Uploaded files live in `request.files`. Each file is an object with metadata and a temporary path.
+Uploaded files live in `request.files`. Each file object holds metadata and a temporary path.
 
 ### Handling a Single File Upload
 
@@ -422,7 +465,7 @@ curl -X POST http://localhost:7147/api/upload \
 
 ### Saving the Uploaded File
 
-The uploaded file sits in a temporary location. Move it somewhere permanent:
+The uploaded file sits in a temporary location. Move it to a permanent path:
 
 ```ruby
 Tina4::Router.post("/api/upload") do |request, response|
@@ -597,7 +640,7 @@ curl http://localhost:7147/api/products/1 -H "Accept: text/html"
 
 ## 10. Input Validation
 
-Tina4 includes a `Validator` class for declarative input validation. Chain rules together and check the result. If validation fails, use `response.error` to return a structured error envelope.
+Tina4 ships a `Validator` class for declarative input validation. Chain rules together, then check the result. If validation fails, `response.error` returns a structured error envelope (see section 3).
 
 ### The Validator Class
 
@@ -645,19 +688,21 @@ The three arguments are: an error code string, a human-readable message, and the
 
 ### Upload Size Limits
 
-Tina4 enforces a maximum upload size via the `TINA4_MAX_UPLOAD_SIZE` environment variable. The value is in bytes. The default is `10485760` (10 MB).
+Tina4 enforces a maximum upload size through the `TINA4_MAX_UPLOAD_SIZE` environment variable. The value is in bytes. The default is `10485760` (10 MB).
 
 ```dotenv
 TINA4_MAX_UPLOAD_SIZE=10485760
 ```
 
-If a client sends a file larger than this limit, Tina4 returns a `413 Payload Too Large` response before your handler runs. To allow larger uploads, increase the value in `.env`:
+When a client sends a body larger than this limit, Tina4 returns a `413 Payload Too Large` response before your handler runs. The check fires before body parsing begins. Your route code never executes.
+
+To allow 50 MB uploads, set this in your `.env` file:
 
 ```dotenv
 TINA4_MAX_UPLOAD_SIZE=52428800
 ```
 
-This sets the limit to 50 MB.
+Calculate the value by multiplying: megabytes times 1,048,576. For 25 MB, that is `26214400`. For 100 MB, `104857600`. Choose the smallest limit that covers your use case. Large limits invite abuse.
 
 ---
 
@@ -822,7 +867,15 @@ end
 
 **Fix:** End every handler with a response method call.
 
-### 2. Body Is Nil for JSON Requests
+### 2. request.body is nil for GET requests
+
+**Problem:** Accessing `request.body` in a GET handler returns `nil`.
+
+**Cause:** GET requests carry no body. Browsers and curl send none by convention.
+
+**Fix:** Use `request.params` for GET parameters. The body populates only for POST, PUT, and PATCH requests.
+
+### 3. Body is nil for JSON requests
 
 **Problem:** `request.body` is `nil` or empty even though you sent JSON.
 
@@ -830,7 +883,7 @@ end
 
 **Fix:** Include `-H "Content-Type: application/json"` with curl. In frontend JavaScript, `fetch()` with `JSON.stringify()` needs `headers: {"Content-Type": "application/json"}`.
 
-### 3. Content-Type Mismatch
+### 4. Content-Type Mismatch
 
 **Problem:** `response.json` sends HTML, or `response.html` sends plain text.
 
@@ -838,7 +891,7 @@ end
 
 **Fix:** Use `response.json(...)`, `response.html(...)`, or another response method. `puts` bypasses the response object entirely.
 
-### 4. File Uploads Return Empty
+### 5. File Uploads Return Empty
 
 **Problem:** `request.files` is empty despite uploading a file.
 
@@ -846,7 +899,7 @@ end
 
 **Fix:** HTML forms need `<form enctype="multipart/form-data">`. Curl needs `-F "field=@file.jpg"` (with `@`), not `-d`.
 
-### 5. Redirect Loops
+### 6. Redirect Loops
 
 **Problem:** The browser shows "too many redirects" or hangs.
 
@@ -854,7 +907,7 @@ end
 
 **Fix:** Trace the redirect chain with the browser's network inspector. Make sure auth checks do not redirect authenticated users away from pages they can access.
 
-### 6. Cookie Not Set
+### 7. Cookie Not Set
 
 **Problem:** `response.cookie(...)` was called but the browser shows no cookie.
 
@@ -862,7 +915,7 @@ end
 
 **Fix:** Set `secure: false` during development, or use `secure: ENV["TINA4_DEBUG"] != "true"` to auto-switch.
 
-### 7. Large Request Body Rejected
+### 8. Large Request Body Rejected
 
 **Problem:** POST requests with large bodies return 413.
 
@@ -872,4 +925,25 @@ end
 
 ```dotenv
 TINA4_MAX_BODY_SIZE=50mb
+```
+
+### 9. Chaining Response Methods in Wrong Order
+
+**Problem:** Headers or cookies set after calling `response.json` have no effect.
+
+**Cause:** `response.json` finalizes and returns the response object. Calling methods on a separate line after the return is dead code.
+
+**Fix:** Chain headers and cookies before the final response method:
+
+```ruby
+# Correct
+response
+  .header("X-Custom", "value")
+  .cookie("token", "abc", { http_only: true })
+  .json({ ok: true })
+
+# Wrong -- header is set after json already returned
+result = response.json({ ok: true })
+response.header("X-Custom", "value")  # Too late
+result
 ```

@@ -305,15 +305,159 @@ function connectWebSocket(path) {
 const ws = connectWebSocket("/ws/chat/general");
 ```
 
+### Using frond.js WebSocket Helper
+
+Frond.js provides a simpler WebSocket API with automatic reconnection:
+
+```html
+<script src="/js/frond.js"></script>
+<script>
+    const ws = frond.ws("/ws/chat/general");
+
+    ws.on("open", () => console.log("Connected"));
+    ws.on("message", (data) => {
+        const msg = JSON.parse(data);
+        console.log("Received:", msg);
+    });
+    ws.on("close", () => console.log("Disconnected"));
+
+    ws.send(JSON.stringify({ type: "message", text: "Hello!" }));
+</script>
+```
+
+Frond.js handles reconnection automatically. When the connection drops, it waits 3 seconds and reconnects. No manual retry code needed.
+
 ---
 
-## 10. Exercise: Build a Real-Time Chat Room
+## 10. Live Notifications with pushToWebSocket
+
+Push messages to WebSocket clients from any route handler. The clients do not need to send a message first -- the server initiates the communication.
+
+```typescript
+import { Router } from "tina4-nodejs";
+
+Router.post("/api/orders", async (req, res) => {
+    // Create the order
+    const order = createOrder(req.body);
+
+    // Push notification to all connected dashboard clients
+    Router.pushToWebSocket("/ws/dashboard", JSON.stringify({
+        type: "new_order",
+        order_id: order.id,
+        total: order.total,
+        customer: order.customerName,
+    }));
+
+    return res.status(201).json(order);
+});
+```
+
+`pushToWebSocket(path, message)` sends the message to every client connected to that WebSocket path. It works from any route handler, middleware, or queue consumer.
+
+### Use Cases
+
+- **Dashboard updates** -- New orders, user signups, system alerts
+- **Notification feeds** -- Task assignments, comments, mentions
+- **Live data** -- Stock tickers, sensor readings, log streams
+- **Progress tracking** -- File upload progress, background job status
+
+### Scoped Notifications
+
+Path parameters scope the broadcast:
+
+```typescript
+// Only clients connected to /ws/project/42 receive this
+Router.pushToWebSocket("/ws/project/42", JSON.stringify({
+    type: "task_completed",
+    task: "Design review",
+}));
+```
+
+---
+
+## 11. Complete Chat Page
+
+A full chat room with HTML, CSS, and JavaScript:
+
+Create `src/templates/chat.html`:
+
+```html
+&#123;% extends "base.html" %&#125;
+
+&#123;% block title %&#125;Chat - &#123;&#123; room &#125;&#125;&#123;% endblock %&#125;
+
+&#123;% block content %&#125;
+<div class="container">
+    <h2>Chat Room: &#123;&#123; room &#125;&#125;</h2>
+
+    <div id="messages" class="card" style="height: 400px; overflow-y: auto; padding: 16px; margin-bottom: 16px;">
+    </div>
+
+    <form id="chat-form" class="row">
+        <div class="col-md-9">
+            <input type="text" id="username" class="form-control" placeholder="Your name" required>
+        </div>
+        <div class="col-md-9">
+            <input type="text" id="message" class="form-control" placeholder="Type a message..." required>
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-primary">Send</button>
+        </div>
+    </form>
+</div>
+
+<script src="/js/frond.js"></script>
+<script>
+    var room = "&#123;&#123; room &#125;&#125;";
+    var ws = frond.ws("/ws/chat/" + room);
+    var messages = document.getElementById("messages");
+
+    ws.on("message", function(raw) {
+        var msg = JSON.parse(raw);
+        var div = document.createElement("div");
+        div.className = "mb-2";
+
+        if (msg.type === "message") {
+            div.innerHTML = "<strong>" + msg.username + ":</strong> " + msg.text;
+        } else if (msg.type === "join" || msg.type === "leave") {
+            div.innerHTML = "<em class='text-muted'>" + msg.text + "</em>";
+        }
+
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+    });
+
+    document.getElementById("chat-form").addEventListener("submit", function(e) {
+        e.preventDefault();
+        var username = document.getElementById("username").value;
+        var text = document.getElementById("message").value;
+
+        ws.send(JSON.stringify({ type: "message", username: username, text: text }));
+        document.getElementById("message").value = "";
+    });
+</script>
+&#123;% endblock %&#125;
+```
+
+Create the route:
+
+```typescript
+Router.get("/room/{roomName}", async (req, res) => {
+    return res.html("chat.html", { room: req.params.roomName });
+});
+```
+
+Navigate to `http://localhost:7148/room/general`. Open two browser tabs. Type in one. The message appears in both.
+
+---
+
+## 12. Exercise: Build a Real-Time Chat Room
 
 Build a WebSocket chat at `/ws/room/{roomName}` with usernames, join/leave messages, and an HTML page at `GET /room/{roomName}`.
 
 ---
 
-## 11. Solution
+## 13. Solution
 
 Create `src/routes/chat-room.ts`:
 
@@ -377,7 +521,7 @@ Router.get("/room/{roomName}", async (req, res) => {
 
 ---
 
-## 12. Scaling with a Backplane
+## 14. Scaling with a Backplane
 
 When you run a single server instance, `broadcast()` reaches every connected client. But in production you often run multiple instances behind a load balancer. Each instance only knows about its own connections. A message broadcast on instance A never reaches clients connected to instance B.
 
@@ -406,7 +550,7 @@ If `TINA4_WS_BACKPLANE` is not set (the default), Tina4 broadcasts only to local
 
 ---
 
-## 13. Gotchas
+## 15. Gotchas
 
 ### 1. WebSocket Needs a Persistent Server
 

@@ -173,6 +173,8 @@ The AI has full context of your Tina4 project. Ask it anything:
 - "How do I add WebSocket support?"
 - "Write a migration to add an avatar column to users"
 
+The "Ask about this error" button on the error overlay sends the full stack trace and source code to the AI for instant debugging.
+
 ---
 
 ## Tips for Effective Vibe Coding with Tina4
@@ -199,7 +201,7 @@ Open your Tina4 Node.js project in Claude Code (or your preferred AI tool) and t
 4. "Send an email notification when a new contact is submitted"
 5. "Add rate limiting to the contact form -- max 3 submissions per minute"
 
-Each prompt should generate correct, runnable TypeScript code on the first try.
+Each prompt should generate correct, runnable TypeScript code on the first try. If it does not, check that CLAUDE.md is in your project root.
 
 ---
 
@@ -223,4 +225,4 @@ Convention over configuration means the AI knows where things go. Zero dependenc
 
 You describe the intent. The AI writes the code. You review and refine. Tina4 is the ground the partnership stands on.
 
-*This Is Now A 4Framework. This is a partnership.*
+*This is not a framework. This is a partnership.*

@@ -2,21 +2,21 @@
 
 ## 1. Beyond JSON -- Rendering HTML
 
-Every route so far returns JSON. That works for APIs. But web applications need HTML -- product listings, dashboards, login forms, email templates. Tina4 uses the **Frond** template engine for this.
+Every route so far returns JSON. That works for APIs. Web applications need HTML -- product listings, dashboards, login forms, email templates. Tina4 uses the **Frond** template engine for this work.
 
 <div v-pre>
 
-Frond is a zero-dependency template engine built from scratch. Its syntax is compatible with Twig, Jinja2, and Nunjucks. If you know any of those, you know Frond. If you do not, the syntax is three things: `{{ }}` for output, `{% %}` for logic, `{# #}` for comments.
+Frond is a zero-dependency template engine built from scratch. Its syntax matches Twig, Jinja2, and Nunjucks. Three constructs drive the entire engine: `{{ }}` for output, `{% %}` for logic, `{# #}` for comments. That is the whole grammar.
 
 </div>
 
-Picture an online store. A product catalog page. Items in a grid. Featured products highlighted. Prices formatted. Layout inherited from a shared template. That is what this chapter builds.
+This chapter builds toward a product catalog page. Items in a grid. Featured products highlighted. Prices formatted. Layout inherited from a shared template. One engine handles it all.
 
 ---
 
 ## 2. The @template Decorator
 
-The shortest path to a rendered template:
+The shortest path to a rendered page:
 
 ```python
 from tina4_python.core.router import get, template
@@ -46,7 +46,7 @@ Create `src/templates/about.html`:
 
 Visit `http://localhost:7145/about` and the rendered page appears.
 
-The `@template` decorator is stacked above `@get` (or `@post`, etc.). When the handler returns a dictionary, the decorator passes that dict to `response.render()` with the named template. If the handler returns something other than a dict (like an already-built Response), it is passed through unchanged. You can also use `response.render()` directly in any route handler -- `@template` is shorthand.
+The `@template` decorator stacks above `@get` (or `@post`, etc.). When the handler returns a dictionary, the decorator passes that dict to `response.render()` with the named template. If the handler returns something other than a dict -- an already-built Response, for instance -- the decorator passes it through unchanged. You can also call `response.render()` directly in any route handler. The decorator is shorthand.
 
 ---
 
@@ -54,11 +54,7 @@ The `@template` decorator is stacked above `@get` (or `@post`, etc.). When the h
 
 ### Basic Output
 
-<div v-pre>
-
-Use `{{ }}` to output a variable:
-
-</div>
+Double curly braces print a variable:
 
 ```html
 <h1>Hello, &#123;&#123; name &#125;&#125;!</h1>
@@ -74,7 +70,7 @@ With data `{"name": "Alice", "balance": 150.50}`, this renders:
 
 ### Accessing Nested Properties
 
-Dot notation for dictionaries and object attributes:
+Dot notation reaches into dictionaries and object attributes:
 
 ```html
 <p>&#123;&#123; user.name &#125;&#125;</p>
@@ -106,7 +102,7 @@ Renders:
 
 ### Method Calls and Slicing
 
-Frond supports calling methods on values directly in templates. If a dictionary value is callable, you can invoke it with arguments:
+Frond supports calling methods on values inside templates. If a dictionary value is callable, you invoke it with arguments:
 
 ```html
 &#123;&#123; user.t("greeting") &#125;&#125;       &#123;# calls user.t("greeting") #&#125;
@@ -114,7 +110,7 @@ Frond supports calling methods on values directly in templates. If a dictionary 
 &#123;&#123; items[2:5] &#125;&#125;               &#123;# slice from index 2 to 5 #&#125;
 ```
 
-Operators inside quoted function arguments (like `+`, `-`, `*`) are handled correctly and will not break the expression parser.
+Operators inside quoted function arguments (such as `+`, `-`, `*`) parse without breaking the expression.
 
 ### Auto-Escaping
 
@@ -130,7 +126,7 @@ With `{"user_input": "<script>alert('hacked')</script>"}`, this renders:
 <p>&lt;script&gt;alert(&#39;hacked&#39;)&lt;/script&gt;</p>
 ```
 
-The script tag is escaped. Displayed as text. Never executes. If you need raw HTML (and you trust the source), use the `|safe` filter:
+The script tag becomes plain text. It never executes. If you need raw HTML output and you trust the source, use the `|safe` filter:
 
 ```html
 <div>&#123;&#123; trusted_html | safe &#125;&#125;</div>
@@ -150,62 +146,126 @@ Filters transform output. The pipe `|` applies them:
 &#123;&#123; bio | trim &#125;&#125;            &#123;# Removes leading/trailing whitespace #&#125;
 ```
 
-### Number Formatting
+### Complete Filter Reference
 
-```html
-&#123;&#123; "%.2f"|format(price) &#125;&#125;              &#123;# 79.99 #&#125;
-&#123;&#123; "{:,}"|format(large_number) &#125;&#125;       &#123;# 1,234,567 #&#125;
-&#123;&#123; percentage | round(1) &#125;&#125;             &#123;# 85.3 #&#125;
-```
+#### String Filters
 
-### String Filters
+| Filter | Example | Description |
+|--------|---------|-------------|
+<div v-pre>
 
-```html
-&#123;&#123; text | replace("old", "new") &#125;&#125;      &#123;# Replace substring #&#125;
-&#123;&#123; title | striptags &#125;&#125;                  &#123;# Remove HTML tags #&#125;
-&#123;&#123; content | nl2br &#125;&#125;                   &#123;# Convert newlines to <br> #&#125;
-&#123;&#123; slug | url_encode &#125;&#125;                 &#123;# URL-encode a string #&#125;
-&#123;&#123; items | join(", ") &#125;&#125;                &#123;# Join list with separator #&#125;
-```
+| `upper` | `{{ name \| upper }}` | Convert to uppercase |
+| `lower` | `{{ name \| lower }}` | Convert to lowercase |
+| `capitalize` | `{{ name \| capitalize }}` | Capitalize first letter |
+| `title` | `{{ name \| title }}` | Capitalize each word |
+| `trim` | `{{ name \| trim }}` | Strip leading/trailing whitespace |
+| `ltrim` | `{{ name \| ltrim }}` | Strip leading whitespace |
+| `rtrim` | `{{ name \| rtrim }}` | Strip trailing whitespace |
+| `slug` | `{{ title \| slug }}` | Convert to URL-friendly slug |
+| `wordwrap(80)` | `{{ text \| wordwrap(80) }}` | Wrap text at N characters |
+| `truncate(100)` | `{{ text \| truncate(100) }}` | Truncate to N characters with ellipsis |
+| `nl2br` | `{{ text \| nl2br }}` | Convert newlines to `<br>` tags |
+| `striptags` | `{{ html \| striptags }}` | Remove all HTML tags |
+| `replace("a", "b")` | `{{ text \| replace("old", "new") }}` | Replace occurrences of a substring |
 
-### Collection Filters
+</div>
 
-```html
-&#123;&#123; items | length &#125;&#125;          &#123;# Number of items #&#125;
-&#123;&#123; items | first &#125;&#125;           &#123;# First item #&#125;
-&#123;&#123; items | last &#125;&#125;            &#123;# Last item #&#125;
-&#123;&#123; items | sort &#125;&#125;            &#123;# Sort ascending #&#125;
-&#123;&#123; items | reverse &#125;&#125;         &#123;# Reverse order #&#125;
-&#123;&#123; items | unique &#125;&#125;          &#123;# Remove duplicates #&#125;
-&#123;&#123; items | slice(0, 3) &#125;&#125;     &#123;# First 3 items #&#125;
-&#123;&#123; items | batch(3) &#125;&#125;        &#123;# Group into batches of 3 #&#125;
-```
+#### Array Filters
 
-### Date Formatting
+| Filter | Example | Description |
+|--------|---------|-------------|
+<div v-pre>
 
-```html
-&#123;&#123; created_at | date("Y-m-d") &#125;&#125;        &#123;# 2026-03-22 #&#125;
-&#123;&#123; created_at | date("d M Y") &#125;&#125;        &#123;# 22 Mar 2026 #&#125;
-&#123;&#123; created_at | date("H:i:s") &#125;&#125;        &#123;# 14:30:00 #&#125;
-```
+| `length` | `{{ items \| length }}` | Count items in array or string length |
+| `reverse` | `{{ items \| reverse }}` | Reverse order of items |
+| `sort` | `{{ items \| sort }}` | Sort items ascending |
+| `shuffle` | `{{ items \| shuffle }}` | Randomly shuffle items |
+| `first` | `{{ items \| first }}` | Get the first item |
+| `last` | `{{ items \| last }}` | Get the last item |
+| `join(", ")` | `{{ items \| join(", ") }}` | Join array items with separator |
+| `split(",")` | `{{ csv \| split(",") }}` | Split string into array |
+| `unique` | `{{ items \| unique }}` | Remove duplicate values |
+| `filter` | `{{ items \| filter }}` | Remove falsy values from array |
+| `map("name")` | `{{ items \| map("name") }}` | Extract a property from each item |
+| `column("name")` | `{{ items \| column("name") }}` | Extract a column from array of objects |
+| `batch(3)` | `{{ items \| batch(3) }}` | Group items into batches of N |
+| `slice(0, 3)` | `{{ items \| slice(0, 3) }}` | Extract a slice from offset with length |
 
-### Encoding Filters
+</div>
 
-```html
-&#123;&#123; data | json_encode &#125;&#125;                &#123;# {"key": "value"} #&#125;
-&#123;&#123; data | to_json &#125;&#125;                    &#123;# Same as json_encode, safe output #&#125;
-&#123;&#123; text | js_escape &#125;&#125;                  &#123;# Escaped for JavaScript strings #&#125;
-&#123;&#123; text | base64encode &#125;&#125;               &#123;# Base64 encoded #&#125;
-&#123;&#123; encoded | base64decode &#125;&#125;            &#123;# Base64 decoded #&#125;
-```
+#### Encoding Filters
 
-### Form Token Filters
+| Filter | Example | Description |
+|--------|---------|-------------|
+<div v-pre>
 
-```html
-&#123;&#123; form_token() &#125;&#125;                     &#123;# Hidden input with CSRF token #&#125;
-&#123;&#123; formTokenValue("context") &#125;&#125;         &#123;# Raw JWT token string #&#125;
-&#123;&#123; form_token_value("context") &#125;&#125;       &#123;# Alias for formTokenValue #&#125;
-```
+| `escape` (`e`) | `{{ text \| escape }}` | HTML-escape special characters |
+| `raw` (`safe`) | `{{ html \| raw }}` | Output without auto-escaping |
+| `url_encode` | `{{ text \| url_encode }}` | URL-encode a string |
+| `base64_encode` (`base64encode`) | `{{ text \| base64_encode }}` | Base64-encode a string |
+| `base64_decode` (`base64decode`) | `{{ data \| base64_decode }}` | Base64-decode a string |
+| `md5` | `{{ text \| md5 }}` | Compute MD5 hash |
+| `sha256` | `{{ text \| sha256 }}` | Compute SHA-256 hash |
+
+</div>
+
+#### Numeric Filters
+
+| Filter | Example | Description |
+|--------|---------|-------------|
+<div v-pre>
+
+| `abs` | `{{ num \| abs }}` | Absolute value |
+| `round(2)` | `{{ price \| round(2) }}` | Round to N decimal places |
+| `number_format(2)` | `{{ price \| number_format(2) }}` | Format with decimals and thousands separator |
+| `int` | `{{ val \| int }}` | Cast to integer |
+| `float` | `{{ val \| float }}` | Cast to float |
+| `string` | `{{ val \| string }}` | Cast to string |
+
+</div>
+
+#### JSON Filters
+
+| Filter | Example | Description |
+|--------|---------|-------------|
+<div v-pre>
+
+| `json_encode` | `{{ data \| json_encode }}` | Encode value as JSON string |
+| `to_json` (`tojson`) | `{{ data \| to_json }}` | Encode value as JSON string (alias) |
+| `json_decode` | `{{ str \| json_decode }}` | Decode JSON string to object |
+| `js_escape` | `{{ text \| js_escape }}` | Escape string for safe use in JavaScript |
+
+</div>
+
+#### Dict Filters
+
+| Filter | Example | Description |
+|--------|---------|-------------|
+<div v-pre>
+
+| `keys` | `{{ obj \| keys }}` | Get dictionary keys as array |
+| `values` | `{{ obj \| values }}` | Get dictionary values as array |
+| `merge(other)` | `{{ defaults \| merge(overrides) }}` | Merge two dictionaries |
+
+</div>
+
+#### Other Filters
+
+| Filter | Example | Description |
+|--------|---------|-------------|
+<div v-pre>
+
+| `default("fallback")` | `{{ name \| default("Guest") }}` | Fallback when value is empty or undefined |
+| `date("Y-m-d")` | `{{ created \| date("Y-m-d") }}` | Format a date value |
+| `format(val)` | `{{ "%.2f" \| format(price) }}` | Format string with value (sprintf-style) |
+| `data_uri` | `{{ content \| data_uri }}` | Convert to a data URI string |
+| `dump` | `{{ var \| dump }}` | Debug output of a variable |
+| `form_token` | `{{ form_token() }}` | Generate a CSRF hidden input with token |
+| `formTokenValue` | `{{ formTokenValue("context") }}` | Return the raw JWT token string |
+| `to_json` | `{{ data \| to_json }}` | JSON-encode a value (no double-escaping) |
+| `js_escape` | `{{ text \| js_escape }}` | Escape for safe use in JavaScript strings |
+
+</div>
 
 ### Chaining Filters
 
@@ -272,7 +332,7 @@ Comparisons and logical operators:
 &#123;% endfor %&#125;
 ```
 
-Inside a for loop, the `loop` variable gives you context:
+Inside a for loop, the `loop` variable provides iteration context:
 
 | Variable | Description |
 |----------|-------------|
@@ -337,7 +397,7 @@ When combining filters with arithmetic, assign the filtered values first:
 
 ## 6. Template Inheritance
 
-Template inheritance kills duplication. A base template defines blocks. Child templates override them.
+Template inheritance kills duplication. A base template defines blocks. Child templates override them. One layout file controls every page.
 
 ### Base Template
 
@@ -396,7 +456,7 @@ When Frond renders `home.html`:
 1. It sees `{% extends "base.html" %}` and loads the base template.
 2. The `{% block title %}` in `home.html` replaces the one in `base.html`.
 3. The `{% block content %}` in `home.html` replaces the one in `base.html`.
-4. Blocks not overridden (`head`, `scripts`) keep their default content (empty here).
+4. Blocks not overridden (`head`, `scripts`) keep their default content -- empty here.
 
 </div>
 
@@ -417,11 +477,7 @@ Use `{{ parent() }}` to include the parent block's content:
 &#123;% endblock %&#125;
 ```
 
-<div v-pre>
-
-This keeps whatever the parent had in `{% block head %}` and adds the extra stylesheet.
-
-</div>
+The `head` block now contains everything from the base plus the extra stylesheet.
 
 ---
 
@@ -449,7 +505,7 @@ Pass variables to included templates:
 
 ### macro -- Reusable Template Functions
 
-Macros are functions for templates. Define once, use everywhere:
+Macros are functions for templates. Define once, call everywhere:
 
 Create `src/templates/macros/forms.html`:
 
@@ -487,7 +543,7 @@ Use them:
 </form>
 ```
 
-Consistent markup. Change the macro once and every form in your application updates.
+Change the macro once and every form in your application updates. Consistent markup across the entire project.
 
 ---
 
@@ -495,7 +551,7 @@ Consistent markup. Change the macro once and every form in your application upda
 
 <div v-pre>
 
-Use `{# #}` for template comments. Stripped from output:
+Template comments use `{# #}`. Frond strips them from the output:
 
 </div>
 
@@ -509,42 +565,282 @@ Use `{# #}` for template comments. Stripped from output:
 #}
 ```
 
-Unlike HTML comments (`<!-- -->`), Frond comments never reach the browser.
+HTML comments (`<!-- -->`) reach the browser. Frond comments never do.
 
 ---
 
-## 9. tina4css
+## 9. Special Tags
+
+<div v-pre>
+
+### {% raw %} -- Literal Output
+
+</div>
+
+<div v-pre>
+
+Output literal `{{ }}` or `{% %}` without processing. This tag saves you when embedding Vue.js or Angular templates:
+
+</div>
+
+```html
+&#123;% raw %&#125;
+    <div id="app">
+        &#123;&#123; message &#125;&#125;
+    </div>
+&#123;% endraw %&#125;
+```
+
+<div v-pre>
+
+Frond outputs the literal text `{{ message }}`. No variable lookup. No expression parsing.
+
+</div>
+
+<div v-pre>
+
+### {% spaceless %} -- Remove Whitespace
+
+</div>
+
+Strip whitespace between HTML tags:
+
+```html
+&#123;% spaceless %&#125;
+    <div>
+        <span>Hello</span>
+    </div>
+&#123;% endspaceless %&#125;
+```
+
+**Output:**
+
+```html
+<div><span>Hello</span></div>
+```
+
+Inline elements create visible gaps when whitespace sits between them. The `spaceless` tag eliminates those gaps.
+
+<div v-pre>
+
+### {% autoescape %} -- Control Escaping
+
+</div>
+
+Override auto-escaping for a block of content:
+
+```html
+&#123;% autoescape false %&#125;
+    &#123;&#123; trusted_html &#125;&#125;
+&#123;% endautoescape %&#125;
+```
+
+Everything inside outputs without HTML escaping. This works the same as `| raw` on every variable, but handles large blocks of trusted content with less repetition. Never use this with user-submitted data.
+
+### Whitespace Control
+
+<div v-pre>
+
+Template tags occupy a full line and produce blank lines in the output. Use `{%-` and `-%}` to strip surrounding whitespace:
+
+</div>
+
+```html
+&#123;%- for item in items -%&#125;
+    <li>&#123;&#123; item.name &#125;&#125;</li>
+&#123;%- endfor -%&#125;
+```
+
+The `-` on the left strips whitespace before the tag. The `-` on the right strips whitespace after. The output contains no blank lines between list items.
+
+---
+
+## 10. tina4css
 
 The `tina4.css` file is Tina4's built-in CSS utility framework. It ships with every project. Layout utilities. Typography. Spacing. Common UI patterns. No Bootstrap. No Tailwind. No separate download.
 
-Some common classes:
+Include it in your base template:
 
 ```html
-&#123;# Grid layout #&#125;
+<link rel="stylesheet" href="/css/tina4.css">
+```
+
+### Layout Classes
+
+The grid system uses a 12-column layout:
+
+```html
+<div class="container">
+    <div class="row">
+        <div class="col-6">Left half</div>
+        <div class="col-6">Right half</div>
+    </div>
+</div>
+```
+
+Flex layout for alignment:
+
+```html
+<div class="flex justify-between items-center">
+    <h1>Title</h1>
+    <button class="btn btn-primary">Action</button>
+</div>
+```
+
+CSS grid for card layouts:
+
+```html
 <div class="grid grid-cols-3 gap-4">
     <div class="card">Item 1</div>
     <div class="card">Item 2</div>
     <div class="card">Item 3</div>
 </div>
+```
 
-&#123;# Flex layout #&#125;
-<div class="flex justify-between items-center">
-    <h1>Title</h1>
-    <button class="btn btn-primary">Action</button>
+### Buttons
+
+Five button styles cover most use cases:
+
+```html
+<button class="btn btn-primary">Primary</button>
+<button class="btn btn-secondary">Secondary</button>
+<button class="btn btn-success">Success</button>
+<button class="btn btn-warning">Warning</button>
+<button class="btn btn-danger">Danger</button>
+```
+
+Link-style buttons use the same classes on anchor tags:
+
+```html
+<a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+<a href="/cancel" class="btn btn-secondary">Cancel</a>
+```
+
+### Cards
+
+Cards group related content with optional header and footer sections:
+
+```html
+<div class="card">
+    <div class="card-header">Order Summary</div>
+    <div class="card-body">
+        <p>3 items in your cart</p>
+        <p class="text-primary">Total: $149.97</p>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary">Checkout</button>
+    </div>
 </div>
+```
 
+Cards work well inside a grid for catalog-style layouts:
+
+```html
+<div class="grid grid-cols-3 gap-4">
+    &#123;% for product in products %&#125;
+    <div class="card">
+        <div class="card-header">&#123;&#123; product.name &#125;&#125;</div>
+        <div class="card-body">
+            <p>$&#123;&#123; "%.2f"|format(product.price) &#125;&#125;</p>
+        </div>
+    </div>
+    &#123;% endfor %&#125;
+</div>
+```
+
+### Alerts
+
+Alert boxes communicate status messages to the user:
+
+```html
+<div class="alert alert-success">Order placed. Check your email for confirmation.</div>
+<div class="alert alert-danger">Payment failed. Your card was declined.</div>
+<div class="alert alert-warning">Your session expires in 5 minutes.</div>
+<div class="alert alert-info">New features are available. See the changelog.</div>
+```
+
+### Forms
+
+Form controls use `form-group` for spacing and `form-control` for input styling:
+
+```html
+<form method="POST" action="/api/contact">
+    <div class="form-group">
+        <label for="name">Full Name</label>
+        <input type="text" id="name" name="name" class="form-control" required>
+    </div>
+
+    <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" name="email" class="form-control" required>
+    </div>
+
+    <div class="form-group">
+        <label for="message">Message</label>
+        <textarea id="message" name="message" class="form-control" rows="4"></textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="priority">Priority</label>
+        <select id="priority" name="priority" class="form-control">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Send Message</button>
+    <button type="reset" class="btn btn-secondary">Clear</button>
+</form>
+```
+
+### Tables
+
+Tables gain borders and row striping with tina4css classes:
+
+```html
+<table class="table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Product</th>
+            <th>Price</th>
+        </tr>
+    </thead>
+    <tbody>
+        &#123;% for product in products %&#125;
+        <tr>
+            <td>&#123;&#123; loop.index &#125;&#125;</td>
+            <td>&#123;&#123; product.name &#125;&#125;</td>
+            <td>$&#123;&#123; "%.2f"|format(product.price) &#125;&#125;</td>
+        </tr>
+        &#123;% endfor %&#125;
+    </tbody>
+</table>
+```
+
+### Spacing and Typography Utilities
+
+```html
 &#123;# Spacing #&#125;
 <div class="p-4 m-2">Padded and margined</div>
+<div class="mt-4">Margin top</div>
+<div class="mb-2">Margin bottom</div>
+<div class="px-3">Horizontal padding</div>
 
 &#123;# Typography #&#125;
 <p class="text-lg text-gray-600">Large gray text</p>
+<p class="text-center">Centered text</p>
+<p class="text-right">Right-aligned text</p>
+<span class="text-muted">Gray text</span>
+<span class="text-primary">Primary color text</span>
 ```
 
-The full tina4css reference is in Book 0. For this chapter, inline styles in the examples work fine.
+No external dependencies. If you prefer Bootstrap or Tailwind, swap the `<link>` tag. Tina4 does not care which CSS framework you choose.
 
 ---
 
-## 10. Exercise: Build a Product Catalog Page
+## 11. Exercise: Build a Product Catalog Page
 
 Build a product catalog page with categories, filtering, and a detail view.
 
@@ -578,7 +874,7 @@ products = [
 
 ---
 
-## 11. Solution
+## 12. Solution
 
 Create `src/templates/macros/catalog.html`:
 
@@ -711,19 +1007,19 @@ async def product_detail(id, request, response):
 - Category filter links: All, Electronics, Fitness, Kitchen, Office
 - A count of products shown
 - Product cards in a grid with names, prices, category labels, and stock badges
-- Featured products have a highlighted style and a "Featured" badge
+- Featured products wear a highlighted style and a "Featured" badge
 - Clicking a product name navigates to the detail page
 - Clicking a category link filters the list
 
 ---
 
-## 12. Gotchas
+## 13. Gotchas
 
 ### 1. Whitespace in output
 
-**Problem:** Your rendered HTML has unexpected blank lines or spaces.
+**Problem:** Rendered HTML contains unexpected blank lines or spaces.
 
-**Cause:** Template tags produce whitespace on the line they occupy.
+**Cause:** Template tags produce whitespace on the lines they occupy.
 
 <div v-pre>
 
@@ -757,7 +1053,7 @@ async def product_detail(id, request, response):
 
 <div v-pre>
 
-**Problem:** `{% extends "base.html" %}` has no effect and the page renders without the layout.
+**Problem:** `{% extends "base.html" %}` has no effect. The page renders without the layout.
 
 </div>
 
@@ -769,7 +1065,7 @@ async def product_detail(id, request, response):
 
 <div v-pre>
 
-**Fix:** Move `{% extends "base.html" %}` to the first line. No content before it.
+**Fix:** Move `{% extends "base.html" %}` to the first line. Nothing before it.
 
 </div>
 
@@ -783,7 +1079,7 @@ async def product_detail(id, request, response):
 
 <div v-pre>
 
-**Cause:** You forgot the `{% import %}` statement, or the import path is wrong.
+**Cause:** The `{% import %}` statement is missing, or the import path is wrong.
 
 </div>
 
@@ -811,7 +1107,7 @@ async def product_detail(id, request, response):
 
 ### 6. Escaped HTML when you want raw output
 
-**Problem:** Your HTML content shows as text with visible `<tags>` instead of rendering.
+**Problem:** HTML content shows as text with visible `<tags>` instead of rendering.
 
 <div v-pre>
 
@@ -829,7 +1125,7 @@ async def product_detail(id, request, response):
 
 <div v-pre>
 
-**Problem:** `{% include "header.html" %}` gives a "template not found" error even though the file exists.
+**Problem:** `{% include "header.html" %}` produces a "template not found" error even though the file exists.
 
 </div>
 

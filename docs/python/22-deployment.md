@@ -2,17 +2,17 @@
 
 ## 1. From Development to Production
 
-The app works on `localhost:7145`. Now it needs to run 24/7 on a real server. Handle 10,000 concurrent users. Survive server restarts. Not leak memory. The gap between "works on my machine" and "works in production" is where projects stumble.
+The app works on `localhost:7145`. Now it needs to run around the clock on a real server. Handle thousands of concurrent users. Survive restarts. Hold steady on memory. The gap between "works on my machine" and "works in production" is where projects stumble.
 
-This chapter covers everything for a production deployment: environment configuration, ASGI server setup, Docker packaging, health checks, graceful shutdown, log rotation, and scaling.
+This chapter covers everything for a production deployment: environment configuration, ASGI server setup, Docker packaging, health checks, graceful shutdown, SSL/TLS, scaling, and monitoring.
 
-When you run `tina4 init`, the framework generates a production-ready `Dockerfile` and `.dockerignore` in your project root. The Dockerfile uses a multi-stage build: the first stage installs dependencies and the second stage copies only the runtime artifacts into a slim image. You do not need to write a Dockerfile from scratch -- the generated one is a solid starting point that you can customise as needed.
+When you run `tina4 init`, the framework generates a production-ready `Dockerfile` and `.dockerignore` in your project root. The Dockerfile uses a multi-stage build: the first stage installs dependencies and the second stage copies only runtime artifacts into a slim image. You do not need to write a Dockerfile from scratch -- the generated one is a solid starting point.
 
 ---
 
 ## 2. Production .env Configuration
 
-The first step is configuring your `.env` for production. Development defaults are optimized for debugging. Production defaults are optimized for performance and security.
+Development defaults optimize for debugging. Production defaults optimize for performance and security. The first deployment step: configure `.env` for production.
 
 Create a production `.env`:
 
@@ -65,7 +65,7 @@ railway variables set JWT_SECRET=your-secret
 
 ## 3. ASGI Server Auto-Detection
 
-Tina4 Python auto-detects ASGI servers at startup. ASGI servers provide production-grade performance with:
+Tina4 Python auto-detects ASGI servers at startup. ASGI servers deliver production-grade performance:
 
 - Multiple worker processes
 - Async request handling
@@ -76,9 +76,9 @@ Tina4 Python auto-detects ASGI servers at startup. ASGI servers provide producti
 
 When you run `uv run python app.py` or `tina4 serve --production`, Tina4 checks for installed ASGI servers:
 
-1. If `uvicorn` is installed, it uses uvicorn with optimal settings
-2. If `hypercorn` is installed, it uses hypercorn
-3. If neither is installed, it falls back to the built-in development server
+1. If `uvicorn` is installed, the framework uses uvicorn with optimal settings
+2. If `hypercorn` is installed, the framework uses hypercorn
+3. If neither is installed, the framework falls back to the built-in development server
 
 ```bash
 # Install uvicorn for production
@@ -110,7 +110,7 @@ uv run python app.py
 
 ### Uvicorn Configuration
 
-You can fine-tune uvicorn through environment variables:
+Fine-tune uvicorn through environment variables:
 
 ```dotenv
 TINA4_WORKERS=4
@@ -126,7 +126,7 @@ uvicorn app:app --workers 4 --host 0.0.0.0 --port 7145
 
 ### How Many Workers?
 
-A good starting point is `(2 * CPU cores) + 1`:
+Start with `(2 * CPU cores) + 1`:
 
 ```python
 import multiprocessing
@@ -218,7 +218,7 @@ docker run -d \
 
 ### Docker Compose
 
-For a complete setup with the app and supporting services, use Docker Compose.
+For a complete setup with supporting services, use Docker Compose.
 
 Create `docker-compose.yml`:
 
@@ -276,7 +276,7 @@ docker compose down
 
 ## 5. Health Checks
 
-Production deployments need a health check endpoint so load balancers, container orchestrators, and monitoring tools can verify the app is running.
+Production deployments need a health check endpoint. Load balancers, container orchestrators, and monitoring tools all rely on it to verify the app is running.
 
 Create a health check route:
 
@@ -333,7 +333,7 @@ Tina4 handles this when it receives a `SIGTERM` signal (the standard shutdown si
 TINA4_SHUTDOWN_TIMEOUT=30
 ```
 
-If active requests do not finish within the timeout, they are terminated forcefully. Set this based on your longest expected request time. For most applications, 30 seconds is generous.
+If active requests do not finish within the timeout, the server terminates them. Set this based on your longest expected request time. For most applications, 30 seconds is generous.
 
 ### Docker Stop Grace Period
 
@@ -349,7 +349,7 @@ services:
 
 ## 7. Log Rotation
 
-In production, logs grow indefinitely unless rotated. Tina4 writes logs to `logs/app.log` and `logs/error.log`.
+In production, logs grow without limit unless rotated. Tina4 writes logs to `logs/app.log` and `logs/error.log`.
 
 ### Using logrotate (Linux)
 
@@ -459,7 +459,266 @@ server {
 
 ---
 
-## 9. Exercise: Docker Deploy
+## 9. SSL/TLS with Let's Encrypt
+
+HTTPS is non-negotiable in production. Let's Encrypt provides free SSL certificates with automatic renewal.
+
+### With Nginx and Certbot
+
+Install Certbot:
+
+```bash
+sudo apt install certbot python3-certbot-nginx
+```
+
+Obtain a certificate:
+
+```bash
+sudo certbot --nginx -d yourdomain.com
+```
+
+Certbot modifies your Nginx configuration to include SSL settings and sets up automatic renewal. Verify auto-renewal works:
+
+```bash
+sudo certbot renew --dry-run
+```
+
+Certbot renews certificates 30 days before expiry. The renewal runs via a systemd timer or cron job that Certbot creates during installation.
+
+### With Docker (Using Traefik as Reverse Proxy)
+
+Traefik handles SSL termination and automatic certificate provisioning. Add it to your Docker Compose setup:
+
+```yaml
+services:
+  reverse-proxy:
+    image: traefik:v3.0
+    command:
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=you@example.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+
+  app:
+    build: .
+    labels:
+      - "traefik.http.routers.app.rule=Host(`yourdomain.com`)"
+      - "traefik.http.routers.app.tls=true"
+      - "traefik.http.routers.app.tls.certresolver=letsencrypt"
+    environment:
+      - TINA4_DEBUG=false
+      - JWT_SECRET=${JWT_SECRET}
+
+volumes:
+  letsencrypt:
+```
+
+Traefik detects your app container through Docker labels, provisions a certificate from Let's Encrypt, and handles all HTTPS traffic. No Nginx configuration needed.
+
+### Certificate Monitoring
+
+Certificates expire. Even with auto-renewal, things go wrong -- DNS changes, firewall rules blocking port 80 for ACME challenges, or a crashed renewal service. Set up monitoring:
+
+```bash
+# Check certificate expiry manually
+echo | openssl s_client -connect yourdomain.com:443 2>/dev/null | openssl x509 -noout -dates
+
+# Verify Certbot timer is active
+sudo systemctl list-timers | grep certbot
+```
+
+Use an external monitoring service (Uptime Robot, Better Uptime) that checks certificate expiry and alerts you 14 days before it expires.
+
+---
+
+## 10. Scaling
+
+A single server handles many applications. When traffic outgrows one server, you scale.
+
+### Multiple Workers
+
+Uvicorn runs multiple worker processes by default. Configure the count in `.env`:
+
+```dotenv
+TINA4_WORKERS=4
+```
+
+Start with the number of CPU cores on your server. For I/O-heavy applications (database queries, external API calls), double or quadruple the core count. CPU-bound work benefits less from extra workers.
+
+### Load Balancing with Nginx
+
+When you run multiple Tina4 instances, Nginx distributes traffic across them:
+
+```nginx
+upstream tina4_backend {
+    server 127.0.0.1:7145;
+    server 127.0.0.1:7146;
+    server 127.0.0.1:7147;
+    server 127.0.0.1:7148;
+}
+
+server {
+    listen 80;
+    server_name yourdomain.com;
+
+    location / {
+        proxy_pass http://tina4_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Start four instances on different ports:
+
+```bash
+TINA4_PORT=7145 uv run python app.py &
+TINA4_PORT=7146 uv run python app.py &
+TINA4_PORT=7147 uv run python app.py &
+TINA4_PORT=7148 uv run python app.py &
+```
+
+Nginx distributes requests in round-robin order by default. If a backend goes down, Nginx routes traffic to the remaining instances.
+
+### Docker Scaling
+
+With Docker Compose, scale horizontally with a single command:
+
+```bash
+docker compose up -d --scale app=4
+```
+
+This starts four containers. Place a load balancer (Traefik, Nginx, or a cloud load balancer) in front of them:
+
+```yaml
+services:
+  reverse-proxy:
+    image: traefik:v3.0
+    command:
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  app:
+    build: .
+    labels:
+      - "traefik.http.routers.app.rule=Host(`yourdomain.com`)"
+    environment:
+      - TINA4_DEBUG=false
+      - DATABASE_URL=sqlite:///data/app.db
+    volumes:
+      - app-data:/app/data
+
+volumes:
+  app-data:
+```
+
+### Scaling Considerations
+
+Scaling introduces shared-state problems. When four instances serve requests, each must agree on the state of the world.
+
+**Sessions:** Store sessions in Redis, not in-memory. Otherwise, a user who logs in on instance 1 appears logged out on instance 2.
+
+**Database:** SQLite handles one writer at a time. Under high load with multiple instances, switch to PostgreSQL or MySQL. If you must use SQLite, enable WAL mode.
+
+**File uploads:** Store uploaded files in shared storage (S3, a mounted volume) -- not the local filesystem of a single container.
+
+**Cache:** Use Redis as the cache backend so all instances share the same cache.
+
+---
+
+## 11. Monitoring
+
+Your app runs in production. You need to know when it breaks, slows down, or runs out of resources.
+
+### Log Aggregation
+
+Switch to JSON-formatted logs for production. Structured logs feed into aggregation services:
+
+```dotenv
+TINA4_LOG_FORMAT=json
+```
+
+Example JSON log entry:
+
+```json
+{
+  "timestamp": "2026-03-22T14:30:00.123Z",
+  "level": "WARNING",
+  "message": "Rate limit exceeded",
+  "request_id": "req-abc123",
+  "ip": "203.0.113.42",
+  "path": "/api/products",
+  "method": "GET"
+}
+```
+
+Services that ingest JSON logs:
+
+| Service | Strengths |
+|---------|-----------|
+| Grafana Loki | Open source, pairs with Grafana dashboards |
+| Elastic Stack (ELK) | Full-text search across logs |
+| Datadog | Managed service, correlates logs with metrics |
+| AWS CloudWatch | Native for AWS deployments |
+
+Docker makes log aggregation straightforward. Configure the logging driver to send container output to your chosen service:
+
+```yaml
+services:
+  app:
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "localhost:24224"
+        tag: "tina4.app"
+```
+
+### Uptime Monitoring
+
+Point an external monitoring service at your health endpoint:
+
+```
+https://yourdomain.com/health
+```
+
+Services like Uptime Robot, Pingdom, or Better Uptime ping this endpoint every 30-60 seconds. When it stops responding or returns a non-200 status, you receive an alert via email, SMS, or Slack.
+
+The health endpoint from section 5 serves double duty: container orchestrators use it for restart decisions, and uptime monitors use it for alerting.
+
+### Application Performance Monitoring (APM)
+
+Uptime monitoring tells you the app is running. APM tells you how well it performs. APM agents track:
+
+- Request latency (average, p95, p99)
+- Database query performance (slow queries, connection pool usage)
+- Error rates (which endpoints fail, how often)
+- Memory and CPU usage over time
+
+Since Tina4 Python runs on standard Python, any Python APM agent works:
+
+- **Datadog APM**: `uv add ddtrace` and run with `ddtrace-run uv run python app.py`
+- **New Relic**: `uv add newrelic` and run with `newrelic-admin run-program uv run python app.py`
+- **Elastic APM**: `uv add elastic-apm` and configure in your app startup
+
+A basic monitoring stack for a small team: Uptime Robot for availability alerts (free tier covers it), JSON logs shipped to Grafana Loki for debugging, and `docker stats` for resource usage. Add APM when your application serves enough traffic to warrant the cost.
+
+---
+
+## 12. Exercise: Docker Deploy
 
 Deploy a Tina4 Python application using Docker.
 
@@ -505,7 +764,7 @@ docker compose down
 
 ### Solution
 
-The Dockerfile and docker-compose.yml are shown in sections 4 above. The health check route is shown in section 5. Combine them all in your project, then:
+The Dockerfile and docker-compose.yml are shown in section 4. The health check route is shown in section 5. Combine them in your project, then:
 
 ```bash
 docker compose up -d --build
@@ -514,8 +773,8 @@ docker compose up -d --build
 ```
 [+] Building 12.3s
 [+] Running 2/2
-  ✔ Container redis    Started
-  ✔ Container my-app   Started
+  Container redis    Started
+  Container my-app   Started
 ```
 
 ```bash
@@ -531,31 +790,31 @@ curl http://localhost:7145/health
 }
 ```
 
-The app is running in production mode, with Redis caching, persistent data volumes, automatic restarts, and health monitoring.
+The app runs in production mode with Redis caching, persistent data volumes, automatic restarts, and health monitoring.
 
 ---
 
-## 10. Gotchas
+## 13. Gotchas
 
 ### 1. .env Not Loaded in Docker
 
 **Problem:** Environment variables from `.env` are not available in the container.
 
-**Cause:** Docker does not automatically read `.env` files. The `.env` file is in `.dockerignore` (as it should be -- never ship secrets in the image).
+**Cause:** Docker does not read `.env` files automatically. The `.env` file belongs in `.dockerignore` (never ship secrets in the image).
 
-**Fix:** Pass environment variables via `docker run -e`, `docker-compose.yml` environment section, or an `env_file` directive. For secrets, use Docker secrets or your platform's secret management.
+**Fix:** Pass environment variables via `docker run -e`, the `environment` section in `docker-compose.yml`, or an `env_file` directive. For secrets, use Docker secrets or your platform's secret management.
 
 ### 2. SQLite Database Lost on Container Restart
 
 **Problem:** All data disappears when the container restarts.
 
-**Cause:** The SQLite database file is inside the container. When the container is recreated, the file is lost.
+**Cause:** The SQLite database file sits inside the container. When the container is recreated, the file is gone.
 
 **Fix:** Mount a volume for the data directory: `-v $(pwd)/data:/app/data`. In Docker Compose, use a named volume: `volumes: [app-data:/app/data]`.
 
 ### 3. WebSocket Connections Drop Behind Nginx
 
-**Problem:** WebSocket connections fail or drop immediately when behind Nginx.
+**Problem:** WebSocket connections fail or drop immediately behind Nginx.
 
 **Cause:** Nginx does not proxy WebSocket by default. It treats the upgrade request as a regular HTTP request.
 
@@ -580,22 +839,43 @@ proxy_read_timeout 86400;
 
 **Problem:** CSS, JS, and images load slowly in production.
 
-**Cause:** Python is serving static files. Every static file request goes through the Python process, which is much slower than a dedicated web server.
+**Cause:** Python serves static files. Every static file request goes through the Python process.
 
 **Fix:** Serve static files from Nginx (see the Nginx config in section 8). Nginx serves static files from memory-mapped files, which is orders of magnitude faster than Python.
 
 ### 6. Memory Usage Grows Over Time
 
-**Problem:** The container's memory usage increases steadily until it crashes with OOM (out of memory).
+**Problem:** The container's memory usage climbs until it crashes with OOM (out of memory).
 
-**Cause:** Memory leaks in your application -- unclosed database connections, growing caches without TTL, accumulating request data in global variables.
+**Cause:** Memory leaks in the application -- unclosed database connections, growing caches without TTL, accumulating request data in global variables.
 
 **Fix:** Set TTLs on all cache entries. Close database connections properly. Avoid storing request data in module-level variables. Use `docker stats` to monitor memory usage. Set memory limits in Docker Compose: `deploy: {resources: {limits: {memory: 512M}}}`.
 
 ### 7. Container Starts Before Database Is Ready
 
-**Problem:** The app crashes on startup because the database is not ready yet.
+**Problem:** The app crashes on startup because the database is not ready.
 
-**Cause:** Docker Compose starts services in parallel. The app container starts before the database container is fully initialized.
+**Cause:** Docker Compose starts services in parallel. The app container starts before the database container finishes initializing.
 
-**Fix:** For SQLite, this is not an issue (the file is created automatically). For PostgreSQL or MySQL, use a startup script that waits for the database, or use Docker Compose `healthcheck` on the database service with `depends_on: {db: {condition: service_healthy}}`.
+**Fix:** For SQLite, this is not an issue (the file is created automatically). For PostgreSQL or MySQL, use a startup script that waits for the database, or use Docker Compose healthcheck on the database service with `depends_on: {db: {condition: service_healthy}}`.
+
+### 8. SSL Certificate Not Renewing
+
+**Problem:** Your HTTPS certificate expires and the site goes down.
+
+**Cause:** The auto-renewal process (Certbot or Traefik) failed. Common reasons: DNS changes, firewall blocking port 80 for ACME challenges, or the renewal service crashed.
+
+**Fix:** Monitor certificate expiry with an external service. Check renewal logs and verify the renewal timer is active:
+
+```bash
+sudo certbot renew --dry-run
+sudo systemctl list-timers | grep certbot
+```
+
+### 9. Scaled Instances Have Different State
+
+**Problem:** Users see inconsistent data across requests when running multiple app instances.
+
+**Cause:** In-memory sessions and cache are not shared between instances. A user who logs in on instance 1 appears logged out when the load balancer routes the next request to instance 2.
+
+**Fix:** Store sessions in Redis. Use Redis as the cache backend. Store uploaded files in shared storage (S3 or a mounted volume). All instances must read from and write to the same data stores.

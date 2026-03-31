@@ -2,9 +2,9 @@
 
 ## 1. Getting a New Developer Up to Speed
 
-A new developer joins your team on Monday morning. You hand them the repo URL. By 10am they have a running project, a new database model, CRUD routes, a migration, and a deployment to staging. All from the command line. No hunting through documentation. No copy-pasting boilerplate from old projects. The CLI handles the scaffolding.
+A new developer joins your team Monday morning. You hand them the repo URL. By 10am they have a running project, a new database model, CRUD routes, a migration, and a deployment to staging. All from the command line. No hunting through documentation. No copy-pasting boilerplate from old projects. The CLI handles scaffolding.
 
-The Tina4 CLI is a single Rust binary. It manages all four Tina4 frameworks (PHP, Python, Ruby, Node.js). The commands are identical across languages. Learn the CLI for PHP. You know it for Python.
+The Tina4 CLI is a single Rust binary. It manages all four Tina4 frameworks (PHP, Python, Ruby, Node.js). Commands stay identical across languages. Learn the CLI for PHP. You know it for Python.
 
 ---
 

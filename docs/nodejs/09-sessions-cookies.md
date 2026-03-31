@@ -282,9 +282,84 @@ Router.post("/logout", async (req, res) => {
 });
 ```
 
+### Session Configuration Options
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_SESSION_BACKEND` | `file` | Storage backend: `file`, `redis`, `mongodb`, `valkey`, `database` |
+| `TINA4_SESSION_TTL` | `3600` | Session lifetime in seconds |
+| `TINA4_SESSION_HOST` | `localhost` | Host for Redis/MongoDB/Valkey |
+| `TINA4_SESSION_PORT` | `6379` | Port for Redis/MongoDB/Valkey |
+| `TINA4_SESSION_PASSWORD` | (none) | Password for Redis/Valkey |
+| `TINA4_SESSION_SECURE` | `false` | Cookie sent only over HTTPS |
+| `TINA4_SESSION_HTTPONLY` | `true` | Cookie inaccessible to JavaScript |
+| `TINA4_SESSION_SAMESITE` | `Lax` | Cross-site cookie policy |
+
+### Cookie Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `httpOnly` | `true` | Prevents JavaScript access |
+| `secure` | `false` | HTTPS only |
+| `sameSite` | `Lax` | Cross-site policy |
+| `maxAge` | session lifetime | Cookie expiry in seconds |
+| `path` | `/` | Cookie path scope |
+| `domain` | (none) | Cookie domain scope |
+
 ---
 
-## 12. Exercise: Build a Shopping Cart with Session Storage
+## 12. Remember Me Pattern
+
+The default session expires when the browser closes. A "Remember Me" checkbox extends the session.
+
+```typescript
+Router.post("/login", async (req, res) => {
+    const { email, password, remember } = req.body;
+
+    // Validate credentials...
+    const user = await authenticateUser(email, password);
+    if (!user) {
+        return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    req.session.regenerate();
+    req.session.set("user_id", user.id);
+
+    if (remember) {
+        // Extend session to 30 days
+        req.session.setTTL(30 * 24 * 60 * 60);
+    }
+
+    return res.redirect("/dashboard");
+});
+```
+
+The form:
+
+```html
+<form method="POST" action="/login">
+    &#123;&#123; form_token() &#125;&#125;
+    <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" class="form-control" required>
+    </div>
+    <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" class="form-control" required>
+    </div>
+    <div class="form-check">
+        <input type="checkbox" id="remember" name="remember" value="1" class="form-check-input">
+        <label for="remember" class="form-check-label">Remember me for 30 days</label>
+    </div>
+    <button type="submit" class="btn btn-primary">Login</button>
+</form>
+```
+
+Without the checkbox, the session uses the default TTL (1 hour). With the checkbox, the session persists for 30 days. The server controls the duration -- the client cannot extend it.
+
+---
+
+## 13. Exercise: Build a Shopping Cart with Session Storage
 
 Build a shopping cart stored entirely in session data.
 
@@ -300,7 +375,7 @@ Build a shopping cart stored entirely in session data.
 
 ---
 
-## 13. Solution
+## 14. Solution
 
 Create `src/routes/cart.ts`:
 
@@ -401,7 +476,7 @@ Router.delete("/api/cart", async (req, res) => {
 
 ---
 
-## 14. Gotchas
+## 15. Gotchas
 
 ### 1. Sessions Do Not Work with curl Without Cookie Flags
 

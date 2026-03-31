@@ -2,11 +2,11 @@
 
 ## 1. The Problem with Frontend Toolchains
 
-Your client wants a dashboard. You know the drill. Install Node.js. Run `npm install`. Wait for 200MB of `node_modules` to download. Configure webpack or Vite. Set up PostCSS. Add a CSS framework. Maybe Tailwind with its purge config. Pray nothing breaks when you upgrade a dependency six months from now.
+Your client wants a dashboard. You know the drill. Install Node.js. Run `npm install`. Watch 200MB of `node_modules` download. Configure webpack or Vite. Set up PostCSS. Add a CSS framework. Maybe Tailwind with its purge config. Pray nothing breaks when you upgrade a dependency six months later.
 
-Tina4 takes a different approach. The framework ships with **tina4css** -- a Bootstrap-compatible CSS framework -- and **frond.js** -- a lightweight JavaScript helper library. Both arrive when you scaffold a project. No npm. No webpack. No build step. Link the files and start building.
+Tina4 takes a different path. The framework ships with **tina4css** -- a Bootstrap-compatible CSS framework -- and **frond.js** -- a lightweight JavaScript helper library. Both arrive when you scaffold a project. No npm. No webpack. No build step. Link the files. Start building.
 
-By the end of this chapter, you will have a complete admin dashboard with sidebar, navigation, cards, tables, modals, and dark mode support. Zero npm dependencies.
+By the end of this chapter, you have a complete admin dashboard with sidebar, navigation, cards, tables, modals, and dark mode support. Zero npm dependencies.
 
 ---
 

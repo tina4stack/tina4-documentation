@@ -2,9 +2,9 @@
 
 ## 1. From SQL to Objects
 
-In Chapter 5 you wrote raw SQL for every operation. It works. It also gets tedious. The same `INSERT INTO products (name, price, ...) VALUES (:name, :price, ...)` pattern appears over and over. The ORM (Object-Relational Mapper) replaces that repetition with PHP classes. Define a class. Map it to a table. Call `save()`, `load()`, `delete()`.
+Chapter 5 used raw SQL for every operation. It works. It also repeats. The same `INSERT INTO products (name, price, ...) VALUES (:name, :price, ...)` pattern shows up in every route. The ORM replaces that repetition with PHP classes. Define a class. Map it to a table. Call `save()`, `load()`, `delete()`.
 
-Tina4's ORM is minimal by design. It does not hide SQL. It gives you convenient methods for common operations and stays out of the way when you need raw queries.
+Tina4's ORM stays minimal. It does not hide SQL. It gives you methods for common operations and steps aside when you need raw queries.
 
 ---
 
@@ -238,7 +238,7 @@ Router::delete("/api/products/{id:int}", function ($request, $response) {
 });
 ```
 
-`delete()` removes the row. The object stays in memory. The database row is gone.
+`delete()` removes the row from the database. The object stays in memory. The database row is gone.
 
 ---
 
@@ -388,7 +388,7 @@ tina4 orm:create-table Product
 Created table "products" with 7 columns.
 ```
 
-Convenient during early development. For production, use migrations (Chapter 5) so schema changes are versioned and reversible.
+Handy during early development. For production, use migrations (Chapter 5) so schema changes are versioned and reversible.
 
 ---
 
@@ -516,7 +516,7 @@ curl http://localhost:7146/api/users/1
 
 ## 10. Eager Loading
 
-Calling relationship methods inside a loop creates the N+1 problem. Load 100 users, call `$user->posts()` for each one: 101 queries. One for users. One hundred for posts.
+Calling relationship methods inside a loop triggers the N+1 problem. Load 100 users. Call `$user->posts()` for each one. That fires 101 queries. One for users. One hundred for posts.
 
 Use the `include` parameter with `select()` to eager-load:
 
@@ -604,12 +604,15 @@ With `$softDelete = true`:
 
 ### Restoring Soft-Deleted Records
 
+Use `restore()` to bring a soft-deleted record back:
+
 ```php
 $post = new Post();
 $post->load(5); // Load even if soft-deleted
-$post->deletedAt = null;
-$post->save();
+$post->restore();
 ```
+
+`restore()` clears `deleted_at` and saves the record in one call. The row reappears in normal queries.
 
 ### Including Soft-Deleted Records in Queries
 
@@ -647,7 +650,7 @@ class Product extends ORM
 
 ## 13. Auto-CRUD
 
-Tina4 generates REST endpoints from any ORM model. Add one property:
+Tina4 generates REST endpoints from any ORM model. One property flips the switch:
 
 ```php
 <?php
@@ -705,7 +708,129 @@ Custom routes still work alongside auto-CRUD. Your custom routes take precedence
 
 ---
 
-## 14. Exercise: Build a Blog
+## 14. Scopes
+
+Scopes are reusable query filters. Define them as static methods on your model. Call them anywhere you need the same filter.
+
+```php
+<?php
+use Tina4\ORM;
+
+class Product extends ORM
+{
+    public int $id;
+    public string $name;
+    public float $price;
+    public bool $inStock;
+    public string $category;
+
+    public string $tableName = "products";
+    public string $primaryKey = "id";
+
+    public static function active(): array
+    {
+        $p = new self();
+        return $p->select("*", "in_stock = :inStock", ["inStock" => 1]);
+    }
+
+    public static function expensive(float $threshold = 100.0): array
+    {
+        $p = new self();
+        return $p->select("*", "price >= :threshold", ["threshold" => $threshold]);
+    }
+
+    public static function inCategory(string $category): array
+    {
+        $p = new self();
+        return $p->select("*", "category = :category", ["category" => $category]);
+    }
+}
+```
+
+Use scopes in your route handlers:
+
+```php
+Router::get("/api/products/active", function ($request, $response) {
+    $products = Product::active();
+    return $response->json(array_map(fn($p) => $p->toArray(), $products));
+});
+
+Router::get("/api/products/expensive", function ($request, $response) {
+    $threshold = (float) ($request->params["min"] ?? 100);
+    $products = Product::expensive($threshold);
+    return $response->json(array_map(fn($p) => $p->toArray(), $products));
+});
+```
+
+Scopes give common queries a name. The filtering logic lives in the model. Route handlers stay clean.
+
+---
+
+## 15. Input Validation on Models
+
+Move validation into the model. Define a `validate()` method that checks field values before saving:
+
+```php
+<?php
+use Tina4\ORM;
+
+class Product extends ORM
+{
+    public int $id;
+    public string $name;
+    public float $price;
+    public string $category = "Uncategorized";
+
+    public string $tableName = "products";
+    public string $primaryKey = "id";
+
+    public function validate(): array
+    {
+        $errors = [];
+
+        if (empty($this->name)) {
+            $errors[] = "Name is required";
+        }
+
+        if ($this->price < 0) {
+            $errors[] = "Price cannot be negative";
+        }
+
+        if (strlen($this->name) > 255) {
+            $errors[] = "Name must be 255 characters or fewer";
+        }
+
+        return $errors;
+    }
+}
+```
+
+Call `validate()` before saving:
+
+```php
+Router::post("/api/products", function ($request, $response) {
+    $body = $request->body;
+
+    $product = new Product();
+    $product->name = $body["name"] ?? "";
+    $product->price = (float) ($body["price"] ?? 0);
+    $product->category = $body["category"] ?? "Uncategorized";
+
+    $errors = $product->validate();
+    if (!empty($errors)) {
+        return $response->json(["errors" => $errors], 400);
+    }
+
+    $product->save();
+    return $response->json($product->toArray(), 201);
+});
+```
+
+Validation lives with the data it validates. Every route that saves a Product calls `validate()`. Change a rule once. Every endpoint picks it up.
+
+---
+
+## 16. Exercise: Build a Blog
 
 Three models: User, Post, Comment. Relationships, eager loading, and auto-CRUD.
 
@@ -776,7 +901,7 @@ curl http://localhost:7146/api/blog/posts/1
 
 ---
 
-## 15. Solution
+## 17. Solution
 
 ### Migrations
 
@@ -1041,7 +1166,7 @@ Router::post("/api/blog/posts/{id:int}/comments", function ($request, $response)
 
 ---
 
-## 16. Gotchas
+## 18. Gotchas
 
 ### 1. Table Naming Convention
 

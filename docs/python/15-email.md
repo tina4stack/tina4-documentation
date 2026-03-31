@@ -2,9 +2,9 @@
 
 ## 1. Every App Sends Email
 
-Signup confirmations. Password resets. Weekly digests. Attachments, HTML templates, reliable delivery. Every application needs email. Nobody enjoys implementing it. SMTP configuration. Plain text fallbacks. Attachment encoding. Connection timeouts. The details pile up fast.
+Signup confirmations. Password resets. Weekly digests. Invoices with PDF attachments. Every application needs email. Nobody enjoys building it.
 
-Tina4's `Messenger` class absorbs that complexity. Configure via `.env`. Create an instance. Send. In development mode, emails are intercepted and shown in the dev dashboard -- no real SMTP server needed.
+SMTP configuration. Plain text fallbacks. Attachment encoding. Connection timeouts. The details pile up fast. Tina4's `Messenger` class absorbs all of it. Configure through `.env`. Create an instance. Send. In development mode, Messenger intercepts every outgoing email and displays it in the dev dashboard -- no real SMTP server required.
 
 ---
 
@@ -13,64 +13,66 @@ Tina4's `Messenger` class absorbs that complexity. Configure via `.env`. Create 
 All email configuration lives in `.env`:
 
 ```dotenv
-TINA4_MAIL_SMTP_HOST=smtp.example.com
-TINA4_MAIL_SMTP_PORT=587
-TINA4_MAIL_SMTP_USERNAME=your-email@example.com
-TINA4_MAIL_SMTP_PASSWORD=your-app-password
-TINA4_MAIL_SMTP_ENCRYPTION=tls
-TINA4_MAIL_FROM_ADDRESS=noreply@example.com
+TINA4_MAIL_HOST=smtp.example.com
+TINA4_MAIL_PORT=587
+TINA4_MAIL_USERNAME=your-email@example.com
+TINA4_MAIL_PASSWORD=your-app-password
+TINA4_MAIL_ENCRYPTION=tls
+TINA4_MAIL_FROM=noreply@example.com
 TINA4_MAIL_FROM_NAME=My Store
 ```
 
 | Variable | Description | Common Values |
 |----------|-------------|---------------|
-| `TINA4_MAIL_SMTP_HOST` | SMTP server hostname | `smtp.gmail.com`, `smtp.mailgun.org`, `smtp.sendgrid.net` |
-| `TINA4_MAIL_SMTP_PORT` | SMTP port | `587` (TLS), `465` (SSL), `25` (unencrypted) |
-| `TINA4_MAIL_SMTP_USERNAME` | Login username | Usually your email address |
-| `TINA4_MAIL_SMTP_PASSWORD` | Login password or app-specific password | App passwords for Gmail |
-| `TINA4_MAIL_SMTP_ENCRYPTION` | Encryption method | `tls` (recommended), `ssl`, `none` |
-| `TINA4_MAIL_FROM_ADDRESS` | Default "From" address | `noreply@yourdomain.com` |
+| `TINA4_MAIL_HOST` | SMTP server hostname | `smtp.gmail.com`, `smtp.mailgun.org`, `smtp.sendgrid.net` |
+| `TINA4_MAIL_PORT` | SMTP port | `587` (TLS), `465` (SSL), `25` (unencrypted) |
+| `TINA4_MAIL_USERNAME` | Login username | Usually your email address |
+| `TINA4_MAIL_PASSWORD` | Login password or app-specific password | App passwords for Gmail |
+| `TINA4_MAIL_ENCRYPTION` | Encryption method | `tls` (recommended), `ssl`, `none` |
+| `TINA4_MAIL_FROM` | Default "From" address | `noreply@yourdomain.com` |
 | `TINA4_MAIL_FROM_NAME` | Default "From" display name | `My Store`, `Acme Corp` |
+
+Messenger also accepts legacy `SMTP_*` prefixed variables as fallback. The `TINA4_MAIL_*` prefix takes priority.
 
 ### Common Provider Configurations
 
 **Gmail:**
 
 ```dotenv
-TINA4_MAIL_SMTP_HOST=smtp.gmail.com
-TINA4_MAIL_SMTP_PORT=587
-TINA4_MAIL_SMTP_USERNAME=your-email@gmail.com
-TINA4_MAIL_SMTP_PASSWORD=your-app-password
-TINA4_MAIL_SMTP_ENCRYPTION=tls
+TINA4_MAIL_HOST=smtp.gmail.com
+TINA4_MAIL_PORT=587
+TINA4_MAIL_USERNAME=your-email@gmail.com
+TINA4_MAIL_PASSWORD=your-app-password
+TINA4_MAIL_ENCRYPTION=tls
 ```
 
-Note: Gmail requires an "App Password" (not your regular password) when two-factor authentication is enabled.
+Gmail requires an "App Password" (not your regular password) when two-factor authentication is enabled.
 
 **Mailgun:**
 
 ```dotenv
-TINA4_MAIL_SMTP_HOST=smtp.mailgun.org
-TINA4_MAIL_SMTP_PORT=587
-TINA4_MAIL_SMTP_USERNAME=postmaster@mg.yourdomain.com
-TINA4_MAIL_SMTP_PASSWORD=your-mailgun-smtp-password
-TINA4_MAIL_SMTP_ENCRYPTION=tls
+TINA4_MAIL_HOST=smtp.mailgun.org
+TINA4_MAIL_PORT=587
+TINA4_MAIL_USERNAME=postmaster@mg.yourdomain.com
+TINA4_MAIL_PASSWORD=your-mailgun-smtp-password
+TINA4_MAIL_ENCRYPTION=tls
 ```
 
 **SendGrid:**
 
 ```dotenv
-TINA4_MAIL_SMTP_HOST=smtp.sendgrid.net
-TINA4_MAIL_SMTP_PORT=587
-TINA4_MAIL_SMTP_USERNAME=apikey
-TINA4_MAIL_SMTP_PASSWORD=your-sendgrid-api-key
-TINA4_MAIL_SMTP_ENCRYPTION=tls
+TINA4_MAIL_HOST=smtp.sendgrid.net
+TINA4_MAIL_PORT=587
+TINA4_MAIL_USERNAME=apikey
+TINA4_MAIL_PASSWORD=your-sendgrid-api-key
+TINA4_MAIL_ENCRYPTION=tls
 ```
 
 ---
 
 ## 3. Constructor Override Pattern
 
-If you need to use different SMTP settings for different purposes (transactional emails from one account, marketing from another), override the configuration in the constructor:
+Different emails need different SMTP accounts. Transactional emails from one server. Marketing from another. Override the configuration in the constructor:
 
 ```python
 from tina4_python.messenger import Messenger
@@ -90,13 +92,13 @@ marketing_mailer = Messenger(
 )
 ```
 
-The constructor accepts keyword arguments that override `.env` values. Unspecified keys fall back to `.env`.
+Constructor arguments take priority over `.env` values. Any argument you omit falls back to the environment variable.
 
 ---
 
 ## 4. Sending Plain Text Email
 
-The simplest email you can send:
+The simplest email:
 
 ```python
 from tina4_python.core.router import post
@@ -132,24 +134,30 @@ curl -X POST http://localhost:7145/api/contact \
 {"message":"Email sent successfully"}
 ```
 
-The `send()` method returns a dict with `"success"` (boolean) and `"error"` (string, only present on failure).
+The `send()` method returns a dict with three keys: `"success"` (boolean), `"error"` (string or None), and `"message_id"` (string or None).
 
-### The send() Method
+### The send() Method Signature
 
 ```python
-mailer.send(to, subject, body, **options)
+mailer.send(
+    to,                  # Recipient(s) -- string or list of strings
+    subject,             # Email subject line
+    body,                # Email body (plain text or HTML)
+    html=False,          # If True, body is treated as HTML
+    text=None,           # Plain text alternative (when body is HTML)
+    cc=None,             # CC recipient(s) -- string or list
+    bcc=None,            # BCC recipient(s) -- string or list
+    reply_to=None,       # Reply-To address
+    attachments=None,    # List of file paths or dicts
+    headers=None         # Additional email headers (dict)
+)
 ```
-
-- **to**: Recipient email address (string)
-- **subject**: Email subject line (string)
-- **body**: Email body content (string -- plain text or HTML)
-- **options**: Optional keyword arguments (see below)
 
 ---
 
 ## 5. Sending HTML Email with Text Fallback
 
-Most emails should be HTML with a plain text fallback for email clients that do not render HTML:
+Most emails should carry HTML with a plain text fallback. Email clients that cannot render HTML display the text version instead:
 
 ```python
 from tina4_python.messenger import Messenger
@@ -196,11 +204,12 @@ result = mailer.send(
     to="alice@example.com",
     subject="Welcome to My Store!",
     body=html_body,
-    text_body=text_body
+    html=True,
+    text=text_body
 )
 ```
 
-The `text_body` option provides the plain text fallback. Email clients that cannot render HTML will show the text version instead.
+Pass `html=True` to tell Messenger the body contains HTML. The `text` parameter provides the plain text alternative. Messenger builds a `multipart/alternative` message that carries both versions.
 
 ---
 
@@ -217,6 +226,7 @@ result = mailer.send(
     to="accounting@example.com",
     subject="Monthly Invoice #1042",
     body="<h2>Invoice #1042</h2><p>Please find the invoice attached.</p>",
+    html=True,
     attachments=[
         "/path/to/invoices/invoice-1042.pdf",
         "/path/to/reports/monthly-summary.csv"
@@ -224,29 +234,31 @@ result = mailer.send(
 )
 ```
 
-Each attachment is the absolute file path. Tina4 reads the file, determines the MIME type, and encodes it for email transmission.
+Messenger reads each file, determines its MIME type, and encodes it for email transmission. Each entry can be a file path string, a `Path` object, or a dict for more control.
 
-### Inline Attachments with Custom Names
+### Attachments with Custom Names and Binary Content
 
 ```python
 result = mailer.send(
     to="alice@example.com",
     subject="Your Export",
     body="<p>Here is your data export.</p>",
+    html=True,
     attachments=[
         {
-            "path": "/tmp/export-20260322.csv",
-            "name": "my-store-export.csv"
+            "filename": "my-store-export.csv",
+            "content": csv_bytes,
+            "mime": "text/csv"
         }
     ]
 )
 ```
 
-The recipient sees the file named `my-store-export.csv` regardless of its actual filename on disk.
+The dict format accepts `filename` (display name), `content` (raw bytes), and `mime` (MIME type string). The recipient sees the file named `my-store-export.csv` regardless of how it was generated.
 
 ---
 
-## 7. CC and BCC
+## 7. CC, BCC, and Reply-To
 
 ```python
 from tina4_python.messenger import Messenger
@@ -257,29 +269,78 @@ result = mailer.send(
     to="alice@example.com",
     subject="Team Meeting Notes",
     body="<p>Here are the notes from today's meeting.</p>",
+    html=True,
     cc=["bob@example.com", "charlie@example.com"],
     bcc=["manager@example.com"],
     reply_to="alice@example.com"
 )
 ```
 
-- **cc**: List of email addresses to carbon copy. All recipients can see CC addresses.
+- **cc**: List of email addresses to carbon copy. All recipients see CC addresses.
 - **bcc**: List of email addresses to blind carbon copy. Recipients cannot see BCC addresses.
-- **reply_to**: When the recipient clicks "Reply", this address is used instead of the "From" address.
+- **reply_to**: When the recipient clicks "Reply", this address fills the "To" field instead of the "From" address.
+
+Both `cc` and `bcc` accept a single string or a list of strings.
 
 ---
 
-## 8. Reading Inbox via IMAP
+## 8. Custom Headers
 
-Tina4's Messenger can also read emails via IMAP:
+Messenger supports two methods for adding headers. The `add_header()` method sets a default header on all emails sent by that instance. The `headers` parameter on `send()` sets headers for a single email.
+
+### Default Headers on an Instance
+
+```python
+from tina4_python.messenger import Messenger
+
+mailer = Messenger()
+mailer.add_header("X-App-Name", "My Store")
+mailer.add_header("X-Environment", "production")
+
+# Every email from this instance carries both headers
+mailer.send(to="alice@example.com", subject="Test", body="Hello")
+```
+
+### Per-Email Headers
+
+```python
+result = mailer.send(
+    to="customer@example.com",
+    subject="Your Support Ticket #123",
+    body="We are looking into your issue.",
+    reply_to="support@mystore.com",
+    headers={
+        "X-Ticket-Id": "123",
+        "X-Priority": "1",
+        "X-Mailer": "Tina4 Messenger"
+    }
+)
+```
+
+Per-email headers merge with default headers. If both define the same key, the per-email value wins.
+
+Custom headers serve several purposes. Tracking headers like `X-Ticket-Id` let you correlate emails with support tickets. Priority headers influence some email clients' display. Bulk-sending headers like `Precedence: bulk` help mail servers classify newsletters.
+
+---
+
+## 9. Reading Inbox via IMAP
+
+Messenger reads email through IMAP. Configure the IMAP server in `.env`:
 
 ```dotenv
 TINA4_MAIL_IMAP_HOST=imap.example.com
 TINA4_MAIL_IMAP_PORT=993
-TINA4_MAIL_IMAP_USERNAME=support@example.com
-TINA4_MAIL_IMAP_PASSWORD=your-imap-password
-TINA4_MAIL_IMAP_ENCRYPTION=ssl
 ```
+
+Messenger reuses `TINA4_MAIL_USERNAME` and `TINA4_MAIL_PASSWORD` for IMAP authentication. You can also override the IMAP host and port in the constructor:
+
+```python
+mailer = Messenger(imap_host="imap.gmail.com", imap_port=993)
+```
+
+### Listing Inbox Messages
+
+The `inbox()` method fetches message headers from the mailbox:
 
 ```python
 from tina4_python.core.router import get
@@ -289,17 +350,17 @@ from tina4_python.messenger import Messenger
 async def get_inbox(request, response):
     mailer = Messenger()
 
-    emails = mailer.get_inbox(limit=20, unread_only=True)
+    emails = mailer.inbox(limit=20, offset=0)
 
     messages = []
     for email in emails:
         messages.append({
-            "id": email["id"],
+            "uid": email["uid"],
             "from": email["from"],
             "subject": email["subject"],
             "date": email["date"],
-            "preview": email["text_body"][:200],
-            "has_attachments": bool(email.get("attachments"))
+            "snippet": email["snippet"],
+            "seen": email["seen"]
         })
 
     return response({"messages": messages, "count": len(messages)})
@@ -313,61 +374,126 @@ curl http://localhost:7145/api/inbox
 {
   "messages": [
     {
-      "id": "12345",
+      "uid": "12345",
       "from": "customer@example.com",
       "subject": "Order question",
       "date": "2026-03-22T10:30:00+00:00",
-      "preview": "Hi, I have a question about my recent order...",
-      "has_attachments": false
+      "snippet": "Hi, I have a question about my recent order...",
+      "seen": false
     }
   ],
   "count": 1
 }
 ```
 
-### Reading a Specific Email
+The `inbox()` method returns messages newest-first. Each message contains `uid`, `subject`, `from`, `to`, `date`, `snippet` (first 150 characters of the body), and `seen` (boolean).
+
+### Reading a Specific Message
 
 ```python
-@get("/api/inbox/{email_id}")
+@get("/api/inbox/{uid}")
 async def get_email(request, response):
     mailer = Messenger()
-    email_id = request.params["email_id"]
+    uid = request.params["uid"]
 
-    email = mailer.get_message(email_id)
+    email = mailer.read(uid, mark_read=True)
 
-    if email is None:
+    if not email:
         return response({"error": "Email not found"}, 404)
 
     return response({
-        "id": email["id"],
+        "uid": email["uid"],
         "from": email["from"],
         "to": email["to"],
+        "cc": email["cc"],
         "subject": email["subject"],
         "date": email["date"],
-        "html_body": email["html_body"],
-        "text_body": email["text_body"],
+        "body_html": email["body_html"],
+        "body_text": email["body_text"],
         "attachments": [
-            {"name": a["name"], "size": a["size"], "type": a["type"]}
+            {"filename": a["filename"], "size": a["size"], "content_type": a["content_type"]}
             for a in email.get("attachments", [])
         ]
     })
 ```
 
+The `read()` method fetches the full message including body and attachments. Pass `mark_read=False` to leave the message unread.
+
+### Searching Messages
+
+```python
+@get("/api/inbox/search")
+async def search_inbox(request, response):
+    mailer = Messenger()
+
+    results = mailer.search(
+        subject=request.query.get("q"),
+        sender=request.query.get("from"),
+        unseen_only=request.query.get("unread") == "true",
+        limit=20
+    )
+
+    return response({"messages": results, "count": len(results)})
+```
+
+The `search()` method accepts `subject`, `sender`, `since` (date string "DD-Mon-YYYY"), `before`, and `unseen_only` as filters. All filters combine with AND logic.
+
+### Other IMAP Operations
+
+```python
+mailer = Messenger()
+
+# Count unread messages
+count = mailer.unread()
+
+# Mark a message as read
+mailer.mark_read("12345")
+
+# Mark a message as unread
+mailer.mark_unread("12345")
+
+# Delete a message
+mailer.delete("12345")
+
+# List all mailbox folders
+folders = mailer.folders()
+# ["INBOX", "Sent", "Drafts", "Trash", "Spam"]
+```
+
+### Testing IMAP Connectivity
+
+```python
+mailer = Messenger()
+result = mailer.test_imap_connection()
+if result["success"]:
+    print("IMAP connection works")
+else:
+    print(f"IMAP failed: {result['error']}")
+```
+
 ---
 
-## 9. Dev Mode: Email Interception
+## 10. Dev Mode: Email Interception
 
-When `TINA4_DEBUG=true`, Tina4 intercepts all outgoing emails and shows them in the dev dashboard. No real recipients receive anything. No accidental emails during development.
+When `TINA4_DEBUG=true`, Tina4 intercepts all outgoing emails and stores them locally. No real recipients receive anything. No accidental emails during development.
 
-Navigate to `/__dev` and look for the "Mail" section. You will see:
+Navigate to `/__dev` and look for the "Mail" section. You see:
 
-- Every email that was "sent" during the current session
+- Every email "sent" during the current session
 - The To, CC, and BCC addresses
 - The subject and body (both HTML and plain text)
 - Attachments (viewable inline)
 - The timestamp
 
-This is invaluable for testing email functionality without configuring a real SMTP server or polluting someone's inbox.
+This is invaluable for testing email functionality without configuring a real SMTP server. Use `create_messenger()` instead of `Messenger()` to get automatic dev-mode interception:
+
+```python
+from tina4_python.messenger import create_messenger
+
+mailer = create_messenger()
+# In dev mode: captures locally
+# In production: sends via SMTP
+```
 
 ### Disabling Interception
 
@@ -377,13 +503,13 @@ If you need to test real email delivery during development, override the interce
 TINA4_MAIL_INTERCEPT=false
 ```
 
-With this set, emails are sent to real recipients even when `TINA4_DEBUG=true`. Use with caution -- you do not want to accidentally email your entire user base from a dev machine.
+With this set, emails reach real recipients even when `TINA4_DEBUG=true`. Use with caution -- you do not want to accidentally email your entire user base from a dev machine.
 
 ---
 
-## 10. Using Templates for Email Content
+## 11. Using Templates for Email Content
 
-Hardcoded HTML in Python strings is ugly and hard to maintain. Templates fix this:
+Hardcoded HTML in Python strings is ugly and hard to maintain. Templates fix this.
 
 Create `src/templates/emails/welcome.html`:
 
@@ -475,9 +601,10 @@ async def register_user(request, response):
         to=body["email"],
         subject=f"Welcome to My Store, {body['name']}!",
         body=html_body,
-        text_body=f"Hi {body['name']},\n\nWelcome to My Store! "
-                  f"Your account (#{user_id}) has been created.\n\n"
-                  f"Cheers,\nThe My Store Team"
+        html=True,
+        text=f"Hi {body['name']},\n\nWelcome to My Store! "
+              f"Your account (#{user_id}) has been created.\n\n"
+              f"Cheers,\nThe My Store Team"
     )
 
     return response({
@@ -501,11 +628,11 @@ curl -X POST http://localhost:7145/api/register \
 }
 ```
 
-With `TINA4_DEBUG=true`, the email appears in the dev dashboard instead of being sent. You can inspect the rendered HTML, check that template variables were substituted correctly, and verify the layout.
+With `TINA4_DEBUG=true`, the email appears in the dev dashboard instead of reaching a real inbox. Inspect the rendered HTML, check that template variables substituted, and verify the layout.
 
 ---
 
-## 11. Sending Email via Queues
+## 12. Sending Email via Queues
 
 In production, never send email inside a route handler. The SMTP call blocks the response. Use the queue system from Chapter 11:
 
@@ -550,7 +677,8 @@ async def send_email_job(job):
     result = mailer.send(
         to=payload["to"],
         subject=payload["subject"],
-        body=html_body
+        body=html_body,
+        html=True
     )
 
     if not result["success"]:
@@ -565,7 +693,7 @@ The route handler returns in under 50 milliseconds. The queue worker sends the e
 
 ---
 
-## 12. Exercise: Build a Contact Form with Email Notification
+## 13. Exercise: Build a Contact Form with Email Notification
 
 Build a contact form that sends an email notification when submitted.
 
@@ -576,7 +704,7 @@ Build a contact form that sends an email notification when submitted.
 2. Create a `POST /contact` endpoint that:
    - Validates all fields are present
    - Sends an email notification to the site admin (`admin@example.com`)
-   - The email should include all form fields, nicely formatted
+   - The email should include all form fields, formatted in HTML
    - Shows a flash message on success
    - Redirects back to the contact page
 
@@ -599,7 +727,7 @@ curl -X POST http://localhost:7145/contact \
 
 ---
 
-## 13. Solution
+## 14. Solution
 
 Create `src/templates/emails/contact-notification.html`:
 
@@ -747,10 +875,11 @@ async def contact_submit(request, response):
         to=admin_email,
         subject=f"Contact Form: {body['subject']}",
         body=html_body,
+        html=True,
         reply_to=body["email"],
-        text_body=f"Contact form submission from {body['name']} ({body['email']}):\n\n"
-                  f"Subject: {body['subject']}\n\n"
-                  f"Message:\n{body['message']}"
+        text=f"Contact form submission from {body['name']} ({body['email']}):\n\n"
+              f"Subject: {body['subject']}\n\n"
+              f"Message:\n{body['message']}"
     )
 
     if result["success"]:
@@ -773,7 +902,7 @@ async def contact_submit(request, response):
 2. Fill in the form and submit
 3. You should see a green "Thank you" flash message
 4. Open `http://localhost:7145/__dev` to see the intercepted email
-5. The email should show the sender details, subject, message, and formatted HTML
+5. The email shows the sender details, subject, message, and formatted HTML
 
 **API test:**
 
@@ -794,29 +923,29 @@ The HTML response includes the success flash message.
 
 ---
 
-## 14. Gotchas
+## 15. Gotchas
 
 ### 1. Gmail Blocks "Less Secure" Apps
 
 **Problem:** Sending via Gmail fails with "Authentication failed" or "Username and Password not accepted".
 
-**Cause:** Gmail blocks SMTP access from apps that do not use OAuth2 by default. Using your regular password will not work if two-factor authentication is enabled.
+**Cause:** Gmail blocks SMTP access from apps that do not use OAuth2 by default. Your regular password will not work when two-factor authentication is enabled.
 
-**Fix:** Generate an "App Password" in your Google Account settings (Security > 2-Step Verification > App Passwords). Use this 16-character password as `TINA4_MAIL_SMTP_PASSWORD`. This is separate from your regular Google password.
+**Fix:** Generate an "App Password" in your Google Account settings (Security > 2-Step Verification > App Passwords). Use this 16-character password as `TINA4_MAIL_PASSWORD`. This is separate from your regular Google password.
 
 ### 2. Emails Go to Spam
 
-**Problem:** Emails are delivered but land in the recipient's spam folder.
+**Problem:** Emails land in the recipient's spam folder.
 
-**Cause:** Your sending domain lacks proper DNS records (SPF, DKIM, DMARC) or you are sending from a free email provider (Gmail, Yahoo).
+**Cause:** Your sending domain lacks proper DNS records (SPF, DKIM, DMARC) or you send from a free email provider (Gmail, Yahoo).
 
-**Fix:** Use a dedicated sending domain with proper DNS records. Set up SPF, DKIM, and DMARC records. Use a transactional email service like Mailgun, SendGrid, or Amazon SES that handles email reputation for you.
+**Fix:** Use a dedicated sending domain with proper DNS records. Set up SPF, DKIM, and DMARC records. Use a transactional email service -- Mailgun, SendGrid, or Amazon SES -- that handles email reputation for you.
 
 ### 3. HTML Email Looks Broken
 
 **Problem:** The email looks fine in Gmail but broken in Outlook or Apple Mail.
 
-**Cause:** Email clients have wildly different HTML/CSS support. CSS flexbox, grid, and many modern properties do not work in email.
+**Cause:** Email clients have different HTML/CSS support. CSS flexbox, grid, and many modern properties do not work in email.
 
 **Fix:** Use inline styles (not external stylesheets or `<style>` blocks). Use table-based layouts for complex designs. Test with an email preview tool. Keep it simple -- most transactional emails do not need elaborate designs.
 
@@ -826,15 +955,15 @@ The HTML response includes the success flash message.
 
 **Cause:** The attachment path is relative or incorrect. The file does not exist at the specified location.
 
-**Fix:** Use absolute paths for attachments. Verify the file exists before calling `send()`: `if not os.path.exists(path): ...`. If the file is generated dynamically (like a PDF), make sure the generation completes before sending.
+**Fix:** Use absolute paths for attachments. Verify the file exists before calling `send()`: `if not os.path.exists(path): ...`. If the file is generated dynamically (a PDF, for example), make sure the generation completes before sending.
 
 ### 5. Dev Mode Silently Intercepts Emails
 
-**Problem:** You set up SMTP correctly but no emails arrive. No errors either.
+**Problem:** You configured SMTP but no emails arrive. No errors either.
 
-**Cause:** `TINA4_DEBUG=true` intercepts all emails and shows them in the dev dashboard. The email is never sent to the SMTP server.
+**Cause:** `TINA4_DEBUG=true` intercepts all emails and stores them in the dev dashboard. The email never reaches the SMTP server.
 
-**Fix:** Check the dev dashboard at `/__dev` for intercepted emails. If you want to send real emails during development, set `TINA4_MAIL_INTERCEPT=false`. Remember to remove this setting before committing.
+**Fix:** Check the dev dashboard at `/__dev` for intercepted emails. If you want to send real emails during development, set `TINA4_MAIL_INTERCEPT=false`. Remove this setting before committing.
 
 ### 6. Email Template Variables Not Substituted
 
@@ -844,7 +973,7 @@ The HTML response includes the success flash message.
 
 </div>
 
-**Cause:** You passed the raw template file content instead of rendering it through the template engine. The template engine was not invoked.
+**Cause:** You passed the raw template file content instead of rendering it through the template engine.
 
 **Fix:** Use `template("emails/template.html", **data)` to render the template with variables substituted. Do not read the file with `open()` -- that gives you the raw template source.
 
@@ -852,6 +981,14 @@ The HTML response includes the success flash message.
 
 **Problem:** `Messenger.send()` hangs for 30 seconds and then fails with a timeout error.
 
-**Cause:** The SMTP server is unreachable from your network, the port is blocked by a firewall, or the hostname is wrong.
+**Cause:** The SMTP server is unreachable from your network. The port may be blocked by a firewall, or the hostname may be wrong.
 
-**Fix:** Test SMTP connectivity: `telnet smtp.example.com 587`. Verify the hostname, port, and encryption settings. Check that your firewall allows outbound connections on the SMTP port. If you are behind a corporate firewall, port 587 or 465 might be blocked -- ask your network administrator.
+**Fix:** Test SMTP connectivity with `mailer.test_connection()`. Verify the hostname, port, and encryption settings. Check that your firewall allows outbound connections on the SMTP port. If you sit behind a corporate firewall, port 587 or 465 might be blocked -- ask your network administrator.
+
+### 8. IMAP Host Not Configured
+
+**Problem:** Calling `mailer.inbox()` raises `MessengerError: IMAP host not configured`.
+
+**Cause:** You did not set `TINA4_MAIL_IMAP_HOST` in `.env` or pass `imap_host` to the constructor.
+
+**Fix:** Add `TINA4_MAIL_IMAP_HOST=imap.example.com` and `TINA4_MAIL_IMAP_PORT=993` to `.env`. The IMAP host is separate from the SMTP host -- many providers use different hostnames for sending and reading.

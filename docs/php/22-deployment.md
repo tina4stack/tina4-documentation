@@ -2,9 +2,9 @@
 
 ## 1. From Development to Production
 
-The app works on `localhost:7146`. Now it needs to run 24/7 on a real server. Handle 10,000 concurrent users. Survive server restarts. Not leak memory. The gap between "works on my machine" and "works in production" is where most projects stumble.
+The app works on `localhost:7146`. Now it needs to run around the clock on a real server. Handle thousands of concurrent users. Survive restarts. Hold steady on memory. The gap between "works on my machine" and "works in production" is where projects stumble.
 
-This chapter covers everything for deploying a Tina4 PHP application: environment configuration, Docker packaging, web server setup, SSL, scaling, monitoring, and graceful shutdown.
+This chapter covers everything for a production deployment: environment configuration, Docker packaging, web server setup, SSL/TLS, scaling, monitoring, and graceful shutdown.
 
 When you run `tina4 init`, the framework generates a production-ready `Dockerfile` and `.dockerignore` in your project root. The Dockerfile uses a multi-stage build: the first stage installs Composer dependencies and the second stage copies only the runtime artifacts into a slim image. You do not need to write a Dockerfile from scratch -- the generated one is a solid starting point that you can customise as needed.
 
@@ -12,7 +12,7 @@ When you run `tina4 init`, the framework generates a production-ready `Dockerfil
 
 ## 2. Production .env Configuration
 
-Configure your `.env` for production. Development defaults optimize for debugging. Production defaults optimize for performance and security.
+Development defaults optimize for debugging. Production defaults optimize for performance and security. The first deployment step: configure `.env` for production.
 
 Create a production `.env`:
 
@@ -48,7 +48,7 @@ TINA4_MINIFY_HTML=true
 
 ### Sensitive Values
 
-Never commit production secrets to version control. The `.env` file is gitignored by default. For deployment, use environment variables from your hosting platform, CI/CD secrets, or a secrets manager.
+Production secrets never go into version control. The `.env` file is gitignored by default. For deployment, use environment variables from your hosting platform, CI/CD secrets, or a secrets manager.
 
 ```bash
 # Docker: pass env vars at runtime
@@ -121,7 +121,7 @@ docker pull dunglas/frankenphp
 
 ## 4. Docker Deployment
 
-Docker is the most reliable deployment path. It packages your code, dependencies, and runtime into a single container. Runs identically everywhere.
+Docker is the most portable deployment path. Your app runs the same way on your laptop, in CI, and on the production server.
 
 ### Dockerfile
 
@@ -421,15 +421,15 @@ Router::get("/health/detailed", function ($request, $response) {
 
 ## 7. Graceful Shutdown
 
-When a container or process receives SIGTERM, Tina4 handles it gracefully:
+Deploy a new version. The old process must stop. Graceful shutdown finishes active requests before terminating.
 
-1. Stops accepting new connections
-2. Finishes processing in-flight requests (up to a configurable timeout)
-3. Closes database connections cleanly
-4. Flushes logs
-5. Exits with status code 0
+Tina4 handles this when it receives a `SIGTERM` signal (the standard shutdown signal from Docker and systemd):
 
-No data corruption. No dropped requests during deployments.
+1. Stop accepting new connections
+2. Wait for active requests to complete (up to a configurable timeout)
+3. Close database connections
+4. Flush logs
+5. Exit
 
 ### Shutdown Timeout
 

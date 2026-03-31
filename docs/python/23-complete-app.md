@@ -2,7 +2,7 @@
 
 ## 1. Putting It All Together
 
-Twenty chapters of building blocks. Routing. Templates. Databases. ORM. Authentication. Middleware. Queues. WebSocket. Caching. Frontend. GraphQL. Testing. Dev tools. CLI scaffolding. Deployment. Now all of it comes together in one application.
+Twenty chapters of building blocks. Routing. Templates. Databases. ORM. Authentication. Middleware. Queues. WebSocket. Caching. Frontend. GraphQL. Testing. Dev tools. CLI scaffolding. Deployment. Now all of it works together in one application.
 
 **TaskFlow** -- a task management system with:
 
@@ -14,7 +14,7 @@ Twenty chapters of building blocks. Routing. Templates. Databases. ORM. Authenti
 - A full test suite
 - Docker deployment
 
-Not a toy project. A complete, production-ready application. Every major Tina4 feature working together.
+Not a toy project. A production-ready application. Every major Tina4 feature in one codebase.
 
 ---
 
@@ -135,6 +135,16 @@ Running migrations...
   [UP] 20260322000200_create_tasks_table.sql
 
   2 migrations applied
+```
+
+Verify the database:
+
+```bash
+curl http://localhost:7145/health
+```
+
+```json
+{"status": "ok", "database": "connected"}
 ```
 
 ---
@@ -270,6 +280,50 @@ async def login(request, response):
     })
 ```
 
+### Test Registration and Login
+
+```bash
+# Start the server
+uv run python app.py
+```
+
+```bash
+# Register a user
+curl -X POST http://localhost:7145/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Alice Johnson", "email": "alice@example.com", "password": "securepass123"}'
+```
+
+```json
+{
+  "message": "Registration successful",
+  "id": 1,
+  "name": "Alice Johnson",
+  "email": "alice@example.com"
+}
+```
+
+```bash
+# Login
+curl -X POST http://localhost:7145/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "alice@example.com", "password": "securepass123"}'
+```
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "name": "Alice Johnson",
+    "email": "alice@example.com",
+    "role": "user"
+  }
+}
+```
+
+Authentication works. Save the token for the next steps.
+
 ---
 
 ## 6. Step 4: Auth Middleware
@@ -296,6 +350,18 @@ async def auth_middleware(request, response, next_handler):
 
     return await next_handler(request, response)
 ```
+
+Verify the middleware blocks unauthenticated requests:
+
+```bash
+curl http://localhost:7145/api/tasks
+```
+
+```json
+{"error": "Authentication required"}
+```
+
+The middleware stands guard. No token, no access.
 
 ---
 
@@ -447,6 +513,59 @@ async def delete_task(request, response):
     return response(None, 204)
 ```
 
+### Test the Task API
+
+```bash
+# Set your token from the login step
+TOKEN="eyJhbGciOiJIUzI1NiIs..."
+
+# Create a task
+curl -X POST http://localhost:7145/api/tasks \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"title": "Design database schema", "priority": "high"}'
+```
+
+```json
+{
+  "id": 1,
+  "title": "Design database schema",
+  "priority": "high",
+  "status": "pending",
+  "created_by": 1,
+  "created_at": "2026-03-22 10:00:00"
+}
+```
+
+```bash
+# Create more tasks
+curl -X POST http://localhost:7145/api/tasks \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"title": "Build API endpoints", "priority": "high"}'
+
+curl -X POST http://localhost:7145/api/tasks \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"title": "Write documentation", "priority": "medium", "due_date": "2026-04-01"}'
+
+# List all tasks
+curl http://localhost:7145/api/tasks \
+  -H "Authorization: Bearer $TOKEN"
+
+# Update a task status
+curl -X PUT http://localhost:7145/api/tasks/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"status": "completed"}'
+
+# Delete a task
+curl -X DELETE http://localhost:7145/api/tasks/3 \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Every endpoint responds. Create. Read. Update. Delete. The CRUD cycle works.
+
 ---
 
 ## 8. Step 6: Dashboard Stats with Caching
@@ -500,6 +619,44 @@ async def admin_dashboard(request, response):
     return response(template("dashboard.html"))
 ```
 
+Verify the stats endpoint:
+
+```bash
+curl http://localhost:7145/api/dashboard/stats \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{
+  "total_tasks": 2,
+  "pending": 1,
+  "in_progress": 0,
+  "completed": 1,
+  "overdue": 0,
+  "total_users": 1,
+  "recent_tasks": [...],
+  "source": "database"
+}
+```
+
+Hit it again. The second response comes from cache:
+
+```bash
+curl http://localhost:7145/api/dashboard/stats \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{
+  "total_tasks": 2,
+  "pending": 1,
+  "completed": 1,
+  "source": "cache"
+}
+```
+
+The cache holds for 30 seconds. Creating or updating a task invalidates it.
+
 ---
 
 ## 9. Step 7: WebSocket Real-Time Updates
@@ -532,6 +689,8 @@ async def push_task_update(action, task):
         "task": task.to_dict()
     }))
 ```
+
+Any user creates, updates, or deletes a task. All connected dashboard users see the change.
 
 ---
 
@@ -581,28 +740,24 @@ Create `src/templates/emails/task-assigned.html`:
 <!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1a1a2e; color: white; padding: 20px; text-align: center;">
-        <h2 style="margin: 0;">New Task Assigned</h2>
-    </div>
-    <div style="padding: 20px; background: white;">
+<body>
+    <div class="container">
+        <h2>New Task Assigned</h2>
         <p>Hi &#123;&#123; assignee_name &#125;&#125;,</p>
         <p><strong>&#123;&#123; creator_name &#125;&#125;</strong> assigned you a new task:</p>
 
-        <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; border-left: 4px solid #1a1a2e;">
-            <h3 style="margin-top: 0;">&#123;&#123; task_title &#125;&#125;</h3>
-            <p>&#123;&#123; task_description &#125;&#125;</p>
-            <table style="width: 100%;">
-                <tr><td><strong>Priority:</strong></td><td>&#123;&#123; task_priority &#125;&#125;</td></tr>
-                <tr><td><strong>Due:</strong></td><td>&#123;&#123; task_due_date &#125;&#125;</td></tr>
-            </table>
+        <div class="card">
+            <div class="card-body">
+                <h3>&#123;&#123; task_title &#125;&#125;</h3>
+                <p>&#123;&#123; task_description &#125;&#125;</p>
+                <table class="table">
+                    <tr><td><strong>Priority:</strong></td><td>&#123;&#123; task_priority &#125;&#125;</td></tr>
+                    <tr><td><strong>Due:</strong></td><td>&#123;&#123; task_due_date &#125;&#125;</td></tr>
+                </table>
+            </div>
         </div>
 
-        <p style="margin-top: 16px;">
-            <a href="&#123;&#123; task_url &#125;&#125;" style="background: #1a1a2e; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
-                View Task
-            </a>
-        </p>
+        <p><a href="&#123;&#123; task_url &#125;&#125;">View Task</a></p>
     </div>
 </body>
 </html>
@@ -665,16 +820,16 @@ Create `src/templates/dashboard.html`:
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">Live Updates</div>
-            <div class="card-body" id="live-updates" style="height: 300px; overflow-y: auto;">
+            <div class="card-body" id="live-updates">
                 <p class="text-muted">Connecting...</p>
             </div>
         </div>
     </div>
 </div>
 
-<script src="/js/frond.js"></script>
+<script src="/js/frond.min.js"></script>
 <script>
-    const token = localStorage.getItem("token");
+    var token = localStorage.getItem("token");
     if (token) frond.setToken(token);
 
     // Load dashboard stats
@@ -686,12 +841,12 @@ Create `src/templates/dashboard.html`:
         document.getElementById("stat-overdue").textContent = data.overdue;
         document.getElementById("stat-users").textContent = data.total_users;
 
-        const tbody = document.getElementById("task-list");
+        var tbody = document.getElementById("task-list");
         tbody.innerHTML = "";
         (data.recent_tasks || []).forEach(function (task) {
-            const tr = document.createElement("tr");
-            const badgeColor = {pending: "secondary", in_progress: "warning",
-                               completed: "success", cancelled: "danger"};
+            var tr = document.createElement("tr");
+            var badgeColor = {pending: "secondary", in_progress: "warning",
+                             completed: "success", cancelled: "danger"};
             tr.innerHTML = "<td>" + task.title + "</td>" +
                 "<td>" + (task.assignee_name || "Unassigned") + "</td>" +
                 "<td>" + task.priority + "</td>" +
@@ -702,18 +857,17 @@ Create `src/templates/dashboard.html`:
     });
 
     // WebSocket for live updates
-    const ws = frond.ws("/ws/tasks");
-    const updates = document.getElementById("live-updates");
+    var ws = frond.ws("/ws/tasks");
+    var updates = document.getElementById("live-updates");
 
     ws.on("open", function () {
         updates.innerHTML = "<p class='text-success'>Connected - listening for updates</p>";
     });
 
     ws.on("message", function (raw) {
-        const msg = JSON.parse(raw);
+        var msg = JSON.parse(raw);
         if (msg.type === "task_update") {
-            const div = document.createElement("div");
-            div.style.marginBottom = "8px";
+            var div = document.createElement("div");
             div.innerHTML = "<strong>" + msg.action + ":</strong> " + msg.task.title;
             updates.prepend(div);
 
@@ -724,6 +878,14 @@ Create `src/templates/dashboard.html`:
 </script>
 &#123;% endblock %&#125;
 ```
+
+Verify the dashboard:
+
+```bash
+curl http://localhost:7145/admin
+```
+
+The server returns the rendered HTML. Open `http://localhost:7145/admin` in your browser to see the full dashboard with stats, task list, and live update panel.
 
 ---
 
@@ -858,6 +1020,8 @@ Running tests...
   8 tests, 8 passed, 0 failed (0.84s)
 ```
 
+All green. The application works.
+
 ---
 
 ## 13. Step 11: Docker Deployment
@@ -931,11 +1095,66 @@ curl http://localhost:7145/health
 {"status": "ok", "version": "1.0.0", "database": "connected"}
 ```
 
-TaskFlow is running in production. Authenticated APIs. Real-time WebSocket updates. Email notifications. Cached dashboard stats. Tested. Dockerized. Every major Tina4 feature, working together in a single application.
+TaskFlow runs in production. Authenticated APIs. Real-time WebSocket updates. Email notifications. Cached dashboard stats. Tested. Dockerized.
 
 ---
 
-## 14. What You Built
+## 14. The Complete Project Structure
+
+```
+taskflow/
+├── .env
+├── .env.example
+├── .gitignore
+├── pyproject.toml
+├── uv.lock
+├── app.py
+├── Dockerfile
+├── docker-compose.yml
+├── src/
+│   ├── routes/
+│   │   ├── auth.py                # Registration, login
+│   │   ├── tasks.py               # Task CRUD
+│   │   ├── dashboard.py           # Dashboard stats + page
+│   │   ├── notifications.py       # Email notification helpers
+│   │   └── task_ws.py             # WebSocket event handlers
+│   ├── orm/
+│   │   ├── user.py                # User model with auth methods
+│   │   └── task.py                # Task model with relationships
+│   ├── middleware/
+│   │   └── auth.py                # JWT auth middleware
+│   ├── migrations/
+│   │   ├── 20260322000100_create_users_table.sql
+│   │   └── 20260322000200_create_tasks_table.sql
+│   ├── templates/
+│   │   ├── base.html              # Base layout
+│   │   ├── dashboard.html         # Dashboard page
+│   │   ├── emails/
+│   │   │   └── task-assigned.html # Assignment notification
+│   │   └── errors/
+│   │       ├── 404.html
+│   │       └── 500.html
+│   ├── public/
+│   │   ├── css/
+│   │   │   └── tina4.css
+│   │   └── js/
+│   │       ├── tina4.min.js
+│   │       └── frond.min.js
+│   └── locales/
+│       └── en.json
+├── data/
+│   └── app.db
+├── logs/
+├── secrets/
+└── tests/
+    └── test_taskflow.py
+```
+
+Every file has a purpose. Every directory follows the convention. A new developer looks at this structure and knows where to find things.
+
+---
+
+## 15. What You Built
 
 This chapter used every major concept from the book:
 
@@ -955,4 +1174,40 @@ This chapter used every major concept from the book:
 | Testing (full test suite) | Chapter 17 |
 | Docker deployment | Chapter 20 |
 
-A production-ready task management application. From here, add features: file attachments, team management, calendar integration, reporting. The foundation holds.
+---
+
+## 16. What to Build Next
+
+TaskFlow is a solid foundation. Here are ideas for extending it.
+
+**Features:**
+- **Task comments** -- Add a Comment model with a `task_id` foreign key. Display comments on the task detail page.
+- **File attachments** -- Let users upload files to tasks. Store them in `data/uploads/` and serve them via a route.
+- **Team management** -- Add a Team model. Users belong to teams. Tasks are scoped to teams.
+- **Task labels/tags** -- Many-to-many relationship between tasks and labels for categorization.
+- **Due date reminders** -- Use the queue system to schedule reminder emails 24 hours before a task's due date.
+- **Activity log** -- Record every change to a task (who changed what, when) for audit trails.
+- **Search** -- Full-text search across task titles and descriptions.
+- **Calendar view** -- Render tasks on a calendar based on their due dates.
+- **Mobile API** -- The API already works for mobile apps. Add push notification support via Firebase Cloud Messaging.
+
+**Technical improvements:**
+- **Rate limiting per user** -- Replace the global rate limiter with per-user limits.
+- **Database upgrade** -- Switch from SQLite to PostgreSQL for better concurrency.
+- **CI/CD pipeline** -- Add GitHub Actions to run tests on every push.
+- **API documentation** -- Generate OpenAPI/Swagger docs from your route definitions.
+- **Internationalization** -- Add `src/locales/` files for multiple languages.
+
+---
+
+## 17. Closing Thoughts -- The Tina4 Philosophy
+
+You built a complete application. User auth. CRUD. Real-time updates. Email. Caching. Tests. Deployment. Your project has one dependency: `tina4_python`.
+
+No separate ORM package. No template engine package. No authentication library. No WebSocket server. No caching library. No testing framework. No CLI tool. No CSS framework. No JavaScript helpers. All built in.
+
+**One framework. Zero extra dependencies. Everything you need.**
+
+The same patterns work in PHP, Ruby, and Node.js. Same project structure. Same CLI commands. Same `.env` variables. Same template syntax. Learn Tina4 once. Use it everywhere.
+
+Build things. Ship them. Keep it simple.

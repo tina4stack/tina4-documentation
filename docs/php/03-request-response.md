@@ -2,7 +2,7 @@
 
 ## 1. The Two Objects You Always Get
 
-Every route handler receives two arguments. `$request` tells you what the client sent. `$response` is how you send something back. Together they are the entire HTTP conversation.
+Every route handler receives two arguments. `$request` carries what the client sent. `$response` builds what goes back. These two objects are the entire HTTP conversation.
 
 ```php
 <?php
@@ -25,13 +25,13 @@ curl http://localhost:7146/echo
 {"method":"GET","path":"/echo","your_ip":"127.0.0.1"}
 ```
 
-The pattern never changes. Inspect the request. Build the response. Return it.
+The pattern never changes. Read the request. Build the response. Return it.
 
 ---
 
 ## 2. The Request Object
 
-The `$request` object carries everything the client sent. Here is the full inventory.
+The `$request` object holds everything the client sent. Here is the full inventory.
 
 ### method
 
@@ -188,11 +188,11 @@ curl -X POST "http://localhost:7146/debug/request?page=1" \
 
 ## 3. The Response Object
 
-The `$response` object builds what goes back to the client. Every method returns the response, so calls chain.
+The `$response` object shapes what travels back to the client. Every method returns the response object, so calls chain.
 
 ### json() -- JSON Response
 
-The workhorse for APIs. Pass an array and it becomes JSON:
+The API workhorse. Pass an array. It becomes JSON:
 
 ```php
 return $response->json(["name" => "Alice", "age" => 30]);
@@ -212,7 +212,7 @@ return $response->json(["id" => 7, "name" => "Widget"], 201);
 
 ### html() -- Raw HTML Response
 
-Return HTML directly:
+Return raw HTML:
 
 ```php
 return $response->html("<h1>Hello</h1><p>This is HTML.</p>");
@@ -230,7 +230,7 @@ Sets `Content-Type: text/plain; charset=utf-8`.
 
 ### render() -- Template Response
 
-Render a Frond template with data ([Chapter 4: Templates](04-templates.md) goes deep):
+Render a Frond template with data (Chapter 4 goes deep):
 
 ```php
 return $response->render("products.html", [
@@ -239,11 +239,11 @@ return $response->render("products.html", [
 ]);
 ```
 
-Tina4 looks in `src/templates/`, renders, returns the HTML.
+Tina4 finds the template in `src/templates/`, renders it, returns the HTML.
 
 ### redirect() -- Redirect Response
 
-Send the client elsewhere:
+Send the client somewhere else:
 
 ```php
 return $response->redirect("/login");
@@ -257,7 +257,7 @@ return $response->redirect("/new-location", 301);
 
 ### file() -- File Download Response
 
-Send a file for download:
+Push a file to the client:
 
 ```php
 return $response->file("/path/to/report.pdf");
@@ -275,7 +275,7 @@ return $response->file("/path/to/report.pdf", "monthly-report-march-2026.pdf");
 
 ## 4. Status Codes
 
-Every response method accepts a status code. The ones you will use most:
+Every response method accepts a status code. Here are the ones you reach for most:
 
 | Code | Meaning | When to Use |
 |------|---------|-------------|
@@ -289,6 +289,7 @@ Every response method accepts a status code. The ones you will use most:
 | `403` | Forbidden | Authenticated but not allowed. |
 | `404` | Not Found | Resource does not exist. |
 | `409` | Conflict | Duplicate or conflicting data. |
+| `413` | Payload Too Large | Request body or file exceeds the size limit. |
 | `422` | Unprocessable Entity | Valid JSON but fails business rules. |
 | `500` | Internal Server Error | Something broke on the server. |
 
@@ -298,7 +299,7 @@ You can also chain `status()` explicitly:
 return $response->status(201)->json(["id" => 7, "created" => true]);
 ```
 
-Equivalent to `$response->json(["id" => 7, "created" => true], 201)`. Some developers find the chain clearer.
+Same result as `$response->json(["id" => 7, "created" => true], 201)`. Pick whichever reads cleaner in context.
 
 ---
 
@@ -329,13 +330,13 @@ Convention: `Title-Case` for custom headers. Prefix with `X-`.
 
 ### CORS Headers
 
-Tina4 handles CORS based on `CORS_ORIGINS` in `.env`. The default `*` allows all origins. For production, restrict:
+Tina4 handles CORS from `CORS_ORIGINS` in `.env`. The default `*` allows all origins. Lock it down for production:
 
 ```dotenv
 CORS_ORIGINS=https://myapp.com,https://admin.myapp.com
 ```
 
-Manual CORS headers are rarely needed, but available:
+Manual CORS headers are rarely needed. They are available when you need them:
 
 ```php
 return $response
@@ -403,7 +404,7 @@ return $response
 
 ## 7. File Uploads
 
-Uploaded files arrive via `$request->files`. Each file is an object with metadata and a temporary path.
+Uploaded files land in `$request->files`. Each file is an object with metadata and a temporary path.
 
 ### Handling a Single File Upload
 
@@ -443,7 +444,7 @@ curl -X POST http://localhost:7146/api/upload \
 
 ### Saving the Uploaded File
 
-The file sits in a temporary location. Move it somewhere permanent:
+The file sits in a temporary location. Move it to permanent storage:
 
 ```php
 <?php
@@ -570,7 +571,7 @@ return $response->file($filepath, "Q1-2026-Sales-Report.pdf");
 
 ## 9. Content Negotiation
 
-One endpoint. Multiple formats. Check the `Accept` header:
+One endpoint serves multiple formats. The `Accept` header decides which one:
 
 ```php
 <?php
@@ -632,7 +633,7 @@ curl http://localhost:7146/api/products/1 -H "Accept: text/html"
 
 ## 10. Input Validation
 
-Tina4 includes a `Validator` class for declarative input validation. Chain rules together and check the result. If validation fails, use `$response->sendError()` to return a structured error envelope.
+Tina4 ships a `Validator` class for declarative input validation. Chain rules. Check the result. When validation fails, `$response->sendError()` returns a structured error envelope.
 
 ### The Validator Class
 
@@ -651,7 +652,7 @@ Router::post("/api/users", function ($request, $response) {
 });
 ```
 
-The `Validator` accepts the request body (an associative array) and provides chainable methods:
+The `Validator` takes the request body (an associative array) and exposes chainable methods:
 
 | Method | Description |
 |--------|-------------|
@@ -678,17 +679,17 @@ This produces:
 {"error": true, "code": "VALIDATION_FAILED", "message": "Name is required", "status": 400}
 ```
 
-The three arguments are: an error code string, a human-readable message, and the HTTP status code. Use this pattern across your API for consistent error handling.
+Three arguments: an error code string, a human-readable message, and the HTTP status code. Use this pattern across your API. Consistent error shapes save frontend developers hours of guesswork.
 
 ### Upload Size Limits
 
-Tina4 enforces a maximum upload size via the `TINA4_MAX_UPLOAD_SIZE` environment variable. The value is in bytes. The default is `10485760` (10 MB).
+Tina4 enforces a maximum upload size through the `TINA4_MAX_UPLOAD_SIZE` environment variable. The value is in bytes. Default: `10485760` (10 MB).
 
 ```dotenv
 TINA4_MAX_UPLOAD_SIZE=10485760
 ```
 
-If a client sends a file larger than this limit, Tina4 returns a `413 Payload Too Large` response before your handler runs. To allow larger uploads, increase the value in `.env`:
+A file exceeding this limit triggers a `413 Payload Too Large` response before your handler runs. To allow larger uploads, increase the value in `.env`:
 
 ```dotenv
 TINA4_MAX_UPLOAD_SIZE=52428800
@@ -700,7 +701,7 @@ This sets the limit to 50 MB.
 
 ## 11. Exercise: Build an Image Upload API
 
-Two endpoints. Upload images and serve them back.
+Two endpoints. One accepts images. The other serves them back.
 
 ### Requirements
 
@@ -847,7 +848,7 @@ Router::get("/api/images/{filename}", function ($request, $response) {
 
 (Status: `400 Bad Request`)
 
-**The GET endpoint** returns the raw image file with the correct `Content-Type` header. The browser displays it directly. Curl with `--output` saves it to disk.
+**The GET endpoint** returns the raw image file with the correct `Content-Type` header. The browser renders it. Curl with `--output` saves it to disk.
 
 ---
 

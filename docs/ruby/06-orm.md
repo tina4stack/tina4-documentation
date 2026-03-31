@@ -594,11 +594,104 @@ Auto-CRUD supports query parameters for filtering, sorting, and pagination out o
 curl "http://localhost:7147/api/products?category=Electronics&sort=price&order=desc&page=1&per_page=10"
 ```
 
-You can still define custom routes alongside auto-CRUD. Your custom routes take precedence over the auto-generated ones.
+### Custom Routes Alongside Auto-CRUD
+
+Custom routes defined in `src/routes/` load before auto-CRUD routes. They take precedence. If you need special logic for one endpoint -- custom validation, side effects, complex queries -- define that route manually. Auto-CRUD handles the rest.
+
+### Introspection
+
+Check which models are registered:
+
+```ruby
+registered = Tina4::AutoCrud.models
+# [User, Product, Order]
+```
 
 ---
 
-## 13. Exercise: Build a Blog
+## 13. Scopes
+
+Scopes are reusable query filters baked into the model. Use the `scope` class method to define them:
+
+```ruby
+class BlogPost < Tina4::ORM
+  integer_field :id, primary_key: true
+  string_field :title
+  string_field :status, default: "draft"
+  string_field :created_at
+
+  table_name "posts"
+
+  scope :published, "status = ?", ["published"]
+  scope :drafts, "status = ?", ["draft"]
+end
+```
+
+Use them in your routes:
+
+```ruby
+Tina4::Router.get("/api/posts/published") do |request, response|
+  posts = BlogPost.published
+  response.json({ posts: posts.map(&:to_h) })
+end
+
+Tina4::Router.get("/api/posts/drafts") do |request, response|
+  posts = BlogPost.drafts
+  response.json({ posts: posts.map(&:to_h) })
+end
+```
+
+Scopes keep query logic in the model where it belongs. Route handlers stay thin.
+
+---
+
+## 14. Input Validation
+
+Field definitions carry validation rules. Call `validate` before `save` and the ORM checks every constraint:
+
+```ruby
+class Product < Tina4::ORM
+  integer_field :id, primary_key: true
+  string_field :name, nullable: false
+  string_field :sku, nullable: false
+  float_field :price, nullable: false
+  string_field :category
+
+  table_name "products"
+end
+```
+
+```ruby
+Tina4::Router.post("/api/products") do |request, response|
+  product = Product.new(request.body)
+
+  errors = product.validate
+  unless errors.empty?
+    return response.json({ errors: errors }, 400)
+  end
+
+  product.save
+  response.json({ product: product.to_h }, 201)
+end
+```
+
+If validation fails, `validate` returns a list of error messages:
+
+```json
+{
+  "errors": [
+    "name cannot be null",
+    "sku cannot be null",
+    "price cannot be null"
+  ]
+}
+```
+
+The ORM validates `nullable` constraints. Fields marked `nullable: false` must have a value before saving. The `save` method also runs `validate_fields` internally -- if validation fails, `save` returns `false` and populates `errors`.
+
+---
+
+## 15. Exercise: Build a Blog
 
 Build a blog with three models: User, Post, and Comment. Use relationships, eager loading, and auto-CRUD.
 
@@ -669,7 +762,7 @@ curl http://localhost:7147/api/blog/posts/1
 
 ---
 
-## 14. Solution
+## 16. Solution
 
 ### Models
 
@@ -837,7 +930,7 @@ end
 
 ---
 
-## 15. Field Name Mapping
+## 17. Field Name Mapping
 
 By default, Tina4 Ruby expects both field names and database columns to use `snake_case`. If your database uses `camelCase` columns (common when sharing a database with a JavaScript or Java backend), enable `auto_map` on your model:
 
@@ -864,7 +957,7 @@ Tina4.camel_to_snake("productName")   # => "product_name"
 
 ---
 
-## 16. Auto-CRUD with `Tina4::CRUD.to_crud`
+## 18. Auto-CRUD with `Tina4::CRUD.to_crud`
 
 Beyond the `auto_crud true` declaration on models (section 12), Tina4 provides `Tina4::CRUD.to_crud` for generating a complete HTML CRUD interface -- a searchable, paginated table with create/edit/delete forms -- from a SQL query or ORM model:
 
@@ -894,7 +987,7 @@ end
 
 ---
 
-## 17. Gotchas
+## 19. Gotchas
 
 ### 1. Table Naming Convention
 

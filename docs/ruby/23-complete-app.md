@@ -2,19 +2,19 @@
 
 ## 1. Putting It All Together
 
-Twenty chapters. Routing. Templates. Databases. ORM. Authentication. Middleware. Queues. WebSocket. Caching. Frontend. GraphQL. Testing. Dev tools. CLI scaffolding. Deployment. Now they all converge into one application.
+Twenty chapters of building blocks. Routing. Templates. Databases. ORM. Authentication. Middleware. Queues. WebSocket. Caching. Frontend. GraphQL. Testing. Dev tools. CLI scaffolding. Deployment. Now all of it works together in one application.
 
 **TaskFlow** -- a task management system with:
 
 - User registration and JWT authentication
 - Task creation, assignment, and tracking
-- A dashboard with real-time updates
+- A dashboard with real-time updates via WebSocket
 - Email notifications when tasks are assigned
 - Caching for dashboard performance
 - A full test suite
 - Docker deployment
 
-This is not a toy. It is a production-ready application where every major Tina4 feature works in concert.
+Not a toy project. A production-ready application. Every major Tina4 feature in one codebase.
 
 ---
 
@@ -89,6 +89,8 @@ CREATE TABLE users (
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX idx_users_email ON users(email);
+
 -- DOWN
 DROP TABLE IF EXISTS users;
 ```
@@ -113,6 +115,10 @@ CREATE TABLE tasks (
     FOREIGN KEY (assigned_to) REFERENCES users(id)
 );
 
+CREATE INDEX idx_tasks_status ON tasks(status);
+CREATE INDEX idx_tasks_assigned_to ON tasks(assigned_to);
+CREATE INDEX idx_tasks_created_by ON tasks(created_by);
+
 -- DOWN
 DROP TABLE IF EXISTS tasks;
 ```
@@ -121,6 +127,24 @@ Run migrations:
 
 ```bash
 tina4 migrate
+```
+
+```
+Running migrations...
+  [UP] 20260322150000_create_users_table.sql
+  [UP] 20260322150100_create_tasks_table.sql
+
+  2 migrations applied
+```
+
+Verify the database:
+
+```bash
+curl http://localhost:7147/health
+```
+
+```json
+{"status": "ok", "database": "connected"}
 ```
 
 ---
@@ -249,6 +273,54 @@ Tina4::Router.get("/api/profile", middleware: "auth_middleware") do |request, re
 end
 ```
 
+### Test Registration and Login
+
+```bash
+# Start the server
+tina4 serve
+```
+
+```bash
+# Register a user
+curl -X POST http://localhost:7147/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Alice Johnson", "email": "alice@example.com", "password": "securepass123"}'
+```
+
+```json
+{
+  "message": "Registration successful",
+  "user": {
+    "id": 1,
+    "name": "Alice Johnson",
+    "email": "alice@example.com",
+    "role": "user"
+  }
+}
+```
+
+```bash
+# Login
+curl -X POST http://localhost:7147/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "alice@example.com", "password": "securepass123"}'
+```
+
+```json
+{
+  "message": "Login successful",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "name": "Alice Johnson",
+    "email": "alice@example.com",
+    "role": "user"
+  }
+}
+```
+
+Authentication works. Save the token for the next steps.
+
 ---
 
 ## 6. Step 4: Task CRUD
@@ -337,6 +409,16 @@ Tina4::Router.group("/api/tasks", middleware: "auth_middleware") do
       end
     end
 
+    # Push WebSocket update
+    Tina4::WebSocket.broadcast("/ws/tasks", {
+      type: "task_update",
+      action: "created",
+      task: task
+    }.to_json)
+
+    # Invalidate cache
+    Tina4.cache_delete("dashboard:stats:#{user_id}")
+
     response.json(task, 201)
   end
 
@@ -370,10 +452,17 @@ Tina4::Router.group("/api/tasks", middleware: "auth_middleware") do
       ]
     )
 
-    # Invalidate cache
-    Tina4.cache_clear
-
+    # Push WebSocket update
     task = db.fetch_one("SELECT * FROM tasks WHERE id = ?", [id])
+    Tina4::WebSocket.broadcast("/ws/tasks", {
+      type: "task_update",
+      action: "updated",
+      task: task
+    }.to_json)
+
+    # Invalidate cache
+    Tina4.cache_delete("dashboard:stats:#{request.user['user_id']}")
+
     response.json(task)
   end
 
@@ -386,7 +475,14 @@ Tina4::Router.group("/api/tasks", middleware: "auth_middleware") do
     return response.json({ error: "Task not found" }, 404) if existing.nil?
 
     db.execute("DELETE FROM tasks WHERE id = ?", [id])
-    Tina4.cache_clear
+
+    Tina4::WebSocket.broadcast("/ws/tasks", {
+      type: "task_update",
+      action: "deleted",
+      task: { id: id }
+    }.to_json)
+
+    Tina4.cache_delete("dashboard:stats:#{request.user['user_id']}")
 
     response.json(nil, 204)
   end
@@ -394,9 +490,62 @@ Tina4::Router.group("/api/tasks", middleware: "auth_middleware") do
 end
 ```
 
+### Test the Task API
+
+```bash
+# Set your token from the login step
+TOKEN="eyJhbGciOiJIUzI1NiIs..."
+
+# Create a task
+curl -X POST http://localhost:7147/api/tasks \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"title": "Design database schema", "priority": "high"}'
+```
+
+```json
+{
+  "id": 1,
+  "title": "Design database schema",
+  "priority": "high",
+  "status": "todo",
+  "created_by": 1,
+  "created_at": "2026-03-22 10:00:00"
+}
+```
+
+```bash
+# Create more tasks
+curl -X POST http://localhost:7147/api/tasks \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"title": "Build API endpoints", "priority": "high"}'
+
+curl -X POST http://localhost:7147/api/tasks \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"title": "Write documentation", "priority": "medium", "due_date": "2026-04-01"}'
+
+# List all tasks
+curl http://localhost:7147/api/tasks \
+  -H "Authorization: Bearer $TOKEN"
+
+# Update a task status
+curl -X PUT http://localhost:7147/api/tasks/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"status": "done"}'
+
+# Delete a task
+curl -X DELETE http://localhost:7147/api/tasks/3 \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Every endpoint responds. Create. Read. Update. Delete. The CRUD cycle works.
+
 ---
 
-## 7. Step 5: Dashboard
+## 7. Step 5: Dashboard Stats with Caching
 
 Create `src/routes/dashboard.rb`:
 
@@ -416,15 +565,20 @@ Tina4::Router.get("/api/dashboard/stats", middleware: "auth_middleware") do |req
     done = db.fetch_one("SELECT COUNT(*) AS count FROM tasks WHERE (assigned_to = ? OR created_by = ?) AND status = 'done'", [user_id, user_id])
     overdue = db.fetch_one("SELECT COUNT(*) AS count FROM tasks WHERE (assigned_to = ? OR created_by = ?) AND due_date < date('now') AND status != 'done'", [user_id, user_id])
 
+    recent = db.fetch(
+      "SELECT t.*, u.name AS assignee_name FROM tasks t LEFT JOIN users u ON t.assigned_to = u.id ORDER BY t.created_at DESC LIMIT 10"
+    )
+
     stats = {
-      total: total["count"],
+      total_tasks: total["count"],
       todo: todo["count"],
       in_progress: in_progress["count"],
       done: done["count"],
-      overdue: overdue["count"]
+      overdue: overdue["count"],
+      recent_tasks: recent
     }
 
-    Tina4.cache_set(cache_key, stats, 60)
+    Tina4.cache_set(cache_key, stats, 30)
   end
 
   response.json(stats)
@@ -437,9 +591,55 @@ Tina4::Router.get("/admin") do |request, response|
 end
 ```
 
+Verify the stats endpoint:
+
+```bash
+curl http://localhost:7147/api/dashboard/stats \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{
+  "total_tasks": 2,
+  "todo": 1,
+  "in_progress": 0,
+  "done": 1,
+  "overdue": 0,
+  "recent_tasks": [...]
+}
+```
+
+Hit it again within 30 seconds. The second response comes from cache -- no database queries.
+
 ---
 
-## 8. Step 6: Email Consumer
+## 8. Step 6: WebSocket Real-Time Updates
+
+Create `src/routes/task_ws.rb`:
+
+```ruby
+Tina4::WebSocket.on("/ws/tasks") do |connection, event, data|
+  case event
+  when "open"
+    connection.send({ type: "connected", message: "Listening for task updates" }.to_json)
+
+  when "message"
+    message = JSON.parse(data)
+    if message["type"] == "ping"
+      connection.send({ type: "pong" }.to_json)
+    end
+
+  when "close"
+    # Connection closed -- cleanup if needed
+  end
+end
+```
+
+Any user creates, updates, or deletes a task. All connected dashboard users see the change. The `Tina4::WebSocket.broadcast` calls in the task routes (Step 4) push updates to every client connected to `/ws/tasks`.
+
+---
+
+## 9. Step 7: Email Notifications
 
 Create the queue consumer for task assignment notifications:
 
@@ -461,9 +661,153 @@ Tina4::Queue.consume("send-email") do |job|
 end
 ```
 
+Create `src/templates/emails/task-assigned.html`:
+
+```html
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body>
+    <div class="container">
+        <h2>New Task Assigned</h2>
+        <p>Hi &#123;&#123; assignee_name &#125;&#125;,</p>
+        <p><strong>&#123;&#123; assigner_name &#125;&#125;</strong> assigned you a new task:</p>
+
+        <div class="card">
+            <div class="card-body">
+                <h3>&#123;&#123; task_title &#125;&#125;</h3>
+            </div>
+        </div>
+
+        <p><a href="http://localhost:7147/admin">View Dashboard</a></p>
+    </div>
+</body>
+</html>
+```
+
+Start the queue worker in a separate terminal:
+
+```bash
+tina4 queue:work
+```
+
 ---
 
-## 9. Step 7: Tests
+## 10. Step 8: Dashboard Template
+
+Create `src/templates/dashboard.html`:
+
+```html
+&#123;% extends "base.html" %&#125;
+
+&#123;% block title %&#125;TaskFlow Dashboard&#123;% endblock %&#125;
+
+&#123;% block content %&#125;
+<h1>Dashboard</h1>
+
+<div id="stats" class="row mb-4">
+    <div class="col-md-2"><div class="card"><div class="card-body">
+        <h6 class="text-muted">Total</h6><h2 id="stat-total">--</h2>
+    </div></div></div>
+    <div class="col-md-2"><div class="card"><div class="card-body">
+        <h6 class="text-muted">Todo</h6><h2 id="stat-todo">--</h2>
+    </div></div></div>
+    <div class="col-md-2"><div class="card"><div class="card-body">
+        <h6 class="text-muted">In Progress</h6><h2 id="stat-progress">--</h2>
+    </div></div></div>
+    <div class="col-md-2"><div class="card"><div class="card-body">
+        <h6 class="text-muted">Done</h6><h2 id="stat-done">--</h2>
+    </div></div></div>
+    <div class="col-md-2"><div class="card"><div class="card-body">
+        <h6 class="text-muted">Overdue</h6><h2 id="stat-overdue" class="text-danger">--</h2>
+    </div></div></div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between">
+                <span>Recent Tasks</span>
+                <button class="btn btn-sm btn-primary" onclick="showNewTaskForm()">
+                    New Task
+                </button>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped" id="task-table">
+                    <thead>
+                        <tr><th>Title</th><th>Assignee</th><th>Priority</th><th>Status</th></tr>
+                    </thead>
+                    <tbody id="task-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">Live Updates</div>
+            <div class="card-body" id="live-updates">
+                <p class="text-muted">Connecting...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/js/frond.min.js"></script>
+<script>
+    var token = localStorage.getItem("token");
+    if (token) frond.setToken(token);
+
+    // Load dashboard stats
+    frond.get("/api/dashboard/stats", function (data) {
+        document.getElementById("stat-total").textContent = data.total_tasks;
+        document.getElementById("stat-todo").textContent = data.todo;
+        document.getElementById("stat-progress").textContent = data.in_progress;
+        document.getElementById("stat-done").textContent = data.done;
+        document.getElementById("stat-overdue").textContent = data.overdue;
+
+        var tbody = document.getElementById("task-list");
+        tbody.innerHTML = "";
+        (data.recent_tasks || []).forEach(function (task) {
+            var tr = document.createElement("tr");
+            var badgeColor = {todo: "secondary", in_progress: "warning",
+                             done: "success"};
+            tr.innerHTML = "<td>" + task.title + "</td>" +
+                "<td>" + (task.assignee_name || "Unassigned") + "</td>" +
+                "<td>" + task.priority + "</td>" +
+                "<td><span class='badge bg-" + (badgeColor[task.status] || "secondary") +
+                "'>" + task.status + "</span></td>";
+            tbody.appendChild(tr);
+        });
+    });
+
+    // WebSocket for live updates
+    var ws = frond.ws("/ws/tasks");
+    var updates = document.getElementById("live-updates");
+
+    ws.on("open", function () {
+        updates.innerHTML = "<p class='text-success'>Connected - listening for updates</p>";
+    });
+
+    ws.on("message", function (raw) {
+        var msg = JSON.parse(raw);
+        if (msg.type === "task_update") {
+            var div = document.createElement("div");
+            div.innerHTML = "<strong>" + msg.action + ":</strong> " + msg.task.title;
+            updates.prepend(div);
+
+            // Refresh stats
+            frond.get("/api/dashboard/stats", function () {});
+        }
+    });
+</script>
+&#123;% endblock %&#125;
+```
+
+Open `http://localhost:7147/admin` in your browser to see the full dashboard with stats, task list, and live update panel.
+
+---
+
+## 11. Step 9: Tests
 
 Create `tests/taskflow_spec.rb`:
 
@@ -473,16 +817,32 @@ require "tina4"
 RSpec.describe "TaskFlow" do
   let(:client) { Tina4::TestClient.new }
   let(:token) do
-    client.post("/api/auth/register", { name: "Test", email: "test#{rand(10000)}@example.com", password: "password123" })
-    result = client.post("/api/auth/login", { email: "test@example.com", password: "password123" })
+    email = "test#{rand(100000)}@example.com"
+    client.post("/api/auth/register", {
+      name: "Test User", email: email, password: "password123"
+    })
+    result = client.post("/api/auth/login", {
+      email: email, password: "password123"
+    })
     result.json["token"]
   end
 
   it "registers a user" do
     result = client.post("/api/auth/register", {
-      name: "Alice", email: "alice#{rand(10000)}@example.com", password: "securePass123"
+      name: "Alice", email: "alice#{rand(100000)}@example.com", password: "securePass123"
     })
     expect(result.status).to eq(201)
+  end
+
+  it "rejects duplicate email" do
+    email = "dup#{rand(100000)}@example.com"
+    client.post("/api/auth/register", {
+      name: "First", email: email, password: "password123"
+    })
+    result = client.post("/api/auth/register", {
+      name: "Second", email: email, password: "password123"
+    })
+    expect(result.status).to eq(409)
   end
 
   it "creates a task" do
@@ -514,6 +874,26 @@ RSpec.describe "TaskFlow" do
     expect(result.json["completed_at"]).not_to be_nil
   end
 
+  it "deletes a task" do
+    created = client.post("/api/tasks", { title: "Delete Me" },
+      headers: { "Authorization" => "Bearer #{token}" })
+    id = created.json["id"]
+
+    result = client.delete("/api/tasks/#{id}",
+      headers: { "Authorization" => "Bearer #{token}" })
+    expect(result.status).to eq(204)
+  end
+
+  it "returns dashboard stats" do
+    client.post("/api/tasks", { title: "Stats Task" },
+      headers: { "Authorization" => "Bearer #{token}" })
+
+    result = client.get("/api/dashboard/stats",
+      headers: { "Authorization" => "Bearer #{token}" })
+    expect(result.status).to eq(200)
+    expect(result.json["total_tasks"]).to be >= 1
+  end
+
   it "requires authentication for tasks" do
     result = client.get("/api/tasks")
     expect(result.status).to eq(401)
@@ -521,15 +901,168 @@ RSpec.describe "TaskFlow" do
 end
 ```
 
+Run the tests:
+
+```bash
+tina4 test
+```
+
+```
+Running tests...
+
+  TaskFlow
+    registers a user
+    rejects duplicate email
+    creates a task
+    lists tasks
+    updates a task status
+    deletes a task
+    returns dashboard stats
+    requires authentication for tasks
+
+  8 examples, 0 failures (0.84s)
+```
+
+All green. The application works.
+
 ---
 
-## 10. Step 8: Docker Deployment
+## 12. Step 10: Docker Deployment
 
-Use the Dockerfile and docker-compose.yml from Chapter 20 with the TaskFlow-specific `.env.production`.
+Use the Dockerfile and docker-compose.yml from Chapter 20. Create `.env.production`:
+
+```dotenv
+TINA4_DEBUG=false
+TINA4_LOG_LEVEL=WARNING
+JWT_SECRET=your-production-secret-at-least-32-characters
+DATABASE_URL=sqlite:///data/app.db
+TINA4_CACHE_BACKEND=redis
+TINA4_CACHE_HOST=redis
+```
+
+Deploy:
+
+```bash
+docker compose up -d --build
+```
+
+Verify:
+
+```bash
+curl http://localhost:7147/health
+```
+
+```json
+{"status": "ok", "version": "1.0.0", "database": "connected"}
+```
+
+TaskFlow runs in production. Authenticated APIs. Real-time WebSocket updates. Email notifications. Cached dashboard stats. Tested. Dockerized.
 
 ---
 
-## 11. Gotchas
+## 13. The Complete Project Structure
+
+```
+taskflow/
+├── .env
+├── .env.example
+├── .gitignore
+├── Gemfile
+├── Gemfile.lock
+├── app.rb
+├── Dockerfile
+├── docker-compose.yml
+├── config/
+│   └── puma.rb
+├── src/
+│   ├── routes/
+│   │   ├── auth.rb                # Registration, login
+│   │   ├── tasks.rb               # Task CRUD
+│   │   ├── dashboard.rb           # Dashboard stats + page
+│   │   ├── middleware.rb          # Auth middleware
+│   │   └── task_ws.rb             # WebSocket event handlers
+│   ├── orm/
+│   │   ├── user.rb                # User model with relationships
+│   │   └── task.rb                # Task model with relationships
+│   ├── migrations/
+│   │   ├── 20260322150000_create_users_table.sql
+│   │   └── 20260322150100_create_tasks_table.sql
+│   ├── templates/
+│   │   ├── base.html              # Base layout
+│   │   ├── dashboard.html         # Dashboard page
+│   │   ├── emails/
+│   │   │   └── task-assigned.html # Assignment notification
+│   │   └── errors/
+│   │       ├── 404.html
+│   │       └── 500.html
+│   ├── public/
+│   │   ├── css/
+│   │   │   └── tina4.css
+│   │   └── js/
+│   │       ├── tina4.min.js
+│   │       └── frond.min.js
+│   └── locales/
+│       └── en.json
+├── data/
+│   └── app.db
+├── logs/
+├── secrets/
+└── tests/
+    └── taskflow_spec.rb
+```
+
+Every file has a purpose. Every directory follows the convention. A new developer looks at this structure and knows where to find things.
+
+---
+
+## 14. What You Built
+
+This chapter used every major concept from the book:
+
+| Feature | Chapter |
+|---------|---------|
+| Route definitions | Chapter 2 |
+| Request/response handling | Chapter 3 |
+| Frond templates | Chapter 4 |
+| Database queries | Chapter 5 |
+| ORM models (User, Task) | Chapter 6 |
+| JWT authentication | Chapter 7 |
+| Auth middleware | Chapter 8 |
+| Queue-based email | Chapter 14 |
+| Email notifications (Messenger) | Chapter 13 |
+| Cache (dashboard stats) | Chapter 14 |
+| Frontend (tina4css dashboard) | Chapter 15 |
+| WebSocket (live updates) | Chapter 12 |
+| Testing (full test suite) | Chapter 17 |
+| Docker deployment | Chapter 20 |
+
+---
+
+## 15. What to Build Next
+
+TaskFlow is a solid foundation. Here are ideas for extending it.
+
+**Features:**
+- **Task comments** -- Add a Comment model with a `task_id` foreign key. Display comments on the task detail page.
+- **File attachments** -- Let users upload files to tasks. Store them in `data/uploads/` and serve them via a route.
+- **Team management** -- Add a Team model. Users belong to teams. Tasks are scoped to teams.
+- **Task labels/tags** -- Many-to-many relationship between tasks and labels for categorization.
+- **Due date reminders** -- Use the queue system to schedule reminder emails 24 hours before a task's due date.
+- **Activity log** -- Record every change to a task (who changed what, when) for audit trails.
+- **Search** -- Full-text search across task titles and descriptions.
+- **Calendar view** -- Render tasks on a calendar based on their due dates.
+- **Mobile API** -- The API already works for mobile apps. Add push notification support.
+
+**Technical improvements:**
+- **Rate limiting per user** -- Replace the global rate limiter with per-user limits.
+- **Database upgrade** -- Switch from SQLite to PostgreSQL for better concurrency.
+- **CI/CD pipeline** -- Add GitHub Actions to run tests on every push.
+- **API documentation** -- Generate OpenAPI/Swagger docs from your route definitions.
+- **Internationalization** -- Add `src/locales/` files for multiple languages.
+
+---
+
+## 16. Gotchas
 
 ### 1. Circular Dependencies Between Models
 
@@ -541,7 +1074,7 @@ Use the Dockerfile and docker-compose.yml from Chapter 20 with the TaskFlow-spec
 
 **Problem:** Dashboard stats are stale after task updates.
 
-**Fix:** Invalidate cache in every write operation: `Tina4.cache_clear`.
+**Fix:** Invalidate cache in every write operation: `Tina4.cache_delete("dashboard:stats:#{user_id}")`.
 
 ### 3. Queue Worker Not Processing Emails
 
@@ -559,7 +1092,7 @@ Use the Dockerfile and docker-compose.yml from Chapter 20 with the TaskFlow-spec
 
 **Problem:** Real-time dashboard updates do not work.
 
-**Fix:** Ensure the WebSocket endpoint is configured and the client JavaScript connects correctly.
+**Fix:** Ensure the WebSocket endpoint is configured, the server is running, and the client JavaScript connects to the correct URL. Check the browser console for connection errors.
 
 ### 6. Database Locked Under Load
 
@@ -571,4 +1104,18 @@ Use the Dockerfile and docker-compose.yml from Chapter 20 with the TaskFlow-spec
 
 **Problem:** The app crashes in production because a table does not exist.
 
-**Fix:** Always run `tina4 migrate` as part of your deployment pipeline.
+**Fix:** Always run `tina4 migrate` as part of your deployment pipeline. Add it to your Dockerfile or CI/CD script.
+
+---
+
+## 17. Closing Thoughts -- The Tina4 Philosophy
+
+You built a complete application. User auth. CRUD. Real-time updates. Email. Caching. Tests. Deployment. Your project has one dependency: `tina4`.
+
+No separate ORM gem. No template engine gem. No authentication library. No WebSocket server. No caching library. No testing framework. No CLI tool. No CSS framework. No JavaScript helpers. All built in.
+
+**One framework. Zero extra dependencies. Everything you need.**
+
+The same patterns work in PHP, Python, and Node.js. Same project structure. Same CLI commands. Same `.env` variables. Same template syntax. Learn Tina4 once. Use it everywhere.
+
+Build things. Ship them. Keep it simple.

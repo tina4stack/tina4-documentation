@@ -382,7 +382,325 @@ end
 
 ---
 
-## 11. Exercise: Build a Product Management Page
+## 11. SCSS Customization
+
+The default tina4css works out of the box. To customize colors, fonts, or spacing, edit the SCSS source.
+
+Edit `src/public/scss/tina4.scss`:
+
+```scss
+// Override variables before importing the framework
+$primary: #2d6a4f;
+$secondary: #52b788;
+$dark: #1b4332;
+$font-family-base: 'Inter', sans-serif;
+$border-radius: 8px;
+
+// Import the framework
+@import 'tina4-base';
+```
+
+Compile SCSS to CSS:
+
+```bash
+tina4 scss
+```
+
+```
+Compiling SCSS...
+  src/public/scss/tina4.scss -> src/public/css/tina4.css
+Done (0.12s)
+```
+
+The compiled CSS replaces the default `tina4.css`. Your custom colors and fonts take effect across the entire application.
+
+### Live SCSS Compilation
+
+During development, run SCSS compilation in watch mode:
+
+```bash
+tina4 scss --watch
+```
+
+Every save to a `.scss` file triggers a recompile. Combined with Tina4's live reload, changes appear in the browser within a second.
+
+---
+
+## 12. frond.js API Reference
+
+Tina4 ships three JavaScript files. Each serves a different purpose. Use them independently or together.
+
+### Including the Scripts
+
+```html
+<script src="/js/tina4.min.js"></script>
+<script src="/js/frond.min.js"></script>
+<script src="/js/tina4js.min.js"></script>
+```
+
+All three live in `src/public/js/` and are served from `/js/`. Include only what you need.
+
+### tina4.min.js -- Core Utilities
+
+Low-level helpers for AJAX page loading and form submission.
+
+#### `loadPage(url, targetId)`
+
+Fetches HTML from `url` and injects it into the element with the given `id`.
+
+```html
+<nav>
+    <a href="#" onclick="loadPage('/dashboard', 'content')">Dashboard</a>
+    <a href="#" onclick="loadPage('/settings', 'content')">Settings</a>
+</nav>
+<div id="content"><!-- pages load here --></div>
+
+<script src="/js/tina4.min.js"></script>
+```
+
+#### `saveForm(formId, url, method)`
+
+Serializes a form and submits it via AJAX. Prevents the default page reload.
+
+```html
+<form id="product-form">
+    <input type="text" name="name" placeholder="Product name">
+    <input type="number" name="price" placeholder="Price">
+    <button type="button" onclick="saveForm('product-form', '/api/products', 'POST')">
+        Save
+    </button>
+</form>
+```
+
+#### `sendRequest(url, method, data, callback)`
+
+Generic AJAX helper for any HTTP method.
+
+```javascript
+sendRequest("/api/products", "GET", null, function (response) {
+    console.log("Products:", JSON.parse(response));
+});
+
+sendRequest("/api/products", "POST", { name: "Widget", price: 9.99 }, function (response) {
+    console.log("Created:", JSON.parse(response));
+});
+```
+
+### frond.min.js -- Template Engine Client-Side Helpers
+
+A companion to the Frond template engine. Handles AJAX form interception, WebSocket connections with auto-reconnect, JWT token management, and dynamic template loading.
+
+#### AJAX Requests
+
+```javascript
+// GET request
+frond.get("/api/products", function (data) {
+    console.log("Products:", data);
+});
+
+// POST request
+frond.post("/api/products", {
+    name: "New Product",
+    price: 29.99
+}, function (data) {
+    console.log("Created:", data);
+});
+
+// PUT request
+frond.put("/api/products/1", { name: "Updated Product" }, function (data) {
+    console.log("Updated:", data);
+});
+
+// DELETE request
+frond.delete("/api/products/1", function (data) {
+    console.log("Deleted:", data);
+});
+```
+
+#### Token Management
+
+frond.js manages JWT tokens. Store a token after login, and frond.js attaches it to every request.
+
+```javascript
+// Store the token (usually after login)
+frond.setToken("eyJhbGciOiJIUzI1NiIs...");
+
+// All subsequent requests include:
+// Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+frond.get("/api/profile", function (data) {
+    console.log("Profile:", data);
+});
+
+// Clear the token (logout)
+frond.clearToken();
+```
+
+frond.js stores the token in `localStorage` and includes it as a `Bearer` token in the `Authorization` header on every request.
+
+#### Loading Indicators
+
+frond.js can show and hide a loading element during AJAX requests.
+
+```javascript
+frond.get("/api/products", function (data) {
+    renderProducts(data.products);
+}, null, {
+    loading: "#loadingSpinner"
+});
+```
+
+```html
+<div id="loadingSpinner" class="text-center p-4" style="display: none;">
+    Loading...
+</div>
+```
+
+frond.js toggles `display: block` and `display: none` on the element. No extra CSS needed.
+
+#### WebSocket Auto-Reconnect
+
+```javascript
+const ws = frond.ws("/ws/notifications");
+ws.on("message", function (data) {
+    const notification = JSON.parse(data);
+    alert(notification.text);
+});
+// If the server restarts or the network blips, frond.js reconnects.
+```
+
+### tina4js.min.js -- Reactive Frontend Framework
+
+A standalone reactive framework for building rich client-side applications. Provides signals, computed values, effects, Web Components, client-side routing, and built-in fetch and WebSocket wrappers.
+
+#### Reactive State
+
+```javascript
+import { signal, computed, effect } from "/js/tina4js.min.js";
+
+const count = signal(0);
+const doubled = computed(() => count.value * 2);
+
+effect(() => {
+    console.log(`Count: ${count.value}, Doubled: ${doubled.value}`);
+});
+
+count.value = 5; // logs "Count: 5, Doubled: 10"
+```
+
+#### Web Components
+
+```javascript
+import { Tina4Element, signal, html } from "/js/tina4js.min.js";
+
+class CounterButton extends Tina4Element {
+    setup() {
+        this.count = signal(0);
+    }
+    render() {
+        return html`
+            <button onclick="${() => this.count.value++}">
+                Clicked ${this.count} times
+            </button>
+        `;
+    }
+}
+customElements.define("counter-button", CounterButton);
+```
+
+---
+
+## 13. Responsive Design
+
+tina4css includes responsive breakpoints for adapting layouts to different screen sizes:
+
+| Breakpoint | Min Width | Class Prefix |
+|------------|-----------|-------------|
+| Extra small | 0px | (none -- default) |
+| Small | 576px | `sm-` |
+| Medium | 768px | `md-` |
+| Large | 992px | `lg-` |
+| Extra large | 1200px | `xl-` |
+
+### Responsive Columns
+
+```html
+<div class="row">
+    <!-- Full width on mobile, half on medium, third on large -->
+    <div class="col-12 col-md-6 col-lg-4">Product 1</div>
+    <div class="col-12 col-md-6 col-lg-4">Product 2</div>
+    <div class="col-12 col-md-6 col-lg-4">Product 3</div>
+</div>
+```
+
+### Responsive Visibility
+
+```html
+<!-- Hidden on mobile, visible on medium and up -->
+<div class="d-none d-md-block">Desktop Sidebar</div>
+
+<!-- Visible on mobile only -->
+<div class="d-block d-md-none">Mobile Menu</div>
+```
+
+---
+
+## 14. Building a Users Page with AJAX
+
+A single-page admin view that loads data without page reloads:
+
+```html
+&#123;% extends "base.html" %&#125;
+
+&#123;% block title %&#125;User Management&#123;% endblock %&#125;
+
+&#123;% block content %&#125;
+<h2>User Management</h2>
+
+<div id="loadingSpinner" class="text-center p-4" style="display: none;">
+    Loading users...
+</div>
+
+<div id="user-list"></div>
+
+<script src="/js/frond.min.js"></script>
+<script>
+    function loadUsers() {
+        frond.get("/api/users", function (data) {
+            var html = '<table class="table"><thead><tr>' +
+                '<th>ID</th><th>Name</th><th>Email</th><th>Actions</th>' +
+                '</tr></thead><tbody>';
+
+            data.users.forEach(function (user) {
+                html += '<tr>' +
+                    '<td>' + user.id + '</td>' +
+                    '<td>' + user.name + '</td>' +
+                    '<td>' + user.email + '</td>' +
+                    '<td><button class="btn btn-sm btn-danger" ' +
+                    'onclick="deleteUser(' + user.id + ')">Delete</button></td>' +
+                    '</tr>';
+            });
+
+            html += '</tbody></table>';
+            document.getElementById("user-list").innerHTML = html;
+        }, null, { loading: "#loadingSpinner" });
+    }
+
+    function deleteUser(id) {
+        frond.delete("/api/users/" + id, function () {
+            loadUsers();
+        });
+    }
+
+    loadUsers();
+</script>
+&#123;% endblock %&#125;
+```
+
+The page loads instantly. frond.js fetches user data in the background. Delete a user and the list refreshes without a page reload.
+
+---
+
+## 15. Exercise: Build a Product Management Page
 
 Build a product management page with a table, add/edit form, and AJAX interactions.
 
@@ -395,7 +713,7 @@ Build a product management page with a table, add/edit form, and AJAX interactio
 
 ---
 
-## 12. Solution
+## 16. Solution
 
 Create `src/templates/admin-products.html` with a table displaying products, a form for adding new ones using `data-frond-submit`, and JavaScript handlers using `frond.post` and `frond.get` for CRUD operations. The template extends `base.html` and uses tina4css for styling.
 
@@ -415,7 +733,7 @@ end
 
 ---
 
-## 13. Gotchas
+## 17. Gotchas
 
 ### 1. tina4css Classes Do Not Work
 

@@ -2,19 +2,19 @@
 
 ## 1. The Two Objects You Use Everywhere
 
-Every route handler receives two arguments: `request` and `response`. The request carries everything the client sent. The response builds what you send back. Master these two objects and you handle any HTTP scenario.
+Every route handler receives two arguments: `request` and `response`. The request carries what the client sent. The response builds what you send back. These two objects handle every HTTP scenario you will face.
 
-Picture a file-sharing service. A user uploads a document. You validate the file type. You check their session. You return a success JSON or an error page. Every step flows through `request` and `response`.
+A file-sharing service demonstrates the pattern. A user uploads a document. You validate the file type. You check the session. You return success JSON or an error page. Every step flows through `request` and `response`.
 
 ---
 
 ## 2. The Request Object
 
-The `request` object gives you access to every piece of information about the incoming HTTP request.
+The `request` object opens every piece of the incoming HTTP request. Headers, body, cookies, files, IP address -- all accessible through named properties.
 
 ### request.method
 
-The HTTP method as an uppercase string:
+The HTTP method arrives as an uppercase string:
 
 ```python
 from tina4_python.core.router import get, post
@@ -34,7 +34,7 @@ curl http://localhost:7145/api/check
 
 ### request.path
 
-The URL path without query parameters:
+The URL path strips query parameters:
 
 ```python
 @get("/api/info")
@@ -52,7 +52,7 @@ curl "http://localhost:7145/api/info?foo=bar"
 
 ### Path Parameters (Function Arguments)
 
-Path parameters captured from the URL pattern are passed as function arguments. The parameter names in your function signature must match the `{name}` placeholders in the route pattern:
+Path parameters captured from the URL pattern arrive as function arguments. The parameter names in your function signature must match the `{name}` placeholders in the route pattern:
 
 ```python
 @get("/users/{id:int}/posts/{slug}")
@@ -73,7 +73,7 @@ curl http://localhost:7145/users/5/posts/hello-world
 
 ### request.params
 
-Query string parameters as a dictionary:
+Query string parameters live in a dictionary. Each key holds a single value unless the same key appears multiple times -- then Tina4 stores a list:
 
 ```python
 @get("/search")
@@ -95,7 +95,7 @@ curl "http://localhost:7145/search?q=laptop&page=2&sort=price"
 
 ### request.body
 
-The parsed request body. JSON requests become a dictionary. Form submissions contain form fields:
+The parsed request body. JSON requests become a dictionary. Form submissions contain form fields. GET requests produce `None`:
 
 ```python
 @post("/api/feedback")
@@ -125,16 +125,16 @@ curl -X POST http://localhost:7145/api/feedback \
 
 ### request.headers
 
-A dictionary of HTTP headers. Header names are case-insensitive:
+A dictionary of HTTP headers. Tina4 normalizes header names to lowercase:
 
 ```python
 @get("/api/headers")
 async def show_headers(request, response):
     return response.json({
-        "content_type": request.headers.get("Content-Type", "not set"),
-        "user_agent": request.headers.get("User-Agent", "not set"),
-        "accept": request.headers.get("Accept", "not set"),
-        "custom": request.headers.get("X-Custom-Header", "not set")
+        "content_type": request.headers.get("content-type", "not set"),
+        "user_agent": request.headers.get("user-agent", "not set"),
+        "accept": request.headers.get("accept", "not set"),
+        "custom": request.headers.get("x-custom-header", "not set")
     })
 ```
 
@@ -148,7 +148,7 @@ curl http://localhost:7145/api/headers -H "X-Custom-Header: hello-tina4"
 
 ### request.ip
 
-The client's IP address:
+The client's IP address. Tina4 respects `X-Forwarded-For` and `X-Real-IP` headers behind a reverse proxy:
 
 ```python
 @get("/api/whoami")
@@ -166,7 +166,7 @@ curl http://localhost:7145/api/whoami
 
 ### request.cookies
 
-A dictionary of cookies sent by the client:
+A dictionary of cookies the client sent:
 
 ```python
 @get("/api/cookies")
@@ -187,7 +187,7 @@ curl http://localhost:7145/api/cookies -b "session_id=abc123; theme=dark"
 
 ### request.files
 
-For multipart file uploads, `request.files` holds the uploaded files:
+For multipart file uploads, `request.files` holds the uploaded files. Each file is a dictionary with four keys: `filename`, `type`, `content` (raw bytes), and `size` (in bytes):
 
 ```python
 @post("/api/upload")
@@ -240,11 +240,82 @@ async def upload_and_save(request, response):
     }, 201)
 ```
 
+### Handling Multiple File Uploads
+
+When a form sends multiple files, each file field name maps to one entry in `request.files`. Use distinct field names for each file input:
+
+```python
+@post("/api/upload-many")
+async def upload_many(request, response):
+    results = []
+
+    for key, file in request.files.items():
+        if not isinstance(file, dict) or "filename" not in file:
+            continue
+
+        ext = os.path.splitext(file["filename"])[1]
+        unique_name = f"{uuid.uuid4().hex}{ext}"
+        save_path = os.path.join("src", "public", "uploads", unique_name)
+
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        with open(save_path, "wb") as f:
+            f.write(file["content"])
+
+        results.append({
+            "original_name": file["filename"],
+            "saved_as": unique_name,
+            "url": f"/uploads/{unique_name}"
+        })
+
+    if not results:
+        return response.json({"error": "No files uploaded"}, 400)
+
+    return response.json({"uploaded": results, "count": len(results)}, 201)
+```
+
+```bash
+curl -X POST http://localhost:7145/api/upload-many \
+  -F "photo=@sunset.jpg" \
+  -F "document=@invoice.pdf" \
+  -F "avatar=@profile.png"
+```
+
+```json
+{
+  "uploaded": [
+    {"original_name": "sunset.jpg", "saved_as": "a1b2c3d4.jpg", "url": "/uploads/a1b2c3d4.jpg"},
+    {"original_name": "invoice.pdf", "saved_as": "e5f6a7b8.pdf", "url": "/uploads/e5f6a7b8.pdf"},
+    {"original_name": "profile.png", "saved_as": "c9d0e1f2.png", "url": "/uploads/c9d0e1f2.png"}
+  ],
+  "count": 3
+}
+```
+
+The HTML form uses distinct `name` attributes for each file input. Each field name becomes a key in `request.files`.
+
+### Upload Size Limits
+
+Tina4 enforces a maximum upload size through the `TINA4_MAX_UPLOAD_SIZE` environment variable. The value is in bytes. The default is `10485760` (10 MB).
+
+```dotenv
+TINA4_MAX_UPLOAD_SIZE=10485760
+```
+
+When a client sends a body larger than this limit, Tina4 raises a `PayloadTooLarge` exception and returns a `413 Payload Too Large` response. Your handler never runs. The check fires before body parsing begins.
+
+To allow 50 MB uploads, set this in your `.env` file:
+
+```dotenv
+TINA4_MAX_UPLOAD_SIZE=52428800
+```
+
+Calculate the value by multiplying: megabytes times 1,048,576. For 25 MB, that is `26214400`. For 100 MB, `104857600`. Choose the smallest limit that covers your use case. Large limits invite abuse.
+
 ---
 
 ## 3. The Response Object
 
-The `response` object builds HTTP responses. Every route handler must return one.
+The `response` object builds HTTP responses. Every route handler must return one. Methods chain, so you can set headers, cookies, and content in a single expression.
 
 ### response.json()
 
@@ -300,7 +371,7 @@ async def robots(request, response):
 
 ### response.render()
 
-Render a Frond template with data ([Chapter 4: Templates](04-templates.md) goes deep):
+Render a Frond template with data ([Chapter 4: Templates](04-templates.md) covers the engine in full):
 
 ```python
 @get("/dashboard")
@@ -317,7 +388,7 @@ async def dashboard(request, response):
 
 ### response.redirect()
 
-Redirect the client to another URL:
+Send the client to another URL:
 
 ```python
 @get("/old-page")
@@ -335,7 +406,7 @@ async def moved(request, response):
     return response.redirect("/new-location", 301)
 ```
 
-The default status code for `redirect()` is `302 Found` (temporary redirect).
+The default status code is `302 Found` (temporary redirect).
 
 ### response.file()
 
@@ -347,9 +418,9 @@ async def download_report(request, response):
     return response.file("data/reports/monthly-report.pdf")
 ```
 
-Tina4 auto-detects the content type from the file extension. The browser displays or downloads the file based on content type.
+Tina4 auto-detects the content type from the file extension. The browser displays or downloads based on the MIME type.
 
-To force a download (instead of inline display), pass a `download_name` to set the `Content-Disposition` header:
+To force a download instead of inline display, pass a `download_name`:
 
 ```python
 @get("/download/data")
@@ -357,9 +428,57 @@ async def download_data(request, response):
     return response.file("data/export.csv", download_name="sales-data.csv")
 ```
 
-### Setting Status Codes
+This sets the `Content-Disposition: attachment` header with your chosen filename.
 
-Every response method accepts an optional status code as the second argument:
+### response.xml()
+
+Return XML content:
+
+```python
+@get("/api/feed")
+async def feed(request, response):
+    return response.xml("<feed><entry><title>Hello</title></entry></feed>")
+```
+
+### response.error()
+
+Return a structured error envelope:
+
+```python
+@post("/api/things")
+async def create_thing(request, response):
+    return response.error("VALIDATION_FAILED", "Name is required", 400)
+```
+
+This produces:
+
+```json
+{"error":true,"code":"VALIDATION_FAILED","message":"Name is required","status":400}
+```
+
+Three arguments: an error code string, a human-readable message, and the HTTP status code. Clients check `error: true` and switch on the `code` field.
+
+---
+
+## 4. Status Codes
+
+Every response method accepts a status code. Here are the codes you will use most:
+
+| Code | Meaning | When to Use |
+|------|---------|-------------|
+| `200` | OK | Default. Successful GET, PUT, PATCH. |
+| `201` | Created | Successful POST that created a resource. |
+| `204` | No Content | Successful DELETE. No body needed. |
+| `301` | Moved Permanently | URL has changed forever. |
+| `302` | Found | Temporary redirect. |
+| `400` | Bad Request | Invalid input from the client. |
+| `401` | Unauthorized | Missing or invalid authentication. |
+| `403` | Forbidden | Authenticated but not permitted. |
+| `404` | Not Found | Resource does not exist. |
+| `409` | Conflict | Duplicate or conflicting data. Two users claim the same username. |
+| `413` | Payload Too Large | Body exceeds `TINA4_MAX_UPLOAD_SIZE`. |
+| `422` | Unprocessable Entity | Valid JSON but fails business rules. The data parses but the logic rejects it. |
+| `500` | Internal Server Error | Something broke on the server. |
 
 ```python
 # 200 OK (default)
@@ -383,13 +502,88 @@ return response.json({"error": "Not allowed"}, 403)
 # 404 Not Found
 return response.json({"error": "Not found"}, 404)
 
+# 409 Conflict
+return response.json({"error": "Username already taken"}, 409)
+
+# 422 Unprocessable Entity
+return response.json({"error": "Start date must precede end date"}, 422)
+
 # 500 Internal Server Error
 return response.json({"error": "Server error"}, 500)
 ```
 
+You can also chain the status with `response.status()`:
+
+```python
+return response.status(201).json({"id": 7, "created": True})
+```
+
+---
+
+## 5. Content Negotiation
+
+One endpoint can return different formats. The client declares what it wants through the `Accept` header. Your handler inspects that header and picks the right response method:
+
+```python
+@get("/api/products/{id:int}")
+async def product_detail(id, request, response):
+    product = {
+        "id": id,
+        "name": "Wireless Keyboard",
+        "price": 79.99
+    }
+
+    accept = request.headers.get("accept", "application/json")
+
+    if "text/html" in accept:
+        return response.render("product-detail.html", {"product": product})
+    elif "text/plain" in accept:
+        text = f"Product #{id}: {product['name']} - ${product['price']}"
+        return response.text(text)
+    elif "application/xml" in accept:
+        xml = f'<product><id>{id}</id><name>{product["name"]}</name><price>{product["price"]}</price></product>'
+        return response.xml(xml)
+    else:
+        return response.json(product)
+```
+
+```bash
+# JSON (default)
+curl http://localhost:7145/api/products/1
+```
+
+```json
+{"id":1,"name":"Wireless Keyboard","price":79.99}
+```
+
+```bash
+# Plain text
+curl http://localhost:7145/api/products/1 -H "Accept: text/plain"
+```
+
+```
+Product #1: Wireless Keyboard - $79.99
+```
+
+```bash
+# HTML (renders the template)
+curl http://localhost:7145/api/products/1 -H "Accept: text/html"
+```
+
+```html
+<!DOCTYPE html>
+<html>...rendered template...</html>
+```
+
+The pattern: check `request.headers.get("accept")`, match against known MIME types, fall back to JSON. Most API clients send `application/json` or `*/*`. Browsers send `text/html`. The same route serves both.
+
+---
+
+## 6. Custom Headers and Cookies
+
 ### Setting Response Headers
 
-Add custom headers:
+Add custom headers with the `header` method. Chain calls before the final response:
 
 ```python
 @get("/api/data")
@@ -442,16 +636,16 @@ Cookie keyword arguments:
 | Argument | Type | Default | Description |
 |----------|------|---------|-------------|
 | `path` | str | `"/"` | URL path scope |
-| `max_age` | int | `3600` | Lifetime in seconds (0 = delete) |
-| `http_only` | bool | `True` | Cookie not accessible via JavaScript |
-| `secure` | bool | `False` | Cookie only sent over HTTPS |
-| `same_site` | str | `"Lax"` | "Strict", "Lax", or "None" |
+| `max_age` | int | `3600` | Lifetime in seconds (0 deletes the cookie) |
+| `http_only` | bool | `True` | JavaScript cannot access the cookie |
+| `secure` | bool | `False` | Cookie travels over HTTPS only |
+| `same_site` | str | `"Lax"` | `"Strict"`, `"Lax"`, or `"None"` |
 
 ---
 
-## 4. Input Validation
+## 7. Input Validation
 
-Tina4 includes a `Validator` class for declarative input validation. Chain rules together and check the result. If validation fails, use `response.error()` to return a structured error envelope.
+Tina4 ships a `Validator` class for declarative input validation. Chain rules together, then check the result.
 
 ### The Validator Class
 
@@ -461,7 +655,7 @@ from tina4_python.validator import Validator
 @post("/api/users")
 async def create_user(request, response):
     v = Validator(request.body)
-    v.required("name").required("email").email("email").min_length("name", 2)
+    v.required("name", "email").email("email").min_length("name", 2)
 
     if not v.is_valid():
         return response.error("VALIDATION_FAILED", v.errors()[0]["message"], 400)
@@ -473,36 +667,25 @@ The `Validator` accepts the request body (a dictionary) and provides chainable m
 
 | Method | Description |
 |--------|-------------|
-| `required(field)` | Field must be present and non-empty |
+| `required(*fields)` | Fields must be present and non-empty |
 | `email(field)` | Field must be a valid email address |
 | `min_length(field, n)` | Field must have at least `n` characters |
 | `max_length(field, n)` | Field must have at most `n` characters |
-| `numeric(field)` | Field must be a number |
+| `integer(field)` | Field must be an integer |
+| `min(field, n)` | Numeric field must be >= `n` |
+| `max(field, n)` | Numeric field must be <= `n` |
 | `in_list(field, values)` | Field must be one of the allowed values |
+| `regex(field, pattern)` | Field must match the regular expression |
 
-Call `v.is_valid()` to check all rules. Call `v.errors()` to get the list of validation failures, each with a `field` and `message` key.
+Call `v.is_valid()` to check all rules. Call `v.errors()` to get the list of validation failures -- each entry holds a `field` and `message` key.
 
-### The Error Response Envelope
-
-`response.error()` returns a consistent JSON error envelope:
-
-```python
-return response.error("VALIDATION_FAILED", "Name is required", 400)
-```
-
-This produces:
-
-```json
-{"error": true, "code": "VALIDATION_FAILED", "message": "Name is required", "status": 400}
-```
-
-The three arguments are: an error code string, a human-readable message, and the HTTP status code. Use this pattern across your API for consistent error handling. Clients can check `error: true` and switch on the `code` field.
+Note that `required()` accepts multiple field names in one call: `v.required("name", "email", "subject")`. This validates all three fields in a single statement.
 
 ---
 
-## 5. Real-World Example: File Upload with Validation
+## 8. Real-World Example: File Upload with Validation
 
-A complete file upload endpoint that validates type, size, and returns appropriate errors:
+A complete file upload endpoint. It validates type and size, generates a unique filename, and returns the URL:
 
 ```python
 from tina4_python.core.router import post
@@ -581,7 +764,7 @@ curl -X POST http://localhost:7145/api/files/upload \
 
 ---
 
-## 6. Exercise: Build a Contact Form API
+## 9. Exercise: Build a Contact Form API
 
 Build an API that processes contact form submissions with full validation.
 
@@ -594,12 +777,12 @@ Create `src/routes/contact.py` with these endpoints:
 | `POST` | `/api/contact` | Submit a contact form. Validate all fields. Return 201 on success. |
 | `GET` | `/api/contact/submissions` | List all submissions. Support `?status=` filter. |
 
-The contact form body should include: `name` (required, 2-100 chars), `email` (required, must contain @), `subject` (required), `message` (required, 10+ chars), `urgency` (optional, one of "low", "medium", "high", default "medium").
+The contact form body must include: `name` (required, 2-100 chars), `email` (required, must contain @), `subject` (required), `message` (required, 10+ chars), `urgency` (optional, one of "low", "medium", "high", default "medium").
 
 Validation rules:
-- Return 400 with an `errors` list if any field is invalid
+- Return 400 with an `errors` list if any field fails
 - Store submissions in a Python list with an auto-incremented ID and timestamp
-- Each submission has a `status` of "new"
+- Each submission starts with a `status` of "new"
 
 ### Test with:
 
@@ -623,7 +806,7 @@ curl "http://localhost:7145/api/contact/submissions?status=new"
 
 ---
 
-## 7. Solution
+## 10. Solution
 
 ```python
 from tina4_python.core.router import get, post
@@ -740,23 +923,23 @@ async def list_submissions(request, response):
 
 ---
 
-## 8. Gotchas
+## 11. Gotchas
 
 ### 1. request.body is None for GET requests
 
-**Problem:** Accessing `request.body` in a GET handler returns `None` or an empty dict.
+**Problem:** Accessing `request.body` in a GET handler returns `None`.
 
-**Cause:** GET requests carry no body by convention. Browsers and curl do not send one.
+**Cause:** GET requests carry no body. Browsers and curl send none by convention.
 
-**Fix:** Use `request.params` for GET parameters. The body is only populated for POST, PUT, and PATCH requests.
+**Fix:** Use `request.params` for GET parameters. The body populates only for POST, PUT, and PATCH requests.
 
-### 2. Forgetting to parse Content-Type
+### 2. Forgetting the Content-Type header
 
-**Problem:** `request.body` is an empty dictionary even though you sent JSON.
+**Problem:** `request.body` is empty even though you sent JSON.
 
-**Cause:** You did not set `Content-Type: application/json` in your request. Without it, Tina4 does not parse the body as JSON.
+**Cause:** The `Content-Type: application/json` header is missing. Without it, Tina4 does not parse the body as JSON.
 
-**Fix:** Include `-H "Content-Type: application/json"` when sending JSON via curl. In JavaScript fetch, set `headers: {"Content-Type": "application/json"}`.
+**Fix:** Include `-H "Content-Type: application/json"` in your curl command. In JavaScript `fetch()`, set `headers: {"Content-Type": "application/json"}`.
 
 ### 3. File upload with wrong field name
 
@@ -768,33 +951,33 @@ async def list_submissions(request, response):
 
 ### 4. response.redirect() in AJAX calls
 
-**Problem:** Your JavaScript `fetch()` call gets a redirect response but the browser does not navigate.
+**Problem:** Your JavaScript `fetch()` call receives a redirect response, but the browser does not navigate.
 
-**Cause:** `fetch()` follows redirects silently and returns the final response. It does not trigger browser navigation.
+**Cause:** `fetch()` follows redirects silently. It returns the final response. It does not trigger browser navigation.
 
-**Fix:** For AJAX calls, return a JSON response with the redirect URL and handle navigation in JavaScript: `window.location.href = data.redirect_url`. Use `response.redirect()` only for traditional form submissions and browser navigation.
+**Fix:** For AJAX calls, return JSON with a redirect URL. Handle navigation in JavaScript: `window.location.href = data.redirect_url`. Use `response.redirect()` only for traditional form submissions and browser navigation.
 
 ### 5. Cookie not being set
 
 **Problem:** You called `response.cookie()` but the cookie does not appear in the browser.
 
-**Cause:** If you set `secure=True`, the cookie is only sent over HTTPS. On `http://localhost`, the browser ignores it.
+**Cause:** Setting `secure=True` restricts the cookie to HTTPS. On `http://localhost`, the browser drops it.
 
-**Fix:** During development on HTTP, set `secure=False` (the default). Enable `secure=True` only in production where HTTPS is configured.
+**Fix:** During development on HTTP, use `secure=False` (the default). Enable `secure=True` only in production with HTTPS configured.
 
-### 6. Large file uploads fail silently
+### 6. Large file uploads fail
 
-**Problem:** Uploading a large file results in an empty `request.files` dictionary or a 413 error.
+**Problem:** Uploading a large file returns a 413 error or empty `request.files`.
 
-**Cause:** The default maximum upload size may be smaller than your file.
+**Cause:** The file exceeds `TINA4_MAX_UPLOAD_SIZE`. The default limit is 10 MB (10,485,760 bytes).
 
-**Fix:** Set `TINA4_MAX_UPLOAD_SIZE` in your `.env` file (value in bytes). For 50 MB: `TINA4_MAX_UPLOAD_SIZE=52428800`.
+**Fix:** Set `TINA4_MAX_UPLOAD_SIZE` in your `.env` file. For 50 MB: `TINA4_MAX_UPLOAD_SIZE=52428800`. The check happens before your handler runs -- there is nothing to catch in your route code.
 
 ### 7. Chaining response methods in wrong order
 
-**Problem:** Setting headers or cookies after calling `response.json()` has no effect.
+**Problem:** Headers or cookies set after calling `response.json()` have no effect.
 
-**Cause:** `response.json()` finalizes and returns the response. Anything after it is too late.
+**Cause:** `response.json()` finalizes and returns the response object. Calling methods on a separate line after the return is dead code.
 
 **Fix:** Chain headers and cookies before the final response method:
 
@@ -807,3 +990,11 @@ result = response.json({"ok": True})
 response.header("X-Custom", "value")  # Too late
 return result
 ```
+
+### 8. Header names are lowercase
+
+**Problem:** `request.headers.get("Content-Type")` returns `None` even though the header exists.
+
+**Cause:** Tina4 normalizes all header names to lowercase during parsing. The ASGI protocol delivers them this way.
+
+**Fix:** Use lowercase keys: `request.headers.get("content-type")`. This applies to all headers -- `"authorization"`, `"user-agent"`, `"x-custom-header"`.

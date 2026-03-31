@@ -12,6 +12,15 @@ Documentation site for the Tina4 framework. See https://tina4.com for the live s
 - Build: `pnpm docs:build`
 - Preview: `pnpm docs:preview`
 
+## Writing Style
+
+- **Always use the `content-writer` skill** when writing or editing documentation prose
+- Active voice, no adverbs, no buzzwords — plain English
+- Personify technology, use fragment chains, end sections strong
+- Flesch reading ease target: 50 (±5)
+- Keep subject and verb within 3 words of each other
+- Code examples stay untouched — only rewrite surrounding prose
+
 ## Code Principles
 
 - **DRY** — Shared concepts go in `docs/general/`, framework-specific details in their own section

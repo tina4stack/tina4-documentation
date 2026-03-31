@@ -266,9 +266,72 @@ function requireRole(role: string) {
 
 ---
 
-## 6. CSRF Protection
+## 6. Using Tokens in Requests
 
-For form-based applications, include a CSRF token in every form:
+Once the client has a JWT token from the login endpoint, include it in every request to a protected route:
+
+```typescript
+// Frontend JavaScript
+const response = await fetch("/api/profile", {
+    headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+    },
+});
+```
+
+With curl:
+
+```bash
+curl http://localhost:7148/api/profile \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..."
+```
+
+The token travels in the `Authorization` header with the `Bearer` prefix. The middleware extracts it, verifies it, and populates `req.user` with the decoded payload.
+
+### Token Expiry
+
+Tokens expire after the configured duration. When a token expires, `Auth.validToken()` returns `null`. The middleware rejects the request with a `401`.
+
+Configure expiry in `.env`:
+
+```dotenv
+TINA4_JWT_EXPIRY=86400
+```
+
+The value is in seconds. `86400` is 24 hours.
+
+### Refreshing Tokens
+
+Issue a new token before the current one expires:
+
+```typescript
+Router.post("/api/auth/refresh", async (req, res) => {
+    // req.user is populated by auth middleware
+    const secret = process.env.SECRET || "tina4-default-secret";
+    const newToken = Auth.getToken({
+        user_id: req.user.user_id,
+        email: req.user.email,
+        role: req.user.role,
+    }, secret);
+
+    return res.json({ token: newToken });
+}, [authMiddleware]);
+```
+
+The frontend can call this endpoint periodically to keep the session alive without requiring re-login.
+
+---
+
+## 7. CSRF Protection
+
+Cross-Site Request Forgery attacks trick a user's browser into submitting a form to your server. The browser sends cookies automatically -- the attacker rides on the user's session.
+
+CSRF tokens stop this. Each form gets a unique token. When the form submits, the server checks the token. If it does not match, the request is rejected.
+
+### Template Integration
+
+Include a CSRF token in every form:
 
 ```html
 <form method="POST" action="/profile/update">
@@ -278,7 +341,13 @@ For form-based applications, include a CSRF token in every form:
 </form>
 ```
 
-Validate in the handler:
+<div v-pre>
+
+The `{{ form_token() }}` helper outputs a hidden input field with a cryptographic token.
+
+</div>
+
+### Validation in Handlers
 
 ```typescript
 Router.post("/profile/update", async (req, res) => {
@@ -286,13 +355,63 @@ Router.post("/profile/update", async (req, res) => {
         return res.status(403).json({ error: "Invalid form token" });
     }
 
+    // Token is valid, process the form
     return res.redirect("/profile");
 });
 ```
 
+### CSRF Middleware
+
+For automatic validation on all POST/PUT/DELETE requests, use the CSRF middleware:
+
+```typescript
+import { csrfMiddleware } from "tina4-nodejs";
+
+// Apply globally to all form-based routes
+Router.post("/profile/update", async (req, res) => {
+    // CSRF validation happens automatically
+    return res.redirect("/profile");
+}, [csrfMiddleware]);
+```
+
+### When CSRF is Not Needed
+
+API endpoints that use JWT tokens in the `Authorization` header do not need CSRF protection. CSRF exploits depend on cookies being sent automatically -- the `Authorization` header is not sent automatically. CSRF protection matters for form-based authentication with cookies.
+
 ---
 
-## 7. Exercise: Build Login, Register, and Profile
+## 8. Sessions and Authentication
+
+Sessions track state between requests. When a user logs in, the server creates a session and sends a session cookie. Subsequent requests include the cookie.
+
+```typescript
+Router.post("/login", async (req, res) => {
+    // After validating credentials:
+    req.session.userId = user.id;
+    req.session.role = user.role;
+
+    return res.redirect("/dashboard");
+});
+
+Router.get("/dashboard", async (req, res) => {
+    if (!req.session.userId) {
+        return res.redirect("/login");
+    }
+
+    return res.html("dashboard.html", {
+        userId: req.session.userId,
+        role: req.session.role,
+    });
+});
+```
+
+Sessions complement JWT tokens. Use JWT for stateless API authentication. Use sessions for traditional web applications with server-rendered pages.
+
+Chapter 9 covers sessions in detail.
+
+---
+
+## 9. Exercise: Build Login, Register, and Profile
 
 Build a complete authentication system with registration, login, profile viewing, and password changing.
 
@@ -308,7 +427,7 @@ Build a complete authentication system with registration, login, profile viewing
 
 ---
 
-## 8. Solution
+## 10. Solution
 
 Create `src/routes/auth.ts`:
 
@@ -459,7 +578,7 @@ Router.put("/api/profile/password", async (req, res) => {
 
 ---
 
-## 9. Gotchas
+## 11. Gotchas
 
 ### 1. Token Expiry Confusion
 

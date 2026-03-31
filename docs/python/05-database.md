@@ -2,11 +2,11 @@
 
 ## 1. From Lists to Real Data
 
-Every example so far stored data in Python lists. Restart the server. Data gone. A real application needs a database.
+Every example so far stored data in Python lists. Restart the server. Data gone. A real application demands persistence.
 
-Tina4 Python makes this painless. Set a `DATABASE_URL` in your `.env`. Create a `Database()` connection. Run SQL. No ORM required (Chapter 6 adds that). Write the SQL you already know.
+Tina4 Python makes database access straightforward. Set a `DATABASE_URL` in your `.env`. Create a `Database()` connection. Run SQL. No ORM required (Chapter 6 adds that). The SQL you already know carries over unchanged.
 
-Picture a notes application. Users create, edit, and delete notes. Those notes need to survive restarts, support searching, and handle concurrent users. That is what a database provides.
+Picture a notes application. Users create, edit, and delete notes. Those notes must survive restarts, support searching, and handle concurrent users. A database delivers all three.
 
 ---
 
@@ -20,7 +20,7 @@ Set your database connection in `.env`:
 DATABASE_URL=sqlite:///data/app.db
 ```
 
-That is the default -- a SQLite database stored in `data/`. SQLite comes with Python. No install required.
+That is the default -- a SQLite database stored in `data/`. SQLite ships with Python. No install required.
 
 Tina4 supports six database engines:
 
@@ -66,7 +66,7 @@ from tina4_python.database.connection import Database
 db = Database()
 ```
 
-That is it. `Database()` reads `DATABASE_URL` from your `.env` and connects. If the SQLite database file does not exist, it creates one.
+One line. `Database()` reads `DATABASE_URL` from your `.env` and connects. If the SQLite file does not exist, the adapter creates one.
 
 You can also pass a URL directly:
 
@@ -76,22 +76,22 @@ db = Database("sqlite:///data/test.db")
 
 ### Connection Pooling
 
-For applications that handle many concurrent requests, enable connection pooling by passing a `pool` argument:
+Applications that handle many concurrent requests benefit from connection pooling. Pass a `pool` argument:
 
 ```python
 db = Database("postgres://localhost/mydb", pool=5)  # 5 connections, round-robin
 ```
 
-The `pool` parameter controls how many database connections are maintained:
+The `pool` parameter controls how many database connections the pool maintains:
 
-- `pool=0` (the default) -- a single connection is used for all queries
-- `pool=N` (where N > 0) -- N connections are created and rotated round-robin across queries
+- `pool=0` (the default) -- a single connection serves all queries
+- `pool=N` (where N > 0) -- N connections rotate round-robin across queries
 
-Pooled connections are thread-safe. Each query is dispatched to the next available connection in the pool. This eliminates contention when multiple route handlers query the database simultaneously.
+Pooled connections are thread-safe. Each query dispatches to the next available connection. This eliminates contention when multiple route handlers query the database at the same time.
 
 ### Extra Driver Options via **kwargs
 
-Any additional keyword arguments passed to `Database()` are forwarded to the underlying driver's `connect()` call. This is useful for engine-specific options like character set or timeout:
+Any additional keyword arguments pass through to the underlying driver's `connect()` call. This suits engine-specific options:
 
 ```python
 db = Database("firebird://localhost:3050//data/legacy.fdb", charset="ISO8859_1")
@@ -99,15 +99,15 @@ db = Database("firebird://localhost:3050//data/legacy.fdb", charset="ISO8859_1")
 
 ### Firebird Dual-Driver Support
 
-The Firebird adapter tries `firebird-driver` (the modern package) first and falls back to the legacy `fdb` package if `firebird-driver` is not installed. Install whichever is available for your environment -- the adapter handles the difference internally.
+The Firebird adapter tries `firebird-driver` (the modern package) first and falls back to the legacy `fdb` package if `firebird-driver` is missing. Install whichever is available -- the adapter handles the difference internally.
 
 ### Lowercase Column Names
 
-Firebird returns column names in uppercase by default. Tina4 normalises them to lowercase automatically, so `result["first_name"]` works regardless of how the column was defined in the schema.
+Firebird returns column names in uppercase by default. Tina4 normalises them to lowercase, so `result["first_name"]` works regardless of how the column was defined in the schema.
 
 ### Firebird Migration Support
 
-As of 3.10.8, the migration runner handles Firebird correctly. It uses a generator (sequence) for auto-increment IDs instead of `AUTOINCREMENT`, and emits `VARCHAR(4096)` instead of `TEXT` (which Firebird does not support as a column type). If you are upgrading from an earlier version, no changes to existing migrations are needed -- the runner detects the engine automatically.
+As of 3.10.8, the migration runner handles Firebird correctly. It uses a generator (sequence) for auto-increment IDs instead of `AUTOINCREMENT`, and emits `VARCHAR(4096)` instead of `TEXT` (which Firebird does not support as a column type). No changes to existing migrations are needed -- the runner detects the engine on its own.
 
 ---
 
@@ -127,7 +127,7 @@ async def list_notes(request, response):
     return response.json({"notes": notes, "count": len(notes)})
 ```
 
-`fetch()` returns a list of dictionaries. Each dictionary represents a row:
+`fetch()` returns a `DatabaseResult` containing a list of dictionaries. Each dictionary represents one row:
 
 ```json
 {
@@ -166,7 +166,7 @@ for user in result:
 
 #### Index Access
 
-Access rows by index like a regular list:
+Access rows by index:
 
 ```python
 first_user = result[0]
@@ -188,11 +188,11 @@ result.to_paginate()          # {"data": [...], "total": 42, "page": 1, "per_pag
 result.to_paginate(page=2, per_page=10)  # custom page and page size
 ```
 
-`to_list()` returns the records as a plain list. `to_paginate(page=1, per_page=20)` is designed for building paginated API responses. It bundles the records with the total count, page, per_page, total_pages, has_next, and has_prev in a single dictionary.
+`to_list()` returns the records as a plain list. `to_paginate(page=1, per_page=20)` bundles the records with total count, page, per_page, total_pages, has_next, and has_prev in a single dictionary. It is built for paginated API responses.
 
 #### Schema Metadata with column_info()
 
-`column_info()` returns detailed metadata about the columns in the result set. The data is lazy-loaded -- it only queries the database schema when you call the method for the first time:
+`column_info()` returns detailed metadata about the columns in the result set. The data loads lazily -- it queries the database schema only when you call the method for the first time:
 
 ```python
 info = result.column_info()
@@ -215,7 +215,7 @@ Each column entry contains:
 | `nullable` | Whether the column allows `NULL` |
 | `primary_key` | Whether the column is part of the primary key |
 
-This is useful for building dynamic forms, generating documentation, or validating data before insert.
+This powers dynamic forms, documentation generation, and data validation before insert.
 
 ### fetch_one -- Get a Single Row
 
@@ -266,7 +266,7 @@ async def create_note(request, response):
 
 ## 5. Parameterised Queries
 
-Never concatenate user input into SQL strings. Parameterised queries are the wall between you and SQL injection:
+Never concatenate user input into SQL strings. Parameterised queries stand between you and SQL injection:
 
 ```python
 # WRONG -- SQL injection vulnerability
@@ -419,11 +419,105 @@ result = db.delete("notes", "id = ?", [1])
 
 Returns a `DatabaseResult` with `affected_rows`.
 
-These helpers eliminate boilerplate INSERT/UPDATE/DELETE SQL. For complex queries, `execute()` is always there.
+These helpers eliminate boilerplate INSERT/UPDATE/DELETE SQL. For complex queries, `execute()` is always available.
 
 ---
 
-## 9. Migrations
+## 9. Schema Inspection
+
+Tina4 exposes methods to inspect your database structure at runtime. The `Database` object delegates to the underlying adapter, so these work across all six engines.
+
+### get_tables()
+
+```python
+db = Database()
+tables = db.get_tables()
+```
+
+Returns a list of table names:
+
+```python
+["notes", "users", "tina4_migration"]
+```
+
+### get_columns()
+
+```python
+columns = db.get_columns("notes")
+```
+
+Returns column definitions as a list of dictionaries:
+
+```python
+[
+    {"name": "id", "type": "INTEGER", "nullable": False, "default": None, "primary_key": True},
+    {"name": "title", "type": "TEXT", "nullable": False, "default": None, "primary_key": False},
+    {"name": "content", "type": "TEXT", "nullable": True, "default": "''", "primary_key": False},
+    {"name": "created_at", "type": "TEXT", "nullable": True, "default": "CURRENT_TIMESTAMP", "primary_key": False}
+]
+```
+
+Each entry includes the column name, data type, whether it accepts NULL, its default value, and whether it belongs to the primary key.
+
+### table_exists()
+
+```python
+if db.table_exists("notes"):
+    # Table exists, safe to query
+    notes = db.fetch("SELECT * FROM notes")
+```
+
+Returns `True` if the table exists, `False` otherwise.
+
+### get_database_type()
+
+```python
+engine = db.get_database_type()
+# "sqlite", "postgresql", "mysql", "mssql", or "firebird"
+```
+
+Returns a lowercase string identifying the active database engine. This is useful when you need engine-specific SQL in a multi-database setup.
+
+### A Schema Info Endpoint
+
+Combine these methods to build a schema browser:
+
+```python
+from tina4_python.core.router import get
+from tina4_python.database.connection import Database
+
+@get("/api/schema")
+async def schema_info(request, response):
+    db = Database()
+    tables = db.get_tables()
+
+    schema = {}
+    for table in tables:
+        schema[table] = db.get_columns(table)
+
+    return response.json({"tables": schema})
+```
+
+```json
+{
+  "tables": {
+    "notes": [
+      {"name": "id", "type": "INTEGER", "nullable": false, "default": null, "primary_key": true},
+      {"name": "title", "type": "TEXT", "nullable": false, "default": null, "primary_key": false}
+    ],
+    "users": [
+      {"name": "id", "type": "INTEGER", "nullable": false, "default": null, "primary_key": true},
+      {"name": "email", "type": "TEXT", "nullable": false, "default": null, "primary_key": false}
+    ]
+  }
+}
+```
+
+Schema inspection powers admin dashboards, migration generators, and dynamic form builders. The database tells you its own structure -- no guesswork required.
+
+---
+
+## 10. Migrations
 
 Migrations are SQL files that version your database schema. Write them once. Apply them in order. Roll them back when needed.
 
@@ -436,7 +530,7 @@ Migration files live in a `migrations/` directory. Two naming patterns are suppo
 | Sequential | `000001_create_users.sql` |
 | Timestamp | `20260322160000_create_notes.sql` |
 
-Files are sorted alphabetically when they run. Pick one pattern and stick with it -- `000001_` sorts before `20260322_`, so mixing the two in one project leads to unexpected execution order.
+Files sort alphabetically when they run. Pick one pattern and stick with it -- `000001_` sorts before `20260322_`, so mixing them leads to unexpected execution order.
 
 ### Generating a Migration
 
@@ -451,7 +545,7 @@ migrations/000001_create_notes_table.sql
 migrations/000001_create_notes_table.down.sql
 ```
 
-The first is your "up" migration. The second is the matching "down" migration used for rollbacks.
+The first is your "up" migration. The second is the matching "down" migration for rollbacks.
 
 ### Writing the Up Migration
 
@@ -483,7 +577,7 @@ DROP INDEX IF EXISTS idx_notes_category;
 DROP TABLE IF EXISTS notes;
 ```
 
-Down migrations are optional. If you skip them, everything works until you try to roll back -- at which point Tina4 will fail with a clear error telling you the down file is missing.
+Down migrations are optional. Everything works without them -- until you try to roll back. At that point Tina4 fails with a clear error about the missing file.
 
 The `.down.sql` file must share the exact same base name as the up file. If your up file is `000001_create_notes_table.sql`, the down file must be `000001_create_notes_table.down.sql`.
 
@@ -495,7 +589,7 @@ tina4 migrate
 tina4python migrate
 ```
 
-Tina4 finds all pending `.sql` files in `migrations/`, sorts them alphabetically, and executes them in order. Each run is assigned a **batch number**. The batch groups every migration applied in that single run.
+Tina4 finds all pending `.sql` files in `migrations/`, sorts them alphabetically, and executes them in order. Each run receives a **batch number**. The batch groups every migration applied in that single run.
 
 ### Checking Status
 
@@ -503,7 +597,7 @@ Tina4 finds all pending `.sql` files in `migrations/`, sorts them alphabetically
 tina4python migrate:status
 ```
 
-This shows which migrations have been applied and which are still pending. Useful before deploying to see what will run.
+This shows which migrations have been applied and which are still pending. Run it before deploying to see what will execute.
 
 ### Rolling Back
 
@@ -526,7 +620,7 @@ Tina4 creates a `tina4_migration` table in your database to track what has run:
 | `executed_at` | When it ran |
 | `passed` | `1` if it succeeded, `0` if it failed |
 
-Failed migrations are recorded with `passed = 0`. On the next `tina4 migrate` run, they will be retried automatically.
+Failed migrations are recorded with `passed = 0`. On the next `tina4 migrate` run, the runner retries them.
 
 ### Advanced SQL Splitting
 
@@ -537,7 +631,7 @@ Tina4's migration runner is not a naive line splitter. It correctly handles:
 - **`/* */` block comments** -- skipped during splitting
 - **`--` line comments** -- skipped during splitting
 
-This means you can write PostgreSQL stored procedures in your migration files without worrying about the runner choking on internal semicolons.
+Write PostgreSQL stored procedures in your migration files without worrying about the runner choking on internal semicolons.
 
 ### Migration Best Practices
 
@@ -549,18 +643,18 @@ This means you can write PostgreSQL stored procedures in your migration files wi
 
 ---
 
-## 10. Query Caching
+## 11. Query Caching
 
-Expensive queries that return the same result on every call deserve caching. Tina4 builds it in. Enable query caching via environment variables in your `.env`:
+Expensive queries that return the same result on every call deserve caching. Tina4 builds caching in. Enable it via environment variables in your `.env`:
 
 ```dotenv
 TINA4_DB_CACHE=true
 TINA4_DB_CACHE_TTL=30
 ```
 
-When caching is enabled, all `fetch()` and `fetch_one()` calls are automatically cached. The `TINA4_DB_CACHE_TTL` value (in seconds) controls how long results are kept. Write operations (`execute()`, `insert()`, `update()`, `delete()`) automatically invalidate the entire cache.
+When caching is active, all `fetch()` and `fetch_one()` calls cache their results. The `TINA4_DB_CACHE_TTL` value (in seconds) controls how long results stay cached. Write operations (`execute()`, `insert()`, `update()`, `delete()`) invalidate the entire cache.
 
-To manually clear the cache (e.g., after external data changes):
+To clear the cache manually (for example, after external data changes):
 
 ```python
 @post("/api/notes")
@@ -578,11 +672,11 @@ async def create_note(request, response):
     return response.json({"note": note}, 201)
 ```
 
-You can check cache performance with `db.cache_stats()` which returns hits, misses, size, and TTL.
+Check cache performance with `db.cache_stats()`. It returns hits, misses, size, and TTL.
 
 ---
 
-## 11. Exercise: Build a Notes App API
+## 12. Exercise: Build a Notes App API
 
 Build a complete notes application API with database persistence.
 
@@ -636,7 +730,7 @@ curl -X DELETE http://localhost:7145/api/notes/2
 
 ---
 
-## 12. Solution
+## 13. Solution
 
 ### Migration
 
@@ -832,7 +926,7 @@ async def delete_note(request, response):
 
 ---
 
-## 13. Seeder -- Generating Test Data
+## 14. Seeder -- Generating Test Data
 
 Testing with an empty database tells you nothing. Testing with hand-typed rows is slow and brittle. The `FakeData` class generates realistic test data, and `seed_table()` inserts it in bulk.
 
@@ -860,7 +954,7 @@ Every method draws from built-in word banks -- no network calls, no external pac
 
 ### Deterministic Output
 
-Pass a seed to get reproducible results. The same seed always produces the same sequence:
+Pass a seed to get reproducible results. The same seed produces the same sequence every time:
 
 ```python
 fake = FakeData(seed=42)
@@ -868,7 +962,7 @@ fake.name()   # Always "Wendy White" with seed 42
 fake.email()  # Always the same email with seed 42
 ```
 
-This matters for tests. Deterministic data means deterministic assertions.
+Deterministic data means deterministic assertions. This matters for tests.
 
 ### Seeding a Table
 
@@ -889,7 +983,7 @@ seed_table(db, "users", 100, {
 })
 ```
 
-This inserts 100 rows into the `users` table. Each row calls `fake.name()`, `fake.email()`, and so on to generate its values. The function commits automatically after all rows are inserted.
+This inserts 100 rows into the `users` table. Each row calls `fake.name()`, `fake.email()`, and so on to generate its values. The function commits after all rows are inserted.
 
 ### Overrides
 
@@ -919,15 +1013,15 @@ Every row gets `role = "member"` and `active = 1`. The field map generates the r
 
 ---
 
-## 14. Gotchas
+## 15. Gotchas
 
 ### 1. SQLite boolean quirk
 
 **Problem:** Boolean values come back as `0` and `1` instead of `false` and `true` in JSON.
 
-**Cause:** SQLite does not have a native boolean type. It stores booleans as integers.
+**Cause:** SQLite has no native boolean type. It stores booleans as integers.
 
-**Fix:** This is expected behavior. In your route handler, you can convert them: `note["pinned"] = bool(note["pinned"])`. Or handle it in the frontend. The ORM (Chapter 6) does this conversion automatically with `BooleanField`.
+**Fix:** This is expected. In your route handler, convert them: `note["pinned"] = bool(note["pinned"])`. Or handle it in the frontend. The ORM (Chapter 6) does this conversion with `BooleanField`.
 
 ### 2. last_insert_rowid() is SQLite-specific
 
@@ -935,31 +1029,31 @@ Every row gets `role = "member"` and `active = 1`. The field map generates the r
 
 **Cause:** `last_insert_rowid()` is a SQLite function. Other databases use different mechanisms.
 
-**Fix:** Use `db.insert()` which returns the last inserted ID regardless of database engine. Or use database-specific syntax: PostgreSQL uses `RETURNING id` in the INSERT statement, MySQL uses `LAST_INSERT_ID()`.
+**Fix:** Use `db.insert()` which returns the last inserted ID regardless of engine. Or use database-specific syntax: PostgreSQL uses `RETURNING id` in the INSERT statement, MySQL uses `LAST_INSERT_ID()`.
 
 ### 3. String vs integer comparison
 
 **Problem:** `WHERE id = ?` does not find the row even though the ID exists.
 
-**Cause:** Path parameters come as strings by default. If `id` is `"5"` (string) and the column is an integer, some databases handle this differently.
+**Cause:** Path parameters arrive as strings by default. If `id` is `"5"` (string) and the column is an integer, some databases handle this differently.
 
-**Fix:** Use typed path parameters (`{id:int}`) so the value is already an integer, or explicitly cast: `[int(request.params["id"])]`.
+**Fix:** Use typed path parameters (`{id:int}`) so the value is already an integer, or cast explicitly: `[int(request.params["id"])]`.
 
 ### 4. Connection not closed
 
 **Problem:** After many requests, the application runs out of database connections.
 
-**Cause:** You are creating `Database()` instances without them being properly cleaned up.
+**Cause:** You create `Database()` instances without them being cleaned up.
 
-**Fix:** Tina4's `Database()` manages connection pooling internally. In most cases, creating `Database()` in each handler is fine because it reuses connections from the pool. If you are seeing connection issues, check that you are not holding transactions open for too long.
+**Fix:** Tina4's `Database()` manages connection pooling internally. Creating `Database()` in each handler is fine because it reuses connections from the pool. If you see connection issues, check that you are not holding transactions open too long.
 
 ### 5. Migration order matters
 
 **Problem:** A migration fails because it references a table that does not exist yet.
 
-**Cause:** Migrations run in alphabetical order. If migration B depends on the table created by migration A, migration A must sort earlier alphabetically.
+**Cause:** Migrations run in alphabetical order. If migration B depends on the table created by migration A, migration A must sort earlier.
 
-**Fix:** Use `tina4 generate migration` which auto-generates sequential numbers. Do not mix `000001_` and `YYYYMMDDHHMMSS_` patterns in the same project -- `000001_` sorts before `20240315_`, which will scramble your intended order.
+**Fix:** Use `tina4 generate migration` which auto-generates sequential numbers. Do not mix `000001_` and `YYYYMMDDHHMMSS_` patterns in the same project -- `000001_` sorts before `20240315_`, which scrambles your intended order.
 
 ### 6. Missing down migration
 
@@ -967,15 +1061,15 @@ Every row gets `role = "member"` and `active = 1`. The field map generates the r
 
 **Cause:** The `.down.sql` file does not exist for the migration being rolled back.
 
-**Fix:** Create a `.down.sql` file with the exact same base name as the up migration. If your up file is `000001_create_users.sql`, the down file must be `000001_create_users.down.sql`. It should undo exactly what the up migration did. For `CREATE TABLE`, the down is `DROP TABLE IF EXISTS`. For `ALTER TABLE ADD COLUMN`, the down is `ALTER TABLE DROP COLUMN` (though SQLite does not support dropping columns -- in that case, you may need to recreate the table).
+**Fix:** Create a `.down.sql` file with the exact same base name as the up migration. If your up file is `000001_create_users.sql`, the down file must be `000001_create_users.down.sql`. It should undo exactly what the up migration did. For `CREATE TABLE`, the down is `DROP TABLE IF EXISTS`. For `ALTER TABLE ADD COLUMN`, the down is `ALTER TABLE DROP COLUMN` (though SQLite does not support dropping columns -- in that case, recreate the table).
 
 ### 7. Failed migrations blocking progress
 
-**Problem:** A migration failed and now `tina4 migrate` keeps skipping it or retrying it.
+**Problem:** A migration failed and now `tina4 migrate` keeps retrying it.
 
-**Cause:** Failed migrations are recorded in the `tina4_migration` table with `passed = 0`. Tina4 will retry them on the next `migrate` run.
+**Cause:** Failed migrations are recorded in the `tina4_migration` table with `passed = 0`. Tina4 retries them on the next `migrate` run.
 
-**Fix:** Fix the SQL in the migration file, then run `tina4 migrate` again. The failed migration will be retried. If you need to skip it entirely, you can manually update its `passed` column to `1` in the `tina4_migration` table -- but fix the root cause first.
+**Fix:** Fix the SQL in the migration file, then run `tina4 migrate` again. The failed migration retries. If you need to skip it entirely, update its `passed` column to `1` in the `tina4_migration` table manually -- but fix the root cause first.
 
 ### 8. SQL injection through string formatting
 
@@ -983,4 +1077,4 @@ Every row gets `role = "member"` and `active = 1`. The field map generates the r
 
 **Cause:** You used f-strings or string concatenation to build SQL queries with user input: `f"WHERE name = '{name}'"`.
 
-**Fix:** Always use parameterised queries: `"WHERE name = ?", [name]`. This is the single most important security practice for database code. Tina4 will handle escaping and quoting for you.
+**Fix:** Use parameterised queries: `"WHERE name = ?", [name]`. This is the single most important security practice for database code. Tina4 handles escaping and quoting for you.

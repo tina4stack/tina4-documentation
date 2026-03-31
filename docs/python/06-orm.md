@@ -2,9 +2,9 @@
 
 ## 1. From SQL to Objects
 
-The last chapter was raw SQL. It works. It also gets repetitive. Every insert: an INSERT statement. Every update: an UPDATE. Every fetch: column names mapped to dictionary keys. Over and over.
+The last chapter was raw SQL. It works. It also gets repetitive. Every insert demands an INSERT statement. Every update demands an UPDATE. Every fetch maps column names to dictionary keys. Over and over.
 
-Tina4's ORM turns database rows into Python objects. Define a model class with fields. The ORM writes the SQL. It remains SQL-first -- you can drop to raw SQL any time -- but for the 90% case of CRUD operations, the ORM handles the grunt work.
+Tina4's ORM turns database rows into Python objects. Define a model class with fields. The ORM writes the SQL. It stays SQL-first -- you can drop to raw SQL at any moment -- but for the 90% case of CRUD operations, the ORM handles the grunt work.
 
 Picture a blog. Authors, posts, comments. Authors own many posts. Posts own many comments. Comments belong to posts. Modeling these relationships with raw SQL means JOINs and manual foreign key management. The ORM makes this declarative.
 
@@ -81,7 +81,7 @@ class User(ORM):
     table_name = "user_accounts"
     primary_key = "id"
     field_mapping = {
-        "first_name": "fname",      # Python attr → DB column
+        "first_name": "fname",      # Python attr -> DB column
         "last_name": "lname",
         "email_address": "email",
     }
@@ -92,11 +92,11 @@ class User(ORM):
     email_address = StringField(required=True)
 ```
 
-With this mapping, `user.first_name` reads from and writes to the `fname` column in the database. The ORM handles the conversion in both directions -- on `find()`, `save()`, `select()`, and `to_dict()`. This is useful when working with legacy databases or third-party schemas where you cannot rename the columns.
+With this mapping, `user.first_name` reads from and writes to the `fname` column. The ORM handles the conversion in both directions -- on `find()`, `save()`, `select()`, and `to_dict()`. This is useful with legacy databases or third-party schemas where you cannot rename the columns.
 
 ### auto_map and Case Conversion Utilities
 
-The `auto_map` flag exists on the ORM base class for cross-language parity with the PHP and Node.js versions. In Python it is a no-op because Python convention already uses `snake_case`, which typically matches database column names.
+The `auto_map` flag exists on the ORM base class for cross-language parity with the PHP and Node.js versions. In Python it is a no-op because Python convention already uses `snake_case`, which matches database column names.
 
 For cases where you need to convert between naming conventions (for example, when serialising to a camelCase JSON API), two utility functions are available:
 
@@ -117,7 +117,7 @@ You can create the database table directly from your model definition:
 Note.create_table()
 ```
 
-This generates and runs the CREATE TABLE SQL based on your field definitions. Good for development and testing. For production, use migrations (Chapter 5) for version-controlled schema changes.
+This generates and runs the CREATE TABLE SQL based on your field definitions. It is good for development and testing. For production, use migrations (Chapter 5) for version-controlled schema changes.
 
 ```bash
 tina4 shell
@@ -263,7 +263,7 @@ data = note.to_dict()
 # {"id": 1, "title": "Shopping List", "content": "Milk, eggs", "category": "personal", "pinned": False, "created_at": "2026-03-22 14:30:00", "updated_at": "2026-03-22 14:30:00"}
 ```
 
-The `include` parameter is used to include relationship data (see Eager Loading below):
+The `include` parameter adds relationship data to the output (see Eager Loading below):
 
 ```python
 # Include relationships in the dict
@@ -397,9 +397,13 @@ async def get_post(id, request, response):
 }
 ```
 
-### Eager Loading with include
+---
 
-To avoid N+1 queries, use `include` to eager-load relationships:
+## 7. Eager Loading
+
+Calling relationship methods inside a loop creates the N+1 problem. Load 10 authors. Call `has_many(BlogPost, "author_id")` for each one. That fires 11 queries -- 1 for authors, 10 for posts. The page drags.
+
+The `include` parameter on `select()`, `where()`, `all()`, and `find()` solves this. It eager-loads relationships in bulk:
 
 ```python
 @get("/api/authors")
@@ -418,16 +422,63 @@ async def list_authors(request, response):
     return response.json({"authors": data})
 ```
 
-Without eager loading, 10 authors and their posts cost 11 queries (1 for authors + 10 for posts). With eager loading: 2 queries. That is the difference between a fast page and a slow one.
+Without eager loading, 10 authors and their posts cost 11 queries. With eager loading: 2 queries. That is the difference between a fast page and a slow one.
+
+### Declarative Relationships with Descriptors
+
+For models where you define relationships declaratively using `HasMany`, `HasOne`, or `BelongsTo` descriptors in the ORM fields module, eager loading works through the `include` parameter on `find()`, `all()`, `where()`, and `select()`. Pass a list of relationship names:
+
+```python
+# Eager load posts when fetching all authors
+authors, count = Author.all(include=["posts"])
+
+# Eager load author and comments when finding a single post
+post = BlogPost.find(1, include=["author", "comments"])
+```
+
+### Nested Eager Loading
+
+Dot notation loads multiple levels deep:
+
+```python
+# Load authors, their posts, and each post's comments
+authors, count = Author.all(include=["posts", "posts.comments"])
+```
+
+Authors, their posts, and each post's comments. Three queries total instead of hundreds.
+
+### to_dict with Nested Includes
+
+When eager loading is active, `to_dict(include=...)` embeds the related data:
+
+```python
+post = BlogPost.find(1, include=["author", "comments"])
+data = post.to_dict(include=["author", "comments"])
+```
+
+```json
+{
+  "id": 1,
+  "title": "Getting Started with Tina4",
+  "author": {
+    "id": 1,
+    "name": "Alice",
+    "email": "alice@example.com"
+  },
+  "comments": [
+    {"id": 1, "body": "Great post!", "author_name": "Bob"}
+  ]
+}
+```
 
 ---
 
-## 7. Soft Delete
+## 8. Soft Delete
 
-Sometimes a record needs to disappear from queries without leaving the database. Soft delete handles this:
+Sometimes a record needs to disappear from queries without leaving the database. Soft delete handles this. The row stays. A timestamp marks it as deleted. Queries skip it.
 
 ```python
-from tina4_python.orm import ORM, IntegerField, StringField, DateTimeField
+from tina4_python.orm import ORM, IntegerField, StringField, BooleanField, DateTimeField
 
 class Task(ORM):
     table_name = "tasks"
@@ -440,31 +491,153 @@ class Task(ORM):
     created_at = DateTimeField(auto_now_add=True)
 ```
 
-When `soft_delete = True`:
+When `soft_delete = True`, the ORM changes its behaviour:
 
-- `task.delete()` sets `deleted_at` to the current timestamp instead of running a DELETE query
-- `Task.select()` automatically filters out soft-deleted records
+- `task.delete()` sets `deleted_at` to the current UTC timestamp instead of running a DELETE query
+- `Task.all()`, `Task.where()`, and `Task.find()` filter out soft-deleted records
 - `task.restore()` clears `deleted_at` and makes the record visible again
-- `task.force_delete()` permanently removes the record
-- `Task.select(with_trashed=True)` includes soft-deleted records
+- `task.force_delete()` permanently removes the row from the database
+- `Task.with_trashed()` includes soft-deleted records in query results
+
+### Deleting and Restoring
 
 ```python
-# Soft delete
-task.delete()  # Sets deleted_at, does not remove the row
+# Soft delete -- sets deleted_at, row stays in the database
+task = Task.find(1)
+task.delete()
 
-# Restore
-task.restore()  # Clears deleted_at
+# Restore -- clears deleted_at, record is visible again
+task.restore()
 
-# Permanently delete
-task.force_delete()  # Actually removes the row
+# Permanently delete -- removes the row, no recovery possible
+task.force_delete()
+```
 
-# Query including soft-deleted
-all_tasks = Task.select(with_trashed=True)
+`restore()` is the inverse of `delete()`. It sets `deleted_at` back to `None` and commits the change. The record reappears in all standard queries.
+
+### Including Soft-Deleted Records
+
+Standard queries (`all()`, `where()`, `find()`) exclude soft-deleted records. When you need to see everything -- for admin dashboards, audit logs, or data recovery -- use `with_trashed()`:
+
+```python
+# All tasks, including soft-deleted ones
+all_tasks, count = Task.with_trashed()
+
+# Soft-deleted tasks matching a condition
+deleted_tasks, count = Task.with_trashed("completed = ?", [1])
+```
+
+`with_trashed()` accepts the same filter parameters as `where()`. The only difference: it ignores the `deleted_at IS NULL` filter that standard queries apply.
+
+### Counting with Soft Delete
+
+The `count()` class method respects soft delete. It only counts non-deleted records:
+
+```python
+active_count = Task.count()
+active_work = Task.count("category = ?", ["work"])
+```
+
+### When to Use Soft Delete
+
+Soft delete suits data that users might want to recover -- emails, documents, user accounts. It also serves audit requirements where regulations demand retention. For temporary data (sessions, cache entries, logs), hard delete keeps the table lean.
+
+---
+
+## 9. Auto-CRUD
+
+Writing the same five REST endpoints for every model gets tedious. Auto-CRUD generates them from your model class. Define the model. Register it. Five routes appear.
+
+### Registering a Model
+
+```python
+from tina4_python.crud import AutoCrud
+from src.orm.note import Note
+
+AutoCrud.register(Note)
+```
+
+That single call registers five routes:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/notes` | List all with pagination (`limit`, `skip` params) |
+| `GET` | `/api/notes/{id}` | Get one by primary key |
+| `POST` | `/api/notes` | Create a new record |
+| `PUT` | `/api/notes/{id}` | Update a record |
+| `DELETE` | `/api/notes/{id}` | Delete a record |
+
+The endpoint prefix derives from the table name. The `notes` table becomes `/api/notes`. Pass a custom prefix to change it:
+
+```python
+AutoCrud.register(Note, prefix="/api/v2")
+# Routes: /api/v2/notes, /api/v2/notes/{id}, etc.
+```
+
+### Auto-Discovering Models
+
+Rather than registering each model by hand, point `AutoCrud.discover()` at your models directory. It scans every `.py` file, finds ORM subclasses, and registers them all:
+
+```python
+from tina4_python.crud import AutoCrud
+
+AutoCrud.discover("src/orm", prefix="/api")
+```
+
+Every ORM model in `src/orm/` gets five REST endpoints. No route files needed.
+
+### What the Generated Routes Do
+
+**GET /api/notes** returns paginated results:
+
+```bash
+curl "http://localhost:7145/api/notes?limit=10&skip=0"
+```
+
+```json
+{
+  "data": [
+    {"id": 1, "title": "Shopping List", "content": "Milk, eggs", "category": "personal", "pinned": false},
+    {"id": 2, "title": "Sprint Plan", "content": "Review backlog", "category": "work", "pinned": true}
+  ],
+  "total": 2,
+  "limit": 10,
+  "skip": 0
+}
+```
+
+**POST /api/notes** validates input before saving:
+
+```bash
+curl -X POST http://localhost:7145/api/notes \
+  -H "Content-Type: application/json" \
+  -d '{"title": "New Note", "content": "Created via auto-CRUD"}'
+```
+
+If validation fails (for example, a required field is missing), the endpoint returns a 400 with error details:
+
+```json
+{"error": "Validation failed", "detail": ["title: This field is required"]}
+```
+
+**DELETE /api/notes/1** respects soft delete. If the model has `soft_delete = True`, the record is marked deleted instead of removed.
+
+### Custom Routes Alongside Auto-CRUD
+
+Custom routes defined in `src/routes/` load before auto-CRUD routes. They take precedence. If you need special logic for one endpoint (custom validation, side effects, complex queries), define that route manually. Auto-CRUD handles the rest.
+
+### Introspection
+
+Check which models are registered:
+
+```python
+registered = AutoCrud.models()
+# {"notes": <class 'Note'>, "users": <class 'User'>}
 ```
 
 ---
 
-## 8. Scopes
+## 10. Scopes
 
 Scopes are reusable query filters baked into the model:
 
@@ -508,9 +681,11 @@ async def recent_posts(request, response):
     return response.json({"posts": [p.to_dict() for p in posts]})
 ```
 
+Scopes keep query logic in the model where it belongs. Route handlers stay thin.
+
 ---
 
-## 9. Input Validation
+## 11. Input Validation
 
 Field definitions carry validation rules. Call `validate()` before `save()` and the ORM checks every constraint:
 
@@ -559,7 +734,7 @@ If validation fails, `validate()` returns a list of error messages:
 
 ---
 
-## 10. Exercise: Build a Blog with Relationships
+## 12. Exercise: Build a Blog with Relationships
 
 Build a blog API with authors, posts, and comments.
 
@@ -586,7 +761,7 @@ Build a blog API with authors, posts, and comments.
 
 ---
 
-## 11. Solution
+## 13. Solution
 
 Create `src/orm/author.py`:
 
@@ -759,23 +934,23 @@ async def add_comment(id, request, response):
 
 ---
 
-## 12. Gotchas
+## 14. Gotchas
 
 ### 1. Forgetting to call save()
 
 **Problem:** You set properties on a model but the database does not change.
 
-**Cause:** Setting `note.title = "New Title"` only changes the Python object. The database is not updated until you call `note.save()`.
+**Cause:** Setting `note.title = "New Title"` only changes the Python object. The database remains unchanged until you call `note.save()`.
 
-**Fix:** Always call `save()` after modifying properties.
+**Fix:** Call `save()` after modifying properties.
 
 ### 2. find() returns None
 
 **Problem:** You call `Note.find(id)` but get `None` instead of a note object.
 
-**Cause:** `find()` returns `None` when no row matches the given primary key.
+**Cause:** `find()` returns `None` when no row matches the given primary key. If soft delete is enabled, `find()` also excludes soft-deleted records.
 
-**Fix:** Always check for `None` after `find()`: `if note is None: return 404`. Use `find_or_fail()` if you want a `ValueError` raised instead.
+**Fix:** Check for `None` after `find()`: `if note is None: return 404`. Use `find_or_fail()` if you want a `ValueError` raised instead.
 
 ### 3. Circular imports with relationships
 
@@ -797,30 +972,48 @@ async def add_comment(id, request, response):
 
 **Problem:** You call `save()` without calling `validate()` first, and invalid data gets into the database.
 
-**Cause:** `save()` does not automatically validate. This is by design -- sometimes you need to save partial data or bypass validation for bulk operations.
+**Cause:** `save()` does not validate. This is by design -- sometimes you need to save partial data or bypass validation for bulk operations.
 
-**Fix:** Always call `errors = model.validate()` before `save()` in your route handlers. Or create a helper method that validates and saves in one step.
+**Fix:** Call `errors = model.validate()` before `save()` in your route handlers. Or create a helper method that validates and saves in one step.
 
 ### 6. Foreign key not enforced
 
 **Problem:** You save a post with `author_id = 999` and it succeeds, even though no author with ID 999 exists.
 
-**Cause:** SQLite does not enforce foreign key constraints by default. The `ForeignKeyField` in the ORM defines the relationship for Tina4's relationship methods, but the database itself may not enforce it.
+**Cause:** SQLite does not enforce foreign key constraints by default. The `ForeignKeyField` in the ORM defines the relationship for Tina4's methods, but the database itself may not enforce it.
 
 **Fix:** Enable SQLite foreign keys with `PRAGMA foreign_keys = ON;` in a migration, or validate the foreign key in your route handler before saving.
 
 ### 7. N+1 query problem
 
-**Problem:** Listing 100 authors with their posts runs 101 queries (1 for authors + 100 for posts), making the page slow.
+**Problem:** Listing 100 authors with their posts runs 101 queries (1 for authors + 100 for posts), and the page loads slowly.
 
-**Cause:** You are calling `author.has_many(BlogPost, "author_id")` inside a loop for each author.
+**Cause:** You call `author.has_many(BlogPost, "author_id")` inside a loop for each author.
 
-**Fix:** Use eager loading with the `include` parameter on `select()`, or fetch all posts in a single query and group them manually:
+**Fix:** Use eager loading with the `include` parameter on `all()`, `where()`, or `select()`. Or fetch all posts in a single query and group them manually:
 
 ```python
-authors = Author.select()
-all_posts = BlogPost.select("author_id IN (" + ",".join(str(a.id) for a in authors) + ")")
+authors, count = Author.all()
+all_posts, _ = BlogPost.select(
+    "SELECT * FROM posts WHERE author_id IN (" + ",".join(str(a.id) for a in authors) + ")"
+)
 posts_by_author = {}
 for post in all_posts:
     posts_by_author.setdefault(post.author_id, []).append(post)
 ```
+
+### 8. Auto-CRUD endpoint conflicts
+
+**Problem:** Custom route at `/api/notes/{id}` stops working after registering Auto-CRUD for the Note model.
+
+**Cause:** Both routes match the same path. The first registered route wins.
+
+**Fix:** Custom routes in `src/routes/` load before Auto-CRUD routes. They take precedence. If you want different behaviour, use a different path for the custom route.
+
+### 9. Soft-deleted records appearing in find()
+
+**Problem:** You soft-deleted a record, but `Model.find(id)` still returns it.
+
+**Cause:** `find()` respects soft delete. If the record appears, check that `soft_delete = True` is set on the model class and that the model has a `deleted_at` field.
+
+**Fix:** Verify both the `soft_delete = True` flag and the `deleted_at = DateTimeField()` field exist on the model. Without both, soft delete is inactive.

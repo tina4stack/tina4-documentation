@@ -2,11 +2,11 @@
 
 ## 1. Every App Sends Email
 
-Your SaaS app needs signup confirmations. Password resets. Weekly digest emails. Attachments, HTML templates, reliable delivery.
+Your SaaS app needs signup confirmations. Password resets. Weekly digests. Attachments. HTML templates. Reliable delivery.
 
-Email is plumbing. Every application needs it. Nobody enjoys building it. SMTP configuration. Plain text fallbacks. Attachment encoding. Connection timeouts. Bounce handling. The details stack up fast.
+Email is plumbing. Every application needs it. Nobody wants to build it. SMTP configuration. Plain text fallbacks. Attachment encoding. Connection timeouts. Bounce handling. The details pile up.
 
-Tina4's `Messenger` class handles all of it. Configure via `.env`. Create an instance. Send. In development mode, emails are intercepted and shown in the dev dashboard -- no real SMTP server needed. No polluted inboxes.
+Tina4's `Messenger` class handles all of it. Configure in `.env`. Create an instance. Send. In development mode, emails land in the dev dashboard -- not in real inboxes. No accidents.
 
 ---
 
@@ -72,7 +72,7 @@ TINA4_MAIL_SMTP_ENCRYPTION=tls
 
 ## 3. Constructor Override Pattern
 
-Different purposes, different accounts. Transactional emails from one sender. Marketing from another. Override the configuration in the constructor:
+Different purposes need different accounts. Transactional emails from one sender. Marketing from another. Override the configuration in the constructor:
 
 ```php
 <?php
@@ -280,7 +280,42 @@ $result = $mailer->send(
 
 ---
 
-## 8. Reading Inbox via IMAP
+## 8. Custom Headers
+
+Add custom headers to outgoing emails with `addHeader()`:
+
+```php
+<?php
+use Tina4\Messenger;
+
+$mailer = new Messenger();
+
+$mailer->addHeader("X-Priority", "1");
+$mailer->addHeader("X-Mailer", "Tina4 Messenger");
+$mailer->addHeader("List-Unsubscribe", "<https://mystore.com/unsubscribe?token=abc123>");
+
+$result = $mailer->send(
+    "alice@example.com",
+    "Important Update",
+    "<p>Your account requires attention.</p>"
+);
+```
+
+Headers persist for the lifetime of the `Messenger` instance. Create a fresh instance if you need different headers for the next email.
+
+Common custom headers:
+
+| Header | Purpose |
+|--------|---------|
+| `X-Priority` | `1` (high), `3` (normal), `5` (low) |
+| `X-Mailer` | Identifies the sending application |
+| `List-Unsubscribe` | One-click unsubscribe link (required by some providers) |
+| `X-Entity-Ref-ID` | Prevents email threading in some clients |
+| `Precedence` | `bulk` for mass emails, `list` for mailing lists |
+
+---
+
+## 9. Reading Inbox via IMAP
 
 Tina4's Messenger reads emails via IMAP:
 
@@ -371,9 +406,74 @@ Router::get("/api/inbox/{id}", function ($request, $response) {
 });
 ```
 
+### Searching Emails
+
+Search the inbox with IMAP search criteria:
+
+```php
+$mailer = new Messenger();
+
+// Search by subject
+$results = $mailer->searchInbox("SUBJECT \"invoice\"");
+
+// Search by sender
+$results = $mailer->searchInbox("FROM \"alice@example.com\"");
+
+// Search by date range
+$results = $mailer->searchInbox("SINCE \"22-Mar-2026\" BEFORE \"29-Mar-2026\"");
+
+// Unread messages from a specific sender
+$results = $mailer->searchInbox("UNSEEN FROM \"support@example.com\"");
+```
+
+The search string follows IMAP search syntax. Common operators: `FROM`, `TO`, `SUBJECT`, `BODY`, `SINCE`, `BEFORE`, `SEEN`, `UNSEEN`.
+
+### Marking Messages
+
+```php
+$mailer = new Messenger();
+
+// Mark as read
+$mailer->markRead("12345");
+
+// Mark as unread
+$mailer->markUnread("12345");
+```
+
+Pass the message ID returned by `getInbox()` or `searchInbox()`.
+
+### Deleting Messages
+
+```php
+$mailer = new Messenger();
+$mailer->deleteMessage("12345");
+```
+
+The message moves to the Trash folder (or is marked for deletion, depending on the IMAP server).
+
+### Listing Folders
+
+```php
+$mailer = new Messenger();
+$folders = $mailer->getFolders();
+// ["INBOX", "Sent", "Drafts", "Trash", "Spam", "Archive"]
+```
+
+### Reading from a Specific Folder
+
+```php
+$mailer = new Messenger();
+$sentEmails = $mailer->getInbox([
+    "folder" => "Sent",
+    "limit" => 10
+]);
+```
+
+Pass the `folder` option to read from any IMAP folder. The default is `"INBOX"`.
+
 ---
 
-## 9. Dev Mode: Email Interception
+## 10. Dev Mode: Email Interception
 
 When `TINA4_DEBUG=true`, all outgoing emails are intercepted. They appear in the dev dashboard instead of reaching real recipients. No accidents during development.
 
@@ -399,9 +499,9 @@ Emails now reach real recipients even when `TINA4_DEBUG=true`. Use with caution.
 
 ---
 
-## 10. Using Templates for Email Content
+## 11. Using Templates for Email Content
 
-Hardcoding HTML in PHP strings is fragile and hard to maintain. Use Frond templates for email content.
+Hardcoding HTML in PHP strings is fragile and hard to read. Use Frond templates for email content.
 
 Create `src/templates/emails/welcome.html`:
 
@@ -522,9 +622,9 @@ With `TINA4_DEBUG=true`, the email appears in the dev dashboard. Inspect the ren
 
 ---
 
-## 11. Sending Email via Queues
+## 12. Sending Email via Queues
 
-In production, never send email inside a route handler. The SMTP handshake takes time. The user waits. Use the queue system from Chapter 11:
+In production, do not send email inside a route handler. The SMTP handshake takes time. The user waits. Push email work to the queue system (Chapter 11):
 
 ```php
 <?php
@@ -583,7 +683,7 @@ The route handler returns in under 50 milliseconds. The queue worker sends the e
 
 ---
 
-## 12. Exercise: Build a Contact Form with Email Notification
+## 13. Exercise: Build a Contact Form with Email Notification
 
 Build a contact form that sends an email notification when submitted.
 
@@ -617,7 +717,7 @@ curl -X POST http://localhost:7146/contact \
 
 ---
 
-## 13. Solution
+## 14. Solution
 
 Create `src/templates/emails/contact-notification.html`:
 
@@ -812,7 +912,7 @@ The HTML response includes the success flash message.
 
 ---
 
-## 14. Gotchas
+## 15. Gotchas
 
 ### 1. Gmail Blocks "Less Secure" Apps
 

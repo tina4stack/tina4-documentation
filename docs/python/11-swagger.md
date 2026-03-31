@@ -1,36 +1,81 @@
 # Chapter 10: Swagger / OpenAPI
 
-## 1. Self-Documenting APIs
+## 1. The 47-Endpoint Problem
 
-Routes built. Requests handled. Database connected. Authentication locked down. Now other developers need to know how to use your API. What endpoints exist. What parameters they accept. What the response looks like.
+Your team ships 47 API endpoints. The frontend developer asks what each one accepts. You email a spreadsheet. It rots. You write a wiki page. Nobody updates it. You add comments to the code. Nobody reads them.
 
-Tina4 Python auto-generates Swagger/OpenAPI documentation from your routes. Add a few decorators. Tina4 produces an interactive API reference that developers explore and test in the browser.
+Swagger kills this problem for good. It generates interactive API documentation from decorators on your route files. The docs stay current because they live inside the code itself. Your frontend developer browses every endpoint, sees expected request and response formats, and tests endpoints from the browser.
 
-Picture handing your API to a frontend team. No separate document that rots the moment you change a route. You point them to `/swagger`. They see every endpoint. Examples. Parameter descriptions. A "Try it out" button on each one.
+Tina4 Python auto-generates a Swagger UI at `/swagger` from your route decorators. No build step. No extra tooling. Write the decorators. The documentation appears.
 
 ---
 
-## 2. Accessing the Swagger UI
+## 2. What Swagger/OpenAPI Is
 
-When `TINA4_DEBUG=true`, the Swagger UI is automatically available at:
+OpenAPI is a specification for describing REST APIs. Swagger is the toolset that reads OpenAPI specs and produces documentation, client SDKs, and server stubs.
+
+An OpenAPI spec describes:
+
+- Every endpoint (path + HTTP method)
+- Parameters (path, query, header, body)
+- Responses (status codes, body schemas)
+- Data schemas (what a "User" or "Product" looks like)
+- Authentication requirements
+- Grouping and tagging
+
+The spec follows a standard JSON structure. Tools across the industry consume it -- Postman, Insomnia, code generators, testing frameworks, API gateways. One spec feeds them all.
+
+Tina4 builds this spec from Python decorators on your routes. No JSON or YAML by hand. The framework inspects your decorators at startup and constructs the full OpenAPI 3.0.3 document. You write Python. Tina4 writes the spec.
+
+---
+
+## 3. Accessing the Swagger UI
+
+When `TINA4_DEBUG=true`, the Swagger UI appears at:
 
 ```
 http://localhost:7145/swagger
 ```
 
-Open it in your browser and you will see all your registered routes, organized by tags, with request/response details.
+Open it in your browser. You see all registered routes, organized by tags, with request and response details.
 
-The underlying OpenAPI JSON spec is available at:
+The underlying OpenAPI JSON spec lives at:
 
 ```
 http://localhost:7145/swagger/json
 ```
 
-This is the raw JSON that tools like Postman, Insomnia, and code generators can import.
+This raw JSON feeds tools that import API definitions. Postman, Insomnia, and code generators all consume it.
+
+```bash
+curl http://localhost:7145/swagger/json
+```
+
+```json
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "My Store API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/products": {
+      "get": {
+        "summary": "List all products",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    }
+  }
+}
+```
 
 ---
 
-## 3. Documenting Routes with Decorators
+## 4. Documenting Routes with Decorators
 
 ### @description -- Describe What an Endpoint Does
 
@@ -70,7 +115,7 @@ async def list_products(request, response):
     return response.json({"products": []})
 ```
 
-Tags group related endpoints together in the Swagger UI. All "Users" endpoints appear under one collapsible section, all "Products" under another.
+Tags group related endpoints in the Swagger UI. All "Users" endpoints appear under one collapsible section, all "Products" under another. Without tags, every endpoint sits in one flat list. With tags, the UI becomes navigable.
 
 ### @example -- Document Request Body
 
@@ -90,7 +135,7 @@ async def create_user(request, response):
     return response.json({"user": request.body}, 201)
 ```
 
-The `@example` decorator shows a sample request body in the Swagger UI. Developers can click "Try it out" and the example is pre-filled.
+The `@example` decorator shows a sample request body in the Swagger UI. Developers click "Try it out" and the example pre-fills the input fields.
 
 ### @example_response -- Document Response Body
 
@@ -115,13 +160,13 @@ async def get_user(request, response):
     return response.json({"id": user_id, "name": "Alice"})
 ```
 
-You can add multiple `@example_response` decorators for different status codes. This shows developers exactly what to expect for success and error cases.
+Stack multiple `@example_response` decorators for different status codes. Developers see what to expect for both success and failure.
 
 ---
 
-## 4. Documenting Path Parameters
+## 5. Documenting Path Parameters
 
-Path parameters are automatically detected from the route pattern. You can add descriptions with the `@description` decorator's extended syntax:
+The framework detects path parameters from the route pattern. Add descriptions with the `@description` decorator's extended syntax:
 
 ```python
 @get("/api/users/{id:int}/posts/{status}")
@@ -160,9 +205,9 @@ async def list_products(request, response):
 
 ---
 
-## 5. Authentication in Swagger
+## 6. Authentication in Swagger
 
-When your API uses JWT authentication, document it so the Swagger UI includes an "Authorize" button:
+Routes marked with `@secured` show a lock icon in the Swagger UI. Developers click "Authorize", paste their JWT token, and all subsequent requests include the header.
 
 ```python
 from tina4_python.core.router import get, secured
@@ -175,8 +220,6 @@ from tina4_python.swagger import description, tags
 async def get_profile(request, response):
     return response.json({"user": request.user})
 ```
-
-Routes marked with `@secured` automatically show a lock icon in the Swagger UI. Developers can click "Authorize", paste their JWT token, and all subsequent requests will include it.
 
 Public routes marked with `@noauth` show as unlocked:
 
@@ -200,9 +243,134 @@ async def login(request, response):
 
 ---
 
-## 6. Complete API Documentation Example
+## 7. Try-It-Out from the Swagger UI
 
-Here is a fully documented User API:
+Every endpoint in the Swagger UI has a "Try it out" button. Click it and the interface transforms.
+
+1. Input fields expand for every parameter
+2. Example values pre-fill (when provided via `@example`)
+3. Edit parameters, headers, and the request body
+4. Click "Execute" -- the actual HTTP request fires against your running server
+5. The response appears: status code, headers, body
+
+This turns your documentation into a live testing tool. No Postman needed. No curl commands to remember.
+
+### Authentication in Try-It-Out
+
+Endpoints that require auth display a lock icon. Click the "Authorize" button at the top of the Swagger UI. Paste your JWT token or API key. The UI stores it and includes the `Authorization` header on every subsequent request.
+
+The workflow for testing a secured endpoint:
+
+1. Call your `/api/login` endpoint through Swagger to get a token
+2. Click "Authorize" and paste the token
+3. Test any protected endpoint -- the token travels with each request
+4. Click "Authorize" again and "Logout" to clear it
+
+Tina4 auto-detects auth requirements from `@secured` and `@noauth` decorators. Secured routes show the lock. Public routes show an open lock. Routes without either decorator inherit the default security scheme.
+
+---
+
+## 8. Customizing the Swagger Info Block
+
+The Swagger UI header and OpenAPI spec carry metadata about your API. Configure this metadata through environment variables in `.env`:
+
+```dotenv
+SWAGGER_TITLE=My Store API
+SWAGGER_DESCRIPTION=REST API for managing products, orders, and users
+SWAGGER_VERSION=1.0.0
+SWAGGER_DEV_URL=http://localhost:7145
+```
+
+These values appear in the OpenAPI spec under the `info` block:
+
+```json
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "My Store API",
+    "description": "REST API for managing products, orders, and users",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:7145"
+    }
+  ]
+}
+```
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `SWAGGER_TITLE` | API name shown in the UI header | `Tina4 API` |
+| `SWAGGER_DESCRIPTION` | Brief description below the title | (empty) |
+| `SWAGGER_VERSION` | API version number | `1.0.0` |
+| `SWAGGER_DEV_URL` | Server URL for the spec | `http://localhost:7145` |
+
+When you version your API, update `SWAGGER_VERSION` so consumers know which version they target. The title and description give context -- a developer who opens your Swagger page should know what the API does before scrolling.
+
+---
+
+## 9. Generating Client SDKs from the Spec
+
+The OpenAPI spec at `/swagger/json` feeds code generation tools. One spec produces client libraries in any language.
+
+### Using OpenAPI Generator
+
+```bash
+npm install -g @openapitools/openapi-generator-cli
+
+# TypeScript client
+openapi-generator-cli generate \
+  -i http://localhost:7145/swagger/json \
+  -g typescript-fetch \
+  -o ./frontend/api-client
+
+# Python client
+openapi-generator-cli generate \
+  -i http://localhost:7145/swagger/json \
+  -g python \
+  -o ./python-client
+```
+
+The generated code carries types. IDE autocompletion works:
+
+```typescript
+const api = new ProductsApi();
+
+const product = await api.getProductById({ id: 42 });
+console.log(product.name);  // TypeScript knows this is a string
+
+const newProduct = await api.createProduct({
+    name: "Widget",
+    category: "General",
+    price: 9.99,
+    inStock: true
+});
+```
+
+Update your decorators. Regenerate. The client stays in sync with the server.
+
+### Other Generators
+
+The ecosystem supports dozens of languages and frameworks:
+
+| Generator | Output |
+|-----------|--------|
+| `typescript-fetch` | Browser-ready TypeScript client |
+| `typescript-axios` | Axios-based TypeScript client |
+| `python` | Python client with type hints |
+| `swift5` | iOS/macOS client |
+| `kotlin` | Android/JVM client |
+| `csharp-netcore` | .NET client |
+| `go` | Go client |
+
+Every generator reads the same spec. Your API documentation becomes the single source of truth for every consumer.
+
+---
+
+## 10. Complete API Documentation Example
+
+Here is a fully documented User API with all decorator features:
 
 ```python
 from tina4_python.core.router import get, post, put, delete, noauth, secured, middleware
@@ -310,7 +478,7 @@ async def delete_user(request, response):
 
 ---
 
-## 7. Swagger Configuration
+## 11. Swagger Configuration
 
 Control Swagger behavior in `.env`:
 
@@ -319,14 +487,14 @@ Control Swagger behavior in `.env`:
 TINA4_DEBUG=true
 
 # Custom API title and version shown in Swagger UI
-TINA4_SWAGGER_TITLE=My Store API
-TINA4_SWAGGER_VERSION=1.0.0
-TINA4_SWAGGER_DESCRIPTION=REST API for the My Store e-commerce platform
+SWAGGER_TITLE=My Store API
+SWAGGER_VERSION=1.0.0
+SWAGGER_DESCRIPTION=REST API for the My Store e-commerce platform
 ```
 
 ---
 
-## 8. Exercise: Document a User API
+## 12. Exercise: Document a User API
 
 Take the authentication routes from Chapter 7 (register, login, profile, update profile, change password) and add full Swagger documentation.
 
@@ -337,23 +505,23 @@ Take the authentication routes from Chapter 7 (register, login, profile, update 
 3. Add `@example()` for all POST and PUT endpoints
 4. Add `@example_response()` for success and error cases on every endpoint
 5. Document query parameters on any endpoint that accepts them
-6. Visit `/swagger` and verify all routes appear correctly with examples
+6. Visit `/swagger` and verify all routes appear with examples
 
 ### Expected Result
 
-When you open `http://localhost:7145/swagger`, you should see:
+Open `http://localhost:7145/swagger`. You should see:
 
 - An "Auth" section with 5 endpoints
-- Each endpoint has a summary and description
+- Each endpoint carries a summary and description
 - POST/PUT endpoints show example request bodies
 - Every endpoint shows example responses for success and error cases
 - The "Authorize" button works for testing protected endpoints
 
 ---
 
-## 9. Solution
+## 13. Solution
 
-Update `src/routes/auth.py` with Swagger decorators (showing just the decorator additions -- the function bodies remain the same as Chapter 7):
+Update `src/routes/auth.py` with Swagger decorators (showing the decorator additions -- the function bodies remain the same as Chapter 7):
 
 ```python
 from tina4_python.core.router import get, post, put, noauth, middleware
@@ -469,29 +637,29 @@ async def change_password(request, response):
 
 ---
 
-## 10. Gotchas
+## 14. Gotchas
 
 ### 1. Swagger not showing up
 
 **Problem:** Visiting `/swagger` returns a 404.
 
-**Cause:** `TINA4_DEBUG` is not set to `true` in your `.env`. The Swagger UI is only available in debug mode.
+**Cause:** `TINA4_DEBUG` is not set to `true` in your `.env`. The Swagger UI only appears in debug mode.
 
 **Fix:** Set `TINA4_DEBUG=true` in `.env` and restart the server.
 
 ### 2. Route appears but has no documentation
 
-**Problem:** A route shows up in Swagger but has no description, examples, or parameter documentation.
+**Problem:** A route shows up in Swagger but carries no description, examples, or parameter documentation.
 
-**Cause:** You did not add Swagger decorators (`@description`, `@example`, etc.) to the route.
+**Cause:** The route has no Swagger decorators (`@description`, `@example`, etc.).
 
-**Fix:** Add at least `@description()` and `@tags()` to every route you want documented. Without these, Swagger shows the route but with minimal information.
+**Fix:** Add at least `@description()` and `@tags()` to every route you want documented. Without these, Swagger shows the route with minimal information.
 
 ### 3. Decorator order causes issues
 
 **Problem:** Adding `@description` or `@tags` breaks the route registration.
 
-**Cause:** Swagger decorators must be placed above the route decorator (applied after it in Python's bottom-up decorator application).
+**Cause:** Swagger decorators must sit below the route decorator. Python applies decorators bottom to top, so the route decorator executes first.
 
 **Fix:** Follow this order (bottom to top): route decorator first, then middleware, then Swagger decorators:
 
@@ -506,32 +674,40 @@ async def list_users(...):
 
 ### 4. Example does not match actual response
 
-**Problem:** The example response in Swagger does not match what the endpoint actually returns.
+**Problem:** The example response in Swagger differs from what the endpoint returns.
 
 **Cause:** You updated the route handler but forgot to update the `@example_response` decorator.
 
-**Fix:** Keep examples in sync with your actual response format. This is the main downside of Swagger decorators -- they are not enforced. Consider writing tests that validate your responses match the documented examples.
+**Fix:** Keep examples in sync with your actual response format. Decorators are not enforced by the runtime. Consider writing tests that validate your responses match the documented examples.
 
 ### 5. Sensitive data in examples
 
-**Problem:** Your `@example` decorator includes a real password or API key.
+**Problem:** Your `@example` decorator contains a real password or API key.
 
 **Cause:** You copy-pasted from a test and forgot to replace real values.
 
-**Fix:** Always use placeholder values in examples: `"password": "securePass123"`, `"token": "eyJhbGciOiJIUzI1NiIs..."`. Never include real credentials.
+**Fix:** Use placeholder values in examples: `"password": "securePass123"`, `"token": "eyJhbGciOiJIUzI1NiIs..."`. Never include real credentials.
 
 ### 6. Swagger in production
 
-**Problem:** Your production API exposes the Swagger UI, revealing all endpoints and their parameters to the public.
+**Problem:** Your production API exposes the Swagger UI, revealing all endpoints and their parameters.
 
 **Cause:** `TINA4_DEBUG=true` in production.
 
-**Fix:** Always set `TINA4_DEBUG=false` in production. The Swagger UI will not be available. If you need API docs in production, export the OpenAPI JSON and host it separately with access controls.
+**Fix:** Set `TINA4_DEBUG=false` in production. The Swagger UI disappears. If you need API docs in production, export the OpenAPI JSON and host it separately with access controls.
 
 ### 7. Too many tags
 
-**Problem:** Your Swagger UI has 20 tags, making it hard to navigate.
+**Problem:** Your Swagger UI has 20 tags. Navigation becomes painful.
 
 **Cause:** You created a separate tag for every resource, sub-resource, and action.
 
-**Fix:** Use broad tags that group related functionality: "Users", "Products", "Orders", "Auth". Most APIs need 5-10 tags. Avoid tags like "User Profile", "User Settings", "User Notifications" -- just use "Users" for all of them.
+**Fix:** Use broad tags that group related functionality: "Users", "Products", "Orders", "Auth". Most APIs need 5-10 tags. Avoid tags like "User Profile", "User Settings", "User Notifications" -- use "Users" for all of them.
+
+### 8. SDK generation produces incorrect types
+
+**Problem:** The generated TypeScript client has `any` types everywhere.
+
+**Cause:** Your `@example_response` data uses generic strings instead of typed values.
+
+**Fix:** Use correct types in examples: strings for text, numbers for numeric values, booleans for flags, arrays for lists. The generator infers types from example values. `"price": 9.99` produces `number`. `"price": "9.99"` produces `string`.

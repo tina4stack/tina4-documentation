@@ -2,9 +2,9 @@
 
 ## 1. The 47-Endpoint Problem
 
-Your team has 47 API endpoints. The frontend developer asks what each one accepts. You email a spreadsheet. It goes stale. You write a wiki page. Nobody updates it. You add comments to the code. Nobody reads them.
+Your team ships 47 API endpoints. The frontend developer asks what each one accepts. You email a spreadsheet. It goes stale in a week. You write a wiki page. Nobody updates it. You add code comments. Nobody reads them.
 
-Swagger solves this permanently. It generates interactive API documentation from annotations in your route files. The docs stay current because they come from the code itself. Your frontend developer browses every endpoint, sees the expected request and response formats, and tests endpoints from the browser.
+Swagger solves this for good. It generates interactive API documentation from annotations in your route files. The docs stay current because they live in the code. Your frontend developer browses every endpoint, sees request and response shapes, and tests calls from the browser.
 
 Tina4 auto-generates a Swagger UI at `/swagger` from doc-block annotations. No build step. No extra tooling. Write the annotations. The documentation appears.
 
@@ -12,7 +12,7 @@ Tina4 auto-generates a Swagger UI at `/swagger` from doc-block annotations. No b
 
 ## 2. What Swagger/OpenAPI Is
 
-OpenAPI is a specification for describing REST APIs. Swagger is the toolset that reads OpenAPI specs and generates documentation, client SDKs, and server stubs.
+OpenAPI is a specification for describing REST APIs. Swagger is the toolset that reads OpenAPI specs and produces documentation, client SDKs, and server stubs.
 
 An OpenAPI spec describes:
 

@@ -2,9 +2,9 @@
 
 ## 1. From Arrays to Real Data
 
-In Chapters 2 and 3, data lived in PHP arrays. Every server restart wiped the slate clean. That works for learning routing and responses. Real applications need persistence. This chapter covers Tina4's database layer: raw queries, parameterised queries, transactions, schema inspection, helper methods, and migrations.
+In Chapters 2 and 3, data lived in PHP arrays. Every server restart wiped the slate. That works for learning routing and responses. Real applications need persistence. This chapter covers Tina4's database layer: raw queries, parameterised queries, transactions, schema inspection, helper methods, migrations, and seeding.
 
-Tina4 supports five database engines: SQLite, PostgreSQL, MySQL, Microsoft SQL Server, and Firebird. The API is identical across all of them. Switch databases by changing one line in `.env`.
+Tina4 supports five database engines: SQLite, PostgreSQL, MySQL, Microsoft SQL Server, and Firebird. The API stays identical across all of them. Switch databases by changing one line in `.env`.
 
 ---
 
@@ -357,7 +357,7 @@ curl "http://localhost:7146/api/products/search?q=key&max_price=100"
 
 ## 6. Transactions
 
-Multiple operations that must succeed or fail together:
+Group operations that must succeed or fail as one unit:
 
 ```php
 <?php
@@ -410,15 +410,15 @@ Router::post("/api/orders", function ($request, $response) {
 });
 ```
 
-If any step fails, `rollback()` undoes everything. The database never lands in a half-finished state.
+Any step fails. `rollback()` undoes everything. The database never lands in a half-finished state.
 
-You must call `commit()` to save. Forget it, and the transaction rolls back when the connection closes.
+Call `commit()` to save. Forget it and the transaction rolls back when the connection closes.
 
 ---
 
 ## 7. Schema Inspection
 
-Tina4 provides methods to inspect your database structure at runtime.
+Tina4 exposes methods to inspect your database structure at runtime. The `Database` object delegates to the underlying adapter, so these work across all five engines.
 
 ### getTables()
 
@@ -458,7 +458,18 @@ if ($db->tableExists("products")) {
 }
 ```
 
+### getDatabaseType()
+
+```php
+$engine = $db->getDatabaseType();
+// "sqlite", "postgresql", "mysql", "mssql", or "firebird"
+```
+
+Returns a lowercase string identifying the active database engine. Use this when you need engine-specific SQL in a multi-database setup.
+
 ### A Schema Info Endpoint
+
+Combine these methods to build a schema browser:
 
 ```php
 <?php
@@ -474,9 +485,14 @@ Router::get("/api/schema", function ($request, $response) {
         $schema[$table] = $db->getColumns($table);
     }
 
-    return $response->json(["tables" => $schema]);
+    return $response->json([
+        "engine" => $db->getDatabaseType(),
+        "tables" => $schema
+    ]);
 });
 ```
+
+Schema inspection powers admin dashboards, migration generators, and dynamic form builders. The database tells you its own structure -- no guesswork required.
 
 ---
 
@@ -544,13 +560,13 @@ Third argument: WHERE clause. Fourth argument: parameters.
 $db->delete("products", "id = :id", ["id" => 7]);
 ```
 
-These helpers generate SQL for you. Convenient for simple CRUD. For complex joins, subqueries, or aggregations, use raw queries.
+These helpers generate SQL for you. Use them for simple CRUD. For joins, subqueries, or aggregations, reach for raw queries.
 
 ---
 
 ## 10. Migrations
 
-Migrations are versioned SQL scripts that evolve your schema over time. No manual `CREATE TABLE` statements. Write migration files. Tina4 applies them in order and tracks what has run.
+Migrations are versioned SQL scripts that evolve your schema over time. Write migration files. Tina4 applies them in order and tracks what has run. No manual `CREATE TABLE` calls against production.
 
 ### File Naming
 
@@ -1033,7 +1049,92 @@ Router::delete("/api/notes/{id:int}", function ($request, $response) {
 
 ---
 
-## 14. Gotchas
+## 14. Seeder -- Generating Test Data
+
+Testing with an empty database tells you nothing. Testing with hand-typed rows is slow and brittle. The `FakeData` class generates realistic test data. The `seedTable()` function inserts it in bulk.
+
+### FakeData
+
+```php
+use Tina4\FakeData;
+
+$fake = new FakeData();
+
+$fake->name();       // "Grace Lopez"
+$fake->email();      // "bob.anderson@demo.net"
+$fake->phone();      // "+1 (547) 382-9104"
+$fake->sentence();   // "Magna exercitation lorem ipsum dolor sit amet consectetur."
+$fake->paragraph();  // Four sentences of filler text
+$fake->integer();    // 7342
+$fake->decimal();    // 481.29
+$fake->date();       // "2023-07-14"
+$fake->uuid();       // "a3f1b2c4-d5e6-f7a8-b9c0-d1e2f3a4b5c6"
+$fake->address();    // "742 Oak Ave, Tokyo"
+$fake->boolean();    // true
+```
+
+Every method draws from built-in word banks. No network calls. No external packages.
+
+### Deterministic Output
+
+Pass a seed to get reproducible results. The same seed produces the same sequence every time:
+
+```php
+$fake = new FakeData(42);
+$fake->name();   // Always "Wendy White" with seed 42
+$fake->email();  // Always the same email with seed 42
+```
+
+Deterministic data means deterministic assertions. This matters for tests.
+
+### Seeding a Table
+
+`seedTable()` combines `FakeData` with your database. Pass a field map -- an associative array where each key is a column name and each value is a callable that generates data:
+
+```php
+use Tina4\FakeData;
+use Tina4\Database;
+use function Tina4\seedTable;
+
+$db = Database::getConnection();
+$fake = new FakeData(1);
+
+seedTable($db, "users", 100, [
+    "name" => [$fake, "name"],
+    "email" => [$fake, "email"],
+    "phone" => [$fake, "phone"],
+    "bio" => [$fake, "sentence"],
+]);
+```
+
+This inserts 100 rows into the `users` table. Each row calls `$fake->name()`, `$fake->email()`, and so on to generate values. The function commits after all rows insert.
+
+### Overrides
+
+Static values that apply to every row go in the overrides array:
+
+```php
+seedTable($db, "users", 50, [
+    "name" => [$fake, "name"],
+    "email" => [$fake, "email"],
+], [
+    "role" => "member",
+    "active" => 1,
+]);
+```
+
+Every row gets `role = "member"` and `active = 1`. The field map generates the rest.
+
+### When to Use It
+
+- Populating a development database with realistic data
+- Writing integration tests that need rows in the database
+- Load testing with thousands of records
+- Demos and screenshots that look real without using real data
+
+---
+
+## 15. Gotchas
 
 ### 1. Forgetting commit()
 

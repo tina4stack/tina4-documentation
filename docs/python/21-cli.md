@@ -4,13 +4,13 @@
 
 Monday morning. A new developer joins your team. You hand them the repo URL. By 10am they have a running project, a new database model, CRUD routes, a migration, and a deployment to staging. All from the command line. No documentation scavenger hunt. No boilerplate copy-paste.
 
-The Tina4 CLI is a single Rust binary that manages all four Tina4 frameworks (PHP, Python, Ruby, Node.js). The commands are identical across languages. Learn the CLI for Python. You know it for PHP.
+The Tina4 CLI is a single Rust binary. It manages all four Tina4 frameworks (PHP, Python, Ruby, Node.js). The commands are identical across languages. Learn the CLI for Python. You know it for PHP.
 
 ---
 
 ## 2. tina4 init -- Project Scaffolding
 
-You saw this in Chapter 1, but let us look at it in detail.
+You saw this in Chapter 1. Now the details.
 
 ```bash
 tina4 init my-project
@@ -48,7 +48,7 @@ Project created! Next steps:
 
 ### Language Detection
 
-The CLI detects the language from existing files in the directory:
+The CLI detects the language from existing files:
 
 | File Present | Language |
 |-------------|----------|
@@ -57,7 +57,7 @@ The CLI detects the language from existing files in the directory:
 | `Gemfile` | Ruby |
 | `package.json` | Node.js |
 
-If no language-specific file exists, the CLI asks you:
+If no language-specific file exists, the CLI asks:
 
 ```bash
 tina4 init my-project
@@ -82,18 +82,18 @@ Skip the prompt by specifying the language:
 tina4 init python my-project
 ```
 
-This creates a Python project directly, including `pyproject.toml`, `app.py`, and the full directory structure.
+This creates a Python project with `pyproject.toml`, `app.py`, and the full directory structure.
 
 ### Init into an Existing Directory
 
-If you already have a project and want to add Tina4 structure:
+Already have a project? Add Tina4 structure:
 
 ```bash
 cd existing-project
 tina4 init .
 ```
 
-The CLI only creates files and directories that do not already exist. It never overwrites existing files.
+The CLI creates only files and directories that do not exist. It never overwrites.
 
 ---
 
@@ -123,7 +123,7 @@ tina4 serve --production       # Production mode (no live reload, debug off)
 
 ### Direct Python Execution
 
-You can also start the server directly with Python:
+You can start the server with Python:
 
 ```bash
 uv run python app.py
@@ -133,11 +133,9 @@ This is identical to `tina4 serve` but gives you more control over the Python ru
 
 ---
 
-## 4. tina4 generate -- Code Generation
+## 4. tina4 generate model -- ORM Scaffolding
 
-The `generate` command creates boilerplate code for common patterns. Every generated file follows Tina4 conventions and is immediately functional.
-
-### Generate a Model
+The `generate model` command creates an ORM model file and a matching migration. One command produces both.
 
 ```bash
 tina4 generate model Product
@@ -145,17 +143,101 @@ tina4 generate model Product
 
 ```
 Created src/orm/product.py
+Created src/migrations/20260322120000_create_products_table.sql
+```
 
-  class Product(ORM):
-      table_name = "products"
-      id: int
-      name: str
-      created_at: str
+The generated model:
+
+```python
+from tina4_python.orm import ORM
+
+class Product(ORM):
+    table_name = "products"
+    id: int
+    created_at: str
+```
+
+The generated migration:
+
+```sql
+-- UP
+CREATE TABLE products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- DOWN
+DROP TABLE IF EXISTS products;
 ```
 
 The model is ready to use. Add your fields and run migrations.
 
-### Generate a Route
+### Adding Fields
+
+Specify fields on the command line:
+
+```bash
+tina4 generate model Product --fields "name:string,price:float,category:string,in_stock:bool"
+```
+
+The generated model includes all the fields:
+
+```python
+from tina4_python.orm import ORM
+
+class Product(ORM):
+    table_name = "products"
+    id: int
+    name: str
+    price: float
+    category: str
+    in_stock: bool
+    created_at: str
+```
+
+And the migration:
+
+```sql
+-- UP
+CREATE TABLE products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL DEFAULT '',
+    price REAL NOT NULL DEFAULT 0,
+    category TEXT NOT NULL DEFAULT '',
+    in_stock INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- DOWN
+DROP TABLE IF EXISTS products;
+```
+
+### Field Types
+
+| CLI Type | Python Type | SQLite Column |
+|----------|------------|---------------|
+| `string` | `str` | `TEXT` |
+| `int` | `int` | `INTEGER` |
+| `float` | `float` | `REAL` |
+| `bool` | `bool` | `INTEGER` |
+| `text` | `str` | `TEXT` |
+| `date` | `str` | `TEXT` |
+
+### Options
+
+| Flag | Description | Example |
+|------|-------------|---------|
+| `--fields` | Comma-separated field definitions | `--fields "name:string,price:float"` |
+| `--auto-crud` | Enable auto-CRUD on the model | `--auto-crud` |
+| `--soft-delete` | Add soft delete support | `--soft-delete` |
+| `--no-migration` | Skip migration generation | `--no-migration` |
+| `--with-route` | Also generate a CRUD route file | `--with-route` |
+
+---
+
+## 5. tina4 generate route -- CRUD Route Scaffolding
+
+The `generate route` command creates a complete CRUD route file with all five REST endpoints. It reads the model's properties and builds routes with proper imports and response handling.
 
 ```bash
 tina4 generate route products
@@ -163,39 +245,142 @@ tina4 generate route products
 
 ```
 Created src/routes/products.py
-
-  @get("/api/products")
-  @get("/api/products/{product_id}")
-  @post("/api/products")
-  @put("/api/products/{product_id}")
-  @delete("/api/products/{product_id}")
 ```
 
-A complete CRUD route file with all five REST endpoints, proper imports, and response handling.
+The generated route file:
 
-### Generate a Migration
+```python
+from tina4_python.core.router import get, post, put, delete
+
+@get("/api/products")
+async def list_products(request, response):
+    page = int(request.params.get("page", 1))
+    per_page = int(request.params.get("per_page", 20))
+    offset = (page - 1) * per_page
+
+    products, total = Product.where("1=1", [], limit=per_page, offset=offset)
+    results = [p.to_dict() for p in products]
+
+    return response({
+        "data": results,
+        "page": page,
+        "per_page": per_page,
+        "count": len(results)
+    })
+
+
+@get("/api/products/{product_id}")
+async def get_product(request, response):
+    product = Product.find(request.params["product_id"])
+
+    if product is None:
+        return response({"error": "Product not found"}, 404)
+
+    return response(product.to_dict())
+
+
+@post("/api/products")
+async def create_product(request, response):
+    body = request.body
+
+    product = Product()
+    product.name = body.get("name", "")
+    product.price = float(body.get("price", 0))
+    product.category = body.get("category", "")
+    product.in_stock = bool(body.get("in_stock", False))
+    product.save()
+
+    return response(product.to_dict(), 201)
+
+
+@put("/api/products/{product_id}")
+async def update_product(request, response):
+    product = Product.find(request.params["product_id"])
+
+    if product is None:
+        return response({"error": "Product not found"}, 404)
+
+    body = request.body
+    if "name" in body:
+        product.name = body["name"]
+    if "price" in body:
+        product.price = float(body["price"])
+    if "category" in body:
+        product.category = body["category"]
+    if "in_stock" in body:
+        product.in_stock = bool(body["in_stock"])
+    product.save()
+
+    return response(product.to_dict())
+
+
+@delete("/api/products/{product_id}")
+async def delete_product(request, response):
+    product = Product.find(request.params["product_id"])
+
+    if product is None:
+        return response({"error": "Product not found"}, 404)
+
+    product.delete()
+    return response(None, 204)
+```
+
+The generator reads the model's properties and creates routes with type casting and None checks. Customize the generated code immediately. It is regular Python, not magic.
+
+### Options
+
+| Flag | Description | Example |
+|------|-------------|---------|
+| `--prefix` | Custom route prefix (default: `/api`) | `--prefix /api/v2` |
+| `--middleware` | Add middleware to all routes | `--middleware auth_middleware` |
+
+---
+
+## 6. tina4 generate migration -- Migration Scaffolding
+
+The `generate migration` command creates a timestamped migration file with `UP` and `DOWN` sections. The timestamp ensures migrations run in order.
 
 ```bash
-tina4 generate migration create_products_table
+tina4 generate migration add_category_to_products
 ```
 
 ```
-Created src/migrations/20260322120000_create_products_table.sql
-
-  -- UP
-  CREATE TABLE products (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
-  );
-
-  -- DOWN
-  DROP TABLE IF EXISTS products;
+Created src/migrations/20260322120500_add_category_to_products.sql
 ```
 
-The migration file is timestamped for ordering. Add your column definitions to the `UP` section.
+The generated file:
 
-### Generate Middleware
+```sql
+-- UP
+-- Add your forward migration SQL here
+
+
+-- DOWN
+-- Add your rollback migration SQL here
+
+```
+
+Fill in the SQL:
+
+```sql
+-- UP
+ALTER TABLE products ADD COLUMN category TEXT DEFAULT '';
+
+-- DOWN
+ALTER TABLE products DROP COLUMN category;
+```
+
+The timestamp prefix (`20260322120500`) ensures migrations run in order. Each migration runs once. The framework tracks which ones have been applied.
+
+### When to Generate a Migration
+
+Generate a new migration when you need to change the database schema after the initial model migration. Adding a column. Creating an index. Renaming a table. Each change gets its own migration file with a unique timestamp.
+
+---
+
+## 7. tina4 generate middleware -- Middleware Scaffolding
+
+The `generate middleware` command creates a middleware function with the correct signature and a placeholder for your logic.
 
 ```bash
 tina4 generate middleware rate_limit
@@ -203,13 +388,34 @@ tina4 generate middleware rate_limit
 
 ```
 Created src/middleware/rate_limit.py
-
-  async def rate_limit(request, response, next_handler):
-      # Add your middleware logic here
-      return await next_handler(request, response)
 ```
 
-### Generate All at Once
+The generated file:
+
+```python
+async def rate_limit(request, response, next_handler):
+    # Add your middleware logic here
+
+    # Continue to the next middleware or route handler
+    return await next_handler(request, response)
+
+    # Or return early to block the request:
+    # return response({"error": "Rate limit exceeded"}, 429)
+```
+
+The middleware is a named function. Reference it in route definitions:
+
+```python
+@get("/api/data", middleware=["rate_limit"])
+async def protected_data(request, response):
+    return response({"data": "protected"})
+```
+
+---
+
+## 8. Generate All at Once
+
+Combine flags to generate multiple files in a single command:
 
 ```bash
 tina4 generate model Product --with-route --with-migration
@@ -221,11 +427,11 @@ Created src/routes/products.py
 Created src/migrations/20260322120000_create_products_table.sql
 ```
 
-This creates the model, a CRUD route file, and a migration -- all wired together and ready to use.
+Model. CRUD routes. Migration. All wired together. Ready to use.
 
 ---
 
-## 5. tina4 doctor -- Health Check
+## 9. tina4 doctor -- Health Check
 
 The `doctor` command checks your project for common issues:
 
@@ -265,11 +471,11 @@ Doctor checks:
 - AI tool context files
 - Git configuration
 
-The warnings give you actionable advice. If your database is not configured, it tells you exactly what to add to `.env`.
+The warnings give actionable advice. If your database is not configured, it tells you exactly what to add to `.env`.
 
 ---
 
-## 6. tina4 test -- Running Tests
+## 10. tina4 test -- Running Tests
 
 ```bash
 tina4 test
@@ -297,7 +503,7 @@ tina4 test --verbose                                # Show assertion details
 
 ---
 
-## 7. tina4 routes -- Route Listing
+## 11. tina4 routes -- Route Listing
 
 See all registered routes in your project:
 
@@ -323,11 +529,21 @@ Registered Routes:
   9 routes registered
 ```
 
-This is useful for verifying that your routes are registered correctly and for finding the handler function for a specific URL.
+This is useful for verifying that your routes are registered and for finding the handler function for a specific URL.
+
+### Filtering
+
+```bash
+tina4 routes --method POST          # Filter by HTTP method
+tina4 routes --filter products      # Filter by path pattern
+tina4 routes --middleware auth      # Filter by middleware
+```
+
+When debugging routing issues, check here first. If a route does not match, `tina4 routes` shows whether it was registered and what middleware is attached.
 
 ---
 
-## 8. tina4 migrate -- Database Migrations
+## 12. tina4 migrate -- Database Migrations
 
 Run pending migrations:
 
@@ -359,7 +575,7 @@ Rolling back last migration...
 
 ### Migration Table Auto-Upgrade
 
-If your project was created with an earlier version of Tina4, the `tina4_migration` tracking table may use the older v2 schema. Running `tina4 migrate` automatically detects the old layout and adds the missing `migration_id`, `batch`, and `executed_at` columns, backfilling existing data. No manual intervention is needed.
+If your project was created with an earlier version of Tina4, the `tina4_migration` tracking table may use the older v2 schema. Running `tina4 migrate` detects the old layout and adds the missing `migration_id`, `batch`, and `executed_at` columns, backfilling existing data. No manual intervention needed.
 
 ### Status
 
@@ -382,19 +598,19 @@ Migration Status:
 
 ---
 
-## 9. Exercise: Scaffold a Feature in 5 Commands
+## 13. Exercise: Scaffold a Feature in 5 Commands
 
 Scaffold a complete "Customer" feature from scratch using only CLI commands.
 
 ### Requirements
 
-Starting from an existing Tina4 Python project, run exactly 5 commands to create:
+Starting from an existing Tina4 Python project, run 5 commands to create:
 
 1. A Customer ORM model with name, email, phone, and company fields
 2. A CRUD route file with all five REST endpoints
 3. A migration that creates the customers table
 4. Run the migration to create the table
-5. Run the tests to verify everything works
+5. Run the doctor to verify everything
 
 ### Expected Commands
 
@@ -402,10 +618,10 @@ Starting from an existing Tina4 Python project, run exactly 5 commands to create
 # 1. Generate the model with route and migration
 tina4 generate model Customer --with-route --with-migration
 
-# 2. Edit the model to add fields (this is manual, not a CLI command)
+# 2. Edit the model to add fields (manual step)
 # Add fields to src/orm/customer.py
 
-# 3. Edit the migration to add columns (this is manual)
+# 3. Edit the migration to add columns (manual step)
 # Add columns to the migration file
 
 # 4. Run the migration
@@ -439,7 +655,7 @@ class Customer(ORM):
     created_at: str
 ```
 
-**Command 3:** Edit the migration file to add columns:
+**Command 3:** Edit the migration file:
 
 ```sql
 -- UP
@@ -503,9 +719,11 @@ curl -X POST http://localhost:7145/api/customers \
 }
 ```
 
+From zero to a working CRUD API. Five commands. Under two minutes.
+
 ---
 
-## 10. Gotchas
+## 14. Gotchas
 
 ### 1. tina4 Command Not Found
 
@@ -513,13 +731,18 @@ curl -X POST http://localhost:7145/api/customers \
 
 **Cause:** The Tina4 CLI is not installed or not in your PATH.
 
-**Fix:** Install the CLI: `curl -fsSL https://tina4.com/install.sh | sh`. Verify with `tina4 --version`. If installed but not found, add the installation directory to your PATH.
+**Fix:** Install the CLI: `curl -fsSL https://tina4.com/install.sh | sh`. Verify with `tina4 --version`. If installed but not found, add the installation directory to your PATH:
+
+```bash
+echo 'export PATH="$HOME/.tina4/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
 
 ### 2. Wrong Language Detected
 
 **Problem:** `tina4 init` creates a PHP project instead of Python.
 
-**Cause:** A `composer.json` file exists in the directory (perhaps from a previous project).
+**Cause:** A `composer.json` file exists in the directory from a previous project.
 
 **Fix:** Use explicit language selection: `tina4 init python my-project`. Or delete the conflicting language file before running `init`.
 
@@ -527,17 +750,17 @@ curl -X POST http://localhost:7145/api/customers \
 
 **Problem:** Running `tina4 generate route products` overwrites your custom route file.
 
-**Cause:** The generate command creates files at fixed paths. If the file already exists, it is overwritten.
+**Cause:** The generate command creates files at fixed paths. If the file exists, it is overwritten.
 
-**Fix:** The CLI warns you before overwriting. Always check if the file exists first. If you need to regenerate, rename the existing file first: `mv src/routes/products.py src/routes/products_backup.py`.
+**Fix:** The CLI warns you before overwriting. Check if the file exists first. If you need to regenerate, rename the existing file: `mv src/routes/products.py src/routes/products_backup.py`.
 
 ### 4. Migration Order Issues
 
 **Problem:** A migration fails because it references a table that does not exist yet.
 
-**Cause:** Migration files are run in alphabetical (timestamp) order. If migration B depends on a table created by migration A, but A has a later timestamp, B runs first and fails.
+**Cause:** Migration files run in alphabetical (timestamp) order. If migration B depends on a table created by migration A, but A has a later timestamp, B runs first and fails.
 
-**Fix:** Use consistent timestamps. The `tina4 generate migration` command uses the current timestamp, so generating migrations in order ensures correct execution order. If you need to fix ordering, rename the migration files to adjust their timestamps.
+**Fix:** Use consistent timestamps. The `tina4 generate migration` command uses the current timestamp. Generating migrations in order ensures correct execution order. If you need to fix ordering, rename the migration files to adjust their timestamps.
 
 ### 5. tina4 serve Uses Wrong Port
 
@@ -545,15 +768,15 @@ curl -X POST http://localhost:7145/api/customers \
 
 **Cause:** The default port is 7145 unless overridden.
 
-**Fix:** Set it in `.env`: `TINA4_PORT=8080`. Or pass it as a flag: `tina4 serve --port 8080`. The `.env` value takes precedence over the default, and the command-line flag overrides everything.
+**Fix:** Set it in `.env`: `TINA4_PORT=8080`. Or pass it as a flag: `tina4 serve --port 8080`. The `.env` value takes precedence over the default. The command-line flag overrides everything.
 
 ### 6. Doctor Shows False Warnings
 
 **Problem:** `tina4 doctor` warns about missing migrations, but your project does not use migrations.
 
-**Cause:** Doctor checks for common conventions. If your project uses a different approach (like manual schema management), it still warns about missing migrations.
+**Cause:** Doctor checks for common conventions. It warns about missing migrations regardless of your approach.
 
-**Fix:** These are warnings, not errors. You can ignore warnings that do not apply to your project. Doctor is a guide, not a gatekeeper.
+**Fix:** These are warnings, not errors. Ignore warnings that do not apply to your project. Doctor is a guide, not a gatekeeper.
 
 ### 7. Generate Creates Python 3.12+ Syntax
 
@@ -562,3 +785,11 @@ curl -X POST http://localhost:7145/api/customers \
 **Cause:** The generator targets the latest Python version supported by Tina4.
 
 **Fix:** Use Python 3.12 or later with Tina4 Python. Check your Python version with `python --version`. If you must use an older version, modify the generated code to use compatible syntax.
+
+### 8. Model Name Must Be PascalCase
+
+**Problem:** `tina4 generate model order_item` creates a model class named `order_item` which is not valid Python convention.
+
+**Cause:** The CLI uses the argument as-is for the class name.
+
+**Fix:** Use PascalCase for model names: `tina4 generate model OrderItem`. The CLI converts it to snake_case for the table name (`order_items`).

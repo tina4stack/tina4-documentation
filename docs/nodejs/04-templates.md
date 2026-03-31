@@ -379,7 +379,11 @@ Handle empty lists with `{% else %}`:
 &#123;% endif %&#125;
 ```
 
-### set -- Local Variables
+<div v-pre>
+
+### {% set %} -- Local Variables
+
+</div>
 
 Create or update a variable inside a template:
 
@@ -410,74 +414,126 @@ When combining filters with arithmetic, assign the filtered values first:
 
 Filters transform values. Apply them with the `|` (pipe) character.
 
-### Text Filters
+### Complete Filter Reference
 
-| Filter | Input | Output | Description |
-|--------|-------|--------|-------------|
-| `upper` | `"hello"` | `"HELLO"` | Uppercase |
-| `lower` | `"HELLO"` | `"hello"` | Lowercase |
-| `capitalize` | `"hello world"` | `"Hello world"` | Capitalize first letter |
-| `title` | `"hello world"` | `"Hello World"` | Capitalize each word |
-| `trim` | `"  hello  "` | `"hello"` | Remove whitespace |
-| `striptags` | `"<b>bold</b>"` | `"bold"` | Remove HTML tags |
+#### String Filters
 
-### Number Filters
-
-| Filter | Input | Output | Description |
-|--------|-------|--------|-------------|
-| `number_format(2)` | `1234.5` | `"1,234.50"` | Format number |
-| `round` | `3.7` | `4` | Round to nearest integer |
-| `abs` | `-5` | `5` | Absolute value |
-
-### Array Filters
-
-| Filter | Input | Output | Description |
-|--------|-------|--------|-------------|
-| `length` | `[1,2,3]` | `3` | Count items |
-| `join(", ")` | `["a","b","c"]` | `"a, b, c"` | Join with separator |
-| `first` | `[1,2,3]` | `1` | First item |
-| `last` | `[1,2,3]` | `3` | Last item |
-| `reverse` | `[1,2,3]` | `[3,2,1]` | Reverse order |
-| `sort` | `[3,1,2]` | `[1,2,3]` | Sort ascending |
-
-### The `default` Filter
-
-```html
-<p>&#123;&#123; subtitle | default("No subtitle") &#125;&#125;</p>
-<p>&#123;&#123; user.nickname | default(user.name) | default("Anonymous") &#125;&#125;</p>
-```
-
-### The `escape` and `raw` Filters
-
+| Filter | Example | Description |
+|--------|---------|-------------|
 <div v-pre>
 
-All `{{ }}` output is auto-escaped for HTML safety. If you trust the content and need raw HTML:
+| `upper` | `{{ name \| upper }}` | Convert to uppercase |
+| `lower` | `{{ name \| lower }}` | Convert to lowercase |
+| `capitalize` | `{{ name \| capitalize }}` | Capitalize first letter |
+| `title` | `{{ name \| title }}` | Capitalize each word |
+| `trim` | `{{ name \| trim }}` | Strip leading/trailing whitespace |
+| `ltrim` | `{{ name \| ltrim }}` | Strip leading whitespace |
+| `rtrim` | `{{ name \| rtrim }}` | Strip trailing whitespace |
+| `slug` | `{{ title \| slug }}` | Convert to URL-friendly slug |
+| `wordwrap(80)` | `{{ text \| wordwrap(80) }}` | Wrap text at N characters |
+| `truncate(100)` | `{{ text \| truncate(100) }}` | Truncate to N characters with ellipsis |
+| `nl2br` | `{{ text \| nl2br }}` | Convert newlines to `<br>` tags |
+| `striptags` | `{{ html \| striptags }}` | Remove all HTML tags |
+| `replace("a", "b")` | `{{ text \| replace("old", "new") }}` | Replace occurrences of a substring |
 
 </div>
 
-```html
-&#123;&#123; trusted_html | raw &#125;&#125;
-```
+#### Array Filters
 
-Use `raw` with caution. Apply it only to content you control. Never to user input.
+| Filter | Example | Description |
+|--------|---------|-------------|
+<div v-pre>
 
-### Encoding Filters
+| `length` | `{{ items \| length }}` | Count items in array or string length |
+| `reverse` | `{{ items \| reverse }}` | Reverse order of items |
+| `sort` | `{{ items \| sort }}` | Sort items ascending |
+| `shuffle` | `{{ items \| shuffle }}` | Randomly shuffle items |
+| `first` | `{{ items \| first }}` | Get the first item |
+| `last` | `{{ items \| last }}` | Get the last item |
+| `join(", ")` | `{{ items \| join(", ") }}` | Join array items with separator |
+| `split(",")` | `{{ csv \| split(",") }}` | Split string into array |
+| `unique` | `{{ items \| unique }}` | Remove duplicate values |
+| `filter` | `{{ items \| filter }}` | Remove falsy values from array |
+| `map("name")` | `{{ items \| map("name") }}` | Extract a property from each item |
+| `column("name")` | `{{ items \| column("name") }}` | Extract a column from array of objects |
+| `batch(3)` | `{{ items \| batch(3) }}` | Group items into batches of N |
+| `slice(0, 3)` | `{{ items \| slice(0, 3) }}` | Extract a slice from offset with length |
 
-```html
-&#123;&#123; data | json_encode &#125;&#125;                &#123;# {"key": "value"} #&#125;
-&#123;&#123; data | to_json &#125;&#125;                    &#123;# Same as json_encode, safe output #&#125;
-&#123;&#123; text | js_escape &#125;&#125;                  &#123;# Escaped for JavaScript strings #&#125;
-&#123;&#123; text | base64encode &#125;&#125;               &#123;# Base64 encoded #&#125;
-&#123;&#123; encoded | base64decode &#125;&#125;            &#123;# Base64 decoded #&#125;
-```
+</div>
 
-### Form Token Filters
+#### Encoding Filters
 
-```html
-&#123;&#123; form_token() &#125;&#125;                     &#123;# Hidden input with CSRF token #&#125;
-&#123;&#123; formTokenValue("context") &#125;&#125;         &#123;# Raw JWT token string #&#125;
-&#123;&#123; form_token_value("context") &#125;&#125;       &#123;# Alias for formTokenValue #&#125;
-```
+| Filter | Example | Description |
+|--------|---------|-------------|
+<div v-pre>
+
+| `escape` (`e`) | `{{ text \| escape }}` | HTML-escape special characters |
+| `raw` (`safe`) | `{{ html \| raw }}` | Output without auto-escaping |
+| `url_encode` | `{{ text \| url_encode }}` | URL-encode a string |
+| `base64_encode` (`base64encode`) | `{{ text \| base64_encode }}` | Base64-encode a string |
+| `base64_decode` (`base64decode`) | `{{ data \| base64_decode }}` | Base64-decode a string |
+| `md5` | `{{ text \| md5 }}` | Compute MD5 hash |
+| `sha256` | `{{ text \| sha256 }}` | Compute SHA-256 hash |
+
+</div>
+
+#### Numeric Filters
+
+| Filter | Example | Description |
+|--------|---------|-------------|
+<div v-pre>
+
+| `abs` | `{{ num \| abs }}` | Absolute value |
+| `round(2)` | `{{ price \| round(2) }}` | Round to N decimal places |
+| `number_format(2)` | `{{ price \| number_format(2) }}` | Format with decimals and thousands separator |
+| `int` | `{{ val \| int }}` | Cast to integer |
+| `float` | `{{ val \| float }}` | Cast to float |
+| `string` | `{{ val \| string }}` | Cast to string |
+
+</div>
+
+#### JSON Filters
+
+| Filter | Example | Description |
+|--------|---------|-------------|
+<div v-pre>
+
+| `json_encode` | `{{ data \| json_encode }}` | Encode value as JSON string |
+| `to_json` (`tojson`) | `{{ data \| to_json }}` | Encode value as JSON string (alias) |
+| `json_decode` | `{{ str \| json_decode }}` | Decode JSON string to object |
+| `js_escape` | `{{ text \| js_escape }}` | Escape string for safe use in JavaScript |
+
+</div>
+
+#### Dict Filters
+
+| Filter | Example | Description |
+|--------|---------|-------------|
+<div v-pre>
+
+| `keys` | `{{ obj \| keys }}` | Get dictionary keys as array |
+| `values` | `{{ obj \| values }}` | Get dictionary values as array |
+| `merge(other)` | `{{ defaults \| merge(overrides) }}` | Merge two dictionaries |
+
+</div>
+
+#### Other Filters
+
+| Filter | Example | Description |
+|--------|---------|-------------|
+<div v-pre>
+
+| `default("fallback")` | `{{ name \| default("Guest") }}` | Fallback when value is empty or undefined |
+| `date("Y-m-d")` | `{{ created \| date("Y-m-d") }}` | Format a date value |
+| `format(val)` | `{{ "%.2f" \| format(price) }}` | Format string with value (sprintf-style) |
+| `data_uri` | `{{ content \| data_uri }}` | Convert to a data URI string |
+| `dump` | `{{ var \| dump }}` | Debug output of a variable |
+| `form_token` | `{{ form_token() }}` | Generate a CSRF hidden input with token |
+| `formTokenValue` | `{{ formTokenValue("context") }}` | Return just the raw JWT token string |
+| `to_json` | `{{ data \| to_json }}` | JSON-encode a value (safe, no double-escaping) |
+| `js_escape` | `{{ text \| js_escape }}` | Escape for safe use in JavaScript strings |
+
+</div>
 
 ### Chaining Filters
 
@@ -560,6 +616,78 @@ When you need to output literal `{{ }}` (for a Vue.js template, for example):
     </div>
 &#123;% endraw %&#125;
 ```
+
+<div v-pre>
+
+### {% spaceless %} -- Remove Whitespace Between Tags
+
+</div>
+
+The `spaceless` tag strips whitespace between HTML tags. Useful for inline elements where whitespace affects layout:
+
+```html
+&#123;% spaceless %&#125;
+    <div>
+        <span>Hello</span>
+        <span>World</span>
+    </div>
+&#123;% endspaceless %&#125;
+```
+
+Output:
+
+```html
+<div><span>Hello</span><span>World</span></div>
+```
+
+Only whitespace between tags is removed. Whitespace inside text content stays intact.
+
+<div v-pre>
+
+### {% autoescape %} -- Control HTML Escaping
+
+</div>
+
+<div v-pre>
+
+By default, Frond escapes HTML in `{{ }}` output to prevent XSS attacks. The `autoescape` tag controls this behavior for a block:
+
+</div>
+
+```html
+&#123;% autoescape false %&#125;
+    &#123;&#123; raw_html &#125;&#125;
+&#123;% endautoescape %&#125;
+```
+
+With `autoescape false`, the variable outputs as raw HTML without escaping. Use this when you trust the content -- rendering Markdown-to-HTML output, for example.
+
+To re-enable escaping inside a `false` block:
+
+```html
+&#123;% autoescape false %&#125;
+    &#123;&#123; trusted_html &#125;&#125;
+    &#123;% autoescape true %&#125;
+        &#123;&#123; user_input &#125;&#125;
+    &#123;% endautoescape %&#125;
+&#123;% endautoescape %&#125;
+```
+
+### Whitespace Control
+
+Use hyphens in tag delimiters to trim whitespace:
+
+```html
+&#123;%- if condition -%&#125;
+    No leading or trailing whitespace around this block
+&#123;%- endif -%&#125;
+```
+
+<div v-pre>
+
+The `-` on the left trims whitespace before the tag. The `-` on the right trims whitespace after the tag. Works with `{{ }}`, `{% %}`, and `{# #}` delimiters.
+
+</div>
 
 ### Comments
 
