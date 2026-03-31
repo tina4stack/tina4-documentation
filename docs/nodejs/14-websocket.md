@@ -382,13 +382,13 @@ A full chat room with HTML, CSS, and JavaScript:
 Create `src/templates/chat.html`:
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block title %&#125;Chat - &#123;&#123; room &#125;&#125;&#123;% endblock %&#125;
+{% block title %}Chat - {{ room }}{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
 <div class="container">
-    <h2>Chat Room: &#123;&#123; room &#125;&#125;</h2>
+    <h2>Chat Room: {{ room }}</h2>
 
     <div id="messages" class="card" style="height: 400px; overflow-y: auto; padding: 16px; margin-bottom: 16px;">
     </div>
@@ -408,7 +408,7 @@ Create `src/templates/chat.html`:
 
 <script src="/js/frond.js"></script>
 <script>
-    var room = "&#123;&#123; room &#125;&#125;";
+    var room = "{{ room }}";
     var ws = frond.ws("/ws/chat/" + room);
     var messages = document.getElementById("messages");
 
@@ -436,7 +436,7 @@ Create `src/templates/chat.html`:
         document.getElementById("message").value = "";
     });
 </script>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 Create the route:

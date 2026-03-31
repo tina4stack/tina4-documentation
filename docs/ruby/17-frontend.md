@@ -79,17 +79,17 @@ tina4css uses a 12-column responsive grid, compatible with Bootstrap's class nam
 
 ```html
 <div class="row">
-    &#123;% for product in products %&#125;
+    {% for product in products %}
         <div class="col-md-4">
             <div class="card">
                 <div class="card-body">
-                    <h3 class="card-title">&#123;&#123; product.name &#125;&#125;</h3>
-                    <p class="card-text">$&#123;&#123; product.price | number_format(2) &#125;&#125;</p>
+                    <h3 class="card-title">{{ product.name }}</h3>
+                    <p class="card-text">${{ product.price | number_format(2) }}</p>
                     <button class="btn btn-primary btn-sm">View</button>
                 </div>
             </div>
         </div>
-    &#123;% endfor %&#125;
+    {% endfor %}
 </div>
 ```
 
@@ -108,17 +108,17 @@ tina4css uses a 12-column responsive grid, compatible with Bootstrap's class nam
         </tr>
     </thead>
     <tbody>
-        &#123;% for product in products %&#125;
+        {% for product in products %}
             <tr>
-                <td>&#123;&#123; product.id &#125;&#125;</td>
-                <td>&#123;&#123; product.name &#125;&#125;</td>
-                <td>$&#123;&#123; product.price | number_format(2) &#125;&#125;</td>
+                <td>{{ product.id }}</td>
+                <td>{{ product.name }}</td>
+                <td>${{ product.price | number_format(2) }}</td>
                 <td>
                     <button class="btn btn-sm btn-primary">Edit</button>
                     <button class="btn btn-sm btn-danger">Delete</button>
                 </td>
             </tr>
-        &#123;% endfor %&#125;
+        {% endfor %}
     </tbody>
 </table>
 ```
@@ -281,18 +281,18 @@ Here is a complete admin dashboard template:
 Create `src/templates/dashboard.html`:
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block title %&#125;Dashboard&#123;% endblock %&#125;
+{% block title %}Dashboard{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
     <h1>Dashboard</h1>
 
     <div class="row">
         <div class="col-md-3">
             <div class="card">
                 <div class="card-body text-center">
-                    <h2>&#123;&#123; stats.total_products &#125;&#125;</h2>
+                    <h2>{{ stats.total_products }}</h2>
                     <p class="text-muted">Products</p>
                 </div>
             </div>
@@ -300,7 +300,7 @@ Create `src/templates/dashboard.html`:
         <div class="col-md-3">
             <div class="card">
                 <div class="card-body text-center">
-                    <h2>&#123;&#123; stats.total_orders &#125;&#125;</h2>
+                    <h2>{{ stats.total_orders }}</h2>
                     <p class="text-muted">Orders</p>
                 </div>
             </div>
@@ -308,7 +308,7 @@ Create `src/templates/dashboard.html`:
         <div class="col-md-3">
             <div class="card">
                 <div class="card-body text-center">
-                    <h2>$&#123;&#123; stats.revenue | number_format(2) &#125;&#125;</h2>
+                    <h2>${{ stats.revenue | number_format(2) }}</h2>
                     <p class="text-muted">Revenue</p>
                 </div>
             </div>
@@ -316,7 +316,7 @@ Create `src/templates/dashboard.html`:
         <div class="col-md-3">
             <div class="card">
                 <div class="card-body text-center">
-                    <h2>&#123;&#123; stats.total_users &#125;&#125;</h2>
+                    <h2>{{ stats.total_users }}</h2>
                     <p class="text-muted">Users</p>
                 </div>
             </div>
@@ -333,14 +333,14 @@ Create `src/templates/dashboard.html`:
                             <tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th></tr>
                         </thead>
                         <tbody>
-                            &#123;% for order in recent_orders %&#125;
+                            {% for order in recent_orders %}
                                 <tr>
-                                    <td>#&#123;&#123; order.id &#125;&#125;</td>
-                                    <td>&#123;&#123; order.customer &#125;&#125;</td>
-                                    <td>$&#123;&#123; order.total | number_format(2) &#125;&#125;</td>
-                                    <td><span class="badge badge-&#123;&#123; order.status_class &#125;&#125;">&#123;&#123; order.status &#125;&#125;</span></td>
+                                    <td>#{{ order.id }}</td>
+                                    <td>{{ order.customer }}</td>
+                                    <td>${{ order.total | number_format(2) }}</td>
+                                    <td><span class="badge badge-{{ order.status_class }}">{{ order.status }}</span></td>
                                 </tr>
-                            &#123;% endfor %&#125;
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -357,7 +357,7 @@ Create `src/templates/dashboard.html`:
             </div>
         </div>
     </div>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 Route handler:
@@ -649,11 +649,11 @@ tina4css includes responsive breakpoints for adapting layouts to different scree
 A single-page admin view that loads data without page reloads:
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block title %&#125;User Management&#123;% endblock %&#125;
+{% block title %}User Management{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
 <h2>User Management</h2>
 
 <div id="loadingSpinner" class="text-center p-4" style="display: none;">
@@ -693,7 +693,7 @@ A single-page admin view that loads data without page reloads:
 
     loadUsers();
 </script>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 The page loads instantly. frond.js fetches user data in the background. Delete a user and the list refreshes without a page reload.

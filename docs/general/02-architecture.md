@@ -438,84 +438,84 @@ Frond is Tina4's template engine. Zero dependencies. Built from scratch in each 
 
 **Variables:**
 ```html
-<h1>&#123;&#123; title &#125;&#125;</h1>
-<p>Welcome, &#123;&#123; user.name &#125;&#125;</p>
-<p>First item: &#123;&#123; items[0] &#125;&#125;</p>
+<h1>{{ title }}</h1>
+<p>Welcome, {{ user.name }}</p>
+<p>First item: {{ items[0] }}</p>
 ```
 
 **Filters (pipe syntax):**
 ```html
-<p>&#123;&#123; name | upper &#125;&#125;</p>           <!-- JOHN DOE -->
-<p>&#123;&#123; name | lower &#125;&#125;</p>           <!-- john doe -->
-<p>&#123;&#123; price | number_format(2) &#125;&#125;</p> <!-- 29.99 -->
-<p>&#123;&#123; text | truncate(100) &#125;&#125;</p>    <!-- First 100 chars... -->
-<p>&#123;&#123; description | raw &#125;&#125;</p>       <!-- No auto-escaping -->
-<p>&#123;&#123; items | length &#125;&#125;</p>          <!-- 5 -->
-<p>&#123;&#123; items | join(", ") &#125;&#125;</p>      <!-- apple, banana, cherry -->
+<p>{{ name | upper }}</p>           <!-- JOHN DOE -->
+<p>{{ name | lower }}</p>           <!-- john doe -->
+<p>{{ price | number_format(2) }}</p> <!-- 29.99 -->
+<p>{{ text | truncate(100) }}</p>    <!-- First 100 chars... -->
+<p>{{ description | raw }}</p>       <!-- No auto-escaping -->
+<p>{{ items | length }}</p>          <!-- 5 -->
+<p>{{ items | join(", ") }}</p>      <!-- apple, banana, cherry -->
 ```
 
 Fifty-five filters. Strings, numbers, dates, arrays, encoding, formatting. If you need to transform data in a template, a filter exists.
 
 **Control structures:**
 ```html
-&#123;% if products | length > 0 %&#125;
-    &#123;% for product in products %&#125;
+{% if products | length > 0 %}
+    {% for product in products %}
         <div class="product">
-            <h2>&#123;&#123; product.name &#125;&#125;</h2>
-            <p>&#123;&#123; product.price | number_format(2) &#125;&#125;</p>
-            &#123;% if loop.last %&#125;
+            <h2>{{ product.name }}</h2>
+            <p>{{ product.price | number_format(2) }}</p>
+            {% if loop.last %}
                 <hr>
-            &#123;% endif %&#125;
+            {% endif %}
         </div>
-    &#123;% else %&#125;
+    {% else %}
         <p>No products found.</p>
-    &#123;% endfor %&#125;
-&#123;% endif %&#125;
+    {% endfor %}
+{% endif %}
 ```
 
 **Template inheritance:**
 ```html
-&#123;# base.html #&#125;
+{# base.html #}
 <!DOCTYPE html>
 <html>
 <head>
-    <title>&#123;% block title %&#125;My App&#123;% endblock %&#125;</title>
+    <title>{% block title %}My App{% endblock %}</title>
 </head>
 <body>
-    &#123;% block content %&#125;&#123;% endblock %&#125;
+    {% block content %}{% endblock %}
 </body>
 </html>
 
-&#123;# products/list.html #&#125;
-&#123;% extends "base.html" %&#125;
+{# products/list.html #}
+{% extends "base.html" %}
 
-&#123;% block title %&#125;Products&#123;% endblock %&#125;
+{% block title %}Products{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
     <h1>Our Products</h1>
-    &#123;% for product in products %&#125;
-        <p>&#123;&#123; product.name &#125;&#125; - $&#123;&#123; product.price | number_format(2) &#125;&#125;</p>
-    &#123;% endfor %&#125;
-&#123;% endblock %&#125;
+    {% for product in products %}
+        <p>{{ product.name }} - ${{ product.price | number_format(2) }}</p>
+    {% endfor %}
+{% endblock %}
 ```
 
 **Includes:**
 ```html
-&#123;% include "partials/header.html" %&#125;
+{% include "partials/header.html" %}
 <main>
-    &#123;&#123; content &#125;&#125;
+    {{ content }}
 </main>
-&#123;% include "partials/footer.html" %&#125;
+{% include "partials/footer.html" %}
 ```
 
 **Fragment caching:**
 ```html
-&#123;% cache "product-list" 300 %&#125;
-    &#123;# This block is cached for 300 seconds #&#125;
-    &#123;% for product in products %&#125;
-        <div>&#123;&#123; product.name &#125;&#125;</div>
-    &#123;% endfor %&#125;
-&#123;% endcache %&#125;
+{% cache "product-list" 300 %}
+    {# This block is cached for 300 seconds #}
+    {% for product in products %}
+        <div>{{ product.name }}</div>
+    {% endfor %}
+{% endcache %}
 ```
 
 One fact matters above all others: the template syntax is identical across all four languages. A template written for a Python backend works on PHP, Ruby, and Node.js without a single change. The backend is invisible to the frontend. Frond guarantees that.

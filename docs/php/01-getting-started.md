@@ -356,7 +356,7 @@ Create `src/templates/base.html`:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>&#123;% block title %&#125;My Store&#123;% endblock %&#125;</title>
+    <title>{% block title %}My Store{% endblock %}</title>
     <link rel="stylesheet" href="/css/tina4.css">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
@@ -377,7 +377,7 @@ Create `src/templates/base.html`:
         <a href="/products">Products</a>
     </nav>
     <div class="container">
-        &#123;% block content %&#125;&#123;% endblock %&#125;
+        {% block content %}{% endblock %}
     </div>
     <script src="/js/frond.js"></script>
 </body>
@@ -391,34 +391,34 @@ Two blocks: `title` and `content`. Child templates override what they need. The 
 Create `src/templates/products.html`:
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block title %&#125;Products - My Store&#123;% endblock %&#125;
+{% block title %}Products - My Store{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
     <h1>Our Products</h1>
-    <p>Showing &#123;&#123; products | length &#125;&#125; product&#123;&#123; products | length != 1 ? "s" : "" &#125;&#125;</p>
+    <p>Showing {{ products | length }} product{{ products | length != 1 ? "s" : "" }}</p>
 
-    &#123;% if products | length > 0 %&#125;
-        &#123;% for product in products %&#125;
+    {% if products | length > 0 %}
+        {% for product in products %}
             <div class="product-card">
-                <h3>&#123;&#123; product.name &#125;&#125;</h3>
-                <p>&#123;&#123; product.description &#125;&#125;</p>
-                <p class="price">$&#123;&#123; product.price | number_format(2) &#125;&#125;</p>
-                &#123;% if product.in_stock %&#125;
+                <h3>{{ product.name }}</h3>
+                <p>{{ product.description }}</p>
+                <p class="price">${{ product.price | number_format(2) }}</p>
+                {% if product.in_stock %}
                     <span class="badge badge-success">In Stock</span>
-                &#123;% else %&#125;
+                {% else %}
                     <span class="badge badge-danger">Out of Stock</span>
-                &#123;% endif %&#125;
-                &#123;% if not loop.last %&#125;
-                    &#123;# Don't add separator after the last item #&#125;
-                &#123;% endif %&#125;
+                {% endif %}
+                {% if not loop.last %}
+                    {# Don't add separator after the last item #}
+                {% endif %}
             </div>
-        &#123;% endfor %&#125;
-    &#123;% else %&#125;
+        {% endfor %}
+    {% else %}
         <p>No products available at the moment.</p>
-    &#123;% endif %&#125;
-&#123;% endblock %&#125;
+    {% endif %}
+{% endblock %}
 ```
 
 ### Create the Route That Renders the Template
@@ -907,7 +907,7 @@ Create `src/templates/store-layout.html`:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>&#123;% block title %&#125;Store&#123;% endblock %&#125;</title>
+    <title>{% block title %}Store{% endblock %}</title>
     <link rel="stylesheet" href="/css/tina4.css">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
@@ -926,10 +926,10 @@ Create `src/templates/store-layout.html`:
 </head>
 <body>
     <header>
-        <h1>&#123;% block header %&#125;Store&#123;% endblock %&#125;</h1>
+        <h1>{% block header %}Store{% endblock %}</h1>
     </header>
     <div class="container">
-        &#123;% block content %&#125;&#123;% endblock %&#125;
+        {% block content %}{% endblock %}
     </div>
     <script src="/js/frond.js"></script>
 </body>
@@ -939,29 +939,29 @@ Create `src/templates/store-layout.html`:
 Create `src/templates/store.html`:
 
 ```html
-&#123;% extends "store-layout.html" %&#125;
+{% extends "store-layout.html" %}
 
-&#123;% block title %&#125;Our Store&#123;% endblock %&#125;
-&#123;% block header %&#125;Our Store&#123;% endblock %&#125;
+{% block title %}Our Store{% endblock %}
+{% block header %}Our Store{% endblock %}
 
-&#123;% block content %&#125;
-    <p class="stats">&#123;&#123; products | length &#125;&#125; products, &#123;&#123; featured_count &#125;&#125; featured</p>
+{% block content %}
+    <p class="stats">{{ products | length }} products, {{ featured_count }} featured</p>
 
     <div class="product-grid">
-        &#123;% for product in products %&#125;
-            <div class="product-card&#123;&#123; product.featured ? ' featured' : '' &#125;&#125;">
+        {% for product in products %}
+            <div class="product-card{{ product.featured ? ' featured' : '' }}">
                 <p class="product-name">
-                    &#123;&#123; product.name &#125;&#125;
-                    &#123;% if product.featured %&#125;
+                    {{ product.name }}
+                    {% if product.featured %}
                         <span class="featured-badge">Featured</span>
-                    &#123;% endif %&#125;
+                    {% endif %}
                 </p>
-                <p class="product-category">&#123;&#123; product.category &#125;&#125;</p>
-                <p class="product-price">$&#123;&#123; product.price | number_format(2) &#125;&#125;</p>
+                <p class="product-category">{{ product.category }}</p>
+                <p class="product-price">${{ product.price | number_format(2) }}</p>
             </div>
-        &#123;% endfor %&#125;
+        {% endfor %}
     </div>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 Create `src/routes/store.php`:

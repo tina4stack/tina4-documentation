@@ -17,7 +17,7 @@ The v3.10 line focused on ORM refinements, Frond template engine fixes, and cros
 The ORM gained automatic translation between JavaScript camelCase and database snake_case. Set `autoMap = true` on a model and the framework handles the rest.
 
 ```typescript
-import { BaseModel } from "tina4-nodejs/orm";
+import { BaseModel } from "tina4-nodejs";
 
 class User extends BaseModel {
   static tableName = "users";
@@ -396,9 +396,9 @@ The `@tina4/twig` npm package was removed. The framework now uses its built-in F
 // Templates use Frond filters (same Twig syntax, built-in engine)
 ```
 
-**Zero npm dependencies (v3.8.4+)**
+**Groundwork for zero dependencies (v3.8.4)**
 
-Starting with v3.8.4, `better-sqlite3` was replaced by Node's built-in `node:sqlite`. The framework has zero npm dependencies. If your code imported `better-sqlite3` directly, switch to the Tina4 database API.
+v3.8.4 began migrating from `better-sqlite3` to Node's built-in `node:sqlite` module. The migration completed in v3.9.3.
 
 ---
 
@@ -539,6 +539,16 @@ Router.websocket("/ws/{room}", (connection, request, params) => {
 **Auth function rename (v3.4.0)**
 
 `getToken()` and `validToken()` are now the primary function names. The old names `createToken` and `validateToken` continue to work as aliases but are deprecated.
+
+```typescript
+// BEFORE (v3.3.x)
+const token = Auth.createToken({ userId: 42 });
+const valid = Auth.validateToken(token);
+
+// AFTER (v3.4.0)
+const token = Auth.getToken({ userId: 42 });
+const valid = Auth.validToken(token);
+```
 
 **Queue job file extension (v3.4.0)**
 

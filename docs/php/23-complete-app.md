@@ -658,7 +658,7 @@ Create `src/templates/app/layout.html`:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>&#123;% block title %&#125;TaskFlow&#123;% endblock %&#125;</title>
+    <title>{% block title %}TaskFlow{% endblock %}</title>
     <link rel="stylesheet" href="/css/tina4.css">
     <script>
         (function() {
@@ -720,29 +720,29 @@ Create `src/templates/app/layout.html`:
             .stats-row { grid-template-columns: 1fr 1fr; }
         }
     </style>
-    &#123;% block extra_css %&#125;&#123;% endblock %&#125;
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
     <div class="app">
         <aside class="sidebar">
             <div class="sidebar-brand">TaskFlow</div>
             <ul class="sidebar-nav">
-                <li><a href="/admin" class="&#123;% if page == 'dashboard' %&#125;active&#123;% endif %&#125;">Dashboard</a></li>
-                <li><a href="/admin/tasks" class="&#123;% if page == 'tasks' %&#125;active&#123;% endif %&#125;">All Tasks</a></li>
-                <li><a href="/admin/my-tasks" class="&#123;% if page == 'my-tasks' %&#125;active&#123;% endif %&#125;">My Tasks</a></li>
+                <li><a href="/admin" class="{% if page == 'dashboard' %}active{% endif %}">Dashboard</a></li>
+                <li><a href="/admin/tasks" class="{% if page == 'tasks' %}active{% endif %}">All Tasks</a></li>
+                <li><a href="/admin/my-tasks" class="{% if page == 'my-tasks' %}active{% endif %}">My Tasks</a></li>
             </ul>
         </aside>
         <div class="main">
             <div class="topbar">
-                <div class="topbar-left">&#123;% block page_title %&#125;Dashboard&#123;% endblock %&#125;</div>
+                <div class="topbar-left">{% block page_title %}Dashboard{% endblock %}</div>
                 <div class="topbar-right">
                     <button class="btn btn-sm btn-outline-secondary" onclick="toggleTheme()">Theme</button>
-                    <span id="userName">&#123;&#123; user_name | default("User") &#125;&#125;</span>
+                    <span id="userName">{{ user_name | default("User") }}</span>
                     <button class="btn btn-sm btn-outline-danger" onclick="logout()">Logout</button>
                 </div>
             </div>
             <div class="content">
-                &#123;% block content %&#125;&#123;% endblock %&#125;
+                {% block content %}{% endblock %}
             </div>
         </div>
     </div>
@@ -759,7 +759,7 @@ Create `src/templates/app/layout.html`:
             window.location.href = "/login";
         }
     </script>
-    &#123;% block extra_js %&#125;&#123;% endblock %&#125;
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
 ```
@@ -767,12 +767,12 @@ Create `src/templates/app/layout.html`:
 Create `src/templates/app/dashboard.html`:
 
 ```html
-&#123;% extends "app/layout.html" %&#125;
+{% extends "app/layout.html" %}
 
-&#123;% block title %&#125;Dashboard - TaskFlow&#123;% endblock %&#125;
-&#123;% block page_title %&#125;Dashboard&#123;% endblock %&#125;
+{% block title %}Dashboard - TaskFlow{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
     <div class="stats-row">
         <div class="stat-card">
             <div class="value" id="statTotal">--</div>
@@ -843,9 +843,9 @@ Create `src/templates/app/dashboard.html`:
     </div>
 
     <div id="alertArea" style="position: fixed; top: 80px; right: 24px; width: 300px; z-index: 1000;"></div>
-&#123;% endblock %&#125;
+{% endblock %}
 
-&#123;% block extra_js %&#125;
+{% block extra_js %}
 <script>
     function loadStats() {
         frond.get("/api/dashboard/stats", function (data) {
@@ -916,7 +916,7 @@ Create `src/templates/app/dashboard.html`:
         loadTasks();
     }, 30000);
 </script>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 ### Dashboard Stats Route

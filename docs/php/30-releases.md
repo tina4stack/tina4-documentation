@@ -2,7 +2,7 @@
 
 ## Version History
 
-Tina4 PHP follows semantic versioning. The major number changes when something breaks. The minor number changes when something new arrives. The patch number changes when something gets fixed. Every release listed here shipped through GitHub Actions and landed on Packagist within minutes.
+Tina4 PHP follows semantic versioning. The major number changes when something breaks. The minor number changes when something new arrives. The patch number changes when something gets fixed. Each release is available on Packagist.
 
 This chapter covers the full v3 line -- from the first release candidate through the current stable release. If you are upgrading from v2, read Chapter 29 first. It covers every breaking change and gives you a migration checklist.
 
@@ -12,8 +12,7 @@ This chapter covers the full v3 line -- from the first release candidate through
 
 **Released:** 28-30 March 2026
 
-The v3.10 line introduced the Frond template engine as a singleton, automatic ORM field mapping, transaction safety, the `tina4 ai` CLI command, and a round of Frond parser fixes. This is the most active patch series in v3 history.
-
+The v3.10 line introduced the Frond template engine as a singleton, automatic ORM field mapping, transaction safety, the `tina4 ai` CLI command, and a round of Frond parser fixes.
 ### v3.10.29 -- `tina4 ai` Command (30 March 2026)
 
 The `tina4 ai` CLI command stopped returning a stub message and started doing real work. It scans your project for AI coding tools -- Claude Code, Cursor, GitHub Copilot, Windsurf, Aider, Cline, and OpenAI Codex -- then installs context files for each one it finds.
@@ -73,20 +72,26 @@ Macro output was getting HTML-escaped when used inside expressions. A `{% macro 
 
 Two changes landed together. The framework rebranded to "This Is Now A 4Framework" across all default pages, CLI banners, and READMEs. More important: ORM `save()`, `delete()`, and `restore()` now wrap their operations in explicit transactions.
 
-**Before (broken on SQLite):**
+**Before (manual workaround for SQLite):**
 
 ```php
-$user = new User();
-$user->name = "Alice";
-$user->save(); // On SQLite, this could silently fail without a transaction
+$db->startTransaction();
+try {
+    $user = new User();
+    $user->name = "Alice";
+    $user->save(); // Without this wrapper, SQLite could silently drop the write
+    $db->commit();
+} catch (\Exception $e) {
+    $db->rollback();
+}
 ```
 
-**After (fixed):**
+**After (automatic transaction wrapping):**
 
 ```php
 $user = new User();
 $user->name = "Alice";
-$user->save(); // Wrapped in startTransaction() / commit() / rollback()
+$user->save(); // save() now calls startTransaction() / commit() / rollback() internally
 ```
 
 The fix also removed the hardcoded `version` field from `composer.json`, which was blocking Packagist sync.
@@ -608,7 +613,7 @@ $db->startTransaction();
 
 ### Release Candidates (21 March 2026)
 
-Five release candidates shipped before the final v3.0.0 release. They covered the initial rewrite (`rc.1`), Frond pre-compilation with a 2.8x render speedup (`rc.4`), and final test fixes (`rc.5`). The RC period lasted one day. All 1,249 tests passed before the final tag.
+Five release candidates shipped before the final v3.0.0 release. They covered the initial rewrite (`rc.1`), Frond pre-compilation with a 2.8x render speedup (`rc.4`), and final test fixes (`rc.5`). The RC period lasted one day. The test suite passed before the final tag.
 
 ---
 

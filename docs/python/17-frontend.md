@@ -642,7 +642,7 @@ Create `src/templates/base.html`:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>&#123;% block title %&#125;Dashboard&#123;% endblock %&#125;</title>
+    <title>{% block title %}Dashboard{% endblock %}</title>
     <link rel="stylesheet" href="/css/tina4.css">
     <script>
         var t = localStorage.getItem("theme");
@@ -667,7 +667,7 @@ Create `src/templates/base.html`:
     <div class="container-fluid mt-4">
         <div class="row">
             <div class="col-md-2">
-                &#123;% block sidebar %&#125;
+                {% block sidebar %}
                 <div class="list-group">
                     <a href="/admin" class="list-group-item list-group-item-action">Overview</a>
                     <a href="/admin/products" class="list-group-item list-group-item-action">Products</a>
@@ -676,10 +676,10 @@ Create `src/templates/base.html`:
                     <a href="/admin/reports" class="list-group-item list-group-item-action">Reports</a>
                     <a href="/admin/settings" class="list-group-item list-group-item-action">Settings</a>
                 </div>
-                &#123;% endblock %&#125;
+                {% endblock %}
             </div>
             <div class="col-md-10">
-                &#123;% block content %&#125;&#123;% endblock %&#125;
+                {% block content %}{% endblock %}
             </div>
         </div>
     </div>
@@ -693,7 +693,7 @@ Create `src/templates/base.html`:
             localStorage.setItem("theme", current === "dark" ? "light" : "dark");
         }
     </script>
-    &#123;% block scripts %&#125;&#123;% endblock %&#125;
+    {% block scripts %}{% endblock %}
 </body>
 </html>
 ```
@@ -703,11 +703,11 @@ Create `src/templates/base.html`:
 Create `src/templates/dashboard.html`:
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block title %&#125;Dashboard - Admin&#123;% endblock %&#125;
+{% block title %}Dashboard - Admin{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
     <h1>Dashboard</h1>
 
     <div class="row mb-4">
@@ -715,7 +715,7 @@ Create `src/templates/dashboard.html`:
             <div class="card">
                 <div class="card-body">
                     <h6 class="card-subtitle text-muted">Total Products</h6>
-                    <h2 class="card-title">&#123;&#123; stats.total_products &#125;&#125;</h2>
+                    <h2 class="card-title">{{ stats.total_products }}</h2>
                 </div>
             </div>
         </div>
@@ -723,7 +723,7 @@ Create `src/templates/dashboard.html`:
             <div class="card">
                 <div class="card-body">
                     <h6 class="card-subtitle text-muted">Total Orders</h6>
-                    <h2 class="card-title">&#123;&#123; stats.total_orders &#125;&#125;</h2>
+                    <h2 class="card-title">{{ stats.total_orders }}</h2>
                 </div>
             </div>
         </div>
@@ -731,7 +731,7 @@ Create `src/templates/dashboard.html`:
             <div class="card">
                 <div class="card-body">
                     <h6 class="card-subtitle text-muted">Revenue</h6>
-                    <h2 class="card-title">$&#123;&#123; stats.revenue &#125;&#125;</h2>
+                    <h2 class="card-title">${{ stats.revenue }}</h2>
                 </div>
             </div>
         </div>
@@ -739,7 +739,7 @@ Create `src/templates/dashboard.html`:
             <div class="card">
                 <div class="card-body">
                     <h6 class="card-subtitle text-muted">Active Users</h6>
-                    <h2 class="card-title">&#123;&#123; stats.active_users &#125;&#125;</h2>
+                    <h2 class="card-title">{{ stats.active_users }}</h2>
                 </div>
             </div>
         </div>
@@ -760,16 +760,16 @@ Create `src/templates/dashboard.html`:
                             </tr>
                         </thead>
                         <tbody>
-                            &#123;% for order in recent_orders %&#125;
+                            {% for order in recent_orders %}
                             <tr>
-                                <td>#&#123;&#123; order.id &#125;&#125;</td>
-                                <td>&#123;&#123; order.customer &#125;&#125;</td>
-                                <td>$&#123;&#123; order.amount &#125;&#125;</td>
+                                <td>#{{ order.id }}</td>
+                                <td>{{ order.customer }}</td>
+                                <td>${{ order.amount }}</td>
                                 <td>
-                                    <span class="badge bg-&#123;&#123; order.badge &#125;&#125;">&#123;&#123; order.status &#125;&#125;</span>
+                                    <span class="badge bg-{{ order.badge }}">{{ order.status }}</span>
                                 </td>
                             </tr>
-                            &#123;% endfor %&#125;
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -790,27 +790,27 @@ Create `src/templates/dashboard.html`:
                 <div class="card-body">
                     <p><strong>CPU:</strong></p>
                     <div class="progress mb-3">
-                        <div class="progress-bar bg-success" style="width: &#123;&#123; stats.cpu_usage &#125;&#125;%">
-                            &#123;&#123; stats.cpu_usage &#125;&#125;%
+                        <div class="progress-bar bg-success" style="width: {{ stats.cpu_usage }}%">
+                            {{ stats.cpu_usage }}%
                         </div>
                     </div>
                     <p><strong>Memory:</strong></p>
                     <div class="progress mb-3">
-                        <div class="progress-bar bg-info" style="width: &#123;&#123; stats.memory_usage &#125;&#125;%">
-                            &#123;&#123; stats.memory_usage &#125;&#125;%
+                        <div class="progress-bar bg-info" style="width: {{ stats.memory_usage }}%">
+                            {{ stats.memory_usage }}%
                         </div>
                     </div>
                     <p><strong>Disk:</strong></p>
                     <div class="progress">
-                        <div class="progress-bar bg-warning" style="width: &#123;&#123; stats.disk_usage &#125;&#125;%">
-                            &#123;&#123; stats.disk_usage &#125;&#125;%
+                        <div class="progress-bar bg-warning" style="width: {{ stats.disk_usage }}%">
+                            {{ stats.disk_usage }}%
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 ### Dashboard Route
@@ -939,11 +939,11 @@ A user management page. Data loads via AJAX using frond.js. No full page reloads
 Create `src/templates/admin/users.html`:
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block title %&#125;Users - Admin&#123;% endblock %&#125;
+{% block title %}Users - Admin{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
             <span>All Users</span>
@@ -1001,9 +1001,9 @@ Create `src/templates/admin/users.html`:
     </div>
 
     <div id="alertArea" class="mt-3"></div>
-&#123;% endblock %&#125;
+{% endblock %}
 
-&#123;% block scripts %&#125;
+{% block scripts %}
 <script>
     function loadUsers() {
         frond.get("/api/users", function (data) {
@@ -1055,7 +1055,7 @@ Create `src/templates/admin/users.html`:
     // Load users on page load
     loadUsers();
 </script>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 ### The Route

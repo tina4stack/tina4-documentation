@@ -24,7 +24,7 @@ print(tina4_python.__version__)
 
 ## v3.10.x — Current Stable (March 28-31, 2026)
 
-The v3.10 line carries the most patches of any minor release. It refined the Frond template engine, hardened the ORM, and brought cross-framework parity to completion.
+The v3.10 line carries the most patches of any minor release. It refined the Frond template engine, hardened the ORM, and completed cross-framework parity.
 
 ### Highlights
 
@@ -44,10 +44,10 @@ class UserProfile(ORM):
 
 ```html
 <!-- Method calls on template variables -->
-&#123;&#123; user.get_display_name() &#125;&#125;
+{{ user.get_display_name() }}
 
 <!-- Slice syntax -->
-&#123;&#123; long_text[:100] &#125;&#125;...
+{{ long_text[:100] }}...
 ```
 
 - **Frond quote-aware operator matching** (v3.10.5). Operators inside quoted strings no longer break the parser. Before this fix, a string containing `>=` or `==` could confuse the template engine.
@@ -58,8 +58,8 @@ class UserProfile(ORM):
 
 ```html
 <script>
-  const config = &#123;&#123; settings|to_json &#125;&#125;;
-  const message = "&#123;&#123; user_input|js_escape &#125;&#125;";
+  const config = {{ settings|to_json }};
+  const message = "{{ user_input|js_escape }}";
 </script>
 ```
 
@@ -67,7 +67,7 @@ class UserProfile(ORM):
 
 ```html
 <form method="post">
-  <input type="hidden" name="form_token" value="&#123;&#123; formTokenValue() &#125;&#125;">
+  <input type="hidden" name="form_token" value="{{ formTokenValue() }}">
   <!-- form fields -->
 </form>
 ```
@@ -81,7 +81,7 @@ class UserProfile(ORM):
 </div>
 
 ```html
-&#123;% set total = price * quantity + shipping %&#125;
+{% set total = price * quantity + shipping %}
 ```
 
 ### Bug Fixes
@@ -89,7 +89,7 @@ class UserProfile(ORM):
 **Middleware not applied to routes (fixed in v3.10.1).** Middleware functions registered with `@middleware` were silently skipped during route dispatch. Routes ran without their middleware.
 
 ```python
-# This middleware was ignored before v3.10.1
+# Before (broken) — middleware was silently skipped
 @app.middleware
 def log_request(request, response):
     print(f"Request: {request.method} {request.url}")
@@ -97,28 +97,51 @@ def log_request(request, response):
 
 @app.get("/users")
 def get_users(request, response):
-    # middleware never ran — fixed in v3.10.1
+    # middleware never ran
+    return response("OK")
+```
+
+```python
+# After (fixed in v3.10.1) — middleware runs on every matching route
+@app.middleware
+def log_request(request, response):
+    print(f"Request: {request.method} {request.url}")
+    return request, response
+
+@app.get("/users")
+def get_users(request, response):
+    # log_request fires before this handler
     return response("OK")
 ```
 
 **Wildcard route matching (fixed in v3.10.1).** Routes with wildcard segments failed to match incoming requests. The router now handles wildcards as expected.
 
-**`Auth.valid_token` reference error (fixed in v3.10.9).** The server module called `Auth.valid_token` instead of the correct static method `Auth.valid_token_static`. This caused a `TypeError` on every token validation.
+**`Auth.valid_token` reference error (fixed in v3.10.9).** The internal server module referenced the wrong attribute name when calling token validation, which caused a `TypeError` on every secured request. The fix resolved the reference so `Auth.valid_token` works as expected.
 
 **Frond `dict[variable_key]` access (fixed in v3.10.11).** Accessing a dictionary with a variable key inside templates raised a `KeyError`. The engine now resolves the variable before the lookup.
 
 ```html
-<!-- This failed before v3.10.11 -->
-&#123;% set key = "name" %&#125;
-&#123;&#123; user[key] &#125;&#125;
+<!-- Before (broken) — raised KeyError -->
+{% set key = "name" %}
+{{ user[key] }}
+
+<!-- After (fixed in v3.10.11) — resolves variable, then looks up the key -->
+{% set key = "name" %}
+{{ user[key] }}  <!-- now outputs user["name"] -->
 ```
 
 **ORM transaction errors on SQLite (fixed in v3.10.25).** Calling `save()` or `delete()` on an ORM model raised `"cannot commit -- no transaction is active"` on SQLite. The ORM now wraps every write operation in a proper `start_transaction` / `commit` / `rollback` cycle.
 
 ```python
+# Before (broken on SQLite)
 user = User()
 user.name = "Alice"
-user.save()  # raised OperationalError on SQLite before v3.10.25
+user.save()  # raised "cannot commit -- no transaction is active"
+
+# After (fixed in v3.10.25) — save() wraps in a transaction automatically
+user = User()
+user.name = "Alice"
+user.save()  # works on all database engines including SQLite
 ```
 
 **Stale templates in dev mode (fixed in v3.10.24).** The dev server cached rendered templates and did not pick up file changes until restart. Templates now reload on every request in debug mode.
@@ -130,6 +153,20 @@ user.save()  # raised OperationalError on SQLite before v3.10.25
 ### Breaking Changes
 
 **`@noauth` and `@secured` decorator behavior (v3.10.1).** Before this fix, these decorators did not update the route's auth flags. If you relied on the broken behavior (routes ignoring auth decorators), your routes will now enforce authentication as intended.
+
+```python
+# Before (broken) — decorator had no effect
+@app.get("/public")
+@noauth
+def public_page(response):
+    return response("Open to all")  # still required auth
+
+# After (fixed in v3.10.1) — decorator works as expected
+@app.get("/public")
+@noauth
+def public_page(response):
+    return response("Open to all")  # accessible without token
+```
 
 ---
 
@@ -388,7 +425,7 @@ def handle_upload(request, response):
 **Ternary-with-filter support in Frond (v3.3.0).** Templates handle inline conditionals that pipe their result through a filter.
 
 ```html
-&#123;&#123; user.name if user else "Anonymous"|upper &#125;&#125;
+{{ user.name if user else "Anonymous"|upper }}
 ```
 
 ### Breaking Changes
@@ -408,6 +445,14 @@ def send_email(job):
 ```
 
 **File upload property rename (v3.3.0).** `file_name` became `filename` (no underscore). The old name is no longer available.
+
+```python
+# Before
+name = request.files[0].file_name
+
+# After
+name = request.files[0].filename
+```
 
 **Route params merged into `request.params` (v3.3.0).** Path parameters now merge into `request.params` alongside query parameters. If a query parameter shares a name with a path parameter, the path parameter wins.
 

@@ -583,15 +583,15 @@ Define this route last (or in a file that sorts alphabetically after your other 
 Or create a custom 404 page at `src/templates/errors/404.html`:
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block title %&#125;Not Found&#123;% endblock %&#125;
+{% block title %}Not Found{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
     <h1>404 - Page Not Found</h1>
     <p>The page you are looking for does not exist.</p>
     <a href="/">Go back home</a>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 Tina4 uses this template for unmatched routes when the file exists.

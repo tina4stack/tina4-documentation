@@ -302,9 +302,9 @@ v3 adds the ability to call methods on object values inside templates, with argu
 <!-- v2: not possible -->
 
 <!-- v3: call methods with arguments -->
-<p>&#123;&#123; user.t("greeting_key") &#125;&#125;</p>
-<p>&#123;&#123; product.formatPrice("USD") &#125;&#125;</p>
-<p>&#123;&#123; order.statusLabel() &#125;&#125;</p>
+<p>{{ user.t("greeting_key") }}</p>
+<p>{{ product.formatPrice("USD") }}</p>
+<p>{{ order.statusLabel() }}</p>
 ```
 
 The object passed to the template must have the method defined. Frond calls it and outputs the return value. Arguments are passed as literals (strings, numbers, booleans).

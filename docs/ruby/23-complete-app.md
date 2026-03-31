@@ -670,12 +670,12 @@ Create `src/templates/emails/task-assigned.html`:
 <body>
     <div class="container">
         <h2>New Task Assigned</h2>
-        <p>Hi &#123;&#123; assignee_name &#125;&#125;,</p>
-        <p><strong>&#123;&#123; assigner_name &#125;&#125;</strong> assigned you a new task:</p>
+        <p>Hi {{ assignee_name }},</p>
+        <p><strong>{{ assigner_name }}</strong> assigned you a new task:</p>
 
         <div class="card">
             <div class="card-body">
-                <h3>&#123;&#123; task_title &#125;&#125;</h3>
+                <h3>{{ task_title }}</h3>
             </div>
         </div>
 
@@ -698,11 +698,11 @@ tina4 queue:work
 Create `src/templates/dashboard.html`:
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block title %&#125;TaskFlow Dashboard&#123;% endblock %&#125;
+{% block title %}TaskFlow Dashboard{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
 <h1>Dashboard</h1>
 
 <div id="stats" class="row mb-4">
@@ -800,7 +800,7 @@ Create `src/templates/dashboard.html`:
         }
     });
 </script>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 Open `http://localhost:7147/admin` in your browser to see the full dashboard with stats, task list, and live update panel.

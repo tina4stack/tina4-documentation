@@ -443,11 +443,11 @@ In your template, include the CSRF token in every form:
 
 ```html
 <form method="POST" action="/profile/update">
-    &#123;&#123; form_token() &#125;&#125;
+    {{ form_token() }}
 
     <div class="form-group">
         <label for="name">Name</label>
-        <input type="text" name="name" id="name" value="&#123;&#123; user.name &#125;&#125;">
+        <input type="text" name="name" id="name" value="{{ user.name }}">
     </div>
 
     <button type="submit">Update Profile</button>

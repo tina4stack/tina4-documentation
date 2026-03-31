@@ -338,7 +338,7 @@ The form:
 
 ```html
 <form method="POST" action="/login">
-    &#123;&#123; form_token() &#125;&#125;
+    {{ form_token() }}
     <div class="form-group">
         <label for="email">Email</label>
         <input type="email" id="email" name="email" class="form-control" required>

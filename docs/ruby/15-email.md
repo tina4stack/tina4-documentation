@@ -458,40 +458,40 @@ Create `src/templates/emails/welcome.html`:
 </head>
 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f5f5; padding: 20px;">
     <div style="background: #1a1a2e; color: white; padding: 24px; text-align: center; border-radius: 8px 8px 0 0;">
-        <h1 style="margin: 0; font-size: 24px;">Welcome, &#123;&#123; name &#125;&#125;!</h1>
+        <h1 style="margin: 0; font-size: 24px;">Welcome, {{ name }}!</h1>
     </div>
     <div style="background: white; padding: 24px; border-radius: 0 0 8px 8px;">
-        <p>Hi &#123;&#123; name &#125;&#125;,</p>
+        <p>Hi {{ name }},</p>
         <p>Your account has been created. Here are your details:</p>
 
         <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
             <tr>
                 <td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">Email</td>
-                <td style="padding: 8px; border-bottom: 1px solid #eee;">&#123;&#123; email &#125;&#125;</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">{{ email }}</td>
             </tr>
             <tr>
                 <td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">Account ID</td>
-                <td style="padding: 8px; border-bottom: 1px solid #eee;">#&#123;&#123; user_id &#125;&#125;</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">#{{ user_id }}</td>
             </tr>
         </table>
 
         <p>Get started:</p>
         <ul>
-            <li><a href="&#123;&#123; base_url &#125;&#125;/products" style="color: #1a1a2e;">Our product catalog</a></li>
-            <li><a href="&#123;&#123; base_url &#125;&#125;/profile" style="color: #1a1a2e;">Your profile settings</a></li>
+            <li><a href="{{ base_url }}/products" style="color: #1a1a2e;">Our product catalog</a></li>
+            <li><a href="{{ base_url }}/profile" style="color: #1a1a2e;">Your profile settings</a></li>
         </ul>
 
-        &#123;% if promo_code %&#125;
+        {% if promo_code %}
             <div style="background: #d4edda; padding: 16px; border-radius: 4px; margin: 16px 0;">
-                <strong>Special offer!</strong> Use code <code>&#123;&#123; promo_code &#125;&#125;</code> for 10% off your first order.
+                <strong>Special offer!</strong> Use code <code>{{ promo_code }}</code> for 10% off your first order.
             </div>
-        &#123;% endif %&#125;
+        {% endif %}
 
-        <p>Cheers,<br>The &#123;&#123; app_name &#125;&#125; Team</p>
+        <p>Cheers,<br>The {{ app_name }} Team</p>
     </div>
 
     <div style="text-align: center; padding: 12px; color: #888; font-size: 12px;">
-        <p>You received this because you signed up at &#123;&#123; app_name &#125;&#125;.</p>
+        <p>You received this because you signed up at {{ app_name }}.</p>
     </div>
 </body>
 </html>

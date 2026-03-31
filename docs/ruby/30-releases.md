@@ -85,6 +85,16 @@ Three new Frond template filters for working with data in JavaScript contexts.
 
 **Bug fix:** The `|replace` filter mishandled backslash characters in replacement strings.
 
+```twig
+{# Before (broken) — backslash produced corrupted output #}
+{{ "hello\\world"|replace("\\\\", "/") }}
+{# rendered: helo/world (ate a character) #}
+
+{# After (fixed) — backslash escaping works correctly #}
+{{ "hello\\world"|replace("\\\\", "/") }}
+{# renders: hello/world #}
+```
+
 ### v3.10.14 -- get_next_id() (March 28)
 
 Pre-generate the next primary key before inserting a record. The method detects your database engine and uses the correct sequence or auto-increment mechanism.
@@ -152,7 +162,7 @@ Frond templates can now call methods on Hash and object values inside expression
 
 ### v3.10.0 -- Optimized For-Loops (March 28)
 
-The Frond template engine rewrites its for-loop renderer. Templates with large iteration counts render faster.
+The Frond template engine rewrote its for-loop renderer. Templates with large iteration counts render faster.
 
 ---
 
@@ -194,12 +204,6 @@ end
 
 **Auto-start sessions.** Every route handler has access to `request.session` with zero configuration. The session API includes `get`, `set`, `delete`, `has`, `clear`, `destroy`, `save`, `regenerate`, `flash`, `get_flash`, and `all`.
 
-### v3.9.2 -- NoSQL QueryBuilder, WebSocket Backplane (March 27)
-
-- QueryBuilder works with MongoDB
-- WebSocket backplane support for multi-process deployments
-- `SameSite=Lax` set as the default cookie policy
-
 ### v3.9.1 -- Security Defaults (March 27)
 
 **Breaking change:** POST, PUT, PATCH, and DELETE routes now require authentication by default.
@@ -222,6 +226,12 @@ This release also added:
 - CSRF middleware with session-bound form tokens
 - Standardized environment variables for CORS headers, session TTL, token limits
 - Queue parity: `push` with priority/delay, `size(status)`, `message.retry`
+
+### v3.9.2 -- NoSQL QueryBuilder, WebSocket Backplane (March 27)
+
+- QueryBuilder works with MongoDB
+- WebSocket backplane support for multi-process deployments
+- `SameSite=Lax` set as the default cookie policy
 
 ---
 
@@ -491,7 +501,7 @@ Tina4::Cache.get("key")
 
 **Frond template engine.** `raw`/`endraw` blocks and `from` imports.
 
-**Performance.** Frond pre-compilation caches parsed tokens. File rendering runs 2.8x faster.
+**Performance.** Frond pre-compilation caches parsed tokens. File rendering runs faster.
 
 **Other additions:**
 
@@ -532,7 +542,7 @@ The ground-up rewrite. Zero gem dependencies. Everything the framework needs -- 
 - WSDL/SOAP service generation
 - DevAdmin dashboard with developer tooling
 - AI coding tool integration (auto-detect and install context for seven tools)
-- 1,509 tests across 53 spec files
+- Full test suite passing
 
 **Quick start:**
 

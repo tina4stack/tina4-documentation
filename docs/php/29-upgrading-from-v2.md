@@ -395,13 +395,13 @@ v3 adds the ability to call methods on array or object values inside templates:
 
 ```html
 <!-- Call a method on an object -->
-<p>&#123;&#123; user.getName() &#125;&#125;</p>
+<p>{{ user.getName() }}</p>
 
 <!-- Call with arguments -->
-<p>&#123;&#123; translator.t("welcome_message") &#125;&#125;</p>
+<p>{{ translator.t("welcome_message") }}</p>
 
 <!-- Chain with filters -->
-<p>&#123;&#123; user.getName()|upper &#125;&#125;</p>
+<p>{{ user.getName()|upper }}</p>
 ```
 
 <div v-pre>
