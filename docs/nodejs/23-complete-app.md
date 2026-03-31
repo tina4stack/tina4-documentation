@@ -2,9 +2,7 @@
 
 ## 1. Putting It All Together
 
-Twenty chapters. Routing. Templates. Databases. ORM. Authentication. Middleware. Queues. WebSocket. Caching. Frontend. GraphQL. Testing. Dev tools. CLI scaffolding. Deployment.
-
-Time to use all of it. From scratch.
+Twenty chapters of building blocks. Routing. Templates. Databases. ORM. Authentication. Middleware. Queues. WebSocket. Caching. Frontend. GraphQL. Testing. Dev tools. CLI scaffolding. Deployment. Now all of it works together in one application.
 
 We are building **TaskFlow** -- a task management system with:
 
@@ -15,6 +13,8 @@ We are building **TaskFlow** -- a task management system with:
 - Caching for dashboard performance
 - A full test suite
 - Docker deployment
+
+Not a toy project. A production-ready application. Every major Tina4 feature in one codebase.
 
 ---
 
@@ -48,6 +48,13 @@ We are building **TaskFlow** -- a task management system with:
 | DELETE | /api/tasks/{id} | Delete a task | secured |
 | GET | /api/dashboard/stats | Dashboard statistics | secured |
 | GET | /admin | Dashboard HTML page | public |
+
+### Templates
+
+- `base.html` -- Base layout with sidebar and topbar
+- `dashboard.html` -- Dashboard with stats, task list, quick actions
+- `login.html` -- Login page
+- `register.html` -- Registration page
 
 ---
 
@@ -116,6 +123,8 @@ CREATE INDEX idx_tasks_created_by ON tasks(created_by);
 DROP TABLE IF EXISTS tasks;
 ```
 
+Run migrations:
+
 ```bash
 tina4 migrate
 ```
@@ -145,7 +154,7 @@ curl http://localhost:7148/health
 Create `src/orm/User.ts`:
 
 ```typescript
-import { BaseModel } from "tina4-nodejs/orm";
+import { BaseModel, Auth } from "tina4-nodejs";
 
 export class User extends BaseModel {
     static tableName = "users";
@@ -161,8 +170,26 @@ export class User extends BaseModel {
     passwordHash!: string;
     role: string = "user";
     createdAt!: string;
+
+    async setPassword(password: string): Promise<void> {
+        this.passwordHash = await Auth.hashPassword(password);
+    }
+
+    async verifyPassword(password: string): Promise<boolean> {
+        if (!this.passwordHash) return false;
+        return Auth.checkPassword(password, this.passwordHash);
+    }
+
+    safeDict(): Record<string, any> {
+        const data = this.toDict();
+        delete data.passwordHash;
+        delete data.password_hash;
+        return data;
+    }
 }
 ```
+
+The `setPassword` method hashes the plain-text password before storage. `verifyPassword` compares a candidate password against the stored hash. `safeDict` strips the hash from any response -- never expose password data to the client.
 
 Create `src/orm/Task.ts`:
 
@@ -177,6 +204,9 @@ export class Task extends BaseModel {
         { model: "User", foreignKey: "assigned_to", as: "assignee" }
     ];
 
+    static STATUSES = ["todo", "in_progress", "done", "cancelled"];
+    static PRIORITIES = ["low", "medium", "high", "urgent"];
+
     id!: number;
     title!: string;
     description: string = "";
@@ -190,6 +220,8 @@ export class Task extends BaseModel {
     updatedAt!: string;
 }
 ```
+
+The static `STATUSES` and `PRIORITIES` arrays serve as validation lists. Any route that accepts a status or priority value checks it against these arrays before writing to the database.
 
 ---
 
@@ -218,9 +250,22 @@ export function authMiddleware(req, res, next) {
     }
 
     req.user = payload;
+    req.userId = payload.user_id;
     next();
 }
 ```
+
+Verify the middleware blocks unauthenticated requests:
+
+```bash
+curl http://localhost:7148/api/tasks
+```
+
+```json
+{"error": "Authorization required"}
+```
+
+The middleware stands guard. No token, no access.
 
 ---
 
@@ -308,6 +353,11 @@ Router.post("/api/auth/login", async (req, res) => {
     });
 });
 
+/**
+ * Get current user profile
+ * @tags Auth
+ * @response 200 {"id": "int", "name": "string", "email": "string", "role": "string", "created_at": "string"}
+ */
 Router.get("/api/profile", async (req, res) => {
     const db = Database.getConnection();
     const user = await db.fetchOne(
@@ -318,17 +368,25 @@ Router.get("/api/profile", async (req, res) => {
 }, [authMiddleware]);
 ```
 
-Test the auth routes:
+### Test Registration and Login
 
 ```bash
-# Register
+# Start the server
+tina4 serve
+```
+
+```bash
+# Register a user
 curl -X POST http://localhost:7148/api/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"name": "Alice", "email": "alice@example.com", "password": "securePass123"}'
+  -d '{"name": "Alice Johnson", "email": "alice@example.com", "password": "securePass123"}'
 ```
 
 ```json
-{"message": "Registration successful", "user": {"id": 1, "name": "Alice", "email": "alice@example.com", "role": "user"}}
+{
+  "message": "Registration successful",
+  "user": {"id": 1, "name": "Alice Johnson", "email": "alice@example.com", "role": "user"}
+}
 ```
 
 ```bash
@@ -339,10 +397,14 @@ curl -X POST http://localhost:7148/api/auth/login \
 ```
 
 ```json
-{"message": "Login successful", "token": "eyJhbGciOiJIUzI1NiIs...", "user": {"id": 1, "name": "Alice", "email": "alice@example.com", "role": "user"}}
+{
+  "message": "Login successful",
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "user": {"id": 1, "name": "Alice Johnson", "email": "alice@example.com", "role": "user"}
+}
 ```
 
-Save the token for subsequent requests:
+Authentication works. Save the token for the next steps.
 
 ```bash
 export TOKEN="eyJhbGciOiJIUzI1NiIs..."
@@ -357,7 +419,10 @@ Create `src/routes/tasks.ts`:
 ```typescript
 import { Router, Queue } from "tina4-nodejs";
 import { Database } from "tina4-nodejs/orm";
+import { cacheDelete } from "tina4-nodejs";
 import { authMiddleware } from "./middleware";
+import { Task } from "../orm/Task";
+import { pushTaskUpdate } from "./ws-tasks";
 
 /**
  * List tasks with filters
@@ -366,10 +431,14 @@ import { authMiddleware } from "./middleware";
  * @query string priority Filter by priority (low, medium, high)
  * @query string assigned Filter by assigned user ID
  * @query int page Page number
+ * @query int limit Results per page
  */
 Router.get("/api/tasks", async (req, res) => {
     const db = Database.getConnection();
     const userId = req.user.user_id;
+    const page = parseInt(req.query.page ?? "1", 10);
+    const limit = parseInt(req.query.limit ?? "20", 10);
+    const offset = (page - 1) * limit;
 
     const conditions = ["(created_by = :userId OR assigned_to = :userId)"];
     const params: Record<string, any> = { userId };
@@ -384,20 +453,29 @@ Router.get("/api/tasks", async (req, res) => {
         params.priority = req.query.priority;
     }
 
-    const sql = `SELECT t.*, 
-        creator.name as creator_name, 
+    if (req.query.assigned) {
+        conditions.push("assigned_to = :assignedTo");
+        params.assignedTo = parseInt(req.query.assigned, 10);
+    }
+
+    const sql = `SELECT t.*,
+        creator.name as creator_name,
         assignee.name as assignee_name
         FROM tasks t
         LEFT JOIN users creator ON t.created_by = creator.id
         LEFT JOIN users assignee ON t.assigned_to = assignee.id
         WHERE ${conditions.join(" AND ")}
-        ORDER BY 
+        ORDER BY
             CASE t.priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 END,
-            t.created_at DESC`;
+            t.created_at DESC
+        LIMIT :limit OFFSET :offset`;
+
+    params.limit = limit;
+    params.offset = offset;
 
     const tasks = await db.fetch(sql, params);
 
-    return res.json({ tasks, count: tasks.length });
+    return res.json({ tasks, page, limit, count: tasks.length });
 }, [authMiddleware]);
 
 /**
@@ -436,6 +514,10 @@ Router.post("/api/tasks", async (req, res) => {
         return res.status(400).json({ error: "Title is required" });
     }
 
+    if (priority && !Task.PRIORITIES.includes(priority)) {
+        return res.status(400).json({ error: `Invalid priority. Must be one of: ${Task.PRIORITIES.join(", ")}` });
+    }
+
     await db.execute(
         `INSERT INTO tasks (title, description, status, priority, created_by, assigned_to, due_date)
          VALUES (:title, :description, 'todo', :priority, :createdBy, :assignedTo, :dueDate)`,
@@ -451,6 +533,9 @@ Router.post("/api/tasks", async (req, res) => {
 
     const task = await db.fetchOne("SELECT * FROM tasks WHERE id = last_insert_rowid()");
 
+    // Invalidate dashboard cache
+    cacheDelete("dashboard:stats");
+
     // Queue notification if assigned to someone
     if (assigned_to) {
         const notifyQueue = new Queue({ topic: "task-notifications" });
@@ -464,10 +549,7 @@ Router.post("/api/tasks", async (req, res) => {
     }
 
     // Push real-time update
-    Router.pushToWebSocket("/ws/tasks", JSON.stringify({
-        type: "task_created",
-        task
-    }));
+    pushTaskUpdate("created", task);
 
     return res.status(201).json(task);
 }, [authMiddleware]);
@@ -487,9 +569,21 @@ Router.put("/api/tasks/{id:int}", async (req, res) => {
 
     const { title, description, status, priority, assigned_to, due_date } = req.body;
 
+    if (status && !Task.STATUSES.includes(status)) {
+        return res.status(400).json({ error: `Invalid status. Must be one of: ${Task.STATUSES.join(", ")}` });
+    }
+
+    if (priority && !Task.PRIORITIES.includes(priority)) {
+        return res.status(400).json({ error: `Invalid priority. Must be one of: ${Task.PRIORITIES.join(", ")}` });
+    }
+
     const completedAt = status === "done" && existing.status !== "done"
         ? new Date().toISOString()
         : existing.completed_at;
+
+    // Detect reassignment for notification
+    const oldAssignee = existing.assigned_to;
+    const newAssignee = assigned_to ?? existing.assigned_to;
 
     await db.execute(
         `UPDATE tasks SET title = :title, description = :description, status = :status,
@@ -501,7 +595,7 @@ Router.put("/api/tasks/{id:int}", async (req, res) => {
             description: description ?? existing.description,
             status: status ?? existing.status,
             priority: priority ?? existing.priority,
-            assignedTo: assigned_to ?? existing.assigned_to,
+            assignedTo: newAssignee,
             dueDate: due_date ?? existing.due_date,
             completedAt,
             id
@@ -510,7 +604,23 @@ Router.put("/api/tasks/{id:int}", async (req, res) => {
 
     const task = await db.fetchOne("SELECT * FROM tasks WHERE id = :id", { id });
 
-    Router.pushToWebSocket("/ws/tasks", JSON.stringify({ type: "task_updated", task }));
+    // Invalidate dashboard cache
+    cacheDelete("dashboard:stats");
+
+    // Notify new assignee if reassigned
+    if (newAssignee && newAssignee !== oldAssignee) {
+        const notifyQueue = new Queue({ topic: "task-notifications" });
+        notifyQueue.push({
+            type: "assigned",
+            task_id: task.id,
+            task_title: task.title,
+            assigned_to: newAssignee,
+            assigned_by: req.user.name
+        });
+    }
+
+    // Push real-time update
+    pushTaskUpdate("updated", task);
 
     return res.json(task);
 }, [authMiddleware]);
@@ -530,51 +640,72 @@ Router.delete("/api/tasks/{id:int}", async (req, res) => {
 
     await db.execute("DELETE FROM tasks WHERE id = :id", { id });
 
-    Router.pushToWebSocket("/ws/tasks", JSON.stringify({ type: "task_deleted", task_id: id }));
+    // Invalidate dashboard cache
+    cacheDelete("dashboard:stats");
+
+    // Push real-time update
+    pushTaskUpdate("deleted", { id });
 
     return res.status(204).json(null);
 }, [authMiddleware]);
 ```
 
-Test the task routes:
+### Test the Task API
 
 ```bash
+# Set your token from the login step
+TOKEN="eyJhbGciOiJIUzI1NiIs..."
+
 # Create a task
 curl -X POST http://localhost:7148/api/tasks \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
-  -d '{"title": "Set up CI pipeline", "priority": "high", "due_date": "2026-04-01"}'
+  -d '{"title": "Design database schema", "priority": "high"}'
 ```
 
 ```json
-{"id": 1, "title": "Set up CI pipeline", "status": "todo", "priority": "high", "created_by": 1, "due_date": "2026-04-01"}
+{
+  "id": 1,
+  "title": "Design database schema",
+  "priority": "high",
+  "status": "todo",
+  "created_by": 1,
+  "created_at": "2026-03-22 10:00:00"
+}
 ```
 
 ```bash
-# List tasks
+# Create more tasks
+curl -X POST http://localhost:7148/api/tasks \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"title": "Build API endpoints", "priority": "high"}'
+
+curl -X POST http://localhost:7148/api/tasks \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"title": "Write documentation", "priority": "medium", "due_date": "2026-04-01"}'
+
+# List all tasks
 curl http://localhost:7148/api/tasks \
   -H "Authorization: Bearer $TOKEN"
-```
 
-```json
-{"tasks": [{"id": 1, "title": "Set up CI pipeline", "status": "todo", "priority": "high", "creator_name": "Alice"}], "count": 1}
-```
-
-```bash
-# Update task status
+# Update a task status
 curl -X PUT http://localhost:7148/api/tasks/1 \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"status": "done"}'
+
+# Delete a task
+curl -X DELETE http://localhost:7148/api/tasks/3 \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
-```json
-{"id": 1, "title": "Set up CI pipeline", "status": "done", "completed_at": "2026-03-22T14:30:00.000Z"}
-```
+Every endpoint responds. Create. Read. Update. Delete. The CRUD cycle works.
 
 ---
 
-## 8. Step 6: Dashboard Stats
+## 8. Step 6: Dashboard Stats with Caching
 
 Create `src/routes/dashboard.ts`:
 
@@ -583,6 +714,11 @@ import { Router, cacheGet, cacheSet } from "tina4-nodejs";
 import { Database } from "tina4-nodejs/orm";
 import { authMiddleware } from "./middleware";
 
+/**
+ * Dashboard statistics
+ * @tags Dashboard
+ * @response 200 {"total_tasks": "int", "by_status": "object", "overdue_tasks": "int", "total_users": "int"}
+ */
 Router.get("/api/dashboard/stats", async (req, res) => {
     const userId = req.user.user_id;
     const cacheKey = `dashboard:${userId}`;
@@ -599,8 +735,18 @@ Router.get("/api/dashboard/stats", async (req, res) => {
         { userId }
     );
 
-    const byStatus = await db.fetch(
-        "SELECT status, COUNT(*) as count FROM tasks WHERE created_by = :userId OR assigned_to = :userId GROUP BY status",
+    const todo = await db.fetchOne(
+        "SELECT COUNT(*) as count FROM tasks WHERE (created_by = :userId OR assigned_to = :userId) AND status = 'todo'",
+        { userId }
+    );
+
+    const inProgress = await db.fetchOne(
+        "SELECT COUNT(*) as count FROM tasks WHERE (created_by = :userId OR assigned_to = :userId) AND status = 'in_progress'",
+        { userId }
+    );
+
+    const done = await db.fetchOne(
+        "SELECT COUNT(*) as count FROM tasks WHERE (created_by = :userId OR assigned_to = :userId) AND status = 'done'",
         { userId }
     );
 
@@ -609,16 +755,24 @@ Router.get("/api/dashboard/stats", async (req, res) => {
         { userId }
     );
 
-    const recentlyCompleted = await db.fetch(
-        "SELECT * FROM tasks WHERE (created_by = :userId OR assigned_to = :userId) AND status = 'done' ORDER BY completed_at DESC LIMIT 5",
+    const users = await db.fetchOne("SELECT COUNT(*) as count FROM users");
+
+    const recentTasks = await db.fetch(
+        `SELECT t.*, u.name as assignee_name FROM tasks t
+         LEFT JOIN users u ON t.assigned_to = u.id
+         WHERE t.created_by = :userId OR t.assigned_to = :userId
+         ORDER BY t.created_at DESC LIMIT 10`,
         { userId }
     );
 
     const stats = {
         total_tasks: total.count,
-        by_status: Object.fromEntries(byStatus.map(r => [r.status, r.count])),
+        todo: todo.count,
+        in_progress: inProgress.count,
+        done: done.count,
         overdue_tasks: overdue.count,
-        recently_completed: recentlyCompleted
+        total_users: users.count,
+        recent_tasks: recentTasks
     };
 
     await cacheSet(cacheKey, stats, 30);
@@ -626,10 +780,53 @@ Router.get("/api/dashboard/stats", async (req, res) => {
     return res.json({ ...stats, source: "database" });
 }, [authMiddleware]);
 
+/**
+ * Dashboard HTML page
+ * @noauth
+ * @tags Dashboard
+ */
 Router.get("/admin", async (req, res) => {
     return res.html("dashboard.html", {});
 });
 ```
+
+Verify the stats endpoint:
+
+```bash
+curl http://localhost:7148/api/dashboard/stats \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{
+  "total_tasks": 2,
+  "todo": 1,
+  "in_progress": 0,
+  "done": 1,
+  "overdue_tasks": 0,
+  "total_users": 1,
+  "recent_tasks": [...],
+  "source": "database"
+}
+```
+
+Hit it again. The second response comes from cache:
+
+```bash
+curl http://localhost:7148/api/dashboard/stats \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{
+  "total_tasks": 2,
+  "todo": 1,
+  "done": 1,
+  "source": "cache"
+}
+```
+
+The cache holds for 30 seconds. Creating, updating, or deleting a task invalidates it.
 
 ---
 
@@ -642,14 +839,37 @@ import { Router } from "tina4-nodejs";
 
 Router.websocket("/ws/tasks", async (connection, event, data) => {
     if (event === "open") {
-        connection.send(JSON.stringify({ type: "connected", message: "Listening for task updates" }));
+        connection.send(JSON.stringify({
+            type: "connected",
+            message: "Listening for task updates"
+        }));
+    }
+
+    if (event === "message") {
+        const message = JSON.parse(data);
+        if (message.type === "ping") {
+            connection.send(JSON.stringify({ type: "pong" }));
+        }
     }
 });
+
+/**
+ * Push a task update to all connected WebSocket clients.
+ */
+export function pushTaskUpdate(action: string, task: any): void {
+    Router.pushToWebSocket("/ws/tasks", JSON.stringify({
+        type: "task_update",
+        action,
+        task
+    }));
+}
 ```
+
+Any user creates, updates, or deletes a task. All connected dashboard users see the change.
 
 ---
 
-## 10. Step 8: Queue Consumer for Notifications
+## 10. Step 8: Email Notifications via Queue
 
 Create `src/routes/queue-consumers.ts`:
 
@@ -660,7 +880,7 @@ import { Database } from "tina4-nodejs/orm";
 const notifyQueue = new Queue({ topic: "task-notifications" });
 
 notifyQueue.process(async (job) => {
-    const { type, task_title, assigned_to, assigned_by } = job.payload as any;
+    const { type, task_title, task_id, assigned_to, assigned_by } = job.payload as any;
 
     const db = Database.getConnection();
     const user = await db.fetchOne("SELECT name, email FROM users WHERE id = :id", { id: assigned_to });
@@ -676,7 +896,13 @@ notifyQueue.process(async (job) => {
     await mailer.send({
         to: user.email,
         subject: `New Task Assigned: ${task_title}`,
-        body: `<h2>New Task Assigned</h2><p>Hi ${user.name},</p><p>${assigned_by} assigned you a new task: <strong>${task_title}</strong></p>`,
+        body: `<h2>New Task Assigned</h2>
+               <p>Hi ${user.name},</p>
+               <p><strong>${assigned_by}</strong> assigned you a new task:</p>
+               <div style="border:1px solid #ddd; padding:16px; margin:16px 0;">
+                   <h3>${task_title}</h3>
+                   <p><a href="http://localhost:7148/admin#task-${task_id}">View Task</a></p>
+               </div>`,
         html: true
     });
 
@@ -684,14 +910,290 @@ notifyQueue.process(async (job) => {
 });
 ```
 
+Create the email template at `src/templates/emails/task-assigned.html`:
+
+```html
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body>
+    <div class="container">
+        <h2>New Task Assigned</h2>
+        <p>Hi {{ assignee_name }},</p>
+        <p><strong>{{ creator_name }}</strong> assigned you a new task:</p>
+
+        <div class="card">
+            <div class="card-body">
+                <h3>{{ task_title }}</h3>
+                <p>{{ task_description }}</p>
+                <table class="table">
+                    <tr><td><strong>Priority:</strong></td><td>{{ task_priority }}</td></tr>
+                    <tr><td><strong>Due:</strong></td><td>{{ task_due_date }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <p><a href="{{ task_url }}">View Task</a></p>
+    </div>
+</body>
+</html>
+```
+
+The queue consumer runs in the background. The task route pushes a job. The consumer picks it up, looks up the assignee, and sends the email. No blocking. No delay in the API response.
+
 ---
 
-## 11. Step 9: Tests
+## 11. Step 9: Dashboard Template
+
+Create `src/templates/dashboard.html`:
+
+```html
+{% extends "base.html" %}
+
+{% block title %}TaskFlow Dashboard{% endblock %}
+
+{% block content %}
+<h1>Dashboard</h1>
+
+<div id="stats" class="row mb-4">
+    <div class="col-md-2"><div class="card"><div class="card-body">
+        <h6 class="text-muted">Total</h6><h2 id="stat-total">--</h2>
+    </div></div></div>
+    <div class="col-md-2"><div class="card"><div class="card-body">
+        <h6 class="text-muted">To Do</h6><h2 id="stat-todo">--</h2>
+    </div></div></div>
+    <div class="col-md-2"><div class="card"><div class="card-body">
+        <h6 class="text-muted">In Progress</h6><h2 id="stat-progress">--</h2>
+    </div></div></div>
+    <div class="col-md-2"><div class="card"><div class="card-body">
+        <h6 class="text-muted">Done</h6><h2 id="stat-done">--</h2>
+    </div></div></div>
+    <div class="col-md-2"><div class="card"><div class="card-body">
+        <h6 class="text-muted">Overdue</h6><h2 id="stat-overdue" class="text-danger">--</h2>
+    </div></div></div>
+    <div class="col-md-2"><div class="card"><div class="card-body">
+        <h6 class="text-muted">Users</h6><h2 id="stat-users">--</h2>
+    </div></div></div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between">
+                <span>Recent Tasks</span>
+                <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#newTaskModal">
+                    New Task
+                </button>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped" id="task-table">
+                    <thead>
+                        <tr><th>Title</th><th>Assignee</th><th>Priority</th><th>Status</th></tr>
+                    </thead>
+                    <tbody id="task-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">Live Updates</div>
+            <div class="card-body" id="live-updates">
+                <p class="text-muted">Connecting...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/js/frond.min.js"></script>
+<script>
+    var token = localStorage.getItem("token");
+    if (token) frond.setToken(token);
+
+    // Load dashboard stats
+    frond.get("/api/dashboard/stats", function (data) {
+        document.getElementById("stat-total").textContent = data.total_tasks;
+        document.getElementById("stat-todo").textContent = data.todo;
+        document.getElementById("stat-progress").textContent = data.in_progress;
+        document.getElementById("stat-done").textContent = data.done;
+        document.getElementById("stat-overdue").textContent = data.overdue_tasks;
+        document.getElementById("stat-users").textContent = data.total_users;
+
+        var tbody = document.getElementById("task-list");
+        tbody.innerHTML = "";
+        (data.recent_tasks || []).forEach(function (task) {
+            var tr = document.createElement("tr");
+            var badgeColor = {todo: "secondary", in_progress: "warning",
+                             done: "success", cancelled: "danger"};
+            tr.innerHTML = "<td>" + task.title + "</td>" +
+                "<td>" + (task.assignee_name || "Unassigned") + "</td>" +
+                "<td>" + task.priority + "</td>" +
+                "<td><span class='badge bg-" + (badgeColor[task.status] || "secondary") +
+                "'>" + task.status + "</span></td>";
+            tbody.appendChild(tr);
+        });
+    });
+
+    // WebSocket for live updates
+    var ws = frond.ws("/ws/tasks");
+    var updates = document.getElementById("live-updates");
+
+    ws.on("open", function () {
+        updates.innerHTML = "<p class='text-success'>Connected - listening for updates</p>";
+    });
+
+    ws.on("message", function (raw) {
+        var msg = JSON.parse(raw);
+        if (msg.type === "task_update") {
+            var div = document.createElement("div");
+            div.innerHTML = "<strong>" + msg.action + ":</strong> " + msg.task.title;
+            updates.prepend(div);
+
+            // Refresh stats
+            frond.get("/api/dashboard/stats", function () {});
+        }
+    });
+</script>
+{% endblock %}
+```
+
+Verify the dashboard:
+
+```bash
+curl http://localhost:7148/admin
+```
+
+The server returns the rendered HTML. Open `http://localhost:7148/admin` in your browser to see the full dashboard with stats, task list, and live update panel.
+
+---
+
+## 12. Step 10: Tests
 
 Create `tests/TaskFlowTest.ts`:
 
 ```typescript
-import { tests, assertEqual, assertTrue, runAllTests, Auth } from "tina4-nodejs";
+import { tests, assertEqual, assertTrue, assertNotNull, runAllTests, Auth } from "tina4-nodejs";
+import { TestClient } from "tina4-nodejs/test";
+
+const client = new TestClient();
+
+function randomEmail(): string {
+    const hex = Math.random().toString(16).substring(2, 10);
+    return `test-${hex}@example.com`;
+}
+
+async function registerAndLogin(): Promise<string> {
+    const email = randomEmail();
+    await client.post("/api/auth/register", {
+        name: "Test User",
+        email,
+        password: "TestPassword123!"
+    });
+    const loginResp = await client.post("/api/auth/login", {
+        email,
+        password: "TestPassword123!"
+    });
+    return loginResp.body.token;
+}
+
+// Test registration
+const testRegister = tests(
+    assertEqual([201])
+)(async function testRegister(): Promise<number> {
+    const resp = await client.post("/api/auth/register", {
+        name: "Alice",
+        email: randomEmail(),
+        password: "SecurePass123!"
+    });
+    return resp.statusCode;
+});
+
+// Test login returns a token
+const testLogin = tests(
+    assertTrue([true])
+)(async function testLogin(): Promise<boolean> {
+    const email = randomEmail();
+    await client.post("/api/auth/register", {
+        name: "Bob",
+        email,
+        password: "SecurePass123!"
+    });
+    const resp = await client.post("/api/auth/login", {
+        email,
+        password: "SecurePass123!"
+    });
+    return resp.statusCode === 200 && resp.body.token !== undefined;
+});
+
+// Test task creation
+const testCreateTask = tests(
+    assertTrue([true])
+)(async function testCreateTask(): Promise<boolean> {
+    const token = await registerAndLogin();
+    const resp = await client.post("/api/tasks", {
+        title: "Test Task",
+        description: "A test task",
+        priority: "high"
+    }, { headers: { Authorization: `Bearer ${token}` } });
+    return resp.statusCode === 201 && resp.body.title === "Test Task" && resp.body.priority === "high";
+});
+
+// Test listing tasks
+const testListTasks = tests(
+    assertTrue([true])
+)(async function testListTasks(): Promise<boolean> {
+    const token = await registerAndLogin();
+    await client.post("/api/tasks", { title: "List Task 1" }, { headers: { Authorization: `Bearer ${token}` } });
+    await client.post("/api/tasks", { title: "List Task 2" }, { headers: { Authorization: `Bearer ${token}` } });
+    const resp = await client.get("/api/tasks", { headers: { Authorization: `Bearer ${token}` } });
+    return resp.statusCode === 200 && resp.body.tasks.length >= 2;
+});
+
+// Test updating task status
+const testUpdateTaskStatus = tests(
+    assertTrue([true])
+)(async function testUpdateTaskStatus(): Promise<boolean> {
+    const token = await registerAndLogin();
+    const createResp = await client.post("/api/tasks", { title: "Status Task" },
+        { headers: { Authorization: `Bearer ${token}` } });
+    const taskId = createResp.body.id;
+    const resp = await client.put(`/api/tasks/${taskId}`, { status: "done" },
+        { headers: { Authorization: `Bearer ${token}` } });
+    return resp.statusCode === 200 && resp.body.status === "done" && resp.body.completed_at !== null;
+});
+
+// Test deleting a task
+const testDeleteTask = tests(
+    assertEqual([204])
+)(async function testDeleteTask(): Promise<number> {
+    const token = await registerAndLogin();
+    const createResp = await client.post("/api/tasks", { title: "Delete Me" },
+        { headers: { Authorization: `Bearer ${token}` } });
+    const taskId = createResp.body.id;
+    const resp = await client.delete(`/api/tasks/${taskId}`,
+        { headers: { Authorization: `Bearer ${token}` } });
+    return resp.statusCode;
+});
+
+// Test dashboard stats
+const testDashboardStats = tests(
+    assertTrue([true])
+)(async function testDashboardStats(): Promise<boolean> {
+    const token = await registerAndLogin();
+    await client.post("/api/tasks", { title: "Stats Task" },
+        { headers: { Authorization: `Bearer ${token}` } });
+    const resp = await client.get("/api/dashboard/stats",
+        { headers: { Authorization: `Bearer ${token}` } });
+    return resp.statusCode === 200 && resp.body.total_tasks >= 1;
+});
+
+// Test unauthorized access
+const testUnauthorizedAccess = tests(
+    assertEqual([401])
+)(async function testUnauthorizedAccess(): Promise<number> {
+    const resp = await client.get("/api/tasks");
+    return resp.statusCode;
+});
 
 // Test that token creation and validation round-trips correctly
 const testTokenRoundTrip = tests(
@@ -714,15 +1216,37 @@ const testPasswordHash = tests(
 runAllTests();
 ```
 
-Run tests:
+Run the tests:
 
 ```bash
 npm test
 ```
 
+```
+Running tests...
+
+  TaskFlowTest
+    [PASS] testRegister
+    [PASS] testLogin
+    [PASS] testCreateTask
+    [PASS] testListTasks
+    [PASS] testUpdateTaskStatus
+    [PASS] testDeleteTask
+    [PASS] testDashboardStats
+    [PASS] testUnauthorizedAccess
+    [PASS] testTokenRoundTrip
+    [PASS] testPasswordHash
+
+  10 tests, 10 passed, 0 failed (1.12s)
+```
+
+All green. The application works.
+
 ---
 
-## 12. Step 10: Docker Deployment
+## 13. Step 11: Docker Deployment
+
+Create `Dockerfile`:
 
 ```dockerfile
 FROM node:20-alpine
@@ -733,37 +1257,63 @@ COPY dist/ ./dist/
 COPY src/templates/ ./src/templates/
 COPY src/public/ ./src/public/
 COPY src/migrations/ ./src/migrations/
+RUN mkdir -p data logs
 ENV TINA4_DEBUG=false
 EXPOSE 7148
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD curl -f http://localhost:7148/health || exit 1
+
 CMD ["node", "dist/app.js"]
 ```
 
-```bash
-tina4 build
-docker build -t taskflow .
-docker run -p 7148:7148 -v taskflow-data:/app/data taskflow
+Create `docker-compose.yml`:
+
+```yaml
+services:
+  app:
+    build: .
+    ports:
+      - "7148:7148"
+    environment:
+      - TINA4_DEBUG=false
+      - TINA4_JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - TINA4_CACHE_BACKEND=redis
+      - TINA4_CACHE_HOST=redis
+    volumes:
+      - taskflow-data:/app/data
+      - taskflow-logs:/app/logs
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+volumes:
+  taskflow-data:
+  taskflow-logs:
 ```
 
----
+Build and deploy:
 
-## 13. What We Built
+```bash
+tina4 build
+docker compose up -d --build
+```
 
-TaskFlow exercises every major Tina4 feature:
+Verify:
 
-- **Routing** -- RESTful API with explicit route registration
-- **ORM** -- User and Task models with relationships
-- **Database** -- SQLite with migrations, parameterised queries
-- **Authentication** -- JWT tokens, password hashing, auth middleware
-- **Middleware** -- Auth protection on route groups
-- **Queues** -- Background email notifications
-- **WebSocket** -- Real-time task updates
-- **Caching** -- Dashboard stats cached for 30 seconds
-- **Templates** -- Dashboard HTML page with tina4css
-- **Swagger** -- Annotated API documentation
-- **Testing** -- Full test suite
-- **Deployment** -- Docker with Nginx
+```bash
+curl http://localhost:7148/health
+```
 
-All of this in a single npm package. Zero extra dependencies. One framework doing the work of twelve.
+```json
+{"status": "ok", "version": "1.0.0", "database": "connected"}
+```
+
+TaskFlow runs in production. Authenticated APIs. Real-time WebSocket updates. Email notifications. Cached dashboard stats. Tested. Dockerized.
 
 ---
 
@@ -789,7 +1339,7 @@ taskflow/
 │   │   ├── queue-consumers.ts     # Email notification consumer
 │   │   └── ws-tasks.ts            # WebSocket event handlers
 │   ├── orm/
-│   │   ├── User.ts                # User model with relationships
+│   │   ├── User.ts                # User model with auth methods
 │   │   └── Task.ts                # Task model with relationships
 │   ├── migrations/
 │   │   ├── 20260322000100_create_users_table.sql
@@ -823,7 +1373,29 @@ Every file has a purpose. Every directory follows the convention. A new develope
 
 ---
 
-## 15. What to Build Next
+## 15. What You Built
+
+This chapter used every major concept from the book:
+
+| Feature | Chapter |
+|---------|---------|
+| Route registration (`Router.get`, `Router.post`, `Router.put`, `Router.delete`) | Chapter 2 |
+| Request/response handling | Chapter 3 |
+| Twig templates | Chapter 4 |
+| Database queries | Chapter 5 |
+| ORM models (User, Task) | Chapter 6 |
+| JWT authentication | Chapter 7 |
+| Auth middleware | Chapter 8 |
+| Email notifications (Messenger) | Chapter 13 |
+| Cache (dashboard stats) | Chapter 14 |
+| Frontend (tina4css dashboard) | Chapter 15 |
+| WebSocket (live updates) | Chapter 12 |
+| Testing (full test suite) | Chapter 17 |
+| Docker deployment | Chapter 20 |
+
+---
+
+## 16. What to Build Next
 
 TaskFlow is a solid foundation. Here are ideas for extending it.
 
@@ -847,7 +1419,7 @@ TaskFlow is a solid foundation. Here are ideas for extending it.
 
 ---
 
-## 16. Closing Thoughts -- The Tina4 Philosophy
+## 17. Closing Thoughts -- The Tina4 Philosophy
 
 You built a complete application. User auth. CRUD. Real-time updates. Email. Caching. Tests. Deployment. Your project has one dependency: `tina4-nodejs`.
 

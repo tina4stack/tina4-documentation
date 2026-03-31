@@ -2,17 +2,83 @@
 
 ## 1. State in a Stateless World
 
-Your e-commerce site needs a shopping cart that persists across page loads. It remembers the user's language preference. It flashes success messages after form submissions. But HTTP has no memory. Every request arrives fresh. No context. No history.
+JWT tokens handle APIs. Traditional web applications need more. A shopping cart that persists across pages. A flash message that appears once after a redirect. A "remember me" checkbox on the login form. These features run on sessions and cookies -- server-side state tied to a browser.
 
-Sessions and cookies give the server memory. They teach it to remember who is making requests and what they have been doing.
+Picture an e-commerce site. A customer adds three items to their cart. Navigates to a product page. Comes back to the cart. Without sessions, the cart is empty every time. Sessions give the server memory. Each browser gets its own state, preserved across requests.
+
+Sessions are auto-started. Every route handler receives `req.session` ready to use. No manual setup. No configuration required for the default file backend.
 
 ---
 
-## 2. How Sessions Work
+## 2. Session Configuration
 
-Sessions are auto-started. Every route handler receives `req.session` ready to use. No manual setup required.
+The default backend is file-based sessions. They work out of the box with no additional dependencies.
 
-A user visits your site for the first time. Tina4 generates a unique session ID, stores it in a cookie named `tina4_session` (`HttpOnly`, `SameSite=Lax`) on the user's browser, and creates a server-side storage entry keyed by that ID. Every subsequent request carries the cookie. Tina4 looks up the session data and attaches it to `req.session`.
+To change the backend, set `TINA4_SESSION_BACKEND` in `.env`:
+
+```dotenv
+TINA4_SESSION_BACKEND=file
+```
+
+### Available Backends
+
+| Backend | `.env` Value | Package Required | Best For |
+|---------|-------------|-----------------|---------|
+| File | `file` | None | Development, single server |
+| Redis | `redis` | `ioredis` | Production, multi-server |
+| MongoDB | `mongodb` | `mongodb` | Production, document stores |
+| Valkey | `valkey` | `iovalkey` | Production, Redis alternative |
+| Database | `database` | None | Production, using existing DB |
+
+### Redis Configuration
+
+```dotenv
+TINA4_SESSION_BACKEND=redis
+TINA4_SESSION_HOST=localhost
+TINA4_SESSION_PORT=6379
+TINA4_SESSION_PASSWORD=
+```
+
+Install the Redis driver:
+
+```bash
+npm install ioredis
+```
+
+### MongoDB Configuration
+
+```dotenv
+TINA4_SESSION_BACKEND=mongodb
+TINA4_SESSION_HOST=localhost
+TINA4_SESSION_PORT=27017
+TINA4_SESSION_DATABASE=tina4_sessions
+```
+
+### Valkey Configuration
+
+```dotenv
+TINA4_SESSION_BACKEND=valkey
+TINA4_SESSION_HOST=localhost
+TINA4_SESSION_PORT=6379
+```
+
+### Database Sessions
+
+```dotenv
+TINA4_SESSION_BACKEND=database
+```
+
+Stores sessions in the `tina4_session` table using your existing database connection (`DATABASE_URL`). The table is auto-created on first use. Works with all 5 database engines (SQLite, PostgreSQL, MySQL, MSSQL, Firebird).
+
+### Session Lifetime
+
+```dotenv
+TINA4_SESSION_TTL=3600  # 1 hour in seconds (default)
+```
+
+### Session Cookie
+
+The session cookie is named `tina4_session`. It is `HttpOnly` and `SameSite=Lax` by default. Tina4 manages it -- you never need to set or read it yourself.
 
 ---
 
@@ -38,76 +104,74 @@ Access session data through `req.session`. It is available in every route handle
 
 ---
 
-## 4. File Sessions (Default)
+## 4. Reading and Writing Session Data
 
-Tina4 stores sessions in files out of the box. Zero configuration.
+### Writing to the Session
 
 ```typescript
 import { Router } from "tina4-nodejs";
 
-Router.get("/visit-counter", async (req, res) => {
-    const count = (req.session.get("visit_count", 0)) + 1;
-    req.session.set("visit_count", count);
+Router.post("/login-form", async (req, res) => {
+    // After validating credentials...
+    req.session.set("user_id", 42);
+    req.session.set("user_name", "Alice");
+    req.session.set("role", "admin");
+    req.session.set("logged_in", true);
 
-    return res.json({
-        visit_count: count,
-        message: `You have visited this page ${count} time${count === 1 ? "" : "s"}`
+    return res.redirect("/dashboard");
+});
+```
+
+### Reading from the Session
+
+```typescript
+import { Router } from "tina4-nodejs";
+
+Router.get("/dashboard", async (req, res) => {
+    if (!req.session.get("logged_in")) {
+        return res.redirect("/login");
+    }
+
+    return res.html("dashboard.html", {
+        user_name: req.session.get("user_name"),
+        role: req.session.get("role")
     });
 });
 ```
 
-```bash
-curl http://localhost:7148/visit-counter -c cookies.txt -b cookies.txt
+### Deleting Session Data
+
+```typescript
+// Delete a single key
+req.session.delete("temp_data");
+
+// Clear all session data (logout)
+Router.post("/logout", async (req, res) => {
+    req.session.clear();
+    return res.redirect("/login");
+});
 ```
 
-```json
-{"visit_count":1,"message":"You have visited this page 1 time"}
+### Checking if a Key Exists
+
+```typescript
+if (req.session.has("user_id")) {
+    const userId = req.session.get("user_id");
+} else {
+    const userId = null;
+}
+
+// Or use .get() with a default
+const userId = req.session.get("user_id", null);
 ```
 
----
+### Getting All Session Data
 
-## 5. Redis Sessions
-
-For production deployments with multiple servers:
-
-```dotenv
-TINA4_SESSION_BACKEND=redis
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=6379
-TINA4_SESSION_PASSWORD=your-redis-password
+```typescript
+const allData = req.session.all();
 ```
 
-Your code stays exactly the same. `req.session` works identically.
-
----
-
-## 6. MongoDB and Valkey Sessions
-
-```dotenv
-# MongoDB
-TINA4_SESSION_BACKEND=mongodb
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=27017
-
-# Valkey
-TINA4_SESSION_BACKEND=valkey
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=6379
-```
-
----
-
-## 7. Database Sessions
-
-```dotenv
-TINA4_SESSION_BACKEND=database
-```
-
-Stores sessions in the `tina4_session` table using your existing database connection (`DATABASE_URL`). The table is auto-created on first use. Works with all 5 database engines (SQLite, PostgreSQL, MySQL, MSSQL, Firebird).
-
----
-
-## 8. Reading and Writing Session Data
+### Preferences Example
 
 ```typescript
 import { Router } from "tina4-nodejs";
@@ -136,202 +200,238 @@ Router.get("/api/preferences", async (req, res) => {
         items_per_page: req.session.get("items_per_page", 20)
     });
 });
-
-Router.post("/api/session/clear", async (req, res) => {
-    req.session.clear();
-    return res.json({ message: "Session cleared" });
-});
 ```
 
-### Shopping Cart Example
+### Visit Counter Example
 
 ```typescript
-Router.post("/api/cart/add", async (req, res) => {
-    const body = req.body;
+import { Router } from "tina4-nodejs";
 
-    const cart = req.session.get("cart", []);
-    const existingIndex = cart.findIndex(item => item.product_id === parseInt(body.product_id, 10));
-
-    if (existingIndex >= 0) {
-        cart[existingIndex].quantity += parseInt(body.quantity ?? "1", 10);
-    } else {
-        cart.push({
-            product_id: parseInt(body.product_id, 10),
-            name: body.name,
-            price: parseFloat(body.price),
-            quantity: parseInt(body.quantity ?? "1", 10)
-        });
-    }
-
-    req.session.set("cart", cart);
-
-    const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+Router.get("/visit-counter", async (req, res) => {
+    const count = (req.session.get("visit_count", 0)) + 1;
+    req.session.set("visit_count", count);
 
     return res.json({
-        message: "Added to cart",
-        cart_items: cart.length,
-        cart_total: Math.round(total * 100) / 100
+        visit_count: count,
+        message: `You have visited this page ${count} time${count === 1 ? "" : "s"}`
     });
 });
 ```
 
+```bash
+curl http://localhost:7148/visit-counter -c cookies.txt -b cookies.txt
+```
+
+```json
+{"visit_count":1,"message":"You have visited this page 1 time"}
+```
+
 ---
 
-## 9. Flash Messages
+## 5. Flash Messages
 
-Flash messages exist for exactly one read:
+Flash messages are session values that exist for exactly one read. Set them before a redirect. Read them on the next request. They vanish after being read.
+
+### Setting a Flash Message
 
 ```typescript
-Router.post("/profile/update", async (req, res) => {
-    // Update profile logic here...
+import { Router } from "tina4-nodejs";
 
-    req.session.flash("message", "Profile updated successfully");
+Router.post("/api/contact", async (req, res) => {
+    // Process the form...
+
+    req.session.flash("message", "Your message has been sent!");
     req.session.flash("message_type", "success");
 
-    return res.redirect("/profile");
+    return res.redirect("/contact");
 });
+```
 
-Router.get("/profile", async (req, res) => {
+### Reading a Flash Message
+
+```typescript
+Router.get("/contact", async (req, res) => {
     const flashMessage = req.session.getFlash("message");
     const flashType = req.session.getFlash("message_type") ?? "info";
 
-    return res.html("profile.html", {
-        user: { name: "Alice", email: "alice@example.com" },
+    return res.html("contact.html", {
         flash_message: flashMessage,
         flash_type: flashType
     });
 });
 ```
 
-The `getFlash()` method reads the value and removes it in one step. The next request will not see it.
+The `getFlash()` method reads the value and removes it in one step. The next time the user visits `/contact`, the flash message will be gone.
+
+### Flash Messages in Templates
+
+```html
+{% if flash_message %}
+    <div class="alert alert-{{ flash_type }}">
+        {{ flash_message }}
+    </div>
+{% endif %}
+```
 
 ---
 
-## 10. Setting and Reading Cookies
+## 6. Cookies
+
+Cookies are small data fragments stored in the browser. Unlike sessions, cookies travel with every request and are visible to JavaScript (unless `httpOnly` is set).
+
+### Setting a Cookie
 
 ```typescript
-Router.post("/api/set-language", async (req, res) => {
+import { Router } from "tina4-nodejs";
+
+Router.post("/preferences", async (req, res) => {
+    const theme = req.body.theme ?? "light";
     const language = req.body.language ?? "en";
 
     return res
-        .cookie("language", language, {
-            expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        .cookie("theme", theme, {
+            maxAge: 365 * 24 * 60 * 60 * 1000,  // 1 year in milliseconds
             path: "/",
-            httpOnly: false,
-            secure: false,
             sameSite: "Lax"
         })
-        .json({ message: `Language set to ${language}` });
+        .cookie("language", language, {
+            maxAge: 365 * 24 * 60 * 60 * 1000,
+            path: "/",
+            sameSite: "Lax"
+        })
+        .json({ message: "Preferences saved" });
 });
+```
 
-Router.get("/api/get-language", async (req, res) => {
+### Reading a Cookie
+
+```typescript
+import { Router } from "tina4-nodejs";
+
+Router.get("/", async (req, res) => {
+    const theme = req.cookies.theme ?? "light";
     const language = req.cookies.language ?? "en";
-    return res.json({ language });
+
+    return res.html("home.html", {
+        theme,
+        language
+    });
 });
 ```
 
-### When to Use Cookies vs Sessions
+### Deleting a Cookie
 
-| Use Cookies For | Use Sessions For |
-|-----------------|------------------|
-| Language preference | Shopping cart contents |
-| Theme preference (light/dark) | User authentication state |
-| "Remember this device" flag | Flash messages |
-| Non-sensitive, long-lived data | Sensitive, short-lived data |
-
----
-
-## 11. Session Security
-
-```dotenv
-TINA4_SESSION_TTL=3600
-TINA4_SESSION_SECURE=true
-TINA4_SESSION_HTTPONLY=true
-TINA4_SESSION_SAMESITE=Lax
-```
-
-`TINA4_SESSION_SAMESITE` controls cross-site cookie behavior:
-
-| Value | Behavior |
-|-------|----------|
-| `Strict` | Never sent with cross-site requests. Safest. Breaks some flows (clicking links from email). |
-| `Lax` | Sent with top-level navigations (clicking links) but not cross-site API calls. Good default. |
-| `None` | Always sent. Requires `TINA4_SESSION_SECURE=true`. Only for cross-site cookie access. |
-
-### Session Regeneration
-
-After login, regenerate the session ID to prevent session fixation:
+Set `maxAge` to 0:
 
 ```typescript
-Router.post("/login", async (req, res) => {
-    // Validate credentials...
-    req.session.regenerate();
-    req.session.set("user_id", user.id);
-    return res.redirect("/dashboard");
+Router.post("/clear-preferences", async (req, res) => {
+    return res
+        .cookie("theme", "", { maxAge: 0, path: "/" })
+        .cookie("language", "", { maxAge: 0, path: "/" })
+        .json({ message: "Preferences cleared" });
 });
 ```
-
-### Destroy a Session
-
-To completely destroy a session (not just clear its data):
-
-```typescript
-Router.post("/logout", async (req, res) => {
-    req.session.destroy();
-    return res.redirect("/login");
-});
-```
-
-### Session Configuration Options
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TINA4_SESSION_BACKEND` | `file` | Storage backend: `file`, `redis`, `mongodb`, `valkey`, `database` |
-| `TINA4_SESSION_TTL` | `3600` | Session lifetime in seconds |
-| `TINA4_SESSION_HOST` | `localhost` | Host for Redis/MongoDB/Valkey |
-| `TINA4_SESSION_PORT` | `6379` | Port for Redis/MongoDB/Valkey |
-| `TINA4_SESSION_PASSWORD` | (none) | Password for Redis/Valkey |
-| `TINA4_SESSION_SECURE` | `false` | Cookie sent only over HTTPS |
-| `TINA4_SESSION_HTTPONLY` | `true` | Cookie inaccessible to JavaScript |
-| `TINA4_SESSION_SAMESITE` | `Lax` | Cross-site cookie policy |
 
 ### Cookie Options
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `httpOnly` | `true` | Prevents JavaScript access |
-| `secure` | `false` | HTTPS only |
-| `sameSite` | `Lax` | Cross-site policy |
-| `maxAge` | session lifetime | Cookie expiry in seconds |
-| `path` | `/` | Cookie path scope |
-| `domain` | (none) | Cookie domain scope |
+| Option | Type | Description |
+|--------|------|-------------|
+| `maxAge` | number | Lifetime in milliseconds. 0 = delete. Omit = session cookie (deleted when browser closes). |
+| `expires` | Date | Expiry date. `maxAge` is preferred -- it is simpler and more predictable. |
+| `path` | string | URL path scope. `/` means the whole site. `/admin` means only under `/admin`. |
+| `domain` | string | Domain scope. `.example.com` includes subdomains. |
+| `secure` | boolean | Only send over HTTPS. Always `true` in production. |
+| `httpOnly` | boolean | Not accessible via JavaScript. Use for session cookies. |
+| `sameSite` | string | `"Strict"`, `"Lax"`, or `"None"`. Controls cross-site sending. |
+
+### When to Use Cookies vs Sessions
+
+| Use Case | Use Cookies | Use Sessions |
+|----------|------------|-------------|
+| User preferences (theme, language) | Yes | No |
+| Shopping cart | No | Yes |
+| Authentication state | No (use JWT in header) | Yes (for form-based auth) |
+| Flash messages | No | Yes |
+| Tracking consent | Yes | No |
+| Sensitive data (user ID, role) | No | Yes |
+
+The rule: sensitive data or data the client should not see goes in sessions. Non-sensitive data that should persist beyond session expiry goes in cookies.
 
 ---
 
-## 12. Remember Me Pattern
+## 7. Remember Me
 
-The default session expires when the browser closes. A "Remember Me" checkbox extends the session.
+The "remember me" pattern extends the session lifetime when the user checks a box on the login form:
 
 ```typescript
+import { Router } from "tina4-nodejs";
+
 Router.post("/login", async (req, res) => {
     const { email, password, remember } = req.body;
 
     // Validate credentials...
     const user = await authenticateUser(email, password);
     if (!user) {
-        return res.status(401).json({ error: "Invalid credentials" });
+        req.session.flash("message", "Invalid email or password");
+        req.session.flash("message_type", "error");
+        return res.redirect("/login");
     }
 
+    // Regenerate session ID (prevents session fixation)
     req.session.regenerate();
-    req.session.set("user_id", user.id);
 
+    // Set session data
+    req.session.set("user_id", user.id);
+    req.session.set("user_name", user.name);
+    req.session.set("logged_in", true);
+
+    // Handle "remember me"
     if (remember) {
-        // Extend session to 30 days
-        req.session.setTTL(30 * 24 * 60 * 60);
+        // Generate a long-lived token
+        const Auth = require("tina4-nodejs").Auth;
+        const rememberToken = Auth.getToken({ user_id: user.id });
+
+        // Store it in a cookie that lasts 30 days
+        return res
+            .cookie("remember_token", rememberToken, {
+                maxAge: 30 * 24 * 60 * 60 * 1000,
+                httpOnly: true,
+                secure: true,
+                path: "/",
+                sameSite: "Lax"
+            })
+            .redirect("/dashboard");
     }
 
     return res.redirect("/dashboard");
 });
+```
+
+Then, on every page load, check for the remember token if the session has expired:
+
+```typescript
+async function rememberMeMiddleware(req, res, nextHandler) {
+    if (!req.session.get("logged_in")) {
+        const rememberToken = req.cookies.remember_token;
+
+        if (rememberToken && Auth.validToken(rememberToken)) {
+            const payload = Auth.getPayload(rememberToken);
+            const db = new Database();
+            const user = await db.fetchOne(
+                "SELECT id, name FROM users WHERE id = ?",
+                [payload.user_id]
+            );
+
+            if (user) {
+                req.session.set("user_id", user.id);
+                req.session.set("user_name", user.name);
+                req.session.set("logged_in", true);
+            }
+        }
+    }
+
+    return await nextHandler(req, res);
+}
 ```
 
 The form:
@@ -355,88 +455,256 @@ The form:
 </form>
 ```
 
-Without the checkbox, the session uses the default TTL (1 hour). With the checkbox, the session persists for 30 days. The server controls the duration -- the client cannot extend it.
+Without the checkbox, the session uses the default TTL (1 hour). With the checkbox, the remember token cookie persists for 30 days. The server controls the duration -- the client cannot extend it.
 
 ---
 
-## 13. Exercise: Build a Shopping Cart with Session Storage
+## 8. Session Security
 
-Build a shopping cart stored entirely in session data.
+### Regenerate Session ID After Login
+
+To prevent session fixation attacks, regenerate the session ID after login:
+
+```typescript
+Router.post("/login-form", async (req, res) => {
+    // After validating credentials...
+
+    // Regenerate session ID (prevents session fixation)
+    req.session.regenerate();
+
+    req.session.set("user_id", user.id);
+    req.session.set("logged_in", true);
+
+    return res.redirect("/dashboard");
+});
+```
+
+### Destroy a Session
+
+To destroy a session entirely (not just clear its data):
+
+```typescript
+Router.post("/logout", async (req, res) => {
+    req.session.destroy();
+    return res.redirect("/login");
+});
+```
+
+### Secure Cookie Settings
+
+The session cookie (`tina4_session`) is `HttpOnly` and `SameSite=Lax` by default. For production, ensure HTTPS:
+
+```dotenv
+TINA4_SESSION_SECURE=true     # Only send over HTTPS
+TINA4_SESSION_HTTPONLY=true   # Not accessible via JavaScript (default)
+TINA4_SESSION_SAMESITE=Lax   # Prevent CSRF via cross-site requests (default)
+```
+
+`TINA4_SESSION_SAMESITE` controls cross-site cookie behavior:
+
+| Value | Behavior |
+|-------|----------|
+| `Strict` | Never sent with cross-site requests. Safest. Breaks some flows (clicking links from email). |
+| `Lax` | Sent with top-level navigations (clicking links) but not cross-site API calls. Good default. |
+| `None` | Always sent. Requires `TINA4_SESSION_SECURE=true`. Only for cross-site cookie access. |
+
+### Session Configuration Options
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_SESSION_BACKEND` | `file` | Storage backend: `file`, `redis`, `mongodb`, `valkey`, `database` |
+| `TINA4_SESSION_TTL` | `3600` | Session lifetime in seconds |
+| `TINA4_SESSION_HOST` | `localhost` | Host for Redis/MongoDB/Valkey |
+| `TINA4_SESSION_PORT` | `6379` | Port for Redis/MongoDB/Valkey |
+| `TINA4_SESSION_PASSWORD` | (none) | Password for Redis/Valkey |
+| `TINA4_SESSION_SECURE` | `false` | Cookie sent only over HTTPS |
+| `TINA4_SESSION_HTTPONLY` | `true` | Cookie inaccessible to JavaScript |
+| `TINA4_SESSION_SAMESITE` | `Lax` | Cross-site cookie policy |
+
+---
+
+## 9. Exercise: Build a Shopping Cart
+
+Build a shopping cart using sessions.
 
 ### Requirements
 
+1. Create these endpoints:
+
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/api/cart/add` | Add an item to the cart |
-| `GET` | `/api/cart` | View the cart with totals |
-| `PUT` | `/api/cart/{product_id:int}` | Update quantity (0 removes) |
-| `DELETE` | `/api/cart/{product_id:int}` | Remove an item |
-| `DELETE` | `/api/cart` | Clear the cart |
+| `GET` | `/cart` | View cart contents (rendered HTML page) |
+| `POST` | `/cart/add` | Add an item to the cart |
+| `POST` | `/cart/update` | Update item quantity |
+| `POST` | `/cart/remove` | Remove an item from the cart |
+| `POST` | `/cart/clear` | Clear the entire cart |
+| `GET` | `/cart/api` | Get cart as JSON (for AJAX) |
+
+2. The cart is stored in the session via `req.session.set("cart", [...])`
+3. Each cart item has: `product_id`, `name`, `price`, `quantity`
+4. Adding an existing product increments its quantity
+5. The cart page shows items, quantities, line totals, and a grand total
+6. Use flash messages for feedback ("Item added", "Cart cleared", etc.)
+
+Use this product data for validation:
+
+```typescript
+const PRODUCTS: Record<number, { name: string; price: number }> = {
+    1: { name: "Wireless Keyboard", price: 79.99 },
+    2: { name: "USB-C Hub", price: 49.99 },
+    3: { name: "Monitor Stand", price: 129.99 },
+    4: { name: "Mechanical Mouse", price: 59.99 },
+    5: { name: "Desk Lamp", price: 39.99 }
+};
+```
+
+### Test with:
+
+```bash
+# Add items
+curl -X POST http://localhost:7148/cart/add \
+  -H "Content-Type: application/json" \
+  -d '{"product_id": 1, "quantity": 2}' \
+  -c cookies.txt -b cookies.txt
+
+curl -X POST http://localhost:7148/cart/add \
+  -H "Content-Type: application/json" \
+  -d '{"product_id": 3, "quantity": 1}' \
+  -c cookies.txt -b cookies.txt
+
+# View cart
+curl http://localhost:7148/cart/api -b cookies.txt
+
+# Update quantity
+curl -X POST http://localhost:7148/cart/update \
+  -H "Content-Type: application/json" \
+  -d '{"product_id": 1, "quantity": 3}' \
+  -c cookies.txt -b cookies.txt
+
+# Remove item
+curl -X POST http://localhost:7148/cart/remove \
+  -H "Content-Type: application/json" \
+  -d '{"product_id": 3}' \
+  -c cookies.txt -b cookies.txt
+
+# Clear cart
+curl -X POST http://localhost:7148/cart/clear -c cookies.txt -b cookies.txt
+```
 
 ---
 
-## 14. Solution
+## 10. Solution
 
 Create `src/routes/cart.ts`:
 
 ```typescript
 import { Router } from "tina4-nodejs";
 
+const PRODUCTS: Record<number, { name: string; price: number }> = {
+    1: { name: "Wireless Keyboard", price: 79.99 },
+    2: { name: "USB-C Hub", price: 49.99 },
+    3: { name: "Monitor Stand", price: 129.99 },
+    4: { name: "Mechanical Mouse", price: 59.99 },
+    5: { name: "Desk Lamp", price: 39.99 }
+};
+
+
 function getCart(session: any): any[] {
     return session.get("cart", []);
 }
 
-function cartResponse(cart: any[]) {
-    let total = 0;
-    let itemCount = 0;
-    const items = cart.map(item => {
-        const subtotal = item.price * item.quantity;
-        total += subtotal;
-        itemCount += item.quantity;
-        return { ...item, subtotal: Math.round(subtotal * 100) / 100 };
-    });
 
-    return {
-        items,
-        item_count: itemCount,
-        unique_items: cart.length,
-        total: Math.round(total * 100) / 100
-    };
+function saveCart(session: any, cart: any[]): void {
+    session.set("cart", cart);
 }
 
-Router.post("/api/cart/add", async (req, res) => {
-    const body = req.body;
-    if (!body.product_id || !body.name || body.price === undefined) {
-        return res.status(400).json({ error: "product_id, name, and price are required" });
-    }
 
+function calculateTotals(cart: any[]): { cart: any[]; grandTotal: number } {
+    for (const item of cart) {
+        item.line_total = Math.round(item.price * item.quantity * 100) / 100;
+    }
+    const grandTotal = Math.round(
+        cart.reduce((sum, item) => sum + item.line_total, 0) * 100
+    ) / 100;
+    return { cart, grandTotal };
+}
+
+
+Router.get("/cart", async (req, res) => {
     const cart = getCart(req.session);
+    const { grandTotal } = calculateTotals(cart);
+    const flashMessage = req.session.getFlash("message");
+    const flashType = req.session.getFlash("message_type") ?? "info";
+
+    return res.html("cart.html", {
+        cart,
+        grand_total: grandTotal,
+        item_count: cart.reduce((sum, item) => sum + item.quantity, 0),
+        flash_message: flashMessage,
+        flash_type: flashType
+    });
+});
+
+
+Router.get("/cart/api", async (req, res) => {
+    const cart = getCart(req.session);
+    const { grandTotal } = calculateTotals(cart);
+
+    return res.json({
+        cart,
+        grand_total: grandTotal,
+        item_count: cart.reduce((sum, item) => sum + item.quantity, 0)
+    });
+});
+
+
+Router.post("/cart/add", async (req, res) => {
+    const body = req.body;
     const productId = parseInt(body.product_id, 10);
     const quantity = parseInt(body.quantity ?? "1", 10);
-    const existingIndex = cart.findIndex(item => item.product_id === productId);
 
-    if (existingIndex >= 0) {
-        cart[existingIndex].quantity += quantity;
-    } else {
-        cart.push({
-            product_id: productId,
-            name: body.name,
-            price: parseFloat(body.price),
-            quantity
-        });
+    if (!PRODUCTS[productId]) {
+        return res.status(404).json({ error: "Product not found" });
     }
 
-    req.session.set("cart", cart);
-    return res.json(cartResponse(cart));
+    if (quantity < 1) {
+        return res.status(400).json({ error: "Quantity must be at least 1" });
+    }
+
+    const product = PRODUCTS[productId];
+    const cart = getCart(req.session);
+
+    // Check if product already in cart
+    const existing = cart.find(item => item.product_id === productId);
+    if (existing) {
+        existing.quantity += quantity;
+        saveCart(req.session, cart);
+        req.session.flash("message", `Updated ${product.name} quantity`);
+        req.session.flash("message_type", "success");
+        return res.json({ message: `Updated ${product.name} quantity`, cart });
+    }
+
+    // Add new item
+    cart.push({
+        product_id: productId,
+        name: product.name,
+        price: product.price,
+        quantity
+    });
+    saveCart(req.session, cart);
+
+    req.session.flash("message", `Added ${product.name} to cart`);
+    req.session.flash("message_type", "success");
+
+    return res.status(201).json({ message: `Added ${product.name}`, cart });
 });
 
-Router.get("/api/cart", async (req, res) => {
-    return res.json(cartResponse(getCart(req.session)));
-});
 
-Router.put("/api/cart/{product_id:int}", async (req, res) => {
-    const productId = req.params.product_id;
-    const quantity = parseInt(req.body.quantity ?? "0", 10);
+Router.post("/cart/update", async (req, res) => {
+    const body = req.body;
+    const productId = parseInt(body.product_id, 10);
+    const quantity = parseInt(body.quantity ?? "1", 10);
+
     const cart = getCart(req.session);
     const index = cart.findIndex(item => item.product_id === productId);
 
@@ -444,18 +712,23 @@ Router.put("/api/cart/{product_id:int}", async (req, res) => {
         return res.status(404).json({ error: "Product not in cart" });
     }
 
-    if (quantity <= 0) {
+    if (quantity < 1) {
+        const removed = cart[index];
         cart.splice(index, 1);
+        req.session.flash("message", `Removed ${removed.name} from cart`);
     } else {
         cart[index].quantity = quantity;
+        req.session.flash("message", `Updated ${cart[index].name} quantity to ${quantity}`);
     }
 
-    req.session.set("cart", cart);
-    return res.json(cartResponse(cart));
+    req.session.flash("message_type", "success");
+    saveCart(req.session, cart);
+    return res.json({ message: "Cart updated", cart });
 });
 
-Router.delete("/api/cart/{product_id:int}", async (req, res) => {
-    const productId = req.params.product_id;
+
+Router.post("/cart/remove", async (req, res) => {
+    const productId = parseInt(req.body.product_id, 10);
     const cart = getCart(req.session);
     const index = cart.findIndex(item => item.product_id === productId);
 
@@ -463,45 +736,110 @@ Router.delete("/api/cart/{product_id:int}", async (req, res) => {
         return res.status(404).json({ error: "Product not in cart" });
     }
 
+    const removed = cart[index];
     cart.splice(index, 1);
-    req.session.set("cart", cart);
-    return res.json(cartResponse(cart));
+    saveCart(req.session, cart);
+
+    req.session.flash("message", `Removed ${removed.name} from cart`);
+    req.session.flash("message_type", "success");
+
+    return res.json({ message: `Removed ${removed.name}`, cart });
 });
 
-Router.delete("/api/cart", async (req, res) => {
-    req.session.set("cart", []);
-    return res.json(cartResponse([]));
+
+Router.post("/cart/clear", async (req, res) => {
+    saveCart(req.session, []);
+    req.session.flash("message", "Cart cleared");
+    req.session.flash("message_type", "info");
+    return res.json({ message: "Cart cleared", cart: [] });
 });
+```
+
+**Expected output for cart API after adding items:**
+
+```json
+{
+  "cart": [
+    {"product_id": 1, "name": "Wireless Keyboard", "price": 79.99, "quantity": 2, "line_total": 159.98},
+    {"product_id": 3, "name": "Monitor Stand", "price": 129.99, "quantity": 1, "line_total": 129.99}
+  ],
+  "grand_total": 289.97,
+  "item_count": 3
+}
 ```
 
 ---
 
-## 15. Gotchas
+## 11. Gotchas
 
-### 1. Sessions Do Not Work with curl Without Cookie Flags
+### 1. Session lost between requests
 
-**Fix:** Use `-c cookies.txt -b cookies.txt` with curl.
+**Problem:** Data you stored in the session is gone on the next request.
 
-### 2. Session Data Disappears After Server Restart
+**Cause:** The session cookie is not being sent back by the client. This happens when using curl without `-c cookies.txt -b cookies.txt`, or when the browser blocks cookies.
 
-**Fix:** Use Redis for production. Set `TINA4_SESSION_PATH` for persistent file sessions.
+**Fix:** For curl testing, use `-c cookies.txt -b cookies.txt` to save and send cookies. In the browser, make sure cookies are not blocked for your site.
 
-### 3. Session Cookie Not Sent Over HTTP in Production
+### 2. Session data is not JSON-serializable
 
-**Fix:** Ensure `TINA4_SESSION_SECURE` matches your actual protocol.
+**Problem:** Storing a JavaScript object with circular references or class instances in the session causes an error.
 
-### 4. Flash Messages Show Twice
+**Cause:** Sessions are serialized to JSON. Objects with circular references, `Map`, `Set`, `Date`, or custom class instances cannot be serialized directly.
+
+**Fix:** Convert objects to plain values before storing. For dates: `req.session.set("login_time", new Date().toISOString())`. For maps: convert to a plain object with `Object.fromEntries(myMap)`.
+
+### 3. Cookie not sent on cross-origin requests
+
+**Problem:** Your frontend at `http://localhost:3000` calls your API at `http://localhost:7148`, but cookies are not included.
+
+**Cause:** Browsers do not send cookies cross-origin by default. You need both CORS configuration and explicit `credentials: "include"` in fetch.
+
+**Fix:** Set `CORS_CREDENTIALS=true` in `.env` and use `fetch(url, { credentials: "include" })` in your frontend JavaScript. Also set `CORS_ORIGINS` to the specific frontend origin (not `*` -- wildcard does not work with credentials).
+
+### 4. File-based sessions on multi-server deployments
+
+**Problem:** A user is logged in on server A but logged out on server B.
+
+**Cause:** File-based sessions are stored on the local filesystem. Each server has its own session files.
+
+**Fix:** Switch to Redis, Valkey, MongoDB, or database-backed sessions so all servers share the same session store.
+
+### 5. Session cookie overwritten by another app
+
+**Problem:** Your session keeps getting reset even though you set it correctly.
+
+**Cause:** Another application on the same domain uses the same session cookie name.
+
+**Fix:** The session cookie name (`tina4_session`) is managed by Tina4. If you need to change it, set `TINA4_SESSION_NAME=myapp_session` in `.env`.
+
+### 6. Secure cookies on localhost
+
+**Problem:** Setting `secure: true` on a cookie means it never gets sent during development.
+
+**Cause:** Secure cookies are only sent over HTTPS. `http://localhost` is not HTTPS.
+
+**Fix:** Do not set `secure: true` during development. Use environment-based configuration: `secure: process.env.TINA4_DEBUG !== "true"`.
+
+### 7. Flash messages shown twice
+
+**Problem:** A flash message appears on the page, but when you refresh, it shows again.
+
+**Cause:** You read the flash message but did not remove it. Using `req.session.get()` reads without deleting.
 
 **Fix:** Use `req.session.getFlash("message")` to read flash data. It reads and deletes in one step. Do not use `req.session.get()` for flash messages.
 
-### 5. Large Session Data Causes Slow Requests
+### 8. Session data disappears after server restart
 
-**Fix:** Keep session data small. Store IDs, not entire objects.
+**Problem:** All sessions vanish when you restart the Node.js process.
 
-### 6. Remember Me Token Not Invalidated on Password Change
+**Cause:** File-based sessions may be stored in a temporary directory that gets cleared on restart, or in-memory state was lost.
 
-**Fix:** Clear `remember_token` when the password changes.
+**Fix:** Use Redis or database sessions for production. For file sessions, set `TINA4_SESSION_PATH` to a persistent directory.
 
-### 7. Session Fixation
+### 9. Large session data causes slow requests
 
-**Fix:** Call `req.session.regenerate()` after successful login.
+**Problem:** Pages load slower than expected. Session reads and writes take visible time.
+
+**Cause:** You stored large objects in the session -- full user profiles, query results, or file contents.
+
+**Fix:** Keep session data small. Store IDs, not entire objects. Look up the full data from the database when you need it.
