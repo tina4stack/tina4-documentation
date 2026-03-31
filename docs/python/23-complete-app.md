@@ -284,7 +284,7 @@ async def login(request, response):
 
 ```bash
 # Start the server
-uv run python app.py
+tina4 serve
 ```
 
 ```bash

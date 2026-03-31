@@ -74,7 +74,7 @@ Tina4 Python auto-detects ASGI servers at startup. ASGI servers deliver producti
 
 ### How Auto-Detection Works
 
-When you run `uv run python app.py` or `tina4 serve --production`, Tina4 checks for installed ASGI servers:
+When you run `tina4 serve` or `tina4 serve --production`, Tina4 checks for installed ASGI servers:
 
 1. If `uvicorn` is installed, the framework uses uvicorn with optimal settings
 2. If `hypercorn` is installed, the framework uses hypercorn
@@ -87,7 +87,7 @@ uv add uvicorn
 
 ```bash
 # With uvicorn installed
-uv run python app.py
+tina4 serve
 ```
 
 ```
@@ -98,7 +98,7 @@ uv run python app.py
 
 ```bash
 # Without uvicorn
-uv run python app.py
+tina4 serve
 ```
 
 ```

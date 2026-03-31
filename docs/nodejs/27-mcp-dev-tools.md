@@ -13,13 +13,13 @@ Tina4 ships a built-in MCP server. It starts automatically in dev mode. No confi
 Set `TINA4_DEBUG=true` in your `.env` file and start the server:
 
 ```bash
-npm run dev
+tina4 serve
 ```
 
 The console prints:
 
 ```
-MCP server available at http://localhost:7145/__dev/mcp
+MCP server available at http://localhost:7148/__dev/mcp
 ```
 
 Tina4 writes the connection details to `.claude/settings.json` automatically. Claude Code discovers the server on its next restart. Cursor reads the same file.
@@ -51,7 +51,7 @@ Tina4 auto-generates `.claude/settings.json`:
 {
   "mcpServers": {
     "tina4-dev": {
-      "url": "http://localhost:7145/__dev/mcp/sse"
+      "url": "http://localhost:7148/__dev/mcp/sse"
     }
   }
 }
@@ -67,8 +67,8 @@ Copy the same MCP config into Cursor's settings. The SSE URL is identical.
 
 Any MCP client can connect via:
 
-- **SSE endpoint**: `GET http://localhost:7145/__dev/mcp/sse` -- returns the message endpoint URL
-- **Message endpoint**: `POST http://localhost:7145/__dev/mcp/message` -- accepts JSON-RPC 2.0 messages
+- **SSE endpoint**: `GET http://localhost:7148/__dev/mcp/sse` -- returns the message endpoint URL
+- **Message endpoint**: `POST http://localhost:7148/__dev/mcp/message` -- accepts JSON-RPC 2.0 messages
 
 ---
 
@@ -184,7 +184,7 @@ Returns the message endpoint URL as a server-sent event:
 
 ```
 event: endpoint
-data: http://localhost:7145/__dev/mcp/message
+data: http://localhost:7148/__dev/mcp/message
 ```
 
 ### Message Endpoint (POST)
@@ -241,10 +241,10 @@ Returns JSON-RPC 2.0 responses:
 - Verify the port matches your server's port
 
 **Tools returning errors:**
-- Database tools require `ormBind(db)` in `app.ts`
+- Database tools require `initDatabase()` in your server setup
 - File tools are sandboxed to the project directory
 - `database_execute` only works on localhost
 
-**Remote server — MCP disabled:**
+**Remote server -- MCP disabled:**
 - This is intentional. Set `TINA4_MCP_REMOTE=true` only on staging environments you trust
 - Never enable MCP on production servers

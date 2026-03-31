@@ -605,7 +605,7 @@ python_functions = ["test_*"]
 Tina4's `Test` class is compatible with pytest. Your test files work with both `tina4 test` and `pytest` without modification.
 
 ```bash
-uv run pytest
+tina4 test
 ```
 
 ```
@@ -623,7 +623,7 @@ With pytest, you can generate code coverage reports:
 
 ```bash
 uv add --dev pytest-cov
-uv run pytest --cov=src --cov-report=term
+tina4 test --cov=src --cov-report=term
 ```
 
 ```
@@ -640,7 +640,7 @@ TOTAL                       105     13    88%
 For HTML coverage reports:
 
 ```bash
-uv run pytest --cov=src --cov-report=html
+tina4 test --cov=src --cov-report=html
 ```
 
 Open `htmlcov/index.html` in your browser to see a visual breakdown of which lines are covered by tests.

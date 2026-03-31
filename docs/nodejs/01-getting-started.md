@@ -619,10 +619,10 @@ startServer();
 
 That is the entire file. Tina4 discovers routes, models, and templates from the `src/` directory. You register nothing manually.
 
-To start the server without the CLI:
+The standard way to start the server is with the CLI:
 
 ```bash
-npx tsx app.ts
+tina4 serve
 ```
 
 ```
@@ -636,7 +636,7 @@ npx tsx app.ts
   Server running at http://0.0.0.0:7148
 ```
 
-Both `tina4 serve` and `npx tsx app.ts` work. The CLI adds live reload and other development features.
+The CLI adds live reload and other development features. For direct Node.js execution (advanced usage), see [Chapter 21: CLI](21-cli.md).
 
 ---
 

@@ -1,0 +1,517 @@
+# Chapter 30: Release Notes
+
+## Version History
+
+Tina4 Python follows semantic versioning. The major version (3) marks the ground-up rewrite from v2. Minor versions (3.1, 3.2, ...) introduce features. Patch versions fix bugs and polish edges.
+
+Every release ships through PyPI. Upgrade with:
+
+```bash
+uv add tina4-python@latest
+
+# or with pip
+pip install --upgrade tina4-python
+```
+
+Check your current version:
+
+```python
+import tina4_python
+print(tina4_python.__version__)
+```
+
+---
+
+## v3.10.x — Current Stable (March 28-31, 2026)
+
+The v3.10 line carries the most patches of any minor release. It refined the Frond template engine, hardened the ORM, and brought cross-framework parity to completion.
+
+### Highlights
+
+- **Singleton Frond engine** (v3.10.0). The template engine creates one instance and reuses it. Previous versions spawned a new engine per render call. This cut template rendering overhead across the board.
+
+- **ORM `auto_map` flag** (v3.10.1). Models translate between `snake_case` and `camelCase` column names without manual mapping.
+
+```python
+from tina4_python import ORM
+
+class UserProfile(ORM):
+    auto_map = True  # created_at ↔ createdAt handled for you
+    table_name = "user_profiles"
+```
+
+- **Frond method calls and slice syntax** (v3.10.2). Templates gained the ability to call methods on objects and use Python slice syntax.
+
+```html
+<!-- Method calls on template variables -->
+&#123;&#123; user.get_display_name() &#125;&#125;
+
+<!-- Slice syntax -->
+&#123;&#123; long_text[:100] &#125;&#125;...
+```
+
+- **Frond quote-aware operator matching** (v3.10.5). Operators inside quoted strings no longer break the parser. Before this fix, a string containing `>=` or `==` could confuse the template engine.
+
+- **ORM auto-commit on write operations** (v3.10.13). Save, delete, and update operations commit their transactions without an explicit call.
+
+- **`to_json` and `js_escape` filters** (v3.10.16). Templates gained filters for safe JSON embedding and JavaScript string escaping.
+
+```html
+<script>
+  const config = &#123;&#123; settings|to_json &#125;&#125;;
+  const message = "&#123;&#123; user_input|js_escape &#125;&#125;";
+</script>
+```
+
+- **`formTokenValue()` helper** (v3.10.23). CSRF tokens gained a dedicated template function for cleaner form markup.
+
+```html
+<form method="post">
+  <input type="hidden" name="form_token" value="&#123;&#123; formTokenValue() &#125;&#125;">
+  <!-- form fields -->
+</form>
+```
+
+- **MCP server and TestClient parity** (v3.10.32). The built-in MCP server and integration test client reached feature parity with the PHP and Ruby implementations.
+
+<div v-pre>
+
+- **Arithmetic in `{% set %}` and expressions** (v3.10.31). The template engine handles math operations inside assignment blocks.
+
+</div>
+
+```html
+&#123;% set total = price * quantity + shipping %&#125;
+```
+
+### Bug Fixes
+
+**Middleware not applied to routes (fixed in v3.10.1).** Middleware functions registered with `@middleware` were silently skipped during route dispatch. Routes ran without their middleware.
+
+```python
+# This middleware was ignored before v3.10.1
+@app.middleware
+def log_request(request, response):
+    print(f"Request: {request.method} {request.url}")
+    return request, response
+
+@app.get("/users")
+def get_users(request, response):
+    # middleware never ran — fixed in v3.10.1
+    return response("OK")
+```
+
+**Wildcard route matching (fixed in v3.10.1).** Routes with wildcard segments failed to match incoming requests. The router now handles wildcards as expected.
+
+**`Auth.valid_token` reference error (fixed in v3.10.9).** The server module called `Auth.valid_token` instead of the correct static method `Auth.valid_token_static`. This caused a `TypeError` on every token validation.
+
+**Frond `dict[variable_key]` access (fixed in v3.10.11).** Accessing a dictionary with a variable key inside templates raised a `KeyError`. The engine now resolves the variable before the lookup.
+
+```html
+<!-- This failed before v3.10.11 -->
+&#123;% set key = "name" %&#125;
+&#123;&#123; user[key] &#125;&#125;
+```
+
+**ORM transaction errors on SQLite (fixed in v3.10.25).** Calling `save()` or `delete()` on an ORM model raised `"cannot commit -- no transaction is active"` on SQLite. The ORM now wraps every write operation in a proper `start_transaction` / `commit` / `rollback` cycle.
+
+```python
+user = User()
+user.name = "Alice"
+user.save()  # raised OperationalError on SQLite before v3.10.25
+```
+
+**Stale templates in dev mode (fixed in v3.10.24).** The dev server cached rendered templates and did not pick up file changes until restart. Templates now reload on every request in debug mode.
+
+**Macro output HTML escaping (fixed in v3.10.27).** Frond macros returned raw strings that the auto-escaper then double-escaped. Macro output now wraps in `SafeString` to preserve the intended HTML.
+
+**DevReload performance (fixed in v3.10.28).** The live-reload watcher polled too fast and triggered duplicate reloads. It now uses a 3-second default interval with debouncing.
+
+### Breaking Changes
+
+**`@noauth` and `@secured` decorator behavior (v3.10.1).** Before this fix, these decorators did not update the route's auth flags. If you relied on the broken behavior (routes ignoring auth decorators), your routes will now enforce authentication as intended.
+
+---
+
+## v3.9.x — QueryBuilder and Sessions (March 26-27, 2026)
+
+### Features
+
+**QueryBuilder with fluent API (v3.9.0).** SQL construction through method chaining, integrated with the ORM.
+
+```python
+from tina4_python import ORM
+
+class User(ORM):
+    table_name = "users"
+
+# Fluent query through the ORM
+admins = User.query() \
+    .where("role = ?", ["admin"]) \
+    .order_by("name") \
+    .limit(10) \
+    .get()
+
+# Standalone query
+from tina4_python import QueryBuilder
+
+results = QueryBuilder.table("orders") \
+    .select("customer_id", "SUM(total) as revenue") \
+    .where("status = ?", ["completed"]) \
+    .group_by("customer_id") \
+    .having("revenue > ?", [1000]) \
+    .get()
+```
+
+**Path parameter injection (v3.9.0).** Route handlers receive path parameters as named function arguments. No more digging through `request.params`.
+
+```python
+# Before v3.9.0
+@app.get("/users/{id}")
+def get_user(request, response):
+    user_id = request.params["id"]
+    return response(f"User {user_id}")
+
+# v3.9.0 and later
+@app.get("/users/{id:int}")
+def get_user(id, request, response):
+    return response(f"User {id}")  # id is already an int
+```
+
+**Auto-start sessions (v3.9.0).** Every route handler receives `request.session` with zero configuration. The session API covers `get`, `set`, `delete`, `has`, `clear`, `destroy`, `regenerate`, `flash`, and `get_flash`.
+
+```python
+@app.get("/dashboard")
+def dashboard(request, response):
+    visits = request.session.get("visits", 0)
+    request.session.set("visits", visits + 1)
+    return response(f"Visit #{visits + 1}")
+```
+
+**CSRF middleware and form tokens (v3.9.1).** Session-bound CSRF tokens protect forms by default. Toggle with the `TINA4_CSRF_ENABLED` environment variable.
+
+```python
+# CSRF is on by default in v3.9.1+
+# Disable for API-only apps:
+# TINA4_CSRF_ENABLED=false
+```
+
+**File-based queue backend (v3.9.1).** Replaced the SQLite queue with a JSON file-based backend. Zero dependencies. Full cross-platform parity with the PHP and Ruby implementations.
+
+**NoSQL QueryBuilder (v3.9.2).** The fluent API gained `to_mongo()` to generate MongoDB queries from the same builder syntax.
+
+```python
+query = QueryBuilder.table("users") \
+    .where("age > ?", [21]) \
+    .order_by("name") \
+    .limit(10) \
+    .to_mongo()
+# Returns a MongoDB-compatible query dict
+```
+
+**WebSocket backplane (v3.9.2).** Redis pub/sub for scaling WebSocket broadcast across multiple server instances.
+
+**SameSite cookie default (v3.9.2).** Session cookies default to `SameSite=Lax`. Override with the `TINA4_SESSION_SAMESITE` environment variable.
+
+### Breaking Changes
+
+**Session API rename (v3.9.0).** The `unset()` method became `delete()` for cross-framework parity. `unset()` still works as an alias but will show a deprecation warning in future releases.
+
+```python
+# Before
+request.session.unset("cart")
+
+# After
+request.session.delete("cart")
+```
+
+**Environment variable standardization (v3.9.1).** All framework environment variables now follow the `TINA4_*` naming convention. `TOKEN_LIMIT` became `TINA4_TOKEN_LIMIT`. Check your `.env` file and rename any bare variables.
+
+**Queue backend change (v3.9.1).** The SQLite queue backend no longer exists. If you used it, the file-based backend is a drop-in replacement. Queue data from the old SQLite store must be migrated manually.
+
+---
+
+## v3.8.x — Pooling, Validation, and Security (March 25-26, 2026)
+
+### Features
+
+**Connection pooling (v3.8.1).** Pass `pool=N` to the `Database` constructor for round-robin, thread-safe connection pooling.
+
+```python
+from tina4_python import Database
+
+db = Database("sqlite:///app.db", pool=4)
+# Four connections rotate across requests
+```
+
+**Validator class (v3.8.1).** Input validation with an error response envelope.
+
+```python
+from tina4_python import Validator
+
+errors = Validator.validate(request.body, {
+    "email": "required|email",
+    "age": "required|integer|min:18"
+})
+
+if errors:
+    return response({"errors": errors}, 422)
+```
+
+**Upload size limit (v3.8.1).** The `TINA4_MAX_UPLOAD_SIZE` environment variable caps file uploads. Set it in bytes.
+
+**TestClient for integration tests (v3.8.1).** Test your routes without starting the server.
+
+```python
+from tina4_python import TestClient
+
+client = TestClient(app)
+result = client.get("/api/users")
+assert result.status_code == 200
+```
+
+**SecurityHeadersMiddleware (v3.8.1).** One import adds `X-Frame-Options`, `Strict-Transport-Security`, `Content-Security-Policy`, and `X-Content-Type-Options` to every response.
+
+```python
+from tina4_python import SecurityHeadersMiddleware
+
+app.use(SecurityHeadersMiddleware())
+```
+
+**Zero core dependencies (v3.8.x).** Database drivers, queue backends, and session handlers became optional installs. The core framework runs on Python's standard library alone.
+
+---
+
+## v3.7.x — Template Auto-Serve and Firebird Fixes (March 25, 2026)
+
+### Features
+
+**Template auto-serve at `/` (v3.7.0).** Place an `index.html` or `index.twig` in `src/templates/` and the framework serves it at the root path. User-registered `GET /` routes take priority.
+
+```
+src/
+  templates/
+    index.html   ← served at / with no route needed
+```
+
+**Firebird idempotent migrations (v3.7.0).** `ALTER TABLE ADD` statements on Firebird check `RDB$RELATION_FIELDS` before executing. Columns that already exist are skipped. Other databases and statement types are not affected.
+
+---
+
+## v3.6.x — API Parity (March 24, 2026)
+
+### Breaking Changes
+
+**Auth method renames (v3.6.0).** The authentication API aligned with the PHP, Ruby, and Node.js implementations.
+
+```python
+# Before v3.6.0
+from tina4_python import Auth
+
+token = Auth.create_token(payload)       # old name
+valid = Auth.validate_token(token)       # old name
+```
+
+```python
+# v3.6.0 and later
+from tina4_python import Auth
+
+token = Auth.get_token(payload)          # new primary name
+valid = Auth.valid_token(token)          # new primary name
+# create_token and validate_token still work as aliases
+```
+
+**Pagination parameter rename (v3.6.0).** `skip` became `offset` across all query methods.
+
+```python
+# Before
+users = User.find(skip=10, limit=5)
+
+# After
+users = User.find(offset=10, limit=5)
+```
+
+**Token expiry parameter rename (v3.6.0).** `token_expiry` became `expires_in` and now accepts minutes instead of seconds.
+
+```python
+# Before
+token = Auth.create_token(payload, token_expiry=3600)  # seconds
+
+# After
+token = Auth.get_token(payload, expires_in=60)          # minutes
+```
+
+**Locale environment variable (v3.6.0).** `LOCALE` became `TINA4_LOCALE`. Update your `.env` file.
+
+---
+
+## v3.5.x — Bundled Frontend (March 24, 2026)
+
+### Features
+
+**tina4js bundled (v3.5.0).** The reactive frontend library (13.6 KB minified) ships with the framework. No CDN link needed. Import it from your templates and build reactive UIs with signals, components, and declarative routing.
+
+**AutoCrud Swagger metadata (v3.5.0).** Routes generated by `AutoCrud` now include Swagger annotations. They appear in the auto-generated API docs without extra configuration.
+
+---
+
+## v3.3.x — WebSockets, File Uploads, and Frond Improvements (March 24, 2026)
+
+### Features
+
+**Route-based WebSocket handlers (v3.3.0).** Define WebSocket endpoints with the same decorator pattern as HTTP routes.
+
+```python
+@app.websocket("/ws/chat")
+def chat_handler(message, client):
+    # message is the incoming data
+    # client.send() to reply
+    client.send(f"Echo: {message}")
+```
+
+**File upload improvements (v3.3.0).** Uploaded files include raw bytes, a `data_uri` template filter, and consistent property names across all frameworks.
+
+```python
+@app.post("/upload")
+def handle_upload(request, response):
+    file = request.files[0]
+    print(file.filename)    # standardized from file_name
+    print(file.type)        # new in v3.3.0
+    raw = file.content      # raw bytes
+    return response("Uploaded")
+```
+
+**Lazy `column_info()` on DatabaseResult (v3.3.0).** Query results expose schema metadata on demand. Call `result.column_info()` to inspect column names, types, and sizes without a separate query.
+
+**`@any` decorator alias (v3.3.0).** `@any` works as shorthand for `@any_method`, matching the PHP, Ruby, and Node.js API.
+
+**Ternary-with-filter support in Frond (v3.3.0).** Templates handle inline conditionals that pipe their result through a filter.
+
+```html
+&#123;&#123; user.name if user else "Anonymous"|upper &#125;&#125;
+```
+
+### Breaking Changes
+
+**`job.data` renamed to `job.payload` (v3.3.0).** Queue jobs use `payload` as the primary attribute. `job.data` remains as a read-only property alias but will be removed in a future release.
+
+```python
+# Before
+@app.consume("emails")
+def send_email(job):
+    to = job.data["to"]
+
+# After
+@app.consume("emails")
+def send_email(job):
+    to = job.payload["to"]
+```
+
+**File upload property rename (v3.3.0).** `file_name` became `filename` (no underscore). The old name is no longer available.
+
+**Route params merged into `request.params` (v3.3.0).** Path parameters now merge into `request.params` alongside query parameters. If a query parameter shares a name with a path parameter, the path parameter wins.
+
+---
+
+## v3.2.x — Flexible Route Handlers and DevReload (March 24, 2026)
+
+### Features
+
+**Flexible handler signatures (v3.2.0).** Route handlers accept any combination of parameters. The framework inspects the signature and injects what you ask for.
+
+```python
+# No parameters — fire and forget
+@app.get("/ping")
+def ping():
+    return "pong"
+
+# Response only
+@app.get("/hello")
+def hello(response):
+    return response("Hello")
+
+# Request only (type-hinted)
+@app.post("/echo")
+def echo(request: Request):
+    return request.body
+
+# Both
+@app.get("/users")
+def users(request, response):
+    return response({"users": []})
+```
+
+**DevReload with SCSS compilation (v3.2.0).** The development server watches for file changes and reloads the browser. SCSS files compile on change.
+
+**Route groups (v3.2.0).** Group routes under a shared prefix with shared middleware.
+
+**MongoDB queue backend (v3.2.0).** Use MongoDB as a queue backend alongside the existing file-based, RabbitMQ, and Kafka options.
+
+**Migration naming convention (v3.2.0).** Migration files follow the `YYYYMMDDHHMMSS` timestamp format. The `tina4 migrate status` command shows which migrations have run.
+
+**Auto-increment port (v3.2.0).** If the default port is in use, the framework picks the next available port and opens your browser.
+
+### Breaking Changes
+
+**Queue constructor simplified (v3.2.0).** The `db` parameter was removed from the Queue constructor. The queue reads its backend from the environment.
+
+```python
+# Before
+from tina4_python import Queue, Database
+db = Database("sqlite:///queue.db")
+queue = Queue("emails", db=db)
+
+# After
+from tina4_python import Queue
+queue = Queue("emails")
+# Backend set via TINA4_QUEUE_BACKEND env var
+```
+
+**Producer/Consumer classes removed (v3.2.0).** Use `queue.produce()` and `queue.consume()` directly.
+
+```python
+# Before
+from tina4_python import Producer, Consumer
+producer = Producer(queue)
+producer.send({"to": "user@example.com"})
+
+# After
+queue.produce({"to": "user@example.com"})
+```
+
+---
+
+## v3.1.x — Benchmarks and Internal Improvements (March 22, 2026)
+
+### Features
+
+**Automated benchmark suite (v3.1.0).** A reproducible benchmark compares Tina4 Python against 17 frameworks across four languages. Run it yourself with `python benchmarks/run.py`.
+
+No user-facing API changes in this release. Internal improvements to test infrastructure and benchmark tooling.
+
+---
+
+## v3.0.0 — The Rewrite (March 22, 2026)
+
+The v3.0.0 release replaced the entire v2 codebase. Zero external dependencies. Pure Python standard library. 38 features. Over 6,000 tests.
+
+### What Changed
+
+- **New module structure.** `tina4_python.core` replaces the old flat namespace.
+- **Frond template engine.** Built-in Twig-compatible templates replace the Jinja2 dependency. Pre-compilation caches tokens for a 2.8x speedup on file renders.
+- **Decorator-based routing.** `@app.get`, `@app.post`, `@app.put`, `@app.delete`, `@app.patch` replace the old `Route` class.
+- **Built-in Dev Admin.** A browser-based dashboard shows routes, database tables, and queue status.
+- **Error overlay in debug mode.** Stack traces render in the browser with source context, request details, and suggested fixes.
+- **Swagger auto-registration.** Decorated routes appear in the Swagger UI without manual annotation.
+- **Unified queue system.** Switch between file-based, RabbitMQ, and Kafka backends through environment variables. No code changes.
+- **Database query caching.** Set `TINA4_DB_CACHE=true` for transparent caching with a 4x speedup on repeated queries.
+- **`tina4 generate` scaffolding.** Generate models, routes, migrations, and middleware from the command line.
+- **Custom error pages.** Self-contained 404, 403, and 500 pages with clean, framework-neutral design.
+
+For the full migration guide, see Chapter 29: Upgrading from v2 to v3.
+
+---
+
+## Release Candidate History
+
+Five release candidates preceded the v3.0.0 stable release between March 21-22, 2026. They resolved test failures, polished the Dev Admin UI, added the benchmark suite, and stabilized the Frond template engine. If you tested a release candidate, upgrade to v3.0.0 or later. The RC builds are not supported.

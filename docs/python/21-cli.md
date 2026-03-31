@@ -43,7 +43,7 @@ Creating Tina4 project in ./my-project ...
 Project created! Next steps:
   cd my-project
   uv sync
-  uv run python app.py
+  tina4 serve
 ```
 
 ### Language Detection

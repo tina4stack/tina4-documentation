@@ -59,7 +59,7 @@ runAllTests();
 Run it:
 
 ```bash
-npx tsx tests/basic.ts
+tina4 test
 ```
 
 ```
@@ -355,7 +355,7 @@ This runs `tests/run-all.ts` which discovers and executes all test files.
 ### Run a Specific Test File
 
 ```bash
-npx tsx tests/basic.ts
+tina4 test tests/basic.ts
 ```
 
 ### With npm Scripts

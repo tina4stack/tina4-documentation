@@ -13,7 +13,7 @@ Tina4 ships a built-in MCP server. It starts automatically in dev mode. No confi
 Set `TINA4_DEBUG=true` in your `.env` file and start the server:
 
 ```bash
-bundle exec ruby app.rb
+tina4 serve
 ```
 
 The console prints:

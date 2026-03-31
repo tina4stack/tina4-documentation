@@ -156,7 +156,7 @@ Click "Try It" on any gallery item. Tina4 creates the necessary files in your pr
 When `TINA4_DEBUG=true`, Tina4 watches your project files for changes and reloads the server. Edit a route file. Save it. The browser refreshes with the new code. No manual restart required.
 
 ```bash
-uv run python app.py
+tina4 serve
 ```
 
 ```
@@ -203,7 +203,7 @@ uv add --dev jurigged
 Start the server with hot-patching:
 
 ```bash
-uv run python app.py --hot
+tina4 serve --hot
 ```
 
 ```
@@ -492,4 +492,4 @@ The dev tools made each bug visible. The error overlay showed the SQL syntax err
 
 **Cause:** The queue system is not running. Jobs are enqueued but no worker processes them.
 
-**Fix:** Start a queue worker: `uv run python app.py --worker`. The queue monitor reflects the state of the queue storage (database or Redis). If no worker is running, jobs sit in "Pending" and never move to "Active" or "Completed."
+**Fix:** Start a queue worker: `tina4 serve --worker`. The queue monitor reflects the state of the queue storage (database or Redis). If no worker is running, jobs sit in "Pending" and never move to "Active" or "Completed."

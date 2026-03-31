@@ -67,7 +67,7 @@ This is the simplest WebSocket handler: it receives a message and sends it back 
 WebSocket runs alongside your HTTP server:
 
 ```bash
-uv run python app.py
+tina4 serve
 ```
 
 ```
@@ -941,7 +941,7 @@ If `TINA4_WS_BACKPLANE` is not set (the default), Tina4 broadcasts only to local
 
 **Cause:** You are running behind a traditional WSGI server like Gunicorn with sync workers. WSGI does not support persistent connections. Each request is handled and the connection is closed.
 
-**Fix:** Use `uv run python app.py` which runs Tina4's async server that handles both HTTP and WebSocket. For production, use an ASGI server like uvicorn or hypercorn (Tina4 auto-detects them). You can still use Nginx as a reverse proxy, but it must be configured for WebSocket proxying with `proxy_set_header Upgrade $http_upgrade` and `proxy_set_header Connection "upgrade"`.
+**Fix:** Use `tina4 serve` which runs Tina4's async server that handles both HTTP and WebSocket. For production, use an ASGI server like uvicorn or hypercorn (Tina4 auto-detects them). You can still use Nginx as a reverse proxy, but it must be configured for WebSocket proxying with `proxy_set_header Upgrade $http_upgrade` and `proxy_set_header Connection "upgrade"`.
 
 ### 2. Messages Are Strings, Not Dicts
 

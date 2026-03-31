@@ -554,7 +554,7 @@ If `TINA4_WS_BACKPLANE` is not set (the default), Tina4 broadcasts only to local
 
 ### 1. WebSocket Needs a Persistent Server
 
-**Fix:** Use `tina4 serve` or `npx tsx app.ts`. Configure Nginx for WebSocket proxying.
+**Fix:** Use `tina4 serve`. Configure Nginx for WebSocket proxying.
 
 ### 2. Messages Are Strings, Not Objects
 

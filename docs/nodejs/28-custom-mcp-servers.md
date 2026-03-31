@@ -13,16 +13,16 @@ A CRM system exposes customer lookup. An accounting system exposes invoice queri
 Import `McpServer` and create an instance on any path:
 
 ```typescript
-import { McpServer } from "tina4-nodejs/mcp";
+import { McpServer } from "@tina4/core";
 
-const mcp = new McpServer("/api/my-tools", { name: "My App Tools", version: "1.0.0" });
+const mcp = new McpServer("/api/my-tools", "My App Tools", "1.0.0");
 ```
 
 The server registers HTTP endpoints at:
 - `POST /api/my-tools/message` -- JSON-RPC message handler
 - `GET /api/my-tools/sse` -- SSE endpoint for client discovery
 
-Register it with the router in `app.ts` before `run()`:
+Register it with the router in your server setup:
 
 ```typescript
 mcp.registerRoutes(router);
@@ -30,37 +30,37 @@ mcp.registerRoutes(router);
 
 ---
 
-## 3. Registering Tools with @mcpTool
+## 3. Registering Tools with mcpTool
 
-The `@mcpTool` decorator turns a method into an MCP tool. Type annotations become the input schema automatically:
+The `mcpTool` function registers a handler as an MCP tool. Parameter metadata becomes the input schema:
 
 ```typescript
-import { McpServer, mcpTool } from "tina4-nodejs/mcp";
+import { McpServer, mcpTool, schemaFromParams } from "@tina4/core";
 
-const mcp = new McpServer("/crm/mcp", { name: "CRM Tools" });
+const mcp = new McpServer("/crm/mcp", "CRM Tools");
 
-class CrmTools {
-  @mcpTool("lookup_customer", { description: "Find a customer by email", server: mcp })
-  async lookupCustomer(email: string): Promise<Record<string, unknown> | null> {
-    return await db.fetchOne("SELECT * FROM customers WHERE email = ?", [email]);
-  }
+mcpTool("lookup_customer", "Find a customer by email", mcp, [
+  { name: "email", type: "string" },
+])((args) => {
+  return db.fetchOne("SELECT * FROM customers WHERE email = ?", [args.email]);
+});
 
-  @mcpTool("recent_orders", { description: "Get recent orders for a customer", server: mcp })
-  async recentOrders(customerId: number, limit: number = 10): Promise<Record<string, unknown>[]> {
-    const result = await db.fetch(
-      "SELECT * FROM orders WHERE customer_id = ? ORDER BY created_at DESC",
-      [customerId], { limit }
-    );
-    return result.toArray();
-  }
-}
+mcpTool("recent_orders", "Get recent orders for a customer", mcp, [
+  { name: "customer_id", type: "integer" },
+  { name: "limit", type: "integer", default: 10 },
+])((args) => {
+  return db.fetch(
+    "SELECT * FROM orders WHERE customer_id = ? ORDER BY created_at DESC",
+    [args.customer_id], { limit: (args.limit as number) || 10 }
+  );
+});
 ```
 
-The decorator extracts:
-- **Parameter names** from the method signature
-- **Types** from type annotations (`string` -> `"string"`, `number` -> `"integer"`, etc.)
+The registration extracts:
+- **Parameter names** from the params list
+- **Types** from the type field (`"string"`, `"integer"`, `"boolean"`, etc.)
 - **Required vs optional** -- parameters with defaults are optional
-- **Description** from the `description` option or the JSDoc comment
+- **Description** from the description argument
 
 An AI assistant sees these tools and their schemas:
 
@@ -80,24 +80,20 @@ An AI assistant sees these tools and their schemas:
 
 ---
 
-## 4. Registering Resources with @mcpResource
+## 4. Registering Resources with mcpResource
 
 Resources are read-only data endpoints. They expose reference data that AI assistants can browse:
 
 ```typescript
-import { mcpResource } from "tina4-nodejs/mcp";
+import { mcpResource } from "@tina4/core";
 
-class CrmResources {
-  @mcpResource("crm://product-catalog", { description: "All active products", server: mcp })
-  async productCatalog(): Promise<Record<string, unknown>[]> {
-    return (await db.fetch("SELECT id, name, price, category FROM products WHERE active = 1")).toArray();
-  }
+mcpResource("crm://product-catalog", "All active products", "application/json", mcp)(
+  () => db.fetch("SELECT id, name, price, category FROM products WHERE active = 1")
+);
 
-  @mcpResource("crm://tax-rates", { description: "Current tax rates by region", server: mcp })
-  async taxRates(): Promise<Record<string, unknown>[]> {
-    return (await db.fetch("SELECT region, rate FROM tax_rates")).toArray();
-  }
-}
+mcpResource("crm://tax-rates", "Current tax rates by region", "application/json", mcp)(
+  () => db.fetch("SELECT region, rate FROM tax_rates")
+);
 ```
 
 Resources are accessed via `resources/list` and `resources/read` in the MCP protocol.
@@ -106,37 +102,30 @@ Resources are accessed via `resources/list` and `resources/read` in the MCP prot
 
 ## 5. Class-Based MCP Services
 
-Group related tools into a service class. Each method with `@mcpTool` becomes a tool:
+Group related tools into a service class. Register each method as a tool:
 
 ```typescript
-import { McpServer, mcpTool } from "tina4-nodejs/mcp";
+import { McpServer, schemaFromParams } from "@tina4/core";
 
-const mcp = new McpServer("/accounting/mcp", { name: "Accounting Tools" });
+const mcp = new McpServer("/accounting/mcp", "Accounting Tools");
 
 class AccountingService {
-  private db: Database;
+  constructor(private db: any) {}
 
-  constructor(db: Database) {
-    this.db = db;
-  }
-
-  @mcpTool("invoice_lookup", { description: "Find an invoice by number", server: mcp })
-  async lookup(invoiceNo: string): Promise<Record<string, unknown> | null> {
-    return await this.db.fetchOne(
+  lookup(invoiceNo: string) {
+    return this.db.fetchOne(
       "SELECT * FROM invoices WHERE invoice_no = ?", [invoiceNo]
     );
   }
 
-  @mcpTool("outstanding_balances", { description: "List all unpaid invoices", server: mcp })
-  async balances(minAmount: number = 0.0): Promise<Record<string, unknown>[]> {
-    return (await this.db.fetch(
+  balances(minAmount = 0.0) {
+    return this.db.fetch(
       "SELECT * FROM invoices WHERE paid = 0 AND total >= ?", [minAmount]
-    )).toArray();
+    );
   }
 
-  @mcpTool("monthly_summary", { description: "Revenue summary for a month", server: mcp })
-  async summary(year: number, month: number): Promise<Record<string, unknown> | null> {
-    return await this.db.fetchOne(
+  summary(year: number, month: number) {
+    return this.db.fetchOne(
       "SELECT SUM(total) as revenue, COUNT(*) as invoice_count " +
       "FROM invoices WHERE strftime('%Y', created_at) = ? " +
       "AND strftime('%m', created_at) = ?",
@@ -145,70 +134,86 @@ class AccountingService {
   }
 }
 
-// Create the service instance — methods are already registered via decorators
-const accounting = new AccountingService(db);
+const svc = new AccountingService(db);
+
+mcp.registerTool("invoice_lookup",
+  (args) => svc.lookup(args.invoice_no as string),
+  "Find an invoice by number",
+  schemaFromParams([{ name: "invoice_no", type: "string" }])
+);
+
+mcp.registerTool("outstanding_balances",
+  (args) => svc.balances((args.min_amount as number) || 0),
+  "List all unpaid invoices",
+  schemaFromParams([{ name: "min_amount", type: "number", default: 0.0 }])
+);
+
+mcp.registerTool("monthly_summary",
+  (args) => svc.summary(args.year as number, args.month as number),
+  "Revenue summary for a month",
+  schemaFromParams([{ name: "year", type: "integer" }, { name: "month", type: "integer" }])
+);
 ```
 
 ---
 
 ## 6. Securing MCP Endpoints
 
-By default, developer MCP servers are public. Add authentication using the standard Tina4 middleware:
+By default, developer MCP servers are public. Add authentication using Tina4 middleware:
 
 ```typescript
-import { secured, middleware } from "tina4-nodejs/router";
+// Secure the MCP routes via middleware
+import { secured } from "@tina4/core";
 
-// Secure the entire MCP path
-@secured()
-@middleware(AuthMiddleware)
-function registerMcp() {
-  mcp.registerRoutes(router);
-}
+// Apply auth middleware before registering routes
+mcp.registerRoutes(router); // then protect the path with middleware
 ```
 
 Or check the bearer token inside individual tools:
 
 ```typescript
-@mcpTool("sensitive_data", { description: "Access restricted data", server: mcp })
-async sensitiveData(token: string): Promise<Record<string, unknown>[] | { error: string }> {
-  const payload = Auth.validTokenStatic(token);
-  if (!payload) {
-    return { error: "Unauthorized" };
-  }
-  return (await db.fetch("SELECT * FROM sensitive_table")).toArray();
-}
+import { Auth } from "@tina4/core";
+
+mcp.registerTool("sensitive_data",
+  (args) => {
+    const payload = Auth.validToken(args.token as string, secret);
+    if (!payload) return { error: "Unauthorized" };
+    return db.fetch("SELECT * FROM sensitive_table");
+  },
+  "Access restricted data",
+  schemaFromParams([{ name: "token", type: "string" }])
+);
 ```
 
 ---
 
 ## 7. Testing MCP Tools
 
-Use `TestClient` to test MCP endpoints without starting a server, or test tool methods directly:
+Test tool functions directly, or test via the MCP protocol:
 
 ```typescript
-// Test the tool method directly
-test("lookup_customer returns correct customer", async () => {
-  const tools = new CrmTools();
-  const result = await tools.lookupCustomer("alice@example.com");
-  expect(result).not.toBeNull();
-  expect(result!.email).toBe("alice@example.com");
-});
+// Test the tool function directly
+function testLookupCustomer() {
+  const result = db.fetchOne("SELECT * FROM customers WHERE email = ?", ["alice@example.com"]);
+  assert(result !== null);
+  assert(result.email === "alice@example.com");
+}
 
 // Test via MCP protocol
-test("MCP tool call returns result", async () => {
-  const resp = JSON.parse(await mcp.handleMessage({
+function testMcpToolCall() {
+  const resp = JSON.parse(mcp.handleMessage({
     jsonrpc: "2.0",
     id: 1,
     method: "tools/call",
     params: {
       name: "lookup_customer",
-      arguments: { email: "alice@example.com" }
-    }
+      arguments: { email: "alice@example.com" },
+    },
   }));
-  expect(resp).toHaveProperty("result");
+  assert("result" in resp);
   const content = resp.result.content[0].text;
-  expect(content.toLowerCase()).toContain("alice");
-});
+  assert(content.toLowerCase().includes("alice"));
+}
 ```
 
 ---
@@ -218,75 +223,68 @@ test("MCP tool call returns result", async () => {
 Here is a full working example -- a CRM system with customer, order, and product tools:
 
 ```typescript
-// app.ts
-import { run } from "tina4-nodejs";
-import { ormBind, Database } from "tina4-nodejs/orm";
-import { McpServer, mcpTool, mcpResource } from "tina4-nodejs/mcp";
+// src/routes/mcp/setup.ts
+import { McpServer, mcpTool, mcpResource, schemaFromParams } from "@tina4/core";
+import { initDatabase } from "@tina4/orm";
 
-const db = new Database("sqlite:///crm.db");
-ormBind(db);
+const db = await initDatabase({ url: "sqlite:///crm.db" });
 
 // Create MCP server
-const crmMcp = new McpServer("/crm/mcp", { name: "CRM Assistant", version: "1.0.0" });
+const crmMcp = new McpServer("/crm/mcp", "CRM Assistant", "1.0.0");
 
-class CrmService {
-  private db: Database;
+// Tools
+mcpTool("find_customer", "Search customers by name or email", crmMcp, [
+  { name: "query", type: "string" },
+])((args) => {
+  const q = args.query as string;
+  return db.fetch(
+    "SELECT * FROM customers WHERE name LIKE ? OR email LIKE ?",
+    [`%${q}%`, `%${q}%`]
+  );
+});
 
-  constructor(db: Database) {
-    this.db = db;
-  }
+mcpTool("customer_orders", "Get all orders for a customer", crmMcp, [
+  { name: "customer_id", type: "integer" },
+])((args) => {
+  return db.fetch(
+    "SELECT o.*, GROUP_CONCAT(oi.product_name) as items " +
+    "FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id " +
+    "WHERE o.customer_id = ? GROUP BY o.id ORDER BY o.created_at DESC",
+    [args.customer_id]
+  );
+});
 
-  // Tools
-  @mcpTool("find_customer", { description: "Search customers by name or email", server: crmMcp })
-  async findCustomer(query: string): Promise<Record<string, unknown>[]> {
-    return (await this.db.fetch(
-      "SELECT * FROM customers WHERE name LIKE ? OR email LIKE ?",
-      [`%${query}%`, `%${query}%`]
-    )).toArray();
-  }
+mcpTool("create_note", "Add a note to a customer record", crmMcp, [
+  { name: "customer_id", type: "integer" },
+  { name: "note", type: "string" },
+])((args) => {
+  db.execute("INSERT INTO customer_notes (customer_id, note) VALUES (?, ?)",
+    [args.customer_id, args.note]);
+  return { success: true };
+});
 
-  @mcpTool("customer_orders", { description: "Get all orders for a customer", server: crmMcp })
-  async customerOrders(customerId: number): Promise<Record<string, unknown>[]> {
-    return (await this.db.fetch(
-      "SELECT o.*, GROUP_CONCAT(oi.product_name) as items " +
-      "FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id " +
-      "WHERE o.customer_id = ? GROUP BY o.id ORDER BY o.created_at DESC",
-      [customerId]
-    )).toArray();
-  }
+// Resources
+mcpResource("crm://products", "Product catalog", "application/json", crmMcp)(
+  () => db.fetch("SELECT * FROM products WHERE active = 1")
+);
 
-  @mcpTool("create_note", { description: "Add a note to a customer record", server: crmMcp })
-  async createNote(customerId: number, note: string): Promise<{ success: boolean }> {
-    await this.db.insert("customer_notes", { customer_id: customerId, note });
-    return { success: true };
-  }
+mcpResource("crm://stats", "CRM statistics", "application/json", crmMcp)(() => {
+  const customers = db.fetch("SELECT COUNT(*) as count FROM customers");
+  const orders = db.fetch("SELECT COUNT(*) as count, SUM(total) as revenue FROM orders");
+  return {
+    customers: customers[0]?.count ?? 0,
+    orders: orders[0]?.count ?? 0,
+    revenue: orders[0]?.revenue ?? 0,
+  };
+});
 
-  // Resources
-  @mcpResource("crm://products", { description: "Product catalog", server: crmMcp })
-  async products(): Promise<Record<string, unknown>[]> {
-    return (await this.db.fetch("SELECT * FROM products WHERE active = 1")).toArray();
-  }
-
-  @mcpResource("crm://stats", { description: "CRM statistics", server: crmMcp })
-  async stats(): Promise<Record<string, unknown>> {
-    const customers = await this.db.fetchOne("SELECT COUNT(*) as count FROM customers");
-    const orders = await this.db.fetchOne("SELECT COUNT(*) as count, SUM(total) as revenue FROM orders");
-    return {
-      customers: customers!.count,
-      orders: orders!.count,
-      revenue: orders!.revenue,
-    };
-  }
-}
-
-// Create the service and register routes
-const crm = new CrmService(db);
+// Register routes
 crmMcp.registerRoutes(router);
 
-run();
+export { crmMcp };
 ```
 
-Connect Claude Code to `http://localhost:7145/crm/mcp/sse` and ask:
+Connect Claude Code to `http://localhost:7148/crm/mcp/sse` and ask:
 
 > "Find all customers named Smith and show their recent orders"
 
@@ -298,7 +296,7 @@ The AI calls `find_customer` with `query: "Smith"`, then `customer_orders` for e
 
 1. **One server per domain** -- CRM tools on `/crm/mcp`, accounting on `/accounting/mcp`
 2. **Keep tools focused** -- one query per tool, not a Swiss-army-knife tool
-3. **Use type annotations** -- they become the schema. An AI assistant cannot call a tool correctly without knowing the parameter types
+3. **Use param metadata** -- types and defaults become the schema. An AI assistant cannot call a tool correctly without knowing the parameter types
 4. **Return structured data** -- objects and arrays, not formatted strings. Let the AI format for the user
-5. **Secure production endpoints** -- use `@secured()` or middleware for any MCP server that runs outside localhost
-6. **Test tools directly** -- call the TypeScript method in your test suite, not just through the MCP protocol
+5. **Secure production endpoints** -- use middleware for any MCP server that runs outside localhost
+6. **Test tools directly** -- call the TypeScript function in your test suite, not just through the MCP protocol
