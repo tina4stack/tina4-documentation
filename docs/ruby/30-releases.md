@@ -6,22 +6,6 @@ This chapter covers every v3 release from the initial launch through the current
 
 ---
 
-## v3.10.43 — April 1, 2026
-
-### Improvements
-
-**Per-tool AI context generation** — `tina4ruby ai` now generates tool-specific content for each AI assistant. Cursor gets compact patterns, Copilot gets short instructions, Claude Code gets the full developer guide.
-
-**New AI tool files** — Added `.windsurfrules`, `.clinerules`, `CONVENTIONS.md` (Aider), `AGENTS.md` (Codex).
-
-### v3.10.42
-
-**`select_one`** — ORM convenience method for single-record queries.
-
-**DevAdmin metrics** — Enhanced code metrics with empty method/class warnings.
-
----
-
 ## v3.10.40 — April 1, 2026
 
 ### Bug Fixes

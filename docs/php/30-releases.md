@@ -8,24 +8,6 @@ This chapter covers the full v3 line -- from the first release candidate through
 
 ---
 
-## v3.10.43 — April 1, 2026
-
-### Improvements
-
-**Per-tool AI context generation** — `bin/tina4php ai` now generates tool-specific content for each AI assistant. Cursor gets compact patterns, Copilot gets short instructions, Claude Code gets the full developer guide.
-
-**New AI tool files** — Added `.windsurfrules`, `.clinerules`, `CONVENTIONS.md` (Aider), `AGENTS.md` (Codex).
-
-**TestClient** — New `TestClient` class for testing routes programmatically without HTTP.
-
-### v3.10.42
-
-**`selectOne()`** — ORM convenience method for single-record queries.
-
-**DevAdmin metrics** — Enhanced code metrics with empty method/class warnings.
-
----
-
 ## v3.10.40 — April 1, 2026
 
 ### Bug Fixes
