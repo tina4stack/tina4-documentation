@@ -8,6 +8,26 @@ This chapter covers the full v3 line -- from the first release candidate through
 
 ---
 
+## v3.10.46 — April 1, 2026
+
+### Test Coverage
+
+Massive test expansion — 605 new tests added across session handlers, queue backends, database drivers, Frond template engine, dev admin, ORM, auth, seeder, log, service runner, container, CORS, form token, HTML element, migration, i18n, events, SCSS, CRUD, rate limiter, and CSRF middleware. PHP now at 1,937 tests with full parity across all 49 core areas.
+
+### Bug Fixes
+
+**CSRF query param check** — Fixed `$request->params` shadowing `$request->query` in the CSRF middleware, so query string token detection now works correctly.
+
+---
+
+## v3.10.45 — April 1, 2026
+
+### Bug Fixes
+
+**CLI serve hijack** — When `index.php` calls `App::run()`, the CLI `serve` command now sets a `TINA4_CLI_SERVE` constant so `run()` returns early, letting the CLI manage the server lifecycle (port, debug mode, browser open).
+
+---
+
 ## v3.10.44 — April 1, 2026
 
 ### New Features

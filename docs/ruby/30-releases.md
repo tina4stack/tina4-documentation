@@ -6,6 +6,22 @@ This chapter covers every v3 release from the initial launch through the current
 
 ---
 
+## v3.10.46 — April 1, 2026
+
+### Test Coverage
+
+344 new tests added across cache (56), ORM (19), Frond (28), database drivers (85), auth (21), SCSS (10), dotenv (30), queue backends (10), migration (10), session handlers (11), router (14), log (13), CSRF middleware (17). Fixed session handler DB key bug (symbol vs string). Ruby now at 2,274 tests with full parity across all 49 core areas.
+
+---
+
+## v3.10.45 — April 1, 2026
+
+### Notes
+
+Version bump for parity with PHP CLI serve fix. No Ruby-specific changes.
+
+---
+
 ## v3.10.44 — April 1, 2026
 
 ### New Features

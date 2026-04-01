@@ -6,6 +6,22 @@ This chapter covers every release from v3.0.0 through v3.10.x. Each section grou
 
 ---
 
+## v3.10.46 — April 1, 2026
+
+### Test Coverage
+
+CSRF middleware expanded to 32 tests matching Python reference. Node.js now at 2,546 tests with full parity across all 49 core areas.
+
+---
+
+## v3.10.45 — April 1, 2026
+
+### Notes
+
+Version bump for parity with PHP CLI serve fix. No Node.js-specific changes.
+
+---
+
 ## v3.10.44 — April 1, 2026
 
 ### New Features

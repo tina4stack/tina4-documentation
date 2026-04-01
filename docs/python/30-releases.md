@@ -22,6 +22,22 @@ print(tina4_python.__version__)
 
 ---
 
+## v3.10.46 — April 1, 2026
+
+### Test Coverage
+
+Massive test parity push across all 4 frameworks. CSRF middleware tests expanded to 29+ per framework. Dedicated test suites added for FakeData, Cache, DevMailbox, Static files, Metrics, CLI scaffolding, and all remaining gap areas. Python: 2,132 tests. PHP: 1,937. Ruby: 2,274. Node.js: 2,546. Total: 8,889 tests, 0 failures, 49 core areas with full parity.
+
+---
+
+## v3.10.45 — April 1, 2026
+
+### Bug Fixes
+
+**PHP CLI serve hijack** — When `index.php` calls `App::run()`, the CLI `serve` command now sets a `TINA4_CLI_SERVE` constant so `run()` returns early, letting the CLI manage the server lifecycle (port, debug mode, browser open). Previously, `index.php`'s `run()` would start its own server and block the CLI's serve logic.
+
+---
+
 ## v3.10.44 — April 1, 2026
 
 ### New Features
