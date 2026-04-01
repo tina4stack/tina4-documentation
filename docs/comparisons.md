@@ -2,7 +2,7 @@
 
 Tina4 ships in Python, PHP, Ruby, Node.js, JavaScript (frontend), and Delphi (FMX). Each variant targets a different language but follows the same project structure, the same routing conventions, and the same ORM API.
 
-This page compares every Tina4 variant against popular frameworks in its language. The data covers performance benchmarks, a 38-feature matrix, deployment size, and honest trade-offs.
+This page compares every Tina4 variant against popular frameworks in its language. The data covers performance benchmarks, a 44-feature matrix, deployment size, and honest trade-offs.
 
 **Methodology.** All benchmarks ran on an Apple Silicon ARM64 MacBook Pro (8 cores). The tool: `hey` — 5,000 requests, 50 concurrency, three runs averaged. Two endpoints tested: a JSON object response and a 100-item list response. Benchmark scripts live at [github.com/tina4stack/tina4-documentation/benchmark/](https://github.com/tina4stack/tina4-documentation/benchmark/). Date: March 2026.
 
@@ -39,7 +39,7 @@ Tina4 Python runs ASGI on uvicorn. Async by default. Zero external dependencies.
 
 Starlette leads raw JSON throughput — it carries no middleware overhead. FastAPI sits on top of Starlette and adds Pydantic validation, which costs ~30% on JSON but drops list throughput to 2,709 req/s. Tina4 lands mid-pack on JSON and holds strong on list responses (5,769), where FastAPI and Flask fall off. Django handles both endpoints at a steady ~2,200 req/s with no dramatic drops. Bottle runs single-threaded, which limits its ceiling.
 
-### Feature Comparison (38 features)
+### Feature Comparison (44 features)
 
 | # | Feature | Tina4 | Django | FastAPI | Flask | Starlette | Bottle |
 |---|---|---|---|---|---|---|---|
@@ -58,47 +58,53 @@ Starlette leads raw JSON throughput — it carries no middleware overhead. FastA
 | 11 | Seeder / fake data | Y | - | - | - | - | - |
 | 12 | Sessions | Y | Y | Y | - | - | - |
 | 13 | Response caching | Y | Y | - | - | - | - |
+| 14 | QueryBuilder | Y | Y | - | - | - | - |
+| 15 | Input validation | Y | Y | Y | - | - | - |
 | | **AUTH** | | | | | | |
-| 14 | JWT built-in | Y | - | - | - | - | - |
-| 15 | Password hashing | Y | Y | - | - | - | - |
-| 16 | CSRF protection | Y | Y | - | - | - | - |
+| 16 | JWT built-in | Y | - | - | - | - | - |
+| 17 | Password hashing | Y | Y | - | - | - | - |
+| 18 | CSRF protection | Y | Y | - | - | - | - |
 | | **FRONTEND** | | | | | | |
-| 17 | Template engine | Y | Y | - | Y | - | Y |
-| 18 | CSS framework | Y | - | - | - | - | - |
-| 19 | SCSS compiler | Y | - | - | - | - | - |
-| 20 | Frontend JS helpers | Y | - | - | - | - | - |
+| 19 | Template engine | Y | Y | - | Y | - | Y |
+| 20 | CSS framework | Y | - | - | - | - | - |
+| 21 | SCSS compiler | Y | - | - | - | - | - |
+| 22 | Frontend JS helpers | Y | - | - | - | - | - |
 | | **API** | | | | | | |
-| 21 | Swagger / OpenAPI | Y | - | Y | - | - | - |
-| 22 | GraphQL | Y | - | - | - | - | - |
-| 23 | SOAP / WSDL | Y | - | - | - | - | - |
-| 24 | HTTP client | Y | - | - | - | - | - |
-| 25 | Queue system | Y | - | - | - | - | - |
+| 23 | Swagger / OpenAPI | Y | - | Y | - | - | - |
+| 24 | GraphQL | Y | - | - | - | - | - |
+| 25 | SOAP / WSDL | Y | - | - | - | - | - |
+| 26 | HTTP client | Y | - | - | - | - | - |
+| 27 | Queue system | Y | - | - | - | - | - |
+| 28 | MCP server | Y | - | - | - | - | - |
 | | **DEV EXPERIENCE** | | | | | | |
-| 26 | CLI scaffolding | Y | Y | - | - | - | - |
-| 27 | Dev admin dashboard | Y | Y | - | - | - | - |
-| 28 | Error overlay | Y | Y | Y | Y | - | Y |
-| 29 | Live reload | Y | Y | Y | Y | - | - |
-| 30 | Auto-CRUD generator | Y | Y | - | - | - | - |
-| 31 | Gallery / examples | Y | - | - | - | - | - |
-| 32 | AI assistant context | Y | - | - | - | - | - |
-| 33 | Inline testing | Y | Y | - | - | - | - |
+| 29 | CLI scaffolding | Y | Y | - | - | - | - |
+| 30 | Dev admin dashboard | Y | Y | - | - | - | - |
+| 31 | Error overlay | Y | Y | Y | Y | - | Y |
+| 32 | Live reload | Y | Y | Y | Y | - | - |
+| 33 | Auto-CRUD generator | Y | Y | - | - | - | - |
+| 34 | Gallery / examples | Y | - | - | - | - | - |
+| 35 | AI assistant context | Y | - | - | - | - | - |
+| 36 | Inline testing | Y | Y | - | - | - | - |
+| 37 | TestClient | Y | Y | Y | Y | - | - |
 | | **ARCHITECTURE** | | | | | | |
-| 34 | Zero dependencies | Y | - | - | - | - | Y |
-| 35 | Dependency injection | Y | - | Y | - | - | - |
-| 36 | Event system | Y | Y | - | - | - | - |
-| 37 | i18n / translations | Y | Y | - | - | - | - |
-| 38 | HTML builder | Y | - | - | - | - | - |
+| 38 | Zero dependencies | Y | - | - | - | - | Y |
+| 39 | Dependency injection | Y | - | Y | - | - | - |
+| 40 | Event system | Y | Y | - | - | - | - |
+| 41 | i18n / translations | Y | Y | - | - | - | - |
+| 42 | Background services | Y | - | - | - | - | - |
+| 43 | .env configuration | Y | - | - | - | - | - |
+| 44 | HTML builder | Y | - | - | - | - | - |
 
 ### Feature Count
 
-| Framework | Features (of 38) | Pct |
+| Framework | Features (of 44) | Pct |
 |---|---:|---:|
-| **Tina4** | **38** | **100%** |
-| Django | 22 | 58% |
-| FastAPI | 8 | 21% |
-| Flask | 7 | 18% |
-| Starlette | 6 | 16% |
-| Bottle | 5 | 13% |
+| **Tina4** | **44** | **100%** |
+| Django | 24 | 55% |
+| FastAPI | 10 | 23% |
+| Flask | 7 | 16% |
+| Starlette | 6 | 14% |
+| Bottle | 5 | 11% |
 
 ### Deployment Size
 
@@ -111,7 +117,7 @@ Starlette leads raw JSON throughput — it carries no middleware overhead. FastA
 | FastAPI | 12 | 4.8 MB |
 | Django | 20 | 25 MB |
 
-Tina4 ships 38 features in 2.4 MB with zero dependencies. Django delivers 22 features in 25 MB with 20 dependencies. FastAPI ships 8 features in 4.8 MB. The size-to-feature ratio favors Tina4.
+Tina4 ships 44 features in 2.4 MB with zero dependencies. Django delivers 24 features in 25 MB with 20 dependencies. FastAPI ships 10 features in 4.8 MB. The size-to-feature ratio favors Tina4.
 
 ---
 
@@ -144,7 +150,7 @@ Tina4 PHP runs its own built-in async server using `stream_select`. No Apache, n
 
 Tina4 PHP dominates. Its built-in async server (`stream_select`) handles requests without the overhead of php-fpm process spawning. It delivers 28,158 JSON req/s — 5.5x faster than Slim and 109x faster than Laravel. The gap narrows under production setups (Nginx + php-fpm + OPcache), but Tina4's zero-config server wins out of the box.
 
-### Feature Comparison (38 features)
+### Feature Comparison (44 features)
 
 | # | Feature | Tina4 | Laravel | Symfony | CodeIgniter | Slim |
 |---|---|---|---|---|---|---|
@@ -163,46 +169,52 @@ Tina4 PHP dominates. Its built-in async server (`stream_select`) handles request
 | 11 | Seeder / fake data | Y | Y | - | - | - |
 | 12 | Sessions | Y | Y | Y | Y | - |
 | 13 | Response caching | Y | Y | Y | Y | - |
+| 14 | QueryBuilder | Y | Y | Y | Y | - |
+| 15 | Input validation | Y | Y | Y | Y | - |
 | | **AUTH** | | | | | |
-| 14 | JWT built-in | Y | Y | - | - | - |
-| 15 | Password hashing | Y | Y | Y | Y | - |
-| 16 | CSRF protection | Y | Y | Y | Y | - |
+| 16 | JWT built-in | Y | Y | - | - | - |
+| 17 | Password hashing | Y | Y | Y | Y | - |
+| 18 | CSRF protection | Y | Y | Y | Y | - |
 | | **FRONTEND** | | | | | |
-| 17 | Template engine | Y | Y | Y | Y | - |
-| 18 | CSS framework | Y | - | - | - | - |
-| 19 | SCSS compiler | Y | - | - | - | - |
-| 20 | Frontend JS helpers | Y | - | - | - | - |
+| 19 | Template engine | Y | Y | Y | Y | - |
+| 20 | CSS framework | Y | - | - | - | - |
+| 21 | SCSS compiler | Y | - | - | - | - |
+| 22 | Frontend JS helpers | Y | - | - | - | - |
 | | **API** | | | | | |
-| 21 | Swagger / OpenAPI | Y | - | - | - | - |
-| 22 | GraphQL | Y | - | - | - | - |
-| 23 | SOAP / WSDL | Y | - | - | - | - |
-| 24 | HTTP client | Y | Y | Y | - | - |
-| 25 | Queue system | Y | Y | Y | - | - |
+| 23 | Swagger / OpenAPI | Y | - | - | - | - |
+| 24 | GraphQL | Y | - | - | - | - |
+| 25 | SOAP / WSDL | Y | - | - | - | - |
+| 26 | HTTP client | Y | Y | Y | - | - |
+| 27 | Queue system | Y | Y | Y | - | - |
+| 28 | MCP server | Y | - | - | - | - |
 | | **DEV EXPERIENCE** | | | | | |
-| 26 | CLI scaffolding | Y | Y | Y | Y | - |
-| 27 | Dev admin dashboard | Y | - | - | - | - |
-| 28 | Error overlay | Y | Y | Y | Y | - |
-| 29 | Live reload | Y | Y | - | - | - |
-| 30 | Auto-CRUD generator | Y | - | - | - | - |
-| 31 | Gallery / examples | Y | - | - | - | - |
-| 32 | AI assistant context | Y | - | - | - | - |
-| 33 | Inline testing | Y | Y | Y | Y | - |
+| 29 | CLI scaffolding | Y | Y | Y | Y | - |
+| 30 | Dev admin dashboard | Y | - | - | - | - |
+| 31 | Error overlay | Y | Y | Y | Y | - |
+| 32 | Live reload | Y | Y | - | - | - |
+| 33 | Auto-CRUD generator | Y | - | - | - | - |
+| 34 | Gallery / examples | Y | - | - | - | - |
+| 35 | AI assistant context | Y | - | - | - | - |
+| 36 | Inline testing | Y | Y | Y | Y | - |
+| 37 | TestClient | Y | Y | Y | - | - |
 | | **ARCHITECTURE** | | | | | |
-| 34 | Zero dependencies | Y | - | - | - | - |
-| 35 | Dependency injection | Y | Y | Y | - | Y |
-| 36 | Event system | Y | Y | Y | - | - |
-| 37 | i18n / translations | Y | Y | Y | Y | - |
-| 38 | HTML builder | Y | - | - | - | - |
+| 38 | Zero dependencies | Y | - | - | - | - |
+| 39 | Dependency injection | Y | Y | Y | - | Y |
+| 40 | Event system | Y | Y | Y | - | - |
+| 41 | i18n / translations | Y | Y | Y | Y | - |
+| 42 | Background services | Y | Y | - | - | - |
+| 43 | .env configuration | Y | Y | - | - | - |
+| 44 | HTML builder | Y | - | - | - | - |
 
 ### Feature Count
 
-| Framework | Features (of 38) | Pct |
+| Framework | Features (of 44) | Pct |
 |---|---:|---:|
-| **Tina4** | **38** | **100%** |
-| Laravel | 25 | 66% |
-| Symfony | 18 | 47% |
-| CodeIgniter | 14 | 37% |
-| Slim | 6 | 16% |
+| **Tina4** | **44** | **100%** |
+| Laravel | 29 | 66% |
+| Symfony | 20 | 45% |
+| CodeIgniter | 16 | 36% |
+| Slim | 6 | 14% |
 
 ### Deployment Size
 
@@ -214,7 +226,7 @@ Tina4 PHP dominates. Its built-in async server (`stream_select`) handles request
 | Symfony | 30+ | ~25 MB |
 | Laravel | 70+ | ~50 MB |
 
-Tina4 PHP packs 38 features into ~1.5 MB with zero external dependencies. Laravel needs 70+ packages and ~50 MB to reach 25 features. Slim stays small at ~3 MB but ships only 6 features.
+Tina4 PHP packs 44 features into ~1.5 MB with zero external dependencies. Laravel needs 70+ packages and ~50 MB to reach 29 features. Slim stays small at ~3 MB but ships only 6 features.
 
 ---
 
@@ -245,7 +257,7 @@ Tina4 Ruby runs on Puma. Built-in ORM, JWT, GraphQL, Swagger, and SCSS — no ge
 
 All four frameworks ran on Puma, making this a fair comparison. Tina4 Ruby leads both endpoints — 17,637 JSON req/s and 11,303 list req/s. It doubles Roda on JSON and triples Sinatra on list throughput. Rails trails at 4,918 JSON req/s, weighed down by its middleware stack.
 
-### Feature Comparison (38 features)
+### Feature Comparison (44 features)
 
 | # | Feature | Tina4 | Rails | Sinatra | Roda |
 |---|---|---|---|---|---|
@@ -264,45 +276,51 @@ All four frameworks ran on Puma, making this a fair comparison. Tina4 Ruby leads
 | 11 | Seeder / fake data | Y | - | - | - |
 | 12 | Sessions | Y | Y | - | - |
 | 13 | Response caching | Y | Y | - | - |
+| 14 | QueryBuilder | Y | Y | - | - |
+| 15 | Input validation | Y | Y | - | - |
 | | **AUTH** | | | | |
-| 14 | JWT built-in | Y | - | - | - |
-| 15 | Password hashing | Y | Y | - | - |
-| 16 | CSRF protection | Y | Y | - | - |
+| 16 | JWT built-in | Y | - | - | - |
+| 17 | Password hashing | Y | Y | - | - |
+| 18 | CSRF protection | Y | Y | - | - |
 | | **FRONTEND** | | | | |
-| 17 | Template engine | Y | Y | Y | - |
-| 18 | CSS framework | Y | - | - | - |
-| 19 | SCSS compiler | Y | - | - | - |
-| 20 | Frontend JS helpers | Y | - | - | - |
+| 19 | Template engine | Y | Y | Y | - |
+| 20 | CSS framework | Y | - | - | - |
+| 21 | SCSS compiler | Y | - | - | - |
+| 22 | Frontend JS helpers | Y | - | - | - |
 | | **API** | | | | |
-| 21 | Swagger / OpenAPI | Y | - | - | - |
-| 22 | GraphQL | Y | - | - | - |
-| 23 | SOAP / WSDL | Y | - | - | - |
-| 24 | HTTP client | Y | - | - | - |
-| 25 | Queue system | Y | Y | - | - |
+| 23 | Swagger / OpenAPI | Y | - | - | - |
+| 24 | GraphQL | Y | - | - | - |
+| 25 | SOAP / WSDL | Y | - | - | - |
+| 26 | HTTP client | Y | - | - | - |
+| 27 | Queue system | Y | Y | - | - |
+| 28 | MCP server | Y | - | - | - |
 | | **DEV EXPERIENCE** | | | | |
-| 26 | CLI scaffolding | Y | Y | - | - |
-| 27 | Dev admin dashboard | Y | - | - | - |
-| 28 | Error overlay | Y | Y | - | - |
-| 29 | Live reload | Y | Y | - | - |
-| 30 | Auto-CRUD generator | Y | Y | - | - |
-| 31 | Gallery / examples | Y | - | - | - |
-| 32 | AI assistant context | Y | - | - | - |
-| 33 | Inline testing | Y | Y | - | - |
+| 29 | CLI scaffolding | Y | Y | - | - |
+| 30 | Dev admin dashboard | Y | - | - | - |
+| 31 | Error overlay | Y | Y | - | - |
+| 32 | Live reload | Y | Y | - | - |
+| 33 | Auto-CRUD generator | Y | Y | - | - |
+| 34 | Gallery / examples | Y | - | - | - |
+| 35 | AI assistant context | Y | - | - | - |
+| 36 | Inline testing | Y | Y | - | - |
+| 37 | TestClient | Y | Y | - | - |
 | | **ARCHITECTURE** | | | | |
-| 34 | Zero dependencies | Y | - | - | - |
-| 35 | Dependency injection | Y | - | - | - |
-| 36 | Event system | Y | Y | - | - |
-| 37 | i18n / translations | Y | Y | - | - |
-| 38 | HTML builder | Y | - | - | - |
+| 38 | Zero dependencies | Y | - | - | - |
+| 39 | Dependency injection | Y | - | - | - |
+| 40 | Event system | Y | Y | - | - |
+| 41 | i18n / translations | Y | Y | - | - |
+| 42 | Background services | Y | Y | - | - |
+| 43 | .env configuration | Y | - | - | - |
+| 44 | HTML builder | Y | - | - | - |
 
 ### Feature Count
 
-| Framework | Features (of 38) | Pct |
+| Framework | Features (of 44) | Pct |
 |---|---:|---:|
-| **Tina4** | **38** | **100%** |
-| Rails | 20 | 53% |
-| Sinatra | 4 | 11% |
-| Roda | 3 | 8% |
+| **Tina4** | **44** | **100%** |
+| Rails | 24 | 55% |
+| Sinatra | 4 | 9% |
+| Roda | 3 | 7% |
 
 ### Deployment Size
 
@@ -313,7 +331,7 @@ All four frameworks ran on Puma, making this a fair comparison. Tina4 Ruby leads
 | Sinatra | 2 | ~5 MB |
 | Rails | 40+ | 40+ MB |
 
-Tina4 Ruby fits 38 features into ~900 KB. Rails needs 40+ gems and 40+ MB for 20 features. Roda stays lean at ~1 MB but ships only 3 built-in features.
+Tina4 Ruby fits 44 features into ~900 KB. Rails needs 40+ gems and 40+ MB for 24 features. Roda stays lean at ~1 MB but ships only 3 built-in features.
 
 ---
 
@@ -357,7 +375,7 @@ Tina4 Node.js runs on Node.js 22+ with zero runtime dependencies. TypeScript-fir
 
 Fastify leads JSON throughput at 55,329 req/s. Tina4 trails on JSON (34,343) but dominates list responses at 50,001 req/s — a 49% lead over the next-best framework (Fastify at 33,496). That list-response strength matters: real APIs return arrays of objects, not single JSON values. All competitors run single-process; Tina4 uses cluster mode with 8 workers. Dev mode (tsx, single process) shows 11,872 JSON req/s — suitable for local development.
 
-### Feature Comparison (38 features)
+### Feature Comparison (44 features)
 
 | # | Feature | Tina4 | Hapi | Fastify | Express | Koa |
 |---|---|---|---|---|---|---|
@@ -376,46 +394,52 @@ Fastify leads JSON throughput at 55,329 req/s. Tina4 trails on JSON (34,343) but
 | 11 | Seeder / fake data | Y | - | - | - | - |
 | 12 | Sessions | Y | Y | - | - | - |
 | 13 | Response caching | Y | Y | - | - | - |
+| 14 | QueryBuilder | Y | - | - | - | - |
+| 15 | Input validation | Y | Y | Y | - | - |
 | | **AUTH** | | | | | |
-| 14 | JWT built-in | Y | - | - | - | - |
-| 15 | Password hashing | Y | - | - | - | - |
-| 16 | CSRF protection | Y | - | - | - | - |
+| 16 | JWT built-in | Y | - | - | - | - |
+| 17 | Password hashing | Y | - | - | - | - |
+| 18 | CSRF protection | Y | - | - | - | - |
 | | **FRONTEND** | | | | | |
-| 17 | Template engine | Y | - | - | - | - |
-| 18 | CSS framework | Y | - | - | - | - |
-| 19 | SCSS compiler | Y | - | - | - | - |
-| 20 | Frontend JS helpers | Y | - | - | - | - |
+| 19 | Template engine | Y | - | - | - | - |
+| 20 | CSS framework | Y | - | - | - | - |
+| 21 | SCSS compiler | Y | - | - | - | - |
+| 22 | Frontend JS helpers | Y | - | - | - | - |
 | | **API** | | | | | |
-| 21 | Swagger / OpenAPI | Y | Y | Y | - | - |
-| 22 | GraphQL | Y | - | - | - | - |
-| 23 | SOAP / WSDL | Y | - | - | - | - |
-| 24 | HTTP client | Y | - | - | - | - |
-| 25 | Queue system | Y | - | - | - | - |
+| 23 | Swagger / OpenAPI | Y | Y | Y | - | - |
+| 24 | GraphQL | Y | - | - | - | - |
+| 25 | SOAP / WSDL | Y | - | - | - | - |
+| 26 | HTTP client | Y | - | - | - | - |
+| 27 | Queue system | Y | - | - | - | - |
+| 28 | MCP server | Y | - | - | - | - |
 | | **DEV EXPERIENCE** | | | | | |
-| 26 | CLI scaffolding | Y | - | - | - | - |
-| 27 | Dev admin dashboard | Y | - | - | - | - |
-| 28 | Error overlay | Y | Y | Y | - | - |
-| 29 | Live reload | Y | - | - | - | - |
-| 30 | Auto-CRUD generator | Y | - | - | - | - |
-| 31 | Gallery / examples | Y | - | - | - | - |
-| 32 | AI assistant context | Y | - | - | - | - |
-| 33 | Inline testing | Y | Y | - | Y | - |
+| 29 | CLI scaffolding | Y | - | - | - | - |
+| 30 | Dev admin dashboard | Y | - | - | - | - |
+| 31 | Error overlay | Y | Y | Y | - | - |
+| 32 | Live reload | Y | - | - | - | - |
+| 33 | Auto-CRUD generator | Y | - | - | - | - |
+| 34 | Gallery / examples | Y | - | - | - | - |
+| 35 | AI assistant context | Y | - | - | - | - |
+| 36 | Inline testing | Y | Y | - | Y | - |
+| 37 | TestClient | Y | - | - | - | - |
 | | **ARCHITECTURE** | | | | | |
-| 34 | Zero dependencies | Y | - | - | - | - |
-| 35 | Dependency injection | Y | Y | Y | - | Y |
-| 36 | Event system | Y | Y | - | - | - |
-| 37 | i18n / translations | Y | - | - | - | - |
-| 38 | HTML builder | Y | - | - | - | - |
+| 38 | Zero dependencies | Y | - | - | - | - |
+| 39 | Dependency injection | Y | Y | Y | - | Y |
+| 40 | Event system | Y | Y | - | - | - |
+| 41 | i18n / translations | Y | - | - | - | - |
+| 42 | Background services | Y | - | - | - | - |
+| 43 | .env configuration | Y | - | - | - | - |
+| 44 | HTML builder | Y | - | - | - | - |
 
 ### Feature Count
 
-| Framework | Features (of 38) | Pct |
+| Framework | Features (of 44) | Pct |
 |---|---:|---:|
-| **Tina4** | **38** | **100%** |
-| Hapi | 12 | 32% |
-| Fastify | 5 | 13% |
-| Express | 4 | 11% |
-| Koa | 3 | 8% |
+| **Tina4** | **44** | **100%** |
+| Hapi | 14 | 32% |
+| Fastify | 7 | 16% |
+| Express | 4 | 9% |
+| Koa | 3 | 7% |
 
 ### Deployment Size
 
@@ -433,13 +457,13 @@ Tina4 Node.js runs on the standard library alone. No `node_modules` tree to audi
 
 ## Cross-Language Summary
 
-All four Tina4 back-end variants share the same 38-feature set, the same project structure, and the same ORM API.
+All four Tina4 back-end variants share the same 44-feature set, the same project structure, and the same ORM API.
 
 | | Python | PHP | Ruby | Node.js |
 |---|---|---|---|---|
 | **JSON req/s** | 9,761 | 28,158 | 17,637 | 34,343 |
 | **List req/s** | 5,769 | 18,191 | 11,303 | 50,001 |
-| **Features** | 38/38 | 38/38 | 38/38 | 38/38 |
+| **Features** | 44/44 | 44/44 | 44/44 | 44/44 |
 | **Dependencies** | 0 | 0 | 0 | 0 |
 | **Install Size** | 2.4 MB | ~1.5 MB | ~900 KB | ~1.8 MB |
 | **Server** | uvicorn (ASGI) | stream_select (built-in) | Puma (threaded) | cluster (8 workers) |
@@ -645,16 +669,16 @@ Tina4 takes a different path: ship everything a modern web project needs in the 
 
 | Language | Tina4 Variant | JSON req/s | List req/s | Features | Size |
 |---|---|---:|---:|---:|---:|
-| **Python** | tina4_python | 9,761 | 5,769 | 38/38 | 2.4 MB |
-| **PHP** | Tina4 PHP | 28,158 | 18,191 | 38/38 | ~1.5 MB |
-| **Ruby** | tina4_ruby | 17,637 | 11,303 | 38/38 | ~900 KB |
-| **Node.js** | Tina4 Node.js | 34,343 | 50,001 | 38/38 | ~1.8 MB |
+| **Python** | tina4_python | 9,761 | 5,769 | 44/44 | 2.4 MB |
+| **PHP** | Tina4 PHP | 28,158 | 18,191 | 44/44 | ~1.5 MB |
+| **Ruby** | tina4_ruby | 17,637 | 11,303 | 44/44 | ~900 KB |
+| **Node.js** | Tina4 Node.js | 34,343 | 50,001 | 44/44 | ~1.8 MB |
 | **JavaScript** | tina4js | — | — | Sub-3KB | 3.7 KB gz |
 | **Delphi** | Tina4 Delphi | — | — | FMX components | Open source |
 
 The trade-off is real. Tina4 has a smaller community, fewer third-party packages, and less production history than established frameworks. No StackOverflow tag with 200,000 questions. No ecosystem of 300,000 community packages. When you hit an edge case, you read source code — not a blog post.
 
-For developers who want working CRUD in a few lines, the same patterns across four languages, 38 features with zero dependencies, and AI context files for seven tools — Tina4 is worth evaluating. Build something. Break something. File an issue. The framework grows with its users.
+For developers who want working CRUD in a few lines, the same patterns across four languages, 44 features with zero dependencies, and AI context files for seven tools — Tina4 is worth evaluating. Build something. Break something. File an issue. The framework grows with its users.
 
 ---
 
