@@ -585,7 +585,78 @@ This overlay exists only when `TINA4_DEBUG=true`. Production never sees it.
 
 ---
 
-## 8. Request & Response Fundamentals
+## 8. Manual Setup (No CLI)
+
+The `tina4` CLI creates the project for you. But if you start from an empty folder — just Composer and a text editor — here is the minimum you need.
+
+### Step 1: Install the Package
+
+```bash
+composer require tina4stack/tina4php
+```
+
+### Step 2: Create `index.php`
+
+This is the entry point. Create a file called `index.php` in your project root:
+
+```php
+<?php
+require_once "./vendor/autoload.php";
+
+$app = new \Tina4\App(basePath: __DIR__, development: true);
+$app->start();
+
+// Dispatch when running under PHP built-in server
+if (php_sapi_name() === "cli-server") {
+    $response = \Tina4\Router::dispatch(new \Tina4\Request(), new \Tina4\Response());
+    http_response_code($response->getStatusCode());
+    foreach ($response->getHeaders() as $name => $value) {
+        header("$name: $value");
+    }
+    echo $response->getBody();
+}
+```
+
+The `App` class boots the framework. The `cli-server` block handles routing when you run PHP's built-in web server.
+
+### Step 3: Create the Folder Structure
+
+Tina4 expects this layout:
+
+```
+my-project/
+├── index.php
+├── .env
+├── vendor/
+└── src/
+    ├── routes/       # Route files go here
+    ├── templates/    # Twig templates go here
+    └── public/       # Static files (CSS, JS, images)
+```
+
+Create the directories:
+
+```bash
+mkdir -p src/routes src/templates src/public
+```
+
+### Step 4: Create `.env`
+
+```dotenv
+TINA4_DEBUG=true
+```
+
+### Step 5: Run It
+
+```bash
+php -S localhost:7145 index.php
+```
+
+The server starts on `http://localhost:7145`. You should see the Tina4 welcome page. From here, add route files in `src/routes/` and templates in `src/templates/` — the same way as a CLI-scaffolded project.
+
+---
+
+## 9. Request & Response Fundamentals
 
 Before jumping into the exercises, let's consolidate how route handlers work in Tina4 PHP. Every handler receives two arguments: `$request` (what the client sent) and `$response` (what you send back). Here is the complete picture.
 
@@ -784,7 +855,7 @@ This example covers every building block the exercises use: reading query parame
 
 ---
 
-## 9. Exercise: Greeting API + Product List Template
+## 10. Exercise: Greeting API + Product List Template
 
 Build both features from scratch. No peeking at the examples above.
 
@@ -848,7 +919,7 @@ $products = [
 
 ---
 
-## 10. Solutions
+## 11. Solutions
 
 ### Solution A: Greeting API
 
@@ -999,7 +1070,7 @@ Router::get("/store", function ($request, $response) {
 
 ---
 
-## 11. Gotchas
+## 12. Gotchas
 
 ### 1. File not auto-discovered
 

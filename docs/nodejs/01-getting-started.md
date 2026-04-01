@@ -640,7 +640,86 @@ The CLI adds live reload and other development features. For direct Node.js exec
 
 ---
 
-## 9. Request & Response Fundamentals
+## 9. Manual Setup (No CLI)
+
+The `tina4` CLI scaffolds everything for you. But if you start from an empty folder — just Node.js and npm — here is the minimum you need.
+
+### Step 1: Initialize and Install
+
+```bash
+npm init -y
+npm install tina4-nodejs typescript tsx
+```
+
+### Step 2: Create `app.ts`
+
+This is the entry point. Create a file called `app.ts` in your project root:
+
+```typescript
+import { startServer } from "@tina4/core";
+
+const port = parseInt(process.env.PORT || "7149", 10);
+const host = process.env.HOST || "0.0.0.0";
+startServer({ port, host });
+```
+
+Three lines of real code. `startServer` boots the framework, scans for routes, and starts listening.
+
+### Step 3: Create `tsconfig.json`
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "outDir": "dist"
+  },
+  "include": ["src/**/*", "app.ts"]
+}
+```
+
+### Step 4: Create the Folder Structure
+
+Tina4 expects this layout:
+
+```
+my-project/
+├── app.ts
+├── tsconfig.json
+├── package.json
+├── .env
+└── src/
+    ├── routes/       # Route files go here
+    ├── templates/    # Twig templates go here
+    └── public/       # Static files (CSS, JS, images)
+```
+
+Create the directories:
+
+```bash
+mkdir -p src/routes src/templates src/public
+```
+
+### Step 5: Create `.env`
+
+```dotenv
+TINA4_DEBUG=true
+```
+
+### Step 6: Run It
+
+```bash
+npx tsx app.ts
+```
+
+The server starts on `http://localhost:7149`. You should see the Tina4 welcome page. From here, add route files in `src/routes/` and templates in `src/templates/` — the same way as a CLI-scaffolded project.
+
+---
+
+## 10. Request & Response Fundamentals
 
 Before jumping into the exercises, let's consolidate how route handlers work in Tina4 Node.js. Every handler receives two arguments: `req` (what the client sent) and `res` (what you send back). Here is the complete picture.
 
@@ -829,7 +908,7 @@ This example covers every building block the exercises use: reading query parame
 
 ---
 
-## 10. Exercise: Greeting API + Product List Template
+## 11. Exercise: Greeting API + Product List Template
 
 Build the following two features from scratch, without looking at the examples above.
 
@@ -893,7 +972,7 @@ const products = [
 
 ---
 
-## 11. Solutions
+## 12. Solutions
 
 ### Solution A: Greeting API
 
@@ -1043,7 +1122,7 @@ Router.get("/store", async (req, res) => {
 
 ---
 
-## 12. Gotchas
+## 13. Gotchas
 
 ### 1. File not auto-discovered
 

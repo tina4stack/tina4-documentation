@@ -581,7 +581,73 @@ This overlay is only visible when `TINA4_DEBUG=true`. Production never sees it.
 
 ---
 
-## 8. Request & Response Fundamentals
+## 8. Manual Setup (No CLI)
+
+The `tina4` CLI scaffolds everything for you. But sometimes you create a project from scratch — an empty folder, a fresh virtual environment, no CLI installed yet. Here is the minimum you need.
+
+### Step 1: Install the Package
+
+```bash
+pip install tina4-python
+```
+
+Or with `uv`:
+
+```bash
+uv add tina4-python
+```
+
+### Step 2: Create `app.py`
+
+This is the entry point. Create a file called `app.py` in your project root:
+
+```python
+"""Tina4 Application."""
+from tina4_python.core import run
+
+if __name__ == "__main__":
+    run()
+```
+
+That is the entire file. The `run()` function starts the web server, scans for routes, and loads templates.
+
+### Step 3: Create the Folder Structure
+
+Tina4 expects this layout:
+
+```
+my-project/
+├── app.py
+├── .env
+└── src/
+    ├── routes/       # Route files go here
+    ├── templates/    # Twig templates go here
+    └── public/       # Static files (CSS, JS, images)
+```
+
+Create the directories:
+
+```bash
+mkdir -p src/routes src/templates src/public
+```
+
+### Step 4: Create `.env`
+
+```dotenv
+TINA4_DEBUG=true
+```
+
+### Step 5: Run It
+
+```bash
+python app.py
+```
+
+The server starts on `http://localhost:7145`. You should see the Tina4 welcome page. From here, add route files in `src/routes/` and templates in `src/templates/` — the same way as a CLI-scaffolded project.
+
+---
+
+## 9. Request & Response Fundamentals
 
 Before jumping into the exercises, let's consolidate how route handlers work in Tina4 Python. Every handler receives two objects: `request` (what the client sent) and `response` (what you send back). Here is the complete picture.
 
@@ -768,7 +834,7 @@ This example covers every building block the exercises use: reading query parame
 
 ---
 
-## 9. Exercise: Greeting API + Product List Template
+## 10. Exercise: Greeting API + Product List Template
 
 Build the following two features from scratch, without looking at the examples above.
 
@@ -832,7 +898,7 @@ products = [
 
 ---
 
-## 10. Solutions
+## 11. Solutions
 
 ### Solution A: Greeting API
 
@@ -982,7 +1048,7 @@ async def store_page(request, response):
 
 ---
 
-## 11. Gotchas
+## 12. Gotchas
 
 ### 1. File not auto-discovered
 
