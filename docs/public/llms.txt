@@ -1,6 +1,6 @@
 # Tina4 Framework — LLM Context
 
-Tina4 is a multi-language web framework with 54 built-in features and zero dependencies.
+Tina4 is a multi-language web framework with 44 built-in features and zero dependencies.
 Available for Python, PHP, Ruby, and Node.js. Frontend library: tina4-js.
 Website: https://tina4.com | GitHub: https://github.com/tina4stack
 
