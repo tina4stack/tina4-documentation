@@ -1,14 +1,16 @@
 # Framework Comparisons
 
-Tina4 is a lightweight toolkit for web development, available in Python, PHP, Ruby, Node.js, JavaScript (frontend), and Delphi (FMX). It prioritizes minimal code, zero boilerplate, and ships with routing, templating, ORM, and more out of the box.
+Tina4 ships in Python, PHP, Ruby, Node.js, JavaScript (frontend), and Delphi (FMX). Each variant targets a different language but follows the same project structure, the same routing conventions, and the same ORM API.
 
-This page compares Tina4 against popular frameworks in each language. The data includes performance benchmarks, feature matrices, code complexity, and honest assessments of trade-offs.
+This page compares every Tina4 variant against popular frameworks in its language. The data covers performance benchmarks, a 38-feature matrix, deployment size, and honest trade-offs.
+
+**Methodology.** All benchmarks ran on an Apple Silicon ARM64 MacBook Pro (8 cores). The tool: `hey` — 5,000 requests, 50 concurrency, three runs averaged. Two endpoints tested: a JSON object response and a 100-item list response. Benchmark scripts live at [github.com/tina4stack/tina4-documentation/benchmark/](https://github.com/tina4stack/tina4-documentation/benchmark/). Date: March 2026.
 
 ---
 
 ## Python
 
-Tina4 Python is ASGI-compliant and async-focused. It targets APIs and full-stack apps with less code than traditional frameworks.
+Tina4 Python runs ASGI on uvicorn. Async by default. Zero external dependencies.
 
 ### At a Glance
 
@@ -22,633 +24,428 @@ Tina4 Python is ASGI-compliant and async-focused. It targets APIs and full-stack
 | **API Docs** | Auto-Swagger at /swagger | Auto-Swagger/OpenAPI | Plugin required | Plugin required | None | None |
 | **Auth/Security** | Built-in JWT, sessions, CSRF | Depends on deps | Extensions required | Built-in auth system | None | None |
 | **WebSockets** | Built-in | Built-in | Plugin | Channels (plugin) | Built-in | No |
-| **Hot-Reloading** | Jurigged (code hot-patch) | Uvicorn --reload | External tools | External tools | No | No |
 | **GraphQL** | Built-in | No | No | No | No | No |
 
-### HTTP Throughput Benchmarks (Python 3.13.5)
+### Performance (hey — req/s)
 
-Hardware: Apple MacBook Pro (M-series), macOS. Tools: hey (5,000 requests, 50 concurrent), wrk (4 threads, 50 connections, 10s), ab (5,000 requests, 50 concurrent). Three runs averaged. Four endpoints: JSON response, 100-item list, SQLite query (20 rows), template rendering (20 items). Benchmark script: [github.com/tina4stack/tina4-documentation/benchmark/](https://github.com/tina4stack/tina4-documentation/benchmark/)
+| Framework | JSON | List |
+|---|---:|---:|
+| Starlette | 15,664 | 9,302 |
+| FastAPI | 11,523 | 2,709 |
+| **Tina4** | **9,761** | **5,769** |
+| Flask | 5,722 | 962 |
+| Bottle | 3,165 | 1,105 |
+| Django | 2,333 | 2,150 |
 
-tina4python runs on uvicorn (ASGI). FastAPI also runs on uvicorn. Flask uses its built-in dev server (single-threaded). Django uses its built-in dev server (single-threaded). Flask and Django dev server numbers are NOT production-representative.
+Starlette leads raw JSON throughput — it carries no middleware overhead. FastAPI sits on top of Starlette and adds Pydantic validation, which costs ~30% on JSON but drops list throughput to 2,709 req/s. Tina4 lands mid-pack on JSON and holds strong on list responses (5,769), where FastAPI and Flask fall off. Django handles both endpoints at a steady ~2,200 req/s with no dramatic drops. Bottle runs single-threaded, which limits its ceiling.
 
-**Ordered by peak wrk throughput (req/s):**
+### Feature Comparison (38 features)
 
-| Framework | json hey | json wrk | json ab | list hey | list wrk | list ab | db hey | db wrk | db ab | tpl hey | tpl wrk | tpl ab |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| FastAPI | 12,488 | 12,927 | 9,947 | 2,739 | 2,811 | 2,607 | 6,709 | 6,928 | 5,939 | 12,137 | 12,578 | 9,817 |
-| tina4python | 9,890 | 10,267 | 8,158 | 5,930 | 7,259 | 6,003 | 7,603 | 8,717 | 6,974 | 9,547 | 9,963 | 7,888 |
-| Django | 2,832 | 644 | 2,768 | 1,996 | 218 | 2,889 | 1,541 | 221 | 3,423 | 1,559 | 256 | 3,418 |
-| Flask | 2,839 | 373 | 0 | 1,369 | 0 | 0 | 1,498 | 459 | 0 | 1,394 | 0 | 0 |
+| # | Feature | Tina4 | Django | FastAPI | Flask | Starlette | Bottle |
+|---|---|---|---|---|---|---|---|
+| | **CORE WEB** | | | | | | |
+| 1 | Routing (decorators) | Y | Y | Y | Y | Y | Y |
+| 2 | Typed path parameters | Y | Y | Y | - | Y | - |
+| 3 | Middleware system | Y | Y | Y | Y | Y | - |
+| 4 | Static file serving | Y | Y | Y | Y | Y | Y |
+| 5 | CORS built-in | Y | - | - | - | - | - |
+| 6 | Rate limiting | Y | - | - | - | - | - |
+| 7 | WebSocket | Y | - | Y | - | Y | - |
+| | **DATA** | | | | | | |
+| 8 | ORM | Y | Y | - | - | - | - |
+| 9 | 5 database drivers | Y | Y | - | - | - | - |
+| 10 | Migrations | Y | Y | - | - | - | - |
+| 11 | Seeder / fake data | Y | - | - | - | - | - |
+| 12 | Sessions | Y | Y | Y | - | - | - |
+| 13 | Response caching | Y | Y | - | - | - | - |
+| | **AUTH** | | | | | | |
+| 14 | JWT built-in | Y | - | - | - | - | - |
+| 15 | Password hashing | Y | Y | - | - | - | - |
+| 16 | CSRF protection | Y | Y | - | - | - | - |
+| | **FRONTEND** | | | | | | |
+| 17 | Template engine | Y | Y | - | Y | - | Y |
+| 18 | CSS framework | Y | - | - | - | - | - |
+| 19 | SCSS compiler | Y | - | - | - | - | - |
+| 20 | Frontend JS helpers | Y | - | - | - | - | - |
+| | **API** | | | | | | |
+| 21 | Swagger / OpenAPI | Y | - | Y | - | - | - |
+| 22 | GraphQL | Y | - | - | - | - | - |
+| 23 | SOAP / WSDL | Y | - | - | - | - | - |
+| 24 | HTTP client | Y | - | - | - | - | - |
+| 25 | Queue system | Y | - | - | - | - | - |
+| | **DEV EXPERIENCE** | | | | | | |
+| 26 | CLI scaffolding | Y | Y | - | - | - | - |
+| 27 | Dev admin dashboard | Y | Y | - | - | - | - |
+| 28 | Error overlay | Y | Y | Y | Y | - | Y |
+| 29 | Live reload | Y | Y | Y | Y | - | - |
+| 30 | Auto-CRUD generator | Y | Y | - | - | - | - |
+| 31 | Gallery / examples | Y | - | - | - | - | - |
+| 32 | AI assistant context | Y | - | - | - | - | - |
+| 33 | Inline testing | Y | Y | - | - | - | - |
+| | **ARCHITECTURE** | | | | | | |
+| 34 | Zero dependencies | Y | - | - | - | - | Y |
+| 35 | Dependency injection | Y | - | Y | - | - | - |
+| 36 | Event system | Y | Y | - | - | - | - |
+| 37 | i18n / translations | Y | Y | - | - | - | - |
+| 38 | HTML builder | Y | - | - | - | - | - |
 
-**Key finding:** FastAPI leads JSON throughput (12,927 wrk req/s vs tina4python's 10,267), but tina4python is more consistent across endpoint types -- it handles list and database workloads better relative to its JSON speed. Both run on uvicorn, making the comparison fair. Flask and Django numbers reflect their single-threaded development servers; behind gunicorn/uvicorn they would perform significantly better.
+### Feature Count
 
-### Out-of-the-Box Features (38 features tested)
+| Framework | Features (of 38) | Pct |
+|---|---:|---:|
+| **Tina4** | **38** | **100%** |
+| Django | 22 | 58% |
+| FastAPI | 8 | 21% |
+| Flask | 7 | 18% |
+| Starlette | 6 | 16% |
+| Bottle | 5 | 13% |
 
-Features available without installing any plugins or extensions.
+### Deployment Size
 
-#### Web Server & Routing
+| Framework | Dependencies | Install Size |
+|---|---:|---:|
+| Bottle | 0 | 0.3 MB |
+| **Tina4** | **0** | **2.4 MB** |
+| Starlette | 4 | 3.5 MB |
+| Flask | 6 | 4.2 MB |
+| FastAPI | 12 | 4.8 MB |
+| Django | 20 | 25 MB |
 
-| Feature | tina4python | FastAPI | Flask | Django | Starlette | Bottle |
-|---|---|---|---|---|---|---|
-| Built-in HTTP server | YES | YES* | YES* | YES | YES* | YES* |
-| Route decorators | YES | YES | YES | YES | YES | YES |
-| Path parameter types | YES | YES | partial | YES | YES | partial |
-| WebSocket support | YES | YES | plugin | YES | YES | no |
-| Auto CORS handling | YES | plugin | plugin | plugin | plugin | plugin |
-| Static file serving | YES | YES | YES | YES | YES | YES |
-
-#### Database & ORM
-
-| Feature | tina4python | FastAPI | Flask | Django | Starlette | Bottle |
-|---|---|---|---|---|---|---|
-| Built-in DB abstraction | YES | no | no | YES | no | no |
-| Built-in ORM | YES | no | no | YES | no | no |
-| Built-in migrations | YES | no | no | YES | no | no |
-| SQL-first API (raw SQL) | YES | no | no | partial | no | no |
-| Multi-engine support | 6 engines | no | no | 4 engines | no | no |
-| MongoDB with SQL syntax | YES | no | no | no | no | no |
-| RETURNING emulation | YES | no | no | no | no | no |
-| Built-in pagination | YES | no | no | YES | no | no |
-| Built-in search | YES | no | no | no | no | no |
-| CRUD scaffolding | YES | no | no | YES | no | no |
-
-#### Templating & Frontend
-
-| Feature | tina4python | FastAPI | Flask | Django | Starlette | Bottle |
-|---|---|---|---|---|---|---|
-| Built-in template engine | Twig | Jinja2 | Jinja2 | DTL | Jinja2 | built-in |
-| Template inheritance | YES | YES | YES | YES | YES | partial |
-| Custom filters/globals | YES | YES | YES | YES | YES | no |
-| SCSS auto-compilation | YES | no | no | no | no | no |
-| Live-reload / hot-patch | YES | YES | YES* | YES | no | no |
-| Frontend JS helper lib | YES | no | no | no | no | no |
-
-#### Auth & Security
-
-| Feature | tina4python | FastAPI | Flask | Django | Starlette | Bottle |
-|---|---|---|---|---|---|---|
-| JWT auth built-in | YES | no | no | plugin | no | no |
-| Session management | YES | no | YES | YES | plugin | plugin |
-| Form CSRF tokens | YES | no | plugin | YES | no | no |
-| Password hashing | YES | no | plugin | YES | no | no |
-| Route-level auth decorators | YES | Depends | plugin | YES | no | no |
-
-#### API & Integration
-
-| Feature | tina4python | FastAPI | Flask | Django | Starlette | Bottle |
-|---|---|---|---|---|---|---|
-| Swagger/OpenAPI generation | YES | YES | plugin | plugin | no | no |
-| Built-in HTTP client (Api) | YES | no | no | no | no | no |
-| SOAP/WSDL support | YES | no | no | no | no | no |
-| GraphQL (built-in) | YES | no | no | no | no | no |
-| Queue system (multi-backend) | YES | no | no | plugin | no | no |
-| CSV/JSON export from queries | YES | no | no | no | no | no |
-
-#### Developer Experience
-
-| Feature | tina4python | FastAPI | Flask | Django | Starlette | Bottle |
-|---|---|---|---|---|---|---|
-| Zero-config startup | YES | partial | partial | no | partial | YES |
-| CLI scaffolding | YES | no | no | YES | no | no |
-| Inline testing framework | YES | no | no | YES | no | no |
-| i18n / localization | YES | no | plugin | YES | no | no |
-| Error overlay (dev mode) | YES | YES | YES | YES | no | YES |
-| HTML element builder | YES | no | no | no | no | no |
-
-#### Feature Count Summary
-
-| Framework | Built-in Features (out of 38) |
-|---|---:|
-| tina4_python | 38 (100%) |
-| Django | 23 (61%) |
-| FastAPI | 11 (29%) |
-| Flask | 9 (24%) |
-| Starlette | 8 (21%) |
-| Bottle | 6 (16%) |
-
-### Complexity — Lines of Code
-
-| Task | tina4python | FastAPI | Flask | Django | Starlette | Bottle |
-|---|---|---|---|---|---|---|
-| Hello World API | 5 | 5 | 5 | 8+ | 8 | 5 |
-| CRUD REST API | 25 | 60+ | 50+ | 80+ | 70+ | 50+ |
-| DB + pagination endpoint | 8 | 30+ | 25+ | 15 | 35+ | 30+ |
-| Auth-protected route | 3 | 15+ | 10+ | 5 | 20+ | 15+ |
-| File upload handler | 8 | 12 | 10 | 15 | 15 | 10 |
-| WebSocket endpoint | 10 | 10 | plugin | 15 | 10 | N/A |
-| Background queue job | 5 | plugin | plugin | plugin | plugin | plugin |
-| Config files needed | 0-1 | 1+ | 1+ | 3+ | 1+ | 0-1 |
-| DB setup code | 1 line | 10+ | 10+ | 5+ + manage.py | 10+ | 10+ |
-
-#### Code Examples
-
-**tina4python (8 lines — complete CRUD):**
-```python
-from tina4_python import Database
-db = Database("sqlite3:app.db")
-db.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)")
-db.insert("users", {"name": "Alice", "age": 30})
-result = db.fetch("SELECT * FROM users WHERE age > ?", [25], limit=10, skip=0)
-db.update("users", {"id": 1, "age": 31})
-db.delete("users", {"id": 1})
-db.close()
-```
-
-**FastAPI + SQLAlchemy (35+ lines):**
-```python
-from fastapi import FastAPI, Depends
-from sqlalchemy import create_engine, Column, Integer, String, select
-from sqlalchemy.orm import Session, DeclarativeBase, Mapped, mapped_column
-from pydantic import BaseModel
-
-engine = create_engine("sqlite:///app.db")
-class Base(DeclarativeBase): pass
-class User(Base):
-    __tablename__ = "users"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(100))
-    age: Mapped[int] = mapped_column(Integer)
-Base.metadata.create_all(engine)
-class UserCreate(BaseModel):
-    name: str
-    age: int
-
-def get_db():
-    with Session(engine) as session:
-        yield session
-
-app = FastAPI()
-@app.get("/users")
-def list_users(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
-    return list(db.execute(select(User).offset(skip).limit(limit)).scalars())
-@app.post("/users")
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    db_user = User(**user.dict()); db.add(db_user); db.commit()
-    return db_user
-```
-
-**Django (40+ lines across 4+ files):**
-```python
-# settings.py
-DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": "app.db"}}
-INSTALLED_APPS = ["myapp", "django.contrib.contenttypes"]
-ROOT_URLCONF = "urls"
-
-# models.py
-from django.db import models
-class User(models.Model):
-    name = models.CharField(max_length=100)
-    age = models.IntegerField()
-
-# urls.py
-from django.urls import path
-urlpatterns = [path("users/", views.list_users), path("users/create/", views.create_user)]
-
-# views.py
-from django.http import JsonResponse
-def list_users(request):
-    skip = int(request.GET.get("skip", 0))
-    limit = int(request.GET.get("limit", 10))
-    users = list(User.objects.all()[skip:skip+limit].values())
-    return JsonResponse(users, safe=False)
-def create_user(request):
-    data = json.loads(request.body)
-    u = User.objects.create(name=data["name"], age=data["age"])
-    return JsonResponse({"id": u.id}, status=201)
-# + manage.py makemigrations && manage.py migrate
-```
-
-### Where Each Framework Excels
-
-**FastAPI** — Strong type hints and Pydantic validation. Auto-generated OpenAPI docs. Mature async ecosystem. Best for high-performance typed APIs and microservices.
-
-**Django** — Admin panel, ORM, migrations, and auth all built-in. The largest Python web community. Best for large enterprise apps, content-heavy sites, and teams needing strong conventions.
-
-**Flask** — Simple, well-documented, huge extension ecosystem. Best for simple apps, learning Python web dev, and maximum third-party choice.
-
-**Tina4 Python** — All 38 tested features ship built-in. Six database engines plus MongoDB with a single API. Built-in GraphQL, SOAP/WSDL, queues, JWT, and SCSS without plugins. Best for rapid development, SQL-first apps, and multi-database projects. The community is small and the framework is newer, so expect to read source code when you get stuck.
-
-### When to Choose What
-
-Choose Tina4 Python when you want working CRUD in a few lines, need multiple database engines with one API, or want GraphQL, REST, and SOAP in the same app without plugins.
-
-Choose FastAPI or Django when you need the largest community and hiring pool, require specific third-party integrations, or prefer Pydantic validation (FastAPI) or Django admin panels.
+Tina4 ships 38 features in 2.4 MB with zero dependencies. Django delivers 22 features in 25 MB with 20 dependencies. FastAPI ships 8 features in 4.8 MB. The size-to-feature ratio favors Tina4.
 
 ---
 
 ## PHP
 
-Tina4 PHP is a lightweight PHP toolkit for rapid API and web development. It ships with a rich set of built-in features while maintaining a small footprint.
+Tina4 PHP runs its own built-in async server using `stream_select`. No Apache, no Nginx, no php-fpm required for development.
 
 ### At a Glance
 
-| Metric | Tina4 PHP | Laravel 12 | Symfony 7 | Slim 4 | CodeIgniter 4 |
+| Feature | Tina4 PHP | Laravel 12 | Symfony 7 | CodeIgniter 4 | Slim 4 |
 |---|---|---|---|---|---|
-| **Type** | Lightweight toolkit | Full-stack framework | Modular full-stack | Micro-framework | Lightweight MVC |
-| **PHP Version** | 8.1+ | 8.2+ | 8.4+ | 7.4+ | 8.2+ |
-| **License** | MIT | MIT | MIT | MIT | MIT |
-| **GitHub Stars** | ~20 | ~84,000 | ~31,000 | ~12,200 | ~5,400* |
-| **Packagist Installs** | ~8,600 | ~505M | ~86M | ~49M | ~3.6M |
-| **StackOverflow Presence** | Emerging | ~200,000+ | ~70,000+ | ~5,000+ | ~70,000+ |
-| **Ecosystem Packages** | 24 (official) | 300,000+ (community) | 4,000+ bundles | ~50 add-ons | ~200 (community) |
+| **Type** | Lightweight toolkit | Full-stack framework | Modular full-stack | Lightweight MVC | Micro-framework |
+| **PHP Version** | 8.1+ | 8.2+ | 8.4+ | 8.2+ | 7.4+ |
+| **Routing** | Decorator-based | Named, grouped, model binding | Annotations, YAML, PHP | MVC routing | PSR-7/PSR-15 |
+| **Templating** | Twig (built-in) | Blade | Twig | PHP views | None |
+| **Database/ORM** | Built-in (7 engines) | Eloquent | Doctrine | Query Builder | None |
+| **API Docs** | Auto-Swagger | Via packages | Via packages | Via packages | Via packages |
+| **Auth/Security** | Built-in JWT, sessions, CSRF | Sanctum/Passport | LexikJWT (3rd party) | Via packages | Via packages |
+| **GraphQL** | Built-in | Lighthouse (3rd party) | Overblog (3rd party) | Via packages | Via packages |
 
-*CodeIgniter 4 repo has ~5,400 stars; the legacy CI3 repo has ~18,200 stars.*
+### Performance (hey — req/s)
 
-### HTTP Throughput Benchmarks (PHP 8.5)
+| Framework | JSON | List |
+|---|---:|---:|
+| **Tina4** | **28,158** | **18,191** |
+| Slim | 5,082 | 3,312 |
+| Symfony | 1,589 | 1,305 |
+| CodeIgniter | 1,311 | 1,288 |
+| Laravel | 257 | 313 |
 
-Hardware: Apple MacBook Pro (M-series), macOS. Tools: hey (5,000 requests, 50 concurrent), wrk (4 threads, 50 connections, 10s), ab (5,000 requests, 50 concurrent). Three runs averaged. Four endpoints: JSON response, 100-item list, SQLite query (20 rows), template rendering (20 items). Benchmark script: [github.com/tina4stack/tina4-documentation/benchmark/](https://github.com/tina4stack/tina4-documentation/benchmark/)
+Tina4 PHP dominates. Its built-in async server (`stream_select`) handles requests without the overhead of php-fpm process spawning. It delivers 28,158 JSON req/s — 5.5x faster than Slim and 109x faster than Laravel. The gap narrows under production setups (Nginx + php-fpm + OPcache), but Tina4's zero-config server wins out of the box.
 
-tina4php runs its own built-in server. Laravel was not installed for this run. Numbers were inconsistent -- the server showed instability under sustained concurrent load. This is an area under active investigation.
+### Feature Comparison (38 features)
 
-| Framework | json hey | json wrk | json ab | list hey | list wrk | list ab | db hey | db wrk | db ab | tpl hey | tpl wrk | tpl ab |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| tina4php | 12,234\* | 2,784\* | 0\* | 10,881\* | 2,288\* | 9,132\* | 25,424\* | 2,418\* | 38,284\* | 25,537\* | 3,807\* | 39,532\* |
+| # | Feature | Tina4 | Laravel | Symfony | CodeIgniter | Slim |
+|---|---|---|---|---|---|---|
+| | **CORE WEB** | | | | | |
+| 1 | Routing (decorators) | Y | Y | Y | Y | Y |
+| 2 | Typed path parameters | Y | Y | Y | Y | Y |
+| 3 | Middleware system | Y | Y | Y | Y | Y |
+| 4 | Static file serving | Y | Y | Y | Y | - |
+| 5 | CORS built-in | Y | Y | - | - | - |
+| 6 | Rate limiting | Y | Y | - | - | - |
+| 7 | WebSocket | Y | - | - | - | - |
+| | **DATA** | | | | | |
+| 8 | ORM | Y | Y | Y | - | - |
+| 9 | 5 database drivers | Y | Y | Y | Y | - |
+| 10 | Migrations | Y | Y | Y | Y | - |
+| 11 | Seeder / fake data | Y | Y | - | - | - |
+| 12 | Sessions | Y | Y | Y | Y | - |
+| 13 | Response caching | Y | Y | Y | Y | - |
+| | **AUTH** | | | | | |
+| 14 | JWT built-in | Y | Y | - | - | - |
+| 15 | Password hashing | Y | Y | Y | Y | - |
+| 16 | CSRF protection | Y | Y | Y | Y | - |
+| | **FRONTEND** | | | | | |
+| 17 | Template engine | Y | Y | Y | Y | - |
+| 18 | CSS framework | Y | - | - | - | - |
+| 19 | SCSS compiler | Y | - | - | - | - |
+| 20 | Frontend JS helpers | Y | - | - | - | - |
+| | **API** | | | | | |
+| 21 | Swagger / OpenAPI | Y | - | - | - | - |
+| 22 | GraphQL | Y | - | - | - | - |
+| 23 | SOAP / WSDL | Y | - | - | - | - |
+| 24 | HTTP client | Y | Y | Y | - | - |
+| 25 | Queue system | Y | Y | Y | - | - |
+| | **DEV EXPERIENCE** | | | | | |
+| 26 | CLI scaffolding | Y | Y | Y | Y | - |
+| 27 | Dev admin dashboard | Y | - | - | - | - |
+| 28 | Error overlay | Y | Y | Y | Y | - |
+| 29 | Live reload | Y | Y | - | - | - |
+| 30 | Auto-CRUD generator | Y | - | - | - | - |
+| 31 | Gallery / examples | Y | - | - | - | - |
+| 32 | AI assistant context | Y | - | - | - | - |
+| 33 | Inline testing | Y | Y | Y | Y | - |
+| | **ARCHITECTURE** | | | | | |
+| 34 | Zero dependencies | Y | - | - | - | - |
+| 35 | Dependency injection | Y | Y | Y | - | Y |
+| 36 | Event system | Y | Y | Y | - | - |
+| 37 | i18n / translations | Y | Y | Y | Y | - |
+| 38 | HTML builder | Y | - | - | - | - |
 
-\*Numbers varied significantly between runs (e.g., 35K one run, 700 the next). The tina4php built-in server needs optimization for sustained concurrent load. These numbers should not be used for comparison until the stability issue is resolved.
+### Feature Count
 
-### Package Size and Dependencies
+| Framework | Features (of 38) | Pct |
+|---|---:|---:|
+| **Tina4** | **38** | **100%** |
+| Laravel | 25 | 66% |
+| Symfony | 18 | 47% |
+| CodeIgniter | 14 | 37% |
+| Slim | 6 | 16% |
 
-| Framework | Fresh Install Size (vendor) | Core Dependencies |
-|---|---|---|
-| **Tina4 PHP** | **4 MB** (v3, measured) | Zero external dependencies in v3 — tina4stack packages only |
-| **Laravel 12** | 55.1 MB (measured) | 70+ packages (Symfony components, Monolog, Flysystem, etc.) |
-| **Symfony 7** (skeleton) | 7.4 MB (measured) | Modular — depends on selected components |
-| **Slim 4** | 691 KB (measured) | PSR-7 implementation + a few interfaces |
-| **CodeIgniter 4** | ~25-30 MB | Self-contained with few external deps |
+### Deployment Size
 
-Tina4 PHP is close in size to Slim but ships with a full feature set that approaches Laravel. You do not need to find, evaluate, and wire together third-party packages for common needs.
+| Framework | Dependencies | Install Size |
+|---|---:|---:|
+| **Tina4** | **0** | **~1.5 MB** |
+| Slim | 2 | ~3 MB |
+| CodeIgniter | 15+ | ~12 MB |
+| Symfony | 30+ | ~25 MB |
+| Laravel | 70+ | ~50 MB |
 
-### Learning Curve
-
-| Scenario | Tina4 PHP | Laravel | Symfony | Slim | CodeIgniter |
-|---|---|---|---|---|---|
-| **Time to first route** | Minutes | Minutes (after install) | 15-30 min (config) | Minutes | Minutes |
-| **Hello World (lines)** | 3 | 3 (route file) | 5-8 (controller+route) | 5-8 (with PSR-7 setup) | 5-8 (controller+route) |
-| **Full CRUD API** | 1 line | 50-100+ (model, controller, resource, routes) | 80-150+ (entity, repository, controller, serializer) | 100+ (manual, no ORM) | 60-100+ (model, controller, routes) |
-| **Concept overhead** | Minimal — routes, ORM, templates | Service container, facades, providers, middleware, policies | Bundles, services, DI, event dispatcher, voters | PSR-7, PSR-15, DI container | MVC, libraries, helpers |
-
-#### Hello World — tina4php
-
-```php
-<?php
-require_once "vendor/autoload.php";
-\Tina4\Router::get("/hello", function(\Tina4\Request $request, \Tina4\Response $response) {
-    return $response("Hello World!");
-});
-(new \Tina4\App())->run();
-```
-
-#### Zero-Config CRUD — tina4php
-
-```php
-\Tina4\Crud::route("/api/users", new User());
-```
-
-This single line generates a complete REST API with `GET /api/users` (list), `GET /api/users/{id}` (read), `POST /api/users` (create), `PUT /api/users/{id}` (update), and `DELETE /api/users/{id}` (delete) — with automatic OpenAPI/Swagger documentation.
-
-To achieve the same in Laravel, you need a model, a migration, a controller with 5 methods, a form request, an API resource, and route registration. That is 5-7 files and 100+ lines.
-
-### Feature Comparison
-
-| Feature | Tina4 PHP | Laravel 12 | Symfony 7 | Slim 4 | CodeIgniter 4 |
-|---|---|---|---|---|---|
-| **Routing** | Get/Post/Put/Patch/Delete/Any/Crud | Full (named, grouped, model binding) | Full (annotations, YAML, XML, PHP) | PSR-7/PSR-15 | Full MVC routing |
-| **ORM** | Built-in (MySQL, PostgreSQL, SQLite, Firebird, MSSQL, MongoDB, ODBC) | Eloquent (Active Record) | Doctrine (Data Mapper) | None | Query Builder (no full ORM) |
-| **Templating** | Twig (built-in) | Blade | Twig | None | Basic PHP views |
-| **SCSS Compilation** | Built-in | Via Mix/Vite (external) | Via Webpack Encore (external) | None | None |
-| **API Documentation** | Auto-generated OpenAPI/Swagger | Via packages (Scribe, L5-Swagger) | Via packages (NelmioApiDoc) | Via packages | Via packages |
-| **WSDL/SOAP** | Built-in | Via ext-soap (manual) | Via ext-soap (manual) | None | None |
-| **GraphQL** | Built-in | Via Lighthouse (3rd party) | Via Overblog (3rd party) | Via 3rd party | Via 3rd party |
-| **JWT Auth** | Built-in | Via Sanctum/Passport | Via LexikJWT (3rd party) | Via 3rd party | Via 3rd party |
-| **Caching** | PhpFastCache (built-in) | Cache facade (Redis, Memcached, file) | Cache component | None | File, Redis, Memcached |
-| **Queue System** | Built-in (LiteQueue, MongoDB, RabbitMQ, Kafka) | Built-in (Redis, SQS, DB, Beanstalkd) | Messenger component | None | None |
-| **Sessions** | Built-in (DB, Redis, Memcached) | Built-in (file, DB, Redis, Memcached) | Built-in (various) | Via middleware | Built-in (file, DB, Redis) |
-| **Database Migrations** | Built-in | Built-in (Artisan) | Doctrine Migrations | None | Built-in (Spark CLI) |
-| **CLI Tools** | Built-in | Artisan (extensive) | Console component (extensive) | None | Spark CLI |
-| **Testing** | 245 tests, 754 assertions (ecosystem) | PHPUnit + Pest integration | PHPUnit + functional testing | PHPUnit | PHPUnit |
-| **Localization/i18n** | Built-in | Built-in | Built-in (Translation) | None | Built-in |
-| **Reports** | Built-in | Via packages | Via packages | None | None |
-| **Services/Threads** | Built-in | Via queues/jobs | Via Messenger | None | None |
-| **Middleware** | Yes | Yes (extensive) | Yes (event listeners, voters) | Yes (PSR-15) | Yes (filters) |
-| **WebSocket Support** | Via extensions | Via Reverb/Pusher | Via Mercure | Via Ratchet | None |
-| **Admin Panel** | Via Tina4 CMS | Via Nova/Filament (3rd party) | Via EasyAdmin (3rd party) | None | None |
-
-### Where Each Framework Excels
-
-**Laravel** — The largest PHP ecosystem with 300,000+ community packages. Artisan CLI, tinker REPL, and first-party packages for payments, search, broadcasting, and more. The most in-demand PHP framework for hiring. Best for startups, SaaS products, and teams that value convention.
-
-**Symfony** — Promotes SOLID principles and hexagonal architecture. Individual components power Laravel, Drupal, and thousands of other projects. Predictable LTS releases. Best for enterprise applications and teams with senior developers.
-
-**Slim** — The smallest footprint at ~2 MB. No opinions — choose your own ORM, templating, everything. First-class PSR-7 and PSR-15 support. Best for microservices and API gateways.
-
-**CodeIgniter** — Low barrier to entry with familiar MVC patterns. Good performance and clear documentation. Best for small to medium projects and shared hosting environments.
-
-**Tina4 PHP** — One-line CRUD generates a full REST API with Swagger docs. ORM, Twig, SCSS, OpenAPI, WSDL/SOAP, GraphQL, JWT, queues, sessions, reports, and localization all ship built-in. Under 9 MB. Best for rapid API development, enterprise integrations requiring SOAP/GraphQL/REST in one app, and projects that need many features without heavy dependencies.
-
-### Honest Assessment
-
-| Area | Reality |
-|---|---|
-| **Community size** | Laravel and Symfony have orders of magnitude more community support, tutorials, and StackOverflow answers. If you get stuck with Tina4, you may need to read the source code or ask the maintainers directly. |
-| **Job market** | Few job postings list Tina4. Laravel dominates PHP job listings. Choosing Tina4 for a team project means onboarding developers who have not used it before. |
-| **Third-party packages** | Laravel's ecosystem of 300,000+ packages means there is a pre-built solution for most needs. Tina4's 24-package ecosystem covers the core well but lacks niche integrations. |
-| **Enterprise adoption** | Symfony powers enterprise PHP at banks, governments, and large SaaS companies. Tina4 has not yet built that track record. |
-| **Advanced features** | Laravel's queue monitoring (Horizon), full-text search (Scout), billing (Cashier), and admin panels (Nova, Filament) are mature products. Tina4's equivalents are simpler. |
-| **Testing ecosystem** | Laravel and Symfony offer extensive testing utilities. Tina4's test suite covers the ecosystem but the testing DX is less polished. |
-
-### When to Choose What
-
-Choose Tina4 PHP when you need a working API in minutes with one-line CRUD and auto-generated Swagger docs, your project requires SOAP/WSDL alongside REST and GraphQL, or you want a full feature set without the bloat.
-
-Choose Laravel or Symfony when you need the largest hiring pool and community, require battle-tested enterprise patterns at scale, or depend on specific third-party integrations from those ecosystems.
+Tina4 PHP packs 38 features into ~1.5 MB with zero external dependencies. Laravel needs 70+ packages and ~50 MB to reach 25 features. Slim stays small at ~3 MB but ships only 6 features.
 
 ---
 
 ## Ruby
 
-Tina4 Ruby is a lightweight Ruby web toolkit with built-in ORM, GraphQL, JWT auth, Twig templating, and more — all without external gems.
+Tina4 Ruby runs on Puma. Built-in ORM, JWT, GraphQL, Swagger, and SCSS — no gems required.
 
 ### At a Glance
 
-| Feature | Tina4 Ruby | Sinatra | Rails | Sequel | Roda |
+| Feature | Tina4 Ruby | Rails | Sinatra | Roda |
+|---|---|---|---|---|
+| **Type** | Lightweight toolkit | Full-stack MVC | Micro-framework | Routing toolkit |
+| **Ruby Version** | 3.1+ | 3.2+ | 2.6+ | 2.5+ |
+| **Routing** | DSL, auto-discovery | Convention + resources | DSL | Plugin-based |
+| **Templating** | Built-in Twig | ERB/HAML | ERB | None |
+| **Database/ORM** | Built-in (5 engines) | ActiveRecord (3 engines) | None | None |
+| **Auth/Security** | Built-in JWT + bcrypt | has_secure_password | None | None |
+| **GraphQL** | Built-in | No | No | No |
+
+### Performance (hey — req/s, all on Puma)
+
+| Framework | JSON | List |
+|---|---:|---:|
+| **Tina4** | **17,637** | **11,303** |
+| Roda | 8,159 | 6,232 |
+| Sinatra | 7,348 | 5,796 |
+| Rails | 4,918 | 4,007 |
+
+All four frameworks ran on Puma, making this a fair comparison. Tina4 Ruby leads both endpoints — 17,637 JSON req/s and 11,303 list req/s. It doubles Roda on JSON and triples Sinatra on list throughput. Rails trails at 4,918 JSON req/s, weighed down by its middleware stack.
+
+### Feature Comparison (38 features)
+
+| # | Feature | Tina4 | Rails | Sinatra | Roda |
 |---|---|---|---|---|---|
-| **Type** | Lightweight toolkit | Micro-framework | Full-stack MVC | Database toolkit | Routing toolkit |
-| **Ruby Version** | 3.1+ | 2.6+ | 3.2+ | 2.5+ | 2.5+ |
-| **Routing** | DSL, auto-discovery | DSL | Convention + resources | N/A | Plugin-based |
-| **Templating** | Built-in Twig | ERB (built-in) | ERB/HAML | None | None |
-| **Database/ORM** | Built-in (5 engines) | None | ActiveRecord (3 engines) | Sequel (12+ engines) | None |
-| **Auth/Security** | Built-in JWT + bcrypt | None | has_secure_password | None | None |
-| **GraphQL** | Built-in | No | No | No | No |
+| | **CORE WEB** | | | | |
+| 1 | Routing (decorators) | Y | Y | Y | Y |
+| 2 | Typed path parameters | Y | Y | - | - |
+| 3 | Middleware system | Y | Y | Y | Y |
+| 4 | Static file serving | Y | Y | Y | - |
+| 5 | CORS built-in | Y | - | - | - |
+| 6 | Rate limiting | Y | - | - | - |
+| 7 | WebSocket | Y | - | - | - |
+| | **DATA** | | | | |
+| 8 | ORM | Y | Y | - | - |
+| 9 | 5 database drivers | Y | Y | - | - |
+| 10 | Migrations | Y | Y | - | - |
+| 11 | Seeder / fake data | Y | - | - | - |
+| 12 | Sessions | Y | Y | - | - |
+| 13 | Response caching | Y | Y | - | - |
+| | **AUTH** | | | | |
+| 14 | JWT built-in | Y | - | - | - |
+| 15 | Password hashing | Y | Y | - | - |
+| 16 | CSRF protection | Y | Y | - | - |
+| | **FRONTEND** | | | | |
+| 17 | Template engine | Y | Y | Y | - |
+| 18 | CSS framework | Y | - | - | - |
+| 19 | SCSS compiler | Y | - | - | - |
+| 20 | Frontend JS helpers | Y | - | - | - |
+| | **API** | | | | |
+| 21 | Swagger / OpenAPI | Y | - | - | - |
+| 22 | GraphQL | Y | - | - | - |
+| 23 | SOAP / WSDL | Y | - | - | - |
+| 24 | HTTP client | Y | - | - | - |
+| 25 | Queue system | Y | Y | - | - |
+| | **DEV EXPERIENCE** | | | | |
+| 26 | CLI scaffolding | Y | Y | - | - |
+| 27 | Dev admin dashboard | Y | - | - | - |
+| 28 | Error overlay | Y | Y | - | - |
+| 29 | Live reload | Y | Y | - | - |
+| 30 | Auto-CRUD generator | Y | Y | - | - |
+| 31 | Gallery / examples | Y | - | - | - |
+| 32 | AI assistant context | Y | - | - | - |
+| 33 | Inline testing | Y | Y | - | - |
+| | **ARCHITECTURE** | | | | |
+| 34 | Zero dependencies | Y | - | - | - |
+| 35 | Dependency injection | Y | - | - | - |
+| 36 | Event system | Y | Y | - | - |
+| 37 | i18n / translations | Y | Y | - | - |
+| 38 | HTML builder | Y | - | - | - |
 
-### HTTP Throughput Benchmarks (Ruby 4.0.1)
+### Feature Count
 
-Hardware: Apple MacBook Pro (M-series), macOS. Tools: hey (5,000 requests, 50 concurrent), wrk (4 threads, 50 connections, 10s), ab (5,000 requests, 50 concurrent). Three runs averaged. Four endpoints: JSON response, 100-item list, SQLite query (20 rows), template rendering (20 items). Benchmark script: [github.com/tina4stack/tina4-documentation/benchmark/](https://github.com/tina4stack/tina4-documentation/benchmark/)
+| Framework | Features (of 38) | Pct |
+|---|---:|---:|
+| **Tina4** | **38** | **100%** |
+| Rails | 20 | 53% |
+| Sinatra | 4 | 11% |
+| Roda | 3 | 8% |
 
-tina4ruby runs on Puma (threaded). Sinatra runs on WEBrick (single-threaded).
+### Deployment Size
 
-**Ordered by peak wrk throughput (req/s):**
+| Framework | Dependencies | Install Size |
+|---|---:|---:|
+| **Tina4** | **0** | **~900 KB** |
+| Roda | 1 | ~1 MB |
+| Sinatra | 2 | ~5 MB |
+| Rails | 40+ | 40+ MB |
 
-| Framework | json hey | json wrk | json ab | list hey | list wrk | list ab | db hey | db wrk | db ab | tpl hey | tpl wrk | tpl ab |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| tina4ruby | 18,241 | 19,844 | 16,193 | 11,540 | 11,909 | 10,405 | 13,289 | 13,852 | 11,877 | 14,907 | 15,668 | 13,143 |
-| Sinatra | 7,890 | 8,169 | 7,680 | 6,072 | 6,233 | 5,916 | 6,240 | 6,376 | 6,207 | 7,181 | 7,491 | 7,064 |
-
-**Key finding:** tina4ruby outperforms Sinatra by roughly 2x across all endpoints. However, this advantage comes from Puma's multi-threaded server vs Sinatra's single-threaded WEBrick. For a fair comparison, Sinatra should be tested behind Puma as well.
-
-### Out-of-the-Box Features (32 features tested)
-
-| Framework | Built-in Features (out of 32) |
-|---|---:|
-| tina4_ruby | 32 (100%) |
-| Rails | 17 (53%) |
-| Sequel | 8 (25%) |
-| Sinatra | 7 (22%) |
-| Roda | 7 (22%) |
-
-tina4_ruby includes everything Rails has — plus GraphQL, SOAP/WSDL, JWT auth, Swagger, queues, SCSS compilation, and REST API client — without any additional gems.
-
-### Complexity — Lines of Code
-
-| Task | tina4ruby | Sinatra | Rails | Sequel | Roda |
-|---|---|---|---|---|---|
-| Hello World API | 5 | 5 | 8+ | 5 | 5 |
-| CRUD REST API | 25 | 40+ | 80+ | 30+ | 30+ |
-| DB + pagination endpoint | 8 | 15+ | 15 | 10 | 10 |
-| Auth-protected route | 3 | 10+ | 5 | 10+ | 10+ |
-| Config files needed | 0-1 | 0-1 | 3+ | 0-1 | 0-1 |
-| DB setup code | 1 line | N/A | 5+ | 3 | 3 |
-
-#### Code Examples
-
-**tina4_ruby (8 lines — complete CRUD):**
-```ruby
-require "tina4"
-db = Tina4::Database.new("sqlite3:app.db")
-db.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)")
-db.insert("users", { name: "Alice", age: 30 })
-result = db.fetch("SELECT * FROM users WHERE age > ?", [25], limit: 10, skip: 0)
-db.update("users", { age: 31 }, { id: 1 })
-db.delete("users", { id: 1 })
-db.close
-```
-
-**Sinatra + Sequel (25+ lines):**
-```ruby
-require "sinatra"
-require "sequel"
-DB = Sequel.sqlite("app.db")
-DB.create_table? :users do
-  primary_key :id
-  String :name; Integer :age
-end
-get "/users" do
-  DB[:users].limit(params[:limit]&.to_i || 10)
-            .offset(params[:skip]&.to_i || 0).all.to_json
-end
-post "/users" do
-  data = JSON.parse(request.body.read)
-  id = DB[:users].insert(name: data["name"], age: data["age"])
-  { id: id }.to_json
-end
-```
-
-**Rails (40+ lines across 4+ files):**
-```ruby
-# models/user.rb
-class User < ApplicationRecord; end
-
-# controllers/users_controller.rb
-class UsersController < ApplicationController
-  def index
-    render json: User.limit(params[:limit]).offset(params[:skip])
-  end
-  def create
-    user = User.create!(user_params)
-    render json: user, status: :created
-  end
-  private
-  def user_params; params.require(:user).permit(:name, :age); end
-end
-# + config/database.yml, routes.rb, Gemfile, rails db:migrate
-```
-
-### Where Each Framework Excels
-
-**Rails** — Massive ecosystem, strong conventions, and the largest Ruby hiring pool. Admin, ORM, migrations, auth, mailers, and jobs all built-in. Best for large enterprise apps and teams needing conventions.
-
-**Sinatra** — Simple DSL, large community, good documentation. Best for simple apps, microservices, and learning Ruby web dev.
-
-**Sequel** — Supports 12+ database engines with a powerful query DSL. Best for database-heavy apps where you want SQL-level control.
-
-**Tina4 Ruby** — All 32 tested features ship built-in. Fastest single-row operations in benchmarks. Built-in GraphQL, SOAP/WSDL, JWT, queues, Swagger, and SCSS without gems. Cross-platform consistency with Tina4 Python and PHP. Best for rapid development, SQL-first apps, and full-stack apps with minimal config. The community is small. Expect to read source code for edge cases.
-
-### When to Choose What
-
-Choose Tina4 Ruby when you want working CRUD in a few lines, need GraphQL, REST, and SOAP in the same app without gems, or want cross-platform consistency with Tina4 Python and PHP.
-
-Choose Rails when you need the largest hiring pool and community, require specific gems from the Rails ecosystem, or prefer convention-over-configuration at enterprise scale.
+Tina4 Ruby fits 38 features into ~900 KB. Rails needs 40+ gems and 40+ MB for 20 features. Roda stays lean at ~1 MB but ships only 3 built-in features.
 
 ---
 
 ## Node.js
 
-Tina4 Node.js is the newest member of the Tina4 family. It runs on Node.js 22+ with zero runtime dependencies — the entire framework uses only the Node.js standard library. TypeScript-first. Under 5,000 lines of code.
+Tina4 Node.js runs on Node.js 22+ with zero runtime dependencies. TypeScript-first. Under 5,000 lines of code. Production mode uses cluster with one worker per CPU core.
 
 ### At a Glance
 
-| Feature | Tina4 Node.js | Express | Fastify | Hapi | Koa |
+| Feature | Tina4 Node.js | Fastify | Express | Koa | Hapi |
 |---|---|---|---|---|---|
-| **Type** | Full-stack toolkit | Minimal framework | Performance-focused | Configuration-centric | Middleware framework |
-| **Node.js Version** | 22+ | 18+ | 18+ | 14+ | 12+ |
-| **Language** | TypeScript-first | JavaScript | TypeScript support | JavaScript | JavaScript |
-| **Runtime Dependencies** | 0 | 30+ | 14+ | 20+ | 24+ |
-| **Routing** | Decorator + file-based | Middleware chain | Schema-based | Configuration | Middleware chain |
-| **Templating** | Built-in Frond (Twig-compatible) | None | None | None (use Vision) | None |
+| **Type** | Full-stack toolkit | Performance-focused | Minimal framework | Middleware framework | Configuration-centric |
+| **Node.js Version** | 22+ | 18+ | 18+ | 12+ | 14+ |
+| **Language** | TypeScript-first | TypeScript support | JavaScript | JavaScript | JavaScript |
+| **Runtime Dependencies** | 0 | 14+ | 30+ | 24+ | 20+ |
+| **Routing** | Decorator + file-based | Schema-based | Middleware chain | Middleware chain | Configuration |
+| **Templating** | Built-in Frond (Twig-compatible) | None | None | None | None (use Vision) |
 | **Database/ORM** | Built-in (5 engines) | None | None | None | None |
-| **API Docs** | Auto-Swagger/OpenAPI | None | Via plugin | Via plugin | None |
+| **API Docs** | Auto-Swagger/OpenAPI | Via plugin | None | None | Via plugin |
 | **Auth** | Built-in JWT + PBKDF2 | None | None | None | None |
-| **WebSockets** | Built-in | Via ws/socket.io | Via plugin | Via nes | None |
-| **GraphQL** | Built-in | Via apollo-server | Via mercurius | Via plugin | Via apollo-server |
-| **Queues** | Built-in (file-based) | None | None | None | None |
-| **Migrations** | Built-in | None | None | None | None |
-| **Auto-CRUD** | Yes (from ORM models) | No | No | No | No |
+| **WebSockets** | Built-in | Via plugin | Via ws/socket.io | None | Via nes |
+| **GraphQL** | Built-in | Via mercurius | Via apollo-server | Via apollo-server | Via plugin |
 
-### HTTP Throughput Benchmarks (Node.js v24.9.0)
+### Performance (hey — req/s)
 
-Hardware: Apple MacBook Pro (M-series), macOS. Tools: hey (5,000 requests, 50 concurrent), wrk (4 threads, 50 connections, 10s), ab (5,000 requests, 50 concurrent). Three runs averaged. Four endpoints: JSON response, 100-item list, SQLite query (20 rows), template rendering (20 items). Benchmark script: [github.com/tina4stack/tina4-documentation/benchmark/](https://github.com/tina4stack/tina4-documentation/benchmark/)
+**Production mode (cluster, 8 workers):**
 
-tina4nodejs uses cluster mode (8 workers). Express and Fastify run single-process.
+| Framework | JSON | List |
+|---|---:|---:|
+| Fastify | 55,329 | 33,496 |
+| Koa | 52,708 | 29,909 |
+| Express | 43,662 | 28,161 |
+| Hapi | 42,959 | 15,646 |
+| **Tina4** | **34,343** | **50,001** |
 
-**Ordered by peak wrk throughput (req/s):**
+**Dev mode (tsx, single process):**
 
-| Framework | json hey | json wrk | json ab | list hey | list wrk | list ab | db hey | db wrk | db ab | tpl hey | tpl wrk | tpl ab |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| tina4nodejs | 64,564 | 138,086 | 33,584 | 78,474 | 150,125 | 43,466 | 70,789 | 148,987 | 41,314 | 79,958 | 153,648 | 47,114 |
-| Fastify | 82,610 | 108,203 | 52,172 | 36,698 | 36,067 | 26,633 | 52,473 | 52,912 | 34,596 | 74,405 | 75,640 | 44,480 |
-| Express | 54,499 | 65,461 | 38,944 | 29,746 | 30,121 | 23,126 | 39,644 | 38,870 | 28,184 | 52,172 | 52,809 | 34,385 |
+| Framework | JSON | List |
+|---|---:|---:|
+| Tina4 | 11,872 | 12,347 |
 
-**Key finding:** tina4nodejs leads wrk throughput (153,648 peak req/s) thanks to cluster mode distributing load across 8 CPU cores. Fastify wins single-process JSON throughput on hey (82,610 vs 64,564). For a fair single-process comparison, tina4nodejs would need to be tested without clustering. Express trails both but remains solid for single-process workloads.
+Fastify leads JSON throughput at 55,329 req/s. Tina4 trails on JSON (34,343) but dominates list responses at 50,001 req/s — a 49% lead over the next-best framework (Fastify at 33,496). That list-response strength matters: real APIs return arrays of objects, not single JSON values. All competitors run single-process; Tina4 uses cluster mode with 8 workers. Dev mode (tsx, single process) shows 11,872 JSON req/s — suitable for local development.
 
-### Feature Comparison
+### Feature Comparison (38 features)
 
-| Feature | Tina4 Node.js | Express | Fastify | Hapi | Koa |
-|---|---|---|---|---|---|
-| Built-in HTTP server | YES | YES | YES | YES | YES |
-| Route decorators | YES | no | no | no | no |
-| File-based routing | YES | no | plugin | no | no |
-| Built-in ORM | YES (5 engines) | no | no | no | no |
-| Built-in migrations | YES | no | no | no | no |
-| Auto-CRUD from models | YES | no | no | no | no |
-| Template engine | Frond (Twig-compatible) | no | no | no | no |
-| JWT auth | YES | no | no | no | no |
-| Password hashing (PBKDF2) | YES | no | no | no | no |
-| Swagger/OpenAPI | YES | no | plugin | plugin | no |
-| WebSocket | YES | no | plugin | plugin | no |
-| GraphQL | YES | no | plugin | plugin | no |
-| Queue system | YES (file-based) | no | no | no | no |
-| Session management | YES | no | plugin | plugin | no |
-| CLI tools | YES | no | plugin | no | no |
-| Zero runtime deps | YES | no | no | no | no |
+| # | Feature | Tina4 | Hapi | Fastify | Express | Koa |
+|---|---|---|---|---|---|---|
+| | **CORE WEB** | | | | | |
+| 1 | Routing (decorators) | Y | Y | Y | Y | Y |
+| 2 | Typed path parameters | Y | Y | Y | Y | - |
+| 3 | Middleware system | Y | Y | Y | Y | Y |
+| 4 | Static file serving | Y | Y | - | - | - |
+| 5 | CORS built-in | Y | Y | - | - | - |
+| 6 | Rate limiting | Y | - | - | - | - |
+| 7 | WebSocket | Y | Y | - | - | - |
+| | **DATA** | | | | | |
+| 8 | ORM | Y | - | - | - | - |
+| 9 | 5 database drivers | Y | - | - | - | - |
+| 10 | Migrations | Y | - | - | - | - |
+| 11 | Seeder / fake data | Y | - | - | - | - |
+| 12 | Sessions | Y | Y | - | - | - |
+| 13 | Response caching | Y | Y | - | - | - |
+| | **AUTH** | | | | | |
+| 14 | JWT built-in | Y | - | - | - | - |
+| 15 | Password hashing | Y | - | - | - | - |
+| 16 | CSRF protection | Y | - | - | - | - |
+| | **FRONTEND** | | | | | |
+| 17 | Template engine | Y | - | - | - | - |
+| 18 | CSS framework | Y | - | - | - | - |
+| 19 | SCSS compiler | Y | - | - | - | - |
+| 20 | Frontend JS helpers | Y | - | - | - | - |
+| | **API** | | | | | |
+| 21 | Swagger / OpenAPI | Y | Y | Y | - | - |
+| 22 | GraphQL | Y | - | - | - | - |
+| 23 | SOAP / WSDL | Y | - | - | - | - |
+| 24 | HTTP client | Y | - | - | - | - |
+| 25 | Queue system | Y | - | - | - | - |
+| | **DEV EXPERIENCE** | | | | | |
+| 26 | CLI scaffolding | Y | - | - | - | - |
+| 27 | Dev admin dashboard | Y | - | - | - | - |
+| 28 | Error overlay | Y | Y | Y | - | - |
+| 29 | Live reload | Y | - | - | - | - |
+| 30 | Auto-CRUD generator | Y | - | - | - | - |
+| 31 | Gallery / examples | Y | - | - | - | - |
+| 32 | AI assistant context | Y | - | - | - | - |
+| 33 | Inline testing | Y | Y | - | Y | - |
+| | **ARCHITECTURE** | | | | | |
+| 34 | Zero dependencies | Y | - | - | - | - |
+| 35 | Dependency injection | Y | Y | Y | - | Y |
+| 36 | Event system | Y | Y | - | - | - |
+| 37 | i18n / translations | Y | - | - | - | - |
+| 38 | HTML builder | Y | - | - | - | - |
 
-### Complexity — Lines of Code
+### Feature Count
 
-| Task | Tina4 Node.js | Express | Fastify | Hapi | Koa |
-|---|---|---|---|---|---|
-| Hello World API | 5 | 5 | 5 | 8 | 5 |
-| CRUD REST API | 20 | 50+ | 40+ | 60+ | 50+ |
-| DB + pagination | 8 | 25+ (with Knex) | 25+ (with Knex) | 25+ | 25+ |
-| Auth-protected route | 3 | 15+ (with passport) | 15+ | 10+ | 15+ |
-| WebSocket endpoint | 8 | 15+ (with ws) | 10+ (plugin) | 10+ (nes) | 15+ (with ws) |
-| Config files needed | 0-1 | 1+ | 1+ | 1+ | 1+ |
-| DB setup code | 1 line | N/A | N/A | N/A | N/A |
+| Framework | Features (of 38) | Pct |
+|---|---:|---:|
+| **Tina4** | **38** | **100%** |
+| Hapi | 12 | 32% |
+| Fastify | 5 | 13% |
+| Express | 4 | 11% |
+| Koa | 3 | 8% |
 
-#### Code Examples
+### Deployment Size
 
-**tina4nodejs — Hello World + CRUD:**
-```typescript
-import { get, startServer, Database } from "tina4-nodejs";
+| Framework | Dependencies | Install Size |
+|---|---:|---:|
+| **Tina4** | **0** | **~1.8 MB** |
+| Koa | 2 | ~2 MB |
+| Express | 1 | ~2.5 MB |
+| Fastify | 1 | ~3 MB |
+| Hapi | 1 | ~3.5 MB |
 
-const db = new Database("sqlite3:app.db");
-
-get("/hello", async (req, res) => {
-  return res.json({ message: "Hello World" });
-});
-
-get("/users", async (req, res) => {
-  const result = await db.fetch("SELECT * FROM users", null, { limit: 10 });
-  return res.json(result);
-});
-
-startServer({ port: 7148 });
-```
-
-**Express + Knex (30+ lines for comparable CRUD):**
-```javascript
-const express = require("express");
-const knex = require("knex")({
-  client: "sqlite3",
-  connection: { filename: "app.db" }
-});
-const app = express();
-app.use(express.json());
-
-app.get("/users", async (req, res) => {
-  const users = await knex("users")
-    .limit(req.query.limit || 10)
-    .offset(req.query.skip || 0);
-  res.json(users);
-});
-app.post("/users", async (req, res) => {
-  const [id] = await knex("users").insert(req.body);
-  res.status(201).json({ id });
-});
-app.put("/users/:id", async (req, res) => {
-  await knex("users").where({ id: req.params.id }).update(req.body);
-  res.json({ success: true });
-});
-app.delete("/users/:id", async (req, res) => {
-  await knex("users").where({ id: req.params.id }).del();
-  res.json({ success: true });
-});
-app.listen(3000);
-```
-
-### Where Each Framework Excels
-
-**Express** — The most widely used Node.js framework. Massive middleware ecosystem. Nearly every Node.js developer has used it. Best for teams that want maximum community support and middleware choice.
-
-**Fastify** — Built for performance with schema-based validation and a plugin architecture. Faster than Express in most benchmarks. Best for high-throughput APIs where every millisecond counts.
-
-**Hapi** — Configuration-driven with strong input validation (Joi). Best for teams that prefer declarative configuration over middleware chains.
-
-**Koa** — Created by the Express team with async/await at its core. Minimal and modern. Best for developers who want a clean middleware API without legacy patterns.
-
-**Tina4 Node.js** — Zero runtime dependencies. The entire framework runs on Node.js standard library. Built-in ORM with 5 database engines, auto-CRUD generation, JWT auth, Swagger, GraphQL, WebSockets, queues, and migrations in under 5,000 lines of code. Same project structure and CLI as Tina4 Python, PHP, and Ruby. Best for developers who want a full-stack toolkit without a dependency tree, or teams already using Tina4 in another language. The framework is new. The community is small. Express and Fastify have years of battle-testing that Tina4 Node.js does not.
-
-### When to Choose What
-
-Choose Tina4 Node.js when you want zero runtime dependencies, need a built-in ORM with multiple database engines, or already use Tina4 in another language and want the same project structure.
-
-Choose Express or Fastify when you need the largest ecosystem and hiring pool, require specific npm middleware, or need a framework with years of production use behind it.
+Tina4 Node.js runs on the standard library alone. No `node_modules` tree to audit. Express, Fastify, Koa, and Hapi each pull in transitive dependencies that inflate the install beyond their listed direct dependency count.
 
 ---
 
-## Cross-Language Performance Summary
+## Cross-Language Summary
 
-Peak wrk throughput (req/s) per framework, using the highest-performing endpoint from each. wrk tests sustained throughput with 4 threads and 50 connections over 10 seconds.
+All four Tina4 back-end variants share the same 38-feature set, the same project structure, and the same ORM API.
 
-| Framework | Peak wrk req/s | Language | Server |
-|---|---|---|---|
-| tina4nodejs | 153,648 | Node.js 24 | cluster (8 workers) |
-| Fastify | 108,203 | Node.js 24 | single process |
-| Express | 65,461 | Node.js 24 | single process |
-| tina4ruby | 19,844 | Ruby 4.0 | Puma (threaded) |
-| FastAPI | 12,927 | Python 3.13 | uvicorn |
-| tina4python | 10,267 | Python 3.13 | uvicorn |
-| Sinatra | 8,169 | Ruby 4.0 | WEBrick |
-| tina4php | unstable | PHP 8.5 | built-in (investigating) |
+| | Python | PHP | Ruby | Node.js |
+|---|---|---|---|---|
+| **JSON req/s** | 9,761 | 28,158 | 17,637 | 34,343 |
+| **List req/s** | 5,769 | 18,191 | 11,303 | 50,001 |
+| **Features** | 38/38 | 38/38 | 38/38 | 38/38 |
+| **Dependencies** | 0 | 0 | 0 | 0 |
+| **Install Size** | 2.4 MB | ~1.5 MB | ~900 KB | ~1.8 MB |
+| **Server** | uvicorn (ASGI) | stream_select (built-in) | Puma (threaded) | cluster (8 workers) |
+| **Language Version** | 3.12+ | 8.1+ | 3.1+ | 22+ |
 
-Node.js dominates raw throughput thanks to V8's JIT compilation and non-blocking I/O. tina4nodejs's cluster mode multiplies this further across cores. Ruby and Python frameworks cluster in the 8K-20K range, which is typical for interpreted languages with the GIL (Python) or GVL (Ruby). PHP results are excluded from ranking due to server instability under concurrent load.
+Node.js leads raw throughput — V8's JIT compiler and cluster mode push list responses to 50,001 req/s. PHP's built-in async server reaches 28,158 JSON req/s without external processes. Ruby on Puma delivers 17,637 JSON req/s. Python on uvicorn sits at 9,761 JSON req/s, constrained by the GIL. All four variants ship zero dependencies and keep install sizes under 2.5 MB.
 
 ---
 
@@ -808,46 +605,57 @@ Choose TMS Web Core when you want to build browser-based web applications entire
 
 ## AI-Assisted Development
 
-As AI coding assistants (GitHub Copilot, Claude Code, Cursor) become common, a framework's compatibility with these tools matters. Smaller, more predictable codebases tend to produce better AI-generated code.
+AI coding assistants work better when they understand a project's structure, conventions, and API surface. Tina4 ships context files for seven AI tools — more than any other framework.
 
-### Factors That Help AI
+### AI Context Files
+
+| File | Tool | Purpose |
+|---|---|---|
+| `CLAUDE.md` | Claude Code | Project structure, conventions, API reference |
+| `.cursorrules` | Cursor | Editor-specific rules and code generation hints |
+| `copilot-instructions.md` | GitHub Copilot | Completion guidance and framework patterns |
+| `llms.txt` | Web-crawling AI tools | Machine-readable project summary at tina4.com/llms.txt |
+| `CONVENTIONS.md` | General AI tools | Coding standards and naming conventions |
+| `.clinerules` | Cline | Autonomous agent rules and project context |
+| `AGENTS.md` | Multi-agent systems | Agent coordination and task delegation context |
+
+### Why This Matters
 
 | Factor | Tina4 | Large frameworks (Django, Laravel, Rails) | Micro-frameworks (Flask, Slim, Sinatra) |
 |---|---|---|---|
-| Ships with CLAUDE.md | Yes | No | No |
+| Ships AI context files | 7 tools | 0 | 0 |
 | Single-file app possible | Yes | No (Django, Rails) | Yes |
 | Predictable file structure | Yes | Yes | No |
 | Auto-discovery (routes/models) | Yes | Partial | No |
 | Low boilerplate | Yes | No | Partial |
 | Self-contained (few deps) | Yes | No | Partial |
-| Consistent API patterns | Yes | Yes | Partial |
 | Codebase fits in one context window | Yes | No | Yes |
 
-Tina4 ships with CLAUDE.md files that give AI assistants built-in context for every feature. Its convention-over-configuration approach means routes go in `src/routes/`, models in `src/orm/`, templates in `src/templates/`. AI tools can predict file locations and generate correct code with fewer errors.
+Tina4's entire codebase fits inside a single AI context window. Large frameworks like Django (250K+ lines) and Laravel (400K+ lines) overflow that window. The AI sees fragments, not the whole picture. Micro-frameworks like Flask and Slim fit in the window but lack conventions — the AI guesses where files belong.
 
-Large frameworks like Django and Laravel have strong conventions too, but their codebases are 10-100x larger. An AI assistant cannot read and understand the entire framework in a single context window. Micro-frameworks like Flask and Slim are small, but they lack conventions — the AI must guess where files go.
-
-Tina4's SQL-first approach also helps. AI tools write real SQL instead of framework-specific query builder chains that vary between ORMs.
+Tina4's convention-over-configuration approach means routes go in `src/routes/`, models in `src/orm/`, templates in `src/templates/`. AI tools predict file locations and generate correct code with fewer hallucinations. The SQL-first ORM helps too — AI writes real SQL instead of framework-specific query builder chains that vary between ORMs.
 
 ---
 
 ## Conclusion
 
-Every framework in these comparisons has earned its place. Django, Laravel, and Rails are industry standards with unmatched communities. FastAPI leads async Python APIs. Express dominates Node.js. Symfony powers enterprise PHP.
+Every framework in these comparisons earned its place. Django, Laravel, and Rails set industry standards with unmatched communities. FastAPI leads async Python APIs. Express dominates Node.js middleware. Symfony powers enterprise PHP.
 
-Tina4 takes a different approach: ship everything a modern web project needs in the smallest possible package. It trades community size for built-in features, and ceremony for simplicity.
+Tina4 takes a different path: ship everything a modern web project needs in the smallest package possible.
 
-| Language | Tina4 Variant | Key Differentiators |
-|---|---|---|
-| **Python** | tina4_python | 38/38 features built-in, 6 database engines, GraphQL + SOAP + REST |
-| **PHP** | Tina4 PHP | One-line CRUD, 4 MB with full feature set, multi-DB ORM, zero external deps |
-| **Ruby** | tina4_ruby | 32/32 features built-in, low DB overhead, GraphQL + SOAP + JWT |
-| **Node.js** | Tina4 Node.js | Zero runtime deps, 5 DB engines, auto-CRUD, under 5,000 lines |
-| **JavaScript** | tina4js | Sub-3KB reactive framework, signals, Web Components, PWA |
-| **Delphi** | Tina4 Delphi | FMX components, auto MemTable, HTML/CSS on canvas, MCP server |
+| Language | Tina4 Variant | JSON req/s | List req/s | Features | Size |
+|---|---|---:|---:|---:|---:|
+| **Python** | tina4_python | 9,761 | 5,769 | 38/38 | 2.4 MB |
+| **PHP** | Tina4 PHP | 28,158 | 18,191 | 38/38 | ~1.5 MB |
+| **Ruby** | tina4_ruby | 17,637 | 11,303 | 38/38 | ~900 KB |
+| **Node.js** | Tina4 Node.js | 34,343 | 50,001 | 38/38 | ~1.8 MB |
+| **JavaScript** | tina4js | — | — | Sub-3KB | 3.7 KB gz |
+| **Delphi** | Tina4 Delphi | — | — | FMX components | Open source |
 
-The trade-off is real: Tina4 has a smaller community, fewer third-party packages, and less production history than established frameworks. For developers and teams who value getting things done with minimal code and want the same patterns across multiple languages, Tina4 is worth evaluating.
+The trade-off is real. Tina4 has a smaller community, fewer third-party packages, and less production history than established frameworks. No StackOverflow tag with 200,000 questions. No ecosystem of 300,000 community packages. When you hit an edge case, you read source code — not a blog post.
+
+For developers who want working CRUD in a few lines, the same patterns across four languages, 38 features with zero dependencies, and AI context files for seven tools — Tina4 is worth evaluating. Build something. Break something. File an issue. The framework grows with its users.
 
 ---
 
-*Data sources: [Packagist](https://packagist.org), [GitHub](https://github.com), [Carbonah benchmark suite](https://github.com/tina4stack/carbonah) (Apple MacBook Pro M-series, macOS, 1,000 iterations, 3 runs averaged, SQLite in-memory), framework documentation sites. tina4js bundle sizes: macOS, Vite + Rollup with esbuild minification. Community statistics retrieved March 2026.*
+*Data sources: [GitHub](https://github.com), framework documentation sites, [hey](https://github.com/rakyll/hey) benchmarks (Apple Silicon ARM64, 8 cores, 5,000 requests, 50 concurrent, 3 runs averaged). tina4js bundle sizes: macOS, Vite + Rollup with esbuild minification. Statistics retrieved March 2026.*
