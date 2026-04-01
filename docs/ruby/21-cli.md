@@ -1,4 +1,4 @@
-# Chapter 19: CLI & Scaffolding
+# Chapter 19: Tina4 CLI
 
 ## 1. Getting a New Developer Up to Speed
 
