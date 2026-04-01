@@ -22,6 +22,32 @@ print(tina4_python.__version__)
 
 ---
 
+## v3.10.43 — April 1, 2026
+
+### Improvements
+
+**Per-tool AI context generation** — `tina4python ai` now generates tool-specific content for each AI assistant. Cursor gets compact patterns (~45 lines), Copilot gets short instructions (~30 lines), Claude Code gets the full developer guide. Previously all 7 tools received the same generic blob.
+
+**New AI tool files** — Added `.windsurfrules`, `.clinerules`, `CONVENTIONS.md` (Aider), `AGENTS.md` (Codex).
+
+**Single source of truth for version** — `pyproject.toml` now reads version dynamically from `__init__.py` via hatchling. No more dual-version drift.
+
+### v3.10.42
+
+**`handle()` for programmatic dispatch** — Route requests programmatically without HTTP.
+
+**`selectOne()`** — ORM convenience method for single-record queries.
+
+**DevAdmin metrics** — Enhanced code metrics with empty method/class warnings.
+
+### v3.10.41
+
+**`selectOne` / `select_one`** — Added to ORM for single-record convenience queries.
+
+**Router refactoring** — Updated `find_by_id` to delegate cleanly.
+
+---
+
 ## v3.10.40 — April 1, 2026
 
 ### Bug Fixes

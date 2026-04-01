@@ -6,6 +6,24 @@ This chapter covers every release from v3.0.0 through v3.10.x. Each section grou
 
 ---
 
+## v3.10.43 — April 1, 2026
+
+### Improvements
+
+**Per-tool AI context generation** — `npx tina4nodejs ai` now generates tool-specific content for each AI assistant. Cursor gets compact patterns, Copilot gets short instructions, Claude Code gets the full developer guide.
+
+**New AI tool files** — Added `.windsurfrules`, `.clinerules`, `CONVENTIONS.md` (Aider), `AGENTS.md` (Codex).
+
+**TestClient** — New `TestClient` class for testing routes programmatically without HTTP.
+
+### v3.10.42
+
+**`selectOne()`** — ORM convenience method for single-record queries.
+
+**DevAdmin metrics** — Enhanced code metrics with empty method/class warnings.
+
+---
+
 ## v3.10.40 — April 1, 2026
 
 ### Bug Fixes
