@@ -32,7 +32,7 @@ That is a complete model. Let us break it down:
 
 - **Extends `Tina4::ORM`** -- This gives you `save`, `load`, `delete`, `select`, and other methods.
 - **Field declarations** -- Each field maps to a database column. The field name uses `snake_case` which maps directly to the column name. Tina4 handles the conversion automatically.
-- **`table_name`** -- The database table this model maps to. If you omit it, Tina4 infers it from the class name: `Product` becomes `products`, `OrderItem` becomes `order_items`.
+- **`table_name`** -- The database table this model maps to. If you omit it, Tina4 uses the lowercase class name: `Product` becomes `product`. Set `ORM_PLURAL_TABLE_NAMES=true` in `.env` to get plural names (`product` → `products`).
 - **`primary_key: true`** -- Marks the primary key column. Defaults to `id`.
 - **Default values** -- Fields with defaults (like `category: "Uncategorized"`) are used when creating new records without specifying those fields.
 
@@ -993,9 +993,9 @@ end
 
 **Problem:** Your model class is `OrderItem` but queries fail because the table does not exist.
 
-**Cause:** Tina4 converts `OrderItem` to `order_items` (plural, snake_case). If your table is named `order_item` (singular), it will not match.
+**Cause:** Tina4 converts `OrderItem` to `orderitem` (lowercase, no separator). If your table is named `order_item` (snake_case), it will not match.
 
-**Fix:** Set `table_name` explicitly: `table_name "order_item"`. Or rename your table to match the convention.
+**Fix:** Set `table_name` explicitly: `table_name "order_item"`.
 
 ### 2. Nil Handling
 

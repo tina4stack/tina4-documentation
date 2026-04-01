@@ -43,7 +43,7 @@ Here is what each piece does:
 
 - **Extends `BaseModel`** -- Gives you `save()`, `findById()`, `findAll()`, `delete()`, `toDict()`, and other methods.
 - **`static fields`** -- Declares field types, constraints, and defaults. The ORM uses this for validation, auto-CRUD, and `createTable()`.
-- **`static tableName`** -- The database table this model maps to. If you omit it, Tina4 infers it from the class name: `Product` becomes `products`, `OrderItem` becomes `order_items`.
+- **`static tableName`** -- The database table this model maps to. If you omit it, Tina4 uses the lowercase class name: `Product` becomes `product`. Set `ORM_PLURAL_TABLE_NAMES=true` in `.env` to get plural names (`product` → `products`).
 - **TypeScript properties** -- Each property maps to a database column. Property names are `camelCase`; column names are `snake_case`. Tina4 converts between them automatically: `inStock` maps to `in_stock`, `createdAt` maps to `created_at`.
 - **Default values** -- Properties with defaults (like `category = "Uncategorized"`) apply when creating new records.
 

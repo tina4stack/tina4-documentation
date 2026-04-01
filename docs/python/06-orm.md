@@ -34,7 +34,7 @@ class Note(ORM):
 
 A complete model. Here is what each piece does:
 
-- `table_name` -- the database table this model maps to. If omitted, the ORM uses the lowercase class name plus `"s"` (e.g. `Contact` → `contacts`, `Product` → `products`). Always set it explicitly to avoid surprises.
+- `table_name` -- the database table this model maps to. If omitted, the ORM uses the lowercase class name (e.g. `Contact` → `contact`). Set `ORM_PLURAL_TABLE_NAMES=true` in `.env` to get plural names (`contact` → `contacts`).
 - `primary_key` -- the primary key column (defaults to `"id"`)
 - Each field is a class-level attribute with a field type
 

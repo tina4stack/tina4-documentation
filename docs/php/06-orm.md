@@ -40,7 +40,7 @@ A complete model. Here is what each piece does:
 
 - **Extends `ORM`** -- Gives you `save()`, `load()`, `delete()`, `select()`, and other methods.
 - **Public properties** -- Each one maps to a database column. Property names are `camelCase`. Column names are `snake_case`. Tina4 converts automatically: `inStock` maps to `in_stock`, `createdAt` maps to `created_at`.
-- **`$tableName`** -- The database table. Omit it and Tina4 infers from the class name: `Product` becomes `products`, `OrderItem` becomes `order_items`.
+- **`$tableName`** -- The database table. Omit it and Tina4 uses the lowercase class name: `Product` becomes `product`. Set `ORM_PLURAL_TABLE_NAMES=true` in `.env` to get plural names (`product` → `products`).
 - **`$primaryKey`** -- The primary key column. Defaults to `"id"`.
 - **Default values** -- Properties like `$category = "Uncategorized"` apply when creating new records without specifying those fields.
 
@@ -1172,9 +1172,9 @@ Router::post("/api/blog/posts/{id:int}/comments", function ($request, $response)
 
 **Problem:** Model class is `OrderItem`. Queries fail because the table does not exist.
 
-**Cause:** Tina4 converts `OrderItem` to `order_items` (plural, snake_case). Your table is `order_item` (singular).
+**Cause:** Tina4 converts `OrderItem` to `orderitem` (lowercase, no separator). Your table is `order_item` (snake_case).
 
-**Fix:** Set `$tableName` explicitly: `public string $tableName = "order_item";`. Or rename the table.
+**Fix:** Set `$tableName` explicitly: `public string $tableName = "order_item";`.
 
 ### 2. Null Handling
 
