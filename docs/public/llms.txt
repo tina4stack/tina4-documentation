@@ -1,0 +1,211 @@
+# Tina4 Framework — LLM Context
+
+Tina4 is a multi-language web framework with 54 built-in features and zero dependencies.
+Available for Python, PHP, Ruby, and Node.js. Frontend library: tina4-js.
+Website: https://tina4.com | GitHub: https://github.com/tina4stack
+
+---
+
+## Quick Start (All Languages)
+
+```bash
+# Install the CLI
+pip install tina4-python     # Python
+composer require tina4stack/tina4php  # PHP
+gem install tina4-ruby       # Ruby
+npm install tina4-nodejs     # Node.js
+
+# Scaffold a project
+tina4 init
+
+# Start dev server
+tina4 serve
+```
+
+Default ports: Python 7145, PHP 7146, Ruby 7147, Node.js 7148
+
+---
+
+## Route Registration
+
+### Python
+```python
+from tina4_python.core.router import get, post, noauth
+
+@get("/api/users")
+async def list_users(request, response):
+    return response({"users": []})
+
+@post("/api/users")
+@noauth()  # POST requires auth by default
+async def create(request, response):
+    return response({"created": request.body["name"]}, 201)
+```
+
+### PHP
+```php
+use Tina4\Router;
+
+Router::get("/api/users", function($request, $response) {
+    return $response->json(["users" => []], 200);
+});
+
+Router::post("/api/users", function($request, $response) {
+    return $response->json(["created" => $request->body["name"]], 201);
+})->noAuth();
+```
+
+### Ruby
+```ruby
+Tina4::Router.get "/api/users" do |request, response|
+  response.json({ users: [] })
+end
+
+Tina4::Router.post("/api/users") { |req, res|
+  res.json({ created: req.body["name"] })
+}.no_auth
+```
+
+### Node.js (TypeScript)
+```typescript
+import { Router } from "@tina4/core";
+
+Router.get("/api/users", async (req, res) => {
+  return res.json({ users: [] });
+});
+
+// Or file-based: src/routes/api/users/get.ts
+export default async function (req, res) {
+  return res.json({ users: [] });
+}
+```
+
+---
+
+## Database
+
+All languages use URL-based connection strings:
+- `sqlite:///app.db`
+- `postgres://user:pass@localhost:5432/mydb`
+- `mysql://user:pass@localhost:3306/mydb`
+- `mssql://user:pass@localhost:1433/mydb`
+- `firebird://user:pass@localhost:3050/mydb`
+
+---
+
+## ORM
+
+### Python
+```python
+from tina4_python.orm import ORM, IntegerField, StringField
+
+class User(ORM):
+    id = IntegerField(primary_key=True, auto_increment=True)
+    name = StringField()
+```
+
+### PHP
+```php
+class User extends \Tina4\ORM {
+    public $tableName = "users";
+    public $id;
+    public $name;
+}
+```
+
+### Ruby
+```ruby
+class User < Tina4::ORM
+  integer_field :id, primary_key: true, auto_increment: true
+  string_field :name
+  table_name "users"
+end
+```
+
+### Node.js
+```typescript
+export default class User {
+  static tableName = "users";
+  static fields = {
+    id:   { type: "integer" as const, primaryKey: true, autoIncrement: true },
+    name: { type: "string" as const,  required: true },
+  };
+}
+```
+
+---
+
+## Auth (All Languages)
+
+- JWT token generation and validation built in
+- Password hashing via PBKDF2/bcrypt built in
+- POST/PUT/DELETE routes require auth by default
+- GET routes are public by default
+- Python: `@noauth()` / `@secured()`
+- PHP: `->noAuth()` / `->secure()`
+- Ruby: `.no_auth` / `.secure`
+- Node.js: `/** @noauth */` / `/** @secure */` JSDoc
+
+---
+
+## Queue (All Languages)
+
+All languages share the same queue API pattern:
+- `queue.push(data)` — enqueue a job
+- `queue.consume(topic)` — process jobs
+- `job.payload` — access job data (NOT `job.data`)
+- `job.complete()` / `job.fail(reason)` — finish a job
+- Backends: file (default), RabbitMQ, Kafka, MongoDB
+
+---
+
+## tina4-js (Frontend)
+
+Sub-3KB reactive JavaScript framework. Shipped with all Tina4 backends at `/js/tina4js.min.js`.
+
+**CRITICAL: Signals use .value property access:**
+```javascript
+const count = signal(0);
+count.value = 5;       // write (NOT count(5))
+count.value;           // read  (NOT count())
+
+// In templates: pass signal itself for reactive binding
+html`<p>${count}</p>`          // RIGHT — reactive
+html`<p>${count.value}</p>`    // WRONG — evaluates once, freezes
+```
+
+Key rules:
+- Boolean attributes: `?disabled=${loading}` (NOT `disabled=${loading}`)
+- Conditionals: `${() => cond ? html\`...\` : null}` (NOT `${cond && html\`...\`}`)
+- Arrays: `items.value = [...items.value, newItem]` (NOT `.push()`)
+- Events: `@click=${fn}` (NOT `onclick=${fn}`)
+- Route: `route(pattern, handler)` — pattern first
+- API: `api.configure({baseUrl})` then `api.get()` — singleton
+- WebSocket: `ws.connect(url)` — not `ws(url)`
+
+---
+
+## Project Structure (All Languages)
+
+```
+src/
+  routes/       # Auto-discovered route files
+  orm/          # ORM model definitions (models/ in Node.js)
+  templates/    # Frond/Twig templates
+  public/       # Static files served at /
+migrations/     # SQL migration files
+.env            # Environment variables
+```
+
+---
+
+## Common Gotchas
+
+1. Queue job payload: `job.payload` NOT `job.data` (all languages)
+2. Database pagination: `offset` NOT `skip` (all languages)
+3. Python routes return `response()` NOT `response.json()`
+4. PHP route methods are static: `Router::get()` NOT `$router->get()`
+5. Ruby route params: `{id}` NOT `:id`
+6. Node.js is ESM only — use `.js` extensions in TypeScript imports
+7. tina4-js signals: `.value` property NOT function calls
+8. Templates use Twig syntax across all backends
