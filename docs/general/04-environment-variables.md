@@ -183,6 +183,12 @@ DATABASE_URL=mongodb://user:password@hostname:27017/database_name
 | `TINA4_DB_CACHE` | `false` | Enable in-memory caching of query results. |
 | `TINA4_DB_CACHE_TTL` | `30` | Cache time-to-live in seconds. |
 
+### ORM
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ORM_PLURAL_TABLE_NAMES` | `false` | Append "s" to auto-generated table names. When `false` (default), `Product` maps to `product`. When `true`, `Product` maps to `products`. |
+
 ### CORS (Cross-Origin Resource Sharing)
 
 | Variable | Default | Description |
@@ -462,6 +468,9 @@ DATABASE_URL=sqlite:///data/app.db
 # --- DB Query Cache ---
 # TINA4_DB_CACHE=false
 # TINA4_DB_CACHE_TTL=30
+
+# --- ORM ---
+# ORM_PLURAL_TABLE_NAMES=false
 
 # --- CORS ---
 TINA4_CORS_ORIGINS=*
