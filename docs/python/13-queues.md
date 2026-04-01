@@ -122,7 +122,7 @@ queue = Queue(topic="emails")
 
 for job in queue.consume("emails"):
     try:
-        send_email(job.data["to"], job.data["subject"], job.data["body"])
+        send_email(job.payload["to"], job.payload["subject"], job.payload["body"])
         job.complete()
     except Exception as e:
         job.fail(str(e))
@@ -145,7 +145,7 @@ job = queue.pop()
 
 if job is not None:
     try:
-        send_email(job.data["to"], job.data["subject"])
+        send_email(job.payload["to"], job.payload["subject"])
         job.complete()
     except Exception as e:
         job.fail(str(e))

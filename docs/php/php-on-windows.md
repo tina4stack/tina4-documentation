@@ -93,14 +93,29 @@ php -i | findstr "PHP Version"
 zend_extension=xdebug
 ```
 
-## You’re ready!
+## 8. Install the Tina4 CLI
 
-Start a new Tina4 project instantly:
+The Tina4 CLI is a Rust-based binary that manages project scaffolding and the dev server. Run this in PowerShell:
 
-```bash
-composer create-project tina4stack/tina4-php my-awesome-site
-cd my-awesome-site
-composer start
+```powershell
+irm https://raw.githubusercontent.com/tina4stack/tina4/main/install.ps1 | iex
 ```
 
-Open http://localhost:7145 — welcome to Tina4 on Windows! 🚀
+Verify:
+
+```bash
+tina4 --version
+```
+
+## You’re ready!
+
+Start a new Tina4 project:
+
+```bash
+tina4 init php my-awesome-site
+cd my-awesome-site
+composer install
+tina4 serve
+```
+
+Open http://localhost:7146 -- welcome to Tina4 on Windows!

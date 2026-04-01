@@ -6,6 +6,32 @@ This chapter covers every release from v3.0.0 through v3.10.x. Each section grou
 
 ---
 
+## v3.10.40 — April 1, 2026
+
+### Bug Fixes
+
+**Dev overlay version check** — Fixed misleading "You are up to date" message when running a version ahead of what's published on npm. The overlay now shows a purple "ahead of npm" message. Also added a breaking changes warning (red banner with changelog link) when a major or minor version update is available.
+
+---
+
+## v3.10.39 — April 1, 2026
+
+### New Features
+
+**`Database.getColumns(tableName)`** — Returns `[{name, type, nullable, default, primaryKey}]` for each column. Uses `PRAGMA table_info` for SQLite and `information_schema.columns` for PostgreSQL/MySQL/MSSQL.
+
+**`Database.executeMany(sql, paramSets)`** — Execute a SQL statement with multiple parameter arrays in a single transaction for atomicity and performance.
+
+**`BaseModel.create<T>(data)`** — Static factory method: instantiates, saves, and returns the new record.
+
+**`BaseModel.find()` and `BaseModel.load()`** — aliases for `findById()` (parity with Python, PHP, Ruby).
+
+**`seed` CLI command** — `tina4nodejs seed` scans `src/seeds/*.ts` and executes them via `tsx`.
+
+**`Router.allRoutes()`** — alias for `getRoutes()`.
+
+---
+
 ## v3.10.38 — April 1, 2026
 
 ### Code Metrics & Bubble Chart
@@ -57,7 +83,11 @@ Explicit `fieldMapping` entries take precedence over auto-generated ones. The tw
 
 **WSDL lifecycle hooks and dotted function names (v3.10.6)**
 
+<div v-pre>
+
 WSDL services gained `beforeCall` and `afterCall` hooks. The Frond template engine learned to resolve dotted function names like `{{ utils.format(value) }}`.
+
+</div>
 
 **ORM auto-commit on write operations (v3.10.13)**
 
@@ -96,7 +126,11 @@ Templates gained a `formTokenValue()` function that generates a unique CSRF toke
 
 **Arithmetic in set and expressions (v3.10.31)**
 
+<div v-pre>
+
 The Frond engine learned arithmetic. `{% set total = price * quantity %}` and `{{ width + padding }}` now work as expected.
+
+</div>
 
 **MCP server (v3.10.32)**
 
@@ -132,7 +166,11 @@ Inline conditionals broke when the true/false branches contained quoted strings 
 
 **Filters in if conditions (v3.10.21)**
 
+<div v-pre>
+
 Filters inside `{% if %}` conditions were silently ignored. The condition evaluated the raw value instead of the filtered one.
+
+</div>
 
 ```twig
 {# Before fix — broken: |length filter ignored, condition tested the array itself #}
@@ -162,7 +200,11 @@ await user.save(); // Transaction handled internally
 
 **Frond macro HTML escaping (v3.10.27)**
 
+<div v-pre>
+
 Macro output was HTML-escaped when used inside `{{ }}` expressions. A macro that generated `<div>` would render as `&lt;div&gt;`. Nested macros double-escaped. Macro output is now treated as safe HTML, matching standard Twig behaviour.
+
+</div>
 
 **js_escape and to_json auto-escaping (v3.10.17–19)**
 

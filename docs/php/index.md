@@ -1,16 +1,16 @@
-# Tina4 PHP – Quick Reference
+# Tina4 PHP -- Quick Reference
 
-::: tip 🔥 Hot Tips
+::: tip Hot Tips
 - Routes go in `src/routes/`, templates in `src/templates/`, static files in `src/public/`
 - GET routes are public by default; POST/PUT/PATCH/DELETE require a token
-- Return an array from `response()` and the framework auto-sets `application/json`
-- Use `composer start` to launch the dev server on port 7145
+- `$response->json()` returns JSON with the correct headers -- no manual config
+- Run `tina4 serve` to start the dev server on port 7146
 :::
 
 <nav class="tina4-menu">
     <a href="#installation">Installation</a> •
     <a href="#static-websites">Static Websites</a> •
-    <a href="#basic-routing">Routing</a> •   
+    <a href="#basic-routing">Routing</a> •
     <a href="#middleware">Middleware</a> •
     <a href="#templates">Templates</a> •
     <a href="#session-handling">Sessions</a> •
@@ -21,7 +21,7 @@
     <a href="#ajax">AJAX</a> •
     <a href="#swagger">OpenAPI</a> •
     <a href="#databases">Databases</a> •
-    <a href="#database-results">Database Results</a> •    
+    <a href="#database-results">Database Results</a> •
     <a href="#migrations">Migrations</a> •
     <a href="#orm">ORM</a> •
     <a href="#crud">CRUD</a> •
@@ -35,7 +35,7 @@
 </nav>
 
 <style>
-.tina4-menu { 
+.tina4-menu {
   background: #2c3e50; color: white; padding: 1rem; border-radius: 8px; margin: 2rem 0; text-align: center; font-size: 1.1rem;
 }
 .tina4-menu a { color: #1abc9c; text-decoration: none; margin: 0 0.4rem; }
@@ -45,15 +45,16 @@
 ### Installation {#installation}
 
 ```bash
-composer require tina4stack/tina4php
-composer exec tina4 initialize:run
-composer start
+tina4 init php my-project
+cd my-project
+composer install
+tina4 serve
 ```
-[More details](installation.md) around project setup and some customizations. 
+[More details](installation.md) on project setup and configuration options.
 
 ### Static Websites {#static-websites}
 
-Put `.html` or `.twig` files in `./src/templates` • assets in `./public`
+Drop `.html` or `.twig` files in `./src/templates`. Put assets in `./src/public`.
 
 ```twig
 <!-- src/templates/index.twig -->
@@ -64,62 +65,89 @@ Put `.html` or `.twig` files in `./src/templates` • assets in `./public`
 ### Basic Routing {#basic-routing}
 
 ```php
-\Tina4\Get::add("/", function (\Tina4\Response $response) {
-    return $response("<h1>Hello Tina4 PHP</h1>");
+<?php
+use Tina4\Router;
+
+Router::get("/", function ($request, $response) {
+    return $response->json(["message" => "Hello Tina4 PHP"]);
 });
 
-// Post requires a formToken or Bearer auth
-\Tina4\Post::add("/api", function (\Tina4\Request $request, \Tina4\Response $response) {
-    return $response(["data" => $request->params]);
+// POST requires a formToken or Bearer auth
+Router::post("/api/items", function ($request, $response) {
+    return $response->json(["data" => $request->body], 201);
 });
 
-// redirect after post
-\Tina4\Post::add("/register", function (\Tina4\Request $request, \Tina4\Response $response) {
-    \Tina4\redirect("/welcome");
+// Dynamic path parameters
+Router::get("/users/{id:int}", function ($request, $response) {
+    $id = $request->params["id"];
+    return $response->json(["user_id" => $id]);
 });
 ```
-Follow the links for , this [basic routing](basic-routing.md#basic-routing), [dynamic routing](basic-routing.md#dynamic-routing) with variables and [different response types](basic-routing.md#response-options).
+Follow the links for [basic routing](basic-routing.md#basic-routing), [dynamic routing](basic-routing.md#dynamic-routing) with variables, and [different response types](basic-routing.md#response-options).
 
 ### Middleware {#middleware}
 
+The v3 middleware system uses class-based middleware with `before*`/`after*` static methods.
+
 ```php
-// Declare the middleware 
-\Tina4\Middleware::add("MyMiddleware", function (\Tina4\Response $response, \Tina4\Request &$request) {
+<?php
+use Tina4\Request;
+use Tina4\Response;
 
-    return $response("This is not my middleware");
-});
-
-// The middleware will intercept the route, which will actually never fire in this design
-\Tina4\Get::add("/my-route", function (\Tina4\Response $response, \Tina4\Request $request) {
-
-    return $response("This is my route");
-})::middleware(["MyMiddleware"]);
+class AuthMiddleware
+{
+    public static function beforeAuth(Request $request, Response $response): array
+    {
+        if (!$request->bearerToken()) {
+            return [$request, $response->json(["error" => "Unauthorized"], 401)];
+        }
+        return [$request, $response];
+    }
+}
 ```
-Follow the links for more on [Middleware Declaration](middleware.md#declare), [Linking to Routes](middleware.md#routes), [Middleware Chaining](middleware.md#chaining) and [Middleware With Dynamic Routes](middleware.md#dynamic).
+
+Register middleware globally or attach it to a single route.
+
+```php
+<?php
+use Tina4\Middleware;
+use Tina4\Router;
+
+// Global -- runs on every request
+Middleware::use(AuthMiddleware::class);
+
+// Per-route -- third argument
+Router::get("/api/secret", function ($request, $response) {
+    return $response->json(["secret" => "The answer is 42"]);
+}, "requireApiKey");
+```
+Follow the links for more on [middleware declaration](middleware.md#declare), [linking to routes](middleware.md#routes), [middleware chaining](middleware.md#chaining), and [middleware with dynamic routes](middleware.md#dynamic).
 
 ### Template Rendering {#templates}
 
-Put `.twig` files in `./src/templates` • assets in `./public`. Render the templates passing data in an array.
+Templates live in `./src/templates`. The framework uses Frond -- a Twig-compatible engine built from scratch. Call `$response->render()` and pass your data.
 
 ```twig
-<!-- src/templates/hello.twig -->
-<h1>Hello {{name}}</h1>
+<!-- src/templates/hello.html -->
+<h1>Hello {{ name }}</h1>
 ```
 
 ```php
-\Tina4\Get("/", function (\Tina4\Request $request, \Tina4\Response $response) {
+<?php
+use Tina4\Router;
 
-    return $response(\Tina4\renderTemplate("hello.twig", ["name" => "World!"]));
+Router::get("/", function ($request, $response) {
+    return $response->render("hello.html", ["name" => "World"]);
 });
 ```
 
 ### Sessions {#session-handling}
 
-Sessions are started by default in the Tina4\Auth constructor.
+Sessions start by default in the `Auth` constructor.
 
 ### SCSS Stylesheets {#scss-stylesheets}
 
-Drop in `./src/scss` then `default.css` is auto-compiled to `./public/css`
+Drop files in `./src/scss`. The framework compiles them to `./src/public/css`.
 
 ```scss
 // src/scss/main.scss
@@ -129,11 +157,11 @@ body {
   color: white;
 }
 ```
-[More details](css.md) on css and scss.
+[More details](css.md) on CSS and SCSS.
 
 ### Environments {#environments}
 
-Default development environment in `.env`
+The default development environment lives in `.env`.
 
 ```
 [Project Settings]
@@ -141,34 +169,51 @@ VERSION=1.0.0
 TINA4_DEBUG=true
 TINA4_DEBUG_LEVEL=[TINA4_LOG_ALL]
 TINA4_CACHE_ON=false
+DATABASE_URL=sqlite:///data/app.db
 [Open API]
 SWAGGER_TITLE=Tina4 Project
 SWAGGER_DESCRIPTION=Edit your .env file to change this description
 SWAGGER_VERSION=1.0.0
 ```
-Environment variables are available through the Environment superglobal variable.
+Access environment variables through the `$_ENV` superglobal.
 ```php
-$data = $_ENV["SWAGGER_TITLE"];
+$title = $_ENV["SWAGGER_TITLE"];
 ```
 
 ### Authentication {#authentication}
 
-All POST routes are naturally secured. GET routes can be secured through php annotations
+POST, PUT, PATCH, and DELETE routes are secured by default. GET routes stay public unless you mark them otherwise.
 
 ```php
+<?php
+use Tina4\Router;
+
+// @secured marks a GET route as protected
 /**
- * @secure
+ * @secured
  */
-\Tina4\Get::add("/my-route", function(\Tina4\Response $response) {
-   
-    return $response("This route is protected");
-});  
+Router::get("/api/profile", function ($request, $response) {
+    return $response->json(["user" => $request->user]);
+});
+
+// Or use the chainable ->secure() method
+Router::get("/api/account", function ($request, $response) {
+    return $response->json(["account" => $request->user]);
+})->secure();
 ```
-A valid bearer token or Tina4 formed JWT token are valid authorizations
+
+Generate and validate tokens with the `Auth` class.
+
+```php
+use Tina4\Auth;
+
+$token = Auth::getToken(["userId" => 1, "role" => "admin"]);
+$payload = Auth::validToken($token);
+```
 
 ### HTML Forms and Tokens {#html-forms-and-tokens}
 
-Form tokens can be added using a Tina4 twig filter
+Form tokens protect POST routes from cross-site forgery. Add one with a Twig filter.
 ```twig
 <form method="POST" action="/process-form">
     {{ "emailForm" | formToken }}
@@ -176,7 +221,7 @@ Form tokens can be added using a Tina4 twig filter
     <button>Save</button>
 </form>
 ```
-Renders out this form with "emailForm" sent via the JWT payload
+The filter renders a hidden input with a signed JWT.
 ```html
 <form method="POST" action="/process-form">
     <input type="hidden" name="formToken" value="ey...">
@@ -184,180 +229,186 @@ Renders out this form with "emailForm" sent via the JWT payload
     <button>Save</button>
 </form>
 ```
-[More details](posting-form-data.md) on posting form data, how to [secure your routes](posting-form-data.md#secure-routes), working with 
-[Tina4 tokens](posting-form-data.md#form-tokens), [uploading files](posting-form-data.md#upload-files), how to [handle errors](posting-form-data.md#handle-errors)
-and a [full login example](posting-form-data.md#login-example).
+[More details](posting-form-data.md) on posting form data, [securing routes](posting-form-data.md#secure-routes), [Tina4 tokens](posting-form-data.md#form-tokens), [uploading files](posting-form-data.md#upload-files), [handling errors](posting-form-data.md#handle-errors), and a [full login example](posting-form-data.md#login-example).
 
 ### AJAX and frond.js {#ajax}
 
-Tina4 ships with frond.js, a small zero-dependency JavaScript library for AJAX calls, form submissions, and real-time WebSocket connections.
+Tina4 ships with frond.js -- a small zero-dependency JavaScript library for AJAX calls, form submissions, and real-time WebSocket connections.
 
 [More details](/general/frond) on available features.
 
 ### OpenAPI and Swagger UI {#swagger}
 
-Swagger is built into Tina4 and found at `/swagger`. Adding the `@description` annotation will include the route into swagger.
+Swagger is built in and lives at `/swagger`. The `@description` annotation registers a route in the documentation.
 
 ```php
+<?php
+use Tina4\Router;
+
 /**
  * @description Returns all users
  */
-\Tina4\Get("/users", function (\Tina4\Response $response) {
-
-    return $response((new User())->select("*"));
+Router::get("/users", function ($request, $response) {
+    return $response->json((new User())->select("*"));
 });
 ```
-Follow the links for more on [Configuration](swagger.md#config), [Annotations](swagger.md#annotations) and  [Usage](swagger.md#usage).
+Follow the links for more on [configuration](swagger.md#config), [annotations](swagger.md#annotations), and [usage](swagger.md#usage).
 
 ### Databases {#databases}
 
-Each database module implements the Database interface and needs to be included into composer, depending on which Database has been selected.
-```bash
+Set `DATABASE_URL` in `.env`. The framework reads it at startup and opens the connection.
 
-composer require tina4stack/tina4php-sqlite3
+```env
+DATABASE_URL=sqlite:///data/app.db
+DATABASE_URL=postgres://localhost:5432/myapp
+DATABASE_URL=mysql://localhost:3306/myapp
+DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
 ```
-The initial database connection in `index.php` might differ due to database selected.
+
+Access the connection through the `Database` class.
+
 ```php
-//Initialize Sqlite Database Connection
-global $DBA;
-$DBA = new \Tina4\DataSQLite3("database/myDatabase.db", "username", "my-password", "d/m/Y");
+<?php
+use Tina4\Database;
+
+$db = Database::getConnection();
+$result = $db->fetch("SELECT * FROM products WHERE price > ?", [50]);
 ```
-Follow the links for more on [Available Connections](database.md#connections), [Core Methods](database.md#core-methods), [Usage](database.md#usage), [Some Examples](database.md#examples) and [Full transaction control](database.md#transactions).
+Follow the links for more on [available connections](database.md#connections), [core methods](database.md#core-methods), [usage](database.md#usage), [examples](database.md#examples), and [transaction control](database.md#transactions).
 
 ### Database Results {#database-results}
-Returning a single row is as easy as 
-```php
-$dataResult = $DBA->fetchOne("select * from test_record order by id");
-```
 
-Database objects all return a DataResult object, which can then be returned in a number of formats.
-```php
-// fetch($sql, $noOfRecords, $offset)
-$dataResult = $DBA->fetch("select * from test_record order by id", 3, 1);
+Fetch a single row or a paginated set. The database returns a `DatabaseResult` object that converts to arrays or objects.
 
-$list = $dataResult->asArray();
-$array = $dataResult->asObject();
+```php
+$db = Database::getConnection();
+
+$row = $db->fetchOne("SELECT * FROM products WHERE id = 1");
+
+// fetch($sql, $params, $noOfRecords, $offset)
+$result = $db->fetch("SELECT * FROM products ORDER BY name", [], 10, 0);
 ```
-Looking at detailed [Usage](database.md#usage) and some [Examples](database.md#examples) will improve deeper understanding.
+Dig into the [usage guide](database.md#usage) and [examples](database.md#examples) for deeper coverage.
 
 ### Migrations {#migrations}
-Migrations are available as cli commands. This command will create a migration file in the migrations folder. Just add your sql.
+
+The CLI manages migrations. Create one, add your SQL, then run it.
+
 ```bash
-
-composer migrate:create my-first-migration
+tina4 migrate:create my-first-migration
 ```
-A number of migration creations can be made before executing the migrations. Once all creations are finished, just run them.
+
+Run all pending migrations in one command.
+
 ```bash
-
-composer migrate
+tina4 migrate
 ```
 
-Alternatively you can spin up the webserver and do the same from the browser.
-```
-http://localhost:7145/migrate/create
-
-http://localhost:7145/migrate
-```
-More details are available on [Migrations](migrations.md), their [Creation](migrations.md#creation), [Running](migrations.md#running) 
-them and [integration with ORM](migrations.md#orm).
+More details on [migrations](migrations.md), their [creation](migrations.md#creation), [running](migrations.md#running) them, and [integration with ORM](migrations.md#orm).
 
 ### ORM {#orm}
 
-Once you have run your migrations, creating the tables, ORM makes database interactions seamless.
+Once your migrations have created the tables, ORM models map PHP classes to database rows.
+
 ```php
-class User extends Tina4\ORM
+<?php
+use Tina4\ORM;
+
+class User extends ORM
 {
-    public $tableName = 'user';
-    
-    public $id;
-    public $email;
+    public string $tableName = "users";
+    public string $primaryKey = "id";
+
+    public int $id;
+    public string $email;
 }
 
-$user = new User(["email" => "my-email@email.com"]);
+$user = new User(["email" => "alice@example.com"]);
 $user->save();
-$user = (new User())->load("id = ?", 1);
+$user = (new User())->load("id = ?", [1]);
 ```
-ORM functionality is quite extensive and needs more study of the [Advanced Detail](orm.md) to get the full value from ORM.
+ORM covers a lot of ground. Study the [full reference](orm.md) to get the most from it.
 
 ### CRUD {#crud}
-With a single line of code, Tina 4 can generate a fully functional CRUD system, screens and all.
+
+One line of code generates a working CRUD system -- screens, routes, and all.
+
 ```php
-(new User())->generateCrud("/my-crud-templates")
+(new User())->generateCrud("/my-crud-templates");
 ```
-[More details](crud.md) on how CRUD works, where it puts the generated files is worth some investigation.
+[More details](crud.md) on how CRUD works and where it puts the generated files.
 
 ### Consuming REST APIs {#consuming-rest-apis}
-Getting data from a public api is as simple as one line of code.
+
+Pull data from an external API in a single call.
+
 ```php
 $api = (new \Tina4\Api("https://api.example.com"))->sendRequest("/my-route", "GET");
 ```
-[More details](rest-api.md) are available on sending a post data body, authorizations and other finer controls of sending api requests.
+[More details](rest-api.md) on sending POST bodies, authorization headers, and other controls.
 
 ### Inline Testing {#inline-testing}
 
-Tina4 allows testing to be added to functions without having to set up a test suite.
-```php
-    /**
-     * @tests Cris
-     * assert(2,5)==7,"2+5 not equal 7"
-     */
-    public function addTwoNumbers($number1, $number2)
-    {
-        return $number1 + $number2;
-    }
-```
-After making changes you can run the tests
-```bash
+Tina4 lets you add tests to functions without setting up a test suite.
 
-composer test
+```php
+/**
+ * @tests
+ * assert(2, 5) == 7, "2+5 not equal 7"
+ */
+public function addTwoNumbers($number1, $number2)
+{
+    return $number1 + $number2;
+}
 ```
-[Limitations](tests.md) and 
+Run the tests from the CLI.
+```bash
+tina4 test
+```
+[Limitations](tests.md) and further reading on the testing system.
+
 ### Services {#services}
 
-Create the required process
+Create a process class. The service runner picks it up and executes it on schedule.
+
 ```php
 class MyProcess extends \Tina4\Process
 {
     public function canRun(): bool
     {
-        // Include any selection criteria you need, or just return true
         return true;
     }
-    
+
     public function run(): void
     {
-        // Do whatever you want here
+        // Your work goes here
     }
 }
 ```
-Add the process to the service
+Register the process with the service.
 ```php
-    $service = (new \Tina4\Service());
-    $service->addProcess(new MyProcess("Unique Process Name")); 
+$service = new \Tina4\Service();
+$service->addProcess(new MyProcess("Unique Process Name"));
 ```
-Create the service on the server by creating and registering an appropriate script. 
 
-[Further reading](services.md) is required for getting the full value out of services, and should 
-be studied in conjunction with [threads](threads.md).
+[Further reading](services.md) on services. Study them alongside [threads](threads.md) for the full picture.
 
 ### Threads {#threads}
 
- Create the thread code as required
+Define a trigger, then fire it. Each trigger runs as a separate PHP thread.
+
 ```php
 Tina4\Thread::addTrigger('myNewProcess', function () {
-    // Do whatever you want to do here
+    // Your work goes here
 });
-```
-Call the thread as required
-```php
-// Starts a new php thread running the code as declared above
+
 Tina4\Thread::trigger('myNewProcess');
 ```
-Please read [More Details](threads.md) on Threads, their restrictions and usage ideas.
+[More details](threads.md) on threads, their restrictions, and usage patterns.
 
 ### Queues {#queues}
 
-Tina4 includes a full queue system with multiple backends: LiteQueue (SQLite), MongoDB, RabbitMQ, and Kafka. Install `tina4stack/tina4php-queue` and use a unified API for producing and consuming messages.
+Tina4 includes a queue system with multiple backends: LiteQueue (SQLite), MongoDB, RabbitMQ, and Kafka. Install `tina4stack/tina4php-queue` and use a single API for producing and consuming messages.
 
 ```php
 use Tina4\Queue;
@@ -370,47 +421,36 @@ foreach ($queue->consume() as $message) {
 }
 ```
 
-Please read [More Details](queues.md) on Queues, their backends and configuration.
+[More details](queues.md) on queues, their backends, and configuration.
 
 ### WSDL {#wsdl}
-Declare your WSDL definition
+
+Define your WSDL service as a class. Tina4 handles the XML, the WSDL generation, and the SOAP envelope.
+
 ```php
 class Calculator extends \Tina4\WSDL {
     protected array $returnSchemas = [
         "Add" => ["Result" => "int"],
-        "SumList" => [
-            "Numbers" => "array<int>",
-            "Total" => "int",
-            "Error" => "?string"
-        ]
     ];
 
     public function Add(int $a, int $b): array {
         return ["Result" => $a + $b];
     }
-
-    /**
-     * @param int[] $Numbers
-     */
-    public function SumList(array $Numbers): array {
-        return [
-            "Numbers" => $Numbers,
-            "Total" => array_sum($Numbers),
-            "Error" => null
-        ];
-    }
 }
 ```
-Add your WSDL routes
+Wire it to a route.
 ```php
-\Tina4\Any::add("/calculator", function (\Tina4\Request $request, \Tina4\Response $response) {
+<?php
+use Tina4\Router;
+
+Router::any("/calculator", function ($request, $response) {
     $calculator = new Calculator($request);
     $handle = $calculator->handle();
-    return $response($handle, HTTP_OK, APPLICATION_XML);
+    return $response->xml($handle);
 });
 ```
-[More Details](wsdl.md) are available for WSDL
+[More details](wsdl.md) on WSDL services.
 
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
-  <a href="#">↑ Back to top</a>
+  <a href="#">Back to top</a>
 </nav>

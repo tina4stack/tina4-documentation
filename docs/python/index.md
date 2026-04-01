@@ -1,16 +1,16 @@
-# Tina4 Python – Quick Reference
+# Tina4 Python -- Quick Reference
 
-::: tip 🔥 Hot Tips
+::: tip Hot Tips
 - Routes go in `src/routes/`, templates in `src/templates/`, static files in `src/public/`
 - GET routes are public by default; POST/PUT/PATCH/DELETE require a token
-- Return a `dict` from `response()` and the framework auto-sets `application/json`
-- Use `uv run tina4 start` to launch the dev server on port 7145
+- Return a `dict` from `response()` and the framework sets `application/json`
+- Run `tina4 serve` to start the dev server on port 7145
   :::
 
 <nav class="tina4-menu">
     <a href="#installation">Installation</a> •
     <a href="#static-websites">Static Websites</a> •
-    <a href="#basic-routing">Routing</a> •  
+    <a href="#basic-routing">Routing</a> •
     <a href="#middleware">Middleware</a> •
     <a href="#templates">Templates</a> •
     <a href="#session-handling">Sessions</a> •
@@ -21,7 +21,7 @@
     <a href="#ajax">AJAX</a> •
     <a href="#swagger">OpenAPI</a> •
     <a href="#databases">Databases</a> •
-    <a href="#database-results">Database Results</a> •    
+    <a href="#database-results">Database Results</a> •
     <a href="#migrations">Migrations</a> •
     <a href="#orm">ORM</a> •
     <a href="#crud">CRUD</a> •
@@ -37,7 +37,7 @@
 </nav>
 
 <style>
-.tina4-menu { 
+.tina4-menu {
   background: #2c3e50; color: white; padding: 1rem; border-radius: 8px; margin: 2rem 0; text-align: center; font-size: 1.1rem;
 }
 .tina4-menu a { color: #1abc9c; text-decoration: none; margin: 0 0.4rem; }
@@ -50,13 +50,16 @@
 pip install tina4-python
 tina4 init my-project
 cd my-project
-tina4 start
+tina4 serve
 ```
-[More details](installation.md) around project setup and some customizations.
+
+The CLI scaffolds your project, installs one package, and starts the server. No dependency tree. No version conflicts. Your browser opens to `http://localhost:7145` and the welcome page greets you.
+
+[More details](installation.md) on project setup and customization.
 
 ### Static Websites {#static-websites}
-<!-- tina4php also allows .html perhaps consider for tina4python -->
-Put `.twig` files in `./src/templates` • assets in `./src/public`
+
+Put `.twig` files in `./src/templates` and assets in `./src/public`. The framework serves them without additional configuration.
 
 ```twig
 <!-- src/templates/index.twig -->
@@ -66,26 +69,29 @@ Put `.twig` files in `./src/templates` • assets in `./src/public`
 
 ### Basic Routing {#basic-routing}
 
-```python
-from tina4_python.Router import get, post
+The `@app` decorators register routes. Each handler receives `request` and `response`. Path parameters arrive as function arguments.
 
-@get("/")
+```python
+@app.get("/")
 async def get_home(request, response):
     return response("<h1>Hello Tina4 Python</h1>")
 
-# post requires a formToken in body or Bearer auth
-@post("/api")
+# POST requires a formToken in the body or Bearer auth
+@app.post("/api")
 async def post_api(request, response):
-    return response({"data": request.params})
+    return response({"data": request.body})
 
-# redirect after post
-@post("/register")
+# Redirect after a POST
+@app.post("/register")
 async def post_register(request, response):
     return response.redirect("/welcome")
 ```
 Follow the links for [basic routing](basic-routing.md#basic-routing) and [dynamic routing](basic-routing.md#dynamic-routing) with variables.
 
 ### Middleware
+
+Middleware runs before and after your route handler. Define a class with static methods, then attach it with the `@middleware` decorator.
+
 ```python
 class RunSomething:
 
@@ -105,7 +111,7 @@ class RunSomething:
         return request, response
 
 @middleware(RunSomething)
-@get("/middleware")
+@app.get("/middleware")
 async def get_middleware(request, response):
     return response("Route") # Before[Before / After Something]Route[Before / After Something]After
 ```
@@ -113,7 +119,7 @@ Follow the links for more on [Middleware Declaration](middleware.md#declare) and
 
 ### Template Rendering {#templates}
 
-Put `.twig` files in `./src/templates` • assets in `./src/public`
+Put `.twig` files in `./src/templates` and assets in `./src/public`. The template engine reads your layout, fills in the variables, and delivers clean HTML.
 
 ```twig
 <!-- src/templates/index.twig -->
@@ -121,20 +127,18 @@ Put `.twig` files in `./src/templates` • assets in `./src/public`
 ```
 
 ```python
-from tina4_python.Router import get
-
-@get("/")
+@app.get("/")
 async def get_home(request, response):
     return response.render("index.twig", {"name": "World!"})
 ```
 
 ### Sessions {#session-handling}
 
-The default session handling is SessionFileHandler, override `TINA4_SESSION_HANDLER` in `.env`
+The default session handler stores data on the file system. Override `TINA4_SESSION_HANDLER` in `.env` to switch backends.
 
 | Handler | Backend | Required package |
 |---------|---------|-----------------|
-| `SessionFileHandler` (default) | File system | — |
+| `SessionFileHandler` (default) | File system | -- |
 | `SessionRedisHandler` | Redis | `redis` |
 | `SessionValkeyHandler` | Valkey | `valkey` |
 | `SessionMongoHandler` | MongoDB | `pymongo` |
@@ -151,25 +155,29 @@ TINA4_SESSION_MONGO_COLLECTION=sessions
 ```
 
 ```python
-@get("/session/set")
+@app.get("/session/set")
 async def get_session_set(request, response):
     request.session.set("name", "Joe")
     request.session.set("info", {"info": ["one", "two", "three"]})
     return response("Session Set!")
 
 
-@get("/session/get")
-async def get_session_set(request, response):
+@app.get("/session/get")
+async def get_session_get(request, response):
     name = request.session.get("name")
     info = request.session.get("info")
-
     return response({"name": name, "info": info})
 
+
+@app.get("/session/clear")
+async def get_session_clear(request, response):
+    request.session.delete("name")
+    return response("Session key removed!")
 ```
 
 ### SCSS Stylesheets {#scss-stylesheets}
 
-Drop in `./src/scss` → auto-compiled to `./src/public/css`
+Drop `.scss` files in `./src/scss`. The framework compiles them to `./src/public/css`.
 
 ```scss
 // src/scss/main.scss
@@ -182,15 +190,15 @@ body {
 [More details](css.md) on css and scss.
 
 ### Environments {#environments}
-Default development environment can be found in `.env`
+
+The `.env` file holds your project configuration. The framework reads it at startup.
+
 ```
-PROJECT_NAME="My Project"
-VERSION=1.0.0
-TINA4_LANGUAGE=en
-TINA4_DEBUG_LEVEL=ALL
+TINA4_DEBUG=true
+TINA4_PORT=7145
+DATABASE_URL=sqlite:///data/app.db
+TINA4_LOG_LEVEL=ALL
 API_KEY=ABC1234
-TINA4_TOKEN_LIMIT=1
-DATABASE_NAME=sqlite3:test.db
 ```
 
 ```python
@@ -201,19 +209,27 @@ api_key = os.getenv("API_KEY", "ABC1234")
 
 ### Authentication {#authentication}
 
-Pass `Authorization: Bearer API_KEY` to secured routes in requests. See `.env` for default `API_KEY`.
+POST, PUT, PATCH, and DELETE routes require a Bearer token by default. Pass `Authorization: Bearer API_KEY` in the request header. Use `@noauth` to open a route to everyone. Use `@secured` to lock a GET route behind authentication.
+
 ```python
-from tina4_python.Router import get, post, noauth, secured
+from tina4_python.Auth import Auth
 
-@post("/login")
-@noauth()
+@app.post("/login")
+@noauth
 async def login(request, response):
-    return response("Logged in")
+    token = Auth.get_token({"user_id": 1, "role": "admin"})
+    return response({"token": token})
 
-@get("/protected")
-@secured()
+@app.get("/protected")
+@secured
 async def secret(request, response):
     return response("Welcome!")
+
+@app.get("/verify")
+async def verify(request, response):
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    payload = Auth.valid_token(token)
+    return response({"valid": payload is not None})
 ```
 
 ### HTML Forms and Tokens {#html-forms-and-tokens}
@@ -237,13 +253,12 @@ Tina4 ships with frond.js, a small zero-dependency JavaScript library for AJAX c
 
 ### OpenAPI and Swagger UI {#swagger}
 
-Visit `http://localhost:7145/swagger`
+Visit `http://localhost:7145/swagger`. Decorated routes appear in the Swagger UI without manual annotation.
 
 ```python
-from tina4_python.Router import get
 from tina4_python import description
 
-@get("/users")
+@app.get("/users")
 @description("Get all users")
 async def users(request, response):
     return response(User().select("*"))
@@ -256,20 +271,23 @@ Follow the links for more on [Configuration](swagger.md#config), [Usage](swagger
 from tina4_python.Database import Database
 
 # dba = Database("<driver>:<hostname>/<port>:database_name", username, password)
-dba = Database("sqlite3:data.db") 
+dba = Database("sqlite3:data.db")
 ```
+The adapter speaks PostgreSQL, MySQL, and SQLite. It translates your queries into whichever dialect the database understands.
+
 Follow the links for more on [Available Connections](database.md#connections), [Core Methods](database.md#core-methods), [Usage](database.md#usage) and [Full transaction control](database.md#transactions).
 
 ### Database Results {#database-results}
+
 ```python
-result = dba.fetch("select * from test_record order by id", limit=3, skip=1)
+result = dba.fetch("select * from test_record order by id", limit=3, offset=1)
 
 array = result.to_array()
 paginated = result.to_paginate()
 csv_data = result.to_csv()
 json_data = result.to_json()
 ```
-Looking at detailed [Usage](database.md#usage) will improve deeper understanding.
+Looking at detailed [Usage](database.md#usage) will deepen your understanding.
 
 ### Migrations {#migrations}
 
@@ -289,14 +307,9 @@ CREATE TABLE users
 ```bash
 tina4 migrate
 ```
-[Migrations](migrations.md) do have some limitations and considerations when used extensively.
-### ORM {#orm}
+[Migrations](migrations.md) have limitations worth knowing before you use them at scale.
 
-<!--
-    @todo this implies that on first use the table will be created and the field "name"
-    will be added to the class definition, this does not match the detailed docs and
-    does not make sense
--->
+### ORM {#orm}
 
 ```python
 from tina4_python.ORM import ORM, IntegerField, StringField
@@ -310,12 +323,12 @@ User({"name": "Alice"}).save()
 user = User()
 user.load("id = ?", [1])
 ```
-ORM functionality is quite extensive and needs more study of the [Advanced Detail](orm.md) to get the full value from ORM.
+ORM covers more ground than this snippet shows. Study the [Advanced Detail](orm.md) to get the full value.
 
 ### CRUD {#crud}
 
 ```python
-@get("/users/dashboard")
+@app.get("/users/dashboard")
 async def dashboard(request, response):
     users = User().select("id, name, email")
     return response.render("users/dashboard.twig", {"crud": users.to_crud(request)})
@@ -324,7 +337,7 @@ async def dashboard(request, response):
 ```twig
 {{ crud }}
 ```
-[More details](crud.md) on how CRUD works, where it puts the generated files is worth some investigation.
+[More details](crud.md) on how CRUD generates its files and where they live.
 
 ### Consuming REST APIs {#consuming-rest-apis}
 
@@ -335,7 +348,7 @@ api = Api("https://api.example.com", auth_header="Bearer xyz")
 result = api.get("/users/42")
 print(result["body"])
 ```
-[More details](rest-api.md) are available on sending a post data body, authorizations and other finer controls of sending api requests.
+[More details](rest-api.md) on sending POST data, authorization headers, and other controls for outbound API requests.
 
 ### Inline Testing {#inline-testing}
 
@@ -358,47 +371,38 @@ Run: `tina4 test`
 
 ### Services {#services}
 
-Due to the nature of python, services are not necessary.
+Due to the nature of Python, services are not necessary.
 
 ### Websockets {#websockets}
 
-Requires `simple-websocket`, add with `uv add simple-websocket`
+WebSocket support is built in. No extra dependencies. Define a handler with the `@app.websocket` decorator, and the framework manages the connection alongside your HTTP routes on the same port.
 
 ```python
-from tina4_python.Websocket import Websocket
-
-@get("/ws/chat")
-async def chat_ws(request, response):
-    ws = await Websocket(request).connection()
-    try:
-        while True:
-            data = await ws.receive()
-            await ws.send(f"Echo: {data}")
-    finally:
-        await ws.close()
-    return response("")
+@app.websocket("/ws/chat")
+async def chat_ws(connection, event, data):
+    if event == "message":
+        await connection.send(f"Echo: {data}")
 ```
-Have a look at out PubSub example under [Websockets](websockets.md)
+Have a look at the PubSub example under [Websockets](websockets.md).
 
 ### Threads {#threads}
 
-Due to the nature of python, threads are not necessary.
+Due to the nature of Python, threads are not necessary.
 
 ### Queues {#queues}
 
-Supports litequeue (default/SQLite), RabbitMQ, Kafka, and MongoDB backends.
+Supports litequeue (default/SQLite), RabbitMQ, Kafka, and MongoDB backends. The queue system uses `produce()` and `consume()` directly -- no separate Producer or Consumer classes.
 
 ```python
-from tina4_python.Queue import Queue, Producer, Consumer
+from tina4_python.Queue import Queue
 
 # Produce a message
 queue = Queue(topic="emails")
-Producer(queue).produce({"to": "alice@example.com", "subject": "Welcome"})
+queue.produce("emails", {"to": "alice@example.com", "subject": "Welcome"})
 
 # Consume messages
-consumer = Consumer(queue)
-for msg in consumer.messages():
-    print(msg.data)
+for job in queue.consume("emails"):
+    print(job.payload)
 ```
 
 [Full details](queues.md) on backend configuration, batching, multi-queue consumers, and error handling.
@@ -429,11 +433,11 @@ async def wsdl_cis(request, response):
     return response.wsdl(Calculator(request))
 
 ```
-[More Details](wsdl.md) are available for WSDL
+[More Details](wsdl.md) on WSDL configuration and usage.
 
 ### Localization (i18n) {#localization}
 
-Set `TINA4_LANGUAGE` in `.env` to change framework language. Supported: `en`, `fr`, `af`.
+Set `TINA4_LANGUAGE` in `.env` to change the framework language. Supported: `en`, `fr`, `af`.
 
 ```python
 from tina4_python.Localization import localize
@@ -442,7 +446,7 @@ _ = localize()
 print(_("Server stopped."))  # "Bediener gestop." (af)
 ```
 
-Translations use Python's `gettext` module. Falls back to English for unsupported languages.
+Translations use Python's `gettext` module. The framework falls back to English for unsupported languages.
 
 ```python
 from tina4_python.Localization import AVAILABLE_LANGUAGES
@@ -450,5 +454,5 @@ from tina4_python.Localization import AVAILABLE_LANGUAGES
 ```
 
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
-  <a href="#">↑ Back to top</a>
+  <a href="#">Back to top</a>
 </nav>

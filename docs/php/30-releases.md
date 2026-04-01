@@ -8,6 +8,69 @@ This chapter covers the full v3 line -- from the first release candidate through
 
 ---
 
+## v3.10.40 — April 1, 2026
+
+### Bug Fixes
+
+**Dev overlay version check** — Fixed misleading "You are up to date" message when running a version ahead of what's published on Packagist. The overlay now shows a purple "ahead of Packagist" message. Also added a breaking changes warning (red banner with changelog link) when a major or minor version update is available.
+
+---
+
+## v3.10.39 — April 1, 2026
+
+### Breaking Changes
+
+**`Auth::hashPassword()` — separator changed from `:` to `$`**
+
+The password hash format now uses `$` as a separator (matching Python, Ruby, and Node.js):
+
+```
+# BEFORE: pbkdf2_sha256:100000:salt:hash
+# AFTER:  pbkdf2_sha256$100000$salt$hash
+```
+
+Existing hashed passwords stored in your database **will not verify** after upgrade. Rehash passwords on next user login:
+
+```php
+if (!Auth::checkPassword($password, $storedHash)) {
+    // try old format first, then rehash
+}
+```
+
+**`Database::update()` and `Database::delete()` filter signature changed**
+
+```php
+// BEFORE (v3.10.38 and earlier) — associative array filter
+$db->update('users', ['name' => 'Alice'], ['id' => 1]);
+$db->delete('users', ['id' => 1]);
+
+// AFTER (v3.10.39+) — SQL string + params (matches Python, Ruby, Node.js)
+$db->update('users', ['name' => 'Alice'], 'id = ?', [1]);
+$db->delete('users', 'id = ?', [1]);
+```
+
+**`Router::list()` removed — use `Router::getRoutes()` or `Router::listRoutes()`**
+
+```php
+// BEFORE
+$routes = Router::list();
+
+// AFTER
+$routes = Router::getRoutes();   // or Router::listRoutes()
+```
+
+### New Features
+
+**`ORM::findById(int|string $id)`** — explicit primary method (with `find()` and `load()` as aliases).
+
+**`Session`: `TINA4_SESSION_HANDLER` env var** — replaces `TINA4_SESSION_BACKEND` (old name still accepted for backward compatibility).
+
+**`Session\RedisSessionHandler`** — new zero-dependency Redis session handler using raw RESP protocol over TCP sockets. Configure with `TINA4_SESSION_REDIS_HOST`, `TINA4_SESSION_REDIS_PORT`, `TINA4_SESSION_REDIS_PASSWORD`, `TINA4_SESSION_REDIS_DB`.
+
+**`Database::cacheStats()` and `Database::cacheClear()`** — query cache wired to `TINA4_DB_CACHE=true` env var.
+
+---
+
 ## v3.10.38 -- April 1, 2026
 
 ### Code Metrics & Bubble Chart
@@ -66,7 +129,11 @@ TINA4_DEV_POLL_INTERVAL=5000  // 5 seconds
 
 ### v3.10.27 -- Frond Macro HTML Escaping Fix (30 March 2026)
 
+<div v-pre>
+
 Macro output was getting HTML-escaped when used inside expressions. A `{% macro %}` that returned HTML would render as visible `&lt;div&gt;` tags instead of actual markup. This patch marks macro output as safe, matching standard Twig behaviour.
+
+</div>
 
 **Before (broken):**
 
