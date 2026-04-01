@@ -22,6 +22,40 @@ print(tina4_python.__version__)
 
 ---
 
+## v3.10.44 — April 1, 2026
+
+### New Features
+
+**Database tab redesign** — The dev admin Database panel now uses a split-screen layout. Tables are listed on the left as a navigation sidebar with click-to-select highlighting. The query editor, toolbar, and results occupy the right panel. Results render immediately below the query box with no gap.
+
+**Copy CSV / Copy JSON** — Two new buttons in the database toolbar copy query results to the clipboard. CSV uses proper comma-separated format with quoting; JSON copies a formatted array of objects.
+
+**Paste data** — A new Paste button opens a modal where you can paste JSON arrays or CSV/tab-separated data. The tool auto-detects the format and generates INSERT statements. If a table is selected on the left, it targets that table. If no table is selected, it prompts for a name and generates a CREATE TABLE statement for new tables. If you paste SQL directly, it passes through to the query box unchanged.
+
+**Multi-statement execution** — The query runner now handles multiple SQL statements separated by semicolons. CREATE TABLE + INSERT batches run in a single transaction with automatic rollback on error.
+
+**Database badge on load** — The Database tab count badge now shows the table count immediately when the dev admin opens, without needing to click the tab first.
+
+**Star wiggle animation** — The GitHub star button on the landing page uses an empty star (☆) with a playful wiggle animation: 3-second delay on page load, then wiggles at random 3–18 second intervals.
+
+### Bug Fixes
+
+**Default port** — Python default port changed from 7145 to 7146 to avoid clashes when running multiple Tina4 frameworks (PHP=7145, Python=7146, Ruby=7147, Node=7148).
+
+**SQLite LIMIT fix** — The SQLite adapter now checks if a query already contains a LIMIT clause before appending one, preventing double-LIMIT errors in the database browser.
+
+**browseTable quote escaping** — Fixed broken onclick handlers for table names in the database panel. Now uses `addEventListener` instead of inline onclick with escaped quotes.
+
+**Migration UP/DOWN separation** — Migration generator no longer puts DOWN SQL in the .sql file. UP SQL stays in the .sql file; DOWN SQL goes in the separate .down.sql file.
+
+### Test Coverage
+
+Major test expansion across all 4 frameworks — 8,107 total tests (up from ~5,200), with full parity across 49 core feature areas. New dedicated test suites added for FakeData, Cache, DevMailbox, Static files, Metrics, and CLI scaffolding.
+
+Python: 2,132 tests passing (12 skipped).
+
+---
+
 ## v3.10.40 — April 1, 2026
 
 ### Bug Fixes
@@ -181,11 +215,7 @@ class UserProfile(ORM):
 
 - **MCP server and TestClient parity** (v3.10.32). The built-in MCP server and integration test client reached feature parity with the PHP and Ruby implementations.
 
-<div v-pre>
-
 - **Arithmetic in `{% set %}` and expressions** (v3.10.31). The template engine handles math operations inside assignment blocks.
-
-</div>
 
 ```html
 {% set total = price * quantity + shipping %}

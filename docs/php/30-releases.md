@@ -8,6 +8,38 @@ This chapter covers the full v3 line -- from the first release candidate through
 
 ---
 
+## v3.10.44 — April 1, 2026
+
+### New Features
+
+**Database tab redesign** — The dev admin Database panel now uses a split-screen layout. Tables are listed on the left as a navigation sidebar with click-to-select highlighting. The query editor, toolbar, and results occupy the right panel.
+
+**Copy CSV / Copy JSON** — Two new buttons in the database toolbar copy query results to the clipboard in CSV or JSON format.
+
+**Paste data** — A Paste button opens a modal for pasting JSON arrays or CSV/tab-separated data. Auto-detects the format and generates INSERT statements. Prompts for a table name if none is selected, and generates CREATE TABLE for new tables. SQL input passes through unchanged.
+
+**Multi-statement execution** — The query runner handles multiple SQL statements separated by semicolons, running them in a single transaction with automatic rollback on error.
+
+**Database badge on load** — The Database tab count badge shows the table count immediately on page load.
+
+**Star wiggle animation** — The GitHub star button on the landing page uses an empty star (☆) with a wiggle animation: 3-second delay, then wiggles at random 3–18 second intervals.
+
+### Bug Fixes
+
+**Default port** — PHP default port confirmed as 7145 (PHP=7145, Python=7146, Ruby=7147, Node=7148).
+
+**SQLite LIMIT fix** — Prevents double-LIMIT errors when browsing tables in the dev admin.
+
+**browseTable quote escaping** — Fixed broken onclick handlers for table names using addEventListener.
+
+**Frond template engine** — Fixed string concatenation (`~` operator) and inline if/else expressions (`{{ 'yes' if active else 'no' }}`). A greedy quoted-string fallback in `evaluateLiteral()` was treating compound expressions as single string literals.
+
+### Test Coverage
+
+Major test expansion — 200 new tests added (FakeData 42, Cache 30, DevMailbox 33, Static files 31, Metrics 20, CLI scaffolding 31, plus v3.10.44 feature tests). 1,532 tests passing, 0 failures.
+
+---
+
 ## v3.10.40 — April 1, 2026
 
 ### Bug Fixes
@@ -129,11 +161,7 @@ TINA4_DEV_POLL_INTERVAL=5000  // 5 seconds
 
 ### v3.10.27 -- Frond Macro HTML Escaping Fix (30 March 2026)
 
-<div v-pre>
-
 Macro output was getting HTML-escaped when used inside expressions. A `{% macro %}` that returned HTML would render as visible `&lt;div&gt;` tags instead of actual markup. This patch marks macro output as safe, matching standard Twig behaviour.
-
-</div>
 
 **Before (broken):**
 

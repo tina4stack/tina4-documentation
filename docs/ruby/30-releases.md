@@ -6,6 +6,42 @@ This chapter covers every v3 release from the initial launch through the current
 
 ---
 
+## v3.10.44 — April 1, 2026
+
+### New Features
+
+**Database tab redesign** — Split-screen layout with tables navigation on the left and query editor + results on the right. Click-to-select table highlighting.
+
+**Copy CSV / Copy JSON** — Copy query results to clipboard in CSV or JSON format.
+
+**Paste data** — Modal for pasting JSON arrays or CSV/tab-separated data. Auto-generates INSERT statements targeting the selected table, or prompts for a new table name with CREATE TABLE generation. SQL input passes through unchanged.
+
+**Multi-statement execution** — Query runner handles batched SQL statements in a transaction.
+
+**Database badge on load** — Table count shows immediately without clicking the Database tab.
+
+**Star wiggle animation** — Empty star (☆) on the landing page with delayed wiggle animation at random intervals.
+
+### Bug Fixes
+
+**Default port** — Ruby default port set to 7147 (PHP=7145, Python=7146, Ruby=7147, Node=7148).
+
+**SQLite LIMIT fix** — Prevents double-LIMIT errors in the database browser.
+
+**browseTable quote escaping** — Fixed table name click handlers.
+
+**ORM table name pluralization** — Fixed default table name resolution. Table names are now pluralized by default (adding "s" suffix), only skipping when `ORM_PLURAL_TABLE_NAMES` is explicitly set to false.
+
+**QueryBuilder closed-connection detection** — `ensure_db!` now checks if the resolved database connection is still open, raising a proper error instead of crashing with `ArgumentError: prepare called on a closed database`.
+
+**Metrics directory validation** — `quick_metrics` and `full_analysis` now check directory existence before `_resolve_root` fallback, so missing-directory errors are raised correctly.
+
+### Test Coverage
+
+88 new tests added (DevMailbox 40, Static files 18, CLI scaffolding 30), plus 13 v3.10.44 feature specs and 60 pre-existing ORM/metrics bug fixes. 1,913 tests passing, 0 failures.
+
+---
+
 ## v3.10.40 — April 1, 2026
 
 ### Bug Fixes
@@ -68,11 +104,7 @@ Version parity release. All four Tina4 frameworks now share the same version num
 
 ### v3.10.27 -- Frond Macro HTML Escaping Fix (March 30)
 
-<div v-pre>
-
 **Bug fix:** Macro output was HTML-escaped when used inside `{{ }}` expressions. Characters like `<`, `>`, and `"` rendered as `&lt;`, `&gt;`, `&amp;quot;` instead of raw HTML. Nested macro calls double-escaped.
-
-</div>
 
 ```ruby
 # BEFORE (broken): macro output escaped
@@ -423,12 +455,8 @@ TINA4_AUTH_PUBLIC_KEY=keys/public.pem
 
 **Frond template additions:**
 
-<div v-pre>
-
 - Ternary-with-filter: `{{ value ? value|upper : "default" }}`
 - `data_uri` filter for inline file display in templates
-
-</div>
 
 ---
 

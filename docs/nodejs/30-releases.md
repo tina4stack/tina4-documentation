@@ -6,6 +6,40 @@ This chapter covers every release from v3.0.0 through v3.10.x. Each section grou
 
 ---
 
+## v3.10.44 — April 1, 2026
+
+### New Features
+
+**Database tab redesign** — Split-screen layout with tables navigation on the left and query editor + results on the right. Click-to-select table highlighting.
+
+**Copy CSV / Copy JSON** — Copy query results to clipboard in CSV or JSON format.
+
+**Paste data** — Modal for pasting JSON arrays or CSV/tab-separated data. Auto-generates INSERT statements targeting the selected table, or prompts for a new table name with CREATE TABLE generation. SQL input passes through unchanged.
+
+**Multi-statement execution** — Query runner handles batched SQL statements in a transaction.
+
+**Database badge on load** — Table count shows immediately without clicking the Database tab.
+
+**Star wiggle animation** — Empty star (☆) on the landing page with delayed wiggle animation at random intervals.
+
+### Bug Fixes
+
+**Default port** — Node.js default port set to 7148 (PHP=7145, Python=7146, Ruby=7147, Node=7148).
+
+**SQLite LIMIT fix** — Prevents double-LIMIT errors in the database browser.
+
+**browseTable quote escaping** — Fixed table name click handlers.
+
+**Server handler dispatch regex** — Fixed a regex that required whitespace after `async` in handler functions. Transpiled auto-CRUD handlers producing `async(req,res)=>` were called with zero arguments, causing crashes.
+
+**Cluster mode in tests** — Server-based tests now set `TINA4_DEBUG=true` to prevent cluster mode forking, which was causing ECONNREFUSED errors.
+
+### Test Coverage
+
+Massive test expansion — 718 new tests added across Auth (+52), ORM (+30), FakeData (+48), Cache (+23), DevMailbox (+32), Static (+21), Queue (+20), Frond (+57), CLI scaffolding (55), Metrics (69), plus v3.10.44 feature tests and server test fixes. 2,530 tests passing, 0 failures.
+
+---
+
 ## v3.10.40 — April 1, 2026
 
 ### Bug Fixes
@@ -83,11 +117,7 @@ Explicit `fieldMapping` entries take precedence over auto-generated ones. The tw
 
 **WSDL lifecycle hooks and dotted function names (v3.10.6)**
 
-<div v-pre>
-
 WSDL services gained `beforeCall` and `afterCall` hooks. The Frond template engine learned to resolve dotted function names like `{{ utils.format(value) }}`.
-
-</div>
 
 **ORM auto-commit on write operations (v3.10.13)**
 
@@ -126,11 +156,7 @@ Templates gained a `formTokenValue()` function that generates a unique CSRF toke
 
 **Arithmetic in set and expressions (v3.10.31)**
 
-<div v-pre>
-
 The Frond engine learned arithmetic. `{% set total = price * quantity %}` and `{{ width + padding }}` now work as expected.
-
-</div>
 
 **MCP server (v3.10.32)**
 
@@ -166,11 +192,7 @@ Inline conditionals broke when the true/false branches contained quoted strings 
 
 **Filters in if conditions (v3.10.21)**
 
-<div v-pre>
-
 Filters inside `{% if %}` conditions were silently ignored. The condition evaluated the raw value instead of the filtered one.
-
-</div>
 
 ```twig
 {# Before fix — broken: |length filter ignored, condition tested the array itself #}
@@ -200,11 +222,7 @@ await user.save(); // Transaction handled internally
 
 **Frond macro HTML escaping (v3.10.27)**
 
-<div v-pre>
-
 Macro output was HTML-escaped when used inside `{{ }}` expressions. A macro that generated `<div>` would render as `&lt;div&gt;`. Nested macros double-escaped. Macro output is now treated as safe HTML, matching standard Twig behaviour.
-
-</div>
 
 **js_escape and to_json auto-escaping (v3.10.17–19)**
 
