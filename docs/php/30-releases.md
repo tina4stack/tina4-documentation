@@ -8,7 +8,29 @@ This chapter covers the full v3 line -- from the first release candidate through
 
 ---
 
-## v3.10.x -- Current Stable
+## v3.10.38 -- April 1, 2026
+
+### Code Metrics & Bubble Chart
+
+The dev dashboard (`/__dev`) now includes a **Code Metrics** tab with a PHPMetrics-style bubble chart visualization. Files appear as animated bubbles sized by LOC and colored by maintainability index. Click any bubble to drill down into per-function cyclomatic complexity.
+
+The metrics engine uses `token_get_all()` for zero-dependency static analysis covering cyclomatic complexity, Halstead volume, maintainability index, coupling, and violation detection. File analysis is sorted worst-first. Results are cached for 60 seconds.
+
+### AI Context Installer
+
+`bin/tina4php ai` now presents a simple numbered menu instead of auto-detection. Select tools by number, comma-separated or `all`. Already-installed tools show green. Generated context includes the full skills table.
+
+### Dashboard Improvements
+
+Full-width layout, sticky header/tabs, full-screen overlay. Removed junk migrations (`mooo`, `hkhkhk`), sample routes, and test templates.
+
+### Cleanup
+
+Removed old `plan/` spec documents, replaced with `PARITY.md` and `TESTS.md`. Central parity matrix added to tina4-book.
+
+---
+
+## v3.10.x -- Previous Releases
 
 **Released:** 28-30 March 2026
 
@@ -44,11 +66,7 @@ TINA4_DEV_POLL_INTERVAL=5000  // 5 seconds
 
 ### v3.10.27 -- Frond Macro HTML Escaping Fix (30 March 2026)
 
-<div v-pre>
-
 Macro output was getting HTML-escaped when used inside expressions. A `{% macro %}` that returned HTML would render as visible `&lt;div&gt;` tags instead of actual markup. This patch marks macro output as safe, matching standard Twig behaviour.
-
-</div>
 
 **Before (broken):**
 

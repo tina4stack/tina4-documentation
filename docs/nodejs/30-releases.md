@@ -6,7 +6,29 @@ This chapter covers every release from v3.0.0 through v3.10.x. Each section grou
 
 ---
 
-## v3.10.x — Current Stable (March 28–31, 2026)
+## v3.10.38 — April 1, 2026
+
+### Code Metrics & Bubble Chart
+
+The dev dashboard (`/__dev`) now includes a **Code Metrics** tab with a PHPMetrics-style bubble chart visualization. Files appear as animated bubbles sized by LOC and colored by maintainability index. Click any bubble to drill down into per-function cyclomatic complexity.
+
+The metrics engine uses regex-based TypeScript/JavaScript analysis for zero-dependency static analysis covering cyclomatic complexity, Halstead volume, maintainability index, coupling, and violation detection. File analysis is sorted worst-first. Results are cached for 60 seconds.
+
+### AI Context Installer
+
+`npx tina4nodejs ai` now presents a simple numbered menu instead of auto-detection. Select tools by number, comma-separated or `all`. Already-installed tools show green. Generated context includes the full skills table.
+
+### Dashboard Improvements
+
+Full-width layout, sticky header/tabs, full-screen overlay. Fixed `/__dev/` trailing slash returning 404.
+
+### Cleanup
+
+Removed `demo/` directory. Removed old `plan/` spec documents, replaced with `PARITY.md` and `TESTS.md`. Central parity matrix added to tina4-book.
+
+---
+
+## v3.10.x — Previous Releases (March 28–31, 2026)
 
 The v3.10 line focused on ORM refinements, Frond template engine fixes, and cross-framework parity. Thirty-two patch releases landed in four days.
 
@@ -35,11 +57,7 @@ Explicit `fieldMapping` entries take precedence over auto-generated ones. The tw
 
 **WSDL lifecycle hooks and dotted function names (v3.10.6)**
 
-<div v-pre>
-
 WSDL services gained `beforeCall` and `afterCall` hooks. The Frond template engine learned to resolve dotted function names like `{{ utils.format(value) }}`.
-
-</div>
 
 **ORM auto-commit on write operations (v3.10.13)**
 
@@ -78,11 +96,7 @@ Templates gained a `formTokenValue()` function that generates a unique CSRF toke
 
 **Arithmetic in set and expressions (v3.10.31)**
 
-<div v-pre>
-
 The Frond engine learned arithmetic. `{% set total = price * quantity %}` and `{{ width + padding }}` now work as expected.
-
-</div>
 
 **MCP server (v3.10.32)**
 
@@ -118,11 +132,7 @@ Inline conditionals broke when the true/false branches contained quoted strings 
 
 **Filters in if conditions (v3.10.21)**
 
-<div v-pre>
-
 Filters inside `{% if %}` conditions were silently ignored. The condition evaluated the raw value instead of the filtered one.
-
-</div>
 
 ```twig
 {# Before fix — broken: |length filter ignored, condition tested the array itself #}
@@ -152,11 +162,7 @@ await user.save(); // Transaction handled internally
 
 **Frond macro HTML escaping (v3.10.27)**
 
-<div v-pre>
-
 Macro output was HTML-escaped when used inside `{{ }}` expressions. A macro that generated `<div>` would render as `&lt;div&gt;`. Nested macros double-escaped. Macro output is now treated as safe HTML, matching standard Twig behaviour.
-
-</div>
 
 **js_escape and to_json auto-escaping (v3.10.17–19)**
 

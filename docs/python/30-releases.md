@@ -22,7 +22,50 @@ print(tina4_python.__version__)
 
 ---
 
-## v3.10.x — Current Stable (March 28-31, 2026)
+## v3.10.38 — April 1, 2026
+
+### Code Metrics & Bubble Chart
+
+The dev dashboard (`/__dev`) now includes a **Code Metrics** tab with a PHPMetrics-style bubble chart visualization. Files are represented as animated bubbles — sized by lines of code, colored by maintainability index (green = healthy, red = needs attention). Click any bubble to drill down into per-function cyclomatic complexity.
+
+The metrics engine uses Python's `ast` module for zero-dependency static analysis:
+- Cyclomatic complexity per function
+- Halstead volume and maintainability index
+- Afferent/efferent coupling and instability
+- Violation detection (CC > 20, LOC > 500, MI < 20)
+
+File analysis is sorted worst-first so problem areas surface immediately. Results are cached for 60 seconds with mtime-based invalidation.
+
+### AI Context Installer
+
+The `tina4python ai` command now presents a simple numbered menu instead of unreliable auto-detection:
+
+```
+  1. Claude Code        CLAUDE.md              [installed]
+  2. Cursor             .cursorules
+  3. GitHub Copilot     copilot-instructions.md
+  ...
+  8. Install tina4-ai tools (requires Python)
+```
+
+Select by number (comma-separated or `all`). Already-installed tools show green. The generated context now includes the full skills table across all frameworks.
+
+### Dashboard Improvements
+
+- Full-width layout (removed 1400px max-width constraint)
+- Sticky header and tab bar when scrolling
+- Dashboard overlay fills the screen (was constrained to 1200px)
+
+### Cleanup
+
+- Removed `demo/` directories from all framework repos (demos live in documentation)
+- Removed old `plan/` spec documents, replaced with `PARITY.md` and `TESTS.md`
+- Removed junk sample files (broken migrations, test templates)
+- Central parity matrix added to tina4-book
+
+---
+
+## v3.10.x — Previous Releases (March 28-31, 2026)
 
 The v3.10 line carries the most patches of any minor release. It refined the Frond template engine, hardened the ORM, and completed cross-framework parity.
 
@@ -74,11 +117,7 @@ class UserProfile(ORM):
 
 - **MCP server and TestClient parity** (v3.10.32). The built-in MCP server and integration test client reached feature parity with the PHP and Ruby implementations.
 
-<div v-pre>
-
 - **Arithmetic in `{% set %}` and expressions** (v3.10.31). The template engine handles math operations inside assignment blocks.
-
-</div>
 
 ```html
 {% set total = price * quantity + shipping %}

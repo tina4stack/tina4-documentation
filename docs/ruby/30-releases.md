@@ -6,7 +6,29 @@ This chapter covers every v3 release from the initial launch through the current
 
 ---
 
-## v3.10.x -- Current Stable
+## v3.10.38 -- April 1, 2026
+
+### Code Metrics & Bubble Chart
+
+The dev dashboard (`/__dev`) now includes a **Code Metrics** tab with a PHPMetrics-style bubble chart visualization. Files appear as animated bubbles sized by LOC and colored by maintainability index. Click any bubble to drill down into per-function cyclomatic complexity.
+
+The metrics engine uses `Ripper` (Ruby stdlib) for zero-dependency static analysis covering cyclomatic complexity, Halstead volume, maintainability index, coupling, and violation detection. File analysis is sorted worst-first. Results are cached for 60 seconds.
+
+### AI Context Installer
+
+`tina4ruby ai` now presents a simple numbered menu instead of auto-detection. Select tools by number, comma-separated or `all`. Already-installed tools show green. Generated context includes the full skills table.
+
+### Dashboard Improvements
+
+Full-width layout, sticky header/tabs, full-screen overlay.
+
+### Cleanup
+
+Removed `demo/` directory. Removed old `plan/` spec documents, replaced with `PARITY.md` and `TESTS.md`. Central parity matrix added to tina4-book.
+
+---
+
+## v3.10.x -- Previous Releases
 
 **Released:** March 28 -- 30, 2026
 
@@ -18,11 +40,7 @@ Version parity release. All four Tina4 frameworks now share the same version num
 
 ### v3.10.27 -- Frond Macro HTML Escaping Fix (March 30)
 
-<div v-pre>
-
 **Bug fix:** Macro output was HTML-escaped when used inside `{{ }}` expressions. Characters like `<`, `>`, and `"` rendered as `&lt;`, `&gt;`, `&amp;quot;` instead of raw HTML. Nested macro calls double-escaped.
-
-</div>
 
 ```ruby
 # BEFORE (broken): macro output escaped
@@ -373,12 +391,8 @@ TINA4_AUTH_PUBLIC_KEY=keys/public.pem
 
 **Frond template additions:**
 
-<div v-pre>
-
 - Ternary-with-filter: `{{ value ? value|upper : "default" }}`
 - `data_uri` filter for inline file display in templates
-
-</div>
 
 ---
 
