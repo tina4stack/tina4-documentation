@@ -46,8 +46,8 @@
 
 ```bash
 composer require tina4stack/tina4php
-composer exec tina4 initialize:run
-composer start
+vendor/bin/tina4php init
+vendor/bin/tina4php serve
 ```
 [More details](installation.md) around project setup and some customizations. 
 
