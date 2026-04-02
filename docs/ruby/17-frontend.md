@@ -776,3 +776,26 @@ end
 **Problem:** You edited `tina4.scss` but the browser shows the old CSS.
 
 **Fix:** Compile SCSS to CSS with `tina4 build:css` or `sass src/public/scss/tina4.scss src/public/css/tina4.css`. The browser loads the compiled CSS file, not the SCSS source.
+
+---
+
+## 18. HtmlElement — Programmatic HTML Builder
+
+Build HTML in Ruby without string concatenation:
+
+```ruby
+el = Tina4::HtmlElement.new("div", { class: "card" }, ["Hello"])
+el.to_s  # => '<div class="card">Hello</div>'
+
+# Nesting
+card = Tina4::HtmlElement.new("div", { class: "card" }, [
+  Tina4::HtmlElement.new("h2", {}, ["Title"]),
+  Tina4::HtmlElement.new("p", {}, ["Content"]),
+])
+
+# HtmlHelpers mixin
+include Tina4::HtmlHelpers
+html = _div({ class: "card" }, _p("Hello"), _a({ href: "/" }, "Home"))
+```
+
+Void tags (`<br>`, `<img>`, `<input>`) render without closing tags. Boolean attributes render as bare names.

@@ -70,48 +70,77 @@ Database drivers are the exception. You cannot talk to PostgreSQL without a Post
 
 ---
 
-## 38 Features in ~5,000 Lines
+## 108 Features at 100% Parity
 
-Tina4 ships with everything you need to build a production web application. Here is what every installation includes, across all four languages:
+Tina4 ships with everything you need to build a production web application. 108 features, all implemented identically across Python, PHP, Ruby, and Node.js. 9,311 tests across 280 test files. Here is what every installation includes:
 
-**Core Web**
-- HTTP router with path parameters, typed params, middleware, and auth guards
+**Core Web (17)**
+- HTTP router with path parameters, typed params, wildcard routes, route groups
 - Request and Response objects with full HTTP access
-- Static file serving, CORS, rate limiting, health checks
+- Static file serving, CORS (proper origin matching), rate limiting, health checks
+- Security headers middleware (CSP, HSTS, X-Frame-Options, Referrer-Policy)
+- noauth/secured decorators, auth guards on write routes by default
 - Graceful shutdown, request ID tracking, structured logging
-- Response compression, ETag support
+- --production flag, TINA4_NO_BROWSER, TINA4_NO_RELOAD
+- Auto test port at port+1000 (stable for user testing, no hot-reload)
 
-**Data Layer**
-- SQL-first ORM with Active Record pattern
-- Five database drivers: SQLite, PostgreSQL, MySQL, MSSQL, Firebird
-- Relationships: hasOne, hasMany, belongsTo with eager loading
+**Data Layer (14)**
+- SQL-first ORM with Active Record pattern, field types, soft delete
+- Seven database drivers: SQLite, PostgreSQL, MySQL, MSSQL, Firebird, MongoDB, ODBC
+- Relationships: hasOne, hasMany, belongsTo with eager loading (declarative + imperative)
+- QueryBuilder with fluent API, toMongo() for NoSQL query generation
+- AutoCRUD: REST endpoints from ORM models (GET, POST, PUT, DELETE with pagination)
 - Migrations with rollback, seeders with 50+ fake data generators
-- Query result caching with TTL, paginated results
+- Connection pooling, query result caching with TTL, race-safe ID generation
+- DATABASE_URL auto-discovery, autoMap for Firebird/Oracle uppercase columns
+- Cross-engine SQL translation (LIMIT, OFFSET, RETURNING, boolean, ILIKE)
 
-**Template and Frontend**
-- Frond: a Twig-compatible template engine with 55+ filters
-- Template inheritance, includes, macros, pre-compilation
-- SCSS compiler, tina4css (built-in CSS framework), frond.js (frontend helpers)
+**Template Engine — Frond (14)**
+- Twig-compatible syntax with 55+ filters, custom filters/globals/tests
+- Template inheritance (extends/block), parent()/super(), includes, macros
+- Import-as syntax, fragment caching, sandbox mode, SafeString
+- SCSS compiler (zero-dep), tina4css (built-in CSS framework), frond.js
+- Pre-compilation for 2.8x render improvement, dev mode cache bypass
 
-**Auth and Sessions**
-- JWT (HS256/RS256) built from scratch
-- Four session backends: file, Redis, Valkey, MongoDB
-- CSRF protection, password hashing
+**Auth and Sessions (8)**
+- JWT (HS256/RS256) built from scratch, password hashing
+- Five session backends: file, database, Redis, Valkey, MongoDB
+- Session TTL and garbage collection, SameSite cookie control
+- CSRF middleware with form tokens, API key authentication
 
-**Integration**
-- Queue system with retry, dead letters, and four backends (SQLite, RabbitMQ, Kafka, MongoDB)
-- GraphQL parser and executor
-- WebSocket server
-- SOAP/WSDL support, HTTP API client, email messenger, i18n
+**Integration (8)**
+- Queue system with retry, dead letters, and four backends (file, RabbitMQ, Kafka, MongoDB)
+- GraphQL parser and executor with ORM auto-generation
+- WebSocket server with Redis pub/sub backplane for horizontal scaling
+- SOAP/WSDL support, HTTP API client, email messenger (SMTP/IMAP), i18n
 
-**Developer Experience**
-- Rust-based unified CLI with scaffolding, migrations, and testing
-- Dev admin dashboard with 11 panels
-- Error overlay with source code and stack traces
-- Interactive gallery with 7 deployable examples
-- Live reload, AI tool integration
+**Infrastructure (12)**
+- Events system (observer pattern with priority and one-shot listeners)
+- DI container with transient and singleton registration
+- Response cache middleware with TTL
+- Service runner, error overlay with syntax-highlighted stack traces
+- HtmlElement programmatic HTML builder
+- Inline testing framework (attach assertions to functions)
+- MCP server (JSON-RPC 2.0 dev tools, auto-start in debug mode)
 
-All of this fits in 5,000 lines of code per language. The biggest component — the Frond template engine — runs about 1,500 lines. Most features need fewer than 200.
+**Developer Experience (9)**
+- Rust-based unified CLI: init, serve, doctor, docs, books, generate, migrate, test, ai
+- Dev admin dashboard with database tab, metrics bubble chart, request inspector
+- Code metrics: complexity, maintainability index, coupling analysis, dependency graph
+- Interactive gallery with 7 deployable examples, dev mailbox for email capture
+- Live reload with file watcher, AI tool context scaffolding (7 tools supported)
+
+**CLI Tools (5)**
+- tina4 init (scaffold for Python, PHP, Ruby, Node.js, tina4js)
+- tina4 doctor (environment check, port scan, CLI detection)
+- tina4 docs (framework-specific book chapters to .tina4-docs/)
+- tina4 generate (model, route, migration, middleware, crud, test, form, view, auth)
+- tina4 update (self-update with prebuilt binaries for macOS, Linux, Windows)
+
+**Static Assets (3)**
+- Minified CSS (tina4.min.css), JS (tina4.min.js, frond.min.js)
+- HtmlElement builder for programmatic HTML generation
+- Scaffold copies framework assets into project on init
 
 ---
 

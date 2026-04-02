@@ -1097,19 +1097,11 @@ Visit `http://localhost:7146/admin/products` and see:
 
 ## 12. Solution
 
-<div v-pre>
-
 The solution follows the same patterns shown in sections 7 and 10. Create the layout template extending the base layout from section 7. Create the dashboard page template with stat cards using `{% for stat in stats %}`. Create the products page template using the AJAX pattern from section 10, but for products instead of users.
-
-</div>
 
 For the products page, use auto-CRUD on the Product model (`$autoCrud = true`) so the API endpoints are available at `/api/products`. Load the table with `frond.get("/api/products", ...)` and handle form submission with `frond.post("/api/products", ...)`.
 
-<div v-pre>
-
 For the dark mode toggle, add the JavaScript from section 8 to the base layout template inside the `{% block extra_js %}` block.
-
-</div>
 
 The key route handlers are:
 
@@ -1233,3 +1225,26 @@ frond.post("/api/products", {
 ```
 
 This tag is included in all the examples above but is easy to forget when creating templates from scratch.
+
+---
+
+## 14. HtmlElement — Programmatic HTML Builder
+
+Build HTML in PHP without string concatenation:
+
+```php
+$el = new HtmlElement("div", ["class" => "card"], ["Hello"]);
+echo $el; // <div class="card">Hello</div>
+
+// Nesting
+$card = new HtmlElement("div", ["class" => "card"], [
+    new HtmlElement("h2", [], ["Title"]),
+    new HtmlElement("p", [], ["Content"]),
+]);
+
+// Helper functions
+extract(HtmlElement::helpers());
+echo $_div(["class" => "card"], $_p("Hello"), $_a(["href" => "/"], "Home"));
+```
+
+Void tags (`<br>`, `<img>`, `<input>`) render without closing tags. Boolean attributes render as bare names.

@@ -13,6 +13,7 @@ const TITLE_OVERRIDES: Record<string, string> = {
     'pwa': 'PWA',
     'graphql': 'GraphQL',
     'websocket': 'WebSocket',
+    'wsdl-soap': 'WSDL / SOAP',
     'wsdl': 'WSDL',
     'what-is-tina4': 'What Is Tina4?',
     'request-response': 'Request & Response',
@@ -26,6 +27,15 @@ const TITLE_OVERRIDES: Record<string, string> = {
     'html-templates': 'HTML Templates',
     'backend-integration': 'Backend Integration',
     'rest-api': 'REST API',
+    'middleware-security': 'Middleware & Security',
+    'api-client': 'API Client',
+    'di-container': 'DI Container',
+    'service-runner': 'Service Runner',
+    'feature-list': 'Feature List',
+    'upgrading-from-v2': 'Upgrading from v2',
+    'mcp-dev-tools': 'MCP Dev Tools',
+    'custom-mcp-servers': 'Custom MCP Servers',
+    'query-builder': 'Query Builder',
 }
 
 function chapterTitle(filename: string): string {
@@ -40,15 +50,27 @@ function chapterTitle(filename: string): string {
         .replace(/\b\w/g, c => c.toUpperCase())
 }
 
+const SECTION_RANGES: Record<string, [number, number]> = {
+    'Foundations': [1, 10],
+    'Building Apps': [11, 19],
+    'APIs & Protocols': [20, 24],
+    'Advanced': [25, 28],
+    'Developer Tools': [29, 31],
+    'Operations': [32, 34],
+    'Releases': [35, 35],
+    'Appendix': [36, 37],
+}
+
 function buildChapterSidebar(section: string, label: string, extras?: object[]): object[] {
     const dir = join(__dirname, '..', section)
-    let chapters: object[] = []
+    let allChapters: { num: number; text: string; link: string }[] = []
 
     try {
-        chapters = readdirSync(dir)
+        allChapters = readdirSync(dir)
             .filter(f => /^\d+-.+\.md$/.test(f))
             .sort()
             .map(f => ({
+                num: parseInt(f.split('-')[0], 10),
                 text: chapterTitle(f),
                 link: `/${section}/${f}`
             }))
@@ -63,12 +85,19 @@ function buildChapterSidebar(section: string, label: string, extras?: object[]):
         }
     ]
 
-    if (chapters.length > 0) {
-        sidebar.push({
-            text: `${label} Book`,
-            collapsed: false,
-            items: chapters
-        })
+    if (allChapters.length > 0) {
+        for (const [groupName, [start, end]] of Object.entries(SECTION_RANGES)) {
+            const items = allChapters
+                .filter(c => c.num >= start && c.num <= end)
+                .map(c => ({ text: c.text, link: c.link }))
+            if (items.length > 0) {
+                sidebar.push({
+                    text: groupName,
+                    collapsed: groupName !== 'Foundations',
+                    items
+                })
+            }
+        }
     }
 
     if (extras && extras.length > 0) {
@@ -88,6 +117,15 @@ export default defineConfig({
         ['script', {}, "window.dataLayer = window.dataLayer || [];\nfunction gtag(){dataLayer.push(arguments);}\ngtag('js', new Date());\ngtag('config', 'G-FZRRSBE9M0');"],
     ],
     ignoreDeadLinks: true,
+    markdown: {
+        // Wrap all code blocks in v-pre to prevent Vue from interpreting {{ }} as expressions
+        config: (md) => {
+            const defaultFence = md.renderer.rules.fence!;
+            md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+                return `<div v-pre>${defaultFence(tokens, idx, options, env, self)}</div>`;
+            };
+        }
+    },
     themeConfig: {
         search: {
             provider: 'local'

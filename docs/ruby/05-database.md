@@ -16,7 +16,7 @@ Tina4 speaks to five database engines: SQLite, PostgreSQL, MySQL, Microsoft SQL 
 
 When you scaffold with `tina4 init`, Tina4 creates a SQLite database at `data/app.db`. The default `.env` contains:
 
-```dotenv
+```env
 TINA4_DEBUG=true
 ```
 
@@ -26,7 +26,7 @@ No explicit `DATABASE_URL`? Tina4 defaults to `sqlite:///data/app.db`. The healt
 
 Set `DATABASE_URL` in `.env` to use a different engine:
 
-```dotenv
+```env
 # SQLite (explicit)
 DATABASE_URL=sqlite:///data/app.db
 
@@ -47,7 +47,7 @@ DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
 
 If you prefer to keep credentials out of the connection string (recommended for production), use separate environment variables:
 
-```dotenv
+```env
 DATABASE_URL=postgres://localhost:5432/myapp
 DATABASE_USERNAME=myuser
 DATABASE_PASSWORD=secretpassword
@@ -707,7 +707,7 @@ The batch system is what makes rollback work: `migrate:rollback` undoes all migr
 
 For read-heavy applications, enable query caching:
 
-```dotenv
+```env
 TINA4_DB_CACHE=true
 ```
 

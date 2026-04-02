@@ -91,7 +91,7 @@ The `-c cookies.txt` flag tells curl to save cookies to a file, and `-b cookies.
 
 For production deployments with multiple servers (behind a load balancer), you need a shared session store. Redis is the most common choice.
 
-```dotenv
+```env
 TINA4_SESSION_BACKEND=redis
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -104,7 +104,7 @@ That is the only change. Your code stays exactly the same. `request.session` wor
 
 ## 6. MongoDB Sessions
 
-```dotenv
+```env
 TINA4_SESSION_BACKEND=mongodb
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=27017
@@ -116,7 +116,7 @@ TINA4_SESSION_COLLECTION=sessions
 
 ## 7. Valkey Sessions
 
-```dotenv
+```env
 TINA4_SESSION_BACKEND=valkey
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -126,7 +126,7 @@ TINA4_SESSION_PORT=6379
 
 ## 8. Database Sessions
 
-```dotenv
+```env
 TINA4_SESSION_BACKEND=database
 ```
 
@@ -379,7 +379,7 @@ end
 
 ### Configuration Options
 
-```dotenv
+```env
 TINA4_SESSION_TTL=3600
 TINA4_SESSION_SAMESITE=Lax
 ```

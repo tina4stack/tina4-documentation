@@ -1160,7 +1160,7 @@ src/public/css/custom.css  → /css/custom.css
 
 Tina4 is the API backend. Point your frontend build tool's output to `src/public/`:
 
-```dotenv
+```env
 # Vue
 VITE_OUTPUT_DIR=../my-tina4-project/src/public
 
@@ -1170,7 +1170,7 @@ BUILD_PATH=../my-tina4-project/src/public
 
 Or use CORS to run them on separate ports during development:
 
-```dotenv
+```env
 CORS_ORIGINS=http://localhost:3000,http://localhost:5173
 ```
 
@@ -1344,3 +1344,29 @@ Router.get("/admin/products", async (req, res) => {
 ### 12. React Router Conflicts
 
 **Fix:** Add a catch-all route that serves `index.html` for client-side routing.
+
+---
+
+## 18. HtmlElement — Programmatic HTML Builder
+
+Build HTML in TypeScript without string concatenation:
+
+```typescript
+import { HtmlElement, htmlElement, addHtmlHelpers } from "@tina4/core";
+
+const el = new HtmlElement("div", { class: "card" }, ["Hello"]);
+el.toString(); // '<div class="card">Hello</div>'
+
+// Nesting
+const card = new HtmlElement("div", { class: "card" }, [
+    new HtmlElement("h2", {}, ["Title"]),
+    new HtmlElement("p", {}, ["Content"]),
+]);
+
+// Helper functions
+const h: Record<string, any> = {};
+addHtmlHelpers(h);
+const html = h._div({ class: "card" }, h._p("Hello"), h._a({ href: "/" }, "Home"));
+```
+
+Void tags (`<br>`, `<img>`, `<input>`) render without closing tags. Boolean attributes render as bare names.
