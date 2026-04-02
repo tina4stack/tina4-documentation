@@ -1017,3 +1017,36 @@ for post in all_posts:
 **Cause:** `find()` respects soft delete. If the record appears, check that `soft_delete = True` is set on the model class and that the model has a `deleted_at` field.
 
 **Fix:** Verify both the `soft_delete = True` flag and the `deleted_at = DateTimeField()` field exist on the model. Without both, soft delete is inactive.
+
+---
+
+## QueryBuilder Integration
+
+ORM models provide a `query()` class method that returns a `QueryBuilder` pre-configured with the model's table name and database connection. This gives you a fluent API for building complex queries without writing raw SQL:
+
+```python
+# Fluent query builder from ORM
+results = User.query() \
+    .select("id", "name", "email") \
+    .where("active = ?", [True]) \
+    .order_by("name") \
+    .limit(50) \
+    .get()
+
+# First matching record
+user = User.query() \
+    .where("email = ?", ["alice@example.com"]) \
+    .first()
+
+# Count
+total = User.query() \
+    .where("role = ?", ["admin"]) \
+    .count()
+
+# Check existence
+exists = User.query() \
+    .where("email = ?", ["test@example.com"]) \
+    .exists()
+```
+
+See the [QueryBuilder chapter](12-query-builder.md) for the full fluent API including joins, grouping, having, and MongoDB support.

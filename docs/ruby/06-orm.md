@@ -1044,3 +1044,36 @@ end
 **Cause:** `select` returns an array of model objects, not hashes. Each item is an instance of your model class.
 
 **Fix:** Access properties with dot syntax: `result.name`. Or convert to a hash with `result.to_h`.
+
+---
+
+## QueryBuilder Integration
+
+ORM models provide a `query` method that returns a `QueryBuilder` pre-configured with the model's table name and database connection:
+
+```ruby
+# Fluent query builder from ORM
+results = User.query
+  .select("id", "name", "email")
+  .where("active = ?", [true])
+  .order_by("name")
+  .limit(50)
+  .get
+
+# First matching record
+user = User.query
+  .where("email = ?", ["alice@example.com"])
+  .first
+
+# Count
+total = User.query
+  .where("role = ?", ["admin"])
+  .count
+
+# Check existence
+exists = User.query
+  .where("email = ?", ["test@example.com"])
+  .exists?
+```
+
+See the [QueryBuilder chapter](12-query-builder.md) for the full fluent API including joins, grouping, having, and MongoDB support.

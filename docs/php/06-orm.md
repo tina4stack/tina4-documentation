@@ -1223,3 +1223,36 @@ Router::post("/api/blog/posts/{id:int}/comments", function ($request, $response)
 **Cause:** `select()` returns model objects, not associative arrays.
 
 **Fix:** Use object syntax: `$result->name`. Or convert: `$result->toArray()`.
+
+---
+
+## QueryBuilder Integration
+
+ORM models provide a static `query()` method that returns a `QueryBuilder` pre-configured with the model's table name and database connection:
+
+```php
+// Fluent query builder from ORM
+$results = User::query()
+    ->select('id', 'name', 'email')
+    ->where('active = ?', [true])
+    ->orderBy('name')
+    ->limit(50)
+    ->get();
+
+// First matching record
+$user = User::query()
+    ->where('email = ?', ['alice@example.com'])
+    ->first();
+
+// Count
+$total = User::query()
+    ->where('role = ?', ['admin'])
+    ->count();
+
+// Check existence
+$exists = User::query()
+    ->where('email = ?', ['test@example.com'])
+    ->exists();
+```
+
+See the [QueryBuilder chapter](12-query-builder.md) for the full fluent API including joins, grouping, having, and MongoDB support.
