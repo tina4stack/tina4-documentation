@@ -6,6 +6,15 @@ This chapter covers every v3 release from the initial launch through the current
 
 ---
 
+## v3.10.54 (2026-04-02)
+- **Auto AI dev port** — second WEBrick on port+1 with no-reload when TINA4_DEBUG=true
+- **TINA4_NO_RELOAD** env var + --no-reload CLI flag
+- **CORS fix** — returns empty string when origin not allowed (not *)
+- **ORM DATABASE_URL discovery** — auto-connect from env
+- **QueryBuilder docs** — added to ORM chapter
+
+---
+
 ## v3.10.48 — April 2, 2026
 
 ### Bug Fixes

@@ -6,6 +6,16 @@ This chapter covers every release from v3.0.0 through v3.10.x. Each section grou
 
 ---
 
+## v3.10.54 (2026-04-02)
+- **Auto AI dev port** — second HTTP server on port+1 with no-reload when TINA4_DEBUG=true
+- **TINA4_NO_RELOAD** env var + --no-reload CLI flag
+- **SQLite transaction safety** — commit/rollback/startTransaction guarded
+- **autoMap uppercase columns** — snakeToCamel lowercases first
+- **ORM DATABASE_URL discovery** — auto-connect from env for SQLite
+- **QueryBuilder docs** — added to ORM chapter
+
+---
+
 ## v3.10.48 — April 2, 2026
 
 ### Bug Fixes

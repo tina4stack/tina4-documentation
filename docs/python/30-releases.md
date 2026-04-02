@@ -22,6 +22,16 @@ print(tina4_python.__version__)
 
 ---
 
+## v3.10.54 (2026-04-02)
+- **Auto AI dev port** — second listener on port+1 with no-reload when TINA4_DEBUG=true
+- **TINA4_NO_RELOAD** env var + --no-reload CLI flag
+- **Firebird path parsing** — preserve absolute paths
+- **ORM DATABASE_URL discovery** — auto-connect from env
+- **SQLite transaction safety** — commit() no-op without transaction
+- **QueryBuilder docs** — added to ORM chapter
+
+---
+
 ## v3.10.48 — April 2, 2026
 
 ### Bug Fixes

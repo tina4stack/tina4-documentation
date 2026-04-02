@@ -8,6 +8,19 @@ This chapter covers the full v3 line -- from the first release candidate through
 
 ---
 
+## v3.10.54 (2026-04-02)
+- **Auto AI dev port** — second socket on port+1 with no-reload when TINA4_DEBUG=true
+- **TINA4_NO_RELOAD** env var + --no-reload CLI flag
+- **#101** FirebirdAdapter path parsing preserves absolute paths
+- **#102** ORM snakeToCamel handles uppercase columns (Firebird/Oracle)
+- **#104** ORM ensureDb() auto-discovers DATABASE_URL
+- **#105** CorsMiddleware matches request origin correctly
+- **SQLite commit()** no-op without transaction
+- **Gallery fixes** — SQLite paths, auth bypass
+- **QueryBuilder docs** — added to ORM chapter
+
+---
+
 ## v3.10.48 — April 2, 2026
 
 ### Bug Fixes
