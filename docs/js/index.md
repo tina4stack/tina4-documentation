@@ -31,7 +31,7 @@
 ### Installation {#installation}
 
 ```bash
-npx tina4 create my-app
+npx tina4js create my-app
 cd my-app
 npm install
 npm run dev
@@ -163,7 +163,7 @@ pwa.register({
 
 #### With tina4-php
 ```bash
-npx tina4 build --target php
+npx tina4js build --target php
 # Outputs JS to src/public/js/
 # Generates src/templates/index.twig
 ```
@@ -174,7 +174,7 @@ TINA4_APP_INDEX=../templates/index.twig
 
 #### With tina4-python
 ```bash
-npx tina4 build --target python
+npx tina4js build --target python
 # Outputs JS to src/public/js/
 # Generates src/templates/index.twig + src/routes/spa.py
 ```

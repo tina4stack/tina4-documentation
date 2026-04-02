@@ -92,7 +92,7 @@ Take a deeper dive into the [documentation](/ruby/index.md)
 The frontend framework runs separately from the backend. Scaffold it with npx:
 
 ```bash
-npx tina4 create my-app
+npx tina4js create my-app
 cd my-app
 npm install
 npm run dev

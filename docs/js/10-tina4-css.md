@@ -29,7 +29,7 @@ The library is designed to look good with zero configuration. No theme files. No
 ### With the CLI
 
 ```bash
-npx tina4 create my-app --css
+npx tina4js create my-app --css
 ```
 
 This adds `tina4-css` to `package.json` and includes the stylesheet link in `index.html`. One flag. Done.

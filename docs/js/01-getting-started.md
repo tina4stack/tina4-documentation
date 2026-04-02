@@ -58,7 +58,7 @@ npm --version
 One command. One line. The scaffolding does the rest:
 
 ```bash
-npx tina4 create my-app
+npx tina4js create my-app
 ```
 
 This scaffolds a complete project with TypeScript, Vite, routing, and a sample page.
@@ -66,7 +66,7 @@ This scaffolds a complete project with TypeScript, Vite, routing, and a sample p
 Want the optional CSS framework included? Add the `--css` flag:
 
 ```bash
-npx tina4 create my-app --css
+npx tina4js create my-app --css
 ```
 
 This adds `tina4-css` to your dependencies -- a utility CSS library with reset, grid, buttons, forms, tables, cards, and dark mode built in. More on this in Chapter 10.
@@ -74,13 +74,13 @@ This adds `tina4-css` to your dependencies -- a utility CSS library with reset, 
 Want PWA support from the start? Add `--pwa`:
 
 ```bash
-npx tina4 create my-app --pwa
+npx tina4js create my-app --pwa
 ```
 
 You can combine them:
 
 ```bash
-npx tina4 create my-app --css --pwa
+npx tina4js create my-app --css --pwa
 ```
 
 Now install and run:
@@ -317,9 +317,9 @@ The rest of this book goes deep on each of these. But you already have a working
 
 | What | How |
 |---|---|
-| Create project | `npx tina4 create my-app` |
-| With CSS framework | `npx tina4 create my-app --css` |
-| With PWA | `npx tina4 create my-app --pwa` |
+| Create project | `npx tina4js create my-app` |
+| With CSS framework | `npx tina4js create my-app --css` |
+| With PWA | `npx tina4js create my-app --pwa` |
 | Dev server | `npm run dev` |
 | Production build | `npm run build` |
 | Reactive state | `signal(initialValue)` |

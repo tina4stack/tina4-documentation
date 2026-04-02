@@ -11,7 +11,7 @@ This chapter builds that dashboard from scratch. It uses every tina4-js module: 
 ## 1. Project Setup
 
 ```bash
-npx tina4 create admin-dashboard --css
+npx tina4js create admin-dashboard --css
 cd admin-dashboard
 npm install
 ```
