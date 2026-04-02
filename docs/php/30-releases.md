@@ -8,6 +8,14 @@ This chapter covers the full v3 line -- from the first release candidate through
 
 ---
 
+## v3.10.48 — April 2, 2026
+
+### Bug Fixes
+
+**FrankenPHP requires `--production` flag** — FrankenPHP no longer auto-detected when debug is off. Use `tina4php serve --production` to enable it. Gallery tests (19) and live reload tests (36) added. Fixed `DotEnv::load()` → `DotEnv::loadEnv()` in Server.php.
+
+---
+
 ## v3.10.46 — April 1, 2026
 
 ### Test Coverage

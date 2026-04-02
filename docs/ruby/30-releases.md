@@ -6,6 +6,14 @@ This chapter covers every v3 release from the initial launch through the current
 
 ---
 
+## v3.10.48 — April 2, 2026
+
+### Bug Fixes
+
+**Puma requires `--production` flag** — Puma no longer auto-selected when `TINA4_DEBUG=false`. Use `tina4ruby serve --production` to enable Puma. Added FakeData (46), Gallery (16), and DevReload (37) tests.
+
+---
+
 ## v3.10.46 — April 1, 2026
 
 ### Test Coverage

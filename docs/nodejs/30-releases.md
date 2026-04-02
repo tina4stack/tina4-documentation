@@ -6,6 +6,14 @@ This chapter covers every release from v3.0.0 through v3.10.x. Each section grou
 
 ---
 
+## v3.10.48 — April 2, 2026
+
+### Bug Fixes
+
+**Cluster mode requires `TINA4_PRODUCTION=true`** — Worker forking no longer auto-triggers when debug is off. Set `TINA4_PRODUCTION=true` env var or use `tina4 serve --production` to enable cluster mode.
+
+---
+
 ## v3.10.46 — April 1, 2026
 
 ### Test Coverage

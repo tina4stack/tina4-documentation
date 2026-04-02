@@ -22,6 +22,20 @@ print(tina4_python.__version__)
 
 ---
 
+## v3.10.48 — April 2, 2026
+
+### Bug Fixes
+
+**Production server explicit opt-in** — All frameworks now require an explicit `--production` flag to use production servers (Puma for Ruby, FrankenPHP for PHP, cluster mode for Node.js). Previously, production servers activated automatically when `TINA4_DEBUG=false`, which was surprising behaviour. Now `tina4 serve` always uses the dev server unless `--production` is passed.
+
+**Python `--no-browser`** — The `run()` function now accepts `no_browser=True` and respects the `TINA4_NO_BROWSER` env var to prevent browser auto-opening on server start.
+
+### Test Coverage
+
+Python: 2,132. PHP: 1,992. Ruby: 2,387. Node.js: 2,546. Total: 9,057 tests, 0 failures.
+
+---
+
 ## v3.10.46 — April 1, 2026
 
 ### Test Coverage
