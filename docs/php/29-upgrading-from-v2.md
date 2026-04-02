@@ -16,6 +16,24 @@ This chapter walks through every breaking change and gives you a step-by-step mi
 
 ---
 
+## Step 0: Run the Automated Upgrade Command
+
+Before doing anything manually, run the automated upgrade tool:
+
+```bash
+cd your-v2-project
+tina4 i-want-to-stop-using-v2-and-switch-to-v3
+```
+
+This command automatically:
+- Moves `routes/`, `orm/`, `templates/`, `scss/`, `public/`, `app/`, `locales/`, `seeds/` into `src/`
+- Updates your `composer.json` dependency from v2 to v3
+- Removes split packages (`tina4php-core`, `tina4php-database`, `tina4php-orm`)
+
+After running the command, continue with the steps below for the changes that require manual attention.
+
+---
+
 ## 2. Package and Installation
 
 ### v2
@@ -442,6 +460,43 @@ Features that did not exist in v2. Each is covered in its own chapter:
 - **Auto-mapping in ORM** -- `$autoMap = true` eliminates manual field mappings (Chapter 6).
 - **Rate limiting** -- Per-IP rate limiting via env vars (Chapter 10).
 - **CSRF protection** -- Built-in, enabled by default (Chapter 10).
+
+---
+
+## Common Pitfalls
+
+### 1. POST/PUT/DELETE routes now require authentication
+
+This is the most common upgrade issue. In v2, all routes were public by default. In v3, only GET routes are public -- POST, PUT, PATCH, and DELETE require a Bearer JWT token.
+
+**Symptom:** Working v2 endpoints return `401 Unauthorized` after upgrading.
+
+**Fix:** Add `#[NoAuth]` or `->noAuth()` to any write route that should remain public.
+
+**Find affected routes:**
+
+```bash
+grep -rn "Router::post\|Router::put\|Router::patch\|Router::delete" src/routes/
+```
+
+Review each match -- if the endpoint should be public (webhooks, public forms, etc.), add the `#[NoAuth]` attribute.
+
+### 2. Database connection strings changed
+
+v2 used driver-specific classes. v3 uses URL format:
+
+```php
+// v2
+$db = new \Tina4\DataSQLite3("data/app.db");
+// v3
+$db = Database::create("sqlite:///data/app.db");
+```
+
+### 3. Template engine renamed
+
+v2: `Template.render()` -- v3: `Frond.render()` (or `$response->render()`)
+
+The Twig syntax is the same -- your `.twig` files work unchanged. Only the PHP API call changes.
 
 ---
 

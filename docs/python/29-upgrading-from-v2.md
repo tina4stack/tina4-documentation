@@ -10,6 +10,23 @@ This chapter covers every breaking change and the migration path for each one. R
 
 ---
 
+## Step 0: Run the Automated Upgrade Command
+
+Before doing anything manually, run the automated upgrade tool:
+
+```bash
+cd your-v2-project
+tina4 i-want-to-stop-using-v2-and-switch-to-v3
+```
+
+This command automatically:
+- Moves `routes/`, `orm/`, `templates/`, `scss/`, `public/`, `app/`, `locales/`, `seeds/` into `src/`
+- Updates your `pyproject.toml` dependency from v2 to v3
+
+After running the command, continue with the steps below for the changes that require manual attention.
+
+---
+
 ## 2. Package and Installation
 
 v2 installed with pip and pulled in external dependencies:
@@ -526,6 +543,43 @@ v3 adds capabilities that did not exist in v2. Each has its own chapter:
 - **SCSS auto-compilation** -- `.scss` files compiled to CSS on change
 
 You do not need to adopt all of these at once. They are opt-in. Migrate your existing code first, then add new features as you need them.
+
+---
+
+## Common Pitfalls
+
+### 1. POST/PUT/DELETE routes now require authentication
+
+This is the most common upgrade issue. In v2, all routes were public by default. In v3, only GET routes are public -- POST, PUT, PATCH, and DELETE require a Bearer JWT token.
+
+**Symptom:** Working v2 endpoints return `401 Unauthorized` after upgrading.
+
+**Fix:** Add `@noauth` to any write route that should remain public.
+
+**Find affected routes:**
+
+```bash
+grep -rn "@post\|@put\|@patch\|@delete" src/routes/
+```
+
+Review each match -- if the endpoint should be public (webhooks, public forms, etc.), add the `@noauth()` decorator.
+
+### 2. Database connection strings changed
+
+v2 used driver-specific classes. v3 uses URL format:
+
+```python
+# v2
+db = DatabaseSqlite3("data/app.db")
+# v3
+db = Database("sqlite:///data/app.db")
+```
+
+### 3. Template engine renamed
+
+v2: `Template.render()` -- v3: `Frond.render()` (or `response.render()`)
+
+The Twig syntax is the same -- your `.twig` files work unchanged. Only the Python API call changes.
 
 ---
 
