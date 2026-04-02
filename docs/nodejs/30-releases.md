@@ -6,6 +6,19 @@ This chapter covers every release from v3.0.0 through v3.10.x. Each section grou
 
 ---
 
+## v3.10.57 (2026-04-02)
+- **MongoDB adapter** — `initDatabase({ url: "mongodb://host:port/db" })`, requires `npm install mongodb`
+- **ODBC adapter** — `initDatabase({ url: "odbc:///DSN=MyDSN" })`, requires `npm install odbc`
+- **Pagination standardized** — limit/offset primary, merged dual-key toPaginate() response
+- **Test port at +1000** — user testing port (e.g. 8148) stable, no hot-reload
+- **Dynamic version** — read from package.json, no hardcoded constant
+- **Metrics dependency lines** — fixed basename parsing
+- **autoMap uppercase columns** — snakeToCamel lowercases first
+- **ORM DATABASE_URL discovery** — auto-connect from env for SQLite
+- **108 features at 100% parity**, 2,646 tests
+
+---
+
 ## v3.10.54 (2026-04-02)
 - **Auto AI dev port** — second HTTP server on port+1 with no-reload when TINA4_DEBUG=true
 - **TINA4_NO_RELOAD** env var + --no-reload CLI flag

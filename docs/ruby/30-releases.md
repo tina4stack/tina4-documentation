@@ -6,6 +6,18 @@ This chapter covers every v3 release from the initial launch through the current
 
 ---
 
+## v3.10.57 (2026-04-02)
+- **MongoDB adapter** — `Database.new("mongodb://host:port/db")`, requires `gem install mongo`
+- **ODBC adapter** — `Database.new("odbc:///DSN=MyDSN")`, requires `gem install ruby-odbc`
+- **Imperative relationships** — `query_has_one`/`query_has_many`/`query_belongs_to`
+- **Pagination standardized** — limit/offset primary, merged dual-key to_paginate response
+- **Test port at +1000** — user testing port (e.g. 8147) stable, no hot-reload
+- **CORS fix** — returns empty string when origin not allowed
+- **ORM DATABASE_URL discovery** — auto-connect from env
+- **108 features at 100% parity**, 2,333 tests
+
+---
+
 ## v3.10.54 (2026-04-02)
 - **Auto AI dev port** — second WEBrick on port+1 with no-reload when TINA4_DEBUG=true
 - **TINA4_NO_RELOAD** env var + --no-reload CLI flag

@@ -22,6 +22,19 @@ print(tina4_python.__version__)
 
 ---
 
+## v3.10.57 (2026-04-02)
+- **MongoDB adapter** — `Database("mongodb://host:port/db")`, requires `pip install pymongo`
+- **ODBC adapter** — parity with PHP/Ruby/Node
+- **RouteGroup class** — `group.get()`/`group.post()` syntax matching PHP/Ruby/Node
+- **Pagination standardized** — limit/offset primary, merged dual-key toPaginate() response
+- **Test port at +1000** — user testing port (e.g. 8145) stable, no hot-reload
+- **Dynamic version** — `__version__` read at runtime, no hardcoded constants
+- **ORM DATABASE_URL discovery** — auto-connect from env
+- **Firebird path parsing** — preserves absolute paths
+- **108 features at 100% parity**, 2,112 tests
+
+---
+
 ## v3.10.54 (2026-04-02)
 - **Auto AI dev port** — second listener on port+1 with no-reload when TINA4_DEBUG=true
 - **TINA4_NO_RELOAD** env var + --no-reload CLI flag

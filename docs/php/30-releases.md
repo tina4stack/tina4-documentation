@@ -8,6 +8,22 @@ This chapter covers the full v3 line -- from the first release candidate through
 
 ---
 
+## v3.10.57 (2026-04-02)
+- **MongoDB adapter** — `Database("mongodb://host:port/db")`, requires ext-mongodb
+- **ODBC adapter** — `Database("odbc:///DSN=MyDSN")` via pdo_odbc
+- **Pagination standardized** — limit/offset primary, merged dual-key toPaginate() response
+- **Test port at +1000** — user testing port (e.g. 8146) stable, no hot-reload
+- **Dynamic version** — read from composer metadata, no hardcoded constant
+- **Packagist v2 API** — version checker uses repo.packagist.org/p2/
+- **#101** FirebirdAdapter path parsing preserves absolute paths
+- **#102** ORM snakeToCamel handles uppercase columns
+- **#104** ORM ensureDb() auto-discovers DATABASE_URL
+- **#105** CorsMiddleware matches request origin correctly
+- **#114** @noauth docblock annotations now affect dispatch
+- **108 features at 100% parity**, 2,220 tests
+
+---
+
 ## v3.10.54 (2026-04-02)
 - **Auto AI dev port** — second socket on port+1 with no-reload when TINA4_DEBUG=true
 - **TINA4_NO_RELOAD** env var + --no-reload CLI flag
