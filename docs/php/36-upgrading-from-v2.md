@@ -1,5 +1,8 @@
 # Chapter 26: Upgrading from v2 to v3
 
+<div v-pre>
+
+
 ## 1. Overview
 
 Tina4 v3 is a ground-up rewrite. Zero Composer dependencies. The built-in HTTP server, template engine, ORM, and database drivers are all native PHP. No Guzzle, no Twig, no Doctrine -- nothing external.
@@ -531,3 +534,5 @@ Follow these steps in order. Check each one off as you go.
 15. **Remove leftover v2 files.** Delete the old `routes/`, `orm/`, and `templates/` directories at the project root (now that everything is under `src/`). Clean up any v2-specific config files.
 
 The migration is mechanical. Most of it is find-and-replace. The auth defaults are the one change that can silently break things -- step 7 is the most important step on this list.
+
+</div>

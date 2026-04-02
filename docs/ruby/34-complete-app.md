@@ -1,5 +1,8 @@
 # Chapter 21: Building a Complete App
 
+<div v-pre>
+
+
 ## 1. Putting It All Together
 
 Twenty chapters of building blocks. Routing. Templates. Databases. ORM. Authentication. Middleware. Queues. WebSocket. Caching. Frontend. GraphQL. Testing. Dev tools. CLI scaffolding. Deployment. Now all of it works together in one application.
@@ -1119,3 +1122,5 @@ No separate ORM gem. No template engine gem. No authentication library. No WebSo
 The same patterns work in PHP, Python, and Node.js. Same project structure. Same CLI commands. Same `.env` variables. Same template syntax. Learn Tina4 once. Use it everywhere.
 
 Build things. Ship them. Keep it simple.
+
+</div>

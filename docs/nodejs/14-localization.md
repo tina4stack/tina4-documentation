@@ -1,5 +1,8 @@
 # Chapter 14: Localization
 
+<div v-pre>
+
+
 ## 1. Your App Speaks One Language. Your Users Speak Many.
 
 An e-commerce store. Half your traffic is German. Error messages in English. Product descriptions in English. Currency formatted American-style. Visitors leave.
@@ -389,3 +392,5 @@ If multiple concurrent requests call `i18n.setLocale()` on the same instance, th
 `{{Name}}` and `{{name}}` are different placeholders. A mismatch silently leaves the placeholder unreplaced.
 
 **Fix:** Use consistent lowercase placeholder names in all locale files.
+
+</div>

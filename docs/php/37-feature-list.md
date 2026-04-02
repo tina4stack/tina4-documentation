@@ -1,5 +1,8 @@
 # Chapter 37: Complete Feature List
 
+<div v-pre>
+
+
 Tina4 PHP ships 44 production-ready features across every layer of a web application. This chapter lists all of them, grouped by category, with a brief description and a PHP snippet for each.
 
 ---
@@ -600,7 +603,8 @@ use Tina4\Service;
 class HeartbeatWorker extends Service {
     public function run(): void {
         while (true) {
-            echo "heartbeat\n";
+            echo "heartbeat
+";
             sleep(60);
         }
     }
@@ -664,3 +668,5 @@ $runner->start();
 | 44 | Service Runner | Infrastructure |
 
 All 44 features are at 100% parity across Tina4 PHP, Python, Ruby, and Node.js.
+
+</div>

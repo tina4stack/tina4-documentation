@@ -1,5 +1,8 @@
 # Chapter 1: Getting Started with Tina4 Python
 
+<div v-pre>
+
+
 ## 1. What Is Tina4 Python
 
 Tina4 Python is a zero-dependency web framework for Python 3.12+. One package. Under 5,000 lines of code. Routing, ORM, template engine, authentication, queues, WebSocket, and 70 other features -- all built in.
@@ -56,14 +59,21 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 
 3. **The Tina4 CLI** -- a Rust-based binary that manages all four Tina4 frameworks:
 
+**macOS (Homebrew):**
+
 ```bash
-# macOS (Homebrew)
 brew install tina4stack/tap/tina4
+```
 
-# Linux / macOS (install script)
+**Linux / macOS (install script):**
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/tina4stack/tina4/main/install.sh | bash
+```
 
-# Windows (PowerShell)
+**Windows (PowerShell):**
+
+```powershell
 irm https://raw.githubusercontent.com/tina4stack/tina4/main/install.ps1 | iex
 ```
 
@@ -1119,3 +1129,5 @@ The CLI will also auto-increment the port if it detects the default port is in u
 **Cause:** The `.env` file must be at the project root (same directory as `pyproject.toml`). A subdirectory placement hides it from Tina4.
 
 **Fix:** Move `.env` to the project root.
+
+</div>

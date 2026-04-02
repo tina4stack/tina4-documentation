@@ -1,5 +1,8 @@
 # Chapter 4: Templates
 
+<div v-pre>
+
+
 ## 1. Why Templates
 
 In Chapter 1, you saw `res.html("products.html", data)` produce a full HTML page. That rendering was done by **Frond**, Tina4's built-in template engine. Zero dependencies. Twig-compatible. Built from scratch. If you know Twig, Jinja2, or Nunjucks, you know 90% of Frond.
@@ -892,3 +895,5 @@ Router.get("/catalog", async (req, res) => {
 **Cause:** Frond filters follow Twig conventions, not JavaScript conventions.
 
 **Fix:** Use `{{ items | length }}` instead of `count`. Use `{{ name | upper }}` instead of `toUpperCase`.
+
+</div>

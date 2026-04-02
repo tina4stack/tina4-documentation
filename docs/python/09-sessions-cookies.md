@@ -1,5 +1,8 @@
 # Chapter 9: Sessions and Cookies
 
+<div v-pre>
+
+
 ## 1. Remembering Your Users
 
 JWT tokens handle APIs. Traditional web applications need more. A shopping cart that persists across pages. A flash message that appears once after a redirect. A "remember me" checkbox on the login form. These features run on sessions and cookies -- server-side state tied to a browser.
@@ -706,3 +709,5 @@ async def clear_cart(request, response):
 **Cause:** You read the flash message but did not remove it. Using `request.session.get()` reads without deleting.
 
 **Fix:** Use `request.session.flash("message")` to read flash data. It reads and deletes in one step. Do not use `request.session.get()` for flash messages.
+
+</div>

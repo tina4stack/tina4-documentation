@@ -1,5 +1,8 @@
 # Chapter 26: Upgrading from v2 to v3
 
+<div v-pre>
+
+
 ## 1. Overview
 
 Tina4 v3 is a ground-up rewrite. Zero external dependencies. Pure Python stdlib. The framework does more with less.
@@ -643,3 +646,5 @@ Follow this order. Each step builds on the previous one.
 ---
 
 That covers the migration. Most projects take under an hour. The biggest time sink is updating import paths and decorators -- a find-and-replace handles the bulk of it. Once you are running on v3, you get zero dependencies, faster startup, and access to every new feature listed in section 11.
+
+</div>

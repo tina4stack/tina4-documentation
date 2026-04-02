@@ -1,5 +1,8 @@
 # Chapter 4: Templates
 
+<div v-pre>
+
+
 ## 1. Beyond JSON -- Rendering HTML
 
 Every route so far returns JSON. That works for APIs. Web applications need HTML -- product listings, dashboards, login forms, email templates. Tina4 uses the **Frond** template engine for this work.
@@ -994,3 +997,5 @@ end
 **Cause:** Frond filters follow Twig conventions, not Ruby conventions.
 
 **Fix:** Use `{{ items | length }}` not `count`. Use `{{ name | upper }}` not `upcase`. Use `{{ text | lower }}` not `downcase`. See the filter table in section 7.
+
+</div>

@@ -1,5 +1,8 @@
 # Chapter 12: Real-time with WebSocket
 
+<div v-pre>
+
+
 ## 1. The Refresh Button Problem
 
 Your project management app needs live updates. Someone moves a card from "In Progress" to "Done." Everyone else on the team should see it. No page refresh. No polling. No waiting.
@@ -1057,3 +1060,5 @@ If `TINA4_WS_BACKPLANE` is not set (the default), Tina4 broadcasts only to local
 **Cause:** You used Express-style `:param` colon syntax instead of Tina4's `{param}` curly-brace syntax.
 
 **Fix:** WebSocket path parameters follow the same `{param}` syntax as HTTP routes. Write `/ws/chat/{room}`, not `/ws/chat/:room`. Both `connection.params.room` and `connection.params["room"]` work.
+
+</div>

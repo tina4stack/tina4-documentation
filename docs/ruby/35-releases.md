@@ -1,5 +1,8 @@
 # Chapter 30: Release Notes
 
+<div v-pre>
+
+
 Tina4 Ruby follows semantic versioning. The major version (3) marks the ground-up rewrite from v2. Minor versions (3.1, 3.2, etc.) introduce features and non-breaking API additions. Patch versions carry bug fixes and small improvements.
 
 This chapter covers every v3 release from the initial launch through the current stable line. Each section groups releases by minor version, highlights the changes that affect your code, and shows migration steps for anything that breaks.
@@ -214,11 +217,11 @@ Three new Frond template filters for working with data in JavaScript contexts.
 
 ```twig
 {# Before (broken) — backslash produced corrupted output #}
-{{ "hello\\world"|replace("\\\\", "/") }}
+{{ "hello\world"|replace("\\", "/") }}
 {# rendered: helo/world (ate a character) #}
 
 {# After (fixed) — backslash escaping works correctly #}
-{{ "hello\\world"|replace("\\\\", "/") }}
+{{ "hello\world"|replace("\\", "/") }}
 {# renders: hello/world #}
 ```
 
@@ -690,3 +693,5 @@ The server starts on port 7147 by default. Set `host: "0.0.0.0"` for Docker depl
 **Released:** March 18, 2026
 
 Versions v0.4.0 through v0.5.2 were development previews. They established the gem structure and basic routing but lacked the ORM, template engine, and queue system. If you used a v0.x release, upgrade directly to v3.0.0 -- there is no migration path from v0.x.
+
+</div>

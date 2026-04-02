@@ -1,5 +1,8 @@
 # Chapter 37: Complete Feature List
 
+<div v-pre>
+
+
 This chapter catalogs all 44 features in Tina4 for Node.js, grouped by category. Use it as a reference when starting a project or auditing what you need.
 
 ---
@@ -322,3 +325,5 @@ import { WSDL, wsdl_operation } from "tina4-nodejs";
 // API Client
 import { api } from "@tina4/core";
 ```
+
+</div>

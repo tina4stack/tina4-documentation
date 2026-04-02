@@ -1,5 +1,8 @@
 # Chapter 21: Building a Complete App
 
+<div v-pre>
+
+
 ## 1. Putting It All Together
 
 Twenty chapters of building blocks. Routing. Templates. Databases. ORM. Authentication. Middleware. Queues. WebSocket. Caching. Frontend. GraphQL. Testing. Dev tools. CLI scaffolding. Deployment. Now all of it works together in one application.
@@ -726,11 +729,18 @@ async def notify_assignee(task):
         to=assignee.email,
         subject=f"Task assigned: {task.title}",
         body=html_body,
-        text_body=f"Hi {assignee.name},\n\n"
-                  f"{creator.name} assigned you a task: {task.title}\n"
-                  f"Priority: {task.priority}\n"
-                  f"Due: {task.due_date or 'No due date'}\n\n"
-                  f"Description:\n{task.description or 'No description'}"
+        text_body=f"Hi {assignee.name},
+
+"
+                  f"{creator.name} assigned you a task: {task.title}
+"
+                  f"Priority: {task.priority}
+"
+                  f"Due: {task.due_date or 'No due date'}
+
+"
+                  f"Description:
+{task.description or 'No description'}"
     )
 ```
 
@@ -1211,3 +1221,5 @@ No separate ORM package. No template engine package. No authentication library. 
 The same patterns work in PHP, Ruby, and Node.js. Same project structure. Same CLI commands. Same `.env` variables. Same template syntax. Learn Tina4 once. Use it everywhere.
 
 Build things. Ship them. Keep it simple.
+
+</div>

@@ -1,5 +1,8 @@
 # Chapter 14: Localization
 
+<div v-pre>
+
+
 ## 1. One App, Many Languages
 
 Your application is live. A customer in Berlin arrives and sees English. A customer in Tokyo sees English. A customer in São Paulo sees English.
@@ -481,3 +484,5 @@ async def create_user(request, response):
 **Problem:** You updated a locale file but the app still serves the old translation.
 
 **Fix:** The `I18n` class caches locale files in memory. Restart the dev server or set a shorter cache duration during development. In production this is the correct behaviour.
+
+</div>

@@ -1,5 +1,8 @@
 # Chapter 7: Authentication
 
+<div v-pre>
+
+
 ## 1. Locking the Door
 
 Every endpoint you have built so far is public. Anyone with the URL can read, create, update, and delete data. Fine for a tutorial. Unacceptable in production.
@@ -1000,3 +1003,5 @@ Router.put("/api/profile/password", async (req, res) => {
 **Cause:** Query parameters are visible in many places where headers are not.
 
 **Fix:** Always send tokens in the `Authorization` header, never in the URL. The only exception is WebSocket connections, where the initial HTTP upgrade request cannot carry custom headers -- use a short-lived token for that case.
+
+</div>

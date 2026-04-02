@@ -1,5 +1,8 @@
 # Chapter 13: Email with Messenger
 
+<div v-pre>
+
+
 ## 1. Every App Sends Email
 
 Signup confirmations. Password resets. Weekly digests. Invoices with PDF attachments. Every application needs email. Nobody enjoys building it.
@@ -106,7 +109,10 @@ Tina4::Router.post("/api/contact") do |request, response|
   result = mail.send(
     to: body["email"],
     subject: "Contact Form Submission",
-    body: "Name: #{body['name']}\nEmail: #{body['email']}\nMessage:\n#{body['message']}"
+    body: "Name: #{body['name']}
+Email: #{body['email']}
+Message:
+#{body['message']}"
   )
 
   if result[:success]
@@ -721,3 +727,5 @@ end
 **Problem:** `inbox` or `read` raises a connection error.
 
 **Fix:** Verify `TINA4_MAIL_IMAP_HOST` and `TINA4_MAIL_IMAP_PORT` in `.env`. Gmail uses `imap.gmail.com` on port `993`. Make sure your email provider allows IMAP access -- some providers disable it by default.
+
+</div>

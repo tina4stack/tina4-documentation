@@ -1,5 +1,8 @@
 # Chapter 9: Sessions & Cookies
 
+<div v-pre>
+
+
 ## 1. State in a Stateless World
 
 Your e-commerce site needs a shopping cart that survives page reloads, remembers the user's language, and flashes success messages after form submissions. HTTP has no memory. Every request is independent. Sessions and cookies give the server a way to remember who is asking and what they have been doing.
@@ -811,3 +814,5 @@ Keyboard has `quantity: 2` (1 + 1). Not two separate entries.
 **Cause:** Session ID not regenerated after authentication.
 
 **Fix:** Call `$request->session->regenerate()` after login. New ID. Old one useless.
+
+</div>

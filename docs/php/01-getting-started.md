@@ -1,5 +1,8 @@
 # Chapter 1: Getting Started with Tina4 PHP
 
+<div v-pre>
+
+
 ## 1. What Is Tina4 PHP
 
 Tina4 PHP is a zero-dependency web framework for PHP 8.1+. One Composer package. Under 5,000 lines of code. Routing, an ORM, a template engine, authentication, queues, WebSocket, and 70 other features -- all included.
@@ -51,14 +54,21 @@ If Composer is not installed, get it from [https://getcomposer.org](https://getc
 
 3. **The Tina4 CLI** -- a Rust-based binary that manages all four Tina4 frameworks:
 
+**macOS (Homebrew):**
+
 ```bash
-# macOS (Homebrew)
 brew install tina4stack/tap/tina4
+```
 
-# Linux / macOS (install script)
+**Linux / macOS (install script):**
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/tina4stack/tina4/main/install.sh | bash
+```
 
-# Windows (PowerShell)
+**Windows (PowerShell):**
+
+```powershell
 irm https://raw.githubusercontent.com/tina4stack/tina4/main/install.ps1 | iex
 ```
 
@@ -1137,3 +1147,5 @@ Or use the CLI flag: `tina4 serve --port 8080`.
 **Cause:** `TINA4_DEBUG=true` in production.
 
 **Fix:** Set `TINA4_DEBUG=false` in your production `.env`. This hides debug information, enables HTML minification, and activates `.broken` file health checks.
+
+</div>

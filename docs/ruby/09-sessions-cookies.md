@@ -1,5 +1,8 @@
 # Chapter 9: Sessions & Cookies
 
+<div v-pre>
+
+
 ## 1. State in a Stateless World
 
 Your e-commerce site needs a shopping cart that persists across page loads. A language preference that sticks. Flash messages after form submissions. But HTTP is stateless. Every request arrives with no memory of what came before. Sessions and cookies give the server a way to remember.
@@ -651,3 +654,5 @@ end
 **Cause:** The session ID is not regenerated after login.
 
 **Fix:** Call `request.session.regenerate` after successful login.
+
+</div>

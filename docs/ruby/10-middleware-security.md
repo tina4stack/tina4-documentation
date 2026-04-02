@@ -1,5 +1,8 @@
 # Chapter 8: Middleware
 
+<div v-pre>
+
+
 ## 1. The Gatekeepers
 
 Your API needs CORS headers for the React frontend. Rate limiting for public endpoints. Auth checking for admin routes. All without cluttering your handlers.
@@ -1354,3 +1357,5 @@ end
 The form is public. The CSRF token is present. The `.no_auth` chain opens the route. The middleware validates the token. The database stores the message. The user sees confirmation.
 
 Five moving parts. Zero security holes. The framework handles the rest.
+
+</div>

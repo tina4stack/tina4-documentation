@@ -1,5 +1,8 @@
 # Chapter 13: Email with Messenger
 
+<div v-pre>
+
+
 ## 1. Every App Sends Email
 
 Signup confirmations. Password resets. Weekly digests. Invoices with PDF attachments. Every application needs email. Nobody enjoys building it.
@@ -113,9 +116,12 @@ async def contact_form(request, response):
     result = mailer.send(
         to=body["email"],
         subject="Contact Form Submission",
-        body=f"Name: {body['name']}\n"
-             f"Email: {body['email']}\n"
-             f"Message:\n{body['message']}"
+        body=f"Name: {body['name']}
+"
+             f"Email: {body['email']}
+"
+             f"Message:
+{body['message']}"
     )
 
     if result["success"]:
@@ -190,14 +196,26 @@ html_body = """
 """
 
 text_body = (
-    "Hi Alice,\n\n"
-    "Thank you for creating your account. We are excited to have you!\n\n"
-    "Here is what you can do next:\n"
-    "- Browse our product catalog: https://mystore.com/products\n"
-    "- Set up your profile: https://mystore.com/profile\n"
-    "- Check out our current deals: https://mystore.com/deals\n\n"
-    "If you have any questions, reply to this email.\n\n"
-    "Cheers,\nThe My Store Team"
+    "Hi Alice,
+
+"
+    "Thank you for creating your account. We are excited to have you!
+
+"
+    "Here is what you can do next:
+"
+    "- Browse our product catalog: https://mystore.com/products
+"
+    "- Set up your profile: https://mystore.com/profile
+"
+    "- Check out our current deals: https://mystore.com/deals
+
+"
+    "If you have any questions, reply to this email.
+
+"
+    "Cheers,
+The My Store Team"
 )
 
 result = mailer.send(
@@ -602,9 +620,14 @@ async def register_user(request, response):
         subject=f"Welcome to My Store, {body['name']}!",
         body=html_body,
         html=True,
-        text=f"Hi {body['name']},\n\nWelcome to My Store! "
-              f"Your account (#{user_id}) has been created.\n\n"
-              f"Cheers,\nThe My Store Team"
+        text=f"Hi {body['name']},
+
+Welcome to My Store! "
+              f"Your account (#{user_id}) has been created.
+
+"
+              f"Cheers,
+The My Store Team"
     )
 
     return response({
@@ -877,9 +900,14 @@ async def contact_submit(request, response):
         body=html_body,
         html=True,
         reply_to=body["email"],
-        text=f"Contact form submission from {body['name']} ({body['email']}):\n\n"
-              f"Subject: {body['subject']}\n\n"
-              f"Message:\n{body['message']}"
+        text=f"Contact form submission from {body['name']} ({body['email']}):
+
+"
+              f"Subject: {body['subject']}
+
+"
+              f"Message:
+{body['message']}"
     )
 
     if result["success"]:
@@ -988,3 +1016,5 @@ The HTML response includes the success flash message.
 **Cause:** You did not set `TINA4_MAIL_IMAP_HOST` in `.env` or pass `imap_host` to the constructor.
 
 **Fix:** Add `TINA4_MAIL_IMAP_HOST=imap.example.com` and `TINA4_MAIL_IMAP_PORT=993` to `.env`. The IMAP host is separate from the SMTP host -- many providers use different hostnames for sending and reading.
+
+</div>

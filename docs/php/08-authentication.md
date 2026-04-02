@@ -1,5 +1,8 @@
 # Chapter 7: Authentication
 
+<div v-pre>
+
+
 ## 1. Locking the Door
 
 Every endpoint built so far is public. Anyone with the URL can read, create, update, delete. That works for a tutorial. A real application needs to know who is making a request and whether they are allowed.
@@ -917,3 +920,5 @@ Router::put("/api/profile/password", function ($request, $response) {
 **Problem:** Tokens in URLs like `/api/profile?token=eyJ...` leak through browser history, server logs, and Referer headers.
 
 **Fix:** Always send tokens in the `Authorization` header. The only exception: WebSocket connections where the upgrade request cannot carry custom headers. Use a short-lived token for that case.
+
+</div>

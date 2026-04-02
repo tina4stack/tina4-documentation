@@ -1,5 +1,8 @@
 # Tina4 PHP -- Quick Reference
 
+<div v-pre>
+
+
 ::: tip Hot Tips
 - Routes go in `src/routes/`, templates in `src/templates/`, static files in `src/public/`
 - GET routes are public by default; POST/PUT/PATCH/DELETE require a token
@@ -454,3 +457,5 @@ Router::any("/calculator", function ($request, $response) {
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">Back to top</a>
 </nav>
+
+</div>

@@ -1,5 +1,8 @@
 # Chapter 15: Frontend Integration
 
+<div v-pre>
+
+
 ## 1. Beyond JSON APIs
 
 Your API returns perfect JSON. Now someone has to build the interface.
@@ -1370,3 +1373,5 @@ const html = h._div({ class: "card" }, h._p("Hello"), h._a({ href: "/" }, "Home"
 ```
 
 Void tags (`<br>`, `<img>`, `<input>`) render without closing tags. Boolean attributes render as bare names.
+
+</div>

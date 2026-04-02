@@ -1,5 +1,8 @@
 # Chapter 8: Middleware
 
+<div v-pre>
+
+
 ## 1. The Gatekeepers
 
 Your API needs CORS headers for the React frontend, rate limiting for public endpoints, and auth checks for admin routes. You could paste the same 10 lines of CORS code into every handler. You will forget one. You could pile every check into a giant `if` tree. The business logic disappears under boilerplate.
@@ -1633,3 +1636,5 @@ Router::post("/api/contact", function (Request $request, Response $response) {
 The form is public. The CSRF token is present. The `->noAuth()` call opens the route. The middleware validates the token. The database stores the message. The user sees confirmation.
 
 Five moving parts. Zero security holes. The framework handles the rest.
+
+</div>

@@ -1,5 +1,8 @@
 # Chapter 1: Getting Started with Tina4 Ruby
 
+<div v-pre>
+
+
 ## 1. What Is Tina4 Ruby
 
 Tina4 Ruby is a zero-dependency web framework for Ruby 3.1+. One gem. Under 5,000 lines of code. Routing, ORM, template engine, authentication, queues, WebSocket, and 70 other features -- all built in.
@@ -46,14 +49,21 @@ Not installed? `gem install bundler`.
 
 3. **The Tina4 CLI** -- a Rust-based binary that manages all four Tina4 frameworks:
 
+**macOS (Homebrew):**
+
 ```bash
-# macOS (Homebrew)
 brew install tina4stack/tap/tina4
+```
 
-# Linux / macOS (install script)
+**Linux / macOS (install script):**
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/tina4stack/tina4/main/install.sh | bash
+```
 
-# Windows (PowerShell)
+**Windows (PowerShell):**
+
+```powershell
 irm https://raw.githubusercontent.com/tina4stack/tina4/main/install.ps1 | iex
 ```
 
@@ -1108,3 +1118,5 @@ Or: `tina4 serve --port 8080`.
 **Cause:** `TINA4_DEBUG=true` in production.
 
 **Fix:** Set `TINA4_DEBUG=false`. This hides debug information, enables HTML minification, and activates `.broken` file health checks.
+
+</div>

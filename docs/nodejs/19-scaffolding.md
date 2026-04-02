@@ -1,5 +1,8 @@
 # Scaffolding
 
+<div v-pre>
+
+
 One command. Six files. A working CRUD feature with routes, templates, tests, and Swagger docs -- ready to run.
 
 That is Tina4's scaffolding system. It generates the boilerplate you write by hand in every project: models, migrations, routes, forms, views, and tests. You describe what you want. The generators produce it.
@@ -426,3 +429,5 @@ npx tina4nodejs generate crud Product --fields "name:string,price:float"
 ```
 
 All generator commands work the same way through npx.
+
+</div>

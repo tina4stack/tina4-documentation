@@ -1,5 +1,8 @@
 # Tina4 Ruby -- Quick Reference
 
+<div v-pre>
+
+
 ::: tip Hot Tips
 - Route files live in `src/routes/`, templates in `src/templates/`, static files in `src/public/`
 - GET routes are public by default; POST/PUT/PATCH/DELETE require a token (use `@noauth` to override)
@@ -385,3 +388,5 @@ puts Tina4.t("server_stopped")  # "Server stopped." (en)
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">Back to top</a>
 </nav>
+
+</div>

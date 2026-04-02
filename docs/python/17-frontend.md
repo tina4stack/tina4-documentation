@@ -1,5 +1,8 @@
 # Chapter 15: Frontend with tina4css
 
+<div v-pre>
+
+
 ## 1. The Problem with Frontend Toolchains
 
 Your client wants a dashboard. You know the drill. Install Node.js. Run `npm install`. Wait for 200MB of `node_modules`. Configure webpack or Vite. Set up PostCSS. Add a CSS framework. Pray nothing breaks when you upgrade a dependency six months from now.
@@ -1314,3 +1317,5 @@ async def admin_products(request, response):
 **Cause:** The CSS selector passed to the `loading` option does not match any element, or the element uses a CSS class to toggle visibility instead of inline `display`.
 
 **Fix:** frond.js toggles `display: block` and `display: none`. Make sure the element exists and its initial style is `display: none`. Use an `id` selector: `{ loading: "#loadingSpinner" }`.
+
+</div>

@@ -1,5 +1,8 @@
 # Chapter 26: Upgrading from v2 to v3
 
+<div v-pre>
+
+
 ## 1. Overview
 
 Tina4 v3 is a ground-up rewrite. The API surface is similar. The internals are completely different.
@@ -497,3 +500,5 @@ npm install
 **Cause:** v3 resolves middleware by function name (string), not by reference.
 
 **Fix:** Define middleware as a named function and pass the name: `"checkAuth"`, not `checkAuth`.
+
+</div>

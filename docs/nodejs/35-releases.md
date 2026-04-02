@@ -1,5 +1,8 @@
 # Chapter 30: Release Notes
 
+<div v-pre>
+
+
 Tina4 Node.js follows semantic versioning. The major version (3) marks the ground-up rewrite. The minor version tracks feature additions. The patch version tracks fixes, template engine corrections, and cross-framework parity updates.
 
 This chapter covers every release from v3.0.0 through v3.10.x. Each section groups releases by minor version, lists features added, bugs fixed, and breaking changes with migration code where relevant.
@@ -227,7 +230,9 @@ Variable keys in dictionary access were ignored. The engine treated `dict[myVar]
 
 **Frond |replace filter backslash escaping (v3.10.15)**
 
-The `|replace` filter mangled backslashes. A replacement string containing `\n` would insert a literal newline instead of the two characters `\n`.
+The `|replace` filter mangled backslashes. A replacement string containing `
+` would insert a literal newline instead of the two characters `
+`.
 
 **Frond variable resolution (v3.10.17)**
 
@@ -890,3 +895,5 @@ Four release candidates preceded v3.0.0. They stabilized the scaffolding, fixed 
 | v3.10.32 | March 31 | MCP server, arithmetic expressions, current stable |
 
 Forty-two releases in eleven days. Each one a step closer to the framework the code deserves.
+
+</div>

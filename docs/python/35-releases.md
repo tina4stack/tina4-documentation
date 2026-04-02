@@ -1,5 +1,8 @@
 # Chapter 30: Release Notes
 
+<div v-pre>
+
+
 ## Version History
 
 Tina4 Python follows semantic versioning. The major version (3) marks the ground-up rewrite from v2. Minor versions (3.1, 3.2, ...) introduce features. Patch versions fix bugs and polish edges.
@@ -750,3 +753,5 @@ For the full migration guide, see Chapter 29: Upgrading from v2 to v3.
 ## Release Candidate History
 
 Five release candidates preceded the v3.0.0 stable release between March 21-22, 2026. They resolved test failures, polished the Dev Admin UI, added the benchmark suite, and stabilized the Frond template engine. If you tested a release candidate, upgrade to v3.0.0 or later. The RC builds are not supported.
+
+</div>

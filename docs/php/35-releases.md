@@ -1,5 +1,8 @@
 # Chapter 30: Release Notes
 
+<div v-pre>
+
+
 ## Version History
 
 Tina4 PHP follows semantic versioning. The major number changes when something breaks. The minor number changes when something new arrives. The patch number changes when something gets fixed. Each release is available on Packagist.
@@ -797,3 +800,5 @@ Five release candidates shipped before the final v3.0.0 release. They covered th
 | v3.9.x | v3.10.x | No breaking changes -- update and test |
 
 The version numbers move fast. The API stays stable. Pick the latest v3.10.x patch and your application gets every fix listed here without changing a line of code.
+
+</div>

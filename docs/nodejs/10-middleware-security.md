@@ -1,5 +1,8 @@
 # Chapter 8: Middleware
 
+<div v-pre>
+
+
 ## 1. The Pipeline Pattern
 
 Every HTTP request passes through a series of gates before reaching your route handler. Rate limiter. Body parser. Auth check. Logger. These gates are middleware -- code that wraps your route handler and runs before, after, or both.
@@ -1832,3 +1835,5 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 The form is public. The CSRF token is present. The `noAuth: true` export opens the route. The middleware validates the token. The database stores the message. The user sees confirmation.
 
 Five moving parts. Zero security holes. The framework handles the rest.
+
+</div>

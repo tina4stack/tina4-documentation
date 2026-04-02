@@ -117,15 +117,6 @@ export default defineConfig({
         ['script', {}, "window.dataLayer = window.dataLayer || [];\nfunction gtag(){dataLayer.push(arguments);}\ngtag('js', new Date());\ngtag('config', 'G-FZRRSBE9M0');"],
     ],
     ignoreDeadLinks: true,
-    markdown: {
-        // Wrap all code blocks in v-pre to prevent Vue from interpreting {{ }} as expressions
-        config: (md) => {
-            const defaultFence = md.renderer.rules.fence!;
-            md.renderer.rules.fence = (tokens, idx, options, env, self) => {
-                return `<div v-pre>${defaultFence(tokens, idx, options, env, self)}</div>`;
-            };
-        }
-    },
     themeConfig: {
         search: {
             provider: 'local'

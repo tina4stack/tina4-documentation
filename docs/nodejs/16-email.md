@@ -1,5 +1,8 @@
 # Chapter 13: Email with Messenger
 
+<div v-pre>
+
+
 ## 1. Every App Sends Email
 
 Signup confirmations. Password resets. Weekly digests. Invoices with PDF attachments. Every application needs email. Nobody enjoys building it.
@@ -108,7 +111,10 @@ Router.post("/api/contact", async (req, res) => {
     const result = await mailer.send({
         to: body.email,
         subject: "Contact Form Submission",
-        body: `Name: ${body.name}\nEmail: ${body.email}\nMessage:\n${body.message}`
+        body: `Name: ${body.name}
+Email: ${body.email}
+Message:
+${body.message}`
     });
 
     if (result.success) {
@@ -197,7 +203,8 @@ const textBody = [
     "",
     "Cheers,",
     "The My Store Team"
-].join("\n");
+].join("
+");
 
 const result = await mailer.send({
     to: "alice@example.com",
@@ -615,7 +622,12 @@ Router.post("/api/register", async (req, res) => {
         subject: `Welcome to My Store, ${body.name}!`,
         body: htmlBody,
         html: true,
-        text: `Hi ${body.name},\n\nWelcome to My Store! Your account (#${userId}) has been created.\n\nCheers,\nThe My Store Team`
+        text: `Hi ${body.name},
+
+Welcome to My Store! Your account (#${userId}) has been created.
+
+Cheers,
+The My Store Team`
     });
 
     return res.status(201).json({
@@ -873,7 +885,12 @@ Router.post("/contact", async (req, res) => {
         body: htmlBody,
         html: true,
         replyTo: body.email,
-        text: `Contact form submission from ${body.name} (${body.email}):\n\nSubject: ${body.subject}\n\nMessage:\n${body.message}`
+        text: `Contact form submission from ${body.name} (${body.email}):
+
+Subject: ${body.subject}
+
+Message:
+${body.message}`
     });
 
     if (result.success) {
@@ -984,3 +1001,5 @@ The HTML response includes the success flash message.
 **Cause:** You did not set `TINA4_MAIL_IMAP_HOST` in `.env` or pass `imapHost` to the constructor.
 
 **Fix:** Add `TINA4_MAIL_IMAP_HOST=imap.example.com` and `TINA4_MAIL_IMAP_PORT=993` to `.env`. The IMAP host is separate from the SMTP host -- many providers use different hostnames for sending and reading.
+
+</div>

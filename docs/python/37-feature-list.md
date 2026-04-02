@@ -1,5 +1,8 @@
 # Chapter 37: Complete Feature List
 
+<div v-pre>
+
+
 ## 1. What Tina4 Covers
 
 Tina4 is four implementations of the same framework: Python, PHP, Ruby, and Node.js. Every feature listed here ships in all four. The same behaviour. The same API shape. The same test expectations.
@@ -158,3 +161,5 @@ Tina4 is deliberately minimal:
 - **No cloud vendor lock-in**: Queues, cache, sessions, and email are backend-agnostic. The backend is a config variable.
 
 The goal is a framework you can understand completely in a weekend and build on confidently for years.
+
+</div>

@@ -1,5 +1,8 @@
 # Chapter 21: Building a Complete App
 
+<div v-pre>
+
+
 ## 1. Putting It All Together
 
 Twenty chapters of building blocks. Routing. Templates. Databases. ORM. Authentication. Middleware. Queues. WebSocket. Caching. Frontend. GraphQL. Testing. Dev tools. CLI scaffolding. Deployment. Now all of it works together in one application.
@@ -1069,13 +1072,25 @@ function sendTaskAssignmentEmail(Task $task, User $assignee, User $assigner): vo
 {
     $subject = "New task assigned: " . $task->title;
 
-    $body = "Hi " . $assignee->name . ",\n\n"
-        . $assigner->name . " has assigned you a new task:\n\n"
-        . "Title: " . $task->title . "\n"
-        . "Priority: " . strtoupper($task->priority) . "\n"
-        . "Due: " . ($task->dueDate ?? "No due date") . "\n\n"
-        . "Description:\n" . ($task->description ?: "(No description)") . "\n\n"
-        . "View it at: http://localhost:7146/admin\n";
+    $body = "Hi " . $assignee->name . ",
+
+"
+        . $assigner->name . " has assigned you a new task:
+
+"
+        . "Title: " . $task->title . "
+"
+        . "Priority: " . strtoupper($task->priority) . "
+"
+        . "Due: " . ($task->dueDate ?? "No due date") . "
+
+"
+        . "Description:
+" . ($task->description ?: "(No description)") . "
+
+"
+        . "View it at: http://localhost:7146/admin
+";
 
     Mail::send(
         $assignee->email,
@@ -1583,3 +1598,5 @@ Your `vendor/` directory is small. Your `composer.lock` has one entry. When PHP 
 Simple does not mean limited. TaskFlow has authentication, real-time WebSocket, email, caching, GraphQL, and a test suite. It deploys in a Docker container. It handles thousands of concurrent users. All of this runs on under 5,000 lines of framework code.
 
 Build things. Ship them. Keep it simple.
+
+</div>

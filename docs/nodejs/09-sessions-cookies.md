@@ -1,5 +1,8 @@
 # Chapter 9: Sessions & Cookies
 
+<div v-pre>
+
+
 ## 1. State in a Stateless World
 
 JWT tokens handle APIs. Traditional web applications need more. A shopping cart that persists across pages. A flash message that appears once after a redirect. A "remember me" checkbox on the login form. These features run on sessions and cookies -- server-side state tied to a browser.
@@ -843,3 +846,5 @@ Router.post("/cart/clear", async (req, res) => {
 **Cause:** You stored large objects in the session -- full user profiles, query results, or file contents.
 
 **Fix:** Keep session data small. Store IDs, not entire objects. Look up the full data from the database when you need it.
+
+</div>

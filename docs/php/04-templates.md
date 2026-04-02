@@ -1,5 +1,8 @@
 # Chapter 4: Templates
 
+<div v-pre>
+
+
 ## 1. Why Templates
 
 In Chapter 1, `$response->render("products.html", $data)` produced a full HTML page. **Frond** did the rendering -- Tina4's built-in template engine. Zero dependencies. Twig-compatible syntax. If you know Twig, Jinja2, or Nunjucks, you know 90% of Frond.
@@ -994,3 +997,5 @@ Router::get("/catalog", function ($request, $response) {
 **Cause:** Frond filters follow Twig conventions, not PHP function names.
 
 **Fix:** `{{ items | length }}` not `count`. `{{ name | upper }}` not `strtoupper`. `{{ text | lower }}` not `strtolower`. See the filter table in section 7.
+
+</div>

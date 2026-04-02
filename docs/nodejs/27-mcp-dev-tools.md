@@ -1,5 +1,8 @@
 # Chapter 27: MCP Dev Tools
 
+<div v-pre>
+
+
 ## 1. What is MCP?
 
 The Model Context Protocol connects AI coding tools to your running application. Claude Code, Cursor, and other assistants speak this protocol. When they connect, they see your database, routes, templates, and files -- not as static text, but as live, queryable tools.
@@ -248,3 +251,5 @@ Returns JSON-RPC 2.0 responses:
 **Remote server -- MCP disabled:**
 - This is intentional. Set `TINA4_MCP_REMOTE=true` only on staging environments you trust
 - Never enable MCP on production servers
+
+</div>

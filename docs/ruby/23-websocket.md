@@ -1,5 +1,8 @@
 # Chapter 12: Real-time with WebSocket
 
+<div v-pre>
+
+
 ## 1. The Refresh Button Problem
 
 Your project management app needs live updates. Someone moves a card from "In Progress" to "Done." Everyone else should see it -- no page refresh, no polling, no waiting. But HTTP is request-response. The client asks. The server answers. The server cannot speak first.
@@ -748,3 +751,5 @@ If `TINA4_WS_BACKPLANE` is not set (the default), Tina4 broadcasts only to local
 **Problem:** Anyone can connect to your WebSocket endpoint.
 
 **Fix:** Pass the token as a query parameter: `ws://localhost:7147/ws/chat?token=eyJ...`. Validate in the `:open` handler and call `connection.close` if invalid.
+
+</div>

@@ -1,5 +1,8 @@
 # Chapter 15: Frontend with tina4css
 
+<div v-pre>
+
+
 ## 1. The Problem with Frontend Toolchains
 
 Your client wants a dashboard. Install Node.js. Run `npm install`. Wait for 200MB of `node_modules`. Configure webpack or Vite. Set up PostCSS. Add a CSS framework. Maybe Tailwind with its purge config. Pray nothing breaks when you upgrade a dependency in 6 months.
@@ -799,3 +802,5 @@ html = _div({ class: "card" }, _p("Hello"), _a({ href: "/" }, "Home"))
 ```
 
 Void tags (`<br>`, `<img>`, `<input>`) render without closing tags. Boolean attributes render as bare names.
+
+</div>

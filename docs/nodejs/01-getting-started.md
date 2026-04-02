@@ -1,5 +1,8 @@
 # Chapter 1: Getting Started with Tina4 Node.js
 
+<div v-pre>
+
+
 ## 1. What Is Tina4 Node.js
 
 Tina4 Node.js is a zero-dependency web framework. One npm package. Under 5,000 lines of code. It hands you routing, an ORM, a template engine, authentication, queues, WebSocket, and 70 other features. Node.js 22+ and TypeScript.
@@ -48,14 +51,21 @@ npm ships with Node.js. If Node.js is installed, npm is too.
 
 3. **The Tina4 CLI** -- a Rust-based binary that manages all four Tina4 frameworks:
 
+**macOS (Homebrew):**
+
 ```bash
-# macOS (Homebrew)
 brew install tina4stack/tap/tina4
+```
 
-# Linux / macOS (install script)
+**Linux / macOS (install script):**
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/tina4stack/tina4/main/install.sh | bash
+```
 
-# Windows (PowerShell)
+**Windows (PowerShell):**
+
+```powershell
 irm https://raw.githubusercontent.com/tina4stack/tina4/main/install.ps1 | iex
 ```
 
@@ -1193,3 +1203,5 @@ Or use the CLI flag: `tina4 serve --port 8080`.
 **Cause:** The `.env` file must be at the project root (same directory as `package.json`).
 
 **Fix:** Move `.env` to the project root.
+
+</div>

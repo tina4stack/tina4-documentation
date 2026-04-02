@@ -1,5 +1,8 @@
 # Chapter 26: Upgrading from v2 to v3
 
+<div v-pre>
+
+
 ## 1. Overview
 
 v3 is a major rewrite. Not a point release with deprecation warnings. A ground-up rebuild with one rule: zero gem dependencies. Everything Tina4 needs -- HTTP server, template engine, ORM, migrations -- ships inside the gem itself. No transitive dependency chains. No version conflicts. No abandoned upstream libraries breaking your build.
@@ -458,3 +461,5 @@ bundle clean
 ---
 
 That is the full migration. Most applications take under an hour. The biggest time sink is usually Firebird column name casing if you have a large codebase with hardcoded uppercase keys. Everything else is search-and-replace.
+
+</div>
