@@ -130,7 +130,7 @@ end
 
 **Startup velocity.** Ruby's expressiveness means less code for the same functionality. Fewer lines. Fewer files. Faster iteration. For teams that need to ship and adjust, Ruby shrinks the distance between idea and production.
 
-**Strong testing culture.** The Ruby community treats testing as a first-class concern. Tina4 Ruby integrates with Ruby's testing ecosystem. The framework itself carries 1,334 tests -- the highest count of any Tina4 implementation. Testing is not an afterthought. It is the foundation.
+**Strong testing culture.** The Ruby community treats testing as a first-class concern. Tina4 Ruby integrates with Ruby's testing ecosystem. The framework itself carries 2,333 tests. Testing is not an afterthought. It is the foundation.
 
 ### Watch Out For
 
@@ -210,12 +210,12 @@ tina4 serve
 | **Async** | Native (asyncio) | Swoole extension | Rack-based | Native (event loop) |
 | **Hosting** | VPS, containers, PaaS | Everywhere | VPS, containers, PaaS | VPS, containers, PaaS |
 | **Raw speed** | Good | Very good (JIT) | Adequate | Best |
-| **Test count** | 1,165 | 1,166 | 1,334 | 1,247 |
+| **Test count** | 2,112 | 2,220 | 2,333 | 2,646 |
 | **Best for** | Data/ML teams | Web agencies, existing PHP | Startups, clean code | JS/TS full-stack teams |
 | **WebSocket** | Native async | Swoole required | Rack hijack / Puma | Native |
 | **Routing style** | Decorator-based | Static method calls | DSL blocks | File-based + decorators |
 | **Learning curve** | Low (if you know Python) | Low (if you know PHP) | Low (if you know Ruby) | Low (if you know JS/TS) |
-| **Framework LOC** | ~5,000 | ~5,000 | ~5,000 | ~5,000 |
+| **Framework LOC** | ~26,000 | ~35,000 | ~24,000 | ~32,000 |
 | **Docker image** | ~60MB | ~50MB | ~70MB | ~40MB |
 | **Community size** | Largest (general) | Largest (web-specific) | Smallest | Large |
 | **Shared hosting** | Rare | Universal | Rare | Rare |

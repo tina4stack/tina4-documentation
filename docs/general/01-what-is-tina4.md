@@ -45,7 +45,7 @@ Tina4's attack surface is the language runtime and your code. Nothing else sits 
 
 A Laravel installation pulls in 70+ packages. A Rails app starts with 40+ gems. A Next.js project's `node_modules` folder is measured in hundreds of megabytes.
 
-Tina4 installs **one package**. The entire framework is roughly **5,000 lines of code** per language. The Docker image fits in **40-80MB**. Your production container ships with what it needs. Nothing else tags along.
+Tina4 installs **one package**. The framework runs to roughly **~26,000 lines of code** per language (Python ~26,000 | PHP ~35,000 | Ruby ~24,000 | Node.js ~32,000), all of it standard-library code you can read and audit. The Docker image fits in **40-80MB**. Your production container ships with what it needs. Nothing else tags along.
 
 ### Portability
 
@@ -70,9 +70,9 @@ Database drivers are the exception. You cannot talk to PostgreSQL without a Post
 
 ---
 
-## 108 Features at 100% Parity
+## 44 Features at 100% Parity
 
-Tina4 ships with everything you need to build a production web application. 108 features, all implemented identically across Python, PHP, Ruby, and Node.js. 9,311 tests across 280 test files. Here is what every installation includes:
+Tina4 ships with everything you need to build a production web application. 44 features, all implemented identically across Python, PHP, Ruby, and Node.js. 9,311 tests across 280 test files. Here is what every installation includes:
 
 **Core Web (17)**
 - HTTP router with path parameters, typed params, wildcard routes, route groups
@@ -235,10 +235,10 @@ The code you don't write is the code that never breaks.
 |--------|-------|
 | Philosophy | Toolkit, not a cathedral |
 | Dependencies | Zero (core features) |
-| Framework size | ~5,000 lines per language |
+| Framework size | ~26,000 lines per language (avg) |
 | Languages | Python, PHP, Ruby, Node.js |
 | Configuration | `.env` file only |
 | Discovery | Automatic (routes, models, templates) |
 | CLI | Unified Rust binary |
-| Tests | 6,260 across all four frameworks |
-| Features | 38 at 100% parity |
+| Tests | 9,311 across all four frameworks |
+| Features | 44 at 100% parity |
