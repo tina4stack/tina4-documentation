@@ -55,7 +55,15 @@ npm --version
 
 ## 3. Create a Project
 
-One command. One line. The scaffolding does the rest:
+Two ways to scaffold. Pick whichever you have installed:
+
+**Option A: Using the Tina4 CLI** (if you have `tina4` installed):
+
+```bash
+tina4 init tina4js my-app
+```
+
+**Option B: Using npx** (no global install needed):
 
 ```bash
 npx tina4js create my-app
