@@ -81,13 +81,25 @@ Verify:
 tsx --version
 ```
 
+## Installing the Tina4 CLI
+
+```bash
+cargo install tina4
+```
+
+Or download from [GitHub Releases](https://github.com/tina4stack/tina4/releases).
+
+The `tina4` CLI manages project scaffolding, development servers, migrations, and more across all Tina4 frameworks.
+
 ### Creating a New Project
 
 The Tina4 CLI scaffolds a new project in one command:
 
 ```bash
-tina4 init my-store
+tina4 init nodejs my-store
 ```
+
+`tina4 init` installs the Tina4 CLI globally (via cargo, homebrew, or direct download), then scaffolds a complete project with routes, templates, database, and configuration.
 
 You should see:
 
