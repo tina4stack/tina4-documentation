@@ -235,6 +235,44 @@ tina4python generate view Product --fields "name:string,price:float"
 
 Creates two templates: a list view and a detail view in `src/templates/products/`.
 
+### CRUD
+
+```bash
+tina4python generate crud Product --fields "name:string,price:float"
+```
+
+Shorthand for running all generators at once: model, migration, route, form, view, and test.
+
+### Auth
+
+```bash
+tina4python generate auth
+```
+
+Generates the full authentication scaffold: User model, migrations, login/register/logout routes, templates, and tests.
+
+---
+
+## AutoCRUD
+
+AutoCRUD automatically generates REST API endpoints from your ORM models:
+
+- `GET /api/{table}` — List with pagination (`?limit=10&offset=0`)
+- `GET /api/{table}/{id}` — Get single record
+- `POST /api/{table}` — Create record
+- `PUT /api/{table}/{id}` — Update record
+- `DELETE /api/{table}/{id}` — Delete record
+
+### Usage
+
+```python
+from tina4_python.crud import AutoCrud
+AutoCrud.register(User)
+AutoCrud.discover("src/orm", prefix="/api")
+```
+
+`AutoCrud.register(Model)` wires up a single model. `AutoCrud.discover(path)` scans a directory and registers every ORM model it finds. Both approaches mount the five standard endpoints automatically — no route files needed.
+
 ---
 
 ## The Auth Generator

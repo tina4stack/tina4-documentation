@@ -240,6 +240,43 @@ tina4nodejs generate view Product --fields "name:string,price:float"
 
 Creates two templates: a list view and a detail view in `src/templates/products/`.
 
+### CRUD
+
+```bash
+tina4nodejs generate crud Product --fields "name:string,price:float"
+```
+
+Shorthand for running all generators at once: model, migration, route, form, view, and test.
+
+### Auth
+
+```bash
+tina4nodejs generate auth
+```
+
+Generates the full authentication scaffold: User model, migrations, login/register/logout routes, templates, and tests.
+
+---
+
+## AutoCRUD
+
+AutoCRUD automatically generates REST API endpoints from your ORM models:
+
+- `GET /api/{table}` — List with pagination (`?limit=10&offset=0`)
+- `GET /api/{table}/{id}` — Get single record
+- `POST /api/{table}` — Create record
+- `PUT /api/{table}/{id}` — Update record
+- `DELETE /api/{table}/{id}` — Delete record
+
+### Usage
+
+```typescript
+// AutoCRUD routes are auto-generated from discovered models
+// Models in src/models/ get REST endpoints at /api/{tableName}
+```
+
+Place your ORM models in `src/models/` and the framework discovers and mounts all five standard endpoints automatically — no route files needed.
+
 ---
 
 ## The Auth Generator

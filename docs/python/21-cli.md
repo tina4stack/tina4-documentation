@@ -793,3 +793,27 @@ source ~/.zshrc
 **Cause:** The CLI uses the argument as-is for the class name.
 
 **Fix:** Use PascalCase for model names: `tina4 generate model OrderItem`. The CLI converts it to snake_case for the table name (`order_items`).
+
+---
+
+## 15. Documentation
+
+```bash
+tina4 docs      # Download framework-specific book chapters to .tina4-docs/
+tina4 books     # Download the complete Tina4 book to tina4-book/
+```
+
+`tina4 docs` detects your project language and downloads only the relevant chapters in Markdown format.
+
+---
+
+## 16. Test Port (Dual-Port Development)
+
+When `TINA4_DEBUG=true`, a second HTTP server starts on port + 1000:
+
+- **Main port** — hot-reload enabled (AI dev tools)
+- **Test port** — stable, no hot-reload (user testing)
+
+Use framework-specific ports: Python 7145/8145, PHP 7146/8146, Ruby 7147/8147, Node 7148/8148.
+
+Settings: `TINA4_NO_AI_PORT=true` disables test port, `TINA4_NO_RELOAD=true` or `--no-reload` disables hot-reload on main port.
