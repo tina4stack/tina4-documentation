@@ -11,6 +11,20 @@ This chapter covers the full v3 line -- from the first release candidate through
 
 ---
 
+## v3.10.65 (2026-04-03)
+- **Metrics 3-stage test detection** — filename, path, and content matching
+- **Metrics framework mode** — scans framework source with correct relative paths
+- **tina4 console** — interactive REPL with framework loaded
+- **tina4 env** — interactive environment configuration
+- **Brand** — "TINA4 — The Intelligent Native Application 4ramework"
+- **Quick references** — 36 sections, DotEnv API documented
+- **37 chapters** — 7 new (Events, Localization, Logging, API Client, WSDL/SOAP, DI Container, Service Runner)
+- **MongoDB + ODBC adapters** across all 4 frameworks
+- **Pagination standardized** — limit/offset primary, merged dual-key response
+- **Port kill-and-take-over** on startup
+
+---
+
 ## v3.10.60 (2026-04-03)
 - **tina4 console** — interactive PHP REPL with framework loaded ($db, $app, Router, Auth)
 - **tina4 env** — interactive environment configuration
