@@ -541,7 +541,7 @@ import { CleanupService } from "./services/CleanupService";
 App.register(CleanupService);
 ```
 
-### WebSockets {#websockets}
+### Websockets {#websockets}
 
 Define a WebSocket handler the same way you define an HTTP route. The connection is persistent and bi-directional. No `ws` or `socket.io` required.
 
@@ -627,28 +627,6 @@ Router.post("/calculator", async (req, res) => {
 
 [More Details](wsdl.md) on WSDL configuration and usage.
 
-### Localization (i18n) {#localization}
-
-Set `TINA4_LANGUAGE` in `.env` to change the framework language. Supported: `en`, `fr`, `af`.
-
-```env
-TINA4_LANGUAGE=af
-```
-
-```typescript
-import { localize } from "tina4-nodejs";
-
-const _ = localize();
-console.log(_("Server stopped.")); // "Bediener gestop." (af)
-```
-
-Translations fall back to English for unsupported languages.
-
-```typescript
-import { AVAILABLE_LANGUAGES } from "tina4-nodejs";
-// ["en", "fr", "af"]
-```
-
 ### GraphQL {#graphql}
 
 Tina4 ships a built-in GraphQL endpoint. Define your schema and resolvers. The framework mounts them at `/graphql`.
@@ -692,3 +670,25 @@ Visit `http://localhost:7148/graphql` to query your API. The GraphiQL playground
 </nav>
 
 </div>
+### Localization (i18n) {#localization}
+
+Set `TINA4_LANGUAGE` in `.env` to change the framework language. Supported: `en`, `fr`, `af`.
+
+```env
+TINA4_LANGUAGE=af
+```
+
+```typescript
+import { localize } from "tina4-nodejs";
+
+const _ = localize();
+console.log(_("Server stopped.")); // "Bediener gestop." (af)
+```
+
+Translations fall back to English for unsupported languages.
+
+```typescript
+import { AVAILABLE_LANGUAGES } from "tina4-nodejs";
+// ["en", "fr", "af"]
+```
+

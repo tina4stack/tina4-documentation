@@ -366,6 +366,18 @@ queue.push({
 })
 ```
 
+### WSDL {#wsdl}
+
+```ruby
+class Calculator < Tina4::WSDL
+  service_url "http://localhost:7147/calculator"
+
+  def add(a, b)
+    { result: a + b }
+  end
+end
+```
+
 ### GraphQL {#graphql}
 
 Tina4 includes a built-in GraphQL engine. No external gems.
@@ -383,18 +395,6 @@ POST queries to `/graphql`, or visit it in a browser for the GraphiQL IDE.
 ```
 
 [Full details](graphql.md) on manual schema definition, mutations, variables, fragments, and programmatic usage.
-
-### WSDL {#wsdl}
-
-```ruby
-class Calculator < Tina4::WSDL
-  service_url "http://localhost:7147/calculator"
-
-  def add(a, b)
-    { result: a + b }
-  end
-end
-```
 
 ### Localization (i18n) {#localization}
 
