@@ -6,7 +6,7 @@ Your app goes live. Users arrive from Germany, Brazil, Japan. Everything is in E
 
 Localization (L10n) makes the same app speak every language. UI strings, error messages, date formats, and number formatting adapt to the user's locale. The code stays the same.
 
-Tina4 provides a built-in `I18n` class. JSON locale files. Automatic fallback. String interpolation. No external packages.
+Tina4 provides a built-in `I18n` class that loads JSON locale files, interpolates variables, falls back to a default locale when a key is missing, and requires no external packages.
 
 ---
 

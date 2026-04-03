@@ -4,7 +4,7 @@
 
 Your application calls a payment gateway. A shipping provider. A weather service. A CRM. Every call needs the same setup: base URL, auth header, error handling, JSON parsing, timeout.
 
-Tina4 provides an `api` singleton — a preconfigured HTTP client that handles the repetitive parts. Get, post, put, delete. JSON in, JSON out. Auth headers set once. Consistent response format. No external dependencies.
+Tina4 provides an `api` singleton — a preconfigured HTTP client that handles the repetitive parts. It covers GET, POST, PUT, and DELETE with JSON serialization, auth headers set once at configure time, and a consistent response format, all with no external dependencies.
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## 1. Work That Runs Forever
 
-Some work does not fit inside an HTTP request. A heartbeat that pings a health check endpoint every 30 seconds. A metrics collector that samples memory usage every minute. A subscription renewal job that runs at midnight. A queue consumer that processes jobs continuously.
+Some work does not fit inside an HTTP request. A heartbeat that pings a health check endpoint every 30 seconds. A queue consumer that processes jobs continuously.
 
 These are background services: long-running processes that start with the app and run until it stops.
 

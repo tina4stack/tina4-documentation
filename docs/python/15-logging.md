@@ -44,7 +44,7 @@ There are five levels, in ascending severity:
 | `WARNING` | `Log.warning()` | Unexpected conditions that are not errors |
 | `ERROR` | `Log.error()` | Failures that need investigation |
 
-Setting `TINA4_LOG_LEVEL=WARNING` suppresses `DEBUG` and `INFO` messages. Only `WARNING` and `ERROR` appear. In production this reduces log volume while keeping the signal.
+Setting `TINA4_LOG_LEVEL=WARNING` suppresses `DEBUG` and `INFO` messages. Only warnings and errors reach the log file.
 
 ---
 
@@ -117,7 +117,7 @@ TINA4_LOG_MAX_BYTES=10485760
 TINA4_LOG_BACKUP_COUNT=5
 ```
 
-`TINA4_LOG_MAX_BYTES=10485760` rotates the log file when it reaches 10 MB. `TINA4_LOG_BACKUP_COUNT=5` keeps the five most recent rotated files before deleting the oldest. With these settings you will never fill a disk with log files.
+`TINA4_LOG_MAX_BYTES=10485760` rotates the log file when it reaches 10 MB. `TINA4_LOG_BACKUP_COUNT=5` keeps the five most recent rotated files before deleting the oldest. These settings cap total log storage at roughly 50 MB.
 
 Rotated files are named `app.log.1`, `app.log.2`, and so on.
 

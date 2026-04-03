@@ -2,7 +2,7 @@
 
 ## 1. Work That Never Stops
 
-Some tasks run once per request. Some tasks run forever. A cache warmer that refreshes data every 60 seconds. A health monitor that pings upstream services every 30 seconds. A queue drainer that processes jobs in a loop. An invoice scheduler that fires at midnight.
+Some tasks run once per request. Some tasks run forever. A cache warmer that refreshes data every 60 seconds. A queue drainer that processes jobs in a loop.
 
 These are background services -- long-running loops that live alongside your HTTP server. They start when the application starts. They stop when the application stops. If they crash, they restart.
 

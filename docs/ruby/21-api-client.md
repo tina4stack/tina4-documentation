@@ -4,7 +4,7 @@
 
 Your app does not live in isolation. It calls payment gateways, weather APIs, shipping providers, CRM platforms, and internal microservices. Each call needs a base URL, auth headers, timeout handling, and response parsing.
 
-Tina4's API client handles that boilerplate. One configured instance. Clean `get`, `post`, `put`, and `delete` calls. Consistent response format. No external gem required.
+Tina4's API client handles that boilerplate. One configured instance gives you clean `get`, `post`, `put`, and `delete` calls with a consistent response format and no external gem required.
 
 ---
 

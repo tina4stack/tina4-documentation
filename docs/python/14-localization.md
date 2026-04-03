@@ -1,13 +1,10 @@
 # Chapter 14: Localization
 
-<div v-pre>
-
-
 ## 1. One App, Many Languages
 
 Your application is live. A customer in Berlin arrives and sees English. A customer in Tokyo sees English. A customer in São Paulo sees English.
 
-Tina4 localization lets you write translations once and switch the active locale at runtime. No third-party libraries. JSON files in `src/locales/`. A single `t()` call at the point of use. A query parameter, a cookie, or an environment variable sets the language.
+Tina4 localization lets you write translations once and switch the active locale at runtime. Store JSON files in `src/locales/`, call `t()` at the point of use, and set the active language from a query parameter, a cookie, or an environment variable. No third-party libraries required.
 
 ---
 
@@ -273,7 +270,7 @@ i18n.t("completely.missing.key")
 # Returns "completely.missing.key" -- the key itself
 ```
 
-This means your app never crashes on a missing translation. It degrades gracefully to the key name, which your translation team can use to find gaps.
+Your app never crashes on a missing translation. It returns the raw key string, which your translation team can search for to find gaps.
 
 ---
 
@@ -484,5 +481,3 @@ async def create_user(request, response):
 **Problem:** You updated a locale file but the app still serves the old translation.
 
 **Fix:** The `I18n` class caches locale files in memory. Restart the dev server or set a shorter cache duration during development. In production this is the correct behaviour.
-
-</div>

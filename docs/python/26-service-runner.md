@@ -2,7 +2,7 @@
 
 ## 1. Work That Never Stops
 
-Some tasks run on a schedule. Some run indefinitely. A queue worker. A cache warmer. A health-check poller. A metrics aggregator. These are background services — long-lived processes that run alongside the web server but are not tied to any HTTP request.
+Some tasks run on a schedule. Some run indefinitely. A queue worker that drains emails. A cache warmer that refreshes product data every five minutes. These are background services — long-lived processes that run alongside the web server but are not tied to any HTTP request.
 
 Tina4's service runner gives these tasks a consistent start/stop lifecycle. Register services. Start them. Stop them gracefully. They run in background threads so they do not block the web server.
 
@@ -158,17 +158,17 @@ class ScheduledTask:
         self._stop_event = threading.Event()
 
     def run(self):
-        Log.info(f"Scheduled task started", task=self.name, interval=self.interval)
+        Log.info("Scheduled task started", task=self.name, interval=self.interval)
         while not self._stop_event.is_set():
             try:
                 self.task_fn()
             except Exception as exc:
-                Log.error(f"Scheduled task failed", task=self.name, error=str(exc))
+                Log.error("Scheduled task failed", task=self.name, error=str(exc))
             self._stop_event.wait(timeout=self.interval)
 
     def stop(self):
         self._stop_event.set()
-        Log.info(f"Scheduled task stopped", task=self.name)
+        Log.info("Scheduled task stopped", task=self.name)
 
 
 def warm_cache():

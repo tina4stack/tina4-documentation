@@ -15,7 +15,7 @@ async def create_order(request, response):
 
 Every route constructs its own dependencies. Testing requires monkey-patching or mocking at the module level. Swapping the payment gateway means touching every route that uses it.
 
-A DI container inverts this. You register services once. You retrieve them by name. The container handles construction, caching, and lifecycle. Tests register mock versions. Production registers real ones.
+A DI container moves construction out of the route. You register services once, at startup. Routes ask the container for what they need by name.
 
 ---
 
@@ -50,7 +50,7 @@ logger2 = container.get("logger")
 assert logger1 is not logger2  # Different objects
 ```
 
-Use transient registration for services that must not share state: request-scoped objects, things with per-use configuration, test fakes.
+Use transient registration for services that must not share state: request-scoped objects, disposable HTTP clients, or mock implementations in tests.
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## 1. Work That Runs Outside HTTP Requests
 
-Not everything fits in an HTTP request. Queue consumers. Scheduled jobs. Report generators. Cache warmers. WebSocket heartbeat monitors. These run continuously in the background, independent of web traffic.
+Not everything fits in an HTTP request. A queue consumer that processes emails. A cache warmer that pre-populates product data on a schedule. These run continuously in the background, independent of web traffic.
 
 Tina4's service runner provides a pattern for long-running background workers. They start with the application, restart on failure, and shut down cleanly.
 

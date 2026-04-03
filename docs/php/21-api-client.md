@@ -4,7 +4,7 @@
 
 Every app calls external services. Weather APIs. Payment gateways. CRM systems. Shipping providers. The default PHP approach is cURL — verbose, error-prone, and full of boilerplate.
 
-Tina4 provides a built-in `Api` class. It wraps cURL with a clean interface. GET, POST, PUT, DELETE, PATCH. Custom headers. Basic auth. JSON or form payloads. Timeout control. No Guzzle. No Composer dependencies.
+Tina4 provides a built-in `Api` class that wraps cURL with a clean interface. It supports GET, POST, PUT, DELETE, and PATCH with custom headers, basic auth, JSON or form payloads, and timeout control — no Guzzle, no Composer dependencies.
 
 ---
 

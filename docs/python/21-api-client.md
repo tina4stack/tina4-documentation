@@ -4,7 +4,7 @@
 
 Every real application talks to something external. A payment processor. A weather service. A shipping carrier. A CRM. You write the HTTP call, parse the response, handle timeouts, retry on failure, add auth headers.
 
-Tina4's `Api` class makes outbound HTTP requests from your server-side code. One import. Consistent response format. Auth in one line. SSL and timeout configuration. No extra libraries.
+Tina4's `Api` class makes outbound HTTP requests from your server-side code. It returns a consistent response format, handles auth in one line, and supports SSL and timeout configuration — with no extra libraries.
 
 ---
 
@@ -155,7 +155,7 @@ api = Api(verify_ssl=False, timeout=5)
 
 The default timeout is 30 seconds. The default SSL behaviour is to verify certificates (`verify_ssl=True`).
 
-Never disable SSL verification in production. If an external API has a self-signed certificate, obtain the CA bundle and pass it explicitly, or fix the certificate.
+Never disable SSL verification in production. If an external API has a self-signed certificate, obtain the CA bundle and pass it explicitly, or ask the provider for their CA bundle.
 
 ---
 
