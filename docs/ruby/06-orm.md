@@ -1076,4 +1076,4 @@ exists = User.query
   .exists?
 ```
 
-See the [QueryBuilder chapter](12-query-builder.md) for the full fluent API including joins, grouping, having, and MongoDB support.
+See the [QueryBuilder chapter](07-query-builder.md) for the full fluent API including joins, grouping, having, and MongoDB support.

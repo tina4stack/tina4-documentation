@@ -358,7 +358,7 @@ curl http://localhost:7145/api/v2/status
 
 ## 6. Middleware on Routes
 
-Middleware is code that runs before or after your route handler. Authentication. Logging. Rate limiting. Input validation. Anything that belongs on multiple routes. Chapter 8 covers middleware in depth. Here is how it connects to routes.
+Middleware is code that runs before or after your route handler. Authentication. Logging. Rate limiting. Input validation. Anything that belongs on multiple routes. Chapter 10 covers middleware in depth. Here is how it connects to routes.
 
 ### Middleware on a Single Route
 

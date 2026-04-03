@@ -1,4 +1,4 @@
-# Chapter 19: Tina4 CLI
+# Chapter 30: Tina4 CLI
 
 ## 1. Getting a New Developer Up to Speed
 
@@ -129,7 +129,7 @@ When the `--production` flag is passed, the CLI:
 4. Disables the dev toolbar and error overlay
 5. Enables graceful shutdown handling
 
-In practice, you rarely use `tina4 serve --production` directly. Instead, you use Docker or a process manager (Chapter 20). But this flag is useful for quick production testing.
+In practice, you rarely use `tina4 serve --production` directly. Instead, you use Docker or a process manager (Chapter 33). But this flag is useful for quick production testing.
 
 ---
 
@@ -504,7 +504,7 @@ Running tests...
   3 tests, 3 passed, 0 failed (0.21s)
 ```
 
-See Chapter 17 for the full testing guide. The CLI command discovers all test files in `tests/` and runs them.
+See Chapter 18 for the full testing guide. The CLI command discovers all test files in `tests/` and runs them.
 
 ### Options
 

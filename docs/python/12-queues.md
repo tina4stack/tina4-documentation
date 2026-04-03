@@ -1,4 +1,4 @@
-# Chapter 11: Queues
+# Chapter 12: Queues
 
 ## 1. Not Everything Should Happen Right Now
 

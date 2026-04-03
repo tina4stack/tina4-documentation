@@ -1,4 +1,4 @@
-# Chapter 16: GraphQL
+# Chapter 22: GraphQL
 
 ## 1. The Problem GraphQL Solves
 

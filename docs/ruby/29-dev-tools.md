@@ -1,4 +1,4 @@
-# Chapter 18: Dev Tools
+# Chapter 29: Dev Tools
 
 ## 1. Debugging at 2am
 
@@ -249,7 +249,7 @@ The query runner only works when `TINA4_DEBUG=true`. It is disabled in productio
 
 ## 10. Queue Monitor
 
-If your application uses background job queues (Chapter 14 -- Queues), the dev dashboard includes a queue monitor. The monitor shows five categories:
+If your application uses background job queues (Chapter 12 -- Queues), the dev dashboard includes a queue monitor. The monitor shows five categories:
 
 - **Pending jobs** -- Jobs waiting to be processed
 - **Active jobs** -- Jobs currently being processed

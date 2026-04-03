@@ -1,4 +1,4 @@
-# Chapter 14: Caching
+# Chapter 11: Caching
 
 ## 1. From 800ms to 3ms
 

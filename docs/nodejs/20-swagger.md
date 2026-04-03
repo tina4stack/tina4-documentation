@@ -1,4 +1,4 @@
-# Chapter 10: API Documentation with Swagger
+# Chapter 20: API Documentation with Swagger
 
 ## 1. The 47-Endpoint Problem
 

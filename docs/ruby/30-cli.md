@@ -1,4 +1,4 @@
-# Chapter 19: Tina4 CLI
+# Chapter 30: Tina4 CLI
 
 ## 1. Getting a New Developer Up to Speed
 
@@ -485,7 +485,7 @@ Running tests...
   2 tests, 2 passed, 0 failed (0.12s)
 ```
 
-This runs all tests in the `tests/` directory. See Chapter 17 for full testing documentation.
+This runs all tests in the `tests/` directory. See Chapter 18 for full testing documentation.
 
 ### Test Options
 

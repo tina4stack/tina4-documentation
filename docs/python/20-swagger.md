@@ -1,4 +1,4 @@
-# Chapter 10: Swagger / OpenAPI
+# Chapter 20: Swagger / OpenAPI
 
 ## 1. The 47-Endpoint Problem
 
@@ -496,7 +496,7 @@ SWAGGER_DESCRIPTION=REST API for the My Store e-commerce platform
 
 ## 12. Exercise: Document a User API
 
-Take the authentication routes from Chapter 7 (register, login, profile, update profile, change password) and add full Swagger documentation.
+Take the authentication routes from Chapter 8 (register, login, profile, update profile, change password) and add full Swagger documentation.
 
 ### Requirements
 
@@ -521,7 +521,7 @@ Open `http://localhost:7145/swagger`. You should see:
 
 ## 13. Solution
 
-Update `src/routes/auth.py` with Swagger decorators (showing the decorator additions -- the function bodies remain the same as Chapter 7):
+Update `src/routes/auth.py` with Swagger decorators (showing the decorator additions -- the function bodies remain the same as Chapter 8):
 
 ```python
 from tina4_python.core.router import get, post, put, noauth, middleware
@@ -560,7 +560,7 @@ async def auth_middleware(request, response, next_handler):
 @example_response(400, {"errors": ["Password must be at least 8 characters"]})
 @example_response(409, {"error": "Email already registered"})
 async def register(request, response):
-    # ... same as Chapter 7 ...
+    # ... same as Chapter 8 ...
     pass
 
 
@@ -580,7 +580,7 @@ async def register(request, response):
 @example_response(400, {"error": "Email and password are required"})
 @example_response(401, {"error": "Invalid email or password"})
 async def login(request, response):
-    # ... same as Chapter 7 ...
+    # ... same as Chapter 8 ...
     pass
 
 
@@ -597,7 +597,7 @@ async def login(request, response):
 })
 @example_response(401, {"error": "Authorization required"})
 async def get_profile(request, response):
-    # ... same as Chapter 7 ...
+    # ... same as Chapter 8 ...
     pass
 
 
@@ -615,7 +615,7 @@ async def get_profile(request, response):
 })
 @example_response(409, {"error": "Email already in use by another account"})
 async def update_profile(request, response):
-    # ... same as Chapter 7 ...
+    # ... same as Chapter 8 ...
     pass
 
 
@@ -631,7 +631,7 @@ async def update_profile(request, response):
 @example_response(400, {"error": "New password must be at least 8 characters"})
 @example_response(401, {"error": "Current password is incorrect"})
 async def change_password(request, response):
-    # ... same as Chapter 7 ...
+    # ... same as Chapter 8 ...
     pass
 ```
 

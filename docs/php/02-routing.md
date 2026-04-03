@@ -1004,7 +1004,7 @@ Tina4 strips trailing slashes automatically. Both `/products` and `/products/` m
 
 **Problem:** Passing a function name string as middleware doesn't work.
 
-**Fix:** Use class-based middleware with `before*`/`after*` static methods. See Chapter 8 for the full middleware pattern:
+**Fix:** Use class-based middleware with `before*`/`after*` static methods. See Chapter 10 for the full middleware pattern:
 
 ```php
 class AuthMiddleware {

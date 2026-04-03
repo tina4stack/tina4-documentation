@@ -1,4 +1,4 @@
-# Chapter 12: QueryBuilder
+# Chapter 7: QueryBuilder
 
 Every database query starts as a string. Small queries stay readable. But the moment you add optional filters, pagination, sorting, and joins, string concatenation turns your code into an unreadable mess of `if` statements and f-strings. One missed space, one misplaced comma, and the query breaks.
 

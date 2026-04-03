@@ -1,4 +1,4 @@
-# Chapter 11: Queue System
+# Chapter 12: Queue System
 
 ## 1. Do Not Make the User Wait
 

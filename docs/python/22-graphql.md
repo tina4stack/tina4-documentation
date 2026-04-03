@@ -1,4 +1,4 @@
-# Chapter 16: GraphQL and SOAP
+# Chapter 22: GraphQL and SOAP
 
 ## 1. The Problem GraphQL Solves
 
