@@ -8,7 +8,7 @@ A terminal. A single command. A browser tab. In five minutes you will have a run
 
 ## 1. What Is tina4-js
 
-tina4-js is a reactive JavaScript framework under 3KB gzipped. Seven modules, each solving one problem:
+tina4-js is a reactive JavaScript framework under 3KB core gzipped. Seven modules, each solving one problem:
 
 - **Signals** for reactive state -- no stores, no reducers, no actions
 - **Tagged template literals** for DOM rendering -- no JSX, no virtual DOM, no compiler
@@ -295,7 +295,7 @@ Development is done. Time to ship:
 npm run build
 ```
 
-Vite bundles everything into `dist/`. The tina4-js runtime adds under 3KB to your bundle. Your entire app -- framework, routes, components, everything -- will likely be smaller than React's runtime alone.
+Vite bundles everything into `dist/`. The tina4-js runtime adds under 6KB to your bundle. Your entire app -- framework, routes, components, everything -- will likely be smaller than React's runtime alone.
 
 To preview the production build:
 

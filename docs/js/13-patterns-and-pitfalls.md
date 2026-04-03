@@ -14,7 +14,7 @@ Every pitfall in this chapter was hit by a real developer on a real project. Eve
 
 Use tina4-js when:
 
-- **Bundle size matters.** Under 3KB gzipped. Your app loads in under a second on a 3G connection.
+- **Bundle size matters.** Under 3KB core gzipped. Your app loads in under a second on a 3G connection.
 - **You want simplicity.** Seven modules. One package. No decisions about state management libraries, routing libraries, or CSS-in-JS solutions.
 - **You are building for a tina4 backend.** The API client speaks tina4-php and tina4-python natively -- auth tokens, CSRF protection, and token rotation work without configuration.
 - **You want real Web Components.** Components that work outside the framework, in plain HTML, in other frameworks, in any context where custom elements are supported.
