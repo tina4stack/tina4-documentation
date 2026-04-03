@@ -15,30 +15,30 @@
 :::
 
 <nav class="tina4-menu">
-    <a href="#installation">Installation</a> •
-    <a href="#static-websites">Static Websites</a> •
-    <a href="#basic-routing">Routing</a> •
-    <a href="#middleware">Middleware</a> •
-    <a href="#templates">Templates</a> •
-    <a href="#session-handling">Sessions</a> •
-    <a href="#scss-stylesheets">SCSS</a> •
-    <a href="#environments">Environments</a> •
-    <a href="#authentication">Authentication</a> •
-    <a href="#html-forms-and-tokens">Forms & Tokens</a> •
-    <a href="#ajax">AJAX</a> •
-    <a href="#swagger">OpenAPI</a> •
-    <a href="#databases">Databases</a> •
-    <a href="#database-results">Database Results</a> •
-    <a href="#migrations">Migrations</a> •
-    <a href="#orm">ORM</a> •
-    <a href="#crud">CRUD</a> •
-    <a href="#consuming-rest-apis">REST Client</a> •
-    <a href="#inline-testing">Testing</a> •
-    <a href="#services">Services</a> •
-    <a href="#websockets">Websockets</a> •
-    <a href="#queues">Queues</a> •
-    <a href="#graphql">GraphQL</a> •
-    <a href="#wsdl">WSDL</a> •
+    <a href="#installation">Installation</a> &bull;
+    <a href="#static-websites">Static Websites</a> &bull;
+    <a href="#basic-routing">Routing</a> &bull;
+    <a href="#middleware">Middleware</a> &bull;
+    <a href="#templates">Templates</a> &bull;
+    <a href="#session-handling">Sessions</a> &bull;
+    <a href="#scss-stylesheets">SCSS</a> &bull;
+    <a href="#environments">Environments</a> &bull;
+    <a href="#authentication">Authentication</a> &bull;
+    <a href="#html-forms-and-tokens">Forms &amp; Tokens</a> &bull;
+    <a href="#ajax">AJAX</a> &bull;
+    <a href="#swagger">OpenAPI</a> &bull;
+    <a href="#databases">Databases</a> &bull;
+    <a href="#database-results">Database Results</a> &bull;
+    <a href="#migrations">Migrations</a> &bull;
+    <a href="#orm">ORM</a> &bull;
+    <a href="#crud">CRUD</a> &bull;
+    <a href="#consuming-rest-apis">REST Client</a> &bull;
+    <a href="#inline-testing">Testing</a> &bull;
+    <a href="#services">Services</a> &bull;
+    <a href="#websockets">Websockets</a> &bull;
+    <a href="#queues">Queues</a> &bull;
+    <a href="#wsdl">WSDL</a> &bull;
+    <a href="#graphql">GraphQL</a> &bull;
     <a href="#localization">Localization</a>
 </nav>
 

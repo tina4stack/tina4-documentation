@@ -35,11 +35,11 @@
     <a href="#consuming-rest-apis">REST Client</a> &bull;
     <a href="#inline-testing">Testing</a> &bull;
     <a href="#services">Services</a> &bull;
-    <a href="#websockets">WebSockets</a> &bull;
+    <a href="#websockets">Websockets</a> &bull;
     <a href="#queues">Queues</a> &bull;
     <a href="#wsdl">WSDL</a> &bull;
-    <a href="#localization">Localization</a> &bull;
-    <a href="#graphql">GraphQL</a>
+    <a href="#graphql">GraphQL</a> &bull;
+    <a href="#localization">Localization</a>
 </nav>
 
 <style>
