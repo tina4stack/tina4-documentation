@@ -272,6 +272,21 @@ API_KEY=ABC1234
 const apiKey = process.env.API_KEY ?? "ABC1234";
 ```
 
+
+
+Access env vars programmatically:
+
+```typescript
+import { loadEnv, getEnv, hasEnv, requireEnv, isTruthy } from "tina4-nodejs";
+
+loadEnv();                           // Load .env file (auto on server start)
+getEnv("DATABASE_URL");              // Get value or undefined
+getEnv("PORT", "7148");              // Get value with default
+hasEnv("TINA4_DEBUG");               // true if set
+requireEnv("DATABASE_URL");          // Throws if missing
+isTruthy(getEnv("TINA4_DEBUG"));     // true for "true", "1", "yes"
+```
+
 ### Authentication {#authentication}
 
 POST, PUT, PATCH, and DELETE routes require a bearer token by default. GET routes are public unless you mark them otherwise.

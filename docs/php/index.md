@@ -198,6 +198,21 @@ Access environment variables through the `$_ENV` superglobal.
 $title = $_ENV["SWAGGER_TITLE"];
 ```
 
+
+
+Access env vars programmatically:
+
+```php
+use Tina4\DotEnv;
+
+DotEnv::loadEnv('.env');                     // Load .env file (auto on server start)
+DotEnv::getEnv('DATABASE_URL');              // Get value or null
+DotEnv::getEnv('PORT', '7146');              // Get value with default
+DotEnv::hasEnv('TINA4_DEBUG');               // true if set
+DotEnv::requireEnv('DATABASE_URL');          // Throws if missing
+DotEnv::isTruthy(DotEnv::getEnv('TINA4_DEBUG'));  // true for "true", "1", "yes"
+```
+
 ### Authentication {#authentication}
 
 POST, PUT, PATCH, and DELETE routes are secured by default. GET routes stay public unless you mark them otherwise.

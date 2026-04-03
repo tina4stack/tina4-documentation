@@ -184,6 +184,19 @@ API_KEY=ABC1234
 api_key = ENV["API_KEY"] || "ABC1234"
 ```
 
+
+
+Access env vars programmatically:
+
+```ruby
+Tina4::Env.load_env                          # Load .env file (auto on server start)
+Tina4::Env.get_env("DATABASE_URL")           # Get value or nil
+Tina4::Env.get_env("PORT", "7147")           # Get value with default
+Tina4::Env.has_env?("TINA4_DEBUG")           # true if set
+Tina4::Env.require_env!("DATABASE_URL")      # Raises KeyError if missing
+Tina4::Env.truthy?(ENV["TINA4_DEBUG"])       # true for "true", "1", "yes"
+```
+
 ### Authentication {#authentication}
 
 Tina4 uses JWT tokens. Keys auto-generate in `.keys/`. GET routes are public. POST/PUT/PATCH/DELETE require a bearer token by default.

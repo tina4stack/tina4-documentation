@@ -220,6 +220,21 @@ import os
 api_key = os.getenv("API_KEY", "ABC1234")
 ```
 
+
+
+Access env vars programmatically:
+
+```python
+from tina4_python.dotenv import load_env, get_env, has_env, require_env, is_truthy
+
+load_env()                          # Load .env file (auto on server start)
+get_env("DATABASE_URL")             # Get value or None
+get_env("PORT", "7145")             # Get value with default
+has_env("TINA4_DEBUG")              # True if set
+require_env("DATABASE_URL")         # Raises if missing
+is_truthy(get_env("TINA4_DEBUG"))   # True for "true", "1", "yes"
+```
+
 ### Authentication {#authentication}
 
 POST, PUT, PATCH, and DELETE routes require a Bearer token by default. Pass `Authorization: Bearer API_KEY` in the request header. Use `@noauth` to open a route to everyone. Use `@secured` to lock a GET route behind authentication.
