@@ -25,7 +25,7 @@ Page.HTMLContent.Text := '<h1>About</h1><a href="#home">Back to Home</a>';
 
 <div v-pre>
 
-## Navigation with Twig Templates {#twig}
+## Navigation with Frond (Twig) Templates {#twig}
 
 Pages can use Twig templates instead of raw HTML:
 

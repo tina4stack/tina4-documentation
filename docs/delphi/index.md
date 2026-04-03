@@ -142,7 +142,7 @@ Page.HTMLContent.Text := '<h1>Home</h1><a href="#about">Go to About</a>';
 
 <div v-pre>
 
-### Twig Templates {#twig}
+### Frond (Twig) Templates {#twig}
 
 A Twig-compatible template engine for rendering dynamic HTML.
 

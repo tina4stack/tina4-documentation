@@ -139,7 +139,7 @@ The key insight: set `MasterSource` on each adapter to the same `TTina4RESTReque
 
 ---
 
-## 4. Pattern 3: HTML Render + Twig + REST Data
+## 4. Pattern 3: HTML Render + Frond (Twig) + REST Data
 
 Rich UI rendering by combining API data with Twig templates.
 

@@ -227,7 +227,7 @@ export default defineConfig({
                         {text: 'JSON Adapter', link: '/delphi/json-adapter.md'},
                         {text: 'HTML Renderer', link: '/delphi/html-render.md'},
                         {text: 'Page Navigation', link: '/delphi/html-pages.md'},
-                        {text: 'Twig Templates', link: '/delphi/twig.md'},
+                        {text: 'Frond (Twig) Templates', link: '/delphi/twig.md'},
                         {text: 'Core Utilities', link: '/delphi/core.md'}
                     ]
                 }
@@ -253,6 +253,10 @@ export default defineConfig({
                     ]
                 }
             ]
+        },
+        footer: {
+            message: 'Sponsored with 🩵 by <a href="https://codeinfinity.co.za?utm_source=tina4&utm_medium=docs&utm_campaign=sponsor" target="_blank"><img src="/c8-logo.svg" alt="Code Infinity" style="height:24px;vertical-align:middle;display:inline-block;margin:0 6px" />Code Infinity</a>',
+            copyright: 'MIT Licensed | Copyright 2007 - present Tina4'
         },
         socialLinks: [
             {icon: 'github', link: 'https://github.com/tina4stack'},

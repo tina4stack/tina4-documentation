@@ -1,4 +1,4 @@
-# Chapter 6: Twig Templates
+# Chapter 6: Frond (Twig) Templates
 
 ## HTML Without the String Concatenation Hell
 

@@ -1,4 +1,4 @@
-# Static Websites with Twig Templates
+# Static Websites with Frond (Twig) Templates
 
 ::: tip 🔥 Hot Tips
 - Twig template handling comes with Tina4 out of the box, no configuration needed.

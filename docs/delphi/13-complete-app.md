@@ -1075,7 +1075,7 @@ end;
 
 ---
 
-## 14. Using Twig Templates Instead of String Concatenation
+## 14. Using Frond (Twig) Templates Instead of String Concatenation
 
 The inline HTML strings above work but become unwieldy. For production applications, use Twig template files. Here is the dashboard page as a Twig template:
 

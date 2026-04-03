@@ -248,7 +248,7 @@ end;
 
 ---
 
-## 10. Using Twig Templates in Pages
+## 10. Using Frond (Twig) Templates in Pages
 
 Pages can use Twig templates for dynamic content. Set variables with `SetTwigVariable` and use Twig syntax in `TwigContent`:
 

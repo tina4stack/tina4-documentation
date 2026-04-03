@@ -46,7 +46,7 @@ body {
 
 - **Partials**: Files starting with `_` (e.g., `_variables.scss`) are imported without compiling separately—efficient like Sass best practices.
 
-## Step 2: Link CSS in Twig Templates
+## Step 2: Link CSS in Frond (Twig) Templates
 Update `base.twig` to reference the compiled CSS:
 
 ```twig
