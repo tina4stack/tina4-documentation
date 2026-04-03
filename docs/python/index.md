@@ -388,10 +388,6 @@ async def chat_ws(connection, event, data):
 ```
 Have a look at the PubSub example under [Websockets](websockets.md).
 
-### Threads {#threads}
-
-Due to the nature of Python, threads are not necessary.
-
 ### Queues {#queues}
 
 Supports litequeue (default/SQLite), RabbitMQ, Kafka, and MongoDB backends. The queue system uses `produce()` and `consume()` directly -- no separate Producer or Consumer classes.
@@ -437,6 +433,44 @@ async def wsdl_cis(request, response):
 
 ```
 [More Details](wsdl.md) on WSDL configuration and usage.
+
+### GraphQL {#graphql}
+
+```python
+from tina4_python.graphql import GraphQL
+
+schema = """
+type Query {
+    hello(name: String!): String
+    users: [User]
+}
+
+type User {
+    id: Int
+    name: String
+    email: String
+}
+"""
+
+resolvers = {
+    "hello": lambda info, name: f"Hello, {name}!",
+    "users": lambda info: db.fetch("SELECT * FROM users").records,
+}
+
+graphql = GraphQL(schema, resolvers)
+```
+
+Register the endpoint:
+
+```python
+@post("/graphql")
+@noauth()
+async def handle_graphql(request, response):
+    result = graphql.execute(request.body.get("query", ""))
+    return response(result)
+```
+
+GraphiQL UI available at `/__dev/graphql` in debug mode.
 
 ### Localization (i18n) {#localization}
 

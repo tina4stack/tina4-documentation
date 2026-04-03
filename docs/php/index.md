@@ -413,19 +413,6 @@ Router::websocket("/ws/chat/{room}", function ($connection, $event, $data) {
 });
 ```
 
-### Threads {#threads}
-
-Define a trigger, then fire it. Each trigger runs as a separate PHP thread.
-
-```php
-Tina4\Thread::addTrigger('myNewProcess', function () {
-    // Your work goes here
-});
-
-Tina4\Thread::trigger('myNewProcess');
-```
-[More details](threads.md) on threads, their restrictions, and usage patterns.
-
 ### Queues {#queues}
 
 Tina4 includes a queue system with multiple backends: LiteQueue (SQLite), MongoDB, RabbitMQ, and Kafka. Install `tina4stack/tina4php-queue` and use a single API for producing and consuming messages.
@@ -470,6 +457,43 @@ Router::any("/calculator", function ($request, $response) {
 });
 ```
 [More details](wsdl.md) on WSDL services.
+
+### GraphQL {#graphql}
+
+```php
+use Tina4\GraphQL;
+
+\$schema = <<<GQL
+type Query {
+    hello(name: String!): String
+    users: [User]
+}
+
+type User {
+    id: Int
+    name: String
+    email: String
+}
+GQL;
+
+\$resolvers = [
+    "hello" => fn(\$args) => "Hello, " . \$args["name"] . "!",
+    "users" => fn() => \$db->fetch("SELECT * FROM users")->toArray(),
+];
+
+\$graphql = new GraphQL(\$schema, \$resolvers);
+```
+
+Register the endpoint:
+
+```php
+Router::post("/graphql", function (\$request, \$response) use (\$graphql) {
+    \$result = \$graphql->execute(\$request->body["query"] ?? "");
+    return \$response->json(\$result);
+})->noAuth();
+```
+
+GraphiQL UI available at `/__dev/graphql` in debug mode.
 
 ### Localization (i18n) {#localization}
 
