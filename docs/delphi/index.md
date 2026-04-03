@@ -196,7 +196,7 @@ uv sync
   "mcpServers": {
     "pascal-dev": {
       "command": "uv",
-      "args": ["run", "--directory", "/path/to/tina4delphi/claude-pascal-mcp", "pascal-mcp"]
+      "args": ["run", "--directory", "/path/to/claude-pascal-mcp", "pascal-mcp"]
     }
   }
 }

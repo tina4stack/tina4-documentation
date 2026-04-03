@@ -18,9 +18,9 @@ Without MCP, Claude can write Delphi code. With MCP, Claude can write, compile, 
 
 ---
 
-## 2. The claude-pascal-mcp Server
+## 2. The Pascal MCP Server
 
-The MCP server ships inside the tina4delphi repository in the `claude-pascal-mcp` directory. It is a Python-based server that exposes Pascal/Delphi development tools to Claude Code.
+The MCP server is in a separate repository at [github.com/tina4stack/claude-pascal-mcp](https://github.com/tina4stack/claude-pascal-mcp). It is a Python-based server that exposes Pascal/Delphi development tools to any MCP-compatible AI assistant (Claude Code, Cursor, Copilot, etc.).
 
 ### What the Server Provides
 
@@ -53,7 +53,7 @@ powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 Then install the MCP server dependencies:
 
 ```bash
-cd /path/to/tina4delphi/claude-pascal-mcp
+cd /path/to/claude-pascal-mcp
 uv sync
 ```
 
@@ -75,7 +75,7 @@ Create a `.mcp.json` file in your Delphi project root:
       "args": [
         "run",
         "--directory",
-        "/path/to/tina4delphi/claude-pascal-mcp",
+        "/path/to/claude-pascal-mcp",
         "pascal-mcp"
       ]
     }
@@ -90,7 +90,7 @@ Replace `/path/to/tina4delphi` with the actual path where you cloned the tina4de
 To make the MCP server available in all Claude Code sessions, add it to your global Claude settings:
 
 ```bash
-claude mcp add pascal-dev -- uv run --directory /path/to/tina4delphi/claude-pascal-mcp pascal-mcp
+claude mcp add pascal-dev -- uv run --directory /path/to/claude-pascal-mcp pascal-mcp
 ```
 
 ### Verifying the Setup
@@ -142,7 +142,7 @@ Create `.claude/launch.json` in your project root:
   "configurations": [
     {
       "name": "pascal-preview",
-      "runtimeExecutable": "/path/to/tina4delphi/claude-pascal-mcp/.venv/Scripts/pythonw.exe",
+      "runtimeExecutable": "/path/to/claude-pascal-mcp/.venv/Scripts/pythonw.exe",
       "runtimeArgs": ["-m", "pascal_mcp.preview_bridge"],
       "port": 18080,
       "autoPort": true
@@ -159,7 +159,7 @@ On macOS or Linux, use the Python path from the virtual environment:
   "configurations": [
     {
       "name": "pascal-preview",
-      "runtimeExecutable": "/path/to/tina4delphi/claude-pascal-mcp/.venv/bin/python",
+      "runtimeExecutable": "/path/to/claude-pascal-mcp/.venv/bin/python",
       "runtimeArgs": ["-m", "pascal_mcp.preview_bridge"],
       "port": 18080,
       "autoPort": true
