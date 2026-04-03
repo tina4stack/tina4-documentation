@@ -1595,7 +1595,7 @@ The same patterns work in Python, Ruby, and Node.js. Same project structure. Sam
 
 Your `vendor/` directory is small. Your `composer.lock` has one entry. When PHP 9.0 ships, you update one package. Everything works. No dependency tree to untangle. No abandoned transitive dependency to replace. No security advisory for a package four levels deep that you never knew you were using.
 
-Simple does not mean limited. TaskFlow has authentication, real-time WebSocket, email, caching, GraphQL, and a test suite. It deploys in a Docker container. It handles thousands of concurrent users. All of this runs on under 5,000 lines of framework code.
+Simple does not mean limited. TaskFlow has authentication, real-time WebSocket, email, caching, GraphQL, and a test suite. It deploys in a Docker container. It handles thousands of concurrent users. All of this runs on a single zero-dependency framework package.
 
 Build things. Ship them. Keep it simple.
 

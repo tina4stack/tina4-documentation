@@ -5,7 +5,7 @@
 
 ## 1. What Is Tina4 Ruby
 
-Tina4 Ruby is a zero-dependency web framework for Ruby 3.1+. One gem. Under 5,000 lines of code. Routing, ORM, template engine, authentication, queues, WebSocket, and 70 other features -- all built in.
+Tina4 Ruby is a zero-dependency web framework for Ruby 3.1+. One gem. Routing, ORM, template engine, authentication, queues, WebSocket, and 70 other features -- all built in.
 
 It belongs to the Tina4 family. Four identical frameworks. Python, PHP, Ruby, Node.js. Everything you learn here transfers to the other three languages. Same project structure. Same template syntax. Same CLI commands. Same `.env` variables.
 

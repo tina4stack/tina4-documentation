@@ -337,7 +337,7 @@ Tina4 Ruby fits 44 features into ~900 KB. Rails needs 40+ gems and 40+ MB for 24
 
 ## Node.js
 
-Tina4 Node.js runs on Node.js 22+ with zero runtime dependencies. TypeScript-first. Under 5,000 lines of code. Production mode uses cluster with one worker per CPU core.
+Tina4 Node.js runs on Node.js 22+ with zero runtime dependencies. TypeScript-first. Production mode uses cluster with one worker per CPU core.
 
 ### At a Glance
 

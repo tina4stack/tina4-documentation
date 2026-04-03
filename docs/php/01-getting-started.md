@@ -5,7 +5,7 @@
 
 ## 1. What Is Tina4 PHP
 
-Tina4 PHP is a zero-dependency web framework for PHP 8.1+. One Composer package. Under 5,000 lines of code. Routing, an ORM, a template engine, authentication, queues, WebSocket, and 70 other features -- all included.
+Tina4 PHP is a zero-dependency web framework for PHP 8.1+. One Composer package. Routing, an ORM, a template engine, authentication, queues, WebSocket, and 70 other features -- all included.
 
 It belongs to the Tina4 family: four identical frameworks in Python, PHP, Ruby, and Node.js. Learn one, know all four. Same project structure. Same template syntax. Same CLI commands. Same `.env` variables.
 

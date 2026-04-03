@@ -5,7 +5,7 @@
 
 ## 1. What Is Tina4 Node.js
 
-Tina4 Node.js is a zero-dependency web framework. One npm package. Under 5,000 lines of code. It hands you routing, an ORM, a template engine, authentication, queues, WebSocket, and 70 other features. Node.js 22+ and TypeScript.
+Tina4 Node.js is a zero-dependency web framework. One npm package. It hands you routing, an ORM, a template engine, authentication, queues, WebSocket, and 70 other features. Node.js 22+ and TypeScript.
 
 Truly zero runtime dependencies means no native C++ addons, no `node-gyp`, no platform-specific binaries. SQLite support uses Node's built-in `node:sqlite` module (available in Node 22+), so even database access requires nothing beyond what ships with Node.js itself.
 
