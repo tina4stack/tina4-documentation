@@ -25,7 +25,7 @@ No `render()` loop. No reconciliation. No diffing. The template creates DOM, bin
 
 ---
 
-## 2. Static Values -- &#36;&#123;value}
+## 2. Static Values -- `&#36;{value}`
 
 Plain values go in as text nodes. Once. Never again.
 
@@ -49,7 +49,7 @@ You cannot accidentally inject HTML through interpolation. This is by design.
 
 ---
 
-## 3. Reactive Text -- &#36;&#123;signal}
+## 3. Reactive Text -- `&#36;{signal}`
 
 Pass a signal directly (not `.value`) to create a reactive text node:
 
@@ -75,13 +75,13 @@ html`<p>${count.value}</p>`
 html`<p>${count}</p>`
 ```
 
-When you write `&#36;&#123;count.value}`, JavaScript evaluates `count.value` (gets `0`) and passes the number `0` to the template. The template sees a plain number, not a signal. It creates a static text node.
+When you write `&#36;{count.value}`, JavaScript evaluates `count.value` (gets `0`) and passes the number `0` to the template. The template sees a plain number, not a signal. It creates a static text node.
 
-When you write `&#36;&#123;count}`, JavaScript passes the signal object. The template detects it (via `isSignal()`), creates a text node, and subscribes to changes. When the signal updates, the text node updates.
+When you write `&#36;{count}`, JavaScript passes the signal object. The template detects it (via `isSignal()`), creates a text node, and subscribes to changes. When the signal updates, the text node updates.
 
 ---
 
-## 4. Reactive Blocks -- &#36;&#123;() => expr}
+## 4. Reactive Blocks -- `&#36;{() => expr}`
 
 Functions are reactive blocks. The function runs immediately, and re-runs whenever any signal read inside it changes:
 
@@ -146,7 +146,7 @@ html`
 `
 ```
 
-Each `&#36;&#123;item.name}` is a reactive text node. If you change `items.value[0].name.value = 'Pear'`, only that text node updates. The list does not re-render.
+Each `&#36;{item.name}` is a reactive text node. If you change `items.value[0].name.value = 'Pear'`, only that text node updates. The list does not re-render.
 
 ---
 
@@ -297,7 +297,7 @@ content.value = '<em>Done!</em>';
 
 ---
 
-## 9. Dynamic Attributes -- attr=&#36;&#123;value}
+## 9. Dynamic Attributes -- attr=`&#36;{value}`
 
 Regular attributes accept signals and functions for reactive updates:
 
@@ -454,12 +454,12 @@ function loginForm() {
 
 Every binding type from this chapter appears in this form:
 
-- **`.value=&#36;&#123;email}`** -- property binding keeps the input's DOM property in sync with the signal
+- **`.value=&#36;{email}`** -- property binding keeps the input's DOM property in sync with the signal
 - **`@input`** -- event handler updates the signal when the user types
-- **`?disabled=&#36;&#123;loading}`** -- boolean attribute toggles from a signal
-- **`?disabled=&#36;&#123;() => !isValid.value || loading.value}`** -- boolean attribute from a function
-- **`&#36;&#123;() => loading.value ? 'Logging in...' : 'Login'}`** -- reactive text block swaps the button label
-- **`&#36;&#123;() => error.value ? html\`...\` : null}`** -- conditional rendering with the ternary pattern
+- **`?disabled=&#36;{loading}`** -- boolean attribute toggles from a signal
+- **`?disabled=&#36;{() => !isValid.value || loading.value}`** -- boolean attribute from a function
+- **`&#36;{() => loading.value ? 'Logging in...' : 'Login'}`** -- reactive text block swaps the button label
+- **`&#36;{() => error.value ? html\`...\` : null}`** -- conditional rendering with the ternary pattern
 
 One template. Six binding types. Zero manual DOM updates. The template engine handles every transition between states, and the form responds the moment data changes.
 
@@ -469,13 +469,13 @@ One template. Six binding types. Zero manual DOM updates. The template engine ha
 
 | Syntax | What it does | Reactive? |
 |---|---|---|
-| `&#36;&#123;value}` | Static text node, XSS-safe | No |
-| `&#36;&#123;signal}` | Reactive text node | Yes |
-| `&#36;&#123;() => expr}` | Reactive block (conditionals, lists) | Yes |
-| `&#36;&#123;fragment}` | Insert DocumentFragment | No |
-| `&#36;&#123;array}` | Render each item | No |
-| `@click=&#36;&#123;fn}` | Event listener (auto-batched) | - |
-| `?disabled=&#36;&#123;x}` | Boolean attribute (add/remove) | If signal/function |
-| `.value=&#36;&#123;x}` | DOM property binding | If signal |
-| `.innerHTML=&#36;&#123;x}` | Raw HTML injection | If signal |
-| `class=&#36;&#123;x}` | Regular attribute | If signal/function |
+| `&#36;{value}` | Static text node, XSS-safe | No |
+| `&#36;{signal}` | Reactive text node | Yes |
+| `&#36;{() => expr}` | Reactive block (conditionals, lists) | Yes |
+| `&#36;{fragment}` | Insert DocumentFragment | No |
+| `&#36;{array}` | Render each item | No |
+| `@click=&#36;{fn}` | Event listener (auto-batched) | - |
+| `?disabled=&#36;{x}` | Boolean attribute (add/remove) | If signal/function |
+| `.value=&#36;{x}` | DOM property binding | If signal |
+| `.innerHTML=&#36;{x}` | Raw HTML injection | If signal |
+| `class=&#36;{x}` | Regular attribute | If signal/function |
