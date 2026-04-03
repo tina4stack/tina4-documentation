@@ -35,7 +35,18 @@
     <a href="#queues">Queues</a> &bull;
     <a href="#wsdl">WSDL</a> &bull;
     <a href="#graphql">GraphQL</a> &bull;
-    <a href="#localization">Localization</a>
+    <a href="#localization">Localization</a> &bull;
+    <a href="#html-builder">HTML Builder</a> &bull;
+    <a href="#events">Events</a> &bull;
+    <a href="#logging">Logging</a> &bull;
+    <a href="#response-cache">Cache</a> &bull;
+    <a href="#health">Health</a> &bull;
+    <a href="#container">DI Container</a> &bull;
+    <a href="#error-overlay">Error Overlay</a> &bull;
+    <a href="#dev-admin">Dev Admin</a> &bull;
+    <a href="#cli">CLI</a> &bull;
+    <a href="#mcp">MCP</a> &bull;
+    <a href="#fakedata">FakeData</a>
 </nav>
 
 <style>
@@ -492,5 +503,124 @@ from tina4_python.Localization import AVAILABLE_LANGUAGES
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">Back to top</a>
 </nav>
+
+
+### HTML Builder {#html-builder}
+
+```python
+from tina4_python.HtmlElement import HTMLElement, add_html_helpers
+
+el = HTMLElement("div", {"class": "card"}, ["Hello"])
+str(el)  # <div class="card">Hello</div>
+
+# Nesting
+page = HTMLElement("div")(
+    HTMLElement("h1")("Title"),
+    HTMLElement("p")("Content"),
+)
+
+# Helper functions
+add_html_helpers(globals())
+html = _div({"class": "card"},
+    _h1("Title"),
+    _p("Description"),
+    _a({"href": "/more"}, "Read more"),
+)
+```
+
+### Events {#events}
+
+```python
+from tina4_python.core.events import on, emit, once, off
+
+@on("user.created")
+def send_welcome(user):
+    print(f"Welcome {user['name']}!")
+
+@once("app.ready")
+def on_ready():
+    print("Started!")
+
+emit("user.created", {"name": "Alice"})
+```
+
+### Logging {#logging}
+
+```python
+from tina4_python.debug import Log
+
+Log.info("Server started")
+Log.debug("Request received", path="/api/users")
+Log.warning("Slow query", duration_ms=450)
+Log.error("Connection failed", host="db.example.com")
+```
+
+Set `TINA4_LOG_LEVEL` in `.env`: `ALL`, `DEBUG`, `INFO`, `WARNING`, `ERROR`.
+
+### Response Cache {#response-cache}
+
+```python
+from tina4_python.core.router import get, cached
+
+@cached(True, max_age=120)
+@get("/api/products")
+async def products(request, response):
+    return response(expensive_query())
+```
+
+### Health Endpoint {#health}
+
+Built-in at `/health`. Returns `{"status": "ok", "uptime": 123.4}`. Configure with `TINA4_HEALTH_PATH` env var.
+
+### DI Container {#container}
+
+```python
+from tina4_python.container import Container
+
+container = Container()
+container.singleton("db", lambda: Database("sqlite:///app.db"))
+container.register("mailer", lambda: MailService())
+db = container.get("db")
+```
+
+### Error Overlay {#error-overlay}
+
+Automatic in debug mode. Shows syntax-highlighted stack trace with source context. Set `TINA4_DEBUG=true` in `.env`.
+
+### Dev Admin {#dev-admin}
+
+Available at `/__dev` in debug mode. Includes route inspector, database tab, request capture, metrics bubble chart, gallery examples, dev mailbox.
+
+### CLI Commands {#cli}
+
+```bash
+tina4 init python my-app    # Scaffold project
+tina4 serve                  # Start dev server
+tina4 serve --production     # Production mode
+tina4 doctor                 # Check environment
+tina4 env                    # Configure .env
+tina4 docs                   # Download documentation
+tina4 generate model User    # Generate scaffolding
+tina4 migrate                # Run migrations
+tina4 test                   # Run tests
+tina4 ai                     # Install AI context
+```
+
+### MCP Server {#mcp}
+
+Auto-starts on `/__mcp` in debug mode. Exposes 24 dev tools via JSON-RPC 2.0 over SSE. Works with Claude Code, Cursor, and other MCP clients.
+
+### FakeData {#fakedata}
+
+```python
+from tina4_python.seeder import FakeData
+
+fake = FakeData()
+fake.name()      # "Alice Johnson"
+fake.email()     # "alice@example.com"
+fake.phone()     # "+1-555-0123"
+fake.sentence()  # "The quick brown fox..."
+fake.integer()   # 4821
+```
 
 </div>

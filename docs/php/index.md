@@ -38,7 +38,18 @@
     <a href="#queues">Queues</a> &bull;
     <a href="#wsdl">WSDL</a> &bull;
     <a href="#graphql">GraphQL</a> &bull;
-    <a href="#localization">Localization</a>
+    <a href="#localization">Localization</a> &bull;
+    <a href="#html-builder">HTML Builder</a> &bull;
+    <a href="#events">Events</a> &bull;
+    <a href="#logging">Logging</a> &bull;
+    <a href="#response-cache">Response Cache</a> &bull;
+    <a href="#health">Health</a> &bull;
+    <a href="#container">DI Container</a> &bull;
+    <a href="#error-overlay">Error Overlay</a> &bull;
+    <a href="#dev-admin">Dev Admin</a> &bull;
+    <a href="#cli">CLI</a> &bull;
+    <a href="#mcp">MCP Server</a> &bull;
+    <a href="#fakedata">FakeData</a>
 </nav>
 
 <style>
@@ -514,5 +525,224 @@ $i18n->setLocale("fr");
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">Back to top</a>
 </nav>
+
+
+### HTML Builder {#html-builder}
+
+```php
+$el = new HtmlElement("div", ["class" => "card"], ["Hello"]);
+echo $el; // <div class="card">Hello</div>
+
+// Nesting
+$card = new HtmlElement("div", ["class" => "card"], [
+    new HtmlElement("h2", [], ["Title"]),
+    new HtmlElement("p", [], ["Content"]),
+]);
+
+// Helper functions
+extract(HtmlElement::helpers());
+echo $_div(["class" => "card"], $_h1("Title"), $_p("Description"));
+```
+
+### Events {#events}
+
+Register listeners and fire them anywhere in the application.
+
+```php
+use Tina4\Events;
+
+// Register a listener
+Events::on("user.registered", function (array $payload): void {
+    echo "New user: " . $payload["email"];
+});
+
+// Fire once -- listener is removed after first call
+Events::once("app.boot", function (): void {
+    echo "Booted!";
+});
+
+// Emit an event
+Events::emit("user.registered", ["email" => "alice@example.com"]);
+```
+
+Multiple listeners can bind to the same event. They run in registration order.
+
+### Logging {#logging}
+
+Write log messages through the `Debug` class. The level is controlled by `TINA4_LOG_LEVEL` in `.env`.
+
+```php
+use Tina4\Debug;
+
+Debug::message("Starting import", TINA4_LOG_INFO);
+Debug::message("Query took 2.3s", TINA4_LOG_WARNING);
+Debug::message("Connection failed", TINA4_LOG_ERROR);
+```
+
+```env
+# .env
+TINA4_LOG_LEVEL=TINA4_LOG_ALL    # DEBUG | INFO | WARNING | ERROR | NONE
+```
+
+Log output goes to `src/logs/` by default. Set `TINA4_LOG_PATH` to change the destination.
+
+### Response Cache {#response-cache}
+
+Chain `->cache()` onto any route handler to store the response. Subsequent requests within the TTL skip the handler entirely.
+
+```php
+use Tina4\Router;
+
+Router::get("/api/products", function ($request, $response) {
+    $db = \Tina4\Database::getConnection();
+    return $response->json($db->fetch("SELECT * FROM products")->toArray());
+})->cache(300); // cache for 300 seconds
+
+// Cache with a custom key
+Router::get("/api/report/{year}", function ($request, $response) {
+    return $response->json(buildReport($request->params["year"]));
+})->cache(3600, "report-" . date("Y"));
+```
+
+Set `TINA4_CACHE_ON=true` in `.env` to activate caching globally.
+
+### Health Endpoint {#health}
+
+Tina4 exposes a built-in health check at `/health`. No setup required.
+
+```bash
+curl http://localhost:7146/health
+```
+
+```json
+{
+  "status": "ok",
+  "uptime": 142,
+  "memory_mb": 12.4,
+  "php": "8.3.0",
+  "tina4": "3.10.20"
+}
+```
+
+Add custom checks by registering a `health.check` event listener.
+
+```php
+use Tina4\Events;
+
+Events::on("health.check", function (array &$report): void {
+    $report["db"] = \Tina4\Database::getConnection()->ping() ? "ok" : "fail";
+});
+```
+
+### DI Container {#container}
+
+Register services once and resolve them anywhere. Singletons share one instance across the request lifecycle.
+
+```php
+use Tina4\Container;
+
+// Bind a factory
+Container::register("mailer", fn() => new Mailer($_ENV["SMTP_HOST"]));
+
+// Bind a singleton
+Container::singleton("db", fn() => \Tina4\Database::getConnection());
+
+// Resolve
+$mailer = Container::get("mailer");
+$db     = Container::get("db");
+```
+
+Route handlers receive resolved dependencies automatically when type-hinted parameter names match registered keys.
+
+### Error Overlay {#error-overlay}
+
+When `TINA4_DEBUG=true`, unhandled exceptions render an interactive overlay in the browser instead of a blank 500 page. The overlay shows the stack trace, request details, and the source file at the point of failure. No configuration needed — it activates automatically.
+
+```env
+# .env
+TINA4_DEBUG=true
+```
+
+In production set `TINA4_DEBUG=false`. Errors log to `src/logs/` and return a plain `500` response.
+
+### Dev Admin {#dev-admin}
+
+Point a browser at `/__dev` while the dev server is running to open the admin dashboard.
+
+```bash
+tina4 serve
+# open http://localhost:7146/__dev
+```
+
+The dashboard surfaces routes, registered middleware, environment variables, recent log entries, active queue workers, and the GraphiQL interface. It is disabled automatically when `TINA4_DEBUG=false`.
+
+### CLI Commands {#cli}
+
+```bash
+# Scaffold a new project
+tina4 init php my-project
+
+# Start the dev server (default port 7146)
+tina4 serve
+
+# Start on a custom port
+tina4 serve --port 8080
+
+# Run inline tests
+tina4 test
+
+# Create a migration
+tina4 migrate:create add-users-table
+
+# Run all pending migrations
+tina4 migrate
+
+# Rollback the last migration
+tina4 migrate:rollback
+
+# Generate CRUD for a model
+tina4 crud User
+```
+
+### MCP Server {#mcp}
+
+Tina4 ships an MCP (Model Context Protocol) server that starts automatically when `TINA4_DEBUG=true`. AI assistants connect to it to inspect routes, models, and data without leaving the editor.
+
+```env
+# .env
+TINA4_DEBUG=true
+TINA4_MCP_PORT=7147   # optional override, defaults to main port + 1
+```
+
+```bash
+# Verify the server is running
+curl http://localhost:7147/mcp/manifest
+```
+
+The manifest lists every route, ORM model, and migration. Disable it in production by setting `TINA4_DEBUG=false`.
+
+### FakeData {#fakedata}
+
+Generate realistic test data without an internet connection. `FakeData` ships with Tina4 — no extra packages required.
+
+```php
+use Tina4\FakeData;
+
+$fake = new FakeData();
+
+echo $fake->name();          // "Alice Johnson"
+echo $fake->email();         // "alice.johnson@example.com"
+echo $fake->phone();         // "+1-555-0123"
+echo $fake->address();       // "42 Maple Street, Springfield"
+echo $fake->company();       // "Acme Corp"
+echo $fake->lorem(10);       // 10 words of placeholder text
+echo $fake->integer(1, 100); // random int between 1 and 100
+echo $fake->uuid();          // "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+
+// Seed for reproducible output
+$fake = new FakeData(seed: 42);
+```
+
+Use `FakeData` inside migrations, seeders, or test fixtures.
 
 </div>

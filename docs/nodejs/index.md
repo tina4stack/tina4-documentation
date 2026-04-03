@@ -39,7 +39,18 @@
     <a href="#queues">Queues</a> &bull;
     <a href="#wsdl">WSDL</a> &bull;
     <a href="#graphql">GraphQL</a> &bull;
-    <a href="#localization">Localization</a>
+    <a href="#localization">Localization</a> &bull;
+    <a href="#html-builder">HTML Builder</a> &bull;
+    <a href="#events">Events</a> &bull;
+    <a href="#logging">Logging</a> &bull;
+    <a href="#response-cache">Cache</a> &bull;
+    <a href="#health">Health</a> &bull;
+    <a href="#container">DI Container</a> &bull;
+    <a href="#error-overlay">Error Overlay</a> &bull;
+    <a href="#dev-admin">Dev Admin</a> &bull;
+    <a href="#cli">CLI</a> &bull;
+    <a href="#mcp">MCP Server</a> &bull;
+    <a href="#fakedata">FakeData</a>
 </nav>
 
 <style>
@@ -668,6 +679,257 @@ Visit `http://localhost:7148/graphql` to query your API. The GraphiQL playground
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">Back to top</a>
 </nav>
+
+
+### HTML Builder {#html-builder}
+
+```typescript
+import { HtmlElement, addHtmlHelpers } from "tina4-nodejs";
+
+const el = new HtmlElement("div", { class: "card" }, ["Hello"]);
+el.toString(); // '<div class="card">Hello</div>'
+
+// Nesting
+const card = new HtmlElement("div")(
+  new HtmlElement("h2")("Title"),
+  new HtmlElement("p")("Content"),
+);
+
+// Helper functions
+const h: Record<string, any> = {};
+addHtmlHelpers(h);
+const html = h._div({ class: "card" }, h._h1("Title"), h._p("Description"));
+```
+
+### Events {#events}
+
+Tina4 ships a built-in event bus. Emit from anywhere. Listen from anywhere. No third-party library required.
+
+```typescript
+import { Events } from "tina4-nodejs";
+
+// Subscribe — runs every time the event fires
+Events.on("user.registered", (payload) => {
+    console.log("New user:", payload.email);
+});
+
+// Subscribe once — unsubscribes automatically after the first fire
+Events.once("app.ready", () => {
+    console.log("App is up. One-time setup done.");
+});
+
+// Emit — synchronous fan-out to all listeners
+Events.emit("user.registered", { email: "alice@example.com" });
+```
+
+Use events to decouple modules. A route emits. A service listens. Neither knows the other exists.
+
+### Logging {#logging}
+
+```typescript
+import { Log } from "tina4-nodejs";
+
+Log.info("Server started on port 7148");
+Log.debug("Query result:", result);
+Log.warn("Cache miss — falling back to database");
+Log.error("Payment gateway timeout", err);
+```
+
+Set the minimum level in `.env`:
+
+```env
+TINA4_LOG_LEVEL=ALL    # DEBUG | INFO | WARN | ERROR | ALL
+```
+
+Output goes to `stdout` in development and to `logs/app.log` in production. Each line is timestamped and tagged with the level. `Log.debug()` is suppressed when `TINA4_DEBUG=false`.
+
+### Response Cache {#response-cache}
+
+Chain `.cache()` onto any route to cache the full response. Repeat requests skip the handler entirely.
+
+```typescript
+import { Router } from "tina4-nodejs";
+
+// Cache with default TTL (60 seconds)
+Router.get("/api/products", async (req, res) => {
+    const products = await db.fetch("SELECT * FROM products");
+    return res.json(products.toArray());
+}).cache();
+
+// Custom TTL in seconds
+Router.get("/api/categories", async (req, res) => {
+    return res.json({ categories: await Category.select("*") });
+}).cache(300);
+
+// Combine with auth
+Router.get("/api/dashboard", async (req, res) => {
+    return res.json({ stats: await buildStats() });
+}).secure().cache(120);
+```
+
+The cache key is the full request path. The store is in-memory by default. Set `TINA4_CACHE_DRIVER=redis` and `TINA4_REDIS_URL` to share cache across instances.
+
+### Health Endpoint {#health}
+
+Tina4 exposes `/health` without any configuration. Point your load balancer or uptime monitor at it.
+
+```bash
+curl http://localhost:7148/health
+```
+
+```json
+{
+  "status": "ok",
+  "uptime": 3742,
+  "timestamp": "2026-04-03T08:00:00.000Z"
+}
+```
+
+Returns `200 OK` when the application is running. Returns `503 Service Unavailable` if a registered health check fails. Register custom checks in your app entry point:
+
+```typescript
+import { Health } from "tina4-nodejs";
+
+Health.register("database", async () => {
+    await db.fetch("SELECT 1");
+});
+```
+
+### DI Container {#container}
+
+The built-in dependency injection container wires up services without manual instantiation.
+
+```typescript
+import { Container } from "tina4-nodejs";
+
+// Transient — new instance per request
+Container.register("mailer", () => new Mailer(process.env.SMTP_HOST));
+
+// Singleton — one instance for the lifetime of the process
+Container.singleton("config", () => new AppConfig());
+
+// Resolve anywhere
+const mailer = Container.get<Mailer>("mailer");
+await mailer.send({ to: "alice@example.com", subject: "Hi" });
+```
+
+Services registered before `App.start()` are available in every route, middleware, and service. Circular dependencies throw at registration time, not at runtime.
+
+### Error Overlay {#error-overlay}
+
+When `TINA4_DEBUG=true`, unhandled errors render a full-screen overlay in the browser instead of a blank page or a plain `500` response.
+
+The overlay shows:
+- The error message and stack trace
+- The source file and line number
+- The incoming request path and method
+
+No configuration needed. Set `TINA4_DEBUG=false` in production and the overlay disappears. The framework returns a plain `500` JSON response instead.
+
+```env
+TINA4_DEBUG=true   # enables overlay in browser
+```
+
+### Dev Admin {#dev-admin}
+
+The `/__dev` dashboard is available when `TINA4_DEBUG=true`. It gives a live view of your running application.
+
+```
+http://localhost:7148/__dev
+```
+
+The dashboard shows:
+
+- All registered routes with their methods, paths, and middleware
+- Active sessions and their keys
+- Queue depths per topic
+- Recent log entries
+- Environment variables (values redacted for secrets)
+
+No setup required. The dashboard disappears in production when `TINA4_DEBUG=false`.
+
+### CLI Commands {#cli}
+
+```bash
+# Scaffold a new project
+tina4 init my-project
+
+# Start the dev server (hot-reload, port 7148)
+tina4 serve
+
+# Run inline tests
+tina4 test
+
+# Generate a migration file
+tina4 generate migration create_orders_table
+
+# Run pending migrations
+tina4 migrate
+
+# Roll back the last migration
+tina4 migrate --down
+
+# Show migration status
+tina4 migrate --status
+
+# Generate a full CRUD route file from a model
+tina4 generate crud Order
+
+# Build for production
+tina4 build
+```
+
+All commands run from the project root. `tina4 --help` lists every command with a short description.
+
+### MCP Server {#mcp}
+
+Tina4 starts a Model Context Protocol server automatically when `TINA4_DEBUG=true`. AI tools — Cursor, Claude Code, VS Code Copilot — connect to it and gain live awareness of your running application.
+
+```env
+TINA4_DEBUG=true          # MCP server starts on port 7149
+TINA4_MCP_PORT=7149       # override the default port
+```
+
+The MCP server exposes:
+
+- Route registry — every path, method, and handler location
+- ORM schema — all models and their field definitions
+- Migration history — applied and pending migrations
+- Log stream — live tail of the application log
+
+Connect your AI tool to `http://localhost:7149/mcp` and it reads your codebase in context. No plugin. No extra install.
+
+### FakeData {#fakedata}
+
+`FakeData` generates realistic test data. Use it in tests, seeders, and fixtures. Zero external dependencies.
+
+```typescript
+import { FakeData } from "tina4-nodejs";
+
+const fake = new FakeData();
+
+fake.name();          // "Alice Hartley"
+fake.email();         // "alice.hartley@example.com"
+fake.phone();         // "+27 82 555 0123"
+fake.address();       // "14 Oak Street, Cape Town, 8001"
+fake.company();       // "Hartley & Sons Ltd"
+fake.sentence();      // "The quick brown fox jumps over the lazy dog."
+fake.number(1, 100);  // 42
+fake.uuid();          // "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+fake.date("Y-m-d");   // "2025-11-03"
+fake.bool();          // true
+```
+
+Seed a table in one loop:
+
+```typescript
+for (let i = 0; i < 50; i++) {
+    await db.execute(
+        "INSERT INTO users (name, email) VALUES (?, ?)",
+        [fake.name(), fake.email()]
+    );
+}
+```
 
 </div>
 ### Localization (i18n) {#localization}

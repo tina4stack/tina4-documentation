@@ -39,7 +39,18 @@
     <a href="#queues">Queues</a> &bull;
     <a href="#wsdl">WSDL</a> &bull;
     <a href="#graphql">GraphQL</a> &bull;
-    <a href="#localization">Localization</a>
+    <a href="#localization">Localization</a> &bull;
+    <a href="#html-builder">HTML Builder</a> &bull;
+    <a href="#events">Events</a> &bull;
+    <a href="#logging">Logging</a> &bull;
+    <a href="#response-cache">Cache</a> &bull;
+    <a href="#health">Health</a> &bull;
+    <a href="#container">DI Container</a> &bull;
+    <a href="#error-overlay">Error Overlay</a> &bull;
+    <a href="#dev-admin">Dev Admin</a> &bull;
+    <a href="#cli">CLI</a> &bull;
+    <a href="#mcp">MCP</a> &bull;
+    <a href="#fakedata">FakeData</a>
 </nav>
 
 <style>
@@ -407,5 +418,171 @@ puts Tina4.t("server_stopped")  # "Server stopped." (en)
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">Back to top</a>
 </nav>
+
+
+### HTML Builder {#html-builder}
+
+```ruby
+el = Tina4::HtmlElement.new("div", { class: "card" }, ["Hello"])
+el.to_s  # => '<div class="card">Hello</div>'
+
+# Nesting with call
+card = Tina4::HtmlElement.new("div").call(
+  { class: "card" },
+  Tina4::HtmlElement.new("h2").call("Title"),
+  Tina4::HtmlElement.new("p").call("Content"),
+)
+
+# Helper methods
+include Tina4::HtmlHelpers
+html = _div({ class: "card" }, _h1("Title"), _p("Description"))
+```
+
+### Events {#events}
+
+```ruby
+# Subscribe to an event
+Tina4::Events.on("user.created") do |payload|
+  puts "New user: #{payload[:name]}"
+end
+
+# Subscribe once — auto-removes after first fire
+Tina4::Events.once("app.boot") do |payload|
+  puts "App booted at #{payload[:time]}"
+end
+
+# Emit an event anywhere in the app
+Tina4::Events.emit("user.created", { name: "Alice", id: 42 })
+```
+
+Events are synchronous by default. Emit inside a service to run them off the request thread.
+
+### Logging {#logging}
+
+```ruby
+Tina4::Log.info("Server ready on port 7147")
+Tina4::Log.debug("Params: #{request.params.inspect}")
+Tina4::Log.warning("Deprecated method called")
+Tina4::Log.error("Database connection failed")
+```
+
+Set `TINA4_LOG_LEVEL=ALL` in `.env` to see every level. Production default is `INFO`. Log output goes to stdout and to `logs/tina4.log`.
+
+### Response Cache {#response-cache}
+
+```ruby
+# Cache for 60 seconds (default)
+Tina4::Router.get("/api/products") do |request, response|
+  response.json({ products: Product.all })
+end.cache
+
+# Custom TTL in seconds
+Tina4::Router.get("/api/summary") do |request, response|
+  response.json({ total: Order.count })
+end.cache(300)
+
+# Cache is keyed on method + path + query string.
+# Clear all cached responses:
+Tina4::Cache.flush
+```
+
+### Health Endpoint {#health}
+
+Tina4 registers `/health` automatically. No setup needed.
+
+```bash
+curl http://localhost:7147/health
+```
+
+```json
+{ "status": "ok", "uptime": 142, "version": "3.10.20" }
+```
+
+The response includes framework version, uptime in seconds, and database connectivity when a `DATABASE_URL` is configured. Use this endpoint for container liveness and readiness probes.
+
+### DI Container {#container}
+
+```ruby
+# Register a service by name
+Tina4::Container.register(:mailer) { Mailer.new(ENV["SMTP_HOST"]) }
+
+# Register a singleton (resolved once, reused everywhere)
+Tina4::Container.register(:config, singleton: true) { AppConfig.load }
+
+# Resolve anywhere in the app
+mailer = Tina4::Container.resolve(:mailer)
+mailer.send_welcome(user)
+```
+
+Registrations are lazy — the block runs on first `.resolve`. Singletons cache the result for the lifetime of the process.
+
+### Error Overlay {#error-overlay}
+
+When `TINA4_DEBUG=true`, unhandled exceptions render an in-browser overlay.
+
+```
+TINA4_DEBUG=true
+```
+
+The overlay shows the exception class, message, and a syntax-highlighted stack trace with source lines. It replaces the default HTML error page only in debug mode. In production the framework returns a plain `500` response and writes the full trace to the log.
+
+### Dev Admin {#dev-admin}
+
+```
+http://localhost:7147/__dev
+```
+
+The `/__dev` dashboard is available when `TINA4_DEBUG=true`. It lists every registered route (method, path, middleware, auth), active services, queue depths, and recent log lines. No configuration needed — visit the URL after `tina4 serve` starts.
+
+### CLI Commands {#cli}
+
+```bash
+tina4 init ruby my-project   # Scaffold a new Ruby project
+tina4 serve                  # Start dev server (port 7147, live reload)
+tina4 serve --port 8080      # Custom port
+tina4 migrate                # Run pending SQL migrations
+tina4 migrate --create name  # Generate a timestamped migration file
+tina4 test                   # Run the RSpec test suite
+tina4 build                  # Compile SCSS, bundle assets for production
+tina4 routes                 # Print all registered routes to stdout
+```
+
+### MCP Server {#mcp}
+
+Tina4 starts an MCP (Model Context Protocol) server automatically when `TINA4_DEBUG=true`.
+
+```
+http://localhost:7147/__mcp
+```
+
+```ruby
+# Register a custom MCP tool
+Tina4::MCP.register_tool("get_user") do |params|
+  user = User.find(params["id"].to_i)
+  { id: user.id, name: user.name }
+end
+```
+
+AI agents connect to `/__mcp` and discover routes, ORM models, and registered tools. Disable with `TINA4_MCP=false` in `.env`.
+
+### FakeData {#fakedata}
+
+```ruby
+fake = Tina4::FakeData.new
+
+puts fake.name          # "Liam Torres"
+puts fake.email         # "liam.torres@example.com"
+puts fake.phone         # "+1-555-0147"
+puts fake.address       # "12 Elm Street, Springfield"
+puts fake.company       # "Bright Horizon Ltd"
+puts fake.paragraph     # Lorem-style filler text
+puts fake.integer(1, 100) # Random integer between 1 and 100
+puts fake.uuid          # "a3f1c2d4-..."
+
+# Seed for reproducible data
+fake = Tina4::FakeData.new(seed: 42)
+```
+
+Use `FakeData` in tests and migrations to generate consistent fixture data without external gems.
 
 </div>
