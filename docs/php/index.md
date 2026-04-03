@@ -1,5 +1,8 @@
 # Tina4 PHP -- Quick Reference
 
+> **TINA4 — The Intelligent Native Application 4ramework**
+> Simple. Fast. Human. | Built for AI. Built for you.
+
 <div v-pre>
 
 
@@ -33,7 +36,9 @@
     <a href="#services">Services</a> •
     <a href="#threads">Threads</a> •
     <a href="#queues">Queues</a> •
-    <a href="#wsdl">WSDL</a>
+    <a href="#wsdl">WSDL</a> •
+    <a href="#localization">Localization</a> •
+    <a href="#websockets">Websockets</a>
 
 </nav>
 
@@ -396,6 +401,18 @@ $service->addProcess(new MyProcess("Unique Process Name"));
 
 [Further reading](services.md) on services. Study them alongside [threads](threads.md) for the full picture.
 
+### Websockets {#websockets}
+
+```php
+Router::websocket("/ws/chat/{room}", function ($connection, $event, $data) {
+    match ($event) {
+        "open" => $connection->send("Welcome to room " . $connection->params["room"]),
+        "message" => $connection->broadcast($data),
+        "close" => null,
+    };
+});
+```
+
 ### Threads {#threads}
 
 Define a trigger, then fire it. Each trigger runs as a separate PHP thread.
@@ -453,6 +470,23 @@ Router::any("/calculator", function ($request, $response) {
 });
 ```
 [More details](wsdl.md) on WSDL services.
+
+### Localization (i18n) {#localization}
+
+Set `TINA4_LOCALE=en` in `.env`. Place JSON files in `src/locales/`:
+
+```json
+// src/locales/en.json
+{ "greeting": "Hello, {name}!" }
+```
+
+```php
+$i18n = new I18n();
+$i18n->t("greeting", ["name" => "Alice"]);  // "Hello, Alice!"
+
+// Switch locale
+$i18n->setLocale("fr");
+```
 
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">Back to top</a>

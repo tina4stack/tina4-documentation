@@ -1,5 +1,8 @@
 # Tina4 Ruby -- Quick Reference
 
+> **TINA4 — The Intelligent Native Application 4ramework**
+> Simple. Fast. Human. | Built for AI. Built for you.
+
 <div v-pre>
 
 
@@ -31,6 +34,7 @@
     <a href="#crud">CRUD</a> •
     <a href="#consuming-rest-apis">REST Client</a> •
     <a href="#inline-testing">Testing</a> •
+    <a href="#services">Services</a> •
     <a href="#websockets">Websockets</a> •
     <a href="#queues">Queues</a> •
     <a href="#graphql">GraphQL</a> •
@@ -320,6 +324,21 @@ end
 ```
 
 Run: `tina4 test`
+
+### Services {#services}
+
+```ruby
+class CacheWarmer < Tina4::Service
+  def run
+    Tina4::Log.info("Warming cache...")
+    # Your background work here
+    sleep 60
+  end
+end
+
+Tina4::ServiceRunner.register(CacheWarmer.new)
+Tina4::ServiceRunner.start_all
+```
 
 ### Websockets {#websockets}
 
