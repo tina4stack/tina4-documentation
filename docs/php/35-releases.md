@@ -11,6 +11,20 @@ This chapter covers the full v3 line -- from the first release candidate through
 
 ---
 
+## v3.10.60 (2026-04-03)
+- **tina4 console** — interactive PHP REPL with framework loaded ($db, $app, Router, Auth)
+- **tina4 env** — interactive environment configuration
+- **Brand update** — "TINA4 — The Intelligent Native Application 4ramework"
+- **Dynamic version** — reads from composer metadata at runtime, no hardcoded constant
+- **Packagist v2 API** — version checker uses repo.packagist.org
+- **@noauth docblock** — annotations now affect dispatch (#114)
+- **Port kill-and-take-over** — default port always reclaimed
+- **MongoDB adapter** (ext-mongodb), **ODBC adapter** (pdo_odbc)
+- **Pagination standardized** — limit/offset primary, merged dual-key response
+- **#101** Firebird paths, **#102** autoMap uppercase, **#104** DATABASE_URL, **#105** CORS fix
+
+---
+
 ## v3.10.57 (2026-04-02)
 - **MongoDB adapter** — `Database("mongodb://host:port/db")`, requires ext-mongodb
 - **ODBC adapter** — `Database("odbc:///DSN=MyDSN")` via pdo_odbc

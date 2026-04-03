@@ -9,6 +9,20 @@ This chapter covers every release from v3.0.0 through v3.10.x. Each section grou
 
 ---
 
+## v3.10.60 (2026-04-03)
+- **tina4 console** — interactive Node REPL with framework loaded (db, Router, Database, Log)
+- **tina4 env** — interactive environment configuration
+- **Brand update** — "TINA4 — The Intelligent Native Application 4ramework"
+- **Dynamic version** — reads from package.json at runtime
+- **Port kill-and-take-over** — default port always reclaimed
+- **findAvailablePort** — checks 0.0.0.0 not 127.0.0.1
+- **MongoDB adapter** (mongodb npm), **ODBC adapter** (odbc npm)
+- **Pagination standardized** — limit/offset primary, merged dual-key response
+- **Metrics dependency lines** — basename fix for correct rendering
+- **autoMap uppercase** — snakeToCamel lowercases first
+
+---
+
 ## v3.10.57 (2026-04-02)
 - **MongoDB adapter** — `initDatabase({ url: "mongodb://host:port/db" })`, requires `npm install mongodb`
 - **ODBC adapter** — `initDatabase({ url: "odbc:///DSN=MyDSN" })`, requires `npm install odbc`

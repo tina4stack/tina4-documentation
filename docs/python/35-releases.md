@@ -25,6 +25,21 @@ print(tina4_python.__version__)
 
 ---
 
+## v3.10.60 (2026-04-03)
+- **tina4 console** — interactive Python REPL with framework loaded (db, Router, ORM, Auth, Api, Log)
+- **tina4 env** — interactive environment configuration (database, cache, session, queue, mail)
+- **Brand update** — "TINA4 — The Intelligent Native Application 4ramework"
+- **Quick reference** — 36 sections covering every framework feature
+- **Chapter reshuffle** — 37 chapters, 7 new (Events, Localization, Logging, API Client, WSDL/SOAP, DI Container, Service Runner)
+- **RouteGroup fix** — double prefix bug resolved
+- **Port kill-and-take-over** — default port always reclaimed on startup
+- **Metrics test detection** — expanded to check spec/, tests/, test/ directories
+- **MongoDB adapter** (pymongo), **ODBC adapter** (pyodbc)
+- **Pagination standardized** — limit/offset primary, merged dual-key response
+- **9,138 tests** across all 4 frameworks
+
+---
+
 ## v3.10.57 (2026-04-02)
 - **MongoDB adapter** — `Database("mongodb://host:port/db")`, requires `pip install pymongo`
 - **ODBC adapter** — parity with PHP/Ruby/Node

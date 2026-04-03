@@ -9,6 +9,18 @@ This chapter covers every v3 release from the initial launch through the current
 
 ---
 
+## v3.10.60 (2026-04-03)
+- **tina4 console** — already existed, now matches Python/PHP/Node API
+- **tina4 env** — interactive environment configuration
+- **Brand update** — "TINA4 — The Intelligent Native Application 4ramework"
+- **Imperative relationships** — query_has_one/many/belongs_to for ad-hoc queries
+- **Port kill-and-take-over** — default port always reclaimed
+- **MongoDB adapter** (mongo gem), **ODBC adapter** (ruby-odbc gem)
+- **Pagination standardized** — limit/offset primary, merged dual-key response
+- **CORS fix** — returns empty string when origin not allowed
+
+---
+
 ## v3.10.57 (2026-04-02)
 - **MongoDB adapter** — `Database.new("mongodb://host:port/db")`, requires `gem install mongo`
 - **ODBC adapter** — `Database.new("odbc:///DSN=MyDSN")`, requires `gem install ruby-odbc`
