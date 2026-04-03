@@ -1,12 +1,20 @@
 # Chapter 1: What Is Tina4?
 
-## The "Not a Framework" Philosophy
+## The AI Framework Philosophy
 
-You install a framework. It pulls 70 packages. It creates 14 configuration files. It generates a folder structure that looks like an architect had a breakdown. Twenty minutes later, you still haven't written a line of your own code.
+**TINA4 — The Intelligent Native Application 4ramework.**
 
-Tina4 is a toolkit. One package. One folder structure. Zero configuration files beyond a `.env`. You write your code, drop it in the right folder, and the framework discovers it.
+Four words. Each one carries weight.
 
-Here is a complete API endpoint in Tina4:
+**Intelligent.** The framework understands AI. Every project ships with a CLAUDE.md file that gives AI assistants complete knowledge of the framework's conventions, API, and structure. Your AI writes correct code on the first try because the framework told it how.
+
+**Native.** Zero third-party dependencies. Every feature — the template engine, the JWT library, the SCSS compiler, the queue system, the GraphQL parser — is built from scratch using the language's standard library. No supply chain risk. No version conflicts. No surprises.
+
+**Application.** This builds real production applications. Routing, ORM, authentication, queues, WebSocket, email, GraphQL, SOAP — 44 features, all included. One package. One install. Ship today.
+
+**4ramework.** Four languages. One API. Python, PHP, Ruby, Node.js — learn the conventions once, build in any of them. The "4" is both the number and "for" — a framework *for* developers who value their time.
+
+Here is a complete API endpoint:
 
 ```php
 <?php
@@ -19,13 +27,13 @@ Router::get("/api/greeting/{name}", function ($request, $response) {
 });
 ```
 
-No base controller. No service provider. No bootstrapping ritual. Drop that file into `src/routes/`, start the server, and it works.
+No base controller. No service provider. No bootstrapping ritual. Drop that file into `src/routes/`, start the server, and it works. Your AI assistant knows this too — it reads the same conventions you do.
 
-The philosophy fits in one sentence: **you write code, Tina4 stays out of the way.**
+The philosophy fits in one sentence: **the framework that gets out of the way — for humans AND for AI.**
 
-Routes go in `src/routes/`. Templates go in `src/templates/`. Models go in `src/orm/`. Learn the convention once. Never think about it again.
+Routes go in `src/routes/`. Templates go in `src/templates/`. Models go in `src/orm/`. Learn the convention once. Your AI learns it once. Neither of you thinks about it again.
 
-This is not laziness. This is a decade of watching developers waste entire afternoons on configuration files, dependency conflicts, and framework upgrades that break everything. Tina4 was born from that frustration.
+A decade of watching developers waste afternoons on configuration files, dependency conflicts, and framework upgrades that break everything. Then AI arrived and made the problem worse — every framework's ambiguity became the AI's confusion. Tina4 was born from both frustrations. One structure. One way to do things. The AI never guesses wrong because there is only one right answer.
 
 ---
 
@@ -33,7 +41,7 @@ This is not laziness. This is a decade of watching developers waste entire after
 
 Tina4 v3 has **zero third-party dependencies** for its core features. The template engine, the JWT library, the SCSS compiler, the queue system, the GraphQL parser, the logger, the rate limiter — every piece is built from scratch using the language's standard library.
 
-This is not showing off. It is a survival strategy.
+This is a survival strategy — for you and for your AI assistant.
 
 ### Security
 
@@ -74,73 +82,44 @@ Database drivers are the exception. You cannot talk to PostgreSQL without a Post
 
 Tina4 ships with everything you need to build a production web application. 44 features, all implemented identically across Python, PHP, Ruby, and Node.js. 9,311 tests across 280 test files. Here is what every installation includes:
 
-**Core Web (17)**
-- HTTP router with path parameters, typed params, wildcard routes, route groups
+**Core Web**
+- HTTP router with path parameters, typed params, middleware, and auth guards
 - Request and Response objects with full HTTP access
-- Static file serving, CORS (proper origin matching), rate limiting, health checks
-- Security headers middleware (CSP, HSTS, X-Frame-Options, Referrer-Policy)
-- noauth/secured decorators, auth guards on write routes by default
+- Static file serving, CORS, rate limiting, health checks
 - Graceful shutdown, request ID tracking, structured logging
-- --production flag, TINA4_NO_BROWSER, TINA4_NO_RELOAD
-- Auto test port at port+1000 (stable for user testing, no hot-reload)
+- Response compression, ETag support
 
-**Data Layer (14)**
-- SQL-first ORM with Active Record pattern, field types, soft delete
-- Seven database drivers: SQLite, PostgreSQL, MySQL, MSSQL, Firebird, MongoDB, ODBC
-- Relationships: hasOne, hasMany, belongsTo with eager loading (declarative + imperative)
-- QueryBuilder with fluent API, toMongo() for NoSQL query generation
-- AutoCRUD: REST endpoints from ORM models (GET, POST, PUT, DELETE with pagination)
+**Data Layer**
+- SQL-first ORM with Active Record pattern
+- Five database drivers: SQLite, PostgreSQL, MySQL, MSSQL, Firebird
+- Relationships: hasOne, hasMany, belongsTo with eager loading
 - Migrations with rollback, seeders with 50+ fake data generators
-- Connection pooling, query result caching with TTL, race-safe ID generation
-- DATABASE_URL auto-discovery, autoMap for Firebird/Oracle uppercase columns
-- Cross-engine SQL translation (LIMIT, OFFSET, RETURNING, boolean, ILIKE)
+- Query result caching with TTL, paginated results
 
-**Template Engine — Frond (14)**
-- Twig-compatible syntax with 55+ filters, custom filters/globals/tests
-- Template inheritance (extends/block), parent()/super(), includes, macros
-- Import-as syntax, fragment caching, sandbox mode, SafeString
-- SCSS compiler (zero-dep), tina4css (built-in CSS framework), frond.js
-- Pre-compilation for 2.8x render improvement, dev mode cache bypass
+**Template and Frontend**
+- Frond: a Twig-compatible template engine with 55+ filters
+- Template inheritance, includes, macros, pre-compilation
+- SCSS compiler, tina4css (built-in CSS framework), frond.js (frontend helpers)
 
-**Auth and Sessions (8)**
-- JWT (HS256/RS256) built from scratch, password hashing
-- Five session backends: file, database, Redis, Valkey, MongoDB
-- Session TTL and garbage collection, SameSite cookie control
-- CSRF middleware with form tokens, API key authentication
+**Auth and Sessions**
+- JWT (HS256/RS256) built from scratch
+- Four session backends: file, Redis, Valkey, MongoDB
+- CSRF protection, password hashing
 
-**Integration (8)**
-- Queue system with retry, dead letters, and four backends (file, RabbitMQ, Kafka, MongoDB)
-- GraphQL parser and executor with ORM auto-generation
-- WebSocket server with Redis pub/sub backplane for horizontal scaling
-- SOAP/WSDL support, HTTP API client, email messenger (SMTP/IMAP), i18n
+**Integration**
+- Queue system with retry, dead letters, and four backends (SQLite, RabbitMQ, Kafka, MongoDB)
+- GraphQL parser and executor
+- WebSocket server
+- SOAP/WSDL support, HTTP API client, email messenger, i18n
 
-**Infrastructure (12)**
-- Events system (observer pattern with priority and one-shot listeners)
-- DI container with transient and singleton registration
-- Response cache middleware with TTL
-- Service runner, error overlay with syntax-highlighted stack traces
-- HtmlElement programmatic HTML builder
-- Inline testing framework (attach assertions to functions)
-- MCP server (JSON-RPC 2.0 dev tools, auto-start in debug mode)
+**Developer Experience**
+- Rust-based unified CLI with scaffolding, migrations, and testing
+- Dev admin dashboard with 11 panels
+- Error overlay with source code and stack traces
+- Interactive gallery with 7 deployable examples
+- Live reload, AI tool integration
 
-**Developer Experience (9)**
-- Rust-based unified CLI: init, serve, doctor, docs, books, generate, migrate, test, ai
-- Dev admin dashboard with database tab, metrics bubble chart, request inspector
-- Code metrics: complexity, maintainability index, coupling analysis, dependency graph
-- Interactive gallery with 7 deployable examples, dev mailbox for email capture
-- Live reload with file watcher, AI tool context scaffolding (7 tools supported)
-
-**CLI Tools (5)**
-- tina4 init (scaffold for Python, PHP, Ruby, Node.js, tina4js)
-- tina4 doctor (environment check, port scan, CLI detection)
-- tina4 docs (framework-specific book chapters to .tina4-docs/)
-- tina4 generate (model, route, migration, middleware, crud, test, form, view, auth)
-- tina4 update (self-update with prebuilt binaries for macOS, Linux, Windows)
-
-**Static Assets (3)**
-- Minified CSS (tina4.min.css), JS (tina4.min.js, frond.min.js)
-- HtmlElement builder for programmatic HTML generation
-- Scaffold copies framework assets into project on init
+All of this fits in a single package per language, with zero runtime dependencies. The biggest component — the Frond template engine — runs about 1,500 lines. Most features need fewer than 200.
 
 ---
 

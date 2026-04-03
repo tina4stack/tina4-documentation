@@ -200,4 +200,4 @@ Convention over configuration means the AI always knows where things go. Zero de
 
 The future of web development is collaborative. You describe the intent. The AI writes the code. You review and refine. Tina4 is built for that future.
 
-*This is not a framework. This is a partnership.*
+*The Intelligent Native Application 4ramework. Built for AI. Built for you.*

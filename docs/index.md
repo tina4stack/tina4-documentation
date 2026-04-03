@@ -5,7 +5,7 @@ layout: home
 hero:
   name: "Tina4"
   text: "Documentation"
-  tagline: This Is Now A 4Framework
+  tagline: The Intelligent Native Application 4ramework
   image:
     src: './logo.svg'
   actions:

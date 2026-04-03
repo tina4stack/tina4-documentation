@@ -302,4 +302,4 @@ Convention over configuration: the AI knows where things go. Zero dependencies: 
 
 You describe the intent. The AI writes the code. You review and refine. That is the workflow Tina4 was built for.
 
-*This is not a framework. This is a partnership.*
+*The Intelligent Native Application 4ramework. Built for AI. Built for you.*

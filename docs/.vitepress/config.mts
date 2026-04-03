@@ -110,7 +110,7 @@ function buildChapterSidebar(section: string, label: string, extras?: object[]):
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
     title: "Simple. Fast. Human.",
-    description: "Tina4 - This Is Now A 4Framework",
+    description: "Tina4 - The Intelligent Native Application 4ramework",
     head: [
         ['link', {rel: 'icon', href: '/favicon.ico', type: 'image/x-icon'}],
         ['script', {async: '', src: 'https://www.googletagmanager.com/gtag/js?id=G-FZRRSBE9M0'}],
