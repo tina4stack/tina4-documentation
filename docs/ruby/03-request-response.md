@@ -354,7 +354,7 @@ Convention: `Title-Case` for custom headers, prefixed with `X-`.
 
 Tina4 handles CORS based on the `CORS_ORIGINS` setting in `.env`. The default `*` allows all origins. For production, restrict:
 
-```env
+```bash
 CORS_ORIGINS=https://myapp.com,https://admin.myapp.com
 ```
 
@@ -690,7 +690,7 @@ The three arguments are: an error code string, a human-readable message, and the
 
 Tina4 enforces a maximum upload size through the `TINA4_MAX_UPLOAD_SIZE` environment variable. The value is in bytes. The default is `10485760` (10 MB).
 
-```env
+```bash
 TINA4_MAX_UPLOAD_SIZE=10485760
 ```
 
@@ -698,7 +698,7 @@ When a client sends a body larger than this limit, Tina4 returns a `413 Payload 
 
 To allow 50 MB uploads, set this in your `.env` file:
 
-```env
+```bash
 TINA4_MAX_UPLOAD_SIZE=52428800
 ```
 
@@ -923,7 +923,7 @@ end
 
 **Fix:** Increase `TINA4_MAX_BODY_SIZE` in `.env`. Default is `10mb`. For file uploads, you may need `50mb` or more:
 
-```env
+```bash
 TINA4_MAX_BODY_SIZE=50mb
 ```
 

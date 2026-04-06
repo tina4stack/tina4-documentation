@@ -14,7 +14,7 @@ Every pitfall in this chapter was hit by a real developer on a real project. Eve
 
 Use tina4-js when:
 
-- **Bundle size matters.** Under 3KB core gzipped. Your app loads in under a second on a 3G connection.
+- **Bundle size matters.** 1.5KB core gzipped, under 6KB for the full framework. Your app loads in under a second on a 3G connection.
 - **You want simplicity.** Seven modules. One package. No decisions about state management libraries, routing libraries, or CSS-in-JS solutions.
 - **You are building for a tina4 backend.** The API client speaks tina4-php and tina4-python natively -- auth tokens, CSRF protection, and token rotation work without configuration.
 - **You want real Web Components.** Components that work outside the framework, in plain HTML, in other frameworks, in any context where custom elements are supported.
@@ -124,9 +124,7 @@ For most computed values -- filtering lists, calculating totals, deriving displa
 
 ## 4. Inputs Must Stay Outside Reactive Blocks
 
-::: danger This is the most common tina4-js bug
-Wrapping `<input>` elements inside `${() => ...}` reactive blocks causes them to lose focus on every keystroke. The reactive block destroys and recreates its entire DOM subtree when any signal it reads changes — so the input element is replaced mid-typing.
-:::
+> **This is the most common tina4-js bug.** Wrapping `<input>` elements inside `${() => ...}` reactive blocks causes them to lose focus on every keystroke. The reactive block destroys and recreates its entire DOM subtree when any signal it reads changes — so the input element is replaced mid-typing.
 
 **The rule:** Form elements (`<input>`, `<textarea>`, `<select>`) go in the **static** part of the template. Use `.value`, `@input`, and `?disabled` bindings to make them reactive. Only wrap **computed output** (conditional messages, dropdown options, dynamic lists) in `${() => ...}`.
 

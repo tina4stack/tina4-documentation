@@ -1,7 +1,4 @@
-# Chapter 7: Authentication
-
-<div v-pre>
-
+# Chapter 8: Authentication
 
 ## 1. Locking the Door
 
@@ -45,26 +42,26 @@ The `secret` parameter is required -- pass your secret key directly or read it f
 
 ### Token Expiry
 
-Pass the expiry time as the third argument to `getToken()` in **seconds**:
+Pass the expiry time as the third argument to `getToken()` in **minutes**:
 
 ```typescript
-const token = Auth.getToken(payload, secret, 3600); // 1 hour (default)
+const token = Auth.getToken(payload, secret, 60); // 1 hour (default)
 ```
 
 | Value | Duration |
 |-------|----------|
-| `900` | 15 minutes |
-| `3600` | 1 hour (default) |
-| `86400` | 24 hours |
-| `604800` | 7 days |
+| `15` | 15 minutes |
+| `60` | 1 hour (default) |
+| `1440` | 24 hours |
+| `10080` | 7 days |
 
 You can also configure the default expiry in `.env`:
 
-```env
-TINA4_JWT_EXPIRY=86400
+```bash
+TINA4_JWT_EXPIRY=1440
 ```
 
-The value is in seconds. `86400` is 24 hours.
+The value is in minutes. `1440` is 24 hours.
 
 ### Validating a Token
 
@@ -105,7 +102,7 @@ Tina4 Node.js uses **HS256** (HMAC-SHA256) for JWT signing. It uses only the sta
 
 Set the secret key in `.env`:
 
-```env
+```bash
 SECRET=my-super-secret-key-at-least-32-chars
 ```
 
@@ -505,7 +502,11 @@ In your template, include the CSRF token in every form:
 </form>
 ```
 
+<div v-pre>
+
 `{{ form_token() }}` renders a hidden input field:
+
+</div>
 
 ```html
 <input type="hidden" name="_token" value="abc123randomtoken456">
@@ -565,7 +566,7 @@ Tina4 supports server-side sessions for storing per-user state between requests.
 
 Set the session backend in `.env`:
 
-```env
+```bash
 # File-based sessions (default)
 TINA4_SESSION_BACKEND=file
 
@@ -625,7 +626,7 @@ Sessions complement JWT tokens. Use JWT for stateless API authentication. Use se
 
 ### Session Options
 
-```env
+```bash
 TINA4_SESSION_LIFETIME=3600       # Session lifetime in seconds (default: 3600)
 TINA4_SESSION_NAME=tina4_session  # Cookie name for the session ID
 ```
@@ -952,7 +953,7 @@ Router.put("/api/profile/password", async (req, res) => {
 
 **Problem:** Tokens that worked yesterday now return 401.
 
-**Cause:** The default token lifetime is 1 hour (3600 seconds). After that, the token is invalid even if the signature is correct.
+**Cause:** The default token lifetime is 60 minutes. After that, the token is invalid even if the signature is correct.
 
 **Fix:** Issue a new token at login. If your application needs long-lived sessions, use refresh tokens: a short-lived access token (15 minutes) paired with a long-lived refresh token (7 days) that can be used to get a new access token without re-entering credentials.
 
@@ -1003,5 +1004,3 @@ Router.put("/api/profile/password", async (req, res) => {
 **Cause:** Query parameters are visible in many places where headers are not.
 
 **Fix:** Always send tokens in the `Authorization` header, never in the URL. The only exception is WebSocket connections, where the initial HTTP upgrade request cannot carry custom headers -- use a short-lived token for that case.
-
-</div>

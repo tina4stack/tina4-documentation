@@ -406,7 +406,7 @@ end
 
 Use a separate test database to avoid polluting development data:
 
-```env
+```bash
 # .env.test
 DATABASE_URL=sqlite:///data/test.db
 TINA4_DEBUG=false

@@ -1,8 +1,5 @@
 # Chapter 1: Getting Started with Tina4 Ruby
 
-<div v-pre>
-
-
 ## 1. What Is Tina4 Ruby
 
 Tina4 Ruby is a zero-dependency web framework for Ruby 3.1+. One gem. Routing, ORM, template engine, authentication, queues, WebSocket, and 70 other features -- all built in.
@@ -481,6 +478,8 @@ Open `http://localhost:7147/products`. You see:
 ### How Template Rendering Works
 
 1. `response.render("products.html", { products: products })` tells Frond to render `src/templates/products.html`.
+<div v-pre>
+
 2. Frond sees `{% extends "base.html" %}` and loads the base template.
 3. `{% block content %}` in `products.html` replaces the same block in `base.html`.
 4. `{{ product.name }}` outputs the value, auto-escaped for HTML safety.
@@ -488,6 +487,8 @@ Open `http://localhost:7147/products`. You see:
 6. `{% for product in products %}` loops through the array.
 7. `{% if product.in_stock %}` renders the right badge.
 8. `{{ products | length }}` returns the item count.
+
+</div>
 
 ### About tina4css
 
@@ -499,7 +500,7 @@ Open `http://localhost:7147/products`. You see:
 
 Open `.env` at the project root:
 
-```env
+```bash
 TINA4_DEBUG=true
 ```
 
@@ -534,7 +535,7 @@ tina4 serve --port 8080
 
 Or add it to your `.env` file:
 
-```env
+```bash
 TINA4_DEBUG=true
 TINA4_PORT=8080
 ```
@@ -641,7 +642,7 @@ mkdir -p src/routes src/templates src/public
 
 ### Step 4: Create `.env`
 
-```env
+```bash
 TINA4_DEBUG=true
 ```
 
@@ -1089,7 +1090,7 @@ end
 
 **Fix:** Stop the other process, or change the port:
 
-```env
+```bash
 TINA4_PORT=8080
 ```
 
@@ -1118,5 +1119,3 @@ Or: `tina4 serve --port 8080`.
 **Cause:** `TINA4_DEBUG=true` in production.
 
 **Fix:** Set `TINA4_DEBUG=false`. This hides debug information, enables HTML minification, and activates `.broken` file health checks.
-
-</div>

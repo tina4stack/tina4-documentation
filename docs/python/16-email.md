@@ -1,7 +1,4 @@
-# Chapter 13: Email with Messenger
-
-<div v-pre>
-
+# Chapter 16: Email with Messenger
 
 ## 1. Every App Sends Email
 
@@ -15,7 +12,7 @@ SMTP configuration. Plain text fallbacks. Attachment encoding. Connection timeou
 
 All email configuration lives in `.env`:
 
-```env
+```bash
 TINA4_MAIL_HOST=smtp.example.com
 TINA4_MAIL_PORT=587
 TINA4_MAIL_USERNAME=your-email@example.com
@@ -41,7 +38,7 @@ Messenger also accepts legacy `SMTP_*` prefixed variables as fallback. The `TINA
 
 **Gmail:**
 
-```env
+```bash
 TINA4_MAIL_HOST=smtp.gmail.com
 TINA4_MAIL_PORT=587
 TINA4_MAIL_USERNAME=your-email@gmail.com
@@ -53,7 +50,7 @@ Gmail requires an "App Password" (not your regular password) when two-factor aut
 
 **Mailgun:**
 
-```env
+```bash
 TINA4_MAIL_HOST=smtp.mailgun.org
 TINA4_MAIL_PORT=587
 TINA4_MAIL_USERNAME=postmaster@mg.yourdomain.com
@@ -63,7 +60,7 @@ TINA4_MAIL_ENCRYPTION=tls
 
 **SendGrid:**
 
-```env
+```bash
 TINA4_MAIL_HOST=smtp.sendgrid.net
 TINA4_MAIL_PORT=587
 TINA4_MAIL_USERNAME=apikey
@@ -116,12 +113,9 @@ async def contact_form(request, response):
     result = mailer.send(
         to=body["email"],
         subject="Contact Form Submission",
-        body=f"Name: {body['name']}
-"
-             f"Email: {body['email']}
-"
-             f"Message:
-{body['message']}"
+        body=f"Name: {body['name']}\n"
+             f"Email: {body['email']}\n"
+             f"Message:\n{body['message']}"
     )
 
     if result["success"]:
@@ -196,26 +190,14 @@ html_body = """
 """
 
 text_body = (
-    "Hi Alice,
-
-"
-    "Thank you for creating your account. We are excited to have you!
-
-"
-    "Here is what you can do next:
-"
-    "- Browse our product catalog: https://mystore.com/products
-"
-    "- Set up your profile: https://mystore.com/profile
-"
-    "- Check out our current deals: https://mystore.com/deals
-
-"
-    "If you have any questions, reply to this email.
-
-"
-    "Cheers,
-The My Store Team"
+    "Hi Alice,\n\n"
+    "Thank you for creating your account. We are excited to have you!\n\n"
+    "Here is what you can do next:\n"
+    "- Browse our product catalog: https://mystore.com/products\n"
+    "- Set up your profile: https://mystore.com/profile\n"
+    "- Check out our current deals: https://mystore.com/deals\n\n"
+    "If you have any questions, reply to this email.\n\n"
+    "Cheers,\nThe My Store Team"
 )
 
 result = mailer.send(
@@ -345,7 +327,7 @@ Custom headers serve several purposes. Tracking headers like `X-Ticket-Id` let y
 
 Messenger reads email through IMAP. Configure the IMAP server in `.env`:
 
-```env
+```bash
 TINA4_MAIL_IMAP_HOST=imap.example.com
 TINA4_MAIL_IMAP_PORT=993
 ```
@@ -517,7 +499,7 @@ mailer = create_messenger()
 
 If you need to test real email delivery during development, override the interception:
 
-```env
+```bash
 TINA4_MAIL_INTERCEPT=false
 ```
 
@@ -620,14 +602,9 @@ async def register_user(request, response):
         subject=f"Welcome to My Store, {body['name']}!",
         body=html_body,
         html=True,
-        text=f"Hi {body['name']},
-
-Welcome to My Store! "
-              f"Your account (#{user_id}) has been created.
-
-"
-              f"Cheers,
-The My Store Team"
+        text=f"Hi {body['name']},\n\nWelcome to My Store! "
+              f"Your account (#{user_id}) has been created.\n\n"
+              f"Cheers,\nThe My Store Team"
     )
 
     return response({
@@ -657,7 +634,7 @@ With `TINA4_DEBUG=true`, the email appears in the dev dashboard instead of reach
 
 ## 12. Sending Email via Queues
 
-In production, never send email inside a route handler. The SMTP call blocks the response. Use the queue system from Chapter 11:
+In production, never send email inside a route handler. The SMTP call blocks the response. Use the queue system from Chapter 12:
 
 ```python
 from tina4_python.core.router import post, template
@@ -900,14 +877,9 @@ async def contact_submit(request, response):
         body=html_body,
         html=True,
         reply_to=body["email"],
-        text=f"Contact form submission from {body['name']} ({body['email']}):
-
-"
-              f"Subject: {body['subject']}
-
-"
-              f"Message:
-{body['message']}"
+        text=f"Contact form submission from {body['name']} ({body['email']}):\n\n"
+              f"Subject: {body['subject']}\n\n"
+              f"Message:\n{body['message']}"
     )
 
     if result["success"]:
@@ -995,7 +967,11 @@ The HTML response includes the success flash message.
 
 ### 6. Email Template Variables Not Substituted
 
+<div v-pre>
+
 **Problem:** The email body shows `{{ name }}` literally instead of the user's name.
+
+</div>
 
 **Cause:** You passed the raw template file content instead of rendering it through the template engine.
 
@@ -1016,5 +992,3 @@ The HTML response includes the success flash message.
 **Cause:** You did not set `TINA4_MAIL_IMAP_HOST` in `.env` or pass `imap_host` to the constructor.
 
 **Fix:** Add `TINA4_MAIL_IMAP_HOST=imap.example.com` and `TINA4_MAIL_IMAP_PORT=993` to `.env`. The IMAP host is separate from the SMTP host -- many providers use different hostnames for sending and reading.
-
-</div>

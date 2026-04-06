@@ -1,7 +1,4 @@
-# Chapter 12: Real-time with WebSocket
-
-<div v-pre>
-
+# Chapter 23: Real-time with WebSocket
 
 ## 1. The Refresh Button Problem
 
@@ -683,7 +680,7 @@ A backplane solves this. It relays WebSocket messages across all instances using
 
 Set two environment variables in your `.env`:
 
-```env
+```bash
 TINA4_WS_BACKPLANE=redis
 TINA4_WS_BACKPLANE_URL=redis://localhost:6379
 ```
@@ -751,5 +748,3 @@ If `TINA4_WS_BACKPLANE` is not set (the default), Tina4 broadcasts only to local
 **Problem:** Anyone can connect to your WebSocket endpoint.
 
 **Fix:** Pass the token as a query parameter: `ws://localhost:7147/ws/chat?token=eyJ...`. Validate in the `:open` handler and call `connection.close` if invalid.
-
-</div>

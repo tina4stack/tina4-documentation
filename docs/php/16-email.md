@@ -1,7 +1,4 @@
-# Chapter 13: Email with Messenger
-
-<div v-pre>
-
+# Chapter 16: Email with Messenger
 
 ## 1. Every App Sends Email
 
@@ -17,7 +14,7 @@ Tina4's `Messenger` class handles all of it. Configure in `.env`. Create an inst
 
 All email configuration lives in `.env`:
 
-```env
+```bash
 TINA4_MAIL_SMTP_HOST=smtp.example.com
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=your-email@example.com
@@ -41,7 +38,7 @@ TINA4_MAIL_FROM_NAME=My Store
 
 **Gmail:**
 
-```env
+```bash
 TINA4_MAIL_SMTP_HOST=smtp.gmail.com
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=your-email@gmail.com
@@ -53,7 +50,7 @@ Note: Gmail requires an "App Password" (not your regular password) when two-fact
 
 **Mailgun:**
 
-```env
+```bash
 TINA4_MAIL_SMTP_HOST=smtp.mailgun.org
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=postmaster@mg.yourdomain.com
@@ -63,7 +60,7 @@ TINA4_MAIL_SMTP_ENCRYPTION=tls
 
 **SendGrid:**
 
-```env
+```bash
 TINA4_MAIL_SMTP_HOST=smtp.sendgrid.net
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=apikey
@@ -117,12 +114,9 @@ Router::post("/api/contact", function ($request, $response) {
     $result = $mailer->send(
         $body["email"],                    // To
         "Contact Form Submission",         // Subject
-        "Name: " . $body["name"] . "
-" .  // Body (plain text)
-        "Email: " . $body["email"] . "
-" .
-        "Message:
-" . $body["message"]
+        "Name: " . $body["name"] . "\n" .  // Body (plain text)
+        "Email: " . $body["email"] . "\n" .
+        "Message:\n" . $body["message"]
     );
 
     if ($result["success"]) {
@@ -192,26 +186,14 @@ $htmlBody = '
 </body>
 </html>';
 
-$textBody = "Hi Alice,
-
-" .
-    "Thank you for creating your account. We are excited to have you!
-
-" .
-    "Here is what you can do next:
-" .
-    "- Browse our product catalog: https://mystore.com/products
-" .
-    "- Set up your profile: https://mystore.com/profile
-" .
-    "- Check out our current deals: https://mystore.com/deals
-
-" .
-    "If you have any questions, reply to this email.
-
-" .
-    "Cheers,
-The My Store Team";
+$textBody = "Hi Alice,\n\n" .
+    "Thank you for creating your account. We are excited to have you!\n\n" .
+    "Here is what you can do next:\n" .
+    "- Browse our product catalog: https://mystore.com/products\n" .
+    "- Set up your profile: https://mystore.com/profile\n" .
+    "- Check out our current deals: https://mystore.com/deals\n\n" .
+    "If you have any questions, reply to this email.\n\n" .
+    "Cheers,\nThe My Store Team";
 
 $result = $mailer->send(
     "alice@example.com",
@@ -337,7 +319,7 @@ Common custom headers:
 
 Tina4's Messenger reads emails via IMAP:
 
-```env
+```bash
 TINA4_MAIL_IMAP_HOST=imap.example.com
 TINA4_MAIL_IMAP_PORT=993
 TINA4_MAIL_IMAP_USERNAME=support@example.com
@@ -509,7 +491,7 @@ Test email without configuring a real SMTP server. Inspect the output without po
 
 To test real email delivery during development:
 
-```env
+```bash
 TINA4_MAIL_INTERCEPT=false
 ```
 
@@ -610,12 +592,7 @@ Router::post("/api/register", function ($request, $response) {
         "Welcome to My Store, " . $body["name"] . "!",
         $htmlBody,
         [
-            "text_body" => "Hi " . $body["name"] . ",
-
-Welcome to My Store! Your account (#" . $userId . ") has been created.
-
-Cheers,
-The My Store Team"
+            "text_body" => "Hi " . $body["name"] . ",\n\nWelcome to My Store! Your account (#" . $userId . ") has been created.\n\nCheers,\nThe My Store Team"
         ]
     );
 
@@ -647,7 +624,7 @@ With `TINA4_DEBUG=true`, the email appears in the dev dashboard. Inspect the ren
 
 ## 12. Sending Email via Queues
 
-In production, do not send email inside a route handler. The SMTP handshake takes time. The user waits. Push email work to the queue system (Chapter 11):
+In production, do not send email inside a route handler. The SMTP handshake takes time. The user waits. Push email work to the queue system (Chapter 12):
 
 ```php
 <?php
@@ -873,7 +850,7 @@ Router::post("/contact", function ($request, $response) {
         "email" => $body["email"],
         "subject" => $body["subject"],
         "message" => $body["message"],
-        "submitted_at" => date("F j, Y \t g:i A")
+        "submitted_at" => date("F j, Y \a\\t g:i A")
     ]);
 
     // Send the email
@@ -886,14 +863,9 @@ Router::post("/contact", function ($request, $response) {
         $htmlBody,
         [
             "reply_to" => $body["email"],
-            "text_body" => "Contact form submission from " . $body["name"] . " (" . $body["email"] . "):
-
-" .
-                          "Subject: " . $body["subject"] . "
-
-" .
-                          "Message:
-" . $body["message"]
+            "text_body" => "Contact form submission from " . $body["name"] . " (" . $body["email"] . "):\n\n" .
+                          "Subject: " . $body["subject"] . "\n\n" .
+                          "Message:\n" . $body["message"]
         ]
     );
 
@@ -984,7 +956,11 @@ The HTML response includes the success flash message.
 
 ### 6. Email Template Variables Not Substituted
 
+<div v-pre>
+
 **Problem:** The email body shows `{{ name }}` instead of the user's name.
+
+</div>
 
 **Cause:** You passed the raw template file content instead of rendering it through Frond. The template engine never ran.
 
@@ -997,5 +973,3 @@ The HTML response includes the success flash message.
 **Cause:** The SMTP server is unreachable. The port is blocked by a firewall. The hostname is wrong.
 
 **Fix:** Test SMTP connectivity: `telnet smtp.example.com 587`. Verify the hostname, port, and encryption settings. Check that your firewall allows outbound connections on the SMTP port. Corporate firewalls often block ports 587 and 465. Ask your network administrator.
-
-</div>

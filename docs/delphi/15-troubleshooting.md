@@ -592,7 +592,7 @@ end;
 
 ---
 
-## 7. Frond (Twig) Template Issues
+## 7. Twig Template Issues
 
 ### Template Not Rendering
 

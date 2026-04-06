@@ -8,7 +8,7 @@ A terminal. A single command. A browser tab. In five minutes you will have a run
 
 ## 1. What Is tina4-js
 
-tina4-js is a reactive JavaScript framework under 3KB core gzipped. Seven modules, each solving one problem:
+tina4-js is a reactive JavaScript framework with a 1.5KB gzipped core. The full framework ships under 6KB gzipped. Eight modules, each solving one problem:
 
 - **Signals** for reactive state -- no stores, no reducers, no actions
 - **Tagged template literals** for DOM rendering -- no JSX, no virtual DOM, no compiler

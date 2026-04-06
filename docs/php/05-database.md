@@ -14,7 +14,7 @@ Tina4 supports five database engines: SQLite, PostgreSQL, MySQL, Microsoft SQL S
 
 `tina4 init` creates an empty `data/` directory but does not create a database file. The default `.env` contains:
 
-```env
+```bash
 TINA4_DEBUG=true
 ```
 
@@ -24,7 +24,7 @@ No explicit `DATABASE_URL` means Tina4 defaults to `sqlite:///data/app.db`. The 
 
 Set `DATABASE_URL` in `.env`:
 
-```env
+```bash
 # SQLite (explicit)
 DATABASE_URL=sqlite:///data/app.db
 
@@ -49,7 +49,7 @@ The Firebird adapter works with either the `ibase_*` or `fbird_*` PHP functions.
 
 Keep credentials out of the connection string. Better for production:
 
-```env
+```bash
 DATABASE_URL=postgres://localhost:5432/myapp
 DATABASE_USERNAME=myuser
 DATABASE_PASSWORD=secretpassword
@@ -739,7 +739,7 @@ Migrations run in filename order. Each runs only once.
 
 For read-heavy applications:
 
-```env
+```bash
 TINA4_DB_CACHE=true
 ```
 

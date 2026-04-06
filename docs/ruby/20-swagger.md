@@ -39,7 +39,7 @@ You should see the Swagger UI with any routes you have already defined. If you h
 
 For production, you can explicitly enable or disable Swagger:
 
-```env
+```bash
 TINA4_SWAGGER=true
 ```
 
@@ -245,7 +245,7 @@ If your endpoints require authentication, click the "Authorize" button at the to
 
 Configure the top-level API information in `.env`:
 
-```env
+```bash
 TINA4_SWAGGER_TITLE=My Store API
 TINA4_SWAGGER_DESCRIPTION=API for managing products, orders, and users
 TINA4_SWAGGER_VERSION=1.0.0

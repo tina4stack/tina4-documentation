@@ -828,7 +828,7 @@ export class Analytics extends BaseModel {
 
 Configure the connection in `.env`:
 
-```env
+```bash
 DATABASE_URL=sqlite:///data/app.db
 DATABASE_URL_ANALYTICS=sqlite:///data/analytics.db
 ```

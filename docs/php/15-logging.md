@@ -57,7 +57,7 @@ Each line is a complete JSON object. One per log entry.
 
 Set the minimum log level via environment variable. Only messages at or above that level appear in the output.
 
-```env
+```bash
 # .env
 TINA4_LOG_LEVEL=WARNING
 ```
@@ -281,7 +281,7 @@ Any query slower than 50ms emits a `WARNING`. All others emit `DEBUG` and are su
 
 ## 10. Environment Configuration
 
-```env
+```bash
 # Minimum level to log (DEBUG | INFO | WARNING | ERROR | CRITICAL)
 TINA4_LOG_LEVEL=WARNING
 

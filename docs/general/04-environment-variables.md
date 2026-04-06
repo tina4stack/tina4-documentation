@@ -6,7 +6,7 @@ Every piece of Tina4 configuration lives in one file. A `.env` at the root of yo
 
 A `.env` file is plain text. Key-value pairs. Nothing more.
 
-```dotenv
+```bash
 # This is a comment
 DATABASE_URL=sqlite:///data/app.db
 TINA4_DEBUG=true
@@ -39,7 +39,7 @@ The `.env` file holds secrets. Database passwords. JWT keys. API tokens. It belo
 
 Commit a `.env.example` instead. Placeholder values. A map for the next developer:
 
-```dotenv
+```bash
 # .env.example -- copy to .env and fill in real values
 DATABASE_URL=sqlite:///data/app.db
 TINA4_DEBUG=false
@@ -88,7 +88,7 @@ Environment variables are strings. The `.env` file has no concept of `true` or `
 
 Write whichever style your team prefers:
 
-```dotenv
+```bash
 # All of these enable debug mode
 TINA4_DEBUG=true
 TINA4_DEBUG=1
@@ -139,7 +139,7 @@ CSRF is **on by default**. When enabled:
 
 To disable for internal services:
 
-```dotenv
+```bash
 TINA4_CSRF=false
 ```
 
@@ -154,7 +154,7 @@ TINA4_CSRF=false
 
 **Connection string formats:**
 
-```dotenv
+```bash
 # SQLite (default -- no credentials needed)
 DATABASE_URL=sqlite:///data/app.db
 
@@ -390,7 +390,7 @@ Tina4 supports two naming conventions for SMTP variables. The `SMTP_*` variables
 
 Getting started? One line:
 
-```dotenv
+```bash
 TINA4_DEBUG=true
 ```
 
@@ -410,7 +410,7 @@ One line. A working development environment. Add variables when you need them. N
 
 ## Minimal .env for Production
 
-```dotenv
+```bash
 TINA4_DEBUG=false
 SECRET=a-very-long-random-string-at-least-32-characters
 DATABASE_URL=postgresql://app_user:strong_password@db-host:5432/myapp
@@ -429,7 +429,7 @@ Ten lines. A production application. Debug disabled. Real database. Signed token
 
 When running in Docker, `HOST` must be `0.0.0.0` so the container accepts connections from outside. This is already the default, but if you override it, keep this in mind:
 
-```dotenv
+```bash
 # Required for Docker -- do NOT set to 127.0.0.1
 HOST=0.0.0.0
 PORT=7145
@@ -440,7 +440,7 @@ TINA4_DEBUG=false
 
 Copy this to your `.env.example` as a starting point:
 
-```dotenv
+```bash
 # =============================================================================
 # Tina4 Environment Configuration
 # Copy this file to .env and fill in your values

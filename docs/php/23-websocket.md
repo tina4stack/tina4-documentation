@@ -1,7 +1,4 @@
-# Chapter 12: Real-time with WebSocket
-
-<div v-pre>
-
+# Chapter 23: Real-time with WebSocket
 
 ## 1. The Refresh Button Problem
 
@@ -922,7 +919,7 @@ A backplane solves this. It relays WebSocket messages across all instances using
 
 Set two environment variables in your `.env`:
 
-```env
+```bash
 TINA4_WS_BACKPLANE=redis
 TINA4_WS_BACKPLANE_URL=redis://localhost:6379
 ```
@@ -998,5 +995,3 @@ If `TINA4_WS_BACKPLANE` is not set (the default), Tina4 broadcasts only to local
 **Cause:** The WebSocket upgrade request does not carry your JWT token in the `Authorization` header. Browsers do not support custom headers on WebSocket connections.
 
 **Fix:** Pass the token as a query parameter: `ws://localhost:7146/ws/chat?token=eyJ...`. In your `open` handler, validate the token and disconnect if invalid. Use a short-lived token for WebSocket connections. Or authenticate via HTTP first, store the session, and check the session cookie during the upgrade.
-
-</div>

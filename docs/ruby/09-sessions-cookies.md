@@ -1,13 +1,10 @@
 # Chapter 9: Sessions & Cookies
 
-<div v-pre>
-
-
 ## 1. State in a Stateless World
 
 Your e-commerce site needs a shopping cart that persists across page loads. A language preference that sticks. Flash messages after form submissions. But HTTP is stateless. Every request arrives with no memory of what came before. Sessions and cookies give the server a way to remember.
 
-Chapter 7 introduced sessions for authentication. This chapter goes deeper. Session backends. Flash messages. Cookies. Remember-me tokens. Security configuration.
+Chapter 8 introduced sessions for authentication. This chapter goes deeper. Session backends. Flash messages. Cookies. Remember-me tokens. Security configuration.
 
 ---
 
@@ -94,7 +91,7 @@ The `-c cookies.txt` flag tells curl to save cookies to a file, and `-b cookies.
 
 For production deployments with multiple servers (behind a load balancer), you need a shared session store. Redis is the most common choice.
 
-```env
+```bash
 TINA4_SESSION_BACKEND=redis
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -107,7 +104,7 @@ That is the only change. Your code stays exactly the same. `request.session` wor
 
 ## 6. MongoDB Sessions
 
-```env
+```bash
 TINA4_SESSION_BACKEND=mongodb
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=27017
@@ -119,7 +116,7 @@ TINA4_SESSION_COLLECTION=sessions
 
 ## 7. Valkey Sessions
 
-```env
+```bash
 TINA4_SESSION_BACKEND=valkey
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -129,7 +126,7 @@ TINA4_SESSION_PORT=6379
 
 ## 8. Database Sessions
 
-```env
+```bash
 TINA4_SESSION_BACKEND=database
 ```
 
@@ -382,7 +379,7 @@ end
 
 ### Configuration Options
 
-```env
+```bash
 TINA4_SESSION_TTL=3600
 TINA4_SESSION_SAMESITE=Lax
 ```
@@ -654,5 +651,3 @@ end
 **Cause:** The session ID is not regenerated after login.
 
 **Fix:** Call `request.session.regenerate` after successful login.
-
-</div>

@@ -1,7 +1,4 @@
-# Chapter 13: Email with Messenger
-
-<div v-pre>
-
+# Chapter 16: Email with Messenger
 
 ## 1. Every App Sends Email
 
@@ -15,7 +12,7 @@ SMTP configuration. Plain text fallbacks. Attachment encoding. Connection timeou
 
 All email configuration lives in `.env`:
 
-```env
+```bash
 TINA4_MAIL_SMTP_HOST=smtp.example.com
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=your-email@example.com
@@ -39,7 +36,7 @@ TINA4_MAIL_FROM_NAME=My Store
 
 **Gmail:**
 
-```env
+```bash
 TINA4_MAIL_SMTP_HOST=smtp.gmail.com
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=your-email@gmail.com
@@ -51,7 +48,7 @@ Gmail requires an "App Password" (not your regular password) when two-factor aut
 
 **Mailgun:**
 
-```env
+```bash
 TINA4_MAIL_SMTP_HOST=smtp.mailgun.org
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=postmaster@mg.yourdomain.com
@@ -61,7 +58,7 @@ TINA4_MAIL_SMTP_ENCRYPTION=tls
 
 **SendGrid:**
 
-```env
+```bash
 TINA4_MAIL_SMTP_HOST=smtp.sendgrid.net
 TINA4_MAIL_SMTP_PORT=587
 TINA4_MAIL_SMTP_USERNAME=apikey
@@ -111,10 +108,7 @@ Router.post("/api/contact", async (req, res) => {
     const result = await mailer.send({
         to: body.email,
         subject: "Contact Form Submission",
-        body: `Name: ${body.name}
-Email: ${body.email}
-Message:
-${body.message}`
+        body: `Name: ${body.name}\nEmail: ${body.email}\nMessage:\n${body.message}`
     });
 
     if (result.success) {
@@ -203,8 +197,7 @@ const textBody = [
     "",
     "Cheers,",
     "The My Store Team"
-].join("
-");
+].join("\n");
 
 const result = await mailer.send({
     to: "alice@example.com",
@@ -341,7 +334,7 @@ Custom headers serve several purposes. Tracking headers like `X-Ticket-Id` let y
 
 Messenger reads email through IMAP. Configure the IMAP server in `.env`:
 
-```env
+```bash
 TINA4_MAIL_IMAP_HOST=imap.example.com
 TINA4_MAIL_IMAP_PORT=993
 TINA4_MAIL_IMAP_USERNAME=support@example.com
@@ -522,7 +515,7 @@ const mailer = createMessenger();
 
 If you need to test real email delivery during development, override the interception:
 
-```env
+```bash
 TINA4_MAIL_INTERCEPT=false
 ```
 
@@ -622,12 +615,7 @@ Router.post("/api/register", async (req, res) => {
         subject: `Welcome to My Store, ${body.name}!`,
         body: htmlBody,
         html: true,
-        text: `Hi ${body.name},
-
-Welcome to My Store! Your account (#${userId}) has been created.
-
-Cheers,
-The My Store Team`
+        text: `Hi ${body.name},\n\nWelcome to My Store! Your account (#${userId}) has been created.\n\nCheers,\nThe My Store Team`
     });
 
     return res.status(201).json({
@@ -658,7 +646,7 @@ With `TINA4_DEBUG=true`, the email appears in the dev dashboard instead of reach
 
 ## 12. Sending Email via Queues
 
-In production, never send email inside a route handler. The SMTP call blocks the response. Use the queue system from Chapter 11:
+In production, never send email inside a route handler. The SMTP call blocks the response. Use the queue system from Chapter 12:
 
 ```typescript
 import { Router, Queue, Messenger } from "tina4-nodejs";
@@ -885,12 +873,7 @@ Router.post("/contact", async (req, res) => {
         body: htmlBody,
         html: true,
         replyTo: body.email,
-        text: `Contact form submission from ${body.name} (${body.email}):
-
-Subject: ${body.subject}
-
-Message:
-${body.message}`
+        text: `Contact form submission from ${body.name} (${body.email}):\n\nSubject: ${body.subject}\n\nMessage:\n${body.message}`
     });
 
     if (result.success) {
@@ -980,7 +963,11 @@ The HTML response includes the success flash message.
 
 ### 6. Email Template Variables Not Substituted
 
+<div v-pre>
+
 **Problem:** The email body shows `{{ name }}` literally instead of the user's name.
+
+</div>
 
 **Cause:** You passed the raw template file content instead of rendering it through the template engine.
 
@@ -1001,5 +988,3 @@ The HTML response includes the success flash message.
 **Cause:** You did not set `TINA4_MAIL_IMAP_HOST` in `.env` or pass `imapHost` to the constructor.
 
 **Fix:** Add `TINA4_MAIL_IMAP_HOST=imap.example.com` and `TINA4_MAIL_IMAP_PORT=993` to `.env`. The IMAP host is separate from the SMTP host -- many providers use different hostnames for sending and reading.
-
-</div>

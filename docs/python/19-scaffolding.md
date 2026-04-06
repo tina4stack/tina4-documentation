@@ -1,8 +1,5 @@
 # Scaffolding
 
-<div v-pre>
-
-
 One command. Six files. A working CRUD feature with routes, templates, tests, and Swagger docs -- ready to run.
 
 That is Tina4's scaffolding system. It generates the boilerplate you write by hand in every project: models, migrations, routes, forms, views, and tests. You describe what you want. The generators produce it.
@@ -415,5 +412,3 @@ Changing `--fields` and re-running the generator does not update existing migrat
 ### Singular Table Names
 
 Tina4 uses singular table names: `product`, not `products`. The route paths use plural (`/api/products`), but the table stays singular. The generator handles this split.
-
-</div>

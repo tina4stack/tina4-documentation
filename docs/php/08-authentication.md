@@ -1,7 +1,4 @@
-# Chapter 7: Authentication
-
-<div v-pre>
-
+# Chapter 8: Authentication
 
 ## 1. Locking the Door
 
@@ -44,7 +41,7 @@ Three parts separated by dots: header, payload, signature. The signature ensures
 
 Tokens expire after 60 minutes by default. Configure in `.env`:
 
-```env
+```bash
 TINA4_TOKEN_LIMIT=60
 ```
 
@@ -96,7 +93,7 @@ Tina4 PHP uses **HS256** (HMAC-SHA256) for JWT signing. It uses only the standar
 
 Set the secret key in `.env`:
 
-```env
+```bash
 SECRET=my-super-secret-key-at-least-32-chars
 ```
 
@@ -479,7 +476,11 @@ Include the CSRF token in every form:
 </form>
 ```
 
+<div v-pre>
+
 `{{ form_token() }}` renders a hidden input:
+
+</div>
 
 ```html
 <input type="hidden" name="_token" value="abc123randomtoken456">
@@ -524,7 +525,7 @@ Server-side sessions store per-user state between requests. Use JWTs for API aut
 
 Set the backend in `.env`:
 
-```env
+```bash
 # File-based sessions (default)
 TINA4_SESSION_DRIVER=file
 
@@ -582,7 +583,7 @@ Router::post("/logout", function ($request, $response) {
 
 ### Session Options
 
-```env
+```bash
 TINA4_SESSION_LIFETIME=3600       # Expires after 1 hour of inactivity
 TINA4_SESSION_NAME=tina4_session  # Cookie name for the session ID
 ```
@@ -920,5 +921,3 @@ Router::put("/api/profile/password", function ($request, $response) {
 **Problem:** Tokens in URLs like `/api/profile?token=eyJ...` leak through browser history, server logs, and Referer headers.
 
 **Fix:** Always send tokens in the `Authorization` header. The only exception: WebSocket connections where the upgrade request cannot carry custom headers. Use a short-lived token for that case.
-
-</div>

@@ -1,7 +1,4 @@
-# Chapter 15: Frontend with tina4css
-
-<div v-pre>
-
+# Chapter 17: Frontend with tina4css
 
 ## 1. The Problem with Frontend Toolchains
 
@@ -402,7 +399,7 @@ The element with id `loadingSpinner` appears while the request flies and disappe
 
 frond.js toggles `display: block` and `display: none` on the element. No extra CSS needed.
 
-### WebSocket (Covered in Chapter 12)
+### WebSocket (Covered in Chapter 23)
 
 ```javascript
 const ws = frond.ws("/ws/chat/general");
@@ -1317,5 +1314,3 @@ async def admin_products(request, response):
 **Cause:** The CSS selector passed to the `loading` option does not match any element, or the element uses a CSS class to toggle visibility instead of inline `display`.
 
 **Fix:** frond.js toggles `display: block` and `display: none`. Make sure the element exists and its initial style is `display: none`. Use an `id` selector: `{ loading: "#loadingSpinner" }`.
-
-</div>

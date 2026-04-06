@@ -1,7 +1,4 @@
-# Chapter 7: Authentication
-
-<div v-pre>
-
+# Chapter 8: Authentication
 
 ## 1. Locking the Door
 
@@ -41,7 +38,7 @@ The token has three parts separated by dots: header, payload, and signature. The
 
 By default, tokens expire after 60 minutes. Configure this in `.env`:
 
-```env
+```bash
 TINA4_TOKEN_EXPIRES_IN=60
 ```
 
@@ -91,7 +88,7 @@ Tina4 Python uses **HS256** (HMAC-SHA256) for JWT signing. It uses only the stan
 
 Set the secret key in `.env`:
 
-```env
+```bash
 SECRET=my-super-secret-key-at-least-32-chars
 ```
 
@@ -457,7 +454,11 @@ In your template, include the CSRF token in every form:
 </form>
 ```
 
+<div v-pre>
+
 `{{ form_token() }}` renders a hidden input field:
+
+</div>
 
 ```html
 <input type="hidden" name="_token" value="abc123randomtoken456">
@@ -505,7 +506,7 @@ Tina4 supports server-side sessions for storing per-user state between requests.
 
 Set the session backend in `.env`:
 
-```env
+```bash
 # File-based sessions (default)
 TINA4_SESSION_BACKEND=file
 
@@ -562,7 +563,7 @@ async def logout(request, response):
 
 ### Session Options
 
-```env
+```bash
 TINA4_SESSION_LIFETIME=3600       # Session lifetime in seconds (default: 3600)
 TINA4_SESSION_NAME=tina4_session  # Cookie name for the session ID
 ```
@@ -909,5 +910,3 @@ async def change_password(request, response):
 **Cause:** Query parameters are visible in many places where headers are not.
 
 **Fix:** Always send tokens in the `Authorization` header, never in the URL. The only exception is WebSocket connections, where the initial HTTP upgrade request cannot carry custom headers -- use a short-lived token for that case.
-
-</div>

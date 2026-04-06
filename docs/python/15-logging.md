@@ -50,7 +50,7 @@ Setting `TINA4_LOG_LEVEL=WARNING` suppresses `DEBUG` and `INFO` messages. Only w
 
 ## 4. The TINA4_LOG_LEVEL Environment Variable
 
-```env
+```bash
 # Development: see everything
 TINA4_LOG_LEVEL=ALL
 
@@ -103,7 +103,7 @@ Log structured data alongside the message. When something goes wrong you can gre
 
 Write logs to a file:
 
-```env
+```bash
 TINA4_LOG_FILE=logs/app.log
 ```
 
@@ -111,7 +111,7 @@ Tina4 creates the file (and the `logs/` directory) if it does not exist. Logs ar
 
 Enable rotation by size:
 
-```env
+```bash
 TINA4_LOG_FILE=logs/app.log
 TINA4_LOG_MAX_BYTES=10485760
 TINA4_LOG_BACKUP_COUNT=5
@@ -200,7 +200,7 @@ Filter by path, method, or status code in any log aggregation tool.
 
 A typical multi-environment setup:
 
-```env
+```bash
 # .env.development
 TINA4_LOG_LEVEL=ALL
 TINA4_LOG_FILE=

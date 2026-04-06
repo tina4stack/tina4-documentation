@@ -276,7 +276,7 @@ Running tests...
 
 By default, `tina4 test` uses a separate test database so your development data is not affected. The test database is created at `data/test.db` (SQLite) and is reset before each test run. If you want to use a different database for tests, set it in `.env`:
 
-```env
+```bash
 TINA4_TEST_DATABASE_URL=sqlite:///data/test.db
 ```
 

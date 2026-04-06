@@ -1,7 +1,4 @@
-# Chapter 15: Frontend Integration
-
-<div v-pre>
-
+# Chapter 17: Frontend Integration
 
 ## 1. Beyond JSON APIs
 
@@ -410,7 +407,7 @@ The element with id `loadingSpinner` appears while the request flies and disappe
 
 frond.js toggles `display: block` and `display: none` on the element. No extra CSS needed.
 
-### WebSocket (Covered in Chapter 12)
+### WebSocket (Covered in Chapter 23)
 
 ```javascript
 const ws = frond.ws("/ws/chat/general");
@@ -1163,7 +1160,7 @@ src/public/css/custom.css  → /css/custom.css
 
 Tina4 is the API backend. Point your frontend build tool's output to `src/public/`:
 
-```env
+```bash
 # Vue
 VITE_OUTPUT_DIR=../my-tina4-project/src/public
 
@@ -1173,7 +1170,7 @@ BUILD_PATH=../my-tina4-project/src/public
 
 Or use CORS to run them on separate ports during development:
 
-```env
+```bash
 CORS_ORIGINS=http://localhost:3000,http://localhost:5173
 ```
 
@@ -1373,5 +1370,3 @@ const html = h._div({ class: "card" }, h._p("Hello"), h._a({ href: "/" }, "Home"
 ```
 
 Void tags (`<br>`, `<img>`, `<input>`) render without closing tags. Boolean attributes render as bare names.
-
-</div>

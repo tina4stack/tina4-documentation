@@ -32,7 +32,7 @@ REST is still great for simple APIs. GraphQL shines when clients have diverse da
 
 GraphQL is available by default. The engine serves requests at `/graphql`. Change the endpoint in `.env` if needed:
 
-```env
+```bash
 TINA4_GRAPHQL_ENDPOINT=/graphql
 ```
 
@@ -531,7 +531,7 @@ One request. The fields the client asked for. Nothing more. Nothing less.
 
 If your ORM models have `$autoCrud = true`, Tina4 can auto-generate GraphQL types and basic CRUD resolvers for them. Enable this in `.env`:
 
-```env
+```bash
 TINA4_GRAPHQL_AUTO_SCHEMA=true
 ```
 

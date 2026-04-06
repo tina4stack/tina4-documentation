@@ -1,7 +1,4 @@
-# Chapter 15: Frontend with tina4css
-
-<div v-pre>
-
+# Chapter 17: Frontend with tina4css
 
 ## 1. The Problem with Frontend Toolchains
 
@@ -802,5 +799,3 @@ html = _div({ class: "card" }, _p("Hello"), _a({ href: "/" }, "Home"))
 ```
 
 Void tags (`<br>`, `<img>`, `<input>`) render without closing tags. Boolean attributes render as bare names.
-
-</div>

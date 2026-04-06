@@ -1,7 +1,4 @@
-# Chapter 15: Frontend with tina4css
-
-<div v-pre>
-
+# Chapter 17: Frontend with tina4css
 
 ## 1. The Problem with Frontend Toolchains
 
@@ -452,7 +449,7 @@ The `data-frond-submit` attribute tells frond.js the URL to POST to. The `data-f
 
 ### Token Management
 
-When your application uses JWT authentication (Chapter 7), frond.js manages tokens automatically:
+When your application uses JWT authentication (Chapter 8), frond.js manages tokens automatically:
 
 ```javascript
 // Store the token after login
@@ -1100,11 +1097,19 @@ Visit `http://localhost:7146/admin/products` and see:
 
 ## 12. Solution
 
+<div v-pre>
+
 The solution follows the same patterns shown in sections 7 and 10. Create the layout template extending the base layout from section 7. Create the dashboard page template with stat cards using `{% for stat in stats %}`. Create the products page template using the AJAX pattern from section 10, but for products instead of users.
+
+</div>
 
 For the products page, use auto-CRUD on the Product model (`$autoCrud = true`) so the API endpoints are available at `/api/products`. Load the table with `frond.get("/api/products", ...)` and handle form submission with `frond.post("/api/products", ...)`.
 
+<div v-pre>
+
 For the dark mode toggle, add the JavaScript from section 8 to the base layout template inside the `{% block extra_js %}` block.
+
+</div>
 
 The key route handlers are:
 
@@ -1251,5 +1256,3 @@ echo $_div(["class" => "card"], $_p("Hello"), $_a(["href" => "/"], "Home"));
 ```
 
 Void tags (`<br>`, `<img>`, `<input>`) render without closing tags. Boolean attributes render as bare names.
-
-</div>

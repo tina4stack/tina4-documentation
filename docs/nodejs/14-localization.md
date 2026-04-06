@@ -111,7 +111,11 @@ Keys use dot notation to access nested values. `"errors.not_found"` reaches `err
 
 ## 5. Interpolation
 
+<div v-pre>
+
 Pass variables to replace `{{placeholder}}` tokens:
+
+</div>
 
 ```typescript
 i18n.setLocale("en");
@@ -386,6 +390,10 @@ If multiple concurrent requests call `i18n.setLocale()` on the same instance, th
 
 ### 4. Placeholder names are case-sensitive
 
+<div v-pre>
+
 `{{Name}}` and `{{name}}` are different placeholders. A mismatch silently leaves the placeholder unreplaced.
+
+</div>
 
 **Fix:** Use consistent lowercase placeholder names in all locale files.

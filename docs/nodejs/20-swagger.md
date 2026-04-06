@@ -38,7 +38,7 @@ http://localhost:7148/swagger/json
 
 By default, Swagger only shows in debug mode. To expose it in production:
 
-```env
+```bash
 TINA4_SWAGGER=true
 ```
 
@@ -397,7 +397,7 @@ The route still works. It does not appear in the Swagger UI or the JSON spec.
 
 Configure the API metadata through `.env`:
 
-```env
+```bash
 TINA4_SWAGGER_TITLE=My Store API
 TINA4_SWAGGER_DESCRIPTION=API for managing products, orders, and users
 TINA4_SWAGGER_VERSION=1.0.0

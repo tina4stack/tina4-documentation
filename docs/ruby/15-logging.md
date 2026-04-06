@@ -52,7 +52,7 @@ Each entry has a timestamp, level, message, and any keyword arguments you passed
 
 Set the minimum log level via the `TINA4_LOG_LEVEL` environment variable. Entries below this level are silently dropped.
 
-```env
+```bash
 TINA4_LOG_LEVEL=info
 ```
 
@@ -159,7 +159,7 @@ Tina4::Config.middleware = ["RequestLogger"]
 
 For log aggregators, switch to JSON output:
 
-```env
+```bash
 TINA4_LOG_FORMAT=json
 ```
 
@@ -176,7 +176,7 @@ One JSON object per line. Compatible with Datadog, Elastic, CloudWatch, and any 
 
 ## 10. Writing to a File
 
-```env
+```bash
 TINA4_LOG_FILE=logs/app.log
 ```
 

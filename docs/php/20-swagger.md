@@ -39,7 +39,7 @@ The Swagger UI appears with all defined routes. No annotations yet means default
 
 For production, control it explicitly:
 
-```env
+```bash
 TINA4_SWAGGER=true
 ```
 
@@ -344,7 +344,7 @@ Tina4 auto-detects auth requirements from `@secured` and `@noauth` annotations.
 
 Configure in `.env`:
 
-```env
+```bash
 SWAGGER_TITLE=My Store API
 SWAGGER_DESCRIPTION=API for managing products, orders, and users
 SWAGGER_VERSION=1.0.0

@@ -18,7 +18,7 @@ Tina4 Python includes a built-in queue that requires zero additional setup. The 
 
 The file queue works out of the box with no extra configuration:
 
-```env
+```bash
 # No TINA4_QUEUE_BACKEND needed -- file is the default
 ```
 
@@ -28,7 +28,7 @@ The first time you push a message, Tina4 automatically creates the queue storage
 
 When your application outgrows the file queue (millions of messages, multiple services, pub/sub patterns), switch to RabbitMQ:
 
-```env
+```bash
 TINA4_QUEUE_BACKEND=rabbitmq
 TINA4_QUEUE_URL=amqp://user:pass@localhost:5672
 ```
@@ -43,7 +43,7 @@ uv add pika
 
 For stream processing, event sourcing, or very high throughput:
 
-```env
+```bash
 TINA4_QUEUE_BACKEND=kafka
 TINA4_QUEUE_URL=localhost:9092
 ```
@@ -56,7 +56,7 @@ uv add confluent-kafka
 
 ### Switching to MongoDB
 
-```env
+```bash
 TINA4_QUEUE_BACKEND=mongodb
 TINA4_QUEUE_URL=mongodb://user:pass@localhost:27017/tina4
 ```
@@ -279,27 +279,27 @@ Switching backends is a config change, not a code change.
 
 ### Development: File (default)
 
-```env
+```bash
 # No config needed -- file is the default
 ```
 
 ### Production: RabbitMQ
 
-```env
+```bash
 TINA4_QUEUE_BACKEND=rabbitmq
 TINA4_QUEUE_URL=amqp://user:pass@rabbitmq.internal:5672
 ```
 
 ### High-Scale Production: Kafka
 
-```env
+```bash
 TINA4_QUEUE_BACKEND=kafka
 TINA4_QUEUE_URL=kafka-1:9092,kafka-2:9092,kafka-3:9092
 ```
 
 ### Production: MongoDB
 
-```env
+```bash
 TINA4_QUEUE_BACKEND=mongodb
 TINA4_QUEUE_URL=mongodb://user:pass@mongo.internal:27017/tina4
 ```

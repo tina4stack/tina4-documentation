@@ -14,6 +14,7 @@ const TITLE_OVERRIDES: Record<string, string> = {
     'graphql': 'GraphQL',
     'websocket': 'WebSocket',
     'wsdl-soap': 'WSDL / SOAP',
+    'sse': 'Server-Sent Events (SSE)',
     'wsdl': 'WSDL',
     'what-is-tina4': 'What Is Tina4?',
     'request-response': 'Request & Response',
@@ -53,12 +54,12 @@ function chapterTitle(filename: string): string {
 const SECTION_RANGES: Record<string, [number, number]> = {
     'Foundations': [1, 10],
     'Building Apps': [11, 19],
-    'APIs & Protocols': [20, 24],
-    'Advanced': [25, 28],
-    'Developer Tools': [29, 31],
-    'Operations': [32, 34],
-    'Releases': [35, 35],
-    'Appendix': [36, 37],
+    'APIs & Protocols': [20, 25],
+    'Advanced': [26, 29],
+    'Developer Tools': [30, 32],
+    'Operations': [33, 35],
+    'Releases': [36, 36],
+    'Appendix': [37, 38],
 }
 
 function buildChapterSidebar(section: string, label: string, extras?: object[]): object[] {

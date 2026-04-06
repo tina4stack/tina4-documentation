@@ -189,7 +189,7 @@ async def set_locale(request, response):
 
 Set the application's default locale in `.env`:
 
-```env
+```bash
 TINA4_LOCALE=de
 ```
 
@@ -243,7 +243,7 @@ When a key is missing from the active locale, Tina4 falls back through a chain:
 3. Default locale (`en` or whatever `TINA4_LOCALE_FALLBACK` is set to)
 4. The raw key string itself
 
-```env
+```bash
 TINA4_LOCALE=de
 TINA4_LOCALE_FALLBACK=en
 ```

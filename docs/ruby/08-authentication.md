@@ -1,7 +1,4 @@
-# Chapter 7: Authentication
-
-<div v-pre>
-
+# Chapter 8: Authentication
 
 ## 1. Locking the Door
 
@@ -39,27 +36,27 @@ The token has three parts separated by dots: header, payload, and signature. The
 
 ### Token Expiry
 
-By default, tokens expire after 1 hour (3600 seconds). Configure the expiry when generating the token:
+By default, tokens expire after 60 minutes. Configure the expiry when generating the token:
 
 ```ruby
-# Default: 1 hour
+# Default: 60 minutes
 token = Tina4::Auth.get_token(payload)
 
-# Custom: 24 hours
-token = Tina4::Auth.get_token(payload, expires_in: 86400)
+# Custom: 24 hours (1440 minutes)
+token = Tina4::Auth.get_token(payload, expires_in: 1440)
 
-# Custom: 7 days
-token = Tina4::Auth.get_token(payload, expires_in: 604800)
+# Custom: 7 days (10080 minutes)
+token = Tina4::Auth.get_token(payload, expires_in: 10080)
 ```
 
-The `expires_in` value is in **seconds**. Common settings:
+The `expires_in` value is in **minutes**. Common settings:
 
 | Value | Duration |
 |-------|----------|
-| `900` | 15 minutes |
-| `3600` | 1 hour (default) |
-| `86400` | 24 hours |
-| `604800` | 7 days |
+| `15` | 15 minutes |
+| `60` | 1 hour (default) |
+| `1440` | 24 hours |
+| `10080` | 7 days |
 
 ### Validating a Token
 
@@ -101,7 +98,7 @@ Tina4 Ruby supports two JWT algorithms, auto-detected based on your configuratio
 - **HS256** (HMAC-SHA256) -- set `SECRET` in `.env`. Uses the standard library. Zero dependencies.
 - **RS256** (RSA) -- RSA keys are auto-generated in the `.keys/` folder. Requires the `jwt` gem (included by default).
 
-```env
+```bash
 # .env -- HS256 mode (recommended, simplest setup)
 SECRET=my-super-secret-key-at-least-32-chars
 ```
@@ -445,7 +442,11 @@ In your template, include the CSRF token in every form:
 </form>
 ```
 
+<div v-pre>
+
 `{{ form_token() }}` renders a hidden input field:
+
+</div>
 
 ```html
 <input type="hidden" name="_token" value="abc123randomtoken456">
@@ -852,5 +853,3 @@ end
 **Cause:** Query parameters are visible in many places where headers are not.
 
 **Fix:** Always send tokens in the `Authorization` header, never in the URL. The only exception is WebSocket connections, where the initial HTTP upgrade request cannot carry custom headers -- use a short-lived token for that case.
-
-</div>

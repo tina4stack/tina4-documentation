@@ -43,7 +43,7 @@ Each call emits a structured log line:
 
 Set the minimum level in `.env`:
 
-```env
+```bash
 TINA4_LOG_LEVEL=info
 ```
 
@@ -58,7 +58,7 @@ Only entries at or above the configured level are emitted:
 
 In development, use `debug`. In production, use `info` or `warn` to reduce log volume.
 
-```env
+```bash
 # .env.development
 TINA4_LOG_LEVEL=debug
 

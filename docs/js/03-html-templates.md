@@ -25,7 +25,7 @@ No `render()` loop. No reconciliation. No diffing. The template creates DOM, bin
 
 ---
 
-## 2. Static Values -- `${value}`
+## 2. Static Values -- ${value}
 
 Plain values go in as text nodes. Once. Never again.
 
@@ -49,7 +49,7 @@ You cannot accidentally inject HTML through interpolation. This is by design.
 
 ---
 
-## 3. Reactive Text -- `${signal}`
+## 3. Reactive Text -- ${signal}
 
 Pass a signal directly (not `.value`) to create a reactive text node:
 
@@ -75,13 +75,13 @@ html`<p>${count.value}</p>`
 html`<p>${count}</p>`
 ```
 
-When you write `&#36;{count.value}`, JavaScript evaluates `count.value` (gets `0`) and passes the number `0` to the template. The template sees a plain number, not a signal. It creates a static text node.
+When you write `${count.value}`, JavaScript evaluates `count.value` (gets `0`) and passes the number `0` to the template. The template sees a plain number, not a signal. It creates a static text node.
 
-When you write `&#36;{count}`, JavaScript passes the signal object. The template detects it (via `isSignal()`), creates a text node, and subscribes to changes. When the signal updates, the text node updates.
+When you write `${count}`, JavaScript passes the signal object. The template detects it (via `isSignal()`), creates a text node, and subscribes to changes. When the signal updates, the text node updates.
 
 ---
 
-## 4. Reactive Blocks -- `${() => expr}`
+## 4. Reactive Blocks -- ${() => expr}
 
 Functions are reactive blocks. The function runs immediately, and re-runs whenever any signal read inside it changes:
 
@@ -146,7 +146,7 @@ html`
 `
 ```
 
-Each `&#36;{item.name}` is a reactive text node. If you change `items.value[0].name.value = 'Pear'`, only that text node updates. The list does not re-render.
+Each `${item.name}` is a reactive text node. If you change `items.value[0].name.value = 'Pear'`, only that text node updates. The list does not re-render.
 
 ---
 
@@ -299,9 +299,7 @@ content.value = '<em>Done!</em>';
 
 ## CRITICAL: Never Put Inputs Inside Reactive Blocks
 
-::: danger Inputs inside `${() => ...}` lose focus on every keystroke
-The most common mistake in tina4-js is wrapping `<input>` elements inside reactive arrow functions. When a signal changes, the reactive block **re-renders its entire DOM subtree** — destroying the input and creating a new one. The cursor disappears, the input loses focus, and the user's typing is interrupted.
-:::
+> **Inputs inside `${() => ...}` lose focus on every keystroke.** The most common mistake in tina4-js is wrapping `<input>` elements inside reactive arrow functions. When a signal changes, the reactive block re-renders its entire DOM subtree — destroying the input and creating a new one. The cursor disappears, the input loses focus, and typing is interrupted.
 
 **BAD — input inside a reactive block (broken):**
 
@@ -343,7 +341,7 @@ html`
 
 ---
 
-## 9. Dynamic Attributes -- attr=`${value}`
+## 9. Dynamic Attributes -- attr=${value}
 
 Regular attributes accept signals and functions for reactive updates:
 
@@ -500,12 +498,12 @@ function loginForm() {
 
 Every binding type from this chapter appears in this form:
 
-- **`.value=&#36;{email}`** -- property binding keeps the input's DOM property in sync with the signal
+- **`.value=${email}`** -- property binding keeps the input's DOM property in sync with the signal
 - **`@input`** -- event handler updates the signal when the user types
-- **`?disabled=&#36;{loading}`** -- boolean attribute toggles from a signal
-- **`?disabled=&#36;{() => !isValid.value || loading.value}`** -- boolean attribute from a function
-- **`&#36;{() => loading.value ? 'Logging in...' : 'Login'}`** -- reactive text block swaps the button label
-- **`&#36;{() => error.value ? html\`...\` : null}`** -- conditional rendering with the ternary pattern
+- **`?disabled=${loading}`** -- boolean attribute toggles from a signal
+- **`?disabled=${() => !isValid.value || loading.value}`** -- boolean attribute from a function
+- **`${() => loading.value ? 'Logging in...' : 'Login'}`** -- reactive text block swaps the button label
+- **`${() => error.value ? html\`...\` : null}`** -- conditional rendering with the ternary pattern
 
 One template. Six binding types. Zero manual DOM updates. The template engine handles every transition between states, and the form responds the moment data changes.
 
@@ -515,13 +513,13 @@ One template. Six binding types. Zero manual DOM updates. The template engine ha
 
 | Syntax | What it does | Reactive? |
 |---|---|---|
-| `&#36;{value}` | Static text node, XSS-safe | No |
-| `&#36;{signal}` | Reactive text node | Yes |
-| `&#36;{() => expr}` | Reactive block (conditionals, lists) | Yes |
-| `&#36;{fragment}` | Insert DocumentFragment | No |
-| `&#36;{array}` | Render each item | No |
-| `@click=&#36;{fn}` | Event listener (auto-batched) | - |
-| `?disabled=&#36;{x}` | Boolean attribute (add/remove) | If signal/function |
-| `.value=&#36;{x}` | DOM property binding | If signal |
-| `.innerHTML=&#36;{x}` | Raw HTML injection | If signal |
-| `class=&#36;{x}` | Regular attribute | If signal/function |
+| `${value}` | Static text node, XSS-safe | No |
+| `${signal}` | Reactive text node | Yes |
+| `${() => expr}` | Reactive block (conditionals, lists) | Yes |
+| `${fragment}` | Insert DocumentFragment | No |
+| `${array}` | Render each item | No |
+| `@click=${fn}` | Event listener (auto-batched) | - |
+| `?disabled=${x}` | Boolean attribute (add/remove) | If signal/function |
+| `.value=${x}` | DOM property binding | If signal |
+| `.innerHTML=${x}` | Raw HTML injection | If signal |
+| `class=${x}` | Regular attribute | If signal/function |

@@ -16,7 +16,7 @@ Picture a notes application. Users create, edit, and delete notes. Those notes m
 
 Set your database connection in `.env`:
 
-```env
+```bash
 DATABASE_URL=sqlite:///data/app.db
 ```
 
@@ -647,7 +647,7 @@ Write PostgreSQL stored procedures in your migration files without worrying abou
 
 Expensive queries that return the same result on every call deserve caching. Tina4 builds caching in. Enable it via environment variables in your `.env`:
 
-```env
+```bash
 TINA4_DB_CACHE=true
 TINA4_DB_CACHE_TTL=30
 ```

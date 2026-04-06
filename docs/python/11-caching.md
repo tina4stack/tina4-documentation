@@ -138,7 +138,7 @@ async def get_profile(request, response):
 
 Tina4's cache system stores data in memory by default. No configuration needed.
 
-```env
+```bash
 # This is the default -- you do not need to set it explicitly
 TINA4_CACHE_BACKEND=memory
 ```
@@ -151,7 +151,7 @@ Memory cache is the fastest option (no disk I/O, no network calls) but it resets
 
 For production deployments where you want cache persistence across server restarts and shared cache across multiple server instances, use Redis:
 
-```env
+```bash
 TINA4_CACHE_BACKEND=redis
 TINA4_CACHE_HOST=localhost
 TINA4_CACHE_PORT=6379
@@ -175,7 +175,7 @@ Your code does not change. The `cache_get`, `cache_set`, and `ResponseCache` mid
 
 If you want cache persistence but do not have Redis, use file-based caching:
 
-```env
+```bash
 TINA4_CACHE_BACKEND=file
 TINA4_CACHE_PATH=/path/to/cache/directory
 ```
@@ -316,7 +316,7 @@ Second call (cache hit):
 
 Tina4 can cache database query results automatically. Enable it in `.env`:
 
-```env
+```bash
 TINA4_DB_CACHE=true
 TINA4_DB_CACHE_TTL=300
 ```

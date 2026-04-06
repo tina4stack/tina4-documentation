@@ -274,7 +274,7 @@ Tina4 auto-detects auth requirements from `@secured` and `@noauth` decorators. S
 
 The Swagger UI header and OpenAPI spec carry metadata about your API. Configure this metadata through environment variables in `.env`:
 
-```env
+```bash
 SWAGGER_TITLE=My Store API
 SWAGGER_DESCRIPTION=REST API for managing products, orders, and users
 SWAGGER_VERSION=1.0.0
@@ -482,7 +482,7 @@ async def delete_user(request, response):
 
 Control Swagger behavior in `.env`:
 
-```env
+```bash
 # Swagger is only available when debug mode is on (default behavior)
 TINA4_DEBUG=true
 

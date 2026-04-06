@@ -1,8 +1,5 @@
 # Chapter 9: Sessions and Cookies
 
-<div v-pre>
-
-
 ## 1. Remembering Your Users
 
 JWT tokens handle APIs. Traditional web applications need more. A shopping cart that persists across pages. A flash message that appears once after a redirect. A "remember me" checkbox on the login form. These features run on sessions and cookies -- server-side state tied to a browser.
@@ -19,7 +16,7 @@ The default backend is file-based sessions. They work out of the box with no add
 
 To change the backend, set `TINA4_SESSION_BACKEND` in `.env`:
 
-```env
+```bash
 TINA4_SESSION_BACKEND=file
 ```
 
@@ -35,7 +32,7 @@ TINA4_SESSION_BACKEND=file
 
 ### Redis Configuration
 
-```env
+```bash
 TINA4_SESSION_BACKEND=redis
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -50,7 +47,7 @@ uv add redis
 
 ### MongoDB Configuration
 
-```env
+```bash
 TINA4_SESSION_BACKEND=mongodb
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=27017
@@ -59,7 +56,7 @@ TINA4_SESSION_DATABASE=tina4_sessions
 
 ### Valkey Configuration
 
-```env
+```bash
 TINA4_SESSION_BACKEND=valkey
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -67,7 +64,7 @@ TINA4_SESSION_PORT=6379
 
 ### Database Sessions
 
-```env
+```bash
 TINA4_SESSION_BACKEND=database
 ```
 
@@ -75,7 +72,7 @@ Stores sessions in the `tina4_session` table using your existing database connec
 
 ### Session Lifetime
 
-```env
+```bash
 TINA4_SESSION_TTL=3600  # 1 hour in seconds (default)
 ```
 
@@ -406,7 +403,7 @@ async def logout(request, response):
 
 The session cookie (`tina4_session`) is `HttpOnly` and `SameSite=Lax` by default. For production, ensure HTTPS:
 
-```env
+```bash
 TINA4_SESSION_SECURE=true     # Only send over HTTPS
 TINA4_SESSION_HTTPONLY=true   # Not accessible via JavaScript (default)
 TINA4_SESSION_SAMESITE=Lax   # Prevent CSRF via cross-site requests (default)
@@ -709,5 +706,3 @@ async def clear_cart(request, response):
 **Cause:** You read the flash message but did not remove it. Using `request.session.get()` reads without deleting.
 
 **Fix:** Use `request.session.flash("message")` to read flash data. It reads and deletes in one step. Do not use `request.session.get()` for flash messages.
-
-</div>
