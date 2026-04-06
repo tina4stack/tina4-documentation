@@ -167,7 +167,7 @@ npx tina4js build --target php
 # Outputs JS to src/public/js/
 # Generates src/templates/index.twig
 ```
-```dotenv
+```bash
 TINA4_APP_DOCUMENT_ROOT=src/public
 TINA4_APP_INDEX=../templates/index.twig
 ```

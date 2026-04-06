@@ -291,7 +291,7 @@ Follow the links for more on [configuration](swagger.md#config), [annotations](s
 
 Set `DATABASE_URL` in `.env`. The framework reads it at startup and opens the connection.
 
-```env
+```bash
 DATABASE_URL=sqlite:///data/app.db
 DATABASE_URL=postgres://localhost:5432/myapp
 DATABASE_URL=mysql://localhost:3306/myapp
@@ -594,7 +594,7 @@ Debug::message("Query took 2.3s", TINA4_LOG_WARNING);
 Debug::message("Connection failed", TINA4_LOG_ERROR);
 ```
 
-```env
+```bash
 # .env
 TINA4_LOG_LEVEL=TINA4_LOG_ALL    # DEBUG | INFO | WARNING | ERROR | NONE
 ```
@@ -673,7 +673,7 @@ Route handlers receive resolved dependencies automatically when type-hinted para
 
 When `TINA4_DEBUG=true`, unhandled exceptions render an interactive overlay in the browser instead of a blank 500 page. The overlay shows the stack trace, request details, and the source file at the point of failure. No configuration needed — it activates automatically.
 
-```env
+```bash
 # .env
 TINA4_DEBUG=true
 ```
@@ -723,7 +723,7 @@ tina4 crud User
 
 Tina4 ships an MCP (Model Context Protocol) server that starts automatically when `TINA4_DEBUG=true`. AI assistants connect to it to inspect routes, models, and data without leaving the editor.
 
-```env
+```bash
 # .env
 TINA4_DEBUG=true
 TINA4_MCP_PORT=7147   # optional override, defaults to main port + 1

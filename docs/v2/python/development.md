@@ -20,7 +20,7 @@ Control the framework's behavior with the `TINA4_DEBUG_LEVEL` environment variab
 | `WARN` | No | No | No | Warnings + Errors |
 | `ERROR` | No | No | No | Errors only |
 
-```dotenv
+```bash
 # .env — development (default)
 TINA4_DEBUG_LEVEL=DEBUG
 
@@ -111,7 +111,7 @@ myproject/
 
 For production, disable dev features by setting the debug level:
 
-```dotenv
+```bash
 # .env.production
 TINA4_DEBUG_LEVEL=INFO
 ```

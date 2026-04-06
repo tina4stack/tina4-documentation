@@ -156,7 +156,7 @@ The default session handler stores data on the file system. Override `TINA4_SESS
 | `SessionValkeyHandler` | Valkey | `valkey` |
 | `SessionMongoHandler` | MongoDB | `pymongo` |
 
-```dotenv
+```bash
 TINA4_SESSION_HANDLER=SessionMongoHandler
 TINA4_SESSION_MONGO_HOST=localhost
 TINA4_SESSION_MONGO_PORT=27017

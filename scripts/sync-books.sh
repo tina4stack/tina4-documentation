@@ -119,7 +119,7 @@ sync_book() {
   local count=0
   for chapter in "$src"/[0-9]*.md; do
     [ -f "$chapter" ] || continue
-    escape_twig < "$chapter" | sed 's/^```env$/```dotenv/' > "$dest/$(basename "$chapter")"
+    escape_twig < "$chapter" | sed 's/^```env$/```bash/' > "$dest/$(basename "$chapter")"
     count=$((count + 1))
   done
 

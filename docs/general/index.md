@@ -75,7 +75,7 @@ See [Chapter 3: Choosing Your Language](/general/03-choosing-your-language) for 
 
 All configuration lives in a single `.env` file:
 
-```dotenv
+```bash
 # Database
 DATABASE_URL=sqlite://app.db
 

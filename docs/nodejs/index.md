@@ -209,7 +209,7 @@ The default session handler stores data on the file system. Override `TINA4_SESS
 | `RedisSession` | Redis | Set `TINA4_REDIS_URL` |
 | `MongoSession` | MongoDB | Set `TINA4_MONGO_URI` |
 
-```env
+```bash
 TINA4_SESSION_HANDLER=RedisSession
 TINA4_REDIS_URL=redis://localhost:6379
 ```
@@ -260,7 +260,7 @@ Reference the compiled file from your templates:
 
 The `.env` file holds your project configuration. The framework reads it at startup.
 
-```env
+```bash
 TINA4_DEBUG=true
 TINA4_PORT=7148
 DATABASE_URL=sqlite:///data/app.db
@@ -391,7 +391,7 @@ Swagger runs when `TINA4_DEBUG=true`. Set `TINA4_SWAGGER=true` in `.env` to expo
 
 Tina4 defaults to SQLite at `data/app.db`. Set `DATABASE_URL` in `.env` to switch engines. The API stays identical across SQLite, PostgreSQL, MySQL, SQL Server, and Firebird.
 
-```env
+```bash
 # PostgreSQL
 DATABASE_URL=postgres://localhost:5432/myapp
 # MySQL
@@ -752,7 +752,7 @@ Log.error("Payment gateway timeout", err);
 
 Set the minimum level in `.env`:
 
-```env
+```bash
 TINA4_LOG_LEVEL=ALL    # DEBUG | INFO | WARN | ERROR | ALL
 ```
 
@@ -841,7 +841,7 @@ The overlay shows:
 
 No configuration needed. Set `TINA4_DEBUG=false` in production and the overlay disappears. The framework returns a plain `500` JSON response instead.
 
-```env
+```bash
 TINA4_DEBUG=true   # enables overlay in browser
 ```
 
@@ -900,7 +900,7 @@ All commands run from the project root. `tina4 --help` lists every command with 
 
 Tina4 starts a Model Context Protocol server automatically when `TINA4_DEBUG=true`. AI tools — Cursor, Claude Code, VS Code Copilot — connect to it and gain live awareness of your running application.
 
-```env
+```bash
 TINA4_DEBUG=true          # MCP server starts on port 7149
 TINA4_MCP_PORT=7149       # override the default port
 ```
@@ -951,7 +951,7 @@ for (let i = 0; i < 50; i++) {
 
 Set `TINA4_LANGUAGE` in `.env` to change the framework language. Supported: `en`, `fr`, `af`.
 
-```env
+```bash
 TINA4_LANGUAGE=af
 ```
 
