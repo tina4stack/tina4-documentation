@@ -37,7 +37,7 @@ tina4 serve
 Frontend (tina4-js):
 
 ```bash
-npx tina4 create my-frontend
+npx tina4js create my-frontend
 cd my-frontend
 npm install
 ```
@@ -296,8 +296,8 @@ export default defineConfig({
 The tina4 CLI has a build command with target support:
 
 ```bash
-npx tina4 build --target php
-npx tina4 build --target python
+npx tina4js build --target php
+npx tina4js build --target python
 ```
 
 This builds and places the output in the conventional location for each backend framework. One command. The files land where the backend expects them.
@@ -493,6 +493,6 @@ One repository. One deployment. The frontend builds into the backend's public di
 | CSRF token | Auto-injected as `formToken` in request bodies |
 | Token rotation | Automatic via `FreshToken` response header |
 | 401 handling | Response interceptor redirects to login |
-| Build for backend | `npx tina4 build --target php` or `--target python` |
+| Build for backend | `npx tina4js build --target php` or `--target python` |
 | Islands | Use `Tina4Element` components in server-rendered HTML |
 | Shared state | Export signals from a store module |

@@ -37,9 +37,9 @@ result = []
 in_fence = False
 fence_lang = ''
 
-# HTML code fences need escaping — Vue's compiler parses {{ }} inside html blocks.
-# All other languages are safe (markdown-it escapes them into <code> elements).
-UNSAFE_LANGS = {'html'}
+# All code fences are safe — markdown-it escapes content into <code> elements.
+# No languages need entity escaping inside fences.
+UNSAFE_LANGS = set()
 
 def escape_line(line):
     \"\"\"Escape template syntax with HTML entities for code fences\"\"\"
@@ -119,7 +119,7 @@ sync_book() {
   local count=0
   for chapter in "$src"/[0-9]*.md; do
     [ -f "$chapter" ] || continue
-    escape_twig < "$chapter" | sed 's/^```env$/```dotenv/' > "$dest/$(basename "$chapter")"
+    escape_twig < "$chapter" | sed 's/^```env$/```bash/' > "$dest/$(basename "$chapter")"
     count=$((count + 1))
   done
 

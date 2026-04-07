@@ -297,6 +297,50 @@ content.value = '<em>Done!</em>';
 
 ---
 
+## CRITICAL: Never Put Inputs Inside Reactive Blocks
+
+> **Inputs inside `${() => ...}` lose focus on every keystroke.** The most common mistake in tina4-js is wrapping `<input>` elements inside reactive arrow functions. When a signal changes, the reactive block re-renders its entire DOM subtree — destroying the input and creating a new one. The cursor disappears, the input loses focus, and typing is interrupted.
+
+**BAD — input inside a reactive block (broken):**
+
+```typescript
+const name = signal('');
+const showExtra = signal(false);
+
+// WRONG: the input is INSIDE ${() => ...} — it gets destroyed on every keystroke
+html`
+  <div>
+    ${() => html`
+      <input .value=${name} @input=${(e: Event) => {
+        name.value = (e.target as HTMLInputElement).value;
+      }} />
+      ${showExtra.value ? html`<p>Extra info</p>` : null}
+    `}
+  </div>
+`;
+```
+
+**GOOD — input outside, only dynamic content in reactive blocks:**
+
+```typescript
+const name = signal('');
+const showExtra = signal(false);
+
+// RIGHT: the input stays in the static template — only the conditional goes in ${() => ...}
+html`
+  <div>
+    <input .value=${name} @input=${(e: Event) => {
+      name.value = (e.target as HTMLInputElement).value;
+    }} />
+    ${() => showExtra.value ? html`<p>Extra info</p>` : null}
+  </div>
+`;
+```
+
+**The rule:** Inputs, textareas, and selects belong in the **static part** of your template. Use `.value`, `@input`, and `?disabled` bindings to make them reactive. Only wrap **computed output** (conditional messages, dynamic lists, calculated text) in `${() => ...}` blocks.
+
+---
+
 ## 9. Dynamic Attributes -- attr=${value}
 
 Regular attributes accept signals and functions for reactive updates:

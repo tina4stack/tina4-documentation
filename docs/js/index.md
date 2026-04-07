@@ -1,6 +1,6 @@
 # Tina4 JavaScript – Quick Reference
 
-::: tip 🔥 Sub-3KB reactive framework
+::: tip 🔥 Sub-3KB core, reactive framework
 - Signals for state, `html` tagged templates for rendering, Web Components for reuse
 - Client-side routing with `{param}` syntax matching tina4-php/python
 - Fetch API wrapper with Bearer + formToken auth compatible with tina4 backends
@@ -31,7 +31,7 @@
 ### Installation {#installation}
 
 ```bash
-npx tina4 create my-app
+npx tina4js create my-app
 cd my-app
 npm install
 npm run dev
@@ -163,18 +163,18 @@ pwa.register({
 
 #### With tina4-php
 ```bash
-npx tina4 build --target php
+npx tina4js build --target php
 # Outputs JS to src/public/js/
 # Generates src/templates/index.twig
 ```
-```dotenv
+```bash
 TINA4_APP_DOCUMENT_ROOT=src/public
 TINA4_APP_INDEX=../templates/index.twig
 ```
 
 #### With tina4-python
 ```bash
-npx tina4 build --target python
+npx tina4js build --target python
 # Outputs JS to src/public/js/
 # Generates src/templates/index.twig + src/routes/spa.py
 ```
@@ -184,22 +184,23 @@ npx tina4 build --target python
 
 | Module | Raw | Gzipped |
 |--------|-----|---------|
-| Core (signals + html + component) | 4.6 KB | 1.51 KB |
+| Core (signals + html + component) | 3.4 KB | 1.33 KB |
 | Router | 0.14 KB | 0.12 KB |
 | API | 3.5 KB | 1.49 KB |
-| PWA | 3.0 KB | 1.16 KB |
+| PWA | 2.7 KB | 1.09 KB |
 | WebSocket | 2.3 KB | 0.91 KB |
-| Debug | 16.2 KB | 5.11 KB |
-| **Full framework** | **3.3 KB** | **1.36 KB** |
+| Debug | 13.8 KB | 4.76 KB |
+| **Full framework** | **13.6 KB** | **5.34 KB** |
 
-Tree-shakeable — import only what you need:
+Tree-shakeable — import only what you need. The full framework is 13.6 KB raw / 5.34 KB gzipped, but most apps use only Core + Router (under 1.5 KB gzip):
+
 ```ts
-import { signal, html } from 'tina4js/core';     // 1.51 KB gzip
+import { signal, html } from 'tina4js/core';     // 1.33 KB gzip
 import { route, router } from 'tina4js/router';   // 0.12 KB gzip
 import { api } from 'tina4js/api';                 // 1.49 KB gzip
-import { pwa } from 'tina4js/pwa';                 // 1.16 KB gzip
+import { pwa } from 'tina4js/pwa';                 // 1.09 KB gzip
 import { ws } from 'tina4js/ws';                   // 0.91 KB gzip
-import 'tina4js/debug';                            // 5.11 KB gzip (dev only)
+import 'tina4js/debug';                            // 4.76 KB gzip (dev only, tree-shaken from prod)
 ```
 
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">

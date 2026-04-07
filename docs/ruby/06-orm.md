@@ -32,7 +32,7 @@ That is a complete model. Let us break it down:
 
 - **Extends `Tina4::ORM`** -- This gives you `save`, `load`, `delete`, `select`, and other methods.
 - **Field declarations** -- Each field maps to a database column. The field name uses `snake_case` which maps directly to the column name. Tina4 handles the conversion automatically.
-- **`table_name`** -- The database table this model maps to. If you omit it, Tina4 infers it from the class name: `Product` becomes `products`, `OrderItem` becomes `order_items`.
+- **`table_name`** -- The database table this model maps to. If you omit it, Tina4 uses the lowercase class name: `Product` becomes `product`. Set `ORM_PLURAL_TABLE_NAMES=true` in `.env` to get plural names (`product` → `products`).
 - **`primary_key: true`** -- Marks the primary key column. Defaults to `id`.
 - **Default values** -- Fields with defaults (like `category: "Uncategorized"`) are used when creating new records without specifying those fields.
 
@@ -594,11 +594,104 @@ Auto-CRUD supports query parameters for filtering, sorting, and pagination out o
 curl "http://localhost:7147/api/products?category=Electronics&sort=price&order=desc&page=1&per_page=10"
 ```
 
-You can still define custom routes alongside auto-CRUD. Your custom routes take precedence over the auto-generated ones.
+### Custom Routes Alongside Auto-CRUD
+
+Custom routes defined in `src/routes/` load before auto-CRUD routes. They take precedence. If you need special logic for one endpoint -- custom validation, side effects, complex queries -- define that route manually. Auto-CRUD handles the rest.
+
+### Introspection
+
+Check which models are registered:
+
+```ruby
+registered = Tina4::AutoCrud.models
+# [User, Product, Order]
+```
 
 ---
 
-## 13. Exercise: Build a Blog
+## 13. Scopes
+
+Scopes are reusable query filters baked into the model. Use the `scope` class method to define them:
+
+```ruby
+class BlogPost < Tina4::ORM
+  integer_field :id, primary_key: true
+  string_field :title
+  string_field :status, default: "draft"
+  string_field :created_at
+
+  table_name "posts"
+
+  scope :published, "status = ?", ["published"]
+  scope :drafts, "status = ?", ["draft"]
+end
+```
+
+Use them in your routes:
+
+```ruby
+Tina4::Router.get("/api/posts/published") do |request, response|
+  posts = BlogPost.published
+  response.json({ posts: posts.map(&:to_h) })
+end
+
+Tina4::Router.get("/api/posts/drafts") do |request, response|
+  posts = BlogPost.drafts
+  response.json({ posts: posts.map(&:to_h) })
+end
+```
+
+Scopes keep query logic in the model where it belongs. Route handlers stay thin.
+
+---
+
+## 14. Input Validation
+
+Field definitions carry validation rules. Call `validate` before `save` and the ORM checks every constraint:
+
+```ruby
+class Product < Tina4::ORM
+  integer_field :id, primary_key: true
+  string_field :name, nullable: false
+  string_field :sku, nullable: false
+  float_field :price, nullable: false
+  string_field :category
+
+  table_name "products"
+end
+```
+
+```ruby
+Tina4::Router.post("/api/products") do |request, response|
+  product = Product.new(request.body)
+
+  errors = product.validate
+  unless errors.empty?
+    return response.json({ errors: errors }, 400)
+  end
+
+  product.save
+  response.json({ product: product.to_h }, 201)
+end
+```
+
+If validation fails, `validate` returns a list of error messages:
+
+```json
+{
+  "errors": [
+    "name cannot be null",
+    "sku cannot be null",
+    "price cannot be null"
+  ]
+}
+```
+
+The ORM validates `nullable` constraints. Fields marked `nullable: false` must have a value before saving. The `save` method also runs `validate_fields` internally -- if validation fails, `save` returns `false` and populates `errors`.
+
+---
+
+## 15. Exercise: Build a Blog
 
 Build a blog with three models: User, Post, and Comment. Use relationships, eager loading, and auto-CRUD.
 
@@ -669,7 +762,7 @@ curl http://localhost:7147/api/blog/posts/1
 
 ---
 
-## 14. Solution
+## 16. Solution
 
 ### Models
 
@@ -837,7 +930,7 @@ end
 
 ---
 
-## 15. Field Name Mapping
+## 17. Field Name Mapping
 
 By default, Tina4 Ruby expects both field names and database columns to use `snake_case`. If your database uses `camelCase` columns (common when sharing a database with a JavaScript or Java backend), enable `auto_map` on your model:
 
@@ -864,7 +957,7 @@ Tina4.camel_to_snake("productName")   # => "product_name"
 
 ---
 
-## 16. Auto-CRUD with `Tina4::CRUD.to_crud`
+## 18. Auto-CRUD with `Tina4::CRUD.to_crud`
 
 Beyond the `auto_crud true` declaration on models (section 12), Tina4 provides `Tina4::CRUD.to_crud` for generating a complete HTML CRUD interface -- a searchable, paginated table with create/edit/delete forms -- from a SQL query or ORM model:
 
@@ -894,15 +987,15 @@ end
 
 ---
 
-## 17. Gotchas
+## 19. Gotchas
 
 ### 1. Table Naming Convention
 
 **Problem:** Your model class is `OrderItem` but queries fail because the table does not exist.
 
-**Cause:** Tina4 converts `OrderItem` to `order_items` (plural, snake_case). If your table is named `order_item` (singular), it will not match.
+**Cause:** Tina4 converts `OrderItem` to `orderitem` (lowercase, no separator). If your table is named `order_item` (snake_case), it will not match.
 
-**Fix:** Set `table_name` explicitly: `table_name "order_item"`. Or rename your table to match the convention.
+**Fix:** Set `table_name` explicitly: `table_name "order_item"`.
 
 ### 2. Nil Handling
 
@@ -951,3 +1044,36 @@ end
 **Cause:** `select` returns an array of model objects, not hashes. Each item is an instance of your model class.
 
 **Fix:** Access properties with dot syntax: `result.name`. Or convert to a hash with `result.to_h`.
+
+---
+
+## QueryBuilder Integration
+
+ORM models provide a `query` method that returns a `QueryBuilder` pre-configured with the model's table name and database connection:
+
+```ruby
+# Fluent query builder from ORM
+results = User.query
+  .select("id", "name", "email")
+  .where("active = ?", [true])
+  .order_by("name")
+  .limit(50)
+  .get
+
+# First matching record
+user = User.query
+  .where("email = ?", ["alice@example.com"])
+  .first
+
+# Count
+total = User.query
+  .where("role = ?", ["admin"])
+  .count
+
+# Check existence
+exists = User.query
+  .where("email = ?", ["test@example.com"])
+  .exists?
+```
+
+See the [QueryBuilder chapter](07-query-builder.md) for the full fluent API including joins, grouping, having, and MongoDB support.

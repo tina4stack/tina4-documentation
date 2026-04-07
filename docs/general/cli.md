@@ -4,14 +4,21 @@ The Tina4 CLI is a single binary that manages all four backend languages. It det
 
 ## Installation
 
+**macOS (Homebrew):**
+
 ```bash
-# macOS (Homebrew)
 brew install tina4stack/tap/tina4
+```
 
-# Linux / macOS (install script)
+**Linux / macOS (install script):**
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/tina4stack/tina4/main/install.sh | bash
+```
 
-# Windows (PowerShell)
+**Windows (PowerShell):**
+
+```powershell
 irm https://raw.githubusercontent.com/tina4stack/tina4/main/install.ps1 | iex
 ```
 
@@ -286,7 +293,7 @@ Downloads the complete documentation book for your detected language.
 
 The `.env` file in your project root configures the framework:
 
-```dotenv
+```bash
 PROJECT_NAME="My Project"
 VERSION=1.0.0
 TINA4_DEBUG_LEVEL=ALL

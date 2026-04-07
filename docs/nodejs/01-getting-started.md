@@ -2,7 +2,7 @@
 
 ## 1. What Is Tina4 Node.js
 
-Tina4 Node.js is a zero-dependency web framework. One npm package. Under 5,000 lines of code. It hands you routing, an ORM, a template engine, authentication, queues, WebSocket, and 70 other features. Node.js 22+ and TypeScript.
+Tina4 Node.js is a zero-dependency web framework. One npm package. It hands you routing, an ORM, a template engine, authentication, queues, WebSocket, and 70 other features. Node.js 22+ and TypeScript.
 
 Truly zero runtime dependencies means no native C++ addons, no `node-gyp`, no platform-specific binaries. SQLite support uses Node's built-in `node:sqlite` module (available in Node 22+), so even database access requires nothing beyond what ships with Node.js itself.
 
@@ -48,14 +48,21 @@ npm ships with Node.js. If Node.js is installed, npm is too.
 
 3. **The Tina4 CLI** -- a Rust-based binary that manages all four Tina4 frameworks:
 
+**macOS (Homebrew):**
+
 ```bash
-# macOS (Homebrew)
 brew install tina4stack/tap/tina4
+```
 
-# Linux / macOS (install script)
+**Linux / macOS (install script):**
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/tina4stack/tina4/main/install.sh | bash
+```
 
-# Windows (PowerShell)
+**Windows (PowerShell):**
+
+```powershell
 irm https://raw.githubusercontent.com/tina4stack/tina4/main/install.ps1 | iex
 ```
 
@@ -81,13 +88,25 @@ Verify:
 tsx --version
 ```
 
+## Installing the Tina4 CLI
+
+```bash
+cargo install tina4
+```
+
+Or download from [GitHub Releases](https://github.com/tina4stack/tina4/releases).
+
+The `tina4` CLI manages project scaffolding, development servers, migrations, and more across all Tina4 frameworks.
+
 ### Creating a New Project
 
 The Tina4 CLI scaffolds a new project in one command:
 
 ```bash
-tina4 init my-store
+tina4 init nodejs my-store
 ```
+
+`tina4 init` installs the Tina4 CLI globally (via cargo, homebrew, or direct download), then scaffolds a complete project with routes, templates, database, and configuration.
 
 You should see:
 
@@ -365,7 +384,7 @@ Create `src/templates/base.html`:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>&#123;% block title %&#125;My Store&#123;% endblock %&#125;</title>
+    <title>{% block title %}My Store{% endblock %}</title>
     <link rel="stylesheet" href="/css/tina4.css">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
@@ -386,7 +405,7 @@ Create `src/templates/base.html`:
         <a href="/products">Products</a>
     </nav>
     <div class="container">
-        &#123;% block content %&#125;&#123;% endblock %&#125;
+        {% block content %}{% endblock %}
     </div>
     <script src="/js/frond.js"></script>
 </body>
@@ -400,31 +419,31 @@ This base layout defines two blocks (`title` and `content`) that child templates
 Create `src/templates/products.html`:
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block title %&#125;Products - My Store&#123;% endblock %&#125;
+{% block title %}Products - My Store{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
     <h1>Our Products</h1>
-    <p>Showing &#123;&#123; products | length &#125;&#125; product&#123;&#123; products | length != 1 ? "s" : "" &#125;&#125;</p>
+    <p>Showing {{ products | length }} product{{ products | length != 1 ? "s" : "" }}</p>
 
-    &#123;% if products | length > 0 %&#125;
-        &#123;% for product in products %&#125;
+    {% if products | length > 0 %}
+        {% for product in products %}
             <div class="product-card">
-                <h3>&#123;&#123; product.name &#125;&#125;</h3>
-                <p>&#123;&#123; product.description &#125;&#125;</p>
-                <p class="price">$&#123;&#123; product.price | number_format(2) &#125;&#125;</p>
-                &#123;% if product.inStock %&#125;
+                <h3>{{ product.name }}</h3>
+                <p>{{ product.description }}</p>
+                <p class="price">${{ product.price | number_format(2) }}</p>
+                {% if product.inStock %}
                     <span class="badge badge-success">In Stock</span>
-                &#123;% else %&#125;
+                {% else %}
                     <span class="badge badge-danger">Out of Stock</span>
-                &#123;% endif %&#125;
+                {% endif %}
             </div>
-        &#123;% endfor %&#125;
-    &#123;% else %&#125;
+        {% endfor %}
+    {% else %}
         <p>No products available at the moment.</p>
-    &#123;% endif %&#125;
-&#123;% endblock %&#125;
+    {% endif %}
+{% endblock %}
 ```
 
 ### Create the Route That Renders the Template
@@ -519,7 +538,7 @@ The `tina4.css` file in the base template is Tina4's built-in CSS utility framew
 
 Open the `.env` file at the root of your project:
 
-```dotenv
+```bash
 TINA4_DEBUG=true
 ```
 
@@ -554,7 +573,7 @@ tina4 serve --port 8080
 
 Or add it to your `.env` file:
 
-```dotenv
+```bash
 TINA4_DEBUG=true
 TINA4_PORT=8080
 ```
@@ -619,10 +638,10 @@ startServer();
 
 That is the entire file. Tina4 discovers routes, models, and templates from the `src/` directory. You register nothing manually.
 
-To start the server without the CLI:
+The standard way to start the server is with the CLI:
 
 ```bash
-npx tsx app.ts
+tina4 serve
 ```
 
 ```
@@ -636,11 +655,90 @@ npx tsx app.ts
   Server running at http://0.0.0.0:7148
 ```
 
-Both `tina4 serve` and `npx tsx app.ts` work. The CLI adds live reload and other development features.
+The CLI adds live reload and other development features. For direct Node.js execution (advanced usage), see [Chapter 30: CLI](30-cli.md).
 
 ---
 
-## 9. Request & Response Fundamentals
+## 9. Manual Setup (No CLI)
+
+The `tina4` CLI scaffolds everything for you. But if you start from an empty folder — just Node.js and npm — here is the minimum you need.
+
+### Step 1: Initialize and Install
+
+```bash
+npm init -y
+npm install tina4-nodejs typescript tsx
+```
+
+### Step 2: Create `app.ts`
+
+This is the entry point. Create a file called `app.ts` in your project root:
+
+```typescript
+import { startServer } from "@tina4/core";
+
+const port = parseInt(process.env.PORT || "7149", 10);
+const host = process.env.HOST || "0.0.0.0";
+startServer({ port, host });
+```
+
+Three lines of real code. `startServer` boots the framework, scans for routes, and starts listening.
+
+### Step 3: Create `tsconfig.json`
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "outDir": "dist"
+  },
+  "include": ["src/**/*", "app.ts"]
+}
+```
+
+### Step 4: Create the Folder Structure
+
+Tina4 expects this layout:
+
+```
+my-project/
+├── app.ts
+├── tsconfig.json
+├── package.json
+├── .env
+└── src/
+    ├── routes/       # Route files go here
+    ├── templates/    # Twig templates go here
+    └── public/       # Static files (CSS, JS, images)
+```
+
+Create the directories:
+
+```bash
+mkdir -p src/routes src/templates src/public
+```
+
+### Step 5: Create `.env`
+
+```bash
+TINA4_DEBUG=true
+```
+
+### Step 6: Run It
+
+```bash
+npx tsx app.ts
+```
+
+The server starts on `http://localhost:7149`. You should see the Tina4 welcome page. From here, add route files in `src/routes/` and templates in `src/templates/` — the same way as a CLI-scaffolded project.
+
+---
+
+## 10. Request & Response Fundamentals
 
 Before jumping into the exercises, let's consolidate how route handlers work in Tina4 Node.js. Every handler receives two arguments: `req` (what the client sent) and `res` (what you send back). Here is the complete picture.
 
@@ -829,7 +927,7 @@ This example covers every building block the exercises use: reading query parame
 
 ---
 
-## 10. Exercise: Greeting API + Product List Template
+## 11. Exercise: Greeting API + Product List Template
 
 Build the following two features from scratch, without looking at the examples above.
 
@@ -893,7 +991,7 @@ const products = [
 
 ---
 
-## 11. Solutions
+## 12. Solutions
 
 ### Solution A: Greeting API
 
@@ -952,7 +1050,7 @@ Create `src/templates/store-layout.html`:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>&#123;% block title %&#125;Store&#123;% endblock %&#125;</title>
+    <title>{% block title %}Store{% endblock %}</title>
     <link rel="stylesheet" href="/css/tina4.css">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
@@ -971,10 +1069,10 @@ Create `src/templates/store-layout.html`:
 </head>
 <body>
     <header>
-        <h1>&#123;% block header %&#125;Store&#123;% endblock %&#125;</h1>
+        <h1>{% block header %}Store{% endblock %}</h1>
     </header>
     <div class="container">
-        &#123;% block content %&#125;&#123;% endblock %&#125;
+        {% block content %}{% endblock %}
     </div>
     <script src="/js/frond.js"></script>
 </body>
@@ -984,29 +1082,29 @@ Create `src/templates/store-layout.html`:
 Create `src/templates/store.html`:
 
 ```html
-&#123;% extends "store-layout.html" %&#125;
+{% extends "store-layout.html" %}
 
-&#123;% block title %&#125;Our Store&#123;% endblock %&#125;
-&#123;% block header %&#125;Our Store&#123;% endblock %&#125;
+{% block title %}Our Store{% endblock %}
+{% block header %}Our Store{% endblock %}
 
-&#123;% block content %&#125;
-    <p class="stats">&#123;&#123; products | length &#125;&#125; products, &#123;&#123; featured_count &#125;&#125; featured</p>
+{% block content %}
+    <p class="stats">{{ products | length }} products, {{ featured_count }} featured</p>
 
     <div class="product-grid">
-        &#123;% for product in products %&#125;
-            <div class="product-card&#123;&#123; product.featured ? ' featured' : '' &#125;&#125;">
+        {% for product in products %}
+            <div class="product-card{{ product.featured ? ' featured' : '' }}">
                 <p class="product-name">
-                    &#123;&#123; product.name &#125;&#125;
-                    &#123;% if product.featured %&#125;
+                    {{ product.name }}
+                    {% if product.featured %}
                         <span class="featured-badge">Featured</span>
-                    &#123;% endif %&#125;
+                    {% endif %}
                 </p>
-                <p class="product-category">&#123;&#123; product.category &#125;&#125;</p>
-                <p class="product-price">$&#123;&#123; product.price | number_format(2) &#125;&#125;</p>
+                <p class="product-category">{{ product.category }}</p>
+                <p class="product-price">${{ product.price | number_format(2) }}</p>
             </div>
-        &#123;% endfor %&#125;
+        {% endfor %}
     </div>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 Create `src/routes/store.ts`:
@@ -1043,7 +1141,7 @@ Router.get("/store", async (req, res) => {
 
 ---
 
-## 12. Gotchas
+## 13. Gotchas
 
 ### 1. File not auto-discovered
 
@@ -1085,7 +1183,7 @@ Router.get("/store", async (req, res) => {
 
 **Fix:** Stop the other process, or change the port:
 
-```dotenv
+```bash
 TINA4_PORT=8080
 ```
 

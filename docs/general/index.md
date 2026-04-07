@@ -1,7 +1,7 @@
 # Understanding Tina4 – Quick Reference
 
 ::: tip
-- Tina4 is a toolkit, not a framework — one package, zero config, convention over configuration
+- Tina4 is The Intelligent Native Application 4ramework — one package, zero config, convention over configuration
 - Same API across Python, Node.js, PHP, and Ruby — learn one, know all four
 - Routes in `src/routes/`, templates in `src/templates/`, ORM in `src/orm/`, static files in `src/public/`
 - Zero runtime dependencies in every language
@@ -19,7 +19,7 @@
 
 ## Philosophy
 
-Tina4 follows the "not a framework" philosophy. One package. One folder structure. Zero configuration files beyond a `.env`. You write your code, drop it in the right folder, and Tina4 discovers it.
+Tina4 follows the AI framework philosophy. One package. One folder structure. Zero configuration files beyond a `.env`. You write your code, drop it in the right folder, and Tina4 discovers it.
 
 ---
 
@@ -75,7 +75,7 @@ See [Chapter 3: Choosing Your Language](/general/03-choosing-your-language) for 
 
 All configuration lives in a single `.env` file:
 
-```dotenv
+```bash
 # Database
 DATABASE_URL=sqlite://app.db
 

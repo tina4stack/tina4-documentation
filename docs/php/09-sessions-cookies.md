@@ -4,7 +4,7 @@
 
 Your e-commerce site needs a shopping cart that survives page reloads, remembers the user's language, and flashes success messages after form submissions. HTTP has no memory. Every request is independent. Sessions and cookies give the server a way to remember who is asking and what they have been doing.
 
-Chapter 7 introduced sessions for authentication. This chapter goes deeper: session backends, flash messages, cookies, remember-me tokens, and security configuration.
+Chapter 8 introduced sessions for authentication. This chapter goes deeper: session backends, flash messages, cookies, remember-me tokens, and security configuration.
 
 ---
 
@@ -104,7 +104,7 @@ File sessions work for single-server deployments. Simplest option. No extra soft
 
 Multiple servers behind a load balancer need a shared session store. Redis is the standard choice.
 
-```dotenv
+```bash
 TINA4_SESSION_BACKEND=redis
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -124,7 +124,7 @@ That is the only change. Your code stays identical. `$request->session` works th
 
 Sharing a Redis instance with other applications:
 
-```dotenv
+```bash
 TINA4_SESSION_BACKEND=redis
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -137,7 +137,7 @@ TINA4_SESSION_PREFIX=myapp:sess:
 
 Already running MongoDB:
 
-```dotenv
+```bash
 TINA4_SESSION_BACKEND=mongodb
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=27017
@@ -153,7 +153,7 @@ TTL indexes handle expired session cleanup.
 
 Valkey is the open-source Redis fork. Wire-compatible. Same client library:
 
-```dotenv
+```bash
 TINA4_SESSION_BACKEND=valkey
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -163,7 +163,7 @@ TINA4_SESSION_PORT=6379
 
 ## 8. Database Sessions
 
-```dotenv
+```bash
 TINA4_SESSION_BACKEND=database
 ```
 
@@ -301,19 +301,19 @@ The `getFlash()` method reads the value and removes it in one step. The next req
 ### In Templates
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block content %&#125;
-    &#123;% if flash_message %&#125;
-        <div class="alert alert-&#123;&#123; flash_type &#125;&#125;">
-            &#123;&#123; flash_message &#125;&#125;
+{% block content %}
+    {% if flash_message %}
+        <div class="alert alert-{{ flash_type }}">
+            {{ flash_message }}
         </div>
-    &#123;% endif %&#125;
+    {% endif %}
 
     <h1>Profile</h1>
-    <p>Name: &#123;&#123; user.name &#125;&#125;</p>
-    <p>Email: &#123;&#123; user.email &#125;&#125;</p>
-&#123;% endblock %&#125;
+    <p>Name: {{ user.name }}</p>
+    <p>Email: {{ user.email }}</p>
+{% endblock %}
 ```
 
 The alert appears once. Refresh the page. Gone.
@@ -488,7 +488,7 @@ The database holds the hash. The cookie holds the raw token. If the database is 
 
 ### Configuration Options
 
-```dotenv
+```bash
 TINA4_SESSION_TTL=3600            # Expires after 1 hour of inactivity
 TINA4_SESSION_SECURE=true         # HTTPS only
 TINA4_SESSION_HTTPONLY=true       # JavaScript cannot access the cookie (default)

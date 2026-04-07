@@ -4,14 +4,21 @@ One CLI runs all languages. Install it once, then `init` and `serve` in Python, 
 
 ## Install the Tina4 CLI
 
+**macOS (Homebrew):**
+
 ```bash
-# macOS (Homebrew)
 brew install tina4stack/tap/tina4
+```
 
-# Linux / macOS (install script)
+**Linux / macOS (install script):**
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/tina4stack/tina4/main/install.sh | bash
+```
 
-# Windows (PowerShell)
+**Windows (PowerShell):**
+
+```powershell
 irm https://raw.githubusercontent.com/tina4stack/tina4/main/install.ps1 | iex
 ```
 
@@ -92,7 +99,7 @@ Take a deeper dive into the [documentation](/ruby/index.md)
 The frontend framework runs separately from the backend. Scaffold it with npx:
 
 ```bash
-npx tina4 create my-app
+npx tina4js create my-app
 cd my-app
 npm install
 npm run dev

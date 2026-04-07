@@ -8,7 +8,7 @@ A terminal. A single command. A browser tab. In five minutes you will have a run
 
 ## 1. What Is tina4-js
 
-tina4-js is a reactive JavaScript framework under 3KB gzipped. Seven modules, each solving one problem:
+tina4-js is a reactive JavaScript framework with a 1.5KB gzipped core. The full framework ships under 6KB gzipped. Eight modules, each solving one problem:
 
 - **Signals** for reactive state -- no stores, no reducers, no actions
 - **Tagged template literals** for DOM rendering -- no JSX, no virtual DOM, no compiler
@@ -55,10 +55,18 @@ npm --version
 
 ## 3. Create a Project
 
-One command. One line. The scaffolding does the rest:
+Two ways to scaffold. Pick whichever you have installed:
+
+**Option A: Using the Tina4 CLI** (if you have `tina4` installed):
 
 ```bash
-npx tina4 create my-app
+tina4 init tina4js my-app
+```
+
+**Option B: Using npx** (no global install needed):
+
+```bash
+npx tina4js create my-app
 ```
 
 This scaffolds a complete project with TypeScript, Vite, routing, and a sample page.
@@ -66,7 +74,7 @@ This scaffolds a complete project with TypeScript, Vite, routing, and a sample p
 Want the optional CSS framework included? Add the `--css` flag:
 
 ```bash
-npx tina4 create my-app --css
+npx tina4js create my-app --css
 ```
 
 This adds `tina4-css` to your dependencies -- a utility CSS library with reset, grid, buttons, forms, tables, cards, and dark mode built in. More on this in Chapter 10.
@@ -74,13 +82,13 @@ This adds `tina4-css` to your dependencies -- a utility CSS library with reset, 
 Want PWA support from the start? Add `--pwa`:
 
 ```bash
-npx tina4 create my-app --pwa
+npx tina4js create my-app --pwa
 ```
 
 You can combine them:
 
 ```bash
-npx tina4 create my-app --css --pwa
+npx tina4js create my-app --css --pwa
 ```
 
 Now install and run:
@@ -287,7 +295,7 @@ Development is done. Time to ship:
 npm run build
 ```
 
-Vite bundles everything into `dist/`. The tina4-js runtime adds under 3KB to your bundle. Your entire app -- framework, routes, components, everything -- will likely be smaller than React's runtime alone.
+Vite bundles everything into `dist/`. The tina4-js runtime adds under 6KB to your bundle. Your entire app -- framework, routes, components, everything -- will likely be smaller than React's runtime alone.
 
 To preview the production build:
 
@@ -317,9 +325,9 @@ The rest of this book goes deep on each of these. But you already have a working
 
 | What | How |
 |---|---|
-| Create project | `npx tina4 create my-app` |
-| With CSS framework | `npx tina4 create my-app --css` |
-| With PWA | `npx tina4 create my-app --pwa` |
+| Create project | `npx tina4js create my-app` |
+| With CSS framework | `npx tina4js create my-app --css` |
+| With PWA | `npx tina4js create my-app --pwa` |
 | Dev server | `npm run dev` |
 | Production build | `npm run build` |
 | Reactive state | `signal(initialValue)` |

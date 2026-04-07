@@ -646,15 +646,15 @@ Define this last. Tina4 matches routes in registration order -- first match wins
 You can also create a custom 404 template at `src/templates/errors/404.twig`:
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block title %&#125;Not Found&#123;% endblock %&#125;
+{% block title %}Not Found{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
     <h1>404 - Page Not Found</h1>
     <p>The page you are looking for does not exist.</p>
     <a href="/">Go back home</a>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 Tina4 uses this template for any unmatched route when the file exists.
@@ -1004,7 +1004,7 @@ Tina4 strips trailing slashes automatically. Both `/products` and `/products/` m
 
 **Problem:** Passing a function name string as middleware doesn't work.
 
-**Fix:** Use class-based middleware with `before*`/`after*` static methods. See Chapter 8 for the full middleware pattern:
+**Fix:** Use class-based middleware with `before*`/`after*` static methods. See Chapter 10 for the full middleware pattern:
 
 ```php
 class AuthMiddleware {

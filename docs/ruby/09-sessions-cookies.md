@@ -4,7 +4,7 @@
 
 Your e-commerce site needs a shopping cart that persists across page loads. A language preference that sticks. Flash messages after form submissions. But HTTP is stateless. Every request arrives with no memory of what came before. Sessions and cookies give the server a way to remember.
 
-Chapter 7 introduced sessions for authentication. This chapter goes deeper. Session backends. Flash messages. Cookies. Remember-me tokens. Security configuration.
+Chapter 8 introduced sessions for authentication. This chapter goes deeper. Session backends. Flash messages. Cookies. Remember-me tokens. Security configuration.
 
 ---
 
@@ -91,7 +91,7 @@ The `-c cookies.txt` flag tells curl to save cookies to a file, and `-b cookies.
 
 For production deployments with multiple servers (behind a load balancer), you need a shared session store. Redis is the most common choice.
 
-```dotenv
+```bash
 TINA4_SESSION_BACKEND=redis
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -104,7 +104,7 @@ That is the only change. Your code stays exactly the same. `request.session` wor
 
 ## 6. MongoDB Sessions
 
-```dotenv
+```bash
 TINA4_SESSION_BACKEND=mongodb
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=27017
@@ -116,7 +116,7 @@ TINA4_SESSION_COLLECTION=sessions
 
 ## 7. Valkey Sessions
 
-```dotenv
+```bash
 TINA4_SESSION_BACKEND=valkey
 TINA4_SESSION_HOST=localhost
 TINA4_SESSION_PORT=6379
@@ -126,7 +126,7 @@ TINA4_SESSION_PORT=6379
 
 ## 8. Database Sessions
 
-```dotenv
+```bash
 TINA4_SESSION_BACKEND=database
 ```
 
@@ -253,19 +253,19 @@ Calling `request.session.flash(key)` with only a key reads the value and removes
 ### Using Flash Messages in Templates
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block content %&#125;
-    &#123;% if flash_message %&#125;
-        <div class="alert alert-&#123;&#123; flash_type &#125;&#125;">
-            &#123;&#123; flash_message &#125;&#125;
+{% block content %}
+    {% if flash_message %}
+        <div class="alert alert-{{ flash_type }}">
+            {{ flash_message }}
         </div>
-    &#123;% endif %&#125;
+    {% endif %}
 
     <h1>Profile</h1>
-    <p>Name: &#123;&#123; user.name &#125;&#125;</p>
-    <p>Email: &#123;&#123; user.email &#125;&#125;</p>
-&#123;% endblock %&#125;
+    <p>Name: {{ user.name }}</p>
+    <p>Email: {{ user.email }}</p>
+{% endblock %}
 ```
 
 ---
@@ -379,7 +379,7 @@ end
 
 ### Configuration Options
 
-```dotenv
+```bash
 TINA4_SESSION_TTL=3600
 TINA4_SESSION_SAMESITE=Lax
 ```

@@ -1,18 +1,18 @@
-# Chapter 15: Frontend with tina4css
+# Chapter 17: Frontend with tina4css
 
 ## 1. The Problem with Frontend Toolchains
 
 Your client wants a dashboard. You know the drill. Install Node.js. Run `npm install`. Wait for 200MB of `node_modules`. Configure webpack or Vite. Set up PostCSS. Add a CSS framework. Pray nothing breaks when you upgrade a dependency six months from now.
 
-Tina4 skips all of that. The framework ships with **tina4css** -- a Bootstrap-compatible CSS framework -- and **frond.js** -- a lightweight JavaScript helper. Both are included when you scaffold a project. No npm. No webpack. No build step. Link the files. Start building.
+Tina4 skips all of that. The framework ships with **tina4css** -- a Bootstrap-compatible CSS framework -- and **frond.js** -- a lightweight JavaScript helper. Both arrive when you scaffold a project. No npm. No webpack. No build step. Link the files. Start building.
 
-By the end of this chapter, you will have a complete admin dashboard with sidebar, navigation, cards, tables, modals, and dark mode -- without touching npm.
+This chapter ends with a complete admin dashboard. Sidebar. Navigation. Cards. Tables. Modals. Dark mode. Progress bars. AJAX-driven user management. Zero npm dependencies.
 
 ---
 
 ## 2. What Ships with Tina4
 
-When you run `tina4 init python`, several files appear in your project:
+Run `tina4 init python`. Several files appear in your project:
 
 ```
 src/public/
@@ -34,13 +34,13 @@ Include them in any template:
 <script src="/js/frond.min.js"></script>
 ```
 
-Include only what you need. See section 7 for the full JavaScript API reference. No CDN, no package manager, no version conflicts.
+Include only what you need. See section 7 for the full JavaScript API reference. No CDN. No package manager. No version conflicts.
 
 ---
 
 ## 3. The Grid System
 
-tina4css uses a 12-column responsive grid, compatible with Bootstrap's class names. If you already know Bootstrap, you already know tina4css.
+tina4css uses a 12-column responsive grid. The class names match Bootstrap. Know Bootstrap? You know tina4css.
 
 ```html
 <div class="container">
@@ -68,7 +68,7 @@ Breakpoints:
 | `col-lg-` | >= 992px | Desktops |
 | `col-xl-` | >= 1200px | Large desktops |
 
-Columns stack vertically on screens smaller than their breakpoint. A `col-md-6` element takes half the row on tablets and up, but full width on phones.
+Columns stack vertically on screens smaller than their breakpoint. A `col-md-6` element takes half the row on tablets and up, full width on phones.
 
 ---
 
@@ -88,6 +88,8 @@ Columns stack vertically on screens smaller than their breakpoint. A `col-md-6` 
     </div>
 </nav>
 ```
+
+Use `navbar-light bg-light` for a light theme, or `navbar-dark bg-primary` for a colored background.
 
 ### Cards
 
@@ -141,14 +143,20 @@ Columns stack vertically on screens smaller than their breakpoint. A `col-md-6` 
         </tr>
     </tbody>
 </table>
+
 ```
+
+Table variants: `table-bordered`, `table-striped`, `table-hover`, `table-sm` (compact), `table-responsive` (wraps in a scrollable container on small screens). Mix and match.
 
 ### Alerts
 
 ```html
-<div class="alert alert-success">Product created successfully!</div>
+<div class="alert alert-success">Product created.</div>
 <div class="alert alert-danger">Failed to save changes.</div>
-<div class="alert alert-warning">Your trial expires in 3 days.</div>
+<div class="alert alert-warning alert-dismissible">
+    Your trial expires in 3 days.
+    <button type="button" class="close" data-dismiss="alert">&times;</button>
+</div>
 <div class="alert alert-info">A new version is available.</div>
 ```
 
@@ -174,6 +182,37 @@ Columns stack vertically on screens smaller than their breakpoint. A `col-md-6` 
         </div>
     </div>
 </div>
+```
+
+tina4css includes the JavaScript for modal toggling. No jQuery required.
+
+### Progress Bars
+
+Progress bars visualize completion, upload status, or system health. The outer `progress` container holds a `progress-bar` fill element.
+
+```html
+<div class="progress">
+    <div class="progress-bar bg-success" style="width: 75%">75%</div>
+</div>
+
+<div class="progress">
+    <div class="progress-bar bg-warning progress-bar-striped" style="width: 45%">
+        45% - Uploading...
+    </div>
+</div>
+```
+
+Set the width with inline `style`. Add `bg-success`, `bg-info`, `bg-warning`, or `bg-danger` for color. Add `progress-bar-striped` for animated stripes.
+
+### Badges
+
+```html
+<span class="badge bg-primary">Primary</span>
+<span class="badge bg-success">Active</span>
+<span class="badge bg-warning">Pending</span>
+<span class="badge bg-danger">Overdue</span>
+<span class="badge bg-info">Info</span>
+<span class="badge bg-dark">Dark</span>
 ```
 
 ### Forms
@@ -212,7 +251,7 @@ Columns stack vertically on screens smaller than their breakpoint. A `col-md-6` 
 
 ## 5. SCSS Customization
 
-The default tina4css is ready to use, but if you want to customize colors, fonts, or spacing, edit the SCSS source:
+The default tina4css works out of the box. To customize colors, fonts, or spacing, edit the SCSS source.
 
 Edit `src/public/scss/tina4.scss`:
 
@@ -240,7 +279,7 @@ Compiling SCSS...
 Done (0.12s)
 ```
 
-The compiled CSS replaces the default `tina4.css`. Your custom colors and fonts are now active across the entire application.
+The compiled CSS replaces the default `tina4.css`. Your custom colors and fonts take effect across the entire application.
 
 ### Live SCSS Compilation
 
@@ -250,13 +289,13 @@ During development, run SCSS compilation in watch mode:
 tina4 scss --watch
 ```
 
-Every time you save a `.scss` file, it recompiles automatically. Combined with Tina4's live reload, you see changes in the browser within a second.
+Every save to a `.scss` file triggers a recompile. Combined with Tina4's live reload, changes appear in the browser within a second.
 
 ---
 
 ## 6. frond.js -- The JavaScript Helper
 
-`frond.js` is a lightweight JavaScript library that ships with Tina4. It handles common frontend tasks without jQuery or any other dependency.
+`frond.js` is a lightweight JavaScript library that ships with Tina4. It handles AJAX requests, form submission, JWT token management, and loading indicators. No jQuery. No Axios. No other dependency.
 
 ### AJAX Requests
 
@@ -264,6 +303,13 @@ Every time you save a `.scss` file, it recompiles automatically. Combined with T
 // GET request
 frond.get("/api/products", function (data) {
     console.log("Products:", data);
+});
+
+// GET with error handling
+frond.get("/api/products", function (data) {
+    console.log(data);
+}, function (error) {
+    console.error("Failed:", error);
 });
 
 // POST request
@@ -296,7 +342,7 @@ frond.delete("/api/products/1", function (data) {
     <button type="submit">Create</button>
 </form>
 
-<script src="/js/frond.js"></script>
+<script src="/js/frond.min.js"></script>
 <script>
     frond.onFormSuccess("product-form", function (data) {
         alert("Product created: " + data.name);
@@ -308,17 +354,17 @@ frond.delete("/api/products/1", function (data) {
 </script>
 ```
 
-The `data-frond-submit` attribute tells frond.js to intercept the form submission and send it as an AJAX request. No page reload.
+The `data-frond-submit` attribute tells frond.js to intercept the form submission and send it as an AJAX request. No page reload. frond.js serializes all form fields as JSON.
 
 ### Token Management
 
-frond.js automatically includes the JWT token in all requests:
+frond.js manages JWT tokens. Store a token after login, and frond.js attaches it to every request.
 
 ```javascript
 // Store the token (usually after login)
 frond.setToken("eyJhbGciOiJIUzI1NiIs...");
 
-// All subsequent requests automatically include:
+// All subsequent requests include:
 // Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 frond.get("/api/profile", function (data) {
     console.log("Profile:", data);
@@ -328,7 +374,32 @@ frond.get("/api/profile", function (data) {
 frond.clearToken();
 ```
 
-### WebSocket (Covered in Chapter 12)
+frond.js stores the token in `localStorage` and includes it as a `Bearer` token in the `Authorization` header on every request.
+
+### Loading Indicators
+
+frond.js can show and hide a loading element during AJAX requests. Pass a CSS selector in the options object.
+
+```javascript
+// Show a loading state while fetching
+frond.get("/api/products", function (data) {
+    renderProducts(data.products);
+}, null, {
+    loading: "#loadingSpinner"  // CSS selector for loading element
+});
+```
+
+The element with id `loadingSpinner` appears while the request flies and disappears when it completes. Pair it with a spinner or "Loading..." text in your HTML:
+
+```html
+<div id="loadingSpinner" class="text-center p-4" style="display: none;">
+    Loading...
+</div>
+```
+
+frond.js toggles `display: block` and `display: none` on the element. No extra CSS needed.
+
+### WebSocket (Covered in Chapter 23)
 
 ```javascript
 const ws = frond.ws("/ws/chat/general");
@@ -337,11 +408,13 @@ ws.on("message", function (data) {
 });
 ```
 
+Connections drop. frond.js reconnects with exponential backoff. If the server restarts or the network blips, the client reconnects without intervention.
+
 ---
 
 ## 7. JavaScript API Reference
 
-Tina4 ships three JavaScript files. Each serves a different purpose and can be used independently or together.
+Tina4 ships three JavaScript files. Each serves a different purpose. Use them independently or together.
 
 ### Including the Scripts
 
@@ -409,7 +482,7 @@ A companion to the Frond template engine. Handles AJAX form interception, WebSoc
 
 #### AJAX Form Handling
 
-Forms with `data-frond-submit` are intercepted automatically. No page reload, no boilerplate.
+Forms with `data-frond-submit` are intercepted. No page reload. No boilerplate.
 
 ```html
 <form id="login-form" data-frond-submit="/api/login" data-frond-method="POST">
@@ -429,15 +502,13 @@ Forms with `data-frond-submit` are intercepted automatically. No page reload, no
 
 #### WebSocket Auto-Reconnect
 
-Connections drop. frond.js reconnects automatically with exponential backoff.
-
 ```javascript
 const ws = frond.ws("/ws/notifications");
 ws.on("message", function (data) {
     const notification = JSON.parse(data);
     alert(notification.text);
 });
-// If the server restarts or the network blips, frond.js reconnects silently.
+// If the server restarts or the network blips, frond.js reconnects.
 ```
 
 #### Token Refresh
@@ -447,7 +518,7 @@ JWT tokens stored via `frond.setToken()` are attached to every request. When a t
 ```javascript
 frond.setToken("eyJhbGciOiJIUzI1NiIs...");
 // All subsequent frond.get/post/put/delete calls include the token.
-// When the token expires, frond.js calls the refresh endpoint automatically.
+// When the token expires, frond.js calls the refresh endpoint.
 ```
 
 #### Dynamic Template Loading
@@ -559,7 +630,7 @@ navigate("/about");
 
 ## 8. Building an Admin Dashboard
 
-Let us build a complete admin dashboard. This is the kind of page that powers the backend of every web application.
+A complete admin dashboard. The kind of page that powers the backend of every web application.
 
 ### Base Template
 
@@ -571,8 +642,12 @@ Create `src/templates/base.html`:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>&#123;% block title %&#125;Dashboard&#123;% endblock %&#125;</title>
+    <title>{% block title %}Dashboard{% endblock %}</title>
     <link rel="stylesheet" href="/css/tina4.css">
+    <script>
+        var t = localStorage.getItem("theme");
+        if (t) document.documentElement.setAttribute("data-theme", t);
+    </script>
 </head>
 <body>
     <nav class="navbar navbar-dark bg-dark">
@@ -592,7 +667,7 @@ Create `src/templates/base.html`:
     <div class="container-fluid mt-4">
         <div class="row">
             <div class="col-md-2">
-                &#123;% block sidebar %&#125;
+                {% block sidebar %}
                 <div class="list-group">
                     <a href="/admin" class="list-group-item list-group-item-action">Overview</a>
                     <a href="/admin/products" class="list-group-item list-group-item-action">Products</a>
@@ -601,30 +676,24 @@ Create `src/templates/base.html`:
                     <a href="/admin/reports" class="list-group-item list-group-item-action">Reports</a>
                     <a href="/admin/settings" class="list-group-item list-group-item-action">Settings</a>
                 </div>
-                &#123;% endblock %&#125;
+                {% endblock %}
             </div>
             <div class="col-md-10">
-                &#123;% block content %&#125;&#123;% endblock %&#125;
+                {% block content %}{% endblock %}
             </div>
         </div>
     </div>
 
-    <script src="/js/frond.js"></script>
+    <script src="/js/frond.min.js"></script>
     <script>
         function toggleDarkMode() {
-            const html = document.documentElement;
-            const current = html.getAttribute("data-theme");
+            var html = document.documentElement;
+            var current = html.getAttribute("data-theme");
             html.setAttribute("data-theme", current === "dark" ? "light" : "dark");
             localStorage.setItem("theme", current === "dark" ? "light" : "dark");
         }
-
-        // Restore saved theme
-        const savedTheme = localStorage.getItem("theme");
-        if (savedTheme) {
-            document.documentElement.setAttribute("data-theme", savedTheme);
-        }
     </script>
-    &#123;% block scripts %&#125;&#123;% endblock %&#125;
+    {% block scripts %}{% endblock %}
 </body>
 </html>
 ```
@@ -634,11 +703,11 @@ Create `src/templates/base.html`:
 Create `src/templates/dashboard.html`:
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block title %&#125;Dashboard - Admin&#123;% endblock %&#125;
+{% block title %}Dashboard - Admin{% endblock %}
 
-&#123;% block content %&#125;
+{% block content %}
     <h1>Dashboard</h1>
 
     <div class="row mb-4">
@@ -646,7 +715,7 @@ Create `src/templates/dashboard.html`:
             <div class="card">
                 <div class="card-body">
                     <h6 class="card-subtitle text-muted">Total Products</h6>
-                    <h2 class="card-title">&#123;&#123; stats.total_products &#125;&#125;</h2>
+                    <h2 class="card-title">{{ stats.total_products }}</h2>
                 </div>
             </div>
         </div>
@@ -654,7 +723,7 @@ Create `src/templates/dashboard.html`:
             <div class="card">
                 <div class="card-body">
                     <h6 class="card-subtitle text-muted">Total Orders</h6>
-                    <h2 class="card-title">&#123;&#123; stats.total_orders &#125;&#125;</h2>
+                    <h2 class="card-title">{{ stats.total_orders }}</h2>
                 </div>
             </div>
         </div>
@@ -662,7 +731,7 @@ Create `src/templates/dashboard.html`:
             <div class="card">
                 <div class="card-body">
                     <h6 class="card-subtitle text-muted">Revenue</h6>
-                    <h2 class="card-title">$&#123;&#123; stats.revenue &#125;&#125;</h2>
+                    <h2 class="card-title">${{ stats.revenue }}</h2>
                 </div>
             </div>
         </div>
@@ -670,7 +739,7 @@ Create `src/templates/dashboard.html`:
             <div class="card">
                 <div class="card-body">
                     <h6 class="card-subtitle text-muted">Active Users</h6>
-                    <h2 class="card-title">&#123;&#123; stats.active_users &#125;&#125;</h2>
+                    <h2 class="card-title">{{ stats.active_users }}</h2>
                 </div>
             </div>
         </div>
@@ -691,16 +760,16 @@ Create `src/templates/dashboard.html`:
                             </tr>
                         </thead>
                         <tbody>
-                            &#123;% for order in recent_orders %&#125;
+                            {% for order in recent_orders %}
                             <tr>
-                                <td>#&#123;&#123; order.id &#125;&#125;</td>
-                                <td>&#123;&#123; order.customer &#125;&#125;</td>
-                                <td>$&#123;&#123; order.amount &#125;&#125;</td>
+                                <td>#{{ order.id }}</td>
+                                <td>{{ order.customer }}</td>
+                                <td>${{ order.amount }}</td>
                                 <td>
-                                    <span class="badge bg-&#123;&#123; order.badge &#125;&#125;">&#123;&#123; order.status &#125;&#125;</span>
+                                    <span class="badge bg-{{ order.badge }}">{{ order.status }}</span>
                                 </td>
                             </tr>
-                            &#123;% endfor %&#125;
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -715,9 +784,33 @@ Create `src/templates/dashboard.html`:
                     <a href="/admin/reports" class="btn btn-outline-secondary btn-block">Generate Report</a>
                 </div>
             </div>
+
+            <div class="card mt-3">
+                <div class="card-header">System Health</div>
+                <div class="card-body">
+                    <p><strong>CPU:</strong></p>
+                    <div class="progress mb-3">
+                        <div class="progress-bar bg-success" style="width: {{ stats.cpu_usage }}%">
+                            {{ stats.cpu_usage }}%
+                        </div>
+                    </div>
+                    <p><strong>Memory:</strong></p>
+                    <div class="progress mb-3">
+                        <div class="progress-bar bg-info" style="width: {{ stats.memory_usage }}%">
+                            {{ stats.memory_usage }}%
+                        </div>
+                    </div>
+                    <p><strong>Disk:</strong></p>
+                    <div class="progress">
+                        <div class="progress-bar bg-warning" style="width: {{ stats.disk_usage }}%">
+                            {{ stats.disk_usage }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-&#123;% endblock %&#125;
+{% endblock %}
 ```
 
 ### Dashboard Route
@@ -733,7 +826,10 @@ async def admin_dashboard(request, response):
         "total_products": 156,
         "total_orders": 1243,
         "revenue": "24,580",
-        "active_users": 89
+        "active_users": 89,
+        "cpu_usage": 42,
+        "memory_usage": 68,
+        "disk_usage": 55
     }
 
     recent_orders = [
@@ -746,13 +842,13 @@ async def admin_dashboard(request, response):
     return response(template("dashboard.html", stats=stats, recent_orders=recent_orders))
 ```
 
-Start the server and visit `http://localhost:7145/admin`. You have a complete admin dashboard with a sidebar, stats cards, a data table, and quick action buttons.
+Start the server and visit `http://localhost:7145/admin`. You see a sidebar, stat cards, a data table, quick action buttons, and system health progress bars. Zero npm dependencies.
 
 ---
 
 ## 9. Dark Mode
 
-tina4css supports dark mode via the `data-theme` attribute on the `<html>` element:
+tina4css supports dark mode through a single attribute on the `<html>` element:
 
 ```html
 <!-- Light mode (default) -->
@@ -766,8 +862,8 @@ The toggle function from the base template handles switching:
 
 ```javascript
 function toggleDarkMode() {
-    const html = document.documentElement;
-    const current = html.getAttribute("data-theme");
+    var html = document.documentElement;
+    var current = html.getAttribute("data-theme");
     html.setAttribute("data-theme", current === "dark" ? "light" : "dark");
     localStorage.setItem("theme", current === "dark" ? "light" : "dark");
 }
@@ -777,29 +873,26 @@ Dark mode transforms every surface. Backgrounds darken. Text colors invert. Bord
 
 ### Respecting System Preference
 
-To match the user's operating system dark mode setting:
+Match the user's operating system dark mode setting:
 
 ```javascript
-// Check if user prefers dark mode
-if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+var saved = localStorage.getItem("theme");
+if (saved) {
+    document.documentElement.setAttribute("data-theme", saved);
+} else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
     document.documentElement.setAttribute("data-theme", "dark");
 }
-
-// Listen for changes
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
-    document.documentElement.setAttribute("data-theme", e.matches ? "dark" : "light");
-});
 ```
 
 ---
 
 ## 10. Responsive Design
 
-tina4css is mobile-first. Components adapt to screen size automatically. Here are the key patterns:
+tina4css is mobile-first. Components stack on small screens and expand on larger ones.
 
 ### Responsive Sidebar
 
-On mobile, the sidebar collapses into a hamburger menu:
+On mobile, the sidebar collapses into a toggle:
 
 ```html
 <button class="btn btn-dark d-md-none" onclick="toggleSidebar()">Menu</button>
@@ -810,7 +903,7 @@ On mobile, the sidebar collapses into a hamburger menu:
 
 <script>
 function toggleSidebar() {
-    const sidebar = document.getElementById("sidebar");
+    var sidebar = document.getElementById("sidebar");
     sidebar.classList.toggle("d-none");
 }
 </script>
@@ -837,158 +930,151 @@ Tables scroll horizontally on small screens:
 
 ---
 
-## 11. Exercise: Build an Admin Dashboard
+## 11. Building a Users Page with AJAX
 
-Build a complete admin dashboard for a product management system.
+A user management page. Data loads via AJAX using frond.js. No full page reloads. The table populates from the API. Users create, edit, and delete records through modals and inline actions.
 
-### Requirements
+### The Template
 
-1. Create a base template with:
-   - A dark navbar with the app name and navigation links
-   - A sidebar with menu items (Dashboard, Products, Orders, Settings)
-   - A main content area
-   - Dark mode toggle that persists across page loads
-
-2. Create a dashboard page at `GET /admin` with:
-   - Four stat cards (Products, Orders, Revenue, Users)
-   - A table showing recent orders with status badges
-   - Quick action buttons
-
-3. Create a product list page at `GET /admin/products` with:
-   - A table of products with name, category, price, and stock status
-   - An "Add Product" button
-   - Search/filter by category
-
-4. Use tina4css classes throughout (no custom CSS needed)
-
-### Test by:
-
-1. Visit `http://localhost:7145/admin` -- you should see the dashboard with stats and orders
-2. Click "Dark Mode" -- the entire page should switch to dark theme
-3. Refresh the page -- dark mode should persist
-4. Resize the browser to mobile width -- the sidebar should collapse
-5. Visit `http://localhost:7145/admin/products` -- you should see the product table
-
----
-
-## 12. Solution
-
-The base template and dashboard route are shown in sections 8 and above. Here is the product list page:
-
-Create `src/templates/products.html`:
+Create `src/templates/admin/users.html`:
 
 ```html
-&#123;% extends "base.html" %&#125;
+{% extends "base.html" %}
 
-&#123;% block title %&#125;Products - Admin&#123;% endblock %&#125;
+{% block title %}Users - Admin{% endblock %}
 
-&#123;% block content %&#125;
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Products</h1>
-        <a href="/admin/products/new" class="btn btn-primary">Add Product</a>
-    </div>
-
-    <div class="card mb-4">
-        <div class="card-body">
-            <form class="row g-3" method="GET" action="/admin/products">
-                <div class="col-md-4">
-                    <input type="text" class="form-control" name="search"
-                           placeholder="Search products..." value="&#123;&#123; search &#125;&#125;">
-                </div>
-                <div class="col-md-3">
-                    <select class="form-control" name="category">
-                        <option value="">All Categories</option>
-                        &#123;% for cat in categories %&#125;
-                        <option value="&#123;&#123; cat &#125;&#125;" &#123;% if cat == selected_category %&#125;selected&#123;% endif %&#125;>&#123;&#123; cat &#125;&#125;</option>
-                        &#123;% endfor %&#125;
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-outline-primary">Filter</button>
-                </div>
-            </form>
+{% block content %}
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>All Users</span>
+            <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#addUserModal">
+                Add User
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div id="loadingSpinner" class="text-center p-4" style="display: none;">
+                Loading...
+            </div>
+            <table class="table table-hover m-0" id="usersTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="usersBody">
+                    <!-- Populated by JavaScript -->
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Category</th>
-                            <th>Price</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        &#123;% for product in products %&#125;
-                        <tr>
-                            <td>&#123;&#123; product.id &#125;&#125;</td>
-                            <td>&#123;&#123; product.name &#125;&#125;</td>
-                            <td>&#123;&#123; product.category &#125;&#125;</td>
-                            <td>$&#123;&#123; product.price &#125;&#125;</td>
-                            <td>
-                                &#123;% if product.in_stock %&#125;
-                                <span class="badge bg-success">In Stock</span>
-                                &#123;% else %&#125;
-                                <span class="badge bg-danger">Out of Stock</span>
-                                &#123;% endif %&#125;
-                            </td>
-                            <td>
-                                <a href="/admin/products/&#123;&#123; product.id &#125;&#125;" class="btn btn-sm btn-outline-primary">Edit</a>
-                                <button class="btn btn-sm btn-outline-danger">Delete</button>
-                            </td>
-                        </tr>
-                        &#123;% endfor %&#125;
-                    </tbody>
-                </table>
+    <!-- Add User Modal -->
+    <div class="modal" id="addUserModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New User</h5>
+                    <button type="button" class="btn-close" data-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addUserForm">
+                        <div class="form-group">
+                            <label for="userName">Name</label>
+                            <input type="text" class="form-control" name="name" id="userName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="userEmail">Email</label>
+                            <input type="email" class="form-control" name="email" id="userEmail" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" onclick="createUser()">Create User</button>
+                </div>
             </div>
         </div>
     </div>
-&#123;% endblock %&#125;
+
+    <div id="alertArea" class="mt-3"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function loadUsers() {
+        frond.get("/api/users", function (data) {
+            var tbody = document.getElementById("usersBody");
+            tbody.innerHTML = "";
+
+            if (data.data && data.data.length > 0) {
+                data.data.forEach(function (user) {
+                    var row = '<tr>'
+                        + '<td>' + user.id + '</td>'
+                        + '<td>' + user.name + '</td>'
+                        + '<td>' + user.email + '</td>'
+                        + '<td>' + user.created_at + '</td>'
+                        + '<td>'
+                        + '<button class="btn btn-sm btn-outline-primary" onclick="editUser(' + user.id + ')">Edit</button> '
+                        + '<button class="btn btn-sm btn-outline-danger" onclick="deleteUser(' + user.id + ')">Delete</button>'
+                        + '</td>'
+                        + '</tr>';
+                    tbody.innerHTML += row;
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4">No users found</td></tr>';
+            }
+        }, null, { loading: "#loadingSpinner" });
+    }
+
+    function createUser() {
+        var name = document.getElementById("userName").value;
+        var email = document.getElementById("userEmail").value;
+
+        frond.post("/api/users", { name: name, email: email }, function (data) {
+            document.getElementById("alertArea").innerHTML =
+                '<div class="alert alert-success">User "' + data.name + '" created.</div>';
+            loadUsers();
+        }, function (error) {
+            document.getElementById("alertArea").innerHTML =
+                '<div class="alert alert-danger">Error creating user.</div>';
+        });
+    }
+
+    function deleteUser(id) {
+        if (confirm("Are you sure you want to delete this user?")) {
+            frond.delete("/api/users/" + id, function () {
+                loadUsers();
+            });
+        }
+    }
+
+    // Load users on page load
+    loadUsers();
+</script>
+{% endblock %}
 ```
 
-Add the route:
+### The Route
 
 ```python
-@get("/admin/products")
-async def admin_products(request, response):
-    search = request.params.get("search", "")
-    selected_category = request.params.get("category", "")
+from tina4_python.core.router import get, template
 
-    products = [
-        {"id": 1, "name": "Wireless Keyboard", "category": "Electronics", "price": "79.99", "in_stock": True},
-        {"id": 2, "name": "Standing Desk", "category": "Furniture", "price": "549.99", "in_stock": True},
-        {"id": 3, "name": "Coffee Grinder", "category": "Kitchen", "price": "49.99", "in_stock": False},
-        {"id": 4, "name": "Yoga Mat", "category": "Fitness", "price": "29.99", "in_stock": True},
-        {"id": 5, "name": "USB-C Hub", "category": "Electronics", "price": "49.99", "in_stock": True},
-    ]
-
-    if selected_category:
-        products = [p for p in products if p["category"] == selected_category]
-
-    if search:
-        products = [p for p in products if search.lower() in p["name"].lower()]
-
-    categories = ["Electronics", "Furniture", "Kitchen", "Fitness"]
-
-    return response(template("products.html",
-        products=products,
-        categories=categories,
-        search=search,
-        selected_category=selected_category
-    ))
+@get("/admin/users")
+async def admin_users(request, response):
+    return response(template("admin/users.html"))
 ```
+
+This page loads users via an AJAX call to `/api/users` (provided by auto-CRUD on the User model from Chapter 6). The loading indicator appears while the request flies. The table populates when data arrives. Users add records through a modal form and delete with confirmation -- all without full page reloads.
 
 ---
 
 ## 12. HTML Builder -- Generating HTML in Code
 
-Sometimes you need to produce HTML from a route handler without a template -- a dynamic email body, an AJAX fragment, or a one-off snippet. String concatenation is fragile and error-prone. The `HTMLElement` class builds HTML programmatically with auto-escaping.
+Sometimes you need HTML from a route handler without a template -- a dynamic email body, an AJAX fragment, or a one-off snippet. String concatenation is fragile. The `HTMLElement` class builds HTML with auto-escaping.
 
 ### Direct Construction
 
@@ -1038,7 +1124,7 @@ The first argument can be an attribute dictionary. Everything else becomes child
 
 ### Void Tags and Auto-Escaping
 
-Void tags like `br`, `hr`, `img`, and `input` render without a closing tag:
+Void tags render without a closing tag:
 
 ```python
 HTMLElement("img", {"src": "logo.png", "alt": "Logo"})
@@ -1048,7 +1134,7 @@ HTMLElement("br")
 # <br>
 ```
 
-All attribute values and text children are HTML-escaped automatically. User input is safe by default -- no XSS vectors from forgotten escaping.
+All attribute values and text children are HTML-escaped. User input is safe by default -- no XSS vectors from forgotten escaping.
 
 ### Use Case -- HTML from a Route
 
@@ -1071,36 +1157,111 @@ No template file needed. The builder handles escaping, nesting, and rendering in
 
 ---
 
-## 13. Gotchas
+## 13. Exercise: Build an Admin Dashboard
+
+Build an admin dashboard for a product management system.
+
+### Requirements
+
+1. Create a base template with:
+   - A dark navbar with the app name and navigation links
+   - A sidebar with menu items (Dashboard, Products, Orders, Settings)
+   - A main content area
+   - Dark mode toggle that persists across page loads
+
+2. Create a dashboard page at `GET /admin` with:
+   - Four stat cards (Products, Orders, Revenue, Users)
+   - A table showing recent orders with status badges
+   - Progress bars showing system health (CPU, Memory, Disk)
+
+3. Create a users page at `GET /admin/users` with:
+   - A table of users loaded via AJAX using frond.js
+   - An "Add User" button that opens a modal with a form
+   - AJAX form submission that refreshes the table without a page reload
+   - A loading indicator while data fetches
+
+4. Use tina4css classes throughout (no custom CSS needed)
+
+### Test by:
+
+1. Visit `http://localhost:7145/admin` -- see the dashboard with stats, orders, and progress bars
+2. Click "Dark Mode" -- the entire page switches to dark theme
+3. Refresh the page -- dark mode persists
+4. Resize the browser to mobile width -- the sidebar collapses
+5. Visit `http://localhost:7145/admin/users` -- see the user table loaded via AJAX
+
+---
+
+## 14. Solution
+
+The base template, dashboard page, and users page are shown in sections 8, 11, and above. The product list page follows the same AJAX pattern from section 11, but for products instead of users.
+
+For the users page, use auto-CRUD on the User model (`auto_crud = True`) so the API endpoints exist at `/api/users`. Load the table with `frond.get("/api/users", ...)` and handle form submission with `frond.post("/api/users", ...)`.
+
+Add the product list route:
+
+```python
+@get("/admin/products")
+async def admin_products(request, response):
+    search = request.params.get("search", "")
+    selected_category = request.params.get("category", "")
+
+    products = [
+        {"id": 1, "name": "Wireless Keyboard", "category": "Electronics", "price": "79.99", "in_stock": True},
+        {"id": 2, "name": "Standing Desk", "category": "Furniture", "price": "549.99", "in_stock": True},
+        {"id": 3, "name": "Coffee Grinder", "category": "Kitchen", "price": "49.99", "in_stock": False},
+        {"id": 4, "name": "Yoga Mat", "category": "Fitness", "price": "29.99", "in_stock": True},
+        {"id": 5, "name": "USB-C Hub", "category": "Electronics", "price": "49.99", "in_stock": True},
+    ]
+
+    if selected_category:
+        products = [p for p in products if p["category"] == selected_category]
+
+    if search:
+        products = [p for p in products if search.lower() in p["name"].lower()]
+
+    categories = ["Electronics", "Furniture", "Kitchen", "Fitness"]
+
+    return response(template("products.html",
+        products=products,
+        categories=categories,
+        search=search,
+        selected_category=selected_category
+    ))
+```
+
+---
+
+## 15. Gotchas
 
 ### 1. CSS Not Loading
 
-**Problem:** The page looks unstyled -- no colors, no layout, just plain text.
+**Problem:** The page looks unstyled -- no colors, no layout, plain text.
 
-**Cause:** The path to `tina4.css` is wrong. The file is in `src/public/css/` but you are linking to `/css/tina4.css`.
+**Cause:** The path to `tina4.css` is wrong. The file lives in `src/public/css/` but the link points elsewhere.
 
-**Fix:** Tina4 serves everything in `src/public/` as static files from the root path. Link to `/css/tina4.css` (not `/src/public/css/tina4.css`). Verify the file exists at `src/public/css/tina4.css`.
+**Fix:** Tina4 serves everything in `src/public/` from the root path. Link to `/css/tina4.css` (not `/src/public/css/tina4.css`). Verify the file exists at `src/public/css/tina4.css`.
 
 ### 2. frond.js Functions Not Found
 
 **Problem:** `frond.get is not a function` or `frond is not defined` in the browser console.
 
-**Cause:** The `frond.js` script tag is missing or placed after the code that uses it.
+**Cause:** The `frond.min.js` script tag is missing or placed after the code that uses it.
 
-**Fix:** Include `<script src="/js/frond.js"></script>` before any script that calls `frond.*`. Put it at the bottom of the body, just before your custom scripts.
+**Fix:** Include `<script src="/js/frond.min.js"></script>` before any script that calls `frond.*`. Put it at the bottom of the body, before your custom scripts.
 
 ### 3. Dark Mode Flickers on Page Load
 
 **Problem:** The page loads in light mode and then flashes to dark mode.
 
-**Cause:** The dark mode JavaScript runs after the page is rendered. The browser paints the light theme first, then switches.
+**Cause:** The dark mode JavaScript runs after the page renders. The browser paints the light theme first, then switches.
 
 **Fix:** Add the theme detection script in the `<head>` (before the body renders):
 
 ```html
 <head>
     <script>
-        const t = localStorage.getItem("theme");
+        var t = localStorage.getItem("theme");
         if (t) document.documentElement.setAttribute("data-theme", t);
     </script>
 </head>
@@ -1110,7 +1271,7 @@ No template file needed. The builder handles escaping, nesting, and rendering in
 
 **Problem:** You edited `tina4.scss` but the CSS did not change.
 
-**Cause:** SCSS does not compile automatically. You need to run `tina4 scss` or use `--watch` mode.
+**Cause:** SCSS does not compile on its own. You need to run `tina4 scss` or use `--watch` mode.
 
 **Fix:** Run `tina4 scss --watch` during development. For production builds, run `tina4 scss` as part of your build process.
 
@@ -1118,22 +1279,38 @@ No template file needed. The builder handles escaping, nesting, and rendering in
 
 **Problem:** Clicking the button does nothing -- the modal stays hidden.
 
-**Cause:** The `data-toggle` and `data-target` attributes require frond.js to be loaded. Without it, there is no JavaScript to handle the modal toggle.
+**Cause:** The `data-toggle` and `data-target` attributes require frond.js to be loaded. Without it, no JavaScript handles the modal toggle.
 
-**Fix:** Ensure `frond.js` is loaded. Verify the `data-target` matches the modal's `id` exactly (including the `#` prefix).
+**Fix:** Ensure `frond.min.js` is loaded. Verify the `data-target` matches the modal's `id` exactly (including the `#` prefix).
 
 ### 6. Grid Columns Do Not Stack on Mobile
 
 **Problem:** Columns stay side-by-side on phone screens instead of stacking vertically.
 
-**Cause:** You used `col-4` instead of `col-md-4`. The `col-4` class applies at all screen sizes, so the columns always take one-third width.
+**Cause:** You used `col-4` instead of `col-md-4`. The `col-4` class applies at all screen sizes.
 
-**Fix:** Use responsive prefixes: `col-md-4` means "one-third on medium screens and up, full width on small screens." For mobile-first design, always use `col-md-*` or `col-lg-*`.
+**Fix:** Use responsive prefixes: `col-md-4` means "one-third on medium screens and up, full width on small screens."
 
 ### 7. Static Files Return 404
 
 **Problem:** CSS, JS, or image files return 404 Not Found.
 
-**Cause:** The files are not in the `src/public/` directory, or the directory structure is wrong.
+**Cause:** The files are not in the `src/public/` directory.
 
-**Fix:** Static files must be in `src/public/`. The URL path maps directly to the file path within that directory. `/css/tina4.css` maps to `src/public/css/tina4.css`. Check file paths and ensure the `src/public/` directory exists.
+**Fix:** Static files must be in `src/public/`. The URL path maps to the file path within that directory. `/css/tina4.css` maps to `src/public/css/tina4.css`.
+
+### 8. Form Data Not Reaching the Server
+
+**Problem:** `frond.post()` sends the request but `request.body` is empty on the server.
+
+**Cause:** frond.js sends JSON by default. Passing a `FormData` object or building the data object wrong prevents correct parsing.
+
+**Fix:** Pass a plain JavaScript object to `frond.post()`. Do not use `new FormData()` -- frond.js handles serialization. Make sure your object keys match what the server expects.
+
+### 9. Loading Indicator Never Disappears
+
+**Problem:** The loading spinner shows but never hides after the AJAX request completes.
+
+**Cause:** The CSS selector passed to the `loading` option does not match any element, or the element uses a CSS class to toggle visibility instead of inline `display`.
+
+**Fix:** frond.js toggles `display: block` and `display: none`. Make sure the element exists and its initial style is `display: none`. Use an `id` selector: `{ loading: "#loadingSpinner" }`.

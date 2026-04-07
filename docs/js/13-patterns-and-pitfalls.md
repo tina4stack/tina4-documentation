@@ -14,7 +14,7 @@ Every pitfall in this chapter was hit by a real developer on a real project. Eve
 
 Use tina4-js when:
 
-- **Bundle size matters.** Under 3KB gzipped. Your app loads in under a second on a 3G connection.
+- **Bundle size matters.** 1.5KB core gzipped, under 6KB for the full framework. Your app loads in under a second on a 3G connection.
 - **You want simplicity.** Seven modules. One package. No decisions about state management libraries, routing libraries, or CSS-in-JS solutions.
 - **You are building for a tina4 backend.** The API client speaks tina4-php and tina4-python natively -- auth tokens, CSRF protection, and token rotation work without configuration.
 - **You want real Web Components.** Components that work outside the framework, in plain HTML, in other frameworks, in any context where custom elements are supported.
@@ -122,7 +122,30 @@ For most computed values -- filtering lists, calculating totals, deriving displa
 
 ---
 
-## 4. Event Handler Auto-Batching
+## 4. Inputs Must Stay Outside Reactive Blocks
+
+> **This is the most common tina4-js bug.** Wrapping `<input>` elements inside `${() => ...}` reactive blocks causes them to lose focus on every keystroke. The reactive block destroys and recreates its entire DOM subtree when any signal it reads changes — so the input element is replaced mid-typing.
+
+**The rule:** Form elements (`<input>`, `<textarea>`, `<select>`) go in the **static** part of the template. Use `.value`, `@input`, and `?disabled` bindings to make them reactive. Only wrap **computed output** (conditional messages, dropdown options, dynamic lists) in `${() => ...}`.
+
+```typescript
+// WRONG — input inside reactive block, loses focus on every keystroke
+html`${() => html`<input .value=${name} @input=${(e: Event) => {
+  name.value = (e.target as HTMLInputElement).value;
+}} />`}`
+
+// RIGHT — input in static template, only output is reactive
+html`
+  <input .value=${name} @input=${(e: Event) => {
+    name.value = (e.target as HTMLInputElement).value;
+  }} />
+  <p>${() => name.value ? `Hello, ${name.value}!` : 'Type your name'}</p>
+`
+```
+
+---
+
+## 5. Event Handler Auto-Batching
 
 Since v1.0.9, all `@event` handlers in templates are wrapped in `batch()` for you. This means:
 
@@ -163,7 +186,7 @@ Any code that runs outside the `@event` handler context needs explicit `batch()`
 
 ---
 
-## 5. Effect Cleanup on Route Navigation
+## 6. Effect Cleanup on Route Navigation
 
 When the router navigates to a new route, it disposes all effects that were created during the previous route's handler execution. This is automatic and prevents memory leaks.
 
@@ -201,7 +224,7 @@ The rule: if you create it in a component, destroy it in `onUnmount()`. If you c
 
 ---
 
-## 6. Do Not Mix addEventListener Inside Reactive Blocks
+## 7. Do Not Mix addEventListener Inside Reactive Blocks
 
 ```typescript
 // WRONG -- adds a new listener every time count changes
@@ -246,7 +269,7 @@ The component adds the listener once on mount and removes it on unmount. Clean l
 
 ---
 
-## 7. The false/null Rendering Trap
+## 8. The false/null Rendering Trap
 
 This is covered in Chapter 3 but deserves repetition because it causes subtle bugs that pass code review:
 
@@ -274,7 +297,7 @@ html`${() => count.value > 0 ? html`<p>${count.value} items</p>` : null}`
 
 ---
 
-## 8. Signal Scope and Lifetime
+## 9. Signal Scope and Lifetime
 
 Signals live until they are garbage collected. If nothing references a signal, the runtime cleans it up. But if an effect or DOM binding holds a reference, the signal stays alive.
 
@@ -317,7 +340,7 @@ Global signals are appropriate for state that persists across route changes: aut
 
 ---
 
-## 9. Debugging Techniques
+## 10. Debugging Techniques
 
 ### Add Labels to Every Signal
 
@@ -350,7 +373,7 @@ This logs whenever `user` or `token` changes. It captures every write, from ever
 
 ---
 
-## 10. Performance Patterns
+## 11. Performance Patterns
 
 ### Keep Lists Reasonable
 
@@ -388,7 +411,7 @@ Without batch, each assignment triggers a separate DOM update. Three writes, thr
 
 ---
 
-## 11. Common Error Messages
+## 12. Common Error Messages
 
 ### "[tina4] computed signals are read-only"
 

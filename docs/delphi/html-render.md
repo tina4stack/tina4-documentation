@@ -158,7 +158,7 @@ Tina4HTMLRender1.HTML.Text := '<img src="https://example.com/photo.jpg" width="2
 
 <div v-pre>
 
-## Twig Template Integration {#twig}
+## Frond (Twig) Template Integration {#twig}
 
 The `Twig` property accepts Twig template content that is automatically rendered to HTML.
 

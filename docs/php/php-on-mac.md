@@ -75,14 +75,29 @@ Then reload:
 source ~/.zshrc   # or source ~/.bash_profile
 ```
 
-## You're ready!
+## 5. Install the Tina4 CLI
 
-You now have a clean, modern PHP environment and can start using **Tina4** immediately:
+The Tina4 CLI is a Rust-based binary that manages project scaffolding and the dev server across all Tina4 frameworks.
 
 ```bash
-composer create-project tina4stack/tina4-php my-project
-cd my-project
-composer start
+brew install tina4stack/tap/tina4
 ```
 
-Open http://localhost:7145 in your browser – welcome to Tina4! 🚀
+Verify:
+
+```bash
+tina4 --version
+```
+
+## You're ready!
+
+You now have a clean, modern PHP environment and can start building with **Tina4** right away:
+
+```bash
+tina4 init php my-project
+cd my-project
+composer install
+tina4 serve
+```
+
+Open http://localhost:7146 in your browser -- welcome to Tina4!

@@ -8,11 +8,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 // Title overrides for chapter filenames that don't auto-title well
 const TITLE_OVERRIDES: Record<string, string> = {
     'orm': 'ORM',
-    'cli': 'CLI & Scaffolding',
+    'cli': 'CLI',
     'crud': 'CRUD',
     'pwa': 'PWA',
     'graphql': 'GraphQL',
     'websocket': 'WebSocket',
+    'wsdl-soap': 'WSDL / SOAP',
+    'sse': 'Server-Sent Events (SSE)',
     'wsdl': 'WSDL',
     'what-is-tina4': 'What Is Tina4?',
     'request-response': 'Request & Response',
@@ -26,6 +28,15 @@ const TITLE_OVERRIDES: Record<string, string> = {
     'html-templates': 'HTML Templates',
     'backend-integration': 'Backend Integration',
     'rest-api': 'REST API',
+    'middleware-security': 'Middleware & Security',
+    'api-client': 'API Client',
+    'di-container': 'DI Container',
+    'service-runner': 'Service Runner',
+    'feature-list': 'Feature List',
+    'upgrading-from-v2': 'Upgrading from v2',
+    'mcp-dev-tools': 'MCP Dev Tools',
+    'custom-mcp-servers': 'Custom MCP Servers',
+    'query-builder': 'Query Builder',
 }
 
 function chapterTitle(filename: string): string {
@@ -40,15 +51,27 @@ function chapterTitle(filename: string): string {
         .replace(/\b\w/g, c => c.toUpperCase())
 }
 
+const SECTION_RANGES: Record<string, [number, number]> = {
+    'Foundations': [1, 10],
+    'Building Apps': [11, 19],
+    'APIs & Protocols': [20, 25],
+    'Advanced': [26, 29],
+    'Developer Tools': [30, 32],
+    'Operations': [33, 35],
+    'Releases': [36, 36],
+    'Appendix': [37, 38],
+}
+
 function buildChapterSidebar(section: string, label: string, extras?: object[]): object[] {
     const dir = join(__dirname, '..', section)
-    let chapters: object[] = []
+    let allChapters: { num: number; text: string; link: string }[] = []
 
     try {
-        chapters = readdirSync(dir)
+        allChapters = readdirSync(dir)
             .filter(f => /^\d+-.+\.md$/.test(f))
             .sort()
             .map(f => ({
+                num: parseInt(f.split('-')[0], 10),
                 text: chapterTitle(f),
                 link: `/${section}/${f}`
             }))
@@ -63,12 +86,19 @@ function buildChapterSidebar(section: string, label: string, extras?: object[]):
         }
     ]
 
-    if (chapters.length > 0) {
-        sidebar.push({
-            text: `${label} Book`,
-            collapsed: false,
-            items: chapters
-        })
+    if (allChapters.length > 0) {
+        for (const [groupName, [start, end]] of Object.entries(SECTION_RANGES)) {
+            const items = allChapters
+                .filter(c => c.num >= start && c.num <= end)
+                .map(c => ({ text: c.text, link: c.link }))
+            if (items.length > 0) {
+                sidebar.push({
+                    text: groupName,
+                    collapsed: groupName !== 'Foundations',
+                    items
+                })
+            }
+        }
     }
 
     if (extras && extras.length > 0) {
@@ -81,7 +111,7 @@ function buildChapterSidebar(section: string, label: string, extras?: object[]):
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
     title: "Simple. Fast. Human.",
-    description: "Tina4 - This Is Now A 4Framework",
+    description: "Tina4 - The Intelligent Native Application 4ramework",
     head: [
         ['link', {rel: 'icon', href: '/favicon.ico', type: 'image/x-icon'}],
         ['script', {async: '', src: 'https://www.googletagmanager.com/gtag/js?id=G-FZRRSBE9M0'}],
@@ -198,7 +228,7 @@ export default defineConfig({
                         {text: 'JSON Adapter', link: '/delphi/json-adapter.md'},
                         {text: 'HTML Renderer', link: '/delphi/html-render.md'},
                         {text: 'Page Navigation', link: '/delphi/html-pages.md'},
-                        {text: 'Twig Templates', link: '/delphi/twig.md'},
+                        {text: 'Frond (Twig) Templates', link: '/delphi/twig.md'},
                         {text: 'Core Utilities', link: '/delphi/core.md'}
                     ]
                 }
@@ -224,6 +254,10 @@ export default defineConfig({
                     ]
                 }
             ]
+        },
+        footer: {
+            message: 'Sponsored with 🩵 by <a href="https://codeinfinity.co.za?utm_source=tina4&utm_medium=docs&utm_campaign=sponsor" target="_blank"><img src="/c8-logo.svg" alt="Code Infinity" style="height:24px;vertical-align:middle;display:inline-block;margin:0 6px" />Code Infinity</a>',
+            copyright: 'MIT Licensed | Copyright 2007 - present Tina4'
         },
         socialLinks: [
             {icon: 'github', link: 'https://github.com/tina4stack'},

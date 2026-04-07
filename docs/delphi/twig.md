@@ -1,4 +1,4 @@
-# Twig Templates
+# Frond (Twig) Templates
 
 ::: tip
 TTina4Twig is a Twig-compatible template engine for server-side rendering, supporting variables, control structures, filters, functions, template inheritance, and macros.

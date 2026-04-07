@@ -180,28 +180,28 @@ end;
 ```html
 <div style="font-family: Arial, sans-serif; padding: 20px;">
   <div style="display: flex; gap: 20px;">
-    &#123;% if imageUrl %&#125;
-      <img src="&#123;&#123; imageUrl &#125;&#125;" style="width: 200px; height: 200px; object-fit: cover; border-radius: 8px;">
-    &#123;% endif %&#125;
+    {% if imageUrl %}
+      <img src="{{ imageUrl }}" style="width: 200px; height: 200px; object-fit: cover; border-radius: 8px;">
+    {% endif %}
     <div>
-      <h2 style="color: #2c3e50; margin: 0 0 10px;">&#123;&#123; name &#125;&#125;</h2>
+      <h2 style="color: #2c3e50; margin: 0 0 10px;">{{ name }}</h2>
       <p style="color: #1abc9c; font-size: 1.4em; font-weight: bold;">
-        &#123;&#123; price|format_currency('USD') &#125;&#125;
+        {{ price|format_currency('USD') }}
       </p>
-      <p style="color: #666;">&#123;&#123; category|title &#125;&#125;</p>
+      <p style="color: #666;">{{ category|title }}</p>
       <p>
-        &#123;% if stock|number_format > 10 %&#125;
-          <span style="color: #27ae60;">In Stock (&#123;&#123; stock &#125;&#125;)</span>
-        &#123;% elseif stock|number_format > 0 %&#125;
-          <span style="color: #f39c12;">Low Stock (&#123;&#123; stock &#125;&#125; left)</span>
-        &#123;% else %&#125;
+        {% if stock|number_format > 10 %}
+          <span style="color: #27ae60;">In Stock ({{ stock }})</span>
+        {% elseif stock|number_format > 0 %}
+          <span style="color: #f39c12;">Low Stock ({{ stock }} left)</span>
+        {% else %}
           <span style="color: #e74c3c;">Out of Stock</span>
-        &#123;% endif %&#125;
+        {% endif %}
       </p>
     </div>
   </div>
   <div style="margin-top: 15px; padding: 15px; background: #f9f9f9; border-radius: 4px;">
-    <p>&#123;&#123; description|nl2br &#125;&#125;</p>
+    <p>{{ description|nl2br }}</p>
   </div>
 </div>
 ```
@@ -551,21 +551,21 @@ end;
   <h2 style="color: #2c3e50;">System Status</h2>
 
   <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-    &#123;% macro metric(label, value, unit, color) %&#125;
+    {% macro metric(label, value, unit, color) %}
       <div style="flex: 1; min-width: 150px; background: white; padding: 15px;
-                  border-radius: 8px; border-left: 4px solid &#123;&#123; color &#125;&#125;;">
-        <p style="color: #999; margin: 0; font-size: 0.85em;">&#123;&#123; label &#125;&#125;</p>
-        <p style="color: &#123;&#123; color &#125;&#125;; font-size: 1.8em; font-weight: bold; margin: 5px 0;">
-          &#123;&#123; value &#125;&#125;&#123;&#123; unit &#125;&#125;
+                  border-radius: 8px; border-left: 4px solid {{ color }};">
+        <p style="color: #999; margin: 0; font-size: 0.85em;">{{ label }}</p>
+        <p style="color: {{ color }}; font-size: 1.8em; font-weight: bold; margin: 5px 0;">
+          {{ value }}{{ unit }}
         </p>
       </div>
-    &#123;% endmacro %&#125;
+    {% endmacro %}
 
-    &#123;&#123; metric('CPU Usage', cpuUsage, '%', '#3498db') &#125;&#125;
-    &#123;&#123; metric('Memory', memoryUsage, '%', '#2ecc71') &#125;&#125;
-    &#123;&#123; metric('Disk', diskUsage, '%', '#e67e22') &#125;&#125;
-    &#123;&#123; metric('Active Users', activeUsers, '', '#9b59b6') &#125;&#125;
-    &#123;&#123; metric('Requests/s', requestsPerSec, '', '#1abc9c') &#125;&#125;
+    {{ metric('CPU Usage', cpuUsage, '%', '#3498db') }}
+    {{ metric('Memory', memoryUsage, '%', '#2ecc71') }}
+    {{ metric('Disk', diskUsage, '%', '#e67e22') }}
+    {{ metric('Active Users', activeUsers, '', '#9b59b6') }}
+    {{ metric('Requests/s', requestsPerSec, '', '#1abc9c') }}
   </div>
 </div>
 ```
@@ -1084,62 +1084,62 @@ end.
 ```html
 <div style="font-family: Arial, sans-serif; padding: 20px;">
   <div style="display: flex; justify-content: space-between; align-items: center;">
-    <h2 style="color: #2c3e50; margin: 0;">&#123;&#123; name &#125;&#125;</h2>
+    <h2 style="color: #2c3e50; margin: 0;">{{ name }}</h2>
     <div>
-      <button onclick="App:EditProduct('&#123;&#123; id &#125;&#125;')"
+      <button onclick="App:EditProduct('{{ id }}')"
               style="background: #3498db; color: white; border: none; padding: 8px 16px;
                      border-radius: 4px; margin-right: 5px; cursor: pointer;">Edit</button>
-      <button onclick="App:DeleteProduct('&#123;&#123; id &#125;&#125;')"
+      <button onclick="App:DeleteProduct('{{ id }}')"
               style="background: #e74c3c; color: white; border: none; padding: 8px 16px;
                      border-radius: 4px; cursor: pointer;">Delete</button>
     </div>
   </div>
 
   <div style="display: flex; gap: 20px; margin-top: 20px;">
-    &#123;% if imageUrl %&#125;
-      <img src="&#123;&#123; imageUrl &#125;&#125;" style="width: 250px; height: 250px; object-fit: cover; border-radius: 8px;">
-    &#123;% else %&#125;
+    {% if imageUrl %}
+      <img src="{{ imageUrl }}" style="width: 250px; height: 250px; object-fit: cover; border-radius: 8px;">
+    {% else %}
       <div style="width: 250px; height: 250px; background: #ecf0f1; border-radius: 8px;
                   display: flex; align-items: center; justify-content: center; color: #bdc3c7;">
         No Image
       </div>
-    &#123;% endif %&#125;
+    {% endif %}
 
     <div style="flex: 1;">
       <p style="font-size: 1.4em; color: #1abc9c; font-weight: bold;">
-        &#123;&#123; price|format_currency('USD') &#125;&#125;
+        {{ price|format_currency('USD') }}
       </p>
       <table style="width: 100%;">
         <tr>
           <td style="padding: 6px 0; color: #999; width: 80px;">SKU</td>
-          <td style="padding: 6px 0;">&#123;&#123; sku|upper &#125;&#125;</td>
+          <td style="padding: 6px 0;">{{ sku|upper }}</td>
         </tr>
         <tr>
           <td style="padding: 6px 0; color: #999;">Category</td>
-          <td style="padding: 6px 0;">&#123;&#123; category|title &#125;&#125;</td>
+          <td style="padding: 6px 0;">{{ category|title }}</td>
         </tr>
         <tr>
           <td style="padding: 6px 0; color: #999;">Stock</td>
           <td style="padding: 6px 0;">
-            &#123;% if stock > 10 %&#125;
-              <span style="color: #27ae60;">In Stock (&#123;&#123; stock &#125;&#125;)</span>
-            &#123;% elseif stock > 0 %&#125;
-              <span style="color: #f39c12;">Low Stock (&#123;&#123; stock &#125;&#125;)</span>
-            &#123;% else %&#125;
+            {% if stock > 10 %}
+              <span style="color: #27ae60;">In Stock ({{ stock }})</span>
+            {% elseif stock > 0 %}
+              <span style="color: #f39c12;">Low Stock ({{ stock }})</span>
+            {% else %}
               <span style="color: #e74c3c;">Out of Stock</span>
-            &#123;% endif %&#125;
+            {% endif %}
           </td>
         </tr>
       </table>
     </div>
   </div>
 
-  &#123;% if description %&#125;
+  {% if description %}
     <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 4px;">
       <h3 style="margin: 0 0 10px; color: #2c3e50;">Description</h3>
-      <p>&#123;&#123; description|nl2br &#125;&#125;</p>
+      <p>{{ description|nl2br }}</p>
     </div>
-  &#123;% endif %&#125;
+  {% endif %}
 </div>
 ```
 
@@ -1147,31 +1147,31 @@ end.
 
 ```html
 <div style="font-family: Arial, sans-serif; padding: 20px;">
-  <h2 style="color: #2c3e50;">&#123;% if id %&#125;Edit Product&#123;% else %&#125;New Product&#123;% endif %&#125;</h2>
+  <h2 style="color: #2c3e50;">{% if id %}Edit Product{% else %}New Product{% endif %}</h2>
 
   <form name="productForm">
-    &#123;% if id %&#125;<input type="hidden" name="id" value="&#123;&#123; id &#125;&#125;">&#123;% endif %&#125;
+    {% if id %}<input type="hidden" name="id" value="{{ id }}">{% endif %}
 
     <div style="margin-bottom: 12px;">
       <label style="display: block; color: #666; margin-bottom: 4px;">Name *</label>
-      <input type="text" name="name" value="&#123;&#123; name|default('') &#125;&#125;"
+      <input type="text" name="name" value="{{ name|default('') }}"
              style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
     </div>
 
     <div style="display: flex; gap: 15px; margin-bottom: 12px;">
       <div style="flex: 1;">
         <label style="display: block; color: #666; margin-bottom: 4px;">Price *</label>
-        <input type="text" name="price" value="&#123;&#123; price|default('') &#125;&#125;"
+        <input type="text" name="price" value="{{ price|default('') }}"
                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
       </div>
       <div style="flex: 1;">
         <label style="display: block; color: #666; margin-bottom: 4px;">Stock</label>
-        <input type="text" name="stock" value="&#123;&#123; stock|default('0') &#125;&#125;"
+        <input type="text" name="stock" value="{{ stock|default('0') }}"
                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
       </div>
       <div style="flex: 1;">
         <label style="display: block; color: #666; margin-bottom: 4px;">SKU</label>
-        <input type="text" name="sku" value="&#123;&#123; sku|default('') &#125;&#125;"
+        <input type="text" name="sku" value="{{ sku|default('') }}"
                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
       </div>
     </div>
@@ -1179,14 +1179,14 @@ end.
     <div style="margin-bottom: 15px;">
       <label style="display: block; color: #666; margin-bottom: 4px;">Description</label>
       <textarea name="description" rows="5"
-                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">&#123;&#123; description|default('') &#125;&#125;</textarea>
+                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">{{ description|default('') }}</textarea>
     </div>
 
     <div style="display: flex; gap: 10px;">
       <button type="submit"
               style="background: #1abc9c; color: white; border: none; padding: 10px 24px;
                      border-radius: 4px; cursor: pointer;">Save</button>
-      <button type="button" onclick="App:ShowProductDetail('&#123;&#123; id &#125;&#125;')"
+      <button type="button" onclick="App:ShowProductDetail('{{ id }}')"
               style="background: #95a5a6; color: white; border: none; padding: 10px 24px;
                      border-radius: 4px; cursor: pointer;">Cancel</button>
     </div>
@@ -1356,25 +1356,25 @@ end;
 The metrics template uses the same macro pattern from Pattern 7:
 
 ```html
-&#123;% macro metricCard(label, value, unit) %&#125;
-  &#123;% set color = '#27ae60' %&#125;
-  &#123;% if value > 80 %&#125;&#123;% set color = '#e74c3c' %&#125;
-  &#123;% elseif value > 60 %&#125;&#123;% set color = '#f39c12' %&#125;&#123;% endif %&#125;
+{% macro metricCard(label, value, unit) %}
+  {% set color = '#27ae60' %}
+  {% if value > 80 %}{% set color = '#e74c3c' %}
+  {% elseif value > 60 %}{% set color = '#f39c12' %}{% endif %}
 
   <div style="flex: 1; background: white; padding: 15px; border-radius: 8px;
-              border-top: 4px solid &#123;&#123; color &#125;&#125;; text-align: center;">
-    <p style="color: #999; margin: 0;">&#123;&#123; label &#125;&#125;</p>
-    <p style="color: &#123;&#123; color &#125;&#125;; font-size: 2em; font-weight: bold; margin: 5px 0;">
-      &#123;&#123; value &#125;&#125;&#123;&#123; unit &#125;&#125;
+              border-top: 4px solid {{ color }}; text-align: center;">
+    <p style="color: #999; margin: 0;">{{ label }}</p>
+    <p style="color: {{ color }}; font-size: 2em; font-weight: bold; margin: 5px 0;">
+      {{ value }}{{ unit }}
     </p>
   </div>
-&#123;% endmacro %&#125;
+{% endmacro %}
 
 <div style="display: flex; gap: 15px; padding: 15px;">
-  &#123;&#123; metricCard('CPU', cpu, '%') &#125;&#125;
-  &#123;&#123; metricCard('Memory', memory, '%') &#125;&#125;
-  &#123;&#123; metricCard('Disk', disk, '%') &#125;&#125;
-  &#123;&#123; metricCard('Network', network, ' Mbps') &#125;&#125;
+  {{ metricCard('CPU', cpu, '%') }}
+  {{ metricCard('Memory', memory, '%') }}
+  {{ metricCard('Disk', disk, '%') }}
+  {{ metricCard('Network', network, ' Mbps') }}
 </div>
 ```
 
