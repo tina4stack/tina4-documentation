@@ -448,36 +448,46 @@ function usersPage() {
 
 ## 9. File Upload
 
-The API client sends JSON by default. Files are not JSON. For file uploads, use `fetch()` with the same base URL and auth token. The browser sets the correct `Content-Type` with multipart boundaries -- do not set it yourself:
+Use `api.upload()` to send files via multipart/form-data. Unlike `api.post()`, this does NOT JSON-stringify the body — the browser sets the `Content-Type` with multipart boundaries automatically. Auth uses the Bearer token header (formToken is not injected into FormData):
 
 ```typescript
-async function uploadFile(file: File) {
-  const formData = new FormData();
-  formData.append('file', file);
+const formData = new FormData();
+formData.append('file', fileInput.files[0]);
 
-  const token = localStorage.getItem('tina4_token');
+const result = await api.upload('/upload', formData);
+```
 
-  const response = await fetch('/api/upload', {
-    method: 'POST',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: formData, // Do NOT set Content-Type -- browser sets it with boundary
-  });
+With additional fields:
 
-  return response.json();
-}
+```typescript
+const formData = new FormData();
+formData.append('avatar', fileInput.files[0]);
+formData.append('userId', '42');
+
+const result = await api.upload('/users/avatar', formData);
 ```
 
 Use in a template:
 
 ```typescript
 html`
-  <input type="file" @change=${(e: Event) => {
+  <input type="file" @change=${async (e: Event) => {
     const file = (e.target as HTMLInputElement).files?.[0];
-    if (file) uploadFile(file);
+    if (file) {
+      const form = new FormData();
+      form.append('file', file);
+      await api.upload('/upload', form);
+    }
   }} />
 `
+```
+
+Per-request headers work with upload too:
+
+```typescript
+await api.upload('/upload', formData, {
+  headers: { 'X-Upload-Type': 'avatar' }
+});
 ```
 
 ---
@@ -492,6 +502,8 @@ html`
 | PUT | `api.put(path, body?, options?)` |
 | PATCH | `api.patch(path, body?, options?)` |
 | DELETE | `api.delete(path, options?)` |
+| Upload | `api.upload(path, formData, options?)` |
+| GraphQL | `api.graphql(path, query, variables?, options?)` |
 | Query params | `{ params: { key: value } }` |
 | Per-request headers | `{ headers: { key: value } }` |
 | Auth token | Automatic Bearer header when `auth: true` |
