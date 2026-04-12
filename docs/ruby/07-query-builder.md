@@ -13,7 +13,7 @@ The QueryBuilder sits between the two. It gives you a fluent, chainable Ruby API
 Every query starts with `Tina4::QueryBuilder.from`:
 
 ```ruby
-query = Tina4::QueryBuilder.from("users", db: db)
+query = Tina4::QueryBuilder.from_table("users", db: db)
 ```
 
 The first argument is the table name. The `db:` keyword argument is the database connection. If you omit `db:`, the QueryBuilder will fall back to `Tina4.database` when you execute the query -- but it will raise an error if no connection is available.
@@ -33,14 +33,14 @@ This creates a QueryBuilder pre-configured with the model's table name and the a
 By default, the QueryBuilder selects all columns (`*`). Use `.select` to pick specific columns:
 
 ```ruby
-query = Tina4::QueryBuilder.from("users", db: db)
+query = Tina4::QueryBuilder.from_table("users", db: db)
   .select("id", "name", "email")
 ```
 
 Pass as many column names as you need. Each is a separate string argument:
 
 ```ruby
-query = Tina4::QueryBuilder.from("products", db: db)
+query = Tina4::QueryBuilder.from_table("products", db: db)
   .select("name", "price", "category")
 ```
 
@@ -53,7 +53,7 @@ If you call `.select` with no arguments, the columns remain unchanged.
 Add conditions with `.where`. Use `?` placeholders for parameters:
 
 ```ruby
-results = Tina4::QueryBuilder.from("users", db: db)
+results = Tina4::QueryBuilder.from_table("users", db: db)
   .where("active = ?", [1])
   .get
 ```
@@ -65,7 +65,7 @@ The first argument is the SQL condition. The second is an array of parameter val
 Chain multiple `.where` calls. They combine with AND:
 
 ```ruby
-results = Tina4::QueryBuilder.from("products", db: db)
+results = Tina4::QueryBuilder.from_table("products", db: db)
   .where("price > ?", [10.00])
   .where("category = ?", ["Electronics"])
   .get
@@ -86,7 +86,7 @@ The first `.where` produces the condition directly. Every subsequent `.where` pr
 Use `.or_where` when you need OR logic:
 
 ```ruby
-results = Tina4::QueryBuilder.from("products", db: db)
+results = Tina4::QueryBuilder.from_table("products", db: db)
   .where("category = ?", ["Electronics"])
   .or_where("category = ?", ["Books"])
   .get
@@ -101,7 +101,7 @@ SELECT * FROM products WHERE category = ? OR category = ?
 You can mix `.where` and `.or_where` freely:
 
 ```ruby
-results = Tina4::QueryBuilder.from("products", db: db)
+results = Tina4::QueryBuilder.from_table("products", db: db)
   .where("price > ?", [10.00])
   .where("in_stock = ?", [1])
   .or_where("featured = ?", [1])
@@ -117,7 +117,7 @@ SELECT * FROM products WHERE price > ? AND in_stock = ? OR featured = ?
 If you need grouped conditions (parentheses), write the group as a single condition string:
 
 ```ruby
-results = Tina4::QueryBuilder.from("products", db: db)
+results = Tina4::QueryBuilder.from_table("products", db: db)
   .where("price > ?", [10.00])
   .where("(category = ? OR category = ?)", ["Electronics", "Books"])
   .get
@@ -130,7 +130,7 @@ results = Tina4::QueryBuilder.from("products", db: db)
 ### Inner Join
 
 ```ruby
-results = Tina4::QueryBuilder.from("orders", db: db)
+results = Tina4::QueryBuilder.from_table("orders", db: db)
   .select("orders.id", "users.name", "orders.total")
   .join("users", "users.id = orders.user_id")
   .get
@@ -145,7 +145,7 @@ SELECT orders.id, users.name, orders.total FROM orders INNER JOIN users ON users
 ### Left Join
 
 ```ruby
-results = Tina4::QueryBuilder.from("users", db: db)
+results = Tina4::QueryBuilder.from_table("users", db: db)
   .select("users.name", "orders.total")
   .left_join("orders", "orders.user_id = users.id")
   .get
@@ -162,7 +162,7 @@ SELECT users.name, orders.total FROM users LEFT JOIN orders ON orders.user_id = 
 Chain as many joins as you need:
 
 ```ruby
-results = Tina4::QueryBuilder.from("order_items", db: db)
+results = Tina4::QueryBuilder.from_table("order_items", db: db)
   .select("products.name", "order_items.quantity", "orders.status")
   .join("products", "products.id = order_items.product_id")
   .join("orders", "orders.id = order_items.order_id")
@@ -177,7 +177,7 @@ results = Tina4::QueryBuilder.from("order_items", db: db)
 Use `.order_by` to sort results:
 
 ```ruby
-results = Tina4::QueryBuilder.from("products", db: db)
+results = Tina4::QueryBuilder.from_table("products", db: db)
   .order_by("price ASC")
   .get
 ```
@@ -185,7 +185,7 @@ results = Tina4::QueryBuilder.from("products", db: db)
 Pass the column name and direction as a single string. Chain multiple `.order_by` calls for multi-column sorting:
 
 ```ruby
-results = Tina4::QueryBuilder.from("products", db: db)
+results = Tina4::QueryBuilder.from_table("products", db: db)
   .order_by("category ASC")
   .order_by("price DESC")
   .get
@@ -204,7 +204,7 @@ SELECT * FROM products ORDER BY category ASC, price DESC
 Use `.limit` to cap the number of rows returned:
 
 ```ruby
-results = Tina4::QueryBuilder.from("products", db: db)
+results = Tina4::QueryBuilder.from_table("products", db: db)
   .order_by("created_at DESC")
   .limit(10)
   .get
@@ -214,7 +214,7 @@ Pass a second argument for the offset:
 
 ```ruby
 # Skip 20 rows, return the next 10
-results = Tina4::QueryBuilder.from("products", db: db)
+results = Tina4::QueryBuilder.from_table("products", db: db)
   .order_by("created_at DESC")
   .limit(10, 20)
   .get
@@ -229,7 +229,7 @@ If you do not call `.limit`, the QueryBuilder defaults to 100 rows with an offse
 ### Group By
 
 ```ruby
-results = Tina4::QueryBuilder.from("orders", db: db)
+results = Tina4::QueryBuilder.from_table("orders", db: db)
   .select("status", "COUNT(*) AS order_count")
   .group_by("status")
   .get
@@ -246,7 +246,7 @@ SELECT status, COUNT(*) AS order_count FROM orders GROUP BY status
 Filter grouped results with `.having`:
 
 ```ruby
-results = Tina4::QueryBuilder.from("products", db: db)
+results = Tina4::QueryBuilder.from_table("products", db: db)
   .select("category", "AVG(price) AS avg_price")
   .group_by("category")
   .having("AVG(price) > ?", [50.00])
@@ -262,7 +262,7 @@ SELECT category, AVG(price) AS avg_price FROM products GROUP BY category HAVING 
 Multiple `.having` calls combine with AND:
 
 ```ruby
-results = Tina4::QueryBuilder.from("products", db: db)
+results = Tina4::QueryBuilder.from_table("products", db: db)
   .select("category", "COUNT(*) AS cnt", "AVG(price) AS avg_price")
   .group_by("category")
   .having("COUNT(*) > ?", [5])
@@ -279,7 +279,7 @@ The QueryBuilder provides four execution methods.
 ### get -- Multiple Rows
 
 ```ruby
-results = Tina4::QueryBuilder.from("users", db: db)
+results = Tina4::QueryBuilder.from_table("users", db: db)
   .where("active = ?", [1])
   .order_by("name ASC")
   .limit(25)
@@ -291,7 +291,7 @@ Returns a `DatabaseResult` object. You can iterate over it, access rows by index
 ### first -- Single Row
 
 ```ruby
-user = Tina4::QueryBuilder.from("users", db: db)
+user = Tina4::QueryBuilder.from_table("users", db: db)
   .where("email = ?", ["alice@example.com"])
   .first
 ```
@@ -301,7 +301,7 @@ Returns a single hash, or `nil` if no row matches. Useful when you expect exactl
 ### count -- Row Count
 
 ```ruby
-total = Tina4::QueryBuilder.from("users", db: db)
+total = Tina4::QueryBuilder.from_table("users", db: db)
   .where("active = ?", [1])
   .count
 ```
@@ -311,7 +311,7 @@ Returns an integer. The QueryBuilder rewrites your columns to `COUNT(*) AS cnt` 
 ### exists? -- Boolean Check
 
 ```ruby
-if Tina4::QueryBuilder.from("users", db: db)
+if Tina4::QueryBuilder.from_table("users", db: db)
      .where("email = ?", ["alice@example.com"])
      .exists?
   puts "User found"
@@ -327,7 +327,7 @@ Returns `true` if at least one matching row exists, `false` otherwise. Calls `.c
 Call `.to_sql` to see the generated SQL without executing it:
 
 ```ruby
-query = Tina4::QueryBuilder.from("products", db: db)
+query = Tina4::QueryBuilder.from_table("products", db: db)
   .select("name", "price")
   .where("category = ?", ["Electronics"])
   .where("price > ?", [50.00])
@@ -355,7 +355,7 @@ This is invaluable for debugging. If a query returns unexpected results, print t
 Tina4::Router.get("/api/products") do |request, response|
   db = Tina4.database
 
-  query = Tina4::QueryBuilder.from("products", db: db)
+  query = Tina4::QueryBuilder.from_table("products", db: db)
 
   # Apply filters from query string
   category = request.params["category"]
@@ -400,15 +400,15 @@ Tina4::Router.get("/api/dashboard/summary") do |request, response|
   db = Tina4.database
 
   # Total users
-  total_users = Tina4::QueryBuilder.from("users", db: db).count
+  total_users = Tina4::QueryBuilder.from_table("users", db: db).count
 
   # Active users
-  active_users = Tina4::QueryBuilder.from("users", db: db)
+  active_users = Tina4::QueryBuilder.from_table("users", db: db)
     .where("active = ?", [1])
     .count
 
   # Revenue by category
-  revenue = Tina4::QueryBuilder.from("order_items", db: db)
+  revenue = Tina4::QueryBuilder.from_table("order_items", db: db)
     .select("products.category", "SUM(order_items.quantity * order_items.price) AS revenue")
     .join("products", "products.id = order_items.product_id")
     .group_by("products.category")
@@ -468,7 +468,7 @@ Create `src/routes/product_search.rb`:
 Tina4::Router.get("/api/products/search") do |request, response|
   db = Tina4.database
 
-  query = Tina4::QueryBuilder.from("products", db: db)
+  query = Tina4::QueryBuilder.from_table("products", db: db)
 
   # Text search
   q = request.params["q"]
@@ -528,7 +528,7 @@ end
 Tina4::Router.get("/api/products/stats") do |request, response|
   db = Tina4.database
 
-  stats = Tina4::QueryBuilder.from("products", db: db)
+  stats = Tina4::QueryBuilder.from_table("products", db: db)
     .select("category", "COUNT(*) AS product_count", "ROUND(AVG(price), 2) AS avg_price")
     .group_by("category")
     .having("COUNT(*) > ?", [2])
@@ -592,7 +592,7 @@ The QueryBuilder can generate MongoDB-compatible query documents with `to_mongo`
 ### Example
 
 ```ruby
-query = Tina4::QueryBuilder.from("users")
+query = Tina4::QueryBuilder.from_table("users")
   .select("name", "email")
   .where("age > ?", [25])
   .where("status = ?", ["active"])
@@ -652,7 +652,7 @@ cursor = collection.find(mongo[:filter])
 
 **Cause:** You did not pass `db:` to `.from`, and `Tina4.database` is not configured.
 
-**Fix:** Either pass the connection explicitly with `Tina4::QueryBuilder.from("users", db: db)` or ensure your `.env` has a valid `DATABASE_URL` so the framework configures `Tina4.database` at startup.
+**Fix:** Either pass the connection explicitly with `Tina4::QueryBuilder.from_table("users", db: db)` or ensure your `.env` has a valid `DATABASE_URL` so the framework configures `Tina4.database` at startup.
 
 ### 4. count Replaces Your Columns
 

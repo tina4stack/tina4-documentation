@@ -2,394 +2,429 @@
 
 ## 1. From SQL to Objects
 
-Chapter 5 had you writing raw SQL for every operation. It works. It gets tedious. The same `INSERT INTO products (name, price, ...) VALUES (:name, :price, ...)` pattern over and over. The ORM replaces that repetition with TypeScript classes. Define a class. Map it to a table. Call `save()`, `findById()`, and `delete()`.
+The last chapter was raw SQL. It works. It also gets repetitive. Every insert demands an INSERT statement. Every update demands an UPDATE. Every fetch maps column names to object keys. Over and over.
 
-Tina4's ORM does not hide SQL. It handles the common operations -- create, read, update, delete -- and steps aside when you need raw queries. You always have `Database.getConnection()` for the hard stuff.
+Tina4's ORM turns database rows into TypeScript objects. Define a model class with fields. The ORM writes the SQL. It stays SQL-first -- you can drop to raw SQL at any moment -- but for the 90% case of CRUD operations, the ORM handles the grunt work.
+
+Picture a blog. Authors, posts, comments. Authors own many posts. Posts own many comments. Comments belong to posts. Modeling these relationships with raw SQL means JOINs and manual foreign key management. The ORM makes this declarative.
 
 ---
 
 ## 2. Defining a Model
 
-ORM models live in `src/orm/`. Every `.ts` file in that directory is auto-loaded at startup. Same discovery pattern as route files.
+Create a model file in `src/models/`. Every `.ts` file in that directory is auto-loaded at startup.
 
-Create `src/orm/Product.ts`:
+Create `src/models/Note.ts`:
 
 ```typescript
 import { BaseModel } from "tina4-nodejs/orm";
 
-export class Product extends BaseModel {
-    static tableName = "products";
-    static fields = {
-        id: { type: "integer", primaryKey: true, autoIncrement: true },
-        name: { type: "string", required: true },
-        category: { type: "string", default: "Uncategorized" },
-        price: { type: "number", default: 0 },
-        inStock: { type: "boolean", default: true },
-        createdAt: { type: "datetime" },
-        updatedAt: { type: "datetime" },
-    };
-
-    id!: number;
-    name!: string;
-    category: string = "Uncategorized";
-    price: number = 0;
-    inStock: boolean = true;
-    createdAt!: string;
-    updatedAt!: string;
+export default class Note extends BaseModel {
+  static tableName = "notes";
+  static fields = {
+    id:        { type: "integer" as const, primaryKey: true, autoIncrement: true },
+    title:     { type: "string" as const, required: true, maxLength: 200 },
+    content:   { type: "string" as const, default: "" },
+    category:  { type: "string" as const, default: "general" },
+    pinned:    { type: "boolean" as const, default: false },
+    createdAt: { type: "datetime" as const },
+    updatedAt: { type: "datetime" as const },
+  };
 }
 ```
 
-Here is what each piece does:
+A complete model. Here is what each piece does:
 
-- **Extends `BaseModel`** -- Gives you `save()`, `findById()`, `findAll()`, `delete()`, `toDict()`, and other methods.
-- **`static fields`** -- Declares field types, constraints, and defaults. The ORM uses this for validation, auto-CRUD, and `createTable()`.
-- **`static tableName`** -- The database table this model maps to. If you omit it, Tina4 uses the lowercase class name: `Product` becomes `product`. Set `ORM_PLURAL_TABLE_NAMES=true` in `.env` to get plural names (`product` → `products`).
-- **TypeScript properties** -- Each property maps to a database column. Property names are `camelCase`; column names are `snake_case`. Tina4 converts between them automatically: `inStock` maps to `in_stock`, `createdAt` maps to `created_at`.
-- **Default values** -- Properties with defaults (like `category = "Uncategorized"`) apply when creating new records.
+- `static tableName` -- the database table this model maps to. If omitted, the ORM uses the lowercase class name (e.g. `Contact` -> `contact`).
+- `primaryKey: true` on a field marks it as the primary key (defaults to `id` if none is specified)
+- Each field is a property in the `static fields` object with a config object describing its type and constraints
 
-### Field Definitions
+### Field Types
 
-The `fields` object describes each column. Every field supports these options:
+| Field Type | TypeScript Type | SQL Type | Description |
+|-----------|----------------|----------|-------------|
+| `"integer"` | `number` | `INTEGER` | Whole numbers |
+| `"string"` | `string` | `TEXT` | Text strings |
+| `"text"` | `string` | `TEXT` | Long text |
+| `"number"` | `number` | `REAL` | Decimal numbers |
+| `"boolean"` | `boolean` | `INTEGER` (0/1) | True/False |
+| `"datetime"` | `string` | `TEXT` | Date and time |
+
+For foreign keys, use `"integer"`. There is no separate foreign key type -- the relationship is defined through `hasMany`, `hasOne`, and `belongsTo` methods instead.
+
+### Field Options
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `type` | string | `"integer"`, `"string"`, `"text"`, `"number"`, `"boolean"`, `"datetime"` |
-| `primaryKey` | boolean | Marks this field as the primary key |
-| `autoIncrement` | boolean | Auto-increments on insert |
-| `required` | boolean | Fails validation if missing |
-| `default` | any | Default value for new records |
-| `minLength` | number | Minimum string length (strings only) |
-| `maxLength` | number | Maximum string length (strings only) |
-| `min` | number | Minimum value (numbers only) |
-| `max` | number | Maximum value (numbers only) |
-| `pattern` | string | Regex pattern the value must match (strings only) |
+| `primaryKey` | `boolean` | Marks this field as the primary key |
+| `required` | `boolean` | Field must have a value (not undefined) |
+| `default` | any | Default value when not provided |
+| `maxLength` | `number` | Maximum string length |
+| `minLength` | `number` | Minimum string length |
+| `min` | `number` | Minimum numeric value |
+| `max` | `number` | Maximum numeric value |
+| `choices` | array | Allowed values |
+| `autoIncrement` | `boolean` | Auto-incrementing integer |
+| `pattern` | `string` | Regex pattern the value must match |
 
 ### Field Mapping
 
-When your TypeScript property names do not match the database column names, use `fieldMapping` to define the translation:
+When your TypeScript property names do not match the database column names, use `static fieldMapping` to define the translation:
 
 ```typescript
 import { BaseModel } from "tina4-nodejs/orm";
 
-export class User extends BaseModel {
-    static tableName = "user_accounts";
-    static fields = {
-        id: { type: "integer", primaryKey: true, autoIncrement: true },
-        firstName: { type: "string", required: true },
-        lastName: { type: "string", required: true },
-        emailAddress: { type: "string", required: true },
-    };
-    static fieldMapping = {
-        firstName: "fname",
-        lastName: "lname",
-        emailAddress: "email",
-    };
+export default class User extends BaseModel {
+  static tableName = "user_accounts";
+  static fieldMapping = {
+    firstName: "fname",        // TS property -> DB column
+    lastName:  "lname",
+    emailAddress: "email",
+  };
 
-    id!: number;
-    firstName!: string;
-    lastName!: string;
-    emailAddress!: string;
+  static fields = {
+    id:           { type: "integer" as const, primaryKey: true, autoIncrement: true },
+    firstName:    { type: "string" as const, required: true },
+    lastName:     { type: "string" as const, required: true },
+    emailAddress: { type: "string" as const, required: true },
+  };
 }
 ```
 
-With this mapping, `user.firstName` reads from and writes to the `fname` column. The ORM handles the conversion in both directions -- on `findById()`, `save()`, `findAll()`, `toDict()`, and `toObject()`. This takes priority over the default `camelCase` to `snake_case` conversion. Useful when working with legacy databases where you cannot rename columns.
+With this mapping, `user.firstName` reads from and writes to the `fname` column. The ORM handles the conversion in both directions -- on `findById()`, `save()`, `select()`, and `toDict()`. This is useful with legacy databases or third-party schemas where you cannot rename the columns.
 
-### Automatic Field Mapping with autoMap
+### autoMap and Case Conversion
 
-If your database columns follow `snake_case` and your TypeScript properties follow `camelCase`, skip writing `fieldMapping`. Set `static autoMap = true` and Tina4 generates the mapping:
+The `static autoMap = true` flag auto-generates `fieldMapping` entries from camelCase field names to snake_case database column names. Explicit `fieldMapping` entries always take precedence.
 
 ```typescript
 import { BaseModel } from "tina4-nodejs/orm";
 
-export class Order extends BaseModel {
-    static tableName = "orders";
-    static autoMap = true;
-    static fields = {
-        id: { type: "integer", primaryKey: true, autoIncrement: true },
-        customerName: { type: "string" },
-        orderTotal: { type: "number" },
-        createdAt: { type: "datetime" },
-    };
+export default class User extends BaseModel {
+  static tableName = "users";
+  static autoMap = true;  // firstName -> first_name, lastName -> last_name
 
-    id!: number;
-    customerName!: string;   // maps to customer_name
-    orderTotal!: number;     // maps to order_total
-    createdAt!: string;      // maps to created_at
+  static fields = {
+    id:        { type: "integer" as const, primaryKey: true, autoIncrement: true },
+    firstName: { type: "string" as const, required: true },
+    lastName:  { type: "string" as const, required: true },
+    email:     { type: "string" as const, required: true },
+  };
 }
 ```
 
-Explicit `fieldMapping` entries always take priority over `autoMap`. Use both when most columns follow the convention but a few do not.
-
-### Utility Exports: snakeToCamel and camelToSnake
-
-The ORM package exports two helper functions for case conversion:
+Two utility functions handle case conversion directly:
 
 ```typescript
 import { snakeToCamel, camelToSnake } from "tina4-nodejs/orm";
 
-snakeToCamel("created_at");   // "createdAt"
-camelToSnake("createdAt");    // "created_at"
+snakeToCamel("first_name");   // "firstName"
+camelToSnake("firstName");    // "first_name"
 ```
 
-These are the same functions the ORM uses internally. Useful when building dynamic queries or transforming API payloads.
-
----
-
-## 3. Field Types
-
-| TypeScript Type | Database Type (SQLite) | Database Type (PostgreSQL) | Notes |
-|-----------------|----------------------|---------------------------|-------|
-| `number` | INTEGER or REAL | INTEGER or DOUBLE PRECISION | Whole or decimal numbers |
-| `string` | TEXT | VARCHAR(255) | Text fields |
-| `boolean` | INTEGER | BOOLEAN | SQLite stores as 0/1 |
-| `string \| null` | TEXT (nullable) | VARCHAR(255) NULL | Nullable fields |
-
-### Nullable Fields
+A common use case is Firebird or Oracle, which store column names in uppercase:
 
 ```typescript
-description: string | null = null;
-discount: number | null = null;
-```
+import { BaseModel } from "tina4-nodejs/orm";
 
----
+export default class Account extends BaseModel {
+  static tableName    = "ACCOUNTS";
+  static fieldMapping: Record<string, string> = {
+    accountNo:   "ACCOUNTNO",
+    storeName:   "STORENAME",
+    creditLimit: "CREDITLIMIT",
+  };
 
-## 4. Creating and Saving Records
-
-### save() -- Insert or Update
-
-The `save()` method inserts a new record or updates an existing one:
-
-```typescript
-import { Router } from "tina4-nodejs";
-import { Product } from "../orm/Product";
-
-Router.post("/api/products", async (req, res) => {
-    const body = req.body;
-
-    const product = new Product();
-    product.name = body.name;
-    product.category = body.category ?? "Uncategorized";
-    product.price = parseFloat(body.price ?? 0);
-    product.inStock = Boolean(body.in_stock ?? true);
-    product.save();
-
-    return res.status(201).json(product.toDict());
-});
-```
-
-```bash
-curl -X POST http://localhost:7148/api/products \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Wireless Keyboard", "category": "Electronics", "price": 79.99}'
-```
-
-```json
-{
-  "id": 1,
-  "name": "Wireless Keyboard",
-  "category": "Electronics",
-  "price": 79.99,
-  "inStock": true,
-  "createdAt": "2026-03-22 14:30:00"
+  static fields = {
+    accountNo:   { type: "string" as const },
+    storeName:   { type: "string" as const },
+    creditLimit: { type: "number" as const, default: 0 },
+  };
 }
 ```
 
-### Constructor Shorthand
+TypeScript code uses clean camelCase names (`account.accountNo`, `account.creditLimit`). The ORM maps them to the uppercase DB columns automatically.
 
-Pass an object to the constructor to set all fields at once:
+### getDbColumn and getDbData
 
-```typescript
-const product = new Product({
-    name: "Standing Desk",
-    category: "Furniture",
-    price: 549.99,
-});
-product.save();
-```
-
-### toDict(), toObject(), toJson()
-
-Three output formats:
+Two helpers expose the fieldMapping in custom code:
 
 ```typescript
-product.toDict();    // Plain object with field names as keys
-product.toObject();  // Alias for toDict()
-product.toJson();    // JSON string
-product.toArray();   // Array of values
-product.toList();    // Alias for toArray()
+// Get the DB column name for a JS property
+const col = Account.getDbColumn("accountNo");   // "ACCOUNTNO"
+
+// Get all instance fields using DB column names as keys
+const data = account.getDbData();
+// { ACCOUNTNO: "A001", STORENAME: "Main Store", CREDITLIMIT: 5000 }
 ```
 
-Use `toDict()` for API responses. Use `toJson()` when you need a string.
+These are used internally by `save()` and `createTable()`, but available for custom queries.
 
-### Updating an Existing Record
+### find() vs where() -- naming convention
 
-When `id` is set, `save()` performs an UPDATE:
+The two query methods have a deliberate difference in how they handle column names:
+
+- **`find(filterObj)`** uses **TypeScript property names**. The ORM translates them via `fieldMapping`.
+- **`where(sql)`** uses **raw DB column names** in the SQL string. No translation is applied.
 
 ```typescript
-Router.put("/api/products/{id:int}", async (req, res) => {
-    const product = Product.findById(req.params.id);
+// find() -- use TS property names (fieldMapping applied)
+const accounts = Account.find({ accountNo: "A001" });   // translates to ACCOUNTNO = ?
 
-    if (!product) {
-        return res.status(404).json({ error: "Product not found" });
-    }
-
-    const body = req.body;
-    product.name = body.name ?? product.name;
-    product.price = parseFloat(body.price ?? product.price);
-    product.category = body.category ?? product.category;
-    product.save();
-
-    return res.json(product.toDict());
-});
+// where() -- use DB column names directly in the SQL
+const accounts2 = Account.where("ACCOUNTNO = ?", ["A001"]);  // raw SQL, no translation
 ```
+
+This means `find()` is portable across database engines, while `where()` gives you full control of the SQL.
 
 ---
 
-## 5. Loading Records
+## 3. createTable -- Schema from Models
 
-### findById() -- Get by Primary Key
+You can create the database table directly from your model definition:
 
 ```typescript
-const product = Product.findById(42);
+Note.createTable();
+```
 
-if (!product) {
-    // Product with ID 42 not found
+This generates and runs the CREATE TABLE SQL based on your field definitions. It is good for development and testing. For production, use migrations (Chapter 5) for version-controlled schema changes.
+
+If the table already exists, `createTable()` does nothing.
+
+---
+
+## 4. CRUD Operations
+
+### save -- Create or Update
+
+```typescript
+// src/routes/api/notes/post.ts
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
+import Note from "../../models/Note.js";
+
+export default async function (req: Tina4Request, res: Tina4Response) {
+  const body = req.body as Record<string, unknown>;
+
+  const note = new Note();
+  note.title = body.title;
+  note.content = body.content ?? "";
+  note.category = body.category ?? "general";
+  note.pinned = body.pinned ?? false;
+  note.save();
+
+  res.json({ message: "Note created", note: note.toDict() }, 201);
 }
 ```
 
-`findById()` returns the model instance or `null` if no record matches.
+`save()` detects whether the record is new (INSERT) or existing (UPDATE) based on whether the primary key has a value. It returns `this` on success for chaining. It returns `false` on failure.
 
-### findOrFail() -- Get or Throw
+### create -- Build and Save in One Step
+
+When you have a data object ready, `create()` builds the model and saves it in one call:
 
 ```typescript
-try {
-    const product = Product.findOrFail(42);
-    // product is guaranteed to exist
-} catch (e) {
-    // Throws Error: "products: record with id 42 not found"
+const note = Note.create({
+  title: "Quick Note",
+  content: "Created in one step",
+  category: "general",
+});
+```
+
+### findById -- Fetch One Record by Primary Key
+
+```typescript
+// src/routes/api/notes/[id]/get.ts
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
+import Note from "../../../models/Note.js";
+
+export default async function (req: Tina4Request, res: Tina4Response) {
+  const note = Note.findById(req.params.id);
+
+  if (note === null) {
+    return res.json({ error: "Note not found" }, 404);
+  }
+
+  res.json(note.toDict());
 }
 ```
 
-### findAll() -- Get Multiple Records
+`findById()` takes a primary key value and returns a model instance, or `null` if no row matches. If soft delete is enabled, it excludes soft-deleted records.
+
+Use `findOrFail()` when you want an Error thrown instead of `null`:
 
 ```typescript
-// All products
-const all = Product.findAll();
-
-// With a WHERE clause
-const electronics = Product.findAll("category = ?", ["Electronics"]);
+const note = Note.findOrFail(id);  // Throws Error if not found
 ```
 
-### Eager Loading with findById and findAll
+### find -- Query by Filter Dict
 
-Pass an `include` array to load relationships in the same call:
+The `find()` method accepts an object of column-value pairs and returns an array of matching records:
 
 ```typescript
-const user = User.findById(1, ["posts"]);
+// Find all notes in the "work" category
+const workNotes = Note.find({ category: "work" });
 
-const users = User.findAll(undefined, undefined, ["posts", "posts.comments"]);
+// Find with pagination and ordering
+const recent = Note.find({ pinned: true }, 10, 0, "created_at DESC");
+
+// Find all records (no filter)
+const allNotes = Note.find();
 ```
 
-This runs two queries instead of N+1. Section 9 covers eager loading in depth.
+The full signature is `find(filter?, limit?, offset?, orderBy?, include?)`.
 
----
+### where -- Query with SQL Conditions
 
-## 6. Deleting Records
+For more complex queries, `where()` takes a SQL WHERE clause with `?` placeholders:
 
 ```typescript
-Router.delete("/api/products/{id:int}", async (req, res) => {
-    const product = Product.findById(req.params.id);
-
-    if (!product) {
-        return res.status(404).json({ error: "Product not found" });
-    }
-
-    product.delete();
-
-    return res.status(204).json(null);
-});
+const notes = Note.where("category = ?", ["work"]);
 ```
 
----
-
-## 7. QueryBuilder -- Fluent Queries
-
-Every model exposes a fluent `query()` method for complex queries:
+### delete -- Remove a Record
 
 ```typescript
-// Chain conditions
-const results = Product.query()
-    .where("category = ?", ["Electronics"])
-    .where("price < ?", [100])
-    .orderBy("price DESC")
-    .limit(10)
-    .get();
+// src/routes/api/notes/[id]/delete.ts
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
+import Note from "../../../models/Note.js";
+
+export default async function (req: Tina4Request, res: Tina4Response) {
+  const note = Note.findById(req.params.id);
+
+  if (note === null) {
+    return res.json({ error: "Note not found" }, 404);
+  }
+
+  note.delete();
+
+  res.json(null, 204);
+}
 ```
 
-### Available Methods
-
-| Method | Description |
-|--------|-------------|
-| `.where(sql, params)` | Add a WHERE condition |
-| `.orderBy(clause)` | Set ORDER BY |
-| `.limit(n)` | Set LIMIT |
-| `.offset(n)` | Set OFFSET |
-| `.get()` | Execute and return results |
-
-### A Full List Endpoint with Filters
+### Listing Records
 
 ```typescript
-import { Router } from "tina4-nodejs";
+// src/routes/api/notes/get.ts
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
+import Note from "../../models/Note.js";
 
-Router.get("/api/products", async (req, res) => {
-    const category = req.query.category ?? "";
-    const page = parseInt(req.query.page ?? "1", 10);
-    const perPage = parseInt(req.query.per_page ?? "20", 10);
-    const sort = req.query.sort ?? "name";
-    const order = (req.query.order ?? "ASC").toUpperCase();
+export default async function (req: Tina4Request, res: Tina4Response) {
+  const category = req.query.category;
 
-    const allowedSorts = ["name", "price", "category", "created_at"];
-    const safeSort = allowedSorts.includes(sort) ? sort : "name";
-    const safeOrder = order === "DESC" ? "DESC" : "ASC";
+  let notes;
+  if (category) {
+    notes = Note.where("category = ?", [category]);
+  } else {
+    notes = Note.all();
+  }
 
-    let qb = Product.query().orderBy(`${safeSort} ${safeOrder}`)
-        .limit(perPage).offset((page - 1) * perPage);
-
-    if (category) {
-        qb = qb.where("category = ?", [category]);
-    }
-
-    const products = qb.get();
-
-    return res.json({
-        products: products.map(p => p.toDict()),
-        page,
-        per_page: perPage,
-        count: products.length,
-    });
-});
+  res.json({
+    notes: notes.map((n) => n.toDict()),
+    count: notes.length,
+  });
+}
 ```
 
-### Raw SQL with select()
-
-When the QueryBuilder is not enough, use `select()` for raw SQL:
+`where()` takes a WHERE clause with `?` placeholders and an array of parameters. It returns an array of model instances. `all()` fetches all records. Both support pagination:
 
 ```typescript
-const results = Product.select(
-    "SELECT p.*, c.name as category_name FROM products p JOIN categories c ON p.category_id = c.id WHERE p.price > ?",
-    [50]
+// With pagination
+const notes = Note.where("category = ?", ["work"], 20, 40);
+
+// Fetch all with pagination -- all() takes an optional where clause string
+const notes2 = Note.all("category = ?", ["work"]);
+
+// SQL-first query -- full control over the SQL
+const notes3 = Note.select(
+  "SELECT * FROM notes WHERE pinned = ? ORDER BY created_at DESC",
+  [1],
 );
 ```
 
+### selectOne -- Fetch a Single Record by SQL
+
+When you need exactly one record from a custom SQL query:
+
+```typescript
+const note = Note.selectOne("SELECT * FROM notes WHERE slug = ?", ["my-note"]);
+```
+
+Returns a model instance or `null`.
+
+### load -- Populate an Existing Instance
+
+The `load()` method fills an existing model instance from the database:
+
+```typescript
+const note = new Note();
+note.id = 42;
+note.load();  // Loads data for id=42
+
+// Or with a filter string
+const note2 = new Note();
+note2.load("slug = ?", ["my-note"]);
+```
+
+Returns `true` if a record was found, `false` otherwise.
+
+### count -- Count Records
+
+```typescript
+const total = Note.count();
+const workCount = Note.count("category = ?", ["work"]);
+```
+
+Respects soft delete -- only counts non-deleted records.
+
 ---
 
-## 8. Relationships
+## 5. toDict, toJson, and Other Serialisation
 
-### hasMany -- One-to-Many
+### toDict
 
-A user has many posts. Define the relationship as a static property:
+Convert a model instance to a plain object:
 
-Create `src/orm/User.ts`:
+```typescript
+const note = Note.findById(1);
+
+const data = note.toDict();
+// { id: 1, title: "Shopping List", content: "Milk, eggs", category: "personal", pinned: false, createdAt: "2026-03-22 14:30:00", updatedAt: "2026-03-22 14:30:00" }
+```
+
+The `include` parameter adds relationship data to the output (see Eager Loading below). Pass an array of relationship names:
+
+```typescript
+// Include relationships in the output
+const data = note.toDict(["comments"]);
+```
+
+### toJson
+
+Convert directly to a JSON string:
+
+```typescript
+const jsonString = note.toJson();
+// '{"id":1,"title":"Shopping List",...}'
+```
+
+### Other Serialisation Methods
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `toDict(include?)` | `Record<string, unknown>` | Primary dict method with optional relationship includes |
+| `toAssoc(include?)` | `Record<string, unknown>` | Alias for `toDict()` |
+| `toObject()` | `Record<string, unknown>` | Alias for `toDict()` |
+| `toJson(include?)` | `string` | JSON string |
+| `toArray()` | `unknown[]` | Flat array of values (no keys) |
+| `toList()` | `unknown[]` | Alias for `toArray()` |
+
+---
+
+## 6. Relationships
+
+### foreignKey Field Type — Auto-Wired Relationships
+
+Declaring a field with `type: "foreignKey"` and a `references` model name automatically wires both sides of the relationship. The declaring model gets a `belongsTo` entry (the column name with `_id` stripped → the association name), and the referenced model gets a `hasMany` entry (the declaring model's table name, or whatever you pass via `relatedName`).
 
 ```typescript
 import { BaseModel } from "tina4-nodejs/orm";
@@ -397,657 +432,967 @@ import { BaseModel } from "tina4-nodejs/orm";
 export class User extends BaseModel {
     static tableName = "users";
     static fields = {
-        id: { type: "integer", primaryKey: true, autoIncrement: true },
+        id:   { type: "integer", primaryKey: true, autoIncrement: true },
         name: { type: "string", required: true },
-        email: { type: "string", required: true },
-        createdAt: { type: "datetime" },
     };
-    static hasMany = [
-        { model: "Post", foreignKey: "user_id" }
-    ];
-
-    id!: number;
-    name!: string;
-    email!: string;
-    createdAt!: string;
 }
-```
-
-Create `src/orm/Post.ts`:
-
-```typescript
-import { BaseModel } from "tina4-nodejs/orm";
 
 export class Post extends BaseModel {
     static tableName = "posts";
     static fields = {
-        id: { type: "integer", primaryKey: true, autoIncrement: true },
-        userId: { type: "integer", required: true },
-        title: { type: "string", required: true },
-        body: { type: "text" },
-        published: { type: "boolean", default: false },
-        createdAt: { type: "datetime" },
+        id:      { type: "integer", primaryKey: true, autoIncrement: true },
+        title:   { type: "string", required: true },
+        // Auto-wires Post.belongsTo User and User.hasMany Post
+        user_id: { type: "foreignKey", references: "User" },
     };
-    static belongsTo = [
-        { model: "User", foreignKey: "user_id" }
-    ];
-    static hasMany = [
-        { model: "Comment", foreignKey: "post_id" }
-    ];
-
-    id!: number;
-    userId!: number;
-    title!: string;
-    body!: string;
-    published: boolean = false;
-    createdAt!: string;
 }
 ```
 
-### hasOne -- One-to-One
-
-A user has one profile. The foreign key lives on the profile table:
+With just the `foreignKey` field, both sides are accessible:
 
 ```typescript
-export class User extends BaseModel {
-    static tableName = "users";
-    static fields = {
-        id: { type: "integer", primaryKey: true, autoIncrement: true },
-        name: { type: "string", required: true },
-    };
-    static hasOne = [
-        { model: "Profile", foreignKey: "user_id" }
-    ];
+const post = Post.findById(1);
+const user = post.belongsTo(User, "user_id");
+console.log(user?.name);     // "Alice"
 
-    id!: number;
-    name!: string;
+// Or via toDict with include
+const postData = post.toDict(["user"]);
+
+const alice = User.findById(1);
+const posts = alice.hasMany(Post, "user_id");
+posts.forEach(p => console.log(p.title));
+```
+
+For a custom `hasMany` key, pass `relatedName`:
+
+```typescript
+user_id: { type: "foreignKey", references: "User", relatedName: "blog_posts" }
+// User.hasMany entry will use "blog_posts" instead of the default
+```
+
+Models must be registered via `BaseModel.registerModel("User", User)` before eager loading can resolve the reference by name.
+
+### hasMany
+
+An author has many posts:
+
+Create `src/models/Author.ts`:
+
+```typescript
+import { BaseModel } from "tina4-nodejs/orm";
+
+export default class Author extends BaseModel {
+  static tableName = "authors";
+  static fields = {
+    id:        { type: "integer" as const, primaryKey: true, autoIncrement: true },
+    name:      { type: "string" as const, required: true },
+    email:     { type: "string" as const, required: true },
+    bio:       { type: "string" as const, default: "" },
+    createdAt: { type: "datetime" as const },
+  };
 }
+```
 
-export class Profile extends BaseModel {
-    static tableName = "profiles";
-    static fields = {
-        id: { type: "integer", primaryKey: true, autoIncrement: true },
-        userId: { type: "integer", required: true },
-        bio: { type: "text" },
-        avatarUrl: { type: "string" },
-    };
-    static belongsTo = [
-        { model: "User", foreignKey: "user_id" }
-    ];
+Create `src/models/BlogPost.ts`:
 
-    id!: number;
-    userId!: number;
-    bio!: string;
-    avatarUrl!: string;
+```typescript
+import { BaseModel } from "tina4-nodejs/orm";
+
+export default class BlogPost extends BaseModel {
+  static tableName = "posts";
+  static fields = {
+    id:        { type: "integer" as const, primaryKey: true, autoIncrement: true },
+    authorId:  { type: "integer" as const, required: true },
+    title:     { type: "string" as const, required: true, maxLength: 300 },
+    slug:      { type: "string" as const, required: true },
+    content:   { type: "string" as const, default: "" },
+    status:    { type: "string" as const, default: "draft", choices: ["draft", "published", "archived"] },
+    createdAt: { type: "datetime" as const },
+    updatedAt: { type: "datetime" as const },
+  };
 }
 ```
 
-`hasOne` returns a single model instance (or `null`). `hasMany` returns an array.
-
-### belongsTo -- Inverse Relationship
-
-`belongsTo` goes on the child model. The foreign key column lives on the child's table:
+Now use `hasMany` to get an author's posts:
 
 ```typescript
-// Post belongs to User
-static belongsTo = [
-    { model: "User", foreignKey: "user_id" }
-];
+// src/routes/api/authors/[id]/get.ts
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
+import Author from "../../../models/Author.js";
+import BlogPost from "../../../models/BlogPost.js";
 
-// Comment belongs to Post
-static belongsTo = [
-    { model: "Post", foreignKey: "post_id" }
-];
+export default async function (req: Tina4Request, res: Tina4Response) {
+  const author = Author.findById(req.params.id);
+
+  if (author === null) {
+    return res.json({ error: "Author not found" }, 404);
+  }
+
+  const posts = author.hasMany(BlogPost, "author_id");
+
+  const data = author.toDict();
+  data.posts = posts.map((p) => p.toDict());
+
+  res.json(data);
+}
 ```
-
-### Using Relationships
-
-Load related models with instance methods:
-
-```typescript
-Router.get("/api/users/{id:int}", async (req, res) => {
-    const user = User.findById(req.params.id);
-
-    if (!user) {
-        return res.status(404).json({ error: "User not found" });
-    }
-
-    // Use toDict with include for nested output
-    return res.json(user.toDict(["posts"]));
-});
-```
-
-### toDict with include
-
-Pass relationship names to `toDict()` to include related data:
-
-```typescript
-const user = User.findById(1);
-
-// Include posts
-user.toDict(["posts"]);
-
-// Include posts and their comments (dot notation)
-user.toDict(["posts", "posts.comments"]);
-```
-
-The result nests related objects inside the output:
 
 ```json
 {
   "id": 1,
   "name": "Alice",
   "email": "alice@example.com",
+  "bio": "Tech writer",
   "posts": [
-    {
-      "id": 10,
-      "title": "First Post",
-      "comments": [
-        { "id": 100, "body": "Great post!" }
-      ]
-    }
+    {"id": 1, "title": "Getting Started with Tina4", "slug": "getting-started", "status": "published"},
+    {"id": 2, "title": "Advanced Routing", "slug": "advanced-routing", "status": "draft"}
+  ]
+}
+```
+
+`hasMany()` accepts an optional `limit` and `offset` for pagination: `author.hasMany(BlogPost, "author_id", 10, 0)`.
+
+### hasOne
+
+A user has one profile:
+
+```typescript
+const profile = user.hasOne(Profile, "user_id");
+```
+
+Returns a single model instance or `null`.
+
+### belongsTo
+
+A post belongs to an author:
+
+```typescript
+// src/routes/api/posts/[id]/get.ts
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
+import Author from "../../../models/Author.js";
+import BlogPost from "../../../models/BlogPost.js";
+
+export default async function (req: Tina4Request, res: Tina4Response) {
+  const post = BlogPost.findById(req.params.id);
+
+  if (post === null) {
+    return res.json({ error: "Post not found" }, 404);
+  }
+
+  const author = post.belongsTo(Author, "author_id");
+
+  const data = post.toDict();
+  data.author = author ? author.toDict() : null;
+
+  res.json(data);
+}
+```
+
+```json
+{
+  "id": 1,
+  "authorId": 1,
+  "title": "Getting Started with Tina4",
+  "slug": "getting-started",
+  "content": "...",
+  "status": "published",
+  "author": {
+    "id": 1,
+    "name": "Alice",
+    "email": "alice@example.com"
+  }
+}
+```
+
+---
+
+## 7. Eager Loading
+
+Calling relationship methods inside a loop creates the N+1 problem. Load 10 authors. Call `hasMany(BlogPost, "author_id")` for each one. That fires 11 queries -- 1 for authors, 10 for posts. The page drags.
+
+The `include` parameter on `all()`, `where()`, `findById()`, and `selectOne()` solves this. It eager-loads relationships in bulk.
+
+Eager loading requires two things: declarative relationship definitions on the model, and model registration.
+
+### Declarative Relationships
+
+Define relationships as static arrays on your model class:
+
+```typescript
+import { BaseModel } from "tina4-nodejs/orm";
+
+export default class Author extends BaseModel {
+  static tableName = "authors";
+  static hasMany = [{ model: "BlogPost", foreignKey: "author_id" }];
+  static fields = {
+    id:    { type: "integer" as const, primaryKey: true, autoIncrement: true },
+    name:  { type: "string" as const, required: true },
+    email: { type: "string" as const, required: true },
+    bio:   { type: "string" as const, default: "" },
+  };
+}
+```
+
+```typescript
+import { BaseModel } from "tina4-nodejs/orm";
+
+export default class BlogPost extends BaseModel {
+  static tableName = "posts";
+  static belongsTo = [{ model: "Author", foreignKey: "author_id" }];
+  static hasMany = [{ model: "Comment", foreignKey: "post_id" }];
+  static fields = {
+    id:       { type: "integer" as const, primaryKey: true, autoIncrement: true },
+    authorId: { type: "integer" as const, required: true },
+    title:    { type: "string" as const, required: true },
+    status:   { type: "string" as const, default: "draft" },
+  };
+}
+```
+
+Register the models so eager loading can resolve them by name:
+
+```typescript
+BaseModel.registerModel("Author", Author);
+BaseModel.registerModel("BlogPost", BlogPost);
+BaseModel.registerModel("Comment", Comment);
+```
+
+Now use `include` to eager-load:
+
+```typescript
+// Eager load posts when fetching all authors
+const authors = Author.all(undefined, undefined, ["posts"]);
+
+// Eager load author and comments when finding a single post
+const post = BlogPost.findById(1, ["author", "comments"]);
+```
+
+Without eager loading, 10 authors and their posts cost 11 queries. With eager loading: 2 queries. That is the difference between a fast page and a slow one.
+
+### Nested Eager Loading
+
+Dot notation loads multiple levels deep:
+
+```typescript
+// Load authors, their posts, and each post's comments
+const authors = Author.all(undefined, undefined, ["posts", "posts.comments"]);
+```
+
+Authors, their posts, and each post's comments. Three queries total instead of hundreds.
+
+### toDict with Nested Includes
+
+When eager loading is active, `toDict(include)` embeds the related data:
+
+```typescript
+const post = BlogPost.findById(1, ["author", "comments"]);
+const data = post.toDict(["author", "comments"]);
+```
+
+```json
+{
+  "id": 1,
+  "title": "Getting Started with Tina4",
+  "author": {
+    "id": 1,
+    "name": "Alice",
+    "email": "alice@example.com"
+  },
+  "comments": [
+    {"id": 1, "body": "Great post!", "authorName": "Bob"}
   ]
 }
 ```
 
 ---
 
-## 9. Eager Loading
+## 8. Soft Delete
 
-The N+1 query problem kills performance. Load 20 users, then load posts for each user -- that is 21 queries. Eager loading runs 2 queries regardless of result count.
-
-### With findAll
-
-```typescript
-const users = User.findAll(undefined, undefined, ["posts"]);
-```
-
-The third argument is an array of relationship names to include.
-
-### Nested Eager Loading
-
-```typescript
-const users = User.findAll(undefined, undefined, ["posts", "posts.comments"]);
-```
-
-Dot notation loads nested relationships. This runs 3 queries: one for users, one for posts, one for comments.
-
----
-
-## 10. Soft Delete
-
-Enable soft delete with `static softDelete = true`. The model needs an `is_deleted` column (integer, default 0) in the database:
+Sometimes a record needs to disappear from queries without leaving the database. Soft delete handles this. The row stays. A flag marks it as deleted. Queries skip it.
 
 ```typescript
 import { BaseModel } from "tina4-nodejs/orm";
 
-export class Post extends BaseModel {
-    static tableName = "posts";
-    static softDelete = true;
-    static fields = {
-        id: { type: "integer", primaryKey: true, autoIncrement: true },
-        title: { type: "string", required: true },
-        body: { type: "text" },
-    };
+export default class Task extends BaseModel {
+  static tableName = "tasks";
+  static softDelete = true;  // Enable soft delete
 
-    id!: number;
-    title!: string;
-    body!: string;
+  static fields = {
+    id:        { type: "integer" as const, primaryKey: true, autoIncrement: true },
+    title:     { type: "string" as const, required: true },
+    completed: { type: "boolean" as const, default: false },
+    isDeleted: { type: "integer" as const, default: 0 },  // Required for soft delete (0 = active, 1 = deleted)
+    createdAt: { type: "string" as const },
+  };
 }
 ```
 
-With `softDelete = true`:
+When `static softDelete = true`, the ORM changes its behaviour:
 
-- `post.delete()` sets `is_deleted = 1` instead of removing the row
-- `findAll()` and `findById()` exclude soft-deleted records automatically
-- `post.forceDelete()` permanently removes the row from the database
+- `task.delete()` sets `is_deleted` to `1` instead of running a DELETE query
+- `Task.all()`, `Task.where()`, and `Task.findById()` filter out records where `is_deleted = 1`
+- `task.restore()` sets `is_deleted` back to `0` and makes the record visible again
+- `task.forceDelete()` permanently removes the row from the database
+- `Task.withTrashed()` includes soft-deleted records in query results
 
-### Restoring Soft-Deleted Records
-
-Bring a record back from the dead:
-
-```typescript
-// Find a deleted record (must bypass the soft delete filter)
-const deleted = Post.withTrashed("id = ?", [42]);
-
-if (deleted.length > 0) {
-    deleted[0].restore();
-    // is_deleted is now 0, record appears in normal queries again
-}
-```
-
-`restore()` only works on models with `softDelete = true`. It sets `is_deleted = 0` and the record reappears in normal queries.
-
-### Querying Including Deleted Records
+### Deleting and Restoring
 
 ```typescript
-// All records, including soft-deleted ones
-const all = Post.withTrashed();
+// Soft delete -- sets is_deleted = 1, row stays in the database
+const task = Task.findById(1);
+task.delete();
 
-// Filtered, including soft-deleted
-const filtered = Post.withTrashed("category = ?", ["News"]);
+// Restore -- sets is_deleted = 0, record is visible again
+task.restore();
 
-// With limit and offset
-const paged = Post.withTrashed(undefined, undefined, 20, 0);
+// Permanently delete -- removes the row, no recovery possible
+task.forceDelete();
 ```
 
-### Table Filter
+`restore()` is the inverse of `delete()`. It sets `is_deleted` back to `0` and commits the change. The record reappears in all standard queries.
 
-Restrict all queries on a model with `tableFilter`. This filter applies automatically to every `findAll()`, `findById()`, and `count()` call:
+### Including Soft-Deleted Records
+
+Standard queries (`all()`, `where()`, `findById()`) exclude soft-deleted records. When you need to see everything -- for admin dashboards, audit logs, or data recovery -- use `withTrashed()`:
 
 ```typescript
-export class ActiveProduct extends BaseModel {
-    static tableName = "products";
-    static tableFilter = "status = 'active'";
-    // ...
-}
+// All tasks, including soft-deleted ones
+const allTasks = Task.withTrashed();
+
+// Soft-deleted tasks matching a condition
+const deletedTasks = Task.withTrashed("completed = ?", [1]);
 ```
 
-Every query against `ActiveProduct` includes `WHERE status = 'active'`. The filter combines with soft delete and any explicit WHERE clauses you add.
+`withTrashed()` accepts the same filter parameters as `where()`: `withTrashed(conditions?, params?, limit?, offset?)`. The only difference: it ignores the `is_deleted` filter that standard queries apply.
+
+### Counting with Soft Delete
+
+The `count()` method respects soft delete. It only counts non-deleted records:
+
+```typescript
+const activeCount = Task.count();
+const activeWork = Task.count("category = ?", ["work"]);
+```
+
+### When to Use Soft Delete
+
+Soft delete suits data that users might want to recover -- emails, documents, user accounts. It also serves audit requirements where regulations demand retention. For temporary data (sessions, cache entries, logs), hard delete keeps the table lean.
 
 ---
 
-## 11. createTable() -- Schema from Model
+## 9. Auto-CRUD
 
-Generate the database table directly from the model's field definitions:
+Writing the same five REST endpoints for every model gets tedious. Auto-CRUD generates them from your model class. Define the model. Set the flag. Five routes appear.
 
-```typescript
-Product.createTable();
-```
+### The autoCrud Flag
 
-The method reads `static fields` and builds a `CREATE TABLE IF NOT EXISTS` statement. It maps field types to SQL types:
-
-| Field Type | SQLite | PostgreSQL |
-|-----------|--------|------------|
-| `integer` | INTEGER | INTEGER |
-| `string` | TEXT | TEXT |
-| `text` | TEXT | TEXT |
-| `number` | REAL | REAL |
-| `boolean` | INTEGER | INTEGER |
-| `datetime` | TEXT | TEXT |
-
-If the table already exists, `createTable()` does nothing.
-
-Use this for quick prototyping and test setup. For production schema changes, use migrations (Chapter 8).
-
----
-
-## 12. Input Validation
-
-The ORM validates data against the `fields` definition. Call `validate()` on any model instance:
-
-```typescript
-const product = new Product();
-product.name = "";
-product.price = -5;
-
-const errors = product.validate();
-// ["name is required", "price must be at least 0"]
-```
-
-### Validation in Routes
-
-```typescript
-Router.post("/api/products", async (req, res) => {
-    const product = new Product(req.body);
-    const errors = product.validate();
-
-    if (errors.length > 0) {
-        return res.status(400).json({ errors });
-    }
-
-    product.save();
-    return res.status(201).json(product.toDict());
-});
-```
-
-### Validation Rules Reference
-
-| Rule | Field Type | Example |
-|------|-----------|---------|
-| `required` | all | `required: true` |
-| `minLength` | string | `minLength: 3` |
-| `maxLength` | string | `maxLength: 255` |
-| `min` | number | `min: 0` |
-| `max` | number | `max: 10000` |
-| `pattern` | string | `pattern: "^[a-z]+$"` |
-
-The validator skips primary key fields on insert and skips missing fields on update. A field with `required: true` that arrives as `undefined`, `null`, or `""` fails validation.
-
----
-
-## 13. Scopes -- Reusable Query Filters
-
-Scopes are named query shortcuts. Instead of repeating the same WHERE clause, define it once:
-
-```typescript
-// Active products (in_stock = 1)
-const active = Product.scope("active", "in_stock = ?", [1]);
-
-// Expensive products (price > 100)
-const expensive = Product.scope("expensive", "price > ?", [100]);
-
-// Products in a category
-const electronics = Product.scope("byCategory", "category = ?", ["Electronics"]);
-```
-
-Scopes respect soft delete and table filters. They compose with existing conditions.
-
----
-
-## 14. count() -- Counting Records
-
-```typescript
-const total = Product.count();
-const electronics = Product.count("category = ?", ["Electronics"]);
-const inStock = Product.count("in_stock = ?", [1]);
-```
-
-`count()` respects soft delete and table filters.
-
----
-
-## 15. Auto-CRUD
-
-Add `static autoCrud = true` to the model definition and Tina4 generates REST endpoints for you. No route file needed.
+Set `static autoCrud = true` on your model class:
 
 ```typescript
 import { BaseModel } from "tina4-nodejs/orm";
 
-export class Product extends BaseModel {
-    static tableName = "products";
-    static fields = {
-        id: { type: "integer", primaryKey: true, autoIncrement: true },
-        name: { type: "string", required: true },
-        category: { type: "string", default: "Uncategorized" },
-        price: { type: "number", default: 0, min: 0 },
-        inStock: { type: "boolean", default: true },
-    };
-    // This single line generates all CRUD routes
-    static autoCrud = true;
+export default class Note extends BaseModel {
+  static tableName = "notes";
+  static autoCrud = true;  // Generates REST endpoints automatically
 
-    id!: number;
-    name!: string;
-    category: string = "Uncategorized";
-    price: number = 0;
-    inStock: boolean = true;
+  static fields = {
+    id:      { type: "integer" as const, primaryKey: true, autoIncrement: true },
+    title:   { type: "string" as const, required: true },
+    content: { type: "string" as const, default: "" },
+  };
 }
 ```
 
-This registers five routes:
+When the ORM discovers this model at startup, it registers CRUD routes. Five routes appear.
+
+### Manual Registration
+
+You can also register routes explicitly using `generateCrudRoutes()`:
+
+```typescript
+import { generateCrudRoutes } from "tina4-nodejs/orm";
+```
+
+Both approaches produce the same result:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/products` | List with filtering and pagination |
-| `GET` | `/api/products/{id}` | Get one by ID |
-| `POST` | `/api/products` | Create a new record |
-| `PUT` | `/api/products/{id}` | Update a record |
-| `DELETE` | `/api/products/{id}` | Delete a record |
+| `GET` | `/api/notes` | List all with filtering and pagination |
+| `GET` | `/api/notes/{id}` | Get one by primary key |
+| `POST` | `/api/notes` | Create a new record |
+| `PUT` | `/api/notes/{id}` | Update a record |
+| `DELETE` | `/api/notes/{id}` | Delete a record |
 
-### Auto-CRUD Features
+The endpoint prefix derives from the table name. The `notes` table becomes `/api/notes`.
 
-The generated list endpoint supports query parameters:
+### What the Generated Routes Do
 
+**GET /api/notes** returns paginated results with filtering and sorting:
+
+```bash
+curl "http://localhost:7148/api/notes?limit=10&page=1"
 ```
-GET /api/products?page=1&limit=20&sort=price&order=desc&category=Electronics
-```
-
-Response format:
 
 ```json
 {
+  "records": [...],
   "data": [...],
-  "meta": {
-    "total": 42,
-    "page": 1,
-    "limit": 20,
-    "totalPages": 3
+  "total": 42,
+  "count": 42,
+  "limit": 10,
+  "page": 1,
+  "perPage": 10,
+  "totalPages": 5
+}
+```
+
+The list endpoint supports query parameters:
+- `?filter[field]=value` -- filter by field value
+- `?sort=-name` -- sort by field (prefix `-` for descending)
+- `?page=2&limit=10` -- pagination
+
+**POST /api/notes** validates input before saving:
+
+```bash
+curl -X POST http://localhost:7148/api/notes \
+  -H "Content-Type: application/json" \
+  -d '{"title": "New Note", "content": "Created via auto-CRUD"}'
+```
+
+If validation fails (for example, a required field is missing), the endpoint returns a 422 with error details:
+
+```json
+{"error": "Validation failed", "statusCode": 422, "errors": ["title: This field is required"]}
+```
+
+**DELETE /api/notes/1** respects soft delete. If the model has `static softDelete = true`, the record is marked deleted instead of removed.
+
+### Custom Routes Alongside Auto-CRUD
+
+Custom routes defined in `src/routes/` load before auto-CRUD routes. They take precedence. If you need special logic for one endpoint (custom validation, side effects, complex queries), define that route as a file. Auto-CRUD handles the rest.
+
+### Table Filter
+
+The `static tableFilter` property adds a permanent WHERE condition to all auto-CRUD queries:
+
+```typescript
+export default class ActiveUser extends BaseModel {
+  static tableName = "users";
+  static tableFilter = "active = 1";
+  static autoCrud = true;
+  // ...
+}
+```
+
+Every auto-CRUD query for this model appends `AND active = 1`.
+
+---
+
+## 10. Scopes
+
+Scopes are reusable query filters baked into the model. In TypeScript, you can define them as static methods:
+
+```typescript
+import { BaseModel } from "tina4-nodejs/orm";
+
+export default class BlogPost extends BaseModel {
+  static tableName = "posts";
+  static fields = {
+    id:        { type: "integer" as const, primaryKey: true, autoIncrement: true },
+    title:     { type: "string" as const, required: true },
+    status:    { type: "string" as const, default: "draft" },
+    createdAt: { type: "datetime" as const },
+  };
+
+  static published() {
+    return this.where("status = ?", ["published"]);
+  }
+
+  static drafts() {
+    return this.where("status = ?", ["draft"]);
+  }
+
+  static recent(days = 7) {
+    return this.where(
+      "created_at > datetime('now', ?)",
+      [`-${days} days`],
+    );
   }
 }
 ```
 
-The generated routes validate input against the `fields` definition. A `POST` with missing required fields returns a `400` error. Soft delete works automatically -- `DELETE` sets `is_deleted = 1` when `softDelete` is enabled.
-
-### When to Use Auto-CRUD
-
-Use it for admin panels, internal tools, and prototypes. For production APIs that need custom logic (authorization checks, notifications, cache invalidation), write your own routes. Custom routes in `src/routes/` take priority over auto-CRUD routes.
-
----
-
-## 16. Multiple Databases
-
-Models can connect to different databases. Set `static _db` to a named connection:
+Use them in your routes:
 
 ```typescript
-export class Analytics extends BaseModel {
-    static tableName = "page_views";
-    static _db = "analytics";
-    // ...
+// src/routes/api/posts/published/get.ts
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
+import BlogPost from "../../../models/BlogPost.js";
+
+export default async function (req: Tina4Request, res: Tina4Response) {
+  const posts = BlogPost.published();
+  res.json({ posts: posts.map((p) => p.toDict()) });
 }
 ```
 
-Configure the connection in `.env`:
+You can also register scopes dynamically with the `scope()` static method:
 
-```bash
-DATABASE_URL=sqlite:///data/app.db
-DATABASE_URL_ANALYTICS=sqlite:///data/analytics.db
+```typescript
+BlogPost.scope("active", "status != ?", ["archived"]);
+
+// Now call it (cast needed since it's dynamically added):
+const activePosts = (BlogPost as any).active();
+
+// With limit and offset:
+const activePosts2 = (BlogPost as any).active(10, 5);
 ```
 
-The default connection uses `DATABASE_URL`. Named connections use `DATABASE_URL_<NAME>` (uppercase).
+`scope()` returns void. It registers a method on the class that calls `where()` with the given filter. The registered method accepts optional `limit` and `offset` parameters.
+
+Scopes keep query logic in the model where it belongs. Route handlers stay thin.
 
 ---
 
-## 17. Exercise: Build a Blog
+## 11. Input Validation
 
-Build a blog with three models: User, Post, and Comment. Use relationships, eager loading, soft delete, and validation.
+Field definitions carry validation rules. Call `validate()` before `save()` and the ORM checks every constraint:
+
+```typescript
+import { BaseModel } from "tina4-nodejs/orm";
+
+export default class Product extends BaseModel {
+  static tableName = "products";
+  static fields = {
+    id:       { type: "integer" as const, primaryKey: true, autoIncrement: true },
+    name:     { type: "string" as const, required: true, minLength: 2, maxLength: 200 },
+    sku:      { type: "string" as const, required: true, pattern: "^[A-Z]{2}-\\d{4}$" },  // e.g., EL-1234
+    price:    { type: "number" as const, required: true, min: 0.01, max: 999999.99 },
+    category: { type: "string" as const, choices: ["Electronics", "Kitchen", "Office", "Fitness"] },
+  };
+}
+```
+
+```typescript
+// src/routes/api/products/post.ts
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
+import Product from "../../models/Product.js";
+
+export default async function (req: Tina4Request, res: Tina4Response) {
+  const body = req.body as Record<string, unknown>;
+
+  const product = new Product();
+  product.name = body.name;
+  product.sku = body.sku;
+  product.price = body.price;
+  product.category = body.category;
+
+  const errors = product.validate();
+  if (errors.length > 0) {
+    return res.json({ errors }, 400);
+  }
+
+  product.save();
+  res.json({ product: product.toDict() }, 201);
+}
+```
+
+If validation fails, `validate()` returns an array of error strings:
+
+```json
+{
+  "errors": [
+    "name Must be at least 2 characters",
+    "sku Must match pattern ^[A-Z]{2}-\\d{4}$",
+    "price Must be at least 0.01",
+    "category Must be one of: Electronics, Kitchen, Office, Fitness"
+  ]
+}
+```
+
+---
+
+## 12. Exercise: Build a Blog with Relationships
+
+Build a blog API with authors, posts, and comments.
 
 ### Requirements
 
-1. Create three models:
-   - `User` with auto-CRUD, hasMany Posts
-   - `Post` with belongsTo User, hasMany Comments, soft delete, validation (title required, min 3 chars)
-   - `Comment` with belongsTo Post, validation (body required)
-2. Create migrations for all three tables
-3. Build custom endpoints:
+1. Create these models:
+
+**Author:** `id`, `name` (required), `email` (required), `bio`, `createdAt`
+
+**BlogPost:** `id`, `authorId` (integer foreign key), `title` (required, max 300), `slug` (required), `content`, `status` (choices: draft/published/archived, default draft), `createdAt`, `updatedAt`
+
+**Comment:** `id`, `postId` (integer foreign key), `authorName` (required), `authorEmail` (required), `body` (required, min 5 chars), `createdAt`
+
+2. Build these endpoints:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/blog/posts` | List published posts with author info |
-| `GET` | `/api/blog/posts/{id:int}` | Get a post with author and comments |
-| `POST` | `/api/blog/posts/{id:int}/comments` | Add a comment (with validation) |
+| `POST` | `/api/authors` | Create an author |
+| `GET` | `/api/authors/{id}` | Get author with their posts |
+| `POST` | `/api/posts` | Create a post (requires authorId) |
+| `GET` | `/api/posts` | List published posts with author info |
+| `GET` | `/api/posts/{id}` | Get post with author and comments |
+| `POST` | `/api/posts/{id}/comments` | Add comment to a post |
 
 ---
 
-## 18. Solution
+## 13. Solution
 
-### Models
-
-Create `src/orm/User.ts`:
+Create `src/models/Author.ts`:
 
 ```typescript
 import { BaseModel } from "tina4-nodejs/orm";
 
-export class User extends BaseModel {
-    static tableName = "users";
-    static fields = {
-        id: { type: "integer", primaryKey: true, autoIncrement: true },
-        name: { type: "string", required: true },
-        email: { type: "string", required: true },
-        createdAt: { type: "datetime" },
-    };
-    static autoCrud = true;
-    static hasMany = [{ model: "Post", foreignKey: "user_id" }];
-
-    id!: number;
-    name!: string;
-    email!: string;
-    createdAt!: string;
+export default class Author extends BaseModel {
+  static tableName = "authors";
+  static fields = {
+    id:        { type: "integer" as const, primaryKey: true, autoIncrement: true },
+    name:      { type: "string" as const, required: true, minLength: 2 },
+    email:     { type: "string" as const, required: true },
+    bio:       { type: "string" as const, default: "" },
+    createdAt: { type: "datetime" as const },
+  };
 }
 ```
 
-Create `src/orm/Post.ts`:
+Create `src/models/BlogPost.ts`:
 
 ```typescript
 import { BaseModel } from "tina4-nodejs/orm";
 
-export class Post extends BaseModel {
-    static tableName = "posts";
-    static softDelete = true;
-    static fields = {
-        id: { type: "integer", primaryKey: true, autoIncrement: true },
-        userId: { type: "integer", required: true },
-        title: { type: "string", required: true, minLength: 3 },
-        body: { type: "text" },
-        published: { type: "boolean", default: false },
-        createdAt: { type: "datetime" },
-    };
-    static belongsTo = [{ model: "User", foreignKey: "user_id" }];
-    static hasMany = [{ model: "Comment", foreignKey: "post_id" }];
+export default class BlogPost extends BaseModel {
+  static tableName = "posts";
+  static fields = {
+    id:        { type: "integer" as const, primaryKey: true, autoIncrement: true },
+    authorId:  { type: "integer" as const, required: true },
+    title:     { type: "string" as const, required: true, maxLength: 300 },
+    slug:      { type: "string" as const, required: true },
+    content:   { type: "string" as const, default: "" },
+    status:    { type: "string" as const, default: "draft", choices: ["draft", "published", "archived"] },
+    createdAt: { type: "datetime" as const },
+    updatedAt: { type: "datetime" as const },
+  };
 
-    id!: number;
-    userId!: number;
-    title!: string;
-    body!: string;
-    published: boolean = false;
-    createdAt!: string;
+  static published() {
+    return this.where("status = ?", ["published"]);
+  }
 }
 ```
 
-Create `src/orm/Comment.ts`:
+Create `src/models/Comment.ts`:
 
 ```typescript
 import { BaseModel } from "tina4-nodejs/orm";
 
-export class Comment extends BaseModel {
-    static tableName = "comments";
-    static fields = {
-        id: { type: "integer", primaryKey: true, autoIncrement: true },
-        postId: { type: "integer", required: true },
-        authorName: { type: "string", required: true },
-        body: { type: "text", required: true },
-        createdAt: { type: "datetime" },
-    };
-    static belongsTo = [{ model: "Post", foreignKey: "post_id" }];
-
-    id!: number;
-    postId!: number;
-    authorName!: string;
-    body!: string;
-    createdAt!: string;
+export default class Comment extends BaseModel {
+  static tableName = "comments";
+  static fields = {
+    id:          { type: "integer" as const, primaryKey: true, autoIncrement: true },
+    postId:      { type: "integer" as const, required: true },
+    authorName:  { type: "string" as const, required: true },
+    authorEmail: { type: "string" as const, required: true },
+    body:        { type: "string" as const, required: true, minLength: 5 },
+    createdAt:   { type: "datetime" as const },
+  };
 }
 ```
 
-### Routes
-
-Create `src/routes/blog.ts`:
+Create `src/routes/api/authors/post.ts`:
 
 ```typescript
-import { Router } from "tina4-nodejs";
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
+import Author from "../../../models/Author.js";
 
-Router.get("/api/blog/posts", async (req, res) => {
-    const posts = Post.findAll("published = ?", [1], ["user"]);
+export default async function (req: Tina4Request, res: Tina4Response) {
+  const body = req.body as Record<string, unknown>;
 
-    return res.json({
-        posts: posts.map(p => p.toDict(["user"])),
-        count: posts.length,
-    });
-});
+  const author = new Author();
+  author.name = body.name;
+  author.email = body.email;
+  author.bio = body.bio ?? "";
 
-Router.get("/api/blog/posts/{id:int}", async (req, res) => {
-    const post = Post.findById(req.params.id, ["user", "comments"]);
+  const errors = author.validate();
+  if (errors.length > 0) {
+    return res.json({ errors }, 400);
+  }
 
-    if (!post) {
-        return res.status(404).json({ error: "Post not found" });
-    }
+  author.save();
+  res.json({ author: author.toDict() }, 201);
+}
+```
 
-    return res.json(post.toDict(["user", "comments"]));
-});
+Create `src/routes/api/authors/[id]/get.ts`:
 
-Router.post("/api/blog/posts/{id:int}/comments", async (req, res) => {
-    const post = Post.findById(req.params.id);
+```typescript
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
+import Author from "../../../../models/Author.js";
+import BlogPost from "../../../../models/BlogPost.js";
 
-    if (!post) {
-        return res.status(404).json({ error: "Post not found" });
-    }
+export default async function (req: Tina4Request, res: Tina4Response) {
+  const author = Author.findById(req.params.id);
 
-    const comment = new Comment(req.body);
-    comment.postId = req.params.id;
+  if (author === null) {
+    return res.json({ error: "Author not found" }, 404);
+  }
 
-    const errors = comment.validate();
-    if (errors.length > 0) {
-        return res.status(400).json({ errors });
-    }
+  const posts = BlogPost.where("author_id = ?", [author.id]);
 
-    comment.save();
+  const data = author.toDict();
+  data.posts = posts.map((p) => p.toDict());
 
-    return res.status(201).json(comment.toDict());
-});
+  res.json(data);
+}
+```
+
+Create `src/routes/api/posts/post.ts`:
+
+```typescript
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
+import Author from "../../../models/Author.js";
+import BlogPost from "../../../models/BlogPost.js";
+
+export default async function (req: Tina4Request, res: Tina4Response) {
+  const body = req.body as Record<string, unknown>;
+
+  // Verify author exists
+  const author = Author.findById(body.authorId);
+  if (author === null) {
+    return res.json({ error: "Author not found" }, 404);
+  }
+
+  const post = new BlogPost();
+  post.authorId = body.authorId;
+  post.title = body.title;
+  post.slug = body.slug;
+  post.content = body.content ?? "";
+  post.status = body.status ?? "draft";
+
+  const errors = post.validate();
+  if (errors.length > 0) {
+    return res.json({ errors }, 400);
+  }
+
+  post.save();
+  res.json({ post: post.toDict() }, 201);
+}
+```
+
+Create `src/routes/api/posts/get.ts`:
+
+```typescript
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
+import Author from "../../../models/Author.js";
+import BlogPost from "../../../models/BlogPost.js";
+
+export default async function (req: Tina4Request, res: Tina4Response) {
+  const posts = BlogPost.published();
+  const data = [];
+
+  for (const p of posts) {
+    const postDict = p.toDict();
+    const author = p.belongsTo(Author, "author_id");
+    postDict.author = author ? author.toDict() : null;
+    data.push(postDict);
+  }
+
+  res.json({ posts: data, count: data.length });
+}
+```
+
+Create `src/routes/api/posts/[id]/get.ts`:
+
+```typescript
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
+import Author from "../../../../models/Author.js";
+import BlogPost from "../../../../models/BlogPost.js";
+import Comment from "../../../../models/Comment.js";
+
+export default async function (req: Tina4Request, res: Tina4Response) {
+  const post = BlogPost.findById(req.params.id);
+
+  if (post === null) {
+    return res.json({ error: "Post not found" }, 404);
+  }
+
+  const author = post.belongsTo(Author, "author_id");
+  const comments = post.hasMany(Comment, "post_id");
+
+  const data = post.toDict();
+  data.author = author ? author.toDict() : null;
+  data.comments = comments.map((c) => c.toDict());
+  data.commentCount = comments.length;
+
+  res.json(data);
+}
+```
+
+Create `src/routes/api/posts/[id]/comments/post.ts`:
+
+```typescript
+import type { Tina4Request, Tina4Response } from "tina4-nodejs";
+import BlogPost from "../../../../../models/BlogPost.js";
+import Comment from "../../../../../models/Comment.js";
+
+export default async function (req: Tina4Request, res: Tina4Response) {
+  const post = BlogPost.findById(req.params.id);
+
+  if (post === null) {
+    return res.json({ error: "Post not found" }, 404);
+  }
+
+  const body = req.body as Record<string, unknown>;
+
+  const comment = new Comment();
+  comment.postId = req.params.id;
+  comment.authorName = body.authorName;
+  comment.authorEmail = body.authorEmail;
+  comment.body = body.body;
+
+  const errors = comment.validate();
+  if (errors.length > 0) {
+    return res.json({ errors }, 400);
+  }
+
+  comment.save();
+  res.json({ comment: comment.toDict() }, 201);
+}
 ```
 
 ---
 
-## 19. Gotchas
+## 14. Gotchas
 
-### 1. Table Naming Convention
+### 1. Forgetting to call save()
 
-**Problem:** Your model class is `OrderItem` but queries fail because the table does not exist.
+**Problem:** You set properties on a model but the database does not change.
 
-**Cause:** Tina4 converts `OrderItem` to `order_items`. If your table is named differently, no match.
+**Cause:** Setting `note.title = "New Title"` only changes the TypeScript object. The database remains unchanged until you call `note.save()`.
 
-**Fix:** Set `static tableName = "order_item"` explicitly.
+**Fix:** Call `save()` after modifying properties. Check the return value -- `save()` returns `this` on success and `false` on failure.
 
-### 2. Relationship Foreign Key Direction
+### 2. findById() returns null
 
-**Problem:** `hasMany` with the wrong foreign key produces wrong results.
+**Problem:** You call `Note.findById(id)` but get `null` instead of a note object.
 
-**Cause:** The foreign key is the column on the related table, not the current table.
+**Cause:** `findById()` returns `null` when no row matches the given primary key. If soft delete is enabled, `findById()` also excludes soft-deleted records.
 
-**Fix:** For `hasMany` and `hasOne`, the foreign key is on the child table. For `belongsTo`, the foreign key is on the current table.
+**Fix:** Check for `null` after `findById()`: `if (note === null) return res.json({error: "Not found"}, 404)`. Use `findOrFail()` if you want an Error thrown instead.
 
-### 3. camelCase to snake_case Mapping
+### 3. find() vs findById()
 
-**Problem:** Property `userId` does not map to column `user_id`.
+**Problem:** You call `Note.find(42)` expecting a single record, but get unexpected results.
 
-**Fix:** Tina4 converts between `camelCase` and `snake_case` automatically. Ensure your database columns use `snake_case`. For non-standard columns, use `fieldMapping`.
+**Cause:** `find()` takes a filter object (`find({ id: 42 })`), not a bare primary key value. For single-record lookups by primary key, use `findById(42)`.
 
-### 4. Forgetting save()
+**Fix:** Use `findById(id)` for primary key lookups. Use `find({ column: value })` for filter-based queries.
 
-**Problem:** You set properties but the database does not change.
+### 4. all() not findAll()
 
-**Fix:** Always call `product.save()` after modifying properties.
+**Problem:** You call `Note.findAll()` and get an error.
 
-### 5. findById Returns null, Not an Empty Model
+**Cause:** The method is `all()`, not `findAll()`. There is no `findAll()` method on BaseModel.
 
-**Problem:** You call `Product.findById(99)` and try to access `.name` but get a null reference error.
+**Fix:** Use `Note.all()` to fetch all records.
 
-**Fix:** `findById()` returns `null` when no record matches. Check the return value before accessing properties.
+### 5. toDict() includes everything
 
-### 6. select() Returns Model Instances, Not Plain Objects
+**Problem:** `user.toDict()` includes `passwordHash` in the API response.
 
-**Problem:** JSON serialization misses some fields.
+**Cause:** `toDict()` includes all fields by default.
 
-**Fix:** Use `result.toDict()` to convert to a plain object for JSON responses.
+**Fix:** Build the response object manually, omitting sensitive fields: `{ id: user.id, name: user.name, email: user.email }`. Or create a helper method on your model class that returns only safe fields.
 
-### 7. Auto-CRUD Endpoint Conflicts
+### 6. Validation only runs on validate()
 
-**Problem:** Your custom route at `/api/products/{id}` conflicts with auto-CRUD.
+**Problem:** You call `save()` without calling `validate()` first, and invalid data gets into the database.
 
-**Fix:** Custom routes defined in `src/routes/` take precedence over auto-CRUD routes.
+**Cause:** `save()` does not validate. This is by design -- sometimes you need to save partial data or bypass validation for bulk operations.
 
-### 8. Validation Runs on Model Data, Not Request Body
+**Fix:** Call `const errors = model.validate()` before `save()` in your route handlers. Or create a helper method that validates and saves in one step.
 
-**Problem:** You call `product.validate()` before setting properties and get no errors.
+### 7. Foreign key not enforced
 
-**Fix:** Set the model's properties first (or pass data to the constructor), then call `validate()`. The validator checks the model's current field values against the `fields` definition.
+**Problem:** You save a post with `authorId = 999` and it succeeds, even though no author with ID 999 exists.
 
-### 9. restore() Fails on Non-Soft-Delete Models
+**Cause:** SQLite does not enforce foreign key constraints by default. The ORM defines the relationship through `hasMany`/`belongsTo` methods, but the database itself may not enforce it.
 
-**Problem:** Calling `restore()` on a model without `softDelete = true` throws an error.
+**Fix:** Enable SQLite foreign keys with `PRAGMA foreign_keys = ON;` in a migration, or validate the foreign key in your route handler before saving.
 
-**Fix:** Only use `restore()` on models with `static softDelete = true`. The method throws: "restore() is only available on models with softDelete enabled."
+### 8. N+1 query problem
 
-### 10. createTable() Does Not Run Migrations
+**Problem:** Listing 100 authors with their posts runs 101 queries (1 for authors + 100 for posts), and the page loads slowly.
 
-**Problem:** You call `createTable()` but your migration history does not reflect the change.
+**Cause:** You call `author.hasMany(BlogPost, "author_id")` inside a loop for each author.
 
-**Fix:** `createTable()` executes raw DDL. It does not register in the migration system. Use it for prototyping and tests. For production, use migration files.
+**Fix:** Use eager loading with the `include` parameter on `all()`, `where()`, or `findById()`. Define declarative relationships on the model and register models with `BaseModel.registerModel()`.
+
+### 9. Auto-CRUD endpoint conflicts
+
+**Problem:** Custom route at `/api/notes/{id}` stops working after enabling auto-CRUD for the Note model.
+
+**Cause:** Both routes match the same path. The first registered route wins.
+
+**Fix:** Custom routes in `src/routes/` load before auto-CRUD routes. They take precedence. If you want different behaviour, use a different path for the custom route.
+
+### 10. Soft-deleted records appearing in queries
+
+**Problem:** You soft-deleted a record, but queries still return it.
+
+**Cause:** Soft delete requires the `static softDelete = true` flag on the model class and an `is_deleted` column in the database (integer, 0 or 1). Without both, soft delete is inactive.
+
+**Fix:** Verify both the `static softDelete = true` flag and the `is_deleted` column exist. The column stores `0` for active records and `1` for deleted ones.
+
+---
+
+## 15. QueryBuilder Integration
+
+ORM models provide a `query()` static method that returns a `QueryBuilder` pre-configured with the model's table name and database connection. This gives you a fluent API for building complex queries without writing raw SQL:
+
+```typescript
+// Fluent query builder from ORM
+const results = User.query()
+  .select("id", "name", "email")
+  .where("active = ?", [1])
+  .orderBy("name")
+  .limit(50)
+  .get();
+
+// First matching record
+const user = User.query()
+  .where("email = ?", ["alice@example.com"])
+  .first();
+
+// Count
+const total = User.query()
+  .where("role = ?", ["admin"])
+  .count();
+
+// Check existence
+const exists = User.query()
+  .where("email = ?", ["test@example.com"])
+  .exists();
+```
+
+The `limit()` method accepts count and an optional offset: `limit(10, 20)`. There is no separate `offset()` method.
+
+Note that `get()` returns plain objects, not model instances. Use `findById()`, `find()`, `all()`, or `where()` when you need model instances with `save()`, `delete()`, and relationship methods.
+
+See the [QueryBuilder chapter](07-query-builder.md) for the full fluent API including joins, grouping, having, and MongoDB support.
+
+### Multiple Database Connections
+
+A model can target a named database connection using `static _db`:
+
+```typescript
+export default class AuditLog extends BaseModel {
+  static tableName = "audit_logs";
+  static _db = "secondary";  // Uses the "secondary" named adapter
+  static fields = {
+    id:    { type: "integer" as const, primaryKey: true, autoIncrement: true },
+    event: { type: "string" as const, required: true },
+  };
+}
+```
+
+Register the named adapter at startup with `initDatabase()`.

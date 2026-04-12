@@ -2,403 +2,396 @@
 
 ## 1. From SQL to Objects
 
-Chapter 5 used raw SQL for every operation. It works. It also repeats. The same `INSERT INTO products (name, price, ...) VALUES (:name, :price, ...)` pattern shows up in every route. The ORM replaces that repetition with PHP classes. Define a class. Map it to a table. Call `save()`, `load()`, `delete()`.
+The last chapter was raw SQL. It works. It also gets repetitive. Every insert demands an INSERT statement. Every update demands an UPDATE. Every fetch maps column names to array keys. Over and over.
 
-Tina4's ORM stays minimal. It does not hide SQL. It gives you methods for common operations and steps aside when you need raw queries.
+Tina4's ORM turns database rows into PHP objects. Define a model class with properties. The ORM writes the SQL. It stays SQL-first -- you can drop to raw SQL at any moment -- but for the 90% case of CRUD operations, the ORM handles the grunt work.
+
+Picture a blog. Authors, posts, comments. Authors own many posts. Posts own many comments. Comments belong to posts. Modelling these relationships with raw SQL means JOINs and manual foreign key management. The ORM makes this declarative.
 
 ---
 
 ## 2. Defining a Model
 
-ORM models live in `src/orm/`. Every `.php` file in that directory is auto-loaded, just like route files.
+Create a model file in `src/orm/`. Every `.php` file in that directory is auto-loaded.
 
-Create `src/orm/Product.php`:
+Create `src/orm/Note.php`:
 
 ```php
 <?php
+
 use Tina4\ORM;
 
-class Product extends ORM
+class Note extends ORM
 {
+    public string $tableName = "notes";
+    public string $primaryKey = "id";
+
     public int $id;
-    public string $name;
-    public string $category = "Uncategorized";
-    public float $price = 0.00;
-    public bool $inStock = true;
+    public string $title;
+    public string $content = "";
+    public string $category = "general";
+    public bool $pinned = false;
     public string $createdAt;
     public string $updatedAt;
-
-    // Map to the "products" table
-    public string $tableName = "products";
-
-    // Primary key field
-    public string $primaryKey = "id";
 }
 ```
 
 A complete model. Here is what each piece does:
 
-- **Extends `ORM`** -- Gives you `save()`, `load()`, `delete()`, `select()`, and other methods.
-- **Public properties** -- Each one maps to a database column. Property names are `camelCase`. Column names are `snake_case`. Tina4 converts automatically: `inStock` maps to `in_stock`, `createdAt` maps to `created_at`.
-- **`$tableName`** -- The database table. Omit it and Tina4 uses the lowercase class name: `Product` becomes `product`. Set `ORM_PLURAL_TABLE_NAMES=true` in `.env` to get plural names (`product` → `products`).
-- **`$primaryKey`** -- The primary key column. Defaults to `"id"`.
-- **Default values** -- Properties like `$category = "Uncategorized"` apply when creating new records without specifying those fields.
+- `$tableName` -- the database table this model maps to. If omitted, the ORM uses the lowercase class name (e.g. `Contact` maps to `contact`).
+- `$primaryKey` -- the primary key column name. Defaults to `"id"` if not specified.
+- Each property uses native PHP type hints (`int`, `string`, `float`, `bool`) to define the column type.
 
-### Auto-Mapping with `$autoMap`
+### Property Types
 
-By default, you must declare every property or use `$fieldMapping` to map database columns to PHP properties. Setting `$autoMap = true` lets Tina4 auto-generate mappings from `snake_case` database columns to `camelCase` properties:
+| PHP Type | SQL Type | Description |
+|----------|----------|-------------|
+| `int` | `INTEGER` | Whole numbers |
+| `string` | `VARCHAR(255)` | Text strings |
+| `float` | `REAL` / `DOUBLE PRECISION` | Decimal numbers |
+| `bool` | `INTEGER` (0/1) | True/False |
 
-```php
-class Product extends ORM
-{
-    public string $tableName = "products";
-    public string $primaryKey = "id";
-    public bool $autoMap = true;
+For foreign keys, use `int`. There is no separate foreign key type -- the relationship is defined through `$hasMany`, `$hasOne`, and `$belongsTo` array properties instead.
 
-    public int $id;
-    public string $productName;   // auto-maps to "product_name"
-    public float $unitPrice;      // auto-maps to "unit_price"
-    public bool $inStock;         // auto-maps to "in_stock"
-}
-```
+### Field Mapping
 
-With `$autoMap = true`, when Tina4 loads data from the database, it automatically converts `snake_case` column names to `camelCase` property names using the built-in `snakeToCamel()` helper (and `camelToSnake()` when saving). Explicit `$fieldMapping` entries always take precedence over auto-mapped ones.
-
----
-
-## 3. Field Types
-
-PHP type declarations on properties. Tina4 uses them for DDL generation and data validation:
-
-| PHP Type | Database Type (SQLite) | Database Type (PostgreSQL) | Notes |
-|----------|----------------------|---------------------------|-------|
-| `int` | INTEGER | INTEGER | Whole numbers |
-| `string` | TEXT | VARCHAR(255) | Text fields |
-| `float` | REAL | DOUBLE PRECISION | Decimal numbers |
-| `bool` | INTEGER | BOOLEAN | SQLite stores as 0/1 |
-| `?string` | TEXT (nullable) | VARCHAR(255) NULL | Nullable with `?` prefix |
-
-### Nullable Fields
-
-PHP nullable type syntax:
-
-```php
-public ?string $description = null;
-public ?float $discount = null;
-```
-
-The `?` prefix allows `null` in the database column.
-
-### Primary Keys and Auto-Increment
-
-Tina4 treats `$primaryKey` as auto-incrementing by default. Call `save()` on a new object (primary key not set) and the database generates the ID:
-
-```php
-$product = new Product();
-$product->name = "Widget";
-$product->price = 9.99;
-$product->save();
-
-echo $product->id; // Auto-generated: 1, 2, 3, ...
-```
-
----
-
-## 4. Creating and Saving Records
-
-### save() -- Insert or Update
-
-`save()` inspects the primary key. Not set: INSERT. Already set: UPDATE.
+When your PHP property names do not match the database column names, use `$fieldMapping` to define the translation:
 
 ```php
 <?php
-use Tina4\Router;
 
-Router::post("/api/products", function ($request, $response) {
-    $body = $request->body;
+use Tina4\ORM;
 
-    $product = new Product();
-    $product->name = $body["name"];
-    $product->category = $body["category"] ?? "Uncategorized";
-    $product->price = (float) ($body["price"] ?? 0);
-    $product->inStock = (bool) ($body["in_stock"] ?? true);
-    $product->save();
-
-    return $response->json($product->toArray(), 201);
-});
-```
-
-```bash
-curl -X POST http://localhost:7146/api/products \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Wireless Keyboard", "category": "Electronics", "price": 79.99}'
-```
-
-```json
+class User extends ORM
 {
-  "id": 1,
-  "name": "Wireless Keyboard",
-  "category": "Electronics",
-  "price": 79.99,
-  "in_stock": true,
-  "created_at": "2026-03-22 14:30:00",
-  "updated_at": "2026-03-22 14:30:00"
+    public string $tableName = "user_accounts";
+    public array $fieldMapping = [
+        "firstName" => "fname",      // PHP property => DB column
+        "lastName"  => "lname",
+        "emailAddress" => "email",
+    ];
+
+    public int $id;
+    public string $firstName;
+    public string $lastName;
+    public string $emailAddress;
 }
 ```
 
-### Updating an Existing Record
+With this mapping, `$user->firstName` reads from and writes to the `fname` column. The ORM handles the conversion in both directions -- on `findById()`, `save()`, `select()`, and `toDict()`. This is useful with legacy databases or third-party schemas where you cannot rename the columns.
 
-When `id` is set, `save()` performs an UPDATE:
+### autoMap and Case Conversion
 
-```php
-Router::put("/api/products/{id:int}", function ($request, $response) {
-    $product = new Product();
-    $product->load($request->params["id"]);
-
-    if (empty($product->id)) {
-        return $response->json(["error" => "Product not found"], 404);
-    }
-
-    $body = $request->body;
-    $product->name = $body["name"] ?? $product->name;
-    $product->price = (float) ($body["price"] ?? $product->price);
-    $product->category = $body["category"] ?? $product->category;
-    $product->save();
-
-    return $response->json($product->toArray());
-});
-```
-
----
-
-## 5. Loading Records
-
-### load() -- Get by Primary Key
+The `$autoMap` flag converts camelCase PHP property names to snake_case database column names. This matters in PHP because convention uses camelCase for properties, but most databases use snake_case for columns.
 
 ```php
-$product = new Product();
-$product->load(42);
+<?php
 
-if (empty($product->id)) {
-    // Product with ID 42 not found
-}
-```
+use Tina4\ORM;
 
-`load()` populates the object from the database row matching the primary key. No match leaves properties at their defaults (or unset).
-
-### A Simple Get Endpoint
-
-```php
-Router::get("/api/products/{id:int}", function ($request, $response) {
-    $product = new Product();
-    $product->load($request->params["id"]);
-
-    if (empty($product->id)) {
-        return $response->json(["error" => "Product not found"], 404);
-    }
-
-    return $response->json($product->toArray());
-});
-```
-
-```bash
-curl http://localhost:7146/api/products/1
-```
-
-```json
+class User extends ORM
 {
-  "id": 1,
-  "name": "Wireless Keyboard",
-  "category": "Electronics",
-  "price": 79.99,
-  "in_stock": true,
-  "created_at": "2026-03-22 14:30:00",
-  "updated_at": "2026-03-22 14:30:00"
+    public string $tableName = "users";
+    public bool $autoMap = true;  // firstName <-> first_name
+
+    public int $id;
+    public string $firstName;    // maps to first_name column
+    public string $lastName;     // maps to last_name column
+    public string $emailAddress; // maps to email_address column
 }
 ```
 
----
-
-## 6. Deleting Records
-
-### delete()
-
-```php
-Router::delete("/api/products/{id:int}", function ($request, $response) {
-    $product = new Product();
-    $product->load($request->params["id"]);
-
-    if (empty($product->id)) {
-        return $response->json(["error" => "Product not found"], 404);
-    }
-
-    $product->delete();
-
-    return $response->json(null, 204);
-});
-```
-
-`delete()` removes the row from the database. The object stays in memory. The database row is gone.
+When `$autoMap` is `true`, the ORM generates the `$fieldMapping` entries from your camelCase properties. Explicit entries in `$fieldMapping` take precedence over auto-generated ones.
 
 ---
 
-## 7. Querying with select()
+## 3. createTable -- Schema from Models
 
-`select()` finds records with filters, ordering, and pagination.
-
-### Basic Select
+You can create the database table directly from your model:
 
 ```php
-$product = new Product();
-$products = $product->select("*");
-```
-
-Returns an array of Product objects. All records.
-
-### Filtering
-
-```php
-$product = new Product();
-
-// Simple filter
-$electronics = $product->select("*", "category = :category", ["category" => "Electronics"]);
-
-// Multiple conditions
-$affordable = $product->select("*", "price < :maxPrice AND in_stock = :inStock", [
-    "maxPrice" => 100,
-    "inStock" => 1
+$note = new Note($db);
+$note->createTable([
+    'id'         => 'INTEGER PRIMARY KEY AUTOINCREMENT',
+    'title'      => 'VARCHAR(200) NOT NULL',
+    'content'    => 'TEXT DEFAULT ""',
+    'category'   => 'VARCHAR(50) DEFAULT "general"',
+    'pinned'     => 'INTEGER DEFAULT 0',
+    'created_at' => 'DATETIME',
+    'updated_at' => 'DATETIME',
 ]);
 ```
 
-### Ordering
+This generates and runs the CREATE TABLE SQL. It is good for development and testing. For production, use migrations (Chapter 5) for version-controlled schema changes.
+
+If you call `createTable()` with no arguments, it creates a minimal table with just the primary key column.
+
+---
+
+## 4. CRUD Operations
+
+### save -- Create or Update
 
 ```php
-$product = new Product();
-$sorted = $product->select("*", "", [], "price DESC");
+Router::post("/api/notes", function (Request $request, Response $response) {
+    $note = new Note();
+    $note->title = $request->body["title"];
+    $note->content = $request->body["content"] ?? "";
+    $note->category = $request->body["category"] ?? "general";
+    $note->pinned = $request->body["pinned"] ?? false;
+    $note->save();
+
+    return $response(["message" => "Note created", "note" => $note->toDict()], 201);
+});
 ```
 
-Fourth argument: ORDER BY clause.
+`save()` detects whether the record is new (INSERT) or existing (UPDATE) based on whether the primary key has a value and whether the record exists in the database. It returns `$this` on success (fluent chaining), or `false` on failure.
 
-### Pagination
+### create -- Build and Save in One Step
+
+When you have an array of data ready, `create()` builds the model and saves it in one call:
 
 ```php
-$product = new Product();
-
-$page = 1;
-$perPage = 10;
-$offset = ($page - 1) * $perPage;
-
-$products = $product->select("*", "", [], "name ASC", $perPage, $offset);
+$note = Note::create([
+    "title"    => "Quick Note",
+    "content"  => "Created in one step",
+    "category" => "general",
+]);
 ```
 
-Fifth argument: LIMIT. Sixth: OFFSET.
+`create()` is a static method. It creates a new instance, populates it from the array, calls `save()`, and returns the saved instance.
 
-### A Full List Endpoint with Filters
+### findById -- Fetch One Record by Primary Key
 
 ```php
-<?php
-use Tina4\Router;
+Router::get("/api/notes/{id}", function (Request $request, Response $response) {
+    $note = Note::findById($request->params["id"]);
 
-Router::get("/api/products", function ($request, $response) {
-    $product = new Product();
-
-    $category = $request->params["category"] ?? "";
-    $minPrice = (float) ($request->params["min_price"] ?? 0);
-    $maxPrice = (float) ($request->params["max_price"] ?? 999999);
-    $page = (int) ($request->params["page"] ?? 1);
-    $perPage = (int) ($request->params["per_page"] ?? 20);
-    $sort = $request->params["sort"] ?? "name";
-    $order = strtoupper($request->params["order"] ?? "ASC");
-
-    // Build filter
-    $conditions = [];
-    $params = [];
-
-    if (!empty($category)) {
-        $conditions[] = "category = :category";
-        $params["category"] = $category;
+    if ($note === null) {
+        return $response(["error" => "Note not found"], 404);
     }
 
-    $conditions[] = "price >= :minPrice AND price <= :maxPrice";
-    $params["minPrice"] = $minPrice;
-    $params["maxPrice"] = $maxPrice;
+    return $response($note->toDict());
+});
+```
 
-    $filter = implode(" AND ", $conditions);
+`findById()` takes a primary key value and returns a model instance, or `null` if no row matches. If soft delete is enabled, it excludes soft-deleted records.
 
-    // Validate sort field
-    $allowedSorts = ["name", "price", "category", "created_at"];
-    if (!in_array($sort, $allowedSorts)) {
-        $sort = "name";
+Use `findOrFail()` when you want a `RuntimeException` raised instead of `null`:
+
+```php
+$note = Note::findOrFail($id);  // Throws RuntimeException if not found
+```
+
+### find -- Query by Filter Array
+
+The `find()` method accepts an associative array of column-value pairs and returns an array of matching records:
+
+```php
+// Find all notes in the "work" category
+$workNotes = Note::find(["category" => "work"]);
+
+// Find with pagination and ordering
+$recent = Note::find(["pinned" => true], limit: 10, orderBy: "created_at DESC");
+
+// Find all records (no filter)
+$allNotes = Note::find();
+```
+
+### find() vs where() -- naming convention
+
+The two query methods have a deliberate difference in how they handle column names:
+
+- **`find($filter)`** uses **PHP property names**. The ORM translates them via `$fieldMapping` or `$autoMap`.
+- **`where($sql)`** uses **raw DB column names** in the SQL string. No translation is done.
+
+```php
+// find() -- use PHP property names
+$accounts = (new Account())->find(["accountNo" => "A001"]);    // translates to ACCOUNTNO = ?
+
+// where() -- use DB column names directly in the SQL
+$accounts = (new Account())->where("ACCOUNTNO = ?", ["A001"]); // raw SQL, no translation
+```
+
+> **Warning:** Mixing up the two is a common source of bugs. Use `find()` for portability and `where()` when you need full SQL control. Never pass DB column names to `find()`, and never use PHP property names as column names in `where()`.
+
+### where -- Query with SQL Conditions
+
+For more complex queries, `where()` takes a SQL WHERE clause with `?` placeholders:
+
+```php
+$notes = (new Note())->where("category = ?", ["work"]);
+```
+
+### delete -- Remove a Record
+
+```php
+Router::delete("/api/notes/{id}", function (Request $request, Response $response) {
+    $note = Note::findById($request->params["id"]);
+
+    if ($note === null) {
+        return $response(["error" => "Note not found"], 404);
     }
-    if ($order !== "ASC" && $order !== "DESC") {
-        $order = "ASC";
+
+    $note->delete();
+
+    return $response(null, 204);
+});
+```
+
+### Listing Records
+
+```php
+Router::get("/api/notes", function (Request $request, Response $response) {
+    $category = $request->query["category"] ?? null;
+
+    if ($category) {
+        $notes = (new Note())->where("category = ?", [$category]);
+        return $response([
+            "notes" => array_map(fn(Note $n) => $n->toDict(), $notes),
+            "count" => count($notes),
+        ]);
     }
 
-    $offset = ($page - 1) * $perPage;
+    $notes = (new Note())->all();
 
-    $products = $product->select("*", $filter, $params, $sort . " " . $order, $perPage, $offset);
-
-    $results = array_map(fn($p) => $p->toArray(), $products);
-
-    return $response->json([
-        "products" => $results,
-        "page" => $page,
-        "per_page" => $perPage,
-        "count" => count($results)
+    return $response([
+        "notes" => array_map(fn(Note $n) => $n->toDict(), $notes),
+        "count" => count($notes),
     ]);
 });
 ```
 
-```bash
-curl "http://localhost:7146/api/products?category=Electronics&sort=price&order=DESC&page=1&per_page=5"
-```
-
-```json
-{
-  "products": [
-    {"id": 4, "name": "Standing Desk", "category": "Electronics", "price": 549.99, "in_stock": true},
-    {"id": 1, "name": "Wireless Keyboard", "category": "Electronics", "price": 79.99, "in_stock": true}
-  ],
-  "page": 1,
-  "per_page": 5,
-  "count": 2
-}
-```
-
----
-
-## 8. Creating Tables from Models
-
-Generate the table directly from your model:
+`where()` takes a WHERE clause with `?` placeholders and an array of parameters. It returns an array of model instances. `all()` also returns an array of model instances. Both support pagination:
 
 ```php
-$product = new Product();
-$product->createTable();
+// With pagination
+$notes = (new Note())->where("category = ?", ["work"], limit: 20, offset: 40);
+
+// Fetch all with pagination
+$result = (new Note())->all(limit: 20, offset: 0);
+
+// SQL-first query -- full control over the SQL
+$notes = (new Note())->select(
+    "SELECT * FROM notes WHERE pinned = ? ORDER BY created_at DESC",
+    [1], limit: 20, offset: 0
+);
 ```
 
-Tina4 reads the properties, types, and defaults from the class and generates the correct `CREATE TABLE` statement for your database engine.
+### selectOne -- Fetch a Single Record by SQL
 
-CLI alternative:
+When you need exactly one record from a custom SQL query:
 
-```bash
-tina4 orm:create-table Product
+```php
+$note = (new Note())->selectOne("SELECT * FROM notes WHERE slug = ?", ["my-note"]);
 ```
 
-```
-Created table "products" with 7 columns.
+Returns a model instance or `null`.
+
+### load -- Populate an Existing Instance
+
+The `load()` method fills an existing model instance from the database:
+
+```php
+$note = new Note();
+$note->id = 42;
+$note->load();  // Loads data for id=42
+
+// Or with a filter string
+$note = new Note();
+$note->load("slug = ?", ["my-note"]);
 ```
 
-Handy during early development. For production, use migrations (Chapter 5) so schema changes are versioned and reversible.
+Returns `true` if a record was found, `false` otherwise.
+
+### count -- Count Records
+
+```php
+$total = (new Note())->count();
+$workCount = (new Note())->count("category = ?", ["work"]);
+```
+
+Respects soft delete -- only counts non-deleted records.
 
 ---
 
-## 9. Relationships
+## 5. toDict, toJson, and Other Serialisation
 
-### hasMany -- One-to-Many
+### toDict
 
-A user has many posts.
+Convert a model instance to an associative array (keyed by property names):
 
-Create `src/orm/User.php`:
+```php
+$note = Note::findById(1);
+
+$data = $note->toDict();
+// ["id" => 1, "title" => "Shopping List", "content" => "Milk, eggs", "category" => "personal", "pinned" => false, "createdAt" => "2026-03-22 14:30:00", "updatedAt" => "2026-03-22 14:30:00"]
+```
+
+The `$include` parameter adds relationship data to the output (see Eager Loading below). Pass an array of relationship names:
+
+```php
+// Include relationships in the dict
+$data = $note->toDict(["comments"]);
+```
+
+### toJson
+
+Convert directly to a JSON string:
+
+```php
+$jsonString = $note->toJson();
+// '{"id": 1, "title": "Shopping List", ...}'
+```
+
+### toArray vs toDict
+
+This distinction matters. `toDict()` returns an associative array with property names as keys. `toArray()` returns an indexed array of values with keys stripped:
+
+```php
+$note = Note::findById(1);
+
+$note->toDict();
+// ["id" => 1, "title" => "Shopping List", "content" => "Milk, eggs"]
+
+$note->toArray();
+// [1, "Shopping List", "Milk, eggs"]
+```
+
+### toObject() -- Returns a stdClass
+
+`toObject()` returns a PHP `stdClass` object, not an array. This differs from `toDict()` which returns an associative array:
+
+```php
+$user = (new User())->findById(1);
+
+$obj = $user->toObject();
+var_dump(is_object($obj));  // bool(true)
+echo $obj->name;            // access as object property
+
+$arr = $user->toDict();
+var_dump(is_array($arr));   // bool(true)
+echo $arr["name"];          // access as array key
+```
+
+### All Serialisation Methods
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `toDict($include)` | `array` | Associative array, keyed by PHP property names |
+| `toAssoc($include)` | `array` | Alias for `toDict()` |
+| `toObject()` | `stdClass` | PHP object (NOT an array) — properties match PHP property names |
+| `toJson($include)` | `string` | JSON string |
+| `toArray()` | `array` | Indexed array of values (no keys) |
+| `toList()` | `array` | Alias for `toArray()` |
+
+---
+
+## 6. Relationships
+
+### $foreignKeys — Auto-Wired Relationships
+
+Declaring `public array $foreignKeys = ['user_id' => 'User']` on a model automatically wires both sides of the relationship. The declaring model gets a `belongsTo` accessor (the column name with `_id` stripped), and the referenced model gets a `hasMany` accessor (the declaring class name lowercased with `s` appended).
 
 ```php
 <?php
@@ -406,160 +399,241 @@ use Tina4\ORM;
 
 class User extends ORM
 {
-    public int $id;
-    public string $name;
-    public string $email;
-    public string $createdAt;
-
     public string $tableName = "users";
     public string $primaryKey = "id";
-
-    public function posts(): array
-    {
-        return $this->hasMany(Post::class, "user_id");
-    }
 }
-```
-
-Create `src/orm/Post.php`:
-
-```php
-<?php
-use Tina4\ORM;
 
 class Post extends ORM
 {
-    public int $id;
-    public int $userId;
-    public string $title;
-    public string $body;
-    public string $createdAt;
-
     public string $tableName = "posts";
     public string $primaryKey = "id";
 
-    public function user(): ?User
-    {
-        return $this->belongsTo(User::class, "user_id");
-    }
-
-    public function comments(): array
-    {
-        return $this->hasMany(Comment::class, "post_id");
-    }
+    // Auto-wires $post->user (belongs_to) and $user->posts (has_many)
+    public array $foreignKeys = [
+        'user_id' => 'User',
+    ];
 }
 ```
 
-The second argument to `hasMany()` is the foreign key on the related table. `$this->hasMany(Post::class, "user_id")` means: find all rows in `posts` where `user_id` equals this user's ID.
-
-### hasOne -- One-to-One
+With just the `$foreignKeys` array, both sides are accessible:
 
 ```php
-public function profile(): ?Profile
+$post = new Post($db);
+$post->load('id = 1');
+echo $post->user->name;              // "Alice"
+
+$user = new User($db);
+$user->load('id = 1');
+foreach ($user->posts as $post) {
+    echo $post->title . "\n";
+}
+```
+
+For a custom `has_many` key, use the extended form:
+
+```php
+public array $foreignKeys = [
+    'user_id' => ['model' => 'User', 'related_name' => 'blog_posts'],
+];
+// $user->blog_posts instead of $user->posts
+```
+
+### hasMany
+
+An author has many posts:
+
+Create `src/orm/Author.php`:
+
+```php
+<?php
+
+use Tina4\ORM;
+
+class Author extends ORM
 {
-    return $this->hasOne(Profile::class, "user_id");
+    public string $tableName = "authors";
+
+    public int $id;
+    public string $name;
+    public string $email;
+    public string $bio = "";
+    public string $createdAt;
 }
 ```
 
-Same as `hasMany()` but returns a single object.
-
-### belongsTo -- Inverse Relationship
-
-A post belongs to a user:
+Create `src/orm/BlogPost.php`:
 
 ```php
-public function user(): ?User
+<?php
+
+use Tina4\ORM;
+
+class BlogPost extends ORM
 {
-    return $this->belongsTo(User::class, "user_id");
+    public string $tableName = "posts";
+
+    public int $id;
+    public int $authorId;
+    public string $title;
+    public string $slug;
+    public string $content = "";
+    public string $status = "draft";
+    public string $createdAt;
+    public string $updatedAt;
 }
 ```
 
-`belongsTo(User::class, "user_id")` means: load the User where `users.id` equals `this->user_id`.
-
-### Using Relationships
+Now use `hasMany()` to get an author's posts:
 
 ```php
-Router::get("/api/users/{id:int}", function ($request, $response) {
-    $user = new User();
-    $user->load($request->params["id"]);
+Router::get("/api/authors/{id}", function (Request $request, Response $response) {
+    $author = Author::findById($request->params["id"]);
 
-    if (empty($user->id)) {
-        return $response->json(["error" => "User not found"], 404);
+    if ($author === null) {
+        return $response(["error" => "Author not found"], 404);
     }
 
-    $posts = $user->posts();
+    $posts = $author->hasMany(BlogPost::class, "author_id");
 
-    return $response->json([
-        "user" => $user->toArray(),
-        "posts" => array_map(fn($p) => $p->toArray(), $posts),
-        "post_count" => count($posts)
-    ]);
+    $data = $author->toDict();
+    $data["posts"] = array_map(fn(BlogPost $p) => $p->toDict(), $posts);
+
+    return $response($data);
 });
-```
-
-```bash
-curl http://localhost:7146/api/users/1
 ```
 
 ```json
 {
-  "user": {"id": 1, "name": "Alice", "email": "alice@example.com"},
+  "id": 1,
+  "name": "Alice",
+  "email": "alice@example.com",
+  "bio": "Tech writer",
   "posts": [
-    {"id": 1, "user_id": 1, "title": "First Post", "body": "Hello world!"},
-    {"id": 3, "user_id": 1, "title": "Second Post", "body": "Another one."}
-  ],
-  "post_count": 2
+    {"id": 1, "title": "Getting Started with Tina4", "slug": "getting-started", "status": "published"},
+    {"id": 2, "title": "Advanced Routing", "slug": "advanced-routing", "status": "draft"}
+  ]
 }
+```
+
+### hasOne
+
+A user has one profile:
+
+```php
+$profile = $user->hasOne(Profile::class, "user_id");
+```
+
+Returns a single model instance or `null`.
+
+### belongsTo
+
+A post belongs to an author:
+
+```php
+Router::get("/api/posts/{id}", function (Request $request, Response $response) {
+    $post = BlogPost::findById($request->params["id"]);
+
+    if ($post === null) {
+        return $response(["error" => "Post not found"], 404);
+    }
+
+    $author = $post->belongsTo(Author::class, "author_id");
+
+    $data = $post->toDict();
+    $data["author"] = $author ? $author->toDict() : null;
+
+    return $response($data);
+});
+```
+
+```json
+{
+  "id": 1,
+  "authorId": 1,
+  "title": "Getting Started with Tina4",
+  "slug": "getting-started",
+  "content": "...",
+  "status": "published",
+  "author": {
+    "id": 1,
+    "name": "Alice",
+    "email": "alice@example.com"
+  }
+}
+```
+
+### Declarative Relationships
+
+Instead of calling relationship methods in every route, declare them as array properties on the model. Each entry is a two-element array: `[ClassName, foreign_key_column]`.
+
+```php
+<?php
+
+use Tina4\ORM;
+
+class Author extends ORM
+{
+    public string $tableName = "authors";
+    public array $hasMany = [
+        ["BlogPost", "author_id"],
+    ];
+
+    public int $id;
+    public string $name;
+    public string $email;
+}
+```
+
+```php
+<?php
+
+use Tina4\ORM;
+
+class BlogPost extends ORM
+{
+    public string $tableName = "posts";
+    public array $hasOne = [
+        ["Author", "author_id"],
+    ];
+    public array $hasMany = [
+        ["Comment", "post_id"],
+    ];
+
+    public int $id;
+    public int $authorId;
+    public string $title;
+    public string $content = "";
+}
+```
+
+With declarative relationships, accessing the magic property triggers lazy loading. The property name is the lowercase class name (or the lowercase plural for `hasMany`):
+
+```php
+$author = (new Author())->findById(1);
+$posts  = $author->posts;   // Lazy-loads BlogPost records via the hasMany declaration
+
+$post   = (new BlogPost())->findById(1);
+$author = $post->author;    // Lazy-loads the related Author via hasOne
 ```
 
 ---
 
-## 10. Eager Loading
+## 7. Eager Loading
 
-Calling relationship methods inside a loop triggers the N+1 problem. Load 100 users. Call `$user->posts()` for each one. That fires 101 queries. One for users. One hundred for posts.
+Calling relationship methods inside a loop creates the N+1 problem. Load 10 authors. Call `hasMany(BlogPost::class, "author_id")` for each one. That fires 11 queries -- 1 for authors, 10 for posts. The page drags.
 
-Use the `include` parameter with `select()` to eager-load:
+The `$include` parameter on `toDict()` and `selectOne()` solves this. It eager-loads relationships in bulk.
 
-```php
-$user = new User();
-$users = $user->select("*", "", [], "name ASC", 20, 0, ["posts"]);
-```
-
-The seventh argument is an array of relationship names. Two queries total: one for users, one for all related posts. Tina4 stitches the results together.
-
-### toArray() with Nested Includes
-
-When eager loading is active, `toArray()` includes the related data:
+For models with declarative relationships (`$hasOne`, `$hasMany`, `$belongsTo` array properties), pass a list of relationship names:
 
 ```php
-$user = new User();
-$users = $user->select("*", "", [], "", 0, 0, ["posts"]);
+// Eager load posts when serialising an author
+$author = Author::findById(1);
+$data = $author->toDict(["posts"]);
 
-$result = array_map(fn($u) => $u->toArray(), $users);
-
-return $response->json($result);
-```
-
-```json
-[
-  {
-    "id": 1,
-    "name": "Alice",
-    "email": "alice@example.com",
-    "posts": [
-      {"id": 1, "title": "First Post", "body": "Hello world!"},
-      {"id": 3, "title": "Second Post", "body": "Another one."}
-    ]
-  },
-  {
-    "id": 2,
-    "name": "Bob",
-    "email": "bob@example.com",
-    "posts": [
-      {"id": 2, "title": "Bob's Post", "body": "Hi there."}
-    ]
-  }
-]
+// Eager load author and comments when serialising a post
+$post = BlogPost::findById(1);
+$data = $post->toDict(["author", "comments"]);
 ```
 
 ### Nested Eager Loading
@@ -567,237 +641,394 @@ return $response->json($result);
 Dot notation loads multiple levels deep:
 
 ```php
-$user = new User();
-$users = $user->select("*", "", [], "", 0, 0, ["posts", "posts.comments"]);
+// Load author with posts, and each post with its comments
+$data = $author->toDict(["posts", "posts.comments"]);
 ```
 
-Users, their posts, and each post's comments. Three queries total.
+Authors, their posts, and each post's comments. Three queries total instead of hundreds.
+
+### toDict with Nested Includes
+
+When eager loading is active, `toDict()` embeds the related data:
+
+```php
+$post = BlogPost::findById(1);
+$data = $post->toDict(["author", "comments"]);
+```
+
+```json
+{
+  "id": 1,
+  "title": "Getting Started with Tina4",
+  "author": {
+    "id": 1,
+    "name": "Alice",
+    "email": "alice@example.com"
+  },
+  "comments": [
+    {"id": 1, "body": "Great post!", "authorName": "Bob"}
+  ]
+}
+```
 
 ---
 
-## 11. Soft Delete
+## 8. Soft Delete
 
-Add a `deletedAt` property and Tina4 marks records as deleted instead of removing them:
+Sometimes a record needs to disappear from queries without leaving the database. Soft delete handles this. The row stays. A flag marks it as deleted. Queries skip it.
 
 ```php
 <?php
+
 use Tina4\ORM;
 
-class Post extends ORM
+class Task extends ORM
 {
+    public string $tableName = "tasks";
+    public bool $softDelete = true;  // Enable soft delete
+
     public int $id;
     public string $title;
-    public string $body;
-    public ?string $deletedAt = null;
-
-    public string $tableName = "posts";
-    public string $primaryKey = "id";
-    public bool $softDelete = true;
+    public bool $completed = false;
+    public int $isDeleted = 0;  // Required for soft delete (0 = active, 1 = deleted)
+    public string $createdAt;
 }
 ```
 
-With `$softDelete = true`:
+When `$softDelete` is `true`, the ORM changes its behaviour:
 
-- `$post->delete()` sets `deleted_at` to the current timestamp. The row stays.
-- `select()` excludes rows where `deleted_at` is not null.
-- `$post->forceDelete()` removes the row permanently.
+- `$task->delete()` sets `is_deleted` to `1` instead of running a DELETE query
+- `Task::find()`, `(new Task)->where()`, and `Task::findById()` filter out records where `is_deleted = 1`
+- `$task->restore()` sets `is_deleted` back to `0` and makes the record visible again
+- `$task->forceDelete()` permanently removes the row from the database
+- `(new Task)->withTrashed()` includes soft-deleted records in query results
 
-### Restoring Soft-Deleted Records
+The soft delete column is `is_deleted` (integer, 0 or 1). There is no `deleted_at` timestamp column -- just the flag.
 
-Use `restore()` to bring a soft-deleted record back:
-
-```php
-$post = new Post();
-$post->load(5); // Load even if soft-deleted
-$post->restore();
-```
-
-`restore()` clears `deleted_at` and saves the record in one call. The row reappears in normal queries.
-
-### Including Soft-Deleted Records in Queries
+### Deleting and Restoring
 
 ```php
-$post = new Post();
-$allPosts = $post->select("*", "", [], "", 0, 0, [], true); // eighth arg = include deleted
+// Soft delete -- sets is_deleted = 1, row stays in the database
+$task = Task::findById(1);
+$task->delete();
+
+// Restore -- sets is_deleted = 0, record is visible again
+$task->restore();
+
+// Permanently delete -- removes the row, no recovery possible
+$task->forceDelete();
 ```
+
+`restore()` is the inverse of `delete()`. It sets `is_deleted` back to `0` and commits the change. The record reappears in all standard queries.
+
+### Including Soft-Deleted Records
+
+Standard queries (`all()`, `where()`, `findById()`) exclude soft-deleted records. When you need to see everything -- for admin dashboards, audit logs, or data recovery -- use `withTrashed()`:
+
+```php
+// All tasks, including soft-deleted ones
+$allTasks = (new Task())->withTrashed();
+
+// Soft-deleted tasks matching a condition
+$deletedTasks = (new Task())->withTrashed("completed = ?", [1]);
+```
+
+`withTrashed()` accepts the same filter parameters as `where()`. The only difference: it ignores the `is_deleted` filter that standard queries apply.
+
+### Counting with Soft Delete
+
+The `count()` method respects soft delete. It only counts non-deleted records:
+
+```php
+$activeCount = (new Task())->count();
+$activeWork = (new Task())->count("category = ?", ["work"]);
+```
+
+### When to Use Soft Delete
+
+Soft delete suits data that users might want to recover -- emails, documents, user accounts. It also serves audit requirements where regulations demand retention. For temporary data (sessions, cache entries, logs), hard delete keeps the table lean.
 
 ---
 
-## 12. NumericField for Prices
+## 9. Auto-CRUD
 
-Floating-point arithmetic causes rounding errors with money. Use `NumericField` for precise decimals:
+Writing the same five REST endpoints for every model gets tedious. Auto-CRUD generates them from your model class. Define the model. Register it. Five routes appear.
 
-```php
-<?php
-use Tina4\ORM;
-use Tina4\NumericField;
+### The autoCrud Flag
 
-class Product extends ORM
-{
-    public int $id;
-    public string $name;
-    public NumericField $price;
-    public NumericField $discount;
-
-    public string $tableName = "products";
-    public string $primaryKey = "id";
-}
-```
-
-`NumericField` maps to `DECIMAL` or `NUMERIC` in the database. Precision stays intact for financial operations.
-
----
-
-## 13. Auto-CRUD
-
-Tina4 generates REST endpoints from any ORM model. One property flips the switch:
+The simplest approach -- set `$autoCrud = true` on your model class:
 
 ```php
 <?php
+
 use Tina4\ORM;
 
-class Product extends ORM
+class Note extends ORM
 {
-    public int $id;
-    public string $name;
-    public string $category = "Uncategorized";
-    public float $price = 0.00;
-    public bool $inStock = true;
+    public string $tableName = "notes";
+    public bool $autoCrud = true;  // Generates REST endpoints automatically
 
-    public string $tableName = "products";
-    public string $primaryKey = "id";
-    public bool $autoCrud = true;
+    public int $id;
+    public string $title;
+    public string $content = "";
 }
 ```
 
-`$autoCrud = true` registers five routes:
+The moment PHP loads this class, the ORM registers it with AutoCrud. Five routes appear.
+
+### Manual Registration
+
+You can also register models explicitly using the `AutoCrud` class:
+
+```php
+use Tina4\AutoCrud;
+use Tina4\Database\Database;
+
+$db = Database::create("sqlite:///path/to/app.db");
+$crud = new AutoCrud($db);
+$crud->register(Note::class);
+$crud->generateRoutes();
+```
+
+Both approaches produce the same result:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/products` | List all with pagination |
-| `GET` | `/api/products/{id}` | Get one by ID |
-| `POST` | `/api/products` | Create a new record |
-| `PUT` | `/api/products/{id}` | Update a record |
-| `DELETE` | `/api/products/{id}` | Delete a record |
+| `GET` | `/api/notes` | List all with pagination (`limit`, `offset` params) |
+| `GET` | `/api/notes/{id}` | Get one by primary key |
+| `POST` | `/api/notes` | Create a new record |
+| `PUT` | `/api/notes/{id}` | Update a record |
+| `DELETE` | `/api/notes/{id}` | Delete a record |
 
-The endpoint prefix comes from the table name: `products` becomes `/api/products`.
+The endpoint prefix derives from the table name. The `notes` table becomes `/api/notes`. Pass a custom prefix to the `AutoCrud` constructor to change it:
+
+```php
+$crud = new AutoCrud($db, prefix: "/api/v2");
+// Routes: /api/v2/notes, /api/v2/notes/{id}, etc.
+```
+
+### Auto-Discovering Models
+
+Rather than registering each model by hand, point `discover()` at your models directory. It scans every `.php` file, finds ORM subclasses, and registers them all:
+
+```php
+use Tina4\AutoCrud;
+
+$crud = new AutoCrud($db);
+$crud->discover("src/orm");
+$crud->generateRoutes();
+```
+
+Every ORM model in `src/orm/` gets five REST endpoints. No route files needed.
+
+### What the Generated Routes Do
+
+**GET /api/notes** returns paginated results:
 
 ```bash
-curl http://localhost:7146/api/products
+curl "http://localhost:7146/api/notes?limit=10&offset=0"
 ```
 
 ```json
 {
   "data": [
-    {"id": 1, "name": "Wireless Keyboard", "category": "Electronics", "price": 79.99, "in_stock": true},
-    {"id": 2, "name": "Yoga Mat", "category": "Fitness", "price": 29.99, "in_stock": true}
+    {"id": 1, "title": "Shopping List", "content": "Milk, eggs", "category": "personal", "pinned": false},
+    {"id": 2, "title": "Sprint Plan", "content": "Review backlog", "category": "work", "pinned": true}
   ],
   "total": 2,
-  "page": 1,
-  "per_page": 20
+  "limit": 10,
+  "offset": 0
 }
 ```
 
-Filtering, sorting, and pagination work out of the box:
+**POST /api/notes** creates a record:
 
 ```bash
-curl "http://localhost:7146/api/products?category=Electronics&sort=price&order=desc&page=1&per_page=10"
+curl -X POST http://localhost:7146/api/notes \
+  -H "Content-Type: application/json" \
+  -d '{"title": "New Note", "content": "Created via auto-CRUD"}'
 ```
 
-Custom routes still work alongside auto-CRUD. Your custom routes take precedence.
+**DELETE /api/notes/1** respects soft delete. If the model has `$softDelete = true`, the record is marked deleted instead of removed.
+
+### Sorting and Filtering
+
+The list endpoint accepts `sort` and `filter` query parameters:
+
+```bash
+# Sort by name descending, then created_at ascending
+curl "http://localhost:7146/api/notes?sort=-name,created_at"
+
+# Filter by column values
+curl "http://localhost:7146/api/notes?filter[category]=work"
+```
+
+The `-` prefix on a sort field means descending order.
+
+### Custom Routes Alongside Auto-CRUD
+
+Custom routes defined in `src/routes/` load before auto-CRUD routes. They take precedence. If you need special logic for one endpoint (custom validation, side effects, complex queries), define that route manually. Auto-CRUD handles the rest.
+
+### Introspection
+
+Check which models are registered:
+
+```php
+$crud = new AutoCrud($db);
+$crud->register(Note::class);
+$registered = $crud->getModels();
+// ["notes" => "Note"]
+```
 
 ---
 
-## 14. Scopes
+## 10. Database Connection
 
-Scopes are reusable query filters. Define them as static methods on your model. Call them anywhere you need the same filter.
+### Setting the Global Database
+
+The ORM needs a database connection. Three ways to provide one:
 
 ```php
-<?php
 use Tina4\ORM;
+use Tina4\Database\Database;
 
-class Product extends ORM
-{
-    public int $id;
-    public string $name;
-    public float $price;
-    public bool $inStock;
-    public string $category;
+// Option 1: Set globally on ORM
+$db = Database::create("sqlite:///path/to/app.db");
+ORM::setGlobalDb($db);
 
-    public string $tableName = "products";
-    public string $primaryKey = "id";
+// Option 2: Set via App
+App::setDatabase($db);
 
-    public static function active(): array
-    {
-        $p = new self();
-        return $p->select("*", "in_stock = :inStock", ["inStock" => 1]);
-    }
+// Option 3: Set DATABASE_URL in .env (auto-discovered)
+// DATABASE_URL=sqlite:///path/to/app.db
+```
 
-    public static function expensive(float $threshold = 100.0): array
-    {
-        $p = new self();
-        return $p->select("*", "price >= :threshold", ["threshold" => $threshold]);
-    }
+Once a global database is set, all ORM models resolve it. You can also pass a database adapter to a specific instance:
 
-    public static function inCategory(string $category): array
-    {
-        $p = new self();
-        return $p->select("*", "category = :category", ["category" => $category]);
-    }
+```php
+$note = new Note($db);
+```
+
+The resolution order is: instance `$_db` -> global `ORM::setGlobalDb()` -> `App::getDatabase()` -> `Database::fromEnv()`. If none is found, the ORM throws a `RuntimeException`.
+
+---
+
+## 11. Raw SQL and DatabaseResult
+
+When you drop below the ORM to execute raw SQL, `$db->fetch()` returns a `DatabaseResult` object. This object has a `->records` property containing the rows -- it is **not** a plain array.
+
+```php
+$result = $db->fetch("SELECT * FROM users WHERE active = ?", [1]);
+
+// WRONG -- $result is not an array:
+foreach ($result['data'] as $row) { ... }
+
+// RIGHT -- iterate over ->records:
+foreach ($result->records as $row) {
+    echo $row->name;
 }
 ```
 
-Use scopes in your route handlers:
+`$result->records` is an array of `stdClass` objects, one per row. Column names map to object properties.
 
 ```php
-Router::get("/api/products/active", function ($request, $response) {
-    $products = Product::active();
-    return $response->json(array_map(fn($p) => $p->toArray(), $products));
-});
-
-Router::get("/api/products/expensive", function ($request, $response) {
-    $threshold = (float) ($request->params["min"] ?? 100);
-    $products = Product::expensive($threshold);
-    return $response->json(array_map(fn($p) => $p->toArray(), $products));
-});
+// Fetch a single row
+$result = $db->fetch("SELECT * FROM users WHERE id = ?", [42]);
+if (!empty($result->records)) {
+    $user = $result->records[0];
+    echo $user->email;
+}
 ```
 
-Scopes give common queries a name. The filtering logic lives in the model. Route handlers stay clean.
+> **Note:** ORM methods (`findById()`, `find()`, `where()`, etc.) return model instances or arrays of model instances -- not `DatabaseResult`. The `DatabaseResult` object only appears when you call `$db->fetch()` directly.
 
 ---
 
-## 15. Input Validation on Models
+## 12. Scopes
 
-Move validation into the model. Define a `validate()` method that checks field values before saving:
+Scopes are reusable query filters baked into the model. Register them with the `scope()` method, then call them as static methods:
 
 ```php
 <?php
+
+use Tina4\ORM;
+
+class BlogPost extends ORM
+{
+    public string $tableName = "posts";
+
+    public int $id;
+    public string $title;
+    public string $status = "draft";
+    public string $createdAt;
+}
+
+// Register scopes
+(new BlogPost())->scope("published", "status = ?", ["published"]);
+(new BlogPost())->scope("drafts", "status = ?", ["draft"]);
+```
+
+Use them in your routes:
+
+```php
+Router::get("/api/posts/published", function (Request $request, Response $response) {
+    $posts = BlogPost::published();
+    return $response(["posts" => array_map(fn($p) => $p->toDict(), $posts)]);
+});
+
+Router::get("/api/posts/drafts", function (Request $request, Response $response) {
+    $posts = BlogPost::drafts();
+    return $response(["posts" => array_map(fn($p) => $p->toDict(), $posts)]);
+});
+```
+
+Scopes accept `$limit` and `$offset` as arguments:
+
+```php
+$recentPublished = BlogPost::published(10, 0);  // limit 10, offset 0
+```
+
+Scopes keep query logic in the model where it belongs. Route handlers stay thin.
+
+---
+
+## 13. Input Validation
+
+Override the `validate()` method on your model to add validation rules:
+
+```php
+<?php
+
 use Tina4\ORM;
 
 class Product extends ORM
 {
+    public string $tableName = "products";
+
     public int $id;
     public string $name;
+    public string $sku;
     public float $price;
-    public string $category = "Uncategorized";
-
-    public string $tableName = "products";
-    public string $primaryKey = "id";
+    public string $category;
 
     public function validate(): array
     {
         $errors = [];
 
-        if (empty($this->name)) {
-            $errors[] = "Name is required";
+        if (empty($this->name) || strlen($this->name) < 2) {
+            $errors[] = "name: Must be at least 2 characters";
         }
-
-        if ($this->price < 0) {
-            $errors[] = "Price cannot be negative";
+        if (strlen($this->name) > 200) {
+            $errors[] = "name: Must be at most 200 characters";
         }
-
-        if (strlen($this->name) > 255) {
-            $errors[] = "Name must be 255 characters or fewer";
+        if (!preg_match('/^[A-Z]{2}-\d{4}$/', $this->sku ?? '')) {
+            $errors[] = "sku: Must match pattern XX-0000 (e.g., EL-1234)";
+        }
+        if (($this->price ?? 0) < 0.01 || ($this->price ?? 0) > 999999.99) {
+            $errors[] = "price: Must be between 0.01 and 999999.99";
+        }
+        if (!in_array($this->category ?? '', ["Electronics", "Kitchen", "Office", "Fitness"])) {
+            $errors[] = "category: Must be one of: Electronics, Kitchen, Office, Fitness";
         }
 
         return $errors;
@@ -805,454 +1036,430 @@ class Product extends ORM
 }
 ```
 
-Call `validate()` before saving:
-
 ```php
-Router::post("/api/products", function ($request, $response) {
-    $body = $request->body;
-
+Router::post("/api/products", function (Request $request, Response $response) {
     $product = new Product();
-    $product->name = $body["name"] ?? "";
-    $product->price = (float) ($body["price"] ?? 0);
-    $product->category = $body["category"] ?? "Uncategorized";
+    $product->name = $request->body["name"] ?? "";
+    $product->sku = $request->body["sku"] ?? "";
+    $product->price = $request->body["price"] ?? 0;
+    $product->category = $request->body["category"] ?? "";
 
     $errors = $product->validate();
     if (!empty($errors)) {
-        return $response->json(["errors" => $errors], 400);
+        return $response(["errors" => $errors], 400);
     }
 
     $product->save();
-    return $response->json($product->toArray(), 201);
+    return $response(["product" => $product->toDict()], 201);
 });
 ```
 
-Validation lives with the data it validates. Every route that saves a Product calls `validate()`. Change a rule once. Every endpoint picks it up.
+If validation fails, `validate()` returns an array of error messages:
+
+```json
+{
+  "errors": [
+    "name: Must be at least 2 characters",
+    "sku: Must match pattern XX-0000 (e.g., EL-1234)",
+    "price: Must be between 0.01 and 999999.99",
+    "category: Must be one of: Electronics, Kitchen, Office, Fitness"
+  ]
+}
+```
 
 ---
 
-## 16. Exercise: Build a Blog
+## 14. QueryBuilder Integration
 
-Three models: User, Post, Comment. Relationships, eager loading, and auto-CRUD.
+ORM models provide a `query()` static method that returns a `QueryBuilder` pre-configured with the model's table name and database connection. This gives you a fluent API for building complex queries without writing raw SQL:
+
+```php
+// Fluent query builder from ORM
+$results = User::query()
+    ->select("id", "name", "email")
+    ->where("active = ?", [1])
+    ->orderBy("name")
+    ->limit(50)
+    ->get();
+
+// First matching record
+$user = User::query()
+    ->where("email = ?", ["alice@example.com"])
+    ->first();
+
+// Count
+$total = User::query()
+    ->where("role = ?", ["admin"])
+    ->count();
+
+// Check existence
+$exists = User::query()
+    ->where("email = ?", ["test@example.com"])
+    ->exists();
+```
+
+See the [QueryBuilder chapter](07-query-builder.md) for the full fluent API including joins, grouping, having, and MongoDB support.
+
+---
+
+## 15. Exercise: Build a Blog with Relationships
+
+Build a blog API with authors, posts, and comments.
 
 ### Requirements
 
-1. Create three models in `src/orm/`:
+1. Create these models:
 
-   **User** -- `users` table:
-   - `id` (int, primary key)
-   - `name` (string)
-   - `email` (string)
-   - `createdAt` (string)
-   - Has many posts
+**Author:** `id`, `name` (required), `email` (required), `bio`, `created_at`
 
-   **Post** -- `posts` table:
-   - `id` (int, primary key)
-   - `userId` (int, foreign key)
-   - `title` (string)
-   - `body` (string)
-   - `published` (bool, default false)
-   - `createdAt` (string)
-   - Belongs to user, has many comments
+**Post:** `id`, `author_id` (integer foreign key), `title` (required, max 300), `slug` (required), `content`, `status` (choices: draft/published/archived, default draft), `created_at`, `updated_at`
 
-   **Comment** -- `comments` table:
-   - `id` (int, primary key)
-   - `postId` (int, foreign key)
-   - `authorName` (string)
-   - `body` (string)
-   - `createdAt` (string)
-   - Belongs to post
+**Comment:** `id`, `post_id` (integer foreign key), `author_name` (required), `author_email` (required), `body` (required, min 5 chars), `created_at`
 
-2. Create migrations for all three tables.
-
-3. Build custom endpoints:
+2. Build these endpoints:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/blog/posts` | List published posts with author info (eager load user) |
-| `GET` | `/api/blog/posts/{id:int}` | Get a post with author and comments (eager load both) |
-| `POST` | `/api/blog/posts/{id:int}/comments` | Add a comment to a post |
-
-4. Enable auto-CRUD on User for admin access at `/api/users`.
-
-### Test with:
-
-```bash
-# Create a user (via auto-CRUD)
-curl -X POST http://localhost:7146/api/users \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Alice", "email": "alice@example.com"}'
-
-# Create a post
-curl -X POST http://localhost:7146/api/blog/posts \
-  -H "Content-Type: application/json" \
-  -d '{"user_id": 1, "title": "My First Post", "body": "Hello world!", "published": true}'
-
-# List posts
-curl http://localhost:7146/api/blog/posts
-
-# Add a comment
-curl -X POST http://localhost:7146/api/blog/posts/1/comments \
-  -H "Content-Type: application/json" \
-  -d '{"author_name": "Bob", "body": "Great post!"}'
-
-# Get post with comments
-curl http://localhost:7146/api/blog/posts/1
-```
+| `POST` | `/api/authors` | Create an author |
+| `GET` | `/api/authors/{id}` | Get author with their posts |
+| `POST` | `/api/posts` | Create a post (requires author_id) |
+| `GET` | `/api/posts` | List published posts with author info |
+| `GET` | `/api/posts/{id}` | Get post with author and comments |
+| `POST` | `/api/posts/{id}/comments` | Add comment to a post |
 
 ---
 
-## 17. Solution
+## 16. Solution
 
-### Migrations
-
-Create `src/migrations/20260322150000_create_users_table.sql`:
-
-```sql
--- UP
-CREATE TABLE users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-);
-
--- DOWN
-DROP TABLE IF EXISTS users;
-```
-
-Create `src/migrations/20260322150100_create_posts_table.sql`:
-
-```sql
--- UP
-CREATE TABLE posts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    title TEXT NOT NULL,
-    body TEXT NOT NULL,
-    published INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
-
--- DOWN
-DROP TABLE IF EXISTS posts;
-```
-
-Create `src/migrations/20260322150200_create_comments_table.sql`:
-
-```sql
--- UP
-CREATE TABLE comments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    post_id INTEGER NOT NULL,
-    author_name TEXT NOT NULL,
-    body TEXT NOT NULL,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (post_id) REFERENCES posts(id)
-);
-
--- DOWN
-DROP TABLE IF EXISTS comments;
-```
-
-Run them:
-
-```bash
-tina4 migrate
-```
-
-```
-Running migrations...
-  [APPLIED] 20260322150000_create_users_table.sql
-  [APPLIED] 20260322150100_create_posts_table.sql
-  [APPLIED] 20260322150200_create_comments_table.sql
-Migrations complete. 3 applied.
-```
-
-### Models
-
-Create `src/orm/User.php`:
+Create `src/orm/Author.php`:
 
 ```php
 <?php
+
 use Tina4\ORM;
 
-class User extends ORM
+class Author extends ORM
 {
+    public string $tableName = "authors";
+
     public int $id;
     public string $name;
     public string $email;
+    public string $bio = "";
     public string $createdAt;
 
-    public string $tableName = "users";
-    public string $primaryKey = "id";
-    public bool $autoCrud = true;
-
-    public function posts(): array
+    public function validate(): array
     {
-        return $this->hasMany(Post::class, "user_id");
+        $errors = [];
+        if (empty($this->name) || strlen($this->name) < 2) {
+            $errors[] = "name: Must be at least 2 characters";
+        }
+        if (empty($this->email)) {
+            $errors[] = "email: Required";
+        }
+        return $errors;
     }
 }
 ```
 
-Create `src/orm/Post.php`:
+Create `src/orm/BlogPost.php`:
 
 ```php
 <?php
+
 use Tina4\ORM;
 
-class Post extends ORM
+class BlogPost extends ORM
 {
-    public int $id;
-    public int $userId;
-    public string $title;
-    public string $body;
-    public bool $published = false;
-    public string $createdAt;
-
     public string $tableName = "posts";
-    public string $primaryKey = "id";
 
-    public function user(): ?User
-    {
-        return $this->belongsTo(User::class, "user_id");
-    }
+    public int $id;
+    public int $authorId;
+    public string $title;
+    public string $slug;
+    public string $content = "";
+    public string $status = "draft";
+    public string $createdAt;
+    public string $updatedAt;
 
-    public function comments(): array
+    public function validate(): array
     {
-        return $this->hasMany(Comment::class, "post_id");
+        $errors = [];
+        if (empty($this->title)) {
+            $errors[] = "title: Required";
+        }
+        if (strlen($this->title ?? '') > 300) {
+            $errors[] = "title: Must be at most 300 characters";
+        }
+        if (empty($this->slug)) {
+            $errors[] = "slug: Required";
+        }
+        if (!in_array($this->status ?? 'draft', ["draft", "published", "archived"])) {
+            $errors[] = "status: Must be one of: draft, published, archived";
+        }
+        return $errors;
     }
 }
+```
+
+Register a scope for published posts:
+
+```php
+(new BlogPost())->scope("published", "status = ?", ["published"]);
 ```
 
 Create `src/orm/Comment.php`:
 
 ```php
 <?php
+
 use Tina4\ORM;
 
 class Comment extends ORM
 {
+    public string $tableName = "comments";
+
     public int $id;
     public int $postId;
     public string $authorName;
+    public string $authorEmail;
     public string $body;
     public string $createdAt;
 
-    public string $tableName = "comments";
-    public string $primaryKey = "id";
-
-    public function post(): ?Post
+    public function validate(): array
     {
-        return $this->belongsTo(Post::class, "post_id");
+        $errors = [];
+        if (empty($this->authorName)) {
+            $errors[] = "authorName: Required";
+        }
+        if (empty($this->authorEmail)) {
+            $errors[] = "authorEmail: Required";
+        }
+        if (empty($this->body) || strlen($this->body) < 5) {
+            $errors[] = "body: Must be at least 5 characters";
+        }
+        return $errors;
     }
 }
 ```
-
-### Routes
 
 Create `src/routes/blog.php`:
 
 ```php
 <?php
+
 use Tina4\Router;
+use Tina4\Request;
+use Tina4\Response;
 
-// List published posts with author
-Router::get("/api/blog/posts", function ($request, $response) {
-    $post = new Post();
-    $posts = $post->select("*", "published = :published", ["published" => 1], "created_at DESC", 0, 0, ["user"]);
+Router::post("/api/authors", function (Request $request, Response $response) {
+    $author = new Author();
+    $author->name = $request->body["name"] ?? "";
+    $author->email = $request->body["email"] ?? "";
+    $author->bio = $request->body["bio"] ?? "";
 
-    $results = array_map(fn($p) => $p->toArray(), $posts);
-
-    return $response->json([
-        "posts" => $results,
-        "count" => count($results)
-    ]);
-});
-
-// Get a single post with author and comments
-Router::get("/api/blog/posts/{id:int}", function ($request, $response) {
-    $post = new Post();
-    $post->load($request->params["id"]);
-
-    if (empty($post->id)) {
-        return $response->json(["error" => "Post not found"], 404);
+    $errors = $author->validate();
+    if (!empty($errors)) {
+        return $response(["errors" => $errors], 400);
     }
 
-    $user = $post->user();
-    $comments = $post->comments();
-
-    $result = $post->toArray();
-    $result["user"] = $user ? $user->toArray() : null;
-    $result["comments"] = array_map(fn($c) => $c->toArray(), $comments);
-    $result["comment_count"] = count($comments);
-
-    return $response->json($result);
+    $author->save();
+    return $response(["author" => $author->toDict()], 201);
 });
 
-// Create a post
-Router::post("/api/blog/posts", function ($request, $response) {
+Router::get("/api/authors/{id}", function (Request $request, Response $response) {
+    $author = Author::findById($request->params["id"]);
+
+    if ($author === null) {
+        return $response(["error" => "Author not found"], 404);
+    }
+
+    $posts = $author->hasMany(BlogPost::class, "author_id");
+
+    $data = $author->toDict();
+    $data["posts"] = array_map(fn(BlogPost $p) => $p->toDict(), $posts);
+
+    return $response($data);
+});
+
+Router::post("/api/posts", function (Request $request, Response $response) {
     $body = $request->body;
 
-    if (empty($body["title"]) || empty($body["body"]) || empty($body["user_id"])) {
-        return $response->json(["error" => "title, body, and user_id are required"], 400);
+    // Verify author exists
+    $author = Author::findById($body["author_id"] ?? 0);
+    if ($author === null) {
+        return $response(["error" => "Author not found"], 404);
     }
 
-    $post = new Post();
-    $post->userId = (int) $body["user_id"];
-    $post->title = $body["title"];
-    $post->body = $body["body"];
-    $post->published = (bool) ($body["published"] ?? false);
+    $post = new BlogPost();
+    $post->authorId = $body["author_id"];
+    $post->title = $body["title"] ?? "";
+    $post->slug = $body["slug"] ?? "";
+    $post->content = $body["content"] ?? "";
+    $post->status = $body["status"] ?? "draft";
+
+    $errors = $post->validate();
+    if (!empty($errors)) {
+        return $response(["errors" => $errors], 400);
+    }
+
     $post->save();
-
-    return $response->json($post->toArray(), 201);
+    return $response(["post" => $post->toDict()], 201);
 });
 
-// Add a comment to a post
-Router::post("/api/blog/posts/{id:int}/comments", function ($request, $response) {
-    $postId = $request->params["id"];
+Router::get("/api/posts", function (Request $request, Response $response) {
+    $posts = BlogPost::published();
+    $data = [];
 
-    // Verify post exists
-    $post = new Post();
-    $post->load($postId);
-
-    if (empty($post->id)) {
-        return $response->json(["error" => "Post not found"], 404);
+    foreach ($posts as $p) {
+        $postDict = $p->toDict();
+        $author = $p->belongsTo(Author::class, "author_id");
+        $postDict["author"] = $author ? $author->toDict() : null;
+        $data[] = $postDict;
     }
 
-    $body = $request->body;
+    return $response(["posts" => $data, "count" => count($data)]);
+});
 
-    if (empty($body["author_name"]) || empty($body["body"])) {
-        return $response->json(["error" => "author_name and body are required"], 400);
+Router::get("/api/posts/{id}", function (Request $request, Response $response) {
+    $post = BlogPost::findById($request->params["id"]);
+
+    if ($post === null) {
+        return $response(["error" => "Post not found"], 404);
+    }
+
+    $author = $post->belongsTo(Author::class, "author_id");
+    $comments = $post->hasMany(Comment::class, "post_id");
+
+    $data = $post->toDict();
+    $data["author"] = $author ? $author->toDict() : null;
+    $data["comments"] = array_map(fn(Comment $c) => $c->toDict(), $comments);
+    $data["commentCount"] = count($comments);
+
+    return $response($data);
+});
+
+Router::post("/api/posts/{id}/comments", function (Request $request, Response $response) {
+    $post = BlogPost::findById($request->params["id"]);
+
+    if ($post === null) {
+        return $response(["error" => "Post not found"], 404);
     }
 
     $comment = new Comment();
-    $comment->postId = $postId;
-    $comment->authorName = $body["author_name"];
-    $comment->body = $body["body"];
-    $comment->save();
+    $comment->postId = (int)$request->params["id"];
+    $comment->authorName = $request->body["author_name"] ?? "";
+    $comment->authorEmail = $request->body["author_email"] ?? "";
+    $comment->body = $request->body["body"] ?? "";
 
-    return $response->json($comment->toArray(), 201);
+    $errors = $comment->validate();
+    if (!empty($errors)) {
+        return $response(["errors" => $errors], 400);
+    }
+
+    $comment->save();
+    return $response(["comment" => $comment->toDict()], 201);
 });
 ```
 
-**Expected output for GET /api/blog/posts/1:**
-
-```json
-{
-  "id": 1,
-  "user_id": 1,
-  "title": "My First Post",
-  "body": "Hello world!",
-  "published": true,
-  "created_at": "2026-03-22 15:00:00",
-  "user": {
-    "id": 1,
-    "name": "Alice",
-    "email": "alice@example.com"
-  },
-  "comments": [
-    {
-      "id": 1,
-      "post_id": 1,
-      "author_name": "Bob",
-      "body": "Great post!",
-      "created_at": "2026-03-22 15:01:00"
-    }
-  ],
-  "comment_count": 1
-}
-```
-
 ---
 
-## 18. Gotchas
+## 17. Gotchas
 
-### 1. Table Naming Convention
+### 1. Forgetting to call save()
 
-**Problem:** Model class is `OrderItem`. Queries fail because the table does not exist.
+**Problem:** You set properties on a model but the database does not change.
 
-**Cause:** Tina4 converts `OrderItem` to `orderitem` (lowercase, no separator). Your table is `order_item` (snake_case).
+**Cause:** Setting `$note->title = "New Title"` only changes the PHP object. The database remains unchanged until you call `$note->save()`.
 
-**Fix:** Set `$tableName` explicitly: `public string $tableName = "order_item";`.
+**Fix:** Call `save()` after modifying properties. Check the return value -- `save()` returns `$this` on success and `false` on failure.
 
-### 2. Null Handling
+### 2. findById() returns null
 
-**Problem:** A nullable field causes errors when the value is null.
+**Problem:** You call `Note::findById($id)` but get `null` instead of a note object.
 
-**Cause:** Property declared as `string` instead of `?string`. PHP 8.1+ enforces type declarations.
+**Cause:** `findById()` returns `null` when no row matches the given primary key. If soft delete is enabled, `findById()` also excludes soft-deleted records.
 
-**Fix:** Use nullable types: `public ?string $description = null;`.
+**Fix:** Check for `null` after `findById()`: `if ($note === null) { return $response(["error" => "Not found"], 404); }`. Use `findOrFail()` if you want a `RuntimeException` raised instead.
 
-### 3. Relationship Foreign Key Direction
+### 3. find() vs findById()
 
-**Problem:** `$this->hasMany(Post::class, "id")` gives wrong results.
+**Problem:** You call `Note::find(42)` expecting a single record, but get a type error.
 
-**Cause:** The foreign key argument is the column on the related table, not the current table. `hasMany(Post::class, "user_id")` means "find posts where posts.user_id = this.id".
+**Cause:** `find()` takes an associative array filter (`find(["id" => 42])`), not a bare primary key value. For single-record lookups by primary key, use `findById(42)`.
 
-**Fix:** The foreign key is always on the "many" side. For `hasMany`, it is on the child table. For `belongsTo`, it is on the current table.
+**Fix:** Use `findById($id)` for primary key lookups. Use `find(["column" => $value])` for filter-based queries.
 
-### 4. camelCase to snake_case Mapping
+### 4. Static vs instance methods
 
-**Problem:** Property `$userId` maps to column `user_id`. But your column is `userid` (no underscore). The field reads as null.
+**Problem:** You call `Note::where("category = ?", ["work"])` but get an error.
 
-**Cause:** Tina4 auto-converts `camelCase` to `snake_case`. `userId` becomes `user_id`. If the column is `userid`, the mapping fails.
+**Cause:** `where()`, `all()`, `select()`, `selectOne()`, `count()`, and `withTrashed()` are instance methods. `findById()`, `findOrFail()`, `find()`, `create()`, and `query()` are static methods.
 
-**Fix:** Consistent naming. PHP: `camelCase`. Database: `snake_case`. Adjust column names or override the mapping.
+**Fix:** For instance methods, create an instance first: `(new Note())->where(...)`. Static methods call directly: `Note::findById(...)`.
 
-### 5. Forgetting save()
+### 5. toDict() includes everything
 
-**Problem:** Properties changed on the model. Database unchanged.
+**Problem:** `$user->toDict()` includes `passwordHash` in the API response.
 
-**Cause:** No `$model->save()` call. Setting properties only changes the in-memory object.
+**Cause:** `toDict()` includes all fields by default.
 
-**Fix:** Call `save()` after modifying any property you want persisted.
+**Fix:** Build the response array manually, omitting sensitive fields: `["id" => $user->id, "name" => $user->name, "email" => $user->email]`. Or create a helper method on your model class that returns only safe fields.
 
-### 6. Auto-CRUD Endpoint Conflicts
+### 6. Validation only runs on validate()
 
-**Problem:** Custom route at `/api/products/{id}` stops working after enabling auto-CRUD.
+**Problem:** You call `save()` without calling `validate()` first, and invalid data gets into the database.
 
-**Cause:** Both routes match the same path. First registered wins.
+**Cause:** `save()` does not validate. This is by design -- sometimes you need to save partial data or bypass validation for bulk operations.
 
-**Fix:** Custom routes in `src/routes/` load before auto-CRUD routes. They take precedence. If you want different behavior, use a different path for the custom route.
+**Fix:** Call `$errors = $model->validate()` before `save()` in your route handlers.
 
-### 7. select() Returns Objects, Not Arrays
+### 7. Soft delete column is is_deleted, not deleted_at
 
-**Problem:** Array syntax `$result["name"]` on the result of `select()` throws an error.
+**Problem:** You add a `deleted_at` timestamp column expecting soft delete to use it.
 
-**Cause:** `select()` returns model objects, not associative arrays.
+**Cause:** Tina4's soft delete uses an `is_deleted` integer column (0 = active, 1 = deleted). It does not use a `deleted_at` timestamp.
 
-**Fix:** Use object syntax: `$result->name`. Or convert: `$result->toArray()`.
+**Fix:** Add an `is_deleted` integer column to your table with a default of `0`. Set `$softDelete = true` on the model.
 
----
+### 8. N+1 query problem
 
-## QueryBuilder Integration
+**Problem:** Listing 100 authors with their posts runs 101 queries (1 for authors + 100 for posts), and the page loads slowly.
 
-ORM models provide a static `query()` method that returns a `QueryBuilder` pre-configured with the model's table name and database connection:
+**Cause:** You call `$author->hasMany(BlogPost::class, "author_id")` inside a loop for each author.
+
+**Fix:** Use declarative relationships with `$hasMany`/`$hasOne`/`$belongsTo` array properties and eager loading via `toDict(["posts"])`. Or fetch all posts in a single query and group them manually.
+
+### 9. Auto-CRUD endpoint conflicts
+
+**Problem:** Custom route at `/api/notes/{id}` stops working after registering Auto-CRUD for the Note model.
+
+**Cause:** Both routes match the same path. The first registered route wins.
+
+**Fix:** Custom routes in `src/routes/` load before Auto-CRUD routes. They take precedence. If you want different behaviour, use a different path for the custom route.
+
+### 10. Soft-deleted records appearing in queries
+
+**Problem:** You soft-deleted a record, but queries still return it.
+
+**Cause:** Soft delete requires the `$softDelete = true` flag on the model class and an `is_deleted` column in the database table. Without both, soft delete is inactive.
+
+**Fix:** Verify both the `$softDelete = true` flag and the `is_deleted` column exist. The column stores `0` for active records and `1` for deleted ones.
+
+### 11. $db->fetch() returns DatabaseResult, not an array
+
+**Problem:** You call `$db->fetch(...)` and try to iterate over it as an array, getting a type error or empty results.
+
+**Cause:** `$db->fetch()` returns a `DatabaseResult` object. The rows are in `$result->records`, not in `$result['data']` or `$result` itself.
+
+**Fix:** Access `->records`:
 
 ```php
-// Fluent query builder from ORM
-$results = User::query()
-    ->select('id', 'name', 'email')
-    ->where('active = ?', [true])
-    ->orderBy('name')
-    ->limit(50)
-    ->get();
+// WRONG:
+foreach ($result['data'] as $row) { ... }
 
-// First matching record
-$user = User::query()
-    ->where('email = ?', ['alice@example.com'])
-    ->first();
-
-// Count
-$total = User::query()
-    ->where('role = ?', ['admin'])
-    ->count();
-
-// Check existence
-$exists = User::query()
-    ->where('email = ?', ['test@example.com'])
-    ->exists();
+// RIGHT:
+foreach ($result->records as $row) { ... }
 ```
 
-See the [QueryBuilder chapter](07-query-builder.md) for the full fluent API including joins, grouping, having, and MongoDB support.
+This only applies to raw `$db->fetch()` calls. ORM methods (`findById()`, `find()`, `where()`, etc.) return model instances directly.

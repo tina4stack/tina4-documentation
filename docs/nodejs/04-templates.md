@@ -527,7 +527,7 @@ Filters transform values. Apply them with the `|` (pipe) character.
 | `date("Y-m-d")` | `{{ created \| date("Y-m-d") }}` | Format a date value |
 | `format(val)` | `{{ "%.2f" \| format(price) }}` | Format string with value (sprintf-style) |
 | `data_uri` | `{{ content \| data_uri }}` | Convert to a data URI string |
-| `dump` | `{{ var \| dump }}` | Debug output of a variable |
+| `dump` | `{{ var \| dump }}` or `{{ dump(var) }}` | Debug output — gated on `TINA4_DEBUG=true` (see [Dumping Values](#dumping-values-for-debugging)) |
 | `form_token` | `{{ form_token() }}` | Generate a CSRF hidden input with token |
 | `formTokenValue` | `{{ formTokenValue("context") }}` | Return just the raw JWT token string |
 | `to_json` | `{{ data \| to_json }}` | JSON-encode a value (safe, no double-escaping) |
@@ -541,6 +541,48 @@ Filters transform values. Apply them with the `|` (pipe) character.
 {{ name | trim | lower | capitalize }}
 {# "  ALICE SMITH  " -> "Alice smith" #}
 ```
+
+### Dumping Values for Debugging
+
+The `dump` helper lets you inspect any variable mid-template. Two interchangeable forms are supported:
+
+```html
+{{ user | dump }}
+{{ dump(user) }}
+```
+
+Both produce the same `<pre>`-wrapped, HTML-escaped inspection of the value. Unlike `JSON.stringify`, the built-in inspector handles everything safely:
+
+- **Circular references** — marked `[Circular]` (no crash)
+- **BigInt** — shown as `123n` (no crash)
+- **Map / Set** — `Map(2) { "a" => 1, "b" => 2 }` / `Set(3) { 1, 2, 3 }`
+- **Date** — `Date(2026-04-09T13:00:00.000Z)` (type retained)
+- **Error** — `Error("message")` (type + message)
+- **Class instances** — `User { name: "Alice" }` (class name preserved)
+- **Functions / Symbols / undefined** — shown inline, not silently dropped
+
+```html
+{{ dump(order) }}
+
+{# Output: #}
+{# <pre>Order { id: 42, items: [...], total: 99.99 }</pre> #}
+```
+
+<div v-pre>
+
+**dump is gated on `TINA4_DEBUG=true`.** In production (env var unset or `false`) **both** the filter and function form silently return an empty `SafeString`. This prevents accidental leaks of internal state, object shapes, or sensitive values into rendered HTML if a developer leaves a `{{ dump(x) }}` call in a template.
+
+</div>
+
+```bash
+# .env — dev
+TINA4_DEBUG=true    # dump() outputs the value
+
+# .env — production
+TINA4_DEBUG=false   # dump() is a no-op
+```
+
+You can rely on this gate for safety, but treat `dump` as a development-only convenience. For structured output in production code paths, use `to_json`.
 
 ---
 

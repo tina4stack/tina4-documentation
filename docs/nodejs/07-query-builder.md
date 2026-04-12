@@ -14,14 +14,14 @@ The QueryBuilder sits between raw SQL and the ORM. It gives you a fluent, chaina
 
 There are two entry points.
 
-### Standalone: QueryBuilder.from()
+### Standalone: QueryBuilder.fromTable()
 
 Import `QueryBuilder` from the ORM package and call the static `from()` factory:
 
 ```typescript
 import { QueryBuilder } from "tina4-nodejs/orm";
 
-const users = QueryBuilder.from("users", db)
+const users = QueryBuilder.fromTable("users", db)
     .select("id", "name", "email")
     .where("active = ?", [1])
     .orderBy("name ASC")
@@ -53,7 +53,7 @@ No need to pass the table name or database. The model knows both.
 By default, the QueryBuilder selects all columns (`*`). Use `select()` to pick specific columns:
 
 ```typescript
-QueryBuilder.from("products", db)
+QueryBuilder.fromTable("products", db)
     .select("id", "name", "price")
     .get();
 ```
@@ -69,7 +69,7 @@ Pass as many column names as you need. Each is a separate string argument, not a
 You can also use expressions:
 
 ```typescript
-QueryBuilder.from("orders", db)
+QueryBuilder.fromTable("orders", db)
     .select("customer_id", "SUM(total) as revenue")
     .groupBy("customer_id")
     .get();
@@ -84,7 +84,7 @@ QueryBuilder.from("orders", db)
 Add a condition with `where()`. Use `?` as the placeholder for parameters:
 
 ```typescript
-QueryBuilder.from("users", db)
+QueryBuilder.fromTable("users", db)
     .where("age > ?", [18])
     .where("active = ?", [1])
     .get();
@@ -105,7 +105,7 @@ Multiple `where()` calls are joined with AND. The first call starts the WHERE cl
 Use `orWhere()` to add an OR condition:
 
 ```typescript
-QueryBuilder.from("products", db)
+QueryBuilder.fromTable("products", db)
     .where("category = ?", ["Electronics"])
     .orWhere("category = ?", ["Books"])
     .get();
@@ -120,7 +120,7 @@ SELECT * FROM products WHERE category = ? OR category = ?
 ### Combining AND and OR
 
 ```typescript
-QueryBuilder.from("products", db)
+QueryBuilder.fromTable("products", db)
     .where("price < ?", [100])
     .where("in_stock = ?", [1])
     .orWhere("featured = ?", [1])
@@ -136,7 +136,7 @@ SELECT * FROM products WHERE price < ? AND in_stock = ? OR featured = ?
 If you need grouping with parentheses, write the grouped expression as a single condition:
 
 ```typescript
-QueryBuilder.from("products", db)
+QueryBuilder.fromTable("products", db)
     .where("price < ?", [100])
     .where("(category = ? OR category = ?)", ["Electronics", "Books"])
     .get();
@@ -155,7 +155,7 @@ SELECT * FROM products WHERE price < ? AND (category = ? OR category = ?)
 ### Inner Join
 
 ```typescript
-QueryBuilder.from("orders", db)
+QueryBuilder.fromTable("orders", db)
     .select("orders.id", "users.name", "orders.total")
     .join("users", "users.id = orders.user_id")
     .get();
@@ -170,7 +170,7 @@ SELECT orders.id, users.name, orders.total FROM orders INNER JOIN users ON users
 ### Left Join
 
 ```typescript
-QueryBuilder.from("users", db)
+QueryBuilder.fromTable("users", db)
     .select("users.name", "orders.total")
     .leftJoin("orders", "orders.user_id = users.id")
     .get();
@@ -187,7 +187,7 @@ SELECT users.name, orders.total FROM users LEFT JOIN orders ON orders.user_id = 
 Chain as many joins as you need:
 
 ```typescript
-QueryBuilder.from("orders", db)
+QueryBuilder.fromTable("orders", db)
     .select("orders.id", "users.name", "products.name as product_name")
     .join("users", "users.id = orders.user_id")
     .join("order_items", "order_items.order_id = orders.id")
@@ -203,7 +203,7 @@ QueryBuilder.from("orders", db)
 ### groupBy()
 
 ```typescript
-QueryBuilder.from("orders", db)
+QueryBuilder.fromTable("orders", db)
     .select("status", "COUNT(*) as total")
     .groupBy("status")
     .get();
@@ -218,7 +218,7 @@ SELECT status, COUNT(*) as total FROM orders GROUP BY status
 Call `groupBy()` multiple times to group by multiple columns:
 
 ```typescript
-QueryBuilder.from("orders", db)
+QueryBuilder.fromTable("orders", db)
     .select("status", "customer_id", "SUM(total) as revenue")
     .groupBy("status")
     .groupBy("customer_id")
@@ -230,7 +230,7 @@ QueryBuilder.from("orders", db)
 Filter grouped results with `having()`:
 
 ```typescript
-QueryBuilder.from("products", db)
+QueryBuilder.fromTable("products", db)
     .select("category", "AVG(price) as avg_price")
     .groupBy("category")
     .having("AVG(price) > ?", [50])
@@ -250,7 +250,7 @@ Multiple `having()` calls are joined with AND.
 ## 7. Ordering
 
 ```typescript
-QueryBuilder.from("products", db)
+QueryBuilder.fromTable("products", db)
     .orderBy("price DESC")
     .get();
 ```
@@ -264,7 +264,7 @@ SELECT * FROM products ORDER BY price DESC
 Call `orderBy()` multiple times for multi-column sorting:
 
 ```typescript
-QueryBuilder.from("products", db)
+QueryBuilder.fromTable("products", db)
     .orderBy("category ASC")
     .orderBy("price DESC")
     .get();
@@ -283,7 +283,7 @@ SELECT * FROM products ORDER BY category ASC, price DESC
 ### Limit Only
 
 ```typescript
-QueryBuilder.from("products", db)
+QueryBuilder.fromTable("products", db)
     .limit(10)
     .get();
 ```
@@ -291,7 +291,7 @@ QueryBuilder.from("products", db)
 ### Limit with Offset
 
 ```typescript
-QueryBuilder.from("products", db)
+QueryBuilder.fromTable("products", db)
     .limit(10, 20)
     .get();
 ```
@@ -303,7 +303,7 @@ const page = 3;
 const perPage = 25;
 const offset = (page - 1) * perPage;
 
-const products = QueryBuilder.from("products", db)
+const products = QueryBuilder.fromTable("products", db)
     .orderBy("name ASC")
     .limit(perPage, offset)
     .get();
@@ -318,7 +318,7 @@ const products = QueryBuilder.from("products", db)
 `get()` executes the query and returns an array of row objects:
 
 ```typescript
-const users = QueryBuilder.from("users", db)
+const users = QueryBuilder.fromTable("users", db)
     .where("active = ?", [1])
     .get();
 // users: Record<string, unknown>[]
@@ -334,7 +334,7 @@ interface User {
     active: boolean;
 }
 
-const users = QueryBuilder.from("users", db)
+const users = QueryBuilder.fromTable("users", db)
     .where("active = ?", [1])
     .get<User>();
 // users: User[]
@@ -347,7 +347,7 @@ The generic is optional. Without it, rows are typed as `Record<string, unknown>[
 `first()` returns one row or `null`:
 
 ```typescript
-const user = QueryBuilder.from("users", db)
+const user = QueryBuilder.fromTable("users", db)
     .where("email = ?", ["alice@example.com"])
     .first<User>();
 
@@ -361,7 +361,7 @@ if (!user) {
 `count()` returns the number of matching rows without fetching the data:
 
 ```typescript
-const total = QueryBuilder.from("users", db)
+const total = QueryBuilder.fromTable("users", db)
     .where("active = ?", [1])
     .count();
 // total: number
@@ -374,7 +374,7 @@ It rewrites the query internally to `SELECT COUNT(*) as cnt` and extracts the va
 `exists()` returns `true` if at least one row matches:
 
 ```typescript
-const hasAdmin = QueryBuilder.from("users", db)
+const hasAdmin = QueryBuilder.fromTable("users", db)
     .where("role = ?", ["admin"])
     .exists();
 // hasAdmin: boolean
@@ -387,7 +387,7 @@ const hasAdmin = QueryBuilder.from("users", db)
 Call `toSql()` to get the generated SQL string without executing the query. Useful for debugging:
 
 ```typescript
-const sql = QueryBuilder.from("users", db)
+const sql = QueryBuilder.fromTable("users", db)
     .select("id", "name")
     .where("active = ?", [1])
     .orderBy("name ASC")
@@ -422,7 +422,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
     const page = parseInt(req.query.page ?? "1", 10);
     const perPage = parseInt(req.query.per_page ?? "20", 10);
 
-    const qb = QueryBuilder.from("products");
+    const qb = QueryBuilder.fromTable("products");
 
     if (category) {
         qb.where("category = ?", [category]);
@@ -453,7 +453,7 @@ import { QueryBuilder } from "tina4-nodejs/orm";
 import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
-    const user = QueryBuilder.from("users")
+    const user = QueryBuilder.fromTable("users")
         .where("id = ?", [req.params.id])
         .first();
 
@@ -473,9 +473,9 @@ import { QueryBuilder } from "tina4-nodejs/orm";
 import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
-    const totalUsers = QueryBuilder.from("users").count();
+    const totalUsers = QueryBuilder.fromTable("users").count();
 
-    const revenueByCategory = QueryBuilder.from("orders")
+    const revenueByCategory = QueryBuilder.fromTable("orders")
         .select("category", "SUM(total) as revenue", "COUNT(*) as order_count")
         .join("order_items", "order_items.order_id = orders.id")
         .join("products", "products.id = order_items.product_id")
@@ -485,7 +485,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
         .orderBy("revenue DESC")
         .get();
 
-    const recentOrders = QueryBuilder.from("orders")
+    const recentOrders = QueryBuilder.fromTable("orders")
         .select("orders.id", "users.name as customer", "orders.total", "orders.created_at")
         .join("users", "users.id = orders.user_id")
         .orderBy("orders.created_at DESC")
@@ -563,7 +563,7 @@ import { QueryBuilder } from "tina4-nodejs/orm";
 import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
-    const qb = QueryBuilder.from("order_items")
+    const qb = QueryBuilder.fromTable("order_items")
         .select(
             "products.category",
             "SUM(order_items.quantity * order_items.unit_price) as revenue",
@@ -605,7 +605,7 @@ import { QueryBuilder } from "tina4-nodejs/orm";
 import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
-    const customers = QueryBuilder.from("orders")
+    const customers = QueryBuilder.fromTable("orders")
         .select(
             "customers.id",
             "customers.name",
@@ -637,7 +637,7 @@ import { QueryBuilder } from "tina4-nodejs/orm";
 import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
-    const stats = QueryBuilder.from("orders")
+    const stats = QueryBuilder.fromTable("orders")
         .select(
             "COUNT(*) as order_count",
             "SUM(total) as total_revenue",
@@ -646,13 +646,13 @@ export default async function (req: Tina4Request, res: Tina4Response) {
         .where("status = ?", ["completed"])
         .first();
 
-    const ordersByStatus = QueryBuilder.from("orders")
+    const ordersByStatus = QueryBuilder.fromTable("orders")
         .select("status", "COUNT(*) as count")
         .groupBy("status")
         .orderBy("count DESC")
         .get();
 
-    const hasOrders = QueryBuilder.from("orders").exists();
+    const hasOrders = QueryBuilder.fromTable("orders").exists();
 
     return res.json({
         summary: stats,
@@ -702,7 +702,7 @@ The QueryBuilder can generate MongoDB-compatible query documents with `toMongo()
 ### Example
 
 ```typescript
-const query = QueryBuilder.from("users")
+const query = QueryBuilder.fromTable("users")
     .select("name", "email")
     .where("age > ?", [25])
     .where("status = ?", ["active"])
@@ -743,11 +743,11 @@ const cursor = collection.find(mongo.filter, {
 
 ### 1. Forgetting the Database Adapter
 
-**Problem:** You call `QueryBuilder.from("users").get()` and get `"QueryBuilder: No database adapter provided."`.
+**Problem:** You call `QueryBuilder.fromTable("users").get()` and get `"QueryBuilder: No database adapter provided."`.
 
 **Cause:** No database adapter was passed to `from()` and no global adapter has been initialised.
 
-**Fix:** Either pass the adapter explicitly -- `QueryBuilder.from("users", db)` -- or ensure `initDatabase()` has been called before any queries run. When Tina4 boots your server, the global adapter is initialised automatically from `DATABASE_URL`.
+**Fix:** Either pass the adapter explicitly -- `QueryBuilder.fromTable("users", db)` -- or ensure `initDatabase()` has been called before any queries run. When Tina4 boots your server, the global adapter is initialised automatically from `DATABASE_URL`.
 
 ### 2. Parameter Order Matters
 
@@ -778,7 +778,7 @@ qb.where("age > ?", [18]).where("country = ?", ["ZA"]);
 
 **Cause:** `count()` temporarily replaces the selected columns with `COUNT(*)` and restores them. This is safe for a single call, but interleaving multiple execution methods on the same builder can produce unexpected SQL if you modify the builder between calls.
 
-**Fix:** For separate queries, create separate builders. Use `QueryBuilder.from()` or `Model.query()` fresh for each independent query.
+**Fix:** For separate queries, create separate builders. Use `QueryBuilder.fromTable()` or `Model.query()` fresh for each independent query.
 
 ### 5. Mixing QueryBuilder with ORM select()
 

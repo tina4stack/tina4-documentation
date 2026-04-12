@@ -2,7 +2,7 @@
 
 ## 1. From Development to Production
 
-The app works on `localhost:7146`. Now it needs to run around the clock on a real server. Handle thousands of concurrent users. Survive restarts. Hold steady on memory. The gap between "works on my machine" and "works in production" is where projects stumble.
+The app works on `localhost:7145`. Now it needs to run around the clock on a real server. Handle thousands of concurrent users. Survive restarts. Hold steady on memory. The gap between "works on my machine" and "works in production" is where projects stumble.
 
 This chapter covers everything for a production deployment: environment configuration, Docker packaging, web server setup, SSL/TLS, scaling, monitoring, and graceful shutdown.
 
@@ -20,7 +20,7 @@ Create a production `.env`:
 # Core
 TINA4_DEBUG=false
 TINA4_LOG_LEVEL=WARNING
-TINA4_PORT=7146
+TINA4_PORT=7145
 
 # Database
 DATABASE_URL=sqlite:///data/app.db
@@ -88,7 +88,7 @@ tina4 serve --production
   Tina4 PHP v3.0.0
   Server: FrankenPHP (worker mode)
   Workers: 4
-  Running at https://0.0.0.0:7146
+  Running at https://0.0.0.0:7145
   TLS: automatic (Let's Encrypt)
 ```
 
@@ -100,7 +100,7 @@ tina4 serve --production
 ```
   Tina4 PHP v3.0.0
   Server: PHP built-in
-  Running at http://0.0.0.0:7146
+  Running at http://0.0.0.0:7145
   Warning: For production, consider FrankenPHP or PHP-FPM + nginx
 ```
 
@@ -123,80 +123,58 @@ docker pull dunglas/frankenphp
 
 Docker is the most portable deployment path. Your app runs the same way on your laptop, in CI, and on the production server.
 
+### Official Base Image
+
+Tina4 PHP provides an official Docker Hub base image: `tina4stack/tina4-php:v3`. It is an Alpine-based image (~154MB) with PHP 8.4, SQLite, OPcache, and the Tina4 framework pre-installed. Your app Dockerfile extends it and adds only your application code and Composer dependencies.
+
+The base image includes these environment variables pre-configured:
+- `TINA4_OVERRIDE_CLIENT=true` — bypasses the CLI guard for Docker
+- `TINA4_DEBUG=false` — production mode by default
+
+OPcache is pre-configured with production settings (timestamps disabled, 10000 accelerated files).
+
 ### Dockerfile
 
 Create `Dockerfile` at the project root:
 
 ```dockerfile
-FROM dunglas/frankenphp:latest-php8.3-alpine
-
-# Install PHP extensions
-RUN install-php-extensions \
-    pdo_sqlite \
-    mbstring \
-    openssl \
-    fileinfo
-
-# Set working directory
+FROM tina4stack/tina4-php:v3
 WORKDIR /app
 
-# Copy Composer files first (for better caching)
-COPY composer.json composer.lock ./
-
-# Install dependencies
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
-    && composer install --no-dev --optimize-autoloader --no-interaction
+# Install Composer and app dependencies
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY composer.json composer.lock* ./
+RUN composer install --no-dev --optimize-autoloader --no-scripts \
+    && rm /usr/bin/composer
 
 # Copy application code
-COPY . .
+COPY index.php .
+COPY .env .
+COPY migrations/ migrations/
+COPY src/ src/
 
-# Create required directories
-RUN mkdir -p data logs secrets \
-    && chown -R www-data:www-data data logs secrets
+# Create data directories for SQLite, sessions, queue, and mailbox
+RUN mkdir -p data data/sessions data/queue data/mailbox
 
-# Expose port
-EXPOSE 7146
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:7146/health || exit 1
-
-# Start the server
-CMD ["tina4", "serve", "--production"]
+EXPOSE 7145
+CMD ["php", "index.php", "0.0.0.0:7145"]
 ```
 
-### docker-compose.yml
+### .dockerignore
 
-Create `docker-compose.yml`:
+Create `.dockerignore` to keep the image small:
 
-```yaml
-version: "3.8"
-
-services:
-  app:
-    build: .
-    ports:
-      - "7146:7146"
-    environment:
-      - TINA4_DEBUG=false
-      - TINA4_LOG_LEVEL=WARNING
-      - JWT_SECRET=${JWT_SECRET}
-      - DATABASE_URL=sqlite:///data/app.db
-      - CORS_ORIGINS=https://yourdomain.com
-    volumes:
-      - app-data:/app/data
-      - app-logs:/app/logs
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7146/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
-volumes:
-  app-data:
-  app-logs:
+```
+.git
+.env.development
+data/
+logs/
+secrets/
+node_modules/
+vendor/
+tests/
+.DS_Store
+.tina4/
 ```
 
 ### Build and Run
@@ -208,19 +186,16 @@ docker build -t my-tina4-app .
 # Run it
 docker run -d \
   --name my-app \
-  -p 7146:7146 \
+  -p 7145:7145 \
   -e JWT_SECRET=your-production-secret \
-  -v app-data:/app/data \
+  -v $(pwd)/data:/app/data \
   my-tina4-app
-
-# Or use docker-compose
-docker compose up -d
 ```
 
 ### Verify
 
 ```bash
-curl http://localhost:7146/health
+curl http://localhost:7145/health
 ```
 
 ```json
@@ -233,21 +208,127 @@ curl http://localhost:7146/health
 }
 ```
 
-### .dockerignore
+### Adding Database Drivers
 
-Create `.dockerignore` to keep the image small:
+The base image ships with SQLite only. To use PostgreSQL, MySQL, MSSQL, or Firebird, install the driver in your Dockerfile using the `install-php-extensions` tool from `mlocati`.
 
+**PostgreSQL:**
+
+```dockerfile
+FROM tina4stack/tina4-php:v3
+WORKDIR /app
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/bin/
+RUN install-php-extensions pdo_pgsql && rm /usr/bin/install-php-extensions
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY composer.json composer.lock* ./
+RUN composer install --no-dev --optimize-autoloader --no-scripts && rm /usr/bin/composer
+COPY index.php .
+COPY .env .
+COPY migrations/ migrations/
+COPY src/ src/
+RUN mkdir -p data data/sessions data/queue data/mailbox
+EXPOSE 7145
+CMD ["php", "index.php", "0.0.0.0:7145"]
 ```
-.git
-.env
-data/
-logs/
-secrets/
-node_modules/
-vendor/
-tests/
-*.md
-.DS_Store
+
+**MySQL:**
+
+```dockerfile
+FROM tina4stack/tina4-php:v3
+WORKDIR /app
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/bin/
+RUN install-php-extensions pdo_mysql && rm /usr/bin/install-php-extensions
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY composer.json composer.lock* ./
+RUN composer install --no-dev --optimize-autoloader --no-scripts && rm /usr/bin/composer
+COPY index.php .
+COPY .env .
+COPY migrations/ migrations/
+COPY src/ src/
+RUN mkdir -p data data/sessions data/queue data/mailbox
+EXPOSE 7145
+CMD ["php", "index.php", "0.0.0.0:7145"]
+```
+
+**MSSQL:**
+
+```dockerfile
+FROM tina4stack/tina4-php:v3
+WORKDIR /app
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/bin/
+RUN install-php-extensions pdo_sqlsrv && rm /usr/bin/install-php-extensions
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY composer.json composer.lock* ./
+RUN composer install --no-dev --optimize-autoloader --no-scripts && rm /usr/bin/composer
+COPY index.php .
+COPY .env .
+COPY migrations/ migrations/
+COPY src/ src/
+RUN mkdir -p data data/sessions data/queue data/mailbox
+EXPOSE 7145
+CMD ["php", "index.php", "0.0.0.0:7145"]
+```
+
+**Firebird:**
+
+Firebird requires system-level libraries not available in Alpine. Use a Debian-based PHP image instead:
+
+```dockerfile
+FROM php:8.4-cli-bookworm
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    firebird-dev libfbclient2 && \
+    docker-php-ext-install pdo_firebird interbase && \
+    apt-get purge -y firebird-dev && apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY composer.json composer.lock* ./
+RUN composer install --no-dev --optimize-autoloader --no-scripts && rm /usr/bin/composer
+COPY index.php .
+COPY .env .
+COPY migrations/ migrations/
+COPY src/ src/
+RUN mkdir -p data data/sessions data/queue data/mailbox
+EXPOSE 7145
+ENV TINA4_OVERRIDE_CLIENT=true
+ENV TINA4_DEBUG=false
+CMD ["php", "index.php", "0.0.0.0:7145"]
+```
+
+> **Note:** The Firebird Dockerfile cannot use `tina4stack/tina4-php:v3` because the base image is Alpine and Firebird's `fbclient` library requires glibc (Debian).
+
+### Docker Compose
+
+Create `docker-compose.yml`:
+
+```yaml
+services:
+  app:
+    build: .
+    ports:
+      - "7145:7145"
+    environment:
+      - TINA4_DEBUG=false
+      - TINA4_LOG_LEVEL=WARNING
+      - JWT_SECRET=${JWT_SECRET}
+      - DATABASE_URL=sqlite:///data/app.db
+    volumes:
+      - app-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  app-data:
+```
+
+```bash
+# Start everything
+docker compose up -d
+
+# View logs
+docker compose logs -f app
+
+# Stop everything
+docker compose down
 ```
 
 ---
@@ -346,7 +427,7 @@ sudo systemctl restart php8.3-fpm
 Tina4 includes a built-in health check endpoint at `/health`:
 
 ```bash
-curl http://localhost:7146/health
+curl http://localhost:7145/health
 ```
 
 ```json
@@ -619,8 +700,8 @@ If you run multiple Tina4 instances, use nginx as a load balancer:
 
 ```nginx
 upstream tina4_backend {
-    server 127.0.0.1:7146;
-    server 127.0.0.1:7146;
+    server 127.0.0.1:7145;
+    server 127.0.0.1:7145;
     server 127.0.0.1:7147;
     server 127.0.0.1:7148;
 }
@@ -642,8 +723,8 @@ server {
 Start four instances on different ports:
 
 ```bash
-TINA4_PORT=7146 tina4 serve --production &
-TINA4_PORT=7146 tina4 serve --production &
+TINA4_PORT=7145 tina4 serve --production &
+TINA4_PORT=7145 tina4 serve --production &
 TINA4_PORT=7147 tina4 serve --production &
 TINA4_PORT=7148 tina4 serve --production &
 ```
@@ -720,18 +801,17 @@ Deploy the task management application you have been building throughout this bo
 ### Requirements
 
 1. Create a `Dockerfile` that:
-   - Uses FrankenPHP as the base image
-   - Installs Composer and dependencies
+   - Uses `tina4stack/tina4-php:v3` as the base image
+   - Installs Composer dependencies
    - Copies the application code
-   - Exposes port 7146
-   - Includes a health check
-   - Starts the server in production mode
+   - Creates data directories
+   - Exposes port 7145
 
 2. Create a `docker-compose.yml` that:
    - Builds and runs the application
-   - Maps port 7146
+   - Maps port 7145
    - Uses environment variables for secrets
-   - Persists the database and logs via volumes
+   - Persists the database via volumes
    - Includes restart policy
 
 3. Create a production `.env.production` with:
@@ -756,15 +836,15 @@ docker compose build
 docker compose up -d
 
 # Health check
-curl http://localhost:7146/health
+curl http://localhost:7145/health
 
 # Create a product
-curl -X POST http://localhost:7146/api/products \
+curl -X POST http://localhost:7145/api/products \
   -H "Content-Type: application/json" \
   -d '{"name": "Docker Widget", "price": 19.99}'
 
 # List products
-curl http://localhost:7146/api/products
+curl http://localhost:7145/api/products
 
 # View logs
 docker compose logs app
@@ -780,59 +860,47 @@ docker compose down
 ### Dockerfile
 
 ```dockerfile
-FROM dunglas/frankenphp:latest-php8.3-alpine
-
-RUN install-php-extensions \
-    pdo_sqlite \
-    mbstring \
-    openssl \
-    fileinfo
-
+FROM tina4stack/tina4-php:v3
 WORKDIR /app
 
-COPY composer.json composer.lock ./
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
-    && composer install --no-dev --optimize-autoloader --no-interaction
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY composer.json composer.lock* ./
+RUN composer install --no-dev --optimize-autoloader --no-scripts \
+    && rm /usr/bin/composer
 
-COPY . .
+COPY index.php .
+COPY .env .
+COPY migrations/ migrations/
+COPY src/ src/
 
-RUN mkdir -p data logs secrets \
-    && chown -R www-data:www-data data logs secrets
+RUN mkdir -p data data/sessions data/queue data/mailbox
 
-EXPOSE 7146
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:7146/health || exit 1
-
-CMD ["tina4", "serve", "--production"]
+EXPOSE 7145
+CMD ["php", "index.php", "0.0.0.0:7145"]
 ```
 
 ### docker-compose.yml
 
 ```yaml
-version: "3.8"
-
 services:
   app:
     build: .
     ports:
-      - "7146:7146"
+      - "7145:7145"
     environment:
       - TINA4_DEBUG=false
       - TINA4_LOG_LEVEL=WARNING
       - TINA4_CACHE_TEMPLATES=true
       - JWT_SECRET=change-this-to-a-real-secret
       - DATABASE_URL=sqlite:///data/app.db
-      - CORS_ORIGINS=http://localhost:7146
+      - CORS_ORIGINS=http://localhost:7145
     volumes:
       - app-data:/app/data
-      - app-logs:/app/logs
     restart: unless-stopped
     stop_grace_period: 35s
 
 volumes:
   app-data:
-  app-logs:
 ```
 
 ### .env.production
@@ -945,7 +1013,7 @@ RUN mkdir -p data logs secrets \
 
 ```dockerfile
 HEALTHCHECK --start-period=10s --interval=30s --timeout=5s --retries=3 \
-    CMD curl -f http://localhost:7146/health || exit 1
+    CMD curl -f http://localhost:7145/health || exit 1
 ```
 
 The `start-period` tells Docker to ignore health check failures during the first 10 seconds.

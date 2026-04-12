@@ -1,5 +1,106 @@
 # Chapter 35: Release Notes
 
+## v3.10.97 (2026-04-11)
+
+- **fix:** frond.form.submit redirect handling — XHR transparently follows 3xx redirects, so the callback received redirected HTML instead of navigating. Fixed by comparing `xhr.responseURL` with the original URL and calling `window.location.href` when a redirect is detected.
+- **fix:** Currency placeholder — locale files now default to `$` for the currency symbol.
+- **fix:** Admin sidebar alignment — widened sidebar to 220px with `min-width` to prevent label truncation.
+- **fix:** Admin table overflow — added `min-width: 0` and `overflow-x: auto` on `.admin-main` to prevent content clipping.
+- **fix:** Order detail template — corrected variable names (`items` instead of `order.items`, `item.name` instead of `item.product_name`) and used `.records` from `DatabaseResult`.
+- **fix:** Status badges — dashboard recent orders and order list now show colored badge pills with translated status labels (pending, processing, shipped, delivered, cancelled).
+- **fix:** Date formatting — admin order/dashboard dates trimmed to `YYYY-MM-DD HH:MM:SS` instead of raw ISO with microseconds.
+- **feat:** Cart quantity spinner — reactive qty controls using tina4-js signals, computed values, and effects.
+- **feat:** Multi-currency pricing — forex conversion via Api client (frankfurter.app), `|currency` template filter, currency selector in navbar.
+- **feat:** MCP server tools — `check_stock`, `low_stock_report`, `search_products` tools and `store://categories`, `store://inventory-summary` resources for AI assistant integration.
+- **feat:** Contact form — built with `HtmlElement` and `add_html_helpers()` to demonstrate programmatic HTML generation.
+- **feat:** ORM named scopes — `Product.scope("active")`, `Product.scope("low_stock")`, `Product.scope("expensive")`.
+- **feat:** Database connection pooling — `Database("sqlite:data/store.db", pool=4)`.
+- **feat:** Inline tests — `@tests` decorators on `cart_service.py` and `forex_service.py`.
+- **feat:** Language toggle — flag button (🇫🇷/🇬🇧) in navbar to switch locale.
+- **feat:** Helpdesk chat persistence — chat messages stored in DB, history API (`GET /api/chat/history`).
+- **dep:** Updated frond.min.js to v2.1.2 across all 4 frameworks (Python, PHP, Ruby, Node.js).
+- **parity:** All 4 frameworks bumped to 3.10.97.
+
+## v3.10.93 (2026-04-11)
+
+<div v-pre>
+
+- **fix:** Frond array/dict literal support — `{% set items = ["a", "b"] %}` and `{% set obj = {"k": "v"} %}` now parse correctly.
+- **fix:** Frond bracket depth tracking in `_find_outside_quotes()` and `_split_outside_quotes()` — expressions like `arr[i % 2]` no longer treated as top-level arithmetic.
+- **fix:** Frond subscript expression evaluation — bracket content uses `_eval_expr()` instead of `_resolve()`, enabling `arr[loop.index0 % 2]`.
+- **fix:** Frond slice with variable bounds — `items[start:end]` evaluates bounds through `_eval_expr()`.
+- **fix:** Frond multiline `{% set %}` — `_SET_RE` regex now uses `re.DOTALL` flag.
+- **docs:** Developer skills updated — Metrics Dashboard guidance, Frond Template Parity rules, `@noauth` security warnings.
+- **demo:** Complete e-commerce store example (`example/store/`) with GraphQL search, SSE, WebSocket, Queue, Events, 13 test files.
+- **parity:** All Frond fixes applied identically across Python, PHP, Ruby, Node.js. 2,304 tests passing.
+
+</div>
+
+## v3.10.92 (2026-04-10)
+
+- **refactor:** Extract `RateLimiter` from `core/middleware.py` into its own file `core/rate_limiter.py`. The old import path still works via re-export.
+- **feat:** Add `RateLimiterMiddleware` wrapper class with `before_rate_limit()` and `check()` static methods.
+- **breaking:** Rename `ErrorOverlay` methods — `render()` → `render_error_overlay()`, `render_production()` → `render_production_error()`, `debug_mode()` → `is_debug_mode()`.
+- **feat:** Add `Server.start()` and `Server.stop()` for cross-framework parity.
+- **feat:** Add `DatabaseResult.size()`, `to_array()`, `to_json()`, `to_csv()` methods.
+- **feat:** Add `ScssCompiler` class with `compile()`, `compile_file()`, `add_import_path()`, `set_variable()`.
+- **feat:** Add `DevAdmin.unresolved_count()`, `clear_all()`, `reset()`, `capture()` (5-param), `register()`.
+- **fix:** GraphQL test API — update `add_query()` calls to use positional args (args, return_type, resolver).
+- **parity:** 44/44 cross-framework features green. 2,263 tests passing.
+
+## v3.10.91 (2026-04-10)
+
+- **feat:** Add parity methods — `GraphQLType.parse()`, `Response.send()` params, `QueryBuilder.from_()`, `Debug.configure()`.
+- **breaking:** Remove alias methods `from_`, `configure`, `template` — use canonical names only (`from_table`, etc.).
+
+## v3.10.90 (2026-04-09)
+
+<div v-pre>
+
+- **docs:** Chapter 4 (Templates) — new "Dumping Values for Debugging" section covering both `{{ x|dump }}` and `{{ dump(x) }}` forms, their shared `<pre>`-wrapped output, and the `TINA4_DEBUG=true` production gate. Filter table entry updated to reference the new section.
+- **docs:** `plan/parity/parity-template.md` updated with a cross-framework dump helper comparison table and marks dump parity as confirmed across all 4 frameworks at v3.10.89.
+- **chore:** Version sync release — brings all 4 frameworks to the same patch version (3.10.90) so downstream users can upgrade PHP/Python/Ruby/Node.js in lockstep without hunting version mismatches.
+
+</div>
+
+## v3.10.89 (2026-04-09)
+
+<div v-pre>
+
+- **feat:** `{{ dump(value) }}` global function form added to Frond alongside the existing `{{ value|dump }}` filter. Both call a single `_render_dump()` helper and produce identical output.
+- **security:** Dump is now **gated on `TINA4_DEBUG=true`**. In production (env var unset or `false`) both the filter and function silently return an empty string. This prevents accidental leaks of internal state, object shapes, and sensitive values into rendered HTML when a developer leaves a `{{ dump(x) }}` call in a template.
+- **refactor:** Dump output is wrapped in `<pre>` and HTML-escaped via a single shared code path.
+- **test:** 6 new tests in `test_frond.py` (`TestDump`) covering debug-mode output, production silencing, unset-env default-to-production, function/filter parity, and circular references.
+
+</div>
+
+## v3.10.86 (2026-04-09)
+
+- **feat:** `ForeignKeyField` is now a proper `Field` subclass that auto-wires both sides of the relationship. Declaring `author_id = ForeignKeyField(to=Author)` injects `belongs_to` on the declaring model and `has_many` on the referenced model via `ORMMeta` — no manual descriptor calls required. Override the has-many name with `related_name=`.
+- **feat:** Cross-framework parity — same FK auto-wiring semantics now available in PHP (`$foreignKeys`), Ruby (`foreign_key_field`), and Node.js (`type: "foreignKey"`)
+- **fix:** `@orm_bind(db)` no longer nulls the decorated class — returns a pass-through decorator
+- **fix:** `Auth.get_token`/`valid_token`/`get_payload`/`refresh_token`/`authenticate_request` can now be called on the class (e.g. `Auth.get_token(payload)`) or on an instance via the `_DualMethod` descriptor
+- **fix:** `SQLiteAdapter` uses a class-level `threading.Lock` + `PRAGMA busy_timeout = 30000` + `timeout=30` on connect to eliminate `SQLITE_BUSY` deadlocks in the dev server under concurrent writes
+- **docs:** Chapter 6 (ORM) updated with a new "ForeignKeyField — Auto-Wired Relationships" section
+
+## v3.10.85 (2026-04-09)
+
+- **refactor:** Split queue adapters into separate files — `queue/rabbitmq_backend.py`, `queue/kafka_backend.py`, `queue/mongo_backend.py` (one class per file, aligning with PHP/Node/Ruby architecture)
+- **fix:** Updated remaining tests to use bool `valid_token()` + `get_payload()` pattern
+
+## v3.10.84 (2026-04-09)
+
+- **fix:** Router/middleware was setting `request.user` / `request.auth` / auth payload to `true` (boolean) instead of the actual JWT payload dict after `validToken()` was changed to return bool — any code reading `request.user["sub"]` etc. would have failed silently or crashed
+- **fix:** CSRF middleware was not correctly rejecting invalid tokens (nil check on bool result always passed)
+- **fix:** `AuthMiddleware.before_request` called `get_payload` incorrectly — would TypeError at runtime on valid token
+- **add:** Headless routing auth payload integration tests to prevent regression
+
+## v3.10.83 (2026-04-08)
+
+- **fix:** prevent orphaned session files on WebSocket and anonymous requests (#36)
+- **feat:** WebSocket rooms — `join_room`, `leave_room`, `broadcast_to_room`, `room_count`, `get_room_connections`
+- **feat:** queue signature parity — instance-scoped `push`/`pop`/`retry`, no topic params on public methods
+
 ## v3.10.70 (2026-04-06)
 
 - **New:** SSE (Server-Sent Events) support via `response.stream()` — pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type

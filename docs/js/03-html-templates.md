@@ -378,26 +378,26 @@ html`<div class=${() => isActive.value ? 'tab active' : 'tab'}>Tab</div>`
 You will hit this. Everyone does. Here are the rules:
 
 ```typescript
-${false}      // Renders the TEXT "false"
-${true}       // Renders the TEXT "true"
-${0}          // Renders the TEXT "0"
+${false}      // Renders nothing (empty) — treated the same as null
 ${null}       // Renders nothing (empty)
 ${undefined}  // Renders nothing (empty)
+${true}       // Renders the TEXT "true"
+${0}          // Renders the TEXT "0"
 ```
 
-Only `null` and `undefined` render as nothing. `false`, `true`, and `0` are all converted to text.
+`false`, `null`, and `undefined` all render as nothing — they are explicitly swallowed by the template engine. Every other value is converted to text via `String(value)`.
 
-This means the common React pattern does not work:
+This means the `&&` shortcut actually works for hiding content — `false` disappears cleanly:
 
 ```typescript
-// WRONG -- if show is false, renders the text "false"
-html`${show.value && html`<p>Content</p>`}`
+// This works -- false renders nothing
+html`${() => show.value && html`<p>Content</p>`}`
 
-// RIGHT -- use a ternary, return null for "nothing"
+// This also works -- explicit ternary is clearer and preferred
 html`${() => show.value ? html`<p>Content</p>` : null}`
 ```
 
-The `&&` pattern is dangerous because `false && anything` evaluates to `false`, which the template renders as the string `"false"`. The ternary is the safe path. `null` is the empty output. Burn this pattern into memory: `condition ? content : null`.
+The ternary is still the recommended style because intent is explicit and it handles both branches. But unlike React, you will not see the stray text `"false"` appear in the DOM if you forget.
 
 ---
 
@@ -518,6 +518,7 @@ One template. Six binding types. Zero manual DOM updates. The template engine ha
 | `${() => expr}` | Reactive block (conditionals, lists) | Yes |
 | `${fragment}` | Insert DocumentFragment | No |
 | `${array}` | Render each item | No |
+| `${false\|null\|undefined}` | Renders nothing (empty) | - |
 | `@click=${fn}` | Event listener (auto-batched) | - |
 | `?disabled=${x}` | Boolean attribute (add/remove) | If signal/function |
 | `.value=${x}` | DOM property binding | If signal |

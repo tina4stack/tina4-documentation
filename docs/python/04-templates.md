@@ -259,7 +259,7 @@ Filters transform output. The pipe `|` applies them:
 | `date("Y-m-d")` | `{{ created \| date("Y-m-d") }}` | Format a date value |
 | `format(val)` | `{{ "%.2f" \| format(price) }}` | Format string with value (sprintf-style) |
 | `data_uri` | `{{ content \| data_uri }}` | Convert to a data URI string |
-| `dump` | `{{ var \| dump }}` | Debug output of a variable |
+| `dump` | `{{ var \| dump }}` or `{{ dump(var) }}` | Debug output — gated on `TINA4_DEBUG=true` (see [Dumping Values](#dumping-values-for-debugging)) |
 | `form_token` | `{{ form_token() }}` | Generate a CSRF hidden input with token |
 | `formTokenValue` | `{{ formTokenValue("context") }}` | Return the raw JWT token string |
 | `to_json` | `{{ data \| to_json }}` | JSON-encode a value (no double-escaping) |
@@ -288,6 +288,40 @@ A fallback when a variable is empty or undefined:
 {{ bio | default("No bio provided.") }}
 {{ theme | default("light") }}
 ```
+
+### Dumping Values for Debugging
+
+The `dump` helper lets you inspect any variable mid-template. Two interchangeable forms are supported:
+
+```html
+{{ user | dump }}
+{{ dump(user) }}
+```
+
+Both produce the same `<pre>`-wrapped, HTML-escaped `repr()` of the value. Handles nested dicts, lists, class instances, and cyclic references without crashing — Python's `repr()` prints `{...}` for back-edges.
+
+```html
+{{ dump(order) }}
+
+{# Output: #}
+{# <pre>{'id': 42, 'items': [...], 'total': 99.99}</pre> #}
+```
+
+<div v-pre>
+
+**dump is gated on `TINA4_DEBUG=true`.** In production (env var unset or `false`) **both** the filter and function form silently return an empty string. This prevents accidental leaks of internal state, object shapes, or sensitive values into rendered HTML if a developer leaves a `{{ dump(x) }}` call in a template.
+
+</div>
+
+```bash
+# .env — dev
+TINA4_DEBUG=true    # dump() outputs the value
+
+# .env — production
+TINA4_DEBUG=false   # dump() is a no-op
+```
+
+You can rely on this gate for safety, but treat `dump` as a development-only convenience. For structured output in production code paths, use `to_json`.
 
 ---
 

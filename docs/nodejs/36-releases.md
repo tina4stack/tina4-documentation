@@ -1,5 +1,97 @@
 # Chapter 35: Release Notes
 
+## v3.10.97 (2026-04-11)
+
+- **fix:** frond.form.submit redirect handling — XHR follows 3xx redirects transparently; fixed by detecting `xhr.responseURL` mismatch and navigating instead.
+- **dep:** Updated frond.min.js to v2.1.2.
+- **parity:** All 4 frameworks bumped to 3.10.97.
+
+## v3.10.93 (2026-04-11)
+
+- **fix:** Frond bracket depth tracking in `findOutsideQuotes()` and `splitOutsideQuotes()` — expressions like `arr[i % 2]` no longer treated as top-level arithmetic.
+- **fix:** Frond subscript expression evaluation — bracket content uses `evalExpr()` instead of direct context lookup, enabling `arr[loop.index0 % 2]`.
+- **fix:** Frond slice with variable bounds — `items[start:end]` evaluates bounds through `evalExpr()`.
+- **docs:** Developer skills updated — Metrics Dashboard guidance, Frond Template Parity rules, `@noauth` security warnings.
+- **parity:** All Frond fixes applied identically across Python, PHP, Ruby, Node.js. 2,831 tests passing (268 Frond).
+
+## v3.10.92 (2026-04-10)
+
+- **feat:** Add `DevAdmin` methods — `capture()` (5-param), `clearAll()`, `health()`, `unresolvedCount()`, `reset()`, `register()`.
+- **feat:** Add `Server.start()` and `Server.stop()` for cross-framework parity.
+- **feat:** Add `DatabaseResult.size()` method.
+- **feat:** Add `DevReload.start()` and `DevReload.stop()`.
+- **feat:** Add `ScssCompiler.compileScss()` method.
+- **fix:** `autoCrud.ts` — fix spread syntax on non-iterable, add id in POST response, correct response format to `{data, meta}`, change validation status from 400 to 422.
+- **parity:** 44/44 cross-framework features green. 2,752 tests passing.
+
+## v3.10.91 (2026-04-10)
+
+- **feat:** Add parity methods — `GraphQLType.parse()`, `CorsMiddleware.isPreflight()`, `RateLimiterMiddleware.check()`.
+- **breaking:** Rename `from()` → `fromTable()`, remove `template()` alias — align with Python canonical names.
+
+## v3.10.90 (2026-04-09)
+
+<div v-pre>
+
+- **docs:** Chapter 4 (Templates) — new "Dumping Values for Debugging" section covering both `{{ x|dump }}` and `{{ dump(x) }}` forms, the v3.10.88 `inspectValue()` inspector (circular refs, BigInt, Map/Set, Error, Date, class instances), and the `TINA4_DEBUG=true` production gate. Filter table entry updated to reference the new section.
+- **docs:** `plan/parity/parity-template.md` updated with a cross-framework dump helper comparison table and marks dump parity as confirmed across all 4 frameworks at v3.10.89.
+- **chore:** Version sync release — brings all 4 frameworks to the same patch version (3.10.90) so downstream users can upgrade PHP/Python/Ruby/Node.js in lockstep without hunting version mismatches.
+
+</div>
+
+## v3.10.89 (2026-04-09)
+
+<div v-pre>
+
+- **feat:** `{{ dump(value) }}` global function form added to Frond alongside the existing `{{ value|dump }}` filter. Both call a single `renderDump()` helper (which delegates to the v3.10.88 `inspectValue()` inspector) and produce identical output.
+- **security:** Dump is now **gated on `TINA4_DEBUG=true`**. In production (env var unset or `false`) both the filter and function silently return an empty `SafeString`. This prevents accidental leaks of internal state, object shapes, and sensitive values into rendered HTML when a developer leaves a `{{ dump(x) }}` call in a template.
+- **test:** 4 new tests in `frond.test.ts` covering `dump()`/`|dump` parity, debug-mode circular ref handling, production silencing for both forms.
+
+</div>
+
+## v3.10.88 (2026-04-09)
+
+<div v-pre>
+
+- **fix:** `{{ value|dump }}` filter now handles complex objects safely. The previous implementation used `JSON.stringify` which crashed on circular references and BigInt, silently dropped functions/Symbols/`undefined`, and serialised `Map`/`Set`/`Error`/class instances as empty `{}`. Replaced with an `inspectValue()` inspector that matches PHP's `var_dump`, Python's `repr`, and Ruby's `inspect`:
+  - Circular references: `[Circular]`
+  - BigInt: `123n`
+  - Date: `Date(2026-04-09T13:00:00.000Z)`
+  - Map / Set: `Map(2) { "a" => 1, "b" => 2 }` / `Set(3) { 1, 2, 3 }`
+  - Error: `Error("boom")`
+  - Class instances: `User { name: "Alice", age: 30 }` (class name preserved)
+  - Functions: `[Function: name]`
+  - Depth-capped at 8 levels to prevent runaway graphs
+- **test:** 11 new edge-case assertions in `frond.test.ts` (frond.test now 254 passing).
+
+</div>
+
+## v3.10.87 (2026-04-09)
+
+- **fix:** Dev toolbar no longer vanishes after a hot-reload. The CLI watcher used to call `server.router.clear()` on every file change — including template/CSS/JS asset edits — which left a brief window of 404 responses that bypass the dev toolbar injection. The watcher now reports whether a `.ts/.tsx/.js/.jsx` source file changed; router re-discovery only runs on code changes, and asset edits pass through without touching the router. Matches the PHP v3.10.87 fix.
+
+## v3.10.86 (2026-04-09)
+
+- **feat:** `foreignKey` field type on `BaseModel` auto-wires both sides of a foreign key relationship. Declaring `user_id: { type: "foreignKey", references: "User" }` injects a `belongsTo` entry on the declaring model and a `hasMany` entry on the referenced model via a module-level FK registry. New static methods `_processForeignKeys()` and `_applyFkRegistry()` are called lazily before relationship resolution. Optional `relatedName` overrides the has-many key.
+- **feat:** Cross-framework parity — same FK auto-wiring semantics now available in Python (`ForeignKeyField`), PHP (`$foreignKeys`), and Ruby (`foreign_key_field`)
+- **docs:** Chapter 6 (ORM) updated with a new "foreignKey Field Type — Auto-Wired Relationships" section
+
+## v3.10.85 (2026-04-09)
+
+- Version bump for parity with Python and PHP releases
+
+## v3.10.84 (2026-04-09)
+
+- **fix:** Router/middleware was setting `request.user` / `request.auth` / auth payload to `true` (boolean) instead of the actual JWT payload after `validToken()` was changed to return bool — any code reading `request.user.sub` etc. would have failed silently or crashed
+- **fix:** CSRF middleware was not correctly rejecting invalid tokens (null check on bool result always passed)
+- **add:** Headless routing auth payload integration tests to prevent regression
+
+## v3.10.83 (2026-04-08)
+
+- **feat:** WebSocket rooms — `joinRoom`, `leaveRoom`, `broadcastToRoom`, `getRoomConnections`, `roomCount`, `getClientRooms`
+- **feat:** Queue signature parity — instance-scoped `push`/`pop`/`retry`, no topic params on public methods
+- **feat:** Auth alias cleanup — removed `createToken`/`validateToken`, canonical `getToken`/`validToken`
+
 ## v3.10.70 (2026-04-06)
 
 - **New:** SSE (Server-Sent Events) support via `response.stream()` — pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
