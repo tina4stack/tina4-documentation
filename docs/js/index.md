@@ -189,8 +189,9 @@ npx tina4js build --target python
 | API | 3.5 KB | 1.49 KB |
 | PWA | 2.7 KB | 1.09 KB |
 | WebSocket | 2.3 KB | 0.91 KB |
+| SSE/NDJSON | 3.4 KB | 1.30 KB |
 | Debug | 13.8 KB | 4.76 KB |
-| **Full framework** | **13.6 KB** | **5.34 KB** |
+| **Full framework** | **17.0 KB** | **6.64 KB** |
 
 Tree-shakeable — import only what you need. The full framework is 13.6 KB raw / 5.34 KB gzipped, but most apps use only Core + Router (under 1.5 KB gzip):
 
@@ -200,6 +201,7 @@ import { route, router } from 'tina4js/router';   // 0.12 KB gzip
 import { api } from 'tina4js/api';                 // 1.49 KB gzip
 import { pwa } from 'tina4js/pwa';                 // 1.09 KB gzip
 import { ws } from 'tina4js/ws';                   // 0.91 KB gzip
+import { sse } from 'tina4js/sse';                 // 1.30 KB gzip
 import 'tina4js/debug';                            // 4.76 KB gzip (dev only, tree-shaken from prod)
 ```
 
