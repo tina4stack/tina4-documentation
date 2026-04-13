@@ -2,680 +2,877 @@
 
 ## 1. From SQL to Objects
 
-Chapter 5 was raw SQL for every operation. It works. It also gets tedious. The same `INSERT INTO products (name, price, ...) VALUES (:name, :price, ...)` patterns, over and over. The ORM lets you work with Ruby classes instead. Define a class. Map it to a table. Call `save`, `load`, `delete`.
+The last chapter was raw SQL. It works. It also gets repetitive. Every insert demands an INSERT statement. Every update demands an UPDATE. Every fetch maps column names to hash keys. Over and over.
 
-Tina4's ORM is minimal by design. It does not hide SQL. It gives you convenience for common operations and steps aside when you need raw queries.
+Tina4's ORM turns database rows into Ruby objects. Define a model class with fields. The ORM writes the SQL. It stays SQL-first -- you can drop to raw SQL at any moment -- but for the 90% case of CRUD operations, the ORM handles the grunt work.
+
+Picture a blog. Authors, posts, comments. Authors own many posts. Posts own many comments. Comments belong to posts. Modeling these relationships with raw SQL means JOINs and manual foreign key management. The ORM makes this declarative.
 
 ---
 
 ## 2. Defining a Model
 
-ORM models live in `src/orm/`. Every `.rb` file in that directory is auto-loaded, just like route files.
+Create a model file in `src/orm/`. Every `.rb` file in that directory is auto-loaded.
 
-Create `src/orm/product.rb`:
+Create `src/orm/note.rb`:
 
 ```ruby
-class Product < Tina4::ORM
-  integer_field :id, primary_key: true
-  string_field :name
-  string_field :category, default: "Uncategorized"
-  float_field :price, default: 0.00
-  boolean_field :in_stock, default: true
-  string_field :created_at
-  string_field :updated_at
-
-  table_name "products"
+class Note < Tina4::ORM
+  integer_field :id, primary_key: true, auto_increment: true
+  string_field :title, nullable: false
+  string_field :content, default: ""
+  string_field :category, default: "general"
+  boolean_field :pinned, default: false
+  datetime_field :created_at
+  datetime_field :updated_at
 end
 ```
 
-That is a complete model. Let us break it down:
-
-- **Extends `Tina4::ORM`** -- This gives you `save`, `load`, `delete`, `select`, and other methods.
-- **Field declarations** -- Each field maps to a database column. The field name uses `snake_case` which maps directly to the column name. Tina4 handles the conversion automatically.
-- **`table_name`** -- The database table this model maps to. If you omit it, Tina4 uses the lowercase class name: `Product` becomes `product`. Set `ORM_PLURAL_TABLE_NAMES=true` in `.env` to get plural names (`product` → `products`).
-- **`primary_key: true`** -- Marks the primary key column. Defaults to `id`.
-- **Default values** -- Fields with defaults (like `category: "Uncategorized"`) are used when creating new records without specifying those fields.
-
----
-
-## 3. Field Types
-
-Use the appropriate field declaration for your data types:
-
-| Ruby Declaration | Database Type (SQLite) | Database Type (PostgreSQL) | Notes |
-|-----------------|----------------------|---------------------------|-------|
-| `integer_field` | INTEGER | INTEGER | Whole numbers |
-| `string_field` | TEXT | VARCHAR(255) | Text fields |
-| `float_field` | REAL | DOUBLE PRECISION | Decimal numbers |
-| `boolean_field` | INTEGER | BOOLEAN | SQLite stores as 0/1 |
-
-### Nullable Fields
-
-Fields are nullable by default. To require a value:
-
-```ruby
-string_field :name, nullable: false
-string_field :description  # nullable by default
-```
-
-### Primary Keys and Auto-Increment
-
-By default, Tina4 treats the primary key field as auto-incrementing. When you call `save` on a new object (where the primary key is not set), the database generates the ID:
-
-```ruby
-product = Product.new
-product.name = "Widget"
-product.price = 9.99
-product.save
-
-puts product.id  # Auto-generated: 1, 2, 3, ...
-```
-
----
-
-## 4. Creating and Saving Records
-
-### save -- Insert or Update
-
-The `save` method inserts a new record or updates an existing one, depending on whether the primary key is set:
-
-```ruby
-Tina4::Router.post("/api/products") do |request, response|
-  body = request.body
-
-  product = Product.new
-  product.name = body["name"]
-  product.category = body["category"] || "Uncategorized"
-  product.price = (body["price"] || 0).to_f
-  product.in_stock = body["in_stock"] != false
-  product.save
-
-  response.json(product.to_h, 201)
-end
-```
-
-```bash
-curl -X POST http://localhost:7147/api/products \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Wireless Keyboard", "category": "Electronics", "price": 79.99}'
-```
-
-```json
-{
-  "id": 1,
-  "name": "Wireless Keyboard",
-  "category": "Electronics",
-  "price": 79.99,
-  "in_stock": true,
-  "created_at": "2026-03-22 14:30:00",
-  "updated_at": "2026-03-22 14:30:00"
-}
-```
-
-### Updating an Existing Record
-
-When `id` is already set, `save` performs an UPDATE:
-
-```ruby
-Tina4::Router.put("/api/products/{id:int}") do |request, response|
-  product = Product.new
-  product.load(request.params["id"])
-
-  if product.id.nil?
-    return response.json({ error: "Product not found" }, 404)
-  end
-
-  body = request.body
-  product.name = body["name"] || product.name
-  product.price = (body["price"] || product.price).to_f
-  product.category = body["category"] || product.category
-  product.save
-
-  response.json(product.to_h)
-end
-```
-
----
-
-## 5. Loading Records
-
-### load -- Get by Primary Key
-
-```ruby
-product = Product.new
-product.load(42)
-
-if product.id.nil?
-  # Product with ID 42 not found
-end
-```
-
-`load` populates the object's properties from the database row matching the primary key. If no row matches, the properties remain at their default values (or nil).
-
-### A Simple Get Endpoint
-
-```ruby
-Tina4::Router.get("/api/products/{id:int}") do |request, response|
-  product = Product.new
-  product.load(request.params["id"])
-
-  if product.id.nil?
-    return response.json({ error: "Product not found" }, 404)
-  end
-
-  response.json(product.to_h)
-end
-```
-
-```bash
-curl http://localhost:7147/api/products/1
-```
-
-```json
-{
-  "id": 1,
-  "name": "Wireless Keyboard",
-  "category": "Electronics",
-  "price": 79.99,
-  "in_stock": true,
-  "created_at": "2026-03-22 14:30:00",
-  "updated_at": "2026-03-22 14:30:00"
-}
-```
-
----
-
-## 6. Deleting Records
-
-### delete
-
-```ruby
-Tina4::Router.delete("/api/products/{id:int}") do |request, response|
-  product = Product.new
-  product.load(request.params["id"])
-
-  if product.id.nil?
-    return response.json({ error: "Product not found" }, 404)
-  end
-
-  product.delete
-
-  response.json(nil, 204)
-end
-```
-
-`delete` removes the row from the database. The object still exists in memory but the database row is gone.
-
----
-
-## 7. Querying with select
-
-The `select` method lets you find records with filters, ordering, and pagination:
-
-### Basic Select
-
-```ruby
-product = Product.new
-products = product.select("*")
-```
-
-Returns an array of Product objects with all records.
-
-### Filtering
-
-```ruby
-# Simple filter
-electronics = Product.where("category = ?", ["Electronics"])
-
-# Multiple conditions
-affordable = Product.where("price < ? AND in_stock = ?", [100, 1])
-```
-
-### Ordering
-
-```ruby
-sorted = Product.all(order_by: "price DESC")
-```
-
-The `order_by` keyword argument is an ORDER BY clause.
-
-### Pagination
-
-```ruby
-page = 1
-per_page = 10
-offset = (page - 1) * per_page
-
-products = Product.all(order_by: "name ASC", limit: per_page, offset: offset)
-```
-
-The `limit` and `offset` keyword arguments control pagination.
-
-### A Full List Endpoint with Filters
-
-```ruby
-Tina4::Router.get("/api/products") do |request, response|
-  product = Product.new
-
-  category = request.params["category"] || ""
-  min_price = (request.params["min_price"] || 0).to_f
-  max_price = (request.params["max_price"] || 999999).to_f
-  page = (request.params["page"] || 1).to_i
-  per_page = (request.params["per_page"] || 20).to_i
-  sort = request.params["sort"] || "name"
-  order = (request.params["order"] || "ASC").upcase
-
-  # Build filter
-  conditions = []
-  params = []
-
-  unless category.empty?
-    conditions << "category = ?"
-    params << category
-  end
-
-  conditions << "price >= ? AND price <= ?"
-  params << min_price
-  params << max_price
-
-  filter = conditions.join(" AND ")
-
-  # Validate sort field
-  allowed_sorts = %w[name price category created_at]
-  sort = "name" unless allowed_sorts.include?(sort)
-  order = "ASC" unless %w[ASC DESC].include?(order)
-
-  offset = (page - 1) * per_page
-
-  sql = "SELECT * FROM products WHERE #{filter} ORDER BY #{sort} #{order}"
-  products = Product.select(sql, params, limit: per_page, offset: offset)
-
-  results = products.map(&:to_h)
-
-  response.json({
-    products: results,
-    page: page,
-    per_page: per_page,
-    count: results.length
-  })
-end
-```
-
-```bash
-curl "http://localhost:7147/api/products?category=Electronics&sort=price&order=DESC&page=1&per_page=5"
-```
-
-```json
-{
-  "products": [
-    {"id": 4, "name": "Standing Desk", "category": "Electronics", "price": 549.99, "in_stock": true},
-    {"id": 1, "name": "Wireless Keyboard", "category": "Electronics", "price": 79.99, "in_stock": true}
-  ],
-  "page": 1,
-  "per_page": 5,
-  "count": 2
-}
-```
-
----
-
-## 8. Creating Tables from Models
-
-Instead of writing a migration manually, you can generate the table from your model:
-
-```ruby
-product = Product.new
-product.create_table
-```
-
-You can also use the CLI:
-
-```bash
-tina4 orm:create-table Product
-```
-
-```
-Created table "products" with 7 columns.
-```
-
-This is convenient during early development. For production, use migrations (Chapter 5) so schema changes are versioned and reversible.
-
----
-
-## 9. Relationships
-
-### has_many -- One-to-Many
-
-A user has many posts:
-
-Create `src/orm/user.rb`:
+A complete model. Here is what each piece does:
+
+- The table name defaults to the lowercase, pluralised class name (`Note` -> `notes`). Override it with `table_name "my_table"` inside the class body.
+- `primary_key: true` on a field marks it as the primary key (defaults to `:id` if none is specified)
+- Each field is a DSL declaration that creates a getter and setter on the model
+
+### Field Types
+
+| Field Type | Ruby Type | SQL Type | Description |
+|-----------|-----------|----------|-------------|
+| `integer_field` | `Integer` | `INTEGER` | Whole numbers |
+| `string_field` | `String` | `VARCHAR(255)` | Text strings |
+| `text_field` | `String` | `TEXT` | Long text |
+| `float_field` | `Float` | `REAL` | Floating-point numbers |
+| `decimal_field` | `Float` | `REAL` | Decimal numbers (precision/scale options) |
+| `numeric_field` | `Float` | `REAL` | Alias for float_field |
+| `boolean_field` | `Integer` | `INTEGER` (0/1) | True/False stored as 0/1 |
+| `date_field` | `String` | `DATE` | Date values |
+| `datetime_field` | `String` | `DATETIME` | Date and time |
+| `timestamp_field` | `String` | `TIMESTAMP` | Timestamps |
+| `blob_field` | `String` | `BLOB` | Binary data |
+| `json_field` | `String` | `TEXT` | JSON stored as text |
+
+For foreign keys, use `integer_field`. There is no separate foreign key field type -- the relationship is defined through `has_many`, `has_one`, and `belongs_to` declarations instead.
+
+### Field Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `primary_key` | `bool` | Marks this field as the primary key |
+| `auto_increment` | `bool` | Auto-incrementing integer |
+| `nullable` | `bool` | Whether the field accepts nil (default: `true`) |
+| `default` | any | Default value when not provided |
+| `length` | `int` | String length for `string_field` (default: 255) |
+| `precision` | `int` | Decimal precision for `decimal_field` |
+| `scale` | `int` | Decimal scale for `decimal_field` |
+
+### Field Mapping
+
+When your Ruby attribute names do not match the database column names, use `field_mapping` to define the translation. `field_mapping` is a hash that maps Ruby attribute names to DB column names.
 
 ```ruby
 class User < Tina4::ORM
-  integer_field :id, primary_key: true
-  string_field :name
-  string_field :email
-  string_field :created_at
+  self.field_mapping = {
+    "first_name"    => "fname",      # Ruby attr -> DB column
+    "last_name"     => "lname",
+    "email_address" => "email"
+  }
 
-  table_name "users"
+  integer_field :id, primary_key: true, auto_increment: true
+  string_field :first_name, nullable: false
+  string_field :last_name, nullable: false
+  string_field :email_address, nullable: false
 
-  has_many :posts, class_name: "Post", foreign_key: "user_id"
+  table_name "user_accounts"
 end
 ```
 
-Create `src/orm/post.rb`:
+With this mapping, `user.first_name` reads from and writes to the `fname` column. The ORM handles the conversion in both directions -- on reads via `from_hash` and on writes via `to_db_hash`. This is useful with legacy databases or third-party schemas where you cannot rename the columns.
+
+A common use case is Firebird or Oracle, which store column names in uppercase:
 
 ```ruby
-class Post < Tina4::ORM
-  integer_field :id, primary_key: true
-  integer_field :user_id
-  string_field :title
-  string_field :body
-  string_field :created_at
+class Account < Tina4::ORM
+  self.table_name   = "ACCOUNTS"
+  self.field_mapping = {
+    "id"           => "CUST_ID",
+    "account_no"   => "ACCOUNTNO",
+    "store_name"   => "STORENAME",
+    "credit_limit" => "CREDITLIMIT",
+  }
 
-  table_name "posts"
-
-  belongs_to :user, class_name: "User", foreign_key: "user_id"
-  has_many :comments, class_name: "Comment", foreign_key: "post_id"
+  integer_field :id, primary_key: true, auto_increment: true
+  string_field :account_no
+  string_field :store_name
+  float_field :credit_limit, default: 0.0
 end
 ```
 
-The `foreign_key` option specifies the column on the related table. `has_many :posts, class_name: "Post", foreign_key: "user_id"` means: find all rows in `posts` where `user_id` equals this user's ID.
+Ruby code uses clean snake_case names (`account.account_no`, `account.credit_limit`). The ORM maps them to the uppercase DB columns automatically.
 
-### has_one -- One-to-One
+### find() vs where() -- naming convention
+
+The two query methods have a deliberate difference in how they handle column names:
+
+- **`find(filter)`** uses **Ruby attribute names**. The ORM translates them via `field_mapping`.
+- **`where(conditions, params)`** uses **raw DB column names** in the SQL string. No translation is done.
 
 ```ruby
-has_one :profile, class_name: "Profile", foreign_key: "user_id"
+# find() -- use Ruby attribute names
+accounts = Account.find(account_no: "A001")   # translates to ACCOUNTNO = ?
+
+# where() -- use DB column names directly in the SQL
+accounts = Account.where("ACCOUNTNO = ?", ["A001"])  # raw SQL, no translation
 ```
 
-`has_one` works like `has_many` but returns a single object instead of an array.
+This means `find()` is portable across database engines, while `where()` gives you full control of the SQL.
 
-### belongs_to -- Inverse Relationship
+### auto_map and Case Conversion Utilities
 
-The inverse of `has_many`. A post belongs to a user:
+The `auto_map` flag exists on the ORM base class for cross-language parity with the PHP and Node.js versions. In Ruby it is a no-op because Ruby convention already uses `snake_case`, which matches database column names.
+
+For cases where you need to convert between naming conventions (for example, when serialising to a camelCase JSON API), two utility methods are available:
 
 ```ruby
-belongs_to :user, class_name: "User", foreign_key: "user_id"
+Tina4.snake_to_camel("first_name")   # "firstName"
+Tina4.camel_to_snake("firstName")    # "first_name"
 ```
 
-`belongs_to :user, class_name: "User", foreign_key: "user_id"` means: load the User where `users.id` equals `self.user_id`.
+---
 
-### Using Relationships
+## 3. create_table -- Schema from Models
+
+You can create the database table directly from your model definition:
 
 ```ruby
-Tina4::Router.get("/api/users/{id:int}") do |request, response|
-  user = User.new
-  user.load(request.params["id"])
+Note.create_table
+```
 
-  if user.id.nil?
-    return response.json({ error: "User not found" }, 404)
+This generates and runs the CREATE TABLE SQL based on your field definitions. It is good for development and testing. For production, use migrations (Chapter 5) for version-controlled schema changes.
+
+```bash
+irb
+irb> require_relative "app"
+irb> Note.create_table
+```
+
+---
+
+## 4. CRUD Operations
+
+### save -- Create or Update
+
+```ruby
+Tina4::Router.post "/api/notes" do |request, response|
+  note = Note.new
+  note.title = request.body_parsed["title"]
+  note.content = request.body_parsed["content"] || ""
+  note.category = request.body_parsed["category"] || "general"
+  note.pinned = request.body_parsed["pinned"] || false
+  result = note.save
+
+  if result
+    response.json({ message: "Note created", note: note.to_h }, status: 201)
+  else
+    response.json({ errors: note.errors }, status: 422)
+  end
+end
+```
+
+`save` detects whether the record is new (INSERT) or existing (UPDATE) based on whether the primary key has a value and the record is persisted. It returns `self` on success, so you can chain calls. It returns `false` on failure -- check `note.errors` for details.
+
+### create -- Build and Save in One Step
+
+When you have a hash of data ready, `create` builds the model and saves it in one call:
+
+```ruby
+note = Note.create({
+  title: "Quick Note",
+  content: "Created in one step",
+  category: "general"
+})
+```
+
+### find_by_id -- Fetch One Record by Primary Key
+
+```ruby
+Tina4::Router.get "/api/notes/{id:int}" do |request, response|
+  note = Note.find_by_id(request.params["id"].to_i)
+
+  if note.nil?
+    response.json({ error: "Note not found" }, status: 404)
+  else
+    response.json(note.to_h)
+  end
+end
+```
+
+`find_by_id` takes a primary key value and returns a model instance, or `nil` if no row matches. If soft delete is enabled, it excludes soft-deleted records.
+
+Use `find_or_fail` when you want an exception raised instead of `nil`:
+
+```ruby
+note = Note.find_or_fail(id)  # Raises RuntimeError if not found
+```
+
+### find -- Query by Filter Hash
+
+The `find` method accepts a hash of column-value pairs and returns an array of matching records:
+
+```ruby
+# Find all notes in the "work" category
+work_notes = Note.find({ category: "work" })
+
+# Find with pagination and ordering
+recent = Note.find({ pinned: true }, limit: 10, order_by: "created_at DESC")
+
+# Find all records (no filter)
+all_notes = Note.find
+```
+
+Both hash syntax (`find({category: "work"})`) and keyword syntax (`find(category: "work")`) are accepted. Ruby attribute names are used in the filter -- the ORM applies `field_mapping` automatically when translating to SQL column names.
+
+### where -- Query with SQL Conditions
+
+For more complex queries, `where` takes a SQL WHERE clause with `?` placeholders:
+
+```ruby
+notes = Note.where("category = ?", ["work"])
+```
+
+### delete -- Remove a Record
+
+```ruby
+Tina4::Router.delete "/api/notes/{id:int}" do |request, response|
+  note = Note.find_by_id(request.params["id"].to_i)
+
+  if note.nil?
+    response.json({ error: "Note not found" }, status: 404)
+  else
+    note.delete
+    response.json(nil, status: 204)
+  end
+end
+```
+
+### Listing Records
+
+```ruby
+Tina4::Router.get "/api/notes" do |request, response|
+  category = request.query["category"]
+
+  if category
+    notes = Note.where("category = ?", [category])
+  else
+    notes = Note.all
   end
 
-  posts = user.posts
-
   response.json({
-    user: user.to_h,
-    posts: posts.map(&:to_h),
-    post_count: posts.length
+    notes: notes.map(&:to_h),
+    count: notes.length
   })
 end
 ```
 
-```bash
-curl http://localhost:7147/api/users/1
+`where` takes a WHERE clause with `?` placeholders and an array of parameters. It returns an array of model instances. `all` fetches all records. Both support pagination:
+
+```ruby
+# With pagination
+notes = Note.where("category = ?", ["work"])
+
+# Fetch all with pagination and ordering
+notes = Note.all(limit: 20, offset: 0, order_by: "created_at DESC")
+
+# SQL-first query -- full control over the SQL
+notes = Note.select(
+  "SELECT * FROM notes WHERE pinned = ? ORDER BY created_at DESC",
+  [1], limit: 20, offset: 0
+)
+```
+
+### select_one -- Fetch a Single Record by SQL
+
+When you need exactly one record from a custom SQL query:
+
+```ruby
+note = Note.select_one("SELECT * FROM notes WHERE slug = ?", ["my-note"])
+```
+
+Returns a model instance or `nil`.
+
+### load -- Populate an Existing Instance
+
+The `load` method fills an existing model instance from the database:
+
+```ruby
+note = Note.new
+note.id = 42
+note.load  # Loads data for id=42
+
+# Or with a filter string
+note = Note.new
+note.load("slug = ?", ["my-note"])
+```
+
+Returns `true` if a record was found, `false` otherwise.
+
+### count -- Count Records
+
+```ruby
+total = Note.count
+work_count = Note.count("category = ?", ["work"])
+```
+
+Respects soft delete -- only counts non-deleted records.
+
+---
+
+## 5. to_h, to_dict, to_json, and Other Serialisation
+
+### to_h and to_dict
+
+Convert a model instance to a hash. `to_dict` is a direct alias for `to_h` -- use whichever reads more naturally in your code:
+
+```ruby
+note = Note.find_by_id(1)
+
+data = note.to_h
+# {id: 1, title: "Shopping List", content: "Milk, eggs", category: "personal", pinned: false, created_at: "2026-03-22 14:30:00", updated_at: "2026-03-22 14:30:00"}
+
+# to_dict is identical
+data = note.to_dict
+```
+
+The `include` parameter adds relationship data to the output (see Eager Loading below). Pass an array of relationship names:
+
+```ruby
+# Include relationships in the hash
+data = note.to_h(include: [:comments])
+data = note.to_dict(include: [:comments])  # same result
+```
+
+### to_json
+
+Convert directly to a JSON string:
+
+```ruby
+json_string = note.to_json
+# '{"id":1,"title":"Shopping List",...}'
+```
+
+### Other Serialisation Methods
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `to_h(include: nil)` | `Hash` | Primary hash method with optional relationship includes |
+| `to_hash(include: nil)` | `Hash` | Alias for `to_h` |
+| `to_dict(include: nil)` | `Hash` | Alias for `to_h` |
+| `to_assoc(include: nil)` | `Hash` | Alias for `to_h` |
+| `to_object` | `Hash` | Alias for `to_h` |
+| `to_json(include: nil)` | `String` | JSON string |
+| `to_array` | `Array` | Flat list of values (no keys) |
+| `to_list` | `Array` | Alias for `to_array` |
+
+---
+
+## 6. Relationships
+
+Tina4 Ruby supports two styles of relationships: declarative (class-level DSL) and imperative (instance-level method calls). Both produce the same queries. Declarative relationships enable eager loading; imperative relationships are ad-hoc.
+
+### foreign_key_field — Auto-Wired Relationships
+
+Declaring a column with `foreign_key_field :user_id, references: User` automatically wires both sides of the relationship. The declaring class gets a `belongs_to` accessor (the column name with `_id` stripped), and the referenced class gets a `has_many` accessor (the declaring class name lowercased with `s` appended, or whatever you pass via `related_name:`).
+
+```ruby
+class User < Tina4::ORM
+  table_name "users"
+  integer_field :id, primary_key: true
+  string_field :name
+end
+
+class Post < Tina4::ORM
+  table_name "posts"
+  integer_field :id, primary_key: true
+  string_field :title
+
+  # Auto-wires post.user (belongs_to) and user.posts (has_many)
+  foreign_key_field :user_id, references: User
+end
+```
+
+With just the `foreign_key_field` declaration, both sides are accessible:
+
+```ruby
+post = Post.find_by_id(1)
+puts post.user.name        # "Alice"
+
+user = User.find_by_id(1)
+user.posts.each do |p|
+  puts p.title
+end
+```
+
+For a custom `has_many` name, pass `related_name:`:
+
+```ruby
+foreign_key_field :user_id, references: User, related_name: :blog_posts
+# user.blog_posts instead of user.posts
+```
+
+If the referenced class is defined later, the framework handles deferred wiring — as soon as the referenced class applies its own field definitions, the `has_many` is injected.
+
+### Declarative Relationships
+
+Define relationships at the class level. The ORM creates accessor methods on each instance.
+
+#### has_many
+
+An author has many posts:
+
+Create `src/orm/author.rb`:
+
+```ruby
+class Author < Tina4::ORM
+  integer_field :id, primary_key: true, auto_increment: true
+  string_field :name, nullable: false
+  string_field :email, nullable: false
+  string_field :bio, default: ""
+  datetime_field :created_at
+
+  has_many :posts, class_name: "BlogPost", foreign_key: "author_id"
+end
+```
+
+Create `src/orm/blog_post.rb`:
+
+```ruby
+class BlogPost < Tina4::ORM
+  integer_field :id, primary_key: true, auto_increment: true
+  integer_field :author_id, nullable: false
+  string_field :title, nullable: false
+  string_field :slug, nullable: false
+  string_field :content, default: ""
+  string_field :status, default: "draft"
+  datetime_field :created_at
+  datetime_field :updated_at
+
+  table_name "posts"
+
+  belongs_to :author, class_name: "Author", foreign_key: "author_id"
+end
+```
+
+Now access an author's posts:
+
+```ruby
+Tina4::Router.get "/api/authors/{id:int}" do |request, response|
+  author = Author.find_by_id(request.params["id"].to_i)
+
+  if author.nil?
+    response.json({ error: "Author not found" }, status: 404)
+  else
+    posts = author.posts  # Calls the has_many accessor
+
+    data = author.to_h
+    data[:posts] = posts.map(&:to_h)
+    response.json(data)
+  end
+end
+```
+
+#### has_one
+
+A user has one profile:
+
+```ruby
+class User < Tina4::ORM
+  integer_field :id, primary_key: true, auto_increment: true
+  string_field :name, nullable: false
+
+  has_one :profile, class_name: "Profile", foreign_key: "user_id"
+end
+```
+
+```ruby
+profile = user.profile  # Returns a single instance or nil
+```
+
+#### belongs_to
+
+A post belongs to an author:
+
+```ruby
+Tina4::Router.get "/api/posts/{id:int}" do |request, response|
+  post = BlogPost.find_by_id(request.params["id"].to_i)
+
+  if post.nil?
+    response.json({ error: "Post not found" }, status: 404)
+  else
+    author = post.author  # Calls the belongs_to accessor
+
+    data = post.to_h
+    data[:author] = author&.to_h
+    response.json(data)
+  end
+end
+```
+
+### Imperative Relationships
+
+For ad-hoc queries without class-level declarations, use `query_has_many`, `query_has_one`, and `query_belongs_to` on any instance:
+
+```ruby
+# Same result as declarative has_many, but without a class-level declaration
+posts = author.query_has_many(BlogPost, foreign_key: "author_id")
+
+# Has one
+profile = user.query_has_one(Profile, foreign_key: "user_id")
+
+# Belongs to
+author = post.query_belongs_to(Author, foreign_key: "author_id")
+```
+
+These work identically to the declarative accessors but do not support eager loading.
+
+---
+
+## 7. Eager Loading
+
+Calling relationship methods inside a loop creates the N+1 problem. Load 10 authors. Call `author.posts` for each one. That fires 11 queries -- 1 for authors, 10 for posts. The page drags.
+
+The `include` parameter on `all`, `where`, `find`, and `select` solves this. It eager-loads relationships in bulk:
+
+```ruby
+Tina4::Router.get "/api/authors" do |request, response|
+  authors = Author.all(include: ["posts"])
+
+  data = authors.map do |author|
+    author_dict = author.to_h
+    author_dict[:posts] = author.posts.map(&:to_h)
+    author_dict
+  end
+
+  response.json({ authors: data })
+end
+```
+
+Without eager loading, 10 authors and their posts cost 11 queries. With eager loading: 2 queries. That is the difference between a fast page and a slow one.
+
+### Nested Eager Loading
+
+Dot notation loads multiple levels deep:
+
+```ruby
+# Load authors, their posts, and each post's comments
+authors = Author.all(include: ["posts", "posts.comments"])
+```
+
+Authors, their posts, and each post's comments. Three queries total instead of hundreds.
+
+### to_h with Nested Includes
+
+When eager loading is active, `to_h(include: ...)` embeds the related data:
+
+```ruby
+post = BlogPost.find_by_id(1)
+# Manually trigger eager load first, or use select with include
+posts = BlogPost.select(
+  "SELECT * FROM posts WHERE id = ?", [1],
+  include: ["author", "comments"]
+)
+post = posts.first
+data = post.to_h(include: ["author", "comments"])
 ```
 
 ```json
 {
-  "user": {"id": 1, "name": "Alice", "email": "alice@example.com"},
-  "posts": [
-    {"id": 1, "user_id": 1, "title": "First Post", "body": "Hello world!"},
-    {"id": 3, "user_id": 1, "title": "Second Post", "body": "Another one."}
-  ],
-  "post_count": 2
+  "id": 1,
+  "title": "Getting Started with Tina4",
+  "author": {
+    "id": 1,
+    "name": "Alice",
+    "email": "alice@example.com"
+  },
+  "comments": [
+    {"id": 1, "body": "Great post!", "author_name": "Bob"}
+  ]
 }
 ```
 
 ---
 
-## 10. Eager Loading
+## 8. Soft Delete
 
-Calling relationship methods inside a loop creates the N+1 query problem. Load 100 users. Call `user.posts` for each one. That is 101 queries -- 1 for users, 100 for posts.
-
-Use the `include` parameter with `select` to eager-load relationships:
+Sometimes a record needs to disappear from queries without leaving the database. Soft delete handles this. The row stays. A flag marks it as deleted. Queries skip it.
 
 ```ruby
-user = User.new
-users = user.select("*", "", {}, "name ASC", 20, 0, ["posts"])
-```
+class Task < Tina4::ORM
+  self.soft_delete = true  # Enable soft delete
 
-The seventh argument is an array of relationship names to include. This runs just 2 queries (one for users, one for all related posts) and stitches the results together.
-
-### to_h with Nested Includes
-
-When eager loading is active, `to_h` includes the related data:
-
-```ruby
-user = User.new
-users = user.select("*", "", {}, "", 0, 0, ["posts"])
-
-result = users.map(&:to_h)
-
-response.json(result)
-```
-
-```json
-[
-  {
-    "id": 1,
-    "name": "Alice",
-    "email": "alice@example.com",
-    "posts": [
-      {"id": 1, "title": "First Post", "body": "Hello world!"},
-      {"id": 3, "title": "Second Post", "body": "Another one."}
-    ]
-  },
-  {
-    "id": 2,
-    "name": "Bob",
-    "email": "bob@example.com",
-    "posts": [
-      {"id": 2, "title": "Bob's Post", "body": "Hi there."}
-    ]
-  }
-]
-```
-
-### Nested Eager Loading
-
-Load multiple levels deep with dot notation:
-
-```ruby
-user = User.new
-users = user.select("*", "", {}, "", 0, 0, ["posts", "posts.comments"])
-```
-
-This loads users, their posts, and each post's comments in 3 queries total.
-
----
-
-## 11. Soft Delete
-
-If your model has a `deleted_at` field, Tina4 supports soft delete -- marking records as deleted without actually removing them from the database:
-
-```ruby
-class Post < Tina4::ORM
-  integer_field :id, primary_key: true
-  string_field :title
-  string_field :body
-  string_field :deleted_at
-
-  table_name "posts"
-
-  soft_delete true
+  integer_field :id, primary_key: true, auto_increment: true
+  string_field :title, nullable: false
+  boolean_field :completed, default: false
+  integer_field :is_deleted, default: 0  # Required for soft delete (0 = active, 1 = deleted)
+  string_field :created_at
 end
 ```
 
-With `soft_delete true`:
+When `soft_delete` is set to `true`, the ORM changes its behaviour:
 
-- `post.delete` sets `deleted_at` to the current timestamp instead of deleting the row
-- `select` automatically excludes rows where `deleted_at` is not null
-- `post.force_delete` permanently removes the row
+- `task.delete` sets `is_deleted` to `1` instead of running a DELETE query
+- `Task.all`, `Task.where`, and `Task.find_by_id` filter out records where `is_deleted = 1`
+- `task.restore` sets `is_deleted` back to `0` and makes the record visible again
+- `task.force_delete` permanently removes the row from the database
+- `Task.with_trashed` includes soft-deleted records in query results
 
-### Restoring Soft-Deleted Records
+### Deleting and Restoring
 
 ```ruby
-post = Post.new
-post.load(5)  # Load even if soft-deleted
-post.deleted_at = nil
-post.save
+# Soft delete -- sets is_deleted = 1, row stays in the database
+task = Task.find_by_id(1)
+task.delete
+
+# Restore -- sets is_deleted = 0, record is visible again
+task.restore
+
+# Permanently delete -- removes the row, no recovery possible
+task.force_delete
 ```
 
-### Including Soft-Deleted Records in Queries
+`restore` is the inverse of `delete`. It sets `is_deleted` back to `0` and commits the change. The record reappears in all standard queries.
+
+### Including Soft-Deleted Records
+
+Standard queries (`all`, `where`, `find_by_id`) exclude soft-deleted records. When you need to see everything -- for admin dashboards, audit logs, or data recovery -- use `with_trashed`:
 
 ```ruby
-post = Post.new
-all_posts = post.select("*", "", {}, "", 0, 0, [], true)  # eighth arg = include deleted
+# All tasks, including soft-deleted ones
+all_tasks = Task.with_trashed
+
+# Soft-deleted tasks matching a condition
+deleted_tasks = Task.with_trashed("completed = ?", [1])
 ```
 
----
+`with_trashed` accepts the same filter parameters as `where`. The only difference: it ignores the `is_deleted` filter that standard queries apply.
 
-## 12. Auto-CRUD
+### Counting with Soft Delete
 
-Auto-CRUD generates REST endpoints for any ORM model. No route files needed.
-
-Add the `auto_crud` declaration to your model:
+The `count` class method respects soft delete. It only counts non-deleted records:
 
 ```ruby
-class Product < Tina4::ORM
-  integer_field :id, primary_key: true
-  string_field :name
-  string_field :category, default: "Uncategorized"
-  float_field :price, default: 0.00
-  boolean_field :in_stock, default: true
+active_count = Task.count
+active_work = Task.count("category = ?", ["work"])
+```
 
-  table_name "products"
+### Custom Soft Delete Field
 
-  auto_crud true
+By default, the ORM uses `:is_deleted` as the soft delete column. You can change this:
+
+```ruby
+class Task < Tina4::ORM
+  self.soft_delete = true
+  self.soft_delete_field = :deleted_flag
+
+  integer_field :id, primary_key: true, auto_increment: true
+  string_field :title, nullable: false
+  integer_field :deleted_flag, default: 0
 end
 ```
 
-With `auto_crud true`, Tina4 automatically registers these routes:
+### When to Use Soft Delete
+
+Soft delete suits data that users might want to recover -- emails, documents, user accounts. It also serves audit requirements where regulations demand retention. For temporary data (sessions, cache entries, logs), hard delete keeps the table lean.
+
+---
+
+## 9. Auto-CRUD
+
+Writing the same five REST endpoints for every model gets tedious. Auto-CRUD generates them from your model class. Define the model. Register it. Five routes appear.
+
+### The auto_crud Flag
+
+The simplest approach -- set `self.auto_crud = true` on your model class:
+
+```ruby
+class Note < Tina4::ORM
+  self.auto_crud = true  # Generates REST endpoints automatically
+
+  integer_field :id, primary_key: true, auto_increment: true
+  string_field :title, nullable: false
+  string_field :content, default: ""
+end
+```
+
+The moment Ruby loads this class, the ORM registers it with `AutoCrud`. Five routes appear after `Tina4::AutoCrud.generate_routes` is called.
+
+### Manual Registration
+
+You can also register models explicitly using `AutoCrud.register`:
+
+```ruby
+Tina4::AutoCrud.register(Note)
+```
+
+Then generate all routes at once:
+
+```ruby
+Tina4::AutoCrud.generate_routes(prefix: "/api")
+```
+
+Both approaches produce the same result:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/products` | List all with pagination |
-| `GET` | `/api/products/{id}` | Get one by ID |
-| `POST` | `/api/products` | Create a new record |
-| `PUT` | `/api/products/{id}` | Update a record |
-| `DELETE` | `/api/products/{id}` | Delete a record |
+| `GET` | `/api/notes` | List all with pagination (`limit`, `offset`, `page`, `per_page` params) |
+| `GET` | `/api/notes/{id}` | Get one by primary key |
+| `POST` | `/api/notes` | Create a new record |
+| `PUT` | `/api/notes/{id}` | Update a record |
+| `DELETE` | `/api/notes/{id}` | Delete a record |
 
-The endpoint prefix is derived from the table name: `products` becomes `/api/products`.
+The endpoint prefix derives from the table name. The `notes` table becomes `/api/notes`. Pass a custom prefix to change it:
+
+```ruby
+Tina4::AutoCrud.generate_routes(prefix: "/api/v2")
+# Routes: /api/v2/notes, /api/v2/notes/{id}, etc.
+```
+
+### What the Generated Routes Do
+
+**GET /api/notes** returns paginated results with optional filtering and sorting:
 
 ```bash
-curl http://localhost:7147/api/products
+curl "http://localhost:7147/api/notes?limit=10&offset=0"
+curl "http://localhost:7147/api/notes?filter[category]=work&sort=-created_at"
 ```
 
 ```json
 {
   "data": [
-    {"id": 1, "name": "Wireless Keyboard", "category": "Electronics", "price": 79.99, "in_stock": true},
-    {"id": 2, "name": "Yoga Mat", "category": "Fitness", "price": 29.99, "in_stock": true}
+    {"id": 1, "title": "Shopping List", "content": "Milk, eggs", "category": "personal", "pinned": false},
+    {"id": 2, "title": "Sprint Plan", "content": "Review backlog", "category": "work", "pinned": true}
   ],
   "total": 2,
-  "page": 1,
-  "per_page": 20
+  "limit": 10,
+  "offset": 0
 }
 ```
 
-Auto-CRUD supports query parameters for filtering, sorting, and pagination out of the box:
+Sorting uses the `sort` parameter. Prefix a field with `-` for descending order: `?sort=-created_at,name`.
+
+Filtering uses `filter[field]=value` syntax: `?filter[category]=work&filter[pinned]=true`.
+
+**POST /api/notes** validates input before saving:
 
 ```bash
-curl "http://localhost:7147/api/products?category=Electronics&sort=price&order=desc&page=1&per_page=10"
+curl -X POST http://localhost:7147/api/notes \
+  -H "Content-Type: application/json" \
+  -d '{"title": "New Note", "content": "Created via auto-CRUD"}'
 ```
+
+If validation fails (for example, a required field is missing), the endpoint returns a 422 with error details:
+
+```json
+{"errors": ["title cannot be null"]}
+```
+
+**DELETE /api/notes/1** respects soft delete. If the model has `self.soft_delete = true`, the record is marked deleted instead of removed.
 
 ### Custom Routes Alongside Auto-CRUD
 
-Custom routes defined in `src/routes/` load before auto-CRUD routes. They take precedence. If you need special logic for one endpoint -- custom validation, side effects, complex queries -- define that route manually. Auto-CRUD handles the rest.
-
-### Introspection
-
-Check which models are registered:
-
-```ruby
-registered = Tina4::AutoCrud.models
-# [User, Product, Order]
-```
+Custom routes defined in `src/routes/` load before auto-CRUD routes. They take precedence. If you need special logic for one endpoint (custom validation, side effects, complex queries), define that route manually. Auto-CRUD handles the rest.
 
 ---
 
-## 13. Scopes
+## 10. Scopes
 
-Scopes are reusable query filters baked into the model. Use the `scope` class method to define them:
+Scopes are reusable query filters baked into the model. Ruby supports two approaches: instance methods and the `scope` class method.
+
+### Class Methods as Scopes
 
 ```ruby
 class BlogPost < Tina4::ORM
-  integer_field :id, primary_key: true
-  string_field :title
+  integer_field :id, primary_key: true, auto_increment: true
+  string_field :title, nullable: false
   string_field :status, default: "draft"
-  string_field :created_at
+  datetime_field :created_at
 
   table_name "posts"
 
-  scope :published, "status = ?", ["published"]
-  scope :drafts, "status = ?", ["draft"]
+  def self.published
+    where("status = ?", ["published"])
+  end
+
+  def self.drafts
+    where("status = ?", ["draft"])
+  end
+
+  def self.recent(days = 7)
+    where(
+      "created_at > datetime('now', ?)",
+      ["-#{days} days"]
+    )
+  end
 end
 ```
 
 Use them in your routes:
 
 ```ruby
-Tina4::Router.get("/api/posts/published") do |request, response|
+Tina4::Router.get "/api/posts/published" do |request, response|
   posts = BlogPost.published
   response.json({ posts: posts.map(&:to_h) })
 end
 
-Tina4::Router.get("/api/posts/drafts") do |request, response|
-  posts = BlogPost.drafts
+Tina4::Router.get "/api/posts/recent" do |request, response|
+  days = (request.query["days"] || 7).to_i
+  posts = BlogPost.recent(days)
   response.json({ posts: posts.map(&:to_h) })
 end
+```
+
+### Dynamic Scopes with scope()
+
+Register scopes dynamically with the `scope` class method:
+
+```ruby
+BlogPost.scope("active", "status != ?", ["archived"])
+
+# Now call it:
+active_posts = BlogPost.active
 ```
 
 Scopes keep query logic in the model where it belongs. Route handlers stay thin.
 
 ---
 
-## 14. Input Validation
+## 11. Input Validation
 
-Field definitions carry validation rules. Call `validate` before `save` and the ORM checks every constraint:
+Field definitions carry validation rules through the `nullable` option. Call `validate` before `save` and the ORM checks every constraint:
 
 ```ruby
 class Product < Tina4::ORM
-  integer_field :id, primary_key: true
+  integer_field :id, primary_key: true, auto_increment: true
   string_field :name, nullable: false
   string_field :sku, nullable: false
   float_field :price, nullable: false
   string_field :category
-
-  table_name "products"
 end
 ```
 
 ```ruby
-Tina4::Router.post("/api/products") do |request, response|
-  product = Product.new(request.body)
+Tina4::Router.post "/api/products" do |request, response|
+  product = Product.new(request.body_parsed)
 
   errors = product.validate
-  unless errors.empty?
-    return response.json({ errors: errors }, 400)
+  if errors.any?
+    response.json({ errors: errors }, status: 400)
+  else
+    product.save
+    response.json({ product: product.to_h }, status: 201)
   end
-
-  product.save
-  response.json({ product: product.to_h }, 201)
 end
 ```
 
-If validation fails, `validate` returns a list of error messages:
+If validation fails, `validate` returns an array of error messages:
 
 ```json
 {
@@ -687,117 +884,74 @@ If validation fails, `validate` returns a list of error messages:
 }
 ```
 
-The ORM validates `nullable` constraints. Fields marked `nullable: false` must have a value before saving. The `save` method also runs `validate_fields` internally -- if validation fails, `save` returns `false` and populates `errors`.
+Note that `save` also runs field validation internally and returns `false` if any required fields are missing. Check `model.errors` after a failed save.
 
 ---
 
-## 15. Exercise: Build a Blog
+## 12. Exercise: Build a Blog with Relationships
 
-Build a blog with three models: User, Post, and Comment. Use relationships, eager loading, and auto-CRUD.
+Build a blog API with authors, posts, and comments.
 
 ### Requirements
 
-1. Create three models in `src/orm/`:
+1. Create these models:
 
-   **User** -- `users` table:
-   - `id` (integer, primary key)
-   - `name` (string)
-   - `email` (string)
-   - `created_at` (string)
-   - Has many posts
+**Author:** `id`, `name` (required), `email` (required), `bio`, `created_at`
 
-   **Post** -- `posts` table:
-   - `id` (integer, primary key)
-   - `user_id` (integer, foreign key)
-   - `title` (string)
-   - `body` (string)
-   - `published` (boolean, default false)
-   - `created_at` (string)
-   - Belongs to user, has many comments
+**Post:** `id`, `author_id` (integer foreign key), `title` (required), `slug` (required), `content`, `status` (default: draft), `created_at`, `updated_at`
 
-   **Comment** -- `comments` table:
-   - `id` (integer, primary key)
-   - `post_id` (integer, foreign key)
-   - `author_name` (string)
-   - `body` (string)
-   - `created_at` (string)
-   - Belongs to post
+**Comment:** `id`, `post_id` (integer foreign key), `author_name` (required), `author_email` (required), `body` (required), `created_at`
 
-2. Create migrations for all three tables.
-
-3. Build custom endpoints:
+2. Build these endpoints:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/blog/posts` | List published posts with author info (eager load user) |
-| `GET` | `/api/blog/posts/{id:int}` | Get a post with author and comments (eager load both) |
-| `POST` | `/api/blog/posts/{id:int}/comments` | Add a comment to a post |
-
-4. Enable auto-CRUD on the User model for admin access at `/api/users`.
-
-### Test with:
-
-```bash
-# Create a user (via auto-CRUD)
-curl -X POST http://localhost:7147/api/users \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Alice", "email": "alice@example.com"}'
-
-# Create a post
-curl -X POST http://localhost:7147/api/blog/posts \
-  -H "Content-Type: application/json" \
-  -d '{"user_id": 1, "title": "My First Post", "body": "Hello world!", "published": true}'
-
-# List posts
-curl http://localhost:7147/api/blog/posts
-
-# Add a comment
-curl -X POST http://localhost:7147/api/blog/posts/1/comments \
-  -H "Content-Type: application/json" \
-  -d '{"author_name": "Bob", "body": "Great post!"}'
-
-# Get post with comments
-curl http://localhost:7147/api/blog/posts/1
-```
+| `POST` | `/api/authors` | Create an author |
+| `GET` | `/api/authors/{id:int}` | Get author with their posts |
+| `POST` | `/api/posts` | Create a post (requires author_id) |
+| `GET` | `/api/posts` | List published posts with author info |
+| `GET` | `/api/posts/{id:int}` | Get post with author and comments |
+| `POST` | `/api/posts/{id:int}/comments` | Add comment to a post |
 
 ---
 
-## 16. Solution
+## 13. Solution
 
-### Models
-
-Create `src/orm/user.rb`:
+Create `src/orm/author.rb`:
 
 ```ruby
-class User < Tina4::ORM
-  integer_field :id, primary_key: true
-  string_field :name
-  string_field :email
-  string_field :created_at
+class Author < Tina4::ORM
+  integer_field :id, primary_key: true, auto_increment: true
+  string_field :name, nullable: false
+  string_field :email, nullable: false
+  string_field :bio, default: ""
+  datetime_field :created_at
 
-  table_name "users"
-
-  auto_crud true
-
-  has_many :posts, class_name: "Post", foreign_key: "user_id"
+  has_many :posts, class_name: "BlogPost", foreign_key: "author_id"
 end
 ```
 
-Create `src/orm/post.rb`:
+Create `src/orm/blog_post.rb`:
 
 ```ruby
-class Post < Tina4::ORM
-  integer_field :id, primary_key: true
-  integer_field :user_id
-  string_field :title
-  string_field :body
-  boolean_field :published, default: false
-  string_field :created_at
+class BlogPost < Tina4::ORM
+  integer_field :id, primary_key: true, auto_increment: true
+  integer_field :author_id, nullable: false
+  string_field :title, nullable: false
+  string_field :slug, nullable: false
+  string_field :content, default: ""
+  string_field :status, default: "draft"
+  datetime_field :created_at
+  datetime_field :updated_at
 
   table_name "posts"
 
-  belongs_to :user, class_name: "User", foreign_key: "user_id"
+  belongs_to :author, class_name: "Author", foreign_key: "author_id"
   has_many :comments, class_name: "Comment", foreign_key: "post_id"
+
+  def self.published
+    where("status = ?", ["published"])
+  end
 end
 ```
 
@@ -805,257 +959,259 @@ Create `src/orm/comment.rb`:
 
 ```ruby
 class Comment < Tina4::ORM
-  integer_field :id, primary_key: true
-  integer_field :post_id
-  string_field :author_name
-  string_field :body
-  string_field :created_at
+  integer_field :id, primary_key: true, auto_increment: true
+  integer_field :post_id, nullable: false
+  string_field :author_name, nullable: false
+  string_field :author_email, nullable: false
+  string_field :body, nullable: false
+  datetime_field :created_at
 
-  table_name "comments"
-
-  belongs_to :post, class_name: "Post", foreign_key: "post_id"
+  belongs_to :post, class_name: "BlogPost", foreign_key: "post_id"
 end
 ```
-
-### Routes
 
 Create `src/routes/blog.rb`:
 
 ```ruby
-# List published posts with author
-Tina4::Router.get("/api/blog/posts") do |request, response|
-  posts = Post.select("SELECT * FROM posts WHERE published = ? ORDER BY created_at DESC", [1], include: ["user"])
+Tina4::Router.post "/api/authors" do |request, response|
+  author = Author.new
+  author.name = request.body_parsed["name"]
+  author.email = request.body_parsed["email"]
+  author.bio = request.body_parsed["bio"] || ""
 
-  results = posts.map(&:to_h)
-
-  response.json({
-    posts: results,
-    count: results.length
-  })
+  errors = author.validate
+  if errors.any?
+    response.json({ errors: errors }, status: 400)
+  else
+    author.save
+    response.json({ author: author.to_h }, status: 201)
+  end
 end
 
-# Get a single post with author and comments
-Tina4::Router.get("/api/blog/posts/{id:int}") do |request, response|
-  post = Post.new
-  post.load(request.params["id"])
+Tina4::Router.get "/api/authors/{id:int}" do |request, response|
+  author = Author.find_by_id(request.params["id"].to_i)
 
-  if post.id.nil?
-    return response.json({ error: "Post not found" }, 404)
+  if author.nil?
+    response.json({ error: "Author not found" }, status: 404)
+  else
+    posts = author.posts
+
+    data = author.to_h
+    data[:posts] = posts.map(&:to_h)
+    response.json(data)
   end
-
-  user = post.user
-  comments = post.comments
-
-  result = post.to_h
-  result[:user] = user ? user.to_h : nil
-  result[:comments] = comments.map(&:to_h)
-  result[:comment_count] = comments.length
-
-  response.json(result)
 end
 
-# Create a post
-Tina4::Router.post("/api/blog/posts") do |request, response|
-  body = request.body
+Tina4::Router.post "/api/posts" do |request, response|
+  body = request.body_parsed
 
-  if body["title"].nil? || body["body"].nil? || body["user_id"].nil?
-    return response.json({ error: "title, body, and user_id are required" }, 400)
+  # Verify author exists
+  author = Author.find_by_id(body["author_id"])
+  if author.nil?
+    next response.json({ error: "Author not found" }, status: 404)
   end
 
-  post = Post.new
-  post.user_id = body["user_id"].to_i
-  post.title = body["title"]
-  post.body = body["body"]
-  post.published = body["published"] || false
-  post.save
+  blog_post = BlogPost.new
+  blog_post.author_id = body["author_id"]
+  blog_post.title = body["title"]
+  blog_post.slug = body["slug"]
+  blog_post.content = body["content"] || ""
+  blog_post.status = body["status"] || "draft"
 
-  response.json(post.to_h, 201)
+  errors = blog_post.validate
+  if errors.any?
+    response.json({ errors: errors }, status: 400)
+  else
+    blog_post.save
+    response.json({ post: blog_post.to_h }, status: 201)
+  end
 end
 
-# Add a comment to a post
-Tina4::Router.post("/api/blog/posts/{id:int}/comments") do |request, response|
-  post_id = request.params["id"]
+Tina4::Router.get "/api/posts" do |request, response|
+  posts = BlogPost.published
+  data = []
 
-  # Verify post exists
-  post = Post.new
-  post.load(post_id)
-
-  if post.id.nil?
-    return response.json({ error: "Post not found" }, 404)
+  posts.each do |p|
+    post_dict = p.to_h
+    post_dict[:author] = p.author&.to_h
+    data << post_dict
   end
 
-  body = request.body
+  response.json({ posts: data, count: data.length })
+end
 
-  if body["author_name"].nil? || body["body"].nil?
-    return response.json({ error: "author_name and body are required" }, 400)
+Tina4::Router.get "/api/posts/{id:int}" do |request, response|
+  blog_post = BlogPost.find_by_id(request.params["id"].to_i)
+
+  if blog_post.nil?
+    response.json({ error: "Post not found" }, status: 404)
+  else
+    data = blog_post.to_h
+    data[:author] = blog_post.author&.to_h
+    comments = blog_post.comments
+    data[:comments] = comments.map(&:to_h)
+    data[:comment_count] = comments.length
+    response.json(data)
+  end
+end
+
+Tina4::Router.post "/api/posts/{id:int}/comments" do |request, response|
+  blog_post = BlogPost.find_by_id(request.params["id"].to_i)
+
+  if blog_post.nil?
+    next response.json({ error: "Post not found" }, status: 404)
   end
 
   comment = Comment.new
-  comment.post_id = post_id
-  comment.author_name = body["author_name"]
-  comment.body = body["body"]
-  comment.save
+  comment.post_id = request.params["id"].to_i
+  comment.author_name = request.body_parsed["author_name"]
+  comment.author_email = request.body_parsed["author_email"]
+  comment.body = request.body_parsed["body"]
 
-  response.json(comment.to_h, 201)
+  errors = comment.validate
+  if errors.any?
+    response.json({ errors: errors }, status: 400)
+  else
+    comment.save
+    response.json({ comment: comment.to_h }, status: 201)
+  end
 end
-```
-
-**Expected output for GET /api/blog/posts/1:**
-
-```json
-{
-  "id": 1,
-  "user_id": 1,
-  "title": "My First Post",
-  "body": "Hello world!",
-  "published": true,
-  "created_at": "2026-03-22 15:00:00",
-  "user": {
-    "id": 1,
-    "name": "Alice",
-    "email": "alice@example.com"
-  },
-  "comments": [
-    {
-      "id": 1,
-      "post_id": 1,
-      "author_name": "Bob",
-      "body": "Great post!",
-      "created_at": "2026-03-22 15:01:00"
-    }
-  ],
-  "comment_count": 1
-}
 ```
 
 ---
 
-## 17. Field Name Mapping
+## 14. Gotchas
 
-By default, Tina4 Ruby expects both field names and database columns to use `snake_case`. If your database uses `camelCase` columns (common when sharing a database with a JavaScript or Java backend), enable `auto_map` on your model:
-
-```ruby
-class Product < Tina4::ORM
-  integer_field :id, primary_key: true
-  string_field :product_name
-  float_field :unit_price
-
-  table_name "products"
-
-  auto_map true
-end
-```
-
-With `auto_map true`, Tina4 automatically translates between `snake_case` Ruby attributes and `camelCase` database columns (`product_name` maps to `productName`).
-
-You can also use the conversion helpers directly:
-
-```ruby
-Tina4.snake_to_camel("product_name")  # => "productName"
-Tina4.camel_to_snake("productName")   # => "product_name"
-```
-
----
-
-## 18. Auto-CRUD with `Tina4::CRUD.to_crud`
-
-Beyond the `auto_crud true` declaration on models (section 12), Tina4 provides `Tina4::CRUD.to_crud` for generating a complete HTML CRUD interface -- a searchable, paginated table with create/edit/delete forms -- from a SQL query or ORM model:
-
-```ruby
-Tina4::Router.get("/admin/products") do |request, response|
-  response.html(Tina4::CRUD.to_crud(request, {
-    title: "Manage Products",
-    model: Product,
-    fields: [:id, :name, :category, :price, :in_stock]
-  }))
-end
-```
-
-You can also use a raw SQL query instead of a model:
-
-```ruby
-Tina4::Router.get("/admin/orders") do |request, response|
-  response.html(Tina4::CRUD.to_crud(request, {
-    title: "Orders",
-    sql: "SELECT id, customer_name, total, status FROM orders",
-    primary_key: "id"
-  }))
-end
-```
-
-`to_crud` automatically registers the supporting REST API routes (list, get, create, update, delete) for the interface.
-
----
-
-## 19. Gotchas
-
-### 1. Table Naming Convention
-
-**Problem:** Your model class is `OrderItem` but queries fail because the table does not exist.
-
-**Cause:** Tina4 converts `OrderItem` to `orderitem` (lowercase, no separator). If your table is named `order_item` (snake_case), it will not match.
-
-**Fix:** Set `table_name` explicitly: `table_name "order_item"`.
-
-### 2. Nil Handling
-
-**Problem:** A field that should be nullable causes errors when the value is nil.
-
-**Cause:** Ruby is generally nil-friendly, but the database column might have a NOT NULL constraint.
-
-**Fix:** Ensure your migration allows null values for optional fields. In Ruby, check with `field.nil?` before accessing methods on potentially nil values.
-
-### 3. Relationship Foreign Key Direction
-
-**Problem:** You write `has_many :posts, foreign_key: "id"` and get wrong results.
-
-**Cause:** The foreign key argument is the column on the related table, not the current table. `has_many :posts, foreign_key: "user_id"` means "find posts where posts.user_id = this.id", not "find posts where posts.id = this.user_id".
-
-**Fix:** The foreign key is always on the "many" side. For `has_many`, it is the column on the child table. For `belongs_to`, it is the column on the current table.
-
-### 4. snake_case Mapping
-
-**Problem:** You have a field `user_id` but the database column is `userId`. Queries return nil for this field.
-
-**Cause:** Tina4 Ruby uses `snake_case` for both field names and database columns. If your database uses `camelCase`, the mapping breaks.
-
-**Fix:** Use consistent naming. Ruby fields and database columns should both be `snake_case`. If your column names differ, you may need to adjust them or override the mapping.
-
-### 5. Forgetting save
+### 1. Forgetting to call save
 
 **Problem:** You set properties on a model but the database does not change.
 
-**Cause:** You forgot to call `model.save`. Setting properties only changes the in-memory object.
+**Cause:** Setting `note.title = "New Title"` only changes the Ruby object. The database remains unchanged until you call `note.save`.
 
-**Fix:** Always call `save` after modifying properties that should be persisted.
+**Fix:** Call `save` after modifying properties. Check the return value -- `save` returns `self` on success and `false` on failure.
 
-### 6. Auto-CRUD Endpoint Conflicts
+### 2. find_by_id returns nil
 
-**Problem:** Your custom route at `/api/products/{id}` does not work after enabling auto-CRUD on the Product model.
+**Problem:** You call `Note.find_by_id(id)` but get `nil` instead of a note object.
 
-**Cause:** Both your custom route and the auto-CRUD route match the same path. The first one registered wins.
+**Cause:** `find_by_id` returns `nil` when no row matches the given primary key. If soft delete is enabled, `find_by_id` also excludes soft-deleted records.
 
-**Fix:** Custom routes defined in `src/routes/` files are loaded before auto-CRUD routes, so they take precedence. If that is not the behavior you want, use a different path for your custom route (e.g., `/api/shop/products/{id}`).
+**Fix:** Check for `nil` after `find_by_id`: `if note.nil?` and return 404. Use `find_or_fail` if you want an exception raised instead.
 
-### 7. select Returns Objects, Not Hashes
+### 3. find takes a hash, not keyword arguments
 
-**Problem:** You try to use hash syntax (`result["name"]`) on the result of `select` and get an error.
+**Problem:** You call `Note.find(category: "work")` expecting a filter, but get unexpected results.
 
-**Cause:** `select` returns an array of model objects, not hashes. Each item is an instance of your model class.
+**Cause:** `find` takes a hash argument: `find({category: "work"})`. Passing `category: "work"` as a keyword argument does not filter -- it gets interpreted differently.
 
-**Fix:** Access properties with dot syntax: `result.name`. Or convert to a hash with `result.to_h`.
+**Fix:** Use `find({column: value})` with an explicit hash. Use `find_by_id(id)` for primary key lookups.
+
+### 4. to_h includes everything
+
+**Problem:** `user.to_h` includes `password_hash` in the API response.
+
+**Cause:** `to_h` includes all fields by default.
+
+**Fix:** Build the response hash manually, omitting sensitive fields: `{id: user.id, name: user.name, email: user.email}`. Or create a helper method on your model class that returns only safe fields.
+
+### 5. Validation runs on save, but check errors
+
+**Problem:** You call `save` and it returns `false`, but you do not know why.
+
+**Cause:** `save` validates required fields internally. When validation fails, it populates `model.errors` and returns `false`.
+
+**Fix:** Call `errors = model.validate` before `save` for explicit error messages. Or check `model.errors` after a failed save.
+
+### 6. Foreign key not enforced
+
+**Problem:** You save a post with `author_id = 999` and it succeeds, even though no author with ID 999 exists.
+
+**Cause:** SQLite does not enforce foreign key constraints by default. The ORM defines the relationship through `has_many`/`belongs_to` declarations, but the database itself may not enforce it.
+
+**Fix:** Enable SQLite foreign keys with `PRAGMA foreign_keys = ON;` in a migration, or validate the foreign key in your route handler before saving.
+
+### 7. N+1 query problem
+
+**Problem:** Listing 100 authors with their posts runs 101 queries (1 for authors + 100 for posts), and the page loads slowly.
+
+**Cause:** You call `author.posts` inside a loop for each author.
+
+**Fix:** Use eager loading with the `include` parameter on `all`, `where`, or `select`:
+
+```ruby
+authors = Author.all(include: ["posts"])
+```
+
+Two queries instead of 101.
+
+### 8. Auto-CRUD endpoint conflicts
+
+**Problem:** Custom route at `/api/notes/{id}` stops working after registering Auto-CRUD for the Note model.
+
+**Cause:** Both routes match the same path. The first registered route wins.
+
+**Fix:** Custom routes in `src/routes/` load before Auto-CRUD routes. They take precedence. If you want different behaviour, use a different path for the custom route.
+
+### 9. Soft-deleted records appearing in queries
+
+**Problem:** You soft-deleted a record, but queries still return it.
+
+**Cause:** Soft delete requires `self.soft_delete = true` on the model class and an `integer_field :is_deleted, default: 0` field. Without both, soft delete is inactive.
+
+**Fix:** Verify both the `self.soft_delete = true` flag and the `integer_field :is_deleted, default: 0` field exist on the model. The column stores `0` for active records and `1` for deleted ones.
+
+### 10. Table name pluralisation
+
+**Problem:** Your model `Category` maps to `categorys` instead of `categories`.
+
+**Cause:** The ORM appends `s` by default unless the name already ends in `s`. It does not handle irregular plurals.
+
+**Fix:** Set the table name explicitly with `table_name "categories"` inside the class body. Disable auto-pluralisation with the `ORM_PLURAL_TABLE_NAMES=false` environment variable.
 
 ---
 
-## QueryBuilder Integration
+## 15. Raw SQL
 
-ORM models provide a `query` method that returns a `QueryBuilder` pre-configured with the model's table name and database connection:
+The ORM handles 90% of queries. The other 10% need custom SQL -- reports, aggregations, complex joins. Drop down to the database directly:
+
+```ruby
+result = Tina4.database.fetch("SELECT * FROM users WHERE active = ?", [1])
+result.each { |row| puts row["name"] }
+```
+
+`fetch` returns an array of hashes. Column names are the keys. Combine raw SQL with ORM serialisation:
+
+```ruby
+rows = Tina4.database.fetch(
+  "SELECT u.*, COUNT(p.id) AS post_count FROM users u LEFT JOIN posts p ON p.user_id = u.id GROUP BY u.id",
+  []
+)
+
+rows.each do |row|
+  puts "#{row["name"]}: #{row["post_count"]} posts"
+end
+```
+
+When your raw query returns rows that match a model's shape, you can hydrate them via `from_hash`:
+
+```ruby
+rows = Tina4.database.fetch("SELECT * FROM users WHERE active = ?", [1])
+users = rows.map { |row| User.from_hash(row) }
+users.each { |user| puts user.to_h }
+```
+
+`from_hash` applies `field_mapping` during hydration, so DB column names are translated to Ruby attribute names automatically.
+
+---
+
+## 16. QueryBuilder Integration
+
+ORM models provide a `query` class method that returns a `QueryBuilder` pre-configured with the model's table name and database connection. This gives you a fluent API for building complex queries without writing raw SQL:
 
 ```ruby
 # Fluent query builder from ORM
 results = User.query
-  .select("id", "name", "email")
-  .where("active = ?", [true])
+  .where("active = ?", [1])
   .order_by("name")
   .limit(50)
   .get

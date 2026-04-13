@@ -21,21 +21,20 @@ from tina4_python.orm import ORM, IntegerField, StringField, BooleanField, DateT
 
 class Note(ORM):
     table_name = "notes"
-    primary_key = "id"
 
-    id = IntegerField(auto_increment=True)
+    id = IntegerField(primary_key=True, auto_increment=True)
     title = StringField(required=True, max_length=200)
     content = StringField(default="")
     category = StringField(default="general")
     pinned = BooleanField(default=False)
-    created_at = DateTimeField(auto_now_add=True)
-    updated_at = DateTimeField(auto_now=True)
+    created_at = DateTimeField()
+    updated_at = DateTimeField()
 ```
 
 A complete model. Here is what each piece does:
 
-- `table_name` -- the database table this model maps to. If omitted, the ORM uses the lowercase class name (e.g. `Contact` → `contact`). Set `ORM_PLURAL_TABLE_NAMES=true` in `.env` to get plural names (`contact` → `contacts`).
-- `primary_key` -- the primary key column (defaults to `"id"`)
+- `table_name` -- the database table this model maps to. If omitted, the ORM uses the lowercase class name (e.g. `Contact` -> `contact`).
+- `primary_key=True` on a field marks it as the primary key (defaults to `id` if none is specified)
 - Each field is a class-level attribute with a field type
 
 ### Field Types
@@ -43,20 +42,22 @@ A complete model. Here is what each piece does:
 | Field Type | Python Type | SQL Type | Description |
 |-----------|-------------|----------|-------------|
 | `IntegerField` | `int` | `INTEGER` | Whole numbers |
-| `StringField` | `str` | `TEXT` or `VARCHAR` | Text strings |
-| `NumericField` | `float` | `REAL` or `NUMERIC` | Decimal numbers |
+| `StringField` | `str` | `VARCHAR(255)` | Text strings |
+| `NumericField` | `float` | `REAL` | Decimal numbers |
 | `BooleanField` | `bool` | `INTEGER` (0/1) | True/False |
-| `DateTimeField` | `str` | `TEXT` or `TIMESTAMP` | Date and time |
+| `DateTimeField` | `str` | `DATETIME` | Date and time |
 | `TextField` | `str` | `TEXT` | Long text |
 | `BlobField` | `bytes` | `BLOB` | Binary data |
-| `ForeignKeyField` | `int` | `INTEGER` | Foreign key reference |
+| `ForeignKeyField` | `int` | `INTEGER` | Foreign key — auto-wires `belongs_to` and `has_many` (see [Relationships](#6-relationships)) |
 
 Verbose names (`IntegerField`, `StringField`, `BooleanField`) are the standard. Short aliases (`IntField`, `StrField`, `BoolField`) also work.
+
 
 ### Field Options
 
 | Option | Type | Description |
 |--------|------|-------------|
+| `primary_key` | `bool` | Marks this field as the primary key |
 | `required` | `bool` | Field must have a value (not None) |
 | `default` | any | Default value when not provided |
 | `max_length` | `int` | Maximum string length |
@@ -65,34 +66,82 @@ Verbose names (`IntegerField`, `StringField`, `BooleanField`) are the standard. 
 | `max_value` | number | Maximum numeric value |
 | `choices` | list | Allowed values |
 | `auto_increment` | `bool` | Auto-incrementing integer |
-| `auto_now_add` | `bool` | Set to current time on create |
-| `auto_now` | `bool` | Set to current time on every save |
 | `regex` | `str` | Pattern the value must match |
 | `validator` | callable | Custom validation function |
 
 ### Field Mapping
 
-When your Python attribute names do not match the database column names, use `field_mapping` to define the translation:
+When your Python attribute names do not match the database column names, use `field_mapping` to define the translation. `field_mapping` is a dict that maps Python attribute names to DB column names.
 
 ```python
 from tina4_python.orm import ORM, IntegerField, StringField
 
 class User(ORM):
     table_name = "user_accounts"
-    primary_key = "id"
     field_mapping = {
         "first_name": "fname",      # Python attr -> DB column
         "last_name": "lname",
         "email_address": "email",
     }
 
-    id = IntegerField(auto_increment=True)
+    id = IntegerField(primary_key=True, auto_increment=True)
     first_name = StringField(required=True)
     last_name = StringField(required=True)
     email_address = StringField(required=True)
 ```
 
-With this mapping, `user.first_name` reads from and writes to the `fname` column. The ORM handles the conversion in both directions -- on `find()`, `save()`, `select()`, and `to_dict()`. This is useful with legacy databases or third-party schemas where you cannot rename the columns.
+With this mapping, `user.first_name` reads from and writes to the `fname` column. The ORM handles the conversion in both directions -- on `find_by_id()`, `save()`, `select()`, and `to_dict()`. This is useful with legacy databases or third-party schemas where you cannot rename the columns.
+
+A common use case is Firebird or Oracle, which store column names in uppercase:
+
+```python
+from tina4_python.orm import ORM, Field, StringField
+
+class Account(ORM):
+    table_name = "ACCOUNTS"
+    field_mapping = {
+        "account_no":   "ACCOUNTNO",
+        "store_name":   "STORENAME",
+        "credit_limit": "CREDITLIMIT",
+    }
+    account_no   = StringField()
+    store_name   = StringField()
+    credit_limit = Field(float, default=0.0)
+```
+
+Python code uses clean snake_case names (`account.account_no`, `account.credit_limit`). The ORM maps them to the uppercase DB columns automatically.
+
+### _get_db_column and _get_db_data
+
+Two internal helpers make field_mapping available in custom code:
+
+```python
+# Get the DB column name for a Python attribute
+col = account._get_db_column("account_no")   # "ACCOUNTNO"
+
+# Get a dict of all fields using DB column names as keys
+data = account._get_db_data()
+# {"ACCOUNTNO": "A001", "STORENAME": "Main Store", "CREDITLIMIT": 5000.0}
+```
+
+These are mainly used internally by `save()` and `create_table()`, but are available if you need them in custom queries.
+
+### find() vs where() -- naming convention
+
+The two query methods have a deliberate difference in how they handle column names:
+
+- **`find(filter_dict)`** uses **Python attribute names**. The ORM translates them via `field_mapping`.
+- **`where(filter_sql)`** uses **raw DB column names** in the SQL string. No translation is done.
+
+```python
+# find() -- use Python attribute names
+accounts = Account.find({"account_no": "A001"})   # translates to ACCOUNTNO = ?
+
+# where() -- use DB column names directly in the SQL
+accounts = Account.where("ACCOUNTNO = ?", ["A001"])  # raw SQL, no translation
+```
+
+This means `find()` is portable across database engines, while `where()` gives you full control of the SQL.
 
 ### auto_map and Case Conversion Utilities
 
@@ -144,37 +193,30 @@ async def create_note(request, response):
     note.pinned = request.body.get("pinned", False)
     note.save()
 
-    return response.json({"message": "Note created", "note": note.to_dict()}, 201)
+    return response({"message": "Note created", "note": note.to_dict()}, 201)
 ```
 
-`save()` detects whether the record is new (INSERT) or existing (UPDATE) based on whether the primary key has a value.
+`save()` detects whether the record is new (INSERT) or existing (UPDATE) based on whether the primary key has a value. It returns `self` on success, so you can chain calls. It returns `False` on failure.
 
-To update an existing record:
+### create -- Build and Save in One Step
+
+When you have a dict of data ready, `create()` builds the model and saves it in one call:
 
 ```python
-@put("/api/notes/{id:int}")
-async def update_note(id, request, response):
-    note = Note.find(id)
-
-    if note is None:
-        return response.json({"error": "Note not found"}, 404)
-
-    body = request.body
-    if "title" in body:
-        note.title = body["title"]
-    if "content" in body:
-        note.content = body["content"]
-    if "category" in body:
-        note.category = body["category"]
-    if "pinned" in body:
-        note.pinned = body["pinned"]
-
-    note.save()
-
-    return response.json({"message": "Note updated", "note": note.to_dict()})
+note = Note.create({
+    "title": "Quick Note",
+    "content": "Created in one step",
+    "category": "general"
+})
 ```
 
-### find -- Fetch One Record
+You can also pass keyword arguments:
+
+```python
+note = Note.create(title="Quick Note", content="One step", category="general")
+```
+
+### find_by_id -- Fetch One Record by Primary Key
 
 ```python
 from tina4_python.core.router import get
@@ -182,18 +224,43 @@ from src.orm.note import Note
 
 @get("/api/notes/{id:int}")
 async def get_note(id, request, response):
-    note = Note.find(id)
+    note = Note.find_by_id(id)
 
     if note is None:
-        return response.json({"error": "Note not found"}, 404)
+        return response({"error": "Note not found"}, 404)
 
-    return response.json(note.to_dict())
+    return response(note.to_dict())
 ```
 
-`find()` takes a primary key value and returns a model instance, or `None` if no row matches. For queries by other columns, use `where()`:
+`find_by_id()` takes a primary key value and returns a model instance, or `None` if no row matches. If soft delete is enabled, it excludes soft-deleted records.
+
+Use `find_or_fail()` when you want a `ValueError` raised instead of `None`:
 
 ```python
-notes, count = Note.where("category = ?", ["work"])
+note = Note.find_or_fail(id)  # Raises ValueError if not found
+```
+
+### find -- Query by Filter Dict
+
+The `find()` method accepts a dictionary of column-value pairs and returns a list of matching records:
+
+```python
+# Find all notes in the "work" category
+work_notes = Note.find({"category": "work"})
+
+# Find with pagination and ordering
+recent = Note.find({"pinned": True}, limit=10, order_by="created_at DESC")
+
+# Find all records (no filter)
+all_notes = Note.find()
+```
+
+### where -- Query with SQL Conditions
+
+For more complex queries, `where()` takes a SQL WHERE clause with `?` placeholders:
+
+```python
+notes = Note.where("category = ?", ["work"])
 ```
 
 ### delete -- Remove a Record
@@ -204,17 +271,17 @@ from src.orm.note import Note
 
 @delete_route("/api/notes/{id:int}")
 async def delete_note(id, request, response):
-    note = Note.find(id)
+    note = Note.find_by_id(id)
 
     if note is None:
-        return response.json({"error": "Note not found"}, 404)
+        return response({"error": "Note not found"}, 404)
 
     note.delete()
 
-    return response.json(None, 204)
+    return response(None, 204)
 ```
 
-### select -- Fetch Multiple Records
+### Listing Records
 
 ```python
 @get("/api/notes")
@@ -222,48 +289,83 @@ async def list_notes(request, response):
     category = request.params.get("category")
 
     if category:
-        notes, count = Note.where("category = ?", [category])
+        notes = Note.where("category = ?", [category])
     else:
-        notes, count = Note.all()
+        notes = Note.all()
 
-    return response.json({
+    return response({
         "notes": [note.to_dict() for note in notes],
-        "count": count
+        "count": len(notes)
     })
 ```
 
-`where()` takes a WHERE clause with `?` placeholders and a list of parameters. It returns a tuple of `(instances, total_count)`. `all()` fetches all records. Both support pagination:
+`where()` takes a WHERE clause with `?` placeholders and a list of parameters. It returns a list of model instances. `all()` fetches all records. Both support pagination:
 
 ```python
 # With pagination
-notes, count = Note.where("category = ?", ["work"], limit=20, offset=40)
+notes = Note.where("category = ?", ["work"], limit=20, offset=40)
 
 # Fetch all with pagination
-notes, count = Note.all(limit=20, offset=0)
+notes = Note.all(limit=20, offset=0)
 
 # SQL-first query -- full control over the SQL
-notes, count = Note.select(
+notes = Note.select(
     "SELECT * FROM notes WHERE pinned = ? ORDER BY created_at DESC",
     [1], limit=20, offset=0
 )
 ```
 
+### select_one -- Fetch a Single Record by SQL
+
+When you need exactly one record from a custom SQL query:
+
+```python
+note = Note.select_one("SELECT * FROM notes WHERE slug = ?", ["my-note"])
+```
+
+Returns a model instance or `None`.
+
+### load -- Populate an Existing Instance
+
+The `load()` method fills an existing model instance from the database:
+
+```python
+note = Note()
+note.id = 42
+note.load()  # Loads data for id=42
+
+# Or with a filter string
+note = Note()
+note.load("slug = ?", ["my-note"])
+```
+
+Returns `True` if a record was found, `False` otherwise.
+
+### count -- Count Records
+
+```python
+total = Note.count()
+work_count = Note.count("category = ?", ["work"])
+```
+
+Respects soft delete -- only counts non-deleted records.
+
 ---
 
-## 5. to_dict and to_json
+## 5. to_dict, to_json, and Other Serialisation
 
 ### to_dict
 
 Convert a model instance to a dictionary:
 
 ```python
-note = Note.find(1)
+note = Note.find_by_id(1)
 
 data = note.to_dict()
 # {"id": 1, "title": "Shopping List", "content": "Milk, eggs", "category": "personal", "pinned": False, "created_at": "2026-03-22 14:30:00", "updated_at": "2026-03-22 14:30:00"}
 ```
 
-The `include` parameter adds relationship data to the output (see Eager Loading below):
+The `include` parameter adds relationship data to the output (see Eager Loading below). Pass a list of relationship names:
 
 ```python
 # Include relationships in the dict
@@ -279,9 +381,62 @@ json_string = note.to_json()
 # '{"id": 1, "title": "Shopping List", ...}'
 ```
 
+### Other Serialisation Methods
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `to_dict(include=None)` | `dict` | Primary dict method with optional relationship includes |
+| `to_assoc(include=None)` | `dict` | Alias for `to_dict()` |
+| `to_object()` | `dict` | Alias for `to_dict()` |
+| `to_json(include=None)` | `str` | JSON string |
+| `to_array()` | `list` | Flat list of values (no keys) |
+| `to_list()` | `list` | Alias for `to_array()` |
+
 ---
 
 ## 6. Relationships
+
+Tina4 ORM supports three relationship types: `has_many`, `has_one`, and `belongs_to`. Each works in two styles:
+
+- **Imperative**: call the method on an instance when you need a one-off lookup
+- **Declarative**: define the relationship as a class attribute using descriptor functions — accessed as a simple attribute, lazy-loaded on first access
+
+Both styles support eager loading via `include=["relationship_name"]`.
+
+### ForeignKeyField — Auto-Wired Relationships
+
+Declaring a column with `ForeignKeyField(to=OtherModel)` automatically wires both sides of the relationship. The declaring model gets a `belongs_to` accessor (the column name with `_id` stripped), and the referenced model gets a `has_many` accessor (the declaring class name lowercased with `s` appended, or whatever you pass via `related_name=`).
+
+```python
+from tina4_python.orm import ORM, IntegerField, StringField, ForeignKeyField
+
+class Author(ORM):
+    table_name = "authors"
+    id = IntegerField(primary_key=True, auto_increment=True)
+    name = StringField(required=True)
+
+class BlogPost(ORM):
+    table_name = "posts"
+    id = IntegerField(primary_key=True, auto_increment=True)
+    title = StringField(required=True)
+    author_id = ForeignKeyField(to=Author, related_name="posts")
+```
+
+With that single `ForeignKeyField` declaration, two accessors are auto-wired:
+
+- `post.author` — returns the `Author` instance (belongs_to)
+- `author.posts` — returns a list of `BlogPost` instances (has_many)
+
+No manual `has_many` or `belongs_to` calls required.
+
+```python
+post = BlogPost.find_by_id(1)
+print(post.author.name)         # "Alice"
+
+author = Author.find_by_id(1)
+for p in author.posts:
+    print(p.title)
+```
 
 ### has_many
 
@@ -295,29 +450,29 @@ from tina4_python.orm import ORM, IntegerField, StringField, DateTimeField
 class Author(ORM):
     table_name = "authors"
 
-    id = IntegerField(auto_increment=True)
+    id = IntegerField(primary_key=True, auto_increment=True)
     name = StringField(required=True)
     email = StringField(required=True)
     bio = StringField(default="")
-    created_at = DateTimeField(auto_now_add=True)
+    created_at = DateTimeField()
 ```
 
 Create `src/orm/blog_post.py`:
 
 ```python
-from tina4_python.orm import ORM, IntegerField, StringField, DateTimeField, ForeignKeyField
+from tina4_python.orm import ORM, IntegerField, StringField, DateTimeField
 
 class BlogPost(ORM):
     table_name = "posts"
 
-    id = IntegerField(auto_increment=True)
-    author_id = ForeignKeyField("authors.id", required=True)
+    id = IntegerField(primary_key=True, auto_increment=True)
+    author_id = IntegerField(required=True)
     title = StringField(required=True, max_length=300)
     slug = StringField(required=True)
     content = StringField(default="")
     status = StringField(default="draft", choices=["draft", "published", "archived"])
-    created_at = DateTimeField(auto_now_add=True)
-    updated_at = DateTimeField(auto_now=True)
+    created_at = DateTimeField()
+    updated_at = DateTimeField()
 ```
 
 Now use `has_many` to get an author's posts:
@@ -325,17 +480,17 @@ Now use `has_many` to get an author's posts:
 ```python
 @get("/api/authors/{id:int}")
 async def get_author(id, request, response):
-    author = Author.find(id)
+    author = Author.find_by_id(id)
 
     if author is None:
-        return response.json({"error": "Author not found"}, 404)
+        return response({"error": "Author not found"}, 404)
 
     posts = author.has_many(BlogPost, "author_id")
 
     data = author.to_dict()
-    data["posts"] = [post.to_dict(include=["id", "title", "slug", "status"]) for post in posts]
+    data["posts"] = [post.to_dict() for post in posts]
 
-    return response.json(data)
+    return response(data)
 ```
 
 ```json
@@ -368,17 +523,17 @@ A post belongs to an author:
 ```python
 @get("/api/posts/{id:int}")
 async def get_post(id, request, response):
-    post = BlogPost.find(id)
+    post = BlogPost.find_by_id(id)
 
     if post is None:
-        return response.json({"error": "Post not found"}, 404)
+        return response({"error": "Post not found"}, 404)
 
     author = post.belongs_to(Author, "author_id")
 
     data = post.to_dict()
-    data["author"] = author.to_dict(include=["id", "name", "email"]) if author else None
+    data["author"] = author.to_dict() if author else None
 
-    return response.json(data)
+    return response(data)
 ```
 
 ```json
@@ -403,37 +558,75 @@ async def get_post(id, request, response):
 
 Calling relationship methods inside a loop creates the N+1 problem. Load 10 authors. Call `has_many(BlogPost, "author_id")` for each one. That fires 11 queries -- 1 for authors, 10 for posts. The page drags.
 
-The `include` parameter on `select()`, `where()`, `all()`, and `find()` solves this. It eager-loads relationships in bulk:
+The `include` parameter on `all()`, `where()`, `find_by_id()`, and `select()` solves this. It eager-loads relationships in bulk:
 
 ```python
 @get("/api/authors")
 async def list_authors(request, response):
-    authors = Author.select(
-        order_by="name ASC",
-        include=[{"model": BlogPost, "foreign_key": "author_id", "as": "posts"}]
-    )
+    # Pass a list of relationship names — ORM batch-loads all posts in 2 queries total
+    authors = Author.all(include=["posts"])
 
     data = []
     for author in authors:
-        author_dict = author.to_dict()
-        author_dict["posts"] = [p.to_dict(include=["id", "title", "status"]) for p in author.posts]
+        author_dict = author.to_dict(include=["posts"])
         data.append(author_dict)
 
-    return response.json({"authors": data})
+    return response({"authors": data})
 ```
 
 Without eager loading, 10 authors and their posts cost 11 queries. With eager loading: 2 queries. That is the difference between a fast page and a slow one.
 
 ### Declarative Relationships with Descriptors
 
-For models where you define relationships declaratively using `HasMany`, `HasOne`, or `BelongsTo` descriptors in the ORM fields module, eager loading works through the `include` parameter on `find()`, `all()`, `where()`, and `select()`. Pass a list of relationship names:
+The imperative `has_many()`, `has_one()`, and `belongs_to()` methods called on instances work for one-off lookups. For models where relationships are always needed, declare them as class attributes using the descriptor functions imported from `tina4_python.orm`:
+
+```python
+from tina4_python.orm import ORM, IntegerField, StringField, DateTimeField
+from tina4_python.orm import has_many, has_one, belongs_to
+
+class Author(ORM):
+    table_name = "authors"
+
+    id    = IntegerField(primary_key=True, auto_increment=True)
+    name  = StringField(required=True)
+    email = StringField(required=True)
+
+    # Declare the relationship once on the class
+    posts = has_many("BlogPost", foreign_key="author_id")
+
+
+class BlogPost(ORM):
+    table_name = "posts"
+
+    id        = IntegerField(primary_key=True, auto_increment=True)
+    author_id = IntegerField(required=True)
+    title     = StringField(required=True)
+
+    # Lazy-load the parent author
+    author   = belongs_to("Author", foreign_key="author_id")
+    # Lazy-load comments
+    comments = has_many("Comment", foreign_key="post_id")
+```
+
+With declarative descriptors, accessing the relationship is a simple attribute read:
+
+```python
+author = Author.find_by_id(1)
+for post in author.posts:          # lazy-loads on first access
+    print(post.title)
+
+post = BlogPost.find_by_id(10)
+print(post.author.name)            # lazy-loads the related Author
+```
+
+Eager loading works through the `include` parameter. Pass a list of relationship names:
 
 ```python
 # Eager load posts when fetching all authors
-authors, count = Author.all(include=["posts"])
+authors = Author.all(include=["posts"])
 
 # Eager load author and comments when finding a single post
-post = BlogPost.find(1, include=["author", "comments"])
+post = BlogPost.find_by_id(1, include=["author", "comments"])
 ```
 
 ### Nested Eager Loading
@@ -442,7 +635,7 @@ Dot notation loads multiple levels deep:
 
 ```python
 # Load authors, their posts, and each post's comments
-authors, count = Author.all(include=["posts", "posts.comments"])
+authors = Author.all(include=["posts", "posts.comments"])
 ```
 
 Authors, their posts, and each post's comments. Three queries total instead of hundreds.
@@ -452,7 +645,7 @@ Authors, their posts, and each post's comments. Three queries total instead of h
 When eager loading is active, `to_dict(include=...)` embeds the related data:
 
 ```python
-post = BlogPost.find(1, include=["author", "comments"])
+post = BlogPost.find_by_id(1, include=["author", "comments"])
 data = post.to_dict(include=["author", "comments"])
 ```
 
@@ -475,59 +668,59 @@ data = post.to_dict(include=["author", "comments"])
 
 ## 8. Soft Delete
 
-Sometimes a record needs to disappear from queries without leaving the database. Soft delete handles this. The row stays. A timestamp marks it as deleted. Queries skip it.
+Sometimes a record needs to disappear from queries without leaving the database. Soft delete handles this. The row stays. A flag marks it as deleted. Queries skip it.
 
 ```python
-from tina4_python.orm import ORM, IntegerField, StringField, BooleanField, DateTimeField
+from tina4_python.orm import ORM, IntegerField, StringField, BooleanField
 
 class Task(ORM):
     table_name = "tasks"
     soft_delete = True  # Enable soft delete
 
-    id = IntegerField(auto_increment=True)
+    id = IntegerField(primary_key=True, auto_increment=True)
     title = StringField(required=True)
     completed = BooleanField(default=False)
-    deleted_at = DateTimeField()  # Required for soft delete
-    created_at = DateTimeField(auto_now_add=True)
+    is_deleted = IntegerField(default=0)  # Required for soft delete (0 = active, 1 = deleted)
+    created_at = StringField()
 ```
 
 When `soft_delete = True`, the ORM changes its behaviour:
 
-- `task.delete()` sets `deleted_at` to the current UTC timestamp instead of running a DELETE query
-- `Task.all()`, `Task.where()`, and `Task.find()` filter out soft-deleted records
-- `task.restore()` clears `deleted_at` and makes the record visible again
+- `task.delete()` sets `is_deleted` to `1` instead of running a DELETE query
+- `Task.all()`, `Task.where()`, and `Task.find_by_id()` filter out records where `is_deleted = 1`
+- `task.restore()` sets `is_deleted` back to `0` and makes the record visible again
 - `task.force_delete()` permanently removes the row from the database
 - `Task.with_trashed()` includes soft-deleted records in query results
 
 ### Deleting and Restoring
 
 ```python
-# Soft delete -- sets deleted_at, row stays in the database
-task = Task.find(1)
+# Soft delete -- sets is_deleted = 1, row stays in the database
+task = Task.find_by_id(1)
 task.delete()
 
-# Restore -- clears deleted_at, record is visible again
+# Restore -- sets is_deleted = 0, record is visible again
 task.restore()
 
 # Permanently delete -- removes the row, no recovery possible
 task.force_delete()
 ```
 
-`restore()` is the inverse of `delete()`. It sets `deleted_at` back to `None` and commits the change. The record reappears in all standard queries.
+`restore()` is the inverse of `delete()`. It sets `is_deleted` back to `0` and commits the change. The record reappears in all standard queries.
 
 ### Including Soft-Deleted Records
 
-Standard queries (`all()`, `where()`, `find()`) exclude soft-deleted records. When you need to see everything -- for admin dashboards, audit logs, or data recovery -- use `with_trashed()`:
+Standard queries (`all()`, `where()`, `find_by_id()`) exclude soft-deleted records. When you need to see everything -- for admin dashboards, audit logs, or data recovery -- use `with_trashed()`:
 
 ```python
 # All tasks, including soft-deleted ones
-all_tasks, count = Task.with_trashed()
+all_tasks = Task.with_trashed()
 
 # Soft-deleted tasks matching a condition
-deleted_tasks, count = Task.with_trashed("completed = ?", [1])
+deleted_tasks = Task.with_trashed("completed = ?", [1])
 ```
 
-`with_trashed()` accepts the same filter parameters as `where()`. The only difference: it ignores the `deleted_at IS NULL` filter that standard queries apply.
+`with_trashed()` accepts the same filter parameters as `where()`. The only difference: it ignores the `is_deleted` filter that standard queries apply.
 
 ### Counting with Soft Delete
 
@@ -548,7 +741,41 @@ Soft delete suits data that users might want to recover -- emails, documents, us
 
 Writing the same five REST endpoints for every model gets tedious. Auto-CRUD generates them from your model class. Define the model. Register it. Five routes appear.
 
-### Registering a Model
+### The auto_crud Flag
+
+The simplest approach -- set `auto_crud = True` on your model class:
+
+```python
+class Note(ORM):
+    table_name = "notes"
+    auto_crud = True  # Generates REST endpoints automatically
+
+    id = IntegerField(primary_key=True, auto_increment=True)
+    title = StringField(required=True)
+    content = StringField(default="")
+```
+
+The moment Python loads this class, the ORM metaclass detects `auto_crud = True` and registers it with `AutoCrud`. Five routes appear at `/api/notes` with no additional code.
+
+Here is a more complete example with a `Product` model:
+
+```python
+from tina4_python.orm import ORM, Field, IntegerField, StringField
+
+class Product(ORM):
+    table_name = "products"
+    auto_crud  = True   # registers /api/products routes automatically
+
+    id    = IntegerField(primary_key=True, auto_increment=True)
+    name  = StringField(required=True)
+    price = Field(float, default=0.0)
+```
+
+This registers five endpoints at `/api/products` with no route files needed.
+
+### Manual Registration
+
+You can also register models explicitly using `AutoCrud.register()`:
 
 ```python
 from tina4_python.crud import AutoCrud
@@ -557,11 +784,11 @@ from src.orm.note import Note
 AutoCrud.register(Note)
 ```
 
-That single call registers five routes:
+Both approaches produce the same result:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/notes` | List all with pagination (`limit`, `skip` params) |
+| `GET` | `/api/notes` | List all with pagination (`limit`, `offset` params) |
 | `GET` | `/api/notes/{id}` | Get one by primary key |
 | `POST` | `/api/notes` | Create a new record |
 | `PUT` | `/api/notes/{id}` | Update a record |
@@ -602,7 +829,7 @@ curl "http://localhost:7145/api/notes?limit=10&offset=0"
   ],
   "total": 2,
   "limit": 10,
-  "skip": 0
+  "offset": 0
 }
 ```
 
@@ -637,7 +864,27 @@ registered = AutoCrud.models()
 
 ---
 
-## 10. Scopes
+## 10. Cached Queries
+
+For expensive queries that don't change often, `cached()` caches the results in memory with a TTL:
+
+```python
+# Cache for 60 seconds
+popular = Note.cached(
+    "SELECT * FROM notes WHERE pinned = ? ORDER BY created_at DESC",
+    [True], ttl=60, limit=20
+)
+```
+
+Clear the cache when data changes:
+
+```python
+Note.clear_cache()
+```
+
+---
+
+## 11. Scopes
 
 Scopes are reusable query filters baked into the model:
 
@@ -645,10 +892,10 @@ Scopes are reusable query filters baked into the model:
 class BlogPost(ORM):
     table_name = "posts"
 
-    id = IntegerField(auto_increment=True)
+    id = IntegerField(primary_key=True, auto_increment=True)
     title = StringField(required=True)
     status = StringField(default="draft")
-    created_at = DateTimeField(auto_now_add=True)
+    created_at = DateTimeField()
 
     @classmethod
     def published(cls):
@@ -672,20 +919,29 @@ Use them in your routes:
 @get("/api/posts/published")
 async def published_posts(request, response):
     posts = BlogPost.published()
-    return response.json({"posts": [p.to_dict() for p in posts]})
+    return response({"posts": [p.to_dict() for p in posts]})
 
 @get("/api/posts/recent")
 async def recent_posts(request, response):
     days = int(request.params.get("days", 7))
     posts = BlogPost.recent(days)
-    return response.json({"posts": [p.to_dict() for p in posts]})
+    return response({"posts": [p.to_dict() for p in posts]})
+```
+
+You can also register scopes dynamically with the `scope()` class method:
+
+```python
+BlogPost.scope("active", "status != ?", ["archived"])
+
+# Now call it:
+active_posts = BlogPost.active()
 ```
 
 Scopes keep query logic in the model where it belongs. Route handlers stay thin.
 
 ---
 
-## 11. Input Validation
+## 12. Input Validation
 
 Field definitions carry validation rules. Call `validate()` before `save()` and the ORM checks every constraint:
 
@@ -695,7 +951,7 @@ from tina4_python.orm import ORM, IntegerField, StringField, NumericField
 class Product(ORM):
     table_name = "products"
 
-    id = IntegerField(auto_increment=True)
+    id = IntegerField(primary_key=True, auto_increment=True)
     name = StringField(required=True, min_length=2, max_length=200)
     sku = StringField(required=True, regex=r"^[A-Z]{2}-\d{4}$")  # e.g., EL-1234
     price = NumericField(required=True, min_value=0.01, max_value=999999.99)
@@ -713,10 +969,10 @@ async def create_product(request, response):
 
     errors = product.validate()
     if errors:
-        return response.json({"errors": errors}, 400)
+        return response({"errors": errors}, 400)
 
     product.save()
-    return response.json({"product": product.to_dict()}, 201)
+    return response({"product": product.to_dict()}, 201)
 ```
 
 If validation fails, `validate()` returns a list of error messages:
@@ -734,7 +990,7 @@ If validation fails, `validate()` returns a list of error messages:
 
 ---
 
-## 12. Exercise: Build a Blog with Relationships
+## 13. Exercise: Build a Blog with Relationships
 
 Build a blog API with authors, posts, and comments.
 
@@ -744,9 +1000,9 @@ Build a blog API with authors, posts, and comments.
 
 **Author:** `id`, `name` (required), `email` (required), `bio`, `created_at`
 
-**Post:** `id`, `author_id` (foreign key), `title` (required, max 300), `slug` (required), `content`, `status` (choices: draft/published/archived, default draft), `created_at`, `updated_at`
+**Post:** `id`, `author_id` (integer foreign key), `title` (required, max 300), `slug` (required), `content`, `status` (choices: draft/published/archived, default draft), `created_at`, `updated_at`
 
-**Comment:** `id`, `post_id` (foreign key), `author_name` (required), `author_email` (required), `body` (required, min 5 chars), `created_at`
+**Comment:** `id`, `post_id` (integer foreign key), `author_name` (required), `author_email` (required), `body` (required, min 5 chars), `created_at`
 
 2. Build these endpoints:
 
@@ -761,7 +1017,7 @@ Build a blog API with authors, posts, and comments.
 
 ---
 
-## 13. Solution
+## 14. Solution
 
 Create `src/orm/author.py`:
 
@@ -771,29 +1027,29 @@ from tina4_python.orm import ORM, IntegerField, StringField, DateTimeField
 class Author(ORM):
     table_name = "authors"
 
-    id = IntegerField(auto_increment=True)
+    id = IntegerField(primary_key=True, auto_increment=True)
     name = StringField(required=True, min_length=2)
     email = StringField(required=True)
     bio = StringField(default="")
-    created_at = DateTimeField(auto_now_add=True)
+    created_at = DateTimeField()
 ```
 
 Create `src/orm/blog_post.py`:
 
 ```python
-from tina4_python.orm import ORM, IntegerField, StringField, DateTimeField, ForeignKeyField
+from tina4_python.orm import ORM, IntegerField, StringField, DateTimeField
 
 class BlogPost(ORM):
     table_name = "posts"
 
-    id = IntegerField(auto_increment=True)
-    author_id = ForeignKeyField("authors.id", required=True)
+    id = IntegerField(primary_key=True, auto_increment=True)
+    author_id = IntegerField(required=True)
     title = StringField(required=True, max_length=300)
     slug = StringField(required=True)
     content = StringField(default="")
     status = StringField(default="draft", choices=["draft", "published", "archived"])
-    created_at = DateTimeField(auto_now_add=True)
-    updated_at = DateTimeField(auto_now=True)
+    created_at = DateTimeField()
+    updated_at = DateTimeField()
 
     @classmethod
     def published(cls):
@@ -803,17 +1059,17 @@ class BlogPost(ORM):
 Create `src/orm/comment.py`:
 
 ```python
-from tina4_python.orm import ORM, IntegerField, StringField, DateTimeField, ForeignKeyField
+from tina4_python.orm import ORM, IntegerField, StringField, DateTimeField
 
 class Comment(ORM):
     table_name = "comments"
 
-    id = IntegerField(auto_increment=True)
-    post_id = ForeignKeyField("posts.id", required=True)
+    id = IntegerField(primary_key=True, auto_increment=True)
+    post_id = IntegerField(required=True)
     author_name = StringField(required=True)
     author_email = StringField(required=True)
     body = StringField(required=True, min_length=5)
-    created_at = DateTimeField(auto_now_add=True)
+    created_at = DateTimeField()
 ```
 
 Create `src/routes/blog.py`:
@@ -834,25 +1090,25 @@ async def create_author(request, response):
 
     errors = author.validate()
     if errors:
-        return response.json({"errors": errors}, 400)
+        return response({"errors": errors}, 400)
 
     author.save()
-    return response.json({"author": author.to_dict()}, 201)
+    return response({"author": author.to_dict()}, 201)
 
 
 @get("/api/authors/{id:int}")
-async def get_author(request, response):
-    author = Author.find(request.params["id"])
+async def get_author(id, request, response):
+    author = Author.find_by_id(id)
 
     if author is None:
-        return response.json({"error": "Author not found"}, 404)
+        return response({"error": "Author not found"}, 404)
 
-    posts, count = BlogPost.where("author_id = ?", [author.id])
+    posts = BlogPost.where("author_id = ?", [author.id])
 
     data = author.to_dict()
     data["posts"] = [p.to_dict() for p in posts]
 
-    return response.json(data)
+    return response(data)
 
 
 @post("/api/posts")
@@ -860,9 +1116,9 @@ async def create_post(request, response):
     body = request.body
 
     # Verify author exists
-    author = Author.find(body.get("author_id"))
+    author = Author.find_by_id(body.get("author_id"))
     if author is None:
-        return response.json({"error": "Author not found"}, 404)
+        return response({"error": "Author not found"}, 404)
 
     blog_post = BlogPost()
     blog_post.author_id = body["author_id"]
@@ -873,10 +1129,10 @@ async def create_post(request, response):
 
     errors = blog_post.validate()
     if errors:
-        return response.json({"errors": errors}, 400)
+        return response({"errors": errors}, 400)
 
     blog_post.save()
-    return response.json({"post": blog_post.to_dict()}, 201)
+    return response({"post": blog_post.to_dict()}, 201)
 
 
 @get("/api/posts")
@@ -887,18 +1143,18 @@ async def list_posts(request, response):
     for p in posts:
         post_dict = p.to_dict()
         author = p.belongs_to(Author, "author_id")
-        post_dict["author"] = author.to_dict(include=["id", "name"]) if author else None
+        post_dict["author"] = author.to_dict() if author else None
         data.append(post_dict)
 
-    return response.json({"posts": data, "count": len(data)})
+    return response({"posts": data, "count": len(data)})
 
 
 @get("/api/posts/{id:int}")
 async def get_post(id, request, response):
-    blog_post = BlogPost.find(id)
+    blog_post = BlogPost.find_by_id(id)
 
     if blog_post is None:
-        return response.json({"error": "Post not found"}, 404)
+        return response({"error": "Post not found"}, 404)
 
     author = blog_post.belongs_to(Author, "author_id")
     comments = blog_post.has_many(Comment, "post_id")
@@ -908,33 +1164,33 @@ async def get_post(id, request, response):
     data["comments"] = [c.to_dict() for c in comments]
     data["comment_count"] = len(comments)
 
-    return response.json(data)
+    return response(data)
 
 
 @post("/api/posts/{id:int}/comments")
 async def add_comment(id, request, response):
-    blog_post = BlogPost.find(id)
+    blog_post = BlogPost.find_by_id(id)
 
     if blog_post is None:
-        return response.json({"error": "Post not found"}, 404)
+        return response({"error": "Post not found"}, 404)
 
     comment = Comment()
-    comment.post_id = request.params["id"]
+    comment.post_id = id
     comment.author_name = request.body.get("author_name")
     comment.author_email = request.body.get("author_email")
     comment.body = request.body.get("body")
 
     errors = comment.validate()
     if errors:
-        return response.json({"errors": errors}, 400)
+        return response({"errors": errors}, 400)
 
     comment.save()
-    return response.json({"comment": comment.to_dict()}, 201)
+    return response({"comment": comment.to_dict()}, 201)
 ```
 
 ---
 
-## 14. Gotchas
+## 15. Gotchas
 
 ### 1. Forgetting to call save()
 
@@ -942,17 +1198,25 @@ async def add_comment(id, request, response):
 
 **Cause:** Setting `note.title = "New Title"` only changes the Python object. The database remains unchanged until you call `note.save()`.
 
-**Fix:** Call `save()` after modifying properties.
+**Fix:** Call `save()` after modifying properties. Check the return value -- `save()` returns `self` on success and `False` on failure.
 
-### 2. find() returns None
+### 2. find_by_id() returns None
 
-**Problem:** You call `Note.find(id)` but get `None` instead of a note object.
+**Problem:** You call `Note.find_by_id(id)` but get `None` instead of a note object.
 
-**Cause:** `find()` returns `None` when no row matches the given primary key. If soft delete is enabled, `find()` also excludes soft-deleted records.
+**Cause:** `find_by_id()` returns `None` when no row matches the given primary key. If soft delete is enabled, `find_by_id()` also excludes soft-deleted records.
 
-**Fix:** Check for `None` after `find()`: `if note is None: return 404`. Use `find_or_fail()` if you want a `ValueError` raised instead.
+**Fix:** Check for `None` after `find_by_id()`: `if note is None: return 404`. Use `find_or_fail()` if you want a `ValueError` raised instead.
 
-### 3. Circular imports with relationships
+### 3. find() vs find_by_id()
+
+**Problem:** You call `Note.find(42)` expecting a single record, but get unexpected results.
+
+**Cause:** `find()` takes a dict filter (`find({"id": 42})`), not a bare primary key value. For single-record lookups by primary key, use `find_by_id(42)`.
+
+**Fix:** Use `find_by_id(id)` for primary key lookups. Use `find({"column": value})` for filter-based queries.
+
+### 4. Circular imports with relationships
 
 **Problem:** `from src.orm.post import BlogPost` in `author.py` and `from src.orm.author import Author` in `post.py` causes an `ImportError`.
 
@@ -960,7 +1224,7 @@ async def add_comment(id, request, response):
 
 **Fix:** Import inside the method that uses the relationship, not at the top of the file. Or pass the model class as a parameter in the route handler where you use both models.
 
-### 4. to_dict() includes everything
+### 5. to_dict() includes everything
 
 **Problem:** `user.to_dict()` includes `password_hash` in the API response.
 
@@ -968,7 +1232,7 @@ async def add_comment(id, request, response):
 
 **Fix:** Build the response dict manually, omitting sensitive fields: `{"id": user.id, "name": user.name, "email": user.email}`. Or create a helper method on your model class that returns only safe fields.
 
-### 5. Validation only runs on validate()
+### 6. Validation only runs on validate()
 
 **Problem:** You call `save()` without calling `validate()` first, and invalid data gets into the database.
 
@@ -976,15 +1240,15 @@ async def add_comment(id, request, response):
 
 **Fix:** Call `errors = model.validate()` before `save()` in your route handlers. Or create a helper method that validates and saves in one step.
 
-### 6. Foreign key not enforced
+### 7. Foreign key not enforced
 
 **Problem:** You save a post with `author_id = 999` and it succeeds, even though no author with ID 999 exists.
 
-**Cause:** SQLite does not enforce foreign key constraints by default. The `ForeignKeyField` in the ORM defines the relationship for Tina4's methods, but the database itself may not enforce it.
+**Cause:** SQLite does not enforce foreign key constraints by default. The ORM defines the relationship through `has_many`/`belongs_to` methods, but the database itself may not enforce it.
 
 **Fix:** Enable SQLite foreign keys with `PRAGMA foreign_keys = ON;` in a migration, or validate the foreign key in your route handler before saving.
 
-### 7. N+1 query problem
+### 8. N+1 query problem
 
 **Problem:** Listing 100 authors with their posts runs 101 queries (1 for authors + 100 for posts), and the page loads slowly.
 
@@ -993,8 +1257,8 @@ async def add_comment(id, request, response):
 **Fix:** Use eager loading with the `include` parameter on `all()`, `where()`, or `select()`. Or fetch all posts in a single query and group them manually:
 
 ```python
-authors, count = Author.all()
-all_posts, _ = BlogPost.select(
+authors = Author.all()
+all_posts = BlogPost.select(
     "SELECT * FROM posts WHERE author_id IN (" + ",".join(str(a.id) for a in authors) + ")"
 )
 posts_by_author = {}
@@ -1002,7 +1266,7 @@ for post in all_posts:
     posts_by_author.setdefault(post.author_id, []).append(post)
 ```
 
-### 8. Auto-CRUD endpoint conflicts
+### 9. Auto-CRUD endpoint conflicts
 
 **Problem:** Custom route at `/api/notes/{id}` stops working after registering Auto-CRUD for the Note model.
 
@@ -1010,13 +1274,13 @@ for post in all_posts:
 
 **Fix:** Custom routes in `src/routes/` load before Auto-CRUD routes. They take precedence. If you want different behaviour, use a different path for the custom route.
 
-### 9. Soft-deleted records appearing in find()
+### 10. Soft-deleted records appearing in queries
 
-**Problem:** You soft-deleted a record, but `Model.find(id)` still returns it.
+**Problem:** You soft-deleted a record, but queries still return it.
 
-**Cause:** `find()` respects soft delete. If the record appears, check that `soft_delete = True` is set on the model class and that the model has a `deleted_at` field.
+**Cause:** Soft delete requires the `soft_delete = True` flag on the model class and an `is_deleted = IntegerField(default=0)` field. Without both, soft delete is inactive.
 
-**Fix:** Verify both the `soft_delete = True` flag and the `deleted_at = DateTimeField()` field exist on the model. Without both, soft delete is inactive.
+**Fix:** Verify both the `soft_delete = True` flag and the `is_deleted = IntegerField(default=0)` field exist on the model. The column stores `0` for active records and `1` for deleted ones.
 
 ---
 

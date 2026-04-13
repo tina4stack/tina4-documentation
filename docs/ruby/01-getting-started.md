@@ -478,8 +478,6 @@ Open `http://localhost:7147/products`. You see:
 ### How Template Rendering Works
 
 1. `response.render("products.html", { products: products })` tells Frond to render `src/templates/products.html`.
-<div v-pre>
-
 2. Frond sees `{% extends "base.html" %}` and loads the base template.
 3. `{% block content %}` in `products.html` replaces the same block in `base.html`.
 4. `{{ product.name }}` outputs the value, auto-escaped for HTML safety.
@@ -487,8 +485,6 @@ Open `http://localhost:7147/products`. You see:
 6. `{% for product in products %}` loops through the array.
 7. `{% if product.in_stock %}` renders the right badge.
 8. `{{ products | length }}` returns the item count.
-
-</div>
 
 ### About tina4css
 

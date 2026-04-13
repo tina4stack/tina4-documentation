@@ -490,8 +490,6 @@ Open `http://localhost:7145/products`. You should see:
 Eight steps. All automatic.
 
 1. `response.render("products.html", {"products": products})` tells Frond to render `src/templates/products.html` with the given data.
-<div v-pre>
-
 2. Frond sees `{% extends "base.html" %}` and loads the base template.
 3. The `{% block content %}` in `products.html` replaces the same block in `base.html`.
 4. `{{ product.name }}` outputs the value, auto-escaped for HTML safety.
@@ -499,8 +497,6 @@ Eight steps. All automatic.
 6. `{% for product in products %}` loops through the list.
 7. `{% if product.in_stock %}` renders the stock badge conditionally.
 8. `{{ products | length }}` returns the item count.
-
-</div>
 
 ### About tina4css
 

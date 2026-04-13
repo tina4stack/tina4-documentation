@@ -1,5 +1,99 @@
 # Chapter 35: Release Notes
 
+## v3.10.99 (2026-04-12)
+
+- **breaking:** `autoMap` now defaults to `true` — ORM models automatically map between camelCase properties and snake_case DB columns. Set `public bool $autoMap = false;` on your model to restore the old behaviour.
+- **breaking:** `all()` now returns a flat array of model instances instead of `['data' => [...], 'total' => N, ...]`. Use `count()` separately if you need the total.
+- **feat:** `toDict(include, case)` parameter — pass `case: 'snake'` to get snake_case keys matching DB columns, or `case: 'camel'` (default) for camelCase.
+- **feat:** Frond `replace` filter now accepts dict args — `{{ v|replace({"T": " ", "-": "/"}) }}` for multiple substitutions in one call.
+- **feat:** `$app->background(callback, interval)` — register periodic tasks that run cooperatively in the `stream_select` event loop. No threads, no separate processes.
+- **feat:** Background timing guard — warns when callbacks exceed their interval, helping developers identify blocking operations.
+- **feat:** WebSocket room management moved to `Server` class — `joinRoom()`, `leaveRoom()`, `broadcastToRoom()` now work reliably via `WebSocketConnection->server`.
+- **feat:** Docker image now bundles the example store demo — `docker run tina4stack/tina4-php:v3` starts a working app out of the box.
+- **fix:** AutoCrud updated for new `all()` return format.
+- **fix:** Cart nav badge now updates reactively on quantity change and item removal.
+- **fix:** Non-blocking queue consumer — `processOrders()` uses `$queue->pop()` instead of blocking `$queue->consume()`.
+- **tests:** 6 new parity tests covering `toDict(case:)`, `autoMap` default, `replace` filter (dict + positional), and `background()` registration. 2,345 tests passing.
+- **parity:** All features shipped identically across Python, PHP, Ruby, Node.js.
+
+## v3.10.97 (2026-04-11)
+
+- **fix:** frond.form.submit redirect handling — XHR follows 3xx redirects transparently; fixed by detecting `xhr.responseURL` mismatch and navigating instead.
+- **dep:** Updated frond.min.js to v2.1.2.
+- **parity:** All 4 frameworks bumped to 3.10.97.
+
+## v3.10.93 (2026-04-11)
+
+- **fix:** Frond bracket depth tracking in `findOutsideQuotes()` and `splitOutsideQuotes()` — expressions like `$arr[$i % 2]` no longer treated as top-level arithmetic.
+- **fix:** Frond subscript expression evaluation — bracket content uses `evaluateExpression()` instead of `resolveVariable()`, enabling `arr[loop.index0 % 2]`.
+- **fix:** Frond slice with variable bounds — `items[start:end]` evaluates bounds through `evaluateExpression()`.
+- **docs:** Developer skills updated — Metrics Dashboard guidance, Frond Template Parity rules, `@noauth` security warnings.
+- **parity:** All Frond fixes applied identically across Python, PHP, Ruby, Node.js. 2,339 tests passing (263 Frond).
+
+## v3.10.92 (2026-04-10)
+
+- **feat:** Add `RateLimiterMiddleware` class with `beforeRateLimit()`, `check()`, `reset()` static methods.
+- **breaking:** Rename `ErrorOverlay` methods — `render()` → `renderErrorOverlay()`, `renderProduction()` → `renderProductionError()`.
+- **feat:** Add `Server::handle(Request $request): Response` for cross-framework parity.
+- **feat:** Add `DatabaseResult::size()` method.
+- **breaking:** Rename `WebSocketBackplane::create()` → `WebSocketBackplane::createBackplane()`.
+- **feat:** Add `DevAdmin::health()` method.
+- **feat:** Add `ScssCompiler::compileScss()` method.
+- **fix:** Add `DatabaseSessionHandler::delete()` delegating to `destroy()`.
+- **fix:** `SmokeTest` — pass secret explicitly to `Auth::getToken()` to fix test ordering issue.
+- **parity:** 44/44 cross-framework features green. 2,305 tests passing.
+
+## v3.10.91 (2026-04-10)
+
+- **feat:** Add parity methods — `GraphQLType::parse()`, `Response::send()` params, `MCP::registerRoutes()` optional router.
+- **breaking:** Rename `from()` → `fromTable()`, `template()` → `render()` — align with Python canonical names.
+
+## v3.10.90 (2026-04-09)
+
+- **docs:** Chapter 4 (Templates) — new "Dumping Values for Debugging" section covering both `{{ $x|dump }}` and `{{ dump($x) }}` forms, their shared `<pre>var_dump()</pre>` output, and the `TINA4_DEBUG=true` production gate. Filter table entry updated to reference the new section.
+- **docs:** `plan/parity/parity-template.md` updated with a cross-framework dump helper comparison table and marks dump parity as confirmed across all 4 frameworks at v3.10.89.
+- **chore:** Version sync release — brings all 4 frameworks to the same patch version (3.10.90) so downstream users can upgrade PHP/Python/Ruby/Node.js in lockstep without hunting version mismatches.
+
+## v3.10.89 (2026-04-09)
+
+- **feat:** `{{ dump(value) }}` global function form added to Frond alongside the existing `{{ value|dump }}` filter. Both call a single `Frond::renderDump()` helper and produce identical output (`<pre>var_dump()</pre>`).
+- **security:** Dump is now **gated on `TINA4_DEBUG=true`**. In production (env var unset or `false`) both the filter and function silently return an empty string. This prevents accidental leaks of internal state, object shapes, and sensitive values into rendered HTML when a developer leaves a `{{ dump($x) }}` call in a template.
+- **test:** 4 new tests in `FrondTest.php` covering debug-mode output, production silencing, function/filter parity, and function-form production silencing.
+
+## v3.10.87 (2026-04-09)
+
+- **fix:** Dev toolbar no longer vanishes after a hot-reload. `Server::onFilesChanged()` used to call `Router::clear()` and then loop `include_once` over every `.php` file in `src/routes/`. Because `include_once` is a no-op for already-included files, routes were never re-registered after a template/CSS/JS edit — subsequent requests fell through to the 404 handler and the dev toolbar injection was lost. The router is now left intact on template/asset edits (Frond re-reads templates in dev mode, static files are served from disk per request, so nothing else needs to move). PHP file edits log a warning that a full server restart is required (classes cannot be redeclared in-process).
+- **fix:** This also resolves a related issue where rapid browser refreshes during hot reload would return 500s — the router wipe left a brief window with zero routes registered.
+
+## v3.10.86 (2026-04-09)
+
+- **feat:** `$foreignKeys` property on `ORM` auto-wires both sides of a foreign key relationship. Declaring `public array $foreignKeys = ['user_id' => 'User']` injects a `belongsTo` accessor (`$post->user`) on the declaring model and a `hasMany` accessor (`$user->posts`) on the referenced model via a cross-model FK registry. Extended form supports a custom has-many key: `['user_id' => ['model' => 'User', 'related_name' => 'blog_posts']]`.
+- **feat:** Cross-framework parity — same FK auto-wiring semantics now available in Python (`ForeignKeyField`), Ruby (`foreign_key_field`), and Node.js (`type: "foreignKey"`)
+- **docs:** Chapter 6 (ORM) updated with a new "$foreignKeys — Auto-Wired Relationships" section
+
+## v3.10.85 (2026-04-09)
+
+- **fix:** Removed duplicate `Job` class from `Queue.php` — canonical definition is `Job.php` only
+- **fix:** `Job.php::fail()` now delegates to `writeFailed()` instead of calling private `getBasePath()` directly
+
+## v3.10.84 (2026-04-09)
+
+- **fix:** Router/middleware was setting `request.user` / `request.auth` / auth payload to `true` (boolean) instead of the actual JWT payload after `validToken()` was changed to return bool — any code reading `request.user["sub"]` etc. would have failed silently or crashed
+- **fix:** CSRF middleware was not correctly rejecting invalid tokens (nil check on bool result always passed)
+- **fix:** `toObject()` declared wrong return type (`array` vs actual `object`)
+- **fix:** Router `request.user` and gallery auth verify endpoint updated for bool `validToken`
+- **add:** Headless routing auth payload integration tests to prevent regression
+
+## v3.10.83 (2026-04-08)
+
+- **fix:** CORS headers now set before auth short-circuit (#106)
+- **fix:** ORM find/all/where no longer crash with DatabaseResult object (#108)
+- **fix:** toObject() returns stdClass, not array (#107)
+- **fix:** Firebird absolute path no longer strips leading slash (#101)
+- **feat:** WebSocket rooms — joinRoom, leaveRoom, broadcastToRoom, getRoomConnections, roomCount
+- **feat:** queue signature parity — instance-scoped, no topic params on public methods
+- **feat:** auth alias cleanup — removed createToken/validateToken aliases
+
 ## v3.10.70 (2026-04-06)
 
 - **New:** SSE (Server-Sent Events) support via `response.stream()` — pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
@@ -147,11 +241,7 @@ Massive test expansion — 605 new tests added across session handlers, queue ba
 
 **browseTable quote escaping** — Fixed broken onclick handlers for table names using addEventListener.
 
-<div v-pre>
-
 **Frond template engine** — Fixed string concatenation (`~` operator) and inline if/else expressions (`{{ 'yes' if active else 'no' }}`). A greedy quoted-string fallback in `evaluateLiteral()` was treating compound expressions as single string literals.
-
-</div>
 
 ### Test Coverage
 
@@ -320,11 +410,7 @@ TINA4_DEV_POLL_INTERVAL=5000  // 5 seconds
 
 ### v3.10.27 -- Frond Macro HTML Escaping Fix (30 March 2026)
 
-<div v-pre>
-
 Macro output was getting HTML-escaped when used inside expressions. A `{% macro %}` that returned HTML would render as visible `&lt;div&gt;` tags instead of actual markup. This patch marks macro output as safe, matching standard Twig behaviour.
-
-</div>
 
 **Before (broken):**
 

@@ -1024,11 +1024,7 @@ $task->delete();
 broadcastTaskUpdate("deleted", ["id" => $request->params["id"]]);
 ```
 
-<div v-pre>
-
 Add WebSocket client code to the dashboard template. Add this inside the `{% block extra_js %}` block:
-
-</div>
 
 ```javascript
 // WebSocket connection for real-time updates

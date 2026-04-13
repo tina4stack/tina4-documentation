@@ -422,11 +422,7 @@ v3 adds the ability to call methods on array or object values inside templates:
 <p>{{ user.getName()|upper }}</p>
 ```
 
-<div v-pre>
-
 This is new in v3. v2 only supported property access (`{{ user.name }}`), not method calls.
-
-</div>
 
 ---
 

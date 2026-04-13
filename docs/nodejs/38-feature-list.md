@@ -22,13 +22,9 @@ This chapter catalogs all 45 features in Tina4 for Node.js, grouped by category.
 | # | Feature | Class / Function | Chapter |
 |---|---------|-----------------|---------|
 | 7 | **Frond Templates** | `res.render("page.frond", data)` | 4 |
-<div v-pre>
-
 | 8 | **Template Variables** | `{{variable}}`, `{{nested.field}}` | 4 |
 | 9 | **Template Includes** | `{{> partial.frond}}` | 4 |
 | 10 | **Template Helpers** | `{{#if}}`, `{{#each}}`, `{{#unless}}` | 4 |
-
-</div>
 
 ---
 
@@ -41,7 +37,7 @@ This chapter catalogs all 45 features in Tina4 for Node.js, grouped by category.
 | 13 | **Named Parameters** | `:paramName` in SQL, bound from object | 5 |
 | 14 | **ORM Models** | `class Product extends Model` | 6 |
 | 15 | **ORM CRUD** | `Model.find`, `.save`, `.delete`, `.load` | 6 |
-| 16 | **Query Builder** | `db.select().from().where().limit().fetch()` | 7 |
+| 16 | **Query Builder** | `db.select().fromTable().where().limit().fetch()` | 7 |
 | 17 | **Migrations** | Auto-migrations from model definitions | 5 |
 | 18 | **Sequence / next_id** | `Database.get_next_id("table")` | 5 |
 | 19 | **Multi-DB Support** | SQLite, PostgreSQL, MySQL, MSSQL | 5 |
@@ -138,23 +134,11 @@ This chapter catalogs all 45 features in Tina4 for Node.js, grouped by category.
 
 **Frond Templates** — Tina4's built-in templating language. Files use the `.frond` extension. No separate template engine to install.
 
-<div v-pre>
-
 **Template Variables** — `{{variable}}` renders a string. `{{user.name}}` accesses nested properties. `{{price | currency}}` applies a filter.
-
-</div>
-
-<div v-pre>
 
 **Template Includes** — `{{> header.frond}}` includes another template. Included templates share the same variable scope.
 
-</div>
-
-<div v-pre>
-
 **Template Helpers** — `{{#if condition}}...{{/if}}` for conditionals. `{{#each items}}...{{/each}}` for loops. `{{#unless condition}}` for negation.
-
-</div>
 
 ---
 
@@ -168,7 +152,7 @@ This chapter catalogs all 45 features in Tina4 for Node.js, grouped by category.
 
 **ORM Models** — Extend `Model`, declare fields. Tina4 generates the table if it does not exist. `Product.find({ category: "Electronics" })` queries without SQL.
 
-**Query Builder** — Chainable: `.select("name", "price").from("products").where("active", true).orderBy("name").limit(20).fetch()`. Composes complex queries without raw SQL.
+**Query Builder** — Chainable: `.select("name", "price").fromTable("products").where("active", true).orderBy("name").limit(20).fetch()`. Composes complex queries without raw SQL.
 
 **Migrations** — Tina4 compares the model definition to the live table schema and adds missing columns on startup. No migration files needed for additive changes.
 

@@ -956,11 +956,7 @@ The HTML response includes the success flash message.
 
 ### 6. Email Template Variables Not Substituted
 
-<div v-pre>
-
 **Problem:** The email body shows `{{ name }}` instead of the user's name.
-
-</div>
 
 **Cause:** You passed the raw template file content instead of rendering it through Frond. The template engine never ran.
 

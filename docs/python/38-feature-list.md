@@ -26,13 +26,9 @@ Tina4 is four implementations of the same framework: Python, PHP, Ruby, and Node
 
 | # | Feature | Description |
 |---|---------|-------------|
-<div v-pre>
-
 | 08 | **Frond Templates** | Tina4's own template engine: `{{ var }}`, `{% if %}`, `{% for %}`, partials, layouts |
 | 09 | **Template Caching** | Compiled templates cached in memory; TTL configurable via `TINA4_TEMPLATE_CACHE_TTL` |
 | 10 | **Asset Helpers** | `css()`, `js()`, `image()` helpers with cache-busting query strings |
-
-</div>
 
 ---
 

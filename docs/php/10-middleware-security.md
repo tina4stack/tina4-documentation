@@ -1071,14 +1071,10 @@ Tina4 blocks this with form tokens.
 
 ### How It Works
 
-<div v-pre>
-
 1. Your template renders a hidden token using `{{ form_token() }}`.
 2. The browser submits the token with the form data.
 3. The `CsrfMiddleware` validates the token before the route handler runs.
 4. Invalid or missing tokens receive a `403 Forbidden` response.
-
-</div>
 
 ### The Template
 
@@ -1090,11 +1086,7 @@ Tina4 blocks this with form tokens.
 </form>
 ```
 
-<div v-pre>
-
 The `{{ form_token() }}` call generates a hidden input field containing a signed JWT. The token is bound to the current session — a token from one session cannot be used in another.
-
-</div>
 
 ### The Middleware
 
@@ -1159,11 +1151,7 @@ Leave it enabled for anything a browser can reach. The cost is one hidden field 
 
 A form token alone prevents cross-site forgery. But what if someone steals a token from a form? Session binding stops them.
 
-<div v-pre>
-
 When `{{ form_token() }}` generates a token, it embeds the current session ID in the JWT payload. The CSRF middleware checks that the session ID in the token matches the session ID of the request. A token stolen from one session cannot be replayed in another.
-
-</div>
 
 This happens automatically. No configuration. No extra code.
 
@@ -1570,14 +1558,10 @@ Prefer external scripts. Inline scripts are an XSS vector.
 Build a public contact form that:
 
 1. Does not require login (`->noAuth()`).
-<div v-pre>
-
 2. Validates CSRF tokens (form includes `{{ form_token() }}`).
 3. Rate-limits submissions to 3 per minute per IP.
 4. Stores messages in the database.
 5. Returns a success message.
-
-</div>
 
 ### Solution
 

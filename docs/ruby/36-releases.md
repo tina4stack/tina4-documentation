@@ -1,5 +1,78 @@
 # Chapter 35: Release Notes
 
+## v3.10.99 (2026-04-12)
+
+- **breaking:** `auto_map` now defaults to `true` — ORM models automatically map between camelCase properties and snake_case DB columns. Set `self.auto_map = false` on your model class to restore the old behaviour.
+- **feat:** `to_h(case:)` parameter — pass `case: 'camel'` to get camelCase keys (for JSON APIs) or `case: 'snake'` (default) for snake_case keys matching DB columns. All aliases (`to_dict`, `to_hash`, `to_assoc`, `to_object`) support the parameter.
+- **feat:** Frond `replace` filter now accepts Hash args — `{{ v|replace({"T": " ", "-": "/"}) }}` for multiple substitutions in one call.
+- **tests:** 6 new parity tests covering `to_h(case:)`, `auto_map` default, `replace` filter (Hash + positional), and `ServiceRunner` registration. 2,519 tests passing.
+- **parity:** All features shipped identically across Python, PHP, Ruby, Node.js.
+
+## v3.10.97 (2026-04-11)
+
+- **fix:** frond.form.submit redirect handling — XHR follows 3xx redirects transparently; fixed by detecting `xhr.responseURL` mismatch and navigating instead.
+- **dep:** Updated frond.min.js to v2.1.2.
+- **parity:** All 4 frameworks bumped to 3.10.97.
+
+## v3.10.93 (2026-04-11)
+
+- **fix:** Frond bracket depth tracking in `find_outside_quotes` — expressions like `arr[i % 2]` no longer treated as top-level arithmetic.
+- **fix:** Frond subscript expression evaluation — bracket content uses `eval_expr()` instead of simple variable lookup, enabling `arr[loop.index0 % 2]`.
+- **fix:** Frond slice with variable bounds — `items[start:end]` evaluates bounds through `eval_expr()`.
+- **docs:** Developer skills updated — Metrics Dashboard guidance, Frond Template Parity rules, `@noauth` security warnings.
+- **parity:** All Frond fixes applied identically across Python, PHP, Ruby, Node.js. 2,513 tests passing.
+
+## v3.10.92 (2026-04-10)
+
+- **breaking:** Rename `ErrorOverlay` methods — `render` → `render_error_overlay`, `render_production` → `render_production_error`, `debug_mode?` → `is_debug_mode`.
+- **feat:** Add `Server.handle(env)` for cross-framework parity.
+- **breaking:** Rename `WebSocketBackplane.create` → `WebSocketBackplane.create_backplane`.
+- **feat:** Add `ScssCompiler.compile`, `add_import_path`, `set_variable` methods.
+- **feat:** Add `DevAdmin.register` method.
+- **parity:** 44/44 cross-framework features green. 2,487 tests passing.
+
+## v3.10.91 (2026-04-10)
+
+- **feat:** Add parity methods — `Response.send` params, `Middleware.check`/`is_preflight`, AI/Log aliases, MCP optional router.
+- **breaking:** Rename `from()` → `from_table()`, `error_envelope` → `error_response`, remove aliases.
+
+## v3.10.90 (2026-04-09)
+
+- **docs:** Chapter 4 (Templates) — new "Dumping Values for Debugging" section covering both `{{ x|dump }}` and `{{ dump(x) }}` forms, their shared `<pre>value.inspect</pre>` output, and the `TINA4_DEBUG=true` production gate. Filter table entry updated to reference the new section.
+- **docs:** `plan/parity/parity-template.md` updated with a cross-framework dump helper comparison table and marks dump parity as confirmed across all 4 frameworks at v3.10.89.
+- **chore:** Version sync release — brings all 4 frameworks to the same patch version (3.10.90) so downstream users can upgrade PHP/Python/Ruby/Node.js in lockstep without hunting version mismatches.
+
+## v3.10.89 (2026-04-09)
+
+- **feat:** `{{ dump(value) }}` global function form added to Frond alongside the existing `{{ value|dump }}` filter. Both call a single `Tina4::Frond.render_dump` helper and produce identical output (`<pre>value.inspect</pre>` HTML-escaped).
+- **security:** Dump is now **gated on `TINA4_DEBUG=true`**. In production (env var unset or `false`) both the filter and function silently return an empty `SafeString`. This prevents accidental leaks of internal state, object shapes, and sensitive values into rendered HTML when a developer leaves a `{{ dump(x) }}` call in a template.
+- **test:** 3 new `spec/frond_spec.rb` examples covering debug-mode output, production silencing, function/filter parity, and function-form production silencing.
+
+## v3.10.86 (2026-04-09)
+
+- **feat:** `foreign_key_field` DSL auto-wires both sides of a foreign key relationship. Declaring `foreign_key_field :user_id, references: User` registers the integer column, calls `belongs_to :user` on the declaring class, and calls `has_many :posts` on the referenced class. Supports `related_name:` for custom has-many names and deferred wiring via a module-level registry so the referenced class can be defined either before or after the declaring one.
+- **feat:** Cross-framework parity — same FK auto-wiring semantics now available in Python (`ForeignKeyField`), PHP (`$foreignKeys`), and Node.js (`type: "foreignKey"`)
+- **docs:** Chapter 6 (ORM) updated with a new "foreign_key_field — Auto-Wired Relationships" section
+
+## v3.10.85 (2026-04-09)
+
+- Version bump for parity with Python and PHP releases
+
+## v3.10.84 (2026-04-09)
+
+- **fix:** Router/middleware was setting `request.user` / `request.auth` / auth payload to `true` (boolean) instead of the actual JWT payload after `valid_token?` was changed to return bool — any code reading `request.user["sub"]` etc. would have failed silently or crashed
+- **fix:** CSRF middleware was not correctly rejecting invalid tokens (nil check on bool result always passed)
+- **add:** Headless routing auth payload integration tests to prevent regression
+
+## v3.10.83 (2026-04-08)
+
+- **feat:** WebSocket rooms — `join_room`, `leave_room`, `broadcast_to_room`, `room_count`, `get_room_connections`
+- **feat:** Queue signature parity — instance-scoped `push`/`pop`/`retry`, no topic params on public methods
+- **feat:** Auth cleanup — canonical `getToken`/`validToken` methods
+- Full parity across Python, PHP, Ruby, Node.js
+
+---
+
 ## v3.10.70 (2026-04-06)
 
 - **New:** SSE (Server-Sent Events) support via `response.stream()` — pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
@@ -163,7 +236,7 @@ db1 = Tina4::Container.resolve(:db)  # creates instance
 db2 = Tina4::Container.resolve(:db)  # same instance
 ```
 
-**`Router.match(path, method)`** — alias for `find_route()` (parity with Python, PHP, Node.js).
+**`Router.match(method, path)`** — primary route lookup (replaces `find_route`; consistent with Python, PHP, Node.js). **`Router.add(method, path, handler)`** — primary imperative registration (replaces `add_route`; all convenience methods delegate to this).
 
 **`Router.get_routes` and `Router.list_routes`** — explicit listing methods (remove ambiguous `routes` alias).
 
@@ -205,11 +278,7 @@ Version parity release. All four Tina4 frameworks now share the same version num
 
 ### v3.10.27 -- Frond Macro HTML Escaping Fix (March 30)
 
-<div v-pre>
-
 **Bug fix:** Macro output was HTML-escaped when used inside `{{ }}` expressions. Characters like `<`, `>`, and `"` rendered as `&lt;`, `&gt;`, `&amp;quot;` instead of raw HTML. Nested macro calls double-escaped.
-
-</div>
 
 ```ruby
 # BEFORE (broken): macro output escaped
@@ -824,12 +893,8 @@ TINA4_AUTH_PUBLIC_KEY=keys/public.pem
 
 **Frond template additions:**
 
-<div v-pre>
-
 - Ternary-with-filter: `{{ value ? value|upper : "default" }}`
 - `data_uri` filter for inline file display in templates
-
-</div>
 
 ---
 

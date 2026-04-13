@@ -4,11 +4,7 @@
 
 Every route so far returns JSON. That works for APIs. Web applications need HTML -- product listings, dashboards, login forms, email templates. Tina4 uses the **Frond** template engine for this work.
 
-<div v-pre>
-
 Frond is a zero-dependency template engine built from scratch. Its syntax matches Twig, Jinja2, and Nunjucks. Three constructs drive the entire engine: `{{ }}` for output, `{% %}` for logic, `{# #}` for comments. That is the whole grammar.
-
-</div>
 
 This chapter builds toward a product catalog page. Items in a grid. Featured products highlighted. Prices formatted. Layout inherited from a shared template. One engine handles it all.
 
@@ -152,8 +148,6 @@ Filters transform output. The pipe `|` applies them:
 
 | Filter | Example | Description |
 |--------|---------|-------------|
-<div v-pre>
-
 | `upper` | `{{ name \| upper }}` | Convert to uppercase |
 | `lower` | `{{ name \| lower }}` | Convert to lowercase |
 | `capitalize` | `{{ name \| capitalize }}` | Capitalize first letter |
@@ -168,14 +162,10 @@ Filters transform output. The pipe `|` applies them:
 | `striptags` | `{{ html \| striptags }}` | Remove all HTML tags |
 | `replace("a", "b")` | `{{ text \| replace("old", "new") }}` | Replace occurrences of a substring |
 
-</div>
-
 #### Array Filters
 
 | Filter | Example | Description |
 |--------|---------|-------------|
-<div v-pre>
-
 | `length` | `{{ items \| length }}` | Count items in array or string length |
 | `reverse` | `{{ items \| reverse }}` | Reverse order of items |
 | `sort` | `{{ items \| sort }}` | Sort items ascending |
@@ -191,14 +181,10 @@ Filters transform output. The pipe `|` applies them:
 | `batch(3)` | `{{ items \| batch(3) }}` | Group items into batches of N |
 | `slice(0, 3)` | `{{ items \| slice(0, 3) }}` | Extract a slice from offset with length |
 
-</div>
-
 #### Encoding Filters
 
 | Filter | Example | Description |
 |--------|---------|-------------|
-<div v-pre>
-
 | `escape` (`e`) | `{{ text \| escape }}` | HTML-escape special characters |
 | `raw` (`safe`) | `{{ html \| raw }}` | Output without auto-escaping |
 | `url_encode` | `{{ text \| url_encode }}` | URL-encode a string |
@@ -207,14 +193,10 @@ Filters transform output. The pipe `|` applies them:
 | `md5` | `{{ text \| md5 }}` | Compute MD5 hash |
 | `sha256` | `{{ text \| sha256 }}` | Compute SHA-256 hash |
 
-</div>
-
 #### Numeric Filters
 
 | Filter | Example | Description |
 |--------|---------|-------------|
-<div v-pre>
-
 | `abs` | `{{ num \| abs }}` | Absolute value |
 | `round(2)` | `{{ price \| round(2) }}` | Round to N decimal places |
 | `number_format(2)` | `{{ price \| number_format(2) }}` | Format with decimals and thousands separator |
@@ -222,50 +204,36 @@ Filters transform output. The pipe `|` applies them:
 | `float` | `{{ val \| float }}` | Cast to float |
 | `string` | `{{ val \| string }}` | Cast to string |
 
-</div>
-
 #### JSON Filters
 
 | Filter | Example | Description |
 |--------|---------|-------------|
-<div v-pre>
-
 | `json_encode` | `{{ data \| json_encode }}` | Encode value as JSON string |
 | `to_json` (`tojson`) | `{{ data \| to_json }}` | Encode value as JSON string (alias) |
 | `json_decode` | `{{ str \| json_decode }}` | Decode JSON string to object |
 | `js_escape` | `{{ text \| js_escape }}` | Escape string for safe use in JavaScript |
 
-</div>
-
 #### Dict Filters
 
 | Filter | Example | Description |
 |--------|---------|-------------|
-<div v-pre>
-
 | `keys` | `{{ obj \| keys }}` | Get dictionary keys as array |
 | `values` | `{{ obj \| values }}` | Get dictionary values as array |
 | `merge(other)` | `{{ defaults \| merge(overrides) }}` | Merge two dictionaries |
-
-</div>
 
 #### Other Filters
 
 | Filter | Example | Description |
 |--------|---------|-------------|
-<div v-pre>
-
 | `default("fallback")` | `{{ name \| default("Guest") }}` | Fallback when value is empty or undefined |
 | `date("Y-m-d")` | `{{ created \| date("Y-m-d") }}` | Format a date value |
 | `format(val)` | `{{ "%.2f" \| format(price) }}` | Format string with value (sprintf-style) |
 | `data_uri` | `{{ content \| data_uri }}` | Convert to a data URI string |
-| `dump` | `{{ var \| dump }}` | Debug output of a variable |
+| `dump` | `{{ var \| dump }}` or `{{ dump(var) }}` | Debug output — gated on `TINA4_DEBUG=true` (see [Dumping Values](#dumping-values-for-debugging)) |
 | `form_token` | `{{ form_token() }}` | Generate a CSRF hidden input with token |
 | `formTokenValue` | `{{ formTokenValue("context") }}` | Return the raw JWT token string |
 | `to_json` | `{{ data \| to_json }}` | JSON-encode a value (no double-escaping) |
 | `js_escape` | `{{ text \| js_escape }}` | Escape for safe use in JavaScript strings |
-
-</div>
 
 ### Chaining Filters
 
@@ -288,6 +256,36 @@ A fallback when a variable is empty or undefined:
 {{ bio | default("No bio provided.") }}
 {{ theme | default("light") }}
 ```
+
+### Dumping Values for Debugging
+
+The `dump` helper lets you inspect any variable mid-template. Two interchangeable forms are supported:
+
+```html
+{{ user | dump }}
+{{ dump(user) }}
+```
+
+Both produce the same `<pre>`-wrapped, HTML-escaped `repr()` of the value. Handles nested dicts, lists, class instances, and cyclic references without crashing — Python's `repr()` prints `{...}` for back-edges.
+
+```html
+{{ dump(order) }}
+
+{# Output: #}
+{# <pre>{'id': 42, 'items': [...], 'total': 99.99}</pre> #}
+```
+
+**dump is gated on `TINA4_DEBUG=true`.** In production (env var unset or `false`) **both** the filter and function form silently return an empty string. This prevents accidental leaks of internal state, object shapes, or sensitive values into rendered HTML if a developer leaves a `{{ dump(x) }}` call in a template.
+
+```bash
+# .env — dev
+TINA4_DEBUG=true    # dump() outputs the value
+
+# .env — production
+TINA4_DEBUG=false   # dump() is a no-op
+```
+
+You can rely on this gate for safety, but treat `dump` as a development-only convenience. For structured output in production code paths, use `to_json`.
 
 ---
 
@@ -354,11 +352,7 @@ Inside a for loop, the `loop` variable provides iteration context:
 
 ### for / else
 
-<div v-pre>
-
 The `{% else %}` block inside `{% for %}` runs when the list is empty:
-
-</div>
 
 ```html
 {% for product in products %}
@@ -451,22 +445,14 @@ Create `src/templates/home.html`:
 
 When Frond renders `home.html`:
 
-<div v-pre>
-
 1. It sees `{% extends "base.html" %}` and loads the base template.
 2. The `{% block title %}` in `home.html` replaces the one in `base.html`.
 3. The `{% block content %}` in `home.html` replaces the one in `base.html`.
 4. Blocks not overridden (`head`, `scripts`) keep their default content -- empty here.
 
-</div>
-
 ### Calling Parent Blocks
 
-<div v-pre>
-
 Use `{{ parent() }}` to include the parent block's content:
-
-</div>
 
 ```html
 {% extends "base.html" %}
@@ -549,11 +535,7 @@ Change the macro once and every form in your application updates. Consistent mar
 
 ## 8. Comments
 
-<div v-pre>
-
 Template comments use `{# #}`. Frond strips them from the output:
-
-</div>
 
 ```html
 {# This comment will not appear in the HTML source #}
@@ -571,17 +553,9 @@ HTML comments (`<!-- -->`) reach the browser. Frond comments never do.
 
 ## 9. Special Tags
 
-<div v-pre>
-
 ### {% raw %} -- Literal Output
 
-</div>
-
-<div v-pre>
-
 Output literal `{{ }}` or `{% %}` without processing. This tag saves you when embedding Vue.js or Angular templates:
-
-</div>
 
 ```html
 {% raw %}
@@ -591,17 +565,9 @@ Output literal `{{ }}` or `{% %}` without processing. This tag saves you when em
 {% endraw %}
 ```
 
-<div v-pre>
-
 Frond outputs the literal text `{{ message }}`. No variable lookup. No expression parsing.
 
-</div>
-
-<div v-pre>
-
 ### {% spaceless %} -- Remove Whitespace
-
-</div>
 
 Strip whitespace between HTML tags:
 
@@ -621,11 +587,7 @@ Strip whitespace between HTML tags:
 
 Inline elements create visible gaps when whitespace sits between them. The `spaceless` tag eliminates those gaps.
 
-<div v-pre>
-
 ### {% autoescape %} -- Control Escaping
-
-</div>
 
 Override auto-escaping for a block of content:
 
@@ -639,11 +601,7 @@ Everything inside outputs without HTML escaping. This works the same as `| raw` 
 
 ### Whitespace Control
 
-<div v-pre>
-
 Template tags occupy a full line and produce blank lines in the output. Use `{%-` and `-%}` to strip surrounding whitespace:
-
-</div>
 
 ```html
 {%- for item in items -%}
@@ -1021,11 +979,7 @@ async def product_detail(id, request, response):
 
 **Cause:** Template tags produce whitespace on the lines they occupy.
 
-<div v-pre>
-
 **Fix:** Use whitespace control with `{%-` and `-%}` to strip whitespace around tags:
-
-</div>
 
 ```html
 {%- for item in items -%}
@@ -1037,106 +991,46 @@ async def product_detail(id, request, response):
 
 **Problem:** Frond raises an error when a variable does not exist in the context.
 
-<div v-pre>
-
 **Cause:** You used `{{ user.name }}` but did not pass `user` in the template data.
-
-</div>
-
-<div v-pre>
 
 **Fix:** Use the `|default` filter: `{{ user.name | default("Guest") }}`. Or check first: `{% if user is defined %}{{ user.name }}{% endif %}`.
 
-</div>
-
 ### 3. Extends must be the first tag
-
-<div v-pre>
 
 **Problem:** `{% extends "base.html" %}` has no effect. The page renders without the layout.
 
-</div>
-
-<div v-pre>
-
 **Cause:** `{% extends %}` must be the first tag in the template. Any text, HTML, or tags before it cause Frond to treat the template as standalone.
-
-</div>
-
-<div v-pre>
 
 **Fix:** Move `{% extends "base.html" %}` to the first line. Nothing before it.
 
-</div>
-
 ### 4. Macro not found
-
-<div v-pre>
 
 **Problem:** `{{ forms.input(...) }}` produces an error about `forms` being undefined.
 
-</div>
-
-<div v-pre>
-
 **Cause:** The `{% import %}` statement is missing, or the import path is wrong.
-
-</div>
-
-<div v-pre>
 
 **Fix:** Add `{% import "macros/forms.html" as forms %}` at the top of the template (after `{% extends %}` if using inheritance). The path is relative to `src/templates/`.
 
-</div>
-
 ### 5. Filter produces wrong type
-
-<div v-pre>
 
 **Problem:** `{{ "%.2f"|format(price) }}` shows an error instead of a formatted number.
 
-</div>
-
 **Cause:** The variable `price` is a string, not a number. Filters expect specific types.
 
-<div v-pre>
-
 **Fix:** Pass correct types from your route handler. Use `float(price)` in Python before passing to the template, or convert in the template: `{{ "%.2f"|format(price|float) }}`.
-
-</div>
 
 ### 6. Escaped HTML when you want raw output
 
 **Problem:** HTML content shows as text with visible `<tags>` instead of rendering.
 
-<div v-pre>
-
 **Cause:** Frond auto-escapes all `{{ }}` output to prevent XSS.
-
-</div>
-
-<div v-pre>
 
 **Fix:** Use the `|safe` filter: `{{ trusted_html | safe }}`. Only use this with content you trust -- never with user input.
 
-</div>
-
 ### 7. Include file path wrong
-
-<div v-pre>
 
 **Problem:** `{% include "header.html" %}` produces a "template not found" error even though the file exists.
 
-</div>
-
-<div v-pre>
-
 **Cause:** The path in `{% include %}` is relative to `src/templates/`, not the current template file.
 
-</div>
-
-<div v-pre>
-
 **Fix:** Use the full path from the templates root: `{% include "partials/header.html" %}` for a file at `src/templates/partials/header.html`.
-
-</div>

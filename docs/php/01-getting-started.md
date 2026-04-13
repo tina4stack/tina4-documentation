@@ -484,8 +484,6 @@ Open `http://localhost:7146/products`. You see:
 The chain is short:
 
 1. `$response->render("products.html", ["products" => $products])` tells Frond to render `src/templates/products.html`.
-<div v-pre>
-
 2. Frond sees `{% extends "base.html" %}` and loads the base template.
 3. The `{% block content %}` in `products.html` replaces the same block in `base.html`.
 4. `{{ product.name }}` outputs the value, auto-escaped for HTML safety.
@@ -493,8 +491,6 @@ The chain is short:
 6. `{% for product in products %}` loops through the array.
 7. `{% if product.in_stock %}` renders the correct badge.
 8. `{{ products | length }}` returns the count.
-
-</div>
 
 ### About tina4css
 

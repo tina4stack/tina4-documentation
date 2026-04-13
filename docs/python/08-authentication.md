@@ -454,11 +454,7 @@ In your template, include the CSRF token in every form:
 </form>
 ```
 
-<div v-pre>
-
 `{{ form_token() }}` renders a hidden input field:
-
-</div>
 
 ```html
 <input type="hidden" name="_token" value="abc123randomtoken456">

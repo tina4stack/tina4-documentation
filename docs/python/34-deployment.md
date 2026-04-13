@@ -2,7 +2,7 @@
 
 ## 1. From Development to Production
 
-The app works on `localhost:7145`. Now it needs to run around the clock on a real server. Handle thousands of concurrent users. Survive restarts. Hold steady on memory. The gap between "works on my machine" and "works in production" is where projects stumble.
+The app works on `localhost:7146`. Now it needs to run around the clock on a real server. Handle thousands of concurrent users. Survive restarts. Hold steady on memory. The gap between "works on my machine" and "works in production" is where projects stumble.
 
 This chapter covers everything for a production deployment: environment configuration, ASGI server setup, Docker packaging, health checks, graceful shutdown, SSL/TLS, scaling, and monitoring.
 
@@ -20,7 +20,7 @@ Create a production `.env`:
 # Core
 TINA4_DEBUG=false
 TINA4_LOG_LEVEL=WARNING
-TINA4_PORT=7145
+TINA4_PORT=7146
 
 # Database
 DATABASE_URL=sqlite:///data/app.db
@@ -93,7 +93,7 @@ tina4 serve
 ```
   Tina4 Python v3.0.0
   Server: uvicorn (4 workers)
-  Running at http://0.0.0.0:7145
+  Running at http://0.0.0.0:7146
 ```
 
 ```bash
@@ -104,7 +104,7 @@ tina4 serve
 ```
   Tina4 Python v3.0.0
   Server: built-in (development)
-  Running at http://0.0.0.0:7145
+  Running at http://0.0.0.0:7146
   WARNING: Do not use the built-in server in production
 ```
 
@@ -121,7 +121,7 @@ TINA4_KEEP_ALIVE=5
 Or pass options directly:
 
 ```bash
-uvicorn app:app --workers 4 --host 0.0.0.0 --port 7145
+uvicorn app:app --workers 4 --host 0.0.0.0 --port 7146
 ```
 
 ### How Many Workers?
@@ -146,57 +146,61 @@ workers = (2 * multiprocessing.cpu_count()) + 1
 
 Docker is the most portable deployment path. Your app runs the same way on your laptop, in CI, and on the production server.
 
+### Official Base Image
+
+Tina4 Python provides an official Docker Hub base image: `tina4stack/tina4-python:v3`. It is a lean, Alpine-based image (~56MB) with Python 3.13, SQLite, and the Tina4 framework pre-installed. Your app Dockerfile extends it and adds only your application code.
+
+The base image includes these environment variables pre-configured:
+- `TINA4_OVERRIDE_CLIENT=true` — bypasses the CLI guard for Docker
+- `TINA4_DEBUG=false` — production mode by default
+- `PYTHONUNBUFFERED=1` — ensures logs appear in `docker logs`
+- `TINA4_NO_BROWSER=true` — prevents browser auto-open attempts
+- `HOST=0.0.0.0` and `PORT=7146` — server binds to all interfaces
+
 ### Dockerfile
 
 Create `Dockerfile`:
 
 ```dockerfile
-FROM python:3.12-slim
-
-# Install uv for fast package management
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
-
+FROM tina4stack/tina4-python:v3
 WORKDIR /app
 
-# Copy dependency files first (for better layer caching)
-COPY pyproject.toml uv.lock ./
-
-# Install dependencies
-RUN uv sync --frozen --no-dev
-
 # Copy application code
-COPY . .
+COPY app.py .
+COPY .env .
+COPY migrations/ migrations/
+COPY src/ src/
 
-# Create directories for data and logs
-RUN mkdir -p data logs
+# Create data directories for SQLite, sessions, queue, and mailbox
+RUN mkdir -p data data/sessions data/queue data/mailbox
 
-# Expose port
-EXPOSE 7145
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD curl -f http://localhost:7145/health || exit 1
-
-# Run the application
-CMD ["uv", "run", "python", "app.py"]
+EXPOSE 7146
+CMD ["python", "app.py"]
 ```
+
+That is the entire Dockerfile. The base image handles Python, dependencies, and framework setup.
 
 ### .dockerignore
 
 Create `.dockerignore`:
 
 ```
-.git
-.env
+.venv
 __pycache__
 *.pyc
+data/
+tests/
+.tina4/
+.DS_Store
+*.db
+*.db-wal
+*.db-shm
+logs/
+.git
+.env.development
 .pytest_cache
 htmlcov
 .claude
-node_modules
-data/*.db
-logs/*.log
-.venv
 ```
 
 ### Building and Running
@@ -208,12 +212,78 @@ docker build -t my-tina4-app .
 # Run the container
 docker run -d \
   --name my-app \
-  -p 7145:7145 \
+  -p 7146:7146 \
   -e JWT_SECRET=your-production-secret \
   -e DATABASE_URL=sqlite:///data/app.db \
   -v $(pwd)/data:/app/data \
-  -v $(pwd)/logs:/app/logs \
   my-tina4-app
+```
+
+### Adding Database Drivers
+
+The base image ships with SQLite only. To use PostgreSQL, MySQL, MSSQL, or Firebird, install the driver in your Dockerfile.
+
+**PostgreSQL:**
+
+```dockerfile
+FROM tina4stack/tina4-python:v3
+WORKDIR /app
+RUN python -m pip install --no-cache-dir psycopg2-binary
+COPY app.py .
+COPY .env .
+COPY migrations/ migrations/
+COPY src/ src/
+RUN mkdir -p data data/sessions data/queue data/mailbox
+EXPOSE 7146
+CMD ["python", "app.py"]
+```
+
+**MySQL:**
+
+```dockerfile
+FROM tina4stack/tina4-python:v3
+WORKDIR /app
+RUN apk add --no-cache mariadb-connector-c-dev && \
+    python -m pip install --no-cache-dir mysqlclient
+COPY app.py .
+COPY .env .
+COPY migrations/ migrations/
+COPY src/ src/
+RUN mkdir -p data data/sessions data/queue data/mailbox
+EXPOSE 7146
+CMD ["python", "app.py"]
+```
+
+**MSSQL:**
+
+```dockerfile
+FROM tina4stack/tina4-python:v3
+WORKDIR /app
+RUN apk add --no-cache unixodbc-dev freetds-dev && \
+    python -m pip install --no-cache-dir pymssql
+COPY app.py .
+COPY .env .
+COPY migrations/ migrations/
+COPY src/ src/
+RUN mkdir -p data data/sessions data/queue data/mailbox
+EXPOSE 7146
+CMD ["python", "app.py"]
+```
+
+**Firebird:**
+
+```dockerfile
+FROM tina4stack/tina4-python:v3
+WORKDIR /app
+# Pure Python driver — no system dependencies needed
+RUN python -m pip install --no-cache-dir firebird-driver
+COPY app.py .
+COPY .env .
+COPY migrations/ migrations/
+COPY src/ src/
+RUN mkdir -p data data/sessions data/queue data/mailbox
+EXPOSE 7146
+CMD ["python", "app.py"]
 ```
 
 ### Docker Compose
@@ -227,38 +297,23 @@ services:
   app:
     build: .
     ports:
-      - "7145:7145"
+      - "7146:7146"
     environment:
       - TINA4_DEBUG=false
       - TINA4_LOG_LEVEL=WARNING
       - JWT_SECRET=${JWT_SECRET}
       - DATABASE_URL=sqlite:///data/app.db
-      - TINA4_CACHE_BACKEND=redis
-      - TINA4_CACHE_HOST=redis
     volumes:
       - app-data:/app/data
-      - app-logs:/app/logs
-    depends_on:
-      - redis
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7145/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7146/health')"]
       interval: 30s
       timeout: 5s
       retries: 3
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    restart: unless-stopped
-
 volumes:
   app-data:
-  app-logs:
-  redis-data:
 ```
 
 ```bash
@@ -437,7 +492,7 @@ server {
 
     # WebSocket upgrade
     location /ws/ {
-        proxy_pass http://127.0.0.1:7145;
+        proxy_pass http://127.0.0.1:7146;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -448,7 +503,7 @@ server {
 
     # Application
     location / {
-        proxy_pass http://127.0.0.1:7145;
+        proxy_pass http://127.0.0.1:7146;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -559,7 +614,7 @@ When you run multiple Tina4 instances, Nginx distributes traffic across them:
 
 ```nginx
 upstream tina4_backend {
-    server 127.0.0.1:7145;
+    server 127.0.0.1:7146;
     server 127.0.0.1:7146;
     server 127.0.0.1:7147;
     server 127.0.0.1:7148;
@@ -582,7 +637,7 @@ server {
 Start four instances on different ports:
 
 ```bash
-TINA4_PORT=7145 uv run python app.py &
+TINA4_PORT=7146 uv run python app.py &
 TINA4_PORT=7146 uv run python app.py &
 TINA4_PORT=7147 uv run python app.py &
 TINA4_PORT=7148 uv run python app.py &
@@ -725,16 +780,13 @@ Deploy a Tina4 Python application using Docker.
 ### Requirements
 
 1. Create a `Dockerfile` that:
-   - Uses `python:3.12-slim` as the base image
-   - Installs dependencies with `uv`
+   - Uses `tina4stack/tina4-python:v3` as the base image
    - Copies the application code
-   - Exposes port 7145
-   - Includes a health check
-   - Runs the app with `uv run python app.py`
+   - Creates data directories
+   - Exposes port 7146
 
 2. Create a `docker-compose.yml` that:
    - Builds and runs the app
-   - Starts a Redis container for caching
    - Mounts volumes for data persistence
    - Sets environment variables for production
 
@@ -750,10 +802,10 @@ docker compose build
 docker compose up -d
 
 # Test health
-curl http://localhost:7145/health
+curl http://localhost:7146/health
 
 # Test the app
-curl http://localhost:7145/api/products
+curl http://localhost:7146/api/products
 
 # View logs
 docker compose logs -f app
@@ -771,14 +823,13 @@ docker compose up -d --build
 ```
 
 ```
-[+] Building 12.3s
-[+] Running 2/2
-  Container redis    Started
+[+] Building 4.2s
+[+] Running 1/1
   Container my-app   Started
 ```
 
 ```bash
-curl http://localhost:7145/health
+curl http://localhost:7146/health
 ```
 
 ```json
@@ -790,7 +841,7 @@ curl http://localhost:7145/health
 }
 ```
 
-The app runs in production mode with Redis caching, persistent data volumes, automatic restarts, and health monitoring.
+The app runs in production mode with persistent data volumes, automatic restarts, and health monitoring.
 
 ---
 
