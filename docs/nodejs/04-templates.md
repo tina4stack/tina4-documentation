@@ -516,17 +516,8 @@ Both produce the same `<pre>`-wrapped, HTML-escaped inspection of the value. Unl
 {# <pre>Order { id: 42, items: [...], total: 99.99 }</pre> #}
 ```
 
-<<<<<<< HEAD
 **dump is gated on `TINA4_DEBUG=true`.** In production (env var unset or `false`) **both** the filter and function form silently return an empty `SafeString`. This prevents accidental leaks of internal state, object shapes, or sensitive values into rendered HTML if a developer leaves a `{{ dump(x) }}` call in a template.
 
-=======
-<div v-pre>
-
-**dump is gated on `TINA4_DEBUG=true`.** In production (env var unset or `false`) **both** the filter and function form silently return an empty `SafeString`. This prevents accidental leaks of internal state, object shapes, or sensitive values into rendered HTML if a developer leaves a `{{ dump(x) }}` call in a template.
-
-</div>
-
->>>>>>> d03a74d32b442b59a90be1d13709d48680e51bdb
 ```bash
 # .env — dev
 TINA4_DEBUG=true    # dump() outputs the value

@@ -1,6 +1,5 @@
 # Chapter 35: Release Notes
 
-<<<<<<< HEAD
 ## v3.10.99 (2026-04-12)
 
 - **breaking:** `autoMap` now defaults to `true` — ORM models automatically map between camelCase properties and snake_case DB columns. Set `static autoMap = false;` on your model to restore the old behaviour.
@@ -9,8 +8,6 @@
 - **tests:** 13 new parity tests covering `toDict(case)`, `autoMap` default, `replace` filter (object + positional), and `ServiceRunner` registration. 268 tests passing.
 - **parity:** All features shipped identically across Python, PHP, Ruby, Node.js.
 
-=======
->>>>>>> d03a74d32b442b59a90be1d13709d48680e51bdb
 ## v3.10.97 (2026-04-11)
 
 - **fix:** frond.form.submit redirect handling — XHR follows 3xx redirects transparently; fixed by detecting `xhr.responseURL` mismatch and navigating instead.
@@ -42,41 +39,18 @@
 
 ## v3.10.90 (2026-04-09)
 
-<<<<<<< HEAD
-=======
-<div v-pre>
-
->>>>>>> d03a74d32b442b59a90be1d13709d48680e51bdb
 - **docs:** Chapter 4 (Templates) — new "Dumping Values for Debugging" section covering both `{{ x|dump }}` and `{{ dump(x) }}` forms, the v3.10.88 `inspectValue()` inspector (circular refs, BigInt, Map/Set, Error, Date, class instances), and the `TINA4_DEBUG=true` production gate. Filter table entry updated to reference the new section.
 - **docs:** `plan/parity/parity-template.md` updated with a cross-framework dump helper comparison table and marks dump parity as confirmed across all 4 frameworks at v3.10.89.
 - **chore:** Version sync release — brings all 4 frameworks to the same patch version (3.10.90) so downstream users can upgrade PHP/Python/Ruby/Node.js in lockstep without hunting version mismatches.
 
-<<<<<<< HEAD
 ## v3.10.89 (2026-04-09)
 
-=======
-</div>
-
-## v3.10.89 (2026-04-09)
-
-<div v-pre>
-
->>>>>>> d03a74d32b442b59a90be1d13709d48680e51bdb
 - **feat:** `{{ dump(value) }}` global function form added to Frond alongside the existing `{{ value|dump }}` filter. Both call a single `renderDump()` helper (which delegates to the v3.10.88 `inspectValue()` inspector) and produce identical output.
 - **security:** Dump is now **gated on `TINA4_DEBUG=true`**. In production (env var unset or `false`) both the filter and function silently return an empty `SafeString`. This prevents accidental leaks of internal state, object shapes, and sensitive values into rendered HTML when a developer leaves a `{{ dump(x) }}` call in a template.
 - **test:** 4 new tests in `frond.test.ts` covering `dump()`/`|dump` parity, debug-mode circular ref handling, production silencing for both forms.
 
-<<<<<<< HEAD
 ## v3.10.88 (2026-04-09)
 
-=======
-</div>
-
-## v3.10.88 (2026-04-09)
-
-<div v-pre>
-
->>>>>>> d03a74d32b442b59a90be1d13709d48680e51bdb
 - **fix:** `{{ value|dump }}` filter now handles complex objects safely. The previous implementation used `JSON.stringify` which crashed on circular references and BigInt, silently dropped functions/Symbols/`undefined`, and serialised `Map`/`Set`/`Error`/class instances as empty `{}`. Replaced with an `inspectValue()` inspector that matches PHP's `var_dump`, Python's `repr`, and Ruby's `inspect`:
   - Circular references: `[Circular]`
   - BigInt: `123n`
@@ -88,11 +62,6 @@
   - Depth-capped at 8 levels to prevent runaway graphs
 - **test:** 11 new edge-case assertions in `frond.test.ts` (frond.test now 254 passing).
 
-<<<<<<< HEAD
-=======
-</div>
-
->>>>>>> d03a74d32b442b59a90be1d13709d48680e51bdb
 ## v3.10.87 (2026-04-09)
 
 - **fix:** Dev toolbar no longer vanishes after a hot-reload. The CLI watcher used to call `server.router.clear()` on every file change — including template/CSS/JS asset edits — which left a brief window of 404 responses that bypass the dev toolbar injection. The watcher now reports whether a `.ts/.tsx/.js/.jsx` source file changed; router re-discovery only runs on code changes, and asset edits pass through without touching the router. Matches the PHP v3.10.87 fix.
