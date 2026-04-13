@@ -764,7 +764,95 @@ async def resolve_add_comment(root, args):
 
 ---
 
-## 13. Gotchas
+## 13. Input Validation
+
+Tina4's GraphQL engine validates arguments against their declared types before the resolver runs. If validation fails, the resolver is skipped and a clean error is returned.
+
+### What Gets Validated
+
+- **Non-null enforcement** — `ID!` means the argument cannot be null or empty
+- **Scalar type checking** — `Int` must be numeric, `Boolean` must be bool, `String` must be scalar
+- **Type coercion** — string `"123"` coerces to Int `123`, string `"true"` coerces to Boolean `True`
+- **List item validation** — `[Int!]` checks each item in the list
+
+### Example
+
+```python
+gql.schema.add_query("user", {"id": "ID!"}, "User", lambda r, a, c: find_user(a["id"]))
+```
+
+Query with missing required argument:
+
+```graphql
+{ user { id name } }
+```
+
+Response:
+
+```json
+{
+  "data": { "user": null },
+  "errors": [
+    { "message": "Argument 'id' on field 'user' is required (type: ID!)", "path": ["user"] }
+  ]
+}
+```
+
+The resolver never runs. The client gets a clear error describing what went wrong and where.
+
+---
+
+## 14. Field-Level Auth Directives
+
+Control access to individual fields using directives. No middleware setup, no wrapper functions — add a directive to the query and Tina4 checks the context.
+
+### Available Directives
+
+| Directive | Meaning |
+|-----------|---------|
+| `@auth` | Field requires any authenticated user |
+| `@role(role: "admin")` | Field requires a specific role |
+| `@guest` | Field is only accessible to unauthenticated users |
+
+### Passing Auth Context
+
+The `execute()` method accepts a `context` parameter. Pass the authenticated user from your request handler:
+
+```python
+from tina4_python import get
+from tina4_python.graphql import GraphQL
+
+gql = GraphQL()
+
+@get("/api/graphql")
+async def graphql_handler(request, response):
+    body = request.body
+    context = {}
+    if request.user:
+        context["user"] = {"id": request.user.id, "role": request.user.role}
+
+    result = gql.execute(body["query"], body.get("variables"), context)
+    return response.json(result)
+```
+
+### Using Directives in Queries
+
+```graphql
+# Only authenticated users can see this field
+{ profile @auth { id name email } }
+
+# Only admins can see salary
+{ employees { name salary @role(role: "admin") } }
+
+# Only guests see the registration prompt
+{ registrationBanner @guest }
+```
+
+When a directive check fails, the field returns `null` and is silently excluded from the response. No error is added — the field simply doesn't appear, as if it doesn't exist for that user.
+
+---
+
+## 15. Gotchas
 
 ### 1. Schema File Not Found
 
@@ -811,7 +899,14 @@ async def resolve_post_author(post, args):
 
 **Cause:** Each nested resolver runs independently. When you resolve `author` for each post, that is one query per post.
 
-**Fix:** Use data loader patterns or batch loading. For simple cases, you can pre-load all related records in the parent resolver and pass them down. For complex cases, consider using the REST API with eager loading instead of GraphQL for that particular endpoint.
+**Fix:** Use the `include` parameter in your ORM queries to eager-load relationships. Tina4's GraphQL engine injects the current selection set into context as `context["__selections"]`, so `fromOrm` resolvers can detect which relationships the client requested and batch-load them:
+
+```python
+# The fromOrm resolver automatically checks __selections and eager-loads
+gql.schema.from_orm(Post)  # Generates queries that use include= when sub-fields match relationships
+```
+
+For custom resolvers, check `context.get("__selections")` and pre-load related data in a single query.
 
 ### 6. GraphQL Playground Returns 404
 
@@ -823,11 +918,11 @@ async def resolve_post_author(post, args):
 
 ### 7. Type Mismatch Between Schema and Resolver
 
-**Problem:** A field declared as `Int!` in the schema receives a string from the resolver, causing a type error.
+**Problem:** A field declared as `Int!` in the schema receives a string from the resolver.
 
-**Cause:** Python's dynamic typing means your resolver might return `"42"` (a string) for an `Int!` field. GraphQL rejects it.
+**Cause:** Python's dynamic typing means your resolver might return `"42"` (a string) for an `Int!` field.
 
-**Fix:** Cast values to the correct type in your resolvers. Use `int()`, `float()`, `bool()` explicitly:
+**Fix:** Tina4's input validation now coerces argument types automatically (string `"123"` becomes Int `123`). For return values, `to_dict()` handles type casting for ORM model properties. For computed fields, cast explicitly:
 
 ```python
 return {
@@ -836,8 +931,6 @@ return {
     "inStock": bool(product.in_stock)
 }
 ```
-
-The `to_dict()` method handles this automatically for model properties with type declarations, but computed or derived fields need manual casting.
 
 ---
 

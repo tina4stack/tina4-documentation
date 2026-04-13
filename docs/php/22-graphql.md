@@ -822,7 +822,136 @@ GraphQL::resolve("Mutation", "addComment", function ($root, $args) {
 
 ---
 
-## 13. Gotchas
+## 13. Input Validation
+
+Tina4's GraphQL engine validates every argument against its declared type before your resolver runs. You never need to check whether a required argument is present or whether a string arrived where an integer was expected -- the engine rejects the query before your code executes.
+
+The built-in validator covers:
+
+- **Non-null enforcement** -- Arguments marked with `!` must be present and non-null.
+- **Scalar type checking** -- `Int`, `Float`, `String`, `Boolean`, and `ID` values are verified against their declared type.
+- **Type coercion** -- When safe, the engine coerces compatible values automatically (e.g., an integer `42` passed to a `Float` field becomes `42.0`, or a string `"7"` passed to an `Int` field becomes `7`).
+- **List item validation** -- For `[Int!]!` arguments, the engine checks that the value is a list, that no item is null, and that every item is an integer.
+
+### Example: Missing Required Argument
+
+Suppose you define a query that requires an `id`:
+
+```php
+<?php
+use Tina4\GraphQL;
+
+GraphQL::resolve("Query", "user", function ($root, $args) {
+    $user = new User();
+    $user->load($args["id"]);
+    return empty($user->id) ? null : $user->toArray();
+});
+```
+
+With the schema declaring `user(id: ID!): User`, sending a query without the required argument:
+
+```graphql
+{
+  user {
+    name
+    email
+  }
+}
+```
+
+Returns an error before the resolver runs:
+
+```json
+{
+  "errors": [
+    {
+      "message": "Argument 'id' of type 'ID!' is required but not provided.",
+      "locations": [{"line": 2, "column": 3}]
+    }
+  ]
+}
+```
+
+Your resolver never executes. No null-check needed inside the function.
+
+---
+
+## 14. Field-Level Auth Directives
+
+Tina4 supports three directives that control field-level access in your GraphQL schema:
+
+| Directive | Effect |
+|-----------|--------|
+| `@auth` | Field resolves only when `ctx["user"]` is present (any authenticated user) |
+| `@role(role: "admin")` | Field resolves only when `ctx["user"]["role"]` matches the specified role |
+| `@guest` | Field resolves only when `ctx["user"]` is absent (unauthenticated visitors) |
+
+### Passing Auth Context
+
+Pass user information through the context parameter of `execute()`:
+
+```php
+<?php
+$result = $gql->execute($query, $variables, [
+    'user' => ['id' => 1, 'role' => 'admin']
+]);
+```
+
+When no user is logged in, pass an empty context or omit the `user` key:
+
+```php
+<?php
+$result = $gql->execute($query, $variables, []);
+```
+
+### Schema Example
+
+```graphql
+type User {
+    id: ID!
+    name: String!
+    email: String! @auth
+    role: String! @role(role: "admin")
+}
+
+type Query {
+    me: User @auth
+    publicStats: Stats @guest
+    users: [User!]! @role(role: "admin")
+}
+```
+
+### Behavior on Failed Auth
+
+When a directive check fails, the field resolves to `null` silently -- no error is added to the response. The rest of the query executes normally. This prevents leaking information about which fields exist behind authentication.
+
+For example, if a non-admin user queries:
+
+```graphql
+{
+  users {
+    name
+    email
+    role
+  }
+}
+```
+
+The response is:
+
+```json
+{
+  "data": {
+    "users": null
+  }
+}
+```
+
+No error message. No hint that the field requires admin access. The field is simply excluded.
+
+---
+
+## 15. Gotchas
 
 ### 1. Schema File Not Found
 
@@ -870,7 +999,7 @@ GraphQL::resolve("Post", "author", function ($post, $args) {
 
 **Cause:** Each nested resolver runs independently. When you resolve `author` for each post, that is one query per post.
 
-**Fix:** Use data loader patterns or batch loading. For simple cases, you can pre-load all related records in the parent resolver and pass them down. For complex cases, consider using the REST API with eager loading instead of GraphQL for that particular endpoint.
+**Fix:** Use data loader patterns or batch loading. For simple cases, you can pre-load all related records in the parent resolver and pass them down. Check `$ctx["__selections"]` to see which nested fields the client requested -- if `author` is not in the selection set, skip the join. For ORM queries, use the `include` parameter to eager-load relationships in a single query. For complex cases, consider using the REST API with eager loading instead of GraphQL for that particular endpoint.
 
 ### 6. GraphQL Playground Returns 404
 
@@ -886,7 +1015,7 @@ GraphQL::resolve("Post", "author", function ($post, $args) {
 
 **Cause:** PHP does not enforce types as strictly as GraphQL. If your resolver returns `"42"` (a string) for an `Int!` field, GraphQL rejects it.
 
-**Fix:** Cast values to the correct type in your resolvers. Use `(int)`, `(float)`, `(bool)` casts explicitly:
+**Fix:** The input validation layer (see section 13) now coerces compatible types automatically -- a string `"42"` passed as an argument to an `Int` parameter is converted before your resolver runs. However, resolver *return values* still need correct types. Cast values explicitly with `(int)`, `(float)`, `(bool)`:
 
 ```php
 return [
