@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 37: Complete Feature List
 
 ## 1. What Tina4 Covers
@@ -159,3 +165,6 @@ Tina4 is deliberately minimal:
 - **No cloud vendor lock-in**: Queues, cache, sessions, and email are backend-agnostic. The backend is a config variable.
 
 The goal is a framework you can understand completely in a weekend and build on confidently for years.
+
+
+</div>

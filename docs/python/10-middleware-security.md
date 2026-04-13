@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 10: Middleware
 
 ## 1. The Pipeline Pattern
@@ -1456,3 +1462,6 @@ async def submit_contact(request, response):
 The form is public. The CSRF token is present. The `@noauth()` decorator opens the route. The middleware validates the token. The database stores the message. The user sees confirmation.
 
 Five moving parts. Zero security holes. The framework handles the rest.
+
+
+</div>

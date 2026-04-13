@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 4: Templates
 
 ## 1. Why Templates
@@ -1028,3 +1034,6 @@ Router::get("/catalog", function ($request, $response) {
 **Cause:** Frond filters follow Twig conventions, not PHP function names.
 
 **Fix:** `{{ items | length }}` not `count`. `{{ name | upper }}` not `strtoupper`. `{{ text | lower }}` not `strtolower`. See the filter table in section 7.
+
+
+</div>

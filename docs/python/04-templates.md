@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 4: Templates
 
 ## 1. Beyond JSON -- Rendering HTML
@@ -1034,3 +1040,6 @@ async def product_detail(id, request, response):
 **Cause:** The path in `{% include %}` is relative to `src/templates/`, not the current template file.
 
 **Fix:** Use the full path from the templates root: `{% include "partials/header.html" %}` for a file at `src/templates/partials/header.html`.
+
+
+</div>

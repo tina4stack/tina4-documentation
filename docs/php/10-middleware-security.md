@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 10: Middleware
 
 ## 1. The Gatekeepers
@@ -1633,3 +1639,6 @@ Router::post("/api/contact", function (Request $request, Response $response) {
 The form is public. The CSRF token is present. The `->noAuth()` call opens the route. The middleware validates the token. The database stores the message. The user sees confirmation.
 
 Five moving parts. Zero security holes. The framework handles the rest.
+
+
+</div>

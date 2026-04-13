@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 35: Release Notes
 
 ## v3.10.99 (2026-04-12)
@@ -1257,3 +1263,6 @@ For the full migration guide, see Chapter 36: Upgrading from v2 to v3.
 ## Release Candidate History
 
 Five release candidates preceded the v3.0.0 stable release between March 21-22, 2026. They resolved test failures, polished the Dev Admin UI, added the benchmark suite, and stabilized the Frond template engine. If you tested a release candidate, upgrade to v3.0.0 or later. The RC builds are not supported.
+
+
+</div>

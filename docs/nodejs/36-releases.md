@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 35: Release Notes
 
 ## v3.10.99 (2026-04-12)
@@ -1044,3 +1050,6 @@ Four release candidates preceded v3.0.0. They stabilized the scaffolding, fixed 
 | v3.10.32 | March 31 | MCP server, arithmetic expressions, current stable |
 
 Forty-two releases in eleven days. Each one a step closer to the framework the code deserves.
+
+
+</div>

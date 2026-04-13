@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 1: Getting Started with Tina4 PHP
 
 ## 1. What Is Tina4 PHP
@@ -1144,3 +1150,6 @@ Or use the CLI flag: `tina4 serve --port 8080`.
 **Cause:** `TINA4_DEBUG=true` in production.
 
 **Fix:** Set `TINA4_DEBUG=false` in your production `.env`. This hides debug information, enables HTML minification, and activates `.broken` file health checks.
+
+
+</div>

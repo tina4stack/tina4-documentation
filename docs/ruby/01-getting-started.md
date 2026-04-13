@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 1: Getting Started with Tina4 Ruby
 
 ## 1. What Is Tina4 Ruby
@@ -1115,3 +1121,6 @@ Or: `tina4 serve --port 8080`.
 **Cause:** `TINA4_DEBUG=true` in production.
 
 **Fix:** Set `TINA4_DEBUG=false`. This hides debug information, enables HTML minification, and activates `.broken` file health checks.
+
+
+</div>

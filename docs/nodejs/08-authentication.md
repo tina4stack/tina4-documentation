@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 8: Authentication
 
 ## 1. Locking the Door
@@ -1000,3 +1006,6 @@ Router.put("/api/profile/password", async (req, res) => {
 **Cause:** Query parameters are visible in many places where headers are not.
 
 **Fix:** Always send tokens in the `Authorization` header, never in the URL. The only exception is WebSocket connections, where the initial HTTP upgrade request cannot carry custom headers -- use a short-lived token for that case.
+
+
+</div>

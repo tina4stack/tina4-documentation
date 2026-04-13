@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 4: Templates
 
 ## 1. Beyond JSON -- Rendering HTML
@@ -1024,3 +1030,6 @@ end
 **Cause:** Frond filters follow Twig conventions, not Ruby conventions.
 
 **Fix:** Use `{{ items | length }}` not `count`. Use `{{ name | upper }}` not `upcase`. Use `{{ text | lower }}` not `downcase`. See the filter table in section 7.
+
+
+</div>

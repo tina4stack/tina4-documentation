@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 4: Templates
 
 ## 1. Why Templates
@@ -930,3 +936,6 @@ Router.get("/catalog", async (req, res) => {
 **Cause:** Frond filters follow Twig conventions, not JavaScript conventions.
 
 **Fix:** Use `{{ items | length }}` instead of `count`. Use `{{ name | upper }}` instead of `toUpperCase`.
+
+
+</div>

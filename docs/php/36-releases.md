@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 35: Release Notes
 
 ## v3.10.99 (2026-04-12)
@@ -1005,3 +1011,6 @@ Five release candidates shipped before the final v3.0.0 release. They covered th
 | v3.9.x | v3.10.x | No breaking changes -- update and test |
 
 The version numbers move fast. The API stays stable. Pick the latest v3.10.x patch and your application gets every fix listed here without changing a line of code.
+
+
+</div>

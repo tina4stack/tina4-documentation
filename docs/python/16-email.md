@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 16: Email with Messenger
 
 ## 1. Every App Sends Email
@@ -988,3 +994,6 @@ The HTML response includes the success flash message.
 **Cause:** You did not set `TINA4_MAIL_IMAP_HOST` in `.env` or pass `imap_host` to the constructor.
 
 **Fix:** Add `TINA4_MAIL_IMAP_HOST=imap.example.com` and `TINA4_MAIL_IMAP_PORT=993` to `.env`. The IMAP host is separate from the SMTP host -- many providers use different hostnames for sending and reading.
+
+
+</div>

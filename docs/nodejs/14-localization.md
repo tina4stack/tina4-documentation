@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 14: Localization
 
 ## 1. Your App Speaks One Language. Your Users Speak Many.
@@ -389,3 +395,6 @@ If multiple concurrent requests call `i18n.setLocale()` on the same instance, th
 `{{Name}}` and `{{name}}` are different placeholders. A mismatch silently leaves the placeholder unreplaced.
 
 **Fix:** Use consistent lowercase placeholder names in all locale files.
+
+
+</div>

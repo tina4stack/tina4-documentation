@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 35: Release Notes
 
 ## v3.10.99 (2026-04-12)
@@ -1147,3 +1153,6 @@ The server starts on port 7147 by default. Set `host: "0.0.0.0"` for Docker depl
 **Released:** March 18, 2026
 
 Versions v0.4.0 through v0.5.2 were development previews. They established the gem structure and basic routing but lacked the ORM, template engine, and queue system. If you used a v0.x release, upgrade directly to v3.0.0 -- there is no migration path from v0.x.
+
+
+</div>

@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 16: Email with Messenger
 
 ## 1. Every App Sends Email
@@ -969,3 +975,6 @@ The HTML response includes the success flash message.
 **Cause:** The SMTP server is unreachable. The port is blocked by a firewall. The hostname is wrong.
 
 **Fix:** Test SMTP connectivity: `telnet smtp.example.com 587`. Verify the hostname, port, and encryption settings. Check that your firewall allows outbound connections on the SMTP port. Corporate firewalls often block ports 587 and 465. Ask your network administrator.
+
+
+</div>

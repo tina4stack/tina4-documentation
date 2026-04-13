@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 1: Getting Started with Tina4 Node.js
 
 ## 1. What Is Tina4 Node.js
@@ -1200,3 +1206,6 @@ Or use the CLI flag: `tina4 serve --port 8080`.
 **Cause:** The `.env` file must be at the project root (same directory as `package.json`).
 
 **Fix:** Move `.env` to the project root.
+
+
+</div>

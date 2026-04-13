@@ -1,3 +1,9 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Chapter 1: Getting Started with Tina4 Python
 
 ## 1. What Is Tina4 Python
@@ -1126,3 +1132,6 @@ The CLI will also auto-increment the port if it detects the default port is in u
 **Cause:** The `.env` file must be at the project root (same directory as `pyproject.toml`). A subdirectory placement hides it from Tina4.
 
 **Fix:** Move `.env` to the project root.
+
+
+</div>
