@@ -7,7 +7,7 @@ hero:
   text: "Documentation"
   tagline: The Intelligent Native Application 4ramework
   image:
-    src: './logo.svg'
+    src: '/images/tina4-animated.svg'
   actions:
     - theme: brand
       text: Get Started
