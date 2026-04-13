@@ -1,68 +1,150 @@
-# Adding CSS to Your Static Website with SCSS
+---
+outline: deep
+---
 
-Tina4 handles SCSS compilation out-of-the-box, but with zero configuration needed. Place files in `src/scss`, and they compile to `src/public/css/default.css` during runtime or build, ensuring efficient and nested styling.
+<div v-pre>
 
-::: tip 🔥 Hot Tips
-- **Automatic Compilation**: No extra tools or watchers—SCSS from `src/scss` merges into a single `default.css`, reducing HTTP requests like Webpack bundling.
-- **Modular Design**: Use variables, nesting, and mixins for cleaner code, akin to Bootstrap's Sass setup.
-- **Hot-Reloading**: Changes in SCSS reload instantly in dev mode, boosting workflow.
-- **Static Serving**: Compiled CSS serves from `/css/default.css`, integrable with CDNs for production-scale sites.
-:::
+# Adding CSS with SCSS
 
-## Updated Project Structure
-```
-myproject/
-├── app.py
-├── src/
-│   ├── scss/               # SCSS source files (e.g., _variables.scss, main.scss)
-│   ├── templates/          # Twig files (as before)
-│   └── public/             # Public assets
-│       └── css/            # Compiled output
-│           └── default.css # Merged CSS file
+Tina4 compiles SCSS to CSS with zero configuration. Drop `.scss` files in `src/scss/`. They compile to `src/public/css/` on server start and on every file save in dev mode.
+
+No Webpack. No Vite. No PostCSS config. No build step.
+
+## Project Structure
 
 ```
+mysite/
+  src/
+    scss/
+      _variables.scss       # Shared variables (partial — not compiled alone)
+      main.scss             # Your styles — compiles to public/css/main.css
+    public/
+      css/
+        tina4.min.css       # Ships with Tina4 (24KB, Bootstrap-compatible)
+        main.css            # Your compiled output
+```
 
-## Step 1: Add SCSS Files
-Create `src/scss/main.scss` (or any `.scss` files—Tina4 compiles all):
+## Quick Start
+
+```bash
+tina4 init python mysite
+cd mysite
+```
+
+Create `src/scss/main.scss`:
 
 ```scss
-// src/scss/_variables.scss (partial file, imported)
-$primary-color: #007bff;
-$font-stack: Helvetica, sans-serif;
-
-// src/scss/main.scss
-@import 'variables';
+$brand: #2c3e50;
+$accent: #3498db;
 
 body {
-  font-family: $font-stack;
-  color: $primary-color;
-  background: lighten($primary-color, 40%);
+    font-family: system-ui, -apple-system, sans-serif;
+    color: #333;
+}
 
-  h1 {
-    text-transform: uppercase; // Nested styling
-  }
+.hero {
+    background: $brand;
+    color: white;
+    padding: 4rem 2rem;
+    text-align: center;
+
+    h1 {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .btn {
+        background: $accent;
+        color: white;
+        padding: 0.75rem 2rem;
+        border: none;
+        border-radius: 0.25rem;
+        font-size: 1rem;
+        cursor: pointer;
+
+        &:hover {
+            background: darken($accent, 10%);
+        }
+    }
 }
 ```
 
-- **Partials**: Files starting with `_` (e.g., `_variables.scss`) are imported without compiling separately—efficient like Sass best practices.
+Start the server:
 
-## Step 2: Link CSS in Frond (Twig) Templates
-Update `base.twig` to reference the compiled CSS:
-
-```twig
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    ...
-    <link rel="stylesheet" href="/css/default.css">  {# Served from src/public/css #}
-</head>
-...
+```bash
+tina4 serve
 ```
 
-- **Path Note**: Tina4 serves `src/public` at root (e.g., `/css/`), making it accessible.
+The CLI compiles `main.scss` to `src/public/css/main.css` and prints:
 
-## Step 3: Develop and Deploy
-- For production: Compilation happens automatically; we recommend committing the compiled CSS to source control for versioning and ease of deployment.
-- Custom Builds: If needed, extend with a script for ahead-of-time compilation, but Tina4's runtime handling suffices for most static sites.
+```
++ src/scss/main.scss -> src/public/css/main.css
++ Compiled 1 SCSS file
+```
 
-This integrates seamlessly with your auto-rendered Twig pages (e.g., `/` from `index.twig`), delivering styled content effortlessly. 
+Link it in your template:
+
+```html
+<link rel="stylesheet" href="/css/tina4.min.css">
+<link rel="stylesheet" href="/css/main.css">
+```
+
+## Partials
+
+Files starting with `_` are partials. They get imported by other SCSS files but don't compile on their own.
+
+```scss
+// src/scss/_variables.scss
+$brand: #2c3e50;
+$font-stack: system-ui, sans-serif;
+$radius: 0.5rem;
+```
+
+```scss
+// src/scss/main.scss
+@import 'variables';
+
+.card {
+    border-radius: $radius;
+    font-family: $font-stack;
+}
+```
+
+One output file: `main.css`. Clean imports, no duplication.
+
+## tina4-css
+
+Every Tina4 project ships with `tina4.min.css` — a 24KB CSS framework with Bootstrap-compatible class names. No CDN, no npm install.
+
+| Component | Classes |
+|-----------|---------|
+| Grid | `.container`, `.row`, `.col-*`, responsive breakpoints |
+| Buttons | `.btn`, `.btn-primary`, `.btn-outline-*`, `.btn-sm`, `.btn-lg` |
+| Forms | `.form-group`, `.form-control`, `.form-label` |
+| Cards | `.card`, `.card-body`, `.card-header`, `.card-footer` |
+| Navigation | `.navbar`, `.navbar-dark`, `.nav-link` |
+| Tables | `.table`, `.table-striped`, `.table-hover` |
+| Alerts | `.alert`, `.alert-success`, `.alert-danger` |
+| Badges | `.badge`, `.badge-primary` |
+| Utilities | `.mt-4`, `.mb-3`, `.text-center`, `.d-flex`, `.justify-content-between` |
+
+Use tina4-css as your base. Add your own SCSS on top for custom branding.
+
+```html
+<!-- Base framework -->
+<link rel="stylesheet" href="/css/tina4.min.css">
+<!-- Your custom styles -->
+<link rel="stylesheet" href="/css/main.css">
+```
+
+## Hot Reload
+
+In dev mode (`TINA4_DEBUG=true`), the server watches `src/scss/` for changes. Edit a `.scss` file, save it, and the browser reloads with the new CSS. No manual compile step.
+
+## Production
+
+The compiled CSS lives in `src/public/css/`. Commit it to source control. In production, the server serves the pre-compiled file directly — no runtime compilation overhead.
+
+For deployment, the compiled CSS is just a static file. Any CDN, reverse proxy, or static host can serve it.
+
+</div>

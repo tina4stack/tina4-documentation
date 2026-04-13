@@ -1,87 +1,193 @@
+---
+outline: deep
+---
+
+<div v-pre>
+
 # Static Websites with Frond (Twig) Templates
 
-::: tip 🔥 Hot Tips
-- Twig template handling comes with Tina4 out of the box, no configuration needed.
-- First get to know Twig or Jinja2 by reading the documentation on their respective websites
-- Use `{% extends .. %}` and `{% include .. %}` to simplify your pages and reuse functionality.
-:::
+Tina4 renders templates from `src/templates/` and matches them to URLs by filename. Put `index.twig` in the templates folder. It serves at `/`. Put `cars.twig` next to it. It serves at `/cars`. No routes needed — Tina4 reads the directory and does the wiring.
 
-Tina4 automatically renders templates from `src/templates`, matching routes with the filenames. For example, `index.twig` serves at `/`, and `cars.twig` at `/cars`. 
+Routes always take precedence. If you define a route for `/cars`, the route handler runs. If you don't, the template renders.
 
-It is important to note that routes will take precedence over templates.
+## Quick Start
 
-## Prerequisites
-- Tina4 Python or PHP installed (see [Getting Started](/get-started)).
-- Project structure (auto-created when initialize the project):
-  ```
-  myproject/
-  ├── src/
-  │   └── templates/      # Auto-rendered Twig files
-  │       ├── base.twig   # Shared layout
-  │       └── index.twig  # Home page (/ route)
-  │       └── cars.twig  # Home page (/cars route)
-  ```
+```bash
+tina4 init python mysite    # or: tina4 init php mysite
+cd mysite
+tina4 serve
+```
 
-## Step 1: Create the Base Layout (base.twig)
-Define common elements in `./src/templates/base.twig`. This acts as the parent template for inheritance.
+Open http://localhost:7146 (Python) or http://localhost:7145 (PHP). The landing page renders from `src/templates/index.twig`.
 
-```twig
+## Project Structure
+
+```
+mysite/
+  .env
+  src/
+    templates/
+      base.twig          # Shared layout
+      index.twig         # / route
+      about.twig         # /about route
+      products.twig      # /products route
+    public/
+      css/
+        tina4.min.css    # Ships with Tina4 — no CDN needed
+    scss/
+      main.scss          # Your custom SCSS — auto-compiles to public/css/
+```
+
+## Step 1: Base Layout
+
+Every page shares a layout. Define it once in `base.twig`:
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}My Static Site{% endblock %}</title>
-    <link rel="stylesheet" href="/css/default.css">  {# Link to static assets #}
+    <title>{% block title %}My Site{% endblock %}</title>
+    <link rel="stylesheet" href="/css/tina4.min.css">
 </head>
 <body>
-    <header>
-        <h1>Welcome to My Site</h1>
-        <nav>
-            <a href="/">Home</a>
-            <a href="/cars">Cars</a>  {# Link to other auto-rendered pages #}
-        </nav>
-    </header>
-    <main>
-        {% block content %}{% endblock %}  {# Content block for child templates #}
-    </main>
-    <footer>
-        <p>&copy; {{ "now"|date("Y") }} Your Name</p>  {# Dynamic year with Twig filter #}
+    <nav class="navbar navbar-dark">
+        <div class="container">
+            <a href="/" class="navbar-brand">My Site</a>
+            <div class="navbar-nav">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/about" class="nav-link">About</a>
+                <a href="/products" class="nav-link">Products</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer class="container mt-4 mb-4 text-muted text-center">
+        Built with Tina4
     </footer>
+
+    <script src="/js/tina4.min.js"></script>
+    <script src="/js/frond.min.js"></script>
 </body>
 </html>
 ```
 
-## Step 2: Create Page Templates
-Add files like `./src/templates/index.twig` (auto-served at `/`) and `./src/templates/cars.twig` (at `/cars`). Each extends the base.
+The `tina4.min.css` and `tina4.min.js` files ship with the framework. No external CDN. No npm install. They're there when you scaffold.
 
-**index.twig**:
-```twig
+## Step 2: Page Templates
+
+Each page extends the base and fills in the content block.
+
+**index.twig** (serves at `/`):
+
+```html
 {% extends "base.twig" %}
 
-{% block title %}Home Page{% endblock %}
+{% block title %}Home{% endblock %}
 
 {% block content %}
-    <h2>Hello, World!</h2>
-    <p>Explore our static site built with Tina4 and Twig—fast, simple, and auto-rendered.</p>
+    <h1>Welcome</h1>
+    <p>This page renders from a template. No route handler needed.</p>
 {% endblock %}
 ```
 
-**cars.twig**:
-```twig
+**about.twig** (serves at `/about`):
+
+```html
 {% extends "base.twig" %}
 
-{% block title %}Cars Section{% endblock %}
+{% block title %}About{% endblock %}
 
 {% block content %}
-    <h2>Our Cars</h2>
-    <ul>
-        <li>Model: Tesla Roadster</li>
-        <li>Model: Ford Mustang</li>
-    </ul>
+    <div class="card">
+        <div class="card-body">
+            <h2>About Us</h2>
+            <p>We build things with Tina4.</p>
+        </div>
+    </div>
 {% endblock %}
 ```
 
-- **Auto-Rendering**: No routes in `app.py` or `index.php` —Tina4 detects and renders `.twig` files at paths matching their names (minus extension).
+**products.twig** (serves at `/products`):
 
+```html
+{% extends "base.twig" %}
 
+{% block title %}Products{% endblock %}
+
+{% block content %}
+    <h2>Products</h2>
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Widget</h5>
+                    <p>A fine widget.</p>
+                    <span class="badge badge-primary">$9.99</span>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+```
+
+Save the files. The browser reloads. Three pages, zero route definitions.
+
+## Step 3: Add Styling with SCSS
+
+Create `src/scss/main.scss`. Tina4 compiles it to `src/public/css/main.css` automatically:
+
+```scss
+$brand-color: #2c3e50;
+
+body {
+    font-family: system-ui, sans-serif;
+}
+
+.navbar {
+    background: $brand-color;
+}
+```
+
+Link it in your base template:
+
+```html
+<link rel="stylesheet" href="/css/tina4.min.css">
+<link rel="stylesheet" href="/css/main.css">
+```
+
+SCSS compiles on startup and on file change (hot reload in dev mode). No Webpack, no Vite, no build step.
+
+## When to Add Routes
+
+Templates handle static content. When you need:
+
+- **Database queries** — define a route, query the DB, pass data to the template
+- **Form handling** — define a POST route
+- **Authentication** — define routes with middleware
+- **API endpoints** — define routes that return JSON
+
+```python
+# Python
+@get("/products")
+async def products(request, response):
+    items = Product.all()
+    return response.template("products.twig", {"products": items})
+```
+
+```php
+// PHP
+Router::get("/products", function ($request, $response) {
+    $products = (new Product())->select("*");
+    return $response->template("products.twig", ["products" => $products]);
+});
+```
+
+The route takes over. The auto-rendered template steps aside.
+
+</div>
