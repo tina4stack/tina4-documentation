@@ -1,11 +1,6 @@
-# frond.js – Client-Side Helper
+# frond.js — Client-Side Helper
 
-::: tip
-- frond.js is a drop-in replacement for tina4helper.js with zero dependencies
-- Use `saveForm` to post data from an HTML form to a REST endpoint, including file uploads
-- Includes a built-in `ReconnectingWebSocket` for real-time features
-- Include `formToken` in every form for CSRF protection
-:::
+A zero-dependency DOM helper for AJAX, forms, WebSocket, SSE, cookies, and GraphQL. Ships with every Tina4 backend and tina4-css. Under 3KB gzipped.
 
 Include it once in your base template:
 
@@ -13,201 +8,357 @@ Include it once in your base template:
 <script src="/js/frond.min.js"></script>
 ```
 
----
-
-### Features at a Glance
-
-| Feature                     | Status |
-|-----------------------------|--------|
-| Automatic `formToken` refresh & injection | Works |
-| Full CSRF protection        | Works |
-| File uploads (single + multiple) | Works |
-| Partial HTML replacement + script re-execution | Works |
-| Bootstrap 5 alert messages  | Works |
-| ReconnectingWebSocket       | Works |
-| Works with all Tina4 backends (Python, PHP, Ruby, Node.js) | Works |
+Every method is available on the global `window.frond` object.
 
 ---
 
-## Core Functions
+## API Reference
 
-### `saveForm(formId, url, targetElement, callback)`
+### frond.request(url, options)
 
-**The most used function** — submits a form securely. Use the targetElement to insert the response into your HTML, OR run a callback function.
+Core HTTP request with automatic Bearer token and CSRF token handling.
 
 ```js
-saveForm("loginForm", "/login", "message", function(content, status) {
-    loadPage("/dashboard", "content");
+frond.request("/api/users", {
+    method: "GET",
+    onSuccess: function(data, status, xhr) {
+        console.log(data);
+    },
+    onError: function(status, xhr) {
+        console.error("Failed:", status);
+    }
 });
 ```
 
-### `postForm()` / `submitForm()`
-
-Exact aliases of `saveForm()`:
+Shorthand with callback:
 
 ```js
-postForm("userForm", "/users", "content");
-submitForm("contact", "/contact", "message");
-```
-
-### `loadPage(url, targetElement = "content", callback)`
-
-Load any route into a div — perfect for SPA-style navigation.
-
-```js
-loadPage("/users", "content");
-loadPage("/profile", "main", () => console.log("Loaded!"));
-```
-
-### `showForm(action, url, targetElement = "form")`
-
-Smart CRUD helper:
-
-```js
-showForm("create", "/articles/create", "form");   // GET
-showForm("edit",   "/articles/42/edit", "form");   // GET
-showForm("delete", "/articles/42/delete", "form"); // DELETE
-```
-
-### `showMessage("Success!")`
-
-Bootstrap 5 alert inserted into the "message" HTML element.
-
-```js
-showMessage("User created successfully!");
-```
-
-### `getRoute(url, callback)`
-
-Simple GET request with callback:
-
-```js
-getRoute("/api/users", function(content, status, xhr) {
-    console.log(JSON.parse(content));
+frond.request("/api/users", function(data) {
+    console.log(data);
 });
 ```
 
-### `postUrl(url, data, targetElement, callback)`
+**Options:**
 
-POST data to a URL:
+| Option | Type | Description |
+|--------|------|-------------|
+| `method` | `string` | HTTP method (default: `"GET"`) |
+| `body` | `object\|FormData\|string` | Request body — objects become JSON, FormData stays multipart |
+| `headers` | `object` | Extra headers |
+| `onSuccess` | `function(data, status, xhr)` | Success callback (2xx/3xx) |
+| `onError` | `function(status, xhr)` | Error callback (4xx/5xx) |
+
+**Automatic features:**
+- Sends `Authorization: Bearer <token>` when `frond.token` is set
+- Reads `FreshToken` response header and updates `frond.token` automatically
+- Detects XHR-followed redirects (3xx) and navigates the browser
+
+---
+
+### frond.load(url, target, callback)
+
+GET a URL and inject the HTML response into a target element.
 
 ```js
-postUrl("/api/users", { name: "John" }, "result");
+frond.load("/dashboard", "content");
+frond.load("/profile", "main", function(html, raw) {
+    console.log("Loaded");
+});
 ```
 
 ---
 
-## Automatic Form Token Handling
+### frond.post(url, data, target, callback)
 
-frond.js declares a global `formToken` variable:
-
-```js
-var formToken = null;   // Filled automatically from FreshToken header
-```
-
-The following functions automatically update `formToken` from the `FreshToken` response header:
+POST data and inject the HTML response into a target element.
 
 ```js
-loadPage(...);
-showForm(...);
-postUrl(...);
-getRoute(...);
+frond.post("/api/save", { name: "Alice" }, "message", function(html, raw) {
+    console.log("Saved");
+});
 ```
+
+---
+
+### frond.inject(html, targetId)
+
+Parse an HTML string, inject it into an element, and execute any `<script>` tags found in the content.
+
+```js
+frond.inject('<div>Hello</div><script>console.log("injected")</script>', "content");
+```
+
+Returns the innerHTML if no target is specified.
+
+---
+
+## Forms
+
+### frond.form.collect(formId)
+
+Collect all form fields into a `FormData` object. Handles text inputs, selects, textareas, checkboxes, radio buttons, and file uploads.
+
+```js
+var data = frond.form.collect("myForm");
+```
+
+If `frond.token` is set and the form contains a `formToken` field, the token value is updated automatically.
+
+### frond.form.submit(formId, url, target, callback)
+
+Collect form data and POST it. The response is injected into the target element.
+
+```js
+frond.form.submit("loginForm", "/login", "message", function(html) {
+    window.location = "/dashboard";
+});
+```
+
+This is the primary way to submit forms in Tina4 applications. The button should use `type="button"` with an `onclick` handler:
+
+```html
+<form id="loginForm" method="POST" action="/login">
+    {{ form_token() }}
+    <input type="email" name="email">
+    <input type="password" name="password">
+    <button type="button" onclick="frond.form.submit('loginForm', '/login', null, function(){ window.location='/dashboard'; })">
+        Login
+    </button>
+</form>
+```
+
+### frond.form.show(action, url, target, callback)
+
+Load a form by action type. Maps actions to HTTP methods:
+
+| Action | HTTP Method |
+|--------|-------------|
+| `"create"` | GET |
+| `"edit"` | GET |
+| `"delete"` | DELETE |
+
+```js
+frond.form.show("create", "/products/new", "form");
+frond.form.show("edit", "/products/42/edit", "form");
+frond.form.show("delete", "/products/42", "form");
+```
+
+---
+
+## WebSocket
+
+### frond.ws(url, options)
+
+Connect to a WebSocket endpoint with automatic reconnection.
+
+```js
+var conn = frond.ws("ws://localhost:7146/ws/chat", {
+    reconnect: true,
+    reconnectDelay: 1000,
+    maxReconnectDelay: 30000,
+    onOpen: function() { console.log("Connected"); },
+    onClose: function(code, reason) { console.log("Closed"); },
+    onError: function(err) { console.error(err); }
+});
+
+// Listen for messages
+conn.on("message", function(data) {
+    console.log("Received:", data);
+});
+
+// Send a message
+conn.send({ type: "chat", text: "Hello" });
+
+// Close
+conn.close();
+```
+
+**Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `reconnect` | `boolean` | `true` | Auto-reconnect on disconnect |
+| `reconnectDelay` | `number` | `1000` | Initial reconnect delay (ms) |
+| `maxReconnectDelay` | `number` | `30000` | Max reconnect delay (exponential backoff) |
+| `maxReconnectAttempts` | `number` | `Infinity` | Stop trying after N attempts |
+| `protocols` | `string[]` | `[]` | WebSocket sub-protocols |
+| `onOpen` | `function` | — | Connection opened |
+| `onClose` | `function(code, reason)` | — | Connection closed |
+| `onError` | `function(error)` | — | Connection error |
+
+**Connection object:**
+
+| Property/Method | Description |
+|----------------|-------------|
+| `conn.status` | `"connecting"` / `"open"` / `"reconnecting"` / `"closed"` |
+| `conn.send(data)` | Send string or object (auto-stringified) |
+| `conn.on(event, fn)` | Listen for `"message"`, `"open"`, `"close"`, `"error"` |
+| `conn.close(code?, reason?)` | Close the connection |
+
+---
+
+## Server-Sent Events (SSE)
+
+### frond.sse(url, options)
+
+Connect to an SSE endpoint with automatic reconnection.
+
+```js
+var stream = frond.sse("/api/sse/sales", {
+    events: ["order", "stock"],
+    json: true,
+    onOpen: function() { console.log("Stream open"); }
+});
+
+stream.on("message", function(data, eventName) {
+    console.log(eventName, data);
+});
+
+stream.close();
+```
+
+**Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `reconnect` | `boolean` | `true` | Auto-reconnect |
+| `events` | `string[]` | `[]` | Named events to listen for |
+| `json` | `boolean` | `true` | Auto-parse JSON data |
+| `onOpen` | `function` | — | Stream opened |
+| `onClose` | `function` | — | Stream closed |
+| `onError` | `function(error)` | — | Stream error |
+
+---
+
+## Cookies
+
+### frond.cookie
+
+```js
+frond.cookie.set("theme", "dark", 30);    // Set cookie, expires in 30 days
+frond.cookie.get("theme");                 // "dark"
+frond.cookie.remove("theme");              // Delete cookie
+```
+
+---
+
+## Utility
+
+### frond.message(text, type)
+
+Display a Bootstrap-style alert in the `#message` element.
+
+```js
+frond.message("User created!", "success");
+frond.message("Something went wrong", "danger");
+```
+
+### frond.popup(url, title, width, height)
+
+Open a centred popup window.
+
+```js
+frond.popup("/preview", "Preview", 800, 600);
+```
+
+### frond.report(url)
+
+Open a URL (typically a PDF) in a new browser tab.
+
+```js
+frond.report("/api/reports/monthly.pdf");
+```
+
+---
+
+## GraphQL
+
+### frond.graphql(url, query, variables, options)
+
+Execute a GraphQL query or mutation.
+
+```js
+frond.graphql("/api/graphql", "{ products { id name price } }", {}, {
+    onSuccess: function(result) {
+        console.log(result.data);
+        if (result.errors) console.warn(result.errors);
+    }
+});
+```
+
+With variables:
+
+```js
+frond.graphql("/api/graphql",
+    'query ($term: String!) { search(term: $term) { id name } }',
+    { term: "widget" },
+    function(result) {
+        console.log(result.data.search);
+    }
+);
+```
+
+---
+
+## Token Management
+
+### frond.token
+
+Read or write the Bearer token. When set, every `frond.request()` call includes `Authorization: Bearer <token>`.
+
+```js
+// Set after login
+frond.token = "eyJhbGciOiJIUzI1NiIs...";
+
+// Read
+console.log(frond.token);
+
+// Clear on logout
+frond.token = null;
+```
+
+Token rotation is automatic — if a response includes a `FreshToken` header, `frond.token` updates to the new value.
+
+---
 
 ## File Uploads
 
+Use `frond.form.submit()` with a form containing file inputs. FormData handles multipart encoding automatically.
+
 ```html
-<form id="upload" enctype="multipart/form-data">
-    <input type="hidden" name="formToken" value="">
-    <input type="file" name="files[]" multiple>
-    <button onclick="saveForm('upload', '/upload', 'message'); return false;">
+<form id="uploadForm">
+    {{ form_token() }}
+    <input type="file" name="avatar">
+    <button type="button" onclick="frond.form.submit('uploadForm', '/api/upload', 'message')">
         Upload
     </button>
 </form>
 ```
 
-Supports:
-- Multiple files
-- Correct `[]` naming
-- Automatic token refresh
-- Proper multipart content-type handling
-
----
-
-## ReconnectingWebSocket
-
-frond.js includes a built-in reconnecting WebSocket client:
-
-```js
-var ws = new ReconnectingWebSocket("ws://localhost:7145/ws");
-
-ws.onopen = function() {
-    console.log("Connected");
-};
-
-ws.onmessage = function(event) {
-    console.log("Received:", event.data);
-};
-
-ws.onclose = function() {
-    console.log("Disconnected — will auto-reconnect");
-};
-```
-
-Features:
-- Automatic reconnection with exponential backoff
-- Configurable max reconnect attempts
-- Drop-in replacement for native `WebSocket`
-
----
-
-## Recommended Base Layout
+Multiple files:
 
 ```html
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>My Tina4 App</title>
-    <link href="/css/tina4.min.css" rel="stylesheet">
-    <link href="/css/default.css" rel="stylesheet">
-</head>
-<body>
-    <div id="content">Loading...</div>
-    <div id="message"></div>
-
-    <script src="/js/tina4.js"></script>
-    <script src="/js/frond.min.js"></script>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            loadPage(location.pathname + location.search, "content");
-        });
-    </script>
-</body>
-</html>
+<input type="file" name="files[]" multiple>
 ```
 
 ---
 
-### One-liner CRUD Example
+## Quick Reference
 
-```js
-// List
-loadPage("/products", "content");
-
-// Add new
-showForm("create", "/products/create", "form");
-
-// Save
-saveForm("productForm", "/products", "message", (content, status) => {
-    showMessage("Saved!");
-    loadPage("/products", "content");
-});
-```
-
----
-
-::: info Migration from tina4helper.js
-frond.js is a drop-in replacement. Simply change your script include from `/js/tina4helper.js` to `/js/frond.min.js`. All existing function calls will work without changes. The callback signature for `sendRequest` is enhanced — it now passes `(content, status, xhr)` instead of just `(content)`.
-:::
+| Method | Description |
+|--------|-------------|
+| `frond.request(url, opts)` | Core HTTP with auth + token rotation |
+| `frond.load(url, target, cb)` | GET + inject HTML |
+| `frond.post(url, data, target, cb)` | POST + inject HTML |
+| `frond.inject(html, target)` | Parse HTML + run scripts |
+| `frond.form.collect(formId)` | Collect FormData |
+| `frond.form.submit(formId, url, target, cb)` | POST form |
+| `frond.form.show(action, url, target, cb)` | Load form by CRUD action |
+| `frond.ws(url, opts)` | WebSocket with reconnect |
+| `frond.sse(url, opts)` | SSE with reconnect |
+| `frond.cookie.set/get/remove` | Cookie helpers |
+| `frond.message(text, type)` | Alert display |
+| `frond.popup(url, title, w, h)` | Centred popup |
+| `frond.report(url)` | Open PDF |
+| `frond.graphql(url, query, vars, opts)` | GraphQL query/mutation |
+| `frond.token` | Bearer token (read/write) |
