@@ -301,6 +301,67 @@ return $response->status(201)->json(["id" => 7, "created" => true]);
 
 Same result as `$response->json(["id" => 7, "created" => true], 201)`. Pick whichever reads cleaner in context.
 
+### HTTP Status Constants
+
+Tina4 exports named constants for every status code. Use them instead of raw integers -- the intent reads at a glance and you avoid typos like `419` when you meant `401`:
+
+```php
+use Tina4\Router;
+
+Router::get("/api/widgets/{id}", function ($request, $response) {
+    $widget = Widget::load(["id" => $request->params["id"]]);
+
+    if (!$widget->exists()) {
+        return $response->json(["error" => "Widget not found"], \Tina4\HTTP_NOT_FOUND);
+    }
+
+    return $response->json($widget->asArray(), \Tina4\HTTP_OK);
+});
+```
+
+Available constants (all in the `\Tina4` namespace):
+
+| Status | Constant | Status | Constant |
+|--------|----------|--------|----------|
+| `200` | `HTTP_OK` | `404` | `HTTP_NOT_FOUND` |
+| `201` | `HTTP_CREATED` | `405` | `HTTP_METHOD_NOT_ALLOWED` |
+| `202` | `HTTP_ACCEPTED` | `409` | `HTTP_CONFLICT` |
+| `204` | `HTTP_NO_CONTENT` | `410` | `HTTP_GONE` |
+| `301` | `HTTP_MOVED_PERMANENTLY` | `422` | `HTTP_UNPROCESSABLE` |
+| `302` | `HTTP_FOUND` | `429` | `HTTP_TOO_MANY` |
+| `304` | `HTTP_NOT_MODIFIED` | `500` | `HTTP_INTERNAL_SERVER_ERROR` |
+| `400` | `HTTP_BAD_REQUEST` | `502` | `HTTP_BAD_GATEWAY` |
+| `401` | `HTTP_UNAUTHORIZED` | `503` | `HTTP_SERVICE_UNAVAILABLE` |
+| `403` | `HTTP_FORBIDDEN` | `504` | `HTTP_GATEWAY_TIMEOUT` |
+
+### Content-Type Constants
+
+For non-JSON responses, pair a status constant with a content-type constant. Tina4 also supports a three-argument response form that sets body, status, and content type in one call:
+
+```php
+use Tina4\Router;
+
+Router::get("/api/legacy-feed", function ($request, $response) {
+    $xml = "<feed><item>...</item></feed>";
+    return $response($xml, \Tina4\HTTP_OK, \Tina4\APPLICATION_XML);
+})->noAuth();
+```
+
+Content-type constants:
+
+| Constant | Value |
+|----------|-------|
+| `APPLICATION_JSON` | `application/json` |
+| `APPLICATION_XML` | `application/xml` |
+| `APPLICATION_FORM` | `application/x-www-form-urlencoded` |
+| `APPLICATION_OCTET_STREAM` | `application/octet-stream` |
+| `TEXT_HTML` | `text/html` |
+| `TEXT_PLAIN` | `text/plain` |
+| `TEXT_CSV` | `text/csv` |
+| `TEXT_XML` | `text/xml` |
+
+Using constants also makes your code grep-friendly -- searching for `HTTP_BAD_REQUEST` across the codebase finds every validation branch, where searching for `400` finds false positives (file sizes, timeouts, anything with the number 400 in it).
+
 ---
 
 ## 5. Custom Headers

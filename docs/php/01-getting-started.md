@@ -8,7 +8,7 @@ outline: deep
 
 ## 1. What Is Tina4 PHP
 
-Tina4 PHP is a zero-dependency web framework for PHP 8.1+. One Composer package. Routing, an ORM, a template engine, authentication, queues, WebSocket, and 70 other features -- all included.
+Tina4 PHP is a batteries-included web framework for PHP 8.1+ with zero runtime dependencies. One Composer package. Routing, an ORM, a template engine, authentication, queues, WebSocket, and 70 other features -- all written in-house, none pulled from the PHP ecosystem. You install Tina4 itself via Composer, but that is the entire supply chain.
 
 It belongs to the Tina4 family: four identical frameworks in Python, PHP, Ruby, and Node.js. Learn one, know all four. Same project structure. Same template syntax. Same CLI commands. Same `.env` variables.
 
@@ -336,8 +336,12 @@ Router::post("/api/greeting", function ($request, $response) {
         "message" => $greeting . ", " . $name . "!",
         "language" => $language
     ], 201);
-});
+})->noAuth();
 ```
+
+::: tip Why `->noAuth()`?
+Tina4 secures `POST`, `PUT`, `PATCH`, and `DELETE` routes by default — they require a valid bearer token. For public, untyped examples like this one, chain `->noAuth()` to disable that check. In production, remove `->noAuth()` and send an `Authorization: Bearer <token>` header instead. See [Authentication](./08-authentication.md) for token issuance.
+:::
 
 Test the POST endpoint:
 
@@ -351,7 +355,17 @@ curl -X POST http://localhost:7146/api/greeting \
 {"message":"Hola, Carlos!","language":"es"}
 ```
 
-Status code: `201 Created`. The second argument to `$response->json()` sets it.
+Status code: `201 Created`. The second argument to `$response->json()` sets it. For a typed, self-documenting alternative, pass an HTTP constant:
+
+```php
+return $response->json($data, \Tina4\HTTP_CREATED);
+```
+
+Tina4 ships a full set of HTTP constants (`HTTP_OK`, `HTTP_BAD_REQUEST`, `HTTP_NOT_FOUND`, `HTTP_UNAUTHORIZED`, `HTTP_UNPROCESSABLE`, etc.) and content-type constants (`APPLICATION_JSON`, `APPLICATION_XML`, `TEXT_HTML`). The three-argument response form lets you set both at once:
+
+```php
+return $response("<error/>", \Tina4\HTTP_BAD_REQUEST, \Tina4\APPLICATION_XML);
+```
 
 ---
 
@@ -559,7 +573,15 @@ Restart the server. It runs on port 8080.
 
 The CLI reads your `.env` file and checks for `TINA4_PORT` (and falls back to `PORT`). The resolved port is passed to the PHP server. All three methods work -- use whichever fits your workflow.
 
-For the complete `.env` reference with all 68 variables, see [Book 0, Chapter 4: Environment Variables](../../book-0-understanding/chapters/04-environment-variables.md).
+### Disable the browser auto-open
+
+By default, `tina4 serve` opens your browser each time the server restarts. If you save files often, this gets annoying. Add this to `.env` to keep the browser out of your way:
+
+```bash
+TINA4_NO_BROWSER=true
+```
+
+For the complete `.env` reference, see [Environment Variables](./33-environment-variables.md).
 
 ---
 
@@ -706,7 +728,7 @@ Router::post("/api/items", function ($request, $response) {
     $name = $request->body["name"] ?? "";
     $price = $request->body["price"] ?? 0;
     return $response->json(["received_name" => $name, "received_price" => $price]);
-});
+})->noAuth();
 ```
 
 ### Reading Headers
@@ -832,9 +854,13 @@ Router::post("/api/books", function ($request, $response) use (&$books) {
     ];
     $books[] = $newBook;
 
-    return $response->json($newBook, 201);
-});
+    return $response->json($newBook, \Tina4\HTTP_CREATED);
+})->noAuth();
 ```
+
+::: tip Public endpoints vs secured endpoints
+`POST`, `PUT`, `PATCH`, and `DELETE` are secured by default. Every example in this chapter uses `->noAuth()` so the `curl` commands work without a token. For real applications, remove `->noAuth()` and send an `Authorization: Bearer <token>` header -- see [Authentication](./08-authentication.md).
+:::
 
 Test it:
 

@@ -331,12 +331,17 @@ Tina4::Router.post("/api/greeting") do |request, response|
 
   greeting = greetings[language] || greetings["en"]
 
-  response.json({
+  next response.json({
     message: "#{greeting}, #{name}!",
     language: language
   }, 201)
-end
+end.no_auth
 ```
+
+::: tip Two Ruby-isms to notice
+- **`.no_auth`** is chained on the block's return value. Tina4 secures `POST`, `PUT`, `PATCH`, and `DELETE` routes by default — without `no_auth` the example returns `401 Unauthorized`. In production, remove `no_auth` and send an `Authorization: Bearer <token>` header instead.
+- **`next response.json(...)`** exits the block with the response value. Inside a Tina4 route block, never use the `return` keyword — that is a `LocalJumpError` in Ruby (blocks are not methods). Use `next` when you need an early exit, otherwise rely on the block's final expression.
+:::
 
 Test:
 
@@ -600,6 +605,12 @@ The `tina4` CLI scaffolds everything for you. But if you start from an empty fol
 source "https://rubygems.org"
 
 gem "tina4-ruby", "~> 3.0"
+
+# Required: Ruby 3.0+ removed webrick from the standard library
+gem "webrick", "~> 1.8"
+
+# Required: the default SQLite database driver
+gem "sqlite3", "~> 2.0"
 ```
 
 Then install:
@@ -607,6 +618,13 @@ Then install:
 ```bash
 bundle install
 ```
+
+::: warning Two dependencies you must declare
+- **`webrick`** — Tina4's dev server uses WEBrick. Ruby 3.0 dropped WEBrick from the standard library, so you must list it in your `Gemfile` or `tina4 serve` fails with `LoadError: cannot load such file -- webrick`.
+- **`sqlite3`** — the default `DATABASE_URL` points to SQLite. Without this gem the server restarts in a loop with `LoadError: cannot load such file -- sqlite3`.
+
+`tina4 init ruby` adds both gems automatically. You only need to add them by hand when bootstrapping an empty project.
+:::
 
 ### Step 2: Create `app.rb`
 
@@ -785,7 +803,7 @@ Tina4::Router.get("/api/books/{id:int}") do |request, response|
   book = books.find { |b| b[:id] == id }
 
   if book.nil?
-    return response.json({ error: "Book with id #{id} not found" }, 404)
+    next response.json({ error: "Book with id #{id} not found" }, 404)
   end
 
   response.json(book)
@@ -798,7 +816,7 @@ Tina4::Router.post("/api/books") do |request, response|
   year = request.body["year"] || 0
 
   if title.empty? || author.empty?
-    return response.json({ error: "title and author are required" }, 400)
+    next response.json({ error: "title and author are required" }, 400)
   end
 
   new_book = {
@@ -810,8 +828,12 @@ Tina4::Router.post("/api/books") do |request, response|
   books << new_book
 
   response.json(new_book, 201)
-end
+end.no_auth
 ```
+
+::: tip `next` vs `return` inside route blocks
+Ruby raises `LocalJumpError: unexpected return` if you use `return` inside a block. Route handlers in Tina4 are blocks (`do ... end`), so use `next value` for early exits — it yields `value` as the block's result, just like `return` would inside a method. The final line of the block is its implicit return, so the terminal `response.json(...)` at the bottom needs no `next`.
+:::
 
 Test it:
 
