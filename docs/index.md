@@ -5,7 +5,7 @@ layout: home
 hero:
   name: "Tina4"
   text: "Documentation"
-  tagline: The Intelligent Native Application 4ramework
+  tagline: One framework, four languages, fifty-five features, zero runtime dependencies.
   image:
     src: '/images/tina4-animated.svg'
   actions:
@@ -38,29 +38,62 @@ hero:
 features:
     - icon: 🌐
       title: Four Languages, One API
-      details: Python, Node.js, PHP, and Ruby share the same project structure, CLI commands, template syntax, and .env variables. Learn one, know all four.
-    - icon: ⚡
-      title: 1.5KB Reactive Core
-      details: Signals, tagged template literals, and Web Components in a 1.5KB gzipped core. The full tina4-js framework with router, API client, WebSocket, and PWA ships under 6KB gzipped.
+      details: Python, Node.js, PHP, and Ruby share the same project structure, CLI, template syntax, route patterns, and .env variables. Learn one, know all four.
+    - icon: 🧭
+      title: One CLI to Rule the Stack
+      details: The Rust-based `tina4` CLI detects the language, compiles SCSS, watches files, and delegates to the framework. `tina4 init`, `tina4 serve`, `tina4 migrate` — same commands across Python, PHP, Ruby, and Node.js.
     - icon: 📦
       title: Zero Runtime Dependencies
-      details: Every Tina4 backend runs on the standard library alone. No native addons, no node-gyp, no platform binaries. Pure language, nothing else.
+      details: Every Tina4 backend runs on the standard library. No native addons, no node-gyp, no vendor tree. Your requirements.txt / composer.json / Gemfile / package.json each hold one entry.
     - icon: 🛣️
       title: Convention-Based Routing
-      details: Drop a file in src/routes/. The framework registers it. Return a response. ASGI in Python, native HTTP in Node.js, PHP, and Ruby. Same pattern everywhere.
+      details: Drop a file in `src/routes/`. The framework registers it. Typed path params (`{id:int}`, `{slug:slug}`, `{id:uuid}`) reject bad input with 404 before your handler runs.
     - icon: 🔌
-      title: Built-in WebSocket Support
-      details: Real-time communication across all backends. Connect, send, receive. Chat apps, live dashboards, notifications. Redis backplane for horizontal scaling.
+      title: Built-in WebSocket + SSE
+      details: Real-time bidirectional comms and server-sent events across all backends. Redis backplane for horizontal scaling. The same `WebSocketServer` API in every language.
     - icon: 🎨
       title: Frond (Twig) Templating
-      details: One Twig-compatible template engine across Python, Node.js, PHP, and Ruby. Variables, loops, inheritance, macros. Write your layout once and render it in any language.
+      details: One Twig-compatible engine. Variables, loops, template inheritance with `{{ parent() }}`, macros, filters. Write your layout once, render it in any language.
     - icon: 🗃️
-      title: One-Line CRUD Generation
-      details: Define an ORM model. The framework generates REST endpoints and migrations for SQLite, PostgreSQL, MySQL, MSSQL, Firebird, and MongoDB.
+      title: Six Databases, One ORM
+      details: SQLite, PostgreSQL, MySQL, MSSQL, Firebird, MongoDB. `Database::create("sqlite:///app.db")` works anywhere. `sqlite:///path` is relative to your project root — same convention across all four frameworks.
+    - icon: 🔐
+      title: Secure by Default
+      details: GET routes are public, POST/PUT/PATCH/DELETE require a bearer token. JWT (HS256/RS256), PBKDF2 password hashing, rate limiting, CSRF form tokens — all built in, nothing to configure.
     - icon: 📋
       title: Swagger at /swagger
-      details: Add a description decorator to your route. Visit /swagger. Your API documentation appears -- typed, grouped, and ready for your team to use.
-    - icon: 🔐
-      title: JWT Authentication Built In
-      details: Token-based auth, session management, and middleware. GET routes are public. POST, PUT, PATCH, and DELETE require a bearer token. Security by default.
+      details: Add an `@description` decorator to your route. Visit `/swagger`. Your API docs appear — typed, grouped, ready for your team.
+    - icon: 🪢
+      title: GraphQL Included
+      details: Zero-dependency GraphQL engine. Point it at your ORM models, get a full schema with queries, mutations, and a GraphiQL IDE. `POST /graphql` in one line.
+    - icon: 📬
+      title: Queues + Background Work
+      details: File-backed by default, RabbitMQ/Kafka/MongoDB when you scale. Producer/consumer/dead-letter semantics consistent across languages. Periodic tasks via `background(fn, interval)` — no threads.
+    - icon: 🛠️
+      title: Dev Dashboard on /__dev
+      details: Routes, requests, SQL runner, queue monitor, mailbox, WebSocket inspector, error tracker, AI chat — shared SPA across all four frameworks. `TINA4_DEBUG=true` turns it on.
 ---
+
+## What's new
+
+**v3.11.13 (2026-04-16)** — [full notes](/python/36-releases.md)
+
+Typed route parameters gain `:alpha` / `:alnum` / `:slug` / `:uuid`. Unknown types now throw at route registration so typos surface at boot, not in production. Gallery Try-It opens in a new tab. Ruby's `sqlite3` is a runtime dep so `tina4 init ruby && tina4 serve` works on first run. Thirteen book/framework issues closed.
+
+**v3.11.12** — `sqlite:///X` URLs resolve relative to the project root across all four frameworks. `DateTimeField` ORM reads no longer crash under PostgreSQL. The bogus `src/migrations/` directory that confused many users is gone.
+
+**v3.11.10** — Hot reload rewrite. The `tina4` CLI is the sole file watcher; frameworks no longer run their own. Overlayfs / Podman / distrobox spurious-event loop fixed.
+
+## How Tina4 reads
+
+Pick a language. Each book stands on its own — you can read Python cover-to-cover, then pick up the PHP book later and recognise every pattern.
+
+- **[Understanding Tina4](/general/index.md)** — Architecture, philosophy, the four-language promise. Read this first if you want the why.
+- **[Python](/python/index.md)** — The reference implementation. Every feature lands here first.
+- **[Node.js](/nodejs/index.md)** — TypeScript-first, native `node:http`, file-based routing, ESM-only.
+- **[PHP](/php/index.md)** — PHP 8.5, `stream_select` server, zero composer deps in core.
+- **[Ruby](/ruby/index.md)** — Rack 3, Puma in production, WEBrick in dev.
+- **[tina4-js](/js/index.md)** — The 1.5 KB reactive frontend. Signals, Web Components, router, API client, WebSocket, PWA, SSE.
+- **[Delphi](/delphi/index.md)** — FireMonkey cross-platform, FireDAC, REST client, and Twig templates.
+
+Every book has a printable PDF with a clickable table of contents. Every chapter stays in sync with the code — release notes, version numbers, and example output are regenerated with every point release.
