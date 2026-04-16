@@ -213,19 +213,25 @@ The query runner is read-write in development. You can run INSERT, UPDATE, and D
 
 ## 8. Hot Reload
 
-Edit a file. Save it. The browser updates. No manual refresh. No external tools. Zero dependencies -- hot reload is built directly into Tina4's `stream_select` server.
+Edit a file. Save it. The browser updates. No manual refresh. No external tools.
 
 ### How It Works
 
-PHP's built-in `stream_select` server includes a file watcher in its event loop. Every second, it scans your project directories for changes using `filemtime()`. When a change is detected, three things happen:
+The `tina4` Rust CLI is the sole file watcher for the Tina4 stack — PHP has no internal watcher (there never was one, unlike Python/Ruby/Node which had their own watchers that were removed in 3.11.x). The flow:
 
-1. **Routes are re-discovered** -- PHP route files are re-included, so new or modified routes take effect immediately without restarting the server.
-2. **`.env` is reloaded** -- Environment variable changes are picked up on the fly.
-3. **Browsers are notified** -- A WebSocket message `{"type":"reload"}` is sent to all connected browsers, triggering a page refresh.
+```
+ ┌────────────┐  POST /__dev/api/reload   ┌────────────┐   WS /__dev_reload    ┌─────────┐
+ │ tina4 CLI  │ ─────────────────────────►│ PHP server │ ─────────────────────►│ Browser │
+ │ (watcher)  │                           │            │   fallback: poll      │         │
+ └────────────┘                           └────────────┘   GET /__dev/api/mtime└─────────┘
+```
 
-The browser side is equally simple. When `TINA4_DEBUG=true`, every HTML page automatically connects to the `/__dev_reload` WebSocket endpoint. If the connection drops (e.g., the server restarts), the client auto-reconnects. When it receives the reload message, it refreshes the page.
+1. The CLI watches `src/`, `migrations/`, `.env` with the `notify` crate. Events are filtered to real source changes — Access and Metadata-only events are dropped; `__pycache__`, `.git`, `.venv`, `node_modules`, `vendor`, `logs`, `.log`/`.db*`/`.swp`/`.pyc` files are ignored. A real mtime check also defeats overlayfs / polling-mode spurious events (Podman, distrobox).
+2. On a real change the CLI POSTs `/__dev/api/reload` to your running PHP server. The server keeps running — there is no process restart for file edits.
+3. `DevAdmin` bumps its in-memory `$reloadMtime` counter and broadcasts `{type: "reload"}` over WebSocket at `/__dev_reload`. `GET /__dev/api/mtime` returns the counter for browsers using the polling fallback.
+4. The inline reload script injected by the dev toolbar reloads the browser. SCSS/CSS changes are signalled as `type: "css"` and swap the stylesheet without a full reload.
 
-No file watcher daemon. No Node.js process. No browser extension. The server watches files, the browser listens on a WebSocket -- that is the entire system.
+No file watcher inside PHP. No sentinel file on disk. No daemon. No Node.js process. The Rust CLI watches, the framework relays, the browser reloads.
 
 ### Watched Directories and File Types
 
@@ -235,39 +241,14 @@ The file watcher scans three locations:
 - `migrations/` -- Database migration files
 - `.env` -- Environment configuration
 
-Within those locations, the following file types are monitored:
-
-| Extension | Examples |
-|-----------|----------|
-| `.php` | Route handlers, ORM models, middleware |
-| `.twig` | Twig templates |
-| `.html` | HTML templates and static pages |
-| `.scss` | SASS source files |
-| `.css` | Stylesheets |
-| `.js` | JavaScript files |
-| `.json` | Configuration and data files |
-
-Any change to a watched file triggers a reload. The watcher uses `filemtime()` to detect modifications -- it compares the current modification timestamp against the last known timestamp for each file.
-
 ### What Happens on Reload
 
-When the server detects a file change, the behavior depends on what changed:
+- **PHP source** (`src/routes/*.php`, `src/orm/*.php`, etc.) -- PHP loads these fresh on every request, so once the browser reloads, the next request sees the updated code. The server process stays up.
+- **Template files** (`.twig`, `.html`) -- Re-read from disk on the next render.
+- **`.env`** -- Re-read on next request.
+- **SCSS/CSS** -- The browser swaps the stylesheet; no full page reload.
 
-- **PHP files** (`src/routes/*.php`, `src/orm/*.php`) -- The server re-includes the changed files, re-discovering routes and ORM definitions. The server process stays up. Active connections are preserved. The change takes effect on the next request.
-- **Template files** (`.twig`, `.html`) -- Templates are re-read from disk on the next render. The browser reloads to display the updated output.
-- **`.env` file** -- Environment variables are reloaded into memory. No server restart needed.
-- **Static assets** (`.css`, `.js`, `.scss`) -- The browser reloads to pick up the new files.
-
-This means the server never restarts for code changes. Routes are re-discovered, templates are re-read, and the browser refreshes -- all while the server process continues running.
-
-### The `tina4 serve` Layer
-
-When you start your project with `tina4 serve` (the Rust CLI), there is an additional layer of file watching. The Rust CLI monitors the same project files and, if it detects a change that requires a full process restart (such as a PHP fatal error that crashed the server), it automatically restarts the entire PHP server process. This gives you two levels of resilience:
-
-1. **PHP-level hot reload** -- The `stream_select` server re-includes changed files without restarting (fast, seamless).
-2. **Process-level restart** -- The Rust CLI restarts the PHP process if it crashes or becomes unresponsive (recovery from fatal errors).
-
-Together, these two layers mean you almost never have to manually restart your dev server.
+The PHP server never restarts for file edits. It only restarts if it actually crashes (unlikely in dev mode thanks to the error overlay catching most issues).
 
 ### Activation
 

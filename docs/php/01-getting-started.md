@@ -693,14 +693,16 @@ Before jumping into the exercises, let's consolidate how route handlers work in 
 
 ### Reading Query Parameters
 
-Query parameters are the key-value pairs after the `?` in a URL. Access them through `$request->params`:
+Query parameters are the key-value pairs after the `?` in a URL. Access them through `$request->query`:
 
 ```php
 // URL: /api/search?q=laptop&page=2
-$request->params["q"]      // "laptop"
-$request->params["page"]   // "2" (always a string)
-$request->params["sort"] ?? "name"  // "name" (default -- param was not sent)
+$request->query["q"]      // "laptop"
+$request->query["page"]   // "2" (always a string)
+$request->query["sort"] ?? "name"  // "name" (default -- param was not sent)
 ```
+
+`$request->params` is reserved for **route path parameters** (see next section). Don't mix them up.
 
 ### Reading URL Path Parameters
 
@@ -796,8 +798,8 @@ $books = [
 
 Router::get("/api/books", function ($request, $response) use (&$books) {
     // List all books. Supports ?author= filter and ?sort=year.
-    $author = $request->params["author"] ?? "";
-    $sortBy = $request->params["sort"] ?? "";
+    $author = $request->query["author"] ?? "";
+    $sortBy = $request->query["sort"] ?? "";
 
     $result = $books;
 
@@ -965,7 +967,7 @@ Create `src/routes/greet.php`:
 use Tina4\Router;
 
 Router::get("/api/greet", function ($request, $response) {
-    $name = $request->params["name"] ?? "Stranger";
+    $name = $request->query["name"] ?? "Stranger";
     $hour = (int) date("G");
 
     if ($hour >= 5 && $hour < 12) {

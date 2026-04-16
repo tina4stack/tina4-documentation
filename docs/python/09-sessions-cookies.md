@@ -301,7 +301,7 @@ The "remember me" pattern extends the session lifetime when the user checks a bo
 
 ```python
 from tina4_python.core.router import post
-from tina4_python.auth import Auth
+from tina4_python.auth import Auth, get_token
 from tina4_python.database.connection import Database
 
 @post("/login-form")
@@ -329,7 +329,7 @@ async def login_form(request, response):
 
     if remember:
         # Generate a long-lived token
-        remember_token = Auth.get_token({"user_id": user["id"]})
+        remember_token = get_token({"user_id": user["id"]})
 
         # Store it in a cookie that lasts 30 days
         return response.cookie("remember_token", remember_token, {

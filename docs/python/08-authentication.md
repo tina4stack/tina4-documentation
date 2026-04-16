@@ -21,7 +21,7 @@ Tina4 uses JSON Web Tokens (JWT) for authentication. A JWT is a signed string ca
 ### Generating a Token
 
 ```python
-from tina4_python.auth import Auth
+from tina4_python.auth import get_token
 
 payload = {
     "user_id": 42,
@@ -29,7 +29,7 @@ payload = {
     "role": "admin"
 }
 
-token = Auth.get_token(payload)
+token = get_token(payload)
 ```
 
 `get_token()` signs the payload with HS256 (HMAC-SHA256) and returns a JWT string like:
@@ -161,7 +161,7 @@ async def register(request, response):
         [body["name"], body["email"], password_hash]
     )
 
-    user = db.fetch_one("SELECT id, name, email FROM users WHERE id = ?", [result.last_id])
+    user = db.fetch_one("SELECT id, name, email FROM users WHERE id = ?", [db.get_last_id()])
 
     return response.json({
         "message": "Registration successful",
@@ -190,7 +190,7 @@ The complete login flow. Client sends credentials. Server validates them. Server
 
 ```python
 from tina4_python.core.router import post, noauth
-from tina4_python.auth import Auth
+from tina4_python.auth import Auth, get_token
 from tina4_python.database.connection import Database
 
 @post("/api/login")
@@ -217,7 +217,7 @@ async def login(request, response):
         return response.json({"error": "Invalid email or password"}, 401)
 
     # Generate a token
-    token = Auth.get_token({
+    token = get_token({
         "user_id": user["id"],
         "email": user["email"],
         "name": user["name"]
@@ -660,7 +660,7 @@ Create `src/routes/auth.py`:
 
 ```python
 from tina4_python.core.router import get, post, put, noauth, middleware
-from tina4_python.auth import Auth
+from tina4_python.auth import Auth, get_token
 from tina4_python.database.connection import Database
 
 
@@ -712,7 +712,7 @@ async def register(request, response):
         [body["name"], body["email"], password_hash]
     )
 
-    user = db.fetch_one("SELECT id, name, email, role, created_at FROM users WHERE id = ?", [result.last_id])
+    user = db.fetch_one("SELECT id, name, email, role, created_at FROM users WHERE id = ?", [db.get_last_id()])
 
     return response.json({"message": "Registration successful", "user": user}, 201)
 
@@ -735,7 +735,7 @@ async def login(request, response):
     if user is None or not Auth.check_password(body["password"], user["password_hash"]):
         return response.json({"error": "Invalid email or password"}, 401)
 
-    token = Auth.get_token({
+    token = get_token({
         "user_id": user["id"],
         "email": user["email"],
         "name": user["name"],
