@@ -10,6 +10,95 @@ Picture a blog. Authors, posts, comments. Authors own many posts. Posts own many
 
 ---
 
+## ORM at a Glance: Four Languages, One Shape
+
+The ORM does the same job in every Tina4 book. Define a model. Save it. Query it. Each language wears its own clothes — PHP uses typed properties, Python uses field class instances, Ruby uses a DSL, Node uses config objects — but the operations line up. If you know the API in one book, you can read the others.
+
+### Defining a Model
+
+The same `Post` model with `id`, `title`, `body`, and `created_at`:
+
+**Python** — field class instances on the class body:
+
+```python
+from tina4_python.orm import ORM, IntegerField, StringField, DateTimeField
+
+class Post(ORM):
+    table_name = "posts"
+
+    id = IntegerField(primary_key=True, auto_increment=True)
+    title = StringField(required=True, max_length=200)
+    body = StringField(default="")
+    created_at = DateTimeField()
+```
+
+**PHP** — native typed properties:
+
+```php
+<?php
+use Tina4\ORM;
+
+class Post extends ORM
+{
+    public string $tableName = "posts";
+
+    public int $id;
+    public string $title;
+    public string $body = "";
+    public string $createdAt;
+}
+```
+
+**Ruby** — class-level DSL declarations:
+
+```ruby
+class Post < Tina4::ORM
+  table_name "posts"
+
+  integer_field :id, primary_key: true, auto_increment: true
+  string_field :title, nullable: false, length: 200
+  string_field :body, default: ""
+  datetime_field :created_at
+end
+```
+
+**Node.js (TypeScript)** — config objects in a `static fields` block:
+
+```typescript
+import { BaseModel } from "tina4-nodejs/orm";
+
+export default class Post extends BaseModel {
+  static tableName = "posts";
+  static fields = {
+    id:        { type: "integer" as const, primaryKey: true, autoIncrement: true },
+    title:     { type: "string"  as const, required: true, maxLength: 200 },
+    body:      { type: "string"  as const, default: "" },
+    createdAt: { type: "datetime" as const },
+  };
+}
+```
+
+### Common Query Operations
+
+Same operation, four shapes:
+
+| Operation | Python | PHP | Ruby | Node.js |
+|---|---|---|---|---|
+| Find by primary key | `Post.find_by_id(1)` | `Post::findById(1)` | `Post.find_by_id(1)` | `Post.findById(1)` |
+| Filter by attributes | `Post.find({"title": "x"})` | `Post::find(["title" => "x"])` | `Post.find(title: "x")` | `Post.find({ title: "x" })` |
+| Raw SQL where clause | `Post.where("title = ?", ["x"])` | `(new Post())->where("title = ?", ["x"])` | `Post.where("title = ?", ["x"])` | `Post.where("title = ?", ["x"])` |
+| Build and save | `Post.create(title="x")` | `Post::create(["title" => "x"])` | `Post.create(title: "x")` | `Post.create({ title: "x" })` |
+| Save an instance | `post.save()` | `$post->save()` | `post.save` | `post.save()` |
+| Fetch every row | `Post.all()` | `(new Post())->all()` | `Post.all` | `Post.all()` |
+| Delete a record | `post.delete()` | `$post->delete()` | `post.delete` | `post.delete()` |
+| Count rows | `Post.count()` | `(new Post())->count()` | `Post.count` | `Post.count()` |
+
+A few details worth noting. `find()` takes attribute names and applies the field map; `where()` takes raw SQL and skips translation. PHP needs `(new Post())` for instance methods like `where()` and `all()` — the rest are static. Ruby methods drop the parentheses by convention.
+
+For full detail on field options, relationships, eager loading, soft delete, validation, and Auto-CRUD, read the rest of this chapter — it shows the API for the language of this book.
+
+---
+
 ## 2. Defining a Model
 
 Create a model file in `src/orm/`. Every `.rb` file in that directory is auto-loaded.

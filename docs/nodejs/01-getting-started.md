@@ -267,6 +267,8 @@ Router.get("/api/greeting/{name}", async (req, res) => {
 
 Save the file. The dev server picks up the change. If live reload is off, restart with `tina4 serve`.
 
+> **Cross-language note.** Node, PHP, and Ruby read path parameters from `req.params` / `$request->params` / `request.params`. Python passes them as function arguments instead. Same concept, two shapes — pick the chapter that matches your runtime.
+
 ### File-Based Routing Alternative
 
 Create the file `src/routes/api/greeting/[name]/get.ts`:

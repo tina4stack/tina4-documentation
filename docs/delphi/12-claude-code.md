@@ -274,7 +274,7 @@ Claude compiles this, launches the app, and confirms it is running. With the pre
 
 ### Interact with Running Applications
 
-This is where the MCP server becomes powerful. Claude does not just launch your app -- it uses it:
+This is where the MCP server earns its keep. Claude does not just launch your app -- it uses it:
 
 ```
 Claude, click Button1 in the running app and tell me what happens.

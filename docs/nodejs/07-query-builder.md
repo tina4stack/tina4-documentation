@@ -4,7 +4,7 @@
 
 In Chapter 5 you wrote raw SQL. In Chapter 6 you used ORM models with `select()`. Both work. Both have limits.
 
-Raw SQL is powerful but brittle. Concatenate a WHERE clause wrong and you get a syntax error -- or worse, a SQL injection. The ORM's `select()` method handles simple cases, but building dynamic queries with optional filters, joins, and aggregations turns into a mess of string concatenation and empty-parameter guards.
+Raw SQL gives you full control but it is brittle. Concatenate a WHERE clause wrong and you get a syntax error -- or worse, a SQL injection. The ORM's `select()` method handles simple cases, but building dynamic queries with optional filters, joins, and aggregations turns into a mess of string concatenation and empty-parameter guards.
 
 The QueryBuilder sits between raw SQL and the ORM. It gives you a fluent, chainable API that builds correct SQL. You write TypeScript. It writes SQL. Every method returns `this`, so you chain calls in any order. When you are done, call `get()` to execute or `toSql()` to inspect.
 

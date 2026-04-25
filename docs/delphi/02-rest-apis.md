@@ -317,7 +317,7 @@ Tina4RESTRequest1.ExecuteRESTCall;
 
 ## 5. Master/Detail with Parameter Injection
 
-This is where `TTina4RESTRequest` gets powerful. Set a `MasterSource` and the detail request injects field values from the master's MemTable into the endpoint, request body, and query params using `{fieldName}` placeholders.
+This is where `TTina4RESTRequest` earns its keep. Set a `MasterSource` and the detail request injects field values from the master's MemTable into the endpoint, request body, and query params using `{fieldName}` placeholders.
 
 ### Setup
 

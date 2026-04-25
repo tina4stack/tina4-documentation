@@ -110,7 +110,7 @@ The `~` operator concatenates strings.
 
 ## 3. Template Inheritance
 
-The most powerful feature. Define a base layout once. Extend it everywhere.
+The headline feature. Define a base layout once. Extend it everywhere.
 
 ### Base Layout
 

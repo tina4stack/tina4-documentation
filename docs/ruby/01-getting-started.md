@@ -260,6 +260,8 @@ end
 
 Save the file. The dev server picks up the change. If not, restart with `tina4 serve`.
 
+> **Cross-language note.** Ruby, PHP, and Node read path parameters from `request.params` / `$request->params` / `req.params`. Python passes them as function arguments instead. Same concept, two shapes — pick the chapter that matches your runtime.
+
 ### Test It
 
 ```

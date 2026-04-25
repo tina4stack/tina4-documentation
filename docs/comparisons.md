@@ -619,7 +619,7 @@ end;
 
 ### When to Choose What
 
-Choose Tina4 Delphi when you build native Delphi apps that consume REST APIs and want automatic dataset population, need to render HTML/CSS inside FMX forms, or want MCP integration for AI-assisted development.
+Choose Tina4 Delphi when you build native Delphi apps. It populates datasets from REST APIs, renders HTML/CSS inside FMX forms, and offers MCP integration for AI-assisted development.
 
 Choose raw FMX when you need full control over HTTP communication with no additional dependencies.
 
@@ -676,7 +676,7 @@ Tina4 takes a different path: ship everything a modern web project needs in the 
 | **JavaScript** | tina4js | — | — | Sub-3KB | 3.7 KB gz |
 | **Delphi** | Tina4 Delphi | — | — | FMX components | Open source |
 
-The trade-off is real. Tina4 has a smaller community, fewer third-party packages, and less production history than established frameworks. No StackOverflow tag with 200,000 questions. No ecosystem of 300,000 community packages. When you hit an edge case, you read source code — not a blog post.
+The trade-off is real. Tina4 has a smaller community, fewer third-party packages, and less production history than established frameworks. No StackOverflow tag with 200,000 questions. No registry of 300,000 community packages. When you hit an edge case, you read source code — not a blog post.
 
 For developers who want working CRUD in a few lines, the same patterns across four languages, 44 features with zero dependencies, and AI context files for seven tools — Tina4 is worth evaluating. Build something. Break something. File an issue. The framework grows with its users.
 

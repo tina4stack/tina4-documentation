@@ -542,7 +542,7 @@ frond.loadTemplate("/templates/user-card", { userId: 42 }, "user-panel");
 
 ### 7.3 tina4js.min.js -- Reactive Frontend Framework
 
-A standalone reactive framework for building rich client-side applications. Provides signals, computed values, effects, Web Components, client-side routing, and built-in fetch and WebSocket wrappers. This is the **tina4-js** project.
+A standalone reactive framework for building interactive client-side applications. Provides signals, computed values, effects, Web Components, client-side routing, and built-in fetch and WebSocket wrappers. This is the **tina4-js** project.
 
 #### Reactive State: `signal()`, `computed()`, `effect()`
 

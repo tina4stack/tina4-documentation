@@ -134,7 +134,7 @@ Tina4JSONAdapter1.MemTable := FDMemTableOrders;
 // When Tina4RESTRequest1 completes, FDMemTableOrders auto-populates
 ```
 
-This is powerful for APIs that return complex nested responses. The REST request gets the whole response into one MemTable. The JSON adapter extracts a specific nested array into another MemTable.
+This works well for APIs that return complex nested responses. The REST request gets the whole response into one MemTable. The JSON adapter extracts a specific nested array into another MemTable.
 
 ### Sync Mode
 

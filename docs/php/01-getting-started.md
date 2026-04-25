@@ -254,6 +254,8 @@ Router::get("/api/greeting/{name}", function ($request, $response) {
 
 Save the file. The dev server picks it up. No restart needed if live reload is active. Otherwise, restart with `tina4 serve`.
 
+> **Cross-language note.** PHP, Ruby, and Node read path parameters from `$request->params` / `request.params` / `req.params`. Python passes them as function arguments instead. Same concept, two shapes — pick the chapter that matches your runtime.
+
 ### Test It
 
 ```

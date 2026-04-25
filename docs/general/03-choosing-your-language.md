@@ -33,7 +33,7 @@ async def create_product(request, response):
 
 **The reference implementation.** Tina4 Python was the first v3 framework to reach 100% completion. When ambiguity exists in the spec, Python's behavior is canonical. Every other implementation follows its lead.
 
-**Largest general-purpose community.** Python is the most-taught programming language in universities worldwide. Finding Python developers is straightforward -- new graduates learn it first, data scientists think in it, and the ecosystem grows faster than any other language.
+**Largest general-purpose community.** Python is the most-taught programming language in universities worldwide. Finding Python developers is straightforward -- new graduates learn it first, data scientists think in it, and the library set grows faster than any other language.
 
 ### Watch Out For
 
@@ -80,7 +80,7 @@ Router::post("/api/products", function ($request, $response) {
 
 **Fastest Tina4.** PHP 8.1+ with JIT compilation makes Tina4 PHP the fastest of the four implementations in raw request throughput. Add OPcache (compiled bytecode caching) and the framework overhead approaches zero. Requests arrive. Responses leave. The interpreter barely warms up.
 
-**Thirty years of ecosystem.** Database drivers, payment processing, PDF generation, image manipulation -- PHP has battle-tested libraries for all of it. Tina4 itself has zero dependencies. Your application can still pull in Composer packages when the need is real.
+**Thirty years of libraries.** Database drivers, payment processing, PDF generation, image manipulation -- PHP has well-tested libraries for all of it. Tina4 itself has zero dependencies. Your application can still pull in Composer packages when the need is real.
 
 **Monorepo simplicity.** Tina4 PHP v3 is a single Composer package under the `Tina4\` namespace. No split packages. No sub-repositories. One `composer require`. Everything arrives.
 
@@ -130,7 +130,7 @@ end
 
 **Startup velocity.** Ruby's expressiveness means less code for the same functionality. Fewer lines. Fewer files. Faster iteration. For teams that need to ship and adjust, Ruby shrinks the distance between idea and production.
 
-**Strong testing culture.** The Ruby community treats testing as a first-class concern. Tina4 Ruby integrates with Ruby's testing ecosystem. The framework itself carries 2,333 tests. Testing is not an afterthought. It is the foundation.
+**Strong testing culture.** The Ruby community treats testing as a first-class concern. Tina4 Ruby integrates with Ruby's testing tools. The framework itself carries 2,333 tests. Testing is not an afterthought. It is the foundation.
 
 ### Watch Out For
 
@@ -183,7 +183,7 @@ export default function handler(request, response) {
 
 ### Watch Out For
 
-**Async complexity.** Modern async/await syntax is clean. The underlying ecosystem is not always clean. Unhandled promise rejections, callback-style legacy APIs, event loop blocking -- these traps exist. If your team is new to async JavaScript, expect a learning curve. The syntax is simple. The debugging is not.
+**Async complexity.** Modern async/await syntax is clean. The underlying tooling is not always clean. Unhandled promise rejections, callback-style legacy APIs, event loop blocking -- these traps exist. If your team is new to async JavaScript, expect a learning curve. The syntax is simple. The debugging is not.
 
 **Single-threaded for user code.** Node.js runs your code on one thread. CPU-heavy operations block the event loop. Image processing, PDF generation, complex calculations -- offload these to worker threads or queue them for background processing. The event loop handles I/O brilliantly. It handles computation poorly.
 

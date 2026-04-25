@@ -570,7 +570,7 @@ ws.on("message", function (data) {
 
 ### tina4js.min.js -- Reactive Frontend Framework
 
-A standalone reactive framework for building rich client-side applications. Provides signals, computed values, effects, Web Components, client-side routing, and built-in fetch and WebSocket wrappers.
+A standalone reactive framework for building interactive client-side applications. Provides signals, computed values, effects, Web Components, client-side routing, and built-in fetch and WebSocket wrappers.
 
 #### Reactive State
 

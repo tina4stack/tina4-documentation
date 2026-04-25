@@ -253,7 +253,9 @@ async def greeting(name, request, response):
     })
 ```
 
-In Python, path parameters are passed directly as function arguments -- not via `request.params`. The parameter name in the function signature must match the `{name}` in the route pattern.
+In Python, path parameters arrive as function arguments. The parameter name in the function signature must match the `{name}` in the route pattern.
+
+> **Cross-language note.** Python is the odd one out here. PHP, Ruby, and Node read path parameters from `$request->params` / `request.params` / `req.params` instead. Same concept, two shapes — pick the chapter that matches your runtime.
 
 Save the file. The dev server picks up the change through live reload. If not, restart with `tina4 serve`.
 
