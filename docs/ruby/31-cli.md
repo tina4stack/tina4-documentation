@@ -24,7 +24,7 @@ Creating Tina4 project in ./my-project ...
   Created .gitignore
   Created src/routes/
   Created src/orm/
-  Created src/migrations/
+  Created migrations/
   Created src/seeds/
   Created src/templates/
   Created src/templates/errors/
@@ -111,7 +111,7 @@ tina4 serve
   Press Ctrl+C to stop
 ```
 
-`tina4 serve` detects the language and starts the appropriate server. For Ruby, it runs `bundle exec ruby app.rb` with live reload enabled.
+`tina4 serve` detects the language and starts the appropriate server. For Ruby, it spawns the Tina4 Ruby runtime with SCSS compilation, file watching, and live reload all wired in.
 
 ### Options
 
@@ -121,18 +121,18 @@ tina4 serve --host 127.0.0.1   # Bind to localhost only
 tina4 serve --production       # Production mode (no live reload, debug off)
 ```
 
-### Direct Ruby Execution
+### Bypassing the CLI
 
-You can start the server directly:
+The framework refuses to start without the Rust CLI. For sandboxed environments (Docker images, CI runners, APM agents) set `TINA4_OVERRIDE_CLIENT=true` in `.env` and only then run:
 
 ```bash
-bundle exec ruby app.rb
+TINA4_OVERRIDE_CLIENT=true bundle exec ruby app.rb
 ```
 
-This is identical to `tina4 serve` but gives you more control over the Ruby runtime. For production, use Puma:
+This bypasses SCSS compilation and live reload. For production deployments use `tina4 serve --production` (or set the override and run Puma directly):
 
 ```bash
-bundle exec puma -C config/puma.rb
+TINA4_OVERRIDE_CLIENT=true bundle exec puma -C config/puma.rb
 ```
 
 ---
@@ -147,7 +147,7 @@ tina4 generate:model Product
 
 ```
 Created src/orm/product.rb
-Created src/migrations/20260322120000_create_products_table.sql
+Created migrations/20260322120000_create_products_table.sql
 ```
 
 The generated model:
@@ -341,7 +341,7 @@ tina4 generate:migration add_category_to_products
 ```
 
 ```
-Created src/migrations/20260322120500_add_category_to_products.sql
+Created migrations/20260322120500_add_category_to_products.sql
 ```
 
 The generated file:
@@ -418,7 +418,7 @@ tina4 generate:crud Product
 ```
 Created src/orm/product.rb
 Created src/routes/products.rb
-Created src/migrations/20260322120000_create_products_table.sql
+Created migrations/20260322120000_create_products_table.sql
 ```
 
 Model. CRUD routes. Migration. All wired together. Ready to use.
@@ -447,7 +447,7 @@ Tina4 Doctor -- Checking your project...
   [OK] src/templates/ directory exists (5 templates)
   [OK] src/public/ directory exists (static files served)
   [OK] tests/ directory exists (4 test files)
-  [WARN] No migrations found in src/migrations/
+  [WARN] No migrations found in migrations/
   [OK] AI context: Claude Code detected, CLAUDE.md present
   [OK] .gitignore includes .env, data/, logs/
 
@@ -807,7 +807,7 @@ source ~/.zshrc
 
 ### 5. tina4 serve Uses Wrong Port
 
-**Problem:** `tina4 serve` starts on port 7145 but you need port 8080.
+**Problem:** `tina4 serve` starts on port 7147 but you need port 8080.
 
 **Cause:** The default port for Ruby is 7147 unless overridden.
 

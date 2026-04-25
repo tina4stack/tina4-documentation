@@ -1,9 +1,3 @@
----
-outline: deep
----
-
-<div v-pre>
-
 # Chapter 14: Localization
 
 ## 1. Your App Speaks One Language. Your Users Speak Many.
@@ -117,7 +111,11 @@ Keys use dot notation to access nested values. `"errors.not_found"` reaches `err
 
 ## 5. Interpolation
 
+<div v-pre>
+
 Pass variables to replace `{{placeholder}}` tokens:
+
+</div>
 
 ```typescript
 i18n.setLocale("en");
@@ -164,7 +162,7 @@ Router.get("/api/greeting", async (req, res) => {
 ```
 
 ```bash
-curl "http://localhost:7145/api/greeting?name=Alice&lang=de"
+curl "http://localhost:7148/api/greeting?name=Alice&lang=de"
 ```
 
 ```json
@@ -175,7 +173,7 @@ curl "http://localhost:7145/api/greeting?name=Alice&lang=de"
 ```
 
 ```bash
-curl "http://localhost:7145/api/greeting?name=Alice&lang=en"
+curl "http://localhost:7148/api/greeting?name=Alice&lang=en"
 ```
 
 ```json
@@ -261,12 +259,12 @@ Build an API that returns validation error messages in the user's language.
 
 ```bash
 # English errors
-curl -X POST "http://localhost:7145/api/contact?lang=en" \
+curl -X POST "http://localhost:7148/api/contact?lang=en" \
   -H "Content-Type: application/json" \
   -d '{"name": "A", "email": "not-an-email"}'
 
 # German errors
-curl -X POST "http://localhost:7145/api/contact?lang=de" \
+curl -X POST "http://localhost:7148/api/contact?lang=de" \
   -H "Content-Type: application/json" \
   -d '{"name": "A", "email": "not-an-email"}'
 ```
@@ -392,9 +390,10 @@ If multiple concurrent requests call `i18n.setLocale()` on the same instance, th
 
 ### 4. Placeholder names are case-sensitive
 
+<div v-pre>
+
 `{{Name}}` and `{{name}}` are different placeholders. A mismatch silently leaves the placeholder unreplaced.
 
-**Fix:** Use consistent lowercase placeholder names in all locale files.
-
-
 </div>
+
+**Fix:** Use consistent lowercase placeholder names in all locale files.

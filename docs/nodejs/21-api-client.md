@@ -255,8 +255,8 @@ Build a route that fetches a GitHub user profile via the `api` client and return
 ### Test with:
 
 ```bash
-curl http://localhost:7145/api/github/torvalds
-curl http://localhost:7145/api/github/this-user-does-not-exist-xyzabc
+curl http://localhost:7148/api/github/torvalds
+curl http://localhost:7148/api/github/this-user-does-not-exist-xyzabc
 ```
 
 ---
@@ -322,7 +322,7 @@ Router.get("/api/github/{username}", async (req, res) => {
 ```
 
 ```bash
-curl http://localhost:7145/api/github/torvalds
+curl http://localhost:7148/api/github/torvalds
 ```
 
 ```json

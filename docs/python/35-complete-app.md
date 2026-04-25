@@ -76,7 +76,7 @@ TINA4_TOKEN_EXPIRES_IN=1440
 
 ### Create Migrations
 
-Create `src/migrations/20260322000100_create_users_table.sql`:
+Create `migrations/20260322000100_create_users_table.sql`:
 
 ```sql
 -- UP
@@ -95,7 +95,7 @@ CREATE INDEX idx_users_email ON users(email);
 DROP TABLE IF EXISTS users;
 ```
 
-Create `src/migrations/20260322000200_create_tasks_table.sql`:
+Create `migrations/20260322000200_create_tasks_table.sql`:
 
 ```sql
 -- UP
@@ -140,7 +140,7 @@ Running migrations...
 Verify the database:
 
 ```bash
-curl http://localhost:7145/health
+curl http://localhost:7146/health
 ```
 
 ```json
@@ -289,7 +289,7 @@ tina4 serve
 
 ```bash
 # Register a user
-curl -X POST http://localhost:7145/api/auth/register \
+curl -X POST http://localhost:7146/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"name": "Alice Johnson", "email": "alice@example.com", "password": "securepass123"}'
 ```
@@ -305,7 +305,7 @@ curl -X POST http://localhost:7145/api/auth/register \
 
 ```bash
 # Login
-curl -X POST http://localhost:7145/api/auth/login \
+curl -X POST http://localhost:7146/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": "alice@example.com", "password": "securepass123"}'
 ```
@@ -354,7 +354,7 @@ async def auth_middleware(request, response, next_handler):
 Verify the middleware blocks unauthenticated requests:
 
 ```bash
-curl http://localhost:7145/api/tasks
+curl http://localhost:7146/api/tasks
 ```
 
 ```json
@@ -520,7 +520,7 @@ async def delete_task(request, response):
 TOKEN="eyJhbGciOiJIUzI1NiIs..."
 
 # Create a task
-curl -X POST http://localhost:7145/api/tasks \
+curl -X POST http://localhost:7146/api/tasks \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"title": "Design database schema", "priority": "high"}'
@@ -539,28 +539,28 @@ curl -X POST http://localhost:7145/api/tasks \
 
 ```bash
 # Create more tasks
-curl -X POST http://localhost:7145/api/tasks \
+curl -X POST http://localhost:7146/api/tasks \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"title": "Build API endpoints", "priority": "high"}'
 
-curl -X POST http://localhost:7145/api/tasks \
+curl -X POST http://localhost:7146/api/tasks \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"title": "Write documentation", "priority": "medium", "due_date": "2026-04-01"}'
 
 # List all tasks
-curl http://localhost:7145/api/tasks \
+curl http://localhost:7146/api/tasks \
   -H "Authorization: Bearer $TOKEN"
 
 # Update a task status
-curl -X PUT http://localhost:7145/api/tasks/1 \
+curl -X PUT http://localhost:7146/api/tasks/1 \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"status": "completed"}'
 
 # Delete a task
-curl -X DELETE http://localhost:7145/api/tasks/3 \
+curl -X DELETE http://localhost:7146/api/tasks/3 \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -622,7 +622,7 @@ async def admin_dashboard(request, response):
 Verify the stats endpoint:
 
 ```bash
-curl http://localhost:7145/api/dashboard/stats \
+curl http://localhost:7146/api/dashboard/stats \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -642,7 +642,7 @@ curl http://localhost:7145/api/dashboard/stats \
 Hit it again. The second response comes from cache:
 
 ```bash
-curl http://localhost:7145/api/dashboard/stats \
+curl http://localhost:7146/api/dashboard/stats \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -718,7 +718,7 @@ async def notify_assignee(task):
         task_priority=task.priority,
         task_due_date=task.due_date or "No due date",
         creator_name=creator.name if creator else "Unknown",
-        task_url=f"http://localhost:7145/admin#task-{task.id}"
+        task_url=f"http://localhost:7146/admin#task-{task.id}"
     )
 
     mailer = Messenger()
@@ -882,10 +882,10 @@ Create `src/templates/dashboard.html`:
 Verify the dashboard:
 
 ```bash
-curl http://localhost:7145/admin
+curl http://localhost:7146/admin
 ```
 
-The server returns the rendered HTML. Open `http://localhost:7145/admin` in your browser to see the full dashboard with stats, task list, and live update panel.
+The server returns the rendered HTML. Open `http://localhost:7146/admin` in your browser to see the full dashboard with stats, task list, and live update panel.
 
 ---
 
@@ -1041,10 +1041,10 @@ RUN uv sync --frozen --no-dev
 COPY . .
 RUN mkdir -p data logs
 
-EXPOSE 7145
+EXPOSE 7146
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD curl -f http://localhost:7145/health || exit 1
+  CMD curl -f http://localhost:7146/health || exit 1
 
 CMD ["uv", "run", "python", "app.py"]
 ```
@@ -1056,7 +1056,7 @@ services:
   app:
     build: .
     ports:
-      - "7145:7145"
+      - "7146:7146"
     environment:
       - TINA4_DEBUG=false
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
@@ -1088,7 +1088,7 @@ docker compose up -d --build
 Verify:
 
 ```bash
-curl http://localhost:7145/health
+curl http://localhost:7146/health
 ```
 
 ```json

@@ -1,9 +1,3 @@
----
-outline: deep
----
-
-<div v-pre>
-
 # Chapter 10: Middleware
 
 ## 1. The Pipeline Pattern
@@ -22,7 +16,7 @@ Tina4 Python ships with two built-in middleware classes in `tina4_python.core.mi
 
 ### CorsMiddleware
 
-CORS (Cross-Origin Resource Sharing) controls which websites can call your API from a browser. When React at `http://localhost:3000` calls your Tina4 API at `http://localhost:7145`, the browser sends a preflight `OPTIONS` request first. Wrong headers and the browser blocks everything.
+CORS (Cross-Origin Resource Sharing) controls which websites can call your API from a browser. When React at `http://localhost:3000` calls your Tina4 API at `http://localhost:7146`, the browser sends a preflight `OPTIONS` request first. Wrong headers and the browser blocks everything.
 
 Configure via `.env`:
 
@@ -433,7 +427,7 @@ async def require_api_key(request, response, next_handler):
 
 ```bash
 # No key -- 401
-curl http://localhost:7145/api/data
+curl http://localhost:7146/api/data
 ```
 
 ```json
@@ -442,7 +436,7 @@ curl http://localhost:7145/api/data
 
 ```bash
 # Invalid key -- 403
-curl http://localhost:7145/api/data -H "X-API-Key: wrong-key"
+curl http://localhost:7146/api/data -H "X-API-Key: wrong-key"
 ```
 
 ```json
@@ -451,7 +445,7 @@ curl http://localhost:7145/api/data -H "X-API-Key: wrong-key"
 
 ```bash
 # Valid key -- 200
-curl http://localhost:7145/api/data -H "X-API-Key: key-abc-123"
+curl http://localhost:7146/api/data -H "X-API-Key: key-abc-123"
 ```
 
 ```json
@@ -612,17 +606,17 @@ Build a complete API key system with key management and usage tracking.
 
 ```bash
 # Create an API key (requires auth token from Chapter 8)
-curl -X POST http://localhost:7145/admin/api-keys \
+curl -X POST http://localhost:7146/admin/api-keys \
   -H "Authorization: Bearer YOUR_AUTH_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name": "Mobile App"}'
 
 # Use the API key
-curl http://localhost:7145/api/data \
+curl http://localhost:7146/api/data \
   -H "X-API-Key: THE_GENERATED_KEY"
 
 # List keys with stats
-curl http://localhost:7145/admin/api-keys \
+curl http://localhost:7146/admin/api-keys \
   -H "Authorization: Bearer YOUR_AUTH_TOKEN"
 ```
 
@@ -632,7 +626,7 @@ curl http://localhost:7145/admin/api-keys \
 
 ### Migration
 
-Create `src/migrations/20260322170000_create_api_keys_table.sql`:
+Create `migrations/20260322170000_create_api_keys_table.sql`:
 
 ```sql
 -- UP
@@ -852,7 +846,7 @@ async def create_order(request, response):
 Test it without a token:
 
 ```bash
-curl -X POST http://localhost:7145/api/orders \
+curl -X POST http://localhost:7146/api/orders \
   -H "Content-Type: application/json" \
   -d '{"product": "widget"}'
 # 401 Unauthorized
@@ -861,7 +855,7 @@ curl -X POST http://localhost:7145/api/orders \
 Test it with a valid token:
 
 ```bash
-curl -X POST http://localhost:7145/api/orders \
+curl -X POST http://localhost:7146/api/orders \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9..." \
   -d '{"product": "widget"}'
@@ -917,10 +911,14 @@ Tina4 blocks this with form tokens.
 
 ### How It Works
 
+<div v-pre>
+
 1. Your template renders a hidden token using `{{ form_token() }}`.
 2. The browser submits the token with the form data.
 3. The `CsrfMiddleware` validates the token before the route handler runs.
 4. Invalid or missing tokens receive a `403 Forbidden` response.
+
+</div>
 
 ### The Template
 
@@ -932,7 +930,11 @@ Tina4 blocks this with form tokens.
 </form>
 ```
 
+<div v-pre>
+
 The `{{ form_token() }}` call generates a hidden input field containing a signed JWT. The token is bound to the current session — a token from one session cannot be used in another.
+
+</div>
 
 ### The Middleware
 
@@ -997,7 +999,11 @@ Leave it enabled for anything a browser can reach. The cost is one hidden field 
 
 A form token alone prevents cross-site forgery. But what if someone steals a token from a form? Session binding stops them.
 
+<div v-pre>
+
 When `{{ form_token() }}` generates a token, it embeds the current session ID in the JWT payload. The CSRF middleware checks that the session ID in the token matches the session ID of the request. A token stolen from one session cannot be replayed in another.
+
+</div>
 
 This happens automatically. No configuration. No extra code.
 
@@ -1385,10 +1391,14 @@ Prefer external scripts. Inline scripts are an XSS vector.
 Build a public contact form that:
 
 1. Does not require login (`@noauth()`).
+<div v-pre>
+
 2. Validates CSRF tokens (form includes `{{ form_token() }}`).
 3. Rate-limits submissions to 3 per minute per IP.
 4. Stores messages in the database.
 5. Returns a success message.
+
+</div>
 
 ### Solution
 
@@ -1459,6 +1469,3 @@ async def submit_contact(request, response):
 The form is public. The CSRF token is present. The `@noauth()` decorator opens the route. The middleware validates the token. The database stores the message. The user sees confirmation.
 
 Five moving parts. Zero security holes. The framework handles the rest.
-
-
-</div>

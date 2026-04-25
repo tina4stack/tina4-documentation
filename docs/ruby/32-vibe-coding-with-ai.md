@@ -64,6 +64,41 @@ For frontend development -- tina4-js signals, Tina4Element components, reactive 
 
 ---
 
+## Supported AI Tools
+
+Tina4 auto-detects and installs context for eight tools. The exact list lives in the framework's `Tina4::AI` module:
+
+| Tool | Detection (context file) | Context installed |
+|------|--------------------------|-------------------|
+| Claude Code | `CLAUDE.md` | CLAUDE.md + `.claude/` skills |
+| Cursor | `.cursorules` | `.cursorules` (+ `.cursor/`) |
+| GitHub Copilot | `.github/copilot-instructions.md` | `.github/copilot-instructions.md` |
+| Windsurf | `.windsurfrules` | `.windsurfrules` |
+| Aider | `CONVENTIONS.md` | `CONVENTIONS.md` |
+| Cline | `.clinerules` | `.clinerules` |
+| OpenAI Codex | `AGENTS.md` | `AGENTS.md` |
+| Google Antigravity | `.antigravity/context.md` | `.antigravity/context.md` |
+
+Run `tina4 ai` to see which tools are detected and install context files via the menu.
+
+---
+
+## The AI Chat in Dev Dashboard
+
+The dev dashboard at `/__dev` includes an AI chat tab. By default it talks to a local **qwen2.5-coder** model served via [Ollama](https://ollama.com), grounded by Tina4's built-in RAG index of the framework source. Nothing leaves your machine.
+
+Configure it in `.env`:
+
+```bash
+TINA4_AI_URL=http://localhost:11434      # Ollama HTTP endpoint
+TINA4_AI_MODEL=qwen2.5-coder             # Default coding model
+TINA4_RAG_URL=http://localhost:11434     # RAG embedding endpoint (defaults to TINA4_AI_URL)
+```
+
+If you prefer a remote provider, point `TINA4_AI_URL` at any OpenAI-compatible endpoint and set `TINA4_AI_MODEL` accordingly.
+
+---
+
 ## The Convention Advantage
 
 AI thrives on convention. When every Tina4 project follows the same structure, the AI never has to ask "where should I put this?"
@@ -228,7 +263,7 @@ Here is a real conversation with an AI assistant:
 
 **AI generates:**
 
-1. `src/migrations/20260322_create_posts_table.sql` -- the migration
+1. `migrations/20260322_create_posts_table.sql` -- the migration
 2. `src/orm/post.rb` -- the model with fields and relationships
 3. `src/routes/posts.rb` -- CRUD routes with authentication and filtering
 4. `tests/posts_spec.rb` -- RSpec tests for all scenarios
@@ -305,7 +340,7 @@ Add a comment system to my blog:
 ```
 
 Verify the AI generates:
-- A migration file in `src/migrations/`
+- A migration file in `migrations/`
 - A model file in `src/orm/`
 - Route handlers in `src/routes/`
 - Test file in `tests/`

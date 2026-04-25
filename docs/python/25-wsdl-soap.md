@@ -42,7 +42,7 @@ async def calculator_soap(request, response):
     return await wsdl.handle_request(request, response)
 ```
 
-Visit `http://localhost:7145/api/soap/calculator?wsdl` to see the generated WSDL document. POST a SOAP envelope to the same URL to invoke an operation.
+Visit `http://localhost:7146/api/soap/calculator?wsdl` to see the generated WSDL document. POST a SOAP envelope to the same URL to invoke an operation.
 
 ---
 
@@ -72,7 +72,7 @@ def get_product_price(product_id: str, currency: str) -> float:
 Tina4 generates the WSDL document from your type annotations. When a SOAP client sends a GET request with the `?wsdl` query string, the handler returns the XML document automatically.
 
 ```bash
-curl "http://localhost:7145/api/soap/calculator?wsdl"
+curl "http://localhost:7146/api/soap/calculator?wsdl"
 ```
 
 ```xml
@@ -118,7 +118,7 @@ Most SOAP clients (SOAPUI, Java's JAX-WS, .NET's `wsdl.exe`) can import this URL
 A raw SOAP request with curl:
 
 ```bash
-curl -X POST http://localhost:7145/api/soap/calculator \
+curl -X POST http://localhost:7146/api/soap/calculator \
   -H "Content-Type: text/xml; charset=utf-8" \
   -H "SOAPAction: \"Add\"" \
   -d '<?xml version="1.0" encoding="utf-8"?>
@@ -272,10 +272,10 @@ Create a SOAP service that converts amounts between currencies.
 
 ```bash
 # Get the WSDL
-curl "http://localhost:7145/api/soap/currency?wsdl"
+curl "http://localhost:7146/api/soap/currency?wsdl"
 
 # Convert $100 USD to EUR
-curl -X POST http://localhost:7145/api/soap/currency \
+curl -X POST http://localhost:7146/api/soap/currency \
   -H "Content-Type: text/xml" \
   -H "SOAPAction: \"Convert\"" \
   -d '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"

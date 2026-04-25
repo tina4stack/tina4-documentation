@@ -772,19 +772,19 @@ Router::get("/api/products/search", function (Request $request, Response $respon
 
 ```bash
 # All active products
-curl "http://localhost:7146/api/products/search"
+curl "http://localhost:7145/api/products/search"
 
 # Books only
-curl "http://localhost:7146/api/products/search?category=books"
+curl "http://localhost:7145/api/products/search?category=books"
 
 # Electronics under $100
-curl "http://localhost:7146/api/products/search?category=electronics&max_price=100"
+curl "http://localhost:7145/api/products/search?category=electronics&max_price=100"
 
 # Search by name, sorted by price
-curl "http://localhost:7146/api/products/search?search=Code&sort=price%20DESC"
+curl "http://localhost:7145/api/products/search?search=Code&sort=price%20DESC"
 
 # Page 2, 3 per page
-curl "http://localhost:7146/api/products/search?limit=3&page=1"
+curl "http://localhost:7145/api/products/search?limit=3&page=1"
 ```
 
 ### Verify the SQL

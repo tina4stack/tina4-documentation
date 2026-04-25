@@ -236,7 +236,7 @@ Router::post('/api/users/register', function ($request, $response) {
 ```
 
 ```bash
-curl -X POST http://localhost:7146/api/users/register \
+curl -X POST http://localhost:7145/api/users/register \
   -H "Content-Type: application/json" \
   -d '{"name": "Alice", "email": "alice@example.com"}'
 ```
@@ -297,12 +297,12 @@ Build an order system where each state change emits an event and multiple listen
 ### Test with:
 
 ```bash
-curl -X POST http://localhost:7146/api/orders \
+curl -X POST http://localhost:7145/api/orders \
   -H "Content-Type: application/json" \
   -d '{"customer": "Alice", "items": ["Widget A", "Widget B"], "total": 59.98}'
 
-curl -X POST http://localhost:7146/api/orders/1001/pay
-curl -X POST http://localhost:7146/api/orders/1001/ship
+curl -X POST http://localhost:7145/api/orders/1001/pay
+curl -X POST http://localhost:7145/api/orders/1001/ship
 ```
 
 ---

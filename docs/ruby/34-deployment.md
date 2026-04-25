@@ -612,9 +612,9 @@ When you run multiple Tina4 instances, Nginx distributes traffic across them:
 ```nginx
 upstream tina4_backend {
     server 127.0.0.1:7147;
-    server 127.0.0.1:7148;
-    server 127.0.0.1:7149;
-    server 127.0.0.1:7150;
+    server 127.0.0.1:7247;
+    server 127.0.0.1:7347;
+    server 127.0.0.1:7447;
 }
 
 server {
@@ -631,13 +631,13 @@ server {
 }
 ```
 
-Start four instances on different ports:
+Start four instances on different ports. Ruby's framework default is `7147`; use any free ports for the additional instances. Set `TINA4_OVERRIDE_CLIENT=true` so Puma can run without going through `tina4 serve`:
 
 ```bash
-TINA4_PORT=7147 bundle exec puma -C config/puma.rb &
-TINA4_PORT=7148 bundle exec puma -C config/puma.rb &
-TINA4_PORT=7149 bundle exec puma -C config/puma.rb &
-TINA4_PORT=7150 bundle exec puma -C config/puma.rb &
+TINA4_OVERRIDE_CLIENT=true TINA4_PORT=7147 bundle exec puma -C config/puma.rb &
+TINA4_OVERRIDE_CLIENT=true TINA4_PORT=7247 bundle exec puma -C config/puma.rb &
+TINA4_OVERRIDE_CLIENT=true TINA4_PORT=7347 bundle exec puma -C config/puma.rb &
+TINA4_OVERRIDE_CLIENT=true TINA4_PORT=7447 bundle exec puma -C config/puma.rb &
 ```
 
 ### Docker Scaling

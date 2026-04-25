@@ -119,7 +119,7 @@ Creating Tina4 project in ./my-store ...
   Created .gitignore
   Created src/routes/
   Created src/orm/
-  Created src/migrations/
+  Created migrations/
   Created src/seeds/
   Created src/templates/
   Created src/templates/errors/
@@ -211,10 +211,10 @@ my-store/
 ├── Gemfile                 # Gem dependencies
 ├── Gemfile.lock            # Locked dependency versions
 ├── app.rb                  # Application entry point
+├── migrations/             # SQL migration files (project root)
 ├── src/
 │   ├── routes/             # Your route handlers go here
 │   ├── orm/                # Your ORM model classes go here
-│   ├── migrations/         # SQL migration files
 │   ├── seeds/              # Database seed files
 │   ├── templates/          # Frond/Twig templates
 │   │   └── errors/         # Custom 404.html, 500.html
@@ -489,6 +489,8 @@ Open `http://localhost:7147/products`. You see:
 ### How Template Rendering Works
 
 1. `response.render("products.html", { products: products })` tells Frond to render `src/templates/products.html`.
+<div v-pre>
+
 2. Frond sees `{% extends "base.html" %}` and loads the base template.
 3. `{% block content %}` in `products.html` replaces the same block in `base.html`.
 4. `{{ product.name }}` outputs the value, auto-escaped for HTML safety.
@@ -496,6 +498,8 @@ Open `http://localhost:7147/products`. You see:
 6. `{% for product in products %}` loops through the array.
 7. `{% if product.in_stock %}` renders the right badge.
 8. `{{ products | length }}` returns the item count.
+
+</div>
 
 ### About tina4css
 
@@ -554,11 +558,11 @@ Restart the server. It now runs on 8080.
 1. **CLI flag** (highest priority): `tina4 serve --port 8080`
 2. **`.env` file**: `TINA4_PORT=8080`
 3. **Environment variable**: `PORT=8080`
-4. **Framework default** (Python: 7145, PHP: 7146, Ruby: 7147, Node.js: 7143)
+4. **Framework default** (PHP: 7145, Python: 7146, Ruby: 7147, Node.js: 7148)
 
 The CLI reads your `.env` file and checks for `TINA4_PORT` (and falls back to `PORT`). The resolved port is passed to the Ruby server. All three methods work -- use whichever fits your workflow.
 
-For the complete `.env` reference with all 68 variables, see [Book 0, Chapter 4: Environment Variables](../../book-0-understanding/chapters/04-environment-variables.md).
+For the complete `.env` reference with all 68 variables, see [Environment Variables](./33-environment-variables.md).
 
 ---
 
@@ -669,10 +673,12 @@ TINA4_DEBUG=true
 ### Step 5: Run It
 
 ```bash
-ruby app.rb
+tina4 serve
 ```
 
 The server starts on `http://localhost:7147`. You should see the Tina4 welcome page. From here, add route files in `src/routes/` and templates in `src/templates/` — the same way as a CLI-scaffolded project.
+
+> **Note:** Tina4 Ruby refuses to start without the Rust CLI. To bypass it (for example inside a Docker image that already wraps the framework) set `TINA4_OVERRIDE_CLIENT=true` in `.env` and run `bundle exec ruby app.rb` directly.
 
 ---
 

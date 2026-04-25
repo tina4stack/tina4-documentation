@@ -258,7 +258,7 @@ if __name__ == "__main__":
     run()
 ```
 
-Connect Claude Code to `http://localhost:7145/crm/mcp/sse` and ask:
+Connect Claude Code to `http://localhost:7146/crm/mcp/sse` and ask:
 
 > "Find all customers named Smith and show their recent orders"
 

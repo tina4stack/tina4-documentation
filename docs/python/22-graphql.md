@@ -39,7 +39,7 @@ TINA4_GRAPHQL_ENDPOINT=/graphql
 To verify it is working, start the server and send a test query:
 
 ```bash
-curl -X POST http://localhost:7145/graphql \
+curl -X POST http://localhost:7146/graphql \
   -H "Content-Type: application/json" \
   -d '{"query": "{ __schema { queryType { name } } }"}'
 ```
@@ -130,7 +130,7 @@ The resolver function receives `root` (the parent value, if any) and `args` (the
 List all products:
 
 ```bash
-curl -X POST http://localhost:7145/graphql \
+curl -X POST http://localhost:7146/graphql \
   -H "Content-Type: application/json" \
   -d '{"query": "{ products { id name price inStock } }"}'
 ```
@@ -152,7 +152,7 @@ Notice: the response only contains the four fields we asked for (`id`, `name`, `
 Get a single product with all fields:
 
 ```bash
-curl -X POST http://localhost:7145/graphql \
+curl -X POST http://localhost:7146/graphql \
   -H "Content-Type: application/json" \
   -d '{"query": "{ product(id: 1) { id name category price inStock createdAt } }"}'
 ```
@@ -175,7 +175,7 @@ curl -X POST http://localhost:7145/graphql \
 Request a product that does not exist:
 
 ```bash
-curl -X POST http://localhost:7145/graphql \
+curl -X POST http://localhost:7146/graphql \
   -H "Content-Type: application/json" \
   -d '{"query": "{ product(id: 999) { id name } }"}'
 ```
@@ -306,7 +306,7 @@ async def resolve_products_by_category(root, args):
 Create a product:
 
 ```bash
-curl -X POST http://localhost:7145/graphql \
+curl -X POST http://localhost:7146/graphql \
   -H "Content-Type: application/json" \
   -d '{
     "query": "mutation { createProduct(input: { name: \"Desk Lamp\", category: \"Office\", price: 39.99 }) { id name price } }"
@@ -328,7 +328,7 @@ curl -X POST http://localhost:7145/graphql \
 Update a product:
 
 ```bash
-curl -X POST http://localhost:7145/graphql \
+curl -X POST http://localhost:7146/graphql \
   -H "Content-Type: application/json" \
   -d '{
     "query": "mutation { updateProduct(id: 4, input: { price: 44.99, inStock: false }) { id name price inStock } }"
@@ -351,7 +351,7 @@ curl -X POST http://localhost:7145/graphql \
 Delete a product:
 
 ```bash
-curl -X POST http://localhost:7145/graphql \
+curl -X POST http://localhost:7146/graphql \
   -H "Content-Type: application/json" \
   -d '{
     "query": "mutation { deleteProduct(id: 4) { success message } }"
@@ -460,7 +460,7 @@ async def resolve_user_posts(user, args):
 Now clients can query across relationships in a single request:
 
 ```bash
-curl -X POST http://localhost:7145/graphql \
+curl -X POST http://localhost:7146/graphql \
   -H "Content-Type: application/json" \
   -d '{
     "query": "{ posts { id title author { name email } comments { authorName body } commentCount } }"
@@ -518,7 +518,7 @@ You can still define custom resolvers that override the auto-generated ones. Cus
 When `TINA4_DEBUG=true`, Tina4 serves a GraphiQL interactive playground at:
 
 ```
-http://localhost:7145/graphql/playground
+http://localhost:7146/graphql/playground
 ```
 
 GraphiQL gives you:
@@ -539,7 +539,7 @@ GraphiQL is only available when `TINA4_DEBUG=true`. In production, it is disable
 For production use, clients should send query variables separately from the query string. This prevents injection and allows query caching.
 
 ```bash
-curl -X POST http://localhost:7145/graphql \
+curl -X POST http://localhost:7146/graphql \
   -H "Content-Type: application/json" \
   -d '{
     "query": "query GetProduct($id: Int!) { product(id: $id) { id name price } }",
@@ -590,22 +590,22 @@ Build a complete GraphQL API for a blog with posts, authors, and comments.
 
 ```bash
 # List published posts with author names
-curl -X POST http://localhost:7145/graphql \
+curl -X POST http://localhost:7146/graphql \
   -H "Content-Type: application/json" \
   -d '{"query": "{ posts { id title author { name } commentCount } }"}'
 
 # Get a specific post with all comments
-curl -X POST http://localhost:7145/graphql \
+curl -X POST http://localhost:7146/graphql \
   -H "Content-Type: application/json" \
   -d '{"query": "{ post(id: 1) { title body author { name email } comments { authorName body } } }"}'
 
 # Create a post
-curl -X POST http://localhost:7145/graphql \
+curl -X POST http://localhost:7146/graphql \
   -H "Content-Type: application/json" \
   -d '{"query": "mutation { createPost(userId: 1, title: \"GraphQL is great\", body: \"Here is why...\", published: true) { id title } }"}'
 
 # Add a comment
-curl -X POST http://localhost:7145/graphql \
+curl -X POST http://localhost:7146/graphql \
   -H "Content-Type: application/json" \
   -d '{"query": "mutation { addComment(postId: 1, authorName: \"Carol\", body: \"Nice article!\") { id authorName } }"}'
 ```
@@ -1048,13 +1048,13 @@ class AuditedService(WSDL):
 Fetch the WSDL definition:
 
 ```bash
-curl http://localhost:7145/calculator?wsdl
+curl http://localhost:7146/calculator?wsdl
 ```
 
 Call the Add operation with a SOAP request:
 
 ```bash
-curl -X POST http://localhost:7145/calculator \
+curl -X POST http://localhost:7146/calculator \
   -H "Content-Type: text/xml" \
   -d '<?xml version="1.0" encoding="UTF-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">

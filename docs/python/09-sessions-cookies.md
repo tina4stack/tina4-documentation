@@ -458,33 +458,33 @@ PRODUCTS = {
 
 ```bash
 # Add items
-curl -X POST http://localhost:7145/cart/add \
+curl -X POST http://localhost:7146/cart/add \
   -H "Content-Type: application/json" \
   -d '{"product_id": 1, "quantity": 2}' \
   -c cookies.txt -b cookies.txt
 
-curl -X POST http://localhost:7145/cart/add \
+curl -X POST http://localhost:7146/cart/add \
   -H "Content-Type: application/json" \
   -d '{"product_id": 3, "quantity": 1}' \
   -c cookies.txt -b cookies.txt
 
 # View cart
-curl http://localhost:7145/cart/api -b cookies.txt
+curl http://localhost:7146/cart/api -b cookies.txt
 
 # Update quantity
-curl -X POST http://localhost:7145/cart/update \
+curl -X POST http://localhost:7146/cart/update \
   -H "Content-Type: application/json" \
   -d '{"product_id": 1, "quantity": 3}' \
   -c cookies.txt -b cookies.txt
 
 # Remove item
-curl -X POST http://localhost:7145/cart/remove \
+curl -X POST http://localhost:7146/cart/remove \
   -H "Content-Type: application/json" \
   -d '{"product_id": 3}' \
   -c cookies.txt -b cookies.txt
 
 # Clear cart
-curl -X POST http://localhost:7145/cart/clear -c cookies.txt -b cookies.txt
+curl -X POST http://localhost:7146/cart/clear -c cookies.txt -b cookies.txt
 ```
 
 ---
@@ -669,7 +669,7 @@ async def clear_cart(request, response):
 
 ### 3. Cookie not sent on cross-origin requests
 
-**Problem:** Your frontend at `http://localhost:3000` calls your API at `http://localhost:7145`, but cookies are not included.
+**Problem:** Your frontend at `http://localhost:3000` calls your API at `http://localhost:7146`, but cookies are not included.
 
 **Cause:** Browsers do not send cookies cross-origin by default. You need both CORS configuration and explicit `credentials: "include"` in fetch.
 

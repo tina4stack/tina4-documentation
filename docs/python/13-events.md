@@ -51,7 +51,7 @@ async def register_user(request, response):
 ```
 
 ```bash
-curl -X POST http://localhost:7145/api/users \
+curl -X POST http://localhost:7146/api/users \
   -H "Content-Type: application/json" \
   -d '{"email": "alice@example.com", "name": "Alice"}'
 ```
@@ -270,12 +270,12 @@ Build a user registration flow using events.
 
 ```bash
 # Register a user
-curl -X POST http://localhost:7145/api/register \
+curl -X POST http://localhost:7146/api/register \
   -H "Content-Type: application/json" \
   -d '{"email": "bob@example.com", "name": "Bob", "password": "secret"}'
 
 # Deactivate a user
-curl -X POST http://localhost:7145/api/users/42/deactivate
+curl -X POST http://localhost:7146/api/users/42/deactivate
 ```
 
 ---

@@ -24,7 +24,7 @@ Creating Tina4 project in ./my-project ...
   Created .gitignore
   Created src/routes/
   Created src/orm/
-  Created src/migrations/
+  Created migrations/
   Created src/seeds/
   Created src/templates/
   Created src/templates/errors/
@@ -101,7 +101,7 @@ tina4 serve
   |_| |_|_| |_|\__,_|  |_|
 
   Tina4 PHP v3.0.0
-  Server running at http://0.0.0.0:7146
+  Server running at http://0.0.0.0:7145
   Debug mode: ON
   Database: sqlite:///data/app.db
   Press Ctrl+C to stop
@@ -111,7 +111,7 @@ tina4 serve
 
 | Flag | Description | Example |
 |------|-------------|---------|
-| `--port` | Custom port (default: 7146) | `tina4 serve --port 8080` |
+| `--port` | Custom port (default: 7145) | `tina4 serve --port 8080` |
 | `--host` | Bind address (default: 0.0.0.0) | `tina4 serve --host 127.0.0.1` |
 | `--no-reload` | Disable live reload | `tina4 serve --no-reload` |
 
@@ -143,7 +143,7 @@ tina4 generate model Order
 
 ```
 Created src/orm/Order.php
-Created src/migrations/20260322100000_create_orders_table.sql
+Created migrations/20260322100000_create_orders_table.sql
 ```
 
 The generated model:
@@ -187,7 +187,7 @@ tina4 generate model Order --fields "userId:int,total:float,status:string,paid:b
 
 ```
 Created src/orm/Order.php
-Created src/migrations/20260322100000_create_orders_table.sql
+Created migrations/20260322100000_create_orders_table.sql
 ```
 
 The generated model now includes all the fields:
@@ -368,7 +368,7 @@ tina4 generate migration "add email to orders"
 ```
 
 ```
-Created src/migrations/20260322101500_add_email_to_orders.sql
+Created migrations/20260322101500_add_email_to_orders.sql
 ```
 
 The generated file:
@@ -617,15 +617,15 @@ Complete this in exactly 5 commands. After running them, test the API with curl 
 
 ```bash
 # Create a task
-curl -X POST http://localhost:7146/api/tasks \
+curl -X POST http://localhost:7145/api/tasks \
   -H "Content-Type: application/json" \
   -d '{"title": "Write chapter 19", "description": "CLI and scaffolding", "priority": "high", "user_id": 1}'
 
 # List tasks
-curl http://localhost:7146/api/tasks
+curl http://localhost:7145/api/tasks
 
 # Get one task
-curl http://localhost:7146/api/tasks/1
+curl http://localhost:7145/api/tasks/1
 ```
 
 ---
@@ -655,7 +655,7 @@ tina4 doctor
 
 ```
 Created src/orm/Task.php
-Created src/migrations/20260322140000_create_tasks_table.sql
+Created migrations/20260322140000_create_tasks_table.sql
 ```
 
 **Command 2 output:**
@@ -695,7 +695,7 @@ Tina4 Doctor - Environment Health Check
 **Test - create a task:**
 
 ```bash
-curl -X POST http://localhost:7146/api/tasks \
+curl -X POST http://localhost:7145/api/tasks \
   -H "Content-Type: application/json" \
   -d '{"title": "Write chapter 19", "description": "CLI and scaffolding", "priority": "high", "user_id": 1}'
 ```
@@ -747,7 +747,7 @@ From zero to a working CRUD API in 5 commands and under 2 minutes.
 
 **Problem:** `tina4 serve` fails with "Address already in use."
 
-**Cause:** Another process is using port 7146 (or whichever port you configured).
+**Cause:** Another process is using port 7145 (or whichever port you configured).
 
 **Fix:** Find and stop the other process, or use a different port:
 
@@ -758,7 +758,7 @@ tina4 serve --port 8080
 To find what is using the port:
 
 ```bash
-lsof -i :7146
+lsof -i :7145
 ```
 
 ### 5. CLI Not Found After Installation
@@ -798,7 +798,7 @@ tina4 books     # Download the complete Tina4 book (all languages) to tina4-book
 
 When `TINA4_DEBUG=true`, Tina4 automatically starts a second HTTP server on `port + 1000`:
 
-- **Main port** (e.g. 7146) — hot-reload enabled, for AI dev tools
+- **Main port** (e.g. 7145) — hot-reload enabled, for AI dev tools
 - **Test port** (e.g. 8146) — stable, no hot-reload, for user testing
 
 This prevents the browser from refreshing mid-test when AI tools edit files.

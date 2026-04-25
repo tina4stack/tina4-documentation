@@ -1,9 +1,3 @@
----
-outline: deep
----
-
-<div v-pre>
-
 # Chapter 10: Middleware
 
 ## 1. The Gatekeepers
@@ -88,7 +82,7 @@ Global middleware runs on every request, in the order registered.
 
 ## 3. Built-in CorsMiddleware
 
-CORS controls which domains can call your API. When React at `http://localhost:3000` calls your Tina4 API at `http://localhost:7146`, the browser sends a preflight `OPTIONS` request first. Wrong headers: the browser blocks everything.
+CORS controls which domains can call your API. When React at `http://localhost:3000` calls your Tina4 API at `http://localhost:7145`, the browser sends a preflight `OPTIONS` request first. Wrong headers: the browser blocks everything.
 
 Tina4 provides `CorsMiddleware`. Configure in `.env`:
 
@@ -114,7 +108,7 @@ The `beforeCors` method sets CORS response headers on every request. For `OPTION
 Test the preflight:
 
 ```bash
-curl -X OPTIONS http://localhost:7146/api/products \
+curl -X OPTIONS http://localhost:7145/api/products \
   -H "Origin: http://localhost:3000" \
   -H "Access-Control-Request-Method: POST" \
   -H "Access-Control-Request-Headers: Content-Type,Authorization" \
@@ -829,18 +823,18 @@ API_KEYS=key-alpha-001,key-beta-002,key-gamma-003
 
 ```bash
 # No key -- 401
-curl http://localhost:7146/api/partner/data
+curl http://localhost:7145/api/partner/data
 
 # Invalid key -- 403
-curl http://localhost:7146/api/partner/data \
+curl http://localhost:7145/api/partner/data \
   -H "X-API-Key: wrong-key"
 
 # Valid key -- 200
-curl http://localhost:7146/api/partner/data \
+curl http://localhost:7145/api/partner/data \
   -H "X-API-Key: key-alpha-001"
 
 # Valid key on another endpoint
-curl http://localhost:7146/api/partner/stats \
+curl http://localhost:7145/api/partner/stats \
   -H "X-API-Key: key-beta-002"
 ```
 
@@ -1010,7 +1004,7 @@ Router::post("/api/orders", function (Request $request, Response $response) {
 Test it without a token:
 
 ```bash
-curl -X POST http://localhost:7146/api/orders \
+curl -X POST http://localhost:7145/api/orders \
   -H "Content-Type: application/json" \
   -d '{"product": "widget"}'
 # 401 Unauthorized
@@ -1019,7 +1013,7 @@ curl -X POST http://localhost:7146/api/orders \
 Test it with a valid token:
 
 ```bash
-curl -X POST http://localhost:7146/api/orders \
+curl -X POST http://localhost:7145/api/orders \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9..." \
   -d '{"product": "widget"}'
@@ -1077,10 +1071,14 @@ Tina4 blocks this with form tokens.
 
 ### How It Works
 
+<div v-pre>
+
 1. Your template renders a hidden token using `{{ form_token() }}`.
 2. The browser submits the token with the form data.
 3. The `CsrfMiddleware` validates the token before the route handler runs.
 4. Invalid or missing tokens receive a `403 Forbidden` response.
+
+</div>
 
 ### The Template
 
@@ -1092,7 +1090,11 @@ Tina4 blocks this with form tokens.
 </form>
 ```
 
+<div v-pre>
+
 The `{{ form_token() }}` call generates a hidden input field containing a signed JWT. The token is bound to the current session — a token from one session cannot be used in another.
+
+</div>
 
 ### The Middleware
 
@@ -1157,7 +1159,11 @@ Leave it enabled for anything a browser can reach. The cost is one hidden field 
 
 A form token alone prevents cross-site forgery. But what if someone steals a token from a form? Session binding stops them.
 
+<div v-pre>
+
 When `{{ form_token() }}` generates a token, it embeds the current session ID in the JWT payload. The CSRF middleware checks that the session ID in the token matches the session ID of the request. A token stolen from one session cannot be replayed in another.
+
+</div>
 
 This happens automatically. No configuration. No extra code.
 
@@ -1564,10 +1570,14 @@ Prefer external scripts. Inline scripts are an XSS vector.
 Build a public contact form that:
 
 1. Does not require login (`->noAuth()`).
+<div v-pre>
+
 2. Validates CSRF tokens (form includes `{{ form_token() }}`).
 3. Rate-limits submissions to 3 per minute per IP.
 4. Stores messages in the database.
 5. Returns a success message.
+
+</div>
 
 ### Solution
 
@@ -1639,6 +1649,3 @@ Router::post("/api/contact", function (Request $request, Response $response) {
 The form is public. The CSRF token is present. The `->noAuth()` call opens the route. The middleware validates the token. The database stores the message. The user sees confirmation.
 
 Five moving parts. Zero security holes. The framework handles the rest.
-
-
-</div>

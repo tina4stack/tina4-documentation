@@ -24,7 +24,7 @@ Creating Tina4 project in ./my-project ...
   Created .gitignore
   Created src/routes/
   Created src/orm/
-  Created src/migrations/
+  Created migrations/
   Created src/seeds/
   Created src/templates/
   Created src/templates/errors/
@@ -111,7 +111,7 @@ tina4 serve
   Press Ctrl+C to stop
 ```
 
-`tina4 serve` detects the language and starts the appropriate server. For Node.js, it runs `npx tsx app.ts` with live reload enabled.
+`tina4 serve` detects the language and starts the appropriate server. For Node.js, it spawns the Tina4 Node.js runtime with SCSS compilation, file watching, and live reload all wired in.
 
 ### Options
 
@@ -121,15 +121,15 @@ tina4 serve --host 127.0.0.1   # Bind to localhost only
 tina4 serve --production       # Production mode (no live reload, debug off)
 ```
 
-### Direct Node.js Execution
+### Bypassing the CLI
 
-You can start the server with Node.js directly:
+The framework refuses to start without the Rust CLI. For sandboxed environments (Docker images, CI runners) set `TINA4_OVERRIDE_CLIENT=true` in `.env` and only then run:
 
 ```bash
-npx tsx app.ts
+TINA4_OVERRIDE_CLIENT=true npx tsx app.ts
 ```
 
-This is identical to `tina4 serve` but gives you more control over the Node.js runtime.
+This bypasses SCSS compilation and live reload — use it only when the Rust CLI is genuinely unavailable.
 
 ---
 
@@ -143,7 +143,7 @@ tina4 generate model Product
 
 ```
 Created src/orm/Product.ts
-Created src/migrations/20260322120000_create_products_table.sql
+Created migrations/20260322120000_create_products_table.sql
 ```
 
 The generated model:
@@ -350,7 +350,7 @@ tina4 generate migration add_category_to_products
 ```
 
 ```
-Created src/migrations/20260322120500_add_category_to_products.sql
+Created migrations/20260322120500_add_category_to_products.sql
 ```
 
 The generated file:
@@ -434,7 +434,7 @@ tina4 generate model Product --with-route --with-migration
 ```
 Created src/orm/Product.ts
 Created src/routes/products.ts
-Created src/migrations/20260322120000_create_products_table.sql
+Created migrations/20260322120000_create_products_table.sql
 ```
 
 Model. CRUD routes. Migration. All wired together. Ready to use.
@@ -463,7 +463,7 @@ Tina4 Doctor -- Checking your project...
   [OK] src/templates/ directory exists (5 templates)
   [OK] src/public/ directory exists (static files served)
   [OK] tests/ directory exists (4 test files)
-  [WARN] No migrations found in src/migrations/
+  [WARN] No migrations found in migrations/
   [OK] AI context: Claude Code detected, CLAUDE.md present
   [OK] .gitignore includes .env, data/, logs/
 

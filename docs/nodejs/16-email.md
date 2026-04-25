@@ -1,9 +1,3 @@
----
-outline: deep
----
-
-<div v-pre>
-
 # Chapter 16: Email with Messenger
 
 ## 1. Every App Sends Email
@@ -969,7 +963,11 @@ The HTML response includes the success flash message.
 
 ### 6. Email Template Variables Not Substituted
 
+<div v-pre>
+
 **Problem:** The email body shows `{{ name }}` literally instead of the user's name.
+
+</div>
 
 **Cause:** You passed the raw template file content instead of rendering it through the template engine.
 
@@ -990,6 +988,3 @@ The HTML response includes the success flash message.
 **Cause:** You did not set `TINA4_MAIL_IMAP_HOST` in `.env` or pass `imapHost` to the constructor.
 
 **Fix:** Add `TINA4_MAIL_IMAP_HOST=imap.example.com` and `TINA4_MAIL_IMAP_PORT=993` to `.env`. The IMAP host is separate from the SMTP host -- many providers use different hostnames for sending and reading.
-
-
-</div>

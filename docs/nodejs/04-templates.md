@@ -1,9 +1,3 @@
----
-outline: deep
----
-
-<div v-pre>
-
 # Chapter 4: Templates
 
 ## 1. Why Templates
@@ -107,7 +101,11 @@ This works with any callable property. Arguments are evaluated as expressions, s
 
 ### Expressions
 
+<div v-pre>
+
 Basic expressions work inside `{{ }}`:
+
+</div>
 
 ```html
 <p>Total: ${{ price * quantity }}</p>
@@ -188,7 +186,11 @@ Router.get("/about", async (req, res) => {
 });
 ```
 
+<div v-pre>
+
 ### Using `{{ parent() }}`
+
+</div>
 
 Add to a block rather than replace it:
 
@@ -210,7 +212,11 @@ Add to a block rather than replace it:
 
 ## 4. Includes
 
+<div v-pre>
+
 Break templates into reusable pieces with `{% include %}`:
+
+</div>
 
 Create `src/templates/partials/header.twig`:
 
@@ -270,7 +276,11 @@ Use `only` to isolate the included template from the parent scope:
 
 ## 5. For Loops
 
+<div v-pre>
+
 Loop through arrays with `{% for %}`:
+
+</div>
 
 ```html
 <ul>
@@ -312,7 +322,11 @@ Inside a for loop, Frond provides a special `loop` variable:
 
 ### Empty Lists
 
+<div v-pre>
+
 Handle empty lists with `{% else %}`:
+
+</div>
 
 ```html
 {% for product in products %}
@@ -365,7 +379,11 @@ Handle empty lists with `{% else %}`:
 {% endif %}
 ```
 
+<div v-pre>
+
 ### {% set %} -- Local Variables
+
+</div>
 
 Create or update a variable inside a template:
 
@@ -402,6 +420,8 @@ Filters transform values. Apply them with the `|` (pipe) character.
 
 | Filter | Example | Description |
 |--------|---------|-------------|
+<div v-pre>
+
 | `upper` | `{{ name \| upper }}` | Convert to uppercase |
 | `lower` | `{{ name \| lower }}` | Convert to lowercase |
 | `capitalize` | `{{ name \| capitalize }}` | Capitalize first letter |
@@ -416,10 +436,14 @@ Filters transform values. Apply them with the `|` (pipe) character.
 | `striptags` | `{{ html \| striptags }}` | Remove all HTML tags |
 | `replace("a", "b")` | `{{ text \| replace("old", "new") }}` | Replace occurrences of a substring |
 
+</div>
+
 #### Array Filters
 
 | Filter | Example | Description |
 |--------|---------|-------------|
+<div v-pre>
+
 | `length` | `{{ items \| length }}` | Count items in array or string length |
 | `reverse` | `{{ items \| reverse }}` | Reverse order of items |
 | `sort` | `{{ items \| sort }}` | Sort items ascending |
@@ -435,10 +459,14 @@ Filters transform values. Apply them with the `|` (pipe) character.
 | `batch(3)` | `{{ items \| batch(3) }}` | Group items into batches of N |
 | `slice(0, 3)` | `{{ items \| slice(0, 3) }}` | Extract a slice from offset with length |
 
+</div>
+
 #### Encoding Filters
 
 | Filter | Example | Description |
 |--------|---------|-------------|
+<div v-pre>
+
 | `escape` (`e`) | `{{ text \| escape }}` | HTML-escape special characters |
 | `raw` (`safe`) | `{{ html \| raw }}` | Output without auto-escaping |
 | `url_encode` | `{{ text \| url_encode }}` | URL-encode a string |
@@ -447,10 +475,14 @@ Filters transform values. Apply them with the `|` (pipe) character.
 | `md5` | `{{ text \| md5 }}` | Compute MD5 hash |
 | `sha256` | `{{ text \| sha256 }}` | Compute SHA-256 hash |
 
+</div>
+
 #### Numeric Filters
 
 | Filter | Example | Description |
 |--------|---------|-------------|
+<div v-pre>
+
 | `abs` | `{{ num \| abs }}` | Absolute value |
 | `round(2)` | `{{ price \| round(2) }}` | Round to N decimal places |
 | `number_format(2)` | `{{ price \| number_format(2) }}` | Format with decimals and thousands separator |
@@ -458,27 +490,39 @@ Filters transform values. Apply them with the `|` (pipe) character.
 | `float` | `{{ val \| float }}` | Cast to float |
 | `string` | `{{ val \| string }}` | Cast to string |
 
+</div>
+
 #### JSON Filters
 
 | Filter | Example | Description |
 |--------|---------|-------------|
+<div v-pre>
+
 | `json_encode` | `{{ data \| json_encode }}` | Encode value as JSON string |
 | `to_json` (`tojson`) | `{{ data \| to_json }}` | Encode value as JSON string (alias) |
 | `json_decode` | `{{ str \| json_decode }}` | Decode JSON string to object |
 | `js_escape` | `{{ text \| js_escape }}` | Escape string for safe use in JavaScript |
 
+</div>
+
 #### Dict Filters
 
 | Filter | Example | Description |
 |--------|---------|-------------|
+<div v-pre>
+
 | `keys` | `{{ obj \| keys }}` | Get dictionary keys as array |
 | `values` | `{{ obj \| values }}` | Get dictionary values as array |
 | `merge(other)` | `{{ defaults \| merge(overrides) }}` | Merge two dictionaries |
+
+</div>
 
 #### Other Filters
 
 | Filter | Example | Description |
 |--------|---------|-------------|
+<div v-pre>
+
 | `default("fallback")` | `{{ name \| default("Guest") }}` | Fallback when value is empty or undefined |
 | `date("Y-m-d")` | `{{ created \| date("Y-m-d") }}` | Format a date value |
 | `format(val)` | `{{ "%.2f" \| format(price) }}` | Format string with value (sprintf-style) |
@@ -488,6 +532,8 @@ Filters transform values. Apply them with the `|` (pipe) character.
 | `formTokenValue` | `{{ formTokenValue("context") }}` | Return just the raw JWT token string |
 | `to_json` | `{{ data \| to_json }}` | JSON-encode a value (safe, no double-escaping) |
 | `js_escape` | `{{ text \| js_escape }}` | Escape for safe use in JavaScript strings |
+
+</div>
 
 ### Chaining Filters
 
@@ -522,7 +568,11 @@ Both produce the same `<pre>`-wrapped, HTML-escaped inspection of the value. Unl
 {# <pre>Order { id: 42, items: [...], total: 99.99 }</pre> #}
 ```
 
+<div v-pre>
+
 **dump is gated on `TINA4_DEBUG=true`.** In production (env var unset or `false`) **both** the filter and function form silently return an empty `SafeString`. This prevents accidental leaks of internal state, object shapes, or sensitive values into rendered HTML if a developer leaves a `{{ dump(x) }}` call in a template.
+
+</div>
 
 ```bash
 # .env — dev
@@ -589,9 +639,17 @@ Create `src/templates/macros.twig`:
 
 ## 9. Special Tags
 
+<div v-pre>
+
 ### {% raw %} -- Literal Output
 
+</div>
+
+<div v-pre>
+
 When you need to output literal `{{ }}` (for a Vue.js template, for example):
+
+</div>
 
 ```html
 {% raw %}
@@ -601,7 +659,11 @@ When you need to output literal `{{ }}` (for a Vue.js template, for example):
 {% endraw %}
 ```
 
+<div v-pre>
+
 ### {% spaceless %} -- Remove Whitespace Between Tags
+
+</div>
 
 The `spaceless` tag strips whitespace between HTML tags. Useful for inline elements where whitespace affects layout:
 
@@ -622,9 +684,17 @@ Output:
 
 Only whitespace between tags is removed. Whitespace inside text content stays intact.
 
+<div v-pre>
+
 ### {% autoescape %} -- Control HTML Escaping
 
+</div>
+
+<div v-pre>
+
 By default, Frond escapes HTML in `{{ }}` output to prevent XSS attacks. The `autoescape` tag controls this behavior for a block:
+
+</div>
 
 ```html
 {% autoescape false %}
@@ -655,7 +725,11 @@ Use hyphens in tag delimiters to trim whitespace:
 {%- endif -%}
 ```
 
+<div v-pre>
+
 The `-` on the left trims whitespace before the tag. The `-` on the right trims whitespace after the tag. Works with `{{ }}`, `{% %}`, and `{# #}` delimiters.
+
+</div>
 
 ### Comments
 
@@ -881,21 +955,41 @@ Router.get("/catalog", async (req, res) => {
 
 ## 13. Gotchas
 
+<div v-pre>
+
 ### 1. `{% extends %}` Must Be the First Tag
+
+</div>
 
 **Problem:** Template inheritance does not work. The page renders without the base layout.
 
+<div v-pre>
+
 **Cause:** `{% extends "base.twig" %}` must be the first tag in the template. No exceptions.
+
+</div>
+
+<div v-pre>
 
 **Fix:** Make `{% extends %}` the absolute first thing in the file.
 
+</div>
+
 ### 2. Undefined Variables Show Nothing
+
+<div v-pre>
 
 **Problem:** `{{ username }}` renders as empty instead of showing an error.
 
+</div>
+
 **Cause:** Frond outputs nothing for undefined variables. By design.
 
+<div v-pre>
+
 **Fix:** Use the `default` filter: `{{ username | default("Guest") }}`.
+
+</div>
 
 ### 3. Auto-Escaping Prevents HTML Output
 
@@ -903,23 +997,43 @@ Router.get("/catalog", async (req, res) => {
 
 **Cause:** Auto-escaping converts `<` to `&lt;` for security.
 
+<div v-pre>
+
 **Fix:** For trusted content, use `{{ content | raw }}`. Never use `raw` on user-supplied input.
+
+</div>
 
 ### 4. Variable Scope in Includes
 
+<div v-pre>
+
 **Problem:** A variable defined inside a `{% for %}` loop is not accessible after the loop ends.
+
+</div>
 
 **Cause:** Loop variables are scoped to the loop.
 
+<div v-pre>
+
 **Fix:** Use `{% set %}` before the loop to accumulate values.
+
+</div>
 
 ### 5. Macro Arguments Are Positional
 
+<div v-pre>
+
 **Problem:** Calling `{{ button("Click", style="danger") }}` does not work.
+
+</div>
 
 **Cause:** Frond macros use positional arguments, not keyword arguments.
 
+<div v-pre>
+
 **Fix:** Pass arguments in the order defined: `{{ button("Click", "/url", "danger") }}`.
+
+</div>
 
 ### 6. Template File Extension Does Not Matter
 
@@ -931,11 +1045,16 @@ Router.get("/catalog", async (req, res) => {
 
 ### 7. Filters Are Not JavaScript Functions
 
+<div v-pre>
+
 **Problem:** You try `{{ items | count }}` or `{{ name | toUpperCase }}` and get an error.
+
+</div>
 
 **Cause:** Frond filters follow Twig conventions, not JavaScript conventions.
 
-**Fix:** Use `{{ items | length }}` instead of `count`. Use `{{ name | upper }}` instead of `toUpperCase`.
+<div v-pre>
 
+**Fix:** Use `{{ items | length }}` instead of `count`. Use `{{ name | upper }}` instead of `toUpperCase`.
 
 </div>

@@ -100,6 +100,40 @@ print('\n'.join(result), end='')
 "
 }
 
+# Rewrite cross-book relative paths to VitePress absolute paths.
+#
+# In tina4-book the chapters live at book-N-NAME/chapters/X.md, so a link
+# like ../../book-0-understanding/chapters/04-environment-variables.md
+# resolves correctly across books. After sync, the file is at
+# docs/<section>/X.md and that relative path is broken — there's no
+# docs/book-0-understanding/.
+#
+# We map each book to its docs section and rewrite the link to an
+# absolute /<section>/X.md form that VitePress resolves at site root.
+rewrite_crossbook_paths() {
+  python3 -c "
+import re, sys
+BOOK_TO_SECTION = {
+    'book-0-understanding': 'general',
+    'book-1-python':        'python',
+    'book-2-php':           'php',
+    'book-3-ruby':          'ruby',
+    'book-4-nodejs':        'nodejs',
+    'book-5-javascript':    'js',
+    'book-6-delphi':        'delphi',
+}
+text = sys.stdin.read()
+def repl(m):
+    book, rest = m.group(1), m.group(2)
+    section = BOOK_TO_SECTION.get(book)
+    if section is None:
+        return m.group(0)
+    return f']( /{section}/{rest})'.replace('( /', '(/')  # no extra space
+text = re.sub(r'\]\(\.\./\.\./(book-[0-9]+-[a-z]+)/chapters/([^)]+)\)', repl, text)
+sys.stdout.write(text)
+"
+}
+
 sync_book() {
   local book="$1"
   local section="$2"
@@ -119,7 +153,10 @@ sync_book() {
   local count=0
   for chapter in "$src"/[0-9]*.md; do
     [ -f "$chapter" ] || continue
-    escape_twig < "$chapter" | sed 's/^```env$/```bash/' > "$dest/$(basename "$chapter")"
+    rewrite_crossbook_paths < "$chapter" \
+      | escape_twig \
+      | sed 's/^```env$/```bash/' \
+      > "$dest/$(basename "$chapter")"
     count=$((count + 1))
   done
 

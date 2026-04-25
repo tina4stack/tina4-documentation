@@ -11,10 +11,12 @@ This chapter builds that dashboard from scratch. It uses every tina4-js module: 
 ## 1. Project Setup
 
 ```bash
-npx tina4js create admin-dashboard --css
+tina4 init js admin-dashboard
 cd admin-dashboard
 npm install
 ```
+
+> The Rust CLI `tina4 init js` does not yet accept `--css`. To pull in Tina4 CSS, either add `tina4-css` to `package.json` after scaffolding, or use the npm-only fallback `npx tina4js create admin-dashboard --css` which wires it in automatically.
 
 We will build this structure:
 

@@ -615,9 +615,9 @@ When you run multiple Tina4 instances, Nginx distributes traffic across them:
 ```nginx
 upstream tina4_backend {
     server 127.0.0.1:7146;
-    server 127.0.0.1:7146;
-    server 127.0.0.1:7147;
-    server 127.0.0.1:7148;
+    server 127.0.0.1:7246;
+    server 127.0.0.1:7346;
+    server 127.0.0.1:7446;
 }
 
 server {
@@ -634,13 +634,13 @@ server {
 }
 ```
 
-Start four instances on different ports:
+Start four instances on different ports. The framework refuses to start without the Rust CLI unless `TINA4_OVERRIDE_CLIENT=true`, so for a multi-process setup either set that override or run each instance through `tina4 serve --port`:
 
 ```bash
-TINA4_PORT=7146 uv run python app.py &
-TINA4_PORT=7146 uv run python app.py &
-TINA4_PORT=7147 uv run python app.py &
-TINA4_PORT=7148 uv run python app.py &
+TINA4_PORT=7146 tina4 serve --port 7146 &
+TINA4_PORT=7246 tina4 serve --port 7246 &
+TINA4_PORT=7346 tina4 serve --port 7346 &
+TINA4_PORT=7446 tina4 serve --port 7446 &
 ```
 
 Nginx distributes requests in round-robin order by default. If a backend goes down, Nginx routes traffic to the remaining instances.
@@ -765,9 +765,9 @@ Uptime monitoring tells you the app is running. APM tells you how well it perfor
 
 Since Tina4 Python runs on standard Python, any Python APM agent works:
 
-- **Datadog APM**: `uv add ddtrace` and run with `ddtrace-run uv run python app.py`
-- **New Relic**: `uv add newrelic` and run with `newrelic-admin run-program uv run python app.py`
-- **Elastic APM**: `uv add elastic-apm` and configure in your app startup
+- **Datadog APM**: `uv add ddtrace` and run with `TINA4_OVERRIDE_CLIENT=true ddtrace-run uv run tina4 serve` (the override is required because APM wrappers spawn Python directly rather than going through the Rust CLI)
+- **New Relic**: `uv add newrelic` and run with `TINA4_OVERRIDE_CLIENT=true newrelic-admin run-program uv run tina4 serve`
+- **Elastic APM**: `uv add elastic-apm` and configure in your app startup, then `TINA4_OVERRIDE_CLIENT=true tina4 serve --production`
 
 A basic monitoring stack for a small team: Uptime Robot for availability alerts (free tier covers it), JSON logs shipped to Grafana Loki for debugging, and `docker stats` for resource usage. Add APM when your application serves enough traffic to warrant the cost.
 

@@ -71,7 +71,7 @@ Zero-config development server. Start with one command.
 
 ```bash
 tina4 serve
-# Listening on http://localhost:7146
+# Listening on http://localhost:7145
 ```
 
 ### 7. Request Object
@@ -125,7 +125,7 @@ TINA4_CORS_METHODS=GET,POST,PUT,DELETE
 Built-in `GET /__health`. Returns `{"status":"ok"}`. Ready for load balancer checks.
 
 ```bash
-curl http://localhost:7146/__health
+curl http://localhost:7145/__health
 # {"status":"ok","version":"3.10.55"}
 ```
 
@@ -546,7 +546,7 @@ tina4 migrate --rollback
 ```
 
 ```php
-// src/migrations/0001_create_products.php
+// migrations/0001_create_products.php
 return [
     'up'   => "CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT, price REAL)",
     'down' => "DROP TABLE products"

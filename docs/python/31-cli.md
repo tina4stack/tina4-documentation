@@ -24,7 +24,7 @@ Creating Tina4 project in ./my-project ...
   Created .gitignore
   Created src/routes/
   Created src/orm/
-  Created src/migrations/
+  Created migrations/
   Created src/seeds/
   Created src/templates/
   Created src/templates/errors/
@@ -105,13 +105,13 @@ tina4 serve
 
 ```
   Tina4 Python v3.0.0
-  HTTP server running at http://0.0.0.0:7145
-  WebSocket server running at ws://0.0.0.0:7145
+  HTTP server running at http://0.0.0.0:7146
+  WebSocket server running at ws://0.0.0.0:7146
   Live reload enabled
   Press Ctrl+C to stop
 ```
 
-`tina4 serve` detects the language and starts the appropriate server. For Python, it runs `uv run python app.py` with live reload enabled.
+`tina4 serve` detects the language and starts the appropriate server. For Python, it spawns the Tina4 Python runtime with SCSS compilation, file watching, and live reload all wired in.
 
 ### Options
 
@@ -121,15 +121,15 @@ tina4 serve --host 127.0.0.1   # Bind to localhost only
 tina4 serve --production       # Production mode (no live reload, debug off)
 ```
 
-### Direct Python Execution
+### Bypassing the CLI
 
-You can start the server with Python:
+The framework refuses to start without the Rust CLI. For sandboxed environments (Docker images that already wrap the framework, CI runners, APM agents that wrap the Python process directly) set `TINA4_OVERRIDE_CLIENT=true` in `.env` and only then run:
 
 ```bash
-uv run python app.py
+TINA4_OVERRIDE_CLIENT=true uv run python app.py
 ```
 
-This is identical to `tina4 serve` but gives you more control over the Python runtime.
+This bypasses SCSS compilation and live reload — use it only when the Rust CLI is genuinely unavailable.
 
 ---
 
@@ -143,7 +143,7 @@ tina4 generate model Product
 
 ```
 Created src/orm/product.py
-Created src/migrations/20260322120000_create_products_table.sql
+Created migrations/20260322120000_create_products_table.sql
 ```
 
 The generated model:
@@ -345,7 +345,7 @@ tina4 generate migration add_category_to_products
 ```
 
 ```
-Created src/migrations/20260322120500_add_category_to_products.sql
+Created migrations/20260322120500_add_category_to_products.sql
 ```
 
 The generated file:
@@ -424,7 +424,7 @@ tina4 generate model Product --with-route --with-migration
 ```
 Created src/orm/product.py
 Created src/routes/products.py
-Created src/migrations/20260322120000_create_products_table.sql
+Created migrations/20260322120000_create_products_table.sql
 ```
 
 Model. CRUD routes. Migration. All wired together. Ready to use.
@@ -453,7 +453,7 @@ Tina4 Doctor -- Checking your project...
   [OK] src/templates/ directory exists (5 templates)
   [OK] src/public/ directory exists (static files served)
   [OK] tests/ directory exists (4 test files)
-  [WARN] No migrations found in src/migrations/
+  [WARN] No migrations found in migrations/
   [OK] AI context: Claude Code detected, CLAUDE.md present
   [OK] .gitignore includes .env, data/, logs/
 
@@ -703,7 +703,7 @@ tina4 doctor
 Now test the API:
 
 ```bash
-curl -X POST http://localhost:7145/api/customers \
+curl -X POST http://localhost:7146/api/customers \
   -H "Content-Type: application/json" \
   -d '{"name": "Alice Corp", "email": "alice@corp.com", "phone": "+1-555-0100", "company": "Alice Corp"}'
 ```
@@ -764,9 +764,9 @@ source ~/.zshrc
 
 ### 5. tina4 serve Uses Wrong Port
 
-**Problem:** `tina4 serve` starts on port 7145 but you need port 8080.
+**Problem:** `tina4 serve` starts on port 7146 but you need port 8080.
 
-**Cause:** The default port is 7145 unless overridden.
+**Cause:** The default port is 7146 unless overridden.
 
 **Fix:** Set it in `.env`: `TINA4_PORT=8080`. Or pass it as a flag: `tina4 serve --port 8080`. The `.env` value takes precedence over the default. The command-line flag overrides everything.
 
@@ -811,7 +811,7 @@ tina4 books     # Download the complete Tina4 book (all languages) to tina4-book
 
 When `TINA4_DEBUG=true`, Tina4 automatically starts a second HTTP server on `port + 1000`:
 
-- **Main port** (e.g. 7145) — hot-reload enabled, for AI dev tools
+- **Main port** (e.g. 7146) — hot-reload enabled, for AI dev tools
 - **Test port** (e.g. 8145) — stable, no hot-reload, for user testing
 
 This prevents the browser from refreshing mid-test when AI tools edit files.

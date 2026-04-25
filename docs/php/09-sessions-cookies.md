@@ -71,7 +71,7 @@ Router::get("/visit-counter", function ($request, $response) {
 ```
 
 ```bash
-curl http://localhost:7146/visit-counter -c cookies.txt -b cookies.txt
+curl http://localhost:7145/visit-counter -c cookies.txt -b cookies.txt
 ```
 
 ```json
@@ -79,7 +79,7 @@ curl http://localhost:7146/visit-counter -c cookies.txt -b cookies.txt
 ```
 
 ```bash
-curl http://localhost:7146/visit-counter -c cookies.txt -b cookies.txt
+curl http://localhost:7145/visit-counter -c cookies.txt -b cookies.txt
 ```
 
 ```json
@@ -87,7 +87,7 @@ curl http://localhost:7146/visit-counter -c cookies.txt -b cookies.txt
 ```
 
 ```bash
-curl http://localhost:7146/visit-counter -c cookies.txt -b cookies.txt
+curl http://localhost:7145/visit-counter -c cookies.txt -b cookies.txt
 ```
 
 ```json
@@ -568,37 +568,37 @@ A cart stored entirely in session data. No database.
 
 ```bash
 # Add first item
-curl -X POST http://localhost:7146/api/cart/add \
+curl -X POST http://localhost:7145/api/cart/add \
   -H "Content-Type: application/json" \
   -d '{"product_id": 1, "name": "Wireless Keyboard", "price": 79.99, "quantity": 1}' \
   -c cookies.txt -b cookies.txt
 
 # Add second item
-curl -X POST http://localhost:7146/api/cart/add \
+curl -X POST http://localhost:7145/api/cart/add \
   -H "Content-Type: application/json" \
   -d '{"product_id": 2, "name": "USB-C Hub", "price": 49.99, "quantity": 2}' \
   -c cookies.txt -b cookies.txt
 
 # Add more of item 1 (increments, no duplicate)
-curl -X POST http://localhost:7146/api/cart/add \
+curl -X POST http://localhost:7145/api/cart/add \
   -H "Content-Type: application/json" \
   -d '{"product_id": 1, "name": "Wireless Keyboard", "price": 79.99, "quantity": 1}' \
   -c cookies.txt -b cookies.txt
 
 # View cart
-curl http://localhost:7146/api/cart -b cookies.txt
+curl http://localhost:7145/api/cart -b cookies.txt
 
 # Update quantity
-curl -X PUT http://localhost:7146/api/cart/2 \
+curl -X PUT http://localhost:7145/api/cart/2 \
   -H "Content-Type: application/json" \
   -d '{"quantity": 5}' \
   -c cookies.txt -b cookies.txt
 
 # Remove item
-curl -X DELETE http://localhost:7146/api/cart/1 -b cookies.txt -c cookies.txt
+curl -X DELETE http://localhost:7145/api/cart/1 -b cookies.txt -c cookies.txt
 
 # Clear cart
-curl -X DELETE http://localhost:7146/api/cart -b cookies.txt -c cookies.txt
+curl -X DELETE http://localhost:7145/api/cart -b cookies.txt -c cookies.txt
 ```
 
 ---

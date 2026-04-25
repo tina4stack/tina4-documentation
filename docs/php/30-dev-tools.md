@@ -19,7 +19,7 @@ TINA4_DEBUG=true
 Restart your server and navigate to:
 
 ```
-http://localhost:7146/__dev
+http://localhost:7145/__dev
 ```
 
 No token or additional environment variables needed. The dashboard runs only when debug mode is on. Set `TINA4_DEBUG=false` in production and the entire dashboard disappears.
@@ -396,7 +396,7 @@ Router::get("/api/orders/summary", function ($request, $response) {
 ### Task
 
 1. Start the dev server with `tina4 serve`.
-2. Visit `http://localhost:7146/api/orders/summary`.
+2. Visit `http://localhost:7145/api/orders/summary`.
 3. Observe the error overlay.
 4. Use the error overlay to identify the exact line and cause of the error.
 5. Fix both bugs:

@@ -842,7 +842,7 @@ async def admin_dashboard(request, response):
     return response(template("dashboard.html", stats=stats, recent_orders=recent_orders))
 ```
 
-Start the server and visit `http://localhost:7145/admin`. You see a sidebar, stat cards, a data table, quick action buttons, and system health progress bars. Zero npm dependencies.
+Start the server and visit `http://localhost:7146/admin`. You see a sidebar, stat cards, a data table, quick action buttons, and system health progress bars. Zero npm dependencies.
 
 ---
 
@@ -1184,11 +1184,11 @@ Build an admin dashboard for a product management system.
 
 ### Test by:
 
-1. Visit `http://localhost:7145/admin` -- see the dashboard with stats, orders, and progress bars
+1. Visit `http://localhost:7146/admin` -- see the dashboard with stats, orders, and progress bars
 2. Click "Dark Mode" -- the entire page switches to dark theme
 3. Refresh the page -- dark mode persists
 4. Resize the browser to mobile width -- the sidebar collapses
-5. Visit `http://localhost:7145/admin/users` -- see the user table loaded via AJAX
+5. Visit `http://localhost:7146/admin/users` -- see the user table loaded via AJAX
 
 ---
 

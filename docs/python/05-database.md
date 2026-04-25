@@ -374,7 +374,7 @@ async def import_notes(request, response):
 ```
 
 ```bash
-curl -X POST http://localhost:7145/api/notes/import \
+curl -X POST http://localhost:7146/api/notes/import \
   -H "Content-Type: application/json" \
   -d '{"notes": [{"title": "Note 1", "content": "First"}, {"title": "Note 2", "content": "Second"}, {"title": "Note 3", "content": "Third"}]}'
 ```
@@ -699,33 +699,33 @@ Build a complete notes application API with database persistence.
 
 ```bash
 # Create notes
-curl -X POST http://localhost:7145/api/notes \
+curl -X POST http://localhost:7146/api/notes \
   -H "Content-Type: application/json" \
   -d '{"title": "Shopping List", "content": "Milk, eggs, bread", "category": "personal"}'
 
-curl -X POST http://localhost:7145/api/notes \
+curl -X POST http://localhost:7146/api/notes \
   -H "Content-Type: application/json" \
   -d '{"title": "Sprint Planning", "content": "Review backlog, assign tasks", "category": "work", "pinned": true}'
 
 # List all
-curl http://localhost:7145/api/notes
+curl http://localhost:7146/api/notes
 
 # Filter by category
-curl "http://localhost:7145/api/notes?category=work"
+curl "http://localhost:7146/api/notes?category=work"
 
 # Filter by pinned
-curl "http://localhost:7145/api/notes?pinned=true"
+curl "http://localhost:7146/api/notes?pinned=true"
 
 # Get categories
-curl http://localhost:7145/api/notes/categories
+curl http://localhost:7146/api/notes/categories
 
 # Update
-curl -X PUT http://localhost:7145/api/notes/1 \
+curl -X PUT http://localhost:7146/api/notes/1 \
   -H "Content-Type: application/json" \
   -d '{"title": "Updated Shopping List", "content": "Milk, eggs, bread, butter"}'
 
 # Delete
-curl -X DELETE http://localhost:7145/api/notes/2
+curl -X DELETE http://localhost:7146/api/notes/2
 ```
 
 ---

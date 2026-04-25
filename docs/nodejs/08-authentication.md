@@ -1,9 +1,3 @@
----
-outline: deep
----
-
-<div v-pre>
-
 # Chapter 8: Authentication
 
 ## 1. Locking the Door
@@ -508,7 +502,11 @@ In your template, include the CSRF token in every form:
 </form>
 ```
 
+<div v-pre>
+
 `{{ form_token() }}` renders a hidden input field:
+
+</div>
 
 ```html
 <input type="hidden" name="_token" value="abc123randomtoken456">
@@ -722,7 +720,7 @@ curl http://localhost:7148/api/profile
 
 ### Migration
 
-Create `src/migrations/20260322160000_create_users_table.sql`:
+Create `migrations/20260322160000_create_users_table.sql`:
 
 ```sql
 -- UP
@@ -1006,6 +1004,3 @@ Router.put("/api/profile/password", async (req, res) => {
 **Cause:** Query parameters are visible in many places where headers are not.
 
 **Fix:** Always send tokens in the `Authorization` header, never in the URL. The only exception is WebSocket connections, where the initial HTTP upgrade request cannot carry custom headers -- use a short-lived token for that case.
-
-
-</div>

@@ -8,7 +8,7 @@ A reference of all 45 features in Tina4 Ruby, grouped by category.
 
 | # | Feature | Class / Method | Description |
 |---|---------|---------------|-------------|
-| 1 | HTTP Server | `Tina4::Server` | Zero-dependency HTTP server. Starts with `tina4 server` or `ruby app.rb`. |
+| 1 | HTTP Server | `Tina4::Server` | Zero-dependency HTTP server. Starts with `tina4 serve` (or `TINA4_OVERRIDE_CLIENT=true bundle exec ruby app.rb` to bypass the Rust CLI). |
 | 2 | Routing | `Tina4::Router.get/post/put/patch/delete` | Declarative route definitions with path params, wildcards, and middleware. |
 | 3 | Request Object | `request.body`, `request.params`, `request.headers`, `request.cookies` | Parsed inbound request. Handles JSON, form data, and multipart bodies. |
 | 4 | Response Object | `response.json`, `response.html`, `response.render`, `response.redirect` | Structured response builder with status codes and headers. |

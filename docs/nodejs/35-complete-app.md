@@ -76,7 +76,7 @@ TINA4_JWT_EXPIRY=86400
 
 ### Create Migrations
 
-Create `src/migrations/20260322000100_create_users_table.sql`:
+Create `migrations/20260322000100_create_users_table.sql`:
 
 ```sql
 -- UP
@@ -95,7 +95,7 @@ CREATE INDEX idx_users_email ON users(email);
 DROP TABLE IF EXISTS users;
 ```
 
-Create `src/migrations/20260322000200_create_tasks_table.sql`:
+Create `migrations/20260322000200_create_tasks_table.sql`:
 
 ```sql
 -- UP
@@ -1256,7 +1256,7 @@ RUN npm ci --only=production
 COPY dist/ ./dist/
 COPY src/templates/ ./src/templates/
 COPY src/public/ ./src/public/
-COPY src/migrations/ ./src/migrations/
+COPY migrations/ ./migrations/
 RUN mkdir -p data logs
 ENV TINA4_DEBUG=false
 EXPOSE 7148

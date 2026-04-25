@@ -74,7 +74,7 @@ Any MCP client can connect via:
 
 ## 4. Built-in Tools
 
-The MCP server exposes 24 tools organized by category.
+The MCP server exposes 48 tools organized by category. The exact list lives in the framework's `@tina4/core` MCP tools registration block -- that is authoritative.
 
 ### Database
 
@@ -127,7 +127,8 @@ Arguments: {"template": "Hello {{ name }}!", "data": "{\"name\": \"Alice\"}"}
 | Tool | Description |
 |------|-------------|
 | `file_read` | Read a project file (relative to project root) |
-| `file_write` | Write or update a project file |
+| `file_write` | Write or update a project file (full overwrite) |
+| `file_patch` | Targeted edit -- replace `old_string` with `new_string` in a file |
 | `file_list` | List files in a directory |
 | `asset_upload` | Upload a file to `src/public/` |
 
@@ -163,9 +164,61 @@ File operations are sandboxed. Paths that escape the project directory are rejec
 | `log_tail` | Read recent log entries |
 | `error_log` | Recent errors and exceptions with stack traces |
 | `env_list` | Environment variables (sensitive values redacted) |
-| `system_info` | Framework version, Node.js version, project path |
+| `system_info` | Framework version, Node.js version, project info |
 
 The `env_list` tool redacts any variable containing "secret", "password", "token", "key", or "credential" in its name.
+
+### Project introspection
+
+| Tool | Description |
+|------|-------------|
+| `git_status` | Show current branch, modified/untracked files, and recent commits |
+| `deps_list` | List the project's declared dependencies (from `package.json`) |
+| `project_overview` | One-shot snapshot: dependencies, routes, models, tables, errors, git |
+
+### Persistent code index
+
+| Tool | Description |
+|------|-------------|
+| `index_rebuild` | Refresh the persistent project index (lazy, mtime-based) |
+| `index_search` | Find files by path, symbol, route, or summary -- use FIRST for "where is X" |
+| `index_file` | Full index entry for one file: symbols, routes, imports |
+| `index_overview` | Project shape: files by language, routes, models, recent edits |
+
+### Framework documentation (prose)
+
+| Tool | Description |
+|------|-------------|
+| `docs_list` | List framework documentation files |
+| `docs_search` | Search Tina4 framework docs for a query string -- use before guessing |
+| `docs_section` | Return a full markdown section from a framework doc file |
+
+### Live API RAG (reflection)
+
+`api_*` tools query the live framework reflection -- actual class/method signatures, file/line locations, with a `framework` vs `user` source tag. Use these for "what's the signature of X?" questions; `docs_*` is for "explain queues conceptually".
+
+| Tool | Description |
+|------|-------------|
+| `api_search` | Live API search -- finds framework + user classes/methods by name/summary |
+| `api_class` | Live class reflection -- returns full method list and signatures for an FQN |
+| `api_method` | Live method reflection -- returns signature, params, return type, file, line |
+
+### Plan management
+
+The `plan_*` family lets an AI assistant cooperate with a markdown plan file in `plan/`. Tina4 uses these to keep a steady record of in-progress refactors and multi-session work.
+
+| Tool | Description |
+|------|-------------|
+| `plan_current` | The active plan: title, steps (done/not), next step, progress |
+| `plan_list` | All plans in `plan/` with progress and which one is active |
+| `plan_create` | Create a new markdown plan and make it active |
+| `plan_switch_to` | Make a different plan the active one |
+| `plan_complete_step` | Tick a step as done (call the moment the step finishes) |
+| `plan_add_step` | Append a new unchecked step to the current plan |
+| `plan_note` | Append a timestamped note/breadcrumb to the current plan |
+| `plan_archive` | Move a finished plan to `plan/done/` and clear the current pointer |
+| `plan_read` | Full structured view of any plan by filename |
+| `plan_flesh` | Auto-generate concrete build steps via qwen and append them to a plan |
 
 ---
 

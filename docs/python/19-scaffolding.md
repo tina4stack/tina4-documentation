@@ -157,7 +157,7 @@ tina4python migrate
 tina4python serve
 ```
 
-Open Swagger UI at `http://localhost:7145/swagger` and test every endpoint. The scaffolded code works out of the box.
+Open Swagger UI at `http://localhost:7146/swagger` and test every endpoint. The scaffolded code works out of the box.
 
 ---
 

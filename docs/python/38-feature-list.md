@@ -1,9 +1,3 @@
----
-outline: deep
----
-
-<div v-pre>
-
 # Chapter 37: Complete Feature List
 
 ## 1. What Tina4 Covers
@@ -32,9 +26,13 @@ Tina4 is four implementations of the same framework: Python, PHP, Ruby, and Node
 
 | # | Feature | Description |
 |---|---------|-------------|
+<div v-pre>
+
 | 08 | **Frond Templates** | Tina4's own template engine: `{{ var }}`, `{% if %}`, `{% for %}`, partials, layouts |
 | 09 | **Template Caching** | Compiled templates cached in memory; TTL configurable via `TINA4_TEMPLATE_CACHE_TTL` |
 | 10 | **Asset Helpers** | `css()`, `js()`, `image()` helpers with cache-busting query strings |
+
+</div>
 
 ---
 
@@ -165,6 +163,3 @@ Tina4 is deliberately minimal:
 - **No cloud vendor lock-in**: Queues, cache, sessions, and email are backend-agnostic. The backend is a config variable.
 
 The goal is a framework you can understand completely in a weekend and build on confidently for years.
-
-
-</div>

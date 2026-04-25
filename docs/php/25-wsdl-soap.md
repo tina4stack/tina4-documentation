@@ -98,7 +98,7 @@ That is the entire registration. The service is now live at:
 ## 4. Accessing the Auto-Generated WSDL
 
 ```bash
-curl http://localhost:7146/calculator?wsdl
+curl http://localhost:7145/calculator?wsdl
 ```
 
 Response:
@@ -107,14 +107,14 @@ Response:
 <?xml version="1.0" encoding="UTF-8"?>
 <wsdl:definitions
     name="CalculatorService"
-    targetNamespace="http://localhost:7146/calculator"
+    targetNamespace="http://localhost:7145/calculator"
     xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
     xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
-    xmlns:tns="http://localhost:7146/calculator"
+    xmlns:tns="http://localhost:7145/calculator"
     xmlns:xsd="http://www.w3.org/2001/XMLSchema">
 
   <wsdl:types>
-    <xsd:schema targetNamespace="http://localhost:7146/calculator">
+    <xsd:schema targetNamespace="http://localhost:7145/calculator">
       <xsd:element name="Add">
         <xsd:complexType>
           <xsd:sequence>
@@ -151,7 +151,7 @@ Test your service using PHP's built-in `SoapClient`:
 ```php
 <?php
 
-$client = new SoapClient('http://localhost:7146/calculator?wsdl', [
+$client = new SoapClient('http://localhost:7145/calculator?wsdl', [
     'trace'      => true,
     'exceptions' => true
 ]);
@@ -260,7 +260,7 @@ Router::soap('/currency', new CurrencyService());
 Call:
 
 ```php
-$client = new SoapClient('http://localhost:7146/currency?wsdl');
+$client = new SoapClient('http://localhost:7145/currency?wsdl');
 
 $converted = $client->Convert(['amount' => 100, 'fromCurrency' => 'USD', 'toCurrency' => 'EUR']);
 echo $converted->ConvertResult;    // 92.0
@@ -328,13 +328,13 @@ public function GetUserEmail(int $userId): string
 Send a raw SOAP envelope to test without a SOAP client:
 
 ```bash
-curl -X POST http://localhost:7146/calculator \
+curl -X POST http://localhost:7145/calculator \
   -H "Content-Type: text/xml; charset=utf-8" \
   -H "SOAPAction: \"Add\"" \
   -d '<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
   <soap:Body>
-    <Add xmlns="http://localhost:7146/calculator">
+    <Add xmlns="http://localhost:7145/calculator">
       <a>10.5</a>
       <b>4.5</b>
     </Add>
@@ -348,7 +348,7 @@ Response:
 <?xml version="1.0" encoding="UTF-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
   <soap:Body>
-    <AddResponse xmlns="http://localhost:7146/calculator">
+    <AddResponse xmlns="http://localhost:7145/calculator">
       <AddResult>15</AddResult>
     </AddResponse>
   </soap:Body>

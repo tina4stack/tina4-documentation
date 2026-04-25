@@ -1,18 +1,98 @@
----
-outline: deep
----
+# Chapter 35: Release Notes
 
+
+## v3.11.13 (2026-04-16)
+
+Issue-driven release. Everything reported in the open tina4-book issues either was fixed in this version or is already fixed in 3.11.12; this release consolidates the remaining bits and corrects documentation drift.
+
+- **feat (router / all 4):** Explicit typed-parameter system shared across Python, PHP, Ruby, Node. Adds `alpha`, `alnum`, `slug`, `uuid`, and explicit `string` types in addition to the existing `int`/`integer`, `float`/`number`, `path`/`.*`. **Unknown type names now throw at registration** — `{name:str}`, `{id:inetger}`, etc. raise with a clear message listing the valid types instead of silently falling through to the default matcher. Fixes tina4-book#125. +45 new tests across the four suites.
+- **fix (gallery / python+php+ruby):** Gallery Try-It / View buttons now open the deployed example in a new tab (`window.open(url, '_blank')`) instead of navigating away from the gallery home. Fixes tina4-book#115.
+- **fix (ruby gemspec):** `sqlite3` promoted from `add_development_dependency` to `add_dependency`. Matches the "zero-config SQLite on first run" promise. Fixes tina4-book#100.
+- **docs (tina4-book):** PHP Chapter 2 updated — correct port (7145), `->noAuth()` on write-method examples, and an explicit callout explaining the secure-by-default policy for POST/PUT/PATCH/DELETE. Addresses tina4-book#87, #94, #123.
+- **docs (tina4-book):** Python `@template` decorator ordering corrected (must sit BELOW the route decorator) in book chapters 04 and 10; Python `request->query` vs `request->params` distinction in PHP chapter 1.
+- **tests (python):** Session-handler tests updated to reflect the real default TTL of 3600s (were stale at 1800s).
+- **verified already fixed in earlier 3.11.x releases** — closed comments posted on all of these:
 <div v-pre>
 
-# Chapter 35: Release Notes
+  - #79 dotted numeric index (`{{ items.0.name }}`)
+  - #80 `truncate` filter
+  - #82 `{{ parent() }}` / `{{ super() }}` across all 4 frameworks
+  - #83 Ruby dashboard — WEBrick is runtime dep
+  - #89 `load_dotenv` rename, `DatabaseResult` methods, SQLite WAL locking
+  - #91 Ruby `request.params` symbol + string keys via `IndifferentHash`
+  - #93 Ruby `/docs/*` and bare `/*` wildcard routes
+  - #97 Frond ternary operator
+- **parity:** All 4 frameworks bumped to 3.11.13.
+
+</div>
+
+
+## v3.11.12 (2026-04-16)
+
+**Breaking:** `sqlite:///X` URLs are now relative to the project root (cwd), matching the documented convention. For absolute paths use four slashes (`sqlite:////abs/path.db`) or a Windows drive letter (`sqlite:///C:/Users/app.db`).
+
+Before this release, `DATABASE_URL=sqlite:///data/app.db` was interpreted differently by every framework. Python/Node/Ruby tried to open `/data/app.db` (absolute) which crashed on macOS with `OSError: [Errno 30] Read-only file system: '/data'`. PHP did the same under the hood. All four frameworks now agree: three slashes = relative, four slashes = absolute.
+
+- **fix (all 4):** `sqlite:///X` resolves under cwd; parent directory auto-created only when inside cwd. Absolute paths are trusted and never mkdir'd at root.
+- **fix (python):** `_ensure_folders` no longer creates a bogus `src/migrations/` directory. The migration runner always looks at `migrations/` at the project root — there is only one correct location.
+- **parity (php, ruby, node):** Same `sqlite:///X` parsing as Python. Dedicated `resolve_path` / `resolveSqlitePath` helpers in each framework so adapters consistently handle `:memory:`, `./` forms, Windows drive letters.
+- **tests:** 9 new Python tests in `TestSQLiteConnectionPath` + `TestProjectFolders`. 4 new PHP tests in `DatabaseUrlTest` covering relative/absolute/Windows/bruce-regression. 6 new Ruby specs in `database_drivers_spec.rb :: SqliteDriver.resolve_path`. Node URL tests expanded in `database.test.ts` with the full relative/absolute/Windows/:memory: matrix.
+- **parity:** All 4 frameworks bumped to 3.11.12.
+
+**Migration note:** If your `.env` has `DATABASE_URL=sqlite:///data/app.db`, it will now create `./data/app.db` in the project root (which is what most users actually want). If you genuinely want an absolute path, change to `sqlite:////data/app.db` (four slashes).
+
+
+## v3.11.11 (2026-04-16)
+
+- **fix (python ORM):** `Field.validate` no longer re-coerces values that are already the correct type. Previously, any PostgreSQL/MSSQL read of a row containing a `DateTimeField` crashed because `datetime(datetime_instance)` raises `TypeError`. The fix accepts native driver types (`datetime`, `bytes`, `int`, `bool`, `float`, `str`) without re-wrapping, and parses ISO-8601 strings into `datetime` for SQLite. See `tina4-python/plan/orm-field-validate-native-types.md`.
+- **fix (python ORM):** `BooleanField` vs `IntegerField` ordering handled explicitly. `BooleanField(1)` still coerces to `True`, `IntegerField(True)` still coerces to `1`; no regression for either direction (bool is a subclass of int in Python).
+- **tests (python):** 10 new `TestFieldsNativeTypes` cases covering datetime/int/bool/float/bytes/string/ForeignKey round-trips.
+- **tests (parity):** Regression-guard "datetime round-trip on read path" tests added to PHP (`ORMV3Test`), Ruby (`orm_spec`) and Node.js (`orm.test.ts`) so an equivalent bug can't creep in there later.
+- **parity:** All 4 frameworks bumped to 3.11.11.
+
+
+## v3.11.10 (2026-04-15)
+
+- **fix (php):** Hot-reload loop — DevAdmin's polling fallback used `mt=0` as the baseline, so the first poll after every page load triggered `location.reload()`, which reset `mt=0` again. Loop now initialises the baseline on the first poll.
+- **fix (php):** Reload sentinel removed — PHP was the only framework recursively walking `src/` and touching `src/.reload_sentinel` on every reload POST. The sentinel lived inside the Rust CLI's watched tree and fed back into the watcher, triggering a second loop. Replaced with the same in-memory counter used by Python/Ruby/Node.
+- **fix (php):** Polling no longer starts more than once when the WebSocket reconnect retry budget is exhausted (added a `pollStarted` guard).
+- **feat (parity):** `GET /__dev/api/queue/topics` and `GET /__dev/api/queue/dead-letters` added to PHP, Ruby and Node (previously only in Python). PHP queue endpoints now read from the real `Tina4\Queue` backend instead of returning stubs.
+- **feat (devadmin):** Refreshed `tina4-dev-admin.js` bundle (87.8 KB) across all 4 frameworks — adds the topic selector dropdown, inline payload expand/copy, and corrected version display.
+- **tests:** 4-way parity tests for hot-reload: mtime starts at 0, POST /__dev/api/reload bumps the counter, no sentinel file is written to disk, mtime is monotonic across successive reloads. Mirrored in `tina4-php/tests/DevAdminTest.php`, `tina4-python/tests/test_dev_admin.py`, `tina4-ruby/spec/dev_admin_spec.rb`, `tina4-nodejs/test/devAdmin.test.ts`.
+- **parity:** All 4 frameworks bumped to 3.11.10.
+
+
+## v3.11.9 (2026-04-15)
+
+Catch-up release covering v3.11.0 → v3.11.9 across all 4 frameworks.
+
+- **feat (websocket):** Full WebSocket parity across Python/PHP/Node/Ruby — `get_client_rooms()` / `getClientRooms()`, `route()` usable as decorator or direct handler registration, matching room/broadcast semantics, plus new parity tests on all 4.
+- **feat (graphql):** Input validation and field-level `@auth` directives with context threading.
+- **feat (graphql):** Auto-discovery of schemas; removed legacy DevAdmin HTML/JS in favour of the new UI.
+- **feat (devadmin — Python):** Queue tab with topic selector, dead-letter listing and replay endpoints, inline payload expand/copy, version display.
+- **feat (cli):** Rust CLI now owns file watching — frameworks receive `POST /__dev/api/reload` and internal watchers are disabled when launched by the Rust CLI (`--managed`).
+- **fix (cli):** `parseFlags` / `parse_flags` / `parseCliArgs` no longer swallow `host:port` or positional args after boolean flags.
+- **fix (scss):** SCSS recompilation loop fixed; output path corrected to `src/public/css/` to match CLI and static serving.
+- **fix (frond — Python):** Numeric dotted index for lists (`items.0.name`) now resolves correctly.
+- **fix (router — Ruby):** Bare `/*` wildcard capture exposed under `"*"` key for parity.
+- **fix (orm — PHP):** Three data-sync bugs fixed: `load()` double-fill, `getPrimaryKeyValue`, `save()` ID sync.
+- **fix (graphql):** `from_orm` / `fromOrm` list resolver used `select(skip=)` instead of `all(offset=)`.
+- **fix (metrics):** Windows backslash paths normalised to forward slashes.
+- **fix (app — PHP):** No longer crashes on notices/deprecations in loaded files; `run()` now prints the banner when starting the server directly.
+- **chore:** Example demo store ships with the repo; Windows-friendly setup; `.env.example` and setup scripts added.
+- **parity:** All 4 frameworks bumped to 3.11.9. PHP aligned to the 3.x tag scheme on `v3`.
 
 ## v3.10.99 (2026-04-12)
 
 - **breaking:** `autoMap` now defaults to `true` — ORM models automatically map between camelCase properties and snake_case DB columns. Set `static autoMap = false;` on your model to restore the old behaviour.
 - **feat:** `toDict(include, case)` parameter — pass `'snake'` as second arg to get snake_case keys matching DB columns, or `'camel'` (default) for camelCase.
+<div v-pre>
+
 - **feat:** Frond `replace` filter now accepts object args — `{{ v|replace({"T": " ", "-": "/"}) }}` for multiple substitutions in one call.
 - **tests:** 13 new parity tests covering `toDict(case)`, `autoMap` default, `replace` filter (object + positional), and `ServiceRunner` registration. 268 tests passing.
 - **parity:** All features shipped identically across Python, PHP, Ruby, Node.js.
+
+</div>
 
 ## v3.10.97 (2026-04-11)
 
@@ -45,17 +125,27 @@ outline: deep
 
 ## v3.10.90 (2026-04-09)
 
+<div v-pre>
+
 - **docs:** Chapter 4 (Templates) — new "Dumping Values for Debugging" section covering both `{{ x|dump }}` and `{{ dump(x) }}` forms, the v3.10.88 `inspectValue()` inspector (circular refs, BigInt, Map/Set, Error, Date, class instances), and the `TINA4_DEBUG=true` production gate. Filter table entry updated to reference the new section.
 - **docs:** `plan/parity/parity-template.md` updated with a cross-framework dump helper comparison table and marks dump parity as confirmed across all 4 frameworks at v3.10.89.
 - **chore:** Version sync release — brings all 4 frameworks to the same patch version (3.10.90) so downstream users can upgrade PHP/Python/Ruby/Node.js in lockstep without hunting version mismatches.
 
+</div>
+
 ## v3.10.89 (2026-04-09)
+
+<div v-pre>
 
 - **feat:** `{{ dump(value) }}` global function form added to Frond alongside the existing `{{ value|dump }}` filter. Both call a single `renderDump()` helper (which delegates to the v3.10.88 `inspectValue()` inspector) and produce identical output.
 - **security:** Dump is now **gated on `TINA4_DEBUG=true`**. In production (env var unset or `false`) both the filter and function silently return an empty `SafeString`. This prevents accidental leaks of internal state, object shapes, and sensitive values into rendered HTML when a developer leaves a `{{ dump(x) }}` call in a template.
 - **test:** 4 new tests in `frond.test.ts` covering `dump()`/`|dump` parity, debug-mode circular ref handling, production silencing for both forms.
 
+</div>
+
 ## v3.10.88 (2026-04-09)
+
+<div v-pre>
 
 - **fix:** `{{ value|dump }}` filter now handles complex objects safely. The previous implementation used `JSON.stringify` which crashed on circular references and BigInt, silently dropped functions/Symbols/`undefined`, and serialised `Map`/`Set`/`Error`/class instances as empty `{}`. Replaced with an `inspectValue()` inspector that matches PHP's `var_dump`, Python's `repr`, and Ruby's `inspect`:
   - Circular references: `[Circular]`
@@ -67,6 +157,8 @@ outline: deep
   - Functions: `[Function: name]`
   - Depth-capped at 8 levels to prevent runaway graphs
 - **test:** 11 new edge-case assertions in `frond.test.ts` (frond.test now 254 passing).
+
+</div>
 
 ## v3.10.87 (2026-04-09)
 
@@ -316,7 +408,11 @@ Explicit `fieldMapping` entries take precedence over auto-generated ones. The tw
 
 **WSDL lifecycle hooks and dotted function names (v3.10.6)**
 
+<div v-pre>
+
 WSDL services gained `beforeCall` and `afterCall` hooks. The Frond template engine learned to resolve dotted function names like `{{ utils.format(value) }}`.
+
+</div>
 
 **ORM auto-commit on write operations (v3.10.13)**
 
@@ -355,7 +451,11 @@ Templates gained a `formTokenValue()` function that generates a unique CSRF toke
 
 **Arithmetic in set and expressions (v3.10.31)**
 
+<div v-pre>
+
 The Frond engine learned arithmetic. `{% set total = price * quantity %}` and `{{ width + padding }}` now work as expected.
+
+</div>
 
 **MCP server (v3.10.32)**
 
@@ -391,7 +491,11 @@ Inline conditionals broke when the true/false branches contained quoted strings 
 
 **Filters in if conditions (v3.10.21)**
 
+<div v-pre>
+
 Filters inside `{% if %}` conditions were silently ignored. The condition evaluated the raw value instead of the filtered one.
+
+</div>
 
 ```twig
 {# Before fix — broken: |length filter ignored, condition tested the array itself #}
@@ -421,7 +525,11 @@ await user.save(); // Transaction handled internally
 
 **Frond macro HTML escaping (v3.10.27)**
 
+<div v-pre>
+
 Macro output was HTML-escaped when used inside `{{ }}` expressions. A macro that generated `<div>` would render as `&lt;div&gt;`. Nested macros double-escaped. Macro output is now treated as safe HTML, matching standard Twig behaviour.
+
+</div>
 
 **js_escape and to_json auto-escaping (v3.10.17–19)**
 
@@ -1050,6 +1158,3 @@ Four release candidates preceded v3.0.0. They stabilized the scaffolding, fixed 
 | v3.10.32 | March 31 | MCP server, arithmetic expressions, current stable |
 
 Forty-two releases in eleven days. Each one a step closer to the framework the code deserves.
-
-
-</div>

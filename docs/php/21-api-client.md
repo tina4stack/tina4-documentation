@@ -318,7 +318,7 @@ Router::get('/api/weather/{city}', function ($request, $response) {
 ```
 
 ```bash
-curl http://localhost:7146/api/weather/London
+curl http://localhost:7145/api/weather/London
 ```
 
 ```json
@@ -354,9 +354,9 @@ Build a proxy that fetches GitHub repository information.
 ### Test with:
 
 ```bash
-curl http://localhost:7146/api/github/tina4/tina4-python
-curl http://localhost:7146/api/github/tina4/tina4-python/releases
-curl http://localhost:7146/api/github/nobody/nonexistent-repo
+curl http://localhost:7145/api/github/tina4/tina4-python
+curl http://localhost:7145/api/github/tina4/tina4-python/releases
+curl http://localhost:7145/api/github/nobody/nonexistent-repo
 ```
 
 ---

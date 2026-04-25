@@ -1,9 +1,3 @@
----
-outline: deep
----
-
-<div v-pre>
-
 # Chapter 37: Complete Feature List
 
 This chapter catalogs all 45 features in Tina4 for Node.js, grouped by category. Use it as a reference when starting a project or auditing what you need.
@@ -28,9 +22,13 @@ This chapter catalogs all 45 features in Tina4 for Node.js, grouped by category.
 | # | Feature | Class / Function | Chapter |
 |---|---------|-----------------|---------|
 | 7 | **Frond Templates** | `res.render("page.frond", data)` | 4 |
+<div v-pre>
+
 | 8 | **Template Variables** | `{{variable}}`, `{{nested.field}}` | 4 |
 | 9 | **Template Includes** | `{{> partial.frond}}` | 4 |
 | 10 | **Template Helpers** | `{{#if}}`, `{{#each}}`, `{{#unless}}` | 4 |
+
+</div>
 
 ---
 
@@ -140,11 +138,23 @@ This chapter catalogs all 45 features in Tina4 for Node.js, grouped by category.
 
 **Frond Templates** — Tina4's built-in templating language. Files use the `.frond` extension. No separate template engine to install.
 
+<div v-pre>
+
 **Template Variables** — `{{variable}}` renders a string. `{{user.name}}` accesses nested properties. `{{price | currency}}` applies a filter.
+
+</div>
+
+<div v-pre>
 
 **Template Includes** — `{{> header.frond}}` includes another template. Included templates share the same variable scope.
 
+</div>
+
+<div v-pre>
+
 **Template Helpers** — `{{#if condition}}...{{/if}}` for conditionals. `{{#each items}}...{{/each}}` for loops. `{{#unless condition}}` for negation.
+
+</div>
 
 ---
 
@@ -246,7 +256,7 @@ This chapter catalogs all 45 features in Tina4 for Node.js, grouped by category.
 
 ```bash
 # Server
-TINA4_PORT=7145
+TINA4_PORT=7148
 TINA4_ENV=development
 
 # Database
@@ -329,6 +339,3 @@ import { WSDL, wsdl_operation } from "tina4-nodejs";
 // API Client
 import { api } from "@tina4/core";
 ```
-
-
-</div>

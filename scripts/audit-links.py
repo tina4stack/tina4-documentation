@@ -34,20 +34,11 @@ EXPLICIT_ANCHOR_RE = re.compile(r'\{#([a-zA-Z0-9_\-]+)\}')
 
 EXCLUDE_DIRS = ('node_modules', '.vitepress/dist', '.vitepress/cache')
 
-# Known broken links — synced verbatim from tina4-book where the relative
-# paths point to sibling chapters in book-0-understanding/ that don't make
-# the trip across the sync. Tracked so --strict mode can still pass while
-# we leave these for a tina4-book / sync-books.sh fix. Remove an entry once
-# the underlying problem is fixed.
-ALLOWLIST = {
-    ("nodejs/01-getting-started.md",
-     "../../book-0-understanding/chapters/04-environment-variables.md"),
-    ("python/01-getting-started.md",
-     "../../book-0-understanding/chapters/04-environment-variables.md"),
-    ("ruby/01-getting-started.md",
-     "../../book-0-understanding/chapters/04-environment-variables.md"),
-    ("nodejs/01-getting-started.md", "30-cli.md"),
-}
+# Known broken links that are accepted by --strict. Empty as of the
+# sync-books.sh cross-book path rewriter landing — every synced reference
+# now resolves. Add an entry here only as a temporary measure when a real
+# fix is queued upstream; document why and the issue/PR that retires it.
+ALLOWLIST: set[tuple[str, str]] = set()
 
 
 def slugify(text: str) -> str:

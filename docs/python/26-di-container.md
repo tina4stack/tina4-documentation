@@ -290,7 +290,7 @@ Build a notification service that can switch between email and SMS providers via
 
 ```bash
 # Set NOTIFIER=email or NOTIFIER=sms in .env
-curl -X POST http://localhost:7145/api/notify \
+curl -X POST http://localhost:7146/api/notify \
   -H "Content-Type: application/json" \
   -d '{"to": "alice@example.com", "message": "Your order has shipped!"}'
 ```

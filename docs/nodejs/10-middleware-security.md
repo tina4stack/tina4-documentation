@@ -1,9 +1,3 @@
----
-outline: deep
----
-
-<div v-pre>
-
 # Chapter 10: Middleware
 
 ## 1. The Pipeline Pattern
@@ -872,7 +866,7 @@ curl http://localhost:7148/admin/api-keys \
 
 ### Migration
 
-Create `src/migrations/20260322170000_create_api_keys_table.sql`:
+Create `migrations/20260322170000_create_api_keys_table.sql`:
 
 ```sql
 -- UP
@@ -1235,10 +1229,14 @@ Tina4 blocks this with form tokens.
 
 ### How It Works
 
+<div v-pre>
+
 1. Your template renders a hidden token using `{{ form_token() }}`.
 2. The browser submits the token with the form data.
 3. The `CsrfMiddleware` validates the token before the route handler runs.
 4. Invalid or missing tokens receive a `403 Forbidden` response.
+
+</div>
 
 ### The Template
 
@@ -1250,7 +1248,11 @@ Tina4 blocks this with form tokens.
 </form>
 ```
 
+<div v-pre>
+
 The `{{ form_token() }}` call generates a hidden input field containing a signed JWT. The token is bound to the current session — a token from one session cannot be used in another.
+
+</div>
 
 ### The Middleware
 
@@ -1315,7 +1317,11 @@ Leave it enabled for anything a browser can reach. The cost is one hidden field 
 
 A form token alone prevents cross-site forgery. But what if someone steals a token from a form? Session binding stops them.
 
+<div v-pre>
+
 When `{{ form_token() }}` generates a token, it embeds the current session ID in the JWT payload. The CSRF middleware checks that the session ID in the token matches the session ID of the request. A token stolen from one session cannot be replayed in another.
+
+</div>
 
 This happens automatically. No configuration. No extra code.
 
@@ -1740,10 +1746,14 @@ Prefer external scripts. Inline scripts are an XSS vector.
 Build a public contact form that:
 
 1. Does not require login (`noAuth: true`).
+<div v-pre>
+
 2. Validates CSRF tokens (form includes `{{ form_token() }}`).
 3. Rate-limits submissions to 3 per minute per IP.
 4. Stores messages in the database.
 5. Returns a success message.
+
+</div>
 
 ### Solution
 
@@ -1838,6 +1848,3 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 The form is public. The CSRF token is present. The `noAuth: true` export opens the route. The middleware validates the token. The database stores the message. The user sees confirmation.
 
 Five moving parts. Zero security holes. The framework handles the rest.
-
-
-</div>

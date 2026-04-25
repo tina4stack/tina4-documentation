@@ -287,11 +287,11 @@ Build a background service that keeps a product cache warm.
 
 ```bash
 # Before the cache warms (first 60 seconds)
-curl http://localhost:7145/api/products/featured
+curl http://localhost:7146/api/products/featured
 # 503 Service Unavailable -- cache not ready
 
 # After the cache warmer runs
-curl http://localhost:7145/api/products/featured
+curl http://localhost:7146/api/products/featured
 # 200 OK with product list
 ```
 

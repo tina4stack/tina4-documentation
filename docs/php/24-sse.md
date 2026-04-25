@@ -64,28 +64,32 @@ SSE uses plain HTTP. No protocol upgrade. No special server support. The server 
 
 ## 3. Your First Stream
 
-Create `src/routes/events.py`:
+Create `src/routes/events.php`:
 
-```python
-import asyncio
-from tina4_python import get
+```php
+<?php
+use Tina4\Router;
+use Tina4\Request;
+use Tina4\Response;
 
-@get("/events")
-async def stream_events(request, response):
-    async def generate():
-        for i in range(10):
-            yield f"data: {{\"count\": {i}, \"message\": \"tick\"}}\n\n"
-            await asyncio.sleep(1)
-        yield "data: {\"done\": true}\n\n"
+Router::get("/events", function (Request $request, Response $response) {
+    $generator = function () {
+        for ($i = 0; $i < 10; $i++) {
+            yield "data: " . json_encode(["count" => $i, "message" => "tick"]) . "\n\n";
+            sleep(1);
+        }
+        yield "data: " . json_encode(["done" => true]) . "\n\n";
+    };
 
-    return response.stream(generate())
+    return $response->stream($generator);
+});
 ```
 
 Three things happen here:
 
-1. `generate()` is an async generator. Each `yield` produces one SSE message.
-2. `response.stream()` tells Tina4 to keep the connection open and send each chunk as it arrives.
-3. The framework sets `Content-Type: text/event-stream`, `Cache-Control: no-cache`, and `Connection: keep-alive` for you.
+1. `$generator` is a closure that returns a PHP generator. Each `yield` produces one SSE message.
+2. `$response->stream()` tells Tina4 to keep the connection open and send each chunk as the generator yields it.
+3. The framework sets `Content-Type: text/event-stream`, `Cache-Control: no-cache`, `Connection: keep-alive`, and `X-Accel-Buffering: no` for you.
 
 Start the server and test with curl:
 
@@ -96,11 +100,11 @@ curl -N http://localhost:7145/events
 You see one message per second:
 
 ```
-data: {"count": 0, "message": "tick"}
+data: {"count":0,"message":"tick"}
 
-data: {"count": 1, "message": "tick"}
+data: {"count":1,"message":"tick"}
 
-data: {"count": 2, "message": "tick"}
+data: {"count":2,"message":"tick"}
 ```
 
 Each message arrives the moment the server yields it. No buffering. No waiting for the full response.
@@ -134,9 +138,9 @@ The client receives this as `"line one\nline two"`.
 
 Names the event type. Without it, the browser fires `onmessage`. With it, the browser fires a named event listener.
 
-```python
-yield "event: metrics\ndata: {\"cpu\": 42}\n\n"
-yield "event: alert\ndata: {\"level\": \"high\", \"message\": \"CPU spike\"}\n\n"
+```php
+yield "event: metrics\ndata: " . json_encode(["cpu" => 42]) . "\n\n";
+yield "event: alert\ndata: " . json_encode(["level" => "high", "message" => "CPU spike"]) . "\n\n";
 ```
 
 On the client:
@@ -159,31 +163,31 @@ Named events let you multiplex different data types on a single connection.
 
 Sets the last event ID. If the connection drops, the browser sends `Last-Event-ID` in the reconnection request. Your server can resume from where it left off.
 
-```python
-yield f"id: {i}\ndata: {{\"count\": {i}}}\n\n"
+```php
+yield "id: {$i}\ndata: " . json_encode(["count" => $i]) . "\n\n";
 ```
 
 ### The `retry:` Field
 
 Tells the browser how many milliseconds to wait before reconnecting after a disconnect.
 
-```python
-yield "retry: 5000\n\n"  # reconnect after 5 seconds
+```php
+yield "retry: 5000\n\n"; // reconnect after 5 seconds
 ```
 
 ### The Delimiter
 
 Every SSE message ends with two newlines: `\n\n`. This tells the browser that the message is complete. A single `\n` separates fields within one message.
 
-```python
-# One complete SSE message:
-yield "event: update\nid: 42\ndata: {\"value\": 100}\n\n"
+```php
+// One complete SSE message:
+yield "event: update\nid: 42\ndata: " . json_encode(["value" => 100]) . "\n\n";
 
-# Broken down:
-# event: update\n     ← event type
-# id: 42\n            ← event ID
-# data: {"value": 100}\n  ← payload
-# \n                   ← end of message (blank line)
+// Broken down:
+// event: update\n        <- event type
+// id: 42\n               <- event ID
+// data: {"value":100}\n  <- payload
+// \n                     <- end of message (blank line)
 ```
 
 ---
@@ -250,20 +254,29 @@ const source = new EventSource(`/events?token=${token}`);
 
 On the server:
 
-```python
-@get("/events")
-async def secure_events(request, response):
-    token = request.query.get("token")
-    payload = Auth.valid_token(token)
-    if not payload:
-        return response({"error": "Unauthorized"}, 401)
+```php
+<?php
+use Tina4\Router;
+use Tina4\Request;
+use Tina4\Response;
+use Tina4\Auth;
 
-    async def generate():
-        while True:
-            yield f"data: {{\"user\": \"{payload['email']}\"}}\n\n"
-            await asyncio.sleep(5)
+Router::get("/events", function (Request $request, Response $response) {
+    $token = $request->query["token"] ?? "";
+    $payload = Auth::validToken($token);
+    if (!$payload) {
+        return $response->json(["error" => "Unauthorized"], 401);
+    }
 
-    return response.stream(generate())
+    $generator = function () use ($payload) {
+        while (true) {
+            yield "data: " . json_encode(["user" => $payload["email"]]) . "\n\n";
+            sleep(5);
+        }
+    };
+
+    return $response->stream($generator);
+});
 ```
 
 ---
@@ -274,23 +287,30 @@ async def secure_events(request, response):
 
 Stream database metrics every five seconds:
 
-```python
-import asyncio
-from tina4_python import get
-from tina4_python.database import Database
+```php
+<?php
+use Tina4\Router;
+use Tina4\Request;
+use Tina4\Response;
+use Tina4\Database\Database;
 
-@get("/events/dashboard")
-async def dashboard_stream(request, response):
-    async def generate():
-        db = Database()
-        while True:
-            orders = db.fetch_one("SELECT count(*) as total FROM orders")
-            revenue = db.fetch_one("SELECT sum(total) as revenue FROM orders WHERE date(created_at) = date('now')")
+Router::get("/events/dashboard", function (Request $request, Response $response) {
+    $generator = function () {
+        $db = Database::fromEnv();
+        while (true) {
+            $orders = $db->fetch("SELECT count(*) as total FROM orders")->records[0] ?? ["total" => 0];
+            $revenue = $db->fetch("SELECT sum(total) as revenue FROM orders WHERE date(created_at) = date('now')")->records[0] ?? ["revenue" => 0];
 
-            yield f"data: {{\"orders\": {orders['total']}, \"revenue\": {revenue['revenue'] or 0}}}\n\n"
-            await asyncio.sleep(5)
+            yield "data: " . json_encode([
+                "orders" => (int) $orders["total"],
+                "revenue" => (float) ($revenue["revenue"] ?? 0),
+            ]) . "\n\n";
+            sleep(5);
+        }
+    };
 
-    return response.stream(generate())
+    return $response->stream($generator);
+});
 ```
 
 The client updates the dashboard numbers without polling. One connection. One query every five seconds. No wasted requests.
@@ -299,30 +319,35 @@ The client updates the dashboard numbers without polling. One connection. One qu
 
 Stream deployment status as it happens:
 
-```python
-import asyncio
-import json
-from tina4_python import get
+```php
+<?php
+use Tina4\Router;
+use Tina4\Request;
+use Tina4\Response;
 
-@get("/events/deploy/{build_id}")
-async def deploy_stream(request, response):
-    build_id = request.params["build_id"]
+Router::get("/events/deploy/{buildId}", function (Request $request, Response $response, string $buildId) {
+    $generator = function () use ($buildId) {
+        $steps = [
+            ["pull", "Pulling latest code..."],
+            ["install", "Installing dependencies..."],
+            ["test", "Running tests..."],
+            ["build", "Building application..."],
+            ["deploy", "Deploying to production..."],
+            ["done", "Deployment complete"],
+        ];
 
-    async def generate():
-        steps = [
-            ("pull", "Pulling latest code..."),
-            ("install", "Installing dependencies..."),
-            ("test", "Running tests..."),
-            ("build", "Building application..."),
-            ("deploy", "Deploying to production..."),
-            ("done", "Deployment complete"),
-        ]
+        foreach ($steps as [$step, $message]) {
+            yield "event: progress\ndata: " . json_encode([
+                "step" => $step,
+                "message" => $message,
+                "build_id" => $buildId,
+            ]) . "\n\n";
+            sleep(2); // simulate work
+        }
+    };
 
-        for step, message in steps:
-            yield f"event: progress\ndata: {json.dumps({'step': step, 'message': message, 'build_id': build_id})}\n\n"
-            await asyncio.sleep(2)  # simulate work
-
-    return response.stream(generate())
+    return $response->stream($generator);
+});
 ```
 
 The browser shows a progress bar that updates in real time. Each step arrives as it completes. The user watches the deployment unfold instead of staring at a spinner.
@@ -331,48 +356,54 @@ The browser shows a progress bar that updates in real time. Each step arrives as
 
 Stream AI responses token by token. This is how ChatGPT works:
 
-```python
-import asyncio
-import json
-import urllib.request
-from tina4_python import get
+```php
+<?php
+use Tina4\Router;
+use Tina4\Request;
+use Tina4\Response;
 
-@get("/events/chat")
-async def chat_stream(request, response):
-    prompt = request.query.get("q", "Hello")
+Router::get("/events/chat", function (Request $request, Response $response) {
+    $prompt = $request->query["q"] ?? "Hello";
 
-    async def generate():
-        # Call the LLM API with streaming enabled
-        req_data = json.dumps({
-            "model": "claude-sonnet-4-20250514",
-            "max_tokens": 512,
-            "stream": True,
-            "messages": [{"role": "user", "content": prompt}],
-        }).encode()
+    $generator = function () use ($prompt) {
+        // Call the LLM API with streaming enabled
+        $body = json_encode([
+            "model" => "claude-sonnet-4-20250514",
+            "max_tokens" => 512,
+            "stream" => true,
+            "messages" => [["role" => "user", "content" => $prompt]],
+        ]);
 
-        req = urllib.request.Request(
-            "https://api.anthropic.com/v1/messages",
-            data=req_data,
-            headers={
-                "Content-Type": "application/json",
-                "x-api-key": os.environ["ANTHROPIC_API_KEY"],
-                "anthropic-version": "2023-06-01",
-            },
-        )
+        $context = stream_context_create([
+            "http" => [
+                "method" => "POST",
+                "header" => implode("\r\n", [
+                    "Content-Type: application/json",
+                    "x-api-key: " . getenv("ANTHROPIC_API_KEY"),
+                    "anthropic-version: 2023-06-01",
+                ]),
+                "content" => $body,
+            ],
+        ]);
 
-        with urllib.request.urlopen(req) as resp:
-            for line in resp:
-                line = line.decode().strip()
-                if line.startswith("data: "):
-                    chunk = json.loads(line[6:])
-                    if chunk.get("type") == "content_block_delta":
-                        text = chunk["delta"].get("text", "")
-                        yield f"data: {json.dumps({'token': text})}\n\n"
-                        await asyncio.sleep(0)
+        $stream = fopen("https://api.anthropic.com/v1/messages", "r", false, $context);
+        while (!feof($stream)) {
+            $line = trim(fgets($stream));
+            if (str_starts_with($line, "data: ")) {
+                $chunk = json_decode(substr($line, 6), true);
+                if (($chunk["type"] ?? "") === "content_block_delta") {
+                    $text = $chunk["delta"]["text"] ?? "";
+                    yield "data: " . json_encode(["token" => $text]) . "\n\n";
+                }
+            }
+        }
+        fclose($stream);
 
-        yield "data: {\"done\": true}\n\n"
+        yield "data: " . json_encode(["done" => true]) . "\n\n";
+    };
 
-    return response.stream(generate())
+    return $response->stream($generator);
+});
 ```
 
 The frontend appends each token as it arrives:
@@ -397,31 +428,40 @@ The response builds character by character. The user reads as the AI writes. No 
 
 Upload a CSV, stream the processing status:
 
-```python
-import asyncio
-import json
-from tina4_python import post
+```php
+<?php
+use Tina4\Router;
+use Tina4\Request;
+use Tina4\Response;
 
-@post("/api/import")
-async def import_csv(request, response):
-    file = request.files.get("csv")
-    if not file:
-        return response({"error": "No file"}, 400)
+Router::post("/api/import", function (Request $request, Response $response) {
+    $file = $request->files["csv"] ?? null;
+    if (!$file) {
+        return $response->json(["error" => "No file"], 400);
+    }
 
-    lines = file["content"].decode().strip().split("\n")
-    total = len(lines) - 1  # minus header
+    $lines = explode("\n", trim($file["content"]));
+    $total = count($lines) - 1; // minus header
 
-    async def generate():
-        for i, line in enumerate(lines[1:], 1):
-            # Process each row
-            cols = line.split(",")
-            # ... insert into database ...
-            yield f"data: {json.dumps({'processed': i, 'total': total, 'percent': round(i/total*100)})}\n\n"
-            await asyncio.sleep(0)  # yield control
+    $generator = function () use ($lines, $total) {
+        $rows = array_slice($lines, 1);
+        foreach ($rows as $i => $line) {
+            // Process each row
+            $cols = explode(",", $line);
+            // ... insert into database ...
+            $processed = $i + 1;
+            yield "data: " . json_encode([
+                "processed" => $processed,
+                "total" => $total,
+                "percent" => (int) round($processed / $total * 100),
+            ]) . "\n\n";
+        }
 
-        yield f"data: {json.dumps({'done': True, 'total': total})}\n\n"
+        yield "data: " . json_encode(["done" => true, "total" => $total]) . "\n\n";
+    };
 
-    return response.stream(generate(), content_type="text/event-stream")
+    return $response->stream($generator, "text/event-stream");
+});
 ```
 
 The browser shows a progress bar that fills as each row is processed. The user sees exactly where the import stands.
@@ -430,25 +470,28 @@ The browser shows a progress bar that fills as each row is processed. The user s
 
 ## 7. Custom Content Types
 
-SSE defaults to `text/event-stream`, but `response.stream()` accepts any content type. Use this for newline-delimited JSON (NDJSON), chunked binary, or custom protocols.
+SSE defaults to `text/event-stream`, but `$response->stream()` accepts any content type as the second argument. Use this for newline-delimited JSON (NDJSON), chunked binary, or custom protocols.
 
 ### NDJSON Streaming
 
-```python
-import asyncio
-import json
-from tina4_python import get
+```php
+<?php
+use Tina4\Router;
+use Tina4\Request;
+use Tina4\Response;
+use Tina4\Database\Database;
 
-@get("/api/export")
-async def export_stream(request, response):
-    async def generate():
-        db = Database()
-        result = db.fetch("SELECT * FROM products", limit=1000)
-        for row in result.records:
-            yield json.dumps(row) + "\n"
-            await asyncio.sleep(0)
+Router::get("/api/export", function (Request $request, Response $response) {
+    $generator = function () {
+        $db = Database::fromEnv();
+        $result = $db->fetch("SELECT * FROM products", 1000);
+        foreach ($result->records as $row) {
+            yield json_encode($row) . "\n";
+        }
+    };
 
-    return response.stream(generate(), content_type="application/x-ndjson")
+    return $response->stream($generator, "application/x-ndjson");
+});
 ```
 
 Each line is a complete JSON object. The client reads line by line. No need to parse a giant array. Memory stays flat regardless of how many rows you export.
@@ -525,38 +568,48 @@ location /events/ {
 
 ### Connection Limits
 
-Each SSE connection is a persistent HTTP connection. Most servers limit concurrent connections. The default asyncio server handles thousands. In production:
+Each SSE connection is a persistent HTTP connection. Most servers limit concurrent connections. Tina4's built-in server uses `stream_select()` to multiplex thousands of connections in a single process. In production:
 
 - Monitor open connections
 - Set timeouts on long-running streams
 - Close streams when the client no longer needs them
 
-```python
-@get("/events/metrics")
-async def metrics_with_timeout(request, response):
-    async def generate():
-        for _ in range(3600):  # max 1 hour (one message per second)
-            yield f"data: {{\"cpu\": {get_cpu()}}}\n\n"
-            await asyncio.sleep(1)
-        yield "event: timeout\ndata: {\"message\": \"Stream expired. Reconnect.\"}\n\n"
+```php
+<?php
+use Tina4\Router;
+use Tina4\Request;
+use Tina4\Response;
 
-    return response.stream(generate())
+Router::get("/events/metrics", function (Request $request, Response $response) {
+    $generator = function () {
+        for ($i = 0; $i < 3600; $i++) { // max 1 hour (one message per second)
+            yield "data: " . json_encode(["cpu" => get_cpu()]) . "\n\n";
+            sleep(1);
+        }
+        yield "event: timeout\ndata: " . json_encode(["message" => "Stream expired. Reconnect."]) . "\n\n";
+    };
+
+    return $response->stream($generator);
+});
 ```
+
+`$response->stream()` checks `connection_aborted()` after each chunk and breaks the loop when the client disconnects, so dropped clients release their slot immediately.
 
 ### Heartbeat Messages
 
 Some proxies and load balancers close idle connections after a timeout (typically 30-60 seconds). Send a heartbeat comment to keep the connection alive:
 
-```python
-async def generate():
-    counter = 0
-    while True:
-        if has_new_data():
-            yield f"data: {json.dumps(get_data())}\n\n"
-        else:
-            yield ": heartbeat\n\n"  # SSE comment (colon prefix) — ignored by EventSource
-        counter += 1
-        await asyncio.sleep(5)
+```php
+$generator = function () {
+    while (true) {
+        if (has_new_data()) {
+            yield "data: " . json_encode(get_data()) . "\n\n";
+        } else {
+            yield ": heartbeat\n\n"; // SSE comment (colon prefix) -- ignored by EventSource
+        }
+        sleep(5);
+    }
+};
 ```
 
 Lines starting with `:` are SSE comments. The browser ignores them, but they keep the connection alive through proxies.
@@ -571,7 +624,7 @@ Build a dashboard that streams server metrics to the browser.
 
 1. SSE endpoint at `GET /events/server-metrics` that streams every 3 seconds:
    - Current timestamp
-   - A random CPU percentage (simulate with `random.randint(10, 90)`)
+   - A random CPU percentage (simulate with `random_int(10, 90)`)
    - A random memory percentage
    - A random request count
 
@@ -592,36 +645,37 @@ Build a dashboard that streams server metrics to the browser.
 
 ## 11. Solution
 
-Create `src/routes/server_metrics.py`:
+Create `src/routes/server_metrics.php`:
 
-```python
-import asyncio
-import json
-import random
-from datetime import datetime, timezone
-from tina4_python import get
+```php
+<?php
+use Tina4\Router;
+use Tina4\Request;
+use Tina4\Response;
 
-@get("/events/server-metrics")
-async def server_metrics_stream(request, response):
-    async def generate():
-        yield "retry: 3000\n\n"
-        counter = 0
-        while True:
-            yield f"id: {counter}\ndata: {json.dumps({
-                'timestamp': datetime.now(timezone.utc).isoformat(),
-                'cpu': random.randint(10, 90),
-                'memory': random.randint(30, 85),
-                'requests': random.randint(100, 5000),
-            })}\n\n"
-            counter += 1
-            await asyncio.sleep(3)
+Router::get("/events/server-metrics", function (Request $request, Response $response) {
+    $generator = function () {
+        yield "retry: 3000\n\n";
+        $counter = 0;
+        while (true) {
+            $payload = json_encode([
+                "timestamp" => gmdate("c"),
+                "cpu" => random_int(10, 90),
+                "memory" => random_int(30, 85),
+                "requests" => random_int(100, 5000),
+            ]);
+            yield "id: {$counter}\ndata: {$payload}\n\n";
+            $counter++;
+            sleep(3);
+        }
+    };
 
-    return response.stream(generate())
+    return $response->stream($generator);
+});
 
 
-@get("/dashboard")
-async def dashboard_page(request, response):
-    html = """
+Router::get("/dashboard", function (Request $request, Response $response) {
+    $html = <<<HTML
     <!DOCTYPE html>
     <html>
     <head><title>Live Dashboard</title></head>
@@ -670,8 +724,9 @@ async def dashboard_page(request, response):
         </script>
     </body>
     </html>
-    """
-    return response(html)
+    HTML;
+    return $response->html($html);
+});
 ```
 
 Open `http://localhost:7145/dashboard`. The numbers update every three seconds. Stop the server. The status turns red: "Reconnecting..." Start it again. The status turns green. The numbers resume.
@@ -683,12 +738,12 @@ No polling. No WebSocket. No JavaScript timers. The browser handles everything.
 ## 12. What You Learned
 
 - **SSE streams data from server to client** over a single HTTP connection. No upgrade. No special protocol.
-- **`response.stream(generator)`** keeps the connection open and flushes each chunk as the generator yields it.
+- **`$response->stream($generator)`** keeps the connection open and flushes each chunk as the generator yields it.
 - **The SSE protocol** uses `data:`, `event:`, `id:`, and `retry:` fields. Messages end with `\n\n`.
 - **`EventSource`** on the client handles connection, parsing, and automatic reconnection.
 - **Named events** let you multiplex different data types on one stream.
-- **Custom content types** let you stream NDJSON, binary, or any format.
+- **Custom content types** let you stream NDJSON, binary, or any format -- pass the type as the second argument to `stream()`.
 - **SSE is for one-way server pushes.** Use WebSocket when the client needs to send data back on the same connection.
-- **Heartbeat comments** keep connections alive through proxies. Tina4 sets `X-Accel-Buffering: no` to disable nginx buffering.
+- **Heartbeat comments** keep connections alive through proxies. Tina4 sets `X-Accel-Buffering: no` to disable nginx buffering and breaks the loop on `connection_aborted()` to release dropped clients.
 
 One direction. One connection. Real-time data. The server speaks. The client listens. The rest is infrastructure.

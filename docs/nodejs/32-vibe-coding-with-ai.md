@@ -92,7 +92,7 @@ Here is an actual conversation with Claude Code in a Tina4 Node.js project:
 4. `src/routes/api/comments.ts` -- Nested comments API
 5. `src/routes/blog.ts` -- Template route for the blog page
 6. `src/templates/blog.twig` -- Page with tina4css cards for each post
-7. `src/migrations/20260322_create_posts_and_comments.sql` -- Database schema
+7. `migrations/20260322_create_posts_and_comments.sql` -- Database schema
 
 All correct. All runnable. First try.
 
@@ -147,25 +147,36 @@ TypeScript's type system is a guardrail. It prevents the AI from generating code
 
 ## Supported AI Tools
 
-Tina4 auto-detects and installs context for:
+Tina4 auto-detects and installs context for eight tools. The exact list lives in `@tina4/core` (the AI module):
 
-| Tool | Detection | Context installed |
-|------|-----------|------------------|
-| Claude Code | `.claude/` directory | CLAUDE.md + skills |
-| Cursor | `.cursor/` directory | .cursorrules |
-| GitHub Copilot | `.github/copilot/` | instructions.md |
-| Windsurf | `.windsurfrules` file | .windsurfrules |
-| Aider | `.aider.conf.yml` | .aider.conf.yml |
-| Cline | `.cline/` directory | .clinerules |
-| OpenAI Codex | `.codex/` directory | instructions.md |
+| Tool | Detection (context file) | Context installed |
+|------|--------------------------|-------------------|
+| Claude Code | `CLAUDE.md` | CLAUDE.md + `.claude/` skills |
+| Cursor | `.cursorules` | `.cursorules` (+ `.cursor/`) |
+| GitHub Copilot | `.github/copilot-instructions.md` | `.github/copilot-instructions.md` |
+| Windsurf | `.windsurfrules` | `.windsurfrules` |
+| Aider | `CONVENTIONS.md` | `CONVENTIONS.md` |
+| Cline | `.clinerules` | `.clinerules` |
+| OpenAI Codex | `AGENTS.md` | `AGENTS.md` |
+| Google Antigravity | `.antigravity/context.md` | `.antigravity/context.md` |
 
-Run `tina4 doctor` to see which tools are detected.
+Run `tina4 ai` to see which tools are detected and install context files via the menu.
 
 ---
 
 ## The AI Chat in Dev Dashboard
 
-The dev dashboard at `/__dev` includes an AI chat tab. Enter your API key. Chat with Claude or GPT about your code directly from the browser.
+The dev dashboard at `/__dev` includes an AI chat tab. By default it talks to a local **qwen2.5-coder** model served via [Ollama](https://ollama.com), grounded by Tina4's built-in RAG index of the framework source. Nothing leaves your machine.
+
+Configure it in `.env`:
+
+```bash
+TINA4_AI_URL=http://localhost:11434      # Ollama HTTP endpoint
+TINA4_AI_MODEL=qwen2.5-coder             # Default coding model
+TINA4_RAG_URL=http://localhost:11434     # RAG embedding endpoint (defaults to TINA4_AI_URL)
+```
+
+If you prefer a remote provider, point `TINA4_AI_URL` at any OpenAI-compatible endpoint and set `TINA4_AI_MODEL` accordingly.
 
 The AI has full context of your Tina4 project. Ask it anything:
 

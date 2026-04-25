@@ -818,7 +818,7 @@ Every ORM model in `src/orm/` gets five REST endpoints. No route files needed.
 **GET /api/notes** returns paginated results:
 
 ```bash
-curl "http://localhost:7145/api/notes?limit=10&offset=0"
+curl "http://localhost:7146/api/notes?limit=10&offset=0"
 ```
 
 ```json
@@ -836,7 +836,7 @@ curl "http://localhost:7145/api/notes?limit=10&offset=0"
 **POST /api/notes** validates input before saving:
 
 ```bash
-curl -X POST http://localhost:7145/api/notes \
+curl -X POST http://localhost:7146/api/notes \
   -H "Content-Type: application/json" \
   -d '{"title": "New Note", "content": "Created via auto-CRUD"}'
 ```

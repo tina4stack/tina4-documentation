@@ -759,7 +759,7 @@ Router::get("/admin", function ($request, $response) {
 });
 ```
 
-Start the server. Visit `http://localhost:7146/admin`. You see:
+Start the server. Visit `http://localhost:7145/admin`. You see:
 
 - Dark sidebar on the left with navigation links
 - Top bar with a welcome message and logout button
@@ -1080,14 +1080,14 @@ Router::get("/admin/seed", function ($request, $response) {
 
 ### Expected Result
 
-Visit `http://localhost:7146/admin` and see:
+Visit `http://localhost:7145/admin` and see:
 
 - A sidebar with navigation (Dashboard highlighted)
 - Four stat cards showing product and order counts
 - A recent orders table with status badges
 - A dark mode toggle that switches the entire UI
 
-Visit `http://localhost:7146/admin/products` and see:
+Visit `http://localhost:7145/admin/products` and see:
 
 - A table of all products loaded via AJAX
 - An "Add Product" button that opens a modal
@@ -1097,11 +1097,19 @@ Visit `http://localhost:7146/admin/products` and see:
 
 ## 12. Solution
 
+<div v-pre>
+
 The solution follows the same patterns shown in sections 7 and 10. Create the layout template extending the base layout from section 7. Create the dashboard page template with stat cards using `{% for stat in stats %}`. Create the products page template using the AJAX pattern from section 10, but for products instead of users.
+
+</div>
 
 For the products page, use auto-CRUD on the Product model (`$autoCrud = true`) so the API endpoints are available at `/api/products`. Load the table with `frond.get("/api/products", ...)` and handle form submission with `frond.post("/api/products", ...)`.
 
+<div v-pre>
+
 For the dark mode toggle, add the JavaScript from section 8 to the base layout template inside the `{% block extra_js %}` block.
+
+</div>
 
 The key route handlers are:
 

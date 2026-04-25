@@ -218,11 +218,11 @@ Build an order processing pipeline using events.
 ### Test with:
 
 ```bash
-curl -X POST http://localhost:7145/api/orders \
+curl -X POST http://localhost:7148/api/orders \
   -H "Content-Type: application/json" \
   -d '{"items": [{"sku": "KB-001", "qty": 2}], "email": "alice@example.com"}'
 
-curl http://localhost:7145/api/orders/events
+curl http://localhost:7148/api/orders/events
 ```
 
 ---

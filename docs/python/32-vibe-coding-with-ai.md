@@ -68,7 +68,10 @@ These skills are automatically installed when AI tools are detected:
 
 ```python
 # In your project root
-AI.install_context(".")  # Detects Claude, Cursor, Copilot, etc.
+from tina4_python.ai import install_selected, install_all
+
+install_selected(".", "all")    # Detects + installs context for every supported tool
+# install_all(".")                # Or: install context for ALL known tools, even those not detected
 ```
 
 ---
@@ -103,7 +106,7 @@ Here is an actual conversation with Claude Code in a Tina4 Python project:
 4. `src/routes/api/comments.py` -- Nested comments API
 5. `src/routes/blog.py` -- Template route for the blog page
 6. `src/templates/blog.html` -- Page with tina4css cards for each post
-7. `src/migrations/20260322_create_posts_and_comments.sql` -- Database schema
+7. `migrations/20260322_create_posts_and_comments.sql` -- Database schema
 
 All correct. All runnable. First try.
 
@@ -152,61 +155,79 @@ async def create_product(request, response):
 ```python
 @get("/products")
 async def products_page(request, response):
-    products = Product().select("*", order_by="name ASC")
-    return response(template("products.html", products=[p.to_dict() for p in products]))
+    products = Product.all(order_by="name ASC")
+    return response.render("products.html", {"products": [p.to_dict() for p in products]})
 ```
 
 ### Middleware Attachment
 
 ```python
-@get("/api/profile", middleware=["auth_middleware"])
+from tina4_python.core.router import get, middleware
+from src.app.middleware import AuthMiddleware
+
+@middleware(AuthMiddleware)
+@get("/api/profile")
 async def get_profile(request, response):
     user = User.find(request.user_id)
-    return response(user.safe_dict()) if user else response({"error": "User not found"}, 404)
+    return response(user.to_dict()) if user else response({"error": "User not found"}, 404)
 ```
+
+`@middleware(...)` is a separate decorator stacked above the route decorator -- it is not a keyword argument on `@get`/`@post`.
 
 ### WebSocket Handlers
 
 ```python
-from tina4_python.core.router import websocket
+from tina4_python.websocket import websocket_route
 
-@websocket("/ws/updates")
-async def updates_handler(connection, event, data):
-    if event == "message":
-        await connection.broadcast(data)
+@websocket_route("/ws/updates")
+async def updates_handler(connection):
+    async for message in connection:
+        await connection.broadcast(message)
 ```
 
 The AI generates all of these patterns correctly because CLAUDE.md specifies:
 
 - Handlers are always `async def`
 - Route handlers always receive `(request, response)`
-- WebSocket handlers always receive `(connection, event, data)`
+- WebSocket handlers receive a single `connection` object -- iterate it with `async for` to receive frames
 - Responses use `response()` with the data as the first argument
-- Templates use `template("name.html", **kwargs)`
+- Templates render via `response.render("name.html", {...})`
+- Middleware stacks above the route decorator via `@middleware(MiddlewareClass)`
 
 ---
 
 ## Supported AI Tools
 
-Tina4 auto-detects and installs context for:
+Tina4 auto-detects and installs context for eight tools. The exact list is in `tina4_python/ai/__init__.py` (`AI_TOOLS`):
 
-| Tool | Detection | Context installed |
-|------|-----------|------------------|
-| Claude Code | `.claude/` directory | CLAUDE.md + skills |
-| Cursor | `.cursor/` directory | .cursorrules |
-| GitHub Copilot | `.github/copilot/` | instructions.md |
-| Windsurf | `.windsurfrules` file | .windsurfrules |
-| Aider | `.aider.conf.yml` | .aider.conf.yml |
-| Cline | `.cline/` directory | .clinerules |
-| OpenAI Codex | `.codex/` directory | instructions.md |
+| Tool | Detection (context file) | Context installed |
+|------|--------------------------|-------------------|
+| Claude Code | `CLAUDE.md` | CLAUDE.md + `.claude/` skills |
+| Cursor | `.cursorules` | `.cursorules` (+ `.cursor/`) |
+| GitHub Copilot | `.github/copilot-instructions.md` | `.github/copilot-instructions.md` |
+| Windsurf | `.windsurfrules` | `.windsurfrules` |
+| Aider | `CONVENTIONS.md` | `CONVENTIONS.md` |
+| Cline | `.clinerules` | `.clinerules` |
+| OpenAI Codex | `AGENTS.md` | `AGENTS.md` |
+| Google Antigravity | `.antigravity/context.md` | `.antigravity/context.md` |
 
-Run `tina4 doctor` to see which tools are detected in your project.
+Run `tina4 ai` to see which tools are detected in your project and install context files via the menu.
 
 ---
 
 ## The AI Chat in Dev Dashboard
 
-The dev dashboard at `/__dev` includes an AI chat tab. Enter your Anthropic or OpenAI API key and chat with Claude/GPT about your code directly from the browser.
+The dev dashboard at `/__dev` includes an AI chat tab. By default it talks to a local **qwen2.5-coder** model served via [Ollama](https://ollama.com), grounded by Tina4's built-in RAG index of the framework source. Nothing leaves your machine.
+
+Configure it in `.env`:
+
+```bash
+TINA4_AI_URL=http://localhost:11434      # Ollama HTTP endpoint
+TINA4_AI_MODEL=qwen2.5-coder             # Default coding model
+TINA4_RAG_URL=http://localhost:11434     # RAG embedding endpoint (defaults to TINA4_AI_URL)
+```
+
+If you prefer a remote provider, point `TINA4_AI_URL` at any OpenAI-compatible endpoint (LM Studio, vLLM, an OpenAI-compatible proxy, etc.) and set `TINA4_AI_MODEL` to the model name that endpoint serves.
 
 The AI has full context of your Tina4 project -- routes, models, templates, configuration. Ask it:
 
@@ -254,13 +275,13 @@ Each prompt should generate correct, runnable code on the first try. If it does 
 
 **Problem:** The AI generates incorrect import paths or uses wrong API patterns.
 
-**Fix:** Run `tina4 init` or `AI.install_context(".")` to generate the CLAUDE.md file. This gives the AI complete framework knowledge.
+**Fix:** Run `tina4 ai` (or `from tina4_python.ai import install_all; install_all(".")`) to generate the CLAUDE.md file. This gives the AI complete framework knowledge.
 
 ### 2. AI Suggests Wrong Import Paths
 
 **Problem:** The AI writes `from tina4 import Router` instead of `from tina4_python.core.router import get`.
 
-**Fix:** The CLAUDE.md might be outdated. Regenerate it with `AI.install_context(".", force=True)`. Check that the file includes the correct import paths for Python.
+**Fix:** The CLAUDE.md might be outdated. Regenerate it with `install_all(".", force=True)`. Check that the file includes the correct import paths for Python.
 
 ### 3. AI Hallucinates a Package
 

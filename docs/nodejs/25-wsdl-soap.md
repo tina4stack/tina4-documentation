@@ -135,7 +135,7 @@ Router.get("/soap/currency?wsdl", service.wsdlDocument());
 The WSDL document is generated automatically from your operation decorators:
 
 ```bash
-curl "http://localhost:7145/soap/currency?wsdl"
+curl "http://localhost:7148/soap/currency?wsdl"
 ```
 
 ```xml
@@ -176,7 +176,7 @@ curl "http://localhost:7145/soap/currency?wsdl"
 Test with a SOAP client or curl:
 
 ```bash
-curl -X POST http://localhost:7145/soap/currency \
+curl -X POST http://localhost:7148/soap/currency \
   -H "Content-Type: text/xml" \
   -H "SOAPAction: ConvertCurrency" \
   -d '<?xml version="1.0" encoding="UTF-8"?>
@@ -222,10 +222,10 @@ Build a SOAP service with two operations: `GetProduct` and `ListProducts`.
 
 ```bash
 # Fetch the WSDL
-curl "http://localhost:7145/soap/products?wsdl"
+curl "http://localhost:7148/soap/products?wsdl"
 
 # Call GetProduct
-curl -X POST http://localhost:7145/soap/products \
+curl -X POST http://localhost:7148/soap/products \
   -H "Content-Type: text/xml" \
   -H "SOAPAction: GetProduct" \
   -d '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">

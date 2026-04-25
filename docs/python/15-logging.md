@@ -244,17 +244,17 @@ Add structured logging to an order management API.
 
 ```bash
 # Valid order
-curl -X POST http://localhost:7145/api/shop/orders \
+curl -X POST http://localhost:7146/api/shop/orders \
   -H "Content-Type: application/json" \
   -d '{"customer_id": 1, "items": [{"name": "Keyboard", "price": 79.99}]}'
 
 # Invalid order (no items)
-curl -X POST http://localhost:7145/api/shop/orders \
+curl -X POST http://localhost:7146/api/shop/orders \
   -H "Content-Type: application/json" \
   -d '{"customer_id": 1}'
 
 # Get order
-curl http://localhost:7145/api/shop/orders/1001
+curl http://localhost:7146/api/shop/orders/1001
 ```
 
 ---

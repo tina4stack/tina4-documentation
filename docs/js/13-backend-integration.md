@@ -37,10 +37,12 @@ tina4 serve
 Frontend (tina4-js):
 
 ```bash
-npx tina4js create my-frontend
+tina4 init js my-frontend
 cd my-frontend
 npm install
 ```
+
+> In npm-only environments where the `tina4` Rust CLI isn't available, the fallback is `npx tina4js create my-frontend`.
 
 Configure the Vite proxy to forward API calls:
 

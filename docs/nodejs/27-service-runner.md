@@ -256,7 +256,7 @@ Build a background service that generates a daily sales summary every 24 hours.
 ```bash
 # Start the server and watch the console for report logs
 # After 5 seconds:
-curl http://localhost:7145/api/reports/last
+curl http://localhost:7148/api/reports/last
 ```
 
 ---

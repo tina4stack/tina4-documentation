@@ -17,7 +17,8 @@ jobs:
           python-version: '3.12'
 
       - name: Audit internal links
-        run: python3 scripts/audit-links.py --strict
-        # --strict gates the merge on missing-file / missing-image counts.
-        # Stale anchors still print as warnings (we have legacy v2 docs with
-        # ~50 of them); when those are cleaned we'll add --strict-anchors.
+        run: python3 scripts/audit-links.py --strict --strict-anchors
+        # Both flags on: gates the merge on missing files, missing images,
+        # AND stale anchors. Anchor count is 0 across the docs as of the
+        # cross-book sync rewriter landing — tightening here so any new
+        # broken anchor blocks the build before it reaches main.

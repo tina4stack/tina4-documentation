@@ -11,7 +11,7 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `HOST` | `0.0.0.0` | Bind address. `0.0.0.0` listens on every interface. `127.0.0.1` restricts to localhost. |
-| `PORT` | `7143` | HTTP server port. The Rust CLI prefers `TINA4_PORT` but falls back to `PORT`. |
+| `PORT` | `7148` | HTTP server port. The Rust CLI prefers `TINA4_PORT` but falls back to `PORT`. |
 | `TINA4_PORT` | _(inherits `PORT`)_ | Explicit Tina4-specific port override. Takes precedence over `PORT` when both are set. |
 | `HOST_NAME` | `localhost:7148` | Fully-qualified host used in generated absolute URLs (Swagger, OAuth redirects, emails). |
 | `TINA4_DEBUG` | `false` | Master debug toggle. Enables Swagger UI, dev dashboard, live reload, template dump filter, error overlay. Never set to `true` in production. |
@@ -129,6 +129,22 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 |----------|---------|-------------|
 | `TINA4_LOCALE` | `en` | Default locale for the `I18n` module. |
 | `TINA4_LOCALE_DIR` | `src/locales` | Directory containing locale JSON files. |
+
+---
+
+## AI and MCP Tooling
+
+The dashboard AI chat and the framework's RAG-based code search both default to a **local qwen2.5-coder model served via Ollama**. Nothing leaves your machine unless you point `TINA4_AI_URL` at a remote endpoint.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_AI_URL` | `http://localhost:11434` | OpenAI-compatible HTTP endpoint for the chat/completion model (Ollama by default). |
+| `TINA4_AI_MODEL` | `qwen2.5-coder` | Model identifier the endpoint should serve. |
+| `TINA4_RAG_URL` | _(inherits `TINA4_AI_URL`)_ | Embedding endpoint for the framework RAG index. |
+| `TINA4_RAG_MODEL` | `nomic-embed-text` | Embedding model used to index the framework and `src/`. |
+| `TINA4_MCP_REMOTE` | `false` | Allow the MCP server to bind on non-localhost interfaces. **Never enable in production.** |
+| `TINA4_NO_AI_PORT` | `false` | Disables the MCP port listener in dev mode. |
+| `TINA4_OVERRIDE_CLIENT` | `false` | Allow the framework to start without the Rust CLI (`tina4 serve`). Used in Docker images and CI runners; bypasses SCSS compilation, the file watcher, and live reload. |
 
 ---
 

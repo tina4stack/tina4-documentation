@@ -826,7 +826,7 @@ Every ORM model in `src/orm/` gets five REST endpoints. No route files needed.
 **GET /api/notes** returns paginated results:
 
 ```bash
-curl "http://localhost:7146/api/notes?limit=10&offset=0"
+curl "http://localhost:7145/api/notes?limit=10&offset=0"
 ```
 
 ```json
@@ -844,7 +844,7 @@ curl "http://localhost:7146/api/notes?limit=10&offset=0"
 **POST /api/notes** creates a record:
 
 ```bash
-curl -X POST http://localhost:7146/api/notes \
+curl -X POST http://localhost:7145/api/notes \
   -H "Content-Type: application/json" \
   -d '{"title": "New Note", "content": "Created via auto-CRUD"}'
 ```
@@ -857,10 +857,10 @@ The list endpoint accepts `sort` and `filter` query parameters:
 
 ```bash
 # Sort by name descending, then created_at ascending
-curl "http://localhost:7146/api/notes?sort=-name,created_at"
+curl "http://localhost:7145/api/notes?sort=-name,created_at"
 
 # Filter by column values
-curl "http://localhost:7146/api/notes?filter[category]=work"
+curl "http://localhost:7145/api/notes?filter[category]=work"
 ```
 
 The `-` prefix on a sort field means descending order.

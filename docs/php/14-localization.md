@@ -182,7 +182,7 @@ Router::get('/api/greeting', function ($request, $response) use ($i18n) {
 ```
 
 ```bash
-curl "http://localhost:7146/api/greeting?name=Alice&lang=de"
+curl "http://localhost:7145/api/greeting?name=Alice&lang=de"
 ```
 
 ```json
@@ -198,7 +198,7 @@ curl "http://localhost:7146/api/greeting?name=Alice&lang=de"
 ```
 
 ```bash
-curl "http://localhost:7146/api/greeting?name=Alice&lang=pt"
+curl "http://localhost:7145/api/greeting?name=Alice&lang=pt"
 ```
 
 ```json
@@ -318,7 +318,7 @@ Router::post('/api/users', function ($request, $response) use ($i18n) {
 ```
 
 ```bash
-curl -X POST "http://localhost:7146/api/users?lang=de" \
+curl -X POST "http://localhost:7145/api/users?lang=de" \
   -H "Content-Type: application/json" \
   -d '{"password": "abc"}'
 ```
@@ -384,10 +384,10 @@ Build a product API that returns localized content.
 ### Test with:
 
 ```bash
-curl "http://localhost:7146/api/products/1?lang=en"
-curl "http://localhost:7146/api/products/1?lang=de"
-curl "http://localhost:7146/api/products/999?lang=de"
-curl "http://localhost:7146/api/locales"
+curl "http://localhost:7145/api/products/1?lang=en"
+curl "http://localhost:7145/api/products/1?lang=de"
+curl "http://localhost:7145/api/products/999?lang=de"
+curl "http://localhost:7145/api/locales"
 ```
 
 ---

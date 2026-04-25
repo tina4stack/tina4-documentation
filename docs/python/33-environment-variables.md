@@ -11,9 +11,9 @@ This chapter lists every variable the Python framework reads, grouped by subsyst
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `HOST` | `0.0.0.0` | Bind address. `0.0.0.0` listens on every interface. `127.0.0.1` restricts to localhost. |
-| `PORT` | `7145` | HTTP server port. The Rust CLI prefers `TINA4_PORT` but falls back to `PORT`. |
+| `PORT` | `7146` | HTTP server port. The Rust CLI prefers `TINA4_PORT` but falls back to `PORT`. |
 | `TINA4_PORT` | _(inherits `PORT`)_ | Explicit Tina4-specific port override. Takes precedence over `PORT` when both are set. |
-| `HOST_NAME` | `localhost:7145` | Fully-qualified host used in generated absolute URLs (Swagger, OAuth redirects, emails). |
+| `HOST_NAME` | `localhost:7146` | Fully-qualified host used in generated absolute URLs (Swagger, OAuth redirects, emails). |
 | `TINA4_DEBUG` | `false` | Master debug toggle. Enables Swagger UI, dev dashboard, live reload, template dump filter, error overlay. Never set to `true` in production. |
 | `TINA4_ENV` | `development` | Runtime environment label. Values like `development`, `staging`, `production` control dev-only features. |
 | `TINA4_NO_BROWSER` | `false` | Stops `tina4 serve` from opening your browser on every restart. Recommended during active development. |
@@ -229,12 +229,17 @@ This chapter lists every variable the Python framework reads, grouped by subsyst
 
 ## AI and MCP Tooling
 
+The dashboard AI chat and the framework's RAG-based code search both default to a **local qwen2.5-coder model served via Ollama**. Nothing leaves your machine unless you point `TINA4_AI_URL` at a remote endpoint.
+
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `TINA4_AI_URL` | `http://localhost:11434` | OpenAI-compatible HTTP endpoint for the chat/completion model. Ollama by default; can point at any compatible provider (vLLM, LM Studio, an OpenAI proxy). |
+| `TINA4_AI_MODEL` | `qwen2.5-coder` | Model identifier the endpoint should serve. |
+| `TINA4_RAG_URL` | _(inherits `TINA4_AI_URL`)_ | Embedding endpoint for the framework RAG index. Override only if embeddings live on a different host. |
+| `TINA4_RAG_MODEL` | `nomic-embed-text` | Embedding model used to index `tina4_python/` and `src/`. |
 | `TINA4_NO_AI_PORT` | `false` | Disables the MCP port listener in dev mode. |
-| `TINA4_OVERRIDE_CLIENT` | _(none)_ | Forces a specific AI client ID in `/__dev/api/ai`. Used for testing. |
-| `ANTHROPIC_API_KEY` | _(none)_ | Anthropic API key for built-in AI integrations. |
-| `OPENAI_API_KEY` | _(none)_ | OpenAI API key for built-in AI integrations. |
+| `TINA4_MCP_REMOTE` | `false` | Allow the MCP server to bind on non-localhost interfaces. **Never enable in production.** |
+| `TINA4_OVERRIDE_CLIENT` | `false` | Allow the framework to start without the Rust CLI (`tina4 serve`). Used in Docker images and CI runners; bypasses SCSS compilation, the file watcher, and live reload. |
 
 ---
 

@@ -41,7 +41,7 @@ Router::get("/api/products", function ($request, $response) {
 - After 300 seconds, the cache expires and the next request runs the handler again
 
 ```bash
-curl http://localhost:7146/api/products
+curl http://localhost:7145/api/products
 ```
 
 ```json
@@ -58,7 +58,7 @@ curl http://localhost:7146/api/products
 Call it again within 5 minutes:
 
 ```bash
-curl http://localhost:7146/api/products
+curl http://localhost:7145/api/products
 ```
 
 ```json
@@ -108,9 +108,9 @@ Router::get("/api/products", function ($request, $response) {
 ```
 
 ```bash
-curl "http://localhost:7146/api/products?page=1"  # Cache MISS, stores for page=1
-curl "http://localhost:7146/api/products?page=2"  # Cache MISS, stores for page=2
-curl "http://localhost:7146/api/products?page=1"  # Cache HIT
+curl "http://localhost:7145/api/products?page=1"  # Cache MISS, stores for page=1
+curl "http://localhost:7145/api/products?page=2"  # Cache MISS, stores for page=2
+curl "http://localhost:7145/api/products?page=1"  # Cache HIT
 ```
 
 ### What Not to Cache
@@ -292,7 +292,7 @@ Router::get("/api/products/{id:int}", function ($request, $response) {
 ```
 
 ```bash
-curl http://localhost:7146/api/products/42
+curl http://localhost:7145/api/products/42
 ```
 
 First call (cache miss):
@@ -520,7 +520,7 @@ Router::get("/api/cache/stats", function ($request, $response) {
 ```
 
 ```bash
-curl http://localhost:7146/api/cache/stats
+curl http://localhost:7145/api/cache/stats
 ```
 
 ```json
@@ -627,24 +627,24 @@ Build a product listing endpoint that uses caching at multiple levels.
 
 ```bash
 # First call -- cache miss, slow
-curl "http://localhost:7146/api/store/products?category=Electronics&page=1"
+curl "http://localhost:7145/api/store/products?category=Electronics&page=1"
 
 # Second call -- cache hit, fast
-curl "http://localhost:7146/api/store/products?category=Electronics&page=1"
+curl "http://localhost:7145/api/store/products?category=Electronics&page=1"
 
 # Different category -- cache miss
-curl "http://localhost:7146/api/store/products?category=Fitness&page=1"
+curl "http://localhost:7145/api/store/products?category=Fitness&page=1"
 
 # Create a product -- should invalidate cache
-curl -X POST http://localhost:7146/api/store/products \
+curl -X POST http://localhost:7145/api/store/products \
   -H "Content-Type: application/json" \
   -d '{"name": "Smart Watch", "category": "Electronics", "price": 299.99}'
 
 # Same query again -- cache miss (invalidated by the POST)
-curl "http://localhost:7146/api/store/products?category=Electronics&page=1"
+curl "http://localhost:7145/api/store/products?category=Electronics&page=1"
 
 # Check cache stats
-curl http://localhost:7146/api/store/cache-stats
+curl http://localhost:7145/api/store/cache-stats
 ```
 
 ---
@@ -784,7 +784,7 @@ Router::get("/api/store/cache-stats", function ($request, $response) {
 **Expected output -- first call (cache miss):**
 
 ```bash
-curl "http://localhost:7146/api/store/products?category=Electronics&page=1"
+curl "http://localhost:7145/api/store/products?category=Electronics&page=1"
 ```
 
 ```json
@@ -826,7 +826,7 @@ Same `generated_at`. Source changed from `"database"` to `"cache"`. The handler 
 **Expected output -- after creating a product:**
 
 ```bash
-curl -X POST http://localhost:7146/api/store/products \
+curl -X POST http://localhost:7145/api/store/products \
   -H "Content-Type: application/json" \
   -d '{"name": "Smart Watch", "category": "Electronics", "price": 299.99}'
 ```

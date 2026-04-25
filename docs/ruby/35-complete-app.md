@@ -76,7 +76,7 @@ JWT_EXPIRY=86400
 
 ### Create Migrations
 
-Create `src/migrations/20260322150000_create_users_table.sql`:
+Create `migrations/20260322150000_create_users_table.sql`:
 
 ```sql
 -- UP
@@ -95,7 +95,7 @@ CREATE INDEX idx_users_email ON users(email);
 DROP TABLE IF EXISTS users;
 ```
 
-Create `src/migrations/20260322150100_create_tasks_table.sql`:
+Create `migrations/20260322150100_create_tasks_table.sql`:
 
 ```sql
 -- UP

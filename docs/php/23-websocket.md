@@ -76,8 +76,8 @@ tina4 serve
 
 ```
   Tina4 PHP v3.0.0
-  HTTP server running at http://0.0.0.0:7146
-  WebSocket server running at ws://0.0.0.0:7146
+  HTTP server running at http://0.0.0.0:7145
+  WebSocket server running at ws://0.0.0.0:7145
   Press Ctrl+C to stop
 ```
 
@@ -373,9 +373,9 @@ Router::websocket("/ws/chat/{room}", function ($connection, $event, $data) {
 Connect to different rooms:
 
 ```
-ws://localhost:7146/ws/chat/general    -- general chat
-ws://localhost:7146/ws/chat/random     -- random chat
-ws://localhost:7146/ws/chat/dev-team   -- dev team chat
+ws://localhost:7145/ws/chat/general    -- general chat
+ws://localhost:7145/ws/chat/random     -- random chat
+ws://localhost:7145/ws/chat/dev-team   -- dev team chat
 ```
 
 Broadcasting in `/ws/chat/general` reaches only clients in `/ws/chat/general`. The `dev-team` and `random` rooms are separate worlds.
@@ -599,7 +599,7 @@ ws.on("reconnect_failed", function () {
 The native WebSocket API works too:
 
 ```javascript
-const ws = new WebSocket("ws://localhost:7146/ws/chat/general");
+const ws = new WebSocket("ws://localhost:7145/ws/chat/general");
 
 ws.onopen = function () {
     console.log("Connected");
@@ -730,7 +730,7 @@ Router::get("/chat/{room}", function ($request, $response) {
 });
 ```
 
-Open `http://localhost:7146/chat/general` in two browser tabs. Type in one. Watch the message appear in the other.
+Open `http://localhost:7145/chat/general` in two browser tabs. Type in one. Watch the message appear in the other.
 
 ---
 
@@ -756,7 +756,7 @@ Build a WebSocket chat room with the following features:
 
 ### Test by:
 
-1. Open `http://localhost:7146/room/test` in two browser tabs
+1. Open `http://localhost:7145/room/test` in two browser tabs
 2. Set different usernames in each
 3. Send messages from both tabs and verify they appear in both
 4. Close one tab and verify the "user left" message appears in the other
@@ -905,7 +905,7 @@ Create `src/templates/room.html`:
 {% endblock %}
 ```
 
-Open `http://localhost:7146/room/test` in two browser tabs. Set different usernames. Send messages from one tab and watch them appear in both. Close one tab and verify the "left the room" message appears.
+Open `http://localhost:7145/room/test` in two browser tabs. Set different usernames. Send messages from one tab and watch them appear in both. Close one tab and verify the "left the room" message appears.
 
 ---
 
@@ -994,4 +994,4 @@ If `TINA4_WS_BACKPLANE` is not set (the default), Tina4 broadcasts only to local
 
 **Cause:** The WebSocket upgrade request does not carry your JWT token in the `Authorization` header. Browsers do not support custom headers on WebSocket connections.
 
-**Fix:** Pass the token as a query parameter: `ws://localhost:7146/ws/chat?token=eyJ...`. In your `open` handler, validate the token and disconnect if invalid. Use a short-lived token for WebSocket connections. Or authenticate via HTTP first, store the session, and check the session cookie during the upgrade.
+**Fix:** Pass the token as a query parameter: `ws://localhost:7145/ws/chat?token=eyJ...`. In your `open` handler, validate the token and disconnect if invalid. Use a short-lived token for WebSocket connections. Or authenticate via HTTP first, store the session, and check the session cookie during the upgrade.

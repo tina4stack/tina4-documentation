@@ -90,7 +90,7 @@ Three things happen here:
 Start the server and test with curl:
 
 ```bash
-curl -N http://localhost:7145/events
+curl -N http://localhost:7147/events
 ```
 
 You see one message per second:
@@ -514,7 +514,7 @@ If you configure Nginx manually:
 
 ```nginx
 location /events/ {
-    proxy_pass http://localhost:7145;
+    proxy_pass http://localhost:7147;
     proxy_buffering off;
     proxy_cache off;
     proxy_set_header Connection '';
@@ -583,7 +583,7 @@ Build a dashboard that streams server metrics to the browser.
 
 ### Test by:
 
-1. Open `http://localhost:7145/dashboard`
+1. Open `http://localhost:7147/dashboard`
 2. Watch the numbers update every 3 seconds
 3. Stop the server and verify "Reconnecting..." appears
 4. Restart the server and verify it reconnects and resumes updating
@@ -674,7 +674,7 @@ async def dashboard_page(request, response):
     return response(html)
 ```
 
-Open `http://localhost:7145/dashboard`. The numbers update every three seconds. Stop the server. The status turns red: "Reconnecting..." Start it again. The status turns green. The numbers resume.
+Open `http://localhost:7147/dashboard`. The numbers update every three seconds. Stop the server. The status turns red: "Reconnecting..." Start it again. The status turns green. The numbers resume.
 
 No polling. No WebSocket. No JavaScript timers. The browser handles everything.
 

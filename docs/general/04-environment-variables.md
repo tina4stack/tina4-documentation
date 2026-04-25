@@ -111,8 +111,8 @@ TINA4_DEBUG=yes
 
 | Framework | Default Port |
 |-----------|-------------|
-| Python | `7145` |
-| PHP | `7146` |
+| PHP | `7145` |
+| Python | `7146` |
 | Ruby | `7147` |
 | Node.js | `7148` |
 

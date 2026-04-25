@@ -19,7 +19,7 @@ TINA4_DEBUG=true
 Restart your server and navigate to:
 
 ```
-http://localhost:7145/__dev
+http://localhost:7146/__dev
 ```
 
 No token or additional environment variables needed. The dashboard runs only when debug mode is on. Set `TINA4_DEBUG=false` in production and the entire dashboard disappears.
@@ -216,7 +216,7 @@ tina4 serve --hot
 
 ```
   Tina4 Python v3.0.0
-  HTTP server running at http://0.0.0.0:7145
+  HTTP server running at http://0.0.0.0:7146
   Hot-patching enabled (jurigged)
 ```
 
@@ -388,7 +388,7 @@ async def buggy_create_user(request, response):
 
 ### Requirements
 
-1. Open the dev dashboard at `http://localhost:7145/__dev`
+1. Open the dev dashboard at `http://localhost:7146/__dev`
 2. Hit the `GET /api/buggy/users` endpoint and find Bug 1 using the error overlay
 3. Hit the `POST /api/buggy/users` endpoint without a body and find Bug 2 using the request inspector
 4. Fix all three bugs:

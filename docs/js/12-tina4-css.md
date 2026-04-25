@@ -29,10 +29,10 @@ The library is designed to look good with zero configuration. No theme files. No
 ### With the CLI
 
 ```bash
-npx tina4js create my-app --css
+tina4 init js my-app
 ```
 
-This adds `tina4-css` to `package.json` and includes the stylesheet link in `index.html`. One flag. Done.
+The Rust CLI does not yet accept a `--css` flag on `init`, so add `tina4-css` to `package.json` after scaffolding, or use the fallback `npx tina4js create my-app --css` which adds the dependency and includes the stylesheet link in `index.html` in one step.
 
 ### Manual Installation
 

@@ -235,8 +235,8 @@ Wire together a product store API using the DI container.
 ### Test with:
 
 ```bash
-curl http://localhost:7145/api/store/1
-curl http://localhost:7145/api/store/99  # should return 404
+curl http://localhost:7148/api/store/1
+curl http://localhost:7148/api/store/99  # should return 404
 ```
 
 ---

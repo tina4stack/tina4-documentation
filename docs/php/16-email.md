@@ -1,9 +1,3 @@
----
-outline: deep
----
-
-<div v-pre>
-
 # Chapter 16: Email with Messenger
 
 ## 1. Every App Sends Email
@@ -134,7 +128,7 @@ Router::post("/api/contact", function ($request, $response) {
 ```
 
 ```bash
-curl -X POST http://localhost:7146/api/contact \
+curl -X POST http://localhost:7145/api/contact \
   -H "Content-Type: application/json" \
   -d '{"name": "Alice", "email": "alice@example.com", "message": "I love your products!"}'
 ```
@@ -363,7 +357,7 @@ Router::get("/api/inbox", function ($request, $response) {
 ```
 
 ```bash
-curl http://localhost:7146/api/inbox
+curl http://localhost:7145/api/inbox
 ```
 
 ```json
@@ -583,7 +577,7 @@ Router::post("/api/register", function ($request, $response) {
         "email" => $body["email"],
         "user_id" => $userId,
         "signed_up_at" => date("F j, Y"),
-        "base_url" => $_ENV["APP_URL"] ?? "http://localhost:7146",
+        "base_url" => $_ENV["APP_URL"] ?? "http://localhost:7145",
         "app_name" => "My Store",
         "promo_code" => "WELCOME10",
         "unsubscribe_token" => bin2hex(random_bytes(16))
@@ -611,7 +605,7 @@ Router::post("/api/register", function ($request, $response) {
 ```
 
 ```bash
-curl -X POST http://localhost:7146/api/register \
+curl -X POST http://localhost:7145/api/register \
   -H "Content-Type: application/json" \
   -d '{"name": "Alice", "email": "alice@example.com", "password": "securePass123"}'
 ```
@@ -653,7 +647,7 @@ Router::post("/api/register", function ($request, $response) {
             "email" => $body["email"],
             "user_id" => $userId,
             "signed_up_at" => date("F j, Y"),
-            "base_url" => $_ENV["APP_URL"] ?? "http://localhost:7146",
+            "base_url" => $_ENV["APP_URL"] ?? "http://localhost:7145",
             "app_name" => "My Store",
             "promo_code" => "WELCOME10"
         ]
@@ -710,15 +704,15 @@ Build a contact form that sends an email notification when submitted.
 
 ```bash
 # View the form
-curl http://localhost:7146/contact
+curl http://localhost:7145/contact
 
 # Submit the form
-curl -X POST http://localhost:7146/contact \
+curl -X POST http://localhost:7145/contact \
   -H "Content-Type: application/json" \
   -d '{"name": "Bob", "email": "bob@example.com", "subject": "Product inquiry", "message": "Do you ship internationally?"}'
 
 # Check the dev dashboard for the intercepted email
-# Navigate to http://localhost:7146/__dev
+# Navigate to http://localhost:7145/__dev
 ```
 
 ---
@@ -893,16 +887,16 @@ Router::post("/contact", function ($request, $response) {
 
 **Testing:**
 
-1. Open `http://localhost:7146/contact` in your browser
+1. Open `http://localhost:7145/contact` in your browser
 2. Fill in the form and submit
 3. You should see a green "Thank you" flash message
-4. Open `http://localhost:7146/__dev` to see the intercepted email
+4. Open `http://localhost:7145/__dev` to see the intercepted email
 5. The email should show the sender details, subject, message, and formatted HTML
 
 **API test:**
 
 ```bash
-curl -X POST http://localhost:7146/contact \
+curl -X POST http://localhost:7145/contact \
   -H "Content-Type: application/json" \
   -d '{"name": "Bob", "email": "bob@example.com", "subject": "Product inquiry", "message": "Do you ship internationally?"}' \
   -c cookies.txt -b cookies.txt
@@ -911,7 +905,7 @@ curl -X POST http://localhost:7146/contact \
 The response is a `302` redirect to `/contact`. Follow the redirect to see the flash message:
 
 ```bash
-curl http://localhost:7146/contact -b cookies.txt
+curl http://localhost:7145/contact -b cookies.txt
 ```
 
 The HTML response includes the success flash message.
@@ -962,7 +956,11 @@ The HTML response includes the success flash message.
 
 ### 6. Email Template Variables Not Substituted
 
+<div v-pre>
+
 **Problem:** The email body shows `{{ name }}` instead of the user's name.
+
+</div>
 
 **Cause:** You passed the raw template file content instead of rendering it through Frond. The template engine never ran.
 
@@ -975,6 +973,3 @@ The HTML response includes the success flash message.
 **Cause:** The SMTP server is unreachable. The port is blocked by a firewall. The hostname is wrong.
 
 **Fix:** Test SMTP connectivity: `telnet smtp.example.com 587`. Verify the hostname, port, and encryption settings. Check that your firewall allows outbound connections on the SMTP port. Corporate firewalls often block ports 587 and 465. Ask your network administrator.
-
-
-</div>

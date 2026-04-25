@@ -104,7 +104,7 @@ RUN npm ci --only=production
 COPY dist/ ./dist/
 COPY src/templates/ ./src/templates/
 COPY src/public/ ./src/public/
-COPY src/migrations/ ./src/migrations/
+COPY migrations/ ./migrations/
 
 # Create directories for data and logs
 RUN mkdir -p data logs
@@ -135,7 +135,7 @@ logs/*.log
 src/
 !src/templates/
 !src/public/
-!src/migrations/
+!migrations/
 ```
 
 ### Building and Running
@@ -630,9 +630,9 @@ When you run multiple Tina4 instances, Nginx distributes traffic across them:
 ```nginx
 upstream tina4_backend {
     server 127.0.0.1:7148;
-    server 127.0.0.1:7149;
-    server 127.0.0.1:7150;
-    server 127.0.0.1:7151;
+    server 127.0.0.1:7248;
+    server 127.0.0.1:7348;
+    server 127.0.0.1:7448;
 }
 
 server {
@@ -649,13 +649,13 @@ server {
 }
 ```
 
-Start four instances on different ports:
+Start four instances on different ports. Node's framework default is `7148`; use any free ports for the additional instances. Set `TINA4_OVERRIDE_CLIENT=true` so Node can run the build directly without going through `tina4 serve`:
 
 ```bash
-TINA4_PORT=7148 node dist/app.js &
-TINA4_PORT=7149 node dist/app.js &
-TINA4_PORT=7150 node dist/app.js &
-TINA4_PORT=7151 node dist/app.js &
+TINA4_OVERRIDE_CLIENT=true TINA4_PORT=7148 node dist/app.js &
+TINA4_OVERRIDE_CLIENT=true TINA4_PORT=7248 node dist/app.js &
+TINA4_OVERRIDE_CLIENT=true TINA4_PORT=7348 node dist/app.js &
+TINA4_OVERRIDE_CLIENT=true TINA4_PORT=7448 node dist/app.js &
 ```
 
 Nginx distributes requests in round-robin order by default. If a backend goes down, Nginx routes traffic to the remaining instances.

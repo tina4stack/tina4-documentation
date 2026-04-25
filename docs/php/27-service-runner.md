@@ -322,7 +322,9 @@ CMD ["php", "src/workers/run.php"]
 services:
   web:
     build: .
-    command: php -S 0.0.0.0:7146 index.php
+    # `tina4 serve` requires the Rust CLI; inside Docker we run the framework
+    # directly with TINA4_OVERRIDE_CLIENT=true so the framework boots without it.
+    command: sh -c "TINA4_OVERRIDE_CLIENT=true php index.php"
 
   workers:
     build: .

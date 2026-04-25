@@ -325,7 +325,7 @@ Build a route that fetches weather for multiple cities and returns a dashboard-r
 ### Test with:
 
 ```bash
-curl "http://localhost:7145/api/dashboard/weather?cities=London,Berlin,Tokyo"
+curl "http://localhost:7146/api/dashboard/weather?cities=London,Berlin,Tokyo"
 ```
 
 ---
@@ -394,7 +394,7 @@ async def weather_dashboard(request, response):
 ```
 
 ```bash
-curl "http://localhost:7145/api/dashboard/weather?cities=London,Berlin,Tokyo"
+curl "http://localhost:7146/api/dashboard/weather?cities=London,Berlin,Tokyo"
 ```
 
 ```json

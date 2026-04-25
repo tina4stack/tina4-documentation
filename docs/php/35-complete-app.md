@@ -76,7 +76,7 @@ JWT_EXPIRY=86400
 
 ### Create Migrations
 
-Create `src/migrations/20260322000100_create_users_table.sql`:
+Create `migrations/20260322000100_create_users_table.sql`:
 
 ```sql
 -- UP
@@ -95,7 +95,7 @@ CREATE INDEX idx_users_email ON users(email);
 DROP TABLE IF EXISTS users;
 ```
 
-Create `src/migrations/20260322000200_create_tasks_table.sql`:
+Create `migrations/20260322000200_create_tasks_table.sql`:
 
 ```sql
 -- UP
@@ -312,7 +312,7 @@ tina4 serve
 
 ```bash
 # Register a user
-curl -X POST http://localhost:7146/api/auth/register \
+curl -X POST http://localhost:7145/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"name": "Alice Johnson", "email": "alice@example.com", "password": "securepass123"}'
 ```
@@ -329,7 +329,7 @@ curl -X POST http://localhost:7146/api/auth/register \
 
 ```bash
 # Login
-curl -X POST http://localhost:7146/api/auth/login \
+curl -X POST http://localhost:7145/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": "alice@example.com", "password": "securepass123"}'
 ```
@@ -348,7 +348,7 @@ curl -X POST http://localhost:7146/api/auth/login \
 
 ```bash
 # Access protected route
-curl http://localhost:7146/api/profile \
+curl http://localhost:7145/api/profile \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
 
@@ -622,27 +622,27 @@ Router::group("/api", function () {
 TOKEN="eyJhbGciOiJIUzI1NiIs..."
 
 # Create tasks
-curl -X POST http://localhost:7146/api/tasks \
+curl -X POST http://localhost:7145/api/tasks \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"title": "Design database schema", "priority": "high", "status": "done"}'
 
-curl -X POST http://localhost:7146/api/tasks \
+curl -X POST http://localhost:7145/api/tasks \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"title": "Build API endpoints", "priority": "high", "status": "in_progress"}'
 
-curl -X POST http://localhost:7146/api/tasks \
+curl -X POST http://localhost:7145/api/tasks \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"title": "Write documentation", "priority": "medium", "due_date": "2026-04-01"}'
 
 # List all tasks
-curl http://localhost:7146/api/tasks \
+curl http://localhost:7145/api/tasks \
   -H "Authorization: Bearer $TOKEN"
 
 # Filter by status
-curl "http://localhost:7146/api/tasks?status=in_progress" \
+curl "http://localhost:7145/api/tasks?status=in_progress" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1024,11 +1024,15 @@ $task->delete();
 broadcastTaskUpdate("deleted", ["id" => $request->params["id"]]);
 ```
 
+<div v-pre>
+
 Add WebSocket client code to the dashboard template. Add this inside the `{% block extra_js %}` block:
+
+</div>
 
 ```javascript
 // WebSocket connection for real-time updates
-var ws = new WebSocket("ws://localhost:7146/ws");
+var ws = new WebSocket("ws://localhost:7145/ws");
 
 ws.onopen = function () {
     ws.send(JSON.stringify({ type: "subscribe", channel: "tasks" }));
@@ -1046,7 +1050,7 @@ ws.onmessage = function (event) {
 ws.onclose = function () {
     // Reconnect after 3 seconds
     setTimeout(function () {
-        ws = new WebSocket("ws://localhost:7146/ws");
+        ws = new WebSocket("ws://localhost:7145/ws");
     }, 3000);
 };
 ```
@@ -1075,7 +1079,7 @@ function sendTaskAssignmentEmail(Task $task, User $assignee, User $assigner): vo
         . "Priority: " . strtoupper($task->priority) . "\n"
         . "Due: " . ($task->dueDate ?? "No due date") . "\n\n"
         . "Description:\n" . ($task->description ?: "(No description)") . "\n\n"
-        . "View it at: http://localhost:7146/admin\n";
+        . "View it at: http://localhost:7145/admin\n";
 
     Mail::send(
         $assignee->email,
@@ -1430,10 +1434,10 @@ COPY . .
 RUN mkdir -p data logs secrets \
     && chown -R www-data:www-data data logs secrets
 
-EXPOSE 7146
+EXPOSE 7145
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:7146/health || exit 1
+    CMD curl -f http://localhost:7145/health || exit 1
 
 CMD ["tina4", "serve", "--production"]
 ```
@@ -1447,7 +1451,7 @@ services:
   app:
     build: .
     ports:
-      - "7146:7146"
+      - "7145:7145"
     environment:
       - TINA4_DEBUG=false
       - TINA4_LOG_LEVEL=WARNING
@@ -1478,7 +1482,7 @@ docker compose up -d
 docker compose exec app tina4 migrate
 
 # Verify
-curl http://localhost:7146/health
+curl http://localhost:7145/health
 ```
 
 ```json

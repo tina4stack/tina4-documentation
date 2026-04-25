@@ -77,7 +77,7 @@ Pooled connections are thread-safe. Each query is dispatched to the next availab
 Update `.env`. Restart. Check:
 
 ```bash
-curl http://localhost:7146/health
+curl http://localhost:7145/health
 ```
 
 ```json
@@ -110,7 +110,7 @@ Router::get("/api/test-db", function ($request, $response) {
 ```
 
 ```bash
-curl http://localhost:7146/api/test-db
+curl http://localhost:7145/api/test-db
 ```
 
 ```json
@@ -262,7 +262,7 @@ Router::get("/api/products", function ($request, $response) {
 ```
 
 ```bash
-curl http://localhost:7146/api/products
+curl http://localhost:7145/api/products
 ```
 
 ```json
@@ -339,7 +339,7 @@ Router::get("/api/products/search", function ($request, $response) {
 ```
 
 ```bash
-curl "http://localhost:7146/api/products/search?q=key&max_price=100"
+curl "http://localhost:7145/api/products/search?q=key&max_price=100"
 ```
 
 ```json
@@ -787,29 +787,29 @@ A notes application backed by SQLite. Migration for the table. Full CRUD API.
 
 ```bash
 # Create
-curl -X POST http://localhost:7146/api/notes \
+curl -X POST http://localhost:7145/api/notes \
   -H "Content-Type: application/json" \
   -d '{"title": "Shopping List", "content": "Milk, eggs, bread", "tag": "personal"}'
 
 # List all
-curl http://localhost:7146/api/notes
+curl http://localhost:7145/api/notes
 
 # Search
-curl "http://localhost:7146/api/notes?search=shopping"
+curl "http://localhost:7145/api/notes?search=shopping"
 
 # Filter by tag
-curl "http://localhost:7146/api/notes?tag=personal"
+curl "http://localhost:7145/api/notes?tag=personal"
 
 # Get one
-curl http://localhost:7146/api/notes/1
+curl http://localhost:7145/api/notes/1
 
 # Update
-curl -X PUT http://localhost:7146/api/notes/1 \
+curl -X PUT http://localhost:7145/api/notes/1 \
   -H "Content-Type: application/json" \
   -d '{"title": "Updated Shopping List", "content": "Milk, eggs, bread, butter"}'
 
 # Delete
-curl -X DELETE http://localhost:7146/api/notes/1
+curl -X DELETE http://localhost:7145/api/notes/1
 ```
 
 ---

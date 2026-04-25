@@ -1,9 +1,3 @@
----
-outline: deep
----
-
-<div v-pre>
-
 # Chapter 1: Getting Started with Tina4 Python
 
 ## 1. What Is Tina4 Python
@@ -120,7 +114,7 @@ Creating Tina4 project in ./my-store ...
   Created .gitignore
   Created src/routes/
   Created src/orm/
-  Created src/migrations/
+  Created migrations/
   Created src/seeds/
   Created src/templates/
   Created src/templates/errors/
@@ -171,18 +165,18 @@ tina4 serve
   |_| |_|_| |_|\__,_|  |_|
 
   Tina4 Python v3.2.0
-  Server running at http://0.0.0.0:7145
+  Server running at http://0.0.0.0:7146
   Debug mode: ON
   Database: sqlite:///data/app.db
   Press Ctrl+C to stop
 ```
 
-Open your browser to `http://localhost:7145`. The Tina4 welcome page greets you.
+Open your browser to `http://localhost:7146`. The Tina4 welcome page greets you.
 
-Open `http://localhost:7145/health` in your browser or curl it:
+Open `http://localhost:7146/health` in your browser or curl it:
 
 ```bash
-curl http://localhost:7145/health
+curl http://localhost:7146/health
 ```
 
 ```json
@@ -210,10 +204,10 @@ my-store/
 ├── .gitignore              # Pre-configured
 ├── pyproject.toml          # Python project definition (uv / pip)
 ├── .venv/                  # Virtual environment (gitignored)
+├── migrations/             # SQL migration files (project root)
 ├── src/
 │   ├── routes/             # Your route handlers go here
 │   ├── orm/                # Your ORM model classes go here
-│   ├── migrations/         # SQL migration files
 │   ├── seeds/              # Database seed files
 │   ├── templates/          # Frond templates
 │   │   └── errors/         # Custom 404.html, 500.html
@@ -268,7 +262,7 @@ Save the file. The dev server picks up the change through live reload. If not, r
 Open your browser to:
 
 ```
-http://localhost:7145/api/greeting/Alice
+http://localhost:7146/api/greeting/Alice
 ```
 
 You should see:
@@ -283,7 +277,7 @@ You should see:
 Or use curl:
 
 ```bash
-curl http://localhost:7145/api/greeting/Alice
+curl http://localhost:7146/api/greeting/Alice
 ```
 
 ```json
@@ -293,7 +287,7 @@ curl http://localhost:7145/api/greeting/Alice
 The browser shows pretty-printed JSON (browser extensions or dev mode). Curl shows compact JSON. Force pretty output with `?pretty=true`:
 
 ```bash
-curl "http://localhost:7145/api/greeting/Alice?pretty=true"
+curl "http://localhost:7146/api/greeting/Alice?pretty=true"
 ```
 
 ```json
@@ -352,7 +346,7 @@ async def create_greeting(request, response):
 Test the POST endpoint:
 
 ```bash
-curl -X POST http://localhost:7145/api/greeting \
+curl -X POST http://localhost:7146/api/greeting \
   -H "Content-Type: application/json" \
   -d '{"name": "Carlos", "language": "es"}'
 ```
@@ -482,7 +476,7 @@ async def products_page(request, response):
 
 ### See It in the Browser
 
-Open `http://localhost:7145/products`. You should see:
+Open `http://localhost:7146/products`. You should see:
 
 - A dark navigation bar with "Home" and "Products" links
 - The heading "Our Products"
@@ -496,6 +490,8 @@ Open `http://localhost:7145/products`. You should see:
 Eight steps. All automatic.
 
 1. `response.render("products.html", {"products": products})` tells Frond to render `src/templates/products.html` with the given data.
+<div v-pre>
+
 2. Frond sees `{% extends "base.html" %}` and loads the base template.
 3. The `{% block content %}` in `products.html` replaces the same block in `base.html`.
 4. `{{ product.name }}` outputs the value, auto-escaped for HTML safety.
@@ -503,6 +499,8 @@ Eight steps. All automatic.
 6. `{% for product in products %}` loops through the list.
 7. `{% if product.in_stock %}` renders the stock badge conditionally.
 8. `{{ products | length }}` returns the item count.
+
+</div>
 
 ### About tina4css
 
@@ -524,7 +522,7 @@ The important defaults for development:
 
 | Variable | Default Value | What It Means |
 |----------|---------------|---------------|
-| `TINA4_PORT` | `7145` | Default server port (override with `tina4 serve --port`) |
+| `TINA4_PORT` | `7146` | Default server port (override with `tina4 serve --port`) |
 | `DATABASE_URL` | `sqlite:///data/app.db` | SQLite database in the `data/` directory |
 | `TINA4_LOG_LEVEL` | `ALL` | All log messages are output |
 | `CORS_ORIGINS` | `*` | All origins allowed (fine for development) |
@@ -561,11 +559,11 @@ Restart the server. It now runs on port 8080.
 1. **CLI flag** (highest priority): `tina4 serve --port 8080`
 2. **`.env` file**: `TINA4_PORT=8080`
 3. **Environment variable**: `PORT=8080`
-4. **Framework default** (Python: 7145, PHP: 7146, Ruby: 7144, Node.js: 7143)
+4. **Framework default** (PHP: 7145, Python: 7146, Ruby: 7147, Node.js: 7148)
 
 The CLI reads your `.env` file and checks for `TINA4_PORT` (and falls back to `PORT`). The resolved port is passed to the Python server. All three methods work -- use whichever fits your workflow.
 
-For the complete `.env` reference with all 68 variables, see [Book 0, Chapter 4: Environment Variables](../../book-0-understanding/chapters/04-environment-variables.md).
+For the complete `.env` reference with all 68 variables, see [Environment Variables](./33-environment-variables.md).
 
 ---
 
@@ -576,7 +574,7 @@ With `TINA4_DEBUG=true` in your `.env`, Tina4 provides a built-in development da
 Restart the server and navigate to:
 
 ```
-http://localhost:7145/__dev
+http://localhost:7146/__dev
 ```
 
 The dashboard shows:
@@ -661,10 +659,12 @@ TINA4_DEBUG=true
 ### Step 5: Run It
 
 ```bash
-python app.py
+tina4 serve
 ```
 
-The server starts on `http://localhost:7145`. You should see the Tina4 welcome page. From here, add route files in `src/routes/` and templates in `src/templates/` — the same way as a CLI-scaffolded project.
+The server starts on `http://localhost:7146`. You should see the Tina4 welcome page. From here, add route files in `src/routes/` and templates in `src/templates/` — the same way as a CLI-scaffolded project.
+
+> **Note:** Tina4 Python refuses to start without the Rust CLI. If you genuinely need to bypass it (e.g. inside a Docker image that already wraps the framework), set `TINA4_OVERRIDE_CLIENT=true` in `.env` and run `uv run python app.py` directly.
 
 ---
 
@@ -831,22 +831,22 @@ Test it:
 
 ```bash
 # List all books
-curl http://localhost:7145/api/books
+curl http://localhost:7146/api/books
 
 # Filter by author
-curl "http://localhost:7145/api/books?author=gibson"
+curl "http://localhost:7146/api/books?author=gibson"
 
 # Sort by year
-curl "http://localhost:7145/api/books?sort=year"
+curl "http://localhost:7146/api/books?sort=year"
 
 # Get a single book
-curl http://localhost:7145/api/books/2
+curl http://localhost:7146/api/books/2
 
 # Get a book that does not exist (returns 404)
-curl http://localhost:7145/api/books/99
+curl http://localhost:7146/api/books/99
 
 # Create a new book
-curl -X POST http://localhost:7145/api/books \
+curl -X POST http://localhost:7146/api/books \
   -H "Content-Type: application/json" \
   -d '{"title": "Foundation", "author": "Isaac Asimov", "year": 1951}'
 ```
@@ -883,8 +883,8 @@ Create an API endpoint at `GET /api/greet` that:
 **Test your endpoint with:**
 
 ```bash
-curl "http://localhost:7145/api/greet?name=Sarah"
-curl "http://localhost:7145/api/greet"
+curl "http://localhost:7146/api/greet?name=Sarah"
+curl "http://localhost:7146/api/greet"
 ```
 
 ### Exercise Part B: Product List Page
@@ -953,7 +953,7 @@ async def greet(request, response):
 **Test:**
 
 ```bash
-curl "http://localhost:7145/api/greet?name=Sarah"
+curl "http://localhost:7146/api/greet?name=Sarah"
 ```
 
 ```json
@@ -961,7 +961,7 @@ curl "http://localhost:7145/api/greet?name=Sarah"
 ```
 
 ```bash
-curl "http://localhost:7145/api/greet"
+curl "http://localhost:7146/api/greet"
 ```
 
 ```json
@@ -1058,7 +1058,7 @@ async def store_page(request, response):
     })
 ```
 
-**Open `http://localhost:7145/store` in your browser.** You should see:
+**Open `http://localhost:7146/store` in your browser.** You should see:
 
 - A dark header reading "Our Store"
 - Text showing "5 products, 3 featured"
@@ -1105,9 +1105,9 @@ async def store_page(request, response):
 
 ### 5. Port already in use
 
-**Problem:** `Error: Address already in use (port 7145)`
+**Problem:** `Error: Address already in use (port 7146)`
 
-**Cause:** Another process (or another Tina4 instance) is using port 7145.
+**Cause:** Another process (or another Tina4 instance) is using port 7146.
 
 **Fix:** Stop the other process, or change the port with the CLI flag:
 
@@ -1132,6 +1132,3 @@ The CLI will also auto-increment the port if it detects the default port is in u
 **Cause:** The `.env` file must be at the project root (same directory as `pyproject.toml`). A subdirectory placement hides it from Tina4.
 
 **Fix:** Move `.env` to the project root.
-
-
-</div>

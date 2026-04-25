@@ -18,7 +18,7 @@ Router::get("/echo", function ($request, $response) {
 ```
 
 ```bash
-curl http://localhost:7146/echo
+curl http://localhost:7145/echo
 ```
 
 ```json
@@ -158,7 +158,7 @@ Router::post("/debug/request", function ($request, $response) {
 ```
 
 ```bash
-curl -X POST "http://localhost:7146/debug/request?page=1" \
+curl -X POST "http://localhost:7145/debug/request?page=1" \
   -H "Content-Type: application/json" \
   -H "X-Custom: hello" \
   -d '{"name": "test"}'
@@ -174,7 +174,7 @@ curl -X POST "http://localhost:7146/debug/request?page=1" \
   "headers": {
     "content-type": "application/json",
     "x-custom": "hello",
-    "host": "localhost:7146",
+    "host": "localhost:7145",
     "user-agent": "curl/8.4.0",
     "accept": "*/*",
     "content-length": "16"
@@ -379,7 +379,7 @@ Router::get("/api/data", function ($request, $response) {
 ```
 
 ```bash
-curl -v http://localhost:7146/api/data 2>&1 | grep "< X-"
+curl -v http://localhost:7145/api/data 2>&1 | grep "< X-"
 ```
 
 ```
@@ -490,7 +490,7 @@ Router::post("/api/upload", function ($request, $response) {
 ```
 
 ```bash
-curl -X POST http://localhost:7146/api/upload \
+curl -X POST http://localhost:7145/api/upload \
   -F "image=@/path/to/photo.jpg"
 ```
 
@@ -553,7 +553,7 @@ Router::post("/api/upload", function ($request, $response) {
 ```
 
 ```bash
-curl -X POST http://localhost:7146/api/upload \
+curl -X POST http://localhost:7145/api/upload \
   -F "image=@/path/to/photo.jpg"
 ```
 
@@ -566,7 +566,7 @@ curl -X POST http://localhost:7146/api/upload \
 }
 ```
 
-The file is now available at `http://localhost:7146/uploads/img_65f3a7b8c1234.jpg`.
+The file is now available at `http://localhost:7145/uploads/img_65f3a7b8c1234.jpg`.
 
 ### Handling Multiple Files
 
@@ -664,7 +664,7 @@ Router::get("/api/products/{id:int}", function ($request, $response) {
 
 ```bash
 # JSON (default)
-curl http://localhost:7146/api/products/1
+curl http://localhost:7145/api/products/1
 ```
 
 ```json
@@ -673,7 +673,7 @@ curl http://localhost:7146/api/products/1
 
 ```bash
 # Plain text
-curl http://localhost:7146/api/products/1 -H "Accept: text/plain"
+curl http://localhost:7145/api/products/1 -H "Accept: text/plain"
 ```
 
 ```
@@ -682,7 +682,7 @@ Product #1: Wireless Keyboard - $79.99
 
 ```bash
 # HTML (renders the template)
-curl http://localhost:7146/api/products/1 -H "Accept: text/html"
+curl http://localhost:7145/api/products/1 -H "Accept: text/html"
 ```
 
 ```html
@@ -783,11 +783,11 @@ Rules:
 
 ```bash
 # Upload
-curl -X POST http://localhost:7146/api/images \
+curl -X POST http://localhost:7145/api/images \
   -F "image=@/path/to/photo.jpg"
 
 # Download
-curl http://localhost:7146/api/images/img_65f3a7b8c1234.jpg --output downloaded.jpg
+curl http://localhost:7145/api/images/img_65f3a7b8c1234.jpg --output downloaded.jpg
 ```
 
 ---

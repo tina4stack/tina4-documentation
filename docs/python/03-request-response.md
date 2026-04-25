@@ -25,7 +25,7 @@ async def check_method(request, response):
 ```
 
 ```bash
-curl http://localhost:7145/api/check
+curl http://localhost:7146/api/check
 ```
 
 ```json
@@ -43,7 +43,7 @@ async def info(request, response):
 ```
 
 ```bash
-curl "http://localhost:7145/api/info?foo=bar"
+curl "http://localhost:7146/api/info?foo=bar"
 ```
 
 ```json
@@ -64,7 +64,7 @@ async def user_post(id, slug, request, response):
 ```
 
 ```bash
-curl http://localhost:7145/users/5/posts/hello-world
+curl http://localhost:7146/users/5/posts/hello-world
 ```
 
 ```json
@@ -86,7 +86,7 @@ async def search(request, response):
 ```
 
 ```bash
-curl "http://localhost:7145/search?q=laptop&page=2&sort=price"
+curl "http://localhost:7146/search?q=laptop&page=2&sort=price"
 ```
 
 ```json
@@ -114,7 +114,7 @@ async def feedback(request, response):
 ```
 
 ```bash
-curl -X POST http://localhost:7145/api/feedback \
+curl -X POST http://localhost:7146/api/feedback \
   -H "Content-Type: application/json" \
   -d '{"name": "Alice", "message": "Great product!", "rating": 5}'
 ```
@@ -139,7 +139,7 @@ async def show_headers(request, response):
 ```
 
 ```bash
-curl http://localhost:7145/api/headers -H "X-Custom-Header: hello-tina4"
+curl http://localhost:7146/api/headers -H "X-Custom-Header: hello-tina4"
 ```
 
 ```json
@@ -157,7 +157,7 @@ async def whoami(request, response):
 ```
 
 ```bash
-curl http://localhost:7145/api/whoami
+curl http://localhost:7146/api/whoami
 ```
 
 ```json
@@ -178,7 +178,7 @@ async def show_cookies(request, response):
 ```
 
 ```bash
-curl http://localhost:7145/api/cookies -b "session_id=abc123; theme=dark"
+curl http://localhost:7146/api/cookies -b "session_id=abc123; theme=dark"
 ```
 
 ```json
@@ -205,7 +205,7 @@ async def upload(request, response):
 ```
 
 ```bash
-curl -X POST http://localhost:7145/api/upload \
+curl -X POST http://localhost:7146/api/upload \
   -F "document=@report.pdf"
 ```
 
@@ -274,7 +274,7 @@ async def upload_many(request, response):
 ```
 
 ```bash
-curl -X POST http://localhost:7145/api/upload-many \
+curl -X POST http://localhost:7146/api/upload-many \
   -F "photo=@sunset.jpg" \
   -F "document=@invoice.pdf" \
   -F "avatar=@profile.png"
@@ -549,7 +549,7 @@ async def product_detail(id, request, response):
 
 ```bash
 # JSON (default)
-curl http://localhost:7145/api/products/1
+curl http://localhost:7146/api/products/1
 ```
 
 ```json
@@ -558,7 +558,7 @@ curl http://localhost:7145/api/products/1
 
 ```bash
 # Plain text
-curl http://localhost:7145/api/products/1 -H "Accept: text/plain"
+curl http://localhost:7146/api/products/1 -H "Accept: text/plain"
 ```
 
 ```
@@ -567,7 +567,7 @@ Product #1: Wireless Keyboard - $79.99
 
 ```bash
 # HTML (renders the template)
-curl http://localhost:7145/api/products/1 -H "Accept: text/html"
+curl http://localhost:7146/api/products/1 -H "Accept: text/html"
 ```
 
 ```html
@@ -594,7 +594,7 @@ async def data_with_headers(request, response):
 ```
 
 ```bash
-curl -i http://localhost:7145/api/data
+curl -i http://localhost:7146/api/data
 ```
 
 ```
@@ -745,7 +745,7 @@ async def upload_file(request, response):
 ```
 
 ```bash
-curl -X POST http://localhost:7145/api/files/upload \
+curl -X POST http://localhost:7146/api/files/upload \
   -F "file=@photo.jpg"
 ```
 
@@ -788,20 +788,20 @@ Validation rules:
 
 ```bash
 # Valid submission
-curl -X POST http://localhost:7145/api/contact \
+curl -X POST http://localhost:7146/api/contact \
   -H "Content-Type: application/json" \
   -d '{"name": "Alice", "email": "alice@example.com", "subject": "Question", "message": "I have a question about your product pricing.", "urgency": "high"}'
 
 # Invalid submission (missing fields, short message)
-curl -X POST http://localhost:7145/api/contact \
+curl -X POST http://localhost:7146/api/contact \
   -H "Content-Type: application/json" \
   -d '{"name": "A", "email": "bad-email", "message": "Short"}'
 
 # List all
-curl http://localhost:7145/api/contact/submissions
+curl http://localhost:7146/api/contact/submissions
 
 # Filter by status
-curl "http://localhost:7145/api/contact/submissions?status=new"
+curl "http://localhost:7146/api/contact/submissions?status=new"
 ```
 
 ---
