@@ -63,8 +63,8 @@ project/
 All four languages share the same conventions:
 
 - **Python** — Best for data science, ML integration, rapid prototyping
-- **Node.js** — Best for real-time apps, highest raw throughput, JavaScript everywhere
-- **PHP** — Best for shared hosting, WordPress ecosystem, legacy integration
+- **Node.js** — Best for real-time apps, async I/O, one language across browser and server
+- **PHP** — Best for broad hosting reach, JIT-compiled speed, mature library set
 - **Ruby** — Best for developer happiness, clean syntax, rapid development
 
 See [Chapter 3: Choosing Your Language](/general/03-choosing-your-language.md) for a detailed comparison.
