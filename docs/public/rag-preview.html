@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tina4 RAG Widget Preview</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #1a1b26;
+      color: #c0caf5;
+      min-height: 100vh;
+    }
+    /* Simulated tina4.com header */
+    header {
+      background: #1e2030;
+      border-bottom: 1px solid #414868;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    header .logo {
+      font-size: 22px;
+      font-weight: 700;
+      color: #7aa2f7;
+    }
+    header nav a {
+      color: #565f89;
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+    header nav a:hover { color: #c0caf5; }
+
+    /* Simulated page content */
+    main {
+      max-width: 800px;
+      margin: 48px auto;
+      padding: 0 24px;
+    }
+    main h1 { font-size: 32px; margin-bottom: 16px; color: #c0caf5; }
+    main h2 { font-size: 22px; margin: 32px 0 12px; color: #7aa2f7; }
+    main p { line-height: 1.7; margin-bottom: 16px; color: #a9b1d6; }
+    main code {
+      background: #24283b;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #bb9af7;
+    }
+    main pre {
+      background: #24283b;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin-bottom: 16px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #c0caf5;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">tina4</div>
+    <nav>
+      <a href="#">Get Started</a>&nbsp;&nbsp;&nbsp;
+      <a href="#">Python</a>&nbsp;&nbsp;&nbsp;
+      <a href="#">PHP</a>&nbsp;&nbsp;&nbsp;
+      <a href="#">Ruby</a>&nbsp;&nbsp;&nbsp;
+      <a href="#">Node.js</a>&nbsp;&nbsp;&nbsp;
+      <a href="#">Comparisons</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Basic Routing</h1>
+    <p>Tina4 discovers routes automatically. Drop a Python file in <code>src/routes/</code> and the framework picks it up — no registration, no imports, no config.</p>
+
+    <h2>Define a route</h2>
+    <pre>from tina4_python import get
+
+@get("/hello")
+async def hello(request, response):
+    return response("Hello, world!")</pre>
+
+    <p>Every route handler receives two arguments: the request and a response callable. Return via <code>response()</code> — that is the Tina4 convention.</p>
+
+    <h2>Route parameters</h2>
+    <pre>@get("/users/{id}")
+async def get_user(request, response):
+    user_id = request.params["id"]
+    return response(f"User {user_id}")</pre>
+
+    <p>Curly-brace placeholders capture URL segments. They appear in <code>request.params</code> as a dictionary.</p>
+
+    <h2>HTTP methods</h2>
+    <p>Import the decorator for the method you need: <code>get</code>, <code>post</code>, <code>put</code>, <code>patch</code>, <code>delete</code>.</p>
+  </main>
+
+  <!-- RAG Widget -->
+  <div id="tina4-rag-widget" style="position:fixed;bottom:20px;right:20px;z-index:999">
+    <button id="tina4-ask-btn" style="padding:12px 20px;background:#7aa2f7;color:#1a1b26;
+      border:none;border-radius:999px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.2);
+      font-size:14px;transition:transform 0.15s,box-shadow 0.15s">
+      💬 Ask Tina4
+    </button>
+    <div id="tina4-panel" style="display:none;position:absolute;bottom:60px;right:0;
+      width:380px;max-height:500px;background:#1e2030;color:#c0caf5;border-radius:12px;
+      box-shadow:0 8px 32px rgba(0,0,0,0.3);overflow:hidden;font-family:system-ui">
+      <div style="padding:12px;border-bottom:1px solid #414868;display:flex;align-items:center;gap:8px">
+        <strong>Ask about tina4</strong>
+        <span style="margin-left:auto;font-size:11px;color:#565f89">Powered by Qwen2.5-Coder</span>
+      </div>
+      <div id="tina4-chat" style="padding:12px;max-height:320px;overflow-y:auto"></div>
+      <form id="tina4-form" style="display:flex;gap:6px;padding:10px;border-top:1px solid #414868">
+        <input id="tina4-input" placeholder="How do I define a route?" autocomplete="off"
+          style="flex:1;padding:8px 12px;background:#24283b;border:1px solid #414868;
+          border-radius:8px;color:#c0caf5;outline:none;font-size:13px">
+        <button type="submit" style="padding:8px 14px;background:#7aa2f7;color:#1a1b26;
+          border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px">Ask</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    const API = 'http://andrevanzuydam.com:11438';
+    const btn = document.getElementById('tina4-ask-btn');
+    const panel = document.getElementById('tina4-panel');
+    const chat = document.getElementById('tina4-chat');
+    const form = document.getElementById('tina4-form');
+    const input = document.getElementById('tina4-input');
+
+    const lang = (location.pathname.match(/\/(python|php|ruby|nodejs|js|delphi)\//) || [])[1];
+
+    // Lightweight markdown → HTML renderer
+    const md = (text) => {
+      let html = text
+        // Escape HTML entities first
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      // Fenced code blocks: ```lang\n...\n```
+      html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+        return `<pre style="background:#1a1b26;padding:10px 12px;border-radius:6px;margin:8px 0;overflow-x:auto;font-size:12px;line-height:1.5"><code>${code.trimEnd()}</code></pre>`;
+      });
+
+      // Inline code: `...`
+      html = html.replace(/`([^`]+)`/g,
+        '<code style="background:#1a1b26;padding:1px 5px;border-radius:3px;font-size:12px">$1</code>');
+
+      // Bold: **...**
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+      // Italic: *...*
+      html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+      // Line breaks (outside of pre blocks)
+      html = html.replace(/\n/g, '<br>');
+
+      // Clean up <br> inside <pre> blocks (put newlines back)
+      html = html.replace(/<pre([^>]*)>([\s\S]*?)<\/pre>/g, (match, attrs, inner) => {
+        return `<pre${attrs}>${inner.replace(/<br>/g, '\n')}</pre>`;
+      });
+
+      return html;
+    };
+
+    btn.onmouseenter = () => { btn.style.transform = 'scale(1.05)'; };
+    btn.onmouseleave = () => { btn.style.transform = 'scale(1)'; };
+
+    btn.onclick = () => {
+      panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+      if (panel.style.display === 'block') input.focus();
+    };
+
+    const addMsg = (role, html) => {
+      const div = document.createElement('div');
+      div.style.cssText = `margin:8px 0;padding:8px 12px;border-radius:8px;font-size:13px;line-height:1.5;${
+        role === 'user' ? 'background:#7aa2f7;color:#1a1b26;margin-left:40px;text-align:right'
+                        : 'background:#24283b;margin-right:40px'}`;
+      div.innerHTML = html;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+      return div;
+    };
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const q = input.value.trim();
+      if (!q) return;
+      input.value = '';
+      addMsg('user', q.replace(/</g,'&lt;'));
+      const reply = addMsg('assistant', '<em style="color:#565f89">Thinking…</em>');
+
+      try {
+        const r = await fetch(`${API}/v1/ask`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({query: q, language: lang, k: 5})
+        });
+        const data = await r.json();
+        const srcs = (data.sources || [])
+          .map(s => `<a href="${s.url}" target="_blank" style="color:#7aa2f7">${s.title || 'source'}</a>`)
+          .join(' · ');
+        reply.innerHTML = md(data.answer)
+                        + (srcs ? `<div style="margin-top:8px;font-size:11px;color:#565f89">Sources: ${srcs}</div>` : '');
+      } catch (err) {
+        reply.innerHTML = `<span style="color:#f7768e">Error: ${err.message}</span>`;
+      }
+    };
+  })();
+  </script>
+</body>
+</html>

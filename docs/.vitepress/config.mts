@@ -119,6 +119,83 @@ export default defineConfig({
         ['link', {rel: 'icon', href: '/favicon.ico', type: 'image/x-icon'}],
         ['script', {async: '', src: 'https://www.googletagmanager.com/gtag/js?id=G-FZRRSBE9M0'}],
         ['script', {}, "window.dataLayer = window.dataLayer || [];\nfunction gtag(){dataLayer.push(arguments);}\ngtag('js', new Date());\ngtag('config', 'G-FZRRSBE9M0');"],
+        ['script', {}, `
+(function(){
+  if(typeof window==='undefined')return;
+  var API='http://andrevanzuydam.com:11438';
+
+  function md(t){
+    var h=t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    h=h.replace(/\`\`\`(\\w*)\\n([\\s\\S]*?)\`\`\`/g,function(_,l,c){
+      return '<pre style="background:#1a1b26;padding:10px 12px;border-radius:6px;margin:8px 0;overflow-x:auto;font-size:12px;line-height:1.5;white-space:pre"><code>'+c.trimEnd()+'</code></pre>';
+    });
+    h=h.replace(/\`([^\`]+)\`/g,'<code style="background:#1a1b26;padding:1px 5px;border-radius:3px;font-size:12px">$1</code>');
+    h=h.replace(/\\*\\*(.+?)\\*\\*/g,'<strong>$1</strong>');
+    h=h.replace(/\\*(.+?)\\*/g,'<em>$1</em>');
+    h=h.replace(/\\n/g,'<br>');
+    h=h.replace(/<pre([^>]*)>([\\s\\S]*?)<\\/pre>/g,function(m,a,i){return '<pre'+a+'>'+i.replace(/<br>/g,'\\n')+'</pre>';});
+    return h;
+  }
+
+  window.addEventListener('DOMContentLoaded',function(){
+    var w=document.createElement('div');
+    w.id='tina4-rag-widget';
+    w.style.cssText='position:fixed;bottom:20px;right:20px;z-index:999';
+    w.innerHTML='<button id="tina4-ask-btn" style="padding:12px 20px;background:#7aa2f7;color:#1a1b26;border:none;border-radius:999px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.2);font-size:14px">\\ud83d\\udcac Ask Tina4</button>'
+      +'<div id="tina4-panel" style="display:none;position:absolute;bottom:60px;right:0;width:380px;max-height:500px;background:#1e2030;color:#c0caf5;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.3);overflow:hidden;font-family:system-ui">'
+      +'<div style="padding:12px;border-bottom:1px solid #414868;display:flex;align-items:center;gap:8px"><strong>Ask about tina4</strong><span style="margin-left:auto;font-size:11px;color:#565f89">Powered by Qwen2.5-Coder</span></div>'
+      +'<div id="tina4-chat" style="padding:12px;max-height:320px;overflow-y:auto"></div>'
+      +'<form id="tina4-form" style="display:flex;gap:6px;padding:10px;border-top:1px solid #414868">'
+      +'<input id="tina4-input" placeholder="How do I define a route?" autocomplete="off" style="flex:1;padding:8px 12px;background:#24283b;border:1px solid #414868;border-radius:8px;color:#c0caf5;outline:none;font-size:13px">'
+      +'<button type="submit" style="padding:8px 14px;background:#7aa2f7;color:#1a1b26;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px">Ask</button>'
+      +'</form></div>';
+    document.body.appendChild(w);
+
+    var lang=(location.pathname.match(/\\/(python|php|ruby|nodejs|js|delphi)\\//) || [])[1];
+    var btn=document.getElementById('tina4-ask-btn');
+    var panel=document.getElementById('tina4-panel');
+    var chat=document.getElementById('tina4-chat');
+    var form=document.getElementById('tina4-form');
+    var input=document.getElementById('tina4-input');
+
+    btn.onclick=function(){
+      panel.style.display=panel.style.display==='none'?'block':'none';
+      if(panel.style.display==='block')input.focus();
+    };
+
+    function addMsg(role,html){
+      var d=document.createElement('div');
+      d.style.cssText='margin:8px 0;padding:8px 12px;border-radius:8px;font-size:13px;line-height:1.5;'
+        +(role==='user'?'background:#7aa2f7;color:#1a1b26;margin-left:40px;text-align:right':'background:#24283b;margin-right:40px');
+      d.innerHTML=html;
+      chat.appendChild(d);
+      chat.scrollTop=chat.scrollHeight;
+      return d;
+    }
+
+    form.onsubmit=function(e){
+      e.preventDefault();
+      var q=input.value.trim();
+      if(!q)return;
+      input.value='';
+      addMsg('user',q.replace(/</g,'&lt;'));
+      var reply=addMsg('assistant','<em style="color:#565f89">Thinking\\u2026</em>');
+      fetch(API+'/v1/ask',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({query:q,language:lang,k:5})
+      }).then(function(r){return r.json()}).then(function(data){
+        var srcs=(data.sources||[]).map(function(s){
+          return '<a href="'+(s.url||'#')+'" target="_blank" style="color:#7aa2f7">'+(s.title||'source')+'</a>';
+        }).join(' \\xb7 ');
+        reply.innerHTML=md(data.answer)+(srcs?'<div style="margin-top:8px;font-size:11px;color:#565f89">Sources: '+srcs+'</div>':'');
+      }).catch(function(err){
+        reply.innerHTML='<span style="color:#f7768e">Error: '+err.message+'</span>';
+      });
+    };
+  });
+})();
+`],
     ],
     ignoreDeadLinks: true,
     themeConfig: {

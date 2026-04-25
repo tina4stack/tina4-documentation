@@ -4,8 +4,14 @@
     {
       "name": "docs",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["docs:dev", "--port", "5173"],
-      "port": 5173
+      "runtimeArgs": ["docs:dev", "--port", "5174"],
+      "port": 5174
+    },
+    {
+      "name": "rag-preview",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "5176", "--directory", "docs/public"],
+      "port": 5176
     }
   ]
 }
