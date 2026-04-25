@@ -70,7 +70,7 @@ cd my-project
 bundle install
 tina4 serve
 ```
-The server starts on port 7147. One gem. No dependency tree. [More details](installation.md) on project setup and customization.
+The server starts on port 7147. One gem. No dependency tree. [More details](01-getting-started.md) on project setup and customization.
 
 ### Static Websites {#static-websites}
 Put `.html` templates in `./src/templates` and assets in `./src/public`.
@@ -79,7 +79,7 @@ Put `.html` templates in `./src/templates` and assets in `./src/public`.
 <!-- src/templates/index.html -->
 <h1>Hello Static World</h1>
 ```
-[More details](static-website.md) on static website routing.
+[More details](04-templates.md) on static website routing.
 
 ### Basic Routing {#basic-routing}
 
@@ -98,7 +98,7 @@ Tina4::Router.get("/users/{id:int}") do |request, response|
   response.json({ user_id: id })
 end
 ```
-Drop route files in `src/routes/`. Tina4 discovers them at startup. Follow the links for [basic routing](basic-routing.md#basic-routing) and [dynamic routing](basic-routing.md#dynamic-routing) with typed parameters.
+Drop route files in `src/routes/`. Tina4 discovers them at startup. Follow the links for [basic routing](02-routing.md) and [dynamic routing](02-routing.md) with typed parameters.
 
 ### Middleware {#middleware}
 
@@ -119,7 +119,7 @@ Tina4::Router.group("/api/admin", middleware: "require_auth") do
   end
 end
 ```
-Follow the links for more on [Middleware Declaration](middleware.md#declare) and [Pattern Matching](middleware.md#patterns).
+Follow the links for more on [Middleware Declaration](10-middleware-security.md) and [Pattern Matching](10-middleware-security.md).
 
 ### Template Rendering {#templates}
 
@@ -166,7 +166,7 @@ body {
   color: white;
 }
 ```
-[More details](css.md) on CSS and SCSS.
+[More details](17-frontend.md) on CSS and SCSS.
 
 ### Environments {#environments}
 
@@ -228,13 +228,13 @@ end
     <button>Save</button>
 </form>
 ```
-[More details](posting-form-data.md) on posting form data.
+[More details](03-request-response.md) on posting form data.
 
 ### AJAX and frond.js {#ajax}
 
 Tina4 ships with frond.js -- a zero-dependency JavaScript library for AJAX calls, form submissions, and real-time WebSocket connections.
 
-[More details](/general/frond) on available features.
+[More details](/general/frond.md) on available features.
 
 ### OpenAPI and Swagger UI {#swagger}
 
@@ -249,7 +249,7 @@ Tina4::Router.get("/api/users") do |request, response|
   response.json({ users: [] })
 end
 ```
-Follow the links for more on [Configuration](swagger.md#config), [Usage](swagger.md#usage) and [Metadata](swagger.md#metadata).
+Follow the links for more on [Configuration](20-swagger.md), [Usage](20-swagger.md) and [Metadata](20-swagger.md).
 
 ### Databases {#databases}
 
@@ -259,7 +259,7 @@ Follow the links for more on [Configuration](swagger.md#config), [Usage](swagger
 db = Tina4::Database.new("sqlite://app.db")
 db = Tina4::Database.new("postgres://localhost:5432/myapp", pool: 5)
 ```
-Follow the links for more on [Available Connections](database.md#connections), [Core Methods](database.md#core-methods), [Usage](database.md#usage) and [Transactions](database.md#transactions).
+Follow the links for more on [Available Connections](05-database.md), [Core Methods](05-database.md), [Usage](05-database.md) and [Transactions](05-database.md).
 
 ### Database Results {#database-results}
 ```ruby
@@ -269,7 +269,7 @@ array = result.to_a        # Array of hashes
 json  = result.to_json     # JSON string
 csv   = result.to_csv      # CSV string
 ```
-Looking at detailed [Usage](database.md#usage) will deepen your understanding.
+Looking at detailed [Usage](05-database.md) will deepen your understanding.
 
 ### Migrations {#migrations}
 
@@ -288,7 +288,7 @@ CREATE TABLE users (
 ```bash
 tina4 migrate
 ```
-[Migrations](migrations.md) have rollback support and status tracking.
+[Migrations](05-database.md) have rollback support and status tracking.
 
 ### ORM {#orm}
 
@@ -312,7 +312,7 @@ found = User.find(1)
 found.name = "Alice Wonder"
 found.save
 ```
-The ORM handles insert-or-update in a single `save` call. See the [Advanced Detail](orm.md) for the full picture.
+The ORM handles insert-or-update in a single `save` call. See the [Advanced Detail](06-orm.md) for the full picture.
 
 ### CRUD {#crud}
 
@@ -322,7 +322,7 @@ Tina4::Router.get("/users/dashboard") do |request, response|
   response.render("users/dashboard.html", { users: users })
 end
 ```
-[More details](crud.md) on how CRUD works.
+[More details](19-scaffolding.md) on how CRUD works.
 
 ### Consuming REST APIs {#consuming-rest-apis}
 
@@ -331,7 +331,7 @@ api = Tina4::API.new("https://api.example.com", auth_header: "Bearer xyz")
 result = api.get("/users/42")
 puts result.body
 ```
-[More details](rest-api.md) on POST bodies, authorization headers, and API responses.
+[More details](21-api-client.md) on POST bodies, authorization headers, and API responses.
 
 ### Inline Testing {#inline-testing}
 
@@ -418,7 +418,7 @@ POST queries to `/graphql`, or visit it in a browser for the GraphiQL IDE.
 { users(limit: 5) { id name email } }
 ```
 
-[Full details](graphql.md) on manual schema definition, mutations, variables, fragments, and programmatic usage.
+[Full details](22-graphql.md) on manual schema definition, mutations, variables, fragments, and programmatic usage.
 
 ### Localization (i18n) {#localization}
 

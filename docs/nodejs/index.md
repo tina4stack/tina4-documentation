@@ -91,7 +91,7 @@ Router.get("/", async (req, res) => {
 });
 ```
 
-[More details](static-website.md) on static website routing.
+[More details](04-templates.md) on static website routing.
 
 ### Basic Routing {#basic-routing}
 
@@ -254,7 +254,7 @@ Reference the compiled file from your templates:
 <link rel="stylesheet" href="/css/main.css">
 ```
 
-[More details](css.md) on CSS and SCSS.
+[More details](17-frontend.md) on CSS and SCSS.
 
 ### Environments {#environments}
 
@@ -346,7 +346,7 @@ Router.post("/register", async (req, res) => {
 });
 ```
 
-[More details](posting-form-data.md) on form tokens, file uploads, error handling, and disabling auth.
+[More details](03-request-response.md) on form tokens, file uploads, error handling, and disabling auth.
 
 ### AJAX and frond.js {#ajax}
 
@@ -366,7 +366,7 @@ frond.post("/api/save", { name: "Alice" }, (data) => {
 </script>
 ```
 
-[More details](/general/frond) on available features.
+[More details](/general/frond.md) on available features.
 
 ### OpenAPI and Swagger UI {#swagger}
 
@@ -407,7 +407,7 @@ const db = Database.getConnection();
 const result = await db.fetch("SELECT * FROM users LIMIT 10");
 ```
 
-Follow the links for more on [Available Connections](database.md#connections), [Core Methods](database.md#core-methods), [Usage](database.md#usage) and [Full transaction control](database.md#transactions).
+Follow the links for more on [Available Connections](05-database.md), [Core Methods](05-database.md), [Usage](05-database.md) and [Full transaction control](05-database.md).
 
 ### Database Results {#database-results}
 
@@ -423,7 +423,7 @@ const csvData   = result.toCsv();
 const jsonData  = result.toJson();
 ```
 
-Looking at detailed [Usage](database.md#usage) will deepen your understanding.
+Looking at detailed [Usage](05-database.md) will deepen your understanding.
 
 ### Migrations {#migrations}
 
@@ -487,7 +487,7 @@ const found = await User.findById(1);
 await found.delete();
 ```
 
-ORM covers more ground than this snippet shows. Study the [Advanced Detail](orm.md) to get the full value.
+ORM covers more ground than this snippet shows. Study the [Advanced Detail](06-orm.md) to get the full value.
 
 ### CRUD {#crud}
 
@@ -506,7 +506,7 @@ Router.get("/users/dashboard", async (req, res) => {
 });
 ```
 
-[More details](crud.md) on how CRUD generates its files and where they live.
+[More details](19-scaffolding.md) on how CRUD generates its files and where they live.
 
 ### Consuming REST APIs {#consuming-rest-apis}
 
@@ -522,7 +522,7 @@ const created = await api.post("/users", { name: "Alice" });
 console.log(created.body);
 ```
 
-[More details](rest-api.md) on sending POST data, authorization headers, and other controls for outbound API requests.
+[More details](21-api-client.md) on sending POST data, authorization headers, and other controls for outbound API requests.
 
 ### Inline Testing {#inline-testing}
 
@@ -589,7 +589,7 @@ Router.websocket("/ws/chat", (connection, event, data) => {
 
 The callback receives three arguments: `connection` (send messages through it), `event` (`"open"`, `"message"`, or `"close"`), and `data` (the message text). WebSocket runs alongside your HTTP server on the same port.
 
-Have a look at the PubSub example under [WebSockets](websockets.md).
+Have a look at the PubSub example under [WebSockets](23-websocket.md).
 
 ### Queues {#queues}
 
@@ -651,7 +651,7 @@ Router.post("/calculator", async (req, res) => {
 });
 ```
 
-[More Details](wsdl.md) on WSDL configuration and usage.
+[More Details](25-wsdl-soap.md) on WSDL configuration and usage.
 
 ### GraphQL {#graphql}
 
@@ -689,7 +689,7 @@ GraphQL.register({ schema, resolvers });
 
 Visit `http://localhost:7148/graphql` to query your API. The GraphiQL playground is available when `TINA4_DEBUG=true`.
 
-[More details](graphql.md) on mutations, subscriptions, and authentication.
+[More details](22-graphql.md) on mutations, subscriptions, and authentication.
 
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">Back to top</a>

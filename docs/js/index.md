@@ -36,7 +36,7 @@ cd my-app
 npm install
 npm run dev
 ```
-[More details](installation.md) on project setup, CLI options, and PWA scaffolding.
+[More details](01-getting-started.md) on project setup, CLI options, and PWA scaffolding.
 
 ### Signals {#signals}
 
@@ -54,7 +54,7 @@ console.log(doubled.value); // 10
 // Batch multiple updates into one notification
 batch(() => { count.value = 10; count.value = 20; });
 ```
-[More details](signals.md) on reactive state, computed values, effects, and batching.
+[More details](02-signals.md) on reactive state, computed values, effects, and batching.
 
 ### HTML Templates {#html-templates}
 
@@ -75,7 +75,7 @@ const view = html`
 
 document.getElementById('root')!.appendChild(view);
 ```
-[More details](html-templates.md) on template syntax, event handlers, boolean attributes, conditionals, and lists.
+[More details](03-html-templates.md) on template syntax, event handlers, boolean attributes, conditionals, and lists.
 
 ### Components {#components}
 
@@ -106,7 +106,7 @@ customElements.define('my-counter', MyCounter);
 ```html
 <my-counter label="Clicks"></my-counter>
 ```
-[More details](components.md) on props, Shadow DOM, styles, lifecycle hooks, and events.
+[More details](04-components.md) on props, Shadow DOM, styles, lifecycle hooks, and events.
 
 ### Routing {#routing}
 
@@ -126,7 +126,7 @@ router.start({ target: '#root', mode: 'history' });
 // Navigate programmatically
 navigate('/user/42');
 ```
-[More details](routing.md) on hash vs history mode, route params, guards, and change events.
+[More details](05-routing.md) on hash vs history mode, route params, guards, and change events.
 
 ### API {#api}
 
@@ -141,7 +141,7 @@ await api.post('/users', { name: 'Andre' });
 await api.put('/users/42', { name: 'Updated' });
 await api.delete('/users/42');
 ```
-[More details](api.md) on configuration, authentication, token rotation, interceptors, and error handling.
+[More details](06-api.md) on configuration, authentication, token rotation, interceptors, and error handling.
 
 ### PWA {#pwa}
 
@@ -157,7 +157,7 @@ pwa.register({
   offlineRoute: '/offline',
 });
 ```
-[More details](pwa.md) on manifest generation, service worker strategies, and offline support.
+[More details](10-pwa.md) on manifest generation, service worker strategies, and offline support.
 
 ### Backend Integration {#backend-integration}
 
@@ -178,7 +178,7 @@ npx tina4js build --target python
 # Outputs JS to src/public/js/
 # Generates src/templates/index.twig + src/routes/spa.py
 ```
-[More details](backend-integration.md) on embedding in tina4-php/python, auth flow, and server-side state injection.
+[More details](13-backend-integration.md) on embedding in tina4-php/python, auth flow, and server-side state injection.
 
 ### Bundle Size {#bundle-size}
 

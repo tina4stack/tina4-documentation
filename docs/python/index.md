@@ -68,7 +68,7 @@ tina4 serve
 
 The CLI scaffolds your project, installs one package, and starts the server. No dependency tree. No version conflicts. Your browser opens to `http://localhost:7145` and the welcome page greets you.
 
-[More details](installation.md) on project setup and customization.
+[More details](01-getting-started.md) on project setup and customization.
 
 ### Static Websites {#static-websites}
 
@@ -78,7 +78,7 @@ Put `.twig` files in `./src/templates` and assets in `./src/public`. The framewo
 <!-- src/templates/index.twig -->
 <h1>Hello Static World</h1>
 ```
-[More details](static-website.md) on static website routing.
+[More details](04-templates.md) on static website routing.
 
 ### Basic Routing {#basic-routing}
 
@@ -99,7 +99,7 @@ async def post_api(request, response):
 async def post_register(request, response):
     return response.redirect("/welcome")
 ```
-Follow the links for [basic routing](basic-routing.md#basic-routing) and [dynamic routing](basic-routing.md#dynamic-routing) with variables.
+Follow the links for [basic routing](02-routing.md) and [dynamic routing](02-routing.md) with variables.
 
 ### Middleware
 
@@ -128,7 +128,7 @@ class RunSomething:
 async def get_middleware(request, response):
     return response("Route") # Before[Before / After Something]Route[Before / After Something]After
 ```
-Follow the links for more on [Middleware Declaration](middleware.md#declare) and [Linking to Routes](middleware.md#routes).
+Follow the links for more on [Middleware Declaration](10-middleware-security.md) and [Linking to Routes](10-middleware-security.md#routes).
 
 ### Template Rendering {#templates}
 
@@ -200,7 +200,7 @@ body {
   color: white;
 }
 ```
-[More details](css.md) on css and scss.
+[More details](17-frontend.md) on css and scss.
 
 ### Environments {#environments}
 
@@ -269,15 +269,15 @@ async def verify(request, response):
     <button>Save</button>
 </form>
 ```
-[More details](posting-form-data.md) on posting form data, [basic form handling](posting-form-data#basic-forms), how to [generate form tokens](posting-form-data#form-tokens),
-dealing with [file uploads](posting-form-data#file-uploads), [returning errors](posting-form-data#error-handling), [disabling route auth](posting-form-data#disabling-auth)
-and a [full login example](posting-form-data#full-example).
+[More details](03-request-response.md) on posting form data, [basic form handling](03-request-response.md), how to [generate form tokens](03-request-response.md),
+dealing with [file uploads](03-request-response.md), [returning errors](03-request-response.md), [disabling route auth](03-request-response.md)
+and a [full login example](03-request-response.md).
 
 ### AJAX and frond.js {#ajax}
 
 Tina4 ships with frond.js, a small zero-dependency JavaScript library for AJAX calls, form submissions, and real-time WebSocket connections.
 
-[More details](/general/frond) on available features.
+[More details](/general/frond.md) on available features.
 
 ### OpenAPI and Swagger UI {#swagger}
 
@@ -291,7 +291,7 @@ from tina4_python import description
 async def users(request, response):
     return response(User().select("*"))
 ```
-Follow the links for more on [Configuration](swagger.md#config), [Usage](swagger.md#usage) and [Decorators](swagger.md#decorators).
+Follow the links for more on [Configuration](20-swagger.md), [Usage](20-swagger.md) and [Decorators](20-swagger.md).
 
 ### Databases {#databases}
 
@@ -303,7 +303,7 @@ dba = Database("sqlite3:data.db")
 ```
 The adapter speaks PostgreSQL, MySQL, and SQLite. It translates your queries into whichever dialect the database understands.
 
-Follow the links for more on [Available Connections](database.md#connections), [Core Methods](database.md#core-methods), [Usage](database.md#usage) and [Full transaction control](database.md#transactions).
+Follow the links for more on [Available Connections](05-database.md), [Core Methods](05-database.md), [Usage](05-database.md) and [Full transaction control](05-database.md).
 
 ### Database Results {#database-results}
 
@@ -315,7 +315,7 @@ paginated = result.to_paginate()
 csv_data = result.to_csv()
 json_data = result.to_json()
 ```
-Looking at detailed [Usage](database.md#usage) will deepen your understanding.
+Looking at detailed [Usage](05-database.md) will deepen your understanding.
 
 ### Migrations {#migrations}
 
@@ -335,7 +335,7 @@ CREATE TABLE users
 ```bash
 tina4 migrate
 ```
-[Migrations](migrations.md) have limitations worth knowing before you use them at scale.
+[Migrations](05-database.md) have limitations worth knowing before you use them at scale.
 
 ### ORM {#orm}
 
@@ -351,7 +351,7 @@ User({"name": "Alice"}).save()
 user = User()
 user.load("id = ?", [1])
 ```
-ORM covers more ground than this snippet shows. Study the [Advanced Detail](orm.md) to get the full value.
+ORM covers more ground than this snippet shows. Study the [Advanced Detail](06-orm.md) to get the full value.
 
 ### CRUD {#crud}
 
@@ -365,7 +365,7 @@ async def dashboard(request, response):
 ```twig
 {{ crud }}
 ```
-[More details](crud.md) on how CRUD generates its files and where they live.
+[More details](19-scaffolding.md) on how CRUD generates its files and where they live.
 
 ### Consuming REST APIs {#consuming-rest-apis}
 
@@ -376,7 +376,7 @@ api = Api("https://api.example.com", auth_header="Bearer xyz")
 result = api.get("/users/42")
 print(result["body"])
 ```
-[More details](rest-api.md) on sending POST data, authorization headers, and other controls for outbound API requests.
+[More details](21-api-client.md) on sending POST data, authorization headers, and other controls for outbound API requests.
 
 ### Inline Testing {#inline-testing}
 
@@ -411,7 +411,7 @@ async def chat_ws(connection, event, data):
     if event == "message":
         await connection.send(f"Echo: {data}")
 ```
-Have a look at the PubSub example under [Websockets](websockets.md).
+Have a look at the PubSub example under [Websockets](23-websocket.md).
 
 ### Queues {#queues}
 
@@ -429,7 +429,7 @@ for job in queue.consume("emails"):
     print(job.payload)
 ```
 
-[Full details](queues.md) on backend configuration, batching, multi-queue consumers, and error handling.
+[Full details](12-queues.md) on backend configuration, batching, multi-queue consumers, and error handling.
 
 ### WSDL {#wsdl}
 
@@ -457,7 +457,7 @@ async def wsdl_cis(request, response):
     return response.wsdl(Calculator(request))
 
 ```
-[More Details](wsdl.md) on WSDL configuration and usage.
+[More Details](25-wsdl-soap.md) on WSDL configuration and usage.
 
 ### GraphQL {#graphql}
 

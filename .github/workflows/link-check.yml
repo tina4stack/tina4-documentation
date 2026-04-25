@@ -1,0 +1,23 @@
+name: Link Check
+
+on:
+  push:
+    branches: [main, vitepress, mkdocs]
+  pull_request:
+    branches: [main, vitepress]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Audit internal links
+        run: python3 scripts/audit-links.py --strict
+        # --strict gates the merge on missing-file / missing-image counts.
+        # Stale anchors still print as warnings (we have legacy v2 docs with
+        # ~50 of them); when those are cleaned we'll add --strict-anchors.

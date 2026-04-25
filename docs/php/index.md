@@ -68,7 +68,7 @@ cd my-project
 composer install
 tina4 serve
 ```
-[More details](installation.md) on project setup and configuration options.
+[More details](01-getting-started.md) on project setup and configuration options.
 
 ### Static Websites {#static-websites}
 
@@ -78,7 +78,7 @@ Drop `.html` or `.twig` files in `./src/templates`. Put assets in `./src/public`
 <!-- src/templates/index.twig -->
 <h1>Hello Static World</h1>
 ```
-[More details](static-website.md) on static website routing.
+[More details](04-templates.md) on static website routing.
 
 ### Basic Routing {#basic-routing}
 
@@ -101,7 +101,7 @@ Router::get("/users/{id:int}", function ($request, $response) {
     return $response->json(["user_id" => $id]);
 });
 ```
-Follow the links for [basic routing](basic-routing.md#basic-routing), [dynamic routing](basic-routing.md#dynamic-routing) with variables, and [different response types](basic-routing.md#response-options).
+Follow the links for [basic routing](02-routing.md), [dynamic routing](02-routing.md) with variables, and [different response types](02-routing.md).
 
 ### Middleware {#middleware}
 
@@ -139,7 +139,7 @@ Router::get("/api/secret", function ($request, $response) {
     return $response->json(["secret" => "The answer is 42"]);
 }, "requireApiKey");
 ```
-Follow the links for more on [middleware declaration](middleware.md#declare), [linking to routes](middleware.md#routes), [middleware chaining](middleware.md#chaining), and [middleware with dynamic routes](middleware.md#dynamic).
+Follow the links for more on [middleware declaration](10-middleware-security.md), [linking to routes](10-middleware-security.md), [middleware chaining](10-middleware-security.md), and [middleware with dynamic routes](10-middleware-security.md).
 
 ### Template Rendering {#templates}
 
@@ -175,7 +175,7 @@ body {
   color: white;
 }
 ```
-[More details](css.md) on CSS and SCSS.
+[More details](17-frontend.md) on CSS and SCSS.
 
 ### Environments {#environments}
 
@@ -262,13 +262,13 @@ The filter renders a hidden input with a signed JWT.
     <button>Save</button>
 </form>
 ```
-[More details](posting-form-data.md) on posting form data, [securing routes](posting-form-data.md#secure-routes), [Tina4 tokens](posting-form-data.md#form-tokens), [uploading files](posting-form-data.md#upload-files), [handling errors](posting-form-data.md#handle-errors), and a [full login example](posting-form-data.md#login-example).
+[More details](03-request-response.md) on posting form data, [securing routes](03-request-response.md), [Tina4 tokens](03-request-response.md), [uploading files](03-request-response.md), [handling errors](03-request-response.md), and a [full login example](03-request-response.md).
 
 ### AJAX and frond.js {#ajax}
 
 Tina4 ships with frond.js -- a small zero-dependency JavaScript library for AJAX calls, form submissions, and real-time WebSocket connections.
 
-[More details](/general/frond) on available features.
+[More details](/general/frond.md) on available features.
 
 ### OpenAPI and Swagger UI {#swagger}
 
@@ -285,7 +285,7 @@ Router::get("/users", function ($request, $response) {
     return $response->json((new User())->select("*"));
 });
 ```
-Follow the links for more on [configuration](swagger.md#config), [annotations](swagger.md#annotations), and [usage](swagger.md#usage).
+Follow the links for more on [configuration](20-swagger.md), [annotations](20-swagger.md), and [usage](20-swagger.md).
 
 ### Databases {#databases}
 
@@ -307,7 +307,7 @@ use Tina4\Database;
 $db = Database::getConnection();
 $result = $db->fetch("SELECT * FROM products WHERE price > ?", [50]);
 ```
-Follow the links for more on [available connections](database.md#connections), [core methods](database.md#core-methods), [usage](database.md#usage), [examples](database.md#examples), and [transaction control](database.md#transactions).
+Follow the links for more on [available connections](05-database.md), [core methods](05-database.md), [usage](05-database.md), [examples](05-database.md), and [transaction control](05-database.md).
 
 ### Database Results {#database-results}
 
@@ -321,7 +321,7 @@ $row = $db->fetchOne("SELECT * FROM products WHERE id = 1");
 // fetch($sql, $params, $noOfRecords, $offset)
 $result = $db->fetch("SELECT * FROM products ORDER BY name", [], 10, 0);
 ```
-Dig into the [usage guide](database.md#usage) and [examples](database.md#examples) for deeper coverage.
+Dig into the [usage guide](05-database.md) and [examples](05-database.md) for deeper coverage.
 
 ### Migrations {#migrations}
 
@@ -337,7 +337,7 @@ Run all pending migrations in one command.
 tina4 migrate
 ```
 
-More details on [migrations](migrations.md), their [creation](migrations.md#creation), [running](migrations.md#running) them, and [integration with ORM](migrations.md#orm).
+More details on [migrations](05-database.md), their [creation](05-database.md), [running](05-database.md) them, and [integration with ORM](05-database.md).
 
 ### ORM {#orm}
 
@@ -360,7 +360,7 @@ $user = new User(["email" => "alice@example.com"]);
 $user->save();
 $user = (new User())->load("id = ?", [1]);
 ```
-ORM covers a lot of ground. Study the [full reference](orm.md) to get the most from it.
+ORM covers a lot of ground. Study the [full reference](06-orm.md) to get the most from it.
 
 ### CRUD {#crud}
 
@@ -369,7 +369,7 @@ One line of code generates a working CRUD system -- screens, routes, and all.
 ```php
 (new User())->generateCrud("/my-crud-templates");
 ```
-[More details](crud.md) on how CRUD works and where it puts the generated files.
+[More details](19-scaffolding.md) on how CRUD works and where it puts the generated files.
 
 ### Consuming REST APIs {#consuming-rest-apis}
 
@@ -378,7 +378,7 @@ Pull data from an external API in a single call.
 ```php
 $api = (new \Tina4\Api("https://api.example.com"))->sendRequest("/my-route", "GET");
 ```
-[More details](rest-api.md) on sending POST bodies, authorization headers, and other controls.
+[More details](21-api-client.md) on sending POST bodies, authorization headers, and other controls.
 
 ### Inline Testing {#inline-testing}
 
@@ -398,7 +398,7 @@ Run the tests from the CLI.
 ```bash
 tina4 test
 ```
-[Limitations](tests.md) and further reading on the testing system.
+[Limitations](18-testing.md) and further reading on the testing system.
 
 ### Services {#services}
 
@@ -424,7 +424,7 @@ $service = new \Tina4\Service();
 $service->addProcess(new MyProcess("Unique Process Name"));
 ```
 
-[Further reading](services.md) on services. Study them alongside [threads](threads.md) for the full picture.
+[Further reading](27-service-runner.md) on services. Study them alongside [threads](27-service-runner.md) for the full picture.
 
 ### Websockets {#websockets}
 
@@ -453,7 +453,7 @@ foreach ($queue->consume() as $message) {
 }
 ```
 
-[More details](queues.md) on queues, their backends, and configuration.
+[More details](12-queues.md) on queues, their backends, and configuration.
 
 ### WSDL {#wsdl}
 
@@ -481,7 +481,7 @@ Router::any("/calculator", function ($request, $response) {
     return $response->xml($handle);
 });
 ```
-[More details](wsdl.md) on WSDL services.
+[More details](25-wsdl-soap.md) on WSDL services.
 
 ### GraphQL {#graphql}
 

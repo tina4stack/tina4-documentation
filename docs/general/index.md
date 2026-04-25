@@ -67,7 +67,7 @@ All four languages share the same conventions:
 - **PHP** — Best for shared hosting, WordPress ecosystem, legacy integration
 - **Ruby** — Best for developer happiness, clean syntax, rapid development
 
-See [Chapter 3: Choosing Your Language](/general/03-choosing-your-language) for a detailed comparison.
+See [Chapter 3: Choosing Your Language](/general/03-choosing-your-language.md) for a detailed comparison.
 
 ---
 
@@ -87,4 +87,4 @@ DEBUG=true
 AUTH_SECRET=your-secret-key
 ```
 
-See [Chapter 4: Environment Variables](/general/04-environment-variables) for the full reference.
+See [Chapter 4: Environment Variables](/general/04-environment-variables.md) for the full reference.

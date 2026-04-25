@@ -33,4 +33,4 @@ Open `http://localhost:7145/` in your browser. You'll see a welcome page or init
 
 For production, deploy to a web server; Tina4 supports easy integration with Apache, Nginx, or containers. If issues occur, verify Composer/PHP versions with `composer --version` and `php -v`.
 
-This minimal setup gets you coding fast, embodying Tina4's "not a framework" philosophy. Explore [Basic Routing](/php/basic-routing.md) for routing examples.
+This minimal setup gets you coding fast, embodying Tina4's "not a framework" philosophy. Explore [Basic Routing](/php/02-routing.md) for routing examples.
