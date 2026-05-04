@@ -36,7 +36,7 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo0MiwiZW1haWwiOiJhbGljZUBleGF
 
 The token has three parts separated by dots: header, payload, and signature. The signature ensures the token has not been tampered with.
 
-The `secret` parameter is required -- pass your secret key directly or read it from the `SECRET` env var.
+The `secret` parameter is required -- pass your secret key directly or read it from the `TINA4_SECRET` env var.
 
 > **Legacy aliases:** `Auth.getToken()` and the standalone `getToken()` function still work. Use the primary name in new code.
 
@@ -58,7 +58,7 @@ const token = Auth.getToken(payload, secret, 60); // 1 hour (default)
 You can also configure the default expiry in `.env`:
 
 ```bash
-TINA4_JWT_EXPIRY=1440
+TINA4_TOKEN_LIMIT=1440
 ```
 
 The value is in minutes. `1440` is 24 hours.
@@ -103,10 +103,10 @@ Tina4 Node.js uses **HS256** (HMAC-SHA256) for JWT signing. It uses only the sta
 Set the secret key in `.env`:
 
 ```bash
-SECRET=my-super-secret-key-at-least-32-chars
+TINA4_SECRET=my-super-secret-key-at-least-32-chars
 ```
 
-The `secret` parameter on `getToken()` and `validToken()` is optional -- if omitted, Tina4 reads from the `SECRET` env var. If neither is set, Tina4 falls back to generating a random key at `secrets/jwt.key` on first run. Setting `SECRET` explicitly is recommended for production so all server instances share the same key.
+The `secret` parameter on `getToken()` and `validToken()` is optional -- if omitted, Tina4 reads from the `TINA4_SECRET` env var. If neither is set, Tina4 falls back to generating a random key at `secrets/jwt.key` on first run. Setting `TINA4_SECRET` explicitly is recommended for production so all server instances share the same key.
 
 Keep this key secret. If someone gets it, they can forge tokens.
 
@@ -228,7 +228,7 @@ Router.post("/api/login", async (req, res) => {
     }
 
     // Generate a token
-    const secret = process.env.SECRET || "tina4-default-secret";
+    const secret = process.env.TINA4_SECRET || "tina4-default-secret";
     const token = Auth.getToken({
         user_id: user.id,
         email: user.email,
@@ -310,7 +310,7 @@ function authMiddleware(req, res, next) {
     }
 
     const token = authHeader.substring(7);  // Remove "Bearer " prefix
-    const secret = process.env.SECRET || "tina4-default-secret";
+    const secret = process.env.TINA4_SECRET || "tina4-default-secret";
 
     const payload = Auth.validToken(token, secret);
     if (payload === null) {
@@ -448,7 +448,7 @@ function requireRole(role: string) {
         }
 
         const token = authHeader.substring(7);
-        const secret = process.env.SECRET || "tina4-default-secret";
+        const secret = process.env.TINA4_SECRET || "tina4-default-secret";
         const payload = Auth.validToken(token, secret);
         if (payload === null) {
             res({ error: "Invalid or expired token" }, 401);
@@ -572,18 +572,18 @@ TINA4_SESSION_BACKEND=file
 
 # Redis
 TINA4_SESSION_BACKEND=redis
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=6379
+TINA4_SESSION_REDIS_HOST=localhost
+TINA4_SESSION_REDIS_PORT=6379
 
 # MongoDB
 TINA4_SESSION_BACKEND=mongodb
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=27017
+TINA4_SESSION_REDIS_HOST=localhost
+TINA4_SESSION_REDIS_PORT=27017
 
 # Valkey
 TINA4_SESSION_BACKEND=valkey
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=6379
+TINA4_SESSION_REDIS_HOST=localhost
+TINA4_SESSION_REDIS_PORT=6379
 ```
 
 File-based sessions work out of the box. No extra dependencies. For production deployments with multiple servers, use Redis or Valkey so sessions are shared across instances.
@@ -627,7 +627,7 @@ Sessions complement JWT tokens. Use JWT for stateless API authentication. Use se
 ### Session Options
 
 ```bash
-TINA4_SESSION_LIFETIME=3600       # Session lifetime in seconds (default: 3600)
+TINA4_SESSION_TTL=3600       # Session lifetime in seconds (default: 3600)
 TINA4_SESSION_NAME=tina4_session  # Cookie name for the session ID
 ```
 
@@ -644,7 +644,7 @@ import { Router, Auth } from "tina4-nodejs";
 
 Router.post("/api/auth/refresh", async (req, res) => {
     // req.user is populated by auth middleware
-    const secret = process.env.SECRET || "tina4-default-secret";
+    const secret = process.env.TINA4_SECRET || "tina4-default-secret";
     const newToken = Auth.getToken({
         user_id: req.user.user_id,
         email: req.user.email,
@@ -759,7 +759,7 @@ function authMiddleware(req, res, next) {
     }
 
     const token = authHeader.substring(7);
-    const secret = process.env.SECRET || "tina4-default-secret";
+    const secret = process.env.TINA4_SECRET || "tina4-default-secret";
 
     const payload = Auth.validToken(token, secret);
     if (payload === null) {
@@ -830,7 +830,7 @@ Router.post("/api/login", async (req, res) => {
         return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    const secret = process.env.SECRET || "tina4-default-secret";
+    const secret = process.env.TINA4_SECRET || "tina4-default-secret";
     const token = Auth.getToken({
         user_id: user.id,
         email: user.email,
@@ -963,7 +963,7 @@ Router.put("/api/profile/password", async (req, res) => {
 
 **Cause:** Each server generated its own random `secrets/jwt.key` file. Or the key file was deleted or regenerated during deployment.
 
-**Fix:** Set `SECRET` in `.env` explicitly and use the same value across all servers. Store it in your deployment secrets manager (not in version control). If the key changes, all existing tokens become invalid and users must log in again.
+**Fix:** Set `TINA4_SECRET` in `.env` explicitly and use the same value across all servers. Store it in your deployment secrets manager (not in version control). If the key changes, all existing tokens become invalid and users must log in again.
 
 ### 3. CORS with Authentication
 

@@ -220,7 +220,7 @@ $db = new \Tina4\DataSQLite3("data/app.db");
 **v3:**
 
 ```bash
-DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=sqlite:///data/app.db
 ```
 
 Or in code:
@@ -236,19 +236,19 @@ All drivers use the same `Database` class. The URL scheme selects the driver:
 
 ```bash
 # SQLite
-DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=sqlite:///data/app.db
 
 # PostgreSQL
-DATABASE_URL=postgres://localhost:5432/myapp
+TINA4_DATABASE_URL=postgres://localhost:5432/myapp
 
 # MySQL
-DATABASE_URL=mysql://localhost:3306/myapp
+TINA4_DATABASE_URL=mysql://localhost:3306/myapp
 
 # Firebird
-DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
+TINA4_DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
 
 # Microsoft SQL Server
-DATABASE_URL=mssql://localhost:1433/myapp
+TINA4_DATABASE_URL=mssql://localhost:1433/myapp
 ```
 
 ### Firebird Notes
@@ -520,7 +520,7 @@ Follow these steps in order. Check each one off as you go.
 
 8. **Add `#[Secured]` to protected GET routes.** Any GET route that should require authentication needs the `#[Secured]` attribute.
 
-9. **Update database connection code.** Replace driver-specific classes (`DataSQLite3`, `DataMySQL`, etc.) with `new Database("url")`. Move connection strings to `DATABASE_URL` in `.env`.
+9. **Update database connection code.** Replace driver-specific classes (`DataSQLite3`, `DataMySQL`, etc.) with `new Database("url")`. Move connection strings to `TINA4_DATABASE_URL` in `.env`.
 
 10. **Fix transaction calls.** `beginTransaction()` becomes `startTransaction()`. `rollBack()` becomes `rollback()`.
 

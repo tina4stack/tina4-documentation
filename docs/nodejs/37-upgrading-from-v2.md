@@ -141,20 +141,20 @@ The middleware function itself is defined as a named function in any auto-loaded
 
 ### Connection Strings
 
-v3 uses the same `DATABASE_URL` environment variable, but the format is standardised:
+v3 uses the same `TINA4_DATABASE_URL` environment variable, but the format is standardised:
 
 ```bash
-# SQLite (default if DATABASE_URL is not set)
-DATABASE_URL=sqlite:///data/app.db
+# SQLite (default if TINA4_DATABASE_URL is not set)
+TINA4_DATABASE_URL=sqlite:///data/app.db
 
 # PostgreSQL
-DATABASE_URL=postgres://localhost:5432/myapp
+TINA4_DATABASE_URL=postgres://localhost:5432/myapp
 
 # MySQL
-DATABASE_URL=mysql://localhost:3306/myapp
+TINA4_DATABASE_URL=mysql://localhost:3306/myapp
 
 # Firebird
-DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
+TINA4_DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
 ```
 
 ### SQLite: node:sqlite

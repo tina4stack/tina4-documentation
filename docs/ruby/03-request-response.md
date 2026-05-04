@@ -921,10 +921,10 @@ end
 
 **Cause:** The body exceeds the configured maximum size.
 
-**Fix:** Increase `TINA4_MAX_BODY_SIZE` in `.env`. Default is `10mb`. For file uploads, you may need `50mb` or more:
+**Fix:** Increase `TINA4_MAX_UPLOAD_SIZE` in `.env`. Default is `10mb`. For file uploads, you may need `50mb` or more:
 
 ```bash
-TINA4_MAX_BODY_SIZE=50mb
+TINA4_MAX_UPLOAD_SIZE=50mb
 ```
 
 ### 9. Chaining Response Methods in Wrong Order

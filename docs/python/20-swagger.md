@@ -275,9 +275,9 @@ Tina4 auto-detects auth requirements from `@secured` and `@noauth` decorators. S
 The Swagger UI header and OpenAPI spec carry metadata about your API. Configure this metadata through environment variables in `.env`:
 
 ```bash
-SWAGGER_TITLE=My Store API
-SWAGGER_DESCRIPTION=REST API for managing products, orders, and users
-SWAGGER_VERSION=1.0.0
+TINA4_SWAGGER_TITLE=My Store API
+TINA4_SWAGGER_DESCRIPTION=REST API for managing products, orders, and users
+TINA4_SWAGGER_VERSION=1.0.0
 SWAGGER_DEV_URL=http://localhost:7146
 ```
 
@@ -301,12 +301,12 @@ These values appear in the OpenAPI spec under the `info` block:
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `SWAGGER_TITLE` | API name shown in the UI header | `Tina4 API` |
-| `SWAGGER_DESCRIPTION` | Brief description below the title | (empty) |
-| `SWAGGER_VERSION` | API version number | `1.0.0` |
+| `TINA4_SWAGGER_TITLE` | API name shown in the UI header | `Tina4 API` |
+| `TINA4_SWAGGER_DESCRIPTION` | Brief description below the title | (empty) |
+| `TINA4_SWAGGER_VERSION` | API version number | `1.0.0` |
 | `SWAGGER_DEV_URL` | Server URL for the spec | `http://localhost:7146` |
 
-When you version your API, update `SWAGGER_VERSION` so consumers know which version they target. The title and description give context -- a developer who opens your Swagger page should know what the API does before scrolling.
+When you version your API, update `TINA4_SWAGGER_VERSION` so consumers know which version they target. The title and description give context -- a developer who opens your Swagger page should know what the API does before scrolling.
 
 ---
 
@@ -487,9 +487,9 @@ Control Swagger behavior in `.env`:
 TINA4_DEBUG=true
 
 # Custom API title and version shown in Swagger UI
-SWAGGER_TITLE=My Store API
-SWAGGER_VERSION=1.0.0
-SWAGGER_DESCRIPTION=REST API for the My Store e-commerce platform
+TINA4_SWAGGER_TITLE=My Store API
+TINA4_SWAGGER_VERSION=1.0.0
+TINA4_SWAGGER_DESCRIPTION=REST API for the My Store e-commerce platform
 ```
 
 ---

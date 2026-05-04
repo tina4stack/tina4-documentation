@@ -988,8 +988,8 @@ ORM::setGlobalDb($db);
 // Option 2: Set via App
 App::setDatabase($db);
 
-// Option 3: Set DATABASE_URL in .env (auto-discovered)
-// DATABASE_URL=sqlite:///path/to/app.db
+// Option 3: Set TINA4_DATABASE_URL in .env (auto-discovered)
+// TINA4_DATABASE_URL=sqlite:///path/to/app.db
 ```
 
 Once a global database is set, all ORM models resolve it. You can also pass a database adapter to a specific instance:

@@ -389,4 +389,4 @@ Response:
 
 **Cause:** The WSDL generator reads the `Host` header from the current request.
 
-**Fix:** Set `TINA4_BASE_URL` in your environment to override the auto-detected host: `TINA4_BASE_URL=https://api.example.com`.
+**Fix:** Set `TINA4_HOST_NAME` in your environment to override the auto-detected host: `TINA4_HOST_NAME=https://api.example.com`.

@@ -133,15 +133,15 @@ Default development environment in `.env`
 VERSION=1.0.0
 TINA4_DEBUG=true
 TINA4_DEBUG_LEVEL=[TINA4_LOG_ALL]
-TINA4_CACHE_ON=false
+TINA4_CACHE_BACKEND=false
 [Open API]
-SWAGGER_TITLE=Tina4 Project
-SWAGGER_DESCRIPTION=Edit your .env file to change this description
-SWAGGER_VERSION=1.0.0
+TINA4_SWAGGER_TITLE=Tina4 Project
+TINA4_SWAGGER_DESCRIPTION=Edit your .env file to change this description
+TINA4_SWAGGER_VERSION=1.0.0
 ```
 Environment variables are available through the Environment superglobal variable.
 ```php
-$data = $_ENV["SWAGGER_TITLE"];
+$data = $_ENV["TINA4_SWAGGER_TITLE"];
 ```
 
 ### Authentication {#authentication}

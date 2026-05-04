@@ -8,7 +8,7 @@ A `.env` file is plain text. Key-value pairs. Nothing more.
 
 ```bash
 # This is a comment
-DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=sqlite:///data/app.db
 TINA4_DEBUG=true
 
 # Blank lines are ignored
@@ -17,7 +17,7 @@ TINA4_DEBUG=true
 TINA4_MAIL_FROM="My App <noreply@example.com>"
 
 # No quotes needed for simple values
-SECRET=my-secret-key-change-in-production
+TINA4_SECRET=my-secret-key-change-in-production
 ```
 
 ### Rules
@@ -41,12 +41,12 @@ Commit a `.env.example` instead. Placeholder values. A map for the next develope
 
 ```bash
 # .env.example -- copy to .env and fill in real values
-DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=sqlite:///data/app.db
 TINA4_DEBUG=false
-SECRET=CHANGE_ME
-SMTP_HOST=smtp.example.com
-SMTP_USERNAME=
-SMTP_PASSWORD=
+TINA4_SECRET=CHANGE_ME
+TINA4_MAIL_HOST=smtp.example.com
+TINA4_MAIL_USERNAME=
+TINA4_MAIL_PASSWORD=
 ```
 
 The example file documents what the application expects. The real file stays on the machine that runs it. Never in the repository.
@@ -120,7 +120,7 @@ TINA4_DEBUG=yes
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SECRET` | `tina4-default-secret` | Secret key for JWT signing (HMAC-SHA256). Long, random, never committed to git. **Change this in production.** |
+| `TINA4_SECRET` | `tina4-default-secret` | Secret key for JWT signing (HMAC-SHA256). Long, random, never committed to git. **Change this in production.** |
 | `TINA4_API_KEY` | _(none)_ | Static API key for bearer token authentication. When set, requests with `Authorization: Bearer {TINA4_API_KEY}` are accepted. |
 | `TINA4_TOKEN_LIMIT` | `60` | Token lifetime in minutes. Tokens issued by `get_token()` / `getToken()` expire after this many minutes. |
 
@@ -147,31 +147,31 @@ TINA4_CSRF=false
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATABASE_URL` | `sqlite:///data/app.db` | Connection string. The URL scheme selects the driver. |
-| `DATABASE_USERNAME` | _(from URL)_ | Override the username in `DATABASE_URL`. Useful when credentials contain special characters. |
-| `DATABASE_PASSWORD` | _(from URL)_ | Override the password in `DATABASE_URL`. |
+| `TINA4_DATABASE_URL` | `sqlite:///data/app.db` | Connection string. The URL scheme selects the driver. |
+| `TINA4_DATABASE_USERNAME` | _(from URL)_ | Override the username in `TINA4_DATABASE_URL`. Useful when credentials contain special characters. |
+| `TINA4_DATABASE_PASSWORD` | _(from URL)_ | Override the password in `TINA4_DATABASE_URL`. |
 | `TINA4_AUTOCOMMIT` | `false` | Enable auto-commit after every write operation. Default is off -- use explicit `commit()` calls. |
 
 **Connection string formats:**
 
 ```bash
 # SQLite (default -- no credentials needed)
-DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=sqlite:///data/app.db
 
 # PostgreSQL
-DATABASE_URL=postgresql://user:password@hostname:5432/database_name
+TINA4_DATABASE_URL=postgresql://user:password@hostname:5432/database_name
 
 # MySQL / MariaDB
-DATABASE_URL=mysql://user:password@hostname:3306/database_name
+TINA4_DATABASE_URL=mysql://user:password@hostname:3306/database_name
 
 # Microsoft SQL Server
-DATABASE_URL=mssql://user:password@hostname:1433/database_name
+TINA4_DATABASE_URL=mssql://user:password@hostname:1433/database_name
 
 # Firebird
-DATABASE_URL=firebird://user:password@hostname:3050/path/to/database.fdb
+TINA4_DATABASE_URL=firebird://user:password@hostname:3050/path/to/database.fdb
 
 # MongoDB (SQL queries are auto-translated)
-DATABASE_URL=mongodb://user:password@hostname:27017/database_name
+TINA4_DATABASE_URL=mongodb://user:password@hostname:27017/database_name
 ```
 
 **Gotcha:** Special characters in your database password -- `@`, `#`, `:`, `/` -- will break URL parsing. URL-encode them (`@` becomes `%40`) or split the credentials into separate variables.
@@ -187,7 +187,7 @@ DATABASE_URL=mongodb://user:password@hostname:27017/database_name
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ORM_PLURAL_TABLE_NAMES` | `false` | Append "s" to auto-generated table names. When `false` (default), `Product` maps to `product`. When `true`, `Product` maps to `products`. |
+| `TINA4_ORM_PLURAL_TABLE_NAMES` | `false` | Append "s" to auto-generated table names. When `false` (default), `Product` maps to `product`. When `true`, `Product` maps to `products`. |
 
 ### CORS (Cross-Origin Resource Sharing)
 
@@ -327,20 +327,20 @@ Tina4 supports two naming conventions for SMTP variables. The `SMTP_*` variables
 
 | Variable | Alias | Default | Description |
 |----------|-------|---------|-------------|
-| `SMTP_HOST` | `TINA4_MAIL_HOST` | `localhost` | SMTP server hostname. |
-| `SMTP_PORT` | `TINA4_MAIL_PORT` | `587` | SMTP port. `587` (TLS), `465` (SSL), `25` (unencrypted). |
-| `SMTP_USERNAME` | `TINA4_MAIL_USERNAME` | _(none)_ | SMTP authentication username. |
-| `SMTP_PASSWORD` | `TINA4_MAIL_PASSWORD` | _(none)_ | SMTP authentication password. |
-| `SMTP_FROM` | `TINA4_MAIL_FROM` | `noreply@localhost` | Default sender address. |
-| `SMTP_FROM_NAME` | `TINA4_MAIL_FROM_NAME` | _(none)_ | Sender display name. |
+| `TINA4_MAIL_HOST` | `TINA4_MAIL_HOST` | `localhost` | SMTP server hostname. |
+| `TINA4_MAIL_PORT` | `TINA4_MAIL_PORT` | `587` | SMTP port. `587` (TLS), `465` (SSL), `25` (unencrypted). |
+| `TINA4_MAIL_USERNAME` | `TINA4_MAIL_USERNAME` | _(none)_ | SMTP authentication username. |
+| `TINA4_MAIL_PASSWORD` | `TINA4_MAIL_PASSWORD` | _(none)_ | SMTP authentication password. |
+| `TINA4_MAIL_FROM` | `TINA4_MAIL_FROM` | `noreply@localhost` | Default sender address. |
+| `TINA4_MAIL_FROM_NAME` | `TINA4_MAIL_FROM_NAME` | _(none)_ | Sender display name. |
 | `TINA4_MAIL_ENCRYPTION` | — | `tls` | Connection encryption. `tls`, `ssl`, or `none`. |
 
 #### IMAP (for reading email)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `IMAP_HOST` | _(falls back to SMTP_HOST)_ | IMAP server hostname. |
-| `IMAP_PORT` | `993` | IMAP port (993 = SSL). |
+| `TINA4_MAIL_IMAP_HOST` | _(falls back to TINA4_MAIL_HOST)_ | IMAP server hostname. |
+| `TINA4_MAIL_IMAP_PORT` | `993` | IMAP port (993 = SSL). |
 
 ### Localization (i18n)
 
@@ -353,9 +353,9 @@ Tina4 supports two naming conventions for SMTP variables. The `SMTP_*` variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SWAGGER_TITLE` | `Tina4 API` | API title shown in Swagger UI. |
-| `SWAGGER_VERSION` | `1.0.0` | API version shown in Swagger UI. |
-| `SWAGGER_DESCRIPTION` | _(none)_ | API description. |
+| `TINA4_SWAGGER_TITLE` | `Tina4 API` | API title shown in Swagger UI. |
+| `TINA4_SWAGGER_VERSION` | `1.0.0` | API version shown in Swagger UI. |
+| `TINA4_SWAGGER_DESCRIPTION` | _(none)_ | API description. |
 
 ### File Uploads
 
@@ -412,15 +412,15 @@ One line. A working development environment. Add variables when you need them. N
 
 ```bash
 TINA4_DEBUG=false
-SECRET=a-very-long-random-string-at-least-32-characters
-DATABASE_URL=postgresql://app_user:strong_password@db-host:5432/myapp
+TINA4_SECRET=a-very-long-random-string-at-least-32-characters
+TINA4_DATABASE_URL=postgresql://app_user:strong_password@db-host:5432/myapp
 TINA4_CORS_ORIGINS=https://myapp.com
 TINA4_HSTS=31536000
-SMTP_HOST=smtp.sendgrid.net
-SMTP_PORT=587
-SMTP_USERNAME=apikey
-SMTP_PASSWORD=SG.xxxxx
-SMTP_FROM=noreply@myapp.com
+TINA4_MAIL_HOST=smtp.sendgrid.net
+TINA4_MAIL_PORT=587
+TINA4_MAIL_USERNAME=apikey
+TINA4_MAIL_PASSWORD=SG.xxxxx
+TINA4_MAIL_FROM=noreply@myapp.com
 ```
 
 Ten lines. A production application. Debug disabled. Real database. Signed tokens. Locked CORS. HSTS enabled. Email configured. Everything else keeps its defaults.
@@ -452,7 +452,7 @@ HOST=0.0.0.0
 TINA4_DEBUG=false
 
 # --- Authentication ---
-SECRET=CHANGE_ME
+TINA4_SECRET=CHANGE_ME
 # TINA4_API_KEY=
 TINA4_TOKEN_LIMIT=60
 
@@ -460,9 +460,9 @@ TINA4_TOKEN_LIMIT=60
 TINA4_CSRF=true
 
 # --- Database ---
-DATABASE_URL=sqlite:///data/app.db
-# DATABASE_USERNAME=
-# DATABASE_PASSWORD=
+TINA4_DATABASE_URL=sqlite:///data/app.db
+# TINA4_DATABASE_USERNAME=
+# TINA4_DATABASE_PASSWORD=
 # TINA4_AUTOCOMMIT=false
 
 # --- DB Query Cache ---
@@ -470,7 +470,7 @@ DATABASE_URL=sqlite:///data/app.db
 # TINA4_DB_CACHE_TTL=30
 
 # --- ORM ---
-# ORM_PLURAL_TABLE_NAMES=false
+# TINA4_ORM_PLURAL_TABLE_NAMES=false
 
 # --- CORS ---
 TINA4_CORS_ORIGINS=*
@@ -523,19 +523,19 @@ TINA4_CACHE_TTL=60
 TINA4_CACHE_MAX_ENTRIES=1000
 
 # --- Email (SMTP) ---
-# SMTP_HOST=smtp.example.com
-# SMTP_PORT=587
-# SMTP_USERNAME=
-# SMTP_PASSWORD=
-# SMTP_FROM=noreply@example.com
+# TINA4_MAIL_HOST=smtp.example.com
+# TINA4_MAIL_PORT=587
+# TINA4_MAIL_USERNAME=
+# TINA4_MAIL_PASSWORD=
+# TINA4_MAIL_FROM=noreply@example.com
 
 # --- Localization ---
 TINA4_LOCALE=en
 
 # --- Swagger ---
-SWAGGER_TITLE=Tina4 API
-SWAGGER_VERSION=1.0.0
-# SWAGGER_DESCRIPTION=
+TINA4_SWAGGER_TITLE=Tina4 API
+TINA4_SWAGGER_VERSION=1.0.0
+# TINA4_SWAGGER_DESCRIPTION=
 
 # --- File Uploads ---
 # TINA4_MAX_UPLOAD_SIZE=10485760
@@ -550,9 +550,9 @@ SWAGGER_VERSION=1.0.0
 | Count | Category |
 |-------|----------|
 | 3 | Server (HOST, PORT, TINA4_DEBUG) |
-| 3 | Authentication (SECRET, TINA4_API_KEY, TINA4_TOKEN_LIMIT) |
+| 3 | Authentication (TINA4_SECRET, TINA4_API_KEY, TINA4_TOKEN_LIMIT) |
 | 1 | CSRF (TINA4_CSRF) |
-| 4 | Database (DATABASE_URL, USERNAME, PASSWORD, AUTOCOMMIT) |
+| 4 | Database (TINA4_DATABASE_URL, USERNAME, PASSWORD, AUTOCOMMIT) |
 | 2 | DB query cache |
 | 5 | CORS |
 | 5 | Security headers |

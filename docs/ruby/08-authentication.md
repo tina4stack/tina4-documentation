@@ -95,15 +95,15 @@ If the token cannot be decoded, `get_payload` returns `nil`.
 
 Tina4 Ruby supports two JWT algorithms, auto-detected based on your configuration:
 
-- **HS256** (HMAC-SHA256) -- set `SECRET` in `.env`. Uses the standard library. Zero dependencies.
+- **HS256** (HMAC-SHA256) -- set `TINA4_SECRET` in `.env`. Uses the standard library. Zero dependencies.
 - **RS256** (RSA) -- RSA keys are auto-generated in the `.keys/` folder. Requires the `jwt` gem (included by default).
 
 ```bash
 # .env -- HS256 mode (recommended, simplest setup)
-SECRET=my-super-secret-key-at-least-32-chars
+TINA4_SECRET=my-super-secret-key-at-least-32-chars
 ```
 
-If `SECRET` is set and no RSA keys exist in `.keys/`, Tina4 uses HS256. If RSA keys exist in `.keys/` instead, Tina4 uses RS256. If neither is configured, Tina4 auto-generates RSA keys in `.keys/` on first run.
+If `TINA4_SECRET` is set and no RSA keys exist in `.keys/`, Tina4 uses HS256. If RSA keys exist in `.keys/` instead, Tina4 uses RS256. If neither is configured, Tina4 auto-generates RSA keys in `.keys/` on first run.
 
 Keep this key secret. If someone gets it, they can forge tokens.
 
@@ -812,7 +812,7 @@ end
 
 **Cause:** Each server generated its own RSA keys in `.keys/`. Or the key files were deleted/regenerated during deployment.
 
-**Fix:** Set `SECRET` in `.env` explicitly and use the same value across all servers. Store it in your deployment secrets manager (not in version control). If the key changes, all existing tokens become invalid and users must log in again.
+**Fix:** Set `TINA4_SECRET` in `.env` explicitly and use the same value across all servers. Store it in your deployment secrets manager (not in version control). If the key changes, all existing tokens become invalid and users must log in again.
 
 ### 3. CORS with Authentication
 

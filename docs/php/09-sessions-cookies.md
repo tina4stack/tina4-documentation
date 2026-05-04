@@ -106,9 +106,9 @@ Multiple servers behind a load balancer need a shared session store. Redis is th
 
 ```bash
 TINA4_SESSION_BACKEND=redis
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=6379
-TINA4_SESSION_PASSWORD=your-redis-password
+TINA4_SESSION_REDIS_HOST=localhost
+TINA4_SESSION_REDIS_PORT=6379
+TINA4_SESSION_REDIS_PASSWORD=your-redis-password
 ```
 
 That is the only change. Your code stays identical. `$request->session` works the same whether backed by files, Redis, MongoDB, or Valkey. The storage backend is invisible to your handlers.
@@ -126,9 +126,9 @@ Sharing a Redis instance with other applications:
 
 ```bash
 TINA4_SESSION_BACKEND=redis
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=6379
-TINA4_SESSION_PREFIX=myapp:sess:
+TINA4_SESSION_REDIS_HOST=localhost
+TINA4_SESSION_REDIS_PORT=6379
+TINA4_SESSION_REDIS_PREFIX=myapp:sess:
 ```
 
 ---
@@ -139,10 +139,10 @@ Already running MongoDB:
 
 ```bash
 TINA4_SESSION_BACKEND=mongodb
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=27017
-TINA4_SESSION_DATABASE=myapp
-TINA4_SESSION_COLLECTION=sessions
+TINA4_SESSION_REDIS_HOST=localhost
+TINA4_SESSION_REDIS_PORT=27017
+TINA4_SESSION_MONGO_DB=myapp
+TINA4_SESSION_MONGO_COLLECTION=sessions
 ```
 
 TTL indexes handle expired session cleanup.
@@ -155,8 +155,8 @@ Valkey is the open-source Redis fork. Wire-compatible. Same client library:
 
 ```bash
 TINA4_SESSION_BACKEND=valkey
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=6379
+TINA4_SESSION_REDIS_HOST=localhost
+TINA4_SESSION_REDIS_PORT=6379
 ```
 
 ---
@@ -167,7 +167,7 @@ TINA4_SESSION_PORT=6379
 TINA4_SESSION_BACKEND=database
 ```
 
-Stores sessions in the `tina4_session` table using your existing database connection (`DATABASE_URL`). The table is auto-created on first use. Works with all 5 database engines (SQLite, PostgreSQL, MySQL, MSSQL, Firebird).
+Stores sessions in the `tina4_session` table using your existing database connection (`TINA4_DATABASE_URL`). The table is auto-created on first use. Works with all 5 database engines (SQLite, PostgreSQL, MySQL, MSSQL, Firebird).
 
 ---
 

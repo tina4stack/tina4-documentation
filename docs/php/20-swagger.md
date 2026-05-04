@@ -40,7 +40,7 @@ The Swagger UI appears with all defined routes. No annotations yet means default
 For production, control it explicitly:
 
 ```bash
-TINA4_SWAGGER=true
+TINA4_SWAGGER_ENABLED=true
 ```
 
 ### The Swagger JSON Endpoint
@@ -345,9 +345,9 @@ Tina4 auto-detects auth requirements from `@secured` and `@noauth` annotations.
 Configure in `.env`:
 
 ```bash
-SWAGGER_TITLE=My Store API
-SWAGGER_DESCRIPTION=API for managing products, orders, and users
-SWAGGER_VERSION=1.0.0
+TINA4_SWAGGER_TITLE=My Store API
+TINA4_SWAGGER_DESCRIPTION=API for managing products, orders, and users
+TINA4_SWAGGER_VERSION=1.0.0
 ```
 
 This appears in the Swagger UI header and the OpenAPI spec:
@@ -718,7 +718,7 @@ Visit `http://localhost:7145/swagger`. Verify:
 
 **Cause:** Swagger disabled when `TINA4_DEBUG=false`.
 
-**Fix:** Set `TINA4_SWAGGER=true` in `.env` for staging servers. Be aware that public documentation reveals implementation details.
+**Fix:** Set `TINA4_SWAGGER_ENABLED=true` in `.env` for staging servers. Be aware that public documentation reveals implementation details.
 
 ### 7. SDK Generation Produces Incorrect Types
 

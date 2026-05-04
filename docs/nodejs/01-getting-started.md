@@ -551,7 +551,7 @@ The important defaults for development:
 | Variable | Default Value | What It Means |
 |----------|---------------|---------------|
 | `TINA4_PORT` | `7148` | Server runs on port 7148 |
-| `DATABASE_URL` | `sqlite:///data/app.db` | SQLite database in the `data/` directory |
+| `TINA4_DATABASE_URL` | `sqlite:///data/app.db` | SQLite database in the `data/` directory |
 | `TINA4_LOG_LEVEL` | `ALL` | All log messages are output |
 | `CORS_ORIGINS` | `*` | All origins allowed (fine for development) |
 | `TINA4_RATE_LIMIT` | `60` | 60 requests per minute per IP |

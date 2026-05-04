@@ -208,7 +208,7 @@ runAllTests();
 Use a separate database for tests so development data stays safe:
 
 ```bash
-TINA4_TEST_DATABASE_URL=sqlite:///data/test.db
+TINA4_DATABASE_URL=sqlite:///data/test.db
 ```
 
 ---

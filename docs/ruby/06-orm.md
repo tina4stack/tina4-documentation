@@ -1255,7 +1255,7 @@ Two queries instead of 101.
 
 **Cause:** The ORM appends `s` by default unless the name already ends in `s`. It does not handle irregular plurals.
 
-**Fix:** Set the table name explicitly with `table_name "categories"` inside the class body. Disable auto-pluralisation with the `ORM_PLURAL_TABLE_NAMES=false` environment variable.
+**Fix:** Set the table name explicitly with `table_name "categories"` inside the class body. Disable auto-pluralisation with the `TINA4_ORM_PLURAL_TABLE_NAMES=false` environment variable.
 
 ---
 

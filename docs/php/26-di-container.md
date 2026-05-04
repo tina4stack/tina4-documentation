@@ -6,8 +6,8 @@ Without dependency injection, your route handlers create their own service insta
 
 ```php
 Router::post('/api/orders', function ($request, $response) {
-    $db    = new Database(getenv('DATABASE_URL'));
-    $mailer = new Mailer(getenv('SMTP_HOST'), getenv('SMTP_PORT'));
+    $db    = new Database(getenv('TINA4_DATABASE_URL'));
+    $mailer = new Mailer(getenv('TINA4_MAIL_HOST'), getenv('TINA4_MAIL_PORT'));
     $logger = new Logger('/var/log/app.log');
     // ...
 });
@@ -46,7 +46,7 @@ $container = new Container();
 
 // Register a factory for a database connection
 $container->register('db', function () {
-    return new \Tina4\Database(getenv('DATABASE_URL'));
+    return new \Tina4\Database(getenv('TINA4_DATABASE_URL'));
 });
 
 // Register a logger
@@ -78,8 +78,8 @@ $container = new Container();
 // Register as singleton -- created once, reused everywhere
 $container->singleton('mailer', function () {
     $mailer = new \Tina4\Messenger();
-    $mailer->setHost(getenv('SMTP_HOST'));
-    $mailer->setPort((int) getenv('SMTP_PORT'));
+    $mailer->setHost(getenv('TINA4_MAIL_HOST'));
+    $mailer->setPort((int) getenv('TINA4_MAIL_PORT'));
     $mailer->setUsername(getenv('SMTP_USER'));
     $mailer->setPassword(getenv('SMTP_PASS'));
     return $mailer;
@@ -109,7 +109,7 @@ Use singletons for services that are expensive to create (database pools, HTTP c
 use Tina4\Container;
 
 $container = new Container();
-$container->singleton('db', fn() => new \Tina4\Database(getenv('DATABASE_URL')));
+$container->singleton('db', fn() => new \Tina4\Database(getenv('TINA4_DATABASE_URL')));
 
 // Check before retrieving
 if ($container->has('db')) {
@@ -141,7 +141,7 @@ $container->singleton('logger', function () {
 });
 
 $container->singleton('db', function () {
-    return new \Tina4\Database(getenv('DATABASE_URL'));
+    return new \Tina4\Database(getenv('TINA4_DATABASE_URL'));
 });
 
 // OrderService depends on db and logger
@@ -185,7 +185,7 @@ use Tina4\Container;
 // Bootstrap container in app.php or index.php
 $container = new Container();
 
-$container->singleton('db', fn() => new \Tina4\Database(getenv('DATABASE_URL')));
+$container->singleton('db', fn() => new \Tina4\Database(getenv('TINA4_DATABASE_URL')));
 
 $container->singleton('order_service', function () use ($container) {
     return new OrderService($container->get('db'));
@@ -256,7 +256,7 @@ $container = new Container();
 
 // Infrastructure
 $container->singleton('db', function () {
-    return new \Tina4\Database(getenv('DATABASE_URL'));
+    return new \Tina4\Database(getenv('TINA4_DATABASE_URL'));
 });
 
 $container->singleton('cache', function () {
@@ -269,7 +269,7 @@ $container->singleton('queue', function () {
 
 $container->singleton('mailer', function () {
     $m = new \Tina4\Messenger();
-    $m->setHost(getenv('SMTP_HOST'));
+    $m->setHost(getenv('TINA4_MAIL_HOST'));
     return $m;
 });
 

@@ -32,7 +32,7 @@ The custom headers can also be used to set the auth header, if it has not been s
 ```php
 $customHeaders = [
     "Authorization: Bearer " . $_ENV["TOKEN"],
-    "ApiKey: " . $_ENV["API_KEY"]
+    "ApiKey: " . $_ENV["TINA4_API_KEY"]
     ];
 $body = json_encode(["test"=>"This is a test","another-test"=>"Another test"]);
 $api = (new \Tina4\Api("https://api.example.com"))

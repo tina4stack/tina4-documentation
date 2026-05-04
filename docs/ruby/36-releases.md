@@ -1,6 +1,87 @@
 # Chapter 35: Release Notes
 
 
+## v3.12.0 (2026-05-04)
+
+> **⚠️ Breaking change — read before upgrading.** Every framework env var now uses the `TINA4_` prefix. Existing `.env` files set with `DATABASE_URL`, `SECRET`, `SMTP_HOST`, `HOST_NAME`, etc. will cause the framework to refuse to boot. Run `tina4 env-migrate` to rewrite, or follow the rename table below.
+
+### Why this release
+
+Tina4's env vars had grown inconsistent. Some had the `TINA4_` prefix (`TINA4_DEBUG`, `TINA4_LOCALE`, `TINA4_CACHE_BACKEND`), others didn't (`DATABASE_URL`, `SECRET`, `SMTP_HOST`). Newcomers had to guess which convention applied to which feature. Existing tools and PaaS dashboards collided with un-prefixed names like `SECRET` and `API_KEY` that other libraries also read. Documentation drifted — 91 env-var names appeared in the docs that didn't exist in any framework, and 22 framework-specific env vars in the code didn't match the names users were told to set.
+
+This release closes all three gaps with a single hard rename. No deprecation period, no fallback chain. The framework refuses to boot if it detects a legacy name in the environment, prints a list of every var to rename, and tells you which command to run.
+
+### What changed
+
+- **22 env vars renamed** to `TINA4_*` form. See the migration table below.
+- **`tina4 env-migrate` CLI** added to all four frameworks. Reads your `.env`, rewrites it in place, leaves a `.env.bak` backup, prints a diff. Idempotent.
+- **Boot-time guard** scans `os.environ` (or the language equivalent) for the 22 legacy names. If any are present, prints the rename map and exits with code 2. Bypass with `TINA4_ALLOW_LEGACY_ENV=true` for migration scripts that need both names set during transition.
+- **All 4 framework books rewritten.** Chapter 33 (Environment Variables) is now a clean canonical list — every var prefixed, descriptions current, legacy names removed.
+- **Doc-vs-code drift closed.** Of the 91 stale env vars previously documented, 61 were renames (corrected), 32 were never implemented (removed). The `audit-links.py` CI gate stays at 0 broken links / 0 broken anchors.
+- **Frond bundle** rebuilt at v2.1.3 — `frond.min.js` footer now shows the version explicitly so users can verify what they have.
+
+### Bug fixes shipped alongside the rename
+
+- **#38 PostgreSQL UUID-PK transaction abort** — the post-INSERT `lastval()` probe is now wrapped in a SAVEPOINT, so UUID-PK INSERTs no longer poison the outer transaction with `InFailedSqlTransaction`. Live regression test against PostgreSQL 16. (Affects all 4 frameworks where the PG adapter does this probe.)
+- **#39 Landing page + template auto-routing** —
+  - Auto-routing now scans `src/templates/pages/` only. Partials, layouts, base.twig, errors/, components/, and `_*` files never auto-serve from a URL.
+  - `TINA4_TEMPLATE_ROUTING=off` kills the feature entirely.
+  - `src/public/index.html` auto-serves at `/` (and `/foo/` serves `src/public/foo/index.html`) — SPA hosting Just Works.
+  - The framework landing page only renders when `TINA4_DEBUG=true`. Production never shows it; framework version, dev-admin link, and gallery don't leak to real users.
+  - The malformed `HTTP/1.1 404 OK` status line is fixed — every status code now uses its canonical RFC 7231/9110 reason phrase.
+- **#37 frond.form.submit redirect handling** — verified shipped at v2.1.x; `xhr.responseURL` change triggers `window.location` navigation correctly.
+- **#36 Session file handler** — re-verified safeguards (lazy save, WebSocket skip, probabilistic GC, new-and-empty skip) all still in place.
+
+### Migration — every renamed var
+
+| Legacy name | New name |
+|---|---|
+| `DATABASE_URL` | `TINA4_DATABASE_URL` |
+| `DATABASE_USERNAME` | `TINA4_DATABASE_USERNAME` |
+| `DATABASE_PASSWORD` | `TINA4_DATABASE_PASSWORD` |
+| `DB_URL` | `TINA4_DATABASE_URL` (alias dropped) |
+| `SECRET` | `TINA4_SECRET` |
+| `API_KEY` | `TINA4_API_KEY` |
+| `JWT_ALGORITHM` | `TINA4_JWT_ALGORITHM` |
+| `SMTP_HOST` | `TINA4_MAIL_HOST` |
+| `SMTP_PORT` | `TINA4_MAIL_PORT` |
+| `SMTP_USERNAME` | `TINA4_MAIL_USERNAME` |
+| `SMTP_PASSWORD` | `TINA4_MAIL_PASSWORD` |
+| `SMTP_FROM` | `TINA4_MAIL_FROM` |
+| `SMTP_FROM_NAME` | `TINA4_MAIL_FROM_NAME` |
+| `IMAP_HOST` | `TINA4_MAIL_IMAP_HOST` |
+| `IMAP_PORT` | `TINA4_MAIL_IMAP_PORT` |
+| `IMAP_USER` | `TINA4_MAIL_IMAP_USERNAME` |
+| `IMAP_PASS` | `TINA4_MAIL_IMAP_PASSWORD` |
+| `HOST_NAME` | `TINA4_HOST_NAME` |
+| `SWAGGER_TITLE` | `TINA4_SWAGGER_TITLE` |
+| `SWAGGER_DESCRIPTION` | `TINA4_SWAGGER_DESCRIPTION` |
+| `SWAGGER_VERSION` | `TINA4_SWAGGER_VERSION` |
+| `ORM_PLURAL_TABLE_NAMES` | `TINA4_ORM_PLURAL_TABLE_NAMES` |
+
+### Names that stay un-prefixed (not framework config)
+
+`PORT`, `HOST`, `NODE_ENV`, `RACK_ENV`, `RUBY_ENV`, `ENVIRONMENT` — these are runtime / PaaS conventions, not framework config. Heroku, Railway, Vercel, and friends set them; we keep reading them.
+
+### How to upgrade
+
+1. **Backup your `.env`:** `cp .env .env.bak.pre-v3.12`
+2. **Run the migration:** `tina4 env-migrate` — rewrites your `.env` in place.
+3. **Update PaaS dashboards:** Heroku, Railway, Vercel, Render, Fly.io etc — rename the same vars in your provider's env-var UI.
+4. **Restart your app.** The boot guard verifies nothing legacy remains.
+
+If your app uses `SECRET`, `DATABASE_URL`, or any other listed name in places besides `.env` (e.g. your CI pipeline's `env:` blocks), update those too — the boot guard checks `os.environ`, not just `.env`.
+
+### Parity
+
+All 4 frameworks aligned at **3.12.0**:
+- tina4-python 3.11.32 → 3.12.0
+- tina4-php 3.11.32 → 3.12.0
+- tina4-ruby 3.11.32 → 3.12.0
+- tina4-nodejs 3.11.32 → 3.12.0
+
+Coordinated release across PyPI, Packagist, RubyGems, npm.
+
 ## v3.11.32 (2026-04-25)
 
 **Critical fix — pool + transactions are now actually atomic.** Plus a coordinated parity release that aligns all four frameworks at the same version after months of drift.
@@ -55,7 +136,7 @@ Issue-driven release. Everything reported in the open tina4-book issues either w
 
 **Breaking:** `sqlite:///X` URLs are now relative to the project root (cwd), matching the documented convention. For absolute paths use four slashes (`sqlite:////abs/path.db`) or a Windows drive letter (`sqlite:///C:/Users/app.db`).
 
-Before this release, `DATABASE_URL=sqlite:///data/app.db` was interpreted differently by every framework. Python/Node/Ruby tried to open `/data/app.db` (absolute) which crashed on macOS with `OSError: [Errno 30] Read-only file system: '/data'`. PHP did the same under the hood. All four frameworks now agree: three slashes = relative, four slashes = absolute.
+Before this release, `TINA4_DATABASE_URL=sqlite:///data/app.db` was interpreted differently by every framework. Python/Node/Ruby tried to open `/data/app.db` (absolute) which crashed on macOS with `OSError: [Errno 30] Read-only file system: '/data'`. PHP did the same under the hood. All four frameworks now agree: three slashes = relative, four slashes = absolute.
 
 - **fix (all 4):** `sqlite:///X` resolves under cwd; parent directory auto-created only when inside cwd. Absolute paths are trusted and never mkdir'd at root.
 - **fix (python):** `_ensure_folders` no longer creates a bogus `src/migrations/` directory. The migration runner always looks at `migrations/` at the project root — there is only one correct location.
@@ -63,7 +144,7 @@ Before this release, `DATABASE_URL=sqlite:///data/app.db` was interpreted differ
 - **tests:** 9 new Python tests in `TestSQLiteConnectionPath` + `TestProjectFolders`. 4 new PHP tests in `DatabaseUrlTest` covering relative/absolute/Windows/bruce-regression. 6 new Ruby specs in `database_drivers_spec.rb :: SqliteDriver.resolve_path`. Node URL tests expanded in `database.test.ts` with the full relative/absolute/Windows/:memory: matrix.
 - **parity:** All 4 frameworks bumped to 3.11.12.
 
-**Migration note:** If your `.env` has `DATABASE_URL=sqlite:///data/app.db`, it will now create `./data/app.db` in the project root (which is what most users actually want). If you genuinely want an absolute path, change to `sqlite:////data/app.db` (four slashes).
+**Migration note:** If your `.env` has `TINA4_DATABASE_URL=sqlite:///data/app.db`, it will now create `./data/app.db` in the project root (which is what most users actually want). If you genuinely want an absolute path, change to `sqlite:////data/app.db` (four slashes).
 
 
 ## v3.11.11 (2026-04-16)
@@ -208,7 +289,7 @@ This chapter covers every v3 release from the initial launch through the current
 ## v3.10.68 (2026-04-03) — Full Parity Release
 - **100% API parity** across Python, PHP, Ruby, Node.js — 30+ issues fixed
 - **ORM:** save() returns self/false, arrays not tuples, toDict/toAssoc, scope registers method, where()/all() on Node, count() on PHP
-- **Auth:** expires_in minutes, PBKDF2 260k, env SECRET fallback, API key fallback
+- **Auth:** expires_in minutes, PBKDF2 260k, env TINA4_SECRET fallback, API key fallback
 - **Session:** dual-mode flash(), get_flash, cookieHeader, getSessionId
 - **Database:** execute() bool/DatabaseResult, get_last_id/get_error, getColumns, cacheStats
 - **Request/Response:** files dict, query, cookies, contentType, xml(), callable
@@ -260,7 +341,7 @@ This chapter covers every v3 release from the initial launch through the current
 - **Pagination standardized** — limit/offset primary, merged dual-key to_paginate response
 - **Test port at +1000** — user testing port (e.g. 8147) stable, no hot-reload
 - **CORS fix** — returns empty string when origin not allowed
-- **ORM DATABASE_URL discovery** — auto-connect from env
+- **ORM TINA4_DATABASE_URL discovery** — auto-connect from env
 - **108 features at 100% parity**, 2,333 tests
 
 ---
@@ -269,7 +350,7 @@ This chapter covers every v3 release from the initial launch through the current
 - **Auto AI dev port** — second WEBrick on port+1 with no-reload when TINA4_DEBUG=true
 - **TINA4_NO_RELOAD** env var + --no-reload CLI flag
 - **CORS fix** — returns empty string when origin not allowed (not *)
-- **ORM DATABASE_URL discovery** — auto-connect from env
+- **ORM TINA4_DATABASE_URL discovery** — auto-connect from env
 - **QueryBuilder docs** — added to ORM chapter
 
 ---
@@ -322,7 +403,7 @@ Version bump for parity with PHP CLI serve fix. No Ruby-specific changes.
 
 **browseTable quote escaping** — Fixed table name click handlers.
 
-**ORM table name pluralization** — Fixed default table name resolution. Table names are now pluralized by default (adding "s" suffix), only skipping when `ORM_PLURAL_TABLE_NAMES` is explicitly set to false.
+**ORM table name pluralization** — Fixed default table name resolution. Table names are now pluralized by default (adding "s" suffix), only skipping when `TINA4_ORM_PLURAL_TABLE_NAMES` is explicitly set to false.
 
 **QueryBuilder closed-connection detection** — `ensure_db!` now checks if the resolved database connection is still open, raising a proper error instead of crashing with `ArgumentError: prepare called on a closed database`.
 
@@ -349,7 +430,7 @@ Version bump for parity with PHP CLI serve fix. No Ruby-specific changes.
 **`Container.singleton(name, &block)`** — Register a memoized factory. The block is called once on first `resolve()` and the same instance is returned on all subsequent calls. `register()` with a block is now always transient (new instance per call), matching Python's behavior.
 
 ```ruby
-Tina4::Container.singleton(:db) { Tina4::Database.new(ENV["DATABASE_URL"]) }
+Tina4::Container.singleton(:db) { Tina4::Database.new(ENV["TINA4_DATABASE_URL"]) }
 db1 = Tina4::Container.resolve(:db)  # creates instance
 db2 = Tina4::Container.resolve(:db)  # same instance
 ```
@@ -972,7 +1053,7 @@ valid = auth.valid_token(token)
 
 ```
 
-**HS256 authentication.** Set `TINA4_AUTH_SECRET` in your `.env` and auth uses HS256. Provide RSA key files and it uses RS256. The framework picks the right algorithm.
+**HS256 authentication.** Set `TINA4_SECRET` in your `.env` and auth uses HS256. Provide RSA key files and it uses RS256. The framework picks the right algorithm.
 
 ```ruby
 # .env for HS256:
@@ -984,7 +1065,7 @@ valid = auth.valid_token(token)
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
 
-TINA4_AUTH_SECRET=my-secret-key
+TINA4_SECRET=my-secret-key
 
 # .env for RS256:
 
@@ -1181,8 +1262,8 @@ user.posts  # => eager-loaded array of Post objects
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
 
-TINA4_CACHE=redis
-TINA4_CACHE_REDIS_URL=redis://localhost:6379
+TINA4_CACHE_BACKEND=redis
+TINA4_CACHE_URL=redis://localhost:6379
 
 # Code stays the same:
 

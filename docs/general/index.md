@@ -77,14 +77,14 @@ All configuration lives in a single `.env` file:
 
 ```bash
 # Database
-DATABASE_URL=sqlite://app.db
+TINA4_DATABASE_URL=sqlite://app.db
 
 # Server
 PORT=7145
 DEBUG=true
 
 # Authentication
-AUTH_SECRET=your-secret-key
+TINA4_SECRET=your-secret-key
 ```
 
 See [Chapter 4: Environment Variables](/general/04-environment-variables.md) for the full reference.

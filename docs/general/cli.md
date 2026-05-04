@@ -298,8 +298,8 @@ PROJECT_NAME="My Project"
 VERSION=1.0.0
 TINA4_DEBUG_LEVEL=ALL
 DATABASE_NAME=sqlite3:data.db
-SECRET=your-secret-key
-TINA4_LANGUAGE=en
+TINA4_SECRET=your-secret-key
+TINA4_LOCALE=en
 ```
 
 All Tina4 frameworks read from the same `.env` format. The `tina4 init` command creates a default `.env` with sensible values.

@@ -385,7 +385,7 @@ curl http://localhost:7145/api/github/nobody/nonexistent-repo
 
 **Cause:** Credentials hard-coded in the `Api` instantiation call.
 
-**Fix:** Always read credentials from environment variables: `getenv('API_KEY')`. Never commit `.env` files.
+**Fix:** Always read credentials from environment variables: `getenv('TINA4_API_KEY')`. Never commit `.env` files.
 
 ### 4. Not handling rate limits
 

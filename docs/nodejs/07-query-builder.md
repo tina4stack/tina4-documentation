@@ -747,7 +747,7 @@ const cursor = collection.find(mongo.filter, {
 
 **Cause:** No database adapter was passed to `from()` and no global adapter has been initialised.
 
-**Fix:** Either pass the adapter explicitly -- `QueryBuilder.fromTable("users", db)` -- or ensure `initDatabase()` has been called before any queries run. When Tina4 boots your server, the global adapter is initialised automatically from `DATABASE_URL`.
+**Fix:** Either pass the adapter explicitly -- `QueryBuilder.fromTable("users", db)` -- or ensure `initDatabase()` has been called before any queries run. When Tina4 boots your server, the global adapter is initialised automatically from `TINA4_DATABASE_URL`.
 
 ### 2. Parameter Order Matters
 

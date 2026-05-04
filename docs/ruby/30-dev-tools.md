@@ -491,7 +491,7 @@ The dev tools made each bug visible. The error overlay showed the SQL syntax err
 
 **Cause:** No log rotation is configured.
 
-**Fix:** Set `TINA4_LOG_MAX_SIZE=10mb` and `TINA4_LOG_MAX_FILES=5` in `.env` to rotate logs automatically.
+**Fix:** Set `TINA4_LOG_MAX_SIZE=10mb` and `TINA4_LOG_KEEP=5` in `.env` to rotate logs automatically.
 
 ### 8. Queue Monitor Shows No Jobs
 

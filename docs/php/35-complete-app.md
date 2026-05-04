@@ -1111,8 +1111,8 @@ Configure email in `.env`:
 ```bash
 TINA4_MAIL_HOST=smtp.example.com
 TINA4_MAIL_PORT=587
-TINA4_MAIL_USER=notifications@example.com
-TINA4_MAIL_PASS=your-email-password
+TINA4_MAIL_USERNAME=notifications@example.com
+TINA4_MAIL_PASSWORD=your-email-password
 TINA4_MAIL_FROM=notifications@example.com
 TINA4_MAIL_FROM_NAME=TaskFlow
 ```
@@ -1457,7 +1457,7 @@ services:
       - TINA4_LOG_LEVEL=WARNING
       - TINA4_CACHE_TEMPLATES=true
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
-      - DATABASE_URL=sqlite:///data/app.db
+      - TINA4_DATABASE_URL=sqlite:///data/app.db
     volumes:
       - taskflow-data:/app/data
       - taskflow-logs:/app/logs

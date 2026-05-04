@@ -76,7 +76,7 @@ Configure connections directly in code or via environment variables for flexibil
 
 Example:
 ```bash
-TINA4_DATABASE_NAME=sqlite3:test.db
+TINA4_DATABASE_URL=sqlite3:test.db
 ```
 
 In code:
@@ -84,7 +84,7 @@ In code:
 import os
 from tina4_python.Database import Database
 
-dba = Database(os.getenv("TINA4_DATABASE_NAME", "sqlite3:test.db"))
+dba = Database(os.getenv("TINA4_DATABASE_URL", "sqlite3:test.db"))
 ```
 
 Supports SQLite, PostgreSQL, MySQL, MariaDB, MSSQL, Firebird. Install required drivers (e.g., `uv add psycopg2` for PostgreSQL).

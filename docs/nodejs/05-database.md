@@ -20,29 +20,29 @@ When you scaffold a project with `tina4 init`, Tina4 drops a SQLite database at 
 TINA4_DEBUG=true
 ```
 
-With no explicit `DATABASE_URL`, Tina4 defaults to `sqlite:///data/app.db`. That is why the health check at `/health` shows `"database": "connected"` with zero configuration.
+With no explicit `TINA4_DATABASE_URL`, Tina4 defaults to `sqlite:///data/app.db`. That is why the health check at `/health` shows `"database": "connected"` with zero configuration.
 
 SQLite support uses Node's built-in `node:sqlite` module (Node 22+). No native C++ addons are needed. No `node-gyp`. No platform-specific binaries. This is what makes Tina4 Node.js truly zero runtime dependencies -- even the database driver ships with Node itself.
 
 ### Connection Strings for Other Databases
 
-Set `DATABASE_URL` in `.env` to use a different engine:
+Set `TINA4_DATABASE_URL` in `.env` to use a different engine:
 
 ```bash
 # SQLite (explicit)
-DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=sqlite:///data/app.db
 
 # PostgreSQL
-DATABASE_URL=postgres://localhost:5432/myapp
+TINA4_DATABASE_URL=postgres://localhost:5432/myapp
 
 # MySQL
-DATABASE_URL=mysql://localhost:3306/myapp
+TINA4_DATABASE_URL=mysql://localhost:3306/myapp
 
 # Microsoft SQL Server
-DATABASE_URL=mssql://localhost:1433/myapp
+TINA4_DATABASE_URL=mssql://localhost:1433/myapp
 
 # Firebird
-DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
+TINA4_DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
 ```
 
 The Firebird adapter requires the `node-firebird` package (`npm install node-firebird`). SQL dialect differences are handled automatically: `LIMIT`/`OFFSET` is translated to `ROWS X TO Y`, boolean values are converted to integers, and `ILIKE` is converted to `LOWER() LIKE LOWER()`.
@@ -50,9 +50,9 @@ The Firebird adapter requires the `node-firebird` package (`npm install node-fir
 ### Separate Credentials
 
 ```bash
-DATABASE_URL=postgres://localhost:5432/myapp
-DATABASE_USERNAME=myuser
-DATABASE_PASSWORD=secretpassword
+TINA4_DATABASE_URL=postgres://localhost:5432/myapp
+TINA4_DATABASE_USERNAME=myuser
+TINA4_DATABASE_PASSWORD=secretpassword
 ```
 
 ### Connection Pooling

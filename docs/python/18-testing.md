@@ -277,7 +277,7 @@ Running tests...
 By default, `tina4 test` uses a separate test database so your development data is not affected. The test database is created at `data/test.db` (SQLite) and is reset before each test run. If you want to use a different database for tests, set it in `.env`:
 
 ```bash
-TINA4_TEST_DATABASE_URL=sqlite:///data/test.db
+TINA4_DATABASE_URL=sqlite:///data/test.db
 ```
 
 ---
@@ -952,7 +952,7 @@ class AuthFlowTest(Test):
 
 **Cause:** Tests are running against the same database as your development server.
 
-**Fix:** Tina4 uses a separate test database by default (`data/test.db`). If your tests are modifying development data, check that `TINA4_TEST_DATABASE_URL` is set correctly in `.env`, or that you are running `tina4 test` (not executing test files manually with `python`).
+**Fix:** Tina4 uses a separate test database by default (`data/test.db`). If your tests are modifying development data, check that `TINA4_DATABASE_URL` is set correctly in `.env`, or that you are running `tina4 test` (not executing test files manually with `python`).
 
 ### 3. Unique Constraint Failures
 

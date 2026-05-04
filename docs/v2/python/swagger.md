@@ -9,13 +9,13 @@ Tina4 Python integrates Swagger for OpenAPI 3.0.3 compliant API documentation. T
 
 Set environment variables for OpenAPI info:
 
-- `SWAGGER_TITLE` (default: "Tina4 Python API")
-- `SWAGGER_DESCRIPTION` (default: "Auto-generated API documentation")
-- `SWAGGER_VERSION` (default: "1.0.0")
+- `TINA4_SWAGGER_TITLE` (default: "Tina4 Python API")
+- `TINA4_SWAGGER_DESCRIPTION` (default: "Auto-generated API documentation")
+- `TINA4_SWAGGER_VERSION` (default: "1.0.0")
 - `SWAGGER_CONTACT_TEAM` (default: "Tina4 Team")
 - `SWAGGER_CONTACT_URL` (default: "https://tina4.com")
 - `SWAGGER_CONTACT_EMAIL` (default: "support@tina4.com")
-- `HOST_NAME` (default: "localhost:8000")
+- `TINA4_HOST_NAME` (default: "localhost:8000")
 - `BASE_URL` (default: "")
 
 Servers include current host and local dev. Security schemes: Bearer (JWT) and Basic for secure routes.

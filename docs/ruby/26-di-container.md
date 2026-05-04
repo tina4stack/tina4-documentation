@@ -14,7 +14,7 @@ A DI container is a registry. You register services by name once. Everything tha
 
 ```ruby
 Tina4::Container.register(:database) do
-  Tina4::Database.new(ENV["DATABASE_URL"])
+  Tina4::Database.new(ENV["TINA4_DATABASE_URL"])
 end
 ```
 
@@ -24,7 +24,7 @@ The block is a factory. It runs the first time the service is resolved (lazy ini
 
 ```ruby
 Tina4::Container.register(:database) do
-  Tina4::Database.new(ENV["DATABASE_URL"])
+  Tina4::Database.new(ENV["TINA4_DATABASE_URL"])
 end
 
 Tina4::Container.register(:cache) do
@@ -41,8 +41,8 @@ end
 
 Tina4::Container.register(:mailer) do
   Tina4::Mailer.new(
-    host:     ENV["SMTP_HOST"],
-    port:     ENV["SMTP_PORT"].to_i,
+    host:     ENV["TINA4_MAIL_HOST"],
+    port:     ENV["TINA4_MAIL_PORT"].to_i,
     username: ENV["SMTP_USER"],
     password: ENV["SMTP_PASS"]
   )

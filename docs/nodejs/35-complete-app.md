@@ -70,8 +70,8 @@ Update `.env`:
 
 ```bash
 TINA4_DEBUG=true
-TINA4_JWT_SECRET=taskflow-dev-secret-change-in-production
-TINA4_JWT_EXPIRY=86400
+TINA4_SECRET=taskflow-dev-secret-change-in-production
+TINA4_TOKEN_LIMIT=86400
 ```
 
 ### Create Migrations
@@ -242,7 +242,7 @@ export function authMiddleware(req, res, next) {
 
     const token = authHeader.substring(7);
 
-    const secret = process.env.SECRET || "tina4-default-secret";
+    const secret = process.env.TINA4_SECRET || "tina4-default-secret";
     const payload = Auth.validToken(token, secret);
     if (payload === null) {
         res({ error: "Invalid or expired token" }, 401);
@@ -338,7 +338,7 @@ Router.post("/api/auth/login", async (req, res) => {
         return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    const secret = process.env.SECRET || "tina4-default-secret";
+    const secret = process.env.TINA4_SECRET || "tina4-default-secret";
     const token = Auth.getToken({
         user_id: user.id,
         email: user.email,
@@ -1199,7 +1199,7 @@ const testUnauthorizedAccess = tests(
 const testTokenRoundTrip = tests(
     assertTrue([{ userId: 1, role: "admin" }]),
 )(function testTokenRoundTrip(payload: Record<string, unknown>): boolean {
-    const secret = process.env.SECRET || "test-secret";
+    const secret = process.env.TINA4_SECRET || "test-secret";
     const token = Auth.getToken(payload, secret);
     const decoded = Auth.validToken(token, secret);
     return decoded !== null && decoded.userId === payload.userId;
@@ -1277,9 +1277,9 @@ services:
       - "7148:7148"
     environment:
       - TINA4_DEBUG=false
-      - TINA4_JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - TINA4_SECRET=${JWT_SECRET:-change-me-in-production}
       - TINA4_CACHE_BACKEND=redis
-      - TINA4_CACHE_HOST=redis
+      - TINA4_CACHE_URL=redis
     volumes:
       - taskflow-data:/app/data
       - taskflow-logs:/app/logs

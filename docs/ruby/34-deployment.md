@@ -23,7 +23,7 @@ TINA4_LOG_LEVEL=WARNING
 TINA4_PORT=7147
 
 # Database
-DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=sqlite:///data/app.db
 
 # Security
 CORS_ORIGINS=https://yourdomain.com
@@ -52,7 +52,7 @@ Production secrets never go into version control. The `.env` file is gitignored 
 
 ```bash
 # Docker: pass env vars at runtime
-docker run -e JWT_SECRET=your-secret -e DATABASE_URL=sqlite:///data/app.db my-app
+docker run -e JWT_SECRET=your-secret -e TINA4_DATABASE_URL=sqlite:///data/app.db my-app
 
 # Fly.io: set secrets
 fly secrets set JWT_SECRET=your-secret
@@ -192,9 +192,9 @@ services:
       - TINA4_DEBUG=false
       - TINA4_LOG_LEVEL=WARNING
       - JWT_SECRET=${JWT_SECRET}
-      - DATABASE_URL=sqlite:///data/app.db
+      - TINA4_DATABASE_URL=sqlite:///data/app.db
       - TINA4_CACHE_BACKEND=redis
-      - TINA4_CACHE_HOST=redis
+      - TINA4_CACHE_URL=redis
     volumes:
       - app-data:/app/data
       - app-logs:/app/logs
@@ -211,7 +211,7 @@ services:
     build: .
     command: tina4 queue:work
     environment:
-      - DATABASE_URL=sqlite:///data/app.db
+      - TINA4_DATABASE_URL=sqlite:///data/app.db
     volumes:
       - app-data:/app/data
     depends_on:

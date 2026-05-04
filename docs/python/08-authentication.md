@@ -89,10 +89,10 @@ Tina4 Python uses **HS256** (HMAC-SHA256) for JWT signing. It uses only the stan
 Set the secret key in `.env`:
 
 ```bash
-SECRET=my-super-secret-key-at-least-32-chars
+TINA4_SECRET=my-super-secret-key-at-least-32-chars
 ```
 
-If no `SECRET` is set, Tina4 falls back to generating a random key at `secrets/jwt.key` on first run. Setting `SECRET` explicitly is recommended for production so all server instances share the same key.
+If no `TINA4_SECRET` is set, Tina4 falls back to generating a random key at `secrets/jwt.key` on first run. Setting `TINA4_SECRET` explicitly is recommended for production so all server instances share the same key.
 
 Keep this key secret. If someone gets it, they can forge tokens.
 
@@ -512,18 +512,18 @@ TINA4_SESSION_BACKEND=file
 
 # Redis
 TINA4_SESSION_BACKEND=redis
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=6379
+TINA4_SESSION_REDIS_HOST=localhost
+TINA4_SESSION_REDIS_PORT=6379
 
 # MongoDB
 TINA4_SESSION_BACKEND=mongodb
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=27017
+TINA4_SESSION_REDIS_HOST=localhost
+TINA4_SESSION_REDIS_PORT=27017
 
 # Valkey
 TINA4_SESSION_BACKEND=valkey
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=6379
+TINA4_SESSION_REDIS_HOST=localhost
+TINA4_SESSION_REDIS_PORT=6379
 ```
 
 File-based sessions work out of the box. No extra dependencies. For production deployments with multiple servers, use Redis or Valkey so sessions are shared across instances.
@@ -564,7 +564,7 @@ async def logout(request, response):
 ### Session Options
 
 ```bash
-TINA4_SESSION_LIFETIME=3600       # Session lifetime in seconds (default: 3600)
+TINA4_SESSION_TTL=3600       # Session lifetime in seconds (default: 3600)
 TINA4_SESSION_NAME=tina4_session  # Cookie name for the session ID
 ```
 
@@ -869,7 +869,7 @@ async def change_password(request, response):
 
 **Cause:** Each server generated its own random `secrets/jwt.key` file. Or the key file was deleted/regenerated during deployment.
 
-**Fix:** Set `SECRET` in `.env` explicitly and use the same value across all servers. Store it in your deployment secrets manager (not in version control). If the key changes, all existing tokens become invalid and users must log in again.
+**Fix:** Set `TINA4_SECRET` in `.env` explicitly and use the same value across all servers. Store it in your deployment secrets manager (not in version control). If the key changes, all existing tokens become invalid and users must log in again.
 
 ### 3. CORS with authentication
 

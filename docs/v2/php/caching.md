@@ -23,10 +23,10 @@ Open (or create) the `.env` file in your project root and set:
 
 ```ini
 [Project Settings]
-TINA4_CACHE_ON=true
+TINA4_CACHE_BACKEND=true
 ```
 
-When the application boots it reads this value. If `TINA4_CACHE_ON` is `true`, Tina4 creates a PhpFastCache `files` instance pointed at `{TINA4_DOCUMENT_ROOT}/cache`.
+When the application boots it reads this value. If `TINA4_CACHE_BACKEND` is `true`, Tina4 creates a PhpFastCache `files` instance pointed at `{TINA4_PUBLIC_DIR}/cache`.
 
 To turn caching off again, set the value back to `false` — no code changes required.
 
@@ -91,7 +91,7 @@ Returns the cached data, or `null` on a miss.
 
 ## ORM query caching
 
-The `\Tina4\ORMCache` class is used internally by the ORM. When `TINA4_CACHE_ON` is `true`:
+The `\Tina4\ORMCache` class is used internally by the ORM. When `TINA4_CACHE_BACKEND` is `true`:
 
 - Every `load()` call checks the cache first using a key derived from the SQL:
   `"orm" . md5($sqlStatement)`
@@ -99,7 +99,7 @@ The `\Tina4\ORMCache` class is used internally by the ORM. When `TINA4_CACHE_ON`
 - On a cache miss the query runs and the result is stored for **60 seconds**.
 - Any `save()` invalidates the relevant cache entry by setting it to `null`.
 
-When `TINA4_CACHE_ON` is `false`, `ORMCache::get()` always returns `null` and `ORMCache::set()` returns `true`, so the ORM falls through to the database every time.
+When `TINA4_CACHE_BACKEND` is `false`, `ORMCache::get()` always returns `null` and `ORMCache::set()` returns `true`, so the ORM falls through to the database every time.
 
 You do not need to interact with `ORMCache` directly — the ORM handles it automatically.
 
@@ -120,7 +120,7 @@ You can override the global setting on individual routes using doc-block annotat
 
 ```php
 /**
- * This route is always cached, even if TINA4_CACHE_ON is false
+ * This route is always cached, even if TINA4_CACHE_BACKEND is false
  * @cache
  */
 \Tina4\Get::add("/api/cached-data", function (\Tina4\Response $response) {
@@ -130,7 +130,7 @@ You can override the global setting on individual routes using doc-block annotat
 
 ```php
 /**
- * This route is never cached, even if TINA4_CACHE_ON is true
+ * This route is never cached, even if TINA4_CACHE_BACKEND is true
  * @no-cache
  */
 \Tina4\Get::add("/api/live-data", function (\Tina4\Response $response) {
@@ -144,7 +144,7 @@ When `TINA4_DEBUG` is `true`, `.twig` files and anything under `/public/` are **
 
 ## Twig template caching
 
-When `TINA4_CACHE_ON` is `true`, the Twig environment is created with compiled template caching:
+When `TINA4_CACHE_BACKEND` is `true`, the Twig environment is created with compiled template caching:
 
 ```php
 // Internally Tina4 does:
@@ -186,8 +186,8 @@ The full set of cache-related settings in your `.env`:
 
 ```ini
 [Project Settings]
-TINA4_CACHE_ON=true    # Enable or disable all caching (default: false)
+TINA4_CACHE_BACKEND=true    # Enable or disable all caching (default: false)
 TINA4_DEBUG=false      # When true, Twig/public file caching is bypassed
 ```
 
-The cache backend is always the **filesystem driver** pointed at `{TINA4_DOCUMENT_ROOT}/cache`. No additional configuration (Redis, Memcached, etc.) is needed.
+The cache backend is always the **filesystem driver** pointed at `{TINA4_PUBLIC_DIR}/cache`. No additional configuration (Redis, Memcached, etc.) is needed.

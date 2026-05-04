@@ -186,9 +186,9 @@ Default development environment can be found in `.env`
 ```
 PROJECT_NAME="My Project"
 VERSION=1.0.0
-TINA4_LANGUAGE=en
+TINA4_LOCALE=en
 TINA4_DEBUG_LEVEL=ALL
-API_KEY=ABC1234
+TINA4_API_KEY=ABC1234
 TINA4_TOKEN_LIMIT=1
 DATABASE_NAME=sqlite3:test.db
 ```
@@ -196,12 +196,12 @@ DATABASE_NAME=sqlite3:test.db
 ```python
 import os
 
-api_key = os.getenv("API_KEY", "ABC1234")
+api_key = os.getenv("TINA4_API_KEY", "ABC1234")
 ```
 
 ### Authentication {#authentication}
 
-Pass `Authorization: Bearer API_KEY` to secured routes in requests. See `.env` for default `API_KEY`.
+Pass `Authorization: Bearer TINA4_API_KEY` to secured routes in requests. See `.env` for default `TINA4_API_KEY`.
 ```python
 from tina4_python.Router import get, post, noauth, secured
 
@@ -433,7 +433,7 @@ async def wsdl_cis(request, response):
 
 ### Localization (i18n) {#localization}
 
-Set `TINA4_LANGUAGE` in `.env` to change framework language. Supported: `en`, `fr`, `af`.
+Set `TINA4_LOCALE` in `.env` to change framework language. Supported: `en`, `fr`, `af`.
 
 ```python
 from tina4_python.Localization import localize

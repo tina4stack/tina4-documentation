@@ -186,16 +186,16 @@ The default development environment lives in `.env`.
 VERSION=1.0.0
 TINA4_DEBUG=true
 TINA4_DEBUG_LEVEL=[TINA4_LOG_ALL]
-TINA4_CACHE_ON=false
-DATABASE_URL=sqlite:///data/app.db
+TINA4_CACHE_BACKEND=false
+TINA4_DATABASE_URL=sqlite:///data/app.db
 [Open API]
-SWAGGER_TITLE=Tina4 Project
-SWAGGER_DESCRIPTION=Edit your .env file to change this description
-SWAGGER_VERSION=1.0.0
+TINA4_SWAGGER_TITLE=Tina4 Project
+TINA4_SWAGGER_DESCRIPTION=Edit your .env file to change this description
+TINA4_SWAGGER_VERSION=1.0.0
 ```
 Access environment variables through the `$_ENV` superglobal.
 ```php
-$title = $_ENV["SWAGGER_TITLE"];
+$title = $_ENV["TINA4_SWAGGER_TITLE"];
 ```
 
 
@@ -206,10 +206,10 @@ Access env vars programmatically:
 use Tina4\DotEnv;
 
 DotEnv::loadEnv('.env');                     // Load .env file (auto on server start)
-DotEnv::getEnv('DATABASE_URL');              // Get value or null
+DotEnv::getEnv('TINA4_DATABASE_URL');              // Get value or null
 DotEnv::getEnv('PORT', '7146');              // Get value with default
 DotEnv::hasEnv('TINA4_DEBUG');               // true if set
-DotEnv::requireEnv('DATABASE_URL');          // Throws if missing
+DotEnv::requireEnv('TINA4_DATABASE_URL');          // Throws if missing
 DotEnv::isTruthy(DotEnv::getEnv('TINA4_DEBUG'));  // true for "true", "1", "yes"
 ```
 
@@ -289,13 +289,13 @@ Follow the links for more on [configuration](20-swagger.md), [annotations](20-sw
 
 ### Databases {#databases}
 
-Set `DATABASE_URL` in `.env`. The framework reads it at startup and opens the connection.
+Set `TINA4_DATABASE_URL` in `.env`. The framework reads it at startup and opens the connection.
 
 ```bash
-DATABASE_URL=sqlite:///data/app.db
-DATABASE_URL=postgres://localhost:5432/myapp
-DATABASE_URL=mysql://localhost:3306/myapp
-DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
+TINA4_DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=postgres://localhost:5432/myapp
+TINA4_DATABASE_URL=mysql://localhost:3306/myapp
+TINA4_DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
 ```
 
 Access the connection through the `Database` class.
@@ -599,7 +599,7 @@ Debug::message("Connection failed", TINA4_LOG_ERROR);
 TINA4_LOG_LEVEL=TINA4_LOG_ALL    # DEBUG | INFO | WARNING | ERROR | NONE
 ```
 
-Log output goes to `src/logs/` by default. Set `TINA4_LOG_PATH` to change the destination.
+Log output goes to `src/logs/` by default. Set `TINA4_LOG_DIR` to change the destination.
 
 ### Response Cache {#response-cache}
 
@@ -619,7 +619,7 @@ Router::get("/api/report/{year}", function ($request, $response) {
 })->cache(3600, "report-" . date("Y"));
 ```
 
-Set `TINA4_CACHE_ON=true` in `.env` to activate caching globally.
+Set `TINA4_CACHE_BACKEND=true` in `.env` to activate caching globally.
 
 ### Health Endpoint {#health}
 
@@ -657,7 +657,7 @@ Register services once and resolve them anywhere. Singletons share one instance 
 use Tina4\Container;
 
 // Bind a factory
-Container::register("mailer", fn() => new Mailer($_ENV["SMTP_HOST"]));
+Container::register("mailer", fn() => new Mailer($_ENV["TINA4_MAIL_HOST"]));
 
 // Bind a singleton
 Container::singleton("db", fn() => \Tina4\Database::getConnection());

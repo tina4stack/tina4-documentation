@@ -437,7 +437,7 @@ This means you can test email functionality without configuring SMTP during deve
 If you need to test real email delivery during development, override the interception:
 
 ```bash
-TINA4_MAIL_INTERCEPT=false
+TINA4_MAILBOX_DIR=false
 ```
 
 With this set, emails reach real recipients even when `TINA4_DEBUG=true`. Use with caution -- you do not want to accidentally email your entire user base from a dev machine.

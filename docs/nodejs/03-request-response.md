@@ -784,7 +784,7 @@ Router.get("/api/images/{filename}", async (req, res) => {
 
 **Cause:** The request body exceeds the configured maximum size.
 
-**Fix:** Increase `TINA4_MAX_BODY_SIZE` in `.env`. The default is `10mb`.
+**Fix:** Increase `TINA4_MAX_UPLOAD_SIZE` in `.env`. The default is `10mb`.
 
 ### 7. Headers Are Lowercase in Node.js
 

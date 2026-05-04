@@ -13,23 +13,23 @@ SMTP configuration. Plain text fallbacks. Attachment encoding. Connection timeou
 All email configuration lives in `.env`:
 
 ```bash
-TINA4_MAIL_SMTP_HOST=smtp.example.com
-TINA4_MAIL_SMTP_PORT=587
-TINA4_MAIL_SMTP_USERNAME=your-email@example.com
-TINA4_MAIL_SMTP_PASSWORD=your-app-password
-TINA4_MAIL_SMTP_ENCRYPTION=tls
-TINA4_MAIL_FROM_ADDRESS=noreply@example.com
+TINA4_MAIL_HOST=smtp.example.com
+TINA4_MAIL_PORT=587
+TINA4_MAIL_USERNAME=your-email@example.com
+TINA4_MAIL_PASSWORD=your-app-password
+TINA4_MAIL_ENCRYPTION=tls
+TINA4_MAIL_FROM=noreply@example.com
 TINA4_MAIL_FROM_NAME=My Store
 ```
 
 | Variable | Description | Common Values |
 |----------|-------------|---------------|
-| `TINA4_MAIL_SMTP_HOST` | SMTP server hostname | `smtp.gmail.com`, `smtp.mailgun.org`, `smtp.sendgrid.net` |
-| `TINA4_MAIL_SMTP_PORT` | SMTP port | `587` (TLS), `465` (SSL), `25` (unencrypted) |
-| `TINA4_MAIL_SMTP_USERNAME` | Login username | Usually your email address |
-| `TINA4_MAIL_SMTP_PASSWORD` | Login password or app-specific password | App passwords for Gmail |
-| `TINA4_MAIL_SMTP_ENCRYPTION` | Encryption method | `tls` (recommended), `ssl`, `none` |
-| `TINA4_MAIL_FROM_ADDRESS` | Default "From" address | `noreply@yourdomain.com` |
+| `TINA4_MAIL_HOST` | SMTP server hostname | `smtp.gmail.com`, `smtp.mailgun.org`, `smtp.sendgrid.net` |
+| `TINA4_MAIL_PORT` | SMTP port | `587` (TLS), `465` (SSL), `25` (unencrypted) |
+| `TINA4_MAIL_USERNAME` | Login username | Usually your email address |
+| `TINA4_MAIL_PASSWORD` | Login password or app-specific password | App passwords for Gmail |
+| `TINA4_MAIL_ENCRYPTION` | Encryption method | `tls` (recommended), `ssl`, `none` |
+| `TINA4_MAIL_FROM` | Default "From" address | `noreply@yourdomain.com` |
 | `TINA4_MAIL_FROM_NAME` | Default "From" display name | `My Store`, `Acme Corp` |
 
 ### Common Provider Configurations
@@ -37,11 +37,11 @@ TINA4_MAIL_FROM_NAME=My Store
 **Gmail:**
 
 ```bash
-TINA4_MAIL_SMTP_HOST=smtp.gmail.com
-TINA4_MAIL_SMTP_PORT=587
-TINA4_MAIL_SMTP_USERNAME=your-email@gmail.com
-TINA4_MAIL_SMTP_PASSWORD=your-app-password
-TINA4_MAIL_SMTP_ENCRYPTION=tls
+TINA4_MAIL_HOST=smtp.gmail.com
+TINA4_MAIL_PORT=587
+TINA4_MAIL_USERNAME=your-email@gmail.com
+TINA4_MAIL_PASSWORD=your-app-password
+TINA4_MAIL_ENCRYPTION=tls
 ```
 
 Gmail requires an "App Password" (not your regular password) when two-factor authentication is enabled.
@@ -49,21 +49,21 @@ Gmail requires an "App Password" (not your regular password) when two-factor aut
 **Mailgun:**
 
 ```bash
-TINA4_MAIL_SMTP_HOST=smtp.mailgun.org
-TINA4_MAIL_SMTP_PORT=587
-TINA4_MAIL_SMTP_USERNAME=postmaster@mg.yourdomain.com
-TINA4_MAIL_SMTP_PASSWORD=your-mailgun-smtp-password
-TINA4_MAIL_SMTP_ENCRYPTION=tls
+TINA4_MAIL_HOST=smtp.mailgun.org
+TINA4_MAIL_PORT=587
+TINA4_MAIL_USERNAME=postmaster@mg.yourdomain.com
+TINA4_MAIL_PASSWORD=your-mailgun-smtp-password
+TINA4_MAIL_ENCRYPTION=tls
 ```
 
 **SendGrid:**
 
 ```bash
-TINA4_MAIL_SMTP_HOST=smtp.sendgrid.net
-TINA4_MAIL_SMTP_PORT=587
-TINA4_MAIL_SMTP_USERNAME=apikey
-TINA4_MAIL_SMTP_PASSWORD=your-sendgrid-api-key
-TINA4_MAIL_SMTP_ENCRYPTION=tls
+TINA4_MAIL_HOST=smtp.sendgrid.net
+TINA4_MAIL_PORT=587
+TINA4_MAIL_USERNAME=apikey
+TINA4_MAIL_PASSWORD=your-sendgrid-api-key
+TINA4_MAIL_ENCRYPTION=tls
 ```
 
 ---
@@ -516,7 +516,7 @@ const mailer = createMessenger();
 If you need to test real email delivery during development, override the interception:
 
 ```bash
-TINA4_MAIL_INTERCEPT=false
+TINA4_MAILBOX_DIR=false
 ```
 
 With this set, emails reach real recipients even when `TINA4_DEBUG=true`. Use with caution -- you do not want to accidentally email your entire user base from a dev machine.
@@ -927,7 +927,7 @@ The HTML response includes the success flash message.
 
 **Cause:** Gmail blocks SMTP access from apps that do not use OAuth2 by default. Your regular password will not work when two-factor authentication is enabled.
 
-**Fix:** Generate an "App Password" in your Google Account settings (Security > 2-Step Verification > App Passwords). Use this 16-character password as `TINA4_MAIL_SMTP_PASSWORD`. This is separate from your regular Google password.
+**Fix:** Generate an "App Password" in your Google Account settings (Security > 2-Step Verification > App Passwords). Use this 16-character password as `TINA4_MAIL_PASSWORD`. This is separate from your regular Google password.
 
 ### 2. Emails Go to Spam
 
@@ -959,7 +959,7 @@ The HTML response includes the success flash message.
 
 **Cause:** `TINA4_DEBUG=true` intercepts all emails and stores them in the dev dashboard. The email never reaches the SMTP server.
 
-**Fix:** Check the dev dashboard at `/__dev` for intercepted emails. If you want to send real emails during development, set `TINA4_MAIL_INTERCEPT=false`. Remove this setting before committing.
+**Fix:** Check the dev dashboard at `/__dev` for intercepted emails. If you want to send real emails during development, set `TINA4_MAILBOX_DIR=false`. Remove this setting before committing.
 
 ### 6. Email Template Variables Not Substituted
 

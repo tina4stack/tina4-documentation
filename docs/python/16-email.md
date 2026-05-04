@@ -500,7 +500,7 @@ mailer = create_messenger()
 If you need to test real email delivery during development, override the interception:
 
 ```bash
-TINA4_MAIL_INTERCEPT=false
+TINA4_MAILBOX_DIR=false
 ```
 
 With this set, emails reach real recipients even when `TINA4_DEBUG=true`. Use with caution -- you do not want to accidentally email your entire user base from a dev machine.
@@ -963,7 +963,7 @@ The HTML response includes the success flash message.
 
 **Cause:** `TINA4_DEBUG=true` intercepts all emails and stores them in the dev dashboard. The email never reaches the SMTP server.
 
-**Fix:** Check the dev dashboard at `/__dev` for intercepted emails. If you want to send real emails during development, set `TINA4_MAIL_INTERCEPT=false`. Remove this setting before committing.
+**Fix:** Check the dev dashboard at `/__dev` for intercepted emails. If you want to send real emails during development, set `TINA4_MAILBOX_DIR=false`. Remove this setting before committing.
 
 ### 6. Email Template Variables Not Substituted
 

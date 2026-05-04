@@ -129,8 +129,8 @@ import { Container } from "tina4-nodejs";
 const container = new Container();
 
 container.singleton("config", () => ({
-    smtpHost: process.env.TINA4_MAIL_SMTP_HOST ?? "localhost",
-    smtpPort: parseInt(process.env.TINA4_MAIL_SMTP_PORT ?? "587")
+    smtpHost: process.env.TINA4_MAIL_HOST ?? "localhost",
+    smtpPort: parseInt(process.env.TINA4_MAIL_PORT ?? "587")
 }));
 
 container.singleton("mailer", (c) => {

@@ -20,7 +20,7 @@ A reference of all 45 features in Tina4 Ruby, grouped by category.
 
 | # | Feature | Class / Method | Description |
 |---|---------|---------------|-------------|
-| 6 | Database Connection | `Tina4::Database.new(url)` | Single connection via `DATABASE_URL`. Supports SQLite, PostgreSQL, MySQL, MSSQL, Oracle. |
+| 6 | Database Connection | `Tina4::Database.new(url)` | Single connection via `TINA4_DATABASE_URL`. Supports SQLite, PostgreSQL, MySQL, MSSQL, Oracle. |
 | 7 | Raw SQL | `db.query(sql)`, `db.execute(sql)` | Execute raw SQL. `query` returns rows. `execute` returns affected row count or last insert ID. |
 | 8 | Query Builder | `Tina4::QueryBuilder` | Chainable `.where`, `.select`, `.order`, `.limit`, `.offset`, `.join`. |
 | 9 | ORM | `Tina4::ORM` | ActiveRecord-style base class. `find`, `save`, `delete`, `all`, `where`. |
@@ -144,7 +144,7 @@ A reference of all 45 features in Tina4 Ruby, grouped by category.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATABASE_URL` | — | Database connection string |
+| `TINA4_DATABASE_URL` | — | Database connection string |
 | `TINA4_ENV` | `development` | Environment: development, production, test |
 | `TINA4_PORT` | `7147` | HTTP server port |
 | `TINA4_LOG_LEVEL` | `info` | Minimum log level |
@@ -154,5 +154,5 @@ A reference of all 45 features in Tina4 Ruby, grouped by category.
 | `TINA4_QUEUE_PATH` | `./queue` | File queue storage directory |
 | `TINA4_QUEUE_URL` | — | Queue broker URL (RabbitMQ, Kafka, MongoDB) |
 | `TINA4_CACHE_BACKEND` | `memory` | Cache backend: memory, file, redis, memcached |
-| `TINA4_SECRET_KEY` | — | JWT signing secret |
-| `TINA4_TOKEN_EXPIRY` | `3600` | JWT expiry in seconds |
+| `TINA4_SECRET` | — | JWT signing secret |
+| `TINA4_TOKEN_LIMIT` | `3600` | JWT expiry in seconds |

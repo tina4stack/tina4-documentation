@@ -175,13 +175,13 @@ The `.env` file sits at the project root. Tina4 reads it at startup.
 ```
 TINA4_DEBUG=true
 TINA4_PORT=7147
-DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=sqlite:///data/app.db
 TINA4_LOG_LEVEL=ALL
-API_KEY=ABC1234
+TINA4_API_KEY=ABC1234
 ```
 
 ```ruby
-api_key = ENV["API_KEY"] || "ABC1234"
+api_key = ENV["TINA4_API_KEY"] || "ABC1234"
 ```
 
 
@@ -190,10 +190,10 @@ Access env vars programmatically:
 
 ```ruby
 Tina4::Env.load_env                          # Load .env file (auto on server start)
-Tina4::Env.get_env("DATABASE_URL")           # Get value or nil
+Tina4::Env.get_env("TINA4_DATABASE_URL")           # Get value or nil
 Tina4::Env.get_env("PORT", "7147")           # Get value with default
 Tina4::Env.has_env?("TINA4_DEBUG")           # true if set
-Tina4::Env.require_env!("DATABASE_URL")      # Raises KeyError if missing
+Tina4::Env.require_env!("TINA4_DATABASE_URL")      # Raises KeyError if missing
 Tina4::Env.truthy?(ENV["TINA4_DEBUG"])       # true for "true", "1", "yes"
 ```
 
@@ -422,7 +422,7 @@ POST queries to `/graphql`, or visit it in a browser for the GraphiQL IDE.
 
 ### Localization (i18n) {#localization}
 
-Set `TINA4_LANGUAGE` in `.env` to change the framework language.
+Set `TINA4_LOCALE` in `.env` to change the framework language.
 
 ```ruby
 puts Tina4.t("server_stopped")  # "Server stopped." (en)
@@ -511,13 +511,13 @@ curl http://localhost:7147/health
 { "status": "ok", "uptime": 142, "version": "3.10.20" }
 ```
 
-The response includes framework version, uptime in seconds, and database connectivity when a `DATABASE_URL` is configured. Use this endpoint for container liveness and readiness probes.
+The response includes framework version, uptime in seconds, and database connectivity when a `TINA4_DATABASE_URL` is configured. Use this endpoint for container liveness and readiness probes.
 
 ### DI Container {#container}
 
 ```ruby
 # Register a service by name
-Tina4::Container.register(:mailer) { Mailer.new(ENV["SMTP_HOST"]) }
+Tina4::Container.register(:mailer) { Mailer.new(ENV["TINA4_MAIL_HOST"]) }
 
 # Register a singleton (resolved once, reused everywhere)
 Tina4::Container.register(:config, singleton: true) { AppConfig.load }

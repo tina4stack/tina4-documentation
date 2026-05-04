@@ -40,7 +40,7 @@ You should see the Swagger UI with any routes you have already defined. If you h
 For production, you can explicitly enable or disable Swagger:
 
 ```bash
-TINA4_SWAGGER=true
+TINA4_SWAGGER_ENABLED=true
 ```
 
 ### The Swagger JSON Endpoint
@@ -497,7 +497,7 @@ end
 
 **Problem:** `/swagger` returns a 404 in production.
 
-**Fix:** If you want Swagger in production, explicitly set `TINA4_SWAGGER=true` in your `.env`.
+**Fix:** If you want Swagger in production, explicitly set `TINA4_SWAGGER_ENABLED=true` in your `.env`.
 
 ### 7. SDK Generation Produces Incorrect Types
 

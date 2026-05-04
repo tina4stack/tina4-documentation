@@ -94,13 +94,13 @@ Tina4 PHP uses **HS256** (HMAC-SHA256) for JWT signing. It uses only the standar
 Set the secret key in `.env`:
 
 ```bash
-SECRET=my-super-secret-key-at-least-32-chars
+TINA4_SECRET=my-super-secret-key-at-least-32-chars
 ```
 
 The `$secret` parameter is **required** on `getToken()` and `validToken()`. Pass it explicitly -- there is no automatic fallback. Read it from your `.env` in your route handler:
 
 ```php
-$secret = $_ENV["SECRET"] ?? getenv("SECRET");
+$secret = $_ENV["TINA4_SECRET"] ?? getenv("TINA4_SECRET");
 ```
 
 `getPayload()` does not take a secret at all -- it decodes without verifying.
@@ -527,22 +527,22 @@ Set the backend in `.env`:
 
 ```bash
 # File-based sessions (default)
-TINA4_SESSION_DRIVER=file
+TINA4_SESSION_BACKEND=file
 
 # Redis
-TINA4_SESSION_DRIVER=redis
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=6379
+TINA4_SESSION_BACKEND=redis
+TINA4_SESSION_REDIS_HOST=localhost
+TINA4_SESSION_REDIS_PORT=6379
 
 # MongoDB
-TINA4_SESSION_DRIVER=mongodb
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=27017
+TINA4_SESSION_BACKEND=mongodb
+TINA4_SESSION_REDIS_HOST=localhost
+TINA4_SESSION_REDIS_PORT=27017
 
 # Valkey
-TINA4_SESSION_DRIVER=valkey
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=6379
+TINA4_SESSION_BACKEND=valkey
+TINA4_SESSION_REDIS_HOST=localhost
+TINA4_SESSION_REDIS_PORT=6379
 ```
 
 File sessions work out of the box. Redis or Valkey for multi-server production deployments where sessions must be shared across instances.
@@ -584,7 +584,7 @@ Router::post("/logout", function ($request, $response) {
 ### Session Options
 
 ```bash
-TINA4_SESSION_LIFETIME=3600       # Expires after 1 hour of inactivity
+TINA4_SESSION_TTL=3600       # Expires after 1 hour of inactivity
 TINA4_SESSION_NAME=tina4_session  # Cookie name for the session ID
 ```
 
@@ -882,7 +882,7 @@ Router::put("/api/profile/password", function ($request, $response) {
 
 **Cause:** Each server generated its own `secrets/jwt.key`. Or the key was regenerated during deployment.
 
-**Fix:** Set `SECRET` in `.env` and use the same value across all servers. Store it in your secrets manager. Not in version control. Key change invalidates all tokens. Users must log in again.
+**Fix:** Set `TINA4_SECRET` in `.env` and use the same value across all servers. Store it in your secrets manager. Not in version control. Key change invalidates all tokens. Users must log in again.
 
 ### 3. CORS with Authentication
 

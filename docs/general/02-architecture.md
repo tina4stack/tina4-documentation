@@ -319,7 +319,7 @@ One file controls everything. Not YAML. Not TOML. Not JSON config objects. A `.e
 # .env
 TINA4_DEBUG=true
 TINA4_PORT=7145
-DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=sqlite:///data/app.db
 JWT_SECRET=change-me-in-production
 ```
 

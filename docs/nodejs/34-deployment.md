@@ -23,11 +23,11 @@ TINA4_LOG_LEVEL=WARNING
 TINA4_PORT=7148
 
 # Database
-DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=sqlite:///data/app.db
 
 # Security
 CORS_ORIGINS=https://yourdomain.com
-TINA4_JWT_SECRET=your-long-random-secret-at-least-32-characters
+TINA4_SECRET=your-long-random-secret-at-least-32-characters
 TINA4_RATE_LIMIT=120
 
 # Performance
@@ -51,13 +51,13 @@ Production secrets never go into version control. The `.env` file is gitignored 
 
 ```bash
 # Docker: pass env vars at runtime
-docker run -e TINA4_JWT_SECRET=your-secret -e DATABASE_URL=sqlite:///data/app.db my-app
+docker run -e TINA4_SECRET=your-secret -e TINA4_DATABASE_URL=sqlite:///data/app.db my-app
 
 # Fly.io: set secrets
-fly secrets set TINA4_JWT_SECRET=your-secret
+fly secrets set TINA4_SECRET=your-secret
 
 # Railway: use the dashboard or CLI
-railway variables set TINA4_JWT_SECRET=your-secret
+railway variables set TINA4_SECRET=your-secret
 ```
 
 ---
@@ -149,8 +149,8 @@ docker build -t my-tina4-app .
 docker run -d \
   --name my-app \
   -p 7148:7148 \
-  -e TINA4_JWT_SECRET=your-production-secret \
-  -e DATABASE_URL=sqlite:///data/app.db \
+  -e TINA4_SECRET=your-production-secret \
+  -e TINA4_DATABASE_URL=sqlite:///data/app.db \
   -v $(pwd)/data:/app/data \
   -v $(pwd)/logs:/app/logs \
   my-tina4-app
@@ -171,10 +171,10 @@ services:
     environment:
       - TINA4_DEBUG=false
       - TINA4_LOG_LEVEL=WARNING
-      - TINA4_JWT_SECRET=${TINA4_JWT_SECRET}
-      - DATABASE_URL=sqlite:///data/app.db
+      - TINA4_SECRET=${TINA4_SECRET}
+      - TINA4_DATABASE_URL=sqlite:///data/app.db
       - TINA4_CACHE_BACKEND=redis
-      - TINA4_CACHE_HOST=redis
+      - TINA4_CACHE_URL=redis
     volumes:
       - app-data:/app/data
       - app-logs:/app/logs
@@ -496,7 +496,7 @@ services:
       - "traefik.http.routers.app.tls.certresolver=letsencrypt"
     environment:
       - TINA4_DEBUG=false
-      - TINA4_JWT_SECRET=${TINA4_JWT_SECRET}
+      - TINA4_SECRET=${TINA4_SECRET}
 
 volumes:
   letsencrypt:

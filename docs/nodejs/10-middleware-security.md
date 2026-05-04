@@ -705,7 +705,7 @@ class JwtAuthMiddleware {
         }
 
         const token = authHeader.slice(7);
-        const secret = process.env.SECRET || "tina4-default-secret";
+        const secret = process.env.TINA4_SECRET || "tina4-default-secret";
         const payload = Auth.validToken(token, secret);
 
         if (!payload) {
@@ -904,7 +904,7 @@ async function authMiddleware(req, res, next) {
     }
 
     const token = authHeader.slice(7);
-    const secret = process.env.SECRET || "tina4-default-secret";
+    const secret = process.env.TINA4_SECRET || "tina4-default-secret";
     const payload = Auth.validToken(token, secret);
 
     if (!payload) {
@@ -1424,7 +1424,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
     }
 
     // Generate token with user claims
-    const secret = process.env.SECRET || "tina4-default-secret";
+    const secret = process.env.TINA4_SECRET || "tina4-default-secret";
     const token: string = getToken({
         sub: user.id,
         email: user.email,
@@ -1687,7 +1687,7 @@ TINA4_CORS_CREDENTIALS=true
 
 Before you deploy, verify:
 
-- [ ] `SECRET` is set to a long, random string — not the default.
+- [ ] `TINA4_SECRET` is set to a long, random string — not the default.
 - [ ] `TINA4_DEBUG=false` in production.
 - [ ] `TINA4_HSTS=31536000` if serving over HTTPS.
 - [ ] `TINA4_CORS_ORIGINS` lists your actual domains — not `*`.

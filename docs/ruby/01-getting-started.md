@@ -524,7 +524,7 @@ The defaults that matter:
 | Variable | Default Value | What It Means |
 |----------|---------------|---------------|
 | `TINA4_PORT` | `7147` | Server runs on port 7147 |
-| `DATABASE_URL` | `sqlite:///data/app.db` | SQLite database in `data/` |
+| `TINA4_DATABASE_URL` | `sqlite:///data/app.db` | SQLite database in `data/` |
 | `TINA4_LOG_LEVEL` | `ALL` | All log messages output |
 | `CORS_ORIGINS` | `*` | All origins allowed (fine for dev) |
 | `TINA4_RATE_LIMIT` | `100` | 100 requests per minute per IP |
@@ -627,7 +627,7 @@ bundle install
 
 ::: warning Two dependencies you must declare
 - **`webrick`** — Tina4's dev server uses WEBrick. Ruby 3.0 dropped WEBrick from the standard library, so you must list it in your `Gemfile` or `tina4 serve` fails with `LoadError: cannot load such file -- webrick`.
-- **`sqlite3`** — the default `DATABASE_URL` points to SQLite. Without this gem the server restarts in a loop with `LoadError: cannot load such file -- sqlite3`.
+- **`sqlite3`** — the default `TINA4_DATABASE_URL` points to SQLite. Without this gem the server restarts in a loop with `LoadError: cannot load such file -- sqlite3`.
 
 `tina4 init ruby` adds both gems automatically. You only need to add them by hand when bootstrapping an empty project.
 :::

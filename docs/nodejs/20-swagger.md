@@ -39,7 +39,7 @@ http://localhost:7148/swagger/json
 By default, Swagger only shows in debug mode. To expose it in production:
 
 ```bash
-TINA4_SWAGGER=true
+TINA4_SWAGGER_ENABLED=true
 ```
 
 This enables the Swagger UI even when `TINA4_DEBUG=false`. Useful for developer portals and partner integrations.
@@ -567,7 +567,7 @@ Router.post("/api/users/{id:int}/avatar", async (req, res) => {
 
 **Problem:** Navigating to `/swagger` returns a 404 in production.
 
-**Fix:** Set `TINA4_SWAGGER=true` in `.env` to enable Swagger in production. Without it, Swagger only runs when `TINA4_DEBUG=true`.
+**Fix:** Set `TINA4_SWAGGER_ENABLED=true` in `.env` to enable Swagger in production. Without it, Swagger only runs when `TINA4_DEBUG=true`.
 
 ### 7. SDK Generation Produces Incorrect Types
 

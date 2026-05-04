@@ -163,11 +163,11 @@ Tina4::Database.new(:sqlite, "data/app.db")
 Tina4::Database.new(:postgres, host: "localhost", port: 5432, database: "myapp")
 
 # v3 -- URL format in .env
-DATABASE_URL=sqlite:///data/app.db
-DATABASE_URL=postgres://localhost:5432/myapp
-DATABASE_URL=mysql://user:pass@localhost:3306/myapp
-DATABASE_URL=firebird://localhost:3050/myapp
-DATABASE_URL=mssql://localhost:1433/myapp
+TINA4_DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=postgres://localhost:5432/myapp
+TINA4_DATABASE_URL=mysql://user:pass@localhost:3306/myapp
+TINA4_DATABASE_URL=firebird://localhost:3050/myapp
+TINA4_DATABASE_URL=mssql://localhost:1433/myapp
 ```
 
 One format. All engines. Set it in `.env` and forget about it.
@@ -366,7 +366,7 @@ Switch to URL-format database connection:
 # DATABASE_PATH=data/app.db
 
 # New
-DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=sqlite:///data/app.db
 ```
 
 ### Step 4: Update ORM Models

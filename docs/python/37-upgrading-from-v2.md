@@ -485,7 +485,7 @@ matches = Auth.check_password("my-secret-password", hashed)  # True
 JWT uses HMAC-SHA256. Set the signing key in `.env`:
 
 ```bash
-SECRET=your-long-random-secret-key
+TINA4_SECRET=your-long-random-secret-key
 ```
 
 Token lifetime defaults to 60 minutes. Override with:
@@ -617,7 +617,7 @@ Follow this order. Each step builds on the previous one.
 7. **Update database connections**
    Switch to URL format in `.env`:
    ```bash
-   DATABASE_URL=sqlite:///data/app.db
+   TINA4_DATABASE_URL=sqlite:///data/app.db
    ```
 
 8. **Run migrations**

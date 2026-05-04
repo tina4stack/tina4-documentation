@@ -259,7 +259,7 @@ Hot reload is only active when `TINA4_DEBUG=true`. In production (`TINA4_DEBUG=f
 If hot reload interferes with your workflow (e.g., you are filling out a form and do not want it to reset), disable it in `.env`:
 
 ```bash
-TINA4_LIVE_RELOAD=false
+TINA4_DEBUG=false
 ```
 
 This disables the browser-side reload while keeping `TINA4_DEBUG=true` for the rest of the dev tools.

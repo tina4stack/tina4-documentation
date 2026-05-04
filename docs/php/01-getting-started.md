@@ -194,7 +194,7 @@ curl http://localhost:7145/health
 
 The server is running. Time to write code.
 
-> **Note:** No database exists yet. The SQLite file (`data/app.db`) is created automatically the first time your code opens a database connection -- for example, when you configure `DATABASE_URL` in `.env` and run a query or migration. Until then, the `data/` directory remains empty.
+> **Note:** No database exists yet. The SQLite file (`data/app.db`) is created automatically the first time your code opens a database connection -- for example, when you configure `TINA4_DATABASE_URL` in `.env` and run a query or migration. Until then, the `data/` directory remains empty.
 
 ---
 
@@ -539,7 +539,7 @@ The defaults that matter for development:
 | Variable | Default Value | What It Does |
 |----------|---------------|--------------|
 | `TINA4_PORT` | `7145` | Server port |
-| `DATABASE_URL` | `sqlite:///data/app.db` | SQLite database path (created on first connection) |
+| `TINA4_DATABASE_URL` | `sqlite:///data/app.db` | SQLite database path (created on first connection) |
 | `TINA4_LOG_LEVEL` | `ALL` | All log messages output |
 | `CORS_ORIGINS` | `*` | All origins allowed |
 | `TINA4_RATE_LIMIT` | `60` | 60 requests per minute per IP |

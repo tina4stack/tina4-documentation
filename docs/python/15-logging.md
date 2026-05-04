@@ -113,11 +113,11 @@ Enable rotation by size:
 
 ```bash
 TINA4_LOG_FILE=logs/app.log
-TINA4_LOG_MAX_BYTES=10485760
-TINA4_LOG_BACKUP_COUNT=5
+TINA4_LOG_MAX_SIZE=10485760
+TINA4_LOG_KEEP=5
 ```
 
-`TINA4_LOG_MAX_BYTES=10485760` rotates the log file when it reaches 10 MB. `TINA4_LOG_BACKUP_COUNT=5` keeps the five most recent rotated files before deleting the oldest. These settings cap total log storage at roughly 50 MB.
+`TINA4_LOG_MAX_SIZE=10485760` rotates the log file when it reaches 10 MB. `TINA4_LOG_KEEP=5` keeps the five most recent rotated files before deleting the oldest. These settings cap total log storage at roughly 50 MB.
 
 Rotated files are named `app.log.1`, `app.log.2`, and so on.
 
@@ -208,14 +208,14 @@ TINA4_LOG_FILE=
 # .env.staging
 TINA4_LOG_LEVEL=INFO
 TINA4_LOG_FILE=logs/staging.log
-TINA4_LOG_MAX_BYTES=10485760
-TINA4_LOG_BACKUP_COUNT=3
+TINA4_LOG_MAX_SIZE=10485760
+TINA4_LOG_KEEP=3
 
 # .env.production
 TINA4_LOG_LEVEL=WARNING
 TINA4_LOG_FILE=logs/app.log
-TINA4_LOG_MAX_BYTES=52428800
-TINA4_LOG_BACKUP_COUNT=10
+TINA4_LOG_MAX_SIZE=52428800
+TINA4_LOG_KEEP=10
 ```
 
 Development logs everything to stdout. Staging logs info and above to a rotating file. Production only logs warnings and errors to a large rotating file kept for 10 rotations.
@@ -364,9 +364,9 @@ async def get_shop_order(request, response):
 
 ### 3. Log file grows without rotation
 
-**Problem:** `TINA4_LOG_FILE` is set but `TINA4_LOG_MAX_BYTES` is not. The log file grows until the disk is full.
+**Problem:** `TINA4_LOG_FILE` is set but `TINA4_LOG_MAX_SIZE` is not. The log file grows until the disk is full.
 
-**Fix:** Always set `TINA4_LOG_MAX_BYTES` and `TINA4_LOG_BACKUP_COUNT` alongside `TINA4_LOG_FILE` in production.
+**Fix:** Always set `TINA4_LOG_MAX_SIZE` and `TINA4_LOG_KEEP` alongside `TINA4_LOG_FILE` in production.
 
 ### 4. Forgetting to log exceptions
 

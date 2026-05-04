@@ -70,7 +70,7 @@ Update `.env`:
 
 ```bash
 TINA4_DEBUG=true
-SECRET=taskflow-dev-secret-change-in-production
+TINA4_SECRET=taskflow-dev-secret-change-in-production
 TINA4_TOKEN_EXPIRES_IN=1440
 ```
 
@@ -1060,9 +1060,9 @@ services:
     environment:
       - TINA4_DEBUG=false
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
-      - DATABASE_URL=sqlite:///data/app.db
+      - TINA4_DATABASE_URL=sqlite:///data/app.db
       - TINA4_CACHE_BACKEND=redis
-      - TINA4_CACHE_HOST=redis
+      - TINA4_CACHE_URL=redis
     volumes:
       - taskflow-data:/app/data
       - taskflow-logs:/app/logs

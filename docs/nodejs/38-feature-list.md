@@ -13,7 +13,7 @@ This chapter catalogs all 45 features in Tina4 for Node.js, grouped by category.
 | 3 | **Request & Response** | `req.body`, `req.query`, `res.json`, `res.render`, `res.status` | 3 |
 | 4 | **Middleware** | Route-level string middleware, `"auth"`, `"ResponseCache:300"` | 10 |
 | 5 | **Static Files** | Served from `public/` automatically | 1 |
-| 6 | **CORS** | `TINA4_CORS_ORIGIN`, `TINA4_CORS_HEADERS` env vars | 10 |
+| 6 | **CORS** | `TINA4_CORS_ORIGINS`, `TINA4_CORS_HEADERS` env vars | 10 |
 
 ---
 
@@ -130,7 +130,7 @@ This chapter catalogs all 45 features in Tina4 for Node.js, grouped by category.
 
 **Static Files** — Everything in the `public/` directory is served automatically. `/public/logo.png` is available at `/logo.png`.
 
-**CORS** — Set `TINA4_CORS_ORIGIN=*` (or a specific domain) and `TINA4_CORS_HEADERS` to control which headers are allowed. Preflight `OPTIONS` requests are handled automatically.
+**CORS** — Set `TINA4_CORS_ORIGINS=*` (or a specific domain) and `TINA4_CORS_HEADERS` to control which headers are allowed. Preflight `OPTIONS` requests are handled automatically.
 
 ---
 
@@ -160,7 +160,7 @@ This chapter catalogs all 45 features in Tina4 for Node.js, grouped by category.
 
 ### Database and ORM
 
-**Database Connection** — Configured via `.env`: `TINA4_DB_DSN`. Supports SQLite (`sqlite:./data/app.db`), PostgreSQL (`pgsql:host=...`), MySQL, and MSSQL. Accessed via `Database.getConnection()`.
+**Database Connection** — Configured via `.env`: `TINA4_DATABASE_URL`. Supports SQLite (`sqlite:./data/app.db`), PostgreSQL (`pgsql:host=...`), MySQL, and MSSQL. Accessed via `Database.getConnection()`.
 
 **Raw Queries** — `db.fetchAll(sql, params)` returns an array of rows. `db.fetchOne(sql, params)` returns one row or null. `db.execute(sql, params)` runs a non-returning statement.
 
@@ -174,7 +174,7 @@ This chapter catalogs all 45 features in Tina4 for Node.js, grouped by category.
 
 **Sequence / next_id** — `Database.get_next_id("invoices")` returns a race-safe, monotonically increasing ID using a sequence table. Safe for concurrent requests.
 
-**Multi-DB Support** — Switch databases by changing `TINA4_DB_DSN`. Application code is unchanged.
+**Multi-DB Support** — Switch databases by changing `TINA4_DATABASE_URL`. Application code is unchanged.
 
 ---
 
@@ -260,12 +260,12 @@ TINA4_PORT=7148
 TINA4_ENV=development
 
 # Database
-TINA4_DB_DSN=sqlite:./data/app.db
+TINA4_DATABASE_URL=sqlite:./data/app.db
 
 # Cache
 TINA4_CACHE_BACKEND=memory
-TINA4_CACHE_HOST=localhost
-TINA4_CACHE_PORT=6379
+TINA4_CACHE_URL=localhost
+TINA4_CACHE_URL=6379
 
 # Queue
 TINA4_QUEUE_BACKEND=file
@@ -273,24 +273,24 @@ TINA4_QUEUE_PATH=./data/queue
 
 # Session
 TINA4_SESSION_BACKEND=file
-TINA4_SESSION_SECRET=your-secret-here
+TINA4_SECRET=your-secret-here
 
 # Email
-TINA4_MAIL_SMTP_HOST=smtp.example.com
-TINA4_MAIL_SMTP_PORT=587
-TINA4_MAIL_SMTP_USERNAME=noreply@example.com
-TINA4_MAIL_SMTP_PASSWORD=your-app-password
-TINA4_MAIL_SMTP_ENCRYPTION=tls
+TINA4_MAIL_HOST=smtp.example.com
+TINA4_MAIL_PORT=587
+TINA4_MAIL_USERNAME=noreply@example.com
+TINA4_MAIL_PASSWORD=your-app-password
+TINA4_MAIL_ENCRYPTION=tls
 
 # Auth
-TINA4_JWT_SECRET=your-jwt-secret
-TINA4_JWT_EXPIRY=86400
+TINA4_SECRET=your-jwt-secret
+TINA4_TOKEN_LIMIT=86400
 
 # Logging
 TINA4_LOG_LEVEL=info
 
 # CORS
-TINA4_CORS_ORIGIN=*
+TINA4_CORS_ORIGINS=*
 TINA4_CORS_HEADERS=Content-Type,Authorization
 ```
 

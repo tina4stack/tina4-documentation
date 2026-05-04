@@ -34,9 +34,9 @@ TINA4_SESSION_BACKEND=file
 
 ```bash
 TINA4_SESSION_BACKEND=redis
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=6379
-TINA4_SESSION_PASSWORD=
+TINA4_SESSION_REDIS_HOST=localhost
+TINA4_SESSION_REDIS_PORT=6379
+TINA4_SESSION_REDIS_PASSWORD=
 ```
 
 Install the Redis driver:
@@ -49,17 +49,17 @@ uv add redis
 
 ```bash
 TINA4_SESSION_BACKEND=mongodb
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=27017
-TINA4_SESSION_DATABASE=tina4_sessions
+TINA4_SESSION_REDIS_HOST=localhost
+TINA4_SESSION_REDIS_PORT=27017
+TINA4_SESSION_MONGO_DB=tina4_sessions
 ```
 
 ### Valkey Configuration
 
 ```bash
 TINA4_SESSION_BACKEND=valkey
-TINA4_SESSION_HOST=localhost
-TINA4_SESSION_PORT=6379
+TINA4_SESSION_REDIS_HOST=localhost
+TINA4_SESSION_REDIS_PORT=6379
 ```
 
 ### Database Sessions
@@ -68,7 +68,7 @@ TINA4_SESSION_PORT=6379
 TINA4_SESSION_BACKEND=database
 ```
 
-Stores sessions in the `tina4_session` table using your existing database connection (`DATABASE_URL`). The table is auto-created on first use.
+Stores sessions in the `tina4_session` table using your existing database connection (`TINA4_DATABASE_URL`). The table is auto-created on first use.
 
 ### Session Lifetime
 

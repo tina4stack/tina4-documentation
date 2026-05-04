@@ -175,7 +175,7 @@ class CacheWarmer extends Service
     {
         echo "[CacheWarmer] Warming cache...\n";
 
-        $db = new \Tina4\Database(getenv('DATABASE_URL'));
+        $db = new \Tina4\Database(getenv('TINA4_DATABASE_URL'));
 
         $categories = $db->fetchAll("SELECT * FROM categories ORDER BY name");
         cache_set('categories:all', $categories, $this->ttl);
@@ -330,8 +330,8 @@ services:
     build: .
     command: php src/workers/run.php
     environment:
-      - DATABASE_URL=sqlite:./data/app.db
-      - SMTP_HOST=mailhog
+      - TINA4_DATABASE_URL=sqlite:./data/app.db
+      - TINA4_MAIL_HOST=mailhog
     depends_on:
       - db
 ```

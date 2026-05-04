@@ -20,27 +20,27 @@ When you scaffold with `tina4 init`, Tina4 creates a SQLite database at `data/ap
 TINA4_DEBUG=true
 ```
 
-No explicit `DATABASE_URL`? Tina4 defaults to `sqlite:///data/app.db`. The health check at `/health` shows `"database": "connected"` with zero configuration.
+No explicit `TINA4_DATABASE_URL`? Tina4 defaults to `sqlite:///data/app.db`. The health check at `/health` shows `"database": "connected"` with zero configuration.
 
 ### Connection Strings for Other Databases
 
-Set `DATABASE_URL` in `.env` to use a different engine:
+Set `TINA4_DATABASE_URL` in `.env` to use a different engine:
 
 ```bash
 # SQLite (explicit)
-DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=sqlite:///data/app.db
 
 # PostgreSQL
-DATABASE_URL=postgres://localhost:5432/myapp
+TINA4_DATABASE_URL=postgres://localhost:5432/myapp
 
 # MySQL
-DATABASE_URL=mysql://localhost:3306/myapp
+TINA4_DATABASE_URL=mysql://localhost:3306/myapp
 
 # Microsoft SQL Server
-DATABASE_URL=mssql://localhost:1433/myapp
+TINA4_DATABASE_URL=mssql://localhost:1433/myapp
 
 # Firebird
-DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
+TINA4_DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
 ```
 
 ### Separate Credentials
@@ -48,9 +48,9 @@ DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
 If you prefer to keep credentials out of the connection string (recommended for production), use separate environment variables:
 
 ```bash
-DATABASE_URL=postgres://localhost:5432/myapp
-DATABASE_USERNAME=myuser
-DATABASE_PASSWORD=secretpassword
+TINA4_DATABASE_URL=postgres://localhost:5432/myapp
+TINA4_DATABASE_USERNAME=myuser
+TINA4_DATABASE_PASSWORD=secretpassword
 ```
 
 Tina4 merges these with the connection string at startup. The credentials in the separate variables take precedence over any embedded in the URL.
@@ -1157,7 +1157,7 @@ Files run in alphabetical order. Prefix with numbers to control sequence. Files 
 
 **Problem:** SQLite creates a new empty database instead of using the existing one.
 
-**Cause:** The path in `DATABASE_URL` is relative and resolves to the wrong directory, or you used `sqlite://` (two slashes) instead of `sqlite:///` (three slashes).
+**Cause:** The path in `TINA4_DATABASE_URL` is relative and resolves to the wrong directory, or you used `sqlite://` (two slashes) instead of `sqlite:///` (three slashes).
 
 **Fix:** Use three slashes for a relative path: `sqlite:///data/app.db`. For an absolute path, use four slashes: `sqlite:////var/data/app.db`. The third slash separates the scheme from the path; the fourth starts the absolute path.
 

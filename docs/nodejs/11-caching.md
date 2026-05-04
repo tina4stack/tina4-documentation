@@ -153,9 +153,9 @@ For production deployments where you want cache persistence across server restar
 
 ```bash
 TINA4_CACHE_BACKEND=redis
-TINA4_CACHE_HOST=localhost
-TINA4_CACHE_PORT=6379
-TINA4_CACHE_PASSWORD=your-redis-password
+TINA4_CACHE_URL=localhost
+TINA4_CACHE_URL=6379
+TINA4_CACHE_URL=your-redis-password
 TINA4_CACHE_PREFIX=myapp:cache:
 ```
 
@@ -177,7 +177,7 @@ If you want cache persistence but do not have Redis, use file-based caching:
 
 ```bash
 TINA4_CACHE_BACKEND=file
-TINA4_CACHE_PATH=/path/to/cache/directory
+TINA4_CACHE_DIR=/path/to/cache/directory
 ```
 
 File cache stores each cache entry as a file on disk. It is slower than memory or Redis but survives server restarts without extra infrastructure.

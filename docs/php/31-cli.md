@@ -477,7 +477,7 @@ If something is wrong, the doctor tells you:
 
   Database connection ...... failed      [FAIL]
     Error: could not open database file
-    Fix: Check DATABASE_URL in .env. Current value: sqlite:///data/app.db
+    Fix: Check TINA4_DATABASE_URL in .env. Current value: sqlite:///data/app.db
          Make sure the data/ directory exists and is writable.
 ```
 

@@ -155,9 +155,9 @@ For production: cache persistence across server restarts. Shared cache across mu
 
 ```bash
 TINA4_CACHE_BACKEND=redis
-TINA4_CACHE_HOST=localhost
-TINA4_CACHE_PORT=6379
-TINA4_CACHE_PASSWORD=your-redis-password
+TINA4_CACHE_URL=localhost
+TINA4_CACHE_URL=6379
+TINA4_CACHE_URL=your-redis-password
 TINA4_CACHE_PREFIX=myapp:cache:
 ```
 
@@ -179,7 +179,7 @@ Cache persistence without Redis. File-based caching:
 
 ```bash
 TINA4_CACHE_BACKEND=file
-TINA4_CACHE_PATH=/path/to/cache/directory
+TINA4_CACHE_DIR=/path/to/cache/directory
 ```
 
 Each cache entry becomes a file on disk. Slower than memory or Redis, but survives server restarts without extra infrastructure.

@@ -4,7 +4,7 @@
 
 Every example so far stored data in Python lists. Restart the server. Data gone. A real application demands persistence.
 
-Tina4 Python makes database access straightforward. Set a `DATABASE_URL` in your `.env`. Create a `Database()` connection. Run SQL. No ORM required (Chapter 6 adds that). The SQL you already know carries over unchanged.
+Tina4 Python makes database access straightforward. Set a `TINA4_DATABASE_URL` in your `.env`. Create a `Database()` connection. Run SQL. No ORM required (Chapter 6 adds that). The SQL you already know carries over unchanged.
 
 Picture a notes application. Users create, edit, and delete notes. Those notes must survive restarts, support searching, and handle concurrent users. A database delivers all three.
 
@@ -12,19 +12,19 @@ Picture a notes application. Users create, edit, and delete notes. Those notes m
 
 ## 2. Configuration
 
-### DATABASE_URL
+### TINA4_DATABASE_URL
 
 Set your database connection in `.env`:
 
 ```bash
-DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=sqlite:///data/app.db
 ```
 
 That is the default -- a SQLite database stored in `data/`. SQLite ships with Python. No install required.
 
 Tina4 supports six database engines:
 
-| Engine | DATABASE_URL Format | Package Required |
+| Engine | TINA4_DATABASE_URL Format | Package Required |
 |--------|-------------------|-----------------|
 | SQLite | `sqlite:///data/app.db` | None (stdlib) |
 | PostgreSQL | `postgresql://user:pass@host:5432/dbname` | `psycopg2` |
@@ -66,7 +66,7 @@ from tina4_python.database.connection import Database
 db = Database()
 ```
 
-One line. `Database()` reads `DATABASE_URL` from your `.env` and connects. If the SQLite file does not exist, the adapter creates one.
+One line. `Database()` reads `TINA4_DATABASE_URL` from your `.env` and connects. If the SQLite file does not exist, the adapter creates one.
 
 You can also pass a URL directly:
 

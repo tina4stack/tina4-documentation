@@ -206,12 +206,12 @@ The default session handler stores data on the file system. Override `TINA4_SESS
 | Handler | Backend | Notes |
 |---------|---------|-------|
 | `FileSession` (default) | File system | No extra config |
-| `RedisSession` | Redis | Set `TINA4_REDIS_URL` |
+| `RedisSession` | Redis | Set `TINA4_CACHE_URL` |
 | `MongoSession` | MongoDB | Set `TINA4_MONGO_URI` |
 
 ```bash
 TINA4_SESSION_HANDLER=RedisSession
-TINA4_REDIS_URL=redis://localhost:6379
+TINA4_CACHE_URL=redis://localhost:6379
 ```
 
 ```typescript
@@ -263,13 +263,13 @@ The `.env` file holds your project configuration. The framework reads it at star
 ```bash
 TINA4_DEBUG=true
 TINA4_PORT=7148
-DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=sqlite:///data/app.db
 TINA4_LOG_LEVEL=ALL
-API_KEY=ABC1234
+TINA4_API_KEY=ABC1234
 ```
 
 ```typescript
-const apiKey = process.env.API_KEY ?? "ABC1234";
+const apiKey = process.env.TINA4_API_KEY ?? "ABC1234";
 ```
 
 
@@ -280,10 +280,10 @@ Access env vars programmatically:
 import { loadEnv, getEnv, hasEnv, requireEnv, isTruthy } from "tina4-nodejs";
 
 loadEnv();                           // Load .env file (auto on server start)
-getEnv("DATABASE_URL");              // Get value or undefined
+getEnv("TINA4_DATABASE_URL");              // Get value or undefined
 getEnv("PORT", "7148");              // Get value with default
 hasEnv("TINA4_DEBUG");               // true if set
-requireEnv("DATABASE_URL");          // Throws if missing
+requireEnv("TINA4_DATABASE_URL");          // Throws if missing
 isTruthy(getEnv("TINA4_DEBUG"));     // true for "true", "1", "yes"
 ```
 
@@ -385,17 +385,17 @@ Router.get("/api/products", async (req, res) => {
 });
 ```
 
-Swagger runs when `TINA4_DEBUG=true`. Set `TINA4_SWAGGER=true` in `.env` to expose it in production. The raw spec lives at `/swagger/json` -- standard OpenAPI 3.0, compatible with every tool in the OpenAPI world.
+Swagger runs when `TINA4_DEBUG=true`. Set `TINA4_SWAGGER_ENABLED=true` in `.env` to expose it in production. The raw spec lives at `/swagger/json` -- standard OpenAPI 3.0, compatible with every tool in the OpenAPI world.
 
 ### Databases {#databases}
 
-Tina4 defaults to SQLite at `data/app.db`. Set `DATABASE_URL` in `.env` to switch engines. The API stays identical across SQLite, PostgreSQL, MySQL, SQL Server, and Firebird.
+Tina4 defaults to SQLite at `data/app.db`. Set `TINA4_DATABASE_URL` in `.env` to switch engines. The API stays identical across SQLite, PostgreSQL, MySQL, SQL Server, and Firebird.
 
 ```bash
 # PostgreSQL
-DATABASE_URL=postgres://localhost:5432/myapp
+TINA4_DATABASE_URL=postgres://localhost:5432/myapp
 # MySQL
-DATABASE_URL=mysql://localhost:3306/myapp
+TINA4_DATABASE_URL=mysql://localhost:3306/myapp
 ```
 
 Access the connection from any route. The database speaks whichever dialect the engine understands:
@@ -782,7 +782,7 @@ Router.get("/api/dashboard", async (req, res) => {
 }).secure().cache(120);
 ```
 
-The cache key is the full request path. The store is in-memory by default. Set `TINA4_CACHE_DRIVER=redis` and `TINA4_REDIS_URL` to share cache across instances.
+The cache key is the full request path. The store is in-memory by default. Set `TINA4_CACHE_BACKEND=redis` and `TINA4_CACHE_URL` to share cache across instances.
 
 ### Health Endpoint {#health}
 
@@ -818,7 +818,7 @@ The built-in dependency injection container wires up services without manual ins
 import { Container } from "tina4-nodejs";
 
 // Transient — new instance per request
-Container.register("mailer", () => new Mailer(process.env.SMTP_HOST));
+Container.register("mailer", () => new Mailer(process.env.TINA4_MAIL_HOST));
 
 // Singleton — one instance for the lifetime of the process
 Container.singleton("config", () => new AppConfig());
@@ -949,10 +949,10 @@ for (let i = 0; i < 50; i++) {
 </div>
 ### Localization (i18n) {#localization}
 
-Set `TINA4_LANGUAGE` in `.env` to change the framework language. Supported: `en`, `fr`, `af`.
+Set `TINA4_LOCALE` in `.env` to change the framework language. Supported: `en`, `fr`, `af`.
 
 ```bash
-TINA4_LANGUAGE=af
+TINA4_LOCALE=af
 ```
 
 ```typescript

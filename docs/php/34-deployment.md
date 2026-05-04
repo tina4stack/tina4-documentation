@@ -23,7 +23,7 @@ TINA4_LOG_LEVEL=WARNING
 TINA4_PORT=7145
 
 # Database
-DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=sqlite:///data/app.db
 
 # Security
 CORS_ORIGINS=https://yourdomain.com
@@ -52,7 +52,7 @@ Production secrets never go into version control. The `.env` file is gitignored 
 
 ```bash
 # Docker: pass env vars at runtime
-docker run -e JWT_SECRET=your-secret -e DATABASE_URL=sqlite:///data/app.db my-app
+docker run -e JWT_SECRET=your-secret -e TINA4_DATABASE_URL=sqlite:///data/app.db my-app
 
 # Fly.io: set secrets
 fly secrets set JWT_SECRET=your-secret
@@ -311,7 +311,7 @@ services:
       - TINA4_DEBUG=false
       - TINA4_LOG_LEVEL=WARNING
       - JWT_SECRET=${JWT_SECRET}
-      - DATABASE_URL=sqlite:///data/app.db
+      - TINA4_DATABASE_URL=sqlite:///data/app.db
     volumes:
       - app-data:/app/data
     restart: unless-stopped
@@ -356,7 +356,7 @@ pm.min_spare_servers = 5
 pm.max_spare_servers = 35
 pm.max_requests = 1000
 
-env[DATABASE_URL] = sqlite:///var/www/tina4-app/data/app.db
+env[TINA4_DATABASE_URL] = sqlite:///var/www/tina4-app/data/app.db
 env[JWT_SECRET] = your-production-secret
 env[TINA4_DEBUG] = false
 env[TINA4_LOG_LEVEL] = WARNING
@@ -892,7 +892,7 @@ services:
       - TINA4_LOG_LEVEL=WARNING
       - TINA4_CACHE_TEMPLATES=true
       - JWT_SECRET=change-this-to-a-real-secret
-      - DATABASE_URL=sqlite:///data/app.db
+      - TINA4_DATABASE_URL=sqlite:///data/app.db
       - CORS_ORIGINS=http://localhost:7145
     volumes:
       - app-data:/app/data
@@ -952,7 +952,7 @@ CORS_ORIGINS=https://yourdomain.com
 **Fix:** For low-to-medium traffic (under 100 concurrent users), SQLite works fine. For higher traffic, switch to PostgreSQL or MySQL:
 
 ```bash
-DATABASE_URL=postgres://user:pass@localhost:5432/myapp
+TINA4_DATABASE_URL=postgres://user:pass@localhost:5432/myapp
 ```
 
 If you must use SQLite under load, enable WAL mode by adding this to your application startup:

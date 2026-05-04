@@ -70,7 +70,7 @@ async def chat_ws(request, response):
 
 ## Client Usage {#client}
 
-Connect from a Python client using the `websockets` library and send JSON actions. Include a Bearer token in the Authorization header for secured routes (obtain token via default `API_KEY` in `.env`):
+Connect from a Python client using the `websockets` library and send JSON actions. Include a Bearer token in the Authorization header for secured routes (obtain token via default `TINA4_API_KEY` in `.env`):
 
 ```python
 import asyncio

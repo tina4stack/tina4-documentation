@@ -30,7 +30,7 @@ import { api } from "@tina4/core";
 api.configure({
     baseUrl: "https://api.example.com/v2",
     headers: {
-        "Authorization": `Bearer ${process.env.API_KEY}`,
+        "Authorization": `Bearer ${process.env.TINA4_API_KEY}`,
         "X-App-Version": "1.0.0"
     },
     timeout: 10000  // 10 seconds

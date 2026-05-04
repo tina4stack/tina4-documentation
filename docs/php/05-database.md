@@ -18,27 +18,27 @@ Tina4 supports five database engines: SQLite, PostgreSQL, MySQL, Microsoft SQL S
 TINA4_DEBUG=true
 ```
 
-No explicit `DATABASE_URL` means Tina4 defaults to `sqlite:///data/app.db`. The SQLite file is created automatically the first time Tina4 opens a database connection (for example, when you run a query, execute a migration, or the framework initialises the database layer at startup with a `DATABASE_URL` configured).
+No explicit `TINA4_DATABASE_URL` means Tina4 defaults to `sqlite:///data/app.db`. The SQLite file is created automatically the first time Tina4 opens a database connection (for example, when you run a query, execute a migration, or the framework initialises the database layer at startup with a `TINA4_DATABASE_URL` configured).
 
 ### Connection Strings for Other Databases
 
-Set `DATABASE_URL` in `.env`:
+Set `TINA4_DATABASE_URL` in `.env`:
 
 ```bash
 # SQLite (explicit)
-DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=sqlite:///data/app.db
 
 # PostgreSQL
-DATABASE_URL=postgres://localhost:5432/myapp
+TINA4_DATABASE_URL=postgres://localhost:5432/myapp
 
 # MySQL
-DATABASE_URL=mysql://localhost:3306/myapp
+TINA4_DATABASE_URL=mysql://localhost:3306/myapp
 
 # Microsoft SQL Server
-DATABASE_URL=mssql://localhost:1433/myapp
+TINA4_DATABASE_URL=mssql://localhost:1433/myapp
 
 # Firebird
-DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
+TINA4_DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
 ```
 
 ### Firebird: Dual-Driver Support
@@ -50,9 +50,9 @@ The Firebird adapter works with either the `ibase_*` or `fbird_*` PHP functions.
 Keep credentials out of the connection string. Better for production:
 
 ```bash
-DATABASE_URL=postgres://localhost:5432/myapp
-DATABASE_USERNAME=myuser
-DATABASE_PASSWORD=secretpassword
+TINA4_DATABASE_URL=postgres://localhost:5432/myapp
+TINA4_DATABASE_USERNAME=myuser
+TINA4_DATABASE_PASSWORD=secretpassword
 ```
 
 Tina4 merges these at startup. Separate variables take precedence over anything embedded in the URL.

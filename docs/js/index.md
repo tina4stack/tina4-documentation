@@ -165,19 +165,19 @@ pwa.register({
 ```bash
 npx tina4js build --target php
 # Outputs JS to src/public/js/
-# Generates src/templates/index.twig
+# Generates src/templates/pages/index.twig
 ```
-```bash
-TINA4_APP_DOCUMENT_ROOT=src/public
-TINA4_APP_INDEX=../templates/index.twig
-```
+
+The build drops your SPA's entry point at `src/templates/pages/index.twig`. Tina4's auto-routing serves it at `/` — no env var or route needed. If your build emits a static `index.html` instead, drop it at `src/public/index.html` and Tina4 auto-serves it at `/` too (since v3.11.33).
 
 #### With tina4-python
 ```bash
 npx tina4js build --target python
 # Outputs JS to src/public/js/
-# Generates src/templates/index.twig + src/routes/spa.py
+# Generates src/templates/pages/index.twig
 ```
+
+Same auto-routing — `src/templates/pages/*.twig` becomes the page tree under `/`. Set `TINA4_TEMPLATE_ROUTING=off` if you want explicit routes only.
 [More details](13-backend-integration.md) on embedding in tina4-php/python, auth flow, and server-side state injection.
 
 ### Bundle Size {#bundle-size}

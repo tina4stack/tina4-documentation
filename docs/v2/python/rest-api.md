@@ -143,15 +143,15 @@ async def delete_user(id, request, response):
 
 - **GET** routes are public by default
 - **POST, PUT, PATCH, DELETE** require a valid `Authorization: Bearer <token>` header
-- Tokens are validated as either a static `API_KEY` or an RS256 JWT
+- Tokens are validated as either a static `TINA4_API_KEY` or an RS256 JWT
 
 ### Getting a token
 
-Set `API_KEY` in your `.env` file for a simple static token:
+Set `TINA4_API_KEY` in your `.env` file for a simple static token:
 
 ```bash
 # .env
-API_KEY=my-secret-api-key
+TINA4_API_KEY=my-secret-api-key
 ```
 
 Clients include it in the header:
@@ -363,16 +363,16 @@ curl http://localhost:7145/api/products
 # Create (needs token)
 curl -X POST http://localhost:7145/api/products \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $TINA4_API_KEY" \
   -d '{"name": "Widget", "price": "9.99"}'
 
 # Update
 curl -X PUT http://localhost:7145/api/products/1 \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $TINA4_API_KEY" \
   -d '{"name": "Widget Pro", "price": "19.99"}'
 
 # Delete
 curl -X DELETE http://localhost:7145/api/products/1 \
-  -H "Authorization: Bearer $API_KEY"
+  -H "Authorization: Bearer $TINA4_API_KEY"
 ```

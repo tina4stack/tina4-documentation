@@ -1332,7 +1332,7 @@ TINA4_CORS_CREDENTIALS=true
 
 Before you deploy, verify:
 
-- [ ] `SECRET` is set to a long, random string — not the default.
+- [ ] `TINA4_SECRET` is set to a long, random string — not the default.
 - [ ] `TINA4_DEBUG=false` in production.
 - [ ] `TINA4_HSTS=31536000` if serving over HTTPS.
 - [ ] `TINA4_CORS_ORIGINS` lists your actual domains — not `*`.

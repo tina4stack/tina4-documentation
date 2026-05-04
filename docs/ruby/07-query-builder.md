@@ -652,7 +652,7 @@ cursor = collection.find(mongo[:filter])
 
 **Cause:** You did not pass `db:` to `.from`, and `Tina4.database` is not configured.
 
-**Fix:** Either pass the connection explicitly with `Tina4::QueryBuilder.from_table("users", db: db)` or ensure your `.env` has a valid `DATABASE_URL` so the framework configures `Tina4.database` at startup.
+**Fix:** Either pass the connection explicitly with `Tina4::QueryBuilder.from_table("users", db: db)` or ensure your `.env` has a valid `TINA4_DATABASE_URL` so the framework configures `Tina4.database` at startup.
 
 ### 4. count Replaces Your Columns
 

@@ -408,7 +408,7 @@ Use a separate test database to avoid polluting development data:
 
 ```bash
 # .env.test
-DATABASE_URL=sqlite:///data/test.db
+TINA4_DATABASE_URL=sqlite:///data/test.db
 TINA4_DEBUG=false
 ```
 
@@ -739,7 +739,7 @@ end
 
 **Problem:** Auth tests fail intermittently with "token expired".
 
-**Fix:** Set a long JWT expiry for tests: `TINA4_JWT_EXPIRY=86400` in `.env.test`.
+**Fix:** Set a long JWT expiry for tests: `TINA4_TOKEN_LIMIT=86400` in `.env.test`.
 
 ### 6. Floating Point Comparison
 

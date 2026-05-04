@@ -11,9 +11,9 @@ Swagger is available at the `/swagger` route, even if no routes have been annota
 entries would probably have been added to your `.env` file on project initialization. Change these values to suit your project
 ```
 [Open API]
-SWAGGER_TITLE=Tina4 Project
-SWAGGER_DESCRIPTION=Edit your .env file to change this description
-SWAGGER_VERSION=1.0.0
+TINA4_SWAGGER_TITLE=Tina4 Project
+TINA4_SWAGGER_DESCRIPTION=Edit your .env file to change this description
+TINA4_SWAGGER_VERSION=1.0.0
 ```
 ## Annotations {#annotations}
 The following annotations are used to create the swagger page

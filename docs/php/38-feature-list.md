@@ -520,7 +520,7 @@ File, database, Redis, Valkey, and MongoDB backends.
 
 ```bash
 TINA4_SESSION_HANDLER=redis
-TINA4_SESSION_HOST=localhost
+TINA4_SESSION_REDIS_HOST=localhost
 TINA4_SESSION_TTL=3600
 ```
 
@@ -600,7 +600,7 @@ Debug::message("Payment failed", TINA4_LOG_ERROR, [
 use Tina4\Container;
 
 $container = new Container();
-$container->singleton('db', fn() => new \Tina4\Database(getenv('DATABASE_URL')));
+$container->singleton('db', fn() => new \Tina4\Database(getenv('TINA4_DATABASE_URL')));
 $db = $container->get('db');
 ```
 

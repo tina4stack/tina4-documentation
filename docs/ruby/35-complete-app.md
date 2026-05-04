@@ -935,9 +935,9 @@ Use the Dockerfile and docker-compose.yml from Chapter 33. Create `.env.producti
 TINA4_DEBUG=false
 TINA4_LOG_LEVEL=WARNING
 JWT_SECRET=your-production-secret-at-least-32-characters
-DATABASE_URL=sqlite:///data/app.db
+TINA4_DATABASE_URL=sqlite:///data/app.db
 TINA4_CACHE_BACKEND=redis
-TINA4_CACHE_HOST=redis
+TINA4_CACHE_URL=redis
 ```
 
 Deploy:
