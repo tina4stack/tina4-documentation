@@ -1,6 +1,17 @@
 # Chapter 35: Release Notes
 
 
+## v3.12.1 (2026-05-04)
+
+CI-only patch — no framework code changes from 3.12.0.
+
+- **fix(ci, all 4):** every `publish.yml` workflow now declares `permissions: contents: write` on the publish job. Without this, `softprops/action-gh-release` 403'd against the default `GITHUB_TOKEN` on repos whose default Workflow permissions setting was read-only (Ruby and Node hit this every release; PHP and Python worked by luck of repo settings). The explicit declaration makes the workflow self-sufficient.
+- **chore(ci):** bumped `softprops/action-gh-release` from `@v1` (unmaintained) to `@v2`.
+
+No `.env` changes, no API changes, no migration needed. Existing 3.12.0 installs can upgrade without touching anything else.
+
+The version-bump itself is the test: a successful 3.12.1 release proves the workflow fix works on Ruby and Node where 3.12.0 needed manual `gh release create`.
+
 ## v3.12.0 (2026-05-04)
 
 > **⚠️ Breaking change — read before upgrading.** Every framework env var now uses the `TINA4_` prefix. Existing `.env` files set with `DATABASE_URL`, `SECRET`, `SMTP_HOST`, `HOST_NAME`, etc. will cause the framework to refuse to boot. Run `tina4 env-migrate` to rewrite, or follow the rename table below.
