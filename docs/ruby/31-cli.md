@@ -142,7 +142,7 @@ TINA4_OVERRIDE_CLIENT=true bundle exec puma -C config/puma.rb
 The `generate model` command creates an ORM model file and a matching migration. One command produces both.
 
 ```bash
-tina4 generate:model Product
+tina4 generate model Product
 ```
 
 ```
@@ -181,7 +181,7 @@ The model is ready to use. Add your fields and run migrations.
 Specify fields on the command line:
 
 ```bash
-tina4 generate:model Product --fields "name:string,price:float,category:string,in_stock:bool"
+tina4 generate model Product --fields "name:string,price:float,category:string,in_stock:bool"
 ```
 
 The generated model includes all the fields:
@@ -243,7 +243,7 @@ DROP TABLE IF EXISTS products;
 The `generate route` command creates a complete CRUD route file with all five REST endpoints. It reads the model's properties and builds routes with proper type casting and nil checks.
 
 ```bash
-tina4 generate:route products
+tina4 generate route products
 ```
 
 ```
@@ -337,7 +337,7 @@ The generator reads the model's properties and creates routes with type casting 
 The `generate migration` command creates a timestamped migration file with `UP` and `DOWN` sections. The timestamp ensures migrations run in order.
 
 ```bash
-tina4 generate:migration add_category_to_products
+tina4 generate migration add_category_to_products
 ```
 
 ```
@@ -555,7 +555,7 @@ Running migrations...
 ### Rollback
 
 ```bash
-tina4 migrate:rollback
+tina4 migrate --rollback
 ```
 
 ```
@@ -600,8 +600,8 @@ tina4 migrate:fresh        # Roll back and re-run all migrations
 ## 13. tina4 queue -- Queue Management
 
 ```bash
-tina4 queue:work                     # Start processing all queues
-tina4 queue:work --queue emails      # Process specific queue
+tina4 queue work                     # Start processing all queues
+tina4 queue work --queue emails      # Process specific queue
 tina4 queue:dead                     # View dead letter queue
 tina4 queue:retry 42                 # Retry a dead letter job
 tina4 queue:retry --all              # Retry all dead letter jobs
@@ -614,8 +614,8 @@ tina4 queue:stats                    # Show queue statistics
 ## 14. tina4 build -- Build Commands
 
 ```bash
-tina4 build:css                      # Compile SCSS to CSS
-tina4 build:js                       # Bundle and minify JavaScript
+tina4 scss                      # Compile SCSS to CSS
+tina4 build                       # Bundle and minify JavaScript
 tina4 build                          # Run all build steps
 ```
 
@@ -624,7 +624,7 @@ tina4 build                          # Run all build steps
 ## 15. tina4 deploy -- Deployment
 
 ```bash
-tina4 deploy:docker                  # Generate Dockerfile and docker-compose.yml
+tina4 deploy docker                  # Generate Dockerfile and docker-compose.yml
 tina4 deploy:systemd                 # Generate systemd service file
 tina4 deploy:nginx                   # Generate Nginx config
 ```
@@ -791,7 +791,7 @@ source ~/.zshrc
 
 ### 3. Generated Files Overwrite Existing Code
 
-**Problem:** Running `tina4 generate:route products` overwrites your custom route file.
+**Problem:** Running `tina4 generate route products` overwrites your custom route file.
 
 **Cause:** The generate command creates files at fixed paths.
 
@@ -803,7 +803,7 @@ source ~/.zshrc
 
 **Cause:** Migration files run in alphabetical (timestamp) order. If migration B depends on a table created by migration A, but A has a later timestamp, B runs first and fails.
 
-**Fix:** Use consistent timestamps. The `tina4 generate:migration` command uses the current timestamp. Generate migrations in order to ensure correct execution. If you need to fix ordering, rename the migration files to adjust their timestamps.
+**Fix:** Use consistent timestamps. The `tina4 generate migration` command uses the current timestamp. Generate migrations in order to ensure correct execution. If you need to fix ordering, rename the migration files to adjust their timestamps.
 
 ### 5. tina4 serve Uses Wrong Port
 
@@ -823,15 +823,15 @@ source ~/.zshrc
 
 ### 7. Model Name Must Be PascalCase
 
-**Problem:** `tina4 generate:model order_item` creates a model class named `order_item` which is not valid Ruby convention.
+**Problem:** `tina4 generate model order_item` creates a model class named `order_item` which is not valid Ruby convention.
 
 **Cause:** The CLI uses the argument as-is for the class name.
 
-**Fix:** Use PascalCase for model names: `tina4 generate:model OrderItem`. The CLI converts it to snake_case for the table name (`order_items`).
+**Fix:** Use PascalCase for model names: `tina4 generate model OrderItem`. The CLI converts it to snake_case for the table name (`order_items`).
 
 ### 8. build:css Fails
 
-**Problem:** `tina4 build:css` fails with "sass not found".
+**Problem:** `tina4 scss` fails with "sass not found".
 
 **Cause:** The Sass compiler is not installed.
 
@@ -843,7 +843,7 @@ source ~/.zshrc
 
 **Cause:** The CLI cannot detect the language without a `Gemfile`.
 
-**Fix:** Make sure your project has a `Gemfile` so the CLI detects Ruby. Or use `tina4 deploy:docker --lang ruby`.
+**Fix:** Make sure your project has a `Gemfile` so the CLI detects Ruby. Or use `tina4 deploy docker --lang ruby`.
 
 ---
 

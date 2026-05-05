@@ -1463,7 +1463,7 @@ def users(request, response):
 
 **MongoDB queue backend (v3.2.0).** Use MongoDB as a queue backend alongside the existing file-based, RabbitMQ, and Kafka options.
 
-**Migration naming convention (v3.2.0).** Migration files follow the `YYYYMMDDHHMMSS` timestamp format. The `tina4 migrate status` command shows which migrations have run.
+**Migration naming convention (v3.2.0).** Migration files follow the `YYYYMMDDHHMMSS` timestamp format. The `tina4 migrate --status` command shows which migrations have run.
 
 **Auto-increment port (v3.2.0).** If the default port is in use, the framework picks the next available port and opens your browser.
 

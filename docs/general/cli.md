@@ -255,12 +255,12 @@ This detects tools like Claude Code, Cursor, GitHub Copilot, and installs CLAUDE
 
 ---
 
-### tina4 upgrade
+### tina4 update
 
 Upgrade a v2 Tina4 project to the v3 structure.
 
 ```bash
-tina4 upgrade
+tina4 update
 ```
 
 Restructures your project to follow the v3 conventions (src/routes, src/orm, src/templates, etc.).

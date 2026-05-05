@@ -688,7 +688,7 @@ Create `src/templates/emails/task-assigned.html`:
 Start the queue worker in a separate terminal:
 
 ```bash
-tina4 queue:work
+tina4 queue work
 ```
 
 ---
@@ -1080,7 +1080,7 @@ TaskFlow is a solid foundation. Here are ideas for extending it.
 
 **Problem:** Task assignment emails are queued but never sent.
 
-**Fix:** Run `tina4 queue:work` in a separate terminal or as a systemd service.
+**Fix:** Run `tina4 queue work` in a separate terminal or as a systemd service.
 
 ### 4. Token Expired During Long Sessions
 

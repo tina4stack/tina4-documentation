@@ -209,7 +209,7 @@ services:
 
   worker:
     build: .
-    command: tina4 queue:work
+    command: tina4 queue work
     environment:
       - TINA4_DATABASE_URL=sqlite:///data/app.db
     volumes:
@@ -573,7 +573,7 @@ After=network.target tina4-app.service
 Type=simple
 User=deploy
 WorkingDirectory=/app
-ExecStart=/usr/local/bin/tina4 queue:work
+ExecStart=/usr/local/bin/tina4 queue work
 Restart=always
 RestartSec=5
 Environment=RACK_ENV=production

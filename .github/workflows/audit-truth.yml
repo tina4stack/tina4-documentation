@@ -1,0 +1,51 @@
+name: Doc Truth
+
+# Fails the build when the docs reference CLI commands the tina4 binary
+# doesn't actually have. The principle: documentation must match code
+# reality at all times. See scripts/audit-truth.py for the full check
+# list and rationale.
+#
+# Today this gate is strict on CLI drift only. Env-var drift is
+# reported but doesn't fail the build — we have 39 historical fakes to
+# clear first. Once that backlog is resolved, swap --strict for
+# --strict --strict-env to gate both.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pull tina4 binary alongside this repo so the audit can parse
+      # the real CLI grammar — without it the script can't compute
+      # ground truth and the gate is meaningless.
+      - name: Install tina4 CLI
+        run: |
+          curl -fsSL https://tina4.com/install.sh | sh
+          tina4 --version
+
+      # Pull every framework repo so the env-var check sees the real
+      # source of truth. Done in a single workspace-style layout that
+      # audit-truth.py expects (sibling dirs to docs).
+      - name: Check out framework repos
+        run: |
+          mkdir -p ../tina4-python ../tina4-php ../tina4-ruby ../tina4-nodejs ../tina4-js
+          cd ..
+          for repo in tina4-python tina4-php tina4-ruby tina4-nodejs tina4-js; do
+            if [ ! -d "$repo/.git" ]; then
+              git clone --depth=1 https://github.com/tina4stack/$repo.git
+            fi
+          done
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run audit
+        run: python3 scripts/audit-truth.py --strict

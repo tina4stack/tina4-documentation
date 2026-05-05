@@ -578,7 +578,7 @@ Running migrations...
 ### Rollback
 
 ```bash
-tina4 migrate --down
+tina4 migrate --rollback
 ```
 
 ```
@@ -616,8 +616,8 @@ Migration Status:
 ## 13. tina4 queue -- Queue Management
 
 ```bash
-tina4 queue:work                        # Start processing jobs
-tina4 queue:work --queue send-email     # Process specific queue
+tina4 queue work                        # Start processing jobs
+tina4 queue work --queue send-email     # Process specific queue
 tina4 queue:dead                        # List dead letter jobs
 tina4 queue:retry 42                    # Retry a dead job
 tina4 queue:clear --older-than 7d       # Clear old dead jobs

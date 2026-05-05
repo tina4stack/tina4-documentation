@@ -563,7 +563,7 @@ Running migrations...
 ### Rollback
 
 ```bash
-tina4 migrate --down
+tina4 migrate --rollback
 ```
 
 ```

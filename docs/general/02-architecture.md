@@ -266,7 +266,7 @@ src/migrations/
 └── 20260320090000_create_products_table.down.sql
 ```
 
-The `.sql` file runs on `tina4 migrate`. The `.down.sql` file runs on `tina4 migrate:rollback`. Tina4 tracks which migrations have run in a `tina4_migrations` table. Forward and back. Always reversible.
+The `.sql` file runs on `tina4 migrate`. The `.down.sql` file runs on `tina4 migrate --rollback`. Tina4 tracks which migrations have run in a `tina4_migrations` table. Forward and back. Always reversible.
 
 ### `src/seeds/` -- Test Data
 

@@ -448,7 +448,7 @@ DROP TABLE users;
 tina4 migrate
 ```
 
-Roll back with `tina4 migrate --down`. Check status with `tina4 migrate --status`. Each migration has UP and DOWN sections, so every change is reversible.
+Roll back with `tina4 migrate --rollback`. Check status with `tina4 migrate --status`. Each migration has UP and DOWN sections, so every change is reversible.
 
 ### ORM {#orm}
 
@@ -882,7 +882,7 @@ tina4 generate migration create_orders_table
 tina4 migrate
 
 # Roll back the last migration
-tina4 migrate --down
+tina4 migrate --rollback
 
 # Show migration status
 tina4 migrate --status

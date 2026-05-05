@@ -110,7 +110,7 @@ Tina4 is four implementations of the same framework: Python, PHP, Ruby, and Node
 
 | # | Feature | Description |
 |---|---------|-------------|
-| 39 | **Scaffolding** | `tina4 new`, `tina4 make:route`, `tina4 make:model`, `tina4 make:migration` |
+| 39 | **Scaffolding** | `tina4 init`, `tina4 generate route`, `tina4 generate model`, `tina4 generate migration` |
 | 40 | **Testing** | Built-in test client with `client.get/post/put/delete`; fixture helpers |
 | 41 | **Localization** | JSON locale files; `t()` function; `{placeholder}` interpolation; fallback chain |
 | 42 | **Structured Logging** | `Log.info/debug/warning/error`; log levels; file output with rotation |

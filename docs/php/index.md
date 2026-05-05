@@ -713,7 +713,7 @@ tina4 migrate:create add-users-table
 tina4 migrate
 
 # Rollback the last migration
-tina4 migrate:rollback
+tina4 migrate --rollback
 
 # Generate CRUD for a model
 tina4 crud User

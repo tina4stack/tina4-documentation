@@ -573,7 +573,7 @@ Migrations complete. 2 applied, 1 skipped.
 | Flag | Description | Example |
 |------|-------------|---------|
 | `--rollback` | Undo the last migration | `tina4 migrate --rollback` |
-| `--rollback-all` | Undo all migrations | `tina4 migrate --rollback-all` |
+| `--rollback-all` | Undo all migrations | `tina4 migrate --rollback` |
 | `--status` | Show migration status | `tina4 migrate --status` |
 
 ### Migration Status

@@ -775,7 +775,7 @@ end
 
 **Problem:** You edited `tina4.scss` but the browser shows the old CSS.
 
-**Fix:** Compile SCSS to CSS with `tina4 build:css` or `sass src/public/scss/tina4.scss src/public/css/tina4.css`. The browser loads the compiled CSS file, not the SCSS source.
+**Fix:** Compile SCSS to CSS with `tina4 scss` or `sass src/public/scss/tina4.scss src/public/css/tina4.css`. The browser loads the compiled CSS file, not the SCSS source.
 
 ---
 

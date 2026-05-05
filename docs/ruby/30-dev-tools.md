@@ -499,7 +499,7 @@ The dev tools made each bug visible. The error overlay showed the SQL syntax err
 
 **Cause:** The queue system is not running. Jobs are enqueued but no worker processes them.
 
-**Fix:** Start a queue worker: `tina4 worker`. The queue monitor reflects the state of the queue storage (database or Redis). If no worker is running, jobs sit in "Pending" and never move to "Active" or "Completed."
+**Fix:** Start a queue worker: `tina4 queue work`. The queue monitor reflects the state of the queue storage (database or Redis). If no worker is running, jobs sit in "Pending" and never move to "Active" or "Completed."
 
 ### 9. Memory Usage Grows During Development
 
