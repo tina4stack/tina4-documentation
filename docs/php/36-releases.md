@@ -110,7 +110,7 @@ The version-bump itself is the test: a successful 3.12.1 release proves the work
 
 ## v3.12.0 (2026-05-04)
 
-> **⚠️ Breaking change — read before upgrading.** Every framework env var now uses the `TINA4_` prefix. Existing `.env` files set with `DATABASE_URL`, `SECRET`, `SMTP_HOST`, `HOST_NAME`, etc. will cause the framework to refuse to boot. Run `tina4 env-migrate` to rewrite, or follow the rename table below.
+> **⚠️ Breaking change — read before upgrading.** Every framework env var now uses the `TINA4_` prefix. Existing `.env` files set with `DATABASE_URL`, `SECRET`, `SMTP_HOST`, `HOST_NAME`, etc. will cause the framework to refuse to boot. Run `tina4 env --migrate` to rewrite, or follow the rename table below.
 
 ### Why this release
 
@@ -121,7 +121,7 @@ This release closes all three gaps with a single hard rename. No deprecation per
 ### What changed
 
 - **22 env vars renamed** to `TINA4_*` form. See the migration table below.
-- **`tina4 env-migrate` CLI** added to all four frameworks. Reads your `.env`, rewrites it in place, leaves a `.env.bak` backup, prints a diff. Idempotent.
+- **`tina4 env --migrate` CLI** added to all four frameworks. Reads your `.env`, rewrites it in place, leaves a `.env.bak` backup, prints a diff. Idempotent.
 - **Boot-time guard** scans `os.environ` (or the language equivalent) for the 22 legacy names. If any are present, prints the rename map and exits with code 2. Bypass with `TINA4_ALLOW_LEGACY_ENV=true` for migration scripts that need both names set during transition.
 - **All 4 framework books rewritten.** Chapter 33 (Environment Variables) is now a clean canonical list — every var prefixed, descriptions current, legacy names removed.
 - **Doc-vs-code drift closed.** Of the 91 stale env vars previously documented, 61 were renames (corrected), 32 were never implemented (removed). The `audit-links.py` CI gate stays at 0 broken links / 0 broken anchors.
@@ -173,7 +173,7 @@ This release closes all three gaps with a single hard rename. No deprecation per
 ### How to upgrade
 
 1. **Backup your `.env`:** `cp .env .env.bak.pre-v3.12`
-2. **Run the migration:** `tina4 env-migrate` — rewrites your `.env` in place.
+2. **Run the migration:** `tina4 env --migrate` — rewrites your `.env` in place.
 3. **Update PaaS dashboards:** Heroku, Railway, Vercel, Render, Fly.io etc — rename the same vars in your provider's env-var UI.
 4. **Restart your app.** The boot guard verifies nothing legacy remains.
 

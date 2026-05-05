@@ -82,7 +82,7 @@ Cross-framework parity sweep. ResponseCache public surface is now middleware-onl
 
 **v3.12.2** — Firebird URL auto-detect. Five equivalent forms (`//abs/path`, `/abs/path`, `/C:/Drive`, URL-encoded colon, alias) all resolve transparently — pick whichever reads best. New `TINA4_DATABASE_FIREBIRD_PATH` env override for Windows backslash paths and split-config setups. PHP also picks up a `mysqli` `localhost`+port quirk fix where Docker container connections were silently falling through to the Unix socket lookup.
 
-**v3.12.0** — *Breaking change*. Every framework env var now requires the `TINA4_` prefix. The boot guard refuses to start when it spots legacy un-prefixed names (`DATABASE_URL`, `SECRET`, `SMTP_HOST`, `HOST_NAME`, etc.) and prints the rename map. Run `tina4 env-migrate` to rewrite your `.env` in place. Bundled with bug fixes #38 (Postgres UUID-PK transaction abort) and #39 (template auto-routing tightening).
+**v3.12.0** — *Breaking change*. Every framework env var now requires the `TINA4_` prefix. The boot guard refuses to start when it spots legacy un-prefixed names (`DATABASE_URL`, `SECRET`, `SMTP_HOST`, `HOST_NAME`, etc.) and prints the rename map. Run `tina4 env --migrate` to rewrite your `.env` in place. Bundled with bug fixes #38 (Postgres UUID-PK transaction abort) and #39 (template auto-routing tightening).
 
 ## How Tina4 reads
 
