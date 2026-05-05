@@ -1,28 +1,151 @@
-# Tina4 Framework — LLM Context
+# Tina4 Framework — AI Bootstrap Protocol
 
-Tina4 is a multi-language web framework with 44 built-in features and zero dependencies.
-Available for Python, PHP, Ruby, and Node.js. Frontend library: tina4-js.
+Tina4 is a four-language web framework (Python, PHP, Ruby, Node.js) with 55
+built-in features and zero runtime dependencies. Frontend library: tina4-js.
 Website: https://tina4.com | GitHub: https://github.com/tina4stack
+
+If you are an AI assistant building a Tina4 app, **follow the steps below in
+order**. Skipping steps causes the most common failure modes — the framework
+hates being treated like Express, Flask, Rails, or Sinatra. Don't do that.
 
 ---
 
-## Quick Start (All Languages)
+## STEP 1 — Identify the language
+
+Tina4 ships in four backends. Before you write a line of code:
+
+- If the working directory has `pyproject.toml` / `requirements.txt` → **Python**
+- If it has `composer.json` / `index.php` in `Tina4/` layout → **PHP**
+- If it has `Gemfile` / `*.gemspec` → **Ruby**
+- If it has `package.json` with `"type": "module"` and TypeScript sources → **Node.js**
+- If the directory is empty → **ask the user which language to use**.
+
+Do not guess. Do not pick "whichever is easiest". Ask.
+
+---
+
+## STEP 2 — Install the `tina4` Rust CLI
+
+The `tina4` CLI is the **only supported entry point** for running a Tina4 app.
+Never run `python app.py`, `node index.js`, `php -S`, `ruby app.rb`, or `rackup`
+directly — the framework refuses to start without the CLI unless
+`TINA4_OVERRIDE_CLIENT=true` is set (Docker / CI escape hatch only).
+
+Install once, system-wide:
 
 ```bash
-# Install the CLI
-pip install tina4-python     # Python
-composer require tina4stack/tina4php  # PHP
-gem install tina4-ruby       # Ruby
-npm install tina4-nodejs     # Node.js
+# macOS, Linux, WSL, Git Bash, Cygwin, MSYS — auto-detects OS + arch
+curl -fsSL https://tina4.com/install.sh | sh
+# or wget
+wget -qO- https://tina4.com/install.sh | sh
 
-# Scaffold a project
-tina4 init
-
-# Start dev server
-tina4 serve
+# Windows PowerShell (default shell since 2009)
+irm https://tina4.com/install.ps1 | iex
 ```
 
-Default ports: Python 7145, PHP 7146, Ruby 7147, Node.js 7148
+Both scripts download the right prebuilt binary from the latest GitHub release
+(darwin-amd64 / darwin-arm64 / linux-amd64 / windows-amd64.exe) and put it on
+PATH. No Rust toolchain needed. No package manager dependency.
+
+If the user's environment has neither curl nor PowerShell, point them at
+https://github.com/tina4stack/tina4/releases/latest to download the binary
+manually.
+
+Confirm the install:
+
+```bash
+tina4 --version
+tina4 doctor
+```
+
+`tina4 doctor` checks the language runtime is installed before you scaffold.
+Run it. If it complains, tell the user what's missing — don't try to install
+the language runtime yourself.
+
+---
+
+## STEP 3 — Scaffold the project
+
+```bash
+tina4 init <python|php|ruby|nodejs>          # creates ./<lang>-app/
+tina4 init <python|php|ruby|nodejs> .        # initialises current directory
+tina4 init <python|php|ruby|nodejs> myapp    # creates ./myapp/
+```
+
+The CLI creates the canonical layout: `src/routes/`, `src/orm/`, `src/templates/`,
+`src/public/`, `.env`, language-specific package file. Don't replicate this
+structure by hand — let `tina4 init` do it.
+
+---
+
+## STEP 4 — Run the dev server
+
+```bash
+cd <project>
+tina4 serve              # development (hot reload, dev toolbar, error overlay)
+tina4 serve --production # production (no hot reload, no toolbar)
+```
+
+The CLI compiles SCSS, watches files, manages the process. Default ports:
+Python 7145, PHP 7146, Ruby 7147, Node.js 7148.
+
+---
+
+## STEP 5 — When `tina4 serve` fails
+
+Tina4 prints structured errors. Read the message before reacting.
+
+**Hard rule: if the same `tina4 serve` invocation fails twice in a row, STOP.**
+Show the error to the user and ask. Do not retry in a loop. Do not start
+"fixing" things by hand. The most common loop trap is: AI sees a missing
+package error, runs `pip install`/`npm install`/`composer install` directly,
+that conflicts with what the framework manages, then more errors appear, and
+the loop deepens. Stop early. Ask.
+
+---
+
+## DO NOT — common patterns from other frameworks that break Tina4
+
+These are the failure modes most often observed in AI-assisted Tina4 builds:
+
+- **Do not install Express, Fastify, Flask, FastAPI, Django, Rails, Sinatra,
+  Hanami, or any other web framework alongside Tina4.** Tina4 has its own
+  HTTP server. Adding another one creates two competing servers, port
+  conflicts, and broken middleware chains.
+- **Do not write your own queue, auth, ORM, session, migration, or HTTP
+  client.** All of these are built in. Use `Queue`, `Auth`, `ORM`, `Session`,
+  `Migration`, `Api` from the framework. See the per-language API tables below.
+- **Do not run language entry points directly.** No `python app.py`,
+  `node index.js`, `php -S`, `ruby app.rb`, or `rackup`. Always go through
+  `tina4 serve`.
+- **Do not edit files outside `src/` unless explicitly asked.** Framework
+  files live alongside; touching them creates merge conflicts on every update.
+- **Do not auto-install language runtimes (Python, Node, etc.) on the user's
+  machine.** If `tina4 doctor` says a runtime is missing, surface that to
+  the user and ask. Their package manager is their choice.
+- **Do not parse routes by reading filenames yourself.** The framework's
+  route discovery scans `src/routes/` automatically. Drop a file there;
+  it becomes a route on next reload.
+
+---
+
+## Per-language quickstart (reference, AFTER step 4 is green)
+
+```bash
+# Python  (default port 7145)
+tina4 init python myapp && cd myapp && tina4 serve
+
+# PHP  (default port 7146)
+tina4 init php myapp && cd myapp && tina4 serve
+
+# Ruby  (default port 7147)
+tina4 init ruby myapp && cd myapp && tina4 serve
+
+# Node.js  (default port 7148)
+tina4 init nodejs myapp && cd myapp && tina4 serve
+```
+
+Default ports: Python 7145, PHP 7146, Ruby 7147, Node.js 7148.
 
 ---
 
