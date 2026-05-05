@@ -36,9 +36,9 @@ http://localhost:5173/
 ```
 ## How to contribute
 
-* Fork the repository, be sure to include the vitepress branch
-* In your project, create a branch from the vitepress branch
-* Make a pull request from your project/branch into the tina4stack/tina4-documentation vitepress branch.
+* Fork the repository
+* Create a feature branch from `main`
+* Open a pull request from your branch into `tina4stack/tina4-documentation` `main`
 * Make sure to include an appropriate reviewer
 
 ---

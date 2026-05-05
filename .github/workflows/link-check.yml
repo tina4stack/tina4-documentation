@@ -2,9 +2,9 @@ name: Link Check
 
 on:
   push:
-    branches: [main, vitepress, mkdocs]
+    branches: [main]
   pull_request:
-    branches: [main, vitepress]
+    branches: [main]
 
 jobs:
   audit:

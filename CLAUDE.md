@@ -5,7 +5,7 @@ Documentation site for the Tina4 framework. See https://tina4.com for the live s
 ## Build
 
 - Framework: VitePress
-- Branch: `vitepress` (active development branch)
+- Branch: `main` (active development + deploy branch)
 - Package manager: `pnpm` (v10.24.0)
 - Install: `pnpm install`
 - Dev server: `pnpm docs:dev`
