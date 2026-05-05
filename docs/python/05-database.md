@@ -97,6 +97,38 @@ Any additional keyword arguments pass through to the underlying driver's `connec
 db = Database("firebird://localhost:3050//data/legacy.fdb", charset="ISO8859_1")
 ```
 
+### Firebird URL Forms
+
+Firebird is the awkward one in the stack: every other engine has a server-side database name (`postgres://host:port/dbname`), but Firebird wants either an absolute file path on the server, a Windows drive-letter path, or an alias. The classic URI form needs a double slash to keep the leading `/` of an absolute path through `urlparse`, which is unintuitive.
+
+Tina4 normalises five equivalent forms. Pick whichever reads best:
+
+```python
+# Classic double-slash absolute path -- the URL spec way
+db = Database("firebird://SYSDBA:masterkey@localhost:3050//firebird/data/app.fdb")
+
+# Single-slash absolute path -- what most people instinctively type
+db = Database("firebird://SYSDBA:masterkey@localhost:3050/firebird/data/app.fdb")
+
+# Windows drive-letter path
+db = Database("firebird://SYSDBA:masterkey@host:3050/C:/Data/app.fdb")
+
+# Windows with URL-encoded colon
+db = Database("firebird://SYSDBA:masterkey@host:3050/C%3A/Data/app.fdb")
+
+# Firebird alias (single token, no slashes)
+db = Database("firebird://SYSDBA:masterkey@localhost:3050/employee")
+```
+
+For ops setups that keep the server URL and the database location in separate config layers -- or for Windows backslash paths that fight URL encoding -- set `TINA4_DATABASE_FIREBIRD_PATH`:
+
+```bash
+TINA4_DATABASE_FIREBIRD_PATH=C:\firebird\data\app.fdb
+TINA4_DATABASE_URL=firebird://SYSDBA:masterkey@localhost:3050/ignored
+```
+
+The env override wins over whatever path is in the URL.
+
 ### Firebird Dual-Driver Support
 
 The Firebird adapter tries `firebird-driver` (the modern package) first and falls back to the legacy `fdb` package if `firebird-driver` is missing. Install whichever is available -- the adapter handles the difference internally.

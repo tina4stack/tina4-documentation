@@ -26,6 +26,8 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 | `TINA4_DEBUG` | `false` | Master debug toggle. Enables Swagger UI, dev dashboard, live reload, template dump filter, error overlay. Never set to `true` in production. |
 | `TINA4_NO_BROWSER` | `false` | Stops `tina4 serve` from opening your browser on every restart. |
 | `TINA4_NO_RELOAD` | `false` | Disables the dev hot-reload signal from the Rust CLI. Use when you want a stable server for debugging. |
+| `TINA4_PRODUCTION` | `false` | Forces production-mode startup (cluster mode, debug overlays disabled). Set automatically by `tina4 serve --production`. |
+| `TINA4_ALLOW_LEGACY_ENV` | `false` | Bypass the v3.12 env-prefix guard. CI / migration scripts only — never enable in production. |
 
 ---
 
@@ -47,6 +49,7 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 | `TINA4_DATABASE_URL` | _(required)_ | Connection URL. Scheme selects the driver: `sqlite`, `postgres`, `mysql`. |
 | `TINA4_DATABASE_USERNAME` | _(empty)_ | Overrides the username embedded in `TINA4_DATABASE_URL`. |
 | `TINA4_DATABASE_PASSWORD` | _(empty)_ | Overrides the password embedded in `TINA4_DATABASE_URL`. |
+| `TINA4_DATABASE_FIREBIRD_PATH` | _(empty)_ | Overrides the database path/alias parsed from `TINA4_DATABASE_URL` for Firebird. Useful for Windows backslash paths and split-config setups. |
 | `TINA4_AUTOCOMMIT` | `false` | Auto-commit after every write. Default is off — call `commit()` explicitly. |
 | `TINA4_DB_CACHE` | `false` | Enables in-memory query-result caching for read queries. |
 | `TINA4_DB_CACHE_TTL` | `30` | Query cache TTL in seconds when `TINA4_DB_CACHE=true`. |
@@ -59,6 +62,10 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `TINA4_CORS_ORIGINS` | `*` | Comma-separated allowed origins. Lock down to real domains in production. |
+| `TINA4_CORS_METHODS` | `GET,POST,PUT,PATCH,DELETE,OPTIONS` | Comma-separated list of allowed methods on preflight responses. |
+| `TINA4_CORS_HEADERS` | `Content-Type,Authorization` | Comma-separated list of allowed request headers on preflight responses. |
+| `TINA4_CORS_MAX_AGE` | `86400` | Preflight cache lifetime in seconds. |
+| `TINA4_CORS_CREDENTIALS` | `true` | Sets `Access-Control-Allow-Credentials`. |
 
 ---
 
@@ -69,6 +76,9 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 | `TINA4_CSP` | `default-src 'self'` | `Content-Security-Policy` header. |
 | `TINA4_CSRF` | `false` | CSRF token validation on POST/PUT/PATCH/DELETE. |
 | `TINA4_HSTS` | _(empty/off)_ | `Strict-Transport-Security` max-age in seconds. Set `31536000` in production with HTTPS. |
+| `TINA4_FRAME_OPTIONS` | `SAMEORIGIN` | `X-Frame-Options` header. |
+| `TINA4_REFERRER_POLICY` | `strict-origin-when-cross-origin` | `Referrer-Policy` header. |
+| `TINA4_PERMISSIONS_POLICY` | `camera=(), microphone=(), geolocation=()` | `Permissions-Policy` header. |
 
 ---
 
@@ -88,6 +98,35 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 | `TINA4_SESSION_BACKEND` | `file` | Storage backend. Options: `file`, `redis`, `valkey`, `mongo`, `database`. |
 | `TINA4_SESSION_TTL` | `1800` | Session expiry in seconds (30 minutes). |
 | `TINA4_SESSION_SAMESITE` | `Lax` | SameSite cookie attribute. Options: `Strict`, `Lax`, `None`. |
+| `TINA4_SESSION_PATH` | `data/sessions` | Filesystem path for the file backend. |
+
+### Redis/Valkey session backend
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_SESSION_REDIS_URL` | _(none)_ | Full `redis://` URL. Overrides host/port when set. |
+| `TINA4_SESSION_REDIS_HOST` | `127.0.0.1` | Redis host. |
+| `TINA4_SESSION_REDIS_PORT` | `6379` | Redis port. |
+| `TINA4_SESSION_REDIS_PASSWORD` | _(none)_ | Redis auth password. |
+| `TINA4_SESSION_REDIS_DB` | `0` | Redis database number. |
+| `TINA4_SESSION_REDIS_PREFIX` | `tina4:session:` | Key prefix for stored sessions. |
+| `TINA4_SESSION_VALKEY_HOST` | `127.0.0.1` | Valkey host. |
+| `TINA4_SESSION_VALKEY_PORT` | `6379` | Valkey port. |
+| `TINA4_SESSION_VALKEY_PASSWORD` | _(none)_ | Valkey auth password. |
+| `TINA4_SESSION_VALKEY_DB` | `0` | Valkey database number. |
+| `TINA4_SESSION_VALKEY_PREFIX` | `tina4:session:` | Key prefix for stored sessions. |
+
+### MongoDB session backend
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_SESSION_MONGO_URI` | _(none)_ | Full MongoDB connection string. Overrides host/port when set. |
+| `TINA4_SESSION_MONGO_HOST` | `127.0.0.1` | MongoDB host. |
+| `TINA4_SESSION_MONGO_PORT` | `27017` | MongoDB port. |
+| `TINA4_SESSION_MONGO_USERNAME` | _(none)_ | MongoDB username. |
+| `TINA4_SESSION_MONGO_PASSWORD` | _(none)_ | MongoDB password. |
+| `TINA4_SESSION_MONGO_DB` | `tina4_sessions` | MongoDB database name. |
+| `TINA4_SESSION_MONGO_COLLECTION` | `sessions` | MongoDB collection name. |
 
 ---
 
@@ -100,6 +139,55 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 | `TINA4_CACHE_TTL` | `60` | Default cache TTL in seconds. |
 | `TINA4_CACHE_MAX_ENTRIES` | `1000` | Maximum cache entries. |
 | `TINA4_CACHE_URL` | `redis://localhost:6379` | Connection URL for remote cache backends. |
+
+---
+
+## Queues
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_QUEUE_BACKEND` | `file` | Queue backend. Options: `file`, `rabbitmq`, `kafka`, `mongodb`. |
+| `TINA4_QUEUE_PATH` | `data/queue` | Filesystem path for the file backend. |
+| `TINA4_QUEUE_URL` | _(none)_ | Connection URL for remote backends (rabbitmq/kafka). |
+
+### Kafka queue backend
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_KAFKA_BROKERS` | `localhost:9092` | Comma-separated broker list. |
+| `TINA4_KAFKA_GROUP_ID` | `tina4_consumer_group` | Kafka consumer group ID. |
+
+### RabbitMQ queue backend
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_RABBITMQ_HOST` | `localhost` | RabbitMQ host. |
+| `TINA4_RABBITMQ_PORT` | `5672` | RabbitMQ port. |
+| `TINA4_RABBITMQ_USERNAME` | `guest` | RabbitMQ username. |
+| `TINA4_RABBITMQ_PASSWORD` | `guest` | RabbitMQ password. |
+| `TINA4_RABBITMQ_VHOST` | `/` | RabbitMQ virtual host. |
+
+### MongoDB queue backend
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_MONGO_URI` | _(none)_ | Full MongoDB connection string. Overrides host/port when set. |
+| `TINA4_MONGO_HOST` | `localhost` | MongoDB host. |
+| `TINA4_MONGO_PORT` | `27017` | MongoDB port. |
+| `TINA4_MONGO_USERNAME` | _(none)_ | MongoDB username. |
+| `TINA4_MONGO_PASSWORD` | _(none)_ | MongoDB password. |
+| `TINA4_MONGO_DB` | `tina4` | MongoDB database name. |
+| `TINA4_MONGO_COLLECTION` | `tina4_queue` | MongoDB collection name for jobs. |
+
+---
+
+## WebSocket
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_WS_PORT` | `8080` | Default WebSocket server port when one isn't passed to the constructor. |
+| `TINA4_WS_BACKPLANE` | _(none)_ | Backplane type for multi-instance broadcasts. Options: `redis`, `nats`. |
+| `TINA4_WS_BACKPLANE_URL` | `redis://localhost:6379` (redis) / `nats://localhost:4222` (nats) | Connection URL for the chosen backplane. |
 
 ---
 
@@ -141,6 +229,31 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 
 ---
 
+## Uploads
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_MAX_UPLOAD_SIZE` | `10485760` | Maximum multipart upload size in bytes (10 MB). |
+
+---
+
+## Services (background tasks)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_SERVICE_DIR` | `src/services` | Directory scanned for service classes. |
+| `TINA4_SERVICE_SLEEP` | `5` | Seconds the service runner sleeps between empty polls. |
+
+---
+
+## Routing
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_TEMPLATE_ROUTING` | `on` | Auto-route any request without a matching handler to a same-named Frond template. Set to `off`, `false`, `0`, `no`, or `disabled` for explicit-only routing. |
+
+---
+
 ## AI and MCP Tooling
 
 The dashboard AI chat and the framework's RAG-based code search both default to a **local qwen2.5-coder model served via Ollama**. Nothing leaves your machine unless you point `TINA4_AI_URL` at a remote endpoint.
@@ -162,6 +275,8 @@ The dashboard AI chat and the framework's RAG-based code search both default to 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `TINA4_SWAGGER_TITLE` | `Tina4 API` | OpenAPI spec title. |
+| `TINA4_SWAGGER_DESCRIPTION` | `Auto-generated API documentation` | OpenAPI spec description. |
+| `TINA4_SWAGGER_VERSION` | `0.0.1` | OpenAPI spec version. |
 
 ---
 

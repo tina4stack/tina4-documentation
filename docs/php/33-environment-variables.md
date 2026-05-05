@@ -32,6 +32,9 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 | `TINA4_VERSION` | _(framework)_ | Override the version string reported by `/__dev/api/system`. Mostly for testing. |
 | `TINA4_CLI_SERVE` | _(none)_ | Set internally by the Rust CLI to signal managed mode. Do not set manually. |
 | `TINA4_INCLUDE_LOCATIONS` | `src/routes,src/orm,src/app` | Comma-separated directories auto-included at boot. |
+| `TINA4_PUBLIC_DIR` | _(empty)_ | Override directory served as static files at `/`. When unset, the static-file middleware searches `src/public/` and the framework's bundled public assets. |
+| `TINA4_TEMPLATE_ROUTING` | `on` | Auto-routing of Twig templates from `src/templates/`. Set to `off`, `false`, `0`, `no`, or `disabled` to require explicit `Router::get()` for every URL. |
+| `TINA4_ALLOW_LEGACY_ENV` | `false` | Bypass the v3.12 boot guard that rejects un-prefixed legacy env vars (`DATABASE_URL`, `SECRET`, `SMTP_HOST`, etc.). Use only in CI / migration scripts during the transition window. |
 
 ---
 
@@ -53,6 +56,7 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 | `TINA4_DATABASE_URL` | `sqlite:///data/app.db` | Connection URL. Scheme selects the driver: `sqlite`, `postgres`, `mysql`, `mssql`, `sqlserver`, `firebird`. |
 | `TINA4_DATABASE_USERNAME` | _(empty)_ | Overrides the username embedded in `TINA4_DATABASE_URL`. |
 | `TINA4_DATABASE_PASSWORD` | _(empty)_ | Overrides the password embedded in `TINA4_DATABASE_URL`. |
+| `TINA4_DATABASE_FIREBIRD_PATH` | _(empty)_ | Overrides the database path/alias parsed from `TINA4_DATABASE_URL` for Firebird. Useful for Windows backslash paths and split-config setups. |
 | `TINA4_DATABASE_URL` | _(empty)_ | Legacy alias for `TINA4_DATABASE_URL`. Prefer `TINA4_DATABASE_URL` in new projects. |
 | `TINA4_AUTOCOMMIT` | `false` | Auto-commit after every write. Default is off — call `commit()` explicitly. |
 | `TINA4_DB_CACHE` | `false` | Enables in-memory query-result caching for read queries. |
@@ -104,6 +108,8 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 | `TINA4_SESSION_TTL` | `3600` | Session expiry in seconds. |
 | `TINA4_SESSION_SAMESITE` | `Lax` | SameSite cookie attribute. Options: `Strict`, `Lax`, `None`. |
 | `TINA4_SESSION_PATH` | `data/sessions` | Filesystem path for the file backend. |
+| `TINA4_PHP_SESSION_NAME` | `PHPSESSID` | Cookie name used by native PHP `$_SESSION` (separate from the framework session). |
+| `TINA4_PHP_SESSION_PATH` | _(system temp)_ | `session.save_path` for native PHP sessions. The framework configures it before `session_start()` so the SAPI and the built-in server share session storage. |
 
 ### Redis/Valkey session backend
 
@@ -201,6 +207,8 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 | `TINA4_MAIL_ENCRYPTION` | `tls` | Connection encryption. Options: `tls`, `ssl`, `none`. |
 | `TINA4_MAIL_IMAP_HOST` | _(none)_ | IMAP server for inbound mail. |
 | `TINA4_MAIL_IMAP_PORT` | `993` | IMAP server port. |
+| `TINA4_MAIL_IMAP_USERNAME` | _(none)_ | IMAP authentication username. |
+| `TINA4_MAIL_IMAP_PASSWORD` | _(none)_ | IMAP authentication password. |
 | `TINA4_MAILBOX_DIR` | `data/mailbox` | Dev mailbox directory. All outbound mail lands here when `TINA4_DEBUG=true`. |
 
 > `TINA4_MAIL_HOST`, `TINA4_MAIL_PORT`, `TINA4_MAIL_USERNAME`, `TINA4_MAIL_PASSWORD` are also accepted as aliases for the `TINA4_MAIL_*` equivalents. New projects should use the `TINA4_MAIL_*` names.
@@ -255,10 +263,25 @@ The dashboard AI chat and the framework's RAG-based code search both default to 
 | `TINA4_AI_URL` | `http://localhost:11434` | OpenAI-compatible HTTP endpoint for the chat/completion model (Ollama by default). |
 | `TINA4_AI_MODEL` | `qwen2.5-coder` | Model identifier the endpoint should serve. |
 | `TINA4_RAG_URL` | _(inherits `TINA4_AI_URL`)_ | Embedding endpoint for the framework RAG index. |
+| `TINA4_RAG_TOPK` | `4` | Number of nearest-neighbour matches the dev dashboard RAG search returns per query. |
 | `TINA4_AI_MODEL` | `nomic-embed-text` | Embedding model used to index the framework and `src/`. |
+| `TINA4_VISION_URL` | `http://andrevanzuydam.com:11434` | Vision-model endpoint surfaced by the dev dashboard `/__dev/api/vision` probe. |
+| `TINA4_EMBED_URL` | `http://andrevanzuydam.com:11435` | Embeddings endpoint surfaced by the dev dashboard `/__dev/api/embed` probe. |
+| `TINA4_IMAGE_URL` | `http://andrevanzuydam.com:11436` | Image-generation endpoint (e.g. SDXL Turbo) for the dev dashboard image tools. |
+| `TINA4_SUPERVISOR_URL` | _(framework port + 2000)_ | Override the URL of the Rust agent supervisor that the dev dashboard proxies for `/__dev/api/supervise/*` and `/__dev/api/execute`. Defaults to `http://127.0.0.1:9145` when `TINA4_PORT=7145`. |
 | `TINA4_MCP_REMOTE` | `false` | Allow the MCP server to bind on non-localhost interfaces. **Never enable in production.** |
 | `TINA4_NO_AI_PORT` | `false` | Disables the MCP port listener in dev mode. |
 | `TINA4_OVERRIDE_CLIENT` | `false` | Allow the framework to start without the Rust CLI (`tina4 serve`). Used in Docker images and CI runners; bypasses SCSS compilation, the file watcher, and live reload. |
+
+---
+
+## Swagger / OpenAPI
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_SWAGGER_TITLE` | `Tina4 API` | OpenAPI spec title shown in the Swagger UI. |
+| `TINA4_SWAGGER_DESCRIPTION` | `Auto-generated from Tina4 routes` | OpenAPI spec description. |
+| `TINA4_SWAGGER_VERSION` | `1.0.0` | OpenAPI spec version. |
 
 ---
 

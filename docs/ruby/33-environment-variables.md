@@ -30,6 +30,11 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 | `RUBY_ENV` | _(none)_ | Ruby-ecosystem environment label. Used if `TINA4_ENV` and `RACK_ENV` are unset. |
 | `TINA4_NO_BROWSER` | `false` | Stops `tina4 serve` from opening your browser on every restart. Recommended during active development. |
 | `TINA4_NO_RELOAD` | `false` | Disables the dev hot-reload signal from the Rust CLI. Use when you want a stable server for debugging. |
+| `ENVIRONMENT` | _(none)_ | PaaS-style environment label. Read by tooling alongside `RACK_ENV`/`RUBY_ENV`. |
+| `TINA4_SHUTDOWN_TIMEOUT` | `10` | Seconds the supervisor waits for graceful shutdown before terminating workers. |
+| `TINA4_SUPERVISOR_URL` | _(derived from `TINA4_PORT` + 2000)_ | Override URL for the local Rust CLI supervisor used by the dev dashboard. |
+| `TINA4_TEMPLATE_ROUTING` | `on` | Controls automatic template-to-route binding. Set to `off`, `false`, `0`, `no`, or `disabled` to require explicit route declarations. |
+| `TINA4_ALLOW_LEGACY_ENV` | `false` | Bypass the v3.12 legacy-env startup guard. Intended for CI/migration scripts only. |
 
 ---
 
@@ -39,6 +44,7 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 |----------|---------|-------------|
 | `TINA4_SECRET` | `tina4-default-secret` | JWT signing secret. Must be long, random, and unique per environment. **Never commit.** |
 | `TINA4_TOKEN_LIMIT` | `60` | JWT token lifetime in minutes. |
+| `TINA4_JWT_ALGORITHM` | `HS256` | JWT signing algorithm. |
 | `TINA4_API_KEY` | _(empty)_ | Static API key used by `Tina4::Auth.validate_api_key` as a fallback to JWT. |
 | `TINA4_API_KEY` | _(empty)_ | Legacy alias for `TINA4_API_KEY`. |
 
@@ -51,6 +57,7 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 | `TINA4_DATABASE_URL` | _(required for non-SQLite)_ | Connection URL. Scheme selects the driver: `sqlite`, `postgres`, `mysql`, `firebird`. |
 | `TINA4_DATABASE_USERNAME` | _(empty)_ | Overrides the username embedded in `TINA4_DATABASE_URL`. |
 | `TINA4_DATABASE_PASSWORD` | _(empty)_ | Overrides the password embedded in `TINA4_DATABASE_URL`. |
+| `TINA4_DATABASE_FIREBIRD_PATH` | _(empty)_ | Overrides the database path/alias parsed from `TINA4_DATABASE_URL` for Firebird. Useful for Windows backslash paths and split-config setups. |
 | `TINA4_DATABASE_URL` | _(empty)_ | Legacy alias for `TINA4_DATABASE_URL`. |
 | `TINA4_AUTOCOMMIT` | `false` | Auto-commit after every write. Default is off — call `commit` explicitly. |
 | `TINA4_DB_CACHE` | `false` | Enables in-memory query-result caching for read queries. |
@@ -79,6 +86,8 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 | `TINA4_CSRF` | `false` | CSRF token validation on POST/PUT/PATCH/DELETE. Off by default in Ruby; enable with `true`. |
 | `TINA4_HSTS` | _(empty/off)_ | `Strict-Transport-Security` max-age in seconds. Set `31536000` in production with HTTPS. |
 | `TINA4_FRAME_OPTIONS` | `SAMEORIGIN` | `X-Frame-Options` header. |
+| `TINA4_REFERRER_POLICY` | `strict-origin-when-cross-origin` | `Referrer-Policy` header. |
+| `TINA4_PERMISSIONS_POLICY` | `camera=(), microphone=(), geolocation=()` | `Permissions-Policy` header. |
 
 ---
 
@@ -96,9 +105,79 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `TINA4_SESSION_BACKEND` | `file` | Storage backend. Options: `file`, `redis`, `valkey`, `mongo`, `database`. |
-| `TINA4_SESSION_TTL` | `1800` | Session expiry in seconds (30 minutes). |
+| `TINA4_SESSION_TTL` | `3600` | Session expiry in seconds. |
 | `TINA4_SESSION_SAMESITE` | `Lax` | SameSite cookie attribute. Options: `Strict`, `Lax`, `None`. |
 | `TINA4_SESSION_PATH` | `data/sessions` | Filesystem path for the file backend. |
+
+### Valkey/Redis session backend
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_SESSION_VALKEY_HOST` | `localhost` | Valkey/Redis host for the session handler. |
+| `TINA4_SESSION_VALKEY_PORT` | `6379` | Valkey/Redis port. |
+| `TINA4_SESSION_VALKEY_PASSWORD` | _(none)_ | Valkey/Redis auth password. |
+| `TINA4_SESSION_VALKEY_DB` | `0` | Valkey/Redis database number. |
+| `TINA4_SESSION_VALKEY_PREFIX` | `tina4:session:` | Key prefix used for session entries. |
+| `TINA4_SESSION_VALKEY_TTL` | `86400` | Per-key expiry in seconds. |
+
+---
+
+## Cache
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_CACHE_BACKEND` | `memory` | Response cache backend. Options: `memory`, `file`, `redis`. |
+| `TINA4_CACHE_DIR` | `data/cache` | Cache directory for the file backend. |
+| `TINA4_CACHE_TTL` | `0` | Default cache TTL in seconds (`0` disables caching for the global instance; the singleton helper uses `60` when unset). |
+| `TINA4_CACHE_MAX_ENTRIES` | `1000` | Maximum cache entries before eviction. |
+| `TINA4_CACHE_URL` | `redis://localhost:6379` | Connection URL for the Redis backend. |
+
+---
+
+## Queues
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_QUEUE_BACKEND` | `file` | Queue backend. Options: `file`, `kafka`, `rabbitmq`, `mongo`, `database`. |
+| `TINA4_QUEUE_URL` | _(none)_ | Connection URL for remote backends. Parsed for `host`/`port` when set. |
+
+### Kafka queue backend
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_KAFKA_BROKERS` | _(none)_ | Comma-separated broker list (e.g. `localhost:9092`). |
+| `TINA4_KAFKA_GROUP_ID` | `tina4_consumer_group` | Kafka consumer group ID. |
+
+### RabbitMQ queue backend
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_RABBITMQ_HOST` | `localhost` | RabbitMQ host. |
+| `TINA4_RABBITMQ_PORT` | `5672` | RabbitMQ port. |
+| `TINA4_RABBITMQ_USERNAME` | `guest` | RabbitMQ username. |
+| `TINA4_RABBITMQ_PASSWORD` | `guest` | RabbitMQ password. |
+| `TINA4_RABBITMQ_VHOST` | `/` | RabbitMQ virtual host. |
+
+### MongoDB queue backend
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_MONGO_URI` | _(none)_ | Full MongoDB connection string. Overrides host/port when set. |
+| `TINA4_MONGO_HOST` | `localhost` | MongoDB host. |
+| `TINA4_MONGO_PORT` | `27017` | MongoDB port. |
+| `TINA4_MONGO_USERNAME` | _(none)_ | MongoDB username. |
+| `TINA4_MONGO_PASSWORD` | _(none)_ | MongoDB password. |
+| `TINA4_MONGO_DB` | `tina4` | MongoDB database name. |
+| `TINA4_MONGO_COLLECTION` | `tina4_queue` | MongoDB collection name for jobs. |
+
+---
+
+## WebSocket
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_WS_BACKPLANE` | _(none)_ | Backplane type. Options: `redis`, `nats`. Required for multi-instance broadcasts. |
+| `TINA4_WS_BACKPLANE_URL` | `redis://localhost:6379` (Redis) / `nats://localhost:4222` (NATS) | Connection URL for the chosen backplane. |
 
 ---
 
@@ -115,6 +194,8 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 | `TINA4_MAIL_ENCRYPTION` | `tls` | Connection encryption. Options: `tls`, `ssl`, `none`. |
 | `TINA4_MAIL_IMAP_HOST` | _(inherits mail host)_ | IMAP server for inbound mail. |
 | `TINA4_MAIL_IMAP_PORT` | `993` | IMAP server port. |
+| `TINA4_MAIL_IMAP_USERNAME` | _(inherits SMTP username)_ | IMAP authentication username. Mapped from legacy `IMAP_USER`. |
+| `TINA4_MAIL_IMAP_PASSWORD` | _(inherits SMTP password)_ | IMAP authentication password. Mapped from legacy `IMAP_PASS`. |
 | `TINA4_MAILBOX_DIR` | `data/mailbox` | Dev mailbox directory. All outbound mail lands here when `TINA4_DEBUG=true`. |
 
 > `TINA4_MAIL_HOST`, `TINA4_MAIL_PORT`, `TINA4_MAIL_USERNAME`, `TINA4_MAIL_PASSWORD`, `TINA4_MAIL_FROM`, `TINA4_MAIL_FROM_NAME`, `TINA4_MAIL_IMAP_HOST`, `TINA4_MAIL_IMAP_PORT` are accepted as legacy aliases. New projects should use the `TINA4_MAIL_*` names.
@@ -128,6 +209,23 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 | `TINA4_LOG_LEVEL` | `[TINA4_LOG_ALL]` | Console log level. Options: `[TINA4_LOG_ALL]`, `[TINA4_LOG_DEBUG]`, `[TINA4_LOG_INFO]`, `[TINA4_LOG_WARNING]`, `[TINA4_LOG_ERROR]`, `[TINA4_LOG_NONE]`. Also accepts plain `DEBUG`, `INFO`, `ERROR`, etc. |
 | `TINA4_LOG_MAX_SIZE` | `10` | Per-file log size limit in megabytes. Rotated when exceeded. |
 | `TINA4_LOG_KEEP` | `5` | Number of rotated log files to retain. |
+
+---
+
+## Uploads
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_MAX_UPLOAD_SIZE` | `10485760` | Maximum multipart upload size in bytes (10 MB). Requests larger than this are rejected before parsing. |
+
+---
+
+## Services (background tasks)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_SERVICE_DIR` | `src/services` | Directory scanned for service classes. |
+| `TINA4_SERVICE_SLEEP` | `5` | Seconds the service runner sleeps between iterations. |
 
 ---
 
@@ -161,8 +259,9 @@ The dashboard AI chat and the framework's RAG-based code search both default to 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `TINA4_SWAGGER_TITLE` | `Tina4 API` | OpenAPI spec title. Falls back to `PROJECT_NAME`. |
-| `PROJECT_NAME` | _(none)_ | Alternative OpenAPI title source. |
-| `VERSION` | _(Gem version)_ | Overrides the spec `version`. |
+| `TINA4_SWAGGER_DESCRIPTION` | `Auto-generated API documentation` | OpenAPI spec description. |
+| `TINA4_SWAGGER_VERSION` | _(Gem version)_ | Overrides the spec `version`. |
+| `PROJECT_NAME` | _(none)_ | Alternative OpenAPI title source when `TINA4_SWAGGER_TITLE` is unset. |
 
 ---
 

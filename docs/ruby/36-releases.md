@@ -1,6 +1,102 @@
 # Chapter 35: Release Notes
 
 
+## v3.12.3 (2026-05-05)
+
+Cross-framework parity sweep. Two minor breaking changes in the Ruby and PHP public API that bring all four frameworks onto the same shape.
+
+### Breaking changes (Ruby + PHP only)
+
+**Ruby Container — predicate now uses `?` suffix.**
+
+```ruby
+# before (3.12.2 and earlier)
+Tina4::Container.has(:mailer)        # outdated
+
+# after (3.12.3)
+Tina4::Container.has?(:mailer)       # idiomatic Ruby predicate
+```
+
+This brings Ruby in line with Python (`has()`), PHP (`has()`), and Node (`has()`) while still respecting Ruby's `?`-suffix idiom for predicates returning bool. The pre-existing `resolve` → `get` rename happened earlier; only the predicate was lagging.
+
+**ResponseCache public surface — middleware-only across all four frameworks.**
+
+The cache has always been middleware. Two of the four frameworks (PHP, Ruby) historically exposed lookup/store as public methods, which let users couple to internals. The public API is now consistent across all four: use the middleware on a route, and read stats with module-level helpers.
+
+```ruby
+# Ruby — module-level helpers (parity with Python)
+Tina4.cache_stats   # → { hits:, misses:, size:, backend:, keys: }
+Tina4.clear_cache   # flush all entries
+
+# PHP — static methods on the class
+\Tina4\Middleware\ResponseCache::cacheStats();
+\Tina4\Middleware\ResponseCache::clearCache();
+```
+
+Internal methods that used to be public (`get`, `lookup`, `store`, `cache_response`) are now private. Tests that needed them retain access via `_internal*` test seams marked `@internal`.
+
+### Doc parity — CLAUDE.md and book chapter 33
+
+- **CLAUDE.md**: every framework's "Key Method Stubs" section now covers the same surface area Python documents — Queue, QueryBuilder, Frond, Api, Background Tasks, ResponseCache, etc. PHP added 4 sections; Ruby added 5; Node added 13.
+- **Book chapter 33**: env var tables are now grounded in source. Each framework's chapter 33 lists every `TINA4_*` var its source actually reads. Found and fixed several gaps — Ruby was missing `TINA4_CACHE_*`, `TINA4_QUEUE_*`, `TINA4_KAFKA_*`, `TINA4_RABBITMQ_*`, `TINA4_MONGO_*`, `TINA4_WS_BACKPLANE`, and the entire `TINA4_SESSION_VALKEY_*` block.
+
+### Other fixes
+
+- **Ruby `lib/tina4/ai.rb`** — subprocess output is now force-encoded to UTF-8 before `String#strip`, fixing `Encoding::CompatibilityError` that crashed 4 ai specs on systems with non-ASCII pip output.
+- **Node `test/serverParity.test.ts`** — sets `TINA4_OVERRIDE_CLIENT=true` so `start()` actually runs, plus emits the `N passed, M failed` summary line the runner expects. The test was effectively a no-op before; now it's recorded properly.
+
+### Genuine gaps surfaced by the parity audit (follow-up, not blocking 3.12.3)
+
+The chapter 33 audit flagged env vars Python documents that no other framework actually reads — Ruby/PHP/Node lack `TINA4_OPEN_BROWSER`, `TINA4_DEV_POLL_INTERVAL`, `TINA4_PUBLIC_DIR`, `TINA4_TOKEN_EXPIRES_IN` alias, plus a few framework-specific gaps (Ruby has no Mongo session backend; Node `TINA4_CSRF` defaults to `false` vs Python's `true`). Tracked for a future patch.
+
+### Upgrade path
+
+| Symptom | Fix |
+|---|---|
+| Ruby: `NoMethodError: undefined method 'has' for Tina4::Container` | Replace `has(:key)` with `has?(:key)` |
+| PHP: `BadMethodCallException` calling `$cache->lookup(...)` | Use the middleware: `[ResponseCache::class, 'beforeCache']` / `[..., 'afterCache']`. Or call `_internalLookup` if you really need direct access (test code only — `@internal`). |
+| Ruby: `NoMethodError: undefined method 'get' for ResponseCache instance` | Use `Tina4.cache_stats` / `Tina4.clear_cache` for stats. Lookup goes through the middleware. |
+
+No `.env` changes from 3.12.2.
+
+## v3.12.2 (2026-05-05)
+
+Quality-of-life patch. Two related portability fixes — no breaking changes from 3.12.1.
+
+### Firebird URL auto-detect
+
+Firebird is the awkward one in the stack. Every other engine has a server-side database name (`postgres://host:port/dbname`), but Firebird wants either an absolute file path on the server, a Windows drive-letter path, or an alias. The classic URI form needs a double slash to keep the leading `/` of an absolute path through the URL parser — unintuitive to anyone used to the way postgres / mysql / mssql encode the database name.
+
+The framework now accepts five equivalent forms and normalises all of them transparently:
+
+| URL path you write | Resolved Firebird identifier |
+|---|---|
+| `//abs/path/db.fdb`   (classic double-slash) | `/abs/path/db.fdb` |
+| `/abs/path/db.fdb`    (single-slash, intuitive) | `/abs/path/db.fdb` |
+| `/C:/Data/db.fdb`     (Windows drive letter) | `C:/Data/db.fdb` |
+| `/C%3A/Data/db.fdb`   (URL-encoded colon) | `C:/Data/db.fdb` |
+| `/employee`           (Firebird alias) | `employee` |
+
+For ops setups that keep server URL and DB location in separate config layers — or for Windows backslash paths that fight URL encoding — set `TINA4_DATABASE_FIREBIRD_PATH`. The env override wins over whatever path is in the URL.
+
+```bash
+TINA4_DATABASE_FIREBIRD_PATH=C:\firebird\data\app.fdb
+TINA4_DATABASE_URL=firebird://SYSDBA:masterkey@localhost:3050/ignored
+```
+
+Shipped to all 4 frameworks. 11 regression tests per framework (8 unit + 3 live).
+
+### Bug fix specific to PHP — `mysqli` localhost+port quirk
+
+PHP's `mysqli` has a long-standing quirk where `host == "localhost"` triggers a Unix socket lookup and IGNORES the port argument entirely. Connecting to `mysql://...:53306` against a Docker container fails with "No such file or directory" — `mysqli` is hunting for `/tmp/mysql.sock` instead of opening a TCP connection. `MySQLAdapter::rewriteHostForTcp()` now rewrites `localhost` to `127.0.0.1` when a non-zero port is specified, forcing the TCP code path. Bare `mysql:///db` (no port) is preserved so existing socket-based setups keep working.
+
+### Other fixes
+
+- **chore(python):** `pyproject.toml` had drifted to `3.10.41` while `__init__.py` read `3.12.1`. Synced both to 3.12.2 so `uv build` and runtime introspection now agree.
+- **chore(claude.md, all 4):** stale framework version banners in `CLAUDE.md` headers updated.
+
+No `.env` changes from 3.12.1, no migration needed. Existing 3.12.1 installs upgrade by changing one version number.
+
 ## v3.12.1 (2026-05-04)
 
 CI-only patch — no framework code changes from 3.12.0.
@@ -291,7 +387,7 @@ Catch-up release covering v3.11.0 → v3.11.9 across all 4 frameworks.
 - Full parity across Python, PHP, Ruby, Node.js
 
 
-Tina4 Ruby follows semantic versioning. The major version (3) marks the ground-up rewrite from v2. Minor versions (3.1, 3.2, etc.) introduce features and non-breaking API additions. Patch versions carry bug fixes and small improvements.
+Tina4 Ruby follows semantic versioning. The major version (3) marks the initial Ruby launch — Tina4 Ruby is new in the v3 line, alongside Tina4 for Node.js. Minor versions (3.1, 3.2, etc.) introduce features and non-breaking API additions. Patch versions carry bug fixes and small improvements.
 
 This chapter covers every v3 release from the initial launch through the current stable line. Each section groups releases by minor version, highlights the changes that affect your code, and shows migration steps for anything that breaks.
 
@@ -1326,7 +1422,7 @@ README code examples updated to match the actual v3 API. Quick start guide added
 
 ### v3.0.0 -- Initial Release (March 21)
 
-The ground-up rewrite. Zero gem dependencies. Everything the framework needs -- HTTP server, template engine, ORM, migrations, auth, queue, GraphQL, WebSocket, WSDL -- ships inside a single gem.
+The initial Ruby release. Zero gem dependencies. Everything the framework needs -- HTTP server, template engine, ORM, migrations, auth, queue, GraphQL, WebSocket, WSDL -- ships inside a single gem.
 
 **Core features:**
 
