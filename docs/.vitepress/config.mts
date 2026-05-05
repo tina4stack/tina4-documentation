@@ -115,6 +115,20 @@ function buildChapterSidebar(section: string, label: string, extras?: object[]):
 export default defineConfig({
     title: "Simple. Fast. Human.",
     description: "Tina4 - The Intelligent Native Application 4ramework",
+    // Dev-server proxy so the Ask Tina4 widget works under `pnpm docs:dev`.
+    // In production this same path is served by an Apache reverse proxy on
+    // tina4.com (see commit message for the ProxyPass snippet).
+    vite: {
+        server: {
+            proxy: {
+                '/api/rag': {
+                    target: 'http://andrevanzuydam.com:11438',
+                    changeOrigin: true,
+                    rewrite: (p: string) => p.replace(/^\/api\/rag/, ''),
+                },
+            },
+        },
+    },
     head: [
         ['link', {rel: 'icon', href: '/favicon.ico', type: 'image/x-icon'}],
         ['script', {async: '', src: 'https://www.googletagmanager.com/gtag/js?id=G-FZRRSBE9M0'}],
@@ -122,7 +136,14 @@ export default defineConfig({
         ['script', {}, `
 (function(){
   if(typeof window==='undefined')return;
-  var API='http://andrevanzuydam.com:11438';
+  // Same-origin path — forwarded by the production reverse proxy
+  // (Apache: ProxyPass /api/rag http://andrevanzuydam.com:11438) and by
+  // the VitePress dev server's vite.server.proxy block below in this config.
+  // Set window.TINA4_RAG_API before this script runs to override.
+  // The previous absolute URL "http://andrevanzuydam.com:11438" was blocked
+  // by the browser as mixed content on tina4.com (HTTPS) — every question
+  // failed silently.
+  var API=window.TINA4_RAG_API||'/api/rag';
 
   function md(t){
     var h=t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -184,13 +205,25 @@ export default defineConfig({
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({query:q,language:lang,k:5})
-      }).then(function(r){return r.json()}).then(function(data){
+      }).then(function(r){
+        if(!r.ok)throw new Error('HTTP '+r.status+' from RAG endpoint ('+API+')');
+        return r.json();
+      }).then(function(data){
+        if(!data||typeof data.answer!=='string'){
+          throw new Error('Malformed response from RAG endpoint — expected {answer, sources}');
+        }
         var srcs=(data.sources||[]).map(function(s){
           return '<a href="'+(s.url||'#')+'" target="_blank" style="color:#7aa2f7">'+(s.title||'source')+'</a>';
         }).join(' \\xb7 ');
         reply.innerHTML=md(data.answer)+(srcs?'<div style="margin-top:8px;font-size:11px;color:#565f89">Sources: '+srcs+'</div>':'');
       }).catch(function(err){
-        reply.innerHTML='<span style="color:#f7768e">Error: '+err.message+'</span>';
+        // TypeError: Failed to fetch usually means a same-origin proxy isn't
+        // set up at \`API\` — show a hint instead of a blank error.
+        var hint='';
+        if(err&&err.message&&/failed to fetch|networkerror/i.test(err.message)){
+          hint='<div style="margin-top:6px;font-size:11px;color:#565f89">Hint: the docs proxy at <code style="background:#1a1b26;padding:1px 4px;border-radius:3px">'+API+'</code> is not reachable. Server admin must add a reverse-proxy rule (Apache: <code style="background:#1a1b26;padding:1px 4px;border-radius:3px">ProxyPass '+API+' http://andrevanzuydam.com:11438</code>).</div>';
+        }
+        reply.innerHTML='<span style="color:#f7768e">Error: '+(err&&err.message||'unknown')+'</span>'+hint;
       });
     };
   });
