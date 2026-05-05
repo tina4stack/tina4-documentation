@@ -76,13 +76,13 @@ features:
 
 ## What's new
 
-**v3.11.13 (2026-04-16)** — [full notes](/python/36-releases.md)
+**v3.12.3 (2026-05-05)** — [full notes](/python/36-releases.md)
 
-Typed route parameters gain `:alpha` / `:alnum` / `:slug` / `:uuid`. Unknown types now throw at route registration so typos surface at boot, not in production. Gallery Try-It opens in a new tab. Ruby's `sqlite3` is a runtime dep so `tina4 init ruby && tina4 serve` works on first run. Thirteen book/framework issues closed.
+Cross-framework parity sweep. ResponseCache public surface is now middleware-only across all four frameworks — lookup / store / get methods moved private. Ruby's Container predicate gained the `?` suffix (`has?`) to match Python's `has()` semantically. Every framework's CLAUDE.md and book chapter 33 env-var table grounded in source — Ruby gained 98 lines of newly-documented variables, Node 113. Side fixes: Ruby `ai.rb` UTF-8 encoding crash and Node `serverParity.test.ts` runner pattern.
 
-**v3.11.12** — `sqlite:///X` URLs resolve relative to the project root across all four frameworks. `DateTimeField` ORM reads no longer crash under PostgreSQL. The bogus `src/migrations/` directory that confused many users is gone.
+**v3.12.2** — Firebird URL auto-detect. Five equivalent forms (`//abs/path`, `/abs/path`, `/C:/Drive`, URL-encoded colon, alias) all resolve transparently — pick whichever reads best. New `TINA4_DATABASE_FIREBIRD_PATH` env override for Windows backslash paths and split-config setups. PHP also picks up a `mysqli` `localhost`+port quirk fix where Docker container connections were silently falling through to the Unix socket lookup.
 
-**v3.11.10** — Hot reload rewrite. The `tina4` CLI is the sole file watcher; frameworks no longer run their own. Overlayfs / Podman / distrobox spurious-event loop fixed.
+**v3.12.0** — *Breaking change*. Every framework env var now requires the `TINA4_` prefix. The boot guard refuses to start when it spots legacy un-prefixed names (`DATABASE_URL`, `SECRET`, `SMTP_HOST`, `HOST_NAME`, etc.) and prints the rename map. Run `tina4 env-migrate` to rewrite your `.env` in place. Bundled with bug fixes #38 (Postgres UUID-PK transaction abort) and #39 (template auto-routing tightening).
 
 ## How Tina4 reads
 
