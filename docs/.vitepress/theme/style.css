@@ -1,0 +1,3 @@
+/* Theme-level overrides. Currently empty — the hero image override
+   keeps its CSS scoped inside HomeHeroImage.vue. Kept as an explicit
+   import so future global tweaks have an obvious home. */
