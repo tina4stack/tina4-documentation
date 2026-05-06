@@ -31,8 +31,7 @@ JWT_SECRET=your-long-random-secret-at-least-32-characters
 TINA4_RATE_LIMIT=120
 
 # Performance
-TINA4_CACHE_TEMPLATES=true
-TINA4_MINIFY_HTML=true
+TINA4_TEMPLATE_CACHE_TTL=true
 
 ```
 
@@ -43,8 +42,6 @@ TINA4_MINIFY_HTML=true
 | `TINA4_DEBUG` | `true` | `false` | Hides stack traces, disables toolbar |
 | `TINA4_LOG_LEVEL` | `ALL` | `WARNING` | Reduces log noise |
 | `CORS_ORIGINS` | `*` | Your domain | Prevents cross-origin abuse |
-| `TINA4_CACHE_TEMPLATES` | `false` | `true` | Caches compiled templates |
-| `TINA4_MINIFY_HTML` | `false` | `true` | Reduces response size |
 
 ### Sensitive Values
 
@@ -76,8 +73,8 @@ port ENV.fetch("TINA4_PORT", 7147)
 # Workers (processes) -- set to number of CPU cores
 workers ENV.fetch("WEB_CONCURRENCY", 2)
 
-# Threads per worker
-threads_count = ENV.fetch("TINA4_MAX_THREADS", 5)
+# Threads per worker — Puma's own config var, not a Tina4 setting.
+threads_count = ENV.fetch("PUMA_MAX_THREADS", 5)
 threads threads_count, threads_count
 
 # Environment
@@ -702,7 +699,6 @@ Services that ingest JSON logs:
 Enable metrics in `.env`:
 
 ```bash
-TINA4_METRICS=true
 ```
 
 Metrics are available at `/metrics` in Prometheus format:

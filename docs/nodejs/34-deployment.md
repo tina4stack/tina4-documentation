@@ -31,8 +31,7 @@ TINA4_SECRET=your-long-random-secret-at-least-32-characters
 TINA4_RATE_LIMIT=120
 
 # Performance
-TINA4_CACHE_TEMPLATES=true
-TINA4_MINIFY_HTML=true
+TINA4_TEMPLATE_CACHE_TTL=true
 ```
 
 ### Key Differences from Development
@@ -42,8 +41,6 @@ TINA4_MINIFY_HTML=true
 | `TINA4_DEBUG` | `true` | `false` | Hides stack traces, disables toolbar |
 | `TINA4_LOG_LEVEL` | `ALL` | `WARNING` | Reduces log noise |
 | `CORS_ORIGINS` | `*` | Your domain | Prevents cross-origin abuse |
-| `TINA4_CACHE_TEMPLATES` | `false` | `true` | Caches compiled templates |
-| `TINA4_MINIFY_HTML` | `false` | `true` | Reduces response size |
 
 ### Sensitive Values
 
@@ -219,14 +216,11 @@ docker compose down
 For multi-core utilization, Tina4 supports Node.js cluster mode:
 
 ```bash
-TINA4_CLUSTER=true
-TINA4_CLUSTER_WORKERS=4
 ```
 
 Or set workers to `auto` to match CPU cores:
 
 ```bash
-TINA4_CLUSTER_WORKERS=auto
 ```
 
 This spawns multiple worker processes. Each handles requests independently. A worker crashes. The cluster master respawns it. No downtime.
@@ -619,8 +613,6 @@ A single server handles many applications. When traffic outgrows one server, you
 Use cluster mode with more workers:
 
 ```bash
-TINA4_CLUSTER=true
-TINA4_CLUSTER_WORKERS=8
 ```
 
 ### Load Balancing with Nginx

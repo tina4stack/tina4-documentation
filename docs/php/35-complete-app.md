@@ -1455,7 +1455,7 @@ services:
     environment:
       - TINA4_DEBUG=false
       - TINA4_LOG_LEVEL=WARNING
-      - TINA4_CACHE_TEMPLATES=true
+      - TINA4_TEMPLATE_CACHE_TTL=true
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
       - TINA4_DATABASE_URL=sqlite:///data/app.db
     volumes:

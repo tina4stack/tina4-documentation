@@ -481,9 +481,9 @@ The dev tools made each bug visible. The error overlay showed the SQL syntax err
 
 **Problem:** You edited a template but the page still shows the old version.
 
-**Cause:** Template caching is enabled (`TINA4_CACHE_TEMPLATES=true`). The compiled template serves from cache.
+**Cause:** Template caching is enabled (`TINA4_TEMPLATE_CACHE_TTL=true`). The compiled template serves from cache.
 
-**Fix:** In development, set `TINA4_CACHE_TEMPLATES=false` (this is the default when `TINA4_DEBUG=true`). If you enabled template caching manually, disable it for development.
+**Fix:** In development, set `TINA4_TEMPLATE_CACHE_TTL=false` (this is the default when `TINA4_DEBUG=true`). If you enabled template caching manually, disable it for development.
 
 ### 7. Log Files Growing Without Bound
 

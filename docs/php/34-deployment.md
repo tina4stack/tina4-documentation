@@ -31,8 +31,7 @@ JWT_SECRET=your-long-random-secret-at-least-32-characters
 TINA4_RATE_LIMIT=120
 
 # Performance
-TINA4_CACHE_TEMPLATES=true
-TINA4_MINIFY_HTML=true
+TINA4_TEMPLATE_CACHE_TTL=true
 
 ```
 
@@ -43,8 +42,6 @@ TINA4_MINIFY_HTML=true
 | `TINA4_DEBUG` | `true` | `false` | Hides stack traces, disables toolbar |
 | `TINA4_LOG_LEVEL` | `ALL` | `WARNING` | Reduces log noise |
 | `CORS_ORIGINS` | `*` | Your domain | Prevents cross-origin abuse |
-| `TINA4_CACHE_TEMPLATES` | `false` | `true` | Caches compiled templates |
-| `TINA4_MINIFY_HTML` | `false` | `true` | Reduces response size |
 
 ### Sensitive Values
 
@@ -689,7 +686,6 @@ volumes:
 FrankenPHP runs multiple worker threads by default. Configure the count in `.env`:
 
 ```bash
-TINA4_WORKERS=4
 ```
 
 A good starting point is the number of CPU cores on your server. For I/O-heavy applications (database queries, API calls), you can go higher -- 2x to 4x the core count.
@@ -890,7 +886,7 @@ services:
     environment:
       - TINA4_DEBUG=false
       - TINA4_LOG_LEVEL=WARNING
-      - TINA4_CACHE_TEMPLATES=true
+      - TINA4_TEMPLATE_CACHE_TTL=true
       - JWT_SECRET=change-this-to-a-real-secret
       - TINA4_DATABASE_URL=sqlite:///data/app.db
       - CORS_ORIGINS=http://localhost:7145
@@ -908,8 +904,7 @@ volumes:
 ```bash
 TINA4_DEBUG=false
 TINA4_LOG_LEVEL=WARNING
-TINA4_CACHE_TEMPLATES=true
-TINA4_MINIFY_HTML=true
+TINA4_TEMPLATE_CACHE_TTL=true
 TINA4_RATE_LIMIT=120
 CORS_ORIGINS=https://yourdomain.com
 ```

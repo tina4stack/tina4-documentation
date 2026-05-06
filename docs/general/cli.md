@@ -296,7 +296,7 @@ The `.env` file in your project root configures the framework:
 ```bash
 PROJECT_NAME="My Project"
 VERSION=1.0.0
-TINA4_DEBUG_LEVEL=ALL
+TINA4_LOG_LEVEL=ALL
 DATABASE_NAME=sqlite3:data.db
 TINA4_SECRET=your-secret-key
 TINA4_LOCALE=en

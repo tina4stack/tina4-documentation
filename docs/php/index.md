@@ -185,7 +185,7 @@ The default development environment lives in `.env`.
 [Project Settings]
 VERSION=1.0.0
 TINA4_DEBUG=true
-TINA4_DEBUG_LEVEL=[TINA4_LOG_ALL]
+TINA4_LOG_LEVEL=[TINA4_LOG_ALL]
 TINA4_CACHE_BACKEND=false
 TINA4_DATABASE_URL=sqlite:///data/app.db
 [Open API]

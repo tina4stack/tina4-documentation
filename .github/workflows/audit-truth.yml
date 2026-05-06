@@ -47,5 +47,5 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Run audit
-        run: python3 scripts/audit-truth.py --strict
+      - name: Run audit (strict — both CLI and env-var drift block the build)
+        run: python3 scripts/audit-truth.py --strict --strict-env

@@ -156,7 +156,6 @@ TINA4_CACHE_BACKEND=redis
 TINA4_CACHE_URL=localhost
 TINA4_CACHE_URL=6379
 TINA4_CACHE_URL=your-redis-password
-TINA4_CACHE_PREFIX=myapp:cache:
 ```
 
 Your code does not change. The `cacheGet`, `cacheSet`, and `ResponseCache` middleware all work the same way. Only the storage backend changes.

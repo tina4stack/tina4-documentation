@@ -31,8 +31,7 @@ JWT_SECRET=your-long-random-secret-at-least-32-characters
 TINA4_RATE_LIMIT=120
 
 # Performance
-TINA4_CACHE_TEMPLATES=true
-TINA4_MINIFY_HTML=true
+TINA4_TEMPLATE_CACHE_TTL=true
 
 ```
 
@@ -43,8 +42,6 @@ TINA4_MINIFY_HTML=true
 | `TINA4_DEBUG` | `true` | `false` | Hides stack traces, disables toolbar |
 | `TINA4_LOG_LEVEL` | `ALL` | `WARNING` | Reduces log noise |
 | `CORS_ORIGINS` | `*` | Your domain | Prevents cross-origin abuse |
-| `TINA4_CACHE_TEMPLATES` | `false` | `true` | Caches compiled templates |
-| `TINA4_MINIFY_HTML` | `false` | `true` | Reduces response size |
 
 ### Sensitive Values
 
@@ -113,9 +110,6 @@ tina4 serve
 Fine-tune uvicorn through environment variables:
 
 ```bash
-TINA4_WORKERS=4
-TINA4_WORKER_TIMEOUT=30
-TINA4_KEEP_ALIVE=5
 ```
 
 Or pass options directly:
@@ -603,7 +597,6 @@ A single server handles many applications. When traffic outgrows one server, you
 Uvicorn runs multiple worker processes by default. Configure the count in `.env`:
 
 ```bash
-TINA4_WORKERS=4
 ```
 
 Start with the number of CPU cores on your server. For I/O-heavy applications (database queries, external API calls), double or quadruple the core count. CPU-bound work benefits less from extra workers.

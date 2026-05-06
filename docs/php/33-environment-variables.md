@@ -25,13 +25,12 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 | `TINA4_WS_PORT` | _(inherits port)_ | Separate port for the WebSocket server. Leave unset to share the HTTP port. |
 | `TINA4_HOST_NAME` | `localhost:7145` | Fully-qualified host used in generated absolute URLs (Swagger, OAuth redirects, emails). |
 | `TINA4_DEBUG` | `false` | Master debug toggle. Enables Swagger UI, dev dashboard, live reload, template dump filter, error overlay. Never set to `true` in production. |
-| `TINA4_DEBUG_LEVEL` | `ERROR` | Minimum message level shown when `TINA4_DEBUG=true`. Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `ALL`. |
+| `TINA4_LOG_LEVEL` | `ERROR` | Minimum message level shown when `TINA4_DEBUG=true`. Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `ALL`. |
 | `TINA4_NO_BROWSER` | `false` | Stops `tina4 serve` from opening your browser on every restart. Recommended during active development. |
 | `TINA4_NO_RELOAD` | `false` | Disables the dev hot-reload signal from the Rust CLI. Use when you want a stable server for debugging. |
 | `TINA4_SUPPRESS` | `false` | Hides the Tina4 startup banner. Useful in CI and systemd units where stdout is ingested. |
 | `TINA4_VERSION` | _(framework)_ | Override the version string reported by `/__dev/api/system`. Mostly for testing. |
 | `TINA4_CLI_SERVE` | _(none)_ | Set internally by the Rust CLI to signal managed mode. Do not set manually. |
-| `TINA4_INCLUDE_LOCATIONS` | `src/routes,src/orm,src/app` | Comma-separated directories auto-included at boot. |
 | `TINA4_PUBLIC_DIR` | _(empty)_ | Override directory served as static files at `/`. When unset, the static-file middleware searches `src/public/` and the framework's bundled public assets. |
 | `TINA4_TEMPLATE_ROUTING` | `on` | Auto-routing of Twig templates from `src/templates/`. Set to `off`, `false`, `0`, `no`, or `disabled` to require explicit `Router::get()` for every URL. |
 | `TINA4_ALLOW_LEGACY_ENV` | `false` | Bypass the v3.12 boot guard that rejects un-prefixed legacy env vars (`DATABASE_URL`, `SECRET`, `SMTP_HOST`, etc.). Use only in CI / migration scripts during the transition window. |
@@ -320,7 +319,7 @@ Passed to `Debug::message()` to tag severity:
 
 ```bash
 TINA4_DEBUG=true
-TINA4_DEBUG_LEVEL=DEBUG
+TINA4_LOG_LEVEL=DEBUG
 TINA4_NO_BROWSER=true
 ```
 

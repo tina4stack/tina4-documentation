@@ -1,6 +1,47 @@
 # Chapter 35: Release Notes
 
 
+## v3.12.4 (2026-05-06)
+
+Documentation-truth release. The `audit-truth.py` CI gate (introduced post-3.12.3) flagged 39 env vars referenced in docs that no framework actually read. This release closes that gap: 25 of them now exist in code, the other 14 are deleted from docs (11 hallucinations + 6 clustering vars deferred to [tina4#2](https://github.com/tina4stack/tina4/issues/2)). Both audit gates (CLI drift + env-var drift) are now strict in CI.
+
+### 25 new env vars across all 4 frameworks
+
+Server: `TINA4_HOST`, `TINA4_SUPPRESS`, `TINA4_ENV_FILE`. Health: `TINA4_HEALTH_PATH` (default `/__health`, with `/health` kept as a legacy alias), `TINA4_TRAILING_SLASH_REDIRECT`. Sessions: `TINA4_SESSION_HTTPONLY`, `TINA4_SESSION_NAME`, `TINA4_SESSION_SECURE`. Templates: `TINA4_TEMPLATE_CACHE_TTL` (`0` = permanent). GraphQL: `TINA4_GRAPHQL_AUTO_SCHEMA`, `TINA4_GRAPHQL_ENDPOINT`. Mail: `TINA4_MAIL_IMAP_ENCRYPTION` (`tls`/`starttls`/`none`). MCP: `TINA4_MCP`, `TINA4_MCP_PORT`. Swagger: `TINA4_SWAGGER_ENABLED`, `TINA4_SWAGGER_CONTACT_EMAIL`, `TINA4_SWAGGER_LICENSE`. Database: `TINA4_DB_POOL` (env override on the existing `Database(url, pool=N)` constructor argument).
+
+### Logging — env-driven file output + rotation
+
+Six new vars give you full control over logging without touching code:
+
+| Var | Default | What it does |
+|---|---|---|
+| `TINA4_LOG_FILE` | _(empty — stdout only)_ | Path to a log file. Empty leaves you on stdout. |
+| `TINA4_LOG_DIR` | `logs` | Directory for log files (joined with `_LOG_FILE` if relative). |
+| `TINA4_LOG_FORMAT` | `text` | `text` or `json`. JSON mode emits one structured record per line. |
+| `TINA4_LOG_OUTPUT` | `stdout` | `stdout`, `file`, or `both`. Strict — `stdout` means stdout only. |
+| `TINA4_LOG_CRITICAL` | `false` | Enables a `Log.critical()` level above `error`. Off = no-op. |
+| `TINA4_LOG_ROTATE_SIZE` | `10485760` (10 MB) | Rotate when the file exceeds this many bytes. `0` disables rotation. |
+| `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated files to retain (`app.log.1` … `app.log.N`). Older ones are deleted. |
+
+Implementation uses each language's stdlib — Python's `logging.handlers.RotatingFileHandler`, Ruby's `Logger.new(path, shift_age, shift_size)`, and a roll-your-own atomic-rename pattern in PHP and Node. Zero new dependencies in any framework.
+
+### Documentation-truth CI gate now strict on both axes
+
+The `audit-truth.py` script now blocks merges to `main` of `tina4-documentation` whenever a doc references a `tina4 <command>` or `TINA4_*` env var that doesn't exist in source. Previously CLI drift was strict; env drift was warn-only. Today both are strict.
+
+### Tests added
+
+- Python: +53 tests in `tests/test_env_vars.py` (2395 → 2448)
+- PHP: +59 tests in `tests/EnvVarTest.php` (2172 → 2231)
+- Ruby: +51 examples in `spec/env_vars_spec.rb` (2696 → 2747)
+- Node: +59 tests in `test/envVars.test.ts` (3204 → 3263)
+
+**Cross-framework total: 10,689 tests passing, +222 from 3.12.3.**
+
+### Upgrade path
+
+Drop in. No breaking changes — every new env var is opt-in with a sensible default. If you were setting any of the 17 deleted vars in your `.env`, the boot guard will warn (then ignore) — clean them out at your leisure.
+
 ## v3.12.3 (2026-05-05)
 
 Cross-framework parity sweep. Two minor breaking changes in the Ruby and PHP public API that bring all four frameworks onto the same shape.
