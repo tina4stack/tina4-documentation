@@ -761,3 +761,11 @@ $fake = new FakeData(seed: 42);
 Use `FakeData` inside migrations, seeders, or test fixtures.
 
 </div>
+
+
+---
+
+## 📕 Download the book
+
+[**Tina4 for PHP Developers** (PDF)](/pdfs/Tina4-for-PHP-Developers.pdf) — full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
+

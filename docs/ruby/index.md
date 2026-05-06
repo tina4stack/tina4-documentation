@@ -599,3 +599,11 @@ fake = Tina4::FakeData.new(seed: 42)
 Use `FakeData` in tests and migrations to generate consistent fixture data without external gems.
 
 </div>
+
+
+---
+
+## 📕 Download the book
+
+[**Tina4 for Ruby Developers** (PDF)](/pdfs/Tina4-for-Ruby-Developers.pdf) — full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
+

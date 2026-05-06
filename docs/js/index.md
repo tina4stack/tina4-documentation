@@ -208,3 +208,11 @@ import 'tina4js/debug';                            // 4.76 KB gzip (dev only, tr
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">↑ Back to top</a>
 </nav>
+
+
+---
+
+## 📕 Download the book
+
+[**tina4-js — The 1.5KB Reactive Core** (PDF)](/pdfs/Tina4-Javascript-Developer.pdf) — full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
+

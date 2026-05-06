@@ -88,3 +88,11 @@ TINA4_SECRET=your-secret-key
 ```
 
 See [Chapter 4: Environment Variables](/general/04-environment-variables.md) for the full reference.
+
+
+---
+
+## 📕 Download the book
+
+[**Understanding Tina4** (PDF)](/pdfs/Understanding-Tina4.pdf) — full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
+
