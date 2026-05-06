@@ -481,10 +481,10 @@ Router::post("/api/upload", function ($request, $response) {
     $file = $request->files["image"];
 
     return $response->json([
-        "name" => $file->name,        // "photo.jpg"
-        "type" => $file->type,        // "image/jpeg"
-        "size" => $file->size,        // 245760 (bytes)
-        "tmp_path" => $file->tmpPath  // Temporary file location
+        "name" => $file["filename"],        // "photo.jpg"
+        "type" => $file["type"],        // "image/jpeg"
+        "size" => $file["size"],        // 245760 (bytes)
+        "tmp_path" => $file["tmp_name"]  // Temporary file location
     ]);
 });
 ```
@@ -520,18 +520,18 @@ Router::post("/api/upload", function ($request, $response) {
 
     // Validate file type
     $allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    if (!in_array($file->type, $allowedTypes)) {
+    if (!in_array($file["type"], $allowedTypes)) {
         return $response->json(["error" => "Invalid file type. Allowed: JPEG, PNG, GIF, WebP"], 400);
     }
 
     // Validate file size (max 5MB)
     $maxSize = 5 * 1024 * 1024;
-    if ($file->size > $maxSize) {
+    if ($file["size"] > $maxSize) {
         return $response->json(["error" => "File too large. Maximum size: 5MB"], 400);
     }
 
     // Generate a unique filename
-    $extension = pathinfo($file->name, PATHINFO_EXTENSION);
+    $extension = pathinfo($file["filename"], PATHINFO_EXTENSION);
     $filename = uniqid("img_") . "." . $extension;
     $destination = __DIR__ . "/../../public/uploads/" . $filename;
 
@@ -541,13 +541,13 @@ Router::post("/api/upload", function ($request, $response) {
     }
 
     // Move the file
-    rename($file->tmpPath, $destination);
+    rename($file["tmp_name"], $destination);
 
     return $response->json([
         "message" => "File uploaded successfully",
         "filename" => $filename,
         "url" => "/uploads/" . $filename,
-        "size" => $file->size
+        "size" => $file["size"]
     ], 201);
 });
 ```
@@ -577,7 +577,7 @@ Router::post("/api/upload-many", function ($request, $response) {
     $results = [];
 
     foreach ($request->files as $key => $file) {
-        $extension = pathinfo($file->name, PATHINFO_EXTENSION);
+        $extension = pathinfo($file["filename"], PATHINFO_EXTENSION);
         $filename = uniqid("file_") . "." . $extension;
         $destination = __DIR__ . "/../../public/uploads/" . $filename;
 
@@ -585,10 +585,10 @@ Router::post("/api/upload-many", function ($request, $response) {
             mkdir(dirname($destination), 0755, true);
         }
 
-        rename($file->tmpPath, $destination);
+        rename($file["tmp_name"], $destination);
 
         $results[] = [
-            "original_name" => $file->name,
+            "original_name" => $file["filename"],
             "saved_as" => $filename,
             "url" => "/uploads/" . $filename
         ];
@@ -694,7 +694,7 @@ curl http://localhost:7145/api/products/1 -H "Accept: text/html"
 
 ## 10. Input Validation
 
-Tina4 ships a `Validator` class for declarative input validation. Chain rules. Check the result. When validation fails, `$response->sendError()` returns a structured error envelope.
+Tina4 ships a `Validator` class for declarative input validation. Chain rules. Check the result. When validation fails, `$response->error()` returns a structured error envelope.
 
 ### The Validator Class
 
@@ -706,7 +706,7 @@ Router::post("/api/users", function ($request, $response) {
     $v->required("name")->required("email")->email("email")->minLength("name", 2);
 
     if (!$v->isValid()) {
-        return $response->sendError("VALIDATION_FAILED", $v->errors()[0]["message"], 400);
+        return $response->error("VALIDATION_FAILED", $v->errors()[0]["message"], 400);
     }
 
     // proceed with valid data
@@ -728,10 +728,10 @@ Call `$v->isValid()` to check all rules. Call `$v->errors()` to get the list of 
 
 ### The Error Response Envelope
 
-`$response->sendError()` returns a consistent JSON error envelope:
+`$response->error()` returns a consistent JSON error envelope:
 
 ```php
-return $response->sendError("VALIDATION_FAILED", "Name is required", 400);
+return $response->error("VALIDATION_FAILED", "Name is required", 400);
 ```
 
 This produces:
@@ -810,26 +810,26 @@ Router::post("/api/images", function ($request, $response) {
 
     // Validate file type
     $allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-    if (!in_array($file->type, $allowedTypes)) {
+    if (!in_array($file["type"], $allowedTypes)) {
         return $response->json([
             "error" => "Invalid file type",
-            "received" => $file->type,
+            "received" => $file["type"],
             "allowed" => $allowedTypes
         ], 400);
     }
 
     // Validate file size (max 2MB)
     $maxSize = 2 * 1024 * 1024;
-    if ($file->size > $maxSize) {
+    if ($file["size"] > $maxSize) {
         return $response->json([
             "error" => "File too large",
-            "size_bytes" => $file->size,
+            "size_bytes" => $file["size"],
             "max_bytes" => $maxSize
         ], 400);
     }
 
     // Generate unique filename preserving extension
-    $extension = pathinfo($file->name, PATHINFO_EXTENSION);
+    $extension = pathinfo($file["filename"], PATHINFO_EXTENSION);
     $savedName = uniqid("img_") . "." . strtolower($extension);
     $uploadDir = __DIR__ . "/../../public/uploads";
     $destination = $uploadDir . "/" . $savedName;
@@ -840,14 +840,14 @@ Router::post("/api/images", function ($request, $response) {
     }
 
     // Move the uploaded file
-    rename($file->tmpPath, $destination);
+    rename($file["tmp_name"], $destination);
 
     return $response->json([
         "message" => "Image uploaded successfully",
-        "original_name" => $file->name,
+        "original_name" => $file["filename"],
         "saved_name" => $savedName,
-        "size_kb" => round($file->size / 1024, 1),
-        "type" => $file->type,
+        "size_kb" => round($file["size"] / 1024, 1),
+        "type" => $file["type"],
         "url" => "/uploads/" . $savedName
     ], 201);
 });
