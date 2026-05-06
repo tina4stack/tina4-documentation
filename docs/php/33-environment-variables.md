@@ -20,6 +20,7 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `HOST` | `0.0.0.0` | Bind address. `0.0.0.0` listens on every interface. `127.0.0.1` restricts to localhost. |
+| `TINA4_HOST` | `0.0.0.0` | Tina4-specific bind override consulted by `App::serve()` and `Server` when no `$host` argument is passed. Wins over the conventional `HOST` for the framework's own server. |
 | `PORT` | `7145` | HTTP server port. The Rust CLI prefers `TINA4_PORT` but falls back to `PORT`. |
 | `TINA4_PORT` | _(inherits `PORT`)_ | Explicit Tina4-specific port override. Takes precedence over `PORT` when both are set. |
 | `TINA4_WS_PORT` | _(inherits port)_ | Separate port for the WebSocket server. Leave unset to share the HTTP port. |
@@ -34,6 +35,16 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 | `TINA4_PUBLIC_DIR` | _(empty)_ | Override directory served as static files at `/`. When unset, the static-file middleware searches `src/public/` and the framework's bundled public assets. |
 | `TINA4_TEMPLATE_ROUTING` | `on` | Auto-routing of Twig templates from `src/templates/`. Set to `off`, `false`, `0`, `no`, or `disabled` to require explicit `Router::get()` for every URL. |
 | `TINA4_ALLOW_LEGACY_ENV` | `false` | Bypass the v3.12 boot guard that rejects un-prefixed legacy env vars (`DATABASE_URL`, `SECRET`, `SMTP_HOST`, etc.). Use only in CI / migration scripts during the transition window. |
+| `TINA4_ENV_FILE` | `.env` | Alternate path for the dotenv file loaded at boot. Resolved relative to the project root unless absolute. Useful for per-environment files (e.g. `.env.production`) without symlinking. |
+| `TINA4_HEALTH_PATH` | `/health` | Path the built-in health-check route registers under. Set `/__health` to align with the v3 documented alias used by the other frameworks; the default keeps `/health` for back-compat with existing probes. |
+
+---
+
+## Routing
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_TRAILING_SLASH_REDIRECT` | `false` | When truthy, any request path ending in `/` (other than the bare root) is 301-redirected to the slash-stripped form. The query string is preserved. Lets you normalise URLs without writing per-route handlers. |
 
 ---
 
@@ -60,6 +71,7 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 | `TINA4_AUTOCOMMIT` | `false` | Auto-commit after every write. Default is off — call `commit()` explicitly. |
 | `TINA4_DB_CACHE` | `false` | Enables in-memory query-result caching for read queries. |
 | `TINA4_DB_CACHE_TTL` | `60` | Query cache TTL in seconds when `TINA4_DB_CACHE=true`. |
+| `TINA4_DB_POOL` | `0` | Default connection-pool size used when a caller constructs `Database` without passing `$pool`. `0` keeps the single-connection behaviour; values above zero enable pooled adapters lazily. An explicit constructor argument always wins. |
 | `TINA4_MIGRATION_ID` | _(timestamp)_ | Override the migration ID used when recording applied migrations. |
 
 ---
@@ -104,8 +116,11 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 |----------|---------|-------------|
 | `TINA4_SESSION_BACKEND` | `file` | Storage backend. Options: `file`, `redis`, `valkey`, `mongo`, `database`. |
 | `TINA4_SESSION_HANDLER` | _(inherits `_BACKEND`)_ | Alternate handler class name. Overrides `TINA4_SESSION_BACKEND`. |
+| `TINA4_SESSION_NAME` | `tina4_session` | Cookie name written by the framework session manager. Distinct from `TINA4_PHP_SESSION_NAME`, which controls the native PHP session cookie. |
 | `TINA4_SESSION_TTL` | `3600` | Session expiry in seconds. |
 | `TINA4_SESSION_SAMESITE` | `Lax` | SameSite cookie attribute. Options: `Strict`, `Lax`, `None`. |
+| `TINA4_SESSION_HTTPONLY` | `true` | Emit the `HttpOnly` attribute on the session cookie. Leave on unless JavaScript genuinely needs to read the cookie. |
+| `TINA4_SESSION_SECURE` | `false` | Emit the `Secure` attribute on the session cookie. Setting `TINA4_SESSION_SAMESITE=None` forces this to `true` regardless of the value here. |
 | `TINA4_SESSION_PATH` | `data/sessions` | Filesystem path for the file backend. |
 | `TINA4_PHP_SESSION_NAME` | `PHPSESSID` | Cookie name used by native PHP `$_SESSION` (separate from the framework session). |
 | `TINA4_PHP_SESSION_PATH` | _(system temp)_ | `session.save_path` for native PHP sessions. The framework configures it before `session_start()` so the SAPI and the built-in server share session storage. |
@@ -130,6 +145,14 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 |----------|---------|-------------|
 | `TINA4_SESSION_MONGO_URL` | `mongodb://localhost:27017` | MongoDB connection string. |
 | `TINA4_SESSION_MONGO_DB` | `tina4` | MongoDB database name. |
+
+---
+
+## Templates
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_TEMPLATE_CACHE_TTL` | `0` | Lifetime of compiled Frond templates in production, in seconds. `0` means cache forever (no filesystem checks per render); a positive value re-reads and re-tokenises a template once it has been cached for that long. Ignored when `TINA4_DEBUG=true` — debug mode always re-reads. |
 
 ---
 
@@ -208,6 +231,7 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 | `TINA4_MAIL_IMAP_PORT` | `993` | IMAP server port. |
 | `TINA4_MAIL_IMAP_USERNAME` | _(none)_ | IMAP authentication username. |
 | `TINA4_MAIL_IMAP_PASSWORD` | _(none)_ | IMAP authentication password. |
+| `TINA4_MAIL_IMAP_ENCRYPTION` | `tls` | IMAP transport encryption. Accepts `tls`, `starttls`, or `none`; any other value is silently coerced back to `tls`. Independent of `TINA4_MAIL_ENCRYPTION` so Gmail-style setups can use IMAPS on 993 alongside SMTP STARTTLS on 587. |
 | `TINA4_MAILBOX_DIR` | `data/mailbox` | Dev mailbox directory. All outbound mail lands here when `TINA4_DEBUG=true`. |
 
 > `TINA4_MAIL_HOST`, `TINA4_MAIL_PORT`, `TINA4_MAIL_USERNAME`, `TINA4_MAIL_PASSWORD` are also accepted as aliases for the `TINA4_MAIL_*` equivalents. New projects should use the `TINA4_MAIL_*` names.
@@ -224,6 +248,20 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 | `TINA4_LOG_ERROR` | `3` | Numeric flag for error-level messages. |
 | `TINA4_LOG_MAX_SIZE` | `10485760` | Per-file log size limit in bytes (10 MB). Rotated when exceeded. |
 | `TINA4_LOG_KEEP` | `5` | Number of rotated log files to retain. |
+
+### Log pipeline (sink, format, rotation)
+
+Logs default to stdout. Set `TINA4_LOG_OUTPUT=file` plus `TINA4_LOG_FILE=app.log` to write to disk; the framework rotates at `TINA4_LOG_ROTATE_SIZE` bytes and keeps `TINA4_LOG_ROTATE_KEEP` backups.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_LOG_FILE` | _(empty = stdout only)_ | Primary log filename. A relative value is joined with `TINA4_LOG_DIR`; an absolute path overrides both directory and filename. Leave empty to skip file output entirely. |
+| `TINA4_LOG_DIR` | `logs` | Directory log files are written into when `TINA4_LOG_OUTPUT` includes `file`. Created on first write if missing. |
+| `TINA4_LOG_FORMAT` | `text` | Wire format for emitted lines. `text` is human-readable; `json` emits one structured object per line for ingestion by Loki, ELK, etc. |
+| `TINA4_LOG_OUTPUT` | `stdout` | Where lines are sent. `stdout` writes to the process stream (great for systemd / containers), `file` writes only to `TINA4_LOG_FILE`, `both` does both. |
+| `TINA4_LOG_CRITICAL` | `false` | Enable `Log::critical()` emission. Off by default so security-relevant criticals can be intentionally surfaced rather than buried in routine output. |
+| `TINA4_LOG_ROTATE_SIZE` | `10485760` | Rotation threshold in bytes (10 MB default). Set `0` to disable rotation entirely — useful when an external tool (logrotate, Docker driver) owns the file. |
+| `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated backups to retain. Older files are pruned on rotation. |
 
 ---
 
@@ -268,6 +306,8 @@ The dashboard AI chat and the framework's RAG-based code search both default to 
 | `TINA4_EMBED_URL` | `http://andrevanzuydam.com:11435` | Embeddings endpoint surfaced by the dev dashboard `/__dev/api/embed` probe. |
 | `TINA4_IMAGE_URL` | `http://andrevanzuydam.com:11436` | Image-generation endpoint (e.g. SDXL Turbo) for the dev dashboard image tools. |
 | `TINA4_SUPERVISOR_URL` | _(framework port + 2000)_ | Override the URL of the Rust agent supervisor that the dev dashboard proxies for `/__dev/api/supervise/*` and `/__dev/api/execute`. Defaults to `http://127.0.0.1:9145` when `TINA4_PORT=7145`. |
+| `TINA4_MCP` | _(inherits `TINA4_DEBUG`)_ | Master switch for the MCP subsystem. When unset, follows `TINA4_DEBUG` — MCP is on in dev and off in prod. Set to `false` to keep MCP disabled while leaving debug mode on, or to `true` to expose MCP from a production server (combine with `TINA4_MCP_REMOTE` if binding off-localhost). |
+| `TINA4_MCP_PORT` | _(framework port + 2000)_ | Port the MCP server listens on. Defaults to `TINA4_PORT + 2000` (so `7145` → `9145`). Set explicitly when running multiple Tina4 instances on the same host. |
 | `TINA4_MCP_REMOTE` | `false` | Allow the MCP server to bind on non-localhost interfaces. **Never enable in production.** |
 | `TINA4_NO_AI_PORT` | `false` | Disables the MCP port listener in dev mode. |
 | `TINA4_OVERRIDE_CLIENT` | `false` | Allow the framework to start without the Rust CLI (`tina4 serve`). Used in Docker images and CI runners; bypasses SCSS compilation, the file watcher, and live reload. |
@@ -281,6 +321,18 @@ The dashboard AI chat and the framework's RAG-based code search both default to 
 | `TINA4_SWAGGER_TITLE` | `Tina4 API` | OpenAPI spec title shown in the Swagger UI. |
 | `TINA4_SWAGGER_DESCRIPTION` | `Auto-generated from Tina4 routes` | OpenAPI spec description. |
 | `TINA4_SWAGGER_VERSION` | `1.0.0` | OpenAPI spec version. |
+| `TINA4_SWAGGER_ENABLED` | _(inherits `TINA4_DEBUG`)_ | Master switch for Swagger UI and the `/swagger`/`/swagger.json` routes. When unset, follows `TINA4_DEBUG` so Swagger is on in dev and off in prod automatically. Set explicitly to expose docs in production. |
+| `TINA4_SWAGGER_CONTACT_EMAIL` | _(empty)_ | Contact email written into the generated OpenAPI `info.contact` block. |
+| `TINA4_SWAGGER_LICENSE` | _(empty)_ | License name written into the generated OpenAPI `info.license` block. |
+
+---
+
+## GraphQL
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_GRAPHQL_ENDPOINT` | `/graphql` | URL path the framework binds the GraphQL handler to. The same value is used when generating `__schema` links and the dev-dashboard query console URL. |
+| `TINA4_GRAPHQL_AUTO_SCHEMA` | `true` | Auto-generate the GraphQL schema from registered ORM models. Set to `false` to skip introspection scaffolding when you supply a hand-written schema. |
 
 ---
 

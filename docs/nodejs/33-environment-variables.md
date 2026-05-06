@@ -20,10 +20,14 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `HOST` | `0.0.0.0` | Bind address. `0.0.0.0` listens on every interface. `127.0.0.1` restricts to localhost. |
+| `TINA4_HOST` | `0.0.0.0` | Framework-prefixed bind address. Takes precedence over `HOST` when both are set. |
 | `PORT` | `7148` | HTTP server port. The Rust CLI prefers `TINA4_PORT` but falls back to `PORT`. |
 | `TINA4_PORT` | _(inherits `PORT`)_ | Explicit Tina4-specific port override. Takes precedence over `PORT` when both are set. |
 | `TINA4_HOST_NAME` | `localhost:7148` | Fully-qualified host used in generated absolute URLs (Swagger, OAuth redirects, emails). |
 | `TINA4_DEBUG` | `false` | Master debug toggle. Enables Swagger UI, dev dashboard, live reload, template dump filter, error overlay. Never set to `true` in production. |
+| `TINA4_SUPPRESS` | `false` | Suppresses the boot banner on startup. Useful for clean CI logs and embedded usage. |
+| `TINA4_ENV_FILE` | `.env` | Path to the dotenv file loaded at startup. Relative paths resolve from the project root. |
+| `TINA4_HEALTH_PATH` | `/__health` | Path for the built-in health endpoint. Legacy `/health` alias is also registered when this points at `/__health`. |
 | `TINA4_NO_BROWSER` | `false` | Stops `tina4 serve` from opening your browser on every restart. |
 | `TINA4_NO_RELOAD` | `false` | Disables the dev hot-reload signal from the Rust CLI. Use when you want a stable server for debugging. |
 | `TINA4_PRODUCTION` | `false` | Forces production-mode startup (cluster mode, debug overlays disabled). Set automatically by `tina4 serve --production`. |
@@ -53,6 +57,7 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 | `TINA4_AUTOCOMMIT` | `false` | Auto-commit after every write. Default is off — call `commit()` explicitly. |
 | `TINA4_DB_CACHE` | `false` | Enables in-memory query-result caching for read queries. |
 | `TINA4_DB_CACHE_TTL` | `30` | Query cache TTL in seconds when `TINA4_DB_CACHE=true`. |
+| `TINA4_DB_POOL` | `0` | Connection-pool size override. Applied to the database adapter's `pool` config when not set explicitly in code. `0` leaves the adapter default in place. |
 | `TINA4_ORM_PLURAL_TABLE_NAMES` | `true` | When `true`, the ORM pluralises class names into table names (`User` → `users`). |
 
 ---
@@ -96,8 +101,11 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `TINA4_SESSION_BACKEND` | `file` | Storage backend. Options: `file`, `redis`, `valkey`, `mongo`, `database`. |
+| `TINA4_SESSION_NAME` | `tina4_session` | Session cookie name. |
 | `TINA4_SESSION_TTL` | `1800` | Session expiry in seconds (30 minutes). |
 | `TINA4_SESSION_SAMESITE` | `Lax` | SameSite cookie attribute. Options: `Strict`, `Lax`, `None`. |
+| `TINA4_SESSION_HTTPONLY` | `true` | Emit the `HttpOnly` flag on the session cookie. |
+| `TINA4_SESSION_SECURE` | `false` | Emit the `Secure` flag on the session cookie. Enable behind HTTPS. |
 | `TINA4_SESSION_PATH` | `data/sessions` | Filesystem path for the file backend. |
 
 ### Redis/Valkey session backend
@@ -204,6 +212,7 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 | `TINA4_MAIL_ENCRYPTION` | `tls` | Connection encryption. Options: `tls`, `ssl`, `none`. |
 | `TINA4_MAIL_IMAP_HOST` | _(none)_ | IMAP server for inbound mail. |
 | `TINA4_MAIL_IMAP_PORT` | `993` | IMAP server port. |
+| `TINA4_MAIL_IMAP_ENCRYPTION` | `tls` | IMAP transport security. Options: `tls`, `starttls`, `none`. Node also accepts `ssl` as an alias for `tls` for back-compat. |
 | `TINA4_MAILBOX_DIR` | `data/mailbox` | Dev mailbox directory. All outbound mail lands here when `TINA4_DEBUG=true`. |
 
 > `TINA4_MAIL_HOST`, `TINA4_MAIL_PORT`, `TINA4_MAIL_USERNAME`, `TINA4_MAIL_PASSWORD`, `TINA4_MAIL_FROM`, `TINA4_MAIL_FROM_NAME`, `TINA4_MAIL_IMAP_HOST`, `TINA4_MAIL_IMAP_PORT`, `TINA4_MAIL_IMAP_USERNAME`, `TINA4_MAIL_IMAP_PASSWORD` are accepted as legacy aliases. New projects should use the `TINA4_MAIL_*` names.
@@ -212,11 +221,25 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 
 ## Logging
 
+Logs default to stdout. Set `TINA4_LOG_OUTPUT=file` plus `TINA4_LOG_FILE=app.log` to write to disk; the framework rotates at `TINA4_LOG_ROTATE_SIZE` bytes and keeps `TINA4_LOG_ROTATE_KEEP` backups using stdlib `fs` calls.
+
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `TINA4_LOG_LEVEL` | `DEBUG` | Minimum log level written to console and files. Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `ALL`. |
 | `TINA4_LOG_MAX_SIZE` | `10` | Per-file log size limit in megabytes. Rotated when exceeded. |
 | `TINA4_LOG_KEEP` | `5` | Number of rotated log files to retain. |
+
+### File logging
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_LOG_FILE` | _(empty = stdout only)_ | Explicit log file path. Absolute paths are used as-is; relative paths resolve against `TINA4_LOG_DIR`. |
+| `TINA4_LOG_DIR` | `logs` | Directory for log files when `TINA4_LOG_FILE` is relative or unset. |
+| `TINA4_LOG_FORMAT` | `text` | File log format. Options: `text`, `json`. |
+| `TINA4_LOG_OUTPUT` | `stdout` | Where to write logs. Options: `stdout`, `file`, `both`. |
+| `TINA4_LOG_CRITICAL` | `false` | Enable the `CRITICAL` level shortcut. Off by default to keep the log surface compact. |
+| `TINA4_LOG_ROTATE_SIZE` | `10485760` | Rotate the file when it reaches this many bytes (10 MB). `0` disables rotation. Node uses an atomic `fs.renameSync` shift on each write. |
+| `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated historical files to retain. |
 
 ---
 
@@ -251,6 +274,24 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `TINA4_TEMPLATE_ROUTING` | `on` | Auto-route any request without a matching handler to a same-named Frond template. Set to `off`, `false`, `0`, `no`, or `disabled` for explicit-only routing. |
+| `TINA4_TRAILING_SLASH_REDIRECT` | `false` | When `true`, requests with a trailing slash are 301-redirected to the canonical no-trailing-slash form. |
+
+---
+
+## Templates
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_TEMPLATE_CACHE_TTL` | `0` | Frond template cache TTL in seconds. `0` (the default) caches permanently for the process lifetime. |
+
+---
+
+## GraphQL
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_GRAPHQL_AUTO_SCHEMA` | `true` | Auto-build a schema from registered ORM models when the dev server starts. Set `false` to require an explicit schema. |
+| `TINA4_GRAPHQL_ENDPOINT` | `/graphql` | Path the GraphQL handler is mounted on. |
 
 ---
 
@@ -270,6 +311,15 @@ The dashboard AI chat and the framework's RAG-based code search both default to 
 
 ---
 
+## MCP
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_MCP` | _(inherits `TINA4_DEBUG`)_ | Enables the MCP server. Defaults to `true` when `TINA4_DEBUG=true`, `false` otherwise. |
+| `TINA4_MCP_PORT` | _(main port + 2000)_ | Port the MCP server listens on. Defaults to the framework HTTP port plus 2000. |
+
+---
+
 ## Swagger / OpenAPI
 
 | Variable | Default | Description |
@@ -277,6 +327,9 @@ The dashboard AI chat and the framework's RAG-based code search both default to 
 | `TINA4_SWAGGER_TITLE` | `Tina4 API` | OpenAPI spec title. |
 | `TINA4_SWAGGER_DESCRIPTION` | `Auto-generated API documentation` | OpenAPI spec description. |
 | `TINA4_SWAGGER_VERSION` | `0.0.1` | OpenAPI spec version. |
+| `TINA4_SWAGGER_CONTACT_EMAIL` | _(empty)_ | Contact email written into the generated OpenAPI `info.contact` block. |
+| `TINA4_SWAGGER_LICENSE` | _(empty)_ | License name written into the generated OpenAPI `info.license` block. |
+| `TINA4_SWAGGER_ENABLED` | _(inherits `TINA4_DEBUG`)_ | Mount the Swagger UI. Defaults to enabled when `TINA4_DEBUG=true`. Force `true`/`false` to override. |
 
 ---
 

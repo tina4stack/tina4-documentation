@@ -35,6 +35,17 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 | `TINA4_SUPERVISOR_URL` | _(derived from `TINA4_PORT` + 2000)_ | Override URL for the local Rust CLI supervisor used by the dev dashboard. |
 | `TINA4_TEMPLATE_ROUTING` | `on` | Controls automatic template-to-route binding. Set to `off`, `false`, `0`, `no`, or `disabled` to require explicit route declarations. |
 | `TINA4_ALLOW_LEGACY_ENV` | `false` | Bypass the v3.12 legacy-env startup guard. Intended for CI/migration scripts only. |
+| `TINA4_SUPPRESS` | `false` | Suppresses the startup banner. Useful for headless processes and CI runs. |
+| `TINA4_ENV_FILE` | `.env` | Path or filename of the dotenv file loaded at boot. Resolved against the project root when relative. |
+| `TINA4_HEALTH_PATH` | `/__health` | Health-check route mounted by `Tina4::Health`. The legacy `/health` path stays registered as an alias unless it's the configured value. |
+
+---
+
+## Routing
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_TRAILING_SLASH_REDIRECT` | `false` | When truthy, the Rack app issues a `301` redirect that strips trailing slashes from request paths. |
 
 ---
 
@@ -63,6 +74,7 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 | `TINA4_DB_CACHE` | `false` | Enables in-memory query-result caching for read queries. |
 | `TINA4_DB_CACHE_TTL` | `30` | Query cache TTL in seconds when `TINA4_DB_CACHE=true`. |
 | `TINA4_ORM_PLURAL_TABLE_NAMES` | `true` | When `true`, the ORM pluralises class names into table names (`User` → `users`). Set `false` to keep them singular. |
+| `TINA4_DB_POOL` | `0` | Connection pool size used by `Tina4::Database.new(url, pool:)` when the caller doesn't pass `pool:` explicitly. `0` disables pooling. |
 
 ---
 
@@ -108,6 +120,9 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 | `TINA4_SESSION_TTL` | `3600` | Session expiry in seconds. |
 | `TINA4_SESSION_SAMESITE` | `Lax` | SameSite cookie attribute. Options: `Strict`, `Lax`, `None`. |
 | `TINA4_SESSION_PATH` | `data/sessions` | Filesystem path for the file backend. |
+| `TINA4_SESSION_NAME` | `tina4_session` | Session cookie name. Used unless the caller passes an explicit `cookie_name`. |
+| `TINA4_SESSION_HTTPONLY` | `true` | Sets the `HttpOnly` attribute on the session cookie. Set `false` to allow JavaScript access. |
+| `TINA4_SESSION_SECURE` | `false` | Sets the `Secure` attribute on the session cookie. Enable in production behind HTTPS. |
 
 ### Valkey/Redis session backend
 
@@ -131,6 +146,23 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 | `TINA4_CACHE_TTL` | `0` | Default cache TTL in seconds (`0` disables caching for the global instance; the singleton helper uses `60` when unset). |
 | `TINA4_CACHE_MAX_ENTRIES` | `1000` | Maximum cache entries before eviction. |
 | `TINA4_CACHE_URL` | `redis://localhost:6379` | Connection URL for the Redis backend. |
+
+---
+
+## Templates
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_TEMPLATE_CACHE_TTL` | `0` | Frond template cache TTL in seconds. `0` keeps compiled templates cached permanently; positive values expire entries after `N` seconds. |
+
+---
+
+## GraphQL
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_GRAPHQL_AUTO_SCHEMA` | `true` | When `true`, the GraphQL module auto-generates a schema from registered ORM models. Set `false` to require an explicit schema. |
+| `TINA4_GRAPHQL_ENDPOINT` | `/graphql` | Path the GraphQL handler is mounted at when the caller doesn't pass an explicit path. |
 
 ---
 
@@ -196,6 +228,7 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 | `TINA4_MAIL_IMAP_PORT` | `993` | IMAP server port. |
 | `TINA4_MAIL_IMAP_USERNAME` | _(inherits SMTP username)_ | IMAP authentication username. Mapped from legacy `IMAP_USER`. |
 | `TINA4_MAIL_IMAP_PASSWORD` | _(inherits SMTP password)_ | IMAP authentication password. Mapped from legacy `IMAP_PASS`. |
+| `TINA4_MAIL_IMAP_ENCRYPTION` | `tls` | IMAP connection encryption. Accepts `tls`, `starttls`, or `none`. |
 | `TINA4_MAILBOX_DIR` | `data/mailbox` | Dev mailbox directory. All outbound mail lands here when `TINA4_DEBUG=true`. |
 
 > `TINA4_MAIL_HOST`, `TINA4_MAIL_PORT`, `TINA4_MAIL_USERNAME`, `TINA4_MAIL_PASSWORD`, `TINA4_MAIL_FROM`, `TINA4_MAIL_FROM_NAME`, `TINA4_MAIL_IMAP_HOST`, `TINA4_MAIL_IMAP_PORT` are accepted as legacy aliases. New projects should use the `TINA4_MAIL_*` names.
@@ -209,6 +242,18 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 | `TINA4_LOG_LEVEL` | `[TINA4_LOG_ALL]` | Console log level. Options: `[TINA4_LOG_ALL]`, `[TINA4_LOG_DEBUG]`, `[TINA4_LOG_INFO]`, `[TINA4_LOG_WARNING]`, `[TINA4_LOG_ERROR]`, `[TINA4_LOG_NONE]`. Also accepts plain `DEBUG`, `INFO`, `ERROR`, etc. |
 | `TINA4_LOG_MAX_SIZE` | `10` | Per-file log size limit in megabytes. Rotated when exceeded. |
 | `TINA4_LOG_KEEP` | `5` | Number of rotated log files to retain. |
+
+Logs default to stdout. Set `TINA4_LOG_OUTPUT=file` plus `TINA4_LOG_FILE=app.log` to write to disk; Ruby's stdlib `Logger` rotates at `TINA4_LOG_ROTATE_SIZE` bytes and keeps `TINA4_LOG_ROTATE_KEEP` backups natively.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_LOG_FILE` | _(empty = stdout only)_ | Explicit log file path. Absolute, or resolved relative to `TINA4_LOG_DIR`. |
+| `TINA4_LOG_DIR` | `logs` | Directory used when `TINA4_LOG_FILE` is set without an absolute path. |
+| `TINA4_LOG_FORMAT` | `text` | Log line format. Accepts `text` or `json`. |
+| `TINA4_LOG_OUTPUT` | `stdout` | Output sink. Accepts `stdout`, `file`, or `both`. |
+| `TINA4_LOG_CRITICAL` | `false` | When `true`, gates the new `critical` level and raises on log write failures instead of swallowing them. |
+| `TINA4_LOG_ROTATE_SIZE` | `10485760` | Per-file rotation threshold in bytes (10 MB). `0` disables rotation. Handled natively by stdlib `Logger.new(path, shift_age, shift_size)`. |
+| `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated backups to retain. |
 
 ---
 
@@ -254,6 +299,15 @@ The dashboard AI chat and the framework's RAG-based code search both default to 
 
 ---
 
+## MCP
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_MCP` | _(inherits `TINA4_DEBUG`)_ | Enables the MCP server. Defaults to whatever `TINA4_DEBUG` is set to; pass `true`/`false` to override explicitly. |
+| `TINA4_MCP_PORT` | _(derived from `TINA4_PORT` + 2000)_ | Port the MCP server binds to. Defaults to the HTTP port plus `2000`. |
+
+---
+
 ## Swagger / OpenAPI
 
 | Variable | Default | Description |
@@ -261,6 +315,9 @@ The dashboard AI chat and the framework's RAG-based code search both default to 
 | `TINA4_SWAGGER_TITLE` | `Tina4 API` | OpenAPI spec title. Falls back to `PROJECT_NAME`. |
 | `TINA4_SWAGGER_DESCRIPTION` | `Auto-generated API documentation` | OpenAPI spec description. |
 | `TINA4_SWAGGER_VERSION` | _(Gem version)_ | Overrides the spec `version`. |
+| `TINA4_SWAGGER_ENABLED` | _(inherits `TINA4_DEBUG`)_ | Enables the Swagger UI and `/swagger.json` route. Defaults to `TINA4_DEBUG`; set explicitly to override. |
+| `TINA4_SWAGGER_CONTACT_EMAIL` | _(empty)_ | Contact email rendered into the OpenAPI `info.contact` block. |
+| `TINA4_SWAGGER_LICENSE` | _(empty)_ | SPDX license name (e.g. `MIT`) rendered into the OpenAPI `info.license` block. |
 | `PROJECT_NAME` | _(none)_ | Alternative OpenAPI title source when `TINA4_SWAGGER_TITLE` is unset. |
 
 ---
