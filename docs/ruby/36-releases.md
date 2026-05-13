@@ -1,6 +1,117 @@
 # Chapter 35: Release Notes
 
 
+## v3.12.9 (2026-05-12)
+
+Cross-framework RFC 9110 HTTP method-conformance release. The 24now / 24stack deployment reported that `Tina4::Router.get('/auth/welcome')` returned **404 on `HEAD`** probes. The audit found four sibling gaps. All fixed across every framework at the same number.
+
+### What was wrong
+
+| # | Gap | Spec | Symptom |
+|---|---|---|---|
+| 1 | `Tina4::Router.get(...)` returned 404 on HEAD | RFC 9110 §9.3.2 MUST | cache validators, link checkers, monitoring probes broken |
+| 2 | HEAD responses could leak a body | RFC 9110 §9.3.2 MUST | clients overread, content-length didn't match |
+| 3 | Wrong method on existing path returned 404 | RFC 9110 §15.5.6 + §10.2.1 | link checkers couldn't tell "no route" from "wrong verb" |
+| 4 | `OPTIONS` only handled by CORS preflight middleware | RFC 9110 §9.3.7 SHOULD | introspection clients got CORS-shaped responses instead of `Allow:` headers |
+| 5 | `TRACE` / `CONNECT` silently 404 | security | should be explicit 405 (origin servers do not tunnel) |
+
+### What's in this release
+
+- **HEAD auto-fallback to GET.** `Tina4::Router.match('HEAD', path)` falls back to the GET route when no explicit HEAD handler is registered. The dispatcher strips the body unconditionally on the way out — even if a developer's explicit `Tina4::Router.head()` handler returned one — and preserves `Content-Length` pointing at the byte count the equivalent GET would have sent.
+- **405 + Allow header** when the path exists but the method doesn't. The Allow header lists every registered method, plus HEAD (whenever GET is registered) and OPTIONS (always, since OPTIONS is auto-handled).
+- **Generic OPTIONS handler.** Returns `204 No Content` with the Allow header for any path the router knows about. Explicit `Tina4::Router.options()` registration overrides.
+- **TRACE / CONNECT** rejected with 405 (falls out of the same code path as the wrong-method handler — origin servers do not tunnel).
+- **`Tina4::Router.head()` and `Tina4::Router.options()` registration methods** for apps that want to override the framework's auto-handling.
+
+### Test coverage
+
+| Framework | New tests | Full suite |
+|---|---|---|
+| tina4-php | 17 | 2648 |
+| tina4-python | 17 | 2486 |
+| tina4-ruby | 17 | 2764 |
+| tina4-nodejs | 12 (router-level) | baseline unchanged |
+
+TDD discipline — every test written before the fix landed, ran to confirm red, then implementation, then confirm green.
+
+### Bonus catch (Ruby)
+
+The previous CORS middleware short-circuited **every** `OPTIONS` request to its preflight response — even introspection probes without an `Origin` header. That shadowed the framework's own OPTIONS support and forced operators to hand-register exceptions for every monitoring client. Now the CORS path only fires when the request actually carries `Origin` or `Access-Control-Request-Method`. Plain RFC 9110 OPTIONS probes hit the router's `Allow`-header response cleanly.
+
+### Verification
+
+```bash
+# Existing GET routes now respond to HEAD
+$ curl -sI https://your-app.example.com/auth/welcome
+HTTP/2 200
+Content-Length: <byte count the GET would have sent>
+# ...same headers as the GET would have sent
+
+# Plain OPTIONS introspection
+$ curl -sI -X OPTIONS https://your-app.example.com/auth/welcome
+HTTP/2 204
+Allow: GET, HEAD, OPTIONS
+
+# Wrong method is now 405, not 404
+$ curl -sI -X PUT https://your-app.example.com/auth/welcome
+HTTP/2 405
+Allow: GET, HEAD, OPTIONS
+```
+
+### Upgrade
+
+Drop in. No `.env` changes. No API breakage — existing code keeps working; new code can opt in to `Tina4::Router.head()` and `Tina4::Router.options()` for custom handlers.
+
+
+## v3.12.6 (2026-05-06)
+
+Python-only fix release. PHP / Ruby / Node ship the same version stamp for parity but carry no behavioural changes.
+
+### Python — psycopg2 `%` substitution no longer trips PL/pgSQL function bodies (#40)
+
+A migration containing a PL/pgSQL function with literal `%` characters in a `RAISE EXCEPTION` (or `format()`) call used to fail with the misleading:
+
+> RuntimeError: Migration failed: list index out of range
+
+The error message gave no hint that the `%` chars were the problem. The user-facing failure looked like a tina4 internal bug — actually psycopg2's argument-substitution system tripping on the literal percent signs.
+
+**Root cause.** `PostgreSQLAdapter.execute(sql, params)` always called `cursor.execute(sql, params or [])`. psycopg2 interprets `%` as parameter placeholders WHENEVER the `params` arg is supplied — even an empty list `[]`. So a function body containing `RAISE EXCEPTION 'thing % conflicts with %', a, b` (perfectly valid PL/pgSQL) blew up because psycopg2 thought `%` was a placeholder and there were no values to substitute.
+
+**Fix.** New `PostgreSQLAdapter._safe_execute(cursor, sql, params)` helper routes empty/None params through `cursor.execute(sql)` (no second arg), which makes psycopg2 skip the substitution pass entirely. Literal `%` chars flow through untouched. Applied at every `cursor.execute(...)` call site in the adapter (5 spots across `execute`, `fetch`, `fetch_one`).
+
+**Tests.** 5 new unit tests in `tests/test_postgres_percent_substitution.py` pin the helper's branching. 3 live-Postgres regression tests in `tests/test_postgres_plpgsql_percent.py` exercise a real CREATE FUNCTION + trigger flow with literal `%` in the body — skipped automatically when no Postgres is reachable. Full suite: 2453 passing (was 2448).
+
+**Cross-framework parity check.** PHP (`pg_query` vs `pg_query_params`) and Ruby (`exec` vs `exec_params`) already branch on params presence so they don't have this bug. Node uses `$1` placeholders not `%`, so the same class of bug doesn't apply.
+
+### Long-standing tina4-js #37 confirmed fixed
+
+`frond.form.submit` not following 3xx redirects — fixed in frond v2.1.2 back on April 11, 2026 (`xhr.responseURL` comparison + `window.location.href` navigation). All four framework `public/js/frond.min.js` copies carry the fix. The original issue stayed open because the reporter never confirmed against the patched build.
+
+### Upgrade
+
+Drop in. No `.env` changes, no API changes.
+
+## v3.12.5 (2026-05-06)
+
+PHP-only bug fix release. Python / Ruby / Node ship the same version stamp for parity but carry no behavioural changes.
+
+### PHP — multipart bodies with file uploads now parse correctly (#135)
+
+Two stacked bugs in `Tina4\Request::__construct` made `$request->body` come through as the raw multipart bytes (~11 KB blobs starting with `------WebKitFormBoundary…`) whenever the request included a file upload:
+
+1. The constructor called `$this->parseBody()` BEFORE initialising `$this->files`. Inside parseBody's multipart branch, the line `$this->files = array_merge($this->files, $parsed['files'])` read an uninitialised typed property — fatal `Error`.
+2. After fixing the init order, that same line tried to mutate the `readonly` `$files` property — another fatal `Error`.
+
+Both errors got swallowed by the upstream error handler and the route handler received the raw multipart payload instead of the parsed associative array. Routes that worked fine for ordinary form posts broke the moment a file field came along.
+
+**Fix.** Move `$this->files` initialisation AFTER `parseBody()` runs. parseBody stashes extracted multipart files on a new private mutable `$multipartFiles`; the constructor merges them into the readonly `$files` in a single assignment that respects the readonly contract.
+
+4 new regression tests in `tests/Issue135Test.php` pin the constructor's contract. Full PHP suite: 2235 passing (was 2231).
+
+### Upgrade
+
+Drop in. No `.env` changes, no API changes, no other framework changes.
+
 ## v3.12.4 (2026-05-06)
 
 Documentation-truth release. The `audit-truth.py` CI gate (introduced post-3.12.3) flagged 39 env vars referenced in docs that no framework actually read. This release closes that gap: 25 of them now exist in code, the other 14 are deleted from docs (11 hallucinations + 6 clustering vars deferred to [tina4#2](https://github.com/tina4stack/tina4/issues/2)). Both audit gates (CLI drift + env-var drift) are now strict in CI.

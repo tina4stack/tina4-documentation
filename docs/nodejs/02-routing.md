@@ -121,6 +121,58 @@ curl -X DELETE http://localhost:7148/products/42
 
 `GET` reads. `POST` creates. `PUT` replaces. `PATCH` patches. `DELETE` removes. REST convention. Predictable API.
 
+### HEAD and OPTIONS — automatic, no boilerplate
+
+Tina4 handles `HEAD` and `OPTIONS` for you. **You don't register them.** They follow from your `router.get(...)` / `router.post(...)` / etc. routes:
+
+- **`HEAD`** is identical to `GET` except the response carries no body (RFC 9110 §9.3.2). Every `GET` route automatically responds to `HEAD` — the framework strips the response body on the way out and preserves `Content-Length` pointing at the byte count the equivalent `GET` would have sent. Cache validators, link checkers, and uptime probes work without you writing anything.
+- **`OPTIONS`** on any registered path returns `204 No Content` with an `Allow:` header listing every method the path supports (RFC 9110 §9.3.7).
+- **Wrong method on an existing path** returns `405 Method Not Allowed` with the same `Allow:` header (RFC 9110 §15.5.6 + §10.2.1). Sending `PUT` to a `GET`-only route used to return `404` — semantically wrong and confusing for link checkers. Now you get a real `405`.
+- **`TRACE` and `CONNECT`** are rejected with `405` (security default for origin servers).
+
+```bash
+# HEAD on a GET route — same headers, empty body
+curl -sI http://localhost:7148/products
+# HTTP/1.1 200 OK
+# Content-Type: application/json
+# Content-Length: 33
+
+# OPTIONS — discover what the path supports
+curl -sI -X OPTIONS http://localhost:7148/products
+# HTTP/1.1 204 No Content
+# Allow: GET, POST, HEAD, OPTIONS
+
+# Wrong method — clear 405 with Allow header
+curl -sI -X PUT http://localhost:7148/products
+# HTTP/1.1 405 Method Not Allowed
+# Allow: GET, POST, HEAD, OPTIONS
+```
+
+### Explicit `router.head()` and `router.options()` registration
+
+The automatic behaviour is enough for 95% of apps. When you need custom HEAD or OPTIONS handlers, register them explicitly:
+
+```typescript
+import { Router } from "@tina4/core";
+const router = new Router();
+
+// HEAD handler that doesn't run the full GET body — useful for
+// expensive endpoints where the client only needs to check existence
+// or read validators (ETag, Last-Modified).
+router.head("/expensive/{id}", async (req, res) => {
+  res.raw.setHeader("ETag", computeEtag(req.params.id));
+  return res({});
+});
+
+// OPTIONS handler that returns more than just Allow — for example
+// a discovery endpoint.
+router.options("/api/discovery", async (_req, res) => {
+  return res({ version: "v1", endpoints: [] });
+});
+```
+
+The framework still strips the response body for `HEAD` handlers (RFC 9110 §9.3.2 is a MUST), so you can't accidentally leak content even if your handler returns a body.
+
 ---
 
 ## 3. Path Parameters

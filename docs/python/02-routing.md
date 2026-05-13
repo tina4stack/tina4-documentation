@@ -100,6 +100,56 @@ curl -X DELETE http://localhost:7146/products/42
 
 `GET` reads. `POST` creates. `PUT` replaces. `PATCH` patches. `DELETE` removes. REST convention. Predictable API.
 
+### HEAD and OPTIONS — automatic, no boilerplate
+
+Tina4 handles `HEAD` and `OPTIONS` for you. **You don't register them.** They follow from your `GET` / `POST` / etc. routes:
+
+- **`HEAD`** is identical to `GET` except the response carries no body (RFC 9110 §9.3.2). Every `GET` route automatically responds to `HEAD` — the framework strips the response body on the way out and preserves `Content-Length` pointing at the byte count the equivalent `GET` would have sent. Cache validators, link checkers, and uptime probes work without you writing anything.
+- **`OPTIONS`** on any registered path returns `204 No Content` with an `Allow:` header listing every method the path supports (RFC 9110 §9.3.7). Useful for clients that need to discover the API surface.
+- **Wrong method on an existing path** returns `405 Method Not Allowed` with the same `Allow:` header (RFC 9110 §15.5.6 + §10.2.1). Sending `PUT` to a `GET`-only route used to return `404` — semantically wrong and confusing for link checkers. Now you get a real `405` that says exactly which methods are allowed.
+- **`TRACE` and `CONNECT`** are rejected with `405` (we never support them — security default for origin servers).
+
+```bash
+# HEAD on a GET route — same headers, empty body
+curl -sI http://localhost:7146/products
+# HTTP/1.1 200 OK
+# Content-Type: application/json
+# Content-Length: 33
+
+# OPTIONS — discover what the path supports
+curl -sI -X OPTIONS http://localhost:7146/products
+# HTTP/1.1 204 No Content
+# Allow: GET, POST, HEAD, OPTIONS
+
+# Wrong method — clear 405 with Allow header
+curl -sI -X PUT http://localhost:7146/products
+# HTTP/1.1 405 Method Not Allowed
+# Allow: GET, POST, HEAD, OPTIONS
+```
+
+### Explicit `head()` and `options()` registration
+
+The automatic behaviour is enough for 95% of apps. When you need custom HEAD or OPTIONS handlers — for example a cheap existence-check endpoint, or a richer OPTIONS payload — register them explicitly:
+
+```python
+from tina4_python.core.router import Router
+
+# A HEAD handler that doesn't run the full GET body — useful for
+# expensive endpoints where the client only needs to check existence
+# or read validators (ETag, Last-Modified).
+Router.head("/expensive/{id}", lambda req, res:
+    res.header("ETag", compute_etag(req.params["id"]))
+)
+
+# An OPTIONS handler that returns more than just Allow — for example
+# a CORS preflight with custom headers, or a discovery endpoint.
+Router.options("/api/discovery", lambda req, res:
+    res.json({"version": "v1", "endpoints": [...]})
+)
+```
+
+The framework still strips the response body for `HEAD` handlers (RFC 9110 §9.3.2 is a MUST), so you can't accidentally leak content even if your handler returns a body.
+
 ---
 
 ## 3. Path Parameters
