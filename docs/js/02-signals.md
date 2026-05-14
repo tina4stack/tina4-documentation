@@ -281,7 +281,88 @@ This is useful for:
 
 ---
 
-## 7. Debug Labels
+## 7. Sharing Signals Across Files -- The Store Pattern
+
+A signal created in one component file is local to that file. To share state across your app -- the logged-in user, the shopping cart, the theme -- you put signals in their own module and import them wherever you need them. That module is your store. There is no `createStore()`, no provider, no context wrapper. **A signal that is exported from a module IS global state.**
+
+### One file, all your app-wide signals
+
+```typescript
+// src/store.ts
+import { signal, computed } from 'tina4js';
+
+// ── Auth ──────────────────────────────────────────────
+export const user      = signal<User | null>(null);
+export const authToken = signal('');
+
+// ── Cart ──────────────────────────────────────────────
+export const cart = signal<CartItem[]>([]);
+
+// ── UI state ──────────────────────────────────────────
+export const theme   = signal<'light' | 'dark'>('light');
+export const sidebar = signal(false);
+
+// ── Derived state -- computed signals belong here too ─
+export const isLoggedIn = computed(() => user.value !== null);
+export const cartCount  = computed(() => cart.value.length);
+export const cartTotal  = computed(() =>
+    cart.value.reduce((sum, i) => sum + i.price * i.qty, 0)
+);
+```
+
+That is the entire store. Every `export const` is a piece of global state. Computed signals go here too -- derived state your whole app reads.
+
+### Import and read in any component
+
+```typescript
+// src/components/Navbar.ts
+import { html } from 'tina4js';
+import { user, isLoggedIn, cartCount } from '../store';
+
+export const Navbar = () => html`
+    <nav>
+        <a href="/cart">Cart (${cartCount})</a>
+        ${() => isLoggedIn.value
+            ? html`<span>Hi, ${user}</span>`
+            : html`<a href="/login">Log in</a>`}
+    </nav>`;
+```
+
+### Import and write from a different component
+
+```typescript
+// src/components/ProductCard.ts
+import { html } from 'tina4js';
+import { cart } from '../store';
+
+export const ProductCard = (product: Product) => html`
+    <button @click=${() => {
+        cart.value = [...cart.value, { ...product, qty: 1 }];
+    }}>Add to cart</button>`;
+```
+
+`ProductCard` writes `cart.value`. `Navbar` read `cartCount` (which reads `cart`). The `Cart (N)` text node updates -- across two files, automatically.
+
+### Why it works
+
+ES modules are singletons. Every file that does `import { cart } from '../store'` gets a reference to the **exact same signal object** -- the module is evaluated once and cached. Write to it from anywhere, every reader updates. That is your entire state-management layer.
+
+### The rules
+
+| Do | Don't |
+|----|-------|
+| Keep app-wide signals in `src/store.ts` | Scatter `signal()` calls across component files |
+| `import { cart } from '../store'` everywhere | `const myCart = signal(cart.value)` -- that is a disconnected **copy**, not the shared signal |
+| Put `computed()` derived state in the store too | Recompute the same derivation in five components |
+| Keep component-local state inside the component | Promote every signal to global "just in case" |
+
+A form's draft fields, a dropdown's open/closed state -- those stay as `signal()` *inside* the component function. Only state that genuinely spans components belongs in `store.ts`.
+
+> **One signal, one source of truth.** The most common store mistake is "copying" a signal -- `signal(user.value)` in a second file. That reads the value once and creates a brand-new, disconnected signal. Always import the original.
+
+---
+
+## 8. Debug Labels
 
 Signals accept an optional second argument -- a debug label:
 
@@ -297,7 +378,7 @@ Add labels to every signal you might need to debug. The overhead is zero when th
 
 ---
 
-## 8. isSignal() -- Type Check
+## 9. isSignal() -- Type Check
 
 ```typescript
 import { isSignal } from 'tina4js';
@@ -314,7 +395,7 @@ Useful when writing utilities that accept either a signal or a plain value.
 
 ---
 
-## 9. Common Mistakes
+## 10. Common Mistakes
 
 ### Mistake 1: Reading .value in Templates
 
@@ -371,7 +452,7 @@ In JavaScript, `false && anything` evaluates to `false`. The template receives t
 
 ---
 
-## 10. Putting It Together -- A Todo List
+## 11. Putting It Together -- A Todo List
 
 Signals. Computed. Effects. Batch. Here they are, working together in a complete todo application:
 
