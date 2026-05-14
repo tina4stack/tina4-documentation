@@ -26,6 +26,8 @@ if (import.meta.env.DEV) {
 
 Vite tree-shakes the debug module away in production. Zero bytes in your final bundle.
 
+The dynamic import resolves after your app's modules have already run. That is fine -- signals created before the overlay loads, including module-level store signals, are buffered and show up the moment the overlay attaches. Import order does not matter.
+
 When the debug module loads, you see a console message:
 
 ```
