@@ -251,6 +251,7 @@ _CLI_NOISE = {
     "backend", "backends", "frontend", "frontends",
     "files", "file", "config", "configs", "site", "sites", "user", "users",
     "developer", "developers", "world", "release", "releases",
+    "internal", "bug", "bugs", "issue", "issues",  # prose: "a tina4 internal bug"
     "signals", "components", "chapter", "core",  # JS book nouns
     # Python statement: ``from tina4 import Router``
     "import",
