@@ -49,6 +49,20 @@ The URL path without query parameters:
 req.path // "/api/users"
 ```
 
+### url and queryString
+
+`req.url` is the full absolute URL. `req.queryString` is the raw query string with no leading `?`:
+
+```typescript
+// Request to https://api.example.com/api/users?page=2
+req.path        // "/api/users"
+req.url         // "https://api.example.com/api/users?page=2"
+req.queryString // "page=2"
+req.query       // { page: "2" }
+```
+
+`req.url` honours `X-Forwarded-Proto` and `X-Forwarded-Host`, so apps behind a proxy see the URL the client actually used. This overrides Node's native `IncomingMessage.url` (which is path+query only) so the shape matches Python, PHP, and Ruby.
+
 ### params
 
 Path parameters from the URL pattern (see Chapter 2):

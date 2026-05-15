@@ -108,7 +108,7 @@ function customCors(req, res, next) {
     const origin = req.headers["origin"] ?? "";
 
     // Only allow CORS for specific paths
-    if (req.url.startsWith("/api/public")) {
+    if (req.path.startsWith("/api/public")) {
         cors()(req, res, next);
         return;
     }
@@ -557,7 +557,7 @@ Skip `next()` and the chain stops cold. The route handler never runs. This is ho
 function maintenanceMode(req, res, next) {
     if (process.env.MAINTENANCE_MODE === "true") {
         // Allow health checks through
-        if (req.url === "/health") {
+        if (req.path === "/health") {
             next();
             return;
         }
