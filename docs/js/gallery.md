@@ -132,6 +132,16 @@ Live interactive demos showing tina4js in real-world scenarios. Each example is 
     </div>
   </div>
 
+  <div class="gallery-card">
+    <iframe src="/gallery/10-persistent-prefs.html" loading="lazy"></iframe>
+    <div class="gallery-card-body">
+      <h3>💾 Persistent Prefs</h3>
+      <p>Theme, language, and sidebar state survive a refresh via <code>persist()</code> — opt-in localStorage with credential-shape warnings, version migration, and cross-tab sync.</p>
+      <div class="tags"><span class="tag">signal</span><span class="tag">persist</span><span class="tag">storage</span></div>
+      <a class="open-link" href="/gallery/10-persistent-prefs.html" target="_blank">Open full demo ↗</a>
+    </div>
+  </div>
+
 </div>
 
 ## Using the Examples as Starting Points
