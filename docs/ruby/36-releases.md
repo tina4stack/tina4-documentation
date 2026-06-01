@@ -1,11 +1,58 @@
 # Chapter 35: Release Notes
 
 
-## v3.12.14 (2026-05-31)
+## v3.12.14 (2026-06-01)
 
-PHP-only fix. The ORM's `save()` emits `:named` placeholders because PDO would accept them. Four of the five PHP database adapters do not use PDO. `MySQLAdapter` (mysqli), `MSSQLAdapter` (sqlsrv), `FirebirdAdapter` (ibase/fbird), and `PostgresAdapter` (pgsql) all bind positionally. Every INSERT/UPDATE through `save()` against those four engines failed silently. Reads worked because read paths typically use `?` or no params.
+Two independent fixes ship together as 3.12.14. **Python** — the `tina4_python.test` class-based xUnit testing surface that the chapter 18 documentation has always promised but never actually existed. Reports came in of developers copy-pasting `from tina4_python.test import Test, assert_equal, assert_true` straight out of the book and getting `ModuleNotFoundError`. The fix was to build the module to match the documentation, not the other way around. **PHP** — `:named` placeholder translation for the four non-PDO adapters where `ORM::save()` was silently failing.
+
+### Python — `tina4_python.test` xUnit testing surface
+
+The testing chapter taught a `Test` base class with positional assertions:
+
+```python
+from tina4_python.test import Test, assert_equal, assert_true
+
+class BasicTest(Test):
+    def test_addition(self):
+        assert_equal(2 + 2, 4, "Basic addition should work")
+
+    def test_string_contains(self):
+        greeting = "Hello, World!"
+        assert_true("World" in greeting, "Greeting should contain 'World'")
+```
+
+The module did not exist. Every developer who followed the chapter hit an immediate import error. The other surface, `tina4_python.Testing` with the inline `@tests` decorator, has always existed — but the two are for different purposes and the docs only documented one of them.
+
+The fix ships the missing module — `tina4_python/test/__init__.py` — with the `Test` base class (inherits `unittest.TestCase`, so pytest discovers any subclass regardless of class-name convention) and 13 positional assertions. The signatures are uniform: `(actual, expected, message)`. The 2-arg legacy `(value, message)` form keeps working — a type-based dispatch detects which shape the caller used. `assert_raises` accepts three forms: docs form (`callable, exception, message`), context-manager form (`with assert_raises(X):`), and unittest order (`exception, callable`). Lifecycle hooks come in both flavours — snake_case `set_up`/`tear_down` (the Tina4 idiom) and camelCase `setUp`/`tearDown` (for users coming from unittest) — without double-calling when a subclass uses either one.
+
+```python
+# 13 assertions, all uniform (actual, expected, message)
+assert_equal(actual, expected, message="")
+assert_not_equal(actual, expected, message="")
+assert_true(actual, expected=True, message="")
+assert_false(actual, expected=False, message="")
+assert_none(actual, expected=None, message="")
+assert_not_none(actual, expected="not None", message="")
+assert_in(item, container, message="")
+assert_not_in(item, container, message="")
+assert_is_instance(value, expected_type, message="")
+assert_greater(actual, expected, message="")
+assert_less(actual, expected, message="")
+assert_almost_equal(actual, expected, places=7, message="")
+assert_raises(callable, exception_class, message="")
+```
+
+51 new tests in `tests/test_test_module.py` pin the contract: BasicTest from the chapter runs verbatim, every assertion fails when it should and passes when it should, both 2-arg and 3-arg shapes work, snake_case and camelCase lifecycle hooks fire once each (never both). Full Python suite: 2,537 passing.
+
+`tina4 test` continues to run pytest (`subprocess.run([sys.executable, "-m", "pytest", "tests/"] + args)`).
+
+### Cross-framework parity check (testing)
+
+PHP / Ruby / Node testing chapters already teach native conventions correctly — PHPUnit, RSpec, and `node:test` respectively. No fake API to fix. The Python-specific gap was that Tina4 had two testing surfaces (`tina4_python.Testing` for inline `@tests` decorator, `tina4_python.test` for class-based suites) and only one of the two existed. The other three frameworks defer to a single native runner each, so the same trap doesn't apply.
 
 ### PHP — :named placeholder translation across non-PDO adapters
+
+The ORM's `save()` emits `:named` placeholders because PDO would accept them. Four of the five PHP database adapters do not use PDO. `MySQLAdapter` (mysqli), `MSSQLAdapter` (sqlsrv), `FirebirdAdapter` (ibase/fbird), and `PostgresAdapter` (pgsql) all bind positionally. Every INSERT/UPDATE through `save()` against those four engines failed silently. Reads worked because read paths typically use `?` or no params.
 
 A single helper, `SqlTranslation::namedToPositional($sql, $params)`, translates `:name` to `?` and reorders `$params` to match the SQL order. Wired into the four affected adapters at the top of their prepare/execute paths. The helper skips string literals and SQL comments, so a literal `:colon` inside a value stays as a value. Duplicate names bind once per occurrence, so `WHERE id = :id AND parent_id = :id` works as expected.
 
@@ -13,13 +60,19 @@ A single helper, `SqlTranslation::namedToPositional($sql, $params)`, translates 
 
 15 unit tests pin the helper in `tests/SqlTranslationNamedToPositionalTest.php`: order preservation, duplicate names, quoted strings, line and block comments, unknown placeholders, null values, and the `0`-as-value case. Full PHP suite: 2,290 passing.
 
-### Cross-framework parity check
+### Cross-framework parity check (`:named` placeholders)
 
-Python (`mysql-connector-python` uses `%s`), Ruby (`mysql2` uses `?`), and Node (`mysql2` uses `?`) build their INSERT/UPDATE SQL with positional placeholders from the ORM down. No `:named` ever emitted. Audited the MySQL adapter and `save()` path in each before shipping; confirmed clean. PHP-only release.
+Python (`mysql-connector-python` uses `%s`), Ruby (`mysql2` uses `?`), and Node (`mysql2` uses `?`) build their INSERT/UPDATE SQL with positional placeholders from the ORM down. No `:named` ever emitted. Audited the MySQL adapter and `save()` path in each before shipping; confirmed clean. PHP-only fix.
 
 ### Upgrade
 
-Drop in. No `.env` changes, no API changes. `:named` and `?` both work, and the framework picks the right form for whichever driver is underneath. Existing ORM `save()` calls start succeeding on MariaDB/MySQL, PostgreSQL, MSSQL, and Firebird.
+Drop in for both Python and PHP. No `.env` changes, no API changes.
+
+**Python users** who followed chapter 18 and hit `ModuleNotFoundError` — bump to `3.12.14`, the `from tina4_python.test import Test, assert_equal, ...` import now resolves. Existing tests written against `tina4_python.Testing` (the inline `@tests` decorator) continue to work — that surface was not touched.
+
+**PHP users** — `:named` and `?` both work, and the framework picks the right form for whichever driver is underneath. Existing ORM `save()` calls start succeeding on MariaDB/MySQL, PostgreSQL, MSSQL, and Firebird.
+
+**Ruby and Node users** — no framework change shipped in 3.12.14. Stay on `3.12.13` or bump to `3.12.14` for version alignment. Both are functionally identical.
 
 ## v3.12.13 (2026-05-29)
 
