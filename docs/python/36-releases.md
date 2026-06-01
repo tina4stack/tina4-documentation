@@ -1,5 +1,114 @@
 # Chapter 35: Release Notes
 
+## v3.13.0 (2026-06-01)
+
+The docs-vs-code parity release. A cross-framework audit of 381 markdown files surfaced 146 hallucinations, signature drifts, and stale references across Python, PHP, Ruby, Node, and tina4-js. 3.13.0 closes the chapter-18 disaster pattern — where documentation taught a class-based API that didn't exist — by shipping the missing pieces, renaming the misnamed pieces, and rewriting the aspirational chapters.
+
+### The headline fire: `Test` class with HTTP helpers
+
+Every framework's chapter 18 has long shown integration tests like:
+
+```python
+class UserApiTest(Test):           # tina4_python.test.Test
+    def test_health(self):
+        resp = self.get("/health")
+        assert_equal(resp.status, 200)
+```
+
+Until 3.13.0, only `Test` (the bare assertion base) existed — calling `self.get(...)` crashed with `AttributeError`. The HTTP test client lived in a separate `TestClient` class that the docs never mentioned.
+
+This release mixes `TestClient.get / post / put / patch / delete` into the `Test` base across every framework:
+
+- **Python** — `tina4_python.test.Test` (extends `unittest.TestCase`, pytest auto-discovers)
+- **PHP** — `Tina4\Test` (extends `PHPUnit\Framework\TestCase`)
+- **Ruby** — `Tina4::Test` (zero-dep; built-in `run_all` runner)
+- **Node.js** — `Tina4Test` (zero-dep; built-in `Tina4Test.runAll()` runner)
+
+Plus positional assertions on every framework — `assertEqual(actual, expected, message)`, `assertNotEqual`, `assertTrue`, `assertFalse`, `assertNull`/`assertNullValue`, `assertNotNull`/`assertNotNullValue`, `assertRaises` — matching the documented `(actual, expected, message)` shape.
+
+### `Auth.valid_token` now returns the payload, not a bare bool — **BREAKING**
+
+The most common silent-fail pattern caught by the audit. Every framework's docs claimed `valid_token` returned the decoded JWT payload; every framework's source returned `bool` and forced a second `get_payload` call.
+
+| Framework | Before | After |
+|---|---|---|
+| Python | `Auth.valid_token(token) → bool` | `Auth.valid_token(token) → dict \| None` |
+| PHP | `Auth::validToken(token) → bool` | `Auth::validToken(token) → array \| null` |
+| Ruby | `Auth.valid_token(token) → Boolean` | `Auth.valid_token(token) → Hash \| nil` |
+| Node | `validToken(token) → boolean` | `validToken(token) → Record<string, unknown> \| null` |
+
+Matches PyJWT / firebase-jwt-ruby / firebase/php-jwt / jsonwebtoken conventions. Truthy/falsy contract preserved — existing `if (validToken(t))` callers keep working because a non-null object is truthy and null is falsy.
+
+### Python-specific groups (mirrored to PHP/Ruby/Node in follow-up patches)
+
+The Python framework is the reference per `feedback_python_master`. Six groups landed in tina4-python:
+
+- **Group A — ergonomic additions**: `Database.get_connection()`, `db.fetch_all()`, `db.pool`, `DatabaseResult.columns`, `Job.error`, `Queue.produce(delay_until=datetime)`, module-level `migrate(db)`/`rollback(db)`/`status(db)`, module-level `i18n.t()`, dict-style `session[key]`, `WebSocketConnection.connection_count`. All zero-risk additions — no signatures changed.
+- **Group B — signature expansions**: `Api(bearer_token=, username=, password=, headers=, verify_ssl=)` kwargs, `Model.find(pk)` int overload (Active Record convention), `@description(summary, detail=, params=, query=)`, `@tags(str | list)`, `@example_response(status_code, data)`, `response.render(template, data, status_code)`, `response.cookie(name, value, options_dict)`, `response(data, headers={})`, `@get(path, description=, middleware=["ResponseCache:300"])` with string-form middleware parser.
+- **Group C — mixins + decorators**: the Test HTTP mixin (covered above), `Frond.add_filter / add_global / add_test` callable as classmethod OR instance method via a `_ClassOrInstanceMethod` descriptor, `@GraphQL.resolve("Type", "field")` decorator with class-level registry — chapter 22's pattern now works as documented.
+- **Group D — return-type changes (BREAKING)**: `Container.reset()` now clears singleton cache only (factories survive); new `Container.reset_all()` for the old wipe-everything behaviour. `queue.dead_letters()` returns `list[Job]` with `.error` populated, not `list[dict]`. `Model.where(..., with_count=True)` returns `(list, int)` tuple for pagination UIs.
+- **Group E — renames (BREAKING)**: `ai.install_all()` → `ai.install_context()`; new `ai.detect_ai()`, `ai.detect_ai_names()`, `ai.status_report()`. `queue.consume(id=)` → `queue.consume(job_id=)`. `Api.send_request()` → `Api.send()`. `I18n(locale=, path=)` preferred over `I18n(locale_dir=, default_locale=)` (legacy kept). `TINA4_TOKEN_EXPIRES_IN` preferred over `TINA4_TOKEN_LIMIT` for JWT expiry (both honoured; new wins; constructor arg overrides both).
+- **Group F — top-level re-exports + scaffolder**: `from tina4_python import Api, WSDL, wsdl_operation, GraphQL, AutoCrud, Messenger, on, emit, once, off, tests` now resolve. `Model.select()` with no args defaults to `SELECT * FROM <table>` so the CRUD-list scaffolder template's emitted code actually runs.
+
+### PHP-specific: `Tina4\Debug` shim
+
+Chapter 15 of the PHP logging docs taught `Tina4\Debug::message($msg, TINA4_LOG_INFO, [...])`. Neither the class nor the constants existed. Real logger is `Tina4\Log`.
+
+This release ships a `Tina4\Debug` compatibility shim that forwards to `Tina4\Log`, plus defines the `TINA4_LOG_*` level constants — so the chapter's code samples run as-written. For new code, prefer `\Tina4\Log::info()` etc.
+
+### Documentation sweep
+
+Aside from the source-side changes, the audit caught hundreds of stale references in docs site + book + AI skills + CLAUDE.md files. All fixed in this release:
+
+- ~80 occurrences of `from tina4 import` → `from tina4_python import` (the Python package is `tina4_python`, not `tina4`)
+- `from tina4_python.router` → `from tina4_python.core.router`
+- `TINA4_SESSION_HANDLER` → `TINA4_SESSION_BACKEND` (matches the env var the framework actually reads)
+- `DATABASE_NAME=` → `TINA4_DATABASE_URL=` (legacy un-prefixed names get rejected by the v3.12 boot guard)
+- `@cached(True, max_age=N)` → `@cached(max_age=N)` (bogus first arg)
+- `Template.render()` → `response.render()` (Template class doesn't exist; renamed to Frond)
+- `Debug.error()` → `Log.error()` in Python (Debug class doesn't exist)
+- `Producer` / `Consumer` (removed in v3.2.0) → `Queue.push / consume`
+- `Email` → `Messenger`, `event.fire / @listener` → `emit / @on`, `gql` singleton → `GraphQL()` + `@GraphQL.resolve`
+- **Security fix**: `Auth.check_password(hash, password)` → `(password, hash)` in skill ref — the bcrypt comparison was returning False every time due to reversed args (silent-failure auth)
+- `request.files['content']` is **raw bytes** — drop `base64.b64decode()` from upload examples
+- Deployment chapter env vars all `TINA4_`-prefixed (un-prefixed names brick boot under v3.12 guard)
+
+### Aspirational chapters rewritten
+
+Two Python chapters were built on APIs that didn't exist:
+
+- **Chapter 22 (GraphQL)**: rewritten around the new `@GraphQL.resolve("Type", "field")` decorator (the FastAPI/Strawberry pattern). The previous `gql.schema.add_query("name", {dict})` form still works but is no longer the primary documented path.
+- **Chapter 25 (WSDL)**: rewritten around the real subclass pattern (`class Calculator(WSDL): @wsdl_operation({"Result": int}) def Add(self, ...): ...; Calculator(request).handle()`). The previous `WSDL(service_name=, namespace=, endpoint=)` constructor + `handle_wsdl` / `handle_request` API was entirely fictional.
+
+### tina4-js doc drift caught
+
+The cross-framework audit's synthesis pass dropped tina4-js findings; the raw agent transcripts had 23 real findings:
+
+- Every import in CLAUDE.md and `docs/js/09-graphql.md` used `"tina4-js"` (with hyphen). The npm package is named `tina4js`. Fixed.
+- `pwa({...})` was treated as callable; real API is `pwa.register({...})`. `PWAConfig.icon` is a single string, not an `icons: [...]` array.
+- `static props = { label: { type: String, default: "..." } }` — the `{ type, default }` wrapper is fictional. Real shape is `static props = { label: String }`.
+- `router.navigate('/users/42')` — `navigate` is a top-level export, not a method on `router`.
+- Chapter 14's `<slot>` inside a `static shadow = false` component — slots are a Shadow DOM feature. Chapter 14 contradicted chapter 4. Switched to `shadow = true`.
+
+### Test counts
+
+Net new across the family:
+
+| Framework | Before | After | New |
+|---|---|---|---|
+| Python | 2,537 | 2,654 | +117 |
+| PHP | 2,742 | 2,749 | +20 |
+| Ruby | 2,800 | 2,816 | +16 (1 pre-existing unrelated rack_app failure) |
+| Node.js | 3,366 | 3,384 | +18 |
+| **Total** | **11,445** | **11,603** | **+171** |
+
+### Upgrade
+
+`Auth.validToken` is the breakage to know about — your `if Auth::validToken($t)` style code keeps working unchanged because non-null arrays are truthy and null is falsy. If you do `=== true` / `=== false` strict comparisons, switch to `!== null` / `=== null`.
+
+Python: `ai.install_all()` → `ai.install_context()`, `queue.consume(id=)` → `consume(job_id=)`, `Api.send_request()` → `Api.send()`, `Container.reset()` semantic change (use `reset_all()` for old behaviour).
+
+Everything else is additive — new properties, new kwargs, new convenience methods that match what the docs have promised for years.
 
 ## v3.12.14 (2026-06-01)
 
