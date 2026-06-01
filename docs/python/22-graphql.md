@@ -103,7 +103,7 @@ from tina4_python.graphql import GraphQL
 # Resolve the "products" query
 @GraphQL.resolve("Query", "products")
 async def resolve_products(root, args):
-    products, count = Product.where("1=1")
+    products = Product.where("1=1")
     return [p.to_dict() for p in products]
 
 
@@ -297,7 +297,7 @@ async def resolve_delete_product(root, args):
 
 @GraphQL.resolve("Query", "productsByCategory")
 async def resolve_products_by_category(root, args):
-    products, count = Product.where("category = ?", [args["category"]])
+    products = Product.where("category = ?", [args["category"]])
     return [p.to_dict() for p in products]
 ```
 

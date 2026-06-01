@@ -10,36 +10,31 @@ The `WSDL` class exposes your Python functions as SOAP 1.1 operations. It auto-g
 
 ## 2. Your First SOAP Service
 
+Tina4's WSDL service is a class you subclass. Methods marked with `@wsdl_operation` become SOAP operations. Each operation declares its response schema as a dict mapping field names to Python types.
+
 ```python
 from tina4_python.wsdl import WSDL, wsdl_operation
-
-wsdl = WSDL(
-    service_name="CalculatorService",
-    namespace="http://example.com/calculator",
-    endpoint="/api/soap/calculator"
-)
-
-@wsdl_operation(wsdl, name="Add", description="Add two integers")
-def add(a: int, b: int) -> int:
-    return a + b
-
-@wsdl_operation(wsdl, name="Multiply", description="Multiply two integers")
-def multiply(a: int, b: int) -> int:
-    return a * b
-```
-
-Register the service with the router:
-
-```python
 from tina4_python.core.router import get, post
 
-@get("/api/soap/calculator")
-async def calculator_wsdl(request, response):
-    return wsdl.handle_wsdl(request, response)
 
+class Calculator(WSDL):
+    @wsdl_operation({"Result": int})
+    def Add(self, a: int, b: int):
+        return {"Result": a + b}
+
+    @wsdl_operation({"Result": int})
+    def Multiply(self, a: int, b: int):
+        return {"Result": a * b}
+```
+
+Mount it on a route. The same handler answers both the WSDL definition and SOAP invocations — `Calculator(request).handle()` inspects the request and returns the right thing.
+
+```python
+@get("/api/soap/calculator")
 @post("/api/soap/calculator")
-async def calculator_soap(request, response):
-    return await wsdl.handle_request(request, response)
+async def calculator(request, response):
+    service = Calculator(request)
+    return response(service.handle())
 ```
 
 Visit `http://localhost:7146/api/soap/calculator?wsdl` to see the generated WSDL document. POST a SOAP envelope to the same URL to invoke an operation.
@@ -48,22 +43,17 @@ Visit `http://localhost:7146/api/soap/calculator?wsdl` to see the generated WSDL
 
 ## 3. The @wsdl_operation Decorator
 
-`@wsdl_operation` registers a function as a SOAP operation on the given `WSDL` instance.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `wsdl` | `WSDL` | The WSDL instance to register on |
-| `name` | `str` | Operation name as it appears in the WSDL |
-| `description` | `str` | Optional human-readable description |
-
-Type annotations on the function parameters become the SOAP message schema. Supported types: `str`, `int`, `float`, `bool`.
+`@wsdl_operation` marks a method on a `WSDL` subclass as a SOAP operation. The single argument is the response schema — a dict mapping each output field name to its Python type.
 
 ```python
-@wsdl_operation(wsdl, name="GetProductPrice")
-def get_product_price(product_id: str, currency: str) -> float:
-    prices = {"USD": 79.99, "EUR": 73.99, "GBP": 62.99}
-    return prices.get(currency, prices["USD"])
+class PriceService(WSDL):
+    @wsdl_operation({"Price": float, "Currency": str})
+    def GetProductPrice(self, product_id: str, currency: str):
+        prices = {"USD": 79.99, "EUR": 73.99, "GBP": 62.99}
+        return {"Price": prices.get(currency, prices["USD"]), "Currency": currency}
 ```
+
+Method-parameter type annotations become the request-message schema. The operation name is the method name. Supported types: `str`, `int`, `float`, `bool`, plus `List[T]` and `Optional[T]` for collections and nullable fields.
 
 ---
 
@@ -150,30 +140,26 @@ Response:
 
 ## 6. Lifecycle Hooks: on_request and on_result
 
-Inspect or modify the SOAP request before the operation runs, and modify the response before it is serialised.
+Override `on_request` and `on_result` in your subclass to inspect or modify the SOAP envelope before invocation and the result before serialisation.
 
 ```python
 from tina4_python.wsdl import WSDL, wsdl_operation
 from tina4_python.debug import Log
 
-wsdl = WSDL(
-    service_name="OrderService",
-    namespace="http://example.com/orders",
-    endpoint="/api/soap/orders"
-)
 
-def on_request(operation_name, params):
-    Log.info("SOAP request received", operation=operation_name, params=params)
-    # Return modified params or None to pass through unchanged
-    return params
+class OrderService(WSDL):
+    def on_request(self, request):
+        """Runs before each operation. Validate auth, audit, etc."""
+        Log.info("SOAP request received", path=getattr(request, "path", ""))
 
-def on_result(operation_name, result):
-    Log.info("SOAP operation completed", operation=operation_name, result=result)
-    # Return modified result or None to pass through unchanged
-    return result
+    def on_result(self, result):
+        """Transform or strip fields before serialisation."""
+        Log.info("SOAP operation completed")
+        return result
 
-wsdl.on_request = on_request
-wsdl.on_result = on_result
+    @wsdl_operation({"OrderId": str})
+    def CreateOrder(self, customer_id: str, product_id: str, quantity: int):
+        return {"OrderId": f"ORD-{customer_id}-{product_id}"}
 ```
 
 Use `on_request` for:
@@ -188,58 +174,56 @@ Use `on_result` for:
 
 ---
 
-## 7. Complex Types with Dataclasses
+## 7. Complex Types and Lists
 
-For operations that accept or return structured data, use Python dataclasses:
+When an operation needs to return structured records or collections, describe the shape in the `@wsdl_operation` response schema. Use `List[T]` for collections and `Optional[T]` for nullable fields.
 
 ```python
-from dataclasses import dataclass
+from typing import List, Optional
 from tina4_python.wsdl import WSDL, wsdl_operation
 
-wsdl = WSDL(
-    service_name="ProductService",
-    namespace="http://example.com/products",
-    endpoint="/api/soap/products"
-)
 
-@dataclass
-class Product:
-    id: str
-    name: str
-    price: float
-    in_stock: bool
+class ProductService(WSDL):
+    @wsdl_operation({
+        "Id": str,
+        "Name": str,
+        "Price": float,
+        "InStock": bool,
+        "Error": Optional[str],
+    })
+    def GetProduct(self, product_id: str):
+        catalog = {
+            "KB-001": {"Id": "KB-001", "Name": "Wireless Keyboard", "Price": 79.99, "InStock": True, "Error": None},
+            "HUB-002": {"Id": "HUB-002", "Name": "USB-C Hub", "Price": 49.99, "InStock": False, "Error": None},
+        }
+        return catalog.get(product_id, {"Id": "", "Name": "", "Price": 0.0, "InStock": False, "Error": "not found"})
 
-@wsdl_operation(wsdl, name="GetProduct")
-def get_product(product_id: str) -> Product:
-    catalog = {
-        "KB-001": Product(id="KB-001", name="Wireless Keyboard", price=79.99, in_stock=True),
-        "HUB-002": Product(id="HUB-002", name="USB-C Hub", price=49.99, in_stock=False)
-    }
-    result = catalog.get(product_id)
-    if result is None:
-        raise ValueError(f"Product {product_id} not found")
-    return result
+    @wsdl_operation({"Total": int, "Average": float, "Error": Optional[str]})
+    def SumList(self, Numbers: List[int]):
+        if not Numbers:
+            return {"Total": 0, "Average": 0.0, "Error": "Empty list"}
+        return {"Total": sum(Numbers), "Average": sum(Numbers) / len(Numbers), "Error": None}
 ```
 
-Tina4 introspects the dataclass fields and generates the corresponding WSDL complex types automatically.
+The dict you return must match the declared schema keys. Tina4 generates the WSDL `<complexType>` definitions from the schema dict and the method's parameter annotations.
 
 ---
 
 ## 8. Error Handling
 
-Raise a Python exception to return a SOAP fault:
+Raise a Python exception inside an operation to return a SOAP fault:
 
 ```python
-@wsdl_operation(wsdl, name="CreateOrder")
-def create_order(customer_id: str, product_id: str, quantity: int) -> str:
-    if quantity <= 0:
-        raise ValueError("Quantity must be greater than zero")
+class OrderService(WSDL):
+    @wsdl_operation({"OrderId": str})
+    def CreateOrder(self, customer_id: str, product_id: str, quantity: int):
+        if quantity <= 0:
+            raise ValueError("Quantity must be greater than zero")
 
-    if not check_stock(product_id, quantity):
-        raise RuntimeError(f"Insufficient stock for {product_id}")
+        if not check_stock(product_id, quantity):
+            raise RuntimeError(f"Insufficient stock for {product_id}")
 
-    order_id = f"ORD-{customer_id}-{product_id}"
-    return order_id
+        return {"OrderId": f"ORD-{customer_id}-{product_id}"}
 ```
 
 Any raised exception becomes a SOAP fault response:
@@ -312,51 +296,41 @@ RATES = {
 }
 SUPPORTED = {"USD", "EUR", "GBP", "JPY"}
 
-wsdl = WSDL(
-    service_name="CurrencyService",
-    namespace="http://example.com/currency",
-    endpoint="/api/soap/currency"
-)
 
-def on_request(operation_name, params):
-    Log.info("SOAP currency request", operation=operation_name, params=str(params))
-    return params
+class CurrencyService(WSDL):
+    def on_request(self, request):
+        Log.info("SOAP currency request received")
 
-wsdl.on_request = on_request
+    def _lookup_rate(self, from_currency: str, to_currency: str) -> float:
+        from_currency = from_currency.upper()
+        to_currency = to_currency.upper()
 
+        if from_currency not in SUPPORTED:
+            raise ValueError(f"Unknown currency: {from_currency}")
+        if to_currency not in SUPPORTED:
+            raise ValueError(f"Unknown currency: {to_currency}")
+        if from_currency == to_currency:
+            return 1.0
 
-@wsdl_operation(wsdl, name="GetRate", description="Get exchange rate between two currencies")
-def get_rate(from_currency: str, to_currency: str) -> float:
-    from_currency = from_currency.upper()
-    to_currency = to_currency.upper()
+        rate = RATES.get((from_currency, to_currency))
+        if rate is None:
+            raise ValueError(f"No rate available for {from_currency} -> {to_currency}")
+        return rate
 
-    if from_currency not in SUPPORTED:
-        raise ValueError(f"Unknown currency: {from_currency}")
-    if to_currency not in SUPPORTED:
-        raise ValueError(f"Unknown currency: {to_currency}")
-    if from_currency == to_currency:
-        return 1.0
+    @wsdl_operation({"Rate": float})
+    def GetRate(self, from_currency: str, to_currency: str):
+        return {"Rate": self._lookup_rate(from_currency, to_currency)}
 
-    rate = RATES.get((from_currency, to_currency))
-    if rate is None:
-        raise ValueError(f"No rate available for {from_currency} -> {to_currency}")
-    return rate
-
-
-@wsdl_operation(wsdl, name="Convert", description="Convert an amount between currencies")
-def convert(amount: float, from_currency: str, to_currency: str) -> float:
-    rate = get_rate(from_currency, to_currency)
-    return round(amount * rate, 2)
+    @wsdl_operation({"Amount": float, "Rate": float})
+    def Convert(self, amount: float, from_currency: str, to_currency: str):
+        rate = self._lookup_rate(from_currency, to_currency)
+        return {"Amount": round(amount * rate, 2), "Rate": rate}
 
 
 @get("/api/soap/currency")
-async def currency_wsdl(request, response):
-    return wsdl.handle_wsdl(request, response)
-
-
 @post("/api/soap/currency")
-async def currency_soap(request, response):
-    return await wsdl.handle_request(request, response)
+async def currency(request, response):
+    return response(CurrencyService(request).handle())
 ```
 
 ---
