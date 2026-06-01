@@ -96,7 +96,7 @@ assert_equal("hello", "hello", "Strings match")    # PASS
 assert_equal(4, 5, "Not equal")                     # FAIL
 ```
 
-### assert_true(value, message)
+### assert_true(actual, expected, message)
 
 Checks that a value is truthy.
 
@@ -108,7 +108,7 @@ assert_true(False, "This fails")                   # FAIL
 assert_true(0, "Zero is falsy")                    # FAIL
 ```
 
-### assert_false(value, message)
+### assert_false(actual, expected, message)
 
 Checks that a value is falsy.
 
@@ -146,7 +146,7 @@ assert_not_equal("hello", "world", "Strings differ")  # PASS
 assert_not_equal(4, 4, "Same values")                  # FAIL
 ```
 
-### assert_none(value, message)
+### assert_none(actual, expected, message)
 
 Checks that a value is None.
 
@@ -155,7 +155,7 @@ assert_none(None, "Should be None")     # PASS
 assert_none("hello", "Not None")        # FAIL
 ```
 
-### assert_not_none(value, message)
+### assert_not_none(actual, expected, message)
 
 Checks that a value is not None.
 
