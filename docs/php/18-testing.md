@@ -336,7 +336,7 @@ class RouteTest extends Test
     {
         $response = $this->get("/health");
 
-        $this->assertEqual($response->statusCode, 200, "Health check should return 200");
+        $this->assertEqual($response->status, 200, "Health check should return 200");
 
         $body = json_decode($response->body, true);
         $this->assertEqual($body["status"], "ok", "Status should be 'ok'");
@@ -347,7 +347,7 @@ class RouteTest extends Test
     {
         $response = $this->get("/api/products");
 
-        $this->assertEqual($response->statusCode, 200, "Should return 200");
+        $this->assertEqual($response->status, 200, "Should return 200");
 
         $body = json_decode($response->body, true);
         $this->assertTrue(isset($body["data"]) || isset($body["products"]), "Should contain product data");
@@ -361,7 +361,7 @@ class RouteTest extends Test
             "price" => 42.00
         ]);
 
-        $this->assertEqual($response->statusCode, 201, "Should return 201 Created");
+        $this->assertEqual($response->status, 201, "Should return 201 Created");
 
         $body = json_decode($response->body, true);
         $this->assertEqual($body["name"], "Route Test Product", "Name should match");
@@ -372,14 +372,14 @@ class RouteTest extends Test
     {
         $response = $this->get("/api/products/99999");
 
-        $this->assertEqual($response->statusCode, 404, "Should return 404 for missing product");
+        $this->assertEqual($response->status, 404, "Should return 404 for missing product");
     }
 
     public function testCreateProductValidation()
     {
         $response = $this->post("/api/products", []);
 
-        $this->assertEqual($response->statusCode, 400, "Should return 400 for empty body");
+        $this->assertEqual($response->status, 400, "Should return 400 for empty body");
     }
 
     public function testDeleteProduct()
@@ -437,10 +437,12 @@ $response = $this->get("/api/profile", [
 The response object has these properties:
 
 ```php
-$response->statusCode;   // HTTP status code (200, 201, 404, etc.)
-$response->body;         // Response body as a string
-$response->headers;      // Response headers as an associative array
-$response->contentType;  // Content-Type header value
+$response->status;        // HTTP status code (200, 201, 404, etc.)
+$response->body;          // Response body as a string
+$response->headers;       // Response headers as an associative array (lowercase keys)
+$response->contentType;   // Content-Type header value
+$response->json();        // Parse body as associative array (or null if not JSON)
+$response->text();        // Body as a string (alias for ->body)
 ```
 
 ---
@@ -464,7 +466,7 @@ class AuthTest extends Test
             "password" => "correct-password"
         ]);
 
-        $this->assertEqual($response->statusCode, 200, "Login should succeed");
+        $this->assertEqual($response->status, 200, "Login should succeed");
 
         $body = json_decode($response->body, true);
         $this->assertNotNull($body["token"], "Should return a JWT token");
@@ -480,7 +482,7 @@ class AuthTest extends Test
             "password" => "wrong-password"
         ]);
 
-        $this->assertEqual($response->statusCode, 401, "Should reject invalid password");
+        $this->assertEqual($response->status, 401, "Should reject invalid password");
     }
 
     public function testLoginWithMissingFields()
@@ -490,7 +492,7 @@ class AuthTest extends Test
         ]);
 
         $this->assertTrue(
-            $response->statusCode === 400 || $response->statusCode === 401,
+            $response->status === 400 || $response->status === 401,
             "Should reject missing password"
         );
     }
@@ -499,7 +501,7 @@ class AuthTest extends Test
     {
         $response = $this->get("/api/profile");
 
-        $this->assertEqual($response->statusCode, 401, "Should reject unauthenticated request");
+        $this->assertEqual($response->status, 401, "Should reject unauthenticated request");
     }
 
     public function testProtectedRouteWithValidToken()
@@ -517,7 +519,7 @@ class AuthTest extends Test
             "Authorization" => "Bearer " . $token
         ]);
 
-        $this->assertEqual($response->statusCode, 200, "Should allow authenticated request");
+        $this->assertEqual($response->status, 200, "Should allow authenticated request");
 
         $body = json_decode($response->body, true);
         $this->assertEqual($body["user"]["email"], "admin@example.com", "Should return user data");
@@ -529,7 +531,7 @@ class AuthTest extends Test
             "Authorization" => "Bearer invalid.token.here"
         ]);
 
-        $this->assertEqual($response->statusCode, 401, "Should reject invalid token");
+        $this->assertEqual($response->status, 401, "Should reject invalid token");
     }
 }
 ```
@@ -604,22 +606,24 @@ class UserTest extends Test
 tina4 test
 ```
 
+`tina4 test` runs the full PHPUnit suite under `tests/`. For more targeted runs, invoke PHPUnit directly — the framework's `tina4 test` is a convenience wrapper that shells out to `vendor/bin/phpunit tests --verbose --color`.
+
 ### Run a Specific Test File
 
 ```bash
-tina4 test --file tests/ProductTest.php
+vendor/bin/phpunit tests/ProductTest.php
 ```
 
 ### Run a Specific Test Method
 
 ```bash
-tina4 test --file tests/ProductTest.php --method testCreateProduct
+vendor/bin/phpunit --filter testCreateProduct tests/ProductTest.php
 ```
 
 ### Verbose Output
 
 ```bash
-tina4 test --verbose
+vendor/bin/phpunit tests --verbose --color
 ```
 
 ```
@@ -761,7 +765,7 @@ Each test method verifies one behavior. When it fails, you know what broke.
 public function testCreateProductReturns201()
 {
     $response = $this->post("/api/products", ["name" => "Widget", "price" => 9.99]);
-    $this->assertEqual($response->statusCode, 201, "Should return 201");
+    $this->assertEqual($response->status, 201, "Should return 201");
 }
 
 public function testCreateProductReturnsCreatedProduct()
@@ -983,7 +987,7 @@ class AuthFlowTest extends Test
             "password" => $this->testPassword
         ]);
 
-        $this->assertEqual($response->statusCode, 201, "Registration should return 201");
+        $this->assertEqual($response->status, 201, "Registration should return 201");
 
         $body = json_decode($response->body, true);
         $this->assertEqual($body["name"], "Auth Test User", "Should return user name");
@@ -1008,7 +1012,7 @@ class AuthFlowTest extends Test
             "password" => $this->testPassword
         ]);
 
-        $this->assertEqual($response->statusCode, 409, "Duplicate email should return 409");
+        $this->assertEqual($response->status, 409, "Duplicate email should return 409");
     }
 
     public function testLoginSuccess()
@@ -1028,7 +1032,7 @@ class AuthFlowTest extends Test
             "password" => $this->testPassword
         ]);
 
-        $this->assertEqual($response->statusCode, 200, "Login should return 200");
+        $this->assertEqual($response->status, 200, "Login should return 200");
 
         $body = json_decode($response->body, true);
         $this->assertNotNull($body["token"], "Should return a token");
@@ -1041,7 +1045,7 @@ class AuthFlowTest extends Test
             "password" => "wrong"
         ]);
 
-        $this->assertEqual($response->statusCode, 401, "Invalid login should return 401");
+        $this->assertEqual($response->status, 401, "Invalid login should return 401");
     }
 
     public function testAccessProtectedRoute()
@@ -1067,7 +1071,7 @@ class AuthFlowTest extends Test
             "Authorization" => "Bearer " . $token
         ]);
 
-        $this->assertEqual($response->statusCode, 200, "Should allow access with valid token");
+        $this->assertEqual($response->status, 200, "Should allow access with valid token");
 
         $body = json_decode($response->body, true);
         $this->assertEqual($body["user"]["email"], $email, "Should return correct user");
@@ -1079,7 +1083,7 @@ class AuthFlowTest extends Test
             "Authorization" => "Bearer expired.invalid.token"
         ]);
 
-        $this->assertEqual($response->statusCode, 401, "Should reject invalid token");
+        $this->assertEqual($response->status, 401, "Should reject invalid token");
     }
 }
 ```
@@ -1130,7 +1134,7 @@ $user->email = "test-" . uniqid() . "@example.com";
 
 **Cause:** You passed the arguments in the wrong order. `assertEqual($actual, $expected)` -- actual comes first, expected comes second.
 
-**Fix:** Follow the convention: `$this->assertEqual($response->statusCode, 200, "message")`. The first argument is what you got, the second is what you expected.
+**Fix:** Follow the convention: `$this->assertEqual($response->status, 200, "message")`. The first argument is what you got, the second is what you expected.
 
 ### 6. Cannot Test Routes That Require Authentication Setup
 

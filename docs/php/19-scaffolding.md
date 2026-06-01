@@ -71,43 +71,42 @@ The **routes** file wires up five endpoints with Swagger docs:
 ```php
 <?php
 
-use Tina4\Get;
-use Tina4\Post;
-use Tina4\Put;
-use Tina4\Delete;
+use Tina4\Router;
 
-Get::add("/api/products", function ($response, $request) {
+Router::get("/api/products", function ($request, $response) {
     $products = (new Product())->select();
     return $response($products);
-})->description("List all products");
+})->swagger(['summary' => 'List all products', 'tags' => ['products']]);
 
-Get::add("/api/products/{id}", function ($response, $request) {
+Router::get("/api/products/{id}", function ($request, $response) {
     $product = new Product();
     $product->id = $request->params["id"];
     $product->load();
     return $response($product);
-})->description("Get a product by ID");
+})->swagger(['summary' => 'Get a product by ID', 'tags' => ['products']]);
 
-Post::add("/api/products", function ($response, $request) {
+Router::post("/api/products", function ($request, $response) {
     $product = new Product($request->body);
     $product->save();
     return $response($product, 201);
-})->description("Create a product");
+})->swagger(['summary' => 'Create a product', 'tags' => ['products']]);
 
-Put::add("/api/products/{id}", function ($response, $request) {
+Router::put("/api/products/{id}", function ($request, $response) {
     $product = new Product($request->body);
     $product->id = $request->params["id"];
     $product->save();
     return $response($product);
-})->description("Update a product");
+})->swagger(['summary' => 'Update a product', 'tags' => ['products']]);
 
-Delete::add("/api/products/{id}", function ($response, $request) {
+Router::delete("/api/products/{id}", function ($request, $response) {
     $product = new Product();
     $product->id = $request->params["id"];
     $product->delete();
     return $response(null, 204);
-})->description("Delete a product");
+})->swagger(['summary' => 'Delete a product', 'tags' => ['products']]);
 ```
+
+The route handler signature is `function ($request, $response)` — `$request` first, `$response` second. Use `->swagger([...])` for OpenAPI metadata; the keys are pass-through to the generator (`summary`, `tags`, `description`, `parameters`, etc.).
 
 The **form template** renders typed inputs with CSRF protection:
 

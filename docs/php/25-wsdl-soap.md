@@ -4,93 +4,75 @@
 
 Most new APIs use REST and JSON. But enterprise systems — banks, insurers, government portals, ERP platforms — often expose SOAP services. You need to interoperate. Sometimes you are also required to expose a SOAP interface for an existing client that cannot change.
 
-Tina4 provides a `WSDL` base class. Extend it. Annotate methods with `@wsdl_operation`. The WSDL document is generated automatically and served at `?wsdl`. Your service handles both SOAP 1.1 and SOAP 1.2.
+Tina4 provides a `WSDL` base class. Extend it. Annotate methods with the `#[WSDLOperation([...])]` PHP attribute. The WSDL document is generated automatically and served at `?wsdl`. Your service handles both SOAP 1.1 and SOAP 1.2.
 
 ---
 
 ## 2. Creating a SOAP Service
 
-Extend `Tina4\WSDL`. Each public method annotated with `@wsdl_operation` becomes a SOAP operation.
+Extend `Tina4\WSDL`. Each public method marked with the `#[WSDLOperation([...])]` attribute becomes a SOAP operation. The attribute's array declares the response shape — a map of field names to XSD types.
 
 ```php
 <?php
 use Tina4\WSDL;
+use Tina4\WSDLOperation;
 
 class CalculatorService extends WSDL
 {
-    /**
-     * Add two numbers together.
-     *
-     * @wsdl_operation
-     * @param float $a First operand
-     * @param float $b Second operand
-     * @return float Sum of a and b
-     */
-    public function Add(float $a, float $b): float
+    protected string $serviceName = 'Calculator';
+
+    #[WSDLOperation(['Result' => 'float'])]
+    public function Add(float $a, float $b): array
     {
-        return $a + $b;
+        return ['Result' => $a + $b];
     }
 
-    /**
-     * Subtract b from a.
-     *
-     * @wsdl_operation
-     * @param float $a
-     * @param float $b
-     * @return float
-     */
-    public function Subtract(float $a, float $b): float
+    #[WSDLOperation(['Result' => 'float'])]
+    public function Subtract(float $a, float $b): array
     {
-        return $a - $b;
+        return ['Result' => $a - $b];
     }
 
-    /**
-     * Multiply two numbers.
-     *
-     * @wsdl_operation
-     * @param float $a
-     * @param float $b
-     * @return float
-     */
-    public function Multiply(float $a, float $b): float
+    #[WSDLOperation(['Result' => 'float'])]
+    public function Multiply(float $a, float $b): array
     {
-        return $a * $b;
+        return ['Result' => $a * $b];
     }
 
-    /**
-     * Divide a by b.
-     *
-     * @wsdl_operation
-     * @param float $a Dividend
-     * @param float $b Divisor (must not be zero)
-     * @return float Quotient
-     */
-    public function Divide(float $a, float $b): float
+    #[WSDLOperation(['Result' => 'float'])]
+    public function Divide(float $a, float $b): array
     {
         if ($b == 0) {
-            throw new \SoapFault('Receiver', 'Division by zero is not allowed');
+            throw new \RuntimeException('Division by zero is not allowed');
         }
-        return $a / $b;
+        return ['Result' => $a / $b];
     }
 }
 ```
+
+Each operation is a public method on the subclass. The `#[WSDLOperation([...])]` PHP attribute declares the response shape — a map of field names to XSD types. The method returns an associative array whose keys match the attribute's spec. Parameter types come from PHP's native type hints (`float`, `int`, `string`, `bool`).
 
 ---
 
 ## 3. Registering the Service
 
-Mount the service on a URL path. Tina4 handles routing, WSDL generation, and request dispatching:
+Mount the service on a URL path. The same handler answers both the WSDL document request (`GET ?wsdl`) and SOAP invocations (`POST`) — `(new CalculatorService($request))->handle()` inspects the request and returns the right thing.
 
 ```php
 <?php
 use Tina4\Router;
+use Tina4\Request;
+use Tina4\Response;
 
-Router::soap('/calculator', new CalculatorService());
+Router::any('/calculator', function (Request $request, Response $response) {
+    $service = new CalculatorService($request);
+    return $service->handle();
+});
 ```
 
-That is the entire registration. The service is now live at:
+The service is now live at:
 
-- `POST /calculator` — accepts SOAP envelopes
+- `POST /calculator` — accepts SOAP envelopes, dispatches to the matching `#[WSDLOperation]` method
 - `GET /calculator?wsdl` — returns the auto-generated WSDL document
 
 ---
@@ -198,55 +180,35 @@ class CurrencyService extends WSDL
         'AUD' => 1.54
     ];
 
-    /**
-     * Convert an amount from one currency to another.
-     *
-     * @wsdl_operation
-     * @param float  $amount       Amount to convert
-     * @param string $fromCurrency Source currency code (e.g., USD)
-     * @param string $toCurrency   Target currency code (e.g., EUR)
-     * @return float               Converted amount
-     */
-    public function Convert(float $amount, string $fromCurrency, string $toCurrency): float
+    #[WSDLOperation(['Converted' => 'float'])]
+    public function Convert(float $amount, string $fromCurrency, string $toCurrency): array
     {
         $from = strtoupper($fromCurrency);
         $to   = strtoupper($toCurrency);
 
         if (!isset($this->rates[$from])) {
-            throw new \SoapFault('Receiver', "Unsupported currency: {$from}");
+            throw new \RuntimeException("Unsupported currency: {$from}");
         }
-
         if (!isset($this->rates[$to])) {
-            throw new \SoapFault('Receiver', "Unsupported currency: {$to}");
+            throw new \RuntimeException("Unsupported currency: {$to}");
         }
 
         // Convert via USD as the base
         $usdAmount = $amount / $this->rates[$from];
-        return round($usdAmount * $this->rates[$to], 2);
+        return ['Converted' => round($usdAmount * $this->rates[$to], 2)];
     }
 
-    /**
-     * List all supported currency codes.
-     *
-     * @wsdl_operation
-     * @return string Comma-separated list of supported currencies
-     */
-    public function GetSupportedCurrencies(): string
+    #[WSDLOperation(['Currencies' => 'string'])]
+    public function GetSupportedCurrencies(): array
     {
-        return implode(',', array_keys($this->rates));
+        return ['Currencies' => implode(',', array_keys($this->rates))];
     }
 
-    /**
-     * Get the exchange rate from one currency to another.
-     *
-     * @wsdl_operation
-     * @param string $fromCurrency Source currency code
-     * @param string $toCurrency   Target currency code
-     * @return float               Exchange rate
-     */
-    public function GetRate(string $fromCurrency, string $toCurrency): float
+    #[WSDLOperation(['Rate' => 'float'])]
+    public function GetRate(string $fromCurrency, string $toCurrency): array
     {
-        return $this->Convert(1.0, $fromCurrency, $toCurrency);
+        $result = $this->Convert(1.0, $fromCurrency, $toCurrency);
+        return ['Rate' => $result['Converted']];
     }
 }
 ```
@@ -254,7 +216,9 @@ class CurrencyService extends WSDL
 Register:
 
 ```php
-Router::soap('/currency', new CurrencyService());
+Router::any('/currency', function (Request $request, Response $response) {
+    return (new CurrencyService($request))->handle();
+});
 ```
 
 Call:
@@ -263,27 +227,29 @@ Call:
 $client = new SoapClient('http://localhost:7145/currency?wsdl');
 
 $converted = $client->Convert(['amount' => 100, 'fromCurrency' => 'USD', 'toCurrency' => 'EUR']);
-echo $converted->ConvertResult;    // 92.0
+echo $converted->Converted;          // 92.0
 
 $currencies = $client->GetSupportedCurrencies();
-echo $currencies->GetSupportedCurrenciesResult;  // USD,EUR,GBP,JPY,AUD
+echo $currencies->Currencies;        // USD,EUR,GBP,JPY,AUD
 ```
+
+The SOAP response field names mirror the `#[WSDLOperation([...])]` attribute keys.
 
 ---
 
 ## 7. Type Annotations
 
-Tina4 reads PHP 8 type hints to generate XSD types. The mapping is:
+Tina4 reads PHP 8 type hints on parameters to generate XSD request types, and the `#[WSDLOperation([fieldName => 'xsd-type'])]` attribute to generate response types. The mapping is:
 
-| PHP type | WSDL/XSD type |
+| PHP type / attribute value | WSDL/XSD type |
 |----------|---------------|
-| `int` | `xsd:integer` |
-| `float` | `xsd:float` |
-| `string` | `xsd:string` |
-| `bool` | `xsd:boolean` |
-| `array` | `xsd:anyType` |
+| `int` / `'int'` / `'integer'` | `xsd:integer` |
+| `float` / `'float'` / `'double'` | `xsd:float` |
+| `string` / `'string'` | `xsd:string` |
+| `bool` / `'boolean'` | `xsd:boolean` |
+| `array` (parameter) | `xsd:anyType` |
 
-Always use explicit PHP 8 type declarations on parameters and return types. Without them, the WSDL generator falls back to `xsd:anyType`.
+Always use explicit PHP 8 type declarations on method parameters. The response field names AND types come from the attribute — the method returns an associative array matching the attribute's spec.
 
 ---
 
@@ -300,12 +266,8 @@ Standard fault codes:
 | `'VersionMismatch'` | SOAP version mismatch |
 
 ```php
-/**
- * @wsdl_operation
- * @param int $userId
- * @return string
- */
-public function GetUserEmail(int $userId): string
+#[WSDLOperation(['Email' => 'string'])]
+public function GetUserEmail(int $userId): array
 {
     if ($userId <= 0) {
         throw new \SoapFault('Client', 'User ID must be a positive integer');
@@ -317,7 +279,7 @@ public function GetUserEmail(int $userId): string
         throw new \SoapFault('Receiver', "User {$userId} not found");
     }
 
-    return $user['email'];
+    return ['Email' => $user['email']];
 }
 ```
 
@@ -363,17 +325,17 @@ Response:
 
 **Problem:** A method exists on the class but does not appear in the generated WSDL.
 
-**Cause:** Missing `@wsdl_operation` annotation in the docblock.
+**Cause:** Missing `#[WSDLOperation([...])]` PHP attribute on the method.
 
-**Fix:** Add `@wsdl_operation` to the method's PHPDoc comment. All WSDL-exposed methods must have it.
+**Fix:** Add `#[WSDLOperation(['FieldName' => 'xsdType'])]` immediately above the method declaration. All WSDL-exposed methods must have it. Make sure you `use Tina4\WSDLOperation;` at the top of the file.
 
 ### 2. Wrong XSD types
 
 **Problem:** The client receives strings instead of numbers, or booleans instead of integers.
 
-**Cause:** PHP type hints are missing. Without them, the generator defaults to `xsd:anyType`.
+**Cause:** PHP type hints are missing on method parameters, OR the `#[WSDLOperation([...])]` response-shape array uses the wrong XSD type name.
 
-**Fix:** Always declare explicit parameter and return types using PHP 8 typed properties and return types.
+**Fix:** Always declare explicit parameter types using PHP 8 type hints (`int`, `float`, `string`, `bool`). For response types, use the XSD names in the attribute array: `'int'`, `'float'`, `'string'`, `'boolean'`.
 
 ### 3. SOAP Fault not reaching the client
 

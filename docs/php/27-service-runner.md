@@ -74,15 +74,13 @@ class EmailQueueWorker extends Service
 <?php
 use Tina4\ServiceRunner;
 
-$runner = new ServiceRunner();
-
 // Register services
-$runner->add(new EmailQueueWorker());
-$runner->add(new ReportGenerator());
-$runner->add(new CacheWarmer());
+ServiceRunner::registerService('email_queue_worker', new EmailQueueWorker());
+ServiceRunner::registerService('report_generator', new ReportGenerator());
+ServiceRunner::registerService('cache_warmer', new CacheWarmer());
 
 // Start all services
-$runner->start();
+ServiceRunner::start();
 ```
 
 `start()` launches each service in its own process or thread (depending on the platform). Services run concurrently and independently.
@@ -259,10 +257,9 @@ require __DIR__ . '/../../vendor/autoload.php';
 
 use Tina4\ServiceRunner;
 
-$runner = new ServiceRunner();
-$runner->add(new EmailQueueWorker());
-$runner->add(new ReportGenerator());
-$runner->start();
+ServiceRunner::registerService('email_queue_worker', new EmailQueueWorker());
+ServiceRunner::registerService('report_generator', new ReportGenerator());
+ServiceRunner::start();
 ```
 
 Run it:

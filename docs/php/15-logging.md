@@ -6,21 +6,23 @@
 
 Structured logging writes JSON. Every log entry is a machine-readable object with a timestamp, level, message, and whatever context you attach. Log aggregators (Datadog, Grafana Loki, AWS CloudWatch, Papertrail) can query, filter, and alert on structured logs.
 
-Tina4 provides `Debug::message()` for structured logging. It uses PHP's standard log infrastructure. No external packages.
+Tina4 provides `Tina4\Log` for structured logging. Each level has its own method — `Log::debug()`, `Log::info()`, `Log::warning()`, `Log::error()`, `Log::critical()`. Output is JSON by default. Zero external packages.
+
+The historical `Tina4\Debug::message()` API still works as a compatibility shim that forwards to `Tina4\Log` — use it if you're upgrading from a v3.12.x codebase. New code should use the level-specific `Log` methods.
 
 ---
 
 ## 2. Log Levels
 
-Tina4 defines five log levels as constants:
+Tina4 has five log levels, each with its own `Log` method:
 
-| Constant | Value | When to use |
-|----------|-------|-------------|
-| `TINA4_LOG_DEBUG` | `'DEBUG'` | Verbose detail for development |
-| `TINA4_LOG_INFO` | `'INFO'` | Normal operations, confirmations |
-| `TINA4_LOG_WARNING` | `'WARNING'` | Something unexpected but recoverable |
-| `TINA4_LOG_ERROR` | `'ERROR'` | A failure that needs attention |
-| `TINA4_LOG_CRITICAL` | `'CRITICAL'` | System is failing. Immediate action required |
+| Method | When to use |
+|--------|-------------|
+| `Log::debug($msg, $context)` | Verbose detail for development |
+| `Log::info($msg, $context)` | Normal operations, confirmations |
+| `Log::warning($msg, $context)` | Something unexpected but recoverable |
+| `Log::error($msg, $context)` | A failure that needs attention |
+| `Log::critical($msg, $context)` | System is failing. Immediate action required |
 
 Higher levels are always visible. Lower levels are filtered by `TINA4_LOG_LEVEL`.
 
@@ -30,13 +32,13 @@ Higher levels are always visible. Lower levels are filtered by `TINA4_LOG_LEVEL`
 
 ```php
 <?php
-use Tina4\Debug;
+use Tina4\Log;
 
-Debug::message("Application started", TINA4_LOG_INFO);
-Debug::message("Cache miss for key: product:42", TINA4_LOG_DEBUG);
-Debug::message("Payment gateway responded slowly", TINA4_LOG_WARNING);
-Debug::message("Database query failed", TINA4_LOG_ERROR);
-Debug::message("Out of disk space", TINA4_LOG_CRITICAL);
+Log::info("Application started");
+Log::debug("Cache miss for key: product:42");
+Log::warning("Payment gateway responded slowly");
+Log::error("Database query failed");
+Log::critical("Out of disk space");
 ```
 
 Output (JSON format):
@@ -66,13 +68,13 @@ With this setting:
 
 ```php
 <?php
-use Tina4\Debug;
+use Tina4\Log;
 
-Debug::message("Detailed SQL query", TINA4_LOG_DEBUG);    // Suppressed
-Debug::message("User logged in", TINA4_LOG_INFO);         // Suppressed
-Debug::message("Slow query detected", TINA4_LOG_WARNING); // Appears
-Debug::message("Auth service unreachable", TINA4_LOG_ERROR);   // Appears
-Debug::message("Disk full", TINA4_LOG_CRITICAL);               // Appears
+Log::debug("Detailed SQL query");        // Suppressed
+Log::info("User logged in");             // Suppressed
+Log::warning("Slow query detected");     // Appears
+Log::error("Auth service unreachable");  // Appears
+Log::critical("Disk full");              // Appears
 ```
 
 Recommended levels by environment:
@@ -87,13 +89,13 @@ Recommended levels by environment:
 
 ## 5. Logging with Context
 
-Pass a context array as the third argument. Context values are merged into the JSON log entry.
+Pass a context array as the second argument. Context values are merged into the JSON log entry.
 
 ```php
 <?php
-use Tina4\Debug;
+use Tina4\Log;
 
-Debug::message("User login attempt", TINA4_LOG_INFO, [
+Log::info("User login attempt", [
     'user_id'    => 42,
     'email'      => 'alice@example.com',
     'ip'         => '203.0.113.5',
@@ -126,19 +128,19 @@ Log the lifecycle of an HTTP request. Incoming requests, decisions made, and out
 ```php
 <?php
 use Tina4\Router;
-use Tina4\Debug;
+use Tina4\Log;
 
 Router::post('/api/payments', function ($request, $response) {
     $body = $request->body;
 
-    Debug::message("Payment request received", TINA4_LOG_INFO, [
+    Log::info("Payment request received", [
         'amount'   => $body['amount'] ?? null,
         'currency' => $body['currency'] ?? 'USD',
         'ip'       => $request->server['REMOTE_ADDR'] ?? null
     ]);
 
     if (empty($body['amount']) || $body['amount'] <= 0) {
-        Debug::message("Payment rejected: invalid amount", TINA4_LOG_WARNING, [
+        Log::warning("Payment rejected: invalid amount", [
             'amount' => $body['amount'] ?? 'missing'
         ]);
         return $response->json(['error' => 'Invalid payment amount'], 400);
@@ -149,14 +151,14 @@ Router::post('/api/payments', function ($request, $response) {
     $transactionId = 'txn_' . uniqid();
 
     if ($success) {
-        Debug::message("Payment processed successfully", TINA4_LOG_INFO, [
+        Log::info("Payment processed successfully", [
             'transaction_id' => $transactionId,
             'amount'         => $body['amount'],
             'currency'       => $body['currency'] ?? 'USD'
         ]);
         return $response->json(['transaction_id' => $transactionId], 201);
     } else {
-        Debug::message("Payment gateway failure", TINA4_LOG_ERROR, [
+        Log::error("Payment gateway failure", [
             'amount'   => $body['amount'],
             'gateway'  => 'stripe',
             'reason'   => 'Gateway timeout'
@@ -174,7 +176,7 @@ Log exceptions with full context. Include the message, file, line, and trace:
 
 ```php
 <?php
-use Tina4\Debug;
+use Tina4\Log;
 
 function processOrder(array $order): array {
     try {
@@ -186,14 +188,14 @@ function processOrder(array $order): array {
         return ['status' => 'processed', 'order_id' => $order['id']];
 
     } catch (\InvalidArgumentException $e) {
-        Debug::message("Order validation failed", TINA4_LOG_WARNING, [
+        Log::warning("Order validation failed", [
             'order_id' => $order['id'] ?? null,
             'error'    => $e->getMessage()
         ]);
         throw $e;
 
     } catch (\Throwable $e) {
-        Debug::message("Unexpected error processing order", TINA4_LOG_ERROR, [
+        Log::error("Unexpected error processing order", [
             'order_id' => $order['id'] ?? null,
             'error'    => $e->getMessage(),
             'file'     => $e->getFile(),
@@ -214,14 +216,14 @@ Attach a request ID to every log message within a request. All log lines from th
 ```php
 <?php
 use Tina4\Router;
-use Tina4\Debug;
+use Tina4\Log;
 
 Router::any('*', function ($request, $response) {
     // Generate a request ID and attach to all logs in this request
     $requestId = bin2hex(random_bytes(8));
     $GLOBALS['request_id'] = $requestId;
 
-    Debug::message("Request started", TINA4_LOG_DEBUG, [
+    Log::debug("Request started", [
         'request_id' => $requestId,
         'method'     => $request->method,
         'path'       => $request->server['REQUEST_URI'] ?? '/'
@@ -230,11 +232,9 @@ Router::any('*', function ($request, $response) {
     return null; // Pass through to the real handler
 }, 'next');
 
-function logWithRequest(string $message, string $level, array $ctx = []): void {
-    Debug::message($message, $level, array_merge(
-        ['request_id' => $GLOBALS['request_id'] ?? 'none'],
-        $ctx
-    ));
+function logWithRequest(string $level, string $message, array $ctx = []): void {
+    $merged = array_merge(['request_id' => $GLOBALS['request_id'] ?? 'none'], $ctx);
+    Log::{$level}($message, $merged);
 }
 ```
 
@@ -248,21 +248,25 @@ Log slow operations automatically. Time your expensive calls:
 
 ```php
 <?php
-use Tina4\Debug;
+use Tina4\Log;
 
 function timedQuery(callable $query, string $label, float $warnThresholdMs = 100): mixed {
     $start = microtime(true);
     $result = $query();
     $durationMs = (microtime(true) - $start) * 1000;
 
-    $level = $durationMs > $warnThresholdMs ? TINA4_LOG_WARNING : TINA4_LOG_DEBUG;
-
-    Debug::message("Query timing: {$label}", $level, [
-        'label'       => $label,
-        'duration_ms' => round($durationMs, 2),
+    $context = [
+        'label'        => $label,
+        'duration_ms'  => round($durationMs, 2),
         'threshold_ms' => $warnThresholdMs,
-        'slow'        => $durationMs > $warnThresholdMs
-    ]);
+        'slow'         => $durationMs > $warnThresholdMs,
+    ];
+
+    if ($durationMs > $warnThresholdMs) {
+        Log::warning("Query timing: {$label}", $context);
+    } else {
+        Log::debug("Query timing: {$label}", $context);
+    }
 
     return $result;
 }
@@ -310,7 +314,7 @@ In development, use `DEBUG` level with `text` format for human-readable output. 
 **Fix:** Never log raw `$request->body` or `$_POST`. Explicitly list the fields you want to log, excluding sensitive ones:
 
 ```php
-Debug::message("User updated", TINA4_LOG_INFO, [
+Log::info("User updated", [
     'user_id' => $body['id'],
     'email'   => $body['email'],
     // NOT: 'password' => $body['password']

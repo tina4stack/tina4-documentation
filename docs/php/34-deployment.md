@@ -26,8 +26,8 @@ TINA4_PORT=7145
 TINA4_DATABASE_URL=sqlite:///data/app.db
 
 # Security
-CORS_ORIGINS=https://yourdomain.com
-JWT_SECRET=your-long-random-secret-at-least-32-characters
+TINA4_CORS_ORIGINS=https://yourdomain.com
+TINA4_SECRET=your-long-random-secret-at-least-32-characters
 TINA4_RATE_LIMIT=120
 
 # Performance
@@ -906,7 +906,7 @@ TINA4_DEBUG=false
 TINA4_LOG_LEVEL=WARNING
 TINA4_TEMPLATE_CACHE_TTL=true
 TINA4_RATE_LIMIT=120
-CORS_ORIGINS=https://yourdomain.com
+TINA4_CORS_ORIGINS=https://yourdomain.com
 ```
 
 **Expected output for health check:**
@@ -1022,7 +1022,7 @@ The `start-period` tells Docker to ignore health check failures during the first
 **Fix:** Set `CORS_ORIGINS` to include all domains that need access:
 
 ```bash
-CORS_ORIGINS=https://yourdomain.com,https://admin.yourdomain.com
+TINA4_CORS_ORIGINS=https://yourdomain.com,https://admin.yourdomain.com
 ```
 
 ### 7. SSL Certificate Not Renewing
