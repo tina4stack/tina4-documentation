@@ -13,7 +13,7 @@ No Apollo. No urql. No code generation. You write a query string, pass it to `ap
 `api.graphql()` sends a POST with `{ query, variables }` and returns a typed response.
 
 ```javascript
-import { api } from "tina4-js";
+import { api } from "tina4js";
 
 api.configure({ baseUrl: "/api", auth: true });
 
@@ -279,8 +279,8 @@ The type flows through destructuring. Your editor autocompletes `data.products[0
 GraphQL and signals fit together. A signal changes. An effect fires the query. The result lands in another signal. The UI updates.
 
 ```javascript
-import { signal, effect, html } from "tina4-js";
-import { api } from "tina4-js/api";
+import { signal, effect, html } from "tina4js";
+import { api } from "tina4js/api";
 
 const searchTerm = signal("");
 const products = signal([]);

@@ -180,7 +180,9 @@ import { user, isLoggedIn, clearAuth, unreadCount } from '../store';
 import { navigate } from 'tina4js';
 
 class AppLayout extends Tina4Element {
-  static shadow = false;
+  // shadow=true so the documented <slot> projects route content correctly.
+  // Light DOM (`shadow = false`) does not support slots in tina4-js.
+  static shadow = true;
 
   render() {
     return html`
