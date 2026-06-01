@@ -471,7 +471,7 @@ The QueryBuilder can generate MongoDB-compatible query documents with `to_mongo(
 ### Example
 
 ```python
-from tina4 import QueryBuilder
+from tina4_python import QueryBuilder
 
 query = (
     QueryBuilder.from_table("users")

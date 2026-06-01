@@ -31,7 +31,7 @@ That single command creates six files:
 The **model** maps the `product` table to a Python class:
 
 ```python
-from tina4 import ORM
+from tina4_python import ORM
 
 class Product(ORM):
     table_name = "product"
@@ -67,7 +67,7 @@ DROP TABLE IF EXISTS product;
 The **routes** file wires up five endpoints with Swagger docs:
 
 ```python
-from tina4 import get, post, put, delete
+from tina4_python import get, post, put, delete
 from src.orm.Product import Product
 
 @get("/api/products", description="List all products")
@@ -120,7 +120,7 @@ The **test file** stubs out CRUD assertions:
 
 ```python
 import pytest
-from tina4 import App
+from tina4_python import App
 
 @pytest.fixture
 def client():
@@ -198,7 +198,7 @@ tina4python generate middleware AuthLog
 Creates one file with before and after stubs:
 
 ```python
-from tina4 import middleware
+from tina4_python import middleware
 
 @middleware(before=True)
 async def auth_log_before(request):

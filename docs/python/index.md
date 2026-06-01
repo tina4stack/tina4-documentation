@@ -147,7 +147,7 @@ async def get_home(request, response):
 
 ### Sessions {#session-handling}
 
-The default session handler stores data on the file system. Override `TINA4_SESSION_HANDLER` in `.env` to switch backends.
+The default session handler stores data on the file system. Override `TINA4_SESSION_BACKEND` in `.env` to switch backends.
 
 | Handler | Backend | Required package |
 |---------|---------|-----------------|
@@ -157,7 +157,7 @@ The default session handler stores data on the file system. Override `TINA4_SESS
 | `SessionMongoHandler` | MongoDB | `pymongo` |
 
 ```bash
-TINA4_SESSION_HANDLER=SessionMongoHandler
+TINA4_SESSION_BACKEND=SessionMongoHandler
 TINA4_SESSION_MONGO_HOST=localhost
 TINA4_SESSION_MONGO_PORT=27017
 TINA4_SESSION_MONGO_URI=
@@ -577,7 +577,7 @@ Set `TINA4_LOG_LEVEL` in `.env`: `ALL`, `DEBUG`, `INFO`, `WARNING`, `ERROR`.
 ```python
 from tina4_python.core.router import get, cached
 
-@cached(True, max_age=120)
+@cached(max_age=120)
 @get("/api/products")
 async def products(request, response):
     return response(expensive_query())

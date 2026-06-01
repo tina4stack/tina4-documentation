@@ -231,7 +231,7 @@ queue.purge("failed")
 The most common pattern is pushing messages from route handlers:
 
 ```python
-from tina4_python.router import get, post
+from tina4_python.core.router import get, post
 from tina4_python.queue import Queue
 
 queue = Queue(topic="emails")
@@ -376,7 +376,7 @@ curl -X POST http://localhost:7146/api/emails/retry
 Create `src/routes/email_queue.py`:
 
 ```python
-from tina4_python.router import get, post
+from tina4_python.core.router import get, post
 from tina4_python.queue import Queue
 
 queue = Queue(topic="emails", max_retries=3)

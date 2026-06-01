@@ -279,7 +279,7 @@ Each prompt should generate correct, runnable code on the first try. If it does 
 
 ### 2. AI Suggests Wrong Import Paths
 
-**Problem:** The AI writes `from tina4 import Router` instead of `from tina4_python.core.router import get`.
+**Problem:** The AI writes `from tina4_python import Router` instead of `from tina4_python.core.router import get`.
 
 **Fix:** The CLAUDE.md might be outdated. Regenerate it with `install_all(".", force=True)`. Check that the file includes the correct import paths for Python.
 
