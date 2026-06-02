@@ -1,5 +1,66 @@
 # Chapter 35: Release Notes
 
+## v3.13.1 (2026-06-02)
+
+Cross-framework parity patch. Closes the remaining audit-flagged docs-vs-code gaps that didn't make 3.13.0 — the documentation claimed APIs across PHP / Ruby / Node that only Python had. This release ships those APIs everywhere and rewrites the PHP chapters that referenced fictional symbols.
+
+### Convenience parity additions (Groups A / B)
+
+Three highest-impact cross-framework methods every documentation set already claimed existed. PHP / Ruby / Node now match Python:
+
+- **`db.fetchAll(sql, params)` / `db.fetch_all` / `$db->fetchAll`** — returns the records list directly. Symmetric with `fetch_one`. For the 80% case where you don't need the `DatabaseResult` metadata.
+- **`Database.getConnection(url)` / `.get_connection` / `::getConnection`** — classmethod factory matching SQLAlchemy's `engine.connect()`. Falls back to in-memory SQLite when no URL or env resolves.
+- **`Api(bearerToken=, username=, password=, headers=, verifySsl=)` ergonomic kwargs** — three setter calls collapse to one constructor. Bearer wins over basic-auth when both are passed. `verifySsl=False` is the positive form of `ignoreSsl=true`.
+
+### Decorator-style GraphQL resolvers across the family
+
+Python `@GraphQL.resolve` shipped in 3.13.0. This release adds:
+
+- **PHP** — `GraphQL::resolve("Type", "field", $callable)` static method + class-level resolver registry that `new GraphQL()` drains into its schema.
+- **Ruby** — `Tina4::GraphQL.resolve("Type", "field") { |root, args, ctx| ... }` with block-based registration.
+- **Node.js** — `GraphQL.resolve(typeName, fieldName, resolver)` matching the cross-framework shape.
+
+All four frameworks now support the FastAPI / Strawberry / Ariadne pattern where resolvers register at module-import time before any `GraphQL` instance is constructed, and where post-startup registrations land in the active default singleton via `setDefault(gql)` / `Tina4::GraphQL.default_instance = gql`.
+
+### Class-based service pattern across the family
+
+`class FooWorker extends Service { run() { ... } }` — chapter 27 / equivalent docs have long taught this pattern. Until 3.13.1, only the runner was real:
+
+- **PHP** — new `Tina4\Service` abstract base class + `ServiceRunner::registerService($name, $service)` static helper.
+- **Ruby** — new `Tina4::Service` class + `Tina4::ServiceRunner.register_service(name, service)`.
+- **Node.js** — new `Tina4Service` abstract class + `ServiceRunner.registerService(name, service)`.
+- **Python** — new `tina4_python.service.Service` base + `ServiceRunner.register_service(name, service)` (this release closes the gap; Python had only the function-style runner before).
+
+All four ship `run()` (abstract), `stop()`, and `should_stop()` / `shouldStop()` helpers backed by an internal flag. Function-style services using bare callables continue to work alongside the new class-based pattern.
+
+### PHP chapter rewrites (`docs/php/` and `book-2-php/`)
+
+The 3.13.0 audit found that the PHP testing-chapter disaster was the tip of a larger pattern — multiple PHP chapters taught APIs that didn't exist. 3.13.1 rewrites all seven of them:
+
+- **Chapter 15 — Logging** — primary surface now `Tina4\Log::info()/warning()/error()` instead of the legacy `Tina4\Debug::message()` shim (still works).
+- **Chapter 18 — Testing** — `$response->statusCode` → `$response->status` across 23 occurrences; CLI section updated (`tina4 test` runs the suite; `vendor/bin/phpunit` for targeted runs).
+- **Chapter 19 — Scaffolding** — v2 `Tina4\Get::add()` / `Post::add()` / `Put::add()` / `Delete::add()` syntax replaced with `Tina4\Router::get/post/put/delete`; fictional `->description()` chain replaced with real `->swagger([...])`.
+- **Chapter 22 — GraphQL** — chapter's decorator pattern (`GraphQL::resolve("Type", "field", $fn)`) now matches real source (built this release).
+- **Chapter 25 — WSDL** — `@wsdl_operation` docblock replaced with `#[WSDLOperation([...])]` PHP attribute; methods now return associative arrays matching the response-shape spec; `Router::soap()` → `Router::any()` + manual `(new Service($request))->handle()`.
+- **Chapter 27 — ServiceRunner** — `new ServiceRunner()` + `->add()` instance API replaced with `ServiceRunner::registerService()` + `ServiceRunner::start()` static API. The `Tina4\Service` base class the chapter teaches now exists.
+- **Chapter 34 — Deployment** — un-prefixed env vars (`SECRET`, `CORS_ORIGINS`, `SMTP_USER`, `JWT_SECRET`, `API_KEY`, `SWAGGER_TITLE`) replaced with `TINA4_`-prefixed forms. The v3.12 boot guard rejects the legacy names with `exit(2)`.
+
+### Test count
+
+Net new across the family this release:
+
+| Framework | Before | After | New |
+|---|---|---|---|
+| Python | 2,654 | 2,665 | +11 |
+| PHP | 2,749 | 2,774 | +25 |
+| Ruby | 2,827 | 2,839 | +12 |
+| Node.js | 3,384 | 3,406 | +22 |
+| **Total** | **11,614** | **11,684** | **+70** |
+
+### Upgrade
+
+Drop-in patch — no breaking changes. Existing source-code patterns from 3.13.0 continue to work; the new methods are additive. Documentation rewrites in chapters 15 / 18 / 19 / 22 / 25 / 27 / 34 redirect copy-paste examples to the real APIs the framework actually ships.
+
 ## v3.13.0 (2026-06-01)
 
 The docs-vs-code parity release. A cross-framework audit of 381 markdown files surfaced 146 hallucinations, signature drifts, and stale references across Python, PHP, Ruby, Node, and tina4-js. 3.13.0 closes the chapter-18 disaster pattern — where documentation taught a class-based API that didn't exist — by shipping the missing pieces, renaming the misnamed pieces, and rewriting the aspirational chapters.
