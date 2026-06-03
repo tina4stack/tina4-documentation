@@ -327,13 +327,13 @@ If a query parameter is missing, `request.params.get("key")` returns `None`. Use
 A set of routes sharing a common prefix belongs in a `group()`:
 
 ```python
-from tina4_python.core.router import Router, get, post
+from tina4_python.core.router import Router
 
-Router.group("/api/v1", lambda: [
-    Router.get("/users", list_users),
-    Router.get("/users/{id:int}", get_user),
-    Router.post("/users", create_user),
-    Router.get("/products", list_products),
+Router.group("/api/v1", lambda group: [
+    group.get("/users", list_users),
+    group.get("/users/{id:int}", get_user),
+    group.post("/users", create_user),
+    group.get("/products", list_products),
 ])
 
 async def list_users(request, response):
@@ -349,7 +349,7 @@ async def list_products(request, response):
     return response.json({"products": []})
 ```
 
-These routes register as `/api/v1/users`, `/api/v1/users/{id}`, and `/api/v1/products`. Short paths inside the group. Tina4 prepends the prefix. `Router.group()` is a classmethod that takes a prefix, a callback, and an optional middleware list.
+These routes register as `/api/v1/users`, `/api/v1/users/{id}`, and `/api/v1/products`. Short paths inside the group. Tina4 prepends the prefix. `Router.group()` is a classmethod that takes a prefix, a callback that receives a `RouteGroup` object, and an optional middleware list. The callback **must accept the group argument** — call `group.get(...)`, `group.post(...)`, etc. on it so the prefix and middleware propagate to nested routes. Using a zero-arg `lambda:` raises `TypeError: <lambda>() takes 0 positional arguments but 1 was given`.
 
 ```bash
 curl http://localhost:7146/api/v1/users
@@ -378,12 +378,12 @@ async def v1_status(request, response):
 async def v2_status(request, response):
     return response.json({"version": "2.0"})
 
-Router.group("/api", lambda: [
-    Router.group("/v1", lambda: [
-        Router.get("/status", v1_status),
+Router.group("/api", lambda api: [
+    api.group("/v1", lambda v1: [
+        v1.get("/status", v1_status),
     ]),
-    Router.group("/v2", lambda: [
-        Router.get("/status", v2_status),
+    api.group("/v2", lambda v2: [
+        v2.get("/status", v2_status),
     ]),
 ])
 ```
