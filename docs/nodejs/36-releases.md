@@ -1,5 +1,70 @@
 # Chapter 35: Release Notes
 
+## v3.13.3 (2026-06-03)
+
+Two reporter-driven ergonomic additions, shipped across all four frameworks with full parity per `feedback_parity`.
+
+### `Env` typed env-var helpers (tina4-python#43)
+
+Reading env vars by hand gets old fast: every boolean flag becomes a `os.getenv("TINA4_DEBUG", "false").lower() in ("1", "true", "on", "yes")` incantation. Every numeric tuning knob needs a try/except around `int()`. `Env` centralises it:
+
+```python
+from tina4_python import Env
+
+debug   = Env.bool("TINA4_DEBUG", default=False)
+workers = Env.int("WORKERS", default=4)
+rate    = Env.float("RATE_LIMIT", default=10.0)
+region  = Env.str("AWS_REGION", default="us-east-1")
+```
+
+Same API across all four frameworks:
+
+- **Python** — `from tina4_python import Env`
+- **PHP** — `Tina4\Env::bool / int / float / str`
+- **Ruby** — `Tina4::Env.bool / int / float / str`
+- **Node.js** — `import { Env } from "@tina4/core"`
+
+Truthy tokens (case-insensitive after `strip`/`trim`): `1`, `true`, `on`, `yes`, `y`, `t`. Falsy: `0`, `false`, `off`, `no`, `n`, `f`, empty string. Anything else returns the `default` — never raises. `int`/`float` parse failures log a warning via `Log` and fall back to default.
+
+### Function-name in log lines (tina4-python#41)
+
+Opt-in via `TINA4_LOG_FUNC=true`. When enabled, the calling function name is injected into every log line so a `tail -f` gives you free context:
+
+```
+2026-06-03T14:22:18.341Z [INFO   ] [super_trooper] Hello from inside the function
+```
+
+Or in JSON mode:
+
+```json
+{"timestamp":"...","level":"INFO","function":"super_trooper","message":"Hello..."}
+```
+
+Default off — zero overhead unless opted in. When on, ~5% per-call cost from the stack walk.
+
+Per-framework implementation:
+
+- **Python** — `inspect.currentframe()` walk past Log's own frames
+- **PHP** — `debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS)` + `{closure}` filter
+- **Ruby** — `caller_locations(2, 16)` + block-noise regex
+- **Node.js** — `new Error().stack` regex parse + anonymous filter
+
+Anonymous frames (`<lambda>`, `<module>`, `{closure}`, anonymous IIFEs) are filtered as noise — showing `[<lambda>]` would be uglier than nothing.
+
+### Test count
+
+| Framework | Before | After | New |
+|---|---|---|---|
+| Python | 2,675 | 2,725 | +50 |
+| PHP | 2,780 | 2,844 | +64 |
+| Ruby | 2,839 | 2,887 | +49 (+1 pre-existing rack_app fail unchanged) |
+| Node.js | 3,420 | 3,477 | +57 |
+| **Total** | **11,714** | **11,933** | **+220** |
+
+### Upgrade
+
+Drop-in patch. No breaking changes. Two new exports (`Env`, plus one new env var `TINA4_LOG_FUNC`). Existing logs and existing code keep working unchanged.
+
 ## v3.13.2 (2026-06-03)
 
 Bug-fix patch — three field reports, fixed with full cross-framework parity audit per `feedback_crosscheck_bugs`.
