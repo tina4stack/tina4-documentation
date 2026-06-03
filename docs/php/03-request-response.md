@@ -146,7 +146,7 @@ $request->cookies["preferences"] // "dark-mode"
 Uploaded files (section 7 covers this in detail):
 
 ```php
-$request->files["avatar"] // File object with name, type, size, tmpPath
+$request->files["avatar"] // ["filename", "type", "size", "content"] — content is raw bytes
 ```
 
 ### Inspecting the Full Request
@@ -479,7 +479,18 @@ return $response
 
 ## 7. File Uploads
 
-Uploaded files land in `$request->files`. Each file is an object with metadata and a temporary path.
+Uploaded files land in `$request->files` as an associative array keyed by field name. Each entry has the file metadata plus the raw bytes — Tina4 does not write a temporary file to disk, so there is no `tmp_path`.
+
+```php
+$file = $request->files["avatar"];
+// [
+//   "fieldName" => "avatar",
+//   "filename"  => "photo.png",
+//   "type"      => "image/png",
+//   "content"   => "<raw bytes>",   // binary, NOT base64
+//   "size"      => 102400,
+// ]
+```
 
 ### Handling a Single File Upload
 
@@ -495,10 +506,9 @@ Router::post("/api/upload", function ($request, $response) {
     $file = $request->files["image"];
 
     return $response->json([
-        "name" => $file["filename"],        // "photo.jpg"
-        "type" => $file["type"],        // "image/jpeg"
-        "size" => $file["size"],        // 245760 (bytes)
-        "tmp_path" => $file["tmp_name"]  // Temporary file location
+        "name" => $file["filename"],   // "photo.jpg"
+        "type" => $file["type"],       // "image/jpeg"
+        "size" => $file["size"],       // 245760 (bytes)
     ]);
 });
 ```
@@ -512,8 +522,7 @@ curl -X POST http://localhost:7145/api/upload \
 {
   "name": "photo.jpg",
   "type": "image/jpeg",
-  "size": 245760,
-  "tmp_path": "/tmp/tina4_upload_abc123"
+  "size": 245760
 }
 ```
 
@@ -554,8 +563,8 @@ Router::post("/api/upload", function ($request, $response) {
         mkdir(dirname($destination), 0755, true);
     }
 
-    // Move the file
-    rename($file["tmp_name"], $destination);
+    // Save the uploaded bytes — Tina4 stores them in $file["content"], not a temp file
+    file_put_contents($destination, $file["content"]);
 
     return $response->json([
         "message" => "File uploaded successfully",
@@ -599,7 +608,7 @@ Router::post("/api/upload-many", function ($request, $response) {
             mkdir(dirname($destination), 0755, true);
         }
 
-        rename($file["tmp_name"], $destination);
+        file_put_contents($destination, $file["content"]);
 
         $results[] = [
             "original_name" => $file["filename"],
@@ -853,8 +862,8 @@ Router::post("/api/images", function ($request, $response) {
         mkdir($uploadDir, 0755, true);
     }
 
-    // Move the uploaded file
-    rename($file["tmp_name"], $destination);
+    // Save the uploaded bytes — Tina4 stores them in $file["content"], not a temp file
+    file_put_contents($destination, $file["content"]);
 
     return $response->json([
         "message" => "Image uploaded successfully",
