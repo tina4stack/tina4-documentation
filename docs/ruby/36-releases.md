@@ -1,5 +1,47 @@
 # Chapter 35: Release Notes
 
+## v3.13.2 (2026-06-03)
+
+Bug-fix patch — three field reports, fixed with full cross-framework parity audit per `feedback_crosscheck_bugs`.
+
+### SCSS calc() with mixed units (tina4-python#42, tina4-php#116, tina4-nodejs#1)
+
+The SCSS math evaluator silently folded mixed-unit arithmetic by keeping operand 1's unit and dropping operand 2's, producing wrong CSS:
+
+- `max-height: calc(100vh - 170px)` → `calc(-70vh)` (negative, layout-breaking)
+- `width: 100% - 20px` → `80%` (pixel term silently lost)
+- `padding: 1rem + 4px` → `5rem`
+
+Fixed in Python, PHP, and Node — the evaluator now captures both operand units, only folds when units match (or one side is unitless for `*`/`/`), and masks `calc(...)` ranges so the browser computes them as intended. Ruby unaffected (delegates to libsass).
+
+### Router.group docs taught a crashing pattern (tina4-python#44)
+
+The Python book and docs site showed `Router.group("/api/v1", lambda: [...])` with a zero-arg lambda. Source intentionally passes a `RouteGroup` instance to the callback, so users hit `TypeError: <lambda>() takes 0 positional arguments but 1 was given`. Docs rewritten to `lambda group: [group.get(...), group.post(...)]` matching the real contract (Node has always taught this correctly; PHP and Ruby use ambient state, no group arg needed).
+
+### DATABASE_URL → TINA4_DATABASE_URL drift (tina4-python#45)
+
+Three real bugs:
+
+- **Python ORM error message** told users to "set DATABASE_URL in .env" — but the v3.12 boot guard rejects that bare name. Users following the error message hit a hard stop.
+- **Python dev-admin `.env` writer** stripped the `TINA4_` prefix when updating existing rows, actively corrupting the config every time the user saved a new connection through the dashboard.
+- **Node `Database.fromEnv()`** defaulted to `"DATABASE_URL"` as the env-var key, missing the project's actual connection. The ORM error message had the same drift.
+
+All fixed. PHP and Ruby audited — already correct in both.
+
+### Test count
+
+| Framework | Before | After | New |
+|---|---|---|---|
+| Python | 2,665 | 2,675 | +10 |
+| PHP | 2,774 | 2,780 | +6 |
+| Ruby | 2,839 | 2,839 | 0 (parity bump only) |
+| Node.js | 3,406 | 3,420 | +14 |
+| **Total** | **11,684** | **11,714** | **+30** |
+
+### Upgrade
+
+Drop-in patch. No breaking changes. No new public API.
+
 ## v3.13.1 (2026-06-02)
 
 Cross-framework parity patch. Closes the remaining audit-flagged docs-vs-code gaps that didn't make 3.13.0 — the documentation claimed APIs across PHP / Ruby / Node that only Python had. This release ships those APIs everywhere and rewrites the PHP chapters that referenced fictional symbols.
