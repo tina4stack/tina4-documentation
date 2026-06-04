@@ -211,6 +211,8 @@ async def require_json(request, response, next_handler):
     return await next_handler(request, response)
 ```
 
+> **Note**: `request.headers` is case-insensitive (HTTP per RFC 7230). `headers.get("Content-Type")`, `headers.get("content-type")`, and `headers.get("CONTENT-TYPE")` all return the same value.
+
 ### Example: Request ID (Class-Based)
 
 ```python
@@ -286,6 +288,8 @@ async def create_item(request, response):
 ```
 
 You can mix function-based and class-based middleware freely. They run in the order you list them. In the example above: `RequestIdMiddleware` runs first (before and after hooks), then `SecurityHeaders`, then `require_json`, then the route handler.
+
+> **Note**: `@middleware()` is purely additive — it does **not** change a route's auth requirement. POST/PUT/PATCH/DELETE routes stay Bearer-token-gated by default even when you add custom middleware. Use `@noauth()` to open a write route, `@secured()` to lock a read route.
 
 ---
 

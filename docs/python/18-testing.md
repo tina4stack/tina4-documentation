@@ -9,27 +9,21 @@ tina4 test
 ```
 
 ```
-Running tests...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /path/to/your-project
+configfile: pyproject.toml
+collected 9 items
 
-  ProductTest
-    [PASS] test_create_product
-    [PASS] test_load_product
-    [PASS] test_update_product
-    [PASS] test_delete_product
-    [PASS] test_list_products_with_filter
+tests/test_product.py .....                                              [ 55%]
+tests/test_auth.py ....                                                  [100%]
 
-  AuthTest
-    [PASS] test_login_with_valid_credentials
-    [PASS] test_login_with_invalid_password
-    [PASS] test_protected_route_without_token
-    [PASS] test_protected_route_with_valid_token
-
-  9 tests, 9 passed, 0 failed (0.34s)
+============================== 9 passed in 0.34s ===============================
 ```
 
 Everything still works. You deploy with confidence. Weekend intact.
 
-Tina4 includes an inline testing framework. No external packages. No configuration. Write a test. Run it. Done.
+Tina4 ships a `Test` class layered on top of pytest. Pytest handles discovery, parallelism, and the standard `.`/`F`/`E` progress dots; the `Test` class gives you the HTTP test client and the `assert_equal` / `assert_true` / `assert_not_none` helpers from the chapter. `tina4 test` just runs pytest against the `tests/` directory.
 
 ---
 
@@ -63,14 +57,13 @@ tina4 test
 ```
 
 ```
-Running tests...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+collected 3 items
 
-  BasicTest
-    [PASS] test_addition
-    [PASS] test_string_contains
-    [PASS] test_array_length
+tests/test_basic.py ...                                                  [100%]
 
-  3 tests, 3 passed, 0 failed (0.02s)
+============================== 3 passed in 0.02s ===============================
 ```
 
 ### How It Works
@@ -174,6 +167,7 @@ Create `tests/test_product.py`:
 
 ```python
 from tina4_python.test import Test, assert_equal, assert_true, assert_not_none
+from src.orm.Product import Product   # assumes src/orm/Product.py exists
 
 class ProductTest(Test):
 
@@ -260,16 +254,13 @@ tina4 test
 ```
 
 ```
-Running tests...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+collected 5 items
 
-  ProductTest
-    [PASS] test_create_product
-    [PASS] test_load_product
-    [PASS] test_update_product
-    [PASS] test_delete_product
-    [PASS] test_select_with_filter
+tests/test_product.py .....                                              [100%]
 
-  5 tests, 5 passed, 0 failed (0.18s)
+============================== 5 passed in 0.18s ===============================
 ```
 
 ### Test Database
@@ -297,7 +288,7 @@ class RouteTest(Test):
     def test_health_endpoint(self):
         resp = self.get("/health")
 
-        assert_equal(resp.status_code, 200, "Health check should return 200")
+        assert_equal(resp.status, 200, "Health check should return 200")
 
         body = json.loads(resp.body)
         assert_equal(body["status"], "ok", "Status should be 'ok'")
@@ -306,19 +297,19 @@ class RouteTest(Test):
     def test_get_products(self):
         resp = self.get("/api/products")
 
-        assert_equal(resp.status_code, 200, "Should return 200")
+        assert_equal(resp.status, 200, "Should return 200")
 
         body = json.loads(resp.body)
         assert_true("data" in body or "products" in body, "Should contain product data")
 
     def test_create_product(self):
-        resp = self.post("/api/products", {
+        resp = self.post("/api/products", json={
             "name": "Route Test Product",
             "category": "Testing",
             "price": 42.00
         })
 
-        assert_equal(resp.status_code, 201, "Should return 201 Created")
+        assert_equal(resp.status, 201, "Should return 201 Created")
 
         body = json.loads(resp.body)
         assert_equal(body["name"], "Route Test Product", "Name should match")
@@ -327,16 +318,16 @@ class RouteTest(Test):
     def test_get_product_not_found(self):
         resp = self.get("/api/products/99999")
 
-        assert_equal(resp.status_code, 404, "Should return 404 for missing product")
+        assert_equal(resp.status, 404, "Should return 404 for missing product")
 
     def test_create_product_validation(self):
-        resp = self.post("/api/products", {})
+        resp = self.post("/api/products", json={})
 
-        assert_equal(resp.status_code, 400, "Should return 400 for empty body")
+        assert_equal(resp.status, 400, "Should return 400 for empty body")
 
     def test_delete_product(self):
         # Create a product first
-        create_resp = self.post("/api/products", {
+        create_resp = self.post("/api/products", json={
             "name": "To Be Deleted",
             "price": 1.00
         })
@@ -345,11 +336,11 @@ class RouteTest(Test):
 
         # Delete it
         delete_resp = self.delete(f"/api/products/{product_id}")
-        assert_equal(delete_resp.status_code, 204, "Should return 204 No Content")
+        assert_equal(delete_resp.status, 204, "Should return 204 No Content")
 
         # Verify it is gone
         get_resp = self.get(f"/api/products/{product_id}")
-        assert_equal(get_resp.status_code, 404, "Should return 404 after deletion")
+        assert_equal(get_resp.status, 404, "Should return 404 after deletion")
 ```
 
 ### Test Client Methods
@@ -364,13 +355,13 @@ resp = self.get("/api/products")
 resp = self.get("/api/products?category=Electronics&page=2")
 
 # POST with JSON body
-resp = self.post("/api/products", {"name": "Widget", "price": 9.99})
+resp = self.post("/api/products", json={"name": "Widget", "price": 9.99})
 
 # PUT with JSON body
-resp = self.put("/api/products/1", {"name": "Updated Widget"})
+resp = self.put("/api/products/1", json={"name": "Updated Widget"})
 
 # PATCH with JSON body
-resp = self.patch("/api/products/1", {"price": 12.99})
+resp = self.patch("/api/products/1", json={"price": 12.99})
 
 # DELETE
 resp = self.delete("/api/products/1")
@@ -386,9 +377,11 @@ resp = self.get("/api/profile", headers={
 The response object has these properties:
 
 ```python
-resp.status_code   # HTTP status code (200, 201, 404, etc.)
-resp.body          # Response body as a string
-resp.headers       # Response headers as a dict
+resp.status        # HTTP status code (200, 201, 404, etc.)
+resp.body          # Response body as raw bytes
+resp.text()        # Decode resp.body to str
+resp.json()        # Parse resp.body as JSON (dict or list)
+resp.headers       # Response headers as a dict (lowercased keys)
 resp.content_type  # Content-Type header value
 ```
 
@@ -405,43 +398,43 @@ import json
 class AuthTest(Test):
 
     def test_login_with_valid_credentials(self):
-        resp = self.post("/api/auth/login", {
+        resp = self.post("/api/auth/login", json={
             "email": "admin@example.com",
             "password": "correct-password"
         })
 
-        assert_equal(resp.status_code, 200, "Login should succeed")
+        assert_equal(resp.status, 200, "Login should succeed")
 
         body = json.loads(resp.body)
         assert_not_none(body.get("token"), "Should return a JWT token")
         assert_true(len(body["token"]) > 50, "Token should be a substantial string")
 
     def test_login_with_invalid_password(self):
-        resp = self.post("/api/auth/login", {
+        resp = self.post("/api/auth/login", json={
             "email": "admin@example.com",
             "password": "wrong-password"
         })
 
-        assert_equal(resp.status_code, 401, "Should reject invalid password")
+        assert_equal(resp.status, 401, "Should reject invalid password")
 
     def test_login_with_missing_fields(self):
-        resp = self.post("/api/auth/login", {
+        resp = self.post("/api/auth/login", json={
             "email": "admin@example.com"
         })
 
         assert_true(
-            resp.status_code in (400, 401),
+            resp.status in (400, 401),
             "Should reject missing password"
         )
 
     def test_protected_route_without_token(self):
         resp = self.get("/api/profile")
 
-        assert_equal(resp.status_code, 401, "Should reject unauthenticated request")
+        assert_equal(resp.status, 401, "Should reject unauthenticated request")
 
     def test_protected_route_with_valid_token(self):
         # Login first to get a token
-        login_resp = self.post("/api/auth/login", {
+        login_resp = self.post("/api/auth/login", json={
             "email": "admin@example.com",
             "password": "correct-password"
         })
@@ -453,7 +446,7 @@ class AuthTest(Test):
             "Authorization": f"Bearer {token}"
         })
 
-        assert_equal(resp.status_code, 200, "Should allow authenticated request")
+        assert_equal(resp.status, 200, "Should allow authenticated request")
 
         body = json.loads(resp.body)
         assert_equal(body["user"]["email"], "admin@example.com", "Should return user data")
@@ -463,7 +456,7 @@ class AuthTest(Test):
             "Authorization": "Bearer invalid.token.here"
         })
 
-        assert_equal(resp.status_code, 401, "Should reject invalid token")
+        assert_equal(resp.status, 401, "Should reject invalid token")
 ```
 
 ---
@@ -538,49 +531,45 @@ tina4 test --verbose
 ```
 
 ```
-Running tests...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+collected 5 items
 
-  ProductTest
-    [PASS] test_create_product (0.03s)
-      assert_not_none: Product should have an ID after save
-      assert_true: Product ID should be positive
-    [PASS] test_load_product (0.02s)
-      assert_equal: Name should match
-      assert_equal: Category should match
-      assert_equal: Price should match
-    [PASS] test_update_product (0.04s)
-      assert_equal: Name should be updated
-      assert_equal: Price should be updated
-    [PASS] test_delete_product (0.02s)
-      assert_true: Deleted product should not be loadable
-    [PASS] test_select_with_filter (0.05s)
-      assert_true: Should find at least 2 FilterCat products
-      assert_true: Should include Filter Test A
-      assert_true: Should include Filter Test B
+tests/test_product.py::ProductTest::test_create_product PASSED           [ 20%]
+tests/test_product.py::ProductTest::test_load_product PASSED             [ 40%]
+tests/test_product.py::ProductTest::test_update_product PASSED           [ 60%]
+tests/test_product.py::ProductTest::test_delete_product PASSED           [ 80%]
+tests/test_product.py::ProductTest::test_select_with_filter PASSED       [100%]
 
-  5 tests, 5 passed, 0 failed (0.16s)
+============================== 5 passed in 0.16s ===============================
 ```
 
-Verbose mode shows each assertion within each test, along with timing information.
+`--verbose` prints one line per test instead of the compact dot-progress.
 
 ### Failed Test Output
 
-When a test fails, you see exactly what went wrong:
+When a test fails, pytest shows exactly what went wrong:
 
 ```
-  ProductTest
-    [PASS] test_create_product
-    [FAIL] test_load_product
-      assert_equal FAILED: Name should match
-        Expected: "Load Test Widget"
-        Actual:   "Wrong Name"
-        File: tests/test_product.py:34
-    [PASS] test_update_product
+=================================== FAILURES ===================================
+______________________ ProductTest.test_load_product ___________________________
 
-  3 tests, 2 passed, 1 failed (0.12s)
+self = <test_product.ProductTest object at 0x10a2c1bb0>
+
+    def test_load_product(self):
+        product = Product.find(1)
+>       assert_equal(product.name, "Load Test Widget", "Name should match")
+E       AssertionError: Name should match
+E       Expected: 'Load Test Widget'
+E       Actual:   'Wrong Name'
+
+tests/test_product.py:34: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_product.py::ProductTest::test_load_product - AssertionError: Name should match
+========================= 1 failed, 2 passed in 0.12s ==========================
 ```
 
-The failure message shows the assertion that failed, what was expected, what was actually received, and the file and line number.
+The failure message shows the failing assertion, expected vs actual, and the file and line number — standard pytest formatting.
 
 ---
 
@@ -656,11 +645,11 @@ Each test method should verify one behavior. If it fails, you know exactly what 
 ```python
 # Good: each test verifies one thing
 def test_create_product_returns_201(self):
-    resp = self.post("/api/products", {"name": "Widget", "price": 9.99})
-    assert_equal(resp.status_code, 201, "Should return 201")
+    resp = self.post("/api/products", json={"name": "Widget", "price": 9.99})
+    assert_equal(resp.status, 201, "Should return 201")
 
 def test_create_product_returns_created_product(self):
-    resp = self.post("/api/products", {"name": "Widget", "price": 9.99})
+    resp = self.post("/api/products", json={"name": "Widget", "price": 9.99})
     body = json.loads(resp.body)
     assert_equal(body["name"], "Widget", "Should return the product name")
 
@@ -736,24 +725,14 @@ tina4 test
 ```
 
 ```
-Running tests...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+collected 11 items
 
-  UserModelTest
-    [PASS] test_create_user
-    [PASS] test_duplicate_email
-    [PASS] test_update_user
-    [PASS] test_delete_user
-    [PASS] test_select_users
+tests/test_user_model.py .....                                           [ 45%]
+tests/test_auth_flow.py ......                                           [100%]
 
-  AuthFlowTest
-    [PASS] test_register_new_user
-    [PASS] test_register_duplicate_email
-    [PASS] test_login_success
-    [PASS] test_login_failure
-    [PASS] test_access_protected_route
-    [PASS] test_access_with_expired_token
-
-  11 tests, 11 passed, 0 failed (0.52s)
+============================== 11 passed in 0.52s ==============================
 ```
 
 ---
@@ -845,13 +824,13 @@ class AuthFlowTest(Test):
         self.test_password = "SecurePassword123!"
 
     def test_register_new_user(self):
-        resp = self.post("/api/auth/register", {
+        resp = self.post("/api/auth/register", json={
             "name": "Auth Test User",
             "email": self.test_email,
             "password": self.test_password
         })
 
-        assert_equal(resp.status_code, 201, "Registration should return 201")
+        assert_equal(resp.status, 201, "Registration should return 201")
 
         body = json.loads(resp.body)
         assert_equal(body["name"], "Auth Test User", "Should return user name")
@@ -860,57 +839,57 @@ class AuthFlowTest(Test):
     def test_register_duplicate_email(self):
         email = f"dup-{uuid.uuid4().hex[:8]}@example.com"
 
-        self.post("/api/auth/register", {
+        self.post("/api/auth/register", json={
             "name": "First",
             "email": email,
             "password": self.test_password
         })
 
-        resp = self.post("/api/auth/register", {
+        resp = self.post("/api/auth/register", json={
             "name": "Second",
             "email": email,
             "password": self.test_password
         })
 
-        assert_equal(resp.status_code, 409, "Duplicate email should return 409")
+        assert_equal(resp.status, 409, "Duplicate email should return 409")
 
     def test_login_success(self):
         email = f"login-{uuid.uuid4().hex[:8]}@example.com"
 
-        self.post("/api/auth/register", {
+        self.post("/api/auth/register", json={
             "name": "Login User",
             "email": email,
             "password": self.test_password
         })
 
-        resp = self.post("/api/auth/login", {
+        resp = self.post("/api/auth/login", json={
             "email": email,
             "password": self.test_password
         })
 
-        assert_equal(resp.status_code, 200, "Login should return 200")
+        assert_equal(resp.status, 200, "Login should return 200")
 
         body = json.loads(resp.body)
         assert_not_none(body.get("token"), "Should return a token")
 
     def test_login_failure(self):
-        resp = self.post("/api/auth/login", {
+        resp = self.post("/api/auth/login", json={
             "email": "nobody@example.com",
             "password": "wrong"
         })
 
-        assert_equal(resp.status_code, 401, "Invalid login should return 401")
+        assert_equal(resp.status, 401, "Invalid login should return 401")
 
     def test_access_protected_route(self):
         email = f"profile-{uuid.uuid4().hex[:8]}@example.com"
 
-        self.post("/api/auth/register", {
+        self.post("/api/auth/register", json={
             "name": "Profile User",
             "email": email,
             "password": self.test_password
         })
 
-        login_resp = self.post("/api/auth/login", {
+        login_resp = self.post("/api/auth/login", json={
             "email": email,
             "password": self.test_password
         })
@@ -921,7 +900,7 @@ class AuthFlowTest(Test):
             "Authorization": f"Bearer {token}"
         })
 
-        assert_equal(resp.status_code, 200, "Should allow access with valid token")
+        assert_equal(resp.status, 200, "Should allow access with valid token")
 
         body = json.loads(resp.body)
         assert_equal(body["user"]["email"], email, "Should return correct user")
@@ -931,7 +910,7 @@ class AuthFlowTest(Test):
             "Authorization": "Bearer expired.invalid.token"
         })
 
-        assert_equal(resp.status_code, 401, "Should reject invalid token")
+        assert_equal(resp.status, 401, "Should reject invalid token")
 ```
 
 ---
@@ -980,7 +959,7 @@ user.email = f"test-{uuid.uuid4().hex[:8]}@example.com"
 
 **Cause:** You passed the arguments in the wrong order. `assert_equal(actual, expected)` -- actual comes first, expected comes second.
 
-**Fix:** Follow the convention: `assert_equal(resp.status_code, 200, "message")`. The first argument is what you got, the second is what you expected.
+**Fix:** Follow the convention: `assert_equal(resp.status, 200, "message")`. The first argument is what you got, the second is what you expected.
 
 ### 6. Cannot Test Routes That Require Authentication Setup
 

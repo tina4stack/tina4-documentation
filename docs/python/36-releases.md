@@ -1,5 +1,74 @@
 # Chapter 35: Release Notes
 
+## v3.13.4 (2026-06-04)
+
+Three middleware/header bug fixes across all four frameworks, plus Python chapter 10 + 18 docs rewrites. Reported in tina4-book#140 and tina4-book#141 by MichaelC8E.
+
+### PY-10-02 — `@middleware()` no longer silently disables auth (SECURITY)
+
+**Before**: Applying `@middleware(...)` to a POST/PUT/PATCH/DELETE route silently flipped `auth_required = false`, removing the framework's built-in Bearer-token gate. A developer adding custom logging or rate-limiting middleware to an admin endpoint would, with no warning, open it to unauthenticated callers.
+
+**After**: Middleware is purely additive. Write routes stay Bearer-token-gated by default. Use `@noauth()` to open a write route, `@secured()` to lock a read route. Same rule across all four frameworks.
+
+This is a **behaviour change** — if your code relied on the old auto-disable to handle auth in custom middleware, add `@noauth()` (and have your middleware enforce auth on its own).
+
+### PY-10-03 — `request.headers` is now case-insensitive
+
+**Before**: `request.headers["Content-Type"]` returned `None`/`undefined`/`nil`. The dict was lowercase-only; mixed-case lookups silently failed. Six chapter 10 examples (`Content-Type`, `X-API-Key`, `Authorization`, `User-Agent`) were broken.
+
+**After**: HTTP headers are case-insensitive per RFC 7230 §3.2. Same is true in every framework:
+
+| Framework | Implementation |
+|---|---|
+| Python | `CaseInsensitiveDict` (dict subclass, normalises string keys to lowercase on read/write) |
+| PHP | `Tina4\CaseInsensitiveArray` (ArrayAccess + IteratorAggregate + Countable) |
+| Ruby | `Tina4::CaseInsensitiveHash < Hash` (overrides `[]`, `[]=`, `key?`, `delete`, etc.) |
+| Node | Proxy wrapper around `http.IncomingHttpHeaders` |
+
+`request.headers.get("Content-Type")`, `request.headers.get("content-type")`, and `request.headers.get("CONTENT-TYPE")` all return the same value. Existing lowercase code keeps working unchanged.
+
+### PY-10-01 — Function-based middleware now runs
+
+**Before**: Chapter 10 taught Express-style `async def mw(req, resp, next_handler)` in 8+ examples, but the Python framework's dispatcher only looked for class-based `before_*`/`after_*` methods. Function-style middleware was silently inert — body never executed. PHP and Ruby had similar gaps (closures ran but no `next` continuation).
+
+**After**: Express-style continuation chain is implemented across the family. Python adds `_is_function_middleware()` + `_invoke_handler_with_middleware()`. PHP wraps closures with `array_reverse` continuation. Ruby uses lambdas + `reverse_each`. Node already had `next()` continuation — added a regression test to keep it green.
+
+```python
+@middleware(my_mw)
+@post("/api/orders")
+async def create_order(req, resp):
+    ...
+
+async def my_mw(req, resp, next_handler):
+    if not authorised(req):
+        return resp.json({"error": "forbidden"}, 403)
+    result = await next_handler(req, resp)   # continue the chain
+    return result
+```
+
+First-declared middleware is the outermost layer; calling `next_handler` descends to the next layer (or the route handler if last). Omitting the `next_handler` call short-circuits the chain.
+
+### Python chapter rewrites — book + docs
+
+- **Chapter 18 (Testing)** — Fixed PY-18-04 (test runner output now shows real pytest output, not the fictional `[PASS] test_addition` format), PY-18-07a (added missing `from src.orm.Product import Product` import), PY-18-08 (`resp.status_code` → `resp.status` across 14+ call sites, positional body `self.post(path, dict)` → keyword `self.post(path, json=dict)`).
+- **Chapter 10 (Middleware)** — Added two callouts: headers are case-insensitive in v3.13.4+; `@middleware()` is purely additive (does not change auth_required). Existing mixed-case header examples now work against v3.13.4.
+
+### Test count
+
+| Framework | Before | After | New |
+|---|---|---|---|
+| Python | 2,725 | 2,741 | +16 |
+| PHP | 2,844 | 2,858 | +14 |
+| Ruby | 2,887 | 2,906 | +19 |
+| Node.js | 3,477 | 3,508 | +31 |
+| **Total** | **11,933** | **12,013** | **+80** |
+
+### Upgrade
+
+PY-10-02 is a behaviour change with a security implication. Audit routes that use `@middleware()` on POST/PUT/PATCH/DELETE: if you rely on custom middleware to handle auth, add `@noauth()` above `@middleware()` (and make sure your middleware enforces auth). Otherwise, no action — your write routes were always supposed to require Bearer tokens.
+
+PY-10-01 and PY-10-03 are purely additive — no breaking changes.
+
 ## v3.13.3 (2026-06-03)
 
 Two reporter-driven ergonomic additions, shipped across all four frameworks with full parity per `feedback_parity`.
