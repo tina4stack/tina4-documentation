@@ -170,7 +170,7 @@ It sets the following headers by default:
 
 | Header | Default Value |
 |--------|---------------|
-| `X-Frame-Options` | `DENY` |
+| `X-Frame-Options` | `SAMEORIGIN` |
 | `Content-Security-Policy` | `default-src 'self'` |
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` |

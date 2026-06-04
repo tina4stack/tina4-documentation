@@ -2,57 +2,57 @@
 
 ## 1. Why Tests Matter More Than You Think
 
-Friday afternoon. Your client reports a critical bug in production. You fix it -- one line of code. But did that fix break something else? You have 47 routes, 12 ORM models, and 3 middleware functions. Click through every page? An hour. Run the test suite? 2 seconds.
+Friday afternoon. Your client reports a critical bug in production. You fix it -- one line of code. But did that fix break something else? 47 routes. 12 ORM models. 3 middleware functions. Clicking through every page: an hour. Running the test suite: 2 seconds.
 
 ```bash
-tina4 test
+tina4ruby test
 ```
 
 ```
-Running tests...
+  Product API
+    ✓ creates a product
+    ✓ loads a product by id
+    ✓ updates a product
+    ✓ deletes a product
+    ✓ filters products by category
 
-  ProductTest
-    [PASS] test_create_product
-    [PASS] test_load_product
-    [PASS] test_update_product
-    [PASS] test_delete_product
-    [PASS] test_list_products_with_filter
+  Authentication
+    ✓ logs in with valid credentials
+    ✓ rejects invalid password
+    ✓ protected route requires token
+    ✓ allows access with valid token
 
-  AuthTest
-    [PASS] test_login_with_valid_credentials
-    [PASS] test_login_with_invalid_password
-    [PASS] test_protected_route_without_token
-    [PASS] test_protected_route_with_valid_token
-
-  9 tests, 9 passed, 0 failed (0.34s)
+  9 tests: 9 passed, 0 failed, 0 errors
 ```
 
-Everything passes. You deploy with confidence. Weekend intact.
+Everything still passes. Deploy with confidence. Weekend intact.
 
-Tina4 uses RSpec for testing. Tests live in `tests/`. Every `_spec.rb` file is auto-discovered when you run `tina4 test`.
+Tina4 ships an inline testing framework -- no RSpec, no Minitest, no setup ceremony. The `Tina4::Testing` module gives you `describe`/`it` blocks, a full set of `assert_*` helpers, and an in-process HTTP test client. `tina4ruby test` discovers `*_test.rb` and `test_*.rb` files under `tests/`, `test/`, `spec/`, or `src/tests/` and runs them.
 
 ---
 
 ## 2. Your First Test
 
-Create `tests/basic_spec.rb`:
+Tests live under `tests/`. Files must be named `*_test.rb` or `test_*.rb` -- the runner ignores anything else.
+
+Create `tests/basic_test.rb`:
 
 ```ruby
 require "tina4"
 
-RSpec.describe "Basic tests" do
+Tina4::Testing.describe "Basic tests" do
   it "adds two numbers" do
-    expect(2 + 2).to eq(4)
+    assert_equal(4, 2 + 2)
   end
 
   it "concatenates strings" do
     result = "Hello" + " " + "World"
-    expect(result).to eq("Hello World")
+    assert_equal("Hello World", result)
   end
 
   it "handles nil correctly" do
     value = nil
-    expect(value).to be_nil
+    assert_nil(value)
   end
 end
 ```
@@ -60,351 +60,235 @@ end
 Run it:
 
 ```bash
-tina4 test
+tina4ruby test
 ```
 
 ```
-Running tests...
-
   Basic tests
-    [PASS] adds two numbers
-    [PASS] concatenates strings
-    [PASS] handles nil correctly
+    ✓ adds two numbers
+    ✓ concatenates strings
+    ✓ handles nil correctly
 
-  3 tests, 3 passed, 0 failed (0.01s)
+  3 tests: 3 passed, 0 failed, 0 errors
 ```
 
-You can also use `bundle exec rspec` directly:
+### How It Works
 
-```bash
-bundle exec rspec tests/
-```
+1. `Tina4::Testing.describe` opens a suite. The block defines the suite's tests.
+2. Each `it` registers a single test case. The description string becomes the label printed to the console.
+3. Inside an `it` block you call `assert_*` helpers to check behaviour. Any assertion that fails raises `Tina4::Testing::TestFailure` and marks the test as failed.
+4. `Tina4::Testing.run_all` runs every registered suite. `tina4ruby test` calls it for you.
 
 ---
 
-## 3. RSpec Matchers Reference
+## 3. Assertion Reference
 
-RSpec provides matchers for every comparison you need. Here are the ones you will use most:
+Every assertion is defined on `Tina4::Testing::TestContext` and available inside `it` blocks. The convention is `assert_<thing>(expected, actual, message = nil)` -- expected first.
 
 ### Equality
 
 ```ruby
-expect(result).to eq(42)             # value equality
-expect(result).not_to eq(0)          # value inequality
-expect(result).to eql(42)            # type + value equality
-expect(object).to equal(other)       # identity (same object)
+assert_equal(42, result)               # value equality
+assert_not_equal(0, result)            # not equal
+```
+
+### Nil
+
+```ruby
+assert_nil(value)                       # value is nil
+assert_not_nil(value)                   # value is not nil
 ```
 
 ### Truthiness
 
 ```ruby
-expect(true).to be_truthy            # truthy (not nil, not false)
-expect(nil).to be_falsy              # falsy (nil or false)
-expect(nil).to be_nil                # exactly nil
-expect("hello").not_to be_nil        # not nil
-expect(true).to be true              # exactly true
-expect(false).to be false            # exactly false
+assert(condition, "optional message")   # condition is truthy
+assert_true(value)                      # value is truthy
+assert_false(value)                     # value is falsy
 ```
 
-### Comparison
+### Collections and Strings
 
 ```ruby
-expect(10).to be > 5                 # greater than
-expect(3).to be < 10                 # less than
-expect(5).to be >= 5                 # greater or equal
-expect(5).to be <= 5                 # less or equal
-expect(5).to be_between(1, 10)       # range check
-```
-
-### Strings
-
-```ruby
-expect("Hello World").to include("World")          # substring
-expect("Hello World").to start_with("Hello")       # prefix
-expect("Hello World").to end_with("World")         # suffix
-expect("user@example.com").to match(/@/)           # regex match
-```
-
-### Collections
-
-```ruby
-expect([1, 2, 3]).to include(2)                    # contains element
-expect([1, 2, 3]).to have_attributes(length: 3)    # size check
-expect([]).to be_empty                             # empty check
-expect([3, 1, 2]).to contain_exactly(1, 2, 3)      # exact elements, any order
+assert_includes([1, 2, 3], 2)           # collection includes item
+assert_match(/@/, "user@example.com")   # string matches pattern
 ```
 
 ### Exceptions
 
 ```ruby
-expect { Integer("not-a-number") }.to raise_error(ArgumentError)
-expect { 10 / 0 }.to raise_error(ZeroDivisionError)
-expect { safe_operation }.not_to raise_error
+assert_raises(ArgumentError) do
+  raise ArgumentError, "bad input"
+end
 ```
 
-### Floating Point
+### JSON / HTTP
 
 ```ruby
-expect(9.99).to be_within(0.01).of(10.0)           # approximate equality
-```
-
-### Type Checking
-
-```ruby
-expect("hello").to be_a(String)
-expect(42).to be_an(Integer)
-expect([]).to be_an(Array)
+data = assert_json(response.body)       # parses body, raises on invalid JSON
+assert_status(response, 200)            # asserts HTTP status (Rack tuple OR TestResponse)
 ```
 
 ---
 
 ## 4. Testing Routes
 
-The `Tina4::TestClient` lets you make HTTP requests to your routes without starting a server:
+Tina4's `Tina4::TestClient` issues requests against your registered routes in-process -- no socket, no server, no port. It returns a `Tina4::TestResponse` with `status`, `body`, `headers`, and a `json` helper.
+
+Create `tests/product_test.rb`:
 
 ```ruby
 require "tina4"
 
-RSpec.describe "Product API" do
-  let(:client) { Tina4::TestClient.new }
+Tina4::Testing.describe "Product API" do
+  client = Tina4::TestClient.new
 
-  it "returns products list" do
-    result = client.get("/api/products")
+  before_each do
+    db = Tina4.database
+    db.execute("DELETE FROM products") if db
+  end
 
-    expect(result.status).to eq(200)
+  it "returns the products list" do
+    resp = client.get("/api/products")
 
-    data = result.json
-    expect(data).to have_key("products")
-    expect(data["products"]).to be_an(Array)
+    assert_status(resp, 200)
+
+    data = resp.json
+    assert_not_nil(data, "Response should be valid JSON")
+    assert_includes(data.keys, "products")
+    assert(data["products"].is_a?(Array), "products should be an array")
   end
 
   it "creates a product" do
-    result = client.post("/api/products", {
+    resp = client.post("/api/products", json: {
       name: "Test Widget",
-      category: "Test",
+      category: "Testing",
       price: 9.99
     })
 
-    expect(result.status).to eq(201)
+    assert_status(resp, 201)
 
-    data = result.json
-    expect(data["name"]).to eq("Test Widget")
-    expect(data["price"]).to eq(9.99)
-    expect(data["id"]).not_to be_nil
+    data = resp.json
+    assert_equal("Test Widget", data["name"])
+    assert_equal(9.99, data["price"])
+    assert_not_nil(data["id"], "New product should have an id")
   end
 
-  it "returns 404 for missing product" do
-    result = client.get("/api/products/99999")
+  it "returns 404 for a missing product" do
+    resp = client.get("/api/products/99999")
 
-    expect(result.status).to eq(404)
-
-    data = result.json
-    expect(data["error"]).to eq("Product not found")
+    assert_status(resp, 404)
   end
 
   it "validates required fields" do
-    result = client.post("/api/products", {})
+    resp = client.post("/api/products", json: {})
 
-    expect(result.status).to eq(400)
+    assert_status(resp, 400)
 
-    data = result.json
-    expect(data["error"]).to include("required")
+    data = resp.json
+    assert_match(/required/, data["error"])
   end
 end
 ```
 
 ### TestClient Methods
 
+`Tina4::TestClient` exposes one method per verb. Every method except `get`/`delete` accepts a `json:` keyword for the request body. Use `headers:` to attach a single hash of HTTP headers.
+
 ```ruby
 client = Tina4::TestClient.new
 
-# GET request
-result = client.get("/api/products")
-result = client.get("/api/products?category=Electronics")
+# GET — with optional query string and headers
+resp = client.get("/api/products")
+resp = client.get("/api/products?category=Electronics")
+resp = client.get("/api/profile", headers: { "Authorization" => "Bearer #{token}" })
 
-# POST request with JSON body
-result = client.post("/api/products", { name: "Widget", price: 9.99 })
+# POST / PUT / PATCH — pass a Ruby hash via `json:`
+resp = client.post("/api/products", json: { name: "Widget", price: 9.99 })
+resp = client.put("/api/products/1", json: { name: "Updated Widget" })
+resp = client.patch("/api/products/1", json: { price: 12.99 })
 
-# PUT request
-result = client.put("/api/products/1", { name: "Updated Widget" })
-
-# DELETE request
-result = client.delete("/api/products/1")
-
-# With custom headers
-result = client.get("/api/profile", headers: { "Authorization" => "Bearer #{token}" })
+# DELETE — no body
+resp = client.delete("/api/products/1")
 ```
 
-### TestResult Properties
+### TestResponse
 
 ```ruby
-result.status      # HTTP status code (200, 201, 404, etc.)
-result.json        # Parsed JSON body as a hash
-result.body        # Raw response body as a string
-result.headers     # Response headers hash
+resp.status         # HTTP status code (200, 201, 404, ...)
+resp.body           # raw response body as a String
+resp.headers        # response headers as a Hash (lowercased keys)
+resp.content_type   # value of the content-type header
+resp.json           # JSON.parse(body); returns nil if the body is not valid JSON
+resp.text           # alias for body.to_s
 ```
+
+If you prefer to assert on the raw Rack tuple instead of a `TestResponse`, use the `get`/`post`/`put`/`delete` helpers exposed on the test context -- they return `[status, headers, body_enumerable]` and work with `assert_status` exactly the same way.
 
 ---
 
 ## 5. Testing ORM Models
 
+Drop into the database directly when you need to verify model behaviour. `before_each` is the right place to truncate tables or seed fixtures.
+
 ```ruby
 require "tina4"
 
-RSpec.describe Product do
-  before(:each) do
+Tina4::Testing.describe "Product model" do
+  before_each do
     db = Tina4.database
     db.execute("DELETE FROM products")
   end
 
-  it "creates and saves a product" do
+  it "saves and reloads a product" do
     product = Product.new
-    product.name = "Test Product"
-    product.price = 29.99
+    product.name = "Test Widget"
     product.category = "Testing"
-    product.save
-
-    expect(product.id).not_to be_nil
-    expect(product.name).to eq("Test Product")
-  end
-
-  it "loads a product by ID" do
-    product = Product.new
-    product.name = "Load Test"
     product.price = 19.99
     product.save
 
-    loaded = Product.new
-    loaded.load(product.id)
+    assert_not_nil(product.id, "Product should have an id after save")
 
-    expect(loaded.name).to eq("Load Test")
-    expect(loaded.price).to eq(19.99)
+    loaded = Product.find(product.id)
+    assert_equal("Test Widget", loaded.name)
+    assert_equal(19.99, loaded.price)
   end
 
   it "updates a product" do
-    product = Product.new
-    product.name = "Before Update"
-    product.price = 10.00
+    product = Product.create(name: "Before", price: 10.0, category: "Testing")
+    product.name = "After"
+    product.price = 20.0
     product.save
 
-    product.name = "After Update"
-    product.price = 20.00
-    product.save
-
-    loaded = Product.new
-    loaded.load(product.id)
-
-    expect(loaded.name).to eq("After Update")
-    expect(loaded.price).to eq(20.00)
+    reloaded = Product.find(product.id)
+    assert_equal("After", reloaded.name)
+    assert_equal(20.0, reloaded.price)
   end
 
   it "deletes a product" do
-    product = Product.new
-    product.name = "To Delete"
-    product.price = 5.00
-    product.save
-
+    product = Product.create(name: "Goodbye", price: 5.0, category: "Testing")
     id = product.id
+
     product.delete
 
-    loaded = Product.new
-    loaded.load(id)
-
-    expect(loaded.id).to be_nil
+    assert_nil(Product.find(id), "Deleted product should not be findable")
   end
 
-  it "selects products with filter" do
-    product = Product.new
-
-    p1 = Product.new
-    p1.name = "Electronics Item"
-    p1.category = "Electronics"
-    p1.price = 99.99
-    p1.save
-
-    p2 = Product.new
-    p2.name = "Fitness Item"
-    p2.category = "Fitness"
-    p2.price = 29.99
-    p2.save
+  it "filters by category" do
+    Product.create(name: "Phone", category: "Electronics", price: 499.0)
+    Product.create(name: "Yoga Mat", category: "Fitness", price: 29.0)
 
     results = Product.where("category = ?", ["Electronics"])
 
-    expect(results.length).to eq(1)
-    expect(results[0].name).to eq("Electronics Item")
+    assert_equal(1, results.length)
+    assert_equal("Phone", results[0].name)
   end
 end
 ```
 
----
+### Test database isolation
 
-## 6. Testing Authentication
-
-```ruby
-require "tina4"
-
-RSpec.describe "Authentication" do
-  let(:client) { Tina4::TestClient.new }
-
-  before(:each) do
-    # Register a test user
-    client.post("/api/register", {
-      name: "Test User",
-      email: "test@example.com",
-      password: "securePass123"
-    })
-  end
-
-  it "logs in with valid credentials" do
-    result = client.post("/api/login", {
-      email: "test@example.com",
-      password: "securePass123"
-    })
-
-    expect(result.status).to eq(200)
-    expect(result.json).to have_key("token")
-    expect(result.json["user"]["email"]).to eq("test@example.com")
-  end
-
-  it "rejects invalid password" do
-    result = client.post("/api/login", {
-      email: "test@example.com",
-      password: "wrongPassword"
-    })
-
-    expect(result.status).to eq(401)
-    expect(result.json["error"]).to include("Invalid")
-  end
-
-  it "protects routes without token" do
-    result = client.get("/api/profile")
-
-    expect(result.status).to eq(401)
-  end
-
-  it "allows access with valid token" do
-    login = client.post("/api/login", {
-      email: "test@example.com",
-      password: "securePass123"
-    })
-
-    token = login.json["token"]
-
-    result = client.get("/api/profile", headers: {
-      "Authorization" => "Bearer #{token}"
-    })
-
-    expect(result.status).to eq(200)
-    expect(result.json["email"]).to eq("test@example.com")
-  end
-end
-```
-
----
-
-## 7. Test Database Isolation
-
-Use a separate test database to avoid polluting development data:
+By default, the framework uses whatever `TINA4_DATABASE_URL` points at. To keep tests off your development data, point them at a dedicated SQLite file:
 
 ```bash
 # .env.test
@@ -412,184 +296,242 @@ TINA4_DATABASE_URL=sqlite:///data/test.db
 TINA4_DEBUG=false
 ```
 
-In your test helper:
+Load it explicitly in your test bootstrap, or set `TINA4_ENV=test` and have your app pick the matching `.env.test` at startup.
+
+---
+
+## 6. Testing Authentication
+
+Auth flows are easy to test because `TestClient` works in-process -- there is no JWT round-trip over the wire.
 
 ```ruby
-# tests/spec_helper.rb
-ENV["TINA4_ENV"] = "test"
 require "tina4"
 
-RSpec.configure do |config|
-  config.before(:suite) do
-    # Run migrations on test database
-    system("tina4 migrate --env test")
+Tina4::Testing.describe "Authentication" do
+  client = Tina4::TestClient.new
+
+  before_each do
+    User.where("email = ?", ["test@example.com"]).each(&:delete)
+
+    client.post("/api/auth/register", json: {
+      name: "Test User",
+      email: "test@example.com",
+      password: "SecurePass123!"
+    })
   end
 
-  config.after(:suite) do
-    # Clean up test database
-    File.delete("data/test.db") if File.exist?("data/test.db")
+  it "logs in with valid credentials" do
+    resp = client.post("/api/auth/login", json: {
+      email: "test@example.com",
+      password: "SecurePass123!"
+    })
+
+    assert_status(resp, 200)
+
+    body = resp.json
+    assert_not_nil(body["token"], "Should return a JWT token")
+    assert(body["token"].length > 50, "Token should be substantial")
+  end
+
+  it "rejects an invalid password" do
+    resp = client.post("/api/auth/login", json: {
+      email: "test@example.com",
+      password: "wrong-password"
+    })
+
+    assert_status(resp, 401)
+    assert_match(/invalid/i, resp.json["error"])
+  end
+
+  it "protects routes without a token" do
+    resp = client.get("/api/profile")
+
+    assert_status(resp, 401)
+  end
+
+  it "allows access with a valid token" do
+    login = client.post("/api/auth/login", json: {
+      email: "test@example.com",
+      password: "SecurePass123!"
+    })
+    token = login.json["token"]
+
+    resp = client.get("/api/profile", headers: {
+      "Authorization" => "Bearer #{token}"
+    })
+
+    assert_status(resp, 200)
+    assert_equal("test@example.com", resp.json["email"])
   end
 end
 ```
 
 ---
 
-## 8. Setup and Teardown
+## 7. Setup and Teardown
 
-RSpec's `before` and `after` hooks handle test fixture management. Use them to create and clean up test data:
+`before_each` runs before every test in the suite. `after_each` runs after every test, even on failure. Use them to create fixtures and clean up state:
 
 ```ruby
-RSpec.describe "User Management" do
-  let(:client) { Tina4::TestClient.new }
+Tina4::Testing.describe "User Management" do
+  client = Tina4::TestClient.new
+  user_id = nil
 
-  before(:each) do
-    # Runs before every test
-    @user = User.new(name: "Test User", email: "test@example.com")
-    @user.save
-    @user_id = @user.id
+  before_each do
+    user = User.new(name: "Test User", email: "fixture@example.com")
+    user.save
+    user_id = user.id
   end
 
-  after(:each) do
-    # Runs after every test, regardless of pass/fail
-    User.find(@user_id)&.delete rescue nil
+  after_each do
+    User.find(user_id)&.delete if user_id
   end
 
   it "loads the user" do
-    loaded = User.find(@user_id)
-    expect(loaded.name).to eq("Test User")
+    loaded = User.find(user_id)
+    assert_equal("Test User", loaded.name)
   end
 
   it "updates the user" do
-    user = User.find(@user_id)
+    user = User.find(user_id)
     user.name = "Updated Name"
     user.save
 
-    reloaded = User.find(@user_id)
-    expect(reloaded.name).to eq("Updated Name")
+    reloaded = User.find(user_id)
+    assert_equal("Updated Name", reloaded.name)
   end
 end
 ```
 
-`before(:each)` runs before every test method. `after(:each)` runs after every test method, regardless of whether the test passed or failed. This keeps tests isolated -- each test starts with a clean state.
-
-Use `before(:all)` and `after(:all)` for expensive setup that applies to the entire describe block (like creating a database). But prefer `before(:each)` for data -- shared state between tests causes flaky results.
+There is no per-suite hook. If you need one-off setup that applies to every test, do it at the top of the file before `describe`, or accept the cost of running it in `before_each`.
 
 ---
 
-## 9. Running Tests
+## 8. Running Tests
 
 ```bash
-# Run all tests
-tina4 test
-
-# Run a specific test file
-tina4 test tests/product_spec.rb
-
-# Run with verbose output
-tina4 test --verbose
-
-# Using RSpec directly
-bundle exec rspec tests/
-bundle exec rspec tests/product_spec.rb
-bundle exec rspec tests/ --format documentation
+# Run every discovered test file
+tina4ruby test
 ```
+
+The runner walks `tests/`, `test/`, `spec/`, and `src/tests/` (in that order) and loads every `*_test.rb` and `test_*.rb` file it finds. Inline tests declared inside route files are picked up automatically because `tina4ruby test` also loads `routes/`.
+
+Output uses ANSI colours: green checks for passes, red crosses for failures, and yellow bangs for unexpected exceptions. Exit code is non-zero if any test fails or errors -- perfect for CI.
+
+```
+  Product API
+    ✓ returns the products list
+    ✓ creates a product
+    ✗ returns 404 for a missing product: Expected status 404, got 200
+    ✓ validates required fields
+
+  4 tests: 3 passed, 1 failed, 0 errors
+```
+
+The failure line shows the suite name, the test description, and the assertion message. Find the line. Fix the logic. Run again.
+
+### Embedding the runner in your own scripts
+
+```ruby
+require "tina4"
+
+# Load whichever test files you want, then:
+results = Tina4::Testing.run_all(quiet: false, failfast: false)
+exit(results[:failed] > 0 || results[:errors] > 0 ? 1 : 0)
+```
+
+`run_all` returns a hash with `:passed`, `:failed`, `:errors`, and a `:tests` array of `{ name:, status:, suite:, message: }` entries. Pass `quiet: true` to suppress console output and inspect the hash directly. Pass `failfast: true` to stop at the first failure.
 
 ---
 
-## 10. Testing Best Practices
+## 9. Testing Best Practices
 
-### Test One Thing Per Test
+### Test one thing per `it`
 
-Each test should verify one behavior. If it fails, you know exactly what broke.
+Each test should verify one behaviour. When it fails, you know exactly what broke.
 
 ```ruby
-# Good: each test verifies one thing
+# Good — each test verifies one thing
 it "returns 201 on create" do
-  result = client.post("/api/products", { name: "Widget", price: 9.99 })
-  expect(result.status).to eq(201)
+  resp = client.post("/api/products", json: { name: "Widget", price: 9.99 })
+  assert_status(resp, 201)
 end
 
 it "returns the created product" do
-  result = client.post("/api/products", { name: "Widget", price: 9.99 })
-  expect(result.json["name"]).to eq("Widget")
+  resp = client.post("/api/products", json: { name: "Widget", price: 9.99 })
+  assert_equal("Widget", resp.json["name"])
 end
 
-# Avoid: testing multiple unrelated things in one test
+# Bad — testing five things in one block
 it "does everything" do
-  # Creates, reads, updates, deletes, checks auth, validates input...
-  # When this fails, you do not know which part broke
+  # Creates, reads, updates, deletes, checks auth, validates input ...
+  # When this fails you have no idea which step broke.
 end
 ```
 
-### Use Descriptive Test Names
+### Use descriptive test names
 
 ```ruby
-# Good: tells you what the test verifies
-it "returns 404 when product does not exist" do
-  # ...
-end
+# Good
+it "returns 404 when the product does not exist"
 
-# Bad: vague name
-it "works" do
-  # ...
-end
+# Bad
+it "works"
 ```
 
-### Isolate Tests
+### Isolate tests
 
-Each test should create its own data and clean up after itself. Never depend on data from another test or from the development database.
+Each test should create its own data and clean up after itself. Never depend on rows left behind by another test.
 
 ```ruby
-# Good: creates its own data
+# Good
 it "deletes a product" do
-  product = Product.new(name: "Temporary", price: 1.00)
-  product.save
-
+  product = Product.create(name: "Temporary", price: 1.0)
   product.delete
-
-  check = Product.find(product.id)
-  expect(check).to be_nil
+  assert_nil(Product.find(product.id))
 end
 ```
 
-### Code Coverage
+### Generate unique values
 
-RSpec integrates with `simplecov` for coverage reports:
+Avoid `UNIQUE` constraint failures by mixing in a random or time-based suffix:
 
 ```ruby
-# Add to Gemfile
-gem "simplecov", require: false, group: :test
+require "securerandom"
 
-# Add to spec/spec_helper.rb (before any other require)
-require "simplecov"
-SimpleCov.start
+it "registers a user" do
+  email = "test-#{SecureRandom.hex(4)}@example.com"
+  resp = client.post("/api/auth/register", json: {
+    name: "Test", email: email, password: "Pass1234!"
+  })
+  assert_status(resp, 201)
+end
 ```
 
-```bash
-bundle exec rspec
-```
+### Compare floats with tolerance
 
-```
-Coverage report generated. 88.5% covered.
-```
+`assert_equal(9.99, product.price)` can fail when SQLite hands back `9.990000000000001`. When the engine is fussy, use a manual tolerance:
 
-Open `coverage/index.html` in your browser for a visual breakdown of which lines are covered.
+```ruby
+diff = (product.price - 9.99).abs
+assert(diff < 0.01, "Expected ~9.99, got #{product.price}")
+```
 
 ---
 
-## 11. Exercise: Write Tests for a Notes API
+## 10. Exercise: Write Tests for a Notes API
 
-Write a comprehensive test suite for the Notes API from Chapter 5.
+Write a test suite for the Notes API from Chapter 5.
 
 ### Requirements
 
-Test these scenarios:
+Cover these scenarios:
 
 1. Create a note with valid data (201)
-2. Create a note with missing title (400)
+2. Reject a note with a missing title (400)
 3. List all notes (200)
-4. Get a note by ID (200)
-5. Get a non-existent note (404)
+4. Get a note by id (200)
+5. Return 404 for a non-existent note
 6. Update a note (200)
 7. Delete a note (204)
 8. Search notes by content
@@ -597,158 +539,160 @@ Test these scenarios:
 
 ---
 
-## 12. Solution
+## 11. Solution
 
-Create `tests/notes_spec.rb`:
+Create `tests/notes_test.rb`:
 
 ```ruby
 require "tina4"
 
-RSpec.describe "Notes API" do
-  let(:client) { Tina4::TestClient.new }
+Tina4::Testing.describe "Notes API" do
+  client = Tina4::TestClient.new
 
-  before(:each) do
+  before_each do
     db = Tina4.database
     db.execute("DELETE FROM notes")
   end
 
   it "creates a note with valid data" do
-    result = client.post("/api/notes", {
+    resp = client.post("/api/notes", json: {
       title: "Test Note",
       content: "This is a test",
       tag: "testing"
     })
 
-    expect(result.status).to eq(201)
-    expect(result.json["title"]).to eq("Test Note")
-    expect(result.json["tag"]).to eq("testing")
-    expect(result.json["id"]).not_to be_nil
+    assert_status(resp, 201)
+
+    body = resp.json
+    assert_equal("Test Note", body["title"])
+    assert_equal("testing", body["tag"])
+    assert_not_nil(body["id"])
   end
 
-  it "rejects note with missing title" do
-    result = client.post("/api/notes", {
-      content: "No title here"
-    })
+  it "rejects a note with a missing title" do
+    resp = client.post("/api/notes", json: { content: "No title here" })
 
-    expect(result.status).to eq(400)
-    expect(result.json["errors"]).to include("Title is required")
+    assert_status(resp, 400)
+    assert_match(/title/i, resp.json["error"])
   end
 
   it "lists all notes" do
-    client.post("/api/notes", { title: "Note 1", content: "Content 1" })
-    client.post("/api/notes", { title: "Note 2", content: "Content 2" })
+    client.post("/api/notes", json: { title: "Note 1", content: "Content 1" })
+    client.post("/api/notes", json: { title: "Note 2", content: "Content 2" })
 
-    result = client.get("/api/notes")
+    resp = client.get("/api/notes")
 
-    expect(result.status).to eq(200)
-    expect(result.json["count"]).to eq(2)
-    expect(result.json["notes"].length).to eq(2)
+    assert_status(resp, 200)
+    assert_equal(2, resp.json["notes"].length)
   end
 
-  it "gets a note by ID" do
-    created = client.post("/api/notes", { title: "Find Me", content: "Here I am" })
+  it "gets a note by id" do
+    created = client.post("/api/notes", json: { title: "Find Me", content: "Here I am" })
     id = created.json["id"]
 
-    result = client.get("/api/notes/#{id}")
+    resp = client.get("/api/notes/#{id}")
 
-    expect(result.status).to eq(200)
-    expect(result.json["title"]).to eq("Find Me")
+    assert_status(resp, 200)
+    assert_equal("Find Me", resp.json["title"])
   end
 
-  it "returns 404 for non-existent note" do
-    result = client.get("/api/notes/99999")
-
-    expect(result.status).to eq(404)
+  it "returns 404 for a non-existent note" do
+    resp = client.get("/api/notes/99999")
+    assert_status(resp, 404)
   end
 
   it "updates a note" do
-    created = client.post("/api/notes", { title: "Original", content: "Original content" })
+    created = client.post("/api/notes", json: { title: "Original", content: "Original content" })
     id = created.json["id"]
 
-    result = client.put("/api/notes/#{id}", { title: "Updated", content: "Updated content" })
+    resp = client.put("/api/notes/#{id}", json: { title: "Updated", content: "Updated content" })
 
-    expect(result.status).to eq(200)
-    expect(result.json["title"]).to eq("Updated")
+    assert_status(resp, 200)
+    assert_equal("Updated", resp.json["title"])
   end
 
   it "deletes a note" do
-    created = client.post("/api/notes", { title: "Delete Me", content: "Goodbye" })
+    created = client.post("/api/notes", json: { title: "Delete Me", content: "Goodbye" })
     id = created.json["id"]
 
-    result = client.delete("/api/notes/#{id}")
+    resp = client.delete("/api/notes/#{id}")
+    assert_status(resp, 204)
 
-    expect(result.status).to eq(204)
-
-    get_result = client.get("/api/notes/#{id}")
-    expect(get_result.status).to eq(404)
+    assert_status(client.get("/api/notes/#{id}"), 404)
   end
 
   it "searches notes by content" do
-    client.post("/api/notes", { title: "Shopping", content: "Buy milk and eggs" })
-    client.post("/api/notes", { title: "Work", content: "Finish the report" })
+    client.post("/api/notes", json: { title: "Shopping", content: "Buy milk and eggs" })
+    client.post("/api/notes", json: { title: "Work", content: "Finish the report" })
 
-    result = client.get("/api/notes?search=milk")
+    resp = client.get("/api/notes?search=milk")
 
-    expect(result.status).to eq(200)
-    expect(result.json["count"]).to eq(1)
-    expect(result.json["notes"][0]["title"]).to eq("Shopping")
+    assert_status(resp, 200)
+    assert_equal(1, resp.json["notes"].length)
+    assert_equal("Shopping", resp.json["notes"][0]["title"])
   end
 
   it "filters notes by tag" do
-    client.post("/api/notes", { title: "Personal", content: "Content", tag: "personal" })
-    client.post("/api/notes", { title: "Work", content: "Content", tag: "work" })
+    client.post("/api/notes", json: { title: "Personal", content: "Content", tag: "personal" })
+    client.post("/api/notes", json: { title: "Work", content: "Content", tag: "work" })
 
-    result = client.get("/api/notes?tag=personal")
+    resp = client.get("/api/notes?tag=personal")
 
-    expect(result.status).to eq(200)
-    expect(result.json["count"]).to eq(1)
-    expect(result.json["notes"][0]["title"]).to eq("Personal")
+    assert_status(resp, 200)
+    assert_equal(1, resp.json["notes"].length)
+    assert_equal("Personal", resp.json["notes"][0]["title"])
   end
 end
 ```
 
 ---
 
-## 13. Gotchas
+## 12. Gotchas
 
-### 1. Tests Share Database State
+### 1. Files must be named correctly
 
-**Problem:** Tests pass individually but fail when run together.
+**Problem:** Your tests don't run.
 
-**Fix:** Clean up in `before(:each)` blocks. Delete test data before each test.
+**Cause:** The runner only loads `*_test.rb` and `test_*.rb`. A file called `notes_spec.rb` will be skipped.
 
-### 2. TestClient Does Not Start a Real Server
+**Fix:** Rename to `notes_test.rb` or `test_notes.rb`.
 
-**Problem:** External services (SMTP, Redis) are not available in tests.
+### 2. Database state carries between tests
 
-**Fix:** Mock external services or use test doubles. The TestClient simulates HTTP requests without network I/O.
+**Problem:** A test passes alone but fails when the whole suite runs.
 
-### 3. Test Order Dependency
+**Fix:** Truncate tables in `before_each` or use unique values per test (UUID/timestamp suffix on emails, etc.).
 
-**Problem:** Test B depends on data created by Test A.
+### 3. `TestClient` doesn't start a real server
 
-**Fix:** Each test should set up its own data. Use `before(:each)` blocks to create required state.
+**Problem:** External services (SMTP, Redis, third-party APIs) are not available in tests.
 
-### 4. Database Migrations Not Applied
+**Fix:** `TestClient` matches routes and runs handlers in-process. Mock out anything that crosses the network boundary, or use the dev mailbox / fake queue backends shipped with the framework.
 
-**Problem:** Tests fail with "table does not exist" errors.
+### 4. Argument order on equality assertions
 
-**Fix:** Run `tina4 migrate` before running tests, or add migration logic to your test setup.
+**Problem:** The failure message reads "Expected: 200, got: 404" but you wanted to compare the other way around.
 
-### 5. Token Expired During Test
+**Fix:** The Tina4 convention is `assert_equal(expected, actual)` -- expected first, like Minitest. Keep the order consistent across your suite.
 
-**Problem:** Auth tests fail intermittently with "token expired".
+### 5. Floating point comparisons
 
-**Fix:** Set a long JWT expiry for tests: `TINA4_TOKEN_LIMIT=86400` in `.env.test`.
+**Problem:** `assert_equal(9.99, product.price)` fails with `9.990000000000001`.
 
-### 6. Floating Point Comparison
+**Fix:** Compare against a tolerance with `assert(diff < 0.01, ...)` as shown above, or store currency as integer cents.
 
-**Problem:** `expect(product.price).to eq(9.99)` fails with `9.990000000000001`.
+### 6. Tests can't find your models
 
-**Fix:** Use `be_within` for floating point: `expect(product.price).to be_within(0.01).of(9.99)`.
+**Problem:** `NameError: uninitialized constant Product` when the test loads.
 
-### 7. Test Output Too Verbose
+**Cause:** Routes and ORM models are normally loaded by the server boot path. `tina4ruby test` calls `Tina4.initialize!(Dir.pwd)` followed by route discovery, but a model file that isn't `require`d anywhere won't load on its own.
 
-**Problem:** Test output includes log messages from the application.
+**Fix:** Either `require_relative "../src/orm/product"` at the top of the test file, or move the model into the autoloaded `src/orm/` directory.
 
-**Fix:** Set `TINA4_LOG_LEVEL=ERROR` in `.env.test` to suppress info and debug logs.
+### 7. Tests pass locally but fail in CI
+
+**Problem:** All green on your machine, red in CI.
+
+**Cause:** Different Ruby version, missing env vars, different SQLite version, time-dependent assertions.
+
+**Fix:** Pin the Ruby version in CI (`.ruby-version`), commit `.env.test` if it contains no secrets, and avoid asserting on wall-clock time or random values.

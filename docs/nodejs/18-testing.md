@@ -215,39 +215,82 @@ TINA4_DATABASE_URL=sqlite:///data/test.db
 
 ## 6. Testing Routes
 
-Write functions that exercise your API endpoints end-to-end:
+The `TestClient` lets you exercise your API endpoints end-to-end without starting a server. It builds a mock request, matches the route, runs the handler, and returns a `TestResponse`. Construct one instance and reuse it across test functions.
 
 ```typescript
-import { tests, assertTrue, assertEqual, runAllTests } from "tina4-nodejs";
+import { tests, assertTrue, runAllTests, TestClient } from "tina4-nodejs";
+
+const client = new TestClient();
 
 const testHealthEndpoint = tests(
     assertTrue([]),
-)(function testHealthEndpoint(): boolean {
-    // Use the test client to send HTTP requests
-    const resp = testClient.get("/health");
-    return resp.status === 200 && resp.body.status === "ok";
+)(async function testHealthEndpoint(): Promise<boolean> {
+    const resp = await client.get("/health");
+    const body = resp.json() as { status?: string } | null;
+    return resp.status === 200 && body?.status === "ok";
 });
 
 const testCreateProduct = tests(
     assertTrue([]),
-)(function testCreateProduct(): boolean {
-    const resp = testClient.post("/api/products", {
-        name: "Route Test Product",
-        category: "Testing",
-        price: 42,
+)(async function testCreateProduct(): Promise<boolean> {
+    const resp = await client.post("/api/products", {
+        json: {
+            name: "Route Test Product",
+            category: "Testing",
+            price: 42,
+        },
     });
-    return resp.status === 201 && resp.body.name === "Route Test Product";
+    const body = resp.json() as { name?: string } | null;
+    return resp.status === 201 && body?.name === "Route Test Product";
 });
 
 const testGetNotFound = tests(
     assertTrue([]),
-)(function testGetNotFound(): boolean {
-    const resp = testClient.get("/api/products/99999");
+)(async function testGetNotFound(): Promise<boolean> {
+    const resp = await client.get("/api/products/99999");
     return resp.status === 404;
 });
 
 runAllTests();
 ```
+
+### TestClient Methods
+
+```typescript
+const client = new TestClient();
+
+// GET request
+const resp1 = await client.get("/api/products");
+
+// GET with query string
+const resp2 = await client.get("/api/products?category=Electronics");
+
+// POST with a JSON body — pass `json` inside the options object
+const resp3 = await client.post("/api/products", { json: { name: "Widget", price: 9.99 } });
+
+// PUT / PATCH / DELETE — same shape
+const resp4 = await client.put("/api/products/1", { json: { name: "Updated" } });
+const resp5 = await client.patch("/api/products/1", { json: { price: 12.99 } });
+const resp6 = await client.delete("/api/products/1");
+
+// Custom headers (e.g. Authorization)
+const resp7 = await client.get("/api/profile", {
+    headers: { authorization: "Bearer eyJhbGciOiJIUzI1NiIs..." },
+});
+```
+
+### TestResponse
+
+```typescript
+resp.status        // HTTP status code
+resp.body          // raw response body as a string
+resp.text()        // alias for resp.body
+resp.json()        // parses resp.body as JSON; returns null if not JSON
+resp.headers       // response headers as a record (lowercased keys)
+resp.contentType   // Content-Type header value
+```
+
+`resp.body` is always a string, so parse it with `resp.json()` (or `JSON.parse(resp.body)`) before reading properties.
 
 ---
 
