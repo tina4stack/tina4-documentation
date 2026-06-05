@@ -339,6 +339,82 @@ function requireJson($request, $response) {
 
 Ensures all write requests send JSON. Status: `415 Unsupported Media Type`.
 
+> **Note on header lookups** (v3.13.4+): `$request->headers` is case-insensitive per RFC 7230 §3.2. `$request->headers["Content-Type"]`, `["content-type"]`, and `["CONTENT-TYPE"]` all return the same value. Internally headers are a `Tina4\CaseInsensitiveArray` — pass it to anything that expects an `ArrayAccess` and it behaves like a normal hash, just without the casing footgun.
+
+### Continuation Middleware (the `$next` callable)
+
+The two-argument form above is a *filter* — it runs before the handler and either short-circuits or steps aside. For middleware that needs to run code **after** the handler (timing, response transformation, cleanup), use the three-argument **continuation** form. Tina4 detects it via reflection: any callable with three or more parameters is dispatched Express-style.
+
+```php
+<?php
+
+$timer = function ($request, $response, $next) {
+    $start = microtime(true);
+
+    $result = $next($request, $response);          // descend into the next layer
+
+    $elapsedMs = (int)((microtime(true) - $start) * 1000);
+    \Tina4\Log::info("{$request->method} {$request->path} → {$elapsedMs}ms");
+    return $result;
+};
+
+Router::post("/api/orders", function ($request, $response) {
+    return $response->json(["created" => true]);
+})->middleware([$timer]);
+```
+
+Inside the middleware, calling `$next($request, $response)` invokes the next middleware in the chain — or the route handler if this is the innermost layer. Omitting the call short-circuits, just like returning a `Response` from a filter middleware does.
+
+#### Russian-doll order
+
+When multiple continuation middlewares are attached, the first declared wraps everything else:
+
+```php
+$outer = function ($req, $resp, $next) {
+    error_log("outer.before");
+    $result = $next($req, $resp);
+    error_log("outer.after");
+    return $result;
+};
+
+$inner = function ($req, $resp, $next) {
+    error_log("inner.before");
+    $result = $next($req, $resp);
+    error_log("inner.after");
+    return $result;
+};
+
+Router::get("/api/x", $handler)->middleware([$outer, $inner]);
+//   request → outer.before → inner.before → handler → inner.after → outer.after → response
+```
+
+#### Short-circuiting without calling `$next`
+
+```php
+$gate = function ($request, $response, $next) {
+    if (!$request->headers["X-Internal-Token"] ?? null) {
+        return $response->json(["error" => "Forbidden"], 403);
+        // $next is never called — handler does not run
+    }
+    return $next($request, $response);
+};
+```
+
+This is the same short-circuit pattern as the filter form, but with the explicit choice of whether to continue made visible at the call site.
+
+#### When to pick which
+
+| Need | Use |
+|---|---|
+| Block or allow based on headers, then continue | 2-arg filter (terser) |
+| Add request metadata, then continue | 2-arg filter |
+| Run code **after** the handler returns | 3-arg continuation |
+| Time the request | 3-arg continuation |
+| Transform the response object | 3-arg continuation |
+| Catch exceptions from inner layers | 3-arg continuation (wrap `$next` in try/catch) |
+
+Both forms can be mixed in the same `->middleware([...])` array. The dispatcher applies the 2-arg filters first, then folds the 3-arg continuations into a chain around the handler.
+
 ### Writing Class-Based Middleware
 
 For more complex middleware, use the class-based pattern with `before*` and `after*` static methods. This style is for **global** middleware registered via `Middleware::use()`:
@@ -461,6 +537,32 @@ Router::get("/api/secret", function ($request, $response) {
     return $response->json(["secret" => "data"]);
 })->middleware([$checkAuth]);
 ```
+
+### `->middleware()` is purely additive
+
+> **Behaviour change in v3.13.4**: `->middleware()` does **not** change a route's auth requirement. POST/PUT/PATCH/DELETE routes stay Bearer-token-gated by default. To open a write route, chain `->noAuth()` explicitly. To lock a read route, chain `->secure()`.
+
+Before v3.13.4, applying `->middleware()` to a write route silently flipped its auth gate off — the framework assumed any custom middleware was handling auth itself. That assumption was undocumented and unsafe: a developer adding a logger or rate-limiter to an admin endpoint would silently open it to unauthenticated callers.
+
+The current behaviour is mechanical: middleware adds layers; `->noAuth()` and `->secure()` are the only knobs that touch `auth_required`.
+
+```php
+// POST routes are auth-gated by default — middleware doesn't change that
+Router::post("/api/admin/users", $handler)
+    ->middleware([$logger]);                         // STILL requires Bearer
+
+// To open a write route, say so explicitly
+Router::post("/api/webhook", $handler)
+    ->middleware([$logger])
+    ->noAuth();                                      // public
+
+// To lock a read route, say so explicitly
+Router::get("/api/admin/stats", $handler)
+    ->middleware([$logger])
+    ->secure();                                      // requires Bearer
+```
+
+The Bearer check still runs *before* your middleware, so a 401 short-circuits the chain before the logger sees the request. If you need to handle auth yourself (OAuth cookie sessions, custom token formats), open the route with `->noAuth()` and put the auth logic inside your middleware.
 
 ---
 
