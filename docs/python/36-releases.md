@@ -1,5 +1,96 @@
 # Chapter 35: Release Notes
 
+## v3.13.5 (2026-06-05)
+
+Frond static-facade parity across PHP, Ruby, Node.js. Closes the last documented v3 parity gap (tina4-python task #32). Python's `Frond.add_filter` / `add_global` / `add_test` have worked as classmethods since v3.13.0 — now PHP / Ruby / Node match.
+
+### What changes
+
+Filters, globals, and tests registered at app-startup persist across `new Frond()` instances. Every framework now supports the same pattern:
+
+```php
+// PHP
+\Tina4\Frond::addFilter("money", fn($v) => number_format((float)$v, 2));
+\Tina4\Frond::addGlobal("APP_NAME", "My App");
+\Tina4\Frond::addTest("positive", fn($v) => $v > 0);
+```
+
+```ruby
+# Ruby
+Tina4::Frond.add_filter("money") { |v| "%.2f" % v.to_f }
+Tina4::Frond.add_global("APP_NAME", "My App")
+Tina4::Frond.add_test("positive") { |v| v > 0 }
+```
+
+```typescript
+// Node.js
+Frond.addFilter("money", (v) => Number(v).toFixed(2));
+Frond.addGlobal("APP_NAME", "My App");
+Frond.addTest("positive", (v) => Number(v) > 0);
+```
+
+```python
+# Python — already shipped in v3.13.0
+Frond.add_filter("money", lambda v: f"{float(v):.2f}")
+Frond.add_global("APP_NAME", "My App")
+Frond.add_test("positive", lambda v: v > 0)
+```
+
+In every framework, registering at the class level updates a static registry. The next `new Frond()` drains that registry into its own filter/global/test maps automatically. No need to thread a single `Frond` instance through the application — register at startup, render everywhere.
+
+### Instance form still works
+
+Existing per-instance registration continues to work, and now propagates to the class registry too — so the lifecycle is symmetric:
+
+```php
+$frond = new \Tina4\Frond();
+$frond->addFilter("currency", $fn);
+// Future `new Frond()` instances also see "currency"
+```
+
+### `clearRegistry()` for test fixtures
+
+Every framework exposes a class-level method to wipe user-registered filters/globals/tests without touching the built-ins (upper, lower, length, defined, even, …). Useful in test setup/teardown to prevent state leaks between specs.
+
+```php
+\Tina4\Frond::clearRegistry();
+```
+
+```ruby
+Tina4::Frond.clear_registry
+```
+
+```typescript
+Frond.clearRegistry();
+```
+
+```python
+Frond.clear_registry()
+```
+
+### Implementation notes per framework
+
+| Framework | Mechanism |
+|---|---|
+| **Python** | `_ClassOrInstanceMethod` descriptor — one method, dual-callable via `__get__` |
+| **PHP** | `__call` + `__callStatic` magic-method pair — PHP can't have same-name static and instance methods |
+| **Ruby** | Same-name class method and instance method — Ruby naturally allows this |
+| **Node.js** | TypeScript class supports same-name `static foo()` and `foo()` instance methods — distinct lookup spaces |
+
+### Test count
+
+| Framework | Before | After | New |
+|---|---|---|---|
+| Python | 2,741 | 2,741 | 0 (already covered) |
+| PHP | 2,858 | 2,871 | +13 |
+| Ruby | 2,907 | 2,928 | +21 |
+| Node.js | 3,508 | 3,526 | +18 |
+| **Total** | **12,014** | **12,066** | **+52** |
+
+### Upgrade
+
+Drop-in patch. No breaking changes. Existing instance-form code (`$frond->addFilter(...)` / `frond.add_filter` / `frond.addFilter`) keeps working unchanged. The new static form is purely additive.
+
 ## v3.13.4 (2026-06-04)
 
 Three middleware/header bug fixes across all four frameworks, plus Python chapter 10 + 18 docs rewrites. Reported in tina4-book#140 and tina4-book#141 by MichaelC8E.
