@@ -177,14 +177,14 @@ Templates handle static content. When you need:
 @get("/products")
 async def products(request, response):
     items = Product.all()
-    return response.template("products.twig", {"products": items})
+    return response.render("products.twig", {"products": items})
 ```
 
 ```php
 // PHP
 Router::get("/products", function ($request, $response) {
     $products = (new Product())->select("*");
-    return $response->template("products.twig", ["products" => $products]);
+    return $response->render("products.twig", ["products" => $products]);
 });
 ```
 
