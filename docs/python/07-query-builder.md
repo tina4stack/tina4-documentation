@@ -16,7 +16,7 @@ from tina4_python.query_builder import QueryBuilder
 qb = QueryBuilder.from_table("users", db)
 ```
 
-The first argument is the table name. The second is your database connection — the same `Database` object you use everywhere else. If you omit the database, QueryBuilder will fall back to the global ORM database (set via `orm_bind()`). If neither exists, it raises a `RuntimeError` when you try to execute.
+The first argument is the table name. The second is your database connection — the same `Database` object you use everywhere else. If you omit the database, QueryBuilder will fall back to the global ORM database (set via `bind_database()`). If neither exists, it raises a `RuntimeError` when you try to execute.
 
 `from_table()` returns a fresh `QueryBuilder` instance. Every method you call on it returns the same instance, so you can chain.
 
@@ -410,7 +410,7 @@ This is where QueryBuilder shines. Without it, you would be concatenating SQL fr
 
 ## 11. Using with ORM Models
 
-If your ORM models are bound to a database via `orm_bind()`, QueryBuilder can use that connection automatically. You do not need to pass `db` explicitly.
+If your ORM models are bound to a database via `bind_database()`, QueryBuilder can use that connection automatically. You do not need to pass `db` explicitly.
 
 ```python
 from tina4_python.query_builder import QueryBuilder
@@ -540,7 +540,7 @@ qb.select("id", "name", "email")
 
 ### 4. "RuntimeError: No database connection provided"
 
-**Cause:** You called an execution method (`get()`, `first()`, `count()`, `exists()`) without passing a database to `from_table()` and without having called `orm_bind()`.
+**Cause:** You called an execution method (`get()`, `first()`, `count()`, `exists()`) without passing a database to `from_table()` and without having called `bind_database()`.
 
 **Fix:** Either pass the database explicitly:
 
@@ -548,7 +548,7 @@ qb.select("id", "name", "email")
 QueryBuilder.from_table("users", db).get()
 ```
 
-Or ensure `orm_bind(db)` has been called in your `app.py` before the query runs.
+Or ensure `bind_database(db)` has been called in your `app.py` before the query runs.
 
 ### 5. "or_where() on the first condition has no effect"
 

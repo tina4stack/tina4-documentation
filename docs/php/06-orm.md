@@ -983,7 +983,7 @@ use Tina4\Database\Database;
 
 // Option 1: Set globally on ORM
 $db = Database::create("sqlite:///path/to/app.db");
-ORM::setGlobalDb($db);
+ORM::bindDatabase($db);
 
 // Option 2: Set via App
 App::setDatabase($db);
@@ -998,7 +998,9 @@ Once a global database is set, all ORM models resolve it. You can also pass a da
 $note = new Note($db);
 ```
 
-The resolution order is: instance `$_db` -> global `ORM::setGlobalDb()` -> `App::getDatabase()` -> `Database::fromEnv()`. If none is found, the ORM throws a `RuntimeException`.
+The resolution order is: instance `$_db` -> global `ORM::bindDatabase()` -> `App::getDatabase()` -> `Database::fromEnv()`. If none is found, the ORM throws a `RuntimeException`.
+
+> Models auto-bind from `TINA4_DATABASE_URL` (`.env`) by default, so most apps never call `bindDatabase()` directly. Pass a second argument — `ORM::bindDatabase($db, "read")` — to register a named secondary connection, then point a model at it with `protected string $_db = "read";`.
 
 ---
 

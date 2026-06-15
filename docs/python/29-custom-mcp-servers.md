@@ -203,12 +203,12 @@ Here is a full working example -- a CRM system with customer, order, and product
 ```python
 # app.py
 from tina4_python.core import run
-from tina4_python.orm import orm_bind
+from tina4_python.orm import bind_database
 from tina4_python.database import Database
 from tina4_python.mcp import McpServer, mcp_tool, mcp_resource
 
 db = Database("sqlite:///crm.db")
-orm_bind(db)
+bind_database(db)
 
 # Create MCP server
 crm_mcp = McpServer("/crm/mcp", name="CRM Assistant", version="1.0.0")

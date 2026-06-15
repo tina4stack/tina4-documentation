@@ -305,14 +305,14 @@ class Product(ORM):
 
 ### Binding the Database
 
-Call `orm_bind(db)` before using any ORM class. Do this once in `app.py`:
+Call `bind_database(db)` before using any ORM class. Do this once in `app.py`:
 
 ```python
 from tina4_python.database import Database
-from tina4_python.orm import orm_bind
+from tina4_python.orm import bind_database
 
 db = Database("sqlite:///data/app.db")
-orm_bind(db)
+bind_database(db)
 ```
 
 ### Auto Mapping
@@ -603,7 +603,7 @@ Follow this order. Each step builds on the previous one.
    Update imports from `from tina4_python import route` to `from tina4_python.core.router import get, post, put, patch, delete`. Replace `@route.get()` with `@get()`. Make handler functions `async`.
 
 4. **Move ORM models to `src/orm/`**
-   Replace raw field definitions with typed fields: `IntegerField`, `StringField`, `FloatField`, `TextField`. Add `orm_bind(db)` in `app.py`.
+   Replace raw field definitions with typed fields: `IntegerField`, `StringField`, `FloatField`, `TextField`. Add `bind_database(db)` in `app.py`.
 
 5. **Move templates to `src/templates/`**
    Replace `response.template()` calls with `response.render()`. Templates are Twig-compatible -- most existing templates work without changes.

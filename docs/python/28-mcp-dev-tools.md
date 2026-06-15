@@ -294,7 +294,7 @@ Returns JSON-RPC 2.0 responses:
 - Verify the port matches your server's port
 
 **Tools returning errors:**
-- Database tools require `orm_bind(db)` in `app.py`
+- Database tools require `bind_database(db)` in `app.py`
 - File tools are sandboxed to the project directory
 - `database_execute` only works on localhost
 
