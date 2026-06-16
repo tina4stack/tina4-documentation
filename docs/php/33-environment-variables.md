@@ -68,7 +68,7 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 | `TINA4_DATABASE_PASSWORD` | _(empty)_ | Overrides the password embedded in `TINA4_DATABASE_URL`. |
 | `TINA4_DATABASE_FIREBIRD_PATH` | _(empty)_ | Overrides the database path/alias parsed from `TINA4_DATABASE_URL` for Firebird. Useful for Windows backslash paths and split-config setups. |
 | `TINA4_DATABASE_URL` | _(empty)_ | Legacy alias for `TINA4_DATABASE_URL`. Prefer `TINA4_DATABASE_URL` in new projects. |
-| `TINA4_AUTOCOMMIT` | `false` | Auto-commit after every write. Default is off — call `commit()` explicitly. |
+| `TINA4_AUTOCOMMIT` | `true` | Standalone writes auto-commit on their own connection (durable + visible across a pool); explicit transactions stay atomic. Set `false` for strict manual-commit mode. |
 | `TINA4_DB_CACHE` | `false` | Enables in-memory query-result caching for read queries. |
 | `TINA4_DB_CACHE_TTL` | `60` | Query cache TTL in seconds when `TINA4_DB_CACHE=true`. |
 | `TINA4_DB_POOL` | `0` | Default connection-pool size used when a caller constructs `Database` without passing `$pool`. `0` keeps the single-connection behaviour; values above zero enable pooled adapters lazily. An explicit constructor argument always wins. |

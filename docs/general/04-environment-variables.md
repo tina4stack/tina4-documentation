@@ -150,7 +150,7 @@ TINA4_CSRF=false
 | `TINA4_DATABASE_URL` | `sqlite:///data/app.db` | Connection string. The URL scheme selects the driver. |
 | `TINA4_DATABASE_USERNAME` | _(from URL)_ | Override the username in `TINA4_DATABASE_URL`. Useful when credentials contain special characters. |
 | `TINA4_DATABASE_PASSWORD` | _(from URL)_ | Override the password in `TINA4_DATABASE_URL`. |
-| `TINA4_AUTOCOMMIT` | `false` | Enable auto-commit after every write operation. Default is off -- use explicit `commit()` calls. |
+| `TINA4_AUTOCOMMIT` | `true` | Standalone writes auto-commit on their own connection (durable + visible across a pool); explicit transactions stay atomic. Set `false` for strict manual-commit mode. |
 
 **Connection string formats:**
 
