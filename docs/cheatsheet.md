@@ -4,6 +4,44 @@ One page, four frameworks, side by side. Find what you need, copy the column for
 
 > **Verified only.** Every entry on this page has been run green across **all four frameworks** (Python · PHP · Ruby · Node) — not transcribed from docs. Each section notes how it was checked. Sections are added only once they pass that bar, so this page is short on purpose and grows as more is verified.
 
+## Routing {#routing}
+
+> Verified by a live cross-framework code review plus the routing test suites in all four (Python · PHP · Ruby · Node — run green this release): method registration, `{id}` params, and typed-param coercion.
+
+Drop a handler file in `src/routes/` (auto-discovered) and register one per HTTP method:
+
+| | Python | PHP | Ruby | Node |
+|---|---|---|---|---|
+| Register | `@get("/p")` · `@post` · `@put` · `@patch` · `@delete` | `Router::get("/p", $fn)` · `post` · `put` · `patch` · `delete` | `Tina4::Router.get("/p") { \|req, res\| … }` · `post` · … | `get("/p", h)` · `post` · `put` · `patch` · `del` |
+| Path param | `@get("/users/{id}")` | `Router::get("/users/{id}", $fn)` | `Tina4::Router.get("/users/{id}")` | `get("/users/{id}", h)` |
+| Typed param | `{id:int}` · `{p:float}` | `{id:int}` · `{p:float}` | `{id:int}` · `{p:float}` | `{id:int}` · `{p:float}` |
+
+- **`{id}` is the param syntax everywhere** — never `:id`. Read it with `request.param("id")` (PHP `$request->params["id"]`, Ruby `params[:id]`, Node `req.params.id`).
+- **Typed params arrive coerced** — `{id:int}`/`{id:integer}` → a native integer, `{p:float}`/`{p:number}` → a native float; `string`/`alpha`/`alnum`/`slug`/`uuid`/`path` and an untyped `{id}` stay strings. The type also constrains matching: `/users/abc` → 404 for `{id:int}`. An unknown type name is rejected at registration.
+- **Returning data** — `return response(obj)` (Node: `return res.json(obj)`): objects/dicts/arrays → JSON, strings → HTML; ORM models, lists of models, and `DatabaseResult`s auto-serialize to JSON.
+
+---
+
+## Auth {#auth}
+
+> Verified by a live cross-framework code review plus the auth / route-protection suites in all four (Python · PHP · Ruby · Node — run green this release): default protection, opt-out/opt-in, JWT, password hashing.
+
+**GET routes are public; POST / PUT / PATCH / DELETE require a Bearer token by default** — the same convention in every framework. A write request with no valid token gets `401`.
+
+| | Python | PHP | Ruby | Node |
+|---|---|---|---|---|
+| Open a write route | `@noauth()` | `Router::post(…)->noAuth()` | `Tina4::Router.post(…).no_auth` | `post(…).noAuth()` |
+| Protect a GET | `@secured()` | `Router::get(…)->secure()` | `Tina4::Router.get(…).secure` | `get(…).secure()` |
+| Issue a JWT | `get_token({"id": 1}, expires_in=60)` | `Auth::getToken(["id"=>1], null, 60)` | `Tina4::Auth.get_token({id: 1}, expires_in: 60)` | `getToken({id: 1}, secret, 60)` |
+| Validate a JWT | `valid_token(t)` | `Auth::validToken($t)` | `Tina4::Auth.valid_token(t)` | `validToken(t)` |
+| Hash / check password | `Auth.hash_password(pw)` / `Auth.check_password(pw, h)` | `Auth::hashPassword($pw)` / `Auth::checkPassword($pw, $h)` | `Tina4::Auth.hash_password(pw)` / `Tina4::Auth.check_password(pw, h)` | `hashPassword(pw)` / `checkPassword(pw, h)` |
+
+- **JWT expiry is in minutes** (default 60) in all four. `valid_token` returns the decoded **payload** (truthy) on success, `null`/`None` on failure — not a bool.
+- A protected route accepts the token from the **`Authorization: Bearer` header, a `formToken` body field, or the session** — checked in that order.
+- Passwords hash with **PBKDF2-SHA256** (260 000 iterations, `pbkdf2_sha256$…` format); the check is timing-safe and always takes **`(password, hash)`** in that order.
+
+---
+
 ## Database
 
 > Verified live on PostgreSQL across all four (connection pool round-robin run, this release).
@@ -122,7 +160,7 @@ From a route, `response.render("pages/x.twig", data)` (PHP `$response->render`, 
 
 ## Coming as verified
 
-These are written and being checked live across all four before they land here: routing & auth defaults · request/response · ORM models & CRUD · QueryBuilder · relationships · migrations · sessions · middleware · caching · queues · websockets · swagger · graphql · events · i18n · logging · DI · fakedata · CLI.
+These are written and being checked live across all four before they land here: request/response · ORM models & CRUD · QueryBuilder · relationships · migrations · sessions · middleware · caching · queues · websockets · swagger · graphql · events · i18n · logging · DI · fakedata · CLI.
 
 ## 📕 Download the book
 
