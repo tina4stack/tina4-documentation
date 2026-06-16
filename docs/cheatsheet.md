@@ -11,11 +11,11 @@ One page, four frameworks, side by side. Find what you need, copy the column for
 | | Python | PHP | Ruby | Node |
 |---|---|---|---|---|
 | Connect | `Database("postgres://…")` | `Database::create("postgres://…")` | `Tina4::Database.new("postgres://…")` | `await initDatabase({url})` |
-| Run a write | `db.execute("INSERT …")` | `$db->execute("INSERT …")` | `db.execute("INSERT …")` | `await db.execute("INSERT …")` |
-| One row | `db.fetch_one(sql)` | `$db->fetchOne(sql)` | `db.fetch_one(sql)` | `await db.fetchOne(sql)` |
+| Write, params | `db.execute("INSERT INTO t (a, b) VALUES (?, ?)", [1, "x"])` | `$db->execute("INSERT INTO t (a, b) VALUES (?, ?)", [1, "x"])` | `db.execute("INSERT INTO t (a, b) VALUES (?, ?)", [1, "x"])` | `await db.execute("INSERT INTO t (a, b) VALUES (?, ?)", [1, "x"])` |
+| One row, params | `db.fetch_one("SELECT * FROM t WHERE id = ?", [1])` | `$db->fetchOne("SELECT * FROM t WHERE id = ?", [1])` | `db.fetch_one("SELECT * FROM t WHERE id = ?", [1])` | `await db.fetchOne("SELECT * FROM t WHERE id = ?", [1])` |
 | Transaction | `db.start_transaction()` … `db.commit()` / `db.rollback()` | `$db->startTransaction()` … `$db->commit()` / `$db->rollback()` | `db.start_transaction` … `db.commit` / `db.rollback` | `await db.startTransaction()` … `await db.commit()` / `await db.rollback()` |
 
-A standalone write auto-commits on its own connection (so it's durable and visible across a pooled connection); an explicit transaction stays atomic. Set `TINA4_AUTOCOMMIT=false` for strict manual-commit mode.
+Always use `?` placeholders with a params array — every adapter translates `?` to the engine's native style (`$1`, `%s`, `?`). Never string-interpolate user input. A standalone write auto-commits on its own connection (durable + visible across a pooled connection); an explicit transaction stays atomic. Set `TINA4_AUTOCOMMIT=false` for strict manual-commit mode.
 
 ## Pages — drop-in templates {#pages}
 
