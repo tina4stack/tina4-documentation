@@ -42,6 +42,41 @@ Drop a handler file in `src/routes/` (auto-discovered) and register one per HTTP
 
 ---
 
+## Request {#request}
+
+> Verified by a live cross-framework code review + the request test suites in all four (Python · PHP · Ruby · Node — run green this release).
+
+| | Python | PHP | Ruby | Node |
+|---|---|---|---|---|
+| Parsed body | `request.body` | `$request->body` | `request.body` | `req.body` |
+| Query param | `request.query["q"]` | `$request->query["q"]` | `request.query["q"]` | `req.query.q` |
+| Header (any case) | `request.headers["Content-Type"]` | `$request->headers["Content-Type"]` | `request.headers["Content-Type"]` | `req.headers["content-type"]` |
+| Cookie | `request.cookies["sid"]` | `$request->cookies["sid"]` | `request.cookies["sid"]` | `req.cookies.sid` |
+| Uploaded file | `request.files["doc"]["content"]` | `$request->files["doc"]["content"]` | `request.files["doc"]["content"]` | `req.files.doc.content` |
+
+- **Body is the parsed payload** — a JSON or form-urlencoded POST becomes a dict/array/hash. (For the raw string, Ruby exposes `request.body_raw`.)
+- **`request.query` is the query string only** — route params like `{id}` come from the path (see Routing). Headers are **case-insensitive** in every framework.
+- **Uploaded files are raw bytes, never base64** — each entry has `filename`, `type`, `content` (the bytes), `size`.
+
+---
+
+## Response {#response}
+
+> Verified by a live cross-framework code review + the response / SSE test suites in all four (Python · PHP · Ruby · Node — run green this release).
+
+| | Python | PHP | Ruby | Node |
+|---|---|---|---|---|
+| JSON (+ status) | `return response(data, 201)` | `return $response($data, 201)` | `response.json(data, 201)` | `return res.json(data, 201)` |
+| Redirect | `response.redirect(url)` | `$response->redirect($url)` | `response.redirect(url)` | `res.redirect(url)` |
+| Serve a file | `response.file(path)` | `$response->file($path)` | `response.file(path)` | `res.file(path)` |
+| Stream / SSE | `response.stream(gen)` | `$response->stream($gen)` | `response.stream(gen)` | `res.stream(gen)` |
+| Custom header | `response.add_header(k, v)` | `$response->header(k, v)` | `response.add_header(k, v)` | `res.addHeader(k, v)` |
+
+- **Send through the response object** — objects/dicts/arrays → JSON, strings → HTML; ORM models, lists of models, and `DatabaseResult`s auto-serialize. Always call `response(...)` / `res.json(...)`: it works in all four (PHP and Ruby also serialize a bare `return [...]`, but the explicit call is portable).
+- `response(data, 201)` sets the status; **redirect** defaults to 302; **file** auto-detects the MIME type and returns 404 if the file is missing; **stream** sends an SSE-ready `text/event-stream` — pass a generator.
+
+---
+
 ## Database
 
 > Verified live on PostgreSQL across all four (connection pool round-robin run, this release).
@@ -160,7 +195,7 @@ From a route, `response.render("pages/x.twig", data)` (PHP `$response->render`, 
 
 ## Coming as verified
 
-These are written and being checked live across all four before they land here: request/response · ORM models & CRUD · QueryBuilder · relationships · migrations · sessions · middleware · caching · queues · websockets · swagger · graphql · events · i18n · logging · DI · fakedata · CLI.
+These are written and being checked live across all four before they land here: ORM models & CRUD · QueryBuilder · relationships · migrations · sessions · middleware · caching · queues · websockets · swagger · graphql · events · i18n · logging · DI · fakedata · CLI.
 
 ## 📕 Download the book
 
