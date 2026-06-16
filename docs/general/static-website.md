@@ -6,9 +6,11 @@ outline: deep
 
 # Static Websites with Frond (Twig) Templates
 
-Tina4 renders templates from `src/templates/` and matches them to URLs by filename. Put `index.twig` in the templates folder. It serves at `/`. Put `cars.twig` next to it. It serves at `/cars`. No routes needed — Tina4 reads the directory and does the wiring.
+Tina4 renders templates from `src/templates/pages/` and matches them to URLs by filename. Put `index.twig` in `src/templates/pages/`. It serves at `/`. Put `cars.twig` next to it. It serves at `/cars`. No routes needed — Tina4 reads the directory and does the wiring.
 
-Routes always take precedence. If you define a route for `/cars`, the route handler runs. If you don't, the template renders.
+Only files inside `pages/` auto-route. Shared templates outside it — `base.twig`, partials, layouts, `errors/` — are render-only (`response.render(...)`) and never served from a URL. Files whose name starts with `_` (e.g. `_partial.twig`) stay private. Turn the whole feature off with `TINA4_TEMPLATE_ROUTING=off`.
+
+Routes always take precedence. If you define a route for `/cars`, the route handler runs. If you don't, the `pages/cars.twig` template renders.
 
 ## Quick Start
 
@@ -18,7 +20,7 @@ cd mysite
 tina4 serve
 ```
 
-Open http://localhost:7146 (Python) or http://localhost:7145 (PHP). The landing page renders from `src/templates/index.twig`.
+Open http://localhost:7145. The landing page renders from `src/templates/pages/index.twig`.
 
 ## Project Structure
 
@@ -27,10 +29,11 @@ mysite/
   .env
   src/
     templates/
-      base.twig          # Shared layout
-      index.twig         # / route
-      about.twig         # /about route
-      products.twig      # /products route
+      base.twig          # Shared layout — render-only, never auto-served
+      pages/
+        index.twig       # /
+        about.twig       # /about
+        products.twig    # /products
     public/
       css/
         tina4.min.css    # Ships with Tina4 — no CDN needed
@@ -83,7 +86,7 @@ The `tina4.min.css` and `tina4.min.js` files ship with the framework. No externa
 
 Each page extends the base and fills in the content block.
 
-**index.twig** (serves at `/`):
+**pages/index.twig** (serves at `/`):
 
 ```html
 {% extends "base.twig" %}
@@ -96,7 +99,7 @@ Each page extends the base and fills in the content block.
 {% endblock %}
 ```
 
-**about.twig** (serves at `/about`):
+**pages/about.twig** (serves at `/about`):
 
 ```html
 {% extends "base.twig" %}
@@ -113,7 +116,7 @@ Each page extends the base and fills in the content block.
 {% endblock %}
 ```
 
-**products.twig** (serves at `/products`):
+**pages/products.twig** (serves at `/products`):
 
 ```html
 {% extends "base.twig" %}
@@ -177,14 +180,14 @@ Templates handle static content. When you need:
 @get("/products")
 async def products(request, response):
     items = Product.all()
-    return response.render("products.twig", {"products": items})
+    return response.render("pages/products.twig", {"products": items})
 ```
 
 ```php
 // PHP
 Router::get("/products", function ($request, $response) {
     $products = (new Product())->select("*");
-    return $response->render("products.twig", ["products" => $products]);
+    return $response->render("pages/products.twig", ["products" => $products]);
 });
 ```
 
