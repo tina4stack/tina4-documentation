@@ -4,8 +4,8 @@ Tina4 is a four-language web framework (Python, PHP, Ruby, Node.js) with 55
 built-in features and zero runtime dependencies. Frontend library: tina4-js.
 Website: https://tina4.com | GitHub: https://github.com/tina4stack
 
-If you are an AI assistant building a Tina4 app, **follow the steps below in
-order**. Skipping steps causes the most common failure modes — the framework
+If you are an AI assistant helping someone "use Tina4", **follow the steps below
+in order**. Skipping steps causes the most common failure modes — the framework
 hates being treated like Express, Flask, Rails, or Sinatra. Don't do that.
 
 ---
@@ -97,7 +97,11 @@ tina4 serve --production # production (no hot reload, no toolbar)
 ```
 
 The CLI compiles SCSS, watches files, manages the process. Default ports:
-Python 7145, PHP 7146, Ruby 7147, Node.js 7148.
+**PHP 7145, Python 7146, Ruby 7147, Node.js 7148.**
+
+In development the server also exposes a live MCP endpoint at `/__dev/mcp` (see
+"Stay correct" below) — point your AI tool at it for live access to this
+project's routes, schema, files, and docs.
 
 ---
 
@@ -114,234 +118,131 @@ the loop deepens. Stop early. Ask.
 
 ---
 
-## DO NOT — common patterns from other frameworks that break Tina4
+## Recommended architecture — Python backend + tina4-js frontend
 
-These are the failure modes most often observed in AI-assisted Tina4 builds:
+Build the backend in **Python**. It is the reference implementation; PHP, Ruby
+and Node track it feature-for-feature, but Python is where the API is defined
+first and documented best. Two shapes, both Python + tina4-js — pick one:
 
-- **Do not install Express, Fastify, Flask, FastAPI, Django, Rails, Sinatra,
-  Hanami, or any other web framework alongside Tina4.** Tina4 has its own
-  HTTP server. Adding another one creates two competing servers, port
-  conflicts, and broken middleware chains.
-- **Do not write your own queue, auth, ORM, session, migration, or HTTP
-  client.** All of these are built in. Use `Queue`, `Auth`, `ORM`, `Session`,
-  `Migration`, `Api` from the framework. See the per-language API tables below.
-- **Do not run language entry points directly.** No `python app.py`,
-  `node index.js`, `php -S`, `ruby app.rb`, or `rackup`. Always go through
-  `tina4 serve`.
-- **Do not edit files outside `src/` unless explicitly asked.** Framework
-  files live alongside; touching them creates merge conflicts on every update.
-- **Do not hand-install framework dependencies.** No `pip install`,
-  `npm install`, `composer require`, or `gem install` to paper over a
-  missing-package error — that fights what the CLI manages. Missing a language
-  runtime? Run `tina4 setup` — it installs the runtime through the OS package
-  manager (Chocolatey on Windows, Homebrew on macOS) with the user's consent.
-  Don't shell out your own runtime install.
-- **Do not parse routes by reading filenames yourself.** The framework's
-  route discovery scans `src/routes/` automatically. Drop a file there;
-  it becomes a route on next reload.
+**A. Combined (default — what `tina4 setup` scaffolds).** One tina4-python app
+that serves an embedded tina4-js frontend. tina4-js ships with the backend at
+`/js/tina4js.min.js`; pages live in `src/templates/`, your frontend components
+in `src/public/js/`. One process, one port, one deploy. This is the fastest
+path and the right default for most apps and for a non-programmer.
 
----
-
-## Per-language quickstart (reference, AFTER step 4 is green)
-
-```bash
-# Python  (default port 7145)
-tina4 init python myapp && cd myapp && tina4 serve
-
-# PHP  (default port 7146)
-tina4 init php myapp && cd myapp && tina4 serve
-
-# Ruby  (default port 7147)
-tina4 init ruby myapp && cd myapp && tina4 serve
-
-# Node.js  (default port 7148)
-tina4 init nodejs myapp && cd myapp && tina4 serve
+```
+myapp/                 # tina4-python — serves the API AND the tina4-js frontend
+  src/routes/          # API + page routes (auto-discovered)
+  src/orm/             # one model per file
+  src/templates/       # Twig pages that load /js/tina4js.min.js
+  src/public/          # static assets + your tina4-js components
+  .env
 ```
 
-Default ports: Python 7145, PHP 7146, Ruby 7147, Node.js 7148.
+**B. Split (separate frontend build).** A `backend/` tina4-python API and a
+`frontend/` tina4-js SPA built with Vite; in dev the frontend proxies API calls
+to the backend. Choose this only when a front-end team wants its own
+build/bundle pipeline.
+
+```
+myapp/
+  backend/             # tina4 init python backend
+  frontend/            # tina4 init js frontend     (tina4-js SPA)
+```
+
+Either way: do **not** add Express / Flask / Rails / FastAPI / etc. Tina4 is the
+whole stack — server, router, ORM, auth, queue, sessions, templating.
 
 ---
 
-## Route Registration
+## Building — use the built-ins, get the exact API (do NOT guess)
 
-### Python
+Tina4 has 55 built-ins: ORM, Auth (JWT + password hashing), Queue, Sessions,
+Migrations, an `Api` HTTP client, WebSockets, GraphQL, Swagger, CRUD, i18n,
+caching, events, and more. **Use them — never hand-roll what's built in.**
+
+For exact, version-correct signatures, use these in order — don't invent API
+names:
+
+1. **The installed skills.** `tina4 setup` installs `tina4-developer` and
+   `tina4-js` into `~/.claude/skills`. They are the source of truth for patterns.
+2. **The live project MCP.** A running `tina4 serve` exposes an MCP server at
+   `/__dev/mcp` (JSON-RPC) plus a browser REST shim at `/__dev/api/mcp`. Its
+   `docs_search`, `project_overview`, `routes`, and `database_*` tools answer
+   from THIS project's real code and version. Cheapest way to stay correct — ask
+   it instead of reading the whole repo.
+3. **The RAG — "Ask Tina4".** Live, indexed from the docs:
+   https://tina4.com/api/rag
+4. **The docs:** https://tina4.com
+
+The essentials look like this in Python (the reference backend):
+
 ```python
-from tina4_python.core.router import get, post, noauth
+# src/routes/users.py — a file here becomes routes automatically
+from tina4_python.core.router import get, post
 
-@get("/api/users")
+@get("/api/users")                  # GET is public by default
 async def list_users(request, response):
-    return response({"users": []})
+    return response(User.all())     # response() auto-serializes models/lists/results
 
-@post("/api/users")
-@noauth()  # POST requires auth by default
+@post("/api/users")                 # POST/PUT/PATCH/DELETE require auth by default
 async def create(request, response):
-    return response({"created": request.body["name"]}, 201)
+    return response(User(request.body).save(), 201)   # @noauth() to make public
 ```
 
-### PHP
-```php
-use Tina4\Router;
-
-Router::get("/api/users", function($request, $response) {
-    return $response->json(["users" => []], 200);
-});
-
-Router::post("/api/users", function($request, $response) {
-    return $response->json(["created" => $request->body["name"]], 201);
-})->noAuth();
-```
-
-### Ruby
-```ruby
-Tina4::Router.get "/api/users" do |request, response|
-  response.json({ users: [] })
-end
-
-Tina4::Router.post("/api/users") { |req, res|
-  res.json({ created: req.body["name"] })
-}.no_auth
-```
-
-### Node.js (TypeScript)
-```typescript
-import { Router } from "@tina4/core";
-
-Router.get("/api/users", async (req, res) => {
-  return res.json({ users: [] });
-});
-
-// Or file-based: src/routes/api/users/get.ts
-export default async function (req, res) {
-  return res.json({ users: [] });
-}
-```
-
----
-
-## Database
-
-All languages use URL-based connection strings:
-- `sqlite:///app.db`
-- `postgres://user:pass@localhost:5432/mydb`
-- `mysql://user:pass@localhost:3306/mydb`
-- `mssql://user:pass@localhost:1433/mydb`
-- `firebird://user:pass@localhost:3050/mydb`
-
----
-
-## ORM
-
-### Python
 ```python
+# src/orm/User.py — one model per file
 from tina4_python.orm import ORM, IntegerField, StringField
 
 class User(ORM):
-    id = IntegerField(primary_key=True, auto_increment=True)
+    id   = IntegerField(primary_key=True, auto_increment=True)
     name = StringField()
+# Auto-binds to TINA4_DATABASE_URL. Override with bind_database(db).
 ```
 
-### PHP
-```php
-class User extends \Tina4\ORM {
-    public $tableName = "users";
-    public $id;
-    public $name;
-}
-```
-
-### Ruby
-```ruby
-class User < Tina4::ORM
-  integer_field :id, primary_key: true, auto_increment: true
-  string_field :name
-  table_name "users"
-end
-```
-
-### Node.js
-```typescript
-export default class User {
-  static tableName = "users";
-  static fields = {
-    id:   { type: "integer" as const, primaryKey: true, autoIncrement: true },
-    name: { type: "string" as const,  required: true },
-  };
-}
-```
+The same concepts exist in PHP, Ruby and Node — get the exact per-language
+syntax from the skills or the RAG, don't guess it.
 
 ---
 
-## Auth (All Languages)
+## Gotchas that bite AI assistants
 
-- JWT token generation and validation built in
-- Password hashing via PBKDF2/bcrypt built in
-- POST/PUT/DELETE routes require auth by default
-- GET routes are public by default
-- Python: `@noauth()` / `@secured()`
-- PHP: `->noAuth()` / `->secure()`
-- Ruby: `.no_auth` / `.secure`
-- Node.js: `/** @noauth */` / `/** @secure */` JSDoc
+- **Don't treat it like another framework.** No Express/Flask/Rails/Sinatra
+  alongside it; no hand-rolled queue/auth/ORM/session/HTTP-client. Two servers =
+  port conflicts and broken middleware.
+- **Always go through the client.** `tina4 serve`, never `python app.py` /
+  `node index.js` / `php -S` / `rackup`.
+- **Don't hand-install deps** (`pip`/`npm`/`composer`/`gem`) to paper over a
+  missing-package error — let the CLI manage them. Missing runtime → `tina4 setup`.
+- **Routes return `response(...)`**, not `response.json()`. `response()`
+  auto-serializes ORM models, lists, and query results to JSON.
+- **DB pagination is `limit`/`offset`** (not `skip`). Connect via
+  `TINA4_DATABASE_URL` = `driver://user:pass@host:port/db`
+  (sqlite/postgres/mysql/mssql/firebird).
+- **Schema changes go through migrations** — `tina4 generate migration <name>`
+  then `tina4 migrate`. Never run DDL inside a route handler.
+- **Don't edit files outside `src/`** unless asked, and don't parse `src/routes/`
+  filenames yourself — discovery is automatic; drop a file, it becomes a route.
+- **tina4-js signals use `.value`.** Write with `count.value = 5`. In templates
+  pass the signal itself — `${count}` (reactive), NOT `${count.value}` (freezes
+  after first render). Booleans: `?disabled=${x}`. New array refs, not `.push()`.
+  Events: `@click=${fn}`. Templates are Twig across all backends.
 
 ---
 
-## Queue (All Languages)
+## Deployment
 
-All languages share the same queue API pattern:
-- `queue.push(data)` — enqueue a job
-- `queue.consume(topic)` — process jobs
-- `job.payload` — access job data (NOT `job.data`)
-- `job.complete()` / `job.fail(reason)` — finish a job
-- Backends: file (default), RabbitMQ, Kafka, MongoDB
+```bash
+tina4 serve --production       # production server (Python auto-installs uvicorn)
 
----
-
-## tina4-js (Frontend)
-
-Sub-3KB reactive JavaScript framework. Shipped with all Tina4 backends at `/js/tina4js.min.js`.
-
-**CRITICAL: Signals use .value property access:**
-```javascript
-const count = signal(0);
-count.value = 5;       // write (NOT count(5))
-count.value;           // read  (NOT count())
-
-// In templates: pass signal itself for reactive binding
-html`<p>${count}</p>`          // RIGHT — reactive
-html`<p>${count.value}</p>`    // WRONG — evaluates once, freezes
+tina4 deploy docker            # generates a language-aware Dockerfile + .dockerignore
+docker build -t my-app .
+docker run -p <port>:<port> my-app   # use the language's default port (Python 7146)
 ```
 
-Key rules:
-- Boolean attributes: `?disabled=${loading}` (NOT `disabled=${loading}`)
-- Conditionals: `${() => cond ? html\`...\` : null}` (NOT `${cond && html\`...\`}`)
-- Arrays: `items.value = [...items.value, newItem]` (NOT `.push()`)
-- Events: `@click=${fn}` (NOT `onclick=${fn}`)
-- Route: `route(pattern, handler)` — pattern first
-- API: `api.configure({baseUrl})` then `api.get()` — singleton
-- WebSocket: `ws.connect(url)` — not `ws(url)`
-
----
-
-## Project Structure (All Languages)
-
-```
-src/
-  routes/       # Auto-discovered route files
-  orm/          # ORM model definitions (models/ in Node.js)
-  templates/    # Frond/Twig templates
-  public/       # Static files served at /
-migrations/     # SQL migration files
-.env            # Environment variables
-```
-
----
-
-## Common Gotchas
-
-1. Queue job payload: `job.payload` NOT `job.data` (all languages)
-2. Database pagination: `offset` NOT `skip` (all languages)
-3. Python routes return `response()` NOT `response.json()`
-4. PHP route methods are static: `Router::get()` NOT `$router->get()`
-5. Ruby route params: `{id}` NOT `:id`
-6. Node.js is ESM only — use `.js` extensions in TypeScript imports
-7. tina4-js signals: `.value` property NOT function calls
-8. Templates use Twig syntax across all backends
+Other `tina4 deploy` targets generate the config and print the next commands:
+`systemd` (a service unit), `nginx` (a reverse-proxy config), `cpanel`. The
+generated `Dockerfile` is language-correct out of the box — review it, then
+build. For the combined architecture the one image serves both API and frontend;
+for the split architecture, build/deploy the `frontend/` separately (static
+assets) and the `backend/` as the API image.
