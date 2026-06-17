@@ -6,13 +6,149 @@ Your product catalog page runs 12 database queries. It takes 800 milliseconds to
 
 Add caching. The first request takes 800ms. The next 10,000 take 3ms each. A 266x improvement. One line of configuration.
 
-Caching stores the result of expensive operations for reuse. Tina4 provides caching at multiple levels: response caching (entire HTTP responses), database query caching, and a direct cache API for custom use cases.
+Caching stores the result of expensive operations for reuse. Tina4 gives you three layers, and you reach for them in this order:
+
+1. **Request-scoped query cache** -- on by default. Dedupes identical SELECTs inside a single request.
+2. **Persistent database cache** -- opt-in. Shares query results across requests with a TTL.
+3. **Response cache** -- the `ResponseCache` middleware. Stores whole HTTP responses and skips your handler entirely.
+
+This chapter walks each layer, then shows the direct key/value API and how to combine the layers.
 
 ---
 
-## 2. Response Caching with ResponseCache Middleware
+## 2. Layer 1: Request-Scoped Query Cache (On by Default)
 
-The fastest cache is at the HTTP response level. The `ResponseCache` middleware stores the complete response -- headers and body -- and serves it on subsequent requests without calling your route handler at all.
+Tina4 wraps every database connection in a query cache. The first layer runs automatically. When a request fires the same SELECT twice, the second call returns the first result instead of hitting the database again.
+
+```bash
+# These are the defaults -- you do not need to set them
+TINA4_AUTO_CACHING=true
+TINA4_AUTO_CACHING_TTL=5
+```
+
+The cache key derives from the SQL and its parameters. The dispatcher clears this cache at the **start** of every HTTP request, so it never serves stale rows across requests. Any write (`insert`, `update`, `delete`, `execute`) flushes it immediately. The 5-second TTL is a safety net for long-running CLI scripts and workers that live outside the request cycle.
+
+```php
+<?php
+use Tina4\Router;
+use Tina4\Database\Database;
+
+Router::get("/api/report", function ($request, $response) {
+    $db = Database::getConnection();
+
+    // First call hits the database.
+    $totals = $db->fetchAll("SELECT category, count(*) c FROM products GROUP BY category");
+
+    // Same SQL again in this request -- served from the request-scoped cache.
+    $alsoTotals = $db->fetchAll("SELECT category, count(*) c FROM products GROUP BY category");
+
+    return $response->json(["totals" => $totals]);
+});
+```
+
+To turn this layer off, set `TINA4_AUTO_CACHING=false`.
+
+---
+
+## 3. Layer 2: Persistent Database Cache (Opt-In)
+
+The request-scoped cache dies at the end of each request. For results that stay fresh across requests -- reference data, category lists, slow aggregates -- enable the persistent layer:
+
+```bash
+TINA4_DB_CACHE=true
+TINA4_DB_CACHE_TTL=30
+```
+
+Now identical queries return cached results across requests until the TTL expires:
+
+```php
+<?php
+use Tina4\Router;
+use Tina4\Database\Database;
+
+Router::get("/api/categories", function ($request, $response) {
+    $db = Database::getConnection();
+
+    // First call: executes the query (20ms)
+    // Subsequent calls within 30 seconds: returns the cached result (0.1ms)
+    $categories = $db->fetchAll("SELECT * FROM categories ORDER BY name");
+
+    return $response->json(["categories" => $categories]);
+});
+```
+
+The persistent cache routes through the unified backend. Pick where it lives and point it at a server:
+
+```bash
+TINA4_DB_CACHE=true
+TINA4_DB_CACHE_TTL=30
+TINA4_DB_CACHE_BACKEND=redis              # memory (default), file, redis, valkey, memcached, mongodb, database
+TINA4_DB_CACHE_URL=redis://localhost:6379
+```
+
+With a network backend like Redis, multiple server instances share one cache, and a write on any instance invalidates the shared cache for all of them.
+
+### When to Use the Persistent Cache
+
+- Read-heavy applications where the same queries run repeatedly
+- Reference data that changes rarely (categories, countries, settings)
+- Dashboard queries that aggregate large datasets
+
+### When Not to Use It
+
+- Write-heavy applications where data changes constantly
+- Queries with real-time requirements (inventory counts, live prices)
+- Queries that must return the latest data
+
+### Bypassing the Cache for One Query
+
+Every read method takes a final `$noCache` flag. Pass `true` to skip both the lookup and the store for that one call -- it runs straight against the database, in either cache mode:
+
+```php
+$db = Database::getConnection();
+
+// fetch($sql, $params, $limit, $offset, $noCache)
+$fresh = $db->fetch("SELECT * FROM products", [], 100, 0, true);
+
+// fetchOne($sql, $params, $noCache)
+$row = $db->fetchOne("SELECT * FROM products WHERE id = :id", ["id" => 42], true);
+
+// fetchAll($sql, $params, $limit, $offset, $noCache)
+$all = $db->fetchAll("SELECT * FROM products", [], 0, 0, true);
+```
+
+### Inspecting the Query Cache
+
+`$db->cacheStats()` reports the live state of the query cache:
+
+```php
+Router::get("/api/db-cache/stats", function ($request, $response) {
+    $db = \Tina4\Database\Database::getConnection();
+    return $response->json($db->cacheStats());
+});
+```
+
+```json
+{
+  "enabled": true,
+  "mode": "persistent",
+  "hits": 1842,
+  "misses": 96,
+  "size": 12,
+  "ttl": 30,
+  "backend": "redis"
+}
+```
+
+`mode` is `"request"` (layer 1 only), `"persistent"` (layer 2 on), or `"off"`. Call `$db->cacheClear()` to flush the query cache and reset the counters.
+
+---
+
+## 4. Layer 3: Response Caching with ResponseCache Middleware
+
+The fastest cache is at the HTTP response level. The `ResponseCache` middleware stores the complete response -- body, status, and content type -- and serves it on subsequent GET requests without calling your route handler at all.
+
+Attach it as a string spec with a TTL:
 
 ```php
 <?php
@@ -31,7 +167,7 @@ Router::get("/api/products", function ($request, $response) {
     ];
 
     return $response->json(["products" => $products, "generated_at" => date("c")]);
-}, "ResponseCache:300");
+})->middleware(["ResponseCache:300"]);
 ```
 
 `"ResponseCache:300"` caches the response for 300 seconds (5 minutes). During those 5 minutes:
@@ -74,23 +210,37 @@ curl http://localhost:7145/api/products
 
 Same `generated_at` timestamp. The handler did not run. The response came from cache.
 
+### Two Ways to Attach It
+
+The string form parses a TTL after the colon. The class-array form uses the default TTL (`TINA4_CACHE_TTL`, 60 seconds). Both work:
+
+```php
+// String spec -- per-route TTL
+Router::get("/api/products", $handler)->middleware(["ResponseCache:300"]);
+
+// Class array -- default TTL from TINA4_CACHE_TTL
+Router::get("/api/categories", $handler)->middleware([\Tina4\Middleware\ResponseCache::class]);
+```
+
+Two env vars tune the response cache globally: `TINA4_CACHE_TTL` (default 60, set 0 to disable) and `TINA4_CACHE_MAX_ENTRIES` (default 1000).
+
 ### Cache Headers
 
-The `ResponseCache` middleware sets cache-related headers:
+The `ResponseCache` middleware stamps two headers on every cacheable response:
 
 ```
 X-Cache: HIT
-X-Cache-TTL: 247
-Cache-Control: public, max-age=300
+X-Cache-TTL: 300
 ```
 
 - `X-Cache: HIT` or `X-Cache: MISS` -- whether the response came from cache
-- `X-Cache-TTL` -- remaining time-to-live in seconds
-- `Cache-Control` -- enables browser and CDN caching
+- `X-Cache-TTL` -- the configured TTL in seconds
+
+The middleware does not set a `Cache-Control` header.
 
 ### Caching with Query Parameters
 
-The cache key includes the full URL with query parameters. `/api/products?page=1` and `/api/products?page=2` are cached separately:
+The cache key is the request method plus the full URL, so `/api/products?page=1` and `/api/products?page=2` are cached separately:
 
 ```php
 Router::get("/api/products", function ($request, $response) {
@@ -104,7 +254,7 @@ Router::get("/api/products", function ($request, $response) {
         "products" => [],
         "generated_at" => date("c")
     ]);
-}, "ResponseCache:300");
+})->middleware(["ResponseCache:300"]);
 ```
 
 ```bash
@@ -115,30 +265,69 @@ curl "http://localhost:7145/api/products?page=1"  # Cache HIT
 
 ### What Not to Cache
 
-Do not use `ResponseCache` on:
+`ResponseCache` only caches GET requests that return a 200. Even so, do not attach it to:
 
-- **POST, PUT, PATCH, DELETE routes**: Only GET responses should be cached
 - **User-specific endpoints**: `/api/profile` returns different data for each user
-- **Real-time data**: Stock prices, live scores, chat messages
-- **Authenticated endpoints**: Unless the cache is scoped per user
+- **Real-time data**: stock prices, live scores, chat messages
+- **Authenticated endpoints**: unless every user shares the same response
 
 ```php
 // GOOD: Public, stable data
 Router::get("/api/categories", function ($request, $response) {
     return $response->json(["categories" => []]);
-}, "ResponseCache:3600"); // Cache for 1 hour
+})->middleware(["ResponseCache:3600"]); // Cache for 1 hour
 
 // BAD: User-specific data -- do NOT cache
 Router::get("/api/profile", function ($request, $response) {
     return $response->json($request->user);
-}, "authMiddleware"); // No ResponseCache here
+})->middleware(["authMiddleware"]); // No ResponseCache here
 ```
+
+### Inspecting the Response Cache
+
+`ResponseCache::cacheStats()` reports hits, misses, and the active backend:
+
+```php
+<?php
+use Tina4\Router;
+use Tina4\Middleware\ResponseCache;
+
+Router::get("/api/cache/stats", function ($request, $response) {
+    return $response->json(ResponseCache::cacheStats());
+});
+```
+
+```json
+{
+  "hits": 15234,
+  "misses": 891,
+  "size": 42,
+  "backend": "memory",
+  "keys": []
+}
+```
+
+Call `ResponseCache::clearCache()` to flush every cached response and reset the counters.
 
 ---
 
-## 3. Memory Cache (Default)
+## 5. Cache Backends
 
-Tina4's cache system stores data in memory by default. No configuration needed.
+All three layers share one set of backends, selected by `TINA4_CACHE_BACKEND`. Seven are available:
+
+| Backend | Notes |
+|---------|-------|
+| `memory` | In-process array. The default. Fastest, zero dependencies, lost on restart. |
+| `file` | JSON files under `data/cache/`. Survives restarts, no external service. |
+| `redis` | Redis over the wire. Shared across instances, server-side expiry. |
+| `valkey` | Valkey (Redis wire protocol). |
+| `memcached` | Memcached, zero-dependency text protocol. |
+| `mongodb` | MongoDB TTL collection. |
+| `database` | A `tina4_cache` table in any Tina4-supported database. |
+
+If a configured network or driver backend is unreachable -- the driver is missing, the service is down, the credentials are wrong -- Tina4 logs a warning and falls back to the **file** backend. It never silently degrades to a no-op, so you always get a real cache.
+
+### Memory (Default)
 
 ```bash
 # This is the default -- you do not need to set it
@@ -147,64 +336,60 @@ TINA4_CACHE_BACKEND=memory
 
 Memory cache is the fastest option. No disk I/O. No network calls. But it resets when the server restarts. Ideal for development and single-server deployments where losing the cache on restart is acceptable.
 
----
+### File
 
-## 4. Redis Cache
+```bash
+TINA4_CACHE_BACKEND=file
+TINA4_CACHE_DIR=data/cache
+```
 
-For production: cache persistence across server restarts. Shared cache across multiple server instances. Use Redis:
+Each cache entry becomes a file on disk. Slower than memory, but survives restarts without extra infrastructure. Use it when you need persistence but cannot run Redis -- shared hosting, no external services.
+
+### Redis (and Valkey, Memcached, MongoDB)
+
+For production, you usually want a cache that survives restarts and is shared across server instances behind a load balancer. Point the backend at one URL:
 
 ```bash
 TINA4_CACHE_BACKEND=redis
 TINA4_CACHE_URL=redis://localhost:6379
+```
 
-# With a password, embed it in the URL:
-# TINA4_CACHE_URL=redis://:your-redis-password@localhost:6379
+Credentials can ride in the URL (`redis://user:pass@host:6379`) or live in their own variables:
 
-# Or use the separate credential vars:
-# TINA4_CACHE_USERNAME=          # optional
-# TINA4_CACHE_PASSWORD=your-redis-password
+```bash
+TINA4_CACHE_USERNAME=cacheuser
+TINA4_CACHE_PASSWORD=secret
 ```
 
 Your code does not change. `cache_get`, `cache_set`, and `ResponseCache` all work the same. Only the storage backend changes.
 
-### Why Redis?
-
-- Cache survives server restarts
-- Shared across multiple server instances behind a load balancer
-- Sub-millisecond reads and writes
-- Built-in key expiry. TTL cleanup is automatic
-- Same Redis instance can serve sessions, cache, and queues
-
 ---
 
-## 5. File Cache
+## 6. Direct Key/Value Cache API
 
-Cache persistence without Redis. File-based caching:
+For custom caching logic, use the namespace-level helpers. They live in `\Tina4\Middleware\`, so import them from there:
 
-```bash
-TINA4_CACHE_BACKEND=file
-TINA4_CACHE_DIR=/path/to/cache/directory
+```php
+use function Tina4\Middleware\cache_get;
+use function Tina4\Middleware\cache_set;
+use function Tina4\Middleware\cache_delete;
 ```
 
-Each cache entry becomes a file on disk. Slower than memory or Redis, but survives server restarts without extra infrastructure.
+The full surface:
 
-### When to Use File Cache
-
-- You need persistence but cannot run Redis
-- Your hosting is limited (shared hosting, no external services)
-- Cache entries are large and you do not want them in memory
-
----
-
-## 6. Direct Cache API
-
-For custom caching logic, use `cache_get`, `cache_set`, and `cache_delete` directly.
+```php
+\Tina4\Middleware\cache_get(string $key): mixed
+\Tina4\Middleware\cache_set(string $key, mixed $value, int $ttl = 0): void
+\Tina4\Middleware\cache_delete(string $key): bool
+\Tina4\Middleware\cache_clear(): void
+\Tina4\Middleware\cache_stats(): array
+```
 
 ### cache_set
 
 ```php
 <?php
-use function Tina4\cache_set;
+use function Tina4\Middleware\cache_set;
 
 // Cache a value for 300 seconds
 cache_set("product:42", [
@@ -217,7 +402,7 @@ cache_set("product:42", [
 // Cache a string
 cache_set("exchange_rate:USD_EUR", "0.92", 3600);
 
-// Cache indefinitely (no TTL)
+// Cache with the backend's default TTL (pass no TTL)
 cache_set("app:config", ["theme" => "dark", "lang" => "en"]);
 ```
 
@@ -225,10 +410,11 @@ cache_set("app:config", ["theme" => "dark", "lang" => "en"]);
 
 ```php
 <?php
-use function Tina4\cache_get;
+use function Tina4\Middleware\cache_get;
+use function Tina4\Middleware\cache_set;
 
 $product = cache_get("product:42");
-// Returns the cached array, or null if not found or expired
+// Returns the cached value, or null if not found or expired
 
 if ($product === null) {
     // Cache miss -- fetch from database
@@ -243,7 +429,7 @@ return $response->json($product);
 
 ```php
 <?php
-use function Tina4\cache_delete;
+use function Tina4\Middleware\cache_delete;
 
 // Delete a specific key
 cache_delete("product:42");
@@ -261,9 +447,9 @@ The most common caching pattern. Also called lazy loading:
 ```php
 <?php
 use Tina4\Router;
-use Tina4\Database;
-use function Tina4\cache_get;
-use function Tina4\cache_set;
+use Tina4\Database\Database;
+use function Tina4\Middleware\cache_get;
+use function Tina4\Middleware\cache_set;
 
 Router::get("/api/products/{id:int}", function ($request, $response) {
     $id = $request->params["id"];
@@ -327,63 +513,7 @@ Second call (cache hit):
 
 ---
 
-## 7. Database Query Caching
-
-Tina4 caches database query results when enabled in `.env`:
-
-```bash
-TINA4_DB_CACHE=true
-TINA4_DB_CACHE_TTL=300
-```
-
-Identical queries return cached results instead of hitting the database:
-
-```php
-<?php
-use Tina4\Router;
-use Tina4\Database;
-
-Router::get("/api/categories", function ($request, $response) {
-    $db = Database::getConnection();
-
-    // First call: executes the query (20ms)
-    // Subsequent calls within 300 seconds: returns cached result (0.1ms)
-    $categories = $db->fetchAll("SELECT * FROM categories ORDER BY name");
-
-    return $response->json(["categories" => $categories]);
-});
-```
-
-The cache key derives from the SQL query and its parameters. Different queries or different parameters produce different cache keys:
-
-```php
-// These are cached separately:
-$db->fetchAll("SELECT * FROM products WHERE category = :cat", ["cat" => "Electronics"]);
-$db->fetchAll("SELECT * FROM products WHERE category = :cat", ["cat" => "Fitness"]);
-```
-
-### When to Use DB Cache
-
-- Read-heavy applications where the same queries run repeatedly
-- Reference data that changes rarely (categories, countries, settings)
-- Dashboard queries that aggregate large datasets
-
-### When Not to Use DB Cache
-
-- Write-heavy applications where data changes constantly
-- Queries with real-time requirements (inventory counts, live prices)
-- Queries that must return the latest data
-
-### Skipping Cache for Specific Queries
-
-```php
-// Force a fresh query, bypassing the cache
-$freshData = $db->fetchAll("SELECT * FROM products", [], ["no_cache" => true]);
-```
-
----
-
-## 8. Cache Invalidation Strategies
+## 7. Cache Invalidation Strategies
 
 The hardest problem in caching: knowing when to clear the cache. Stale cache serves outdated data. Premature invalidation reduces cache effectiveness.
 
@@ -404,9 +534,8 @@ Clear the cache when the underlying data changes:
 ```php
 <?php
 use Tina4\Router;
-use Tina4\Database;
-use function Tina4\cache_set;
-use function Tina4\cache_delete;
+use Tina4\Database\Database;
+use function Tina4\Middleware\cache_delete;
 
 // Update a product
 Router::put("/api/products/{id:int}", function ($request, $response) {
@@ -462,7 +591,7 @@ The cache always has the latest data. No cache miss after an update. The next re
 
 ---
 
-## 9. TTL Management
+## 8. TTL Management
 
 Choosing the right TTL depends on change frequency and tolerance for stale data:
 
@@ -482,8 +611,8 @@ Adjust TTL based on data characteristics:
 
 ```php
 <?php
-use function Tina4\cache_set;
-use function Tina4\cache_get;
+use function Tina4\Middleware\cache_get;
+use function Tina4\Middleware\cache_set;
 
 function getCachedProduct($id) {
     $cacheKey = "product:" . $id;
@@ -507,19 +636,19 @@ function getCachedProduct($id) {
 
 ---
 
-## 10. Cache Statistics
+## 9. Cache Statistics
 
-Monitor cache performance. Verify that caching helps:
+Monitor cache performance. Verify that caching helps.
+
+For the response cache, use `cache_stats()` (or `ResponseCache::cacheStats()`):
 
 ```php
 <?php
 use Tina4\Router;
-use function Tina4\cache_stats;
+use function Tina4\Middleware\cache_stats;
 
 Router::get("/api/cache/stats", function ($request, $response) {
-    $stats = cache_stats();
-
-    return $response->json($stats);
+    return $response->json(cache_stats());
 });
 ```
 
@@ -529,45 +658,43 @@ curl http://localhost:7145/api/cache/stats
 
 ```json
 {
-  "backend": "memory",
-  "entries": 42,
   "hits": 15234,
   "misses": 891,
-  "hit_rate": "94.5%",
-  "memory_bytes": 524288,
-  "oldest_entry_age": 3542
+  "size": 42,
+  "backend": "memory",
+  "keys": []
 }
 ```
 
-A hit rate above 90% means your caching strategy works. Below 80% suggests TTLs are too short, the cache is too small, or you are caching data that is accessed too infrequently to benefit.
+A high hit-to-miss ratio means your caching strategy works. Lots of misses suggests TTLs are too short, or you are caching data that is accessed too infrequently to benefit.
 
-The dev dashboard at `/__dev` also shows cache statistics, including per-key hit counts and miss counts.
+For the database query cache, use `$db->cacheStats()` instead -- it reports `enabled`, `mode`, `hits`, `misses`, `size`, `ttl`, and `backend` (see Section 3).
 
 ---
 
-## 11. Combining Cache Layers
+## 10. Combining Cache Layers
 
 For maximum performance, layer multiple cache strategies:
 
 ```php
 <?php
 use Tina4\Router;
-use Tina4\Database;
-use function Tina4\cache_get;
-use function Tina4\cache_set;
+use Tina4\Database\Database;
+use function Tina4\Middleware\cache_get;
+use function Tina4\Middleware\cache_set;
 
 Router::get("/api/catalog", function ($request, $response) {
     $page = (int) ($request->params["page"] ?? 1);
     $cacheKey = "catalog:page:" . $page;
 
-    // Layer 1: Check application cache
+    // Layer A: Check the key/value cache
     $catalog = cache_get($cacheKey);
 
     if ($catalog !== null) {
         return $response->json(array_merge($catalog, ["cache" => "application"]));
     }
 
-    // Layer 2: Database query (with DB-level caching if TINA4_DB_CACHE=true)
+    // Layer B: Database query (with the query cache underneath)
     $db = Database::getConnection();
     $limit = 20;
     $offset = ($page - 1) * $limit;
@@ -592,24 +719,24 @@ Router::get("/api/catalog", function ($request, $response) {
         "generated_at" => date("c")
     ];
 
-    // Store in application cache
+    // Store in the key/value cache
     cache_set($cacheKey, $catalog, 300);
 
     return $response->json(array_merge($catalog, ["cache" => "none"]));
-}, "ResponseCache:60"); // Layer 3: HTTP response cache (60 seconds)
+})->middleware(["ResponseCache:60"]); // Response cache (60 seconds)
 ```
 
-Three cache layers:
+Three cache layers stack here:
 
-1. **ResponseCache** (60 seconds): The entire HTTP response is cached. No PHP code runs.
-2. **Application cache** (300 seconds): If the response cache expired but the app cache is fresh, skip the database queries.
-3. **DB query cache** (if enabled): Individual query results are cached even if the application cache missed.
+1. **ResponseCache** (60 seconds): the entire HTTP response is cached. No PHP code runs.
+2. **Key/value cache** (300 seconds): if the response cache expired but the KV entry is fresh, skip the database queries.
+3. **Query cache** (request-scoped by default, or persistent if `TINA4_DB_CACHE=true`): individual query results are cached even when the KV entry missed.
 
 The first visitor after a full cache expiry waits 800ms. Everyone else gets the response in under 5ms.
 
 ---
 
-## 12. Exercise: Cache an Expensive Product Listing Endpoint
+## 11. Exercise: Cache an Expensive Product Listing Endpoint
 
 Build a product listing endpoint that uses caching at multiple levels.
 
@@ -653,17 +780,17 @@ curl http://localhost:7145/api/store/cache-stats
 
 ---
 
-## 13. Solution
+## 12. Solution
 
 Create `src/routes/store-cached.php`:
 
 ```php
 <?php
 use Tina4\Router;
-use function Tina4\cache_get;
-use function Tina4\cache_set;
-use function Tina4\cache_delete;
-use function Tina4\cache_stats;
+use function Tina4\Middleware\cache_get;
+use function Tina4\Middleware\cache_set;
+use function Tina4\Middleware\cache_delete;
+use function Tina4\Middleware\cache_stats;
 
 // Simulated product database
 function getProductStore() {
@@ -853,15 +980,15 @@ The next request to the same URL is a cache miss again. The POST invalidated the
 
 ---
 
-## 14. Gotchas
+## 13. Gotchas
 
 ### 1. Caching Authenticated Responses
 
 **Problem:** User A's profile is served to User B because the response was cached.
 
-**Cause:** `ResponseCache` caches by URL only. `/api/profile` returns different data per user, but all requests hit the same URL. The first user's response is served to everyone.
+**Cause:** `ResponseCache` keys by method and URL only. `/api/profile` returns different data per user, but all requests hit the same URL. The first user's response is served to everyone.
 
-**Fix:** Do not use `ResponseCache` on user-specific endpoints. Use the direct cache API with user-specific keys: `cache_set("profile:" . $userId, $data, 300)`.
+**Fix:** Do not attach `ResponseCache` to user-specific endpoints. Use the direct cache API with user-specific keys: `cache_set("profile:" . $userId, $data, 300)`.
 
 ### 2. Cache Stampede
 
@@ -869,23 +996,23 @@ The next request to the same URL is a cache miss again. The POST invalidated the
 
 **Cause:** All requests see the miss. All try to rebuild the cache independently.
 
-**Fix:** Use cache locking or "stale-while-revalidate." One request rebuilds the cache. Others serve the stale value. Tina4's `ResponseCache` handles this by serving the expired response to concurrent requests while one request refreshes it.
+**Fix:** Shorten the window where the key is missing -- pre-warm hot keys on a schedule, or stagger TTLs so popular keys do not all expire together. Tina4 does not lock or serve stale entries for you, so plan for the miss.
 
 ### 3. Memory Cache Lost on Restart
 
 **Problem:** After restarting the server, performance drops until the cache warms up.
 
-**Cause:** Memory cache dies when the process restarts. Every request is a cache miss until data populates again.
+**Cause:** The memory backend dies when the process restarts. Every request is a cache miss until data populates again.
 
-**Fix:** For production, use Redis cache (`TINA4_CACHE_BACKEND=redis`). It persists across restarts. Or implement a cache warmup script that pre-populates the cache with frequently accessed data.
+**Fix:** For production, use a persistent backend (`TINA4_CACHE_BACKEND=redis` or `file`). Redis also survives across multiple instances. Or run a cache warmup script that pre-populates frequently accessed data.
 
 ### 4. Stale Data After Database Update
 
 **Problem:** You updated a product's price in the database. The API still returns the old price.
 
-**Cause:** The cache holds the old data. It has not expired yet.
+**Cause:** The key/value cache holds the old data. It has not expired yet. (The query cache flushes itself on writes; the KV cache does not.)
 
-**Fix:** Always invalidate or update the cache when you modify the underlying data. Use `cache_delete("product:" . $id)` after an update, or use write-through caching with `cache_set()` to write the new value.
+**Fix:** Always invalidate or update the KV cache when you modify the underlying data. Use `cache_delete("product:" . $id)` after an update, or write the new value with `cache_set()`.
 
 ### 5. Cache Key Collisions
 
@@ -903,10 +1030,10 @@ The next request to the same URL is a cache miss again. The POST invalidated the
 
 **Fix:** Only cache data that is expensive to compute. If the original operation takes 5ms and cache serialization takes 10ms, caching is counterproductive. Profile before and after to verify the improvement.
 
-### 7. Forgetting to Set TTL
+### 7. Importing the Helpers from the Wrong Namespace
 
-**Problem:** Cache entries never expire. Server memory grows until it crashes.
+**Problem:** `Call to undefined function Tina4\cache_set()`.
 
-**Cause:** You called `cache_set("key", $value)` without a TTL. The entry lives forever (or until the server restarts).
+**Cause:** The key/value helpers live in `\Tina4\Middleware\`, not the root `Tina4\` namespace.
 
-**Fix:** Always set a TTL: `cache_set("key", $value, 300)`. Even for data that "never changes," set a long TTL -- 86400 (24 hours). This provides a safety net against stale data and prevents unbounded memory growth.
+**Fix:** Import them from the right place: `use function Tina4\Middleware\cache_set;`. Or call them fully qualified: `\Tina4\Middleware\cache_set("key", $value, 300)`.

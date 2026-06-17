@@ -6,13 +6,136 @@ Your product catalog page runs 12 database queries. 800 milliseconds to render. 
 
 Add caching. The first request takes 800ms. The next 10,000 take 3ms each. A 266x improvement from one line of configuration.
 
-Caching stores the result of expensive operations for reuse. Tina4 provides three levels: response caching (entire HTTP responses), database query caching, and a direct cache API for custom use cases.
+Caching stores the result of expensive operations for reuse. Tina4 gives you three layers, and they stack:
+
+1. **Request-scoped query cache** -- on by default. Dedupes identical reads inside a single request. Flushes on every write.
+2. **Persistent database query cache** -- opt-in. Holds query results across requests until they expire.
+3. **Response cache middleware** -- caches whole HTTP responses so the route handler never runs.
+
+This chapter covers all three, plus the direct key-value API you use for everything else.
 
 ---
 
-## 2. Response Caching with ResponseCache Middleware
+## 2. Layer 1: Request-Scoped Query Cache
 
-The fastest cache lives at the HTTP response level. The `ResponseCache` middleware stores the complete response (headers and body) and serves it directly on subsequent requests without calling your route handler at all.
+The first layer needs no setup. Tina4 caches database reads for the lifetime of a single request. Run the same query twice in one handler and the second call returns the first result -- no second trip to the database.
+
+```ruby
+Tina4::Router.get("/api/dashboard") do |request, response|
+  db = Tina4.database
+
+  # First call hits the database
+  user_count = db.fetch_one("SELECT COUNT(*) AS c FROM users")
+
+  # ... other work ...
+
+  # Same query, same request: served from the request-scoped cache
+  user_count_again = db.fetch_one("SELECT COUNT(*) AS c FROM users")
+
+  response.json({ users: user_count["c"] })
+end
+```
+
+This layer is controlled by two environment variables:
+
+```bash
+TINA4_AUTO_CACHING=true       # default -- set to false to turn it off
+TINA4_AUTO_CACHING_TTL=5      # default TTL in seconds
+```
+
+The cache clears at the start of each request, so one request never sees another request's data. Any write -- `insert`, `update`, `delete`, `execute` -- flushes the cache immediately, so a read after a write always reflects the change.
+
+It lives in process and never touches the network. You get it for free.
+
+---
+
+## 3. Layer 2: Persistent Database Query Cache
+
+The second layer survives across requests. Turn it on when the same queries run on every request and the underlying data changes rarely.
+
+```bash
+TINA4_DB_CACHE=true           # opt-in -- off by default
+TINA4_DB_CACHE_TTL=30         # default TTL in seconds
+```
+
+With persistent caching on, identical queries return cached results until the TTL expires:
+
+```ruby
+Tina4::Router.get("/api/categories") do |request, response|
+  db = Tina4.database
+
+  # First call: executes the query
+  # Subsequent calls within 30 seconds (across requests): cached result
+  categories = db.fetch("SELECT * FROM categories ORDER BY name")
+
+  response.json({ categories: categories })
+end
+```
+
+The cache key derives from the SQL and its parameters. Different queries or different parameters get different keys:
+
+```ruby
+# Cached separately:
+db.fetch("SELECT * FROM products WHERE category = ?", ["Electronics"])
+db.fetch("SELECT * FROM products WHERE category = ?", ["Fitness"])
+```
+
+Any write operation (`insert`, `update`, `delete`, `execute`) invalidates the cache.
+
+### Sharing the cache across instances
+
+By default the persistent cache lives in process memory. To share one cache across multiple server instances, route it through a backend:
+
+```bash
+TINA4_DB_CACHE=true
+TINA4_DB_CACHE_BACKEND=redis
+TINA4_DB_CACHE_URL=redis://localhost:6379
+```
+
+`TINA4_DB_CACHE_BACKEND` accepts any of the backends listed in section 5. A shared backend means a write on one instance invalidates the cache for all of them.
+
+### Bypassing the cache per query
+
+Some reads must always hit the database -- a live inventory count, a balance check. Pass `no_cache: true` to skip the cache for a single call. No lookup, no store, just a direct query:
+
+```ruby
+# Always reads fresh from the database
+balance = db.fetch_one(
+  "SELECT balance FROM accounts WHERE id = ?",
+  [account_id],
+  no_cache: true
+)
+```
+
+The flag works on all three read methods:
+
+```ruby
+db.fetch(sql, params, limit: 100, offset: 0, no_cache: false)
+db.fetch_one(sql, params, no_cache: false)
+db.fetch_all(sql, params, limit: nil, offset: nil, no_cache: false)
+```
+
+`no_cache: true` bypasses both Layer 1 and Layer 2 for that call.
+
+### When to use the persistent DB cache
+
+- Read-heavy applications where the same queries run repeatedly
+- Reference data that changes infrequently (categories, countries, settings)
+- Dashboard queries that aggregate large datasets
+
+### When not to use it
+
+- Write-heavy applications where data changes constantly
+- Queries with real-time requirements (use `no_cache: true` for those reads)
+- Queries that must always return the latest data
+
+---
+
+## 4. Layer 3: Response Cache Middleware
+
+The fastest cache lives at the HTTP response level. The `Tina4::ResponseCache` middleware stores the complete response (body, content type, status) and serves it on later requests without calling your route handler at all.
+
+Attach it as middleware with a TTL:
 
 ```ruby
 Tina4::Router.get("/api/products", middleware: ["ResponseCache:300"]) do |request, response|
@@ -31,7 +154,7 @@ Tina4::Router.get("/api/products", middleware: ["ResponseCache:300"]) do |reques
 end
 ```
 
-The `"ResponseCache:300"` middleware caches the response for 300 seconds (5 minutes). During those 5 minutes:
+The string form `"ResponseCache:300"` caches the response for 300 seconds (5 minutes). During those 5 minutes:
 
 - The first request runs the handler (800ms)
 - The next 10,000 requests serve the cached response (3ms each)
@@ -54,97 +177,107 @@ curl http://localhost:7147/api/products
 
 Call it again within 5 minutes. The `generated_at` timestamp stays the same. The handler did not run -- the response came from cache.
 
-### Cache Headers
+The middleware only caches `GET` requests that return a `200` status.
 
-The `ResponseCache` middleware sets cache-related headers:
+### Default TTL and limits
+
+Without a TTL in the middleware string, the response cache reads its settings from the environment:
+
+```bash
+TINA4_CACHE_TTL=60            # default response-cache TTL in seconds
+TINA4_CACHE_MAX_ENTRIES=1000  # maximum cached entries (LRU eviction)
+```
+
+### Cache headers
+
+The `ResponseCache` middleware stamps two headers on every response it handles:
 
 ```
 X-Cache: HIT
 X-Cache-TTL: 247
-Cache-Control: public, max-age=300
 ```
 
 - `X-Cache: HIT` or `X-Cache: MISS` tells you whether the response came from cache
-- `X-Cache-TTL` shows the remaining time-to-live in seconds
-- `Cache-Control` enables browser and CDN caching
+- `X-Cache-TTL` shows the remaining TTL in seconds on a HIT, or the configured TTL on a MISS
 
-### Caching with Query Parameters
+### Caching with query parameters
 
 The cache key includes the full URL with query parameters. `/api/products?page=1` and `/api/products?page=2` are cached separately:
 
 ```bash
-curl "http://localhost:7147/api/products?page=1"  # Cache MISS, stores for page=1
-curl "http://localhost:7147/api/products?page=2"  # Cache MISS, stores for page=2
-curl "http://localhost:7147/api/products?page=1"  # Cache HIT
+curl "http://localhost:7147/api/products?page=1"  # MISS, stores for page=1
+curl "http://localhost:7147/api/products?page=2"  # MISS, stores for page=2
+curl "http://localhost:7147/api/products?page=1"  # HIT
 ```
 
-### What Not to Cache
+### What not to cache
 
 Do not use `ResponseCache` on:
 
-- **POST, PUT, PATCH, DELETE routes**: Only GET responses should be cached
-- **User-specific endpoints**: `/api/profile` returns different data for each user
-- **Real-time data**: Stock prices, live scores, chat messages
-- **Authenticated endpoints**: Unless the cache is scoped per user
+- **POST, PUT, PATCH, DELETE routes**: only GET responses are cached
+- **User-specific endpoints**: `/api/profile` returns different data per user, but the cache keys on URL alone
+- **Real-time data**: stock prices, live scores, chat messages
+- **Authenticated endpoints**: unless every user shares the same response
 
 ---
 
-## 3. Memory Cache (Default)
+## 5. Cache Backends
 
-Tina4's cache system stores data in memory by default. No configuration needed.
+The response cache and the direct key-value API share one backend, selected with `TINA4_CACHE_BACKEND`. Seven backends ship in the box:
+
+| Backend | `TINA4_CACHE_BACKEND` | Notes |
+|---------|------------------------|-------|
+| Memory | `memory` (default) | In-process LRU. Fastest. Lost on restart. |
+| File | `file` | JSON files on disk. Survives restarts, zero dependencies. |
+| Redis | `redis` | Shared across instances, sub-millisecond. |
+| Valkey | `valkey` | Redis wire protocol; reports as `valkey`. |
+| Memcached | `memcached` | Zero-dependency text protocol. |
+| MongoDB | `mongodb` | TTL collection (requires the `mongo` gem). |
+| Database | `database` | A `tina4_cache` table in any Tina4-supported database. |
 
 ```bash
-# This is the default -- you do not need to set it explicitly
+# Memory is the default -- you do not need to set it
 TINA4_CACHE_BACKEND=memory
 ```
 
-Memory cache is the fastest option (no disk I/O, no network calls) but it resets when the server restarts. It works well for development and single-server deployments where losing the cache on restart is acceptable.
+### Redis
 
----
-
-## 4. Redis Cache
-
-For production deployments where you want cache persistence across server restarts and shared cache across multiple server instances, use Redis:
+For cache that survives restarts and is shared across instances behind a load balancer:
 
 ```bash
 TINA4_CACHE_BACKEND=redis
 TINA4_CACHE_URL=redis://localhost:6379
 ```
 
-Your code does not change. The `cache_get`, `cache_set`, and `ResponseCache` middleware all work identically. Only the storage backend changes.
+Your code does not change. `cache_get`, `cache_set`, and the `ResponseCache` middleware all work the same way -- only the storage changes. If your credentials are not in the URL, set them separately:
 
-### Why Redis?
+```bash
+TINA4_CACHE_USERNAME=cacheuser
+TINA4_CACHE_PASSWORD=secret
+```
 
-- Cache survives server restarts
-- Shared across multiple server instances (behind a load balancer)
-- Sub-millisecond reads and writes
-- Built-in key expiry (TTL cleanup is automatic)
-- Same Redis instance can serve sessions, cache, and queues
+Valkey, Memcached, and MongoDB use the same single `TINA4_CACHE_URL` (Memcached is unauthenticated).
 
----
+### File
 
-## 5. File Cache
-
-If you want cache persistence but do not have Redis, use file-based caching:
+When you want persistence but cannot run Redis:
 
 ```bash
 TINA4_CACHE_BACKEND=file
 TINA4_CACHE_DIR=/path/to/cache/directory
 ```
 
-File cache stores each cache entry as a JSON file on disk. It is slower than memory or Redis but survives server restarts without extra infrastructure.
+File cache stores each entry as a JSON file on disk. Slower than memory or Redis, but it survives restarts with no extra infrastructure.
 
-### When to Use File Cache
+### Graceful fallback
 
-- You need cache persistence but cannot run Redis
-- Your hosting environment is limited (shared hosting, no external services)
-- Cache entries are large and you do not want them in memory
+If a configured backend's driver is missing or its service is unreachable, Tina4 logs a warning and falls back to the **file** backend -- a real, working, persistent cache. It never degrades to a silent no-op. A degraded backend reports its real name (`file`) in `cache_stats`, so you can see the fallback happened.
 
 ---
 
-## 6. Direct Cache API
+## 6. The Direct Cache API
 
-For custom caching logic, use `cache_get`, `cache_set`, and `cache_delete` directly through the `Tina4` module:
+For custom caching logic, use the key-value helpers on the `Tina4` module: `cache_get`, `cache_set`, `cache_delete`, `clear_cache`, and `cache_stats`.
 
 ### cache_set
 
@@ -160,6 +293,8 @@ Tina4.cache_set("product:42", {
 # Cache a string
 Tina4.cache_set("exchange_rate:USD_EUR", "0.92", ttl: 3600)
 ```
+
+`ttl:` defaults to `0`, which falls back to the configured default TTL.
 
 ### cache_get
 
@@ -180,13 +315,20 @@ end
 # Delete a specific key
 Tina4.cache_delete("product:42")
 
-# Delete multiple keys
+# Delete several keys
 Tina4.cache_delete("product:42")
 Tina4.cache_delete("product:43")
 Tina4.cache_delete("product:44")
 ```
 
-### Real-World Pattern: Cache-Aside
+### clear_cache
+
+```ruby
+# Flush every entry in the cache
+Tina4.clear_cache
+```
+
+### Real-world pattern: cache-aside
 
 The most common caching pattern is cache-aside (also called lazy loading):
 
@@ -253,58 +395,11 @@ Second call (cache hit):
 
 ---
 
-## 7. Database Query Caching
-
-Tina4 can cache database query results automatically. Enable it in `.env`:
-
-```bash
-TINA4_DB_CACHE=true
-TINA4_DB_CACHE_TTL=300
-```
-
-With database caching enabled, identical queries return cached results instead of hitting the database:
-
-```ruby
-Tina4::Router.get("/api/categories") do |request, response|
-  db = Tina4.database
-
-  # First call: executes the query (20ms)
-  # Subsequent calls within 300 seconds: returns cached result (0.1ms)
-  categories = db.fetch("SELECT * FROM categories ORDER BY name")
-
-  response.json({ categories: categories })
-end
-```
-
-The cache key derives from the SQL query and its parameters. Different queries or different parameters produce different cache keys:
-
-```ruby
-# These are cached separately:
-db.fetch("SELECT * FROM products WHERE category = ?", ["Electronics"])
-db.fetch("SELECT * FROM products WHERE category = ?", ["Fitness"])
-```
-
-Any write operation (`insert`, `update`, `delete`, `execute`) automatically invalidates the query cache.
-
-### When to Use DB Cache
-
-- Read-heavy applications where the same queries run repeatedly
-- Reference data that changes infrequently (categories, countries, settings)
-- Dashboard queries that aggregate large datasets
-
-### When Not to Use DB Cache
-
-- Write-heavy applications where data changes constantly
-- Queries with real-time requirements (inventory counts, live prices)
-- Queries that must always return the latest data
-
----
-
-## 8. Cache Invalidation Strategies
+## 7. Cache Invalidation Strategies
 
 Cache invalidation is the hard problem. Stale cache serves outdated data. Premature invalidation throws away performance gains. Three strategies handle this.
 
-### Strategy 1: Time-Based Expiry (TTL)
+### Strategy 1: Time-based expiry (TTL)
 
 The simplest strategy. Set a TTL and let the cache expire naturally:
 
@@ -314,7 +409,7 @@ Tina4.cache_set("products:featured", featured_products, ttl: 600)  # Expires in 
 
 Good for data where near-real-time accuracy is acceptable. A 10-minute delay in updating the featured products list is usually fine.
 
-### Strategy 2: Event-Based Invalidation
+### Strategy 2: Event-based invalidation
 
 Clear the cache when the underlying data changes:
 
@@ -344,7 +439,7 @@ end
 
 This is the most accurate strategy -- the cache is always fresh after a write. The downside: you must remember to invalidate everywhere the data could be cached.
 
-### Strategy 3: Write-Through Cache
+### Strategy 3: Write-through cache
 
 Update the cache at the same time as the database:
 
@@ -368,11 +463,11 @@ Tina4::Router.put("/api/products/{id:int}") do |request, response|
 end
 ```
 
-This ensures the cache always has the latest data. No cache miss after an update -- the next read comes from the already-warm cache.
+The cache always has the latest data. No cache miss after an update -- the next read comes from the already-warm cache.
 
 ---
 
-## 9. TTL Management
+## 8. TTL Management
 
 Choosing the right TTL depends on how often the data changes and how acceptable stale data is:
 
@@ -411,9 +506,13 @@ end
 
 ---
 
-## 10. Cache Statistics
+## 9. Cache Statistics
 
-Monitor cache performance to verify that caching helps:
+Two stat surfaces help you verify that caching helps.
+
+### Response / KV cache stats
+
+`Tina4.cache_stats` reports the shared response and key-value cache:
 
 ```ruby
 Tina4::Router.get("/api/cache/stats") do |request, response|
@@ -427,42 +526,71 @@ curl http://localhost:7147/api/cache/stats
 
 ```json
 {
-  "backend": "memory",
-  "size": 42,
   "hits": 15234,
-  "misses": 891
+  "misses": 891,
+  "size": 42,
+  "backend": "memory",
+  "keys": ["GET:/api/products", "direct:product:42"]
 }
 ```
 
-Hit rate above 90%: your caching strategy works. Below 80%: TTLs are too short, cache is too small, or you are caching data that does not benefit from caching.
+The fields are `hits`, `misses`, `size`, `backend`, and `keys`. The `keys` array is populated for the memory backend and empty for the others.
 
-The dev dashboard at `/__dev` shows cache statistics too -- per-key hit counts and miss counts. You see which keys earn their keep.
+Hit rate above 90%: your caching strategy works. Below 80%: TTLs are too short, the cache is too small, or you are caching data that does not benefit from caching.
+
+### Database cache stats
+
+`db.cache_stats` reports the query cache on a database connection:
+
+```ruby
+Tina4::Router.get("/api/db/cache-stats") do |request, response|
+  response.json(Tina4.database.cache_stats)
+end
+```
+
+```json
+{
+  "enabled": true,
+  "mode": "request",
+  "hits": 318,
+  "misses": 47,
+  "size": 12,
+  "backend": "memory",
+  "ttl": 5
+}
+```
+
+The `mode` field tells you which layer is active:
+
+- `"request"` -- request-scoped caching (the default)
+- `"persistent"` -- `TINA4_DB_CACHE=true` is set
+- `"off"` -- both layers are disabled
 
 ---
 
-## 11. Combining Cache Layers
+## 10. Combining Cache Layers
 
-For maximum performance, layer multiple cache strategies:
+For maximum performance, stack all three layers:
 
 ```ruby
 Tina4::Router.get("/api/catalog", middleware: ["ResponseCache:60"]) do |request, response|
   page = (request.params["page"] || 1).to_i
   cache_key = "catalog:page:#{page}"
 
-  # Layer 1: Check application cache
+  # Layer A: application cache (direct KV API)
   catalog = Tina4.cache_get(cache_key)
 
   unless catalog.nil?
     return response.json(catalog.merge(cache: "application"))
   end
 
-  # Layer 2: Database query (with DB-level caching if TINA4_DB_CACHE=true)
+  # Layer B: database queries (request-scoped + persistent DB cache apply here)
   db = Tina4.database
   limit = 20
   offset = (page - 1) * limit
 
   products = db.fetch(
-    "SELECT p.*, c.name as category_name
+    "SELECT p.*, c.name AS category_name
      FROM products p
      JOIN categories c ON p.category_id = c.id
      WHERE p.active = 1
@@ -470,7 +598,7 @@ Tina4::Router.get("/api/catalog", middleware: ["ResponseCache:60"]) do |request,
     [], limit: limit, offset: offset
   )
 
-  total = db.fetch_one("SELECT COUNT(*) as count FROM products WHERE active = 1")
+  total = db.fetch_one("SELECT COUNT(*) AS count FROM products WHERE active = 1")
 
   catalog = {
     products: products,
@@ -487,31 +615,31 @@ Tina4::Router.get("/api/catalog", middleware: ["ResponseCache:60"]) do |request,
 end
 ```
 
-This creates three cache layers:
+This creates three working layers:
 
-1. **ResponseCache** (60 seconds): The entire HTTP response is cached. No Ruby code runs at all.
-2. **Application cache** (300 seconds): If the response cache expired but the app cache is still fresh, skip the database queries.
-3. **DB query cache** (if enabled): Individual query results are cached even if the application cache missed.
+1. **ResponseCache** (60 seconds): the entire HTTP response is cached. No Ruby code runs at all.
+2. **Application cache** (300 seconds): if the response cache expired but the app cache is fresh, skip the database queries.
+3. **DB query cache**: individual query results are cached -- request-scoped by default, persistent if `TINA4_DB_CACHE=true`.
 
 The first visitor after a full cache expiry waits 800ms. Everyone else gets the response in under 5ms.
 
 ---
 
-## 12. Exercise: Cache an Expensive Product Listing Endpoint
+## 11. Exercise: Cache an Expensive Product Listing Endpoint
 
-Build a product listing endpoint that uses caching at multiple levels.
+Build a product listing endpoint that caches at multiple levels.
 
 ### Requirements
 
 1. Create a `GET /api/store/products` endpoint that:
    - Accepts query parameters: `category`, `page`, `limit`
    - Returns a list of products with pagination metadata
-   - Uses the direct cache API (`Tina4.cache_get`/`Tina4.cache_set`) with a 5-minute TTL
+   - Uses the direct cache API (`Tina4.cache_get` / `Tina4.cache_set`) with a 5-minute TTL
    - Includes a `source` field in the response (`"cache"` or `"database"`)
 
 2. Create a `POST /api/store/products` endpoint that:
    - Creates a new product
-   - Invalidates the relevant cache entries
+   - Invalidates the cached product lists
 
 3. Create a `GET /api/store/cache-stats` endpoint that shows cache statistics
 
@@ -541,7 +669,7 @@ curl http://localhost:7147/api/store/cache-stats
 
 ---
 
-## 13. Solution
+## 12. Solution
 
 Create `src/routes/store_cached.rb`:
 
@@ -621,7 +749,7 @@ Tina4::Router.post("/api/store/products") do |request, response|
   }
 
   # Invalidate all product list caches
-  Tina4.cache_clear
+  Tina4.clear_cache
 
   response.json({
     message: "Product created",
@@ -659,60 +787,60 @@ Same data, but `source` changes to `"cache"`. The handler did not run.
 
 ---
 
-## 14. Gotchas
+## 13. Gotchas
 
-### 1. Caching Authenticated Responses
+### 1. Caching authenticated responses
 
 **Problem:** User A's profile is served to User B because the response was cached.
 
-**Cause:** `ResponseCache` caches by URL only. If `/api/profile` returns different data per user but all requests hit the same URL, the first user's response is served to everyone.
+**Cause:** `ResponseCache` keys on URL only. If `/api/profile` returns different data per user but every request hits the same URL, the first user's response is served to everyone.
 
 **Fix:** Do not use `ResponseCache` on user-specific endpoints. Use the direct cache API with user-specific keys: `Tina4.cache_set("profile:#{user_id}", data, ttl: 300)`.
 
-### 2. Cache Stampede
-
-**Problem:** When a popular cache key expires, hundreds of requests hit the database simultaneously.
-
-**Cause:** All requests see the cache miss and all try to rebuild the cache independently.
-
-**Fix:** Use cache locking or "stale-while-revalidate". One request rebuilds the cache while others serve the stale value. Tina4's `ResponseCache` handles this automatically.
-
-### 3. Memory Cache Lost on Restart
+### 2. Memory cache lost on restart
 
 **Problem:** After restarting the server, performance drops until the cache warms up.
 
-**Cause:** Memory cache is lost when the process restarts.
+**Cause:** The memory backend lives in process and is lost when the process restarts.
 
-**Fix:** For production, use Redis cache (`TINA4_CACHE_BACKEND=redis`). It persists across server restarts. Or implement a cache warmup script that pre-populates with frequently accessed data.
+**Fix:** For production, use the Redis backend (`TINA4_CACHE_BACKEND=redis`). It survives restarts and is shared across instances. Or write a warmup script that pre-populates frequently accessed keys.
 
-### 4. Stale Data After Database Update
+### 3. Stale data after a database update
 
 **Problem:** You updated a product's price in the database, but the API still returns the old price.
 
-**Cause:** The cache still has the old data and has not expired yet.
+**Cause:** The cache still holds the old value and has not expired.
 
-**Fix:** Always invalidate or update the cache when you modify the underlying data. Use `Tina4.cache_delete("product:#{product_id}")` after an update, or use write-through caching to update the cache with the new value.
+**Fix:** Invalidate or update the cache when you change the underlying data. Use `Tina4.cache_delete("product:#{product_id}")` after an update, or write through with the new value. For a single live read, pass `no_cache: true` to the query.
 
-### 5. Cache Key Collisions
+### 4. Cache key collisions
 
 **Problem:** Two different queries return the same cached data.
 
-**Cause:** Your cache keys are not specific enough. Using `"products"` as a key for both the full list and a filtered list causes collisions.
+**Cause:** Your cache keys are not specific enough. Using `"products"` for both the full list and a filtered list causes collisions.
 
-**Fix:** Include all relevant parameters in the cache key: `"products:category:Electronics:page:1:limit:20"`. Or use an MD5 hash of the parameters.
+**Fix:** Include every relevant parameter in the key: `"products:category:Electronics:page:1:limit:20"`. Or hash the parameters with MD5.
 
-### 6. Serialization Overhead
+### 5. Serialization overhead
 
 **Problem:** Caching makes certain requests slower, not faster.
 
-**Cause:** The cached object is very large. Serializing and deserializing it takes more time than re-computing it.
+**Cause:** The cached object is very large. Serializing and deserializing it costs more than recomputing it.
 
-**Fix:** Only cache data that is expensive to compute. If the original operation takes 5ms and cache serialization takes 10ms, caching is counterproductive. Profile before and after to verify the improvement.
+**Fix:** Only cache data that is expensive to compute. If the original operation takes 5ms and cache serialization takes 10ms, caching hurts. Profile before and after to confirm the win.
 
-### 7. Forgetting to Set TTL
+### 6. Forgetting that writes flush the request cache
 
-**Problem:** Cache entries never expire and the server's memory grows until it crashes.
+**Problem:** You expected a read to come from cache, but it hit the database.
 
-**Cause:** You called `cache_set` without a TTL. The entry lives until the server restarts.
+**Cause:** A write earlier in the same request flushed the request-scoped query cache. That is by design -- a read after a write must reflect the change.
 
-**Fix:** Always set a TTL: `Tina4.cache_set("key", value, ttl: 300)`. Even for data that "never changes," set a long TTL like 86400 (24 hours). This prevents unbounded memory growth.
+**Fix:** This is correct behavior. If you need a value to survive a write within one request, capture it in a local variable before the write, or store it with the direct cache API.
+
+### 7. Reaching for a backend you do not have
+
+**Problem:** You set `TINA4_CACHE_BACKEND=redis` but `cache_stats` reports `"backend": "file"`.
+
+**Cause:** Redis was unreachable or its driver was missing, so Tina4 fell back to the file backend and logged a warning.
+
+**Fix:** This is the graceful-fallback safety net -- your cache still works. Check the logs, fix the connection (`TINA4_CACHE_URL`, credentials, the service itself), and the reported backend returns to `redis`.

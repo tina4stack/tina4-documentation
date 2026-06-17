@@ -6,22 +6,152 @@ Your product catalog page runs 12 database queries. 800 milliseconds to render. 
 
 Add caching. The first request takes 800ms. The next 10,000 take 3ms each. A 266x improvement from one line of configuration.
 
-Caching stores the result of expensive operations for reuse. Tina4 provides three levels: response caching (entire HTTP responses), database query caching, and a direct cache API for custom use cases.
+Caching stores the result of expensive operations for reuse. Tina4 gives you three layers, each with its own job:
+
+1. **Request-scoped query cache** -- on by default, dedupes identical database reads within a single request.
+2. **Persistent database cache** -- opt-in, caches query results across requests for a few seconds.
+3. **Response cache** -- caches whole HTTP responses so the route handler never runs.
+
+On top of those, a direct key/value API (`cacheGet`/`cacheSet`/...) caches anything you want.
+
+> **Node specifics.** Method names are camelCase. The key/value API, the response-cache middleware, and the database read path are **async** -- `await` them. Only `db.cacheStats()` and `db.cacheClear()` are synchronous.
 
 ---
 
-## 2. Response Caching with ResponseCache Middleware
+## 2. Layer 1: Request-Scoped Query Cache (On by Default)
 
-The fastest way to cache is at the HTTP response level. The `ResponseCache` middleware stores the complete response (headers and body) and serves it on subsequent requests without calling your route handler at all.
+The database wrapper caches every `SELECT` it runs during a single HTTP request. Run the same query twice in one handler and the second call returns the cached rows -- no second trip to the database.
+
+This layer is **on by default**. You do not configure it. At the start of every request the framework clears it, so one request never sees another request's rows. Any write (`insert`, `update`, `delete`, `execute`) flushes it immediately.
 
 ```typescript
-import { Router } from "tina4-nodejs";
+import { get } from "tina4-nodejs";
+import { Database } from "tina4-nodejs/orm";
 
-Router.get("/api/products", async (req, res) => {
-    // This handler runs 12 database queries and takes 800ms
-    // With ResponseCache, it runs once every 5 minutes
+get("/api/report", async (req, res) => {
+    const db = Database.getConnection();
 
-    console.log("Handler called -- should only appear once every 5 minutes");
+    // First call hits the database.
+    const totals = await db.fetchAll("SELECT category, COUNT(*) AS n FROM products GROUP BY category");
+
+    // Same query later in the SAME request — served from the request cache, no DB hit.
+    const totalsAgain = await db.fetchAll("SELECT category, COUNT(*) AS n FROM products GROUP BY category");
+
+    return res.json({ totals, matches: JSON.stringify(totals) === JSON.stringify(totalsAgain) });
+});
+```
+
+Control it with two environment variables:
+
+```bash
+# On by default. Set to false to turn the request-scoped cache off.
+TINA4_AUTO_CACHING=true
+
+# Safety TTL in seconds for non-request contexts (scripts, workers). Default: 5
+TINA4_AUTO_CACHING_TTL=5
+```
+
+Inside an HTTP request the cache clears at the request boundary, so the TTL rarely matters. It only kicks in for long-running scripts or workers that never cross a request boundary.
+
+This layer always runs in-process. It is the fastest cache there is -- a plain in-memory map, no serialization, no network.
+
+---
+
+## 3. Layer 2: Persistent Database Cache (Opt-In)
+
+The request cache forgets everything between requests. The persistent cache does not. Turn it on and identical queries return cached rows across requests, until the entry expires.
+
+```bash
+TINA4_DB_CACHE=true
+TINA4_DB_CACHE_TTL=30
+```
+
+`TINA4_DB_CACHE_TTL` defaults to **30** seconds. With the persistent cache enabled, identical queries return cached results instead of hitting the database:
+
+```typescript
+import { get } from "tina4-nodejs";
+import { Database } from "tina4-nodejs/orm";
+
+get("/api/categories", async (req, res) => {
+    const db = Database.getConnection();
+
+    // First call across all requests: runs the query.
+    // Repeat calls within 30 seconds: returns the cached rows.
+    const categories = await db.fetchAll("SELECT * FROM categories ORDER BY name");
+
+    return res.json({ categories });
+});
+```
+
+The cache key comes from the SQL and its parameters. Different queries or different parameters get different keys:
+
+```typescript
+// Cached separately:
+await db.fetchAll("SELECT * FROM products WHERE category = ?", ["Electronics"]);
+await db.fetchAll("SELECT * FROM products WHERE category = ?", ["Fitness"]);
+```
+
+A write on any connection flushes the persistent cache, so a stale row never outlives an update.
+
+### Choosing the backend
+
+By default the persistent cache lives in-process (same as request caching, just longer-lived). Point it at a shared store to share cached rows across instances:
+
+```bash
+TINA4_DB_CACHE_BACKEND=redis        # memory (default) | file | redis | valkey | memcached | mongodb | database
+TINA4_DB_CACHE_URL=redis://localhost:6379
+```
+
+With `memory` (the default), each process keeps its own copy. With a network backend, every instance reads and writes the same cache, and a write on one instance invalidates the rest.
+
+### When to use it
+
+- Read-heavy apps where the same queries run over and over
+- Reference data that changes seldom (categories, countries, settings)
+- Dashboard queries that aggregate large datasets
+
+### When not to use it
+
+- Write-heavy apps where data changes on every request
+- Queries with real-time requirements (inventory counts, live prices)
+- Queries that must return the latest data at all times
+
+### Skipping the cache for one query
+
+Pass `{ noCache: true }` as the **trailing options argument** to bypass both cache layers for a single call. It is a separate argument -- it never replaces the params array:
+
+```typescript
+// fetchAll(sql, params, limit, offset, opts)
+const fresh = await db.fetchAll("SELECT * FROM products WHERE category = ?", ["Electronics"], 50, 0, { noCache: true });
+
+// fetch(sql, params, limit, offset, opts) — returns the full DatabaseResult
+const result = await db.fetch("SELECT * FROM products", [], 50, 0, { noCache: true });
+
+// fetchOne(sql, params, opts)
+const one = await db.fetchOne("SELECT * FROM products WHERE id = ?", [42], { noCache: true });
+```
+
+A `noCache` read runs straight against the database and leaves the hit/miss counters untouched.
+
+---
+
+## 4. Layer 3: Response Cache
+
+The fastest cache skips your handler entirely. The response-cache middleware stores the complete response -- body, content type, status code -- and serves it on the next matching GET request without calling your route handler at all.
+
+There are two ways to attach it. Both work.
+
+### String form in the middleware list
+
+Pass `"ResponseCache:300"` as a middleware spec. The number after the colon is the TTL in seconds:
+
+```typescript
+import { get } from "tina4-nodejs";
+
+get("/api/products", async (req, res) => {
+    // This handler runs 12 database queries and takes 800ms.
+    // With the response cache, it runs once every 5 minutes.
+    console.log("Handler called — should only appear once every 5 minutes");
 
     const products = [
         { id: 1, name: "Wireless Keyboard", price: 79.99 },
@@ -29,15 +159,23 @@ Router.get("/api/products", async (req, res) => {
         { id: 3, name: "Monitor Stand", price: 129.99 }
     ];
 
-    return res.json({ products, generated_at: new Date().toISOString() });
-}, "ResponseCache:300");
+    return res.json({ products, generatedAt: new Date().toISOString() });
+}, ["ResponseCache:300"]);
 ```
 
-The `"ResponseCache:300"` middleware caches the response for 300 seconds (5 minutes). During those 5 minutes:
+The middleware list is the third argument -- an array. Use `"ResponseCache"` on its own for the default TTL (`TINA4_CACHE_TTL`, 60 seconds), or `"ResponseCache:300"` to set it.
 
-- The first request runs the handler (800ms)
-- The next 10,000 requests serve the cached response (3ms each)
-- After 300 seconds, the cache expires and the next request runs the handler again
+### Function form via `.middleware(...)`
+
+For the same effect with an explicit config object, chain `responseCache(...)`:
+
+```typescript
+import { get, responseCache } from "tina4-nodejs";
+
+get("/api/products", listProducts).middleware(responseCache({ ttl: 300 }));
+```
+
+### What happens during the TTL
 
 ```bash
 curl http://localhost:7148/api/products
@@ -50,7 +188,7 @@ curl http://localhost:7148/api/products
     {"id": 2, "name": "USB-C Hub", "price": 49.99},
     {"id": 3, "name": "Monitor Stand", "price": 129.99}
   ],
-  "generated_at": "2026-03-22T14:30:00.000Z"
+  "generatedAt": "2026-03-22T14:30:00.000Z"
 }
 ```
 
@@ -67,143 +205,150 @@ curl http://localhost:7148/api/products
     {"id": 2, "name": "USB-C Hub", "price": 49.99},
     {"id": 3, "name": "Monitor Stand", "price": 129.99}
   ],
-  "generated_at": "2026-03-22T14:30:00.000Z"
+  "generatedAt": "2026-03-22T14:30:00.000Z"
 }
 ```
 
-Notice the `generated_at` timestamp is the same. The handler did not run -- the response came from cache.
+The `generatedAt` timestamp is identical. The handler did not run -- the response came from cache.
 
-### Cache Headers
+### Cache headers
 
-The `ResponseCache` middleware sets cache-related headers on every response:
+The middleware sets two headers on every response:
 
 ```
 X-Cache: HIT
-X-Cache-TTL: 247
-Cache-Control: public, max-age=300
+X-Cache-TTL: 300
 ```
 
-- `X-Cache: HIT` or `X-Cache: MISS` tells you whether the response came from cache
-- `X-Cache-TTL` shows the remaining time-to-live in seconds
-- `Cache-Control` enables browser and CDN caching
+- `X-Cache` is `HIT` when the response came from cache, `MISS` when the handler ran.
+- `X-Cache-TTL` reports the configured cache lifetime in seconds.
 
-### Caching with Query Parameters
+### Caching with query parameters
 
-By default, the cache key includes the full URL with query parameters. `/api/products?page=1` and `/api/products?page=2` are cached separately:
+The cache key is the method plus the full URL, including the query string. `/api/products?page=1` and `/api/products?page=2` cache separately:
 
 ```typescript
-Router.get("/api/products", async (req, res) => {
+import { get } from "tina4-nodejs";
+
+get("/api/products", async (req, res) => {
     const page = parseInt(req.query.page ?? "1", 10);
-    const limit = 20;
-    const offset = (page - 1) * limit;
 
     return res.json({
         page,
         products: [],
-        generated_at: new Date().toISOString()
+        generatedAt: new Date().toISOString()
     });
-}, "ResponseCache:300");
+}, ["ResponseCache:300"]);
 ```
 
 ```bash
-curl "http://localhost:7148/api/products?page=1"  # Cache MISS, stores for page=1
-curl "http://localhost:7148/api/products?page=2"  # Cache MISS, stores for page=2
-curl "http://localhost:7148/api/products?page=1"  # Cache HIT
+curl "http://localhost:7148/api/products?page=1"  # MISS, stores page=1
+curl "http://localhost:7148/api/products?page=2"  # MISS, stores page=2
+curl "http://localhost:7148/api/products?page=1"  # HIT
 ```
 
-### What Not to Cache
+### What not to cache
 
-Do not use `ResponseCache` on:
+Only GET responses are cached -- the middleware passes other methods straight through. Beyond that, do not put the response cache on:
 
-- **POST, PUT, PATCH, DELETE routes**: Only GET responses should be cached
-- **User-specific endpoints**: `/api/profile` returns different data for each user
-- **Real-time data**: Stock prices, live scores, chat messages
-- **Authenticated endpoints**: Unless the cache is scoped per user
+- **User-specific endpoints**: `/api/profile` returns different data per user, but the key is just the URL, so the first user's response goes to everyone.
+- **Real-time data**: stock prices, live scores, chat messages.
+- **Authenticated endpoints**: unless the cache is scoped per user (use the key/value API with a user-specific key instead).
 
 ```typescript
-// GOOD: Public, rarely changing data
-Router.get("/api/categories", async (req, res) => {
+// GOOD: public, rarely changing data
+get("/api/categories", async (req, res) => {
     return res.json({ categories: [] });
-}, "ResponseCache:3600");
+}, ["ResponseCache:3600"]);
 
-// BAD: User-specific data -- do NOT cache
-Router.get("/api/profile", async (req, res) => {
+// BAD: user-specific data — do NOT cache
+get("/api/profile", async (req, res) => {
     return res.json(req.user);
-}, "auth_middleware");
+});
 ```
 
 ---
 
-## 3. Memory Cache (Default)
+## 5. Backends
 
-Tina4's cache system stores data in memory by default. No configuration needed.
+All three layers (and the key/value API below) share one backend set. Pick it with `TINA4_CACHE_BACKEND`:
+
+| Backend | Notes |
+|---------|-------|
+| `memory` | Default. In-process, fastest, lost on restart. |
+| `file` | JSON files on disk. Survives restarts, no extra service. |
+| `redis` | Shared across instances, sub-millisecond, built-in expiry. |
+| `valkey` | Redis wire protocol -- same behaviour as redis. |
+| `memcached` | Shared, unauthenticated. |
+| `mongodb` | TTL collection. Needs the optional `mongodb` driver. |
+| `database` | A `tina4_cache` table in your existing database. |
+
+### Memory (default)
 
 ```bash
-# This is the default -- you do not need to set it explicitly
+# This is the default — you do not need to set it.
 TINA4_CACHE_BACKEND=memory
 ```
 
-Memory cache is the fastest option (no disk I/O, no network calls) but it resets when the server restarts. It is ideal for development and single-server deployments where losing the cache on restart is acceptable.
+No disk I/O, no network calls. It resets when the server restarts. Ideal for development and single-server deployments where losing the cache on restart is fine.
 
----
+### Redis (and Valkey)
 
-## 4. Redis Cache
-
-For production deployments where you want cache persistence across server restarts and shared cache across multiple server instances, use Redis:
+For cache that survives restarts and is shared across instances behind a load balancer, use Redis:
 
 ```bash
 TINA4_CACHE_BACKEND=redis
 TINA4_CACHE_URL=redis://localhost:6379
-
-# With a password, embed it in the URL:
-# TINA4_CACHE_URL=redis://:your-redis-password@localhost:6379
-
-# Or use the separate credential vars:
-# TINA4_CACHE_USERNAME=          # optional
-# TINA4_CACHE_PASSWORD=your-redis-password
 ```
 
-Your code does not change. The `cacheGet`, `cacheSet`, and `ResponseCache` middleware all work the same way. Only the storage backend changes.
+Credentials live in the URL (`redis://user:pass@host`, `redis://:pass@host`) or in separate env vars when they are not embedded:
 
-### Why Redis?
+```bash
+TINA4_CACHE_USERNAME=myuser
+TINA4_CACHE_PASSWORD=mypassword
+```
 
-- Cache survives server restarts
-- Shared across multiple server instances (behind a load balancer)
-- Sub-millisecond reads and writes
-- Built-in key expiry (TTL cleanup is automatic)
-- Same Redis instance can serve sessions, cache, and queues
+Valkey speaks the same protocol -- set `TINA4_CACHE_BACKEND=valkey` and the rest is identical.
 
----
+Why Redis:
 
-## 5. File Cache
+- Cache survives server restarts.
+- Shared across instances behind a load balancer.
+- Sub-millisecond reads and writes.
+- Built-in key expiry -- TTL cleanup is automatic.
+- One instance can serve sessions, cache, and queues.
 
-If you want cache persistence but do not have Redis, use file-based caching:
+### File
+
+If you want persistence but cannot run Redis, use file-based caching:
 
 ```bash
 TINA4_CACHE_BACKEND=file
 TINA4_CACHE_DIR=/path/to/cache/directory
 ```
 
-File cache stores each cache entry as a file on disk. It is slower than memory or Redis but survives server restarts without extra infrastructure.
+Each entry is a file on disk. Slower than memory or Redis, but survives restarts with zero extra infrastructure. Reach for it when you need persistence on limited hosting, or when entries are large and you would rather not hold them in memory.
 
-### When to Use File Cache
+### Graceful fallback
 
-- You need cache persistence but cannot run Redis
-- Your hosting environment is limited (shared hosting, no external services)
-- Cache entries are large and you do not want them in memory
+If the configured backend's driver is missing, or the service is unreachable, or the credentials are wrong, the cache logs a warning and falls back to the **file** backend -- a real, persistent cache, never a silent no-op. Your code does not change; only the storage backend does.
 
 ---
 
-## 6. Direct Cache API
+## 6. Direct Key/Value API
 
-For custom caching logic, use the `cacheGet`, `cacheSet`, and `cacheDelete` functions:
+For custom caching logic, use the key/value functions. They are **async** -- `await` every call. A miss returns `undefined`.
+
+```typescript
+import { cacheGet, cacheSet, cacheDelete, clearCache, cacheStats } from "@tina4/core";
+```
 
 ### cacheSet
 
 ```typescript
-import { cacheSet } from "tina4-nodejs";
+import { cacheSet } from "@tina4/core";
 
-// Cache a value for 300 seconds
+// Cache a value for 300 seconds.
 await cacheSet("product:42", {
     id: 42,
     name: "Wireless Keyboard",
@@ -211,170 +356,100 @@ await cacheSet("product:42", {
     inStock: true
 }, 300);
 
-// Cache a string
-await cacheSet("exchange_rate:USD_EUR", "0.92", 3600);
+// Cache a string.
+await cacheSet("exchangeRate:USD_EUR", "0.92", 3600);
 
-// Cache indefinitely (no TTL)
+// No TTL — uses the default (TINA4_CACHE_TTL, 60 seconds).
 await cacheSet("app:config", { theme: "dark", lang: "en" });
 ```
 
 ### cacheGet
 
 ```typescript
-import { cacheGet, cacheSet } from "tina4-nodejs";
+import { cacheGet, cacheSet } from "@tina4/core";
 
 const product = await cacheGet("product:42");
-// Returns the cached value, or null if not found or expired
+// Returns the cached value, or undefined if not found or expired.
 
-if (product === null) {
-    // Cache miss -- fetch from database
-    const freshProduct = await fetchProductFromDatabase(42);
-    await cacheSet("product:42", freshProduct, 300);
+if (product === undefined) {
+    // Cache miss — fetch from the database, then store it.
+    const fresh = await fetchProductFromDatabase(42);
+    await cacheSet("product:42", fresh, 300);
 }
-
-return res.json(product);
 ```
 
 ### cacheDelete
 
 ```typescript
-import { cacheDelete } from "tina4-nodejs";
+import { cacheDelete } from "@tina4/core";
 
-// Delete a specific key
 await cacheDelete("product:42");
 
-// Delete multiple keys
-await cacheDelete("product:42");
+// Delete several keys.
 await cacheDelete("product:43");
 await cacheDelete("product:44");
 ```
 
-### Real-World Pattern: Cache-Aside
-
-The most common caching pattern is cache-aside (also called lazy loading):
+### clearCache
 
 ```typescript
-import { Router, cacheGet, cacheSet } from "tina4-nodejs";
+import { clearCache } from "@tina4/core";
+
+// Wipe every entry in the active backend.
+await clearCache();
+```
+
+### Cache-aside pattern
+
+The most common pattern is cache-aside (lazy loading). Note the `=== undefined` miss check -- and that every cache call is `await`ed:
+
+```typescript
+import { get, cacheGet, cacheSet } from "@tina4/core";
 import { Database } from "tina4-nodejs/orm";
 
-Router.get("/api/products/{id:int}", async (req, res) => {
-    const id = req.params.id;
+get("/api/products/{id}", async (req, res) => {
+    const id = parseInt(req.params.id, 10);
     const cacheKey = `product:${id}`;
 
-    // 1. Try the cache first
-    let product = await cacheGet(cacheKey);
-
-    if (product !== null) {
-        // Cache hit -- return immediately
-        return res.json({ ...product, source: "cache" });
+    // 1. Try the cache first — await it.
+    const cached = await cacheGet(cacheKey);
+    if (cached !== undefined) {
+        return res.json({ ...(cached as object), source: "cache" });
     }
 
-    // 2. Cache miss -- fetch from database
+    // 2. Miss — fetch from the database.
     const db = Database.getConnection();
-    product = await db.fetchOne(
-        "SELECT id, name, category, price, in_stock FROM products WHERE id = :id",
-        { id }
+    const product = await db.fetchOne(
+        "SELECT id, name, category, price, in_stock FROM products WHERE id = ?",
+        [id]
     );
 
     if (product === null) {
         return res.status(404).json({ error: "Product not found" });
     }
 
-    // 3. Store in cache for next time
-    await cacheSet(cacheKey, product, 600);  // Cache for 10 minutes
+    // 3. Store for next time.
+    await cacheSet(cacheKey, product, 600);  // 10 minutes
 
     return res.json({ ...product, source: "database" });
 });
 ```
 
-```bash
-curl http://localhost:7148/api/products/42
-```
-
 First call (cache miss):
 
 ```json
-{
-  "id": 42,
-  "name": "Wireless Keyboard",
-  "category": "Electronics",
-  "price": 79.99,
-  "in_stock": true,
-  "source": "database"
-}
+{ "id": 42, "name": "Wireless Keyboard", "category": "Electronics", "price": 79.99, "in_stock": true, "source": "database" }
 ```
 
 Second call (cache hit):
 
 ```json
-{
-  "id": 42,
-  "name": "Wireless Keyboard",
-  "category": "Electronics",
-  "price": 79.99,
-  "in_stock": true,
-  "source": "cache"
-}
+{ "id": 42, "name": "Wireless Keyboard", "category": "Electronics", "price": 79.99, "in_stock": true, "source": "cache" }
 ```
 
 ---
 
-## 7. Database Query Caching
-
-Tina4 can cache database query results. Enable it in `.env`:
-
-```bash
-TINA4_DB_CACHE=true
-TINA4_DB_CACHE_TTL=300
-```
-
-With database caching enabled, identical queries return cached results instead of hitting the database:
-
-```typescript
-import { Router } from "tina4-nodejs";
-import { Database } from "tina4-nodejs/orm";
-
-Router.get("/api/categories", async (req, res) => {
-    const db = Database.getConnection();
-
-    // First call: executes the query (20ms)
-    // Subsequent calls within 300 seconds: returns cached result (0.1ms)
-    const categories = await db.fetchAll("SELECT * FROM categories ORDER BY name");
-
-    return res.json({ categories });
-});
-```
-
-The cache key is derived from the SQL query and its parameters. Different queries or different parameters produce different cache keys:
-
-```typescript
-// These are cached separately:
-await db.fetchAll("SELECT * FROM products WHERE category = :cat", { cat: "Electronics" });
-await db.fetchAll("SELECT * FROM products WHERE category = :cat", { cat: "Fitness" });
-```
-
-### When to Use DB Cache
-
-- Read-heavy applications where the same queries run over and over
-- Reference data that changes seldom (categories, countries, settings)
-- Dashboard queries that aggregate large datasets
-
-### When Not to Use DB Cache
-
-- Write-heavy applications where data changes on every request
-- Queries with real-time requirements (inventory counts, live prices)
-- Queries that must return the latest data at all times
-
-### Skipping Cache for Specific Queries
-
-```typescript
-// Force a fresh query, bypassing the cache
-const freshData = await db.fetchAll("SELECT * FROM products", { noCache: true });
-```
-
----
-
-## 8. Cache Invalidation Strategies
+## 7. Cache Invalidation Strategies
 
 Cache invalidation is the hard problem. Stale cache serves outdated data. Premature invalidation throws away performance gains. Three strategies handle this.
 
@@ -393,61 +468,63 @@ Good for data where near-real-time accuracy is acceptable. A 10-minute delay in 
 Clear the cache when the underlying data changes:
 
 ```typescript
-import { Router, cacheSet, cacheDelete } from "tina4-nodejs";
+import { put, cacheDelete } from "@tina4/core";
 import { Database } from "tina4-nodejs/orm";
 
-Router.put("/api/products/{id:int}", async (req, res) => {
-    const productId = req.params.id;
+put("/api/products/{id}", async (req, res) => {
+    const id = parseInt(req.params.id, 10);
     const body = req.body;
     const db = Database.getConnection();
 
     await db.execute(
-        "UPDATE products SET name = :name, price = :price WHERE id = :id",
-        { name: body.name, price: body.price, id: productId }
+        "UPDATE products SET name = ?, price = ? WHERE id = ?",
+        [body.name, body.price, id]
     );
 
-    // Invalidate the cache for this product
-    await cacheDelete(`product:${productId}`);
+    // Invalidate the cache for this product.
+    await cacheDelete(`product:${id}`);
 
-    // Also invalidate any list caches that might include this product
+    // Also invalidate any list caches that might include it.
     await cacheDelete("products:all");
     await cacheDelete("products:featured");
 
-    const updated = await db.fetchOne("SELECT * FROM products WHERE id = :id", { id: productId });
-
+    const updated = await db.fetchOne("SELECT * FROM products WHERE id = ?", [id]);
     return res.json(updated);
 });
 ```
 
-This is the most accurate strategy -- the cache is fresh after every write. The downside: you must remember to invalidate every key that holds the affected data.
+The most accurate strategy -- the cache is fresh after every write. The downside: you must remember to invalidate every key that holds the affected data.
 
 ### Strategy 3: Write-Through Cache
 
 Update the cache at the same time as the database:
 
 ```typescript
-Router.put("/api/products/{id:int}", async (req, res) => {
-    const productId = req.params.id;
+import { put, cacheSet } from "@tina4/core";
+import { Database } from "tina4-nodejs/orm";
+
+put("/api/products/{id}", async (req, res) => {
+    const id = parseInt(req.params.id, 10);
     const body = req.body;
     const db = Database.getConnection();
 
     await db.execute(
-        "UPDATE products SET name = :name, price = :price WHERE id = :id",
-        { name: body.name, price: body.price, id: productId }
+        "UPDATE products SET name = ?, price = ? WHERE id = ?",
+        [body.name, body.price, id]
     );
 
-    const updated = await db.fetchOne("SELECT * FROM products WHERE id = :id", { id: productId });
+    const updated = await db.fetchOne("SELECT * FROM products WHERE id = ?", [id]);
 
-    // Write the new data to cache (instead of deleting)
-    await cacheSet(`product:${productId}`, updated, 600);
+    // Write the new data to cache instead of deleting.
+    await cacheSet(`product:${id}`, updated, 600);
 
     return res.json(updated);
 });
 ```
 
-This ensures the cache holds the latest data at all times. No cache miss after an update -- the next read comes from the already-warm cache.
+The cache holds the latest data at all times. No cache miss after an update -- the next read comes from the already-warm cache.
 
-### Choosing a Strategy
+### Choosing a strategy
 
 | Strategy | Best For | Tradeoff |
 |----------|----------|----------|
@@ -459,7 +536,7 @@ Combine them. Use TTL as a safety net (entries expire even if invalidation misse
 
 ---
 
-## 9. TTL Management
+## 8. TTL Management
 
 Choosing the right TTL depends on how often the data changes and how acceptable stale data is:
 
@@ -475,25 +552,24 @@ Choosing the right TTL depends on how often the data changes and how acceptable 
 
 ### Dynamic TTL
 
-Adjust TTL based on data characteristics:
+Adjust the TTL based on the data:
 
 ```typescript
-import { Router, cacheGet, cacheSet } from "tina4-nodejs";
+import { cacheGet, cacheSet } from "@tina4/core";
 
 async function getCachedProduct(productId: number) {
     const cacheKey = `product:${productId}`;
-    let product = await cacheGet(cacheKey);
 
-    if (product !== null) {
-        return product;
+    const cached = await cacheGet(cacheKey);
+    if (cached !== undefined) {
+        return cached;
     }
 
-    product = await fetchProductFromDatabase(productId);
+    const product = await fetchProductFromDatabase(productId);
 
-    // Popular products: shorter TTL (more likely to change)
-    // Inactive products: longer TTL (rarely change)
+    // Popular products: shorter TTL (more likely to change).
+    // Inactive products: longer TTL (rarely change).
     const ttl = product.viewCount > 1000 ? 60 : 3600;
-
     await cacheSet(cacheKey, product, ttl);
 
     return product;
@@ -502,14 +578,18 @@ async function getCachedProduct(productId: number) {
 
 ---
 
-## 10. Cache Statistics
+## 9. Cache Statistics
 
-Monitor cache performance to verify that caching helps:
+Two `cacheStats` calls report on two different things. Get the async/await right -- they differ.
+
+### Key/value backend stats (async)
+
+`cacheStats()` from `@tina4/core` reports the backend behind the key/value API, the response cache, and the persistent DB cache. It is **async**:
 
 ```typescript
-import { Router, cacheStats } from "tina4-nodejs";
+import { get, cacheStats } from "@tina4/core";
 
-Router.get("/api/cache/stats", async (req, res) => {
+get("/api/cache/stats", async (req, res) => {
     const stats = await cacheStats();
     return res.json(stats);
 });
@@ -521,94 +601,120 @@ curl http://localhost:7148/api/cache/stats
 
 ```json
 {
-  "backend": "memory",
-  "entries": 42,
   "hits": 15234,
   "misses": 891,
-  "hit_rate": "94.5%",
-  "memory_bytes": 524288,
-  "oldest_entry_age": 3542
+  "size": 42,
+  "backend": "memory"
 }
 ```
 
-Hit rate above 90%: your caching strategy works. Below 80%: TTLs are too short, the cache is too small, or you are caching data that is not accessed often enough to benefit.
+The shape is exactly `{ hits, misses, size, backend }` -- four fields, nothing more.
 
-The dev dashboard at `/__dev` shows cache statistics too -- per-key hit counts and miss counts. You see which keys earn their keep.
+### Database query-cache stats (sync)
+
+`db.cacheStats()` reports the database query cache (layers 1 and 2). It is **synchronous** -- no `await`:
+
+```typescript
+import { Database } from "tina4-nodejs/orm";
+
+const db = Database.getConnection();
+const stats = db.cacheStats();
+```
+
+```json
+{
+  "enabled": true,
+  "mode": "request",
+  "hits": 128,
+  "misses": 12,
+  "size": 9,
+  "ttl": 5,
+  "backend": "memory"
+}
+```
+
+The shape is `{ enabled, mode, hits, misses, size, ttl, backend? }`. `mode` is one of:
+
+- `"request"` -- request-scoped caching is active (the default).
+- `"persistent"` -- `TINA4_DB_CACHE=true`, so entries survive across requests.
+- `"off"` -- both layers are disabled.
+
+`db.cacheClear()` flushes the query cache and resets its counters. It is synchronous too.
+
+A key/value hit rate above 90% means your caching strategy works. Below 80% means TTLs are too short, the cache is too small, or you are caching data that is not accessed often enough to benefit.
 
 ---
 
-## 11. Combining Cache Layers
+## 10. Combining Cache Layers
 
-For maximum performance, layer multiple cache strategies:
+For maximum performance, stack the layers. Each backstops the one above it:
 
 ```typescript
-import { Router, cacheGet, cacheSet } from "tina4-nodejs";
+import { get, cacheGet, cacheSet } from "@tina4/core";
 import { Database } from "tina4-nodejs/orm";
 
-Router.get("/api/catalog", async (req, res) => {
+get("/api/catalog", async (req, res) => {
     const page = parseInt(req.query.page ?? "1", 10);
     const cacheKey = `catalog:page:${page}`;
 
-    // Layer 1: Check application cache
+    // Layer A: application key/value cache — await it.
     const cached = await cacheGet(cacheKey);
-
-    if (cached !== null) {
-        return res.json({ ...cached, cache: "application" });
+    if (cached !== undefined) {
+        return res.json({ ...(cached as object), cache: "application" });
     }
 
-    // Layer 2: Database query (with DB-level caching if TINA4_DB_CACHE=true)
+    // Layer B: database query (request + persistent caching apply here automatically).
     const db = Database.getConnection();
     const limit = 20;
     const offset = (page - 1) * limit;
 
     const products = await db.fetchAll(
-        `SELECT p.*, c.name as category_name
+        `SELECT p.*, c.name AS category_name
          FROM products p
          JOIN categories c ON p.category_id = c.id
          WHERE p.active = 1
          ORDER BY p.created_at DESC
-         LIMIT :limit OFFSET :offset`,
-        { limit, offset }
+         LIMIT ? OFFSET ?`,
+        [limit, offset]
     );
 
-    const total = await db.fetchOne("SELECT COUNT(*) as count FROM products WHERE active = 1");
+    const total = await db.fetchOne("SELECT COUNT(*) AS count FROM products WHERE active = 1");
 
     const catalog = {
         products,
         page,
-        total: total.count,
-        pages: Math.ceil(total.count / limit),
-        generated_at: new Date().toISOString()
+        total: (total as { count: number }).count,
+        pages: Math.ceil((total as { count: number }).count / limit),
+        generatedAt: new Date().toISOString()
     };
 
-    // Store in application cache
     await cacheSet(cacheKey, catalog, 300);
 
     return res.json({ ...catalog, cache: "none" });
-}, "ResponseCache:60");
+}, ["ResponseCache:60"]);
 ```
 
-This creates three cache layers:
+Three layers, in the order a request meets them:
 
-1. **ResponseCache** (60 seconds): The entire HTTP response is cached. No JavaScript code runs at all.
-2. **Application cache** (300 seconds): If the response cache expired but the app cache is still fresh, skip the database queries.
-3. **DB query cache** (if enabled): Individual query results are cached even if the application cache missed.
+1. **Response cache** (60 seconds): the entire HTTP response is cached. The handler does not run.
+2. **Application key/value cache** (300 seconds): if the response cache expired but this is still fresh, skip the database work.
+3. **Database query cache**: individual query results dedupe within the request and (if `TINA4_DB_CACHE=true`) across requests.
 
-The first visitor after a full cache expiry waits 800ms. Everyone else gets the response in under 5ms.
+The first visitor after a full expiry waits 800ms. Everyone else gets the response in under 5ms.
 
 ---
 
-## 12. Exercise: Cache an Expensive Product Listing Endpoint
+## 11. Exercise: Cache an Expensive Product Listing Endpoint
 
-Build a product listing endpoint that uses caching at multiple levels.
+Build a product listing endpoint that caches at multiple levels.
 
 ### Requirements
 
 1. Create a `GET /api/store/products` endpoint that:
    - Accepts query parameters: `category`, `page`, `limit`
    - Returns a list of products with pagination metadata
-   - Uses the direct cache API (`cacheGet`/`cacheSet`) with a 5-minute TTL
-   - Includes a `source` field in the response (`"cache"` or `"database"`)
+   - Uses the key/value API (`cacheGet`/`cacheSet`) with a 5-minute TTL
+   - Includes a `source` field (`"cache"` or `"database"`)
 
 2. Create a `POST /api/store/products` endpoint that:
    - Creates a new product
@@ -616,24 +722,24 @@ Build a product listing endpoint that uses caching at multiple levels.
 
 3. Create a `GET /api/store/cache-stats` endpoint that shows cache statistics
 
-### Test with:
+### Test with
 
 ```bash
-# First call -- cache miss, slow
+# First call — cache miss, slow
 curl "http://localhost:7148/api/store/products?category=Electronics&page=1"
 
-# Second call -- cache hit, fast
+# Second call — cache hit, fast
 curl "http://localhost:7148/api/store/products?category=Electronics&page=1"
 
-# Different category -- cache miss
+# Different category — cache miss
 curl "http://localhost:7148/api/store/products?category=Fitness&page=1"
 
-# Create a product -- should invalidate cache
+# Create a product — should invalidate cache
 curl -X POST http://localhost:7148/api/store/products \
   -H "Content-Type: application/json" \
   -d '{"name": "Smart Watch", "category": "Electronics", "price": 299.99}'
 
-# Same query again -- cache miss (invalidated by the POST)
+# Same query again — cache miss (invalidated by the POST)
 curl "http://localhost:7148/api/store/products?category=Electronics&page=1"
 
 # Check cache stats
@@ -642,12 +748,12 @@ curl http://localhost:7148/api/store/cache-stats
 
 ---
 
-## 13. Solution
+## 12. Solution
 
 Create `src/routes/storeCached.ts`:
 
 ```typescript
-import { Router, cacheGet, cacheSet, cacheDelete, cacheStats } from "tina4-nodejs";
+import { get, post, cacheGet, cacheSet, cacheDelete, cacheStats } from "@tina4/core";
 import { createHash } from "crypto";
 
 function getProductStore() {
@@ -663,29 +769,29 @@ function getProductStore() {
     ];
 }
 
+function cacheKeyFor(category: string | null, page: number, limit: number): string {
+    const keyData = JSON.stringify({ category, page, limit });
+    return `store:products:${createHash("md5").update(keyData).digest("hex")}`;
+}
 
-Router.get("/api/store/products", async (req, res) => {
+
+get("/api/store/products", async (req, res) => {
     const category = req.query.category ?? null;
     const page = parseInt(req.query.page ?? "1", 10);
     const limit = parseInt(req.query.limit ?? "20", 10);
 
-    // Build cache key from query parameters
-    const keyData = JSON.stringify({ category, page, limit });
-    const cacheKey = `store:products:${createHash("md5").update(keyData).digest("hex")}`;
+    const cacheKey = cacheKeyFor(category, page, limit);
 
-    // Try cache first
+    // Try cache first — await it. A miss is undefined.
     const cached = await cacheGet(cacheKey);
-
-    if (cached !== null) {
-        return res.json({ ...cached, source: "cache" });
+    if (cached !== undefined) {
+        return res.json({ ...(cached as object), source: "cache" });
     }
 
-    // Simulate expensive database query
+    // Simulate an expensive database query.
     await new Promise(resolve => setTimeout(resolve, 100));  // 100ms delay
 
     let products = getProductStore();
-
-    // Filter by category
     if (category !== null) {
         products = products.filter(
             p => p.category.toLowerCase() === String(category).toLowerCase()
@@ -702,17 +808,17 @@ Router.get("/api/store/products", async (req, res) => {
         limit,
         total,
         pages: Math.ceil(total / limit),
-        generated_at: new Date().toISOString()
+        generatedAt: new Date().toISOString()
     };
 
-    // Cache for 5 minutes
+    // Cache for 5 minutes.
     await cacheSet(cacheKey, result, 300);
 
     return res.json({ ...result, source: "database" });
 });
 
 
-Router.post("/api/store/products", async (req, res) => {
+post("/api/store/products", async (req, res) => {
     const body = req.body;
 
     if (!body.name) {
@@ -727,39 +833,28 @@ Router.post("/api/store/products", async (req, res) => {
         inStock: true
     };
 
-    // Invalidate all product list caches
-    const categories = ["Electronics", "Fitness", "Kitchen", "General"];
+    // Invalidate every product-list cache we might have stored.
+    const categories: (string | null)[] = ["Electronics", "Fitness", "Kitchen", "General", null];
     for (const cat of categories) {
         for (let p = 1; p <= 5; p++) {
-            const keyData = JSON.stringify({ category: cat, page: p, limit: 20 });
-            await cacheDelete(
-                `store:products:${createHash("md5").update(keyData).digest("hex")}`
-            );
+            await cacheDelete(cacheKeyFor(cat, p, 20));
         }
-    }
-
-    // Also invalidate the unfiltered list
-    for (let p = 1; p <= 5; p++) {
-        const keyData = JSON.stringify({ category: null, page: p, limit: 20 });
-        await cacheDelete(
-            `store:products:${createHash("md5").update(keyData).digest("hex")}`
-        );
     }
 
     return res.status(201).json({
         message: "Product created",
         product,
-        cache_invalidated: true
+        cacheInvalidated: true
     });
 });
 
 
-Router.get("/api/store/cache-stats", async (req, res) => {
+get("/api/store/cache-stats", async (req, res) => {
     return res.json(await cacheStats());
 });
 ```
 
-**Expected output -- first call (cache miss):**
+**First call (cache miss):**
 
 ```bash
 curl "http://localhost:7148/api/store/products?category=Electronics&page=1"
@@ -776,12 +871,12 @@ curl "http://localhost:7148/api/store/products?category=Electronics&page=1"
   "limit": 20,
   "total": 3,
   "pages": 1,
-  "generated_at": "2026-03-22T14:30:00.000Z",
+  "generatedAt": "2026-03-22T14:30:00.000Z",
   "source": "database"
 }
 ```
 
-**Expected output -- second call (cache hit):**
+**Second call (cache hit):**
 
 ```json
 {
@@ -794,69 +889,69 @@ curl "http://localhost:7148/api/store/products?category=Electronics&page=1"
   "limit": 20,
   "total": 3,
   "pages": 1,
-  "generated_at": "2026-03-22T14:30:00.000Z",
+  "generatedAt": "2026-03-22T14:30:00.000Z",
   "source": "cache"
 }
 ```
 
-Notice: same `generated_at`, but `source` changed from `"database"` to `"cache"`. The handler did not run.
+Same `generatedAt`, but `source` changed from `"database"` to `"cache"`. The handler did not run.
 
 ---
 
-## 14. Gotchas
+## 13. Gotchas
 
-### 1. Caching Authenticated Responses
+### 1. Forgetting to await a cache call
+
+**Problem:** `cacheGet` always looks like a miss, or `cacheSet` never seems to store anything.
+
+**Cause:** The key/value API is async. `const v = cacheGet(key)` returns a Promise, not the value. Comparing a Promise with `=== undefined` is always false, so you treat every read as a hit -- of a Promise object.
+
+**Fix:** `await` every key/value call: `const v = await cacheGet(key)`, `await cacheSet(...)`, `await cacheDelete(...)`, `await clearCache()`. The database read path is async too -- `await db.fetchAll(...)`. Only `db.cacheStats()` and `db.cacheClear()` are synchronous.
+
+### 2. Caching authenticated responses
 
 **Problem:** User A's profile is served to User B because the response was cached.
 
-**Cause:** `ResponseCache` caches by URL alone. If `/api/profile` returns different data per user but all requests hit the same URL, the first user's response is served to everyone.
+**Cause:** The response cache keys by method and URL alone. If `/api/profile` returns different data per user but every request hits the same URL, the first response is served to everyone.
 
-**Fix:** Do not use `ResponseCache` on user-specific endpoints. Use the direct cache API with user-specific keys instead: `await cacheSet(`profile:${userId}`, data, 300)`.
+**Fix:** Do not put the response cache on user-specific endpoints. Use the key/value API with a user-specific key instead: `await cacheSet(`profile:${userId}`, data, 300)`.
 
-### 2. Cache Stampede
-
-**Problem:** When a popular cache key expires, hundreds of requests hit the database at the same moment (all experiencing a cache miss together).
-
-**Cause:** All requests see the cache miss and all try to rebuild the cache on their own.
-
-**Fix:** Use cache locking or "stale-while-revalidate." One request rebuilds the cache while others serve the stale value. Tina4's `ResponseCache` handles this by serving the expired response to concurrent requests while one request refreshes it.
-
-### 3. Memory Cache Lost on Restart
+### 3. Memory cache lost on restart
 
 **Problem:** After restarting the server, performance drops until the cache warms up.
 
-**Cause:** Memory cache is lost when the process restarts. Every request is a cache miss until data is cached again.
+**Cause:** The memory backend lives in the process. It is gone when the process restarts, so every request is a miss until data is cached again.
 
-**Fix:** For production, use Redis cache (`TINA4_CACHE_BACKEND=redis`). It persists across server restarts. You can also implement a cache warmup script that pre-populates the cache with data your application accesses most.
+**Fix:** For production, use Redis (`TINA4_CACHE_BACKEND=redis`) or file (`TINA4_CACHE_BACKEND=file`). Both survive restarts. You can also run a warmup script that pre-populates the cache with your hottest data.
 
-### 4. Stale Data After Database Update
+### 4. Stale data after a database update
 
-**Problem:** You updated a product's price in the database, but the API still returns the old price.
+**Problem:** You updated a product's price, but the API still returns the old price.
 
-**Cause:** The cache still has the old data and has not expired yet.
+**Cause:** A key/value entry you set yourself still holds the old data and has not expired.
 
-**Fix:** Invalidate (or update) the cache when you modify the underlying data. Use `await cacheDelete(`product:${productId}`)` after an update, or use write-through caching with `cacheSet()` to update the cache with the new value.
+**Fix:** Invalidate or update on write. Use `await cacheDelete(`product:${id}`)` after an update, or write-through with `await cacheSet(...)`. (The request and persistent DB caches flush themselves on any write -- this gotcha is about keys you manage by hand.)
 
-### 5. Cache Key Collisions
+### 5. Cache key collisions
 
 **Problem:** Two different queries return the same cached data.
 
-**Cause:** Your cache keys are not specific enough. Using `"products"` as a key for both the full list and a filtered list causes collisions.
+**Cause:** Your keys are not specific enough. Using `"products"` for both the full list and a filtered list collides.
 
-**Fix:** Include all relevant parameters in the cache key: `"products:category:Electronics:page:1:limit:20"`. Or use an MD5 hash of the parameters: `` `products:${createHash("md5").update(JSON.stringify(params)).digest("hex")}` ``.
+**Fix:** Include every relevant parameter in the key: `"products:category:Electronics:page:1:limit:20"`, or hash the parameters: `` `products:${createHash("md5").update(JSON.stringify(params)).digest("hex")}` ``.
 
-### 6. Serialization Overhead
+### 6. Serialization overhead
 
 **Problem:** Caching makes certain requests slower, not faster.
 
-**Cause:** The cached object is large. Serializing and deserializing it takes more time than re-computing it.
+**Cause:** The cached object is large. Serializing and deserializing it costs more than recomputing it -- especially on a network backend, where every value is JSON over the wire.
 
-**Fix:** Only cache data that is expensive to compute. If the original operation takes 5ms and cache serialization takes 10ms, caching is counterproductive. Profile before and after caching to verify the improvement.
+**Fix:** Only cache data that is expensive to compute. If the original operation takes 5ms and serialization takes 10ms, caching is counterproductive. Profile before and after.
 
-### 7. Forgetting to Set TTL
+### 7. Forgetting to set a TTL
 
 **Problem:** Cache entries never expire and the server's memory grows until it crashes.
 
-**Cause:** You called `await cacheSet("key", value)` without a TTL. The entry lives forever (or until the server restarts).
+**Cause:** You called `await cacheSet("key", value)` with no TTL, so it used the default. For data you expect to live a long time, that may be shorter than you think -- or, on a backend without eviction, longer.
 
-**Fix:** Set a TTL on every entry: `await cacheSet("key", value, 300)`. Even for data that "never changes," set a long TTL like 86400 (24 hours). This provides a safety net against stale data and prevents unbounded memory growth.
+**Fix:** Set an explicit TTL: `await cacheSet("key", value, 300)`. Even for data that "never changes," set a long one like 86400 (24 hours). It is a safety net against both stale data and unbounded growth. `TINA4_CACHE_MAX_ENTRIES` (default 1000) also caps the memory and file backends.
