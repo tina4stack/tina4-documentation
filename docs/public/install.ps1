@@ -45,8 +45,8 @@ if ($userPath -notlike "*$installDir*") {
 Write-Host ""
 Write-Host "  tina4 $tag installed successfully" -ForegroundColor Green
 Write-Host ""
-Write-Host "Get started (open a new terminal):"
-Write-Host "  tina4 doctor   - Check your environment"
-Write-Host "  tina4 init     - Create a new project"
-Write-Host "  tina4 serve    - Start development server"
+
+# Getting started = run setup. One command, then a few questions, then you're building.
+Write-Host "  Starting setup..." -ForegroundColor Cyan
 Write-Host ""
+& "$dest" setup

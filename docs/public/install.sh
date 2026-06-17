@@ -107,8 +107,20 @@ fi
 echo ""
 echo "✓ tina4 ${LATEST} installed successfully"
 echo ""
-echo "Get started:"
-echo "  tina4 doctor   — Check your environment"
-echo "  tina4 init     — Create a new project"
-echo "  tina4 serve    — Start development server"
-echo ""
+
+# Getting started = run setup. One command, then a few questions, then you're
+# building. `curl | sh` leaves stdin attached to the pipe (not the keyboard),
+# so read the answers from the controlling terminal. With no tty available
+# (CI / non-interactive), fall back to printing the next steps instead of
+# hanging on a prompt that can never be answered.
+if [ -r /dev/tty ]; then
+  echo "  Starting setup..."
+  echo ""
+  "${INSTALL_DIR}/tina4" setup < /dev/tty
+else
+  echo "Get started:"
+  echo "  tina4 setup    — Guided onboarding (language + AI tool + first project)"
+  echo "  tina4 doctor   — Check your environment"
+  echo "  tina4 serve    — Start development server"
+  echo ""
+fi
