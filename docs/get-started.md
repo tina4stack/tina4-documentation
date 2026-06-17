@@ -13,13 +13,13 @@ brew install tina4stack/tap/tina4
 **Linux / macOS (install script):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/tina4stack/tina4/main/install.sh | bash
+curl -fsSL https://tina4.com/install.sh | sh
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-irm https://raw.githubusercontent.com/tina4stack/tina4/main/install.ps1 | iex
+irm https://tina4.com/install.ps1 | iex
 ```
 
 Verify the installation:
@@ -36,11 +36,32 @@ Run `tina4 doctor` to see which languages and package managers are available:
 tina4 doctor
 ```
 
-This shows installed languages (Python, PHP, Ruby, Node.js), their versions, and whether the package managers (uv, composer, bundler, npm) are ready. If a language is missing, install it with:
+This shows installed languages (Python, PHP, Ruby, Node.js), their versions, and whether the package managers (uv, composer, bundler, npm) are ready.
+
+## Set Everything Up — `tina4 setup`
+
+The fastest path, especially if you're starting from a fresh machine. `tina4 setup` reads what `doctor` found, installs whatever is missing — the language runtime and git, through the OS package manager (Chocolatey on Windows, Homebrew on macOS) — installs the AI skills, scaffolds a ready-to-run project, and points you at it.
 
 ```bash
-tina4 install python    # or php, ruby, nodejs
+tina4 setup
 ```
+
+It's guided: it asks which language, which AI tool, where your projects folder is, and the project name. First run remembers those; later runs ask only the project type and name. Use `tina4 setup --dry-run` to preview without changing anything.
+
+Prefer to do it by hand? Skip to **Create a Project** below.
+
+## Skills — make your AI assistant fluent in Tina4
+
+Tina4 ships two AI **skills**: `tina4-developer` (backend) and `tina4-js` (frontend). They are the source of truth for the framework's patterns, so Claude (Code or Desktop) builds correctly instead of guessing.
+
+`tina4 setup` installs them for you. To install or refresh them on any machine:
+
+```bash
+curl -fsSL https://tina4.com/install-skills.sh | sh   # macOS / Linux
+irm https://tina4.com/install-skills.ps1 | iex        # Windows PowerShell
+```
+
+They install into `~/.claude/skills/tina4-developer` and `~/.claude/skills/tina4-js`, where Claude Code and Claude Desktop load them automatically.
 
 ## Create a Project
 
@@ -54,7 +75,7 @@ cd my-app
 tina4 serve
 ```
 
-Access your app at `http://localhost:7145`
+Access your app at `http://localhost:7146`
 
 Take a deeper dive into the [documentation](/python/index.md)
 
@@ -78,7 +99,7 @@ cd my-app
 tina4 serve
 ```
 
-Access your app at `http://localhost:7146`
+Access your app at `http://localhost:7145`
 
 Take a deeper dive into the [documentation](/php/index.md)
 

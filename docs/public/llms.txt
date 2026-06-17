@@ -88,6 +88,45 @@ build that structure by hand.
 
 ---
 
+## Skills — install them; the AI gets much better at Tina4
+
+The tina4 **skills** are the single highest-leverage thing for an AI building
+Tina4. They are the source of truth for the framework's patterns and stop the
+guessing that breaks builds. **Install them and use them.**
+
+- **What:** `tina4-developer` (backend — routing, ORM, auth, queues, migrations,
+  …) and `tina4-js` (the reactive frontend).
+- **Install:** `tina4 setup` installs them automatically. To (re)install on any
+  machine, standalone:
+  ```bash
+  curl -fsSL https://tina4.com/install-skills.sh | sh   # macOS / Linux
+  irm https://tina4.com/install-skills.ps1 | iex        # Windows PowerShell
+  ```
+- **Where they live:** `~/.claude/skills/tina4-developer` and
+  `~/.claude/skills/tina4-js`. Claude Code and Claude Desktop auto-load skills
+  from there.
+- **Use:** follow `tina4-developer` for backend work and `tina4-js` for the
+  frontend. Unsure of an API? The skill has the exact, current pattern — read it
+  instead of guessing.
+
+---
+
+## Scaffolding commands — let the CLI write the boilerplate
+
+Never hand-build the project layout or files; generate them:
+
+```bash
+tina4 init <python|php|ruby|nodejs> [name]   # new project (or `tina4 setup`, guided)
+tina4 generate model <Name>                  # src/orm/<Name>      (one model per file)
+tina4 generate route <name>                  # src/routes/<name>   (CRUD verbs)
+tina4 generate migration "<description>"     # migrations/<timestamp>_<slug>.sql
+tina4 generate middleware <Name>             # src/middleware/<name>
+tina4 migrate                                # apply pending migrations
+tina4 routes                                 # list registered routes
+```
+
+---
+
 ## STEP 4 — Run the dev server
 
 ```bash
