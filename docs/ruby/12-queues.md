@@ -54,17 +54,21 @@ The file-based backend is the default. No configuration needed.
 ```ruby
 queue = Tina4::Queue.new(topic: "emails")
 
-# Push a job
-queue.push({
+# Push a job -- returns the Job that was queued
+job = queue.push({
   to: "alice@example.com",
   subject: "Order Confirmation",
   body: "Your order #1234 has been confirmed."
 })
+
+puts job.id  # the generated job id
 ```
+
+`push` returns a `Tina4::Job`, not an integer. Read `job.id` when you need the identifier.
 
 ### Convenience Method: produce
 
-The `produce` method pushes to a specific topic without creating a separate Queue instance:
+The `produce` method pushes to a specific topic without creating a separate Queue instance. It also returns the `Job`:
 
 ```ruby
 queue = Tina4::Queue.new(topic: "emails")
@@ -73,14 +77,23 @@ queue.produce("invoices", { order_id: 101, format: "pdf" })
 
 ### Push with Priority
 
-Jobs default to priority 0 (normal). Higher numbers are popped first:
+Jobs default to priority 0 (normal). The queue pops the highest priority first, and breaks ties oldest-first:
 
 ```ruby
 # Normal priority (default)
 queue.push({ to: "alice@example.com", subject: "Newsletter" })
 
-# High priority -- processed before normal jobs
+# High priority -- popped before normal jobs
 queue.push({ to: "alice@example.com", subject: "Password Reset" }, priority: 10)
+```
+
+### Delaying a Job
+
+Pass `delay_seconds` to hold a job back. It stays invisible to consumers until the delay elapses:
+
+```ruby
+# Becomes available 60 seconds from now
+queue.push({ to: "alice@example.com", subject: "Reminder" }, delay_seconds: 60)
 ```
 
 ### Queue Size
@@ -91,10 +104,10 @@ Check how many pending messages are in the queue:
 count = queue.size
 ```
 
-Pass a status keyword to count jobs in a specific state:
+Pass a status keyword to count jobs in a specific state. `"failed"` and `"dead"` both count jobs in the dead-letter store:
 
 ```ruby
-failed = queue.size(status: "failed")
+dead = queue.size(status: "dead")
 ```
 
 ---
@@ -155,9 +168,40 @@ queue.consume("emails") do |job|
 end
 ```
 
-### Retry with Delay
+`consume` polls forever by default. When the queue is empty it sleeps for `poll_interval` seconds (default 1.0) and polls again. To drain the queue once and stop, pass `poll_interval: 0`. To stop after a set number of jobs, pass `iterations:`.
 
-If a job fails but you want to retry it after a cooldown instead of marking it as failed:
+### Automatic Retry
+
+When you call `job.fail(reason)`, the queue handles the retry for you. It increments the job's attempt count and puts the job straight back onto the pending queue. The next `pop` or `consume` iteration picks it up again. Once a job has been attempted `max_retries` times, the queue stops retrying and moves it to the dead-letter store.
+
+So the consumer loop below retries a failing job up to `max_retries` times on its own, then dead-letters it. No manual `retry_failed` call is needed:
+
+```ruby
+# Retry each failed job up to 3 times, then dead-letter it
+queue = Tina4::Queue.new(topic: "emails", max_retries: 3)
+
+queue.consume("emails") do |job|
+  begin
+    send_email(job.payload[:to], job.payload[:subject], job.payload[:body])
+    job.complete
+  rescue => e
+    job.fail(e.message)  # auto re-enqueues until attempts == max_retries
+  end
+end
+```
+
+### Retry Backoff
+
+By default a failed job is retried on the very next poll. To wait before the next attempt, set `retry_backoff` (in seconds) when you create the queue:
+
+```ruby
+# Wait 30 seconds before each retry
+queue = Tina4::Queue.new(topic: "emails", max_retries: 3, retry_backoff: 30)
+```
+
+### Manual Retry with Delay
+
+`job.retry` is a manual override, distinct from the automatic `fail` path. It always re-queues the job regardless of the retry limit and increments the attempt count. The job already carries its queue reference from `pop`/`consume`, so you only pass the delay:
 
 ```ruby
 queue.consume("emails") do |job|
@@ -165,15 +209,15 @@ queue.consume("emails") do |job|
     send_email(job.payload[:to], job.payload[:subject], job.payload[:body])
     job.complete
   rescue => e
-    # Retry after 30 seconds instead of failing immediately
-    job.retry(queue: queue, delay_seconds: 30)
+    # Re-queue this job to run again 30 seconds from now
+    job.retry(delay_seconds: 30)
   end
 end
 ```
 
 ### Manual Pop
 
-For more control, pop a single message:
+For more control, pop a single message. `pop` returns the highest-priority available job, or `nil` when the queue is empty:
 
 ```ruby
 job = queue.pop
@@ -188,37 +232,61 @@ unless job.nil?
 end
 ```
 
+### Pop a Specific Job by ID
+
+Pull one known job out of the pending queue with `pop_by_id`. It returns the matching `Job` (claimed from the queue) or `nil` if no pending job has that id:
+
+```ruby
+job = queue.pop_by_id("abc-123")
+job.complete if job
+```
+
+`consume` accepts the same lookup via `id:` -- it processes that single job and returns:
+
+```ruby
+queue.consume("emails", id: "abc-123") do |job|
+  send_email(job.payload[:to], job.payload[:subject])
+  job.complete
+end
+```
+
 ---
 
 ## 6. Job Lifecycle
 
-Every job moves through states:
+Every job moves through these states:
 
 ```
-push -> PENDING -> pop/consume -> RESERVED -> job.complete -> COMPLETED
-                                           -> job.fail     -> FAILED
+push -> PENDING -> pop/consume -> RESERVED -> job.complete -> COMPLETED (terminal)
+                                           -> job.fail     -> attempts += 1
                                                                 |
-                                                          retry (manual)
+                                              attempts < max_retries
                                                                 |
-                                                             PENDING
+                                                             PENDING (auto re-queue)
                                                                 |
-                                                      max retries exceeded
+                                              attempts >= max_retries
                                                                 |
                                                            DEAD LETTER
 ```
 
+`job.fail` does the bookkeeping automatically: it re-queues the job while it still has retries left, and moves it to the dead-letter store once it has been attempted `max_retries` times.
+
 ### Job Methods
 
-When you receive a job from `consume` or `pop`, you have three methods:
+When you receive a job from `consume` or `pop`, you have these methods:
 
-- `job.complete` -- mark the job as done
-- `job.fail(reason)` -- mark the job as failed with a reason string
-- `job.reject(reason)` -- alias for `fail`
-- `job.retry(queue: queue, delay_seconds: 30)` -- re-queue the job after a delay (in seconds). The job goes back to PENDING after the delay elapses. You must pass the `queue` reference.
+- `job.complete` -- mark the job as done. Terminal; the job is removed.
+- `job.fail(reason)` -- record a failed attempt with a reason string. Auto re-queues while retries remain, then dead-letters.
+- `job.reject(reason)` -- alias for `fail`.
+- `job.retry(delay_seconds: 0)` -- manual override. Re-queue the job after an optional delay (in seconds), regardless of the retry limit.
 
 ### Job Properties
 
+- `job.id` -- the generated job id.
+- `job.payload` -- the data you pushed.
 - `job.topic` -- the topic this job belongs to. Useful when consuming from multiple topics.
+- `job.attempts` -- how many times the job has been attempted.
+- `job.error` -- the reason from the last `fail`/`reject`.
 
 Always call `complete`, `fail`, or `retry` on every job. If you do not, the job stays reserved.
 
@@ -228,36 +296,54 @@ Always call `complete`, `fail`, or `retry` on every job. If you do not, the job 
 
 ### Max Retries
 
-The default `max_retries` is 3. When a job's attempt count reaches `max_retries`, `retry_failed` skips it.
+The default `max_retries` is 3. When a job's attempt count reaches `max_retries`, the queue stops retrying it and moves it to the dead-letter store. Set the limit when you create the queue.
 
-### Retrying Failed Jobs
+### Inspecting Retrying Jobs
+
+`failed` returns the jobs that have failed at least once but are still being retried (attempts above zero, under `max_retries`). These jobs live in the pending queue and will be picked up again automatically. `failed` returns an array of **Hashes**, so use string keys:
 
 ```ruby
-# Retry all failed jobs (skips those that exceeded max_retries)
-queue.retry_failed
+retrying = queue.failed
+
+retrying.each do |job|
+  puts "Retrying job: #{job["id"]} (attempt #{job["attempts"]})"
+  puts "  Last error: #{job["error"]}"
+end
 ```
 
 ### Dead Letters
 
-Jobs that have exceeded `max_retries` are dead letters. There is no magic dead letter queue -- you retrieve and handle them yourself:
+Jobs that exhausted `max_retries` are dead letters. `dead_letters` returns an array of **Hashes** -- access fields with string keys:
 
 ```ruby
 dead_jobs = queue.dead_letters
 
 dead_jobs.each do |job|
-  puts "Dead job: #{job.id}"
-  puts "  Payload: #{job.payload}"
-  puts "  Error: #{job.error}"
+  puts "Dead job: #{job["id"]}"
+  puts "  Payload: #{job["payload"]}"
+  puts "  Error: #{job["error"]}"
 end
+```
+
+### Reviving Dead Letters
+
+`retry_failed` revives dead-letter jobs (those still under `max_retries`) back to the pending queue and returns the count re-queued. To revive one specific dead-letter job by id, use `queue.retry(job_id)`:
+
+```ruby
+# Revive every eligible dead letter
+queue.retry_failed
+
+# Revive one specific dead-letter job
+queue.retry("abc-123")
 ```
 
 ### Purging Jobs
 
-Remove jobs by status:
+Remove jobs by status. `"failed"` and `"dead"` remove from the dead-letter store; `"pending"` removes matching jobs from the pending queue:
 
 ```ruby
-queue.purge("completed")
-queue.purge("failed")
+queue.purge("dead")
+queue.purge("pending")
 ```
 
 ---
@@ -311,9 +397,15 @@ Switching backends is a config change, not a code change.
 ### Default: File
 
 ```bash
-# No config needed -- file is the default
-# Optionally set a custom storage path (defaults to ./queue)
-TINA4_QUEUE_PATH=./data/queue
+# No config needed -- file is the default.
+# Jobs are stored as JSON files under ./.queue in the working directory.
+```
+
+To store jobs somewhere else, pass a `dir:` option to the backend rather than an environment variable:
+
+```ruby
+backend = Tina4::QueueBackends::LiteBackend.new(dir: "./data/queue")
+queue = Tina4::Queue.new(topic: "emails", backend: backend)
 ```
 
 ### RabbitMQ
@@ -381,7 +473,7 @@ Build a queue-based email system with failure handling.
 | `POST` | `/api/emails/send` | Queue an email for sending |
 | `GET` | `/api/emails/queue` | Show pending email count |
 | `GET` | `/api/emails/dead` | List dead letter jobs |
-| `POST` | `/api/emails/retry` | Retry all failed jobs |
+| `POST` | `/api/emails/retry` | Revive dead-letter jobs |
 
 2. The email payload should include: `to` (required), `subject` (required), `body` (required)
 
@@ -423,7 +515,7 @@ Tina4::Router.post("/api/emails/send") do |request, response|
     return response.json({ errors: errors }, 400)
   end
 
-  message_id = queue.push({
+  job = queue.push({
     to: body["to"],
     subject: body["subject"],
     body: body["body"]
@@ -431,7 +523,7 @@ Tina4::Router.post("/api/emails/send") do |request, response|
 
   response.json({
     message: "Email queued for sending",
-    message_id: message_id
+    job_id: job.id
   }, 201)
 end
 
@@ -443,21 +535,21 @@ end
 Tina4::Router.get("/api/emails/dead") do |request, response|
   dead_jobs = queue.dead_letters
   items = dead_jobs.map do |job|
-    { id: job.id, payload: job.payload, error: job.error }
+    { id: job["id"], payload: job["payload"], error: job["error"] }
   end
   response.json({ dead_letters: items, count: items.length })
 end
 
 Tina4::Router.post("/api/emails/retry") do |request, response|
   queue.retry_failed
-  response.json({ message: "Failed emails re-queued for retry" })
+  response.json({ message: "Dead-letter emails re-queued" })
 end
 ```
 
 Create a separate consumer file `src/workers/email_worker.rb`:
 
 ```ruby
-queue = Tina4::Queue.new(topic: "emails")
+queue = Tina4::Queue.new(topic: "emails", max_retries: 3)
 
 queue.consume("emails") do |job|
   payload = job.payload
@@ -484,7 +576,7 @@ queue.consume("emails") do |job|
 end
 ```
 
-After the consumer has retried a job to `bad@example.com` three times, `queue.dead_letters` returns that job. The `/api/emails/dead` endpoint shows it. You investigate, fix the address, and call `/api/emails/retry` to re-queue.
+The consumer retries a failing job to `bad@example.com` automatically. After `max_retries` attempts, `queue.dead_letters` returns that job, and the `/api/emails/dead` endpoint shows it. You investigate, fix the address, and call `/api/emails/retry` to revive it.
 
 ---
 
@@ -518,9 +610,9 @@ After the consumer has retried a job to `bad@example.com` three times, `queue.de
 
 **Problem:** Dead letters accumulate and nobody notices.
 
-**Cause:** Failed jobs that exceed `max_retries` become dead letters but are never cleaned up.
+**Cause:** Jobs that exhaust `max_retries` become dead letters but are never cleaned up.
 
-**Fix:** Monitor dead letters with `queue.dead_letters`. Set up an alert when the count exceeds a threshold. Investigate, fix, then call `queue.retry_failed` or `queue.purge("failed")`.
+**Fix:** Monitor dead letters with `queue.dead_letters`. Set up an alert when the count exceeds a threshold. Investigate, fix, then call `queue.retry_failed` or `queue.purge("dead")`.
 
 ### 5. File backend for production
 
@@ -530,10 +622,10 @@ After the consumer has retried a job to `bad@example.com` three times, `queue.de
 
 **Fix:** For production with multiple workers, switch to RabbitMQ, Kafka, or MongoDB via the `TINA4_QUEUE_BACKEND` environment variable.
 
-### 6. Consumer block returns nothing useful
+### 6. dead_letters and failed return Hashes
 
-**Problem:** Jobs are processed but the system does not track completion.
+**Problem:** `job.id` or `job.payload` raises `NoMethodError` when iterating `dead_letters` or `failed`.
 
-**Cause:** Your consumer block does not call `job.complete`. Without an explicit call, the job stays reserved.
+**Cause:** `dead_letters` and `failed` return arrays of Hashes, not `Job` objects.
 
-**Fix:** Always call `job.complete` when the job succeeds and `job.fail(reason)` when it fails.
+**Fix:** Use string keys: `job["id"]`, `job["payload"]`, `job["error"]`, `job["attempts"]`.

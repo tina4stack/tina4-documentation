@@ -22,7 +22,7 @@ The file queue works out of the box with no extra configuration:
 # No TINA4_QUEUE_BACKEND needed -- file is the default
 ```
 
-The first time you push a message, Tina4 automatically creates the queue storage.
+The first time you push a message, Tina4 creates the queue storage.
 
 ### Switching to RabbitMQ
 
@@ -45,7 +45,7 @@ For stream processing, event sourcing, or very high throughput:
 
 ```bash
 TINA4_QUEUE_BACKEND=kafka
-TINA4_QUEUE_URL=localhost:9092
+TINA4_KAFKA_BROKERS=localhost:9092
 ```
 
 Install the client library:
@@ -88,7 +88,23 @@ message_id = queue.push({
 
 The `topic` argument names the queue. The payload is any dictionary that can be serialized to JSON.
 
-> **Backend configuration:** The queue backend is selected via environment variables, not constructor parameters. Set `TINA4_QUEUE_BACKEND` to `file` (default), `rabbitmq`, `kafka`, or `mongodb`. For the file backend, the `TINA4_QUEUE_PATH` environment variable controls the storage directory (default: data/queue). See Section 2 and Section 8 for full details.
+> **Backend configuration:** The queue backend is selected via environment variables, not constructor parameters. Set `TINA4_QUEUE_BACKEND` to `file` (default), `rabbitmq`, `kafka`, or `mongodb`. For the file backend, the `TINA4_QUEUE_PATH` environment variable controls the storage directory (default: data/queue). See Section 2 and Section 9 for full details.
+
+### Priority and Delay
+
+`push` accepts two optional arguments:
+
+```python
+# Higher priority is processed first
+queue.push({"to": "vip@example.com", "subject": "Urgent"}, priority=10)
+
+# Hold the job for 60 seconds before it becomes available
+queue.push({"to": "later@example.com", "subject": "Reminder"}, delay_seconds=60)
+```
+
+`priority` defaults to `0`. `pop` and `consume` return the highest-priority job first; ties break oldest-first. See Section 5.
+
+`delay_seconds` defaults to `0`. The file backend honors the delay — the job stays hidden until the time arrives. External brokers (RabbitMQ, Kafka, MongoDB) manage their own delivery timing.
 
 ### Convenience Method: produce
 
@@ -113,7 +129,7 @@ count = queue.size()
 
 ### The consume Pattern
 
-The `consume` method is a generator that yields jobs one at a time. Each job must be explicitly completed or failed:
+The `consume` method is a generator that yields jobs one at a time. It polls the queue continuously and sleeps when empty, so you need no outer loop. Each job must be explicitly completed or failed:
 
 ```python
 from tina4_python.queue import Queue
@@ -128,17 +144,35 @@ for job in queue.consume("emails"):
         job.fail(str(e))
 ```
 
-You can also filter by job ID:
+This loop runs forever, processing jobs as they arrive. To drain the queue once and stop when it is empty, pass `poll_interval=0`:
 
 ```python
-for job in queue.consume("emails", id="specific-job-id"):
-    # Process only the job with that ID
+for job in queue.consume("emails", poll_interval=0):
+    process(job)
+    job.complete()
+```
+
+You can also stop after a fixed number of jobs with `iterations`:
+
+```python
+for job in queue.consume("emails", iterations=5):
+    process(job)
+    job.complete()
+```
+
+### Consume a Single Job by ID
+
+Pass `job_id` to process one specific job. It yields that job once, then returns:
+
+```python
+for job in queue.consume("emails", job_id="specific-job-id"):
+    process(job)
     job.complete()
 ```
 
 ### Manual Pop
 
-For more control, pop a single message:
+For full control, pop a single message. `pop` returns the highest-priority available job, or `None` when the queue is empty:
 
 ```python
 job = queue.pop()
@@ -153,80 +187,152 @@ if job is not None:
 
 ---
 
-## 5. Job Lifecycle
+## 5. Priority Ordering
+
+`pop` and `consume` do not return jobs in plain insert order. They return the **highest-priority** available job first. When two jobs share the same priority, the **older** one wins.
+
+```python
+queue = Queue(topic="tasks")
+
+queue.push({"label": "normal"})                 # priority 0
+queue.push({"label": "urgent"}, priority=10)    # priority 10
+queue.push({"label": "also normal"})            # priority 0
+
+queue.pop().payload["label"]   # "urgent"        (highest priority)
+queue.pop().payload["label"]   # "normal"        (oldest of the priority-0 pair)
+queue.pop().payload["label"]   # "also normal"
+```
+
+A delayed job (pushed with `delay_seconds`) stays hidden until its time arrives, regardless of priority.
+
+Priority ordering is enforced by the file backend. External brokers store the priority on each message but follow their own delivery semantics.
+
+---
+
+## 6. Job Lifecycle
 
 A job moves through these statuses:
 
 ```
-push() -> PENDING -> pop()/consume() -> RESERVED -> job.complete() -> COMPLETED
-                                                  -> job.fail()    -> FAILED
-                                                                        |
-                                                                  retry (manual)
-                                                                        |
-                                                                     PENDING
-                                                                        |
-                                                              max retries exceeded
-                                                                        |
-                                                                   DEAD LETTER
+push() -> PENDING -> pop()/consume() -> job.complete() -> done (removed)
+                                      -> job.fail()     -> attempts += 1
+                                                              |
+                                            attempts < max_retries
+                                                              |
+                                                  re-enqueued -> PENDING
+                                                              |
+                                           attempts >= max_retries
+                                                              |
+                                                         DEAD LETTER
 ```
 
 ### Job Methods
 
-When you receive a job from `consume` or `pop`, you have three methods:
+When you receive a job from `consume` or `pop`, you have these methods:
 
-- `job.complete()` -- mark the job as done
-- `job.fail(reason)` -- mark the job as failed with a reason string
-- `job.reject(reason)` -- alias for `fail`
+- `job.complete()` -- mark the job as done. Terminal: the job is removed and never comes back.
+- `job.fail(reason)` -- record a failed attempt. Increments `attempts` and either re-enqueues the job or dead-letters it (see Section 7).
+- `job.reject(reason)` -- alias for `fail`.
+- `job.retry(delay_seconds=0)` -- manually re-queue the job, optionally after a delay. Bypasses the retry limit.
 
-Always call one of these. If you do not, the job stays reserved.
+Read the payload with `job.payload`. The fields `job.id`, `job.attempts`, and `job.error` are also available.
+
+Always call `complete()` or `fail()`. If you call neither, the job has already left the queue (it was claimed on pop) and will not be retried.
 
 ---
 
-## 6. Retry and Dead Letters
+## 7. Automatic Retry and Dead Letters
 
-### Max Retries
+### How Retry Works
 
-The `Queue` constructor accepts a `max_retries` parameter (default: 3). When a job's attempt count reaches `max_retries`, `retry_failed()` skips it.
+`job.fail()` does the retry bookkeeping for you. Each call increments the job's `attempts` count. While `attempts` is below `max_retries`, the job is automatically re-enqueued, so the next `pop()` or `consume()` picks it up again. Once `attempts` reaches `max_retries`, the job moves to the dead-letter store.
+
+This means a normal `consume` loop retries failed jobs on its own. No manual `retry_failed()` call is needed:
+
+```python
+queue = Queue(topic="emails", max_retries=3)
+
+for job in queue.consume("emails"):
+    try:
+        send_email(job.payload)
+        job.complete()
+    except Exception as e:
+        job.fail(str(e))   # retried up to 3 times, then dead-lettered
+```
+
+With `max_retries=3`, a job that keeps failing is attempted 3 times. On the third failure it lands in dead letters.
+
+### Retry Backoff
+
+By default a failed job is re-enqueued immediately and the next loop iteration retries it. To space retries out, pass `retry_backoff` (in seconds) to the constructor:
+
+```python
+queue = Queue(topic="emails", max_retries=5, retry_backoff=30)
+```
+
+Now each automatic re-enqueue holds the job for 30 seconds before it becomes available again. `retry_backoff` applies to the file backend.
+
+### Configuring Max Retries
+
+The `Queue` constructor accepts `max_retries` (default: 3):
 
 ```python
 queue = Queue(topic="emails", max_retries=5)
 ```
 
-### Retrying Failed Jobs
+### Inspecting Failed and Dead Jobs
+
+Two methods let you see where jobs are in the retry cycle:
 
 ```python
-# Retry a specific job by ID
-queue.retry(job_id)
+# Jobs that failed at least once but are still being retried
+# (0 < attempts < max_retries)
+retrying = queue.failed()
 
-# Retry all failed jobs (skips those that exceeded max_retries)
-queue.retry_failed()
+# Jobs that exhausted their retries (attempts >= max_retries)
+dead_jobs = queue.dead_letters()
 ```
 
-### Dead Letters
-
-Jobs that have exceeded `max_retries` are dead letters. There is no magic dead letter queue -- you retrieve and handle them yourself:
+`failed()` returns plain dicts. `dead_letters()` returns `Job` objects, so you can iterate them like any other job:
 
 ```python
-dead_jobs = queue.dead_letters()
-
-for job in dead_jobs:
+for job in queue.dead_letters():
     print(f"Dead job: {job.id}")
-    print(f"  Payload: {job.data}")
+    print(f"  Payload: {job.payload}")
+    print(f"  Attempts: {job.attempts}")
     print(f"  Error: {job.error}")
 ```
 
-### Purging Jobs
+### Reviving Dead Letters
 
-Remove jobs by status:
+Auto-retry stops at the dead-letter store. To put dead jobs back on the queue, do it explicitly:
 
 ```python
-queue.purge("completed")
-queue.purge("failed")
+# Re-queue every dead-letter job
+queue.retry()
+
+# Re-queue one specific job by ID
+queue.retry(job_id)
+
+# Re-queue dead jobs that are still under the retry limit
+queue.retry_failed()
+```
+
+### Counting and Purging by Status
+
+`size` and `purge` accept a status: `pending`, `failed`, or `dead`.
+
+```python
+queue.size("pending")    # jobs waiting to be processed
+queue.size("dead")       # dead-letter jobs
+
+queue.purge("pending")   # drop everything still waiting
+queue.purge("dead")      # clear the dead-letter store
 ```
 
 ---
 
-## 7. Queue in Route Handlers
+## 8. Queue in Route Handlers
 
 The most common pattern is pushing messages from route handlers:
 
@@ -273,7 +379,7 @@ The user gets an instant response. The email, invoice, and warehouse sync happen
 
 ---
 
-## 8. Switching Backends via .env
+## 9. Switching Backends via .env
 
 Switching backends is a config change, not a code change.
 
@@ -294,7 +400,7 @@ TINA4_QUEUE_URL=amqp://user:pass@rabbitmq.internal:5672
 
 ```bash
 TINA4_QUEUE_BACKEND=kafka
-TINA4_QUEUE_URL=kafka-1:9092,kafka-2:9092,kafka-3:9092
+TINA4_KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
 ```
 
 ### Production: MongoDB
@@ -304,11 +410,20 @@ TINA4_QUEUE_BACKEND=mongodb
 TINA4_QUEUE_URL=mongodb://user:pass@mongo.internal:27017/tina4
 ```
 
+### Environment variables the queue reads
+
+| Variable | Used by | Purpose |
+|----------|---------|---------|
+| `TINA4_QUEUE_BACKEND` | all | Selects the backend: `file` (default), `rabbitmq`, `kafka`, `mongodb` |
+| `TINA4_QUEUE_PATH` | file | Storage directory for the file backend (default: `data/queue`) |
+| `TINA4_QUEUE_URL` | rabbitmq, mongodb, kafka | Connection URL for the broker |
+| `TINA4_KAFKA_BROKERS` | kafka | Comma-separated broker list (overrides `TINA4_QUEUE_URL`) |
+
 Your queue code does not change at all. The same `queue.push()` and `queue.consume()` calls work with every backend.
 
 ---
 
-## 9. Produce and Consume Across Topics
+## 10. Produce and Consume Across Topics
 
 The `Queue` class provides `produce()` and `consume()` methods for cross-topic messaging:
 
@@ -326,11 +441,11 @@ for job in queue.consume("emails"):
     job.complete()
 ```
 
-The `produce()` method pushes a job onto any named topic. The `consume()` method yields all available jobs from a topic as a generator.
+The `produce()` method pushes a job onto any named topic. The `consume()` method yields available jobs from a topic as a generator.
 
 ---
 
-## 10. Exercise: Build an Email Queue
+## 11. Exercise: Build an Email Queue
 
 Build an email queue system that sends emails in the background, including failure handling.
 
@@ -343,7 +458,7 @@ Build an email queue system that sends emails in the background, including failu
 | `POST` | `/api/emails/send` | Queue an email for sending |
 | `GET` | `/api/emails/queue` | List pending email count |
 | `GET` | `/api/emails/dead` | List dead letter jobs |
-| `POST` | `/api/emails/retry` | Retry all failed jobs |
+| `POST` | `/api/emails/retry` | Revive dead-letter jobs |
 
 2. The email payload should include: `to` (required), `subject` (required), `body` (required)
 
@@ -365,13 +480,13 @@ curl http://localhost:7146/api/emails/queue
 # Check dead letters
 curl http://localhost:7146/api/emails/dead
 
-# Retry failed
+# Revive dead letters
 curl -X POST http://localhost:7146/api/emails/retry
 ```
 
 ---
 
-## 11. Solution
+## 12. Solution
 
 Create `src/routes/email_queue.py`:
 
@@ -417,21 +532,21 @@ async def email_queue_size(request, response):
 
 @get("/api/emails/dead")
 async def email_dead_letters(request, response):
-    dead = queue.dead_letters()
     items = []
-    for job in dead:
+    for job in queue.dead_letters():
         items.append({
             "id": job.id,
-            "payload": job.data,
+            "payload": job.payload,
+            "attempts": job.attempts,
             "error": job.error
         })
     return response.json({"dead_letters": items, "count": len(items)})
 
 
 @post("/api/emails/retry")
-async def retry_failed_emails(request, response):
-    queue.retry_failed()
-    return response.json({"message": "Failed emails re-queued for retry"})
+async def retry_dead_emails(request, response):
+    queue.retry()
+    return response.json({"message": "Dead-letter emails re-queued"})
 ```
 
 Create a separate consumer file `src/workers/email_worker.py`:
@@ -443,7 +558,7 @@ import time
 queue = Queue(topic="emails", max_retries=3)
 
 for job in queue.consume("emails"):
-    payload = job.data
+    payload = job.payload
 
     print(f"Sending email to {payload['to']}...")
     print(f"  Subject: {payload['subject']}")
@@ -465,19 +580,19 @@ for job in queue.consume("emails"):
         job.fail(str(e))
 ```
 
-After the consumer has retried a job to `bad@example.com` three times, `queue.dead_letters()` returns that job. The `/api/emails/dead` endpoint shows it. You investigate, fix the address, and call `/api/emails/retry` to re-queue.
+The consumer loop retries on its own. A job to `bad@example.com` fails, gets re-enqueued, and is retried. After three attempts `queue.dead_letters()` returns it and the `/api/emails/dead` endpoint shows it. You investigate, fix the address, and call `/api/emails/retry` to put it back on the queue.
 
 ---
 
-## 12. Gotchas
+## 13. Gotchas
 
 ### 1. Always call complete or fail
 
-**Problem:** Jobs stay in reserved status forever.
+**Problem:** A failed job is never retried, or you lose track of it.
 
-**Cause:** Your consumer does not call `job.complete()` or `job.fail()`. The job stays reserved and is never released.
+**Cause:** Your consumer does not call `job.complete()` or `job.fail()`. The job was claimed on pop, so it has already left the pending queue — without `fail()` it is neither retried nor dead-lettered.
 
-**Fix:** Always call one of `job.complete()`, `job.fail(reason)`, or `job.reject(reason)` in your consumer loop.
+**Fix:** Always call one of `job.complete()`, `job.fail(reason)`, or `job.reject(reason)` in your consumer loop. `fail()` handles the retry and dead-letter bookkeeping for you.
 
 ### 2. Worker not picking up messages
 
@@ -499,9 +614,9 @@ After the consumer has retried a job to `bad@example.com` three times, `queue.de
 
 **Problem:** Dead letters accumulate and nobody notices.
 
-**Cause:** Failed jobs that exceed `max_retries` become dead letters but are never cleaned up.
+**Cause:** Jobs that exhaust `max_retries` become dead letters and stay there until you act.
 
-**Fix:** Monitor dead letters with `queue.dead_letters()`. Set up an alert when the count exceeds a threshold. Investigate the root cause, fix it, then call `queue.retry_failed()` or `queue.purge("failed")`.
+**Fix:** Monitor dead letters with `queue.dead_letters()` or `queue.size("dead")`. Set up an alert when the count exceeds a threshold. Investigate the root cause, fix it, then call `queue.retry()` to revive them or `queue.purge("dead")` to clear them.
 
 ### 5. File backend for production
 

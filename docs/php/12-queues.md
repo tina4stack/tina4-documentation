@@ -6,7 +6,7 @@ Your app sends welcome emails on signup, generates PDF invoices, and resizes upl
 
 Queues move slow work to a background process. The handler drops a job onto a queue and responds immediately. A separate consumer picks it up. The user sees "Welcome -- check your email." in under 100 milliseconds. The email arrives 5 seconds later.
 
-Tina4 has a built-in queue system. Works out of the box with a file-based backend. No Redis. No RabbitMQ. No external services. Add jobs. Process them.
+Tina4 has a built-in queue system. It works out of the box with a file-based backend. No Redis. No RabbitMQ. No external services. Add jobs. Process them.
 
 ---
 
@@ -43,18 +43,18 @@ Meanwhile, in the background:
 
 6.5 seconds becomes 33 milliseconds. The work still happens. Just not during the HTTP request.
 
-Beyond speed, queues provide:
+Beyond speed, queues give you:
 
-- **Retry logic**: Email server down. Job retries automatically.
-- **Rate limiting**: Process at a controlled pace. Do not overwhelm external services.
+- **Automatic retries**: The email server is down. The job retries on its own, then lands in dead letters if it keeps failing.
+- **Priority**: Password resets jump ahead of newsletters.
 - **Fault isolation**: A failed PDF does not crash the signup request.
-- **Scaling**: More consumers for higher load.
+- **Scaling**: Run more consumers for higher load.
 
 ---
 
 ## 3. File Queue (Default)
 
-The file-based backend is the default. No configuration needed. First job creates the queue storage automatically.
+The file-based backend is the default. No configuration needed. The first job creates the queue storage automatically under `data/queue`.
 
 ### Creating a Queue and Pushing a Job
 
@@ -72,10 +72,16 @@ $queue->push([
 ]);
 ```
 
-You can also use the longer constructor form:
+You can also use the longer constructor form. The signature is `new Queue($backend, $config, $topic)`:
 
 ```php
 $queue = new Queue('file', [], 'emails');
+```
+
+The `$config` array accepts `path`, `maxRetries`, and `retryBackoff` (covered in section 7):
+
+```php
+$queue = new Queue('file', ['maxRetries' => 5, 'retryBackoff' => 10], 'emails');
 ```
 
 ### Convenience Method: produce
@@ -89,14 +95,23 @@ $queue->produce('invoices', ["order_id" => 101, "format" => "pdf"]);
 
 ### Push with Priority
 
-Jobs default to priority 0 (normal). Higher numbers are popped first:
+Jobs default to priority 0 (normal). Higher numbers are popped first. Within the same priority, the oldest job goes first:
 
 ```php
 // Normal priority (default)
 $queue->push(["to" => "alice@example.com", "subject" => "Newsletter"]);
 
-// High priority -- processed before normal jobs
+// High priority -- popped before the newsletter above
 $queue->push(["to" => "alice@example.com", "subject" => "Password Reset"], priority: 10);
+```
+
+### Push with Delay
+
+Pass a delay (in seconds) to hold a job back until the delay elapses:
+
+```php
+// Becomes available 60 seconds from now
+$queue->push(["to" => "alice@example.com", "subject" => "Reminder"], priority: 0, delay: 60);
 ```
 
 ### Queue Size
@@ -107,12 +122,12 @@ Check how many pending messages are in the queue:
 $count = $queue->size();
 ```
 
-Pass a status string to count jobs in a specific state:
+Pass a status string to count jobs in a specific state. The file backend tracks three states: `pending`, `failed` (retrying), and `dead` (exhausted retries):
 
 ```php
-$failed = $queue->size("failed");
-$completed = $queue->size("completed");
-$reserved = $queue->size("reserved");
+$pending = $queue->size("pending");
+$retrying = $queue->size("failed");
+$dead = $queue->size("dead");
 ```
 
 ---
@@ -162,13 +177,13 @@ curl -X POST http://localhost:7145/api/register \
 }
 ```
 
-Response returns immediately. The email job waits in the queue.
+The response returns immediately. The email job waits in the queue.
 
 ---
 
 ## 5. Consuming Jobs
 
-The `consume` method is a generator that yields jobs one at a time. Each job must be explicitly completed or failed:
+The `consume` method is a generator that yields `Job` objects one at a time. Each `Job` carries the payload and the lifecycle methods you call on it:
 
 ```php
 <?php
@@ -186,9 +201,27 @@ foreach ($queue->consume('emails') as $job) {
 }
 ```
 
-### Retry with Delay
+When a job fails, `$job->fail()` re-queues it automatically and the next iteration picks it up again. After `maxRetries` attempts the job moves to dead letters. You do not call anything manually -- the loop above is the whole retry mechanism. Section 7 covers the lifecycle in detail.
 
-If a job fails but you want to retry it after a cooldown instead of marking it as failed:
+### consume Is a Long-Running Poll
+
+By default `consume` never returns. When the queue drains it sleeps for `pollInterval` seconds (default `1.0`) and polls again, so a worker loop keeps running and waiting for new jobs. That is exactly what you want for a long-lived background worker.
+
+When you want a **single pass** -- drain everything currently queued, then stop -- pass `pollInterval` of `0`. The generator returns as soon as the queue is empty:
+
+```php
+// Drain the queue once and stop (useful in tests and one-shot scripts)
+foreach ($queue->consume('emails', null, 0) as $job) {
+    sendEmail($job->payload['to'], $job->payload['subject'], $job->payload['body']);
+    $job->complete();
+}
+```
+
+The `consume` signature is `consume($topic, $id, $pollInterval, $iterations, $batchSize)`. Pass `$iterations` to stop after a fixed number of jobs, or `$id` to consume one specific job by ID.
+
+### Retry with a Manual Delay
+
+`$job->fail()` already retries automatically. If instead you want to push a job back yourself with a specific cooldown -- regardless of the retry limit -- call `$job->retry($delaySeconds)`:
 
 ```php
 foreach ($queue->consume('emails') as $job) {
@@ -196,7 +229,7 @@ foreach ($queue->consume('emails') as $job) {
         sendEmail($job->payload['to'], $job->payload['subject'], $job->payload['body']);
         $job->complete();
     } catch (\Throwable $e) {
-        // Retry after 30 seconds instead of failing immediately
+        // Manual override: re-queue after 30 seconds (does not consult maxRetries)
         $job->retry(30);
     }
 }
@@ -204,95 +237,134 @@ foreach ($queue->consume('emails') as $job) {
 
 ### Manual Pop
 
-For more control, pop a single message:
+For lower-level control, `pop` returns the next job as a **plain array** (not a `Job` object), or `null` when the queue is empty. Use array access on the payload, and do not call lifecycle methods on it -- the file backend already removed the job from the pending queue when you popped it:
 
 ```php
 $job = $queue->pop();
 
 if ($job !== null) {
-    try {
-        sendEmail($job->payload['to'], $job->payload['subject']);
-        $job->complete();
-    } catch (\Throwable $e) {
-        $job->fail($e->getMessage());
-    }
+    // $job is an array: ['id' => ..., 'payload' => [...], 'priority' => ..., ...]
+    sendEmail($job['payload']['to'], $job['payload']['subject']);
 }
 ```
 
+If you need the convenient `Job` object with `->payload`, `->complete()`, and `->fail()`, use `consume` instead. To grab several jobs at once, `popBatch($count)` returns an array of job arrays (highest priority first).
+
 ---
 
-## 6. Job Lifecycle
+## 6. The Job Object
 
-Every job moves through states:
-
-```
-push() -> PENDING -> pop()/consume() -> RESERVED -> $job->complete() -> COMPLETED
-                                                 -> $job->fail()     -> FAILED
-                                                                          |
-                                                                    retry (manual)
-                                                                          |
-                                                                       PENDING
-                                                                          |
-                                                                max retries exceeded
-                                                                          |
-                                                                     DEAD LETTER
-```
+`consume` yields `Job` objects. Here are the methods and properties you use.
 
 ### Job Methods
 
-When you receive a job from `consume` or `pop`, you have three methods:
-
-- `$job->complete()` -- mark the job as done
-- `$job->fail($reason)` -- mark the job as failed with a reason string
-- `$job->reject($reason)` -- alias for `fail`
-- `$job->retry($delaySeconds)` -- re-queue the job after a delay (in seconds). The job goes back to PENDING after the delay elapses.
+- `$job->complete()` -- mark the job as done. Terminal -- the job is finished and gone.
+- `$job->fail($reason)` -- record a failed attempt. Increments `attempts`, stores the error, and **automatically re-queues** the job while retries remain, or moves it to dead letters once they are exhausted.
+- `$job->reject($reason)` -- alias for `fail`.
+- `$job->retry($delaySeconds)` -- a manual override that always re-queues the job after the delay, regardless of the retry limit. Use this when you want to schedule a retry yourself rather than rely on the automatic path.
 
 ### Job Properties
 
+- `$job->payload` -- the data you pushed.
 - `$job->topic` -- the topic this job belongs to. Useful when consuming from multiple topics.
+- `$job->priority` -- the job's priority.
+- `$job->attempts` -- how many times this job has been attempted.
+- `$job->id` -- the unique job ID.
+- `$job->error` -- the last failure reason, if any.
 
-Always call `complete`, `fail`, or `retry` on every job. If you do not, the job stays reserved.
+You can also call `$job->toArray()`, `$job->toHash()`, or `$job->toJson()` to serialize a job.
 
 ---
 
-## 7. Retry and Dead Letters
+## 7. Automatic Retry and Dead Letters
 
-### Max Retries
+This is the part the queue handles for you. When a `Job` from `consume` fails, you do not schedule the retry -- `$job->fail()` does.
 
-The default `max_retries` is 3. When a job's attempt count reaches `max_retries`, `retryFailed()` skips it.
+### How the Lifecycle Works
 
-### Retrying Failed Jobs
+Every job moves through these states:
 
-```php
-// Retry a specific job by ID
-$queue->retry($jobId);
-
-// Retry all failed jobs (skips those that exceeded max_retries)
-$queue->retryFailed();
+```
+push() -> PENDING -> consume() yields Job -> $job->complete() -> done (removed)
+                                          -> $job->fail()
+                                                 |
+                                       attempts < maxRetries ?
+                                          |              |
+                                         yes             no
+                                          |              |
+                          re-queued to PENDING      DEAD LETTER
+                          (after retryBackoff)   (deadLetters() returns it)
 ```
 
-### Dead Letters
+When you call `$job->fail()`:
 
-Jobs that have exceeded `max_retries` are dead letters. There is no magic dead letter queue -- you retrieve and handle them yourself:
+1. `attempts` is incremented and the error is stored.
+2. If `attempts` is still **below** `maxRetries`, the job is re-queued to PENDING (after the `retryBackoff` delay, if set). The next `consume`/`pop` picks it up again.
+3. Once `attempts` reaches `maxRetries`, the job is moved to the dead-letter store, where `deadLetters()` returns it.
+
+So a `consume` loop that calls `$job->fail($e)` in its `catch` block retries each job `maxRetries` times on its own, then dead-letters it. **There is no manual `retryFailed()` step in this path.**
+
+### maxRetries
+
+The default `maxRetries` is 3. Override it in the constructor config:
+
+```php
+$queue = new Queue('file', ['maxRetries' => 5], 'emails');
+```
+
+### retryBackoff
+
+`retryBackoff` (in seconds) delays the automatic re-enqueue after a failure. With `0` (the default), a failed job is available again on the very next poll. Set it to space retries out -- handy when an external service needs time to recover:
+
+```php
+// Failed jobs wait 10 seconds before becoming available to retry again
+$queue = new Queue('file', ['maxRetries' => 5, 'retryBackoff' => 10], 'emails');
+```
+
+### Inspecting Retrying and Dead Jobs
+
+These management methods operate on the file backend's store:
+
+- `$queue->failed()` returns jobs that have failed at least once but are **still being retried** (`0 < attempts < maxRetries`). They live in the pending queue.
+- `$queue->deadLetters()` returns jobs that **exhausted their retries** (`attempts >= maxRetries`).
 
 ```php
 $deadJobs = $queue->deadLetters();
 
 foreach ($deadJobs as $job) {
-    error_log("Dead job: " . $job->id);
-    error_log("  Payload: " . json_encode($job->payload));
-    error_log("  Error: " . $job->error);
+    // Items from deadLetters() are arrays, not Job objects
+    error_log("Dead job: " . $job['id']);
+    error_log("  Payload: " . json_encode($job['payload']));
+    error_log("  Error: " . ($job['error'] ?? ''));
 }
+```
+
+### Manually Reviving Jobs
+
+Beyond the automatic path, you can revive jobs by hand:
+
+```php
+// Revive a specific dead-letter job by ID (always re-queues it)
+$queue->retry($jobId);
+
+// Revive all dead-letter jobs
+$queue->retry();
+
+// Re-queue failed jobs that are still under maxRetries
+$queue->retryFailed();
 ```
 
 ### Purging Jobs
 
-Remove jobs by status:
+Remove jobs by status. `purge` accepts `pending`, `failed`, and `dead`, and returns the number removed:
 
 ```php
-$queue->purge("completed");
-$queue->purge("failed");
+$queue->purge("dead");      // clear the dead-letter store
+$queue->purge("failed");    // clear retrying jobs
+$queue->purge("pending");   // clear the pending queue
 ```
+
+`$queue->clear()` is a shortcut that removes all pending jobs and returns the count.
 
 ---
 
@@ -344,13 +416,13 @@ Four jobs queued in under 5 milliseconds. Instant response.
 
 ## 9. Switching Backends
 
-Switching backends is a config change, not a code change.
+Switching backends is a config change, not a code change. The file backend handles the retry and dead-letter lifecycle described above; external brokers (RabbitMQ, Kafka, MongoDB) manage their own delivery and retry semantics.
 
 ### Default: File
 
 ```bash
 # No config needed -- file is the default
-# Optionally set a custom storage path (defaults to ./queue)
+# Optionally set a custom storage path (defaults to data/queue)
 TINA4_QUEUE_PATH=./data/queue
 ```
 
@@ -365,7 +437,7 @@ TINA4_QUEUE_URL=amqp://user:pass@localhost:5672
 
 ```bash
 TINA4_QUEUE_BACKEND=kafka
-TINA4_QUEUE_URL=localhost:9092
+TINA4_QUEUE_URL=kafka://localhost:9092
 ```
 
 ### MongoDB
@@ -375,7 +447,7 @@ TINA4_QUEUE_BACKEND=mongodb
 TINA4_QUEUE_URL=mongodb://user:pass@localhost:27017/tina4
 ```
 
-Your queue code does not change at all. The same `$queue->push()` and `$queue->consume()` calls work with every backend.
+`TINA4_QUEUE_BACKEND` selects the backend, `TINA4_QUEUE_PATH` sets the file backend's storage directory, and `TINA4_QUEUE_URL` carries the connection string for rabbitmq, kafka, and mongodb. Your queue code does not change -- the same `$queue->push()` and `$queue->consume()` calls work with every backend.
 
 ---
 
@@ -392,7 +464,7 @@ Build a queue-based email system with failure handling.
 | `POST` | `/api/emails/send` | Queue an email for sending |
 | `GET` | `/api/emails/queue` | Show pending email count |
 | `GET` | `/api/emails/dead` | List dead letter jobs |
-| `POST` | `/api/emails/retry` | Retry all failed jobs |
+| `POST` | `/api/emails/retry` | Revive dead-letter jobs |
 
 2. The email payload should include: `to` (required), `subject` (required), `body` (required)
 
@@ -414,7 +486,7 @@ curl http://localhost:7145/api/emails/queue
 # Check dead letters
 curl http://localhost:7145/api/emails/dead
 
-# Retry failed
+# Revive dead letters
 curl -X POST http://localhost:7145/api/emails/retry
 ```
 
@@ -468,17 +540,18 @@ Router::get("/api/emails/dead", function ($request, $response) use ($queue) {
     $items = [];
     foreach ($deadJobs as $job) {
         $items[] = [
-            "id" => $job->id,
-            "payload" => $job->payload,
-            "error" => $job->error
+            "id" => $job["id"],
+            "payload" => $job["payload"],
+            "error" => $job["error"] ?? null
         ];
     }
     return $response->json(["dead_letters" => $items, "count" => count($items)]);
 });
 
 Router::post("/api/emails/retry", function ($request, $response) use ($queue) {
-    $queue->retryFailed();
-    return $response->json(["message" => "Failed emails re-queued for retry"]);
+    // Revive every dead-letter job back to the pending queue
+    $queue->retry();
+    return $response->json(["message" => "Dead-letter emails re-queued"]);
 });
 ```
 
@@ -510,26 +583,45 @@ foreach ($queue->consume('emails') as $job) {
 
     } catch (\Throwable $e) {
         echo "  Failed: {$e->getMessage()}\n";
+        // Automatic retry -> dead-letter. No manual re-queue needed.
         $job->fail($e->getMessage());
     }
 }
 ```
 
-After the consumer has retried a job to `bad@example.com` three times, `$queue->deadLetters()` returns that job. The `/api/emails/dead` endpoint shows it. You investigate, fix the address, and call `/api/emails/retry` to re-queue.
+The consumer calls `$job->fail()` whenever an email fails. The queue re-queues that job automatically, so the same worker retries it on its next pass. After `maxRetries` attempts (3 by default) the job to `bad@example.com` lands in dead letters, where `$queue->deadLetters()` returns it. The `/api/emails/dead` endpoint shows it. You investigate, fix the address, and call `/api/emails/retry` to revive it.
+
+> The consumer above is a long-running poll -- it keeps waiting for new jobs and never returns on its own. Run it as a dedicated worker process. For a one-shot drain (for example in a test), use `$queue->consume('emails', null, 0)`.
 
 ---
 
 ## 12. Gotchas
 
-### 1. Always call complete or fail
+### 1. consume runs forever by default
 
-**Problem:** Jobs stay in reserved status forever.
+**Problem:** Your script calls `consume` and never reaches the code after the loop.
 
-**Cause:** Your consumer does not call `$job->complete()` or `$job->fail()`. The job stays reserved and is never released.
+**Cause:** `consume` is a long-running poll. With the default `pollInterval` of `1.0`, it sleeps and keeps polling when the queue is empty -- it does not return.
 
-**Fix:** Always call one of `$job->complete()`, `$job->fail($reason)`, or `$job->reject($reason)` in your consumer loop.
+**Fix:** That is correct for a background worker. For a single-pass drain (tests, one-shot jobs), pass `pollInterval` of `0`: `$queue->consume('emails', null, 0)`.
 
-### 2. Worker not picking up messages
+### 2. Calling complete or fail on a pop() result
+
+**Problem:** `$job->complete()` or `$job->payload` errors after `pop()`.
+
+**Cause:** `pop()` returns a plain **array**, not a `Job` object. There is no `->payload` property and no lifecycle methods on it.
+
+**Fix:** Use array access (`$job['payload']`) for `pop()` results, and do not call `complete()`/`fail()` -- the job is already removed from the pending queue. If you want `Job` objects with lifecycle methods, use `consume` instead.
+
+### 3. Letting jobs fail silently
+
+**Problem:** Jobs that error are lost instead of retried.
+
+**Cause:** Your consumer catches the exception but never calls `$job->fail()`, so the queue never records the failure or schedules a retry.
+
+**Fix:** In a `consume` loop, call `$job->complete()` on success and `$job->fail($reason)` on failure. `fail()` is what drives the automatic retry -> dead-letter lifecycle.
+
+### 4. Worker not picking up messages
 
 **Problem:** Messages are pushed but nothing happens.
 
@@ -537,34 +629,26 @@ After the consumer has retried a job to `bad@example.com` three times, `$queue->
 
 **Fix:** Make sure the consumer is running. Check that the topic name in `$queue->push()` matches the topic in `$queue->consume()`.
 
-### 3. Payload must be JSON-serializable
+### 5. Payload must be JSON-serializable
 
-**Problem:** `$queue->push()` throws a serialization error.
+**Problem:** Your payload comes back wrong or empty.
 
-**Cause:** You passed an object, database connection, file handle, or other non-serializable value.
+**Cause:** You passed an object, database connection, file handle, or other non-serializable value. Jobs are stored as JSON.
 
-**Fix:** Payload must contain only simple types: strings, numbers, booleans, arrays of these. Pass IDs, not objects. The consumer looks up records by ID.
+**Fix:** Payload must contain only simple types: strings, numbers, booleans, and arrays of these. Pass IDs, not objects. The consumer looks up records by ID.
 
-### 4. Dead letters pile up
+### 6. Dead letters pile up
 
 **Problem:** Dead letters accumulate and nobody notices.
 
-**Cause:** Failed jobs that exceed `max_retries` become dead letters but are never cleaned up.
+**Cause:** Jobs that exhaust `maxRetries` become dead letters and stay there until you act on them.
 
-**Fix:** Monitor dead letters with `$queue->deadLetters()`. Set up an alert when the count exceeds a threshold. Investigate the root cause, fix it, then call `$queue->retryFailed()` or `$queue->purge("failed")`.
+**Fix:** Monitor dead letters with `$queue->deadLetters()` or `$queue->size("dead")`. Alert when the count crosses a threshold. Fix the root cause, then `$queue->retry()` to revive them or `$queue->purge("dead")` to clear them.
 
-### 5. File backend for production
+### 7. File backend for production
 
-**Problem:** Multiple workers cause contention on the file backend.
+**Problem:** Many workers contend on the file backend.
 
 **Cause:** The file backend is designed for single-worker setups.
 
 **Fix:** For production with multiple workers, switch to RabbitMQ, Kafka, or MongoDB via the `TINA4_QUEUE_BACKEND` environment variable.
-
-### 6. Consumer returns nothing
-
-**Problem:** Jobs process but immediately fail.
-
-**Cause:** You forgot to call `$job->complete()`. Without it, the job stays reserved or is treated as failed.
-
-**Fix:** Always call `$job->complete()` on success and `$job->fail($reason)` on failure. Do not rely on return values.
