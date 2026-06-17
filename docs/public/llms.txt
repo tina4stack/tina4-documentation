@@ -10,28 +10,16 @@ hates being treated like Express, Flask, Rails, or Sinatra. Don't do that.
 
 ---
 
-## STEP 1 — Identify the language
+## STEP 1 — Make sure the `tina4` client is installed
 
-Tina4 ships in four backends. Before you write a line of code:
+The `tina4` CLI — "the client" — is the **only supported entry point** and the
+first thing to check. Everything flows from it.
 
-- If the working directory has `pyproject.toml` / `requirements.txt` → **Python**
-- If it has `composer.json` / `index.php` in `Tina4/` layout → **PHP**
-- If it has `Gemfile` / `*.gemspec` → **Ruby**
-- If it has `package.json` with `"type": "module"` and TypeScript sources → **Node.js**
-- If the directory is empty → **ask the user which language to use**.
+```bash
+tina4 --version    # found? go to STEP 2
+```
 
-Do not guess. Do not pick "whichever is easiest". Ask.
-
----
-
-## STEP 2 — Install the `tina4` Rust CLI
-
-The `tina4` CLI is the **only supported entry point** for running a Tina4 app.
-Never run `python app.py`, `node index.js`, `php -S`, `ruby app.rb`, or `rackup`
-directly — the framework refuses to start without the CLI unless
-`TINA4_OVERRIDE_CLIENT=true` is set (Docker / CI escape hatch only).
-
-Install once, system-wide:
+If that command is not found, install it once, system-wide:
 
 ```bash
 # macOS, Linux, WSL, Git Bash, Cygwin, MSYS — auto-detects OS + arch
@@ -39,42 +27,64 @@ curl -fsSL https://tina4.com/install.sh | sh
 # or wget
 wget -qO- https://tina4.com/install.sh | sh
 
-# Windows PowerShell (default shell since 2009)
+# Windows PowerShell
 irm https://tina4.com/install.ps1 | iex
 ```
 
-Both scripts download the right prebuilt binary from the latest GitHub release
-(darwin-amd64 / darwin-arm64 / linux-amd64 / windows-amd64.exe) and put it on
-PATH. No Rust toolchain needed. No package manager dependency.
+The script downloads the right prebuilt binary from the latest GitHub release
+(darwin-amd64 / darwin-arm64 / linux-amd64 / windows-amd64.exe) and puts it on
+PATH — no Rust toolchain, no package-manager dependency. If there's neither
+curl nor PowerShell, grab the binary from
+https://github.com/tina4stack/tina4/releases/latest.
 
-If the user's environment has neither curl nor PowerShell, point them at
-https://github.com/tina4stack/tina4/releases/latest to download the binary
-manually.
+Never run `python app.py`, `node index.js`, `php -S`, `ruby app.rb`, or `rackup`
+directly — the framework refuses to start without the client unless
+`TINA4_OVERRIDE_CLIENT=true` is set (Docker / CI escape hatch only).
 
-Confirm the install:
-
-```bash
-tina4 --version
-tina4 doctor
-```
-
-`tina4 doctor` checks the language runtime is installed before you scaffold.
-Run it. If it complains, tell the user what's missing — don't try to install
-the language runtime yourself.
+**Already inside a Tina4 project?** Detect the language from what's present —
+`pyproject.toml`→Python, `composer.json`→PHP, `Gemfile`→Ruby, `package.json`
+(type:module + TypeScript)→Node — confirm the client, then skip to STEP 4.
 
 ---
 
-## STEP 3 — Scaffold the project
+## STEP 2 — `tina4 doctor` — find out what's missing
 
 ```bash
-tina4 init <python|php|ruby|nodejs>          # creates ./<lang>-app/
-tina4 init <python|php|ruby|nodejs> .        # initialises current directory
-tina4 init <python|php|ruby|nodejs> myapp    # creates ./myapp/
+tina4 doctor
 ```
 
-The CLI creates the canonical layout: `src/routes/`, `src/orm/`, `src/templates/`,
-`src/public/`, `.env`, language-specific package file. Don't replicate this
-structure by hand — let `tina4 init` do it.
+`doctor` inspects the machine and reports what's present and what's missing —
+the language runtimes (Python / Node / PHP / Ruby), package managers, git.
+Read its output: it tells you exactly what STEP 3 needs to install. Don't
+hand-install anything off a guess — let `doctor` diagnose first.
+
+---
+
+## STEP 3 — `tina4 setup` — install what's missing, then scaffold
+
+```bash
+tina4 setup
+```
+
+`setup` is the turnkey path, built for someone starting from nothing. It
+installs whatever `doctor` flagged as missing — the language runtime and git,
+through the OS package manager (Chocolatey on Windows, Homebrew on macOS), plus
+the tina4 AI skills — then scaffolds a ready-to-run project and points you at
+it. It is guided: it asks which language, which AI tool, where your projects
+folder lives, and the project name. Answer those (on the user's behalf if you're
+driving the session) and it does the rest.
+
+First run remembers those choices; later `tina4 setup` runs ask only the project
+type + name and build straight into the saved projects folder.
+
+Preview without changing anything: `tina4 setup --dry-run`. Scaffold without any
+system installs (safe local test): `tina4 setup --skip-install`.
+
+**Scripted / non-interactive alternative:** if the runtime is already present
+(STEP 2 was clean) and you just want a project laid down, use
+`tina4 init <python|php|ruby|nodejs> [name]` — it creates the canonical layout
+(`src/routes/`, `src/orm/`, `src/templates/`, `src/public/`, `.env`). Don't
+build that structure by hand.
 
 ---
 
@@ -120,9 +130,12 @@ These are the failure modes most often observed in AI-assisted Tina4 builds:
   `tina4 serve`.
 - **Do not edit files outside `src/` unless explicitly asked.** Framework
   files live alongside; touching them creates merge conflicts on every update.
-- **Do not auto-install language runtimes (Python, Node, etc.) on the user's
-  machine.** If `tina4 doctor` says a runtime is missing, surface that to
-  the user and ask. Their package manager is their choice.
+- **Do not hand-install framework dependencies.** No `pip install`,
+  `npm install`, `composer require`, or `gem install` to paper over a
+  missing-package error — that fights what the CLI manages. Missing a language
+  runtime? Run `tina4 setup` — it installs the runtime through the OS package
+  manager (Chocolatey on Windows, Homebrew on macOS) with the user's consent.
+  Don't shell out your own runtime install.
 - **Do not parse routes by reading filenames yourself.** The framework's
   route discovery scans `src/routes/` automatically. Drop a file there;
   it becomes a route on next reload.
