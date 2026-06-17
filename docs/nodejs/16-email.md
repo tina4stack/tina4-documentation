@@ -836,7 +836,7 @@ import { Frond } from "tina4-nodejs/frond";
 Router.get("/contact", async (req, res) => {
     const flash = req.session._flash ?? null;
     delete req.session._flash;
-    return res.html("contact.html", { flash });
+    return res.render("contact.html", { flash });
 });
 
 Router.post("/contact", async (req, res) => {

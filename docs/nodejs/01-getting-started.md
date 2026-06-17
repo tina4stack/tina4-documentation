@@ -483,7 +483,7 @@ Router.get("/products", async (req, res) => {
         }
     ];
 
-    return res.html("products.html", { products });
+    return res.render("products.html", { products });
 });
 ```
 
@@ -517,7 +517,7 @@ Open `http://localhost:7148/products`. You should see:
 
 ### How Template Rendering Works
 
-1. `res.html("products.html", { products })` tells Frond to render `src/templates/products.html` with the given data.
+1. `res.render("products.html", { products })` tells Frond to render `src/templates/products.html` with the given data.
 <div v-pre>
 
 2. Frond sees `{% extends "base.html" %}` and loads the base template.
@@ -810,7 +810,7 @@ return res.status(404).json({ error: "Not found" });        // 404 Not Found
 `res.html()` renders a Frond template from `src/templates/` when given a filename and data:
 
 ```typescript
-return res.html("products.html", { products: productList, title: "Our Products" });
+return res.render("products.html", { products: productList, title: "Our Products" });
 ```
 
 For raw HTML without a template file:
@@ -1127,7 +1127,7 @@ Router.get("/store", async (req, res) => {
 
     const featuredCount = products.filter(p => p.featured).length;
 
-    return res.html("store.html", {
+    return res.render("store.html", {
         products,
         featured_count: featuredCount
     });

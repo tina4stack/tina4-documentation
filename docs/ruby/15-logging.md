@@ -12,15 +12,14 @@ Tina4's logger writes structured entries, supports configurable levels, and is a
 
 ## 2. Log Levels
 
-Five levels, in order of increasing severity:
+Four levels, in order of increasing severity:
 
 | Level | Method | When to use |
 |-------|--------|-------------|
 | DEBUG | `Tina4::Log.debug` | Detailed trace — request internals, query params, timings |
 | INFO | `Tina4::Log.info` | Normal operations — request received, user logged in |
 | WARNING | `Tina4::Log.warning` | Something unexpected but recoverable — deprecated API called |
-| ERROR | `Tina4::Log.error` | Something broke but the app is still running |
-| FATAL | `Tina4::Log.fatal` | Unrecoverable error — app cannot continue |
+| ERROR | `Tina4::Log.error` | Something broke — use for unrecoverable failures too |
 
 ---
 
@@ -31,7 +30,7 @@ Tina4::Log.debug("Cache miss", key: "products:list")
 Tina4::Log.info("User logged in", user_id: 42, email: "alice@example.com")
 Tina4::Log.warning("Deprecated endpoint called", path: "/api/v1/products")
 Tina4::Log.error("Database query failed", table: "orders", error: "connection timeout")
-Tina4::Log.fatal("Out of memory -- shutting down")
+Tina4::Log.error("Out of memory -- shutting down")
 ```
 
 Output (text format):
@@ -41,7 +40,7 @@ Output (text format):
 [2026-04-02 09:00:02 UTC] INFO   User logged in | user_id=42 email=alice@example.com
 [2026-04-02 09:00:03 UTC] WARN   Deprecated endpoint called | path=/api/v1/products
 [2026-04-02 09:00:04 UTC] ERROR  Database query failed | table=orders error=connection timeout
-[2026-04-02 09:00:05 UTC] FATAL  Out of memory -- shutting down
+[2026-04-02 09:00:05 UTC] ERROR  Out of memory -- shutting down
 ```
 
 Each entry has a timestamp, level, message, and any keyword arguments you passed as structured fields.
@@ -56,25 +55,24 @@ Set the minimum log level via the `TINA4_LOG_LEVEL` environment variable. Entrie
 TINA4_LOG_LEVEL=info
 ```
 
-Valid values (case-insensitive): `debug`, `info`, `warning`, `error`, `fatal`.
+Valid values (case-insensitive): `all`, `debug`, `info`, `warning`, `error`, `none`.
 
-With `TINA4_LOG_LEVEL=info`, `Tina4::Log.debug(...)` calls produce no output. With `TINA4_LOG_LEVEL=error`, only `error` and `fatal` entries appear.
+With `TINA4_LOG_LEVEL=info`, `Tina4::Log.debug(...)` calls produce no output. With `TINA4_LOG_LEVEL=error`, only `error` entries appear. `none` silences everything.
 
-Default is `info` in production and `debug` in development (detected via `TINA4_ENV`).
+Default is `info` (set this before the process starts).
 
 ---
 
-## 5. Setting the Level in Code
+## 5. Reconfiguring the Logger
+
+The log level is read from `TINA4_LOG_LEVEL` when the logger first initializes. To pick up a changed value (for example after setting the env var in code), call `configure` to re-read the environment:
 
 ```ruby
-Tina4::Log.level = :debug
-Tina4::Log.level = :info
-Tina4::Log.level = :warning
-Tina4::Log.level = :error
-Tina4::Log.level = :fatal
+ENV["TINA4_LOG_LEVEL"] = "debug"
+Tina4::Log.configure
 ```
 
-The environment variable takes precedence over the in-code setting at startup. Changing it at runtime affects all subsequent log calls.
+`configure` re-reads all `TINA4_LOG_*` environment variables (level, directory, file, format, output, rotation). Setting the env var before the process starts is the usual approach.
 
 ---
 
@@ -146,11 +144,11 @@ The middleware logs:
 [2026-04-02 09:01:00 UTC] INFO  Response | method=GET path=/api/users status=200 duration_ms=4
 ```
 
-Apply it globally via config to log every route:
+Apply it globally to log every route by registering the middleware class with `Router.use`:
 
 ```ruby
 # config/app.rb
-Tina4::Config.middleware = ["RequestLogger"]
+Tina4::Router.use(Tina4::RequestLoggerMiddleware)
 ```
 
 ---
@@ -193,7 +191,7 @@ if Tina4::Log.debug?
 end
 ```
 
-Available predicates: `debug?`, `info?`, `warning?`, `error?`, `fatal?`.
+Available predicates: `debug?`, `info?`, `warning?`, `error?`.
 
 ---
 
@@ -223,6 +221,6 @@ Tina4::Log.debug("Records loaded", user_id: user.id, count: records.count)
 
 Set `TINA4_LOG_LEVEL=info` in production. Debug output at scale produces millions of lines per hour and obscures real errors.
 
-### 4. fatal does not exit
+### 4. Logging an error does not exit
 
-`Tina4::Log.fatal(...)` logs at the fatal level but does not call `exit`. Call `abort` or `Process.exit(1)` explicitly after logging an unrecoverable condition.
+`Tina4::Log.error(...)` logs at the error level but does not call `exit`. Call `abort` or `Process.exit(1)` explicitly after logging an unrecoverable condition.

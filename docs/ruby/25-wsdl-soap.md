@@ -177,29 +177,34 @@ Response:
 
 ## 7. Calling a Remote WSDL Service
 
-Use `Tina4::WSDL::Client` to call an external SOAP service.
+Tina4 provides the SOAP **server** side (`Tina4::WSDL` and the `Tina4::WSDL::Service` builder). It does not ship a SOAP client. To call an external SOAP service, send the SOAP envelope yourself with the standard library or a dedicated gem.
 
 ```ruby
-client = Tina4::WSDL::Client.new("https://www.w3schools.com/xml/tempconvert.asmx?wsdl")
+require "net/http"
+require "uri"
 
-result = client.call(:CelsiusToFahrenheit, Celsius: "100")
+uri  = URI("https://www.w3schools.com/xml/tempconvert.asmx")
+body = <<~XML
+  <?xml version="1.0" encoding="utf-8"?>
+  <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+    <soap:Body>
+      <CelsiusToFahrenheit xmlns="https://www.w3schools.com/xml/">
+        <Celsius>100</Celsius>
+      </CelsiusToFahrenheit>
+    </soap:Body>
+  </soap:Envelope>
+XML
 
-puts result[:CelsiusToFahrenheitResult]
-# => 212
-```
-
-The client fetches and parses the WSDL on first call, then caches it.
-
-### With Authentication
-
-```ruby
-client = Tina4::WSDL::Client.new(
-  "https://secure-service.example.com/api?wsdl",
-  headers: {
-    "Authorization" => "Basic #{Base64.strict_encode64('user:pass')}"
-  }
+response = Net::HTTP.post(
+  uri, body,
+  "Content-Type" => "text/xml; charset=utf-8",
+  "SOAPAction"   => "https://www.w3schools.com/xml/CelsiusToFahrenheit"
 )
+
+puts response.body # parse the SOAP envelope for <CelsiusToFahrenheitResult>
 ```
+
+For richer client features (WSDL parsing, type coercion), use a gem such as `savon`.
 
 ---
 

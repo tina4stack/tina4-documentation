@@ -263,9 +263,10 @@ TINA4_ENV=development
 TINA4_DATABASE_URL=sqlite:./data/app.db
 
 # Cache
-TINA4_CACHE_BACKEND=memory
-TINA4_CACHE_URL=localhost
-TINA4_CACHE_URL=6379
+TINA4_CACHE_BACKEND=memory       # memory | file | redis | valkey | memcached | mongodb | database
+# TINA4_CACHE_URL=redis://localhost:6379
+# TINA4_CACHE_USERNAME=
+# TINA4_CACHE_PASSWORD=
 
 # Queue
 TINA4_QUEUE_BACKEND=file

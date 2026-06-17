@@ -155,9 +155,14 @@ For production: cache persistence across server restarts. Shared cache across mu
 
 ```bash
 TINA4_CACHE_BACKEND=redis
-TINA4_CACHE_URL=localhost
-TINA4_CACHE_URL=6379
-TINA4_CACHE_URL=your-redis-password
+TINA4_CACHE_URL=redis://localhost:6379
+
+# With a password, embed it in the URL:
+# TINA4_CACHE_URL=redis://:your-redis-password@localhost:6379
+
+# Or use the separate credential vars:
+# TINA4_CACHE_USERNAME=          # optional
+# TINA4_CACHE_PASSWORD=your-redis-password
 ```
 
 Your code does not change. `cache_get`, `cache_set`, and `ResponseCache` all work the same. Only the storage backend changes.

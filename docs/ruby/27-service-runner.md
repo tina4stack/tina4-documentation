@@ -28,10 +28,10 @@ The block runs in a background thread. The `loop` keeps it alive. `sleep 30` yie
 ## 3. Starting All Services
 
 ```ruby
-Tina4::ServiceRunner.start_all
+Tina4::ServiceRunner.start
 ```
 
-Call this once, typically in your app startup file after route definitions. All registered services start in background threads.
+Call this once, typically in your app startup file after route definitions. Called with no argument, `start` launches every registered service in a background thread.
 
 ```ruby
 # config/app.rb
@@ -39,7 +39,7 @@ Call this once, typically in your app startup file after route definitions. All 
 require_relative "../src/routes/api"
 require_relative "../src/services/background"
 
-Tina4::ServiceRunner.start_all
+Tina4::ServiceRunner.start
 ```
 
 ---
@@ -60,8 +60,8 @@ Useful for starting services conditionally based on environment or configuration
 # Stop a specific service
 Tina4::ServiceRunner.stop("heartbeat")
 
-# Stop all running services
-Tina4::ServiceRunner.stop_all
+# Stop all running services (no argument)
+Tina4::ServiceRunner.stop
 ```
 
 `stop` signals the thread to terminate. The runner waits for the thread to finish its current iteration before stopping.
@@ -71,11 +71,14 @@ Tina4::ServiceRunner.stop_all
 ## 6. Checking Service Status
 
 ```ruby
-Tina4::ServiceRunner.running?("heartbeat")
+Tina4::ServiceRunner.is_running("heartbeat")
 # => true or false
 
-Tina4::ServiceRunner.status
-# => { "heartbeat" => :running, "metrics" => :stopped, "queue_consumer" => :running }
+Tina4::ServiceRunner.list
+# => [
+#      { name: "heartbeat", running: true,  last_run: <Time>, error_count: 0, options: {...} },
+#      { name: "metrics",   running: false, last_run: nil,    error_count: 0, options: {...} }
+#    ]
 ```
 
 ---
@@ -196,8 +199,8 @@ end
 ## 11. Listing Registered Services
 
 ```ruby
-Tina4::ServiceRunner.services.each do |name, info|
-  puts "#{name}: #{info[:status]}"
+Tina4::ServiceRunner.list.each do |info|
+  puts "#{info[:name]}: #{info[:running] ? 'running' : 'stopped'}"
 end
 ```
 
@@ -260,13 +263,13 @@ Tina4::ServiceRunner.register("counter_service") do
 end
 ```
 
-### 4. stop_all on shutdown
+### 4. stop on shutdown
 
-In production, call `Tina4::ServiceRunner.stop_all` in a signal trap to cleanly shut down services before the process exits.
+In production, call `Tina4::ServiceRunner.stop` (no argument stops every service) in a signal trap to cleanly shut down services before the process exits.
 
 ```ruby
 trap("SIGTERM") do
-  Tina4::ServiceRunner.stop_all
+  Tina4::ServiceRunner.stop
   exit 0
 end
 ```

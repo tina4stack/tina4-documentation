@@ -609,7 +609,7 @@ Router.get("/dashboard", async (req, res) => {
         return res.redirect("/login");
     }
 
-    return res.html("dashboard.html", {
+    return res.render("dashboard.html", {
         userName: req.session.userName
     });
 });

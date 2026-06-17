@@ -846,7 +846,7 @@ Router.get("/admin", async (req, res) => {
         { id: 1039, customer: "Dave Brown", amount: "34.99", status: "Cancelled", badge: "danger" },
     ];
 
-    return res.html("dashboard.html", { stats, recent_orders });
+    return res.render("dashboard.html", { stats, recent_orders });
 });
 ```
 
@@ -1072,7 +1072,7 @@ Create `src/templates/admin/users.html`:
 import { Router } from "tina4-nodejs";
 
 Router.get("/admin/users", async (req, res) => {
-    return res.html("admin/users.html", {});
+    return res.render("admin/users.html", {});
 });
 ```
 
@@ -1244,7 +1244,7 @@ Router.get("/admin/products", async (req, res) => {
 
     const categories = ["Electronics", "Furniture", "Kitchen", "Fitness"];
 
-    return res.html("products.html", { products, categories, search, selected_category: selectedCategory });
+    return res.render("products.html", { products, categories, search, selected_category: selectedCategory });
 });
 ```
 

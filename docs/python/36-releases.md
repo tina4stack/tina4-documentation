@@ -1,5 +1,715 @@
 # Chapter 35: Release Notes
 
+## v3.13.31 (2026-06-17) — Documentation fixes (no functional change)
+
+Corrected the developer guide: `Response.add_header` is an instance method — the class-level `Response.add_header(...)` shown previously raises `TypeError`, so it's now `response.add_header(...)` (including six middleware examples in Chapter 10). Removed a stale `fieldName` key from the `request.files` upload example (the dict has `filename`, `type`, `content`, `size`). Code is unchanged. Full suite: 2,914 passing.
+
+## v3.13.30 (2026-06-16) — Typed route params now arrive coerced (⚠ behavioural change)
+
+**Behavioural change.** A typed path param now arrives **coerced to its type** instead of as a raw string: `{id:int}` / `{id:integer}` → `int`, `{price:float}` / `{x:number}` → `float`. Every other type (`string`, `alpha`, `alnum`, `slug`, `uuid`, `path`) and an untyped `{id}` stay strings; URL matching is unchanged (`{id:int}` still 404s on non-digits). Previously `{id:int}` matched only digits but still handed the handler the string `"42"` — code that did string operations on a typed param must adjust. This brings Python in line with Ruby (which already coerced) and the documented “auto-converted” behaviour, now matched by PHP and Node too. Also fixed a reversed `check_password` argument-order line in the dev guide. Full suite: 2,914 passing.
+
+## v3.13.29 (2026-06-16) — Live API search (`api_search`/`api_class`/`api_method`) now finds what you ask for
+
+The live reflection index behind the `api_*` MCP tools — what AI assistants query for real method signatures instead of guessing — had three gaps, now fixed:
+
+- **Metaprogrammed methods were invisible.** `Frond.add_filter` / `add_global` / `add_test` are defined through a custom class/instance descriptor, and the reflector's `__qualname__` owner check skipped them — they never entered the index. Reflection now walks `obj.__dict__`, unwraps staticmethod/classmethod/property/descriptor wrappers, and strips receiver params, so `api_method("Frond", "add_test")` returns `add_test(name, fn)`.
+- **Class-qualified queries weren't steered.** `api_search("Frond.add_test")` returned unrelated `add_*`/`*test*` methods because only the bare name was scored. Ranking now weights the owning class, fqn segments, and an exact `Class.method` match, so the right method ranks first.
+- **Lookups only matched the deep fqn.** `api_class`/`api_method` now resolve the documented public import path and a bare class name (`Database`), not just `tina4_python.database.connection.Database`.
+
+The bundled AI skills (developer/maintainer/js) now instruct assistants to query `api_*` before guessing a signature. Full suite: 2,905 passing.
+
+## v3.13.28 (2026-06-16) — Frond: custom `add_test` now honoured by `is`
+
+<div v-pre>
+
+**Python only.** A test registered with `Frond.add_test("positive", fn)` was ignored by `{% if x is positive %}` — the `is` evaluator checked a hardcoded built-in table (`even`, `odd`, `defined`, …) and never consulted the instance's custom-test registry, so every custom test silently returned false. It now merges the registered tests (reachable via the bound evaluator) over the built-ins, so custom registrations work and can override built-ins — matching PHP, Ruby, and Node. Built-in tests are unchanged. Surfaced by a cross-engine host-API check (`add_filter`/`add_global`/`add_test`/`form_token`) while building the verified cheatsheet. Full suite: 2,901 passing.
+
+</div>
+
+## v3.13.27 (2026-06-16) — Frond template-engine parity fixes
+
+A 50-case cross-engine audit (every Frond tag, filter, and test rendered through all four frameworks with identical templates) surfaced six places where Python's output diverged from the Twig/Jinja standard. All are now fixed to match:
+
+<div v-pre>
+
+- **`{{ x | e }}` / `escape`** no longer double-escapes — the filter returns a `SafeString`, so the auto-escaper leaves it alone (`<b>` → `&lt;b&gt;`, not `&amp;lt;b&amp;gt;`).
+- **`{{ "%.2f" | format(value) }}`** now resolves a *variable* argument to its value (it previously errored). Unquoted filter arguments are treated as variable references; quoted literals stay literal.
+- **`{%- ... -%}` whitespace control** now actually trims — a single up-front pass applies every trim marker, including on closing tags (`endif`/`endfor`) and block-body boundaries.
+- **`json_encode`** emits compact `[1,2,3]` (no spaces); **`round`** at precision 0 renders the integer `4` (not `4.0`); **`nl2br`** escapes its input, inserts `<br />`, and is marked safe — all matching PHP.
+
+</div>
+
+Behavioural note: these change rendered output for the affected filters — they are correctness fixes toward the documented Twig/Jinja behaviour. Full suite: 2,900 passing.
+
+## v3.13.26 (2026-06-16) — pooling fix: standalone writes auto-commit; explicit transactions stay atomic
+
+**Behavioural default change.** A standalone write — `execute`/`insert`/`update`/`delete` made **outside** an explicit transaction — now **auto-commits on its own connection before returning**. Previously the default was autocommit *off*, which broke connection pooling: a standalone `INSERT` landed uncommitted on one pooled connection, then the next read round-robined to a different connection and saw nothing. Standalone writes are now durable and visible across the pool.
+
+Explicit transactions are unchanged and stay atomic — inside `start_transaction()` … `commit()`/`rollback()` the per-statement commit is suppressed (the commit branches are gated on `not self._in_transaction`), so a `rollback()` still discards everything. The psycopg2 connection still runs with `connection.autocommit = False`, so the framework owns commit boundaries and the v3.13.15 idle-in-transaction read-rollback still applies.
+
+Set `TINA4_AUTOCOMMIT=false` in `.env` for strict manual-commit mode (every write needs an explicit `commit()`).
+
+Verified live on PostgreSQL: standalone write visible from a separate connection, explicit rollback discards, explicit commit persists, and pooled standalone writes visible across every round-robin connection. Full suite: 2,894 passing.
+
+## v3.13.24 (2026-06-15) — unified cache backends across response, KV, and persistent DB cache
+
+The response/KV cache now supports **seven backends**, selected by `TINA4_CACHE_BACKEND`: `memory` (default), `file`, `redis`, `valkey`, `memcached`, `mongodb`, and `database`. `TINA4_CACHE_URL` carries the connection string for `redis`/`valkey`/`memcached`/`mongodb`, or a SQL URL for the `database` backend (which falls back to `TINA4_DATABASE_URL`). Credentials can be embedded in the URL (`redis://user:pass@host`, `redis://:pass@host`, `mongodb://user:pass@host`) or supplied via `TINA4_CACHE_USERNAME` / `TINA4_CACHE_PASSWORD` (mirroring `TINA4_DATABASE_USERNAME`/`_PASSWORD`); memcached is unauthenticated. The usual `TINA4_CACHE_TTL` (60), `TINA4_CACHE_MAX_ENTRIES` (1000), and `TINA4_CACHE_DIR` (`data/cache`) still apply.
+
+**Graceful fallback:** if a configured backend's driver is missing or the service/credentials are unreachable or wrong, the cache logs a warning and falls back to the **file** backend — a real persistent cache, never a silent no-op.
+
+The **persistent DB query cache** (`TINA4_DB_CACHE=true`) now routes through the same backend set via `TINA4_DB_CACHE_BACKEND` + `TINA4_DB_CACHE_URL`, so multiple instances share one cache with global write-invalidation. `cache_stats()` now reports a `backend` field alongside `mode`.
+
+Full suite: 2,899 passing.
+
+## v3.13.23 (2026-06-15) — request-scoped DB query cache, on by default
+
+A new **request-scoped query cache** protects your database from rapid repeat reads. Within a single request, identical `SELECT`s and ORM reads are deduped automatically — the DB is hit once and subsequent identical reads are served from memory. The cache is **cleared at the start of every request** (so it never serves stale rows across requests) and **flushed on any write** (insert/update/delete/execute). For non-request contexts (scripts, workers) a short safety TTL applies.
+
+It is **on by default** via `TINA4_AUTO_CACHING=true` (off-switch `TINA4_AUTO_CACHING=false`); the in-request TTL is `TINA4_AUTO_CACHING_TTL` (default 5 seconds). The existing `TINA4_DB_CACHE` (default `false`) remains the separate *persistent* cross-request cache (TTL `TINA4_DB_CACHE_TTL`, default 30s) and is not cleared per request. `cache_stats()` now reports a `mode` field: `"request"` (default), `"persistent"`, or `"off"`.
+
+Full suite: 2,866 passing.
+
+## v3.13.22 (2026-06-15) — session default TTL standardised to 1 hour
+
+The default session lifetime now matches across all four frameworks: **3600 seconds (1 hour)**. Python previously defaulted to 1800s (30 min). The session cookie `Max-Age` and the file-handler garbage-collection window both follow `TINA4_SESSION_TTL` (default now 3600) — override it in your `.env`. PHP and Node already used 3600 and are unchanged.
+
+## v3.13.21 (2026-06-15) — security: never sign JWTs with a guessable default secret
+
+**Security fix.** When `TINA4_SECRET` was unset, Tina4 silently signed JWTs **and** CSRF form tokens with a hardcoded built-in default secret — so anyone who knew that default could forge valid tokens, and the developer got no warning. It affected `Auth`, the Frond `form_token()` filter, and the CSRF middleware (four copies of the same fallback).
+
+Token signing now reads `TINA4_SECRET` and, when it is unset, **warns loudly and uses a blank secret** — matching what the PHP and Node frameworks already did. There is no longer a guessable built-in secret. **Always set `TINA4_SECRET` in production.**
+
+Also corrected stale docs: the JWT secret env var is **`TINA4_SECRET`** (some docs still said `SECRET`), and `$response->template()` references are fixed to `response.render()`.
+
+Full suite: 2,857 passing.
+
+## v3.13.19 (2026-06-15) — return domain objects, construct from JSON, and one database binder
+
+Three ergonomic improvements surfaced by the live side-by-side review of the book's own examples across all four frameworks.
+
+### `response(...)` serializes domain objects
+
+Return an ORM model, a list of models, or a query result straight from a route — Tina4 serializes it to JSON. No more hand-rolled `to_dict()` / `to_json()`:
+
+```python
+@get("/api/users")
+async def users(request, response):
+    return response(User.all())        # list of models -> JSON array
+```
+
+A single model becomes a JSON object; a list of models or a `DatabaseResult` becomes a JSON array. Plain dicts, lists and strings behave exactly as before — this is purely additive.
+
+### Construct a model from a JSON object string
+
+The model constructor now accepts a JSON object string, alongside a dict or keyword args:
+
+```python
+User('{"name": "Alice", "email": "alice@example.com"}')   # parsed into one record
+User({"name": "Alice"})                                    # still works
+User(name="Alice")                                         # still works
+```
+
+Passing a **list/array** to a single-record constructor now raises a clear `TypeError` instead of a cryptic `'list' object has no attribute 'items'`. To build many records, map over the list.
+
+### ⚠ Breaking — one database binder: `bind_database`
+
+The ORM-to-database binder is now **`bind_database`** across all four frameworks (was `orm_bind` in Python). The default is unchanged — models still auto-bind to `TINA4_DATABASE_URL`, so apps that rely on the `.env` default need **no change at all**.
+
+```python
+# Most apps: nothing to do — the .env default is auto-bound.
+
+# Override the default explicitly:
+bind_database(Database("sqlite:///app.db"))
+
+# Register a NAMED connection and point a model at it:
+bind_database(Database("postgres://…/analytics", "u", "p"), name="analytics")
+
+class Visit(ORM):
+    _db = "analytics"        # this model uses the analytics connection
+```
+
+A model can live on a different database from the default — `bind_database(db, name="…")` registers it and `_db = "…"` selects it. A missing named connection raises a clear error.
+
+**Migration:** rename `orm_bind(...)` → `bind_database(...)`. That is the only change; the `name=` argument, per-model `_db`, and `.env` resolution are new or unchanged.
+
+Full suite: 2,852 passing. Shipped with parity across all four frameworks.
+
+## v3.13.16 (2026-06-15) — `create_table()` works on PostgreSQL + `DatabaseResult` index access
+
+Found by the live documentation-verification pass — running the book's own samples against a real PostgreSQL database. The documented code-first schema path, `ORM.create_table()`, was silently broken on PostgreSQL: it emitted SQLite-only DDL, PG rejected it, the error was swallowed, and the method returned `True` while creating **no table**.
+
+### `create_table()` is now engine-aware
+
+- **`DateTimeField` → `TIMESTAMP`** on PostgreSQL (and Firebird) — they have no `DATETIME` type (`type "datetime" does not exist`); `DATETIME` stays on SQLite/MySQL/MSSQL.
+- **`BooleanField` → native `BOOLEAN`** on PostgreSQL/MySQL, `BIT` on MSSQL, `INTEGER` on SQLite/Firebird. The engine check previously compared against `"postgres"` but `get_database_type()` returns `"postgresql"`, so bool columns silently got `INTEGER` on PG — fixed. Boolean column `DEFAULT`s are engine-aware too (`TRUE`/`FALSE` vs `1`/`0`).
+- **A failed `CREATE` now returns `False` (and logs)** instead of masquerading as success.
+- The PostgreSQL adapter no longer rewrites `TRUE`/`FALSE` → `1`/`0` (`boolean_to_int`) — PG has a native boolean, and that rewrite had broken `DEFAULT FALSE` and `WHERE active = TRUE` on `BOOLEAN` columns.
+
+### `DatabaseResult` is subscriptable
+
+`result[0]` (documented in chapter 5, "Index Access") raised `TypeError: 'DatabaseResult' object is not subscriptable`. Added `__getitem__` — index and slice access now delegate to `.records`. The bundled guide's wrong "no `len()` support" note is corrected too.
+
+Verified against PostgreSQL 16: a model with `id` (auto-increment) + `StringField` + `BooleanField` + `DateTimeField` creates, inserts, and round-trips natively (real `bool`, `TIMESTAMP`). New PG-backed test suite (skip-if-no-PG) + always-run subscript suite. Full suite: 2,840 passing. Shipped with parity across all four frameworks.
+
+## v3.13.15 (2026-06-15) — Python only: PostgreSQL idle-in-transaction leak (#51)
+
+**Python only.** psycopg2 follows the DB-API contract — a connection starts with `autocommit = False`, so even a bare `SELECT` opens a transaction. Tina4's `fetch()` / `fetch_one()` never closed it, so every read left the connection `idle in transaction` for its lifetime, pinning a pool slot and any locks it touched. PHP (`pg_query`), Ruby (`pg`), and Node (`node-postgres`) run on libpq autocommit — each statement is its own transaction — so the leak can't happen there. They stay at v3.13.14.
+
+### The slow-motion outage
+
+The migration runner's batch lookup runs at boot:
+
+```python
+row = db.fetch_one("SELECT MAX(batch) as max_batch FROM tina4_migration")
+```
+
+That read opened a transaction and left it open. Each short-lived pod/process leaked one `idle in transaction` connection holding locks on `tina4_migration`. Over enough restarts the pool filled — `FATAL: remaining connection slots are reserved for roles with the SUPERUSER attribute` — and then module autodiscovery failed mid-boot, so `/health-check` still passed (pod marked Ready) while every real route 404'd. A silent "ready but broken" state; #51 reported sessions sitting idle for 2+ days.
+
+### The fix
+
+After a successful read **outside** an explicit transaction, the PostgreSQL adapter now rolls back the implicit transaction — a `SELECT` has nothing to persist, so a rollback is the clean close that returns the connection to plain `idle`. Inside `start_transaction()` the caller owns the transaction, so it's left alone. `execute()` (writes) is deliberately untouched: with autocommit off a write must still be committed explicitly, and auto-closing it would silently drop data.
+
+This is distinct from the v3.13.8 fix, which healed *aborted* transactions — a clean idle read-transaction never hit that path.
+
+### Tests
+
+- Python: 2,836 passed (+7 — `_end_read_txn` unit, `fetch`/`fetch_one` wiring, in-transaction deferral). No live PostgreSQL required: a fake connection records the rollback, and psycopg2 is stubbed when the optional driver is absent (so the guard runs in CI).
+
+## v3.13.14 (2026-06-13) — Logs reach stdout in containers + per-request logging + schema-qualified tables (#48)
+
+**Cross-framework release (all four).** Deployed Docker containers were getting no application logs. The cause was the same architectural decision in every framework: in production/container mode Tina4 either **suppressed stdout** or wrote logs **only to a file inside the container** — but `docker logs` (and Kubernetes) read PID 1's stdout, so operators saw nothing. A follow-on report — "logs stop after `Development server: asyncio`" — surfaced a second gap: the dev server logged its startup banner but **never logged requests**, so it looked dead under traffic.
+
+This is a 12-factor correction: a container's stdout *is* the log sink.
+
+### Per-request logging — on by default in dev
+
+Every request now logs one line through the Tina4 `Log` (→ stdout), on by default in development and opt-in for production via `TINA4_LOG_REQUESTS`:
+
+```
+2026-06-12T10:15:03.221Z [INFO   ] GET /api/users -> 200 (12.3ms)
+```
+
+- Format is identical across all four frameworks: `METHOD /path -> STATUS (Nms)`.
+- **Default**: on when `TINA4_DEBUG` is truthy (dev), off in production — so prod doesn't pay the per-request cost unless you opt in.
+- `TINA4_LOG_REQUESTS=true` forces it on (production debugging); `=false` forces it off.
+- Routed through `Log`, so it's coloured human-readable in dev and structured JSON in production, like every other line.
+
+Two bugs fixed here: Python's `RequestLoggerMiddleware` emitted via an **unconfigured stdlib `logging` logger** (silently dropped — never reached stdout), and the dev server only fed request data to the `/__dev` dashboard inspector, never to a log. Both now go through `Log`.
+
+### What changed (stdout)
+
+1. **stdout is no longer suppressed in production.** Logs are written to stdout regardless of `TINA4_ENV`/`TINA4_DEBUG`. Production emits clean JSON (no ANSI colour) so aggregators can parse it; dev keeps the human-readable coloured format. `TINA4_LOG_OUTPUT=file` still opts out of stdout entirely.
+2. **stdout is flushed per line.** `print(..., flush=True)` — logs appear immediately on a non-TTY pipe (every container) instead of sitting in Python's block buffer until the process exits (or vanishing on an abrupt stop).
+3. **Default log level is now `INFO`** (was `ERROR`). An app that logged at info/debug previously looked silent in production. INFO surfaces request/startup/warning/error without debug noise. Override with `TINA4_LOG_LEVEL`.
+
+```python
+# In a container (TINA4_ENV=production), with the default config:
+Log.info("worker started")
+# pre-v3.13.14: written only to logs/tina4.log inside the container → docker logs empty
+# v3.13.14:    {"timestamp":"...","level":"INFO","message":"worker started"}  → on stdout
+```
+
+### Why it spanned all four
+
+The bug was the *same* decision in each framework, so the fix is too:
+
+| Framework | Pre-v3.13.14 cause | Fix |
+|---|---|---|
+| Python | `not _is_production` gate suppressed stdout; default ERROR | stdout always on (flushed); default INFO |
+| PHP | `$stdout = $development` (file-only in prod); no `TINA4_LOG_LEVEL` read | stdout default on + `fflush`; reads `TINA4_LOG_LEVEL`; default INFO |
+| Ruby | stdout written but **never flushed** (block-buffered on non-TTY); default ALL | `$stdout.sync = true`; default INFO; accepts plain + bracket level names |
+| Node | `!isProduction()` gate suppressed console; default DEBUG | console always on; production emits JSON; default INFO |
+
+The Rust `tina4` CLI was already correct — it inherits child stdio, so child logs flow to the container.
+
+### Request logging parity
+
+| Framework | Pre-v3.13.14 | Fix |
+|---|---|---|
+| Python | no request log; `RequestLoggerMiddleware` used a dead stdlib logger | log in dispatch via `Log`; middleware routed through `Log` |
+| PHP | `RequestLogger` not default-on, line lacked status | log in `Router::dispatch` via `Log`; status added to the line |
+| Ruby | dev inspector only; `RequestLoggerMiddleware` not wired; `[RequestLogger]` prefix | log in `rack_app` via `Log`; prefix dropped for parity |
+| Node | `requestLogger` always-on via bare `console.log`, status-first format | gated (dev-default + env), routed through `Log`, standard format |
+
+### Schema-qualified tables (#48) + a PostgreSQL `fetch()` regression
+
+Issue #48 — *"Database Table Does Not Exist"* on PostgreSQL. A model whose table lives in a non-default schema (`gift_cards.gift_card`, MSSQL `dbo.widget`, MySQL `otherdb.table`, SQLite ATTACH `extra.widget`) was invisible to the framework's introspection. `table_exists`, `get_tables`, and `get_columns` hardcoded the default namespace (`public`) and matched the whole dotted string as one flat name — so plain reads worked, but `create_table`, migrations, and auto-CRUD were blind to the table and reported it missing.
+
+All introspection is now schema-aware on every affected engine:
+
+- **PostgreSQL** — `table_exists` uses `to_regclass()` (honours schema + `search_path`); `get_columns` filters by `table_schema`; `get_tables` lists every non-system schema and returns non-`public` tables schema-qualified.
+- **MySQL** — schema = database; a qualified name checks that catalog, a bare name defaults to `DATABASE()`.
+- **MSSQL** — honours `dbo.table`; a bare name matches in any schema.
+- **SQLite** — honours an ATTACH alias (`extra.widget`) for both `table_exists` and `get_columns`.
+- **Firebird** — N/A (no schemas).
+
+Verified against a live PostgreSQL 16 container: `table_exists('gift_cards.gift_card') → True`, `get_tables → ['gift_cards.gift_card', 'gift_cards.transaction']`, `get_columns → 12 columns` — identical results across all four frameworks.
+
+> **PHP also fixed a v3.13.12 regression found while cross-checking #48.** `PostgresAdapter` referenced `stripTrailingSemicolons()` (added in v3.13.12) and the new `splitSchema()` but never mixed in `SqlNormalizerTrait` — so **every PostgreSQL `fetch()` / `fetchOne()` / `getColumns()` fatalled** with *"Call to undefined method"*. It shipped silently because the PHP PostgreSQL test suite skips without a live server. Fixed with a one-line trait mix-in and pinned by server-free reflection guards that assert all five SQL adapters expose the normalizer helpers.
+
+### Tests
+
+- Python: 2,829 passed (+18 new — stdout-in-prod, JSON shape, level filter, file opt-out; request-log gate + middleware; #48 schema split + SQLite ATTACH introspection)
+- PHP: 2,394 passed (+63 new — stdout/level/file gating; request-log format + gate; #119 cli-server crash fix + LegacyEnvGuard suite now CI-gated; #48 schema-qualified + PG trait regression guards)
+- Ruby: 2,999 passed (+23 new — level resolution + `$stdout.sync`; request-log gate + dispatch; #48 schema split + SQLite ATTACH introspection)
+- Node: 3,628 passed (+16 net — production JSON stdout; request-log gating + format; #48 schema split + SQLite ATTACH introspection)
+
+**11,850 tests across the family, zero regressions.**
+
+> PHP also fixed #119 in this release — `App::checkLegacyEnvVars()` crashed with `Undefined constant Tina4\STDERR` under the built-in `cli-server` (bare `STDERR` is only auto-defined for the `cli` SAPI). Now uses the `php://stderr` stream. PHP-specific; the other three don't reference that constant.
+
+---
+
+## v3.13.12 (2026-06-11) — SQL safety + implicit ORM binding + `fetch_all` correctness
+
+Three high-impact fixes that close out long-standing footguns. All three ship with full parity across all four frameworks.
+
+### `fetch_all` actually fetches ALL rows now (no silent 100-row truncation)
+
+Pre-v3.13.12 the convenience method defaulted to `limit=100` and silently truncated. The name says `fetch_all` — it should fetch them all:
+
+```python
+# 150 rows in the table
+db.fetch_all("SELECT * FROM rows")
+# pre-v3.13.12: returns 100 rows, silently drops the other 50
+# v3.13.12:    returns all 150 rows
+```
+
+The new default is `limit=0`, which the adapter interprets as "no pagination injection" — your SQL runs verbatim. To opt back into a cap, pass `limit=N` explicitly:
+
+```python
+db.fetch_all("SELECT * FROM events", limit=500)   # capped
+db.fetch_all("SELECT * FROM users")               # all rows
+```
+
+`db.fetch()` (the paginated sibling that returns a `DatabaseResult` with count metadata) keeps its 100-row default — pagination is its job. Only the `fetch_all` convenience changed.
+
+**Breaking change**: callers who relied on the silent 100-row cap now get every row. For very large tables, switch to `fetch()` (which paginates with metadata) or pass an explicit `limit`. Per the v3 parity rule, breaking changes are OK when correctness is the win.
+
+### Trailing `;` is now stripped from user SQL in `fetch()` / `fetch_one()`
+
+The framework appends `LIMIT n OFFSET m` to the user-supplied query (and wraps it in `SELECT COUNT(*) FROM (...) AS subq` for the count probe). When the user's query already ended with a `;`, both rewrites broke:
+
+```python
+db.fetch("SELECT * FROM users;")
+# pre-v3.13.12: syntax error near "LIMIT" — the appended LIMIT followed a ;
+# v3.13.12:    works — trailing ; is stripped before LIMIT is appended
+```
+
+The strip is conservative: only trailing whitespace + semicolons are removed (any number of them, including `;;`), nothing inside the statement is touched. Parameters and quoting are unchanged — the existing parameter-binding defense against injection still does all the heavy lifting.
+
+Applied at the top of `fetch()` and `fetch_one()` on all five adapters: PostgreSQL, MySQL, SQLite, MSSQL, Firebird.
+
+### Ruby ORM now auto-discovers `TINA4_DATABASE_URL` like the other three
+
+When `TINA4_DATABASE_URL` was set in `.env` but `Tina4.bind!` had never been called, Ruby ORM operations returned `nil` from the model's `db` accessor — every save / find / where silently no-op'd. Python, PHP, and Node all already discovered the env var on first use; Ruby had the helper (`auto_discover_db`) defined but never called.
+
+```ruby
+# .env has TINA4_DATABASE_URL=sqlite://./app.db, no explicit Tina4.bind! anywhere
+User.find(1)
+# pre-v3.13.12: nil  (db accessor returned nil, query never ran)
+# v3.13.12:     <User id: 1, ...>  (auto-discovered on first model access)
+```
+
+Explicit `Tina4.bind!(db)` still takes precedence — use it to bind a second database or override the env-driven default. The behaviour now matches Python's `database_url_auto_discover()`, PHP's adapter auto-init, and Node's `initDatabase()` env fallback.
+
+### Cross-framework parity
+
+| Fix | Python | PHP | Ruby | Node |
+|---|---|---|---|---|
+| `fetch_all` returns ALL rows by default | ✓ `limit=0` default | ✓ `$limit = 0` default | ✓ `limit: nil` default | ✓ already correct (`limit?` undefined) |
+| Strip trailing `;` from fetch SQL | ✓ shared helper on `DatabaseAdapter` | ✓ `SqlNormalizerTrait` on 5 adapters | ✓ `Tina4::Database.strip_trailing_semicolons` | ✓ exported `stripTrailingSemicolons` |
+| Implicit ORM binding from env | ✓ already worked | ✓ already worked | ✓ **fixed** (wired `auto_discover_db`) | ✓ already worked |
+
+### Tests
+
+- Python: 2,811 passed (+24 new)
+- PHP: 2,316 passed (+13 new)
+- Ruby: 2,980 passed (+18 new)
+- Node: 3,612 passed across 95 files (+16 new)
+
+**11,719 tests across the family, +71 new for v3.13.12, zero regressions.**
+
+---
+
+## v3.13.11 (2026-06-11) — ORM correctness pass
+
+Five fixes bundled into one release. Two are Andre's own ORM bugs (#50), two close out follow-on gaps from Michael's error-visibility report (#49), and one fixes a PostgreSQL-level mismatch that BooleanField columns were creating.
+
+### #50.1 — Callable field defaults are now resolved per-instance
+
+```python
+class GiftCard(ORM):
+    created_at = DateTimeField(default=lambda: datetime.now())
+```
+
+Pre-v3.13.11 this stored the lambda object verbatim and crashed on save:
+
+```
+psycopg2.ProgrammingError: can't adapt type 'function'
+```
+
+Now the framework invokes the callable **per instance** at construction time, so every row gets a fresh value. Types are excluded (`default=int` is preserved verbatim — that's almost never intended as "call `int()`").
+
+### #50.2 — `save()` correctly INSERTs natural (non-auto-increment) PKs
+
+For models with a user-supplied PK (e.g. `gift_card_number = "GC-100"` set before the first save), pre-v3.13.11 `save()` always chose UPDATE — matched zero rows — and silently returned success without inserting anything. The framework now checks `cls.exists(pk_value)` for non-auto-increment PKs:
+
+```python
+gc = GiftCard()
+gc.gift_card_number = "GC-100"
+gc.save()                          # → INSERT (pre-v3.13.11 was a silent UPDATE no-op)
+GiftCard.find_by_id("GC-100")      # → returns the row
+```
+
+Auto-increment behaviour is unchanged: `PK is None → INSERT`, `PK set → UPDATE`. Saving an existing natural-key row still UPDATEs (and doesn't duplicate).
+
+### #49.1 — Original cause logged when failure is inside an explicit transaction
+
+When a query fails inside `db.start_transaction()`, the auto-rollback correctly defers to the user. But the visibility half no longer goes with it — the framework now emits a Log.warning marker so operators can spot the upstream cause that's about to be buried by the cascade. The `fetch()` COUNT probe also now logs original-cause failures via `Log.warning` before swallowing.
+
+### #49.2 — `Database.fetch()` populates `last_error` (mirror of `execute()`)
+
+```python
+try:
+    db.fetch("SELECT * FROM does_not_exist")
+except Exception:
+    pass
+
+db.get_error()   # pre-v3.13.11: None  (adapter had the cause, wrapper never read it)
+                 # v3.13.11:     "relation \"does_not_exist\" does not exist"
+```
+
+### BooleanField — engine-aware DDL on PG / MySQL / MSSQL
+
+Pre-v3.13.11 `BooleanField` mapped to `INTEGER` on every engine. That caused PostgreSQL to throw `operator does not exist: boolean = integer` when Python `bool` values bound via psycopg2 met the `INTEGER` column — because psycopg2 adapts `True`/`False` to PG `boolean`, not to integer.
+
+v3.13.11 makes `BooleanField → create_table()` engine-aware:
+
+| Engine | DDL type |
+|---|---|
+| PostgreSQL | `BOOLEAN` |
+| MySQL | `BOOLEAN` (alias for `TINYINT(1)`) |
+| MSSQL | `BIT` |
+| SQLite | `INTEGER` (no native bool) |
+| Firebird | `INTEGER` (driver round-trip uneven for native BOOLEAN) |
+
+**Breaking change**: callers writing literal `= 0` / `= 1` against tables created by `create_table()` on PG / MySQL / MSSQL will need to update to `= false` / `= true` (or the engine's native bool literal). Tables created via migration with explicit DDL aren't affected — the framework only sets the type when it creates the table itself.
+
+### Cross-framework parity
+
+| Fix | Python | PHP | Ruby | Node |
+|---|---|---|---|---|
+| #50.1 callable defaults | ✓ fixed | N/A (PHP property defaults are constants) | ✓ fixed (Procs) | N/A (no auto-default at construction) |
+| #50.2 natural-key INSERT | ✓ fixed | ✓ already correct (`recordExists`) | ✓ already correct (`@persisted` flag) | ✓ fixed |
+| #49.1 + #49.2 PG visibility | ✓ fixed (Python-only — libpq autocommit means cascade never happens on PHP/Ruby/Node) |  |  |  |
+| BooleanField DDL | ✓ fixed | N/A (PHP createTable is migration-driven) | ✓ fixed | ✓ already engine-aware |
+
+### Tests
+
+- Python: 2,807 passed, 31 skipped (+34 new)
+- PHP: 2,888 passed (no changes)
+- Ruby: 2,962 passed, 7 pending (+10 new)
+- Node: 3,596 passed across 94 files (+10 new)
+
+**12,253 tests across the family, +54 new for v3.13.11, zero regressions.**
+
+---
+
+## v3.13.10 (2026-06-11) — Python only
+
+Three Python-only housekeeping items.
+
+### 1. Google Antigravity removed from `AI_TOOLS` — it reads `AGENTS.md`, not `.antigravity/context.md`
+
+Per Google's official Antigravity docs ([rules-workflows](https://antigravity.google/docs/rules-workflows)), as of Antigravity **v1.20.3 (March 2026)** the IDE reads `AGENTS.md` from the repo root — the same cross-tool standard Codex pioneered, Cursor adopted, and Claude Code reads as a fallback. Our pre-v3.13.10 installer wrote to `.antigravity/context.md`, **a path nothing actually reads.** Antigravity has been silently producing dead files in users' projects since the entry was added in commit `04fba18`.
+
+The fix in v3.13.10 is simply to **remove the antigravity entry from `AI_TOOLS`**. The existing `codex` entry (`AGENTS.md`) already writes the Tina4 skill block to the file Antigravity actually consumes — one file, four tools (Codex + Cursor + Claude Code + Antigravity all read it).
+
+If you want Antigravity-specific tuning beyond the shared `AGENTS.md`, write it to `.agents/rules/tina4.md` by hand — that's the documented per-workspace rules folder.
+
+### 2. `uv.lock` drift caught
+
+The lockfile had quietly fallen out of sync — it tracked `tina4-python` at `3.13.8` while `pyproject.toml` was at `3.13.9`. The mistake was on my side: I didn't re-stage `uv.lock` on the v3.13.7 / v3.13.8 / v3.13.9 commits, and `uv` only regenerates it lazily. **Cosmetic only** (the PyPI artefact was always built from `pyproject.toml`, so the published packages were correct), but the lockfile would have drifted further every release. Now refreshed to `3.13.10` and committed.
+
+### 3. `.gitignore` for runtime broken-route artefacts
+
+`Tina4::BrokenTracker` writes import-time and route-time failure dumps to `data/.broken/` and `data/broken/` at the project root. The pre-v3.13.10 `.gitignore` only covered `/broken` (older convention) and the `example/store/` paths. The newer `data/`-rooted paths weren't ignored, so test runs that intentionally threw (the `tina4.request.error` tests in v3.13.7) were leaving untracked `.broken` files lying around in the framework's own repo.
+
+Now ignored:
+```gitignore
+/data/broken/
+/data/.broken/
+```
+
+### Why Python-only
+
+All three items are Python-specific. PHP/Ruby/Node never had the Antigravity entry, don't use uv, and have their own gitignore conventions covered separately.
+
+### Tests
+
+- `tests/test_ai.py::TestAITools::test_antigravity_is_handled_via_codex_entry` — new test that asserts (a) Antigravity is NOT a separate `AI_TOOLS` entry, (b) the Codex entry's `context_file` remains `AGENTS.md`. Keeps the design intent visible so nobody reintroduces a dedicated Antigravity entry without checking the docs.
+- Existing `test_tools_count_matches_known_set` updated from 8 → 7.
+
+2,773 passed, 47 skipped — no regressions.
+
+---
+
+## v3.13.9 (2026-06-10)
+
+Non-destructive AI installer across all four frameworks.
+
+### The bug
+
+Pre-v3.13.9 the installer wrote a full developer guide to `CLAUDE.md` (and the equivalent context files for Cursor / Copilot / Windsurf / Aider / Cline / Codex / Antigravity) on every run, clobbering whatever the user had put there. If a user kept project-specific notes in `CLAUDE.md` — branch naming, deploy URLs, "don't touch this", reminders about a flaky service — re-running `install_context()` wiped all of that.
+
+### The fix
+
+The installer now uses a **marker-bracketed skill block**:
+
+```markdown
+<!-- tina4-skills:start -->
+## Tina4 Skills
+
+When working on this Tina4 project, these skills give the assistant project-aware behaviour:
+
+- **tina4-developer** — Read `.claude/skills/tina4-developer/SKILL.md` before building features.
+- **tina4-js** — Read `.claude/skills/tina4-js/SKILL.md` for frontend work.
+- **tina4-maintainer** — Read `.claude/skills/tina4-maintainer/SKILL.md` for framework-level changes.
+
+See https://tina4.com for full docs.
+<!-- tina4-skills:end -->
+```
+
+Four behaviours:
+
+1. **Fresh install** — file doesn't exist → write the framework guide plus the skill block.
+2. **Marker refresh** — file exists with our markers → replace just the bracketed block. **Idempotent**: re-running the installer keeps the skill references current as new skills are added.
+3. **One-time migration** — file starts with the pre-v3.13.9 framework header (`# Tina4 Python — Developer Guidelines`, `# Tina4 PHP`, `# Tina4 Ruby`, `# CLAUDE.md — AI Developer Guide for tina4-nodejs`) → replace the old dump with the new framework guide + skill block.
+4. **Preserve user content** — file exists with the user's own content (no markers, no old header) → append the skill block to the end. Everything else is preserved verbatim.
+
+Markdown files (`CLAUDE.md`, `.github/copilot-instructions.md`, `CONVENTIONS.md`, `AGENTS.md`, `.antigravity/context.md`) get HTML-comment markers (`<!-- ... -->`). Rule files (`.cursorules`, `.windsurfrules`, `.clinerules`) get `#`-prefixed markers so rule loaders treat them as comments.
+
+The actual skill content lives in `.claude/skills/tina4-*/SKILL.md` — those are framework-owned and still get cleanly overwritten so re-runs upgrade the skill content. `CLAUDE.md` itself becomes a thin pointer, not a re-rendered guide.
+
+### Cross-framework parity
+
+Same algorithm, same marker syntax, same four branches in Python, PHP, Ruby, and Node. Same canonical action verbs in the log output (`Installed` / `Refreshed skill block in` / `Migrated (replaced old framework dump in)` / `Appended skill block to`).
+
+### Tests
+
+99 new tests across the family covering all four branches plus marker detection, block replacement, idempotency, old-header detection, encoding edge cases, and rule-file vs markdown-file behaviour.
+
+- Python: 2,772 passed, 47 skipped (24 new)
+- PHP: 2,888 passed (11 new — verified via reflection so private helpers stay private)
+- Ruby: 2,952 passed, 7 pending (18 new)
+- Node: 3,586 passed across 93 files (46 assertions new)
+
+### What you'll see when you re-install
+
+Existing users running the installer for the first time after upgrading will hit branch 3 — they'll see this in the output:
+
+```
+✓ Migrated (replaced old framework dump in) CLAUDE.md
+```
+
+On any subsequent run, branch 2 kicks in:
+
+```
+✓ Refreshed skill block in CLAUDE.md
+```
+
+Users who curated their own `CLAUDE.md` and never ran the old installer will see branch 4:
+
+```
+✓ Appended skill block to CLAUDE.md
+```
+
+---
+
+## v3.13.8 (2026-06-10) — Python only
+
+Follow-on for issue [#46](https://github.com/tina4stack/tina4-python/issues/46). Schalk on the 24rent team upgraded to v3.13.7 and still hit the cascade message on the FIRST query of a function — meaning the PostgreSQL connection had been poisoned **before** the wrapper saw any failure.
+
+### The gap in v3.13.6 / v3.13.7
+
+v3.13.6 added auto-rollback **inside** `_on_query_error` — that clears the abort *on* a failure the framework's wrapper catches. But the connection can still arrive poisoned from sources the wrapper never observed:
+
+- A boot-time query that failed before request handling started (migration probe, ORM `information_schema` lookup, etc.)
+- A failure inside an explicit transaction where the user owned the rollback but never issued one
+- A direct `cursor.execute` call in another adapter method (the `SELECT lastval()` SAVEPOINT probe in `execute`) that managed to leave the txn dirty
+
+In all three cases, the *next* `db.fetch` / `db.execute` — even one routed through the wrapper — hits `InFailedSqlTransaction` immediately, and the cascade message buries whatever the original cause was. Exactly what Schalk reported:
+
+```
+[ERROR] PostgreSQL query failed: InFailedSqlTransaction: current transaction is aborted, commands ignored until end of transaction block
+{"sql": "SELECT * FROM gift_cards.gift_card WHERE created_by_email = %s AND is_deleted = 0 LIMIT %s OFFSET %s"}
+```
+
+### The fix: pre-flight heal
+
+`_exec_with_handling` and `fetch` now call `_heal_aborted_txn()` before executing. That checks the psycopg2 connection's `transaction_status` against `TRANSACTION_STATUS_INERROR` and rolls back if poisoned:
+
+```python
+def _heal_aborted_txn(self):
+    if self._in_transaction or self._conn is None:
+        return
+    import psycopg2.extensions as _ext
+    if self._conn.info.transaction_status != _ext.TRANSACTION_STATUS_INERROR:
+        return
+    self._conn.rollback()
+    Log.warning(
+        "PostgreSQL connection arrived in aborted-transaction state — "
+        "issued pre-flight ROLLBACK so the next query starts clean. "
+        "Look back in the log for the original PostgreSQL query failed entry."
+    )
+```
+
+- **Only fires outside an explicit transaction** — same rule as the failure-time auto-rollback. Callers running SAVEPOINT/retry stay in charge.
+- **Logs a warning when it triggers** so the operator can correlate against the upstream failure.
+- **Defensive**: even if a code path bypasses the wrapper entirely, the next path that does *use* the wrapper heals the connection on the way in.
+
+### Cross-framework
+
+Python only. PHP `pg_query`, Ruby `pg`, and Node `node-postgres` use libpq autocommit by default — each statement is its own transaction, so the cascade never happens there.
+
+### Tests
+
+3 new tests in `tests/test_postgres_error_visibility.py::TestPoisonedConnectionIsHealed`:
+- `test_fetch_heals_poisoned_connection` — manually poison the connection with a raw `cursor.execute`, then verify `db.fetch` succeeds
+- `test_execute_heals_poisoned_connection` — same for `db.execute`
+- `test_explicit_transaction_skips_heal` — confirms the heal defers when the user owns the txn
+
+2,764 passing, 31 skipped (skipped tests require PG container; verified against `postgres:16-alpine` on `localhost:55432`).
+
+---
+
+## v3.13.7 (2026-06-10)
+
+Two changes from an external app-platform team (24rent, PLATFORM-2159) — one observability hook, one production-safety fix. Both ship across **all four frameworks** with identical event payload shape.
+
+### NEW: `tina4.request.error` event
+
+When the router catches a thrown exception, it now emits `tina4.request.error` **before** rendering the 500 page. Listeners receive `{exception, request}` and can ship the failure to CloudWatch / Sentry / Slack — even though the framework caught the throwable.
+
+```python
+from tina4_python.core.events import on
+from tina4_python.debug import Log
+
+@on("tina4.request.error")
+def report_to_observability(payload):
+    exc = payload["exception"]
+    req = payload["request"]
+    Log.error(f"Route error: {type(exc).__name__}: {exc}", path=req.path)
+    # ...or POST to your centralised logging pipeline
+```
+
+- **Fires for caught route exceptions** (and warnings escalated to exceptions). Does NOT fire for 404s — those aren't server errors.
+- **Listener errors are swallowed + logged via `Log.warning`** so a broken listener can never break the 500 render.
+- **Listeners fire in priority order** (higher priority first, matching the existing `@on(event, priority=N)` contract).
+- **Same payload shape in every framework** — only the calling syntax differs:
+
+```php
+// PHP
+Events::on('tina4.request.error', function ($payload) {
+    Log::error('Route error: ' . $payload['exception']->getMessage());
+});
+```
+
+```ruby
+# Ruby
+Tina4::Events.on("tina4.request.error") do |payload|
+  Tina4::Log.error("Route error: #{payload[:exception].message}")
+end
+```
+
+```typescript
+// Node.js
+import { Events, Log } from "@tina4/core";
+Events.on("tina4.request.error", (payload) => {
+  Log.error(`Route error: ${(payload as any).exception.message}`);
+});
+```
+
+### FIX: Stack trace removed from production 500 body (CWE-209)
+
+Before v3.13.7, an unhandled route exception would render the **full stack trace** into the HTTP 500 response body — file paths, function chain, the exception message — **regardless of `TINA4_DEBUG`**. That's [CWE-209 / OWASP A05](https://cwe.mitre.org/data/definitions/209.html): information disclosure.
+
+<div v-pre>
+
+The framework's own `500.twig` now guards the trace block with `{% if error_message %}`. When `TINA4_DEBUG=false`, callers pass an empty `error_message` and the trace block doesn't render. The trace stays in `Log.error` (server-side) and reaches observability via the new event.
+
+</div>
+
+When `TINA4_DEBUG=true`, the rich `ErrorOverlay` page is unchanged.
+
+### Tests
+
+Each framework added 6–14 regression tests covering: event payload shape, dev/prod symmetry, listener priority ordering, listener-error safety, and CWE-209 (no trace markers in the prod body).
+
+- Python: 2,748 passed, 44 skipped
+- PHP: 2,877 passed
+- Ruby: 2,934 passed, 7 pending (PG container)
+- Node: 3,540 passed across 92 files
+
+### Background
+
+Reported by DevProx on the 24rent platform — they centralise observability by scraping structured JSON lines from stderr → CloudWatch → a Slack notifier. Route-level exceptions weren't surfacing because the framework caught them silently. The event hook fixes that without forcing any team's logging convention; the trace-leak fix is independently a security concern.
+
+---
+
+## v3.13.6 (2026-06-09)
+
+Two small reliability fixes — both tracked across all four frameworks.
+
+### PostgreSQL transaction errors no longer cascade (#46)
+
+A failed PostgreSQL query outside an explicit transaction used to leave the connection in an aborted state. Every subsequent query then failed with `current transaction is aborted, commands ignored until end of transaction block`, masking the original cause and making the bug effectively invisible to operators.
+
+The fix wraps every PostgreSQL `cursor.execute` in error-aware machinery:
+
+```python
+# Bad query
+try:
+    db.execute("SELECT * FROM table_that_does_not_exist")
+except Exception:
+    pass
+
+# Before v3.13.6: this raised InFailedSqlTransaction
+# v3.13.6 onward: succeeds — the framework auto-rolled back
+result = db.fetch("SELECT 1 AS one")
+assert result.records[0]["one"] == 1
+
+# The original error is still visible:
+db.last_error  # → 'relation "table_that_does_not_exist" does not exist'
+```
+
+The framework now:
+1. Logs the original failure via `Log.error` with the SQL and params.
+2. Stores the message on `db.last_error` so observability tools can read it.
+3. Auto-rollbacks **only** when the caller is not inside an explicit transaction — explicit transactions are left to the user (so SAVEPOINT / retry patterns still work).
+
+Cross-framework note: this cascade behaviour is psycopg2-specific (DB-API 2.0 mandates an implicit transaction on first statement). PHP `pg_query`, Ruby `pg` gem, and Node `node-postgres` all run in libpq autocommit by default — no cascade, no fix needed.
+
+### Better driver install hints (#47)
+
+Missing-driver `ImportError` messages now suggest a `uv add` command alongside `pip install`:
+
+```
+psycopg2 is required for PostgreSQL connections. Install one of:
+    uv add tina4-python[postgres]   # extra for projects using uv
+    pip install psycopg2-binary    # bare driver
+    uv add tina4-python[all-db]    # all five database drivers
+```
+
+Applies to the PostgreSQL, MySQL, MSSQL, Firebird, ODBC, and MongoDB drivers, plus the MongoDB queue backend.
+
+### Tests
+
+2,741 passing, 44 skipped (Postgres / MySQL / MongoDB containers).
+
+---
+
 ## v3.13.5 (2026-06-05)
 
 Frond static-facade parity across PHP, Ruby, Node.js. Closes the last documented v3 parity gap (tina4-python task #32). Python's `Frond.add_filter` / `add_global` / `add_test` have worked as classmethods since v3.13.0 — now PHP / Ruby / Node match.
@@ -508,8 +1218,6 @@ Drop in for both Python and PHP. No `.env` changes, no API changes.
 **Python users** who followed chapter 18 and hit `ModuleNotFoundError` — bump to `3.12.14`, the `from tina4_python.test import Test, assert_equal, ...` import now resolves. Existing tests written against `tina4_python.Testing` (the inline `@tests` decorator) continue to work — that surface was not touched.
 
 **PHP users** — `:named` and `?` both work, and the framework picks the right form for whichever driver is underneath. Existing ORM `save()` calls start succeeding on MariaDB/MySQL, PostgreSQL, MSSQL, and Firebird.
-
-**Ruby and Node users** — no framework change shipped in 3.12.14. Stay on `3.12.13` or bump to `3.12.14` for version alignment. Both are functionally identical.
 
 ## v3.12.13 (2026-05-29)
 

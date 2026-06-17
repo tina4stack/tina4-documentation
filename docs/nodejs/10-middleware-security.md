@@ -108,7 +108,7 @@ function customCors(req, res, next) {
     const origin = req.headers["origin"] ?? "";
 
     // Only allow CORS for specific paths
-    if (req.path.startsWith("/api/public")) {
+    if (req.url.startsWith("/api/public")) {
         cors()(req, res, next);
         return;
     }
@@ -557,7 +557,7 @@ Skip `next()` and the chain stops cold. The route handler never runs. This is ho
 function maintenanceMode(req, res, next) {
     if (process.env.MAINTENANCE_MODE === "true") {
         // Allow health checks through
-        if (req.path === "/health") {
+        if (req.url === "/health") {
             next();
             return;
         }
@@ -1196,16 +1196,32 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 
 ### Protecting a GET Route
 
-Admin dashboards, user profiles, account settings — some pages need protection even though they only read data. Export `meta` with `secured: true`:
+Admin dashboards, user profiles, account settings — some pages need protection even though they only read data. The framework only enforces the Bearer-token gate on routes whose `secure` flag is set, and that flag is set by registering the route programmatically and chaining `.secure()` (there is no `meta`/`secured` export that file-discovery reads):
+
+```typescript
+// src/routes/admin.ts
+import { get } from "tina4-nodejs";
+
+// .secure() flips the framework's auth gate on for this GET route.
+get("/api/admin/users", async (req, res) => {
+    // Requires a valid Bearer token, even though it's a GET.
+    return res.json({ users: [] });
+}).secure();
+```
+
+For a file-discovered `get.ts` route that has no `.secure()` hook, verify the token inside the handler instead:
 
 ```typescript
 // src/routes/api/admin/users/get.ts
+import { validToken } from "tina4-nodejs";
 import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 
-export const meta = { secured: true };
-
 export default async function (req: Tina4Request, res: Tina4Response) {
-    // Requires a valid Bearer token, even though it's a GET.
+    const auth = req.headers.authorization ?? "";
+    const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+    if (!validToken(token)) {
+        return res.status(401).json({ error: "Authentication required" });
+    }
     return res.json({ users: [] });
 }
 ```
@@ -1214,10 +1230,10 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 
 | Method | Default | Override |
 |--------|---------|----------|
-| GET, HEAD, OPTIONS | Public | `{ secured: true }` to protect |
-| POST, PUT, PATCH, DELETE | Auth required | `{ noAuth: true }` to open |
+| GET, HEAD, OPTIONS | Public | chain `.secure()` on a programmatic route (or check the token in-handler) |
+| POST, PUT, PATCH, DELETE | Auth required | chain `.noAuth()` on a programmatic route to open |
 
-One export. One rule. No surprises.
+Write routes are secured by default; reads are public unless you opt in.
 
 ---
 

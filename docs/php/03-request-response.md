@@ -50,20 +50,6 @@ The URL path, stripped of query parameters:
 $request->path // "/api/users"
 ```
 
-### url and queryString
-
-`$request->url` is the full absolute URL. `$request->queryString` is the raw query string with no leading `?`:
-
-```php
-// Request to https://api.example.com/api/users?page=2
-$request->path         // "/api/users"
-$request->url          // "https://api.example.com/api/users?page=2"
-$request->queryString  // "page=2"
-$request->query        // ["page" => "2"]
-```
-
-`$request->url` honours `X-Forwarded-Proto` and `X-Forwarded-Host`, so apps behind a proxy see the URL the client actually used. The shape matches Python, Ruby, and Node.
-
 ### params
 
 Path parameters captured from the URL pattern (see Chapter 2):

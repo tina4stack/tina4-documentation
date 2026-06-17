@@ -16,15 +16,15 @@ Store locale files as JSON in `src/locales/`. Name them by locale code.
 
 ```json
 {
-  "greeting": "Hello, {name}!",
+  "greeting": "Hello, %{name}!",
   "order": {
     "confirmation": "Order Confirmation",
-    "placed": "Your order #{number} has been placed.",
-    "total": "Total: {currency}{amount}"
+    "placed": "Your order #%{number} has been placed.",
+    "total": "Total: %{currency}%{amount}"
   },
   "errors": {
     "invalid_email": "Invalid email address.",
-    "required": "{field} is required."
+    "required": "%{field} is required."
   },
   "nav": {
     "home": "Home",
@@ -38,15 +38,15 @@ Store locale files as JSON in `src/locales/`. Name them by locale code.
 
 ```json
 {
-  "greeting": "Bonjour, {name}!",
+  "greeting": "Bonjour, %{name}!",
   "order": {
     "confirmation": "Confirmation de commande",
-    "placed": "Votre commande #{number} a été passée.",
-    "total": "Total: {currency}{amount}"
+    "placed": "Votre commande #%{number} a été passée.",
+    "total": "Total: %{currency}%{amount}"
   },
   "errors": {
     "invalid_email": "Adresse e-mail invalide.",
-    "required": "{field} est requis."
+    "required": "%{field} est requis."
   },
   "nav": {
     "home": "Accueil",
@@ -60,16 +60,19 @@ Store locale files as JSON in `src/locales/`. Name them by locale code.
 
 ## 3. Basic Translation
 
-```ruby
-i18n = Tina4::I18n.new(locale: "en", path: "src/locales")
+`Tina4::Localization` is a module-level singleton. Load the locale files once at startup, then translate with `t`:
 
-puts i18n.t("greeting", name: "Alice")
+```ruby
+Tina4::Localization.load          # scans locales/, translations/, i18n/, src/locales/
+Tina4::Localization.set_locale("en")
+
+puts Tina4::Localization.t("greeting", name: "Alice")
 # => Hello, Alice!
 
-puts i18n.t("order.confirmation")
+puts Tina4::Localization.t("order.confirmation")
 # => Order Confirmation
 
-puts i18n.t("nav.logout")
+puts Tina4::Localization.t("nav.logout")
 # => Log Out
 ```
 
@@ -79,16 +82,16 @@ Dot notation navigates nested keys. `"order.confirmation"` maps to `locales["ord
 
 ## 4. Interpolation
 
-Use `{placeholder}` in locale values. Pass named keyword arguments to `t`.
+Use `%{placeholder}` in locale values. Pass named keyword arguments to `t`.
 
 ```ruby
-puts i18n.t("order.placed", number: "1042")
+puts Tina4::Localization.t("order.placed", number: "1042")
 # => Your order #1042 has been placed.
 
-puts i18n.t("order.total", currency: "$", amount: "79.99")
+puts Tina4::Localization.t("order.total", currency: "$", amount: "79.99")
 # => Total: $79.99
 
-puts i18n.t("errors.required", field: "Email")
+puts Tina4::Localization.t("errors.required", field: "Email")
 # => Email is required.
 ```
 
@@ -98,17 +101,21 @@ Missing interpolation variables are left as-is in the output string.
 
 ## 5. Switching Locales
 
-Create one `I18n` instance per locale, or call `locale=` to switch.
+Call `set_locale` to change the active locale, or pass `locale:` to a single `t` call.
 
 ```ruby
-i18n = Tina4::I18n.new(locale: "en", path: "src/locales")
+Tina4::Localization.set_locale("en")
 
-puts i18n.t("greeting", name: "Alice")
+puts Tina4::Localization.t("greeting", name: "Alice")
 # => Hello, Alice!
 
-i18n.locale = "fr"
+Tina4::Localization.set_locale("fr")
 
-puts i18n.t("greeting", name: "Alice")
+puts Tina4::Localization.t("greeting", name: "Alice")
+# => Bonjour, Alice!
+
+# Or override for a single call without changing the active locale:
+puts Tina4::Localization.t("greeting", locale: "fr", name: "Alice")
 # => Bonjour, Alice!
 ```
 
@@ -116,18 +123,18 @@ puts i18n.t("greeting", name: "Alice")
 
 ## 6. Fallback Locale
 
-When a key is missing from the active locale, fall back to a default.
+When a key is missing from the active locale, `t` automatically falls back to English (`"en"`) before returning the key itself.
 
 ```ruby
-i18n = Tina4::I18n.new(
-  locale: "de",
-  path: "src/locales",
-  fallback: "en"
-)
+Tina4::Localization.set_locale("de")
 
 # "de" locale has no "nav.logout" key
-puts i18n.t("nav.logout")
+puts Tina4::Localization.t("nav.logout")
 # => Log Out  (falls back to English)
+
+# You can also supply an explicit default for a single call:
+puts Tina4::Localization.t("nav.missing", default: "Menu")
+# => Menu
 ```
 
 Fallback prevents missing key errors in partially translated locales.
@@ -136,7 +143,7 @@ Fallback prevents missing key errors in partially translated locales.
 
 ## 7. Per-Request Locale in Routes
 
-Read the user's preferred locale from a header, cookie, or query param and set it on a per-request `I18n` instance.
+Read the user's preferred locale from a header, cookie, or query param and pass it to `t` with `locale:`. Passing `locale:` per call avoids mutating the shared active locale across concurrent requests.
 
 ```ruby
 # @noauth
@@ -144,10 +151,8 @@ Tina4::Router.get("/api/greeting") do |request, response|
   locale = request.headers["Accept-Language"]&.split(",")&.first&.strip || "en"
   locale = locale[0..1]  # normalize "fr-FR" to "fr"
 
-  i18n = Tina4::I18n.new(locale: locale, path: "src/locales", fallback: "en")
-
   response.json({
-    message: i18n.t("greeting", name: "World"),
+    message: Tina4::Localization.t("greeting", locale: locale, name: "World"),
     locale: locale
   })
 end
@@ -178,8 +183,8 @@ German falls back to English because `de.json` does not exist.
 List all locale files present in the locales directory.
 
 ```ruby
-i18n = Tina4::I18n.new(locale: "en", path: "src/locales")
-puts i18n.available_locales.inspect
+Tina4::Localization.load
+puts Tina4::Localization.available_locales.inspect
 # => ["en", "fr"]
 ```
 
@@ -188,8 +193,7 @@ Use this to build a language switcher UI.
 ```ruby
 # @noauth
 Tina4::Router.get("/api/locales") do |request, response|
-  i18n = Tina4::I18n.new(locale: "en", path: "src/locales")
-  response.json({ locales: i18n.available_locales })
+  response.json({ locales: Tina4::Localization.available_locales })
 end
 ```
 
@@ -197,14 +201,14 @@ end
 
 ## 9. Locale in Templates
 
-Pass the `I18n` instance to your template context.
+Tina4 auto-wires `t()` as a template global, so templates call it directly. Set the active locale for the request before rendering.
 
 ```ruby
 Tina4::Router.get("/dashboard") do |request, response|
   locale = request.cookies["locale"] || "en"
-  i18n = Tina4::I18n.new(locale: locale, path: "src/locales", fallback: "en")
+  Tina4::Localization.set_locale(locale)
 
-  response.render("dashboard.html", { i18n: i18n, user: { name: "Alice" } })
+  response.render("dashboard.html", { user: { name: "Alice" } })
 end
 ```
 
@@ -212,12 +216,12 @@ In `src/templates/dashboard.html` (Frond template):
 
 ```html
 <nav>
-  <a href="/">{i18n.t("nav.home")}</a>
-  <a href="/account">{i18n.t("nav.account")}</a>
-  <a href="/logout">{i18n.t("nav.logout")}</a>
+  <a href="/">{{ t("nav.home") }}</a>
+  <a href="/account">{{ t("nav.account") }}</a>
+  <a href="/logout">{{ t("nav.logout") }}</a>
 </nav>
 
-<h1>{i18n.t("greeting", name: user.name)}</h1>
+<h1>{{ t("greeting", name=user.name) }}</h1>
 ```
 
 ---
@@ -227,12 +231,10 @@ In `src/templates/dashboard.html` (Frond template):
 Add locale-specific formatting helpers to your locale files or handle them with Ruby's standard library.
 
 ```ruby
-i18n = Tina4::I18n.new(locale: "en", path: "src/locales")
-
 # Format a date string for the current locale
 date = Time.now
 
-formatted = case i18n.locale
+formatted = case Tina4::Localization.current_locale
             when "en" then date.strftime("%B %-d, %Y")
             when "fr" then date.strftime("%-d %B %Y")
             when "de" then date.strftime("%-d. %B %Y")
@@ -255,7 +257,7 @@ If the requested locale file does not exist and a fallback is set, the fallback 
 
 ### 2. Nested key typo
 
-`i18n.t("order.confimation")` (typo) returns the key string `"order.confimation"` unchanged. If you see keys appearing raw in the UI, check for spelling mistakes in your `t()` calls.
+`Tina4::Localization.t("order.confimation")` (typo) returns the key string `"order.confimation"` unchanged. If you see keys appearing raw in the UI, check for spelling mistakes in your `t()` calls.
 
 ### 3. Reload locale files in development
 

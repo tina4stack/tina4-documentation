@@ -10,9 +10,9 @@ No magic. No hidden queries. You see exactly what runs.
 
 ---
 
-## 2. The Factory: `QueryBuilder::from()`
+## 2. The Factory: `QueryBuilder::fromTable()`
 
-The constructor is private. You create a QueryBuilder through the static `from()` method:
+The constructor is private. You create a QueryBuilder through the static `fromTable()` method:
 
 ```php
 <?php
@@ -21,7 +21,7 @@ use Tina4\Database\Database;
 
 $db = Database::create("sqlite:///data/app.db");
 
-$qb = QueryBuilder::from("users", $db);
+$qb = QueryBuilder::fromTable("users", $db);
 ```
 
 Two arguments:
@@ -32,7 +32,7 @@ Two arguments:
 The factory returns a fresh `QueryBuilder` instance. Chain methods directly:
 
 ```php
-$result = QueryBuilder::from("users", $db)
+$result = QueryBuilder::fromTable("users", $db)
     ->select("id", "name")
     ->where("active = ?", [1])
     ->get();
@@ -45,14 +45,14 @@ $result = QueryBuilder::from("users", $db)
 By default the builder selects all columns (`*`). Narrow the selection with `select()`:
 
 ```php
-$qb = QueryBuilder::from("products", $db)
+$qb = QueryBuilder::fromTable("products", $db)
     ->select("id", "name", "price");
 ```
 
 Pass column names as separate string arguments. Expressions work too:
 
 ```php
-$qb = QueryBuilder::from("orders", $db)
+$qb = QueryBuilder::fromTable("orders", $db)
     ->select("customer_id", "SUM(total) as revenue");
 ```
 
@@ -65,7 +65,7 @@ If you never call `select()`, the builder uses `SELECT *`.
 Add a `WHERE` condition with `where()`:
 
 ```php
-$qb = QueryBuilder::from("users", $db)
+$qb = QueryBuilder::fromTable("users", $db)
     ->where("active = ?", [1]);
 ```
 
@@ -76,7 +76,7 @@ The first argument is the SQL condition. Use `?` placeholders for parameter bind
 Each call adds an `AND` condition:
 
 ```php
-$qb = QueryBuilder::from("products", $db)
+$qb = QueryBuilder::fromTable("products", $db)
     ->where("price > ?", [10])
     ->where("category = ?", ["electronics"]);
 ```
@@ -94,7 +94,7 @@ Parameters are accumulated in order: `[10, "electronics"]`.
 For conditions that do not need binding:
 
 ```php
-$qb = QueryBuilder::from("users", $db)
+$qb = QueryBuilder::fromTable("users", $db)
     ->where("email IS NOT NULL");
 ```
 
@@ -107,7 +107,7 @@ The second argument defaults to an empty array.
 Use `orWhere()` to add an `OR` condition:
 
 ```php
-$qb = QueryBuilder::from("products", $db)
+$qb = QueryBuilder::fromTable("products", $db)
     ->where("category = ?", ["books"])
     ->orWhere("category = ?", ["music"]);
 ```
@@ -121,7 +121,7 @@ SELECT * FROM products WHERE category = ? OR category = ?
 The first condition in the chain never has a connector prefix. The second gets `OR`. If you mix `where()` and `orWhere()`, they appear in order:
 
 ```php
-$qb = QueryBuilder::from("products", $db)
+$qb = QueryBuilder::fromTable("products", $db)
     ->where("active = ?", [1])
     ->where("price > ?", [5])
     ->orWhere("featured = ?", [1]);
@@ -146,7 +146,7 @@ Standard SQL operator precedence applies. If you need grouping, write the groupe
 ### Inner Join
 
 ```php
-$qb = QueryBuilder::from("orders", $db)
+$qb = QueryBuilder::fromTable("orders", $db)
     ->select("orders.id", "users.name", "orders.total")
     ->join("users", "users.id = orders.user_id");
 ```
@@ -160,7 +160,7 @@ SELECT orders.id, users.name, orders.total FROM orders INNER JOIN users ON users
 ### Left Join
 
 ```php
-$qb = QueryBuilder::from("users", $db)
+$qb = QueryBuilder::fromTable("users", $db)
     ->select("users.name", "orders.id as order_id")
     ->leftJoin("orders", "orders.user_id = users.id");
 ```
@@ -176,7 +176,7 @@ SELECT users.name, orders.id as order_id FROM users LEFT JOIN orders ON orders.u
 Chain as many as you need:
 
 ```php
-$qb = QueryBuilder::from("orders", $db)
+$qb = QueryBuilder::fromTable("orders", $db)
     ->select("orders.id", "users.name", "products.name as product")
     ->join("users", "users.id = orders.user_id")
     ->join("order_items", "order_items.order_id = orders.id")
@@ -190,7 +190,7 @@ Joins appear in the SQL in the order you call them.
 ## 7. Grouping: `groupBy()`
 
 ```php
-$qb = QueryBuilder::from("orders", $db)
+$qb = QueryBuilder::fromTable("orders", $db)
     ->select("customer_id", "COUNT(*) as order_count")
     ->groupBy("customer_id");
 ```
@@ -204,7 +204,7 @@ SELECT customer_id, COUNT(*) as order_count FROM orders GROUP BY customer_id
 Call `groupBy()` multiple times for multiple columns:
 
 ```php
-$qb = QueryBuilder::from("orders", $db)
+$qb = QueryBuilder::fromTable("orders", $db)
     ->select("customer_id", "status", "COUNT(*) as cnt")
     ->groupBy("customer_id")
     ->groupBy("status");
@@ -223,7 +223,7 @@ SELECT customer_id, status, COUNT(*) as cnt FROM orders GROUP BY customer_id, st
 `having()` filters aggregated results. It works like `where()` but applies after `GROUP BY`:
 
 ```php
-$qb = QueryBuilder::from("orders", $db)
+$qb = QueryBuilder::fromTable("orders", $db)
     ->select("customer_id", "SUM(total) as revenue")
     ->groupBy("customer_id")
     ->having("SUM(total) > ?", [1000]);
@@ -238,7 +238,7 @@ SELECT customer_id, SUM(total) as revenue FROM orders GROUP BY customer_id HAVIN
 Multiple `having()` calls are joined with `AND`:
 
 ```php
-$qb = QueryBuilder::from("orders", $db)
+$qb = QueryBuilder::fromTable("orders", $db)
     ->select("customer_id", "COUNT(*) as cnt", "SUM(total) as revenue")
     ->groupBy("customer_id")
     ->having("COUNT(*) > ?", [5])
@@ -256,14 +256,14 @@ Generates:
 ## 9. Sorting: `orderBy()`
 
 ```php
-$qb = QueryBuilder::from("products", $db)
+$qb = QueryBuilder::fromTable("products", $db)
     ->orderBy("price ASC");
 ```
 
 Pass the column name and direction as a single string. Call multiple times for multi-column sorts:
 
 ```php
-$qb = QueryBuilder::from("products", $db)
+$qb = QueryBuilder::fromTable("products", $db)
     ->orderBy("category ASC")
     ->orderBy("price DESC");
 ```
@@ -279,14 +279,14 @@ SELECT * FROM products ORDER BY category ASC, price DESC
 ## 10. Pagination: `limit()`
 
 ```php
-$qb = QueryBuilder::from("products", $db)
+$qb = QueryBuilder::fromTable("products", $db)
     ->limit(10);
 ```
 
 With an offset for pagination:
 
 ```php
-$qb = QueryBuilder::from("products", $db)
+$qb = QueryBuilder::fromTable("products", $db)
     ->limit(10, 20); // 10 rows, skip 20
 ```
 
@@ -299,7 +299,7 @@ The first argument is the maximum number of rows. The second is the offset (numb
 `toSql()` returns the constructed SQL string without executing it. Invaluable for debugging:
 
 ```php
-$qb = QueryBuilder::from("orders", $db)
+$qb = QueryBuilder::fromTable("orders", $db)
     ->select("customer_id", "SUM(total) as revenue")
     ->join("users", "users.id = orders.user_id")
     ->where("orders.status = ?", ["completed"])
@@ -325,12 +325,12 @@ Note: `toSql()` does not include the `LIMIT`/`OFFSET` in the SQL string. Those v
 
 ## 12. Execution Methods
 
-Four methods execute the query against the database. All require a `DatabaseAdapter` passed to `from()`.
+Four methods execute the query against the database. All require a `DatabaseAdapter` passed to `fromTable()`.
 
 ### `get()` -- Fetch All Matching Rows
 
 ```php
-$result = QueryBuilder::from("users", $db)
+$result = QueryBuilder::fromTable("users", $db)
     ->where("active = ?", [1])
     ->orderBy("name ASC")
     ->limit(25)
@@ -348,7 +348,7 @@ foreach ($result['data'] as $row) {
 ### `first()` -- Fetch a Single Row
 
 ```php
-$user = QueryBuilder::from("users", $db)
+$user = QueryBuilder::fromTable("users", $db)
     ->where("email = ?", ["alice@example.com"])
     ->first();
 
@@ -362,7 +362,7 @@ Returns an associative array for the first matching row, or `null` if nothing ma
 ### `count()` -- Count Matching Rows
 
 ```php
-$total = QueryBuilder::from("orders", $db)
+$total = QueryBuilder::fromTable("orders", $db)
     ->where("status = ?", ["pending"])
     ->count();
 
@@ -374,7 +374,7 @@ Returns an integer. Internally replaces your column list with `COUNT(*) as cnt`,
 ### `exists()` -- Check for Any Match
 
 ```php
-$hasAdmin = QueryBuilder::from("users", $db)
+$hasAdmin = QueryBuilder::fromTable("users", $db)
     ->where("role = ?", ["admin"])
     ->exists();
 
@@ -392,7 +392,7 @@ Returns a boolean. Calls `count()` internally and checks if the result is greate
 Every method returns `$this`. Chain them in any order (though a logical order improves readability):
 
 ```php
-$topCustomers = QueryBuilder::from("orders", $db)
+$topCustomers = QueryBuilder::fromTable("orders", $db)
     ->select("users.name", "users.email", "COUNT(*) as order_count", "SUM(orders.total) as total_spent")
     ->join("users", "users.id = orders.user_id")
     ->where("orders.created_at > ?", ["2025-01-01"])
@@ -426,7 +426,7 @@ use Tina4\QueryBuilder;
 Router::get("/api/products", function (Request $request, Response $response) {
     global $db;
 
-    $qb = QueryBuilder::from("products", $db)
+    $qb = QueryBuilder::fromTable("products", $db)
         ->select("id", "name", "price", "category")
         ->where("active = ?", [1])
         ->orderBy("name ASC")
@@ -446,7 +446,7 @@ Build queries conditionally based on request parameters:
 Router::get("/api/products/search", function (Request $request, Response $response) {
     global $db;
 
-    $qb = QueryBuilder::from("products", $db)
+    $qb = QueryBuilder::fromTable("products", $db)
         ->select("id", "name", "price", "category")
         ->where("active = ?", [1]);
 
@@ -497,7 +497,7 @@ class User extends \Tina4\ORM
     public static function query(): QueryBuilder
     {
         global $db;
-        return QueryBuilder::from("users", $db);
+        return QueryBuilder::fromTable("users", $db);
     }
 }
 ```
@@ -545,13 +545,12 @@ The QueryBuilder can generate MongoDB-compatible query documents with `toMongo()
 ### Example
 
 ```php
-$query = QueryBuilder::from("users")
+$query = QueryBuilder::fromTable("users")
     ->select("name", "email")
     ->where("age > ?", [25])
     ->where("status = ?", ["active"])
     ->orderBy("name ASC")
-    ->limit(10)
-    ->offset(5);
+    ->limit(10, 5);
 
 $mongo = $query->toMongo();
 ```
@@ -592,11 +591,11 @@ $cursor = $collection->find(
 Calling `get()`, `first()`, `count()`, or `exists()` without a database adapter throws a `RuntimeException`:
 
 ```php
-$qb = QueryBuilder::from("users"); // no $db
+$qb = QueryBuilder::fromTable("users"); // no $db
 $qb->get(); // RuntimeException: QueryBuilder: No database adapter provided.
 ```
 
-Fix: pass a `DatabaseAdapter` as the second argument to `from()`.
+Fix: pass a `DatabaseAdapter` as the second argument to `fromTable()`.
 
 ### Parameter Order Matters
 
@@ -703,7 +702,7 @@ Router::get("/api/products/search", function (Request $request, Response $respon
     global $db;
 
     try {
-        $qb = QueryBuilder::from("products", $db)
+        $qb = QueryBuilder::fromTable("products", $db)
             ->select("id", "name", "category", "price")
             ->where("active = ?", [1]);
 
@@ -735,7 +734,7 @@ Router::get("/api/products/search", function (Request $request, Response $respon
         $qb->limit($limit, $page * $limit);
 
         // Get total count (separate query)
-        $countQb = QueryBuilder::from("products", $db)
+        $countQb = QueryBuilder::fromTable("products", $db)
             ->where("active = ?", [1]);
 
         if (!empty($request->query["category"])) {
@@ -803,7 +802,7 @@ Check the log output. The SQL should match your filters exactly. No extra condit
 
 | Method | Purpose | Returns |
 |--------|---------|---------|
-| `QueryBuilder::from($table, $db)` | Create a builder | `QueryBuilder` |
+| `QueryBuilder::fromTable($table, $db)` | Create a builder | `QueryBuilder` |
 | `->select(...$columns)` | Set columns | `$this` |
 | `->where($condition, $params)` | AND filter | `$this` |
 | `->orWhere($condition, $params)` | OR filter | `$this` |

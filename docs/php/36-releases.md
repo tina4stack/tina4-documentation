@@ -1,5 +1,498 @@
 # Chapter 35: Release Notes
 
+## v3.13.31 (2026-06-17) — Version alignment (no functional change in PHP)
+
+Cross-framework version alignment with the Ruby request/response parity release. PHP's request body, query, headers, cookies, file uploads (raw-bytes `content`), and response surface were already in parity — no behavioural change here. Full suite: 3,024 passing.
+
+## v3.13.30 (2026-06-16) — Typed route params coerce + /__dev auth-bypass fixed (⚠ behavioural change)
+
+**Behavioural change.** Typed path params now arrive coerced: `{id:int}` → `int`, `{price:float}` → `float` (other types and untyped params stay strings; matching unchanged). `compilePath()` computed the param-type map but `addRoute()` dropped it, so the existing cast in `matchInTable()` was dead code and `{id:int}` arrived as the string `"42"` — now wired through, bringing PHP in line with Python/Ruby/Node. Separately, a bug fix: the dev-admin auth bypass tested `$request->url` (always the full `scheme://host/path`) so it never matched — a write to `/__dev/…` (and the gallery prefixes) returned 401 instead of bypassing; it now tests `$request->path`. Full suite: 3,024 passing.
+
+## v3.13.29 (2026-06-16) — Live API search finds magic methods + ranks qualified queries
+
+Parity with the Python master fix for the `api_*` live-reflection tools (what AI assistants query for real signatures):
+
+- **Magic methods are now indexed.** `Frond::addFilter` / `addGlobal` / `addTest` dispatch through `__call`/`__callStatic`, so the token parser never saw them. `Docs` now reads `@method` docblock tags (and `Frond` declares them, which also helps IDE autocomplete), so `api_method("Frond", "addTest")` returns `addTest(string $name, callable $fn)`.
+- **Class-qualified ranking.** `api_search("Frond.addTest")` now ranks `Frond::addTest` first — the owning class, fqn segments, and an exact `Class.method` match are scored.
+- **Natural-name lookups.** `api_class`/`api_method` resolve a bare class name (`Database`) and leading-backslash variants, not just the exact fqn.
+
+The bundled AI skills now tell assistants to query `api_*` before guessing. Full suite: 3,014 passing.
+
+## v3.13.26 (2026-06-16) — pooling fixes: standalone writes auto-commit + independent pooled PostgreSQL connections
+
+**Behavioural default change.** A standalone write made **outside** an explicit transaction now auto-commits on its own connection before returning — the default `autoCommit` is flipped to *on* across all adapters. Previously autocommit was off by default, which broke connection pooling: a standalone write stayed uncommitted on one pooled connection while the next read round-robined to another and saw nothing. Explicit transactions (`startTransaction`/`commit`/`rollback`) stay atomic — MySQL/MSSQL suspend driver autocommit for the duration of the transaction, and Firebird's commit branch is gated on `transaction === null`. Set `TINA4_AUTOCOMMIT=false` for strict manual-commit mode (per-connection override: `Database::create($url, autoCommit: false)`).
+
+**PostgreSQL pooling fix.** `pg_connect()` was reusing a single libpq connection for every adapter that shared a DSN, so a `pool` of N adapters all shared **one** connection — and closing one broke the rest. Pooled adapters now each open an independent connection (`PGSQL_CONNECT_FORCE_NEW`), matching Python, Node, and Ruby.
+
+Verified live on PostgreSQL: standalone write visible from a separate connection, explicit rollback discards, explicit commit persists, and pooled standalone writes visible across every round-robin connection. Full suite: 3,011 passing.
+
+## v3.13.24 (2026-06-15) — unified cache backends across response, KV, and persistent DB cache
+
+The response/KV cache now supports **seven backends**, selected by `TINA4_CACHE_BACKEND`: `memory` (default), `file`, `redis`, `valkey`, `memcached`, `mongodb`, and `database`. `TINA4_CACHE_URL` carries the connection string for `redis`/`valkey`/`memcached`/`mongodb`, or a SQL URL for the `database` backend (which falls back to `TINA4_DATABASE_URL`). Credentials can be embedded in the URL (`redis://user:pass@host`, `redis://:pass@host`, `mongodb://user:pass@host`) or supplied via `TINA4_CACHE_USERNAME` / `TINA4_CACHE_PASSWORD` (mirroring `TINA4_DATABASE_USERNAME`/`_PASSWORD`); memcached is unauthenticated. The usual `TINA4_CACHE_TTL` (60), `TINA4_CACHE_MAX_ENTRIES` (1000), and `TINA4_CACHE_DIR` (`data/cache`) still apply.
+
+**Graceful fallback:** if a configured backend's driver is missing or the service/credentials are unreachable or wrong, the cache logs a warning and falls back to the **file** backend — a real persistent cache, never a silent no-op.
+
+The **persistent DB query cache** (`TINA4_DB_CACHE=true`) now routes through the same backend set via `TINA4_DB_CACHE_BACKEND` + `TINA4_DB_CACHE_URL`, so multiple instances share one cache with global write-invalidation. `cacheStats()` now reports a `backend` field alongside `mode`.
+
+Full suite: 3,010 tests passing.
+
+## v3.13.23 (2026-06-15) — request-scoped DB query cache, on by default
+
+A new **request-scoped query cache** protects your database from rapid repeat reads. Within a single request, identical `SELECT`s and ORM reads are deduped automatically — the DB is hit once and subsequent identical reads are served from memory. The cache is **cleared at the start of every request** (so it never serves stale rows across requests) and **flushed on any write** (insert/update/delete/execute). For non-request contexts (scripts, workers) a short safety TTL applies.
+
+It is **on by default** via `TINA4_AUTO_CACHING=true` (off-switch `TINA4_AUTO_CACHING=false`); the in-request TTL is `TINA4_AUTO_CACHING_TTL` (default 5 seconds). The existing `TINA4_DB_CACHE` (default `false`) remains the separate *persistent* cross-request cache (TTL `TINA4_DB_CACHE_TTL`, default 30s) and is not cleared per request. `cacheStats()` now reports a `mode` field: `"request"` (default), `"persistent"`, or `"off"`.
+
+**Also fixed:** the `\Tina4\Middleware\cache_get/cache_set/cache_delete/cache_clear/cache_stats` helpers now autoload on a plain `require` — previously they fataled with "undefined function" until the `ResponseCache` class had been touched.
+
+Full suite: 2,992 tests passing.
+
+## v3.13.21 (2026-06-15) — docs: `render()` corrections + version re-sync
+
+Documentation consistency pass — no behavior change. References to a `$response->template()` *method* (which never existed) are corrected to **`$response->render()`** — the real method; `template` is only the route-level binding, not a response method. Fixed across the AI guide, `llms.txt`, and the gallery page. Version re-synced to 3.13.21 with the other frameworks (this release also carries a Python-side JWT-secret security hardening).
+
+Full suite: 2,433 tests passing.
+
+## v3.13.19 (2026-06-15) — return domain objects, construct from JSON, and one database binder
+
+Three ergonomic improvements surfaced by the live side-by-side review of the book's own examples across all four frameworks.
+
+### `$response(...)` serializes domain objects
+
+Return an ORM model, an array of models, or a query result straight from a route — Tina4 serializes it to JSON. No more hand-rolled `toDict()` / `toJson()`:
+
+```php
+Router::get('/api/users', function ($request, $response) {
+    return $response((new User())->all());     // array of models -> JSON array
+});
+```
+
+A single model becomes a JSON object; an array of models or a `DatabaseResult` becomes a JSON array. Plain arrays and strings behave exactly as before — purely additive. (`Response::json()` still pretty-prints.)
+
+### Construct a model from JSON, or data-first
+
+```php
+new User('{"name": "Alice"}');     // JSON object string -> one record
+new User(['name' => 'Alice']);     // array data-first (NEW — no need for the data: arg)
+new User(data: ['name' => 'Alice']); // still works
+new User($db, ['name' => 'Alice']);  // still works ($db first)
+```
+
+The first constructor argument is now type-detected (a `DatabaseAdapter`, an array, or a JSON string). Passing a **list** to a single-record constructor throws `InvalidArgumentException`. To build many records, map over the list.
+
+### ⚠ Breaking — one database binder: `bindDatabase`
+
+The ORM-to-database binder is now **`bindDatabase`** (was `ORM::setGlobalDb`). The default is unchanged — models still auto-bind to `TINA4_DATABASE_URL` (via `Database::fromEnv()`), so apps relying on the `.env` default need **no change**.
+
+```php
+// Most apps: nothing to do — the .env default is auto-bound.
+
+\Tina4\ORM::bindDatabase(Database::create('sqlite:///app.db'));   // override the default
+
+// Register a NAMED connection and point a model at it:
+\Tina4\ORM::bindDatabase(
+    Database::create('postgres://…/analytics', username: 'u', password: 'p'),
+    name: 'analytics'
+);
+
+class Visit extends \Tina4\ORM {
+    public \Tina4\Database\DatabaseAdapter|string|null $_db = 'analytics';  // uses the analytics connection
+}
+```
+
+`bindDatabase($db, name: '…')` registers a named connection; a model selects it with `$_db = '…'`. A missing named connection throws a clear error.
+
+**Migration:** rename `\Tina4\ORM::setGlobalDb(...)` → `\Tina4\ORM::bindDatabase(...)`. That is the only change.
+
+Full suite: 2,433 tests passing. Shipped with parity across all four frameworks.
+
+## v3.13.18 (2026-06-15) — ORM relationship + QueryBuilder fixes + boolean param binding
+
+Found by the live side-by-side validation against PostgreSQL.
+
+- **QueryBuilder `first()` / `count()` returned null/0** even with matching rows — `get()` returns a `DatabaseResult` but `first()`/`count()` read `$result['data']` (raw-array shape). All three now consume the result via a shared `extractRecords()`: `first()` returns the row, `count()` the integer, and `groupBy().get()` returns every group.
+- **`belongsTo` returned null for a snake_case FK column** under autoMap — the lookup read `$this->{column}` but autoMap stores the value under the camelCase property. It now reverse-maps column → property, so the documented `$foreignKeys=['author_id'=>'Author']` form resolves the parent (lazy `$post->author`, explicit, and eager `include:['author']`).
+- **`fetch()` corrupted SQL that already ended in `LIMIT`** — it appended `LIMIT 100 OFFSET 0` unconditionally (`… LIMIT 1 LIMIT 100`), PG errored, the adapter swallowed it → empty result. It now skips the append when a trailing `LIMIT` is present.
+- **Bound PHP booleans are normalised** to the literal the column accepts — `'t'`/`'f'` on PostgreSQL's native `BOOLEAN`, `1`/`0` on the integer/BIT-backed engines (SQLite, MySQL, MSSQL, Firebird). Previously `fetch('… WHERE active = ?', [false])` bound `''` and PG rejected it.
+- Doc: `DatabaseUrl` docstring corrected to `postgres://` / `postgresql://` (not `pgsql://`).
+
+Python/Ruby/Node were already correct on the boolean binding (verified live). Full suite: 2,416 passing.
+
+## v3.13.17 (2026-06-15) — PostgreSQL: native-type reads + `execute()` reports real failure
+
+Two fixes found by the live side-by-side validation against PostgreSQL.
+
+### Reads return native PHP types (not strings)
+
+`ext-pgsql` returns every column as a string — `id` as `"1"`, a boolean as `"t"`, floats as `"12.50"`. A Tina4 app written on SQLite (native-ish types) silently changed behaviour when moved to PostgreSQL, and diverged from Python/Node which return native types. `PostgresAdapter` now coerces each column from its PG type: `int2`/`int4`/`int8` → `int`, `bool` → `bool`, `float4`/`float8`/`numeric` → `float` (nulls preserved; `bytea` unchanged). So `$result[0]` is now `{"id":1,"active":true,...}` instead of all-strings. (`timestamp`/`date`/`json`/`uuid` stay strings — a minor diff vs Python's datetime objects.)
+
+### `execute()` propagates failure
+
+`Database::execute()` returned `true` unconditionally for a plain write/DDL, discarding the adapter's boolean result — so a failed INSERT/UPDATE/DELETE/DDL reported success. (Python/Ruby/Node were already correct: their adapters *raise* and the facade catches; PHP adapters *return false*, which the facade ignored.) It now returns `false` and populates `getError()` from the adapter when the statement fails. A write affecting 0 rows is still a success.
+
+Full suite: 2,405 passing. Python/Node already had both behaviours (Ruby ships the native-reads half), so this is primarily a PHP release.
+
+## v3.13.16 (2026-06-15) — `createTable()` works on PostgreSQL + `DatabaseResult` index access
+
+Found by the live documentation-verification pass — running the book's own samples against a real PostgreSQL database. The documented code-first schema path, `ORM::createTable()`, was silently broken on PostgreSQL: it ignored the model entirely, emitted a hardcoded SQLite `INTEGER PRIMARY KEY AUTOINCREMENT`, PG rejected it, and it returned `true` while creating **no table**.
+
+### `createTable()` is now engine-aware
+
+It now derives the DDL from the model's typed properties:
+
+- **datetime → `TIMESTAMP`** on PostgreSQL/Firebird (no `DATETIME` there); `DATETIME` on SQLite/MySQL/MSSQL.
+- **bool → native `BOOLEAN`** (PostgreSQL/MySQL), `BIT` (MSSQL), `INTEGER` (SQLite/Firebird); boolean `DEFAULT`s engine-aware (`TRUE`/`FALSE` vs `1`/`0`).
+- Auto-increment translated per engine (`SERIAL` on PostgreSQL) via `SqlTranslation`.
+- **A failed `CREATE` now returns `false`** (with a post-create `tableExists` re-check + `Log::error`) instead of reporting success.
+
+`DatabaseResult` already implements `ArrayAccess`, so `$result[0]` works (no change needed there).
+
+Verified against PostgreSQL 16: a model with `id` (auto-increment) + string + bool + datetime creates, inserts, and round-trips natively (`SERIAL`, `boolean`, `timestamp`; `WHERE active = TRUE` matches). New `CreateTablePostgresTest` (PG-gated). Full suite: 2,400 passing. Shipped with parity across all four frameworks.
+
+## v3.13.14 (2026-06-13) — Logs reach stdout in containers + per-request logging + schema-qualified tables (#48)
+
+**Cross-framework release (all four).** Deployed Docker containers were getting no application logs. In production PHP set `Log::$stdout = false` (logs went only to `logs/tina4.log` inside the container), never read `TINA4_LOG_LEVEL`, and didn't flush stdout. `docker logs` reads PID 1 stdout — so it was empty. A follow-on report — the dev server going silent after startup — surfaced a second gap: requests were never logged.
+
+### PHP also: #119 — legacy-env guard crash under the built-in server
+
+`App::checkLegacyEnvVars()` wrote its migration message with `fwrite(STDERR, ...)`. `STDERR` is only auto-defined for the `cli` SAPI — under `cli-server` (the built-in dev server) a bare `STDERR` in `namespace Tina4` resolved to the undefined `Tina4\STDERR`, so a user with a stray legacy var (e.g. `SMTP_HOST`) in `.env` got `Uncaught Error: Undefined constant "Tina4\STDERR"` instead of the actionable "rename these vars" message. Now writes to the `php://stderr` stream (available in every SAPI). The same latent pattern in `MCP.php` was fixed alongside. New `cli-server` subprocess regression test reproduces it.
+
+### Per-request logging — on by default in dev
+
+Every request now logs one line through `Tina4\Log` (→ stdout), on by default in dev and opt-in for production via `TINA4_LOG_REQUESTS`:
+
+```
+2026-06-12T10:15:03.221Z [INFO   ] GET /api/users -> 200 (12.3ms)
+```
+
+`Router::dispatch()` emits it at the end of every request. Format is identical across all four frameworks: `METHOD /path -> STATUS (Nms)`. Default: on under `TINA4_DEBUG`, off in production; `TINA4_LOG_REQUESTS=true`/`false` overrides. The `RequestLogger` middleware's line now includes the status code for parity.
+
+### What changed (stdout)
+
+1. **stdout is ON by default** (was: only when `TINA4_DEBUG=true`). The default-case in `Log::configure()` now sets `$stdout = true`. `TINA4_LOG_OUTPUT=file` still opts out.
+2. **`Log::configure()` now reads `TINA4_LOG_LEVEL`** from the environment (it previously ignored it). Default level is **INFO** (was effectively DEBUG).
+3. **stdout is flushed** — `fflush()` after each `fwrite()` so logs appear immediately under the long-running built-in server instead of sitting in the stream buffer.
+4. **Production stdout is clean JSON** — `writeStdout()` no longer prepends ANSI colour when not in human-readable mode, so aggregators can parse the line.
+
+```php
+// In a container (TINA4_DEBUG unset), default config:
+\Tina4\Log::info("worker started");
+// pre-v3.13.14: only in logs/tina4.log inside the container → docker logs empty
+// v3.13.14:    {"timestamp":"...","level":"INFO","message":"worker started"} on stdout
+```
+
+### Why it spanned all four
+
+The bug was the same architectural decision in every framework — production logged to a file (or suppressed stdout) when a container's stdout *is* the log sink:
+
+| Framework | Pre-v3.13.14 cause | Fix |
+|---|---|---|
+| Python | `not _is_production` gate suppressed stdout; default ERROR | stdout always on (flushed); default INFO |
+| PHP | `$stdout = $development` (file-only in prod); no `TINA4_LOG_LEVEL` read | stdout default on + `fflush`; reads `TINA4_LOG_LEVEL`; default INFO |
+| Ruby | stdout written but never flushed (block-buffered on non-TTY); default ALL | `$stdout.sync = true`; default INFO; accepts plain + bracket names |
+| Node | `!isProduction()` gate suppressed console; default DEBUG | console always on; production emits JSON; default INFO |
+
+The Rust `tina4` CLI was already correct (inherits child stdio).
+
+### Schema-qualified tables (#48) + a PostgreSQL `fetch()` regression
+
+Issue #48 — *"Database Table Does Not Exist"* on PostgreSQL. A model whose table lives in a non-default schema (`gift_cards.gift_card`, MSSQL `dbo.widget`, MySQL `otherdb.table`, SQLite ATTACH `extra.widget`) was invisible to the framework's introspection. `tableExists`, `getTables`, and `getColumns` hardcoded the default namespace (`public`) and matched the whole dotted string as one flat name — so plain reads worked, but `createTable`, migrations, and auto-CRUD were blind to the table and reported it missing.
+
+All introspection is now schema-aware on every affected engine:
+
+- **PostgreSQL** — `tableExists` uses `to_regclass()` (honours schema + `search_path`); `getColumns` filters by `table_schema`; `getTables` lists every non-system schema and returns non-`public` tables schema-qualified.
+- **MySQL** — schema = database; a qualified name checks that catalog, a bare name defaults to `DATABASE()`.
+- **MSSQL** — honours `dbo.table`; a bare name matches in any schema.
+- **SQLite** — honours an ATTACH alias (`extra.widget`) for both `tableExists` and `getColumns`.
+- **Firebird** — N/A (no schemas).
+
+Verified against a live PostgreSQL 16 container: `tableExists('gift_cards.gift_card') → true`, `getTables → ['gift_cards.gift_card', 'gift_cards.transaction']`, `getColumns → 12 columns` — identical results across all four frameworks.
+
+> **A v3.13.12 regression surfaced while cross-checking #48.** `PostgresAdapter` referenced `stripTrailingSemicolons()` (added in v3.13.12) and the new `splitSchema()` but never mixed in `SqlNormalizerTrait` — so **every PostgreSQL `fetch()` / `fetchOne()` / `getColumns()` fatalled** with *"Call to undefined method"*. It shipped silently because PHP's PostgreSQL test suite skips without a live server. Fixed with a one-line trait mix-in and pinned by server-free reflection guards that assert all five SQL adapters expose the normalizer helpers — so this can never regress unnoticed again.
+
+### Tests
+
+- PHP: 2,394 passed (+63 new — stdout/level/file gating; request-log format + gate; #119 cli-server repro + the previously-unregistered LegacyEnvGuard suite now gated in CI; #48 schema-qualified introspection + PG `SqlNormalizerTrait` regression guards)
+- Family: Python 2,829 · PHP 2,394 · Ruby 2,999 · Node 3,628 — **11,850 total, zero regressions.**
+
+---
+
+## v3.13.13 (2026-06-11) — PHP only: large-response truncation fix
+
+**PHP-only release.** Python, Ruby, and Node stay at v3.13.12 — the bug is specific to PHP's built-in socket server, which is the only one of the four frameworks that hand-rolls a non-blocking socket write loop. Python (asyncio `StreamWriter.drain()`), Ruby (WEBrick), and Node (`node:http`) all delegate body writes to a server that handles a full send buffer correctly, so none of them can hit this.
+
+### Responses larger than the OS send buffer are no longer truncated
+
+`Tina4\Server` (the standalone HTTP server behind `tina4 serve`, including when run as an nginx upstream) wrote responses with a non-blocking `fwrite()` loop. On a non-blocking socket, `fwrite()` returns `0` when the OS send buffer is full — this is **EAGAIN ("try again")**, *not* a closed socket. The pre-v3.13.13 loop treated `0` as fatal and `break`ed mid-body:
+
+```php
+while ($written < $total) {
+    $n = @fwrite($client, substr($httpResponse, $written));
+    if ($n === false || $n === 0) {
+        break;   // BUG: 0 is "buffer full", not "socket closed"
+    }
+    $written += $n;
+    // ...only waited for drain AFTER a successful write
+}
+```
+
+Symptom: a ~4 MB attachment download returned `200` with the correct `Content-Length` but only part of the body (the cutoff varied run-to-run — we saw 2.31 MB and 1.30 MB), nginx logged `upstream prematurely closed connection while reading upstream`, and the browser showed a failed download. Anything larger than the send buffer (~200 KB–1 MB depending on platform) was affected — the dev-admin JS bundle had hit a related case.
+
+### The fix
+
+Body writes now go through `Server::writeFully()`, which:
+
+- On `fwrite() === 0`, **waits for the socket to become writable** (`stream_select` on the write set, 5 s no-progress timeout) and retries, instead of bailing.
+- Only gives up on a real error (`false`) or a client that has genuinely stopped reading for 5 s.
+- Writes in 512 KB chunks so it doesn't recopy the entire remaining tail on every iteration (O(n) instead of O(n²) for large bodies).
+
+```php
+$n = @fwrite($client, substr($data, $written, 524288)); // 512KB
+if ($n === false) break;                 // real error
+if ($n === 0) {                          // buffer full — wait, don't quit
+    $sw = [$client]; $sr = []; $se = [];
+    if (@stream_select($sr, $sw, $se, 5) === 0) break; // 5s no progress → gone
+    continue;
+}
+$written += $n;
+```
+
+The error-response path (`sendHttpError`) routes through the same helper.
+
+### Why PHP only — cross-framework verification
+
+| Framework | Built-in server | Body write | Truncation risk |
+|---|---|---|---|
+| **PHP** | raw `stream_socket_server` | non-blocking `fwrite` loop | ❌ **was buggy** → fixed |
+| Python | asyncio `start_server` | `write()` + `await drain()` | ✅ safe |
+| Ruby | WEBrick | blocking `IO#write` | ✅ safe |
+| Node | native `node:http` | atomic `res.end(buffer)` | ✅ safe |
+
+### Tests
+
+- New `tests/ServerLargeResponseTest.php`: pushes 4 MB through a deliberately stalled reader (via `pcntl_fork`) and asserts every byte arrives. Verified to **fail on the old loop** (truncated at the 8 KB socketpair buffer) and **pass on the fix** (full 4 MB).
+- PHP: 2,331 passing.
+
+> Housekeeping caught alongside this fix: the CI test invocation (`vendor/bin/phpunit`, xml-file-list mode) ran fewer tests than `composer test` (directory mode), so newly-added test files could silently skip CI. The v3.13.12 SQL-normalizer tests and this release's socket test are now registered in `phpunit.xml`; fully reconciling the two invocations is tracked separately.
+
+---
+
+## v3.13.12 (2026-06-11) — SQL safety + implicit ORM binding + `fetchAll` correctness
+
+Three high-impact fixes that close out long-standing footguns. All three ship with full parity across all four frameworks.
+
+### `fetchAll` actually fetches ALL rows now (no silent 100-row truncation)
+
+Pre-v3.13.12 the convenience method defaulted to `$limit = 100` and silently truncated. The name says `fetchAll` — it should fetch them all:
+
+```php
+// 150 rows in the table
+$db->fetchAll("SELECT * FROM rows");
+// pre-v3.13.12: returns 100 rows, silently drops the other 50
+// v3.13.12:    returns all 150 rows
+```
+
+The new default is `$limit = 0`, which all six adapters (SQLite, PostgreSQL, MySQL, MSSQL, Firebird, ODBC) now interpret as "no pagination injection" — your SQL runs verbatim. To opt back into a cap, pass an explicit `$limit`:
+
+```php
+$db->fetchAll("SELECT * FROM events", [], 500);   // capped at 500
+$db->fetchAll("SELECT * FROM users");             // all rows
+```
+
+`$db->fetch()` (the paginated sibling that returns a `DatabaseResult` with count metadata) keeps its 100-row default — pagination is its job. Only the `fetchAll` convenience changed.
+
+**Breaking change**: callers who relied on the silent 100-row cap now get every row. For very large tables, switch to `fetch()` (which paginates with metadata) or pass an explicit limit.
+
+### Trailing `;` is now stripped from user SQL in `fetch()` / `fetchOne()`
+
+The framework appends `LIMIT n OFFSET m` to the user-supplied query (and wraps it in `SELECT COUNT(*) FROM (...) AS subq` for the count probe). When the user's query already ended with a `;`, both rewrites broke:
+
+```php
+$db->fetch("SELECT * FROM users;");
+// pre-v3.13.12: syntax error near "LIMIT" — the appended LIMIT followed a ;
+// v3.13.12:    works — trailing ; is stripped before LIMIT is appended
+```
+
+The strip is conservative: only trailing whitespace + semicolons are removed (any number of them, including `;;`), nothing inside the statement is touched. Parameters and quoting are unchanged — the existing parameter-binding defense against injection still does all the heavy lifting.
+
+The shared logic lives in a new `\Tina4\Database\SqlNormalizerTrait` and is `use`d by all five adapters: PostgreSQL, MySQL, SQLite, MSSQL, Firebird.
+
+### Implicit ORM binding from `TINA4_DATABASE_URL`
+
+PHP already auto-discovered `TINA4_DATABASE_URL` on adapter init — this release simply documents and pins it as parity behaviour. When the env var is present, the first ORM model call binds the default adapter; an explicit `\Tina4\Database\Adapter` instance still takes precedence and can be used to bind a second database.
+
+### Cross-framework parity
+
+| Fix | Python | PHP | Ruby | Node |
+|---|---|---|---|---|
+| `fetch_all`/`fetchAll` returns ALL rows by default | ✓ `limit=0` default | ✓ `$limit = 0` default | ✓ `limit: nil` default | ✓ already correct (`limit?` undefined) |
+| Strip trailing `;` from fetch SQL | ✓ shared helper on `DatabaseAdapter` | ✓ `SqlNormalizerTrait` on 5 adapters | ✓ `Tina4::Database.strip_trailing_semicolons` | ✓ exported `stripTrailingSemicolons` |
+| Implicit ORM binding from env | ✓ already worked | ✓ already worked | ✓ **fixed** (wired `auto_discover_db`) | ✓ already worked |
+
+### Tests
+
+- Python: 2,811 passed (+24 new)
+- PHP: 2,316 passed (+13 new)
+- Ruby: 2,980 passed (+18 new)
+- Node: 3,612 passed across 95 files (+16 new)
+
+**11,719 tests across the family, +71 new for v3.13.12, zero regressions.**
+
+---
+
+## v3.13.11 (2026-06-11) — ORM correctness pass (parity bump)
+
+**No PHP source changes.** This release is a parity-version bump alongside Python's ORM correctness pass. Each issue in the Python report was checked against PHP and found to be either already-correct or N/A for the PHP framework.
+
+### Per-issue audit
+
+- **#50.1 — Callable field defaults** → **N/A**. PHP property defaults must be constant expressions in declarations (`public string $foo = 'bar';` is allowed; `public DateTime $foo = new DateTime();` is not). The Python/Ruby callable-default pattern doesn't apply.
+- **#50.2 — `save()` correctly handles natural-key INSERTs** → **already correct**. `Tina4\ORM::save()` (line 363) already routes through `recordExists($pkValue)` for natural-key models. The Python bug was specifically about that decision branch; PHP's branch was already right.
+- **#49 — PostgreSQL error visibility follow-on** → **N/A**. The cascade behaviour is psycopg2-specific (DB-API 2.0 implicit transactions). PHP's `pg_query` uses libpq in autocommit mode; every statement is its own transaction, so the cascade never happens.
+- **BooleanField engine-aware DDL** → **N/A**. PHP's `ORM::createTable()` is a minimal stub that creates a PK-only table — full schema is migration-driven, so the user controls the bool column type explicitly in their migration SQL.
+
+### Tests
+
+2,888 passed — unchanged from v3.13.9.
+
+---
+
+## v3.13.9 (2026-06-10)
+
+Non-destructive AI installer — `AI::installSelected()` / `AI::installAll()` no longer clobber the user's `CLAUDE.md`. They write (or refresh) a marker-bracketed Tina4 skill block and leave the rest of the file alone.
+
+### The bug
+
+Pre-v3.13.9 the installer wrote a full developer guide to `CLAUDE.md` (and to `.cursorules` / `.github/copilot-instructions.md` / `.windsurfrules` / `CONVENTIONS.md` / `.clinerules` / `AGENTS.md` / `.antigravity/context.md`) on every run, clobbering whatever the user had put there. If a user kept project-specific notes in `CLAUDE.md`, re-running the installer wiped all of it.
+
+### The fix
+
+A marker-bracketed skill block — HTML comments for `.md` files, `#`-prefixed line comments for rule files:
+
+```markdown
+<!-- tina4-skills:start -->
+## Tina4 Skills
+- **tina4-maintainer** — Read `.claude/skills/tina4-maintainer/SKILL.md` for framework-level changes.
+- **tina4-developer** — Read `.claude/skills/tina4-developer/SKILL.md` before building features.
+- **tina4-js** — Read `.claude/skills/tina4-js/SKILL.md` for frontend work.
+<!-- tina4-skills:end -->
+```
+
+Four behaviours:
+
+1. **Fresh install** → write the framework guide plus the skill block.
+2. **Marker refresh** (idempotent) → file exists with our markers → replace only the bracketed block.
+3. **One-time migration** → file starts with the pre-v3.13.9 framework header → replace the old dump with the new framework guide + skill block.
+4. **Preserve user content** → file exists with the user's own content (no markers, no old header) → append the skill block to the end, leave everything else verbatim.
+
+The actual skill content under `.claude/skills/tina4-*/SKILL.md` still gets cleanly overwritten — those are framework-owned packages, not user notes.
+
+### Same algorithm in Python / Ruby / Node
+
+Identical four-branch logic, identical marker syntax, identical canonical action verbs in the log output. Skill content stays consistent across the family.
+
+### Tests
+
+11 new tests in `tests/AIInstallerTest.php` (verified via reflection so private helpers stay private). All four branches plus marker detection, block replacement, idempotency, old-header detection, and rule-file vs markdown-file behaviour.
+
+2,888 passed — no regressions.
+
+### What you'll see when you re-install
+
+```
+[OK] Migrated (replaced old framework dump in) CLAUDE.md   ← first run after upgrade
+[OK] Refreshed skill block in CLAUDE.md                     ← every subsequent run
+[OK] Appended skill block to CLAUDE.md                      ← user-curated file
+```
+
+---
+
+## v3.13.7 (2026-06-10)
+
+Two changes from the 24rent app-platform team (PLATFORM-2159) — one observability hook, one production-safety fix. Both ship across **all four frameworks** with identical event payload shape.
+
+### NEW: `tina4.request.error` event
+
+When `Router::dispatch()` catches a `Throwable`, it now emits `tina4.request.error` **before** rendering the 500 page. Listeners receive an assoc array `['exception' => $e, 'request' => $request]` and can ship the failure to CloudWatch / Sentry / Slack — even though the framework caught it.
+
+```php
+use Tina4\Events;
+use Tina4\Log;
+
+Events::on('tina4.request.error', function ($payload) {
+    /** @var \Throwable $e */
+    $e = $payload['exception'];
+    /** @var \Tina4\Request $request */
+    $request = $payload['request'];
+
+    Log::error(sprintf(
+        'Route error: %s: %s',
+        $e::class,
+        $e->getMessage()
+    ), [
+        'method' => $request->method ?? null,
+        'path'   => $request->path ?? null,
+    ]);
+    // ...or POST to your centralised logging pipeline
+});
+```
+
+- **Fires for caught route throwables.** Does NOT fire for 404s — those aren't server errors.
+- **Listener errors are swallowed + warning-logged** so a broken listener can't break the 500 render.
+- **Listeners fire in priority order** (higher priority first, matching `Events::on($event, $cb, priority: N)`).
+- **Identical event name + payload across Python / Ruby / Node** — only the per-language syntax differs.
+
+The Router also now calls `Log::error` itself with the exception class, message, method, and path. Previously route exceptions were swallowed without any framework-side log; tail-the-log workflows now see them.
+
+### FIX: Stack trace removed from production 500 body (CWE-209)
+
+Before v3.13.7, an unhandled route exception in PHP would render `$e->getMessage() . "\n" . $e->getTraceAsString()` into the 500 response body — absolute file paths, full call chain — **regardless of `TINA4_DEBUG`**. That's [CWE-209 / OWASP A05](https://cwe.mitre.org/data/definitions/209.html): information disclosure.
+
+<div v-pre>
+
+The framework's own `Tina4/templates/errors/500.twig` now guards the trace block with `{% if error_message %}`. When `TINA4_DEBUG=false`, the Router passes an empty `error_message` and the trace block doesn't render. The trace stays in `Log::error` (server-side) and reaches observability via the new event.
+
+</div>
+
+When `TINA4_DEBUG=true`, the rich `ErrorOverlay` page is unchanged.
+
+### Tests
+
+Six new tests in `tests/RouterErrorEventTest.php`: event payload shape, behaviour with no listeners, listener priority order, no traceback markers in prod body, request_id still surfaces, listener-error safety.
+
+- 2,877 tests passing, no regressions.
+
+### Background
+
+Reported by DevProx on the 24rent platform — they centralise observability by scraping structured JSON lines from stderr → CloudWatch → a Slack notifier. Route-level exceptions weren't surfacing because the framework caught them silently. The event hook fixes that without forcing any team's logging convention; the trace-leak fix is independently a security concern.
+
+---
+
+## v3.13.6 (2026-06-09)
+
+Parity-version bump alongside Python's #46 / #47 fixes. **No PHP source changes** — both issues were verified against the PHP codebase and required no action here.
+
+### #46 — PostgreSQL transaction cascade (no fix needed)
+
+The cascade behaviour that prompted Python's fix is psycopg2-specific (DB-API 2.0 mandates an implicit transaction on first statement). PHP's `pg_query` / `pg_query_params` use libpq in autocommit mode by default — each statement is its own transaction, so a failed query does not poison subsequent ones.
+
+`PostgresAdapter::query()` already populates `$this->lastError` from `pg_last_error()` on every failure, accessible via `$db->getError()`:
+
+```php
+$db = \Tina4\Database\Database::create('postgres://localhost:5432/mydb');
+$db->fetch("SELECT * FROM does_not_exist");
+$error = $db->getError();  // already populated — has been since 3.x
+```
+
+### #47 — Driver install hints (no change needed)
+
+PHP's driver-missing exceptions already include OS-level install guidance (`sudo apt-get install php-pgsql`, `brew install php`). PHP database drivers are extensions, not Composer packages, so the Python/Ruby/Node-style "extras" pattern doesn't apply.
+
+### Tests
+
+2,871 passing — no regressions.
+
+---
+
 ## v3.13.5 (2026-06-05)
 
 Frond static-facade parity across PHP, Ruby, Node.js. Closes the last documented v3 parity gap (tina4-python task #32). Python's `Frond.add_filter` / `add_global` / `add_test` have worked as classmethods since v3.13.0 — now PHP / Ruby / Node match.
@@ -1605,7 +2098,7 @@ $admins = User::query()
     ->get();
 
 // Standalone
-$results = QueryBuilder::from("orders")
+$results = QueryBuilder::fromTable("orders")
     ->where("total > ?", [100])
     ->join("customers", "customers.id = orders.customer_id")
     ->orderBy("total DESC")
@@ -1883,11 +2376,11 @@ Router::get("/search", function (\Tina4\Request $request) {
 });
 ```
 
-The authentication API consolidated. `createToken` and `validateToken` became the primary methods. `getToken` and `validToken` remain as aliases.
+The authentication API consolidated. `getToken` and `validToken` are the only token methods — there are no `createToken`/`validateToken` aliases.
 
 ```php
-$token = \Tina4\Auth::createToken(["userId" => 42, "role" => "admin"]);
-$valid = \Tina4\Auth::validateToken($token);
+$token = \Tina4\Auth::getToken(["userId" => 42, "role" => "admin"]);
+$valid = \Tina4\Auth::validToken($token);
 ```
 
 Other changes: inline `Router::` calls now work in route discovery. The error overlay passes full request details. Windows path separators are normalized after gallery deploy.

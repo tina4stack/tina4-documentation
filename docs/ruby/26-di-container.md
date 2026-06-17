@@ -28,7 +28,7 @@ Tina4::Container.register(:database) do
 end
 
 Tina4::Container.register(:cache) do
-  Tina4::Cache.new(backend: :memory)
+  Tina4::QueryCache.new(default_ttl: 60, max_size: 1000)
 end
 
 Tina4::Container.register(:stripe) do
@@ -40,7 +40,7 @@ Tina4::Container.register(:stripe) do
 end
 
 Tina4::Container.register(:mailer) do
-  Tina4::Mailer.new(
+  Tina4::Messenger.new(
     host:     ENV["TINA4_MAIL_HOST"],
     port:     ENV["TINA4_MAIL_PORT"].to_i,
     username: ENV["SMTP_USER"],
@@ -65,7 +65,7 @@ The first `resolve` call runs the factory block and caches the result. Every sub
 ## 4. Checking Registration
 
 ```ruby
-if Tina4::Container.registered?(:cache)
+if Tina4::Container.has?(:cache)
   cache = Tina4::Container.resolve(:cache)
   cached = cache.get("products:list")
 end
@@ -117,15 +117,15 @@ end
 
 ---
 
-## 6. clear!: Reset the Container
+## 6. reset: Reset the Container
 
 Remove all registered services and their cached instances.
 
 ```ruby
-Tina4::Container.clear!
+Tina4::Container.reset
 ```
 
-Use `clear!` in tests to start fresh between test cases and register test doubles.
+Use `reset` in tests to start fresh between test cases and register test doubles.
 
 ---
 
@@ -166,7 +166,7 @@ end
 
 class OrderTest < Minitest::Test
   def setup
-    Tina4::Container.clear!
+    Tina4::Container.reset
     @mailer = FakeMailer.new
 
     Tina4::Container.register(:database) { FakeDatabase.new }
@@ -175,7 +175,7 @@ class OrderTest < Minitest::Test
   end
 
   def teardown
-    Tina4::Container.clear!
+    Tina4::Container.reset
   end
 
   def test_order_sends_confirmation_email
@@ -250,9 +250,9 @@ The route handler has one job: parse the request, delegate to the service, retur
 
 ## 9. Gotchas
 
-### 1. clear! drops cached instances
+### 1. reset drops cached instances
 
-`clear!` removes the factory registration and the cached instance. Any subsequent `resolve` after `clear!` raises unless you re-register.
+`reset` removes the factory registration and the cached instance. Any subsequent `resolve` after `reset` raises unless you re-register.
 
 ### 2. Singletons by default
 

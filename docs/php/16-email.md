@@ -940,7 +940,7 @@ The HTML response includes the success flash message.
 
 ### 4. Attachment File Not Found
 
-**Problem:** `Messenger::send()` returns an error about a missing file.
+**Problem:** `$mailer->send()` returns an error about a missing file.
 
 **Cause:** The attachment path is relative or incorrect. The file does not exist at the specified location.
 
@@ -968,7 +968,7 @@ The HTML response includes the success flash message.
 
 ### 7. Connection Timeout on Send
 
-**Problem:** `Messenger::send()` hangs for 30 seconds and then fails with a timeout error.
+**Problem:** `$mailer->send()` hangs for 30 seconds and then fails with a timeout error.
 
 **Cause:** The SMTP server is unreachable. The port is blocked by a firewall. The hostname is wrong.
 

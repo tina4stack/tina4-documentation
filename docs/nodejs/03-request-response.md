@@ -49,20 +49,6 @@ The URL path without query parameters:
 req.path // "/api/users"
 ```
 
-### url and queryString
-
-`req.url` is the full absolute URL. `req.queryString` is the raw query string with no leading `?`:
-
-```typescript
-// Request to https://api.example.com/api/users?page=2
-req.path        // "/api/users"
-req.url         // "https://api.example.com/api/users?page=2"
-req.queryString // "page=2"
-req.query       // { page: "2" }
-```
-
-`req.url` honours `X-Forwarded-Proto` and `X-Forwarded-Host`, so apps behind a proxy see the URL the client actually used. This overrides Node's native `IncomingMessage.url` (which is path+query only) so the shape matches Python, PHP, and Ruby.
-
 ### params
 
 Path parameters from the URL pattern (see Chapter 2):
@@ -211,7 +197,7 @@ This returns `201 Created` with the JSON body.
 Render a Frond template with data ([Chapter 4: Templates](04-templates.md) goes deep):
 
 ```typescript
-return res.html("products.html", {
+return res.render("products.html", {
     products,
     title: "Our Products"
 });
@@ -552,7 +538,7 @@ Router.get("/api/products/{id:int}", async (req, res) => {
     const accept = req.headers["accept"] ?? "application/json";
 
     if (accept.includes("text/html")) {
-        return res.html("product-detail.html", { product });
+        return res.render("product-detail.html", { product });
     }
 
     if (accept.includes("application/xml")) {

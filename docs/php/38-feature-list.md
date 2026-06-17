@@ -140,19 +140,19 @@ Zero-dependency JWT. Sign and verify tokens with a secret from the environment.
 ```php
 use Tina4\Auth;
 
-$token = Auth::generateToken(['user_id' => 42, 'role' => 'admin']);
-$payload = Auth::verifyToken($token);
+$token = Auth::getToken(['user_id' => 42, 'role' => 'admin']);
+$payload = Auth::validToken($token);
 ```
 
 ### 13. Password Hashing
 
-bcrypt hashing. Hash on registration, verify on login.
+PBKDF2-SHA256 hashing. Hash on registration, verify on login.
 
 ```php
 use Tina4\Auth;
 
 $hash = Auth::hashPassword('userSecret123');
-$ok   = Auth::verifyPassword('userSecret123', $hash);   // true
+$ok   = Auth::checkPassword('userSecret123', $hash);   // true
 ```
 
 ### 14. CSRF Protection
@@ -192,10 +192,11 @@ Built-in input validation. Rules for required, type, length, pattern.
 use Tina4\Validator;
 
 $v = new Validator($request->body);
-$v->required('email')->email();
-$v->required('password')->minLength(8);
+$v->required('email', 'password')
+  ->email('email')
+  ->minLength('password', 8);
 
-if (!$v->passes()) {
+if (!$v->isValid()) {
     return $response->json(['errors' => $v->errors()], 422);
 }
 ```
@@ -461,15 +462,16 @@ Auto-generate WSDL from annotated PHP classes.
 
 ```php
 use Tina4\WSDL;
+use Tina4\WSDLOperation;
 
 class PaymentService extends WSDL {
-    /** @wsdl_operation */
-    public function Charge(float $amount, string $currency): string {
-        return 'txn_' . uniqid();
+    #[WSDLOperation(['TransactionId' => 'string'])]
+    public function Charge(float $amount, string $currency): array {
+        return ['TransactionId' => 'txn_' . uniqid()];
     }
 }
 
-Router::soap('/payment', new PaymentService());
+Router::any('/payment', fn($request, $response) => (new PaymentService($request))->handle());
 ```
 
 ---

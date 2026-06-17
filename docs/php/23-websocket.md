@@ -499,28 +499,25 @@ Router::websocket("/ws/notifications/{userId}", function ($connection, $event, $
     }
 });
 
-// HTTP endpoint that triggers a notification
-Router::post("/api/orders/{orderId:int}/ship", function ($request, $response) {
-    $orderId = $request->params["orderId"];
-    $userId = $request->body["user_id"] ?? 0;
-
-    // Update order status in database...
-
-    // Send real-time notification via WebSocket
-    // The notification is pushed to all connections on /ws/notifications/{userId}
-    Router::pushToWebSocket("/ws/notifications/" . $userId, json_encode([
-        "type" => "notification",
-        "title" => "Order Shipped",
-        "message" => "Your order #" . $orderId . " has been shipped!",
-        "action_url" => "/orders/" . $orderId,
-        "timestamp" => date("c")
-    ]));
-
-    return $response->json(["message" => "Order shipped, user notified"]);
+// Inside the WebSocket handler, push to everyone on this path
+Router::websocket("/ws/notifications/{userId}", function ($connection, $event, $data) {
+    if ($event === "message") {
+        $payload = json_decode($data, true);
+        if (($payload["type"] ?? "") === "order-shipped") {
+            // Broadcast to every client connected on this path
+            $connection->broadcast(json_encode([
+                "type" => "notification",
+                "title" => "Order Shipped",
+                "message" => "Your order #" . ($payload["orderId"] ?? "") . " has been shipped!",
+                "action_url" => "/orders/" . ($payload["orderId"] ?? ""),
+                "timestamp" => date("c")
+            ]), includeSelf: true);
+        }
+    }
 });
 ```
 
-`Router::pushToWebSocket()` bridges the gap. Your HTTP handlers send messages to WebSocket clients. Request-response meets real-time.
+Broadcasting happens from inside the `Router::websocket()` handler through the `$connection` object — `$connection->send()` for one client, `$connection->broadcast()` for everyone on the same path, and `$connection->broadcastToRoom()` for a room. Request-response meets real-time.
 
 ---
 

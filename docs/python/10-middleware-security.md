@@ -157,8 +157,7 @@ class TimingMiddleware:
     @staticmethod
     def after_add_timing(request, response):
         elapsed = time.time() - getattr(request, "_start_time", time.time())
-        from tina4_python.core.response import Response
-        Response.add_header("X-Response-Time", f"{elapsed:.3f}s")
+        response.add_header("X-Response-Time", f"{elapsed:.3f}s")
         return request, response
 ```
 
@@ -185,15 +184,13 @@ async def log_middleware(request, response, next_handler):
 ### Example: Security Headers (Class-Based)
 
 ```python
-from tina4_python.core.response import Response
-
 class SecurityHeaders:
     @staticmethod
     def after_security(request, response):
-        Response.add_header("X-Content-Type-Options", "nosniff")
-        Response.add_header("X-Frame-Options", "DENY")
-        Response.add_header("X-XSS-Protection", "1; mode=block")
-        Response.add_header("Strict-Transport-Security", "max-age=31536000")
+        response.add_header("X-Content-Type-Options", "nosniff")
+        response.add_header("X-Frame-Options", "DENY")
+        response.add_header("X-XSS-Protection", "1; mode=block")
+        response.add_header("Strict-Transport-Security", "max-age=31536000")
         return request, response
 ```
 
@@ -226,8 +223,7 @@ class RequestIdMiddleware:
 
     @staticmethod
     def after_add_header(request, response):
-        from tina4_python.core.response import Response
-        Response.add_header("X-Request-ID", getattr(request, "request_id", ""))
+        response.add_header("X-Request-ID", getattr(request, "request_id", ""))
         return request, response
 ```
 

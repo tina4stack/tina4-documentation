@@ -155,12 +155,17 @@ end
 
 ## 6. Securing MCP Endpoints
 
-By default, developer MCP servers are public. Add authentication using Tina4 middleware:
+By default, developer MCP servers are public. Add authentication with a path-scoped `before` middleware that runs ahead of the MCP routes:
 
 ```ruby
-# Secure the entire MCP path
-Tina4.secured do
-  mcp.register_routes
+mcp.register_routes
+
+# Require a valid bearer token on every request under the MCP path
+Tina4::Middleware.before("#{mcp.path}/*") do |request, response|
+  token = request.headers["Authorization"].to_s.sub(/^Bearer /, "")
+  unless Tina4::Auth.valid_token(token)
+    response.json({ error: "Unauthorized" }, 401)
+  end
 end
 ```
 
@@ -219,7 +224,7 @@ Here is a full working example -- a CRM system with customer, order, and product
 require "tina4"
 
 db = Tina4::Database.new("sqlite:///crm.db")
-Tina4::ORM.bind(db)
+Tina4.bind_database(db)   # models resolve Tina4.database; or set per-model with Model.db = db
 
 # Create MCP server
 crm_mcp = Tina4::McpServer.new("/crm/mcp", name: "CRM Assistant", version: "1.0.0")
@@ -286,5 +291,5 @@ The AI calls `find_customer` with `query: "Smith"`, then `customer_orders` for e
 2. **Keep tools focused** -- one query per tool, not a Swiss-army-knife tool
 3. **Use param metadata** -- types and defaults become the schema. An AI assistant cannot call a tool correctly without knowing the parameter types
 4. **Return structured data** -- hashes and arrays, not formatted strings. Let the AI format for the user
-5. **Secure production endpoints** -- use `Tina4.secured` or middleware for any MCP server that runs outside localhost
+5. **Secure production endpoints** -- add a path-scoped `Tina4::Middleware.before` token check (Section 6) for any MCP server that runs outside localhost
 6. **Test tools directly** -- call the Ruby method in your test suite, not just through the MCP protocol

@@ -409,17 +409,19 @@ Tina4::Router.group("/api/tasks", middleware: "auth_middleware") do
       end
     end
 
-    # Push WebSocket update
-    Tina4::WebSocket.broadcast("/ws/tasks", {
+    # Notify dashboards: the client sends this change over its /ws/tasks
+    # socket, and the WebSocket handler (Step 6) relays it to every other
+    # connected client via connection.broadcast.
+    notification = {
       type: "task_update",
       action: "created",
       task: task
-    }.to_json)
+    }
 
     # Invalidate cache
     Tina4.cache_delete("dashboard:stats:#{user_id}")
 
-    response.json(task, 201)
+    response.json(task.merge(notify: notification), 201)
   end
 
   # Update task
@@ -452,18 +454,19 @@ Tina4::Router.group("/api/tasks", middleware: "auth_middleware") do
       ]
     )
 
-    # Push WebSocket update
+    # Notify dashboards over the /ws/tasks socket (relayed by the
+    # WebSocket handler in Step 6 via connection.broadcast).
     task = db.fetch_one("SELECT * FROM tasks WHERE id = ?", [id])
-    Tina4::WebSocket.broadcast("/ws/tasks", {
+    notification = {
       type: "task_update",
       action: "updated",
       task: task
-    }.to_json)
+    }
 
     # Invalidate cache
     Tina4.cache_delete("dashboard:stats:#{request.user['user_id']}")
 
-    response.json(task)
+    response.json(task.merge(notify: notification))
   end
 
   # Delete task
@@ -476,15 +479,17 @@ Tina4::Router.group("/api/tasks", middleware: "auth_middleware") do
 
     db.execute("DELETE FROM tasks WHERE id = ?", [id])
 
-    Tina4::WebSocket.broadcast("/ws/tasks", {
+    # Notify dashboards over the /ws/tasks socket (relayed by the
+    # WebSocket handler in Step 6 via connection.broadcast).
+    notification = {
       type: "task_update",
       action: "deleted",
       task: { id: id }
-    }.to_json)
+    }
 
     Tina4.cache_delete("dashboard:stats:#{request.user['user_id']}")
 
-    response.json(nil, 204)
+    response.json({ deleted: id, notify: notification }, 200)
   end
 
 end
@@ -615,27 +620,31 @@ Hit it again within 30 seconds. The second response comes from cache -- no datab
 
 ## 8. Step 6: WebSocket Real-Time Updates
 
-Create `src/routes/task_ws.rb`:
+Create `src/routes/task_ws.rb`. WebSocket handlers are registered as routes with `Tina4::Router.websocket`. The handler receives `(connection, event, data)` where `event` is a symbol (`:open`, `:message`, `:close`):
 
 ```ruby
-Tina4::WebSocket.on("/ws/tasks") do |connection, event, data|
+Tina4::Router.websocket("/ws/tasks") do |connection, event, data|
   case event
-  when "open"
+  when :open
     connection.send({ type: "connected", message: "Listening for task updates" }.to_json)
 
-  when "message"
+  when :message
     message = JSON.parse(data)
-    if message["type"] == "ping"
+    if message["type"] == "task_update"
+      # Relay a task change to every other client on /ws/tasks.
+      # connection.broadcast is path-scoped: only clients on /ws/tasks receive it.
+      connection.broadcast(data)
+    elsif message["type"] == "ping"
       connection.send({ type: "pong" }.to_json)
     end
 
-  when "close"
+  when :close
     # Connection closed -- cleanup if needed
   end
 end
 ```
 
-Any user creates, updates, or deletes a task. All connected dashboard users see the change. The `Tina4::WebSocket.broadcast` calls in the task routes (Step 4) push updates to every client connected to `/ws/tasks`.
+Any user creates, updates, or deletes a task. The task routes (Step 4) notify connected clients over the same `/ws/tasks` socket, and `connection.broadcast` fans the change out to every other client on that path.
 
 ---
 
@@ -937,7 +946,7 @@ TINA4_LOG_LEVEL=WARNING
 JWT_SECRET=your-production-secret-at-least-32-characters
 TINA4_DATABASE_URL=sqlite:///data/app.db
 TINA4_CACHE_BACKEND=redis
-TINA4_CACHE_URL=redis
+TINA4_CACHE_URL=redis://redis:6379
 ```
 
 Deploy:

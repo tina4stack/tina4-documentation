@@ -973,7 +973,7 @@ $registered = $crud->getModels();
 
 ## 10. Database Connection
 
-### Setting the Global Database
+### Binding the Database
 
 The ORM needs a database connection. Three ways to provide one:
 
@@ -981,26 +981,42 @@ The ORM needs a database connection. Three ways to provide one:
 use Tina4\ORM;
 use Tina4\Database\Database;
 
-// Option 1: Set globally on ORM
+// Option 1: Bind the default connection on ORM
 $db = Database::create("sqlite:///path/to/app.db");
 ORM::bindDatabase($db);
 
 // Option 2: Set via App
 App::setDatabase($db);
 
-// Option 3: Set TINA4_DATABASE_URL in .env (auto-discovered)
+// Option 3: Set TINA4_DATABASE_URL in .env (auto-bound, no call needed)
 // TINA4_DATABASE_URL=sqlite:///path/to/app.db
 ```
 
-Once a global database is set, all ORM models resolve it. You can also pass a database adapter to a specific instance:
+Once the default database is bound, all ORM models resolve it. You can also pass a database adapter to a specific instance:
 
 ```php
 $note = new Note($db);
 ```
 
-The resolution order is: instance `$_db` -> global `ORM::bindDatabase()` -> `App::getDatabase()` -> `Database::fromEnv()`. If none is found, the ORM throws a `RuntimeException`.
+The resolution order is: instance `$_db` -> default `ORM::bindDatabase()` binding -> `App::getDatabase()` -> `Database::fromEnv()`. If none is found, the ORM throws a `RuntimeException`.
 
-> Models auto-bind from `TINA4_DATABASE_URL` (`.env`) by default, so most apps never call `bindDatabase()` directly. Pass a second argument — `ORM::bindDatabase($db, "read")` — to register a named secondary connection, then point a model at it with `protected string $_db = "read";`.
+#### Named (secondary) connections
+
+`bindDatabase()` can also register a **named** connection that a specific model points at, so one app can talk to several databases:
+
+```php
+ORM::bindDatabase(
+    Database::create("postgres://localhost:5432/analytics", username: "u", password: "p"),
+    name: "analytics"
+);
+
+class Visit extends \Tina4\ORM {
+    // A string selects a named connection registered above.
+    public \Tina4\Database\DatabaseAdapter|string|null $_db = "analytics";
+}
+```
+
+A missing named connection throws a clear error.
 
 ---
 

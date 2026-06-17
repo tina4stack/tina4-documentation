@@ -171,7 +171,7 @@ services:
       - TINA4_SECRET=${TINA4_SECRET}
       - TINA4_DATABASE_URL=sqlite:///data/app.db
       - TINA4_CACHE_BACKEND=redis
-      - TINA4_CACHE_URL=redis
+      - TINA4_CACHE_URL=redis://redis:6379
     volumes:
       - app-data:/app/data
       - app-logs:/app/logs

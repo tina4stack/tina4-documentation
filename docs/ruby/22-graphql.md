@@ -465,7 +465,7 @@ schema.add_query("me", type: "User") do |root, args, ctx|
   end
 
   token = request.headers["Authorization"].sub("Bearer ", "")
-  payload = Tina4::Auth.decode(token)
+  payload = Tina4::Auth.valid_token(token)
 
   raise "Invalid token" if payload.nil?
 

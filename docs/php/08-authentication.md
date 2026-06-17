@@ -35,8 +35,6 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo0MiwiZW1haWwiOiJhbGljZUBleGF
 
 Three parts separated by dots: header, payload, signature. The signature ensures the token has not been tampered with.
 
-> **Legacy aliases:** `Auth::createToken()` still works as an alias for `Auth::getToken()`. Use the primary name in new code.
-
 ### Token Expiry
 
 Tokens expire after 60 minutes by default. Configure in `.env`:
@@ -62,8 +60,6 @@ $payload = Auth::validToken($token, $secret);
 ```
 
 `validToken()` returns the decoded payload on success, not a boolean. This lets you validate and read the token in one step. Returns `null` if the token is invalid or expired.
-
-> **Legacy alias:** `Auth::validateToken()` works the same way.
 
 ### Reading the Payload
 
@@ -483,27 +479,29 @@ Include the CSRF token in every form:
 </div>
 
 ```html
-<input type="hidden" name="_token" value="abc123randomtoken456">
+<input type="hidden" name="formToken" value="abc123randomtoken456">
 ```
 
 ### Validating the Token
 
+Register `CsrfMiddleware` and it validates the `formToken` on every state-changing request automatically — no manual check in the handler:
+
 ```php
 <?php
 use Tina4\Router;
-use Tina4\Auth;
+use Tina4\Middleware\CsrfMiddleware;
+
+// Enable globally (or set TINA4_CSRF=true in .env)
+Router::use(CsrfMiddleware::class);
 
 Router::post("/profile/update", function ($request, $response) {
-    if (!Auth::validateFormToken($request->body["_token"] ?? "")) {
-        return $response->json(["error" => "Invalid form token. Please refresh and try again."], 403);
-    }
-
-    // Process the form...
+    // CsrfMiddleware already rejected the request with a 403 if the
+    // formToken was missing or invalid — just process the form.
     return $response->redirect("/profile");
 });
 ```
 
-The token is tied to the user's session and expires after one use. A malicious site cannot forge it.
+The middleware reads the token from `request->body["formToken"]` (or the `X-Form-Token` header), validates it with `Auth::validToken()`, and returns a `403 CSRF_INVALID` error if it is missing or invalid. The token is tied to the user's session. A malicious site cannot forge it.
 
 ### When to Use CSRF Tokens
 

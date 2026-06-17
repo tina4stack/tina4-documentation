@@ -786,7 +786,7 @@ Router.get("/api/dashboard/stats", async (req, res) => {
  * @tags Dashboard
  */
 Router.get("/admin", async (req, res) => {
-    return res.html("dashboard.html", {});
+    return res.render("dashboard.html", {});
 });
 ```
 
@@ -1072,7 +1072,7 @@ The server returns the rendered HTML. Open `http://localhost:7148/admin` in your
 Create `tests/TaskFlowTest.ts`:
 
 ```typescript
-import { tests, assertEqual, assertTrue, assertNotNull, runAllTests, Auth } from "tina4-nodejs";
+import { tests, assertEqual, assertTrue, runAll, Auth } from "tina4-nodejs";
 import { TestClient } from "tina4-nodejs/test";
 
 const client = new TestClient();
@@ -1213,7 +1213,7 @@ const testPasswordHash = tests(
     return Auth.checkPassword(password, hash);
 });
 
-runAllTests();
+runAll();
 ```
 
 Run the tests:
@@ -1279,7 +1279,7 @@ services:
       - TINA4_DEBUG=false
       - TINA4_SECRET=${JWT_SECRET:-change-me-in-production}
       - TINA4_CACHE_BACKEND=redis
-      - TINA4_CACHE_URL=redis
+      - TINA4_CACHE_URL=redis://redis:6379
     volumes:
       - taskflow-data:/app/data
       - taskflow-logs:/app/logs

@@ -192,7 +192,7 @@ Or check the bearer token inside individual tools:
 public function sensitiveData(string $token): array
 {
     global $db;
-    $payload = Auth::validTokenStatic($token);
+    $payload = Auth::validToken($token);
     if (!$payload) {
         return ["error" => "Unauthorized"];
     }

@@ -307,11 +307,13 @@ When the limit is exceeded, the server returns `429 Too Many Requests`.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_CACHE_BACKEND` | `memory` | Cache storage. Options: `memory` (in-process), `redis`, `file`. |
+| `TINA4_CACHE_BACKEND` | `memory` | Cache storage. Options: `memory` (in-process), `file`, `redis`, `valkey`, `memcached`, `mongodb`, `database`. Falls back to `file` if the configured backend is unreachable. |
 | `TINA4_CACHE_TTL` | `60` | Default cache TTL in seconds for cached routes. |
 | `TINA4_CACHE_MAX_ENTRIES` | `1000` | Maximum cached responses (memory backend). Oldest entries evicted at the limit. |
 | `TINA4_CACHE_DIR` | `data/cache` | Directory for file-based cache. |
-| `TINA4_CACHE_URL` | `redis://localhost:6379` | Redis connection URL for cache backend. |
+| `TINA4_CACHE_URL` | `redis://localhost:6379` | Connection URL for remote cache backends (Redis, Valkey, Memcached, MongoDB). For `database`, falls back to `TINA4_DATABASE_URL`. |
+| `TINA4_CACHE_USERNAME` | _(none)_ | Username for the cache backend. May also be embedded in `TINA4_CACHE_URL`. |
+| `TINA4_CACHE_PASSWORD` | _(none)_ | Password for the cache backend. May also be embedded in `TINA4_CACHE_URL` (e.g. `redis://:pass@host`). Memcached is unauthenticated. |
 
 ### Logging
 

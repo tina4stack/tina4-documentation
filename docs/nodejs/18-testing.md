@@ -30,17 +30,17 @@ Tina4 ships an inline testing framework. No external packages. No Jest configura
 
 ## 2. Your First Test
 
-Tina4's testing framework uses a decorator-style pattern. Attach test assertions directly to functions using `tests()`, `assertEqual()`, `assertThrows()`, `assertTrue()`, and `assertFalse()`. Then call `runAllTests()` to execute them.
+Tina4's testing framework uses a decorator-style pattern. Attach test assertions directly to functions using `tests()`, `assertEqual()`, `assertRaises()`, `assertTrue()`, and `assertFalse()`. Then call `runAll()` to execute them.
 
 Create `tests/basic.ts`:
 
 ```typescript
-import { tests, assertEqual, assertThrows, assertTrue, assertFalse, runAllTests } from "tina4-nodejs";
+import { tests, assertEqual, assertRaises, assertTrue, assertFalse, runAll } from "tina4-nodejs";
 
 const add = tests(
     assertEqual([5, 3], 8),
     assertEqual([0, 0], 0),
-    assertThrows(Error, [null]),
+    assertRaises(Error, [null]),
 )(function add(a: number, b: number | null = null): number {
     if (b === null) throw new Error("b required");
     return a + b;
@@ -53,7 +53,7 @@ const isEven = tests(
     return n % 2 === 0;
 });
 
-runAllTests();
+runAll();
 ```
 
 Run it:
@@ -79,7 +79,7 @@ tina4 test
 
 1. The `tests()` function takes assertion objects and returns a decorator.
 2. The decorator wraps the function, registers it in the test registry, and returns the original function unchanged.
-3. The function works normally in production code -- tests only execute when you call `runAllTests()`.
+3. The function works normally in production code -- tests only execute when you call `runAll()`.
 4. Named functions produce readable output. Anonymous functions show as "anonymous."
 
 ---
@@ -89,7 +89,7 @@ tina4 test
 | Function | Description |
 |----------|-------------|
 | `assertEqual(args, expected)` | Call the function with `args` array, expect `expected` as the return value |
-| `assertThrows(ErrorClass, args)` | Call the function with `args` array, expect it to throw `ErrorClass` |
+| `assertRaises(ErrorClass, args)` | Call the function with `args` array, expect it to throw `ErrorClass` |
 | `assertTrue(args)` | Call the function with `args` array, expect a truthy return value |
 | `assertFalse(args)` | Call the function with `args` array, expect a falsy return value |
 
@@ -102,11 +102,11 @@ assertEqual([5, 3], 8)     // Call with 5, 3 -- expect 8
 assertEqual(["hello"], 5)  // Call with "hello" -- expect 5
 ```
 
-### assertThrows
+### assertRaises
 
 ```typescript
-assertThrows(Error, [null])         // Expect Error when called with null
-assertThrows(TypeError, ["bad"])    // Expect TypeError when called with "bad"
+assertRaises(Error, [null])         // Expect Error when called with null
+assertRaises(TypeError, ["bad"])    // Expect TypeError when called with "bad"
 ```
 
 ### assertTrue / assertFalse
@@ -121,14 +121,14 @@ assertFalse([0])    // Expect a falsy return value
 ## 4. Testing Business Logic
 
 ```typescript
-import { tests, assertEqual, assertThrows, runAllTests } from "tina4-nodejs";
+import { tests, assertEqual, assertRaises, runAll } from "tina4-nodejs";
 
 const calculateDiscount = tests(
     assertEqual([100, 10], 90),
     assertEqual([50, 0], 50),
     assertEqual([200, 50], 100),
-    assertThrows(Error, [100, -5]),
-    assertThrows(Error, [100, 101]),
+    assertRaises(Error, [100, -5]),
+    assertRaises(Error, [100, 101]),
 )(function calculateDiscount(price: number, discountPercent: number): number {
     if (discountPercent < 0 || discountPercent > 100) {
         throw new Error("Discount must be between 0 and 100");
@@ -136,10 +136,10 @@ const calculateDiscount = tests(
     return price - (price * discountPercent / 100);
 });
 
-runAllTests();
+runAll();
 ```
 
-The function works in production. The tests run only when you call `runAllTests()`.
+The function works in production. The tests run only when you call `runAll()`.
 
 ---
 
@@ -148,7 +148,7 @@ The function works in production. The tests run only when you call `runAllTests(
 Test your models by writing functions that exercise create, read, update, and delete:
 
 ```typescript
-import { tests, assertTrue, assertEqual, runAllTests } from "tina4-nodejs";
+import { tests, assertTrue, assertEqual, runAll } from "tina4-nodejs";
 import { Database } from "tina4-nodejs/orm";
 
 const testCreateProduct = tests(
@@ -200,7 +200,7 @@ const testDeleteProduct = tests(
     return gone === null;
 });
 
-runAllTests();
+runAll();
 ```
 
 ### Test Database
@@ -218,7 +218,7 @@ TINA4_DATABASE_URL=sqlite:///data/test.db
 The `TestClient` lets you exercise your API endpoints end-to-end without starting a server. It builds a mock request, matches the route, runs the handler, and returns a `TestResponse`. Construct one instance and reuse it across test functions.
 
 ```typescript
-import { tests, assertTrue, runAllTests, TestClient } from "tina4-nodejs";
+import { tests, assertTrue, runAll, TestClient } from "tina4-nodejs";
 
 const client = new TestClient();
 
@@ -251,7 +251,7 @@ const testGetNotFound = tests(
     return resp.status === 404;
 });
 
-runAllTests();
+runAll();
 ```
 
 ### TestClient Methods
@@ -297,7 +297,7 @@ resp.contentType   // Content-Type header value
 ## 7. Testing Authentication
 
 ```typescript
-import { tests, assertTrue, runAllTests, Auth } from "tina4-nodejs";
+import { tests, assertTrue, runAll, Auth } from "tina4-nodejs";
 
 const secret = "test-secret";
 
@@ -324,19 +324,19 @@ const testInvalidToken = tests(
     return decoded === null;
 });
 
-runAllTests();
+runAll();
 ```
 
 ---
 
 ## 8. Resetting Tests Between Files
 
-When running tests across multiple files, use `resetTests()` to clear the registry:
+When running tests across multiple files, use `reset()` to clear the registry:
 
 ```typescript
-import { resetTests, tests, assertEqual, runAllTests } from "tina4-nodejs";
+import { reset, tests, assertEqual, runAll } from "tina4-nodejs";
 
-resetTests();
+reset();
 
 const multiply = tests(
     assertEqual([3, 4], 12),
@@ -345,7 +345,7 @@ const multiply = tests(
     return a * b;
 });
 
-runAllTests();
+runAll();
 ```
 
 Without resetting, tests from previously imported modules accumulate in the registry.
@@ -354,15 +354,15 @@ Without resetting, tests from previously imported modules accumulate in the regi
 
 ## 9. Runner Options
 
-`runAllTests()` accepts an options object:
+`runAll()` accepts an options object:
 
 ```typescript
 // Quiet mode -- no console output, returns results only
-const results = runAllTests({ quiet: true });
+const results = runAll({ quiet: true });
 console.log(`${results.passed} passed, ${results.failed} failed`);
 
 // Fail fast -- stop on the first failure
-runAllTests({ failfast: true });
+runAll({ failfast: true });
 ```
 
 The returned `TestResults` object:
@@ -379,7 +379,7 @@ The returned `TestResults` object:
 Use the return value for CI exit codes:
 
 ```typescript
-const results = runAllTests();
+const results = runAll();
 process.exit(results.failed === 0 ? 0 : 1);
 ```
 
@@ -524,7 +524,7 @@ Write inline tests for the following functions:
 ## 14. Solution
 
 ```typescript
-import { tests, assertEqual, assertThrows, runAllTests } from "tina4-nodejs";
+import { tests, assertEqual, assertRaises, runAll } from "tina4-nodejs";
 
 const slugify = tests(
     assertEqual(["Hello World"], "hello-world"),
@@ -547,8 +547,8 @@ const clamp = tests(
 const parsePrice = tests(
     assertEqual(["$19.99"], 19.99),
     assertEqual(["$0.50"], 0.5),
-    assertThrows(Error, ["not-a-price"]),
-    assertThrows(Error, [""]),
+    assertRaises(Error, ["not-a-price"]),
+    assertRaises(Error, [""]),
 )(function parsePrice(input: string): number {
     const match = input.match(/\$?([\d.]+)/);
     if (!match) throw new Error("Invalid price format");
@@ -557,7 +557,7 @@ const parsePrice = tests(
     return value;
 });
 
-runAllTests();
+runAll();
 ```
 
 ---
@@ -566,7 +566,7 @@ runAllTests();
 
 ### 1. The `tests()` Decorator Returns the Original Function
 
-The wrapped function works identically in production. Tests only run when you call `runAllTests()`. You can use the decorated function in your application code without side effects.
+The wrapped function works identically in production. Tests only run when you call `runAll()`. You can use the decorated function in your application code without side effects.
 
 ### 2. Arguments Are Passed as an Array
 
@@ -576,11 +576,11 @@ The wrapped function works identically in production. Tests only run when you ca
 
 Anonymous functions show up as "anonymous" in test output. Use named function expressions: `function testCreateProduct() {}` not `() => {}`.
 
-### 4. Call `resetTests()` Between Separate Test Files
+### 4. Call `reset()` Between Separate Test Files
 
-Without resetting, tests from previously imported modules accumulate in the registry. Each test file should call `resetTests()` at the top.
+Without resetting, tests from previously imported modules accumulate in the registry. Each test file should call `reset()` at the top.
 
-### 5. `runAllTests()` Returns Results
+### 5. `runAll()` Returns Results
 
 Use the return value for CI integration. Check `results.failed === 0` to determine the exit code. Without this, your CI pipeline passes even when tests fail.
 

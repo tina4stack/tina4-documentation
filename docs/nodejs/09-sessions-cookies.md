@@ -135,7 +135,7 @@ Router.get("/dashboard", async (req, res) => {
         return res.redirect("/login");
     }
 
-    return res.html("dashboard.html", {
+    return res.render("dashboard.html", {
         user_name: req.session.get("user_name"),
         role: req.session.get("role")
     });
@@ -259,7 +259,7 @@ Router.get("/contact", async (req, res) => {
     const flashMessage = req.session.flash("message");       // get + auto-remove
     const flashType = req.session.flash("message_type") ?? "info";
 
-    return res.html("contact.html", {
+    return res.render("contact.html", {
         flash_message: flashMessage,
         flash_type: flashType
     });
@@ -317,7 +317,7 @@ Router.get("/", async (req, res) => {
     const theme = req.cookies.theme ?? "light";
     const language = req.cookies.language ?? "en";
 
-    return res.html("home.html", {
+    return res.render("home.html", {
         theme,
         language
     });
@@ -641,7 +641,7 @@ Router.get("/cart", async (req, res) => {
     const flashMessage = req.session.getFlash("message");
     const flashType = req.session.getFlash("message_type") ?? "info";
 
-    return res.html("cart.html", {
+    return res.render("cart.html", {
         cart,
         grand_total: grandTotal,
         item_count: cart.reduce((sum, item) => sum + item.quantity, 0),

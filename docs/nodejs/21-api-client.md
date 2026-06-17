@@ -4,78 +4,99 @@
 
 Your application calls a payment gateway. A shipping provider. A weather service. A CRM. Every call needs the same setup: base URL, auth header, error handling, JSON parsing, timeout.
 
-Tina4 provides an `api` singleton — a preconfigured HTTP client that handles the repetitive parts. It covers GET, POST, PUT, and DELETE with JSON serialization, auth headers set once at configure time, and a consistent response format, all with no external dependencies.
+Tina4 provides an `Api` class — a small HTTP client over Node's built-in `node:http`/`node:https` that handles the repetitive parts. It covers GET, POST, PUT, PATCH, and DELETE with JSON serialization, auth headers set once on the instance, and a consistent response format, all with no external dependencies.
 
 ---
 
-## 2. The api Singleton
+## 2. The Api Class
 
-Import `api` from `@tina4/core`:
+Import `Api` from `@tina4/core` and construct an instance:
 
 ```typescript
-import { api } from "@tina4/core";
+import { Api } from "@tina4/core";
+
+const api = new Api("https://api.example.com/v2");
 ```
 
-`api` is a ready-to-use HTTP client. Configure it once. Use it everywhere.
+`Api` is a ready-to-use HTTP client. Construct it once. Reuse the instance everywhere.
 
 ---
 
 ## 3. Configuring the Client
 
-Set the base URL and default headers before making requests. Do this at startup in `src/index.ts` or a dedicated `src/services/http.ts` file:
+The constructor takes the base URL, an optional `Authorization` header value, and an optional timeout **in seconds** (default 30). Auth and custom headers can also be set after construction:
 
 ```typescript
-import { api } from "@tina4/core";
+import { Api } from "@tina4/core";
 
-api.configure({
-    baseUrl: "https://api.example.com/v2",
-    headers: {
-        "Authorization": `Bearer ${process.env.TINA4_API_KEY}`,
-        "X-App-Version": "1.0.0"
-    },
-    timeout: 10000  // 10 seconds
+// Positional form: (baseUrl, authHeader, timeoutSeconds)
+const api = new Api("https://api.example.com/v2", "", 10 /* seconds */);
+
+api.addHeaders({ "X-App-Version": "1.0.0" });
+api.setBearerToken(process.env.TINA4_API_KEY ?? "");
+
+// Or the options-bag form (recommended):
+const api2 = new Api("https://api.example.com/v2", {
+    bearerToken: process.env.TINA4_API_KEY,
+    headers: { "X-App-Version": "1.0.0" },
+    timeout: 10,
 });
 ```
 
-| Option | Default | Description |
-|--------|---------|-------------|
+| Constructor arg | Default | Description |
+|-----------------|---------|-------------|
 | `baseUrl` | `""` | Prepended to every request path |
-| `headers` | `{}` | Sent with every request |
-| `timeout` | `30000` | Request timeout in milliseconds |
+| `authHeaderOrOptions` | `""` | An `Authorization` header value, or an options bag (`bearerToken`, `username`/`password`, `headers`, `timeout`, `verifySsl`) |
+| `timeout` | `30` | Request timeout in **seconds** |
+
+Instance setters:
+
+| Method | Description |
+|--------|-------------|
+| `addHeaders(headers)` | Merge headers sent with every request |
+| `setBearerToken(token)` | Set `Authorization: Bearer <token>` |
+| `setBasicAuth(user, pass)` | Set HTTP Basic auth |
+| `setIgnoreSsl(true)` | Skip TLS verification (dev / self-signed certs only) |
 
 ---
 
 ## 4. GET Requests
 
 ```typescript
-import { api } from "@tina4/core";
+import { Api } from "@tina4/core";
 
+const api = new Api("https://api.example.com");
 const response = await api.get("/products");
 
-if (response.ok) {
-    const products = response.data;
+if (response.error === null && response.http_code === 200) {
+    const products = response.body as unknown[];
     console.log(`Fetched ${products.length} products`);
 } else {
-    console.error(`Error ${response.status}: ${response.error}`);
+    console.error(`Error ${response.http_code}: ${response.error}`);
 }
 ```
 
-Pass query parameters as the second argument:
+Pass query parameters as a flat object in the second argument:
 
 ```typescript
 const response = await api.get("/products", {
-    params: { category: "Electronics", page: 2, limit: 20 }
+    category: "Electronics",
+    page: "2",
+    limit: "20",
 });
 // Requests: GET /products?category=Electronics&page=2&limit=20
 ```
+
+Query values are strings (they go straight into the query string).
 
 ---
 
 ## 5. POST Requests
 
 ```typescript
-import { api } from "@tina4/core";
+import { Api } from "@tina4/core";
 
+const api = new Api("https://api.example.com");
 const response = await api.post("/orders", {
     customerId: 15,
     items: [
@@ -89,21 +110,24 @@ const response = await api.post("/orders", {
     }
 });
 
-if (response.ok) {
-    console.log(`Order created: ${response.data.orderId}`);
+if (response.error === null && response.http_code === 201) {
+    const order = response.body as { orderId: string };
+    console.log(`Order created: ${order.orderId}`);
 } else {
-    console.error("Order failed:", response.error);
+    console.error("Order failed:", response.error ?? response.http_code);
 }
 ```
 
-The body is serialized as JSON automatically. The `Content-Type: application/json` header is set for you.
+The body is serialized as JSON automatically. The `Content-Type: application/json` header is set for you (override it with the optional third argument).
 
 ---
 
 ## 6. PUT and PATCH Requests
 
 ```typescript
-import { api } from "@tina4/core";
+import { Api } from "@tina4/core";
+
+const api = new Api("https://api.example.com");
 
 // Replace the entire resource
 const putResponse = await api.put("/products/42", {
@@ -118,8 +142,8 @@ const patchResponse = await api.patch("/products/42", {
     price: 74.99
 });
 
-if (putResponse.ok) {
-    console.log("Product updated:", putResponse.data);
+if (putResponse.error === null && putResponse.http_code === 200) {
+    console.log("Product updated:", putResponse.body);
 }
 ```
 
@@ -128,16 +152,17 @@ if (putResponse.ok) {
 ## 7. DELETE Requests
 
 ```typescript
-import { api } from "@tina4/core";
+import { Api } from "@tina4/core";
 
+const api = new Api("https://api.example.com");
 const response = await api.delete("/products/42");
 
-if (response.ok) {
+if (response.http_code === 200 || response.http_code === 204) {
     console.log("Product deleted");
-} else if (response.status === 404) {
+} else if (response.http_code === 404) {
     console.log("Product not found");
 } else {
-    console.error("Delete failed:", response.error);
+    console.error("Delete failed:", response.error ?? response.http_code);
 }
 ```
 
@@ -145,86 +170,86 @@ if (response.ok) {
 
 ## 8. Response Format
 
-Every method returns the same response shape:
+Every method returns the same `ApiResult` shape:
 
 ```typescript
-interface ApiResponse<T = unknown> {
-    ok: boolean;          // true if status 200-299
-    status: number;       // HTTP status code
-    data: T;              // Parsed JSON body (on success)
-    error: string | null; // Error message (on failure)
-    headers: Record<string, string>;
+interface ApiResult {
+    http_code: number | null;            // HTTP status code, or null if the request never reached the server
+    body: unknown;                        // Parsed JSON body, or the raw string if not JSON
+    headers: Record<string, string>;      // Response headers
+    error: string | null;                 // Non-null on transport failure or timeout
 }
 ```
 
-Check `response.ok` before using `response.data`. On failure, `response.error` contains the error message and `response.data` may be `null`.
+`error` is non-null only on a transport-level failure (connection refused, DNS, timeout). An HTTP error *response* (e.g. 404, 500) still arrives with `error: null` — inspect `http_code` to branch on it.
 
 ```typescript
 const response = await api.get("/products/999");
 
-if (!response.ok) {
-    if (response.status === 404) {
-        return res.status(404).json({ error: "Product not found upstream" });
-    }
+if (response.error !== null) {
+    // Never reached the server
+    return res.status(502).json({ error: "Upstream unreachable" });
+}
+
+if (response.http_code === 404) {
+    return res.status(404).json({ error: "Product not found upstream" });
+}
+if (response.http_code !== 200) {
     return res.status(502).json({ error: "Upstream service error" });
 }
 
-return res.json(response.data);
+return res.json(response.body);
 ```
 
 ---
 
-## 9. Per-Request Headers
+## 9. Per-Request Content Type and Generic Requests
 
-Override or extend headers for a specific request:
+`post`/`put`/`patch` take an optional third argument to override the content type, and `sendRequest()` lets you issue any method:
 
 ```typescript
-import { api } from "@tina4/core";
+import { Api } from "@tina4/core";
 
-// Override the Authorization header for this request only
-const response = await api.get("/admin/users", {
-    headers: {
-        "Authorization": `Bearer ${adminToken}`,
-        "X-Request-Id": requestId
-    }
-});
+const api = new Api("https://api.example.com");
+
+// Send a non-JSON body
+await api.post("/upload", "<xml/>", "application/xml");
+
+// Any HTTP method
+const options = await api.sendRequest("OPTIONS", "/users");
 ```
 
-Per-request headers are merged with the configured defaults. The per-request value wins on conflict.
+Headers configured with `addHeaders()` / `setBearerToken()` are sent on every request from that instance. For different auth, construct a second `Api` instance.
 
 ---
 
-## 10. Using api Inside Route Handlers
+## 10. Using Api Inside Route Handlers
 
-Proxy or transform external API calls inside your routes:
+Proxy or transform external API calls inside your routes. Construct the client once at module load and reuse it:
 
 ```typescript
-import { Router } from "tina4-nodejs";
-import { api } from "@tina4/core";
+import { get } from "@tina4/core";
+import { Api } from "@tina4/core";
 
-api.configure({
-    baseUrl: "https://api.openweathermap.org/data/2.5",
-    headers: { "Accept": "application/json" }
-});
+const weatherApi = new Api("https://api.openweathermap.org/data/2.5");
+weatherApi.addHeaders({ "Accept": "application/json" });
 
-Router.get("/api/weather/{city}", async (req, res) => {
+get("/api/weather/{city}", async (req, res) => {
     const city = req.params.city;
 
-    const response = await api.get("/weather", {
-        params: {
-            q: city,
-            appid: process.env.OPENWEATHER_API_KEY,
-            units: "metric"
-        }
+    const response = await weatherApi.get("/weather", {
+        q: city,
+        appid: process.env.OPENWEATHER_API_KEY ?? "",
+        units: "metric"
     });
 
-    if (!response.ok) {
-        return res.status(response.status).json({
-            error: `Weather service error: ${response.error}`
+    if (response.error !== null || response.http_code !== 200) {
+        return res.status(502).json({
+            error: `Weather service error: ${response.error ?? response.http_code}`
         });
     }
 
-    const weather = response.data as {
+    const weather = response.body as {
         name: string;
         main: { temp: number; humidity: number };
         weather: { description: string }[];
@@ -243,11 +268,11 @@ Router.get("/api/weather/{city}", async (req, res) => {
 
 ## 11. Exercise: GitHub User Profile Proxy
 
-Build a route that fetches a GitHub user profile via the `api` client and returns a simplified version.
+Build a route that fetches a GitHub user profile via an `Api` client and returns a simplified version.
 
 ### Requirements
 
-1. Configure `api` with `https://api.github.com` as the base URL and a `User-Agent` header (GitHub requires one)
+1. Construct an `Api` with `https://api.github.com` as the base URL and a `User-Agent` header (GitHub requires one)
 2. Create a `GET /api/github/{username}` route that fetches the user's public profile
 3. Return only: `login`, `name`, `public_repos`, `followers`, `following`, `bio`, and `avatar_url`
 4. Return `404` with a message if the GitHub user does not exist
@@ -266,24 +291,20 @@ curl http://localhost:7148/api/github/this-user-does-not-exist-xyzabc
 `src/services/github.ts`:
 
 ```typescript
-import { api } from "@tina4/core";
+import { Api } from "@tina4/core";
 
-api.configure({
-    baseUrl: "https://api.github.com",
-    headers: {
-        "User-Agent": "tina4-book-example/1.0",
-        "Accept": "application/vnd.github+json"
-    },
-    timeout: 8000
+export const githubApi = new Api("https://api.github.com", "", 8 /* seconds */);
+githubApi.addHeaders({
+    "User-Agent": "tina4-book-example/1.0",
+    "Accept": "application/vnd.github+json"
 });
 ```
 
 `src/routes/github.ts`:
 
 ```typescript
-import { Router } from "tina4-nodejs";
-import { api } from "@tina4/core";
-import "../services/github";
+import { get } from "@tina4/core";
+import { githubApi } from "../services/github";
 
 interface GitHubUser {
     login: string;
@@ -295,19 +316,22 @@ interface GitHubUser {
     avatar_url: string;
 }
 
-Router.get("/api/github/{username}", async (req, res) => {
+get("/api/github/{username}", async (req, res) => {
     const { username } = req.params;
 
-    const response = await api.get<GitHubUser>(`/users/${username}`);
+    const response = await githubApi.get(`/users/${username}`);
 
-    if (!response.ok) {
-        if (response.status === 404) {
-            return res.status(404).json({ error: `GitHub user '${username}' not found` });
-        }
-        return res.status(502).json({ error: "GitHub API error", detail: response.error });
+    if (response.error !== null) {
+        return res.status(502).json({ error: "GitHub API unreachable", detail: response.error });
+    }
+    if (response.http_code === 404) {
+        return res.status(404).json({ error: `GitHub user '${username}' not found` });
+    }
+    if (response.http_code !== 200) {
+        return res.status(502).json({ error: "GitHub API error", detail: response.http_code });
     }
 
-    const user = response.data;
+    const user = response.body as GitHubUser;
 
     return res.json({
         login: user.login,
@@ -341,26 +365,26 @@ curl http://localhost:7148/api/github/torvalds
 
 ## 13. Gotchas
 
-### 1. Configure before first use
+### 1. `http_code` vs `error`
 
-`api.configure()` must be called before any request is made. If a module imports `api` and immediately calls `api.get()` at module load time before `configure()` runs, the request goes to an empty base URL.
+`error` is set only when the request never reaches the server (timeout, connection refused). A `404` or `503` *response* arrives with `error: null` — branch on `http_code` for those.
 
-**Fix:** Call `api.configure()` in your app entry point (`src/index.ts`) before importing any service modules that use `api`.
+**Fix:** Check `response.error` first for transport failures, then check `response.http_code` for HTTP-level branches.
 
-### 2. Swallowing upstream errors
+### 2. Timeout is in seconds
 
-Checking only `response.ok` hides the status code. A `401` and a `503` both set `ok: false`, but require different handling.
-
-**Fix:** Always check `response.status` for error branches. A `401` means your API key is wrong. A `503` means the service is down. Treat them differently.
-
-### 3. Timeout not set
-
-The default timeout is 30 seconds. If the upstream API hangs, your route handler hangs too, holding a connection open.
+The constructor's third argument is **seconds**, not milliseconds — `new Api(url, "", 10)` is a 10-second timeout. The default is 30 seconds.
 
 **Fix:** Set an explicit timeout appropriate for your service SLA. For real-time endpoints, 5-10 seconds is usually the right upper bound.
+
+### 3. Reuse the instance
+
+Constructing a new `Api` for every request re-applies headers each time and adds noise.
+
+**Fix:** Construct one `Api` per upstream service at module load, configure its headers once, and reuse it.
 
 ### 4. Sending secrets in URLs
 
 Appending API keys as query parameters (e.g., `?apikey=secret`) logs the key to access logs.
 
-**Fix:** Pass secrets in headers (`Authorization`, `X-API-Key`). Configure them once with `api.configure({ headers: { ... } })`.
+**Fix:** Pass secrets in headers. Use `api.setBearerToken(token)` or `api.addHeaders({ "X-API-Key": key })` once on the instance.

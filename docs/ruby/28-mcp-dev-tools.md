@@ -294,7 +294,7 @@ Returns JSON-RPC 2.0 responses:
 - Verify the port matches your server's port
 
 **Tools returning errors:**
-- Database tools require `Tina4::ORM.bind(db)` in `app.rb`
+- Database tools require a bound database: call `Tina4.bind_database(db)` (or set `TINA4_DATABASE_URL`) so `Tina4.database` resolves
 - File tools are sandboxed to the project directory
 - `database_execute` only works on localhost
 

@@ -294,7 +294,7 @@ class Product:
     price = None
 
 # v3
-from tina4_python.orm import ORM, orm_bind, IntegerField, StringField, FloatField
+from tina4_python.orm import ORM, bind_database, IntegerField, StringField, FloatField
 
 class Product(ORM):
     table_name = "products"

@@ -68,10 +68,10 @@ These skills are automatically installed when AI tools are detected:
 
 ```python
 # In your project root
-from tina4_python.ai import install_selected, install_all
+from tina4_python.ai import install_selected, install_context
 
 install_selected(".", "all")    # Detects + installs context for every supported tool
-# install_all(".")                # Or: install context for ALL known tools, even those not detected
+# install_context(".")            # Or: install context for ALL known tools, even those not detected
 ```
 
 ---
@@ -275,13 +275,13 @@ Each prompt should generate correct, runnable code on the first try. If it does 
 
 **Problem:** The AI generates incorrect import paths or uses wrong API patterns.
 
-**Fix:** Run `tina4 ai` (or `from tina4_python.ai import install_all; install_all(".")`) to generate the CLAUDE.md file. This gives the AI complete framework knowledge.
+**Fix:** Run `tina4 ai` (or `from tina4_python.ai import install_context; install_context(".")`) to generate the CLAUDE.md file. This gives the AI complete framework knowledge.
 
 ### 2. AI Suggests Wrong Import Paths
 
 **Problem:** The AI writes `from tina4_python import Router` instead of `from tina4_python.core.router import get`.
 
-**Fix:** The CLAUDE.md might be outdated. Regenerate it with `install_all(".", force=True)`. Check that the file includes the correct import paths for Python.
+**Fix:** The CLAUDE.md might be outdated. Regenerate it with `install_context(".")`. Check that the file includes the correct import paths for Python.
 
 ### 3. AI Hallucinates a Package
 

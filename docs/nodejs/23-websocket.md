@@ -780,7 +780,7 @@ Create the route to serve the page:
 ```typescript
 Router.get("/chat/{room}", async (req, res) => {
     const room = req.params.room;
-    return res.html("chat.html", { room });
+    return res.render("chat.html", { room });
 });
 ```
 
@@ -888,7 +888,7 @@ Router.websocket("/ws/room/{roomName}", (connection, event, data) => {
 
 Router.get("/room/{roomName}", async (req, res) => {
     const room = req.params.roomName;
-    return res.html("room.html", { room });
+    return res.render("room.html", { room });
 });
 ```
 

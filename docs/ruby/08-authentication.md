@@ -458,8 +458,8 @@ In your route handler, check the token:
 
 ```ruby
 Tina4::Router.post("/profile/update") do |request, response|
-  # Validate CSRF token
-  unless Tina4::Auth.validate_form_token(request.body["_token"] || "")
+  # Validate CSRF token (form_token() renders a signed JWT, validated like any token)
+  unless Tina4::Auth.valid_token(request.body["_token"] || "")
     return response.json({ error: "Invalid form token. Please refresh and try again." }, 403)
   end
 

@@ -264,15 +264,15 @@ Events::on('order.placed', function (): void {});
 Events::on('order.placed', function (): void {});
 Events::on('payment.failed', function (): void {});
 
-$count = Events::count('order.placed');     // 2
-$all   = Events::listeners();               // ['order.placed' => [...], 'payment.failed' => [...]]
-$has   = Events::hasListeners('order.placed'); // true
+$count = count(Events::listeners('order.placed')); // 2
+$names = Events::events();                          // ['order.placed', 'payment.failed']
+$has   = Events::listeners('order.placed') !== []; // true
 ```
 
 In tests, reset all events between test cases:
 
 ```php
-Events::reset();
+Events::clear();
 ```
 
 ---
@@ -413,7 +413,7 @@ Router::post('/api/orders/{id:int}/ship', function ($request, $response) use (&$
 
 **Cause:** Events are global state. Listeners accumulate across tests.
 
-**Fix:** Call `Events::reset()` in your test `setUp` or `tearDown` method.
+**Fix:** Call `Events::clear()` in your test `setUp` or `tearDown` method.
 
 ### 4. Using closures with off()
 

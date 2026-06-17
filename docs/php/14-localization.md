@@ -345,17 +345,13 @@ use Tina4\I18n;
 
 $i18n = new I18n('src/locales');
 
-// Add or extend a locale at runtime
-$i18n->addTranslations('fr', [
-    'welcome'    => 'Bienvenue, {name} !',
-    'goodbye'    => 'Au revoir, {name}.',
-    'nav' => [
-        'home'     => 'Accueil',
-        'products' => 'Produits',
-        'account'  => 'Mon Compte',
-        'logout'   => 'Déconnexion'
-    ]
-]);
+// Add or extend a locale at runtime — one key at a time
+$i18n->addTranslation('fr', 'welcome', 'Bienvenue, {name} !');
+$i18n->addTranslation('fr', 'goodbye', 'Au revoir, {name}.');
+$i18n->addTranslation('fr', 'nav.home', 'Accueil');
+$i18n->addTranslation('fr', 'nav.products', 'Produits');
+$i18n->addTranslation('fr', 'nav.account', 'Mon Compte');
+$i18n->addTranslation('fr', 'nav.logout', 'Déconnexion');
 
 $i18n->setLocale('fr');
 echo $i18n->t('welcome', ['name' => 'Alice']);

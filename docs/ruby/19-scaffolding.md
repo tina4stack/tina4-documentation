@@ -122,10 +122,10 @@ The **test file** stubs out CRUD assertions:
 require "tina4"
 
 RSpec.describe "Products API" do
-  let(:client) { Tina4::App.new.test_client }
+  let(:client) { Tina4::TestClient.new }
 
   it "creates a product" do
-    response = client.post("/api/products", { name: "Widget", price: 9.99 })
+    response = client.post("/api/products", json: { name: "Widget", price: 9.99 })
     expect(response.status).to eq(201)
   end
 
@@ -140,7 +140,7 @@ RSpec.describe "Products API" do
   end
 
   it "updates a product" do
-    response = client.put("/api/products/1", { name: "Updated Widget" })
+    response = client.put("/api/products/1", json: { name: "Updated Widget" })
     expect(response.status).to eq(200)
   end
 

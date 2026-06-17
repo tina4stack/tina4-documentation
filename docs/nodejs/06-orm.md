@@ -258,10 +258,10 @@ The two query methods have a deliberate difference in how they handle column nam
 
 ```typescript
 // find() -- use TS property names (fieldMapping applied)
-const accounts = Account.find({ accountNo: "A001" });   // translates to ACCOUNTNO = ?
+const accounts = await Account.find({ accountNo: "A001" });   // translates to ACCOUNTNO = ?
 
 // where() -- use DB column names directly in the SQL
-const accounts2 = Account.where("ACCOUNTNO = ?", ["A001"]);  // raw SQL, no translation
+const accounts2 = await Account.where("ACCOUNTNO = ?", ["A001"]);  // raw SQL, no translation
 ```
 
 This means `find()` is portable across database engines, while `where()` gives you full control of the SQL.
@@ -273,7 +273,7 @@ This means `find()` is portable across database engines, while `where()` gives y
 You can create the database table directly from your model definition:
 
 ```typescript
-Note.createTable();
+await Note.createTable();
 ```
 
 This generates and runs the CREATE TABLE SQL based on your field definitions. It is good for development and testing. For production, use migrations (Chapter 5) for version-controlled schema changes.
@@ -299,7 +299,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
   note.content = body.content ?? "";
   note.category = body.category ?? "general";
   note.pinned = body.pinned ?? false;
-  note.save();
+  await note.save();
 
   res.json({ message: "Note created", note: note.toDict() }, 201);
 }
@@ -327,7 +327,7 @@ import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 import Note from "../../../models/Note.js";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
-  const note = Note.findById(req.params.id);
+  const note = await Note.findById(req.params.id);
 
   if (note === null) {
     return res.json({ error: "Note not found" }, 404);
@@ -342,7 +342,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 Use `findOrFail()` when you want an Error thrown instead of `null`:
 
 ```typescript
-const note = Note.findOrFail(id);  // Throws Error if not found
+const note = await Note.findOrFail(id);  // Throws Error if not found
 ```
 
 ### find -- Query by Filter Dict
@@ -351,13 +351,13 @@ The `find()` method accepts an object of column-value pairs and returns an array
 
 ```typescript
 // Find all notes in the "work" category
-const workNotes = Note.find({ category: "work" });
+const workNotes = await Note.find({ category: "work" });
 
 // Find with pagination and ordering
-const recent = Note.find({ pinned: true }, 10, 0, "created_at DESC");
+const recent = await Note.find({ pinned: true }, 10, 0, "created_at DESC");
 
 // Find all records (no filter)
-const allNotes = Note.find();
+const allNotes = await Note.find();
 ```
 
 The full signature is `find(filter?, limit?, offset?, orderBy?, include?)`.
@@ -367,7 +367,7 @@ The full signature is `find(filter?, limit?, offset?, orderBy?, include?)`.
 For more complex queries, `where()` takes a SQL WHERE clause with `?` placeholders:
 
 ```typescript
-const notes = Note.where("category = ?", ["work"]);
+const notes = await Note.where("category = ?", ["work"]);
 ```
 
 ### delete -- Remove a Record
@@ -378,13 +378,13 @@ import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 import Note from "../../../models/Note.js";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
-  const note = Note.findById(req.params.id);
+  const note = await Note.findById(req.params.id);
 
   if (note === null) {
     return res.json({ error: "Note not found" }, 404);
   }
 
-  note.delete();
+  await note.delete();
 
   res.json(null, 204);
 }
@@ -402,9 +402,9 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 
   let notes;
   if (category) {
-    notes = Note.where("category = ?", [category]);
+    notes = await Note.where("category = ?", [category]);
   } else {
-    notes = Note.all();
+    notes = await Note.all();
   }
 
   res.json({
@@ -418,13 +418,13 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 
 ```typescript
 // With pagination
-const notes = Note.where("category = ?", ["work"], 20, 40);
+const notes = await Note.where("category = ?", ["work"], 20, 40);
 
 // Fetch all with pagination -- all() takes an optional where clause string
-const notes2 = Note.all("category = ?", ["work"]);
+const notes2 = await Note.all("category = ?", ["work"]);
 
 // SQL-first query -- full control over the SQL
-const notes3 = Note.select(
+const notes3 = await Note.select(
   "SELECT * FROM notes WHERE pinned = ? ORDER BY created_at DESC",
   [1],
 );
@@ -435,7 +435,7 @@ const notes3 = Note.select(
 When you need exactly one record from a custom SQL query:
 
 ```typescript
-const note = Note.selectOne("SELECT * FROM notes WHERE slug = ?", ["my-note"]);
+const note = await Note.selectOne("SELECT * FROM notes WHERE slug = ?", ["my-note"]);
 ```
 
 Returns a model instance or `null`.
@@ -447,11 +447,11 @@ The `load()` method fills an existing model instance from the database:
 ```typescript
 const note = new Note();
 note.id = 42;
-note.load();  // Loads data for id=42
+await note.load();  // Loads data for id=42
 
 // Or with a filter string
 const note2 = new Note();
-note2.load("slug = ?", ["my-note"]);
+await note2.load("slug = ?", ["my-note"]);
 ```
 
 Returns `true` if a record was found, `false` otherwise.
@@ -459,8 +459,8 @@ Returns `true` if a record was found, `false` otherwise.
 ### count -- Count Records
 
 ```typescript
-const total = Note.count();
-const workCount = Note.count("category = ?", ["work"]);
+const total = await Note.count();
+const workCount = await Note.count("category = ?", ["work"]);
 ```
 
 Respects soft delete -- only counts non-deleted records.
@@ -474,7 +474,7 @@ Respects soft delete -- only counts non-deleted records.
 Convert a model instance to a plain object:
 
 ```typescript
-const note = Note.findById(1);
+const note = await Note.findById(1);
 
 const data = note.toDict();
 // { id: 1, title: "Shopping List", content: "Milk, eggs", category: "personal", pinned: false, createdAt: "2026-03-22 14:30:00", updatedAt: "2026-03-22 14:30:00" }
@@ -540,14 +540,14 @@ export class Post extends BaseModel {
 With just the `foreignKey` field, both sides are accessible:
 
 ```typescript
-const post = Post.findById(1);
+const post = await Post.findById(1);
 const user = post.belongsTo(User, "user_id");
 console.log(user?.name);     // "Alice"
 
 // Or via toDict with include
 const postData = post.toDict(["user"]);
 
-const alice = User.findById(1);
+const alice = await User.findById(1);
 const posts = alice.hasMany(Post, "user_id");
 posts.forEach(p => console.log(p.title));
 ```
@@ -611,7 +611,7 @@ import Author from "../../../models/Author.js";
 import BlogPost from "../../../models/BlogPost.js";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
-  const author = Author.findById(req.params.id);
+  const author = await Author.findById(req.params.id);
 
   if (author === null) {
     return res.json({ error: "Author not found" }, 404);
@@ -662,7 +662,7 @@ import Author from "../../../models/Author.js";
 import BlogPost from "../../../models/BlogPost.js";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
-  const post = BlogPost.findById(req.params.id);
+  const post = await BlogPost.findById(req.params.id);
 
   if (post === null) {
     return res.json({ error: "Post not found" }, 404);
@@ -750,10 +750,10 @@ Now use `include` to eager-load:
 
 ```typescript
 // Eager load posts when fetching all authors
-const authors = Author.all(undefined, undefined, ["posts"]);
+const authors = await Author.all(undefined, undefined, ["posts"]);
 
 // Eager load author and comments when finding a single post
-const post = BlogPost.findById(1, ["author", "comments"]);
+const post = await BlogPost.findById(1, ["author", "comments"]);
 ```
 
 Without eager loading, 10 authors and their posts cost 11 queries. With eager loading: 2 queries. That is the difference between a fast page and a slow one.
@@ -764,7 +764,7 @@ Dot notation loads multiple levels deep:
 
 ```typescript
 // Load authors, their posts, and each post's comments
-const authors = Author.all(undefined, undefined, ["posts", "posts.comments"]);
+const authors = await Author.all(undefined, undefined, ["posts", "posts.comments"]);
 ```
 
 Authors, their posts, and each post's comments. Three queries total instead of hundreds.
@@ -774,7 +774,7 @@ Authors, their posts, and each post's comments. Three queries total instead of h
 When eager loading is active, `toDict(include)` embeds the related data:
 
 ```typescript
-const post = BlogPost.findById(1, ["author", "comments"]);
+const post = await BlogPost.findById(1, ["author", "comments"]);
 const data = post.toDict(["author", "comments"]);
 ```
 
@@ -828,14 +828,14 @@ When `static softDelete = true`, the ORM changes its behaviour:
 
 ```typescript
 // Soft delete -- sets is_deleted = 1, row stays in the database
-const task = Task.findById(1);
-task.delete();
+const task = await Task.findById(1);
+await task.delete();
 
 // Restore -- sets is_deleted = 0, record is visible again
-task.restore();
+await task.restore();
 
 // Permanently delete -- removes the row, no recovery possible
-task.forceDelete();
+await task.forceDelete();
 ```
 
 `restore()` is the inverse of `delete()`. It sets `is_deleted` back to `0` and commits the change. The record reappears in all standard queries.
@@ -846,10 +846,10 @@ Standard queries (`all()`, `where()`, `findById()`) exclude soft-deleted records
 
 ```typescript
 // All tasks, including soft-deleted ones
-const allTasks = Task.withTrashed();
+const allTasks = await Task.withTrashed();
 
 // Soft-deleted tasks matching a condition
-const deletedTasks = Task.withTrashed("completed = ?", [1]);
+const deletedTasks = await Task.withTrashed("completed = ?", [1]);
 ```
 
 `withTrashed()` accepts the same filter parameters as `where()`: `withTrashed(conditions?, params?, limit?, offset?)`. The only difference: it ignores the `is_deleted` filter that standard queries apply.
@@ -859,8 +859,8 @@ const deletedTasks = Task.withTrashed("completed = ?", [1]);
 The `count()` method respects soft delete. It only counts non-deleted records:
 
 ```typescript
-const activeCount = Task.count();
-const activeWork = Task.count("category = ?", ["work"]);
+const activeCount = await Task.count();
+const activeWork = await Task.count("category = ?", ["work"]);
 ```
 
 ### When to Use Soft Delete
@@ -1079,7 +1079,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
     return res.json({ errors }, 400);
   }
 
-  product.save();
+  await product.save();
   res.json({ product: product.toDict() }, 201);
 }
 ```
@@ -1206,7 +1206,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
     return res.json({ errors }, 400);
   }
 
-  author.save();
+  await author.save();
   res.json({ author: author.toDict() }, 201);
 }
 ```
@@ -1219,13 +1219,13 @@ import Author from "../../../../models/Author.js";
 import BlogPost from "../../../../models/BlogPost.js";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
-  const author = Author.findById(req.params.id);
+  const author = await Author.findById(req.params.id);
 
   if (author === null) {
     return res.json({ error: "Author not found" }, 404);
   }
 
-  const posts = BlogPost.where("author_id = ?", [author.id]);
+  const posts = await BlogPost.where("author_id = ?", [author.id]);
 
   const data = author.toDict();
   data.posts = posts.map((p) => p.toDict());
@@ -1245,7 +1245,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
   const body = req.body as Record<string, unknown>;
 
   // Verify author exists
-  const author = Author.findById(body.authorId);
+  const author = await Author.findById(body.authorId);
   if (author === null) {
     return res.json({ error: "Author not found" }, 404);
   }
@@ -1262,7 +1262,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
     return res.json({ errors }, 400);
   }
 
-  post.save();
+  await post.save();
   res.json({ post: post.toDict() }, 201);
 }
 ```
@@ -1298,7 +1298,7 @@ import BlogPost from "../../../../models/BlogPost.js";
 import Comment from "../../../../models/Comment.js";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
-  const post = BlogPost.findById(req.params.id);
+  const post = await BlogPost.findById(req.params.id);
 
   if (post === null) {
     return res.json({ error: "Post not found" }, 404);
@@ -1324,7 +1324,7 @@ import BlogPost from "../../../../../models/BlogPost.js";
 import Comment from "../../../../../models/Comment.js";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
-  const post = BlogPost.findById(req.params.id);
+  const post = await BlogPost.findById(req.params.id);
 
   if (post === null) {
     return res.json({ error: "Post not found" }, 404);
@@ -1343,7 +1343,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
     return res.json({ errors }, 400);
   }
 
-  comment.save();
+  await comment.save();
   res.json({ comment: comment.toDict() }, 201);
 }
 ```
@@ -1440,7 +1440,7 @@ ORM models provide a `query()` static method that returns a `QueryBuilder` pre-c
 
 ```typescript
 // Fluent query builder from ORM
-const results = User.query()
+const results = await User.query()
   .select("id", "name", "email")
   .where("active = ?", [1])
   .orderBy("name")
@@ -1448,17 +1448,17 @@ const results = User.query()
   .get();
 
 // First matching record
-const user = User.query()
+const user = await User.query()
   .where("email = ?", ["alice@example.com"])
   .first();
 
 // Count
-const total = User.query()
+const total = await User.query()
   .where("role = ?", ["admin"])
   .count();
 
 // Check existence
-const exists = User.query()
+const exists = await User.query()
   .where("email = ?", ["test@example.com"])
   .exists();
 ```

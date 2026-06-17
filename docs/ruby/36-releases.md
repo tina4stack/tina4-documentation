@@ -1,5 +1,483 @@
 # Chapter 35: Release Notes
 
+## v3.13.31 (2026-06-17) — Request/response parity with Python/PHP/Node (⚠ breaking: request.body)
+
+**Breaking.** `request.body` now returns the **parsed** body (JSON/form → Hash) like the other three frameworks; the raw string moves to `request.body_raw`. Apps that read the raw body — webhook signature/HMAC verification, `JSON.parse(request.body)`, SOAP/XML — must switch to `request.body_raw`. Reading fields via `request.body["key"]` now works directly. (Framework internals graphql/wsdl were repointed.)
+
+Additive: uploaded files gain a raw-bytes **`content`** field with indifferent string/symbol keys (`file["content"]` / `file[:content]`), parity with the others — materialised **lazily** on first access so `:tempfile`-only handlers never buffer large uploads in memory. `response.stream` now accepts a positional generator (`stream(gen)`) in addition to the block form. Full suite: 3,090 passing.
+
+## v3.13.30 (2026-06-16) — Cross-framework parity release (no functional change in Ruby)
+
+Version alignment with Python/PHP/Node, which gained typed-route-param coercion this release. Ruby already coerced `{id:int}` → `Integer` and `{price:float}` → `Float` (it was the reference for the cross-framework fix), so there is no behavioural change here. Verified green against the routing and auth suites. Full suite: 3,079 passing.
+
+## v3.13.29 (2026-06-16) — Live API search ranks qualified queries + resolves natural names
+
+Parity with the Python master fix for the `api_*` live-reflection tools. (Ruby's `Frond.add_filter`/`add_global`/`add_test` are plain methods, already indexed — the metaprogramming gap that hit Python/PHP doesn't apply here.)
+
+- **Class-qualified ranking.** `api_search("Frond.add_test")` now ranks `Tina4::Frond#add_test` first — the owning class, fqn segments, and an exact `Class.method` match are scored, instead of the qualifier being dead weight.
+- **Natural-name lookups.** `api_class`/`api_method` resolve a bare class name (`Database`) and longer nested paths via a new resolver, not just the exact fqn.
+
+The bundled AI skills now tell assistants to query `api_*` before guessing. Full suite: 3,079 passing.
+
+## v3.13.27 (2026-06-16) — Frond template-engine parity fixes
+
+A 50-case cross-engine audit (every Frond tag, filter, and test rendered through all four frameworks with identical templates) surfaced five places where Ruby's output diverged from the Twig/Jinja standard. All are now fixed to match:
+
+<div v-pre>
+
+- **Expression-parser literal bug** — `{{ 'a' ~ 'b' }}` and `{{ 'Y' if x else 'N' }}` came out mangled (the literal detector stripped the outer quotes off the *whole* expression before concatenation / inline-if ran). The detector now only treats an expression as a single string literal when the opening quote's match is the final character, so concatenation and inline-if of two quoted literals work.
+- **`{{ x | e }}` / `nl2br`** return a `SafeString`, so the auto-escaper no longer double-escapes them; `nl2br` escapes its input and emits `<br />`.
+- **`url_encode`** percent-encodes spaces as `%20` (was form-encoding them as `+`).
+
+</div>
+
+Behavioural note: these change rendered output for the affected cases — correctness fixes toward the documented Twig/Jinja behaviour. `TINA4_AUTOCOMMIT=false` strict mode remains unsupported in Ruby (unchanged). Full suite: 3,075 examples.
+
+## v3.13.26 (2026-06-16) — pooling parity confirmed; standalone writes auto-commit
+
+Ruby already had the correct behaviour, so this release is a parity + test pass rather than a code change. Standalone writes auto-commit on their own connection (the `pg`, `sqlite3`, and `mysql2` drivers run in autocommit mode by default), pooled connections are independent (`PG.connect` opens a fresh backend per pool slot), and explicit transactions (`start_transaction`/`commit`/`rollback`) stay atomic. A new regression test asserts a standalone write is visible across pooled connections, bringing Ruby in line with the pooling fix shipped to Python, PHP, and Node.
+
+The cross-framework default is now **autocommit on for standalone writes** (durable + pool-visible); explicit transactions stay atomic. Note: `TINA4_AUTOCOMMIT=false` strict manual-commit mode is **not** supported in Ruby — its drivers don't expose an autocommit toggle — but the autocommit-on default matches the other frameworks.
+
+Verified live on PostgreSQL: standalone write visible from a separate connection, explicit rollback discards, explicit commit persists, pooled standalone writes visible across every round-robin connection. Full suite: 3,071 passing.
+
+## v3.13.24 (2026-06-15) — unified cache backends across response, KV, and persistent DB cache
+
+The response/KV cache now supports **seven backends**, selected by `TINA4_CACHE_BACKEND`: `memory` (default), `file`, `redis`, `valkey`, `memcached`, `mongodb`, and `database`. `TINA4_CACHE_URL` carries the connection string for `redis`/`valkey`/`memcached`/`mongodb`, or a SQL URL for the `database` backend (which falls back to `TINA4_DATABASE_URL`). Credentials can be embedded in the URL (`redis://user:pass@host`, `redis://:pass@host`, `mongodb://user:pass@host`) or supplied via `TINA4_CACHE_USERNAME` / `TINA4_CACHE_PASSWORD` (mirroring `TINA4_DATABASE_USERNAME`/`_PASSWORD`); memcached is unauthenticated. The usual `TINA4_CACHE_TTL` (60), `TINA4_CACHE_MAX_ENTRIES` (1000), and `TINA4_CACHE_DIR` (`data/cache`) still apply.
+
+**Graceful fallback:** if a configured backend's driver is missing or the service/credentials are unreachable or wrong, the cache logs a warning and falls back to the **file** backend — a real persistent cache, never a silent no-op.
+
+The **persistent DB query cache** (`TINA4_DB_CACHE=true`) now routes through the same backend set via `TINA4_DB_CACHE_BACKEND` + `TINA4_DB_CACHE_URL`, so multiple instances share one cache with global write-invalidation. `cache_stats` now reports a `backend` field alongside `mode`.
+
+Full suite: 3,070 examples passing.
+
+## v3.13.23 (2026-06-15) — request-scoped DB query cache, on by default
+
+A new **request-scoped query cache** protects your database from rapid repeat reads. Within a single request, identical `SELECT`s and ORM reads are deduped automatically — the DB is hit once and subsequent identical reads are served from memory. The cache is **cleared at the start of every request** (so it never serves stale rows across requests) and **flushed on any write** (insert/update/delete/execute). For non-request contexts (scripts, workers) a short safety TTL applies.
+
+It is **on by default** via `TINA4_AUTO_CACHING=true` (off-switch `TINA4_AUTO_CACHING=false`); the in-request TTL is `TINA4_AUTO_CACHING_TTL` (default 5 seconds). The existing `TINA4_DB_CACHE` (default `false`) remains the separate *persistent* cross-request cache (TTL `TINA4_DB_CACHE_TTL`, default 30s) and is not cleared per request. `cache_stats` now reports a `mode` field: `"request"` (default), `"persistent"`, or `"off"`.
+
+**Also fixed:** the response-cache default TTL changed `0` → `60` seconds, matching Python, PHP, and Node.
+
+Full suite: 3,049 examples passing.
+
+## v3.13.22 (2026-06-15) — session default TTL standardised to 1 hour
+
+The default session lifetime now matches across all four frameworks: **3600 seconds (1 hour)**. Ruby previously defaulted to 86400s (24 hours). The session cookie `Max-Age` and the file-handler gc window now use 3600 by default — override via `Session.new(env, max_age: …)`. PHP and Node already used 3600 and are unchanged.
+
+## v3.13.21 (2026-06-15) — docs: `render()` corrections + version re-sync
+
+Documentation consistency pass — no behavior change. The `response.template(...)` reference in `llms.txt` is corrected to **`response.render(...)`** — the real method; `template` is only the route-level binding, not a response method. Version re-synced to 3.13.21 with the other frameworks (this release also carries a Python-side JWT-secret security hardening).
+
+Full suite: 3,040 examples passing.
+
+## v3.13.19 (2026-06-15) — return domain objects, construct from JSON, and one database binder
+
+Three ergonomic improvements surfaced by the live side-by-side review of the book's own examples across all four frameworks.
+
+### `response` serializes domain objects
+
+Return an ORM model, an array of models, or a query result straight from a route — Tina4 serializes it to JSON. No more hand-rolled `to_h` / `to_json`:
+
+```ruby
+Tina4::Router.get("/api/users") do |request, response|
+  response.json(User.all)        # array of models -> JSON array
+end
+```
+
+A single model becomes a JSON object; an array of models or a `DatabaseResult` becomes a JSON array. Plain Hashes, Arrays and Strings behave exactly as before — purely additive.
+
+### Construct a model from a JSON object string
+
+```ruby
+Widget.new('{"name": "Alice"}')      # JSON object string -> one record
+Widget.new(name: "Alice")            # still works
+Widget.new("name" => "Alice")        # still works
+```
+
+Passing an **Array** to a single-record constructor now raises a clear `ArgumentError`. To build many records, map over the list.
+
+### ⚠ Breaking — one database binder: `bind_database`
+
+The ORM-to-database binder is now **`Tina4.bind_database`** (the `Tina4.database = db` writer is gone; `Tina4.database` remains as a reader). The default is unchanged — models still auto-bind to `TINA4_DATABASE_URL`, so apps relying on the `.env` default need **no change**.
+
+```ruby
+# Most apps: nothing to do — the .env default is auto-bound.
+
+Tina4.bind_database(Tina4::Database.new("sqlite:///app.db"))   # override the default
+
+# Register a NAMED connection and point a model at it:
+Tina4.bind_database(
+  Tina4::Database.new("postgres://…/analytics", username: "u", password: "p"),
+  name: :analytics
+)
+
+class Visit < Tina4::ORM
+  self.db = :analytics      # uses the analytics connection (symbol = named connection)
+end
+```
+
+`Tina4.bind_database(db, name: :…)` registers a named connection; a model selects it with `self.db = :…`. A missing named connection raises a clear error.
+
+**Migration:** replace `Tina4.database = db` → `Tina4.bind_database(db)`. Reading `Tina4.database` is unchanged.
+
+Full suite: 3,040 examples passing. Shipped with parity across all four frameworks.
+
+## v3.13.18 (2026-06-15) — ORM `Model.query` + foreign-key wiring fixes
+
+Found by the live side-by-side validation against PostgreSQL.
+
+- **`Model.query` raised `NoMethodError`** — it called `QueryBuilder.from`, but the factory is `from_table`. Fixed: `MyModel.query.where(...).get` now works.
+- **`foreign_key_field` with a string / forward reference never wired the has_many side** — the deferred registry (`apply_fk_registry!`) was never invoked (no `inherited` hook). An `inherited` hook on `Tina4::ORM` now applies it as model classes load, so `references: "Author"` (string) wires both `belongs_to` and `has_many` regardless of definition order. (A bare constant used before its class is defined is still plain-Ruby ordering — use the string form to defer.)
+- Doc: the has_many accessor is the declaring class name (lowercased) + `"s"` — the cross-framework convention — overridable with `related_name:` (the CLAUDE.md "tableName" wording was wrong).
+
+Full suite: 3,018 examples, 0 failures.
+
+## v3.13.17 (2026-06-15) — PostgreSQL reads return native Ruby types
+
+Found by the live side-by-side validation against PostgreSQL. The `pg` gem returns every column as a String by default — `id` as `"1"`, a boolean as `"t"`, timestamps as strings — so a Tina4 app written on SQLite (native types) silently changed behaviour on PostgreSQL, diverging from Python and Node. The PostgreSQL driver now installs `PG::BasicTypeMapForResults` on the connection, so reads decode by type: integer → `Integer`, boolean → `true`/`false`, float → `Float`, numeric → `BigDecimal`, timestamp → `Time`, date → `Date`. `uuid`/`json`/`jsonb` stay strings; `bytea` stays binary.
+
+So `db.fetch(...)[0]` is now `{id: 1, active: true, created: <Time>}` instead of all-strings — matching SQLite, Python, and Node.
+
+Full suite: 3,011 examples, 0 failures.
+
+## v3.13.16 (2026-06-15) — `create_table` works on PostgreSQL + `DatabaseResult` index access
+
+Found by the live documentation-verification pass — running the book's own samples against a real PostgreSQL database. The documented code-first schema path, `create_table`, was silently broken on PostgreSQL: it emitted SQLite-only DDL (`AUTOINCREMENT`/`DATETIME`), PG rejected it, the error was swallowed, and it returned `true` while creating **no table**.
+
+### Root cause: `get_database_type` didn't exist
+
+`create_table` called `db.get_database_type` to pick engine-appropriate types — but that method was never defined on `Database`, so the engine was always blank and every column fell back to SQLite DDL. (This also means the v3.13.11 engine-aware `BooleanField` work had **never actually fired on Ruby** until now.) `get_database_type` is now implemented, and `create_table` is engine-aware:
+
+- **datetime → `TIMESTAMP`** on PostgreSQL/Firebird; `DATETIME` on SQLite/MySQL/MSSQL.
+- **boolean → native `BOOLEAN`** (PostgreSQL/MySQL), `BIT` (MSSQL), `INTEGER` (SQLite/Firebird); boolean `DEFAULT`s engine-aware (`TRUE`/`FALSE` vs `1`/`0`).
+- Auto-increment translated per engine (`SERIAL` on PostgreSQL) via `SQLTranslator`.
+- **A failed `CREATE` now returns `false`** (and logs) instead of reporting success.
+
+### `DatabaseResult` index + slice access
+
+`result[0]` already worked; widened `[]` to ranges/slices (`result[1, 2]`, `result[1..3]`) and added `to_ary` for destructuring — full parity with the documented behaviour.
+
+Verified against PostgreSQL 16: a model with `id` (auto-increment) + string + boolean + datetime creates, inserts, and round-trips (`SERIAL`, `boolean DEFAULT true`, `timestamp`; `WHERE active = TRUE` matches). New `postgres_create_table_spec` (PG-gated). Full suite: 3,010 examples, 0 failures. Shipped with parity across all four frameworks.
+
+## v3.13.14 (2026-06-13) — Logs reach stdout in containers + per-request logging + schema-qualified tables (#48)
+
+**Cross-framework release (all four).** Deployed Docker containers were getting no application logs. Ruby actually *did* write to stdout by default (`TINA4_LOG_OUTPUT=both`), but it **never set `$stdout.sync`** — and a container's stdout is a non-TTY pipe, which Ruby block-buffers. Logs sat in the buffer until it filled or the process exited, so `docker logs` looked empty (and a crash lost the tail). A follow-on report — the dev server going silent after startup — surfaced a second gap: requests were never logged to stdout.
+
+### Per-request logging — on by default in dev
+
+Every request now logs one line through `Tina4::Log` (→ stdout), on by default in dev and opt-in for production via `TINA4_LOG_REQUESTS`:
+
+```
+2026-06-12T10:15:03.221Z [INFO   ] GET /api/users -> 200 (12.3ms)
+```
+
+`rack_app` emits it after every request (the dev inspector previously only fed the `/__dev` UI). Format is identical across all four frameworks: `METHOD /path -> STATUS (Nms)`. Default: on under `TINA4_DEBUG`, off in production; `TINA4_LOG_REQUESTS=true`/`false` overrides. `RequestLoggerMiddleware` dropped its `[RequestLogger]` prefix for parity.
+
+### What changed (stdout)
+
+1. **`$stdout.sync = true`** is set in `Log.configure` (unless output is file-only). Logs now flush to the container's stdout immediately.
+2. **Default log level is `INFO`** (was `[TINA4_LOG_ALL]`). Surfaces request/startup/warn/error without debug noise.
+3. **`TINA4_LOG_LEVEL` now accepts plain names** (`ERROR`, `info`) in addition to the legacy bracket form (`[TINA4_LOG_ERROR]`) — so the env value is portable with Python/PHP/Node. Unknown values fall back to INFO.
+
+```ruby
+# In a container, default config:
+Tina4::Log.info("worker started")
+# pre-v3.13.14: buffered on the non-TTY pipe → docker logs lagged / lost on crash
+# v3.13.14:    flushed immediately to stdout
+```
+
+### Why it spanned all four
+
+The same logging-in-containers gap showed up in every framework:
+
+| Framework | Pre-v3.13.14 cause | Fix |
+|---|---|---|
+| Python | `not _is_production` gate suppressed stdout; default ERROR | stdout always on (flushed); default INFO |
+| PHP | `$stdout = $development` (file-only in prod); no `TINA4_LOG_LEVEL` read | stdout default on + `fflush`; reads `TINA4_LOG_LEVEL`; default INFO |
+| Ruby | stdout written but never flushed (block-buffered on non-TTY); default ALL | `$stdout.sync = true`; default INFO; accepts plain + bracket names |
+| Node | `!isProduction()` gate suppressed console; default DEBUG | console always on; production emits JSON; default INFO |
+
+The Rust `tina4` CLI was already correct (inherits child stdio).
+
+### Schema-qualified tables (#48) + a PostgreSQL `fetch()` regression
+
+Issue #48 — *"Database Table Does Not Exist"* on PostgreSQL. A model whose table lives in a non-default schema (`gift_cards.gift_card`, MSSQL `dbo.widget`, MySQL `otherdb.table`, SQLite ATTACH `extra.widget`) was invisible to the framework's introspection. `table_exists?`, `tables`, and `columns` hardcoded the default namespace (`public`) and matched the whole dotted string as one flat name — so plain reads worked, but `create_table`, migrations, and auto-CRUD were blind to the table and reported it missing.
+
+Each driver now resolves a qualified name through a shared `SchemaSplit` helper, and `Database#table_exists?` delegates to the driver when it can answer:
+
+- **PostgreSQL** — `table_exists?` uses `to_regclass()` (honours schema + `search_path`); `columns` filters by `table_schema`; `tables` lists every non-system schema and returns non-`public` tables schema-qualified.
+- **MySQL** — schema = database; a qualified name checks that catalog, a bare name defaults to `DATABASE()`.
+- **MSSQL** — honours `dbo.table`; a bare name matches in any schema.
+- **SQLite** — honours an ATTACH alias (`extra.widget`) for both `table_exists?` and `columns`.
+- **Firebird** — N/A (no schemas).
+
+Verified against a live PostgreSQL 16 container: `table_exists?('gift_cards.gift_card') → true`, `tables → ['gift_cards.gift_card', 'gift_cards.transaction']`, `columns → 12 columns` — identical results across all four frameworks.
+
+> **PHP also fixed a v3.13.12 regression found while cross-checking #48.** Its `PostgresAdapter` referenced `stripTrailingSemicolons()` (added in v3.13.12) and the new `splitSchema()` but never mixed in `SqlNormalizerTrait` — so **every PostgreSQL `fetch` / `fetchOne` / `getColumns` fatalled**. It shipped silently because the PostgreSQL test suite skips without a live server. Fixed and pinned by server-free reflection guards.
+
+### Tests
+
+- Ruby: 2,999 passed (+23 new — level resolution + `$stdout.sync`; request-log gate + dispatch; #48 schema split + SQLite ATTACH introspection)
+- Family: Python 2,829 · PHP 2,394 · Ruby 2,999 · Node 3,628 — **11,850 total, zero regressions.** (PHP also fixed #119, a `cli-server` boot crash, and the PG `fetch` regression above.)
+
+---
+
+## v3.13.12 (2026-06-11) — SQL safety + implicit ORM binding + `fetch_all` correctness
+
+Three high-impact fixes that close out long-standing footguns. All three ship with full parity across all four frameworks — Ruby gets the auto-discover wiring as the headline change.
+
+### `fetch_all` actually fetches ALL rows now (no silent 100-row truncation)
+
+Pre-v3.13.12 the convenience method defaulted to `limit: 100` and silently truncated. The name says `fetch_all` — it should fetch them all:
+
+```ruby
+# 150 rows in the table
+db.fetch_all("SELECT * FROM rows")
+# pre-v3.13.12: returns 100 rows, silently drops the other 50
+# v3.13.12:    returns all 150 rows
+```
+
+The new default is `limit: nil`, which the driver's `apply_limit` already treats as "no LIMIT injection" — your SQL runs verbatim. To opt back into a cap, pass `limit:` explicitly:
+
+```ruby
+db.fetch_all("SELECT * FROM events", limit: 500)   # capped
+db.fetch_all("SELECT * FROM users")                # all rows
+```
+
+`db.fetch` (the paginated sibling that returns a `DatabaseResult` with count metadata) keeps its 100-row default — pagination is its job. Only the `fetch_all` convenience changed.
+
+**Breaking change**: callers who relied on the silent 100-row cap now get every row. For very large tables, switch to `fetch` (which paginates with metadata) or pass an explicit `limit:`.
+
+### Trailing `;` is now stripped from user SQL in `fetch` / `fetch_one`
+
+The framework appends `LIMIT n OFFSET m` to the user-supplied query (and wraps it in `SELECT COUNT(*) FROM (...) AS subq` for the count probe). When the user's query already ended with a `;`, both rewrites broke:
+
+```ruby
+db.fetch("SELECT * FROM users;")
+# pre-v3.13.12: syntax error near "LIMIT" — the appended LIMIT followed a ;
+# v3.13.12:    works — trailing ; is stripped before LIMIT is appended
+```
+
+The strip is conservative: only trailing whitespace + semicolons are removed (any number of them, including `;;`), nothing inside the statement is touched. Parameters and quoting are unchanged — the existing parameter-binding defense against injection still does all the heavy lifting.
+
+Lives as `Tina4::Database.strip_trailing_semicolons(sql)` and is called from `fetch` and `fetch_one`.
+
+### Ruby ORM now auto-discovers `TINA4_DATABASE_URL` (the binding fix)
+
+This was the Ruby outlier. When `TINA4_DATABASE_URL` was set in `.env` but `Tina4.bind!` had never been called, the model's `db` accessor returned `nil` — every `save` / `find` / `where` silently no-op'd. Python, PHP, and Node already discovered the env var on first use; Ruby had the helper (`auto_discover_db`) defined but never called.
+
+```ruby
+# .env has TINA4_DATABASE_URL=sqlite://./app.db, no explicit Tina4.bind! anywhere
+User.find(1)
+# pre-v3.13.12: nil  (db accessor returned nil, query never ran)
+# v3.13.12:     #<User id: 1, ...>  (auto-discovered on first model access)
+```
+
+The `db` accessor on `Tina4::ORM` now resolves in this order:
+
+```ruby
+def db
+  @db || Tina4.database || auto_discover_db
+end
+```
+
+Explicit `Tina4.bind!(db)` still takes precedence — use it to bind a second database or override the env-driven default. The behaviour now matches Python's `database_url_auto_discover()`, PHP's adapter auto-init, and Node's `initDatabase()` env fallback.
+
+### Cross-framework parity
+
+| Fix | Python | PHP | Ruby | Node |
+|---|---|---|---|---|
+| `fetch_all`/`fetchAll` returns ALL rows by default | ✓ `limit=0` default | ✓ `$limit = 0` default | ✓ `limit: nil` default | ✓ already correct (`limit?` undefined) |
+| Strip trailing `;` from fetch SQL | ✓ shared helper on `DatabaseAdapter` | ✓ `SqlNormalizerTrait` on 5 adapters | ✓ `Tina4::Database.strip_trailing_semicolons` | ✓ exported `stripTrailingSemicolons` |
+| Implicit ORM binding from env | ✓ already worked | ✓ already worked | ✓ **fixed** (wired `auto_discover_db`) | ✓ already worked |
+
+### Tests
+
+- Python: 2,811 passed (+24 new)
+- PHP: 2,316 passed (+13 new)
+- Ruby: 2,980 passed (+18 new)
+- Node: 3,612 passed across 95 files (+16 new)
+
+**11,719 tests across the family, +71 new for v3.13.12, zero regressions.**
+
+---
+
+## v3.13.11 (2026-06-11) — ORM correctness pass
+
+Mirrors Python's ORM correctness pass. Two Ruby-side changes plus regression-pinning tests.
+
+### #50.1 — Callable Proc defaults are now resolved per-instance
+
+```ruby
+class GiftCard < Tina4::ORM
+  integer_field :id, primary_key: true, auto_increment: true
+  datetime_field :created_at, default: -> { Time.now }
+end
+```
+
+Pre-v3.13.11 the Proc was stored verbatim; on save it reached the driver as the Proc object. Now `initialize` invokes the Proc per instance, so each row gets a fresh value. Classes are excluded — `default: Integer` survives verbatim.
+
+### BooleanField — engine-aware DDL on PG / MySQL / MSSQL
+
+`Tina4::ORM.create_table` now picks each engine's native bool type. SQLite and Firebird stay on INTEGER (SQLite has no native bool; Firebird's driver round-trip is uneven). PostgreSQL gets `BOOLEAN`, MySQL gets `BOOLEAN` (alias for `TINYINT(1)`), MSSQL gets `BIT`.
+
+### #50.2 — natural-key INSERT (already correct, now pinned)
+
+Ruby's `save()` already routes through the `@persisted` flag — set to `false` by `initialize`, `true` by `from_hash` and after a successful save — so natural-key INSERT was working correctly all along. Pinned with a regression spec so a future refactor can't silently break it.
+
+### PG error-visibility fixes (Python only)
+
+The `tina4.request.error` event hook, the explicit-txn log gap, the COUNT-probe swallow, and the BooleanField PG cascade are all psycopg2-specific. Ruby's `pg` gem uses libpq in autocommit mode — the cascade never happens. No Ruby changes needed.
+
+### Tests
+
+2,962 examples passing, 7 pending (+10 new — `spec/orm_v3_13_11_spec.rb`). No regressions.
+
+---
+
+## v3.13.9 (2026-06-10)
+
+Non-destructive AI installer — `Tina4::AI.install_selected` / `install_all` no longer clobber the user's `CLAUDE.md`. They write (or refresh) a marker-bracketed Tina4 skill block and leave the rest of the file alone.
+
+### The bug
+
+Pre-v3.13.9 the installer wrote a full developer guide to `CLAUDE.md` (and to `.cursorules` / `.github/copilot-instructions.md` / `.windsurfrules` / `CONVENTIONS.md` / `.clinerules` / `AGENTS.md` / `.antigravity/context.md`) on every run, clobbering whatever the user had put there. Comment in the old code: *"Always overwrite -- user chose to install"* — well, sort of, but they didn't choose to lose their notes.
+
+### The fix
+
+A marker-bracketed skill block — HTML comments for `.md` files, `#`-prefixed line comments for rule files:
+
+```markdown
+<!-- tina4-skills:start -->
+## Tina4 Skills
+
+- **tina4-maintainer** -- Read `.claude/skills/tina4-maintainer/SKILL.md` for framework-level changes.
+- **tina4-developer** -- Read `.claude/skills/tina4-developer/SKILL.md` before building features.
+- **tina4-js** -- Read `.claude/skills/tina4-js/SKILL.md` for frontend work.
+<!-- tina4-skills:end -->
+```
+
+Four behaviours:
+
+1. **Fresh install** → write the framework guide plus the skill block.
+2. **Marker refresh** (idempotent) → file exists with our markers → replace only the bracketed block.
+3. **One-time migration** → file starts with the pre-v3.13.9 framework header → replace the old dump with the new framework guide + skill block.
+4. **Preserve user content** → file exists with the user's own content (no markers, no old header) → append the skill block to the end, leave everything else verbatim.
+
+The Ruby implementation also force-encodes UTF-8 on both read and write, so `File.read` returning `ASCII-8BIT` no longer trips up the string concatenation with non-ASCII content (em-dashes, ✓ characters in the skill block).
+
+### Same algorithm in Python / PHP / Node
+
+Identical four-branch logic, identical marker syntax, identical canonical action verbs in the log output. Skill content stays consistent across the family.
+
+### Tests
+
+18 new specs in `spec/ai_installer_spec.rb`. All four branches plus marker detection, block replacement, idempotency, old-header detection, and rule-file vs markdown-file behaviour.
+
+2,952 examples, 0 failures, 7 pending — no regressions.
+
+### What you'll see when you re-install
+
+```
+✓ Migrated (replaced old framework dump in) CLAUDE.md   ← first run after upgrade
+✓ Refreshed skill block in CLAUDE.md                     ← every subsequent run
+✓ Appended skill block to CLAUDE.md                      ← user-curated file
+```
+
+---
+
+## v3.13.7 (2026-06-10)
+
+Two changes from the 24rent app-platform team (PLATFORM-2159) — one observability hook, one production-safety fix. Both ship across **all four frameworks** with identical event payload shape.
+
+### NEW: `tina4.request.error` event
+
+When `handle_500` catches a route exception, it now emits `tina4.request.error` **before** rendering the 500 page. Listeners receive a hash `{ exception:, request: }` and can ship the failure to CloudWatch / Sentry / Slack — even though the framework caught it.
+
+```ruby
+Tina4::Events.on("tina4.request.error") do |payload|
+  exc = payload[:exception]
+  req = payload[:request]
+
+  Tina4::Log.error("Route error: #{exc.class}: #{exc.message}",
+                   method: req&.method, path: req&.path)
+  # ...or POST to your centralised logging pipeline
+end
+```
+
+- **Fires for caught route exceptions.** Does NOT fire for 404s — those aren't server errors.
+- **Listener errors are swallowed + warning-logged** so a broken listener can't break the 500 render.
+- **Listeners fire in priority order** (higher priority first, matching the existing `Tina4::Events.on(event, priority: N)`).
+- **Identical event name + payload across Python / PHP / Node** — only the per-language syntax differs.
+
+The framework already logged via `Tina4::Log.error` before — that line is unchanged.
+
+### FIX: Stack trace removed from production 500 body (CWE-209)
+
+Before v3.13.7, an unhandled route exception in Ruby would render `"#{error.message}\n#{error.backtrace.first(10).join("\n")}"` into the 500 response body — absolute file paths, the top 10 frames, the exception message — **regardless of `TINA4_DEBUG`**. That's [CWE-209 / OWASP A05](https://cwe.mitre.org/data/definitions/209.html): information disclosure.
+
+<div v-pre>
+
+The framework's own `lib/tina4/templates/errors/500.twig` now guards the trace block with `{% if error_message %}`. When `TINA4_DEBUG=false`, `handle_500` passes an empty `error_message` and the trace block doesn't render. The trace stays in `Tina4::Log.error` (server-side) and reaches observability via the new event.
+
+</div>
+
+When `TINA4_DEBUG=true`, the rich `Tina4::ErrorOverlay` page is unchanged.
+
+### Tests
+
+Six new specs in `spec/router_error_event_spec.rb`: event payload shape, dev/prod symmetry, listener priority order, no traceback markers in prod body, request_id still surfaces, listener-error safety.
+
+- 2,934 examples passing, 7 pending (PG container), no regressions.
+
+### Background
+
+Reported by DevProx on the 24rent platform — they centralise observability by scraping structured JSON lines from stderr → CloudWatch → a Slack notifier. Route-level exceptions weren't surfacing because the framework caught them silently. The event hook fixes that without forcing any team's logging convention; the trace-leak fix is independently a security concern.
+
+---
+
+## v3.13.6 (2026-06-09)
+
+Two fixes: one Ruby-specific (spec contamination from v3.13.5), one cross-framework polish (driver install hints).
+
+### Spec contamination from Frond static-facade — fixed
+
+v3.13.5 introduced `Tina4::Frond.add_filter / add_global / add_test` as a class-level registry (matching Python / PHP / Node). One side effect: globals set in one spec leaked into specs that expected the missing-variable fallback.
+
+`spec/spec_helper.rb` now resets the registry between examples:
+
+```ruby
+config.after(:each) do
+  # ...existing cleanup...
+  Tina4::Frond.clear_registry if defined?(Tina4::Frond) && Tina4::Frond.respond_to?(:clear_registry)
+end
+```
+
+No production code change — only the test harness. Matches the autouse fixture in Python and the `clearRegistry()` call in Node's `i18n-leaf-alias.test.ts`.
+
+### Better driver install hints (#47)
+
+Driver gems (`pg`, `mysql2`, `tiny_tds`, `ruby-odbc`, `mongo`, `fb`) now raise a multi-line `LoadError` suggesting both Bundler and bare-gem install:
+
+```
+The 'pg' gem is required for PostgreSQL connections. Install one of:
+    bundle add pg     # if your project uses Bundler
+    gem install pg    # bare driver
+```
+
+Replaces the previous bare `LoadError` (or single-line `Install: gem install pg`).
+
+### #46 — PostgreSQL transaction cascade (no fix needed)
+
+The cascade behaviour that prompted Python's #46 fix is psycopg2-specific. Ruby's `pg` gem uses libpq in autocommit mode by default — each statement is its own transaction, so a failed query does not poison subsequent ones. Verified.
+
+### Tests
+
+2,928 passing, 7 pending (Postgres container).
+
+---
+
 ## v3.13.5 (2026-06-05)
 
 Frond static-facade parity across PHP, Ruby, Node.js. Closes the last documented v3 parity gap (tina4-python task #32). Python's `Frond.add_filter` / `add_global` / `add_test` have worked as classmethods since v3.13.0 — now PHP / Ruby / Node match.
@@ -2142,7 +2620,7 @@ require "tina4"
 
 Tina4::Router.get("/") { |request, response| response.html("<h1>Hello Tina4!</h1>") }
 
-Tina4::App.new.run
+Tina4.run!
 ```
 
 ```bash

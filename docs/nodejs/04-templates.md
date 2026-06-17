@@ -2,9 +2,9 @@
 
 ## 1. Why Templates
 
-In Chapter 1, you saw `res.html("products.html", data)` produce a full HTML page. That rendering was done by **Frond**, Tina4's built-in template engine. Zero dependencies. Twig-compatible. Built from scratch. If you know Twig, Jinja2, or Nunjucks, you know 90% of Frond.
+In Chapter 1, you saw `res.render("products.html", data)` produce a full HTML page. That rendering was done by **Frond**, Tina4's built-in template engine. Zero dependencies. Twig-compatible. Built from scratch. If you know Twig, Jinja2, or Nunjucks, you know 90% of Frond.
 
-Templates live in `src/templates/`. Call `res.html("page.html", data)` and Frond loads `src/templates/page.html`, processes the tags and expressions, and returns the final HTML.
+Templates live in `src/templates/`. Call `res.render("page.html", data)` and Frond loads `src/templates/page.html`, processes the tags and expressions, and returns the final HTML.
 
 This chapter covers every feature of the template engine. After this, you build real pages.
 
@@ -24,7 +24,7 @@ Route handler:
 import { Router } from "tina4-nodejs";
 
 Router.get("/welcome", async (req, res) => {
-    return res.html("welcome.html", {
+    return res.render("welcome.html", {
         name: "Alice"
     });
 });
@@ -64,7 +64,7 @@ const data = {
     }
 };
 
-return res.html("profile.html", data);
+return res.render("profile.html", data);
 ```
 
 ```html
@@ -89,7 +89,7 @@ const data = {
     }
 };
 
-return res.html("page.html", data);
+return res.render("page.html", data);
 ```
 
 ```html
@@ -178,7 +178,7 @@ Route handler:
 import { Router } from "tina4-nodejs";
 
 Router.get("/about", async (req, res) => {
-    return res.html("about.twig", {
+    return res.render("about.twig", {
         founded_year: 2020,
         team_size: 12,
         office_count: 3
@@ -930,7 +930,7 @@ Router.get("/catalog", async (req, res) => {
         ? allProducts.filter(p => p.category.toLowerCase() === String(activeCategory).toLowerCase())
         : allProducts;
 
-    return res.html("catalog.twig", {
+    return res.render("catalog.twig", {
         products,
         categories,
         active_category: activeCategory

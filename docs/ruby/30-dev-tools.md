@@ -299,10 +299,10 @@ Filter by level (DEBUG, INFO, WARNING, ERROR), search by keyword, and view times
 ### Logging from Code
 
 ```ruby
-Tina4::Logger.debug("Processing order #{order_id}")
-Tina4::Logger.info("User #{user_id} logged in")
-Tina4::Logger.warning("Rate limit approaching for IP #{ip}")
-Tina4::Logger.error("Failed to send email: #{error.message}")
+Tina4::Log.debug("Processing order #{order_id}")
+Tina4::Log.info("User #{user_id} logged in")
+Tina4::Log.warning("Rate limit approaching for IP #{ip}")
+Tina4::Log.error("Failed to send email: #{error.message}")
 ```
 
 Logs are written to `logs/app.log` and displayed in the dev dashboard.

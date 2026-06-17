@@ -142,11 +142,13 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_CACHE_BACKEND` | `memory` | Response cache backend. Options: `memory`, `file`, `redis`. |
+| `TINA4_CACHE_BACKEND` | `memory` | Response cache backend. Options: `memory`, `file`, `redis`, `valkey`, `memcached`, `mongodb`, `database`. Falls back to `file` if the configured backend is unreachable. |
 | `TINA4_CACHE_DIR` | `data/cache` | Cache directory for the file backend. |
 | `TINA4_CACHE_TTL` | `60` | Default cache TTL in seconds. |
 | `TINA4_CACHE_MAX_ENTRIES` | `1000` | Maximum cache entries. |
-| `TINA4_CACHE_URL` | `redis://localhost:6379` | Connection URL for remote cache backends. |
+| `TINA4_CACHE_URL` | `redis://localhost:6379` | Connection URL for remote cache backends. For `database`, falls back to `TINA4_DATABASE_URL` when unset. |
+| `TINA4_CACHE_USERNAME` | _(none)_ | Username for the cache backend. May also be embedded in `TINA4_CACHE_URL`. |
+| `TINA4_CACHE_PASSWORD` | _(none)_ | Password for the cache backend. May also be embedded in `TINA4_CACHE_URL` (e.g. `redis://:pass@host`). Memcached is unauthenticated. |
 
 ---
 

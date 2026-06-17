@@ -153,9 +153,14 @@ For production deployments where you want cache persistence across server restar
 
 ```bash
 TINA4_CACHE_BACKEND=redis
-TINA4_CACHE_URL=localhost
-TINA4_CACHE_URL=6379
-TINA4_CACHE_URL=your-redis-password
+TINA4_CACHE_URL=redis://localhost:6379
+
+# With a password, embed it in the URL:
+# TINA4_CACHE_URL=redis://:your-redis-password@localhost:6379
+
+# Or use the separate credential vars:
+# TINA4_CACHE_USERNAME=          # optional
+# TINA4_CACHE_PASSWORD=your-redis-password
 ```
 
 Your code does not change. The `cacheGet`, `cacheSet`, and `ResponseCache` middleware all work the same way. Only the storage backend changes.

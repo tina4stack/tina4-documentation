@@ -94,8 +94,10 @@ worker_timeout 60
 
 # Graceful shutdown
 on_worker_boot do
-  # Reconnect to database after fork
-  Tina4::Database.reconnect
+  # Re-establish the database connection after fork: close the inherited
+  # connection and rebind a fresh one from TINA4_DATABASE_URL.
+  Tina4.database&.close
+  Tina4.bind_database(Tina4::Database.from_env)
 end
 ```
 
@@ -191,7 +193,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - TINA4_DATABASE_URL=sqlite:///data/app.db
       - TINA4_CACHE_BACKEND=redis
-      - TINA4_CACHE_URL=redis
+      - TINA4_CACHE_URL=redis://redis:6379
     volumes:
       - app-data:/app/data
       - app-logs:/app/logs
@@ -850,11 +852,12 @@ proxy_read_timeout 86400;
 
 **Cause:** Puma forks the master process to create workers. The forked processes inherit the parent's database connection, which is invalid after fork.
 
-**Fix:** Use `on_worker_boot` in Puma config to reconnect:
+**Fix:** Use `on_worker_boot` in Puma config to re-establish the connection — close the inherited one and rebind a fresh `Tina4::Database` from the environment:
 
 ```ruby
 on_worker_boot do
-  Tina4::Database.reconnect
+  Tina4.database&.close
+  Tina4.bind_database(Tina4::Database.from_env)
 end
 ```
 

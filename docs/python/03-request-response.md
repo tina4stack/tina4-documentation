@@ -50,25 +50,6 @@ curl "http://localhost:7146/api/info?foo=bar"
 {"path":"/api/info"}
 ```
 
-### request.url and request.query_string
-
-`request.url` is the full absolute URL. `request.query_string` is the raw query string with no leading `?`:
-
-```python
-@get("/api/where")
-async def where(request, response):
-    return response.json({
-        "path": request.path,            # "/api/where"
-        "url": request.url,              # "http://localhost:7146/api/where?page=2"
-        "query_string": request.query_string,  # "page=2"
-        "query": request.query,          # {"page": "2"}
-    })
-```
-
-`request.url` honours `X-Forwarded-Proto` and `X-Forwarded-Host`, so apps behind a proxy see the URL the client actually used.
-
-The same four attributes exist with the same shape in PHP, Ruby, and Node.js. Only the casing differs: `queryString` in PHP and Node, `query_string` in Python and Ruby.
-
 ### Path Parameters (Function Arguments)
 
 Path parameters captured from the URL pattern arrive as function arguments. The parameter names in your function signature must match the `{name}` placeholders in the route pattern:

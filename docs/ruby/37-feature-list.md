@@ -84,10 +84,10 @@ A reference of all 45 features in Tina4 Ruby, grouped by category.
 
 | # | Feature | Class / Method | Description |
 |---|---------|---------------|-------------|
-| 28 | I18n | `Tina4::I18n.new(locale:, path:)` | Loads JSON locale files. Dot-notation key lookup. |
-| 29 | Translation | `i18n.t("key", field: value)` | Translates a key with `{placeholder}` interpolation. |
-| 30 | Fallback Locale | `fallback: "en"` | Falls back to a default locale when a key is missing. |
-| 31 | Locale Switching | `i18n.locale = "fr"` | Switch the active locale at runtime. |
+| 28 | Localization | `Tina4::Localization.load` | Loads JSON/YAML locale files from `locales/`, `i18n/`, `src/locales/`. Dot-notation key lookup. |
+| 29 | Translation | `Tina4::Localization.t("key", field: value)` | Translates a key with `%{placeholder}` interpolation. |
+| 30 | Fallback Locale | `Tina4::Localization.t(key, default: ...)` | Auto-falls back to `"en"`, then to the supplied `default` or the key itself. |
+| 31 | Locale Switching | `Tina4::Localization.set_locale("fr")` | Switch the active locale at runtime. |
 
 ---
 
@@ -108,7 +108,7 @@ A reference of all 45 features in Tina4 Ruby, grouped by category.
 |---|---------|---------------|-------------|
 | 36 | API Client | `Tina4::Api.new(base_url, headers)` | HTTP client for calling external REST APIs. `get`, `post`, `put`, `delete`. |
 | 37 | WSDL / SOAP Server | `Tina4::WSDL`, `wsdl_operation` | Define SOAP operations with auto-generated WSDL. |
-| 38 | SOAP Client | `Tina4::WSDL::Client.new(wsdl_url)` | Call remote SOAP services by parsing their WSDL. |
+| 38 | WSDL Service Builder | `Tina4::WSDL::Service.new(name:, namespace:)` | Programmatically build a SOAP service: `add_operation`, `generate_wsdl`. |
 | 39 | GraphQL | `Tina4::GraphQL` | Schema-first GraphQL endpoint. Types, queries, mutations, subscriptions. |
 | 40 | WebSocket | `Tina4::WebSocket` | Real-time bidirectional communication. `on_message`, `broadcast`, `rooms`. |
 | 41 | SSE / Streaming | `response.stream` | Server-Sent Events for real-time data push via `response.stream(generator)`. |
