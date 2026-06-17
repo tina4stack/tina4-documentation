@@ -1,5 +1,25 @@
 # Chapter 35: Release Notes
 
+## v3.13.36 (2026-06-18) — Instant WebSocket dev-reload (parity)
+
+Dev-reload is now a WebSocket push, matching Python. `tina4 serve` POSTs `/__dev/api/reload`; `DevAdmin` invalidates OPcache for the changed file and re-discovers routes in-process (`RouteDiscovery::rescan`, no respawn, same PID), then broadcasts `{type, file, mtime}` over `/__dev_reload`. The injected client is WebSocket-primary — instant reload, CSS hot-swap, and it only falls back to the `/__dev/api/mtime` poll when the socket drops. `Router` registers `(method, path)` with replace-in-place semantics so the re-loaded handler wins. Debug-mode only — production is untouched. Full suite: 3,078 passing.
+
+## v3.13.35 (2026-06-17) — Live MCP endpoint for AI agents
+
+The built-in MCP server is now actually reachable. Its 48 dev tools (live DB queries, sandboxed file I/O, route list, project overview, docs search) were fully built but never mounted. `DevAdmin::register()` now mounts `/__dev/mcp` (JSON-RPC) + `/__dev/mcp/sse` in debug mode, so an AI agent (Claude Desktop/Code) gets live access scoped to the running project. The SSE handshake was made SAPI-safe for the built-in server. 15 new tests; full suite 3,064 passing.
+
+## v3.13.34 (2026-06-17) — Store images + dual-port test
+
+Fixed blank product images in the example store: the storefront templates read `product.imageUrl` (camelCase) but `toDict()` emits snake_case `image_url`. Aligned the templates to `image_url` (matching the API and the Python store). Corrected stale env-var names in `example/.env.example` (notably `SECRET` → `TINA4_SECRET`, which PHP rejects at boot). Added `DualPortReloadTest` locking in the AI dual-port dev mode (main port hot-reloads; port+1000 is the stable AI port). Full suite: 3,049 passing.
+
+## v3.13.33 (2026-06-17) — Queues: priority pop + automatic dead-lettering (⚠ behavioural change)
+
+**Behavioural change.** `$job->fail()` now re-enqueues (incrementing `attempts`) until `attempts >= maxRetries`, then dead-letters — a `consume` loop retries `maxRetries` times automatically. `pop`/`consume` are now priority-ordered (was FIFO); new additive `retryBackoff` config. Bug fix: `Job::$topic` is now **public** (was private → fatal when read). Only the file backend changed. Queue chapter rewritten to match. Full suite: 3,046 passing.
+
+## v3.13.32 (2026-06-17) — Caching: per-query bypass + X-Cache headers + string-middleware (chapter rewritten)
+
+Added a per-query bypass — `$db->fetch(..., noCache: true)` (also `fetchOne`/`fetchAll`) skips lookup + store. `ResponseCache` now sets `X-Cache: HIT|MISS` + `X-Cache-TTL`, and the `"ResponseCache:300"` string-middleware form now works (parity with Python/Ruby) — this also fixed a dispatch bug where the response cache's store step never ran on the route path. The KV helpers live in `\Tina4\Middleware\`. The caching chapter was rewritten to match code (real `cacheStats()` shapes, all seven backends + file fallback, the three cache layers, accurate env/defaults), dropping earlier aspirational claims. Full suite: 3,035 passing.
+
 ## v3.13.31 (2026-06-17) — Version alignment (no functional change in PHP)
 
 Cross-framework version alignment with the Ruby request/response parity release. PHP's request body, query, headers, cookies, file uploads (raw-bytes `content`), and response surface were already in parity — no behavioural change here. Full suite: 3,024 passing.

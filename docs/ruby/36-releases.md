@@ -1,5 +1,25 @@
 # Chapter 35: Release Notes
 
+## v3.13.36 (2026-06-18) — Instant WebSocket dev-reload + dev-admin file browser fix
+
+Dev-reload is now a WebSocket push, matching Python. `tina4 serve` POSTs `/__dev/api/reload`; the server re-loads changed route files in-process (`rescan_routes!`, mtime-tracked, no respawn) and broadcasts `{type, file, mtime}` over `/__dev_reload` (held open by a process-wide manager; the upgrade needs a hijack-capable server such as Puma). The injected client is WebSocket-primary and only polls `/__dev/api/mtime` when the socket is down. **Also fixed:** the dev-admin file browser returned `type` instead of `is_dir`, so folders never rendered in the dashboard tree — `/__dev/api/files` now returns `is_dir`, `has_children`, real per-entry `git_status` and the repo `branch`, full parity with Python/PHP. Full suite: 3,149 passing.
+
+## v3.13.35 (2026-06-17) — Live MCP endpoint for AI agents
+
+The built-in MCP server is now actually reachable, and its tools actually work. Two bugs: the dev tools were never registered on the default server (so it had zero tools), and `route_list` called `route[:method]` (subscript) on `Tina4::Route` objects that only expose attr-readers (every call raised). Both fixed; `DevAdmin.handle_request` now mounts `/__dev/mcp` (JSON-RPC) + `/__dev/mcp/sse` in debug mode, giving an AI agent (Claude Desktop/Code) live access (DB queries, file I/O, routes, docs) scoped to the running project. 17 new specs; full suite 3,136 examples.
+
+## v3.13.34 (2026-06-17) — Cross-framework parity release (no functional change in Ruby)
+
+Version alignment with Python/PHP/Node. Ruby's example app, env handling, and AI dual-port dev mode (main port hot-reloads; port+1000 stable) were already correct — verified live this release (main injects the reload script; port+1000 shows the AI-port badge with no reload). No code change. Full suite: 3,119 passing.
+
+## v3.13.33 (2026-06-17) — Queues: priority pop + automatic dead-lettering (⚠ behavioural change)
+
+**Behavioural change.** `job.fail(reason)` now re-enqueues (incrementing `attempts`) until `attempts >= max_retries`, then dead-letters — a `consume` loop retries `max_retries` times automatically. `pop`/`consume` are now priority-ordered (was FIFO); new additive `retry_backoff:`. Bug fixes: `consume(id:)` no longer raises and `pop_by_id` now works (implements `find_by_id`). Only the file backend changed. Queue chapter rewritten to match. Full suite: 3,119 passing.
+
+## v3.13.32 (2026-06-17) — Caching: per-query bypass + X-Cache headers (chapter rewritten to match code)
+
+Added a per-query bypass — `db.fetch(..., no_cache: true)` (also `fetch_one`/`fetch_all`) skips lookup + store. `Tina4::ResponseCache` now sets `X-Cache: HIT|MISS` + `X-Cache-TTL` (this fixed a bug where the MISS header silently no-op'd on a real Request). The caching chapter was rewritten to match code (real `cache_stats` shapes, all seven backends + file fallback, the three cache layers, accurate env/defaults), dropping earlier aspirational claims. Full suite: 3,099 passing.
+
 ## v3.13.31 (2026-06-17) — Request/response parity with Python/PHP/Node (⚠ breaking: request.body)
 
 **Breaking.** `request.body` now returns the **parsed** body (JSON/form → Hash) like the other three frameworks; the raw string moves to `request.body_raw`. Apps that read the raw body — webhook signature/HMAC verification, `JSON.parse(request.body)`, SOAP/XML — must switch to `request.body_raw`. Reading fields via `request.body["key"]` now works directly. (Framework internals graphql/wsdl were repointed.)

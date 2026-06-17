@@ -1,5 +1,25 @@
 # Chapter 35: Release Notes
 
+## v3.13.36 (2026-06-18) — Instant WebSocket dev-reload
+
+Dev-reload is now a WebSocket push instead of a poll. On a file change `tina4 serve` POSTs `/__dev/api/reload`; the server re-imports just the changed route module in-process — mtime-tracked, same PID, **no respawn** — then broadcasts `{type, file, mtime}` to every browser on the `/__dev_reload` WebSocket, and the injected toolbar client reloads instantly (CSS changes hot-swap the `<link>` href without a full reload). The `/__dev/api/mtime` poll is now a fallback only, used when the socket is down. `Router.add` replaces a re-registered `(method, path)` in place so the fresh handler wins instead of being shadowed by a stale duplicate. Debug-mode only — production is untouched. Full suite: 2,952 passing.
+
+## v3.13.35 (2026-06-17) — Live MCP endpoint for AI agents
+
+The built-in MCP server is now actually reachable. It was fully built — 50+ dev tools (live DB queries, file I/O sandboxed to the project, route list, project overview, framework docs search) — but never mounted, so no MCP client could connect. `tina4 serve` now exposes it at `/__dev/mcp` (JSON-RPC) + `/__dev/mcp/sse`, gated on debug mode, giving an AI agent (Claude Desktop/Code) live access scoped to the running project. Also fixed the `route_list` dev tool, which referenced a non-existent `Router._routes` (now `Router.get_routes()`) and errored for every caller — caught by new tool-coverage tests. Full suite: 2,943 passing.
+
+## v3.13.34 (2026-06-17) — Demo + onboarding fixes
+
+The example store crashed on boot: `app.py` imported `orm_bind`, which was renamed to `bind_database` in 3.13 (no alias). Switched it, so the demo boots, migrates, seeds, and serves real data again. Corrected stale env-var names in the README and `example/.env` to the names the framework actually reads (`TINA4_SECRET`, `TINA4_LOG_LEVEL`, `TINA4_LOCALE`, `TINA4_SESSION_BACKEND`, `TINA4_SWAGGER_*`) — the demo had been signing JWTs with a blank secret — and unified project creation on the `tina4` CLI. Examples/docs only; framework unchanged.
+
+## v3.13.33 (2026-06-17) — Queues: priority pop + automatic dead-lettering (⚠ behavioural change)
+
+**Behavioural change.** `job.fail()` now **re-enqueues** the job (incrementing `attempts`) until `attempts >= max_retries`, then moves it to the dead-letter store — so a `for job in queue.consume(topic): … job.fail(e)` loop retries `max_retries` times and dead-letters automatically (no manual `retry_failed()`). Previously `fail()` only marked the job failed. Also: `pop`/`consume` now return the **highest-priority** available job first (ties oldest-first) instead of FIFO; new additive `Queue(..., retry_backoff=0)` delays the auto re-enqueue. Only the file/lite backend changed (brokers delegate retry/dead-lettering). The queue chapter was rewritten to match (the documented retry→dead-letter flow is now real). Full suite: 2,933 passing.
+
+## v3.13.32 (2026-06-17) — Caching: per-query bypass + X-Cache headers (chapter rewritten to match code)
+
+Added a per-query cache bypass — `db.fetch(... , no_cache=True)` (also `fetch_one`/`fetch_all`) skips both the lookup and the store for that one call. The HTTP `ResponseCache` now stamps `X-Cache: HIT|MISS` and `X-Cache-TTL: <seconds>` on cached responses (no `Cache-Control`). The caching chapter was substantially rewritten to match the code: the real `cache_stats()` shapes, all seven backends + file-backend fallback, the three cache layers (request-scoped auto, persistent DB, response), and accurate env/defaults — removing earlier aspirational claims (a fictional stats shape, stale-while-revalidate, a `/__dev` per-key panel, auto `Cache-Control`). Full suite: 2,924 passing.
+
 ## v3.13.31 (2026-06-17) — Documentation fixes (no functional change)
 
 Corrected the developer guide: `Response.add_header` is an instance method — the class-level `Response.add_header(...)` shown previously raises `TypeError`, so it's now `response.add_header(...)` (including six middleware examples in Chapter 10). Removed a stale `fieldName` key from the `request.files` upload example (the dict has `filename`, `type`, `content`, `size`). Code is unchanged. Full suite: 2,914 passing.
