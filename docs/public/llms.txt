@@ -1,18 +1,18 @@
-# Tina4 Framework — AI Bootstrap Protocol
+# Tina4 Framework - AI Bootstrap Protocol
 
 Tina4 is a four-language web framework (Python, PHP, Ruby, Node.js) with 55
 built-in features and zero runtime dependencies. Frontend library: tina4-js.
 Website: https://tina4.com | GitHub: https://github.com/tina4stack
 
 If you are an AI assistant helping someone "use Tina4", **follow the steps below
-in order**. Skipping steps causes the most common failure modes — the framework
+in order**. Skipping steps causes the most common failure modes - the framework
 hates being treated like Express, Flask, Rails, or Sinatra. Don't do that.
 
 ---
 
-## STEP 1 — Make sure the `tina4` client is installed
+## STEP 1 - Make sure the `tina4` client is installed
 
-The `tina4` CLI — "the client" — is the **only supported entry point** and the
+The `tina4` CLI - "the client" - is the **only supported entry point** and the
 first thing to check. Everything flows from it.
 
 ```bash
@@ -22,7 +22,7 @@ tina4 --version    # found? go to STEP 2
 If that command is not found, install it once, system-wide:
 
 ```bash
-# macOS, Linux, WSL, Git Bash, Cygwin, MSYS — auto-detects OS + arch
+# macOS, Linux, WSL, Git Bash, Cygwin, MSYS - auto-detects OS + arch
 curl -fsSL https://tina4.com/install.sh | sh
 # or wget
 wget -qO- https://tina4.com/install.sh | sh
@@ -33,43 +33,43 @@ irm https://tina4.com/install.ps1 | iex
 
 The script downloads the right prebuilt binary from the latest GitHub release
 (darwin-amd64 / darwin-arm64 / linux-amd64 / windows-amd64.exe) and puts it on
-PATH — no Rust toolchain, no package-manager dependency. If there's neither
+PATH - no Rust toolchain, no package-manager dependency. If there's neither
 curl nor PowerShell, grab the binary from
 https://github.com/tina4stack/tina4/releases/latest.
 
 Never run `python app.py`, `node index.js`, `php -S`, `ruby app.rb`, or `rackup`
-directly — the framework refuses to start without the client unless
+directly - the framework refuses to start without the client unless
 `TINA4_OVERRIDE_CLIENT=true` is set (Docker / CI escape hatch only).
 
-**Already inside a Tina4 project?** Detect the language from what's present —
-`pyproject.toml`→Python, `composer.json`→PHP, `Gemfile`→Ruby, `package.json`
-(type:module + TypeScript)→Node — confirm the client, then skip to STEP 4.
+**Already inside a Tina4 project?** Detect the language from what's present -
+`pyproject.toml`->Python, `composer.json`->PHP, `Gemfile`->Ruby, `package.json`
+(type:module + TypeScript)->Node - confirm the client, then skip to STEP 4.
 
 ---
 
-## STEP 2 — `tina4 doctor` — find out what's missing
+## STEP 2 - `tina4 doctor` - find out what's missing
 
 ```bash
 tina4 doctor
 ```
 
-`doctor` inspects the machine and reports what's present and what's missing —
+`doctor` inspects the machine and reports what's present and what's missing -
 the language runtimes (Python / Node / PHP / Ruby), package managers, git.
 Read its output: it tells you exactly what STEP 3 needs to install. Don't
-hand-install anything off a guess — let `doctor` diagnose first.
+hand-install anything off a guess - let `doctor` diagnose first.
 
 ---
 
-## STEP 3 — `tina4 setup` — install what's missing, then scaffold
+## STEP 3 - `tina4 setup` - install what's missing, then scaffold
 
 ```bash
 tina4 setup
 ```
 
 `setup` is the turnkey path, built for someone starting from nothing. It
-installs whatever `doctor` flagged as missing — the language runtime and git,
+installs whatever `doctor` flagged as missing - the language runtime and git,
 through the OS package manager (Chocolatey on Windows, Homebrew on macOS), plus
-the tina4 AI skills — then scaffolds a ready-to-run project and points you at
+the tina4 AI skills - then scaffolds a ready-to-run project and points you at
 it. It is guided: it asks which language, which AI tool, where your projects
 folder lives, and the project name. Answer those (on the user's behalf if you're
 driving the session) and it does the rest.
@@ -82,20 +82,20 @@ system installs (safe local test): `tina4 setup --skip-install`.
 
 **Scripted / non-interactive alternative:** if the runtime is already present
 (STEP 2 was clean) and you just want a project laid down, use
-`tina4 init <python|php|ruby|nodejs> [name]` — it creates the canonical layout
+`tina4 init <python|php|ruby|nodejs> [name]` - it creates the canonical layout
 (`src/routes/`, `src/orm/`, `src/templates/`, `src/public/`, `.env`). Don't
 build that structure by hand.
 
 ---
 
-## Skills — install them; the AI gets much better at Tina4
+## Skills - install them; the AI gets much better at Tina4
 
 The tina4 **skills** are the single highest-leverage thing for an AI building
 Tina4. They are the source of truth for the framework's patterns and stop the
 guessing that breaks builds. **Install them and use them.**
 
-- **What:** `tina4-developer` (backend — routing, ORM, auth, queues, migrations,
-  …) and `tina4-js` (the reactive frontend).
+- **What:** `tina4-developer` (backend - routing, ORM, auth, queues, migrations,
+  ...) and `tina4-js` (the reactive frontend).
 - **Install:** `tina4 setup` installs them automatically. To (re)install on any
   machine, standalone:
   ```bash
@@ -106,12 +106,12 @@ guessing that breaks builds. **Install them and use them.**
   `~/.claude/skills/tina4-js`. Claude Code and Claude Desktop auto-load skills
   from there.
 - **Use:** follow `tina4-developer` for backend work and `tina4-js` for the
-  frontend. Unsure of an API? The skill has the exact, current pattern — read it
+  frontend. Unsure of an API? The skill has the exact, current pattern - read it
   instead of guessing.
 
 ---
 
-## Scaffolding commands — let the CLI write the boilerplate
+## Scaffolding commands - let the CLI write the boilerplate
 
 Never hand-build the project layout or files; generate them:
 
@@ -127,7 +127,7 @@ tina4 routes                                 # list registered routes
 
 ---
 
-## STEP 4 — Run the dev server
+## STEP 4 - Run the dev server
 
 ```bash
 cd <project>
@@ -139,12 +139,12 @@ The CLI compiles SCSS, watches files, manages the process. Default ports:
 **PHP 7145, Python 7146, Ruby 7147, Node.js 7148.**
 
 In development the server also exposes a live MCP endpoint at `/__dev/mcp` (see
-"Stay correct" below) — point your AI tool at it for live access to this
+"Stay correct" below) - point your AI tool at it for live access to this
 project's routes, schema, files, and docs.
 
 ---
 
-## STEP 5 — When `tina4 serve` fails
+## STEP 5 - When `tina4 serve` fails
 
 Tina4 prints structured errors. Read the message before reacting.
 
@@ -157,20 +157,20 @@ the loop deepens. Stop early. Ask.
 
 ---
 
-## Recommended architecture — Python backend + tina4-js frontend
+## Recommended architecture - Python backend + tina4-js frontend
 
 Build the backend in **Python**. It is the reference implementation; PHP, Ruby
 and Node track it feature-for-feature, but Python is where the API is defined
-first and documented best. Two shapes, both Python + tina4-js — pick one:
+first and documented best. Two shapes, both Python + tina4-js - pick one:
 
-**A. Combined (default — what `tina4 setup` scaffolds).** One tina4-python app
+**A. Combined (default - what `tina4 setup` scaffolds).** One tina4-python app
 that serves an embedded tina4-js frontend. tina4-js ships with the backend at
 `/js/tina4js.min.js`; pages live in `src/templates/`, your frontend components
 in `src/public/js/`. One process, one port, one deploy. This is the fastest
 path and the right default for most apps and for a non-programmer.
 
 ```
-myapp/                 # tina4-python — serves the API AND the tina4-js frontend
+myapp/                 # tina4-python - serves the API AND the tina4-js frontend
   src/routes/          # API + page routes (auto-discovered)
   src/orm/             # one model per file
   src/templates/       # Twig pages that load /js/tina4js.min.js
@@ -190,17 +190,17 @@ myapp/
 ```
 
 Either way: do **not** add Express / Flask / Rails / FastAPI / etc. Tina4 is the
-whole stack — server, router, ORM, auth, queue, sessions, templating.
+whole stack - server, router, ORM, auth, queue, sessions, templating.
 
 ---
 
-## Building — use the built-ins, get the exact API (do NOT guess)
+## Building - use the built-ins, get the exact API (do NOT guess)
 
 Tina4 has 55 built-ins: ORM, Auth (JWT + password hashing), Queue, Sessions,
 Migrations, an `Api` HTTP client, WebSockets, GraphQL, Swagger, CRUD, i18n,
-caching, events, and more. **Use them — never hand-roll what's built in.**
+caching, events, and more. **Use them - never hand-roll what's built in.**
 
-For exact, version-correct signatures, use these in order — don't invent API
+For exact, version-correct signatures, use these in order - don't invent API
 names:
 
 1. **The installed skills.** `tina4 setup` installs `tina4-developer` and
@@ -208,16 +208,16 @@ names:
 2. **The live project MCP.** A running `tina4 serve` exposes an MCP server at
    `/__dev/mcp` (JSON-RPC) plus a browser REST shim at `/__dev/api/mcp`. Its
    `docs_search`, `project_overview`, `routes`, and `database_*` tools answer
-   from THIS project's real code and version. Cheapest way to stay correct — ask
+   from THIS project's real code and version. Cheapest way to stay correct - ask
    it instead of reading the whole repo.
-3. **The RAG — "Ask Tina4".** Live, indexed from the docs:
+3. **The RAG - "Ask Tina4".** Live, indexed from the docs:
    https://tina4.com/api/rag
 4. **The docs:** https://tina4.com
 
 The essentials look like this in Python (the reference backend):
 
 ```python
-# src/routes/users.py — a file here becomes routes automatically
+# src/routes/users.py - a file here becomes routes automatically
 from tina4_python.core.router import get, post
 
 @get("/api/users")                  # GET is public by default
@@ -230,7 +230,7 @@ async def create(request, response):
 ```
 
 ```python
-# src/orm/User.py — one model per file
+# src/orm/User.py - one model per file
 from tina4_python.orm import ORM, IntegerField, StringField
 
 class User(ORM):
@@ -239,7 +239,7 @@ class User(ORM):
 # Auto-binds to TINA4_DATABASE_URL. Override with bind_database(db).
 ```
 
-The same concepts exist in PHP, Ruby and Node — get the exact per-language
+The same concepts exist in PHP, Ruby and Node - get the exact per-language
 syntax from the skills or the RAG, don't guess it.
 
 ---
@@ -252,18 +252,18 @@ syntax from the skills or the RAG, don't guess it.
 - **Always go through the client.** `tina4 serve`, never `python app.py` /
   `node index.js` / `php -S` / `rackup`.
 - **Don't hand-install deps** (`pip`/`npm`/`composer`/`gem`) to paper over a
-  missing-package error — let the CLI manage them. Missing runtime → `tina4 setup`.
+  missing-package error - let the CLI manage them. Missing runtime -> `tina4 setup`.
 - **Routes return `response(...)`**, not `response.json()`. `response()`
   auto-serializes ORM models, lists, and query results to JSON.
 - **DB pagination is `limit`/`offset`** (not `skip`). Connect via
   `TINA4_DATABASE_URL` = `driver://user:pass@host:port/db`
   (sqlite/postgres/mysql/mssql/firebird).
-- **Schema changes go through migrations** — `tina4 generate migration <name>`
+- **Schema changes go through migrations** - `tina4 generate migration <name>`
   then `tina4 migrate`. Never run DDL inside a route handler.
 - **Don't edit files outside `src/`** unless asked, and don't parse `src/routes/`
-  filenames yourself — discovery is automatic; drop a file, it becomes a route.
+  filenames yourself - discovery is automatic; drop a file, it becomes a route.
 - **tina4-js signals use `.value`.** Write with `count.value = 5`. In templates
-  pass the signal itself — `${count}` (reactive), NOT `${count.value}` (freezes
+  pass the signal itself - `${count}` (reactive), NOT `${count.value}` (freezes
   after first render). Booleans: `?disabled=${x}`. New array refs, not `.push()`.
   Events: `@click=${fn}`. Templates are Twig across all backends.
 
@@ -281,7 +281,7 @@ docker run -p <port>:<port> my-app   # use the language's default port (Python 7
 
 Other `tina4 deploy` targets generate the config and print the next commands:
 `systemd` (a service unit), `nginx` (a reverse-proxy config), `cpanel`. The
-generated `Dockerfile` is language-correct out of the box — review it, then
+generated `Dockerfile` is language-correct out of the box - review it, then
 build. For the combined architecture the one image serves both API and frontend;
 for the split architecture, build/deploy the `frontend/` separately (static
 assets) and the `backend/` as the API image.
