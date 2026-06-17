@@ -1,5 +1,9 @@
 # Chapter 35: Release Notes
 
+## v3.13.37 (2026-06-18) — Dev-admin editor: Ruby + more syntax highlighting
+
+The dev-admin code editor now highlights `.rb`/`.rs`/`.go`/`.java`/`.scss` (the CodeMirror bundle was missing those grammars). Also aligned the file-read language map to the Python master (scss→css, add rust/go/java, txt/csv/log→text, xml→html, shell variants, gemspec/rake→ruby, svg) and added no-extension `Dockerfile` detection. Dev-mode tooling only. Full suite: 3,078 passing.
+
 ## v3.13.36 (2026-06-18) — Instant WebSocket dev-reload (parity)
 
 Dev-reload is now a WebSocket push, matching Python. `tina4 serve` POSTs `/__dev/api/reload`; `DevAdmin` invalidates OPcache for the changed file and re-discovers routes in-process (`RouteDiscovery::rescan`, no respawn, same PID), then broadcasts `{type, file, mtime}` over `/__dev_reload`. The injected client is WebSocket-primary — instant reload, CSS hot-swap, and it only falls back to the `/__dev/api/mtime` poll when the socket drops. `Router` registers `(method, path)` with replace-in-place semantics so the re-loaded handler wins. Debug-mode only — production is untouched. Full suite: 3,078 passing.

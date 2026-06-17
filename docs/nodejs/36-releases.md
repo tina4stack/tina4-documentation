@@ -1,5 +1,9 @@
 # Chapter 35: Release Notes
 
+## v3.13.37 (2026-06-18) — Dev-admin editor: TypeScript + Ruby highlighting fixed
+
+The dev-admin file-read endpoint returned `{path, content, bytes}` with **no `language` field**, so the dashboard editor highlighted nothing — including `.ts`. It now returns a `language` (canonical extension map matching the Python master, plus no-extension `Dockerfile`), and the rebuilt editor bundle adds the Ruby/Rust/Go/Java/SCSS grammars. `.ts` and `.rb` now highlight correctly. Dev-mode tooling only. Full suite: 3,980 passing.
+
 ## v3.13.36 (2026-06-18) — Instant WebSocket dev-reload + dev-admin file browser fix
 
 Dev-reload is now a WebSocket push, matching Python. `tina4 serve` POSTs `/__dev/api/reload`; the server re-imports changed routes in-process (no respawn, same PID) and broadcasts `{type, file, mtime}` over the `/__dev_reload` WebSocket upgrade route (debug-only, never mounted on the stable AI port). The injected client is WebSocket-primary and only polls `/__dev/api/mtime` when the socket drops. **Also fixed:** the dev-admin file browser returned `type` instead of `is_dir`, so folders never rendered in the dashboard tree — `/__dev/api/files` now returns `is_dir`, `has_children`, real per-entry `git_status` and the repo `branch`, full parity with Python/PHP. Full suite: 3,957 passing.

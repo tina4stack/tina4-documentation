@@ -1,5 +1,9 @@
 # Chapter 35: Release Notes
 
+## v3.13.37 (2026-06-18) — Dev-admin editor: Ruby + more syntax highlighting
+
+The dev-admin dashboard's code editor (CodeMirror) gained the grammars it was missing: `.rb` files — plus `.rs`/`.go`/`.java`/`.scss` — now highlight in the file viewer instead of falling through to plain text (the editor bundle had no Ruby/Rust/Go/Java case). Python's file-read endpoint already reported the correct `language` per extension, so this ships the rebuilt editor bundle that can render them. Dev-mode tooling only; no framework runtime change. Full suite: 2,952 passing.
+
 ## v3.13.36 (2026-06-18) — Instant WebSocket dev-reload
 
 Dev-reload is now a WebSocket push instead of a poll. On a file change `tina4 serve` POSTs `/__dev/api/reload`; the server re-imports just the changed route module in-process — mtime-tracked, same PID, **no respawn** — then broadcasts `{type, file, mtime}` to every browser on the `/__dev_reload` WebSocket, and the injected toolbar client reloads instantly (CSS changes hot-swap the `<link>` href without a full reload). The `/__dev/api/mtime` poll is now a fallback only, used when the socket is down. `Router.add` replaces a re-registered `(method, path)` in place so the fresh handler wins instead of being shadowed by a stale duplicate. Debug-mode only — production is untouched. Full suite: 2,952 passing.
