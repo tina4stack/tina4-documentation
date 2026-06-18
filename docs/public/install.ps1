@@ -34,12 +34,30 @@ $dest = "$installDir\tina4.exe"
 Write-Host "Downloading $binary..."
 Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $dest
 
-# Add to PATH if not already there
+# Put the install dir FIRST on the user PATH so a fresh install always wins
+# over a stale tina4.exe sitting earlier on PATH (e.g. an old copy dropped in a
+# Ruby / MSYS / Scoop bin dir by a previous install or `tina4 update`). Just
+# appending left the old binary shadowing the new one -- `tina4 --version` kept
+# reporting the old version and `tina4 setup` ran old code.
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
-if ($userPath -notlike "*$installDir*") {
-    [Environment]::SetEnvironmentVariable("Path", "$userPath;$installDir", "User")
-    $env:Path = "$env:Path;$installDir"
-    Write-Host "Added $installDir to PATH"
+$parts = @()
+if ($userPath) { $parts = $userPath -split ';' | Where-Object { $_ -and $_ -ne $installDir } }
+$newUserPath = (@($installDir) + $parts) -join ';'
+[Environment]::SetEnvironmentVariable("Path", $newUserPath, "User")
+$env:Path = "$installDir;$env:Path"
+Write-Host "Put $installDir first on PATH"
+
+# A tina4.exe in a MACHINE/system PATH dir is searched before any user-PATH dir
+# in a new terminal, so a user install can't reorder it. Surface any other copy
+# so the user knows why `tina4 --version` might still report an old version.
+$others = @(Get-Command tina4 -All -ErrorAction SilentlyContinue |
+    ForEach-Object { $_.Source } | Where-Object { $_ -and $_ -ne $dest })
+if ($others.Count -gt 0) {
+    Write-Host ""
+    Write-Host "  Heads up: other tina4 copies are also on PATH:" -ForegroundColor Yellow
+    $others | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
+    Write-Host "  If 'tina4 --version' doesn't show $tag in a new terminal, remove the" -ForegroundColor Yellow
+    Write-Host "  one(s) above (or their folder from PATH)." -ForegroundColor Yellow
 }
 
 Write-Host ""
