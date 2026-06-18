@@ -46,21 +46,21 @@ Write-Host ""
 Write-Host "  tina4 $tag installed successfully" -ForegroundColor Green
 Write-Host ""
 
-# Always print the command list FIRST, so that if setup is interrupted or
-# crashes (e.g. a declined UAC prompt), the user still has `tina4 setup` on
-# screen to run again. The guided setup is launched right after.
-Write-Host "  Get started (these work any time — open a new terminal):"
-Write-Host "    tina4 setup    - Guided onboarding: language + AI tool + first project"
+# Do NOT auto-launch `tina4 setup` here. This script is normally run via
+#   irm https://tina4.com/install.ps1 | iex
+# which means the PowerShell host's stdin IS the download pipe — already at EOF.
+# `tina4 setup` is an interactive wizard; launched from that dead stdin its menu
+# can't be answered and it would silently default, then fail on UAC elevation —
+# the "Starting setup… → drops to the prompt" symptom. Instead, point the user at
+# the next step. They run it in their own fresh terminal where stdin is a real
+# console and the menu works. (`tina4 setup` itself also now refuses a
+# non-interactive stdin, as a backstop.)
+Write-Host "  Next step — run this in your terminal:" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "    tina4 setup" -ForegroundColor Green -NoNewline
+Write-Host "    Guided onboarding: language + AI tool + first project"
+Write-Host ""
+Write-Host "  Other commands (any time):"
 Write-Host "    tina4 doctor   - Check your environment"
 Write-Host "    tina4 serve    - Start the dev server"
 Write-Host ""
-
-Write-Host "  Starting setup..." -ForegroundColor Cyan
-Write-Host ""
-try {
-    & "$dest" setup
-    if ($LASTEXITCODE -ne 0) { throw "setup exited with code $LASTEXITCODE" }
-} catch {
-    Write-Host ""
-    Write-Host "  Setup didn't finish. Run it again any time with:  tina4 setup" -ForegroundColor Yellow
-}
