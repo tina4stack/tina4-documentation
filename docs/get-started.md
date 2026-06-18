@@ -28,6 +28,8 @@ Verify the installation:
 tina4 --version
 ```
 
+On Windows the CLI lands in `%LOCALAPPDATA%\tina4` and goes first on your PATH, so the newest copy always wins. If `tina4 --version` still reports an old version, another `tina4.exe` sits earlier on a system PATH — the installer prints its location so you can remove it.
+
 ## Check Your Environment
 
 Run `tina4 doctor` to see which languages and package managers are available:
@@ -47,6 +49,15 @@ tina4 setup
 ```
 
 It's guided: it asks which language, which AI tool, where your projects folder is, and the project name. First run remembers those; later runs ask only the project type and name. Use `tina4 setup --dry-run` to preview without changing anything.
+
+### What to expect
+
+Setup asks the four questions, installs whatever `doctor` flagged as missing, scaffolds the project — including its own `CLAUDE.md` and `.mcp.json` — then hands you off based on the AI tool you picked:
+
+- **Claude Code** — opens a coding session right inside your new project, seeded with a first prompt. Start building.
+- **Claude Desktop, or no AI** — asks "Start it now?". Say yes and it runs `tina4 serve`, opening your app in the browser. Choose Claude Desktop and it comes to the front too; open a session there and point it at your project folder.
+
+Either way you land on a running app with the skills installed. From here, you build.
 
 Prefer to do it by hand? Skip to **Create a Project** below.
 

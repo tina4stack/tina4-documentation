@@ -58,6 +58,15 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Iterable
 
+# The status glyphs (✓ ✗ —) are UTF-8. A default Windows console is cp1252 and
+# raises UnicodeEncodeError when we print them, crashing the audit mid-report.
+# Force UTF-8 on stdout/stderr so local Windows runs match CI (which is UTF-8).
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
+
 # ── Paths ─────────────────────────────────────────────────────────────
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -108,7 +117,10 @@ def find_doc_files() -> list[Path]:
     files: list[Path] = []
     for pattern in DOC_GLOBS:
         for path in REPO_ROOT.glob(pattern):
-            if any(frag in str(path) for frag in SKIP_PATH_FRAGMENTS):
+            # Match against the POSIX form so the forward-slash skip fragments
+            # (e.g. "/docs/v2/") also match on Windows, where str(path) uses
+            # backslashes — otherwise v2 docs leak into the audit locally.
+            if any(frag in path.as_posix() for frag in SKIP_PATH_FRAGMENTS):
                 continue
             files.append(path)
     return sorted(files)
