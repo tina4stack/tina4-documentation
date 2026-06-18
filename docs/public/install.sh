@@ -108,19 +108,23 @@ echo ""
 echo "✓ tina4 ${LATEST} installed successfully"
 echo ""
 
-# Getting started = run setup. One command, then a few questions, then you're
-# building. `curl | sh` leaves stdin attached to the pipe (not the keyboard),
-# so read the answers from the controlling terminal. With no tty available
-# (CI / non-interactive), fall back to printing the next steps instead of
-# hanging on a prompt that can never be answered.
+# Always print the command list FIRST, so that if setup is interrupted or
+# crashes the user still has `tina4 setup` on screen to run again.
+echo "Get started (these work any time):"
+echo "  tina4 setup    — Guided onboarding: language + AI tool + first project"
+echo "  tina4 doctor   — Check your environment"
+echo "  tina4 serve    — Start the dev server"
+echo ""
+
+# Launch guided setup now. `curl | sh` leaves stdin attached to the pipe (not
+# the keyboard), so read the answers from the controlling terminal. With no tty
+# (CI / non-interactive) we skip the launch — the commands above already tell
+# the user how to run it. A non-zero exit prints a clear retry hint.
 if [ -r /dev/tty ]; then
   echo "  Starting setup..."
   echo ""
-  "${INSTALL_DIR}/tina4" setup < /dev/tty
-else
-  echo "Get started:"
-  echo "  tina4 setup    — Guided onboarding (language + AI tool + first project)"
-  echo "  tina4 doctor   — Check your environment"
-  echo "  tina4 serve    — Start development server"
-  echo ""
+  if ! "${INSTALL_DIR}/tina4" setup < /dev/tty; then
+    echo ""
+    echo "  Setup didn't finish. Run it again any time with: tina4 setup"
+  fi
 fi

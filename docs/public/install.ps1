@@ -46,7 +46,21 @@ Write-Host ""
 Write-Host "  tina4 $tag installed successfully" -ForegroundColor Green
 Write-Host ""
 
-# Getting started = run setup. One command, then a few questions, then you're building.
+# Always print the command list FIRST, so that if setup is interrupted or
+# crashes (e.g. a declined UAC prompt), the user still has `tina4 setup` on
+# screen to run again. The guided setup is launched right after.
+Write-Host "  Get started (these work any time — open a new terminal):"
+Write-Host "    tina4 setup    - Guided onboarding: language + AI tool + first project"
+Write-Host "    tina4 doctor   - Check your environment"
+Write-Host "    tina4 serve    - Start the dev server"
+Write-Host ""
+
 Write-Host "  Starting setup..." -ForegroundColor Cyan
 Write-Host ""
-& "$dest" setup
+try {
+    & "$dest" setup
+    if ($LASTEXITCODE -ne 0) { throw "setup exited with code $LASTEXITCODE" }
+} catch {
+    Write-Host ""
+    Write-Host "  Setup didn't finish. Run it again any time with:  tina4 setup" -ForegroundColor Yellow
+}
