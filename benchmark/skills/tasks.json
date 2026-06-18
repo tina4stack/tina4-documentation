@@ -1,0 +1,30 @@
+{
+  "_comment": "Vanilla-vs-skills benchmark tasks for Tina4. Each task is generated twice per model: once with NO skill (vanilla arm) and once with the tina4-developer skill prepended (skills arm). Scoring is automated in score.py. Language defaults to python; the markers below are python-flavoured. idiom = markers we WANT (uses the framework correctly); halluc = patterns that prove the model reached for the wrong framework or invented APIs.",
+  "language": "python",
+  "tasks": [
+    {
+      "id": "products-endpoint",
+      "prompt": "In a Tina4 Python project, add a GET /api/products endpoint that returns all products as JSON, backed by a Product ORM model with fields name (string) and price (numeric). Show the route file and the model file.",
+      "idiom": ["@get(", "from tina4_python", "ORM", "response(", "src/orm", "src/routes", "IntegerField", "StringField", "NumericField"],
+      "halluc": ["from flask", "Flask(", "@app.route", "jsonify(", "request.get_json", "SQLAlchemy", "db.session", "from fastapi", "FastAPI(", "@router.get", "express", "app.get(", "render_template("]
+    },
+    {
+      "id": "auth-login",
+      "prompt": "In a Tina4 Python project, add a POST /api/login route that checks a username and password against a User model and returns a JWT on success. Use the framework's built-in auth and password hashing.",
+      "idiom": ["@post(", "Auth", "get_token", "check_password", "from tina4_python", "noauth"],
+      "halluc": ["import jwt", "import bcrypt", "from passlib", "hashlib", "werkzeug.security", "generate_password_hash", "PyJWT", "from flask", "from fastapi"]
+    },
+    {
+      "id": "background-email",
+      "prompt": "In a Tina4 Python project, a POST /api/invite route should send a welcome email without making the request wait. Use the framework's built-in mechanism for background/queued work.",
+      "idiom": ["Queue", "queue.push", "from tina4_python.queue", "@post(", "consume"],
+      "halluc": ["import threading", "Thread(", "celery", "Celery", "import asyncio\nasyncio.create_task", "concurrent.futures", "multiprocessing", "from rq import"]
+    },
+    {
+      "id": "products-page",
+      "prompt": "In a Tina4 Python project, render an HTML page at /products that lists products from the database as cards. Use the framework's template engine and conventions.",
+      "idiom": ["@get(", "response.render", "template(", ".twig", "{% ", "{{ ", "extends", "src/templates"],
+      "halluc": ["from flask", "render_template(", "from jinja2 import", "from fastapi", "Jinja2Templates", "<html>\n<head>", "f\"\"\"<html"]
+    }
+  ]
+}
