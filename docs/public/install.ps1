@@ -48,14 +48,17 @@ Write-Host ""
 
 # Do NOT auto-launch `tina4 setup` here. This script is normally run via
 #   irm https://tina4.com/install.ps1 | iex
-# which means the PowerShell host's stdin IS the download pipe — already at EOF.
+# which means the PowerShell host's stdin IS the download pipe -- already at EOF.
 # `tina4 setup` is an interactive wizard; launched from that dead stdin its menu
-# can't be answered and it would silently default, then fail on UAC elevation —
-# the "Starting setup… → drops to the prompt" symptom. Instead, point the user at
+# can't be answered and it would silently default, then fail on UAC elevation --
+# the "Starting setup -> drops to the prompt" symptom. Instead, point the user at
 # the next step. They run it in their own fresh terminal where stdin is a real
 # console and the menu works. (`tina4 setup` itself also now refuses a
 # non-interactive stdin, as a backstop.)
-Write-Host "  Next step — run this in your terminal:" -ForegroundColor Cyan
+# NOTE: keep all Write-Host output ASCII-only. Windows PowerShell 5.1 reads this
+# UTF-8 script as cp1252, so an em dash / ellipsis renders as mojibake (the
+# reported "any time | open a new terminal" garbage). Plain ASCII renders right.
+Write-Host "  Next step - run this in your terminal:" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "    tina4 setup" -ForegroundColor Green -NoNewline
 Write-Host "    Guided onboarding: language + AI tool + first project"
