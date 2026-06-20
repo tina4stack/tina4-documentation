@@ -68,7 +68,51 @@ TINA4_LOG_LEVEL=warn
 
 ---
 
-## 4. Adding Context Fields
+## 4. Checking the Current Level
+
+Sometimes the context you want to log is expensive to build — a full state snapshot, a serialized request body, a diff of two large objects. Building it only to have `Log.debug` discard it because the console level is `info` wastes work on every call.
+
+`Log.isEnabled` answers the question before you pay the cost: would a message at this level clear the configured console threshold?
+
+```typescript
+import { Log } from "tina4-nodejs";
+
+if (Log.isEnabled("debug")) {
+    Log.debug("Cache state", expensiveSnapshot());  // only runs when debug is visible
+}
+```
+
+`isEnabled` takes a level name and returns a boolean. It uses the exact same threshold check the logger uses to decide whether to print, so it can never disagree with what you actually see on stdout.
+
+```typescript
+// With TINA4_LOG_LEVEL=info
+Log.isEnabled("debug");    // false — debug is below the threshold
+Log.isEnabled("info");     // true
+Log.isEnabled("warning");  // true
+Log.isEnabled("error");    // true
+
+// Case-insensitive
+Log.isEnabled("INFO");     // true
+Log.isEnabled("Debug");    // false
+```
+
+`critical` is special. It logs only when `TINA4_LOG_CRITICAL=true` — otherwise `Log.critical` is a no-op. So `isEnabled("critical")` returns `true` only when the toggle is on **and** the critical severity clears the threshold:
+
+```typescript
+// TINA4_LOG_CRITICAL unset or false
+Log.isEnabled("critical");  // false — critical() would emit nothing
+
+// TINA4_LOG_CRITICAL=true
+Log.isEnabled("critical");  // true
+```
+
+### isEnabled reflects console visibility, not the file sink
+
+`isEnabled` tells you whether a message would reach **stdout**. It says nothing about the log file. The file sink records **every** level regardless of `TINA4_LOG_LEVEL` — that's the raw, unfiltered audit trail. So a `debug` line you skip with `if (Log.isEnabled("debug"))` is a line you also skip writing to the file. Use `isEnabled` to gate expensive payload construction, not to decide what gets persisted: if you call `Log.debug`, it lands in the file whether or not the console shows it.
+
+---
+
+## 5. Adding Context Fields
 
 The second argument to any log method is a plain object. Its fields are merged into the log entry:
 
@@ -92,7 +136,7 @@ Any JSON-serializable value is valid: strings, numbers, booleans, arrays, nested
 
 ---
 
-## 5. Logging Errors
+## 6. Logging Errors
 
 Pass an `Error` object alongside context:
 
@@ -125,7 +169,7 @@ try {
 
 ---
 
-## 6. Request-Scoped Logging
+## 7. Request-Scoped Logging
 
 Add a request ID to every log entry in a request handler so you can trace all log lines from a single request:
 
@@ -166,7 +210,7 @@ Search your log aggregator for `requestId` to see every log line from that reque
 
 ---
 
-## 7. Performance Logging
+## 8. Performance Logging
 
 Log slow operations to identify bottlenecks:
 
@@ -203,7 +247,7 @@ async function fetchDashboardData(userId: number) {
 
 ---
 
-## 8. Exercise: Add Logging to an Existing API
+## 9. Exercise: Add Logging to an Existing API
 
 Take the product listing endpoint from Chapter 11 and add structured logging at every meaningful point.
 
@@ -225,7 +269,7 @@ Take the product listing endpoint from Chapter 11 and add structured logging at 
 
 ---
 
-## 9. Solution
+## 10. Solution
 
 ```typescript
 import { Router, Log, cacheGet, cacheSet } from "tina4-nodejs";
@@ -299,7 +343,7 @@ Router.get("/api/products/logged", async (req, res) => {
 
 ---
 
-## 10. Gotchas
+## 11. Gotchas
 
 ### 1. Logging sensitive data
 

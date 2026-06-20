@@ -87,7 +87,41 @@ Recommended levels by environment:
 
 ---
 
-## 5. Logging with Context
+## 5. Checking the Current Level
+
+Sometimes you want to skip building an expensive log payload that would never reach the console anyway. `Log::isEnabled()` answers one question: would a message at this level pass the configured minimum level?
+
+```php
+<?php
+use Tina4\Log;
+
+if (Log::isEnabled('debug')) {
+    // Only run the costly dump when DEBUG output is actually visible.
+    Log::debug("Cache snapshot", ['entries' => $cache->dumpAll()]);
+}
+```
+
+The level is case-insensitive, so `Log::isEnabled('DEBUG')` and `Log::isEnabled('debug')` behave the same.
+
+The predicate uses the exact threshold the logger uses to decide what to print, so it can never disagree with real output:
+
+```php
+<?php
+use Tina4\Log;
+
+// With TINA4_LOG_LEVEL=ERROR:
+Log::isEnabled('info');     // false — info is below the ERROR threshold
+Log::isEnabled('warning');  // false — also below ERROR
+Log::isEnabled('error');    // true  — at the threshold
+```
+
+`isEnabled('critical')` additionally honours `TINA4_LOG_CRITICAL` — it returns `false` while that toggle is off, mirroring `Log::critical()`, which is a no-op unless the toggle is set.
+
+> **Console visibility only.** `Log::isEnabled()` reflects what reaches **stdout**. The log **file** always records every level regardless of the minimum level — so a `Log::debug()` you guarded out of the console still lands in `tina4.log`. Use `isEnabled()` to gate expensive work, not to decide what gets persisted.
+
+---
+
+## 6. Logging with Context
 
 Pass a context array as the second argument. Context values are merged into the JSON log entry.
 
@@ -121,7 +155,7 @@ Context makes log lines searchable: `level:INFO AND user_id:42` finds every acti
 
 ---
 
-## 6. Logging in Route Handlers
+## 7. Logging in Route Handlers
 
 Log the lifecycle of an HTTP request. Incoming requests, decisions made, and outcomes:
 
@@ -170,7 +204,7 @@ Router::post('/api/payments', function ($request, $response) {
 
 ---
 
-## 7. Logging Exceptions
+## 8. Logging Exceptions
 
 Log exceptions with full context. Include the message, file, line, and trace:
 
@@ -209,7 +243,7 @@ function processOrder(array $order): array {
 
 ---
 
-## 8. Request Correlation
+## 9. Request Correlation
 
 Attach a request ID to every log message within a request. All log lines from the same request share one ID. This lets you filter a full request trace from thousands of concurrent requests.
 
@@ -242,7 +276,7 @@ With request correlation, a single `grep "request_id:a3f8c1d2"` finds every log 
 
 ---
 
-## 9. Performance Logging
+## 10. Performance Logging
 
 Log slow operations automatically. Time your expensive calls:
 
@@ -283,7 +317,7 @@ Any query slower than 50ms emits a `WARNING`. All others emit `DEBUG` and are su
 
 ---
 
-## 10. Environment Configuration
+## 11. Environment Configuration
 
 ```bash
 # Minimum level to log (DEBUG | INFO | WARNING | ERROR | CRITICAL)
@@ -303,7 +337,7 @@ In development, use `DEBUG` level with `text` format for human-readable output. 
 
 ---
 
-## 11. Gotchas
+## 12. Gotchas
 
 ### 1. Logging sensitive data
 

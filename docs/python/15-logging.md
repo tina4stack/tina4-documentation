@@ -80,6 +80,19 @@ Two more things worth knowing:
 - **Production keeps console output — it just changes shape.** When `TINA4_ENV=production`, stdout stays on (containers and Kubernetes read PID 1's stdout) but logs switch to uncolored JSON lines instead of human-readable text. Console output is controlled by `TINA4_LOG_OUTPUT` (`stdout` / `file` / `both`), not by `TINA4_ENV` — set `TINA4_LOG_OUTPUT=file` if you want file-only.
 - **The file always receives every level.** `logs/tina4.log` is written with all levels (and `logs/error.log` with warnings and errors), independent of the console level. If the console is quiet, `tail -f logs/tina4.log` still shows the full stream.
 
+### Checking whether a level is enabled
+
+Use `Log.is_enabled(level)` to skip building an expensive log payload that the current level would hide:
+
+```python
+from tina4_python.debug import Log
+
+if Log.is_enabled("debug"):
+    Log.debug("Query plan", plan=db.explain(query))   # only built when debug is visible
+```
+
+`is_enabled` returns `True` when `level` meets the configured minimum console level (`level` is case-insensitive). It reflects **console (stdout) visibility** — the log file still records every level regardless, so this guards what you'd see on the console, not whether anything is written at all.
+
 ---
 
 ## 5. Logging in Route Handlers

@@ -184,7 +184,21 @@ The logger writes to the file and to stdout simultaneously. Log rotation is hand
 
 ## 11. Checking the Current Level
 
-Tina4 filters by level internally: call `Tina4::Log.debug` (or `info` / `warning` / `error`) and the logger emits the line only when `TINA4_LOG_LEVEL` allows it — no manual level check is needed. There are no `debug?` / `info?` predicate methods. If you must skip an expensive computation when debug logging is off, gate it on your own read of `ENV["TINA4_LOG_LEVEL"]`.
+Tina4 filters by level internally: call `Tina4::Log.debug` (or `info` / `warning` / `error`) and the logger emits the line only when `TINA4_LOG_LEVEL` allows it — no manual level check is needed.
+
+When you want to skip an expensive computation that only feeds a log line, ask first with `Tina4::Log.enabled?`:
+
+```ruby
+if Tina4::Log.enabled?(:debug)
+  Tina4::Log.debug("Cache snapshot", entries: build_expensive_report)
+end
+```
+
+`enabled?` returns `true` when a message at that level would reach the console, and `false` when `TINA4_LOG_LEVEL` would drop it. With `TINA4_LOG_LEVEL=info`, `enabled?(:debug)` is `false` while `enabled?(:info)`, `enabled?(:warning)`, and `enabled?(:error)` are all `true`. The level accepts a String or Symbol and is case-insensitive — `enabled?("INFO")`, `enabled?(:info)`, and `enabled?("Info")` are equivalent.
+
+It reuses the exact threshold the logger itself applies, so the predicate can never disagree with what actually prints.
+
+**Caveat — this reflects console visibility only.** The log file records every level regardless of `TINA4_LOG_LEVEL` (see [Section 10](#_10-writing-to-a-file)). `enabled?` answers "would this show on the console?", not "would this be logged at all?" — a `:debug` entry still lands in the file even when `enabled?(:debug)` is `false`.
 
 ---
 
