@@ -58,9 +58,14 @@ docs/
   delphi/                 # Delphi-specific (8 pages)
     installation.md, core.md, html-pages.md, html-render.md,
     json-adapter.md, rest-client.md, twig.md ...
-  javascript/             # JavaScript-specific (9 pages)
-    installation.md, routing.md, components.md, api.md,
-    html-templates.md, signals.md, pwa.md ...
+  js/                     # JavaScript (tina4-js) — index + gallery + 16 numbered chapters
+    index.md, gallery.md, 01-getting-started.md, 02-signals.md,
+    03-html-templates.md, 04-components.md, 05-routing.md, 06-api.md,
+    07-websocket.md, 08-sse-streaming.md, 09-graphql.md, 10-pwa.md,
+    11-debug.md, 12-tina4-css.md, 13-backend-integration.md,
+    14-building-a-complete-app.md, 15-patterns-and-pitfalls.md,
+    16-vibe-coding-with-ai.md
+    # (renamed from javascript/ in 2026-03 to dodge mod_security 403s)
   public/                 # Static assets
 ```
 
