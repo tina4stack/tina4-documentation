@@ -339,7 +339,7 @@ class Order extends ORM {
     protected bool $softDelete = true;
 }
 
-$order->delete();                // Sets deleted_at, not removed
+$order->delete();                // Sets is_deleted = 1, not removed
 $active = (new Order())->all();  // Excludes soft-deleted rows
 ```
 

@@ -604,7 +604,7 @@ Tina4 supports two naming patterns for migration files:
 - **Sequential:** `000001_create_products.sql`
 - **Timestamp:** `YYYYMMDDHHMMSS_create_products.sql`
 
-Both patterns sort correctly. Tina4 uses BigInt comparison internally, so you can mix them in the same project without issues.
+Both patterns sort correctly. Tina4 applies files in **numeric-prefix order** -- the leading number drives the sort, so `9_create_x.sql` runs before `10_create_y.sql` (a plain alphabetical sort would put `10` first). Files without a numeric or timestamp prefix sort last and log a warning, since their order is undefined.
 
 ### Generating a Migration
 
@@ -652,6 +652,10 @@ tina4nodejs migrate
 ```
 
 Each run increments a batch number. Every migration applied during that run belongs to the same batch. This matters for rollback.
+
+Each migration file is wrapped in its **own transaction**. Per-file atomicity is real only on engines with transactional DDL (PostgreSQL): there a failed statement rolls the whole file back. MySQL, Firebird, and SQLite auto-commit DDL, so a half-applied file leaves its earlier statements in place. Keep one logical change per file. A failed migration **stops the run and raises** -- already-applied files stay applied. Fix the SQL and re-run; the runner picks up where it left off.
+
+`CREATE TABLE` and `ALTER TABLE ... ADD` are idempotent on Firebird and MSSQL, which lack `IF NOT EXISTS`: the runner checks whether the table or column already exists and skips that statement on a re-run instead of erroring. Only a genuine already-exists is skipped -- every other error still raises. SQLite, MySQL, and PostgreSQL use native `IF NOT EXISTS`.
 
 ### Automatic Migrations on Startup
 

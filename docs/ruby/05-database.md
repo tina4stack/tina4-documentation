@@ -748,7 +748,11 @@ DROP INDEX IF EXISTS idx_users_email;
 
 ### Migration Tracking
 
-Migrations run in filename order. Each migration runs once. Tina4 tracks applied migrations in a `tina4_migration` table with the following columns:
+Migrations apply in **numeric-prefix order** -- the leading number drives the sort, so `9_create_x.sql` runs before `10_create_y.sql` (a plain alphabetical sort would put `10` first). Files without a numeric or timestamp prefix sort last and log a warning, since their order is undefined. Each migration file is wrapped in its **own transaction**. Per-file atomicity is real only on engines with transactional DDL (PostgreSQL): there a failed statement rolls the whole file back. MySQL, Firebird, and SQLite auto-commit DDL, so a half-applied file leaves its earlier statements in place. Keep one logical change per file. A failed migration **stops the run and raises** -- already-applied files stay applied; fix the SQL and re-run.
+
+`CREATE TABLE` and `ALTER TABLE ... ADD` are idempotent on Firebird and MSSQL, which lack `IF NOT EXISTS`: the runner checks whether the table or column already exists and skips that statement on a re-run instead of erroring. Only a genuine already-exists is skipped -- every other error still raises. SQLite, MySQL, and PostgreSQL use native `IF NOT EXISTS`.
+
+Each migration runs once. Tina4 tracks applied migrations in a `tina4_migration` table with the following columns:
 
 | Column | Description |
 |--------|-------------|
