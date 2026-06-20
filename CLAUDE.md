@@ -15,7 +15,8 @@ Documentation site for the Tina4 framework. See https://tina4.com for the live s
 ## Writing Style
 
 - **Always use the `content-writer` skill** when writing or editing documentation prose
-- Active voice, no adverbs, no buzzwords — plain English
+- **ASCII punctuation only — NEVER use em dashes.** No em/en dash (use a comma, colon, parentheses, or a plain hyphen), no smart/curly quotes (use straight `'` `"`), no ellipsis character (use `...`). Em dashes are a machine-wrote-this tell, and smart quotes inside code samples break copy-paste. `scripts/audit-truth.py --strict` enforces this as a CI gate.
+- Active voice, no adverbs, no buzzwords, plain English
 - Personify technology, use fragment chains, end sections strong
 - Flesch reading ease target: 50 (±5)
 - Keep subject and verb within 3 words of each other

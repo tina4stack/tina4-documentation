@@ -459,11 +459,61 @@ def check_env() -> tuple[int, list[str]]:
     return len(missing), lines
 
 
+# ── Punctuation: ASCII-only docs (no em dashes / smart quotes) ──────────
+#
+# Finished documentation ships plain ASCII. The em dash is the clearest
+# "a machine wrote this" tell, and a smart quote / long dash pasted into a
+# shell, SQL, or source sample fails to run. This gate keeps every doc clean.
+# Replace with a comma / colon / parentheses / hyphen, straight quotes, and
+# three dots for an ellipsis. See the content-writer skill's "Hard Rule".
+
+_BANNED_PUNCT = {
+    "—": "em dash",          "–": "en dash",
+    "“": "smart-double",     "”": "smart-double",
+    "„": "smart-double",     "‟": "smart-double",
+    "‘": "smart-single",     "’": "smart-single",
+    "‚": "smart-single",     "‛": "smart-single",
+    "…": "ellipsis-char",    "′": "prime",  "″": "double-prime",
+}
+
+
+def check_punctuation() -> tuple[int, list[str]]:
+    files = find_doc_files()
+    offenders: dict[Path, dict[str, int]] = {}
+    total = 0
+    for path in files:
+        try:
+            text = path.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        hits = {ch: text.count(ch) for ch in _BANNED_PUNCT if ch in text}
+        if hits:
+            offenders[path] = hits
+            total += sum(hits.values())
+
+    lines = [f"\n{cyan('Punctuation check')} — ASCII-only docs "
+             f"(no em/en dash, smart quotes, ellipsis char): scanned {len(files)} files"]
+    if not offenders:
+        lines.append(green("  ✓ clean — no banned punctuation in any doc"))
+        return 0, lines
+
+    lines.append(red(f"  ✗ {total} banned char(s) in {len(offenders)} file(s):"))
+    for path in sorted(offenders)[:20]:
+        rel = str(path.relative_to(REPO_ROOT))
+        summary = ", ".join(f"{_BANNED_PUNCT[ch]}×{n}" for ch, n in offenders[path].items())
+        lines.append(f"    {red('•')} {rel} {dim('→ ' + summary)}")
+    if len(offenders) > 20:
+        lines.append(dim(f"    … +{len(offenders) - 20} more files"))
+    lines.append(dim("    Use ASCII: comma/colon/parentheses/hyphen, straight quotes, ... for an ellipsis."))
+    return total, lines
+
+
 # ── Driver ────────────────────────────────────────────────────────────
 
 CHECKS = {
     "cli": check_cli,
     "env": check_env,
+    "punct": check_punctuation,
 }
 
 
@@ -511,7 +561,12 @@ def main() -> int:
     # cleared. --strict-env opts in to gating env too.
     cli_drift = json_payload.get("cli", 0)
     env_drift = json_payload.get("env", 0)
+    punct_drift = json_payload.get("punct", 0)
     if args.strict and cli_drift > 0:
+        return 1
+    # Punctuation is strict immediately — the docs are at zero, so this just
+    # blocks a regression (a stray em dash / smart quote breaks the build).
+    if args.strict and punct_drift > 0:
         return 1
     if args.strict_env and env_drift > 0:
         return 1
