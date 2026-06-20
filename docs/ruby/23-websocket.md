@@ -699,7 +699,82 @@ If `TINA4_WS_BACKPLANE` is not set (the default), Tina4 broadcasts only to local
 
 ---
 
-## 16. Gotchas
+## 16. Securing a WebSocket Route
+
+A WebSocket route is **public by default** -- exactly like a `GET` route. Anyone can connect. That is the right default for a public chat or a live ticker. When a channel carries private data, mark the route secured and Tina4 enforces a valid JWT *on the upgrade itself* -- before the handshake completes, before any frame flows.
+
+Mark a route secured one of two ways, both equivalent (they set the same flag):
+
+```ruby
+# Declarative -- the secure_websocket sibling of secure_get / secure_post
+Tina4::Router.secure_websocket "/ws/inbox" do |connection, event, data|
+  case event
+  when :open
+    # connection.auth holds the verified token payload
+    connection.send_json({ welcome: connection.auth["user_id"] })
+  when :message
+    connection.send(data)
+  end
+end
+
+# Imperative -- chain .secure on a normal websocket route
+Tina4::Router.websocket("/ws/inbox") do |connection, event, data|
+  # ...
+end.secure
+```
+
+On a secured route, Tina4 extracts a token, validates it with the same `Tina4::Auth.valid_token` your HTTP routes use, and **rejects the upgrade with `401` (it never accepts the handshake)** when the token is missing or invalid. A public route always passes -- so adding this feature breaks nothing that already worked.
+
+### Sending the token -- three transports
+
+The client can present the JWT three ways. Tina4 checks them in this order:
+
+**1. Authorization header (servers, CLI tools, mobile clients):**
+
+```ruby
+require "faye/websocket" # or any client that can set headers
+ws = Faye::WebSocket::Client.new(
+  "ws://localhost:7147/ws/inbox",
+  nil,
+  headers: { "Authorization" => "Bearer #{token}" }
+)
+```
+
+**2. The `bearer` subprotocol (browsers):**
+
+A browser's `new WebSocket()` cannot set request headers -- but it *can* offer subprotocols. Pass `['bearer', token]` and Tina4 reads the token from the `Sec-WebSocket-Protocol` header. When you do, Tina4 **echoes `bearer` back** as the accepted subprotocol so the browser's handshake succeeds:
+
+```javascript
+const ws = new WebSocket("ws://localhost:7147/ws/inbox", ["bearer", token]);
+```
+
+**3. The `?token=` query parameter (fallback):**
+
+```javascript
+const ws = new WebSocket(`ws://localhost:7147/ws/inbox?token=${token}`);
+```
+
+### Reading the verified payload
+
+Once the upgrade is accepted, the decoded token payload is on `connection.auth` (a Hash). On a public route it is `nil`. Use it to scope the connection to a user:
+
+```ruby
+Tina4::Router.secure_websocket "/ws/inbox" do |connection, event, data|
+  case event
+  when :open
+    user_id = connection.auth["user_id"]
+    connection.join_room("user-#{user_id}")
+  when :close
+    # cleanup
+  end
+end
+```
+
+The origin allow-list (`TINA4_WS_ALLOWED_ORIGINS`) still applies first -- a rejected origin never reaches the auth check. Auth is the per-route control; the origin list is the per-deployment control. Use both.
+
+---
+
+## 17. Gotchas
 
 ### 1. WebSocket Needs a Persistent Server
 
@@ -747,4 +822,4 @@ If `TINA4_WS_BACKPLANE` is not set (the default), Tina4 broadcasts only to local
 
 **Problem:** Anyone can connect to your WebSocket endpoint.
 
-**Fix:** Pass the token as a query parameter: `ws://localhost:7147/ws/chat?token=eyJ...`. Validate in the `:open` handler and call `connection.close` if invalid.
+**Fix:** Mark the route secured -- `Tina4::Router.secure_websocket "/ws/chat"` (or chain `.secure`). Tina4 then enforces a valid JWT on the upgrade and rejects the handshake with `401` when the token is missing or invalid. The client sends the token via the `Authorization: Bearer` header, the `['bearer', token]` subprotocol (browsers), or `?token=`. The verified payload lands on `connection.auth`. See [Securing a WebSocket Route](#_16-securing-a-websocket-route). Don't hand-roll the check in the `:open` handler -- by then the handshake is already accepted.
