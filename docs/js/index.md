@@ -15,7 +15,11 @@
     <a href="#components">Components</a> •
     <a href="#routing">Routing</a> •
     <a href="#api">API</a> •
+    <a href="#websocket">WebSocket</a> •
+    <a href="#sse">SSE</a> •
+    <a href="#storage">Storage</a> •
     <a href="#pwa">PWA</a> •
+    <a href="#debug">Debug</a> •
     <a href="#backend-integration">Backend Integration</a> •
     <a href="#bundle-size">Bundle Size</a>
 </nav>
@@ -143,6 +147,33 @@ await api.delete('/users/42');
 ```
 [More details](06-api.md) on configuration, authentication, token rotation, interceptors, and error handling.
 
+### WebSocket {#websocket}
+
+```ts
+import { ws } from 'tina4js';
+
+const socket = ws.connect('/ws/chat');   // status & connected are signals — bind them in templates
+
+const view = html`
+  <div>Status: ${socket.status}</div>
+  ${() => socket.connected.value ? html`<span>● live</span>` : html`<span>○ reconnecting…</span>`}
+`;
+
+socket.on('message', (msg) => console.log(msg));
+socket.send({ type: 'hello' });
+```
+Auto-reconnect with exponential backoff; `status`/`connected` are signals, so the UI reacts to the connection state with no extra wiring. [More details](07-websocket.md).
+
+### SSE / Streaming {#sse}
+
+```ts
+import { sse } from 'tina4js';
+
+const stream = sse.connect('/events', { json: true });   // Server-Sent Events / NDJSON
+stream.on('data', (row) => append(row));
+```
+Same signal-driven status + auto-reconnect shape as `ws`, for one-way server push and NDJSON. [More details](08-sse-streaming.md).
+
 ### PWA {#pwa}
 
 ```ts
@@ -158,6 +189,29 @@ pwa.register({
 });
 ```
 [More details](10-pwa.md) on manifest generation, service worker strategies, and offline support.
+
+### Storage {#storage}
+
+```ts
+import { signal } from 'tina4js';
+import { persist, clearPersistedKeys } from 'tina4js/storage';
+
+const theme = persist(signal('light'), { key: 'theme' });   // survives reloads, syncs across tabs
+theme.value = 'dark';                                        // written to localStorage automatically
+
+clearPersistedKeys(['theme']);                               // remove on logout
+```
+
+`persist` backs a signal with `localStorage` — versioned, migratable, and synced across tabs. **Never store secrets, tokens, or personal data**: `localStorage` is readable by any script on the page (XSS), so it is for UI preferences and non-sensitive view state only — keep auth tokens in memory or an httpOnly cookie.
+
+### Debug {#debug}
+
+```ts
+// Enable the dev overlay (Ctrl+Shift+D to toggle). Dev only — tree-shaken from production.
+if (import.meta.env.DEV) import('tina4js/debug');
+```
+
+A side-effect import that mounts an overlay tracking live signals, mounted components, route changes, and API calls. Never ship it to production. [More details](11-debug.md).
 
 ### Backend Integration {#backend-integration}
 
@@ -184,16 +238,16 @@ Same auto-routing — `src/templates/pages/*.twig` becomes the page tree under `
 
 | Module | Raw | Gzipped |
 |--------|-----|---------|
-| Core (signals + html + component) | 3.4 KB | 1.33 KB |
+| Core (signals + html + component) | 4.59 KB | 1.49 KB |
 | Router | 0.14 KB | 0.12 KB |
-| API | 3.5 KB | 1.49 KB |
-| PWA | 2.7 KB | 1.09 KB |
-| WebSocket | 2.3 KB | 0.91 KB |
-| SSE/NDJSON | 3.4 KB | 1.30 KB |
-| Debug | 13.8 KB | 4.76 KB |
-| **Full framework** | **17.0 KB** | **6.64 KB** |
+| API | 6.12 KB | 2.27 KB |
+| WebSocket | 2.20 KB | 0.89 KB |
+| SSE / NDJSON | 3.34 KB | 1.30 KB |
+| Storage (persist) | 4.33 KB | 1.66 KB |
+| PWA | 3.06 KB | 1.16 KB |
+| Debug (dev only) | 15.9 KB | 5.01 KB |
 
-Tree-shakeable — import only what you need. The full framework is 13.6 KB raw / 5.34 KB gzipped, but most apps use only Core + Router (under 1.5 KB gzip):
+Measured on macOS, tina4-js v1.2.7 — per-module ES bundles. The six production modules are budget-asserted by `npm run test:size`; Storage and Debug were measured via gzip on the built bundle. **Debug is dev-only and tree-shaken from production.** Tree-shakeable — import only what you use; most apps ship just Core + Router (~1.6 KB gzip):
 
 ```ts
 import { signal, html } from 'tina4js/core';     // 1.33 KB gzip
