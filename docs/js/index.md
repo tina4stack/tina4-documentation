@@ -236,28 +236,30 @@ Same auto-routing — `src/templates/pages/*.twig` becomes the page tree under `
 
 ### Bundle Size {#bundle-size}
 
-| Module | Raw | Gzipped |
-|--------|-----|---------|
-| Core (signals + html + component) | 4.59 KB | 1.49 KB |
-| Router | 0.14 KB | 0.12 KB |
-| API | 6.12 KB | 2.27 KB |
-| WebSocket | 2.20 KB | 0.89 KB |
-| SSE / NDJSON | 3.34 KB | 1.30 KB |
-| Storage (persist) | 4.33 KB | 1.66 KB |
-| PWA | 3.06 KB | 1.16 KB |
-| Debug (dev only) | 15.9 KB | 5.01 KB |
+**What your app actually downloads.** tina4-js is code-split: a bundler ships one shared reactive-core chunk plus only the modules you import. These are real deduplicated bundles (esbuild `--minify`, then compressed), measured on macOS, v1.2.7 — brotli is what most CDNs serve:
 
-Measured on macOS, tina4-js v1.2.7 — per-module ES bundles. The six production modules are budget-asserted by `npm run test:size`; Storage and Debug were measured via gzip on the built bundle. **Debug is dev-only and tree-shaken from production.** Tree-shakeable — import only what you use; most apps ship just Core + Router (~1.6 KB gzip):
+| Your app imports | gzip | brotli |
+|---|---|---|
+| Core only (signals + `html` + components) | 2.30 KB | 2.05 KB |
+| **Core + Router** (typical SPA) | **3.14 KB** | **2.78 KB** |
+| + API | 4.00 KB | 3.54 KB |
+| + WebSocket + SSE | 5.32 KB | 4.73 KB |
+| **Everything** (+ Storage + PWA, **no Debug**) | **7.52 KB** | **6.68 KB** |
+
+Marginal cost per feature is small (gzip): Router **+0.8 KB**, API **+0.9 KB**, WebSocket + SSE **+1.3 KB**. **Debug is a separate dev-only entry** (`import 'tina4js/debug'`, ~5 KB gzip) — guard it behind `import.meta.env.DEV` so your production bundler drops it entirely.
 
 ```ts
-import { signal, html } from 'tina4js/core';     // 1.33 KB gzip
-import { route, router } from 'tina4js/router';   // 0.12 KB gzip
-import { api } from 'tina4js/api';                 // 1.49 KB gzip
-import { pwa } from 'tina4js/pwa';                 // 1.09 KB gzip
-import { ws } from 'tina4js/ws';                   // 0.91 KB gzip
-import { sse } from 'tina4js/sse';                 // 1.30 KB gzip
-import 'tina4js/debug';                            // 4.76 KB gzip (dev only, tree-shaken from prod)
+// Import from sub-paths to help the bundler tree-shake:
+import { signal, html } from 'tina4js/core';
+import { route, router } from 'tina4js/router';
+import { api } from 'tina4js/api';
+import { ws } from 'tina4js/ws';
+import { sse } from 'tina4js/sse';
+import { persist } from 'tina4js/storage';
+import { pwa } from 'tina4js/pwa';
 ```
+
+> **Don't add up the published `dist/*.es.js` file sizes.** Each looks standalone, but the reactive core lives in one shared chunk that the others import — so summing the files counts core several times over (and includes the dev-only debug overlay). The table above is what actually ships.
 
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">↑ Back to top</a>
