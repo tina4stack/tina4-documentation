@@ -249,7 +249,7 @@ These power the dev dashboard's AI chat, RAG code search, and the MCP developer-
 |----------|---------|-------------|
 | `TINA4_MCP` | _(inherits `TINA4_DEBUG`)_ | Toggle the built-in MCP dev-tools server. Set explicitly to keep the MCP endpoint exposed in a debug-disabled deployment. |
 | `TINA4_MCP_PORT` | _(framework port + 2000)_ | TCP port for the MCP server. The offset keeps it clear of the main server and the AI test port. |
-| `TINA4_MCP_REMOTE` | `false` | Allow the MCP server to bind on non-localhost interfaces. **Never enable in production.** |
+| `TINA4_MCP_REMOTE` | `false` | The MCP dev tools auto-enable in debug mode only on localhost. Set `TINA4_MCP_REMOTE=true` to allow them on a non-localhost host (an explicit `TINA4_MCP=true` also exposes them on any host). |
 | `TINA4_AI_URL` | `http://localhost:11437/api/chat` | OpenAI-compatible chat/completion endpoint. Ollama by default; can point at any compatible provider. |
 | `TINA4_AI_MODEL` | `qwen2.5-coder:14b` | Model identifier the endpoint should serve. |
 | `TINA4_RAG_URL` | `http://localhost:11438` | RAG service endpoint for framework code search. |
