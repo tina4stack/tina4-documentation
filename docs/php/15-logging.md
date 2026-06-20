@@ -289,8 +289,8 @@ Any query slower than 50ms emits a `WARNING`. All others emit `DEBUG` and are su
 # Minimum level to log (DEBUG | INFO | WARNING | ERROR | CRITICAL)
 TINA4_LOG_LEVEL=WARNING
 
-# Log output destination (stderr | stdout | file)
-TINA4_LOG_OUTPUT=stderr
+# Log output destination (stdout | file | both)
+TINA4_LOG_OUTPUT=both
 
 # Log file path (only used when TINA4_LOG_OUTPUT=file)
 TINA4_LOG_FILE=./logs/app.log

@@ -184,14 +184,7 @@ The logger writes to the file and to stdout simultaneously. Log rotation is hand
 
 ## 11. Checking the Current Level
 
-```ruby
-if Tina4::Log.debug?
-  # Build expensive debug payload only if debug logging is active
-  Tina4::Log.debug("Query plan", plan: db.explain(query).inspect)
-end
-```
-
-Available predicates: `debug?`, `info?`, `warning?`, `error?`.
+Tina4 filters by level internally: call `Tina4::Log.debug` (or `info` / `warning` / `error`) and the logger emits the line only when `TINA4_LOG_LEVEL` allows it — no manual level check is needed. There are no `debug?` / `info?` predicate methods. If you must skip an expensive computation when debug logging is off, gate it on your own read of `ENV["TINA4_LOG_LEVEL"]`.
 
 ---
 

@@ -26,7 +26,7 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 | `TINA4_WS_PORT` | _(inherits port)_ | Separate port for the WebSocket server. Leave unset to share the HTTP port. |
 | `TINA4_HOST_NAME` | `localhost:7145` | Fully-qualified host used in generated absolute URLs (Swagger, OAuth redirects, emails). |
 | `TINA4_DEBUG` | `false` | Master debug toggle. Enables Swagger UI, dev dashboard, live reload, template dump filter, error overlay. Never set to `true` in production. |
-| `TINA4_LOG_LEVEL` | `ERROR` | Minimum message level shown when `TINA4_DEBUG=true`. Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `ALL`. |
+| `TINA4_LOG_LEVEL` | `INFO` | Minimum level shown on the console (stdout). The file always receives every level. Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. |
 | `TINA4_NO_BROWSER` | `false` | Stops `tina4 serve` from opening your browser on every restart. Recommended during active development. |
 | `TINA4_NO_RELOAD` | `false` | Disables the dev hot-reload signal from the Rust CLI. Use when you want a stable server for debugging. |
 | `TINA4_SUPPRESS` | `false` | Hides the Tina4 startup banner. Useful in CI and systemd units where stdout is ingested. |
@@ -244,7 +244,7 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_LOG_LEVEL` | `ERROR` | Minimum log level written to files. Options: `ALL`, `DEBUG`, `INFO`, `WARNING`, `ERROR`. |
+| `TINA4_LOG_LEVEL` | `INFO` | Minimum level shown on the console (stdout). The log file always receives every level regardless of this setting. Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. |
 | `TINA4_LOG_DEBUG` | `0` | Numeric flag for debug-level messages. Used internally by `Debug::message()`. |
 | `TINA4_LOG_INFO` | `1` | Numeric flag for info-level messages. |
 | `TINA4_LOG_ERROR` | `3` | Numeric flag for error-level messages. |
