@@ -9,362 +9,274 @@
 > **Conventional names stay un-prefixed:** `PORT`, `HOST`, `NODE_ENV`, `RACK_ENV`, `RUBY_ENV`, `ENVIRONMENT`. These are runtime/PaaS conventions, not framework config.
 
 
-Tina4 is configured through environment variables, read from `.env` at the project root. Every variable has a sensible default — most projects set three or four values and leave the rest alone.
+Tina4 PHP is configured through environment variables, read from `.env` at the project root. Every variable has a sensible default — most projects set three or four values and leave the rest alone.
 
-This chapter lists every variable the PHP framework reads, grouped by subsystem. Start with the minimum-config examples at the end, then come back here when you need to tune something specific.
+The **Universal** section below is identical across Python, PHP, Ruby, and Node.js: same variables, same defaults, same grouping. The **AI / Dev-Admin** section covers the dashboard's AI and developer tooling. The **Framework-specific** section at the end lists the handful of variables only this framework reads.
+
+Start with the minimum-config examples at the end, then come back here when you need to tune something specific.
 
 ---
 
-## Core Server
+## Universal
+
+These variables behave the same way in every Tina4 framework. Defaults are canonical — the framework reads each one and applies the listed default when it's unset.
+
+### Core Server
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `HOST` | `0.0.0.0` | Bind address. `0.0.0.0` listens on every interface. `127.0.0.1` restricts to localhost. |
-| `TINA4_HOST` | `0.0.0.0` | Tina4-specific bind override consulted by `App::serve()` and `Server` when no `$host` argument is passed. Wins over the conventional `HOST` for the framework's own server. |
-| `PORT` | `7145` | HTTP server port. The Rust CLI prefers `TINA4_PORT` but falls back to `PORT`. |
-| `TINA4_PORT` | _(inherits `PORT`)_ | Explicit Tina4-specific port override. Takes precedence over `PORT` when both are set. |
-| `TINA4_WS_PORT` | _(inherits port)_ | Separate port for the WebSocket server. Leave unset to share the HTTP port. |
-| `TINA4_HOST_NAME` | `localhost:7145` | Fully-qualified host used in generated absolute URLs (Swagger, OAuth redirects, emails). |
 | `TINA4_DEBUG` | `false` | Master debug toggle. Enables Swagger UI, dev dashboard, live reload, template dump filter, error overlay. Never set to `true` in production. |
-| `TINA4_LOG_LEVEL` | `INFO` | Minimum level shown on the console (stdout). The file always receives every level. Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. |
-| `TINA4_NO_BROWSER` | `false` | Stops `tina4 serve` from opening your browser on every restart. Recommended during active development. |
+| `TINA4_ENV` | `development` | Runtime environment label. Values like `development`, `staging`, `production` control dev-only features. |
+| `HOST` | `0.0.0.0` | Bind address. `0.0.0.0` listens on every interface. `127.0.0.1` restricts to localhost. |
+| `TINA4_HOST` | `0.0.0.0` | Framework-prefixed bind address. Pairs with `HOST` — set either one. |
+| `PORT` | `7146` | HTTP server port. The Rust CLI prefers `TINA4_PORT` but falls back to `PORT`. |
+| `TINA4_PORT` | `7146` | Framework-prefixed port override. Pairs with `PORT` — set either one. |
+| `TINA4_HOST_NAME` | `localhost:<port>` | Fully-qualified host used in generated absolute URLs (Swagger, OAuth redirects, emails) and for localhost detection. |
+| `CI` | _(none)_ | Standard CI flag. When set, suppresses dev-secret auto-minting so test runs stay deterministic. |
+| `TINA4_SUPPRESS` | `false` | Suppresses the framework startup banner. Useful in CI runs and systemd units where stdout is parsed. |
 | `TINA4_NO_RELOAD` | `false` | Disables the dev hot-reload signal from the Rust CLI. Use when you want a stable server for debugging. |
-| `TINA4_SUPPRESS` | `false` | Hides the Tina4 startup banner. Useful in CI and systemd units where stdout is ingested. |
-| `TINA4_VERSION` | _(framework)_ | Override the version string reported by `/__dev/api/system`. Mostly for testing. |
-| `TINA4_CLI_SERVE` | _(none)_ | Set internally by the Rust CLI to signal managed mode. Do not set manually. |
-| `TINA4_PUBLIC_DIR` | _(empty)_ | Override directory served as static files at `/`. When unset, the static-file middleware searches `src/public/` and the framework's bundled public assets. |
-| `TINA4_TEMPLATE_ROUTING` | `on` | Auto-routing of Twig templates from `src/templates/`. Set to `off`, `false`, `0`, `no`, or `disabled` to require explicit `Router::get()` for every URL. |
-| `TINA4_ALLOW_LEGACY_ENV` | `false` | Bypass the v3.12 boot guard that rejects un-prefixed legacy env vars (`DATABASE_URL`, `SECRET`, `SMTP_HOST`, etc.). Use only in CI / migration scripts during the transition window. |
-| `TINA4_ENV_FILE` | `.env` | Alternate path for the dotenv file loaded at boot. Resolved relative to the project root unless absolute. Useful for per-environment files (e.g. `.env.production`) without symlinking. |
-| `TINA4_HEALTH_PATH` | `/health` | Path the built-in health-check route registers under. Set `/__health` to align with the v3 documented alias used by the other frameworks; the default keeps `/health` for back-compat with existing probes. |
+| `TINA4_NO_AI_PORT` | `false` | Disables the secondary stable AI port started alongside the dev server. |
+| `TINA4_NO_BROWSER` | `false` | Stops `tina4 serve` from opening your browser on every restart. Recommended during active development. |
+| `TINA4_OVERRIDE_CLIENT` | _(none)_ | Set truthy to start without the Rust CLI supervisor (`tina4 serve`). Used in Docker images and CI runners; bypasses SCSS compilation, the file watcher, and live reload. |
+| `TINA4_ALLOW_LEGACY_ENV` | `false` | Bypass the v3.12 boot guard that rejects un-prefixed legacy env vars. Use only in CI / migration scripts during the transition window. |
+| `TINA4_TRAILING_SLASH_REDIRECT` | `false` | When truthy, requests to `/foo/` are 301-redirected to `/foo` so clients see one canonical URL per route. The root `/` is exempt. |
+| `TINA4_TEMPLATE_ROUTING` | `on` | Auto-routing of templates from `src/templates/`. Set to `off`, `false`, `0`, `no`, or `disabled` to require an explicit route for every URL. |
+| `TINA4_TEMPLATE_CACHE_TTL` | `0` | Frond compiled-template cache TTL in seconds. `0` keeps compiled templates in memory permanently; a positive value recompiles after N seconds. `tina4 serve` invalidates the cache on file change. |
+| `TINA4_HEALTH_PATH` | `/__health` | URL for the built-in liveness/readiness endpoint. |
+| `TINA4_PUBLIC_DIR` | _(none)_ | Override directory served as static files under `/`. When unset, the framework searches the bundled and project public assets. |
+| `TINA4_ENV_FILE` | `.env` | Path to the dotenv file loaded at boot, before any other framework config. Point at `.env.staging` or `.env.production` to switch the whole config tree. |
+| `TINA4_MAX_UPLOAD_SIZE` | `10485760` | Maximum multipart upload size in bytes (10 MB). Larger requests are rejected before parsing. |
+| `TINA4_DEV_POLL_INTERVAL` | `3000` | Milliseconds between dev-mode file-change polls when the WebSocket reload channel is unavailable. |
+| `TINA4_SSE_HEARTBEAT` | `15` | Server-Sent Events keep-alive interval in seconds. |
 
----
+### Logging
 
-## Routing
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TINA4_TRAILING_SLASH_REDIRECT` | `false` | When truthy, any request path ending in `/` (other than the bare root) is 301-redirected to the slash-stripped form. The query string is preserved. Lets you normalise URLs without writing per-route handlers. |
-
----
-
-## Secrets and Authentication
+stdout is always on. With `TINA4_LOG_OUTPUT` unset, the log **file** is written only in development (`TINA4_DEBUG` truthy); production and containers stay stdout-only so a log file never bloats the writable layer. Set `TINA4_LOG_OUTPUT=file`/`both`, or point `TINA4_LOG_FILE` at a path, to force a file. Switch `TINA4_LOG_FORMAT=json` for one structured record per line.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_SECRET` | _(empty)_ | JWT signing secret. Must be long, random, and unique per environment. **Never commit.** |
-| `TINA4_JWT_ALGORITHM` | `HS256` | JWT signing algorithm. Supports `HS256`, `HS384`, `HS512`. |
-| `TINA4_TOKEN_LIMIT` | `60` | JWT token lifetime in minutes. |
-| `TINA4_API_KEY` | _(empty)_ | Static API key used by `Auth::validateApiKey()` as a fallback to JWT. |
+| `TINA4_LOG_LEVEL` | `INFO` | Minimum level shown on the console (stdout). The log file always records every level. Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. |
+| `TINA4_LOG_REQUESTS` | _(inherits `TINA4_DEBUG`)_ | Per-request access logging. On by default in dev; set explicitly to override. |
+| `TINA4_LOG_OUTPUT` | `stdout` | Where logs go. Options: `stdout`, `file`, `both`. When unset, the file is written only in development; explicit `file`/`both` always writes a file. |
+| `TINA4_LOG_FORMAT` | `text` | Output format. `text` writes the human-readable form; `json` writes one structured record per line. |
+| `TINA4_LOG_ROTATE_SIZE` | `10485760` | Bytes per file before rotation (10 MB). `0` disables rotation entirely. |
+| `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated files to keep (`app.log.1` … `app.log.N`). |
+| `TINA4_LOG_MAX_SIZE` | _(legacy alias)_ | Legacy alias for `TINA4_LOG_ROTATE_SIZE`. |
+| `TINA4_LOG_KEEP` | `5` | Legacy alias for `TINA4_LOG_ROTATE_KEEP`. |
+| `TINA4_LOG_FILE` | _(empty)_ | Path to a log file. Empty leaves logs on stdout. Relative paths resolve against `TINA4_LOG_DIR`; absolute paths are used verbatim. Setting any path forces file output. |
+| `TINA4_LOG_DIR` | `logs` | Directory for log files. Joined with `TINA4_LOG_FILE` when the latter is relative. |
+| `TINA4_LOG_FUNC` | _(empty)_ | When truthy, includes the calling function name in each log line. |
+| `TINA4_LOG_STRICT` | `false` | When `true`, raises on a log-write failure instead of swallowing it. |
 
----
-
-## Database
+### Database
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_DATABASE_URL` | `sqlite:///data/app.db` | Connection URL. Scheme selects the driver: `sqlite`, `postgres`, `mysql`, `mssql`, `sqlserver`, `firebird`. |
+| `TINA4_DATABASE_URL` | `sqlite:///data/app.db` | Connection URL. Scheme selects the driver: `sqlite`, `postgres`, `mysql`, `firebird`. |
 | `TINA4_DATABASE_USERNAME` | _(empty)_ | Overrides the username embedded in `TINA4_DATABASE_URL`. |
 | `TINA4_DATABASE_PASSWORD` | _(empty)_ | Overrides the password embedded in `TINA4_DATABASE_URL`. |
-| `TINA4_DATABASE_FIREBIRD_PATH` | _(empty)_ | Overrides the database path/alias parsed from `TINA4_DATABASE_URL` for Firebird. Useful for Windows backslash paths and split-config setups. |
-| `TINA4_DATABASE_URL` | _(empty)_ | Legacy alias for `TINA4_DATABASE_URL`. Prefer `TINA4_DATABASE_URL` in new projects. |
+| `TINA4_DB_POOL` | `0` | Default connection-pool size when the caller doesn't pass `pool=` explicitly. `0` uses a single connection; a positive integer enables round-robin pooling. |
 | `TINA4_AUTOCOMMIT` | `true` | Standalone writes auto-commit on their own connection (durable + visible across a pool); explicit transactions stay atomic. Set `false` for strict manual-commit mode. |
-| `TINA4_DB_CACHE` | `false` | Enables in-memory query-result caching for read queries. |
-| `TINA4_DB_CACHE_TTL` | `60` | Query cache TTL in seconds when `TINA4_DB_CACHE=true`. |
-| `TINA4_DB_POOL` | `0` | Default connection-pool size used when a caller constructs `Database` without passing `$pool`. `0` keeps the single-connection behaviour; values above zero enable pooled adapters lazily. An explicit constructor argument always wins. |
-| `TINA4_MIGRATION_ID` | _(timestamp)_ | Override the migration ID used when recording applied migrations. |
+| `TINA4_DATABASE_FIREBIRD_PATH` | _(none)_ | Overrides the database path/alias parsed from `TINA4_DATABASE_URL` for Firebird. Useful for Windows backslash paths and split-config setups. |
+| `TINA4_ORM_PLURAL_TABLE_NAMES` | `false` | When `true`, the ORM pluralises class names into table names (`User` → `users`). Default keeps them singular. |
 
----
-
-## CORS
+### Cache
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_CORS_ORIGINS` | `*` | Comma-separated allowed origins. Lock down to real domains in production. |
-| `TINA4_CORS_METHODS` | `GET,POST,PUT,PATCH,DELETE,OPTIONS` | Allowed request methods. |
-| `TINA4_CORS_HEADERS` | `Content-Type,Authorization,X-Requested-With` | Allowed request headers. |
-| `TINA4_CORS_CREDENTIALS` | `false` | Send `Access-Control-Allow-Credentials: true`. Required for cross-origin cookies. |
-| `TINA4_CORS_MAX_AGE` | `600` | Preflight cache lifetime in seconds. |
+| `TINA4_DB_CACHE` | `false` | Persistent cross-request query-result cache for read queries. |
+| `TINA4_AUTO_CACHING` | `false` | Request-scoped query cache. Off by default to avoid read-after-write staleness within a request. |
+| `TINA4_DB_CACHE_TTL` | `30` | Persistent query cache TTL in seconds when `TINA4_DB_CACHE=true`. |
+| `TINA4_AUTO_CACHING_TTL` | `5` | Request-scoped query cache TTL in seconds. |
+| `TINA4_DB_CACHE_BACKEND` | `memory` | Backend for the persistent DB cache. Options: `memory`, `redis`, `valkey`, `memcached`. |
+| `TINA4_DB_CACHE_URL` | _(none)_ | Connection URL for a remote persistent DB cache backend. |
+| `TINA4_CACHE_BACKEND` | `memory` | Response / KV cache backend. Options: `memory`, `file`, `redis`, `valkey`, `memcached`, `mongodb`, `database`. Falls back to `file` if the configured backend is unreachable. |
+| `TINA4_CACHE_URL` | _(varies by backend)_ | Connection URL for remote cache backends. For `database`, falls back to `TINA4_DATABASE_URL` when unset. |
+| `TINA4_CACHE_USERNAME` | _(empty)_ | Username for the cache backend. May also be embedded in `TINA4_CACHE_URL`. |
+| `TINA4_CACHE_PASSWORD` | _(empty)_ | Password for the cache backend. May also be embedded in `TINA4_CACHE_URL` (e.g. `redis://:pass@host`). Memcached is unauthenticated. |
+| `TINA4_CACHE_TTL` | `60` | Default response cache TTL in seconds. |
+| `TINA4_CACHE_MAX_ENTRIES` | `1000` | Maximum cache entries. Oldest entries evicted first. |
+| `TINA4_CACHE_DIR` | `data/cache` | Cache directory for the file backend. |
 
----
-
-## Security Headers
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TINA4_CSP` | `default-src 'self'` | `Content-Security-Policy` header. |
-| `TINA4_CSRF` | `true` | CSRF token validation on POST/PUT/PATCH/DELETE. Requires `_csrf` in the body or `X-CSRF-Token` header. |
-| `TINA4_HSTS` | _(empty/off)_ | `Strict-Transport-Security` max-age in seconds. Set `31536000` in production with HTTPS. |
-| `TINA4_FRAME_OPTIONS` | `DENY` | `X-Frame-Options` header. Set `SAMEORIGIN` if you embed your own app in an iframe. |
-| `TINA4_REFERRER_POLICY` | `strict-origin-when-cross-origin` | `Referrer-Policy` header. |
-| `TINA4_PERMISSIONS_POLICY` | _(empty)_ | `Permissions-Policy` header. Example: `geolocation=(), microphone=()`. |
-
----
-
-## Rate Limiting
+### Secrets and Authentication
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_RATE_LIMIT` | `100` | Maximum requests per window per IP. Set `0` to disable. |
-| `TINA4_RATE_WINDOW` | `60` | Rate-limit window in seconds. |
+| `TINA4_SECRET` | _(none)_ | JWT/signing secret. No built-in or guessable default. In development the framework auto-mints one to `.env.local`; in CI/production it stays blank and the framework warns. Must be long, random, and unique per environment. **Never commit.** |
+| `TINA4_API_KEY` | _(empty)_ | Static bearer API key used as a fallback to JWT. Unset disables it. |
+| `TINA4_TOKEN_LIMIT` | `60` | JWT / form-token lifetime in minutes. |
+| `TINA4_JWT_ALGORITHM` | `HS256` | JWT signing algorithm. Supports `HS256`, `HS384`, `HS512`. |
 
----
-
-## Sessions
+### Sessions
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `TINA4_SESSION_BACKEND` | `file` | Storage backend. Options: `file`, `redis`, `valkey`, `mongo`, `database`. |
-| `TINA4_SESSION_HANDLER` | _(inherits `_BACKEND`)_ | Alternate handler class name. Overrides `TINA4_SESSION_BACKEND`. |
-| `TINA4_SESSION_NAME` | `tina4_session` | Cookie name written by the framework session manager. Distinct from `TINA4_PHP_SESSION_NAME`, which controls the native PHP session cookie. |
 | `TINA4_SESSION_TTL` | `3600` | Session expiry in seconds. |
-| `TINA4_SESSION_SAMESITE` | `Lax` | SameSite cookie attribute. Options: `Strict`, `Lax`, `None`. |
-| `TINA4_SESSION_HTTPONLY` | `true` | Emit the `HttpOnly` attribute on the session cookie. Leave on unless JavaScript genuinely needs to read the cookie. |
-| `TINA4_SESSION_SECURE` | `false` | Emit the `Secure` attribute on the session cookie. Setting `TINA4_SESSION_SAMESITE=None` forces this to `true` regardless of the value here. |
 | `TINA4_SESSION_PATH` | `data/sessions` | Filesystem path for the file backend. |
-| `TINA4_PHP_SESSION_NAME` | `PHPSESSID` | Cookie name used by native PHP `$_SESSION` (separate from the framework session). |
-| `TINA4_PHP_SESSION_PATH` | _(system temp)_ | `session.save_path` for native PHP sessions. The framework configures it before `session_start()` so the SAPI and the built-in server share session storage. |
+| `TINA4_SESSION_STRICT` | `false` | When `true`, re-raises on a session backend failure instead of degrading gracefully. |
+| `TINA4_SESSION_NAME` | `tina4_session` | Name of the session cookie sent to the browser. |
+| `TINA4_SESSION_SAMESITE` | `Lax` | SameSite cookie attribute. Options: `Strict`, `Lax`, `None`. |
+| `TINA4_SESSION_HTTPONLY` | `true` | Sets the `HttpOnly` cookie attribute so JavaScript on the page cannot read the session ID. |
+| `TINA4_SESSION_SECURE` | `false` | Sets the `Secure` cookie attribute so the session cookie is only sent over HTTPS. Turn on in production. |
+| `TINA4_SESSION_REDIS_HOST` | `localhost` | Redis session host. |
+| `TINA4_SESSION_REDIS_PORT` | `6379` | Redis session port. |
+| `TINA4_SESSION_REDIS_PASSWORD` | _(none)_ | Redis session auth password. |
+| `TINA4_SESSION_REDIS_DB` | `0` | Redis session database number. |
+| `TINA4_SESSION_VALKEY_HOST` | `localhost` | Valkey session host. |
+| `TINA4_SESSION_VALKEY_PORT` | `6379` | Valkey session port. |
+| `TINA4_SESSION_VALKEY_PASSWORD` | _(none)_ | Valkey session auth password. |
+| `TINA4_SESSION_VALKEY_DB` | `0` | Valkey session database number. |
+| `TINA4_SESSION_VALKEY_PREFIX` | `tina4:session:` | Key prefix for Valkey session entries. |
+| `TINA4_SESSION_MONGO_URL` | `mongodb://localhost:27017` | MongoDB session connection string. |
+| `TINA4_SESSION_MONGO_DB` | `tina4` | MongoDB session database name. |
+| `TINA4_SESSION_MONGO_COLLECTION` | `sessions` | MongoDB session collection name. |
 
-### Redis/Valkey session backend
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TINA4_SESSION_REDIS_HOST` | `localhost` | Redis host. |
-| `TINA4_SESSION_REDIS_PORT` | `6379` | Redis port. |
-| `TINA4_SESSION_REDIS_PASSWORD` | _(none)_ | Redis auth password. |
-| `TINA4_SESSION_REDIS_DB` | `0` | Redis database number. |
-| `TINA4_SESSION_REDIS_URL` | _(none)_ | Full `redis://` URL. Overrides the individual fields when set. |
-| `TINA4_SESSION_VALKEY_HOST` | `localhost` | Valkey host. |
-| `TINA4_SESSION_VALKEY_PORT` | `6379` | Valkey port. |
-| `TINA4_SESSION_VALKEY_PASSWORD` | _(none)_ | Valkey auth password. |
-| `TINA4_SESSION_VALKEY_DB` | `0` | Valkey database number. |
-
-### MongoDB session backend
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TINA4_SESSION_MONGO_URL` | `mongodb://localhost:27017` | MongoDB connection string. |
-| `TINA4_SESSION_MONGO_DB` | `tina4` | MongoDB database name. |
-
----
-
-## Templates
+### CORS
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_TEMPLATE_CACHE_TTL` | `0` | Lifetime of compiled Frond templates in production, in seconds. `0` means cache forever (no filesystem checks per render); a positive value re-reads and re-tokenises a template once it has been cached for that long. Ignored when `TINA4_DEBUG=true` — debug mode always re-reads. |
+| `TINA4_CORS_ORIGINS` | `*` | Comma-separated allowed origins. Lock down to real domains in production. |
+| `TINA4_CORS_METHODS` | `GET, POST, PUT, DELETE, PATCH, OPTIONS` | Allowed request methods. |
+| `TINA4_CORS_HEADERS` | `Content-Type,Authorization,X-Request-ID` | Allowed request headers. |
+| `TINA4_CORS_MAX_AGE` | `86400` | Preflight cache lifetime in seconds. |
+| `TINA4_CORS_CREDENTIALS` | `false` | Send `Access-Control-Allow-Credentials: true`. Opt-in — combining `true` with `TINA4_CORS_ORIGINS=*` is unsafe. |
 
----
-
-## Cache
+### Security Headers
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_CACHE_BACKEND` | `memory` | Response cache backend. Options: `memory`, `file`, `redis`, `valkey`, `memcached`, `mongodb`, `database`. Falls back to `file` if the configured backend is unreachable. |
-| `TINA4_CACHE_DIR` | `data/cache` | Cache directory for the file backend. |
-| `TINA4_CACHE_TTL` | `60` | Default cache TTL in seconds. |
-| `TINA4_CACHE_MAX_ENTRIES` | `1000` | Maximum cache entries. Oldest entries evicted first. |
-| `TINA4_CACHE_URL` | _(none)_ | Connection URL for remote cache backends (e.g. `redis://localhost:6379`). For `database`, falls back to `TINA4_DATABASE_URL` when unset. |
-| `TINA4_CACHE_USERNAME` | _(none)_ | Username for the cache backend. May also be embedded in `TINA4_CACHE_URL`. |
-| `TINA4_CACHE_PASSWORD` | _(none)_ | Password for the cache backend. May also be embedded in `TINA4_CACHE_URL` (e.g. `redis://:pass@host`). Memcached is unauthenticated. |
+| `TINA4_FRAME_OPTIONS` | `SAMEORIGIN` | `X-Frame-Options` header. Set `DENY` to forbid all framing. |
+| `TINA4_HSTS` | _(empty/off)_ | `Strict-Transport-Security` max-age in seconds. Set `31536000` in production with HTTPS. |
+| `TINA4_CSP` | `default-src 'self'` | `Content-Security-Policy` header. |
+| `TINA4_REFERRER_POLICY` | `strict-origin-when-cross-origin` | `Referrer-Policy` header. |
+| `TINA4_PERMISSIONS_POLICY` | `camera=(), microphone=(), geolocation=()` | `Permissions-Policy` header. |
+| `TINA4_CSRF` | `true` | CSRF token validation on POST/PUT/PATCH/DELETE. Enabled by default; disable with `TINA4_CSRF=false`. |
+| `TINA4_RATE_LIMIT` | `100` | Maximum requests per window per IP. Set `0` to disable. |
+| `TINA4_RATE_WINDOW` | `60` | Rate-limit window in seconds. |
 
----
+### Localisation
 
-## Queues
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_LOCALE` | `en` | Default locale for the I18n module. |
+| `TINA4_LOCALE_DIR` | `src/locales` | Directory containing locale JSON files. |
+
+### Email
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_MAIL_HOST` | `localhost` | SMTP server hostname. |
+| `TINA4_MAIL_PORT` | `587` | SMTP server port. |
+| `TINA4_MAIL_USERNAME` | _(empty)_ | SMTP authentication username. |
+| `TINA4_MAIL_PASSWORD` | _(empty)_ | SMTP authentication password. |
+| `TINA4_MAIL_FROM` | _(inherits username or `noreply@localhost`)_ | Default sender email address. |
+| `TINA4_MAIL_FROM_NAME` | _(empty)_ | Default sender display name. |
+| `TINA4_MAIL_ENCRYPTION` | `tls` | Connection encryption. Options: `tls`, `ssl`, `none`. |
+| `TINA4_MAIL_IMAP_HOST` | _(empty)_ | IMAP server for inbound mail. |
+| `TINA4_MAIL_IMAP_PORT` | `993` | IMAP server port. |
+| `TINA4_MAIL_IMAP_USERNAME` | _(inherits `TINA4_MAIL_USERNAME`)_ | IMAP authentication username. |
+| `TINA4_MAIL_IMAP_PASSWORD` | _(inherits `TINA4_MAIL_PASSWORD`)_ | IMAP authentication password. |
+| `TINA4_MAIL_IMAP_ENCRYPTION` | `tls` | IMAP transport encryption. Options: `tls`, `starttls`, `none`. Invalid values fall back to `tls`. |
+| `TINA4_MAIL_TLS_INSECURE` | `false` | When `true`, skips TLS certificate validation. Leave off outside trusted dev setups. |
+| `TINA4_MAILBOX_DIR` | `data/mailbox` | Dev mailbox directory. All outbound mail lands here when `TINA4_DEBUG=true`. |
+
+### Queues
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `TINA4_QUEUE_BACKEND` | `file` | Queue backend. Options: `file`, `kafka`, `rabbitmq`, `mongo`, `database`. |
 | `TINA4_QUEUE_PATH` | `data/queue` | Filesystem path for the file backend. |
-| `TINA4_QUEUE_URL` | _(none)_ | Connection URL for remote backends. |
-
-### Kafka queue backend
-
-| Variable | Default | Description |
-|----------|---------|-------------|
+| `TINA4_QUEUE_URL` | _(none)_ | Unified connection URL for remote backends (AMQP / Kafka / Mongo). Per-field variables below override it. |
 | `TINA4_KAFKA_BROKERS` | `localhost:9092` | Comma-separated broker list. |
 | `TINA4_KAFKA_GROUP_ID` | `tina4_consumer_group` | Kafka consumer group ID. |
-
-### RabbitMQ queue backend
-
-| Variable | Default | Description |
-|----------|---------|-------------|
 | `TINA4_RABBITMQ_HOST` | `localhost` | RabbitMQ host. |
 | `TINA4_RABBITMQ_PORT` | `5672` | RabbitMQ port. |
 | `TINA4_RABBITMQ_USERNAME` | `guest` | RabbitMQ username. |
 | `TINA4_RABBITMQ_PASSWORD` | `guest` | RabbitMQ password. |
 | `TINA4_RABBITMQ_VHOST` | `/` | RabbitMQ virtual host. |
-
-### MongoDB queue backend
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TINA4_MONGO_URI` | _(none)_ | Full MongoDB connection string. Overrides host/port when set. |
+| `TINA4_MONGO_URI` | _(empty)_ | Full MongoDB connection string. Overrides host/port when set. |
 | `TINA4_MONGO_HOST` | `localhost` | MongoDB host. |
 | `TINA4_MONGO_PORT` | `27017` | MongoDB port. |
-| `TINA4_MONGO_USERNAME` | _(none)_ | MongoDB username. |
-| `TINA4_MONGO_PASSWORD` | _(none)_ | MongoDB password. |
+| `TINA4_MONGO_USERNAME` | _(empty)_ | MongoDB username. |
+| `TINA4_MONGO_PASSWORD` | _(empty)_ | MongoDB password. |
 | `TINA4_MONGO_DB` | `tina4` | MongoDB database name. |
 | `TINA4_MONGO_COLLECTION` | `tina4_queue` | MongoDB collection name for jobs. |
 
----
-
-## WebSocket Backplane
+### WebSocket
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_WS_BACKPLANE` | _(none)_ | Backplane type. Set `redis` for multi-instance broadcasts. |
-| `TINA4_WS_BACKPLANE_URL` | `redis://localhost:6379` | Connection URL for the backplane. |
+| `TINA4_WS_BACKPLANE` | _(none)_ | Backplane type for multi-instance broadcasts. Options: `redis`, `nats`. Empty = local-only. |
+| `TINA4_WS_BACKPLANE_URL` | `redis://localhost:6379` | Connection URL for the chosen backplane (NATS defaults to `nats://localhost:4222`). |
+| `TINA4_WS_ALLOWED_ORIGINS` | _(empty)_ | Comma-separated WebSocket origin allow-list. Empty allows all origins. |
+| `TINA4_WS_IDLE_TIMEOUT` | `0` | Idle-connection reaper interval in seconds. `0` disables it. |
+| `TINA4_WS_MAX_FRAME_SIZE` | `1048576` | Maximum WebSocket frame size in bytes (1 MB). |
 
----
-
-## Email
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TINA4_MAIL_HOST` | _(none)_ | SMTP server hostname. |
-| `TINA4_MAIL_PORT` | `587` | SMTP server port. |
-| `TINA4_MAIL_USERNAME` | _(none)_ | SMTP authentication username. |
-| `TINA4_MAIL_PASSWORD` | _(none)_ | SMTP authentication password. |
-| `TINA4_MAIL_FROM` | _(none)_ | Default sender email address. |
-| `TINA4_MAIL_FROM_NAME` | _(none)_ | Default sender display name. |
-| `TINA4_MAIL_ENCRYPTION` | `tls` | Connection encryption. Options: `tls`, `ssl`, `none`. |
-| `TINA4_MAIL_IMAP_HOST` | _(none)_ | IMAP server for inbound mail. |
-| `TINA4_MAIL_IMAP_PORT` | `993` | IMAP server port. |
-| `TINA4_MAIL_IMAP_USERNAME` | _(none)_ | IMAP authentication username. |
-| `TINA4_MAIL_IMAP_PASSWORD` | _(none)_ | IMAP authentication password. |
-| `TINA4_MAIL_IMAP_ENCRYPTION` | `tls` | IMAP transport encryption. Accepts `tls`, `starttls`, or `none`; any other value is silently coerced back to `tls`. Independent of `TINA4_MAIL_ENCRYPTION` so Gmail-style setups can use IMAPS on 993 alongside SMTP STARTTLS on 587. |
-| `TINA4_MAILBOX_DIR` | `data/mailbox` | Dev mailbox directory. All outbound mail lands here when `TINA4_DEBUG=true`. |
-
-> `TINA4_MAIL_HOST`, `TINA4_MAIL_PORT`, `TINA4_MAIL_USERNAME`, `TINA4_MAIL_PASSWORD` are also accepted as aliases for the `TINA4_MAIL_*` equivalents. New projects should use the `TINA4_MAIL_*` names.
-
----
-
-## Logging
+### GraphQL
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_LOG_LEVEL` | `INFO` | Minimum level shown on the console (stdout). The log file always receives every level regardless of this setting. Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. |
-| `TINA4_LOG_DEBUG` | `0` | Numeric flag for debug-level messages. Used internally by `Debug::message()`. |
-| `TINA4_LOG_INFO` | `1` | Numeric flag for info-level messages. |
-| `TINA4_LOG_ERROR` | `3` | Numeric flag for error-level messages. |
-| `TINA4_LOG_MAX_SIZE` | `10485760` | Per-file log size limit in bytes (10 MB). Rotated when exceeded. |
-| `TINA4_LOG_KEEP` | `5` | Number of rotated log files to retain. |
+| `TINA4_GRAPHQL_ENDPOINT` | `/graphql` | URL path the GraphQL handler is mounted on. POST serves queries, GET serves the IDE. |
+| `TINA4_GRAPHQL_AUTO_SCHEMA` | `true` | Auto-build the GraphQL schema from every registered ORM model on boot. Set `false` to define the schema manually. |
+| `TINA4_GRAPHQL_MAX_DEPTH` | `50` | Maximum query selection depth (DoS guard). `0` or lower disables the limit. |
 
-### Log pipeline (sink, format, rotation)
-
-Logs default to stdout. When `TINA4_LOG_OUTPUT` is unset, the log **file** is written only in development (`TINA4_DEBUG` truthy) — production and containers are stdout-only so a log file never bloats the writable layer. Set `TINA4_LOG_OUTPUT=file`/`both`, or point `TINA4_LOG_FILE` at a path, to force a file regardless of `TINA4_DEBUG`. The framework rotates at `TINA4_LOG_ROTATE_SIZE` bytes and keeps `TINA4_LOG_ROTATE_KEEP` backups.
+### Swagger / OpenAPI
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_LOG_FILE` | _(empty)_ | Primary log filename. A relative value is joined with `TINA4_LOG_DIR`; an absolute path overrides both directory and filename. Setting any path forces file output — even in production. Leave empty to follow the `TINA4_LOG_OUTPUT` default. |
-| `TINA4_LOG_DIR` | `logs` | Directory log files are written into when a file is emitted. Created on first write if missing. |
-| `TINA4_LOG_FORMAT` | `text` | Wire format for emitted lines. `text` is human-readable; `json` emits one structured object per line for ingestion by Loki, ELK, etc. |
-| `TINA4_LOG_OUTPUT` | `stdout` | Where lines are sent. Unset (the default): stdout is always on, and the log **file** is written only in development (`TINA4_DEBUG`) — production/containers are stdout-only. `stdout` is explicit stdout-only; `file` writes only to `TINA4_LOG_FILE`; `both` does both. Explicit `file`/`both` always writes a file, even in production. |
-| `TINA4_LOG_ROTATE_SIZE` | `10485760` | Rotation threshold in bytes (10 MB default). Set `0` to disable rotation entirely — useful when an external tool (logrotate, Docker driver) owns the file. |
-| `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated backups to retain. Older files are pruned on rotation. |
+| `TINA4_SWAGGER_ENABLED` | _(inherits `TINA4_DEBUG`)_ | Toggle the Swagger UI independently of debug mode. Set `true` in production to keep API docs available. |
+| `TINA4_SWAGGER_TITLE` | `Tina4 API` | OpenAPI spec title. |
+| `TINA4_SWAGGER_VERSION` | `1.0.0` | OpenAPI spec version. |
+| `TINA4_SWAGGER_DESCRIPTION` | _(empty)_ | OpenAPI spec description. |
+| `TINA4_SWAGGER_CONTACT_EMAIL` | _(empty)_ | Contact email rendered in the spec's `info.contact.email` field. |
+| `TINA4_SWAGGER_LICENSE` | _(empty)_ | License name in the spec's `info.license.name` field (e.g. `MIT`, `Apache-2.0`). |
 
----
-
-## Uploads
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TINA4_MAX_UPLOAD_SIZE` | `10485760` | Maximum multipart upload size in bytes (10 MB). |
-
----
-
-## Localisation
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TINA4_LOCALE` | `en` | Default locale for `I18n`. |
-| `TINA4_LOCALE_DIR` | `src/locale` | Directory containing locale JSON files. |
-
----
-
-## Services (background tasks)
+### Services (background tasks)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `TINA4_SERVICE_DIR` | `src/services` | Directory scanned for service classes. |
-| `TINA4_SERVICE_SLEEP` | `1` | Default tick interval (seconds) when a service does not specify one. |
+| `TINA4_SERVICE_SLEEP` | `5` | Seconds the service runner sleeps between iterations. |
 
 ---
 
-## AI and MCP Tooling
+## AI / Dev-Admin (Python today — rolling out to all)
 
-The dashboard AI chat and the framework's RAG-based code search both default to a **local qwen2.5-coder model served via Ollama**. Nothing leaves your machine unless you point `TINA4_AI_URL` at a remote endpoint.
+These power the dev dashboard's AI chat, RAG code search, and the MCP developer-tools endpoint. They are fully wired in Python today and rolling out to PHP, Ruby, and Node.js for parity. The dashboard AI defaults to a **local model served via Ollama** — nothing leaves your machine unless you point the URLs at a remote endpoint. If you run the hosted Tina4 AI services, put their URLs in your own `.env`.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_AI_URL` | `http://localhost:11434` | OpenAI-compatible HTTP endpoint for the chat/completion model (Ollama by default). |
-| `TINA4_AI_MODEL` | `qwen2.5-coder` | Model identifier the endpoint should serve. |
-| `TINA4_RAG_URL` | _(inherits `TINA4_AI_URL`)_ | Embedding endpoint for the framework RAG index. |
-| `TINA4_RAG_TOPK` | `4` | Number of nearest-neighbour matches the dev dashboard RAG search returns per query. |
-| `TINA4_AI_MODEL` | `nomic-embed-text` | Embedding model used to index the framework and `src/`. |
-| `TINA4_VISION_URL` | `http://andrevanzuydam.com:11434` | Vision-model endpoint surfaced by the dev dashboard `/__dev/api/vision` probe. |
-| `TINA4_EMBED_URL` | `http://andrevanzuydam.com:11435` | Embeddings endpoint surfaced by the dev dashboard `/__dev/api/embed` probe. |
-| `TINA4_IMAGE_URL` | `http://andrevanzuydam.com:11436` | Image-generation endpoint (e.g. SDXL Turbo) for the dev dashboard image tools. |
-| `TINA4_SUPERVISOR_URL` | _(framework port + 2000)_ | Override the URL of the Rust agent supervisor that the dev dashboard proxies for `/__dev/api/supervise/*` and `/__dev/api/execute`. Defaults to `http://127.0.0.1:9145` when `TINA4_PORT=7145`. |
-| `TINA4_MCP` | _(inherits `TINA4_DEBUG`)_ | Master switch for the MCP subsystem. When unset, follows `TINA4_DEBUG` — MCP is on in dev and off in prod. Set to `false` to keep MCP disabled while leaving debug mode on, or to `true` to expose MCP from a production server (combine with `TINA4_MCP_REMOTE` if binding off-localhost). |
-| `TINA4_MCP_PORT` | _(framework port + 2000)_ | Port the MCP server listens on. Defaults to `TINA4_PORT + 2000` (so `7145` → `9145`). Set explicitly when running multiple Tina4 instances on the same host. |
+| `TINA4_MCP` | _(inherits `TINA4_DEBUG`)_ | Toggle the built-in MCP dev-tools server. Set explicitly to keep the MCP endpoint exposed in a debug-disabled deployment. |
+| `TINA4_MCP_PORT` | _(framework port + 2000)_ | TCP port for the MCP server. The offset keeps it clear of the main server and the AI test port. |
 | `TINA4_MCP_REMOTE` | `false` | Allow the MCP server to bind on non-localhost interfaces. **Never enable in production.** |
-| `TINA4_NO_AI_PORT` | `false` | Disables the MCP port listener in dev mode. |
-| `TINA4_OVERRIDE_CLIENT` | `false` | Allow the framework to start without the Rust CLI (`tina4 serve`). Used in Docker images and CI runners; bypasses SCSS compilation, the file watcher, and live reload. |
+| `TINA4_AI_URL` | `http://localhost:11437/api/chat` | OpenAI-compatible chat/completion endpoint. Ollama by default; can point at any compatible provider. |
+| `TINA4_AI_MODEL` | `qwen2.5-coder:14b` | Model identifier the endpoint should serve. |
+| `TINA4_RAG_URL` | `http://localhost:11438` | RAG service endpoint for framework code search. |
+| `TINA4_RAG_TOPK` | `4` | Number of nearest-neighbour matches the RAG search returns per query. |
+| `TINA4_VISION_URL` | `http://localhost:11437/api/chat` | Vision-model endpoint for the dev dashboard vision tools. |
+| `TINA4_EMBED_URL` | `http://localhost:11437/api/embeddings` | Embeddings endpoint used to index the framework and `src/`. |
+| `TINA4_IMAGE_URL` | `http://localhost:11437/api/generate` | Image-generation endpoint for the dev dashboard image tools. |
+| `TINA4_SUPERVISOR_URL` | `http://localhost:9999` | URL of the Rust agent supervisor proxied by the dev dashboard. Derived from the agent/base port when unset. |
+| `TINA4_AGENT_PORT` | _(none)_ | Agent port used to derive `TINA4_SUPERVISOR_URL`. |
+| `TINA4_ENABLE_FEEDBACK` | `false` | Master switch for the dev-dashboard feedback widget. |
+| `TINA4_FEEDBACK_WHITELIST` | _(empty)_ | Comma-separated allow-list of users who can submit feedback. |
+| `TINA4_FEEDBACK_DEV_USER` | _(empty)_ | Identity attached to feedback submitted from the dev dashboard. |
 
 ---
 
-## Swagger / OpenAPI
+## Framework-specific (PHP)
+
+These variables only the PHP framework reads.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_SWAGGER_TITLE` | `Tina4 API` | OpenAPI spec title shown in the Swagger UI. |
-| `TINA4_SWAGGER_DESCRIPTION` | `Auto-generated from Tina4 routes` | OpenAPI spec description. |
-| `TINA4_SWAGGER_VERSION` | `1.0.0` | OpenAPI spec version. |
-| `TINA4_SWAGGER_ENABLED` | _(inherits `TINA4_DEBUG`)_ | Master switch for Swagger UI and the `/swagger`/`/swagger.json` routes. When unset, follows `TINA4_DEBUG` so Swagger is on in dev and off in prod automatically. Set explicitly to expose docs in production. |
-| `TINA4_SWAGGER_CONTACT_EMAIL` | _(empty)_ | Contact email written into the generated OpenAPI `info.contact` block. |
-| `TINA4_SWAGGER_LICENSE` | _(empty)_ | License name written into the generated OpenAPI `info.license` block. |
-
----
-
-## GraphQL
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TINA4_GRAPHQL_ENDPOINT` | `/graphql` | URL path the framework binds the GraphQL handler to. The same value is used when generating `__schema` links and the dev-dashboard query console URL. |
-| `TINA4_GRAPHQL_AUTO_SCHEMA` | `true` | Auto-generate the GraphQL schema from registered ORM models. Set to `false` to skip introspection scaffolding when you supply a hand-written schema. |
-
----
-
-## HTTP Status Constants
-
-For use in route handlers instead of raw integers:
-
-```php
-return $response->json($data, \Tina4\HTTP_CREATED);
-return $response("<error/>", \Tina4\HTTP_BAD_REQUEST, \Tina4\APPLICATION_XML);
-```
-
-See [Chapter 3: Request and Response](./03-request-response.md#http-status-constants) for the full table.
-
----
-
-## Log-Level Constants
-
-Passed to `Debug::message()` to tag severity:
-
-| Constant | Description |
-|----------|-------------|
-| `TINA4_LOG_DEBUG` | Verbose developer messages. |
-| `TINA4_LOG_INFO` | Normal operational messages. |
-| `TINA4_LOG_WARNING` | Non-fatal anomalies. |
-| `TINA4_LOG_ERROR` | Recoverable errors. |
-| `TINA4_LOG_CRITICAL` | Fatal or security-relevant events. |
-
-```php
-\Tina4\Debug::message("User " . $id . " missed the cache", TINA4_LOG_INFO);
-```
+| `TINA4_JWT_ALGORITHM` | `HS256` | JWT signing algorithm. Supports `HS256`, `HS384`, `HS512`. |
+| `TINA4_SESSION_HANDLER` | _(inherits `TINA4_SESSION_BACKEND`)_ | Alternate session handler/backend name. Overrides `TINA4_SESSION_BACKEND`. |
+| `TINA4_SESSION_REDIS_URL` | _(none)_ | Full `redis://` URL for Redis sessions. Overrides the individual host/port fields. |
+| `TINA4_PHP_SESSION_NAME` | `PHPSESSID` | Cookie name used by native PHP `$_SESSION` (separate from the framework session). |
+| `TINA4_PHP_SESSION_PATH` | _(basePath/data/sessions-php)_ | `session.save_path` for native PHP sessions, configured before `session_start()`. |
+| `TINA4_WS_PORT` | _(inherits port)_ | Separate port for a standalone WebSocket server. Leave unset to share the HTTP port. |
 
 ---
 
@@ -376,7 +288,7 @@ TINA4_LOG_LEVEL=DEBUG
 TINA4_NO_BROWSER=true
 ```
 
-That is it. Debug mode lights up the Swagger UI, the dev dashboard, detailed error pages, and live reload. Keeping the browser flag on stops a new tab opening every time you save a file.
+Debug mode lights up the Swagger UI, the dev dashboard, detailed error pages, and live reload. Keeping the browser flag on stops a new tab opening every time you save a file.
 
 ---
 
