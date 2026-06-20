@@ -245,14 +245,14 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 | `TINA4_LOG_MAX_SIZE` | `10` | Per-file log size limit in megabytes. Rotated when exceeded. |
 | `TINA4_LOG_KEEP` | `5` | Number of rotated log files to retain. |
 
-Logs default to stdout. Set `TINA4_LOG_OUTPUT=file` plus `TINA4_LOG_FILE=app.log` to write to disk; Ruby's stdlib `Logger` rotates at `TINA4_LOG_ROTATE_SIZE` bytes and keeps `TINA4_LOG_ROTATE_KEEP` backups natively.
+stdout is always on. The log **file** is dev-gated: with `TINA4_LOG_OUTPUT` unset, Tina4 writes `logs/tina4.log` only in development (`TINA4_DEBUG` truthy). In production and inside containers it stays stdout-only — no file — because a log file there just bloats the writable layer, and the 12-factor approach wants logs on stdout. To force a file anyway, set `TINA4_LOG_OUTPUT=file` (or `both`) or name a path with `TINA4_LOG_FILE` — an explicit value always wins over the dev gate. Ruby's stdlib `Logger` rotates at `TINA4_LOG_ROTATE_SIZE` bytes and keeps `TINA4_LOG_ROTATE_KEEP` backups natively.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `TINA4_LOG_FILE` | _(empty = stdout only)_ | Explicit log file path. Absolute, or resolved relative to `TINA4_LOG_DIR`. |
 | `TINA4_LOG_DIR` | `logs` | Directory used when `TINA4_LOG_FILE` is set without an absolute path. |
 | `TINA4_LOG_FORMAT` | `text` | Log line format. Accepts `text` or `json`. |
-| `TINA4_LOG_OUTPUT` | `stdout` | Output sink. Accepts `stdout`, `file`, or `both`. |
+| `TINA4_LOG_OUTPUT` | _(dev-gated)_ | Output sink. Accepts `stdout`, `file`, or `both`. When unset: a log file is written only in development (`TINA4_DEBUG` truthy) — production/containers are stdout-only. An explicit `TINA4_LOG_OUTPUT` or `TINA4_LOG_FILE` always forces a file. |
 | `TINA4_LOG_STRICT` | `false` | When `true`, raises on a log-write failure instead of swallowing it. (Renamed from `TINA4_LOG_CRITICAL` in v3.13.39, which is now a log level, not a toggle.) |
 | `TINA4_LOG_ROTATE_SIZE` | `10485760` | Per-file rotation threshold in bytes (10 MB). `0` disables rotation. Handled natively by stdlib `Logger.new(path, shift_age, shift_size)`. |
 | `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated backups to retain. |

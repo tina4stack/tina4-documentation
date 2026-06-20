@@ -177,11 +177,16 @@ One JSON object per line. Compatible with Datadog, Elastic, CloudWatch, and any 
 
 ## 10. Writing to a File
 
+stdout is always on. The log **file** follows your environment by default. In development — `TINA4_DEBUG` set to a truthy value — Tina4 writes `logs/tina4.log` and mirrors every line to stdout. In production, and inside containers, it writes to stdout only. No file. A log file in a container just bloats the writable layer and the disk, and the 12-factor approach wants logs on stdout so the platform captures them.
+
+Need a file in production anyway? Ask for one. Set `TINA4_LOG_OUTPUT` to `file` or `both`, or name a path with `TINA4_LOG_FILE`:
+
 ```bash
+TINA4_LOG_OUTPUT=both
 TINA4_LOG_FILE=logs/app.log
 ```
 
-The logger writes to the file and to stdout simultaneously. Log rotation is handled by the OS log rotation tool (logrotate on Linux, newsyslog on macOS).
+An explicit `TINA4_LOG_OUTPUT` or `TINA4_LOG_FILE` always wins — it forces a file regardless of `TINA4_DEBUG`. With `file` the logger writes the file only; with `both` it writes the file and stdout together. Log rotation is handled natively by Ruby's stdlib `Logger` (`TINA4_LOG_ROTATE_SIZE` / `TINA4_LOG_ROTATE_KEEP`).
 
 ---
 

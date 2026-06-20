@@ -223,7 +223,45 @@ Search your log aggregator for `requestId` to see every log line from that reque
 
 ---
 
-## 8. Performance Logging
+## 8. File Output: Dev Writes a File, Production Is stdout-Only
+
+stdout is always on. The logger writes a `logs/tina4.log` file too — but only in development. In production, the logger is stdout-only.
+
+The rule is simple. When `TINA4_LOG_OUTPUT` is unset (the default), the framework checks `TINA4_DEBUG`:
+
+- **Development** (`TINA4_DEBUG` truthy): logs go to stdout **and** to `logs/tina4.log`.
+- **Production / containers** (`TINA4_DEBUG` unset or falsy): logs go to stdout **only**. No file.
+
+Why no file in production? A log file inside a container writes to the container's writable layer and grows on disk. The platform — Docker, Kubernetes, your process manager — already captures PID 1 stdout. That's where production logs belong. Writing a file as well bloats the image layer and the disk for no gain. This follows the 12-factor rule: treat logs as a stream, let the platform route it.
+
+```bash
+# Development — stdout + logs/tina4.log
+TINA4_DEBUG=true
+
+# Production — stdout only, no file (the default with TINA4_DEBUG off)
+# (nothing to set)
+```
+
+### Forcing a file in production
+
+Explicit configuration always wins over the dev/production default. Set either of these and the file is written regardless of `TINA4_DEBUG`:
+
+```bash
+# Force a file (and keep stdout) in any environment
+TINA4_LOG_OUTPUT=both
+
+# File only, no stdout
+TINA4_LOG_OUTPUT=file
+
+# An explicit file path also forces a file
+TINA4_LOG_FILE=/var/log/myapp/app.log
+```
+
+So you control the file three ways: leave it to the default (file in dev, none in production), set `TINA4_LOG_OUTPUT` to `file` or `both`, or point `TINA4_LOG_FILE` at a path. The last two override the default — an explicit choice beats the environment guess every time.
+
+---
+
+## 9. Performance Logging
 
 Log slow operations to identify bottlenecks:
 
@@ -260,7 +298,7 @@ async function fetchDashboardData(userId: number) {
 
 ---
 
-## 9. Exercise: Add Logging to an Existing API
+## 10. Exercise: Add Logging to an Existing API
 
 Take the product listing endpoint from Chapter 11 and add structured logging at every meaningful point.
 
@@ -282,7 +320,7 @@ Take the product listing endpoint from Chapter 11 and add structured logging at 
 
 ---
 
-## 10. Solution
+## 11. Solution
 
 ```typescript
 import { Router, Log, cacheGet, cacheSet } from "tina4-nodejs";
@@ -356,7 +394,7 @@ Router.get("/api/products/logged", async (req, res) => {
 
 ---
 
-## 11. Gotchas
+## 12. Gotchas
 
 ### 1. Logging sensitive data
 

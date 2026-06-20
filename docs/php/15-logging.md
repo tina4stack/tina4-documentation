@@ -325,14 +325,26 @@ Any query slower than 50ms emits a `WARNING`. All others emit `DEBUG` and are su
 TINA4_LOG_LEVEL=WARNING
 
 # Log output destination (stdout | file | both)
+# Unset (the default): stdout is always on; the log FILE is written
+# ONLY in development (TINA4_DEBUG truthy). Set this to force a file.
 TINA4_LOG_OUTPUT=both
 
-# Log file path (only used when TINA4_LOG_OUTPUT=file)
+# Log file path — an explicit path forces a file, even in production
 TINA4_LOG_FILE=./logs/app.log
 
 # Log format (json | text)
 TINA4_LOG_FORMAT=json
 ```
+
+### Where do logs go by default?
+
+When `TINA4_LOG_OUTPUT` is **unset** (the default), the destination depends on whether you run in development:
+
+- **stdout is always on.** The built-in server logs to standard output so Docker, Kubernetes, or your shell captures every line — 12-factor wants logs on stdout for the platform to collect.
+- **The log file is written only in development** — when `TINA4_DEBUG` is truthy. A local `tail -f logs/tina4.log` keeps working.
+- **Production and containers are stdout-only.** No `tina4.log`, no `error.log`. A log file inside a container just bloats the writable layer and fills the disk, and the platform already captures stdout.
+
+Explicit settings always win. Set `TINA4_LOG_OUTPUT=file` or `TINA4_LOG_OUTPUT=both`, or point `TINA4_LOG_FILE` at a path, and Tina4 writes the file regardless of `TINA4_DEBUG`.
 
 In development, use `DEBUG` level with `text` format for human-readable output. In production, use `WARNING` or `ERROR` level with `json` format for log aggregators.
 

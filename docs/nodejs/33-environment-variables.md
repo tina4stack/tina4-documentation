@@ -223,7 +223,7 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 
 ## Logging
 
-Logs default to stdout. Set `TINA4_LOG_OUTPUT=file` plus `TINA4_LOG_FILE=app.log` to write to disk; the framework rotates at `TINA4_LOG_ROTATE_SIZE` bytes and keeps `TINA4_LOG_ROTATE_KEEP` backups using stdlib `fs` calls.
+stdout is always on. With `TINA4_LOG_OUTPUT` unset (the default), the framework also writes `logs/tina4.log` — but only in development (`TINA4_DEBUG` truthy). In production / containers (`TINA4_DEBUG` off) it is stdout-only, no file, so a log file never bloats the container's writable layer or disk; the platform captures PID 1 stdout. Set `TINA4_LOG_OUTPUT=file` (or `both`), or point `TINA4_LOG_FILE` at a path, to force a file in any environment — an explicit choice always wins. When a file is written, the framework rotates at `TINA4_LOG_ROTATE_SIZE` bytes and keeps `TINA4_LOG_ROTATE_KEEP` backups using stdlib `fs` calls.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -235,10 +235,10 @@ Logs default to stdout. Set `TINA4_LOG_OUTPUT=file` plus `TINA4_LOG_FILE=app.log
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_LOG_FILE` | _(empty = stdout only)_ | Explicit log file path. Absolute paths are used as-is; relative paths resolve against `TINA4_LOG_DIR`. |
+| `TINA4_LOG_FILE` | _(empty)_ | Explicit log file path. Setting it forces a file even in production (explicit wins). Absolute paths are used as-is; relative paths resolve against `TINA4_LOG_DIR`. |
 | `TINA4_LOG_DIR` | `logs` | Directory for log files when `TINA4_LOG_FILE` is relative or unset. |
 | `TINA4_LOG_FORMAT` | `text` | File log format. Options: `text`, `json`. |
-| `TINA4_LOG_OUTPUT` | `stdout` | Where to write logs. Options: `stdout`, `file`, `both`. |
+| `TINA4_LOG_OUTPUT` | `stdout` | Where to write logs. Options: `stdout`, `file`, `both`. With `stdout` (the default), the file is written **only in development** (`TINA4_DEBUG` truthy); production / containers are stdout-only. `file`/`both` force a file in any environment. |
 | `TINA4_LOG_ROTATE_SIZE` | `10485760` | Rotate the file when it reaches this many bytes (10 MB). `0` disables rotation. Node uses an atomic `fs.renameSync` shift on each write. |
 | `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated historical files to retain. |
 

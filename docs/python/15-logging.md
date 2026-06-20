@@ -138,7 +138,9 @@ Write logs to a file:
 TINA4_LOG_FILE=logs/app.log
 ```
 
-Tina4 creates the file (and the `logs/` directory) if it does not exist. Logs are written to both the file and stdout.
+Tina4 creates the file (and the `logs/` directory) if it does not exist. With an explicit `TINA4_LOG_FILE`, logs are written to both the file and stdout.
+
+Without an explicit `TINA4_LOG_FILE` (or `TINA4_LOG_OUTPUT`), the log **file is written only in development** (`TINA4_DEBUG=true`). In production and containers the logger is **stdout-only** — a `logs/tina4.log` inside a container just bloats the writable layer and disk, and 12-factor wants logs on stdout for the platform to capture. Setting `TINA4_LOG_FILE`, or `TINA4_LOG_OUTPUT=file`/`both`, always writes a file in any environment.
 
 Enable rotation by size:
 

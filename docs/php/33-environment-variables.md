@@ -253,14 +253,14 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 
 ### Log pipeline (sink, format, rotation)
 
-Logs default to stdout. Set `TINA4_LOG_OUTPUT=file` plus `TINA4_LOG_FILE=app.log` to write to disk; the framework rotates at `TINA4_LOG_ROTATE_SIZE` bytes and keeps `TINA4_LOG_ROTATE_KEEP` backups.
+Logs default to stdout. When `TINA4_LOG_OUTPUT` is unset, the log **file** is written only in development (`TINA4_DEBUG` truthy) — production and containers are stdout-only so a log file never bloats the writable layer. Set `TINA4_LOG_OUTPUT=file`/`both`, or point `TINA4_LOG_FILE` at a path, to force a file regardless of `TINA4_DEBUG`. The framework rotates at `TINA4_LOG_ROTATE_SIZE` bytes and keeps `TINA4_LOG_ROTATE_KEEP` backups.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_LOG_FILE` | _(empty = stdout only)_ | Primary log filename. A relative value is joined with `TINA4_LOG_DIR`; an absolute path overrides both directory and filename. Leave empty to skip file output entirely. |
-| `TINA4_LOG_DIR` | `logs` | Directory log files are written into when `TINA4_LOG_OUTPUT` includes `file`. Created on first write if missing. |
+| `TINA4_LOG_FILE` | _(empty)_ | Primary log filename. A relative value is joined with `TINA4_LOG_DIR`; an absolute path overrides both directory and filename. Setting any path forces file output — even in production. Leave empty to follow the `TINA4_LOG_OUTPUT` default. |
+| `TINA4_LOG_DIR` | `logs` | Directory log files are written into when a file is emitted. Created on first write if missing. |
 | `TINA4_LOG_FORMAT` | `text` | Wire format for emitted lines. `text` is human-readable; `json` emits one structured object per line for ingestion by Loki, ELK, etc. |
-| `TINA4_LOG_OUTPUT` | `stdout` | Where lines are sent. `stdout` writes to the process stream (great for systemd / containers), `file` writes only to `TINA4_LOG_FILE`, `both` does both. |
+| `TINA4_LOG_OUTPUT` | `stdout` | Where lines are sent. Unset (the default): stdout is always on, and the log **file** is written only in development (`TINA4_DEBUG`) — production/containers are stdout-only. `stdout` is explicit stdout-only; `file` writes only to `TINA4_LOG_FILE`; `both` does both. Explicit `file`/`both` always writes a file, even in production. |
 | `TINA4_LOG_ROTATE_SIZE` | `10485760` | Rotation threshold in bytes (10 MB default). Set `0` to disable rotation entirely — useful when an external tool (logrotate, Docker driver) owns the file. |
 | `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated backups to retain. Older files are pruned on rotation. |
 
