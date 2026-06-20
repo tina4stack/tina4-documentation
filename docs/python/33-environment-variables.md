@@ -234,12 +234,11 @@ Logs default to stdout in `text` format. Set `TINA4_LOG_OUTPUT=file` plus `TINA4
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_LOG_LEVEL` | `ERROR` | Minimum log level written to files. Options: `ALL`, `DEBUG`, `INFO`, `WARNING`, `ERROR`. |
+| `TINA4_LOG_LEVEL` | `INFO` | Minimum level shown on the console (stdout). The log file always records every level. Options: `ALL`, `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. |
 | `TINA4_LOG_FILE` | _(empty — stdout only)_ | Path to a log file. Empty leaves logs on stdout. Relative paths are resolved against `TINA4_LOG_DIR`; absolute paths are used verbatim. |
 | `TINA4_LOG_DIR` | `logs` | Directory for log files. Joined with `TINA4_LOG_FILE` when the latter is a relative path. |
 | `TINA4_LOG_FORMAT` | `text` | Output format. `text` writes the human-readable `[INFO   ] message` form; `json` writes one structured JSON record per line. |
 | `TINA4_LOG_OUTPUT` | `stdout` | Where logs go. Options: `stdout`, `file`, `both`. |
-| `TINA4_LOG_CRITICAL` | `false` | Enables the `Log.critical(...)` level above `error`. When off, calls to `Log.critical()` are silent no-ops. |
 | `TINA4_LOG_ROTATE_SIZE` | `10485760` | Bytes per file before rotation (default 10 MB). `0` disables rotation entirely. |
 | `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated files to keep (`app.log.1` … `app.log.N`). Older files are deleted on the next rotation. |
 | `TINA4_LOG_MAX_SIZE` | `10485760` | Legacy alias for `TINA4_LOG_ROTATE_SIZE`. Per-file log size limit in bytes (10 MB). Rotated when exceeded. |

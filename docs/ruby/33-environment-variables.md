@@ -241,7 +241,7 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_LOG_LEVEL` | `[TINA4_LOG_ALL]` | Console log level. Options: `[TINA4_LOG_ALL]`, `[TINA4_LOG_DEBUG]`, `[TINA4_LOG_INFO]`, `[TINA4_LOG_WARNING]`, `[TINA4_LOG_ERROR]`, `[TINA4_LOG_NONE]`. Also accepts plain `DEBUG`, `INFO`, `ERROR`, etc. |
+| `TINA4_LOG_LEVEL` | `[TINA4_LOG_ALL]` | Console log level. Options: `[TINA4_LOG_ALL]`, `[TINA4_LOG_DEBUG]`, `[TINA4_LOG_INFO]`, `[TINA4_LOG_WARNING]`, `[TINA4_LOG_ERROR]`, `[TINA4_LOG_CRITICAL]`, `[TINA4_LOG_NONE]`. Also accepts plain `DEBUG`, `INFO`, `ERROR`, `CRITICAL`, etc. |
 | `TINA4_LOG_MAX_SIZE` | `10` | Per-file log size limit in megabytes. Rotated when exceeded. |
 | `TINA4_LOG_KEEP` | `5` | Number of rotated log files to retain. |
 
@@ -253,7 +253,7 @@ Logs default to stdout. Set `TINA4_LOG_OUTPUT=file` plus `TINA4_LOG_FILE=app.log
 | `TINA4_LOG_DIR` | `logs` | Directory used when `TINA4_LOG_FILE` is set without an absolute path. |
 | `TINA4_LOG_FORMAT` | `text` | Log line format. Accepts `text` or `json`. |
 | `TINA4_LOG_OUTPUT` | `stdout` | Output sink. Accepts `stdout`, `file`, or `both`. |
-| `TINA4_LOG_CRITICAL` | `false` | When `true`, gates the new `critical` level and raises on log write failures instead of swallowing them. |
+| `TINA4_LOG_STRICT` | `false` | When `true`, raises on a log-write failure instead of swallowing it. (Renamed from `TINA4_LOG_CRITICAL` in v3.13.39, which is now a log level, not a toggle.) |
 | `TINA4_LOG_ROTATE_SIZE` | `10485760` | Per-file rotation threshold in bytes (10 MB). `0` disables rotation. Handled natively by stdlib `Logger.new(path, shift_age, shift_size)`. |
 | `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated backups to retain. |
 

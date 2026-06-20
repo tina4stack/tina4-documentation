@@ -12,14 +12,17 @@ Tina4's logger writes structured entries, supports configurable levels, and is a
 
 ## 2. Log Levels
 
-Four levels, in order of increasing severity:
+Five levels, in order of increasing severity:
 
 | Level | Method | When to use |
 |-------|--------|-------------|
 | DEBUG | `Tina4::Log.debug` | Detailed trace — request internals, query params, timings |
 | INFO | `Tina4::Log.info` | Normal operations — request received, user logged in |
 | WARNING | `Tina4::Log.warning` | Something unexpected but recoverable — deprecated API called |
-| ERROR | `Tina4::Log.error` | Something broke — use for unrecoverable failures too |
+| ERROR | `Tina4::Log.error` | Something broke — a request failed |
+| CRITICAL | `Tina4::Log.critical` | The highest severity — the app cannot continue (data loss, hard outage) |
+
+`CRITICAL` is the top severity: `debug < info < warning < error < critical`. Like every other level it always emits, gated only by `TINA4_LOG_LEVEL`. On the console it renders in magenta.
 
 ---
 
@@ -55,9 +58,9 @@ Set the minimum log level via the `TINA4_LOG_LEVEL` environment variable. Entrie
 TINA4_LOG_LEVEL=info
 ```
 
-Valid values (case-insensitive): `all`, `debug`, `info`, `warning`, `error`, `none`.
+Valid values (case-insensitive): `all`, `debug`, `info`, `warning`, `error`, `critical`, `none`.
 
-With `TINA4_LOG_LEVEL=info`, `Tina4::Log.debug(...)` calls produce no output. With `TINA4_LOG_LEVEL=error`, only `error` entries appear. `none` silences everything.
+With `TINA4_LOG_LEVEL=info`, `Tina4::Log.debug(...)` calls produce no output. With `TINA4_LOG_LEVEL=error`, only `error` and `critical` entries appear. With `TINA4_LOG_LEVEL=critical`, only `critical` survives. `none` silences everything.
 
 Default is `info` (set this before the process starts).
 
@@ -194,7 +197,9 @@ if Tina4::Log.enabled?(:debug)
 end
 ```
 
-`enabled?` returns `true` when a message at that level would reach the console, and `false` when `TINA4_LOG_LEVEL` would drop it. With `TINA4_LOG_LEVEL=info`, `enabled?(:debug)` is `false` while `enabled?(:info)`, `enabled?(:warning)`, and `enabled?(:error)` are all `true`. The level accepts a String or Symbol and is case-insensitive — `enabled?("INFO")`, `enabled?(:info)`, and `enabled?("Info")` are equivalent.
+`enabled?` returns `true` when a message at that level would reach the console, and `false` when `TINA4_LOG_LEVEL` would drop it. With `TINA4_LOG_LEVEL=info`, `enabled?(:debug)` is `false` while `enabled?(:info)`, `enabled?(:warning)`, `enabled?(:error)`, and `enabled?(:critical)` are all `true`. The level accepts a String or Symbol and is case-insensitive — `enabled?("INFO")`, `enabled?(:info)`, and `enabled?("Info")` are equivalent.
+
+`:critical` is a first-class top level (severity 4, above `:error`), not an alias for error. It passes the threshold at every level except `none`, so `enabled?(:critical)` is `true` even when `TINA4_LOG_LEVEL=error`.
 
 It reuses the exact threshold the logger itself applies, so the predicate can never disagree with what actually prints.
 

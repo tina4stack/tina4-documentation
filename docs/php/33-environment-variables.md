@@ -261,7 +261,6 @@ Logs default to stdout. Set `TINA4_LOG_OUTPUT=file` plus `TINA4_LOG_FILE=app.log
 | `TINA4_LOG_DIR` | `logs` | Directory log files are written into when `TINA4_LOG_OUTPUT` includes `file`. Created on first write if missing. |
 | `TINA4_LOG_FORMAT` | `text` | Wire format for emitted lines. `text` is human-readable; `json` emits one structured object per line for ingestion by Loki, ELK, etc. |
 | `TINA4_LOG_OUTPUT` | `stdout` | Where lines are sent. `stdout` writes to the process stream (great for systemd / containers), `file` writes only to `TINA4_LOG_FILE`, `both` does both. |
-| `TINA4_LOG_CRITICAL` | `false` | Enable `Log::critical()` emission. Off by default so security-relevant criticals can be intentionally surfaced rather than buried in routine output. |
 | `TINA4_LOG_ROTATE_SIZE` | `10485760` | Rotation threshold in bytes (10 MB default). Set `0` to disable rotation entirely — useful when an external tool (logrotate, Docker driver) owns the file. |
 | `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated backups to retain. Older files are pruned on rotation. |
 

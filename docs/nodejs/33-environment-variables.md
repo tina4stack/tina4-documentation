@@ -227,7 +227,7 @@ Logs default to stdout. Set `TINA4_LOG_OUTPUT=file` plus `TINA4_LOG_FILE=app.log
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_LOG_LEVEL` | `DEBUG` | Minimum log level written to console and files. Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `ALL`. |
+| `TINA4_LOG_LEVEL` | `INFO` | Minimum console log level. Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. `CRITICAL` is the highest severity and always clears the threshold at every level. |
 | `TINA4_LOG_MAX_SIZE` | `10` | Per-file log size limit in megabytes. Rotated when exceeded. |
 | `TINA4_LOG_KEEP` | `5` | Number of rotated log files to retain. |
 
@@ -239,7 +239,6 @@ Logs default to stdout. Set `TINA4_LOG_OUTPUT=file` plus `TINA4_LOG_FILE=app.log
 | `TINA4_LOG_DIR` | `logs` | Directory for log files when `TINA4_LOG_FILE` is relative or unset. |
 | `TINA4_LOG_FORMAT` | `text` | File log format. Options: `text`, `json`. |
 | `TINA4_LOG_OUTPUT` | `stdout` | Where to write logs. Options: `stdout`, `file`, `both`. |
-| `TINA4_LOG_CRITICAL` | `false` | Enable the `CRITICAL` level shortcut. Off by default to keep the log surface compact. |
 | `TINA4_LOG_ROTATE_SIZE` | `10485760` | Rotate the file when it reaches this many bytes (10 MB). `0` disables rotation. Node uses an atomic `fs.renameSync` shift on each write. |
 | `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated historical files to retain. |
 

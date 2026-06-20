@@ -34,7 +34,7 @@ Every message includes a UTC timestamp and level. Keyword arguments become struc
 
 ## 3. Log Levels
 
-There are five levels, in ascending severity:
+There are five severity levels, in ascending order (plus `ALL`, a filter-only setting):
 
 | Level | Method | When to Use |
 |-------|--------|-------------|
@@ -43,8 +43,9 @@ There are five levels, in ascending severity:
 | `INFO` | `Log.info()` | Normal operational events |
 | `WARNING` | `Log.warning()` | Unexpected conditions that are not errors |
 | `ERROR` | `Log.error()` | Failures that need investigation |
+| `CRITICAL` | `Log.critical()` | Unrecoverable, alert-worthy failures — the highest severity |
 
-Setting `TINA4_LOG_LEVEL=WARNING` suppresses `DEBUG` and `INFO` messages. Only warnings and errors reach the log file.
+Setting `TINA4_LOG_LEVEL=WARNING` hides `DEBUG` and `INFO` on the console; `WARNING`, `ERROR`, and `CRITICAL` stay visible. (The log file always records every level regardless — the level gates console output only.)
 
 ---
 

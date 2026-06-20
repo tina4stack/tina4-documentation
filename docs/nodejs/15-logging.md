@@ -6,11 +6,11 @@
 
 Structured logging emits machine-readable JSON. Every entry has a timestamp, log level, message, and optional context fields. You can filter, search, and aggregate without grep.
 
-Tina4 provides a `Log` singleton with four severity levels. Zero configuration required. Control verbosity with one environment variable.
+Tina4 provides a `Log` singleton with five severity levels. Zero configuration required. Control verbosity with one environment variable.
 
 ---
 
-## 2. The Four Log Levels
+## 2. The Five Log Levels
 
 ```typescript
 import { Log } from "tina4-nodejs";
@@ -19,6 +19,7 @@ Log.debug("Cache lookup", { key: "product:42", hit: false });
 Log.info("User registered", { userId: 99, email: "alice@example.com" });
 Log.warn("Rate limit approaching", { ip: "203.0.113.5", requests: 95, limit: 100 });
 Log.error("Payment failed", { orderId: 1042, reason: "Card declined" });
+Log.critical("Database unreachable", { host: "db-primary", retries: 5 });
 ```
 
 Each call emits a structured log line:
@@ -28,7 +29,10 @@ Each call emits a structured log line:
 {"timestamp":"2026-04-02T08:12:01.235Z","level":"INFO","message":"User registered","userId":99,"email":"alice@example.com"}
 {"timestamp":"2026-04-02T08:12:01.236Z","level":"WARN","message":"Rate limit approaching","ip":"203.0.113.5","requests":95,"limit":100}
 {"timestamp":"2026-04-02T08:12:01.237Z","level":"ERROR","message":"Payment failed","orderId":1042,"reason":"Card declined"}
+{"timestamp":"2026-04-02T08:12:01.238Z","level":"CRITICAL","message":"Database unreachable","host":"db-primary","retries":5}
 ```
+
+The levels rank from lowest to highest: `debug` (0), `info` (1), `warning` (2), `error` (3), `critical` (4). `critical` sits at the top. It is its own level — never a relabelled `error`. The console renders it magenta so it stands out from the red of `error`.
 
 | Level | Use for |
 |-------|---------|
@@ -36,6 +40,9 @@ Each call emits a structured log line:
 | `info` | Normal application events: logins, signups, orders placed |
 | `warn` | Unexpected but recoverable situations: retries, slow queries |
 | `error` | Failures that need attention: payment errors, crashed workers |
+| `critical` | The app cannot continue: a lost database, an exhausted disk, a failed boot |
+
+`Log.critical` always emits, exactly like every other level. There is no toggle to switch it on. A critical event is the one you most need to see, so the logger never lets it fall silent.
 
 ---
 
@@ -47,14 +54,15 @@ Set the minimum level in `.env`:
 TINA4_LOG_LEVEL=info
 ```
 
-Only entries at or above the configured level are emitted:
+Only entries at or above the configured level are emitted. `critical` sits at the top, so it shows at every threshold:
 
-| `TINA4_LOG_LEVEL` | debug | info | warn | error |
-|-------------------|-------|------|------|-------|
-| `debug` | shown | shown | shown | shown |
-| `info` | silent | shown | shown | shown |
-| `warn` | silent | silent | shown | shown |
-| `error` | silent | silent | silent | shown |
+| `TINA4_LOG_LEVEL` | debug | info | warn | error | critical |
+|-------------------|-------|------|------|-------|----------|
+| `debug` | shown | shown | shown | shown | shown |
+| `info` | silent | shown | shown | shown | shown |
+| `warn` | silent | silent | shown | shown | shown |
+| `error` | silent | silent | silent | shown | shown |
+| `critical` | silent | silent | silent | silent | shown |
 
 In development, use `debug`. In production, use `info` or `warn` to reduce log volume.
 
@@ -96,14 +104,19 @@ Log.isEnabled("INFO");     // true
 Log.isEnabled("Debug");    // false
 ```
 
-`critical` is special. It logs only when `TINA4_LOG_CRITICAL=true` — otherwise `Log.critical` is a no-op. So `isEnabled("critical")` returns `true` only when the toggle is on **and** the critical severity clears the threshold:
+`critical` follows the same rule as every other level. It is priority 4 — above `error` at 3 — so it clears the threshold wherever `error` does, and at the strictest `critical` setting too. No toggle gates it:
 
 ```typescript
-// TINA4_LOG_CRITICAL unset or false
-Log.isEnabled("critical");  // false — critical() would emit nothing
-
-// TINA4_LOG_CRITICAL=true
+// With TINA4_LOG_LEVEL=info
 Log.isEnabled("critical");  // true
+
+// With TINA4_LOG_LEVEL=error
+Log.isEnabled("error");     // true
+Log.isEnabled("critical");  // true — critical outranks error
+
+// With TINA4_LOG_LEVEL=critical
+Log.isEnabled("error");     // false
+Log.isEnabled("critical");  // true — only critical clears this bar
 ```
 
 ### isEnabled reflects console visibility, not the file sink

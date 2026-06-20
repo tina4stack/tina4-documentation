@@ -24,7 +24,7 @@ Tina4 has five log levels, each with its own `Log` method:
 | `Log::error($msg, $context)` | A failure that needs attention |
 | `Log::critical($msg, $context)` | System is failing. Immediate action required |
 
-Higher levels are always visible. Lower levels are filtered by `TINA4_LOG_LEVEL`.
+The levels rank `debug` < `info` < `warning` < `error` < `critical`. `critical` is the highest severity — it always emits like every other level, and it lands in `error.log` alongside `warning` and `error`. Lower levels are filtered by `TINA4_LOG_LEVEL`; a higher level is visible whenever it meets that threshold.
 
 ---
 
@@ -113,9 +113,10 @@ use Tina4\Log;
 Log::isEnabled('info');     // false — info is below the ERROR threshold
 Log::isEnabled('warning');  // false — also below ERROR
 Log::isEnabled('error');    // true  — at the threshold
+Log::isEnabled('critical'); // true  — critical outranks error
 ```
 
-`isEnabled('critical')` additionally honours `TINA4_LOG_CRITICAL` — it returns `false` while that toggle is off, mirroring `Log::critical()`, which is a no-op unless the toggle is set.
+`critical` is the highest severity — `debug` < `info` < `warning` < `error` < `critical`. It flows through the same ordinary threshold as every other level, so `Log::critical()` always emits (subject only to `TINA4_LOG_LEVEL`) and `isEnabled('critical')` passes at every normal level.
 
 > **Console visibility only.** `Log::isEnabled()` reflects what reaches **stdout**. The log **file** always records every level regardless of the minimum level — so a `Log::debug()` you guarded out of the console still lands in `tina4.log`. Use `isEnabled()` to gate expensive work, not to decide what gets persisted.
 
