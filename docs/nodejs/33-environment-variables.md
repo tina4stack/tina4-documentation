@@ -77,6 +77,7 @@ stdout is always on. With `TINA4_LOG_OUTPUT` unset, the log **file** is written 
 | `TINA4_DATABASE_PASSWORD` | _(empty)_ | Overrides the password embedded in `TINA4_DATABASE_URL`. |
 | `TINA4_DB_POOL` | `0` | Default connection-pool size when the caller doesn't pass `pool=` explicitly. `0` uses a single connection; a positive integer enables round-robin pooling. |
 | `TINA4_AUTOCOMMIT` | `true` | Standalone writes auto-commit on their own connection (durable + visible across a pool); explicit transactions stay atomic. Set `false` for strict manual-commit mode. |
+| `TINA4_AUTO_MIGRATE` | `true` | Run pending migrations on startup when a `migrations/` folder exists. Non-breaking — a failed migration is logged and the service still boots; the explicit `tina4 migrate` CLI stays fail-fast. Set `false` to disable (e.g. multi-instance production that migrates as a separate deploy step). |
 | `TINA4_DATABASE_FIREBIRD_PATH` | _(none)_ | Overrides the database path/alias parsed from `TINA4_DATABASE_URL` for Firebird. Useful for Windows backslash paths and split-config setups. |
 | `TINA4_ORM_PLURAL_TABLE_NAMES` | `false` | When `true`, the ORM pluralises class names into table names (`User` → `users`). Default keeps them singular. |
 

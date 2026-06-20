@@ -653,6 +653,35 @@ tina4nodejs migrate
 
 Each run increments a batch number. Every migration applied during that run belongs to the same batch. This matters for rollback.
 
+### Automatic Migrations on Startup
+
+Tina4 runs your pending migrations the moment the server boots. It checks for a `migrations/` folder (with at least one migration file) and a resolvable database, then applies anything outstanding before the first request lands. No extra deploy step. Ship the code, start the service, and the schema catches up.
+
+This runs the same migration engine as the CLI, so the result matches `tina4 migrate`. The startup hook fires after routes and the database bind, just before the server accepts traffic.
+
+Startup migration is **non-breaking**. If a migration fails, Tina4 logs the error and the service still boots:
+
+```
+Startup auto-migration failed: <error> — the service is starting anyway. Run `tina4 migrate` to retry.
+```
+
+A successful run logs how many it applied:
+
+```
+Applied 2 pending migration(s) on startup
+```
+
+The explicit `tina4 migrate` CLI stays **fail-fast** — it exits non-zero on failure, so CI keeps a real exit code to gate on. Only the startup hook swallows the error to keep the service available.
+
+Set `TINA4_AUTO_MIGRATE=false` (or `0`, `no`, `off`) to turn the hook off. The default is `true`.
+
+**Multi-instance caveat.** When several instances boot at once against one database, they race to apply the same migrations. For multi-instance production, disable the hook and migrate as a separate deploy step:
+
+```bash
+TINA4_AUTO_MIGRATE=false   # in each instance's environment
+tina4 migrate              # run once, before rolling out the new instances
+```
+
 ### Checking Status
 
 ```bash
