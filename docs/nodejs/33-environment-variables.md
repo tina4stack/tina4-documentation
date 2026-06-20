@@ -60,7 +60,7 @@ stdout is always on. With `TINA4_LOG_OUTPUT` unset, the log **file** is written 
 | `TINA4_LOG_OUTPUT` | `stdout` | Where logs go. Options: `stdout`, `file`, `both`. When unset, the file is written only in development; explicit `file`/`both` always writes a file. |
 | `TINA4_LOG_FORMAT` | `text` | Output format. `text` writes the human-readable form; `json` writes one structured record per line. |
 | `TINA4_LOG_ROTATE_SIZE` | `10485760` | Bytes per file before rotation (10 MB). `0` disables rotation entirely. |
-| `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated files to keep (`app.log.1` … `app.log.N`). |
+| `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated files to keep (`app.log.1` ... `app.log.N`). |
 | `TINA4_LOG_MAX_SIZE` | _(legacy alias)_ | Legacy alias for `TINA4_LOG_ROTATE_SIZE`. |
 | `TINA4_LOG_KEEP` | `5` | Legacy alias for `TINA4_LOG_ROTATE_KEEP`. |
 | `TINA4_LOG_FILE` | _(empty)_ | Path to a log file. Empty leaves logs on stdout. Relative paths resolve against `TINA4_LOG_DIR`; absolute paths are used verbatim. Setting any path forces file output. |

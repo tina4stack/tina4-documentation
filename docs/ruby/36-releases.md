@@ -91,7 +91,7 @@ Full suite: 3,049 examples passing.
 
 ## v3.13.22 (2026-06-15) — session default TTL standardised to 1 hour
 
-The default session lifetime now matches across all four frameworks: **3600 seconds (1 hour)**. Ruby previously defaulted to 86400s (24 hours). The session cookie `Max-Age` and the file-handler gc window now use 3600 by default — override via `Session.new(env, max_age: …)`. PHP and Node already used 3600 and are unchanged.
+The default session lifetime now matches across all four frameworks: **3600 seconds (1 hour)**. Ruby previously defaulted to 86400s (24 hours). The session cookie `Max-Age` and the file-handler gc window now use 3600 by default — override via `Session.new(env, max_age: ...)`. PHP and Node already used 3600 and are unchanged.
 
 ## v3.13.21 (2026-06-15) — docs: `render()` corrections + version re-sync
 
@@ -136,7 +136,7 @@ Tina4.bind_database(Tina4::Database.new("sqlite:///app.db"))   # override the de
 
 # Register a NAMED connection and point a model at it:
 Tina4.bind_database(
-  Tina4::Database.new("postgres://…/analytics", username: "u", password: "p"),
+  Tina4::Database.new("postgres://.../analytics", username: "u", password: "p"),
   name: :analytics
 )
 
@@ -145,7 +145,7 @@ class Visit < Tina4::ORM
 end
 ```
 
-`Tina4.bind_database(db, name: :…)` registers a named connection; a model selects it with `self.db = :…`. A missing named connection raises a clear error.
+`Tina4.bind_database(db, name: :...)` registers a named connection; a model selects it with `self.db = :...`. A missing named connection raises a clear error.
 
 **Migration:** replace `Tina4.database = db` → `Tina4.bind_database(db)`. Reading `Tina4.database` is unchanged.
 
@@ -556,7 +556,7 @@ $frond->addFilter("currency", $fn);
 
 ### `clearRegistry()` for test fixtures
 
-Every framework exposes a class-level method to wipe user-registered filters/globals/tests without touching the built-ins (upper, lower, length, defined, even, …). Useful in test setup/teardown to prevent state leaks between specs.
+Every framework exposes a class-level method to wipe user-registered filters/globals/tests without touching the built-ins (upper, lower, length, defined, even, ...). Useful in test setup/teardown to prevent state leaks between specs.
 
 ```php
 \Tina4\Frond::clearRegistry();
@@ -1019,9 +1019,9 @@ Drop in for both Python and PHP. No `.env` changes, no API changes.
 
 ## v3.12.13 (2026-05-29)
 
-Consolidated parity release. PHP ran ahead through two independent patch releases (3.12.11–3.12.12) while Python / Ruby / Node stayed at 3.12.10. This release realigns all four frameworks on **3.12.13** and ships the cross-framework dev-admin parity sweep — five tiers of work that bring PHP, Ruby and Node up to Python's AI-assisted development surface.
+Consolidated parity release. PHP ran ahead through two independent patch releases (3.12.11-3.12.12) while Python / Ruby / Node stayed at 3.12.10. This release realigns all four frameworks on **3.12.13** and ships the cross-framework dev-admin parity sweep — five tiers of work that bring PHP, Ruby and Node up to Python's AI-assisted development surface.
 
-### Cross-framework dev-admin parity sweep (Tier 1–5)
+### Cross-framework dev-admin parity sweep (Tier 1-5)
 
 The Python framework had pulled ahead on a series of dev-admin features driven by real frustration with the AI coder loop ("Applying a small patch went and messed up my whole file", "Says it is creating files but then doesn't", repeated import-error spirals). This release ports the full set to PHP, Ruby, and Node — same intent, language-idiomatic implementations.
 
@@ -1046,7 +1046,7 @@ The Python framework had pulled ahead on a series of dev-admin features driven b
 
 PHP's larger delta reflects new tests + the 3.12.11 + 3.12.12 lineage rolling forward.
 
-**Why all four frameworks at once.** Per the cross-framework parity rule: a feature that exists in only one framework is technical debt. The Python-only Tier 1–5 surface had been accumulating for two weeks while the UX was settling. With it settled, this release closes the gap in one coordinated sweep.
+**Why all four frameworks at once.** Per the cross-framework parity rule: a feature that exists in only one framework is technical debt. The Python-only Tier 1-5 surface had been accumulating for two weeks while the UX was settling. With it settled, this release closes the gap in one coordinated sweep.
 
 ### Folded-in from PHP 3.12.11 — file upload regression (`tina4-book#139`)
 
@@ -1085,7 +1085,7 @@ Drop in. No `.env` changes, no API changes.
 
 ## v3.12.10 (2026-05-14)
 
-Version-alignment release. PHP ran ahead through three independent patch releases (3.12.7–3.12.9) while Python / Ruby / Node stayed at 3.12.6. This release realigns all four frameworks on **3.12.10** and ships the ORM `save()` fix.
+Version-alignment release. PHP ran ahead through three independent patch releases (3.12.7-3.12.9) while Python / Ruby / Node stayed at 3.12.6. This release realigns all four frameworks on **3.12.10** and ships the ORM `save()` fix.
 
 ### PHP — `ORM->save()` no longer swallows write failures (#114)
 
@@ -1101,7 +1101,7 @@ $this->_db->commit();
 
 **Cross-framework parity check.** Python, Ruby and Node don't have this exact failure mode — they build the write payload from declared fields only (not all public properties), and their DB adapters raise on bad SQL, which the existing `try/except` already catches. PHP was the outlier on both counts. 3 regression tests in `tests/Issue114Test.php`; PHP suite 2235 → 2238 passing.
 
-### Also in the PHP 3.12.7–3.12.9 patch line
+### Also in the PHP 3.12.7-3.12.9 patch line
 
 These shipped to PHP between 3.12.6 and this release; folded into the consolidated 3.12.10 line:
 
@@ -1150,7 +1150,7 @@ PHP-only bug fix release. Python / Ruby / Node ship the same version stamp for p
 
 ### PHP — multipart bodies with file uploads now parse correctly (#135)
 
-Two stacked bugs in `Tina4\Request::__construct` made `$request->body` come through as the raw multipart bytes (~11 KB blobs starting with `------WebKitFormBoundary…`) whenever the request included a file upload:
+Two stacked bugs in `Tina4\Request::__construct` made `$request->body` come through as the raw multipart bytes (~11 KB blobs starting with `------WebKitFormBoundary...`) whenever the request included a file upload:
 
 1. The constructor called `$this->parseBody()` BEFORE initialising `$this->files`. Inside parseBody's multipart branch, the line `$this->files = array_merge($this->files, $parsed['files'])` read an uninitialised typed property — fatal `Error`.
 2. After fixing the init order, that same line tried to mutate the `readonly` `$files` property — another fatal `Error`.
@@ -1185,7 +1185,7 @@ Six new vars give you full control over logging without touching code:
 | `TINA4_LOG_OUTPUT` | `stdout` | `stdout`, `file`, or `both`. Strict — `stdout` means stdout only. |
 | `TINA4_LOG_CRITICAL` | `false` | Enables a `Log.critical()` level above `error`. Off = no-op. |
 | `TINA4_LOG_ROTATE_SIZE` | `10485760` (10 MB) | Rotate when the file exceeds this many bytes. `0` disables rotation. |
-| `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated files to retain (`app.log.1` … `app.log.N`). Older ones are deleted. |
+| `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated files to retain (`app.log.1` ... `app.log.N`). Older ones are deleted. |
 
 Implementation uses each language's stdlib — Python's `logging.handlers.RotatingFileHandler`, Ruby's `Logger.new(path, shift_age, shift_size)`, and a roll-your-own atomic-rename pattern in PHP and Node. Zero new dependencies in any framework.
 

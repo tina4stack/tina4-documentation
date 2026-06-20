@@ -1,8 +1,8 @@
 # Get Up and Running with PHP on macOS
 
-This guide will get you a fully working PHP development environment (including Composer and Tina4) on your Mac in just a few minutes using **Homebrew** – the de facto standard package manager for macOS.
+This guide will get you a fully working PHP development environment (including Composer and Tina4) on your Mac in just a few minutes using **Homebrew** - the de facto standard package manager for macOS.
 
-## 1. Install Homebrew (if you don’t have it already)
+## 1. Install Homebrew (if you don't have it already)
 
 Open Terminal and run:
 
@@ -38,7 +38,7 @@ PHP 8.3.x (cli) (built: ...) ...
 ```bash
 php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
 
-# Verify the installer (official SHA-384 hash – always up-to-date at https://composer.github.io/installer.sig)
+# Verify the installer (official SHA-384 hash - always up-to-date at https://composer.github.io/installer.sig)
 php -r "if (hash_file('sha384', 'composer-setup.php') === trim(file_get_contents('https://composer.github.io/installer.sig'))) { echo 'Installer verified'.PHP_EOL; } else { echo 'Installer corrupt'.PHP_EOL; unlink('composer-setup.php'); exit(1); }"
 
 php composer-setup.php --install-dir=/usr/local/bin --filename=composer

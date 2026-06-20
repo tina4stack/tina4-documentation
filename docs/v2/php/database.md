@@ -26,7 +26,7 @@ If your database module is not present you can write your own based on the `Data
 
 | Method                                              | Description                                        | Returns                     |
 |-----------------------------------------------------|----------------------------------------------------|-----------------------------|
-| `exec($sql, $params=None)`                          | Run any SQL (CREATE, DROP, INSERT, …) - Not SELECT | `DataResult` or `DataError` |
+| `exec($sql, $params=None)`                          | Run any SQL (CREATE, DROP, INSERT, ...) - Not SELECT | `DataResult` or `DataError` |
 | `fetch($sql, $noOfRecords, $offset, $fieldMapping)` | SELECT with pagination & search                    | `DataResult` or `DataError` |
 | `fetchOne(sql, params=None)`                        | Return single row                                  | `array` or `null`           |
 | `tableExists(table_name)`                           | Check if table exists                              | `bool`                      |

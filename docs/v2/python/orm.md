@@ -2,12 +2,12 @@
 
 ::: tip 🔥 Hot Tips
 - You **never** need the ORM — raw `Database` is perfect for 90% of cases
-- But when you want it… it feels like writing plain Python classes
+- But when you want it... it feels like writing plain Python classes
 - Zero boilerplate — no `__init__`, no `save()` method to write
 - Works with SQLite, PostgreSQL, MySQL, MSSQL, Firebird — all the same  
   :::
 
-## Quick Start – 8 lines {#quick-start}
+## Quick Start - 8 lines {#quick-start}
 
 ```python
 from tina4_python import ORM, orm, Database
@@ -60,7 +60,7 @@ created_at = DateTimeField()
 status = IntegerField(default=1)
 ```
 
-## Foreign Keys – Beautiful & Simple {#foreign-keys}
+## Foreign Keys - Beautiful & Simple {#foreign-keys}
 
 ```python
 from tina4_python.FieldTypes import ForeignKeyField
@@ -94,7 +94,7 @@ print(post.title)
 | `.create_table()`      | `User().create_table()`     | Auto-create table                  |                  |
 | `.to_dict()`           | `user.to_dict()`            | Convert instance to dict           | `dict`           |
 
-## Migrations – One command {#migrations}
+## Migrations - One command {#migrations}
 
 ```python
 from tina4_python.Migration import migrate
@@ -102,7 +102,7 @@ from tina4_python.Migration import migrate
 migrate(Database("sqlite3:test.db"))  # creates/updates all ORM tables
 ```
 
-## Full Example – Real Project Ready {#full-example}
+## Full Example - Real Project Ready {#full-example}
 
 ```python
 from tina4_python import ORM, orm, Database
@@ -139,7 +139,7 @@ for a in result.records:
     print(a["title"])
 ```
 
-## Summary – The Tina4 ORM Philosophy {#summary}
+## Summary - The Tina4 ORM Philosophy {#summary}
 
 - **No `__init__` needed**
 - **No `save()` method to write**

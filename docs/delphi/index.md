@@ -1,4 +1,4 @@
-# Tina4 Delphi – Quick Reference
+# Tina4 Delphi - Quick Reference
 
 ::: tip 🔥 Hot Tips
 - Drop components on your form, configure in Object Inspector, and you're ready to go
@@ -41,7 +41,7 @@ git clone https://github.com/tina4stack/tina4delphi.git
 
 ### Quick Wins {#quick-wins}
 
-No components needed – just add `Tina4Core` to your uses clause and start using these utilities immediately.
+No components needed - just add `Tina4Core` to your uses clause and start using these utilities immediately.
 
 **Fetch JSON from any REST API in one line:**
 
@@ -60,12 +60,12 @@ var JSON := GetJSONFromDB(FDConnection1, 'SELECT * FROM customers WHERE active =
 // Field names are auto-converted to camelCase, dates to ISO 8601, blobs to Base64
 ```
 
-**Populate a MemTable from JSON – no manual field defs needed:**
+**Populate a MemTable from JSON - no manual field defs needed:**
 
 ```pascal
 PopulateMemTableFromJSON(FDMemTable1, 'records',
   '{"records": [{"id": "1", "name": "Alice"}, {"id": "2", "name": "Bob"}]}');
-// FDMemTable1 is now a live dataset – bind it to a grid, filter it, export it
+// FDMemTable1 is now a live dataset - bind it to a grid, filter it, export it
 ```
 
 **Upload files with multipart form data:**
@@ -204,19 +204,19 @@ uv sync
 
 **What Claude can do with the MCP server:**
 
-- **Compile Pascal** – compile single-file code or full Delphi projects (DPR + PAS + DFM)
-- **Project Templates** – generate proper Delphi project structure with components and event handlers
-- **Run Programs** – compile and execute console programs, capturing stdout/stderr
-- **Launch GUI Apps** – compile and run VCL/FMX applications in the background
-- **Live Preview** – see running desktop apps through Claude's preview panel via an HTTP bridge
-- **Click Buttons** – interact with controls by enumerating child windows and sending clicks directly
-- **Move & Resize** – reposition and resize application windows programmatically
-- **Type & Send Keys** – enter text and send keyboard shortcuts to running apps
-- **Parse Forms** – read `.dfm`, `.fmx`, or `.lfm` form files and understand component structure
-- **Auto-detect Compilers** – finds Free Pascal, Delphi 7 (dcc32), and RAD Studio (dcc64)
-- **Specify Compiler Path** – use any compiler by passing its full path
+- **Compile Pascal** - compile single-file code or full Delphi projects (DPR + PAS + DFM)
+- **Project Templates** - generate proper Delphi project structure with components and event handlers
+- **Run Programs** - compile and execute console programs, capturing stdout/stderr
+- **Launch GUI Apps** - compile and run VCL/FMX applications in the background
+- **Live Preview** - see running desktop apps through Claude's preview panel via an HTTP bridge
+- **Click Buttons** - interact with controls by enumerating child windows and sending clicks directly
+- **Move & Resize** - reposition and resize application windows programmatically
+- **Type & Send Keys** - enter text and send keyboard shortcuts to running apps
+- **Parse Forms** - read `.dfm`, `.fmx`, or `.lfm` form files and understand component structure
+- **Auto-detect Compilers** - finds Free Pascal, Delphi 7 (dcc32), and RAD Studio (dcc64)
+- **Specify Compiler Path** - use any compiler by passing its full path
 
-**Preview Bridge** – Claude can see your running desktop app through its built-in preview panel. Add this to `.claude/launch.json`:
+**Preview Bridge** - Claude can see your running desktop app through its built-in preview panel. Add this to `.claude/launch.json`:
 
 ```json
 {

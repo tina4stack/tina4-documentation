@@ -34,7 +34,7 @@ Cross-framework version alignment with the Ruby request/response parity release.
 
 ## v3.13.30 (2026-06-16) — Typed route params coerce + /__dev auth-bypass fixed (⚠ behavioural change)
 
-**Behavioural change.** Typed path params now arrive coerced: `{id:int}` → `int`, `{price:float}` → `float` (other types and untyped params stay strings; matching unchanged). `compilePath()` computed the param-type map but `addRoute()` dropped it, so the existing cast in `matchInTable()` was dead code and `{id:int}` arrived as the string `"42"` — now wired through, bringing PHP in line with Python/Ruby/Node. Separately, a bug fix: the dev-admin auth bypass tested `$request->url` (always the full `scheme://host/path`) so it never matched — a write to `/__dev/…` (and the gallery prefixes) returned 401 instead of bypassing; it now tests `$request->path`. Full suite: 3,024 passing.
+**Behavioural change.** Typed path params now arrive coerced: `{id:int}` → `int`, `{price:float}` → `float` (other types and untyped params stay strings; matching unchanged). `compilePath()` computed the param-type map but `addRoute()` dropped it, so the existing cast in `matchInTable()` was dead code and `{id:int}` arrived as the string `"42"` — now wired through, bringing PHP in line with Python/Ruby/Node. Separately, a bug fix: the dev-admin auth bypass tested `$request->url` (always the full `scheme://host/path`) so it never matched — a write to `/__dev/...` (and the gallery prefixes) returned 401 instead of bypassing; it now tests `$request->path`. Full suite: 3,024 passing.
 
 ## v3.13.29 (2026-06-16) — Live API search finds magic methods + ranks qualified queries
 
@@ -118,7 +118,7 @@ The ORM-to-database binder is now **`bindDatabase`** (was `ORM::setGlobalDb`). T
 
 // Register a NAMED connection and point a model at it:
 \Tina4\ORM::bindDatabase(
-    Database::create('postgres://…/analytics', username: 'u', password: 'p'),
+    Database::create('postgres://.../analytics', username: 'u', password: 'p'),
     name: 'analytics'
 );
 
@@ -127,7 +127,7 @@ class Visit extends \Tina4\ORM {
 }
 ```
 
-`bindDatabase($db, name: '…')` registers a named connection; a model selects it with `$_db = '…'`. A missing named connection throws a clear error.
+`bindDatabase($db, name: '...')` registers a named connection; a model selects it with `$_db = '...'`. A missing named connection throws a clear error.
 
 **Migration:** rename `\Tina4\ORM::setGlobalDb(...)` → `\Tina4\ORM::bindDatabase(...)`. That is the only change.
 
@@ -139,8 +139,8 @@ Found by the live side-by-side validation against PostgreSQL.
 
 - **QueryBuilder `first()` / `count()` returned null/0** even with matching rows — `get()` returns a `DatabaseResult` but `first()`/`count()` read `$result['data']` (raw-array shape). All three now consume the result via a shared `extractRecords()`: `first()` returns the row, `count()` the integer, and `groupBy().get()` returns every group.
 - **`belongsTo` returned null for a snake_case FK column** under autoMap — the lookup read `$this->{column}` but autoMap stores the value under the camelCase property. It now reverse-maps column → property, so the documented `$foreignKeys=['author_id'=>'Author']` form resolves the parent (lazy `$post->author`, explicit, and eager `include:['author']`).
-- **`fetch()` corrupted SQL that already ended in `LIMIT`** — it appended `LIMIT 100 OFFSET 0` unconditionally (`… LIMIT 1 LIMIT 100`), PG errored, the adapter swallowed it → empty result. It now skips the append when a trailing `LIMIT` is present.
-- **Bound PHP booleans are normalised** to the literal the column accepts — `'t'`/`'f'` on PostgreSQL's native `BOOLEAN`, `1`/`0` on the integer/BIT-backed engines (SQLite, MySQL, MSSQL, Firebird). Previously `fetch('… WHERE active = ?', [false])` bound `''` and PG rejected it.
+- **`fetch()` corrupted SQL that already ended in `LIMIT`** — it appended `LIMIT 100 OFFSET 0` unconditionally (`... LIMIT 1 LIMIT 100`), PG errored, the adapter swallowed it → empty result. It now skips the append when a trailing `LIMIT` is present.
+- **Bound PHP booleans are normalised** to the literal the column accepts — `'t'`/`'f'` on PostgreSQL's native `BOOLEAN`, `1`/`0` on the integer/BIT-backed engines (SQLite, MySQL, MSSQL, Firebird). Previously `fetch('... WHERE active = ?', [false])` bound `''` and PG rejected it.
 - Doc: `DatabaseUrl` docstring corrected to `postgres://` / `postgresql://` (not `pgsql://`).
 
 Python/Ruby/Node were already correct on the boolean binding (verified live). Full suite: 2,416 passing.
@@ -263,7 +263,7 @@ while ($written < $total) {
 }
 ```
 
-Symptom: a ~4 MB attachment download returned `200` with the correct `Content-Length` but only part of the body (the cutoff varied run-to-run — we saw 2.31 MB and 1.30 MB), nginx logged `upstream prematurely closed connection while reading upstream`, and the browser showed a failed download. Anything larger than the send buffer (~200 KB–1 MB depending on platform) was affected — the dev-admin JS bundle had hit a related case.
+Symptom: a ~4 MB attachment download returned `200` with the correct `Content-Length` but only part of the body (the cutoff varied run-to-run — we saw 2.31 MB and 1.30 MB), nginx logged `upstream prematurely closed connection while reading upstream`, and the browser showed a failed download. Anything larger than the send buffer (~200 KB-1 MB depending on platform) was affected — the dev-admin JS bundle had hit a related case.
 
 ### The fix
 
@@ -571,7 +571,7 @@ $frond->addFilter("currency", $fn);
 
 ### `clearRegistry()` for test fixtures
 
-Every framework exposes a class-level method to wipe user-registered filters/globals/tests without touching the built-ins (upper, lower, length, defined, even, …). Useful in test setup/teardown to prevent state leaks between specs.
+Every framework exposes a class-level method to wipe user-registered filters/globals/tests without touching the built-ins (upper, lower, length, defined, even, ...). Useful in test setup/teardown to prevent state leaks between specs.
 
 ```php
 \Tina4\Frond::clearRegistry();
@@ -1034,9 +1034,9 @@ Drop in for both Python and PHP. No `.env` changes, no API changes.
 
 ## v3.12.13 (2026-05-29)
 
-Consolidated parity release. PHP ran ahead through two independent patch releases (3.12.11–3.12.12) while Python / Ruby / Node stayed at 3.12.10. This release realigns all four frameworks on **3.12.13** and ships the cross-framework dev-admin parity sweep — five tiers of work that bring PHP, Ruby and Node up to Python's AI-assisted development surface.
+Consolidated parity release. PHP ran ahead through two independent patch releases (3.12.11-3.12.12) while Python / Ruby / Node stayed at 3.12.10. This release realigns all four frameworks on **3.12.13** and ships the cross-framework dev-admin parity sweep — five tiers of work that bring PHP, Ruby and Node up to Python's AI-assisted development surface.
 
-### Cross-framework dev-admin parity sweep (Tier 1–5)
+### Cross-framework dev-admin parity sweep (Tier 1-5)
 
 The Python framework had pulled ahead on a series of dev-admin features driven by real frustration with the AI coder loop ("Applying a small patch went and messed up my whole file", "Says it is creating files but then doesn't", repeated import-error spirals). This release ports the full set to PHP, Ruby, and Node — same intent, language-idiomatic implementations.
 
@@ -1061,7 +1061,7 @@ The Python framework had pulled ahead on a series of dev-admin features driven b
 
 PHP's larger delta reflects new tests + the 3.12.11 + 3.12.12 lineage rolling forward.
 
-**Why all four frameworks at once.** Per the cross-framework parity rule: a feature that exists in only one framework is technical debt. The Python-only Tier 1–5 surface had been accumulating for two weeks while the UX was settling. With it settled, this release closes the gap in one coordinated sweep.
+**Why all four frameworks at once.** Per the cross-framework parity rule: a feature that exists in only one framework is technical debt. The Python-only Tier 1-5 surface had been accumulating for two weeks while the UX was settling. With it settled, this release closes the gap in one coordinated sweep.
 
 ### Folded-in from PHP 3.12.11 — file upload regression (`tina4-book#139`)
 
@@ -1100,7 +1100,7 @@ Drop in. No `.env` changes, no API changes.
 
 ## v3.12.10 (2026-05-14)
 
-Version-alignment release. PHP ran ahead through three independent patch releases (3.12.7–3.12.9) while Python / Ruby / Node stayed at 3.12.6. This release realigns all four frameworks on **3.12.10** and ships the ORM `save()` fix.
+Version-alignment release. PHP ran ahead through three independent patch releases (3.12.7-3.12.9) while Python / Ruby / Node stayed at 3.12.6. This release realigns all four frameworks on **3.12.10** and ships the ORM `save()` fix.
 
 ### PHP — `ORM->save()` no longer swallows write failures (#114)
 
@@ -1116,7 +1116,7 @@ $this->_db->commit();
 
 **Cross-framework parity check.** Python, Ruby and Node don't have this exact failure mode — they build the write payload from declared fields only (not all public properties), and their DB adapters raise on bad SQL, which the existing `try/except` already catches. PHP was the outlier on both counts. 3 regression tests in `tests/Issue114Test.php`; PHP suite 2235 → 2238 passing.
 
-### Also in the PHP 3.12.7–3.12.9 patch line
+### Also in the PHP 3.12.7-3.12.9 patch line
 
 These shipped to PHP between 3.12.6 and this release; folded into the consolidated 3.12.10 line:
 
@@ -1165,7 +1165,7 @@ PHP-only bug fix release. Python / Ruby / Node ship the same version stamp for p
 
 ### PHP — multipart bodies with file uploads now parse correctly (#135)
 
-Two stacked bugs in `Tina4\Request::__construct` made `$request->body` come through as the raw multipart bytes (~11 KB blobs starting with `------WebKitFormBoundary…`) whenever the request included a file upload:
+Two stacked bugs in `Tina4\Request::__construct` made `$request->body` come through as the raw multipart bytes (~11 KB blobs starting with `------WebKitFormBoundary...`) whenever the request included a file upload:
 
 1. The constructor called `$this->parseBody()` BEFORE initialising `$this->files`. Inside parseBody's multipart branch, the line `$this->files = array_merge($this->files, $parsed['files'])` read an uninitialised typed property — fatal `Error`.
 2. After fixing the init order, that same line tried to mutate the `readonly` `$files` property — another fatal `Error`.
@@ -1200,7 +1200,7 @@ Six new vars give you full control over logging without touching code:
 | `TINA4_LOG_OUTPUT` | `stdout` | `stdout`, `file`, or `both`. Strict — `stdout` means stdout only. |
 | `TINA4_LOG_CRITICAL` | `false` | Enables a `Log.critical()` level above `error`. Off = no-op. |
 | `TINA4_LOG_ROTATE_SIZE` | `10485760` (10 MB) | Rotate when the file exceeds this many bytes. `0` disables rotation. |
-| `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated files to retain (`app.log.1` … `app.log.N`). Older ones are deleted. |
+| `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated files to retain (`app.log.1` ... `app.log.N`). Older ones are deleted. |
 
 Implementation uses each language's stdlib — Python's `logging.handlers.RotatingFileHandler`, Ruby's `Logger.new(path, shift_age, shift_size)`, and a roll-your-own atomic-rename pattern in PHP and Node. Zero new dependencies in any framework.
 
@@ -1757,7 +1757,7 @@ Massive test expansion — 605 new tests added across session handlers, queue ba
 
 **Database badge on load** — The Database tab count badge shows the table count immediately on page load.
 
-**Star wiggle animation** — The GitHub star button on the landing page uses an empty star (☆) with a wiggle animation: 3-second delay, then wiggles at random 3–18 second intervals.
+**Star wiggle animation** — The GitHub star button on the landing page uses an empty star (☆) with a wiggle animation: 3-second delay, then wiggles at random 3-18 second intervals.
 
 ### Bug Fixes
 

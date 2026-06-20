@@ -65,7 +65,7 @@ This scaffolds a complete project with TypeScript, Vite, routing, and a sample p
 
 > **The `tina4` Rust CLI is the unified installer across all Tina4 frameworks**
 > (Python, PHP, Ruby, Node.js, JS). For npm-only environments where the
-> CLI isn't available, every command has an `npx tina4js …` fallback -- for
+> CLI isn't available, every command has an `npx tina4js ...` fallback -- for
 > example `npx tina4js create my-app` is equivalent to `tina4 init js my-app`.
 
 Want the optional CSS framework included? The Rust CLI does not yet accept a `--css` flag on `init`, so scaffold first and then add the dependency:

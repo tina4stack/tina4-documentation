@@ -5,11 +5,11 @@ title: Routing
 # Routing {#basic-routing}
 
 ::: tip 🔥 Hot Tips 
-- You **don’t need** `app = Tina4()` in route files – just import `get`, `post`, etc. directly  
-- All route handlers **must be `async def`** – Tina4 is 100% async-native  
+- You **don't need** `app = Tina4()` in route files - just import `get`, `post`, etc. directly  
+- All route handlers **must be `async def`** - Tina4 is 100% async-native  
 - Path parameters are **auto-injected** in the exact order they appear in the URL  
-- Use type hints: `{id:int}`, `{price:float}`, `{path:path}` – Tina4 converts them automatically  
-- `request` and `response` are **automatically added** as the last arguments if you don’t declare them  
+- Use type hints: `{id:int}`, `{price:float}`, `{path:path}` - Tina4 converts them automatically  
+- `request` and `response` are **automatically added** as the last arguments if you don't declare them  
 - Save files in a `routes/` folder  → **auto-discovered**, zero config needed  
 - Stack decorators freely: `@get("/users") @post("/users")` works on the same function  
 - Use `@describe("...")` for beautiful Swagger docs  
@@ -71,12 +71,12 @@ async def serve_file(filepath: str, request, response):
 async def search(request, response):
     q = request.params.get("q", "world")
     page = int(request.params.get("page", 1))
-    return response(f"Searching '{q}' – page {page}")
+    return response(f"Searching '{q}' - page {page}")
 ```
 
 ## Prefixes & File Organization
 
-Just use the path you want – no special prefix decorator needed:
+Just use the path you want - no special prefix decorator needed:
 
 ```python
 @get("/admin/dashboard")
@@ -184,13 +184,13 @@ Tina4 automatically loads routes from:
 | Auto-discovery         | Drop file in `routes/`               | No config needed                           |
 
 ::: tip 🔥 Hot Tips 
-- Prefer **explicit `request, response` arguments** – they are auto-injected only when needed
+- Prefer **explicit `request, response` arguments** - they are auto-injected only when needed
 - Use **`response.file()`** for serving uploads (root is project folder by default)
 - Return early in `before_route` middleware to **block** the request
 - `@description` is your friend for auto-generated Swagger/OpenAPI docs
 - Combine `@get` + `@post` on the same function to handle multiple methods cleanly
-- Your route files can be **anywhere** under `./src/routes/` – Tina4 finds them magically
-- Always `await` WebSocket send/receive – they are fully async  
+- Your route files can be **anywhere** under `./src/routes/` - Tina4 finds them magically
+- Always `await` WebSocket send/receive - they are fully async  
   :::
 
 Happy routing with Tina4 Python! 🚀

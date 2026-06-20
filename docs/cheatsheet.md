@@ -12,7 +12,7 @@ Drop a handler file in `src/routes/` (auto-discovered) and register one per HTTP
 
 | | Python | PHP | Ruby | Node |
 |---|---|---|---|---|
-| Register | `@get("/p")` · `@post` · `@put` · `@patch` · `@delete` | `Router::get("/p", $fn)` · `post` · `put` · `patch` · `delete` | `Tina4::Router.get("/p") { \|req, res\| … }` · `post` · … | `get("/p", h)` · `post` · `put` · `patch` · `del` |
+| Register | `@get("/p")` · `@post` · `@put` · `@patch` · `@delete` | `Router::get("/p", $fn)` · `post` · `put` · `patch` · `delete` | `Tina4::Router.get("/p") { \|req, res\| ... }` · `post` · ... | `get("/p", h)` · `post` · `put` · `patch` · `del` |
 | Path param | `@get("/users/{id}")` | `Router::get("/users/{id}", $fn)` | `Tina4::Router.get("/users/{id}")` | `get("/users/{id}", h)` |
 | Typed param | `{id:int}` · `{p:float}` | `{id:int}` · `{p:float}` | `{id:int}` · `{p:float}` | `{id:int}` · `{p:float}` |
 
@@ -30,15 +30,15 @@ Drop a handler file in `src/routes/` (auto-discovered) and register one per HTTP
 
 | | Python | PHP | Ruby | Node |
 |---|---|---|---|---|
-| Open a write route | `@noauth()` | `Router::post(…)->noAuth()` | `Tina4::Router.post(…).no_auth` | `post(…).noAuth()` |
-| Protect a GET | `@secured()` | `Router::get(…)->secure()` | `Tina4::Router.get(…).secure` | `get(…).secure()` |
+| Open a write route | `@noauth()` | `Router::post(...)->noAuth()` | `Tina4::Router.post(...).no_auth` | `post(...).noAuth()` |
+| Protect a GET | `@secured()` | `Router::get(...)->secure()` | `Tina4::Router.get(...).secure` | `get(...).secure()` |
 | Issue a JWT | `get_token({"id": 1}, expires_in=60)` | `Auth::getToken(["id"=>1], null, 60)` | `Tina4::Auth.get_token({id: 1}, expires_in: 60)` | `getToken({id: 1}, secret, 60)` |
 | Validate a JWT | `valid_token(t)` | `Auth::validToken($t)` | `Tina4::Auth.valid_token(t)` | `validToken(t)` |
 | Hash / check password | `Auth.hash_password(pw)` / `Auth.check_password(pw, h)` | `Auth::hashPassword($pw)` / `Auth::checkPassword($pw, $h)` | `Tina4::Auth.hash_password(pw)` / `Tina4::Auth.check_password(pw, h)` | `hashPassword(pw)` / `checkPassword(pw, h)` |
 
 - **JWT expiry is in minutes** (default 60) in all four. `valid_token` returns the decoded **payload** (truthy) on success, `null`/`None` on failure — not a bool.
 - A protected route accepts the token from the **`Authorization: Bearer` header, a `formToken` body field, or the session** — checked in that order.
-- Passwords hash with **PBKDF2-SHA256** (260 000 iterations, `pbkdf2_sha256$…` format); the check is timing-safe and always takes **`(password, hash)`** in that order.
+- Passwords hash with **PBKDF2-SHA256** (260 000 iterations, `pbkdf2_sha256$...` format); the check is timing-safe and always takes **`(password, hash)`** in that order.
 
 ---
 
@@ -83,10 +83,10 @@ Drop a handler file in `src/routes/` (auto-discovered) and register one per HTTP
 
 | | Python | PHP | Ruby | Node |
 |---|---|---|---|---|
-| Connect | `Database("postgres://…")` | `Database::create("postgres://…")` | `Tina4::Database.new("postgres://…")` | `await initDatabase({url})` |
+| Connect | `Database("postgres://...")` | `Database::create("postgres://...")` | `Tina4::Database.new("postgres://...")` | `await initDatabase({url})` |
 | Write, params | `db.execute("INSERT INTO t (a, b) VALUES (?, ?)", [1, "x"])` | `$db->execute("INSERT INTO t (a, b) VALUES (?, ?)", [1, "x"])` | `db.execute("INSERT INTO t (a, b) VALUES (?, ?)", [1, "x"])` | `await db.execute("INSERT INTO t (a, b) VALUES (?, ?)", [1, "x"])` |
 | One row, params | `db.fetch_one("SELECT * FROM t WHERE id = ?", [1])` | `$db->fetchOne("SELECT * FROM t WHERE id = ?", [1])` | `db.fetch_one("SELECT * FROM t WHERE id = ?", [1])` | `await db.fetchOne("SELECT * FROM t WHERE id = ?", [1])` |
-| Transaction | `db.start_transaction()` … `db.commit()` / `db.rollback()` | `$db->startTransaction()` … `$db->commit()` / `$db->rollback()` | `db.start_transaction` … `db.commit` / `db.rollback` | `await db.startTransaction()` … `await db.commit()` / `await db.rollback()` |
+| Transaction | `db.start_transaction()` ... `db.commit()` / `db.rollback()` | `$db->startTransaction()` ... `$db->commit()` / `$db->rollback()` | `db.start_transaction` ... `db.commit` / `db.rollback` | `await db.startTransaction()` ... `await db.commit()` / `await db.rollback()` |
 
 Always use `?` placeholders with a params array — every adapter translates `?` to the engine's native style (`$1`, `%s`, `?`). Never string-interpolate user input. A standalone write auto-commits on its own connection (durable + visible across a pooled connection); an explicit transaction stays atomic. Set `TINA4_AUTOCOMMIT=false` for strict manual-commit mode.
 
@@ -166,7 +166,7 @@ Verified filters: `upper` `lower` `length` `trim` `capitalize` `title` `default`
 {# this is a comment — not rendered #}
 {%- if trim -%}no surrounding whitespace{%- endif -%}
 {% raw %}{{ this is output literally }}{% endraw %}
-{% cache "sidebar" 300 %}…expensive fragment cached 300s…{% endcache %}
+{% cache "sidebar" 300 %}...expensive fragment cached 300s...{% endcache %}
 ```
 
 ### Forms & tokens
@@ -184,9 +184,9 @@ Verified filters: `upper` `lower` `length` `trim` `capitalize` `title` `default`
 ```python
 # Python                         # PHP                                # Ruby                                # Node
 frond.render("p.twig", d)        $frond->render("p.twig", d)          frond.render("p.twig", d)             frond.render("p.twig", d)
-frond.add_filter("money", fn)    $frond->addFilter("money", $fn)      frond.add_filter("money"){ |v| … }    frond.addFilter("money", fn)
+frond.add_filter("money", fn)    $frond->addFilter("money", $fn)      frond.add_filter("money"){ |v| ... }    frond.addFilter("money", fn)
 frond.add_global("APP", v)       $frond->addGlobal("APP", v)          frond.add_global("APP", v)            frond.addGlobal("APP", v)
-frond.add_test("positive", fn)   $frond->addTest("positive", $fn)     frond.add_test("positive"){ |v| … }   frond.addTest("positive", fn)
+frond.add_test("positive", fn)   $frond->addTest("positive", $fn)     frond.add_test("positive"){ |v| ... }   frond.addTest("positive", fn)
 ```
 
 From a route, `response.render("pages/x.twig", data)` (PHP `$response->render`, Node `res.render`) renders a template with data.

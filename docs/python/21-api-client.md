@@ -428,7 +428,7 @@ curl "http://localhost:7146/api/dashboard/weather?cities=London,Berlin,Tokyo"
 
 **Problem:** An external API hangs for 90 seconds. Your route handler blocks for 90 seconds. All workers are eventually held waiting.
 
-**Fix:** Always set `timeout` to a sensible value (5–15 seconds for most external APIs). Return a 502 or 504 to the caller if the external API does not respond in time.
+**Fix:** Always set `timeout` to a sensible value (5-15 seconds for most external APIs). Return a 502 or 504 to the caller if the external API does not respond in time.
 
 ### 4. Hardcoding API keys
 

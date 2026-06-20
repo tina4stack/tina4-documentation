@@ -31,7 +31,7 @@ Just include it once:
 
 ### `saveForm(formId, url, targetElement, callback)`
 
-**The #1 most used function** – submits a form securely. Mutually exclusive response options. Use the targetElement to 
+**The #1 most used function** - submits a form securely. Mutually exclusive response options. Use the targetElement to 
 insert the response into your HTML, OR run a callback function. 
 
 ```js
@@ -51,7 +51,7 @@ submitForm("contact", "/contact", "message");
 
 ### `loadPage(url, targetElement = "content", callback)`
 
-Load any route into a div – perfect for navigation.
+Load any route into a div - perfect for navigation.
 
 ```js
 loadPage("/users", "content");
@@ -93,7 +93,7 @@ postUrl(...);
 getRoute(...);
 ```
 
-## File Uploads – Zero Effort
+## File Uploads - Zero Effort
 
 ```html
 <form id="upload" enctype="multipart/form-data">

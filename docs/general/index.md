@@ -1,4 +1,4 @@
-# Understanding Tina4 – Quick Reference
+# Understanding Tina4 - Quick Reference
 
 ::: tip
 - Tina4 is The Intelligent Native Application 4ramework — one package, zero config, convention over configuration

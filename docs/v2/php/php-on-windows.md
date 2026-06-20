@@ -1,6 +1,6 @@
 # Get Up and Running with PHP on Windows
 
-Good news — you **don’t need WAMP, XAMPP, or any heavy installers** in 2025.  
+Good news — you **don't need WAMP, XAMPP, or any heavy installers** in 2025.  
 Just grab the official PHP binaries, unzip, and go!
 
 ## 1. Download the latest PHP zip (Thread-Safe version)
@@ -18,7 +18,7 @@ https://windows.php.net/downloads/releases/php-8.5.0-nts-Win32-vs17-x64.zip
 ## 2. Extract to C:\php
 
 1. Unzip the downloaded file
-2. Create folder `C:\php` (if it doesn’t exist)
+2. Create folder `C:\php` (if it doesn't exist)
 3. Move all contents into `C:\php`
 
 Your folder should now contain `php.exe`, `php.ini-development`, etc.
@@ -93,7 +93,7 @@ php -i | findstr "PHP Version"
 zend_extension=xdebug
 ```
 
-## You’re ready!
+## You're ready!
 
 Start a new Tina4 project instantly:
 

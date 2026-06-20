@@ -1,4 +1,4 @@
-# Tina4 PHP – Quick Reference
+# Tina4 PHP - Quick Reference
 
 <nav class="tina4-menu">
     <a href="#installation">Installation</a> •

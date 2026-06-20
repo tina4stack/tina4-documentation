@@ -31,7 +31,7 @@ async def about_page(request, response):
     }
 ```
 
-> **Decorator order matters.** `@template` must sit **below** the route decorator (`@get`/`@post`/…) so the template wrapper is what gets registered with the router. If `@template` is above the route decorator, the router only sees the raw handler and the template wrapping is never applied — the page renders a bare dict.
+> **Decorator order matters.** `@template` must sit **below** the route decorator (`@get`/`@post`/...) so the template wrapper is what gets registered with the router. If `@template` is above the route decorator, the router only sees the raw handler and the template wrapping is never applied — the page renders a bare dict.
 
 Create `src/templates/about.html`:
 

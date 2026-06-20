@@ -1,4 +1,4 @@
-# Tina4 Python – Quick Reference
+# Tina4 Python - Quick Reference
 
 ::: tip 🔥 Hot Tips
 - Routes go in `src/routes/`, templates in `src/templates/`, static files in `src/public/`

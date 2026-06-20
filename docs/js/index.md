@@ -1,4 +1,4 @@
-# Tina4 JavaScript – Quick Reference
+# Tina4 JavaScript - Quick Reference
 
 ::: tip 🔥 Sub-3KB core, reactive framework
 - Signals for state, `html` tagged templates for rendering, Web Components for reuse
@@ -156,7 +156,7 @@ const socket = ws.connect('/ws/chat');   // status & connected are signals — b
 
 const view = html`
   <div>Status: ${socket.status}</div>
-  ${() => socket.connected.value ? html`<span>● live</span>` : html`<span>○ reconnecting…</span>`}
+  ${() => socket.connected.value ? html`<span>● live</span>` : html`<span>○ reconnecting...</span>`}
 `;
 
 socket.on('message', (msg) => console.log(msg));

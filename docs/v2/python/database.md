@@ -1,4 +1,4 @@
-# Tina4-Python – Database Class {#connections}
+# Tina4-Python - Database Class {#connections}
 
 ::: tip 🔥 Hot Tips
 - Instantiate `dba` in the `./src/__init__.py`,  include with `from . import dba`
@@ -15,7 +15,7 @@ from tina4_python.Database import Database
 # SQLite (file)
 dba = Database("sqlite3:test.db")
 
-# SQLite (in-memory – perfect for tests)
+# SQLite (in-memory - perfect for tests)
 dba = Database("sqlite3::memory:")
 
 # PostgreSQL
@@ -39,7 +39,7 @@ dba = Database("pymongo:localhost/27017:mydb", "user", "password")  # with auth
 
 | Method                               | Description                                          | Returns                     |
 |--------------------------------------|------------------------------------------------------|-----------------------------|
-| `execute(sql, params=None)`          | Run any SQL (CREATE, DROP, INSERT, …)               | `Result`                    |
+| `execute(sql, params=None)`          | Run any SQL (CREATE, DROP, INSERT, ...)               | `Result`                    |
 | `execute_many(sql, params_list)`     | Bulk insert/update                                   | `Result`                    |
 | `insert(table, data)`                | Smart insert (auto-increment, returns IDs)           | `Result`                    |
 | `update(table, data, primary_key="id")` | Update by PK                                      | `bool`                      |
@@ -121,7 +121,7 @@ except:
 Database("sqlite3:test.db").execute("INSERT INTO logs (msg) VALUES (?)", ["Hello Tina4"])
 ```
 
-That’s it.
+That's it.
 No models. No config files. No nonsense.
 
 ## MongoDB {#mongodb}
@@ -136,7 +136,7 @@ db.execute("CREATE TABLE users (id INTEGER)")  # creates collection
 db.insert("users", {"id": 1, "name": "Alice", "email": "alice@test.com"})
 
 result = db.fetch("SELECT * FROM users WHERE name = ?", ["Alice"])
-print(result.records)  # → [{‘id’: 1, ‘name’: ‘Alice’, ‘email’: ‘alice@test.com’}]
+print(result.records)  # → [{'id': 1, 'name': 'Alice', 'email': 'alice@test.com'}]
 
 db.execute("UPDATE users SET name = ? WHERE id = ?", ["Bob", 1])
 db.execute("DELETE FROM users WHERE id = ?", [1])
@@ -149,7 +149,7 @@ db.execute("DELETE FROM users WHERE id = ?", [1])
 | `=` | Direct match |
 | `!=`, `<>` | `$ne` |
 | `>`, `>=`, `<`, `<=` | `$gt`, `$gte`, `$lt`, `$lte` |
-| `LIKE ‘%text%’` | `$regex` (case-insensitive) |
+| `LIKE '%text%'` | `$regex` (case-insensitive) |
 | `IN (a, b, c)` | `$in` |
 | `NOT IN (a, b)` | `$nin` |
 | `IS NULL` | `None` |
@@ -177,7 +177,7 @@ result = db.execute(
     "INSERT INTO users (id, name) VALUES (?, ?) RETURNING *",
     [1, "Alice"]
 )
-print(result.records)  # → [{‘id’: 1, ‘name’: ‘Alice’}]
+print(result.records)  # → [{'id': 1, 'name': 'Alice'}]
 ```
 
 ::: warning Limitations

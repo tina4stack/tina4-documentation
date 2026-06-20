@@ -62,7 +62,7 @@ Behavioural note: these change rendered output for the affected filters — corr
 
 **Behavioural default change.** A standalone write — `execute`/`insert`/`update`/`delete` made **outside** an explicit transaction — now **auto-commits on its own connection before returning** (`autoCommit` default flipped to *on*). Previously autocommit was off by default, which broke connection pooling: a standalone write stayed uncommitted on one pooled connection while the next read round-robined to a different connection and saw nothing.
 
-Explicit transactions stay atomic. The per-statement commit branches now also check whether a transaction adapter is pinned to the current async context (`AsyncLocalStorage`) and suppress the commit inside `startTransaction()` … `commit()`/`rollback()`, so a `rollback()` still discards everything. Set `TINA4_AUTOCOMMIT=false` for strict manual-commit mode.
+Explicit transactions stay atomic. The per-statement commit branches now also check whether a transaction adapter is pinned to the current async context (`AsyncLocalStorage`) and suppress the commit inside `startTransaction()` ... `commit()`/`rollback()`, so a `rollback()` still discards everything. Set `TINA4_AUTOCOMMIT=false` for strict manual-commit mode.
 
 Verified live on PostgreSQL: standalone write visible from a separate connection, explicit rollback discards, explicit commit persists, and pooled standalone writes visible across every round-robin connection. Full suite: 3,748 passing.
 
@@ -157,14 +157,14 @@ Node gains a public **`bindDatabase(adapter, name?)`**. This is **not a breaking
 bindDatabase(adapter);                       // set/override the default explicitly
 
 // Register a NAMED connection and point a model at it:
-bindDatabase(await createAdapterFromUrl("postgres://u:p@…/analytics"), "analytics");
+bindDatabase(await createAdapterFromUrl("postgres://u:p@.../analytics"), "analytics");
 
 class Visit extends BaseModel {
   static _db = "analytics";          // uses the analytics connection
 }
 ```
 
-`bindDatabase(adapter, "…")` registers a named connection; a model selects it with `static _db = "…"`. A mistyped/missing named connection now throws a clear error instead of silently falling back to the default.
+`bindDatabase(adapter, "...")` registers a named connection; a model selects it with `static _db = "..."`. A mistyped/missing named connection now throws a clear error instead of silently falling back to the default.
 
 Full suite: 3,679 passing. Shipped with parity across all four frameworks (where the binder is named `bind_database` in Python/Ruby and `bindDatabase` in PHP/Node).
 
@@ -577,7 +577,7 @@ $frond->addFilter("currency", $fn);
 
 ### `clearRegistry()` for test fixtures
 
-Every framework exposes a class-level method to wipe user-registered filters/globals/tests without touching the built-ins (upper, lower, length, defined, even, …). Useful in test setup/teardown to prevent state leaks between specs.
+Every framework exposes a class-level method to wipe user-registered filters/globals/tests without touching the built-ins (upper, lower, length, defined, even, ...). Useful in test setup/teardown to prevent state leaks between specs.
 
 ```php
 \Tina4\Frond::clearRegistry();
@@ -1040,9 +1040,9 @@ Drop in for both Python and PHP. No `.env` changes, no API changes.
 
 ## v3.12.13 (2026-05-29)
 
-Consolidated parity release. PHP ran ahead through two independent patch releases (3.12.11–3.12.12) while Python / Ruby / Node stayed at 3.12.10. This release realigns all four frameworks on **3.12.13** and ships the cross-framework dev-admin parity sweep — five tiers of work that bring PHP, Ruby and Node up to Python's AI-assisted development surface.
+Consolidated parity release. PHP ran ahead through two independent patch releases (3.12.11-3.12.12) while Python / Ruby / Node stayed at 3.12.10. This release realigns all four frameworks on **3.12.13** and ships the cross-framework dev-admin parity sweep — five tiers of work that bring PHP, Ruby and Node up to Python's AI-assisted development surface.
 
-### Cross-framework dev-admin parity sweep (Tier 1–5)
+### Cross-framework dev-admin parity sweep (Tier 1-5)
 
 The Python framework had pulled ahead on a series of dev-admin features driven by real frustration with the AI coder loop ("Applying a small patch went and messed up my whole file", "Says it is creating files but then doesn't", repeated import-error spirals). This release ports the full set to PHP, Ruby, and Node — same intent, language-idiomatic implementations.
 
@@ -1067,7 +1067,7 @@ The Python framework had pulled ahead on a series of dev-admin features driven b
 
 PHP's larger delta reflects new tests + the 3.12.11 + 3.12.12 lineage rolling forward.
 
-**Why all four frameworks at once.** Per the cross-framework parity rule: a feature that exists in only one framework is technical debt. The Python-only Tier 1–5 surface had been accumulating for two weeks while the UX was settling. With it settled, this release closes the gap in one coordinated sweep.
+**Why all four frameworks at once.** Per the cross-framework parity rule: a feature that exists in only one framework is technical debt. The Python-only Tier 1-5 surface had been accumulating for two weeks while the UX was settling. With it settled, this release closes the gap in one coordinated sweep.
 
 ### Folded-in from PHP 3.12.11 — file upload regression (`tina4-book#139`)
 
@@ -1106,7 +1106,7 @@ Drop in. No `.env` changes, no API changes.
 
 ## v3.12.10 (2026-05-14)
 
-Version-alignment release. PHP ran ahead through three independent patch releases (3.12.7–3.12.9) while Python / Ruby / Node stayed at 3.12.6. This release realigns all four frameworks on **3.12.10** and ships the ORM `save()` fix.
+Version-alignment release. PHP ran ahead through three independent patch releases (3.12.7-3.12.9) while Python / Ruby / Node stayed at 3.12.6. This release realigns all four frameworks on **3.12.10** and ships the ORM `save()` fix.
 
 ### PHP — `ORM->save()` no longer swallows write failures (#114)
 
@@ -1122,7 +1122,7 @@ $this->_db->commit();
 
 **Cross-framework parity check.** Python, Ruby and Node don't have this exact failure mode — they build the write payload from declared fields only (not all public properties), and their DB adapters raise on bad SQL, which the existing `try/except` already catches. PHP was the outlier on both counts. 3 regression tests in `tests/Issue114Test.php`; PHP suite 2235 → 2238 passing.
 
-### Also in the PHP 3.12.7–3.12.9 patch line
+### Also in the PHP 3.12.7-3.12.9 patch line
 
 These shipped to PHP between 3.12.6 and this release; folded into the consolidated 3.12.10 line:
 
@@ -1171,7 +1171,7 @@ PHP-only bug fix release. Python / Ruby / Node ship the same version stamp for p
 
 ### PHP — multipart bodies with file uploads now parse correctly (#135)
 
-Two stacked bugs in `Tina4\Request::__construct` made `$request->body` come through as the raw multipart bytes (~11 KB blobs starting with `------WebKitFormBoundary…`) whenever the request included a file upload:
+Two stacked bugs in `Tina4\Request::__construct` made `$request->body` come through as the raw multipart bytes (~11 KB blobs starting with `------WebKitFormBoundary...`) whenever the request included a file upload:
 
 1. The constructor called `$this->parseBody()` BEFORE initialising `$this->files`. Inside parseBody's multipart branch, the line `$this->files = array_merge($this->files, $parsed['files'])` read an uninitialised typed property — fatal `Error`.
 2. After fixing the init order, that same line tried to mutate the `readonly` `$files` property — another fatal `Error`.
@@ -1206,7 +1206,7 @@ Six new vars give you full control over logging without touching code:
 | `TINA4_LOG_OUTPUT` | `stdout` | `stdout`, `file`, or `both`. Strict — `stdout` means stdout only. |
 | `TINA4_LOG_CRITICAL` | `false` | Enables a `Log.critical()` level above `error`. Off = no-op. |
 | `TINA4_LOG_ROTATE_SIZE` | `10485760` (10 MB) | Rotate when the file exceeds this many bytes. `0` disables rotation. |
-| `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated files to retain (`app.log.1` … `app.log.N`). Older ones are deleted. |
+| `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated files to retain (`app.log.1` ... `app.log.N`). Older ones are deleted. |
 
 Implementation uses each language's stdlib — Python's `logging.handlers.RotatingFileHandler`, Ruby's `Logger.new(path, shift_age, shift_size)`, and a roll-your-own atomic-rename pattern in PHP and Node. Zero new dependencies in any framework.
 
@@ -1817,7 +1817,7 @@ Removed `demo/` directory. Removed old `plan/` spec documents, replaced with `PA
 
 ---
 
-## v3.10.x — Previous Releases (March 28–31, 2026)
+## v3.10.x — Previous Releases (March 28-31, 2026)
 
 The v3.10 line focused on ORM refinements, Frond template engine fixes, and cross-framework parity. Thirty-two patch releases landed in four days.
 
@@ -1969,7 +1969,7 @@ Macro output was HTML-escaped when used inside `{{ }}` expressions. A macro that
 
 </div>
 
-**js_escape and to_json auto-escaping (v3.10.17–19)**
+**js_escape and to_json auto-escaping (v3.10.17-19)**
 
 The `js_escape` and `to_json` filters produced output that Frond then HTML-escaped. A JSON string like `{"key":"value"}` became `{&quot;key&quot;:&quot;value&quot;}`. These filters now wrap their output in SafeString to bypass auto-escaping.
 
@@ -1981,7 +1981,7 @@ The migration runner generated SQLite-style `AUTOINCREMENT` and `TEXT` types for
 
 ---
 
-## v3.9.x — QueryBuilder, Sessions, Path Injection (March 26–27, 2026)
+## v3.9.x — QueryBuilder, Sessions, Path Injection (March 26-27, 2026)
 
 The v3.9 line delivered three features that changed how developers write routes and query data.
 
@@ -2119,7 +2119,7 @@ The `better-sqlite3` native module was the last remaining npm dependency. This r
 
 ---
 
-## v3.8.x — Template Engine, Typed Params, Security (March 25–26, 2026)
+## v3.8.x — Template Engine, Typed Params, Security (March 25-26, 2026)
 
 The v3.8 line replaced the template engine, added typed route parameters, and introduced production-grade security middleware.
 
@@ -2454,7 +2454,7 @@ Name your single parameter `request` or `req` and the framework passes the reque
 
 ---
 
-## v3.1.x — Response Parity, Routing API (March 21–22, 2026)
+## v3.1.x — Response Parity, Routing API (March 21-22, 2026)
 
 ### Features
 
@@ -2571,7 +2571,7 @@ One import. One function call. The server starts and your application is live.
 
 ---
 
-## Pre-Release (rc.2–rc.5)
+## Pre-Release (rc.2-rc.5)
 
 Four release candidates preceded v3.0.0. They stabilized the scaffolding, fixed the init command, added the error overlay, refined the landing page, and established the benchmark suite. If you started a project on a release candidate, upgrade to v3.0.0 and run `tina4 init` to regenerate your scaffolding files.
 

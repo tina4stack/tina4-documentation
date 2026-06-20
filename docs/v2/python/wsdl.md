@@ -1,4 +1,4 @@
-# Tina4 Python – Built-in SOAP 1.1 / WSDL 1.0 Service
+# Tina4 Python - Built-in SOAP 1.1 / WSDL 1.0 Service
 
 ::: tip 🔥 Hot Tips
 - Zero-configuration SOAP with auto-WSDL on `?wsdl`.
