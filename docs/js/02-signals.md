@@ -31,29 +31,29 @@ That is the entire API for basic signals. `.value` to read. `.value =` to write.
 
 When you write a new value, every subscriber -- effects, computed signals, DOM bindings -- fires. Not eventually. Not on the next tick. Synchronously, right now.
 
-### The Three Forms — Read This Before Anything Else
+### The Three Forms: Read This Before Anything Else
 
 This is the rule that decides whether your UI updates. Everything else in this chapter is detail; this is the part you cannot skip. When you put a signal into an `html` template, there are **three forms**, and they are not interchangeable:
 
 ```typescript
 const count = signal(0);
 
-html`<p>${count}</p>`              // ✅ REACTIVE — pass the signal itself
-html`<p>${() => count.value * 2}</p>`  // ✅ REACTIVE — wrap an expression in a function
-html`<p>${count.value}</p>`        // ❌ STATIC — renders "0" once, never updates again
+html`<p>${count}</p>`              // ✅ REACTIVE - pass the signal itself
+html`<p>${() => count.value * 2}</p>`  // ✅ REACTIVE - wrap an expression in a function
+html`<p>${count.value}</p>`        // ❌ STATIC - renders "0" once, never updates again
 ```
 
 | You write | The template receives | Behaviour |
 |-----------|----------------------|-----------|
-| `${count}` | the signal object | Reactive text node — updates on every change |
-| `${() => count.value > 5}` | a function | Reactive block — re-runs on change; use for expressions, conditionals, lists |
-| `${count.value}` | a plain number | Static — evaluated once, frozen forever |
+| `${count}` | the signal object | Reactive text node, updates on every change |
+| `${() => count.value > 5}` | a function | Reactive block, re-runs on change; use for expressions, conditionals, lists |
+| `${count.value}` | a plain number | Static, evaluated once, frozen forever |
 
-Why? `${count.value}` is evaluated by JavaScript **before** the template ever sees it. The template gets the number `0` — a dead value with no way to know when `count` changes. `${count}` hands the template the live signal, so it can subscribe. `${() => ...}` hands it a function it can re-run.
+Why? `${count.value}` is evaluated by JavaScript **before** the template ever sees it. The template gets the number `0`, a dead value with no way to know when `count` changes. `${count}` hands the template the live signal, so it can subscribe. `${() => ...}` hands it a function it can re-run.
 
 **If your UI renders once and never updates, you almost certainly wrote `${signal.value}` where you needed `${signal}` or `${() => ...}`.** This one mistake accounts for the large majority of "my signal isn't working" reports. Burn the three forms into memory now and the rest of this chapter is easy.
 
-> The same split shows up in attributes and properties — `${signal}` is reactive, `${signal.value}` is frozen — covered fully in the next chapter. The principle never changes: **pass the signal, or pass a function. Never pass `.value` into a template.**
+> The same split shows up in attributes and properties (`${signal}` is reactive, `${signal.value}` is frozen), covered fully in the next chapter. The principle never changes: **pass the signal, or pass a function. Never pass `.value` into a template.**
 
 ---
 

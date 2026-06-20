@@ -345,7 +345,7 @@ use Tina4\I18n;
 
 $i18n = new I18n('src/locales');
 
-// Add or extend a locale at runtime — one key at a time
+// Add or extend a locale at runtime - one key at a time
 $i18n->addTranslation('fr', 'welcome', 'Bienvenue, {name} !');
 $i18n->addTranslation('fr', 'goodbye', 'Au revoir, {name}.');
 $i18n->addTranslation('fr', 'nav.home', 'Accueil');

@@ -1,10 +1,10 @@
 # Tina4-Python ORM 
 
 ::: tip 🔥 Hot Tips
-- You **never** need the ORM — raw `Database` is perfect for 90% of cases
+- You **never** need the ORM. Raw `Database` is perfect for 90% of cases
 - But when you want it... it feels like writing plain Python classes
-- Zero boilerplate — no `__init__`, no `save()` method to write
-- Works with SQLite, PostgreSQL, MySQL, MSSQL, Firebird — all the same  
+- Zero boilerplate: no `__init__`, no `save()` method to write
+- Works with SQLite, PostgreSQL, MySQL, MSSQL, Firebird, all the same  
   :::
 
 ## Quick Start - 8 lines {#quick-start}
@@ -22,7 +22,7 @@ class User(ORM):
 # Connect once (usually in your main.py)
 orm(Database("sqlite3:test.db"))
 
-# That's it — table is auto-created on first use
+# That's it - table is auto-created on first use
 user = User({"name": "Alice", "email": "alice@example.com"})
 user.save()                    # → INSERT
 print(user.id)                 # → 1

@@ -106,7 +106,7 @@ Router::delete("/api/products/{id}", function ($request, $response) {
 })->swagger(['summary' => 'Delete a product', 'tags' => ['products']]);
 ```
 
-The route handler signature is `function ($request, $response)` — `$request` first, `$response` second. Use `->swagger([...])` for OpenAPI metadata; the keys are pass-through to the generator (`summary`, `tags`, `description`, `parameters`, etc.).
+The route handler signature is `function ($request, $response)`, `$request` first, `$response` second. Use `->swagger([...])` for OpenAPI metadata; the keys are pass-through to the generator (`summary`, `tags`, `description`, `parameters`, etc.).
 
 The **form template** renders typed inputs with CSRF protection:
 
@@ -282,11 +282,11 @@ Generates the full authentication scaffold: User model, migrations, login/regist
 
 AutoCRUD automatically generates REST API endpoints from your ORM models:
 
-- `GET /api/{table}` — List with pagination (`?limit=10&offset=0`)
-- `GET /api/{table}/{id}` — Get single record
-- `POST /api/{table}` — Create record
-- `PUT /api/{table}/{id}` — Update record
-- `DELETE /api/{table}/{id}` — Delete record
+- `GET /api/{table}`, List with pagination (`?limit=10&offset=0`)
+- `GET /api/{table}/{id}`, Get single record
+- `POST /api/{table}`, Create record
+- `PUT /api/{table}/{id}`, Update record
+- `DELETE /api/{table}/{id}`, Delete record
 
 ### Usage
 
@@ -296,7 +296,7 @@ $crud->register(User::class);
 $crud->generateRoutes();
 ```
 
-`AutoCrud::register()` wires up a single model class. `generateRoutes()` mounts the five standard endpoints automatically — no route files needed.
+`AutoCrud::register()` wires up a single model class. `generateRoutes()` mounts the five standard endpoints automatically, no route files needed.
 
 ---
 

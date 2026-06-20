@@ -1,6 +1,6 @@
 # Tina4 Ruby -- Quick Reference
 
-> **TINA4 — The Intelligent Native Application 4ramework**
+> **TINA4 - The Intelligent Native Application 4ramework**
 > Simple. Fast. Human. | Built for AI. Built for you.
 
 <div v-pre>
@@ -459,7 +459,7 @@ Tina4::Events.on("user.created") do |payload|
   puts "New user: #{payload[:name]}"
 end
 
-# Subscribe once — auto-removes after first fire
+# Subscribe once - auto-removes after first fire
 Tina4::Events.once("app.boot") do |payload|
   puts "App booted at #{payload[:time]}"
 end
@@ -527,7 +527,7 @@ mailer = Tina4::Container.resolve(:mailer)
 mailer.send_welcome(user)
 ```
 
-Registrations are lazy — the block runs on first `.resolve`. Singletons cache the result for the lifetime of the process.
+Registrations are lazy: the block runs on first `.resolve`. Singletons cache the result for the lifetime of the process.
 
 ### Error Overlay {#error-overlay}
 
@@ -545,7 +545,7 @@ The overlay shows the exception class, message, and a syntax-highlighted stack t
 http://localhost:7147/__dev
 ```
 
-The `/__dev` dashboard is available when `TINA4_DEBUG=true`. It lists every registered route (method, path, middleware, auth), active services, queue depths, and recent log lines. No configuration needed — visit the URL after `tina4 serve` starts.
+The `/__dev` dashboard is available when `TINA4_DEBUG=true`. It lists every registered route (method, path, middleware, auth), active services, queue depths, and recent log lines. No configuration needed: visit the URL after `tina4 serve` starts.
 
 ### CLI Commands {#cli}
 
@@ -605,5 +605,5 @@ Use `FakeData` in tests and migrations to generate consistent fixture data witho
 
 ## 📕 Download the book
 
-[**Tina4 for Ruby Developers** (PDF)](/pdfs/Tina4-for-Ruby-Developers.pdf) — full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
+[**Tina4 for Ruby Developers** (PDF)](/pdfs/Tina4-for-Ruby-Developers.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
 

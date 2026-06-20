@@ -1,6 +1,6 @@
 # Tina4 CSS
 
-Tina4 CSS is a lightweight, responsive CSS framework (~24KB minified) that ships built-in with every Tina4 framework — Python, Ruby, PHP, and JavaScript. It provides Bootstrap-compatible class names so you can build responsive UIs with zero external CDN dependencies.
+Tina4 CSS is a lightweight, responsive CSS framework (~24KB minified) that ships built-in with every Tina4 framework: Python, Ruby, PHP, and JavaScript. It provides Bootstrap-compatible class names so you can build responsive UIs with zero external CDN dependencies.
 
 ## What's Included
 
@@ -30,7 +30,7 @@ Tina4 CSS ships with every Tina4 framework. Your `base.twig` template should inc
 ```
 
 ::: info
-`tina4.js` provides JavaScript for modals, dismissible alerts, and navbar toggling — replacing the need for Bootstrap's JavaScript bundle.
+`tina4.js` provides JavaScript for modals, dismissible alerts, and navbar toggling, replacing the need for Bootstrap's JavaScript bundle.
 :::
 
 ## Grid System
@@ -92,7 +92,7 @@ A 12-column flexbox grid with 5 responsive breakpoints:
 
 ## Modals
 
-Modals work with `tina4.js` — no Bootstrap JavaScript needed:
+Modals work with `tina4.js`, no Bootstrap JavaScript needed:
 
 ```html
 <!-- Trigger -->
@@ -131,7 +131,7 @@ tina4.modal.close("#myModal");
 ```
 
 ::: tip Bootstrap Compatibility
-`data-bs-toggle`, `data-bs-target`, and `data-bs-dismiss` attributes also work — so existing Bootstrap templates migrate seamlessly.
+`data-bs-toggle`, `data-bs-target`, and `data-bs-dismiss` attributes also work, so existing Bootstrap templates migrate seamlessly.
 :::
 
 ## Navigation
@@ -230,8 +230,8 @@ Tina4 CSS uses the same class names as Bootstrap 5, so migration is straightforw
 
 1. Replace Bootstrap CDN links with local tina4 files
 2. Replace `bootstrap.bundle.min.js` with `tina4.js`
-3. Change `data-bs-*` attributes to `data-t4-*` (optional — `data-bs-*` still works)
-4. Remove any Bootstrap Icons CDN (or keep them — they're independent)
+3. Change `data-bs-*` attributes to `data-t4-*` (optional, `data-bs-*` still works)
+4. Remove any Bootstrap Icons CDN (or keep them, they're independent)
 
 ::: warning
 Tina4 CSS does not include JavaScript-heavy components like dropdowns, popovers, tooltips, or carousels. If you need these, add them as standalone micro-libraries.
@@ -243,6 +243,6 @@ Tina4 CSS does not include JavaScript-heavy components like dropdowns, popovers,
 |-----------|-------------|------------|
 | **Tina4 CSS** | ~24KB | ~3KB |
 | Bootstrap 5 | ~227KB | ~80KB |
-| Tailwind CSS | ~300KB+ | — |
+| Tailwind CSS | ~300KB+ | - |
 
 Tina4 CSS delivers 90% of Bootstrap's utility at 10% of the size.

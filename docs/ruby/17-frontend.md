@@ -779,7 +779,7 @@ end
 
 ---
 
-## 18. HtmlElement — Programmatic HTML Builder
+## 18. HtmlElement - Programmatic HTML Builder
 
 Build HTML in Ruby without string concatenation:
 

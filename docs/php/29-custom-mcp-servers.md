@@ -162,7 +162,7 @@ class AccountingService
     }
 }
 
-// Create the service instance — methods are already registered via attributes
+// Create the service instance - methods are already registered via attributes
 $accounting = new AccountingService($db);
 ```
 

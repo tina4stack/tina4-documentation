@@ -22,14 +22,14 @@ From your project root (create an empty folder if starting fresh):
    ```bash
    composer start
    ```
-   This launches a built-in PHP server at `http://localhost:7145` with hot-reloading—edit files and refresh the browser to see changes instantly.
+   This launches a built-in PHP server at `http://localhost:7145` with hot-reloading. Edit files and refresh the browser to see changes instantly.
 
 ## Customizing the Setup
 - **Change Port**: Edit `composer.json` under the `scripts` section to modify the default port (e.g., replace `7145` with your preferred port).
-- **Existing Projects**: Tina4 packages can integrate into non-Tina4 apps without the full framework—add specific modules via Composer.
+- **Existing Projects**: Tina4 packages can integrate into non-Tina4 apps without the full framework, adding specific modules via Composer.
 
 ## Verification
-Open `http://localhost:7145/` in your browser. You'll see a welcome page or initialization prompt. Add routes in the generated files to test—changes apply immediately, echoing Laravel's artisan serve with live reload.
+Open `http://localhost:7145/` in your browser. You'll see a welcome page or initialization prompt. Add routes in the generated files to test, and changes apply immediately, echoing Laravel's artisan serve with live reload.
 
 For production, deploy to a web server; Tina4 supports easy integration with Apache, Nginx, or containers. If issues occur, verify Composer/PHP versions with `composer --version` and `php -v`.
 

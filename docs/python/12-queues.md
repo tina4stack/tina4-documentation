@@ -104,7 +104,7 @@ queue.push({"to": "later@example.com", "subject": "Reminder"}, delay_seconds=60)
 
 `priority` defaults to `0`. `pop` and `consume` return the highest-priority job first; ties break oldest-first. See Section 5.
 
-`delay_seconds` defaults to `0`. The file backend honors the delay — the job stays hidden until the time arrives. External brokers (RabbitMQ, Kafka, MongoDB) manage their own delivery timing.
+`delay_seconds` defaults to `0`. The file backend honors the delay, keeping the job hidden until the time arrives. External brokers (RabbitMQ, Kafka, MongoDB) manage their own delivery timing.
 
 ### Convenience Method: produce
 
@@ -590,7 +590,7 @@ The consumer loop retries on its own. A job to `bad@example.com` fails, gets re-
 
 **Problem:** A failed job is never retried, or you lose track of it.
 
-**Cause:** Your consumer does not call `job.complete()` or `job.fail()`. The job was claimed on pop, so it has already left the pending queue — without `fail()` it is neither retried nor dead-lettered.
+**Cause:** Your consumer does not call `job.complete()` or `job.fail()`. The job was claimed on pop, so it has already left the pending queue, and without `fail()` it is neither retried nor dead-lettered.
 
 **Fix:** Always call one of `job.complete()`, `job.fail(reason)`, or `job.reject(reason)` in your consumer loop. `fail()` handles the retry and dead-letter bookkeeping for you.
 

@@ -298,6 +298,6 @@ Returns JSON-RPC 2.0 responses:
 - File tools are sandboxed to the project directory
 - `database_execute` only works on localhost
 
-**Remote server — MCP disabled:**
+**Remote server - MCP disabled:**
 - This is intentional. Set `TINA4_MCP_REMOTE=true` only on staging environments you trust
 - Never enable MCP on production servers

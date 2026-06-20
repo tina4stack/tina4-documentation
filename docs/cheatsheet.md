@@ -2,11 +2,11 @@
 
 One page, four frameworks, side by side. Find what you need, copy the column for your language.
 
-> **Verified only.** Every entry on this page has been run green across **all four frameworks** (Python · PHP · Ruby · Node) — not transcribed from docs. Each section notes how it was checked. Sections are added only once they pass that bar, so this page is short on purpose and grows as more is verified.
+> **Verified only.** Every entry on this page has been run green across **all four frameworks** (Python · PHP · Ruby · Node), not transcribed from docs. Each section notes how it was checked. Sections are added only once they pass that bar, so this page is short on purpose and grows as more is verified.
 
 ## Routing {#routing}
 
-> Verified by a live cross-framework code review plus the routing test suites in all four (Python · PHP · Ruby · Node — run green this release): method registration, `{id}` params, and typed-param coercion.
+> Verified by a live cross-framework code review plus the routing test suites in all four (Python · PHP · Ruby · Node, run green this release): method registration, `{id}` params, and typed-param coercion.
 
 Drop a handler file in `src/routes/` (auto-discovered) and register one per HTTP method:
 
@@ -16,17 +16,17 @@ Drop a handler file in `src/routes/` (auto-discovered) and register one per HTTP
 | Path param | `@get("/users/{id}")` | `Router::get("/users/{id}", $fn)` | `Tina4::Router.get("/users/{id}")` | `get("/users/{id}", h)` |
 | Typed param | `{id:int}` · `{p:float}` | `{id:int}` · `{p:float}` | `{id:int}` · `{p:float}` | `{id:int}` · `{p:float}` |
 
-- **`{id}` is the param syntax everywhere** — never `:id`. Read it with `request.param("id")` (PHP `$request->params["id"]`, Ruby `params[:id]`, Node `req.params.id`).
-- **Typed params arrive coerced** — `{id:int}`/`{id:integer}` → a native integer, `{p:float}`/`{p:number}` → a native float; `string`/`alpha`/`alnum`/`slug`/`uuid`/`path` and an untyped `{id}` stay strings. The type also constrains matching: `/users/abc` → 404 for `{id:int}`. An unknown type name is rejected at registration.
-- **Returning data** — `return response(obj)` (Node: `return res.json(obj)`): objects/dicts/arrays → JSON, strings → HTML; ORM models, lists of models, and `DatabaseResult`s auto-serialize to JSON.
+- **`{id}` is the param syntax everywhere**, never `:id`. Read it with `request.param("id")` (PHP `$request->params["id"]`, Ruby `params[:id]`, Node `req.params.id`).
+- **Typed params arrive coerced:** `{id:int}`/`{id:integer}` → a native integer, `{p:float}`/`{p:number}` → a native float; `string`/`alpha`/`alnum`/`slug`/`uuid`/`path` and an untyped `{id}` stay strings. The type also constrains matching: `/users/abc` → 404 for `{id:int}`. An unknown type name is rejected at registration.
+- **Returning data:** `return response(obj)` (Node: `return res.json(obj)`): objects/dicts/arrays → JSON, strings → HTML; ORM models, lists of models, and `DatabaseResult`s auto-serialize to JSON.
 
 ---
 
 ## Auth {#auth}
 
-> Verified by a live cross-framework code review plus the auth / route-protection suites in all four (Python · PHP · Ruby · Node — run green this release): default protection, opt-out/opt-in, JWT, password hashing.
+> Verified by a live cross-framework code review plus the auth / route-protection suites in all four (Python · PHP · Ruby · Node, run green this release): default protection, opt-out/opt-in, JWT, password hashing.
 
-**GET routes are public; POST / PUT / PATCH / DELETE require a Bearer token by default** — the same convention in every framework. A write request with no valid token gets `401`.
+**GET routes are public; POST / PUT / PATCH / DELETE require a Bearer token by default**, the same convention in every framework. A write request with no valid token gets `401`.
 
 | | Python | PHP | Ruby | Node |
 |---|---|---|---|---|
@@ -36,15 +36,15 @@ Drop a handler file in `src/routes/` (auto-discovered) and register one per HTTP
 | Validate a JWT | `valid_token(t)` | `Auth::validToken($t)` | `Tina4::Auth.valid_token(t)` | `validToken(t)` |
 | Hash / check password | `Auth.hash_password(pw)` / `Auth.check_password(pw, h)` | `Auth::hashPassword($pw)` / `Auth::checkPassword($pw, $h)` | `Tina4::Auth.hash_password(pw)` / `Tina4::Auth.check_password(pw, h)` | `hashPassword(pw)` / `checkPassword(pw, h)` |
 
-- **JWT expiry is in minutes** (default 60) in all four. `valid_token` returns the decoded **payload** (truthy) on success, `null`/`None` on failure — not a bool.
-- A protected route accepts the token from the **`Authorization: Bearer` header, a `formToken` body field, or the session** — checked in that order.
+- **JWT expiry is in minutes** (default 60) in all four. `valid_token` returns the decoded **payload** (truthy) on success, `null`/`None` on failure, not a bool.
+- A protected route accepts the token from the **`Authorization: Bearer` header, a `formToken` body field, or the session**, checked in that order.
 - Passwords hash with **PBKDF2-SHA256** (260 000 iterations, `pbkdf2_sha256$...` format); the check is timing-safe and always takes **`(password, hash)`** in that order.
 
 ---
 
 ## Request {#request}
 
-> Verified by a live cross-framework code review + the request test suites in all four (Python · PHP · Ruby · Node — run green this release).
+> Verified by a live cross-framework code review + the request test suites in all four (Python · PHP · Ruby · Node, run green this release).
 
 | | Python | PHP | Ruby | Node |
 |---|---|---|---|---|
@@ -54,15 +54,15 @@ Drop a handler file in `src/routes/` (auto-discovered) and register one per HTTP
 | Cookie | `request.cookies["sid"]` | `$request->cookies["sid"]` | `request.cookies["sid"]` | `req.cookies.sid` |
 | Uploaded file | `request.files["doc"]["content"]` | `$request->files["doc"]["content"]` | `request.files["doc"]["content"]` | `req.files.doc.content` |
 
-- **Body is the parsed payload** — a JSON or form-urlencoded POST becomes a dict/array/hash. (For the raw string, Ruby exposes `request.body_raw`.)
-- **`request.query` is the query string only** — route params like `{id}` come from the path (see Routing). Headers are **case-insensitive** in every framework.
-- **Uploaded files are raw bytes, never base64** — each entry has `filename`, `type`, `content` (the bytes), `size`.
+- **Body is the parsed payload:** a JSON or form-urlencoded POST becomes a dict/array/hash. (For the raw string, Ruby exposes `request.body_raw`.)
+- **`request.query` is the query string only:** route params like `{id}` come from the path (see Routing). Headers are **case-insensitive** in every framework.
+- **Uploaded files are raw bytes, never base64:** each entry has `filename`, `type`, `content` (the bytes), `size`.
 
 ---
 
 ## Response {#response}
 
-> Verified by a live cross-framework code review + the response / SSE test suites in all four (Python · PHP · Ruby · Node — run green this release).
+> Verified by a live cross-framework code review + the response / SSE test suites in all four (Python · PHP · Ruby · Node, run green this release).
 
 | | Python | PHP | Ruby | Node |
 |---|---|---|---|---|
@@ -72,8 +72,8 @@ Drop a handler file in `src/routes/` (auto-discovered) and register one per HTTP
 | Stream / SSE | `response.stream(gen)` | `$response->stream($gen)` | `response.stream(gen)` | `res.stream(gen)` |
 | Custom header | `response.add_header(k, v)` | `$response->header(k, v)` | `response.add_header(k, v)` | `res.addHeader(k, v)` |
 
-- **Send through the response object** — objects/dicts/arrays → JSON, strings → HTML; ORM models, lists of models, and `DatabaseResult`s auto-serialize. Always call `response(...)` / `res.json(...)`: it works in all four (PHP and Ruby also serialize a bare `return [...]`, but the explicit call is portable).
-- `response(data, 201)` sets the status; **redirect** defaults to 302; **file** auto-detects the MIME type and returns 404 if the file is missing; **stream** sends an SSE-ready `text/event-stream` — pass a generator.
+- **Send through the response object:** objects/dicts/arrays → JSON, strings → HTML; ORM models, lists of models, and `DatabaseResult`s auto-serialize. Always call `response(...)` / `res.json(...)`: it works in all four (PHP and Ruby also serialize a bare `return [...]`, but the explicit call is portable).
+- `response(data, 201)` sets the status; **redirect** defaults to 302; **file** auto-detects the MIME type and returns 404 if the file is missing; **stream** sends an SSE-ready `text/event-stream`, so pass a generator.
 
 ---
 
@@ -88,13 +88,13 @@ Drop a handler file in `src/routes/` (auto-discovered) and register one per HTTP
 | One row, params | `db.fetch_one("SELECT * FROM t WHERE id = ?", [1])` | `$db->fetchOne("SELECT * FROM t WHERE id = ?", [1])` | `db.fetch_one("SELECT * FROM t WHERE id = ?", [1])` | `await db.fetchOne("SELECT * FROM t WHERE id = ?", [1])` |
 | Transaction | `db.start_transaction()` ... `db.commit()` / `db.rollback()` | `$db->startTransaction()` ... `$db->commit()` / `$db->rollback()` | `db.start_transaction` ... `db.commit` / `db.rollback` | `await db.startTransaction()` ... `await db.commit()` / `await db.rollback()` |
 
-Always use `?` placeholders with a params array — every adapter translates `?` to the engine's native style (`$1`, `%s`, `?`). Never string-interpolate user input. A standalone write auto-commits on its own connection (durable + visible across a pooled connection); an explicit transaction stays atomic. Set `TINA4_AUTOCOMMIT=false` for strict manual-commit mode.
+Always use `?` placeholders with a params array: every adapter translates `?` to the engine's native style (`$1`, `%s`, `?`). Never string-interpolate user input. A standalone write auto-commits on its own connection (durable + visible across a pooled connection); an explicit transaction stays atomic. Set `TINA4_AUTOCOMMIT=false` for strict manual-commit mode.
 
-## Pages — drop-in templates {#pages}
+## Pages: drop-in templates {#pages}
 
-> Verified by the landing-page / template-routing test suites in all four (Python 43, PHP 44, Ruby 45, Node 55 — run green this release).
+> Verified by the landing-page / template-routing test suites in all four (Python 43, PHP 44, Ruby 45, Node 55, run green this release).
 
-Drop a `.twig` (or `.html`) file into `src/templates/pages/` and it serves at the matching URL — no route needed. Same convention in all four frameworks.
+Drop a `.twig` (or `.html`) file into `src/templates/pages/` and it serves at the matching URL, no route needed. Same convention in all four frameworks.
 
 | File | URL |
 |---|---|
@@ -102,8 +102,8 @@ Drop a `.twig` (or `.html`) file into `src/templates/pages/` and it serves at th
 | `src/templates/pages/cars.twig` | `/cars` |
 | `src/templates/pages/admin/users.twig` | `/admin/users` |
 
-- **Only `pages/` auto-routes** — `base.twig`, partials, layouts, and `errors/` live in `src/templates/` outside `pages/` and are render-only (`response.render(...)`), never URL-exposed.
-- **`_`-prefixed files are private** — `pages/_partial.twig` won't serve.
+- **Only `pages/` auto-routes:** `base.twig`, partials, layouts, and `errors/` live in `src/templates/` outside `pages/` and are render-only (`response.render(...)`), never URL-exposed.
+- **`_`-prefixed files are private:** `pages/_partial.twig` won't serve.
 - **An explicit route always wins** over a same-path template.
 - **Toggle:** `TINA4_TEMPLATE_ROUTING=off` (default on). Dev re-reads the directory each request; production caches the lookup at boot.
 
@@ -111,7 +111,7 @@ Drop a `.twig` (or `.html`) file into `src/templates/pages/` and it serves at th
 
 ## Frond templates {#frond}
 
-> Verified by a 50-case cross-engine harness (identical templates rendered through all four engines → identical output) plus a host-API check, this release. Frond is Tina4's built-in Twig/Jinja-compatible engine. **The template syntax below is identical in all four frameworks** — only the host call to render or extend it differs (table at the end).
+> Verified by a 50-case cross-engine harness (identical templates rendered through all four engines → identical output) plus a host-API check, this release. Frond is Tina4's built-in Twig/Jinja-compatible engine. **The template syntax below is identical in all four frameworks**, only the host call to render or extend it differs (table at the end).
 
 ### Output & filters
 
@@ -121,7 +121,7 @@ Drop a `.twig` (or `.html`) file into `src/templates/pages/` and it serves at th
 {{ price | default(0) }}            {# fallback for undefined/None #}
 {{ "%.2f" | format(total) }}        {# printf-style formatting #}
 {{ "hello " ~ name }}               {# string concatenation (~, not +) #}
-{{ user.email | e }}                {# HTML-escape (single — never double) #}
+{{ user.email | e }}                {# HTML-escape (single - never double) #}
 {{ html | raw }}                    {# unescaped output (also: | safe) #}
 ```
 
@@ -153,7 +153,7 @@ Verified filters: `upper` `lower` `length` `trim` `capitalize` `title` `default`
 {% extends "base.twig" %}
 {% block content %}{% include "partials/nav.twig" %}{% endblock %}
 
-{# macros/forms.twig — macros do NOT inherit context, pass vars explicitly #}
+{# macros/forms.twig - macros do NOT inherit context, pass vars explicitly #}
 {% macro field(name, label) %}<label>{{ label }}<input name="{{ name }}"></label>{% endmacro %}
 {% from "macros/forms.twig" import field %}
 {{ field("email", "Email") }}
@@ -163,7 +163,7 @@ Verified filters: `upper` `lower` `length` `trim` `capitalize` `title` `default`
 
 ```twig
 {% set total = price * qty %}
-{# this is a comment — not rendered #}
+{# this is a comment - not rendered #}
 {%- if trim -%}no surrounding whitespace{%- endif -%}
 {% raw %}{{ this is output literally }}{% endraw %}
 {% cache "sidebar" 300 %}...expensive fragment cached 300s...{% endcache %}
@@ -179,7 +179,7 @@ Verified filters: `upper` `lower` `length` `trim` `capitalize` `title` `default`
 </form>
 ```
 
-### The only part that differs — the host call
+### The only part that differs: the host call
 
 ```python
 # Python                         # PHP                                # Ruby                                # Node

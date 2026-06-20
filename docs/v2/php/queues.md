@@ -3,7 +3,7 @@
 Tina4's queue module provides a multi-backend message queue system with a unified API. It supports **LiteQueue** (SQLite), **MongoDB**, **RabbitMQ**, and **Kafka** backends out of the box.
 
 ::: tip Hot tips!
-- LiteQueue uses SQLite and requires no external services — perfect for development and single-machine deployments
+- LiteQueue uses SQLite and requires no external services, perfect for development and single-machine deployments
 - All backends share the same `Queue`, `Producer`, and `Consumer` API
 - Messages are consumed via PHP generators for memory efficiency
 :::

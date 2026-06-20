@@ -147,7 +147,7 @@ Supports:
 </html>
 ```
 
-Now your entire site feels like a modern SPA — **with zero JavaScript framework overhead**.
+Now your entire site feels like a modern SPA, **with zero JavaScript framework overhead**.
 
 ---
 

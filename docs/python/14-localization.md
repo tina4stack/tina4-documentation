@@ -88,7 +88,7 @@ Keys use dot notation for nested structures. Placeholders in curly braces are re
 
 ## 4. The I18n Class
 
-For more control — setting the locale per request, loading custom locale paths — use the `I18n` class directly:
+For more control, such as setting the locale per request or loading custom locale paths, use the `I18n` class directly:
 
 ```python
 from tina4_python.i18n import I18n
@@ -240,7 +240,7 @@ When a key is missing from the active locale, Tina4 falls back through a chain:
 
 1. Active locale (`de`)
 2. Base language (`de` if locale was `de_AT`)
-3. Default locale (`en` — or whatever you passed as `default_locale=` when creating the `I18n` instance)
+3. Default locale (`en`, or whatever you passed as `default_locale=` when creating the `I18n` instance)
 4. The raw key string itself
 
 ```bash
@@ -467,7 +467,7 @@ async def create_user(request, response):
 
 **Problem:** JSON has `{firstName}` but code calls `t("greeting", first_name="Alice")`. The placeholder is not replaced.
 
-**Fix:** Placeholder names in JSON and keyword argument names in Python must match exactly. Use consistent naming conventions — either camelCase or snake_case throughout your locale files.
+**Fix:** Placeholder names in JSON and keyword argument names in Python must match exactly. Use consistent naming conventions: either camelCase or snake_case throughout your locale files.
 
 ### 3. TINA4_LOCALE not set, t() uses "en"
 

@@ -1,9 +1,9 @@
 # ORM
 ::: tip 🔥 Hot Tips
-- You **never** need the ORM — raw `Database` is [perfect for 90% of cases](database.md)
+- You **never** need the ORM. Raw `Database` is [perfect for 90% of cases](database.md)
 - But when you want it . . , you might enjoy it, as it feels like writing plain classes
-- Zero boilerplate — no methods to write
-- Works with SQLite, PostgreSQL, MySQL, MSSQL, Firebird — all the same  
+- Zero boilerplate: no methods to write
+- Works with SQLite, PostgreSQL, MySQL, MSSQL, Firebird, all the same  
   :::
 
 ## Setting it all up

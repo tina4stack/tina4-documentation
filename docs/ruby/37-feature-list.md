@@ -144,15 +144,15 @@ A reference of all 45 features in Tina4 Ruby, grouped by category.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_DATABASE_URL` | — | Database connection string |
+| `TINA4_DATABASE_URL` | - | Database connection string |
 | `TINA4_ENV` | `development` | Environment: development, production, test |
 | `TINA4_PORT` | `7147` | HTTP server port |
 | `TINA4_LOG_LEVEL` | `info` | Minimum log level |
 | `TINA4_LOG_FORMAT` | `text` | Log format: text or json |
-| `TINA4_LOG_FILE` | — | Log file path (optional) |
+| `TINA4_LOG_FILE` | - | Log file path (optional) |
 | `TINA4_QUEUE_BACKEND` | `file` | Queue backend: file, rabbitmq, kafka, mongodb |
 | `TINA4_QUEUE_PATH` | `./queue` | File queue storage directory |
-| `TINA4_QUEUE_URL` | — | Queue broker URL (RabbitMQ, Kafka, MongoDB) |
+| `TINA4_QUEUE_URL` | - | Queue broker URL (RabbitMQ, Kafka, MongoDB) |
 | `TINA4_CACHE_BACKEND` | `memory` | Cache backend: memory, file, redis, memcached |
-| `TINA4_SECRET` | — | JWT signing secret |
+| `TINA4_SECRET` | - | JWT signing secret |
 | `TINA4_TOKEN_LIMIT` | `3600` | JWT expiry in seconds |

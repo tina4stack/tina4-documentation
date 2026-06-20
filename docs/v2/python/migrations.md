@@ -26,7 +26,7 @@ uv run tina4 migrate:create "Create users table"
   );
   ```
 
-Migrations can also auto-generate SQL when initializing an ORM object if the table doesn't exist—it logs the CREATE TABLE SQL to the console, which you can copy into a migration file.
+Migrations can also auto-generate SQL when initializing an ORM object if the table doesn't exist. It logs the CREATE TABLE SQL to the console, which you can copy into a migration file.
 
 ## Running Migrations {#running}
 

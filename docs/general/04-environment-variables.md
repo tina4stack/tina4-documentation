@@ -335,7 +335,7 @@ Tina4 supports two naming conventions for SMTP variables. The `SMTP_*` variables
 | `TINA4_MAIL_PASSWORD` | `TINA4_MAIL_PASSWORD` | _(none)_ | SMTP authentication password. |
 | `TINA4_MAIL_FROM` | `TINA4_MAIL_FROM` | `noreply@localhost` | Default sender address. |
 | `TINA4_MAIL_FROM_NAME` | `TINA4_MAIL_FROM_NAME` | _(none)_ | Sender display name. |
-| `TINA4_MAIL_ENCRYPTION` | — | `tls` | Connection encryption. `tls`, `ssl`, or `none`. |
+| `TINA4_MAIL_ENCRYPTION` | - | `tls` | Connection encryption. `tls`, `ssl`, or `none`. |
 
 #### IMAP (for reading email)
 

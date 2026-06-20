@@ -255,7 +255,7 @@ async def greeting(name, request, response):
 
 In Python, path parameters arrive as function arguments. The parameter name in the function signature must match the `{name}` in the route pattern.
 
-> **Cross-language note.** Python is the odd one out here. PHP, Ruby, and Node read path parameters from `$request->params` / `request.params` / `req.params` instead. Same concept, two shapes — pick the chapter that matches your runtime.
+> **Cross-language note.** Python is the odd one out here. PHP, Ruby, and Node read path parameters from `$request->params` / `request.params` / `req.params` instead. Same concept, two shapes, so pick the chapter that matches your runtime.
 
 Save the file. The dev server picks up the change through live reload. If not, restart with `tina4 serve`.
 
@@ -604,7 +604,7 @@ This overlay is only visible when `TINA4_DEBUG=true`. Production never sees it.
 
 ## 8. Manual Setup (No CLI)
 
-The `tina4` CLI scaffolds everything for you. But sometimes you create a project from scratch — an empty folder, a fresh virtual environment, no CLI installed yet. Here is the minimum you need.
+The `tina4` CLI scaffolds everything for you. But sometimes you create a project from scratch: an empty folder, a fresh virtual environment, no CLI installed yet. Here is the minimum you need.
 
 ### Step 1: Install the Package
 
@@ -664,7 +664,7 @@ TINA4_DEBUG=true
 tina4 serve
 ```
 
-The server starts on `http://localhost:7146`. You should see the Tina4 welcome page. From here, add route files in `src/routes/` and templates in `src/templates/` — the same way as a CLI-scaffolded project.
+The server starts on `http://localhost:7146`. You should see the Tina4 welcome page. From here, add route files in `src/routes/` and templates in `src/templates/`, the same way as a CLI-scaffolded project.
 
 > **Note:** Tina4 Python refuses to start without the Rust CLI. If you genuinely need to bypass it (e.g. inside a Docker image that already wraps the framework), set `TINA4_OVERRIDE_CLIENT=true` in `.env` and run `uv run python app.py` directly.
 

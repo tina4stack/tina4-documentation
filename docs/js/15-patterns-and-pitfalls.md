@@ -124,17 +124,17 @@ For most computed values -- filtering lists, calculating totals, deriving displa
 
 ## 4. Inputs Must Stay Outside Reactive Blocks
 
-> **This is the most common tina4-js bug.** Wrapping `<input>` elements inside `${() => ...}` reactive blocks causes them to lose focus on every keystroke. The reactive block destroys and recreates its entire DOM subtree when any signal it reads changes — so the input element is replaced mid-typing.
+> **This is the most common tina4-js bug.** Wrapping `<input>` elements inside `${() => ...}` reactive blocks causes them to lose focus on every keystroke. The reactive block destroys and recreates its entire DOM subtree when any signal it reads changes, so the input element is replaced mid-typing.
 
 **The rule:** Form elements (`<input>`, `<textarea>`, `<select>`) go in the **static** part of the template. Use `.value`, `@input`, and `?disabled` bindings to make them reactive. Only wrap **computed output** (conditional messages, dropdown options, dynamic lists) in `${() => ...}`.
 
 ```typescript
-// WRONG — input inside reactive block, loses focus on every keystroke
+// WRONG - input inside reactive block, loses focus on every keystroke
 html`${() => html`<input .value=${name} @input=${(e: Event) => {
   name.value = (e.target as HTMLInputElement).value;
 }} />`}`
 
-// RIGHT — input in static template, only output is reactive
+// RIGHT - input in static template, only output is reactive
 html`
   <input .value=${name} @input=${(e: Event) => {
     name.value = (e.target as HTMLInputElement).value;

@@ -1,6 +1,6 @@
 # Get Up and Running with PHP on Windows
 
-Good news — you **don't need WAMP, XAMPP, or any heavy installers** in 2025.  
+Good news, you **don't need WAMP, XAMPP, or any heavy installers** in 2025.  
 Just grab the official PHP binaries, unzip, and go!
 
 ## 1. Download the latest PHP zip (Thread-Safe version)

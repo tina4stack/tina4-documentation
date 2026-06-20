@@ -198,17 +198,17 @@ end
 ```ruby
 client = Tina4::TestClient.new
 
-# GET — with optional query string and headers
+# GET - with optional query string and headers
 resp = client.get("/api/products")
 resp = client.get("/api/products?category=Electronics")
 resp = client.get("/api/profile", headers: { "Authorization" => "Bearer #{token}" })
 
-# POST / PUT / PATCH — pass a Ruby hash via `json:`
+# POST / PUT / PATCH - pass a Ruby hash via `json:`
 resp = client.post("/api/products", json: { name: "Widget", price: 9.99 })
 resp = client.put("/api/products/1", json: { name: "Updated Widget" })
 resp = client.patch("/api/products/1", json: { price: 12.99 })
 
-# DELETE — no body
+# DELETE - no body
 resp = client.delete("/api/products/1")
 ```
 
@@ -451,7 +451,7 @@ exit(results[:failed] > 0 || results[:errors] > 0 ? 1 : 0)
 Each test should verify one behaviour. When it fails, you know exactly what broke.
 
 ```ruby
-# Good — each test verifies one thing
+# Good - each test verifies one thing
 it "returns 201 on create" do
   resp = client.post("/api/products", json: { name: "Widget", price: 9.99 })
   assert_status(resp, 201)
@@ -462,7 +462,7 @@ it "returns the created product" do
   assert_equal("Widget", resp.json["name"])
 end
 
-# Bad — testing five things in one block
+# Bad - testing five things in one block
 it "does everything" do
   # Creates, reads, updates, deletes, checks auth, validates input ...
   # When this fails you have no idea which step broke.

@@ -1,6 +1,6 @@
 # Environment Variables
 
-> **⚠️ BREAKING CHANGE — Tina4 v3.12.0**
+> **⚠️ BREAKING CHANGE: Tina4 v3.12.0**
 >
 > Every framework env var now requires the `TINA4_` prefix. The legacy un-prefixed names (`DATABASE_URL`, `SECRET`, `SMTP_HOST`, `HOST_NAME`, etc.) no longer work. Setting them at startup makes the framework refuse to boot with a list of renames.
 >
@@ -9,7 +9,7 @@
 > **Conventional names stay un-prefixed:** `PORT`, `HOST`, `NODE_ENV`, `RACK_ENV`, `RUBY_ENV`, `ENVIRONMENT`. These are runtime/PaaS conventions, not framework config.
 
 
-Tina4 Node.js is configured through environment variables, read from `.env` at the project root. Every variable has a sensible default — most projects set three or four values and leave the rest alone.
+Tina4 Node.js is configured through environment variables, read from `.env` at the project root. Every variable has a sensible default, so most projects set three or four values and leave the rest alone.
 
 The **Universal** section below is identical across Python, PHP, Ruby, and Node.js: same variables, same defaults, same grouping. The **AI / Dev-Admin** section covers the dashboard's AI and developer tooling. The **Framework-specific** section at the end lists the handful of variables only this framework reads.
 
@@ -19,7 +19,7 @@ Start with the minimum-config examples at the end, then come back here when you 
 
 ## Universal
 
-These variables behave the same way in every Tina4 framework. Defaults are canonical — the framework reads each one and applies the listed default when it's unset.
+These variables behave the same way in every Tina4 framework. Defaults are canonical: the framework reads each one and applies the listed default when it's unset.
 
 ### Core Server
 
@@ -28,9 +28,9 @@ These variables behave the same way in every Tina4 framework. Defaults are canon
 | `TINA4_DEBUG` | `false` | Master debug toggle. Enables Swagger UI, dev dashboard, live reload, template dump filter, error overlay. Never set to `true` in production. |
 | `TINA4_ENV` | `development` | Runtime environment label. Values like `development`, `staging`, `production` control dev-only features. |
 | `HOST` | `0.0.0.0` | Bind address. `0.0.0.0` listens on every interface. `127.0.0.1` restricts to localhost. |
-| `TINA4_HOST` | `0.0.0.0` | Framework-prefixed bind address. Pairs with `HOST` — set either one. |
+| `TINA4_HOST` | `0.0.0.0` | Framework-prefixed bind address. Pairs with `HOST`, set either one. |
 | `PORT` | `7146` | HTTP server port. The Rust CLI prefers `TINA4_PORT` but falls back to `PORT`. |
-| `TINA4_PORT` | `7146` | Framework-prefixed port override. Pairs with `PORT` — set either one. |
+| `TINA4_PORT` | `7146` | Framework-prefixed port override. Pairs with `PORT`, set either one. |
 | `TINA4_HOST_NAME` | `localhost:<port>` | Fully-qualified host used in generated absolute URLs (Swagger, OAuth redirects, emails) and for localhost detection. |
 | `CI` | _(none)_ | Standard CI flag. When set, suppresses dev-secret auto-minting so test runs stay deterministic. |
 | `TINA4_SUPPRESS` | `false` | Suppresses the framework startup banner. Useful in CI runs and systemd units where stdout is parsed. |
@@ -77,7 +77,7 @@ stdout is always on. With `TINA4_LOG_OUTPUT` unset, the log **file** is written 
 | `TINA4_DATABASE_PASSWORD` | _(empty)_ | Overrides the password embedded in `TINA4_DATABASE_URL`. |
 | `TINA4_DB_POOL` | `0` | Default connection-pool size when the caller doesn't pass `pool=` explicitly. `0` uses a single connection; a positive integer enables round-robin pooling. |
 | `TINA4_AUTOCOMMIT` | `true` | Standalone writes auto-commit on their own connection (durable + visible across a pool); explicit transactions stay atomic. Set `false` for strict manual-commit mode. |
-| `TINA4_AUTO_MIGRATE` | `true` | Run pending migrations on startup when a `migrations/` folder exists. Non-breaking — a failed migration is logged and the service still boots; the explicit `tina4 migrate` CLI stays fail-fast. Set `false` to disable (e.g. multi-instance production that migrates as a separate deploy step). |
+| `TINA4_AUTO_MIGRATE` | `true` | Run pending migrations on startup when a `migrations/` folder exists. Non-breaking, so a failed migration is logged and the service still boots; the explicit `tina4 migrate` CLI stays fail-fast. Set `false` to disable (e.g. multi-instance production that migrates as a separate deploy step). |
 | `TINA4_DATABASE_FIREBIRD_PATH` | _(none)_ | Overrides the database path/alias parsed from `TINA4_DATABASE_URL` for Firebird. Useful for Windows backslash paths and split-config setups. |
 | `TINA4_ORM_PLURAL_TABLE_NAMES` | `false` | When `true`, the ORM pluralises class names into table names (`User` → `users`). Default keeps them singular. |
 
@@ -141,7 +141,7 @@ stdout is always on. With `TINA4_LOG_OUTPUT` unset, the log **file** is written 
 | `TINA4_CORS_METHODS` | `GET, POST, PUT, DELETE, PATCH, OPTIONS` | Allowed request methods. |
 | `TINA4_CORS_HEADERS` | `Content-Type,Authorization,X-Request-ID` | Allowed request headers. |
 | `TINA4_CORS_MAX_AGE` | `86400` | Preflight cache lifetime in seconds. |
-| `TINA4_CORS_CREDENTIALS` | `false` | Send `Access-Control-Allow-Credentials: true`. Opt-in — combining `true` with `TINA4_CORS_ORIGINS=*` is unsafe. |
+| `TINA4_CORS_CREDENTIALS` | `false` | Send `Access-Control-Allow-Credentials: true`. Opt-in; combining `true` with `TINA4_CORS_ORIGINS=*` is unsafe. |
 
 ### Security Headers
 
@@ -242,9 +242,9 @@ stdout is always on. With `TINA4_LOG_OUTPUT` unset, the log **file** is written 
 
 ---
 
-## AI / Dev-Admin (Python today — rolling out to all)
+## AI / Dev-Admin (Python today, rolling out to all)
 
-These power the dev dashboard's AI chat, RAG code search, and the MCP developer-tools endpoint. They are fully wired in Python today and rolling out to PHP, Ruby, and Node.js for parity. The dashboard AI defaults to a **local model served via Ollama** — nothing leaves your machine unless you point the URLs at a remote endpoint. If you run the hosted Tina4 AI services, put their URLs in your own `.env`.
+These power the dev dashboard's AI chat, RAG code search, and the MCP developer-tools endpoint. They are fully wired in Python today and rolling out to PHP, Ruby, and Node.js for parity. The dashboard AI defaults to a **local model served via Ollama**, so nothing leaves your machine unless you point the URLs at a remote endpoint. If you run the hosted Tina4 AI services, put their URLs in your own `.env`.
 
 | Variable | Default | Description |
 |----------|---------|-------------|

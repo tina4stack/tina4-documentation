@@ -1,6 +1,6 @@
 # Get Up and Running with PHP on Windows
 
-Good news — you **don't need WAMP, XAMPP, or any heavy installers** in 2025.  
+Good news: you **don't need WAMP, XAMPP, or any heavy installers** in 2025.  
 Just grab the official PHP binaries, unzip, and go!
 
 ## 1. Download the latest PHP zip (Thread-Safe version)
@@ -103,4 +103,4 @@ cd my-awesome-site
 composer start
 ```
 
-Open http://localhost:7145 — welcome to Tina4 on Windows! 🚀
+Open http://localhost:7145, welcome to Tina4 on Windows! 🚀

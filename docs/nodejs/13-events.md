@@ -246,7 +246,7 @@ Events.on("order.placed", (payload) => {
 }, 10);
 
 Events.on("order.placed", (payload) => {
-    console.log(`[Analytics] Recording order ${payload.orderId} — total $${payload.total}`);
+    console.log(`[Analytics] Recording order ${payload.orderId} - total $${payload.total}`);
 }, 0);
 ```
 

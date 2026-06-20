@@ -28,7 +28,7 @@ Verify the installation:
 tina4 --version
 ```
 
-On Windows the CLI lands in `%LOCALAPPDATA%\tina4` and goes first on your PATH, so the newest copy always wins. If `tina4 --version` still reports an old version, another `tina4.exe` sits earlier on a system PATH — the installer prints its location so you can remove it.
+On Windows the CLI lands in `%LOCALAPPDATA%\tina4` and goes first on your PATH, so the newest copy always wins. If `tina4 --version` still reports an old version, another `tina4.exe` sits earlier on a system PATH, and the installer prints its location so you can remove it.
 
 ## Check Your Environment
 
@@ -40,9 +40,9 @@ tina4 doctor
 
 This shows installed languages (Python, PHP, Ruby, Node.js), their versions, and whether the package managers (uv, composer, bundler, npm) are ready.
 
-## Set Everything Up — `tina4 setup`
+## Set Everything Up with `tina4 setup`
 
-The fastest path, especially if you're starting from a fresh machine. `tina4 setup` reads what `doctor` found, installs whatever is missing — the language runtime and git, through the OS package manager (Chocolatey on Windows, Homebrew on macOS) — installs the AI skills, scaffolds a ready-to-run project, and points you at it.
+The fastest path, especially if you're starting from a fresh machine. `tina4 setup` reads what `doctor` found, installs whatever is missing (the language runtime and git, through the OS package manager such as Chocolatey on Windows or Homebrew on macOS), installs the AI skills, scaffolds a ready-to-run project, and points you at it.
 
 ```bash
 tina4 setup
@@ -52,16 +52,16 @@ It's guided: it asks which language, which AI tool, where your projects folder i
 
 ### What to expect
 
-Setup asks the four questions, installs whatever `doctor` flagged as missing, scaffolds the project — including its own `CLAUDE.md` and `.mcp.json` — then hands you off based on the AI tool you picked:
+Setup asks the four questions, installs whatever `doctor` flagged as missing, scaffolds the project (including its own `CLAUDE.md` and `.mcp.json`), then hands you off based on the AI tool you picked:
 
-- **Claude Code** — opens a coding session right inside your new project, seeded with a first prompt. Start building.
-- **Claude Desktop, or no AI** — asks "Start it now?". Say yes and it runs `tina4 serve`, opening your app in the browser. Choose Claude Desktop and it comes to the front too; open a session there and point it at your project folder.
+- **Claude Code**: opens a coding session right inside your new project, seeded with a first prompt. Start building.
+- **Claude Desktop, or no AI**: asks "Start it now?". Say yes and it runs `tina4 serve`, opening your app in the browser. Choose Claude Desktop and it comes to the front too; open a session there and point it at your project folder.
 
 Either way you land on a running app with the skills installed. From here, you build.
 
 Prefer to do it by hand? Skip to **Create a Project** below.
 
-## Skills — make your AI assistant fluent in Tina4
+## Skills: make your AI assistant fluent in Tina4
 
 Tina4 ships two AI **skills**: `tina4-developer` (backend) and `tina4-js` (frontend). They are the source of truth for the framework's patterns, so Claude (Code or Desktop) builds correctly instead of guessing.
 

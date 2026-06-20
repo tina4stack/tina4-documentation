@@ -32,7 +32,7 @@ Each call emits a structured log line:
 {"timestamp":"2026-04-02T08:12:01.238Z","level":"CRITICAL","message":"Database unreachable","host":"db-primary","retries":5}
 ```
 
-The levels rank from lowest to highest: `debug` (0), `info` (1), `warning` (2), `error` (3), `critical` (4). `critical` sits at the top. It is its own level — never a relabelled `error`. The console renders it magenta so it stands out from the red of `error`.
+The levels rank from lowest to highest: `debug` (0), `info` (1), `warning` (2), `error` (3), `critical` (4). `critical` sits at the top. It is its own level, never a relabelled `error`. The console renders it magenta so it stands out from the red of `error`.
 
 | Level | Use for |
 |-------|---------|
@@ -78,7 +78,7 @@ TINA4_LOG_LEVEL=warn
 
 ## 4. Checking the Current Level
 
-Sometimes the context you want to log is expensive to build — a full state snapshot, a serialized request body, a diff of two large objects. Building it only to have `Log.debug` discard it because the console level is `info` wastes work on every call.
+Sometimes the context you want to log is expensive to build: a full state snapshot, a serialized request body, a diff of two large objects. Building it only to have `Log.debug` discard it because the console level is `info` wastes work on every call.
 
 `Log.isEnabled` answers the question before you pay the cost: would a message at this level clear the configured console threshold?
 
@@ -94,7 +94,7 @@ if (Log.isEnabled("debug")) {
 
 ```typescript
 // With TINA4_LOG_LEVEL=info
-Log.isEnabled("debug");    // false — debug is below the threshold
+Log.isEnabled("debug");    // false - debug is below the threshold
 Log.isEnabled("info");     // true
 Log.isEnabled("warning");  // true
 Log.isEnabled("error");    // true
@@ -104,7 +104,7 @@ Log.isEnabled("INFO");     // true
 Log.isEnabled("Debug");    // false
 ```
 
-`critical` follows the same rule as every other level. It is priority 4 — above `error` at 3 — so it clears the threshold wherever `error` does, and at the strictest `critical` setting too. No toggle gates it:
+`critical` follows the same rule as every other level. It is priority 4 (above `error` at 3), so it clears the threshold wherever `error` does, and at the strictest `critical` setting too. No toggle gates it:
 
 ```typescript
 // With TINA4_LOG_LEVEL=info
@@ -112,16 +112,16 @@ Log.isEnabled("critical");  // true
 
 // With TINA4_LOG_LEVEL=error
 Log.isEnabled("error");     // true
-Log.isEnabled("critical");  // true — critical outranks error
+Log.isEnabled("critical");  // true - critical outranks error
 
 // With TINA4_LOG_LEVEL=critical
 Log.isEnabled("error");     // false
-Log.isEnabled("critical");  // true — only critical clears this bar
+Log.isEnabled("critical");  // true - only critical clears this bar
 ```
 
 ### isEnabled reflects console visibility, not the file sink
 
-`isEnabled` tells you whether a message would reach **stdout**. It says nothing about the log file. The file sink records **every** level regardless of `TINA4_LOG_LEVEL` — that's the raw, unfiltered audit trail. So a `debug` line you skip with `if (Log.isEnabled("debug"))` is a line you also skip writing to the file. Use `isEnabled` to gate expensive payload construction, not to decide what gets persisted: if you call `Log.debug`, it lands in the file whether or not the console shows it.
+`isEnabled` tells you whether a message would reach **stdout**. It says nothing about the log file. The file sink records **every** level regardless of `TINA4_LOG_LEVEL`: that's the raw, unfiltered audit trail. So a `debug` line you skip with `if (Log.isEnabled("debug"))` is a line you also skip writing to the file. Use `isEnabled` to gate expensive payload construction, not to decide what gets persisted: if you call `Log.debug`, it lands in the file whether or not the console shows it.
 
 ---
 
@@ -225,20 +225,20 @@ Search your log aggregator for `requestId` to see every log line from that reque
 
 ## 8. File Output: Dev Writes a File, Production Is stdout-Only
 
-stdout is always on. The logger writes a `logs/tina4.log` file too — but only in development. In production, the logger is stdout-only.
+stdout is always on. The logger writes a `logs/tina4.log` file too, but only in development. In production, the logger is stdout-only.
 
 The rule is simple. When `TINA4_LOG_OUTPUT` is unset (the default), the framework checks `TINA4_DEBUG`:
 
 - **Development** (`TINA4_DEBUG` truthy): logs go to stdout **and** to `logs/tina4.log`.
 - **Production / containers** (`TINA4_DEBUG` unset or falsy): logs go to stdout **only**. No file.
 
-Why no file in production? A log file inside a container writes to the container's writable layer and grows on disk. The platform — Docker, Kubernetes, your process manager — already captures PID 1 stdout. That's where production logs belong. Writing a file as well bloats the image layer and the disk for no gain. This follows the 12-factor rule: treat logs as a stream, let the platform route it.
+Why no file in production? A log file inside a container writes to the container's writable layer and grows on disk. The platform (Docker, Kubernetes, your process manager) already captures PID 1 stdout. That's where production logs belong. Writing a file as well bloats the image layer and the disk for no gain. This follows the 12-factor rule: treat logs as a stream, let the platform route it.
 
 ```bash
-# Development — stdout + logs/tina4.log
+# Development - stdout + logs/tina4.log
 TINA4_DEBUG=true
 
-# Production — stdout only, no file (the default with TINA4_DEBUG off)
+# Production - stdout only, no file (the default with TINA4_DEBUG off)
 # (nothing to set)
 ```
 
@@ -257,7 +257,7 @@ TINA4_LOG_OUTPUT=file
 TINA4_LOG_FILE=/var/log/myapp/app.log
 ```
 
-So you control the file three ways: leave it to the default (file in dev, none in production), set `TINA4_LOG_OUTPUT` to `file` or `both`, or point `TINA4_LOG_FILE` at a path. The last two override the default — an explicit choice beats the environment guess every time.
+So you control the file three ways: leave it to the default (file in dev, none in production), set `TINA4_LOG_OUTPUT` to `file` or `both`, or point `TINA4_LOG_FILE` at a path. The last two override the default; an explicit choice beats the environment guess every time.
 
 ---
 

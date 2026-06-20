@@ -162,7 +162,7 @@ tina4 serve
 ```
   Tina4 Python v3.11.12
   HTTP server running at http://0.0.0.0:7146
-  File watcher active — press Ctrl+C to stop
+  File watcher active - press Ctrl+C to stop
 ```
 
 Live reload watches:
@@ -173,7 +173,7 @@ Live reload watches:
 
 ### How It Works
 
-The `tina4` Rust CLI is the sole file watcher for the whole Tina4 stack — Python, PHP, Ruby, and Node.js all share it. There is no framework-side watcher (the old `dev_reload.py` was removed in 3.11.x).
+The `tina4` Rust CLI is the sole file watcher for the whole Tina4 stack: Python, PHP, Ruby, and Node.js all share it. There is no framework-side watcher (the old `dev_reload.py` was removed in 3.11.x).
 
 ```
  ┌────────────┐  POST /__dev/api/reload   ┌────────────┐   WS /__dev_reload    ┌─────────┐
@@ -182,14 +182,14 @@ The `tina4` Rust CLI is the sole file watcher for the whole Tina4 stack — Pyth
  └────────────┘                           └────────────┘   GET /__dev/api/mtime└─────────┘
 ```
 
-1. The CLI watches `src/`, `migrations/`, `.env` using the `notify` crate. Events are filtered to real source changes — metadata/access events, `__pycache__`, `.git`, `node_modules`, `logs`, `.log`/`.db*`/`.pyc`/`.swp` files are ignored. A real mtime check also defeats overlayfs / polling-mode spurious events (Podman, distrobox).
+1. The CLI watches `src/`, `migrations/`, `.env` using the `notify` crate. Events are filtered to real source changes: metadata/access events, `__pycache__`, `.git`, `node_modules`, `logs`, `.log`/`.db*`/`.pyc`/`.swp` files are ignored. A real mtime check also defeats overlayfs / polling-mode spurious events (Podman, distrobox).
 2. On a real change, the CLI POSTs `/__dev/api/reload` to the framework. The server keeps running.
 3. The framework bumps an in-memory reload counter and broadcasts `{type: "reload"}` over WebSocket at `/__dev_reload`. `GET /__dev/api/mtime` returns the counter for browsers using the polling fallback.
 4. The dev-toolbar script in your page reloads the browser. SCSS/CSS changes are signalled as `type: "css"` and swap the stylesheet without a full reload.
 
 The reload happens in under a second. Edit code. Switch to the browser. The changes are already there.
 
-If you run without the Rust CLI (e.g. Docker), set `TINA4_OVERRIDE_CLIENT=true` — there is no automatic reload in that mode.
+If you run without the Rust CLI (e.g. Docker), set `TINA4_OVERRIDE_CLIENT=true`, since there is no automatic reload in that mode.
 
 ---
 

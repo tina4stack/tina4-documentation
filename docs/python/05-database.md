@@ -636,7 +636,7 @@ This runs the same migration engine as the CLI, so the result matches `tina4 mig
 Startup migration is **non-breaking**. If a migration fails, Tina4 logs the error and the service still boots:
 
 ```
-Startup auto-migration failed: <error> — the service is starting anyway. Run `tina4 migrate` to retry.
+Startup auto-migration failed: <error> - the service is starting anyway. Run `tina4 migrate` to retry.
 ```
 
 A successful run logs how many it applied:
@@ -645,7 +645,7 @@ A successful run logs how many it applied:
 Applied 2 pending migration(s) on startup
 ```
 
-The explicit `tina4 migrate` CLI stays **fail-fast** — it exits non-zero on failure, so CI keeps a real exit code to gate on. Only the startup hook swallows the error to keep the service available.
+The explicit `tina4 migrate` CLI stays **fail-fast**: it exits non-zero on failure, so CI keeps a real exit code to gate on. Only the startup hook swallows the error to keep the service available.
 
 Set `TINA4_AUTO_MIGRATE=false` (or `0`, `no`, `off`) to turn the hook off. The default is `true`.
 

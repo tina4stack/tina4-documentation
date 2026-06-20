@@ -1,6 +1,6 @@
 # Development Mode
 
-Tina4 provides a rich developer experience out of the box. When running in debug mode, you get browser live-reload, a rich error overlay, hot code patching, and CSS-only reloads — all zero-config.
+Tina4 provides a rich developer experience out of the box. When running in debug mode, you get browser live-reload, a rich error overlay, hot code patching, and CSS-only reloads, all zero-config.
 
 ::: tip Hot Tips
 - Set `TINA4_DEBUG_LEVEL=DEBUG` or `ALL` in your `.env` for full dev features
@@ -21,10 +21,10 @@ Control the framework's behavior with the `TINA4_DEBUG_LEVEL` environment variab
 | `ERROR` | No | No | No | Errors only |
 
 ```bash
-# .env — development (default)
+# .env - development (default)
 TINA4_DEBUG_LEVEL=DEBUG
 
-# .env — production
+# .env - production
 TINA4_DEBUG_LEVEL=INFO
 ```
 
@@ -32,10 +32,10 @@ TINA4_DEBUG_LEVEL=INFO
 
 In debug mode, Tina4 automatically watches your `src/` directory for changes and refreshes the browser via WebSocket:
 
-- **Templates** (`.twig`, `.html`) — full page refresh on save
-- **Python routes** (`.py`) — hot-patched via jurigged, then browser refreshes
-- **SCSS/Sass** (`.scss`, `.sass`) — CSS-only reload (no full page refresh)
-- **JavaScript & CSS** (`.js`, `.css`) — full page refresh
+- **Templates** (`.twig`, `.html`): full page refresh on save
+- **Python routes** (`.py`): hot-patched via jurigged, then browser refreshes
+- **SCSS/Sass** (`.scss`, `.sass`): CSS-only reload (no full page refresh)
+- **JavaScript & CSS** (`.js`, `.css`): full page refresh
 
 Changes are debounced (100ms) so rapid saves don't cause multiple reloads.
 
@@ -50,7 +50,7 @@ A small toast notification appears briefly in the bottom-right corner when the D
 3. The browser receives the message and either reloads the page or refreshes stylesheets
 4. A `<script>` tag is automatically injected before `</body>` in every HTML response
 
-No configuration needed — just start in debug mode and it works.
+No configuration needed, just start in debug mode and it works.
 
 ## Hot Code Patching with Jurigged
 
@@ -79,9 +79,9 @@ When a route throws an exception in debug mode, Tina4 displays a rich error over
 
 The overlay features:
 - **500 badge** with the request URL
-- **Syntax-highlighted Python traceback** — file paths in blue, line numbers in yellow, error types in red
+- **Syntax-highlighted Python traceback**: file paths in blue, line numbers in yellow, error types in red
 - **Dismiss** with the Escape key, the X button, or clicking outside the panel
-- **Auto-reload hint** — fix the error and save, the browser refreshes automatically
+- **Auto-reload hint**: fix the error and save, the browser refreshes automatically
 
 ### AI-Friendly Errors
 

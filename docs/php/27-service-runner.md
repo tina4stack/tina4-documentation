@@ -353,7 +353,7 @@ The web service and workers service share the same image. They run independently
 
 **Cause:** Variables accumulate in the loop. Large result sets are never freed.
 
-**Fix:** `unset()` large variables inside the loop. Call `gc_collect_cycles()` periodically. Keep loop iterations small — process one job at a time, not thousands.
+**Fix:** `unset()` large variables inside the loop. Call `gc_collect_cycles()` periodically. Keep loop iterations small, process one job at a time, not thousands.
 
 ### 3. Database connection dropped
 

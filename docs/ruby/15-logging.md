@@ -16,11 +16,11 @@ Five levels, in order of increasing severity:
 
 | Level | Method | When to use |
 |-------|--------|-------------|
-| DEBUG | `Tina4::Log.debug` | Detailed trace — request internals, query params, timings |
-| INFO | `Tina4::Log.info` | Normal operations — request received, user logged in |
-| WARNING | `Tina4::Log.warning` | Something unexpected but recoverable — deprecated API called |
-| ERROR | `Tina4::Log.error` | Something broke — a request failed |
-| CRITICAL | `Tina4::Log.critical` | The highest severity — the app cannot continue (data loss, hard outage) |
+| DEBUG | `Tina4::Log.debug` | Detailed trace: request internals, query params, timings |
+| INFO | `Tina4::Log.info` | Normal operations: request received, user logged in |
+| WARNING | `Tina4::Log.warning` | Something unexpected but recoverable: deprecated API called |
+| ERROR | `Tina4::Log.error` | Something broke: a request failed |
+| CRITICAL | `Tina4::Log.critical` | The highest severity: the app cannot continue (data loss, hard outage) |
 
 `CRITICAL` is the top severity: `debug < info < warning < error < critical`. Like every other level it always emits, gated only by `TINA4_LOG_LEVEL`. On the console it renders in magenta.
 
@@ -177,7 +177,7 @@ One JSON object per line. Compatible with Datadog, Elastic, CloudWatch, and any 
 
 ## 10. Writing to a File
 
-stdout is always on. The log **file** follows your environment by default. In development — `TINA4_DEBUG` set to a truthy value — Tina4 writes `logs/tina4.log` and mirrors every line to stdout. In production, and inside containers, it writes to stdout only. No file. A log file in a container just bloats the writable layer and the disk, and the 12-factor approach wants logs on stdout so the platform captures them.
+stdout is always on. The log **file** follows your environment by default. In development (`TINA4_DEBUG` set to a truthy value) Tina4 writes `logs/tina4.log` and mirrors every line to stdout. In production, and inside containers, it writes to stdout only. No file. A log file in a container just bloats the writable layer and the disk, and the 12-factor approach wants logs on stdout so the platform captures them.
 
 Need a file in production anyway? Ask for one. Set `TINA4_LOG_OUTPUT` to `file` or `both`, or name a path with `TINA4_LOG_FILE`:
 
@@ -186,13 +186,13 @@ TINA4_LOG_OUTPUT=both
 TINA4_LOG_FILE=logs/app.log
 ```
 
-An explicit `TINA4_LOG_OUTPUT` or `TINA4_LOG_FILE` always wins — it forces a file regardless of `TINA4_DEBUG`. With `file` the logger writes the file only; with `both` it writes the file and stdout together. Log rotation is handled natively by Ruby's stdlib `Logger` (`TINA4_LOG_ROTATE_SIZE` / `TINA4_LOG_ROTATE_KEEP`).
+An explicit `TINA4_LOG_OUTPUT` or `TINA4_LOG_FILE` always wins: it forces a file regardless of `TINA4_DEBUG`. With `file` the logger writes the file only; with `both` it writes the file and stdout together. Log rotation is handled natively by Ruby's stdlib `Logger` (`TINA4_LOG_ROTATE_SIZE` / `TINA4_LOG_ROTATE_KEEP`).
 
 ---
 
 ## 11. Checking the Current Level
 
-Tina4 filters by level internally: call `Tina4::Log.debug` (or `info` / `warning` / `error`) and the logger emits the line only when `TINA4_LOG_LEVEL` allows it — no manual level check is needed.
+Tina4 filters by level internally: call `Tina4::Log.debug` (or `info` / `warning` / `error`) and the logger emits the line only when `TINA4_LOG_LEVEL` allows it; no manual level check is needed.
 
 When you want to skip an expensive computation that only feeds a log line, ask first with `Tina4::Log.enabled?`:
 
@@ -202,13 +202,13 @@ if Tina4::Log.enabled?(:debug)
 end
 ```
 
-`enabled?` returns `true` when a message at that level would reach the console, and `false` when `TINA4_LOG_LEVEL` would drop it. With `TINA4_LOG_LEVEL=info`, `enabled?(:debug)` is `false` while `enabled?(:info)`, `enabled?(:warning)`, `enabled?(:error)`, and `enabled?(:critical)` are all `true`. The level accepts a String or Symbol and is case-insensitive — `enabled?("INFO")`, `enabled?(:info)`, and `enabled?("Info")` are equivalent.
+`enabled?` returns `true` when a message at that level would reach the console, and `false` when `TINA4_LOG_LEVEL` would drop it. With `TINA4_LOG_LEVEL=info`, `enabled?(:debug)` is `false` while `enabled?(:info)`, `enabled?(:warning)`, `enabled?(:error)`, and `enabled?(:critical)` are all `true`. The level accepts a String or Symbol and is case-insensitive: `enabled?("INFO")`, `enabled?(:info)`, and `enabled?("Info")` are equivalent.
 
 `:critical` is a first-class top level (severity 4, above `:error`), not an alias for error. It passes the threshold at every level except `none`, so `enabled?(:critical)` is `true` even when `TINA4_LOG_LEVEL=error`.
 
 It reuses the exact threshold the logger itself applies, so the predicate can never disagree with what actually prints.
 
-**Caveat — this reflects console visibility only.** The log file records every level regardless of `TINA4_LOG_LEVEL` (see [Section 10](#_10-writing-to-a-file)). `enabled?` answers "would this show on the console?", not "would this be logged at all?" — a `:debug` entry still lands in the file even when `enabled?(:debug)` is `false`.
+**Caveat: this reflects console visibility only.** The log file records every level regardless of `TINA4_LOG_LEVEL` (see [Section 10](#_10-writing-to-a-file)). `enabled?` answers "would this show on the console?", not "would this be logged at all?": a `:debug` entry still lands in the file even when `enabled?(:debug)` is `false`.
 
 ---
 

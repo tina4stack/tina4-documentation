@@ -554,7 +554,7 @@ async def generate():
         if has_new_data():
             yield f"data: {json.dumps(get_data())}\n\n"
         else:
-            yield ": heartbeat\n\n"  # SSE comment (colon prefix) — ignored by EventSource
+            yield ": heartbeat\n\n"  # SSE comment (colon prefix) - ignored by EventSource
         counter += 1
         await asyncio.sleep(5)
 ```

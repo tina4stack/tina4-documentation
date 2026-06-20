@@ -145,11 +145,11 @@ Docker is the most portable deployment path. Your app runs the same way on your 
 Tina4 Python provides an official Docker Hub base image: `tina4stack/tina4-python:v3`. It is a lean, Alpine-based image (~56MB) with Python 3.13, SQLite, and the Tina4 framework pre-installed. Your app Dockerfile extends it and adds only your application code.
 
 The base image includes these environment variables pre-configured:
-- `TINA4_OVERRIDE_CLIENT=true` — bypasses the CLI guard for Docker
-- `TINA4_DEBUG=false` — production mode by default
-- `PYTHONUNBUFFERED=1` — ensures logs appear in `docker logs`
-- `TINA4_NO_BROWSER=true` — prevents browser auto-open attempts
-- `HOST=0.0.0.0` and `PORT=7146` — server binds to all interfaces
+- `TINA4_OVERRIDE_CLIENT=true`: bypasses the CLI guard for Docker
+- `TINA4_DEBUG=false`: production mode by default
+- `PYTHONUNBUFFERED=1`: ensures logs appear in `docker logs`
+- `TINA4_NO_BROWSER=true`: prevents browser auto-open attempts
+- `HOST=0.0.0.0` and `PORT=7146`: server binds to all interfaces
 
 ### Dockerfile
 
@@ -269,7 +269,7 @@ CMD ["python", "app.py"]
 ```dockerfile
 FROM tina4stack/tina4-python:v3
 WORKDIR /app
-# Pure Python driver — no system dependencies needed
+# Pure Python driver - no system dependencies needed
 RUN python -m pip install --no-cache-dir firebird-driver
 COPY app.py .
 COPY .env .

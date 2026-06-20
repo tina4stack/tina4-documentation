@@ -2,7 +2,7 @@
 
 ## 1. When You Need SOAP
 
-Most new APIs use REST and JSON. But enterprise systems — banks, insurers, government portals, ERP platforms — often expose SOAP services. You need to interoperate. Sometimes you are also required to expose a SOAP interface for an existing client that cannot change.
+Most new APIs use REST and JSON. But enterprise systems, banks, insurers, government portals, ERP platforms, often expose SOAP services. You need to interoperate. Sometimes you are also required to expose a SOAP interface for an existing client that cannot change.
 
 Tina4 provides a `WSDL` base class. Extend it. Annotate methods with the `#[WSDLOperation([...])]` PHP attribute. The WSDL document is generated automatically and served at `?wsdl`. Your service handles both SOAP 1.1 and SOAP 1.2.
 
@@ -10,7 +10,7 @@ Tina4 provides a `WSDL` base class. Extend it. Annotate methods with the `#[WSDL
 
 ## 2. Creating a SOAP Service
 
-Extend `Tina4\WSDL`. Each public method marked with the `#[WSDLOperation([...])]` attribute becomes a SOAP operation. The attribute's array declares the response shape — a map of field names to XSD types.
+Extend `Tina4\WSDL`. Each public method marked with the `#[WSDLOperation([...])]` attribute becomes a SOAP operation. The attribute's array declares the response shape, a map of field names to XSD types.
 
 ```php
 <?php
@@ -50,13 +50,13 @@ class CalculatorService extends WSDL
 }
 ```
 
-Each operation is a public method on the subclass. The `#[WSDLOperation([...])]` PHP attribute declares the response shape — a map of field names to XSD types. The method returns an associative array whose keys match the attribute's spec. Parameter types come from PHP's native type hints (`float`, `int`, `string`, `bool`).
+Each operation is a public method on the subclass. The `#[WSDLOperation([...])]` PHP attribute declares the response shape, a map of field names to XSD types. The method returns an associative array whose keys match the attribute's spec. Parameter types come from PHP's native type hints (`float`, `int`, `string`, `bool`).
 
 ---
 
 ## 3. Registering the Service
 
-Mount the service on a URL path. The same handler answers both the WSDL document request (`GET ?wsdl`) and SOAP invocations (`POST`) — `(new CalculatorService($request))->handle()` inspects the request and returns the right thing.
+Mount the service on a URL path. The same handler answers both the WSDL document request (`GET ?wsdl`) and SOAP invocations (`POST`), `(new CalculatorService($request))->handle()` inspects the request and returns the right thing.
 
 ```php
 <?php
@@ -72,8 +72,8 @@ Router::any('/calculator', function (Request $request, Response $response) {
 
 The service is now live at:
 
-- `POST /calculator` — accepts SOAP envelopes, dispatches to the matching `#[WSDLOperation]` method
-- `GET /calculator?wsdl` — returns the auto-generated WSDL document
+- `POST /calculator`, accepts SOAP envelopes, dispatches to the matching `#[WSDLOperation]` method
+- `GET /calculator?wsdl`, returns the auto-generated WSDL document
 
 ---
 
@@ -249,7 +249,7 @@ Tina4 reads PHP 8 type hints on parameters to generate XSD request types, and th
 | `bool` / `'boolean'` | `xsd:boolean` |
 | `array` (parameter) | `xsd:anyType` |
 
-Always use explicit PHP 8 type declarations on method parameters. The response field names AND types come from the attribute — the method returns an associative array matching the attribute's spec.
+Always use explicit PHP 8 type declarations on method parameters. The response field names AND types come from the attribute, the method returns an associative array matching the attribute's spec.
 
 ---
 

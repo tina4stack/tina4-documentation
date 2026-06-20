@@ -2,9 +2,9 @@
 
 ## 1. Decouple Everything with Events
 
-Your order route creates an order, sends a confirmation email, deducts inventory, and notifies the warehouse. Six hundred lines of intertwined logic. Add a new requirement — loyalty points — and you are touching the order route again.
+Your order route creates an order, sends a confirmation email, deducts inventory, and notifies the warehouse. Six hundred lines of intertwined logic. Add a new requirement, loyalty points, and you are touching the order route again.
 
-Events flip this around. The order route fires `order.placed` and walks away. Separate handlers pick it up — one sends the email, another deducts inventory, a third notifies the warehouse. None of them know about each other.
+Events flip this around. The order route fires `order.placed` and walks away. Separate handlers pick it up: one sends the email, another deducts inventory, a third notifies the warehouse. None of them know about each other.
 
 Tina4's event system is synchronous by default and supports async via `emit_async`. No broker required.
 
@@ -141,7 +141,7 @@ Stock is validated before payment is charged, payment is charged before the conf
 
 ## 7. Async Event Support with emit_async
 
-For handlers that do I/O — sending HTTP requests, writing to a database, publishing to a message broker — use `emit_async` with async handlers:
+For handlers that do I/O, such as sending HTTP requests, writing to a database, or publishing to a message broker, use `emit_async` with async handlers:
 
 ```python
 import asyncio

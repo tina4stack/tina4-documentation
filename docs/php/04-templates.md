@@ -551,7 +551,7 @@ Filters transform values. Apply them with `|`:
 | `date("Y-m-d")` | `{{ created \| date("Y-m-d") }}` | Format a date value |
 | `format(val)` | `{{ "%.2f" \| format(price) }}` | Format string with value (sprintf-style) |
 | `data_uri` | `{{ content \| data_uri }}` | Convert to a data URI string |
-| `dump` | `{{ var \| dump }}` or `{{ dump(var) }}` | Debug output — gated on `TINA4_DEBUG=true` (see [Dumping Values](#dumping-values-for-debugging)) |
+| `dump` | `{{ var \| dump }}` or `{{ dump(var) }}` | Debug output, gated on `TINA4_DEBUG=true` (see [Dumping Values](#dumping-values-for-debugging)) |
 | `form_token` | `{{ form_token() }}` | Generate a CSRF hidden input with token |
 | `formTokenValue` | `{{ formTokenValue("context") }}` | Return just the raw JWT token string |
 | `to_json` | `{{ data \| to_json }}` | JSON-encode a value (safe, no double-escaping) |
@@ -577,7 +577,7 @@ The `dump` helper lets you inspect any variable mid-template. Two interchangeabl
 {{ dump($user) }}
 ```
 
-Both produce the same `<pre>`-wrapped, HTML-escaped `var_dump()` of the value. Handles arrays, objects, class instances, and cyclic references — PHP's `var_dump` prints `*RECURSION*` for back-edges.
+Both produce the same `<pre>`-wrapped, HTML-escaped `var_dump()` of the value. Handles arrays, objects, class instances, and cyclic references, PHP's `var_dump` prints `*RECURSION*` for back-edges.
 
 ```html
 {{ dump($order) }}
@@ -597,10 +597,10 @@ Both produce the same `<pre>`-wrapped, HTML-escaped `var_dump()` of the value. H
 </div>
 
 ```ini
-# .env — dev
+# .env - dev
 TINA4_DEBUG=true    # dump() outputs the value
 
-# .env — production
+# .env - production
 TINA4_DEBUG=false   # dump() is a no-op
 ```
 

@@ -2,7 +2,7 @@
 
 Every database query starts as a string. Small queries stay readable. But the moment you add optional filters, pagination, sorting, and joins, string concatenation turns your code into an unreadable mess of `if` statements and f-strings. One missed space, one misplaced comma, and the query breaks.
 
-QueryBuilder solves this. It gives you a fluent, chainable API that assembles SQL for you. You describe what you want — columns, conditions, joins, ordering — and QueryBuilder produces the correct SQL string with properly separated parameters. No concatenation. No injection risk. No debugging whitespace.
+QueryBuilder solves this. It gives you a fluent, chainable API that assembles SQL for you. You describe what you want (columns, conditions, joins, ordering) and QueryBuilder produces the correct SQL string with properly separated parameters. No concatenation. No injection risk. No debugging whitespace.
 
 ---
 
@@ -16,7 +16,7 @@ from tina4_python.query_builder import QueryBuilder
 qb = QueryBuilder.from_table("users", db)
 ```
 
-The first argument is the table name. The second is your database connection — the same `Database` object you use everywhere else. If you omit the database, QueryBuilder will fall back to the global ORM database (set via `bind_database()`). If neither exists, it raises a `RuntimeError` when you try to execute.
+The first argument is the table name. The second is your database connection, the same `Database` object you use everywhere else. If you omit the database, QueryBuilder will fall back to the global ORM database (set via `bind_database()`). If neither exists, it raises a `RuntimeError` when you try to execute.
 
 `from_table()` returns a fresh `QueryBuilder` instance. Every method you call on it returns the same instance, so you can chain.
 
@@ -31,7 +31,7 @@ qb = QueryBuilder.from_table("users", db) \
     .select("id", "name", "email")
 ```
 
-Pass column names as separate arguments — not a list. Each call to `select()` replaces the previous column selection.
+Pass column names as separate arguments, not a list. Each call to `select()` replaces the previous column selection.
 
 ```python
 # This selects only "email", not "id", "name", "email"
@@ -113,7 +113,7 @@ INNER JOIN users ON users.id = orders.user_id
 WHERE orders.total > ?
 ```
 
-For optional relationships — where a matching row might not exist — use `left_join()`.
+For optional relationships, where a matching row might not exist, use `left_join()`.
 
 ```python
 result = QueryBuilder.from_table("users", db) \
@@ -288,7 +288,7 @@ Output:
 SELECT id, name FROM users WHERE active = ? ORDER BY name ASC
 ```
 
-Note that `to_sql()` does not include `LIMIT` or `OFFSET` in the string. Those values are passed as arguments to `db.fetch()` at execution time. The SQL string shows everything else — columns, joins, conditions, grouping, having, and ordering.
+Note that `to_sql()` does not include `LIMIT` or `OFFSET` in the string. Those values are passed as arguments to `db.fetch()` at execution time. The SQL string shows everything else: columns, joins, conditions, grouping, having, and ordering.
 
 `to_sql()` does not execute anything. It does not require a database connection. Use it freely for logging and debugging.
 
@@ -298,7 +298,7 @@ Note that `to_sql()` does not include `LIMIT` or `OFFSET` in the string. Those v
 
 Four methods execute the query against the database.
 
-### get() — Multiple rows
+### get() - Multiple rows
 
 Returns a `DatabaseResult` object. Use `.records` for the list of dicts, `.to_list()` for a plain list, or iterate directly.
 
@@ -311,7 +311,7 @@ for row in result:
     print(row["name"])
 ```
 
-### first() — Single row
+### first() - Single row
 
 Returns a single dict, or `None` if no rows match.
 
@@ -324,7 +324,7 @@ if user:
     print(user["name"])
 ```
 
-### count() — Row count
+### count() - Row count
 
 Returns an integer. Internally rewrites the select to `COUNT(*) as cnt` and reads the result.
 
@@ -336,7 +336,7 @@ total = QueryBuilder.from_table("orders", db) \
 print(f"{total} pending orders")
 ```
 
-### exists() — Boolean check
+### exists() - Boolean check
 
 Returns `True` if at least one row matches, `False` otherwise. Calls `count()` under the hood.
 
@@ -349,7 +349,7 @@ if QueryBuilder.from_table("users", db) \
 
 ---
 
-## 10. Chaining — Building Complex Queries
+## 10. Chaining - Building Complex Queries
 
 Every method returns `self`, so you can chain everything into a single expression. Here is a realistic example that combines most features.
 
@@ -415,7 +415,7 @@ If your ORM models are bound to a database via `bind_database()`, QueryBuilder c
 ```python
 from tina4_python.query_builder import QueryBuilder
 
-# No db argument — uses the global ORM database
+# No db argument - uses the global ORM database
 result = QueryBuilder.from_table("users") \
     .where("active = ?", [1]) \
     .get()
@@ -427,17 +427,17 @@ This means you can use QueryBuilder in the same files as your ORM models without
 
 ### When to use QueryBuilder vs ORM
 
-Use the ORM when you are working with a single model — loading, saving, deleting records. The ORM gives you objects with attributes.
+Use the ORM when you are working with a single model: loading, saving, deleting records. The ORM gives you objects with attributes.
 
 Use QueryBuilder when you need joins across tables, aggregations, complex filtering, or you want a `DatabaseResult` instead of model instances.
 
 ```python
-# ORM — single model operations
+# ORM - single model operations
 user = User.find(1)
 user.name = "Alice"
 user.save()
 
-# QueryBuilder — cross-table query with joins
+# QueryBuilder - cross-table query with joins
 result = QueryBuilder.from_table("users", db) \
     .select("users.name", "COUNT(orders.id) as order_count") \
     .join("orders", "orders.user_id = users.id") \
@@ -519,10 +519,10 @@ cursor = collection.find(
 **Fix:** Pass all columns in a single `select()` call.
 
 ```python
-# Wrong — only selects "email"
+# Wrong - only selects "email"
 qb.select("id", "name").select("email")
 
-# Right — selects all three
+# Right - selects all three
 qb.select("id", "name", "email")
 ```
 
@@ -599,7 +599,7 @@ async def search_products(request, response):
         ) \
         .left_join("categories", "categories.id = products.category_id")
 
-    # Count query — same filters, no join needed for count
+    # Count query - same filters, no join needed for count
     count_qb = QueryBuilder.from_table("products", db)
 
     # Apply filters to both queries
@@ -619,7 +619,7 @@ async def search_products(request, response):
         qb.where("products.price <= ?", [float(max_price)])
         count_qb.where("products.price <= ?", [float(max_price)])
 
-    # Sorting — validate column name to prevent injection
+    # Sorting - validate column name to prevent injection
     sort_col = request.params.get("sort", "name")
     if sort_col not in ALLOWED_SORT_COLUMNS:
         sort_col = "name"
@@ -646,4 +646,4 @@ async def search_products(request, response):
     })
 ```
 
-The sort column is validated against a whitelist. The direction is constrained to `ASC` or `DESC`. User input never touches the SQL directly — it either goes through `?` placeholders or gets checked against known-safe values. QueryBuilder handles the assembly. The route handler stays readable.
+The sort column is validated against a whitelist. The direction is constrained to `ASC` or `DESC`. User input never touches the SQL directly: it either goes through `?` placeholders or gets checked against known-safe values. QueryBuilder handles the assembly. The route handler stays readable.

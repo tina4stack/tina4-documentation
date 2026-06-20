@@ -6,7 +6,7 @@ An AI chatbot types back one token at a time. A dashboard counter ticks up as or
 
 Server-Sent Events (SSE) is the browser's built-in streaming protocol. One-directional: server pushes, client listens. It reconnects automatically. It works over HTTP/2. It's simpler than WebSocket for every case where you don't need to send data back.
 
-NDJSON (Newline-Delimited JSON) is the same idea over a regular fetch response. One JSON object per line, streamed as the server generates them. This is how most AI APIs stream tokens — and it supports POST requests and custom headers, which SSE's EventSource does not.
+NDJSON (Newline-Delimited JSON) is the same idea over a regular fetch response. One JSON object per line, streamed as the server generates them. This is how most AI APIs stream tokens, and it supports POST requests and custom headers, which SSE's EventSource does not.
 
 tina4-js wraps both in a single module. One function call opens the stream. Six reactive signals track the state. A pipe function accumulates messages into your signals with a reducer. Auto-reconnect handles dropped connections.
 
@@ -16,10 +16,10 @@ tina4-js wraps both in a single module. One function call opens the stream. Six 
 
 The tina4-js SSE client provides:
 
-1. **Dual mode** — native EventSource for SSE, fetch+ReadableStream for NDJSON
-2. **Reactive signals** — `status`, `connected`, `lastMessage`, `lastEvent`, `error`, `reconnectCount`
-3. **Auto-reconnect** — exponential backoff, configurable attempts
-4. **Signal piping** — stream messages into signals with a reducer
+1. **Dual mode** - native EventSource for SSE, fetch+ReadableStream for NDJSON
+2. **Reactive signals** - `status`, `connected`, `lastMessage`, `lastEvent`, `error`, `reconnectCount`
+3. **Auto-reconnect** - exponential backoff, configurable attempts
+4. **Signal piping** - stream messages into signals with a reducer
 
 ```typescript
 import { sse } from 'tina4js';
@@ -111,8 +111,8 @@ const stream = sse.connect('/api/events');
 
 stream.status         // Signal<'connecting' | 'open' | 'closed' | 'reconnecting'>
 stream.connected      // Signal<boolean>
-stream.lastMessage    // Signal<unknown>  — last parsed message
-stream.lastEvent      // Signal<string | null>  — SSE event name or null
+stream.lastMessage    // Signal<unknown>  - last parsed message
+stream.lastEvent      // Signal<string | null>  - SSE event name or null
 stream.error          // Signal<Event | Error | null>
 stream.reconnectCount // Signal<number>
 ```

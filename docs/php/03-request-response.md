@@ -132,7 +132,7 @@ $request->cookies["preferences"] // "dark-mode"
 Uploaded files (section 7 covers this in detail):
 
 ```php
-$request->files["avatar"] // ["filename", "type", "size", "content"] — content is raw bytes
+$request->files["avatar"] // ["filename", "type", "size", "content"] - content is raw bytes
 ```
 
 ### Inspecting the Full Request
@@ -465,7 +465,7 @@ return $response
 
 ## 7. File Uploads
 
-Uploaded files land in `$request->files` as an associative array keyed by field name. Each entry has the file metadata plus the raw bytes — Tina4 does not write a temporary file to disk, so there is no `tmp_path`.
+Uploaded files land in `$request->files` as an associative array keyed by field name. Each entry has the file metadata plus the raw bytes, Tina4 does not write a temporary file to disk, so there is no `tmp_path`.
 
 ```php
 $file = $request->files["avatar"];
@@ -549,7 +549,7 @@ Router::post("/api/upload", function ($request, $response) {
         mkdir(dirname($destination), 0755, true);
     }
 
-    // Save the uploaded bytes — Tina4 stores them in $file["content"], not a temp file
+    // Save the uploaded bytes - Tina4 stores them in $file["content"], not a temp file
     file_put_contents($destination, $file["content"]);
 
     return $response->json([
@@ -848,7 +848,7 @@ Router::post("/api/images", function ($request, $response) {
         mkdir($uploadDir, 0755, true);
     }
 
-    // Save the uploaded bytes — Tina4 stores them in $file["content"], not a temp file
+    // Save the uploaded bytes - Tina4 stores them in $file["content"], not a temp file
     file_put_contents($destination, $file["content"]);
 
     return $response->json([

@@ -1236,7 +1236,7 @@ This tag is included in all the examples above but is easy to forget when creati
 
 ---
 
-## 14. HtmlElement — Programmatic HTML Builder
+## 14. HtmlElement - Programmatic HTML Builder
 
 Build HTML in PHP without string concatenation:
 

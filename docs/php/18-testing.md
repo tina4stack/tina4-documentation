@@ -606,7 +606,7 @@ class UserTest extends Test
 tina4 test
 ```
 
-`tina4 test` runs the full PHPUnit suite under `tests/`. For more targeted runs, invoke PHPUnit directly — the framework's `tina4 test` is a convenience wrapper that shells out to `vendor/bin/phpunit tests --verbose --color`.
+`tina4 test` runs the full PHPUnit suite under `tests/`. For more targeted runs, invoke PHPUnit directly, the framework's `tina4 test` is a convenience wrapper that shells out to `vendor/bin/phpunit tests --verbose --color`.
 
 ### Run a Specific Test File
 

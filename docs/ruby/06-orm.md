@@ -12,13 +12,13 @@ Picture a blog. Authors, posts, comments. Authors own many posts. Posts own many
 
 ## ORM at a Glance: Four Languages, One Shape
 
-The ORM does the same job in every Tina4 book. Define a model. Save it. Query it. Each language wears its own clothes — PHP uses typed properties, Python uses field class instances, Ruby uses a DSL, Node uses config objects — but the operations line up. If you know the API in one book, you can read the others.
+The ORM does the same job in every Tina4 book. Define a model. Save it. Query it. Each language wears its own clothes (PHP uses typed properties, Python uses field class instances, Ruby uses a DSL, Node uses config objects), but the operations line up. If you know the API in one book, you can read the others.
 
 ### Defining a Model
 
 The same `Post` model with `id`, `title`, `body`, and `created_at`:
 
-**Python** — field class instances on the class body:
+**Python** - field class instances on the class body:
 
 ```python
 from tina4_python.orm import ORM, IntegerField, StringField, DateTimeField
@@ -32,7 +32,7 @@ class Post(ORM):
     created_at = DateTimeField()
 ```
 
-**PHP** — native typed properties:
+**PHP** - native typed properties:
 
 ```php
 <?php
@@ -49,7 +49,7 @@ class Post extends ORM
 }
 ```
 
-**Ruby** — class-level DSL declarations:
+**Ruby** - class-level DSL declarations:
 
 ```ruby
 class Post < Tina4::ORM
@@ -62,7 +62,7 @@ class Post < Tina4::ORM
 end
 ```
 
-**Node.js (TypeScript)** — config objects in a `static fields` block:
+**Node.js (TypeScript)** - config objects in a `static fields` block:
 
 ```typescript
 import { BaseModel } from "tina4-nodejs/orm";
@@ -93,9 +93,9 @@ Same operation, four shapes:
 | Delete a record | `post.delete()` | `$post->delete()` | `post.delete` | `post.delete()` |
 | Count rows | `Post.count()` | `(new Post())->count()` | `Post.count` | `Post.count()` |
 
-A few details worth noting. `find()` takes attribute names and applies the field map; `where()` takes raw SQL and skips translation. PHP needs `(new Post())` for instance methods like `where()` and `all()` — the rest are static. Ruby methods drop the parentheses by convention.
+A few details worth noting. `find()` takes attribute names and applies the field map; `where()` takes raw SQL and skips translation. PHP needs `(new Post())` for instance methods like `where()` and `all()`; the rest are static. Ruby methods drop the parentheses by convention.
 
-For full detail on field options, relationships, eager loading, soft delete, validation, and Auto-CRUD, read the rest of this chapter — it shows the API for the language of this book.
+For full detail on field options, relationships, eager loading, soft delete, validation, and Auto-CRUD, read the rest of this chapter: it shows the API for the language of this book.
 
 ---
 
@@ -467,7 +467,7 @@ json_string = note.to_json
 
 Tina4 Ruby supports two styles of relationships: declarative (class-level DSL) and imperative (instance-level method calls). Both produce the same queries. Declarative relationships enable eager loading; imperative relationships are ad-hoc.
 
-### foreign_key_field — Auto-Wired Relationships
+### foreign_key_field - Auto-Wired Relationships
 
 Declaring a column with `foreign_key_field :user_id, references: User` automatically wires both sides of the relationship. The declaring class gets a `belongs_to` accessor (the column name with `_id` stripped), and the referenced class gets a `has_many` accessor (the declaring class name lowercased with `s` appended, or whatever you pass via `related_name:`).
 
@@ -507,7 +507,7 @@ foreign_key_field :user_id, references: User, related_name: :blog_posts
 # user.blog_posts instead of user.posts
 ```
 
-If the referenced class is defined later, the framework handles deferred wiring — as soon as the referenced class applies its own field definitions, the `has_many` is injected.
+If the referenced class is defined later, the framework handles deferred wiring: as soon as the referenced class applies its own field definitions, the `has_many` is injected.
 
 ### Declarative Relationships
 

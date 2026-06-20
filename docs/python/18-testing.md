@@ -569,7 +569,7 @@ FAILED tests/test_product.py::ProductTest::test_load_product - AssertionError: N
 ========================= 1 failed, 2 passed in 0.12s ==========================
 ```
 
-The failure message shows the failing assertion, expected vs actual, and the file and line number — standard pytest formatting.
+The failure message shows the failing assertion, expected vs actual, and the file and line number, in standard pytest formatting.
 
 ---
 

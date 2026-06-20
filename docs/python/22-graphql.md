@@ -770,10 +770,10 @@ Tina4's GraphQL engine validates arguments against their declared types before t
 
 ### What Gets Validated
 
-- **Non-null enforcement** — `ID!` means the argument cannot be null or empty
-- **Scalar type checking** — `Int` must be numeric, `Boolean` must be bool, `String` must be scalar
-- **Type coercion** — string `"123"` coerces to Int `123`, string `"true"` coerces to Boolean `True`
-- **List item validation** — `[Int!]` checks each item in the list
+- **Non-null enforcement**: `ID!` means the argument cannot be null or empty
+- **Scalar type checking**: `Int` must be numeric, `Boolean` must be bool, `String` must be scalar
+- **Type coercion**: string `"123"` coerces to Int `123`, string `"true"` coerces to Boolean `True`
+- **List item validation**: `[Int!]` checks each item in the list
 
 ### Example
 
@@ -804,7 +804,7 @@ The resolver never runs. The client gets a clear error describing what went wron
 
 ## 14. Field-Level Auth Directives
 
-Control access to individual fields using directives. No middleware setup, no wrapper functions — add a directive to the query and Tina4 checks the context.
+Control access to individual fields using directives. No middleware setup, no wrapper functions: add a directive to the query and Tina4 checks the context.
 
 ### Available Directives
 
@@ -848,7 +848,7 @@ async def graphql_handler(request, response):
 { registrationBanner @guest }
 ```
 
-When a directive check fails, the field returns `null` and is silently excluded from the response. No error is added — the field simply doesn't appear, as if it doesn't exist for that user.
+When a directive check fails, the field returns `null` and is silently excluded from the response. No error is added; the field simply doesn't appear, as if it doesn't exist for that user.
 
 ---
 

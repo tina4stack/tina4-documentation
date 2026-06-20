@@ -645,5 +645,5 @@ fake.integer()   # 4821
 
 ## 📕 Download the book
 
-[**Tina4 for Python Developers** (PDF)](/pdfs/Tina4-for-Python-Developers.pdf) — full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
+[**Tina4 for Python Developers** (PDF)](/pdfs/Tina4-for-Python-Developers.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
 

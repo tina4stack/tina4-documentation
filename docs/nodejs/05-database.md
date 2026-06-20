@@ -573,7 +573,7 @@ await db.insert("products", {
     in_stock: 1
 });
 
-// Insert multiple rows — call insert() once per row
+// Insert multiple rows - call insert() once per row
 await db.insert("products", { name: "USB Cable", price: 9.99, in_stock: 1 });
 await db.insert("products", { name: "HDMI Cable", price: 14.99, in_stock: 1 });
 ```
@@ -666,7 +666,7 @@ This runs the same migration engine as the CLI, so the result matches `tina4 mig
 Startup migration is **non-breaking**. If a migration fails, Tina4 logs the error and the service still boots:
 
 ```
-Startup auto-migration failed: <error> — the service is starting anyway. Run `tina4 migrate` to retry.
+Startup auto-migration failed: <error> - the service is starting anyway. Run `tina4 migrate` to retry.
 ```
 
 A successful run logs how many it applied:
@@ -675,7 +675,7 @@ A successful run logs how many it applied:
 Applied 2 pending migration(s) on startup
 ```
 
-The explicit `tina4 migrate` CLI stays **fail-fast** — it exits non-zero on failure, so CI keeps a real exit code to gate on. Only the startup hook swallows the error to keep the service available.
+The explicit `tina4 migrate` CLI stays **fail-fast**: it exits non-zero on failure, so CI keeps a real exit code to gate on. Only the startup hook swallows the error to keep the service available.
 
 Set `TINA4_AUTO_MIGRATE=false` (or `0`, `no`, `off`) to turn the hook off. The default is `true`.
 
@@ -739,7 +739,7 @@ TINA4_DB_CACHE=true
 Identical queries with identical parameters return cached results. The cache invalidates itself when you call `execute()`, `insert()`, `update()`, or `delete()` on the same table.
 
 ```typescript
-// fetch() takes (sql, params?, limit?, offset?) — there is no per-call cache bypass.
+// fetch() takes (sql, params?, limit?, offset?) - there is no per-call cache bypass.
 const products = await db.fetch("SELECT * FROM products", [], 10, 0);
 
 // Clear the entire cache

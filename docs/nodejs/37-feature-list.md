@@ -90,7 +90,7 @@ This chapter catalogs all 45 features in Tina4 for Node.js, grouped by category.
 | 34 | **Email (SMTP)** | `Messenger` class | 16 |
 | 35 | **WebSocket** | `WebSocket` server, `ws.on`, `ws.send` | 23 |
 | 36 | **Events System** | `Events.on`, `.emit`, `.once`, `.off`, `.clear` | 13 |
-| 37 | **SSE / Streaming** | `response.stream(generator)` for Server-Sent Events | — |
+| 37 | **SSE / Streaming** | `response.stream(generator)` for Server-Sent Events | - |
 
 ---
 
@@ -112,7 +112,7 @@ This chapter catalogs all 45 features in Tina4 for Node.js, grouped by category.
 | # | Feature | Class / Function | Chapter |
 |---|---------|-----------------|---------|
 | 44 | **Swagger / OpenAPI** | Auto-generated from JSDoc `@noauth`, `@path` | 20 |
-| 45 | **Dev Dashboard** | `/__dev` — routes, queues, cache, logs | 29 |
+| 45 | **Dev Dashboard** | `/__dev` - routes, queues, cache, logs | 29 |
 
 ---
 
@@ -120,39 +120,39 @@ This chapter catalogs all 45 features in Tina4 for Node.js, grouped by category.
 
 ### Routing and HTTP
 
-**HTTP Routing** — Define routes with `Router.get("/path", handler)`. Handlers are async functions that receive `(req, res)`. Supports all HTTP methods. Routes are auto-loaded from `src/routes/`.
+**HTTP Routing**: Define routes with `Router.get("/path", handler)`. Handlers are async functions that receive `(req, res)`. Supports all HTTP methods. Routes are auto-loaded from `src/routes/`.
 
-**Route Parameters** — Typed parameters in curly braces: `{id}` is a string, `{id:int}` is an integer, `{slug}` matches URL-safe strings. Parameters are available as `req.params.id`.
+**Route Parameters**: Typed parameters in curly braces: `{id}` is a string, `{id:int}` is an integer, `{slug}` matches URL-safe strings. Parameters are available as `req.params.id`.
 
-**Request and Response** — `req.body` is the parsed JSON request body. `req.query` holds query string values. `res.json(data)` sends JSON. `res.render("template.frond", data)` renders a template. `res.status(404).json({})` chains status and body.
+**Request and Response**: `req.body` is the parsed JSON request body. `req.query` holds query string values. `res.json(data)` sends JSON. `res.render("template.frond", data)` renders a template. `res.status(404).json({})` chains status and body.
 
-**Middleware** — Applied as a string in the route definition: `Router.get("/path", handler, "auth,ResponseCache:300")`. Multiple middleware separated by commas. Custom middleware registered with `Router.middleware("name", fn)`.
+**Middleware**: Applied as a string in the route definition: `Router.get("/path", handler, "auth,ResponseCache:300")`. Multiple middleware separated by commas. Custom middleware registered with `Router.middleware("name", fn)`.
 
-**Static Files** — Everything in the `public/` directory is served automatically. `/public/logo.png` is available at `/logo.png`.
+**Static Files**: Everything in the `public/` directory is served automatically. `/public/logo.png` is available at `/logo.png`.
 
-**CORS** — Set `TINA4_CORS_ORIGINS=*` (or a specific domain) and `TINA4_CORS_HEADERS` to control which headers are allowed. Preflight `OPTIONS` requests are handled automatically.
+**CORS**: Set `TINA4_CORS_ORIGINS=*` (or a specific domain) and `TINA4_CORS_HEADERS` to control which headers are allowed. Preflight `OPTIONS` requests are handled automatically.
 
 ---
 
 ### Templating
 
-**Frond Templates** — Tina4's built-in templating language. Files use the `.frond` extension. No separate template engine to install.
+**Frond Templates**: Tina4's built-in templating language. Files use the `.frond` extension. No separate template engine to install.
 
 <div v-pre>
 
-**Template Variables** — `{{variable}}` renders a string. `{{user.name}}` accesses nested properties. `{{price | currency}}` applies a filter.
+**Template Variables**: `{{variable}}` renders a string. `{{user.name}}` accesses nested properties. `{{price | currency}}` applies a filter.
 
 </div>
 
 <div v-pre>
 
-**Template Includes** — `{{> header.frond}}` includes another template. Included templates share the same variable scope.
+**Template Includes**: `{{> header.frond}}` includes another template. Included templates share the same variable scope.
 
 </div>
 
 <div v-pre>
 
-**Template Helpers** — `{{#if condition}}...{{/if}}` for conditionals. `{{#each items}}...{{/each}}` for loops. `{{#unless condition}}` for negation.
+**Template Helpers**: `{{#if condition}}...{{/if}}` for conditionals. `{{#each items}}...{{/each}}` for loops. `{{#unless condition}}` for negation.
 
 </div>
 
@@ -160,95 +160,95 @@ This chapter catalogs all 45 features in Tina4 for Node.js, grouped by category.
 
 ### Database and ORM
 
-**Database Connection** — Configured via `.env`: `TINA4_DATABASE_URL`. Supports SQLite (`sqlite:./data/app.db`), PostgreSQL (`pgsql:host=...`), MySQL, and MSSQL. Accessed via `Database.getConnection()`.
+**Database Connection**: Configured via `.env`: `TINA4_DATABASE_URL`. Supports SQLite (`sqlite:./data/app.db`), PostgreSQL (`pgsql:host=...`), MySQL, and MSSQL. Accessed via `Database.getConnection()`.
 
-**Raw Queries** — `db.fetchAll(sql, params)` returns an array of rows. `db.fetchOne(sql, params)` returns one row or null. `db.execute(sql, params)` runs a non-returning statement.
+**Raw Queries**: `db.fetchAll(sql, params)` returns an array of rows. `db.fetchOne(sql, params)` returns one row or null. `db.execute(sql, params)` runs a non-returning statement.
 
-**Named Parameters** — Use `:name` in SQL. Pass values as `{ name: value }`. Never interpolate user input directly into SQL -- always use named parameters.
+**Named Parameters**: Use `:name` in SQL. Pass values as `{ name: value }`. Never interpolate user input directly into SQL -- always use named parameters.
 
-**ORM Models** — Extend `Model`, declare fields. Tina4 generates the table if it does not exist. `Product.find({ category: "Electronics" })` queries without SQL.
+**ORM Models**: Extend `Model`, declare fields. Tina4 generates the table if it does not exist. `Product.find({ category: "Electronics" })` queries without SQL.
 
-**Query Builder** — Chainable: `.select("name", "price").fromTable("products").where("active", true).orderBy("name").limit(20).fetch()`. Composes complex queries without raw SQL.
+**Query Builder**: Chainable: `.select("name", "price").fromTable("products").where("active", true).orderBy("name").limit(20).fetch()`. Composes complex queries without raw SQL.
 
-**Migrations** — Tina4 compares the model definition to the live table schema and adds missing columns on startup. No migration files needed for additive changes.
+**Migrations**: Tina4 compares the model definition to the live table schema and adds missing columns on startup. No migration files needed for additive changes.
 
-**Sequence / next_id** — `Database.get_next_id("invoices")` returns a race-safe, monotonically increasing ID using a sequence table. Safe for concurrent requests.
+**Sequence / next_id**: `Database.get_next_id("invoices")` returns a race-safe, monotonically increasing ID using a sequence table. Safe for concurrent requests.
 
-**Multi-DB Support** — Switch databases by changing `TINA4_DATABASE_URL`. Application code is unchanged.
+**Multi-DB Support**: Switch databases by changing `TINA4_DATABASE_URL`. Application code is unchanged.
 
 ---
 
 ### Authentication and Sessions
 
-**JWT Authentication** — `POST /api/login` with `{ username, password }` returns a JWT. Include it as `Authorization: Bearer <token>`. Protected routes use the `"auth"` middleware string.
+**JWT Authentication**: `POST /api/login` with `{ username, password }` returns a JWT. Include it as `Authorization: Bearer <token>`. Protected routes use the `"auth"` middleware string.
 
-**Login and Logout** — Built-in login/logout routes. Customize by overriding the handlers. `POST /api/logout` invalidates the session.
+**Login and Logout**: Built-in login/logout routes. Customize by overriding the handlers. `POST /api/logout` invalidates the session.
 
-**Password Hashing** — `hashPassword(plain)` returns a bcrypt hash. `verifyPassword(plain, hash)` validates. Never store plain passwords.
+**Password Hashing**: `hashPassword(plain)` returns a bcrypt hash. `verifyPassword(plain, hash)` validates. Never store plain passwords.
 
-**Sessions** — `req.session.set("key", value)` and `req.session.get("key")`. Backend: file (default), Redis (`TINA4_SESSION_BACKEND=redis`), or database.
+**Sessions**: `req.session.set("key", value)` and `req.session.get("key")`. Backend: file (default), Redis (`TINA4_SESSION_BACKEND=redis`), or database.
 
-**Cookies** — `res.cookie("name", "value", { httpOnly: true, secure: true })` sets a cookie. `req.cookies.name` reads it.
+**Cookies**: `res.cookie("name", "value", { httpOnly: true, secure: true })` sets a cookie. `req.cookies.name` reads it.
 
-**CSRF Protection** — The `CSRF` middleware validates a token on mutating requests. Include the token from `req.csrfToken()` in forms or AJAX calls.
+**CSRF Protection**: The `CSRF` middleware validates a token on mutating requests. Include the token from `req.csrfToken()` in forms or AJAX calls.
 
 ---
 
 ### Background Processing
 
-**Queue System** — `queue.push(payload)` enqueues a job. `queue.consume("topic")` is a generator that yields jobs. Call `job.complete()` or `job.fail()` after each.
+**Queue System**: `queue.push(payload)` enqueues a job. `queue.consume("topic")` is a generator that yields jobs. Call `job.complete()` or `job.fail()` after each.
 
-**Queue Backends** — File-based by default (`TINA4_QUEUE_BACKEND=file`). Switch to RabbitMQ, Kafka, or MongoDB with one env var change. No code changes.
+**Queue Backends**: File-based by default (`TINA4_QUEUE_BACKEND=file`). Switch to RabbitMQ, Kafka, or MongoDB with one env var change. No code changes.
 
-**Service Runner** — `ServiceRunner` manages multiple `Service` instances. Each runs its `run()` method on an interval. Crashes restart automatically.
+**Service Runner**: `ServiceRunner` manages multiple `Service` instances. Each runs its `run()` method on an interval. Crashes restart automatically.
 
-**Scheduled Services** — Control timing with `interval` (ms), `runOnStart` (boolean), `restartDelay` (ms), and `maxRestarts`.
+**Scheduled Services**: Control timing with `interval` (ms), `runOnStart` (boolean), `restartDelay` (ms), and `maxRestarts`.
 
 ---
 
 ### Caching
 
-**Response Cache** — `"ResponseCache:300"` as middleware caches the entire HTTP response for 300 seconds. Cache key includes the full URL with query parameters.
+**Response Cache**: `"ResponseCache:300"` as middleware caches the entire HTTP response for 300 seconds. Cache key includes the full URL with query parameters.
 
-**Cache API** — `cacheSet(key, value, ttlSeconds)`, `cacheGet(key)`, `cacheDelete(key)`. Use for custom caching logic: cache-aside, write-through, event-based invalidation.
+**Cache API**: `cacheSet(key, value, ttlSeconds)`, `cacheGet(key)`, `cacheDelete(key)`. Use for custom caching logic: cache-aside, write-through, event-based invalidation.
 
-**Cache Backends** — Memory (default), Redis (`TINA4_CACHE_BACKEND=redis`), file (`TINA4_CACHE_BACKEND=file`). Backend is transparent to application code.
+**Cache Backends**: Memory (default), Redis (`TINA4_CACHE_BACKEND=redis`), file (`TINA4_CACHE_BACKEND=file`). Backend is transparent to application code.
 
-**Cache Statistics** — `cacheStats()` returns hits, misses, hit rate, entry count, and memory usage. Visible in the dev dashboard.
+**Cache Statistics**: `cacheStats()` returns hits, misses, hit rate, entry count, and memory usage. Visible in the dev dashboard.
 
 ---
 
 ### Communication
 
-**Email** — `Messenger` reads SMTP config from `.env`. `mailer.send({ to, subject, html, text })`. Attachments supported. Dev mode intercepts emails and shows them in the dashboard.
+**Email**: `Messenger` reads SMTP config from `.env`. `mailer.send({ to, subject, html, text })`. Attachments supported. Dev mode intercepts emails and shows them in the dashboard.
 
-**WebSocket** — Real-time bidirectional communication. `Router.ws("/ws/chat", handler)`. `ws.on("message", fn)`, `ws.send(data)`, `ws.broadcast(data)`.
+**WebSocket**: Real-time bidirectional communication. `Router.ws("/ws/chat", handler)`. `ws.on("message", fn)`, `ws.send(data)`, `ws.broadcast(data)`.
 
-**Events System** — In-process publish/subscribe. `Events.on("event", handler, priority)`. `Events.emit("event", payload)`. `Events.once` for one-shot listeners. `Events.off` and `Events.clear` for cleanup.
+**Events System**: In-process publish/subscribe. `Events.on("event", handler, priority)`. `Events.emit("event", payload)`. `Events.once` for one-shot listeners. `Events.off` and `Events.clear` for cleanup.
 
 ---
 
 ### Utilities and Services
 
-**Structured Logging** — `Log.info/debug/warn/error(message, context)`. Outputs JSON. Level controlled by `TINA4_LOG_LEVEL` env var. Context fields merged into every log entry.
+**Structured Logging**: `Log.info/debug/warn/error(message, context)`. Outputs JSON. Level controlled by `TINA4_LOG_LEVEL` env var. Context fields merged into every log entry.
 
-**Localization** — `I18n` loads JSON locale files from `locales/`. `i18n.t("key", { variable: "value" })` with interpolation. Automatic fallback to default locale for missing keys.
+**Localization**: `I18n` loads JSON locale files from `locales/`. `i18n.t("key", { variable: "value" })` with interpolation. Automatic fallback to default locale for missing keys.
 
-**API Client** — `api` singleton from `@tina4/core`. `api.configure({ baseUrl, headers, timeout })`. Methods: `api.get`, `api.post`, `api.put`, `api.patch`, `api.delete`. Consistent response: `{ ok, status, data, error }`.
+**API Client**: `api` singleton from `@tina4/core`. `api.configure({ baseUrl, headers, timeout })`. Methods: `api.get`, `api.post`, `api.put`, `api.patch`, `api.delete`. Consistent response: `{ ok, status, data, error }`.
 
-**DI Container** — `Container` with `register(name, factory)` (transient) and `singleton(name, factory)`. Resolve with `get<Type>(name)`. `has(name)` for existence checks. `reset()` for test cleanup.
+**DI Container**: `Container` with `register(name, factory)` (transient) and `singleton(name, factory)`. Resolve with `get<Type>(name)`. `has(name)` for existence checks. `reset()` for test cleanup.
 
-**WSDL / SOAP** — Consume SOAP with `WSDL.load(url)` and `client.call(operation, params)`. Publish SOAP with `wsdl_operation` decorator and `WSDL` server class. Auto WSDL document generation.
+**WSDL / SOAP**: Consume SOAP with `WSDL.load(url)` and `client.call(operation, params)`. Publish SOAP with `wsdl_operation` decorator and `WSDL` server class. Auto WSDL document generation.
 
-**GraphQL** — Schema-first or code-first. Resolvers registered with `Router.graphql`. Introspection enabled in development. Playground available at `/graphql`.
+**GraphQL**: Schema-first or code-first. Resolvers registered with `Router.graphql`. Introspection enabled in development. Playground available at `/graphql`.
 
 ---
 
 ### Developer Experience
 
-**Swagger / OpenAPI** — Routes annotated with JSDoc comments generate an OpenAPI 3.0 spec automatically. Swagger UI available at `/swagger`. `@noauth` marks public endpoints. `@path`, `@query`, and `@body` document parameters.
+**Swagger / OpenAPI**: Routes annotated with JSDoc comments generate an OpenAPI 3.0 spec automatically. Swagger UI available at `/swagger`. `@noauth` marks public endpoints. `@path`, `@query`, and `@body` document parameters.
 
-**Dev Dashboard** — Available at `/__dev` in development mode. Shows: registered routes, active queue jobs, cache entries and hit rates, recent log output, registered services and their status, environment variable summary.
+**Dev Dashboard**: Available at `/__dev` in development mode. Shows: registered routes, active queue jobs, cache entries and hit rates, recent log output, registered services and their status, environment variable summary.
 
 ---
 

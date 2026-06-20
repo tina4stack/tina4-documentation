@@ -59,7 +59,7 @@ Router::delete("/products/{id}", function ($request, $response) {
 })->noAuth();
 ```
 
-> **Default auth policy.** `POST`, `PUT`, `PATCH`, and `DELETE` are secured by default in Tina4 — without `->noAuth()` the examples below return `401 Unauthorized`. In production leave the defaults alone and send an `Authorization: Bearer <token>` header on write requests. For these Getting Started examples we chain `->noAuth()` so `curl` works without setting up auth first.
+> **Default auth policy.** `POST`, `PUT`, `PATCH`, and `DELETE` are secured by default in Tina4, without `->noAuth()` the examples below return `401 Unauthorized`. In production leave the defaults alone and send an `Authorization: Bearer <token>` header on write requests. For these Getting Started examples we chain `->noAuth()` so `curl` works without setting up auth first.
 
 Test each one:
 
@@ -107,28 +107,28 @@ curl -X DELETE http://localhost:7145/products/42
 
 `GET` reads. `POST` creates. `PUT` replaces. `PATCH` patches. `DELETE` removes. REST convention. Predictable API.
 
-### HEAD and OPTIONS — automatic, no boilerplate
+### HEAD and OPTIONS - automatic, no boilerplate
 
 Tina4 handles `HEAD` and `OPTIONS` for you. **You don't register them.** They follow from your `Router::get(...)` / `Router::post(...)` / etc. routes:
 
-- **`HEAD`** is identical to `GET` except the response carries no body (RFC 9110 §9.3.2). Every `GET` route automatically responds to `HEAD` — the framework strips the response body on the way out and preserves `Content-Length` pointing at the byte count the equivalent `GET` would have sent. Cache validators, link checkers, and uptime probes work without you writing anything.
+- **`HEAD`** is identical to `GET` except the response carries no body (RFC 9110 §9.3.2). Every `GET` route automatically responds to `HEAD`, the framework strips the response body on the way out and preserves `Content-Length` pointing at the byte count the equivalent `GET` would have sent. Cache validators, link checkers, and uptime probes work without you writing anything.
 - **`OPTIONS`** on any registered path returns `204 No Content` with an `Allow:` header listing every method the path supports (RFC 9110 §9.3.7).
-- **Wrong method on an existing path** returns `405 Method Not Allowed` with the same `Allow:` header (RFC 9110 §15.5.6 + §10.2.1). Sending `PUT` to a `GET`-only route used to return `404` — semantically wrong and confusing for link checkers. Now you get a real `405`.
+- **Wrong method on an existing path** returns `405 Method Not Allowed` with the same `Allow:` header (RFC 9110 §15.5.6 + §10.2.1). Sending `PUT` to a `GET`-only route used to return `404`, semantically wrong and confusing for link checkers. Now you get a real `405`.
 - **`TRACE` and `CONNECT`** are rejected with `405` (security default for origin servers).
 
 ```bash
-# HEAD on a GET route — same headers, empty body
+# HEAD on a GET route - same headers, empty body
 curl -sI http://localhost:7145/products
 # HTTP/1.1 200 OK
 # Content-Type: application/json
 # Content-Length: 33
 
-# OPTIONS — discover what the path supports
+# OPTIONS - discover what the path supports
 curl -sI -X OPTIONS http://localhost:7145/products
 # HTTP/1.1 204 No Content
 # Allow: GET, POST, HEAD, OPTIONS
 
-# Wrong method — clear 405 with Allow header
+# Wrong method - clear 405 with Allow header
 curl -sI -X PUT http://localhost:7145/products
 # HTTP/1.1 405 Method Not Allowed
 # Allow: GET, POST, HEAD, OPTIONS
@@ -143,7 +143,7 @@ use Tina4\Router;
 use Tina4\Request;
 use Tina4\Response;
 
-// HEAD handler that doesn't run the full GET body — useful for
+// HEAD handler that doesn't run the full GET body - useful for
 // expensive endpoints where the client only needs to check existence
 // or read validators (ETag, Last-Modified).
 Router::head("/expensive/{id}", function (Request $request, Response $response) {
@@ -151,7 +151,7 @@ Router::head("/expensive/{id}", function (Request $request, Response $response) 
     return $response;
 });
 
-// OPTIONS handler that returns more than just Allow — for example
+// OPTIONS handler that returns more than just Allow - for example
 // a discovery endpoint.
 Router::options("/api/discovery", function (Request $request, Response $response) {
     return $response->json(["version" => "v1", "endpoints" => [...]]);
@@ -1023,7 +1023,7 @@ Not found:
 
 ### 1. Trailing Slashes Are Normalised
 
-Tina4 strips trailing slashes automatically. Both `/products` and `/products/` match the same route. You do not need to register both or configure anything — it just works.
+Tina4 strips trailing slashes automatically. Both `/products` and `/products/` match the same route. You do not need to register both or configure anything, it just works.
 
 ### 2. Parameter Names Must Be Unique in a Path
 
@@ -1075,4 +1075,4 @@ Router::use(AuthMiddleware::class);
 
 ### 7. Group Prefix Normalisation
 
-Tina4 auto-normalises group prefixes — it prepends `/` if missing and strips trailing slashes. `Router::group("api/v1", ...)` and `Router::group("/api/v1", ...)` both work. However, for clarity, always start with `/`.
+Tina4 auto-normalises group prefixes, it prepends `/` if missing and strips trailing slashes. `Router::group("api/v1", ...)` and `Router::group("/api/v1", ...)` both work. However, for clarity, always start with `/`.

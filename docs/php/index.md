@@ -1,6 +1,6 @@
 # Tina4 PHP -- Quick Reference
 
-> **TINA4 — The Intelligent Native Application 4ramework**
+> **TINA4, The Intelligent Native Application 4ramework**
 > Simple. Fast. Human. | Built for AI. Built for you.
 
 <div v-pre>
@@ -671,7 +671,7 @@ Route handlers receive resolved dependencies automatically when type-hinted para
 
 ### Error Overlay {#error-overlay}
 
-When `TINA4_DEBUG=true`, unhandled exceptions render an interactive overlay in the browser instead of a blank 500 page. The overlay shows the stack trace, request details, and the source file at the point of failure. No configuration needed — it activates automatically.
+When `TINA4_DEBUG=true`, unhandled exceptions render an interactive overlay in the browser instead of a blank 500 page. The overlay shows the stack trace, request details, and the source file at the point of failure. No configuration needed, it activates automatically.
 
 ```bash
 # .env
@@ -738,7 +738,7 @@ The manifest lists every route, ORM model, and migration. Disable it in producti
 
 ### FakeData {#fakedata}
 
-Generate realistic test data without an internet connection. `FakeData` ships with Tina4 — no extra packages required.
+Generate realistic test data without an internet connection. `FakeData` ships with Tina4, no extra packages required.
 
 ```php
 use Tina4\FakeData;
@@ -767,5 +767,5 @@ Use `FakeData` inside migrations, seeders, or test fixtures.
 
 ## 📕 Download the book
 
-[**Tina4 for PHP Developers** (PDF)](/pdfs/Tina4-for-PHP-Developers.pdf) — full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
+[**Tina4 for PHP Developers** (PDF)](/pdfs/Tina4-for-PHP-Developers.pdf), full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
 

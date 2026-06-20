@@ -1,7 +1,7 @@
 # Queue Usage
 
 ::: tip 🔥 Hot Tips
-- Default to `litequeue` for local, lightweight queuing—no external services needed.
+- Default to `litequeue` for local, lightweight queuing, with no external services needed.
 - For production, configure RabbitMQ, Kafka, or mongo-queue-service backends via `Config`.
 - Handle delivery errors in callbacks (especially for Kafka/RabbitMQ).
 - Install backends separately: e.g., `uv add litequeue`, `uv add pika` for RabbitMQ, `uv add confluent-kafka` for Kafka, `uv add mongo-queue pymongo` for Mongo.

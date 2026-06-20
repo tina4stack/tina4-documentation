@@ -171,7 +171,7 @@ Higher number = higher priority = runs earlier.
 
 The typical pattern: emit events from route handlers, define listeners in a separate boot file.
 
-**`src/boot/events.php`** — register all listeners at startup:
+**`src/boot/events.php`** - register all listeners at startup:
 
 ```php
 <?php
@@ -203,7 +203,7 @@ Events::on('order.completed', function (array $data): void {
 });
 ```
 
-**`src/routes/users.php`** — emit from the route handler:
+**`src/routes/users.php`** - emit from the route handler:
 
 ```php
 <?php
@@ -225,7 +225,7 @@ Router::post('/api/users/register', function ($request, $response) {
         'plan'  => $body['plan'] ?? 'free'
     ];
 
-    // Emit — listeners handle the rest
+    // Emit - listeners handle the rest
     Events::emit('user.registered', $user);
 
     return $response->json([
@@ -325,7 +325,7 @@ Events::on('order.created', function (array $order): void {
 }, 5);
 
 Events::on('order.paid', function (array $order): void {
-    error_log("[payment] received for order #{$order['id']} — \${$order['total']}");
+    error_log("[payment] received for order #{$order['id']} - \${$order['total']}");
 }, 10);
 
 Events::on('order.paid', function (array $order): void {

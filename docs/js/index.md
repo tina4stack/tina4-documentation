@@ -152,7 +152,7 @@ await api.delete('/users/42');
 ```ts
 import { ws } from 'tina4js';
 
-const socket = ws.connect('/ws/chat');   // status & connected are signals — bind them in templates
+const socket = ws.connect('/ws/chat');   // status & connected are signals - bind them in templates
 
 const view = html`
   <div>Status: ${socket.status}</div>
@@ -202,12 +202,12 @@ theme.value = 'dark';                                        // written to local
 clearPersistedKeys(['theme']);                               // remove on logout
 ```
 
-`persist` backs a signal with `localStorage` — versioned, migratable, and synced across tabs. **Never store secrets, tokens, or personal data**: `localStorage` is readable by any script on the page (XSS), so it is for UI preferences and non-sensitive view state only — keep auth tokens in memory or an httpOnly cookie.
+`persist` backs a signal with `localStorage`: versioned, migratable, and synced across tabs. **Never store secrets, tokens, or personal data**: `localStorage` is readable by any script on the page (XSS), so it is for UI preferences and non-sensitive view state only; keep auth tokens in memory or an httpOnly cookie.
 
 ### Debug {#debug}
 
 ```ts
-// Enable the dev overlay (Ctrl+Shift+D to toggle). Dev only — tree-shaken from production.
+// Enable the dev overlay (Ctrl+Shift+D to toggle). Dev only - tree-shaken from production.
 if (import.meta.env.DEV) import('tina4js/debug');
 ```
 
@@ -222,7 +222,7 @@ npx tina4js build --target php
 # Generates src/templates/pages/index.twig
 ```
 
-The build drops your SPA's entry point at `src/templates/pages/index.twig`. Tina4's auto-routing serves it at `/` — no env var or route needed. If your build emits a static `index.html` instead, drop it at `src/public/index.html` and Tina4 auto-serves it at `/` too (since v3.11.33).
+The build drops your SPA's entry point at `src/templates/pages/index.twig`. Tina4's auto-routing serves it at `/`, with no env var or route needed. If your build emits a static `index.html` instead, drop it at `src/public/index.html` and Tina4 auto-serves it at `/` too (since v3.11.33).
 
 #### With tina4-python
 ```bash
@@ -231,12 +231,12 @@ npx tina4js build --target python
 # Generates src/templates/pages/index.twig
 ```
 
-Same auto-routing — `src/templates/pages/*.twig` becomes the page tree under `/`. Set `TINA4_TEMPLATE_ROUTING=off` if you want explicit routes only.
+Same auto-routing: `src/templates/pages/*.twig` becomes the page tree under `/`. Set `TINA4_TEMPLATE_ROUTING=off` if you want explicit routes only.
 [More details](13-backend-integration.md) on embedding in tina4-php/python, auth flow, and server-side state injection.
 
 ### Bundle Size {#bundle-size}
 
-**What your app actually downloads.** tina4-js is code-split: a bundler ships one shared reactive-core chunk plus only the modules you import. These are real deduplicated bundles (esbuild `--minify`, then compressed), measured on macOS, v1.2.7 — brotli is what most CDNs serve:
+**What your app actually downloads.** tina4-js is code-split: a bundler ships one shared reactive-core chunk plus only the modules you import. These are real deduplicated bundles (esbuild `--minify`, then compressed), measured on macOS, v1.2.7; brotli is what most CDNs serve:
 
 | Your app imports | gzip | brotli |
 |---|---|---|
@@ -246,7 +246,7 @@ Same auto-routing — `src/templates/pages/*.twig` becomes the page tree under `
 | + WebSocket + SSE | 5.32 KB | 4.73 KB |
 | **Everything** (+ Storage + PWA, **no Debug**) | **7.52 KB** | **6.68 KB** |
 
-Marginal cost per feature is small (gzip): Router **+0.8 KB**, API **+0.9 KB**, WebSocket + SSE **+1.3 KB**. **Debug is a separate dev-only entry** (`import 'tina4js/debug'`, ~5 KB gzip) — guard it behind `import.meta.env.DEV` so your production bundler drops it entirely.
+Marginal cost per feature is small (gzip): Router **+0.8 KB**, API **+0.9 KB**, WebSocket + SSE **+1.3 KB**. **Debug is a separate dev-only entry** (`import 'tina4js/debug'`, ~5 KB gzip): guard it behind `import.meta.env.DEV` so your production bundler drops it entirely.
 
 ```ts
 // Import from sub-paths to help the bundler tree-shake:
@@ -259,7 +259,7 @@ import { persist } from 'tina4js/storage';
 import { pwa } from 'tina4js/pwa';
 ```
 
-> **Don't add up the published `dist/*.es.js` file sizes.** Each looks standalone, but the reactive core lives in one shared chunk that the others import — so summing the files counts core several times over (and includes the dev-only debug overlay). The table above is what actually ships.
+> **Don't add up the published `dist/*.es.js` file sizes.** Each looks standalone, but the reactive core lives in one shared chunk that the others import, so summing the files counts core several times over (and includes the dev-only debug overlay). The table above is what actually ships.
 
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">↑ Back to top</a>
@@ -270,5 +270,5 @@ import { pwa } from 'tina4js/pwa';
 
 ## 📕 Download the book
 
-[**tina4-js — The 1.5KB Reactive Core** (PDF)](/pdfs/Tina4-Javascript-Developer.pdf) — full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
+[**tina4-js: The 1.5KB Reactive Core** (PDF)](/pdfs/Tina4-Javascript-Developer.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
 

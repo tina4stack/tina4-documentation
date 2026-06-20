@@ -127,16 +127,16 @@ This is a convention, not a requirement. tina4-js does not care where your files
 The scaffold wires up an `@` alias pointing at `src/`, so you import by absolute path instead of counting `../` hops:
 
 ```typescript
-// Without the alias — brittle, breaks when you move the file
+// Without the alias - brittle, breaks when you move the file
 import { homePage } from '../pages/home';
 import { user } from '../../store';
 
-// With the alias — always anchored at src/, move files freely
+// With the alias - always anchored at src/, move files freely
 import { homePage } from '@/pages/home';
 import { user } from '@/store';
 ```
 
-It is configured in two places, and **both must agree** — TypeScript uses `tsconfig.json` for editor go-to-definition and type-checking; Vite uses `vite.config.ts` for the actual build:
+It is configured in two places, and **both must agree**: TypeScript uses `tsconfig.json` for editor go-to-definition and type-checking; Vite uses `vite.config.ts` for the actual build:
 
 ```jsonc
 // tsconfig.json
@@ -159,7 +159,7 @@ export default defineConfig({
 });
 ```
 
-`tina4 init js` writes both for you — new projects get `@/` imports out of the box. If you scaffolded before this was the default, add the two blocks above and you're set.
+`tina4 init js` writes both for you, so new projects get `@/` imports out of the box. If you scaffolded before this was the default, add the two blocks above and you're set.
 
 ---
 

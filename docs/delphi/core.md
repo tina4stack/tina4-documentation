@@ -209,11 +209,11 @@ Populates a `TFDMemTable` from JSON with two sync modes:
 | `Sync` | Matches by `IndexFieldNames`, updates existing or inserts new |
 
 ```pascal
-// Clear mode — replaces all data
+// Clear mode - replaces all data
 PopulateMemTableFromJSON(MemTable, 'records',
   '{"records": [{"id": "1", "name": "Alice"}]}');
 
-// Sync mode — update existing, insert new
+// Sync mode - update existing, insert new
 PopulateMemTableFromJSON(MemTable, 'records',
   '{"records": [{"id": "1", "name": "Alice Updated"}]}',
   'id', TTina4RestSyncMode.Sync);

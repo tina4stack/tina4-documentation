@@ -1,6 +1,6 @@
 # Tina4 Node.js -- Quick Reference
 
-> **TINA4 — The Intelligent Native Application 4ramework**
+> **TINA4: The Intelligent Native Application 4ramework**
 > Simple. Fast. Human. | Built for AI. Built for you.
 
 <div v-pre>
@@ -341,7 +341,7 @@ import { Router } from "tina4-nodejs";
  */
 Router.post("/register", async (req, res) => {
     const email = req.body.email;
-    // token validated automatically — proceed with form data
+    // token validated automatically - proceed with form data
     return res.redirect("/welcome");
 });
 ```
@@ -723,17 +723,17 @@ Tina4 ships a built-in event bus. Emit from anywhere. Listen from anywhere. No t
 ```typescript
 import { Events } from "tina4-nodejs";
 
-// Subscribe — runs every time the event fires
+// Subscribe - runs every time the event fires
 Events.on("user.registered", (payload) => {
     console.log("New user:", payload.email);
 });
 
-// Subscribe once — unsubscribes automatically after the first fire
+// Subscribe once - unsubscribes automatically after the first fire
 Events.once("app.ready", () => {
     console.log("App is up. One-time setup done.");
 });
 
-// Emit — synchronous fan-out to all listeners
+// Emit - synchronous fan-out to all listeners
 Events.emit("user.registered", { email: "alice@example.com" });
 ```
 
@@ -746,7 +746,7 @@ import { Log } from "tina4-nodejs";
 
 Log.info("Server started on port 7148");
 Log.debug("Query result:", result);
-Log.warn("Cache miss — falling back to database");
+Log.warn("Cache miss - falling back to database");
 Log.error("Payment gateway timeout", err);
 ```
 
@@ -817,10 +817,10 @@ The built-in dependency injection container wires up services without manual ins
 ```typescript
 import { Container } from "tina4-nodejs";
 
-// Transient — new instance per request
+// Transient - new instance per request
 Container.register("mailer", () => new Mailer(process.env.TINA4_MAIL_HOST));
 
-// Singleton — one instance for the lifetime of the process
+// Singleton - one instance for the lifetime of the process
 Container.singleton("config", () => new AppConfig());
 
 // Resolve anywhere
@@ -898,7 +898,7 @@ All commands run from the project root. `tina4 --help` lists every command with 
 
 ### MCP Server {#mcp}
 
-Tina4 starts a Model Context Protocol server automatically when `TINA4_DEBUG=true`. AI tools — Cursor, Claude Code, VS Code Copilot — connect to it and gain live awareness of your running application.
+Tina4 starts a Model Context Protocol server automatically when `TINA4_DEBUG=true`. AI tools (Cursor, Claude Code, VS Code Copilot) connect to it and gain live awareness of your running application.
 
 ```bash
 TINA4_DEBUG=true          # MCP server starts on port 7149
@@ -907,10 +907,10 @@ TINA4_MCP_PORT=7149       # override the default port
 
 The MCP server exposes:
 
-- Route registry — every path, method, and handler location
-- ORM schema — all models and their field definitions
-- Migration history — applied and pending migrations
-- Log stream — live tail of the application log
+- Route registry: every path, method, and handler location
+- ORM schema: all models and their field definitions
+- Migration history: applied and pending migrations
+- Log stream: live tail of the application log
 
 Connect your AI tool to `http://localhost:7149/mcp` and it reads your codebase in context. No plugin. No extra install.
 
@@ -975,5 +975,5 @@ import { AVAILABLE_LANGUAGES } from "tina4-nodejs";
 
 ## 📕 Download the book
 
-[**Tina4 for Node.js Developers** (PDF)](/pdfs/Tina4-for-Nodejs-Developers.pdf) — full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
+[**Tina4 for Node.js Developers** (PDF)](/pdfs/Tina4-for-Nodejs-Developers.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
 

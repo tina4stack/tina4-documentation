@@ -214,8 +214,8 @@ Build a SOAP service with two operations: `GetProduct` and `ListProducts`.
 
 ### Requirements
 
-1. `GetProduct` — takes `productId: string`, returns `id`, `name`, `price`, `inStock`
-2. `ListProducts` — takes `category: string`, returns an array of products
+1. `GetProduct`: takes `productId: string`, returns `id`, `name`, `price`, `inStock`
+2. `ListProducts`: takes `category: string`, returns an array of products
 3. Mount at `/soap/products` with auto WSDL at `/soap/products?wsdl`
 
 ### Test with:

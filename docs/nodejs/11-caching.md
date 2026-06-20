@@ -34,7 +34,7 @@ get("/api/report", async (req, res) => {
     // First call hits the database.
     const totals = await db.fetchAll("SELECT category, COUNT(*) AS n FROM products GROUP BY category");
 
-    // Same query later in the SAME request — served from the request cache, no DB hit.
+    // Same query later in the SAME request - served from the request cache, no DB hit.
     const totalsAgain = await db.fetchAll("SELECT category, COUNT(*) AS n FROM products GROUP BY category");
 
     return res.json({ totals, matches: JSON.stringify(totals) === JSON.stringify(totalsAgain) });
@@ -124,7 +124,7 @@ Pass `{ noCache: true }` as the **trailing options argument** to bypass both cac
 // fetchAll(sql, params, limit, offset, opts)
 const fresh = await db.fetchAll("SELECT * FROM products WHERE category = ?", ["Electronics"], 50, 0, { noCache: true });
 
-// fetch(sql, params, limit, offset, opts) — returns the full DatabaseResult
+// fetch(sql, params, limit, offset, opts) - returns the full DatabaseResult
 const result = await db.fetch("SELECT * FROM products", [], 50, 0, { noCache: true });
 
 // fetchOne(sql, params, opts)
@@ -151,7 +151,7 @@ import { get } from "tina4-nodejs";
 get("/api/products", async (req, res) => {
     // This handler runs 12 database queries and takes 800ms.
     // With the response cache, it runs once every 5 minutes.
-    console.log("Handler called — should only appear once every 5 minutes");
+    console.log("Handler called - should only appear once every 5 minutes");
 
     const products = [
         { id: 1, name: "Wireless Keyboard", price: 79.99 },
@@ -261,7 +261,7 @@ get("/api/categories", async (req, res) => {
     return res.json({ categories: [] });
 }, ["ResponseCache:3600"]);
 
-// BAD: user-specific data — do NOT cache
+// BAD: user-specific data - do NOT cache
 get("/api/profile", async (req, res) => {
     return res.json(req.user);
 });
@@ -286,7 +286,7 @@ All three layers (and the key/value API below) share one backend set. Pick it wi
 ### Memory (default)
 
 ```bash
-# This is the default — you do not need to set it.
+# This is the default - you do not need to set it.
 TINA4_CACHE_BACKEND=memory
 ```
 
@@ -359,7 +359,7 @@ await cacheSet("product:42", {
 // Cache a string.
 await cacheSet("exchangeRate:USD_EUR", "0.92", 3600);
 
-// No TTL — uses the default (TINA4_CACHE_TTL, 60 seconds).
+// No TTL - uses the default (TINA4_CACHE_TTL, 60 seconds).
 await cacheSet("app:config", { theme: "dark", lang: "en" });
 ```
 
@@ -372,7 +372,7 @@ const product = await cacheGet("product:42");
 // Returns the cached value, or undefined if not found or expired.
 
 if (product === undefined) {
-    // Cache miss — fetch from the database, then store it.
+    // Cache miss - fetch from the database, then store it.
     const fresh = await fetchProductFromDatabase(42);
     await cacheSet("product:42", fresh, 300);
 }
@@ -411,13 +411,13 @@ get("/api/products/{id}", async (req, res) => {
     const id = parseInt(req.params.id, 10);
     const cacheKey = `product:${id}`;
 
-    // 1. Try the cache first — await it.
+    // 1. Try the cache first - await it.
     const cached = await cacheGet(cacheKey);
     if (cached !== undefined) {
         return res.json({ ...(cached as object), source: "cache" });
     }
 
-    // 2. Miss — fetch from the database.
+    // 2. Miss - fetch from the database.
     const db = Database.getConnection();
     const product = await db.fetchOne(
         "SELECT id, name, category, price, in_stock FROM products WHERE id = ?",
@@ -657,7 +657,7 @@ get("/api/catalog", async (req, res) => {
     const page = parseInt(req.query.page ?? "1", 10);
     const cacheKey = `catalog:page:${page}`;
 
-    // Layer A: application key/value cache — await it.
+    // Layer A: application key/value cache - await it.
     const cached = await cacheGet(cacheKey);
     if (cached !== undefined) {
         return res.json({ ...(cached as object), cache: "application" });
@@ -725,21 +725,21 @@ Build a product listing endpoint that caches at multiple levels.
 ### Test with
 
 ```bash
-# First call — cache miss, slow
+# First call - cache miss, slow
 curl "http://localhost:7148/api/store/products?category=Electronics&page=1"
 
-# Second call — cache hit, fast
+# Second call - cache hit, fast
 curl "http://localhost:7148/api/store/products?category=Electronics&page=1"
 
-# Different category — cache miss
+# Different category - cache miss
 curl "http://localhost:7148/api/store/products?category=Fitness&page=1"
 
-# Create a product — should invalidate cache
+# Create a product - should invalidate cache
 curl -X POST http://localhost:7148/api/store/products \
   -H "Content-Type: application/json" \
   -d '{"name": "Smart Watch", "category": "Electronics", "price": 299.99}'
 
-# Same query again — cache miss (invalidated by the POST)
+# Same query again - cache miss (invalidated by the POST)
 curl "http://localhost:7148/api/store/products?category=Electronics&page=1"
 
 # Check cache stats
@@ -782,7 +782,7 @@ get("/api/store/products", async (req, res) => {
 
     const cacheKey = cacheKeyFor(category, page, limit);
 
-    // Try cache first — await it. A miss is undefined.
+    // Try cache first - await it. A miss is undefined.
     const cached = await cacheGet(cacheKey);
     if (cached !== undefined) {
         return res.json({ ...(cached as object), source: "cache" });

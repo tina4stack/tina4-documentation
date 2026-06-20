@@ -4,7 +4,7 @@
 
 Your user registration handler validates input, creates the account, sends a welcome email, creates an activity log entry, and notifies an analytics service. Seven responsibilities crammed into one method. Adding an eighth means editing that method again.
 
-Events decouple producers from consumers. The registration handler fires `user.registered`. Any number of listeners react to it — email, analytics, logging — without the handler knowing they exist. Adding a new reaction is adding a new listener.
+Events decouple producers from consumers. The registration handler fires `user.registered`. Any number of listeners react to it (email, analytics, logging) without the handler knowing they exist. Adding a new reaction is adding a new listener.
 
 Tina4's event system is in-process, synchronous by default, and zero dependency. No broker, no serialization, no network.
 

@@ -125,8 +125,8 @@ Docker is the most portable deployment path. Your app runs the same way on your 
 Tina4 PHP provides an official Docker Hub base image: `tina4stack/tina4-php:v3`. It is an Alpine-based image (~154MB) with PHP 8.4, SQLite, OPcache, and the Tina4 framework pre-installed. Your app Dockerfile extends it and adds only your application code and Composer dependencies.
 
 The base image includes these environment variables pre-configured:
-- `TINA4_OVERRIDE_CLIENT=true` — bypasses the CLI guard for Docker
-- `TINA4_DEBUG=false` — production mode by default
+- `TINA4_OVERRIDE_CLIENT=true`, bypasses the CLI guard for Docker
+- `TINA4_DEBUG=false`, production mode by default
 
 OPcache is pre-configured with production settings (timestamps disabled, 10000 accelerated files).
 

@@ -129,7 +129,7 @@ The framework refuses to start without the Rust CLI. For sandboxed environments 
 TINA4_OVERRIDE_CLIENT=true uv run python app.py
 ```
 
-This bypasses SCSS compilation and live reload — use it only when the Rust CLI is genuinely unavailable.
+This bypasses SCSS compilation and live reload, so use it only when the Rust CLI is genuinely unavailable.
 
 ---
 
@@ -811,8 +811,8 @@ tina4 books     # Download the complete Tina4 book (all languages) to tina4-book
 
 When `TINA4_DEBUG=true`, Tina4 automatically starts a second HTTP server on `port + 1000`:
 
-- **Main port** (e.g. 7146) — hot-reload enabled, for AI dev tools
-- **Test port** (e.g. 8145) — stable, no hot-reload, for user testing
+- **Main port** (e.g. 7146): hot-reload enabled, for AI dev tools
+- **Test port** (e.g. 8145): stable, no hot-reload, for user testing
 
 This prevents the browser from refreshing mid-test when AI tools edit files.
 

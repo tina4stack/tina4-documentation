@@ -160,7 +160,7 @@ tina4 serve
 ```
   Tina4 Ruby v3.11.12
   HTTP server running at http://0.0.0.0:7147
-  File watcher active — press Ctrl+C to stop
+  File watcher active - press Ctrl+C to stop
 ```
 
 Live reload watches:
@@ -180,7 +180,7 @@ The `tina4` Rust CLI is the sole file watcher for the whole Tina4 stack. There i
  └────────────┘                           └────────────┘   GET /__dev/api/mtime└─────────┘
 ```
 
-1. The CLI watches `src/`, `migrations/`, `.env` with the `notify` crate. Events are filtered to real source changes — metadata/access events, `__pycache__`, `.git`, `node_modules`, `vendor`, `logs`, `.log`/`.db*`/`.swp` files are ignored. A real mtime check defeats overlayfs / polling-mode spurious events (Podman, distrobox).
+1. The CLI watches `src/`, `migrations/`, `.env` with the `notify` crate. Events are filtered to real source changes: metadata/access events, `__pycache__`, `.git`, `node_modules`, `vendor`, `logs`, `.log`/`.db*`/`.swp` files are ignored. A real mtime check defeats overlayfs / polling-mode spurious events (Podman, distrobox).
 2. On a real change, the CLI POSTs `/__dev/api/reload` to the running Ruby server. The server keeps running.
 3. `Tina4::DevAdmin` bumps its `@reload_mtime` counter and broadcasts `{type: "reload"}` over WebSocket at `/__dev_reload`. `GET /__dev/api/mtime` returns the counter for browsers using the polling fallback.
 4. The dev-toolbar script reloads the browser. SCSS/CSS changes are signalled as `type: "css"` and swap the stylesheet without a full reload.

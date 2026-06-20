@@ -683,7 +683,7 @@ This reconnects on every close. It does not limit retries or buffer messages sen
 
 ## 11. Securing a WebSocket Route
 
-A WebSocket route is **public by default** — same as a `GET` route. Anyone can connect. When a route carries private data, mark it secured. Tina4 then demands a valid JWT on the upgrade handshake and rejects the connection when the token is missing or invalid.
+A WebSocket route is **public by default**, same as a `GET` route. Anyone can connect. When a route carries private data, mark it secured. Tina4 then demands a valid JWT on the upgrade handshake and rejects the connection when the token is missing or invalid.
 
 ### Mark the route secured
 
@@ -692,32 +692,32 @@ Pass `{ secured: true }` when you register the route, or chain `.secure()` on th
 ```typescript
 import { Router } from "@tina4/core";
 
-// Option 1 — the options bag
+// Option 1 - the options bag
 Router.websocket("/ws/account", accountHandler, { secured: true });
 
-// Option 2 — the chained reference
+// Option 2 - the chained reference
 Router.websocket("/ws/account", accountHandler).secure();
 ```
 
-A secured route enforces the token **on the upgrade** — before the handler ever runs and before the connection is accepted. A missing or invalid token gets a `401` and the upgrade is refused. A public route always connects, token or not.
+A secured route enforces the token **on the upgrade**, before the handler ever runs and before the connection is accepted. A missing or invalid token gets a `401` and the upgrade is refused. A public route always connects, token or not.
 
 ### Send the token from a client
 
 The handshake reads the token from three places, in this order. Pick the one that fits your client:
 
 ```typescript
-// 1. Authorization header — server, CLI, or mobile clients
+// 1. Authorization header - server, CLI, or mobile clients
 const ws = new WebSocket("ws://localhost:7148/ws/account");
 ws.setRequestHeader?.("Authorization", `Bearer ${token}`);  // Node ws / native clients
 
-// 2. The "bearer" subprotocol — browsers (new WebSocket() cannot set headers)
+// 2. The "bearer" subprotocol - browsers (new WebSocket() cannot set headers)
 const ws = new WebSocket("ws://localhost:7148/ws/account", ["bearer", token]);
 
-// 3. The ?token= query param — anywhere a header or subprotocol is awkward
+// 3. The ?token= query param - anywhere a header or subprotocol is awkward
 const ws = new WebSocket(`ws://localhost:7148/ws/account?token=${token}`);
 ```
 
-A browser cannot set request headers on `new WebSocket()`. So a browser passes the token as the **second subprotocol** — `["bearer", token]`. When the client offers `bearer`, the server echoes `bearer` back as the accepted subprotocol, completing the negotiation.
+A browser cannot set request headers on `new WebSocket()`. So a browser passes the token as the **second subprotocol**: `["bearer", token]`. When the client offers `bearer`, the server echoes `bearer` back as the accepted subprotocol, completing the negotiation.
 
 ### Read the verified payload
 
@@ -732,7 +732,7 @@ Router.websocket("/ws/account", (connection, event, data) => {
 }, { secured: true });
 ```
 
-On a **public** route, `connection.auth` is `null` — there is no token to verify.
+On a **public** route, `connection.auth` is `null`; there is no token to verify.
 
 The same JWT secret (`TINA4_SECRET`) and validator power both HTTP and WebSocket auth, so a token minted by your login route works on either.
 

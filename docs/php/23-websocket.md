@@ -517,7 +517,7 @@ Router::websocket("/ws/notifications/{userId}", function ($connection, $event, $
 });
 ```
 
-Broadcasting happens from inside the `Router::websocket()` handler through the `$connection` object — `$connection->send()` for one client, `$connection->broadcast()` for everyone on the same path, and `$connection->broadcastToRoom()` for a room. Request-response meets real-time.
+Broadcasting happens from inside the `Router::websocket()` handler through the `$connection` object, `$connection->send()` for one client, `$connection->broadcast()` for everyone on the same path, and `$connection->broadcastToRoom()` for a room. Request-response meets real-time.
 
 ---
 
@@ -937,7 +937,7 @@ If `TINA4_WS_BACKPLANE` is not set (the default), Tina4 broadcasts only to local
 
 ## 15. Securing a WebSocket Route
 
-A WebSocket route is **public by default** — exactly like a `GET` route. Anyone who can reach the URL can connect. To require a valid JWT on the connection, mark the route `@secured`. The framework then checks the token on the upgrade itself, **before** the handshake completes. A missing or invalid token is rejected with a 401 and the socket never opens. Your handler only ever runs for an authenticated client.
+A WebSocket route is **public by default** - exactly like a `GET` route. Anyone who can reach the URL can connect. To require a valid JWT on the connection, mark the route `@secured`. The framework then checks the token on the upgrade itself, **before** the handshake completes. A missing or invalid token is rejected with a 401 and the socket never opens. Your handler only ever runs for an authenticated client.
 
 ### Mark the route secured
 
@@ -959,7 +959,7 @@ Router::websocket("/ws/admin",
 );
 ```
 
-You can also secure a route imperatively — pass `true` as the third argument. Use this when the handler has no docblock or is built dynamically:
+You can also secure a route imperatively, pass `true` as the third argument. Use this when the handler has no docblock or is built dynamically:
 
 ```php
 Router::websocket("/ws/admin", $handler, true);
@@ -971,26 +971,26 @@ Both forms set `auth_required` on the route. Public routes stay public, so this 
 
 The token reaches the server through any of three transports. The framework checks them in this order:
 
-**1. Authorization header** — for server, CLI, and mobile clients that control their own headers:
+**1. Authorization header** - for server, CLI, and mobile clients that control their own headers:
 
 ```
 Authorization: Bearer eyJhbGciOi...
 ```
 
-**2. The `bearer` subprotocol** — the only way a **browser** can pass a token, because `new WebSocket()` cannot set request headers. Pass `['bearer', token]` as the second argument and the server echoes `bearer` back as the accepted subprotocol:
+**2. The `bearer` subprotocol** - the only way a **browser** can pass a token, because `new WebSocket()` cannot set request headers. Pass `['bearer', token]` as the second argument and the server echoes `bearer` back as the accepted subprotocol:
 
 ```javascript
 const token = "eyJhbGciOi...";
 const ws = new WebSocket("ws://localhost:7145/ws/admin", ["bearer", token]);
 ```
 
-**3. The `token` query parameter** — the simplest browser fallback:
+**3. The `token` query parameter** - the simplest browser fallback:
 
 ```javascript
 const ws = new WebSocket(`ws://localhost:7145/ws/admin?token=${token}`);
 ```
 
-The token is validated with `Auth::validToken()` — the same validator your HTTP routes use, reading the same `TINA4_SECRET`.
+The token is validated with `Auth::validToken()`, the same validator your HTTP routes use, reading the same `TINA4_SECRET`.
 
 ### The verified payload on `$connection->auth`
 
@@ -1072,4 +1072,4 @@ The origin allow-list (`TINA4_WS_ALLOWED_ORIGINS`) is checked **before** the tok
 
 **Cause:** The route is public. A WebSocket route, like a `GET` route, is public by default.
 
-**Fix:** Mark the route `@secured` (or pass `true` as the third argument to `Router::websocket()`). The framework then requires a valid JWT on the upgrade and rejects a missing or invalid token with a 401 before the handshake — your handler only runs for an authenticated client. The browser sends the token through the `bearer` subprotocol or a `?token=` query param; servers can use the `Authorization` header. The verified payload lands on `$connection->auth`. See [Securing a WebSocket Route](#_15-securing-a-websocket-route).
+**Fix:** Mark the route `@secured` (or pass `true` as the third argument to `Router::websocket()`). The framework then requires a valid JWT on the upgrade and rejects a missing or invalid token with a 401 before the handshake, your handler only runs for an authenticated client. The browser sends the token through the `bearer` subprotocol or a `?token=` query param; servers can use the `Authorization` header. The verified payload lands on `$connection->auth`. See [Securing a WebSocket Route](#_15-securing-a-websocket-route).

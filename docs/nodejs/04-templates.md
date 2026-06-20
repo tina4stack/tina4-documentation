@@ -527,7 +527,7 @@ Filters transform values. Apply them with the `|` (pipe) character.
 | `date("Y-m-d")` | `{{ created \| date("Y-m-d") }}` | Format a date value |
 | `format(val)` | `{{ "%.2f" \| format(price) }}` | Format string with value (sprintf-style) |
 | `data_uri` | `{{ content \| data_uri }}` | Convert to a data URI string |
-| `dump` | `{{ var \| dump }}` or `{{ dump(var) }}` | Debug output — gated on `TINA4_DEBUG=true` (see [Dumping Values](#dumping-values-for-debugging)) |
+| `dump` | `{{ var \| dump }}` or `{{ dump(var) }}` | Debug output, gated on `TINA4_DEBUG=true` (see [Dumping Values](#dumping-values-for-debugging)) |
 | `form_token` | `{{ form_token() }}` | Generate a CSRF hidden input with token |
 | `formTokenValue` | `{{ formTokenValue("context") }}` | Return just the raw JWT token string |
 | `to_json` | `{{ data \| to_json }}` | JSON-encode a value (safe, no double-escaping) |
@@ -553,13 +553,13 @@ The `dump` helper lets you inspect any variable mid-template. Two interchangeabl
 
 Both produce the same `<pre>`-wrapped, HTML-escaped inspection of the value. Unlike `JSON.stringify`, the built-in inspector handles everything safely:
 
-- **Circular references** — marked `[Circular]` (no crash)
-- **BigInt** — shown as `123n` (no crash)
-- **Map / Set** — `Map(2) { "a" => 1, "b" => 2 }` / `Set(3) { 1, 2, 3 }`
-- **Date** — `Date(2026-04-09T13:00:00.000Z)` (type retained)
-- **Error** — `Error("message")` (type + message)
-- **Class instances** — `User { name: "Alice" }` (class name preserved)
-- **Functions / Symbols / undefined** — shown inline, not silently dropped
+- **Circular references**: marked `[Circular]` (no crash)
+- **BigInt**: shown as `123n` (no crash)
+- **Map / Set**: `Map(2) { "a" => 1, "b" => 2 }` / `Set(3) { 1, 2, 3 }`
+- **Date**: `Date(2026-04-09T13:00:00.000Z)` (type retained)
+- **Error**: `Error("message")` (type + message)
+- **Class instances**: `User { name: "Alice" }` (class name preserved)
+- **Functions / Symbols / undefined**: shown inline, not silently dropped
 
 ```html
 {{ dump(order) }}
@@ -575,10 +575,10 @@ Both produce the same `<pre>`-wrapped, HTML-escaped inspection of the value. Unl
 </div>
 
 ```bash
-# .env — dev
+# .env - dev
 TINA4_DEBUG=true    # dump() outputs the value
 
-# .env — production
+# .env - production
 TINA4_DEBUG=false   # dump() is a no-op
 ```
 

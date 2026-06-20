@@ -3,7 +3,7 @@
 Tina4 includes a built-in SOAP 1.1 / WSDL 1.0 service with zero-configuration automatic WSDL generation. Extend the `\Tina4\WSDL` abstract class, define your methods, and Tina4 handles the rest.
 
 ::: tip Hot tips!
-- WSDL is auto-generated from your PHP method signatures — no XML files to maintain
+- WSDL is auto-generated from your PHP method signatures, with no XML files to maintain
 - Supports `string`, `int`, `float`, `bool`, `array<T>`, `?T` (nullable) types
 - Works behind reverse proxies with `X-Forwarded-*` header support
 - Access `?wsdl` on any SOAP endpoint to get the service definition

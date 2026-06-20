@@ -16,8 +16,8 @@ No Webpack. No Vite. No PostCSS config. No build step.
 mysite/
   src/
     scss/
-      _variables.scss       # Shared variables (partial — not compiled alone)
-      main.scss             # Your styles — compiles to public/css/main.css
+      _variables.scss       # Shared variables (partial - not compiled alone)
+      main.scss             # Your styles - compiles to public/css/main.css
     public/
       css/
         tina4.min.css       # Ships with Tina4 (24KB, Bootstrap-compatible)
@@ -114,7 +114,7 @@ One output file: `main.css`. Clean imports, no duplication.
 
 ## tina4-css
 
-Every Tina4 project ships with `tina4.min.css` — a 24KB CSS framework with Bootstrap-compatible class names. No CDN, no npm install.
+Every Tina4 project ships with `tina4.min.css`, a 24KB CSS framework with Bootstrap-compatible class names. No CDN, no npm install.
 
 | Component | Classes |
 |-----------|---------|
@@ -143,7 +143,7 @@ In dev mode (`TINA4_DEBUG=true`), the server watches `src/scss/` for changes. Ed
 
 ## Production
 
-The compiled CSS lives in `src/public/css/`. Commit it to source control. In production, the server serves the pre-compiled file directly — no runtime compilation overhead.
+The compiled CSS lives in `src/public/css/`. Commit it to source control. In production, the server serves the pre-compiled file directly, with no runtime compilation overhead.
 
 For deployment, the compiled CSS is just a static file. Any CDN, reverse proxy, or static host can serve it.
 

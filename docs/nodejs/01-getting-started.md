@@ -267,7 +267,7 @@ Router.get("/api/greeting/{name}", async (req, res) => {
 
 Save the file. The dev server picks up the change. If live reload is off, restart with `tina4 serve`.
 
-> **Cross-language note.** Node, PHP, and Ruby read path parameters from `req.params` / `$request->params` / `request.params`. Python passes them as function arguments instead. Same concept, two shapes — pick the chapter that matches your runtime.
+> **Cross-language note.** Node, PHP, and Ruby read path parameters from `req.params` / `$request->params` / `request.params`. Python passes them as function arguments instead. Same concept, two shapes, so pick the chapter that matches your runtime.
 
 ### File-Based Routing Alternative
 
@@ -663,7 +663,7 @@ The CLI adds live reload and other development features. For direct Node.js exec
 
 ## 9. Manual Setup (No CLI)
 
-The `tina4` CLI scaffolds everything for you. But if you start from an empty folder — just Node.js and npm — here is the minimum you need.
+The `tina4` CLI scaffolds everything for you. But if you start from an empty folder (just Node.js and npm), here is the minimum you need.
 
 ### Step 1: Initialize and Install
 
@@ -736,7 +736,7 @@ TINA4_DEBUG=true
 tina4 serve
 ```
 
-The server starts on `http://localhost:7148`. You should see the Tina4 welcome page. From here, add route files in `src/routes/` and templates in `src/templates/` — the same way as a CLI-scaffolded project.
+The server starts on `http://localhost:7148`. You should see the Tina4 welcome page. From here, add route files in `src/routes/` and templates in `src/templates/`, the same way as a CLI-scaffolded project.
 
 > **Note:** Tina4 Node.js refuses to start without the Rust CLI. To bypass it (for example inside a Docker image that already wraps the framework) set `TINA4_OVERRIDE_CLIENT=true` in `.env` and run `npx tsx app.ts` directly.
 

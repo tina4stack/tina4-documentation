@@ -4,7 +4,7 @@
 - Drop components on your form, configure in Object Inspector, and you're ready to go
 - `TTina4REST` + `TTina4RESTRequest` = one-line API calls with automatic MemTable population
 - Use `SendHttpRequest` from `Tina4Core` for quick one-off REST calls without components
-- `TTina4HTMLRender` renders HTML with CSS directly on an FMX canvas — including native form controls
+- `TTina4HTMLRender` renders HTML with CSS directly on an FMX canvas, including native form controls
 - Twig templates work in both `TTina4HTMLRender` and `TTina4HTMLPages` for dynamic content
 :::
 
@@ -233,7 +233,7 @@ uv sync
 }
 ```
 
-This means Claude can write Delphi code, compile it, launch the app, see it running, click buttons, verify behavior, and fix issues — all without leaving the conversation.
+This means Claude can write Delphi code, compile it, launch the app, see it running, click buttons, verify behavior, and fix issues, all without leaving the conversation.
 
 <nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
   <a href="#">&uarr; Back to top</a>
@@ -244,5 +244,5 @@ This means Claude can write Delphi code, compile it, launch the app, see it runn
 
 ## 📕 Download the book
 
-[**Tina4Delphi Developer** (PDF)](/pdfs/Tina4-Delphi-Developer.pdf) — full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
+[**Tina4Delphi Developer** (PDF)](/pdfs/Tina4-Delphi-Developer.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
 

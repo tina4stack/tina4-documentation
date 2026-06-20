@@ -12,13 +12,13 @@ Picture a blog. Authors, posts, comments. Authors own many posts. Posts own many
 
 ## ORM at a Glance: Four Languages, One Shape
 
-The ORM does the same job in every Tina4 book. Define a model. Save it. Query it. Each language wears its own clothes — PHP uses typed properties, Python uses field class instances, Ruby uses a DSL, Node uses config objects — but the operations line up. If you know the API in one book, you can read the others.
+The ORM does the same job in every Tina4 book. Define a model. Save it. Query it. Each language wears its own clothes (PHP uses typed properties, Python uses field class instances, Ruby uses a DSL, Node uses config objects) but the operations line up. If you know the API in one book, you can read the others.
 
 ### Defining a Model
 
 The same `Post` model with `id`, `title`, `body`, and `created_at`:
 
-**Python** — field class instances on the class body:
+**Python**: field class instances on the class body:
 
 ```python
 from tina4_python.orm import ORM, IntegerField, StringField, DateTimeField
@@ -32,7 +32,7 @@ class Post(ORM):
     created_at = DateTimeField()
 ```
 
-**PHP** — native typed properties:
+**PHP**: native typed properties:
 
 ```php
 <?php
@@ -49,7 +49,7 @@ class Post extends ORM
 }
 ```
 
-**Ruby** — class-level DSL declarations:
+**Ruby**: class-level DSL declarations:
 
 ```ruby
 class Post < Tina4::ORM
@@ -62,7 +62,7 @@ class Post < Tina4::ORM
 end
 ```
 
-**Node.js (TypeScript)** — config objects in a `static fields` block:
+**Node.js (TypeScript)**: config objects in a `static fields` block:
 
 ```typescript
 import { BaseModel } from "tina4-nodejs/orm";
@@ -93,9 +93,9 @@ Same operation, four shapes:
 | Delete a record | `post.delete()` | `$post->delete()` | `post.delete` | `post.delete()` |
 | Count rows | `Post.count()` | `(new Post())->count()` | `Post.count` | `Post.count()` |
 
-A few details worth noting. `find()` takes attribute names and applies the field map; `where()` takes raw SQL and skips translation. PHP needs `(new Post())` for instance methods like `where()` and `all()` — the rest are static. Ruby methods drop the parentheses by convention.
+A few details worth noting. `find()` takes attribute names and applies the field map; `where()` takes raw SQL and skips translation. PHP needs `(new Post())` for instance methods like `where()` and `all()`; the rest are static. Ruby methods drop the parentheses by convention.
 
-For full detail on field options, relationships, eager loading, soft delete, validation, and Auto-CRUD, read the rest of this chapter — it shows the API for the language of this book.
+For full detail on field options, relationships, eager loading, soft delete, validation, and Auto-CRUD, read the rest of this chapter, which shows the API for the language of this book.
 
 ---
 
@@ -137,7 +137,7 @@ A complete model. Here is what each piece does:
 | `DateTimeField` | `str` | `DATETIME` | Date and time |
 | `TextField` | `str` | `TEXT` | Long text |
 | `BlobField` | `bytes` | `BLOB` | Binary data |
-| `ForeignKeyField` | `int` | `INTEGER` | Foreign key — auto-wires `belongs_to` and `has_many` (see [Relationships](#6-relationships)) |
+| `ForeignKeyField` | `int` | `INTEGER` | Foreign key, auto-wires `belongs_to` and `has_many` (see [Relationships](#6-relationships)) |
 
 Verbose names (`IntegerField`, `StringField`, `BooleanField`) are the standard. Short aliases (`IntField`, `StrField`, `BoolField`) also work.
 
@@ -488,11 +488,11 @@ json_string = note.to_json()
 Tina4 ORM supports three relationship types: `has_many`, `has_one`, and `belongs_to`. Each works in two styles:
 
 - **Imperative**: call the method on an instance when you need a one-off lookup
-- **Declarative**: define the relationship as a class attribute using descriptor functions — accessed as a simple attribute, lazy-loaded on first access
+- **Declarative**: define the relationship as a class attribute using descriptor functions, accessed as a simple attribute, lazy-loaded on first access
 
 Both styles support eager loading via `include=["relationship_name"]`.
 
-### ForeignKeyField — Auto-Wired Relationships
+### ForeignKeyField - Auto-Wired Relationships
 
 Declaring a column with `ForeignKeyField(to=OtherModel)` automatically wires both sides of the relationship. The declaring model gets a `belongs_to` accessor (the column name with `_id` stripped), and the referenced model gets a `has_many` accessor (the declaring class name lowercased with `s` appended, or whatever you pass via `related_name=`).
 
@@ -513,8 +513,8 @@ class BlogPost(ORM):
 
 With that single `ForeignKeyField` declaration, two accessors are auto-wired:
 
-- `post.author` — returns the `Author` instance (belongs_to)
-- `author.posts` — returns a list of `BlogPost` instances (has_many)
+- `post.author`, returns the `Author` instance (belongs_to)
+- `author.posts`, returns a list of `BlogPost` instances (has_many)
 
 No manual `has_many` or `belongs_to` calls required.
 
@@ -652,7 +652,7 @@ The `include` parameter on `all()`, `where()`, `find_by_id()`, and `select()` so
 ```python
 @get("/api/authors")
 async def list_authors(request, response):
-    # Pass a list of relationship names — ORM batch-loads all posts in 2 queries total
+    # Pass a list of relationship names - ORM batch-loads all posts in 2 queries total
     authors = Author.all(include=["posts"])
 
     data = []

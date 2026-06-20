@@ -133,7 +133,7 @@ class AccountingService:
             [str(year), f"{month:02d}"]
         )
 
-# Create the service instance — methods are already registered via decorators
+# Create the service instance - methods are already registered via decorators
 accounting = AccountingService(db)
 ```
 

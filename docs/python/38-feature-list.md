@@ -46,7 +46,7 @@ Tina4 is four implementations of the same framework: Python, PHP, Ruby, and Node
 | 14 | **Query Builder** | Fluent query API: `select`, `where`, `join`, `order_by`, `limit`, `paginate` |
 | 15 | **Migrations** | Version-controlled schema changes via `migrate up`, `migrate down`, auto-runner |
 | 16 | **Transactions** | `db.begin()`, `db.commit()`, `db.rollback()` with context manager support |
-| 17 | **Sequence / Next ID** | `Database.get_next_id(table)` — race-safe sequence via a dedicated sequence table |
+| 17 | **Sequence / Next ID** | `Database.get_next_id(table)`: race-safe sequence via a dedicated sequence table |
 
 ---
 

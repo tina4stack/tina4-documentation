@@ -1,92 +1,92 @@
 # Chapter 35: Release Notes
 
-## v3.13.38 (2026-06-19) — Coordinated security & robustness release
+## v3.13.38 (2026-06-19) - Coordinated security & robustness release
 
-A large bundled release closing a cross-framework hardening sweep. **WebSockets:** the Redis backplane is now wired for real — local-first delivery, then a published envelope on the shared `tina4:ws` channel, relayed with an origin guard (no own-echo, no cluster loop) — and, critically, the backplane class is now PSR-4 autoloadable (it had never loaded). Plus an origin allow-list (`TINA4_WS_ALLOWED_ORIGINS`), an idle reaper (`TINA4_WS_IDLE_TIMEOUT`), resilient broadcast, OP_CONTINUATION frame reassembly, and SSE hardening (generator error mid-stream). **Sessions:** the `DatabaseSessionHandler` SQL injection is fixed — the client-controlled session id is no longer interpolated into SQL; every query is parameterized. Plus a log-loud-and-degrade backend-failure policy (`TINA4_SESSION_STRICT` to re-raise). **GraphQL/WSDL:** a SOAP `<!DOCTYPE>` is rejected before parsing (SOAP 1.1 forbids DTDs — closes the XML entity-expansion / external-entity surface), a recursion-depth guard (`TINA4_GRAPHQL_MAX_DEPTH`, default 50) catches deep queries **and** circular fragments, and resolver/SOAP faults are masked in production with the real cause logged (full detail only under `TINA4_DEBUG`). **Tooling:** a new `tina4 metrics` command reports the top-N code-health offenders with `--top/--json/--fail-on/--path`, and the coverage test-detection is now precise (a real `use`/FQCN import or defined-class reference, not a name-substring scan). Zero new third-party dependencies. Full suite: 3,219 passing.
+A large bundled release closing a cross-framework hardening sweep. **WebSockets:** the Redis backplane is now wired for real - local-first delivery, then a published envelope on the shared `tina4:ws` channel, relayed with an origin guard (no own-echo, no cluster loop) - and, critically, the backplane class is now PSR-4 autoloadable (it had never loaded). Plus an origin allow-list (`TINA4_WS_ALLOWED_ORIGINS`), an idle reaper (`TINA4_WS_IDLE_TIMEOUT`), resilient broadcast, OP_CONTINUATION frame reassembly, and SSE hardening (generator error mid-stream). **Sessions:** the `DatabaseSessionHandler` SQL injection is fixed - the client-controlled session id is no longer interpolated into SQL; every query is parameterized. Plus a log-loud-and-degrade backend-failure policy (`TINA4_SESSION_STRICT` to re-raise). **GraphQL/WSDL:** a SOAP `<!DOCTYPE>` is rejected before parsing (SOAP 1.1 forbids DTDs - closes the XML entity-expansion / external-entity surface), a recursion-depth guard (`TINA4_GRAPHQL_MAX_DEPTH`, default 50) catches deep queries **and** circular fragments, and resolver/SOAP faults are masked in production with the real cause logged (full detail only under `TINA4_DEBUG`). **Tooling:** a new `tina4 metrics` command reports the top-N code-health offenders with `--top/--json/--fail-on/--path`, and the coverage test-detection is now precise (a real `use`/FQCN import or defined-class reference, not a name-substring scan). Zero new third-party dependencies. Full suite: 3,219 passing.
 
-## v3.13.37 (2026-06-18) — Dev-admin editor: Ruby + more syntax highlighting
+## v3.13.37 (2026-06-18) - Dev-admin editor: Ruby + more syntax highlighting
 
 The dev-admin code editor now highlights `.rb`/`.rs`/`.go`/`.java`/`.scss` (the CodeMirror bundle was missing those grammars). Also aligned the file-read language map to the Python master (scss→css, add rust/go/java, txt/csv/log→text, xml→html, shell variants, gemspec/rake→ruby, svg) and added no-extension `Dockerfile` detection. Dev-mode tooling only. Full suite: 3,078 passing.
 
-## v3.13.36 (2026-06-18) — Instant WebSocket dev-reload (parity)
+## v3.13.36 (2026-06-18) - Instant WebSocket dev-reload (parity)
 
-Dev-reload is now a WebSocket push, matching Python. `tina4 serve` POSTs `/__dev/api/reload`; `DevAdmin` invalidates OPcache for the changed file and re-discovers routes in-process (`RouteDiscovery::rescan`, no respawn, same PID), then broadcasts `{type, file, mtime}` over `/__dev_reload`. The injected client is WebSocket-primary — instant reload, CSS hot-swap, and it only falls back to the `/__dev/api/mtime` poll when the socket drops. `Router` registers `(method, path)` with replace-in-place semantics so the re-loaded handler wins. Debug-mode only — production is untouched. Full suite: 3,078 passing.
+Dev-reload is now a WebSocket push, matching Python. `tina4 serve` POSTs `/__dev/api/reload`; `DevAdmin` invalidates OPcache for the changed file and re-discovers routes in-process (`RouteDiscovery::rescan`, no respawn, same PID), then broadcasts `{type, file, mtime}` over `/__dev_reload`. The injected client is WebSocket-primary - instant reload, CSS hot-swap, and it only falls back to the `/__dev/api/mtime` poll when the socket drops. `Router` registers `(method, path)` with replace-in-place semantics so the re-loaded handler wins. Debug-mode only - production is untouched. Full suite: 3,078 passing.
 
-## v3.13.35 (2026-06-17) — Live MCP endpoint for AI agents
+## v3.13.35 (2026-06-17) - Live MCP endpoint for AI agents
 
 The built-in MCP server is now actually reachable. Its 48 dev tools (live DB queries, sandboxed file I/O, route list, project overview, docs search) were fully built but never mounted. `DevAdmin::register()` now mounts `/__dev/mcp` (JSON-RPC) + `/__dev/mcp/sse` in debug mode, so an AI agent (Claude Desktop/Code) gets live access scoped to the running project. The SSE handshake was made SAPI-safe for the built-in server. 15 new tests; full suite 3,064 passing.
 
-## v3.13.34 (2026-06-17) — Store images + dual-port test
+## v3.13.34 (2026-06-17) - Store images + dual-port test
 
 Fixed blank product images in the example store: the storefront templates read `product.imageUrl` (camelCase) but `toDict()` emits snake_case `image_url`. Aligned the templates to `image_url` (matching the API and the Python store). Corrected stale env-var names in `example/.env.example` (notably `SECRET` → `TINA4_SECRET`, which PHP rejects at boot). Added `DualPortReloadTest` locking in the AI dual-port dev mode (main port hot-reloads; port+1000 is the stable AI port). Full suite: 3,049 passing.
 
-## v3.13.33 (2026-06-17) — Queues: priority pop + automatic dead-lettering (⚠ behavioural change)
+## v3.13.33 (2026-06-17) - Queues: priority pop + automatic dead-lettering (⚠ behavioural change)
 
-**Behavioural change.** `$job->fail()` now re-enqueues (incrementing `attempts`) until `attempts >= maxRetries`, then dead-letters — a `consume` loop retries `maxRetries` times automatically. `pop`/`consume` are now priority-ordered (was FIFO); new additive `retryBackoff` config. Bug fix: `Job::$topic` is now **public** (was private → fatal when read). Only the file backend changed. Queue chapter rewritten to match. Full suite: 3,046 passing.
+**Behavioural change.** `$job->fail()` now re-enqueues (incrementing `attempts`) until `attempts >= maxRetries`, then dead-letters - a `consume` loop retries `maxRetries` times automatically. `pop`/`consume` are now priority-ordered (was FIFO); new additive `retryBackoff` config. Bug fix: `Job::$topic` is now **public** (was private → fatal when read). Only the file backend changed. Queue chapter rewritten to match. Full suite: 3,046 passing.
 
-## v3.13.32 (2026-06-17) — Caching: per-query bypass + X-Cache headers + string-middleware (chapter rewritten)
+## v3.13.32 (2026-06-17) - Caching: per-query bypass + X-Cache headers + string-middleware (chapter rewritten)
 
-Added a per-query bypass — `$db->fetch(..., noCache: true)` (also `fetchOne`/`fetchAll`) skips lookup + store. `ResponseCache` now sets `X-Cache: HIT|MISS` + `X-Cache-TTL`, and the `"ResponseCache:300"` string-middleware form now works (parity with Python/Ruby) — this also fixed a dispatch bug where the response cache's store step never ran on the route path. The KV helpers live in `\Tina4\Middleware\`. The caching chapter was rewritten to match code (real `cacheStats()` shapes, all seven backends + file fallback, the three cache layers, accurate env/defaults), dropping earlier aspirational claims. Full suite: 3,035 passing.
+Added a per-query bypass - `$db->fetch(..., noCache: true)` (also `fetchOne`/`fetchAll`) skips lookup + store. `ResponseCache` now sets `X-Cache: HIT|MISS` + `X-Cache-TTL`, and the `"ResponseCache:300"` string-middleware form now works (parity with Python/Ruby) - this also fixed a dispatch bug where the response cache's store step never ran on the route path. The KV helpers live in `\Tina4\Middleware\`. The caching chapter was rewritten to match code (real `cacheStats()` shapes, all seven backends + file fallback, the three cache layers, accurate env/defaults), dropping earlier aspirational claims. Full suite: 3,035 passing.
 
-## v3.13.31 (2026-06-17) — Version alignment (no functional change in PHP)
+## v3.13.31 (2026-06-17) - Version alignment (no functional change in PHP)
 
-Cross-framework version alignment with the Ruby request/response parity release. PHP's request body, query, headers, cookies, file uploads (raw-bytes `content`), and response surface were already in parity — no behavioural change here. Full suite: 3,024 passing.
+Cross-framework version alignment with the Ruby request/response parity release. PHP's request body, query, headers, cookies, file uploads (raw-bytes `content`), and response surface were already in parity - no behavioural change here. Full suite: 3,024 passing.
 
-## v3.13.30 (2026-06-16) — Typed route params coerce + /__dev auth-bypass fixed (⚠ behavioural change)
+## v3.13.30 (2026-06-16) - Typed route params coerce + /__dev auth-bypass fixed (⚠ behavioural change)
 
-**Behavioural change.** Typed path params now arrive coerced: `{id:int}` → `int`, `{price:float}` → `float` (other types and untyped params stay strings; matching unchanged). `compilePath()` computed the param-type map but `addRoute()` dropped it, so the existing cast in `matchInTable()` was dead code and `{id:int}` arrived as the string `"42"` — now wired through, bringing PHP in line with Python/Ruby/Node. Separately, a bug fix: the dev-admin auth bypass tested `$request->url` (always the full `scheme://host/path`) so it never matched — a write to `/__dev/...` (and the gallery prefixes) returned 401 instead of bypassing; it now tests `$request->path`. Full suite: 3,024 passing.
+**Behavioural change.** Typed path params now arrive coerced: `{id:int}` → `int`, `{price:float}` → `float` (other types and untyped params stay strings; matching unchanged). `compilePath()` computed the param-type map but `addRoute()` dropped it, so the existing cast in `matchInTable()` was dead code and `{id:int}` arrived as the string `"42"` - now wired through, bringing PHP in line with Python/Ruby/Node. Separately, a bug fix: the dev-admin auth bypass tested `$request->url` (always the full `scheme://host/path`) so it never matched - a write to `/__dev/...` (and the gallery prefixes) returned 401 instead of bypassing; it now tests `$request->path`. Full suite: 3,024 passing.
 
-## v3.13.29 (2026-06-16) — Live API search finds magic methods + ranks qualified queries
+## v3.13.29 (2026-06-16) - Live API search finds magic methods + ranks qualified queries
 
 Parity with the Python master fix for the `api_*` live-reflection tools (what AI assistants query for real signatures):
 
 - **Magic methods are now indexed.** `Frond::addFilter` / `addGlobal` / `addTest` dispatch through `__call`/`__callStatic`, so the token parser never saw them. `Docs` now reads `@method` docblock tags (and `Frond` declares them, which also helps IDE autocomplete), so `api_method("Frond", "addTest")` returns `addTest(string $name, callable $fn)`.
-- **Class-qualified ranking.** `api_search("Frond.addTest")` now ranks `Frond::addTest` first — the owning class, fqn segments, and an exact `Class.method` match are scored.
+- **Class-qualified ranking.** `api_search("Frond.addTest")` now ranks `Frond::addTest` first - the owning class, fqn segments, and an exact `Class.method` match are scored.
 - **Natural-name lookups.** `api_class`/`api_method` resolve a bare class name (`Database`) and leading-backslash variants, not just the exact fqn.
 
 The bundled AI skills now tell assistants to query `api_*` before guessing. Full suite: 3,014 passing.
 
-## v3.13.26 (2026-06-16) — pooling fixes: standalone writes auto-commit + independent pooled PostgreSQL connections
+## v3.13.26 (2026-06-16) - pooling fixes: standalone writes auto-commit + independent pooled PostgreSQL connections
 
-**Behavioural default change.** A standalone write made **outside** an explicit transaction now auto-commits on its own connection before returning — the default `autoCommit` is flipped to *on* across all adapters. Previously autocommit was off by default, which broke connection pooling: a standalone write stayed uncommitted on one pooled connection while the next read round-robined to another and saw nothing. Explicit transactions (`startTransaction`/`commit`/`rollback`) stay atomic — MySQL/MSSQL suspend driver autocommit for the duration of the transaction, and Firebird's commit branch is gated on `transaction === null`. Set `TINA4_AUTOCOMMIT=false` for strict manual-commit mode (per-connection override: `Database::create($url, autoCommit: false)`).
+**Behavioural default change.** A standalone write made **outside** an explicit transaction now auto-commits on its own connection before returning - the default `autoCommit` is flipped to *on* across all adapters. Previously autocommit was off by default, which broke connection pooling: a standalone write stayed uncommitted on one pooled connection while the next read round-robined to another and saw nothing. Explicit transactions (`startTransaction`/`commit`/`rollback`) stay atomic - MySQL/MSSQL suspend driver autocommit for the duration of the transaction, and Firebird's commit branch is gated on `transaction === null`. Set `TINA4_AUTOCOMMIT=false` for strict manual-commit mode (per-connection override: `Database::create($url, autoCommit: false)`).
 
-**PostgreSQL pooling fix.** `pg_connect()` was reusing a single libpq connection for every adapter that shared a DSN, so a `pool` of N adapters all shared **one** connection — and closing one broke the rest. Pooled adapters now each open an independent connection (`PGSQL_CONNECT_FORCE_NEW`), matching Python, Node, and Ruby.
+**PostgreSQL pooling fix.** `pg_connect()` was reusing a single libpq connection for every adapter that shared a DSN, so a `pool` of N adapters all shared **one** connection - and closing one broke the rest. Pooled adapters now each open an independent connection (`PGSQL_CONNECT_FORCE_NEW`), matching Python, Node, and Ruby.
 
 Verified live on PostgreSQL: standalone write visible from a separate connection, explicit rollback discards, explicit commit persists, and pooled standalone writes visible across every round-robin connection. Full suite: 3,011 passing.
 
-## v3.13.24 (2026-06-15) — unified cache backends across response, KV, and persistent DB cache
+## v3.13.24 (2026-06-15) - unified cache backends across response, KV, and persistent DB cache
 
 The response/KV cache now supports **seven backends**, selected by `TINA4_CACHE_BACKEND`: `memory` (default), `file`, `redis`, `valkey`, `memcached`, `mongodb`, and `database`. `TINA4_CACHE_URL` carries the connection string for `redis`/`valkey`/`memcached`/`mongodb`, or a SQL URL for the `database` backend (which falls back to `TINA4_DATABASE_URL`). Credentials can be embedded in the URL (`redis://user:pass@host`, `redis://:pass@host`, `mongodb://user:pass@host`) or supplied via `TINA4_CACHE_USERNAME` / `TINA4_CACHE_PASSWORD` (mirroring `TINA4_DATABASE_USERNAME`/`_PASSWORD`); memcached is unauthenticated. The usual `TINA4_CACHE_TTL` (60), `TINA4_CACHE_MAX_ENTRIES` (1000), and `TINA4_CACHE_DIR` (`data/cache`) still apply.
 
-**Graceful fallback:** if a configured backend's driver is missing or the service/credentials are unreachable or wrong, the cache logs a warning and falls back to the **file** backend — a real persistent cache, never a silent no-op.
+**Graceful fallback:** if a configured backend's driver is missing or the service/credentials are unreachable or wrong, the cache logs a warning and falls back to the **file** backend - a real persistent cache, never a silent no-op.
 
 The **persistent DB query cache** (`TINA4_DB_CACHE=true`) now routes through the same backend set via `TINA4_DB_CACHE_BACKEND` + `TINA4_DB_CACHE_URL`, so multiple instances share one cache with global write-invalidation. `cacheStats()` now reports a `backend` field alongside `mode`.
 
 Full suite: 3,010 tests passing.
 
-## v3.13.23 (2026-06-15) — request-scoped DB query cache, on by default
+## v3.13.23 (2026-06-15) - request-scoped DB query cache, on by default
 
-A new **request-scoped query cache** protects your database from rapid repeat reads. Within a single request, identical `SELECT`s and ORM reads are deduped automatically — the DB is hit once and subsequent identical reads are served from memory. The cache is **cleared at the start of every request** (so it never serves stale rows across requests) and **flushed on any write** (insert/update/delete/execute). For non-request contexts (scripts, workers) a short safety TTL applies.
+A new **request-scoped query cache** protects your database from rapid repeat reads. Within a single request, identical `SELECT`s and ORM reads are deduped automatically - the DB is hit once and subsequent identical reads are served from memory. The cache is **cleared at the start of every request** (so it never serves stale rows across requests) and **flushed on any write** (insert/update/delete/execute). For non-request contexts (scripts, workers) a short safety TTL applies.
 
 It is **on by default** via `TINA4_AUTO_CACHING=true` (off-switch `TINA4_AUTO_CACHING=false`); the in-request TTL is `TINA4_AUTO_CACHING_TTL` (default 5 seconds). The existing `TINA4_DB_CACHE` (default `false`) remains the separate *persistent* cross-request cache (TTL `TINA4_DB_CACHE_TTL`, default 30s) and is not cleared per request. `cacheStats()` now reports a `mode` field: `"request"` (default), `"persistent"`, or `"off"`.
 
-**Also fixed:** the `\Tina4\Middleware\cache_get/cache_set/cache_delete/cache_clear/cache_stats` helpers now autoload on a plain `require` — previously they fataled with "undefined function" until the `ResponseCache` class had been touched.
+**Also fixed:** the `\Tina4\Middleware\cache_get/cache_set/cache_delete/cache_clear/cache_stats` helpers now autoload on a plain `require` - previously they fataled with "undefined function" until the `ResponseCache` class had been touched.
 
 Full suite: 2,992 tests passing.
 
-## v3.13.21 (2026-06-15) — docs: `render()` corrections + version re-sync
+## v3.13.21 (2026-06-15) - docs: `render()` corrections + version re-sync
 
-Documentation consistency pass — no behavior change. References to a `$response->template()` *method* (which never existed) are corrected to **`$response->render()`** — the real method; `template` is only the route-level binding, not a response method. Fixed across the AI guide, `llms.txt`, and the gallery page. Version re-synced to 3.13.21 with the other frameworks (this release also carries a Python-side JWT-secret security hardening).
+Documentation consistency pass - no behavior change. References to a `$response->template()` *method* (which never existed) are corrected to **`$response->render()`** - the real method; `template` is only the route-level binding, not a response method. Fixed across the AI guide, `llms.txt`, and the gallery page. Version re-synced to 3.13.21 with the other frameworks (this release also carries a Python-side JWT-secret security hardening).
 
 Full suite: 2,433 tests passing.
 
-## v3.13.19 (2026-06-15) — return domain objects, construct from JSON, and one database binder
+## v3.13.19 (2026-06-15) - return domain objects, construct from JSON, and one database binder
 
 Three ergonomic improvements surfaced by the live side-by-side review of the book's own examples across all four frameworks.
 
 ### `$response(...)` serializes domain objects
 
-Return an ORM model, an array of models, or a query result straight from a route — Tina4 serializes it to JSON. No more hand-rolled `toDict()` / `toJson()`:
+Return an ORM model, an array of models, or a query result straight from a route - Tina4 serializes it to JSON. No more hand-rolled `toDict()` / `toJson()`:
 
 ```php
 Router::get('/api/users', function ($request, $response) {
@@ -94,25 +94,25 @@ Router::get('/api/users', function ($request, $response) {
 });
 ```
 
-A single model becomes a JSON object; an array of models or a `DatabaseResult` becomes a JSON array. Plain arrays and strings behave exactly as before — purely additive. (`Response::json()` still pretty-prints.)
+A single model becomes a JSON object; an array of models or a `DatabaseResult` becomes a JSON array. Plain arrays and strings behave exactly as before - purely additive. (`Response::json()` still pretty-prints.)
 
 ### Construct a model from JSON, or data-first
 
 ```php
 new User('{"name": "Alice"}');     // JSON object string -> one record
-new User(['name' => 'Alice']);     // array data-first (NEW — no need for the data: arg)
+new User(['name' => 'Alice']);     // array data-first (NEW - no need for the data: arg)
 new User(data: ['name' => 'Alice']); // still works
 new User($db, ['name' => 'Alice']);  // still works ($db first)
 ```
 
 The first constructor argument is now type-detected (a `DatabaseAdapter`, an array, or a JSON string). Passing a **list** to a single-record constructor throws `InvalidArgumentException`. To build many records, map over the list.
 
-### ⚠ Breaking — one database binder: `bindDatabase`
+### ⚠ Breaking - one database binder: `bindDatabase`
 
-The ORM-to-database binder is now **`bindDatabase`** (was `ORM::setGlobalDb`). The default is unchanged — models still auto-bind to `TINA4_DATABASE_URL` (via `Database::fromEnv()`), so apps relying on the `.env` default need **no change**.
+The ORM-to-database binder is now **`bindDatabase`** (was `ORM::setGlobalDb`). The default is unchanged - models still auto-bind to `TINA4_DATABASE_URL` (via `Database::fromEnv()`), so apps relying on the `.env` default need **no change**.
 
 ```php
-// Most apps: nothing to do — the .env default is auto-bound.
+// Most apps: nothing to do - the .env default is auto-bound.
 
 \Tina4\ORM::bindDatabase(Database::create('sqlite:///app.db'));   // override the default
 
@@ -133,35 +133,35 @@ class Visit extends \Tina4\ORM {
 
 Full suite: 2,433 tests passing. Shipped with parity across all four frameworks.
 
-## v3.13.18 (2026-06-15) — ORM relationship + QueryBuilder fixes + boolean param binding
+## v3.13.18 (2026-06-15) - ORM relationship + QueryBuilder fixes + boolean param binding
 
 Found by the live side-by-side validation against PostgreSQL.
 
-- **QueryBuilder `first()` / `count()` returned null/0** even with matching rows — `get()` returns a `DatabaseResult` but `first()`/`count()` read `$result['data']` (raw-array shape). All three now consume the result via a shared `extractRecords()`: `first()` returns the row, `count()` the integer, and `groupBy().get()` returns every group.
-- **`belongsTo` returned null for a snake_case FK column** under autoMap — the lookup read `$this->{column}` but autoMap stores the value under the camelCase property. It now reverse-maps column → property, so the documented `$foreignKeys=['author_id'=>'Author']` form resolves the parent (lazy `$post->author`, explicit, and eager `include:['author']`).
-- **`fetch()` corrupted SQL that already ended in `LIMIT`** — it appended `LIMIT 100 OFFSET 0` unconditionally (`... LIMIT 1 LIMIT 100`), PG errored, the adapter swallowed it → empty result. It now skips the append when a trailing `LIMIT` is present.
-- **Bound PHP booleans are normalised** to the literal the column accepts — `'t'`/`'f'` on PostgreSQL's native `BOOLEAN`, `1`/`0` on the integer/BIT-backed engines (SQLite, MySQL, MSSQL, Firebird). Previously `fetch('... WHERE active = ?', [false])` bound `''` and PG rejected it.
+- **QueryBuilder `first()` / `count()` returned null/0** even with matching rows - `get()` returns a `DatabaseResult` but `first()`/`count()` read `$result['data']` (raw-array shape). All three now consume the result via a shared `extractRecords()`: `first()` returns the row, `count()` the integer, and `groupBy().get()` returns every group.
+- **`belongsTo` returned null for a snake_case FK column** under autoMap - the lookup read `$this->{column}` but autoMap stores the value under the camelCase property. It now reverse-maps column → property, so the documented `$foreignKeys=['author_id'=>'Author']` form resolves the parent (lazy `$post->author`, explicit, and eager `include:['author']`).
+- **`fetch()` corrupted SQL that already ended in `LIMIT`** - it appended `LIMIT 100 OFFSET 0` unconditionally (`... LIMIT 1 LIMIT 100`), PG errored, the adapter swallowed it → empty result. It now skips the append when a trailing `LIMIT` is present.
+- **Bound PHP booleans are normalised** to the literal the column accepts - `'t'`/`'f'` on PostgreSQL's native `BOOLEAN`, `1`/`0` on the integer/BIT-backed engines (SQLite, MySQL, MSSQL, Firebird). Previously `fetch('... WHERE active = ?', [false])` bound `''` and PG rejected it.
 - Doc: `DatabaseUrl` docstring corrected to `postgres://` / `postgresql://` (not `pgsql://`).
 
 Python/Ruby/Node were already correct on the boolean binding (verified live). Full suite: 2,416 passing.
 
-## v3.13.17 (2026-06-15) — PostgreSQL: native-type reads + `execute()` reports real failure
+## v3.13.17 (2026-06-15) - PostgreSQL: native-type reads + `execute()` reports real failure
 
 Two fixes found by the live side-by-side validation against PostgreSQL.
 
 ### Reads return native PHP types (not strings)
 
-`ext-pgsql` returns every column as a string — `id` as `"1"`, a boolean as `"t"`, floats as `"12.50"`. A Tina4 app written on SQLite (native-ish types) silently changed behaviour when moved to PostgreSQL, and diverged from Python/Node which return native types. `PostgresAdapter` now coerces each column from its PG type: `int2`/`int4`/`int8` → `int`, `bool` → `bool`, `float4`/`float8`/`numeric` → `float` (nulls preserved; `bytea` unchanged). So `$result[0]` is now `{"id":1,"active":true,...}` instead of all-strings. (`timestamp`/`date`/`json`/`uuid` stay strings — a minor diff vs Python's datetime objects.)
+`ext-pgsql` returns every column as a string - `id` as `"1"`, a boolean as `"t"`, floats as `"12.50"`. A Tina4 app written on SQLite (native-ish types) silently changed behaviour when moved to PostgreSQL, and diverged from Python/Node which return native types. `PostgresAdapter` now coerces each column from its PG type: `int2`/`int4`/`int8` → `int`, `bool` → `bool`, `float4`/`float8`/`numeric` → `float` (nulls preserved; `bytea` unchanged). So `$result[0]` is now `{"id":1,"active":true,...}` instead of all-strings. (`timestamp`/`date`/`json`/`uuid` stay strings - a minor diff vs Python's datetime objects.)
 
 ### `execute()` propagates failure
 
-`Database::execute()` returned `true` unconditionally for a plain write/DDL, discarding the adapter's boolean result — so a failed INSERT/UPDATE/DELETE/DDL reported success. (Python/Ruby/Node were already correct: their adapters *raise* and the facade catches; PHP adapters *return false*, which the facade ignored.) It now returns `false` and populates `getError()` from the adapter when the statement fails. A write affecting 0 rows is still a success.
+`Database::execute()` returned `true` unconditionally for a plain write/DDL, discarding the adapter's boolean result - so a failed INSERT/UPDATE/DELETE/DDL reported success. (Python/Ruby/Node were already correct: their adapters *raise* and the facade catches; PHP adapters *return false*, which the facade ignored.) It now returns `false` and populates `getError()` from the adapter when the statement fails. A write affecting 0 rows is still a success.
 
 Full suite: 2,405 passing. Python/Node already had both behaviours (Ruby ships the native-reads half), so this is primarily a PHP release.
 
-## v3.13.16 (2026-06-15) — `createTable()` works on PostgreSQL + `DatabaseResult` index access
+## v3.13.16 (2026-06-15) - `createTable()` works on PostgreSQL + `DatabaseResult` index access
 
-Found by the live documentation-verification pass — running the book's own samples against a real PostgreSQL database. The documented code-first schema path, `ORM::createTable()`, was silently broken on PostgreSQL: it ignored the model entirely, emitted a hardcoded SQLite `INTEGER PRIMARY KEY AUTOINCREMENT`, PG rejected it, and it returned `true` while creating **no table**.
+Found by the live documentation-verification pass - running the book's own samples against a real PostgreSQL database. The documented code-first schema path, `ORM::createTable()`, was silently broken on PostgreSQL: it ignored the model entirely, emitted a hardcoded SQLite `INTEGER PRIMARY KEY AUTOINCREMENT`, PG rejected it, and it returned `true` while creating **no table**.
 
 ### `createTable()` is now engine-aware
 
@@ -176,15 +176,15 @@ It now derives the DDL from the model's typed properties:
 
 Verified against PostgreSQL 16: a model with `id` (auto-increment) + string + bool + datetime creates, inserts, and round-trips natively (`SERIAL`, `boolean`, `timestamp`; `WHERE active = TRUE` matches). New `CreateTablePostgresTest` (PG-gated). Full suite: 2,400 passing. Shipped with parity across all four frameworks.
 
-## v3.13.14 (2026-06-13) — Logs reach stdout in containers + per-request logging + schema-qualified tables (#48)
+## v3.13.14 (2026-06-13) - Logs reach stdout in containers + per-request logging + schema-qualified tables (#48)
 
-**Cross-framework release (all four).** Deployed Docker containers were getting no application logs. In production PHP set `Log::$stdout = false` (logs went only to `logs/tina4.log` inside the container), never read `TINA4_LOG_LEVEL`, and didn't flush stdout. `docker logs` reads PID 1 stdout — so it was empty. A follow-on report — the dev server going silent after startup — surfaced a second gap: requests were never logged.
+**Cross-framework release (all four).** Deployed Docker containers were getting no application logs. In production PHP set `Log::$stdout = false` (logs went only to `logs/tina4.log` inside the container), never read `TINA4_LOG_LEVEL`, and didn't flush stdout. `docker logs` reads PID 1 stdout - so it was empty. A follow-on report - the dev server going silent after startup - surfaced a second gap: requests were never logged.
 
-### PHP also: #119 — legacy-env guard crash under the built-in server
+### PHP also: #119 - legacy-env guard crash under the built-in server
 
-`App::checkLegacyEnvVars()` wrote its migration message with `fwrite(STDERR, ...)`. `STDERR` is only auto-defined for the `cli` SAPI — under `cli-server` (the built-in dev server) a bare `STDERR` in `namespace Tina4` resolved to the undefined `Tina4\STDERR`, so a user with a stray legacy var (e.g. `SMTP_HOST`) in `.env` got `Uncaught Error: Undefined constant "Tina4\STDERR"` instead of the actionable "rename these vars" message. Now writes to the `php://stderr` stream (available in every SAPI). The same latent pattern in `MCP.php` was fixed alongside. New `cli-server` subprocess regression test reproduces it.
+`App::checkLegacyEnvVars()` wrote its migration message with `fwrite(STDERR, ...)`. `STDERR` is only auto-defined for the `cli` SAPI - under `cli-server` (the built-in dev server) a bare `STDERR` in `namespace Tina4` resolved to the undefined `Tina4\STDERR`, so a user with a stray legacy var (e.g. `SMTP_HOST`) in `.env` got `Uncaught Error: Undefined constant "Tina4\STDERR"` instead of the actionable "rename these vars" message. Now writes to the `php://stderr` stream (available in every SAPI). The same latent pattern in `MCP.php` was fixed alongside. New `cli-server` subprocess regression test reproduces it.
 
-### Per-request logging — on by default in dev
+### Per-request logging - on by default in dev
 
 Every request now logs one line through `Tina4\Log` (→ stdout), on by default in dev and opt-in for production via `TINA4_LOG_REQUESTS`:
 
@@ -198,8 +198,8 @@ Every request now logs one line through `Tina4\Log` (→ stdout), on by default 
 
 1. **stdout is ON by default** (was: only when `TINA4_DEBUG=true`). The default-case in `Log::configure()` now sets `$stdout = true`. `TINA4_LOG_OUTPUT=file` still opts out.
 2. **`Log::configure()` now reads `TINA4_LOG_LEVEL`** from the environment (it previously ignored it). Default level is **INFO** (was effectively DEBUG).
-3. **stdout is flushed** — `fflush()` after each `fwrite()` so logs appear immediately under the long-running built-in server instead of sitting in the stream buffer.
-4. **Production stdout is clean JSON** — `writeStdout()` no longer prepends ANSI colour when not in human-readable mode, so aggregators can parse the line.
+3. **stdout is flushed** - `fflush()` after each `fwrite()` so logs appear immediately under the long-running built-in server instead of sitting in the stream buffer.
+4. **Production stdout is clean JSON** - `writeStdout()` no longer prepends ANSI colour when not in human-readable mode, so aggregators can parse the line.
 
 ```php
 // In a container (TINA4_DEBUG unset), default config:
@@ -210,7 +210,7 @@ Every request now logs one line through `Tina4\Log` (→ stdout), on by default 
 
 ### Why it spanned all four
 
-The bug was the same architectural decision in every framework — production logged to a file (or suppressed stdout) when a container's stdout *is* the log sink:
+The bug was the same architectural decision in every framework - production logged to a file (or suppressed stdout) when a container's stdout *is* the log sink:
 
 | Framework | Pre-v3.13.14 cause | Fix |
 |---|---|---|
@@ -223,34 +223,34 @@ The Rust `tina4` CLI was already correct (inherits child stdio).
 
 ### Schema-qualified tables (#48) + a PostgreSQL `fetch()` regression
 
-Issue #48 — *"Database Table Does Not Exist"* on PostgreSQL. A model whose table lives in a non-default schema (`gift_cards.gift_card`, MSSQL `dbo.widget`, MySQL `otherdb.table`, SQLite ATTACH `extra.widget`) was invisible to the framework's introspection. `tableExists`, `getTables`, and `getColumns` hardcoded the default namespace (`public`) and matched the whole dotted string as one flat name — so plain reads worked, but `createTable`, migrations, and auto-CRUD were blind to the table and reported it missing.
+Issue #48 - *"Database Table Does Not Exist"* on PostgreSQL. A model whose table lives in a non-default schema (`gift_cards.gift_card`, MSSQL `dbo.widget`, MySQL `otherdb.table`, SQLite ATTACH `extra.widget`) was invisible to the framework's introspection. `tableExists`, `getTables`, and `getColumns` hardcoded the default namespace (`public`) and matched the whole dotted string as one flat name - so plain reads worked, but `createTable`, migrations, and auto-CRUD were blind to the table and reported it missing.
 
 All introspection is now schema-aware on every affected engine:
 
-- **PostgreSQL** — `tableExists` uses `to_regclass()` (honours schema + `search_path`); `getColumns` filters by `table_schema`; `getTables` lists every non-system schema and returns non-`public` tables schema-qualified.
-- **MySQL** — schema = database; a qualified name checks that catalog, a bare name defaults to `DATABASE()`.
-- **MSSQL** — honours `dbo.table`; a bare name matches in any schema.
-- **SQLite** — honours an ATTACH alias (`extra.widget`) for both `tableExists` and `getColumns`.
-- **Firebird** — N/A (no schemas).
+- **PostgreSQL** - `tableExists` uses `to_regclass()` (honours schema + `search_path`); `getColumns` filters by `table_schema`; `getTables` lists every non-system schema and returns non-`public` tables schema-qualified.
+- **MySQL** - schema = database; a qualified name checks that catalog, a bare name defaults to `DATABASE()`.
+- **MSSQL** - honours `dbo.table`; a bare name matches in any schema.
+- **SQLite** - honours an ATTACH alias (`extra.widget`) for both `tableExists` and `getColumns`.
+- **Firebird** - N/A (no schemas).
 
-Verified against a live PostgreSQL 16 container: `tableExists('gift_cards.gift_card') → true`, `getTables → ['gift_cards.gift_card', 'gift_cards.transaction']`, `getColumns → 12 columns` — identical results across all four frameworks.
+Verified against a live PostgreSQL 16 container: `tableExists('gift_cards.gift_card') → true`, `getTables → ['gift_cards.gift_card', 'gift_cards.transaction']`, `getColumns → 12 columns` - identical results across all four frameworks.
 
-> **A v3.13.12 regression surfaced while cross-checking #48.** `PostgresAdapter` referenced `stripTrailingSemicolons()` (added in v3.13.12) and the new `splitSchema()` but never mixed in `SqlNormalizerTrait` — so **every PostgreSQL `fetch()` / `fetchOne()` / `getColumns()` fatalled** with *"Call to undefined method"*. It shipped silently because PHP's PostgreSQL test suite skips without a live server. Fixed with a one-line trait mix-in and pinned by server-free reflection guards that assert all five SQL adapters expose the normalizer helpers — so this can never regress unnoticed again.
+> **A v3.13.12 regression surfaced while cross-checking #48.** `PostgresAdapter` referenced `stripTrailingSemicolons()` (added in v3.13.12) and the new `splitSchema()` but never mixed in `SqlNormalizerTrait` - so **every PostgreSQL `fetch()` / `fetchOne()` / `getColumns()` fatalled** with *"Call to undefined method"*. It shipped silently because PHP's PostgreSQL test suite skips without a live server. Fixed with a one-line trait mix-in and pinned by server-free reflection guards that assert all five SQL adapters expose the normalizer helpers - so this can never regress unnoticed again.
 
 ### Tests
 
-- PHP: 2,394 passed (+63 new — stdout/level/file gating; request-log format + gate; #119 cli-server repro + the previously-unregistered LegacyEnvGuard suite now gated in CI; #48 schema-qualified introspection + PG `SqlNormalizerTrait` regression guards)
-- Family: Python 2,829 · PHP 2,394 · Ruby 2,999 · Node 3,628 — **11,850 total, zero regressions.**
+- PHP: 2,394 passed (+63 new - stdout/level/file gating; request-log format + gate; #119 cli-server repro + the previously-unregistered LegacyEnvGuard suite now gated in CI; #48 schema-qualified introspection + PG `SqlNormalizerTrait` regression guards)
+- Family: Python 2,829 · PHP 2,394 · Ruby 2,999 · Node 3,628 - **11,850 total, zero regressions.**
 
 ---
 
-## v3.13.13 (2026-06-11) — PHP only: large-response truncation fix
+## v3.13.13 (2026-06-11) - PHP only: large-response truncation fix
 
-**PHP-only release.** Python, Ruby, and Node stay at v3.13.12 — the bug is specific to PHP's built-in socket server, which is the only one of the four frameworks that hand-rolls a non-blocking socket write loop. Python (asyncio `StreamWriter.drain()`), Ruby (WEBrick), and Node (`node:http`) all delegate body writes to a server that handles a full send buffer correctly, so none of them can hit this.
+**PHP-only release.** Python, Ruby, and Node stay at v3.13.12 - the bug is specific to PHP's built-in socket server, which is the only one of the four frameworks that hand-rolls a non-blocking socket write loop. Python (asyncio `StreamWriter.drain()`), Ruby (WEBrick), and Node (`node:http`) all delegate body writes to a server that handles a full send buffer correctly, so none of them can hit this.
 
 ### Responses larger than the OS send buffer are no longer truncated
 
-`Tina4\Server` (the standalone HTTP server behind `tina4 serve`, including when run as an nginx upstream) wrote responses with a non-blocking `fwrite()` loop. On a non-blocking socket, `fwrite()` returns `0` when the OS send buffer is full — this is **EAGAIN ("try again")**, *not* a closed socket. The pre-v3.13.13 loop treated `0` as fatal and `break`ed mid-body:
+`Tina4\Server` (the standalone HTTP server behind `tina4 serve`, including when run as an nginx upstream) wrote responses with a non-blocking `fwrite()` loop. On a non-blocking socket, `fwrite()` returns `0` when the OS send buffer is full - this is **EAGAIN ("try again")**, *not* a closed socket. The pre-v3.13.13 loop treated `0` as fatal and `break`ed mid-body:
 
 ```php
 while ($written < $total) {
@@ -263,7 +263,7 @@ while ($written < $total) {
 }
 ```
 
-Symptom: a ~4 MB attachment download returned `200` with the correct `Content-Length` but only part of the body (the cutoff varied run-to-run — we saw 2.31 MB and 1.30 MB), nginx logged `upstream prematurely closed connection while reading upstream`, and the browser showed a failed download. Anything larger than the send buffer (~200 KB-1 MB depending on platform) was affected — the dev-admin JS bundle had hit a related case.
+Symptom: a ~4 MB attachment download returned `200` with the correct `Content-Length` but only part of the body (the cutoff varied run-to-run - we saw 2.31 MB and 1.30 MB), nginx logged `upstream prematurely closed connection while reading upstream`, and the browser showed a failed download. Anything larger than the send buffer (~200 KB-1 MB depending on platform) was affected - the dev-admin JS bundle had hit a related case.
 
 ### The fix
 
@@ -276,7 +276,7 @@ Body writes now go through `Server::writeFully()`, which:
 ```php
 $n = @fwrite($client, substr($data, $written, 524288)); // 512KB
 if ($n === false) break;                 // real error
-if ($n === 0) {                          // buffer full — wait, don't quit
+if ($n === 0) {                          // buffer full - wait, don't quit
     $sw = [$client]; $sr = []; $se = [];
     if (@stream_select($sr, $sw, $se, 5) === 0) break; // 5s no progress → gone
     continue;
@@ -286,7 +286,7 @@ $written += $n;
 
 The error-response path (`sendHttpError`) routes through the same helper.
 
-### Why PHP only — cross-framework verification
+### Why PHP only - cross-framework verification
 
 | Framework | Built-in server | Body write | Truncation risk |
 |---|---|---|---|
@@ -304,13 +304,13 @@ The error-response path (`sendHttpError`) routes through the same helper.
 
 ---
 
-## v3.13.12 (2026-06-11) — SQL safety + implicit ORM binding + `fetchAll` correctness
+## v3.13.12 (2026-06-11) - SQL safety + implicit ORM binding + `fetchAll` correctness
 
 Three high-impact fixes that close out long-standing footguns. All three ship with full parity across all four frameworks.
 
 ### `fetchAll` actually fetches ALL rows now (no silent 100-row truncation)
 
-Pre-v3.13.12 the convenience method defaulted to `$limit = 100` and silently truncated. The name says `fetchAll` — it should fetch them all:
+Pre-v3.13.12 the convenience method defaulted to `$limit = 100` and silently truncated. The name says `fetchAll` - it should fetch them all:
 
 ```php
 // 150 rows in the table
@@ -319,14 +319,14 @@ $db->fetchAll("SELECT * FROM rows");
 // v3.13.12:    returns all 150 rows
 ```
 
-The new default is `$limit = 0`, which all six adapters (SQLite, PostgreSQL, MySQL, MSSQL, Firebird, ODBC) now interpret as "no pagination injection" — your SQL runs verbatim. To opt back into a cap, pass an explicit `$limit`:
+The new default is `$limit = 0`, which all six adapters (SQLite, PostgreSQL, MySQL, MSSQL, Firebird, ODBC) now interpret as "no pagination injection" - your SQL runs verbatim. To opt back into a cap, pass an explicit `$limit`:
 
 ```php
 $db->fetchAll("SELECT * FROM events", [], 500);   // capped at 500
 $db->fetchAll("SELECT * FROM users");             // all rows
 ```
 
-`$db->fetch()` (the paginated sibling that returns a `DatabaseResult` with count metadata) keeps its 100-row default — pagination is its job. Only the `fetchAll` convenience changed.
+`$db->fetch()` (the paginated sibling that returns a `DatabaseResult` with count metadata) keeps its 100-row default - pagination is its job. Only the `fetchAll` convenience changed.
 
 **Breaking change**: callers who relied on the silent 100-row cap now get every row. For very large tables, switch to `fetch()` (which paginates with metadata) or pass an explicit limit.
 
@@ -336,17 +336,17 @@ The framework appends `LIMIT n OFFSET m` to the user-supplied query (and wraps i
 
 ```php
 $db->fetch("SELECT * FROM users;");
-// pre-v3.13.12: syntax error near "LIMIT" — the appended LIMIT followed a ;
-// v3.13.12:    works — trailing ; is stripped before LIMIT is appended
+// pre-v3.13.12: syntax error near "LIMIT" - the appended LIMIT followed a ;
+// v3.13.12:    works - trailing ; is stripped before LIMIT is appended
 ```
 
-The strip is conservative: only trailing whitespace + semicolons are removed (any number of them, including `;;`), nothing inside the statement is touched. Parameters and quoting are unchanged — the existing parameter-binding defense against injection still does all the heavy lifting.
+The strip is conservative: only trailing whitespace + semicolons are removed (any number of them, including `;;`), nothing inside the statement is touched. Parameters and quoting are unchanged - the existing parameter-binding defense against injection still does all the heavy lifting.
 
 The shared logic lives in a new `\Tina4\Database\SqlNormalizerTrait` and is `use`d by all five adapters: PostgreSQL, MySQL, SQLite, MSSQL, Firebird.
 
 ### Implicit ORM binding from `TINA4_DATABASE_URL`
 
-PHP already auto-discovered `TINA4_DATABASE_URL` on adapter init — this release simply documents and pins it as parity behaviour. When the env var is present, the first ORM model call binds the default adapter; an explicit `\Tina4\Database\Adapter` instance still takes precedence and can be used to bind a second database.
+PHP already auto-discovered `TINA4_DATABASE_URL` on adapter init - this release simply documents and pins it as parity behaviour. When the env var is present, the first ORM model call binds the default adapter; an explicit `\Tina4\Database\Adapter` instance still takes precedence and can be used to bind a second database.
 
 ### Cross-framework parity
 
@@ -367,26 +367,26 @@ PHP already auto-discovered `TINA4_DATABASE_URL` on adapter init — this releas
 
 ---
 
-## v3.13.11 (2026-06-11) — ORM correctness pass (parity bump)
+## v3.13.11 (2026-06-11) - ORM correctness pass (parity bump)
 
 **No PHP source changes.** This release is a parity-version bump alongside Python's ORM correctness pass. Each issue in the Python report was checked against PHP and found to be either already-correct or N/A for the PHP framework.
 
 ### Per-issue audit
 
-- **#50.1 — Callable field defaults** → **N/A**. PHP property defaults must be constant expressions in declarations (`public string $foo = 'bar';` is allowed; `public DateTime $foo = new DateTime();` is not). The Python/Ruby callable-default pattern doesn't apply.
-- **#50.2 — `save()` correctly handles natural-key INSERTs** → **already correct**. `Tina4\ORM::save()` (line 363) already routes through `recordExists($pkValue)` for natural-key models. The Python bug was specifically about that decision branch; PHP's branch was already right.
-- **#49 — PostgreSQL error visibility follow-on** → **N/A**. The cascade behaviour is psycopg2-specific (DB-API 2.0 implicit transactions). PHP's `pg_query` uses libpq in autocommit mode; every statement is its own transaction, so the cascade never happens.
-- **BooleanField engine-aware DDL** → **N/A**. PHP's `ORM::createTable()` is a minimal stub that creates a PK-only table — full schema is migration-driven, so the user controls the bool column type explicitly in their migration SQL.
+- **#50.1 - Callable field defaults** → **N/A**. PHP property defaults must be constant expressions in declarations (`public string $foo = 'bar';` is allowed; `public DateTime $foo = new DateTime();` is not). The Python/Ruby callable-default pattern doesn't apply.
+- **#50.2 - `save()` correctly handles natural-key INSERTs** → **already correct**. `Tina4\ORM::save()` (line 363) already routes through `recordExists($pkValue)` for natural-key models. The Python bug was specifically about that decision branch; PHP's branch was already right.
+- **#49 - PostgreSQL error visibility follow-on** → **N/A**. The cascade behaviour is psycopg2-specific (DB-API 2.0 implicit transactions). PHP's `pg_query` uses libpq in autocommit mode; every statement is its own transaction, so the cascade never happens.
+- **BooleanField engine-aware DDL** → **N/A**. PHP's `ORM::createTable()` is a minimal stub that creates a PK-only table - full schema is migration-driven, so the user controls the bool column type explicitly in their migration SQL.
 
 ### Tests
 
-2,888 passed — unchanged from v3.13.9.
+2,888 passed - unchanged from v3.13.9.
 
 ---
 
 ## v3.13.9 (2026-06-10)
 
-Non-destructive AI installer — `AI::installSelected()` / `AI::installAll()` no longer clobber the user's `CLAUDE.md`. They write (or refresh) a marker-bracketed Tina4 skill block and leave the rest of the file alone.
+Non-destructive AI installer - `AI::installSelected()` / `AI::installAll()` no longer clobber the user's `CLAUDE.md`. They write (or refresh) a marker-bracketed Tina4 skill block and leave the rest of the file alone.
 
 ### The bug
 
@@ -394,14 +394,14 @@ Pre-v3.13.9 the installer wrote a full developer guide to `CLAUDE.md` (and to `.
 
 ### The fix
 
-A marker-bracketed skill block — HTML comments for `.md` files, `#`-prefixed line comments for rule files:
+A marker-bracketed skill block - HTML comments for `.md` files, `#`-prefixed line comments for rule files:
 
 ```markdown
 <!-- tina4-skills:start -->
 ## Tina4 Skills
-- **tina4-maintainer** — Read `.claude/skills/tina4-maintainer/SKILL.md` for framework-level changes.
-- **tina4-developer** — Read `.claude/skills/tina4-developer/SKILL.md` before building features.
-- **tina4-js** — Read `.claude/skills/tina4-js/SKILL.md` for frontend work.
+- **tina4-maintainer** - Read `.claude/skills/tina4-maintainer/SKILL.md` for framework-level changes.
+- **tina4-developer** - Read `.claude/skills/tina4-developer/SKILL.md` before building features.
+- **tina4-js** - Read `.claude/skills/tina4-js/SKILL.md` for frontend work.
 <!-- tina4-skills:end -->
 ```
 
@@ -412,7 +412,7 @@ Four behaviours:
 3. **One-time migration** → file starts with the pre-v3.13.9 framework header → replace the old dump with the new framework guide + skill block.
 4. **Preserve user content** → file exists with the user's own content (no markers, no old header) → append the skill block to the end, leave everything else verbatim.
 
-The actual skill content under `.claude/skills/tina4-*/SKILL.md` still gets cleanly overwritten — those are framework-owned packages, not user notes.
+The actual skill content under `.claude/skills/tina4-*/SKILL.md` still gets cleanly overwritten - those are framework-owned packages, not user notes.
 
 ### Same algorithm in Python / Ruby / Node
 
@@ -422,7 +422,7 @@ Identical four-branch logic, identical marker syntax, identical canonical action
 
 11 new tests in `tests/AIInstallerTest.php` (verified via reflection so private helpers stay private). All four branches plus marker detection, block replacement, idempotency, old-header detection, and rule-file vs markdown-file behaviour.
 
-2,888 passed — no regressions.
+2,888 passed - no regressions.
 
 ### What you'll see when you re-install
 
@@ -436,11 +436,11 @@ Identical four-branch logic, identical marker syntax, identical canonical action
 
 ## v3.13.7 (2026-06-10)
 
-Two changes from the 24rent app-platform team (PLATFORM-2159) — one observability hook, one production-safety fix. Both ship across **all four frameworks** with identical event payload shape.
+Two changes from the 24rent app-platform team (PLATFORM-2159) - one observability hook, one production-safety fix. Both ship across **all four frameworks** with identical event payload shape.
 
 ### NEW: `tina4.request.error` event
 
-When `Router::dispatch()` catches a `Throwable`, it now emits `tina4.request.error` **before** rendering the 500 page. Listeners receive an assoc array `['exception' => $e, 'request' => $request]` and can ship the failure to CloudWatch / Sentry / Slack — even though the framework caught it.
+When `Router::dispatch()` catches a `Throwable`, it now emits `tina4.request.error` **before** rendering the 500 page. Listeners receive an assoc array `['exception' => $e, 'request' => $request]` and can ship the failure to CloudWatch / Sentry / Slack - even though the framework caught it.
 
 ```php
 use Tina4\Events;
@@ -464,16 +464,16 @@ Events::on('tina4.request.error', function ($payload) {
 });
 ```
 
-- **Fires for caught route throwables.** Does NOT fire for 404s — those aren't server errors.
+- **Fires for caught route throwables.** Does NOT fire for 404s - those aren't server errors.
 - **Listener errors are swallowed + warning-logged** so a broken listener can't break the 500 render.
 - **Listeners fire in priority order** (higher priority first, matching `Events::on($event, $cb, priority: N)`).
-- **Identical event name + payload across Python / Ruby / Node** — only the per-language syntax differs.
+- **Identical event name + payload across Python / Ruby / Node** - only the per-language syntax differs.
 
 The Router also now calls `Log::error` itself with the exception class, message, method, and path. Previously route exceptions were swallowed without any framework-side log; tail-the-log workflows now see them.
 
 ### FIX: Stack trace removed from production 500 body (CWE-209)
 
-Before v3.13.7, an unhandled route exception in PHP would render `$e->getMessage() . "\n" . $e->getTraceAsString()` into the 500 response body — absolute file paths, full call chain — **regardless of `TINA4_DEBUG`**. That's [CWE-209 / OWASP A05](https://cwe.mitre.org/data/definitions/209.html): information disclosure.
+Before v3.13.7, an unhandled route exception in PHP would render `$e->getMessage() . "\n" . $e->getTraceAsString()` into the 500 response body - absolute file paths, full call chain - **regardless of `TINA4_DEBUG`**. That's [CWE-209 / OWASP A05](https://cwe.mitre.org/data/definitions/209.html): information disclosure.
 
 <div v-pre>
 
@@ -491,39 +491,39 @@ Six new tests in `tests/RouterErrorEventTest.php`: event payload shape, behaviou
 
 ### Background
 
-Reported by DevProx on the 24rent platform — they centralise observability by scraping structured JSON lines from stderr → CloudWatch → a Slack notifier. Route-level exceptions weren't surfacing because the framework caught them silently. The event hook fixes that without forcing any team's logging convention; the trace-leak fix is independently a security concern.
+Reported by DevProx on the 24rent platform - they centralise observability by scraping structured JSON lines from stderr → CloudWatch → a Slack notifier. Route-level exceptions weren't surfacing because the framework caught them silently. The event hook fixes that without forcing any team's logging convention; the trace-leak fix is independently a security concern.
 
 ---
 
 ## v3.13.6 (2026-06-09)
 
-Parity-version bump alongside Python's #46 / #47 fixes. **No PHP source changes** — both issues were verified against the PHP codebase and required no action here.
+Parity-version bump alongside Python's #46 / #47 fixes. **No PHP source changes** - both issues were verified against the PHP codebase and required no action here.
 
-### #46 — PostgreSQL transaction cascade (no fix needed)
+### #46 - PostgreSQL transaction cascade (no fix needed)
 
-The cascade behaviour that prompted Python's fix is psycopg2-specific (DB-API 2.0 mandates an implicit transaction on first statement). PHP's `pg_query` / `pg_query_params` use libpq in autocommit mode by default — each statement is its own transaction, so a failed query does not poison subsequent ones.
+The cascade behaviour that prompted Python's fix is psycopg2-specific (DB-API 2.0 mandates an implicit transaction on first statement). PHP's `pg_query` / `pg_query_params` use libpq in autocommit mode by default - each statement is its own transaction, so a failed query does not poison subsequent ones.
 
 `PostgresAdapter::query()` already populates `$this->lastError` from `pg_last_error()` on every failure, accessible via `$db->getError()`:
 
 ```php
 $db = \Tina4\Database\Database::create('postgres://localhost:5432/mydb');
 $db->fetch("SELECT * FROM does_not_exist");
-$error = $db->getError();  // already populated — has been since 3.x
+$error = $db->getError();  // already populated - has been since 3.x
 ```
 
-### #47 — Driver install hints (no change needed)
+### #47 - Driver install hints (no change needed)
 
 PHP's driver-missing exceptions already include OS-level install guidance (`sudo apt-get install php-pgsql`, `brew install php`). PHP database drivers are extensions, not Composer packages, so the Python/Ruby/Node-style "extras" pattern doesn't apply.
 
 ### Tests
 
-2,871 passing — no regressions.
+2,871 passing - no regressions.
 
 ---
 
 ## v3.13.5 (2026-06-05)
 
-Frond static-facade parity across PHP, Ruby, Node.js. Closes the last documented v3 parity gap (tina4-python task #32). Python's `Frond.add_filter` / `add_global` / `add_test` have worked as classmethods since v3.13.0 — now PHP / Ruby / Node match.
+Frond static-facade parity across PHP, Ruby, Node.js. Closes the last documented v3 parity gap (tina4-python task #32). Python's `Frond.add_filter` / `add_global` / `add_test` have worked as classmethods since v3.13.0 - now PHP / Ruby / Node match.
 
 ### What changes
 
@@ -551,17 +551,17 @@ Frond.addTest("positive", (v) => Number(v) > 0);
 ```
 
 ```python
-# Python — already shipped in v3.13.0
+# Python - already shipped in v3.13.0
 Frond.add_filter("money", lambda v: f"{float(v):.2f}")
 Frond.add_global("APP_NAME", "My App")
 Frond.add_test("positive", lambda v: v > 0)
 ```
 
-In every framework, registering at the class level updates a static registry. The next `new Frond()` drains that registry into its own filter/global/test maps automatically. No need to thread a single `Frond` instance through the application — register at startup, render everywhere.
+In every framework, registering at the class level updates a static registry. The next `new Frond()` drains that registry into its own filter/global/test maps automatically. No need to thread a single `Frond` instance through the application - register at startup, render everywhere.
 
 ### Instance form still works
 
-Existing per-instance registration continues to work, and now propagates to the class registry too — so the lifecycle is symmetric:
+Existing per-instance registration continues to work, and now propagates to the class registry too - so the lifecycle is symmetric:
 
 ```php
 $frond = new \Tina4\Frond();
@@ -593,10 +593,10 @@ Frond.clear_registry()
 
 | Framework | Mechanism |
 |---|---|
-| **Python** | `_ClassOrInstanceMethod` descriptor — one method, dual-callable via `__get__` |
-| **PHP** | `__call` + `__callStatic` magic-method pair — PHP can't have same-name static and instance methods |
-| **Ruby** | Same-name class method and instance method — Ruby naturally allows this |
-| **Node.js** | TypeScript class supports same-name `static foo()` and `foo()` instance methods — distinct lookup spaces |
+| **Python** | `_ClassOrInstanceMethod` descriptor - one method, dual-callable via `__get__` |
+| **PHP** | `__call` + `__callStatic` magic-method pair - PHP can't have same-name static and instance methods |
+| **Ruby** | Same-name class method and instance method - Ruby naturally allows this |
+| **Node.js** | TypeScript class supports same-name `static foo()` and `foo()` instance methods - distinct lookup spaces |
 
 ### Test count
 
@@ -616,15 +616,15 @@ Drop-in patch. No breaking changes. Existing instance-form code (`$frond->addFil
 
 Three middleware/header bug fixes across all four frameworks, plus Python chapter 10 + 18 docs rewrites. Reported in tina4-book#140 and tina4-book#141 by MichaelC8E.
 
-### PY-10-02 — `@middleware()` no longer silently disables auth (SECURITY)
+### PY-10-02 - `@middleware()` no longer silently disables auth (SECURITY)
 
 **Before**: Applying `@middleware(...)` to a POST/PUT/PATCH/DELETE route silently flipped `auth_required = false`, removing the framework's built-in Bearer-token gate. A developer adding custom logging or rate-limiting middleware to an admin endpoint would, with no warning, open it to unauthenticated callers.
 
 **After**: Middleware is purely additive. Write routes stay Bearer-token-gated by default. Use `@noauth()` to open a write route, `@secured()` to lock a read route. Same rule across all four frameworks.
 
-This is a **behaviour change** — if your code relied on the old auto-disable to handle auth in custom middleware, add `@noauth()` (and have your middleware enforce auth on its own).
+This is a **behaviour change** - if your code relied on the old auto-disable to handle auth in custom middleware, add `@noauth()` (and have your middleware enforce auth on its own).
 
-### PY-10-03 — `request.headers` is now case-insensitive
+### PY-10-03 - `request.headers` is now case-insensitive
 
 **Before**: `request.headers["Content-Type"]` returned `None`/`undefined`/`nil`. The dict was lowercase-only; mixed-case lookups silently failed. Six chapter 10 examples (`Content-Type`, `X-API-Key`, `Authorization`, `User-Agent`) were broken.
 
@@ -639,11 +639,11 @@ This is a **behaviour change** — if your code relied on the old auto-disable t
 
 `request.headers.get("Content-Type")`, `request.headers.get("content-type")`, and `request.headers.get("CONTENT-TYPE")` all return the same value. Existing lowercase code keeps working unchanged.
 
-### PY-10-01 — Function-based middleware now runs
+### PY-10-01 - Function-based middleware now runs
 
-**Before**: Chapter 10 taught Express-style `async def mw(req, resp, next_handler)` in 8+ examples, but the Python framework's dispatcher only looked for class-based `before_*`/`after_*` methods. Function-style middleware was silently inert — body never executed. PHP and Ruby had similar gaps (closures ran but no `next` continuation).
+**Before**: Chapter 10 taught Express-style `async def mw(req, resp, next_handler)` in 8+ examples, but the Python framework's dispatcher only looked for class-based `before_*`/`after_*` methods. Function-style middleware was silently inert - body never executed. PHP and Ruby had similar gaps (closures ran but no `next` continuation).
 
-**After**: Express-style continuation chain is implemented across the family. Python adds `_is_function_middleware()` + `_invoke_handler_with_middleware()`. PHP wraps closures with `array_reverse` continuation. Ruby uses lambdas + `reverse_each`. Node already had `next()` continuation — added a regression test to keep it green.
+**After**: Express-style continuation chain is implemented across the family. Python adds `_is_function_middleware()` + `_invoke_handler_with_middleware()`. PHP wraps closures with `array_reverse` continuation. Ruby uses lambdas + `reverse_each`. Node already had `next()` continuation - added a regression test to keep it green.
 
 ```python
 @middleware(my_mw)
@@ -660,10 +660,10 @@ async def my_mw(req, resp, next_handler):
 
 First-declared middleware is the outermost layer; calling `next_handler` descends to the next layer (or the route handler if last). Omitting the `next_handler` call short-circuits the chain.
 
-### Python chapter rewrites — book + docs
+### Python chapter rewrites - book + docs
 
-- **Chapter 18 (Testing)** — Fixed PY-18-04 (test runner output now shows real pytest output, not the fictional `[PASS] test_addition` format), PY-18-07a (added missing `from src.orm.Product import Product` import), PY-18-08 (`resp.status_code` → `resp.status` across 14+ call sites, positional body `self.post(path, dict)` → keyword `self.post(path, json=dict)`).
-- **Chapter 10 (Middleware)** — Added two callouts: headers are case-insensitive in v3.13.4+; `@middleware()` is purely additive (does not change auth_required). Existing mixed-case header examples now work against v3.13.4.
+- **Chapter 18 (Testing)** - Fixed PY-18-04 (test runner output now shows real pytest output, not the fictional `[PASS] test_addition` format), PY-18-07a (added missing `from src.orm.Product import Product` import), PY-18-08 (`resp.status_code` → `resp.status` across 14+ call sites, positional body `self.post(path, dict)` → keyword `self.post(path, json=dict)`).
+- **Chapter 10 (Middleware)** - Added two callouts: headers are case-insensitive in v3.13.4+; `@middleware()` is purely additive (does not change auth_required). Existing mixed-case header examples now work against v3.13.4.
 
 ### Test count
 
@@ -677,9 +677,9 @@ First-declared middleware is the outermost layer; calling `next_handler` descend
 
 ### Upgrade
 
-PY-10-02 is a behaviour change with a security implication. Audit routes that use `@middleware()` on POST/PUT/PATCH/DELETE: if you rely on custom middleware to handle auth, add `@noauth()` above `@middleware()` (and make sure your middleware enforces auth). Otherwise, no action — your write routes were always supposed to require Bearer tokens.
+PY-10-02 is a behaviour change with a security implication. Audit routes that use `@middleware()` on POST/PUT/PATCH/DELETE: if you rely on custom middleware to handle auth, add `@noauth()` above `@middleware()` (and make sure your middleware enforces auth). Otherwise, no action - your write routes were always supposed to require Bearer tokens.
 
-PY-10-01 and PY-10-03 are purely additive — no breaking changes.
+PY-10-01 and PY-10-03 are purely additive - no breaking changes.
 
 ## v3.13.3 (2026-06-03)
 
@@ -700,12 +700,12 @@ region  = Env.str("AWS_REGION", default="us-east-1")
 
 Same API across all four frameworks:
 
-- **Python** — `from tina4_python import Env`
-- **PHP** — `Tina4\Env::bool / int / float / str`
-- **Ruby** — `Tina4::Env.bool / int / float / str`
-- **Node.js** — `import { Env } from "@tina4/core"`
+- **Python** - `from tina4_python import Env`
+- **PHP** - `Tina4\Env::bool / int / float / str`
+- **Ruby** - `Tina4::Env.bool / int / float / str`
+- **Node.js** - `import { Env } from "@tina4/core"`
 
-Truthy tokens (case-insensitive after `strip`/`trim`): `1`, `true`, `on`, `yes`, `y`, `t`. Falsy: `0`, `false`, `off`, `no`, `n`, `f`, empty string. Anything else returns the `default` — never raises. `int`/`float` parse failures log a warning via `Log` and fall back to default.
+Truthy tokens (case-insensitive after `strip`/`trim`): `1`, `true`, `on`, `yes`, `y`, `t`. Falsy: `0`, `false`, `off`, `no`, `n`, `f`, empty string. Anything else returns the `default` - never raises. `int`/`float` parse failures log a warning via `Log` and fall back to default.
 
 ### Function-name in log lines (tina4-python#41)
 
@@ -721,16 +721,16 @@ Or in JSON mode:
 {"timestamp":"...","level":"INFO","function":"super_trooper","message":"Hello..."}
 ```
 
-Default off — zero overhead unless opted in. When on, ~5% per-call cost from the stack walk.
+Default off - zero overhead unless opted in. When on, ~5% per-call cost from the stack walk.
 
 Per-framework implementation:
 
-- **Python** — `inspect.currentframe()` walk past Log's own frames
-- **PHP** — `debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS)` + `{closure}` filter
-- **Ruby** — `caller_locations(2, 16)` + block-noise regex
-- **Node.js** — `new Error().stack` regex parse + anonymous filter
+- **Python** - `inspect.currentframe()` walk past Log's own frames
+- **PHP** - `debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS)` + `{closure}` filter
+- **Ruby** - `caller_locations(2, 16)` + block-noise regex
+- **Node.js** - `new Error().stack` regex parse + anonymous filter
 
-Anonymous frames (`<lambda>`, `<module>`, `{closure}`, anonymous IIFEs) are filtered as noise — showing `[<lambda>]` would be uglier than nothing.
+Anonymous frames (`<lambda>`, `<module>`, `{closure}`, anonymous IIFEs) are filtered as noise - showing `[<lambda>]` would be uglier than nothing.
 
 ### Test count
 
@@ -748,7 +748,7 @@ Drop-in patch. No breaking changes. Two new exports (`Env`, plus one new env var
 
 ## v3.13.2 (2026-06-03)
 
-Bug-fix patch — three field reports, fixed with full cross-framework parity audit per `feedback_crosscheck_bugs`.
+Bug-fix patch - three field reports, fixed with full cross-framework parity audit per `feedback_crosscheck_bugs`.
 
 ### SCSS calc() with mixed units (tina4-python#42, tina4-php#116, tina4-nodejs#1)
 
@@ -758,7 +758,7 @@ The SCSS math evaluator silently folded mixed-unit arithmetic by keeping operand
 - `width: 100% - 20px` → `80%` (pixel term silently lost)
 - `padding: 1rem + 4px` → `5rem`
 
-Fixed in Python, PHP, and Node — the evaluator now captures both operand units, only folds when units match (or one side is unitless for `*`/`/`), and masks `calc(...)` ranges so the browser computes them as intended. Ruby unaffected (delegates to libsass).
+Fixed in Python, PHP, and Node - the evaluator now captures both operand units, only folds when units match (or one side is unitless for `*`/`/`), and masks `calc(...)` ranges so the browser computes them as intended. Ruby unaffected (delegates to libsass).
 
 ### Router.group docs taught a crashing pattern (tina4-python#44)
 
@@ -768,11 +768,11 @@ The Python book and docs site showed `Router.group("/api/v1", lambda: [...])` wi
 
 Three real bugs:
 
-- **Python ORM error message** told users to "set DATABASE_URL in .env" — but the v3.12 boot guard rejects that bare name. Users following the error message hit a hard stop.
+- **Python ORM error message** told users to "set DATABASE_URL in .env" - but the v3.12 boot guard rejects that bare name. Users following the error message hit a hard stop.
 - **Python dev-admin `.env` writer** stripped the `TINA4_` prefix when updating existing rows, actively corrupting the config every time the user saved a new connection through the dashboard.
 - **Node `Database.fromEnv()`** defaulted to `"DATABASE_URL"` as the env-var key, missing the project's actual connection. The ORM error message had the same drift.
 
-All fixed. PHP and Ruby audited — already correct in both.
+All fixed. PHP and Ruby audited - already correct in both.
 
 ### Test count
 
@@ -790,48 +790,48 @@ Drop-in patch. No breaking changes. No new public API.
 
 ## v3.13.1 (2026-06-02)
 
-Cross-framework parity patch. Closes the remaining audit-flagged docs-vs-code gaps that didn't make 3.13.0 — the documentation claimed APIs across PHP / Ruby / Node that only Python had. This release ships those APIs everywhere and rewrites the PHP chapters that referenced fictional symbols.
+Cross-framework parity patch. Closes the remaining audit-flagged docs-vs-code gaps that didn't make 3.13.0 - the documentation claimed APIs across PHP / Ruby / Node that only Python had. This release ships those APIs everywhere and rewrites the PHP chapters that referenced fictional symbols.
 
 ### Convenience parity additions (Groups A / B)
 
 Three highest-impact cross-framework methods every documentation set already claimed existed. PHP / Ruby / Node now match Python:
 
-- **`db.fetchAll(sql, params)` / `db.fetch_all` / `$db->fetchAll`** — returns the records list directly. Symmetric with `fetch_one`. For the 80% case where you don't need the `DatabaseResult` metadata.
-- **`Database.getConnection(url)` / `.get_connection` / `::getConnection`** — classmethod factory matching SQLAlchemy's `engine.connect()`. Falls back to in-memory SQLite when no URL or env resolves.
-- **`Api(bearerToken=, username=, password=, headers=, verifySsl=)` ergonomic kwargs** — three setter calls collapse to one constructor. Bearer wins over basic-auth when both are passed. `verifySsl=False` is the positive form of `ignoreSsl=true`.
+- **`db.fetchAll(sql, params)` / `db.fetch_all` / `$db->fetchAll`** - returns the records list directly. Symmetric with `fetch_one`. For the 80% case where you don't need the `DatabaseResult` metadata.
+- **`Database.getConnection(url)` / `.get_connection` / `::getConnection`** - classmethod factory matching SQLAlchemy's `engine.connect()`. Falls back to in-memory SQLite when no URL or env resolves.
+- **`Api(bearerToken=, username=, password=, headers=, verifySsl=)` ergonomic kwargs** - three setter calls collapse to one constructor. Bearer wins over basic-auth when both are passed. `verifySsl=False` is the positive form of `ignoreSsl=true`.
 
 ### Decorator-style GraphQL resolvers across the family
 
 Python `@GraphQL.resolve` shipped in 3.13.0. This release adds:
 
-- **PHP** — `GraphQL::resolve("Type", "field", $callable)` static method + class-level resolver registry that `new GraphQL()` drains into its schema.
-- **Ruby** — `Tina4::GraphQL.resolve("Type", "field") { |root, args, ctx| ... }` with block-based registration.
-- **Node.js** — `GraphQL.resolve(typeName, fieldName, resolver)` matching the cross-framework shape.
+- **PHP** - `GraphQL::resolve("Type", "field", $callable)` static method + class-level resolver registry that `new GraphQL()` drains into its schema.
+- **Ruby** - `Tina4::GraphQL.resolve("Type", "field") { |root, args, ctx| ... }` with block-based registration.
+- **Node.js** - `GraphQL.resolve(typeName, fieldName, resolver)` matching the cross-framework shape.
 
 All four frameworks now support the FastAPI / Strawberry / Ariadne pattern where resolvers register at module-import time before any `GraphQL` instance is constructed, and where post-startup registrations land in the active default singleton via `setDefault(gql)` / `Tina4::GraphQL.default_instance = gql`.
 
 ### Class-based service pattern across the family
 
-`class FooWorker extends Service { run() { ... } }` — chapter 27 / equivalent docs have long taught this pattern. Until 3.13.1, only the runner was real:
+`class FooWorker extends Service { run() { ... } }` - chapter 27 / equivalent docs have long taught this pattern. Until 3.13.1, only the runner was real:
 
-- **PHP** — new `Tina4\Service` abstract base class + `ServiceRunner::registerService($name, $service)` static helper.
-- **Ruby** — new `Tina4::Service` class + `Tina4::ServiceRunner.register_service(name, service)`.
-- **Node.js** — new `Tina4Service` abstract class + `ServiceRunner.registerService(name, service)`.
-- **Python** — new `tina4_python.service.Service` base + `ServiceRunner.register_service(name, service)` (this release closes the gap; Python had only the function-style runner before).
+- **PHP** - new `Tina4\Service` abstract base class + `ServiceRunner::registerService($name, $service)` static helper.
+- **Ruby** - new `Tina4::Service` class + `Tina4::ServiceRunner.register_service(name, service)`.
+- **Node.js** - new `Tina4Service` abstract class + `ServiceRunner.registerService(name, service)`.
+- **Python** - new `tina4_python.service.Service` base + `ServiceRunner.register_service(name, service)` (this release closes the gap; Python had only the function-style runner before).
 
 All four ship `run()` (abstract), `stop()`, and `should_stop()` / `shouldStop()` helpers backed by an internal flag. Function-style services using bare callables continue to work alongside the new class-based pattern.
 
 ### PHP chapter rewrites (`docs/php/` and `book-2-php/`)
 
-The 3.13.0 audit found that the PHP testing-chapter disaster was the tip of a larger pattern — multiple PHP chapters taught APIs that didn't exist. 3.13.1 rewrites all seven of them:
+The 3.13.0 audit found that the PHP testing-chapter disaster was the tip of a larger pattern - multiple PHP chapters taught APIs that didn't exist. 3.13.1 rewrites all seven of them:
 
-- **Chapter 15 — Logging** — primary surface now `Tina4\Log::info()/warning()/error()` instead of the legacy `Tina4\Debug::message()` shim (still works).
-- **Chapter 18 — Testing** — `$response->statusCode` → `$response->status` across 23 occurrences; CLI section updated (`tina4 test` runs the suite; `vendor/bin/phpunit` for targeted runs).
-- **Chapter 19 — Scaffolding** — v2 `Tina4\Get::add()` / `Post::add()` / `Put::add()` / `Delete::add()` syntax replaced with `Tina4\Router::get/post/put/delete`; fictional `->description()` chain replaced with real `->swagger([...])`.
-- **Chapter 22 — GraphQL** — chapter's decorator pattern (`GraphQL::resolve("Type", "field", $fn)`) now matches real source (built this release).
-- **Chapter 25 — WSDL** — `@wsdl_operation` docblock replaced with `#[WSDLOperation([...])]` PHP attribute; methods now return associative arrays matching the response-shape spec; `Router::soap()` → `Router::any()` + manual `(new Service($request))->handle()`.
-- **Chapter 27 — ServiceRunner** — `new ServiceRunner()` + `->add()` instance API replaced with `ServiceRunner::registerService()` + `ServiceRunner::start()` static API. The `Tina4\Service` base class the chapter teaches now exists.
-- **Chapter 34 — Deployment** — un-prefixed env vars (`SECRET`, `CORS_ORIGINS`, `SMTP_USER`, `JWT_SECRET`, `API_KEY`, `SWAGGER_TITLE`) replaced with `TINA4_`-prefixed forms. The v3.12 boot guard rejects the legacy names with `exit(2)`.
+- **Chapter 15 - Logging** - primary surface now `Tina4\Log::info()/warning()/error()` instead of the legacy `Tina4\Debug::message()` shim (still works).
+- **Chapter 18 - Testing** - `$response->statusCode` → `$response->status` across 23 occurrences; CLI section updated (`tina4 test` runs the suite; `vendor/bin/phpunit` for targeted runs).
+- **Chapter 19 - Scaffolding** - v2 `Tina4\Get::add()` / `Post::add()` / `Put::add()` / `Delete::add()` syntax replaced with `Tina4\Router::get/post/put/delete`; fictional `->description()` chain replaced with real `->swagger([...])`.
+- **Chapter 22 - GraphQL** - chapter's decorator pattern (`GraphQL::resolve("Type", "field", $fn)`) now matches real source (built this release).
+- **Chapter 25 - WSDL** - `@wsdl_operation` docblock replaced with `#[WSDLOperation([...])]` PHP attribute; methods now return associative arrays matching the response-shape spec; `Router::soap()` → `Router::any()` + manual `(new Service($request))->handle()`.
+- **Chapter 27 - ServiceRunner** - `new ServiceRunner()` + `->add()` instance API replaced with `ServiceRunner::registerService()` + `ServiceRunner::start()` static API. The `Tina4\Service` base class the chapter teaches now exists.
+- **Chapter 34 - Deployment** - un-prefixed env vars (`SECRET`, `CORS_ORIGINS`, `SMTP_USER`, `JWT_SECRET`, `API_KEY`, `SWAGGER_TITLE`) replaced with `TINA4_`-prefixed forms. The v3.12 boot guard rejects the legacy names with `exit(2)`.
 
 ### Test count
 
@@ -847,11 +847,11 @@ Net new across the family this release:
 
 ### Upgrade
 
-Drop-in patch — no breaking changes. Existing source-code patterns from 3.13.0 continue to work; the new methods are additive. Documentation rewrites in chapters 15 / 18 / 19 / 22 / 25 / 27 / 34 redirect copy-paste examples to the real APIs the framework actually ships.
+Drop-in patch - no breaking changes. Existing source-code patterns from 3.13.0 continue to work; the new methods are additive. Documentation rewrites in chapters 15 / 18 / 19 / 22 / 25 / 27 / 34 redirect copy-paste examples to the real APIs the framework actually ships.
 
 ## v3.13.0 (2026-06-01)
 
-The docs-vs-code parity release. A cross-framework audit of 381 markdown files surfaced 146 hallucinations, signature drifts, and stale references across Python, PHP, Ruby, Node, and tina4-js. 3.13.0 closes the chapter-18 disaster pattern — where documentation taught a class-based API that didn't exist — by shipping the missing pieces, renaming the misnamed pieces, and rewriting the aspirational chapters.
+The docs-vs-code parity release. A cross-framework audit of 381 markdown files surfaced 146 hallucinations, signature drifts, and stale references across Python, PHP, Ruby, Node, and tina4-js. 3.13.0 closes the chapter-18 disaster pattern - where documentation taught a class-based API that didn't exist - by shipping the missing pieces, renaming the misnamed pieces, and rewriting the aspirational chapters.
 
 ### The headline fire: `Test` class with HTTP helpers
 
@@ -864,18 +864,18 @@ class UserApiTest(Test):           # tina4_python.test.Test
         assert_equal(resp.status, 200)
 ```
 
-Until 3.13.0, only `Test` (the bare assertion base) existed — calling `self.get(...)` crashed with `AttributeError`. The HTTP test client lived in a separate `TestClient` class that the docs never mentioned.
+Until 3.13.0, only `Test` (the bare assertion base) existed - calling `self.get(...)` crashed with `AttributeError`. The HTTP test client lived in a separate `TestClient` class that the docs never mentioned.
 
 This release mixes `TestClient.get / post / put / patch / delete` into the `Test` base across every framework:
 
-- **Python** — `tina4_python.test.Test` (extends `unittest.TestCase`, pytest auto-discovers)
-- **PHP** — `Tina4\Test` (extends `PHPUnit\Framework\TestCase`)
-- **Ruby** — `Tina4::Test` (zero-dep; built-in `run_all` runner)
-- **Node.js** — `Tina4Test` (zero-dep; built-in `Tina4Test.runAll()` runner)
+- **Python** - `tina4_python.test.Test` (extends `unittest.TestCase`, pytest auto-discovers)
+- **PHP** - `Tina4\Test` (extends `PHPUnit\Framework\TestCase`)
+- **Ruby** - `Tina4::Test` (zero-dep; built-in `run_all` runner)
+- **Node.js** - `Tina4Test` (zero-dep; built-in `Tina4Test.runAll()` runner)
 
-Plus positional assertions on every framework — `assertEqual(actual, expected, message)`, `assertNotEqual`, `assertTrue`, `assertFalse`, `assertNull`/`assertNullValue`, `assertNotNull`/`assertNotNullValue`, `assertRaises` — matching the documented `(actual, expected, message)` shape.
+Plus positional assertions on every framework - `assertEqual(actual, expected, message)`, `assertNotEqual`, `assertTrue`, `assertFalse`, `assertNull`/`assertNullValue`, `assertNotNull`/`assertNotNullValue`, `assertRaises` - matching the documented `(actual, expected, message)` shape.
 
-### `Auth.valid_token` now returns the payload, not a bare bool — **BREAKING**
+### `Auth.valid_token` now returns the payload, not a bare bool - **BREAKING**
 
 The most common silent-fail pattern caught by the audit. Every framework's docs claimed `valid_token` returned the decoded JWT payload; every framework's source returned `bool` and forced a second `get_payload` call.
 
@@ -886,24 +886,24 @@ The most common silent-fail pattern caught by the audit. Every framework's docs 
 | Ruby | `Auth.valid_token(token) → Boolean` | `Auth.valid_token(token) → Hash \| nil` |
 | Node | `validToken(token) → boolean` | `validToken(token) → Record<string, unknown> \| null` |
 
-Matches PyJWT / firebase-jwt-ruby / firebase/php-jwt / jsonwebtoken conventions. Truthy/falsy contract preserved — existing `if (validToken(t))` callers keep working because a non-null object is truthy and null is falsy.
+Matches PyJWT / firebase-jwt-ruby / firebase/php-jwt / jsonwebtoken conventions. Truthy/falsy contract preserved - existing `if (validToken(t))` callers keep working because a non-null object is truthy and null is falsy.
 
 ### Python-specific groups (mirrored to PHP/Ruby/Node in follow-up patches)
 
 The Python framework is the reference per `feedback_python_master`. Six groups landed in tina4-python:
 
-- **Group A — ergonomic additions**: `Database.get_connection()`, `db.fetch_all()`, `db.pool`, `DatabaseResult.columns`, `Job.error`, `Queue.produce(delay_until=datetime)`, module-level `migrate(db)`/`rollback(db)`/`status(db)`, module-level `i18n.t()`, dict-style `session[key]`, `WebSocketConnection.connection_count`. All zero-risk additions — no signatures changed.
-- **Group B — signature expansions**: `Api(bearer_token=, username=, password=, headers=, verify_ssl=)` kwargs, `Model.find(pk)` int overload (Active Record convention), `@description(summary, detail=, params=, query=)`, `@tags(str | list)`, `@example_response(status_code, data)`, `response.render(template, data, status_code)`, `response.cookie(name, value, options_dict)`, `response(data, headers={})`, `@get(path, description=, middleware=["ResponseCache:300"])` with string-form middleware parser.
-- **Group C — mixins + decorators**: the Test HTTP mixin (covered above), `Frond.add_filter / add_global / add_test` callable as classmethod OR instance method via a `_ClassOrInstanceMethod` descriptor, `@GraphQL.resolve("Type", "field")` decorator with class-level registry — chapter 22's pattern now works as documented.
-- **Group D — return-type changes (BREAKING)**: `Container.reset()` now clears singleton cache only (factories survive); new `Container.reset_all()` for the old wipe-everything behaviour. `queue.dead_letters()` returns `list[Job]` with `.error` populated, not `list[dict]`. `Model.where(..., with_count=True)` returns `(list, int)` tuple for pagination UIs.
-- **Group E — renames (BREAKING)**: `ai.install_all()` → `ai.install_context()`; new `ai.detect_ai()`, `ai.detect_ai_names()`, `ai.status_report()`. `queue.consume(id=)` → `queue.consume(job_id=)`. `Api.send_request()` → `Api.send()`. `I18n(locale=, path=)` preferred over `I18n(locale_dir=, default_locale=)` (legacy kept). `TINA4_TOKEN_EXPIRES_IN` preferred over `TINA4_TOKEN_LIMIT` for JWT expiry (both honoured; new wins; constructor arg overrides both).
-- **Group F — top-level re-exports + scaffolder**: `from tina4_python import Api, WSDL, wsdl_operation, GraphQL, AutoCrud, Messenger, on, emit, once, off, tests` now resolve. `Model.select()` with no args defaults to `SELECT * FROM <table>` so the CRUD-list scaffolder template's emitted code actually runs.
+- **Group A - ergonomic additions**: `Database.get_connection()`, `db.fetch_all()`, `db.pool`, `DatabaseResult.columns`, `Job.error`, `Queue.produce(delay_until=datetime)`, module-level `migrate(db)`/`rollback(db)`/`status(db)`, module-level `i18n.t()`, dict-style `session[key]`, `WebSocketConnection.connection_count`. All zero-risk additions - no signatures changed.
+- **Group B - signature expansions**: `Api(bearer_token=, username=, password=, headers=, verify_ssl=)` kwargs, `Model.find(pk)` int overload (Active Record convention), `@description(summary, detail=, params=, query=)`, `@tags(str | list)`, `@example_response(status_code, data)`, `response.render(template, data, status_code)`, `response.cookie(name, value, options_dict)`, `response(data, headers={})`, `@get(path, description=, middleware=["ResponseCache:300"])` with string-form middleware parser.
+- **Group C - mixins + decorators**: the Test HTTP mixin (covered above), `Frond.add_filter / add_global / add_test` callable as classmethod OR instance method via a `_ClassOrInstanceMethod` descriptor, `@GraphQL.resolve("Type", "field")` decorator with class-level registry - chapter 22's pattern now works as documented.
+- **Group D - return-type changes (BREAKING)**: `Container.reset()` now clears singleton cache only (factories survive); new `Container.reset_all()` for the old wipe-everything behaviour. `queue.dead_letters()` returns `list[Job]` with `.error` populated, not `list[dict]`. `Model.where(..., with_count=True)` returns `(list, int)` tuple for pagination UIs.
+- **Group E - renames (BREAKING)**: `ai.install_all()` → `ai.install_context()`; new `ai.detect_ai()`, `ai.detect_ai_names()`, `ai.status_report()`. `queue.consume(id=)` → `queue.consume(job_id=)`. `Api.send_request()` → `Api.send()`. `I18n(locale=, path=)` preferred over `I18n(locale_dir=, default_locale=)` (legacy kept). `TINA4_TOKEN_EXPIRES_IN` preferred over `TINA4_TOKEN_LIMIT` for JWT expiry (both honoured; new wins; constructor arg overrides both).
+- **Group F - top-level re-exports + scaffolder**: `from tina4_python import Api, WSDL, wsdl_operation, GraphQL, AutoCrud, Messenger, on, emit, once, off, tests` now resolve. `Model.select()` with no args defaults to `SELECT * FROM <table>` so the CRUD-list scaffolder template's emitted code actually runs.
 
 ### PHP-specific: `Tina4\Debug` shim
 
 Chapter 15 of the PHP logging docs taught `Tina4\Debug::message($msg, TINA4_LOG_INFO, [...])`. Neither the class nor the constants existed. Real logger is `Tina4\Log`.
 
-This release ships a `Tina4\Debug` compatibility shim that forwards to `Tina4\Log`, plus defines the `TINA4_LOG_*` level constants — so the chapter's code samples run as-written. For new code, prefer `\Tina4\Log::info()` etc.
+This release ships a `Tina4\Debug` compatibility shim that forwards to `Tina4\Log`, plus defines the `TINA4_LOG_*` level constants - so the chapter's code samples run as-written. For new code, prefer `\Tina4\Log::info()` etc.
 
 ### Documentation sweep
 
@@ -918,8 +918,8 @@ Aside from the source-side changes, the audit caught hundreds of stale reference
 - `Debug.error()` → `Log.error()` in Python (Debug class doesn't exist)
 - `Producer` / `Consumer` (removed in v3.2.0) → `Queue.push / consume`
 - `Email` → `Messenger`, `event.fire / @listener` → `emit / @on`, `gql` singleton → `GraphQL()` + `@GraphQL.resolve`
-- **Security fix**: `Auth.check_password(hash, password)` → `(password, hash)` in skill ref — the bcrypt comparison was returning False every time due to reversed args (silent-failure auth)
-- `request.files['content']` is **raw bytes** — drop `base64.b64decode()` from upload examples
+- **Security fix**: `Auth.check_password(hash, password)` → `(password, hash)` in skill ref - the bcrypt comparison was returning False every time due to reversed args (silent-failure auth)
+- `request.files['content']` is **raw bytes** - drop `base64.b64decode()` from upload examples
 - Deployment chapter env vars all `TINA4_`-prefixed (un-prefixed names brick boot under v3.12 guard)
 
 ### Aspirational chapters rewritten
@@ -935,9 +935,9 @@ The cross-framework audit's synthesis pass dropped tina4-js findings; the raw ag
 
 - Every import in CLAUDE.md and `docs/js/09-graphql.md` used `"tina4-js"` (with hyphen). The npm package is named `tina4js`. Fixed.
 - `pwa({...})` was treated as callable; real API is `pwa.register({...})`. `PWAConfig.icon` is a single string, not an `icons: [...]` array.
-- `static props = { label: { type: String, default: "..." } }` — the `{ type, default }` wrapper is fictional. Real shape is `static props = { label: String }`.
-- `router.navigate('/users/42')` — `navigate` is a top-level export, not a method on `router`.
-- Chapter 14's `<slot>` inside a `static shadow = false` component — slots are a Shadow DOM feature. Chapter 14 contradicted chapter 4. Switched to `shadow = true`.
+- `static props = { label: { type: String, default: "..." } }` - the `{ type, default }` wrapper is fictional. Real shape is `static props = { label: String }`.
+- `router.navigate('/users/42')` - `navigate` is a top-level export, not a method on `router`.
+- Chapter 14's `<slot>` inside a `static shadow = false` component - slots are a Shadow DOM feature. Chapter 14 contradicted chapter 4. Switched to `shadow = true`.
 
 ### Test counts
 
@@ -953,17 +953,17 @@ Net new across the family:
 
 ### Upgrade
 
-`Auth.validToken` is the breakage to know about — your `if Auth::validToken($t)` style code keeps working unchanged because non-null arrays are truthy and null is falsy. If you do `=== true` / `=== false` strict comparisons, switch to `!== null` / `=== null`.
+`Auth.validToken` is the breakage to know about - your `if Auth::validToken($t)` style code keeps working unchanged because non-null arrays are truthy and null is falsy. If you do `=== true` / `=== false` strict comparisons, switch to `!== null` / `=== null`.
 
 Python: `ai.install_all()` → `ai.install_context()`, `queue.consume(id=)` → `consume(job_id=)`, `Api.send_request()` → `Api.send()`, `Container.reset()` semantic change (use `reset_all()` for old behaviour).
 
-Everything else is additive — new properties, new kwargs, new convenience methods that match what the docs have promised for years.
+Everything else is additive - new properties, new kwargs, new convenience methods that match what the docs have promised for years.
 
 ## v3.12.14 (2026-06-01)
 
-Two independent fixes ship together as 3.12.14. **Python** — the `tina4_python.test` class-based xUnit testing surface that the chapter 18 documentation has always promised but never actually existed. Reports came in of developers copy-pasting `from tina4_python.test import Test, assert_equal, assert_true` straight out of the book and getting `ModuleNotFoundError`. The fix was to build the module to match the documentation, not the other way around. **PHP** — `:named` placeholder translation for the four non-PDO adapters where `ORM::save()` was silently failing.
+Two independent fixes ship together as 3.12.14. **Python** - the `tina4_python.test` class-based xUnit testing surface that the chapter 18 documentation has always promised but never actually existed. Reports came in of developers copy-pasting `from tina4_python.test import Test, assert_equal, assert_true` straight out of the book and getting `ModuleNotFoundError`. The fix was to build the module to match the documentation, not the other way around. **PHP** - `:named` placeholder translation for the four non-PDO adapters where `ORM::save()` was silently failing.
 
-### Python — `tina4_python.test` xUnit testing surface
+### Python - `tina4_python.test` xUnit testing surface
 
 The testing chapter taught a `Test` base class with positional assertions:
 
@@ -979,9 +979,9 @@ class BasicTest(Test):
         assert_true("World" in greeting, "Greeting should contain 'World'")
 ```
 
-The module did not exist. Every developer who followed the chapter hit an immediate import error. The other surface, `tina4_python.Testing` with the inline `@tests` decorator, has always existed — but the two are for different purposes and the docs only documented one of them.
+The module did not exist. Every developer who followed the chapter hit an immediate import error. The other surface, `tina4_python.Testing` with the inline `@tests` decorator, has always existed - but the two are for different purposes and the docs only documented one of them.
 
-The fix ships the missing module — `tina4_python/test/__init__.py` — with the `Test` base class (inherits `unittest.TestCase`, so pytest discovers any subclass regardless of class-name convention) and 13 positional assertions. The signatures are uniform: `(actual, expected, message)`. The 2-arg legacy `(value, message)` form keeps working — a type-based dispatch detects which shape the caller used. `assert_raises` accepts three forms: docs form (`callable, exception, message`), context-manager form (`with assert_raises(X):`), and unittest order (`exception, callable`). Lifecycle hooks come in both flavours — snake_case `set_up`/`tear_down` (the Tina4 idiom) and camelCase `setUp`/`tearDown` (for users coming from unittest) — without double-calling when a subclass uses either one.
+The fix ships the missing module - `tina4_python/test/__init__.py` - with the `Test` base class (inherits `unittest.TestCase`, so pytest discovers any subclass regardless of class-name convention) and 13 positional assertions. The signatures are uniform: `(actual, expected, message)`. The 2-arg legacy `(value, message)` form keeps working - a type-based dispatch detects which shape the caller used. `assert_raises` accepts three forms: docs form (`callable, exception, message`), context-manager form (`with assert_raises(X):`), and unittest order (`exception, callable`). Lifecycle hooks come in both flavours - snake_case `set_up`/`tear_down` (the Tina4 idiom) and camelCase `setUp`/`tearDown` (for users coming from unittest) - without double-calling when a subclass uses either one.
 
 ```python
 # 13 assertions, all uniform (actual, expected, message)
@@ -1006,9 +1006,9 @@ assert_raises(callable, exception_class, message="")
 
 ### Cross-framework parity check (testing)
 
-PHP / Ruby / Node testing chapters already teach native conventions correctly — PHPUnit, RSpec, and `node:test` respectively. No fake API to fix. The Python-specific gap was that Tina4 had two testing surfaces (`tina4_python.Testing` for inline `@tests` decorator, `tina4_python.test` for class-based suites) and only one of the two existed. The other three frameworks defer to a single native runner each, so the same trap doesn't apply.
+PHP / Ruby / Node testing chapters already teach native conventions correctly - PHPUnit, RSpec, and `node:test` respectively. No fake API to fix. The Python-specific gap was that Tina4 had two testing surfaces (`tina4_python.Testing` for inline `@tests` decorator, `tina4_python.test` for class-based suites) and only one of the two existed. The other three frameworks defer to a single native runner each, so the same trap doesn't apply.
 
-### PHP — :named placeholder translation across non-PDO adapters
+### PHP - :named placeholder translation across non-PDO adapters
 
 The ORM's `save()` emits `:named` placeholders because PDO would accept them. Four of the five PHP database adapters do not use PDO. `MySQLAdapter` (mysqli), `MSSQLAdapter` (sqlsrv), `FirebirdAdapter` (ibase/fbird), and `PostgresAdapter` (pgsql) all bind positionally. Every INSERT/UPDATE through `save()` against those four engines failed silently. Reads worked because read paths typically use `?` or no params.
 
@@ -1026,35 +1026,35 @@ Python (`mysql-connector-python` uses `%s`), Ruby (`mysql2` uses `?`), and Node 
 
 Drop in for both Python and PHP. No `.env` changes, no API changes.
 
-**Python users** who followed chapter 18 and hit `ModuleNotFoundError` — bump to `3.12.14`, the `from tina4_python.test import Test, assert_equal, ...` import now resolves. Existing tests written against `tina4_python.Testing` (the inline `@tests` decorator) continue to work — that surface was not touched.
+**Python users** who followed chapter 18 and hit `ModuleNotFoundError` - bump to `3.12.14`, the `from tina4_python.test import Test, assert_equal, ...` import now resolves. Existing tests written against `tina4_python.Testing` (the inline `@tests` decorator) continue to work - that surface was not touched.
 
-**PHP users** — `:named` and `?` both work, and the framework picks the right form for whichever driver is underneath. Existing ORM `save()` calls start succeeding on MariaDB/MySQL, PostgreSQL, MSSQL, and Firebird.
+**PHP users** - `:named` and `?` both work, and the framework picks the right form for whichever driver is underneath. Existing ORM `save()` calls start succeeding on MariaDB/MySQL, PostgreSQL, MSSQL, and Firebird.
 
-**Ruby and Node users** — no framework change shipped in 3.12.14. Stay on `3.12.13` or bump to `3.12.14` for version alignment. Both are functionally identical.
+**Ruby and Node users** - no framework change shipped in 3.12.14. Stay on `3.12.13` or bump to `3.12.14` for version alignment. Both are functionally identical.
 
 ## v3.12.13 (2026-05-29)
 
-Consolidated parity release. PHP ran ahead through two independent patch releases (3.12.11-3.12.12) while Python / Ruby / Node stayed at 3.12.10. This release realigns all four frameworks on **3.12.13** and ships the cross-framework dev-admin parity sweep — five tiers of work that bring PHP, Ruby and Node up to Python's AI-assisted development surface.
+Consolidated parity release. PHP ran ahead through two independent patch releases (3.12.11-3.12.12) while Python / Ruby / Node stayed at 3.12.10. This release realigns all four frameworks on **3.12.13** and ships the cross-framework dev-admin parity sweep - five tiers of work that bring PHP, Ruby and Node up to Python's AI-assisted development surface.
 
 ### Cross-framework dev-admin parity sweep (Tier 1-5)
 
-The Python framework had pulled ahead on a series of dev-admin features driven by real frustration with the AI coder loop ("Applying a small patch went and messed up my whole file", "Says it is creating files but then doesn't", repeated import-error spirals). This release ports the full set to PHP, Ruby, and Node — same intent, language-idiomatic implementations.
+The Python framework had pulled ahead on a series of dev-admin features driven by real frustration with the AI coder loop ("Applying a small patch went and messed up my whole file", "Says it is creating files but then doesn't", repeated import-error spirals). This release ports the full set to PHP, Ruby, and Node - same intent, language-idiomatic implementations.
 
-**Tier 1 — MCP defensive write layer.** `file_write` and `file_patch` now refuse prose-as-filenames (the LLM occasionally emits `## FILE: I'll implement Step 1 by creating the database migration` and the parser used to write a zero-byte file with that sentence as its filename), normalise bare top-level `routes/` / `orm/` / `templates/` / `seeds/` / `controllers/` / `middleware/` paths to their canonical `src/<dir>/` form (auto-discovery only scans `src/`, so a file at `templates/foo.twig` was dead weight), back up existing files to `.tina4/backups/<flat-path>.<ISO-ts>.bak` before overwrite, and refuse suspicious truncations (>200B file → <30% size = almost always a truncated LLM response). Every attempt logs to `.tina4/agent.log` with a structured category (`write.ok` / `write.refused` / `write.path_normalized` / `write.import_failed`) — the supervisor reads that file on every turn so it sees what broke last time and can self-correct without asking the developer "what's the error?".
+**Tier 1 - MCP defensive write layer.** `file_write` and `file_patch` now refuse prose-as-filenames (the LLM occasionally emits `## FILE: I'll implement Step 1 by creating the database migration` and the parser used to write a zero-byte file with that sentence as its filename), normalise bare top-level `routes/` / `orm/` / `templates/` / `seeds/` / `controllers/` / `middleware/` paths to their canonical `src/<dir>/` form (auto-discovery only scans `src/`, so a file at `templates/foo.twig` was dead weight), back up existing files to `.tina4/backups/<flat-path>.<ISO-ts>.bak` before overwrite, and refuse suspicious truncations (>200B file → <30% size = almost always a truncated LLM response). Every attempt logs to `.tina4/agent.log` with a structured category (`write.ok` / `write.refused` / `write.path_normalized` / `write.import_failed`) - the supervisor reads that file on every turn so it sees what broke last time and can self-correct without asking the developer "what's the error?".
 
-**Tier 2 — Post-write syntax verification.** PHP shells out to `php -l`, Ruby to `ruby -c`, Node to `node --check` (and single-file `tsc --noEmit --allowJs --skipLibCheck` for `.ts`). On parse error the tool result gets an `import_error` field AND a `write.import_failed` log entry surfaces in the next supervisor turn's failure context. Catches hallucinated framework APIs (`CharField` doesn't exist in `tina4_python.orm.fields` — should be `StrField`; `auto_now_add` keyword on `Field.__init__()`) at write time instead of letting them propagate to a runtime 500 the user only discovers by hitting the URL.
+**Tier 2 - Post-write syntax verification.** PHP shells out to `php -l`, Ruby to `ruby -c`, Node to `node --check` (and single-file `tsc --noEmit --allowJs --skipLibCheck` for `.ts`). On parse error the tool result gets an `import_error` field AND a `write.import_failed` log entry surfaces in the next supervisor turn's failure context. Catches hallucinated framework APIs (`CharField` doesn't exist in `tina4_python.orm.fields` - should be `StrField`; `auto_now_add` keyword on `Field.__init__()`) at write time instead of letting them propagate to a runtime 500 the user only discovers by hitting the URL.
 
-**Tier 3 — `/__dev/api/threads` + `/__dev/api/chat` proxy.** The SPA now talks to the Rust supervisor agent the same way regardless of framework. `_supervisor_base_url()` matches Python's 4-step ladder (`TINA4_SUPERVISOR_URL` → `TINA4_AGENT_PORT` → `PORT+2000` → `9145`). `active_file` rides through `/chat` POST verbatim so deictic phrases ("fix this", "explain this") bind to the editor's open file without the supervisor asking. The Node port forwards SSE chunks as they arrive; PHP and Ruby buffer (functional — EventSource parses fine — but feels less snappy until a future round of Rack/PHP-FPM streaming work).
+**Tier 3 - `/__dev/api/threads` + `/__dev/api/chat` proxy.** The SPA now talks to the Rust supervisor agent the same way regardless of framework. `_supervisor_base_url()` matches Python's 4-step ladder (`TINA4_SUPERVISOR_URL` → `TINA4_AGENT_PORT` → `PORT+2000` → `9145`). `active_file` rides through `/chat` POST verbatim so deictic phrases ("fix this", "explain this") bind to the editor's open file without the supervisor asking. The Node port forwards SSE chunks as they arrive; PHP and Ruby buffer (functional - EventSource parses fine - but feels less snappy until a future round of Rack/PHP-FPM streaming work).
 
-**Tier 4 — Customer feedback widget.** A floating bubble for end-users of a shipped Tina4 app, gated by `TINA4_ENABLE_FEEDBACK=true` AND a non-empty `TINA4_FEEDBACK_WHITELIST`. The framework's response middleware injects `<script src="/__feedback/widget.js" data-tina4-feedback></script>` immediately before the LAST `</body>` tag on text/html responses, ONLY for whitelisted users, NEVER on `/__dev` or `/__feedback` paths (no double-bubble UX on the developer dashboard). One conversational turn at a time POSTs to `/__feedback/api/turn` → server-side identity stamp from the verified JWT (clients cannot fake `sender`) → forward to the Rust agent's intake-only agent (zero tools, JSON-only output). Finalised tickets land in the dev admin sidebar with `kind:"feedback"`. Rate-limited at 5 turns/hour per user.
+**Tier 4 - Customer feedback widget.** A floating bubble for end-users of a shipped Tina4 app, gated by `TINA4_ENABLE_FEEDBACK=true` AND a non-empty `TINA4_FEEDBACK_WHITELIST`. The framework's response middleware injects `<script src="/__feedback/widget.js" data-tina4-feedback></script>` immediately before the LAST `</body>` tag on text/html responses, ONLY for whitelisted users, NEVER on `/__dev` or `/__feedback` paths (no double-bubble UX on the developer dashboard). One conversational turn at a time POSTs to `/__feedback/api/turn` → server-side identity stamp from the verified JWT (clients cannot fake `sender`) → forward to the Rust agent's intake-only agent (zero tools, JSON-only output). Finalised tickets land in the dev admin sidebar with `kind:"feedback"`. Rate-limited at 5 turns/hour per user.
 
-**Tier 5 — Stale-source overlay badge + `list_plans()` merge.** The error overlay now stamps `captured_at` on render and tags each stack frame whose source file has been modified since: "FILE MODIFIED @ HH:MM:SS UTC — source may not match what failed". Stops the user from chasing ghosts when the AI coder rewrote the file between the error and the page reload. `list_plans()` reads from BOTH `plan/` (user-curated canonical) AND `.tina4/plans/` (AI-planner output), dedupes by filename with `plan/` winning on collision, sorts newest-first, and returns a `path` field so the SPA can open the right file regardless of source dir.
+**Tier 5 - Stale-source overlay badge + `list_plans()` merge.** The error overlay now stamps `captured_at` on render and tags each stack frame whose source file has been modified since: "FILE MODIFIED @ HH:MM:SS UTC - source may not match what failed". Stops the user from chasing ghosts when the AI coder rewrote the file between the error and the page reload. `list_plans()` reads from BOTH `plan/` (user-curated canonical) AND `.tina4/plans/` (AI-planner output), dedupes by filename with `plan/` winning on collision, sorts newest-first, and returns a `path` field so the SPA can open the right file regardless of source dir.
 
 **Test counts.** Per-framework deltas across the sweep:
 
 | Framework | Before → After (full suite) |
 |---|---|
-| Python | 2453 → 2453 (canonical — no new tests, just released) |
+| Python | 2453 → 2453 (canonical - no new tests, just released) |
 | PHP | 2235 → 2714 (+479) |
 | Ruby | 2747 → 2800 (+53) |
 | Node | 3263 → 3368 (+105) |
@@ -1063,36 +1063,36 @@ PHP's larger delta reflects new tests + the 3.12.11 + 3.12.12 lineage rolling fo
 
 **Why all four frameworks at once.** Per the cross-framework parity rule: a feature that exists in only one framework is technical debt. The Python-only Tier 1-5 surface had been accumulating for two weeks while the UX was settling. With it settled, this release closes the gap in one coordinated sweep.
 
-### Folded-in from PHP 3.12.11 — file upload regression (`tina4-book#139`)
+### Folded-in from PHP 3.12.11 - file upload regression (`tina4-book#139`)
 
-`WebSocket::parseHttpHeaders()` previously split the entire raw HTTP request on `\r\n` and iterated every line for a `:` to fill the headers map. Multipart body parts have their own `Content-Type`, `Content-Disposition`, and `Content-Transfer-Encoding` headers — those lines matched the parser and overwrote the real request `Content-Type: multipart/form-data; boundary=...` with whatever the last body part's content type was (typically `application/pdf`, `image/png`). Downstream `str_contains($contentType, 'multipart/form-data')` then failed, the multipart branch was skipped, `$parsedFiles` was never set, and `$request->files` came out empty. Every file upload through the stream-socket server was silently lost — the body landed in `$request->body` as a raw multipart string with no way to parse it.
+`WebSocket::parseHttpHeaders()` previously split the entire raw HTTP request on `\r\n` and iterated every line for a `:` to fill the headers map. Multipart body parts have their own `Content-Type`, `Content-Disposition`, and `Content-Transfer-Encoding` headers - those lines matched the parser and overwrote the real request `Content-Type: multipart/form-data; boundary=...` with whatever the last body part's content type was (typically `application/pdf`, `image/png`). Downstream `str_contains($contentType, 'multipart/form-data')` then failed, the multipart branch was skipped, `$parsedFiles` was never set, and `$request->files` came out empty. Every file upload through the stream-socket server was silently lost - the body landed in `$request->body` as a raw multipart string with no way to parse it.
 
 **Fix.** Stop the parser at the first `\r\n\r\n` (RFC 9112 §2.2 boundary between headers and body) before splitting into lines. One logical change in `Tina4/WebSocket.php`. 9 regression tests in `tests/BookIssue139Test.php` cover single-part, multi-part, and mixed-header cases.
 
 **Cross-framework parity check.** Python (`http.server`), Ruby (`webrick`/`puma`), and Node (built-in `http` module) all delegate header parsing to upstream stdlib HTTP parsers that already split headers from body correctly. PHP was the only framework with a hand-rolled HTTP parser in this code path. No port needed.
 
-### Folded-in from PHP 3.12.12 + Python 3.12.13 — v2 `tina4_migration` auto-upgrade (#115)
+### Folded-in from PHP 3.12.12 + Python 3.12.13 - v2 `tina4_migration` auto-upgrade (#115)
 
-Projects upgrading from tina4 ^2.x to ^3.x carried a v2-shaped `tina4_migration` table that v3's `ensureMigrationsTable()` left untouched (the `CREATE TABLE IF NOT EXISTS` short-circuited). The v3 reader then selected columns that didn't exist, fell into the "never seen this migration, run it" branch, and re-applied already-applied migrations — typically failing on duplicate-column / table-already-exists errors when the SQL was non-idempotent. The AirOffices ~190-migration codebase tripped on this in March 2026 and needed a manual SQL backfill at the time.
+Projects upgrading from tina4 ^2.x to ^3.x carried a v2-shaped `tina4_migration` table that v3's `ensureMigrationsTable()` left untouched (the `CREATE TABLE IF NOT EXISTS` short-circuited). The v3 reader then selected columns that didn't exist, fell into the "never seen this migration, run it" branch, and re-applied already-applied migrations - typically failing on duplicate-column / table-already-exists errors when the SQL was non-idempotent. The AirOffices ~190-migration codebase tripped on this in March 2026 and needed a manual SQL backfill at the time.
 
 | Framework | v2 schema | v3 schema |
 |---|---|---|
 | PHP | `migration_id VARCHAR(14)`, `description`, `content BLOB`, `passed` | `id INT PK`, `migration`, `batch`, `applied_at` |
 | Python | `description` as identifier, `content`, `passed` | `migration_id`, `migration_name`, `executed_at` |
 
-**Fix.** `ensureMigrationsTable()` (PHP) and `_ensure_tracking_table()` (Python) now detect a v2-shaped table (v2 columns present, v3 columns absent) and call an in-place upgrade that ALTERs in the v3 columns alongside the v2 ones, then backfills v3 fields from the v2 data. v2 columns are kept in place so a manual rollback path stays open — they're simply ignored by v3 readers. The match is by file stem: a v2 row's identifier is matched against `migrations/` files by basename (Python uses `000001_create_users.sql` → stem `000001_create_users` → v2 description `create_users`).
+**Fix.** `ensureMigrationsTable()` (PHP) and `_ensure_tracking_table()` (Python) now detect a v2-shaped table (v2 columns present, v3 columns absent) and call an in-place upgrade that ALTERs in the v3 columns alongside the v2 ones, then backfills v3 fields from the v2 data. v2 columns are kept in place so a manual rollback path stays open - they're simply ignored by v3 readers. The match is by file stem: a v2 row's identifier is matched against `migrations/` files by basename (Python uses `000001_create_users.sql` → stem `000001_create_users` → v2 description `create_users`).
 
-**Cross-framework parity check.** Ruby and Node never shipped a v2 migration table with the trapping shape — their v2 lineages used a different column layout that v3's tracker tolerated. Nothing to port.
+**Cross-framework parity check.** Ruby and Node never shipped a v2 migration table with the trapping shape - their v2 lineages used a different column layout that v3's tracker tolerated. Nothing to port.
 
-### Folded-in from PHP 3.12.11 — request URL parity
+### Folded-in from PHP 3.12.11 - request URL parity
 
-`$request->url` now returns the full absolute URL (`https://host:port/path?query`) instead of just the path. `$request->queryString` (raw query bytes) added for parity with `request.query_string` on the other frameworks. Drop-in — old code that read `$request->path` (untouched) keeps working.
+`$request->url` now returns the full absolute URL (`https://host:port/path?query`) instead of just the path. `$request->queryString` (raw query bytes) added for parity with `request.query_string` on the other frameworks. Drop-in - old code that read `$request->path` (untouched) keeps working.
 
 ### Upgrade
 
 Drop in. No `.env` changes, no API changes.
 
-**For projects upgrading from v2.x:** the v2 `tina4_migration` auto-upgrade runs once on first boot against v3 — back up your migrations table beforehand if you're paranoid. The upgrade is non-destructive (v2 columns are kept alongside the new v3 ones).
+**For projects upgrading from v2.x:** the v2 `tina4_migration` auto-upgrade runs once on first boot against v3 - back up your migrations table beforehand if you're paranoid. The upgrade is non-destructive (v2 columns are kept alongside the new v3 ones).
 
 **For projects using the dev admin AI coder loop:** the new MCP defensive layer will silently rewrite `## FILE: routes/foo.py` to `src/routes/foo.py` and log a `write.path_normalized` entry. If you were relying on the old behaviour (writes landing wherever the LLM emitted them), this will move some files. Run `tail -n 50 .tina4/agent.log | grep path_normalized` after upgrading to see what got rewritten.
 
@@ -1102,9 +1102,9 @@ Drop in. No `.env` changes, no API changes.
 
 Version-alignment release. PHP ran ahead through three independent patch releases (3.12.7-3.12.9) while Python / Ruby / Node stayed at 3.12.6. This release realigns all four frameworks on **3.12.10** and ships the ORM `save()` fix.
 
-### PHP — `ORM->save()` no longer swallows write failures (#114)
+### PHP - `ORM->save()` no longer swallows write failures (#114)
 
-`ORM->save()` called `update()`/`insert()` but ignored their `bool` return — it only caught exceptions. The PHP adapter's `exec()` returns `false` on a bad statement instead of throwing, so a failed `UPDATE` (commonly: one referencing a public model property with no matching DB column, since `getDbData()` includes every public property) slipped through. The empty transaction got committed and `save()` returned `$this` — the documented success signal. Callers relying on the `save(): static|false` contract believed the row persisted when nothing changed. **Silent data loss** — no exception, no log.
+`ORM->save()` called `update()`/`insert()` but ignored their `bool` return - it only caught exceptions. The PHP adapter's `exec()` returns `false` on a bad statement instead of throwing, so a failed `UPDATE` (commonly: one referencing a public model property with no matching DB column, since `getDbData()` includes every public property) slipped through. The empty transaction got committed and `save()` returned `$this` - the documented success signal. Callers relying on the `save(): static|false` contract believed the row persisted when nothing changed. **Silent data loss** - no exception, no log.
 
 **Fix.** `save()` now captures the `bool` return of `update()`/`insert()`, rolls back, and returns `false` on a falsy result.
 
@@ -1114,14 +1114,14 @@ if ($ok === false) { $this->_db->rollback(); return false; }
 $this->_db->commit();
 ```
 
-**Cross-framework parity check.** Python, Ruby and Node don't have this exact failure mode — they build the write payload from declared fields only (not all public properties), and their DB adapters raise on bad SQL, which the existing `try/except` already catches. PHP was the outlier on both counts. 3 regression tests in `tests/Issue114Test.php`; PHP suite 2235 → 2238 passing.
+**Cross-framework parity check.** Python, Ruby and Node don't have this exact failure mode - they build the write payload from declared fields only (not all public properties), and their DB adapters raise on bad SQL, which the existing `try/except` already catches. PHP was the outlier on both counts. 3 regression tests in `tests/Issue114Test.php`; PHP suite 2235 → 2238 passing.
 
 ### Also in the PHP 3.12.7-3.12.9 patch line
 
 These shipped to PHP between 3.12.6 and this release; folded into the consolidated 3.12.10 line:
 
-- **3.12.7** — `Request` now normalises caller-provided header keys to lowercase. Some upstream entry points (Apache+PHP-FPM custom mappings, certain proxies, hand-written test fixtures) hand headers in with original case. The constructor only looks them up by lowercase key, so without normalisation `multipart/form-data` content-type detection silently missed and the body fell through as raw bytes — a follow-up to the #135 fix.
-- **3.12.8 / 3.12.9** — Router gained RFC 9110 HTTP method conformance: proper `HEAD` and `OPTIONS` handling, `405 Method Not Allowed` with an `Allow` header listing the methods a route does support.
+- **3.12.7** - `Request` now normalises caller-provided header keys to lowercase. Some upstream entry points (Apache+PHP-FPM custom mappings, certain proxies, hand-written test fixtures) hand headers in with original case. The constructor only looks them up by lowercase key, so without normalisation `multipart/form-data` content-type detection silently missed and the body fell through as raw bytes - a follow-up to the #135 fix.
+- **3.12.8 / 3.12.9** - Router gained RFC 9110 HTTP method conformance: proper `HEAD` and `OPTIONS` handling, `405 Method Not Allowed` with an `Allow` header listing the methods a route does support.
 
 ### Python / Ruby / Node
 
@@ -1135,25 +1135,25 @@ Drop in. No `.env` changes, no API changes. PHP users on 3.12.9 get the `save()`
 
 Python-only fix release. PHP / Ruby / Node ship the same version stamp for parity but carry no behavioural changes.
 
-### Python — psycopg2 `%` substitution no longer trips PL/pgSQL function bodies (#40)
+### Python - psycopg2 `%` substitution no longer trips PL/pgSQL function bodies (#40)
 
 A migration containing a PL/pgSQL function with literal `%` characters in a `RAISE EXCEPTION` (or `format()`) call used to fail with the misleading:
 
 > RuntimeError: Migration failed: list index out of range
 
-The error message gave no hint that the `%` chars were the problem. The user-facing failure looked like a tina4 internal bug — actually psycopg2's argument-substitution system tripping on the literal percent signs.
+The error message gave no hint that the `%` chars were the problem. The user-facing failure looked like a tina4 internal bug - actually psycopg2's argument-substitution system tripping on the literal percent signs.
 
-**Root cause.** `PostgreSQLAdapter.execute(sql, params)` always called `cursor.execute(sql, params or [])`. psycopg2 interprets `%` as parameter placeholders WHENEVER the `params` arg is supplied — even an empty list `[]`. So a function body containing `RAISE EXCEPTION 'thing % conflicts with %', a, b` (perfectly valid PL/pgSQL) blew up because psycopg2 thought `%` was a placeholder and there were no values to substitute.
+**Root cause.** `PostgreSQLAdapter.execute(sql, params)` always called `cursor.execute(sql, params or [])`. psycopg2 interprets `%` as parameter placeholders WHENEVER the `params` arg is supplied - even an empty list `[]`. So a function body containing `RAISE EXCEPTION 'thing % conflicts with %', a, b` (perfectly valid PL/pgSQL) blew up because psycopg2 thought `%` was a placeholder and there were no values to substitute.
 
 **Fix.** New `PostgreSQLAdapter._safe_execute(cursor, sql, params)` helper routes empty/None params through `cursor.execute(sql)` (no second arg), which makes psycopg2 skip the substitution pass entirely. Literal `%` chars flow through untouched. Applied at every `cursor.execute(...)` call site in the adapter (5 spots across `execute`, `fetch`, `fetch_one`).
 
-**Tests.** 5 new unit tests in `tests/test_postgres_percent_substitution.py` pin the helper's branching. 3 live-Postgres regression tests in `tests/test_postgres_plpgsql_percent.py` exercise a real CREATE FUNCTION + trigger flow with literal `%` in the body — skipped automatically when no Postgres is reachable. Full suite: 2453 passing (was 2448).
+**Tests.** 5 new unit tests in `tests/test_postgres_percent_substitution.py` pin the helper's branching. 3 live-Postgres regression tests in `tests/test_postgres_plpgsql_percent.py` exercise a real CREATE FUNCTION + trigger flow with literal `%` in the body - skipped automatically when no Postgres is reachable. Full suite: 2453 passing (was 2448).
 
 **Cross-framework parity check.** PHP (`pg_query` vs `pg_query_params`) and Ruby (`exec` vs `exec_params`) already branch on params presence so they don't have this bug. Node uses `$1` placeholders not `%`, so the same class of bug doesn't apply.
 
 ### Long-standing tina4-js #37 confirmed fixed
 
-`frond.form.submit` not following 3xx redirects — fixed in frond v2.1.2 back on April 11, 2026 (`xhr.responseURL` comparison + `window.location.href` navigation). All four framework `public/js/frond.min.js` copies carry the fix. The original issue stayed open because the reporter never confirmed against the patched build.
+`frond.form.submit` not following 3xx redirects - fixed in frond v2.1.2 back on April 11, 2026 (`xhr.responseURL` comparison + `window.location.href` navigation). All four framework `public/js/frond.min.js` copies carry the fix. The original issue stayed open because the reporter never confirmed against the patched build.
 
 ### Upgrade
 
@@ -1163,12 +1163,12 @@ Drop in. No `.env` changes, no API changes.
 
 PHP-only bug fix release. Python / Ruby / Node ship the same version stamp for parity but carry no behavioural changes.
 
-### PHP — multipart bodies with file uploads now parse correctly (#135)
+### PHP - multipart bodies with file uploads now parse correctly (#135)
 
 Two stacked bugs in `Tina4\Request::__construct` made `$request->body` come through as the raw multipart bytes (~11 KB blobs starting with `------WebKitFormBoundary...`) whenever the request included a file upload:
 
-1. The constructor called `$this->parseBody()` BEFORE initialising `$this->files`. Inside parseBody's multipart branch, the line `$this->files = array_merge($this->files, $parsed['files'])` read an uninitialised typed property — fatal `Error`.
-2. After fixing the init order, that same line tried to mutate the `readonly` `$files` property — another fatal `Error`.
+1. The constructor called `$this->parseBody()` BEFORE initialising `$this->files`. Inside parseBody's multipart branch, the line `$this->files = array_merge($this->files, $parsed['files'])` read an uninitialised typed property - fatal `Error`.
+2. After fixing the init order, that same line tried to mutate the `readonly` `$files` property - another fatal `Error`.
 
 Both errors got swallowed by the upstream error handler and the route handler received the raw multipart payload instead of the parsed associative array. Routes that worked fine for ordinary form posts broke the moment a file field came along.
 
@@ -1188,21 +1188,21 @@ Documentation-truth release. The `audit-truth.py` CI gate (introduced post-3.12.
 
 Server: `TINA4_HOST`, `TINA4_SUPPRESS`, `TINA4_ENV_FILE`. Health: `TINA4_HEALTH_PATH` (default `/__health`, with `/health` kept as a legacy alias), `TINA4_TRAILING_SLASH_REDIRECT`. Sessions: `TINA4_SESSION_HTTPONLY`, `TINA4_SESSION_NAME`, `TINA4_SESSION_SECURE`. Templates: `TINA4_TEMPLATE_CACHE_TTL` (`0` = permanent). GraphQL: `TINA4_GRAPHQL_AUTO_SCHEMA`, `TINA4_GRAPHQL_ENDPOINT`. Mail: `TINA4_MAIL_IMAP_ENCRYPTION` (`tls`/`starttls`/`none`). MCP: `TINA4_MCP`, `TINA4_MCP_PORT`. Swagger: `TINA4_SWAGGER_ENABLED`, `TINA4_SWAGGER_CONTACT_EMAIL`, `TINA4_SWAGGER_LICENSE`. Database: `TINA4_DB_POOL` (env override on the existing `Database(url, pool=N)` constructor argument).
 
-### Logging — env-driven file output + rotation
+### Logging - env-driven file output + rotation
 
 Six new vars give you full control over logging without touching code:
 
 | Var | Default | What it does |
 |---|---|---|
-| `TINA4_LOG_FILE` | _(empty — stdout only)_ | Path to a log file. Empty leaves you on stdout. |
+| `TINA4_LOG_FILE` | _(empty - stdout only)_ | Path to a log file. Empty leaves you on stdout. |
 | `TINA4_LOG_DIR` | `logs` | Directory for log files (joined with `_LOG_FILE` if relative). |
 | `TINA4_LOG_FORMAT` | `text` | `text` or `json`. JSON mode emits one structured record per line. |
-| `TINA4_LOG_OUTPUT` | `stdout` | `stdout`, `file`, or `both`. Strict — `stdout` means stdout only. |
+| `TINA4_LOG_OUTPUT` | `stdout` | `stdout`, `file`, or `both`. Strict - `stdout` means stdout only. |
 | `TINA4_LOG_CRITICAL` | `false` | Enables a `Log.critical()` level above `error`. Off = no-op. |
 | `TINA4_LOG_ROTATE_SIZE` | `10485760` (10 MB) | Rotate when the file exceeds this many bytes. `0` disables rotation. |
 | `TINA4_LOG_ROTATE_KEEP` | `5` | Number of rotated files to retain (`app.log.1` ... `app.log.N`). Older ones are deleted. |
 
-Implementation uses each language's stdlib — Python's `logging.handlers.RotatingFileHandler`, Ruby's `Logger.new(path, shift_age, shift_size)`, and a roll-your-own atomic-rename pattern in PHP and Node. Zero new dependencies in any framework.
+Implementation uses each language's stdlib - Python's `logging.handlers.RotatingFileHandler`, Ruby's `Logger.new(path, shift_age, shift_size)`, and a roll-your-own atomic-rename pattern in PHP and Node. Zero new dependencies in any framework.
 
 ### Documentation-truth CI gate now strict on both axes
 
@@ -1219,7 +1219,7 @@ The `audit-truth.py` script now blocks merges to `main` of `tina4-documentation`
 
 ### Upgrade path
 
-Drop in. No breaking changes — every new env var is opt-in with a sensible default. If you were setting any of the 17 deleted vars in your `.env`, the boot guard will warn (then ignore) — clean them out at your leisure.
+Drop in. No breaking changes - every new env var is opt-in with a sensible default. If you were setting any of the 17 deleted vars in your `.env`, the boot guard will warn (then ignore) - clean them out at your leisure.
 
 ## v3.12.3 (2026-05-05)
 
@@ -1227,7 +1227,7 @@ Cross-framework parity sweep. Two minor breaking changes in the Ruby and PHP pub
 
 ### Breaking changes (Ruby + PHP only)
 
-**Ruby Container — predicate now uses `?` suffix.**
+**Ruby Container - predicate now uses `?` suffix.**
 
 ```ruby
 # before (3.12.2 and earlier)
@@ -1239,53 +1239,53 @@ Tina4::Container.has?(:mailer)       # idiomatic Ruby predicate
 
 This brings Ruby in line with Python (`has()`), PHP (`has()`), and Node (`has()`) while still respecting Ruby's `?`-suffix idiom for predicates returning bool. The pre-existing `resolve` → `get` rename happened earlier; only the predicate was lagging.
 
-**ResponseCache public surface — middleware-only across all four frameworks.**
+**ResponseCache public surface - middleware-only across all four frameworks.**
 
 The cache has always been middleware. Two of the four frameworks (PHP, Ruby) historically exposed lookup/store as public methods, which let users couple to internals. The public API is now consistent across all four: use the middleware on a route, and read stats with module-level helpers.
 
 ```ruby
-# Ruby — module-level helpers (parity with Python)
+# Ruby - module-level helpers (parity with Python)
 Tina4.cache_stats   # → { hits:, misses:, size:, backend:, keys: }
 Tina4.clear_cache   # flush all entries
 
-# PHP — static methods on the class
+# PHP - static methods on the class
 \Tina4\Middleware\ResponseCache::cacheStats();
 \Tina4\Middleware\ResponseCache::clearCache();
 ```
 
 Internal methods that used to be public (`get`, `lookup`, `store`, `cache_response`) are now private. Tests that needed them retain access via `_internal*` test seams marked `@internal`.
 
-### Doc parity — CLAUDE.md and book chapter 33
+### Doc parity - CLAUDE.md and book chapter 33
 
-- **CLAUDE.md**: every framework's "Key Method Stubs" section now covers the same surface area Python documents — Queue, QueryBuilder, Frond, Api, Background Tasks, ResponseCache, etc. PHP added 4 sections; Ruby added 5; Node added 13.
-- **Book chapter 33**: env var tables are now grounded in source. Each framework's chapter 33 lists every `TINA4_*` var its source actually reads. Found and fixed several gaps — Ruby was missing `TINA4_CACHE_*`, `TINA4_QUEUE_*`, `TINA4_KAFKA_*`, `TINA4_RABBITMQ_*`, `TINA4_MONGO_*`, `TINA4_WS_BACKPLANE`, and the entire `TINA4_SESSION_VALKEY_*` block.
+- **CLAUDE.md**: every framework's "Key Method Stubs" section now covers the same surface area Python documents - Queue, QueryBuilder, Frond, Api, Background Tasks, ResponseCache, etc. PHP added 4 sections; Ruby added 5; Node added 13.
+- **Book chapter 33**: env var tables are now grounded in source. Each framework's chapter 33 lists every `TINA4_*` var its source actually reads. Found and fixed several gaps - Ruby was missing `TINA4_CACHE_*`, `TINA4_QUEUE_*`, `TINA4_KAFKA_*`, `TINA4_RABBITMQ_*`, `TINA4_MONGO_*`, `TINA4_WS_BACKPLANE`, and the entire `TINA4_SESSION_VALKEY_*` block.
 
 ### Other fixes
 
-- **Ruby `lib/tina4/ai.rb`** — subprocess output is now force-encoded to UTF-8 before `String#strip`, fixing `Encoding::CompatibilityError` that crashed 4 ai specs on systems with non-ASCII pip output.
-- **Node `test/serverParity.test.ts`** — sets `TINA4_OVERRIDE_CLIENT=true` so `start()` actually runs, plus emits the `N passed, M failed` summary line the runner expects. The test was effectively a no-op before; now it's recorded properly.
+- **Ruby `lib/tina4/ai.rb`** - subprocess output is now force-encoded to UTF-8 before `String#strip`, fixing `Encoding::CompatibilityError` that crashed 4 ai specs on systems with non-ASCII pip output.
+- **Node `test/serverParity.test.ts`** - sets `TINA4_OVERRIDE_CLIENT=true` so `start()` actually runs, plus emits the `N passed, M failed` summary line the runner expects. The test was effectively a no-op before; now it's recorded properly.
 
 ### Genuine gaps surfaced by the parity audit (follow-up, not blocking 3.12.3)
 
-The chapter 33 audit flagged env vars Python documents that no other framework actually reads — Ruby/PHP/Node lack `TINA4_OPEN_BROWSER`, `TINA4_DEV_POLL_INTERVAL`, `TINA4_PUBLIC_DIR`, `TINA4_TOKEN_EXPIRES_IN` alias, plus a few framework-specific gaps (Ruby has no Mongo session backend; Node `TINA4_CSRF` defaults to `false` vs Python's `true`). Tracked for a future patch.
+The chapter 33 audit flagged env vars Python documents that no other framework actually reads - Ruby/PHP/Node lack `TINA4_OPEN_BROWSER`, `TINA4_DEV_POLL_INTERVAL`, `TINA4_PUBLIC_DIR`, `TINA4_TOKEN_EXPIRES_IN` alias, plus a few framework-specific gaps (Ruby has no Mongo session backend; Node `TINA4_CSRF` defaults to `false` vs Python's `true`). Tracked for a future patch.
 
 ### Upgrade path
 
 | Symptom | Fix |
 |---|---|
 | Ruby: `NoMethodError: undefined method 'has' for Tina4::Container` | Replace `has(:key)` with `has?(:key)` |
-| PHP: `BadMethodCallException` calling `$cache->lookup(...)` | Use the middleware: `[ResponseCache::class, 'beforeCache']` / `[..., 'afterCache']`. Or call `_internalLookup` if you really need direct access (test code only — `@internal`). |
+| PHP: `BadMethodCallException` calling `$cache->lookup(...)` | Use the middleware: `[ResponseCache::class, 'beforeCache']` / `[..., 'afterCache']`. Or call `_internalLookup` if you really need direct access (test code only - `@internal`). |
 | Ruby: `NoMethodError: undefined method 'get' for ResponseCache instance` | Use `Tina4.cache_stats` / `Tina4.clear_cache` for stats. Lookup goes through the middleware. |
 
 No `.env` changes from 3.12.2.
 
 ## v3.12.2 (2026-05-05)
 
-Quality-of-life patch. Two related portability fixes — no breaking changes from 3.12.1.
+Quality-of-life patch. Two related portability fixes - no breaking changes from 3.12.1.
 
 ### Firebird URL auto-detect
 
-Firebird is the awkward one in the stack. Every other engine has a server-side database name (`postgres://host:port/dbname`), but Firebird wants either an absolute file path on the server, a Windows drive-letter path, or an alias. The classic URI form needs a double slash to keep the leading `/` of an absolute path through the URL parser — unintuitive to anyone used to the way postgres / mysql / mssql encode the database name.
+Firebird is the awkward one in the stack. Every other engine has a server-side database name (`postgres://host:port/dbname`), but Firebird wants either an absolute file path on the server, a Windows drive-letter path, or an alias. The classic URI form needs a double slash to keep the leading `/` of an absolute path through the URL parser - unintuitive to anyone used to the way postgres / mysql / mssql encode the database name.
 
 The framework now accepts five equivalent forms and normalises all of them transparently:
 
@@ -1297,7 +1297,7 @@ The framework now accepts five equivalent forms and normalises all of them trans
 | `/C%3A/Data/db.fdb`   (URL-encoded colon) | `C:/Data/db.fdb` |
 | `/employee`           (Firebird alias) | `employee` |
 
-For ops setups that keep server URL and DB location in separate config layers — or for Windows backslash paths that fight URL encoding — set `TINA4_DATABASE_FIREBIRD_PATH`. The env override wins over whatever path is in the URL.
+For ops setups that keep server URL and DB location in separate config layers - or for Windows backslash paths that fight URL encoding - set `TINA4_DATABASE_FIREBIRD_PATH`. The env override wins over whatever path is in the URL.
 
 ```bash
 TINA4_DATABASE_FIREBIRD_PATH=C:\firebird\data\app.fdb
@@ -1306,9 +1306,9 @@ TINA4_DATABASE_URL=firebird://SYSDBA:masterkey@localhost:3050/ignored
 
 Shipped to all 4 frameworks. 11 regression tests per framework (8 unit + 3 live).
 
-### Bug fix specific to PHP — `mysqli` localhost+port quirk
+### Bug fix specific to PHP - `mysqli` localhost+port quirk
 
-PHP's `mysqli` has a long-standing quirk where `host == "localhost"` triggers a Unix socket lookup and IGNORES the port argument entirely. Connecting to `mysql://...:53306` against a Docker container fails with "No such file or directory" — `mysqli` is hunting for `/tmp/mysql.sock` instead of opening a TCP connection. `MySQLAdapter::rewriteHostForTcp()` now rewrites `localhost` to `127.0.0.1` when a non-zero port is specified, forcing the TCP code path. Bare `mysql:///db` (no port) is preserved so existing socket-based setups keep working.
+PHP's `mysqli` has a long-standing quirk where `host == "localhost"` triggers a Unix socket lookup and IGNORES the port argument entirely. Connecting to `mysql://...:53306` against a Docker container fails with "No such file or directory" - `mysqli` is hunting for `/tmp/mysql.sock` instead of opening a TCP connection. `MySQLAdapter::rewriteHostForTcp()` now rewrites `localhost` to `127.0.0.1` when a non-zero port is specified, forcing the TCP code path. Bare `mysql:///db` (no port) is preserved so existing socket-based setups keep working.
 
 ### Other fixes
 
@@ -1319,7 +1319,7 @@ No `.env` changes from 3.12.1, no migration needed. Existing 3.12.1 installs upg
 
 ## v3.12.1 (2026-05-04)
 
-CI-only patch — no framework code changes from 3.12.0.
+CI-only patch - no framework code changes from 3.12.0.
 
 - **fix(ci, all 4):** every `publish.yml` workflow now declares `permissions: contents: write` on the publish job. Without this, `softprops/action-gh-release` 403'd against the default `GITHUB_TOKEN` on repos whose default Workflow permissions setting was read-only (Ruby and Node hit this every release; PHP and Python worked by luck of repo settings). The explicit declaration makes the workflow self-sufficient.
 - **chore(ci):** bumped `softprops/action-gh-release` from `@v1` (unmaintained) to `@v2`.
@@ -1330,11 +1330,11 @@ The version-bump itself is the test: a successful 3.12.1 release proves the work
 
 ## v3.12.0 (2026-05-04)
 
-> **⚠️ Breaking change — read before upgrading.** Every framework env var now uses the `TINA4_` prefix. Existing `.env` files set with `DATABASE_URL`, `SECRET`, `SMTP_HOST`, `HOST_NAME`, etc. will cause the framework to refuse to boot. Run `tina4 env --migrate` to rewrite, or follow the rename table below.
+> **⚠️ Breaking change - read before upgrading.** Every framework env var now uses the `TINA4_` prefix. Existing `.env` files set with `DATABASE_URL`, `SECRET`, `SMTP_HOST`, `HOST_NAME`, etc. will cause the framework to refuse to boot. Run `tina4 env --migrate` to rewrite, or follow the rename table below.
 
 ### Why this release
 
-Tina4's env vars had grown inconsistent. Some had the `TINA4_` prefix (`TINA4_DEBUG`, `TINA4_LOCALE`, `TINA4_CACHE_BACKEND`), others didn't (`DATABASE_URL`, `SECRET`, `SMTP_HOST`). Newcomers had to guess which convention applied to which feature. Existing tools and PaaS dashboards collided with un-prefixed names like `SECRET` and `API_KEY` that other libraries also read. Documentation drifted — 91 env-var names appeared in the docs that didn't exist in any framework, and 22 framework-specific env vars in the code didn't match the names users were told to set.
+Tina4's env vars had grown inconsistent. Some had the `TINA4_` prefix (`TINA4_DEBUG`, `TINA4_LOCALE`, `TINA4_CACHE_BACKEND`), others didn't (`DATABASE_URL`, `SECRET`, `SMTP_HOST`). Newcomers had to guess which convention applied to which feature. Existing tools and PaaS dashboards collided with un-prefixed names like `SECRET` and `API_KEY` that other libraries also read. Documentation drifted - 91 env-var names appeared in the docs that didn't exist in any framework, and 22 framework-specific env vars in the code didn't match the names users were told to set.
 
 This release closes all three gaps with a single hard rename. No deprecation period, no fallback chain. The framework refuses to boot if it detects a legacy name in the environment, prints a list of every var to rename, and tells you which command to run.
 
@@ -1343,23 +1343,23 @@ This release closes all three gaps with a single hard rename. No deprecation per
 - **22 env vars renamed** to `TINA4_*` form. See the migration table below.
 - **`tina4 env --migrate` CLI** added to all four frameworks. Reads your `.env`, rewrites it in place, leaves a `.env.bak` backup, prints a diff. Idempotent.
 - **Boot-time guard** scans `os.environ` (or the language equivalent) for the 22 legacy names. If any are present, prints the rename map and exits with code 2. Bypass with `TINA4_ALLOW_LEGACY_ENV=true` for migration scripts that need both names set during transition.
-- **All 4 framework books rewritten.** Chapter 33 (Environment Variables) is now a clean canonical list — every var prefixed, descriptions current, legacy names removed.
+- **All 4 framework books rewritten.** Chapter 33 (Environment Variables) is now a clean canonical list - every var prefixed, descriptions current, legacy names removed.
 - **Doc-vs-code drift closed.** Of the 91 stale env vars previously documented, 61 were renames (corrected), 32 were never implemented (removed). The `audit-links.py` CI gate stays at 0 broken links / 0 broken anchors.
-- **Frond bundle** rebuilt at v2.1.3 — `frond.min.js` footer now shows the version explicitly so users can verify what they have.
+- **Frond bundle** rebuilt at v2.1.3 - `frond.min.js` footer now shows the version explicitly so users can verify what they have.
 
 ### Bug fixes shipped alongside the rename
 
-- **#38 PostgreSQL UUID-PK transaction abort** — the post-INSERT `lastval()` probe is now wrapped in a SAVEPOINT, so UUID-PK INSERTs no longer poison the outer transaction with `InFailedSqlTransaction`. Live regression test against PostgreSQL 16. (Affects all 4 frameworks where the PG adapter does this probe.)
-- **#39 Landing page + template auto-routing** —
+- **#38 PostgreSQL UUID-PK transaction abort** - the post-INSERT `lastval()` probe is now wrapped in a SAVEPOINT, so UUID-PK INSERTs no longer poison the outer transaction with `InFailedSqlTransaction`. Live regression test against PostgreSQL 16. (Affects all 4 frameworks where the PG adapter does this probe.)
+- **#39 Landing page + template auto-routing** -
   - Auto-routing now scans `src/templates/pages/` only. Partials, layouts, base.twig, errors/, components/, and `_*` files never auto-serve from a URL.
   - `TINA4_TEMPLATE_ROUTING=off` kills the feature entirely.
-  - `src/public/index.html` auto-serves at `/` (and `/foo/` serves `src/public/foo/index.html`) — SPA hosting Just Works.
+  - `src/public/index.html` auto-serves at `/` (and `/foo/` serves `src/public/foo/index.html`) - SPA hosting Just Works.
   - The framework landing page only renders when `TINA4_DEBUG=true`. Production never shows it; framework version, dev-admin link, and gallery don't leak to real users.
-  - The malformed `HTTP/1.1 404 OK` status line is fixed — every status code now uses its canonical RFC 7231/9110 reason phrase.
-- **#37 frond.form.submit redirect handling** — verified shipped at v2.1.x; `xhr.responseURL` change triggers `window.location` navigation correctly.
-- **#36 Session file handler** — re-verified safeguards (lazy save, WebSocket skip, probabilistic GC, new-and-empty skip) all still in place.
+  - The malformed `HTTP/1.1 404 OK` status line is fixed - every status code now uses its canonical RFC 7231/9110 reason phrase.
+- **#37 frond.form.submit redirect handling** - verified shipped at v2.1.x; `xhr.responseURL` change triggers `window.location` navigation correctly.
+- **#36 Session file handler** - re-verified safeguards (lazy save, WebSocket skip, probabilistic GC, new-and-empty skip) all still in place.
 
-### Migration — every renamed var
+### Migration - every renamed var
 
 | Legacy name | New name |
 |---|---|
@@ -1388,16 +1388,16 @@ This release closes all three gaps with a single hard rename. No deprecation per
 
 ### Names that stay un-prefixed (not framework config)
 
-`PORT`, `HOST`, `NODE_ENV`, `RACK_ENV`, `RUBY_ENV`, `ENVIRONMENT` — these are runtime / PaaS conventions, not framework config. Heroku, Railway, Vercel, and friends set them; we keep reading them.
+`PORT`, `HOST`, `NODE_ENV`, `RACK_ENV`, `RUBY_ENV`, `ENVIRONMENT` - these are runtime / PaaS conventions, not framework config. Heroku, Railway, Vercel, and friends set them; we keep reading them.
 
 ### How to upgrade
 
 1. **Backup your `.env`:** `cp .env .env.bak.pre-v3.12`
-2. **Run the migration:** `tina4 env --migrate` — rewrites your `.env` in place.
-3. **Update PaaS dashboards:** Heroku, Railway, Vercel, Render, Fly.io etc — rename the same vars in your provider's env-var UI.
+2. **Run the migration:** `tina4 env --migrate` - rewrites your `.env` in place.
+3. **Update PaaS dashboards:** Heroku, Railway, Vercel, Render, Fly.io etc - rename the same vars in your provider's env-var UI.
 4. **Restart your app.** The boot guard verifies nothing legacy remains.
 
-If your app uses `SECRET`, `DATABASE_URL`, or any other listed name in places besides `.env` (e.g. your CI pipeline's `env:` blocks), update those too — the boot guard checks `os.environ`, not just `.env`.
+If your app uses `SECRET`, `DATABASE_URL`, or any other listed name in places besides `.env` (e.g. your CI pipeline's `env:` blocks), update those too - the boot guard checks `os.environ`, not just `.env`.
 
 ### Parity
 
@@ -1411,22 +1411,22 @@ Coordinated release across PyPI, Packagist, RubyGems, npm.
 
 ## v3.11.32 (2026-04-25)
 
-**Critical fix — pool + transactions are now actually atomic.** Plus a coordinated parity release that aligns all four frameworks at the same version after months of drift.
+**Critical fix - pool + transactions are now actually atomic.** Plus a coordinated parity release that aligns all four frameworks at the same version after months of drift.
 
-Before this release, creating a `Database` with `pool > 0` silently broke transactions. The pool's round-robin checkout rotated to a different adapter on every call — so `start_transaction()` pinned its flag on adapter A, the executes autocommitted on adapters B and C, and the final `commit()` / `rollback()` landed on adapter D, which had nothing to commit. Result: `rollback()` was a no-op, writes leaked through, and no error or log surfaced the problem.
+Before this release, creating a `Database` with `pool > 0` silently broke transactions. The pool's round-robin checkout rotated to a different adapter on every call - so `start_transaction()` pinned its flag on adapter A, the executes autocommitted on adapters B and C, and the final `commit()` / `rollback()` landed on adapter D, which had nothing to commit. Result: `rollback()` was a no-op, writes leaked through, and no error or log surfaced the problem.
 
 The fix pins one adapter to the calling context for the lifetime of a transaction. Each language uses its own primitive:
 
-- **Python** — `threading.local()` on the `Database` instance
-- **Ruby** — `Thread.current[:tina4_pinned_adapter_<obj_id>]`
-- **Node.js** — `AsyncLocalStorage` from `node:async_hooks` (async-safe across overlapping awaits)
-- **PHP** — per-instance property (PHP-FPM is one process per request; threading.local is unnecessary)
+- **Python** - `threading.local()` on the `Database` instance
+- **Ruby** - `Thread.current[:tina4_pinned_adapter_<obj_id>]`
+- **Node.js** - `AsyncLocalStorage` from `node:async_hooks` (async-safe across overlapping awaits)
+- **PHP** - per-instance property (PHP-FPM is one process per request; threading.local is unnecessary)
 
 While pinned, every database call routes to the same adapter. `commit()` and `rollback()` release the pin so subsequent calls round-robin again.
 
-- **fix (database / all 4):** adapter pinning across transaction scope in `Database._get_adapter()` (and language equivalents). Every backend is affected — SQLite, PostgreSQL, MySQL, MSSQL, Firebird. Firebird exposed it loudest because of its honest "commit-empty-txn is a real no-op" semantics; the others mostly hid the bug behind eager autocommits but still lost rollback atomicity.
-- **tests (all 4):** new regression suite — three INSERTs followed by `rollback()` under `pool=4` now leaves zero rows (was leaking three). Three INSERTs followed by `commit()` persists exactly three. Pin-release after commit/rollback verified. `pool=0` regression test added so single-connection mode stays unaffected.
-- **parity / version alignment:** all 4 frameworks bumped to 3.11.32 — closes the cross-framework version drift that had built up (PHP at 3.11.31, Python at 3.11.24, Ruby and Node at 3.11.19). A single coordinated release across all four registries: PyPI, Packagist, RubyGems, npm.
+- **fix (database / all 4):** adapter pinning across transaction scope in `Database._get_adapter()` (and language equivalents). Every backend is affected - SQLite, PostgreSQL, MySQL, MSSQL, Firebird. Firebird exposed it loudest because of its honest "commit-empty-txn is a real no-op" semantics; the others mostly hid the bug behind eager autocommits but still lost rollback atomicity.
+- **tests (all 4):** new regression suite - three INSERTs followed by `rollback()` under `pool=4` now leaves zero rows (was leaking three). Three INSERTs followed by `commit()` persists exactly three. Pin-release after commit/rollback verified. `pool=0` regression test added so single-connection mode stays unaffected.
+- **parity / version alignment:** all 4 frameworks bumped to 3.11.32 - closes the cross-framework version drift that had built up (PHP at 3.11.31, Python at 3.11.24, Ruby and Node at 3.11.19). A single coordinated release across all four registries: PyPI, Packagist, RubyGems, npm.
 
 **No migration needed.** Code using `pool=0` (the default for every adapter except where explicitly raised) is unaffected. Code using `pool>0` will now actually honour transactions instead of silently dropping them.
 
@@ -1437,19 +1437,19 @@ While pinned, every database call routes to the same adapter. `commit()` and `ro
 
 Issue-driven release. Everything reported in the open tina4-book issues either was fixed in this version or is already fixed in 3.11.12; this release consolidates the remaining bits and corrects documentation drift.
 
-- **feat (router / all 4):** Explicit typed-parameter system shared across Python, PHP, Ruby, Node. Adds `alpha`, `alnum`, `slug`, `uuid`, and explicit `string` types in addition to the existing `int`/`integer`, `float`/`number`, `path`/`.*`. **Unknown type names now throw at registration** — `{name:str}`, `{id:inetger}`, etc. raise with a clear message listing the valid types instead of silently falling through to the default matcher. Fixes tina4-book#125. +45 new tests across the four suites.
+- **feat (router / all 4):** Explicit typed-parameter system shared across Python, PHP, Ruby, Node. Adds `alpha`, `alnum`, `slug`, `uuid`, and explicit `string` types in addition to the existing `int`/`integer`, `float`/`number`, `path`/`.*`. **Unknown type names now throw at registration** - `{name:str}`, `{id:inetger}`, etc. raise with a clear message listing the valid types instead of silently falling through to the default matcher. Fixes tina4-book#125. +45 new tests across the four suites.
 - **fix (gallery / python+php+ruby):** Gallery Try-It / View buttons now open the deployed example in a new tab (`window.open(url, '_blank')`) instead of navigating away from the gallery home. Fixes tina4-book#115.
 - **fix (ruby gemspec):** `sqlite3` promoted from `add_development_dependency` to `add_dependency`. Matches the "zero-config SQLite on first run" promise. Fixes tina4-book#100.
-- **docs (tina4-book):** PHP Chapter 2 updated — correct port (7145), `->noAuth()` on write-method examples, and an explicit callout explaining the secure-by-default policy for POST/PUT/PATCH/DELETE. Addresses tina4-book#87, #94, #123.
+- **docs (tina4-book):** PHP Chapter 2 updated - correct port (7145), `->noAuth()` on write-method examples, and an explicit callout explaining the secure-by-default policy for POST/PUT/PATCH/DELETE. Addresses tina4-book#87, #94, #123.
 - **docs (tina4-book):** Python `@template` decorator ordering corrected (must sit BELOW the route decorator) in book chapters 04 and 10; Python `request->query` vs `request->params` distinction in PHP chapter 1.
 - **tests (python):** Session-handler tests updated to reflect the real default TTL of 3600s (were stale at 1800s).
-- **verified already fixed in earlier 3.11.x releases** — closed comments posted on all of these:
+- **verified already fixed in earlier 3.11.x releases** - closed comments posted on all of these:
 <div v-pre>
 
   - #79 dotted numeric index (`{{ items.0.name }}`)
   - #80 `truncate` filter
   - #82 `{{ parent() }}` / `{{ super() }}` across all 4 frameworks
-  - #83 Ruby dashboard — WEBrick is runtime dep
+  - #83 Ruby dashboard - WEBrick is runtime dep
   - #89 `load_dotenv` rename, `DatabaseResult` methods, SQLite WAL locking
   - #91 Ruby `request.params` symbol + string keys via `IndifferentHash`
   - #93 Ruby `/docs/*` and bare `/*` wildcard routes
@@ -1466,7 +1466,7 @@ Issue-driven release. Everything reported in the open tina4-book issues either w
 Before this release, `TINA4_DATABASE_URL=sqlite:///data/app.db` was interpreted differently by every framework. Python/Node/Ruby tried to open `/data/app.db` (absolute) which crashed on macOS with `OSError: [Errno 30] Read-only file system: '/data'`. PHP did the same under the hood. All four frameworks now agree: three slashes = relative, four slashes = absolute.
 
 - **fix (all 4):** `sqlite:///X` resolves under cwd; parent directory auto-created only when inside cwd. Absolute paths are trusted and never mkdir'd at root.
-- **fix (python):** `_ensure_folders` no longer creates a bogus `src/migrations/` directory. The migration runner always looks at `migrations/` at the project root — there is only one correct location.
+- **fix (python):** `_ensure_folders` no longer creates a bogus `src/migrations/` directory. The migration runner always looks at `migrations/` at the project root - there is only one correct location.
 - **parity (php, ruby, node):** Same `sqlite:///X` parsing as Python. Dedicated `resolve_path` / `resolveSqlitePath` helpers in each framework so adapters consistently handle `:memory:`, `./` forms, Windows drive letters.
 - **tests:** 9 new Python tests in `TestSQLiteConnectionPath` + `TestProjectFolders`. 4 new PHP tests in `DatabaseUrlTest` covering relative/absolute/Windows/bruce-regression. 6 new Ruby specs in `database_drivers_spec.rb :: SqliteDriver.resolve_path`. Node URL tests expanded in `database.test.ts` with the full relative/absolute/Windows/:memory: matrix.
 - **parity:** All 4 frameworks bumped to 3.11.12.
@@ -1485,11 +1485,11 @@ Before this release, `TINA4_DATABASE_URL=sqlite:///data/app.db` was interpreted 
 
 ## v3.11.10 (2026-04-15)
 
-- **fix (php):** Hot-reload loop — DevAdmin's polling fallback used `mt=0` as the baseline, so the first poll after every page load triggered `location.reload()`, which reset `mt=0` again. Loop now initialises the baseline on the first poll.
-- **fix (php):** Reload sentinel removed — PHP was the only framework recursively walking `src/` and touching `src/.reload_sentinel` on every reload POST. The sentinel lived inside the Rust CLI's watched tree and fed back into the watcher, triggering a second loop. Replaced with the same in-memory counter used by Python/Ruby/Node.
+- **fix (php):** Hot-reload loop - DevAdmin's polling fallback used `mt=0` as the baseline, so the first poll after every page load triggered `location.reload()`, which reset `mt=0` again. Loop now initialises the baseline on the first poll.
+- **fix (php):** Reload sentinel removed - PHP was the only framework recursively walking `src/` and touching `src/.reload_sentinel` on every reload POST. The sentinel lived inside the Rust CLI's watched tree and fed back into the watcher, triggering a second loop. Replaced with the same in-memory counter used by Python/Ruby/Node.
 - **fix (php):** Polling no longer starts more than once when the WebSocket reconnect retry budget is exhausted (added a `pollStarted` guard).
 - **feat (parity):** `GET /__dev/api/queue/topics` and `GET /__dev/api/queue/dead-letters` added to PHP, Ruby and Node (previously only in Python). PHP queue endpoints now read from the real `Tina4\Queue` backend instead of returning stubs.
-- **feat (devadmin):** Refreshed `tina4-dev-admin.js` bundle (87.8 KB) across all 4 frameworks — adds the topic selector dropdown, inline payload expand/copy, and corrected version display.
+- **feat (devadmin):** Refreshed `tina4-dev-admin.js` bundle (87.8 KB) across all 4 frameworks - adds the topic selector dropdown, inline payload expand/copy, and corrected version display.
 - **tests:** 4-way parity tests for hot-reload: mtime starts at 0, POST /__dev/api/reload bumps the counter, no sentinel file is written to disk, mtime is monotonic across successive reloads. Mirrored in `tina4-php/tests/DevAdminTest.php`, `tina4-python/tests/test_dev_admin.py`, `tina4-ruby/spec/dev_admin_spec.rb`, `tina4-nodejs/test/devAdmin.test.ts`.
 - **parity:** All 4 frameworks bumped to 3.11.10.
 
@@ -1498,37 +1498,37 @@ Before this release, `TINA4_DATABASE_URL=sqlite:///data/app.db` was interpreted 
 
 Catch-up release covering v3.11.0 → v3.11.9 across all 4 frameworks.
 
-- **feat (websocket):** Full WebSocket parity across Python/PHP/Node/Ruby — `get_client_rooms()` / `getClientRooms()`, `route()` usable as decorator or direct handler registration, matching room/broadcast semantics, plus new parity tests on all 4.
+- **feat (websocket):** Full WebSocket parity across Python/PHP/Node/Ruby - `get_client_rooms()` / `getClientRooms()`, `route()` usable as decorator or direct handler registration, matching room/broadcast semantics, plus new parity tests on all 4.
 - **feat (graphql):** Input validation and field-level `@auth` directives with context threading.
 - **feat (graphql):** Auto-discovery of schemas; removed legacy DevAdmin HTML/JS in favour of the new UI.
-- **feat (devadmin — Python):** Queue tab with topic selector, dead-letter listing and replay endpoints, inline payload expand/copy, version display.
-- **feat (cli):** Rust CLI now owns file watching — frameworks receive `POST /__dev/api/reload` and internal watchers are disabled when launched by the Rust CLI (`--managed`).
+- **feat (devadmin - Python):** Queue tab with topic selector, dead-letter listing and replay endpoints, inline payload expand/copy, version display.
+- **feat (cli):** Rust CLI now owns file watching - frameworks receive `POST /__dev/api/reload` and internal watchers are disabled when launched by the Rust CLI (`--managed`).
 - **fix (cli):** `parseFlags` / `parse_flags` / `parseCliArgs` no longer swallow `host:port` or positional args after boolean flags.
 - **fix (scss):** SCSS recompilation loop fixed; output path corrected to `src/public/css/` to match CLI and static serving.
-- **fix (frond — Python):** Numeric dotted index for lists (`items.0.name`) now resolves correctly.
-- **fix (router — Ruby):** Bare `/*` wildcard capture exposed under `"*"` key for parity.
-- **fix (orm — PHP):** Three data-sync bugs fixed: `load()` double-fill, `getPrimaryKeyValue`, `save()` ID sync.
+- **fix (frond - Python):** Numeric dotted index for lists (`items.0.name`) now resolves correctly.
+- **fix (router - Ruby):** Bare `/*` wildcard capture exposed under `"*"` key for parity.
+- **fix (orm - PHP):** Three data-sync bugs fixed: `load()` double-fill, `getPrimaryKeyValue`, `save()` ID sync.
 - **fix (graphql):** `from_orm` / `fromOrm` list resolver used `select(skip=)` instead of `all(offset=)`.
 - **fix (metrics):** Windows backslash paths normalised to forward slashes.
-- **fix (app — PHP):** No longer crashes on notices/deprecations in loaded files; `run()` now prints the banner when starting the server directly.
+- **fix (app - PHP):** No longer crashes on notices/deprecations in loaded files; `run()` now prints the banner when starting the server directly.
 - **chore:** Example demo store ships with the repo; Windows-friendly setup; `.env.example` and setup scripts added.
 - **parity:** All 4 frameworks bumped to 3.11.9. PHP aligned to the 3.x tag scheme on `v3`.
 
 ## v3.10.99 (2026-04-12)
 
-- **breaking:** `autoMap` now defaults to `true` — ORM models automatically map between camelCase properties and snake_case DB columns. Set `public bool $autoMap = false;` on your model to restore the old behaviour.
+- **breaking:** `autoMap` now defaults to `true` - ORM models automatically map between camelCase properties and snake_case DB columns. Set `public bool $autoMap = false;` on your model to restore the old behaviour.
 - **breaking:** `all()` now returns a flat array of model instances instead of `['data' => [...], 'total' => N, ...]`. Use `count()` separately if you need the total.
-- **feat:** `toDict(include, case)` parameter — pass `case: 'snake'` to get snake_case keys matching DB columns, or `case: 'camel'` (default) for camelCase.
+- **feat:** `toDict(include, case)` parameter - pass `case: 'snake'` to get snake_case keys matching DB columns, or `case: 'camel'` (default) for camelCase.
 <div v-pre>
 
-- **feat:** Frond `replace` filter now accepts dict args — `{{ v|replace({"T": " ", "-": "/"}) }}` for multiple substitutions in one call.
-- **feat:** `$app->background(callback, interval)` — register periodic tasks that run cooperatively in the `stream_select` event loop. No threads, no separate processes.
-- **feat:** Background timing guard — warns when callbacks exceed their interval, helping developers identify blocking operations.
-- **feat:** WebSocket room management moved to `Server` class — `joinRoom()`, `leaveRoom()`, `broadcastToRoom()` now work reliably via `WebSocketConnection->server`.
-- **feat:** Docker image now bundles the example store demo — `docker run tina4stack/tina4-php:v3` starts a working app out of the box.
+- **feat:** Frond `replace` filter now accepts dict args - `{{ v|replace({"T": " ", "-": "/"}) }}` for multiple substitutions in one call.
+- **feat:** `$app->background(callback, interval)` - register periodic tasks that run cooperatively in the `stream_select` event loop. No threads, no separate processes.
+- **feat:** Background timing guard - warns when callbacks exceed their interval, helping developers identify blocking operations.
+- **feat:** WebSocket room management moved to `Server` class - `joinRoom()`, `leaveRoom()`, `broadcastToRoom()` now work reliably via `WebSocketConnection->server`.
+- **feat:** Docker image now bundles the example store demo - `docker run tina4stack/tina4-php:v3` starts a working app out of the box.
 - **fix:** AutoCrud updated for new `all()` return format.
 - **fix:** Cart nav badge now updates reactively on quantity change and item removal.
-- **fix:** Non-blocking queue consumer — `processOrders()` uses `$queue->pop()` instead of blocking `$queue->consume()`.
+- **fix:** Non-blocking queue consumer - `processOrders()` uses `$queue->pop()` instead of blocking `$queue->consume()`.
 - **tests:** 6 new parity tests covering `toDict(case:)`, `autoMap` default, `replace` filter (dict + positional), and `background()` registration. 2,345 tests passing.
 - **parity:** All features shipped identically across Python, PHP, Ruby, Node.js.
 
@@ -1536,43 +1536,43 @@ Catch-up release covering v3.11.0 → v3.11.9 across all 4 frameworks.
 
 ## v3.10.97 (2026-04-11)
 
-- **fix:** frond.form.submit redirect handling — XHR follows 3xx redirects transparently; fixed by detecting `xhr.responseURL` mismatch and navigating instead.
+- **fix:** frond.form.submit redirect handling - XHR follows 3xx redirects transparently; fixed by detecting `xhr.responseURL` mismatch and navigating instead.
 - **dep:** Updated frond.min.js to v2.1.2.
 - **parity:** All 4 frameworks bumped to 3.10.97.
 
 ## v3.10.93 (2026-04-11)
 
-- **fix:** Frond bracket depth tracking in `findOutsideQuotes()` and `splitOutsideQuotes()` — expressions like `$arr[$i % 2]` no longer treated as top-level arithmetic.
-- **fix:** Frond subscript expression evaluation — bracket content uses `evaluateExpression()` instead of `resolveVariable()`, enabling `arr[loop.index0 % 2]`.
-- **fix:** Frond slice with variable bounds — `items[start:end]` evaluates bounds through `evaluateExpression()`.
-- **docs:** Developer skills updated — Metrics Dashboard guidance, Frond Template Parity rules, `@noauth` security warnings.
+- **fix:** Frond bracket depth tracking in `findOutsideQuotes()` and `splitOutsideQuotes()` - expressions like `$arr[$i % 2]` no longer treated as top-level arithmetic.
+- **fix:** Frond subscript expression evaluation - bracket content uses `evaluateExpression()` instead of `resolveVariable()`, enabling `arr[loop.index0 % 2]`.
+- **fix:** Frond slice with variable bounds - `items[start:end]` evaluates bounds through `evaluateExpression()`.
+- **docs:** Developer skills updated - Metrics Dashboard guidance, Frond Template Parity rules, `@noauth` security warnings.
 - **parity:** All Frond fixes applied identically across Python, PHP, Ruby, Node.js. 2,339 tests passing (263 Frond).
 
 ## v3.10.92 (2026-04-10)
 
 - **feat:** Add `RateLimiterMiddleware` class with `beforeRateLimit()`, `check()`, `reset()` static methods.
-- **breaking:** Rename `ErrorOverlay` methods — `render()` → `renderErrorOverlay()`, `renderProduction()` → `renderProductionError()`.
+- **breaking:** Rename `ErrorOverlay` methods - `render()` → `renderErrorOverlay()`, `renderProduction()` → `renderProductionError()`.
 - **feat:** Add `Server::handle(Request $request): Response` for cross-framework parity.
 - **feat:** Add `DatabaseResult::size()` method.
 - **breaking:** Rename `WebSocketBackplane::create()` → `WebSocketBackplane::createBackplane()`.
 - **feat:** Add `DevAdmin::health()` method.
 - **feat:** Add `ScssCompiler::compileScss()` method.
 - **fix:** Add `DatabaseSessionHandler::delete()` delegating to `destroy()`.
-- **fix:** `SmokeTest` — pass secret explicitly to `Auth::getToken()` to fix test ordering issue.
+- **fix:** `SmokeTest` - pass secret explicitly to `Auth::getToken()` to fix test ordering issue.
 - **parity:** 44/44 cross-framework features green. 2,305 tests passing.
 
 ## v3.10.91 (2026-04-10)
 
-- **feat:** Add parity methods — `GraphQLType::parse()`, `Response::send()` params, `MCP::registerRoutes()` optional router.
-- **breaking:** Rename `from()` → `fromTable()`, `template()` → `render()` — align with Python canonical names.
+- **feat:** Add parity methods - `GraphQLType::parse()`, `Response::send()` params, `MCP::registerRoutes()` optional router.
+- **breaking:** Rename `from()` → `fromTable()`, `template()` → `render()` - align with Python canonical names.
 
 ## v3.10.90 (2026-04-09)
 
 <div v-pre>
 
-- **docs:** Chapter 4 (Templates) — new "Dumping Values for Debugging" section covering both `{{ $x|dump }}` and `{{ dump($x) }}` forms, their shared `<pre>var_dump()</pre>` output, and the `TINA4_DEBUG=true` production gate. Filter table entry updated to reference the new section.
+- **docs:** Chapter 4 (Templates) - new "Dumping Values for Debugging" section covering both `{{ $x|dump }}` and `{{ dump($x) }}` forms, their shared `<pre>var_dump()</pre>` output, and the `TINA4_DEBUG=true` production gate. Filter table entry updated to reference the new section.
 - **docs:** `plan/parity/parity-template.md` updated with a cross-framework dump helper comparison table and marks dump parity as confirmed across all 4 frameworks at v3.10.89.
-- **chore:** Version sync release — brings all 4 frameworks to the same patch version (3.10.90) so downstream users can upgrade PHP/Python/Ruby/Node.js in lockstep without hunting version mismatches.
+- **chore:** Version sync release - brings all 4 frameworks to the same patch version (3.10.90) so downstream users can upgrade PHP/Python/Ruby/Node.js in lockstep without hunting version mismatches.
 
 </div>
 
@@ -1588,23 +1588,23 @@ Catch-up release covering v3.11.0 → v3.11.9 across all 4 frameworks.
 
 ## v3.10.87 (2026-04-09)
 
-- **fix:** Dev toolbar no longer vanishes after a hot-reload. `Server::onFilesChanged()` used to call `Router::clear()` and then loop `include_once` over every `.php` file in `src/routes/`. Because `include_once` is a no-op for already-included files, routes were never re-registered after a template/CSS/JS edit — subsequent requests fell through to the 404 handler and the dev toolbar injection was lost. The router is now left intact on template/asset edits (Frond re-reads templates in dev mode, static files are served from disk per request, so nothing else needs to move). PHP file edits log a warning that a full server restart is required (classes cannot be redeclared in-process).
-- **fix:** This also resolves a related issue where rapid browser refreshes during hot reload would return 500s — the router wipe left a brief window with zero routes registered.
+- **fix:** Dev toolbar no longer vanishes after a hot-reload. `Server::onFilesChanged()` used to call `Router::clear()` and then loop `include_once` over every `.php` file in `src/routes/`. Because `include_once` is a no-op for already-included files, routes were never re-registered after a template/CSS/JS edit - subsequent requests fell through to the 404 handler and the dev toolbar injection was lost. The router is now left intact on template/asset edits (Frond re-reads templates in dev mode, static files are served from disk per request, so nothing else needs to move). PHP file edits log a warning that a full server restart is required (classes cannot be redeclared in-process).
+- **fix:** This also resolves a related issue where rapid browser refreshes during hot reload would return 500s - the router wipe left a brief window with zero routes registered.
 
 ## v3.10.86 (2026-04-09)
 
 - **feat:** `$foreignKeys` property on `ORM` auto-wires both sides of a foreign key relationship. Declaring `public array $foreignKeys = ['user_id' => 'User']` injects a `belongsTo` accessor (`$post->user`) on the declaring model and a `hasMany` accessor (`$user->posts`) on the referenced model via a cross-model FK registry. Extended form supports a custom has-many key: `['user_id' => ['model' => 'User', 'related_name' => 'blog_posts']]`.
-- **feat:** Cross-framework parity — same FK auto-wiring semantics now available in Python (`ForeignKeyField`), Ruby (`foreign_key_field`), and Node.js (`type: "foreignKey"`)
-- **docs:** Chapter 6 (ORM) updated with a new "$foreignKeys — Auto-Wired Relationships" section
+- **feat:** Cross-framework parity - same FK auto-wiring semantics now available in Python (`ForeignKeyField`), Ruby (`foreign_key_field`), and Node.js (`type: "foreignKey"`)
+- **docs:** Chapter 6 (ORM) updated with a new "$foreignKeys - Auto-Wired Relationships" section
 
 ## v3.10.85 (2026-04-09)
 
-- **fix:** Removed duplicate `Job` class from `Queue.php` — canonical definition is `Job.php` only
+- **fix:** Removed duplicate `Job` class from `Queue.php` - canonical definition is `Job.php` only
 - **fix:** `Job.php::fail()` now delegates to `writeFailed()` instead of calling private `getBasePath()` directly
 
 ## v3.10.84 (2026-04-09)
 
-- **fix:** Router/middleware was setting `request.user` / `request.auth` / auth payload to `true` (boolean) instead of the actual JWT payload after `validToken()` was changed to return bool — any code reading `request.user["sub"]` etc. would have failed silently or crashed
+- **fix:** Router/middleware was setting `request.user` / `request.auth` / auth payload to `true` (boolean) instead of the actual JWT payload after `validToken()` was changed to return bool - any code reading `request.user["sub"]` etc. would have failed silently or crashed
 - **fix:** CSRF middleware was not correctly rejecting invalid tokens (nil check on bool result always passed)
 - **fix:** `toObject()` declared wrong return type (`array` vs actual `object`)
 - **fix:** Router `request.user` and gallery auth verify endpoint updated for bool `validToken`
@@ -1616,13 +1616,13 @@ Catch-up release covering v3.11.0 → v3.11.9 across all 4 frameworks.
 - **fix:** ORM find/all/where no longer crash with DatabaseResult object (#108)
 - **fix:** toObject() returns stdClass, not array (#107)
 - **fix:** Firebird absolute path no longer strips leading slash (#101)
-- **feat:** WebSocket rooms — joinRoom, leaveRoom, broadcastToRoom, getRoomConnections, roomCount
-- **feat:** queue signature parity — instance-scoped, no topic params on public methods
-- **feat:** auth alias cleanup — removed createToken/validateToken aliases
+- **feat:** WebSocket rooms - joinRoom, leaveRoom, broadcastToRoom, getRoomConnections, roomCount
+- **feat:** queue signature parity - instance-scoped, no topic params on public methods
+- **feat:** auth alias cleanup - removed createToken/validateToken aliases
 
 ## v3.10.70 (2026-04-06)
 
-- **New:** SSE (Server-Sent Events) support via `response.stream()` — pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
+- **New:** SSE (Server-Sent Events) support via `response.stream()` - pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
 - **New:** Chapter 24 added to documentation: Server-Sent Events
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
@@ -1636,8 +1636,8 @@ This chapter covers the full v3 line -- from the first release candidate through
 
 ---
 
-## v3.10.68 (2026-04-03) — Full Parity Release
-- **100% API parity** across Python, PHP, Ruby, Node.js — 30+ issues fixed
+## v3.10.68 (2026-04-03) - Full Parity Release
+- **100% API parity** across Python, PHP, Ruby, Node.js - 30+ issues fixed
 - **ORM:** save() returns self/false, arrays not tuples, toDict/toAssoc, scope registers method, where()/all() on Node, count() on PHP
 - **Auth:** expires_in minutes, PBKDF2 260k, env TINA4_SECRET fallback, API key fallback
 - **Session:** dual-mode flash(), get_flash, cookieHeader, getSessionId
@@ -1650,49 +1650,49 @@ This chapter covers the full v3 line -- from the first release candidate through
 - **i18n:** zero-dep YAML support
 
 ## v3.10.67 (2026-04-03)
-- **load() returns bool** — `$model->load($sql, $params)` calls selectOne internally, populates the instance, returns `true`/`false`. Use `findById()` for PK lookups
-- **api.upload()** added to tina4-js — sends FormData with Bearer token auth for multipart file uploads
-- **ORM CLAUDE.md rewrite** — all method stubs now match actual API signatures
-- **File upload docs** — `$request->files` format documented in CLAUDE.md
+- **load() returns bool** - `$model->load($sql, $params)` calls selectOne internally, populates the instance, returns `true`/`false`. Use `findById()` for PK lookups
+- **api.upload()** added to tina4-js - sends FormData with Bearer token auth for multipart file uploads
+- **ORM CLAUDE.md rewrite** - all method stubs now match actual API signatures
+- **File upload docs** - `$request->files` format documented in CLAUDE.md
 
 ## v3.10.66 (2026-04-03)
-- **Metrics file detail fix** — clicking bubbles in framework scanning mode now resolves paths correctly via scan root tracking
+- **Metrics file detail fix** - clicking bubbles in framework scanning mode now resolves paths correctly via scan root tracking
 
 ## v3.10.65 (2026-04-03)
-- **Metrics 3-stage test detection** — filename, path, and content matching
-- **Metrics framework mode** — scans framework source with correct relative paths
-- **tina4 console** — interactive REPL with framework loaded
-- **tina4 env** — interactive environment configuration
-- **Brand** — "TINA4 — The Intelligent Native Application 4ramework"
-- **Quick references** — 36 sections, DotEnv API documented
-- **37 chapters** — 7 new (Events, Localization, Logging, API Client, WSDL/SOAP, DI Container, Service Runner)
+- **Metrics 3-stage test detection** - filename, path, and content matching
+- **Metrics framework mode** - scans framework source with correct relative paths
+- **tina4 console** - interactive REPL with framework loaded
+- **tina4 env** - interactive environment configuration
+- **Brand** - "TINA4 - The Intelligent Native Application 4ramework"
+- **Quick references** - 36 sections, DotEnv API documented
+- **37 chapters** - 7 new (Events, Localization, Logging, API Client, WSDL/SOAP, DI Container, Service Runner)
 - **MongoDB + ODBC adapters** across all 4 frameworks
-- **Pagination standardized** — limit/offset primary, merged dual-key response
+- **Pagination standardized** - limit/offset primary, merged dual-key response
 - **Port kill-and-take-over** on startup
 
 ---
 
 ## v3.10.60 (2026-04-03)
-- **tina4 console** — interactive PHP REPL with framework loaded ($db, $app, Router, Auth)
-- **tina4 env** — interactive environment configuration
-- **Brand update** — "TINA4 — The Intelligent Native Application 4ramework"
-- **Dynamic version** — reads from composer metadata at runtime, no hardcoded constant
-- **Packagist v2 API** — version checker uses repo.packagist.org
-- **@noauth docblock** — annotations now affect dispatch (#114)
-- **Port kill-and-take-over** — default port always reclaimed
+- **tina4 console** - interactive PHP REPL with framework loaded ($db, $app, Router, Auth)
+- **tina4 env** - interactive environment configuration
+- **Brand update** - "TINA4 - The Intelligent Native Application 4ramework"
+- **Dynamic version** - reads from composer metadata at runtime, no hardcoded constant
+- **Packagist v2 API** - version checker uses repo.packagist.org
+- **@noauth docblock** - annotations now affect dispatch (#114)
+- **Port kill-and-take-over** - default port always reclaimed
 - **MongoDB adapter** (ext-mongodb), **ODBC adapter** (pdo_odbc)
-- **Pagination standardized** — limit/offset primary, merged dual-key response
+- **Pagination standardized** - limit/offset primary, merged dual-key response
 - **#101** Firebird paths, **#102** autoMap uppercase, **#104** TINA4_DATABASE_URL, **#105** CORS fix
 
 ---
 
 ## v3.10.57 (2026-04-02)
-- **MongoDB adapter** — `Database("mongodb://host:port/db")`, requires ext-mongodb
-- **ODBC adapter** — `Database("odbc:///DSN=MyDSN")` via pdo_odbc
-- **Pagination standardized** — limit/offset primary, merged dual-key toPaginate() response
-- **Test port at +1000** — user testing port (e.g. 8146) stable, no hot-reload
-- **Dynamic version** — read from composer metadata, no hardcoded constant
-- **Packagist v2 API** — version checker uses repo.packagist.org/p2/
+- **MongoDB adapter** - `Database("mongodb://host:port/db")`, requires ext-mongodb
+- **ODBC adapter** - `Database("odbc:///DSN=MyDSN")` via pdo_odbc
+- **Pagination standardized** - limit/offset primary, merged dual-key toPaginate() response
+- **Test port at +1000** - user testing port (e.g. 8146) stable, no hot-reload
+- **Dynamic version** - read from composer metadata, no hardcoded constant
+- **Packagist v2 API** - version checker uses repo.packagist.org/p2/
 - **#101** FirebirdAdapter path parsing preserves absolute paths
 - **#102** ORM snakeToCamel handles uppercase columns
 - **#104** ORM ensureDb() auto-discovers TINA4_DATABASE_URL
@@ -1703,95 +1703,95 @@ This chapter covers the full v3 line -- from the first release candidate through
 ---
 
 ## v3.10.54 (2026-04-02)
-- **Auto AI dev port** — second socket on port+1 with no-reload when TINA4_DEBUG=true
+- **Auto AI dev port** - second socket on port+1 with no-reload when TINA4_DEBUG=true
 - **TINA4_NO_RELOAD** env var + --no-reload CLI flag
 - **#101** FirebirdAdapter path parsing preserves absolute paths
 - **#102** ORM snakeToCamel handles uppercase columns (Firebird/Oracle)
 - **#104** ORM ensureDb() auto-discovers TINA4_DATABASE_URL
 - **#105** CorsMiddleware matches request origin correctly
 - **SQLite commit()** no-op without transaction
-- **Gallery fixes** — SQLite paths, auth bypass
-- **QueryBuilder docs** — added to ORM chapter
+- **Gallery fixes** - SQLite paths, auth bypass
+- **QueryBuilder docs** - added to ORM chapter
 
 ---
 
-## v3.10.48 — April 2, 2026
+## v3.10.48 - April 2, 2026
 
 ### Bug Fixes
 
-**FrankenPHP requires `--production` flag** — FrankenPHP no longer auto-detected when debug is off. Use `tina4php serve --production` to enable it. Gallery tests (19) and live reload tests (36) added. Fixed `DotEnv::load()` → `DotEnv::loadEnv()` in Server.php.
+**FrankenPHP requires `--production` flag** - FrankenPHP no longer auto-detected when debug is off. Use `tina4php serve --production` to enable it. Gallery tests (19) and live reload tests (36) added. Fixed `DotEnv::load()` → `DotEnv::loadEnv()` in Server.php.
 
 ---
 
-## v3.10.46 — April 1, 2026
+## v3.10.46 - April 1, 2026
 
 ### Test Coverage
 
-Massive test expansion — 605 new tests added across session handlers, queue backends, database drivers, Frond template engine, dev admin, ORM, auth, seeder, log, service runner, container, CORS, form token, HTML element, migration, i18n, events, SCSS, CRUD, rate limiter, and CSRF middleware. PHP now at 1,937 tests with full parity across all 49 core areas.
+Massive test expansion - 605 new tests added across session handlers, queue backends, database drivers, Frond template engine, dev admin, ORM, auth, seeder, log, service runner, container, CORS, form token, HTML element, migration, i18n, events, SCSS, CRUD, rate limiter, and CSRF middleware. PHP now at 1,937 tests with full parity across all 49 core areas.
 
 ### Bug Fixes
 
-**CSRF query param check** — Fixed `$request->params` shadowing `$request->query` in the CSRF middleware, so query string token detection now works correctly.
+**CSRF query param check** - Fixed `$request->params` shadowing `$request->query` in the CSRF middleware, so query string token detection now works correctly.
 
 ---
 
-## v3.10.45 — April 1, 2026
+## v3.10.45 - April 1, 2026
 
 ### Bug Fixes
 
-**CLI serve hijack** — When `index.php` calls `App::run()`, the CLI `serve` command now sets a `TINA4_CLI_SERVE` constant so `run()` returns early, letting the CLI manage the server lifecycle (port, debug mode, browser open).
+**CLI serve hijack** - When `index.php` calls `App::run()`, the CLI `serve` command now sets a `TINA4_CLI_SERVE` constant so `run()` returns early, letting the CLI manage the server lifecycle (port, debug mode, browser open).
 
 ---
 
-## v3.10.44 — April 1, 2026
+## v3.10.44 - April 1, 2026
 
 ### New Features
 
-**Database tab redesign** — The dev admin Database panel now uses a split-screen layout. Tables are listed on the left as a navigation sidebar with click-to-select highlighting. The query editor, toolbar, and results occupy the right panel.
+**Database tab redesign** - The dev admin Database panel now uses a split-screen layout. Tables are listed on the left as a navigation sidebar with click-to-select highlighting. The query editor, toolbar, and results occupy the right panel.
 
-**Copy CSV / Copy JSON** — Two new buttons in the database toolbar copy query results to the clipboard in CSV or JSON format.
+**Copy CSV / Copy JSON** - Two new buttons in the database toolbar copy query results to the clipboard in CSV or JSON format.
 
-**Paste data** — A Paste button opens a modal for pasting JSON arrays or CSV/tab-separated data. Auto-detects the format and generates INSERT statements. Prompts for a table name if none is selected, and generates CREATE TABLE for new tables. SQL input passes through unchanged.
+**Paste data** - A Paste button opens a modal for pasting JSON arrays or CSV/tab-separated data. Auto-detects the format and generates INSERT statements. Prompts for a table name if none is selected, and generates CREATE TABLE for new tables. SQL input passes through unchanged.
 
-**Multi-statement execution** — The query runner handles multiple SQL statements separated by semicolons, running them in a single transaction with automatic rollback on error.
+**Multi-statement execution** - The query runner handles multiple SQL statements separated by semicolons, running them in a single transaction with automatic rollback on error.
 
-**Database badge on load** — The Database tab count badge shows the table count immediately on page load.
+**Database badge on load** - The Database tab count badge shows the table count immediately on page load.
 
-**Star wiggle animation** — The GitHub star button on the landing page uses an empty star (☆) with a wiggle animation: 3-second delay, then wiggles at random 3-18 second intervals.
+**Star wiggle animation** - The GitHub star button on the landing page uses an empty star (☆) with a wiggle animation: 3-second delay, then wiggles at random 3-18 second intervals.
 
 ### Bug Fixes
 
-**Default port** — PHP default port confirmed as 7145 (PHP=7145, Python=7146, Ruby=7147, Node=7148).
+**Default port** - PHP default port confirmed as 7145 (PHP=7145, Python=7146, Ruby=7147, Node=7148).
 
-**SQLite LIMIT fix** — Prevents double-LIMIT errors when browsing tables in the dev admin.
+**SQLite LIMIT fix** - Prevents double-LIMIT errors when browsing tables in the dev admin.
 
-**browseTable quote escaping** — Fixed broken onclick handlers for table names using addEventListener.
+**browseTable quote escaping** - Fixed broken onclick handlers for table names using addEventListener.
 
 <div v-pre>
 
-**Frond template engine** — Fixed string concatenation (`~` operator) and inline if/else expressions (`{{ 'yes' if active else 'no' }}`). A greedy quoted-string fallback in `evaluateLiteral()` was treating compound expressions as single string literals.
+**Frond template engine** - Fixed string concatenation (`~` operator) and inline if/else expressions (`{{ 'yes' if active else 'no' }}`). A greedy quoted-string fallback in `evaluateLiteral()` was treating compound expressions as single string literals.
 
 </div>
 
 ### Test Coverage
 
-Major test expansion — 200 new tests added (FakeData 42, Cache 30, DevMailbox 33, Static files 31, Metrics 20, CLI scaffolding 31, plus v3.10.44 feature tests). 1,532 tests passing, 0 failures.
+Major test expansion - 200 new tests added (FakeData 42, Cache 30, DevMailbox 33, Static files 31, Metrics 20, CLI scaffolding 31, plus v3.10.44 feature tests). 1,532 tests passing, 0 failures.
 
 ---
 
-## v3.10.40 — April 1, 2026
+## v3.10.40 - April 1, 2026
 
 ### Bug Fixes
 
-**Dev overlay version check** — Fixed misleading "You are up to date" message when running a version ahead of what's published on Packagist. The overlay now shows a purple "ahead of Packagist" message. Also added a breaking changes warning (red banner with changelog link) when a major or minor version update is available.
+**Dev overlay version check** - Fixed misleading "You are up to date" message when running a version ahead of what's published on Packagist. The overlay now shows a purple "ahead of Packagist" message. Also added a breaking changes warning (red banner with changelog link) when a major or minor version update is available.
 
 ---
 
-## v3.10.39 — April 1, 2026
+## v3.10.39 - April 1, 2026
 
 ### Breaking Changes
 
-**`Auth::hashPassword()` — separator changed from `:` to `$`**
+**`Auth::hashPassword()` - separator changed from `:` to `$`**
 
 The password hash format now uses `$` as a separator (matching Python, Ruby, and Node.js):
 
@@ -1800,7 +1800,7 @@ The password hash format now uses `$` as a separator (matching Python, Ruby, and
 
 ## v3.10.70 (2026-04-06)
 
-- **New:** SSE (Server-Sent Events) support via `response.stream()` — pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
+- **New:** SSE (Server-Sent Events) support via `response.stream()` - pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
 - **New:** Chapter 24 added to documentation: Server-Sent Events
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
@@ -1809,7 +1809,7 @@ The password hash format now uses `$` as a separator (matching Python, Ruby, and
 
 ## v3.10.70 (2026-04-06)
 
-- **New:** SSE (Server-Sent Events) support via `response.stream()` — pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
+- **New:** SSE (Server-Sent Events) support via `response.stream()` - pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
 - **New:** Chapter 24 added to documentation: Server-Sent Events
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
@@ -1827,16 +1827,16 @@ if (!Auth::checkPassword($password, $storedHash)) {
 **`Database::update()` and `Database::delete()` filter signature changed**
 
 ```php
-// BEFORE (v3.10.38 and earlier) — associative array filter
+// BEFORE (v3.10.38 and earlier) - associative array filter
 $db->update('users', ['name' => 'Alice'], ['id' => 1]);
 $db->delete('users', ['id' => 1]);
 
-// AFTER (v3.10.39+) — SQL string + params (matches Python, Ruby, Node.js)
+// AFTER (v3.10.39+) - SQL string + params (matches Python, Ruby, Node.js)
 $db->update('users', ['name' => 'Alice'], 'id = ?', [1]);
 $db->delete('users', 'id = ?', [1]);
 ```
 
-**`Router::list()` removed — use `Router::getRoutes()` or `Router::listRoutes()`**
+**`Router::list()` removed - use `Router::getRoutes()` or `Router::listRoutes()`**
 
 ```php
 // BEFORE
@@ -1848,13 +1848,13 @@ $routes = Router::getRoutes();   // or Router::listRoutes()
 
 ### New Features
 
-**`ORM::findById(int|string $id)`** — explicit primary method (with `find()` and `load()` as aliases).
+**`ORM::findById(int|string $id)`** - explicit primary method (with `find()` and `load()` as aliases).
 
-**`Session`: `TINA4_SESSION_HANDLER` env var** — replaces `TINA4_SESSION_BACKEND` (old name still accepted for backward compatibility).
+**`Session`: `TINA4_SESSION_HANDLER` env var** - replaces `TINA4_SESSION_BACKEND` (old name still accepted for backward compatibility).
 
-**`Session\RedisSessionHandler`** — new zero-dependency Redis session handler using raw RESP protocol over TCP sockets. Configure with `TINA4_SESSION_REDIS_HOST`, `TINA4_SESSION_REDIS_PORT`, `TINA4_SESSION_REDIS_PASSWORD`, `TINA4_SESSION_REDIS_DB`.
+**`Session\RedisSessionHandler`** - new zero-dependency Redis session handler using raw RESP protocol over TCP sockets. Configure with `TINA4_SESSION_REDIS_HOST`, `TINA4_SESSION_REDIS_PORT`, `TINA4_SESSION_REDIS_PASSWORD`, `TINA4_SESSION_REDIS_DB`.
 
-**`Database::cacheStats()` and `Database::cacheClear()`** — query cache wired to `TINA4_DB_CACHE=true` env var.
+**`Database::cacheStats()` and `Database::cacheClear()`** - query cache wired to `TINA4_DB_CACHE=true` env var.
 
 ---
 
@@ -1894,7 +1894,7 @@ The `tina4 ai` CLI command stopped returning a stub message and started doing re
 
 ## v3.10.70 (2026-04-06)
 
-- **New:** SSE (Server-Sent Events) support via `response.stream()` — pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
+- **New:** SSE (Server-Sent Events) support via `response.stream()` - pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
 - **New:** Chapter 24 added to documentation: Server-Sent Events
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
@@ -1905,7 +1905,7 @@ tina4 ai
 
 ## v3.10.70 (2026-04-06)
 
-- **New:** SSE (Server-Sent Events) support via `response.stream()` — pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
+- **New:** SSE (Server-Sent Events) support via `response.stream()` - pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
 - **New:** Chapter 24 added to documentation: Server-Sent Events
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
@@ -1916,7 +1916,7 @@ tina4 ai --all
 
 ## v3.10.70 (2026-04-06)
 
-- **New:** SSE (Server-Sent Events) support via `response.stream()` — pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
+- **New:** SSE (Server-Sent Events) support via `response.stream()` - pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
 - **New:** Chapter 24 added to documentation: Server-Sent Events
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
@@ -2404,7 +2404,7 @@ Router::get("/search", function (\Tina4\Request $request) {
 });
 ```
 
-The authentication API consolidated. `getToken` and `validToken` are the only token methods — there are no `createToken`/`validateToken` aliases.
+The authentication API consolidated. `getToken` and `validToken` are the only token methods - there are no `createToken`/`validateToken` aliases.
 
 ```php
 $token = \Tina4\Auth::getToken(["userId" => 42, "role" => "admin"]);
@@ -2478,7 +2478,7 @@ These are the changes that will break existing code. See Chapter 29 for a full m
 
 ## v3.10.70 (2026-04-06)
 
-- **New:** SSE (Server-Sent Events) support via `response.stream()` — pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
+- **New:** SSE (Server-Sent Events) support via `response.stream()` - pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
 - **New:** Chapter 24 added to documentation: Server-Sent Events
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
@@ -2489,7 +2489,7 @@ composer require tina4stack/tina4php
 
 ## v3.10.70 (2026-04-06)
 
-- **New:** SSE (Server-Sent Events) support via `response.stream()` — pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
+- **New:** SSE (Server-Sent Events) support via `response.stream()` - pass a generator, framework handles chunked transfer encoding, keep-alive, and `text/event-stream` content type
 - **New:** Chapter 24 added to documentation: Server-Sent Events
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js

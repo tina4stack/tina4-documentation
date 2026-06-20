@@ -265,10 +265,10 @@ const resp1 = await client.get("/api/products");
 // GET with query string
 const resp2 = await client.get("/api/products?category=Electronics");
 
-// POST with a JSON body — pass `json` inside the options object
+// POST with a JSON body - pass `json` inside the options object
 const resp3 = await client.post("/api/products", { json: { name: "Widget", price: 9.99 } });
 
-// PUT / PATCH / DELETE — same shape
+// PUT / PATCH / DELETE - same shape
 const resp4 = await client.put("/api/products/1", { json: { name: "Updated" } });
 const resp5 = await client.patch("/api/products/1", { json: { price: 12.99 } });
 const resp6 = await client.delete("/api/products/1");

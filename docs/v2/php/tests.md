@@ -3,7 +3,7 @@
 Tina4 projects use [PHPUnit](https://phpunit.de/) for testing. Each module in the Tina4 ecosystem includes a `phpunit.xml` configuration and a `tests/` directory.
 
 ::: tip Hot tips!
-- Use SQLite (`:memory:`) for database tests — no external services needed
+- Use SQLite (`:memory:`) for database tests, no external services needed
 - Run `composer test` from any Tina4 module to execute its test suite
 - All Tina4 modules target PHPUnit 9 with PHP 8.1+
 :::

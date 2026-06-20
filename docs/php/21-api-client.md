@@ -2,9 +2,9 @@
 
 ## 1. Calling External APIs Without Dependencies
 
-Every app calls external services. Weather APIs. Payment gateways. CRM systems. Shipping providers. The default PHP approach is cURL — verbose, error-prone, and full of boilerplate.
+Every app calls external services. Weather APIs. Payment gateways. CRM systems. Shipping providers. The default PHP approach is cURL, verbose, error-prone, and full of boilerplate.
 
-Tina4 provides a built-in `Api` class that wraps cURL with a clean interface. It supports GET, POST, PUT, DELETE, and PATCH with custom headers, basic auth, JSON or form payloads, and timeout control — no Guzzle, no Composer dependencies.
+Tina4 provides a built-in `Api` class that wraps cURL with a clean interface. It supports GET, POST, PUT, DELETE, and PATCH with custom headers, basic auth, JSON or form payloads, and timeout control, no Guzzle, no Composer dependencies.
 
 ---
 
@@ -26,10 +26,10 @@ The `Api` class stores the base URL and shared configuration. Individual request
 
 All requests go through `sendRequest()`. It returns an associative array with:
 
-- `status` — HTTP status code (integer)
-- `body` — parsed response body (array if JSON, string otherwise)
-- `headers` — response headers
-- `error` — error message string on failure, `null` on success
+- `status`, HTTP status code (integer)
+- `body`, parsed response body (array if JSON, string otherwise)
+- `headers`, response headers
+- `error`, error message string on failure, `null` on success
 
 ```php
 <?php
@@ -73,7 +73,7 @@ if ($result['status'] === 200) {
 
 Pass the payload as the fourth argument to `sendRequest()`.
 
-### POST — Create a resource
+### POST - Create a resource
 
 ```php
 <?php
@@ -91,7 +91,7 @@ echo $result['status'];              // 201
 echo $result['body']['id'];          // 101 (new resource ID)
 ```
 
-### PUT — Full update
+### PUT - Full update
 
 ```php
 $result = $api->sendRequest('PUT', '/posts/1', [], [
@@ -104,7 +104,7 @@ $result = $api->sendRequest('PUT', '/posts/1', [], [
 echo $result['status'];   // 200
 ```
 
-### PATCH — Partial update
+### PATCH - Partial update
 
 ```php
 $result = $api->sendRequest('PATCH', '/posts/1', [], [
@@ -114,7 +114,7 @@ $result = $api->sendRequest('PATCH', '/posts/1', [], [
 echo $result['status'];   // 200
 ```
 
-### DELETE — Remove a resource
+### DELETE - Remove a resource
 
 ```php
 $result = $api->sendRequest('DELETE', '/posts/1');

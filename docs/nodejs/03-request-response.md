@@ -360,7 +360,7 @@ Router.post("/api/gallery", async (req, res) => {
         return res.status(400).json({ error: "No files uploaded" });
     }
 
-    // files is a dict keyed by field name — multiple files under one name become an array
+    // files is a dict keyed by field name - multiple files under one name become an array
     const fileList = Object.values(files).flat();
 
     const results = [];

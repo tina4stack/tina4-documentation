@@ -134,7 +134,7 @@ The default session handling is SessionFileHandler, override `TINA4_SESSION_HAND
 
 | Handler | Backend | Required package |
 |---------|---------|-----------------|
-| `SessionFileHandler` (default) | File system | — |
+| `SessionFileHandler` (default) | File system | - |
 | `SessionRedisHandler` | Redis | `redis` |
 | `SessionValkeyHandler` | Valkey | `valkey` |
 | `SessionMongoHandler` | MongoDB | `pymongo` |

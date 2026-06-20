@@ -218,7 +218,7 @@ afterEach(() => {
 });
 ```
 
-The test installs a no-op mailer. Route handlers use `app.get("mailer")` — they never know the difference.
+The test installs a no-op mailer. Route handlers use `app.get("mailer")`, so they never know the difference.
 
 ---
 

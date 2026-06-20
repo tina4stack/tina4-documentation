@@ -3,7 +3,7 @@
 Tina4 handles SCSS compilation out-of-the-box, but with zero configuration needed. Place files in `src/scss`, and they compile to `src/public/css/default.css` during runtime or build, ensuring efficient and nested styling.
 
 ::: tip 🔥 Hot Tips
-- **Automatic Compilation**: No extra tools or watchers—SCSS from `src/scss` merges into a single `default.css`, reducing HTTP requests like Webpack bundling.
+- **Automatic Compilation**: No extra tools or watchers. SCSS from `src/scss` merges into a single `default.css`, reducing HTTP requests like Webpack bundling.
 - **Modular Design**: Use variables, nesting, and mixins for cleaner code, akin to Bootstrap's Sass setup.
 - **Hot-Reloading**: Changes in SCSS reload instantly in dev mode, boosting workflow.
 - **Static Serving**: Compiled CSS serves from `/css/default.css`, integrable with CDNs for production-scale sites.
@@ -23,7 +23,7 @@ myproject/
 ```
 
 ## Step 1: Add SCSS Files
-Create `src/scss/main.scss` (or any `.scss` files—Tina4 compiles all):
+Create `src/scss/main.scss` (or any `.scss` files, Tina4 compiles all):
 
 ```scss
 // src/scss/_variables.scss (partial file, imported)
@@ -44,7 +44,7 @@ body {
 }
 ```
 
-- **Partials**: Files starting with `_` (e.g., `_variables.scss`) are imported without compiling separately—efficient like Sass best practices.
+- **Partials**: Files starting with `_` (e.g., `_variables.scss`) are imported without compiling separately, efficient like Sass best practices.
 
 ## Step 2: Link CSS in Frond (Twig) Templates
 Update `base.twig` to reference the compiled CSS:

@@ -31,7 +31,7 @@ The `Container` is a lightweight registry. It does not scan files, read XML, or 
 
 ---
 
-## 3. register() — Transient Services
+## 3. register() - Transient Services
 
 A transient service creates a new instance every time `get()` is called:
 
@@ -54,7 +54,7 @@ Use transient registration for services that must not share state: request-scope
 
 ---
 
-## 4. singleton() — Cached Services
+## 4. singleton() - Cached Services
 
 A singleton creates the instance once and returns the same object on every subsequent call:
 

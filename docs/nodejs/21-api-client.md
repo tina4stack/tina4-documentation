@@ -4,7 +4,7 @@
 
 Your application calls a payment gateway. A shipping provider. A weather service. A CRM. Every call needs the same setup: base URL, auth header, error handling, JSON parsing, timeout.
 
-Tina4 provides an `Api` class — a small HTTP client over Node's built-in `node:http`/`node:https` that handles the repetitive parts. It covers GET, POST, PUT, PATCH, and DELETE with JSON serialization, auth headers set once on the instance, and a consistent response format, all with no external dependencies.
+Tina4 provides an `Api` class, a small HTTP client over Node's built-in `node:http`/`node:https` that handles the repetitive parts. It covers GET, POST, PUT, PATCH, and DELETE with JSON serialization, auth headers set once on the instance, and a consistent response format, all with no external dependencies.
 
 ---
 
@@ -181,7 +181,7 @@ interface ApiResult {
 }
 ```
 
-`error` is non-null only on a transport-level failure (connection refused, DNS, timeout). An HTTP error *response* (e.g. 404, 500) still arrives with `error: null` — inspect `http_code` to branch on it.
+`error` is non-null only on a transport-level failure (connection refused, DNS, timeout). An HTTP error *response* (e.g. 404, 500) still arrives with `error: null`, so inspect `http_code` to branch on it.
 
 ```typescript
 const response = await api.get("/products/999");
@@ -367,13 +367,13 @@ curl http://localhost:7148/api/github/torvalds
 
 ### 1. `http_code` vs `error`
 
-`error` is set only when the request never reaches the server (timeout, connection refused). A `404` or `503` *response* arrives with `error: null` — branch on `http_code` for those.
+`error` is set only when the request never reaches the server (timeout, connection refused). A `404` or `503` *response* arrives with `error: null`, so branch on `http_code` for those.
 
 **Fix:** Check `response.error` first for transport failures, then check `response.http_code` for HTTP-level branches.
 
 ### 2. Timeout is in seconds
 
-The constructor's third argument is **seconds**, not milliseconds — `new Api(url, "", 10)` is a 10-second timeout. The default is 30 seconds.
+The constructor's third argument is **seconds**, not milliseconds: `new Api(url, "", 10)` is a 10-second timeout. The default is 30 seconds.
 
 **Fix:** Set an explicit timeout appropriate for your service SLA. For real-time endpoints, 5-10 seconds is usually the right upper bound.
 

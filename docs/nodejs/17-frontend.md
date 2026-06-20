@@ -1347,7 +1347,7 @@ Router.get("/admin/products", async (req, res) => {
 
 ---
 
-## 18. HtmlElement — Programmatic HTML Builder
+## 18. HtmlElement: Programmatic HTML Builder
 
 Build HTML in TypeScript without string concatenation:
 

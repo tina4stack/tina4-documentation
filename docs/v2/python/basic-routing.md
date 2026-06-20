@@ -16,7 +16,7 @@ title: Routing
 :::
 
 The routing system in **Tina4 Python** is decorator-driven, fully async-ready, and designed for clarity and speed.
-Routes are defined using imported method decorators directly — no app instance required in route files.
+Routes are defined using imported method decorators directly, with no app instance required in route files.
 
 ## Core Imports
 

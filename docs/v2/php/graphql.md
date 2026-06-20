@@ -1,7 +1,7 @@
 # GraphQL
 ::: tip 🔥 Hot Tips
 - Auto-generate a full GraphQL API from your [ORM classes](orm.md) with a single `fromORM()` call
-- Zero external dependencies — Tina4 ships its own recursive-descent parser and executor
+- Zero external dependencies: Tina4 ships its own recursive-descent parser and executor
 - Register the `/graphql` endpoint in one line
 - Supports queries, mutations, variables, fragments, and aliases out of the box
   :::
@@ -463,6 +463,6 @@ Now you can query:
 
 ## Further Reading
 
-- [ORM](orm.md) — the ORM classes that power `fromORM()`
-- [Basic Routing](basic-routing.md) — how Tina4 routing works under the hood
-- [REST API](rest-api.md) — for traditional REST-style endpoints
+- [ORM](orm.md) - the ORM classes that power `fromORM()`
+- [Basic Routing](basic-routing.md) - how Tina4 routing works under the hood
+- [REST API](rest-api.md) - for traditional REST-style endpoints

@@ -50,7 +50,7 @@ Two rules keep it safe:
 Tuning:
 
 ```bash
-TINA4_AUTO_CACHING=true        # default — set to false to turn this layer off
+TINA4_AUTO_CACHING=true        # default - set to false to turn this layer off
 TINA4_AUTO_CACHING_TTL=5       # safety TTL in seconds (default: 5)
 ```
 
@@ -114,13 +114,13 @@ Both cache layers can be skipped for a single call. Pass `no_cache=True` and tha
 ```python
 db = Database()
 
-# fetch — full signature
+# fetch - full signature
 fresh = db.fetch("SELECT * FROM products", params=None, limit=100, offset=0, no_cache=True)
 
-# fetch_one — single row, always fresh
+# fetch_one - single row, always fresh
 row = db.fetch_one("SELECT * FROM products WHERE id = ?", [42], no_cache=True)
 
-# fetch_all — list of dicts, always fresh
+# fetch_all - list of dicts, always fresh
 rows = db.fetch_all("SELECT * FROM products", params=None, limit=0, offset=0, no_cache=True)
 ```
 
@@ -321,7 +321,7 @@ Both the response cache and the key/value API (Section 7) share one set of backe
 | Database | `database` | A `tina4_cache` table in any Tina4-supported DB. |
 
 ```bash
-# Memory — the default, nothing to set
+# Memory - the default, nothing to set
 TINA4_CACHE_BACKEND=memory
 
 # File

@@ -2,7 +2,7 @@
 
 ## 1. Work That Never Stops
 
-Some tasks run on a schedule. Some run indefinitely. A queue worker that drains emails. A cache warmer that refreshes product data every five minutes. These are background services — long-lived processes that run alongside the web server but are not tied to any HTTP request.
+Some tasks run on a schedule. Some run indefinitely. A queue worker that drains emails. A cache warmer that refreshes product data every five minutes. These are background services: long-lived processes that run alongside the web server but are not tied to any HTTP request.
 
 Tina4's service runner gives these tasks a consistent start/stop lifecycle. Register services. Start them. Stop them gracefully. They run in background threads so they do not block the web server.
 
@@ -370,7 +370,7 @@ runner.start()
 
 **Problem:** `runner.start()` blocks because a service's `run()` calls `runner.start()` again recursively, or a service does not return from `run()`.
 
-**Fix:** `run()` must contain the loop internally. `runner.start()` is non-blocking — it launches threads and returns. Each service owns its own loop.
+**Fix:** `run()` must contain the loop internally. `runner.start()` is non-blocking: it launches threads and returns. Each service owns its own loop.
 
 ### 2. No stop() method
 

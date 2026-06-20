@@ -1,7 +1,7 @@
 # Caching
 
 ::: tip Hot Tips
-- Caching is **off by default** — flip one `.env` setting to enable it
+- Caching is **off by default**: flip one `.env` setting to enable it
 - Built on [PhpFastCache](https://www.phpfastcache.com/) using the filesystem driver
 - ORM queries, route responses, and Twig templates are all cached automatically once enabled
 - Use `@no-cache` / `@cache` annotations to override caching per route
@@ -28,7 +28,7 @@ TINA4_CACHE_BACKEND=true
 
 When the application boots it reads this value. If `TINA4_CACHE_BACKEND` is `true`, Tina4 creates a PhpFastCache `files` instance pointed at `{TINA4_PUBLIC_DIR}/cache`.
 
-To turn caching off again, set the value back to `false` — no code changes required.
+To turn caching off again, set the value back to `false`, no code changes required.
 
 ## Manual caching with `Cache::set()` and `Cache::get()`
 
@@ -61,7 +61,7 @@ $cache = new \Tina4\Cache();
 $value = $cache->get("my-key");
 
 if ($value === null) {
-    // cache miss — fetch from the source
+    // cache miss - fetch from the source
 }
 ```
 
@@ -101,7 +101,7 @@ The `\Tina4\ORMCache` class is used internally by the ORM. When `TINA4_CACHE_BAC
 
 When `TINA4_CACHE_BACKEND` is `false`, `ORMCache::get()` always returns `null` and `ORMCache::set()` returns `true`, so the ORM falls through to the database every time.
 
-You do not need to interact with `ORMCache` directly — the ORM handles it automatically.
+You do not need to interact with `ORMCache` directly, the ORM handles it automatically.
 
 ## Route response caching
 
@@ -111,7 +111,7 @@ When caching is enabled, the Router caches the full response (content, HTTP code
 
 1. A request comes in and the Router looks for a cached response using the key:
    `"url_" . md5($url . $method)`
-2. If a cached entry exists it is returned immediately — the route callback is never executed.
+2. If a cached entry exists it is returned immediately, the route callback is never executed.
 3. If there is no cache entry, the route runs normally and the response is cached for **360 seconds** (6 minutes).
 
 ### Per-route control with annotations

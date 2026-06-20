@@ -1,4 +1,4 @@
-# frond.js — Client-Side Helper
+# frond.js: Client-Side Helper
 
 A zero-dependency DOM helper for AJAX, forms, WebSocket, SSE, cookies, and GraphQL. Ships with every Tina4 backend and tina4-css. Under 3KB gzipped.
 
@@ -43,7 +43,7 @@ frond.request("/api/users", function(data) {
 | Option | Type | Description |
 |--------|------|-------------|
 | `method` | `string` | HTTP method (default: `"GET"`) |
-| `body` | `object\|FormData\|string` | Request body — objects become JSON, FormData stays multipart |
+| `body` | `object\|FormData\|string` | Request body: objects become JSON, FormData stays multipart |
 | `headers` | `object` | Extra headers |
 | `onSuccess` | `function(data, status, xhr)` | Success callback (2xx/3xx) |
 | `onError` | `function(status, xhr)` | Error callback (4xx/5xx) |
@@ -182,9 +182,9 @@ conn.close();
 | `maxReconnectDelay` | `number` | `30000` | Max reconnect delay (exponential backoff) |
 | `maxReconnectAttempts` | `number` | `Infinity` | Stop trying after N attempts |
 | `protocols` | `string[]` | `[]` | WebSocket sub-protocols |
-| `onOpen` | `function` | — | Connection opened |
-| `onClose` | `function(code, reason)` | — | Connection closed |
-| `onError` | `function(error)` | — | Connection error |
+| `onOpen` | `function` | - | Connection opened |
+| `onClose` | `function(code, reason)` | - | Connection closed |
+| `onError` | `function(error)` | - | Connection error |
 
 **Connection object:**
 
@@ -224,9 +224,9 @@ stream.close();
 | `reconnect` | `boolean` | `true` | Auto-reconnect |
 | `events` | `string[]` | `[]` | Named events to listen for |
 | `json` | `boolean` | `true` | Auto-parse JSON data |
-| `onOpen` | `function` | — | Stream opened |
-| `onClose` | `function` | — | Stream closed |
-| `onError` | `function(error)` | — | Stream error |
+| `onOpen` | `function` | - | Stream opened |
+| `onClose` | `function` | - | Stream closed |
+| `onError` | `function(error)` | - | Stream error |
 
 ---
 
@@ -317,7 +317,7 @@ console.log(frond.token);
 frond.token = null;
 ```
 
-Token rotation is automatic — if a response includes a `FreshToken` header, `frond.token` updates to the new value.
+Token rotation is automatic: if a response includes a `FreshToken` header, `frond.token` updates to the new value.
 
 ---
 

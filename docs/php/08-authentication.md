@@ -484,7 +484,7 @@ Include the CSRF token in every form:
 
 ### Validating the Token
 
-Register `CsrfMiddleware` and it validates the `formToken` on every state-changing request automatically — no manual check in the handler:
+Register `CsrfMiddleware` and it validates the `formToken` on every state-changing request automatically, no manual check in the handler:
 
 ```php
 <?php
@@ -496,7 +496,7 @@ Router::use(CsrfMiddleware::class);
 
 Router::post("/profile/update", function ($request, $response) {
     // CsrfMiddleware already rejected the request with a 403 if the
-    // formToken was missing or invalid — just process the form.
+    // formToken was missing or invalid - just process the form.
     return $response->redirect("/profile");
 });
 ```

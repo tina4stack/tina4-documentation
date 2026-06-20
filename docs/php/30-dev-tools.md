@@ -116,9 +116,9 @@ TypeError: Cannot access property "name" on null
   5 | });
 
   Stack Trace:
-    #0 src/routes/api.php:4 — {closure}()
-    #1 vendor/tina4/tina4-php/src/Router.php:142 — call_user_func()
-    #2 vendor/tina4/tina4-php/src/Server.php:89 — Router->dispatch()
+    #0 src/routes/api.php:4 - {closure}()
+    #1 vendor/tina4/tina4-php/src/Router.php:142 - call_user_func()
+    #2 vendor/tina4/tina4-php/src/Server.php:89 - Router->dispatch()
 
   Request: GET /api/broken
   Headers: Accept: */*
@@ -217,7 +217,7 @@ Edit a file. Save it. The browser updates. No manual refresh. No external tools.
 
 ### How It Works
 
-The `tina4` Rust CLI is the sole file watcher for the Tina4 stack — PHP has no internal watcher (there never was one, unlike Python/Ruby/Node which had their own watchers that were removed in 3.11.x). The flow:
+The `tina4` Rust CLI is the sole file watcher for the Tina4 stack, PHP has no internal watcher (there never was one, unlike Python/Ruby/Node which had their own watchers that were removed in 3.11.x). The flow:
 
 ```
  ┌────────────┐  POST /__dev/api/reload   ┌────────────┐   WS /__dev_reload    ┌─────────┐
@@ -226,8 +226,8 @@ The `tina4` Rust CLI is the sole file watcher for the Tina4 stack — PHP has no
  └────────────┘                           └────────────┘   GET /__dev/api/mtime└─────────┘
 ```
 
-1. The CLI watches `src/`, `migrations/`, `.env` with the `notify` crate. Events are filtered to real source changes — Access and Metadata-only events are dropped; `__pycache__`, `.git`, `.venv`, `node_modules`, `vendor`, `logs`, `.log`/`.db*`/`.swp`/`.pyc` files are ignored. A real mtime check also defeats overlayfs / polling-mode spurious events (Podman, distrobox).
-2. On a real change the CLI POSTs `/__dev/api/reload` to your running PHP server. The server keeps running — there is no process restart for file edits.
+1. The CLI watches `src/`, `migrations/`, `.env` with the `notify` crate. Events are filtered to real source changes, Access and Metadata-only events are dropped; `__pycache__`, `.git`, `.venv`, `node_modules`, `vendor`, `logs`, `.log`/`.db*`/`.swp`/`.pyc` files are ignored. A real mtime check also defeats overlayfs / polling-mode spurious events (Podman, distrobox).
+2. On a real change the CLI POSTs `/__dev/api/reload` to your running PHP server. The server keeps running, there is no process restart for file edits.
 3. `DevAdmin` bumps its in-memory `$reloadMtime` counter and broadcasts `{type: "reload"}` over WebSocket at `/__dev_reload`. `GET /__dev/api/mtime` returns the counter for browsers using the polling fallback.
 4. The inline reload script injected by the dev toolbar reloads the browser. SCSS/CSS changes are signalled as `type: "css"` and swap the stylesheet without a full reload.
 

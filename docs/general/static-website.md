@@ -6,9 +6,9 @@ outline: deep
 
 # Static Websites with Frond (Twig) Templates
 
-Tina4 renders templates from `src/templates/pages/` and matches them to URLs by filename. Put `index.twig` in `src/templates/pages/`. It serves at `/`. Put `cars.twig` next to it. It serves at `/cars`. No routes needed — Tina4 reads the directory and does the wiring.
+Tina4 renders templates from `src/templates/pages/` and matches them to URLs by filename. Put `index.twig` in `src/templates/pages/`. It serves at `/`. Put `cars.twig` next to it. It serves at `/cars`. No routes needed: Tina4 reads the directory and does the wiring.
 
-Only files inside `pages/` auto-route. Shared templates outside it — `base.twig`, partials, layouts, `errors/` — are render-only (`response.render(...)`) and never served from a URL. Files whose name starts with `_` (e.g. `_partial.twig`) stay private. Turn the whole feature off with `TINA4_TEMPLATE_ROUTING=off`.
+Only files inside `pages/` auto-route. Shared templates outside it (`base.twig`, partials, layouts, `errors/`) are render-only (`response.render(...)`) and never served from a URL. Files whose name starts with `_` (e.g. `_partial.twig`) stay private. Turn the whole feature off with `TINA4_TEMPLATE_ROUTING=off`.
 
 Routes always take precedence. If you define a route for `/cars`, the route handler runs. If you don't, the `pages/cars.twig` template renders.
 
@@ -29,16 +29,16 @@ mysite/
   .env
   src/
     templates/
-      base.twig          # Shared layout — render-only, never auto-served
+      base.twig          # Shared layout - render-only, never auto-served
       pages/
         index.twig       # /
         about.twig       # /about
         products.twig    # /products
     public/
       css/
-        tina4.min.css    # Ships with Tina4 — no CDN needed
+        tina4.min.css    # Ships with Tina4 - no CDN needed
     scss/
-      main.scss          # Your custom SCSS — auto-compiles to public/css/
+      main.scss          # Your custom SCSS - auto-compiles to public/css/
 ```
 
 ## Step 1: Base Layout
@@ -170,10 +170,10 @@ SCSS compiles on startup and on file change (hot reload in dev mode). No Webpack
 
 Templates handle static content. When you need:
 
-- **Database queries** — define a route, query the DB, pass data to the template
-- **Form handling** — define a POST route
-- **Authentication** — define routes with middleware
-- **API endpoints** — define routes that return JSON
+- **Database queries** - define a route, query the DB, pass data to the template
+- **Form handling** - define a POST route
+- **Authentication** - define routes with middleware
+- **API endpoints** - define routes that return JSON
 
 ```python
 # Python

@@ -31,7 +31,7 @@ async def about_page(request, response):
     }
 ```
 
-> **Decorator order matters.** `@template` must sit **below** the route decorator (`@get`/`@post`/...) so the template wrapper is what gets registered with the router. If `@template` is above the route decorator, the router only sees the raw handler and the template wrapping is never applied — the page renders a bare dict.
+> **Decorator order matters.** `@template` must sit **below** the route decorator (`@get`/`@post`/...) so the template wrapper is what gets registered with the router. If `@template` is above the route decorator, the router only sees the raw handler and the template wrapping is never applied, so the page renders a bare dict.
 
 Create `src/templates/about.html`:
 
@@ -261,7 +261,7 @@ Filters transform output. The pipe `|` applies them:
 | `date("Y-m-d")` | `{{ created \| date("Y-m-d") }}` | Format a date value |
 | `format(val)` | `{{ "%.2f" \| format(price) }}` | Format string with value (sprintf-style) |
 | `data_uri` | `{{ content \| data_uri }}` | Convert to a data URI string |
-| `dump` | `{{ var \| dump }}` or `{{ dump(var) }}` | Debug output — gated on `TINA4_DEBUG=true` (see [Dumping Values](#dumping-values-for-debugging)) |
+| `dump` | `{{ var \| dump }}` or `{{ dump(var) }}` | Debug output, gated on `TINA4_DEBUG=true` (see [Dumping Values](#dumping-values-for-debugging)) |
 | `form_token` | `{{ form_token() }}` | Generate a CSRF hidden input with token |
 | `formTokenValue` | `{{ formTokenValue("context") }}` | Return the raw JWT token string |
 | `to_json` | `{{ data \| to_json }}` | JSON-encode a value (no double-escaping) |
@@ -300,7 +300,7 @@ The `dump` helper lets you inspect any variable mid-template. Two interchangeabl
 {{ dump(user) }}
 ```
 
-Both produce the same `<pre>`-wrapped, HTML-escaped `repr()` of the value. Handles nested dicts, lists, class instances, and cyclic references without crashing — Python's `repr()` prints `{...}` for back-edges.
+Both produce the same `<pre>`-wrapped, HTML-escaped `repr()` of the value. Handles nested dicts, lists, class instances, and cyclic references without crashing, since Python's `repr()` prints `{...}` for back-edges.
 
 ```html
 {{ dump(order) }}
@@ -316,10 +316,10 @@ Both produce the same `<pre>`-wrapped, HTML-escaped `repr()` of the value. Handl
 </div>
 
 ```bash
-# .env — dev
+# .env - dev
 TINA4_DEBUG=true    # dump() outputs the value
 
-# .env — production
+# .env - production
 TINA4_DEBUG=false   # dump() is a no-op
 ```
 

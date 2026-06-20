@@ -73,7 +73,7 @@ port ENV.fetch("TINA4_PORT", 7147)
 # Workers (processes) -- set to number of CPU cores
 workers ENV.fetch("WEB_CONCURRENCY", 2)
 
-# Threads per worker — Puma's own config var, not a Tina4 setting.
+# Threads per worker - Puma's own config var, not a Tina4 setting.
 threads_count = ENV.fetch("PUMA_MAX_THREADS", 5)
 threads threads_count, threads_count
 
@@ -852,7 +852,7 @@ proxy_read_timeout 86400;
 
 **Cause:** Puma forks the master process to create workers. The forked processes inherit the parent's database connection, which is invalid after fork.
 
-**Fix:** Use `on_worker_boot` in Puma config to re-establish the connection — close the inherited one and rebind a fresh `Tina4::Database` from the environment:
+**Fix:** Use `on_worker_boot` in Puma config to re-establish the connection: close the inherited one and rebind a fresh `Tina4::Database` from the environment:
 
 ```ruby
 on_worker_boot do

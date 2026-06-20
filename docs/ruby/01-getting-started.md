@@ -260,7 +260,7 @@ end
 
 Save the file. The dev server picks up the change. If not, restart with `tina4 serve`.
 
-> **Cross-language note.** Ruby, PHP, and Node read path parameters from `request.params` / `$request->params` / `req.params`. Python passes them as function arguments instead. Same concept, two shapes — pick the chapter that matches your runtime.
+> **Cross-language note.** Ruby, PHP, and Node read path parameters from `request.params` / `$request->params` / `req.params`. Python passes them as function arguments instead. Same concept, two shapes: pick the chapter that matches your runtime.
 
 ### Test It
 
@@ -341,8 +341,8 @@ end.no_auth
 ```
 
 ::: tip Two Ruby-isms to notice
-- **`.no_auth`** is chained on the block's return value. Tina4 secures `POST`, `PUT`, `PATCH`, and `DELETE` routes by default — without `no_auth` the example returns `401 Unauthorized`. In production, remove `no_auth` and send an `Authorization: Bearer <token>` header instead.
-- **`next response.json(...)`** exits the block with the response value. Inside a Tina4 route block, never use the `return` keyword — that is a `LocalJumpError` in Ruby (blocks are not methods). Use `next` when you need an early exit, otherwise rely on the block's final expression.
+- **`.no_auth`** is chained on the block's return value. Tina4 secures `POST`, `PUT`, `PATCH`, and `DELETE` routes by default. Without `no_auth` the example returns `401 Unauthorized`. In production, remove `no_auth` and send an `Authorization: Bearer <token>` header instead.
+- **`next response.json(...)`** exits the block with the response value. Inside a Tina4 route block, never use the `return` keyword: that is a `LocalJumpError` in Ruby (blocks are not methods). Use `next` when you need an early exit, otherwise rely on the block's final expression.
 :::
 
 Test:
@@ -603,7 +603,7 @@ The overlay vanishes when `TINA4_DEBUG=false`. Production users never see it.
 
 ## 8. Manual Setup (No CLI)
 
-The `tina4` CLI scaffolds everything for you. But if you start from an empty folder — just Ruby and Bundler — here is the minimum you need.
+The `tina4` CLI scaffolds everything for you. But if you start from an empty folder (just Ruby and Bundler), here is the minimum you need.
 
 ### Step 1: Create `Gemfile`
 
@@ -626,8 +626,8 @@ bundle install
 ```
 
 ::: warning Two dependencies you must declare
-- **`webrick`** — Tina4's dev server uses WEBrick. Ruby 3.0 dropped WEBrick from the standard library, so you must list it in your `Gemfile` or `tina4 serve` fails with `LoadError: cannot load such file -- webrick`.
-- **`sqlite3`** — the default `TINA4_DATABASE_URL` points to SQLite. Without this gem the server restarts in a loop with `LoadError: cannot load such file -- sqlite3`.
+- **`webrick`** - Tina4's dev server uses WEBrick. Ruby 3.0 dropped WEBrick from the standard library, so you must list it in your `Gemfile` or `tina4 serve` fails with `LoadError: cannot load such file -- webrick`.
+- **`sqlite3`** - the default `TINA4_DATABASE_URL` points to SQLite. Without this gem the server restarts in a loop with `LoadError: cannot load such file -- sqlite3`.
 
 `tina4 init ruby` adds both gems automatically. You only need to add them by hand when bootstrapping an empty project.
 :::
@@ -678,7 +678,7 @@ TINA4_DEBUG=true
 tina4 serve
 ```
 
-The server starts on `http://localhost:7147`. You should see the Tina4 welcome page. From here, add route files in `src/routes/` and templates in `src/templates/` — the same way as a CLI-scaffolded project.
+The server starts on `http://localhost:7147`. You should see the Tina4 welcome page. From here, add route files in `src/routes/` and templates in `src/templates/`, the same way as a CLI-scaffolded project.
 
 > **Note:** Tina4 Ruby refuses to start without the Rust CLI. To bypass it (for example inside a Docker image that already wraps the framework) set `TINA4_OVERRIDE_CLIENT=true` in `.env` and run `bundle exec ruby app.rb` directly.
 
@@ -840,7 +840,7 @@ end.no_auth
 ```
 
 ::: tip `next` vs `return` inside route blocks
-Ruby raises `LocalJumpError: unexpected return` if you use `return` inside a block. Route handlers in Tina4 are blocks (`do ... end`), so use `next value` for early exits — it yields `value` as the block's result, just like `return` would inside a method. The final line of the block is its implicit return, so the terminal `response.json(...)` at the bottom needs no `next`.
+Ruby raises `LocalJumpError: unexpected return` if you use `return` inside a block. Route handlers in Tina4 are blocks (`do ... end`), so use `next value` for early exits: it yields `value` as the block's result, just like `return` would inside a method. The final line of the block is its implicit return, so the terminal `response.json(...)` at the bottom needs no `next`.
 :::
 
 Test it:

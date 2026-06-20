@@ -299,15 +299,15 @@ content.value = '<em>Done!</em>';
 
 ## CRITICAL: Never Put Inputs Inside Reactive Blocks
 
-> **Inputs inside `${() => ...}` lose focus on every keystroke.** The most common mistake in tina4-js is wrapping `<input>` elements inside reactive arrow functions. When a signal changes, the reactive block re-renders its entire DOM subtree — destroying the input and creating a new one. The cursor disappears, the input loses focus, and typing is interrupted.
+> **Inputs inside `${() => ...}` lose focus on every keystroke.** The most common mistake in tina4-js is wrapping `<input>` elements inside reactive arrow functions. When a signal changes, the reactive block re-renders its entire DOM subtree, destroying the input and creating a new one. The cursor disappears, the input loses focus, and typing is interrupted.
 
-**BAD — input inside a reactive block (broken):**
+**BAD - input inside a reactive block (broken):**
 
 ```typescript
 const name = signal('');
 const showExtra = signal(false);
 
-// WRONG: the input is INSIDE ${() => ...} — it gets destroyed on every keystroke
+// WRONG: the input is INSIDE ${() => ...} - it gets destroyed on every keystroke
 html`
   <div>
     ${() => html`
@@ -320,13 +320,13 @@ html`
 `;
 ```
 
-**GOOD — input outside, only dynamic content in reactive blocks:**
+**GOOD - input outside, only dynamic content in reactive blocks:**
 
 ```typescript
 const name = signal('');
 const showExtra = signal(false);
 
-// RIGHT: the input stays in the static template — only the conditional goes in ${() => ...}
+// RIGHT: the input stays in the static template - only the conditional goes in ${() => ...}
 html`
   <div>
     <input .value=${name} @input=${(e: Event) => {
@@ -378,16 +378,16 @@ html`<div class=${() => isActive.value ? 'tab active' : 'tab'}>Tab</div>`
 You will hit this. Everyone does. Here are the rules:
 
 ```typescript
-${false}      // Renders nothing (empty) — treated the same as null
+${false}      // Renders nothing (empty) - treated the same as null
 ${null}       // Renders nothing (empty)
 ${undefined}  // Renders nothing (empty)
 ${true}       // Renders the TEXT "true"
 ${0}          // Renders the TEXT "0"
 ```
 
-`false`, `null`, and `undefined` all render as nothing — they are explicitly swallowed by the template engine. Every other value is converted to text via `String(value)`.
+`false`, `null`, and `undefined` all render as nothing; they are explicitly swallowed by the template engine. Every other value is converted to text via `String(value)`.
 
-This means the `&&` shortcut actually works for hiding content — `false` disappears cleanly:
+This means the `&&` shortcut actually works for hiding content: `false` disappears cleanly:
 
 ```typescript
 // This works -- false renders nothing

@@ -323,11 +323,11 @@ Generate REST endpoints from a model in one line.
 
 ```php
 Product::autoCrud('/api/products');
-// GET    /api/products       — list
-// GET    /api/products/{id}  — fetch
-// POST   /api/products       — create
-// PUT    /api/products/{id}  — update
-// DELETE /api/products/{id}  — delete
+// GET    /api/products       - list
+// GET    /api/products/{id}  - fetch
+// POST   /api/products       - create
+// PUT    /api/products/{id}  - update
+// DELETE /api/products/{id}  - delete
 ```
 
 ### 27. Soft Delete
@@ -355,7 +355,7 @@ Block inheritance, includes, loops, conditions, filters.
 {% extends "layout.html" %}
 {% block content %}
   {% for product in products %}
-    <p>{{ product.name }} — {{ product.price | number_format(2) }}</p>
+    <p>{{ product.name }} - {{ product.price | number_format(2) }}</p>
   {% endfor %}
 {% endblock %}
 ```

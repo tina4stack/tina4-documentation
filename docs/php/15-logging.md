@@ -6,9 +6,9 @@
 
 Structured logging writes JSON. Every log entry is a machine-readable object with a timestamp, level, message, and whatever context you attach. Log aggregators (Datadog, Grafana Loki, AWS CloudWatch, Papertrail) can query, filter, and alert on structured logs.
 
-Tina4 provides `Tina4\Log` for structured logging. Each level has its own method — `Log::debug()`, `Log::info()`, `Log::warning()`, `Log::error()`, `Log::critical()`. Output is JSON by default. Zero external packages.
+Tina4 provides `Tina4\Log` for structured logging. Each level has its own method, `Log::debug()`, `Log::info()`, `Log::warning()`, `Log::error()`, `Log::critical()`. Output is JSON by default. Zero external packages.
 
-The historical `Tina4\Debug::message()` API still works as a compatibility shim that forwards to `Tina4\Log` — use it if you're upgrading from a v3.12.x codebase. New code should use the level-specific `Log` methods.
+The historical `Tina4\Debug::message()` API still works as a compatibility shim that forwards to `Tina4\Log`, use it if you're upgrading from a v3.12.x codebase. New code should use the level-specific `Log` methods.
 
 ---
 
@@ -24,7 +24,7 @@ Tina4 has five log levels, each with its own `Log` method:
 | `Log::error($msg, $context)` | A failure that needs attention |
 | `Log::critical($msg, $context)` | System is failing. Immediate action required |
 
-The levels rank `debug` < `info` < `warning` < `error` < `critical`. `critical` is the highest severity — it always emits like every other level, and it lands in `error.log` alongside `warning` and `error`. Lower levels are filtered by `TINA4_LOG_LEVEL`; a higher level is visible whenever it meets that threshold.
+The levels rank `debug` < `info` < `warning` < `error` < `critical`. `critical` is the highest severity, it always emits like every other level, and it lands in `error.log` alongside `warning` and `error`. Lower levels are filtered by `TINA4_LOG_LEVEL`; a higher level is visible whenever it meets that threshold.
 
 ---
 
@@ -110,15 +110,15 @@ The predicate uses the exact threshold the logger uses to decide what to print, 
 use Tina4\Log;
 
 // With TINA4_LOG_LEVEL=ERROR:
-Log::isEnabled('info');     // false — info is below the ERROR threshold
-Log::isEnabled('warning');  // false — also below ERROR
-Log::isEnabled('error');    // true  — at the threshold
-Log::isEnabled('critical'); // true  — critical outranks error
+Log::isEnabled('info');     // false - info is below the ERROR threshold
+Log::isEnabled('warning');  // false - also below ERROR
+Log::isEnabled('error');    // true  - at the threshold
+Log::isEnabled('critical'); // true  - critical outranks error
 ```
 
-`critical` is the highest severity — `debug` < `info` < `warning` < `error` < `critical`. It flows through the same ordinary threshold as every other level, so `Log::critical()` always emits (subject only to `TINA4_LOG_LEVEL`) and `isEnabled('critical')` passes at every normal level.
+`critical` is the highest severity, `debug` < `info` < `warning` < `error` < `critical`. It flows through the same ordinary threshold as every other level, so `Log::critical()` always emits (subject only to `TINA4_LOG_LEVEL`) and `isEnabled('critical')` passes at every normal level.
 
-> **Console visibility only.** `Log::isEnabled()` reflects what reaches **stdout**. The log **file** always records every level regardless of the minimum level — so a `Log::debug()` you guarded out of the console still lands in `tina4.log`. Use `isEnabled()` to gate expensive work, not to decide what gets persisted.
+> **Console visibility only.** `Log::isEnabled()` reflects what reaches **stdout**. The log **file** always records every level regardless of the minimum level, so a `Log::debug()` you guarded out of the console still lands in `tina4.log`. Use `isEnabled()` to gate expensive work, not to decide what gets persisted.
 
 ---
 
@@ -329,7 +329,7 @@ TINA4_LOG_LEVEL=WARNING
 # ONLY in development (TINA4_DEBUG truthy). Set this to force a file.
 TINA4_LOG_OUTPUT=both
 
-# Log file path — an explicit path forces a file, even in production
+# Log file path - an explicit path forces a file, even in production
 TINA4_LOG_FILE=./logs/app.log
 
 # Log format (json | text)
@@ -340,8 +340,8 @@ TINA4_LOG_FORMAT=json
 
 When `TINA4_LOG_OUTPUT` is **unset** (the default), the destination depends on whether you run in development:
 
-- **stdout is always on.** The built-in server logs to standard output so Docker, Kubernetes, or your shell captures every line — 12-factor wants logs on stdout for the platform to collect.
-- **The log file is written only in development** — when `TINA4_DEBUG` is truthy. A local `tail -f logs/tina4.log` keeps working.
+- **stdout is always on.** The built-in server logs to standard output so Docker, Kubernetes, or your shell captures every line, 12-factor wants logs on stdout for the platform to collect.
+- **The log file is written only in development** - when `TINA4_DEBUG` is truthy. A local `tail -f logs/tina4.log` keeps working.
 - **Production and containers are stdout-only.** No `tina4.log`, no `error.log`. A log file inside a container just bloats the writable layer and fills the disk, and the platform already captures stdout.
 
 Explicit settings always win. Set `TINA4_LOG_OUTPUT=file` or `TINA4_LOG_OUTPUT=both`, or point `TINA4_LOG_FILE` at a path, and Tina4 writes the file regardless of `TINA4_DEBUG`.

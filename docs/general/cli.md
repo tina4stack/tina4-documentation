@@ -64,7 +64,7 @@ tina4 doctor
 Example output:
 
 ```
-Tina4 Doctor — Environment Check
+Tina4 Doctor - Environment Check
 
   Language     Status     Version              Pkg Mgr      Version
   ──────────────────────────────────────────────────────────────────────

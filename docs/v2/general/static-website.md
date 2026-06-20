@@ -63,7 +63,7 @@ Add files like `./src/templates/index.twig` (auto-served at `/`) and `./src/temp
 
 {% block content %}
     <h2>Hello, World!</h2>
-    <p>Explore our static site built with Tina4 and Twig—fast, simple, and auto-rendered.</p>
+    <p>Explore our static site built with Tina4 and Twig-fast, simple, and auto-rendered.</p>
 {% endblock %}
 ```
 
@@ -82,6 +82,6 @@ Add files like `./src/templates/index.twig` (auto-served at `/`) and `./src/temp
 {% endblock %}
 ```
 
-- **Auto-Rendering**: No routes in `app.py` or `index.php` —Tina4 detects and renders `.twig` files at paths matching their names (minus extension).
+- **Auto-Rendering**: No routes in `app.py` or `index.php`. Tina4 detects and renders `.twig` files at paths matching their names (minus extension).
 
 

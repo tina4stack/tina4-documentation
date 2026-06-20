@@ -4,7 +4,7 @@ Tina4 ships in Python, PHP, Ruby, Node.js, JavaScript (frontend), and Delphi (FM
 
 This page compares every Tina4 variant against popular frameworks in its language. The data covers performance benchmarks, a 44-feature matrix, deployment size, and honest trade-offs.
 
-**Methodology.** All benchmarks ran on an Apple Silicon ARM64 MacBook Pro (8 cores). The tool: `hey` — 5,000 requests, 50 concurrency, three runs averaged. Two endpoints tested: a JSON object response and a 100-item list response. Benchmark scripts live at [github.com/tina4stack/tina4-documentation/benchmark/](https://github.com/tina4stack/tina4-documentation/benchmark/). Date: March 2026.
+**Methodology.** All benchmarks ran on an Apple Silicon ARM64 MacBook Pro (8 cores). The tool: `hey`, with 5,000 requests, 50 concurrency, three runs averaged. Two endpoints tested: a JSON object response and a 100-item list response. Benchmark scripts live at [github.com/tina4stack/tina4-documentation/benchmark/](https://github.com/tina4stack/tina4-documentation/benchmark/). Date: March 2026.
 
 ---
 
@@ -26,7 +26,7 @@ Tina4 Python runs ASGI on uvicorn. Async by default. Zero external dependencies.
 | **WebSockets** | Built-in | Built-in | Plugin | Channels (plugin) | Built-in | No |
 | **GraphQL** | Built-in | No | No | No | No | No |
 
-### Performance (hey — req/s)
+### Performance (hey: req/s)
 
 | Framework | JSON | List |
 |---|---:|---:|
@@ -37,7 +37,7 @@ Tina4 Python runs ASGI on uvicorn. Async by default. Zero external dependencies.
 | Bottle | 3,165 | 1,105 |
 | Django | 2,333 | 2,150 |
 
-Starlette leads raw JSON throughput — it carries no middleware overhead. FastAPI sits on top of Starlette and adds Pydantic validation, which costs ~30% on JSON but drops list throughput to 2,709 req/s. Tina4 lands mid-pack on JSON and holds strong on list responses (5,769), where FastAPI and Flask fall off. Django handles both endpoints at a steady ~2,200 req/s with no dramatic drops. Bottle runs single-threaded, which limits its ceiling.
+Starlette leads raw JSON throughput because it carries no middleware overhead. FastAPI sits on top of Starlette and adds Pydantic validation, which costs ~30% on JSON but drops list throughput to 2,709 req/s. Tina4 lands mid-pack on JSON and holds strong on list responses (5,769), where FastAPI and Flask fall off. Django handles both endpoints at a steady ~2,200 req/s with no dramatic drops. Bottle runs single-threaded, which limits its ceiling.
 
 ### Feature Comparison (44 features)
 
@@ -138,7 +138,7 @@ Tina4 PHP runs its own built-in async server using `stream_select`. No Apache, n
 | **Auth/Security** | Built-in JWT, sessions, CSRF | Sanctum/Passport | LexikJWT (3rd party) | Via packages | Via packages |
 | **GraphQL** | Built-in | Lighthouse (3rd party) | Overblog (3rd party) | Via packages | Via packages |
 
-### Performance (hey — req/s)
+### Performance (hey: req/s)
 
 | Framework | JSON | List |
 |---|---:|---:|
@@ -148,7 +148,7 @@ Tina4 PHP runs its own built-in async server using `stream_select`. No Apache, n
 | CodeIgniter | 1,311 | 1,288 |
 | Laravel | 257 | 313 |
 
-Tina4 PHP dominates. Its built-in async server (`stream_select`) handles requests without the overhead of php-fpm process spawning. It delivers 28,158 JSON req/s — 5.5x faster than Slim and 109x faster than Laravel. The gap narrows under production setups (Nginx + php-fpm + OPcache), but Tina4's zero-config server wins out of the box.
+Tina4 PHP dominates. Its built-in async server (`stream_select`) handles requests without the overhead of php-fpm process spawning. It delivers 28,158 JSON req/s, 5.5x faster than Slim and 109x faster than Laravel. The gap narrows under production setups (Nginx + php-fpm + OPcache), but Tina4's zero-config server wins out of the box.
 
 ### Feature Comparison (44 features)
 
@@ -232,7 +232,7 @@ Tina4 PHP packs 44 features into ~1.5 MB with zero external dependencies. Larave
 
 ## Ruby
 
-Tina4 Ruby runs on Puma. Built-in ORM, JWT, GraphQL, Swagger, and SCSS — no gems required.
+Tina4 Ruby runs on Puma. Built-in ORM, JWT, GraphQL, Swagger, and SCSS, with no gems required.
 
 ### At a Glance
 
@@ -246,7 +246,7 @@ Tina4 Ruby runs on Puma. Built-in ORM, JWT, GraphQL, Swagger, and SCSS — no ge
 | **Auth/Security** | Built-in JWT + bcrypt | has_secure_password | None | None |
 | **GraphQL** | Built-in | No | No | No |
 
-### Performance (hey — req/s, all on Puma)
+### Performance (hey: req/s, all on Puma)
 
 | Framework | JSON | List |
 |---|---:|---:|
@@ -255,7 +255,7 @@ Tina4 Ruby runs on Puma. Built-in ORM, JWT, GraphQL, Swagger, and SCSS — no ge
 | Sinatra | 7,348 | 5,796 |
 | Rails | 4,918 | 4,007 |
 
-All four frameworks ran on Puma, making this a fair comparison. Tina4 Ruby leads both endpoints — 17,637 JSON req/s and 11,303 list req/s. It doubles Roda on JSON and triples Sinatra on list throughput. Rails trails at 4,918 JSON req/s, weighed down by its middleware stack.
+All four frameworks ran on Puma, making this a fair comparison. Tina4 Ruby leads both endpoints at 17,637 JSON req/s and 11,303 list req/s. It doubles Roda on JSON and triples Sinatra on list throughput. Rails trails at 4,918 JSON req/s, weighed down by its middleware stack.
 
 ### Feature Comparison (44 features)
 
@@ -355,7 +355,7 @@ Tina4 Node.js runs on Node.js 22+ with zero runtime dependencies. TypeScript-fir
 | **WebSockets** | Built-in | Via plugin | Via ws/socket.io | None | Via nes |
 | **GraphQL** | Built-in | Via mercurius | Via apollo-server | Via apollo-server | Via plugin |
 
-### Performance (hey — req/s)
+### Performance (hey: req/s)
 
 **Production mode (cluster, 8 workers):**
 
@@ -373,7 +373,7 @@ Tina4 Node.js runs on Node.js 22+ with zero runtime dependencies. TypeScript-fir
 |---|---:|---:|
 | Tina4 | 11,872 | 12,347 |
 
-Fastify leads JSON throughput at 55,329 req/s. Tina4 trails on JSON (34,343) but dominates list responses at 50,001 req/s — a 49% lead over the next-best framework (Fastify at 33,496). That list-response strength matters: real APIs return arrays of objects, not single JSON values. All competitors run single-process; Tina4 uses cluster mode with 8 workers. Dev mode (tsx, single process) shows 11,872 JSON req/s — suitable for local development.
+Fastify leads JSON throughput at 55,329 req/s. Tina4 trails on JSON (34,343) but dominates list responses at 50,001 req/s, a 49% lead over the next-best framework (Fastify at 33,496). That list-response strength matters: real APIs return arrays of objects, not single JSON values. All competitors run single-process; Tina4 uses cluster mode with 8 workers. Dev mode (tsx, single process) shows 11,872 JSON req/s, suitable for local development.
 
 ### Feature Comparison (44 features)
 
@@ -469,7 +469,7 @@ All four Tina4 back-end variants share the same 44-feature set, the same project
 | **Server** | uvicorn (ASGI) | stream_select (built-in) | Puma (threaded) | cluster (8 workers) |
 | **Language Version** | 3.12+ | 8.1+ | 3.1+ | 22+ |
 
-Node.js leads raw throughput — V8's JIT compiler and cluster mode push list responses to 50,001 req/s. PHP's built-in async server reaches 28,158 JSON req/s without external processes. Ruby on Puma delivers 17,637 JSON req/s. Python on uvicorn sits at 9,761 JSON req/s, constrained by the GIL. All four variants ship zero dependencies and keep install sizes under 2.5 MB.
+Node.js leads raw throughput: V8's JIT compiler and cluster mode push list responses to 50,001 req/s. PHP's built-in async server reaches 28,158 JSON req/s without external processes. Ruby on Puma delivers 17,637 JSON req/s. Python on uvicorn sits at 9,761 JSON req/s, constrained by the GIL. All four variants ship zero dependencies and keep install sizes under 2.5 MB.
 
 ---
 
@@ -498,16 +498,16 @@ Tina4 JavaScript (tina4js) is a sub-3KB reactive framework using signals, tagged
 | React | ~42 KB | Yes | Custom | Hooks | No | No | No | None |
 
 ::: info Apples to oranges
-React, Vue, and Svelte sizes are for the core runtime only — they don't include a router, HTTP client, or PWA support. Adding those pushes their real-world size to 50-100+ KB gzipped. tina4js includes all of those in 3.7 KB.
+React, Vue, and Svelte sizes are for the core runtime only; they don't include a router, HTTP client, or PWA support. Adding those pushes their real-world size to 50-100+ KB gzipped. tina4js includes all of those in 3.7 KB.
 :::
 
 ### Performance Characteristics
 
-- **No virtual DOM** — Signals track exactly which DOM nodes need updating
-- **Surgical DOM updates** — Only the exact text nodes/attributes that changed are touched
-- **No reconciliation overhead** — A list of 1,000 items does not re-diff when one changes
-- **Tree-shakeable** — Import only what you need; unused modules are stripped at build time
-- **Works without a build step** — ESM imports work directly in browsers
+- **No virtual DOM**: Signals track exactly which DOM nodes need updating
+- **Surgical DOM updates**: Only the exact text nodes/attributes that changed are touched
+- **No reconciliation overhead**: A list of 1,000 items does not re-diff when one changes
+- **Tree-shakeable**: Import only what you need; unused modules are stripped at build time
+- **Works without a build step**: ESM imports work directly in browsers
 
 ### 231 Tests Passing
 
@@ -611,11 +611,11 @@ end;
 
 ### Where Each Approach Excels
 
-**Raw FMX (TRESTClient)** — Ships with Delphi, no additional dependencies. Full control over every HTTP header and response. Best when you need precise control over REST communication and do not mind manual JSON parsing.
+**Raw FMX (TRESTClient)**: Ships with Delphi, no additional dependencies. Full control over every HTTP header and response. Best when you need precise control over REST communication and do not mind manual JSON parsing.
 
-**TMS Web Core** — Generates full browser-based web applications from Delphi code using Pas2JS. Visual designer. Best for teams that want to build web UIs in Delphi/Object Pascal instead of JavaScript.
+**TMS Web Core**: Generates full browser-based web applications from Delphi code using Pas2JS. Visual designer. Best for teams that want to build web UIs in Delphi/Object Pascal instead of JavaScript.
 
-**Tina4 Delphi** — Reduces REST client boilerplate with auto MemTable population. Renders HTML/CSS inside native FMX forms. Twig templates for generating dynamic content. Built-in MCP server for Claude Code integration. Best for native Delphi apps that consume REST APIs, need to display HTML content on the FMX canvas, or want AI-assisted development with Claude Code.
+**Tina4 Delphi**: Reduces REST client boilerplate with auto MemTable population. Renders HTML/CSS inside native FMX forms. Twig templates for generating dynamic content. Built-in MCP server for Claude Code integration. Best for native Delphi apps that consume REST APIs, need to display HTML content on the FMX canvas, or want AI-assisted development with Claude Code.
 
 ### When to Choose What
 
@@ -629,7 +629,7 @@ Choose TMS Web Core when you want to build browser-based web applications entire
 
 ## AI-Assisted Development
 
-AI coding assistants work better when they understand a project's structure, conventions, and API surface. Tina4 ships context files for seven AI tools — more than any other framework.
+AI coding assistants work better when they understand a project's structure, conventions, and API surface. Tina4 ships context files for seven AI tools, more than any other framework.
 
 ### AI Context Files
 
@@ -655,9 +655,9 @@ AI coding assistants work better when they understand a project's structure, con
 | Self-contained (few deps) | Yes | No | Partial |
 | Codebase fits in one context window | Yes | No | Yes |
 
-Tina4's entire codebase fits inside a single AI context window. Large frameworks like Django (250K+ lines) and Laravel (400K+ lines) overflow that window. The AI sees fragments, not the whole picture. Micro-frameworks like Flask and Slim fit in the window but lack conventions — the AI guesses where files belong.
+Tina4's entire codebase fits inside a single AI context window. Large frameworks like Django (250K+ lines) and Laravel (400K+ lines) overflow that window. The AI sees fragments, not the whole picture. Micro-frameworks like Flask and Slim fit in the window but lack conventions, so the AI guesses where files belong.
 
-Tina4's convention-over-configuration approach means routes go in `src/routes/`, models in `src/orm/`, templates in `src/templates/`. AI tools predict file locations and generate correct code with fewer hallucinations. The SQL-first ORM helps too — AI writes real SQL instead of framework-specific query builder chains that vary between ORMs.
+Tina4's convention-over-configuration approach means routes go in `src/routes/`, models in `src/orm/`, templates in `src/templates/`. AI tools predict file locations and generate correct code with fewer hallucinations. The SQL-first ORM helps too, since AI writes real SQL instead of framework-specific query builder chains that vary between ORMs.
 
 ---
 
@@ -673,12 +673,12 @@ Tina4 takes a different path: ship everything a modern web project needs in the 
 | **PHP** | Tina4 PHP | 28,158 | 18,191 | 44/44 | ~1.5 MB |
 | **Ruby** | tina4_ruby | 17,637 | 11,303 | 44/44 | ~900 KB |
 | **Node.js** | Tina4 Node.js | 34,343 | 50,001 | 44/44 | ~1.8 MB |
-| **JavaScript** | tina4js | — | — | Sub-3KB | 3.7 KB gz |
-| **Delphi** | Tina4 Delphi | — | — | FMX components | Open source |
+| **JavaScript** | tina4js | - | - | Sub-3KB | 3.7 KB gz |
+| **Delphi** | Tina4 Delphi | - | - | FMX components | Open source |
 
-The trade-off is real. Tina4 has a smaller community, fewer third-party packages, and less production history than established frameworks. No StackOverflow tag with 200,000 questions. No registry of 300,000 community packages. When you hit an edge case, you read source code — not a blog post.
+The trade-off is real. Tina4 has a smaller community, fewer third-party packages, and less production history than established frameworks. No StackOverflow tag with 200,000 questions. No registry of 300,000 community packages. When you hit an edge case, you read source code, not a blog post.
 
-For developers who want working CRUD in a few lines, the same patterns across four languages, 44 features with zero dependencies, and AI context files for seven tools — Tina4 is worth evaluating. Build something. Break something. File an issue. The framework grows with its users.
+For developers who want working CRUD in a few lines, the same patterns across four languages, 44 features with zero dependencies, and AI context files for seven tools, Tina4 is worth evaluating. Build something. Break something. File an issue. The framework grows with its users.
 
 ---
 

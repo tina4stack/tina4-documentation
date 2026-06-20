@@ -1,6 +1,6 @@
-# Gallery — Real-World Examples
+# Gallery: Real-World Examples
 
-Live interactive demos showing tina4js in real-world scenarios. Each example is self-contained and uses the CDN build — no build step required.
+Live interactive demos showing tina4js in real-world scenarios. Each example is self-contained and uses the CDN build, so no build step is required.
 
 <style>
 .gallery-grid {
@@ -56,7 +56,7 @@ Live interactive demos showing tina4js in real-world scenarios. Each example is 
     <iframe src="/gallery/02-contacts.html" loading="lazy"></iframe>
     <div class="gallery-card-body">
       <h3>👥 Contact Manager</h3>
-      <p>Full CRUD — create, edit, delete contacts with search filtering and form validation.</p>
+      <p>Full CRUD: create, edit, delete contacts with search filtering and form validation.</p>
       <div class="tags"><span class="tag">signal</span><span class="tag">api</span><span class="tag">html</span><span class="tag">routing</span></div>
       <a class="open-link" href="/gallery/02-contacts.html" target="_blank">Open full demo ↗</a>
     </div>
@@ -136,7 +136,7 @@ Live interactive demos showing tina4js in real-world scenarios. Each example is 
     <iframe src="/gallery/10-persistent-prefs.html" loading="lazy"></iframe>
     <div class="gallery-card-body">
       <h3>💾 Persistent Prefs</h3>
-      <p>Theme, language, and sidebar state survive a refresh via <code>persist()</code> — opt-in localStorage with credential-shape warnings, version migration, and cross-tab sync.</p>
+      <p>Theme, language, and sidebar state survive a refresh via <code>persist()</code>: opt-in localStorage with credential-shape warnings, version migration, and cross-tab sync.</p>
       <div class="tags"><span class="tag">signal</span><span class="tag">persist</span><span class="tag">storage</span></div>
       <a class="open-link" href="/gallery/10-persistent-prefs.html" target="_blank">Open full demo ↗</a>
     </div>

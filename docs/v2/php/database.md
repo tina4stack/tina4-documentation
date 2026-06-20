@@ -30,8 +30,8 @@ If your database module is not present you can write your own based on the `Data
 | `fetch($sql, $noOfRecords, $offset, $fieldMapping)` | SELECT with pagination & search                    | `DataResult` or `DataError` |
 | `fetchOne(sql, params=None)`                        | Return single row                                  | `array` or `null`           |
 | `tableExists(table_name)`                           | Check if table exists                              | `bool`                      |
-| `startTransaction()`, `commit()`, `rollback()`      | Full transaction control                           | —                           |
-| `close()`                                           | Close connection                                   | —                           |
+| `startTransaction()`, `commit()`, `rollback()`      | Full transaction control                           | -                           |
+| `close()`                                           | Close connection                                   | -                           |
 
 ## Usage {#usage}
 

@@ -5,7 +5,7 @@
 - Use `@noauth()` to make a write route public (e.g. webhooks)
 - Use `@secured()` to protect a GET route that needs auth
 - Return a `dict` or `list` from `response()` and the framework sets `application/json` automatically
-- `request.body` is already parsed — JSON comes in as a `dict`, no manual decoding needed
+- `request.body` is already parsed: JSON comes in as a `dict`, no manual decoding needed
   :::
 
 ## A Simple GET Endpoint {#simple-get}
@@ -19,7 +19,7 @@ async def api_status(request, response):
 ```
 
 - Returns JSON automatically because the argument is a `dict`
-- GET routes are **public by default** — no token required
+- GET routes are **public by default**, no token required
 
 ## Path Parameters {#path-params}
 
@@ -170,7 +170,7 @@ auth = Auth()
 token = auth.get_token({"user_id": 1, "role": "admin"})
 ```
 
-### `@secured()` — Protect a GET route
+### `@secured()` - Protect a GET route
 
 ```python
 from tina4_python.Router import get, secured
@@ -181,7 +181,7 @@ async def admin_stats(request, response):
     return response({"active_users": 42})
 ```
 
-### `@noauth()` — Make a write route public
+### `@noauth()` - Make a write route public
 
 ```python
 from tina4_python.Router import post, noauth
@@ -189,7 +189,7 @@ from tina4_python.Router import post, noauth
 @noauth()
 @post("/api/webhook/stripe")
 async def stripe_webhook(request, response):
-    # No token required — public endpoint
+    # No token required - public endpoint
     event = request.body
     return response({"received": True})
 ```
@@ -282,7 +282,7 @@ async def create_user(request, response):
 
 See the [Swagger documentation](swagger.md) for the full list of decorators.
 
-## Full Example — CRUD API {#full-example}
+## Full Example - CRUD API {#full-example}
 
 ```python
 from tina4_python import ORM, orm, Database

@@ -1,8 +1,8 @@
 # Understanding Tina4 - Quick Reference
 
 ::: tip
-- Tina4 is The Intelligent Native Application 4ramework — one package, zero config, convention over configuration
-- Same API across Python, Node.js, PHP, and Ruby — learn one, know all four
+- Tina4 is The Intelligent Native Application 4ramework: one package, zero config, convention over configuration
+- Same API across Python, Node.js, PHP, and Ruby: learn one, know all four
 - Routes in `src/routes/`, templates in `src/templates/`, ORM in `src/orm/`, static files in `src/public/`
 - Zero runtime dependencies in every language
 :::
@@ -62,10 +62,10 @@ project/
 
 All four languages share the same conventions:
 
-- **Python** — Best for data science, ML integration, rapid prototyping
-- **Node.js** — Best for real-time apps, async I/O, one language across browser and server
-- **PHP** — Best for broad hosting reach, JIT-compiled speed, mature library set
-- **Ruby** — Best for developer happiness, clean syntax, rapid development
+- **Python** - Best for data science, ML integration, rapid prototyping
+- **Node.js** - Best for real-time apps, async I/O, one language across browser and server
+- **PHP** - Best for broad hosting reach, JIT-compiled speed, mature library set
+- **Ruby** - Best for developer happiness, clean syntax, rapid development
 
 See [Chapter 3: Choosing Your Language](/general/03-choosing-your-language.md) for a detailed comparison.
 
@@ -94,5 +94,5 @@ See [Chapter 4: Environment Variables](/general/04-environment-variables.md) for
 
 ## 📕 Download the book
 
-[**Understanding Tina4** (PDF)](/pdfs/Understanding-Tina4.pdf) — full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
+[**Understanding Tina4** (PDF)](/pdfs/Understanding-Tina4.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
 

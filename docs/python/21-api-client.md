@@ -4,7 +4,7 @@
 
 Every real application talks to something external. A payment processor. A weather service. A shipping carrier. A CRM. You write the HTTP call, parse the response, handle timeouts, retry on failure, add auth headers.
 
-Tina4's `Api` class makes outbound HTTP requests from your server-side code. It returns a consistent response format, handles auth in one line, and supports SSL and timeout configuration — with no extra libraries.
+Tina4's `Api` class makes outbound HTTP requests from your server-side code. It returns a consistent response format, handles auth in one line, and supports SSL and timeout configuration, all with no extra libraries.
 
 ---
 

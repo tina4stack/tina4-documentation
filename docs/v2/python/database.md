@@ -47,8 +47,8 @@ dba = Database("pymongo:localhost/27017:mydb", "user", "password")  # with auth
 | `fetch(sql, params=None, **options)` | SELECT with pagination & search                      | `Result`                    |
 | `fetch_one(sql, params=None)`        | Return single row as dict                            | `dict` or `None`            |
 | `table_exists(table_name)`           | Check if table exists                                | `bool`                      |
-| `commit()`, `rollback()`, `start_transaction()` | Full transaction control                  | —                           |
-| `close()`                            | Close connection                                     | —                           |
+| `commit()`, `rollback()`, `start_transaction()` | Full transaction control                  | -                           |
+| `close()`                            | Close connection                                     | -                           |
 
 ## Result Object
 
@@ -126,7 +126,7 @@ No models. No config files. No nonsense.
 
 ## MongoDB {#mongodb}
 
-MongoDB uses the same SQL API as all other engines. The `SQLToMongo` module translates SQL to MongoDB queries transparently — no new API to learn.
+MongoDB uses the same SQL API as all other engines. The `SQLToMongo` module translates SQL to MongoDB queries transparently, with no new API to learn.
 
 ```python
 db = Database("pymongo:localhost/27017:myapp")
@@ -181,7 +181,7 @@ print(result.records)  # → [{'id': 1, 'name': 'Alice'}]
 ```
 
 ::: warning Limitations
-- **JOINs are not supported** — MongoDB is document-based. Use embedded documents or application-level joins.
-- **CREATE TABLE** maps to collection creation — column definitions are ignored (MongoDB is schema-less).
+- **JOINs are not supported**: MongoDB is document-based. Use embedded documents or application-level joins.
+- **CREATE TABLE** maps to collection creation, column definitions are ignored (MongoDB is schema-less).
 - **Migrations** will create/drop collections but column-level DDL (ALTER TABLE) is a no-op.
 :::

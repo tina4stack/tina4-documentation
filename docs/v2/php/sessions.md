@@ -19,8 +19,8 @@ Depending on your chosen backend, you may also need:
 composer require tina4stack/tina4php-sqlite3
 composer require tina4stack/tina4php-mysql
 
-# For Redis sessions — requires ext-redis
-# For Memcached sessions — requires ext-memcached
+# For Redis sessions - requires ext-redis
+# For Memcached sessions - requires ext-memcached
 ```
 
 ## SessionConfig Options {#config}
