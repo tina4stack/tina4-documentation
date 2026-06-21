@@ -41,7 +41,7 @@ features:
       details: Python, Node.js, PHP, and Ruby share the same project structure, CLI, template syntax, route patterns, and .env variables. Learn one, know all four.
     - icon: 🧭
       title: One CLI to Rule the Stack
-      details: The Rust-based `tina4` CLI detects the language, compiles SCSS, watches files, and delegates to the framework. `tina4 init`, `tina4 serve`, `tina4 migrate`: the same commands across Python, PHP, Ruby, and Node.js.
+      details: The Rust-based `tina4` CLI detects the language, compiles SCSS, watches files, and delegates to the framework. `tina4 init`, `tina4 serve`, and `tina4 migrate` run the same across Python, PHP, Ruby, and Node.js.
     - icon: 📦
       title: Zero Runtime Dependencies
       details: Every Tina4 backend runs on the standard library. No native addons, no node-gyp, no vendor tree. Your requirements.txt / composer.json / Gemfile / package.json each hold one entry.
@@ -59,7 +59,7 @@ features:
       details: SQLite, PostgreSQL, MySQL, MSSQL, Firebird, MongoDB. `Database::create("sqlite:///app.db")` works anywhere. `sqlite:///path` is relative to your project root, the same convention across all four frameworks.
     - icon: 🔐
       title: Secure by Default
-      details: GET routes are public, POST/PUT/PATCH/DELETE require a bearer token. JWT (HS256/RS256), PBKDF2 password hashing, rate limiting, CSRF form tokens: all built in, nothing to configure.
+      details: GET routes are public, POST/PUT/PATCH/DELETE require a bearer token. JWT (HS256/RS256), PBKDF2 password hashing, rate limiting, CSRF form tokens, all built in, nothing to configure.
     - icon: 📋
       title: Swagger at /swagger
       details: Add an `@description` decorator to your route. Visit `/swagger`. Your API docs appear, typed, grouped, ready for your team.
@@ -71,7 +71,7 @@ features:
       details: File-backed by default, RabbitMQ/Kafka/MongoDB when you scale. Producer/consumer/dead-letter semantics consistent across languages. Periodic tasks via `background(fn, interval)`, no threads.
     - icon: 🛠️
       title: Dev Dashboard on /__dev
-      details: Routes, requests, SQL runner, queue monitor, mailbox, WebSocket inspector, error tracker, AI chat: a shared SPA across all four frameworks. `TINA4_DEBUG=true` turns it on.
+      details: Routes, requests, SQL runner, queue monitor, mailbox, WebSocket inspector, error tracker, AI chat, a shared SPA across all four frameworks. `TINA4_DEBUG=true` turns it on.
 ---
 
 ## What's new

@@ -508,12 +508,53 @@ def check_punctuation() -> tuple[int, list[str]]:
     return total, lines
 
 
+# ── Frontmatter: YAML must parse (VitePress builds it as YAML) ──────────
+#
+# VitePress parses each page's `---` frontmatter as YAML. A value with an
+# unquoted inner `: ` (colon-space) reads as a nested mapping and fails the
+# build with "mapping values are not allowed here". This catches it before
+# the build does. (A doc-prose em-dash -> colon swap inside a `details:` value
+# is the classic way to introduce it.)
+
+def check_frontmatter() -> tuple[int, list[str]]:
+    try:
+        import yaml  # type: ignore
+    except Exception:
+        return 0, [yellow("⚠ PyYAML not installed - skipping frontmatter check")]
+
+    fm_re = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
+    bad: list[tuple[str, str]] = []
+    for path in find_doc_files():
+        try:
+            text = path.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        m = fm_re.match(text)
+        if not m:
+            continue
+        try:
+            yaml.safe_load(m.group(1))
+        except Exception as e:
+            bad.append((str(path.relative_to(REPO_ROOT)), str(e).splitlines()[0][:80]))
+
+    lines = [f"\n{cyan('Frontmatter check')} - YAML frontmatter parses (VitePress build gate)"]
+    if not bad:
+        lines.append(green("  ✓ all frontmatter parses as YAML"))
+        return 0, lines
+    lines.append(red(f"  ✗ {len(bad)} file(s) with invalid YAML frontmatter:"))
+    for rel, why in bad:
+        lines.append(f"    {red('•')} {rel} {dim('-> ' + why)}")
+    lines.append(dim("    Quote the value or remove the inner colon-space (often an em-dash -> colon swap)."))
+    return len(bad), lines
+
+
 # ── Driver ────────────────────────────────────────────────────────────
 
 CHECKS = {
     "cli": check_cli,
     "env": check_env,
     "punct": check_punctuation,
+    "frontmatter": check_frontmatter,
 }
 
 
