@@ -128,7 +128,7 @@ Every feature in the table above ships in all four Tina4 implementations:
 |----------------|----------|---------|
 | tina4-python | Python 3.12+ | `pip install tina4-python` |
 | tina4-php | PHP 8.2+ | `composer require tina4/tina4-php` |
-| tina4-ruby | Ruby 3.3+ | `gem install tina4-ruby` |
+| tina4-ruby | Ruby 3.3+ | `gem install tina4ruby` |
 | tina4-nodejs | Node.js 20+ | `npm install tina4-nodejs` |
 
 **What parity means in practice:**

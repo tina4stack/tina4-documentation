@@ -2652,7 +2652,7 @@ Tina4.run!
 ```
 
 ```bash
-gem install tina4-ruby
+gem install tina4ruby
 ```
 
 The server starts on port 7147 by default. Set `host: "0.0.0.0"` for Docker deployments.

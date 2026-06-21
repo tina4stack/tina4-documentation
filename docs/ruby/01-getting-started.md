@@ -610,7 +610,7 @@ The `tina4` CLI scaffolds everything for you. But if you start from an empty fol
 ```ruby
 source "https://rubygems.org"
 
-gem "tina4-ruby", "~> 3.0"
+gem "tina4ruby", "~> 3.0"
 
 # Required: Ruby 3.0+ removed webrick from the standard library
 gem "webrick", "~> 1.8"

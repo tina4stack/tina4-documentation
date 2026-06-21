@@ -34,7 +34,7 @@ Choose your language:
 | **Python** | `pip install tina4_python` | `python -m tina4_python` |
 | **Node.js** | `npm i tina4-nodejs` | `npx tina4` |
 | **PHP** | `composer require tina4stack/tina4php` | `php -S localhost:7145 index.php` |
-| **Ruby** | `gem install tina4-ruby` | `tina4` |
+| **Ruby** | `gem install tina4ruby` | `tina4` |
 
 </div>
 
