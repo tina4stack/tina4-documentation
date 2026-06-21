@@ -76,13 +76,13 @@ features:
 
 ## What's new
 
-**v3.12.3 (2026-05-05)** - [full notes](/python/36-releases.md)
+**v3.13.39 (2026-06-21)** - [full notes](/python/36-releases.md)
 
-Cross-framework parity sweep. ResponseCache public surface is now middleware-only across all four frameworks, lookup / store / get methods moved private. Ruby's Container predicate gained the `?` suffix (`has?`) to match Python's `has()` semantically. Every framework's CLAUDE.md and book chapter 33 env-var table grounded in source: Ruby gained 98 lines of newly-documented variables, Node 113. Side fixes: Ruby `ai.rb` UTF-8 encoding crash and Node `serverParity.test.ts` runner pattern.
+Auto-run migrations on startup (`TINA4_AUTO_MIGRATE`), a unified first-class `critical` log level, fail-loud ORM contracts (`save`, `create`, and `QueryBuilder` stop swallowing errors), and per-route WebSocket authentication on the upgrade. Plus a uniform `TINA4_` env manifest, an `Api` client that strips auth headers on cross-origin redirects, and sharper `tina4 metrics` coverage detection. Breaking: `critical` is now a top-level severity, and on Node.js `TINA4_CORS_CREDENTIALS` now defaults to `false`.
 
-**v3.12.2** - Firebird URL auto-detect. Five equivalent forms (`//abs/path`, `/abs/path`, `/C:/Drive`, URL-encoded colon, alias) all resolve transparently, pick whichever reads best. New `TINA4_DATABASE_FIREBIRD_PATH` env override for Windows backslash paths and split-config setups. PHP also picks up a `mysqli` `localhost`+port quirk fix where Docker container connections were silently falling through to the Unix socket lookup.
+**v3.13.38 (2026-06-19)** - Coordinated security and robustness release. The WebSocket and SSE backplane is wired for real with an origin allow-list and idle reaper, a SOAP DTD reject and a GraphQL depth guard close the XML and query-depth attack surfaces, `htmlElement` escapes child content, and the new `tina4 metrics` command reports the top code-health offenders.
 
-**v3.12.0** - *Breaking change*. Every framework env var now requires the `TINA4_` prefix. The boot guard refuses to start when it spots legacy un-prefixed names (`DATABASE_URL`, `SECRET`, `SMTP_HOST`, `HOST_NAME`, etc.) and prints the rename map. Run `tina4 env --migrate` to rewrite your `.env` in place. Bundled with bug fixes #38 (Postgres UUID-PK transaction abort) and #39 (template auto-routing tightening).
+**Highlights since v3.12.3** - the v3.13 line unified the cache backend (memory, file, redis, valkey, memcached, mongodb, database), gave queues a full lifecycle (priority pop, retry backoff, automatic dead-lettering), added a request-scoped query cache, shipped live dev tooling over WebSocket and the `/__dev/mcp` endpoint, hardened the ORM and database layer to fail loud, and ran a broad security pass. See the [full release notes](/python/36-releases.md) for every version.
 
 ## How Tina4 reads
 
