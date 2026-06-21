@@ -548,6 +548,46 @@ def check_frontmatter() -> tuple[int, list[str]]:
     return len(bad), lines
 
 
+# ── Vue interpolation: bare ${...} / {{...}} blanks the page ────────────
+#
+# VitePress compiles each page into a Vue render function. A bare `${...}` or
+# `{{...}}` in prose or a heading (outside a code fence / inline-code span) is
+# compiled as a live interpolation -> the page renders blank on the client even
+# though the SSR build succeeds (so `vitepress build` does NOT catch it). Wrap
+# the snippet in backticks (use ``double backticks`` if it already contains a
+# backtick, e.g. a JS template literal). This blanked docs/js/03-html-templates
+# after a book sync dropped the original escaping.
+
+def check_vue_interp() -> tuple[int, list[str]]:
+    bad: list[tuple[str, int, str]] = []
+    for path in find_doc_files():
+        try:
+            lines = path.read_text(encoding="utf-8").split("\n")
+        except Exception:
+            continue
+        in_fence = False
+        for i, l in enumerate(lines, 1):
+            s = l.lstrip()
+            if s.startswith("```") or s.startswith("~~~"):
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
+            stripped = re.sub(r"`[^`]*`", "", l)  # drop inline-code spans
+            if "${" in stripped or "{{" in stripped:
+                bad.append((str(path.relative_to(REPO_ROOT)), i, l.strip()[:80]))
+
+    lines = [f"\n{cyan('Vue-interpolation check')} - no bare ${{...}} / {{{{...}}}} outside code (VitePress render gate)"]
+    if not bad:
+        lines.append(green("  ✓ no bare interpolation that would blank a page"))
+        return 0, lines
+    lines.append(red(f"  ✗ {len(bad)} bare ${{...}}/{{{{...}}}} outside code:"))
+    for rel, ln, txt in bad[:25]:
+        lines.append(f"    {red('•')} {rel}:{ln} {dim(txt)}")
+    lines.append(dim("    Wrap in backticks (``double`` if it contains a backtick) so VitePress does not compile it as a live interpolation."))
+    return len(bad), lines
+
+
 # ── Driver ────────────────────────────────────────────────────────────
 
 CHECKS = {
@@ -555,6 +595,7 @@ CHECKS = {
     "env": check_env,
     "punct": check_punctuation,
     "frontmatter": check_frontmatter,
+    "vue": check_vue_interp,
 }
 
 
@@ -600,14 +641,17 @@ def main() -> int:
     # Two gates: CLI is strict immediately (we just got it to zero),
     # env stays warn-only until the existing 39-entry backlog is
     # cleared. --strict-env opts in to gating env too.
-    cli_drift = json_payload.get("cli", 0)
     env_drift = json_payload.get("env", 0)
-    punct_drift = json_payload.get("punct", 0)
-    if args.strict and cli_drift > 0:
-        return 1
-    # Punctuation is strict immediately — the docs are at zero, so this just
-    # blocks a regression (a stray em dash / smart quote breaks the build).
-    if args.strict and punct_drift > 0:
+    # These are all at zero today, so --strict just blocks a regression:
+    # a fake CLI command, a stray em dash / smart quote, invalid YAML
+    # frontmatter (fails the build), or a bare interpolation (blanks a page).
+    strict_drift = (
+        json_payload.get("cli", 0)
+        + json_payload.get("punct", 0)
+        + json_payload.get("frontmatter", 0)
+        + json_payload.get("vue", 0)
+    )
+    if args.strict and strict_drift > 0:
         return 1
     if args.strict_env and env_drift > 0:
         return 1

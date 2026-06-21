@@ -25,7 +25,7 @@ No `render()` loop. No reconciliation. No diffing. The template creates DOM, bin
 
 ---
 
-## 2. Static Values -- ${value}
+## 2. Static Values: `${value}`
 
 Plain values go in as text nodes. Once. Never again.
 
@@ -49,7 +49,7 @@ You cannot accidentally inject HTML through interpolation. This is by design.
 
 ---
 
-## 3. Reactive Text -- ${signal}
+## 3. Reactive Text: `${signal}`
 
 Pass a signal directly (not `.value`) to create a reactive text node:
 
@@ -81,7 +81,7 @@ When you write `${count}`, JavaScript passes the signal object. The template det
 
 ---
 
-## 4. Reactive Blocks -- ${() => expr}
+## 4. Reactive Blocks: `${() => expr}`
 
 Functions are reactive blocks. The function runs immediately, and re-runs whenever any signal read inside it changes:
 
@@ -341,7 +341,7 @@ html`
 
 ---
 
-## 9. Dynamic Attributes -- attr=${value}
+## 9. Dynamic Attributes: `attr=${value}`
 
 Regular attributes accept signals and functions for reactive updates:
 

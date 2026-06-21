@@ -914,7 +914,7 @@ Same `generatedAt`, but `source` changed from `"database"` to `"cache"`. The han
 
 **Cause:** The response cache keys by method and URL alone. If `/api/profile` returns different data per user but every request hits the same URL, the first response is served to everyone.
 
-**Fix:** Do not put the response cache on user-specific endpoints. Use the key/value API with a user-specific key instead: `await cacheSet(`profile:${userId}`, data, 300)`.
+**Fix:** Do not put the response cache on user-specific endpoints. Use the key/value API with a user-specific key instead: ``await cacheSet(`profile:${userId}`, data, 300)``.
 
 ### 3. Memory cache lost on restart
 
@@ -930,7 +930,7 @@ Same `generatedAt`, but `source` changed from `"database"` to `"cache"`. The han
 
 **Cause:** A key/value entry you set yourself still holds the old data and has not expired.
 
-**Fix:** Invalidate or update on write. Use `await cacheDelete(`product:${id}`)` after an update, or write-through with `await cacheSet(...)`. (The request and persistent DB caches flush themselves on any write -- this gotcha is about keys you manage by hand.)
+**Fix:** Invalidate or update on write. Use ``await cacheDelete(`product:${id}`)`` after an update, or write-through with `await cacheSet(...)`. (The request and persistent DB caches flush themselves on any write -- this gotcha is about keys you manage by hand.)
 
 ### 5. Cache key collisions
 
