@@ -6,6 +6,8 @@
 import { h } from 'vue'
 import DefaultTheme from 'vitepress/theme'
 import HomeHeroImage from './HomeHeroImage.vue'
+import InstallTabs from './InstallTabs.vue'
+import FeaturesGrid from './FeaturesGrid.vue'
 import './style.css'
 
 export default {
@@ -13,6 +15,10 @@ export default {
   Layout() {
     return h(DefaultTheme.Layout, null, {
       'home-hero-image': () => h(HomeHeroImage),
+      'home-features-before': () => h(InstallTabs),
     })
+  },
+  enhanceApp({ app }) {
+    app.component('FeaturesGrid', FeaturesGrid)
   },
 }
