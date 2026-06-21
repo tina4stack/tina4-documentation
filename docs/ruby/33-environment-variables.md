@@ -283,6 +283,105 @@ These variables only the Ruby framework reads.
 
 ---
 
+## Configuration Recipes
+
+The tables above list every knob. These are the setups most apps actually reach for, ready to paste into `.env`. Each block sets only what the feature needs. Everything else keeps its default.
+
+### PostgreSQL in production
+
+One URL points the ORM, the migrations, and the query builder at Postgres. Credentials can ride in the URL or sit in their own variables, which keeps the password out of your shell history.
+
+```bash
+TINA4_DATABASE_URL=postgresql://localhost:5432/myapp
+TINA4_DATABASE_USERNAME=myapp
+TINA4_DATABASE_PASSWORD=changeme
+TINA4_DB_POOL=4
+```
+
+`TINA4_DB_POOL=4` opens four connections and rotates across them. Leave it at `0` for a single connection on a small app.
+
+### A shared cache on Redis
+
+The response cache and the cross-request query cache both speak to the same Redis. Point them at it and every instance shares one cache, invalidated globally on every write.
+
+```bash
+TINA4_CACHE_BACKEND=redis
+TINA4_CACHE_URL=redis://localhost:6379
+TINA4_DB_CACHE=true
+TINA4_DB_CACHE_BACKEND=redis
+TINA4_DB_CACHE_URL=redis://localhost:6379
+```
+
+If Redis is down or the driver is missing, the cache logs a warning and falls back to the file backend. It never silently stops caching.
+
+### Sessions that survive more than one box
+
+The file backend is fine for a single server. Move sessions to Redis the moment you run more than one instance, so a user stays logged in whichever instance answers the next request.
+
+```bash
+TINA4_SESSION_BACKEND=redis
+TINA4_SESSION_REDIS_HOST=localhost
+TINA4_SESSION_REDIS_PORT=6379
+TINA4_SESSION_SECURE=true
+TINA4_SESSION_SAMESITE=Strict
+```
+
+`TINA4_SESSION_SECURE=true` keeps the cookie off plain HTTP. Turn it on once you have TLS.
+
+### A queue on RabbitMQ or Kafka
+
+One URL is enough for RabbitMQ; the per-field variables only exist for split configs. The queue API stays identical whichever backend you pick.
+
+```bash
+TINA4_QUEUE_BACKEND=rabbitmq
+TINA4_QUEUE_URL=amqp://guest:guest@localhost:5672/
+```
+
+Kafka reads a broker list instead:
+
+```bash
+TINA4_QUEUE_BACKEND=kafka
+TINA4_KAFKA_BROKERS=localhost:9092
+TINA4_KAFKA_GROUP_ID=myapp_workers
+```
+
+### WebSocket broadcasts across instances
+
+A single server broadcasts in memory. Add a backplane and a message sent on one instance reaches clients connected to every other instance.
+
+```bash
+TINA4_WS_BACKPLANE=redis
+TINA4_WS_BACKPLANE_URL=redis://localhost:6379
+TINA4_WS_ALLOWED_ORIGINS=https://myapp.com
+```
+
+Set the origin allow-list in production. Empty allows every origin, which is fine in dev and risky on the public internet.
+
+### Locked-down production headers
+
+The defaults are already safe. These four tighten the screws for a public site on HTTPS.
+
+```bash
+TINA4_CORS_ORIGINS=https://myapp.com,https://www.myapp.com
+TINA4_HSTS=31536000
+TINA4_FRAME_OPTIONS=DENY
+TINA4_SESSION_SECURE=true
+```
+
+Never pair `TINA4_CORS_CREDENTIALS=true` with `TINA4_CORS_ORIGINS=*`. Name your real origins instead.
+
+### The dev dashboard AI, kept local
+
+The dashboard AI talks to a local model through Ollama by default, so nothing leaves your machine. Point the URLs elsewhere only when you run the hosted Tina4 AI services.
+
+```bash
+TINA4_AI_URL=http://localhost:11437/api/chat
+TINA4_AI_MODEL=qwen2.5-coder:14b
+TINA4_RAG_URL=http://localhost:11438
+```
+
+---
+
 ## Minimal `.env` for Development
 
 ```bash
