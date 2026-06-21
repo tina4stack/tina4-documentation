@@ -7,6 +7,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 
 // Title overrides for chapter filenames that don't auto-title well
 const TITLE_OVERRIDES: Record<string, string> = {
+    'storage': 'Persistent Signals',
     'orm': 'ORM',
     'cli': 'CLI',
     'crud': 'CRUD',
