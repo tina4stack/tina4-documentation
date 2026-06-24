@@ -1,5 +1,9 @@
 # Chapter 35: Release Notes
 
+## v3.13.46 (2026-06-24) - Atomic batch insert on SQLite + full batch-contract tests
+
+A batch insert that hits a bad row must leave the table untouched, not half-written. SQLite's execute_many ran the batch with no transaction wrapper, so a row that violated a constraint mid-batch raised but left the rows before it applied in an open, uncommitted transaction - a partial write. It now wraps a standalone batch in one transaction and rolls the whole batch back on any error, all-or-nothing, matching PostgreSQL, MySQL and MSSQL (which already committed the batch as a unit). The batch-insert tests now assert the full contract against every live engine - all rows read back, the affected-row count, a single-row insert, an empty-array no-op, and the atomic rollback - with no mocks. No new third-party dependencies.
+
 ## v3.13.45 (2026-06-24) - MSSQL insert row-count fix + real-service test hardening
 
 Running the batch-insert tests against a live SQL Server for the first time exposed a real adapter bug. `execute()` read the affected-row count at the end of the call, but for an INSERT it had already run `SELECT SCOPE_IDENTITY()` on the same cursor, so the count it returned reflected the identity probe rather than the insert. Every MSSQL INSERT reported an `affected_rows` of zero. The rows landed and `last_id` was correct, but a batch insert summed those zeros and looked like it had done nothing. The adapter now captures the count straight after the main statement, before the identity probe overwrites it. The fix is INSERT-only - UPDATE and DELETE never run that probe and were already correct. The live MySQL and MSSQL batch tests now build their connection from the standard `TINA4_TEST_*` host and port variables, so they run for real against the provisioned engines instead of skipping on an absent URL. No new third-party dependencies.

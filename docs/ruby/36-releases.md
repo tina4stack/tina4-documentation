@@ -1,5 +1,9 @@
 # Chapter 35: Release Notes
 
+## v3.13.46 (2026-06-24) - MSSQL fetch_one fix + real MySQL/MSSQL batch tests
+
+The MySQL and MSSQL batch-insert specs were placeholders that skipped even when the engines were provisioned. They now run for real against both engines and assert the full batch contract, including a bad row rolling the whole batch back. Making the MSSQL one run exposed a real adapter bug: apply_limit emitted an OFFSET/FETCH page with no ORDER BY, which SQL Server rejects, so any fetch_one of an unordered query (a COUNT or MAX aggregate) raised "Incorrect syntax near '0'". It now adds a no-op ORDER BY when the query has none, matching the Python master. No new third-party dependencies.
+
 ## v3.13.45 (2026-06-24) - Real-service test hardening
 
 The Valkey and Redis session handlers talk through the `redis` client gem. The test bundle now installs it alongside the other optional service drivers, so the live Valkey session round-trip - write a value, read it back, destroy it against a real Valkey - runs on every pass with the infrastructure up instead of skipping. Under `TINA4_REQUIRE_SERVICES` a provisioned service that goes unexercised is a hard failure, so this closes a gap where the session path slipped through untested. The gem stays in the optional group, so a plain install on a machine without it is unchanged. No framework runtime change. No new third-party dependencies.

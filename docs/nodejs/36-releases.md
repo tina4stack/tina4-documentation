@@ -1,5 +1,9 @@
 # Chapter 35: Release Notes
 
+## v3.13.46 (2026-06-24) - Atomic batch insert across MySQL, MSSQL and PostgreSQL
+
+A batch insert that hits a bad row must roll the whole batch back, not leave the rows before it committed. The MySQL, MSSQL and PostgreSQL adapters ran executeManyAsync as a row-by-row loop with no transaction, so a failure mid-batch left a partial write - despite the documented "wrapped in a transaction" contract that only SQLite honoured. Each adapter now wraps the batch in one transaction and rolls back on any error, joining a caller's explicit transaction when already inside one. Two MSSQL fixes ride along: transactions use the native tedious begin, commit and rollback calls (a raw BEGIN through sp_executesql failed SQL Server's transaction-count check, which had also broken explicit transactions), and a single-object insert now reports one affected row instead of two. The batch-insert tests run the full contract against every live engine, no mocks. No new third-party dependencies.
+
 ## v3.13.45 (2026-06-24) - Real-service test hardening
 
 The MongoDB queue tests now isolate the Mongo connection environment, so a host-level `TINA4_MONGO_URI` can no longer bleed into the two tests that build a connection from explicit host and port values and flip their expected result. The suite runs clean against the provisioned services. No framework runtime change. No new third-party dependencies.

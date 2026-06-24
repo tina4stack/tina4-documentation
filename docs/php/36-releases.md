@@ -1,5 +1,9 @@
 # Chapter 35: Release Notes
 
+## v3.13.46 (2026-06-24) - MySQL/MSSQL batch atomicity tests
+
+The MySQL and MSSQL batch-insert tests checked that all three rows landed, but not that a failed batch rolls back. They now cover the same atomic-rollback and single-row contract the SQLite and PostgreSQL tests already enforce: a batch with a bad row (a NULL into a NOT NULL column) raises and leaves the table unchanged, run against the real engines with no mocks. No framework code changed - Database::executeMany already wraps the batch in one transaction and the adapters re-raise on a bad row; this locks the behaviour in as a regression guard. No new third-party dependencies.
+
 ## v3.13.45 (2026-06-24) - SQLite commit resilience + real-service test hardening
 
 A standalone write under autocommit lands through SQLite's own autocommit, so a later explicit `commit()` finds no open transaction to close. SQLite reports that as a harmless warning, and on some platform builds of libsqlite3 the warning surfaced as an exception the adapter did not catch - so a redundant commit raised instead of doing nothing. `commit()` and `rollback()` now absorb the no-transaction case on every build while still surfacing any other error loudly. The data was already committed either way; this only stops the no-op commit from throwing. Real-service test hardening rounds out the release. No new third-party dependencies.
