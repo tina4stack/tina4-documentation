@@ -1,5 +1,17 @@
 # Chapter 35: Release Notes
 
+## v3.13.47 (2026-06-25) - Open-issue batch: migration comment splitting, global middleware, SCSS interpolation
+
+Three reported issues, fixed and locked in with tests against the real thing.
+
+**Migration statement splitter (#54).** A migration whose SQL carried a `;` inside a `-- ...` line comment fragmented into broken pieces, because the runner split on the `;` delimiter before it stripped comments. A `CREATE TABLE` with a trailing `-- drop then re-add; old way` comment raised "incomplete input" on SQLite. The splitter is now a single-pass, quote- and comment-aware scanner: it strips `--` line and `/* */` block comments, copies single- and double-quoted string literals verbatim (honouring the `''`/`""` escape), keeps `$$`/`//` stored-procedure blocks intact, and splits on the delimiter only outside all of that. A `;` or `--` inside a comment or a string literal can no longer split or corrupt a statement. Named regression tests plus an end-to-end migrate against a real temp SQLite database lock it in, with no mocks.
+
+**Global middleware lock-in (#55).** Global class-based middleware registered with `Router.use(...)` already ran on every route in Node, with `global-middleware.test.ts` covering it. This release is the Python-master dispatch fix plus matching lock-in tests across the family.
+
+**SCSS `#{}` interpolation (#116).** The SCSS compiler did not support interpolation, so `calc(100% - #{$gap})` left the `#{...}` in the output and corrupted the CSS around it. The compiler now resolves `#{ ... }` before variable substitution and nesting: a `$variable` inside the braces resolves to its value and anything else inlines verbatim, so `calc(100% - #{$gap})` becomes `calc(100% - 20px)` and `.icon-#{$name}` becomes `.icon-home`. Shipped across all four frameworks for parity.
+
+No new third-party dependencies.
+
 ## v3.13.46 (2026-06-24) - Atomic batch insert across MySQL, MSSQL and PostgreSQL
 
 A batch insert that hits a bad row must roll the whole batch back, not leave the rows before it committed. The MySQL, MSSQL and PostgreSQL adapters ran executeManyAsync as a row-by-row loop with no transaction, so a failure mid-batch left a partial write - despite the documented "wrapped in a transaction" contract that only SQLite honoured. Each adapter now wraps the batch in one transaction and rolls back on any error, joining a caller's explicit transaction when already inside one. Two MSSQL fixes ride along: transactions use the native tedious begin, commit and rollback calls (a raw BEGIN through sp_executesql failed SQL Server's transaction-count check, which had also broken explicit transactions), and a single-object insert now reports one affected row instead of two. The batch-insert tests run the full contract against every live engine, no mocks. No new third-party dependencies.

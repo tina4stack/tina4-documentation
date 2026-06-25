@@ -1,5 +1,19 @@
 # Chapter 35: Release Notes
 
+## v3.13.47 (2026-06-25) - Open-issue batch: migration comment splitting, global middleware, SCSS interpolation
+
+Four reported bugs, fixed and locked in with tests against the real thing.
+
+**Migration statement splitter (#54).** A migration whose SQL carried a `;` inside a `-- ...` line comment fragmented into broken pieces, because the runner split on the `;` delimiter before it stripped comments. A `CREATE TABLE` with a trailing `-- drop then re-add; old way` comment raised "incomplete input" on SQLite. The splitter is now a single-pass, quote- and comment-aware scanner: it strips `--` line and `/* */` block comments, copies single- and double-quoted string literals verbatim (honouring the `''`/`""` escape), keeps `$$`/`//` stored-procedure blocks intact, and splits on the delimiter only outside all of that. A `;` or `--` inside a comment or a string literal can no longer split or corrupt a statement. Named regression tests plus an end-to-end migrate against a real temp SQLite database lock it in, with no mocks.
+
+**Global middleware now runs (#55).** Middleware registered globally with `Middleware.use(...)` or `Router.use(...)` never executed - the request dispatcher only iterated each route's own middleware list and never read the global registry, and `Router.use` wrote to a private list nothing consulted. Global middleware now folds into every route's before and after run, in registration order, deduped against route-level middleware. PHP, Ruby, and Node already dispatched globals; each gains a lock-in test so the contract never regresses.
+
+**Hot-reload no longer duplicates modules (#53).** The dev-reload auto-discover re-imported a `src` module that another file had already pulled in transitively, minting a fresh module object while the earlier importer kept the old one - module-level singletons silently diverged. Discovery now records a baseline for a transitively-loaded module instead of re-importing it, and only ever reloads a module it loaded itself. A genuine edit still hot-reloads on the next pass; a regression test covers both paths.
+
+**SCSS `#{}` interpolation (#116).** The SCSS compiler did not support interpolation, so `calc(100% - #{$gap})` left the `#{...}` in the output and corrupted the CSS around it. The compiler now resolves `#{ ... }` before variable substitution and nesting: a `$variable` inside the braces resolves to its value and anything else inlines verbatim, so `calc(100% - #{$gap})` becomes `calc(100% - 20px)` and `.icon-#{$name}` becomes `.icon-home`. Shipped across all four frameworks for parity.
+
+No new third-party dependencies. Full suite: 3,183 passing.
+
 ## v3.13.46 (2026-06-24) - Atomic batch insert on SQLite + full batch-contract tests
 
 A batch insert that hits a bad row must leave the table untouched, not half-written. SQLite's execute_many ran the batch with no transaction wrapper, so a row that violated a constraint mid-batch raised but left the rows before it applied in an open, uncommitted transaction - a partial write. It now wraps a standalone batch in one transaction and rolls the whole batch back on any error, all-or-nothing, matching PostgreSQL, MySQL and MSSQL (which already committed the batch as a unit). The batch-insert tests now assert the full contract against every live engine - all rows read back, the affected-row count, a single-row insert, an empty-array no-op, and the atomic rollback - with no mocks. No new third-party dependencies.

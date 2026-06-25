@@ -1,5 +1,17 @@
 # Chapter 35: Release Notes
 
+## v3.13.47 (2026-06-25) - Open-issue batch: migration comment splitting, global middleware, SCSS interpolation
+
+Three reported issues, fixed and locked in with tests against the real thing.
+
+**Migration statement splitter (#54).** A migration whose SQL carried a `;` inside a `-- ...` line comment could fragment into broken pieces in the frameworks that split before stripping comments. PHP's splitter was already a single-pass, quote- and comment-aware scanner and never fragmented, so it changed in one way only: it now strips `--` and `/* */` comments from the emitted SQL instead of carrying them through, byte-identical with Python, Ruby, and Node. Named regression tests cover a `;` inside a line comment, a `;` inside a block comment, a `;` and a `--` inside string literals, and an end-to-end migrate against a real temp SQLite database, with no mocks.
+
+**Global middleware lock-in (#55).** Middleware registered globally with `Router::use(...)` / `Middleware::use(...)` already ran on every route in PHP. A lock-in test now guards the contract - `Router::use` registers into the one global registry the dispatcher reads, the before and after hooks fire, and a class registered twice is deduped - so the regression fixed in the Python master this release cannot creep in.
+
+**SCSS `#{}` interpolation (#116).** The SCSS compiler did not support interpolation, so `calc(100% - #{$gap})` left the `#{...}` in the output and corrupted the CSS around it. The compiler now resolves `#{ ... }` before variable substitution and nesting: a `$variable` inside the braces resolves to its value and anything else inlines verbatim, so `calc(100% - #{$gap})` becomes `calc(100% - 20px)` and `.icon-#{$name}` becomes `.icon-home`. Shipped across all four frameworks for parity.
+
+No new third-party dependencies. Full suite: 2,727 passing.
+
 ## v3.13.46 (2026-06-24) - MySQL/MSSQL batch atomicity tests
 
 The MySQL and MSSQL batch-insert tests checked that all three rows landed, but not that a failed batch rolls back. They now cover the same atomic-rollback and single-row contract the SQLite and PostgreSQL tests already enforce: a batch with a bad row (a NULL into a NOT NULL column) raises and leaves the table unchanged, run against the real engines with no mocks. No framework code changed - Database::executeMany already wraps the batch in one transaction and the adapters re-raise on a bad row; this locks the behaviour in as a regression guard. No new third-party dependencies.
