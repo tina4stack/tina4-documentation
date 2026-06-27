@@ -21,7 +21,16 @@ esac
 case "$ARCH" in
   x86_64|amd64)  ARCH_NAME="amd64" ;;
   arm64|aarch64)  ARCH_NAME="arm64" ;;
-  *) echo "Error: Unsupported architecture: $ARCH" >&2; exit 1 ;;
+  i386|i486|i586|i686)
+    echo "Error: 32-bit x86 ($ARCH) is not supported - tina4 ships 64-bit builds only." >&2
+    echo "  Build from source on this machine with: cargo install tina4" >&2
+    echo "  (needs the Rust toolchain - https://rustup.rs), or use a 64-bit OS." >&2
+    exit 1 ;;
+  *)
+    echo "Error: Unsupported architecture: $ARCH" >&2
+    echo "  Prebuilt binaries cover x86_64 and arm64. Build from source with:" >&2
+    echo "    cargo install tina4   (needs Rust - https://rustup.rs)" >&2
+    exit 1 ;;
 esac
 
 # Helper: download a URL to stdout
@@ -94,6 +103,38 @@ echo ""
 TMP=$(mktemp)
 echo "Downloading ${BINARY}..."
 fetch_to "$URL" "$TMP"
+
+# Verify integrity against the release SHA256SUMS before trusting the binary.
+# Releases from 3.8.53 publish SHA256SUMS; when it is present we verify strictly
+# and abort on any mismatch. Older releases predate it, so we warn and continue
+# (a pinned older install still works).
+SUMS_TMP=$(mktemp)
+if fetch_to "https://github.com/${REPO}/releases/download/${LATEST}/SHA256SUMS" "$SUMS_TMP" 2>/dev/null && [ -s "$SUMS_TMP" ]; then
+  EXPECTED=$(grep -E "[[:space:]]\*?${BINARY}\$" "$SUMS_TMP" | awk '{print $1}' | head -1)
+  if [ -z "$EXPECTED" ]; then
+    echo "Error: ${BINARY} is not listed in SHA256SUMS for ${LATEST}" >&2
+    rm -f "$TMP" "$SUMS_TMP"; exit 1
+  fi
+  if command -v sha256sum >/dev/null 2>&1; then
+    ACTUAL=$(sha256sum "$TMP" | awk '{print $1}')
+  elif command -v shasum >/dev/null 2>&1; then
+    ACTUAL=$(shasum -a 256 "$TMP" | awk '{print $1}')
+  else
+    echo "Error: no sha256 tool (sha256sum or shasum) available to verify the download" >&2
+    rm -f "$TMP" "$SUMS_TMP"; exit 1
+  fi
+  if [ "$EXPECTED" != "$ACTUAL" ]; then
+    echo "Error: checksum mismatch for ${BINARY} - refusing to install" >&2
+    echo "  expected: ${EXPECTED}" >&2
+    echo "  actual:   ${ACTUAL}" >&2
+    rm -f "$TMP" "$SUMS_TMP"; exit 1
+  fi
+  echo "Checksum verified (sha256)."
+else
+  echo "Note: no SHA256SUMS published for ${LATEST} - skipping integrity check (older release)." >&2
+fi
+rm -f "$SUMS_TMP"
+
 chmod +x "$TMP"
 
 # Install — try without sudo first

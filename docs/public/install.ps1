@@ -34,6 +34,34 @@ $dest = "$installDir\tina4.exe"
 Write-Host "Downloading $binary..."
 Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $dest
 
+# Verify integrity against the release SHA256SUMS before trusting the binary.
+# Releases from 3.8.53 publish SHA256SUMS; verify strictly when present, and
+# warn + continue for older releases that predate it.
+# (Keep all output ASCII-only - see the cp1252 note further down.)
+$sumsAsset = $release.assets | Where-Object { $_.name -eq "SHA256SUMS" }
+if ($sumsAsset) {
+    $sums = (Invoke-WebRequest -Uri $sumsAsset.browser_download_url -UseBasicParsing).Content
+    $line = $sums -split "`n" | Where-Object { $_ -match "\s\*?$([regex]::Escape($binary))\s*$" } | Select-Object -First 1
+    if (-not $line) {
+        Remove-Item $dest -Force
+        Write-Error "$binary is not listed in SHA256SUMS for $tag"
+        exit 1
+    }
+    $expected = (($line -split '\s+')[0]).ToLower()
+    $actual = (Get-FileHash $dest -Algorithm SHA256).Hash.ToLower()
+    if ($expected -ne $actual) {
+        Remove-Item $dest -Force
+        Write-Host ""
+        Write-Host "  Error: checksum mismatch for $binary - refusing to install" -ForegroundColor Red
+        Write-Host "    expected: $expected" -ForegroundColor Red
+        Write-Host "    actual:   $actual" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "Checksum verified (sha256)." -ForegroundColor Green
+} else {
+    Write-Host "Note: no SHA256SUMS published for $tag - skipping integrity check (older release)." -ForegroundColor Yellow
+}
+
 # Put the install dir FIRST on the user PATH so a fresh install always wins
 # over a stale tina4.exe sitting earlier on PATH (e.g. an old copy dropped in a
 # Ruby / MSYS / Scoop bin dir by a previous install or `tina4 update`). Just
