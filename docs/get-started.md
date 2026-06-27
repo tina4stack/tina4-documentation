@@ -30,6 +30,10 @@ tina4 --version
 
 On Windows the CLI lands in `%LOCALAPPDATA%\tina4` and goes first on your PATH, so the newest copy always wins. If `tina4 --version` still reports an old version, another `tina4.exe` sits earlier on a system PATH, and the installer prints its location so you can remove it.
 
+### For security teams
+
+Reviewing Tina4 for a managed machine? [Installer Security and Transparency](/install-security.md) states exactly what the installer downloads, where it lands, what it does not do, and how to verify a download is genuine.
+
 ## Check Your Environment
 
 Run `tina4 doctor` to see which languages and package managers are available:
