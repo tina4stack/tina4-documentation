@@ -6,7 +6,11 @@
 # Stopgap until `tina4 skills install` ships embedded in the CLI binary.
 $ErrorActionPreference = "Stop"
 
-$base = "https://raw.githubusercontent.com/tina4stack/tina4-python/v3/.claude/skills"
+# Pin skills to a released tag, not a moving branch, so an install is
+# reproducible and auditable. Bump this when the skills change in a new
+# tina4-python release. Override with TINA4_SKILLS_REF if you need a branch.
+$ref = if ($env:TINA4_SKILLS_REF) { $env:TINA4_SKILLS_REF } else { "3.13.47" }
+$base = "https://raw.githubusercontent.com/tina4stack/tina4-python/$ref/.claude/skills"
 $dest = Join-Path $HOME ".claude\skills"
 
 # skill name -> reference files
