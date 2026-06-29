@@ -29,12 +29,12 @@ Tina4 follows the AI framework philosophy. One package. One folder structure. Ze
 
 Choose your language:
 
-| Language | Install | Start |
-|----------|---------|-------|
-| **Python** | `pip install tina4_python` | `python -m tina4_python` |
-| **Node.js** | `npm i tina4-nodejs` | `npx tina4` |
-| **PHP** | `composer require tina4stack/tina4php` | `php -S localhost:7145 index.php` |
-| **Ruby** | `gem install tina4ruby` | `tina4` |
+| Language | Scaffold | Run |
+|----------|----------|-----|
+| **Python** | `tina4 init python my-app` | `tina4 serve` |
+| **Node.js** | `tina4 init nodejs my-app` | `tina4 serve` |
+| **PHP** | `tina4 init php my-app` | `tina4 serve` |
+| **Ruby** | `tina4 init ruby my-app` | `tina4 serve` |
 
 </div>
 
