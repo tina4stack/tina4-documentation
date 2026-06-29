@@ -64,10 +64,11 @@
 ### Installation {#installation}
 
 ```bash
-gem install tina4ruby
-tina4 init my-project
-cd my-project
-bundle install
+# Install the tina4 CLI once. Windows: irm https://tina4.com/install.ps1 | iex
+curl -fsSL https://tina4.com/install.sh | sh
+
+tina4 init ruby my-app
+cd my-app
 tina4 serve
 ```
 The server starts on port 7147. One gem. No dependency tree. [More details](01-getting-started.md) on project setup and customization.

@@ -10,7 +10,7 @@
 - Routes go in `src/routes/`, templates in `src/templates/`, static files in `src/public/`
 - GET routes are public by default; POST/PUT/PATCH/DELETE require a token
 - `$response->json()` returns JSON with the correct headers -- no manual config
-- Run `tina4 serve` to start the dev server on port 7146
+- Run `tina4 serve` to start the dev server on port 7145
 :::
 
 <nav class="tina4-menu">
@@ -63,9 +63,11 @@
 ### Installation {#installation}
 
 ```bash
-tina4 init php my-project
-cd my-project
-composer install
+# Install the tina4 CLI once. Windows: irm https://tina4.com/install.ps1 | iex
+curl -fsSL https://tina4.com/install.sh | sh
+
+tina4 init php my-app
+cd my-app
 tina4 serve
 ```
 [More details](01-getting-started.md) on project setup and configuration options.

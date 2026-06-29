@@ -63,12 +63,14 @@
 
 ### Installation {#installation}
 
-Four commands. The server starts and your browser shows the result.
+The server starts and your browser shows the result.
 
 ```bash
-npm install tina4-nodejs
-tina4 init my-project
-cd my-project
+# Install the tina4 CLI once. Windows: irm https://tina4.com/install.ps1 | iex
+curl -fsSL https://tina4.com/install.sh | sh
+
+tina4 init nodejs my-app
+cd my-app
 tina4 serve
 ```
 

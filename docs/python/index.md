@@ -7,7 +7,7 @@
 - Routes go in `src/routes/`, templates in `src/templates/`, static files in `src/public/`
 - GET routes are public by default; POST/PUT/PATCH/DELETE require a token
 - Return a `dict` from `response()` and the framework sets `application/json`
-- Run `tina4 serve` to start the dev server on port 7145
+- Run `tina4 serve` to start the dev server on port 7146
   :::
 
 <nav class="tina4-menu">
@@ -60,13 +60,15 @@
 ### Installation {#installation}
 
 ```bash
-pip install tina4-python
-tina4 init my-project
-cd my-project
+# Install the tina4 CLI once. Windows: irm https://tina4.com/install.ps1 | iex
+curl -fsSL https://tina4.com/install.sh | sh
+
+tina4 init python my-app
+cd my-app
 tina4 serve
 ```
 
-The CLI scaffolds your project, installs one package, and starts the server. No dependency tree. No version conflicts. Your browser opens to `http://localhost:7145` and the welcome page greets you.
+The CLI scaffolds your project, installs the dependencies, and starts the server. No dependency tree. No version conflicts. Your browser opens to `http://localhost:7146` and the welcome page greets you.
 
 [More details](01-getting-started.md) on project setup and customization.
 
