@@ -40,7 +40,13 @@ Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $dest
 # (Keep all output ASCII-only - see the cp1252 note further down.)
 $sumsAsset = $release.assets | Where-Object { $_.name -eq "SHA256SUMS" }
 if ($sumsAsset) {
-    $sums = (Invoke-WebRequest -Uri $sumsAsset.browser_download_url -UseBasicParsing).Content
+    # GitHub serves release assets as application/octet-stream, so
+    # Invoke-WebRequest returns .Content as a byte[] (NOT a string). Splitting a
+    # byte[] on "`n" yields per-byte garbage, the regex never matches, and every
+    # lookup wrongly reports "is not listed". Decode to UTF-8 text first. (Guard
+    # the type so a future string response still works.)
+    $sumsRaw = (Invoke-WebRequest -Uri $sumsAsset.browser_download_url -UseBasicParsing).Content
+    $sums = if ($sumsRaw -is [byte[]]) { [System.Text.Encoding]::UTF8.GetString($sumsRaw) } else { $sumsRaw }
     $line = $sums -split "`n" | Where-Object { $_ -match "\s\*?$([regex]::Escape($binary))\s*$" } | Select-Object -First 1
     if (-not $line) {
         Remove-Item $dest -Force
