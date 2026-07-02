@@ -1,5 +1,11 @@
 # Chapter 35: Release Notes
 
+## v3.13.50 (2026-07-02) - Path route params match INTEGER primary keys on SQLite (Ruby fix)
+
+A route path parameter like `{id}`, matched against a real HTTP request, must find an INTEGER primary-key row. On Ruby it did not. Rack delivers the request path as ASCII-8BIT, so an untyped `{id}` capture reached the SQL bind as a binary string, and the sqlite3 gem bound it as a BLOB. SQLite gives a BLOB no numeric affinity, so `WHERE id = ?` never matched an INTEGER column - `GET /api/users/{id}` returned 404 for a row that plainly existed (and `GET /api/users` listed it). The router now relabels path captures as UTF-8 so they bind as TEXT, which SQLite coerces to the column's integer affinity, and the row matches. Typed `{id:int}` params were never affected - they cast to an Integer. The SQLite driver is left alone on purpose: coercing every binary string there would corrupt genuine BLOB writes, so the encoding is fixed at the source (the router).
+
+Python, PHP, and Node were confirmed unaffected - their string path params already bind as TEXT - and each gains a real regression test: real router extraction feeding a real SQLite integer-primary-key lookup, no mocks, so the contract cannot silently drift. No new third-party dependencies.
+
 ## v3.13.49 (2026-06-30) - Current tina4-js runtime bundle + reactive-select guidance
 
 Refreshes the bundled tina4-js runtime that every Tina4 app loads from `/js/tina4js.min.js`. The shipped script-tag bundle had drifted behind npm: it predated persistent signals and the i18n module, because the minified IIFE was never committed to the tina4-js repo, so `tina4 install tina4-js` downloaded a 404 and fell back to a stale copy. tina4-js 1.4.1 fixes the source of the drift (the bundle is now tracked in git and built in CI), and this release vendors the current bundle so a fresh install serves persistent signals and i18n out of the box. Run `tina4 install tina4-js` to refresh an existing app immediately.
