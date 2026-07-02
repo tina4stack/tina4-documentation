@@ -152,6 +152,46 @@ Live interactive demos showing tina4js in real-world scenarios. Each example is 
     </div>
   </div>
 
+  <div class="gallery-card">
+    <iframe src="/gallery/12-streaming.html" loading="lazy"></iframe>
+    <div class="gallery-card-body">
+      <h3>📡 Live Streaming (SSE)</h3>
+      <p>Server-Sent Events and NDJSON streaming wired to signals: an AI-style token stream and a live server-event feed, each piped into state behind a reactive status badge.</p>
+      <div class="tags"><span class="tag">sse</span><span class="tag">signal</span><span class="tag">pipe</span></div>
+      <a class="open-link" href="/gallery/12-streaming.html" target="_blank">Open full demo ↗</a>
+    </div>
+  </div>
+
+  <div class="gallery-card">
+    <iframe src="/gallery/13-islands.html" loading="lazy"></iframe>
+    <div class="gallery-card-body">
+      <h3>🏝️ Islands (Web Components)</h3>
+      <p>A static, server-rendered product page with three self-hydrating Tina4Element islands - star rating, add-to-cart, and a live viewer count - each shadow-DOM encapsulated with its own scoped styles.</p>
+      <div class="tags"><span class="tag">component</span><span class="tag">shadow-dom</span><span class="tag">signal</span></div>
+      <a class="open-link" href="/gallery/13-islands.html" target="_blank">Open full demo ↗</a>
+    </div>
+  </div>
+
+  <div class="gallery-card">
+    <iframe src="/gallery/14-graphql.html" loading="lazy"></iframe>
+    <div class="gallery-card-body">
+      <h3>🔗 GraphQL Client</h3>
+      <p>Typed queries and mutations through api.graphql(): search with variables, restock with a mutation, and a live wire console showing the exact request and response.</p>
+      <div class="tags"><span class="tag">graphql</span><span class="tag">api</span><span class="tag">signal</span></div>
+      <a class="open-link" href="/gallery/14-graphql.html" target="_blank">Open full demo ↗</a>
+    </div>
+  </div>
+
+  <div class="gallery-card">
+    <iframe src="/gallery/15-upload.html" loading="lazy"></iframe>
+    <div class="gallery-card-body">
+      <h3>📤 File Upload</h3>
+      <p>Drag-and-drop or browse, a real FileReader preview, and multipart api.upload() with a live per-file progress bar.</p>
+      <div class="tags"><span class="tag">api</span><span class="tag">upload</span><span class="tag">signal</span></div>
+      <a class="open-link" href="/gallery/15-upload.html" target="_blank">Open full demo ↗</a>
+    </div>
+  </div>
+
 </div>
 
 ## Using the Examples as Starting Points
