@@ -41,6 +41,7 @@ const TITLE_OVERRIDES: Record<string, string> = {
     'mcp-dev-tools': 'MCP Dev Tools',
     'custom-mcp-servers': 'Custom MCP Servers',
     'query-builder': 'Query Builder',
+    'i18n': 'Internationalization (i18n)',
 }
 
 function chapterTitle(filename: string): string {
