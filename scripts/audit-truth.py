@@ -14,17 +14,22 @@ What it checks
 
 1. **CLI commands** — every ``tina4 <subcommand>`` mentioned in any
    markdown doc must be a real subcommand of the ``tina4`` Rust CLI.
-   Source of truth: parse ``tina4 --help`` output.
+   Source of truth: parse ``--help`` from a binary BUILT FROM THE CLI
+   SOURCE REPO (sibling ``../tina4``), not whatever ``tina4`` happens to
+   be on PATH. An old global install predates recently added commands
+   and would false-flag real docs — see ``_resolve_cli_binary`` for the
+   resolution order (``$TINA4_CLI_BIN`` -> ../tina4 build -> PATH).
 
 2. **Environment variables** — every ``TINA4_*`` mentioned in docs must
    appear in at least one framework source tree (read from a getenv()-
    style call). Source of truth: ripgrep across the four framework repos.
 
-The script discovers framework source trees by walking ``..`` from the
-docs repo, looking for sibling repos named ``tina4-{python,php,ruby,
-nodejs,js}``. If a sibling is missing, the corresponding check is
-skipped with a warning rather than failing — keeps local dev usable
-when you only have one repo cloned.
+The script discovers source trees by walking ``..`` from the docs repo,
+looking for the CLI repo ``tina4`` and the framework repos
+``tina4-{python,php,ruby,nodejs,js}``. If a sibling is missing, the
+corresponding check falls back (CLI: to a PATH binary) or is skipped
+with a warning rather than failing — keeps local dev usable when you
+only have one repo cloned.
 
 Why this exists
 ===============
@@ -50,6 +55,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -71,6 +77,14 @@ for _stream in (sys.stdout, sys.stderr):
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 WORKSPACE_ROOT = REPO_ROOT.parent  # ../
+
+# The Rust CLI repo — sibling to the docs repo. This is the SOURCE OF TRUTH
+# for the `tina4 <cmd>` grammar. We introspect a binary BUILT FROM THIS
+# SOURCE rather than whatever `tina4` happens to be on PATH: an old global
+# install (e.g. a 3.8.25 left over from months ago) predates recently added
+# commands and would false-flag real docs (this is exactly how `tina4 setup`
+# and `tina4 metrics` used to be reported as fake). See `_resolve_cli_binary`.
+CLI_REPO = WORKSPACE_ROOT / "tina4"
 
 # Doc directories to scan. We deliberately skip vendored/built outputs.
 DOC_GLOBS: tuple[str, ...] = (
@@ -135,6 +149,126 @@ def strip_code_fences(text: str) -> str:
 
 # ── Check 1: CLI commands ─────────────────────────────────────────────
 
+def _fmt_ver(v: tuple[int, int, int] | None) -> str:
+    return ".".join(map(str, v)) if v else "unknown"
+
+
+def _semver(text: str) -> tuple[int, int, int] | None:
+    m = re.search(r"(\d+)\.(\d+)\.(\d+)", text or "")
+    return (int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
+
+
+def _cli_source_version() -> tuple[int, int, int] | None:
+    """Version declared in the sibling CLI repo's ``Cargo.toml`` ``[package]``
+    table — the real target the docs should match. ``None`` if the CLI repo
+    isn't a sibling (keeps the check working when only the docs are cloned)."""
+    cargo = CLI_REPO / "Cargo.toml"
+    if not cargo.exists():
+        return None
+    section = ""
+    for raw in cargo.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw.strip()
+        if line.startswith("[") and line.endswith("]"):
+            section = line
+        elif section == "[package]" and line.startswith("version") and "=" in line:
+            return _semver(line.split("=", 1)[1])
+    return None
+
+
+def _binary_version(binary: str) -> tuple[int, int, int] | None:
+    try:
+        out = subprocess.run(
+            [binary, "--version"], capture_output=True, text=True,
+            check=False, timeout=20,
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return _semver(out)
+
+
+def _sibling_cli_binary(src_ver: tuple[int, int, int] | None,
+                        notes: list[str]) -> str | None:
+    """Return a tina4 binary built from the sibling CLI source, or ``None``.
+
+    Prefers an existing ``target/{release,debug}/tina4``. If none exists and
+    ``cargo`` is available, builds it once so the grammar reflects committed
+    source. Warns (never fails) when an existing build lags the source."""
+    release = CLI_REPO / "target" / "release" / "tina4"
+    debug = CLI_REPO / "target" / "debug" / "tina4"
+
+    existing = next((c for c in (release, debug) if c.exists()), None)
+    if existing:
+        bv = _binary_version(str(existing))
+        if src_ver and bv and bv < src_ver:
+            notes.append(yellow(
+                f"⚠ ../tina4 build is {_fmt_ver(bv)} but source is "
+                f"{_fmt_ver(src_ver)} — rebuild for exact grammar: "
+                f"(cd ../tina4 && cargo build --release)"))
+        return str(existing)
+
+    # No build yet — produce one from source if we can.
+    if shutil.which("cargo"):
+        notes.append(cyan("→ no ../tina4 build found; running "
+                          "`cargo build --release` to establish CLI ground truth…"))
+        proc = subprocess.run(
+            ["cargo", "build", "--release", "--manifest-path",
+             str(CLI_REPO / "Cargo.toml")],
+            capture_output=True, text=True, check=False,
+        )
+        if proc.returncode == 0 and release.exists():
+            return str(release)
+        notes.append(yellow("⚠ cargo build of ../tina4 failed — falling back to PATH"))
+        for ln in (proc.stderr or "").strip().splitlines()[-3:]:
+            notes.append(dim(f"    {ln}"))
+    else:
+        notes.append(yellow("⚠ ../tina4 has no build and cargo is not installed "
+                            "— falling back to the PATH binary (may be stale)"))
+    return None
+
+
+def _resolve_cli_binary() -> tuple[str | None, list[str]]:
+    """Locate the tina4 binary whose grammar we trust as ground truth.
+
+    Priority, most to least trustworthy:
+      1. ``$TINA4_CLI_BIN``         — explicit override (path to a binary).
+      2. A build of the sibling     — ../tina4/target/{release,debug}/tina4,
+         CLI repo (../tina4)          built from source so it matches the
+                                      committed grammar (auto-built if absent).
+      3. ``tina4`` on ``PATH``      — last resort. An old global install can
+                                      predate recently added commands, which
+                                      is precisely what produced the false
+                                      ``tina4 metrics`` / ``tina4 setup`` flags.
+
+    Returns ``(binary_or_None, notes)``. Notes surface staleness so a red gate
+    is never silently caused by an out-of-date binary."""
+    notes: list[str] = []
+    src_ver = _cli_source_version()
+
+    override = os.environ.get("TINA4_CLI_BIN")
+    if override:
+        if Path(override).exists():
+            return override, notes
+        notes.append(yellow(f"⚠ TINA4_CLI_BIN={override} does not exist — ignoring"))
+
+    if (CLI_REPO / "Cargo.toml").exists():
+        built = _sibling_cli_binary(src_ver, notes)
+        if built:
+            return built, notes
+
+    path_bin = shutil.which("tina4")
+    if path_bin:
+        bin_ver = _binary_version(path_bin)
+        if src_ver and bin_ver and bin_ver < src_ver:
+            notes.append(yellow(
+                f"⚠ using `tina4` on PATH ({_fmt_ver(bin_ver)}) but the CLI "
+                f"source is {_fmt_ver(src_ver)} — it may predate recently added "
+                f"commands. Build ../tina4 (cargo build --release) or set "
+                f"TINA4_CLI_BIN to validate against current source."))
+        return path_bin, notes
+
+    return None, notes
+
+
 def _parse_help_commands(help_text: str) -> set[str]:
     """Pull subcommand names out of a ``--help`` Commands: block."""
     cmds: set[str] = set()
@@ -169,11 +303,13 @@ def _parse_help_positional_choices(help_text: str) -> set[str]:
     return choices
 
 
-def real_cli_grammar() -> tuple[set[str], dict[str, set[str]]] | None:
+def real_cli_grammar(binary: str | None = None) -> tuple[set[str], dict[str, set[str]]] | None:
     """Two-level discovery:
 
-    Returns ``(top_level, second_token_per_cmd)`` or ``None`` if the
-    ``tina4`` binary isn't on PATH.
+    Returns ``(top_level, second_token_per_cmd)`` or ``None`` if no ``tina4``
+    binary could be resolved. ``binary`` may be passed in (from
+    ``_resolve_cli_binary``) so the caller can surface resolution notes;
+    when omitted it is resolved here for back-compat.
 
     - ``top_level`` is the set of valid top-level subcommands (``serve``,
       ``init``, ``migrate``, ``generate``, etc).
@@ -191,7 +327,8 @@ def real_cli_grammar() -> tuple[set[str], dict[str, set[str]]] | None:
     ``tina4 generate:model`` (colon-style, never real) while accepting
     the canonical space-separated form.
     """
-    binary = shutil.which("tina4")
+    if binary is None:
+        binary, _ = _resolve_cli_binary()
     if not binary:
         return None
     top_help = subprocess.run(
@@ -290,9 +427,12 @@ def doc_cli_mentions() -> dict[tuple[str, str | None], list[Path]]:
 def check_cli() -> tuple[int, list[str]]:
     """Two-level drift detection: invalid first token AND invalid
     second token (when one is present and the first token is real)."""
-    grammar = real_cli_grammar()
+    binary, resolve_notes = _resolve_cli_binary()
+    grammar = real_cli_grammar(binary)
     if grammar is None:
-        return 0, [yellow("⚠ tina4 binary not on PATH — skipping CLI check")]
+        return 0, resolve_notes + [
+            yellow("⚠ no tina4 CLI available (no ../tina4 source, no build, "
+                   "none on PATH) — skipping CLI check")]
     real_top, real_second = grammar
 
     mentions = doc_cli_mentions()
@@ -347,6 +487,7 @@ def check_cli() -> tuple[int, list[str]]:
     drift = len(missing_first) + len(missing_second)
     lines = [f"\n{cyan('CLI check')} — real top-level: {len(real_top)}, "
              f"unique doc forms: {len(mentions)}"]
+    lines.extend(resolve_notes)
     if drift == 0:
         lines.append(green("  ✓ no drift — every `tina4 <cmd> [<arg>]` is real"))
         return 0, lines
