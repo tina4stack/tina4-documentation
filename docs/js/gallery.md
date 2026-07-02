@@ -142,6 +142,16 @@ Live interactive demos showing tina4js in real-world scenarios. Each example is 
     </div>
   </div>
 
+  <div class="gallery-card">
+    <iframe src="/gallery/11-i18n.html" loading="lazy"></iframe>
+    <div class="gallery-card-body">
+      <h3>🌍 Localization (i18n)</h3>
+      <p>Switch between six languages and watch every translated string plus Intl number, currency, and date formatting update in place. Arabic flips the layout to right-to-left. The active locale is a signal.</p>
+      <div class="tags"><span class="tag">i18n</span><span class="tag">signal</span><span class="tag">intl</span><span class="tag">rtl</span></div>
+      <a class="open-link" href="/gallery/11-i18n.html" target="_blank">Open full demo ↗</a>
+    </div>
+  </div>
+
 </div>
 
 ## Using the Examples as Starting Points
