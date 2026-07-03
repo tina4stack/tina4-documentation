@@ -39,13 +39,13 @@ hero:
 
 ## What's new
 
-**v3.13.39 (2026-06-21)** - [full notes](/python/36-releases.md)
+**v3.13.51 (2026-07-03)** - [full notes](/python/36-releases.md)
 
-Auto-run migrations on startup (`TINA4_AUTO_MIGRATE`), a unified first-class `critical` log level, fail-loud ORM contracts (`save`, `create`, and `QueryBuilder` stop swallowing errors), and per-route WebSocket authentication on the upgrade. Plus a uniform `TINA4_` env manifest, an `Api` client that strips auth headers on cross-origin redirects, and sharper `tina4 metrics` coverage detection. Breaking: `critical` is now a top-level severity, and on Node.js `TINA4_CORS_CREDENTIALS` now defaults to `false`.
+The built-in dev MCP server now speaks the current MCP Streamable HTTP transport, so Claude Code and today's MCP clients connect over a single `/__dev/mcp` endpoint out of the box. The legacy HTTP+SSE handshake stays for older clients. This release also fixes three Firebird issues (parameterized DML, NULL binding, migrations calling `execute`) and repairs migration recording on a `tina4_migration` table upgraded in place from the old v2 layout.
 
-**v3.13.38 (2026-06-19)** - Coordinated security and robustness release. The WebSocket and SSE backplane is wired for real with an origin allow-list and idle reaper, a SOAP DTD reject and a GraphQL depth guard close the XML and query-depth attack surfaces, `htmlElement` escapes child content, and the new `tina4 metrics` command reports the top code-health offenders.
+**Recent releases (v3.13.40 - v3.13.50)** - Swagger gained per-route security and reusable component schemas; queues were unified on one lifecycle across all four frameworks, with a reservation and visibility timeout so a dead consumer never strands a job; the test suite moved onto real services (no mocks) and caught a batch of live database and broker bugs; i18n was hardened with partial interpolation that never throws; the tina4-js runtime bundle was refreshed; and a Ruby fix made integer primary-key path parameters match on SQLite.
 
-**Highlights since v3.12.3** - the v3.13 line unified the cache backend (memory, file, redis, valkey, memcached, mongodb, database), gave queues a full lifecycle (priority pop, retry backoff, automatic dead-lettering), added a request-scoped query cache, shipped live dev tooling over WebSocket and the `/__dev/mcp` endpoint, hardened the ORM and database layer to fail loud, and ran a broad security pass. See the [full release notes](/python/36-releases.md) for every version.
+**Highlights since v3.12.3** - the v3.13 line unified the cache backend (memory, file, redis, valkey, memcached, mongodb, database), gave queues a full lifecycle (priority pop, retry backoff, automatic dead-lettering), added a request-scoped query cache, shipped live dev tooling over WebSocket and a Streamable HTTP `/__dev/mcp` endpoint, hardened the ORM and database layer to fail loud, and ran a broad security pass. See the [full release notes](/python/36-releases.md) for every version.
 
 ## How Tina4 reads
 
