@@ -1,9 +1,10 @@
 <!--
   Tina4 Coding Models + API tokens promo.
   Registered globally in theme/index.ts and dropped into a page as <TinaCoderPromo />.
-  CSS lives here (not inline in markdown) because an inline <style> block in a
-  VitePress .md breaks the Vue/markdown compiler. All rules are namespaced under
-  .t4-mcp so this is safe as global CSS.
+  Styling uses VitePress theme tokens (--vp-c-*, --vp-button-brand-*) so the block
+  blends with the site and adapts to light / dark mode. CSS is namespaced under
+  .t4-mcp; it lives here (not inline in markdown) because an inline <style> in a
+  VitePress .md breaks the Vue/markdown compiler.
 -->
 <template>
   <section class="t4-mcp">
@@ -48,38 +49,45 @@
 </template>
 
 <style>
-.t4-mcp{--ink:#0e1116;--panel:#161b22;--line:#232a34;--mut:#8b98a5;--fg:#e6edf3;
-  --accent:#7C5CFF;--accent2:#37E2D5;--gold:#FFB800;
-  background:radial-gradient(900px 480px at 50% -20%,#1a2233,#0e1116);
-  color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  padding:72px 20px;line-height:1.55;border-radius:16px;margin:28px 0}
+.t4-mcp{
+  background:var(--vp-c-bg-soft);
+  border:1px solid var(--vp-c-divider);
+  border-radius:16px;
+  padding:56px 24px;
+  margin:32px 0;
+  line-height:1.55;
+}
 .t4-mcp *{box-sizing:border-box}
-.t4-mcp .wrap{max-width:960px;margin:0 auto;text-align:center}
-.t4-mcp .eyebrow{display:inline-block;font-size:.78rem;font-weight:700;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--accent2);border:1px solid var(--line);
+.t4-mcp .wrap{max-width:820px;margin:0 auto;text-align:center}
+.t4-mcp .eyebrow{display:inline-block;font-size:.75rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--vp-c-brand-1);
+  border:1px solid var(--vp-c-brand-soft);background:var(--vp-c-brand-soft);
   padding:5px 12px;border-radius:999px;margin-bottom:18px}
-.t4-mcp h2{font-size:clamp(1.8rem,4vw,2.7rem);margin:.1em 0;letter-spacing:-.02em;
-  border:0;padding:0;
-  background:linear-gradient(120deg,#fff,#b9c4d0);
-  -webkit-background-clip:text;background-clip:text;color:transparent}
-.t4-mcp .lead{color:#aeb9c7;max-width:60ch;margin:14px auto 0;font-size:1.08rem}
-.t4-mcp .feats{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:22px auto 0}
-.t4-mcp .feats span{font-size:.85rem;color:#cdd6e2;background:rgba(255,255,255,.04);
-  border:1px solid var(--line);border-radius:8px;padding:6px 11px}
-.t4-mcp .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:40px 0 8px;text-align:left}
+.t4-mcp h2{font-size:clamp(1.7rem,4vw,2.4rem);margin:.1em 0;letter-spacing:-.02em;
+  border:0;padding:0;color:var(--vp-c-text-1)}
+.t4-mcp .lead{color:var(--vp-c-text-2);max-width:60ch;margin:14px auto 0;font-size:1.05rem}
+.t4-mcp .lead b{color:var(--vp-c-text-1)}
+.t4-mcp .feats{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:22px auto 0}
+.t4-mcp .feats span{font-size:.82rem;color:var(--vp-c-text-2);background:var(--vp-c-bg);
+  border:1px solid var(--vp-c-divider);border-radius:8px;padding:5px 11px}
+.t4-mcp .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:36px 0 8px;text-align:left}
 @media(max-width:680px){.t4-mcp .steps{grid-template-columns:1fr}}
-.t4-mcp .step{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
-.t4-mcp .step .n{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
-  font-weight:800;color:#0e1116;background:linear-gradient(135deg,var(--gold),#FF8A00);margin-bottom:12px}
-.t4-mcp .step h3{margin:0 0 4px;font-size:1.02rem;border:0;padding:0}
-.t4-mcp .step p{margin:0;color:var(--mut);font-size:.92rem}
-.t4-mcp .step a{color:var(--accent2);text-decoration:none}
-.t4-mcp pre{text-align:left;background:#0b0e13;border:1px solid var(--line);border-radius:12px;
-  padding:16px 18px;overflow-x:auto;margin:26px auto 0;max-width:720px}
-.t4-mcp code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:.9rem;color:#cfe8e4;background:none}
-.t4-mcp .cta{display:inline-flex;align-items:center;gap:10px;margin-top:30px;font-weight:700;
-  text-decoration:none;color:#0e1116;background:linear-gradient(135deg,var(--gold),#FF8A00);
-  padding:13px 24px;border-radius:12px;box-shadow:0 10px 28px rgba(255,138,0,.3)}
-.t4-mcp .cta:hover{filter:brightness(1.05)}
-.t4-mcp .fine{color:var(--mut);font-size:.85rem;margin-top:16px}
+.t4-mcp .step{background:var(--vp-c-bg);border:1px solid var(--vp-c-divider);border-radius:12px;padding:20px}
+.t4-mcp .step .n{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;
+  font-weight:700;color:var(--vp-c-white);background:var(--vp-c-brand-1);margin-bottom:12px}
+.t4-mcp .step h3{margin:0 0 4px;font-size:1rem;border:0;padding:0;color:var(--vp-c-text-1)}
+.t4-mcp .step p{margin:0;color:var(--vp-c-text-2);font-size:.9rem}
+.t4-mcp .step a{color:var(--vp-c-brand-1);text-decoration:none;font-weight:500}
+.t4-mcp .step a:hover{text-decoration:underline}
+.t4-mcp pre{text-align:left;background:var(--vp-code-block-bg);border:1px solid var(--vp-c-divider);
+  border-radius:12px;padding:16px 18px;overflow-x:auto;margin:26px auto 0;max-width:720px}
+.t4-mcp code{font-family:var(--vp-font-family-mono);font-size:.85rem;color:var(--vp-c-text-1);background:transparent}
+.t4-mcp .cta{display:inline-flex;align-items:center;gap:8px;margin-top:28px;font-weight:600;
+  text-decoration:none;border-radius:20px;padding:0 22px;line-height:38px;
+  border:1px solid var(--vp-button-brand-border);
+  color:var(--vp-button-brand-text);background:var(--vp-button-brand-bg);
+  transition:background-color .25s,border-color .25s,color .25s}
+.t4-mcp .cta:hover{border-color:var(--vp-button-brand-hover-border);
+  color:var(--vp-button-brand-hover-text);background:var(--vp-button-brand-hover-bg)}
+.t4-mcp .fine{color:var(--vp-c-text-3);font-size:.82rem;margin-top:14px}
 </style>
