@@ -37,6 +37,8 @@ hero:
 
 ---
 
+<TinaCoderPromo />
+
 ## What's new
 
 **v3.13.51 (2026-07-03)** - [full notes](/python/36-releases.md)

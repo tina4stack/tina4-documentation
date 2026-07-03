@@ -96,8 +96,6 @@ curl -fsSL https://tina4.com/install-skills.sh | TINA4_SKILLS_REF=3.13.51 sh   #
 $env:TINA4_SKILLS_REF="3.13.51"; irm https://tina4.com/install-skills.ps1 | iex  # Windows PowerShell
 ```
 
-<TinaCoderPromo />
-
 ## Create a Project
 
 Pick a language. Scaffold a project. Start the server. Three commands.
