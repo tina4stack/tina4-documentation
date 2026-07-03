@@ -117,15 +117,17 @@ function buildChapterSidebar(section: string, label: string, extras?: object[]):
 export default defineConfig({
     title: "Simple. Fast. Human.",
     description: "Tina4 - The Intelligent Native Application 4ramework",
-    // Dev-server proxy so the Ask Tina4 widget works under `pnpm docs:dev`.
-    // In production this same path is served by an Apache reverse proxy on
-    // tina4.com (see commit message for the ProxyPass snippet).
+    // The hosted RAG is public at https://rag.tina4.com, so the Ask Tina4
+    // widget calls it directly (HTTPS + wildcard CORS, no proxy needed). This
+    // block only backs the optional same-origin '/api/rag' override for anyone
+    // who sets window.TINA4_RAG_API to that path during `pnpm docs:dev`.
     vite: {
         server: {
             proxy: {
                 '/api/rag': {
-                    target: 'http://andrevanzuydam.com:11438',
+                    target: 'https://rag.tina4.com',
                     changeOrigin: true,
+                    secure: true,
                     rewrite: (p: string) => p.replace(/^\/api\/rag/, ''),
                 },
             },
@@ -138,14 +140,12 @@ export default defineConfig({
         ['script', {}, `
 (function(){
   if(typeof window==='undefined')return;
-  // Same-origin path — forwarded by the production reverse proxy
-  // (Apache: ProxyPass /api/rag http://andrevanzuydam.com:11438) and by
-  // the VitePress dev server's vite.server.proxy block below in this config.
-  // Set window.TINA4_RAG_API before this script runs to override.
-  // The previous absolute URL "http://andrevanzuydam.com:11438" was blocked
-  // by the browser as mixed content on tina4.com (HTTPS) — every question
-  // failed silently.
-  var API=window.TINA4_RAG_API||'/api/rag';
+  // The hosted RAG is public at https://rag.tina4.com over HTTPS with wildcard
+  // CORS, so the widget calls it directly from any page. No reverse proxy is
+  // needed. Set window.TINA4_RAG_API before this script runs to override, for
+  // example to a same-origin '/api/rag' path (the vite.server.proxy block and
+  // an Apache ProxyPass can forward that path to the same host).
+  var API=window.TINA4_RAG_API||'https://rag.tina4.com';
 
   function md(t){
     var h=t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -219,11 +219,11 @@ export default defineConfig({
         }).join(' \\xb7 ');
         reply.innerHTML=md(data.answer)+(srcs?'<div style="margin-top:8px;font-size:11px;color:#565f89">Sources: '+srcs+'</div>':'');
       }).catch(function(err){
-        // TypeError: Failed to fetch usually means a same-origin proxy isn't
-        // set up at \`API\` — show a hint instead of a blank error.
+        // TypeError: Failed to fetch usually means the RAG endpoint at API is
+        // unreachable (network or CORS) - show a hint instead of a blank error.
         var hint='';
         if(err&&err.message&&/failed to fetch|networkerror/i.test(err.message)){
-          hint='<div style="margin-top:6px;font-size:11px;color:#565f89">Hint: the docs proxy at <code style="background:#1a1b26;padding:1px 4px;border-radius:3px">'+API+'</code> is not reachable. Server admin must add a reverse-proxy rule (Apache: <code style="background:#1a1b26;padding:1px 4px;border-radius:3px">ProxyPass '+API+' http://andrevanzuydam.com:11438</code>).</div>';
+          hint='<div style="margin-top:6px;font-size:11px;color:#565f89">Hint: the RAG endpoint at <code style="background:#1a1b26;padding:1px 4px;border-radius:3px">'+API+'</code> could not be reached. Check your connection, or set <code style="background:#1a1b26;padding:1px 4px;border-radius:3px">window.TINA4_RAG_API</code> to a reachable endpoint.</div>';
         }
         reply.innerHTML='<span style="color:#f7768e">Error: '+(err&&err.message||'unknown')+'</span>'+hint;
       });
