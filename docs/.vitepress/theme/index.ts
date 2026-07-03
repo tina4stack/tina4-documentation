@@ -8,6 +8,7 @@ import DefaultTheme from 'vitepress/theme'
 import HomeHeroImage from './HomeHeroImage.vue'
 import InstallTabs from './InstallTabs.vue'
 import FeaturesGrid from './FeaturesGrid.vue'
+import TinaCoderPromo from './TinaCoderPromo.vue'
 import './style.css'
 
 export default {
@@ -20,5 +21,6 @@ export default {
   },
   enhanceApp({ app }) {
     app.component('FeaturesGrid', FeaturesGrid)
+    app.component('TinaCoderPromo', TinaCoderPromo)
   },
 }
