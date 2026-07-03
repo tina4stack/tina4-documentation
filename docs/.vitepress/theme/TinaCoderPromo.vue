@@ -9,10 +9,10 @@
 <template>
   <section class="t4-cta">
     <div class="wrap">
-      <h2>Free AI coding models, tuned for Tina4</h2>
-      <p>In-house, fine-tuned models that write idiomatic Tina4 right in your editor -
-        routes, ORM, queues, Tina4CSS - and run on our infrastructure, so they never
-        spend your Claude tokens. 250 requests a day, free.</p>
+      <h2>Code Tina4 without spending paid tokens</h2>
+      <p>Our in-house models are fine-tuned for Tina4 and run on our infrastructure, so
+        routes, ORM, queues, and Tina4CSS get written in your editor for free - your paid
+        AI tokens stay untouched. 250 requests a day.</p>
       <a class="cta" href="https://profile.tina4.com">Get your free token -&gt;</a>
     </div>
   </section>
