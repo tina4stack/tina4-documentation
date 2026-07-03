@@ -45,13 +45,14 @@ TINA4_MCP_REMOTE=true
 
 ### Claude Code
 
-Tina4 auto-generates `.claude/settings.json`:
+Tina4 auto-generates `.claude/settings.json` with the current Streamable HTTP transport:
 
 ```json
 {
   "mcpServers": {
     "tina4-dev": {
-      "url": "http://localhost:7148/__dev/mcp/sse"
+      "type": "http",
+      "url": "http://localhost:7148/__dev/mcp"
     }
   }
 }
@@ -59,16 +60,26 @@ Tina4 auto-generates `.claude/settings.json`:
 
 Restart Claude Code. It connects and lists the tools.
 
+Prefer the command line? Register the same server in one step:
+
+```bash
+claude mcp add --transport http tina4-dev http://localhost:7148/__dev/mcp
+```
+
 ### Cursor
 
-Copy the same MCP config into Cursor's settings. The SSE URL is identical.
+Copy the same MCP config into Cursor's settings. The `type` and `url` are identical.
 
 ### Manual Connection
 
-Any MCP client can connect via:
+Any modern MCP client talks to a single endpoint:
 
-- **SSE endpoint**: `GET http://localhost:7148/__dev/mcp/sse` -- returns the message endpoint URL
-- **Message endpoint**: `POST http://localhost:7148/__dev/mcp/message` -- accepts JSON-RPC 2.0 messages
+- **Streamable HTTP**: `POST http://localhost:7148/__dev/mcp` -- send JSON-RPC 2.0 and read the response inline. `initialize` returns an `Mcp-Session-Id` header; send it back on later calls. `DELETE` on the same URL ends the session.
+
+Older clients that speak the 2024-11-05 HTTP+SSE transport keep working:
+
+- **SSE handshake** (legacy): `GET http://localhost:7148/__dev/mcp/sse` -- returns the message endpoint URL
+- **Message endpoint** (legacy): `POST http://localhost:7148/__dev/mcp/message` -- accepts JSON-RPC 2.0 messages
 
 ---
 
@@ -224,9 +235,26 @@ The `plan_*` family lets an AI assistant cooperate with a markdown plan file in 
 
 ## 5. Protocol Details
 
-The MCP server uses JSON-RPC 2.0 over HTTP. Two endpoints serve the protocol:
+The MCP server speaks JSON-RPC 2.0 over the current Streamable HTTP transport (protocol versions `2025-06-18` and `2025-03-26`). It still answers the legacy `2024-11-05` HTTP+SSE transport so older clients keep working. The server negotiates: it echoes the version a client asks for when it can speak it, and otherwise falls back to the newest one.
 
-### SSE Endpoint (GET)
+### Streamable HTTP (current)
+
+One endpoint carries the whole conversation:
+
+```
+POST /__dev/mcp
+Content-Type: application/json
+```
+
+`initialize` mints a session and returns it in a header:
+
+```
+Mcp-Session-Id: 0f9a...c31
+```
+
+Send that header on every later request. A request bearing an unknown session gets a `404`, the client's cue to initialize again. A notification (a message with no `id`) returns `202` with an empty body. Every other request answers inline with the JSON-RPC response as `application/json`. `GET /__dev/mcp` returns `405` with an `Allow: POST, DELETE` header; `DELETE /__dev/mcp` ends the session.
+
+### Legacy HTTP+SSE (still supported)
 
 ```
 GET /__dev/mcp/sse
@@ -240,14 +268,16 @@ event: endpoint
 data: http://localhost:7148/__dev/mcp/message
 ```
 
-### Message Endpoint (POST)
+Then POST JSON-RPC messages to that endpoint:
 
 ```
 POST /__dev/mcp/message
 Content-Type: application/json
 ```
 
-Accepts JSON-RPC 2.0 requests:
+### Messages
+
+Both transports carry the same JSON-RPC 2.0 requests:
 
 ```json
 {
