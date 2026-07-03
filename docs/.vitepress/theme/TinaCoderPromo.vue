@@ -12,8 +12,8 @@
       <h2>Save your paid tokens for the hard parts</h2>
       <p>Let a model that already knows Tina4 write the routes, models, and Tina4CSS. It
         runs on our infrastructure, so the boilerplate costs nothing and your paid tokens
-        stay free for the real work. 250 requests a day.</p>
-      <a class="cta" href="https://profile.tina4.com">Get your free token -&gt;</a>
+        stay free for the real work.</p>
+      <a class="cta" href="https://profile.tina4.com">Register Now -&gt;</a>
     </div>
   </section>
 </template>
