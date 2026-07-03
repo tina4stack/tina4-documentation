@@ -69,7 +69,7 @@ Prefer to do it by hand? Skip to **Create a Project** below.
 
 Tina4 ships two AI **skills**: `tina4-developer` (backend) and `tina4-js` (frontend). They are the source of truth for the framework's patterns, so Claude (Code or Desktop) builds correctly instead of guessing.
 
-`tina4 setup` installs them for you. To install or refresh them on any machine:
+`tina4 setup` installs them for you. To install them by hand on any machine:
 
 ```bash
 curl -fsSL https://tina4.com/install-skills.sh | sh   # macOS / Linux
@@ -77,6 +77,24 @@ irm https://tina4.com/install-skills.ps1 | iex        # Windows PowerShell
 ```
 
 They install into `~/.claude/skills/tina4-developer` and `~/.claude/skills/tina4-js`, where Claude Code and Claude Desktop load them automatically.
+
+### Updating your skills
+
+The skills grow with the framework. Each release refines the patterns, and your local copies stay frozen at whatever version you installed. To pull the current ones, run the same command again:
+
+```bash
+curl -fsSL https://tina4.com/install-skills.sh | sh   # macOS / Linux
+irm https://tina4.com/install-skills.ps1 | iex        # Windows PowerShell
+```
+
+The installer overwrites each `SKILL.md` and its reference files in place, so an update never leaves a stale copy behind. There is nothing to uninstall first. After it finishes, restart Claude (Code or Desktop) so it reloads the files.
+
+The installer tracks the latest release, so a re-run gives you exactly what shipped with the current version. To pin a machine to a specific version instead, pass a release tag through `TINA4_SKILLS_REF`:
+
+```bash
+curl -fsSL https://tina4.com/install-skills.sh | TINA4_SKILLS_REF=3.13.51 sh   # macOS / Linux
+$env:TINA4_SKILLS_REF="3.13.51"; irm https://tina4.com/install-skills.ps1 | iex  # Windows PowerShell
+```
 
 ## Create a Project
 

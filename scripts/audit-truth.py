@@ -565,6 +565,9 @@ def doc_env_mentions() -> dict[str, list[Path]]:
 # them so the audit doesn't false-positive on family-prefix prose.
 _ENV_NOISE = {
     "TINA4_",  # the prefix itself, mentioned in prose
+    # Read by the install-skills.sh/.ps1 scripts (tina4 CLI repo), not the
+    # framework runtime, so it never appears in a scanned framework source tree.
+    "TINA4_SKILLS_REF",
 }
 
 
