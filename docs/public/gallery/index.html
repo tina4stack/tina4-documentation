@@ -73,8 +73,8 @@
     <h1><span>tina4js</span> Gallery</h1>
     <p>Real-world examples you can learn from, copy, and build on</p>
     <div class="stats">
-      <div class="stat"><div class="stat-value">9</div><div class="stat-label">Examples</div></div>
-      <div class="stat"><div class="stat-value">7</div><div class="stat-label">Modules Used</div></div>
+      <div class="stat"><div class="stat-value">15</div><div class="stat-label">Examples</div></div>
+      <div class="stat"><div class="stat-value">9</div><div class="stat-label">Modules Used</div></div>
       <div class="stat"><div class="stat-value">&lt;3KB</div><div class="stat-label">Framework Size</div></div>
     </div>
   </header>
@@ -214,10 +214,100 @@
         <a href="09-search.html" class="btn">View</a>
       </div>
     </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">💾</span>
+        <span class="card-title">Persistent Preferences</span>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">Six persisted signals: theme, font size, sidebar state, last-used filter, draft text, and a cross-tab synced cart. Also shows the credential-shape warning and wipe-on-logout.</p>
+        <div class="card-tags"><span class="tag">persist</span><span class="tag">signal</span><span class="tag">storage</span><span class="tag">syncTabs</span></div>
+      </div>
+      <div class="card-footer">
+        <span class="difficulty">Beginner <span class="dots">●●○○</span></span>
+        <a href="10-persistent-prefs.html" class="btn">View</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">🌍</span>
+        <span class="card-title">Localization (i18n)</span>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">Switch between six languages and watch every translated string plus Intl number, currency, and date formatting update in place. Arabic flips the layout to right-to-left. The active locale is a signal.</p>
+        <div class="card-tags"><span class="tag">i18n</span><span class="tag">signal</span><span class="tag">intl</span><span class="tag">rtl</span></div>
+      </div>
+      <div class="card-footer">
+        <span class="difficulty">Beginner <span class="dots">●●○○</span></span>
+        <a href="11-i18n.html" class="btn">View</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">&#128225;</span>
+        <span class="card-title">Live Streaming (SSE)</span>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">Server-Sent Events and NDJSON streaming wired to signals: an AI-style token stream and a live server-event feed, each piped into state behind a reactive status badge.</p>
+        <div class="card-tags"><span class="tag">sse</span><span class="tag">signal</span><span class="tag">pipe</span></div>
+      </div>
+      <div class="card-footer">
+        <span class="difficulty">Intermediate <span class="dots">&#9679;&#9679;&#9679;&#9675;</span></span>
+        <a href="12-streaming.html" class="btn">View</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">&#127965;</span>
+        <span class="card-title">Islands (Web Components)</span>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">A static, server-rendered product page with three self-hydrating Tina4Element islands - star rating, add-to-cart, and a live viewer count - each shadow-DOM encapsulated with its own scoped styles.</p>
+        <div class="card-tags"><span class="tag">component</span><span class="tag">shadow-dom</span><span class="tag">signal</span></div>
+      </div>
+      <div class="card-footer">
+        <span class="difficulty">Advanced <span class="dots">&#9679;&#9679;&#9679;&#9679;</span></span>
+        <a href="13-islands.html" class="btn">View</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">&#128279;</span>
+        <span class="card-title">GraphQL Client</span>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">Typed queries and mutations through api.graphql(): search with variables, restock with a mutation, and a live wire console showing the exact request and response.</p>
+        <div class="card-tags"><span class="tag">graphql</span><span class="tag">api</span><span class="tag">signal</span></div>
+      </div>
+      <div class="card-footer">
+        <span class="difficulty">Intermediate <span class="dots">&#9679;&#9679;&#9679;&#9675;</span></span>
+        <a href="14-graphql.html" class="btn">View</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">&#128228;</span>
+        <span class="card-title">File Upload</span>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">Drag-and-drop or browse, a real FileReader preview, and multipart api.upload() with a live per-file progress bar.</p>
+        <div class="card-tags"><span class="tag">api</span><span class="tag">upload</span><span class="tag">signal</span></div>
+      </div>
+      <div class="card-footer">
+        <span class="difficulty">Beginner <span class="dots">&#9679;&#9679;&#9675;&#9675;</span></span>
+        <a href="15-upload.html" class="btn">View</a>
+      </div>
+    </div>
   </div>
 
   <footer>
-    <p>Built with <a href="https://www.npmjs.com/package/tina4js">tina4js</a> v1.0.7 — Sub-3KB reactive framework</p>
+    <p>Built with <a href="https://www.npmjs.com/package/tina4js">tina4js</a> v1.0.7 — Sub-3KB core, reactive framework</p>
     <p style="margin-top:0.5rem">Each example is self-contained. View source to learn.</p>
   </footer>
 </body>
