@@ -10,7 +10,7 @@ set -euo pipefail
 # Pin skills to a released tag, not a moving branch, so an install is
 # reproducible and auditable. Bump this when the skills change in a new
 # tina4-python release. Override with TINA4_SKILLS_REF if you need a branch.
-ref="${TINA4_SKILLS_REF:-3.13.51}"
+ref="${TINA4_SKILLS_REF:-3.13.52}"
 base="https://raw.githubusercontent.com/tina4stack/tina4-python/${ref}/.claude/skills"
 dest="$HOME/.claude/skills"
 
