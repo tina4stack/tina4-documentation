@@ -1,19 +1,21 @@
 # Posting forms and Token handling
 
 ::: tip 🔥 Hot Tips
-- Most route endpoints are secure by default (Not GET)
-- Redirect after successful POST (Post/Redirect/Get pattern)
-- Use `request.params` for form data and query data
-- Tokens available in 3 ways
-  :::
 
-## Securing your routes {#secure-routes}
+* Most route endpoints are secure by default (Not GET)
+* Redirect after successful POST (Post/Redirect/Get pattern)
+* Use `request.params` for form data and query data
+* Tokens available in 3 ways :::
+
+## Securing your routes <a href="#secure-routes" id="secure-routes"></a>
+
 If you're used to posting forms in the traditional manner to the web service, then:
 
 * All `POST`, `PUT`, `PATCH`, and `DELETE` requests are **secured by default**
 * You **must** pass a `formToken` input value to be validated (CSRF protection)
 * `GET` requests must be manually secured
 * Invalid tokens return a `403 Forbidden` automatically.
+
 ### Standard Route Setup
 
 ```php
@@ -31,7 +33,9 @@ If you're used to posting forms in the traditional manner to the web service, th
     return $response($message, HTTP_OK, TEXT_HTML);
 });
 ```
+
 ### Advanced Route Setup
+
 ```php
 /**
  * GET route protected by the annotation
@@ -43,7 +47,9 @@ If you're used to posting forms in the traditional manner to the web service, th
     return $response($message, HTTP_OK, TEXT_HTML);
 });
 ```
+
 Complex route security can be obtained by labels after the `@secure` annotation. These can be accessed in the `$request->security` array and incorporated into your security logic.
+
 ```php
 /**
  * GET route protected by the annotation
@@ -57,7 +63,8 @@ Complex route security can be obtained by labels after the `@secure` annotation.
 });
 ```
 
-## Setting up the template with form tokens {#form-tokens}
+## Setting up the template with form tokens <a href="#form-tokens" id="form-tokens"></a>
+
 ```twig
 <!-- templates/contact.twig -->
 <form method="POST" action="/contact">
@@ -78,30 +85,33 @@ Complex route security can be obtained by labels after the `@secure` annotation.
     <button type="submit">Send Message</button>
 </form>
 ```
+
 ### Form tokens - Twig Global Function
-The twig global function generates a token which can be added to a hidden input. It can be passed a json payload, which
-can be found in the `payload` parameter of the JWT token.
+
+The twig global function generates a token which can be added to a hidden input. It can be passed a json payload, which can be found in the `payload` parameter of the JWT token.
+
 ```twig
 {% set token = formToken({"page": "login", "version":"1.01"}) %}
 <input type="hidden" name="formToken" value="{{ token }}">
 ```
+
 ### Form tokens - Twig Filters
-The twig filter is simpler to use, auto generating a hidden input field. The given name `contactForm` below, will be added to the parameter
-`formName` in the JWT token payload and can be used as page specific tokens.
+
+The twig filter is simpler to use, auto generating a hidden input field. The given name `contactForm` below, will be added to the parameter `formName` in the JWT token payload and can be used as page specific tokens.
+
 ```twig
 <!-- Auto-generates <input type="hidden" name="formToken" value="ey..."> -->
 {{ "contactForm" | formToken }} 
 ```
-### Form tokens - Response Headers
-Specifically useful for ajax reponses, a `freshtoken` is supplied in the response headers. There are numerous ways to access
-the `freshtoken` but will depend on how the ajax call was made, which is beyond the scope of this article. 
-::: info
-This is made simpler when using the [Tina4Helper.js](tina4helper.md) 
-:::
 
-## File Uploads with Forms {#upload-files}
+### Form tokens - Response Headers
+
+Specifically useful for ajax reponses, a `freshtoken` is supplied in the response headers. There are numerous ways to access the `freshtoken` but will depend on how the ajax call was made, which is beyond the scope of this article. ::: info This is made simpler when using the [Tina4Helper.js](/broken/pages/5orz7JC70OGbPRNM2o9d) :::
+
+## File Uploads with Forms <a href="#upload-files" id="upload-files"></a>
 
 Add `enctype="multipart/form-data"` to the form.
+
 ```twig
 // For a single file upload
 <form method="POST" action="/upload" enctype="multipart/form-data">
@@ -111,7 +121,9 @@ Add `enctype="multipart/form-data"` to the form.
     <button type="submit">Upload Files</button>
 </form>
 ```
+
 Uploading multiple files requires the `multiple` attribute and an array added to the name
+
 ```twig
 // For multiple file uploads
 <form method="POST" action="/upload" enctype="multipart/form-data">
@@ -121,7 +133,9 @@ Uploading multiple files requires the `multiple` attribute and an array added to
     <button type="submit">Upload Files</button>
 </form>
 ```
+
 The files will be available in the standard php `$_FILES` super global and in the `$request->files` parameter.
+
 ```php
 \Tina4\Post::add("/upload", function(\Tina4\Request $request,\Tina4\Response $response) {
     $files = $request->files;
@@ -133,7 +147,7 @@ The files will be available in the standard php `$_FILES` super global and in th
 });
 ```
 
-## Validation & Error Handling {#handle-errors}
+## Validation & Error Handling <a href="#handle-errors" id="handle-errors"></a>
 
 Return errors and old input on failure.
 
@@ -177,13 +191,13 @@ This error data can be used in the twig to repopulate fields and deliver error m
 
 ## Disabling Protection
 
-Unlike Tina4Python, there is no `noauth` feature to switch off default route security. Should one need to create public
-webhooks there are more than enough strategies to create a bypass.
+Unlike Tina4Python, there is no `noauth` feature to switch off default route security. Should one need to create public webhooks there are more than enough strategies to create a bypass.
+
 * use an unsecured get route
 * Overwrite the auth `validate` function.
 * add the `@secure` annotation to the POST route, add a name and using `request->security` create specialised security overwriting.
 
-## Example: Full Login Flow {#login-example}
+## Example: Full Login Flow <a href="#login-example" id="login-example"></a>
 
 ### Routes
 

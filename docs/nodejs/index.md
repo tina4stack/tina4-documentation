@@ -1,67 +1,18 @@
 # Tina4 Node.js -- Quick Reference
 
-> **TINA4: The Intelligent Native Application 4ramework**
-> Simple. Fast. Human. | Built for AI. Built for you.
-
-<div v-pre>
-
+> **TINA4: The Intelligent Native Application 4ramework** Simple. Fast. Human. | Built for AI. Built for you.
 
 ::: tip Hot Tips
-- Routes go in `src/routes/`, templates in `src/templates/`, static files in `src/public/`
-- GET routes are public by default; POST/PUT/PATCH/DELETE require a token
-- Return an object from `res.json()` and the framework sets `application/json`
-- Use `tina4 serve` to launch the dev server on port 7148
-- Node.js 22+ required (uses built-in `node:sqlite`)
-:::
 
-<nav class="tina4-menu">
-    <a href="#installation">Installation</a> &bull;
-    <a href="#static-websites">Static Websites</a> &bull;
-    <a href="#basic-routing">Routing</a> &bull;
-    <a href="#middleware">Middleware</a> &bull;
-    <a href="#templates">Templates</a> &bull;
-    <a href="#session-handling">Sessions</a> &bull;
-    <a href="#scss-stylesheets">SCSS</a> &bull;
-    <a href="#environments">Environments</a> &bull;
-    <a href="#authentication">Authentication</a> &bull;
-    <a href="#html-forms-and-tokens">Forms &amp; Tokens</a> &bull;
-    <a href="#ajax">AJAX</a> &bull;
-    <a href="#swagger">OpenAPI</a> &bull;
-    <a href="#databases">Databases</a> &bull;
-    <a href="#database-results">Database Results</a> &bull;
-    <a href="#migrations">Migrations</a> &bull;
-    <a href="#orm">ORM</a> &bull;
-    <a href="#crud">CRUD</a> &bull;
-    <a href="#consuming-rest-apis">REST Client</a> &bull;
-    <a href="#inline-testing">Testing</a> &bull;
-    <a href="#services">Services</a> &bull;
-    <a href="#websockets">Websockets</a> &bull;
-    <a href="#queues">Queues</a> &bull;
-    <a href="#wsdl">WSDL</a> &bull;
-    <a href="#graphql">GraphQL</a> &bull;
-    <a href="#localization">Localization</a> &bull;
-    <a href="#html-builder">HTML Builder</a> &bull;
-    <a href="#events">Events</a> &bull;
-    <a href="#logging">Logging</a> &bull;
-    <a href="#response-cache">Cache</a> &bull;
-    <a href="#health">Health</a> &bull;
-    <a href="#container">DI Container</a> &bull;
-    <a href="#error-overlay">Error Overlay</a> &bull;
-    <a href="#dev-admin">Dev Admin</a> &bull;
-    <a href="#cli">CLI</a> &bull;
-    <a href="#mcp">MCP Server</a> &bull;
-    <a href="#fakedata">FakeData</a>
-</nav>
+* Routes go in `src/routes/`, templates in `src/templates/`, static files in `src/public/`
+* GET routes are public by default; POST/PUT/PATCH/DELETE require a token
+* Return an object from `res.json()` and the framework sets `application/json`
+* Use `tina4 serve` to launch the dev server on port 7148
+* Node.js 22+ required (uses built-in `node:sqlite`) :::
 
-<style>
-.tina4-menu {
-  background: #2c3e50; color: white; padding: 1rem; border-radius: 8px; margin: 2rem 0; text-align: center; font-size: 1.1rem;
-}
-.tina4-menu a { color: #1abc9c; text-decoration: none; margin: 0 0.4rem; }
-.tina4-menu a:hover { text-decoration: underline; }
-</style>
+[Installation](index.md#installation) • [Static Websites](index.md#static-websites) • [Routing](index.md#basic-routing) • [Middleware](index.md#middleware) • [Templates](index.md#templates) • [Sessions](index.md#session-handling) • [SCSS](index.md#scss-stylesheets) • [Environments](index.md#environments) • [Authentication](index.md#authentication) • [Forms & Tokens](index.md#html-forms-and-tokens) • [AJAX](index.md#ajax) • [OpenAPI](index.md#swagger) • [Databases](index.md#databases) • [Database Results](index.md#database-results) • [Migrations](index.md#migrations) • [ORM](index.md#orm) • [CRUD](index.md#crud) • [REST Client](index.md#consuming-rest-apis) • [Testing](index.md#inline-testing) • [Services](index.md#services) • [Websockets](index.md#websockets) • [Queues](index.md#queues) • [WSDL](index.md#wsdl) • [GraphQL](index.md#graphql) • [Localization](index.md#localization) • [HTML Builder](index.md#html-builder) • [Events](index.md#events) • [Logging](index.md#logging) • [Cache](index.md#response-cache) • [Health](index.md#health) • [DI Container](index.md#container) • [Error Overlay](index.md#error-overlay) • [Dev Admin](index.md#dev-admin) • [CLI](index.md#cli) • [MCP Server](index.md#mcp) • [FakeData](index.md#fakedata)
 
-### Installation {#installation}
+### Installation <a href="#installation" id="installation"></a>
 
 The server starts and your browser shows the result.
 
@@ -76,7 +27,7 @@ tina4 serve
 
 The dev server runs at `http://localhost:7148`. One dependency. No `node-gyp`. No native binaries. SQLite uses Node's built-in `node:sqlite` module.
 
-### Static Websites {#static-websites}
+### Static Websites <a href="#static-websites" id="static-websites"></a>
 
 Put `.html` files in `src/templates/` and assets in `src/public/`. The framework serves them without additional configuration.
 
@@ -95,7 +46,7 @@ Router.get("/", async (req, res) => {
 
 [More details](04-templates.md) on static website routing.
 
-### Basic Routing {#basic-routing}
+### Basic Routing <a href="#basic-routing" id="basic-routing"></a>
 
 The `Router` class maps requests to your code. Define a path. Write a handler. The framework does the rest.
 
@@ -141,7 +92,7 @@ Router.post("/register", async (req, res) => {
 });
 ```
 
-### Middleware {#middleware}
+### Middleware <a href="#middleware" id="middleware"></a>
 
 Middleware sits between the request and your handler. It runs before, after, or both.
 
@@ -182,7 +133,7 @@ Router.group("/api/admin", (group) => {
 }, [requireAuth]);
 ```
 
-### Template Rendering {#templates}
+### Template Rendering <a href="#templates" id="templates"></a>
 
 Place `.html` files in `src/templates/` and static assets in `src/public/`. The Frond engine reads your template, fills in the variables, and delivers clean HTML.
 
@@ -201,15 +152,15 @@ Router.get("/welcome", async (req, res) => {
 
 Frond supports Twig-compatible syntax: loops, conditionals, extends, blocks, includes, and filters. Zero dependencies. Built from scratch.
 
-### Sessions {#session-handling}
+### Sessions <a href="#session-handling" id="session-handling"></a>
 
 The default session handler stores data on the file system. Override `TINA4_SESSION_HANDLER` in `.env` to switch backends.
 
-| Handler | Backend | Notes |
-|---------|---------|-------|
-| `FileSession` (default) | File system | No extra config |
-| `RedisSession` | Redis | Set `TINA4_CACHE_URL` |
-| `MongoSession` | MongoDB | Set `TINA4_MONGO_URI` |
+| Handler                 | Backend     | Notes                 |
+| ----------------------- | ----------- | --------------------- |
+| `FileSession` (default) | File system | No extra config       |
+| `RedisSession`          | Redis       | Set `TINA4_CACHE_URL` |
+| `MongoSession`          | MongoDB     | Set `TINA4_MONGO_URI` |
 
 ```bash
 TINA4_SESSION_HANDLER=RedisSession
@@ -237,7 +188,7 @@ Router.get("/session/clear", async (req, res) => {
 });
 ```
 
-### SCSS Stylesheets {#scss-stylesheets}
+### SCSS Stylesheets <a href="#scss-stylesheets" id="scss-stylesheets"></a>
 
 Drop `.scss` files in `src/scss/`. The framework compiles them to `src/public/css/` automatically.
 
@@ -258,7 +209,7 @@ Reference the compiled file from your templates:
 
 [More details](17-frontend.md) on CSS and SCSS.
 
-### Environments {#environments}
+### Environments <a href="#environments" id="environments"></a>
 
 The `.env` file holds your project configuration. The framework reads it at startup.
 
@@ -274,8 +225,6 @@ TINA4_API_KEY=ABC1234
 const apiKey = process.env.TINA4_API_KEY ?? "ABC1234";
 ```
 
-
-
 Access env vars programmatically:
 
 ```typescript
@@ -289,7 +238,7 @@ requireEnv("TINA4_DATABASE_URL");          // Throws if missing
 isTruthy(getEnv("TINA4_DEBUG"));     // true for "true", "1", "yes"
 ```
 
-### Authentication {#authentication}
+### Authentication <a href="#authentication" id="authentication"></a>
 
 POST, PUT, PATCH, and DELETE routes require a bearer token by default. GET routes are public unless you mark them otherwise.
 
@@ -322,7 +271,7 @@ Router.get("/api/account", async (req, res) => {
 }).secure().cache();
 ```
 
-### HTML Forms and Tokens {#html-forms-and-tokens}
+### HTML Forms and Tokens <a href="#html-forms-and-tokens" id="html-forms-and-tokens"></a>
 
 Tina4 embeds a CSRF form token into every POST form. The framework validates it on submission.
 
@@ -350,7 +299,7 @@ Router.post("/register", async (req, res) => {
 
 [More details](03-request-response.md) on form tokens, file uploads, error handling, and disabling auth.
 
-### AJAX and frond.js {#ajax}
+### AJAX and frond.js <a href="#ajax" id="ajax"></a>
 
 Tina4 ships with frond.js, a small zero-dependency JavaScript library for AJAX calls, form submissions, and real-time WebSocket connections.
 
@@ -368,9 +317,9 @@ frond.post("/api/save", { name: "Alice" }, (data) => {
 </script>
 ```
 
-[More details](/general/frond.md) on available features.
+[More details](https://github.com/tina4stack/tina4-documentation/blob/main/general/frond.md) on available features.
 
-### OpenAPI and Swagger UI {#swagger}
+### OpenAPI and Swagger UI <a href="#swagger" id="swagger"></a>
 
 Add JSDoc annotations to your routes. Visit `http://localhost:7148/swagger`. Your API documentation appears, interactive and ready to share.
 
@@ -389,7 +338,7 @@ Router.get("/api/products", async (req, res) => {
 
 Swagger runs when `TINA4_DEBUG=true`. Set `TINA4_SWAGGER_ENABLED=true` in `.env` to expose it in production. The raw spec lives at `/swagger/json` -- standard OpenAPI 3.0, compatible with every tool in the OpenAPI world.
 
-### Databases {#databases}
+### Databases <a href="#databases" id="databases"></a>
 
 Tina4 defaults to SQLite at `data/app.db`. Set `TINA4_DATABASE_URL` in `.env` to switch engines. The API stays identical across SQLite, PostgreSQL, MySQL, SQL Server, and Firebird.
 
@@ -411,7 +360,7 @@ const result = await db.fetch("SELECT * FROM users LIMIT 10");
 
 Follow the links for more on [Available Connections](05-database.md), [Core Methods](05-database.md), [Usage](05-database.md) and [Full transaction control](05-database.md).
 
-### Database Results {#database-results}
+### Database Results <a href="#database-results" id="database-results"></a>
 
 ```typescript
 import { Database } from "tina4-nodejs";
@@ -427,7 +376,7 @@ const jsonData  = result.toJson();
 
 Looking at detailed [Usage](05-database.md) will deepen your understanding.
 
-### Migrations {#migrations}
+### Migrations <a href="#migrations" id="migrations"></a>
 
 Generate a timestamped migration file. Write your SQL. Run it. The framework tracks what has run.
 
@@ -452,7 +401,7 @@ tina4 migrate
 
 Roll back with `tina4 migrate --rollback`. Check status with `tina4 migrate --status`. Each migration has UP and DOWN sections, so every change is reversible.
 
-### ORM {#orm}
+### ORM <a href="#orm" id="orm"></a>
 
 ORM models live in `src/orm/`. Each file maps a class to a table. Define fields, types, and constraints. The ORM handles the rest.
 
@@ -491,7 +440,7 @@ await found.delete();
 
 ORM covers more ground than this snippet shows. Study the [Advanced Detail](06-orm.md) to get the full value.
 
-### CRUD {#crud}
+### CRUD <a href="#crud" id="crud"></a>
 
 The CLI generates a full CRUD route file from your model. One command wires up all five REST endpoints:
 
@@ -510,7 +459,7 @@ Router.get("/users/dashboard", async (req, res) => {
 
 [More details](19-scaffolding.md) on how CRUD generates its files and where they live.
 
-### Consuming REST APIs {#consuming-rest-apis}
+### Consuming REST APIs <a href="#consuming-rest-apis" id="consuming-rest-apis"></a>
 
 ```typescript
 import { Api } from "tina4-nodejs";
@@ -526,7 +475,7 @@ console.log(created.body);
 
 [More details](21-api-client.md) on sending POST data, authorization headers, and other controls for outbound API requests.
 
-### Inline Testing {#inline-testing}
+### Inline Testing <a href="#inline-testing" id="inline-testing"></a>
 
 ```typescript
 import { tests, assertEqual, assertRaises } from "tina4-nodejs";
@@ -544,7 +493,7 @@ function divide(a: number, b: number): number {
 
 Run: `tina4 test`
 
-### Services {#services}
+### Services <a href="#services" id="services"></a>
 
 Services are long-running background processes that start with your application. Define a class that extends `Service` and implement the `run()` method.
 
@@ -569,7 +518,7 @@ import { CleanupService } from "./services/CleanupService";
 App.register(CleanupService);
 ```
 
-### Websockets {#websockets}
+### Websockets <a href="#websockets" id="websockets"></a>
 
 Define a WebSocket handler the same way you define an HTTP route. The connection is persistent and bi-directional. No `ws` or `socket.io` required.
 
@@ -593,7 +542,7 @@ The callback receives three arguments: `connection` (send messages through it), 
 
 Have a look at the PubSub example under [WebSockets](23-websocket.md).
 
-### Queues {#queues}
+### Queues <a href="#queues" id="queues"></a>
 
 Push slow work to the background. The user gets a response in milliseconds. The work still happens -- just not during the request.
 
@@ -626,7 +575,7 @@ for (const job of queue.consume("emails")) {
 
 No Redis. No RabbitMQ. The file-based backend works out of the box.
 
-### WSDL {#wsdl}
+### WSDL <a href="#wsdl" id="wsdl"></a>
 
 ```typescript
 import { WSDL, wsdlOperation, wsdlRoute } from "tina4-nodejs";
@@ -655,7 +604,7 @@ Router.post("/calculator", async (req, res) => {
 
 [More Details](25-wsdl-soap.md) on WSDL configuration and usage.
 
-### GraphQL {#graphql}
+### GraphQL <a href="#graphql" id="graphql"></a>
 
 Tina4 ships a built-in GraphQL endpoint. Define your schema and resolvers. The framework mounts them at `/graphql`.
 
@@ -693,12 +642,9 @@ Visit `http://localhost:7148/graphql` to query your API. The GraphiQL playground
 
 [More details](22-graphql.md) on mutations, subscriptions, and authentication.
 
-<nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
-  <a href="#">Back to top</a>
-</nav>
+[Back to top](index.md)
 
-
-### HTML Builder {#html-builder}
+### HTML Builder <a href="#html-builder" id="html-builder"></a>
 
 ```typescript
 import { HtmlElement, addHtmlHelpers } from "tina4-nodejs";
@@ -718,7 +664,7 @@ addHtmlHelpers(h);
 const html = h._div({ class: "card" }, h._h1("Title"), h._p("Description"));
 ```
 
-### Events {#events}
+### Events <a href="#events" id="events"></a>
 
 Tina4 ships a built-in event bus. Emit from anywhere. Listen from anywhere. No third-party library required.
 
@@ -741,7 +687,7 @@ Events.emit("user.registered", { email: "alice@example.com" });
 
 Use events to decouple modules. A route emits. A service listens. Neither knows the other exists.
 
-### Logging {#logging}
+### Logging <a href="#logging" id="logging"></a>
 
 ```typescript
 import { Log } from "tina4-nodejs";
@@ -760,7 +706,7 @@ TINA4_LOG_LEVEL=ALL    # DEBUG | INFO | WARN | ERROR | ALL
 
 Output goes to `stdout` in development and to `logs/app.log` in production. Each line is timestamped and tagged with the level. `Log.debug()` is suppressed when `TINA4_DEBUG=false`.
 
-### Response Cache {#response-cache}
+### Response Cache <a href="#response-cache" id="response-cache"></a>
 
 Chain `.cache()` onto any route to cache the full response. Repeat requests skip the handler entirely.
 
@@ -786,7 +732,7 @@ Router.get("/api/dashboard", async (req, res) => {
 
 The cache key is the full request path. The store is in-memory by default. Set `TINA4_CACHE_BACKEND=redis` and `TINA4_CACHE_URL` to share cache across instances.
 
-### Health Endpoint {#health}
+### Health Endpoint <a href="#health" id="health"></a>
 
 Tina4 exposes `/health` without any configuration. Point your load balancer or uptime monitor at it.
 
@@ -812,7 +758,7 @@ Health.register("database", async () => {
 });
 ```
 
-### DI Container {#container}
+### DI Container <a href="#container" id="container"></a>
 
 The built-in dependency injection container wires up services without manual instantiation.
 
@@ -832,14 +778,15 @@ await mailer.send({ to: "alice@example.com", subject: "Hi" });
 
 Services registered before `App.start()` are available in every route, middleware, and service. Circular dependencies throw at registration time, not at runtime.
 
-### Error Overlay {#error-overlay}
+### Error Overlay <a href="#error-overlay" id="error-overlay"></a>
 
 When `TINA4_DEBUG=true`, unhandled errors render a full-screen overlay in the browser instead of a blank page or a plain `500` response.
 
 The overlay shows:
-- The error message and stack trace
-- The source file and line number
-- The incoming request path and method
+
+* The error message and stack trace
+* The source file and line number
+* The incoming request path and method
 
 No configuration needed. Set `TINA4_DEBUG=false` in production and the overlay disappears. The framework returns a plain `500` JSON response instead.
 
@@ -847,7 +794,7 @@ No configuration needed. Set `TINA4_DEBUG=false` in production and the overlay d
 TINA4_DEBUG=true   # enables overlay in browser
 ```
 
-### Dev Admin {#dev-admin}
+### Dev Admin <a href="#dev-admin" id="dev-admin"></a>
 
 The `/__dev` dashboard is available when `TINA4_DEBUG=true`. It gives a live view of your running application.
 
@@ -857,15 +804,15 @@ http://localhost:7148/__dev
 
 The dashboard shows:
 
-- All registered routes with their methods, paths, and middleware
-- Active sessions and their keys
-- Queue depths per topic
-- Recent log entries
-- Environment variables (values redacted for secrets)
+* All registered routes with their methods, paths, and middleware
+* Active sessions and their keys
+* Queue depths per topic
+* Recent log entries
+* Environment variables (values redacted for secrets)
 
 No setup required. The dashboard disappears in production when `TINA4_DEBUG=false`.
 
-### CLI Commands {#cli}
+### CLI Commands <a href="#cli" id="cli"></a>
 
 ```bash
 # Scaffold a new project
@@ -898,7 +845,7 @@ tina4 build
 
 All commands run from the project root. `tina4 --help` lists every command with a short description.
 
-### MCP Server {#mcp}
+### MCP Server <a href="#mcp" id="mcp"></a>
 
 Tina4 starts a Model Context Protocol server automatically when `TINA4_DEBUG=true`. AI tools (Cursor, Claude Code, VS Code Copilot) connect to it and gain live awareness of your running application.
 
@@ -909,14 +856,14 @@ TINA4_MCP_PORT=7149       # override the default port
 
 The MCP server exposes:
 
-- Route registry: every path, method, and handler location
-- ORM schema: all models and their field definitions
-- Migration history: applied and pending migrations
-- Log stream: live tail of the application log
+* Route registry: every path, method, and handler location
+* ORM schema: all models and their field definitions
+* Migration history: applied and pending migrations
+* Log stream: live tail of the application log
 
 Connect your AI tool to `http://localhost:7149/mcp` and it reads your codebase in context. No plugin. No extra install.
 
-### FakeData {#fakedata}
+### FakeData <a href="#fakedata" id="fakedata"></a>
 
 `FakeData` generates realistic test data. Use it in tests, seeders, and fixtures. Zero external dependencies.
 
@@ -948,8 +895,7 @@ for (let i = 0; i < 50; i++) {
 }
 ```
 
-</div>
-### Localization (i18n) {#localization}
+\### Localization (i18n) {#localization}
 
 Set `TINA4_LOCALE` in `.env` to change the framework language. Supported: `en`, `fr`, `af`.
 
@@ -971,11 +917,8 @@ import { AVAILABLE_LANGUAGES } from "tina4-nodejs";
 // ["en", "fr", "af"]
 ```
 
-
-
----
+***
 
 ## 📕 Download the book
 
-[**Tina4 for Node.js Developers** (PDF)](/pdfs/Tina4-for-Nodejs-Developers.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
-
+[**Tina4 for Node.js Developers** (PDF)](https://github.com/tina4stack/tina4-documentation/blob/main/pdfs/Tina4-for-Nodejs-Developers.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.

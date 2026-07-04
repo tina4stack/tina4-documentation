@@ -2,197 +2,95 @@
 
 Live interactive demos showing tina4js in real-world scenarios. Each example is self-contained and uses the CDN build, so no build step is required.
 
-<style>
-.gallery-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  margin: 2rem 0;
-}
-.gallery-card {
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--vp-c-bg-soft);
-  transition: box-shadow 0.2s;
-}
-.gallery-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
-.gallery-card iframe {
-  width: 100%;
-  height: 480px;
-  border: none;
-  display: block;
-  background: #0f172a;
-}
-.gallery-card-body { padding: 1rem; }
-.gallery-card-body h3 { margin: 0 0 0.4rem; font-size: 1rem; }
-.gallery-card-body p { margin: 0 0 0.75rem; font-size: 0.85rem; color: var(--vp-c-text-2); }
-.tags { display: flex; flex-wrap: wrap; gap: 0.3rem; }
-.tag {
-  font-size: 0.7rem; padding: 0.15rem 0.5rem;
-  border-radius: 4px; background: var(--vp-c-brand-soft);
-  color: var(--vp-c-brand-1); font-weight: 600; text-transform: uppercase;
-}
-.open-link {
-  display: inline-block; margin-top: 0.75rem;
-  font-size: 0.82rem; color: var(--vp-c-brand-1); text-decoration: none;
-}
-.open-link:hover { text-decoration: underline; }
-</style>
+### 📊 Admin Dashboard
 
-<div class="gallery-grid">
+Live stats with reactive counters, computed KPIs, polling effects, and a notification feed.
 
-  <div class="gallery-card">
-    <iframe src="/gallery/01-dashboard.html" loading="lazy"></iframe>
-    <div class="gallery-card-body">
-      <h3>📊 Admin Dashboard</h3>
-      <p>Live stats with reactive counters, computed KPIs, polling effects, and a notification feed.</p>
-      <div class="tags"><span class="tag">signal</span><span class="tag">computed</span><span class="tag">effect</span><span class="tag">component</span></div>
-      <a class="open-link" href="/gallery/01-dashboard.html" target="_blank">Open full demo ↗</a>
-    </div>
-  </div>
+signalcomputedeffectcomponent[Open full demo ↗](https://github.com/tina4stack/tina4-documentation/blob/main/gallery/01-dashboard.html)
 
-  <div class="gallery-card">
-    <iframe src="/gallery/02-contacts.html" loading="lazy"></iframe>
-    <div class="gallery-card-body">
-      <h3>👥 Contact Manager</h3>
-      <p>Full CRUD: create, edit, delete contacts with search filtering and form validation.</p>
-      <div class="tags"><span class="tag">signal</span><span class="tag">api</span><span class="tag">html</span><span class="tag">routing</span></div>
-      <a class="open-link" href="/gallery/02-contacts.html" target="_blank">Open full demo ↗</a>
-    </div>
-  </div>
+### 👥 Contact Manager
 
-  <div class="gallery-card">
-    <iframe src="/gallery/03-chat.html" loading="lazy"></iframe>
-    <div class="gallery-card-body">
-      <h3>💬 Live Chat</h3>
-      <p>WebSocket-powered chat with signal-driven message list, auto-scroll, and reconnect status.</p>
-      <div class="tags"><span class="tag">websocket</span><span class="tag">signal</span><span class="tag">component</span></div>
-      <a class="open-link" href="/gallery/03-chat.html" target="_blank">Open full demo ↗</a>
-    </div>
-  </div>
+Full CRUD: create, edit, delete contacts with search filtering and form validation.
 
-  <div class="gallery-card">
-    <iframe src="/gallery/04-auth.html" loading="lazy"></iframe>
-    <div class="gallery-card-body">
-      <h3>🔐 Auth Flow</h3>
-      <p>Login / logout with JWT token storage, route guards, protected pages, and 401 redirect.</p>
-      <div class="tags"><span class="tag">api</span><span class="tag">routing</span><span class="tag">signal</span></div>
-      <a class="open-link" href="/gallery/04-auth.html" target="_blank">Open full demo ↗</a>
-    </div>
-  </div>
+signalapihtmlrouting[Open full demo ↗](https://github.com/tina4stack/tina4-documentation/blob/main/gallery/02-contacts.html)
 
-  <div class="gallery-card">
-    <iframe src="/gallery/05-cart.html" loading="lazy"></iframe>
-    <div class="gallery-card-body">
-      <h3>🛒 Shopping Cart</h3>
-      <p>Product listing, add-to-cart, quantity controls, computed totals, and checkout summary.</p>
-      <div class="tags"><span class="tag">signal</span><span class="tag">computed</span><span class="tag">batch</span></div>
-      <a class="open-link" href="/gallery/05-cart.html" target="_blank">Open full demo ↗</a>
-    </div>
-  </div>
+### 💬 Live Chat
 
-  <div class="gallery-card">
-    <iframe src="/gallery/06-forms.html" loading="lazy"></iframe>
-    <div class="gallery-card-body">
-      <h3>📝 Dynamic Form Builder</h3>
-      <p>Add/remove fields at runtime, reactive validation, conditional sections, and live preview.</p>
-      <div class="tags"><span class="tag">signal</span><span class="tag">html</span><span class="tag">effect</span></div>
-      <a class="open-link" href="/gallery/06-forms.html" target="_blank">Open full demo ↗</a>
-    </div>
-  </div>
+WebSocket-powered chat with signal-driven message list, auto-scroll, and reconnect status.
 
-  <div class="gallery-card">
-    <iframe src="/gallery/07-pwa-notes.html" loading="lazy"></iframe>
-    <div class="gallery-card-body">
-      <h3>📱 PWA Notes</h3>
-      <p>Offline-capable notes app with service worker, localStorage persistence, and install prompt.</p>
-      <div class="tags"><span class="tag">pwa</span><span class="tag">signal</span><span class="tag">component</span></div>
-      <a class="open-link" href="/gallery/07-pwa-notes.html" target="_blank">Open full demo ↗</a>
-    </div>
-  </div>
+websocketsignalcomponent[Open full demo ↗](https://github.com/tina4stack/tina4-documentation/blob/main/gallery/03-chat.html)
 
-  <div class="gallery-card">
-    <iframe src="/gallery/08-datatable.html" loading="lazy"></iframe>
-    <div class="gallery-card-body">
-      <h3>📋 Data Table</h3>
-      <p>Sortable, paginated data table with column filters, row selection, and CSV export.</p>
-      <div class="tags"><span class="tag">signal</span><span class="tag">computed</span><span class="tag">html</span></div>
-      <a class="open-link" href="/gallery/08-datatable.html" target="_blank">Open full demo ↗</a>
-    </div>
-  </div>
+### 🔐 Auth Flow
 
-  <div class="gallery-card">
-    <iframe src="/gallery/09-search.html" loading="lazy"></iframe>
-    <div class="gallery-card-body">
-      <h3>🔍 Live Search</h3>
-      <p>Debounced search with API calls, loading states, highlight matching, and keyboard navigation.</p>
-      <div class="tags"><span class="tag">signal</span><span class="tag">api</span><span class="tag">effect</span></div>
-      <a class="open-link" href="/gallery/09-search.html" target="_blank">Open full demo ↗</a>
-    </div>
-  </div>
+Login / logout with JWT token storage, route guards, protected pages, and 401 redirect.
 
-  <div class="gallery-card">
-    <iframe src="/gallery/10-persistent-prefs.html" loading="lazy"></iframe>
-    <div class="gallery-card-body">
-      <h3>💾 Persistent Prefs</h3>
-      <p>Theme, language, and sidebar state survive a refresh via <code>persist()</code>: opt-in localStorage with credential-shape warnings, version migration, and cross-tab sync.</p>
-      <div class="tags"><span class="tag">signal</span><span class="tag">persist</span><span class="tag">storage</span></div>
-      <a class="open-link" href="/gallery/10-persistent-prefs.html" target="_blank">Open full demo ↗</a>
-    </div>
-  </div>
+apiroutingsignal[Open full demo ↗](https://github.com/tina4stack/tina4-documentation/blob/main/gallery/04-auth.html)
 
-  <div class="gallery-card">
-    <iframe src="/gallery/11-i18n.html" loading="lazy"></iframe>
-    <div class="gallery-card-body">
-      <h3>🌍 Localization (i18n)</h3>
-      <p>Switch between six languages and watch every translated string plus Intl number, currency, and date formatting update in place. Arabic flips the layout to right-to-left. The active locale is a signal.</p>
-      <div class="tags"><span class="tag">i18n</span><span class="tag">signal</span><span class="tag">intl</span><span class="tag">rtl</span></div>
-      <a class="open-link" href="/gallery/11-i18n.html" target="_blank">Open full demo ↗</a>
-    </div>
-  </div>
+### 🛒 Shopping Cart
 
-  <div class="gallery-card">
-    <iframe src="/gallery/12-streaming.html" loading="lazy"></iframe>
-    <div class="gallery-card-body">
-      <h3>📡 Live Streaming (SSE)</h3>
-      <p>Server-Sent Events and NDJSON streaming wired to signals: an AI-style token stream and a live server-event feed, each piped into state behind a reactive status badge.</p>
-      <div class="tags"><span class="tag">sse</span><span class="tag">signal</span><span class="tag">pipe</span></div>
-      <a class="open-link" href="/gallery/12-streaming.html" target="_blank">Open full demo ↗</a>
-    </div>
-  </div>
+Product listing, add-to-cart, quantity controls, computed totals, and checkout summary.
 
-  <div class="gallery-card">
-    <iframe src="/gallery/13-islands.html" loading="lazy"></iframe>
-    <div class="gallery-card-body">
-      <h3>🏝️ Islands (Web Components)</h3>
-      <p>A static, server-rendered product page with three self-hydrating Tina4Element islands - star rating, add-to-cart, and a live viewer count - each shadow-DOM encapsulated with its own scoped styles.</p>
-      <div class="tags"><span class="tag">component</span><span class="tag">shadow-dom</span><span class="tag">signal</span></div>
-      <a class="open-link" href="/gallery/13-islands.html" target="_blank">Open full demo ↗</a>
-    </div>
-  </div>
+signalcomputedbatch[Open full demo ↗](https://github.com/tina4stack/tina4-documentation/blob/main/gallery/05-cart.html)
 
-  <div class="gallery-card">
-    <iframe src="/gallery/14-graphql.html" loading="lazy"></iframe>
-    <div class="gallery-card-body">
-      <h3>🔗 GraphQL Client</h3>
-      <p>Typed queries and mutations through api.graphql(): search with variables, restock with a mutation, and a live wire console showing the exact request and response.</p>
-      <div class="tags"><span class="tag">graphql</span><span class="tag">api</span><span class="tag">signal</span></div>
-      <a class="open-link" href="/gallery/14-graphql.html" target="_blank">Open full demo ↗</a>
-    </div>
-  </div>
+### 📝 Dynamic Form Builder
 
-  <div class="gallery-card">
-    <iframe src="/gallery/15-upload.html" loading="lazy"></iframe>
-    <div class="gallery-card-body">
-      <h3>📤 File Upload</h3>
-      <p>Drag-and-drop or browse, a real FileReader preview, and multipart api.upload() with a live per-file progress bar.</p>
-      <div class="tags"><span class="tag">api</span><span class="tag">upload</span><span class="tag">signal</span></div>
-      <a class="open-link" href="/gallery/15-upload.html" target="_blank">Open full demo ↗</a>
-    </div>
-  </div>
+Add/remove fields at runtime, reactive validation, conditional sections, and live preview.
 
-</div>
+signalhtmleffect[Open full demo ↗](https://github.com/tina4stack/tina4-documentation/blob/main/gallery/06-forms.html)
+
+### 📱 PWA Notes
+
+Offline-capable notes app with service worker, localStorage persistence, and install prompt.
+
+pwasignalcomponent[Open full demo ↗](https://github.com/tina4stack/tina4-documentation/blob/main/gallery/07-pwa-notes.html)
+
+### 📋 Data Table
+
+Sortable, paginated data table with column filters, row selection, and CSV export.
+
+signalcomputedhtml[Open full demo ↗](https://github.com/tina4stack/tina4-documentation/blob/main/gallery/08-datatable.html)
+
+### 🔍 Live Search
+
+Debounced search with API calls, loading states, highlight matching, and keyboard navigation.
+
+signalapieffect[Open full demo ↗](https://github.com/tina4stack/tina4-documentation/blob/main/gallery/09-search.html)
+
+### 💾 Persistent Prefs
+
+Theme, language, and sidebar state survive a refresh via `persist()`: opt-in localStorage with credential-shape warnings, version migration, and cross-tab sync.
+
+signalpersiststorage[Open full demo ↗](https://github.com/tina4stack/tina4-documentation/blob/main/gallery/10-persistent-prefs.html)
+
+### 🌍 Localization (i18n)
+
+Switch between six languages and watch every translated string plus Intl number, currency, and date formatting update in place. Arabic flips the layout to right-to-left. The active locale is a signal.
+
+i18nsignalintlrtl[Open full demo ↗](https://github.com/tina4stack/tina4-documentation/blob/main/gallery/11-i18n.html)
+
+### 📡 Live Streaming (SSE)
+
+Server-Sent Events and NDJSON streaming wired to signals: an AI-style token stream and a live server-event feed, each piped into state behind a reactive status badge.
+
+ssesignalpipe[Open full demo ↗](https://github.com/tina4stack/tina4-documentation/blob/main/gallery/12-streaming.html)
+
+### 🏝️ Islands (Web Components)
+
+A static, server-rendered product page with three self-hydrating Tina4Element islands - star rating, add-to-cart, and a live viewer count - each shadow-DOM encapsulated with its own scoped styles.
+
+componentshadow-domsignal[Open full demo ↗](https://github.com/tina4stack/tina4-documentation/blob/main/gallery/13-islands.html)
+
+### 🔗 GraphQL Client
+
+Typed queries and mutations through api.graphql(): search with variables, restock with a mutation, and a live wire console showing the exact request and response.
+
+graphqlapisignal[Open full demo ↗](https://github.com/tina4stack/tina4-documentation/blob/main/gallery/14-graphql.html)
+
+### 📤 File Upload
+
+Drag-and-drop or browse, a real FileReader preview, and multipart api.upload() with a live per-file progress bar.
+
+apiuploadsignal[Open full demo ↗](https://github.com/tina4stack/tina4-documentation/blob/main/gallery/15-upload.html)
 
 ## Using the Examples as Starting Points
 

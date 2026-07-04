@@ -32,7 +32,7 @@ On Windows the CLI lands in `%LOCALAPPDATA%\tina4` and goes first on your PATH, 
 
 ### For security teams
 
-Reviewing Tina4 for a managed machine? [Installer Security and Transparency](/install-security.md) states exactly what the installer downloads, where it lands, what it does not do, and how to verify a download is genuine.
+Reviewing Tina4 for a managed machine? [Installer Security and Transparency](https://github.com/tina4stack/tina4-documentation/blob/main/install-security.md) states exactly what the installer downloads, where it lands, what it does not do, and how to verify a download is genuine.
 
 ## Check Your Environment
 
@@ -58,8 +58,8 @@ It's guided: it asks which language, which AI tool, where your projects folder i
 
 Setup asks the four questions, installs whatever `doctor` flagged as missing, scaffolds the project (including its own `CLAUDE.md` and `.mcp.json`), then hands you off based on the AI tool you picked:
 
-- **Claude Code**: opens a coding session right inside your new project, seeded with a first prompt. Start building.
-- **Claude Desktop, or no AI**: asks "Start it now?". Say yes and it runs `tina4 serve`, opening your app in the browser. Choose Claude Desktop and it comes to the front too; open a session there and point it at your project folder.
+* **Claude Code**: opens a coding session right inside your new project, seeded with a first prompt. Start building.
+* **Claude Desktop, or no AI**: asks "Start it now?". Say yes and it runs `tina4 serve`, opening your app in the browser. Choose Claude Desktop and it comes to the front too; open a session there and point it at your project folder.
 
 Either way you land on a running app with the skills installed. From here, you build.
 
@@ -110,7 +110,7 @@ tina4 serve
 
 Access your app at `http://localhost:7146`
 
-Take a deeper dive into the [documentation](/python/index.md)
+Take a deeper dive into the [documentation](https://github.com/tina4stack/tina4-documentation/blob/main/python/index.md)
 
 ### Node.js
 
@@ -122,7 +122,7 @@ tina4 serve
 
 Access your app at `http://localhost:7148`
 
-Take a deeper dive into the [documentation](/nodejs/index.md)
+Take a deeper dive into the [documentation](https://github.com/tina4stack/tina4-documentation/blob/main/nodejs/index.md)
 
 ### PHP
 
@@ -134,7 +134,7 @@ tina4 serve
 
 Access your app at `http://localhost:7145`
 
-Take a deeper dive into the [documentation](/php/index.md)
+Take a deeper dive into the [documentation](https://github.com/tina4stack/tina4-documentation/blob/main/php/index.md)
 
 ### Ruby
 
@@ -146,7 +146,7 @@ tina4 serve
 
 Access your app at `http://localhost:7147`
 
-Take a deeper dive into the [documentation](/ruby/index.md)
+Take a deeper dive into the [documentation](https://github.com/tina4stack/tina4-documentation/blob/main/ruby/index.md)
 
 ## JavaScript (tina4-js)
 
@@ -161,7 +161,7 @@ npm run dev
 
 Access your app at `http://localhost:5173`
 
-Take a deeper dive into the [documentation](/js/index.md)
+Take a deeper dive into the [documentation](https://github.com/tina4stack/tina4-documentation/blob/main/js/index.md)
 
 ## Delphi 10.4+
 
@@ -175,7 +175,7 @@ git clone https://github.com/tina4stack/tina4delphi.git
 # Components appear in the "Tina4" tool palette
 ```
 
-Take a deeper dive into the [documentation](/delphi/index.md)
+Take a deeper dive into the [documentation](https://github.com/tina4stack/tina4-documentation/blob/main/delphi/index.md)
 
 ## Common CLI Commands
 

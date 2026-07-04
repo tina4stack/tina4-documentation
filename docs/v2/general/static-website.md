@@ -1,28 +1,31 @@
 # Static Websites with Frond (Twig) Templates
 
 ::: tip 🔥 Hot Tips
-- Twig template handling comes with Tina4 out of the box, no configuration needed.
-- First get to know Twig or Jinja2 by reading the documentation on their respective websites
-- Use `{% extends .. %}` and `{% include .. %}` to simplify your pages and reuse functionality.
-:::
 
-Tina4 automatically renders templates from `src/templates`, matching routes with the filenames. For example, `index.twig` serves at `/`, and `cars.twig` at `/cars`. 
+* Twig template handling comes with Tina4 out of the box, no configuration needed.
+* First get to know Twig or Jinja2 by reading the documentation on their respective websites
+* Use `{% extends .. %}` and `{% include .. %}` to simplify your pages and reuse functionality. :::
+
+Tina4 automatically renders templates from `src/templates`, matching routes with the filenames. For example, `index.twig` serves at `/`, and `cars.twig` at `/cars`.
 
 It is important to note that routes will take precedence over templates.
 
 ## Prerequisites
-- Tina4 Python or PHP installed (see [Getting Started](/get-started)).
-- Project structure (auto-created when initialize the project):
-  ```
-  myproject/
-  ├── src/
-  │   └── templates/      # Auto-rendered Twig files
-  │       ├── base.twig   # Shared layout
-  │       └── index.twig  # Home page (/ route)
-  │       └── cars.twig  # Home page (/cars route)
-  ```
+
+* Tina4 Python or PHP installed (see [Getting Started](https://github.com/tina4stack/tina4-documentation/blob/main/get-started/README.md)).
+*   Project structure (auto-created when initialize the project):
+
+    ```
+    myproject/
+    ├── src/
+    │   └── templates/      # Auto-rendered Twig files
+    │       ├── base.twig   # Shared layout
+    │       └── index.twig  # Home page (/ route)
+    │       └── cars.twig  # Home page (/cars route)
+    ```
 
 ## Step 1: Create the Base Layout (base.twig)
+
 Define common elements in `./src/templates/base.twig`. This acts as the parent template for inheritance.
 
 ```twig
@@ -53,9 +56,11 @@ Define common elements in `./src/templates/base.twig`. This acts as the parent t
 ```
 
 ## Step 2: Create Page Templates
+
 Add files like `./src/templates/index.twig` (auto-served at `/`) and `./src/templates/cars.twig` (at `/cars`). Each extends the base.
 
 **index.twig**:
+
 ```twig
 {% extends "base.twig" %}
 
@@ -68,6 +73,7 @@ Add files like `./src/templates/index.twig` (auto-served at `/`) and `./src/temp
 ```
 
 **cars.twig**:
+
 ```twig
 {% extends "base.twig" %}
 
@@ -82,6 +88,4 @@ Add files like `./src/templates/index.twig` (auto-served at `/`) and `./src/temp
 {% endblock %}
 ```
 
-- **Auto-Rendering**: No routes in `app.py` or `index.php`. Tina4 detects and renders `.twig` files at paths matching their names (minus extension).
-
-
+* **Auto-Rendering**: No routes in `app.py` or `index.php`. Tina4 detects and renders `.twig` files at paths matching their names (minus extension).

@@ -1,63 +1,15 @@
 # Tina4 Python -- Quick Reference
 
-<div v-pre>
-
-
 ::: tip Hot Tips
-- Routes go in `src/routes/`, templates in `src/templates/`, static files in `src/public/`
-- GET routes are public by default; POST/PUT/PATCH/DELETE require a token
-- Return a `dict` from `response()` and the framework sets `application/json`
-- Run `tina4 serve` to start the dev server on port 7146
-  :::
 
-<nav class="tina4-menu">
-    <a href="#installation">Installation</a> &bull;
-    <a href="#static-websites">Static Websites</a> &bull;
-    <a href="#basic-routing">Routing</a> &bull;
-    <a href="#middleware">Middleware</a> &bull;
-    <a href="#templates">Templates</a> &bull;
-    <a href="#session-handling">Sessions</a> &bull;
-    <a href="#scss-stylesheets">SCSS</a> &bull;
-    <a href="#environments">Environments</a> &bull;
-    <a href="#authentication">Authentication</a> &bull;
-    <a href="#html-forms-and-tokens">Forms &amp; Tokens</a> &bull;
-    <a href="#ajax">AJAX</a> &bull;
-    <a href="#swagger">OpenAPI</a> &bull;
-    <a href="#databases">Databases</a> &bull;
-    <a href="#database-results">Database Results</a> &bull;
-    <a href="#migrations">Migrations</a> &bull;
-    <a href="#orm">ORM</a> &bull;
-    <a href="#crud">CRUD</a> &bull;
-    <a href="#consuming-rest-apis">REST Client</a> &bull;
-    <a href="#inline-testing">Testing</a> &bull;
-    <a href="#services">Services</a> &bull;
-    <a href="#websockets">Websockets</a> &bull;
-    <a href="#queues">Queues</a> &bull;
-    <a href="#wsdl">WSDL</a> &bull;
-    <a href="#graphql">GraphQL</a> &bull;
-    <a href="#localization">Localization</a> &bull;
-    <a href="#html-builder">HTML Builder</a> &bull;
-    <a href="#events">Events</a> &bull;
-    <a href="#logging">Logging</a> &bull;
-    <a href="#response-cache">Cache</a> &bull;
-    <a href="#health">Health</a> &bull;
-    <a href="#container">DI Container</a> &bull;
-    <a href="#error-overlay">Error Overlay</a> &bull;
-    <a href="#dev-admin">Dev Admin</a> &bull;
-    <a href="#cli">CLI</a> &bull;
-    <a href="#mcp">MCP</a> &bull;
-    <a href="#fakedata">FakeData</a>
-</nav>
+* Routes go in `src/routes/`, templates in `src/templates/`, static files in `src/public/`
+* GET routes are public by default; POST/PUT/PATCH/DELETE require a token
+* Return a `dict` from `response()` and the framework sets `application/json`
+* Run `tina4 serve` to start the dev server on port 7146 :::
 
-<style>
-.tina4-menu {
-  background: #2c3e50; color: white; padding: 1rem; border-radius: 8px; margin: 2rem 0; text-align: center; font-size: 1.1rem;
-}
-.tina4-menu a { color: #1abc9c; text-decoration: none; margin: 0 0.4rem; }
-.tina4-menu a:hover { text-decoration: underline; }
-</style>
+[Installation](index.md#installation) • [Static Websites](index.md#static-websites) • [Routing](index.md#basic-routing) • [Middleware](index.md#middleware) • [Templates](index.md#templates) • [Sessions](index.md#session-handling) • [SCSS](index.md#scss-stylesheets) • [Environments](index.md#environments) • [Authentication](index.md#authentication) • [Forms & Tokens](index.md#html-forms-and-tokens) • [AJAX](index.md#ajax) • [OpenAPI](index.md#swagger) • [Databases](index.md#databases) • [Database Results](index.md#database-results) • [Migrations](index.md#migrations) • [ORM](index.md#orm) • [CRUD](index.md#crud) • [REST Client](index.md#consuming-rest-apis) • [Testing](index.md#inline-testing) • [Services](index.md#services) • [Websockets](index.md#websockets) • [Queues](index.md#queues) • [WSDL](index.md#wsdl) • [GraphQL](index.md#graphql) • [Localization](index.md#localization) • [HTML Builder](index.md#html-builder) • [Events](index.md#events) • [Logging](index.md#logging) • [Cache](index.md#response-cache) • [Health](index.md#health) • [DI Container](index.md#container) • [Error Overlay](index.md#error-overlay) • [Dev Admin](index.md#dev-admin) • [CLI](index.md#cli) • [MCP](index.md#mcp) • [FakeData](index.md#fakedata)
 
-### Installation {#installation}
+### Installation <a href="#installation" id="installation"></a>
 
 ```bash
 # Install the tina4 CLI once. Windows: irm https://tina4.com/install.ps1 | iex
@@ -72,7 +24,7 @@ The CLI scaffolds your project, installs the dependencies, and starts the server
 
 [More details](01-getting-started.md) on project setup and customization.
 
-### Static Websites {#static-websites}
+### Static Websites <a href="#static-websites" id="static-websites"></a>
 
 Put `.twig` files in `./src/templates` and assets in `./src/public`. The framework serves them without additional configuration.
 
@@ -80,9 +32,10 @@ Put `.twig` files in `./src/templates` and assets in `./src/public`. The framewo
 <!-- src/templates/index.twig -->
 <h1>Hello Static World</h1>
 ```
+
 [More details](04-templates.md) on static website routing.
 
-### Basic Routing {#basic-routing}
+### Basic Routing <a href="#basic-routing" id="basic-routing"></a>
 
 The `@app` decorators register routes. Each handler receives `request` and `response`. Path parameters arrive as function arguments.
 
@@ -101,6 +54,7 @@ async def post_api(request, response):
 async def post_register(request, response):
     return response.redirect("/welcome")
 ```
+
 Follow the links for [basic routing](02-routing.md) and [dynamic routing](02-routing.md) with variables.
 
 ### Middleware
@@ -130,9 +84,10 @@ class RunSomething:
 async def get_middleware(request, response):
     return response("Route") # Before[Before / After Something]Route[Before / After Something]After
 ```
+
 Follow the links for more on [Middleware Declaration](10-middleware-security.md) and [Linking to Routes](10-middleware-security.md#routes).
 
-### Template Rendering {#templates}
+### Template Rendering <a href="#templates" id="templates"></a>
 
 Put `.twig` files in `./src/templates` and assets in `./src/public`. The template engine reads your layout, fills in the variables, and delivers clean HTML.
 
@@ -147,16 +102,16 @@ async def get_home(request, response):
     return response.render("index.twig", {"name": "World!"})
 ```
 
-### Sessions {#session-handling}
+### Sessions <a href="#session-handling" id="session-handling"></a>
 
 The default session handler stores data on the file system. Override `TINA4_SESSION_BACKEND` in `.env` to switch backends.
 
-| Handler | Backend | Required package |
-|---------|---------|-----------------|
-| `SessionFileHandler` (default) | File system | -- |
-| `SessionRedisHandler` | Redis | `redis` |
-| `SessionValkeyHandler` | Valkey | `valkey` |
-| `SessionMongoHandler` | MongoDB | `pymongo` |
+| Handler                        | Backend     | Required package |
+| ------------------------------ | ----------- | ---------------- |
+| `SessionFileHandler` (default) | File system | --               |
+| `SessionRedisHandler`          | Redis       | `redis`          |
+| `SessionValkeyHandler`         | Valkey      | `valkey`         |
+| `SessionMongoHandler`          | MongoDB     | `pymongo`        |
 
 ```bash
 TINA4_SESSION_BACKEND=SessionMongoHandler
@@ -190,7 +145,7 @@ async def get_session_clear(request, response):
     return response("Session key removed!")
 ```
 
-### SCSS Stylesheets {#scss-stylesheets}
+### SCSS Stylesheets <a href="#scss-stylesheets" id="scss-stylesheets"></a>
 
 Drop `.scss` files in `./src/scss`. The framework compiles them to `./src/public/css`.
 
@@ -202,9 +157,10 @@ body {
   color: white;
 }
 ```
+
 [More details](17-frontend.md) on css and scss.
 
-### Environments {#environments}
+### Environments <a href="#environments" id="environments"></a>
 
 The `.env` file holds your project configuration. The framework reads it at startup.
 
@@ -222,8 +178,6 @@ import os
 api_key = os.getenv("TINA4_API_KEY", "ABC1234")
 ```
 
-
-
 Access env vars programmatically:
 
 ```python
@@ -237,7 +191,7 @@ require_env("TINA4_DATABASE_URL")         # Raises if missing
 is_truthy(get_env("TINA4_DEBUG"))   # True for "true", "1", "yes"
 ```
 
-### Authentication {#authentication}
+### Authentication <a href="#authentication" id="authentication"></a>
 
 POST, PUT, PATCH, and DELETE routes require a Bearer token by default. Pass `Authorization: Bearer TINA4_API_KEY` in the request header. Use `@noauth` to open a route to everyone. Use `@secured` to lock a GET route behind authentication.
 
@@ -262,7 +216,7 @@ async def verify(request, response):
     return response({"valid": payload is not None})
 ```
 
-### HTML Forms and Tokens {#html-forms-and-tokens}
+### HTML Forms and Tokens <a href="#html-forms-and-tokens" id="html-forms-and-tokens"></a>
 
 ```twig
 <form method="POST" action="/register">
@@ -271,17 +225,16 @@ async def verify(request, response):
     <button>Save</button>
 </form>
 ```
-[More details](03-request-response.md) on posting form data, [basic form handling](03-request-response.md), how to [generate form tokens](03-request-response.md),
-dealing with [file uploads](03-request-response.md), [returning errors](03-request-response.md), [disabling route auth](03-request-response.md)
-and a [full login example](03-request-response.md).
 
-### AJAX and frond.js {#ajax}
+[More details](03-request-response.md) on posting form data, [basic form handling](03-request-response.md), how to [generate form tokens](03-request-response.md), dealing with [file uploads](03-request-response.md), [returning errors](03-request-response.md), [disabling route auth](03-request-response.md) and a [full login example](03-request-response.md).
+
+### AJAX and frond.js <a href="#ajax" id="ajax"></a>
 
 Tina4 ships with frond.js, a small zero-dependency JavaScript library for AJAX calls, form submissions, and real-time WebSocket connections.
 
-[More details](/general/frond.md) on available features.
+[More details](https://github.com/tina4stack/tina4-documentation/blob/main/general/frond.md) on available features.
 
-### OpenAPI and Swagger UI {#swagger}
+### OpenAPI and Swagger UI <a href="#swagger" id="swagger"></a>
 
 Visit `http://localhost:7145/swagger`. Decorated routes appear in the Swagger UI without manual annotation.
 
@@ -293,9 +246,10 @@ from tina4_python import description
 async def users(request, response):
     return response(User().select("*"))
 ```
+
 Follow the links for more on [Configuration](20-swagger.md), [Usage](20-swagger.md) and [Decorators](20-swagger.md).
 
-### Databases {#databases}
+### Databases <a href="#databases" id="databases"></a>
 
 ```python
 from tina4_python.Database import Database
@@ -303,11 +257,12 @@ from tina4_python.Database import Database
 # dba = Database("<driver>:<hostname>/<port>:database_name", username, password)
 dba = Database("sqlite3:data.db")
 ```
+
 The adapter speaks PostgreSQL, MySQL, and SQLite. It translates your queries into whichever dialect the database understands.
 
 Follow the links for more on [Available Connections](05-database.md), [Core Methods](05-database.md), [Usage](05-database.md) and [Full transaction control](05-database.md).
 
-### Database Results {#database-results}
+### Database Results <a href="#database-results" id="database-results"></a>
 
 ```python
 result = dba.fetch("select * from test_record order by id", limit=3, offset=1)
@@ -317,9 +272,10 @@ paginated = result.to_paginate()
 csv_data = result.to_csv()
 json_data = result.to_json()
 ```
+
 Looking at detailed [Usage](05-database.md) will deepen your understanding.
 
-### Migrations {#migrations}
+### Migrations <a href="#migrations" id="migrations"></a>
 
 ```bash
 tina4 migrate:create create_users_table
@@ -337,9 +293,10 @@ CREATE TABLE users
 ```bash
 tina4 migrate
 ```
+
 [Migrations](05-database.md) have limitations worth knowing before you use them at scale.
 
-### ORM {#orm}
+### ORM <a href="#orm" id="orm"></a>
 
 ```python
 from tina4_python.ORM import ORM, IntegerField, StringField
@@ -353,9 +310,10 @@ User({"name": "Alice"}).save()
 user = User()
 user.load("id = ?", [1])
 ```
+
 ORM covers more ground than this snippet shows. Study the [Advanced Detail](06-orm.md) to get the full value.
 
-### CRUD {#crud}
+### CRUD <a href="#crud" id="crud"></a>
 
 ```python
 @app.get("/users/dashboard")
@@ -367,9 +325,10 @@ async def dashboard(request, response):
 ```twig
 {{ crud }}
 ```
+
 [More details](19-scaffolding.md) on how CRUD generates its files and where they live.
 
-### Consuming REST APIs {#consuming-rest-apis}
+### Consuming REST APIs <a href="#consuming-rest-apis" id="consuming-rest-apis"></a>
 
 ```python
 from tina4_python import Api
@@ -378,9 +337,10 @@ api = Api("https://api.example.com", auth_header="Bearer xyz")
 result = api.get("/users/42")
 print(result["body"])
 ```
+
 [More details](21-api-client.md) on sending POST data, authorization headers, and other controls for outbound API requests.
 
-### Inline Testing {#inline-testing}
+### Inline Testing <a href="#inline-testing" id="inline-testing"></a>
 
 ```python
 from tina4_python import tests
@@ -399,11 +359,11 @@ def divide(a: int, b: int) -> float:
 
 Run: `tina4 test`
 
-### Services {#services}
+### Services <a href="#services" id="services"></a>
 
 Due to the nature of Python, services are not necessary.
 
-### Websockets {#websockets}
+### Websockets <a href="#websockets" id="websockets"></a>
 
 WebSocket support is built in. No extra dependencies. Define a handler with the `@app.websocket` decorator, and the framework manages the connection alongside your HTTP routes on the same port.
 
@@ -413,9 +373,10 @@ async def chat_ws(connection, event, data):
     if event == "message":
         await connection.send(f"Echo: {data}")
 ```
+
 Have a look at the PubSub example under [Websockets](23-websocket.md).
 
-### Queues {#queues}
+### Queues <a href="#queues" id="queues"></a>
 
 Supports litequeue (default/SQLite), RabbitMQ, Kafka, and MongoDB backends. The queue system uses `produce()` and `consume()` directly -- no separate Producer or Consumer classes.
 
@@ -433,7 +394,7 @@ for job in queue.consume("emails"):
 
 [Full details](12-queues.md) on backend configuration, batching, multi-queue consumers, and error handling.
 
-### WSDL {#wsdl}
+### WSDL <a href="#wsdl" id="wsdl"></a>
 
 ```python
 from tina4_python.WSDL import WSDL, wsdl_operation
@@ -459,9 +420,10 @@ async def wsdl_cis(request, response):
     return response.wsdl(Calculator(request))
 
 ```
+
 [More Details](25-wsdl-soap.md) on WSDL configuration and usage.
 
-### GraphQL {#graphql}
+### GraphQL <a href="#graphql" id="graphql"></a>
 
 ```python
 from tina4_python.graphql import GraphQL
@@ -499,7 +461,7 @@ async def handle_graphql(request, response):
 
 GraphiQL UI available at `/__dev/graphql` in debug mode.
 
-### Localization (i18n) {#localization}
+### Localization (i18n) <a href="#localization" id="localization"></a>
 
 Set `TINA4_LOCALE` in `.env` to change the framework language. Supported: `en`, `fr`, `af`.
 
@@ -517,12 +479,9 @@ from tina4_python.Localization import AVAILABLE_LANGUAGES
 # ['en', 'fr', 'af']
 ```
 
-<nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
-  <a href="#">Back to top</a>
-</nav>
+[Back to top](index.md)
 
-
-### HTML Builder {#html-builder}
+### HTML Builder <a href="#html-builder" id="html-builder"></a>
 
 ```python
 from tina4_python.HtmlElement import HTMLElement, add_html_helpers
@@ -545,7 +504,7 @@ html = _div({"class": "card"},
 )
 ```
 
-### Events {#events}
+### Events <a href="#events" id="events"></a>
 
 ```python
 from tina4_python.core.events import on, emit, once, off
@@ -561,7 +520,7 @@ def on_ready():
 emit("user.created", {"name": "Alice"})
 ```
 
-### Logging {#logging}
+### Logging <a href="#logging" id="logging"></a>
 
 ```python
 from tina4_python.debug import Log
@@ -574,7 +533,7 @@ Log.error("Connection failed", host="db.example.com")
 
 Set `TINA4_LOG_LEVEL` in `.env`: `ALL`, `DEBUG`, `INFO`, `WARNING`, `ERROR`.
 
-### Response Cache {#response-cache}
+### Response Cache <a href="#response-cache" id="response-cache"></a>
 
 ```python
 from tina4_python.core.router import get, cached
@@ -585,11 +544,11 @@ async def products(request, response):
     return response(expensive_query())
 ```
 
-### Health Endpoint {#health}
+### Health Endpoint <a href="#health" id="health"></a>
 
 Built-in at `/health`. Returns `{"status": "ok", "uptime": 123.4}`. Configure with `TINA4_HEALTH_PATH` env var.
 
-### DI Container {#container}
+### DI Container <a href="#container" id="container"></a>
 
 ```python
 from tina4_python.container import Container
@@ -600,15 +559,15 @@ container.register("mailer", lambda: MailService())
 db = container.get("db")
 ```
 
-### Error Overlay {#error-overlay}
+### Error Overlay <a href="#error-overlay" id="error-overlay"></a>
 
 Automatic in debug mode. Shows syntax-highlighted stack trace with source context. Set `TINA4_DEBUG=true` in `.env`.
 
-### Dev Admin {#dev-admin}
+### Dev Admin <a href="#dev-admin" id="dev-admin"></a>
 
 Available at `/__dev` in debug mode. Includes route inspector, database tab, request capture, metrics bubble chart, gallery examples, dev mailbox.
 
-### CLI Commands {#cli}
+### CLI Commands <a href="#cli" id="cli"></a>
 
 ```bash
 tina4 init python my-app    # Scaffold project
@@ -623,11 +582,11 @@ tina4 test                   # Run tests
 tina4 ai                     # Install AI context
 ```
 
-### MCP Server {#mcp}
+### MCP Server <a href="#mcp" id="mcp"></a>
 
 Auto-starts on `/__mcp` in debug mode. Exposes 24 dev tools via JSON-RPC 2.0 over SSE. Works with Claude Code, Cursor, and other MCP clients.
 
-### FakeData {#fakedata}
+### FakeData <a href="#fakedata" id="fakedata"></a>
 
 ```python
 from tina4_python.seeder import FakeData
@@ -640,12 +599,8 @@ fake.sentence()  # "The quick brown fox..."
 fake.integer()   # 4821
 ```
 
-</div>
-
-
----
+***
 
 ## 📕 Download the book
 
-[**Tina4 for Python Developers** (PDF)](/pdfs/Tina4-for-Python-Developers.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
-
+[**Tina4 for Python Developers** (PDF)](https://github.com/tina4stack/tina4-documentation/blob/main/pdfs/Tina4-for-Python-Developers.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.

@@ -1,66 +1,17 @@
 # Tina4 PHP -- Quick Reference
 
-> **TINA4, The Intelligent Native Application 4ramework**
-> Simple. Fast. Human. | Built for AI. Built for you.
-
-<div v-pre>
-
+> **TINA4, The Intelligent Native Application 4ramework** Simple. Fast. Human. | Built for AI. Built for you.
 
 ::: tip Hot Tips
-- Routes go in `src/routes/`, templates in `src/templates/`, static files in `src/public/`
-- GET routes are public by default; POST/PUT/PATCH/DELETE require a token
-- `$response->json()` returns JSON with the correct headers -- no manual config
-- Run `tina4 serve` to start the dev server on port 7145
-:::
 
-<nav class="tina4-menu">
-    <a href="#installation">Installation</a> &bull;
-    <a href="#static-websites">Static Websites</a> &bull;
-    <a href="#basic-routing">Routing</a> &bull;
-    <a href="#middleware">Middleware</a> &bull;
-    <a href="#templates">Templates</a> &bull;
-    <a href="#session-handling">Sessions</a> &bull;
-    <a href="#scss-stylesheets">SCSS</a> &bull;
-    <a href="#environments">Environments</a> &bull;
-    <a href="#authentication">Authentication</a> &bull;
-    <a href="#html-forms-and-tokens">Forms &amp; Tokens</a> &bull;
-    <a href="#ajax">AJAX</a> &bull;
-    <a href="#swagger">OpenAPI</a> &bull;
-    <a href="#databases">Databases</a> &bull;
-    <a href="#database-results">Database Results</a> &bull;
-    <a href="#migrations">Migrations</a> &bull;
-    <a href="#orm">ORM</a> &bull;
-    <a href="#crud">CRUD</a> &bull;
-    <a href="#consuming-rest-apis">REST Client</a> &bull;
-    <a href="#inline-testing">Testing</a> &bull;
-    <a href="#services">Services</a> &bull;
-    <a href="#websockets">Websockets</a> &bull;
-    <a href="#queues">Queues</a> &bull;
-    <a href="#wsdl">WSDL</a> &bull;
-    <a href="#graphql">GraphQL</a> &bull;
-    <a href="#localization">Localization</a> &bull;
-    <a href="#html-builder">HTML Builder</a> &bull;
-    <a href="#events">Events</a> &bull;
-    <a href="#logging">Logging</a> &bull;
-    <a href="#response-cache">Response Cache</a> &bull;
-    <a href="#health">Health</a> &bull;
-    <a href="#container">DI Container</a> &bull;
-    <a href="#error-overlay">Error Overlay</a> &bull;
-    <a href="#dev-admin">Dev Admin</a> &bull;
-    <a href="#cli">CLI</a> &bull;
-    <a href="#mcp">MCP Server</a> &bull;
-    <a href="#fakedata">FakeData</a>
-</nav>
+* Routes go in `src/routes/`, templates in `src/templates/`, static files in `src/public/`
+* GET routes are public by default; POST/PUT/PATCH/DELETE require a token
+* `$response->json()` returns JSON with the correct headers -- no manual config
+* Run `tina4 serve` to start the dev server on port 7145 :::
 
-<style>
-.tina4-menu {
-  background: #2c3e50; color: white; padding: 1rem; border-radius: 8px; margin: 2rem 0; text-align: center; font-size: 1.1rem;
-}
-.tina4-menu a { color: #1abc9c; text-decoration: none; margin: 0 0.4rem; }
-.tina4-menu a:hover { text-decoration: underline; }
-</style>
+[Installation](index.md#installation) • [Static Websites](index.md#static-websites) • [Routing](index.md#basic-routing) • [Middleware](index.md#middleware) • [Templates](index.md#templates) • [Sessions](index.md#session-handling) • [SCSS](index.md#scss-stylesheets) • [Environments](index.md#environments) • [Authentication](index.md#authentication) • [Forms & Tokens](index.md#html-forms-and-tokens) • [AJAX](index.md#ajax) • [OpenAPI](index.md#swagger) • [Databases](index.md#databases) • [Database Results](index.md#database-results) • [Migrations](index.md#migrations) • [ORM](index.md#orm) • [CRUD](index.md#crud) • [REST Client](index.md#consuming-rest-apis) • [Testing](index.md#inline-testing) • [Services](index.md#services) • [Websockets](index.md#websockets) • [Queues](index.md#queues) • [WSDL](index.md#wsdl) • [GraphQL](index.md#graphql) • [Localization](index.md#localization) • [HTML Builder](index.md#html-builder) • [Events](index.md#events) • [Logging](index.md#logging) • [Response Cache](index.md#response-cache) • [Health](index.md#health) • [DI Container](index.md#container) • [Error Overlay](index.md#error-overlay) • [Dev Admin](index.md#dev-admin) • [CLI](index.md#cli) • [MCP Server](index.md#mcp) • [FakeData](index.md#fakedata)
 
-### Installation {#installation}
+### Installation <a href="#installation" id="installation"></a>
 
 ```bash
 # Install the tina4 CLI once. Windows: irm https://tina4.com/install.ps1 | iex
@@ -70,9 +21,10 @@ tina4 init php my-app
 cd my-app
 tina4 serve
 ```
+
 [More details](01-getting-started.md) on project setup and configuration options.
 
-### Static Websites {#static-websites}
+### Static Websites <a href="#static-websites" id="static-websites"></a>
 
 Drop `.html` or `.twig` files in `./src/templates`. Put assets in `./src/public`.
 
@@ -80,9 +32,10 @@ Drop `.html` or `.twig` files in `./src/templates`. Put assets in `./src/public`
 <!-- src/templates/index.twig -->
 <h1>Hello Static World</h1>
 ```
+
 [More details](04-templates.md) on static website routing.
 
-### Basic Routing {#basic-routing}
+### Basic Routing <a href="#basic-routing" id="basic-routing"></a>
 
 ```php
 <?php
@@ -103,9 +56,10 @@ Router::get("/users/{id:int}", function ($request, $response) {
     return $response->json(["user_id" => $id]);
 });
 ```
+
 Follow the links for [basic routing](02-routing.md), [dynamic routing](02-routing.md) with variables, and [different response types](02-routing.md).
 
-### Middleware {#middleware}
+### Middleware <a href="#middleware" id="middleware"></a>
 
 The v3 middleware system uses class-based middleware with `before*`/`after*` static methods.
 
@@ -141,9 +95,10 @@ Router::get("/api/secret", function ($request, $response) {
     return $response->json(["secret" => "The answer is 42"]);
 }, "requireApiKey");
 ```
+
 Follow the links for more on [middleware declaration](10-middleware-security.md), [linking to routes](10-middleware-security.md), [middleware chaining](10-middleware-security.md), and [middleware with dynamic routes](10-middleware-security.md).
 
-### Template Rendering {#templates}
+### Template Rendering <a href="#templates" id="templates"></a>
 
 Templates live in `./src/templates`. The framework uses Frond -- a Twig-compatible engine built from scratch. Call `$response->render()` and pass your data.
 
@@ -161,11 +116,11 @@ Router::get("/", function ($request, $response) {
 });
 ```
 
-### Sessions {#session-handling}
+### Sessions <a href="#session-handling" id="session-handling"></a>
 
 Sessions start by default in the `Auth` constructor.
 
-### SCSS Stylesheets {#scss-stylesheets}
+### SCSS Stylesheets <a href="#scss-stylesheets" id="scss-stylesheets"></a>
 
 Drop files in `./src/scss`. The framework compiles them to `./src/public/css`.
 
@@ -177,9 +132,10 @@ body {
   color: white;
 }
 ```
+
 [More details](17-frontend.md) on CSS and SCSS.
 
-### Environments {#environments}
+### Environments <a href="#environments" id="environments"></a>
 
 The default development environment lives in `.env`.
 
@@ -195,12 +151,12 @@ TINA4_SWAGGER_TITLE=Tina4 Project
 TINA4_SWAGGER_DESCRIPTION=Edit your .env file to change this description
 TINA4_SWAGGER_VERSION=1.0.0
 ```
+
 Access environment variables through the `$_ENV` superglobal.
+
 ```php
 $title = $_ENV["TINA4_SWAGGER_TITLE"];
 ```
-
-
 
 Access env vars programmatically:
 
@@ -215,7 +171,7 @@ DotEnv::requireEnv('TINA4_DATABASE_URL');          // Throws if missing
 DotEnv::isTruthy(DotEnv::getEnv('TINA4_DEBUG'));  // true for "true", "1", "yes"
 ```
 
-### Authentication {#authentication}
+### Authentication <a href="#authentication" id="authentication"></a>
 
 POST, PUT, PATCH, and DELETE routes are secured by default. GET routes stay public unless you mark them otherwise.
 
@@ -246,9 +202,10 @@ $token = Auth::getToken(["userId" => 1, "role" => "admin"]);
 $payload = Auth::validToken($token);
 ```
 
-### HTML Forms and Tokens {#html-forms-and-tokens}
+### HTML Forms and Tokens <a href="#html-forms-and-tokens" id="html-forms-and-tokens"></a>
 
 Form tokens protect POST routes from cross-site forgery. Add one with a Twig filter.
+
 ```twig
 <form method="POST" action="/process-form">
     {{ "emailForm" | formToken }}
@@ -256,7 +213,9 @@ Form tokens protect POST routes from cross-site forgery. Add one with a Twig fil
     <button>Save</button>
 </form>
 ```
+
 The filter renders a hidden input with a signed JWT.
+
 ```html
 <form method="POST" action="/process-form">
     <input type="hidden" name="formToken" value="ey...">
@@ -264,15 +223,16 @@ The filter renders a hidden input with a signed JWT.
     <button>Save</button>
 </form>
 ```
+
 [More details](03-request-response.md) on posting form data, [securing routes](03-request-response.md), [Tina4 tokens](03-request-response.md), [uploading files](03-request-response.md), [handling errors](03-request-response.md), and a [full login example](03-request-response.md).
 
-### AJAX and frond.js {#ajax}
+### AJAX and frond.js <a href="#ajax" id="ajax"></a>
 
 Tina4 ships with frond.js -- a small zero-dependency JavaScript library for AJAX calls, form submissions, and real-time WebSocket connections.
 
-[More details](/general/frond.md) on available features.
+[More details](https://github.com/tina4stack/tina4-documentation/blob/main/general/frond.md) on available features.
 
-### OpenAPI and Swagger UI {#swagger}
+### OpenAPI and Swagger UI <a href="#swagger" id="swagger"></a>
 
 Swagger is built in and lives at `/swagger`. The `@description` annotation registers a route in the documentation.
 
@@ -287,9 +247,10 @@ Router::get("/users", function ($request, $response) {
     return $response->json((new User())->select("*"));
 });
 ```
+
 Follow the links for more on [configuration](20-swagger.md), [annotations](20-swagger.md), and [usage](20-swagger.md).
 
-### Databases {#databases}
+### Databases <a href="#databases" id="databases"></a>
 
 Set `TINA4_DATABASE_URL` in `.env`. The framework reads it at startup and opens the connection.
 
@@ -309,9 +270,10 @@ use Tina4\Database;
 $db = Database::getConnection();
 $result = $db->fetch("SELECT * FROM products WHERE price > ?", [50]);
 ```
+
 Follow the links for more on [available connections](05-database.md), [core methods](05-database.md), [usage](05-database.md), [examples](05-database.md), and [transaction control](05-database.md).
 
-### Database Results {#database-results}
+### Database Results <a href="#database-results" id="database-results"></a>
 
 Fetch a single row or a paginated set. The database returns a `DatabaseResult` object that converts to arrays or objects.
 
@@ -323,9 +285,10 @@ $row = $db->fetchOne("SELECT * FROM products WHERE id = 1");
 // fetch($sql, $params, $noOfRecords, $offset)
 $result = $db->fetch("SELECT * FROM products ORDER BY name", [], 10, 0);
 ```
+
 Dig into the [usage guide](05-database.md) and [examples](05-database.md) for deeper coverage.
 
-### Migrations {#migrations}
+### Migrations <a href="#migrations" id="migrations"></a>
 
 The CLI manages migrations. Create one, add your SQL, then run it.
 
@@ -341,7 +304,7 @@ tina4 migrate
 
 More details on [migrations](05-database.md), their [creation](05-database.md), [running](05-database.md) them, and [integration with ORM](05-database.md).
 
-### ORM {#orm}
+### ORM <a href="#orm" id="orm"></a>
 
 Once your migrations have created the tables, ORM models map PHP classes to database rows.
 
@@ -362,27 +325,30 @@ $user = new User(["email" => "alice@example.com"]);
 $user->save();
 $user = (new User())->load("id = ?", [1]);
 ```
+
 ORM covers a lot of ground. Study the [full reference](06-orm.md) to get the most from it.
 
-### CRUD {#crud}
+### CRUD <a href="#crud" id="crud"></a>
 
 One line of code generates a working CRUD system -- screens, routes, and all.
 
 ```php
 (new User())->generateCrud("/my-crud-templates");
 ```
+
 [More details](19-scaffolding.md) on how CRUD works and where it puts the generated files.
 
-### Consuming REST APIs {#consuming-rest-apis}
+### Consuming REST APIs <a href="#consuming-rest-apis" id="consuming-rest-apis"></a>
 
 Pull data from an external API in a single call.
 
 ```php
 $api = (new \Tina4\Api("https://api.example.com"))->sendRequest("/my-route", "GET");
 ```
+
 [More details](21-api-client.md) on sending POST bodies, authorization headers, and other controls.
 
-### Inline Testing {#inline-testing}
+### Inline Testing <a href="#inline-testing" id="inline-testing"></a>
 
 Tina4 lets you add tests to functions without setting up a test suite.
 
@@ -396,13 +362,16 @@ public function addTwoNumbers($number1, $number2)
     return $number1 + $number2;
 }
 ```
+
 Run the tests from the CLI.
+
 ```bash
 tina4 test
 ```
+
 [Limitations](18-testing.md) and further reading on the testing system.
 
-### Services {#services}
+### Services <a href="#services" id="services"></a>
 
 Create a process class. The service runner picks it up and executes it on schedule.
 
@@ -420,7 +389,9 @@ class MyProcess extends \Tina4\Process
     }
 }
 ```
+
 Register the process with the service.
+
 ```php
 $service = new \Tina4\Service();
 $service->addProcess(new MyProcess("Unique Process Name"));
@@ -428,7 +399,7 @@ $service->addProcess(new MyProcess("Unique Process Name"));
 
 [Further reading](27-service-runner.md) on services. Study them alongside [threads](27-service-runner.md) for the full picture.
 
-### Websockets {#websockets}
+### Websockets <a href="#websockets" id="websockets"></a>
 
 ```php
 Router::websocket("/ws/chat/{room}", function ($connection, $event, $data) {
@@ -440,7 +411,7 @@ Router::websocket("/ws/chat/{room}", function ($connection, $event, $data) {
 });
 ```
 
-### Queues {#queues}
+### Queues <a href="#queues" id="queues"></a>
 
 Tina4 includes a queue system with multiple backends: LiteQueue (SQLite), MongoDB, RabbitMQ, and Kafka. Install `tina4stack/tina4php-queue` and use a single API for producing and consuming messages.
 
@@ -457,7 +428,7 @@ foreach ($queue->consume() as $message) {
 
 [More details](12-queues.md) on queues, their backends, and configuration.
 
-### WSDL {#wsdl}
+### WSDL <a href="#wsdl" id="wsdl"></a>
 
 Define your WSDL service as a class. Tina4 handles the XML, the WSDL generation, and the SOAP envelope.
 
@@ -472,7 +443,9 @@ class Calculator extends \Tina4\WSDL {
     }
 }
 ```
+
 Wire it to a route.
+
 ```php
 <?php
 use Tina4\Router;
@@ -483,9 +456,10 @@ Router::any("/calculator", function ($request, $response) {
     return $response->xml($handle);
 });
 ```
+
 [More details](25-wsdl-soap.md) on WSDL services.
 
-### GraphQL {#graphql}
+### GraphQL <a href="#graphql" id="graphql"></a>
 
 ```php
 use Tina4\GraphQL;
@@ -522,7 +496,7 @@ Router::post("/graphql", function (\$request, \$response) use (\$graphql) {
 
 GraphiQL UI available at `/__dev/graphql` in debug mode.
 
-### Localization (i18n) {#localization}
+### Localization (i18n) <a href="#localization" id="localization"></a>
 
 Set `TINA4_LOCALE=en` in `.env`. Place JSON files in `src/locales/`:
 
@@ -539,12 +513,9 @@ $i18n->t("greeting", ["name" => "Alice"]);  // "Hello, Alice!"
 $i18n->setLocale("fr");
 ```
 
-<nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
-  <a href="#">Back to top</a>
-</nav>
+[Back to top](index.md)
 
-
-### HTML Builder {#html-builder}
+### HTML Builder <a href="#html-builder" id="html-builder"></a>
 
 ```php
 $el = new HtmlElement("div", ["class" => "card"], ["Hello"]);
@@ -561,7 +532,7 @@ extract(HtmlElement::helpers());
 echo $_div(["class" => "card"], $_h1("Title"), $_p("Description"));
 ```
 
-### Events {#events}
+### Events <a href="#events" id="events"></a>
 
 Register listeners and fire them anywhere in the application.
 
@@ -584,7 +555,7 @@ Events::emit("user.registered", ["email" => "alice@example.com"]);
 
 Multiple listeners can bind to the same event. They run in registration order.
 
-### Logging {#logging}
+### Logging <a href="#logging" id="logging"></a>
 
 Write log messages through the `Debug` class. The level is controlled by `TINA4_LOG_LEVEL` in `.env`.
 
@@ -603,7 +574,7 @@ TINA4_LOG_LEVEL=TINA4_LOG_ALL    # DEBUG | INFO | WARNING | ERROR | NONE
 
 Log output goes to `src/logs/` by default. Set `TINA4_LOG_DIR` to change the destination.
 
-### Response Cache {#response-cache}
+### Response Cache <a href="#response-cache" id="response-cache"></a>
 
 Chain `->cache()` onto any route handler to store the response. Subsequent requests within the TTL skip the handler entirely.
 
@@ -623,7 +594,7 @@ Router::get("/api/report/{year}", function ($request, $response) {
 
 Set `TINA4_CACHE_BACKEND=true` in `.env` to activate caching globally.
 
-### Health Endpoint {#health}
+### Health Endpoint <a href="#health" id="health"></a>
 
 Tina4 exposes a built-in health check at `/health`. No setup required.
 
@@ -651,7 +622,7 @@ Events::on("health.check", function (array &$report): void {
 });
 ```
 
-### DI Container {#container}
+### DI Container <a href="#container" id="container"></a>
 
 Register services once and resolve them anywhere. Singletons share one instance across the request lifecycle.
 
@@ -671,7 +642,7 @@ $db     = Container::get("db");
 
 Route handlers receive resolved dependencies automatically when type-hinted parameter names match registered keys.
 
-### Error Overlay {#error-overlay}
+### Error Overlay <a href="#error-overlay" id="error-overlay"></a>
 
 When `TINA4_DEBUG=true`, unhandled exceptions render an interactive overlay in the browser instead of a blank 500 page. The overlay shows the stack trace, request details, and the source file at the point of failure. No configuration needed, it activates automatically.
 
@@ -682,7 +653,7 @@ TINA4_DEBUG=true
 
 In production set `TINA4_DEBUG=false`. Errors log to `src/logs/` and return a plain `500` response.
 
-### Dev Admin {#dev-admin}
+### Dev Admin <a href="#dev-admin" id="dev-admin"></a>
 
 Point a browser at `/__dev` while the dev server is running to open the admin dashboard.
 
@@ -693,7 +664,7 @@ tina4 serve
 
 The dashboard surfaces routes, registered middleware, environment variables, recent log entries, active queue workers, and the GraphiQL interface. It is disabled automatically when `TINA4_DEBUG=false`.
 
-### CLI Commands {#cli}
+### CLI Commands <a href="#cli" id="cli"></a>
 
 ```bash
 # Scaffold a new project
@@ -721,7 +692,7 @@ tina4 migrate --rollback
 tina4 crud User
 ```
 
-### MCP Server {#mcp}
+### MCP Server <a href="#mcp" id="mcp"></a>
 
 Tina4 ships an MCP (Model Context Protocol) server that starts automatically when `TINA4_DEBUG=true`. AI assistants connect to it to inspect routes, models, and data without leaving the editor.
 
@@ -738,7 +709,7 @@ curl http://localhost:7147/mcp/manifest
 
 The manifest lists every route, ORM model, and migration. Disable it in production by setting `TINA4_DEBUG=false`.
 
-### FakeData {#fakedata}
+### FakeData <a href="#fakedata" id="fakedata"></a>
 
 Generate realistic test data without an internet connection. `FakeData` ships with Tina4, no extra packages required.
 
@@ -762,12 +733,8 @@ $fake = new FakeData(seed: 42);
 
 Use `FakeData` inside migrations, seeders, or test fixtures.
 
-</div>
-
-
----
+***
 
 ## 📕 Download the book
 
-[**Tina4 for PHP Developers** (PDF)](/pdfs/Tina4-for-PHP-Developers.pdf), full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
-
+[**Tina4 for PHP Developers** (PDF)](https://github.com/tina4stack/tina4-documentation/blob/main/pdfs/Tina4-for-PHP-Developers.pdf), full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.

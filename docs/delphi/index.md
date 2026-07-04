@@ -1,35 +1,16 @@
 # Tina4 Delphi - Quick Reference
 
 ::: tip 🔥 Hot Tips
-- Drop components on your form, configure in Object Inspector, and you're ready to go
-- `TTina4REST` + `TTina4RESTRequest` = one-line API calls with automatic MemTable population
-- Use `SendHttpRequest` from `Tina4Core` for quick one-off REST calls without components
-- `TTina4HTMLRender` renders HTML with CSS directly on an FMX canvas, including native form controls
-- Twig templates work in both `TTina4HTMLRender` and `TTina4HTMLPages` for dynamic content
-:::
 
-<nav class="tina4-menu">
-    <a href="#installation">Installation</a> •
-    <a href="#quick-wins">Quick Wins</a> •
-    <a href="#rest-client">REST Client</a> •
-    <a href="#rest-request">REST Request</a> •
-    <a href="#json-adapter">JSON Adapter</a> •
-    <a href="#html-render">HTML Renderer</a> •
-    <a href="#html-pages">Page Navigation</a> •
-    <a href="#twig">Twig Templates</a> •
-    <a href="#core-utilities">Core Utilities</a> •
-    <a href="#claude-ai">Claude AI</a>
-</nav>
+* Drop components on your form, configure in Object Inspector, and you're ready to go
+* `TTina4REST` + `TTina4RESTRequest` = one-line API calls with automatic MemTable population
+* Use `SendHttpRequest` from `Tina4Core` for quick one-off REST calls without components
+* `TTina4HTMLRender` renders HTML with CSS directly on an FMX canvas, including native form controls
+* Twig templates work in both `TTina4HTMLRender` and `TTina4HTMLPages` for dynamic content :::
 
-<style>
-.tina4-menu {
-  background: #2c3e50; color: white; padding: 1rem; border-radius: 8px; margin: 2rem 0; text-align: center; font-size: 1.1rem;
-}
-.tina4-menu a { color: #1abc9c; text-decoration: none; margin: 0 0.4rem; }
-.tina4-menu a:hover { text-decoration: underline; }
-</style>
+[Installation](index.md#installation) • [Quick Wins](index.md#quick-wins) • [REST Client](index.md#rest-client) • [REST Request](index.md#rest-request) • [JSON Adapter](index.md#json-adapter) • [HTML Renderer](index.md#html-render) • [Page Navigation](index.md#html-pages) • [Twig Templates](index.md#twig) • [Core Utilities](index.md#core-utilities) • [Claude AI](index.md#claude-ai)
 
-### Installation {#installation}
+### Installation <a href="#installation" id="installation"></a>
 
 ```bash
 # Clone the repository
@@ -37,9 +18,10 @@ git clone https://github.com/tina4stack/tina4delphi.git
 # Open Tina4DelphiProject in Delphi IDE
 # Build and install Tina4Delphi, then Tina4DelphiDesign
 ```
+
 [More details](installation.md) on requirements, SSL setup, and project configuration.
 
-### Quick Wins {#quick-wins}
+### Quick Wins <a href="#quick-wins" id="quick-wins"></a>
 
 No components needed - just add `Tina4Core` to your uses clause and start using these utilities immediately.
 
@@ -80,9 +62,9 @@ SendMultipartFormData(StatusCode,
 
 [More details](core.md) on string helpers, dates, encoding, JSON, database, and HTTP utilities.
 
----
+***
 
-### REST Client {#rest-client}
+### REST Client <a href="#rest-client" id="rest-client"></a>
 
 Drop a `TTina4REST` on your form and configure base URL and auth. Other components reference this for HTTP calls.
 
@@ -93,9 +75,10 @@ Tina4REST1.SetBearer('eyJhbGciOiJIUzI1NiJ9...');
 var StatusCode: Integer;
 var Response := Tina4REST1.Get(StatusCode, '/users', 'page=1&limit=10');
 ```
+
 [More details](rest-client.md) on authentication, HTTP methods, and response handling.
 
-### REST Request {#rest-request}
+### REST Request <a href="#rest-request" id="rest-request"></a>
 
 Links to a `TTina4REST` and executes REST calls with automatic MemTable population.
 
@@ -104,9 +87,10 @@ Links to a `TTina4REST` and executes REST calls with automatic MemTable populati
 Tina4RESTRequest1.ExecuteRESTCall;
 // FDMemTable1 is now populated with the response data
 ```
+
 [More details](rest-client.md#rest-request) on POST bodies, master/detail, async execution, and events.
 
-### JSON Adapter {#json-adapter}
+### JSON Adapter <a href="#json-adapter" id="json-adapter"></a>
 
 Populates a `TFDMemTable` from static JSON or from a REST request master source.
 
@@ -116,18 +100,20 @@ Tina4JSONAdapter1.DataKey := 'products';
 Tina4JSONAdapter1.JSONData.Text := '{"products": [{"id": "1", "name": "Widget"}]}';
 Tina4JSONAdapter1.Execute;
 ```
+
 [More details](json-adapter.md) on MasterSource linking and sync modes.
 
-### HTML Renderer {#html-render}
+### HTML Renderer <a href="#html-render" id="html-render"></a>
 
 An FMX control that parses and renders HTML with CSS support directly on a canvas.
 
 ```pascal
 Tina4HTMLRender1.HTML.Text := '<h1>Hello</h1><p>This is <b>bold</b> and <i>italic</i>.</p>';
 ```
+
 [More details](html-render.md) on supported HTML/CSS, form controls, events, DOM manipulation, and Twig integration.
 
-### Page Navigation {#html-pages}
+### Page Navigation <a href="#html-pages" id="html-pages"></a>
 
 Design-time SPA-style page navigation using `TTina4HTMLRender`.
 
@@ -138,11 +124,10 @@ Page.PageName := 'home';
 Page.IsDefault := True;
 Page.HTMLContent.Text := '<h1>Home</h1><a href="#about">Go to About</a>';
 ```
+
 [More details](html-pages.md) on Twig pages, programmatic navigation, and events.
 
-<div v-pre>
-
-### Frond (Twig) Templates {#twig}
+### Frond (Twig) Templates <a href="#twig" id="twig"></a>
 
 A Twig-compatible template engine for rendering dynamic HTML.
 
@@ -155,11 +140,10 @@ finally
   Twig.Free;
 end;
 ```
+
 [More details](twig.md) on template syntax, filters, and functions.
 
-</div>
-
-### Core Utilities {#core-utilities}
+### Core Utilities <a href="#core-utilities" id="core-utilities"></a>
 
 `Tina4Core.pas` provides standalone utility functions for JSON, dates, encoding, HTTP, and database operations.
 
@@ -175,9 +159,10 @@ GetJSONDate(Now);                     // '2024-06-15T14:30:00.000Z'
 // Base64 encoding
 var B64 := FileToBase64('C:\photos\avatar.jpg');
 ```
+
 [More details](core.md) on all available utility functions.
 
-### Working with Claude AI {#claude-ai}
+### Working with Claude AI <a href="#claude-ai" id="claude-ai"></a>
 
 Tina4 Delphi ships with an MCP (Model Context Protocol) server that gives [Claude Code](https://claude.com/claude-code) the ability to compile, run, preview, and interact with Pascal/Delphi applications directly from the CLI.
 
@@ -204,17 +189,17 @@ uv sync
 
 **What Claude can do with the MCP server:**
 
-- **Compile Pascal** - compile single-file code or full Delphi projects (DPR + PAS + DFM)
-- **Project Templates** - generate proper Delphi project structure with components and event handlers
-- **Run Programs** - compile and execute console programs, capturing stdout/stderr
-- **Launch GUI Apps** - compile and run VCL/FMX applications in the background
-- **Live Preview** - see running desktop apps through Claude's preview panel via an HTTP bridge
-- **Click Buttons** - interact with controls by enumerating child windows and sending clicks directly
-- **Move & Resize** - reposition and resize application windows programmatically
-- **Type & Send Keys** - enter text and send keyboard shortcuts to running apps
-- **Parse Forms** - read `.dfm`, `.fmx`, or `.lfm` form files and understand component structure
-- **Auto-detect Compilers** - finds Free Pascal, Delphi 7 (dcc32), and RAD Studio (dcc64)
-- **Specify Compiler Path** - use any compiler by passing its full path
+* **Compile Pascal** - compile single-file code or full Delphi projects (DPR + PAS + DFM)
+* **Project Templates** - generate proper Delphi project structure with components and event handlers
+* **Run Programs** - compile and execute console programs, capturing stdout/stderr
+* **Launch GUI Apps** - compile and run VCL/FMX applications in the background
+* **Live Preview** - see running desktop apps through Claude's preview panel via an HTTP bridge
+* **Click Buttons** - interact with controls by enumerating child windows and sending clicks directly
+* **Move & Resize** - reposition and resize application windows programmatically
+* **Type & Send Keys** - enter text and send keyboard shortcuts to running apps
+* **Parse Forms** - read `.dfm`, `.fmx`, or `.lfm` form files and understand component structure
+* **Auto-detect Compilers** - finds Free Pascal, Delphi 7 (dcc32), and RAD Studio (dcc64)
+* **Specify Compiler Path** - use any compiler by passing its full path
 
 **Preview Bridge** - Claude can see your running desktop app through its built-in preview panel. Add this to `.claude/launch.json`:
 
@@ -235,14 +220,10 @@ uv sync
 
 This means Claude can write Delphi code, compile it, launch the app, see it running, click buttons, verify behavior, and fix issues, all without leaving the conversation.
 
-<nav class="tina4-menu" style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
-  <a href="#">&uarr; Back to top</a>
-</nav>
+[↑ Back to top](index.md)
 
-
----
+***
 
 ## 📕 Download the book
 
-[**Tina4Delphi Developer** (PDF)](/pdfs/Tina4-Delphi-Developer.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
-
+[**Tina4Delphi Developer** (PDF)](https://github.com/tina4stack/tina4-documentation/blob/main/pdfs/Tina4-Delphi-Developer.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
