@@ -230,6 +230,92 @@ stream.close();
 
 ---
 
+## Live Blocks
+
+A live block is a region of a server-rendered page that keeps itself current. You write it in a Frond template with the `{% live %}` tag. Frond renders it on the server with the first request, so the page ships with real content, and `frond.js` refreshes that one region on its own.
+
+```twig
+{% live "prices" poll 5 %}
+  <ul>
+    {% for row in rows %}<li>{{ row.name }}: {{ row.price }}</li>{% endfor %}
+  </ul>
+{% endlive %}
+```
+
+Frond wraps the block in a marker element:
+
+```html
+<div data-frond-live="prices" id="live-prices" data-mode="poll" data-interval="5" data-src="/__frond/live/prices">
+  ...first-paint HTML...
+</div>
+```
+
+`frond.js` finds every `[data-frond-live]` marker on the page and drives it. You load nothing extra. The same client that powers `frond.request` and `frond.ws` hydrates live blocks.
+
+### Transports
+
+Name the transport right after the block name.
+
+| Directive | Refresh |
+|-----------|---------|
+| `{% live "name" poll 5 %}` | Re-fetch `GET /__frond/live/name` every 5 seconds |
+| `{% live "name" sse %}` | Stream refreshes over Server-Sent Events |
+| `{% live "name" ws "/ws/path" %}` | Refresh when the server pushes over a WebSocket you own |
+
+Poll and SSE blocks read from one always-on endpoint, `GET /__frond/live/{name}`, that Frond mounts for you. A WebSocket block refreshes when your code pushes to it.
+
+### The data provider
+
+Register a provider so each refresh renders fresh data. The provider runs again with the live request, so an authenticated block re-checks auth on every refresh and a block that reads the current user keeps reading the right one.
+
+```python
+# Python
+from tina4_python.frond import live_source
+
+@live_source("prices")
+def prices(request):
+    return {"rows": Price.all()}
+```
+
+```php
+// PHP
+Frond::liveSource("prices", fn($request) => ["rows" => Price::all()]);
+```
+
+```ruby
+# Ruby
+Tina4::Frond.live_source("prices") { |request| { rows: Price.all } }
+```
+
+```javascript
+// Node
+Frond.liveSource("prices", (request) => ({ rows: Price.all() }));
+```
+
+### Pushing over a WebSocket
+
+For a `ws` block, re-render and broadcast the fresh HTML to every connected client with one call:
+
+```python
+await push_live("prices", {"rows": Price.all()})   # Python
+```
+
+```ruby
+Tina4::Frond.push_live("prices", { rows: Price.all })   # Ruby
+```
+
+```javascript
+Frond.pushLive("prices", { rows: Price.all() });   // Node   (PHP: Frond::pushLive)
+```
+
+### Rules
+
+- A block's `src` attribute is same-origin only. A live block cannot pull from another host.
+- Nested live blocks are rejected. Keep each block flat.
+- The provider is the only place a live block reads data, so put your auth check there.
+
+---
+
 ## Cookies
 
 ### frond.cookie
