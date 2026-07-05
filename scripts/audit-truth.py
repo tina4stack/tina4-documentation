@@ -732,6 +732,104 @@ def check_vue_interp() -> tuple[int, list[str]]:
     return len(bad), lines
 
 
+# ── Python API: doc code imports a real module, no phantom @app ─────────
+#
+# The Python quick-reference was rewritten "to the v3 API" (Apr 2026) by
+# GUESSING rather than importing: it invented an ``@app.get`` / ``@app.post``
+# decorator object (there is no ``app`` — routes use bare ``@get`` / ``@post``)
+# and PascalCase module paths (``tina4_python.Auth``, ``.Database``, ``.ORM``,
+# ``.Localization``) that raise ``ModuleNotFoundError``. Nothing ran the
+# examples and the CLI/env/punct checks don't look at Python imports, so it
+# shipped and the RAG ingested it. This check imports nothing either: it
+# resolves every ``tina4_python[.x.y]`` import in a ```python block against the
+# sibling framework source tree (filesystem), and flags any ``@app.<attr>``
+# decorator. Changelogs (``36-releases.md``) are historical and legitimately
+# reference removed / superseded APIs, so they are skipped.
+
+_PY_FENCE_RE = re.compile(r"^```(?:python|py)[^\n]*\n(.*?)^```", re.DOTALL | re.MULTILINE)
+_PY_IMPORT_RE = re.compile(
+    r"^\s*(?:from\s+(tina4_python[\w.]*)\s+import\b|import\s+(tina4_python[\w.]*))",
+    re.MULTILINE,
+)
+_PY_APP_RE = re.compile(r"@app\.[A-Za-z_]\w*")
+
+
+def _python_pkg_root() -> Path | None:
+    root = WORKSPACE_ROOT / "tina4-python" / "tina4_python"
+    return root if root.is_dir() else None
+
+
+def _module_path_exists(pkg_root: Path, dotted: str) -> bool:
+    """True if a dotted ``tina4_python[.a.b]`` path resolves to a real module
+    or package on disk, compared CASE-SENSITIVELY.
+
+    We must NOT use ``Path.exists()``: on a case-insensitive filesystem
+    (macOS, Windows) ``pkg_root/'Auth'`` matches the real ``auth.py`` and the
+    check would pass locally, then ImportError on the Linux CI/production box.
+    That is the very trap that produced the bug this guard exists to catch.
+    So we match each path component against the actual directory entry names."""
+    parts = dotted.split(".")[1:]  # drop the leading "tina4_python"
+    if not parts:
+        return True  # the package root itself
+    cur = pkg_root
+    for i, part in enumerate(parts):
+        try:
+            names = {p.name for p in cur.iterdir()}  # real on-disk casing
+        except OSError:
+            return False
+        last = i == len(parts) - 1
+        if part in names and (cur / part).is_dir():
+            cur = cur / part            # descend into a subpackage
+            continue
+        if last and f"{part}.py" in names:
+            return True                 # a module file (exact-case)
+        return False
+    return True                         # ended on a real package dir
+
+
+def check_python_api() -> tuple[int, list[str]]:
+    pkg_root = _python_pkg_root()
+    lines = [f"\n{cyan('Python-API check')} — doc ```python imports resolve; "
+             f"no phantom @app decorator"]
+    if pkg_root is None:
+        return 0, lines + [yellow("⚠ tina4-python/tina4_python not found — "
+                                  "skipping Python-API check")]
+
+    bad_import: set[tuple[str, str]] = set()
+    bad_app: set[tuple[str, str]] = set()
+    for path in find_doc_files():
+        if "/docs/python/" not in path.as_posix() or path.name == "36-releases.md":
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        relp = str(path.relative_to(REPO_ROOT))
+        for block in _PY_FENCE_RE.findall(text):
+            for m in _PY_IMPORT_RE.finditer(block):
+                mod = m.group(1) or m.group(2)
+                if not _module_path_exists(pkg_root, mod):
+                    bad_import.add((relp, mod))
+            for am in _PY_APP_RE.finditer(block):
+                bad_app.add((relp, am.group(0)))
+
+    drift = len(bad_import) + len(bad_app)
+    if drift == 0:
+        lines.append(green("  ✓ every tina4_python import resolves; no phantom @app.*"))
+        return 0, lines
+    if bad_import:
+        lines.append(red(f"  ✗ {len(bad_import)} import(s) of a nonexistent "
+                         f"tina4_python module:"))
+        for relp, mod in sorted(bad_import):
+            lines.append(f"    {red('•')} {mod:<34s} {dim('→ ' + relp)}")
+    if bad_app:
+        lines.append(red(f"  ✗ {len(bad_app)} phantom @app.* decorator(s) "
+                         f"(no app object — use bare @get/@post/@websocket):"))
+        for relp, tok in sorted(bad_app):
+            lines.append(f"    {red('•')} {tok:<34s} {dim('→ ' + relp)}")
+    return drift, lines
+
+
 # ── Driver ────────────────────────────────────────────────────────────
 
 CHECKS = {
@@ -740,6 +838,7 @@ CHECKS = {
     "punct": check_punctuation,
     "frontmatter": check_frontmatter,
     "vue": check_vue_interp,
+    "pyapi": check_python_api,
 }
 
 
@@ -794,6 +893,7 @@ def main() -> int:
         + json_payload.get("punct", 0)
         + json_payload.get("frontmatter", 0)
         + json_payload.get("vue", 0)
+        + json_payload.get("pyapi", 0)
     )
     if args.strict and strict_drift > 0:
         return 1

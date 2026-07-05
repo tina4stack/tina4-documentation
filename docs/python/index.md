@@ -37,20 +37,22 @@ Put `.twig` files in `./src/templates` and assets in `./src/public`. The framewo
 
 ### Basic Routing <a href="#basic-routing" id="basic-routing"></a>
 
-The `@app` decorators register routes. Each handler receives `request` and `response`. Path parameters arrive as function arguments.
+Import the route decorators from `tina4_python`. Each handler receives `request` and `response`. Path parameters arrive as function arguments.
 
 ```python
-@app.get("/")
+from tina4_python import get, post
+
+@get("/")
 async def get_home(request, response):
     return response("<h1>Hello Tina4 Python</h1>")
 
 # POST requires a formToken in the body or Bearer auth
-@app.post("/api")
+@post("/api")
 async def post_api(request, response):
     return response({"data": request.body})
 
 # Redirect after a POST
-@app.post("/register")
+@post("/register")
 async def post_register(request, response):
     return response.redirect("/welcome")
 ```
@@ -62,6 +64,8 @@ Follow the links for [basic routing](02-routing.md) and [dynamic routing](02-rou
 Middleware runs before and after your route handler. Define a class with static methods, then attach it with the `@middleware` decorator.
 
 ```python
+from tina4_python import get, middleware
+
 class RunSomething:
 
     @staticmethod
@@ -80,7 +84,7 @@ class RunSomething:
         return request, response
 
 @middleware(RunSomething)
-@app.get("/middleware")
+@get("/middleware")
 async def get_middleware(request, response):
     return response("Route") # Before[Before / After Something]Route[Before / After Something]After
 ```
@@ -97,7 +101,9 @@ Put `.twig` files in `./src/templates` and assets in `./src/public`. The templat
 ```
 
 ```python
-@app.get("/")
+from tina4_python import get
+
+@get("/")
 async def get_home(request, response):
     return response.render("index.twig", {"name": "World!"})
 ```
@@ -125,21 +131,23 @@ TINA4_SESSION_MONGO_COLLECTION=sessions
 ```
 
 ```python
-@app.get("/session/set")
+from tina4_python import get
+
+@get("/session/set")
 async def get_session_set(request, response):
     request.session.set("name", "Joe")
     request.session.set("info", {"info": ["one", "two", "three"]})
     return response("Session Set!")
 
 
-@app.get("/session/get")
+@get("/session/get")
 async def get_session_get(request, response):
     name = request.session.get("name")
     info = request.session.get("info")
     return response({"name": name, "info": info})
 
 
-@app.get("/session/clear")
+@get("/session/clear")
 async def get_session_clear(request, response):
     request.session.delete("name")
     return response("Session key removed!")
@@ -193,23 +201,24 @@ is_truthy(get_env("TINA4_DEBUG"))   # True for "true", "1", "yes"
 
 ### Authentication <a href="#authentication" id="authentication"></a>
 
-POST, PUT, PATCH, and DELETE routes require a Bearer token by default. Pass `Authorization: Bearer TINA4_API_KEY` in the request header. Use `@noauth` to open a route to everyone. Use `@secured` to lock a GET route behind authentication.
+POST, PUT, PATCH, and DELETE routes require a Bearer token by default. Pass `Authorization: Bearer TINA4_API_KEY` in the request header. Use `@noauth()` to open a route to everyone. Use `@secured()` to lock a GET route behind authentication.
 
 ```python
-from tina4_python.Auth import Auth
+from tina4_python import get, post, noauth, secured
+from tina4_python.auth import Auth
 
-@app.post("/login")
-@noauth
+@post("/login")
+@noauth()
 async def login(request, response):
     token = Auth.get_token({"user_id": 1, "role": "admin"})
     return response({"token": token})
 
-@app.get("/protected")
-@secured
+@get("/protected")
+@secured()
 async def secret(request, response):
     return response("Welcome!")
 
-@app.get("/verify")
+@get("/verify")
 async def verify(request, response):
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
     payload = Auth.valid_token(token)
@@ -239,9 +248,10 @@ Tina4 ships with frond.js, a small zero-dependency JavaScript library for AJAX c
 Visit `http://localhost:7145/swagger`. Decorated routes appear in the Swagger UI without manual annotation.
 
 ```python
-from tina4_python import description
+from tina4_python import get
+from tina4_python.swagger import description
 
-@app.get("/users")
+@get("/users")
 @description("Get all users")
 async def users(request, response):
     return response(User().select("*"))
@@ -252,7 +262,7 @@ Follow the links for more on [Configuration](20-swagger.md), [Usage](20-swagger.
 ### Databases <a href="#databases" id="databases"></a>
 
 ```python
-from tina4_python.Database import Database
+from tina4_python.database import Database
 
 # dba = Database("<driver>:<hostname>/<port>:database_name", username, password)
 dba = Database("sqlite3:data.db")
@@ -299,7 +309,7 @@ tina4 migrate
 ### ORM <a href="#orm" id="orm"></a>
 
 ```python
-from tina4_python.ORM import ORM, IntegerField, StringField
+from tina4_python.orm import ORM, IntegerField, StringField
 
 class User(ORM):
     id   = IntegerField(primary_key=True, auto_increment=True)
@@ -316,7 +326,9 @@ ORM covers more ground than this snippet shows. Study the [Advanced Detail](06-o
 ### CRUD <a href="#crud" id="crud"></a>
 
 ```python
-@app.get("/users/dashboard")
+from tina4_python import get
+
+@get("/users/dashboard")
 async def dashboard(request, response):
     users = User().select("id, name, email")
     return response.render("users/dashboard.twig", {"crud": users.to_crud(request)})
@@ -345,7 +357,6 @@ print(result["body"])
 ```python
 from tina4_python import tests
 
-
 @tests(
     assert_equal((7, 7), 1),
     assert_equal((-1, 1), -1),
@@ -365,10 +376,12 @@ Due to the nature of Python, services are not necessary.
 
 ### Websockets <a href="#websockets" id="websockets"></a>
 
-WebSocket support is built in. No extra dependencies. Define a handler with the `@app.websocket` decorator, and the framework manages the connection alongside your HTTP routes on the same port.
+WebSocket support is built in. No extra dependencies. Define a handler with the `@websocket` decorator, and the framework manages the connection alongside your HTTP routes on the same port.
 
 ```python
-@app.websocket("/ws/chat")
+from tina4_python import websocket
+
+@websocket("/ws/chat")
 async def chat_ws(connection, event, data):
     if event == "message":
         await connection.send(f"Echo: {data}")
@@ -381,7 +394,7 @@ Have a look at the PubSub example under [Websockets](23-websocket.md).
 Supports litequeue (default/SQLite), RabbitMQ, Kafka, and MongoDB backends. The queue system uses `produce()` and `consume()` directly -- no separate Producer or Consumer classes.
 
 ```python
-from tina4_python.Queue import Queue
+from tina4_python.queue import Queue
 
 # Produce a message
 queue = Queue(topic="emails")
@@ -396,29 +409,22 @@ for job in queue.consume("emails"):
 
 ### WSDL <a href="#wsdl" id="wsdl"></a>
 
+Subclass `WSDL` and decorate each operation with `@wsdl_operation`, giving the return shape. Drop the file in `src/routes/` and the framework serves the SOAP endpoint plus its generated WSDL.
+
 ```python
-from tina4_python.WSDL import WSDL, wsdl_operation
 from typing import List
+from tina4_python.wsdl import WSDL, wsdl_operation
 
 
 class Calculator(WSDL):
-    SERVICE_URL = "http://localhost:7145/calculator"
 
+    @wsdl_operation({"Result": int})
     def Add(self, a: int, b: int):
         return {"Result": a + b}
 
+    @wsdl_operation({"Numbers": List[int], "Total": int})
     def SumList(self, Numbers: List[int]):
-        return {
-            "Numbers": Numbers,
-            "Total": sum(Numbers),
-            "Error": None
-        }
-
-
-@wsdl("/calculator")
-async def wsdl_cis(request, response):
-    return response.wsdl(Calculator(request))
-
+        return {"Numbers": Numbers, "Total": sum(Numbers)}
 ```
 
 [More Details](25-wsdl-soap.md) on WSDL configuration and usage.
@@ -452,6 +458,8 @@ graphql = GraphQL(schema, resolvers)
 Register the endpoint:
 
 ```python
+from tina4_python import post, noauth
+
 @post("/graphql")
 @noauth()
 async def handle_graphql(request, response):
@@ -463,21 +471,19 @@ GraphiQL UI available at `/__dev/graphql` in debug mode.
 
 ### Localization (i18n) <a href="#localization" id="localization"></a>
 
-Set `TINA4_LOCALE` in `.env` to change the framework language. Supported: `en`, `fr`, `af`.
+Translation files live in `src/locales/` as JSON. Create an `I18n` instance with a locale directory and a default locale, switch languages at runtime, and translate keys with `t()`.
 
 ```python
-from tina4_python.Localization import localize
+from tina4_python.i18n import I18n
 
-_ = localize()
-print(_("Server stopped."))  # "Bediener gestop." (af)
+i18n = I18n(locale_dir="src/locales", default_locale="en")
+
+i18n.set_locale("af")          # switch language
+i18n.t("welcome_message")      # translated string for the active locale
+i18n.t("greeting", name="Ada") # with interpolation
 ```
 
-Translations use Python's `gettext` module. The framework falls back to English for unsupported languages.
-
-```python
-from tina4_python.Localization import AVAILABLE_LANGUAGES
-# ['en', 'fr', 'af']
-```
+Missing keys fall back to the default locale.
 
 [Back to top](index.md)
 

@@ -2367,7 +2367,7 @@ def log_request(request, response):
     print(f"Request: {request.method} {request.url}")
     return request, response
 
-@app.get("/users")
+@get("/users")
 def get_users(request, response):
     # middleware never ran
     return response("OK")
@@ -2388,7 +2388,7 @@ def log_request(request, response):
     print(f"Request: {request.method} {request.url}")
     return request, response
 
-@app.get("/users")
+@get("/users")
 def get_users(request, response):
     # log_request fires before this handler
     return response("OK")
@@ -2460,7 +2460,7 @@ user.save()  # works on all database engines including SQLite
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
 
-@app.get("/public")
+@get("/public")
 @noauth
 def public_page(response):
     return response("Open to all")  # still required auth
@@ -2474,7 +2474,7 @@ def public_page(response):
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
 
-@app.get("/public")
+@get("/public")
 @noauth
 def public_page(response):
     return response("Open to all")  # accessible without token
@@ -2540,7 +2540,7 @@ results = QueryBuilder.table("orders") \
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
 
-@app.get("/users/{id}")
+@get("/users/{id}")
 def get_user(request, response):
     user_id = request.params["id"]
     return response(f"User {user_id}")
@@ -2554,7 +2554,7 @@ def get_user(request, response):
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
 
-@app.get("/users/{id:int}")
+@get("/users/{id:int}")
 def get_user(id, request, response):
     return response(f"User {id}")  # id is already an int
 ```
@@ -2562,7 +2562,7 @@ def get_user(id, request, response):
 **Auto-start sessions (v3.9.0).** Every route handler receives `request.session` with zero configuration. The session API covers `get`, `set`, `delete`, `has`, `clear`, `destroy`, `regenerate`, `flash`, and `get_flash`.
 
 ```python
-@app.get("/dashboard")
+@get("/dashboard")
 def dashboard(request, response):
     visits = request.session.get("visits", 0)
     request.session.set("visits", visits + 1)
@@ -2855,7 +2855,7 @@ token = Auth.get_token(payload, expires_in=60)          # minutes
 **Route-based WebSocket handlers (v3.3.0).** Define WebSocket endpoints with the same decorator pattern as HTTP routes.
 
 ```python
-@app.websocket("/ws/chat")
+@websocket("/ws/chat")
 def chat_handler(message, client):
     # message is the incoming data
     # client.send() to reply
@@ -2865,7 +2865,7 @@ def chat_handler(message, client):
 **File upload improvements (v3.3.0).** Uploaded files include raw bytes, a `data_uri` template filter, and consistent property names across all frameworks.
 
 ```python
-@app.post("/upload")
+@post("/upload")
 def handle_upload(request, response):
     file = request.files[0]
     print(file.filename)    # standardized from file_name
@@ -2962,7 +2962,7 @@ name = request.files[0].filename
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
 
-@app.get("/ping")
+@get("/ping")
 def ping():
     return "pong"
 
@@ -2975,7 +2975,7 @@ def ping():
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
 
-@app.get("/hello")
+@get("/hello")
 def hello(response):
     return response("Hello")
 
@@ -2988,7 +2988,7 @@ def hello(response):
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
 
-@app.post("/echo")
+@post("/echo")
 def echo(request: Request):
     return request.body
 
@@ -3001,7 +3001,7 @@ def echo(request: Request):
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
 
-@app.get("/users")
+@get("/users")
 def users(request, response):
     return response({"users": []})
 ```
@@ -3104,7 +3104,7 @@ The v3.0.0 release replaced the entire v2 codebase. Zero external dependencies. 
 
 - **New module structure.** `tina4_python.core` replaces the old flat namespace.
 - **Frond template engine.** Built-in Twig-compatible templates replace the Jinja2 dependency. Pre-compilation caches tokens for a 2.8x speedup on file renders.
-- **Decorator-based routing.** `@app.get`, `@app.post`, `@app.put`, `@app.delete`, `@app.patch` replace the old `Route` class.
+- **Decorator-based routing.** `@get`, `@post`, `@put`, `@delete`, `@patch` replace the old `Route` class.
 - **Built-in Dev Admin.** A browser-based dashboard shows routes, database tables, and queue status.
 - **Error overlay in debug mode.** Stack traces render in the browser with source context, request details, and suggested fixes.
 - **Swagger auto-registration.** Decorated routes appear in the Swagger UI without manual annotation.

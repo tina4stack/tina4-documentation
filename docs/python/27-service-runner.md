@@ -245,23 +245,20 @@ runner.stop_service("cache_warmer")
 
 ## 8. Integrating with the App
 
-Start the runner in your `src/app.py`:
+Tina4 imports every file under `src/` on boot, so start the runner where you define it. Put the setup in `src/worker_services.py` and call `start()` at the bottom:
 
 ```python
-# src/app.py
-from tina4_python.tina4 import Tina4
-from src.worker_services import runner
+# src/worker_services.py
+from tina4_python.service import ServiceRunner
 
-app = Tina4()
+runner = ServiceRunner()
+runner.register("email_worker", EmailWorker())
+runner.register("sms_worker", SmsWorker())
 
-@app.on_startup
-def start_services():
-    runner.start()
-
-@app.on_shutdown
-def stop_services():
-    runner.stop()
+runner.start()   # runs when the server boots and imports this file
 ```
+
+Stop them cleanly with the `SIGTERM`/`SIGINT` handler shown above, which calls `runner.stop()`.
 
 ---
 
