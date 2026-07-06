@@ -41,7 +41,7 @@ hero:
 
 ## What's new
 
-**v3.13.52 (2026-07-04)** - [full notes](/python/36-releases.md)
+**v3.13.53 (2026-07-06)** - [full notes](/python/36-releases.md)
 
 Frond gains live blocks. Wrap a region in `{% live %}` and Frond paints it on the server, then refreshes it on its own over polling, Server-Sent Events, or a WebSocket you already own. The block renders real content on first paint, and its data provider re-runs with each request so an authenticated block re-checks auth every refresh. One `frond.js` client drives it, byte-identical across all four frameworks. This release also restores `pgsql://` as a PostgreSQL connection scheme (the spelling PDO, Laravel, and Doctrine use), and the built-in SCSS compiler now evaluates `rgba(#hex, a)`, `rgb()`, `mix()`, `lighten()`, and `darken()` instead of passing them through as invalid CSS.
 

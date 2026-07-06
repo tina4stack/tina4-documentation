@@ -138,8 +138,32 @@ A complete model. Here is what each piece does:
 | `"number"` | `number` | `REAL` | Decimal numbers |
 | `"boolean"` | `boolean` | `INTEGER` (0/1) | True/False |
 | `"datetime"` | `string` | `TEXT` | Date and time |
+| `"json"` | `object` / `array` | `JSONB` (PG), `JSON` (MySQL), `TEXT` (SQLite) | JSON document column (see [JSON columns](#json-columns) below) |
 
 For foreign keys, use `"integer"`. There is no separate foreign key type -- the relationship is defined through `hasMany`, `hasOne`, and `belongsTo` methods instead.
+
+#### JSON columns
+
+A `"json"` field stores an object or an array as a JSON document. The framework encodes the value to JSON on save and decodes it back to a JavaScript object on read, so the property holds native data, never a raw string:
+
+```typescript
+export default class Event extends BaseModel {
+  static tableName = "events";
+  static fields = {
+    id:      { type: "integer" as const, primaryKey: true, autoIncrement: true },
+    name:    { type: "string"  as const },
+    payload: { type: "json"    as const },   // object or array
+  };
+}
+
+const event = new Event({ name: "click", payload: { x: 10, tags: ["ui", "beta"] } });
+await event.save();
+
+const fresh = await Event.find(event.id);
+fresh.payload.x;                 // 10 -- an object, not a string
+```
+
+The column type follows the engine: `JSONB` on PostgreSQL, `JSON` on MySQL, `NVARCHAR(MAX)` on SQL Server, a text `BLOB` on Firebird, and `TEXT` on SQLite. A value that cannot be encoded to JSON (a circular reference, a `BigInt`) makes `save()` fail loud (returns `false`, records the cause) rather than writing partial data.
 
 ### Field Options
 
