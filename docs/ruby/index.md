@@ -1,8 +1,6 @@
-# Tina4 Ruby -- Quick Reference
+# Tina4 Ruby - Quick Reference
 
-> **TINA4 - The Intelligent Native Application 4ramework** Simple. Fast. Human. | Built for AI. Built for you.
-
-::: tip Hot Tips
+::: tip 🔥 Hot Tips
 
 * Route files live in `src/routes/`, templates in `src/templates/`, static files in `src/public/`
 * GET routes are public by default; POST/PUT/PATCH/DELETE require a token (use `@noauth` to override)
@@ -114,7 +112,7 @@ end
 
 ### SCSS Stylesheets <a href="#scss-stylesheets" id="scss-stylesheets"></a>
 
-Drop files in `./src/public/scss` -- Tina4 compiles them to `./src/public/css`.
+Drop files in `./src/public/scss`, Tina4 compiles them to `./src/public/css`.
 
 ```scss
 // src/public/scss/main.scss
@@ -190,13 +188,13 @@ end
 
 ### AJAX and frond.js <a href="#ajax" id="ajax"></a>
 
-Tina4 ships with frond.js -- a zero-dependency JavaScript library for AJAX calls, form submissions, and real-time WebSocket connections.
+Tina4 ships with frond.js, a zero-dependency JavaScript library for AJAX calls, form submissions, and real-time WebSocket connections.
 
 [More details](https://github.com/tina4stack/tina4-documentation/blob/main/general/frond.md) on available features.
 
 ### OpenAPI and Swagger UI <a href="#swagger" id="swagger"></a>
 
-Visit `http://localhost:7147/swagger` -- available when `TINA4_DEBUG=true`.
+Visit `http://localhost:7147/swagger`, available when `TINA4_DEBUG=true`.
 
 ```ruby
 # List all users

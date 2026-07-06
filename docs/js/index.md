@@ -1,6 +1,6 @@
 # Tina4 JavaScript - Quick Reference
 
-::: tip 🔥 Sub-3KB core, reactive framework
+::: tip 🔥 Hot Tips
 
 * Signals for state, `html` tagged templates for rendering, Web Components for reuse
 * Client-side routing with `{param}` syntax matching tina4-php/python

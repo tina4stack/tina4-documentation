@@ -1,8 +1,6 @@
-# Tina4 Node.js -- Quick Reference
+# Tina4 Node.js - Quick Reference
 
-> **TINA4: The Intelligent Native Application 4ramework** Simple. Fast. Human. | Built for AI. Built for you.
-
-::: tip Hot Tips
+::: tip 🔥 Hot Tips
 
 * Routes go in `src/routes/`, templates in `src/templates/`, static files in `src/public/`
 * GET routes are public by default; POST/PUT/PATCH/DELETE require a token
@@ -337,7 +335,7 @@ Router.get("/api/products", async (req, res) => {
 });
 ```
 
-Swagger runs when `TINA4_DEBUG=true`. Set `TINA4_SWAGGER_ENABLED=true` in `.env` to expose it in production. The raw spec lives at `/swagger/json` -- standard OpenAPI 3.0, compatible with every tool in the OpenAPI world.
+Swagger runs when `TINA4_DEBUG=true`. Set `TINA4_SWAGGER_ENABLED=true` in `.env` to expose it in production. The raw spec lives at `/swagger/json`, standard OpenAPI 3.0, compatible with every tool in the OpenAPI world.
 
 ### Databases <a href="#databases" id="databases"></a>
 
@@ -449,7 +447,7 @@ The CLI generates a full CRUD route file from your model. One command wires up a
 tina4 generate crud User
 ```
 
-This creates `src/routes/users.ts` with GET, POST, PUT, PATCH, and DELETE routes. Model, routes, and migration -- all connected, ready to serve.
+This creates `src/routes/users.ts` with GET, POST, PUT, PATCH, and DELETE routes. Model, routes, and migration, all connected, ready to serve.
 
 ```typescript
 Router.get("/users/dashboard", async (req, res) => {
@@ -545,7 +543,7 @@ Have a look at the PubSub example under [WebSockets](23-websocket.md).
 
 ### Queues <a href="#queues" id="queues"></a>
 
-Push slow work to the background. The user gets a response in milliseconds. The work still happens -- just not during the request.
+Push slow work to the background. The user gets a response in milliseconds. The work still happens, just not during the request.
 
 ```typescript
 import { Router, Queue } from "tina4-nodejs";

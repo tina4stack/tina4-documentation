@@ -1,12 +1,10 @@
-# Tina4 PHP -- Quick Reference
+# Tina4 PHP - Quick Reference
 
-> **TINA4, The Intelligent Native Application 4ramework** Simple. Fast. Human. | Built for AI. Built for you.
-
-::: tip Hot Tips
+::: tip 🔥 Hot Tips
 
 * Routes go in `src/routes/`, templates in `src/templates/`, static files in `src/public/`
 * GET routes are public by default; POST/PUT/PATCH/DELETE require a token
-* `$response->json()` returns JSON with the correct headers -- no manual config
+* `$response->json()` returns JSON with the correct headers, no manual config
 * Run `tina4 serve` to start the dev server on port 7145
 :::
 
@@ -101,7 +99,7 @@ Follow the links for more on [middleware declaration](10-middleware-security.md)
 
 ### Template Rendering <a href="#templates" id="templates"></a>
 
-Templates live in `./src/templates`. The framework uses Frond -- a Twig-compatible engine built from scratch. Call `$response->render()` and pass your data.
+Templates live in `./src/templates`. The framework uses Frond, a Twig-compatible engine built from scratch. Call `$response->render()` and pass your data.
 
 ```twig
 <!-- src/templates/hello.html -->
@@ -229,7 +227,7 @@ The filter renders a hidden input with a signed JWT.
 
 ### AJAX and frond.js <a href="#ajax" id="ajax"></a>
 
-Tina4 ships with frond.js -- a small zero-dependency JavaScript library for AJAX calls, form submissions, and real-time WebSocket connections.
+Tina4 ships with frond.js, a small zero-dependency JavaScript library for AJAX calls, form submissions, and real-time WebSocket connections.
 
 [More details](https://github.com/tina4stack/tina4-documentation/blob/main/general/frond.md) on available features.
 
@@ -331,7 +329,7 @@ ORM covers a lot of ground. Study the [full reference](06-orm.md) to get the mos
 
 ### CRUD <a href="#crud" id="crud"></a>
 
-One line of code generates a working CRUD system -- screens, routes, and all.
+One line of code generates a working CRUD system: screens, routes, and all.
 
 ```php
 (new User())->generateCrud("/my-crud-templates");

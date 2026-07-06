@@ -1,6 +1,6 @@
 # Understanding Tina4 - Quick Reference
 
-::: tip
+::: tip 🔥 Hot Tips
 
 * Tina4 is The Intelligent Native Application 4ramework: one package, zero config, convention over configuration
 * Same API across Python, Node.js, PHP, and Ruby: learn one, know all four

@@ -1,6 +1,6 @@
-# Tina4 Python -- Quick Reference
+# Tina4 Python - Quick Reference
 
-::: tip Hot Tips
+::: tip 🔥 Hot Tips
 
 * Routes go in `src/routes/`, templates in `src/templates/`, static files in `src/public/`
 * GET routes are public by default; POST/PUT/PATCH/DELETE require a token
@@ -392,7 +392,7 @@ Have a look at the PubSub example under [Websockets](23-websocket.md).
 
 ### Queues <a href="#queues" id="queues"></a>
 
-Supports litequeue (default/SQLite), RabbitMQ, Kafka, and MongoDB backends. The queue system uses `produce()` and `consume()` directly -- no separate Producer or Consumer classes.
+Supports litequeue (default/SQLite), RabbitMQ, Kafka, and MongoDB backends. The queue system uses `produce()` and `consume()` directly, with no separate Producer or Consumer classes.
 
 ```python
 from tina4_python.queue import Queue
