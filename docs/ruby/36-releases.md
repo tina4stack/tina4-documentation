@@ -1,5 +1,20 @@
 # Chapter 35: Release Notes
 
+## v3.13.53 (2026-07-06) - JSONField: JSON document columns
+
+**Store a JSON document in a column.** A model field can now hold a whole object or array. The framework encodes it to JSON when it writes and decodes it back to a native Hash when it reads, so the attribute is always live data, never a raw string.
+
+```ruby
+class Event < Tina4::ORM
+  json_field :payload            # Hash or Array
+```
+
+The column type follows the engine. PostgreSQL gets native `JSONB`, MySQL native `JSON`, SQL Server `NVARCHAR(MAX)`, Firebird a text `BLOB`, and SQLite `TEXT` (queryable through JSON1). One field declaration, the right column on every database.
+
+A value that cannot be encoded to JSON does not slip through. `save()` fails loud: it rolls back, returns `false`, and records the cause, so a half-written row never reaches the table. A mutable default is copied per instance, so two records never share and mutate the same object.
+
+No new third-party dependencies.
+
 ## v3.13.52 (2026-07-04) - Frond live blocks, pgsql:// URL scheme, SCSS colour functions
 
 **Frond live blocks.** A page can now carry a region that keeps itself current. Wrap the region in `{% live %}` and Frond paints it on the server with the first request, then refreshes it over the transport you name.

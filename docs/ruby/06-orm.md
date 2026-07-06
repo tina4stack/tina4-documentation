@@ -138,9 +138,29 @@ A complete model. Here is what each piece does:
 | `datetime_field` | `String` | `DATETIME` | Date and time |
 | `timestamp_field` | `String` | `TIMESTAMP` | Timestamps |
 | `blob_field` | `String` | `BLOB` | Binary data |
-| `json_field` | `String` | `TEXT` | JSON stored as text |
+| `json_field` | `Hash` / `Array` | `JSONB` (PG), `JSON` (MySQL), `TEXT` (SQLite) | JSON document column (see [JSON columns](#json-columns) below) |
 
 For foreign keys, use `integer_field`. There is no separate foreign key field type -- the relationship is defined through `has_many`, `has_one`, and `belongs_to` declarations instead.
+
+#### JSON columns
+
+`json_field` stores a `Hash` or an `Array` as a JSON document. The framework encodes the value to JSON on save and decodes it back to a Ruby object on read, so the attribute holds native data, never a raw string:
+
+```ruby
+class Event < Tina4::ORM
+  integer_field :id, primary_key: true, auto_increment: true
+  string_field :name
+  json_field :payload          # Hash or Array
+end
+
+event = Event.new(name: "click", payload: { "x" => 10, "tags" => %w[ui beta] })
+event.save
+
+fresh = Event.find(event.id)
+fresh.payload["x"]             # 10 -- a Hash, not a string
+```
+
+The column type follows the engine: `JSONB` on PostgreSQL, `JSON` on MySQL, `NVARCHAR(MAX)` on SQL Server, a text `BLOB` on Firebird, and `TEXT` on SQLite. A value that cannot be encoded to JSON makes `save` fail loud (returns `false`, records the cause) rather than writing partial data.
 
 ### Field Options
 
