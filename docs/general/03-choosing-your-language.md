@@ -200,7 +200,7 @@ tina4 serve
 
 | Factor | Python | PHP | Ruby | Node.js |
 |--------|--------|-----|------|---------|
-| **Install** | `pip install tina4-python` | `composer require tina4stack/tina4php` | `gem install tina4` | `npm install tina4-nodejs` |
+| **Install** | `pip install tina4-python` | `composer require tina4stack/tina4php` | `gem install tina4ruby` | `npm install tina4-nodejs` |
 | **CLI** | `tina4` | `tina4` | `tina4` | `tina4` |
 | **Naming** | `snake_case` | `camelCase` | `snake_case` | `camelCase` |
 | **Async** | Native (asyncio) | Swoole extension | Rack-based | Native (event loop) |
