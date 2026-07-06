@@ -6,7 +6,8 @@
 * `TTina4REST` + `TTina4RESTRequest` = one-line API calls with automatic MemTable population
 * Use `SendHttpRequest` from `Tina4Core` for quick one-off REST calls without components
 * `TTina4HTMLRender` renders HTML with CSS directly on an FMX canvas, including native form controls
-* Twig templates work in both `TTina4HTMLRender` and `TTina4HTMLPages` for dynamic content :::
+* Twig templates work in both `TTina4HTMLRender` and `TTina4HTMLPages` for dynamic content
+:::
 
 [Installation](index.md#installation) • [Quick Wins](index.md#quick-wins) • [REST Client](index.md#rest-client) • [REST Request](index.md#rest-request) • [JSON Adapter](index.md#json-adapter) • [HTML Renderer](index.md#html-render) • [Page Navigation](index.md#html-pages) • [Twig Templates](index.md#twig) • [Core Utilities](index.md#core-utilities) • [Claude AI](index.md#claude-ai)
 

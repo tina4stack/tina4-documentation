@@ -1,6 +1,7 @@
 # HTML Renderer
 
-::: tip TTina4HTMLRender is an FMX control that parses and renders HTML with CSS support directly on a canvas, including native form controls, Bootstrap 5 class support, and interactive event handling. :::
+::: tip TTina4HTMLRender is an FMX control that parses and renders HTML with CSS support directly on a canvas, including native form controls, Bootstrap 5 class support, and interactive event handling.
+:::
 
 ## Basic Usage <a href="#usage" id="usage"></a>
 

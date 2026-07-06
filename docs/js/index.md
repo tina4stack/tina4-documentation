@@ -6,7 +6,8 @@
 * Client-side routing with `{param}` syntax matching tina4-php/python
 * Fetch API wrapper with Bearer + formToken auth compatible with tina4 backends
 * PWA support with runtime manifest and service worker generation
-* Tree-shakeable: import only what you need :::
+* Tree-shakeable: import only what you need
+:::
 
 [Installation](index.md#installation) • [Signals](index.md#signals) • [HTML Templates](index.md#html-templates) • [Components](index.md#components) • [Routing](index.md#routing) • [API](index.md#api) • [WebSocket](index.md#websocket) • [SSE](index.md#sse) • [Storage](index.md#storage) • [PWA](index.md#pwa) • [Debug](index.md#debug) • [Backend Integration](index.md#backend-integration) • [Bundle Size](index.md#bundle-size)
 

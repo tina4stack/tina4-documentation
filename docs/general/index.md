@@ -5,7 +5,8 @@
 * Tina4 is The Intelligent Native Application 4ramework: one package, zero config, convention over configuration
 * Same API across Python, Node.js, PHP, and Ruby: learn one, know all four
 * Routes in `src/routes/`, templates in `src/templates/`, ORM in `src/orm/`, static files in `src/public/`
-* Zero runtime dependencies in every language :::
+* Zero runtime dependencies in every language
+:::
 
 [Philosophy](index.md#philosophy) • [Installation](index.md#installation) • [Project Structure](index.md#project-structure) • [Choosing a Language](index.md#choosing-a-language) • [Environment](index.md#environment-variables)
 

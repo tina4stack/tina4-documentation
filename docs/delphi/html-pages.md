@@ -1,6 +1,7 @@
 # Page Navigation
 
-::: tip TTina4HTMLPages provides SPA-style page navigation using TTina4HTMLRender. Pages are defined as a collection at design time. Navigation is triggered by `<a href="#pagename">` links. :::
+::: tip TTina4HTMLPages provides SPA-style page navigation using TTina4HTMLRender. Pages are defined as a collection at design time. Navigation is triggered by `<a href="#pagename">` links.
+:::
 
 ## Basic Setup <a href="#setup" id="setup"></a>
 
