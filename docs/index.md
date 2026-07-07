@@ -41,9 +41,11 @@ hero:
 
 ## What's new
 
-**v3.13.53 (2026-07-06)** - [full notes](/python/36-releases.md)
+**v3.13.54 (2026-07-07)** - [full notes](/python/36-releases.md)
 
-A model field can now hold a JSON document. Declare it (`JSONField` in Python, an `array`-typed property in PHP, `json_field` in Ruby, `{ type: "json" }` in Node) and the ORM stores an object or array in a JSON column: JSONB on PostgreSQL, JSON on MySQL, NVARCHAR(MAX) on SQL Server, a text BLOB on Firebird, and TEXT on SQLite. It encodes to JSON on write and decodes back to native data on read, so the attribute is never a raw string, and a value that cannot be encoded makes `save()` fail loud instead of writing a half-formed row.
+Migrations now honour the Firebird `SET TERM` directive. A trigger or stored procedure whose body ends its inner statements with a semicolon used to split apart on that punctuation and fail; wrapping it in `SET TERM` switches the active terminator so the whole block travels as one statement, and the directive itself never reaches the engine. PHP and Ruby also repair the Firebird v2 to v3 migration-tracking upgrade, which read column names in the wrong case and re-ran every applied migration. Shipped across all four frameworks.
+
+**v3.13.53 (2026-07-06)** - A model field can now hold a JSON document. Declare it (`JSONField` in Python, an `array`-typed property in PHP, `json_field` in Ruby, `{ type: "json" }` in Node) and the ORM stores an object or array in a JSON column: JSONB on PostgreSQL, JSON on MySQL, NVARCHAR(MAX) on SQL Server, a text BLOB on Firebird, and TEXT on SQLite. It encodes to JSON on write and decodes back to native data on read, so the attribute is never a raw string, and a value that cannot be encoded makes `save()` fail loud instead of writing a half-formed row.
 
 **Recent releases (v3.13.40 - v3.13.52)** - Frond gained live blocks (`{% live %}` regions that render on the server and refresh over polling, Server-Sent Events, or a WebSocket you own); `pgsql://` returned as a PostgreSQL connection scheme; the built-in SCSS compiler learned the colour functions (`rgba(#hex, a)`, `rgb()`, `mix()`, `lighten()`, `darken()`); the dev MCP server moved to the current Streamable HTTP transport over a single `/__dev/mcp` endpoint, with the legacy HTTP+SSE handshake kept for older clients; Swagger gained per-route security and reusable component schemas; queues were unified on one lifecycle across all four frameworks, with a reservation and visibility timeout so a dead consumer never strands a job; the test suite moved onto real services (no mocks) and caught a batch of live database, broker, and Firebird bugs; and i18n was hardened with partial interpolation that never throws.
 

@@ -1,5 +1,26 @@
 # Chapter 35: Release Notes
 
+## v3.13.54 (2026-07-07) - Migrations honour the SET TERM directive
+
+**A Firebird trigger or stored procedure now survives the migration splitter.** Those bodies end their inner statements with a semicolon, the same character the runner uses to separate one statement from the next. Run under the default terminator, a trigger body split apart on its own punctuation and the migration failed.
+
+A `SET TERM` line fixes it. Wrap the block in the universal isql idiom and the runner switches its active terminator, so the whole body travels as one statement:
+
+```sql
+SET TERM ^ ;
+CREATE OR ALTER TRIGGER t_bi FOR t ACTIVE BEFORE INSERT AS
+BEGIN
+  IF (NEW.id IS NULL) THEN NEW.id = GEN_ID(GEN_T, 1);
+END^
+SET TERM ; ^
+```
+
+The runner consumes each `SET TERM` line instead of sending it to the engine, restores the previous terminator when the block ends, and handles a multi-character terminator such as `!!`. A migration with no `SET TERM` splits on the semicolon exactly as before. Shipped across all four frameworks.
+
+**PHP and Ruby also repair the Firebird v2 to v3 upgrade.** Firebird returns column names in upper case, so the migration tracker read a null migration name and treated every applied migration as pending, re-running the lot. The tracking-table reads now normalise to one key shape. PHP additionally records a row on an upgraded table with its original 14-character id and detects the Firebird dialect through the Database facade.
+
+Thanks to justin-k-bruce for the contribution.
+
 ## v3.13.53 (2026-07-06) - JSONField: JSON document columns
 
 **Store a JSON document in a column.** A model field can now hold a whole object or array. The framework encodes it to JSON when it writes and decodes it back to a native Hash when it reads, so the attribute is always live data, never a raw string.
