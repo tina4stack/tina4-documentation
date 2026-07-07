@@ -6,7 +6,7 @@
 import { h } from 'vue'
 import DefaultTheme from 'vitepress/theme'
 import HomeHeroImage from './HomeHeroImage.vue'
-import InstallTabs from './InstallTabs.vue'
+import InstallPromoRow from './InstallPromoRow.vue'
 import FeaturesGrid from './FeaturesGrid.vue'
 import TinaCoderPromo from './TinaCoderPromo.vue'
 import './style.css'
@@ -16,11 +16,13 @@ export default {
   Layout() {
     return h(DefaultTheme.Layout, null, {
       'home-hero-image': () => h(HomeHeroImage),
-      'home-features-before': () => h(InstallTabs),
+      // Install tabs (left) beside the coding-models promo (right), two columns.
+      'home-features-before': () => h(InstallPromoRow),
     })
   },
   enhanceApp({ app }) {
     app.component('FeaturesGrid', FeaturesGrid)
+    // Kept registered for any page that still drops <TinaCoderPromo /> inline.
     app.component('TinaCoderPromo', TinaCoderPromo)
   },
 }

@@ -31,7 +31,7 @@
 .t4-cta .wrap{max-width:620px;margin:0 auto;text-align:center;
   display:flex;flex-direction:column;align-items:center;gap:16px}
 .t4-cta h2{font-size:clamp(1.6rem,3.6vw,2.2rem);margin:0;letter-spacing:-.02em;
-  border:0;padding:0;color:var(--vp-c-text-1)}
+  border:0;padding:0;color:var(--vp-c-text-1);line-height:1.2}
 .t4-cta p{margin:0;color:var(--vp-c-text-2);font-size:1.02rem;max-width:54ch}
 .t4-cta .cta{display:inline-flex;align-items:center;gap:8px;margin-top:4px;font-weight:600;
   text-decoration:none;border-radius:20px;padding:0 24px;line-height:42px;font-size:1rem;
