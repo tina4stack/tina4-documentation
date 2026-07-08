@@ -197,14 +197,17 @@ whole stack - server, router, ORM, auth, queue, sessions, templating.
 ## Building - use the built-ins, get the exact API (do NOT guess)
 
 Tina4 has 55 built-ins: ORM, Auth (JWT + password hashing), Queue, Sessions,
-Migrations, an `Api` HTTP client, WebSockets, GraphQL, Swagger, CRUD, i18n,
-caching, events, and more. **Use them - never hand-roll what's built in.**
+Migrations, an `Api` HTTP client, WebSockets, real-time collaboration (WebRTC:
+peer calls + chat + files), GraphQL, Swagger, CRUD, i18n, caching, events, and
+more. **Use them - never hand-roll what's built in.**
 
 For exact, version-correct signatures, use these in order - don't invent API
 names:
 
-1. **The installed skills.** `tina4 setup` installs `tina4-developer` and
-   `tina4-js` into `~/.claude/skills`. They are the source of truth for patterns.
+1. **The installed skills.** `tina4 setup` installs the Tina4 skills - the
+   per-language `tina4-developer-<language>` (python/php/ruby/nodejs), `tina4-js`,
+   and `tina4-maintainer` - into `~/.claude/skills`. They are the source of truth
+   for patterns.
 2. **The live project MCP.** A running `tina4 serve` exposes an MCP server at
    `/__dev/mcp` (JSON-RPC) plus a browser REST shim at `/__dev/api/mcp`. Its
    `docs_search`, `project_overview`, `routes`, and `database_*` tools answer

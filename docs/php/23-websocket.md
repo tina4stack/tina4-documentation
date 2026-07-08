@@ -53,18 +53,18 @@ Define WebSocket handlers with `Router::websocket()`:
 <?php
 use Tina4\Router;
 
-Router::websocket("/ws/echo", function ($connection, $event, $data) {
+Router::websocket("/ws/echo", function ($connection, $data, $event) {
     if ($event === "message") {
         $connection->send("Echo: " . $data);
     }
 });
 ```
 
-The simplest handler. It receives a message and sends it back with "Echo: " prepended. Three arguments arrive:
+The simplest handler. It receives a message and sends it back with "Echo: " prepended. Three arguments arrive, **in this order** — the payload comes before the event type:
 
 - **$connection**: The WebSocket connection object. Send messages through it.
+- **$data**: The message payload — the string for `"message"` events, `null` for `"open"` and `"close"`.
 - **$event**: The event type: `"open"`, `"message"`, or `"close"`.
-- **$data**: The message data. Present only for `"message"` events.
 
 ### Starting the Server
 
@@ -97,7 +97,7 @@ Fires when a client connects:
 <?php
 use Tina4\Router;
 
-Router::websocket("/ws/notifications", function ($connection, $event, $data) {
+Router::websocket("/ws/notifications", function ($connection, $data, $event) {
     if ($event === "open") {
         error_log("Client connected: " . $connection->id);
         $connection->send(json_encode([
@@ -114,7 +114,7 @@ Router::websocket("/ws/notifications", function ($connection, $event, $data) {
 Fires when a client sends data:
 
 ```php
-Router::websocket("/ws/notifications", function ($connection, $event, $data) {
+Router::websocket("/ws/notifications", function ($connection, $data, $event) {
     if ($event === "open") {
         $connection->send(json_encode([
             "type" => "welcome",
@@ -142,7 +142,7 @@ Router::websocket("/ws/notifications", function ($connection, $event, $data) {
 Fires when a client disconnects:
 
 ```php
-Router::websocket("/ws/notifications", function ($connection, $event, $data) {
+Router::websocket("/ws/notifications", function ($connection, $data, $event) {
     if ($event === "open") {
         error_log("Client connected: " . $connection->id);
     }
@@ -166,7 +166,7 @@ All three events in one handler:
 <?php
 use Tina4\Router;
 
-Router::websocket("/ws/chat", function ($connection, $event, $data) {
+Router::websocket("/ws/chat", function ($connection, $data, $event) {
     switch ($event) {
         case "open":
             error_log("[Chat] New connection: " . $connection->id);
@@ -204,7 +204,7 @@ Router::websocket("/ws/chat", function ($connection, $event, $data) {
 `$connection->send()` targets the specific client that triggered the event:
 
 ```php
-Router::websocket("/ws/private", function ($connection, $event, $data) {
+Router::websocket("/ws/private", function ($connection, $data, $event) {
     if ($event === "message") {
         $message = json_decode($data, true);
         $action = $message["action"] ?? "";
@@ -236,7 +236,7 @@ Only the sender receives the response. Other connected clients see nothing.
 `$connection->close()` terminates the connection from the server side:
 
 ```php
-Router::websocket("/ws/secure", function ($connection, $event, $data) {
+Router::websocket("/ws/secure", function ($connection, $data, $event) {
     if ($event === "open") {
         // Reject unauthenticated connections
         $token = $connection->params["token"] ?? "";
@@ -264,7 +264,7 @@ The client receives the close event. Use this for kicking users, enforcing authe
 <?php
 use Tina4\Router;
 
-Router::websocket("/ws/announcements", function ($connection, $event, $data) {
+Router::websocket("/ws/announcements", function ($connection, $data, $event) {
     if ($event === "open") {
         // Tell everyone about the new connection
         $connection->broadcast(json_encode([
@@ -334,7 +334,7 @@ Different WebSocket paths are walls. Clients connected to `/ws/chat/room-1` neve
 <?php
 use Tina4\Router;
 
-Router::websocket("/ws/chat/{room}", function ($connection, $event, $data) {
+Router::websocket("/ws/chat/{room}", function ($connection, $data, $event) {
     $room = $connection->params["room"];
 
     if ($event === "open") {
@@ -398,7 +398,7 @@ use Tina4\Router;
 
 $chatUsers = [];
 
-Router::websocket("/ws/livechat/{room}", function ($connection, $event, $data) use (&$chatUsers) {
+Router::websocket("/ws/livechat/{room}", function ($connection, $data, $event) use (&$chatUsers) {
     $room = $connection->params["room"];
 
     if ($event === "open") {
@@ -479,7 +479,7 @@ use Tina4\Router;
 use Tina4\Queue;
 
 // WebSocket handler for notifications
-Router::websocket("/ws/notifications/{userId}", function ($connection, $event, $data) {
+Router::websocket("/ws/notifications/{userId}", function ($connection, $data, $event) {
     $userId = $connection->params["userId"];
 
     if ($event === "open") {
@@ -500,7 +500,7 @@ Router::websocket("/ws/notifications/{userId}", function ($connection, $event, $
 });
 
 // Inside the WebSocket handler, push to everyone on this path
-Router::websocket("/ws/notifications/{userId}", function ($connection, $event, $data) {
+Router::websocket("/ws/notifications/{userId}", function ($connection, $data, $event) {
     if ($event === "message") {
         $payload = json_decode($data, true);
         if (($payload["type"] ?? "") === "order-shipped") {
@@ -770,7 +770,7 @@ use Tina4\Router;
 
 $roomUsers = [];
 
-Router::websocket("/ws/room/{roomName}", function ($connection, $event, $data) use (&$roomUsers) {
+Router::websocket("/ws/room/{roomName}", function ($connection, $data, $event) use (&$roomUsers) {
     $room = $connection->params["roomName"];
     $key = $room . ":" . $connection->id;
 
@@ -950,7 +950,7 @@ Router::websocket("/ws/admin",
     /**
      * @secured
      */
-    function ($connection, $event, $data) {
+    function ($connection, $data, $event) {
         if ($event === "open") {
             // $connection->auth holds the verified token payload.
             $connection->send("Welcome, user {$connection->auth['user_id']}");
@@ -1001,7 +1001,7 @@ Router::websocket("/ws/notifications",
     /**
      * @secured
      */
-    function ($connection, $event, $data) {
+    function ($connection, $data, $event) {
         if ($event === "open") {
             $userId = $connection->auth["user_id"];
             $connection->joinRoom("user-{$userId}");

@@ -14,6 +14,8 @@ const TITLE_OVERRIDES: Record<string, string> = {
     'pwa': 'PWA',
     'graphql': 'GraphQL',
     'websocket': 'WebSocket',
+    'realtime-rtc': 'Real-time (WebRTC)',
+    'realtime-webrtc': 'Real-time (WebRTC)',
     'wsdl-soap': 'WSDL / SOAP',
     'sse': 'Server-Sent Events (SSE)',
     'wsdl': 'WSDL',
@@ -64,7 +66,7 @@ const SECTION_RANGES: Record<string, [number, number]> = {
     'Developer Tools': [30, 32],
     'Operations': [33, 35],
     'Releases': [36, 36],
-    'Appendix': [37, 38],
+    'Appendix': [37, 39],
 }
 
 function buildChapterSidebar(section: string, label: string, extras?: object[]): object[] {
