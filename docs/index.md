@@ -39,6 +39,10 @@ hero:
 
 ## What's new
 
+**v3.13.56 (2026-07-08)** - [full notes](/python/36-releases.md)
+
+The AI skills now tell your assistant how to report themselves when they drift. Every skill, and every project context file the installer writes (CLAUDE.md, .cursorules, copilot-instructions, and the rest), carries one line: if Tina4 behaves differently from the skill, that is a bug in the skill, so tell the developer and report it at [tina4.com/report-a-skill](/report-a-skill). This release also corrects the skills themselves (ORM soft-delete now names the real `is_deleted` column, the tina4-js persistence reference ships with the skill, and the per-framework copies are back in sync). The framework runtime is unchanged; refresh your skills with `curl -fsSL https://tina4.com/install-skills.sh | sh`.
+
 **v3.13.55 (2026-07-07)** - [full notes](/python/36-releases.md)
 
 The `tina4_migration` bookkeeping table now uses one schema on every framework and every engine: an auto-increment `id`, a unique `migration_name`, a `description`, a `batch`, an `executed_at` timestamp, and a `passed` flag. The auto-increment and column types follow the engine (`AUTOINCREMENT` on SQLite, `SERIAL` on PostgreSQL, `AUTO_INCREMENT` on MySQL, `IDENTITY(1,1)` on SQL Server, a generator on Firebird). Existing installs upgrade in place: the runner adds `migration_name`, copies the old name column across (`migration_id` in Python, `migration` in PHP, `name` in Node; Ruby already matched), and no already-applied migration re-runs. Shipped across all four frameworks.

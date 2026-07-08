@@ -9,14 +9,14 @@ $ErrorActionPreference = "Stop"
 # Pin skills to a released tag, not a moving branch, so an install is
 # reproducible and auditable. Bump this when the skills change in a new
 # tina4-python release. Override with TINA4_SKILLS_REF if you need a branch.
-$ref = if ($env:TINA4_SKILLS_REF) { $env:TINA4_SKILLS_REF } else { "3.13.52" }
+$ref = if ($env:TINA4_SKILLS_REF) { $env:TINA4_SKILLS_REF } else { "3.13.56" }
 $base = "https://raw.githubusercontent.com/tina4stack/tina4-python/$ref/.claude/skills"
 $dest = Join-Path $HOME ".claude\skills"
 
 # skill name -> reference files
 $skills = [ordered]@{
   "tina4-developer" = @("auth-and-services.md", "data-and-orm.md", "deployment.md", "routes-and-api.md", "templates-and-frontend.md")
-  "tina4-js"        = @("html-and-components.md", "signals-and-reactivity.md")
+  "tina4-js"        = @("html-and-components.md", "signals-and-reactivity.md", "persistence.md")
 }
 
 Write-Host ""
