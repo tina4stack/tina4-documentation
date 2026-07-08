@@ -2,36 +2,45 @@
 # Tina4 AI skills installer for macOS / Linux
 # Usage: curl -fsSL https://raw.githubusercontent.com/tina4stack/tina4/main/install-skills.sh | sh
 #
-# Installs the tina4 AI skills (tina4-developer, tina4-js) into ~/.claude/skills
-# so Claude Desktop / Claude Code use Tina4 conventions out of the box.
+# Installs the tina4 AI skills into ~/.claude/skills so Claude Desktop / Claude Code
+# use Tina4 conventions out of the box. As of 3.13.58 the developer skill is split
+# per language (each owned by its framework repo); tina4-js + tina4-maintainer are shared.
 # Stopgap until `tina4 skills install` ships embedded in the CLI binary.
 set -euo pipefail
 
-# Pin skills to a released tag, not a moving branch, so an install is
-# reproducible and auditable. Bump this when the skills change in a new
-# tina4-python release. Override with TINA4_SKILLS_REF if you need a branch.
-ref="${TINA4_SKILLS_REF:-3.13.56}"
-base="https://raw.githubusercontent.com/tina4stack/tina4-python/${ref}/.claude/skills"
+# Pin skills to a released tag, not a moving branch, so an install is reproducible.
+# Bump this when the skills change in a new release. Override with TINA4_SKILLS_REF.
+ref="${TINA4_SKILLS_REF:-3.13.58}"
 dest="$HOME/.claude/skills"
 
+# install_skill <repo> <skill> <reference.md ...>
 install_skill() {
-  skill="$1"; shift
+  repo="$1"; skill="$2"; shift 2
+  base="https://raw.githubusercontent.com/tina4stack/${repo}/${ref}/.claude/skills"
   mkdir -p "$dest/$skill/references"
   curl -fsSL "$base/$skill/SKILL.md" -o "$dest/$skill/SKILL.md"
-  for ref in "$@"; do
-    curl -fsSL "$base/$skill/references/$ref" -o "$dest/$skill/references/$ref"
+  for r in "$@"; do
+    curl -fsSL "$base/$skill/references/$r" -o "$dest/$skill/references/$r"
   done
-  echo "  + $skill"
+  echo "  + $skill  ($repo)"
 }
+
+DEV_REFS="auth-and-services.md data-and-orm.md deployment.md routes-and-api.md templates-and-frontend.md realtime.md"
 
 echo ""
 echo "  Tina4 Skills Installer"
-echo "  Installing to: $dest"
+echo "  Installing to: $dest  (ref: $ref)"
 echo ""
 
-install_skill tina4-developer auth-and-services.md data-and-orm.md deployment.md routes-and-api.md templates-and-frontend.md
-install_skill tina4-js html-and-components.md signals-and-reactivity.md persistence.md
+# Per-language developer skills (each from its own framework repo)
+install_skill tina4-python  tina4-developer-python  $DEV_REFS
+install_skill tina4-php     tina4-developer-php     $DEV_REFS
+install_skill tina4-ruby    tina4-developer-ruby    $DEV_REFS
+install_skill tina4-nodejs  tina4-developer-nodejs  $DEV_REFS
+# Shared skills (canonical copy served from tina4-python)
+install_skill tina4-python  tina4-js          html-and-components.md signals-and-reactivity.md persistence.md rtc.md
+install_skill tina4-python  tina4-maintainer  cli-and-deployment.md frond-and-frontend.md routing-and-orm.md subsystems.md
 
 echo ""
-echo "  Done. Restart Claude (Desktop/Code) to pick up the skills."
+echo "  Done — six skills installed. Restart Claude (Desktop/Code) to pick them up."
 echo ""
