@@ -1,5 +1,27 @@
 # Chapter 35: Release Notes
 
+## v3.13.57 (2026-07-08) - Realtime collaboration, and a test client that tells the truth
+
+**Tina4 ships realtime collaboration: peer-to-peer calls, live chat, and file sharing, from one call.** Add `realtime()` before `run()` and the framework wires the whole surface. A WebRTC signalling channel relays offers and answers between peers. A chat channel carries messages, presence, typing, and read receipts, and persists its history through the ORM. An upload and download path moves files.
+
+```python
+from tina4_python import realtime
+
+realtime(features=["calls", "chat", "files"])
+```
+
+Calls run on a mesh backend by default, so a small room needs no media server at all. Set `TINA4_RTC_TURN_URL` and `TINA4_RTC_TURN_SECRET` and the framework mints time-limited coturn credentials for peers behind strict NATs. Chat history survives a restart, so a reconnecting client catches up. Files land on local disk by default, or in any S3-compatible bucket (MinIO included) when you set `TINA4_STORAGE_BACKEND=s3`.
+
+The browser half ships in tina4-js 1.5.0 as the `rtc` module. `rtc.call(room)` opens a call with perfect-negotiation handshaking. `rtc.chat(channel)` binds a live message list, a presence roster, and a typing signal straight into a template. `rtc.upload(channel, file)` sends a file. Every piece of live state is a signal, so the interface updates itself. Every Tina4 backend now vendors the tina4-js bundle that carries this module.
+
+The auth levels are deliberate. The call signalling socket is public, because the framework never reads your SDP. Chat, history, upload, and download each require a valid token, and chat rechecks channel membership on every frame.
+
+**The in-process TestClient now enforces the real auth gate.** This is the fail-loud fix. The test client used to match a route and run its handler directly, skipping the secure-by-default check the live server applies. A write with no token returned 201 in a test while production returned 401. A green test hid a live failure, and the verification layer lied. The client now routes through the same gate the server uses, so a tokenless write to a secure route returns 401 in a test exactly as it does in production.
+
+**One more ORM fix (#61).** A callable field default, the timestamp idiom `DateTimeField(default=lambda: datetime.now())`, was stringified into the CREATE TABLE DDL as invalid SQL, so the table silently failed to create and a later `.save()` hit "no such table". Callable defaults belong at insert time, not in the schema. `create_table()` now omits them from the DDL and resolves them per row.
+
+**Breaking, tests only.** A test that posts to an auth-required route without a token now sees 401 instead of the handler response. When the test checks plumbing rather than auth, open the route with `@noauth()` or pass a valid bearer token. No production request path changes. Shipped across all four frameworks.
+
 ## v3.13.56 (2026-07-08) - Skills that own up when they drift
 
 **Every AI skill now tells the assistant how to report itself when it is wrong.** A skill is documentation, and documentation drifts. When a skill still describes a method, default, or column the framework no longer has, an assistant writes confident code against an API that is gone. This release closes that loop.

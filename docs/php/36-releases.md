@@ -1,5 +1,25 @@
 # Chapter 35: Release Notes
 
+## v3.13.57 (2026-07-08) - Realtime collaboration, and a test client that tells the truth
+
+**Tina4 ships realtime collaboration: peer-to-peer calls, live chat, and file sharing, from one call.** Mount the surface before you serve and the framework wires the whole thing. A WebRTC signalling channel relays offers and answers between peers. A chat channel carries messages, presence, typing, and read receipts, and persists its history through the ORM. An upload and download path moves files.
+
+```php
+use Tina4\Realtime\Realtime;
+
+Realtime::mount('', ['features' => ['calls', 'chat', 'files']]);
+```
+
+Calls run on a mesh backend by default, so a small room needs no media server at all. Set `TINA4_RTC_TURN_URL` and `TINA4_RTC_TURN_SECRET` and the framework mints time-limited coturn credentials for peers behind strict NATs. Chat history survives a restart, so a reconnecting client catches up. Files land on local disk by default, or in any S3-compatible bucket (MinIO included) when you set `TINA4_STORAGE_BACKEND=s3`.
+
+The browser half ships in tina4-js 1.5.0 as the `rtc` module. `rtc.call(room)` opens a call with perfect-negotiation handshaking. `rtc.chat(channel)` binds a live message list, a presence roster, and a typing signal straight into a template. `rtc.upload(channel, file)` sends a file. Every piece of live state is a signal, so the interface updates itself. Every Tina4 backend now vendors the tina4-js bundle that carries this module.
+
+The auth levels are deliberate. The call signalling socket is public, because the framework never reads your SDP. Chat, history, upload, and download each require a valid token, and chat rechecks channel membership on every frame.
+
+**The in-process TestClient now enforces the real auth gate.** This is the fail-loud fix. The PHP `TestClient` already dispatched through the real router, so it met the contract, but nothing pinned that at the client surface. A regression test now locks it in: a write with no token returns 401 through the test client exactly as it does on the live server, so a green test can never hide a live 401.
+
+**Breaking, tests only.** A test that posts to an auth-required route without a token sees 401, not the handler response. When the test checks plumbing rather than auth, open the route with `->noAuth()` or pass a valid bearer token. No production request path changes. Shipped across all four frameworks.
+
 ## v3.13.56 (2026-07-08) - Skills that own up when they drift
 
 **Every AI skill now tells the assistant how to report itself when it is wrong.** A skill is documentation, and documentation drifts. When a skill still describes a method, default, or column the framework no longer has, an assistant writes confident code against an API that is gone. This release closes that loop.
