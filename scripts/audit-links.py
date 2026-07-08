@@ -42,10 +42,19 @@ ALLOWLIST: set[tuple[str, str]] = set()
 
 
 def slugify(text: str) -> str:
-    """GitHub / VitePress-style heading slug."""
+    """VitePress-style heading slug.
+
+    Mirrors VitePress/markdown-it-anchor, which prefixes an underscore when the
+    slug would otherwise start with a digit (a leading digit is not a valid CSS
+    identifier) — e.g. `## 6. Calls` renders `id="_6-calls"`. The audit must match
+    that or every numbered-heading anchor is a false "missing-anchor".
+    """
     s = text.strip().lower()
     s = re.sub(r'[^\w\s\-]', '', s)
-    return re.sub(r'\s+', '-', s)
+    s = re.sub(r'\s+', '-', s)
+    if s and s[0].isdigit():
+        s = '_' + s
+    return s
 
 
 _anchor_cache: dict = {}
