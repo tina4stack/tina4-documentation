@@ -1,0 +1,59 @@
+name: Stale or incorrect skill
+description: Report a Tina4 AI skill that no longer matches the framework.
+title: "[skill] "
+labels: ["skill"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for keeping the skills honest. The code is the source of truth; a
+        skill that disagrees with it is the bug. Fill in enough for us to
+        reproduce and fix it in one pass. See https://tina4.com/report-a-skill.
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Which skill
+      options:
+        - tina4-developer
+        - tina4-js
+        - tina4-maintainer
+    validations:
+      required: true
+  - type: input
+    id: location
+    attributes:
+      label: Where it says the wrong thing
+      description: Section heading, and the reference file if you know it.
+      placeholder: "references/data-and-orm.md, the Soft delete section"
+    validations:
+      required: true
+  - type: textarea
+    id: claim
+    attributes:
+      label: What the skill claims
+      description: Quote the wrong guidance.
+      placeholder: "soft_delete = True adds a deleted_at column"
+    validations:
+      required: true
+  - type: textarea
+    id: reality
+    attributes:
+      label: What the code actually does
+      description: A file:line in the framework source, or a short repro that behaves differently.
+      placeholder: "tina4_python/orm/model.py:467 sets is_deleted = 1; there is no deleted_at column"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Framework and version checked
+      placeholder: "tina4-python 3.13.55"
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked against the current release, and the code (not another doc) is what disagrees.
+          required: true

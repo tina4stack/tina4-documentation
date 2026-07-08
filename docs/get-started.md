@@ -96,6 +96,13 @@ curl -fsSL https://tina4.com/install-skills.sh | TINA4_SKILLS_REF=3.13.51 sh   #
 $env:TINA4_SKILLS_REF="3.13.51"; irm https://tina4.com/install-skills.ps1 | iex  # Windows PowerShell
 ```
 
+### Found a skill that lies?
+
+A skill is documentation, and documentation drifts. If a skill tells your assistant
+about a method, default, or column that the framework no longer has, that is a bug we
+want to hear about. [Report a stale or incorrect skill](/report-a-skill) and we fix it
+at the source, then ship the fix to everyone.
+
 ## Create a Project
 
 Pick a language. Scaffold a project. Start the server. Three commands.
