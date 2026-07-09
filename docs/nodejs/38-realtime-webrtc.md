@@ -185,8 +185,8 @@ built with Node's `node:crypto` `createHmac`. The credential expires after `ttl`
 | Variable | Default | Effect |
 |---|---|---|
 | `TINA4_RTC_STUN_URLS` | `stun:stun.l.google.com:19302` | Comma-separated STUN URLs. |
-| `TINA4_RTC_TURN_URL` | — | Comma-separated TURN URLs; enables TURN when set together with the secret. |
-| `TINA4_RTC_TURN_SECRET` | — | coturn `use-auth-secret` shared secret (ephemeral credentials). |
+| `TINA4_RTC_TURN_URL` | - | Comma-separated TURN URLs; enables TURN when set together with the secret. |
+| `TINA4_RTC_TURN_SECRET` | - | coturn `use-auth-secret` shared secret (ephemeral credentials). |
 | `TINA4_RTC_TURN_TTL` | `3600` | Ephemeral TURN credential lifetime, in seconds. |
 
 > `TINA4_RTC_BACKEND` is **not read** in Node. The backend is always `mesh` (see §11).
@@ -317,7 +317,7 @@ The catch-up-on-reconnect endpoint.
 
 - Identity comes from **`req.user`** (the verified JWT payload the router attached on the secured route).
 - Invalid channel id -> `400 { "error": "invalid channel id" }`; not authorized -> `403 { "error": "forbidden" }`.
-- Query params: `before` (return messages with `id < before`) and `limit` (default **50**, clamped to **1–200**).
+- Query params: `before` (return messages with `id < before`) and `limit` (default **50**, clamped to **1-200**).
 - Returns messages **newest-first** -- the standard infinite-scroll-backwards shape. Each item uses the saved-message JSON shape above.
 
 ```js
@@ -378,9 +378,9 @@ const att = await fetch("/api/files", {
 |---|---|---|
 | `TINA4_STORAGE_BACKEND` | `local` | `local` \| `s3`. |
 | `TINA4_STORAGE_DIR` | `data/rt_storage` | Local filesystem directory. |
-| `TINA4_STORAGE_URL` | — | S3 endpoint URL (S3-compatible / MinIO); `forcePathStyle: true`. |
-| `TINA4_STORAGE_KEY` / `TINA4_STORAGE_SECRET` | — | S3 credentials. |
-| `TINA4_STORAGE_BUCKET` | — | S3 bucket. Required for S3 -- missing means the constructor throws and selection falls back to local. |
+| `TINA4_STORAGE_URL` | - | S3 endpoint URL (S3-compatible / MinIO); `forcePathStyle: true`. |
+| `TINA4_STORAGE_KEY` / `TINA4_STORAGE_SECRET` | - | S3 credentials. |
+| `TINA4_STORAGE_BUCKET` | - | S3 bucket. Required for S3 -- missing means the constructor throws and selection falls back to local. |
 | `TINA4_STORAGE_REGION` | `us-east-1` | S3 region. |
 
 `LocalStorage` resolves every key inside its root and rejects path traversal; its `url()` returns `null` (files are served by the permissioned download route). `S3Storage.url()` returns a presigned GET URL (default TTL 3600s), so clients fetch large blobs straight from object storage. You can also pass an instance explicitly:
@@ -456,10 +456,10 @@ import {
   RealtimeChannelMember,
 } from "tina4-nodejs/orm";
 
-// 1. Bind a database FIRST — the chat/files tables are created at mount.
+// 1. Bind a database FIRST - the chat/files tables are created at mount.
 await initDatabase(process.env.TINA4_DATABASE_URL ?? "sqlite://./data/app.db");
 
-// 2. Mount the realtime surface (await it — it is async in Node).
+// 2. Mount the realtime surface (await it - it is async in Node).
 const paths = await realtime({
   prefix: "/api/collab",
   features: ["calls", "chat", "files"],
@@ -510,7 +510,7 @@ The browser side, driven entirely by `/api/collab/api/rtc/config`:
   const base = "/api/collab";
   const jwt = localStorage.getItem("token");        // minted by your login route
 
-  // Discover everything from the server — never hardcode paths.
+  // Discover everything from the server - never hardcode paths.
   const cfg = await fetch(`${base}/api/rtc/config`).then(r => r.json());
   const wsOrigin = location.origin.replace(/^http/, "ws");
 

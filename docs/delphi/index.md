@@ -227,4 +227,4 @@ This means Claude can write Delphi code, compile it, launch the app, see it runn
 
 ## 📕 Download the book
 
-[**Tina4Delphi Developer** (PDF)](https://github.com/tina4stack/tina4-documentation/blob/main/pdfs/Tina4-Delphi-Developer.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
+[**Tina4Delphi Developer** (PDF)](/pdfs/Tina4-Delphi-Developer.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.

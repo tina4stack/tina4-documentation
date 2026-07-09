@@ -736,4 +736,4 @@ Use `FakeData` inside migrations, seeders, or test fixtures.
 
 ## 📕 Download the book
 
-[**Tina4 for PHP Developers** (PDF)](https://github.com/tina4stack/tina4-documentation/blob/main/pdfs/Tina4-for-PHP-Developers.pdf), full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
+[**Tina4 for PHP Developers** (PDF)](/pdfs/Tina4-for-PHP-Developers.pdf), full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.

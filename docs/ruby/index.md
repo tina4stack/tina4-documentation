@@ -563,4 +563,4 @@ Use `FakeData` in tests and migrations to generate consistent fixture data witho
 
 ## 📕 Download the book
 
-[**Tina4 for Ruby Developers** (PDF)](https://github.com/tina4stack/tina4-documentation/blob/main/pdfs/Tina4-for-Ruby-Developers.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
+[**Tina4 for Ruby Developers** (PDF)](/pdfs/Tina4-for-Ruby-Developers.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.

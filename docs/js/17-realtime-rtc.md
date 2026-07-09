@@ -256,7 +256,7 @@ mount('#log', () => html`
 
 mount('#who', () => html`Online: ${chat.presence.value.join(', ')}`);
 mount('#typing', () => html`
-  ${chat.typing.value.length ? `${chat.typing.value.join(', ')} typing…` : ''}
+  ${chat.typing.value.length ? `${chat.typing.value.join(', ')} typing...` : ''}
 `);
 
 const input = document.querySelector('#msg') as HTMLInputElement;
@@ -404,11 +404,11 @@ async function room(name: string, token: string) {
           `)}
         </div>
         <div class="typing">
-          ${chat.typing.value.length ? `${chat.typing.value.join(', ')} typing…` : ''}
+          ${chat.typing.value.length ? `${chat.typing.value.join(', ')} typing...` : ''}
         </div>
         <form @submit=${(e: Event) => { e.preventDefault(); send(); }}>
           <input
-            placeholder="Message…"
+            placeholder="Message..."
             .value=${draft}
             @input=${(e: Event) => {
               draft.value = (e.target as HTMLInputElement).value;

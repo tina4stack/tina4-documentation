@@ -271,7 +271,7 @@ curl -X POST http://localhost:7145/api/files \
 ### `GET {p}/api/files/{key}` -- download (secured)
 
 - Looks up the `Attachment` by `storage_key`; missing -- **404**. Authorizes against the attachment's `channel_id`; a non-member -- **403**.
-- If the backend has a direct URL it **302-redirects** to it. Otherwise it **streams the bytes** (**200**) with `Content-Disposition: inline; filename="…"` and `Content-Type` set from `attachment.mime` (default `application/octet-stream`). A missing blob on disk -- **404**.
+- If the backend has a direct URL it **302-redirects** to it. Otherwise it **streams the bytes** (**200**) with `Content-Disposition: inline; filename="..."` and `Content-Type` set from `attachment.mime` (default `application/octet-stream`). A missing blob on disk -- **404**.
 
 The download route needs `.secure` because a `GET` is public by default; the upload does not, because writes already require a token.
 

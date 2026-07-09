@@ -69,9 +69,27 @@ const SECTION_RANGES: Record<string, [number, number]> = {
     'Appendix': [37, 39],
 }
 
+// tina4-js has its own shape (a short, feature-driven chapter set), so it uses
+// an explicit, name-based grouping instead of the backend-oriented numeric
+// ranges above. This gives it a real "Features" menu (WebSocket, SSE, GraphQL,
+// i18n, PWA, WebRTC) rather than dropping later chapters into "Building Apps".
+const SECTION_GROUPS: Record<string, { text: string; stems: string[] }[]> = {
+    js: [
+        {text: 'Getting Started', stems: ['getting-started']},
+        {text: 'Core Concepts', stems: ['signals', 'storage', 'html-templates', 'components', 'routing']},
+        {text: 'Features', stems: ['api', 'websocket', 'sse-streaming', 'graphql', 'i18n', 'pwa', 'realtime-rtc']},
+        {text: 'Tooling', stems: ['debug', 'tina4-css']},
+        {text: 'Guides', stems: ['backend-integration', 'building-a-complete-app', 'patterns-and-pitfalls', 'vibe-coding-with-ai']},
+    ],
+}
+
+function chapterStem(filename: string): string {
+    return filename.replace(/^\d+-/, '').replace(/\.md$/, '')
+}
+
 function buildChapterSidebar(section: string, label: string, extras?: object[]): object[] {
     const dir = join(__dirname, '..', section)
-    let allChapters: { num: number; text: string; link: string }[] = []
+    let allChapters: { num: number; text: string; link: string; stem: string }[] = []
 
     try {
         allChapters = readdirSync(dir)
@@ -80,7 +98,8 @@ function buildChapterSidebar(section: string, label: string, extras?: object[]):
             .map(f => ({
                 num: parseInt(f.split('-')[0], 10),
                 text: chapterTitle(f),
-                link: `/${section}/${f}`
+                link: `/${section}/${f}`,
+                stem: chapterStem(f)
             }))
     } catch {
         // directory may not exist yet
@@ -94,16 +113,42 @@ function buildChapterSidebar(section: string, label: string, extras?: object[]):
     ]
 
     if (allChapters.length > 0) {
-        for (const [groupName, [start, end]] of Object.entries(SECTION_RANGES)) {
-            const items = allChapters
-                .filter(c => c.num >= start && c.num <= end)
-                .map(c => ({ text: c.text, link: c.link }))
-            if (items.length > 0) {
-                sidebar.push({
-                    text: groupName,
-                    collapsed: groupName !== 'Foundations',
-                    items
-                })
+        const groups = SECTION_GROUPS[section]
+        if (groups) {
+            // Explicit name-based grouping (tina4-js).
+            const seen = new Set<string>()
+            groups.forEach((group, i) => {
+                const chapters = allChapters.filter(c => group.stems.includes(c.stem))
+                chapters.forEach(c => seen.add(c.stem))
+                if (chapters.length > 0) {
+                    sidebar.push({
+                        text: group.text,
+                        collapsed: i !== 0,
+                        items: chapters.map(c => ({text: c.text, link: c.link}))
+                    })
+                }
+            })
+            // Any chapter not claimed by a group still appears (future-proof —
+            // a new file never silently vanishes from the sidebar).
+            const orphans = allChapters
+                .filter(c => !seen.has(c.stem))
+                .map(c => ({text: c.text, link: c.link}))
+            if (orphans.length > 0) {
+                sidebar.push({text: 'More', collapsed: true, items: orphans})
+            }
+        } else {
+            // Numeric-range grouping (backend framework docs).
+            for (const [groupName, [start, end]] of Object.entries(SECTION_RANGES)) {
+                const items = allChapters
+                    .filter(c => c.num >= start && c.num <= end)
+                    .map(c => ({text: c.text, link: c.link}))
+                if (items.length > 0) {
+                    sidebar.push({
+                        text: groupName,
+                        collapsed: groupName !== 'Foundations',
+                        items
+                    })
+                }
             }
         }
     }

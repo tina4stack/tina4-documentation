@@ -84,4 +84,4 @@ See [Chapter 4: Environment Variables](https://github.com/tina4stack/tina4-docum
 
 ## 📕 Download the book
 
-[**Understanding Tina4** (PDF)](https://github.com/tina4stack/tina4-documentation/blob/main/pdfs/Understanding-Tina4.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
+[**Understanding Tina4** (PDF)](/pdfs/Understanding-Tina4.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.

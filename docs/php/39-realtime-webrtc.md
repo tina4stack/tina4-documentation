@@ -268,7 +268,7 @@ Inbound frames are JSON; broadcasts are `json_encode(...)` strings.
 
 | event / message `type` | server behaviour |
 |---|---|
-| `open` | Authorize. **Fail →** `sendJson(['type'=>'error','error'=>'not a member of this channel'])` then `close()`. **OK →** `joinRoom`, send the caller the roster `{"type":"presence","event":"roster","users":[…]}`, then broadcast `{"type":"presence","event":"join","user_id":<id>}` (excluding self). |
+| `open` | Authorize. **Fail →** `sendJson(['type'=>'error','error'=>'not a member of this channel'])` then `close()`. **OK →** `joinRoom`, send the caller the roster `{"type":"presence","event":"roster","users":[...]}`, then broadcast `{"type":"presence","event":"join","user_id":<id>}` (excluding self). |
 | `close` | Broadcast `{"type":"presence","event":"leave","user_id":<id>}` (excluding self). |
 | `typing` | Broadcast `{"type":"typing","user_id":<id>}` (excluding self). |
 | `read` | Advance the member's read cursor (`last_read_at = now`), broadcast `{"type":"read","user_id":<id>,"at":<iso>}` (excluding self). |
@@ -341,7 +341,7 @@ curl -H "Authorization: Bearer $JWT" \
 ### `GET {p}/api/files/{key}` -- download (secured)
 
 - Looks up the `Attachment` by `storage_key`; missing → `404`. Authorizes against the attachment's `channelId`; non-member → `403`.
-- If the backend has a direct URL → **`302`** redirect. Otherwise it **streams the bytes** (`200`) with `Content-Disposition: inline; filename="…"` and `Content-Type = $attachment->mime` (default `application/octet-stream`).
+- If the backend has a direct URL → **`302`** redirect. Otherwise it **streams the bytes** (`200`) with `Content-Disposition: inline; filename="..."` and `Content-Type = $attachment->mime` (default `application/octet-stream`).
 
 ### Storage backends
 

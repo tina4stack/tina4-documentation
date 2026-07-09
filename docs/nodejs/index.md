@@ -920,4 +920,4 @@ import { AVAILABLE_LANGUAGES } from "tina4-nodejs";
 
 ## 📕 Download the book
 
-[**Tina4 for Node.js Developers** (PDF)](https://github.com/tina4stack/tina4-documentation/blob/main/pdfs/Tina4-for-Nodejs-Developers.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.
+[**Tina4 for Node.js Developers** (PDF)](/pdfs/Tina4-for-Nodejs-Developers.pdf): full reference, printable, with clickable table of contents and PDF outline. Regenerated with every release.

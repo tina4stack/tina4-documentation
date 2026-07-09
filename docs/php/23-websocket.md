@@ -60,10 +60,10 @@ Router::websocket("/ws/echo", function ($connection, $data, $event) {
 });
 ```
 
-The simplest handler. It receives a message and sends it back with "Echo: " prepended. Three arguments arrive, **in this order** — the payload comes before the event type:
+The simplest handler. It receives a message and sends it back with "Echo: " prepended. Three arguments arrive, **in this order** - the payload comes before the event type:
 
 - **$connection**: The WebSocket connection object. Send messages through it.
-- **$data**: The message payload — the string for `"message"` events, `null` for `"open"` and `"close"`.
+- **$data**: The message payload - the string for `"message"` events, `null` for `"open"` and `"close"`.
 - **$event**: The event type: `"open"`, `"message"`, or `"close"`.
 
 ### Starting the Server
