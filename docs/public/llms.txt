@@ -123,6 +123,8 @@ tina4 generate migration "<description>"     # migrations/<timestamp>_<slug>.sql
 tina4 generate middleware <Name>             # src/middleware/<name>
 tina4 migrate                                # apply pending migrations
 tina4 routes                                 # list registered routes
+tina4 metrics                                # code-health report: top complexity offenders (--fail-on warn|error for CI)
+tina4 update                                 # self-update the tina4 CLI to the latest release
 ```
 
 ---
