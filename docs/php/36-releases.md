@@ -1,5 +1,9 @@
 # Chapter 35: Release Notes
 
+## v3.13.68 (2026-07-10) - Firebird counts again
+
+`count()` and `recordExists()` return the right number on Firebird. Firebird folds an unquoted column alias to upper case, so `SELECT COUNT(*) as cnt` comes back under the key `CNT`. The ORM read a lower-case `cnt` that never existed and always returned 0, so every count looked empty and `recordExists()` always said no. Both now read the alias without caring about case. `insert()` also routes Firebird through `INSERT ... RETURNING` so a generated identity key lands back on the model, the same path Postgres already uses. Verified against a real Firebird 5.0.2 server. Reported in #132 (#133).
+
 ## v3.13.67 (2026-07-10) - The MCP table browser lists your tables again
 
 **The `database_tables` dev-tool works again.** It called `getDatabase()`, a method the base `Database` does not carry, so every call fataled with "Call to undefined method" and returned an error instead of your table list. The tool now calls `getTables()`, the adapter contract that actually lists tables. Drive the dev MCP server from an AI client and "list the tables" answers correctly.

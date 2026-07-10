@@ -1,5 +1,9 @@
 # Chapter 35: Release Notes
 
+## v3.13.68 (2026-07-10) - Steadier test suite
+
+The documentation-search performance spec no longer fails at random. It timed a single request against a 50ms budget, and one slow sample on a busy machine turned the whole suite red. It now takes the best of several samples, so the check measures real speed instead of scheduler noise. Test-only; nothing in the framework changed.
+
 ## v3.13.67 (2026-07-10) - The MCP table browser, locked down
 
 **The `database_tables` dev-tool now has a real behavioural test.** A sibling bug in the PHP framework (#164) fataled the same tool: it called a method that does not exist instead of listing tables, and the test never caught it because it only checked the tool was registered, never that it ran. This framework already listed tables correctly, but carried the same blind spot in its own tests. The new test invokes the real handler against a real SQLite database and asserts a table list comes back, so this class of drift is caught here too. Shipped across all four frameworks.
