@@ -1,5 +1,70 @@
 # Chapter 35: Release Notes
 
+## v3.13.66 (2026-07-10) - A self-describing CLI, and generators that ship their tests
+
+The command line grew up. The `tina4` client no longer keeps its own copy of what
+each framework can do. It asks the framework, then forwards the request. A command
+you add to the framework shows up in the client automatically; one you remove simply
+stops being offered. The whole class of client-versus-framework drift is gone.
+
+### The self-describing CLI
+
+- **`commands` / `commands --json`.** Every framework CLI now prints its own command
+  table from a single source. The `tina4` client reads that manifest to render an
+  accurate `tina4 --help`, caches it by a cheap fingerprint of the resolved CLI, and
+  refreshes with `--refresh`. Dispatch never depends on the manifest, so a discovery
+  miss shortens the help listing and never breaks a command.
+- **Pass-through dispatch.** The client keeps its own conductor commands (serve, scss,
+  setup, init, deploy, agent, doctor, install, update, build) and forwards everything
+  else to the framework verbatim. It carries no per-command flag knowledge, so it can
+  never fall out of parity.
+- **`queue` is now a top-level command** in all four frameworks: `queue work`,
+  `queue stats`, `queue retry`, `queue clear`, wired to the real queue. Run a worker
+  straight from the CLI instead of only scaffolding one.
+- **`build` builds the deployable Docker image** (`docker build`), replacing the old
+  library-packaging behaviour. `build` produces the image; `deploy` ships it.
+- **Ruby gains `migrate:create`**, matching the other three.
+
+### Generators now ship a test with the code
+
+Every code-producing `generate` subcommand writes a real, passing test next to the
+code it scaffolds. `generate model Product` also gives you a `Product` test that talks
+to a real database. The tests use real collaborators (real SQLite, a real test client,
+a real queue), never mocks, and pass the moment they are generated.
+
+Writing those tests exposed real bugs in the scaffolds that no string-matching test
+would have caught: the generated `auth` current-user endpoint rejected valid tokens in
+Python and PHP, and the generated migration created then immediately dropped its table
+in Ruby and PHP. All four are fixed and locked in by the new tests.
+
+### Databases
+
+- **PHP silent PDO fallback.** SQLite and PostgreSQL adapters prefer the native
+  extension and fall back to the matching PDO driver when it is missing. The developer
+  gets a working database either way, with identical behaviour (native types, raw-byte
+  BLOBs, last insert id, transactions, fail-loud errors).
+- **ORM `where()` takes an order.** `Model.where(...)` now accepts `order_by` /
+  `orderBy` (and Ruby also gains `limit`/`offset`), matching `find()`, `all()`, and the
+  query builder.
+
+### Fixes
+
+- The Frond browser helper now applies a 30 second request timeout by default.
+- SQLite datetime adapters no longer emit a deprecation warning on Python 3.12+.
+- Node route handlers accept a `void` return in TypeScript without a type error.
+
+### Breaking
+
+- **Frond `request()` now times out after 30 seconds by default.** A request that
+  used to hang forever now fails after 30 seconds and calls `onError`. Pass
+  `timeout: 0` to restore the old unbounded behaviour, or a millisecond value to set
+  your own.
+- **`build` changed target.** It now builds a Docker image rather than packaging the
+  framework as a library. Projects that relied on the old behaviour should call their
+  packaging tool directly.
+- **`generate` writes an extra test file per scaffold.** If you script generation and
+  assert on the exact set of created files, expect one more file (the co-emitted test).
+
 ## v3.13.57 (2026-07-08) - Realtime collaboration, and a test client that tells the truth
 
 **Tina4 ships realtime collaboration: peer-to-peer calls, live chat, and file sharing, from one call.** Mount the surface before you serve and the framework wires the whole thing. A WebRTC signalling channel relays offers and answers between peers. A chat channel carries messages, presence, typing, and read receipts, and persists its history through the ORM. An upload and download path moves files.

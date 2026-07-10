@@ -2,14 +2,14 @@
 # Usage: irm https://raw.githubusercontent.com/tina4stack/tina4/main/install-skills.ps1 | iex
 #
 # Installs the tina4 AI skills into ~/.claude/skills so Claude Desktop / Claude Code
-# use Tina4 conventions out of the box. As of 3.13.59 the developer skill is split
+# use Tina4 conventions out of the box. As of 3.13.66 the developer skill is split
 # per language (each owned by its framework repo); tina4-js + tina4-maintainer are shared.
 # Stopgap until `tina4 skills install` ships embedded in the CLI binary.
 $ErrorActionPreference = "Stop"
 
 # Pin skills to a released tag, not a moving branch, so an install is reproducible.
 # Bump this when the skills change in a new release. Override with TINA4_SKILLS_REF.
-$ref  = if ($env:TINA4_SKILLS_REF) { $env:TINA4_SKILLS_REF } else { "3.13.59" }
+$ref  = if ($env:TINA4_SKILLS_REF) { $env:TINA4_SKILLS_REF } else { "3.13.66" }
 $dest = Join-Path $HOME ".claude\skills"
 
 $devRefs = @("auth-and-services.md", "data-and-orm.md", "deployment.md", "routes-and-api.md", "templates-and-frontend.md", "realtime.md")
