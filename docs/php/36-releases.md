@@ -1,5 +1,11 @@
 # Chapter 35: Release Notes
 
+## v3.13.67 (2026-07-10) - The MCP table browser lists your tables again
+
+**The `database_tables` dev-tool works again.** It called `getDatabase()`, a method the base `Database` does not carry, so every call fataled with "Call to undefined method" and returned an error instead of your table list. The tool now calls `getTables()`, the adapter contract that actually lists tables. Drive the dev MCP server from an AI client and "list the tables" answers correctly.
+
+The bug hid in plain sight because the test only checked that the tool was registered, never that it ran. The new test invokes the real handler against a real SQLite database and asserts a table list comes back, so a silent fatal cannot ship again. All four frameworks gained the same behavioural test; Python, Ruby, and Node already called the right method. Reported by skorteva (#164).
+
 ## v3.13.66 (2026-07-10) - A self-describing CLI, and generators that ship their tests
 
 The command line grew up. The `tina4` client no longer keeps its own copy of what

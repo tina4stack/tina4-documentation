@@ -1,5 +1,9 @@
 # Chapter 35: Release Notes
 
+## v3.13.67 (2026-07-10) - The MCP table browser, locked down
+
+**The `database_tables` dev-tool now has a real behavioural test.** A sibling bug in the PHP framework (#164) fataled the same tool: it called a method that does not exist instead of listing tables, and the test never caught it because it only checked the tool was registered, never that it ran. This framework already listed tables correctly, but carried the same blind spot in its own tests. The new test invokes the real handler against a real SQLite database and asserts a table list comes back, so this class of drift is caught here too. Shipped across all four frameworks.
+
 ## v3.13.66 (2026-07-10) - A self-describing CLI, and generators that ship their tests
 
 The command line grew up. The `tina4` client no longer keeps its own copy of what
