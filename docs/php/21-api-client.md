@@ -394,3 +394,122 @@ curl http://localhost:7145/api/github/nobody/nonexistent-repo
 **Cause:** No rate limit detection or backoff logic.
 
 **Fix:** Check for `status === 429`, read `Retry-After` from the response headers, and sleep before retrying.
+
+---
+
+## 14. Uploading Files (New in 3.13.69)
+
+`upload()` posts a `multipart/form-data` body: a file plus optional text fields. Supply the file two ways, so your code never stages a temp file first.
+
+```php
+<?php
+use Tina4\Api;
+
+$api = new Api('https://api.example.com', bearerToken: getenv('API_TOKEN'));
+
+// A file on disk. filename defaults to the basename.
+$result = $api->upload('/avatars', filePath: '/tmp/me.png');
+
+// In-memory bytes. Pass a filename so the server sees a real name.
+$raw = build_thumbnail();          // raw byte string
+$result = $api->upload(
+    '/avatars',
+    fileBytes: $raw,
+    filename: 'me.png',
+    extraFields: ['user_id' => '42'],   // extra text parts
+);
+```
+
+The full signature:
+
+```php
+$api->upload(
+    string $path = '',
+    ?string $filePath = null,
+    string $fieldName = 'file',
+    array $extraFields = [],
+    array $headers = [],
+    ?string $fileBytes = null,
+    ?string $filename = null
+): array
+```
+
+`fieldName` is the form field the file rides under (default `"file"`). `extraFields` become additional text parts. `headers` merge extra per-call headers onto the request. The part's `Content-Type` is guessed from the filename, falling back to `application/octet-stream`.
+
+`upload()` returns the standard result array, keyed `http_code`, `body`, `headers`, `error`. A missing file, or no source at all, returns a clean error array and never throws:
+
+```php
+$result = $api->upload('/avatars', filePath: '/tmp/gone.png');
+// ['http_code' => null, 'body' => null, 'headers' => [], 'error' => 'file not found: /tmp/gone.png']
+```
+
+---
+
+## 15. Streaming Downloads (New in 3.13.69)
+
+`download()` streams a GET body straight to disk, 64KB at a time. A large export never buffers whole in memory.
+
+```php
+$result = $api->download('/reports/2026.csv', destPath: '/tmp/2026.csv');
+
+if ($result['error'] === null) {
+    echo "saved to {$result['path']}";   // /tmp/2026.csv
+}
+```
+
+The signature:
+
+```php
+$api->download(string $path = '', ?string $destPath = null, array $params = []): array
+```
+
+The result has no `body` key. The body went to disk. It carries `http_code`, `headers`, `error`, and `path`. On success `path` is your `destPath`; on any error (no dest, an HTTP error status, or a transport failure) `path` is `null` and no file is written.
+
+---
+
+## 16. Testing Your Code: the transport Seam (New in 3.13.69)
+
+The constructor accepts a `transport` callable that fully replaces the network call. Point it at your own closure and the code that calls an `Api` runs in a unit test with no live server.
+
+```php
+<?php
+use Tina4\Api;
+
+$fake = fn (string $method, string $url, array $headers, ?string $body, int $timeout): array
+    => ['http_code' => 200, 'body' => ['ok' => true], 'headers' => [], 'error' => null];
+
+$api = new Api('https://api.example.com', transport: $fake);
+$result = $api->get('/health');     // returns the canned array, opens no socket
+```
+
+The callable signature is `fn(string $method, string $url, array $headers, ?string $body, int $timeout): array`, and it returns the standard result array.
+
+This seam is for **your** tests, not Tina4's. The framework's own suite never injects a canned fake: it follows the no-mock rule, so its transport-seam test injects a transport that performs real socket I/O. Reach for `transport` to test the code that calls an `Api`, never to stand in for `Api` itself.
+
+---
+
+## 17. The Cookie Jar (New in 3.13.69)
+
+Pass `cookies: true` and the client keeps a per-instance, in-memory cookie jar. It reads `Set-Cookie` on each response and replays the accumulated `Cookie` header on the next request, so a session carries across a login and the calls that follow.
+
+```php
+<?php
+use Tina4\Api;
+
+$api = new Api('https://api.example.com', cookies: true);
+
+$api->post('/login', ['user' => 'alice', 'pass' => 'secret']);   // server sets a session cookie
+$api->get('/account');                                            // the cookie is sent automatically
+```
+
+The jar is off by default. It keeps only the leading `name=value` of each cookie, it is never persisted, and it is scoped to the instance.
+
+---
+
+## 18. Redirects and Cross-Origin Safety (Security fix, 3.13.69)
+
+The client follows redirects, and it now strips the `Authorization` header and the cookie-jar `Cookie` header on a **cross-origin hop** (a different scheme, host, or port). Same-origin redirects keep both headers.
+
+This closes a real leak. Before 3.13.69, the PHP `Api` used the `file_get_contents` stream wrapper, which auto-follows redirects and forwarded the `Authorization` header and the session `Cookie` to the new origin. A call to `https://api.example.com/login` that redirected to `https://evil.example/` handed your bearer token and session cookie to a host you never authenticated against. The client now follows redirects itself, one hop at a time, and drops those headers whenever the origin changes.
+
+**Upgrade recommended** for anyone using `Api` against endpoints that redirect. You get the fix on every verb, on `upload()`, and on `download()`, with no code change and no new dependency (the stream wrapper only, no ext-curl).

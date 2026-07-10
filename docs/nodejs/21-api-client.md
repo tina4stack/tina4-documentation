@@ -388,3 +388,95 @@ Constructing a new `Api` for every request re-applies headers each time and adds
 Appending API keys as query parameters (e.g., `?apikey=secret`) logs the key to access logs.
 
 **Fix:** Pass secrets in headers. Use `api.setBearerToken(token)` or `api.addHeaders({ "X-API-Key": key })` once on the instance.
+
+---
+
+## 14. Uploading Files (New in 3.13.69)
+
+`upload()` posts a `multipart/form-data` body: a file plus optional text fields. You supply the file two ways through an options object, so your code never stages a temp file first.
+
+```typescript
+import { Api } from "@tina4/core";
+
+const api = new Api("https://api.example.com", { bearerToken: process.env.API_TOKEN });
+
+// A file on disk. filename defaults to the basename.
+await api.upload("/avatars", { filePath: "/tmp/me.png" });
+
+// In-memory bytes (Buffer or string). Pass a filename so the server sees a real name.
+const raw = await buildThumbnail();          // Buffer
+await api.upload("/avatars", {
+    fileBytes: raw,
+    filename: "me.png",
+    extraFields: { user_id: "42" },          // extra text parts
+});
+```
+
+The options object accepts `filePath`, `fieldName` (default `"file"`), `extraFields`, `headers`, `fileBytes`, and `filename`. The part's `Content-Type` is guessed from the filename, falling back to `application/octet-stream`.
+
+`upload()` returns the standard `ApiResult` (`http_code`, `body`, `headers`, `error`). A missing file, or no source at all, resolves to a clean error result and never throws:
+
+```typescript
+const result = await api.upload("/avatars", { filePath: "/tmp/gone.png" });
+// { http_code: null, body: null, headers: {}, error: "file not found: /tmp/gone.png" }
+```
+
+---
+
+## 15. Streaming Downloads (New in 3.13.69)
+
+`download()` streams a GET body straight to disk, 64KB at a time. A large export never buffers whole in memory.
+
+```typescript
+const result = await api.download("/reports/2026.csv", "/tmp/2026.csv", { q: "2026" });
+
+if (result.error === null) {
+    console.log("saved to", result.path);   // /tmp/2026.csv
+}
+```
+
+The signature is `download(path, destPath, params?)`. The result has no `body` field. The body went to disk. It carries `http_code`, `headers`, `error`, and `path`. On success `path` is your `destPath`; on any error (no dest, an HTTP error status, or a transport failure) `path` is `null` and no file is written.
+
+---
+
+## 16. Testing Your Code: the transport Seam (New in 3.13.69)
+
+The options bag accepts a `transport` function that fully replaces the `node:http`/`node:https` call. Point it at your own function and the code that calls an `Api` runs in a unit test with no live server.
+
+```typescript
+const api = new Api("https://api.example.com", {
+    transport: async (method, url, headers, body, timeout) =>
+        ({ http_code: 200, body: { ok: true }, headers: {}, error: null }),
+});
+
+const result = await api.get("/health");   // returns the canned result, opens no socket
+```
+
+The function signature is `(method, url, headers, body, timeout) => ApiResult`. It may be sync or async and returns the standard result shape.
+
+This seam is for **your** tests, not Tina4's. The framework's own suite never injects a fake transport: it follows the no-mock rule and drives the real network against a real local server. Reach for `transport` to test the code that calls an `Api`, never to stand in for `Api` itself.
+
+---
+
+## 17. The Cookie Jar (New in 3.13.69)
+
+Set `cookies: true` and the client keeps a per-instance, in-memory cookie jar. It reads `Set-Cookie` on each response and replays the accumulated `Cookie` header on the next request, so a session carries across a login and the calls that follow.
+
+```typescript
+const api = new Api("https://api.example.com", { cookies: true });
+
+await api.post("/login", { user: "alice", pass: "secret" });   // server sets a session cookie
+await api.get("/account");                                      // the cookie is sent automatically
+```
+
+The jar is off by default. It keeps only the leading `name=value` of each cookie, it is never persisted, and it is scoped to the instance.
+
+---
+
+## 18. Redirects and Cross-Origin Safety (New in 3.13.69)
+
+Bare `node:http`/`node:https` does not follow redirects. The client now does, bounded to ten hops. A `301`, `302`, or `303` on a body-bearing method becomes a `GET` with the body dropped (matching urllib); `307` and `308` keep the method and body.
+
+On a redirect that crosses to a different origin (a different scheme, host, or port), the client strips the `Authorization` header and the cookie-jar `Cookie` header before following. That strip is a security boundary: without it, a call to `https://api.example.com/login` that redirected to `https://evil.example/` would hand your bearer token and session cookie to a host you never authenticated against. Same-origin redirects keep both headers.
+
+You get this on every verb, on `upload()`, and on `download()`, with nothing to switch on.

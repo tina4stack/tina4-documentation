@@ -1,5 +1,23 @@
 # Chapter 35: Release Notes
 
+## v3.13.69 (2026-07-10) - Api file transfer, and a testing seam
+
+**The `Api` HTTP client learns to move files and to step out of the way in a test.** Five additions, all built on `node:http` / `node:https`, all opt-in, none breaking:
+
+- **Multipart `upload()`** posts a `multipart/form-data` body from a file on disk or from in-memory bytes (Buffer or string), with optional form fields. No temp file, no dependency.
+- **Streaming `download()`** writes a response body to disk 64KB at a time, so a large export never buffers whole in memory. It returns `path` instead of `body`.
+- **An injectable `transport` seam** lets you unit-test the code that calls an `Api` without a live server. Tina4's own suite never injects a fake: it follows the no-mock rule and drives the real network against a real local server.
+- **An opt-in in-memory cookie jar** (`cookies: true`) reads `Set-Cookie` and replays the `Cookie` header on later requests, so a session carries across a login.
+- **Redirect following with a cross-origin strip.** Bare `node:http` does not follow redirects; the client now does, bounded to ten hops, and it drops the `Authorization` header and the cookie-jar `Cookie` header on a cross-origin hop so a bearer token or session cookie never leaks to a host you did not authenticate against.
+
+### Also shipping (previously held on v3)
+
+- **The AI Coder Rule Path.** The developer skill now ships the canonical guidance for where an AI coding tool reads and writes project rules, aligned across all four frameworks.
+
+### Docs
+
+- A dedicated **Real-time Collaboration (WebRTC)** chapter is now published: peer-to-peer calls, live chat, and file transfer, grounded in the shipped `realtime()` surface.
+
 ## v3.13.68 (2026-07-10) - Parity release
 
 A version bump to keep all four frameworks on the same number. No functional changes to the Node.js package since 3.13.67; the accompanying change is a fix to the Tina4 maintainer AI skill so it links plan and source files by a path that resolves when clicked.

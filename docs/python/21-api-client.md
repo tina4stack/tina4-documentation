@@ -435,3 +435,115 @@ curl "http://localhost:7146/api/dashboard/weather?cities=London,Berlin,Tokyo"
 **Problem:** `api = Api(bearer_token="sk-live-abc123...")` exposes the key in source control.
 
 **Fix:** Read credentials from environment variables: `bearer_token=os.environ["PAYMENT_API_KEY"]`. Never hardcode secrets.
+
+---
+
+## 12. Uploading Files (New in 3.13.69)
+
+`upload()` posts a `multipart/form-data` body: a file plus optional text fields. You supply the file two ways, so your code never has to stage a temp file first.
+
+```python
+import os
+from tina4_python.api import Api
+
+api = Api("https://api.example.com", bearer_token=os.environ["API_TOKEN"])
+
+# A file on disk. filename defaults to the basename.
+result = api.upload("/avatars", file_path="/tmp/me.png")
+
+# In-memory bytes. Pass a filename so the server sees a real name.
+raw = build_thumbnail()          # bytes
+result = api.upload(
+    "/avatars",
+    file_bytes=raw,
+    filename="me.png",
+    extra_fields={"user_id": "42"},   # extra text parts
+)
+```
+
+The full signature:
+
+```python
+api.upload(path="", file_path=None, field_name="file",
+           extra_fields=None, headers=None,
+           file_bytes=None, filename=None) -> dict
+```
+
+`field_name` is the form field the file rides under (default `"file"`). `extra_fields` become additional text parts. `headers` merge extra per-call headers onto the request. The part's `Content-Type` is guessed from the filename, falling back to `application/octet-stream`.
+
+`upload()` returns the same result dict every verb returns. A missing file, or no source at all, returns a clean error dict and never raises:
+
+```python
+result = api.upload("/avatars", file_path="/tmp/gone.png")
+# {"http_code": None, "body": None, "headers": {}, "error": "file not found: /tmp/gone.png"}
+```
+
+---
+
+## 13. Streaming Downloads (New in 3.13.69)
+
+`download()` streams a GET body straight to disk, 64KB at a time. A multi-gigabyte export never lands in memory at once.
+
+```python
+result = api.download("/reports/2026.csv", dest_path="/tmp/2026.csv")
+
+if result["error"] is None:
+    print("saved to", result["path"])   # /tmp/2026.csv
+```
+
+The signature:
+
+```python
+api.download(path="", dest_path=None, params=None) -> dict
+```
+
+The result has no `body` key. The body went to disk. It carries `http_code`, `headers`, `error`, and `path`. On success `path` is your `dest_path`; on any error (no dest, an HTTP error status, or a transport failure) `path` is `None` and no file is written.
+
+```python
+{"http_code": 200, "headers": {...}, "error": None, "path": "/tmp/2026.csv"}
+```
+
+`download()` runs through the same opener as every verb, so redirect following, the cross-origin auth strip, and the SSL setting all apply.
+
+---
+
+## 14. Testing Your Code: the transport Seam (New in 3.13.69)
+
+The constructor accepts a `transport` callable that fully replaces the network call. Point it at your own function and the code that calls an `Api` runs in a unit test with no live server.
+
+```python
+def fake_transport(method, url, headers, body, timeout):
+    return {"http_code": 200, "body": {"ok": True}, "headers": {}, "error": None}
+
+api = Api("https://api.example.com", transport=fake_transport)
+result = api.get("/health")     # returns the canned dict, opens no socket
+```
+
+The callable signature is `transport(method, url, headers, body, timeout)`, and it returns the standard result dict.
+
+This seam is for **your** tests, not Tina4's. The framework's own suite never injects a fake transport: it follows the no-mock rule and drives the real network against a real local server. Reach for `transport` to test the code that calls an `Api`, never to stand in for `Api` itself.
+
+---
+
+## 15. The Cookie Jar (New in 3.13.69)
+
+Pass `cookies=True` and the client keeps a per-instance, in-memory cookie jar. It reads `Set-Cookie` on each response and replays the accumulated `Cookie` header on the next request, so a session carries across a login and the calls that follow.
+
+```python
+api = Api("https://api.example.com", cookies=True)
+
+api.post("/login", {"user": "alice", "pass": "secret"})   # server sets a session cookie
+api.get("/account")                                         # the cookie is sent automatically
+```
+
+The jar is off by default. It keeps only the leading `name=value` of each cookie, it is never written to disk, and it lives and dies with the instance.
+
+---
+
+## 16. Redirects and Cross-Origin Safety (New in 3.13.69)
+
+The client follows redirects. On a redirect that crosses to a different origin (a different scheme, host, or port), it strips the `Authorization` header and the cookie-jar `Cookie` header before following.
+
+That strip is a security boundary. Without it, a call to `https://api.example.com/login` that redirects to `https://evil.example/` would hand your bearer token and session cookie to a host you never authenticated against. Same-origin redirects keep both headers, so an ordinary login-then-redirect flow is untouched.
+
+You get this on every verb, on `upload()`, and on `download()`. There is nothing to switch on.

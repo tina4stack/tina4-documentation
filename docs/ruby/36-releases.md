@@ -1,5 +1,27 @@
 # Chapter 35: Release Notes
 
+## v3.13.69 (2026-07-10) - Api file transfer, with one breaking upload change
+
+**The `Tina4::API` HTTP client learns to move files and to step out of the way in a test.** Five additions:
+
+- **Multipart `upload`** posts a `multipart/form-data` body from a file on disk (`file_path:`) or from in-memory bytes (`file_bytes:` plus `filename:`), with optional form fields. No temp file.
+- **Streaming `download`** writes a response body to disk 64KB at a time, so a large export never buffers whole in memory. The `APIResponse` carries `path` and no `body`.
+- **An injectable `transport` seam** lets you unit-test the code that calls an `API` without a live server. Tina4's own suite never injects a fake: it follows the no-mock rule and drives the real network against a real local server.
+- **An opt-in in-memory cookie jar** (`cookies: true`) reads `Set-Cookie` and replays the `Cookie` header on later requests, so a session carries across a login.
+- **Redirect following with a cross-origin strip.** `Net::HTTP` does not follow redirects on its own; the client now does, and it drops the `Authorization` header and the cookie-jar `Cookie` header on a cross-origin hop so a bearer token or session cookie never leaks to a host you did not authenticate against.
+
+### Breaking
+
+- **`Tina4::API#upload` changed signature.** `file_path` was the second **positional** argument; it is now a **keyword** (`file_path:`). Update call sites from `api.upload("/path", "/tmp/me.png")` to `api.upload("/path", file_path: "/tmp/me.png")`. This reconciles Ruby with the upload signature the other three frameworks already use, and enables the in-memory `file_bytes:` form.
+
+### Also shipping (previously held on v3)
+
+- **The AI Coder Rule Path.** The developer skill now ships the canonical guidance for where an AI coding tool reads and writes project rules, aligned across all four frameworks.
+
+### Docs
+
+- A dedicated **Real-time Collaboration (WebRTC)** chapter is now published: peer-to-peer calls, live chat, and file transfer, grounded in the shipped `Tina4::Realtime` surface.
+
 ## v3.13.68 (2026-07-10) - Steadier test suite
 
 The documentation-search performance spec no longer fails at random. It timed a single request against a 50ms budget, and one slow sample on a busy machine turned the whole suite red. It now takes the best of several samples, so the check measures real speed instead of scheduler noise. Test-only; nothing in the framework changed.

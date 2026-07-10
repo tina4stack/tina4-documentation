@@ -1,5 +1,28 @@
 # Chapter 35: Release Notes
 
+## v3.13.69 (2026-07-10) - Api file transfer, plus a cross-origin redirect fix
+
+**The `Api` HTTP client learns to move files, and it stops leaking your token on a redirect.** Five additions, all zero-dependency, all opt-in, none breaking:
+
+- **Multipart `upload()`** posts a `multipart/form-data` body from a file on disk or from in-memory bytes, with optional form fields. No temp file, no ext-curl.
+- **Streaming `download()`** writes a response body to disk 64KB at a time, so a large export never buffers whole in memory. It returns `path` instead of `body`.
+- **An injectable `transport` seam** lets you unit-test the code that calls an `Api` without a live server. Tina4's own suite never injects a canned fake: its transport-seam test injects a transport that performs real socket I/O.
+- **An opt-in in-memory cookie jar** (`cookies: true`) reads `Set-Cookie` and replays the `Cookie` header on later requests, so a session carries across a login.
+
+### Security
+
+**The `Api` was following cross-origin redirects and forwarding your credentials to the new origin.** The old client used the `file_get_contents` stream wrapper, which auto-follows redirects and forwarded the `Authorization` header and the session `Cookie` to the redirect target, including a different host. A call to an endpoint that redirected to another origin handed your bearer token and session cookie to a host you never authenticated against. The client now follows redirects itself, one hop at a time, and strips the `Authorization` and `Cookie` headers whenever the origin (scheme, host, or port) changes. Same-origin redirects keep them. This is verified against a real two-origin localhost server, needs no code change, and adds no dependency (the stream wrapper only). **Upgrade recommended** for anyone using `Api` against endpoints that redirect.
+
+### Also shipping (previously held on v3)
+
+- **Firebird `pdo_firebird` fallback.** The Firebird adapter auto-engages the `pdo_firebird` driver when the native `ext-interbase` extension is absent or broken (the macOS plus Firebird 5 clumplet case), so you get a working database either way. Force the choice with `TINA4_FIREBIRD_DRIVER=pdo` (or `interbase`) app-wide, or with a `?driver=pdo` query param on one connection. Migrations are engine-aware across the driver switch.
+- **The REPL console honours the database env.** `tina4 console` now reads `TINA4_DATABASE_URL` plus `TINA4_DATABASE_USERNAME` / `TINA4_DATABASE_PASSWORD` and binds the ORM, so models resolve a connection inside the console exactly as they do in a request.
+- **The AI Coder Rule Path.** The developer skill now ships the canonical guidance for where an AI coding tool reads and writes project rules, aligned across all four frameworks.
+
+### Docs
+
+- A dedicated **Real-time Collaboration (WebRTC)** chapter is now published: peer-to-peer calls, live chat, and file transfer, grounded in the shipped `realtime()` surface.
+
 ## v3.13.68 (2026-07-10) - Firebird counts again
 
 `count()` and `recordExists()` return the right number on Firebird. Firebird folds an unquoted column alias to upper case, so `SELECT COUNT(*) as cnt` comes back under the key `CNT`. The ORM read a lower-case `cnt` that never existed and always returned 0, so every count looked empty and `recordExists()` always said no. Both now read the alias without caring about case. `insert()` also routes Firebird through `INSERT ... RETURNING` so a generated identity key lands back on the model, the same path Postgres already uses. Verified against a real Firebird 5.0.2 server. Reported in #132 (#133).
