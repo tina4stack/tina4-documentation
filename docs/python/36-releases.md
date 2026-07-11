@@ -1,5 +1,17 @@
 # Chapter 35: Release Notes
 
+## v3.13.70 (2026-07-11) - Unset columns keep their database default
+
+**An unset column no longer forces a `NULL` into your `INSERT`.** Leave a column unset on a new model and the ORM now drops it from the `INSERT` entirely, so a `NOT NULL DEFAULT` column takes its database default instead of an explicit `NULL` that breaks the constraint. Set a column to `None` on purpose and it still writes `NULL`. When every insertable column is unset, the row inserts with the engine's all-defaults form: `DEFAULT VALUES` on SQLite, PostgreSQL, MSSQL, and Firebird, and `() VALUES ()` on MySQL. Python tracks which fields the caller assigned, so an explicit `None` and an untouched field never look the same. (#165)
+
+### Firebird charset is now yours to set (#160)
+
+The Firebird adapter hardcoded `UTF8`, so bytes stored under a legacy `NONE` database came back double-encoded with no way out. You can now set the connection charset three ways, highest precedence first: a `?charset=` query on the URL (`firebird://host:3050/path?charset=NONE`), a `charset=` keyword on `Database(...)`, or the `TINA4_DATABASE_CHARSET` environment variable. The default stays `UTF8`, so every existing connection behaves exactly as before.
+
+### Swagger keeps every stacked decorator (#59)
+
+Stack `@description`, `@tags`, and an example on one route and all of that metadata reaches the OpenAPI spec. Python already annotated the handler in place, so nothing was ever dropped here; this release adds a regression test that locks the behaviour in across all four frameworks.
+
 ## v3.13.69 (2026-07-10) - Api file transfer, and a testing seam
 
 **The `Api` HTTP client learns to move files and to step out of the way in a test.** Five additions, all zero-dependency, all opt-in, none breaking:

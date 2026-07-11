@@ -1,5 +1,17 @@
 # Chapter 35: Release Notes
 
+## v3.13.70 (2026-07-11) - Unset columns keep their database default
+
+**An unset column no longer forces a `NULL` into your `INSERT`.** Leave a column unset on a new model and the ORM now drops it from the `INSERT` entirely, so a `NOT NULL DEFAULT` column takes its database default instead of an explicit `NULL` that breaks the constraint. Set a column to `nil` on purpose and it still writes `NULL`. When every insertable column is unset, the row inserts with the engine's all-defaults form: `DEFAULT VALUES` on SQLite, PostgreSQL, MSSQL, and Firebird, and `() VALUES ()` on MySQL. `UPDATE` is untouched: a save still never nulls a column you did not set. (#165)
+
+### Firebird charset is now yours to set (#160)
+
+The Firebird driver hardcoded `UTF8`, so bytes stored under a legacy `NONE` database came back double-encoded with no way out. You can now set the connection charset with a `?charset=` query on the URL (`firebird://host:3050/path?charset=NONE`) or the `TINA4_DATABASE_CHARSET` environment variable. The URL query wins, then the env var, then the `UTF8` default, so every existing connection behaves exactly as before.
+
+### Swagger keeps every stacked decorator (#59)
+
+Route metadata attached through `swagger_meta` all reaches the OpenAPI spec. Ruby already merged it correctly, so nothing was dropped here; this release adds a regression test that locks the behaviour in across all four frameworks.
+
 ## v3.13.69 (2026-07-10) - Api file transfer, with one breaking upload change
 
 **The `Tina4::API` HTTP client learns to move files and to step out of the way in a test.** Five additions:

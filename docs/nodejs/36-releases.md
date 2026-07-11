@@ -1,5 +1,21 @@
 # Chapter 35: Release Notes
 
+## v3.13.70 (2026-07-11) - Installed apps can import the ORM again
+
+**`tina4-nodejs` now works from an installed app, not just inside the monorepo.** The package pointed its internal imports at `@tina4/*` workspace aliases that only the monorepo resolves, so a real `npm install` broke the moment you imported `tina4-nodejs/orm`. Those specifiers now resolve to relative paths, and the subpath exports (`tina4-nodejs/orm`, `tina4-nodejs/frond`, `tina4-nodejs/swagger`) plus `response.render()` for Frond templates all work from a consumer install. The optional database and storage drivers (`mongodb`, `pg`, `redis`, `@aws-sdk/*`) are now declared as `optionalDependencies`, so a plain install pulls only what your engine needs. (#32)
+
+### Unset columns keep their database default (#165)
+
+Leave a column unset on a new model and the ORM now drops it from the `INSERT` entirely, so a `NOT NULL DEFAULT` column takes its database default instead of an explicit `NULL` that breaks the constraint. Set a column to `null` on purpose and it still writes `NULL`. TypeScript makes the split natural: an unset column is `undefined`, an explicit `null` is `null`. When every insertable column is unset, the row inserts with the engine's all-defaults form: `DEFAULT VALUES` on SQLite, PostgreSQL, MSSQL, and Firebird, and `() VALUES ()` on MySQL.
+
+### Firebird charset is now yours to set (#160)
+
+The Firebird adapter hardcoded `UTF8`, so bytes stored under a legacy `NONE` database came back double-encoded with no way out. You can now set the connection charset with a `?charset=` query on the URL (`firebird://host:3050/path?charset=NONE`) or the `TINA4_DATABASE_CHARSET` environment variable. The URL query wins, then the env var, then the `UTF8` default, so every existing connection behaves exactly as before.
+
+### Swagger keeps every stacked decorator (#59)
+
+Route metadata attached through a route's `meta` all reaches the OpenAPI spec. Node already merged it correctly, so nothing was dropped here; this release adds a regression test that locks the behaviour in across all four frameworks.
+
 ## v3.13.69 (2026-07-10) - Api file transfer, and a testing seam
 
 **The `Api` HTTP client learns to move files and to step out of the way in a test.** Five additions, all built on `node:http` / `node:https`, all opt-in, none breaking:

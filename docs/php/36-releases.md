@@ -1,5 +1,19 @@
 # Chapter 35: Release Notes
 
+## v3.13.70 (2026-07-11) - Unset columns keep their database default, and Swagger stops overwriting
+
+**An unset column no longer forces a `NULL` into your `INSERT`.** Leave a column unset on a new model and the ORM now drops it from the `INSERT` entirely, so a `NOT NULL DEFAULT` column takes its database default instead of an explicit `NULL` that breaks the constraint. Set a column to `null` on purpose and it still writes `NULL`. When every insertable column is unset, the row inserts with the engine's all-defaults form: `DEFAULT VALUES` on SQLite, PostgreSQL, MSSQL, and Firebird, and `() VALUES ()` on MySQL. (#165)
+
+**One PHP-specific edge.** PHP fires no `__set` for a declared public property, so a direct `$model->col = null` on a property that already defaults to `null` looks identical to leaving it unset. In that one case the column is omitted rather than written `NULL`, which you notice only on a `NOT NULL DEFAULT` column during an `INSERT`. Constructor data, `fill()` data, and a no-default typed property (`public ?int $qty;`) all behave exactly as you expect: an explicit `null` there writes `NULL`.
+
+### Firebird charset is now yours to set (#160)
+
+The Firebird adapter hardcoded `UTF8`, so bytes stored under a legacy `NONE` database came back double-encoded with no way out. You can now set the connection charset with a `?charset=` query on the URL (`firebird://host:3050/path?charset=NONE`) or the `TINA4_DATABASE_CHARSET` environment variable. The URL query wins, then the env var, then the `UTF8` default, so every existing connection behaves exactly as before.
+
+### Swagger stops overwriting stacked metadata (#59)
+
+`Router::swagger()` used to replace whatever metadata a route already carried, so a second call wiped the first. It now merges: each call adds its keys, a later call may override the same key, but no sibling key is ever dropped. Summary, description, and tags attached across separate calls all reach the OpenAPI spec, matching the Python master (where Node and Ruby were already correct too).
+
 ## v3.13.69 (2026-07-10) - Api file transfer, plus a cross-origin redirect fix
 
 **The `Api` HTTP client learns to move files, and it stops leaking your token on a redirect.** Five additions, all zero-dependency, all opt-in, none breaking:

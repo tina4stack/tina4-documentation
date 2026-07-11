@@ -127,6 +127,23 @@ TINA4_DATABASE_FIREBIRD_PATH=C:\firebird\data\app.fdb
 TINA4_DATABASE_URL=firebird://SYSDBA:masterkey@localhost:3050/ignored
 ```
 
+### Firebird Connection Charset
+
+Firebird connects as `UTF8` by default. A database created under the `NONE` charset stores raw bytes, and reading UTF-8 text out of it as `UTF8` double-encodes every non-ASCII character. Override the charset three ways, highest precedence first: a `?charset=` query on the URL, a `charset=` keyword on `Database(...)`, or the `TINA4_DATABASE_CHARSET` environment variable. The default stays `UTF8`, so existing connections are unchanged.
+
+```python
+# URL query
+db = Database("firebird://SYSDBA:masterkey@localhost:3050/app.fdb?charset=NONE")
+
+# Keyword argument
+db = Database("firebird://SYSDBA:masterkey@localhost:3050/app.fdb", charset="WIN1252")
+```
+
+```bash
+# Environment variable (applies to every Firebird connection)
+TINA4_DATABASE_CHARSET=WIN1252
+```
+
 The env override wins over whatever path is in the URL.
 
 ### Firebird Dual-Driver Support

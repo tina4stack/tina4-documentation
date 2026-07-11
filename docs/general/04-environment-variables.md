@@ -150,6 +150,7 @@ TINA4_CSRF=false
 | `TINA4_DATABASE_URL` | `sqlite:///data/app.db` | Connection string. The URL scheme selects the driver. |
 | `TINA4_DATABASE_USERNAME` | _(from URL)_ | Override the username in `TINA4_DATABASE_URL`. Useful when credentials contain special characters. |
 | `TINA4_DATABASE_PASSWORD` | _(from URL)_ | Override the password in `TINA4_DATABASE_URL`. |
+| `TINA4_DATABASE_CHARSET` | `UTF8` | Firebird connection charset. Set it when a legacy database created under `NONE` returns double-encoded UTF-8. A `?charset=` query on the connection URL takes precedence. |
 | `TINA4_AUTOCOMMIT` | `true` | Standalone writes auto-commit on their own connection (durable + visible across a pool); explicit transactions stay atomic. Set `false` for strict manual-commit mode. |
 
 **Connection string formats:**
@@ -167,7 +168,7 @@ TINA4_DATABASE_URL=mysql://user:password@hostname:3306/database_name
 # Microsoft SQL Server
 TINA4_DATABASE_URL=mssql://user:password@hostname:1433/database_name
 
-# Firebird
+# Firebird (charset defaults to UTF8; add ?charset=NONE for a legacy NONE database)
 TINA4_DATABASE_URL=firebird://user:password@hostname:3050/path/to/database.fdb
 
 # MongoDB (SQL queries are auto-translated)
