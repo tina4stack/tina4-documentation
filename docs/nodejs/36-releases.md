@@ -1,5 +1,9 @@
 # Chapter 35: Release Notes
 
+## v3.13.71 (2026-07-11) - AI skills: sharper tina4_code guidance
+
+A skills-and-docs release; no change to the Node.js package. The bundled Tina4 AI skills now state WHY `tina4_code` is deprecated: in a boot-and-verify gate (scaffold the output, boot it, run it) `tina4_code` failed where a strong model grounded with `tina4_context` passed, so the tools point to grounding plus a strong model over the self-hosted coder. The recommendation is unchanged - ground with `tina4_context` and write the code yourself; only the rationale is sharper. Running `curl -fsSL https://tina4.com/install-skills.sh | sh` now installs these updated skills by default.
+
 ## v3.13.70 (2026-07-11) - Installed apps can import the ORM again
 
 **`tina4-nodejs` now works from an installed app, not just inside the monorepo.** The package pointed its internal imports at `@tina4/*` workspace aliases that only the monorepo resolves, so a real `npm install` broke the moment you imported `tina4-nodejs/orm`. Those specifiers now resolve to relative paths, and the subpath exports (`tina4-nodejs/orm`, `tina4-nodejs/frond`, `tina4-nodejs/swagger`) plus `response.render()` for Frond templates all work from a consumer install. The optional database and storage drivers (`mongodb`, `pg`, `redis`, `@aws-sdk/*`) are now declared as `optionalDependencies`, so a plain install pulls only what your engine needs. (#32)
