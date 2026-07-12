@@ -237,7 +237,7 @@ The catch-up-on-reconnect endpoint. A client opens the socket for live traffic a
 ```bash
 # Page backwards from message id 900, 50 at a time.
 curl -H "Authorization: Bearer $JWT" \
-  "http://localhost:7145/api/channels/42/messages?before=900&limit=50"
+  "http://localhost:7147/api/channels/42/messages?before=900&limit=50"
 ```
 
 ---
@@ -262,7 +262,7 @@ Enabled with `features: %w[files]`. Files are stored through a `StorageBackend` 
 This route is registered with `Tina4::Router.post(...)` **without** `.no_auth`, so the default **write-route bearer gate applies** -- a tokenless upload 401s.
 
 ```bash
-curl -X POST http://localhost:7145/api/files \
+curl -X POST http://localhost:7147/api/files \
   -H "Authorization: Bearer $JWT" \
   -F "channel_id=42" \
   -F "file=@./diagram.png"
