@@ -9,7 +9,7 @@ $ErrorActionPreference = "Stop"
 
 # Pin skills to a released tag, not a moving branch, so an install is reproducible.
 # Bump this when the skills change in a new release. Override with TINA4_SKILLS_REF.
-$ref  = if ($env:TINA4_SKILLS_REF) { $env:TINA4_SKILLS_REF } else { "3.13.72" }
+$ref  = if ($env:TINA4_SKILLS_REF) { $env:TINA4_SKILLS_REF } else { "3.13.73" }
 $dest = Join-Path $HOME ".claude\skills"
 
 $devRefs = @("auth-and-services.md", "data-and-orm.md", "deployment.md", "routes-and-api.md", "templates-and-frontend.md", "realtime.md")
@@ -41,6 +41,11 @@ foreach ($i in $installs) {
   Write-Host "  + $($i.skill)  ($($i.repo))" -ForegroundColor Green
 }
 
+# Record the installed ref so `tina4 doctor` can report skills currency. This is
+# a GLOBAL marker under ~/.claude/skills only - it NEVER touches a project's
+# CLAUDE.md or any project file.
+Set-Content -Path (Join-Path $dest ".tina4-skills-ref") -Value $ref -NoNewline
+
 Write-Host ""
-Write-Host "  Done - six skills installed. Restart Claude (Desktop/Code) to pick them up." -ForegroundColor Green
+Write-Host "  Done - six skills installed (ref $ref). Restart Claude (Desktop/Code) to pick them up." -ForegroundColor Green
 Write-Host ""

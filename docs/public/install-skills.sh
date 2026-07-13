@@ -10,7 +10,7 @@ set -euo pipefail
 
 # Pin skills to a released tag, not a moving branch, so an install is reproducible.
 # Bump this when the skills change in a new release. Override with TINA4_SKILLS_REF.
-ref="${TINA4_SKILLS_REF:-3.13.72}"
+ref="${TINA4_SKILLS_REF:-3.13.73}"
 dest="$HOME/.claude/skills"
 
 # install_skill <repo> <skill> <reference.md ...>
@@ -41,6 +41,11 @@ install_skill tina4-nodejs  tina4-developer-nodejs  $DEV_REFS
 install_skill tina4-python  tina4-js          html-and-components.md signals-and-reactivity.md persistence.md rtc.md
 install_skill tina4-python  tina4-maintainer  cli-and-deployment.md frond-and-frontend.md routing-and-orm.md subsystems.md
 
+# Record the installed ref so `tina4 doctor` can report skills currency. This is
+# a GLOBAL marker under ~/.claude/skills only — it NEVER touches a project's
+# CLAUDE.md or any project file.
+printf '%s\n' "$ref" > "$dest/.tina4-skills-ref"
+
 echo ""
-echo "  Done — six skills installed. Restart Claude (Desktop/Code) to pick them up."
+echo "  Done — six skills installed (ref $ref). Restart Claude (Desktop/Code) to pick them up."
 echo ""
