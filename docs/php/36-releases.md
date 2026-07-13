@@ -1,5 +1,28 @@
 # Chapter 35: Release Notes
 
+## v3.13.72 (2026-07-12) - Frond number_format, filter precedence, and a sandbox fix
+
+This release sharpens the Frond template engine, locks in a database error contract, and brings the dev dashboard to parity across the four frameworks.
+
+- **`number_format` reads all three arguments.** The filter now honours the full Twig signature, `number_format(decimals, decimalPoint, thousandsSep)`:
+
+  ```twig
+  {{ 1234.5 | number_format(2, ',', '.') }}   {# renders 1.234,50 #}
+  ```
+
+  The one-argument form is unchanged, so every existing template behaves as before. (#170)
+- **The filter pipe binds tighter than concat.** `|` now groups before `~`:
+
+  ```twig
+  {{ amount|number_format(2) ~ ' EUR' }}   {# (amount|number_format(2)) ~ ' EUR' -> 1,234.50 EUR #}
+  ```
+
+  The rule holds at any nesting depth, including both branches of a ternary. (#171)
+- **The sandbox allow-list covers every filter path (Security).** A filter applied inside a `~` concatenation or a ternary condition now respects the `{% sandbox %}` filter allow-list. A filter you did not allow-list no longer runs its code in sandbox mode. **Breaking:** in `{% sandbox %}` mode a blocked filter now skips and passes the value through unchanged, where PHP used to return an empty string. Both behaviours were secure; this only aligns PHP's output with Python, Ruby, and Node.
+- **A malformed request path was already safe here.** The Node worker gained a guard this release for a path like `//` (or `///`, `/\`); PHP never crashed on it and returns a normal 404.
+- **Database errors still fail loud (python#57).** `execute()` and `fetch()` raise on failure and record the message on `getError()` rather than returning `false` or an empty result. This shipped in 3.13.38; this release adds a real-PostgreSQL regression test across all four frameworks so it can never slip back to a silent failure.
+- **Dev dashboard parity (`TINA4_DEBUG`).** The dev-admin dependency installer (`deps/install`), the grounding-token proxy, and the Migrate, Test, and Seed run-chips now match across all four frameworks. This is development-only; nothing changes in production.
+
 ## v3.13.71 (2026-07-11) - AI skills: sharper tina4_code guidance
 
 A skills-and-docs release; no change to the PHP package. The bundled Tina4 AI skills now state WHY `tina4_code` is deprecated: in a boot-and-verify gate (scaffold the output, boot it, run it) `tina4_code` failed where a strong model grounded with `tina4_context` passed, so the tools point to grounding plus a strong model over the self-hosted coder. The recommendation is unchanged - ground with `tina4_context` and write the code yourself; only the rationale is sharper. Running `curl -fsSL https://tina4.com/install-skills.sh | sh` now installs these updated skills by default.
