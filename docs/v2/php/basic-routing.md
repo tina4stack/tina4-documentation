@@ -100,4 +100,4 @@ The section on [Posting Data](posting-form-data.md) from forms might be useful f
 
 [Middleware](middleware.md) can be added to routes to improve functionality, especially around security.
 
-By adding annotations one can create a fully functional [Swagger UI](/broken/pages/CWOSoev9GalzYdYa8q2W) to document your api.
+By adding annotations one can create a fully functional Swagger UI to document your api.

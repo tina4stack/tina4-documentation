@@ -9,7 +9,7 @@ Tina4 ships AI skills so Claude, Cursor, Copilot, and other assistants write
 idiomatic Tina4 code out of the box. There are three: `tina4-developer` (build
 apps), `tina4-js` (the reactive frontend), and `tina4-maintainer` (work on the
 framework itself). Install them with the
-[skills installer](/get-started#install-the-ai-skills).
+[skills installer](/get-started#skills-make-your-ai-assistant-fluent-in-tina4).
 
 A skill is documentation, and documentation drifts. A method gets renamed, a
 default flips, a column changes name, and the skill keeps describing the old

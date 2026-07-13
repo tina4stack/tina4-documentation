@@ -408,6 +408,19 @@ _CLI_NOISE = {
     "python", "php", "ruby", "nodejs", "js", "delphi", "javascript",
 }
 
+# Subcommands the tina4 CLI does NOT declare in clap but BLIND-FORWARDS to the
+# per-language framework via its external-subcommand catch-all (the
+# self-describing-CLI design: `tina4 migrate` runs `tina4python migrate`, etc.).
+# They are real, documented commands, but `tina4 --help` never lists them, so the
+# grammar parse cannot see them and would false-flag them as fake. List them here
+# so the audit recognises them as real. This tracks the framework CLIs' forwarded
+# set; adding a new forwarded command is a deliberate edit, which keeps the gate
+# meaningful (a genuinely-unknown token is still flagged). Second-token grammar
+# for these is owned by the framework, not the CLI, so it is not validated here.
+FORWARDED_SUBCOMMANDS = {
+    "migrate", "generate", "test", "routes", "metrics", "queue", "seed", "console",
+}
+
 
 def doc_cli_mentions() -> dict[tuple[str, str | None], list[Path]]:
     """Walk every doc, return
@@ -434,6 +447,8 @@ def check_cli() -> tuple[int, list[str]]:
             yellow("⚠ no tina4 CLI available (no ../tina4 source, no build, "
                    "none on PATH) — skipping CLI check")]
     real_top, real_second = grammar
+    # Blind-forwarded framework commands are real even though `--help` omits them.
+    real_top = real_top | FORWARDED_SUBCOMMANDS
 
     mentions = doc_cli_mentions()
     missing_first: dict[str, list[Path]] = defaultdict(list)
@@ -450,6 +465,11 @@ def check_cli() -> tuple[int, list[str]]:
             continue
         # First token is real. Validate the second token if present.
         if second is None:
+            continue
+        # Blind-forwarded commands: first token validated above, but the CLI
+        # forwards their flags/args to the framework verbatim - their grammar is
+        # not knowable from `tina4 --help`, so don't false-flag the second token.
+        if cmd in FORWARDED_SUBCOMMANDS:
             continue
         # Subcommands with multiple positional args (e.g. ``init`` takes
         # ``[LANG] [PATH]``) accept free-form second tokens — nothing

@@ -138,7 +138,7 @@ A complete model. Here is what each piece does:
 | `TextField` | `str` | `TEXT` | Long text |
 | `BlobField` | `bytes` | `BLOB` | Binary data |
 | `JSONField` | `dict` / `list` | `JSONB` (PG), `JSON` (MySQL), `TEXT` (SQLite) | JSON document column (see [JSON columns](#json-columns) below) |
-| `ForeignKeyField` | `int` | `INTEGER` | Foreign key, auto-wires `belongs_to` and `has_many` (see [Relationships](#6-relationships)) |
+| `ForeignKeyField` | `int` | `INTEGER` | Foreign key, auto-wires `belongs_to` and `has_many` (see [Relationships](#_6-relationships)) |
 
 Verbose names (`IntegerField`, `StringField`, `BooleanField`) are the standard. Short aliases (`IntField`, `StrField`, `BoolField`) also work.
 

@@ -31,6 +31,18 @@ PUBLIC = DOCS / "public"
 LINK_RE = re.compile(r'(!?)\[([^\]]*)\]\(([^)]+)\)')
 HEADING_RE = re.compile(r'^(#{1,6})\s+(.+?)\s*$', re.MULTILINE)
 EXPLICIT_ANCHOR_RE = re.compile(r'\{#([a-zA-Z0-9_\-]+)\}')
+# Raw HTML anchor ids. Many pages (GitBook imports) attach an explicit anchor
+# to a heading as `### Installation <a href="#installation" id="installation">`,
+# which VitePress renders as a real `id="installation"` target. Extract those
+# ids (and legacy `name="..."`) so `#installation` resolves - the anchor genuinely
+# exists in the output; only this audit failed to see it. This RECOGNISES real
+# anchors, it does not weaken the check: a link to an id that is not present still
+# fails.
+HTML_ID_RE = re.compile(r'(?:\bid|\bname)\s*=\s*["\']([A-Za-z0-9_\-]+)["\']')
+# Strip inline HTML from heading text before slugifying, so a heading carrying an
+# inline `<a>` anchor slugs from its visible text (what VitePress does), not the
+# raw markup.
+TAG_RE = re.compile(r'<[^>]+>')
 
 EXCLUDE_DIRS = ('node_modules', '.vitepress/dist', '.vitepress/cache')
 
@@ -67,8 +79,9 @@ def file_anchors(p: Path) -> set:
         _anchor_cache[p] = set()
         return set()
     text = p.read_text(encoding='utf-8', errors='ignore')
-    anchors = {slugify(m.group(2)) for m in HEADING_RE.finditer(text)}
+    anchors = {slugify(TAG_RE.sub('', m.group(2))) for m in HEADING_RE.finditer(text)}
     anchors |= {m.group(1).lower() for m in EXPLICIT_ANCHOR_RE.finditer(text)}
+    anchors |= {m.group(1).lower() for m in HTML_ID_RE.finditer(text)}
     _anchor_cache[p] = anchors
     return anchors
 

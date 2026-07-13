@@ -106,7 +106,7 @@ The twig filter is simpler to use, auto generating a hidden input field. The giv
 
 ### Form tokens - Response Headers
 
-Specifically useful for ajax reponses, a `freshtoken` is supplied in the response headers. There are numerous ways to access the `freshtoken` but will depend on how the ajax call was made, which is beyond the scope of this article. ::: info This is made simpler when using the [Tina4Helper.js](/broken/pages/5orz7JC70OGbPRNM2o9d) :::
+Specifically useful for ajax reponses, a `freshtoken` is supplied in the response headers. There are numerous ways to access the `freshtoken` but will depend on how the ajax call was made, which is beyond the scope of this article. ::: info This is made simpler when using the Tina4Helper.js :::
 
 ## File Uploads with Forms <a href="#upload-files" id="upload-files"></a>
 
