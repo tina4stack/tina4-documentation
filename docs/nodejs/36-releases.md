@@ -1,5 +1,13 @@
 # Chapter 35: Release Notes
 
+## v3.13.74 (2026-07-13) - The dev dashboard connection tester works again
+
+The dev dashboard "Test connection" panel now reports the real table count and server version. On Node.js the handler called the async `db.getTables()` and `db.execute()` without awaiting them, so `tableCount` was always 0 (an unresolved Promise is not an array) and the version always fell back to a bare label. This release awaits `db.getTables()` and reads the version through `db.fetchOne(...)`, matching Python and Ruby.
+
+- **A real node:sqlite test drives the endpoint end to end.** It opens a live database with two tables and asserts the panel returns success, a table count of two or more, and a real `SQLite <version>` string. No mocks, and the version assertion cannot pass against the old empty output.
+
+The same panel was broken in different ways in Python and PHP and is fixed there too; Ruby was already correct and gained the same lock-in test.
+
 ## v3.13.73 (2026-07-13) - A failed migration re-applies cleanly
 
 This release makes a previously-failed migration run again on the next migrate, at full parity across the four frameworks.

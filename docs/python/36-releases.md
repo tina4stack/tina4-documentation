@@ -1,5 +1,13 @@
 # Chapter 35: Release Notes
 
+## v3.13.74 (2026-07-13) - The dev dashboard connection tester works again
+
+The dev dashboard has a "Test connection" panel that opens a database URL and reports the server version and the table count. On Python it failed on every call: the handler imported `tina4_python.Database` (capital D), a module that does not exist, so it always returned `{"success": false}` and never reached `db.get_tables()`. This release imports the real `tina4_python.database` module, so the panel connects, lists the tables, and shows the version.
+
+- **The connection tester reports the real table count.** A real-SQLite test (no mocks) now drives the endpoint end to end against a live database with two tables and asserts the count and version come back. The endpoint had no end-to-end coverage before, which is exactly how the broken import shipped unnoticed.
+
+The same panel was broken in different ways in PHP and Node.js and is fixed there too; Ruby was already correct and gained the same lock-in test.
+
 ## v3.13.73 (2026-07-13) - A failed migration re-applies cleanly
 
 This release makes a previously-failed migration run again on the next migrate, at full parity across the four frameworks.

@@ -1,5 +1,11 @@
 # Chapter 35: Release Notes
 
+## v3.13.74 (2026-07-13) - A lock-in test for the connection tester
+
+The dev dashboard "Test connection" panel was already correct on Ruby - it lists the tables through `db.tables` and reads the version through `db.fetch_one`. The same panel was broken in three different ways in Python, PHP, and Node.js, so this release adds the regression test Ruby was missing.
+
+- **A real-SQLite spec drives the endpoint end to end.** It opens a live database with two tables and asserts the handler returns success, the real table count, and the version. No mocks, so the "zero tables" class of bug cannot slip in here either.
+
 ## v3.13.73 (2026-07-13) - A failed migration re-applies cleanly
 
 This release makes a previously-failed migration run again on the next migrate, at full parity across the four frameworks.

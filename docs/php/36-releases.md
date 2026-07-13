@@ -1,5 +1,13 @@
 # Chapter 35: Release Notes
 
+## v3.13.74 (2026-07-13) - The dev dashboard connection tester works again
+
+The dev dashboard "Test connection" panel now connects, lists the tables, and shows the server version. On PHP it was broken two ways: it built the database with `new DataBase(...)`, which resolved to a class that does not exist and threw before anything ran, and it counted tables with a method the adapters do not expose. This release builds the connection with `Database::create(url, username:, password:)` (the same call the rest of the dashboard uses) and counts tables with `getTables()`.
+
+- **A real-SQLite test drives the endpoint end to end.** It opens a live database with two tables and asserts the panel returns success, the real table count, and the version. No mocks.
+- **Firebird writes are guarded against a silent loss (#132).** A regression test confirms that an explicit-transaction DELETE or UPDATE - the path the ORM takes - is visible to a separate connection, run against a real Firebird server. The fix itself shipped earlier; this locks it in so a write can never again commit an empty transaction unnoticed.
+- **A PHPDoc house style is written down (#128).** CONTRIBUTING.md now states the standard: every public method carries a one-line behaviour summary plus `@param`, `@return`, and `@throws`, describes the behaviour rather than the fix, keeps types in step with the signature, and leaves no orphaned docblocks. The generated AI-context files carry the same rule.
+
 ## v3.13.73 (2026-07-13) - A failed migration re-applies cleanly
 
 This release makes a previously-failed migration run again on the next migrate, at full parity across the four frameworks.
