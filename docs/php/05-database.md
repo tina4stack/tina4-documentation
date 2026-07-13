@@ -737,16 +737,18 @@ The `.down.sql` file must share the exact same base name as the migration. For `
 
 ### Tracking Table
 
-Tina4 creates a `tina4_migration` table to track applied migrations. The table has four columns:
+Tina4 creates a `tina4_migration` table to track applied migrations. It has six columns:
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | integer | Auto-increment primary key |
-| `migration` | VARCHAR(255) | The migration filename |
+| `migration_name` | VARCHAR(500) | The migration filename (unique) |
+| `description` | VARCHAR(500) | Human-readable description derived from the filename |
 | `batch` | integer | Batch number (increments each `tina4 migrate` run) |
-| `applied_at` | timestamp | When the migration was applied |
+| `executed_at` | VARCHAR(50) | ISO-8601 timestamp string of when the migration ran |
+| `passed` | integer | `1` marks the migration as applied |
 
-You should not modify this table directly, but inspecting it can help debug migration issues.
+A migration counts as applied when a row exists for it with `passed = 1`. The runner writes only `passed = 1` rows. A failed file rolls back and writes no row, so the next `tina4 migrate` retries it. You should not modify this table directly, but inspecting it can help debug migration issues.
 
 ### Advanced SQL: Stored Procedures and Block Comments
 

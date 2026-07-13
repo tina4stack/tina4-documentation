@@ -721,11 +721,13 @@ Tina4 creates a `tina4_migration` table automatically. It has these columns:
 | Column | Purpose |
 |--------|---------|
 | `id` | Auto-incrementing primary key |
-| `description` | The migration filename |
-| `content` | Full SQL text of the migration (for audit) |
-| `passed` | Whether the migration ran successfully |
+| `migration_name` | The migration filename (unique) |
+| `description` | Human-readable description derived from the filename |
 | `batch` | Which batch this migration belongs to |
-| `run_at` | When the migration was applied |
+| `executed_at` | ISO-8601 timestamp string of when the migration ran |
+| `passed` | `1` marks the migration as applied |
+
+A migration counts as applied when a row exists for it with `passed = 1`. The runner writes only `passed = 1` rows: a failed file rolls back and writes no row, so the next run retries it.
 
 ### Advanced SQL Splitting
 

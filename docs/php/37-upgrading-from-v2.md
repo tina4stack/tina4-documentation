@@ -436,11 +436,11 @@ v3 uses an enhanced migration tracking table with additional columns for better 
 
 When you run migrations on a database that was previously managed by v2, Tina4 v3 auto-detects the old tracking table format and upgrades it. The upgrade adds three columns:
 
-- **`migration_id`** -- Unique identifier for each migration record.
+- **`migration_name`** -- The migration filename, used to match a file to its record.
 - **`batch`** -- Groups migrations that ran together.
 - **`executed_at`** -- Timestamp of when the migration was executed.
 
-Existing migration records are preserved. The upgrade happens automatically on the first migration run. No manual intervention needed.
+The v2 `migration_id` and `passed` columns stay in place. If the v2 table holds `passed = 0` rows (migrations that failed under v2), the upgrade logs a warning naming them. Those migrations re-apply on the next migration run: the runner deletes the stale `passed = 0` row and writes a fresh `passed = 1` row, so a previously-failed migration runs again cleanly instead of colliding on the unique `migration_name`. Existing migration records are preserved. The upgrade happens automatically on the first migration run. No manual intervention needed.
 
 ---
 

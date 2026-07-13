@@ -764,16 +764,18 @@ Migrations apply in **numeric-prefix order** -- the leading number drives the so
 
 `CREATE TABLE` and `ALTER TABLE ... ADD` are idempotent on Firebird and MSSQL, which lack `IF NOT EXISTS`: the runner checks whether the table or column already exists and skips that statement on a re-run instead of erroring. Only a genuine already-exists is skipped -- every other error still raises. SQLite, MySQL, and PostgreSQL use native `IF NOT EXISTS`.
 
-Each migration runs once. Tina4 tracks applied migrations in a `tina4_migration` table with the following columns:
+Each migration runs once. Tina4 tracks applied migrations in a `tina4_migration` table with these columns:
 
 | Column | Description |
 |--------|-------------|
 | `id` | Auto-increment primary key |
-| `migration_name` | The filename of the migration |
+| `migration_name` | The filename of the migration (unique) |
+| `description` | Human-readable description derived from the filename |
 | `batch` | The batch number (all migrations applied in one run share a batch) |
-| `executed_at` | Timestamp of when the migration was applied |
+| `executed_at` | ISO-8601 timestamp string of when the migration ran |
+| `passed` | `1` marks the migration as applied |
 
-The batch system is what makes rollback work: `migrate:rollback` undoes all migrations in the highest batch number.
+A migration counts as applied when a row exists for it with `passed = 1`. The runner writes only `passed = 1` rows: a failed file rolls back and writes no row, so the next run retries it. The batch system is what makes rollback work: `migrate:rollback` undoes all migrations in the highest batch number.
 
 ---
 

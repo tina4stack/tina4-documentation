@@ -696,13 +696,13 @@ Tina4 creates a `tina4_migration` table in your database to track what has run:
 | Column | Purpose |
 |--------|---------|
 | `id` | Primary key |
-| `migration_id` | The migration filename |
-| `description` | Human-readable description |
+| `migration_name` | The migration filename (unique) |
+| `description` | Human-readable description derived from the filename |
 | `batch` | Which batch this migration belonged to |
 | `executed_at` | When it ran |
-| `passed` | `1` for an applied migration |
+| `passed` | `1` marks the migration as applied |
 
-A migration is recorded by **row existence** -- only a successful file writes a row. A failure raises and stops the run, writing nothing for that file, so the next `tina4 migrate` retries it automatically. Rollback deletes the row rather than flipping a flag.
+A migration counts as applied when a row exists for it with `passed = 1`. The runner writes only `passed = 1` rows. A failure raises and stops the run, writing nothing for that file, so the next `tina4 migrate` retries it automatically. Rollback deletes the row rather than flipping a flag.
 
 ### Advanced SQL Splitting
 
@@ -1149,7 +1149,7 @@ Every row gets `role = "member"` and `active = 1`. The field map generates the r
 
 **Problem:** A migration failed and now `tina4 migrate` keeps retrying it.
 
-**Cause:** A failed migration raises and stops the run without writing a tracking row. Because Tina4 records migrations by row existence, a file with no row is treated as pending and retried on the next `migrate` run. Files that already applied keep their rows and are skipped.
+**Cause:** A failed migration raises and stops the run without writing a tracking row. Because Tina4 treats a migration as applied only when it has a `passed = 1` row, a file with no such row is treated as pending and retried on the next `migrate` run. Files that already applied keep their rows and are skipped.
 
 **Fix:** Fix the SQL in the migration file, then run `tina4 migrate` again. The failed migration retries from a clean slate. On PostgreSQL the failed file rolled back atomically; on MySQL, Firebird, and SQLite (which auto-commit DDL) check that no partial objects were left behind before re-running.
 

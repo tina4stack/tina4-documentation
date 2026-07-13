@@ -441,13 +441,14 @@ v3 uses an expanded schema:
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `migration_id` | text | Unique identifier |
-| `description` | text | Migration description |
+| `id` | integer | Auto-increment primary key |
+| `migration_name` | VARCHAR(500) | The migration filename (unique) |
+| `description` | VARCHAR(500) | Migration description |
 | `batch` | integer | Batch number |
-| `executed_at` | timestamp | When it ran |
-| `passed` | boolean | Whether it succeeded |
+| `executed_at` | VARCHAR(50) | ISO-8601 timestamp string of when it ran |
+| `passed` | integer | `1` marks the migration as applied |
 
-You do not need to alter the table yourself. Run `tina4 migrate` and v3 auto-detects the v2 schema. It adds the missing columns and backfills `migration_id` from `description`. Your existing migration history is preserved.
+You do not need to alter the table yourself. Run `tina4 migrate` and v3 auto-detects the v2 schema. It adds the missing columns and backfills `migration_name` by matching each v2 `description` to the migration file on disk. Your existing migration history is preserved. If the v2 table holds `passed = 0` rows (migrations that failed under v2), the upgrade logs a warning naming them. Those migrations re-apply on the next `tina4 migrate`: the runner deletes the stale `passed = 0` row and writes a fresh `passed = 1` row, so a previously-failed migration runs again cleanly instead of colliding on the unique `migration_name`.
 
 ```bash
 tina4 migrate

@@ -1,5 +1,13 @@
 # Chapter 35: Release Notes
 
+## v3.13.73 (2026-07-13) - A failed migration re-applies cleanly
+
+This release makes a previously-failed migration run again on the next migrate, at full parity across the four frameworks.
+
+- **A leftover `passed = 0` row no longer wedges the next run.** When a migration succeeds, the runner deletes any existing bookkeeping row for that migration name before it writes the fresh `passed = 1` row. A migration that failed earlier - whether you recorded it with `recordMigration(name, batch, 0)` or carried it over from a v2 table - re-applies cleanly instead of colliding on the unique `migration_name`. The `tina4_migration` table holds at most one row per migration, and the latest run wins. The delete-then-insert path is identical on every engine, so there is no dialect-specific behaviour to reason about.
+- **The v2 upgrade tells you what happens next.** When the v2 to v3 upgrade finds `passed = 0` rows, it logs that those migrations re-apply on the next migrate, instead of asking you to clear them by hand.
+- **Gallery ORM imports resolve from a consumer app (#32).** The database gallery examples now import from the published entry points, `tina4-nodejs` and `tina4-nodejs/orm`, instead of the internal `@tina4/*` workspace names, and they `await initDatabase()` before use. A copied gallery file now runs in a fresh project without an import error.
+
 ## v3.13.72 (2026-07-12) - Frond fixes, a sandbox hardening, and a malformed-path guard
 
 This release sharpens the Frond template engine, guards the Node worker against a malformed request path, locks in a database error contract, and brings the dev dashboard to parity across the four frameworks.
