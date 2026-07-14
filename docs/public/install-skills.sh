@@ -10,7 +10,7 @@ set -euo pipefail
 
 # Pin skills to a released tag, not a moving branch, so an install is reproducible.
 # Bump this when the skills change in a new release. Override with TINA4_SKILLS_REF.
-ref="${TINA4_SKILLS_REF:-3.13.74}"
+ref="${TINA4_SKILLS_REF:-3.13.75}"
 dest="$HOME/.claude/skills"
 
 # install_skill <repo> <skill> <reference.md ...>

@@ -1,5 +1,14 @@
 # Chapter 35: Release Notes
 
+## v3.13.75 (2026-07-14) - Static assets revalidate, so a deploy reaches users without a hard refresh
+
+The built-in static file handler (everything under public/) now lets a browser cache an asset but forces it to revalidate on every use. A redeployed CSS or JS file reaches the browser on the next page load, with no manual hard refresh - and an unchanged file costs a cheap 304 Not Modified, not a full re-download.
+
+- **Cache-Control and validators on every static response.** Each asset carries `Cache-Control: no-cache, must-revalidate`, an `ETag`, and a `Last-Modified`. Before, the static path set no Cache-Control and no Last-Modified.
+- **Conditional requests get a 304.** The handler answers `If-None-Match` and `If-Modified-Since` with a `304 Not Modified` and no body, so a revalidation is a small round trip rather than a re-download. Real-file, real-request tests lock the behaviour in.
+
+This lands identically across Python, PHP, Ruby, and Node.js. It closes the class of "I already reported this" where a browser kept serving a fixed-but-cached front-end asset.
+
 ## v3.13.74 (2026-07-13) - The dev dashboard connection tester works again
 
 The dev dashboard has a "Test connection" panel that opens a database URL and reports the server version and the table count. On Python it failed on every call: the handler imported `tina4_python.Database` (capital D), a module that does not exist, so it always returned `{"success": false}` and never reached `db.get_tables()`. This release imports the real `tina4_python.database` module, so the panel connects, lists the tables, and shows the version.
