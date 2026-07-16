@@ -1,5 +1,12 @@
 # Chapter 35: Release Notes
 
+## v3.13.77 (2026-07-16) - The native session cookie is no longer readable by JavaScript
+
+- **Security: `PHPSESSID` now carries `HttpOnly` and `SameSite`.** The framework starts PHP's native session so `$_SESSION` persists, but it let PHP emit the cookie with the stock ini defaults: no `HttpOnly`, no `SameSite`. Any app keeping a login in `$_SESSION` had a session cookie readable by any XSS and sent on cross-site requests. Tina4's own `tina4_session` cookie was correctly attributed twenty-five lines further down the same method; that asymmetry was the bug. The cookie is now configured before it is emitted, reusing `TINA4_SESSION_SAMESITE` (default `Lax`) and the same SameSite=None implies Secure rule. Scope is unchanged: lifetime, path and domain still come from your ini.
+- **`toDict()` is not deprecated.** The `@deprecated` tag said the default key casing changed from camel to snake in 3.11.22, but it sat on the method, so editors struck through every call and pointed nowhere: `toAssoc()`, `toObject()` and the response auto-serialization all delegate to `toDict()`. The tag is gone and the casing note is now plain documentation.
+
+Both reported by justin-k-bruce. The cookie fix is pinned by a test that reads the real `Set-Cookie` off a live server.
+
 ## v3.13.76 (2026-07-16) - Migrations apply again on a database created before 3.13.55
 
 If your database was created by Tina4 v3 3.13.54 or earlier, every new migration failed and none could ever be applied. This release fixes that. PHP already built its insert this way and was never affected; the behaviour is now pinned by tests here too.

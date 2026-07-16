@@ -1,5 +1,12 @@
 # Chapter 35: Release Notes
 
+## v3.13.77 (2026-07-16) - A slow background task no longer runs on top of itself
+
+- **`background()` never overlaps a task with itself.** The timer used `setInterval`, which fires on a fixed schedule and does not wait for an async callback, so a run slower than the interval had a second copy start alongside it. The timer is now re-armed only after each run settles, making the interval the gap between runs. Found by cross-checking the Python report against all four frameworks, not by a Node report.
+- **Stopping a task mid-run really stops it.** `stop()` and `stopAllBackgroundTasks()` cleared the timer but a run already in flight would schedule another when it finished. Both paths now mark the task stopped and the in-flight run checks that before re-arming.
+
+PHP and Ruby already never overlapped, so all four frameworks now behave the same way.
+
 ## v3.13.76 (2026-07-16) - Migrations apply again on a database created before 3.13.55
 
 If your database was created by Tina4 v3 3.13.54 or earlier, every new migration failed and none could ever be applied. This release fixes that. Node never created that column, so this only reached apps pointed at a database whose tracking table came from tina4-python; the same hardening now applies.

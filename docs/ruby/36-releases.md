@@ -1,5 +1,9 @@
 # Chapter 35: Release Notes
 
+## v3.13.77 (2026-07-16) - Background task scheduling confirmed, no code change
+
+Ruby needed no fix this release. A cross-framework check of a reported Python bug (`background()` running a slow task concurrently with itself) confirmed Ruby was already correct: each task owns a thread that sleeps, calls, and sleeps again, so a run can never overlap the next one. Python and Node.js were brought in line with that behaviour.
+
 ## v3.13.76 (2026-07-16) - Migrations apply again on a database created before 3.13.55
 
 If your database was created by Tina4 v3 3.13.54 or earlier, every new migration failed and none could ever be applied. This release fixes that. Ruby never created that column, so this only reached apps pointed at a database whose tracking table came from tina4-python; the same hardening now applies.

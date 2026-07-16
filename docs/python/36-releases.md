@@ -1,5 +1,12 @@
 # Chapter 35: Release Notes
 
+## v3.13.77 (2026-07-16) - A slow background task no longer runs on top of itself
+
+- **`background()` never overlaps a task with itself.** A sync callback that took longer than the loop's timeout used to have a second copy started alongside it, and every later tick piled on another. A callable already running in a thread pool cannot be cancelled, so the timeout abandoned the wrapper while the thread kept working. Each run is now awaited to completion before the next tick, and an overrun only logs a warning. The old warning claimed the task "was interrupted" when it was still running, which pointed away from the cause; it now says the task is still running and the next run is deferred.
+- **Why it matters.** This is silent double-execution of any slow periodic sweep, in a single process, with no clustering involved. A queue drainer that reads rows and marks them one by one would process every row twice.
+
+Reported by justin-k-bruce, who traced it to the exact lines and supplied a repro. Real-thread regression tests now pin the no-overlap invariant.
+
 ## v3.13.76 (2026-07-16) - Migrations apply again on a database created before 3.13.55
 
 If your database was created by Tina4 v3 3.13.54 or earlier, every new migration failed and none could ever be applied. This release fixes that. It is the framework that created the legacy column, so Python is where it bit.
