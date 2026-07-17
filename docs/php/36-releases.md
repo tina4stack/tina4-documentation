@@ -1,5 +1,17 @@
 # Chapter 35: Release Notes
 
+## v3.13.78 (2026-07-17) - Session cookies get Secure behind a TLS-terminating proxy
+
+If you run PHP behind nginx, HAProxy, an ALB, Cloudflare, or almost any container setup, your session cookies were missing `Secure` and stayed sendable over plain HTTP. This release fixes that.
+
+- **Security: `Secure` now follows the scheme the client actually used.** TLS is normally terminated at the proxy, which forwards plain HTTP to PHP, so `$_SERVER['HTTPS']` is unset on exactly the deployments that are encrypted. Both session cookies read that flag alone, concluded "plain HTTP", and dropped `Secure`. They now go through `Request::isSecureScheme()`, which honours `x-forwarded-proto` (and takes the first hop of a proxy chain, which is the client-facing one). The framework already did this when building `$request->url`, so `$request->url` reported `https://` on the very request where the cookies decided otherwise. That disagreement was the bug, and there is now one rule instead of two.
+- **`TINA4_SESSION_SECURE` now works on both session cookies.** The documented variable was only read by `Session.php`; the two cookies emitted by the router ignored it entirely, so setting it did nothing for `PHPSESSID` or `tina4_session`. All three now honour it.
+- **Plain HTTP is unchanged.** Without a proxy header and without TLS, neither cookie gets `Secure` - marking it eagerly would stop the browser returning the cookie at all and silently break every local session.
+
+Reported by justin-k-bruce as a follow-up to 3.13.77, with the proxy repro and the inconsistency already isolated. Pinned by tests that read the real `Set-Cookie` off a live server driven with a real `X-Forwarded-Proto` header.
+
+PHP only. Python, Ruby, and Node decide `Secure` from `TINA4_SESSION_SECURE` alone and never auto-detected, so they had no proxy-blind detection to correct.
+
 ## v3.13.77 (2026-07-16) - The native session cookie is no longer readable by JavaScript
 
 - **Security: `PHPSESSID` now carries `HttpOnly` and `SameSite`.** The framework starts PHP's native session so `$_SESSION` persists, but it let PHP emit the cookie with the stock ini defaults: no `HttpOnly`, no `SameSite`. Any app keeping a login in `$_SESSION` had a session cookie readable by any XSS and sent on cross-site requests. Tina4's own `tina4_session` cookie was correctly attributed twenty-five lines further down the same method; that asymmetry was the bug. The cookie is now configured before it is emitted, reusing `TINA4_SESSION_SAMESITE` (default `Lax`) and the same SameSite=None implies Secure rule. Scope is unchanged: lifetime, path and domain still come from your ini.

@@ -1,5 +1,11 @@
 # Chapter 35: Release Notes
 
+## v3.13.78 (2026-07-17) - Version alignment
+
+No Ruby code changes. This release keeps the four frameworks on one version.
+
+The security fix in 3.13.78 is PHP-only: PHP auto-detects the `Secure` flag on its session cookies from the request scheme, and that detection did not see through a TLS-terminating proxy. Ruby decides `Secure` from `TINA4_SESSION_SECURE` alone and has no auto-detection, so it was never affected. Verified against the source rather than assumed.
+
 ## v3.13.77 (2026-07-16) - Background task scheduling confirmed, no code change
 
 Ruby needed no fix this release. A cross-framework check of a reported Python bug (`background()` running a slow task concurrently with itself) confirmed Ruby was already correct: each task owns a thread that sleeps, calls, and sleeps again, so a run can never overlap the next one. Python and Node.js were brought in line with that behaviour.

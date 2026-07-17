@@ -1,5 +1,11 @@
 # Chapter 35: Release Notes
 
+## v3.13.78 (2026-07-17) - Version alignment
+
+No Python code changes. This release keeps the four frameworks on one version.
+
+The security fix in 3.13.78 is PHP-only: PHP auto-detects the `Secure` flag on its session cookies from the request scheme, and that detection did not see through a TLS-terminating proxy. Python decides `Secure` from `TINA4_SESSION_SECURE` alone and has no auto-detection, so it was never affected. Verified against the source rather than assumed.
+
 ## v3.13.77 (2026-07-16) - A slow background task no longer runs on top of itself
 
 - **`background()` never overlaps a task with itself.** A sync callback that took longer than the loop's timeout used to have a second copy started alongside it, and every later tick piled on another. A callable already running in a thread pool cannot be cancelled, so the timeout abandoned the wrapper while the thread kept working. Each run is now awaited to completion before the next tick, and an overrun only logs a warning. The old warning claimed the task "was interrupted" when it was still running, which pointed away from the cause; it now says the task is still running and the next run is deferred.

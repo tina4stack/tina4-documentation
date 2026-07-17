@@ -1,5 +1,11 @@
 # Chapter 35: Release Notes
 
+## v3.13.78 (2026-07-17) - Version alignment
+
+No Node.js code changes. This release keeps the four frameworks on one version.
+
+The security fix in 3.13.78 is PHP-only: PHP auto-detects the `Secure` flag on its session cookies from the request scheme, and that detection did not see through a TLS-terminating proxy. Node decides `Secure` from `TINA4_SESSION_SECURE` alone and has no auto-detection, so it was never affected. Verified against the source rather than assumed.
+
 ## v3.13.77 (2026-07-16) - A slow background task no longer runs on top of itself
 
 - **`background()` never overlaps a task with itself.** The timer used `setInterval`, which fires on a fixed schedule and does not wait for an async callback, so a run slower than the interval had a second copy start alongside it. The timer is now re-armed only after each run settles, making the interval the gap between runs. Found by cross-checking the Python report against all four frameworks, not by a Node report.
