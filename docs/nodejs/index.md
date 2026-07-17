@@ -153,17 +153,22 @@ Frond supports Twig-compatible syntax: loops, conditionals, extends, blocks, inc
 
 ### Sessions <a href="#session-handling" id="session-handling"></a>
 
-The default session handler stores data on the file system. Override `TINA4_SESSION_HANDLER` in `.env` to switch backends.
+The default session handler stores data on the file system. Override `TINA4_SESSION_BACKEND` in `.env` to switch backends.
 
-| Handler                 | Backend     | Notes                 |
-| ----------------------- | ----------- | --------------------- |
-| `FileSession` (default) | File system | No extra config       |
-| `RedisSession`          | Redis       | Set `TINA4_CACHE_URL` |
-| `MongoSession`          | MongoDB     | Set `TINA4_MONGO_URI` |
+The value is the backend name, not a class name. Unknown values fall back to the
+file backend, so a typo costs you the backend you asked for without raising.
+
+| Value            | Backend     | Connection settings            |
+| ---------------- | ----------- | ------------------------------ |
+| `file` (default) | File system | No extra config                |
+| `redis`          | Redis       | `TINA4_SESSION_REDIS_URL`      |
+| `valkey`         | Valkey      | `TINA4_SESSION_VALKEY_HOST`    |
+| `mongodb`        | MongoDB     | `TINA4_SESSION_MONGO_URI`      |
+| `database`       | Your ORM DB | `TINA4_DATABASE_URL`           |
 
 ```bash
-TINA4_SESSION_HANDLER=RedisSession
-TINA4_CACHE_URL=redis://localhost:6379
+TINA4_SESSION_BACKEND=redis
+TINA4_SESSION_REDIS_URL=redis://localhost:6379
 ```
 
 ```typescript

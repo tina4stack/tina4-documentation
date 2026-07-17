@@ -665,7 +665,7 @@ docker compose up -d --scale app=4
 Run multiple instances behind a load balancer. Use Redis for shared sessions, cache, and queues:
 
 ```bash
-TINA4_SESSION_HANDLER=redis
+TINA4_SESSION_BACKEND=redis
 TINA4_CACHE_BACKEND=redis
 TINA4_QUEUE_BACKEND=rabbitmq
 # Or use MongoDB for queues:

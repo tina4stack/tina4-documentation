@@ -521,7 +521,7 @@ foreach ($queue->consume('emails') as $job) {
 File, database, Redis, Valkey, and MongoDB backends.
 
 ```bash
-TINA4_SESSION_HANDLER=redis
+TINA4_SESSION_BACKEND=redis
 TINA4_SESSION_REDIS_HOST=localhost
 TINA4_SESSION_TTL=3600
 ```

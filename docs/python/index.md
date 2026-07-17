@@ -113,20 +113,20 @@ async def get_home(request, response):
 
 The default session handler stores data on the file system. Override `TINA4_SESSION_BACKEND` in `.env` to switch backends.
 
-| Handler                        | Backend     | Required package |
-| ------------------------------ | ----------- | ---------------- |
-| `SessionFileHandler` (default) | File system | --               |
-| `SessionRedisHandler`          | Redis       | `redis`          |
-| `SessionValkeyHandler`         | Valkey      | `valkey`         |
-| `SessionMongoHandler`          | MongoDB     | `pymongo`        |
+The value is the backend name, not a class name. Unknown values fall back to the
+file backend, so a typo costs you the backend you asked for without raising.
+
+| Value                    | Backend     | Required package |
+| ------------------------ | ----------- | ---------------- |
+| `file` (default)         | File system | --               |
+| `redis`                  | Redis       | `redis`          |
+| `valkey`                 | Valkey      | `valkey`         |
+| `mongodb`                | MongoDB     | `pymongo`        |
+| `database`               | Your ORM DB | --               |
 
 ```bash
-TINA4_SESSION_BACKEND=SessionMongoHandler
-TINA4_SESSION_MONGO_HOST=localhost
-TINA4_SESSION_MONGO_PORT=27017
-TINA4_SESSION_MONGO_URI=
-TINA4_SESSION_MONGO_USERNAME=
-TINA4_SESSION_MONGO_PASSWORD=
+TINA4_SESSION_BACKEND=mongodb
+TINA4_SESSION_MONGO_URI=mongodb://localhost:27017
 TINA4_SESSION_MONGO_DB=tina4_sessions
 TINA4_SESSION_MONGO_COLLECTION=sessions
 ```
