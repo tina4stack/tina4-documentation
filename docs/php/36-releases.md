@@ -1,5 +1,13 @@
 # Chapter 35: Release Notes
 
+## v3.13.80 (2026-07-19) - The xUnit base class Tina4\Test finally ships
+
+The `\Tina4\Test` base class has been documented since 3.13.0 for class-based test suites - chapter 18 shows `class MyTest extends \Tina4\Test`. It never actually shipped. This release ships it.
+
+- **`Tina4/Test.php` was silently kept out of the package.** An unanchored `test.php` line in `.gitignore` matched `Tina4/Test.php` case-insensitively (macOS git), so the file was never committed and never reached Packagist - even though `\Tina4\TestClient` and the parity test that extends the base class were both present. Anyone who followed chapter 18 got "Class Tina4\Test not found". The file is now committed, guarded by an explicit un-ignore, and ships.
+- **3.13.79 is what surfaced it.** The switch to test-directory discovery in 3.13.79 finally ran the test that extends `\Tina4\Test`, so CI failed loudly instead of the file staying invisible.
+- **PHP only.** The Python, Ruby, and Node test base classes were already committed and shipping.
+
 ## v3.13.79 (2026-07-19) - The test suite runs every test file, a renamed session cookie is read back, and a stuck migration clears
 
 The 3.13.78 session-cookie fix was PHP's, and its regression test never ran in CI. This release closes that hole, reads a renamed cookie back, and clears a stuck migration.
