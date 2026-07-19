@@ -1,10 +1,22 @@
 # Chapter 35: Release Notes
 
+## v3.13.79 (2026-07-19) - Session cookies get Secure behind a proxy, honour SameSite, and a renamed cookie is read back
+
+If you run Ruby behind a TLS-terminating proxy, the session cookie shipped without `Secure` and always used `SameSite=Lax`, whatever you configured. This release fixes both and reads a renamed cookie back.
+
+- **Security: the session cookie now goes through the builder.** The `Set-Cookie` was hand-written in `rack_app.rb` and never went through the cookie builder, so `TINA4_SESSION_SECURE` was a silent no-op and `SameSite` was hardcoded to `Lax`, ignoring `TINA4_SESSION_SAMESITE`. The emit path now routes through the builder: `Secure` is proxy-aware through `Request.secure_scheme?` (the `x-forwarded-proto` first hop, else the native scheme), honours `TINA4_SESSION_SECURE`, and `SameSite=None` forces `Secure`. `TINA4_SESSION_SAMESITE` is honoured.
+- **Plain HTTP is unchanged.** Without a proxy header and without TLS, the cookie stays non-Secure.
+- **`TINA4_SESSION_NAME` is now read back.** The name resolves through one method (`Session.cookie_name`) on both sides, the same as the other three frameworks; the default is byte-identical.
+- **`TINA4_SESSION_BACKEND` now selects the handler.** Backend selection was unreachable before, so the setting did nothing. The Redis/Valkey and Mongo session handlers now read their connection from the environment instead of a hardcoded `localhost`.
+- **A background no-overlap spec** was added, matching the other three frameworks.
+
+Reported by justin-k-bruce (ruby#31). Real specs, no mocks.
+
 ## v3.13.78 (2026-07-17) - Version alignment
 
 No Ruby code changes. This release keeps the four frameworks on one version.
 
-The security fix in 3.13.78 is PHP-only: PHP auto-detects the `Secure` flag on its session cookies from the request scheme, and that detection did not see through a TLS-terminating proxy. Ruby decides `Secure` from `TINA4_SESSION_SECURE` alone and has no auto-detection, so it was never affected. Verified against the source rather than assumed.
+Correction: the original 3.13.78 note said Ruby was never affected by the session-cookie `Secure` issue, and that it was verified. That was wrong. The check confirmed the cookie builder existed, not that the emit path called it - and it did not, so `TINA4_SESSION_SECURE` was a silent no-op and Ruby had no proxy-aware detection at all. 3.13.79 fixes this; see the 3.13.79 note above.
 
 ## v3.13.77 (2026-07-16) - Background task scheduling confirmed, no code change
 

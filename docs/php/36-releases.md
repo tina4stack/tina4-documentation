@@ -1,5 +1,18 @@
 # Chapter 35: Release Notes
 
+## v3.13.79 (2026-07-19) - The test suite runs every test file, a renamed session cookie is read back, and a stuck migration clears
+
+The 3.13.78 session-cookie fix was PHP's, and its regression test never ran in CI. This release closes that hole, reads a renamed cookie back, and clears a stuck migration.
+
+- **CI gap (#178): every test file runs now.** `phpunit.xml` hand-listed its test files, so 78 of 186 test classes never ran in CI - including the #174 session-cookie regression added in 3.13.78. The config now discovers `tests/` by directory, so every `tests/*Test.php` runs, and a guard test asserts the config collects them all. This is the same class of hole as a file registered by hand in 3.13.78.
+- **`TINA4_SESSION_NAME` is now read back.** The write side honoured `TINA4_SESSION_NAME`, but the router read the incoming cookie under a hardcoded `tina4_session`, so a renamed cookie never resumed. Both sides now resolve the name through one method, `Session::cookieName()`; the default is byte-identical.
+- **Migration (#176): a stuck row clears.** A bookkeeping row left at `passed = 0` - a prior failure, or one carried over from a v2 table - is treated as pending and re-applies cleanly on the next migrate. This was merged earlier; this release publishes it.
+- **Test hygiene.** Four PHPUnit "risky" notices surfaced once directory discovery ran the dormant files, and they are cleared. They came from error and exception-handler bookkeeping in the test harness (an `ErrorTracker` static counter and `App` handlers restored at garbage-collection time); the fix is test-infra only and touches no framework runtime code, so production behaviour is identical.
+
+The session-cookie `Secure` fix itself shipped for PHP in 3.13.78, the proven reference for the other three this release; 3.13.79 closes the CI hole that let its test go unrun and adds the cookie-name parity.
+
+Reported by justin-k-bruce (php#178, php#179; #176).
+
 ## v3.13.78 (2026-07-17) - Session cookies get Secure behind a TLS-terminating proxy
 
 If you run PHP behind nginx, HAProxy, an ALB, Cloudflare, or almost any container setup, your session cookies were missing `Secure` and stayed sendable over plain HTTP. This release fixes that.
@@ -10,7 +23,7 @@ If you run PHP behind nginx, HAProxy, an ALB, Cloudflare, or almost any containe
 
 Reported by justin-k-bruce as a follow-up to 3.13.77, with the proxy repro and the inconsistency already isolated. Pinned by tests that read the real `Set-Cookie` off a live server driven with a real `X-Forwarded-Proto` header.
 
-PHP only. Python, Ruby, and Node decide `Secure` from `TINA4_SESSION_SECURE` alone and never auto-detected, so they had no proxy-blind detection to correct.
+Correction: the other three did not merely lack proxy detection - their session-cookie emit path bypassed the cookie builder, so `TINA4_SESSION_SECURE` was a silent no-op there and none of them was proxy-aware. 3.13.79 brings Python, Ruby, and Node to this same contract.
 
 ## v3.13.77 (2026-07-16) - The native session cookie is no longer readable by JavaScript
 

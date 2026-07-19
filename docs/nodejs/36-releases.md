@@ -1,10 +1,20 @@
 # Chapter 35: Release Notes
 
+## v3.13.79 (2026-07-19) - Session cookies get Secure behind a proxy, and a renamed cookie is read back
+
+If you run Node behind a TLS-terminating proxy, the session cookie shipped without `Secure` over the very deployments that were encrypted. This release fixes that and reads a renamed cookie back.
+
+- **Security: `Secure` is now proxy-aware.** `buildSessionCookie()` set `Secure` only from an explicit `TINA4_SESSION_SECURE` and ignored `x-forwarded-proto`, so HTTPS behind a TLS-terminating proxy shipped the session cookie without `Secure`. `Secure` now reads the scheme through `isSecureScheme()` (the `x-forwarded-proto` first hop, else the native scheme), still honours `TINA4_SESSION_SECURE`, and `SameSite=None` forces `Secure`.
+- **Plain HTTP is unchanged.** Without a proxy header and without TLS, the cookie stays non-Secure.
+- **`TINA4_SESSION_NAME` is now read back.** The name resolves through one function (`sessionCookieName()`) on both the write and the read side, and the incoming cookie is matched on an exact `name=` prefix; the default is byte-identical.
+
+Reported by justin-k-bruce (nodejs#34). Real wire tests read the actual `Set-Cookie` and replay a renamed cookie.
+
 ## v3.13.78 (2026-07-17) - Version alignment
 
 No Node.js code changes. This release keeps the four frameworks on one version.
 
-The security fix in 3.13.78 is PHP-only: PHP auto-detects the `Secure` flag on its session cookies from the request scheme, and that detection did not see through a TLS-terminating proxy. Node decides `Secure` from `TINA4_SESSION_SECURE` alone and has no auto-detection, so it was never affected. Verified against the source rather than assumed.
+Correction: the original 3.13.78 note said Node was never affected by the session-cookie `Secure` issue, and that it was verified. That was wrong. The check confirmed the cookie builder existed, not that the emit path called it - and it did not, so `TINA4_SESSION_SECURE` was a silent no-op and Node had no proxy-aware detection at all. 3.13.79 fixes this; see the 3.13.79 note above.
 
 ## v3.13.77 (2026-07-16) - A slow background task no longer runs on top of itself
 

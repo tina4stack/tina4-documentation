@@ -1,10 +1,20 @@
 # Chapter 35: Release Notes
 
+## v3.13.79 (2026-07-19) - Session cookies get Secure behind a proxy, and a renamed cookie is read back
+
+If you run Python behind nginx, an ALB, or any TLS-terminating proxy, your session cookie shipped without `Secure` on the very deployments that were encrypted. This release fixes that and reads a renamed cookie back.
+
+- **Security: `Secure` now follows the scheme the client actually used.** The response emit path in `server.py` hand-wrote the session `Set-Cookie` header and never called the cookie builder, so the documented `TINA4_SESSION_SECURE` did nothing and there was no proxy detection at all. The emit path now routes through the one cookie builder (`cookie_header`). `Secure` is set when `TINA4_SESSION_SECURE` is truthy, when `SameSite` is `None` (browsers reject `None` without `Secure`), or when the request is HTTPS - detected proxy-aware through `x-forwarded-proto`, whose first hop is the client-facing one, resolved by `Request.is_secure_scheme()`, else the native scheme.
+- **Plain HTTP is unchanged.** Without a proxy header and without TLS, the cookie stays non-Secure, so the browser keeps returning it and local sessions never break silently.
+- **`TINA4_SESSION_NAME` is now read back.** The write side honoured `TINA4_SESSION_NAME`, but the incoming-cookie read used a hardcoded `tina4_session` literal, so an operator who renamed the cookie wrote one name and read another, and the session silently never resumed. Both sides now resolve the name through one function (`session_cookie_name()`); the default is byte-identical to before.
+
+Reported by justin-k-bruce (python#95). Real-server tests read the actual `Set-Cookie` off a live server driven with a real `X-Forwarded-Proto` header; the name test resumes a renamed cookie across two requests and proves the default is unchanged.
+
 ## v3.13.78 (2026-07-17) - Version alignment
 
 No Python code changes. This release keeps the four frameworks on one version.
 
-The security fix in 3.13.78 is PHP-only: PHP auto-detects the `Secure` flag on its session cookies from the request scheme, and that detection did not see through a TLS-terminating proxy. Python decides `Secure` from `TINA4_SESSION_SECURE` alone and has no auto-detection, so it was never affected. Verified against the source rather than assumed.
+Correction: the original 3.13.78 note said Python was never affected by the session-cookie `Secure` issue, and that it was verified. That was wrong. The check confirmed the cookie builder existed, not that the emit path called it - and it did not, so `TINA4_SESSION_SECURE` was a silent no-op and Python had no proxy-aware detection at all. 3.13.79 fixes this; see the 3.13.79 note above.
 
 ## v3.13.77 (2026-07-16) - A slow background task no longer runs on top of itself
 
