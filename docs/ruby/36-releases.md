@@ -1,5 +1,11 @@
 # Chapter 35: Release Notes
 
+## v3.13.81 (2026-07-21) - `tina4ruby test` exit code, locked in
+
+Ruby needed no fix here. `tina4ruby test` already exited non-zero when a test failed. This release adds a real lock-in spec so the contract can never drift: it spawns the actual CLI against a failing project and asserts a non-zero exit. Parity with the python#96 fix.
+
+This release re-aligns all four frameworks on one version. Python, Ruby, and Node skip 3.13.80, a PHP-only patch that shipped the `\Tina4\Test` base class; PHP moves from 3.13.80 to 3.13.81. Everyone is back on 3.13.81.
+
 ## v3.13.79 (2026-07-19) - Session cookies get Secure behind a proxy, honour SameSite, and a renamed cookie is read back
 
 If you run Ruby behind a TLS-terminating proxy, the session cookie shipped without `Secure` and always used `SameSite=Lax`, whatever you configured. This release fixes both and reads a renamed cookie back.

@@ -1,5 +1,11 @@
 # Chapter 35: Release Notes
 
+## v3.13.81 (2026-07-21) - `tina4 test` exit code, locked in
+
+Node needed no fix here. `tina4 test` already propagated a non-zero exit when a test failed, in both the single-file and the auto-discover paths. This release adds a real lock-in test so the contract can never drift: it spawns the actual CLI and asserts a non-zero exit on failure, including one failing test among passing ones. Parity with the python#96 fix.
+
+This release re-aligns all four frameworks on one version. Python, Ruby, and Node skip 3.13.80, a PHP-only patch that shipped the `\Tina4\Test` base class; PHP moves from 3.13.80 to 3.13.81. Everyone is back on 3.13.81.
+
 ## v3.13.79 (2026-07-19) - Session cookies get Secure behind a proxy, and a renamed cookie is read back
 
 If you run Node behind a TLS-terminating proxy, the session cookie shipped without `Secure` over the very deployments that were encrypted. This release fixes that and reads a renamed cookie back.

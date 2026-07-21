@@ -1,5 +1,15 @@
 # Chapter 35: Release Notes
 
+## v3.13.81 (2026-07-21) - `tina4php test` fails the build when tests fail
+
+The same hole Python had. `tina4php test` ran the suite through `passthru()` and never captured the exit code, so it always returned 0. A CI gate passed on a red suite. This release captures the runner's exit code and exits with it, so a failing suite fails the gate. A missing runner counts as a failure and exits non-zero too.
+
+- **The exit code now propagates.** `tina4php test` exits with the runner's own code. A red suite stops the pipeline; a green suite exits 0.
+- **The `--verbose` flag is gone.** PHPUnit 10 and up removed `--verbose`, so on the pinned PHPUnit 11 the runner exited 2. Once the exit code propagated, that would have turned a passing suite into a false failure. The command now runs with `--colors=always`, and the documented command matches.
+- **Real lock-in tests pin both branches.** One covers the smoke-script path, one covers the phpunit path, each against a real temp project. No mocks. Nothing changes beyond the exit code and the flag.
+
+This release re-aligns all four frameworks on one version. Python, Ruby, and Node skip 3.13.80, a PHP-only patch that shipped the `\Tina4\Test` base class; PHP moves from 3.13.80 to 3.13.81. Everyone is back on 3.13.81.
+
 ## v3.13.80 (2026-07-19) - The xUnit base class Tina4\Test finally ships
 
 The `\Tina4\Test` base class has been documented since 3.13.0 for class-based test suites - chapter 18 shows `class MyTest extends \Tina4\Test`. It never actually shipped. This release ships it.

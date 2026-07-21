@@ -1,5 +1,16 @@
 # Chapter 35: Release Notes
 
+## v3.13.81 (2026-07-21) - `tina4 test` fails the build when tests fail
+
+A green build could hide a red suite. `tina4 test` ran pytest, then threw pytest's exit code away and always returned 0. A `tina4 test || exit 1` gate in CI or a pre-push hook passed while tests failed underneath it. This release makes the command exit with pytest's own return code, so a failing suite fails the gate.
+
+- **The exit code now propagates.** `tina4 test` returns whatever pytest returns. A red suite exits non-zero and stops the pipeline; a green suite exits 0. Nothing else about the command changes.
+- **A real lock-in test pins it.** The test spawns the actual CLI against a temp project with a failing test and asserts a non-zero exit, then repeats with a passing test and asserts 0. No mocks - the CLI runs for real.
+
+This release re-aligns all four frameworks on one version. Python, Ruby, and Node skip 3.13.80, a PHP-only patch that shipped the `\Tina4\Test` base class; PHP moves from 3.13.80 to 3.13.81. Everyone is back on 3.13.81.
+
+Reported as python#96.
+
 ## v3.13.79 (2026-07-19) - Session cookies get Secure behind a proxy, and a renamed cookie is read back
 
 If you run Python behind nginx, an ALB, or any TLS-terminating proxy, your session cookie shipped without `Secure` on the very deployments that were encrypted. This release fixes that and reads a renamed cookie back.
