@@ -2,9 +2,11 @@
 
 Tina4 ships in Python, PHP, Ruby, Node.js, JavaScript (frontend), and Delphi (FMX). Each variant targets a different language but follows the same project structure, the same routing conventions, and the same ORM API.
 
-This page compares every Tina4 variant against popular frameworks in its language. The data covers performance benchmarks, a 44-feature matrix, deployment size, and honest trade-offs.
+This page compares every Tina4 variant against popular frameworks in its language. The data covers performance benchmarks, a 44-capability comparison checklist, deployment size, and honest trade-offs.
 
 **Methodology.** All benchmarks ran on an Apple Silicon ARM64 MacBook Pro (8 cores). The tool: `hey`, with 5,000 requests, 50 concurrency, three runs averaged. Two endpoints tested: a JSON object response and a 100-item list response. Benchmark scripts live at [github.com/tina4stack/tina4-documentation/benchmark/](https://github.com/tina4stack/tina4-documentation/benchmark/). Date: March 2026.
+
+**What "of 44" means.** Every feature table below scores each framework against one fixed list of 44 capabilities. The list stays the same across all four languages, so the columns compare like with like: a framework at 24/44 covers 24 of those 44 capabilities. That 44 is a comparison denominator, not Tina4's feature count. For what Tina4 actually ships, read the complete feature list for your language, which enumerates every built-in feature with the class or method that provides it.
 
 ---
 
