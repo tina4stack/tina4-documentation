@@ -57,7 +57,22 @@ If `consume(handler)` acks first and the handler then raises, the message is gon
 stored. Acking after means the broker redelivers with DUP set, which is exactly what the DUP flag
 is for. `receive()` acking immediately is fine for a simple synchronous read.
 
-### 3. Importing the client must have no side effects
+### 3. TLS verification must use a PER-CLIENT trust store, never the shared default (NORMATIVE)
+
+Ruby's first attempt "passed" TLS and then accepted a self-signed cert with NO CA - plaintext trust
+wearing a TLS badge. Cause: `SSLContext#set_params` installs the process-wide default cert store, and
+a later `ca_file=` writes the CA INTO that shared store, so every subsequent client in the process
+trusts it. Every language has this shared-default-store shape, so all four ports must build their own
+store and never touch the shared default. The lock-in connects WITH the CA then WITHOUT it in the
+same process; under a randomised suite the naive version goes green by ordering, so the negative is
+what makes the test mean anything.
+
+Also: reading one byte at a time over TLS deadlocks. Decrypted plaintext sits in the TLS layer's
+buffer while the raw socket has nothing, so a select() on the socket blocks forever on a connection
+that already has data. Read a whole chunk at a time and select on the underlying socket, checking the
+TLS pending-bytes count first. (Both from the Ruby port, 2026-07-23.)
+
+### 4. Importing the client must have no side effects
 
 My spike ran its checks at module level and ended in `SystemExit`, so importing it as a library
 executed the whole suite and killed the caller. Trivial in a spike, fatal in a framework module.
@@ -113,7 +128,11 @@ PHP/Node, per the existing convention.
 - [x] **Auth + TLS + EMQX proven** (`spikes/mqtt_spike3_auth_tls.py`, 13/13) - owner asked for all
       three in this release. Auth 6 checks, TLS 4 (incl. the self-signed-cert REJECTION that proves
       verification is real), EMQX 3 (`SUBACK 0x80`, which Mosquitto cannot produce).
-- [ ] Ruby: auth + TLS + EMQX implementation (IN FLIGHT)
+- [x] **Ruby: auth + TLS + EMQX implementation** (`tina4-ruby` `b689a90`, +30 examples). Auth via
+      CONNECT flags + url userinfo (percent-decoded); TLS via a lazily-required stdlib `openssl`;
+      EMQX `SUBACK 0x80` now a real passing test. 78 MQTT examples 0 failures; isolated-worktree run
+      4081/0/60 (= 4051 baseline + 30). Verified by me: both security negatives pass - a self-signed
+      cert is REJECTED without the CA, and a client's CA does NOT leak into the process-wide store.
 - [ ] Mosquitto + EMQX as CI services in all four workflows (same as redis/kafka/rabbitmq).
       Reproducible via `spikes/mqtt-infra.sh`: 1883 anon, 1884 auth, 8883 TLS, 1885 EMQX 5.8.
 - [ ] **QoS 2: refuse loudly. DECIDED by the owner 2026-07-23.** `qos=2` raises immediately with a
