@@ -40,12 +40,16 @@ def _mstr(s):
 
 
 class Mqtt:
-    __slots__ = ("sock", "_pid")
+    __slots__ = ("sock", "_pid", "_inbox")
 
     def __init__(self, host="127.0.0.1", port=1883):
         self.sock = socket.create_connection((host, port), timeout=5)
         self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self._pid = 0
+        # Inbound PUBLISHes that arrived while we were waiting for an ack.
+        # See _await_ack: on a connection that both publishes and subscribes,
+        # the next packet after a PUBLISH is NOT necessarily its PUBACK.
+        self._inbox = []
 
     def _next_pid(self):
         # Packet identifiers are 1..65535; 0 is invalid.
@@ -98,6 +102,32 @@ class Mqtt:
             raise ConnectionError(f"CONNACK refused: head={head:#x} rc={resp[1] if resp else '?'}")
         return True
 
+    def _await_ack(self, want_head, want_pid):
+        """Read until the expected ack arrives.
+
+        CORRECTION (found by the Ruby port, 2026-07-23): the earlier version of
+        this spike assumed the very next packet after a PUBLISH was its PUBACK.
+        On any connection that both publishes AND subscribes, an inbound PUBLISH
+        can arrive first - the broker is not obliged to answer us before pushing
+        someone else's message. Treating that PUBLISH as the ack fails the id
+        check and desynchronises the stream for every later packet.
+
+        So: park inbound PUBLISHes in _inbox and keep reading for the real ack.
+        All four framework implementations must do this.
+        """
+        while True:
+            head, body = self._read_packet()
+            if head & 0xF0 == PUBLISH:
+                self._inbox.append((head, body))
+                continue
+            if head == PINGRESP:
+                continue
+            got = struct.unpack("!H", body[:2])[0] if len(body) >= 2 else None
+            if head == want_head and got == want_pid:
+                return body
+            raise ConnectionError(
+                f"expected {want_head:#x} pid={want_pid}, got {head:#x} pid={got}")
+
     def publish(self, topic, payload, qos=0, retain=False):
         if isinstance(payload, str):
             payload = payload.encode()
@@ -110,10 +140,7 @@ class Mqtt:
         body += payload
         self.sock.sendall(bytes([flags]) + _varint(len(body)) + body)
         if qos == 1:
-            head, resp = self._read_packet()
-            got = struct.unpack("!H", resp[:2])[0]
-            if head != PUBACK or got != pid:
-                raise ConnectionError(f"bad PUBACK: head={head:#x} pid={got} want={pid}")
+            self._await_ack(PUBACK, pid)
         return pid
 
     def subscribe(self, topic_filter, qos=1):
@@ -122,9 +149,12 @@ class Mqtt:
         body += _mstr(topic_filter)
         body.append(qos)
         self.sock.sendall(bytes([SUBSCRIBE]) + _varint(len(body)) + body)
-        head, resp = self._read_packet()
-        if head != SUBACK or struct.unpack("!H", resp[:2])[0] != pid:
-            raise ConnectionError("bad SUBACK")
+        # Must go through _await_ack for the same reason publish() does, and the
+        # case is not hypothetical: on a clean_session=false reconnect the broker
+        # replays queued PUBLISHes BEFORE the SUBACK, so a direct read here sees
+        # a PUBLISH and wrongly reports "bad SUBACK". Every ack wait needs this,
+        # not just PUBACK.
+        resp = self._await_ack(SUBACK, pid)
         granted = resp[2]
         if granted == 0x80:
             raise ConnectionError("subscription refused by broker")
@@ -132,7 +162,29 @@ class Mqtt:
 
     def receive(self):
         """Returns (topic, payload_bytes, qos). Acks QoS 1 so the broker
-        does not redeliver."""
+        does not redeliver.
+
+        Drains _inbox first: a PUBLISH that arrived while we were waiting for an
+        ack is already read off the socket, and forgetting it loses a message.
+
+        NOTE for the framework implementations: this acks BEFORE the caller has
+        processed the message, which is correct for a simple synchronous read but
+        WRONG for a consume(handler) loop. There, ack AFTER the handler returns,
+        so a raising handler leaves the message unacked and the broker redelivers
+        it with DUP set. Acking first silently drops data the consumer never
+        stored. (Correction from the Ruby port, 2026-07-23.)
+        """
+        if self._inbox:
+            head, body = self._inbox.pop(0)
+            qos = (head & 0x06) >> 1
+            tlen = struct.unpack("!H", body[:2])[0]
+            topic = bytes(body[2:2 + tlen]).decode()
+            off = 2 + tlen
+            if qos:
+                pid = struct.unpack("!H", body[off:off + 2])[0]
+                off += 2
+                self.sock.sendall(bytes([PUBACK, 0x02]) + struct.pack("!H", pid))
+            return topic, bytes(body[off:]), qos
         head, body = self._read_packet()
         if head == PINGRESP:
             return self.receive()

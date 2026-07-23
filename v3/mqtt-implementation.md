@@ -4,7 +4,7 @@ Owner go-ahead 2026-07-23: "would be good to get MQTT working", "keep to zero de
 code". Phase 1b of `iot-and-ev-charging.md`. Companion test cases in `iot-gis-test-plan.md`
 (A5-A11, E1-E2).
 
-## Status: SPIKE PROVEN, build not started
+## Status: Ruby SHIPPED (local), Python/PHP/Node pending
 
 The plan called for a spike before committing four implementations. Done, and it passes.
 
@@ -29,6 +29,38 @@ Eclipse Mosquitto 2 in Docker on 1883. **15 of 15 checks passed:**
 Reproduce: `docker run -d --name tina4-mosquitto -p 1883:1883 -v
 $PWD/plan/v3/spikes/mosquitto.conf:/mosquitto/config/mosquitto.conf eclipse-mosquitto:2` then
 `python3 plan/v3/spikes/mqtt_spike.py`.
+
+## CORRECTIONS to the reference spike (found by the Ruby port) - NORMATIVE
+
+The Ruby implementation found two real bugs in my spike. Both are now fixed in
+`spikes/mqtt_spike.py`, and **all four frameworks must match the corrected behaviour.**
+Ruby already does.
+
+### 1. Never assume the next packet is your ack
+
+The original spike read one packet after a QoS 1 PUBLISH and treated it as the PUBACK. On any
+connection that both publishes AND subscribes, an inbound PUBLISH can arrive first - the broker is
+not obliged to answer us before pushing someone else's message. Treating it as the ack fails the id
+check and desynchronises the stream for every packet after it.
+
+Fix: `_await_ack()` loops, parks inbound PUBLISHes in an inbox, and keeps reading for the real ack.
+`receive()` drains that inbox before touching the socket, or a parked message is lost.
+
+**This applies to EVERY ack wait, not just PUBACK.** I fixed `publish()` first and spike 2
+immediately failed with "bad SUBACK" - because on a `clean_session=false` reconnect the broker
+replays queued PUBLISHes BEFORE the SUBACK, so a direct read in `subscribe()` sees a PUBLISH and
+wrongly reports a bad SUBACK. Not hypothetical: it is the normal durable-session path.
+
+### 2. `consume` acknowledges AFTER the handler, `receive` may ack immediately
+
+If `consume(handler)` acks first and the handler then raises, the message is gone and was never
+stored. Acking after means the broker redelivers with DUP set, which is exactly what the DUP flag
+is for. `receive()` acking immediately is fine for a simple synchronous read.
+
+### 3. Importing the client must have no side effects
+
+My spike ran its checks at module level and ended in `SystemExit`, so importing it as a library
+executed the whole suite and killed the caller. Trivial in a spike, fatal in a framework module.
 
 ## Wire-protocol facts the four implementations must all get right
 
@@ -73,7 +105,10 @@ PHP/Node, per the existing convention.
 
 ## Scope
 - [x] Spike hand-rolled MQTT 3.1.1 against real Mosquitto (15/15)
-- [ ] Python master implementation + real-broker tests
+- [x] **Ruby implementation + real-broker tests** (`tina4-ruby` `0e2a2bf`) - 49 examples 0 failures,
+      full suite 4051/0/61 (baseline 4002 + 49). Built ahead of Python because the TestClient batch
+      owned the other three repos; it mirrors the proven spike rather than leading the design.
+- [ ] Python master implementation + real-broker tests (must match Ruby, incl. the corrections above)
 - [ ] Mirror PHP / Ruby / Node + equivalent tests
 - [ ] Mosquitto as a CI service in all four workflows (same as redis/kafka/rabbitmq)
 - [ ] **QoS 2: refuse loudly. DECIDED by the owner 2026-07-23.** `qos=2` raises immediately with a
