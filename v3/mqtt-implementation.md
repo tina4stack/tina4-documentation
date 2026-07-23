@@ -123,8 +123,43 @@ PHP/Node, per the existing convention.
 - [x] **Ruby implementation + real-broker tests** (`tina4-ruby` `0e2a2bf`) - 49 examples 0 failures,
       full suite 4051/0/61 (baseline 4002 + 49). Built ahead of Python because the TestClient batch
       owned the other three repos; it mirrors the proven spike rather than leading the design.
-- [ ] Python master implementation + real-broker tests (must match Ruby, incl. the corrections above)
-- [ ] Mirror PHP / Ruby / Node + equivalent tests
+- [x] **Python master implementation + real-broker tests** (`tina4-python` `9290aae`) - stdlib-only
+      (socket/struct/ssl/select), mirrors the Ruby client + all four corrections. 53 no-mock tests
+      vs real Mosquitto (anon 1883 / auth 1884 / TLS 8883); full suite 3642/0/104. TLS negatives
+      (self-signed REJECTED without CA, no CA leak, wrong creds + CONNACK code) all pass. One
+      Python-specific fix vs the Ruby port: server_hostname is ALWAYS passed to wrap_socket (Python
+      couples check_hostname with it and matches IP-SANs), unlike Ruby which skips SNI for an IP.
+- [x] **PHP implementation + real-broker tests** (`tina4-php` `aad6457f`) - `Tina4\Mqtt` +
+      `Tina4\MqttMessage` (+ `MqttError`/`MqttTimeoutError`), PHP streams + `ext-openssl` only,
+      camelCase API (`publish`/`subscribe`/`consume` = `\Generator`). 50 no-mock tests vs real
+      Mosquitto (anon 1883 / auth 1884 / TLS 8883); full suite 3953/0/0/100-skip. TLS negatives
+      all pass (self-signed REJECTED w/o CA, no CA leak into a later client, wrong creds ->
+      CONNACK code, missing CA by path, verify-off logs). PHP-specific choices: per-stream ssl
+      context (no shared-store footgun by construction), two-step tcp:// + stream_socket_enable_crypto
+      to capture the real OpenSSL error, blocking fread + per-read stream_set_timeout (sidesteps the
+      buffered-TLS-plaintext select hang - 1 MiB/many-records test proves it).
+- [x] **Node implementation + real-broker tests** (`tina4-nodejs` `2e70bd1`) - `Mqtt` +
+      `MqttMessage` (+ `MqttError`/`MqttTimeoutError`) in `packages/core/src`, `node:net` +
+      `node:tls` only, exported from the package index. Async by design (no sync socket read in
+      Node): `await connect()/publish()/subscribe()/receive()`, `consume()` is an `async *`
+      generator that acks after the body. Single-waiter `'data'`-driven reader reassembles short
+      TCP reads + TLS records (1 MiB test). 77 no-mock assertions across 3 test files
+      (mqtt 43 / mqttAuthTls 30 / mqttSession 4), all green vs real Mosquitto (anon/auth/TLS);
+      typecheck clean; full suite 5670/0 (174 files) + i18n 44. TLS negatives all pass
+      (self-signed REJECTED w/o CA, no CA leak, wrong creds -> CONNACK, missing CA by path,
+      verify-off logs). Node-specific: per-connection tls options object (no shared store),
+      `tls.connect` with rejectUnauthorized+ca surfacing the real OpenSSL message.
+
+> **MQTT is now 4/4 at parity** (Python master, Ruby, PHP, Node) - 2026-07-23. It becomes
+> feature row 98 in `feature-reference-table.md` + the feature-list doc pages (both HELD for the
+> feature-list regeneration pass). Remaining follow-ups below (CI services, idempotent-ingest
+> helper, reconnect/E1, docs) are additive, not parity gaps.
+
+> Infra note (2026-07-23): the live 8883 broker's cert is signed by the CA in
+> `$TMPDIR/tina4-mqtt-infra/certs/ca.crt` (the infra script's default DIR, = the Ruby helper's
+> default). `plan/v3/spikes/mqtt-infra/certs/` is a STALE duplicate from a different run - do not
+> point tests at it. mosquitto loads certfile at startup, so regenerating on-disk certs needs a
+> broker restart to take effect.
 - [x] **Auth + TLS + EMQX proven** (`spikes/mqtt_spike3_auth_tls.py`, 13/13) - owner asked for all
       three in this release. Auth 6 checks, TLS 4 (incl. the self-signed-cert REJECTION that proves
       verification is real), EMQX 3 (`SUBACK 0x80`, which Mosquitto cannot produce).
