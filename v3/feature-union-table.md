@@ -106,33 +106,32 @@ differently-anchored check on every apparent absence. Result: **17 present in al
 (C1, Ruby), 1 language-native (C13, Ruby ERB). The "needs checking in" column below is the original
 scoping note, kept for history - it is now closed.
 
-Each was reported by the audit of ONE framework, which only proves it there. They are NOT yet
-countable at family level. Needs the Section-A method applied to the other three.
+Verdicts below are the finished result, not a to-do list. Method: the Python walker across all
+four, plus a second differently-anchored check on every apparent absence (which is how C2 and the
+two PHP rows turned out to be false negatives from my own patterns, not gaps).
 
-Request logging aside, these came from PHP (19 reported), Ruby (8) and Node (15) with heavy overlap
-already folded into Section B. What remains distinct:
+| # | Feature | Verdict |
+|---|---------|---------|
+| C1 | Doc-truth checker (`checkDocs`/`syncDocs`) | **GAP: missing in Ruby** - py/php/node have it |
+| C2 | File / attachment responses | all four (Node's is `response.file = function (`, which my first pattern missed) |
+| C3 | Queue job handle (explicit ack/nack object) | all four |
+| C4 | Swagger security-scheme + schema registry | all four |
+| C5 | Credential-safe database URL parser | all four |
+| C6 | Docker image build command | all four |
+| C7 | Route table inspector (`routes` command) | all four |
+| C8 | Self-describing CLI manifest (`commands --json`) | all four (PHP's is in the EXTENSIONLESS `bin/tina4php`, 5 hits) |
+| C9 | Realtime chat domain models | all four |
+| C10 | Firebird driver + fallback | all four have a Firebird driver; the *PDO* fallback is PHP-specific by language |
+| C11 | Legacy env-var migration checker | all four |
+| C12 | Instant HTML CRUD UI | all four |
+| C13 | Second template engine (ERB + Twig) | **Ruby-native.** ERB is a Ruby technology; nothing to port. Frond is the cross-framework engine (Section A) |
+| C14 | Secure-by-default write routes | all four |
+| C15 | Template auto-routing + SPA index | all four |
+| C16 | HTTP/1.1 method conformance (auto-HEAD, OPTIONS, 405+Allow) | all four |
+| C17 | Code generators | all four (PHP's `generate` also in `bin/tina4php`) |
+| C18 | Built-in Tina4 CSS bundle | all four - I verified the shipped bundles byte-identical myself |
+| C19 | In-dashboard AI agent + supervised sessions | all four (Node's `/__dev/api/supervise/*` are stubs - see D-list) |
 
-| # | Feature | Reported in | Needs checking in |
-|---|---------|-------------|-------------------|
-| C1 | Doc-truth checker (`checkDocs`/`syncDocs`) | PHP | py, rb, node |
-| C2 | File / attachment responses (`Response::file()`) | PHP | py, rb, node |
-| C3 | Queue job handle (explicit ack/nack object) | PHP | py, rb, node |
-| C4 | Swagger security-scheme + schema registry | PHP | py, rb, node |
-| C5 | Credential-safe database URL parser (redacted logging) | PHP | py, rb, node |
-| C6 | Docker image build command | PHP, Node | py, rb |
-| C7 | Route table inspector (`routes` command) | PHP | py, rb, node |
-| C8 | Self-describing CLI manifest (`commands --json`) | PHP | py, rb, node |
-| C9 | Realtime chat domain models (workspace/channel/message/attachment) | PHP | py, rb, node |
-| C10 | Firebird PDO fallback adapter | PHP | py, rb, node (may be PHP-unique) |
-| C11 | Legacy env-var migration checker | PHP | py, rb, node |
-| C12 | Instant HTML CRUD UI (searchable, paginated, modals) | Ruby | py, php, node |
-| C13 | Second template engine (ERB + Twig) + route `template:` | Ruby | py, php, node (may be Ruby-unique) |
-| C14 | Secure-by-default write routes | Node | py, php, rb |
-| C15 | Template auto-routing + SPA index + landing page | Node | py, php, rb |
-| C16 | HTTP/1.1 method conformance (auto-HEAD, OPTIONS, 405+Allow) | Node | py, php, rb |
-| C17 | Code generators (model/route/crud/migration/…) | Node | py, php, rb |
-| C18 | Built-in Tina4 CSS bundle | Python | php, rb, node |
-| C19 | In-dashboard AI agent + supervised edit sessions | Python | php, rb, node |
 
 ## The number
 
