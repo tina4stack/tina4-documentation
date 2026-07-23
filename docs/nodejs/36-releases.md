@@ -1,5 +1,38 @@
 # Chapter 35: Release Notes
 
+## v3.13.82 (2026-07-23) - MQTT 3.1.1: talk to any broker, no dependency
+
+Tina4 now speaks MQTT. The new `Mqtt` client publishes and subscribes to any MQTT 3.1.1 broker - Mosquitto, EMQX, HiveMQ, AWS IoT - and adds nothing to your dependency tree. It is built on `node:net` and `node:tls` alone, and it is the same client in all four frameworks. Node has no blocking socket read, so it is async by design: `connect`, `publish`, `subscribe`, and `receive` return promises, and `consume` is an async generator.
+
+```ts
+import { Mqtt } from "tina4-nodejs";
+
+const mqtt = new Mqtt();   // reads TINA4_MQTT_URL, default mqtt://127.0.0.1:1883
+await mqtt.connect();
+await mqtt.publish("fleet/meter-42/telemetry", '{"kwh":12.5}', 1);
+
+for await (const message of mqtt.consume("fleet/+/telemetry", 1)) {
+    if (message.isDuplicate()) continue;
+    store(message.topic, message.payload);
+}
+```
+
+- **QoS 0 and QoS 1, retained messages, and a Last Will.** `publish`, `subscribe`, and `consume` mirror the Queue you already know. `consume` acknowledges a message only after your loop body has processed it, so a body that throws leaves the message for redelivery - at-least-once, which is what QoS 1 is for.
+- **QoS 2 is refused, loudly.** Asking for exactly-once raises an error that names the limit and the fix - a QoS 1 consumer keyed on device id and timestamp - rather than silently downgrading to at-least-once and double-processing forever.
+- **TLS with a per-connection trust store.** An `mqtts://` connection verifies the broker against the CA you supply and no other. A self-signed certificate is rejected unless you provide its CA, and a CA loaded for one client never leaks into the next.
+- **Username and password auth**, over plain or TLS connections, from the URL or from explicit arguments.
+- **No mocks.** Every test runs against a real Mosquitto broker - the anonymous, authenticated, and TLS listeners - so the wire protocol is verified for real, not simulated.
+
+This release also:
+
+- **Counts 98 built-in features.** MQTT is the newest. 97 features are identical across all four languages; Ruby adds ERB as a native second template engine for 98.
+- **Breaking: `sqlTranslation` is renamed to `sqlTranslator`** (module `sqlTranslator.ts`) so the name matches across all four frameworks. Update your imports.
+- **Fixes two dev endpoints** that a bare `require()` inside the ESM package silently broke.
+- **Stops and deregisters a single background task.** The handle returned by `background()` has a `stop()` that ends just that task and removes it from the registry.
+- **Dispatches the in-process test client through the real front-controller tail**, so a test sees the same routing, middleware, and 404 path a real request does.
+- **Ships the compiled Tina4 CSS assets** and honours SCSS `!default` instead of leaking it into the output.
+- **Reaches `doctor`, `setup`, and `deploy`** from `tina4nodejs` by delegating to the shared Rust CLI.
+
 ## v3.13.81 (2026-07-21) - `tina4 test` exit code, locked in
 
 Node needed no fix here. `tina4 test` already propagated a non-zero exit when a test failed, in both the single-file and the auto-discover paths. This release adds a real lock-in test so the contract can never drift: it spawns the actual CLI and asserts a non-zero exit on failure, including one failing test among passing ones. Parity with the python#96 fix.

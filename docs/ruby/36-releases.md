@@ -1,5 +1,35 @@
 # Chapter 35: Release Notes
 
+## v3.13.82 (2026-07-23) - MQTT 3.1.1: talk to any broker, no dependency
+
+Tina4 now speaks MQTT. The new `Tina4::Mqtt` client publishes and subscribes to any MQTT 3.1.1 broker - Mosquitto, EMQX, HiveMQ, AWS IoT - and adds nothing to your dependency tree. It is built on `socket` and a lazily-required stdlib `openssl` alone, and it is the same client in all four frameworks.
+
+```ruby
+mqtt = Tina4::Mqtt.new   # reads TINA4_MQTT_URL, default mqtt://127.0.0.1:1883
+mqtt.publish("fleet/meter-42/telemetry", '{"kwh":12.5}', qos: 1)
+
+mqtt.consume("fleet/+/telemetry", qos: 1) do |message|
+  next if message.duplicate?
+  store(message.topic, message.payload)
+end
+```
+
+- **QoS 0 and QoS 1, retained messages, and a Last Will.** `publish`, `subscribe`, and `consume` mirror the Queue you already know. `consume` acknowledges a message only after your block has processed it, so a block that fails leaves the message for redelivery - at-least-once, which is what QoS 1 is for.
+- **QoS 2 is refused, loudly.** Asking for exactly-once raises an error that names the limit and the fix - a QoS 1 consumer keyed on device id and timestamp - rather than silently downgrading to at-least-once and double-processing forever.
+- **TLS with a per-client trust store.** An `mqtts://` connection verifies the broker against the CA you supply and no other. A self-signed certificate is rejected unless you provide its CA, and a CA loaded for one client never leaks into the next.
+- **Username and password auth**, over plain or TLS connections, from the URL or from explicit arguments.
+- **No mocks.** Every test runs against a real Mosquitto broker - the anonymous, authenticated, and TLS listeners, plus an EMQX SUBACK-refusal path - so the wire protocol is verified for real, not simulated.
+
+This release also:
+
+- **Counts 98 built-in features.** Ruby ships all 97 shared features plus its native ERB engine, for 98.
+- **Breaking: `SqlTranslation` is renamed to `SQLTranslator`** (file `sql_translator.rb`) so the class name matches across all four frameworks. Update your references.
+- **Fixes four parity defects** from the feature-recount audit (D5, D6, D11, D12), so Ruby matches the other three frameworks exactly.
+- **Fails the test run on a `before(:all)` service skip**, closing a hole where a class-wide "service unavailable" skip passed CI green.
+- **Stops and deregisters a single background task.** `Tina4::Background.stop_task(task)` ends just that task and removes it from the registry.
+- **Ships the compiled Tina4 CSS assets** and honours SCSS `!default` instead of leaking it into the output.
+- **Reaches `doctor`, `setup`, and `deploy`** from `tina4ruby` by delegating to the shared Rust CLI.
+
 ## v3.13.81 (2026-07-21) - `tina4ruby test` exit code, locked in
 
 Ruby needed no fix here. `tina4ruby test` already exited non-zero when a test failed. This release adds a real lock-in spec so the contract can never drift: it spawns the actual CLI against a failing project and asserts a non-zero exit. Parity with the python#96 fix.

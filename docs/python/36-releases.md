@@ -1,5 +1,35 @@
 # Chapter 35: Release Notes
 
+## v3.13.82 (2026-07-23) - MQTT 3.1.1: talk to any broker, no dependency
+
+Tina4 now speaks MQTT. The new `Mqtt` client publishes and subscribes to any MQTT 3.1.1 broker - Mosquitto, EMQX, HiveMQ, AWS IoT - and adds nothing to your dependency tree. It is built on the standard library alone (`socket`, `struct`, `ssl`), and it is the same client in all four frameworks.
+
+```python
+from tina4_python.mqtt import Mqtt
+
+mqtt = Mqtt()   # reads TINA4_MQTT_URL, default mqtt://127.0.0.1:1883
+mqtt.publish("fleet/meter-42/telemetry", '{"kwh":12.5}', qos=1)
+
+for message in mqtt.consume("fleet/+/telemetry", qos=1):
+    if message.duplicate:
+        continue
+    store(message.topic, message.payload)
+```
+
+- **QoS 0 and QoS 1, retained messages, and a Last Will.** `publish`, `subscribe`, and `consume` mirror the Queue you already know. `consume` acknowledges a message only after your handler has processed it, so a handler that fails leaves the message for redelivery - at-least-once, which is what QoS 1 is for.
+- **QoS 2 is refused, loudly.** Asking for exactly-once raises an error that names the limit and the fix - a QoS 1 consumer keyed on device id and timestamp - rather than silently downgrading to at-least-once and double-processing forever.
+- **TLS with a per-client trust store.** An `mqtts://` connection verifies the broker against the CA you supply and no other. A self-signed certificate is rejected unless you provide its CA, and a CA loaded for one client never leaks into the next.
+- **Username and password auth**, over plain or TLS connections, from the URL or from explicit arguments.
+- **No mocks.** Every test runs against a real Mosquitto broker - the anonymous, authenticated, and TLS listeners - so the wire protocol is verified for real, not simulated.
+
+This release also:
+
+- **Counts 98 built-in features.** MQTT is the newest. 97 features are identical across all four languages; Ruby adds ERB as a native second template engine for 98.
+- **Stops and deregisters a single background task.** `background()` returns a handle whose `stop()` ends just that task and removes it from the registry.
+- **Dispatches the in-process test client through the real front controller**, so a test sees the same routing, middleware, and 404 path a real request does.
+- **Ships the compiled Tina4 CSS assets** and honours SCSS `!default` instead of leaking it into the output.
+- **Reaches `doctor`, `setup`, and `deploy`** from the framework CLI by delegating to the shared Rust CLI.
+
 ## v3.13.81 (2026-07-21) - `tina4 test` fails the build when tests fail
 
 A green build could hide a red suite. `tina4 test` ran pytest, then threw pytest's exit code away and always returned 0. A `tina4 test || exit 1` gate in CI or a pre-push hook passed while tests failed underneath it. This release makes the command exit with pytest's own return code, so a failing suite fails the gate.
