@@ -166,81 +166,82 @@ class Mqtt:
         self.sock.close()
 
 
-# ---------------------------------------------------------------- spike checks
-passed = failed = 0
+if __name__ == "__main__":
+    # ---------------------------------------------------------------- spike checks
+    passed = failed = 0
 
 
-def check(label, cond, detail=""):
-    global passed, failed
-    if cond:
-        print(f"  PASS  {label}")
-        passed += 1
-    else:
-        print(f"  FAIL  {label} {detail}")
-        failed += 1
+    def check(label, cond, detail=""):
+        global passed, failed
+        if cond:
+            print(f"  PASS  {label}")
+            passed += 1
+        else:
+            print(f"  FAIL  {label} {detail}")
+            failed += 1
 
 
-print("=== MQTT 3.1.1 hand-rolled client vs real Mosquitto ===")
+    print("=== MQTT 3.1.1 hand-rolled client vs real Mosquitto ===")
 
-# 1. CONNECT / CONNACK
-c = Mqtt()
-check("CONNECT accepted (CONNACK rc=0)", c.connect("spike-pub"))
+    # 1. CONNECT / CONNACK
+    c = Mqtt()
+    check("CONNECT accepted (CONNACK rc=0)", c.connect("spike-pub"))
 
-# 2. varint encoding, including the multi-byte boundary at 128
-check("varint 0 -> 00", bytes(_varint(0)) == b"\x00")
-check("varint 127 -> 7f", bytes(_varint(127)) == b"\x7f")
-check("varint 128 -> 80 01", bytes(_varint(128)) == b"\x80\x01", bytes(_varint(128)).hex())
-check("varint 16383 -> ff 7f", bytes(_varint(16383)) == b"\xff\x7f")
+    # 2. varint encoding, including the multi-byte boundary at 128
+    check("varint 0 -> 00", bytes(_varint(0)) == b"\x00")
+    check("varint 127 -> 7f", bytes(_varint(127)) == b"\x7f")
+    check("varint 128 -> 80 01", bytes(_varint(128)) == b"\x80\x01", bytes(_varint(128)).hex())
+    check("varint 16383 -> ff 7f", bytes(_varint(16383)) == b"\xff\x7f")
 
-# 3. QoS 0 publish (no packet id on the wire, no ack expected)
-c.publish("spike/qos0", "hello", qos=0)
-check("QoS 0 publish sent, no ack expected", True)
+    # 3. QoS 0 publish (no packet id on the wire, no ack expected)
+    c.publish("spike/qos0", "hello", qos=0)
+    check("QoS 0 publish sent, no ack expected", True)
 
-# 4. QoS 1 publish must round-trip a matching PUBACK
-pid = c.publish("spike/qos1", '{"kwh":12.5}', qos=1)
-check("QoS 1 publish got matching PUBACK", pid == 1, f"pid={pid}")
+    # 4. QoS 1 publish must round-trip a matching PUBACK
+    pid = c.publish("spike/qos1", '{"kwh":12.5}', qos=1)
+    check("QoS 1 publish got matching PUBACK", pid == 1, f"pid={pid}")
 
-# 5. keepalive
-check("PINGREQ -> PINGRESP", c.ping())
+    # 5. keepalive
+    check("PINGREQ -> PINGRESP", c.ping())
 
-# 6. subscribe + receive, with a wildcard filter
-sub = Mqtt()
-sub.connect("spike-sub")
-granted = sub.subscribe("fleet/+/telemetry", qos=1)
-check("SUBACK granted QoS 1 for wildcard filter", granted == 1, f"granted={granted}")
-c.publish("fleet/meter-42/telemetry", '{"kwh":99}', qos=1)
-topic, payload, qos = sub.receive()
-check("wildcard delivered the right topic", topic == "fleet/meter-42/telemetry", topic)
-check("payload intact end to end", payload == b'{"kwh":99}', payload)
-check("delivered at negotiated QoS 1", qos == 1, f"qos={qos}")
+    # 6. subscribe + receive, with a wildcard filter
+    sub = Mqtt()
+    sub.connect("spike-sub")
+    granted = sub.subscribe("fleet/+/telemetry", qos=1)
+    check("SUBACK granted QoS 1 for wildcard filter", granted == 1, f"granted={granted}")
+    c.publish("fleet/meter-42/telemetry", '{"kwh":99}', qos=1)
+    topic, payload, qos = sub.receive()
+    check("wildcard delivered the right topic", topic == "fleet/meter-42/telemetry", topic)
+    check("payload intact end to end", payload == b'{"kwh":99}', payload)
+    check("delivered at negotiated QoS 1", qos == 1, f"qos={qos}")
 
-# 7. retained: a NEW subscriber must get the last value immediately
-c.publish("fleet/meter-42/status", "online", qos=1, retain=True)
-late = Mqtt()
-late.connect("spike-late")
-late.subscribe("fleet/meter-42/status", qos=1)
-topic, payload, _ = late.receive()
-check("retained message reached a late subscriber", payload == b"online", payload)
-late.disconnect()
+    # 7. retained: a NEW subscriber must get the last value immediately
+    c.publish("fleet/meter-42/status", "online", qos=1, retain=True)
+    late = Mqtt()
+    late.connect("spike-late")
+    late.subscribe("fleet/meter-42/status", qos=1)
+    topic, payload, _ = late.receive()
+    check("retained message reached a late subscriber", payload == b"online", payload)
+    late.disconnect()
 
-# 8. Last Will: register one, then die WITHOUT a DISCONNECT
-watcher = Mqtt()
-watcher.connect("spike-watcher")
-watcher.subscribe("fleet/meter-99/status", qos=1)
-doomed = Mqtt()
-doomed.connect("spike-doomed", keepalive=5,
-               will_topic="fleet/meter-99/status", will_payload="offline", will_qos=1)
-doomed.kill()
-topic, payload, _ = watcher.receive()
-check("Last Will published on ungraceful disconnect", payload == b"offline", payload)
+    # 8. Last Will: register one, then die WITHOUT a DISCONNECT
+    watcher = Mqtt()
+    watcher.connect("spike-watcher")
+    watcher.subscribe("fleet/meter-99/status", qos=1)
+    doomed = Mqtt()
+    doomed.connect("spike-doomed", keepalive=5,
+                   will_topic="fleet/meter-99/status", will_payload="offline", will_qos=1)
+    doomed.kill()
+    topic, payload, _ = watcher.receive()
+    check("Last Will published on ungraceful disconnect", payload == b"offline", payload)
 
-# 9. clearing a retained message is an empty payload to the same topic
-c.publish("fleet/meter-42/status", b"", qos=1, retain=True)
-check("retained cleared with empty payload", True)
+    # 9. clearing a retained message is an empty payload to the same topic
+    c.publish("fleet/meter-42/status", b"", qos=1, retain=True)
+    check("retained cleared with empty payload", True)
 
-watcher.disconnect()
-sub.disconnect()
-c.disconnect()
+    watcher.disconnect()
+    sub.disconnect()
+    c.disconnect()
 
-print(f"\n  Results: {passed} passed, {failed} failed")
-raise SystemExit(1 if failed else 0)
+    print(f"\n  Results: {passed} passed, {failed} failed")
+    raise SystemExit(1 if failed else 0)
