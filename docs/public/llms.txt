@@ -1,6 +1,6 @@
 # Tina4 Framework - AI Bootstrap Protocol
 
-Tina4 is a four-language web framework (Python, PHP, Ruby, Node.js) with 55
+Tina4 is a four-language web framework (Python, PHP, Ruby, Node.js) with 97
 built-in features and zero runtime dependencies. Frontend library: tina4-js.
 Website: https://tina4.com | GitHub: https://github.com/tina4stack
 
