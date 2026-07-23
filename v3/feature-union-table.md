@@ -60,14 +60,15 @@ absent:
 Caveat on B7: Ruby WRITES the sentinel but nothing in `lib/` READS it (D15), and Python's `/health`
 does read it. Counted present, flagged as a behavioural parity gap.
 
-## THE NUMBER: 97
+## THE NUMBER: 98
 
 | Section | Rows | All four today |
 |---------|------|----------------|
 | A - audited candidates | 65 | 65 |
 | B - additions verified all four | 13 | 13 |
 | C - additions, now verified | 19 | 18 |
-| **Total** | **97** | **96** |
+| D - IoT (MQTT, added 2026-07-23) | 1 | 1 |
+| **Total** | **98** | **97** |
 
 One row is legitimately language-native; the former C1 gap is now closed:
 - **C1 doc-truth checker - CLOSED, now all four (2026-07-23).** The "missing in Ruby" verdict was
@@ -82,7 +83,8 @@ One row is legitimately language-native; the former C1 gap is now closed:
   technology; there is nothing to port. Frond is the cross-framework engine and is Section A. This
   row stays flagged Ruby-native rather than counted as a gap.
 
-So: **97 rows, 96 at full parity, 1 legitimately language-native (C13 ERB). No open parity gap.**
+So: **98 rows, 97 at full parity, 1 legitimately language-native (C13 ERB). No open parity gap.**
+(Section D / MQTT is the newest all-four row, added 2026-07-23; unreleased, staged on v3.)
 
 ## Method failures in this session - all six were my own harness, never a real gap
 
@@ -140,7 +142,8 @@ two PHP rows turned out to be false negatives from my own patterns, not gaps).
 ## The number
 
 - **Confirmed floor: 78** (65 audited candidates + 13 additions verified in all four).
-- **Ceiling if every Section-C row lands in all four: 97.**
+- **Ceiling if every Section-C row lands in all four: 97.** Section D (MQTT, added 2026-07-23)
+  takes the family total to **98** (97 all-four + 1 language-native).
 - Rows that turn out to be genuinely framework-unique still count under the owner's model, but must
   be marked as such in the docs so the per-language pages stay honest.
 

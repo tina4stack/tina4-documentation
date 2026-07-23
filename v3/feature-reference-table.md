@@ -1,7 +1,7 @@
 # Tina4 built-in feature reference (all 4 languages)
 
 The canonical "is it already in the box?" table. Before you add a third-party library, check here:
-if Tina4 already ships it, use the built-in. 97 rows; 96 are present in all four frameworks, 1 is
+if Tina4 already ships it, use the built-in. 98 rows; 97 are present in all four frameworks, 1 is
 Ruby-native (ERB). Source of truth for the per-framework feature-list doc pages (they regenerate
 from this file so they cannot drift into three different numbers again). Companion to
 `feature-recount.md` (the audit evidence) and `feature-union-table.md` (the count decision).
@@ -168,10 +168,19 @@ from this file so they cannot drift into three different numbers again). Compani
 | 96 | Built-in Tina4 CSS bundle | Bootstrap-compatible CSS, shipped. Instead of a CSS framework dep | Y | Y | Y | Y |
 | 97 | In-dashboard AI agent + supervised sessions | AI chat + supervised runs in DevAdmin | Y | Y | Y | Y |
 
+## IoT and device messaging (Section D, 1)
+
+| # | Feature | What it does / instead of | Py | PHP | Rb | Node |
+|---|---------|---------------------------|----|-----|----|----|
+| 98 | MQTT 3.1.1 client (QoS 0/1, TLS, retained, Last Will) | Pub/sub to any broker (Mosquitto/EMQX/HiveMQ/AWS IoT): publish/subscribe/consume, retained + Last Will, per-client TLS trust store. QoS 2 is refused loudly, never silently downgraded. Instead of paho-mqtt/php-mqtt/ruby-mqtt/mqtt.js | Y | Y | Y | Y |
+
 ## Totals
 
-- **97 rows.** 96 present in all four; **1 Ruby-native** (row 91, ERB -- ERB is a Ruby technology,
+- **98 rows.** 97 present in all four; **1 Ruby-native** (row 91, ERB -- ERB is a Ruby technology,
   Frond is the cross-framework engine at row 32, so there is nothing to port).
-- Per framework: Python 96, PHP 96, Ruby 97, Node 96. The published family count is **97**.
+- Per framework: Python 97, PHP 97, Ruby 98, Node 97. The published family count is **98**.
 - PHP also ships a Firebird PDO fallback (row 88) as a language-specific extra; it is not a separate
   cross-framework feature, so it is not its own row.
+- MQTT (row 98) is the newest all-four feature (2026-07-23): a zero-dependency, no-mock-verified
+  MQTT 3.1.1 client in every framework. It is unreleased at time of writing (staged on the v3
+  branches); the published count moves 97 -> 98 when it ships.
