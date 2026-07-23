@@ -1,0 +1,8 @@
+# Runtime debris from running the spikes in-tree. All regenerated on demand by
+# v3/spikes/mqtt-infra.sh, and the certs/passwd must never be committed - they
+# are throwaway self-signed test material but committing private keys is a habit
+# worth not forming (and it trips secret scanners).
+v3/spikes/__pycache__/
+v3/spikes/mqtt-infra/
+__pycache__/
+*.pyc
