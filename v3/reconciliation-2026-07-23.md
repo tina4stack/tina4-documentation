@@ -32,18 +32,42 @@ No mocks; full suites, not subsets. This is the shippable baseline once the six 
   `Breaking:` note: `TestResponse.status_code -> .status`, which ALIGNS Python with Ruby/PHP/Node
   (Python was the outlier), not a divergence.
 
-## Three parity fixes are HALF-LANDED (each 2 of 4) — the real reconciliation output
+## The three "half-landed" fixes — RESOLVED. Only ONE was a real gap.
 
-| Fix | Python | PHP | Ruby | Node | Missing |
+The matrix below was first built from **commit-message presence**, which overcounted the backlog:
+independent verification (read the behaviour / run it) proved 2 of the 3 were already complete. This
+is the recurring lesson — a commit-message absence is not a behaviour absence.
+
+| Fix | Python | PHP | Ruby | Node | Verdict |
 |-----|--------|-----|------|------|---------|
-| D6 TestClient -> real front controller | ✅ `010e381` | ❌ old `Router::dispatch` | ✅ `417e5a3` | ❌ old | **PHP, Node** |
-| test-gate: fail run on a service-skip | ❌ | ✅ `2ef3580f` | ✅ `c67fd7f` | ❌ | **Python, Node** |
-| background: deregister a stopped task | ✅ `7e53aa7` | ✅ `14df2a3a` | ❌ | ❌ | **Ruby, Node** |
+| D6 TestClient -> real front controller | ✅ `010e381` | ✅ `6f3f8fc1` | ✅ `417e5a3` | ✅ `ce07a8a` | **REAL gap, now 4/4** |
+| test-gate: fail run on a service-skip | ✅ (native) | ✅ `2ef3580f` | ✅ `c67fd7f` | ✅ (native) | **NOT a gap** |
+| background: deregister a stopped task | ✅ | ✅ | ✅ | ✅ | **NOT a gap** |
 
-Six framework-ports remain, plus their lock-in tests. Node is missing all three. Under the parity
-mandate none of these is "done" until 4 of 4. **These came from independent/background sessions that
-each stalled mid-matrix** - the pattern of the day (4+ workers died mid-task leaving orphans), which
-is why they are half-landed rather than complete.
+**D6 (real).** Python's old TestClient hand-rolled `Router.match` + fabricated `{"error":"Not
+found"}`; Node's did the same and skipped RFC-9110 conformance + middleware. Both fixed to dispatch
+through the real front-controller tail, each with a biting lock-in. PHP was ALREADY correct
+(`Router::dispatch` IS the front controller — proven empirically: a miss renders the real
+`<!DOCTYPE ... 404`); its gap was only the missing lock-in, now added. Ruby had it (`417e5a3`).
+
+**test-gate (not a gap).** The PHP fix (`2ef3580f`) patches a blind spot specific to the PHPUnit/
+RSpec EVENT model: a skip from `setUpBeforeClass`/`before(:all)` emits one `TestSuite\Skipped` for
+the whole class, which a per-test subscriber misses. Python's gate is a per-item
+`pytest_runtest_makereport` hook and Node's is a stdout SKIP scanner — neither shares the blind spot.
+**Verified empirically for Python:** a `setup_class` skip under `TINA4_REQUIRE_SERVICES=1` exits 1
+(gate caught it, becomes a per-item ERROR on every test in the class); exits 0 with the flag off.
+Like C13 (Ruby ERB): the same guarantee achieved by a different, inherently-complete mechanism.
+
+**background-deregister (not a gap).** Already 4/4 in code AND tests: Ruby `Background.stop_task`
+(`tasks.delete_if { |r| r.equal?(task) }`, `background.rb:60`) + `spec/background_spec.rb` `.stop_task`
+block; Node `handle.stop()` (`_tasks.splice`, `background.ts:106`) + `backgroundTaskCount() === 0,
+"stop() must deregister the task"` (`backgroundOverlap.test.ts:81`); Python + PHP documented and
+tested. The ledger's ❌ came from the absence of a commit titled "background: deregister", not the
+absence of the behaviour.
+
+**Net:** one real gap (D6) closed to 4/4 this session; the other two were verification artifacts.
+The day's stalled sessions left the D6 orphan, but did NOT leave six ports — the parity backlog from
+this reconciliation is now empty.
 
 ## Orphan status
 
