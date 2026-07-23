@@ -1,684 +1,190 @@
-# Chapter 37: Complete Feature List
+# Chapter 38: Complete Feature List
 
-Tina4 PHP ships 45 production-ready features across every layer of a web application. This chapter lists all of them, grouped by category, with a brief description and a PHP snippet for each.
+Tina4 PHP ships **97 built-in features** with zero third-party runtime dependencies. This page is the "is it already in the box?" reference. Before you reach for a library, check here first: if Tina4 ships it, use the built-in.
 
----
+Every feature below is present in all four Tina4 frameworks - Python, PHP, Ruby, and Node.js - with identical behaviour, JSON shapes, environment variables, and error messages. Only the method names change to fit each language; in PHP they are camelCase. The "instead of" note in each row names the common dependency the built-in replaces, so you never add it.
 
 ## Core HTTP
 
-### 1. Router (GET / POST / PUT / PATCH / DELETE / ANY)
-
-Full HTTP method coverage. Route handlers are plain PHP closures.
-
-```php
-use Tina4\Router;
-
-Router::get('/items',           fn($req, $res) => $res->json(['items' => []]));
-Router::post('/items',          fn($req, $res) => $res->json(['created' => true], 201));
-Router::put('/items/{id:int}',  fn($req, $res) => $res->json(['updated' => true]));
-Router::patch('/items/{id:int}',fn($req, $res) => $res->json(['patched'  => true]));
-Router::delete('/items/{id:int}',fn($req, $res) => $res->json(['deleted' => true]));
-Router::any('/ping',            fn($req, $res) => $res->json(['pong'  => true]));
-```
-
-### 2. Path Parameters
-
-Type-safe path segments. `{id:int}`, `{price:float}`, `{name}` (string).
-
-```php
-Router::get('/products/{id:int}', function ($req, $res) {
-    $id = $req->params['id'];   // integer, validated
-    return $res->json(['id' => $id]);
-});
-```
-
-### 3. Wildcard Routes
-
-Catch-all routes for SPAs, proxies, or custom 404 pages.
-
-```php
-Router::get('/app/*', fn($req, $res) => $res->html(file_get_contents('public/index.html')));
-```
-
-### 4. Route Grouping
-
-Group related routes under a shared prefix.
-
-```php
-use Tina4\RouteGroup;
-
-RouteGroup::prefix('/api/v2', function () {
-    Router::get('/users',  fn($req, $res) => $res->json([]));
-    Router::post('/users', fn($req, $res) => $res->json([], 201));
-});
-```
-
-### 5. Route Discovery
-
-Place PHP files in `src/routes/`. Tina4 loads them automatically at startup. No manual require statements.
-
-```
-src/
-  routes/
-    users.php
-    orders.php
-    products.php
-```
-
-### 6. Built-in Server
-
-Zero-config development server. Start with one command.
-
-```bash
-tina4 serve
-# Listening on http://localhost:7145
-```
-
-### 7. Request Object
-
-Full access to method, headers, body, path params, query params, and server vars.
-
-```php
-Router::post('/echo', function ($req, $res) {
-    return $res->json([
-        'method'  => $req->method,
-        'body'    => $req->body,
-        'params'  => $req->params,
-        'headers' => $req->headers
-    ]);
-});
-```
-
-### 8. Response Object
-
-Fluent response builder. JSON, HTML, redirect, file, status codes.
-
-```php
-return $res->json(['ok' => true], 200);
-return $res->html('<h1>Hello</h1>');
-return $res->redirect('/login');
-return $res->file('/path/to/report.pdf', 'report.pdf');
-```
-
-### 9. Static File Serving
-
-Files in `public/` are served automatically. No route needed.
-
-```
-public/
-  css/tina4.min.css
-  js/tina4.min.js
-  images/logo.png
-```
-
-### 10. CORS Middleware
-
-Origin-aware CORS. Configurable via environment.
-
-```bash
-TINA4_CORS_ORIGINS=https://app.example.com,https://admin.example.com
-TINA4_CORS_METHODS=GET,POST,PUT,DELETE
-```
-
-### 11. Health Endpoint
-
-Built-in `GET /__health`. Returns `{"status":"ok"}`. Ready for load balancer checks.
-
-```bash
-curl http://localhost:7145/__health
-# {"status":"ok","version":"3.10.55"}
-```
-
----
-
-## Authentication & Security
-
-### 12. JWT Authentication
-
-Zero-dependency JWT. Sign and verify tokens with a secret from the environment.
-
-```php
-use Tina4\Auth;
-
-$token = Auth::getToken(['user_id' => 42, 'role' => 'admin']);
-$payload = Auth::validToken($token);
-```
-
-### 13. Password Hashing
-
-PBKDF2-SHA256 hashing. Hash on registration, verify on login.
-
-```php
-use Tina4\Auth;
-
-$hash = Auth::hashPassword('userSecret123');
-$ok   = Auth::checkPassword('userSecret123', $hash);   // true
-```
-
-### 14. CSRF Protection
-
-Form token generation and middleware validation.
-
-```php
-// In a Frond template:
-{{ form_token() }}
-
-// In a route handler (middleware):
-Router::post('/form', fn($req, $res) => $res->json(['ok' => true]), 'CSRFMiddleware');
-```
-
-### 15. Rate Limiter
-
-Per-IP or per-user request throttling. Configured via middleware.
-
-```php
-Router::post('/api/login', fn($req, $res) => $res->json([]), 'RateLimit:10:60');
-// Max 10 requests per 60 seconds
-```
-
-### 16. Security Headers
-
-Adds `X-Frame-Options`, `X-Content-Type-Options`, `Strict-Transport-Security`, and `Content-Security-Policy` headers.
-
-```php
-Router::get('/secure', fn($req, $res) => $res->json(['data' => []]), 'SecurityHeaders');
-```
-
-### 17. Validator
-
-Built-in input validation. Rules for required, type, length, pattern.
-
-```php
-use Tina4\Validator;
-
-$v = new Validator($request->body);
-$v->required('email', 'password')
-  ->email('email')
-  ->minLength('password', 8);
-
-if (!$v->isValid()) {
-    return $response->json(['errors' => $v->errors()], 422);
-}
-```
-
----
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| HTTP server (zero-dep, dev and production) | Serves HTTP with no runtime dependencies; `serve --production` auto-tunes. Instead of gunicorn/uvicorn config, Apache with mod_php, Puma tuning, or Express |
+| Routing (path and typed params, wildcards) | `get`/`post` with `{id:int}` and `{...slug}` patterns. Instead of a router library |
+| Route groups | Group a prefix with shared auth and middleware |
+| Request object | Parsed body, query, headers, cookies, and files. Instead of body-parser |
+| Response object | JSON, HTML, redirect, file, and stream, plus auto-serialised models |
+| Middleware pipeline | Before and after hooks, short-circuit, per-route |
+| CORS middleware | Built-in preflight and headers. Instead of a cors package |
+| Rate limiting middleware | Built-in throttle. Instead of express-rate-limit or rack-attack |
+| Static file serving (cache-control revalidation) | Serves the public directory with ETag and 304. Instead of serve-static |
+| Health check endpoint | `/health` and `/__health`, returns 503 on broken files |
+| Graceful shutdown | Clean SIGTERM and SIGINT drain |
+| SSE and streaming responses | Streams from a generator, hardened. Instead of an SSE library |
+| Convention auto-discovery (routes, models, seeds) | File location is configuration. Instead of manual registration |
 
 ## Database
 
-### 18. URL-Based Multi-Driver Connection
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| Multi-driver database abstraction | SQLite, PostgreSQL, MySQL, MSSQL, Firebird, and ODBC through one URL. Instead of per-driver glue |
+| Connection pooling | Round-robin connections with a pool size |
+| Query builder (with `to_mongo`) | Fluent JOIN, aggregate, and GROUP BY, plus a NoSQL bridge. Instead of a query-builder library |
+| ORM (active record) | Models with save, find, and where. Instead of SQLAlchemy, Eloquent, ActiveRecord, or Prisma |
+| ORM relationships and eager loading | has_many, has_one, and belongs_to, with `include` |
+| Soft deletes | An is_deleted flag with restore |
+| Migrations (with auto-migrate on startup) | SQL-file migrations, per-engine DDL. Instead of Alembic or Phinx |
+| Race-safe sequences | Atomic id generation across engines |
+| SQL translator | Cross-engine dialect rewrite (LIMIT, ROWS, TOP, ILIKE, CONCAT) |
+| Query cache (request and persistent) | Dedupe reads; opt-in persistent cache with backends |
+| DocStore (Mongo-style, SQLite fallback) | A pymongo-style API with a zero-config local store. Instead of a Mongo dependency in dev |
+| Seeder and FakeData | Deterministic fake data and bulk seeding. Instead of faker and factory libraries |
+| Auto-CRUD REST generator | REST endpoints from a model |
+| Validator | Request and body validation. Instead of a validation library |
 
-One connection string covers SQLite, PostgreSQL, MySQL, MSSQL, Firebird, MongoDB, and ODBC.
+## Authentication and Sessions
 
-```php
-use Tina4\Database;
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| JWT authentication | Token issue and verify, RS256 and HS256. Instead of pyjwt, firebase-jwt, or jsonwebtoken |
+| Password hashing (PBKDF2) | Hash and check, timing-safe. Instead of bcrypt or argon libraries |
+| API-key authentication | Key validation with header fallbacks |
+| Sessions (file, redis, valkey, mongo, database) | Pluggable backends that degrade loudly. Instead of a session library |
 
-$db = new Database('sqlite:./data/app.db');
-$db = new Database('pgsql://user:pass@host:5432/dbname');
-$db = new Database('mysql://user:pass@host:3306/dbname');
-```
+## Templates and Frontend
 
-### 19. Query Execution
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| Frond template engine | Twig-compatible, with live blocks, a sandbox, and fragment caching. Instead of Jinja, Twig, ERB, or Handlebars |
+| SCSS compiler | Built-in SCSS to CSS. Instead of a sass dependency |
+| HtmlElement builder | Programmatic HTML, XSS-safe |
+| tina4-js and frond.js frontend | A reactive frontend with AJAX and WebSocket helpers, shipped. Instead of React or Vue for admin UIs |
 
-`execute()`, `fetchOne()`, `fetchAll()` with named parameters.
+## Caching
 
-```php
-$db->execute("INSERT INTO products (name, price) VALUES (:name, :price)",
-    ['name' => 'Widget', 'price' => 9.99]);
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| Response cache | GET cache middleware with TTL and an X-Cache header |
+| Unified cache backends | memory, file, redis, valkey, memcached, mongodb, and database, with a file fallback |
 
-$product = $db->fetchOne("SELECT * FROM products WHERE id = :id", ['id' => 1]);
-$all     = $db->fetchAll("SELECT * FROM products WHERE active = 1");
-```
+## Background and Messaging
 
-### 20. Query Caching
-
-Cache identical queries. Controlled by environment.
-
-```bash
-TINA4_DB_CACHE=true
-TINA4_DB_CACHE_TTL=300
-```
-
-### 21. Race-Safe Sequence (get_next_id)
-
-Atomic ID generation without race conditions. Safe for concurrent workers.
-
-```php
-$nextId = $db->getNextId('orders');
-```
-
-### 22. Transactions
-
-Explicit transaction control. Autocommit is off unless the environment overrides it.
-
-```php
-$db->beginTransaction();
-try {
-    $db->execute("UPDATE accounts SET balance = balance - :amt WHERE id = :id", ['amt' => 100, 'id' => 1]);
-    $db->execute("UPDATE accounts SET balance = balance + :amt WHERE id = :id", ['amt' => 100, 'id' => 2]);
-    $db->commit();
-} catch (\Throwable $e) {
-    $db->rollback();
-    throw $e;
-}
-```
-
----
-
-## ORM
-
-### 23. Active Record
-
-Models map to tables. `save()`, `load()`, `delete()`.
-
-```php
-use Tina4\ORM;
-
-class Product extends ORM {
-    public int $id = 0;
-    public string $name = '';
-    public float $price = 0.0;
-    public bool $active = true;
-}
-
-$p = new Product();
-$p->name = 'Keyboard';
-$p->price = 79.99;
-$p->save();
-
-$found = (new Product())->load(['id' => 1]);
-```
-
-### 24. QueryBuilder
-
-Fluent SQL construction. Chainable methods.
-
-```php
-$results = (new Product())
-    ->query()
-    ->where('active', '=', 1)
-    ->where('price', '<', 100)
-    ->orderBy('name', 'ASC')
-    ->limit(20)
-    ->get();
-```
-
-### 25. Relationships
-
-`hasMany`, `hasOne`, `belongsTo` declared on model classes.
-
-```php
-class Order extends ORM {
-    public function items(): array {
-        return $this->hasMany(OrderItem::class, 'order_id');
-    }
-}
-
-$order = (new Order())->load(['id' => 1]);
-$items = $order->items();
-```
-
-### 26. AutoCRUD
-
-Generate REST endpoints from a model in one line.
-
-```php
-Product::autoCrud('/api/products');
-// GET    /api/products       - list
-// GET    /api/products/{id}  - fetch
-// POST   /api/products       - create
-// PUT    /api/products/{id}  - update
-// DELETE /api/products/{id}  - delete
-```
-
-### 27. Soft Delete
-
-Mark records as deleted without removing them from the database.
-
-```php
-class Order extends ORM {
-    protected bool $softDelete = true;
-}
-
-$order->delete();                // Sets is_deleted = 1, not removed
-$active = (new Order())->all();  // Excludes soft-deleted rows
-```
-
----
-
-## Template Engine (Frond)
-
-### 28. Twig-Compatible Syntax
-
-Block inheritance, includes, loops, conditions, filters.
-
-```twig
-{% extends "layout.html" %}
-{% block content %}
-  {% for product in products %}
-    <p>{{ product.name }} - {{ product.price | number_format(2) }}</p>
-  {% endfor %}
-{% endblock %}
-```
-
-### 29. Custom Filters and Functions
-
-Extend Frond with PHP callables.
-
-```php
-use Tina4\Frond;
-
-Frond::addFilter('currency', fn($amount, $symbol = '$') => $symbol . number_format($amount, 2));
-```
-
-```twig
-{{ product.price | currency('€') }}
-```
-
-### 30. Fragment Caching
-
-Cache template fragments to avoid re-rendering.
-
-```twig
-{% cache 'featured-products' 300 %}
-  {% for p in featured %}
-    <div class="card">{{ p.name }}</div>
-  {% endfor %}
-{% endcache %}
-```
-
----
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| Queue (lite, RabbitMQ, Kafka, Mongo) | Jobs with retry to dead-letter and a visibility timeout. Instead of Celery, Bull, or Sidekiq |
+| Background tasks | Periodic in-loop callbacks, no threads |
+| Service runner | Cron, daemon, and interval services |
+| Events (observer) | on, emit, once, and off, with priorities. Instead of an event-emitter library |
+| Messenger (SMTP and IMAP) | Send and read mail, fail-loud IMAP. Instead of nodemailer or mail gems |
 
 ## APIs and Protocols
 
-### 31. API Client
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| API HTTP client | get, post, upload, download, retry, cookie jar, redirect-safe. Instead of requests, guzzle, faraday, or axios |
+| Swagger and OpenAPI | A 3.0.3 spec from routes with `$ref` schemas and a UI. Instead of a swagger-gen dependency |
+| GraphQL | A zero-dep engine with ORM auto-schema and a depth guard. Instead of graphql-core or graphql-js |
+| WSDL and SOAP | SOAP 1.1 with auto-WSDL, DTD-rejecting |
+| WebSocket (backplane, rooms, per-route auth) | An RFC 6455 server with Redis and NATS scale-out. Instead of ws, socket.io, or actioncable |
+| Realtime collab (WebRTC calls, chat, files) | Signaling, chat, and file-transfer domain |
+| MCP server (Streamable HTTP and legacy SSE) | A built-in AI tool server |
+
+## Internationalisation
+
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| i18n and localization | JSON locales, interpolation, and fallback. Instead of an i18n library |
+
+## Developer Experience
+
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| CLI (serve, migrate, generate, test, doctor, setup, deploy) | One toolchain. Instead of make plus scripts |
+| Dev toolbar and dashboard | A route, request, query, queue, mailbox, and WebSocket inspector |
+| Dev mailbox | Captures outbound mail in dev. Instead of mailhog |
+| Error overlay | A rich stack-trace page in dev |
+| Dev reload (WebSocket-primary hot reload) | Instant browser reload on change |
+| Structured logging | Levels, JSON and human output, dev and prod file gating |
+| Metrics | Built-in request and runtime metrics |
+| Inline testing framework | Assertions attached to functions or described in suites |
+| TestClient (xUnit plus HTTP surface) | In-process requests through the real front controller |
+| Live API index and docs search | Reflects real signatures; a doc-drift detector |
+| AI context scaffolding | Installs context for 7 AI tools |
+| DI container | Transient and singleton registrations |
+| `.env` loader and env helpers | Precedence-correct env loading |
+| Gallery (interactive examples) | 7 live examples under `/__dev/` |
+| Plan, ProjectIndex, and Feedback | An in-dashboard AI developer surface |
+
+## Security and Request Handling
+
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| CSRF protection | A form token plus validating middleware |
+| Security-headers middleware | CSP, X-Frame-Options, and Referrer-Policy. Instead of helmet |
+| Request-logging middleware | Structured access logs, on by default in dev |
+| Multipart file uploads | Raw file bytes on the request. Instead of multer or multipart libraries |
+| Named and multiple database connections | Bind a database under a name and point a model at it |
+| Project code and doc search index | SQLite FTS5 over the project |
+| Broken-file tracker | `data/.broken` sentinels, health returns 503 |
+| Dual-port dev server | A stable AI port at base+1000 |
+| Interactive REPL console | An app-context REPL |
+| Pluggable file-storage backends | Local and S3 storage. Instead of an S3 SDK for the common path |
+| MongoDB as a database driver | Mongo through the same SQL-style API |
+| Cookie API | Response cookies with HttpOnly, SameSite, and Secure |
+| Response compression and ETag | gzip plus validators, automatically |
+
+## Additional Capabilities
+
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| Doc-truth checker | A drift detector for docs versus code |
+| File and attachment responses | Download or inline file responses |
+| Queue job handle | An explicit ack, nack, and retry object |
+| Swagger security-scheme and schema registry | Per-route security plus reusable `$ref` schemas |
+| Credential-safe database URL parser | Parses `driver://user:pass@host/db` safely |
+| Docker image build command | Generates a Dockerfile |
+| Route table inspector | Lists the route table from the CLI |
+| Self-describing CLI manifest | Emits the command set as JSON |
+| Realtime chat domain models | Chat, message, and presence models |
+| Firebird driver | Firebird engine support (PHP also has a PDO fallback) |
+| Legacy env-var migration checker | Warns on pre-3.12 un-prefixed variables |
+| Instant HTML CRUD UI | A searchable, paginated admin table from SQL |
+| Secure-by-default write routes | POST, PUT, PATCH, and DELETE require auth unless marked public |
+| Template auto-routing and SPA index | Templates map to routes; an SPA index fallback |
+| HTTP/1.1 method conformance | Auto-HEAD, OPTIONS 204, and 405 with Allow |
+| Code generators | Generate models, routes, migrations, and middleware |
+| Built-in Tina4 CSS bundle | Bootstrap-compatible CSS, shipped. Instead of a CSS-framework dependency |
+| In-dashboard AI agent and supervised sessions | AI chat plus supervised runs in the dashboard |
+
+## IoT and Device Messaging
+
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| MQTT 3.1.1 client (QoS 0/1, TLS, retained, Last Will) | Pub/sub to any broker (Mosquitto, EMQX, HiveMQ, AWS IoT): publish, subscribe, and consume, with retained messages, a Last Will, and a per-client TLS trust store. QoS 2 is refused loudly, never silently downgraded. Instead of paho-mqtt, php-mqtt, ruby-mqtt, or mqtt.js |
+
+## Cross-Language Parity
+
+The same 97 features ship in every Tina4 framework. Only the package and the method-name style differ:
+
+| Framework | Language | Install |
+|-----------|----------|---------|
+| tina4-python | Python 3.12+ | `pip install tina4-python` |
+| tina4-php | PHP 8.2+ | `composer require tina4stack/tina4php` |
+| tina4-ruby | Ruby 3.1+ | `gem install tina4ruby` |
+| tina4-nodejs | Node.js 22+ | `npm install tina4-nodejs` |
+
+Ruby ships one extra, language-native feature: ERB as a second template engine alongside Frond, for 98 in total. Frond is the cross-framework engine, so nothing is missing anywhere else.
+
+## What Parity Means
+
+- A route written in one framework maps directly to the others; only the syntax changes.
+- A Frond template renders the same under any of the four.
+- A test written against one framework's test client ports line-for-line to the others.
+- The same `TINA4_*` environment variables are honoured everywhere, with the same meaning.
 
-Call external APIs. No Guzzle. No Composer.
+## Verification
 
-```php
-use Tina4\Api;
+Every feature is backed by real tests in all four frameworks, run against real dependencies - no mocks. A feature is not shipped until its tests pass in Python, PHP, Ruby, and Node.js, and a bug fix lands in all four before it closes.
 
-$api = new Api('https://api.example.com');
-$api->addCustomHeaders(['Authorization' => 'Bearer ' . getenv('API_TOKEN')]);
-$result = $api->sendRequest('GET', '/resources');
-```
+## What Is Not in Tina4
 
-### 32. Swagger / OpenAPI
-
-Auto-generate API docs from PHPDoc annotations.
-
-```php
-/**
- * @route GET /api/products
- * @summary List all products
- * @response 200 array of products
- */
-Router::get('/api/products', fn($req, $res) => $res->json([]));
-```
-
-Visit `/__swagger` to view the interactive docs.
-
-### 33. GraphQL
-
-Zero-dependency GraphQL engine. Type definitions and resolvers in PHP.
-
-```php
-use Tina4\GraphQL;
-
-GraphQL::type('Product', ['id' => 'Int', 'name' => 'String', 'price' => 'Float']);
-GraphQL::query('products', 'Product', fn() => getAllProducts());
-GraphQL::mount('/graphql');
-```
-
-### 34. WebSocket
-
-Real-time bidirectional communication. Backplane for multi-server scale.
-
-```php
-use Tina4\WebSocket;
-
-WebSocket::on('message', function ($client, $message) {
-    WebSocket::broadcast(['type' => 'chat', 'text' => $message]);
-});
-```
-
-### 35. SSE / Streaming
-
-Server-Sent Events for real-time data push. Pass a generator callable to `response->stream()`.
-
-```php
-Router::get('/events', function ($req, $res) {
-    $res->stream(function () {
-        while (true) {
-            yield "data: " . json_encode(['time' => date('c')]) . "\n\n";
-            sleep(1);
-        }
-    });
-});
-```
-
-### 36. WSDL / SOAP
-
-Auto-generate WSDL from annotated PHP classes.
-
-```php
-use Tina4\WSDL;
-use Tina4\WSDLOperation;
-
-class PaymentService extends WSDL {
-    #[WSDLOperation(['TransactionId' => 'string'])]
-    public function Charge(float $amount, string $currency): array {
-        return ['TransactionId' => 'txn_' . uniqid()];
-    }
-}
-
-Router::any('/payment', fn($request, $response) => (new PaymentService($request))->handle());
-```
-
----
-
-## Real-time and Messaging
-
-### 37. Messenger (Email)
-
-SMTP email with attachments. Configurable via environment.
-
-```php
-use Tina4\Messenger;
-
-Messenger::send(
-    to:      'alice@example.com',
-    subject: 'Your Order',
-    body:    'Order #1234 has shipped.'
-);
-```
-
----
-
-## Queue
-
-### 38. Queue System
-
-File, RabbitMQ, Kafka, and MongoDB backends. Same API for all.
-
-```php
-use Tina4\Queue;
-
-$queue = new Queue(topic: 'emails');
-$queue->push(['to' => 'alice@example.com', 'subject' => 'Hi']);
-
-foreach ($queue->consume('emails') as $job) {
-    sendEmail($job->payload);
-    $job->complete();
-}
-```
-
----
-
-## Sessions
-
-### 39. Session Handlers
-
-File, database, Redis, Valkey, and MongoDB backends.
-
-```bash
-TINA4_SESSION_BACKEND=redis
-TINA4_SESSION_REDIS_HOST=localhost
-TINA4_SESSION_TTL=3600
-```
-
-```php
-use Tina4\Session;
-
-Session::set('user_id', 42);
-$id = Session::get('user_id');
-Session::destroy();
-```
-
----
-
-## Infrastructure
-
-### 40. Migrations
-
-Versioned database schema migrations. Run via CLI.
-
-```bash
-tina4 migrate
-tina4 migrate --rollback
-```
-
-```php
-// migrations/0001_create_products.php
-return [
-    'up'   => "CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT, price REAL)",
-    'down' => "DROP TABLE products"
-];
-```
-
-### 41. Localization (I18n)
-
-JSON locale files. Dot-notation keys. Interpolation. Fallback.
-
-```php
-use Tina4\I18n;
-
-$i18n = new I18n('src/locales', defaultLocale: 'en');
-$i18n->setLocale('de');
-echo $i18n->t('welcome', ['name' => 'Alice']);
-// Willkommen, Alice!
-```
-
-### 42. Events (Observer Pattern)
-
-`on()`, `once()`, `off()`, `emit()`. Priority dispatch.
-
-```php
-use Tina4\Events;
-
-Events::on('order.placed', fn($data) => sendConfirmation($data['email']), 10);
-Events::emit('order.placed', ['email' => 'alice@example.com', 'total' => 59.99]);
-```
-
-### 43. Structured Logging
-
-Log levels. JSON output. Context fields. Env-controlled level filter.
-
-```php
-use Tina4\Debug;
-
-Debug::message("Payment failed", TINA4_LOG_ERROR, [
-    'user_id'   => 42,
-    'amount'    => 99.00,
-    'gateway'   => 'stripe',
-    'error_code' => 'insufficient_funds'
-]);
-```
-
-### 44. DI Container
-
-`register()`, `singleton()`, `get()`, `has()`, `reset()`.
-
-```php
-use Tina4\Container;
-
-$container = new Container();
-$container->singleton('db', fn() => new \Tina4\Database(getenv('TINA4_DATABASE_URL')));
-$db = $container->get('db');
-```
-
-### 45. Service Runner
-
-Long-running background workers. Supervisor and systemd compatible.
-
-```php
-use Tina4\ServiceRunner;
-use Tina4\Service;
-
-class HeartbeatWorker extends Service {
-    public function run(): void {
-        while (true) {
-            echo "heartbeat\n";
-            sleep(60);
-        }
-    }
-    public function stop(): void {}
-}
-
-$runner = new ServiceRunner();
-$runner->add(new HeartbeatWorker());
-$runner->start();
-```
-
----
-
-## Summary Table
-
-| # | Feature | Category |
-|---|---------|----------|
-| 1 | Router (GET/POST/PUT/PATCH/DELETE/ANY) | Core HTTP |
-| 2 | Path parameters ({id:int}, {price:float}) | Core HTTP |
-| 3 | Wildcard routes | Core HTTP |
-| 4 | Route grouping | Core HTTP |
-| 5 | Route discovery (auto-load src/) | Core HTTP |
-| 6 | Built-in server | Core HTTP |
-| 7 | Request object | Core HTTP |
-| 8 | Response object | Core HTTP |
-| 9 | Static file serving | Core HTTP |
-| 10 | CORS middleware | Core HTTP |
-| 11 | Health endpoint | Core HTTP |
-| 12 | JWT authentication | Auth & Security |
-| 13 | Password hashing | Auth & Security |
-| 14 | CSRF protection | Auth & Security |
-| 15 | Rate limiter | Auth & Security |
-| 16 | Security headers | Auth & Security |
-| 17 | Validator | Auth & Security |
-| 18 | URL-based multi-driver connection | Database |
-| 19 | Query execution | Database |
-| 20 | Query caching | Database |
-| 21 | Race-safe sequence (get_next_id) | Database |
-| 22 | Transactions | Database |
-| 23 | Active Record ORM | ORM |
-| 24 | QueryBuilder | ORM |
-| 25 | Relationships (hasMany/hasOne/belongsTo) | ORM |
-| 26 | AutoCRUD | ORM |
-| 27 | Soft delete | ORM |
-| 28 | Frond template engine (Twig-compatible) | Templates |
-| 29 | Custom filters and functions | Templates |
-| 30 | Fragment caching | Templates |
-| 31 | API client (zero-dep) | APIs & Protocols |
-| 32 | Swagger / OpenAPI | APIs & Protocols |
-| 33 | GraphQL engine | APIs & Protocols |
-| 34 | WebSocket server | APIs & Protocols |
-| 35 | SSE / Streaming (response.stream) | APIs & Protocols |
-| 36 | WSDL / SOAP server | APIs & Protocols |
-| 37 | Messenger (email) | Messaging |
-| 38 | Queue system (4 backends) | Queue |
-| 39 | Session handlers (5 backends) | Sessions |
-| 40 | Migrations | Infrastructure |
-| 41 | Localization (I18n) | Infrastructure |
-| 42 | Events (observer pattern) | Infrastructure |
-| 43 | Structured logging | Infrastructure |
-| 44 | DI Container | Infrastructure |
-| 45 | Service Runner | Infrastructure |
-
-All 45 features are at 100% parity across Tina4 PHP, Python, Ruby, and Node.js.
+Tina4 stays deliberately small. It carries zero third-party runtime dependencies, so there is no large tree to audit or update. The backends for queues, cache, sessions, and mail are configuration choices, not vendor lock-in: point an environment variable at Redis, RabbitMQ, or MongoDB and the same code keeps working. The goal is a framework you can read in a weekend and rely on for years.

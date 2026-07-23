@@ -1,158 +1,191 @@
 # Chapter 37: Complete Feature List
 
-A reference of all 45 features in Tina4 Ruby, grouped by category.
+Tina4 Ruby ships **98 built-in features** with zero third-party runtime dependencies. This page is the "is it already in the box?" reference. Before you reach for a library, check here first: if Tina4 ships it, use the built-in.
 
----
+Every feature below is present in all four Tina4 frameworks - Python, PHP, Ruby, and Node.js - with identical behaviour, JSON shapes, environment variables, and error messages. Only the method names change to fit each language; in Ruby they are snake_case, under the Tina4 namespace. The "instead of" note in each row names the common dependency the built-in replaces, so you never add it.
 
-## 1. Core Server
+## Core HTTP
 
-| # | Feature | Class / Method | Description |
-|---|---------|---------------|-------------|
-| 1 | HTTP Server | `Tina4::Server` | Zero-dependency HTTP server. Starts with `tina4 serve` (or `TINA4_OVERRIDE_CLIENT=true bundle exec ruby app.rb` to bypass the Rust CLI). |
-| 2 | Routing | `Tina4::Router.get/post/put/patch/delete` | Declarative route definitions with path params, wildcards, and middleware. |
-| 3 | Request Object | `request.body`, `request.params`, `request.headers`, `request.cookies` | Parsed inbound request. Handles JSON, form data, and multipart bodies. |
-| 4 | Response Object | `response.json`, `response.html`, `response.render`, `response.redirect` | Structured response builder with status codes and headers. |
-| 5 | Middleware | `middleware: ["Name:arg"]` | Per-route or global middleware pipeline. Built-in: `ResponseCache`, `RequestLogger`, `CORS`, `RateLimit`. |
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| HTTP server (zero-dep, dev and production) | Serves HTTP with no runtime dependencies; `serve --production` auto-tunes. Instead of gunicorn/uvicorn config, Apache with mod_php, Puma tuning, or Express |
+| Routing (path and typed params, wildcards) | `get`/`post` with `{id:int}` and `{...slug}` patterns. Instead of a router library |
+| Route groups | Group a prefix with shared auth and middleware |
+| Request object | Parsed body, query, headers, cookies, and files. Instead of body-parser |
+| Response object | JSON, HTML, redirect, file, and stream, plus auto-serialised models |
+| Middleware pipeline | Before and after hooks, short-circuit, per-route |
+| CORS middleware | Built-in preflight and headers. Instead of a cors package |
+| Rate limiting middleware | Built-in throttle. Instead of express-rate-limit or rack-attack |
+| Static file serving (cache-control revalidation) | Serves the public directory with ETag and 304. Instead of serve-static |
+| Health check endpoint | `/health` and `/__health`, returns 503 on broken files |
+| Graceful shutdown | Clean SIGTERM and SIGINT drain |
+| SSE and streaming responses | Streams from a generator, hardened. Instead of an SSE library |
+| Convention auto-discovery (routes, models, seeds) | File location is configuration. Instead of manual registration |
 
----
+## Database
 
-## 2. Database
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| Multi-driver database abstraction | SQLite, PostgreSQL, MySQL, MSSQL, Firebird, and ODBC through one URL. Instead of per-driver glue |
+| Connection pooling | Round-robin connections with a pool size |
+| Query builder (with `to_mongo`) | Fluent JOIN, aggregate, and GROUP BY, plus a NoSQL bridge. Instead of a query-builder library |
+| ORM (active record) | Models with save, find, and where. Instead of SQLAlchemy, Eloquent, ActiveRecord, or Prisma |
+| ORM relationships and eager loading | has_many, has_one, and belongs_to, with `include` |
+| Soft deletes | An is_deleted flag with restore |
+| Migrations (with auto-migrate on startup) | SQL-file migrations, per-engine DDL. Instead of Alembic or Phinx |
+| Race-safe sequences | Atomic id generation across engines |
+| SQL translator | Cross-engine dialect rewrite (LIMIT, ROWS, TOP, ILIKE, CONCAT) |
+| Query cache (request and persistent) | Dedupe reads; opt-in persistent cache with backends |
+| DocStore (Mongo-style, SQLite fallback) | A pymongo-style API with a zero-config local store. Instead of a Mongo dependency in dev |
+| Seeder and FakeData | Deterministic fake data and bulk seeding. Instead of faker and factory libraries |
+| Auto-CRUD REST generator | REST endpoints from a model |
+| Validator | Request and body validation. Instead of a validation library |
 
-| # | Feature | Class / Method | Description |
-|---|---------|---------------|-------------|
-| 6 | Database Connection | `Tina4::Database.new(url)` | Single connection via `TINA4_DATABASE_URL`. Supports SQLite, PostgreSQL, MySQL, MSSQL, Oracle. |
-| 7 | Raw SQL | `db.query(sql)`, `db.execute(sql)` | Execute raw SQL. `query` returns rows. `execute` returns affected row count or last insert ID. |
-| 8 | Query Builder | `Tina4::QueryBuilder` | Chainable `.where`, `.select`, `.order`, `.limit`, `.offset`, `.join`. |
-| 9 | ORM | `Tina4::ORM` | ActiveRecord-style base class. `find`, `save`, `delete`, `all`, `where`. |
-| 10 | Migrations | `Tina4::Migration` | Version-controlled schema changes. `tina4 migrate` applies pending migrations. |
-| 11 | get_next_id | `Database.get_next_id(table)` | Race-safe sequence generator using a dedicated sequence table. |
+## Authentication and Sessions
 
----
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| JWT authentication | Token issue and verify, RS256 and HS256. Instead of pyjwt, firebase-jwt, or jsonwebtoken |
+| Password hashing (PBKDF2) | Hash and check, timing-safe. Instead of bcrypt or argon libraries |
+| API-key authentication | Key validation with header fallbacks |
+| Sessions (file, redis, valkey, mongo, database) | Pluggable backends that degrade loudly. Instead of a session library |
 
-## 3. Authentication and Sessions
+## Templates and Frontend
 
-| # | Feature | Class / Method | Description |
-|---|---------|---------------|-------------|
-| 12 | JWT Authentication | `Tina4::Auth` | Token-based auth. Protects routes by default. Bypass with `# @noauth` comment. |
-| 13 | Session Management | `Tina4::Session` | Server-side sessions stored in file, memory, or database backends. |
-| 14 | Cookie Handling | `request.cookies`, `response.set_cookie` | Read and write cookies with expiry, domain, secure, and HttpOnly flags. |
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| Frond template engine | Twig-compatible, with live blocks, a sandbox, and fragment caching. Instead of Jinja, Twig, ERB, or Handlebars |
+| SCSS compiler | Built-in SCSS to CSS. Instead of a sass dependency |
+| HtmlElement builder | Programmatic HTML, XSS-safe |
+| tina4-js and frond.js frontend | A reactive frontend with AJAX and WebSocket helpers, shipped. Instead of React or Vue for admin UIs |
+| ERB templates (second engine, Ruby-native) | ERB alongside Frond; Frond stays the cross-framework engine. A Ruby-native extra |
 
----
+## Caching
 
-## 4. Templates and Frontend
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| Response cache | GET cache middleware with TTL and an X-Cache header |
+| Unified cache backends | memory, file, redis, valkey, memcached, mongodb, and database, with a file fallback |
 
-| # | Feature | Class / Method | Description |
-|---|---------|---------------|-------------|
-| 15 | Frond Templates | `response.render("page.html", data)` | Tina4's zero-dependency template engine. `{variable}`, `{if}`, `{each}`, `{include}`. |
-| 16 | Static Files | `public/` directory | Files in `public/` are served directly without a route. CSS, JS, images. |
-| 17 | Frontend Integration | `tina4-js` | The companion 13.6KB reactive frontend library. Signals, components, routing. |
+## Background and Messaging
 
----
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| Queue (lite, RabbitMQ, Kafka, Mongo) | Jobs with retry to dead-letter and a visibility timeout. Instead of Celery, Bull, or Sidekiq |
+| Background tasks | Periodic in-loop callbacks, no threads |
+| Service runner | Cron, daemon, and interval services |
+| Events (observer) | on, emit, once, and off, with priorities. Instead of an event-emitter library |
+| Messenger (SMTP and IMAP) | Send and read mail, fail-loud IMAP. Instead of nodemailer or mail gems |
 
-## 5. Caching
+## APIs and Protocols
 
-| # | Feature | Class / Method | Description |
-|---|---------|---------------|-------------|
-| 18 | Response Cache | `middleware: ["ResponseCache:ttl"]` | Caches complete HTTP responses. Memory or file backend. |
-| 19 | Cache API | `Tina4::Cache.get/set/delete/flush` | Direct cache read/write with TTL. Backends: memory, file, Redis, Memcached. |
-| 20 | Query Caching | `db.cache(ttl) { query }` | Caches database query results for a given TTL. |
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| API HTTP client | get, post, upload, download, retry, cookie jar, redirect-safe. Instead of requests, guzzle, faraday, or axios |
+| Swagger and OpenAPI | A 3.0.3 spec from routes with `$ref` schemas and a UI. Instead of a swagger-gen dependency |
+| GraphQL | A zero-dep engine with ORM auto-schema and a depth guard. Instead of graphql-core or graphql-js |
+| WSDL and SOAP | SOAP 1.1 with auto-WSDL, DTD-rejecting |
+| WebSocket (backplane, rooms, per-route auth) | An RFC 6455 server with Redis and NATS scale-out. Instead of ws, socket.io, or actioncable |
+| Realtime collab (WebRTC calls, chat, files) | Signaling, chat, and file-transfer domain |
+| MCP server (Streamable HTTP and legacy SSE) | A built-in AI tool server |
 
----
+## Internationalisation
 
-## 6. Background Processing
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| i18n and localization | JSON locales, interpolation, and fallback. Instead of an i18n library |
 
-| # | Feature | Class / Method | Description |
-|---|---------|---------------|-------------|
-| 21 | Queue System | `Tina4::Queue` | File-based queue by default. `push`, `pop`, `consume`, `retry`. Backends: file, RabbitMQ, Kafka, MongoDB. |
-| 22 | Job Lifecycle | `job.complete`, `job.fail`, `job.retry` | Explicit job state transitions: PENDING → RESERVED → COMPLETED / FAILED / DEAD LETTER. |
-| 23 | Service Runner | `Tina4::ServiceRunner` | Manages long-running background threads. Auto-restart on crash with exponential backoff. |
+## Developer Experience
 
----
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| CLI (serve, migrate, generate, test, doctor, setup, deploy) | One toolchain. Instead of make plus scripts |
+| Dev toolbar and dashboard | A route, request, query, queue, mailbox, and WebSocket inspector |
+| Dev mailbox | Captures outbound mail in dev. Instead of mailhog |
+| Error overlay | A rich stack-trace page in dev |
+| Dev reload (WebSocket-primary hot reload) | Instant browser reload on change |
+| Structured logging | Levels, JSON and human output, dev and prod file gating |
+| Metrics | Built-in request and runtime metrics |
+| Inline testing framework | Assertions attached to functions or described in suites |
+| TestClient (xUnit plus HTTP surface) | In-process requests through the real front controller |
+| Live API index and docs search | Reflects real signatures; a doc-drift detector |
+| AI context scaffolding | Installs context for 7 AI tools |
+| DI container | Transient and singleton registrations |
+| `.env` loader and env helpers | Precedence-correct env loading |
+| Gallery (interactive examples) | 7 live examples under `/__dev/` |
+| Plan, ProjectIndex, and Feedback | An in-dashboard AI developer surface |
 
-## 7. Events
+## Security and Request Handling
 
-| # | Feature | Class / Method | Description |
-|---|---------|---------------|-------------|
-| 24 | Event Bus | `Tina4::Events` | In-process synchronous event system. |
-| 25 | Listener Registration | `Events.on(event, priority:)` | Register a listener block. Priority controls execution order. |
-| 26 | One-Shot Listeners | `Events.once(event)` | Registers a listener that fires exactly once then removes itself. |
-| 27 | Listener Removal | `Events.off(event, listener)`, `Events.clear` | Remove specific or all listeners. |
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| CSRF protection | A form token plus validating middleware |
+| Security-headers middleware | CSP, X-Frame-Options, and Referrer-Policy. Instead of helmet |
+| Request-logging middleware | Structured access logs, on by default in dev |
+| Multipart file uploads | Raw file bytes on the request. Instead of multer or multipart libraries |
+| Named and multiple database connections | Bind a database under a name and point a model at it |
+| Project code and doc search index | SQLite FTS5 over the project |
+| Broken-file tracker | `data/.broken` sentinels, health returns 503 |
+| Dual-port dev server | A stable AI port at base+1000 |
+| Interactive REPL console | An app-context REPL |
+| Pluggable file-storage backends | Local and S3 storage. Instead of an S3 SDK for the common path |
+| MongoDB as a database driver | Mongo through the same SQL-style API |
+| Cookie API | Response cookies with HttpOnly, SameSite, and Secure |
+| Response compression and ETag | gzip plus validators, automatically |
 
----
+## Additional Capabilities
 
-## 8. Localization
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| Doc-truth checker | A drift detector for docs versus code |
+| File and attachment responses | Download or inline file responses |
+| Queue job handle | An explicit ack, nack, and retry object |
+| Swagger security-scheme and schema registry | Per-route security plus reusable `$ref` schemas |
+| Credential-safe database URL parser | Parses `driver://user:pass@host/db` safely |
+| Docker image build command | Generates a Dockerfile |
+| Route table inspector | Lists the route table from the CLI |
+| Self-describing CLI manifest | Emits the command set as JSON |
+| Realtime chat domain models | Chat, message, and presence models |
+| Firebird driver | Firebird engine support (PHP also has a PDO fallback) |
+| Legacy env-var migration checker | Warns on pre-3.12 un-prefixed variables |
+| Instant HTML CRUD UI | A searchable, paginated admin table from SQL |
+| Secure-by-default write routes | POST, PUT, PATCH, and DELETE require auth unless marked public |
+| Template auto-routing and SPA index | Templates map to routes; an SPA index fallback |
+| HTTP/1.1 method conformance | Auto-HEAD, OPTIONS 204, and 405 with Allow |
+| Code generators | Generate models, routes, migrations, and middleware |
+| Built-in Tina4 CSS bundle | Bootstrap-compatible CSS, shipped. Instead of a CSS-framework dependency |
+| In-dashboard AI agent and supervised sessions | AI chat plus supervised runs in the dashboard |
 
-| # | Feature | Class / Method | Description |
-|---|---------|---------------|-------------|
-| 28 | Localization | `Tina4::Localization.load` | Loads JSON/YAML locale files from `locales/`, `i18n/`, `src/locales/`. Dot-notation key lookup. |
-| 29 | Translation | `Tina4::Localization.t("key", field: value)` | Translates a key with `%{placeholder}` interpolation. |
-| 30 | Fallback Locale | `Tina4::Localization.t(key, default: ...)` | Auto-falls back to `"en"`, then to the supplied `default` or the key itself. |
-| 31 | Locale Switching | `Tina4::Localization.set_locale("fr")` | Switch the active locale at runtime. |
+## IoT and Device Messaging
 
----
+| Feature | What it does / instead of |
+|---------|---------------------------|
+| MQTT 3.1.1 client (QoS 0/1, TLS, retained, Last Will) | Pub/sub to any broker (Mosquitto, EMQX, HiveMQ, AWS IoT): publish, subscribe, and consume, with retained messages, a Last Will, and a per-client TLS trust store. QoS 2 is refused loudly, never silently downgraded. Instead of paho-mqtt, php-mqtt, ruby-mqtt, or mqtt.js |
 
-## 9. Logging
+## Cross-Language Parity
 
-| # | Feature | Class / Method | Description |
-|---|---------|---------------|-------------|
-| 32 | Structured Logger | `Tina4::Log.info/debug/warning/error/fatal` | Structured log entries with timestamp, level, message, and keyword fields. |
-| 33 | Log Level Control | `TINA4_LOG_LEVEL` env var | Filter output by minimum severity. Values: debug, info, warning, error, fatal. |
-| 34 | JSON Output | `TINA4_LOG_FORMAT=json` | Emit NDJSON for log aggregators (Datadog, Elastic, CloudWatch). |
-| 35 | File Logging | `TINA4_LOG_FILE=path` | Write logs to a file in addition to stdout. |
+The same 97 features ship in every Tina4 framework. Only the package and the method-name style differ:
 
----
+| Framework | Language | Install |
+|-----------|----------|---------|
+| tina4-python | Python 3.12+ | `pip install tina4-python` |
+| tina4-php | PHP 8.2+ | `composer require tina4stack/tina4php` |
+| tina4-ruby | Ruby 3.1+ | `gem install tina4ruby` |
+| tina4-nodejs | Node.js 22+ | `npm install tina4-nodejs` |
 
-## 10. API and Integrations
+Ruby ships one extra, language-native feature: ERB as a second template engine alongside Frond, for 98 in total. Frond is the cross-framework engine, so nothing is missing anywhere else.
 
-| # | Feature | Class / Method | Description |
-|---|---------|---------------|-------------|
-| 36 | API Client | `Tina4::Api.new(base_url, headers)` | HTTP client for calling external REST APIs. `get`, `post`, `put`, `delete`. |
-| 37 | WSDL / SOAP Server | `Tina4::WSDL`, `wsdl_operation` | Define SOAP operations with auto-generated WSDL. |
-| 38 | WSDL Service Builder | `Tina4::WSDL::Service.new(name:, namespace:)` | Programmatically build a SOAP service: `add_operation`, `generate_wsdl`. |
-| 39 | GraphQL | `Tina4::GraphQL` | Schema-first GraphQL endpoint. Types, queries, mutations, subscriptions. |
-| 40 | WebSocket | `Tina4::WebSocket` | Real-time bidirectional communication. `on_message`, `broadcast`, `rooms`. |
-| 41 | SSE / Streaming | `response.stream` | Server-Sent Events for real-time data push via `response.stream(generator)`. |
+## What Parity Means
 
----
+- A route written in one framework maps directly to the others; only the syntax changes.
+- A Frond template renders the same under any of the four.
+- A test written against one framework's test client ports line-for-line to the others.
+- The same `TINA4_*` environment variables are honoured everywhere, with the same meaning.
 
-## 11. Developer Tools
+## Verification
 
-| # | Feature | Class / Method | Description |
-|---|---------|---------------|-------------|
-| 42 | Swagger / OpenAPI | `Tina4::Swagger` | Auto-generates OpenAPI 3.0 docs from route comments. `/swagger` serves the UI. |
-| 43 | DI Container | `Tina4::Container` | Register, resolve, and replace services. `registered?`, `clear!`. |
-| 44 | CLI | `tina4` command | `new`, `server`, `migrate`, `scaffold`, `routes`, `version`. |
-| 45 | MCP Dev Tools | `Tina4::MCP` | Model Context Protocol server for AI assistant integration. |
+Every feature is backed by real tests in all four frameworks, run against real dependencies - no mocks. A feature is not shipped until its tests pass in Python, PHP, Ruby, and Node.js, and a bug fix lands in all four before it closes.
 
----
+## What Is Not in Tina4
 
-## Feature Summary by Version
-
-| Version | Features Added |
-|---------|---------------|
-| 3.0.0 | Core server, routing, request/response, templates, database, ORM, auth, sessions |
-| 3.1.0 | Queue system, caching, middleware pipeline |
-| 3.5.0 | GraphQL, WebSocket, Swagger |
-| 3.8.0 | Service Runner, Events, MCP dev tools |
-| 3.10.0 | API client, WSDL/SOAP, DI container |
-| 3.10.20 | get_next_id, race-safe sequences |
-| 3.11.0 | Localization, structured logging, log level control |
-
----
-
-## Quick Reference: Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TINA4_DATABASE_URL` | - | Database connection string |
-| `TINA4_ENV` | `development` | Environment: development, production, test |
-| `TINA4_PORT` | `7147` | HTTP server port |
-| `TINA4_LOG_LEVEL` | `info` | Minimum log level |
-| `TINA4_LOG_FORMAT` | `text` | Log format: text or json |
-| `TINA4_LOG_FILE` | - | Log file path (optional) |
-| `TINA4_QUEUE_BACKEND` | `file` | Queue backend: file, rabbitmq, kafka, mongodb |
-| `TINA4_QUEUE_PATH` | `./queue` | File queue storage directory |
-| `TINA4_QUEUE_URL` | - | Queue broker URL (RabbitMQ, Kafka, MongoDB) |
-| `TINA4_CACHE_BACKEND` | `memory` | Cache backend: memory, file, redis, memcached |
-| `TINA4_SECRET` | - | JWT signing secret |
-| `TINA4_TOKEN_LIMIT` | `3600` | JWT expiry in seconds |
+Tina4 stays deliberately small. It carries zero third-party runtime dependencies, so there is no large tree to audit or update. The backends for queues, cache, sessions, and mail are configuration choices, not vendor lock-in: point an environment variable at Redis, RabbitMQ, or MongoDB and the same code keeps working. The goal is a framework you can read in a weekend and rely on for years.
