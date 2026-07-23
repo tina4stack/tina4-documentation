@@ -66,19 +66,23 @@ does read it. Counted present, flagged as a behavioural parity gap.
 |---------|------|----------------|
 | A - audited candidates | 65 | 65 |
 | B - additions verified all four | 13 | 13 |
-| C - additions, now verified | 19 | 17 |
-| **Total** | **97** | **95** |
+| C - additions, now verified | 19 | 18 |
+| **Total** | **97** | **96** |
 
-Two rows are not yet all-four:
-- **C1 doc-truth checker - MISSING IN RUBY.** Real, confirmed gap. PHP has `Docs::checkDocs`
-  (`Tina4/Docs.php:291`) + `syncDocs` (`:364`); Python and Node have equivalents; `tina4-ruby/lib/
-  tina4/docs.rb` has no check/verify/audit/sync method at all. **Owner directive 2026-07-23: a
-  feature missing in one framework must be BUILT there so all four match.** Queued to port.
+One row is legitimately language-native; the former C1 gap is now closed:
+- **C1 doc-truth checker - CLOSED, now all four (2026-07-23).** The "missing in Ruby" verdict was
+  stale: `tina4-ruby/lib/tina4/docs.rb` DOES have `Docs.check_docs` (drift detector, `:161`) and
+  `Docs.sync_docs` (`:211`), backed by `STDLIB_ALLOWLIST` (`:27`) and `render_generated_block`
+  (`:624`) - a full mirror of the Python master (`docs.py check_docs`/`sync_docs`) and PHP
+  (`Docs::checkDocs`/`syncDocs`). Verified by reading the source AND running `spec/docs_spec.rb`
+  (20 examples, 0 failures - including the drift-detector and BEGIN/END-GENERATED-API sync tests).
+  It is a library-level API in all four (no MCP/CLI wiring in any of them), so parity holds. The
+  original verdict was built from a stale grep, not the code - see the method warning below.
 - **C13 second template engine (ERB + Twig) - Ruby-only by language necessity.** ERB is a Ruby
   technology; there is nothing to port. Frond is the cross-framework engine and is Section A. This
   row stays flagged Ruby-native rather than counted as a gap.
 
-So: **97 rows, 95 at full parity, 1 gap to close (C1 -> 96), 1 legitimately language-native.**
+So: **97 rows, 96 at full parity, 1 legitimately language-native (C13 ERB). No open parity gap.**
 
 ## Method failures in this session - all six were my own harness, never a real gap
 
@@ -112,7 +116,7 @@ two PHP rows turned out to be false negatives from my own patterns, not gaps).
 
 | # | Feature | Verdict |
 |---|---------|---------|
-| C1 | Doc-truth checker (`checkDocs`/`syncDocs`) | **GAP: missing in Ruby** - py/php/node have it |
+| C1 | Doc-truth checker (`checkDocs`/`syncDocs`) | all four - Ruby `Docs.check_docs`/`sync_docs` (`docs.rb:161`/`:211`), specs green (was a stale "missing" verdict) |
 | C2 | File / attachment responses | all four (Node's is `response.file = function (`, which my first pattern missed) |
 | C3 | Queue job handle (explicit ack/nack object) | all four |
 | C4 | Swagger security-scheme + schema registry | all four |
