@@ -76,18 +76,22 @@ PHP/Node, per the existing convention.
 - [ ] Python master implementation + real-broker tests
 - [ ] Mirror PHP / Ruby / Node + equivalent tests
 - [ ] Mosquitto as a CI service in all four workflows (same as redis/kafka/rabbitmq)
-- [ ] QoS 2 decision: implement the 4-packet handshake, or reject `qos=2` with a clear error rather
-      than silently downgrading. **Silent downgrade is not acceptable** - it breaks the delivery
-      contract the caller asked for.
+- [ ] **QoS 2: refuse loudly. DECIDED by the owner 2026-07-23.** `qos=2` raises immediately with a
+      message naming the limit and the alternative, in all four frameworks. It is NOT silently
+      downgraded to QoS 1: a caller who asked for exactly-once and got at-least-once would
+      double-process without ever seeing an error, which is the same silent-success failure class as
+      the bare `require()` and the `testing: true` SSE tests. The error text must say what to do
+      instead: use QoS 1 with an idempotent consumer keyed on `(device_id, device_timestamp)`.
+      Lock-in test per framework: `qos=2` raises, and the message names both the limit and the
+      alternative. QoS 2 support can land later without a breaking change, since today's behaviour
+      is an error rather than a wrong success.
 - [ ] Idempotent ingest helper (test case A5): QoS 1 is at-least-once, so duplicates are guaranteed.
       Natural key `(device_id, device_timestamp)`, not an incrementing counter.
 - [ ] Reconnect + clean-session=false replay (E1)
 - [ ] Docs: one chapter per framework, generated from the same source
 
-## Open decisions for the owner
-1. **QoS 2** - implement, or refuse loudly? My recommendation: refuse loudly in the first release.
-   Almost nobody needs it, the broker state machine is the expensive half, and an idempotent
-   consumer makes QoS 1 sufficient.
+## Decisions taken
+1. **QoS 2: refuse loudly** (owner, 2026-07-23). See the scope item above for the contract.
 2. **MQTT 5 features** (topic aliases, shared subscriptions, session expiry) are out of scope for
    the first release. 3.1.1 is what every broker and device speaks.
 3. **Modbus and OCPP stay separate.** OCPP 1.6J is JSON frames over WebSocket, which we already
