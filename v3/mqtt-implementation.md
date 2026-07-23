@@ -110,7 +110,12 @@ PHP/Node, per the existing convention.
       owned the other three repos; it mirrors the proven spike rather than leading the design.
 - [ ] Python master implementation + real-broker tests (must match Ruby, incl. the corrections above)
 - [ ] Mirror PHP / Ruby / Node + equivalent tests
-- [ ] Mosquitto as a CI service in all four workflows (same as redis/kafka/rabbitmq)
+- [x] **Auth + TLS + EMQX proven** (`spikes/mqtt_spike3_auth_tls.py`, 13/13) - owner asked for all
+      three in this release. Auth 6 checks, TLS 4 (incl. the self-signed-cert REJECTION that proves
+      verification is real), EMQX 3 (`SUBACK 0x80`, which Mosquitto cannot produce).
+- [ ] Ruby: auth + TLS + EMQX implementation (IN FLIGHT)
+- [ ] Mosquitto + EMQX as CI services in all four workflows (same as redis/kafka/rabbitmq).
+      Reproducible via `spikes/mqtt-infra.sh`: 1883 anon, 1884 auth, 8883 TLS, 1885 EMQX 5.8.
 - [ ] **QoS 2: refuse loudly. DECIDED by the owner 2026-07-23.** `qos=2` raises immediately with a
       message naming the limit and the alternative, in all four frameworks. It is NOT silently
       downgraded to QoS 1: a caller who asked for exactly-once and got at-least-once would

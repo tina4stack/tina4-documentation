@@ -99,7 +99,12 @@ Rule: a negative is not a finding until a second, differently-anchored check agr
 per-framework audit method (case-sensitive symbol anchor + public-export cross-check + live
 invocation) over anything hand-rolled.
 
-## Section C - detail (19 rows, verified)
+## Section C - detail (19 rows, VERIFIED 2026-07-23)
+
+All 19 were checked across all four frameworks with the Python walker plus a second
+differently-anchored check on every apparent absence. Result: **17 present in all four**, 1 real gap
+(C1, Ruby), 1 language-native (C13, Ruby ERB). The "needs checking in" column below is the original
+scoping note, kept for history - it is now closed.
 
 Each was reported by the audit of ONE framework, which only proves it there. They are NOT yet
 countable at family level. Needs the Section-A method applied to the other three.
