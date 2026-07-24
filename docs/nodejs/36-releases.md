@@ -1,5 +1,14 @@
 # Chapter 35: Release Notes
 
+## Unreleased - The write-result contract is now consistent across the family
+
+Nothing changed in Node. `db.insert`, `db.update`, and `db.delete` already resolved to
+a write result carrying `rowsAffected` and `lastInsertId`, and they still do. This note
+records that PHP (which used to return a bool) and Ruby (which used to return a Hash)
+now return a result object from these writes too, so a write returns a result in every
+language.
+
+
 ## v3.13.85 (2026-07-24) - The dev-admin bundle ships once
 Every install carried the dev-admin dashboard twice. `tina4-dev-admin.js` and
 `tina4-dev-admin.min.js` sat side by side in the framework's public assets,

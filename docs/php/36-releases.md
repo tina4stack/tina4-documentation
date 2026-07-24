@@ -1,5 +1,24 @@
 # Chapter 35: Release Notes
 
+## Unreleased - Writes return a DatabaseResult
+
+`$db->insert()`, `$db->update()`, and `$db->delete()` now return a `DatabaseResult`
+instead of a bare `bool`. The object is truthy on success, so `if ($db->insert(...))`
+still reads the same. What is new is the metadata it carries: `->affectedRows` on
+every write, and `->lastId` after an insert.
+
+This lines PHP up with the Python master and with Ruby and Node, so a write returns
+a result object in every Tina4 language.
+
+**Breaking:** code that tested the return against a strict `true`
+(`=== true`, `assertSame(true, ...)`, `assertIsBool(...)`) no longer matches, because
+the return is now an object. Read `->affectedRows` or `->lastId`, or keep a plain
+truthiness check. A failed write still raises a `DatabaseException` rather than
+returning `false`, so wrap writes in `try/catch` and never test for a falsy return.
+
+The ORM is unaffected: `save()` uses its own insert path and `getLastId()`.
+
+
 ## v3.13.85 (2026-07-24) - The dev-admin bundle ships once
 PHP already shipped a single `tina4-dev-admin.min.js`; this release adds the PHP
 half of a four-framework gate that keeps it that way.

@@ -603,6 +603,24 @@ await db.update("products", { price: 39.99, in_stock: 1 }, { id: 7 });
 await db.delete("products", { id: 7 });
 ```
 
+### What they return
+
+`insert()`, `update()`, and `delete()` are async. Await them. Each resolves to a
+write result carrying `success`, `rowsAffected`, and `lastInsertId`. The new row id
+lands on `lastInsertId` after an `insert()`.
+
+```typescript
+const result = await db.insert("products", { name: "Wireless Mouse", price: 34.99 });
+result.lastInsertId;  // the new row id
+result.rowsAffected;  // 1
+
+const changed = await db.update("products", { price: 39.99 }, { id: 7 });
+changed.rowsAffected; // rows updated
+```
+
+A failed write raises. It never resolves to a falsy value, so wrap writes in
+`try/catch` rather than testing the return value.
+
 ---
 
 ## 11. Migrations

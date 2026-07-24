@@ -575,6 +575,26 @@ The second argument is the data to set, and the third is a filter hash for the W
 db.delete("products", { id: 7 })
 ```
 
+### What they return
+
+`insert`, `update`, and `delete` each return a `Tina4::DatabaseResult`. The object
+is truthy, responds to `success?`, and carries `.affected_rows` and `.last_id`. The
+new row id lands on `.last_id` after an `insert`; it is `nil` for `update` and
+`delete`.
+
+```ruby
+result = db.insert("products", { name: "Wireless Mouse", price: 34.99 })
+result.last_id        # the new row id
+result.affected_rows  # 1
+result.success?       # true
+
+changed = db.update("products", { price: 39.99 }, { id: 7 })
+changed.affected_rows # rows updated
+```
+
+A failed write raises. It never returns a falsy value, so rescue the error rather
+than testing the return value.
+
 These helpers generate SQL for you. Convenient for simple CRUD. Raw queries still own complex joins, subqueries, and aggregations.
 
 ---

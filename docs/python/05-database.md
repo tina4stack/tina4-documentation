@@ -1111,7 +1111,7 @@ Every row gets `role = "member"` and `active = 1`. The field map generates the r
 
 **Cause:** `last_insert_rowid()` is a SQLite function. Other databases use different mechanisms.
 
-**Fix:** Use `db.insert()` which returns the last inserted ID regardless of engine. Or use database-specific syntax: PostgreSQL uses `RETURNING id` in the INSERT statement, MySQL uses `LAST_INSERT_ID()`.
+**Fix:** Use `db.insert()`, whose `DatabaseResult` carries `.last_id` regardless of engine. Or use database-specific syntax: PostgreSQL uses `RETURNING id` in the INSERT statement, MySQL uses `LAST_INSERT_ID()`.
 
 ### 3. String vs integer comparison
 

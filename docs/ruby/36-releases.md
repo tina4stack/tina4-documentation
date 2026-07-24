@@ -1,5 +1,25 @@
 # Chapter 35: Release Notes
 
+## Unreleased - Writes return a DatabaseResult
+
+`db.insert`, `db.update`, and `db.delete` now return a `Tina4::DatabaseResult`
+instead of a plain Hash. The object is truthy and answers `success?`, so an
+`if db.insert(...)` check still reads the same. What is new is the metadata it
+carries: `.affected_rows` on every write, and `.last_id` after an insert.
+
+Before, a single insert returned `{ success: true, last_id: ... }`, update and
+delete returned `{ success: true }`, and only a batch insert returned a
+DatabaseResult. Now every write returns the same object, matching the Python master
+and the PHP and Node frameworks.
+
+**Breaking:** code that read the old Hash keys must change. `result[:last_id]`
+becomes `result.last_id`, and `result[:success]` becomes `result.success?`. A failed
+write raises rather than returning a falsy value, so rescue the error instead of
+testing the return.
+
+The ORM is unaffected: `save` reads `db.get_last_id`.
+
+
 ## v3.13.85 (2026-07-24) - The dev-admin bundle ships once
 Every install carried the dev-admin dashboard twice. `tina4-dev-admin.js` and
 `tina4-dev-admin.min.js` sat side by side in the framework's public assets,

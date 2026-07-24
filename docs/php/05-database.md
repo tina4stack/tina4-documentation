@@ -601,6 +601,25 @@ Third argument: WHERE clause. Fourth argument: parameters.
 $db->delete("products", "id = :id", ["id" => 7]);
 ```
 
+### What they return
+
+`insert()`, `update()`, and `delete()` each return a `DatabaseResult`. The object
+is truthy on success, so `if ($db->insert(...))` still reads naturally. It carries
+`->affectedRows` and `->lastId`. The new row id lands on `->lastId` after an
+`insert()`; it is `null` for `update()` and `delete()`.
+
+```php
+$result = $db->insert("products", ["name" => "Wireless Mouse", "price" => 34.99]);
+$result->lastId;        // the new row id
+$result->affectedRows;  // 1
+
+$changed = $db->update("products", ["price" => 39.99], "id = :id", ["id" => 7]);
+$changed->affectedRows; // rows updated
+```
+
+A failed write raises a `DatabaseException`. It never returns `false`, so wrap
+writes in `try/catch` rather than testing the return value.
+
 These helpers generate SQL for you. Use them for simple CRUD. For joins, subqueries, or aggregations, reach for raw queries.
 
 ---
