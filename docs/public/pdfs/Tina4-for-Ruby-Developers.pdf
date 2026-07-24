@@ -915,12 +915,12 @@ endobj
 endobj
 175 0 obj
 <<
-/Border [ 0 0 0 ] /Contents () /Dest [ 3422 0 R /XYZ 70.8 740.9898 0 ] /Rect [ 513.3556 660.4898 524.4756 674.4898 ] /Subtype /Link /Type /Annot
+/Border [ 0 0 0 ] /Contents () /Dest [ 3502 0 R /XYZ 70.8 462.4898 0 ] /Rect [ 513.3556 660.4898 524.4756 674.4898 ] /Subtype /Link /Type /Annot
 >>
 endobj
 176 0 obj
 <<
-/Border [ 0 0 0 ] /Contents () /Dest [ 3422 0 R /XYZ 70.8 740.9898 0 ] /Rect [ 88.8 658.4898 141.61 670.4898 ] /Subtype /Link /Type /Annot
+/Border [ 0 0 0 ] /Contents () /Dest [ 3502 0 R /XYZ 70.8 462.4898 0 ] /Rect [ 88.8 658.4898 141.61 670.4898 ] /Subtype /Link /Type /Annot
 >>
 endobj
 177 0 obj
@@ -23331,7 +23331,7 @@ endobj
 endobj
 3966 0 obj
 <<
-/Author (Tina4 Stack) /CreationDate (D:20260724173649+00'00') /Creator (\(unspecified\)) /Keywords () /ModDate (D:20260724173649+00'00') /Producer (ReportLab PDF Library - \(opensource\)) 
+/Author (Tina4 Stack) /CreationDate (D:20260724175444+00'00') /Creator (\(unspecified\)) /Keywords () /ModDate (D:20260724175444+00'00') /Producer (ReportLab PDF Library - \(opensource\)) 
   /Subject (\(unspecified\)) /Title (Tina4 for Ruby Developers) /Trapped /False
 >>
 endobj
@@ -23771,7 +23771,7 @@ endobj
 endobj
 4050 0 obj
 <<
-/Dest [ 3422 0 R /XYZ 70.8 740.9898 0 ] /Next 4051 0 R /Parent 4019 0 R /Prev 4048 0 R /Title (13. Solution)
+/Dest [ 3502 0 R /XYZ 70.8 462.4898 0 ] /Next 4051 0 R /Parent 4019 0 R /Prev 4048 0 R /Title (13. Solution)
 >>
 endobj
 4051 0 obj
@@ -42691,7 +42691,7 @@ xref
 trailer
 <<
 /ID 
-[<815940ec4b7db8482b5316d023b1d708><815940ec4b7db8482b5316d023b1d708>]
+[<a91184a8405796c8ec6050e002f01b3a><a91184a8405796c8ec6050e002f01b3a>]
 % ReportLab generated PDF document -- digest (opensource)
 
 /Info 3966 0 R
