@@ -1,5 +1,15 @@
 # Chapter 35: Release Notes
 
+## Unreleased - The package imports under plain Node, not just tsx
+
+`import "tina4-nodejs"` and its subpaths (`/orm`, `/swagger`, `/frond`) now resolve to
+the built JavaScript in `dist/`, so an installed app runs them under plain Node with no
+TypeScript loader. The `exports` map used to point at `.ts` source, and `exports`
+resolves ahead of `main`, so a consumer not running `tsx` got a file Node could not
+execute. The map is now conditional: `types` still reads the TypeScript source for
+editors and `tsc`, while `import` and `default` load the compiled bundle. Fixes
+nodejs#32.
+
 ## Unreleased - Write-result field names now match the family
 
 `db.insert`, `db.update`, and `db.delete` return a write result object, unchanged. What
