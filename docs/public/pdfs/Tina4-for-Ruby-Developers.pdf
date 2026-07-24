@@ -915,12 +915,12 @@ endobj
 endobj
 175 0 obj
 <<
-/Border [ 0 0 0 ] /Contents () /Dest [ 3502 0 R /XYZ 70.8 462.4898 0 ] /Rect [ 513.3556 660.4898 524.4756 674.4898 ] /Subtype /Link /Type /Annot
+/Border [ 0 0 0 ] /Contents () /Dest [ 3422 0 R /XYZ 70.8 740.9898 0 ] /Rect [ 513.3556 660.4898 524.4756 674.4898 ] /Subtype /Link /Type /Annot
 >>
 endobj
 176 0 obj
 <<
-/Border [ 0 0 0 ] /Contents () /Dest [ 3502 0 R /XYZ 70.8 462.4898 0 ] /Rect [ 88.8 658.4898 141.61 670.4898 ] /Subtype /Link /Type /Annot
+/Border [ 0 0 0 ] /Contents () /Dest [ 3422 0 R /XYZ 70.8 740.9898 0 ] /Rect [ 88.8 658.4898 141.61 670.4898 ] /Subtype /Link /Type /Annot
 >>
 endobj
 177 0 obj
@@ -3895,22 +3895,22 @@ endobj
 endobj
 751 0 obj
 <<
-/Border [ 0 0 0 ] /Contents () /Dest [ 3587 0 R /XYZ 70.8 735.9898 0 ] /Rect [ 509.4636 317.4898 524.4756 330.4898 ] /Subtype /Link /Type /Annot
+/Border [ 0 0 0 ] /Contents () /Dest [ 3516 0 R /XYZ 70.8 376.4898 0 ] /Rect [ 509.4636 317.4898 524.4756 330.4898 ] /Subtype /Link /Type /Annot
 >>
 endobj
 752 0 obj
 <<
-/Border [ 0 0 0 ] /Contents () /Dest [ 3587 0 R /XYZ 70.8 735.9898 0 ] /Rect [ 106.8 315.6898 162.816 326.4898 ] /Subtype /Link /Type /Annot
+/Border [ 0 0 0 ] /Contents () /Dest [ 3516 0 R /XYZ 70.8 376.4898 0 ] /Rect [ 106.8 315.6898 162.816 326.4898 ] /Subtype /Link /Type /Annot
 >>
 endobj
 753 0 obj
 <<
-/Border [ 0 0 0 ] /Contents () /Dest [ 3587 0 R /XYZ 70.8 520.9898 0 ] /Rect [ 509.4636 291.4898 524.4756 304.4898 ] /Subtype /Link /Type /Annot
+/Border [ 0 0 0 ] /Contents () /Dest [ 3517 0 R /XYZ 70.8 789.4898 0 ] /Rect [ 509.4636 291.4898 524.4756 304.4898 ] /Subtype /Link /Type /Annot
 >>
 endobj
 754 0 obj
 <<
-/Border [ 0 0 0 ] /Contents () /Dest [ 3587 0 R /XYZ 70.8 520.9898 0 ] /Rect [ 106.8 289.6898 145.311 300.4898 ] /Subtype /Link /Type /Annot
+/Border [ 0 0 0 ] /Contents () /Dest [ 3517 0 R /XYZ 70.8 789.4898 0 ] /Rect [ 106.8 289.6898 145.311 300.4898 ] /Subtype /Link /Type /Annot
 >>
 endobj
 755 0 obj
@@ -23331,7 +23331,7 @@ endobj
 endobj
 3966 0 obj
 <<
-/Author (Tina4 Stack) /CreationDate (D:20260724175444+00'00') /Creator (\(unspecified\)) /Keywords () /ModDate (D:20260724175444+00'00') /Producer (ReportLab PDF Library - \(opensource\)) 
+/Author (Tina4 Stack) /CreationDate (D:20000101000000+00'00') /Creator (\(unspecified\)) /Keywords () /ModDate (D:20000101000000+00'00') /Producer (ReportLab PDF Library - \(opensource\)) 
   /Subject (\(unspecified\)) /Title (Tina4 for Ruby Developers) /Trapped /False
 >>
 endobj
@@ -23771,7 +23771,7 @@ endobj
 endobj
 4050 0 obj
 <<
-/Dest [ 3502 0 R /XYZ 70.8 462.4898 0 ] /Next 4051 0 R /Parent 4019 0 R /Prev 4048 0 R /Title (13. Solution)
+/Dest [ 3422 0 R /XYZ 70.8 740.9898 0 ] /Next 4051 0 R /Parent 4019 0 R /Prev 4048 0 R /Title (13. Solution)
 >>
 endobj
 4051 0 obj
@@ -25240,12 +25240,12 @@ endobj
 endobj
 4333 0 obj
 <<
-/Dest [ 3587 0 R /XYZ 70.8 735.9898 0 ] /Next 4334 0 R /Parent 4332 0 R /Title (Requirements)
+/Dest [ 3516 0 R /XYZ 70.8 376.4898 0 ] /Next 4334 0 R /Parent 4332 0 R /Title (Requirements)
 >>
 endobj
 4334 0 obj
 <<
-/Dest [ 3587 0 R /XYZ 70.8 520.9898 0 ] /Parent 4332 0 R /Prev 4333 0 R /Title (Test with:)
+/Dest [ 3517 0 R /XYZ 70.8 789.4898 0 ] /Parent 4332 0 R /Prev 4333 0 R /Title (Test with:)
 >>
 endobj
 4335 0 obj
@@ -42691,7 +42691,7 @@ xref
 trailer
 <<
 /ID 
-[<a91184a8405796c8ec6050e002f01b3a><a91184a8405796c8ec6050e002f01b3a>]
+[<da8361d88dd72c0a3ac511c8bfc6c298><da8361d88dd72c0a3ac511c8bfc6c298>]
 % ReportLab generated PDF document -- digest (opensource)
 
 /Info 3966 0 R
