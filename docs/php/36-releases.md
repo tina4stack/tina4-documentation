@@ -1,6 +1,6 @@
 # Chapter 35: Release Notes
 
-## Unreleased - Writes return a DatabaseResult
+## v3.13.86 (2026-07-25) - Writes return a DatabaseResult
 
 `$db->insert()`, `$db->update()`, and `$db->delete()` now return a `DatabaseResult`
 instead of a bare `bool`. The object is truthy on success, so `if ($db->insert(...))`

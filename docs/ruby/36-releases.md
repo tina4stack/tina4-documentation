@@ -1,6 +1,6 @@
 # Chapter 35: Release Notes
 
-## Unreleased - Writes return a DatabaseResult
+## v3.13.86 (2026-07-25) - Writes return a DatabaseResult
 
 `db.insert`, `db.update`, and `db.delete` now return a `Tina4::DatabaseResult`
 instead of a plain Hash. The object is truthy and answers `success?`, so an

@@ -1,6 +1,6 @@
 # Chapter 35: Release Notes
 
-## Unreleased - The write-result contract is now consistent across the family
+## v3.13.86 (2026-07-25) - The write-result contract is now consistent across the family
 
 Nothing changed in Python. `db.insert`, `db.update`, and `db.delete` already returned
 a `DatabaseResult` carrying `.last_id` and `.affected_rows`, and they still do. This

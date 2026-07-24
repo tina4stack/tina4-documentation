@@ -1,6 +1,6 @@
 # Chapter 35: Release Notes
 
-## Unreleased - The package imports under plain Node, not just tsx
+## v3.13.86 (2026-07-25) - The package imports under plain Node, not just tsx
 
 `import "tina4-nodejs"` and its subpaths (`/orm`, `/swagger`, `/frond`) now resolve to
 the built JavaScript in `dist/`, so an installed app runs them under plain Node with no
@@ -10,7 +10,7 @@ execute. The map is now conditional: `types` still reads the TypeScript source f
 editors and `tsc`, while `import` and `default` load the compiled bundle. Fixes
 nodejs#32.
 
-## Unreleased - Write-result field names now match the family
+## v3.13.86 (2026-07-25) - Write-result field names now match the family
 
 `db.insert`, `db.update`, and `db.delete` return a write result object, unchanged. What
 changed is the names of its two data fields, renamed to match the Python master, PHP,
