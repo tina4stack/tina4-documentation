@@ -1,5 +1,41 @@
 # Chapter 35: Release Notes
 
+## v3.13.83 (2026-07-24) - Swagger UI stops serving itself in production
+**Security.** With swagger disabled, `/swagger/openapi.json` returned 404 and `/swagger` returned 200. The gate was real. The static files walked around it.
+
+The framework ships the Swagger UI as files inside its own public directory. Static serving runs before route matching, and it resolves a directory to its index, so `/swagger` became `swagger/index.html` and never reached the gated route. A production server kept serving the whole UI on four paths:
+
+```
+/swagger                       200
+/swagger/                      200
+/swagger/index.html            200
+/swagger/oauth2-redirect.html  200
+```
+
+The tell was the mismatch. The spec route obeyed `TINA4_SWAGGER_ENABLED`; the UI ignored it. Static serving now checks the swagger gate before it resolves an index, so all four paths return 404 when swagger is off and serve as before when it is on. Fixed in all four frameworks, each with a lock-in test that fails against the old code. (python#97)
+
+### The banner advertises only what answers (python#99)
+
+Every boot printed both dev links, whatever the environment:
+
+```
+Swagger:   http://localhost:7146/swagger
+Dashboard: http://localhost:7146/__dev
+```
+
+In production both URLs 404. That misled two readers at once. An operator scanning a production log believed a dev surface was exposed. A developer clicking the link landed on a dead page.
+
+The banner now prints a row only when that surface answers. Each framework builds those rows through one pure function of the port and two booleans, so the contract is unit tested instead of inferred from stdout: `banner_surface_lines` in Python, `App::bannerSurfaceLines` in PHP, `Tina4.banner_surface_lines` in Ruby, `bannerSurfaceLines` in Node.
+
+### The CLI runs no watcher in production (tina4 v3.8.57)
+
+`tina4 serve --production` started the file watcher and the SCSS watcher anyway. Both burn CPU, both contend with the single server process, and neither has anything to do: production compiles SCSS once at boot and never re-imports code. `--production` now starts neither. The CLI stays to supervise the server process and shut its tree down cleanly on Ctrl-C.
+
+### A stale CA no longer turns a missing certificate into six failures (python#98)
+
+The MQTT TLS tests trusted whatever CA file happened to sit in the shared temp directory. Once that file went stale, the tests did not skip. They failed, six of them, in all four frameworks, pointing at TLS code that was correct. Each suite now verifies that the CA actually validates the broker certificate before it treats the TLS environment as present, and skips when it does not.
+
+
 ## v3.13.82 (2026-07-23) - MQTT 3.1.1: talk to any broker, no dependency
 
 Tina4 now speaks MQTT. The new `Mqtt` client publishes and subscribes to any MQTT 3.1.1 broker - Mosquitto, EMQX, HiveMQ, AWS IoT - and adds nothing to your dependency tree. It is built on the standard library alone (`socket`, `struct`, `ssl`), and it is the same client in all four frameworks.
