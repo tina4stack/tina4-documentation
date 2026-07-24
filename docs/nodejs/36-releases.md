@@ -1,12 +1,16 @@
 # Chapter 35: Release Notes
 
-## Unreleased - The write-result contract is now consistent across the family
+## Unreleased - Write-result field names now match the family
 
-Nothing changed in Node. `db.insert`, `db.update`, and `db.delete` already resolved to
-a write result carrying `rowsAffected` and `lastInsertId`, and they still do. This note
-records that PHP (which used to return a bool) and Ruby (which used to return a Hash)
-now return a result object from these writes too, so a write returns a result in every
-language.
+`db.insert`, `db.update`, and `db.delete` return a write result object, unchanged. What
+changed is the names of its two data fields, renamed to match the Python master, PHP,
+and Ruby: `rowsAffected` is now `affectedRows`, and `lastInsertId` is now `lastId`. A
+write now exposes the same field names in every Tina4 language, and `lastId` also agrees
+with Node's own `getLastId()` method.
+
+**Breaking:** read `result.affectedRows` and `result.lastId`; the old `result.rowsAffected`
+/ `result.lastInsertId` are gone. The `success` and `error` fields are unchanged, and the
+adapter-level `lastInsertId()` method keeps its name (only the result field was renamed).
 
 
 ## v3.13.85 (2026-07-24) - The dev-admin bundle ships once

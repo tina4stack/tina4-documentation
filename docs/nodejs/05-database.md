@@ -606,16 +606,17 @@ await db.delete("products", { id: 7 });
 ### What they return
 
 `insert()`, `update()`, and `delete()` are async. Await them. Each resolves to a
-write result carrying `success`, `rowsAffected`, and `lastInsertId`. The new row id
-lands on `lastInsertId` after an `insert()`.
+write result carrying `success`, `affectedRows`, and `lastId`. The new row id lands
+on `lastId` after an `insert()`. These names match the other Tina4 frameworks, so a
+write returns the same shape in every language.
 
 ```typescript
 const result = await db.insert("products", { name: "Wireless Mouse", price: 34.99 });
-result.lastInsertId;  // the new row id
-result.rowsAffected;  // 1
+result.lastId;        // the new row id
+result.affectedRows;  // 1
 
 const changed = await db.update("products", { price: 39.99 }, { id: 7 });
-changed.rowsAffected; // rows updated
+changed.affectedRows; // rows updated
 ```
 
 A failed write raises. It never resolves to a falsy value, so wrap writes in
