@@ -72,7 +72,7 @@ TINA4_DATABASE_URL=sqlite://app.db
 
 # Server
 PORT=7145
-DEBUG=true
+TINA4_DEBUG=true
 
 # Authentication
 TINA4_SECRET=your-secret-key

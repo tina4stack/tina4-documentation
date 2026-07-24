@@ -33,6 +33,14 @@ Six rules govern the format:
 
 Simple format. No surprises. A developer who has never seen a `.env` file understands it in thirty seconds.
 
+### Every Framework Variable Needs the TINA4_ Prefix
+
+Tina4 3.12 renamed every framework variable to carry the `TINA4_` prefix. The pre-3.12 names (`SECRET`, `DATABASE_URL`, `SWAGGER_TITLE`, `SMTP_HOST`, `HOST_NAME`, and the rest) no longer work. Setting one at startup does not quietly fall back to a default. The framework refuses to boot and prints each old name beside its new one, so a stale `.env` fails loud instead of running auth or the database on the wrong config.
+
+Run `tina4 env --migrate` to rewrite an existing `.env` automatically, or rename by hand. During a migration window, set `TINA4_ALLOW_LEGACY_ENV=true` to bypass the guard while both names are present.
+
+Runtime conventions stay un-prefixed on purpose. `PORT`, `HOST`, `NODE_ENV`, `RACK_ENV`, `RUBY_ENV`, and `ENVIRONMENT` are platform names, not Tina4 config, so the guard leaves them alone.
+
 ### The .env File Is Not Committed to Git
 
 The `.env` file holds secrets. Database passwords. JWT keys. API tokens. It belongs in `.gitignore`. When you run `tina4 init`, the generated `.gitignore` already excludes it.
