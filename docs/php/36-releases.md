@@ -1,5 +1,31 @@
 # Chapter 35: Release Notes
 
+## v3.13.85 (2026-07-24) - The dev-admin bundle ships once
+PHP already shipped a single `tina4-dev-admin.min.js`; this release adds the PHP
+half of a four-framework gate that keeps it that way.
+
+Python, Ruby and Node.js each carried `tina4-dev-admin.js` AND
+`tina4-dev-admin.min.js` as byte-for-byte identical copies, referenced by
+nothing: 0.92MB of dead weight in every install. Those duplicates are gone.
+
+Nothing about the dashboard changes in any framework.
+
+### A gate, so the duplicate cannot come back
+
+Nothing compared the two files, which is how 0.92MB per package went unnoticed.
+All four frameworks now test the shipped assets directly: the `.min.js` is
+present, the unminified duplicate is absent, exactly one `tina4-dev-admin*.js`
+exists (so a differently-named copy cannot slip through), and the surviving file
+is the real bundle rather than a stub.
+
+The Ruby half of this was quietly broken in a way worth naming. Two specs read
+the unminified file behind a `skip ... unless File.exist?` guard. Deleting the
+file would have turned both into silent skips: a green suite with two dead
+assertions, and no signal that the asset had vanished. They now read the shipped
+bundle with no skip guard, so a missing asset fails loudly. A skip that hides a
+missing file is not a passing test.
+
+
 ## v3.13.84 (2026-07-24) - Every generated Dockerfile actually starts
 `tina4 deploy docker` wrote Dockerfiles that could not run. Building each one for real found that of the eight Dockerfile generators in the stack (four templates in the `tina4` CLI, plus one inside each framework's own CLI), exactly one was correct.
 

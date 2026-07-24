@@ -1,5 +1,44 @@
 # Chapter 35: Release Notes
 
+## v3.13.85 (2026-07-24) - The dev-admin bundle ships once
+Every install carried the dev-admin dashboard twice. `tina4-dev-admin.js` and
+`tina4-dev-admin.min.js` sat side by side in the framework's public assets,
+byte-for-byte identical, and nothing referenced the first one. The route that
+serves the dashboard, the SPA shell that loads it, and the asset resolver that
+finds it all name the `.min.js`.
+
+The unminified copy is gone. That is 0.92MB removed from every install, in
+Python, Ruby and Node.js. PHP had already dropped its copy and is unchanged.
+
+Nothing about the dashboard changes. The file that ships is the same file that
+was always being served, and the two were identical anyway, so the only
+difference is what you download.
+
+### Why the surviving file is still called `.min.js`
+
+It is not minified, and it never was. The two files had the same SHA-256, so the
+`.min` suffix described an intention rather than a fact.
+
+Renaming it would break every project that references the asset by path, for no
+benefit, so the name stays. If the bundle is ever genuinely minified the name
+will finally be honest; until then it is simply the name of the bundle.
+
+### A gate, so the duplicate cannot come back
+
+Nothing compared the two files, which is how 0.92MB per package went unnoticed.
+All four frameworks now test the shipped assets directly: the `.min.js` is
+present, the unminified duplicate is absent, exactly one `tina4-dev-admin*.js`
+exists (so a differently-named copy cannot slip through), and the surviving file
+is the real bundle rather than a stub.
+
+The Ruby half of this was quietly broken in a way worth naming. Two specs read
+the unminified file behind a `skip ... unless File.exist?` guard. Deleting the
+file would have turned both into silent skips: a green suite with two dead
+assertions, and no signal that the asset had vanished. They now read the shipped
+bundle with no skip guard, so a missing asset fails loudly. A skip that hides a
+missing file is not a passing test.
+
+
 ## v3.13.84 (2026-07-24) - Every generated Dockerfile actually starts
 `tina4 deploy docker` wrote Dockerfiles that could not run. Building each one for real found that of the eight Dockerfile generators in the stack (four templates in the `tina4` CLI, plus one inside each framework's own CLI), exactly one was correct.
 
