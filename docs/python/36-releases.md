@@ -1,5 +1,54 @@
 # Chapter 35: Release Notes
 
+## v3.13.84 (2026-07-24) - Every generated Dockerfile actually starts
+`tina4 deploy docker` wrote Dockerfiles that could not run. Building each one for real found that of the eight Dockerfile generators in the stack (four templates in the `tina4` CLI, plus one inside each framework's own CLI), exactly one was correct.
+
+The Python image is the clearest case. Its `CMD` was:
+
+```
+CMD ["python", "-m", "tina4_python.cli", "serve", "--production"]
+```
+
+`tina4_python/cli.py` used to be a module, and `python -m` is valid for a module. The v3 restructure replaced it with the package `tina4_python/cli/`, which has no `__main__.py`, so `-m` cannot execute it. Containers died on startup with "'tina4_python.cli' is a package and cannot be directly executed". The code moved; the hard-coded string in a different repo did not, and nothing tested the generated file.
+
+Every generator now names an entry point that exists, and asks for production mode:
+
+| language | CMD |
+|---|---|
+| Python | `tina4python serve --production` |
+| PHP | `php vendor/bin/tina4php serve --host 0.0.0.0 --port 7145 --production` |
+| Ruby | `bundle exec tina4ruby serve --production` |
+| Node.js | `npx tina4nodejs serve --production` |
+
+All four were verified by scaffolding a project, running `tina4 deploy docker`, building the image, and starting a container.
+
+### `serve` no longer kills PID 1 (all four frameworks)
+
+Before starting, the CLI reclaims the port from a stale dev server by reading `lsof -ti` and signalling what it finds. It never validated that output. Where `lsof` exists but prints a different shape, a non-numeric field coerced to 0 or 1, and signalling PID 0 sends the signal to every process in the caller's own process group.
+
+In a container the server is PID 1, so it killed itself. The Node image logged `Killed existing process on port 7148 (PID: 1 ...)` and exited 143. The PHP image logged the same attempt and survived by luck.
+
+Port reclaiming is now skipped entirely inside a container, where there is no stale sibling to reclaim from. Outside one, only all-digit PIDs are accepted, and PID 0, PID 1 and the current process are never signalled. The message reports only what was really killed.
+
+### A gate, so this cannot rot again
+
+Nothing tested a generated artifact. The CLI's deploy tests covered argument parsing and nothing else, and the docs truth-check inspects prose, not template payloads.
+
+The CLI now carries five contract tests over the Dockerfile templates that fail on exactly the mistakes above: no `python -m` on a package, no dev-only runner such as tsx in a production CMD, every CMD names a published entry point, every CMD requests production, and every template sets `TINA4_OVERRIDE_CLIENT`.
+
+The port-reclaim rule is pinned down too, in all four frameworks. Deciding which
+PIDs to signal now lives in one pure function per language (`selectable_pids`,
+`tina4SelectablePids`, `selectablePids`), so the safety rule is testable without
+touching a real process: 43 tests assert that a junk token, PID 0, PID 1, the
+current process and the current process group are each refused, and that a
+genuine stale sibling is still reclaimed. One of them feeds in the exact line
+from the container log that started this.
+
+### Also in the CLI (tina4 v3.8.58)
+
+The four bundled Dockerfile templates carry the corrected commands, and the Ruby template gains its build toolchain. Each framework's own `docker` generator was corrected to match, so the two paths agree. The PHP generator now detects whether a project has `bin/tina4php` or `vendor/bin/tina4php` and writes whichever exists, because composer does not link a root package's own bin into `vendor/bin`.
+
+
 ## v3.13.83 (2026-07-24) - Swagger UI stops serving itself in production
 **Security.** With swagger disabled, `/swagger/openapi.json` returned 404 and `/swagger` returned 200. The gate was real. The static files walked around it.
 
