@@ -37,6 +37,25 @@ hero:
 
 ---
 
+## Install and register
+
+::: tabs
+== macOS / Linux
+```bash
+curl -fsSL https://tina4.com/install.sh | sh
+tina4 setup
+```
+== Windows
+```powershell
+irm https://tina4.com/install.ps1 | iex
+tina4 setup
+```
+:::
+
+::: tip Save your paid tokens for the hard parts
+Let Tina4's own AI coder handle the boilerplate. Register for a free profile to get started. [Register Now →](https://profile.tina4.com)
+:::
+
 ## What's new
 
 **v3.13.56 (2026-07-08)** - [full notes](/python/36-releases.md)
@@ -71,4 +90,29 @@ Pick a language. Each book stands on its own: you can read Python cover-to-cover
 
 Every book has a printable PDF with a clickable table of contents. Every chapter stays in sync with the code: release notes, version numbers, and example output are regenerated with every point release.
 
-<FeaturesGrid />
+::: cards
+== 🌐 Four Languages, One API
+Python, Node.js, PHP, and Ruby share the same project structure, CLI, template syntax, route patterns, and .env variables. Learn one, know all four.
+== 🧭 One CLI to Rule the Stack
+The Rust-based `tina4` CLI detects the language, compiles SCSS, watches files, and delegates to the framework. `tina4 init`, `tina4 serve`, and `tina4 migrate` run the same across Python, PHP, Ruby, and Node.js.
+== 📦 Zero Runtime Dependencies
+Every Tina4 backend runs on the standard library. No native addons, no node-gyp, no vendor tree. Your requirements.txt / composer.json / Gemfile / package.json each hold one entry.
+== 🛣️ Convention-Based Routing
+Drop a file in `src/routes/`. The framework registers it. Typed path params (`{id:int}`, `{slug:slug}`, `{id:uuid}`) reject bad input with 404 before your handler runs.
+== 🔌 Built-in WebSocket + SSE
+Real-time bidirectional comms and server-sent events across all backends. Redis backplane for horizontal scaling. The same `WebSocketServer` API in every language.
+== 🎨 Frond (Twig) Templating
+One Twig-compatible engine. Variables, loops, template inheritance with `{{ parent() }}`, macros, filters. Write your layout once, render it in any language.
+== 🗃️ Six Databases, One ORM
+SQLite, PostgreSQL, MySQL, MSSQL, Firebird, MongoDB. `Database::create("sqlite:///app.db")` works anywhere. `sqlite:///path` is relative to your project root, the same convention across all four frameworks.
+== 🔐 Secure by Default
+GET routes are public, POST/PUT/PATCH/DELETE require a bearer token. JWT (HS256/RS256), PBKDF2 password hashing, rate limiting, CSRF form tokens, all built in, nothing to configure.
+== 📋 Swagger at /swagger
+Add an `@description` decorator to your route. Visit `/swagger`. Your API docs appear, typed, grouped, ready for your team.
+== 🪢 GraphQL Included
+Zero-dependency GraphQL engine. Point it at your ORM models, get a full schema with queries, mutations, and a GraphiQL IDE. `POST /graphql` in one line.
+== 📬 Queues + Background Work
+File-backed by default, RabbitMQ/Kafka/MongoDB when you scale. Producer/consumer/dead-letter semantics consistent across languages. Periodic tasks via `background(fn, interval)`, no threads.
+== 🛠️ Dev Dashboard on /__dev
+Routes, requests, SQL runner, queue monitor, mailbox, WebSocket inspector, error tracker, AI chat, a shared SPA across all four frameworks. `TINA4_DEBUG=true` turns it on.
+:::
