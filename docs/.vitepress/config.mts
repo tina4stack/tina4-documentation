@@ -412,6 +412,7 @@ export default defineConfig({
                     text: 'Documentation',
                     items: [
                         {text: 'Get Started', link: '/get-started.md'},
+                        {text: 'Build with the AI Coder', link: '/build-with-ai.md'},
                         {text: 'Comparisons', link: '/comparisons.md'}
                     ]
                 }
