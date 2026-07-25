@@ -184,6 +184,36 @@ git clone https://github.com/tina4stack/tina4delphi.git
 
 Take a deeper dive into the [documentation](https://github.com/tina4stack/tina4-documentation/blob/main/delphi/index.md)
 
+## What's next: build with the AI coder
+
+Your project ships with an AI coder in the dev admin. Describe what you want and
+it scaffolds the resource, runs the tests, and serves the result live — you
+watch the endpoint go from 404 to 200 without a restart.
+
+1. Start the project:
+
+   ```bash
+   tina4 serve
+   ```
+
+2. Open the dev admin at `/__dev` on your running app — for example
+   `http://localhost:7146/__dev`.
+
+3. Add your Tina4 MCP key. Click the key icon in the **Threads** panel, paste
+   your key, and press **Save**. Get a free key from your account at
+   [profile.tina4.com](https://profile.tina4.com). The key saves to your project `.env`
+   as `TINA4_MCP_TOKEN` and takes effect on the next turn — no restart. The
+   panel shows a green **Configured** status once it lands.
+
+4. Ask for what you want. In the **Threads** panel, type a request such as
+   `Build a products resource with name and price fields`. The coder generates
+   the model, the CRUD routes and their tests, runs them, migrates the database,
+   and reloads — then reports the live endpoint.
+
+The key grounds the coder against the current Tina4 API, so it writes correct,
+idiomatic code for your language instead of guessing. Without a key the coder
+still runs, falling back to a local reference.
+
 ## Common CLI Commands
 
 Once inside a project, the `tina4` CLI detects your language and delegates:
