@@ -1,0 +1,52 @@
+name: Reindex RAG
+
+# Refresh the tina4-rag corpus (/v1/reindex) as soon as docs land on main — which
+# is the last step of every release, once the release notes are pushed. The host
+# also polls main every 5-15 min and rebuilds nightly at 03:00, so this is the
+# deterministic "reindex on release" that removes the up-to-15-minute lag on top
+# of those safety nets.
+#
+# The per-project MCP live API index needs no step here — it is reflection-based
+# and always reflects the running framework version.
+#
+# Best-effort by design: a failed/unreachable ping NEVER fails the run, and it
+# skips cleanly when the secrets are not configured, so this is safe to ship even
+# before the secrets exist. Requires repo/org secrets:
+#   TINA4_RAG_URL        e.g. https://andrevanzuydam.com:11438
+#   TINA4_RAG_ADMIN_KEY  the tina4-rag ADMIN_KEY
+
+on:
+  push:
+    branches: [main]
+
+# Never let overlapping doc pushes stack multiple full rebuilds; the latest wins.
+concurrency:
+  group: reindex-rag
+  cancel-in-progress: false
+
+jobs:
+  reindex:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping tina4-rag /v1/reindex
+        env:
+          RAG_URL: ${{ secrets.TINA4_RAG_URL }}
+          RAG_ADMIN_KEY: ${{ secrets.TINA4_RAG_ADMIN_KEY }}
+        run: |
+          if [ -z "$RAG_URL" ] || [ -z "$RAG_ADMIN_KEY" ]; then
+            echo "TINA4_RAG_URL / TINA4_RAG_ADMIN_KEY not set — skipping reindex ping."
+            echo "(The tina4-rag host cron still reindexes on the main-poll within ~15 min.)"
+            exit 0
+          fi
+          url="${RAG_URL%/}/v1/reindex"
+          echo "POST $url"
+          code=$(curl -s -o /tmp/reindex.out -w '%{http_code}' --max-time 120 \
+            -X POST "$url" -H "X-Admin-Key: $RAG_ADMIN_KEY" || echo "000")
+          echo "HTTP $code"
+          cat /tmp/reindex.out 2>/dev/null || true
+          if [ "$code" != "200" ]; then
+            echo "::warning title=RAG reindex::ping returned $code (host cron still reindexes within ~15 min)"
+          else
+            echo "RAG reindex accepted."
+          fi
+          exit 0
