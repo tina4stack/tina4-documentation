@@ -58,6 +58,12 @@ Let Tina4's own AI coder handle the boilerplate. Register for a free profile to 
 <a class="tp-cta" href="https://profile.tina4.com">Register Now →</a>
 :::
 
+::: tip Review your code with the Tina4 Code Viewer
+A lightweight, read-only desktop reviewer that understands your Tina4 layout, lets you leave line-anchored comments grounded against the Tina4 RAG, and exports a portable bundle any AI agent can act on. It views and comments, it never edits your code. Signed builds for macOS, Windows, and Linux.
+
+<a class="tp-cta" href="/download/code-viewer/">Download the Code Viewer →</a>
+:::
+
 ## What's new
 
 **v3.13.56 (2026-07-08)** - [full notes](/python/36-releases.md)

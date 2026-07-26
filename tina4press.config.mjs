@@ -31,6 +31,7 @@ export default {
       { text: "PHP", link: "php/index.html" },
       { text: "Ruby", link: "ruby/index.html" },
       { text: "Delphi", link: "delphi/index.html" },
+      { text: "Code Viewer", link: "/download/code-viewer/" },
     ],
     sidebar: null, // auto, section-scoped; grouped below (ported from SECTION_GROUPS)
     sectionLabels: { js: "tina4-js", python: "Python", nodejs: "Node.js", php: "PHP", ruby: "Ruby", delphi: "Delphi", general: "Understanding Tina4", v2: "v2 Docs" },
