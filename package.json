@@ -1,6 +1,6 @@
 {
   "devDependencies": {
-    "tina4press": "^0.1.5",
+    "tina4press": "^0.1.6",
     "vitepress": "^2.0.0-alpha.15"
   },
   "scripts": {
