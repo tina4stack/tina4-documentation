@@ -7,40 +7,44 @@
   <meta name="description" content="Download the Tina4 Code Viewer — a lightweight, cross-platform, read-only reviewer and code commenter for Tina4 codebases." />
   <link rel="icon" href="/favicon.ico" />
   <style>
+    /* tina4 palette (mirrors tina4press.config.mjs themeConfig.colors):
+       brand blue accent, browny dark theme. Dark is the default; light via media query. */
     :root {
-      --bg:#0f1115; --panel:#151922; --soft:#1b2029; --border:#262d38; --border2:#333c49;
-      --fg:#d7dce4; --dim:#8b95a4; --mute:#5c6675; --green:#35d29a; --blue:#2aa3ff;
+      --bg:#17130f; --panel:#201a15; --soft:#2a221b; --border:#352b22; --border2:#45392e;
+      --fg:#ece4da; --dim:#b4a99a; --mute:#8a7d6d; --brand:#8db4ff; --brand2:#6b9bff;
+      --btn-fg:#17130f; /* dark text on the light-blue dark-mode brand */
       --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,sans-serif;
       --mono:"SF Mono","JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
     }
     @media (prefers-color-scheme: light) {
       :root { --bg:#f6f7f9; --panel:#fff; --soft:#eef0f3; --border:#dde1e7; --border2:#cbd1da;
-        --fg:#1c2430; --dim:#5a6472; --mute:#8b94a2; }
+        --fg:#1c2430; --dim:#5a6472; --mute:#8b94a2;
+        --brand:#2f5fe0; --brand2:#4888ff; --btn-fg:#fff; /* white text on the saturated light-mode brand */ }
     }
     * { box-sizing:border-box; }
     body { margin:0; background:var(--bg); color:var(--fg); font-family:var(--font);
       line-height:1.55; -webkit-font-smoothing:antialiased; }
-    a { color:var(--green); text-decoration:none; }
+    a { color:var(--brand); text-decoration:none; }
     a:hover { text-decoration:underline; }
     .wrap { max-width:940px; margin:0 auto; padding:56px 22px 80px; }
     .top { display:flex; align-items:center; gap:12px; margin-bottom:36px; }
-    .logo { color:var(--green); font-size:26px; }
+    .logo { color:var(--brand); font-size:26px; }
     .brandname { font-weight:700; font-size:16px; letter-spacing:.2px; }
     .home { margin-left:auto; color:var(--dim); font-size:13px; }
     h1 { font-size:38px; line-height:1.15; margin:0 0 10px; letter-spacing:-.5px; }
     .lede { color:var(--dim); font-size:16px; max-width:620px; margin:0 0 8px; }
-    .roreview { display:inline-block; margin-bottom:28px; font-size:12px; color:var(--green);
+    .roreview { display:inline-block; margin-bottom:28px; font-size:12px; color:var(--brand);
       border:1px solid var(--border2); border-radius:11px; padding:2px 10px; }
     /* primary */
     .primary { display:flex; align-items:center; justify-content:space-between; gap:20px;
-      padding:22px 24px; border:1px solid var(--green); border-radius:14px;
+      padding:22px 24px; border:1px solid var(--brand); border-radius:14px;
       background:var(--panel); flex-wrap:wrap; }
-    .eyebrow { font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--green);
+    .eyebrow { font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--brand);
       font-weight:600; }
     .p-os { font-size:22px; font-weight:700; margin-top:2px; }
     .p-note { color:var(--dim); font-size:13px; }
     .btn { display:inline-block; padding:12px 24px; border-radius:10px; font-weight:600;
-      color:#06231a; background:var(--green); border:1px solid var(--green); cursor:pointer;
+      color:var(--btn-fg); background:var(--brand); border:1px solid var(--brand); cursor:pointer;
       white-space:nowrap; }
     .btn:hover { filter:brightness(1.06); text-decoration:none; }
     /* grid */
@@ -48,9 +52,9 @@
       margin-top:16px; }
     .card { display:flex; flex-direction:column; gap:3px; padding:14px 16px; border-radius:12px;
       border:1px solid var(--border); background:var(--panel); }
-    .card:hover { border-color:var(--green); text-decoration:none; transform:translateY(-1px);
+    .card:hover { border-color:var(--brand); text-decoration:none; transform:translateY(-1px);
       transition:.12s; }
-    .card.on { border-color:var(--green); }
+    .card.on { border-color:var(--brand); }
     .card.soon { opacity:.5; cursor:default; }
     .card.soon:hover { border-color:var(--border); transform:none; }
     .c-os { font-weight:600; color:var(--fg); }
