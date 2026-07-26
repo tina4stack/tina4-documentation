@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Download Tina4 Code Viewer</title>
+  <meta name="description" content="Download the Tina4 Code Viewer — a lightweight, cross-platform, read-only reviewer and code commenter for Tina4 codebases." />
+  <link rel="icon" href="/favicon.ico" />
+  <style>
+    :root {
+      --bg:#0f1115; --panel:#151922; --soft:#1b2029; --border:#262d38; --border2:#333c49;
+      --fg:#d7dce4; --dim:#8b95a4; --mute:#5c6675; --green:#35d29a; --blue:#2aa3ff;
+      --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,sans-serif;
+      --mono:"SF Mono","JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+    }
+    @media (prefers-color-scheme: light) {
+      :root { --bg:#f6f7f9; --panel:#fff; --soft:#eef0f3; --border:#dde1e7; --border2:#cbd1da;
+        --fg:#1c2430; --dim:#5a6472; --mute:#8b94a2; }
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--fg); font-family:var(--font);
+      line-height:1.55; -webkit-font-smoothing:antialiased; }
+    a { color:var(--green); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .wrap { max-width:940px; margin:0 auto; padding:56px 22px 80px; }
+    .top { display:flex; align-items:center; gap:12px; margin-bottom:36px; }
+    .logo { color:var(--green); font-size:26px; }
+    .brandname { font-weight:700; font-size:16px; letter-spacing:.2px; }
+    .home { margin-left:auto; color:var(--dim); font-size:13px; }
+    h1 { font-size:38px; line-height:1.15; margin:0 0 10px; letter-spacing:-.5px; }
+    .lede { color:var(--dim); font-size:16px; max-width:620px; margin:0 0 8px; }
+    .roreview { display:inline-block; margin-bottom:28px; font-size:12px; color:var(--green);
+      border:1px solid var(--border2); border-radius:11px; padding:2px 10px; }
+    /* primary */
+    .primary { display:flex; align-items:center; justify-content:space-between; gap:20px;
+      padding:22px 24px; border:1px solid var(--green); border-radius:14px;
+      background:var(--panel); flex-wrap:wrap; }
+    .eyebrow { font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--green);
+      font-weight:600; }
+    .p-os { font-size:22px; font-weight:700; margin-top:2px; }
+    .p-note { color:var(--dim); font-size:13px; }
+    .btn { display:inline-block; padding:12px 24px; border-radius:10px; font-weight:600;
+      color:#06231a; background:var(--green); border:1px solid var(--green); cursor:pointer;
+      white-space:nowrap; }
+    .btn:hover { filter:brightness(1.06); text-decoration:none; }
+    /* grid */
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px;
+      margin-top:16px; }
+    .card { display:flex; flex-direction:column; gap:3px; padding:14px 16px; border-radius:12px;
+      border:1px solid var(--border); background:var(--panel); }
+    .card:hover { border-color:var(--green); text-decoration:none; transform:translateY(-1px);
+      transition:.12s; }
+    .card.on { border-color:var(--green); }
+    .card.soon { opacity:.5; cursor:default; }
+    .card.soon:hover { border-color:var(--border); transform:none; }
+    .c-os { font-weight:600; color:var(--fg); }
+    .c-note { font-size:12px; color:var(--dim); }
+    .foot-links { margin-top:16px; font-size:13px; color:var(--dim); }
+    .sep { margin:0 8px; opacity:.5; }
+    /* sections */
+    section { margin-top:52px; }
+    h2 { font-size:20px; margin:0 0 14px; }
+    .feats { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }
+    .feat { padding:16px; border:1px solid var(--border); border-radius:12px; background:var(--panel); }
+    .feat b { display:block; margin-bottom:4px; }
+    .feat span { color:var(--dim); font-size:13px; }
+    pre { background:var(--soft); border:1px solid var(--border); border-radius:10px; padding:14px 16px;
+      overflow:auto; font-family:var(--mono); font-size:12.5px; color:var(--fg); }
+    code { font-family:var(--mono); }
+    .muted { color:var(--mute); font-size:13px; }
+    footer { margin-top:60px; padding-top:22px; border-top:1px solid var(--border); color:var(--mute);
+      font-size:13px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <span class="logo">&#9672;</span>
+      <span class="brandname">Tina4 Code Viewer</span>
+      <a class="home" href="https://tina4.com">&larr; tina4.com</a>
+    </div>
+
+    <span class="roreview">read-only reviewer</span>
+    <h1>Review Tina4 code.<br />Hand the fixes to any AI agent.</h1>
+    <p class="lede">A lightweight, cross-platform desktop app that understands your Tina4 layout,
+      lets you leave line-anchored review comments grounded against the Tina4 RAG, audits the live
+      project over <code>/__dev/mcp</code>, and exports a portable <code>.tina4-review</code> bundle
+      any agent can follow. It views and comments &mdash; it never edits your code.</p>
+
+    <!-- tina4-js renders the download panel here -->
+    <div id="app"></div>
+
+    <section>
+      <h2>What it does</h2>
+      <div class="feats">
+        <div class="feat"><b>Knows your stack</b><span>Fingerprints tina4-python / php / ruby / nodejs / js from layout and jumps you to routes, ORM, templates, migrations.</span></div>
+        <div class="feat"><b>Click a line, comment</b><span>Severity, tags, and RAG-grounded context attached to exact file:line anchors.</span></div>
+        <div class="feat"><b>Live MCP audit</b><span>Read-only calls to <code>/__dev/mcp</code> snapshot routes, ORM and migrations into the review.</span></div>
+        <div class="feat"><b>Live handoff</b><span>Stream each comment to <code>.tina4-review/live.jsonl</code> so an agent can start fixing mid-review.</span></div>
+        <div class="feat"><b>Editable plans</b><span>Author <code>plan/*.md</code> with live preview &mdash; the marching orders your agent follows.</span></div>
+        <div class="feat"><b>Portable handoff</b><span>Exports <code>review.md</code> + <code>review.json</code> that any AI agent (Claude Code, Cursor&hellip;) can act on.</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Verify your download</h2>
+      <p class="muted">macOS and Windows builds are code-signed (Apple Developer ID + notarization; EV
+        certificate on Windows). Every release also publishes checksums.</p>
+      <pre># macOS / Linux
+shasum -a 256 -c SHA256SUMS.txt
+
+# macOS: confirm the signature and notarization
+spctl -a -vvv "/Applications/Tina4 Code Viewer.app"
+codesign -dv --verbose=4 "/Applications/Tina4 Code Viewer.app"</pre>
+      <p class="muted">Built with <a href="https://tina4.com">tina4-js</a> and a small Rust/Tauri shell.
+        Open source under MIT.</p>
+    </section>
+
+    <footer>
+      Tina4 Code Viewer &middot; part of the <a href="https://tina4.com">Tina4</a> stack &middot;
+      one framework, four languages, zero runtime dependencies.
+    </footer>
+  </div>
+
+  <script src="./tina4js.min.js"></script>
+  <script>
+    // Pure tina4-js: no framework on the page but Tina4 itself.
+    const { html, signal, effect } = Tina4;
+
+    const version = "0.1.0";
+    const base = "https://tina4.com/downloads";
+
+    const builds = [
+      { id: "mac",   os: "macOS",            note: "Universal · Apple Silicon + Intel · signed & notarized", file: "Tina4-Code-Viewer_0.1.0_universal.dmg", ready: true },
+      { id: "win",   os: "Windows",          note: "x64 · EV code-signed installer",   file: "", ready: false },
+      { id: "linux", os: "Linux (AppImage)", note: "x64 · portable",                    file: "", ready: false },
+      { id: "deb",   os: "Linux (.deb)",     note: "x64 · Debian / Ubuntu",             file: "", ready: false },
+    ];
+    const url = (f) => `${base}/${f}`;
+
+    // Detected-OS signal drives which build is highlighted / offered first.
+    const detected = signal("mac");
+    const ua = (navigator.userAgent + " " + (navigator.platform || "")).toLowerCase();
+    if (ua.includes("win")) detected.value = "win";
+    else if (ua.includes("mac")) detected.value = "mac";
+    else if (ua.includes("linux") || ua.includes("x11")) detected.value = "linux";
+
+    // Prefer the detected OS if it has a build; otherwise offer the first ready one (macOS).
+    const primary = () => {
+      const d = builds.find((b) => b.id === detected.value);
+      return (d && d.ready) ? d : builds.find((b) => b.ready) || builds[0];
+    };
+
+    const panel = html`
+      <div class="primary">
+        <div>
+          <div class="eyebrow">${() => (primary().id === detected.value ? "Recommended for your system" : "Available now")}</div>
+          <div class="p-os">${() => primary().os}</div>
+          <div class="p-note">${() => primary().note}</div>
+        </div>
+        <a class="btn" href=${() => url(primary().file)} download>Download v${version}</a>
+      </div>
+      <div class="grid">
+        ${builds.map((b) => b.ready
+          ? html`<a class=${() => "card" + (b.id === detected.value ? " on" : "")} href=${url(b.file)} download>
+              <span class="c-os">${b.os}</span><span class="c-note">${b.note}</span></a>`
+          : html`<div class="card soon"><span class="c-os">${b.os}</span><span class="c-note">Coming soon</span></div>`)}
+      </div>
+      <div class="foot-links">
+        <a href=${url("SHA256SUMS.txt")}>SHA256SUMS</a><span class="sep">&middot;</span>
+        <span class="muted">macOS build is signed with a Developer ID and notarized by Apple &mdash; verify below.</span>
+      </div>`;
+
+    document.getElementById("app").append(panel);
+  </script>
+</body>
+</html>
