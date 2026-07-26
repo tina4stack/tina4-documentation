@@ -8,6 +8,7 @@ export default {
   srcDir: "docs",
   outDir: "docs/.vitepress/dist",
   themeConfig: {
+    analytics: "G-FZRRSBE9M0",
     // All theme colors as constants — tweak these to retheme the whole site.
     colors: {
       light: { brand: "#2f5fe0", brand2: "#4888ff" },
