@@ -5,6 +5,7 @@ export default {
   title: "Tina4",
   description: "One framework, four languages, fifty-five features, zero runtime dependencies.",
   base: "/",
+  cleanUrls: true, // /python/02-routing/ + a redirect stub at /python/02-routing.html
   srcDir: "docs",
   outDir: "docs/.vitepress/dist",
   themeConfig: {

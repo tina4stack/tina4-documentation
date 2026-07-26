@@ -53,7 +53,9 @@ tina4 setup
 :::
 
 ::: tip Save your paid tokens for the hard parts
-Let Tina4's own AI coder handle the boilerplate. Register for a free profile to get started. [Register Now →](https://profile.tina4.com)
+Let Tina4's own AI coder handle the boilerplate. Register for a free profile to get started.
+
+<a class="tp-cta" href="https://profile.tina4.com">Register Now →</a>
 :::
 
 ## What's new
