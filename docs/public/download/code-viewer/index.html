@@ -132,9 +132,9 @@ codesign -dv --verbose=4 "/Applications/Tina4 Code Viewer.app"</pre>
 
     const builds = [
       { id: "mac",   os: "macOS",            note: "Universal · Apple Silicon + Intel · signed & notarized", file: "Tina4-Code-Viewer_0.1.0_universal.dmg", ready: true },
-      { id: "win",   os: "Windows",          note: "x64 · EV code-signed installer",   file: "", ready: false },
-      { id: "linux", os: "Linux (AppImage)", note: "x64 · portable",                    file: "", ready: false },
-      { id: "deb",   os: "Linux (.deb)",     note: "x64 · Debian / Ubuntu",             file: "", ready: false },
+      { id: "win",   os: "Windows",          note: "x64 · EV code-signed installer",   file: "Tina4-Code-Viewer_0.1.0_x64-setup.exe", ready: true },
+      { id: "linux", os: "Linux (AppImage)", note: "x64 · portable",                    file: "Tina4-Code-Viewer_0.1.0_amd64.AppImage", ready: true },
+      { id: "deb",   os: "Linux (.deb)",     note: "x64 · Debian / Ubuntu",             file: "Tina4-Code-Viewer_0.1.0_amd64.deb", ready: true },
     ];
     const url = (f) => `${base}/${f}`;
 
