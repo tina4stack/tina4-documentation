@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       tina4press:
-        specifier: ^0.1.6
-        version: 0.1.6
+        specifier: ^0.1.7
+        version: 0.1.7
       vitepress:
         specifier: ^2.0.0-alpha.15
         version: 2.0.0-alpha.17(postcss@8.5.8)
@@ -643,8 +643,8 @@ packages:
     resolution: {integrity: sha512-adRY20dcyqBPaTBHByoM9HLjT8AXwHPg2n1tHP6DT3pcwrLoLnaLN6FtUntgOQ/sKdUzwYvNbllr9+hH5lIzTw==}
     hasBin: true
 
-  tina4press@0.1.6:
-    resolution: {integrity: sha512-0683dzpbH/R5gs+gDrFiVclvKH4KKERjUjT+KpKbXgsJakLJ2823Rh/daOUjZUBa+7lbQ9cf2pAVI7xsHITPZg==}
+  tina4press@0.1.7:
+    resolution: {integrity: sha512-Gquyg/HtUOPYj3aJvI06t/6GcwCCUsFFEe/cB6cRiSRdqwcYs3h2179SSWREtksJqRVOK+rCGjkxcn9YQaRJTQ==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -1293,7 +1293,7 @@ snapshots:
 
   tina4js@1.5.1: {}
 
-  tina4press@0.1.6:
+  tina4press@0.1.7:
     dependencies:
       tina4js: 1.5.1
 
