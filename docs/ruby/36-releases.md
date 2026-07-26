@@ -1,5 +1,99 @@
 # Chapter 35: Release Notes
 
+## v3.13.87 (2026-07-27) - Frond expressions agree in all four frameworks
+
+Frond has always been described as one template language with four
+implementations. That was an assumption. Nobody had ever measured it.
+
+So we measured it. Seventy-two expressions covering filters, operators,
+ternaries, null coalescing, concatenation, comparisons, math precedence, missing
+values, dotted paths, arrays, hashes, escaping and filter chains, rendered
+through Python, PHP, Ruby and Node.js against one identical dataset. Eleven of
+the seventy-two disagreed.
+
+All eleven are fixed. Every framework now renders all seventy-two identically.
+
+The corpus is no longer a one-off script. It ships as a test fixture in all four
+repositories, byte for byte identical, with a single shared answer key. If one
+framework drifts, its own suite turns red while the other three stay green, and
+the failure names the expression. Changing the contract on purpose now means
+changing the answer key in four repositories in the same change, which is the
+point.
+
+### Booleans print as true or false (Breaking)
+
+Ruby disagreed with itself. `{{ n > 3 }}` printed `false`, but `{{ flag }}` with
+a stored `false` printed nothing at all.
+
+Both now print `false`.
+
+The cause was a falsy guard. Lookup used `value[part] || value[part.to_sym]`,
+and because only `nil` and `false` are falsy in Ruby, a stored `false` fell
+through to a missing symbol key, became `nil`, and rendered empty. The string
+concatenation path carried the same bug. Both now probe with `key?` instead of
+truthiness, so "absent" and "false" stay different things.
+
+If a template leaned on the blank output of a bare false variable, wrap it in a
+conditional.
+
+### {% import "file" as alias %} now works (New)
+
+The alias import form rendered as nothing at all. The tag parsed, the macros were
+never registered, and `{{ forms.button("Save") }}` produced an empty string with
+no error and no warning. Only `{% from "file" import name %}` worked.
+
+Both forms now work and behave identically. The function-call pattern was widened
+to accept a dot in the callee name, because a dot is not a word character and
+`forms.button(...)` was never recognised as a call in the first place.
+
+A second macro bug went with it: a parameter declared with a default value, as in
+`{% macro greet(name, greeting = "Hello") %}`, was mis-parsed. Defaulted
+parameters now bind correctly.
+
+### The not operator works in output (Fixed)
+
+`{{ not user.active }}` rendered as nothing.
+
+Every logical operator was matched with spaces on both sides, so a leading `not`
+with nothing to its left matched none of them, fell through to variable lookup,
+and was resolved as a variable literally named "not user.active". Finding no such
+variable, it rendered empty.
+
+`{% if not x %}` and `{{ x and not y }}` always worked, so the operator itself was
+never broken. Only the standalone output expression was lost, and before booleans
+printed lowercase a dropped expression and a false value looked identical.
+
+A leading `not` now routes to the same evaluator `{% if %}` uses. It also binds
+looser than the filter pipe, so `{{ not x|upper }}` means `not (x|upper)`.
+
+### json_encode escaping
+
+Ruby has always escaped `{{ data | json_encode }}`, and still does. Use
+`{{ data | json_encode | raw }}` inside a `<script>` block.
+
+The note records that PHP returned raw JSON from this filter and was brought in
+line.
+
+### The gate that keeps this true
+
+Every one of these bugs survived because each implementation looked correct on
+its own. Reading the code four times would not have found them. Rendering the
+same expression through all four and diffing the bytes found eleven in an
+afternoon.
+
+That diff is now a test. `frond_expression_corpus.txt` and
+`frond_expression_expected.txt` live in every framework's test directory as
+identical bytes, and every suite renders the corpus and compares against the
+shared answer key. Alongside it sit named regression tests for each bug above,
+each carrying the negative case that was failing before the fix.
+
+One more thing worth naming, because it is a pattern rather than an incident.
+Every boolean bug was a falsy guard: `|| ""`, `a[k] || a[k.to_sym]`,
+`true ? '1' : ''`. In a template engine, "absent" and "false" are different
+things, and code that conflates them prints nothing where it should print
+something.
+
+
 ## v3.13.86 (2026-07-25) - Writes return a DatabaseResult
 
 `db.insert`, `db.update`, and `db.delete` now return a `Tina4::DatabaseResult`

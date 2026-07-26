@@ -1,5 +1,99 @@
 # Chapter 35: Release Notes
 
+## v3.13.87 (2026-07-27) - Frond expressions agree in all four frameworks
+
+Frond has always been described as one template language with four
+implementations. That was an assumption. Nobody had ever measured it.
+
+So we measured it. Seventy-two expressions covering filters, operators,
+ternaries, null coalescing, concatenation, comparisons, math precedence, missing
+values, dotted paths, arrays, hashes, escaping and filter chains, rendered
+through Python, PHP, Ruby and Node.js against one identical dataset. Eleven of
+the seventy-two disagreed.
+
+All eleven are fixed. Every framework now renders all seventy-two identically.
+
+The corpus is no longer a one-off script. It ships as a test fixture in all four
+repositories, byte for byte identical, with a single shared answer key. If one
+framework drifts, its own suite turns red while the other three stay green, and
+the failure names the expression. Changing the contract on purpose now means
+changing the answer key in four repositories in the same change, which is the
+point.
+
+### Booleans print as true or false (Breaking)
+
+`{{ flag }}` used to print Python's `True` and `False`. It now prints `true` and
+`false`, lowercase.
+
+Lowercase is the only form a template can use directly. `data-active="true"`
+reads back from JavaScript as `el.dataset.active === "true"`. `True` needs
+translating at every site that touches it, and it is a Python artifact leaking
+into a template language.
+
+This was a deliberate break with the reference implementation. The four
+frameworks had drifted to four different answers, so one of them had to change,
+and the master was the one that was wrong for a template.
+
+Search your templates and tests for comparisons against the rendered `True` or
+`False`.
+
+### Both macro import forms now agree (Fixed)
+
+`{% import "macros.twig" as forms %}` shifted every macro argument by one
+position. `{{ forms.greet("Andre") }}` arrived at the macro with the alias as the
+first argument and `"Andre"` as the second.
+
+The macros were installed as class attributes, so Python bound them as methods
+and passed the namespace object in as `self`. They are now installed on a plain
+namespace object, which binds nothing.
+
+`{% from "macros.twig" import greet %}` was never affected. Both forms now behave
+identically, which is what the two forms were always supposed to mean.
+
+### The not operator works in output (Fixed)
+
+`{{ not user.active }}` rendered as nothing.
+
+Every logical operator was matched with spaces on both sides, so a leading `not`
+with nothing to its left matched none of them, fell through to variable lookup,
+and was resolved as a variable literally named "not user.active". Finding no such
+variable, it rendered empty.
+
+`{% if not x %}` and `{{ x and not y }}` always worked, so the operator itself was
+never broken. Only the standalone output expression was lost, and before booleans
+printed lowercase a dropped expression and a false value looked identical.
+
+A leading `not` now routes to the same evaluator `{% if %}` uses, so a condition
+means the same thing in a condition and in an output expression.
+
+### json_encode escaping
+
+Python has always escaped `{{ data | json_encode }}`, and still does. Use
+`{{ data | json_encode | raw }}` inside a `<script>` block.
+
+The note records that PHP returned raw JSON from this filter and was brought in
+line.
+
+### The gate that keeps this true
+
+Every one of these bugs survived because each implementation looked correct on
+its own. Reading the code four times would not have found them. Rendering the
+same expression through all four and diffing the bytes found eleven in an
+afternoon.
+
+That diff is now a test. `frond_expression_corpus.txt` and
+`frond_expression_expected.txt` live in every framework's test directory as
+identical bytes, and every suite renders the corpus and compares against the
+shared answer key. Alongside it sit named regression tests for each bug above,
+each carrying the negative case that was failing before the fix.
+
+One more thing worth naming, because it is a pattern rather than an incident.
+Every boolean bug was a falsy guard: `|| ""`, `a[k] || a[k.to_sym]`,
+`true ? '1' : ''`. In a template engine, "absent" and "false" are different
+things, and code that conflates them prints nothing where it should print
+something.
+
+
 ## v3.13.86 (2026-07-25) - The write-result contract is now consistent across the family
 
 Nothing changed in Python. `db.insert`, `db.update`, and `db.delete` already returned

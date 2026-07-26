@@ -381,6 +381,57 @@ Handle empty lists with `{% else %}`:
 
 <div v-pre>
 
+### The not Operator in Output
+
+`not` works in an output expression, not only in a condition:
+
+```html
+{{ not user.active }}
+```
+
+```html
+false
+```
+
+It reads the same way it does inside `{% if %}`, because both go through the same
+evaluator. `{% if not user.active %}` and `{{ not user.active }}` agree by
+construction.
+
+**Fixed in 3.13.87.** `{{ not x }}` rendered as nothing. Every logical operator
+was matched with spaces on both sides, so a leading `not` matched none of them and
+was looked up as a variable named "not x". `{% if not x %}` and `x and not y`
+always worked, which is why the gap went unnoticed for so long.
+
+### Printing a Boolean
+
+A boolean prints as `true` or `false`, lowercase, in every Tina4 framework.
+
+```html
+<div data-active="{{ user.active }}">
+```
+
+```html
+<div data-active="true">
+```
+
+Lowercase is the form the browser already understands. Read it back with
+`el.dataset.active === "true"` and it works. There is no casing to translate and
+no special case to write.
+
+A false value prints the word `false`. It does not print blank. That distinction
+earns its keep: a blank attribute reads as a missing value, and a template that
+shows nothing where it should show `false` is wrong in a way nobody notices.
+
+**Breaking in 3.13.87.** The four frameworks used to give four different answers
+here. Python printed Python's `True` and `False`. PHP printed `1` for true and an
+empty string for false. Ruby printed `false` for a comparison but an empty string
+for a stored false value. Node.js already printed `true` and `false`. All four now
+agree, and a 72 expression corpus in every test suite holds them there.
+
+Node.js already printed `true` and `false`, so your templates keep working. The
+note is here because the contract is now shared: the same expression prints the
+same bytes in Python, PHP, Ruby and Node.js.
+
 ### {% set %} -- Local Variables
 
 </div>
@@ -535,6 +586,36 @@ Filters transform values. Apply them with the `|` (pipe) character.
 
 </div>
 
+### json_encode Escapes by Default
+
+`json_encode` returns a JSON string, and Frond escapes it like any other value:
+
+```html
+<div data-product="{{ product | json_encode }}">
+```
+
+```html
+<div data-product="{&quot;id&quot;:1,&quot;name&quot;:&quot;Widget&quot;}">
+```
+
+That is what you want inside an HTML attribute. Unescaped JSON closes the
+attribute early and hands an attacker somewhere to write markup.
+
+Inside a `<script>` block you want the raw JSON, so ask for it:
+
+```html
+<script>
+    const product = {{ product | json_encode | raw }};
+</script>
+```
+
+`raw` is the same escape hatch Twig uses. Putting it at the call site keeps the
+decision visible: a reader sees which JSON is escaped and which is not, without
+opening the filter.
+
+Node.js has always escaped here. The note records that PHP, which returned raw
+JSON, was brought in line in 3.13.87.
+
 ### Chaining Filters
 
 ```html
@@ -636,6 +717,34 @@ Create `src/templates/macros.twig`:
 ```
 
 ---
+
+### Two Ways to Import Macros
+
+Frond accepts both Twig import forms and they behave identically.
+
+Name the macros you want:
+
+```html
+{% from "macros.twig" import button, alert %}
+
+{{ button("Save", "", "primary") }}
+```
+
+Or bind the whole file to an alias:
+
+```html
+{% import "macros.twig" as forms %}
+
+{{ forms.button("Save", "", "primary") }}
+```
+
+The alias form keeps the names namespaced, which earns its keep the moment two
+macro files both define a `button`. Arguments bind the same way in either form:
+the first argument you pass is the first parameter the macro declares.
+
+**New in 3.13.87.** The alias form used to render as nothing at all: the tag
+parsed, the macros were never registered, and the call produced an empty string
+with no error. Only `{% from %}` worked. Both forms now work.
 
 ## 9. Special Tags
 

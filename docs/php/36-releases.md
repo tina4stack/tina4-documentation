@@ -1,5 +1,104 @@
 # Chapter 35: Release Notes
 
+## v3.13.87 (2026-07-27) - Frond expressions agree in all four frameworks
+
+Frond has always been described as one template language with four
+implementations. That was an assumption. Nobody had ever measured it.
+
+So we measured it. Seventy-two expressions covering filters, operators,
+ternaries, null coalescing, concatenation, comparisons, math precedence, missing
+values, dotted paths, arrays, hashes, escaping and filter chains, rendered
+through Python, PHP, Ruby and Node.js against one identical dataset. Eleven of
+the seventy-two disagreed.
+
+All eleven are fixed. Every framework now renders all seventy-two identically.
+
+The corpus is no longer a one-off script. It ships as a test fixture in all four
+repositories, byte for byte identical, with a single shared answer key. If one
+framework drifts, its own suite turns red while the other three stay green, and
+the failure names the expression. Changing the contract on purpose now means
+changing the answer key in four repositories in the same change, which is the
+point.
+
+### Booleans print as true or false (Breaking)
+
+PHP used to print `1` for true and an **empty string** for false. It now prints
+`true` and `false`.
+
+The empty string was the real problem. A template printing a false boolean
+showed nothing at all, which reads as a missing value rather than a false one.
+Nobody notices a blank where a `false` belongs.
+
+The old behaviour was Twig faithful, and defensible in isolation. It stopped
+being defensible once the four frameworks were compared side by side: Python
+printed `True`, Ruby printed two different things depending on where the value
+came from, and Node.js already printed `true`. Lowercase won because it is the
+only form usable directly in HTML and JavaScript.
+
+Two things to check in your templates. A test against the rendered `1` now sees
+`true`. And a false value that used to render as nothing now renders the word
+`false`, so any layout that leaned on the blank output needs a conditional.
+
+### {% import "file" as alias %} now works (New)
+
+The alias import form rendered as nothing at all. The tag parsed, the macros were
+never registered, and `{{ forms.button("Save") }}` produced an empty string with
+no error and no warning. Only `{% from "file" import name %}` worked.
+
+Both forms now work and behave identically. A dotted callee such as
+`forms.button` is recognised as a macro call, and the macro registry is checked
+before the dotted-object path so an aliased macro resolves.
+
+### The not operator in output
+
+PHP has always handled `{{ not user.active }}` correctly.
+
+The note records that Python, Ruby and Node.js dropped the standalone form
+entirely, rendering it as an empty string, and now match PHP.
+
+### json_encode is HTML escaped (Breaking)
+
+`{{ data | json_encode }}` used to return raw JSON. It is now escaped like any
+other value, which is what Python, Ruby and Node.js have always done.
+
+Escaping is the secure default. Raw JSON dropped into an HTML attribute closes
+the attribute early and hands an attacker somewhere to write markup.
+
+The `<script>` case is served by asking for it:
+
+```html
+<script>
+    const product = {{ product | json_encode | raw }};
+</script>
+```
+
+Putting `raw` at the call site keeps the decision visible. A reader can see which
+JSON is escaped and which is not without opening the filter.
+
+Grep your templates for `json_encode }}` and append `| raw` wherever the output
+lands inside a `<script>` block. Attribute uses need no change: escaped is what
+they always should have been.
+
+### The gate that keeps this true
+
+Every one of these bugs survived because each implementation looked correct on
+its own. Reading the code four times would not have found them. Rendering the
+same expression through all four and diffing the bytes found eleven in an
+afternoon.
+
+That diff is now a test. `frond_expression_corpus.txt` and
+`frond_expression_expected.txt` live in every framework's test directory as
+identical bytes, and every suite renders the corpus and compares against the
+shared answer key. Alongside it sit named regression tests for each bug above,
+each carrying the negative case that was failing before the fix.
+
+One more thing worth naming, because it is a pattern rather than an incident.
+Every boolean bug was a falsy guard: `|| ""`, `a[k] || a[k.to_sym]`,
+`true ? '1' : ''`. In a template engine, "absent" and "false" are different
+things, and code that conflates them prints nothing where it should print
+something.
+
+
 ## v3.13.86 (2026-07-25) - Writes return a DatabaseResult
 
 `$db->insert()`, `$db->update()`, and `$db->delete()` now return a `DatabaseResult`
