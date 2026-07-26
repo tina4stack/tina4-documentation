@@ -5,7 +5,7 @@ export default {
   title: "Tina4",
   description: "One framework, four languages, fifty-five features, zero runtime dependencies.",
   base: "/",
-  cleanUrls: false, // reverted: dir-style clean URLs 500'd on the live Apache (MultiViews conflict between /foo.html stub and /foo/ dir). Investigate before re-enabling.
+  cleanUrls: true,
   srcDir: "docs",
   outDir: "docs/.vitepress/dist",
   themeConfig: {
