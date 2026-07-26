@@ -5,7 +5,7 @@ export default {
   title: "Tina4",
   description: "One framework, four languages, fifty-five features, zero runtime dependencies.",
   base: "/",
-  cleanUrls: true, // /python/02-routing/ + a redirect stub at /python/02-routing.html
+  cleanUrls: false, // reverted: dir-style clean URLs 500'd on the live Apache (MultiViews conflict between /foo.html stub and /foo/ dir). Investigate before re-enabling.
   srcDir: "docs",
   outDir: "docs/.vitepress/dist",
   themeConfig: {
