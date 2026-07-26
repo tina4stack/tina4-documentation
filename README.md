@@ -54,6 +54,6 @@ http://localhost:5173/
 
 **Sponsored with 🩵 by Code Infinity**
 
-[![Code Infinity](https://codeinfinity.co.za/wp-content/uploads/2025/09/c8e-logo-github.png)](https://codeinfinity.co.za/about-open-source-policy?utm_source=github\&utm_medium=website\&utm_campaign=opensource_campaign\&utm_id=opensource)
+[<img src="https://codeinfinity.co.za/wp-content/uploads/2025/09/c8e-logo-github.png" alt="Code Infinity" width="100">](https://codeinfinity.co.za/about-open-source-policy?utm_source=github&utm_medium=website&utm_campaign=opensource_campaign&utm_id=opensource)
 
-_Supporting open source communities • Innovate • Code • Empower_
+*Supporting open source communities <span style="color: #1DC7DE;">•</span> Innovate <span style="color: #1DC7DE;">•</span> Code <span style="color: #1DC7DE;">•</span> Empower*
