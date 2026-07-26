@@ -5,7 +5,7 @@ export default {
   title: "Tina4",
   description: "One framework, four languages, fifty-five features, zero runtime dependencies.",
   base: "/",
-  cleanUrls: true,
+  cleanUrls: false, // reverted again: clean dir-style 500s because the live deploy extracts OVER the web root without clearing it, so new /foo/ dirs collide with stale /foo.html (MultiViews). Needs the deploy to clear public_html first.
   srcDir: "docs",
   outDir: "docs/.vitepress/dist",
   themeConfig: {
