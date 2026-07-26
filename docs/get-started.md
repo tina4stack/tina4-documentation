@@ -187,7 +187,7 @@ Take a deeper dive into the [documentation](https://github.com/tina4stack/tina4-
 ## What's next: build with the AI coder
 
 Your project ships with an AI coder in the dev admin. Run `tina4 serve`, open
-`/__dev`, paste your Tina4 MCP key, and describe what you want — it scaffolds the
+`/__dev`, paste your Tina4 MCP key, and describe what you want, it scaffolds the
 resource, runs the tests, and serves the result live. See
 [Build with the AI Coder](/build-with-ai.md) for the walkthrough.
 
