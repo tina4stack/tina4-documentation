@@ -13,10 +13,10 @@ A lightweight, cross-platform desktop app that understands your Tina4 layout, le
 
 | Platform | Build | Download |
 |----------|-------|----------|
-| macOS | Universal (Apple Silicon + Intel), signed and notarized | <a href="https://tina4.com/downloads/Tina4-Code-Viewer_0.1.0_universal.dmg">.dmg</a> |
-| Windows | x64, EV code-signed installer | <a href="https://tina4.com/downloads/Tina4-Code-Viewer_0.1.0_x64-setup.exe">.exe</a> |
-| Linux | x64, portable AppImage | <a href="https://tina4.com/downloads/Tina4-Code-Viewer_0.1.0_amd64.AppImage">.AppImage</a> |
-| Linux | Debian / Ubuntu package | <a href="https://tina4.com/downloads/Tina4-Code-Viewer_0.1.0_amd64.deb">.deb</a> |
+| macOS | Universal (Apple Silicon + Intel), signed and notarized | [.dmg](https://tina4.com/downloads/Tina4-Code-Viewer_0.1.0_universal.dmg) |
+| Windows | x64, EV code-signed installer | [.exe](https://tina4.com/downloads/Tina4-Code-Viewer_0.1.0_x64-setup.exe) |
+| Linux | x64, portable AppImage | [.AppImage](https://tina4.com/downloads/Tina4-Code-Viewer_0.1.0_amd64.AppImage) |
+| Linux | Debian / Ubuntu package | [.deb](https://tina4.com/downloads/Tina4-Code-Viewer_0.1.0_amd64.deb) |
 
 Checksums for every build: [SHA256SUMS.txt](https://tina4.com/downloads/SHA256SUMS.txt)
 
