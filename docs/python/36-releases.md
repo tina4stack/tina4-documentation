@@ -1,5 +1,104 @@
 # Chapter 35: Release Notes
 
+## v3.13.88 (2026-07-27) - json_encode gives you JSON again
+
+3.13.87 HTML-escaped the `json_encode` filter in all four frameworks. That was
+wrong, and this release reverts it.
+
+Entity-encoded JSON is not JSON. `{&quot;a&quot;:1}` inside a `<script>` block
+is a SyntaxError, and a script block is most of what the filter is for. One
+change broke all four languages at once.
+
+The same pass fixed a bug that had been there far longer: a value JSON cannot
+represent used to escape as itself, or as nothing at all.
+
+### json_encode emits JSON, not entities (Breaking, reverts 3.13.87)
+
+`{{ product | json_encode }}` renders `{"id":1,"name":"Widget"}` again. Put it
+straight into a script block:
+
+```html
+<script>
+    const product = {{ product | json_encode }};
+</script>
+```
+
+The output is still safe on the page. Frond escapes the four characters that can
+break out of HTML, as JSON unicode escapes rather than entities. A `</script>`
+inside a string arrives as `\u003c/script\u003e` and cannot close the block
+early. A single quote becomes `\u0027`, so the value also drops into a
+single-quoted attribute untouched:
+
+```html
+<div data-product='{{ product | json_encode }}'>
+```
+
+Use single quotes there. JSON carries its own double quotes, so a double-quoted
+attribute needs `| e` on top. This is the model Jinja2 uses for `tojson`, and it
+is why the result is marked safe.
+
+`| raw` after `json_encode` is now a no-op. If you added one for 3.13.87 you can
+delete it, and nothing breaks if you leave it.
+
+### A value JSON cannot represent becomes null (Fixed)
+
+Reported as tina4-php#184 by justin-k-bruce, who hit it in production: two
+infinite sort keys in a 657-row grid blanked the whole screen.
+
+JSON has no Infinity and no NaN. All four frameworks handled that differently
+and all four were wrong. Python wrote a bare `Infinity`, which no parser reads.
+PHP's `json_encode` returned false, which arrived as an empty string, so the
+payload vanished with no error anywhere. Ruby fell back to Ruby inspect output.
+Only Node.js already did the right thing.
+
+Every framework now writes `null`, which is what `JSON.stringify` has always
+produced and the only answer the grammar allows:
+
+```html
+{{ readings | json_encode }}
+```
+
+```html
+{"low":1.5,"high":null}
+```
+
+The rule behind it is wider than one value type. This filter never returns an
+empty string and never returns a token that would fail to parse. A payload
+always arrives, in the worst case as `null`. An empty script assignment is at
+least a loud error; a silently wrong one is not.
+
+Two smaller differences went with it. Forward slashes stay unescaped, so `a/b`
+no longer comes back as `a\/b` from PHP. Non-ASCII text stays raw, so `cafe`
+with an accent is itself rather than a `\u00e9` escape from Python.
+
+### to_json and tojson are the same filter
+
+All three names now share one serializer. They cannot drift apart again.
+
+The `to_json` indent argument is gone. PHP's pretty printer has a fixed
+four-space indent and cannot honour an arbitrary width, so supporting the
+argument in three frameworks and not the fourth broke byte parity on the one
+filter whose entire job is a wire format.
+
+### The expression corpus grew to 79
+
+The cross-framework expression fixture added seven entries: the json_encode
+escape shape, a non-finite value, a NaN nested in an object, the `to_json`
+alias, a filter pipe feeding a `~` concatenation, that same expression inside a
+ternary, and `number_format` with locale separators.
+
+The last three close tina4-php#170 and tina4-php#171. Both were reported against
+3.13.68 and both were already fixed by the 3.13.87 expression work; they are
+locked in now so they cannot come back.
+
+### What to change in your templates
+
+Grep for `json_encode`. Three cases:
+
+- Inside a `<script>` block: nothing to do. It works again.
+- Inside a single-quoted attribute: nothing to do.
+- Inside a double-quoted attribute: add `| e`.
+
 ## v3.13.87 (2026-07-27) - Frond expressions agree in all four frameworks
 
 Frond has always been described as one template language with four

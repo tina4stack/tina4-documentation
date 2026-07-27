@@ -319,35 +319,54 @@ Filters transform output. The pipe `|` applies them:
 
 </div>
 
-### json_encode Escapes by Default
+### json_encode Is Ready for a Script Block
 
-`json_encode` returns a JSON string, and Frond escapes it like any other value:
-
-```html
-<div data-product="{{ product | json_encode }}">
-```
-
-```html
-<div data-product="{&quot;id&quot;:1,&quot;name&quot;:&quot;Widget&quot;}">
-```
-
-That is what you want inside an HTML attribute. Unescaped JSON closes the
-attribute early and hands an attacker somewhere to write markup.
-
-Inside a `<script>` block you want the raw JSON, so ask for it:
+`json_encode` gives you JSON that parses as JSON and runs as JavaScript. Frond
+does not HTML-escape it, because an entity-encoded payload is a syntax error the
+moment the browser reads it:
 
 ```html
 <script>
-    const product = {{ product | json_encode | raw }};
+    const product = {{ product | json_encode }};
 </script>
 ```
 
-`raw` is the same escape hatch Twig uses. Putting it at the call site keeps the
-decision visible: a reader sees which JSON is escaped and which is not, without
-opening the filter.
+```html
+<script>
+    const product = {"id":1,"name":"Widget"};
+</script>
+```
 
-Python has always escaped here. The note records that PHP, which returned raw
-JSON, was brought in line in 3.13.87.
+The output is still safe on the page. Frond escapes the four characters that can
+break out of HTML, as JSON unicode escapes rather than entities, so `</script>`
+inside a string arrives as `\u003c/script\u003e` and cannot close the block
+early. A single quote becomes `\u0027`, so the same value drops straight into a
+single-quoted attribute:
+
+```html
+<div data-product='{{ product | json_encode }}'>
+```
+
+Use single quotes there. JSON is full of double quotes, so a double-quoted
+attribute needs `| e` on top:
+
+```html
+<div data-product="{{ product | json_encode | e }}">
+```
+
+A value JSON cannot represent becomes `null`. Infinity, NaN and anything the
+serializer refuses all serialize as `null`, so the payload always arrives and
+always parses. It is never blank, and it is never a bare token that
+`JSON.parse` would reject.
+
+`to_json` and `tojson` are the same filter under two more names.
+
+**Breaking in 3.13.88.** 3.13.87 HTML-escaped this filter in all four
+frameworks, which turned every `<script>` block that used it into a
+`SyntaxError`. That is reverted: `json_encode` no longer produces entities, and
+`| raw` after it is now a no-op you can delete. If you added `| raw` for
+3.13.87, nothing breaks by leaving it. Any double-quoted attribute holding
+`json_encode` output wants `| e` instead.
 
 ### Chaining Filters
 
