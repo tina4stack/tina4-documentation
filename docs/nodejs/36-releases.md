@@ -1,5 +1,112 @@
 # Chapter 35: Release Notes
 
+## v3.13.91 (2026-07-27) - The offenders list finally points at code worth fixing
+
+`tina4 metrics` ranked `public/js/frond.js` as the worst code in the framework,
+at cyclomatic complexity 191. Second place went to `register_dev_tools` at 139.
+Neither number was real. The first belongs to a file wrapped in one anonymous
+function. The second belongs to a registrar that declares twenty small handlers
+inside itself.
+
+Both scores were the same arithmetic mistake, and it had been in every framework
+since the metrics module shipped.
+
+### A function is no longer charged for the functions inside it
+
+Complexity was measured across a function's whole span. A branch inside a nested
+function landed on that function and on every function wrapping it. Count the
+same branch twice, three times, four, once per level of nesting.
+
+The deeper the nesting, the worse the lie:
+
+```python
+def outer(a):
+    def inner1(x):
+        if x: return 1
+        if x > 2: return 2
+        return 3
+    def inner2(y):
+        if y: return 1
+        if y > 2: return 2
+        return 3
+    return inner1(a) + inner2(a)
+```
+
+`outer` branches on nothing. It scored 5. It now scores 1, and each inner keeps
+its own 3. The branches moved to where they belong. None went missing.
+
+Python and the Rust engine walk a real syntax tree, so they stop descending at a
+nested function or class. PHP, Ruby and Node scan text, where that surgery would
+be three risky rewrites. They apply an identity instead:
+
+```
+own(F) = raw(F) - sum over direct children C of (raw(C) - 1)
+```
+
+A raw score is 1 plus every decision in the span, so `raw - 1` is the total
+decision count of a whole subtree. Subtract that for each direct child and what
+remains is the function's own work. It needs only the line and LOC each extractor
+already reports.
+
+Closures, blocks, lambdas and arrow functions stay exactly where they are. None
+of them appear in the function list, so nothing subtracts them, and their
+decisions remain with the function that contains them.
+
+**Breaking:** every complexity number drops, and so does every file total. A
+`tina4 metrics --fail-on` gate that failed on an inflated score may now pass. Run
+the gate once before you trust the old threshold, and lower it if the inflation
+was holding your ceiling up.
+
+### Ruby complexity was double what it should have been
+
+In the tree-sitter Ruby grammar, `if`, `unless`, `while`, `when` and `rescue`
+name two things: the construct, and the keyword token inside it. The engine
+matched on the name alone, so it counted both.
+
+`return 1 if y` scored 3. It has one branch.
+
+Every Ruby number the engine produced came out at roughly double. The fix ignores
+anonymous nodes, which is what a bare keyword token is. The engine and
+`metrics.rb` now agree on the same file, method for method.
+
+### LOC means one thing again
+
+Every framework counted file LOC as code lines, skipping blanks and comments.
+Every framework counted function LOC as a raw line span. One word, two units,
+sitting side by side in the same payload.
+
+The dashboard sized its bubbles in one unit and printed its function table in the
+other. A function documented with care looked bigger than a function with no
+comments at all.
+
+Each language now has one definition of a code line, shared by both levels, so
+they cannot drift apart again. `Swagger.generate` reports 167 lines in Python and
+167 in the Rust engine, which is the first time two implementations have been
+asked the same question and given the same answer.
+
+Fixing it in PHP surfaced a third bug. A bare `}` is a token with no line number,
+so the scan for a function's last line landed on the whitespace before it. Every
+PHP function was one line short. That line is back.
+
+Nothing but the dashboard reads function LOC. Violations and the maintainability
+index both use file LOC, which was right all along, so no threshold moves.
+
+### The dev dashboard reads the coupling it is given
+
+The bubble chart now uses the numbers the engine resolves. Files that everything
+depends on drift to the centre. A ring around each bubble runs blue for stable
+and amber for unstable. Hovering prints the real figures behind them.
+
+The chart draws none of this unless the coupling actually resolved. The older
+metrics modules never mapped an import to a file, so they reported zero
+dependents for everything and an instability of exactly 1.0. Drawing that would
+paint every ring at maximum instability, which is a confident lie, so the chart
+leaves those channels dark instead.
+
+Thirty-three regression tests hold all of it in place across the four frameworks,
+and seven more in the engine. Each was run against the old code first and watched
+to fail. A test that has never failed has never proved anything.
+
 ## v3.13.90 (2026-07-27) - A scaffolded model and its migration finally agree
 
 `tina4 generate crud Todo` wrote a model that declared a `name` column and a
