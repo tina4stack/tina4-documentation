@@ -148,6 +148,13 @@ tina4 generate test <Name>           # test scaffold
 **Building a REST API with auth? `tina4 generate auth` then `tina4 generate crud
 <Name>` gets you there in two commands.** Do not hand-roll either.
 
+> **Check the generated migration before you run it.** In CLI 3.8.58 `generate
+> model` / `generate crud` can emit a migration that omits the fields declared on
+> the model (you get only `id` and `created_at`). If a column is missing, the
+> first authenticated write fails with `table <x> has no column named <field>`.
+> Open `migrations/<timestamp>_create_<name>.sql`, add any missing columns to
+> match the model, then `tina4 migrate`.
+
 ```bash
 tina4 migrate                                # apply pending migrations
 tina4 migrate:status                         # what's applied / pending

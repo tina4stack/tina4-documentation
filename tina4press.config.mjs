@@ -3,7 +3,7 @@
 // override per-section here later to match the exact VitePress grouping.
 export default {
   title: "Tina4",
-  description: "One framework, four languages, fifty-five features, zero runtime dependencies.",
+  description: "One framework, four languages, ninety-seven features, zero runtime dependencies.",
   base: "/",
   cleanUrls: true,
   srcDir: "docs",

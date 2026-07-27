@@ -5,7 +5,7 @@ layout: home
 hero:
   name: "Tina4"
   text: "Documentation"
-  tagline: One framework, four languages, fifty-five features, zero runtime dependencies.
+  tagline: One framework, four languages, ninety-seven features, zero runtime dependencies.
   image:
     src: '/images/tina4-animated.svg'
   actions:
@@ -36,6 +36,31 @@ hero:
 
 
 ---
+
+## Your AI doesn't know Tina4 yet. Give it 30 seconds.
+
+Copy this into Claude, Cursor, Copilot, or whatever you already have open. It reads the bootstrap protocol, installs what it needs, and hands you a running REST API with JWT auth. Same prompt, four languages.
+
+::: tabs
+== Python
+```text
+Read https://tina4.com/llms.txt and build me a REST API with a Todo model and JWT auth in Python.
+```
+== PHP
+```text
+Read https://tina4.com/llms.txt and build me a REST API with a Todo model and JWT auth in PHP.
+```
+== Ruby
+```text
+Read https://tina4.com/llms.txt and build me a REST API with a Todo model and JWT auth in Ruby.
+```
+== Node.js
+```text
+Read https://tina4.com/llms.txt and build me a REST API with a Todo model and JWT auth in Node.js.
+```
+:::
+
+No signup, no plugin. [llms.txt](/llms.txt) is a bootstrap protocol written for machines: it tells your assistant to drive the `tina4` CLI, generate the scaffold, and use the built-ins instead of inventing them. That last part is why the output runs.
 
 ## Install and register
 
