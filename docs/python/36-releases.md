@@ -1,5 +1,49 @@
 # Chapter 35: Release Notes
 
+## v3.13.90 (2026-07-27) - A scaffolded model and its migration finally agree
+
+`tina4 generate crud Todo` wrote a model that declared a `name` column and a
+migration that never created it. The first write died:
+
+```
+table todo has no column named name
+```
+
+This sits on the path https://tina4.com/llms.txt hands to AI assistants, so the
+documented way to stand up a REST API returned a 500 on its first POST.
+
+### One default, defined once (php#186, ruby#33, nodejs#38)
+
+The default field set lived inside the model template. Other generators each
+carried their own copy, and the migration builder had none, so it built the
+table from an empty field list: `id` and `created_at`, nothing else. The default
+now lives in a single constant that flows into the model, the migration, the
+form, the view and the co-emitted test alike.
+
+Ruby hid a second trap. An empty array is truthy in Ruby, so
+`fields_override || parse_fields(...)` short-circuited to the empty array and
+the fallback never fired. That check now tests for content, not truthiness.
+
+Python shipped this fix in 3.13.89 and missed one generator: the form kept its
+own inline copy of the default. The output matches while the default happens to
+be `name`, and diverges the moment it changes, at which point the form renders
+an input for a column the table does not have. Fixed, with a source invariant
+that fails if any generator restates the literal again.
+
+### A failed write no longer reports success
+
+The generated create and update routes serialised their result without checking
+it. `create()` and `save()` report failure by return value; they do not raise.
+In Node a failed insert therefore returned HTTP 201 carrying unsaved data. In
+Ruby it surfaced as a NoMethodError on `false` and buried the real cause. Both
+now check the result and return 400 with a clear message. PHP already checked,
+and a test pins that behaviour in place.
+
+Every generator test in all four frameworks passed `--fields` explicitly, which
+is why one bug survived in four languages. Each framework now exercises the
+no-fields path and asserts that every field the model declares reaches the
+migration, ending with a real write against a real database.
+
 ## v3.13.89 (2026-07-27) - A typo'd tag no longer renders what it was hiding
 
 Two Frond bugs, both present identically in all four frameworks since v3, both
