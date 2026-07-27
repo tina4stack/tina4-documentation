@@ -350,3 +350,51 @@ can expose gated content.
 
 **Supersedes:** none. The stale skill copy at `IdeaProjects/tina4-maintainer/` (not a git
 repo, not the install source) is the origin of the confusion and must not be synced from.
+
+---
+
+## ADR-0006 - We own only OUR Dockerfiles; competitor images are official/community, cited
+
+**Date:** 2026-07-27
+**Status:** Accepted
+**Owner decision.**
+
+**Context.** Moving the framework benchmark from bare metal to Docker raised the question of
+where every container comes from. The bare-metal harness it replaces compared Tina4's
+built-in production server against competitors' DEV servers (`artisan serve`, `runserver`,
+`WEBrick`, `php -S`), which is how a "110x faster than Laravel" claim ended up published.
+Repeating that mistake in a new form - by hand-authoring the opponents' containers - was a
+live risk.
+
+**Decision.**
+
+1. **We author and own exactly one kind of image: ours.** The four Tina4 images are built by
+   `tina4 deploy docker`, the same path a user takes, so the benchmark dogfoods the real
+   deploy route rather than a bespoke benchmark rig.
+2. **Every competitor runs from its OWN official or best community image**, at latest, in
+   production mode. We do not write their Dockerfiles.
+3. **The image source and tag are published next to the number.** Not a footnote: the source
+   is part of the result.
+4. **Where no defensible image exists** - Django, Flask and Sinatra have no official Docker
+   Hub image - name the community image chosen and why. If nothing defensible exists, record
+   the row as **NOT MEASURED**.
+
+**Why.** A benchmark in which we author the opponent's container is one nobody should trust,
+and it hands critics a one-line rebuttal: "you configured it badly." Running each framework
+from the image its own maintainers publish removes that argument completely, and is less work
+than maintaining a dozen Dockerfiles we would then have to keep current. It also makes the
+comparison reproducible by a third party, which our numbers have never been.
+
+The honesty rule generalises: **an unmeasured row is acceptable, a self-built opponent is
+not.** A gap in the table costs credibility once; a rigged comparison costs it permanently.
+
+**Alternatives rejected.** *Hand-write production Dockerfiles for every competitor so the
+stack is "identical":* rejected - identical-by-our-hand is not neutral, and the frameworks
+disagree about what production means (php-fpm vs FrankenPHP, gunicorn vs uvicorn); imposing
+one shape favours whoever happens to suit it. *Keep the bare-metal dev-server comparison and
+just refresh the numbers:* rejected - re-measuring a meaningless comparison only makes it
+look precise. Section 1 of each BENCHMARK.md is retired, not refreshed.
+
+**Supersedes:** none. Implements the harness described in
+`plan/v3/docker-benchmark-harness.md`; base-image work is tracked in
+`plan/v3/docker-base-images.md`.
