@@ -82,9 +82,10 @@ system installs (safe local test): `tina4 setup --skip-install`.
 
 **Scripted / non-interactive alternative:** if the runtime is already present
 (STEP 2 was clean) and you just want a project laid down, use
-`tina4 init <python|php|ruby|nodejs> [name]` - it creates the canonical layout
-(`src/routes/`, `src/orm/`, `src/templates/`, `src/public/`, `.env`). Don't
-build that structure by hand.
+`tina4 init <python|php|ruby|nodejs> [name]`. It writes `app.py` (or the language
+equivalent), `.env`, the package manifest and `.gitignore`; the `src/` tree is
+then created by the generators on demand (see "Scaffolding commands" below).
+Don't build that structure by hand.
 
 ---
 
@@ -167,7 +168,24 @@ tina4 update                                 # self-update the tina4 CLI
 
 ---
 
-## STEP 4 - Run the dev server
+## STEP 4 - `tina4 migrate` - create the tables BEFORE you serve
+
+Generating a model or CRUD writes a migration; it does not apply it. Skip this
+and the API starts fine and then 500s on the first query, because the table does
+not exist.
+
+```bash
+cd <project>
+tina4 migrate            # apply pending migrations
+tina4 migrate:status     # what's applied / pending
+```
+
+Read the generated SQL before applying it (see the warning under
+`generate crud` above - the migration can omit fields your model declares).
+
+---
+
+## STEP 5 - Run the dev server
 
 ```bash
 cd <project>
@@ -184,7 +202,7 @@ project's routes, schema, files, and docs.
 
 ---
 
-## STEP 5 - When `tina4 serve` fails
+## STEP 6 - When `tina4 serve` fails
 
 Tina4 prints structured errors. Read the message before reacting.
 
