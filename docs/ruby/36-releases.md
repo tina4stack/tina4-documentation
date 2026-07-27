@@ -1,5 +1,88 @@
 # Chapter 35: Release Notes
 
+## v3.13.89 (2026-07-27) - A typo'd tag no longer renders what it was hiding
+
+Two Frond bugs, both present identically in all four frameworks since v3, both
+compatibility gaps against Twig and Jinja2. One of them was quietly showing
+people content that was supposed to be gated.
+
+### An unknown tag raises instead of leaking its body (Breaking, Security)
+
+Look at this template and decide what a visitor sees:
+
+```html
+{% iff user.is_admin %}
+    <a href="/admin">Admin console</a>
+{% endiff %}
+```
+
+Everyone. `iff` is a typo, and Frond did not recognise it, so the tag rendered
+nothing and its body rendered as ordinary content. The admin link went to every
+visitor. Worse than a broken page: the template reads as guarded, so a reviewer
+scrolling past sees a check that is not there.
+
+The same shape hid behind any misspelling. `{% ifff %}`, `{% unles %}`,
+`{% i %}`, a tag copied from another engine. Each one silently removed its own
+condition.
+
+An unrecognised tag now raises, naming it and listing what Frond does know:
+
+```
+Frond: unknown tag "iff" -- known tags are: autoescape, block, cache, extends,
+for, from, if, import, include, live, macro, raw, set, spaceless
+```
+
+Frond has no plugin system for tags, so an unrecognised name is always a typo,
+never an extension. Twig and Jinja2 both raise on one. Frond now does too.
+
+Two things deliberately still render nothing. A stray terminator, an
+`{% endif %}` with no `{% if %}`, and an empty `{%  %}`. Neither has a body, so
+neither can expose anything, and both have always been silent.
+
+**What to do:** run your templates once. A typo'd tag now fails on the page that
+contains it, which is where you want to find it.
+
+### set works as a block (Fixed)
+
+```html
+{% set badge %}
+    <span class="badge">{{ order.status|upper }}</span>
+{% endset %}
+
+<td>{{ badge }}</td>
+<td class="mobile-only">{{ badge }}</td>
+```
+
+That is core syntax in both Twig and Jinja2, and until now it did the wrong
+thing in all four frameworks: the body printed inline where the block stood, and
+the variable was never bound. `{% set g %}Hello{% endset %}[{{ g }}]` rendered
+`Hello[]` instead of `[Hello]`.
+
+It captures now. The captured value is marked safe, so markup you wrote in the
+body renders as markup rather than as escaped angle brackets, matching both
+reference engines. A value interpolated into the body is still escaped on the way
+in, which is the right place for it: the escaping happens once, where the
+untrusted value enters.
+
+Blocks nest, and a loop inside the body renders into the capture rather than to
+the page:
+
+```html
+{% set rows %}{% for i in items %}<li>{{ i }}</li>{% endfor %}{% endset %}
+<ul>{{ rows }}</ul>
+```
+
+One rule decides which form you get: an `=` anywhere in the tag means
+assignment. So `{% set label = "a = b" %}` stays an assignment and is never read
+as a block. The inline form is untouched.
+
+### The expression corpus grew to 82
+
+Three entries cover the block form: a plain capture, a capture that must not be
+double-escaped, and an inline `set` whose value contains an `=`. The unknown-tag
+rule is locked by named tests in each framework rather than the corpus, because
+the corpus compares rendered output and this one raises.
+
 ## v3.13.88 (2026-07-27) - json_encode gives you JSON again
 
 3.13.87 HTML-escaped the `json_encode` filter in all four frameworks. That was

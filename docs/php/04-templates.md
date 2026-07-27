@@ -477,6 +477,54 @@ When combining filters with arithmetic, assign the filtered values first:
 <p>Balance: {{ balance }}</p>
 ```
 
+### set as a block -- capture rendered markup
+
+The block form captures whatever its body renders and binds it to the name.
+Nothing is printed where the block stands:
+
+```html
+{% set badge %}
+    <span class="badge">{{ order.status|upper }}</span>
+{% endset %}
+
+<td>{{ badge }}</td>
+<td class="mobile-only">{{ badge }}</td>
+```
+
+Build the markup once, use it twice. The capture is marked safe, so the badge
+renders as HTML rather than as escaped angle brackets. A value interpolated into
+the body is still escaped on the way in, which is the correct place for it: the
+escaping happens once, where the untrusted value enters.
+
+Which form you get is decided by one rule: an `=` in the tag means assignment,
+so `{% set label = "a = b" %}` is never mistaken for a block.
+
+This form is new in 3.13.89. Before that it printed its body inline and bound
+nothing.
+
+### An unknown tag is an error
+
+A tag Frond does not recognise raises, naming the tag and listing the ones it
+knows:
+
+```html
+{% iff user.is_admin %}
+    <a href="/admin">Admin</a>
+{% endiff %}
+```
+
+```
+Frond: unknown tag "iff" -- known tags are: autoescape, block, cache, extends,
+for, from, if, import, include, live, macro, raw, set, spaceless
+```
+
+That one is worth staring at. Before 3.13.89 the mistyped tag rendered nothing
+and its body rendered as ordinary content, so the admin link appeared for every
+visitor. The template looked guarded. It was not.
+
+Frond has no plugin system for tags, so an unrecognised name is always a typo.
+Twig and Jinja2 both raise on one too.
+
 ---
 
 ## 7. Filters
