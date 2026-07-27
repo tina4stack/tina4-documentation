@@ -1,5 +1,107 @@
 # Chapter 35: Release Notes
 
+## v3.13.92 (2026-07-27) - HS512 no longer rejects every token you mint
+
+Set `TINA4_JWT_ALGORITHM=HS512` and your application locked everyone out. Not
+some users. Every token, on every request, including the one `Auth::getToken()`
+had minted a millisecond earlier.
+
+Three reported issues sit behind this release, one shared contract, all four
+frameworks. PHP carried the worst of it.
+
+### HS384 and HS512 rejected every token (Fixed)
+
+`Auth::validToken()` branched on `HS256`, branched on `RS256`, and fell through
+to `null` for anything else. Two of the four documented values of
+`TINA4_JWT_ALGORITHM` produced a total authentication outage, and the only
+evidence was a 401 with nothing behind it.
+
+Verification now looks the digest up instead of branching, so the whole HMAC
+family verifies. This is the most serious item in the release: a variable the
+framework told you to set could take your login page down.
+
+### The header names the algorithm that signed (php#187)
+
+`Auth::sign()` hardcoded `sha256`. A token advertising HS512 in its header
+carried a 32-byte HMAC-SHA256 signature where the header promised 64. Any
+verifier that reads the header and computes what it names got different bytes and
+rejected the token.
+
+The digest now comes from a lookup keyed by the configured algorithm, so the
+`alg` in the header is always the one that produced the signature. HS256, HS384
+and HS512 all sign and verify through `hash_hmac`, with nothing new installed.
+
+The assertion that catches this measures the signature's byte length: 32, 48, 64.
+Comparing one algorithm's token against another's proves nothing, because the
+header is part of the signing input, so two tokens differ either way.
+
+`RS256` is unchanged and still works here. PHP has ext-openssl and Node has
+`node:crypto`, so RSA signing costs those two nothing. Python and Ruby would need
+a third-party package, and the core takes no dependencies, so `RS256` is a
+documented PHP and Node extra rather than part of the cross-framework contract.
+The other two are not getting it.
+
+### nbf is enforced, with 60 seconds of leeway (php#187)
+
+A token stamped not-valid-until-noon was accepted at nine. `validToken()` checked
+`exp` and walked straight past `nbf`.
+
+It now refuses a post-dated token until its `nbf` arrives, and accepts one up to
+`Auth::JWT_LEEWAY_SECONDS` early. RFC 7519 allows a small leeway, and without one
+a token minted on a host a second ahead is rejected for nothing at all.
+
+A token carrying no `nbf` is unconstrained, which is what keeps this
+non-breaking for every token already in circulation. `getToken()` does not stamp
+one, matching Python and Node. Ruby used to, and no longer does, so all four now
+issue the same claims.
+
+### The header cannot choose the verifier
+
+`validToken()` now rejects a token whose header names any algorithm other than
+the configured one, `alg: "none"` included, before it spends a single HMAC. The
+header used to be ignored entirely during verification.
+
+This closed no live hole. Every framework already verified with its own
+configured algorithm and never read the header to pick one, so a forged header
+changed the signing input and broke the signature anyway. What the check buys is
+parity with Ruby, which always had it, an exit before the wasted work, and a test
+that fails the day someone refactors `validToken()` into trusting `alg` from the
+header. That mistake has its own CVE list. Now it has a test here.
+
+### authenticateRequest forwards its algorithm
+
+`Auth::authenticateRequest()` accepted a `$algorithm` argument and dropped it on
+the floor, so a caller asking for a particular algorithm silently got the
+environment's. It is forwarded now, and its default changed from `'HS256'` to
+`null` so environment resolution applies. Passing `'HS256'` explicitly behaves
+exactly as before.
+
+### A misconfigured algorithm throws (Breaking)
+
+`TINA4_JWT_ALGORITHM=HS-256` used to be swallowed. The typo went into the header,
+`sign()` produced an HMAC-SHA256 signature anyway, and `validToken()` then failed
+to recognise the algorithm and rejected every token. A one-character mistake in a
+deployment variable read as a silent 401 forever.
+
+`resolveAlgorithm()` now throws an `\InvalidArgumentException` naming the
+variable and the values it accepts: `HS256`, `HS384`, `HS512`, `RS256`. A
+deployment error announces itself instead of impersonating a bad password.
+
+A malformed or forged token still returns `null`, exactly as before. Only the
+configuration error escapes.
+
+**Migration:** set `TINA4_JWT_ALGORITHM` to one of the four supported values, or
+leave it unset for the HS256 default. A value that used to be swallowed now stops
+the first token operation and tells you why.
+
+### The tests that hold it
+
+Thirty-five tests, a positive and a negative case per issue, real `Auth`, real
+`hash_hmac`, real OpenSSL key pairs, no doubles anywhere. Each was reverted
+against the old code and watched to fail: forcing every HMAC algorithm back to
+`sha256` fails six digest assertions. Full suite on macOS with PHP 8.5.7 and
+PHPUnit 11.5.55: 4,311 tests, 12,704 assertions, zero failures.
+
 ## v3.13.91 (2026-07-27) - The offenders list finally points at code worth fixing
 
 `tina4 metrics` ranked `public/js/frond.js` as the worst code in the framework,

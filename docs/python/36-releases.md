@@ -1,5 +1,103 @@
 # Chapter 35: Release Notes
 
+## v3.13.92 (2026-07-27) - A token header that tells the truth about its signature
+
+Configure `Auth` for HS512 and Tina4 minted a token whose header said HS512 over
+a signature computed with HMAC-SHA256. The signer reached for `hashlib.sha256`
+and never asked the header what it had promised.
+
+Tina4 accepted its own tokens, because it made the identical mistake on the way
+back in. Anything else that reads the header and computes the digest it names got
+different bytes and threw the token out. Three reported issues, one contract,
+shipped in all four frameworks.
+
+### The header names the algorithm that signed (python#105)
+
+`_sign()` hardcoded the digest while the header carried `self.algorithm`. HS512
+produced a 32-byte signature under a header promising 64.
+
+The digest now comes from `_HMAC_ALGORITHMS[self.algorithm]`, so the `alg` in the
+header is always the one that produced the bytes. HS256, HS384 and HS512 all
+sign and verify, and the whole family lives in `hashlib`, so nothing new was
+installed to get it.
+
+The assertion that catches this measures the signature's byte length: 32, 48, 64.
+Comparing one algorithm's token against another's proves nothing, because the
+header is part of the signing input, so two tokens differ either way.
+
+### TINA4_JWT_ALGORITHM is read for real (python#106)
+
+The variable sat in the CLI's list of known variables and was never read. Set
+HS512, see it acknowledged as a setting Tina4 knows about, and get HS256 tokens
+anyway.
+
+`_resolve_algorithm()` reads it now. An explicit argument wins, then the
+environment, then HS256. An algorithm Tina4 cannot sign raises and names the
+supported set, because the silent downgrade was the whole defect: a weaker token
+than the one you asked for, and nothing said a word.
+
+RS256 is not in the Python set, and it is not coming. PHP has OpenSSL and Node
+has `node:crypto`, so RSA signing costs those two nothing and stays available
+there. Python and Ruby would need a third-party package, and the core takes no
+dependencies. RS256 is a documented PHP and Node extra, permanently.
+
+### nbf is enforced, with 60 seconds of leeway (python#107)
+
+A token stamped not-valid-until-noon was accepted at nine. `valid_token()`
+checked `exp` and walked straight past `nbf`.
+
+It now refuses a post-dated token until its `nbf` arrives, and accepts one up to
+60 seconds early. RFC 7519 allows a small leeway, and without one a token minted
+on a host a second ahead is rejected for nothing at all.
+
+A token carrying no `nbf` is unconstrained, which is what keeps this
+non-breaking for every token already in circulation. `get_token()` does not stamp
+one. Ruby used to, and no longer does, so all four now issue the same claims.
+
+### The header cannot choose the verifier
+
+`valid_token()` now rejects a token whose header names any algorithm other than
+the configured one, `alg: "none"` included, before it spends a single HMAC.
+
+This closed no live hole. Every framework already verified with its own
+configured algorithm and never read the header to pick one, so a forged header
+changed the signing input and broke the signature anyway. What the check buys is
+parity with Ruby, which always had it, an exit before the wasted work, and a test
+that fails the day someone refactors `valid_token()` into trusting `header.alg`.
+That mistake has its own CVE list. Now it has a test here.
+
+### Overrides on authenticate_request are honoured
+
+`authenticate_request(headers, secret=..., algorithm=...)` accepted both
+overrides and dropped them. The body called `self.valid_token()`, so a caller
+asking for a particular secret or algorithm quietly got the instance's own.
+
+Both are honoured now. Their defaults moved to `None`, because the override
+branch tests for `is not None` and a real default recursed until the stack ran
+out.
+
+### A misconfigured algorithm raises (Breaking)
+
+While the variable was ignored, `TINA4_JWT_ALGORITHM=HS-256` did nothing at all
+and you signed HS256 without being told. Now that the setting is honoured, a
+value Tina4 cannot sign has to go somewhere, and it raises a `ValueError` naming
+the variable and the values it accepts. A typo surfaces at the first token
+operation, which is where a deployment mistake belongs.
+
+A malformed or forged token still returns `None`, exactly as before. Only the
+configuration error escapes.
+
+**Migration:** set `TINA4_JWT_ALGORITHM` to `HS256`, `HS384` or `HS512`, or leave
+it unset for the HS256 default. A value that used to be swallowed now stops the
+first token operation and tells you why.
+
+### The tests that hold it
+
+Twenty-seven named regression tests, a positive and a negative case per issue, no
+doubles anywhere. Each ran against the old code first and was watched to fail:
+restoring the hardcoded digest fails four of them. Full suite on macOS with
+Python 3.13: 3,967 passing, 114 skipped.
+
 ## v3.13.91 (2026-07-27) - The offenders list finally points at code worth fixing
 
 `tina4 metrics` ranked `public/js/frond.js` as the worst code in the framework,

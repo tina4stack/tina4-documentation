@@ -1,5 +1,105 @@
 # Chapter 35: Release Notes
 
+## v3.13.92 (2026-07-27) - One algorithm, from the env var to the middleware
+
+`getToken` read `TINA4_JWT_ALGORITHM`. `validToken` read it. `authMiddleware`
+ignored it and passed the string `"HS256"` instead.
+
+That mismatch was harmless while HS256 was the only algorithm Node could sign.
+This release adds HS384 and HS512, which turns the hardcoded default into a live
+breakage: tokens minted HS512, middleware verifying HS256, every valid token
+refused. It is fixed in the same change that made it reachable. Three reported
+issues, one shared contract, all four frameworks.
+
+### The header names the algorithm that signed
+
+The digest was hardcoded to `sha256` while the header carried whatever
+`TINA4_JWT_ALGORITHM` said. An app configured for HS512 emitted a token claiming
+HS512 over a 32-byte HMAC-SHA256 signature, and any verifier that reads the header
+and computes what it names got different bytes and rejected the token.
+
+The digest now comes from a lookup keyed by the resolved algorithm, so the `alg`
+in the header is always the one that produced the signature. HS256, HS384 and
+HS512 all sign and verify through `node:crypto`, with nothing new installed.
+
+The assertion that catches this measures the signature's byte length: 32, 48, 64.
+Comparing one algorithm's token against another's proves nothing, because the
+header is part of the signing input, so two tokens differ either way.
+
+`RS256` is kept. Node ships `node:crypto`, so RSA signing costs nothing here, and
+the same holds for PHP with ext-openssl. Python and Ruby would need a third-party
+package, and the core takes no dependencies, so `RS256` is a documented PHP and
+Node extra rather than part of the cross-framework contract. The other two are not
+getting it.
+
+### authMiddleware stops overriding your configuration
+
+`authMiddleware(secret?, algorithm = "HS256")` shadowed the environment for every
+route it guarded. Nothing broke while HS256 was the only option, and with HS384
+and HS512 now supported it would have broken every app that moved off HS256.
+
+The parameter no longer carries a default, so an unset argument resolves through
+`TINA4_JWT_ALGORITHM` exactly as `getToken` and `validToken` do. Pass one
+explicitly and it still wins.
+
+### nbf is enforced, with 60 seconds of leeway (nodejs#39)
+
+A token stamped not-valid-until-noon was accepted at nine. `validToken` checked
+`exp` and walked straight past `nbf`.
+
+It now refuses a post-dated token until its `nbf` arrives, and accepts one up to
+`JWT_LEEWAY_SECONDS` early. RFC 7519 allows a small leeway, and without one a
+token minted on a host a second ahead is rejected for nothing at all. An `nbf`
+that is present but not a number is rejected rather than read as no constraint.
+
+A token carrying no `nbf` is unconstrained, which is what keeps this
+non-breaking for every token already in circulation. `getToken` does not stamp
+one, matching Python and PHP. Ruby used to, and no longer does, so all four now
+issue the same claims.
+
+### The header cannot choose the verifier
+
+`validToken` now rejects a token whose header names any algorithm other than the
+expected one, `alg: "none"` included, before it spends a single HMAC.
+
+Node was not exploitable here. `verifySignature` always used the configured
+algorithm and never read the header to pick one, so a forged header changed the
+signing input and broke the signature anyway. What the check buys is parity with
+Ruby, which always had it, an exit before the wasted work, and a lock-in test: a
+future refactor that starts trusting `header.alg`, which is the classic algorithm
+substitution mistake, now fails four tests. That mistake has its own CVE list. Now
+it has a test here.
+
+### A misconfigured algorithm throws (Breaking)
+
+`validToken` resolved the algorithm inside its own `try`, so a typo in
+`TINA4_JWT_ALGORITHM` was caught and returned `null`. Every request got a 401 and
+no explanation. `getToken` threw on the same value, so the two paths disagreed
+about what a misconfiguration means.
+
+The fail-closed argument does not survive contact with that: `getToken` already
+threw, so a typo surfaced at login regardless. Swallowing it in `validToken` never
+avoided the error, it only made the rejection silent. A misconfigured algorithm is
+a deployment error, not a bad token, and both paths now say so with a message
+naming the variable and the supported set.
+
+A malformed or forged token still returns `null`, exactly as before. Only the
+configuration error escapes.
+
+**Migration:** set `TINA4_JWT_ALGORITHM` to `HS256`, `HS384`, `HS512` or `RS256`,
+or leave it unset for the HS256 default. A value that used to become a silent 401
+now throws and tells you why.
+
+### The tests that hold it
+
+Sixty-nine real assertions, a positive and a negative case per issue, no mocks and
+no doubles. Signatures are checked against an independently computed `node:crypto`
+HMAC and against the digest's raw byte length. Each check ran against the old code
+first and was watched to fail: forcing `sha256` for every HMAC algorithm fails
+exactly the five digest tests, disabling the `nbf` check fails seven, and a
+header-trusting verifier fails the four pinning tests. Full suite on macOS with
+Node 25: 6,005 passing across 191 files, typecheck green.
+
 ## v3.13.91 (2026-07-27) - The offenders list finally points at code worth fixing
 
 `tina4 metrics` ranked `public/js/frond.js` as the worst code in the framework,

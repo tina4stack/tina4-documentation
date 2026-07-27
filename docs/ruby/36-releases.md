@@ -1,5 +1,125 @@
 # Chapter 35: Release Notes
 
+## v3.13.92 (2026-07-27) - The algorithm you configure is the algorithm that signs
+
+Ruby read `TINA4_JWT_ALGORITHM` nowhere. Set HS512, restart, and every token came
+out HS256 with a header that agreed with the code rather than with you.
+
+Ruby also stamped an `nbf` claim on every token it issued, which none of the other
+three did. Three reported issues sit behind this release, one shared contract, and
+Ruby is the framework whose issuing behaviour changes.
+
+### The header names the algorithm that signed
+
+`hmac_encode` and `hmac_decode` both hardcoded SHA-256. `HMAC_ALGORITHMS` now maps
+HS256, HS384 and HS512 to their `OpenSSL::Digest` classes and both ends take the
+digest from the map, so the `alg` in the header is always the one that produced
+the signature. The family ships with Ruby, so no gem was added to get it.
+
+The assertion that catches this measures the signature's byte length: 32, 48, 64.
+Comparing one algorithm's token against another's proves nothing, because the
+header is part of the signing input, so two tokens differ either way.
+
+RS256 is not in the Ruby set, and it is not coming. PHP has OpenSSL bindings for
+it and Node has `node:crypto`, so RSA signing costs those two nothing and stays
+available there. Ruby and Python would need a third-party package, and the core
+takes no dependencies. RS256 is a documented PHP and Node extra, permanently.
+
+### TINA4_JWT_ALGORITHM is read for real
+
+`resolve_algorithm` reads it now: an explicit argument wins, then the environment,
+then HS256. A blank value counts as unset. An algorithm Tina4 cannot sign raises
+and names the supported set, because the silent downgrade was the whole defect: a
+weaker token than the one you asked for, and nothing said a word.
+
+### get_token no longer stamps nbf (Breaking, Ruby only)
+
+Every token Ruby issued carried `"nbf" => now`. It duplicated `iat`, bought no
+security at all, and manufactured clock-skew rejections between hosts whose clocks
+disagreed by a second. RFC 7519 keeps `nbf` for a token you deliberately
+post-date, and that still works: pass your own and validation enforces it.
+
+Python, PHP and Node never stamped it. Ruby was the outlier, so Ruby moved.
+
+**Migration:** if you relied on a Ruby-issued token carrying an `nbf` claim, pass
+`"nbf" => <epoch>` yourself in the payload. Nothing else changes, and every token
+already in circulation keeps validating.
+
+### nbf validation gains 60 seconds of leeway
+
+Ruby was the one framework that already honoured `nbf`, and it honoured it to the
+second. A token minted on a host one second ahead was refused for nothing at all.
+
+`JWT_LEEWAY_SECONDS` is 60 now, so a post-dated token is accepted up to a minute
+early. RFC 7519 allows a small leeway, which is exactly what this is. A token
+carrying no `nbf` is unconstrained, as before.
+
+`refresh_token` used to strip `nbf` along with `iat` and `exp`. With the automatic
+claim gone, that would have erased a caller's deliberate post-dating on every
+refresh. It now drops only the two timing claims it owns and leaves your `nbf`
+where you put it.
+
+### The header cannot choose the verifier
+
+Ruby already refused a token whose header did not say HS256. That check now names
+the configured algorithm instead, so a forged `none`, HS384, HS512 or RS256 header
+is refused before any signature work, whichever algorithm you signed with.
+
+This closed no live hole in any of the four frameworks. Each already verified with
+its own configured algorithm and never read the header to pick one, so a forged
+header changed the signing input and broke the signature anyway. What generalising
+the check buys is one behaviour across four languages, an exit before the wasted
+work, and a test that fails the day someone refactors `hmac_decode` into trusting
+the header. That mistake has its own CVE list. Now it has a test in all four.
+
+### Overrides on authenticate_request are honoured
+
+`authenticate_request(headers, algorithm: ...)` accepted the keyword with a
+hardcoded `"HS256"` default and then dropped it, so an explicit argument lost to
+the environment. It is a real override now: explicit, then environment, then
+HS256.
+
+### A misconfigured algorithm raises (Breaking)
+
+An algorithm Tina4 cannot sign raises an `ArgumentError` naming the variable and
+the values it accepts. Resolution happens outside `hmac_decode`'s rescue on
+purpose, so a configuration error surfaces instead of decaying into a `nil`
+invalid-token result and a silent 401 on every request.
+
+A malformed or forged token still returns `nil`, exactly as before. Only the
+configuration error escapes.
+
+**Migration:** set `TINA4_JWT_ALGORITHM` to `HS256`, `HS384` or `HS512`, or leave
+it unset for the HS256 default. A value that used to be ignored now stops the
+first token operation and tells you why.
+
+### The live Mongo queue specs stop dropping each other's database
+
+Fixed, tests only, no runtime change. Every example in the live MongoDB queue
+group ended by dropping the database it had used, and the name was one fixed
+constant shared by the whole group. So example B, or a second `rspec` process on
+the same `mongod`, could drop the database example A was still working in.
+
+That produced a real failure that never reproduced in isolation: "expected 1, got
+0" on the retry example, because the seeded document had been dropped out from
+under the update. A failure that vanishes when you run the file alone is a
+cross-process failure, not a logic bug.
+
+Each example now builds its own database name from the prefix, the process id and
+a random suffix. The pid separates concurrent processes, the suffix separates
+examples and repeat runs inside one process, and the existing drop can now only
+destroy data the example created. The specs still hit a real MongoDB. Isolation
+comes from namespacing the data, never from faking the service.
+
+### The tests that hold it
+
+Thirty examples for the algorithm and `nbf` contract, real `Auth`, real OpenSSL
+HMAC, real process environment, no doubles anywhere. Each ran against the old code
+first and was watched to fail: re-hardcoding SHA-256 fails the digest examples,
+restoring the automatic `nbf` fails eight, and removing the leeway fails the
+in-leeway example. Full suite on macOS with Ruby 4.0.0, against a live SQLite and
+a live MongoDB: 4,271 examples, zero failures, 74 pending.
+
 ## v3.13.91 (2026-07-27) - The offenders list finally points at code worth fixing
 
 `tina4 metrics` ranked `public/js/frond.js` as the worst code in the framework,
