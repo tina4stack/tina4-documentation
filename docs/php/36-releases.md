@@ -1,5 +1,77 @@
 # Chapter 35: Release Notes
 
+## v3.13.93 (2026-07-27) - index.php tells you where the server actually is
+
+Run `php index.php` and you get one line saying Tina4 started, then the process
+exits 0 with nothing listening. That is correct. `index.php` is a front
+controller for Apache, nginx and php-fpm, and `handle()` returns early under the
+CLI SAPI so the CLI can include the file for bootstrap without emitting an HTTP
+body into its output.
+
+Correct, and it reads exactly like a crash. It now prints where the server is:
+
+```
+Routes bootstrapped. index.php is a front controller, not a server.
+To serve locally run: tina4 serve
+```
+
+Behaviour is unchanged. This is a signpost, nothing more.
+
+### Guarded twice, because the alternative is worse than the papercut
+
+The CLI includes `index.php`, and `tina4php commands --json` emits a machine-read
+manifest on stdout that the self-describing CLI depends on. A stray line there
+corrupts it. So the hint fires only when `index.php` is itself the entry script,
+and it is written to stderr, which nothing parsing that manifest reads. An
+unknown entry script stays silent: never guess into a machine-read stream.
+
+The decision is a pure static, `App::shouldHintCliServe`, so it is tested without
+spawning a process, and the tests pin both directions - fires for `index.php`,
+silent for `bin/tina4php` and `vendor/bin/tina4php`.
+
+### Not the Ruby fix
+
+Ruby shipped 3.13.93 the same day for a real bug: `Tina4.run!` never registered
+the built-in routes, so `app.rb` served 404 on `/health`. PHP was never broken.
+Reading an exit code and inferring a defect is how this was first misdiagnosed,
+and reading `handle()` is what corrected it.
+
+### Also in the CLI (tina4 v3.8.60 through v3.8.63)
+
+Every Tina4 production image now installs the `tina4` binary and launches through
+it, so one `tina4 serve --production` replaces four different per-language entry
+points. The image comes from `ghcr.io/tina4stack/tina4-cli`, copied into your
+build as a layer. No Rust toolchain, no compile step, no network fetch: the cost
+lives in our release, once, not in yours.
+
+It is a static musl binary on purpose. Two of the four base images are Alpine,
+where a glibc binary cannot exec at all, and one static build runs unchanged on
+both Alpine and Debian-slim. One artifact per architecture, four images.
+
+`tina4 serve` could never start a Python production image. A `.venv` was read as
+"uv is installed", and uv builds the virtualenv in the builder stage and is left
+out of the slim runtime by design. It now runs the virtualenv's own interpreter,
+which needs no uv and is the one uv would have picked anyway. The reason this
+took so long to find is its own fix: a failed spawn discarded the OS error, so a
+missing uv, a missing interpreter and a permissions error all printed the same
+blank "Failed to start server". The cause is printed now.
+
+The Node image was pinned to `node:20` while tina4-nodejs declares
+`engines.node >=22` and imports the built-in `node:sqlite`, added in 22.5. npm
+downgrades an engines mismatch to a warning, so the image built cleanly and died
+at start. It is `node:24` now, and a test reads the FROM lines out of the
+templates and checks each against its framework's published floor.
+
+Two release-pipeline defects were fixed in the same window, and the second
+matters more than it looks. Eight build jobs each uploaded to the same release,
+which is a race: concurrent writers lose assets, and one release shipped four of
+eight binaries while every job still reported success. Worse, the checksums file
+was generated over whatever happened to arrive, so the release carried an
+authoritative-looking SHA256SUMS covering half of itself, and `install.sh`
+verifies against that file and would have passed. A single job now publishes
+every asset, and it refuses to publish at all unless all seven binaries are
+present.
+
 ## v3.13.92 (2026-07-27) - HS512 no longer rejects every token you mint
 
 Set `TINA4_JWT_ALGORITHM=HS512` and your application locked everyone out. Not
