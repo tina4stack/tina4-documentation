@@ -117,14 +117,45 @@ Never hand-build the project layout or files; generate them:
 
 ```bash
 tina4 init <python|php|ruby|nodejs> [name]   # new project (or `tina4 setup`, guided)
-tina4 generate model <Name>                  # src/orm/<Name>      (one model per file)
-tina4 generate route <name>                  # src/routes/<name>   (CRUD verbs)
-tina4 generate migration "<description>"     # migrations/<timestamp>_<slug>.sql
-tina4 generate middleware <Name>             # src/middleware/<name>
+```
+
+`init` writes `app.py` (or the language equivalent), `.env`, the package manifest
+(`pyproject.toml` / `composer.json` / `Gemfile` / `package.json`) and
+`.gitignore`. The `src/` tree (`src/routes/`, `src/orm/`, `src/middleware/`, ...)
+is created **by the generators, on demand** - an empty `src/` right after `init`
+is normal, not a failed scaffold.
+
+**All 15 generators.** Reach for these before writing anything by hand:
+
+```bash
+tina4 generate model <Name>          # src/orm/<Name>        one model per file
+tina4 generate route <name>          # src/routes/<name>     CRUD verbs
+tina4 generate crud <Name>           # model + route + migration in one shot
+tina4 generate auth                  # JWT register/login/me + User model + migration
+tina4 generate migration "<desc>"    # migrations/<timestamp>_<slug>.sql
+tina4 generate middleware <Name>     # src/middleware/<name>
+tina4 generate validator <Name>      # request validation
+tina4 generate service <Name>        # business-logic layer
+tina4 generate seeder <Name>         # database seed data
+tina4 generate queue <Name>          # queue job/consumer
+tina4 generate listener <Name>       # event listener
+tina4 generate websocket <Name>      # websocket handler
+tina4 generate form <Name>           # form + CSRF token handling
+tina4 generate view <name>           # Frond template
+tina4 generate test <Name>           # test scaffold
+```
+
+**Building a REST API with auth? `tina4 generate auth` then `tina4 generate crud
+<Name>` gets you there in two commands.** Do not hand-roll either.
+
+```bash
 tina4 migrate                                # apply pending migrations
-tina4 routes                                 # list registered routes
-tina4 metrics                                # code-health report: top complexity offenders (--fail-on warn|error for CI)
-tina4 update                                 # self-update the tina4 CLI to the latest release
+tina4 migrate:status                         # what's applied / pending
+tina4 seed                                   # run seeders
+tina4 console                                # REPL with the framework loaded
+tina4 metrics                                # code-health report (--fail-on warn|error for CI)
+tina4 commands --json                        # every command this project supports, machine-readable
+tina4 update                                 # self-update the tina4 CLI
 ```
 
 ---
@@ -198,7 +229,7 @@ whole stack - server, router, ORM, auth, queue, sessions, templating.
 
 ## Building - use the built-ins, get the exact API (do NOT guess)
 
-Tina4 has 55 built-ins: ORM, Auth (JWT + password hashing), Queue, Sessions,
+Tina4 has 97 built-ins: ORM, Auth (JWT + password hashing), Queue, Sessions,
 Migrations, an `Api` HTTP client, WebSockets, real-time collaboration (WebRTC:
 peer calls + chat + files), GraphQL, Swagger, CRUD, i18n, caching, events, and
 more. **Use them - never hand-roll what's built in.**
@@ -206,17 +237,24 @@ more. **Use them - never hand-roll what's built in.**
 For exact, version-correct signatures, use these in order - don't invent API
 names:
 
-1. **The installed skills.** `tina4 setup` installs the Tina4 skills - the
-   per-language `tina4-developer-<language>` (python/php/ruby/nodejs), `tina4-js`,
-   and `tina4-maintainer` - into `~/.claude/skills`. They are the source of truth
-   for patterns.
-2. **The live project MCP.** A running `tina4 serve` exposes an MCP server at
+1. **The live project MCP.** A running `tina4 serve` exposes an MCP server at
    `/__dev/mcp` (JSON-RPC) plus a browser REST shim at `/__dev/api/mcp`. Its
    `docs_search`, `project_overview`, `routes`, and `database_*` tools answer
    from THIS project's real code and version. Cheapest way to stay correct - ask
-   it instead of reading the whole repo.
-3. **The RAG - "Ask Tina4".** Live, indexed from the docs:
-   https://tina4.com/api/rag
+   it instead of reading the whole repo. **Works in any AI tool.**
+2. **The RAG - "Ask Tina4".** Live, indexed from the docs. Any tool that can make
+   an HTTP request can use it:
+   ```bash
+   curl -s -X POST https://rag.tina4.com/v1/ask \
+     -H 'Content-Type: application/json' \
+     -d '{"question":"How do I define a POST route with auth in Python?","language":"python"}'
+   # -> {"query": "...", "answer": "...", "sources": [...]}
+   ```
+3. **The installed skills** (Claude Code / Claude Desktop only). `tina4 setup`
+   installs `tina4-developer-<language>`, `tina4-js` and `tina4-maintainer` into
+   `~/.claude/skills`, auto-loaded from there. If you are Cursor, Copilot,
+   Windsurf, Gemini or anything else, you will NOT have these - use 1 and 2,
+   which are tool-agnostic, and read the generated scaffold (below).
 4. **The docs:** https://tina4.com
 
 The essentials look like this in Python (the reference backend):
@@ -244,8 +282,43 @@ class User(ORM):
 # Auto-binds to TINA4_DATABASE_URL. Override with bind_database(db).
 ```
 
+**Auth / JWT - run `tina4 generate auth`, then use this API.** Never hand-roll
+token signing or password hashing. The generator writes a `User` model, its
+migration, and `/api/auth/register|login|me`; this is the exact API it uses:
+
+```python
+from tina4_python.core.router import get, post, noauth
+from tina4_python.auth import Auth
+
+Auth.hash_password(password)                  # store this, never the plaintext
+Auth.check_password(password, user.password)  # -> bool
+Auth.get_token({"user_id": user.id})          # -> signed JWT string
+Auth.valid_token_static(token)                # -> bool
+
+@noauth()                                     # put ABOVE the verb decorator
+@post("/api/auth/login")                      # ... or POST would require a token
+async def login(request, response):
+    ...
+```
+
+Signing needs **`TINA4_SECRET`** in `.env` - set it or every token is signed with
+a blank secret. Note the route-registration log prints `auth=required` even for
+`@noauth()` routes (the log is emitted before the decorator applies); trust the
+actual HTTP response, not that line.
+
+**Environment variables you will need:**
+
+```bash
+TINA4_DATABASE_URL=sqlite:///data/app.db   # sqlite path is relative to project root
+                                           # also: postgres://, mysql://, mssql://, firebird://, mongodb://
+TINA4_SECRET=<random-string>               # JWT signing - REQUIRED for auth
+TINA4_DEBUG=true                           # dev dashboard + /__dev/mcp
+```
+
+**Swagger** is on automatically: UI at `/swagger`, spec at `/swagger/openapi.json`.
+
 The same concepts exist in PHP, Ruby and Node - get the exact per-language
-syntax from the skills or the RAG, don't guess it.
+syntax from the live MCP or the RAG, don't guess it.
 
 ---
 
