@@ -90,7 +90,17 @@ FRAMEWORKS=(
   "tina4-nodejs|tina4-nodejs|7148|3.13.92"
 )
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+# Where the framework repos live. TINA4_REPOS wins so a caller that already knows
+# (tina4-lab.sh) can pass its answer down, instead of this script re-deriving it
+# from its own path and getting a different one. That path guess assumes the
+# script sits in a tina4-documentation checkout beside the framework repos; copied
+# to /root/tina4-lab it resolved to "/" and every framework was reported as
+# "no Dockerfile". One root, decided once, passed along.
+if [ -n "${TINA4_REPOS:-}" ]; then
+  ROOT="$TINA4_REPOS"
+else
+  ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+fi
 FAILED=()
 GATED=()
 

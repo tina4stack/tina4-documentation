@@ -89,7 +89,13 @@ elif [ -d "$(dirname "${BASH_SOURCE[0]}")/../../../tina4-python" ]; then
 elif [ -d "$PWD/tina4-python" ]; then
   ROOT="$PWD"                                                    # run from the parent dir
 else
-  ROOT="${TINA4_LAB_HOME:-$PWD/tina4-repos}"                     # where `repos sync` puts them
+  # Anchored to THIS SCRIPT's directory, deliberately not to $PWD. A $PWD default
+  # makes the repo root depend on where you happened to cd first: the same box
+  # ended up with two 98 MB clones at DIFFERENT commits (/root/tina4-repos from a
+  # run with TINA4_REPOS set, /root/tina4-lab/tina4-repos from one without), and
+  # `images build` would then build whichever was stale. The script's own location
+  # is stable; the working directory is not.
+  ROOT="${TINA4_LAB_HOME:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/tina4-repos}"
 fi
 
 c_ok()   { printf '  \033[32m%s\033[0m %s\n' "OK" "$*"; }
@@ -139,6 +145,21 @@ cmd_doctor() {
   else
     c_warn "buildx does not list $other -- the cross-arch half of a publish will fail"
     c_info "fix: docker run --privileged --rm tonistiigi/binfmt --install all"
+  fi
+
+  # CHECK THE DRIVER, not the platform list. The default builder uses the
+  # `docker` driver, which lists every qemu-emulable platform and then refuses
+  # the actual job: "Multi-platform build is not supported for the docker
+  # driver." An earlier version of this check grepped the platform list, passed
+  # happily, and the publish still died at push time. A capability check has to
+  # test the capability.
+  local driver; driver="$(docker buildx inspect 2>/dev/null | awk '/^Driver:/{print $2}')"
+  if [ "$driver" = "docker-container" ]; then
+    c_ok "buildx driver is docker-container (multi-platform push works)"
+  else
+    c_bad "buildx driver is '${driver:-unknown}' -- multi-platform push WILL fail at the end of a long build"
+    c_info "fix: docker buildx create --name tina4 --driver docker-container --use --bootstrap"
+    fail=1
   fi
 
   # The publish credential lives in THIS user's docker config, which is why a
@@ -373,6 +394,10 @@ cmd_images() {
   local action="${1:-build}"; shift || true
   local pub="$(dirname "${BASH_SOURCE[0]}")/publish-base-images.sh"
   [ -f "$pub" ] || die "publish-base-images.sh not found beside this script"
+  # Hand our resolved root down rather than letting the child re-derive it. It
+  # used to guess from its own path, and from /root/tina4-lab that landed on "/"
+  # -- all four frameworks reported "no Dockerfile" while sitting right there.
+  export TINA4_REPOS="$ROOT"
   case "$action" in
     build)   bash "$pub" "$@" ;;
     publish) bash "$pub" --push "$@" ;;
