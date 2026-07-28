@@ -321,14 +321,22 @@ cmd_infra_up() {
   #                    to tina4_py and quietly prove nothing -- Node said exactly
   #                    that: "default=tina4_py, named=tina4_py".
   #   tina4_php        PHP's Postgres tests do NOT read TINA4_TEST_PG_DB; each test
-  #   tina4            class names its own database in a PG_DB constant (4 use
-  #                    tina4_php, 1 uses tina4). With them absent, 43 PHP tests
-  #                    ERROR as "PostgresAdapter: Failed to connect to PostgreSQL"
-  #                    -- which reads like a driver bug and is a missing database.
-  #                    (PostgresAdapter discards libpq's real message, so the
-  #                    error never says which database it wanted.)
+  #   tina4            class names its own database. Four use tina4_php, one uses
+  #   tina4_rb         tina4, and OrmBindDatabaseTest uses tina4_rb -- RUBY's
+  #                    default name, inside a PHP test. With them absent, 43 PHP
+  #                    tests ERROR as "Failed to connect to PostgreSQL", which
+  #                    reads like a driver bug and is a missing database.
+  #
+  #                    tina4_rb was MISSED on the first pass: that file does not
+  #                    use the PG_DB constant the others do, so grepping for the
+  #                    constant came back short. What caught it was the improved
+  #                    PostgresAdapter error, which now names the database it
+  #                    wanted -- the old bare "Failed to connect to PostgreSQL"
+  #                    would have sent the next reader digging again. If a NEW
+  #                    database name ever turns up here, read the error, do not
+  #                    re-grep for the constant.
   if [ "$(docker inspect -f '{{.State.Running}}' "$PREFIX-postgres" 2>/dev/null)" = "true" ]; then
-    for db in tina4_analytics tina4_php tina4; do
+    for db in tina4_analytics tina4_php tina4 tina4_rb; do
       if docker exec "$PREFIX-postgres" psql -U tina4 -d tina4_py -tAc \
            "SELECT 1 FROM pg_database WHERE datname='$db'" 2>/dev/null | grep -q 1; then
         c_ok "postgres $db already present"
