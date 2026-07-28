@@ -244,7 +244,7 @@ reviewed and closed at a time, not batched.
 | 1 | DotEnv parser | SYNTHESISE | correctness | `features/001-dotenv.md` | closed |
 | 2 | Structured logger | SYNTHESISE | correctness | `features/002-structured-logger.md` | closed |
 | 3 | DB adapter interface | PROMOTE php | SOLID | `features/003-database-adapter-interface.md` | closed |
-| 4 | SQLite adapter + write path | **GAP** (P1, broken in 4 of 4) | correctness | `features/004-sqlite-adapter.md` | closed |
+| 4 | SQLite adapter + write path | **GAP** (P1, was broken in 4 of 4) | correctness | `features/004-sqlite-adapter.md` | **SHIPPED all 4** |
 | 5 | DATABASE_URL parser | PROMOTE php | SOLID | `features/005-database-url-parser.md` | closed, one blocker |
 | 6 | Router + dispatch | SYNTHESISE | SOLID | `features/006-router-and-dispatch.md` | closed, sequenced first |
 | 13 | ORM base class | PROMOTE ruby (structure) | LOC/CC | `features/013-orm-base-class.md` | closed |

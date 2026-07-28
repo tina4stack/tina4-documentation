@@ -202,8 +202,59 @@ production.
 - **Node's no-op is the quietest and likeliest to be depended on** by code that
   never checked `affectedRows`.
 
-## Parked
+## SHIPPED 2026-07-28, all four frameworks
 
-Not implemented. Recommend P1 in the implementation queue, behind feature 6 only
-because feature 6 is already sequenced first - this one is a silent data-loss
-class and outranks everything else found so far.
+No longer parked. The owner called it first in the fix queue and it is done.
+
+| framework | commit | contract tests | full suite |
+| --- | --- | --- | --- |
+| python | `3036448` | 16/16 | 3938 passed (6 reds are the messenger contract) |
+| ruby | `8e21360` | 16/16 | **4323 / 0 failures** (166 pending, service-gated) |
+| node | `fafe4ad` | 14/14 | 5876 passed (26 reds: messenger + Valkey/Mongo absent) |
+| php | `9403377e` | 15/15 | **4333 / 0 failures** (170 skipped, service-gated) |
+
+Red before green in every framework. Failure counts at the red stage: Python
+8/11, Ruby 7/16, Node 6/10, PHP 8 errors + 2 failures of 15.
+
+The fix landed on the **public facade** in each framework rather than in each
+engine adapter, so all five to seven adapters inherit it from one place.
+
+Verified on macOS with SQLite only. The other engines share the facade path but
+were not exercised.
+
+### Two findings that came out of implementing, not auditing
+
+**1. A composite primary key was silently truncated to its first column, in the
+introspection layer, in Ruby and Node.** `PRAGMA table_info` reports `pk` as the
+**1-based position within the key**, not a boolean, so a composite key gives
+`pk=1, pk=2`. Ruby tested `r[:pk] == 1` and Node `r.pk === 1`; both therefore
+reported only the first column. Python (`bool(row["pk"])`) and PHP
+(`(int)$row['pk'] > 0`) were already correct.
+
+This was pre-existing and affected anything reading `columns()` / `getColumns()`,
+not just this fix. Both are corrected.
+
+It also nearly shipped **into** the fix: the first version of `primary_key()`
+used `next(...)` / `.find()`, so on `order_items (order_id, product_id)` it built
+`WHERE order_id = 1` and tried to set `product_id` on every row in that order.
+The UNIQUE constraint caught it; without one it would have corrupted both rows
+silently, which is the same masking that hid the original bug. `primary_key()`
+now returns a **list** in all four, every key column enters the WHERE, and a
+**partial** key raises and names what is missing. Five composite-key pairs per
+framework cover it.
+
+**2. PHP's `getColumns()` returns the key `'primary'` where the other three
+return `primary_key` / `primaryKey`.** A public return-shape divergence, so it is
+data rather than a host-language method name and should converge. **Not changed
+here** - it does not belong bundled into a P1 data fix. Open item.
+
+### Still open from this row
+
+- [ ] Converge PHP's `getColumns()` key `'primary'` on `primary_key`.
+- [ ] **The ORM layer is still single-key in all four.** The resolver is
+      first-match-or-`"id"` (`baseModel.ts:342`, Ruby `primary_key_field || :id`),
+      and `createTable` emits `PRIMARY KEY` per column, which is invalid DDL for a
+      composite key. So `model.save()` / `.delete()` still key on one column even
+      though the raw write path no longer does. Raised by the owner from prior
+      experience; needs its own plan.
+- [ ] Row-cap decision (unchanged, see feature 18).
