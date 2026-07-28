@@ -248,14 +248,15 @@ reviewed and closed at a time, not batched.
 | 5 | DATABASE_URL parser | PROMOTE php | SOLID | `features/005-database-url-parser.md` | closed, one blocker |
 | 6 | Router + dispatch | SYNTHESISE | SOLID | `features/006-router-and-dispatch.md` | closed, sequenced first |
 | 13 | ORM base class | PROMOTE ruby (structure) | LOC/CC | `features/013-orm-base-class.md` | closed |
-| 7-12, 14-93+ | remainder | - | - | - | not started |
+| 14 | Soft delete | **GAP** (broken in 3 of 4) | correctness | `features/014-soft-delete.md` | closed, 1 outstanding |
+| 7-12, 15-93+ | remainder | - | - | - | not started |
 
 Seven closed rows. PHP has now won twice (features 3 and 5, both on SOLID) and is
 the only framework to win at all - every other row went SYNTHESISE because no
 single framework held the whole answer. "Python is master" would have been the
 wrong call on six of the seven.
 
-Implementation order, revised as rows closed: **6, 4, 5, 3, 13**, then 2, 1, 0.
+Implementation order, revised as rows closed: **6, 4, 5, 3, 13, 14**, then 2, 1, 0.
 Feature 3 sits behind 5 because 5 removes the URL parsing that 3 would otherwise
 refactor twice, and behind 4 because both touch the same facade methods.
 
