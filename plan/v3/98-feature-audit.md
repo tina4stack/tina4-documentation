@@ -252,14 +252,15 @@ reviewed and closed at a time, not batched.
 | 15 | Relationships + eager load | PROVISIONAL PROMOTE python/ruby | correctness | `features/015-relationships.md` | closed, 2 outstanding |
 | 16 | Scopes | SYNTHESISE | correctness | `features/016-scopes.md` | closed |
 | 17 | Field mapping | PROMOTE node (mechanism) | SOLID | `features/017-field-mapping.md` | closed, decided (ADR-0008) |
-| 7-12, 18-93+ | remainder | - | - | - | not started |
+| 18 | Paginated results | SYNTHESISE | wire contract | `features/018-paginated-results.md` | closed, 1 outstanding |
+| 7-12, 19-93+ | remainder | - | - | - | not started |
 
 Seven closed rows. PHP has now won twice (features 3 and 5, both on SOLID) and is
 the only framework to win at all - every other row went SYNTHESISE because no
 single framework held the whole answer. "Python is master" would have been the
 wrong call on six of the seven.
 
-Implementation order, revised as rows closed: **6, 4, 5, 3, 13, 14, 15, 16, 17**, then 2, 1, 0.
+Implementation order, revised as rows closed: **6, 4, 5, 3, 13, 14, 15, 16, 17, 18**, then 2, 1, 0.
 Feature 3 sits behind 5 because 5 removes the URL parsing that 3 would otherwise
 refactor twice, and behind 4 because both touch the same facade methods.
 
@@ -304,6 +305,18 @@ decision applied inconsistently five times.
 unbounded with explicit opt-in pagination, or they all cap at the same number and
 say so. Deciding it per feature guarantees the inconsistency survives. Recorded
 here rather than in any single feature plan because no single plan owns it.
+
+**Feature 18 turned this from a preference into a correctness requirement.** A
+paginate envelope is only honest if `total` is the true total. If `Model.all` caps at
+100 and the table has 250 rows, `total` reads 100 and `total_pages` reads 5 - both
+wrong, and wrong in a way that looks authoritative. The envelope launders a
+truncation into a fact.
+
+So `total` must come from a real `COUNT(*)` over the filter, never from a capped
+read, and every path feeding a paginated response must be uncapped. That is the
+argument for **unbounded by default, with pagination as the only thing that limits
+rows** - and feature 18's `total_is_not_capped_by_a_default_read_limit` test is the
+enforcement mechanism rather than a note in a plan.
 
 ## Findings that are not per-feature
 
