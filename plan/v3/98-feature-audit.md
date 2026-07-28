@@ -255,7 +255,8 @@ reviewed and closed at a time, not batched.
 | 18 | Paginated results | SYNTHESISE | wire contract | `features/018-paginated-results.md` | closed, 1 outstanding |
 | 19 | Result / ORM caching | GAP (ruby) + SYNTHESISE | correctness | `features/019-orm-result-caching.md` | closed |
 | 20 | Input validation | SYNTHESISE | correctness | `features/020-input-validation.md` | closed, 1 outstanding |
-| 7-12, 21-93+ | remainder | - | - | - | not started |
+| 28-31 | Frond engine (lexer/parser/compiler/runtime) | PROMOTE python (structure) | SOLID | `features/028-031-frond-engine.md` | closed as one row |
+| 7-12, 21-27, 32-93+ | remainder | - | - | - | not started |
 
 Seven closed rows. PHP has now won twice (features 3 and 5, both on SOLID) and is
 the only framework to win at all - every other row went SYNTHESISE because no
@@ -264,7 +265,15 @@ wrong call on six of the seven.
 
 Implementation order, revised as rows closed: **6, 4, 5, 3, 13, 14, 15, 16, 17, 18, 19, 20**, then 2, 1, 0.
 
-**Phase 1 (rows 1-6) and Phase 2 (rows 13-20) are both complete.** 16 rows closed.
+**Phase 1 (rows 1-6) and Phase 2 (rows 13-20) are complete. Phase 3 is open.** 17
+rows closed.
+
+**Phase 3 reads differently from 1 and 2.** Frond's correctness parity is already
+enforced by a byte-identical 82-case corpus in all four frameworks (verified, md5
+`931ed20b`), so the axis is **structure and performance**, not drift. It is also the
+worst-measuring subsystem in the framework: 42 scanner errors across the four, two
+frameworks at maintainability 0.0, and the single highest complexity number measured
+anywhere (Node's Frond, 1095).
 Feature 3 sits behind 5 because 5 removes the URL parsing that 3 would otherwise
 refactor twice, and behind 4 because both touch the same facade methods.
 
@@ -287,6 +296,7 @@ before any extraction, one stage per commit.
 | --- | --- | --- |
 | Implementation order | dispatch pipeline (feature 6) goes first | this doc |
 | PHP `autoSnakeCase` default (feature 17) | **`false`** - the property name is the column in all four; PHP takes the migration | **ADR-0008** |
+| Feature layout, all four (raised in Phase 3) | **one folder per feature**, so a feature can be deleted; Python is the reference | **ADR-0009** |
 
 ## Cross-cutting decision still open: one default row cap
 
