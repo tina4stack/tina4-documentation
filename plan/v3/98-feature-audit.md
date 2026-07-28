@@ -258,16 +258,26 @@ reviewed and closed at a time, not batched.
 | 28-31 | Frond engine (lexer/parser/compiler/runtime) | PROMOTE python (structure) | SOLID | `features/028-031-frond-engine.md` | closed as one row |
 | 32 | Frond filters | SYNTHESISE | template portability | `features/032-frond-filters.md` | closed |
 | 37 | Auto-escaping | UNIFORM (html) + GAP (js/css/url) | correctness | `features/037-auto-escaping.md` | closed, 1 owner call |
-| 7-12, 21-27, 33-36, 38-93+ | remainder | - | - | - | not started |
+| 38 | Sandboxing | PROMOTE php (**P1**) + GAP (tags) | correctness | `features/038-sandboxing.md` | closed, 2 owner calls |
+| 7-12, 21-27, 33-36, 39-93+ | remainder | - | - | - | not started |
 
-Seven closed rows. PHP has now won twice (features 3 and 5, both on SOLID) and is
-the only framework to win at all - every other row went SYNTHESISE because no
-single framework held the whole answer. "Python is master" would have been the
-wrong call on six of the seven.
+PHP has now won three times: features 3 and 5 on SOLID, and feature 38 on the
+correctness of a security control. It is the only framework to win more than once.
+Most other rows went SYNTHESISE because no single framework held the whole answer.
+**"Python is master" would have been the wrong call on nearly every row**, and
+feature 38 is the sharpest case: Python is the broken implementation there, and a
+release converged the correct framework (PHP) onto it.
 
 Implementation order, revised as rows closed: **6, 4, 5, 3, 13, 14, 15, 16, 17, 18, 19, 20**, then 2, 1, 0.
 
-**Phase 1 (rows 1-6) and Phase 2 (rows 13-20) are complete. Phase 3 is open.** 19 rows closed.
+**Phase 1 (rows 1-6) and Phase 2 (rows 13-20) are complete. Phase 3 is open.** 20 rows closed.
+
+**One row now recommends jumping the queue.** Feature 38 found an exploitable bypass of a
+documented security control: the Frond sandbox cannot revoke `raw` / `safe` in Python, Ruby and
+Node, and `{% autoescape false %}` bypasses the tag gate in all four. Every other finding in
+this programme is parked for planned implementation. That one is a live XSS hole in the
+feature whose documented purpose is rendering user-supplied templates, and the fix is small.
+See `features/038-sandboxing.md`. **Owner decision.**
 
 **Phase 3 reads differently from 1 and 2.** Frond's correctness parity is already
 enforced by a byte-identical 82-case corpus in all four frameworks (verified, md5
