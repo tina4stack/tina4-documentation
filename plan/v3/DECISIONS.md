@@ -398,3 +398,67 @@ look precise. Section 1 of each BENCHMARK.md is retired, not refreshed.
 **Supersedes:** none. Implements the harness described in
 `plan/v3/docker-benchmark-harness.md`; base-image work is tracked in
 `plan/v3/docker-base-images.md`.
+
+## ADR-0007 - Base images stay on official runtime images; we do not compile a runtime to shrink one
+
+**Status:** accepted, 2026-07-28. Owner decision.
+
+**Decision.** Each Tina4 base image builds `FROM` the runtime's own official image (or bare
+Alpine plus a copied interpreter, where that is already the case) and we accept the resulting
+floor. We do NOT compile a language runtime ourselves to reduce image size. Specifically,
+`tina4-nodejs` stays on `node:24-alpine` with npm intact, at roughly 174 MB.
+
+**Measured, on a native amd64 box (`du -sx /` inside the container, not the compressed size
+Docker Hub reports):**
+
+| image | empty base | our image | Tina4 adds |
+| --- | --- | --- | --- |
+| tina4-nodejs | node:24-alpine 165 MB | 174 MB | 9 MB |
+| tina4-php | php:8.4-cli-alpine 109 MB | 112 MB | 3 MB |
+| tina4-ruby | ruby:3.3-alpine 75 MB | 97 MB | 22 MB |
+| tina4-python | alpine:3.23 9 MB | 41 MB | 32 MB |
+
+Inside `tina4-nodejs`: the `node` binary alone is 123 MB, npm 19 MB, headers 7 MB, Alpine and
+the rest 25 MB, the Tina4 framework 6 MB, the app close to nothing.
+
+**Why.** The Node image looks like an outlier and is not one. Tina4 contributes 9 MB to it,
+the smallest addition of the four in absolute terms. What is large is the runtime: one
+statically linked binary carrying V8 and a full ICU build. There is nothing to prune, because
+unlike Python there is no separable standard library to strip.
+
+Two levers exist and both are rejected.
+
+*Remove npm (saves 24 MB, base 165 -> 141).* Rejected because npm is precisely what makes
+`FROM tina4-nodejs` plus `RUN npm install pg` work, which is the documented way a user adds a
+database driver. Verified working at 185 MB. Trading that capability for 14% of the image is a
+bad deal, and it would contradict the direction the other three images are moving in, where
+shipping the ecosystem's package manager is the goal.
+
+*Compile Node with small-icu or without-intl (saves perhaps 30 MB of the 123 MB binary).*
+Rejected as too much effort to maintain. It means owning a Node build: tracking upstream
+releases, rebuilding for every security patch on two architectures, and carrying the blame for
+any behavioural difference between our Node and everyone else's. That is a permanent
+maintenance liability for a one-time percentage. The official image is maintained by people
+whose job it is, and it is the image every Node developer already trusts.
+
+The same reasoning binds the other three. If a runtime's official image is large, that is the
+runtime's size, and we report it honestly rather than fork the runtime to flatter a table.
+
+**What we DO optimise.** Everything that is ours: no transpiler in production, no dev
+dependencies, no optional database driver trees (SQLite only, add your own), no duplicated
+framework copy, no build tooling left in a runtime stage. That is how tina4-nodejs went 288 MB
+-> 174 MB, and it is where the remaining wins are.
+
+**Reporting rule.** Always quote the on-disk figure from `du -sx /` inside the container, and
+say so. `docker image inspect {{.Size}}` and the Docker Hub listing both report a COMPRESSED
+size: Hub shows tina4-nodejs as 59 MB against 174 MB on disk. Quoting the smaller number
+without qualification is flattering and wrong.
+
+**Alternatives rejected.** *Publish a second "slim" Node tag without npm alongside the normal
+one:* rejected - two tags with different capabilities is a support burden and an invitation to
+pick the one that then cannot install a driver. *Switch to a distroless Node base:* rejected -
+it removes the shell and package manager, so `FROM` plus add stops working, which is the same
+objection as removing npm, only worse.
+
+**Supersedes:** none. Related: `plan/v3/docker-base-images.md`, ADR-0006 (we own only our
+Dockerfiles).
