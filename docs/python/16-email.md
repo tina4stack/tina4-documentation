@@ -485,7 +485,7 @@ Navigate to `/__dev` and look for the "Mail" section. You see:
 - Attachments (viewable inline)
 - The timestamp
 
-This is invaluable for testing email functionality without configuring a real SMTP server. Use `create_messenger()` instead of `Messenger()` to get automatic dev-mode interception:
+This is invaluable for testing email functionality without configuring a real SMTP server. Interception is built into `send()` itself, so it applies whether you construct a `Messenger` directly or through the factory; `create_messenger()` additionally attaches the mailbox up front, so you can inspect it before the first send:
 
 ```python
 from tina4_python.messenger import create_messenger

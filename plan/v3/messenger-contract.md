@@ -137,17 +137,17 @@ the contract that actually matters.
 
 ## Scope
 
-- [ ] Python: delete the `messenger.send = dev_send` swap; branch inside
+- [x] Python: delete the `messenger.send = dev_send` swap; branch inside
       `Messenger.send()`. Carry `text`. Move cc/bcc normalisation into `capture()`.
       Keep `capture()` public. Gate on SMTP availability, not `TINA4_DEBUG`.
-- [ ] Ruby: collapse `DevMessengerProxy` into `Messenger` (one return type); branch
+- [x] Ruby: collapse `DevMessengerProxy` into `Messenger` (one return type); branch
       inside `send`; add `text:` to `capture`; normalise cc/bcc.
-- [ ] PHP: add the dev branch that does not exist yet; make `capture()` internal;
+- [x] PHP: add the dev branch that does not exist yet; make `capture()` internal;
       normalise cc/bcc; carry `text`.
-- [ ] Node: `createMessenger(): Messenger`; branch inside `send()`; `capture()`
+- [x] Node: `createMessenger(): Messenger`; branch inside `send()`; `capture()`
       internal; normalise cc/bcc; add `text` to `EmailMessage`; drop the
       `NODE_ENV != production` clause.
-- [ ] Docs: correct `docs/nodejs/16-email.md` and `docs/python/16-email.md`.
+- [x] Docs: correct `docs/nodejs/16-email.md` and `docs/python/16-email.md`.
 - [ ] Changelog: `Breaking:` entry plus migration note - `capture()` stops being
       public in Node, PHP and Python; Ruby's `DevMessengerProxy` goes away; Node no
       longer captures on a non-production host that has SMTP configured.
@@ -157,18 +157,18 @@ the contract that actually matters.
 Four contract points, each as a positive/negative pair - eight per framework, the
 same eight in all four. Each must FAIL against today's code before the fix lands.
 
-- [ ] 1. The factory returns one type that can send.
+- [x] 1. The factory returns one type that can send.
       **+** the returned object exposes a callable `send`.
       **-** it never returns something offering `capture` but not `send` (the #41
       reproduction).
-- [ ] 2. `text` is the 5th positional and lands in `text`.
+- [x] 2. `text` is the 5th positional and lands in `text`.
       **+** a captured message round-trips the plain-text alternative.
       **-** the plain-text body never appears as a `cc` recipient (the #42
       reproduction).
-- [ ] 3. cc/bcc are normalised at the boundary.
+- [x] 3. cc/bcc are normalised at the boundary.
       **+** a proper list passes through unchanged.
       **-** a bare string is never stored as a bare string.
-- [ ] 4. Interception is a branch, not a swap.
+- [x] 4. Interception is a branch, not a swap.
       **+** the instance's `send` is the class's `send`.
       **-** `send` is not an own/instance attribute, and the dev signature is not a
       different signature.
@@ -178,18 +178,39 @@ No mocks. The dev mailbox writes to the real filesystem, so every test points
 
 ## Bugs
 
-- [ ] nodejs#41 - union factory has no common `send()`
-- [ ] nodejs#42 - `capture()` files the text body as `cc`, unvalidated
-- [ ] (new, unreported) Python has #42 too, via the instance-method swap, and
+- [x] nodejs#41 - union factory has no common `send()`
+- [x] nodejs#42 - `capture()` files the text body as `cc`, unvalidated
+- [x] (new, unreported) Python has #42 too, via the instance-method swap, and
       `send(text=...)` raises `TypeError` on a dev messenger
-- [ ] (new, unreported) PHP's factory has no dev interception at all
-- [ ] (new, unreported) Ruby's factory also returns a union
-- [ ] (new, unreported) the dev-capture gate differs four ways
-- [ ] (new, unreported) all four drop `text` on the dev path
-- [ ] (new, unreported) two doc pages promise a drop-in that no framework honours
+- [x] (new, unreported) PHP's factory has no dev interception at all
+- [x] (new, unreported) Ruby's factory also returns a union
+- [x] (new, unreported) the dev-capture gate differs four ways
+- [x] (new, unreported) all four drop `text` on the dev path
+- [x] (new, unreported) two doc pages promise a drop-in that no framework honours
 
 ## Commits
 
-- (hash  description - one line per landed change, per framework)
+- `9075423`  Python - swap deleted, branch inside send(), capture carries text + normalises
+- `721aba94` PHP - dev branch added where none existed, capture aligned with send
+- `c96ba9f`  Node - union factory collapsed (#41), capture aligned (#42), NODE_ENV clause dropped
+- `33b25de`  Ruby - DevMessengerProxy deleted, text carried, cold-reachable factory
 
-## Status: Tests being written. No implementation yet.
+## Found during implementation, not in the original evidence
+
+- **Ruby's `Tina4.create_messenger` was unreachable on a cold require.** `autoload`
+  fires only on a CONSTANT reference and a module function is not a constant, so
+  `require "tina4"; Tina4.create_messenger` raised `NoMethodError` unless something
+  else had already touched `Tina4::Messenger`. Verified against the prior commit, so
+  pre-existing. Fixed by moving the implementation onto the class and adding an eager
+  module-level delegator.
+- **PHP's type system turned the capture realignment into a hard error**, which is the
+  best possible outcome: four existing tests were passing a cc ARRAY into the new
+  `?string $text` and failed instantly. Those were exactly the callers the
+  realignment targets.
+- **Node's own tests contained the #42 bug.** One `capture()` call passed NINE
+  arguments against the ten-parameter order, silently shifting `from` off the end.
+- **Three frameworks confer escaping safety from a value the filter produces**
+  (SafeString in Python/Ruby, RAW_MARKER in PHP); only Node trusted a name. Unrelated
+  to the messenger, found in the same sweep, fixed separately.
+
+## Status: SHIPPED to v3 in all four. Not released (owner: no releases yet).
