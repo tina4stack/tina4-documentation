@@ -183,15 +183,28 @@ today.
   path now raises underneath. That is what makes this P2 and schedulable, rather
   than something to rush.
 
-## Open decisions for the owner
+## Decided by the owner, 2026-07-28
 
-1. **AutoCrud: refuse, or invent a route shape?** My recommendation is refuse
-   loudly. If you would rather it generate something, the URL shape is your call
-   (`/{order_id}/{product_id}` is the honest one; a delimited single segment is
-   more compact and worse to debug).
-2. **PHP declaration: widen `$primaryKey` to `string|array`, or move PHP to
-   field-level flags like the other three?** Widening is smaller and
-   non-breaking. Moving is more consistent with the other three and is a bigger
-   change to PHP's ORM. I lean widening, and recording the divergence.
-3. **Priority.** This is P2. It sits behind the sandbox P1 (feature 38) and does
-   not block the rest of the audit.
+1. **AutoCrud REFUSES a composite-key model**, with a named error pointing at
+   hand-written routes. No invented route shape, no partially-addressable key.
+2. **The primary key is declared as `string | array` on the model, in ALL FOUR** -
+   not just widened in PHP. PHP already has this shape; the other three adopt it.
+
+   This changes the surface table above. The canonical declaration becomes:
+
+   | | declaration |
+   | --- | --- |
+   | python | `_primary_key = "id"` or `["order_id", "product_id"]` |
+   | php | `$primaryKey = 'id'` or `['order_id', 'product_id']` |
+   | ruby | `self.primary_key = :id` or `[:order_id, :product_id]` |
+   | node | `static primaryKey = "id"` or `["order_id", "product_id"]` |
+
+   **The field-level `primary_key=True` flag stays**, for two reasons: every
+   existing model uses it, and it is what `create_table()` reads to emit the key
+   clause. So the resolver becomes: **use the model-level declaration when
+   present, otherwise derive the list from the field-level flags.** One canonical
+   accessor, both declaration styles, nothing existing breaks.
+
+   PHP gains the derivation it currently lacks (it has no field-level flag to
+   read), which is the part that makes PHP's DDL correct for the first time.
+3. **Priority: P2**, behind the sandbox P1 (feature 38).
