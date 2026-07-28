@@ -254,14 +254,17 @@ reviewed and closed at a time, not batched.
 | 17 | Field mapping | PROMOTE node (mechanism) | SOLID | `features/017-field-mapping.md` | closed, decided (ADR-0008) |
 | 18 | Paginated results | SYNTHESISE | wire contract | `features/018-paginated-results.md` | closed, 1 outstanding |
 | 19 | Result / ORM caching | GAP (ruby) + SYNTHESISE | correctness | `features/019-orm-result-caching.md` | closed |
-| 7-12, 20-93+ | remainder | - | - | - | not started |
+| 20 | Input validation | SYNTHESISE | correctness | `features/020-input-validation.md` | closed, 1 outstanding |
+| 7-12, 21-93+ | remainder | - | - | - | not started |
 
 Seven closed rows. PHP has now won twice (features 3 and 5, both on SOLID) and is
 the only framework to win at all - every other row went SYNTHESISE because no
 single framework held the whole answer. "Python is master" would have been the
 wrong call on six of the seven.
 
-Implementation order, revised as rows closed: **6, 4, 5, 3, 13, 14, 15, 16, 17, 18, 19**, then 2, 1, 0.
+Implementation order, revised as rows closed: **6, 4, 5, 3, 13, 14, 15, 16, 17, 18, 19, 20**, then 2, 1, 0.
+
+**Phase 1 (rows 1-6) and Phase 2 (rows 13-20) are both complete.** 16 rows closed.
 Feature 3 sits behind 5 because 5 removes the URL parsing that 3 would otherwise
 refactor twice, and behind 4 because both touch the same facade methods.
 
@@ -306,6 +309,13 @@ decision applied inconsistently five times.
 unbounded with explicit opt-in pagination, or they all cap at the same number and
 say so. Deciding it per feature guarantees the inconsistency survives. Recorded
 here rather than in any single feature plan because no single plan owns it.
+
+A third inverted-flag defect turned up in feature 20 (`required` vs `nullable`),
+after feature 2 (`production` vs `development`) and feature 17's schema split. Three
+occurrences make it a pattern worth its own rule: **the audit treats an inverted
+spelling of the same concept as equal in severity to a wrong value**, because the code
+runs either way and the failure is silent. Every rename of one gets a hard error on
+the old name rather than a silent reinterpretation.
 
 **Feature 18 turned this from a preference into a correctness requirement.** A
 paginate envelope is only honest if `total` is the true total. If `Model.all` caps at
