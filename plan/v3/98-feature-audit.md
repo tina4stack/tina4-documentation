@@ -240,11 +240,11 @@ reviewed and closed at a time, not batched.
 
 | # | feature | verdict | decided on | plan | state |
 | --- | --- | --- | --- | --- | --- |
-| 0 | Messenger (pilot) | SYNTHESISE | correctness | `messenger-contract.md` | closed, tests red + committed |
+| 0 | Messenger (pilot) | SYNTHESISE | correctness | `messenger-contract.md` | **SHIPPED all 4**, 0 open (py `9075423`, php `721aba94`, node `c96ba9f`, ruby `33b25de`) |
 | 1 | DotEnv parser | SYNTHESISE | correctness | `features/001-dotenv.md` | closed |
 | 2 | Structured logger | SYNTHESISE | correctness | `features/002-structured-logger.md` | closed |
 | 3 | DB adapter interface | PROMOTE php | SOLID | `features/003-database-adapter-interface.md` | closed |
-| 4 | SQLite adapter + write path | **GAP** (P1, was broken in 4 of 4) | correctness | `features/004-sqlite-adapter.md` | **SHIPPED all 4** |
+| 4 | SQLite adapter + write path | **GAP** (P1, was broken in 4 of 4) | correctness | `features/004-sqlite-adapter.md` | **P1 SHIPPED all 4; 3 OPEN** (PHP `getColumns()` key, ORM still single-key, row cap) |
 | 5 | DATABASE_URL parser | PROMOTE php | SOLID | `features/005-database-url-parser.md` | closed, one blocker |
 | 6 | Router + dispatch | SYNTHESISE | SOLID | `features/006-router-and-dispatch.md` | closed, sequenced first |
 | 13 | ORM base class | PROMOTE ruby (structure) | LOC/CC | `features/013-orm-base-class.md` | closed |
@@ -258,7 +258,7 @@ reviewed and closed at a time, not batched.
 | 28-31 | Frond engine (lexer/parser/compiler/runtime) | PROMOTE python (structure) | SOLID | `features/028-031-frond-engine.md` | closed as one row |
 | 32 | Frond filters | SYNTHESISE | template portability | `features/032-frond-filters.md` | closed |
 | 37 | Auto-escaping | UNIFORM (html) + GAP (js/css/url) | correctness | `features/037-auto-escaping.md` | closed, 1 owner call |
-| 38 | Sandboxing | PROMOTE php (**P1**) + GAP (tags) | correctness | `features/038-sandboxing.md` | closed, 2 owner calls |
+| 38 | Sandboxing | PROMOTE php (**P1**) + GAP (tags) | correctness | `features/038-sandboxing.md` | **SHIPPED all 4**, 0 open (both owner calls answered) |
 | 7-12, 21-27, 33-36, 39-93+ | remainder | - | - | - | not started |
 
 PHP has now won three times: features 3 and 5 on SOLID, and feature 38 on the

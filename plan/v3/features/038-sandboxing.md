@@ -249,13 +249,35 @@ framework treats `[]`. **Open probe item.**
 
 ## Open items
 
-- [ ] **Does an empty allow-list (`[]`) deny everything or allow everything, per framework?**
+- [x] **Does an empty allow-list (`[]`) deny everything or allow everything, per framework?**
       Both are defensible; silently differing is not.
-- [ ] **Should this jump the audit queue?** Every other finding in the programme is parked for
+
+      **ANSWERED by execution, and it was silently differing.** `[]` must mean
+      **permit nothing**; only `None`/`null`/`nil` means "allow everything". Three of
+      four already did that and Python did not:
+
+      | | mechanism | `[]` behaved as |
+      | --- | --- | --- |
+      | Python | `if allowed_filters` | **allow all** - BUG, `[]` is falsy in Python |
+      | Ruby | `filters ? ... : nil` | permit nothing (`[]` is truthy in Ruby) |
+      | Node | `filters ? new Set(filters) : null` | permit nothing (`[]` truthy in JS) |
+      | PHP | `!== null` | permit nothing (explicit null test) |
+
+      Python's line became `if allowed_filters is not None else None`. Note the shape
+      of this bug: the SAME intent expressed in four languages produced three
+      immunities and one hole, purely because of what each language counts as falsy.
+      A single-framework review could not have found it. Pinned in all four by
+      `negative: an empty allow-list does not permit everything`.
+
+- [x] **Should this jump the audit queue?** Every other finding in the programme is parked for
       planned implementation. This one is an exploitable bypass of a documented security
       control in three of four frameworks, and the fix is small and well understood. My
       recommendation is to ship steps 1 to 4 as their own release ahead of the rest of the
       audit. **Owner decision.**
+
+      **YES - owner approved ("fix the two P1s first"), and it shipped.** Python
+      `bef0c6d`, PHP `cbe31184`, Ruby `167fe78`, Node `1eb1c4a`, plus escape lock-in
+      tests in all four. Not released: the owner is holding releases.
 
 ## Parked
 
