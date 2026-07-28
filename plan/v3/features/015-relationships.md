@@ -2,8 +2,8 @@
 
 Audited 2026-07-28. Part of `98-feature-audit.md`. Phase 2, row 3. **Planning only.**
 
-**Status: CLOSED with two outstanding items** (Node detail, PHP). Python and Ruby
-verified working by execution.
+**Status: CLOSED with one outstanding item** (Node detail). Python, Ruby and PHP
+verified by execution; the PHP blocker is resolved.
 
 ## Files
 
@@ -27,10 +27,11 @@ structural answer and it already exists.
 
 Author plus Post with a foreign key, two posts saved, real SQLite:
 
-| | `post.author` | `author.posts` present | `author.authors` present | count | eager `include` |
+| | belongs-to | has-many accessor | wrong-direction accessor | count | eager `include` |
 | --- | --- | --- | --- | --- | --- |
-| python | `ann` | yes | no | 2 | `ann` |
-| ruby | `ann` | yes | no | 2 | not probed |
+| python | `post.author` -> `ann` | `author.posts` yes | `author.authors` no | 2 | `ann` |
+| ruby | `post.author` -> `ann` | `author.posts` yes | `author.authors` no | 2 | not probed |
+| php | `belongsTo()` -> `ann` | **imperative only** | n/a | 2 | not probed |
 
 Both get the has-many default name right - the declaring class (`Post`) lowercased
 plus `s`, not the referenced class - and neither leaks a wrong-direction accessor.
@@ -80,13 +81,43 @@ one that failed.
 
 ## Outstanding
 
-- [ ] **Node: settle D2.** Check whether relations arrive via `toDict(include)` or
+- [ ] **Node: settle D2, and check its `has_many` limit default (D4) at the same time.** Check whether relations arrive via `toDict(include)` or
       another accessor rather than as instance properties. If they do, this is a
       surface divergence (fix: expose the same accessors as the other three). If
       they do not, it is a broken documented feature and a P1 alongside feature 14.
-- [ ] **PHP: not probed.** Same blocker as feature 14 - my PHP model definition did
-      not produce a table, so no relationship probe ran. Needs a correct PHP model
-      first.
+**PHP: resolved.** With the correct model shape (non-nullable typed properties with
+defaults, per `tina4-php/tests`), and using `load()` correctly - it returns `bool`
+and loads into `$this`, it does not return the model:
+
+```
+belongsTo -> ann          (imperative call works)
+hasMany   -> 2 rows       (imperative call works)
+auto accessor $au->rposts? no
+```
+
+So **PHP is imperative-only**: the relationship methods work, but declaring a
+foreign key creates no accessor. Python and Ruby auto-wire; PHP requires the
+explicit call; Node's registry produced neither. That completes D3 with real data
+and makes PHP the second framework needing accessor work.
+
+**D4 (new). `has_many` carries a silent default `limit = 100` in Python and PHP.**
+
+```
+python  def has_many(self, related_class, foreign_key=None, limit: int = 100, offset: int = 0)
+php     function hasMany(string $relatedClass, ?string $foreignKey = null, int $limit = 100, int $offset = 0)
+ruby    def has_many(name, class_name: nil, foreign_key: nil)        <- no limit
+```
+
+So `author.posts` silently returns the first 100 children and no more, in two of
+four. An author with 150 posts loses 50 with no error and no warning.
+
+This is the same footgun that was already fixed once: `QueryBuilder#get` had its
+default `LIMIT 100` removed deliberately. The ORM's `has_many` kept it. One fix
+landed in one place and the identical hazard survived next door - which is an
+argument for the audit doing the sweep rather than waiting for a report.
+
+Ruby's DSL declares no limit; Node's was not matched by the probe and needs the
+same check (folded into the Outstanding item).
 
 ## Verdict: PROVISIONAL - PROMOTE python/ruby on the wiring, ruby on the structure
 

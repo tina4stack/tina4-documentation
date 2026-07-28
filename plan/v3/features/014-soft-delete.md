@@ -2,8 +2,8 @@
 
 Audited 2026-07-28. Part of `98-feature-audit.md`. Phase 2, row 2. **Planning only.**
 
-**Status: CLOSED with one outstanding item** (PHP, below). Python, Ruby and Node
-verified by execution against real SQLite.
+**Status: CLOSED. All four verified** by execution against real SQLite. The PHP
+outstanding item is resolved - it fails the same way.
 
 ## The row's name in the matrix is wrong
 
@@ -30,7 +30,7 @@ No separate file set.
 ## What differs: nothing. That is the finding.
 
 **D1. `create_table()` does not create the `is_deleted` column, so `delete()` fails
-on a soft-delete model. Confirmed identical in Python, Ruby and Node.**
+on a soft-delete model. Confirmed identical in ALL FOUR.**
 
 Same model in each - soft delete enabled, two fields, create the table, save a row,
 delete it:
@@ -40,9 +40,9 @@ delete it:
 | python | `['id', 'name']` | **raises** `OperationalError: no such column: is_deleted` | untouched |
 | ruby | `["id", "name"]` | **raises** `SQLite3::SQLException: no such column: is_deleted` | untouched |
 | node | `['id', 'name']` | **raises** `no such column: is_deleted` | untouched |
-| php | inconclusive - see Outstanding | - | - |
+| php | `["id","name"]` | **raises** `no such column: is_deleted` | untouched |
 
-Three frameworks, one failure, same cause. The model declares `soft_delete = true`,
+**All four frameworks, one failure, same cause.** The model declares `soft_delete = true`,
 the framework builds the table without the column the flag requires, and the first
 `delete()` throws. The row is left in place, so nothing is lost - it simply does not
 work.
@@ -70,21 +70,28 @@ soft delete at a different column. Python, PHP and Node hardcode `is_deleted`. A
 capability difference, not a bug - but it needs a decision: promote the indirection
 to all four, or drop it from Ruby. Recommendation below.
 
-## Outstanding
+## Outstanding: resolved
 
-- [ ] **PHP: not settled.** My probe defined the model with typed public properties
-      and `createTable()` produced no table at all, so `delete()` returned "ok"
-      against a table that did not exist. That is a defect in my probe, not a
-      finding about PHP - PHP's ORM infers columns differently and my definition was
-      insufficient. Re-run with a correct PHP model (mirroring
-      `tina4-php/tests` usage) before the pattern is finalised. If PHP does add the
-      column, PHP becomes the reference for D1 and the fix is a port rather than a
-      new build.
+The earlier PHP probe failed because I declared the model with nullable typed
+properties (`public ?int $id = null`). PHP's ORM infers columns from
+**non-nullable typed properties with defaults** (`public int $id = 0;`), the shape
+used throughout `tina4-php/tests`. Re-run with the correct shape:
 
-## Verdict: GAP (present in at least three of four, likely all four)
+```
+createTable() -> true
+COLS: ["id","name"]
+delete() -> RAISED SQLite3 execute() failed: Unable to prepare statement:
+            no such column: is_deleted
+row after: {"id":1,"name":"a"}
+```
+
+So PHP fails identically. This is **4 of 4**, and there is no reference
+implementation to port from - the fix is a build in every framework.
+
+## Verdict: GAP (present in all four, confirmed)
 
 Decided on **correctness**. The feature is declared, documented, and non-functional
-on the documented code-first path in three frameworks. Nothing to promote from -
+on the documented code-first path in all four frameworks. Nothing to promote from -
 this is a build, not a reconciliation.
 
 Category 4 for the missing column (nothing runtime-related prevents any of them from
@@ -128,19 +135,17 @@ Surface table:
 
 ## Methodology
 
-1. Settle the PHP Outstanding item first. It decides whether this is a four-way
-   build or a three-way port.
-2. Write the tests below in all four. Expect red in Python, Ruby and Node on the
-   first two pairs.
-3. Fix `create_table()` to emit the column. This depends on **feature 13** (the
+1. Write the tests below in all four. Expect red in all four on the first two
+   pairs - there is no reference implementation, so nothing goes green for free.
+2. Fix `create_table()` to emit the column. This depends on **feature 13** (the
    `create_table` split) and therefore on **feature 3** (the translator), so it
    sequences behind both.
-4. Make the two table-creating paths share one DDL builder, so `create_table()` and
+3. Make the two table-creating paths share one DDL builder, so `create_table()` and
    the schema-sync path cannot drift again. That shared builder is the real fix; the
    column is the symptom.
-5. Add the named runtime error (pattern point 4).
-6. Promote `soft_delete_field` from Ruby to the other three.
-7. Fix the matrix row title (`deleted_at` -> the correct verbs) and audit the docs
+4. Add the named runtime error (pattern point 4).
+5. Promote `soft_delete_field` from Ruby to the other three.
+6. Fix the matrix row title (`deleted_at` -> the correct verbs) and audit the docs
    site plus the four skills for the same stale name.
 
 ## Tests to write
