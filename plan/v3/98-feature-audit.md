@@ -250,14 +250,15 @@ reviewed and closed at a time, not batched.
 | 13 | ORM base class | PROMOTE ruby (structure) | LOC/CC | `features/013-orm-base-class.md` | closed |
 | 14 | Soft delete | **GAP** (broken in 3 of 4) | correctness | `features/014-soft-delete.md` | closed, 1 outstanding |
 | 15 | Relationships + eager load | PROVISIONAL PROMOTE python/ruby | correctness | `features/015-relationships.md` | closed, 2 outstanding |
-| 7-12, 16-93+ | remainder | - | - | - | not started |
+| 16 | Scopes | SYNTHESISE | correctness | `features/016-scopes.md` | closed |
+| 7-12, 17-93+ | remainder | - | - | - | not started |
 
 Seven closed rows. PHP has now won twice (features 3 and 5, both on SOLID) and is
 the only framework to win at all - every other row went SYNTHESISE because no
 single framework held the whole answer. "Python is master" would have been the
 wrong call on six of the seven.
 
-Implementation order, revised as rows closed: **6, 4, 5, 3, 13, 14, 15**, then 2, 1, 0.
+Implementation order, revised as rows closed: **6, 4, 5, 3, 13, 14, 15, 16**, then 2, 1, 0.
 Feature 3 sits behind 5 because 5 removes the URL parsing that 3 would otherwise
 refactor twice, and behind 4 because both touch the same facade methods.
 
@@ -273,6 +274,28 @@ verdicts from archaeology into a diff.
 
 Order within feature 6: Ruby, Node, Python, PHP. Characterisation tests green
 before any extraction, one stage per commit.
+
+## Cross-cutting decision needed: one default row cap
+
+Surfaced by features 15 and 16 together, plus a fix that already landed. "Give me
+some related or filtered rows" currently caps at four different numbers:
+
+| path | default cap |
+| --- | --- |
+| `scope()` | 20 (python, php, node) / unbounded (ruby) |
+| `has_many()` | 100 (python, php) / unbounded (ruby DSL) |
+| `Model.where` | 20 (python, php, node) / nil (ruby) |
+| `Model.all` | 100 (python) |
+| `QueryBuilder#get` | unbounded - the `LIMIT 100` was **deliberately removed** |
+
+Five read paths, four defaults, all truncating silently, and one of them was
+already fixed once by removing its cap. That is not five bugs; it is one missing
+decision applied inconsistently five times.
+
+**This needs the owner's call, once, for the whole ORM** - either every read is
+unbounded with explicit opt-in pagination, or they all cap at the same number and
+say so. Deciding it per feature guarantees the inconsistency survives. Recorded
+here rather than in any single feature plan because no single plan owns it.
 
 ## Findings that are not per-feature
 
