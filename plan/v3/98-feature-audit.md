@@ -242,7 +242,7 @@ reviewed and closed at a time, not batched.
 | --- | --- | --- | --- | --- | --- |
 | 0 | Messenger (pilot) | SYNTHESISE | correctness | `messenger-contract.md` | closed, tests red + committed |
 | 1 | DotEnv parser | SYNTHESISE | correctness | `features/001-dotenv.md` | closed |
-| 2 | Structured logger | - | - | - | measured only |
+| 2 | Structured logger | SYNTHESISE | correctness | `features/002-structured-logger.md` | closed |
 | 3 | DB adapter interface | - | - | - | measured only |
 | 4 | SQLite adapter + write path | SYNTHESISE (**P1**) | correctness | `features/004-sqlite-adapter.md` | closed |
 | 5 | DATABASE_URL parser | PROMOTE php | SOLID | `features/005-database-url-parser.md` | closed, one blocker |
