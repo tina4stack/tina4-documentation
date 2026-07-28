@@ -57,8 +57,23 @@
 
 set -uo pipefail
 
+# Args in any order: --push, and/or one or more framework names to restrict to.
+# A name filter exists so a single-image fix still goes through THIS script --
+# the boot gate and the version gate are the whole point, and re-publishing three
+# unchanged images to prove one is wasteful. Without a filter the temptation is a
+# hand-rolled `docker buildx build --push`, which is exactly the ungated path that
+# let a never-booted image sit in the registry for months.
+#   ./publish-base-images.sh                          # all four, dry run
+#   ./publish-base-images.sh tina4-nodejs --push      # just Node, published
 PUSH=0
-[[ "${1:-}" == "--push" ]] && PUSH=1
+ONLY=()
+for arg in "$@"; do
+  case "$arg" in
+    --push) PUSH=1 ;;
+    -*)     echo "unknown flag: $arg" >&2; exit 2 ;;
+    *)      ONLY+=("$arg") ;;
+  esac
+done
 
 REGISTRY="docker.io/tina4stack"
 PLATFORMS="linux/amd64,linux/arm64"
@@ -82,8 +97,22 @@ GATED=()
 cleanup() { docker rm -f gate >/dev/null 2>&1 || true; }
 trap cleanup EXIT INT TERM
 
+SKIPPED=()
+
 for entry in "${FRAMEWORKS[@]}"; do
   IFS='|' read -r name dir port version <<< "$entry"
+
+  # Honour a name filter. Reported at the end rather than silently dropped -- a
+  # run that covered one image must never read like a run that covered four.
+  if (( ${#ONLY[@]} )); then
+    match=0
+    for want in "${ONLY[@]}"; do [[ "$want" == "$name" ]] && match=1; done
+    if (( ! match )); then
+      SKIPPED+=("$name")
+      continue
+    fi
+  fi
+
   ctx="$ROOT/$dir"
   echo
   echo "=============================================================="
@@ -229,11 +258,18 @@ done
 echo
 echo "=============================================================="
 printf '  gated OK : %s\n' "${GATED[*]:-none}"
+if (( ${#SKIPPED[@]} )); then
+  printf '  skipped  : %s  (name filter -- NOT verified this run)\n' "${SKIPPED[*]}"
+fi
 if (( ${#FAILED[@]} )); then
   printf '  FAILED   : %s\n' "${FAILED[*]}"
   echo "=============================================================="
   exit 1
 fi
-echo "  all four passed the boot gate"
+if (( ${#SKIPPED[@]} )); then
+  echo "  the selected image(s) passed the boot gate and the version gate"
+else
+  echo "  all four passed the boot gate and the version gate"
+fi
 [[ "$PUSH" == "1" ]] && echo "  amd64 gated by emulation from the registry (not a real amd64 host -- see the caveat at the top)"
 echo "=============================================================="
