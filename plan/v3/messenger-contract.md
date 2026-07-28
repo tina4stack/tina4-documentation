@@ -84,25 +84,62 @@ worst mechanism and a live #42 to three other languages.
 2. Interception is a **real branch inside `send()`**, never a runtime method swap. One
    name, one signature, one place to read. If a dev mailbox is active, `send()`
    captures and returns the same result shape a real send returns.
-3. The gate is: **capture when `TINA4_DEBUG` is truthy OR no SMTP host is configured.**
-   Debug means never send real mail, even with SMTP configured - that is the safety
-   property worth having. No SMTP host means sending is impossible, so capture
-   instead of failing. Node's third clause (`NODE_ENV != production` captures even
-   with SMTP configured and debug off) is **dropped**: it silently eats every
-   staging email, and forgetting one env var should not swallow your mail.
-4. `capture()` becomes **internal**. Users only ever call `send()`. This dissolves #42
-   rather than patching it: with no public positional `capture()`, there is no 5th
-   argument to mis-order.
+3. The gate is: **capture when no SMTP host is configured, send when one is.**
+   No SMTP host means sending is impossible, so simulate it into a folder rather than
+   failing - that is the "works on a laptop with no mail server" property, and it is
+   the original Tina4 behaviour being deliberately restored. **`TINA4_DEBUG` does NOT
+   gate sending:** debug must still be able to send real mail. An explicit
+   `TINA4_MAIL_CAPTURE=true` forces capture even with SMTP configured, for anyone who
+   wants the never-send-from-dev safety property. Node's third clause
+   (`NODE_ENV != production` captures even with SMTP configured) is **dropped**: it
+   silently eats every staging email, and forgetting one env var should not swallow
+   your mail.
+
+   > **Revision, 2026-07-28, owner decision.** This point previously read "capture when
+   > `TINA4_DEBUG` is truthy OR no SMTP host is configured. Debug means never send real
+   > mail, even with SMTP configured - that is the safety property worth having." The
+   > owner overruled it: debug must be able to send. Tying capture to `TINA4_DEBUG`
+   > would mean nobody can test a real send from a dev box, which is the common case,
+   > and it silently changes behaviour for every existing `Messenger()` caller running
+   > with debug on. Availability of a server, not a verbosity flag, decides whether
+   > mail can be sent; wanting to suppress sending is a separate intent and gets its
+   > own explicit switch. Supersedes the original point 3.
+
+4. `capture()` becomes **internal in Ruby and Node**; it stays public but undocumented
+   in **Python and PHP**. Users only ever call `send()`. This dissolves #42 rather
+   than patching it: with no public positional `capture()` in the paths that had the
+   bug, there is no 5th argument to mis-order. Python and PHP keep the symbol because
+   they carry the most production usage (owner: "Ruby and Node can be broken easily,
+   more care on Python and PHP") - there, `capture()` gains the corrected signature
+   and normalisation instead of disappearing, so an existing caller keeps working and
+   gets the fix.
 5. `cc`/`bcc` are **normalised at the boundary** in all four (`"a@b.c"` -> `["a@b.c"]`),
    and a malformed message is corrected, never stored as a success. A dev mailbox
    exists to show you what you would have sent; accepting a broken message defeats
    its purpose (the reporter's own words on #42).
 6. Both paths accept and carry `text`. The captured message must be the message.
 
+## Blast-radius policy (owner, 2026-07-28)
+
+Breaking changes are approved for v3 parity, but **not evenly**. The owner's ranking is
+"Ruby and Node can be broken easily, more care on Python and PHP", so:
+
+| | freedom | what that means here |
+| --- | --- | --- |
+| Ruby | break freely | collapse `DevMessengerProxy` away, `capture` goes private |
+| Node | break freely | `createMessenger(): Messenger`, `capture` goes private, drop the `NODE_ENV` clause |
+| Python | care | the `send` swap MUST go (it is the bug), but `capture()` keeps its name and gains the fix |
+| PHP | care, though mostly additive | PHP has NO interception today, so adding it breaks nothing; `capture()` keeps its name |
+
+Python and PHP therefore get the corrected behaviour without losing a public symbol.
+Every framework still ends up with one signature behind one name, which is the part of
+the contract that actually matters.
+
 ## Scope
 
 - [ ] Python: delete the `messenger.send = dev_send` swap; branch inside
       `Messenger.send()`. Carry `text`. Move cc/bcc normalisation into `capture()`.
+      Keep `capture()` public. Gate on SMTP availability, not `TINA4_DEBUG`.
 - [ ] Ruby: collapse `DevMessengerProxy` into `Messenger` (one return type); branch
       inside `send`; add `text:` to `capture`; normalise cc/bcc.
 - [ ] PHP: add the dev branch that does not exist yet; make `capture()` internal;
