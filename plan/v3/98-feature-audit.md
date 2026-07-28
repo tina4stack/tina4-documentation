@@ -53,12 +53,47 @@ plan. A feature is not "checked" until all six are done.
    - **CC** (per function, plus the worst single function)
 5. **Write the pattern.** The canonical shape all four adopt, stated concretely
    enough to implement from: the signature, the return shape, the gate, the
-   error behaviour. Name what is being dropped and why.
+   error behaviour. Name what is being dropped and why. Every pattern MUST carry
+   a surface table (below).
 6. **Write the tests.** Named positive/negative pairs, the same set in all four,
    each one required to FAIL before the fix. No mocks: real dependency or a pure
    function.
 
 Then park it. Nothing is implemented in this pass.
+
+## The surface table (mandatory in every plan)
+
+Owner rule, 2026-07-28: "all the frameworks will contain the same method names
+(framework specific naming - snake case, camel case) and the same outcomes and
+same optimizations where possible."
+
+So every per-feature pattern carries a table with one row per public concept and
+one column per framework, giving the exact name a caller types:
+
+| concept | python | php | ruby | node |
+| --- | --- | --- | --- | --- |
+| load | `load_env(root=None)` | `DotEnv::loadEnv($root = null)` | `Tina4.load_env(root = nil)` | `loadEnv(root?)` |
+
+Three rules the table enforces, and each is a defect when broken:
+
+1. **Same concept, same name, idiomatic casing.** snake_case in Python and Ruby,
+   camelCase in PHP and Node, PascalCase classes everywhere. A concept that is
+   `capture` in one framework and `store` in another is a defect even when both
+   work. No alias methods to paper over a mismatch - rename the primary.
+2. **Same arguments in the same order, and the same outcome for the same input.**
+   Feature 1 found `loadEnv($file)` in PHP against `load_env(dir)` in Ruby, so the
+   obvious cross-framework call throws. The audit treats an argument-shape
+   difference as equal in weight to a wrong return value.
+3. **Same optimizations where the runtime allows.** If one framework memoises a
+   compiled pattern, caches a lookup, or hoists work out of a per-row loop, the
+   others do too, unless the runtime makes it impossible - and then the plan says
+   why in one line. An optimization present in one framework and absent in three
+   is a performance parity gap, and it is recorded as such rather than left as
+   folklore about which language is fast.
+
+Where a concept genuinely cannot carry the same name (a language keyword clash,
+`delete` in Node being the classic), the plan states the substitute and the reason
+in the table itself.
 
 ## Verdict vocabulary
 
@@ -129,7 +164,20 @@ decision can be challenged before the next batch builds on it.
 | Batch | Rows | Status |
 | --- | --- | --- |
 | 0 | Messenger (pilot, ran ahead of this doc) | done - `messenger-contract.md` |
-| 1 | 1-6 Foundation: dotenv, logger, DB adapter interface, SQLite, URL parser, router | in progress |
+| 1 | 1-6 Foundation: dotenv, logger, DB adapter interface, SQLite, URL parser, router | measured; 6 written up |
+
+## Implementation order (owner decision, 2026-07-28)
+
+The audit runs to completion first; implementation follows. Within the
+implementation queue, **the named-stage dispatch pipeline (feature 6) goes
+first** - owner's call, "get it done early". The reason it earns the front of the
+queue: every downstream verdict in this audit describes behaviour that currently
+lives inside one of four god-functions, so until the stages have names there is
+nothing to compare a downstream feature against. Fixing it first turns later
+verdicts from archaeology into a diff.
+
+Order within feature 6: Ruby, Node, Python, PHP. Characterisation tests green
+before any extraction, one stage per commit.
 
 ## Findings that are not per-feature
 
