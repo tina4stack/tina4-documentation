@@ -101,10 +101,10 @@ All category 4. Every language can do either behaviour.
 
 1. `field_mapping` / `fieldMapping` exists in all four, empty by default, and
    `get_db_column(prop)` returns `mapping[prop]` or `prop` - Node's line, promoted.
-2. **PHP's automatic `camelToSnake` becomes opt-in**, not the default. Keep the
-   converter, expose it as a class-level switch
-   (`$autoSnakeCase = true`) so an existing PHP app sets one property and keeps its
-   schema, and a new one gets the same verbatim default as the other three.
+2. **PHP's automatic `camelToSnake` becomes opt-in and defaults to `false`** (owner
+   decision, 2026-07-28, recorded as ADR-0008). Keep the converter, expose it as
+   `$autoSnakeCase`, default off. An existing PHP app sets one property to keep its
+   schema; a new one gets the same verbatim default as the other three.
 3. `camel_to_snake` / `snake_to_camel` become **public helpers in all four**, so a
    developer who wants snake_case columns from camelCase properties can opt in
    anywhere rather than only in PHP.
@@ -161,17 +161,18 @@ turns accidental convergence into an enforced contract.
 
 ## Risks
 
-- **Point 2 changes PHP's emitted schema.** Any PHP app calling `createTable()` on a
-  camelCase model gets different column names after the change. That is why the
-  switch defaults must be considered carefully: defaulting `autoSnakeCase = true` in
-  PHP only preserves PHP but keeps the family split; defaulting it `false`
-  everywhere unifies the family and breaks PHP. **This one needs the owner's call.**
-  My recommendation is `false` everywhere plus a loud migration note, because a
-  schema that differs by framework is the more expensive problem - but it is a real
-  trade and PHP has the largest installed base of the four.
+- **Point 2 changes PHP's emitted schema, deliberately.** The owner chose
+  `autoSnakeCase = false` everywhere (ADR-0008), so any PHP app calling
+  `createTable()` on a camelCase model emits different column names after this
+  change. The cost is real and falls on the framework with the largest installed
+  base; it is accepted because a schema that differs by framework is the more
+  expensive problem and it compounds with time. Mitigations, all required:
+  a `Breaking:` changelog entry, a migration note, and the one-line opt-back-in
+  (`$autoSnakeCase = true`) stated prominently in both.
 - Everything else in this row is additive.
 
 ## Parked
 
-Not implemented. Blocked on the owner's decision about PHP's default. Order: 6, 4,
-5, 3, 13, 14, 15, 16, 17, then 2, 1, 0.
+Not implemented, but **no longer blocked** - the PHP default is decided
+(`false`, ADR-0008). Ready to implement in queue order: 6, 4, 5, 3, 13, 14, 15, 16,
+17, then 2, 1, 0.

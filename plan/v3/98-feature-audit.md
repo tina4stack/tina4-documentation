@@ -251,7 +251,7 @@ reviewed and closed at a time, not batched.
 | 14 | Soft delete | **GAP** (broken in 3 of 4) | correctness | `features/014-soft-delete.md` | closed, 1 outstanding |
 | 15 | Relationships + eager load | PROVISIONAL PROMOTE python/ruby | correctness | `features/015-relationships.md` | closed, 2 outstanding |
 | 16 | Scopes | SYNTHESISE | correctness | `features/016-scopes.md` | closed |
-| 17 | Field mapping | PROMOTE node (mechanism) | SOLID | `features/017-field-mapping.md` | closed, 1 owner call |
+| 17 | Field mapping | PROMOTE node (mechanism) | SOLID | `features/017-field-mapping.md` | closed, decided (ADR-0008) |
 | 7-12, 18-93+ | remainder | - | - | - | not started |
 
 Seven closed rows. PHP has now won twice (features 3 and 5, both on SOLID) and is
@@ -276,7 +276,14 @@ verdicts from archaeology into a diff.
 Order within feature 6: Ruby, Node, Python, PHP. Characterisation tests green
 before any extraction, one stage per commit.
 
-## Cross-cutting decision needed: one default row cap
+## Owner decisions taken during the audit
+
+| decision | outcome | recorded |
+| --- | --- | --- |
+| Implementation order | dispatch pipeline (feature 6) goes first | this doc |
+| PHP `autoSnakeCase` default (feature 17) | **`false`** - the property name is the column in all four; PHP takes the migration | **ADR-0008** |
+
+## Cross-cutting decision still open: one default row cap
 
 Surfaced by features 15 and 16 together, plus a fix that already landed. "Give me
 some related or filtered rows" currently caps at four different numbers:
