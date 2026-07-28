@@ -95,6 +95,80 @@ Where a concept genuinely cannot carry the same name (a language keyword clash,
 `delete` in Node being the classic), the plan states the substitute and the reason
 in the table itself.
 
+## Language-specific issues: when the runtime does the heavy lifting
+
+Owner question, 2026-07-28: "How do we deal with language specific issues -
+language may heavy lift certain things."
+
+It happens constantly, and it cuts both ways: one runtime hands a framework
+something free that another must build by hand. Handled wrongly it produces two
+opposite mistakes - demanding four identical implementations of something only one
+runtime supports, or waving "it's a language thing" over drift that has no runtime
+cause at all. The messenger row is the cautionary case: Python's instance-method
+swap looked like Python being Pythonic and was simply a bad choice, since a branch
+inside `send()` was available the whole time.
+
+**The governing rule: outcome parity is non-negotiable, mechanism parity is not
+required.** Two callers in two languages must observe the same result for the same
+input. How the framework gets there is the runtime's business.
+
+Every divergence sorts into exactly one of four categories, and the plan must say
+which:
+
+**1. Runtime gift.** The language or stdlib already provides it, so the framework
+uses it instead of reimplementing. Node's `node:sqlite`, Python's stdlib `sqlite3`,
+Ruby's native keyword arguments, PHP's `PDO`. Expected effect: that framework has
+*less* code for the same outcome. Correct, and a LOC win that must not be read as
+the others being bloated. Rule: **use the gift, never reimplement it for symmetry.**
+
+**2. Runtime tax.** The language lacks it, so the framework hand-rolls it. PHP's
+silent PDO fallback family (feature 4) is 163 extra lines that exist because a PHP
+install may ship `ext-sqlite3` or `pdo_sqlite` and the framework cannot know
+which; Python, Node and Ruby each have exactly one canonical binding and need
+nothing. Expected effect: that framework has *more* code for the same outcome.
+Rule: **record the tax and its reason in the plan**, so a later reader does not
+"simplify" it back into a bug. This is the one place a metric outlier is correct.
+
+**3. Runtime-idiomatic difference.** Same outcome, different shape. Keyword
+arguments versus positional. `async`/`await` everywhere versus sync-with-async-server.
+A long-running process versus PHP's shared-nothing request model. Rule: **the
+surface table absorbs the naming and casing, and the contract is stated in terms
+of outcome, never mechanism.** A contract that says "call `capture()` with
+keywords" is unportable; one that says "the captured message carries `text`" is not.
+
+**4. Genuine drift.** No runtime reason. Somebody made a different choice, or
+nobody made a choice. This is the only category that is a defect, and it is the
+one the audit exists to find.
+
+**The decisive test, applied to every claimed language-specific issue:**
+
+> Could this framework produce the canonical outcome without the divergence, using
+> what its runtime already offers?
+
+If **yes**, it is category 4 - drift - and it gets fixed, regardless of how
+idiomatic it looks. Python could have branched inside `send()`. Ruby could have
+stripped an `export ` prefix. Neither needed anything the runtime withheld.
+
+If **no**, it is DEFER, and the plan must name the specific runtime limitation in
+one line that a reader can check. "Ruby has native keyword arguments and PHP does
+not" is checkable. "It's more idiomatic" is not, and is rejected.
+
+**A runtime gift can still set the standard.** Where one language's heavy lifting
+produces the best *outcome*, that outcome becomes canonical for all four even
+though the mechanism cannot be copied - ADR-0004's "parity flows from semantics,
+not implementation". Ruby's keyword arguments make the #42 argument-order bug
+unrepresentable; PHP and Node cannot copy keyword arguments, so they adopt the
+outcome (no public positional `capture()` to mis-order) by a different means.
+
+**Performance is judged inside the language, not across languages.** Ruby will not
+match Node's template throughput and it is not a defect that it does not. The
+performance question is always "is Tina4 competitive against the other frameworks
+in ITS OWN language", which is what the Carbonah and competitor benchmarks measure.
+What IS a defect: an optimization present in one framework and absent in another
+where the runtime permits it - a memoised pattern, a hoisted per-row conversion, a
+cached lookup. Those are recorded as performance parity gaps rather than left as
+folklore about which language is fast.
+
 ## Verdict vocabulary
 
 | Verdict | Meaning |
