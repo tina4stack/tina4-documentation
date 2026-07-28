@@ -257,7 +257,8 @@ reviewed and closed at a time, not batched.
 | 20 | Input validation | SYNTHESISE | correctness | `features/020-input-validation.md` | closed, 1 outstanding |
 | 28-31 | Frond engine (lexer/parser/compiler/runtime) | PROMOTE python (structure) | SOLID | `features/028-031-frond-engine.md` | closed as one row |
 | 32 | Frond filters | SYNTHESISE | template portability | `features/032-frond-filters.md` | closed |
-| 7-12, 21-27, 33-93+ | remainder | - | - | - | not started |
+| 37 | Auto-escaping | UNIFORM (html) + GAP (js/css/url) | correctness | `features/037-auto-escaping.md` | closed, 1 owner call |
+| 7-12, 21-27, 33-36, 38-93+ | remainder | - | - | - | not started |
 
 Seven closed rows. PHP has now won twice (features 3 and 5, both on SOLID) and is
 the only framework to win at all - every other row went SYNTHESISE because no
@@ -266,7 +267,7 @@ wrong call on six of the seven.
 
 Implementation order, revised as rows closed: **6, 4, 5, 3, 13, 14, 15, 16, 17, 18, 19, 20**, then 2, 1, 0.
 
-**Phase 1 (rows 1-6) and Phase 2 (rows 13-20) are complete. Phase 3 is open.** 18 rows closed.
+**Phase 1 (rows 1-6) and Phase 2 (rows 13-20) are complete. Phase 3 is open.** 19 rows closed.
 
 **Phase 3 reads differently from 1 and 2.** Frond's correctness parity is already
 enforced by a byte-identical 82-case corpus in all four frameworks (verified, md5
