@@ -143,9 +143,39 @@ for entry in "${FRAMEWORKS[@]}"; do
     continue
   fi
 
+  # --- 2b. THE TAG MUST NOT LIE ABOUT THE VERSION -------------------------
+  # The image tag mirrors the framework release (tina4-nodejs:3.13.92), so the
+  # tag is a claim about what is inside. Verify it instead of trusting it: all
+  # four frameworks report a `version` on /health, sourced from the same place
+  # the release is cut from (__version__ / self::$VERSION / Tina4::VERSION /
+  # package.json). If the running container disagrees with the tag we are about
+  # to push, the tag is a lie and nothing gets pushed.
+  #
+  # This is not hypothetical. The Node image was about to be tagged 3.13.92
+  # while serving "version": "0.0.0" -- relocating the framework out of /app
+  # broke the three-level walk in server.ts's readPackageVersion(), which fell
+  # back to "0.0.0". It booted, it served 200, it passed every other gate here.
+  # Only comparing the served version against the tag catches that class of bug.
+  served_version=$(curl -fsS -m 3 "http://127.0.0.1:$HOST_PORT/health" 2>/dev/null \
+    | python3 -c 'import json,sys; print(json.load(sys.stdin).get("version",""))' 2>/dev/null)
+
+  if [[ -z "$served_version" ]]; then
+    echo "  FAIL: /health reported no version -- cannot verify the :$version tag"
+    FAILED+=("$name (no version on /health)")
+    cleanup
+    continue
+  fi
+  if [[ "$served_version" != "$version" ]]; then
+    echo "  FAIL: version mismatch -- tag says $version, container serves $served_version"
+    echo "        Refusing to publish a tag that misreports its own contents."
+    FAILED+=("$name (version $served_version != tag $version)")
+    cleanup
+    continue
+  fi
+
   size=$(docker run --rm --entrypoint sh "gate/$name:probe" -c 'du -sx / 2>/dev/null | cut -f1' 2>/dev/null \
           | awk '{printf "%.0f", $1*1024/1000000}')
-  echo "  PASS: 200 on /health, ${size} MB on disk"
+  echo "  PASS: 200 on /health, serves $served_version (matches tag), ${size} MB on disk"
   GATED+=("$name")
   cleanup
 
