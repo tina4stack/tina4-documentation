@@ -46,23 +46,45 @@ Measuring the adapter's size found nothing. Probing its write contract found the
 most serious divergence in the audit so far. Two rows in a table, then
 `update(table, data)` with no explicit filter:
 
-| framework | affected | rows changed | semantics |
-| --- | --- | --- | --- |
-| python | 1 | 1 | **keyed update** - takes `id` out of the data and uses it as the WHERE |
-| php | 2 | **2** | **full-table update** |
-| ruby | 2 | **2** | **full-table update** |
-| node | 0 | **0** | **silent no-op** |
+| framework | rows changed | semantics |
+| --- | --- | --- |
+| python | **2** | **full-table update** |
+| php | **2** | **full-table update** |
+| ruby | **2** | **full-table update** |
+| node | **0** | **silent no-op** |
 
-Three distinct behaviours, each dangerous in a different way:
+**CORRECTED 2026-07-28, after the first version of this row got Python wrong.**
 
-- **PHP and Ruby silently overwrite every row.** `db.update('users', ['name' =>
-  $name])` sets that name on the whole table and reports success. In my probe the
-  PK-carrying variant only failed because SQLite raised a UNIQUE violation trying
-  to set `id=1` on two rows - the constraint saved the test, not the framework.
+The original table recorded Python as a keyed update ("takes `id` out of the data
+and uses it as the WHERE, affected=1"), and called it the only framework that
+behaves correctly. **That was wrong.** Re-verified against real SQLite before
+starting the fix:
+
+```
+update("t", {"name": "NOPK"})   ->  affected=2, BOTH rows overwritten
+update("t", {"id": 1, ...})     ->  IntegrityError: UNIQUE constraint failed
+```
+
+Reading the source confirms it: `Database.update()` (`connection.py:684`) is a
+passthrough, and `SQLiteAdapter.update()` (`sqlite.py:225`) builds
+`UPDATE t SET ...` and appends a WHERE **only if a filter was passed**. There is
+no primary-key extraction anywhere in the Python write path.
+
+The original `affected=1` almost certainly came from probing with a PK in the data,
+hitting the UNIQUE violation, and recording the post-failure state as "one row
+changed". The constraint masked the bug, exactly as it did for PHP and Ruby.
+
+**So the data-loss class is 3 of 4, not 2 of 4**, and there is **no correct
+reference implementation** to promote. The keyed update has to be built.
+
+Two distinct dangerous behaviours:
+
+- **Python, PHP and Ruby silently overwrite every row.** `db.update('users',
+  {'name': name})` sets that name on the whole table and reports success. A PK in
+  the data does not save you - it either raises a constraint error (if the PK is
+  unique, which is luck) or overwrites the PK on every row (if it is not).
 - **Node silently does nothing.** `affected=0`, both rows untouched, no error. A
   caller who does not read `affectedRows` believes the write landed.
-- **Python does what a developer expects** and is the only one of the four that
-  does.
 
 `delete()` splits differently:
 
@@ -86,12 +108,14 @@ twice, or a doc example written once for all four, produces silent data loss on
 two frameworks and a silent no-op on a third. Nothing logs. Nothing raises. The
 only signal is `affected_rows`, and the four do not agree on what it means.
 
-## Verdict: SYNTHESISE, and it is a P1
+## Verdict: GAP, and it is a P1
 
-Decided on **correctness**, decisively. No framework is right on all three points:
-Python has the only correct `update` and the only broken `delete`; PHP and Ruby
-have the correct `delete` and a destructive `update`; Node has the correct
-`delete` and an `update` that does nothing.
+**Revised from SYNTHESISE after the correction above.** Decided on **correctness**,
+decisively. There is nothing to synthesise from, because no framework has the
+behaviour: Python, PHP and Ruby all do a destructive full-table update, and Node's
+update does nothing at all. Python additionally has the only broken `delete`.
+
+The keyed update is a **GAP in all four** and gets built, not ported.
 
 Category 4 (genuine drift) on every point. Nothing here is a runtime limitation -
 every framework can express a keyed WHERE and every framework can raise.
@@ -103,9 +127,10 @@ every framework can express a keyed WHERE and every framework can raise.
 That single rule kills the data-loss class outright. Three sub-rules:
 
 1. **`update(table, data)` extracts the primary key from `data` and uses it as the
-   filter** (Python's behaviour, promoted). If `data` carries no primary key AND no
-   explicit filter is given, **raise** a named error: "update requires a filter or
-   a primary key in the data; pass `filter` explicitly to update multiple rows."
+   filter.** This exists in **no framework today** and must be built in all four.
+   If `data` carries no primary key AND no explicit filter is given, **raise** a
+   named error: "update requires a filter or a primary key in the data; pass
+   `filter` explicitly to update multiple rows."
 2. **`delete(table)` with no filter raises** the same way. Deleting a whole table
    is a real thing to want; it must be spelled `delete(table, '1=1')` or a
    dedicated `truncate(table)`, never the accidental default.
@@ -133,11 +158,12 @@ an UPDATE, which its own docs say is insert-only).
 ## Methodology
 
 1. Write the tests below in all four. Confirm each framework fails the ones it
-   should: PHP and Ruby on full-table update, Node on the no-op, Python on the
-   dict delete and the UPDATE `last_id`.
-2. **Python first.** It already has the correct `update` semantics, so it is the
-   reference for rule 1; the work is fixing its `delete` to honour the declared
-   dict, and dropping `last_id` from update/delete.
+   should: **Python, PHP and Ruby on the full-table update**, Node on the no-op,
+   Python additionally on the dict delete and the UPDATE `last_id`.
+2. **Python first, as the place the design gets settled** - not as a reference to
+   copy, because it does not have the behaviour either. Build the PK extraction and
+   the no-filter raise, fix `delete` to honour the declared dict, drop `last_id`
+   from update/delete. The other three then follow the shape Python establishes.
 3. Ruby second (leanest adapter, fastest signal), then Node, then PHP.
 4. Each framework: add the no-filter raise, make both filter forms work, add
    `truncate`.
