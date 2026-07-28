@@ -251,14 +251,15 @@ reviewed and closed at a time, not batched.
 | 14 | Soft delete | **GAP** (broken in 3 of 4) | correctness | `features/014-soft-delete.md` | closed, 1 outstanding |
 | 15 | Relationships + eager load | PROVISIONAL PROMOTE python/ruby | correctness | `features/015-relationships.md` | closed, 2 outstanding |
 | 16 | Scopes | SYNTHESISE | correctness | `features/016-scopes.md` | closed |
-| 7-12, 17-93+ | remainder | - | - | - | not started |
+| 17 | Field mapping | PROMOTE node (mechanism) | SOLID | `features/017-field-mapping.md` | closed, 1 owner call |
+| 7-12, 18-93+ | remainder | - | - | - | not started |
 
 Seven closed rows. PHP has now won twice (features 3 and 5, both on SOLID) and is
 the only framework to win at all - every other row went SYNTHESISE because no
 single framework held the whole answer. "Python is master" would have been the
 wrong call on six of the seven.
 
-Implementation order, revised as rows closed: **6, 4, 5, 3, 13, 14, 15, 16**, then 2, 1, 0.
+Implementation order, revised as rows closed: **6, 4, 5, 3, 13, 14, 15, 16, 17**, then 2, 1, 0.
 Feature 3 sits behind 5 because 5 removes the URL parsing that 3 would otherwise
 refactor twice, and behind 4 because both touch the same facade methods.
 
