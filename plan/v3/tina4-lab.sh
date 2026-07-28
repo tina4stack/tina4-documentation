@@ -26,10 +26,13 @@
 #   git clone https://github.com/tina4stack/tina4-documentation
 #   ./tina4-documentation/plan/v3/tina4-lab.sh doctor
 #
+# MQTT IS now provisioned (mosquitto 1883 anon / 1884 auth / 8883 TLS, EMQX 1885).
+# It needs a generated CA + server cert + password file, which `docker run` alone
+# cannot express, so `infra up` delegates to the in-repo tests/mqtt-infra.sh -- the
+# same script CI uses. Verified 2026-07-28: 258 MQTT tests pass across all four
+# frameworks against these brokers (py 53, php 50, ruby 78, node 77), zero skips.
+#
 # WHAT IT DOES NOT COVER, stated so a skip is never mistaken for a pass:
-#   * MQTT (mosquitto 1883/1884/8883 + EMQX 1885). Those need generated TLS certs
-#     and per-broker auth files; the MQTT tests will still SKIP. `infra status`
-#     labels them "not provisioned" rather than leaving you to guess.
 #   * Firebird. Its live tests are gated separately and excluded by design.
 #
 set -uo pipefail
@@ -58,10 +61,18 @@ set -uo pipefail
 # FAILED for 120s while its own log said "mongod startup complete". A broken
 # probe looks exactly like a broken service. Quote the argument.
 #
-#   name^image^port-mapping...^env...^readycmd
+#   name^image^port-mapping...^env...^readycmd^container-command
+#
+# Field 6 (container-command) is optional and is passed to `docker run` AFTER the
+# image, so it replaces the image's default CMD. redis-auth is why it exists: the
+# cache tests expect `requirepass s3cret` and the readiness probe below already
+# assumed it, but the container ran a bare `redis-server` with NO password, so the
+# probe's own `-a s3cret` was silently ignored and every auth test skipped. Setting
+# it live with `redis-cli CONFIG SET requirepass` worked and then vanished on the
+# next container restart. A runtime patch is not provisioning.
 SERVICES=(
   "redis^redis:7-alpine^6379:6379^^redis-cli ping"
-  "redis-auth^redis:7-alpine^6381:6379^^redis-cli -a s3cret ping"
+  "redis-auth^redis:7-alpine^6381:6379^^redis-cli -a s3cret ping^redis-server --requirepass s3cret"
   "valkey^valkey/valkey:8-alpine^6380:6379^^valkey-cli ping"
   "memcached^memcached:alpine^11211:11211^^"
   "mongo^mongo:7^27017:27017^^mongosh --quiet --eval 'db.runCommand({ping:1}).ok'"
@@ -73,6 +84,16 @@ SERVICES=(
 )
 
 PREFIX="tina4-lab"
+
+# MQTT deliberately lives OUTSIDE the SERVICES table: it needs a generated CA, a
+# server cert and a password file, which is more than `docker run` can express.
+# tests/mqtt-infra.sh -- shipped in all four repos, idempotent, self-contained --
+# already builds exactly that, so `infra up` calls it instead of reimplementing it
+# (reuse ladder: port the proven thing). That script names its containers
+# tina4-mosquitto / tina4-emqx, NOT $PREFIX-*, so `infra down` and `infra status`
+# have to name them explicitly rather than deriving them from the prefix.
+MQTT_HOME="${TINA4_LAB_MQTT_HOME:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/mqtt-infra}"
+MQTT_CONTAINERS=(tina4-mosquitto tina4-emqx)
 
 # Where the four framework repos live.
 #
@@ -214,10 +235,10 @@ svc_field() { echo "$1" | cut -d'^' -f"$2"; }
 
 infra_up_one() {
   local entry="$1"
-  local name image ports envs ready
+  local name image ports envs ready cmdline
   name="$(svc_field "$entry" 1)"; image="$(svc_field "$entry" 2)"
   ports="$(svc_field "$entry" 3)"; envs="$(svc_field "$entry" 4)"
-  ready="$(svc_field "$entry" 5)"
+  ready="$(svc_field "$entry" 5)"; cmdline="$(svc_field "$entry" 6)"
   local cname="$PREFIX-$name"
 
   # Idempotent: an already-running container is left alone, so re-running `infra
@@ -238,8 +259,12 @@ infra_up_one() {
   done
   IFS="$IFS_SAVE"
 
+  # Field 6 is a flag list, not one argv element, so split it on whitespace.
+  local -a cmdargs=()
+  [ -n "$cmdline" ] && read -r -a cmdargs <<< "$cmdline"
+
   printf '  .. %-11s pulling/starting %s\n' "$name" "$image"
-  if ! docker run "${args[@]}" "$image" >/dev/null 2>&1; then
+  if ! docker run "${args[@]}" "$image" "${cmdargs[@]}" >/dev/null 2>&1; then
     c_bad "$name failed to start"
     docker logs "$cname" 2>&1 | tail -5 | sed 's/^/        /'
     return 1
@@ -288,9 +313,50 @@ cmd_infra_up() {
     [ "$ok" = "1" ] && c_ok "mssql tina4_test ready" || c_bad "mssql tina4_test could not be created"
   fi
 
+  # The two-database routing tests need a SECOND Postgres database. The image
+  # creates only POSTGRES_DB, so tina4_analytics has to be added here or those
+  # tests bind both handles to tina4_py and quietly prove nothing.
+  if [ "$(docker inspect -f '{{.State.Running}}' "$PREFIX-postgres" 2>/dev/null)" = "true" ]; then
+    if docker exec "$PREFIX-postgres" psql -U tina4 -d tina4_py -tAc \
+         "SELECT 1 FROM pg_database WHERE datname='tina4_analytics'" 2>/dev/null | grep -q 1; then
+      c_ok "postgres tina4_analytics already present"
+    else
+      printf '  .. %-11s creating tina4_analytics\n' "postgres"
+      if docker exec "$PREFIX-postgres" createdb -U tina4 tina4_analytics >/dev/null 2>&1; then
+        c_ok "postgres tina4_analytics created"
+      else
+        c_bad "postgres tina4_analytics could not be created"
+        failed+=("postgres-analytics")
+      fi
+    fi
+  fi
+
+  # MQTT: four brokers, generated CA + server cert, and a password file. Delegated
+  # to the in-repo script so the lab and CI provision it the same way.
   echo
-  c_warn "MQTT is not provisioned (needs generated TLS certs + per-broker auth)."
-  c_info "The MQTT tests will SKIP. That is a known gap, not a pass."
+  local mqtt_script="$ROOT/tina4-python/tests/mqtt-infra.sh"
+  if [ ! -f "$mqtt_script" ]; then
+    c_warn "MQTT not provisioned -- $mqtt_script not found (run 'repos sync' first)."
+    c_info "The MQTT tests will FAIL under TINA4_REQUIRE_SERVICES=1, as they should."
+    failed+=("mqtt")
+  else
+    printf '  .. %-11s provisioning via tests/mqtt-infra.sh\n' "mqtt"
+    if bash "$mqtt_script" "$MQTT_HOME" >/dev/null 2>&1; then
+      local mqtt_ok=1
+      for p in 1883 1884 1885 8883; do
+        (exec 3<>/dev/tcp/127.0.0.1/"$p") 2>/dev/null || { c_bad "mqtt port $p not listening"; mqtt_ok=0; }
+      done
+      [ -s "$MQTT_HOME/certs/ca.crt" ] || { c_bad "mqtt CA missing at $MQTT_HOME/certs/ca.crt"; mqtt_ok=0; }
+      if [ "$mqtt_ok" = "1" ]; then
+        c_ok "mqtt healthy -- 1883 anon, 1884 auth, 8883 TLS, 1885 EMQX"
+      else
+        failed+=("mqtt")
+      fi
+    else
+      c_bad "mqtt provisioning script failed"
+      failed+=("mqtt")
+    fi
+  fi
   echo
   if [ ${#failed[@]} -gt 0 ]; then
     c_bad "failed: ${failed[*]}"
@@ -307,7 +373,13 @@ cmd_infra_down() {
     local cname="$PREFIX-$(svc_field "$entry" 1)"
     if docker rm -f "$cname" >/dev/null 2>&1; then c_ok "removed $cname"; n=$((n+1)); fi
   done
+  # The MQTT brokers are not $PREFIX-named (tests/mqtt-infra.sh names them), so
+  # they have to be removed by name or `infra down` silently leaks four listeners.
+  for cname in "${MQTT_CONTAINERS[@]}"; do
+    if docker rm -f "$cname" >/dev/null 2>&1; then c_ok "removed $cname"; n=$((n+1)); fi
+  done
   echo "  removed $n container(s)"
+  c_info "MQTT certs/config left in $MQTT_HOME (re-used on the next 'infra up')"
 }
 
 cmd_infra_status() {
@@ -322,7 +394,20 @@ cmd_infra_status() {
     printf '  %-12s %-9s %-16s %s\n' "$name" "$state" "$ports" "$image"
   done
   echo
-  printf '  %-12s %-9s %-16s %s\n' "mqtt" "-" "1883/8883" "NOT PROVISIONED (tests skip)"
+  # Report what the MQTT brokers are ACTUALLY doing. This line used to be a
+  # hardcoded "NOT PROVISIONED", which stayed wrong after they were provisioned --
+  # a status command that cannot be wrong is not a status command.
+  local mstate mports mimage
+  for cname in "${MQTT_CONTAINERS[@]}"; do
+    mstate="$(docker inspect -f '{{.State.Status}}' "$cname" 2>/dev/null || echo '-')"
+    mimage="$(docker inspect -f '{{.Config.Image}}' "$cname" 2>/dev/null || echo 'NOT PROVISIONED')"
+    case "$cname" in
+      tina4-mosquitto) mports="1883,1884,8883" ;;
+      tina4-emqx)      mports="1885" ;;
+      *)               mports="-" ;;
+    esac
+    printf '  %-12s %-9s %-16s %s\n' "${cname#tina4-}" "$mstate" "$mports" "$mimage"
+  done
   printf '  %-12s %-9s %-16s %s\n' "firebird" "-" "3050" "excluded by design"
 }
 
@@ -330,7 +415,9 @@ cmd_infra_status() {
 # it a missing service SKIPS instead of failing, and a suite full of skips reads
 # like a green run. Exporting it turns "not tested" back into "failed".
 cmd_infra_env() {
-  cat <<'ENVBLOCK'
+  # The heredoc stays QUOTED so nothing in it expands by accident; the one value
+  # that must vary by machine is substituted afterwards.
+  cat <<'ENVBLOCK' | sed "s|MQTT_CA_PLACEHOLDER|$MQTT_HOME/certs/ca.crt|"
 export TINA4_REQUIRE_SERVICES=1
 export TINA4_TEST_PG_HOST=localhost TINA4_TEST_PG_PORT=55432
 export TINA4_TEST_PG_USER=tina4 TINA4_TEST_PG_PASS=tina4 TINA4_TEST_PG_DB=tina4_py
@@ -338,9 +425,32 @@ export TINA4_TEST_POSTGRES_URL=postgres://tina4:tina4@localhost:55432/tina4_py
 export TINA4_TEST_MONGO_URL=mongodb://localhost:27017
 export TINA4_TEST_REDIS_URL=redis://localhost:6379
 export TINA4_TEST_VALKEY_URL=redis://localhost:6380
+# redis-auth: password is set by the container command in SERVICES, db index 3 is
+# what the cache-backend tests use. Without this export the auth tests skipped.
+export TINA4_TEST_REDIS_AUTH_URL=redis://:s3cret@localhost:6381/3
 export TINA4_TEST_RABBITMQ_URL=amqp://guest:guest@localhost:5672
 export TINA4_TEST_KAFKA_URL=localhost:9092
 export TINA4_KAFKA_BROKERS=localhost:9092
+# The Kafka tests default to a container named `tina4-kafka`; this lab prefixes
+# every container with `tina4-lab-`, so without the override they cannot find it.
+export TINA4_TEST_KAFKA_CONTAINER=tina4-lab-kafka
+# Second Postgres database, for the two-database routing tests. Creating the
+# database is NOT enough -- the specs read this env var, and with it unset they
+# fall back to a default database name that does not exist here (Ruby defaults to
+# "tina4_rb2"). The name is TINA4_TEST_PG_DB_2 with an UNDERSCORE before the 2;
+# Ruby's bind_database_spec.rb and Node's bind-database.test.ts both agree on it,
+# and an earlier draft of this block wrote TINA4_TEST_PG_DB2, which silently
+# satisfied nothing. Python and PHP have no two-database test, so this pair is
+# the whole consumer set.
+export TINA4_TEST_PG_DB_2=tina4_analytics
+export TINA4_TEST_POSTGRES_URL_2=postgres://tina4:tina4@localhost:55432/tina4_analytics
+# MQTT: mosquitto on 1883 (anon) / 1884 (auth) / 8883 (TLS), EMQX on 1885.
+# Provisioned by `infra up` via the in-repo tests/mqtt-infra.sh.
+export TINA4_TEST_MQTT_URL=mqtt://127.0.0.1:1883
+export TINA4_TEST_MQTT_AUTH_URL=mqtt://127.0.0.1:1884
+export TINA4_TEST_MQTT_TLS_URL=mqtts://127.0.0.1:8883
+export TINA4_TEST_MQTT_EMQX_URL=mqtt://127.0.0.1:1885
+export TINA4_TEST_MQTT_CA_FILE=MQTT_CA_PLACEHOLDER
 export TINA4_TEST_MYSQL_HOST=localhost TINA4_TEST_MYSQL_PORT=3306
 export TINA4_TEST_MYSQL_USER=tina4 TINA4_TEST_MYSQL_PASS=tina4 TINA4_TEST_MYSQL_DB=tina4_test
 export TINA4_TEST_MSSQL_HOST=localhost TINA4_TEST_MSSQL_PORT=1433
