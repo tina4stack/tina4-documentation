@@ -243,14 +243,20 @@ reviewed and closed at a time, not batched.
 | 0 | Messenger (pilot) | SYNTHESISE | correctness | `messenger-contract.md` | closed, tests red + committed |
 | 1 | DotEnv parser | SYNTHESISE | correctness | `features/001-dotenv.md` | closed |
 | 2 | Structured logger | SYNTHESISE | correctness | `features/002-structured-logger.md` | closed |
-| 3 | DB adapter interface | - | - | - | measured only |
+| 3 | DB adapter interface | PROMOTE php | SOLID | `features/003-database-adapter-interface.md` | closed |
 | 4 | SQLite adapter + write path | SYNTHESISE (**P1**) | correctness | `features/004-sqlite-adapter.md` | closed |
 | 5 | DATABASE_URL parser | PROMOTE php | SOLID | `features/005-database-url-parser.md` | closed, one blocker |
 | 6 | Router + dispatch | SYNTHESISE | SOLID | `features/006-router-and-dispatch.md` | closed, sequenced first |
 | 7-93+ | remainder | - | - | - | not started |
 
-Nobody has won twice. Four closed rows in, "Python is master" would have been the
-wrong call on three of them.
+Seven closed rows. PHP has now won twice (features 3 and 5, both on SOLID) and is
+the only framework to win at all - every other row went SYNTHESISE because no
+single framework held the whole answer. "Python is master" would have been the
+wrong call on six of the seven.
+
+Implementation order, revised as rows closed: **6, 4, 5, 3**, then 2, 1, 0.
+Feature 3 sits behind 5 because 5 removes the URL parsing that 3 would otherwise
+refactor twice, and behind 4 because both touch the same facade methods.
 
 ## Implementation order (owner decision, 2026-07-28)
 
