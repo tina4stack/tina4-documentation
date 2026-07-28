@@ -313,22 +313,35 @@ cmd_infra_up() {
     [ "$ok" = "1" ] && c_ok "mssql tina4_test ready" || c_bad "mssql tina4_test could not be created"
   fi
 
-  # The two-database routing tests need a SECOND Postgres database. The image
-  # creates only POSTGRES_DB, so tina4_analytics has to be added here or those
-  # tests bind both handles to tina4_py and quietly prove nothing.
+  # The postgres image creates only POSTGRES_DB (tina4_py), but the suites want
+  # more than one database, for two different reasons:
+  #
+  #   tina4_analytics  the two-database routing tests (Ruby bind_database_spec,
+  #                    Node bind-database.test). Without it they bind both handles
+  #                    to tina4_py and quietly prove nothing -- Node said exactly
+  #                    that: "default=tina4_py, named=tina4_py".
+  #   tina4_php        PHP's Postgres tests do NOT read TINA4_TEST_PG_DB; each test
+  #   tina4            class names its own database in a PG_DB constant (4 use
+  #                    tina4_php, 1 uses tina4). With them absent, 43 PHP tests
+  #                    ERROR as "PostgresAdapter: Failed to connect to PostgreSQL"
+  #                    -- which reads like a driver bug and is a missing database.
+  #                    (PostgresAdapter discards libpq's real message, so the
+  #                    error never says which database it wanted.)
   if [ "$(docker inspect -f '{{.State.Running}}' "$PREFIX-postgres" 2>/dev/null)" = "true" ]; then
-    if docker exec "$PREFIX-postgres" psql -U tina4 -d tina4_py -tAc \
-         "SELECT 1 FROM pg_database WHERE datname='tina4_analytics'" 2>/dev/null | grep -q 1; then
-      c_ok "postgres tina4_analytics already present"
-    else
-      printf '  .. %-11s creating tina4_analytics\n' "postgres"
-      if docker exec "$PREFIX-postgres" createdb -U tina4 tina4_analytics >/dev/null 2>&1; then
-        c_ok "postgres tina4_analytics created"
+    for db in tina4_analytics tina4_php tina4; do
+      if docker exec "$PREFIX-postgres" psql -U tina4 -d tina4_py -tAc \
+           "SELECT 1 FROM pg_database WHERE datname='$db'" 2>/dev/null | grep -q 1; then
+        c_ok "postgres $db already present"
       else
-        c_bad "postgres tina4_analytics could not be created"
-        failed+=("postgres-analytics")
+        printf '  .. %-11s creating %s\n' "postgres" "$db"
+        if docker exec "$PREFIX-postgres" createdb -U tina4 "$db" >/dev/null 2>&1; then
+          c_ok "postgres $db created"
+        else
+          c_bad "postgres $db could not be created"
+          failed+=("postgres-$db")
+        fi
       fi
-    fi
+    done
   fi
 
   # MQTT: four brokers, generated CA + server cert, and a password file. Delegated
