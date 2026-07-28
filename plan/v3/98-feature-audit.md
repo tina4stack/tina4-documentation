@@ -235,10 +235,22 @@ Decided on: correctness. One sentence saying which axis was decisive and why.
 Streamed in batches. Each batch is reported to the owner as it lands, so a
 decision can be challenged before the next batch builds on it.
 
-| Batch | Rows | Status |
-| --- | --- | --- |
-| 0 | Messenger (pilot, ran ahead of this doc) | done - `messenger-contract.md` |
-| 1 | 1-6 Foundation: dotenv, logger, DB adapter interface, SQLite, URL parser, router | measured; 6 written up |
+One plan file per feature under `features/`. Rhythm from 2026-07-28: one feature
+reviewed and closed at a time, not batched.
+
+| # | feature | verdict | decided on | plan | state |
+| --- | --- | --- | --- | --- | --- |
+| 0 | Messenger (pilot) | SYNTHESISE | correctness | `messenger-contract.md` | closed, tests red + committed |
+| 1 | DotEnv parser | SYNTHESISE | correctness | `features/001-dotenv.md` | closed |
+| 2 | Structured logger | - | - | - | measured only |
+| 3 | DB adapter interface | - | - | - | measured only |
+| 4 | SQLite adapter + write path | SYNTHESISE (**P1**) | correctness | `features/004-sqlite-adapter.md` | closed |
+| 5 | DATABASE_URL parser | PROMOTE php | SOLID | `features/005-database-url-parser.md` | closed, one blocker |
+| 6 | Router + dispatch | SYNTHESISE | SOLID | `features/006-router-and-dispatch.md` | closed, sequenced first |
+| 7-93+ | remainder | - | - | - | not started |
+
+Nobody has won twice. Four closed rows in, "Python is master" would have been the
+wrong call on three of them.
 
 ## Implementation order (owner decision, 2026-07-28)
 
