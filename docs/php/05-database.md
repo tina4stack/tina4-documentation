@@ -243,9 +243,9 @@ $result->toPaginate();  // ["records" => [...], "count" => 42, "limit" => 10, "o
 ```php
 $info = $result->columnInfo();
 // [
-//     ["name" => "id", "type" => "INTEGER", "size" => null, "decimals" => null, "nullable" => false, "primary_key" => true],
-//     ["name" => "name", "type" => "TEXT", "size" => null, "decimals" => null, "nullable" => false, "primary_key" => false],
-//     ["name" => "email", "type" => "TEXT", "size" => 255, "decimals" => null, "nullable" => true, "primary_key" => false],
+//     ["name" => "id", "type" => "INTEGER", "size" => null, "decimals" => null, "nullable" => false, "primaryKey" => true],
+//     ["name" => "name", "type" => "TEXT", "size" => null, "decimals" => null, "nullable" => false, "primaryKey" => false],
+//     ["name" => "email", "type" => "TEXT", "size" => 255, "decimals" => null, "nullable" => true, "primaryKey" => false],
 //     ...
 // ]
 ```
@@ -259,7 +259,7 @@ Each column entry contains:
 | `size` | Maximum size (or `null` if not applicable) |
 | `decimals` | Decimal places (or `null`) |
 | `nullable` | Whether the column allows `NULL` |
-| `primary_key` | Whether the column is part of the primary key |
+| `primaryKey` | Whether the column is part of the primary key |
 
 This is useful for building dynamic forms, generating documentation, or validating data before insert.
 
