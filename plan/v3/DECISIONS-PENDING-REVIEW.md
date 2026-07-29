@@ -190,6 +190,28 @@ the Python master's is `(limit, offset, include, order_by)`, so `Model.all(10)`
 means different things in the two. Node's `QueryBuilder.get()` also returns a
 plain array where the other three return a DatabaseResult.
 
+### D. Node `db.executeMany()` atomicity -- ALREADY DONE, and my note was WRONG
+
+I recorded this as an open bug. It is not one. The facade in
+`packages/orm/src/database.ts` already owns BEGIN/COMMIT behind an owns-guard
+(`owns = !this.inExplicitTransaction()`): a standalone batch is atomic
+all-or-nothing, and a batch nested inside a caller's explicit transaction JOINS
+it so the caller's commit/rollback decides -- which is the correct behaviour,
+because an unconditional inner COMMIT would commit the caller's OUTER
+transaction early and make their later rollback undo nothing.
+
+A lock-in test already exists as well: `test/executeManyFacadeTxn.test.ts`,
+covering both the nested-rollback case and "a bad row mid-batch rolls the whole
+batch back", against real PostgreSQL.
+
+Verified by RUNNING it, not by reading, because that PG test is env-gated and
+this workstation cannot reach the lab PG: a 4-row batch whose 3rd row violates
+UNIQUE, against real SQLite through the public facade, gave `threw=true` and
+`rows_landed=0`. Atomic. No code change made.
+
+So the earlier claim that "the facade offers a WEAKER guarantee than the method
+it fronts" was false when I wrote it down. Nothing to ship for D.
+
 ## 6. Open questions I did NOT decide (they need you)
 
 | # | Question | Why I did not decide it |
