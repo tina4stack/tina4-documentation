@@ -8,6 +8,10 @@
 #   ./tina4-lab.sh infra status      # what is up, on which port, healthy or not
 #   ./tina4-lab.sh infra env         # print the export block to run the suites against them
 #   ./tina4-lab.sh infra down        # remove them all
+#   sudo ./tina4-lab.sh clients      # install the LANGUAGE clients the suites need
+#                                    # (PHP pdo_dblib, Ruby mysql2/tiny_tds/redis).
+#                                    # Services alone are not enough: a missing
+#                                    # client makes live tests SKIP, not fail.
 #   ./tina4-lab.sh images build      # build + boot-gate the four base images
 #   ./tina4-lab.sh images publish    # the same, then push to Docker Hub
 #   ./tina4-lab.sh derive            # prove `FROM <base>` + add-your-own-driver works
@@ -228,6 +232,11 @@ cmd_doctor() {
     echo "  NOT ready -- fix the !! lines above, then re-run doctor"
     return 1
   fi
+
+  # A missing language client is as fatal to coverage as a missing service.
+  clients_report
+
+  return $fail
 }
 
 # --- infra -------------------------------------------------------------------
@@ -590,9 +599,84 @@ cmd_derive() {
   done
 }
 
+# --- language client libraries -----------------------------------------------
+#
+# Standing up the SERVICES is only half of it: a suite still skips its live
+# tests if the LANGUAGE CLIENT is missing, and a skip is invisible unless
+# TINA4_REQUIRE_SERVICES is set. On 2026-07-29 that cost us a genuinely
+# incomplete run -- 9 PHP MSSQL tests and 35 Ruby MySQL/MSSQL/Valkey specs had
+# never executed on this host, because:
+#   * PHP had no pdo_dblib / sqlsrv extension, and
+#   * Ruby's :databases bundle group is `optional: true`, so a plain
+#     `bundle install` silently skips mysql2 / tiny_tds / redis.
+# CI installs these; the lab did not. Provisioning them here is what keeps the
+# two honest.
+
+# name^probe^fix
+CLIENT_CHECKS=(
+  "php pdo_dblib (MSSQL)^php -m 2>/dev/null | grep -qx pdo_dblib^apt-get install -y php8.3-sybase"
+  "ruby mysql2^cd '$ROOT/tina4-ruby' 2>/dev/null && bundle exec ruby -e \"require 'mysql2'\" >/dev/null 2>&1^tina4-lab.sh clients"
+  "ruby tiny_tds^cd '$ROOT/tina4-ruby' 2>/dev/null && bundle exec ruby -e \"require 'tiny_tds'\" >/dev/null 2>&1^tina4-lab.sh clients"
+  "ruby redis^cd '$ROOT/tina4-ruby' 2>/dev/null && bundle exec ruby -e \"require 'redis'\" >/dev/null 2>&1^tina4-lab.sh clients"
+)
+
+cmd_clients() {
+  [ "$(id -u)" = "0" ] || die "clients: needs root (apt + native gem builds). Re-run with sudo."
+  export DEBIAN_FRONTEND=noninteractive
+
+  echo "=== language clients ==="
+  c_info "apt: pdo_dblib (PHP MSSQL) + headers mysql2/tiny_tds compile against"
+  apt-get update -qq >/dev/null 2>&1
+  # default-libmysqlclient-dev -> mysql2; freetds-dev -> tiny_tds;
+  # php8.3-sybase -> pdo_dblib.
+  if apt-get install -y -qq default-libmysqlclient-dev freetds-dev php8.3-sybase >/dev/null 2>&1; then
+    c_ok "apt packages installed"
+  else
+    c_bad "apt install failed -- see: apt-get install default-libmysqlclient-dev freetds-dev php8.3-sybase"
+  fi
+
+  # The :databases group is optional:true, so it must be enabled EXPLICITLY --
+  # a bare `bundle install` will keep skipping it however many times you run it.
+  if [ -d "$ROOT/tina4-ruby" ]; then
+    c_info "ruby: enabling the optional :databases bundle group"
+    ( cd "$ROOT/tina4-ruby" \
+        && bundle config set --local with databases >/dev/null 2>&1 \
+        && bundle install >/dev/null 2>&1 ) \
+      && c_ok "bundle install (with databases) done" \
+      || c_bad "bundle install failed -- run it by hand in $ROOT/tina4-ruby"
+  else
+    c_warn "no $ROOT/tina4-ruby -- run 'tina4-lab.sh repos sync' first"
+  fi
+
+  clients_report
+}
+
+# Report each client's presence. Used by `clients` and by `doctor`, so a missing
+# client is visible WITHOUT having to notice a skip count in a suite summary.
+clients_report() {
+  local missing=0 entry name probe fix
+  echo "=== language client status ==="
+  for entry in "${CLIENT_CHECKS[@]}"; do
+    name="$(echo "$entry" | cut -d'^' -f1)"
+    probe="$(echo "$entry" | cut -d'^' -f2)"
+    fix="$(echo "$entry" | cut -d'^' -f3)"
+    if eval "$probe"; then
+      c_ok "$name"
+    else
+      c_bad "$name MISSING -- live tests using it will SKIP"
+      c_info "fix: $fix"
+      missing=$((missing + 1))
+    fi
+  done
+  [ "$missing" -eq 0 ] && c_ok "all language clients present" \
+    || c_warn "$missing client(s) missing: run 'sudo tina4-lab.sh clients'"
+  return 0
+}
+
 # --- dispatch ----------------------------------------------------------------
 case "${1:-help}" in
   doctor) shift; cmd_doctor "$@" ;;
+  clients) shift; cmd_clients "$@" ;;
   infra)
     shift
     case "${1:-status}" in
@@ -612,5 +696,5 @@ case "${1:-help}" in
   derive) shift; cmd_derive "$@" ;;
   help|-h|--help)
     sed -n '2,40p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' ;;
-  *) die "unknown command '${1}'. Try: doctor | infra | images | derive | help" ;;
+  *) die "unknown command '${1}'. Try: doctor | infra | clients | images | derive | help" ;;
 esac
