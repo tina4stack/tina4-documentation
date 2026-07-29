@@ -120,6 +120,76 @@ the framework returns (`primary_key` / `primaryKey`), which follows each
 language's paradigm because it is framework API surface. A is about the COLUMN
 NAME itself, which is DATA and must mirror the database verbatim.
 
+## 5c. Owner answers now IMPLEMENTED (2026-07-29/30)
+
+### B. Docker images -- DONE
+All four 3.13.94 images are published (`3.13.94` + `v3` + `latest`, amd64 AND
+arm64). Auth was in **root's** `~/.docker/config.json` on .99, not andre's -- I
+had checked the wrong file and wrongly called it blocked. Each image was
+boot-gated exactly as CI does it (run the container, require HTTP 200 on
+`/health` through the PUBLISHED port so the 0.0.0.0 bind is proven too, require
+it still alive after, require `/health` to report a version MATCHING the tag),
+then the arm64 image was pulled back from the published manifest and booted
+under emulation. Verified independently against the Docker Hub API afterwards
+(12/12 tags), not just from my own script's log. Sizes: python 13MB, php 40MB,
+ruby 49MB, nodejs 57MB.
+
+Trap worth keeping: `git archive <tag>` HONOURS `.gitattributes export-ignore`.
+tina4-php marks `/example export-ignore`, so its Dockerfile's
+`COPY /build/example` failed on a silently-thinned tree. Fixed by cloning and
+checking out the tag, with a file-count completeness guard. Of the four repos
+only tina4-php has export-ignore rules. **Still open:** the
+`DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets are missing in all four GitHub
+repos, so CI will fail again on the next tag unless they are added.
+
+### C. ORM row cap = 100 -- DONE in all four
+`select`/`where`/`with_trashed`/`cached`/`scope` all move to 100; `all`/`find`/
+`db.fetch` were already 100 in Python and PHP and are now 100 everywhere.
+
+**Two of the four frameworks were returning ENTIRE TABLES** from methods
+documented as paginated, which is worse than the "four different defaults" I
+first described:
+
+| Path | Python | PHP | Ruby (before) | Node (before) |
+| --- | --- | --- | --- | --- |
+| all / select / where | 100 / 20 / 20 | 100 / 20 / 20 | **UNCAPPED** (`limit: nil` makes fetch skip apply_limit) | **UNCAPPED** (no limit parameter at all) |
+| with_trashed | 20 | 20 | 20 | **UNCAPPED** (`limit?` with no default) |
+| db.fetch | 100 | 100 | 100 | **UNCAPPED** (`limit?` with no default) |
+
+Plus a real bug: **Ruby's `scope` accepted `limit:`/`offset:` and discarded
+both** -- `define_singleton_method(name) do |limit: 20, offset: 0|` then called
+`where(filter_sql, params)` passing neither. `User.active(limit: 5)` returned
+150 rows from a 150-row table. Proven by running it, not inferred.
+
+TWO PATHS ARE DELIBERATELY EXCLUDED, and each has its own test in all four so
+the exclusion is a decision on the record rather than an oversight:
+`QueryBuilder.get()` (v3.13.39 removed a silent LIMIT 100 there because it was a
+data-loss-on-read footgun -- it has no `limit` parameter, so any cap there can
+only be silent) and `fetch_all` (its NAME is the request for every row). The
+reconciling rule: **a path that ADVERTISES `limit` caps at 100; a path with no
+limit parameter must never cap.**
+
+Node needed a structural change, not a default: its adapters treat `limit: 0` as
+`LIMIT 0` (zero rows), not as Python/PHP's "no truncation" sentinel, so the cap
+could not live on `fetch`'s parameter default without `fetchAll()` silently
+inheriting it. One shared `_fetchWithLimit` body now backs both, with `fetch`
+applying the cap and `fetchAll` passing the limit verbatim.
+
+Lock-in tests are BEHAVIOURAL in all four (insert 150 rows, count what returns),
+so the contract cannot be satisfied by a signature that says 100 while the body
+ignores it, and includes a smaller-limit AND a larger-limit case -- without
+those, a hardcoded `LIMIT 100` would satisfy every other assertion.
+
+Commits: `tina4-python 3b69d94`, `tina4-php 1be9add3`, `tina4-ruby a5e4132`,
+tina4-nodejs pending. Needs a `Breaking:` changelog entry + migration note.
+
+Two findings recorded, NOT fixed (out of scope, would each be a separate
+breaking change): Ruby has **no `cached` method** at all while the other three
+do; and Node's `all()` signature is `(where, params, include, orderBy)` where
+the Python master's is `(limit, offset, include, order_by)`, so `Model.all(10)`
+means different things in the two. Node's `QueryBuilder.get()` also returns a
+plain array where the other three return a DatabaseResult.
+
 ## 6. Open questions I did NOT decide (they need you)
 
 | # | Question | Why I did not decide it |
