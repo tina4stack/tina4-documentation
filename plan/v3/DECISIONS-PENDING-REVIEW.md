@@ -39,6 +39,42 @@ those yet - they go in with the release notes.
 | 2.3 | A PHP test looped `foreach` over the `functions` COUNT. An int is not iterable, so the body never ran - the test asserted **nothing** while reporting green. | `tina4-php/tests/MetricsTest.php` | rewritten to assert non-empty FIRST so it cannot rot back |
 | 2.4 | `PRAGMA table_info` returns `pk` as a 1-based POSITION, not a boolean. Testing `pk == 1` truncated composite keys. | Ruby + Node drivers (2 frameworks, not 3 - I miscounted first) | `ColumnShapeContractTest` (7 tests, real SQLite, composite key + source-invariant) |
 
+## 2b. Firebird: two real bugs, found by RUNNING it (not reading it)
+
+You said Firebird was on the .99 server. It was not -- no image, no container,
+not even a stopped one. I pulled `firebirdsql/firebird:5` and started
+`tina4-lab-firebird` (5.0.4.1812, `--restart unless-stopped`, port 3050,
+SYSDBA/masterkey, tina4test.fdb) alongside the other 13 lab services, then ran
+the real adapters against it. That is what turned up these two.
+
+| # | Bug | Python | PHP | Ruby | Node |
+| --- | --- | --- | --- | --- | --- |
+| B1 | **Identifier folding.** Firebird stores an UNQUOTED-created name UPPERCASE and treats a QUOTED one as case-sensitive, so `INSERT INTO "probe_t"` matches nothing after `CREATE TABLE probe_t`. Broke insert/update/delete/truncate against every conventionally-created table. | FIXED | clean (interpolates unquoted) | clean (unquoted) | FIXED (quoted the raw name AND every column) |
+| B2 | **`primary_key` hardcoded `false`.** The constraint catalogue was never queried. | FIXED | clean (computes from pkFields) | FIXED | FIXED |
+
+**PHP was already correct on both** -- it has had the most Firebird attention
+(#132/#133), and it shows. The parity picture was NOT uniform, which is why I
+checked each one instead of assuming the master's bug was everywhere.
+
+B2's real bite: `primary_key()` returned `[]` on Firebird, so the **3.13.94
+filterless-write guard** could never find the PK in `data` and would raise even
+when the caller had supplied it. A change I shipped last release was silently
+broken on that engine.
+
+Evidence:
+- a 7-point contract probe against the live server went **3/7 -> 7/7**
+- the new Python tests, run with the PRE-FIX adapter mounted in, give **5 failed /
+  5 passed**, and the 5 failures are precisely the fixed behaviours
+- the PK catalogue query was run directly on the server: returns `ID`, `CODE` in
+  position order for a composite key
+
+**Limit of the verification, stated plainly:** Python's live path is proven end to
+end. Ruby's and Node's are NOT -- their new tests are gated and PENDING on this
+host, because the `fb` gem / node-firebird plus libfbclient are not installed on
+it. The shared SQL is proven; the Ruby and Node plumbing around it is not yet.
+
+Commits: `tina4-python bbc30e7`, `tina4-ruby 554507d`, tina4-nodejs pending.
+
 ## 3. Claims of mine that turned out WRONG (corrected, on the record)
 
 | Claim I made | Reality | How it was caught |
