@@ -1,5 +1,130 @@
 # Chapter 35: Release Notes
 
+## v3.13.94 (2026-07-29) - A write with no filter is an error
+
+`update()` and `delete()` with no WHERE clause used to be accepted. Two of the
+four frameworks then wrote every row in the table. The other two changed nothing
+and said they had succeeded. Neither answer is a write, and neither told you
+which one you got.
+
+An unfiltered write now refuses to run and names what is missing. `truncate()` is
+the explicit spelling for the case where you really did mean every row.
+
+**Breaking.** Read the migration note below before upgrading.
+
+### The write path (BREAKING)
+
+A write needs a target. `update(table, data)` with no filter now takes the primary
+key out of `data` and uses it as the WHERE clause. With neither a filter nor the
+complete primary key, it raises and names the columns it wanted. `delete(table)`
+with no filter raises too. `truncate(table)` is the whole-table spelling, and it
+always was.
+
+A failed write raises rather than returning a falsy result the caller never
+inspected.
+
+Primary keys are read as a LIST, because a key can span several columns and every
+one of them belongs in the WHERE. Match a composite key on its first column alone
+and you hit every row that shares that value: the same data-loss shape the fix
+exists to prevent. Two of the four SQLite drivers had a second bug underneath that
+one. `PRAGMA table_info` returns `pk` as the 1-BASED POSITION within the key, not
+a boolean, so a composite key reports `pk=1, pk=2`. Code that tested `pk == 1` saw
+a key one column wide and truncated the rest.
+
+**Migration.** Two changes to make, both mechanical:
+
+1. An `update()` that relied on the primary key travelling inside `data` still
+   works, and now works on composite keys. An `update()` with neither a filter nor
+   a full primary key was already broken. Add the filter.
+2. Replace a deliberate delete-everything with `truncate(table)`.
+
+Nothing else in the write path moved. A filtered write behaves as it did before.
+
+### The Frond sandbox revokes capability, it does not skip a step
+
+`sandbox()` filtered the tag and filter lists but let a denied name fall through
+to the default path, so a template could still reach an escape filter it was never
+granted. A denied filter cannot confer safety now, and the tag gate collapsed to
+one check at dispatch instead of several that could disagree.
+
+The shared render corpus grew from 72 cases to 84, covering `|safe` and `|escape`.
+It is one committed fixture with one answer key, byte-identical across all four
+frameworks, so a divergence is a failing test rather than a discovery six months
+later.
+
+### Messenger: one name, one signature
+
+The dev branch and the send branch had drifted into two shapes of the same method,
+and capture keyed off debug mode rather than whether a transport was available.
+One signature behind one name now, and capture follows availability.
+
+### Base images that boot
+
+No CI had ever built or run a base image. Two of the four had therefore never
+served a request at all, and the two that did boot were each wrong in their own
+way. `docker run` is a supported entry point, so all four are now gated in CI on
+Docker Hub, on `/health`, and on the version they actually serve.
+
+The `FROM` to `COPY` recipe for adding your own database driver is documented in
+all four image headers, and in one case that documented line did not work until
+this release. An install instruction nobody runs is a claim, not a feature.
+
+### Frond, measured against the engines it replaces
+
+The benchmark page carried seven categories and none of them timed a template.
+That absence flattered us, because template rendering is the one axis where Frond
+competes head-on with the engine it replaced. It is a headline category now, and
+the numbers are not kind.
+
+Every engine renders the same page: a 20-row product list with a loop, an index,
+an even/odd class, an uppercase filter, two-decimal money, and a conditional
+footer. Output is compared byte for byte and proven identical before any timing
+counts, so nothing here is a strawman.
+
+Frond loses in all four languages, on its own compiled path rather than the
+interpreter fallback. The competition compiles a template to code the host runtime
+optimises. Frond walks a tree and calls back into engine primitives per hole. What
+Frond buys is the zero in the dependency column, and one template language that
+renders the same across four runtimes.
+
+The per-language multiples are in each framework's own note below. Publishing them
+costs us the comparison and buys the reader a real number.
+
+### Also in this release
+
+MQTT test infrastructure locks its password file to `0600` and the broker's own
+user, so a run cannot leave a world-readable credential behind.
+
+### PHP specifics
+
+`update()` with no filter appended no WHERE and overwrote every row. `delete()`
+with no filter removed every row in silence. PHP was already ahead on two of the
+five points, and those are locked in by tests now rather than left implicit: a
+failed write raises `DatabaseException`, and `writeResult(withLastId: false)`
+already kept `lastId` null on update and delete. `update()` also accepts an array
+filter as well as a string, matching `delete()` and the other three.
+
+`getColumns()` already read composite keys correctly, so PHP needed no driver fix.
+
+PHP has no `ext-rdkafka` path, so the socket client is the only Kafka client PHP
+has, and the queue backend did not work against a Kafka 4.x broker at all.
+
+The base image never booted, and the three defects sat one per layer, each
+reachable only after fixing the one above it. The vendored autoloader described a
+different project and replaced the one composer had just generated. The demo seeded
+its data before `App::start()` had discovered the models. Composer ran its
+optimised dump against an empty directory. A fourth defect hid all of it:
+`.dockerignore` was itself ignored, so an earlier fix shipped nowhere.
+
+Running `index.php` directly now points at `tina4 serve` instead of failing without
+explanation. The test suite no longer leaks the `php -S` fixture servers that made
+a piped run hang long after PHPUnit had finished, and a failed PostgreSQL connect
+says what libpq said instead of dereferencing a null handle.
+
+**Frond:** 3.70x slower than Twig and 2.92x slower than Blade on identical output,
+with `FrondCompiler` engaged. Production mode buys little.
+
+
 ## v3.13.93 (2026-07-27) - index.php tells you where the server actually is
 
 Run `php index.php` and you get one line saying Tina4 started, then the process

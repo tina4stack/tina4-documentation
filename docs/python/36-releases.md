@@ -1,5 +1,126 @@
 # Chapter 35: Release Notes
 
+## v3.13.94 (2026-07-29) - A write with no filter is an error
+
+`update()` and `delete()` with no WHERE clause used to be accepted. Two of the
+four frameworks then wrote every row in the table. The other two changed nothing
+and said they had succeeded. Neither answer is a write, and neither told you
+which one you got.
+
+An unfiltered write now refuses to run and names what is missing. `truncate()` is
+the explicit spelling for the case where you really did mean every row.
+
+**Breaking.** Read the migration note below before upgrading.
+
+### The write path (BREAKING)
+
+A write needs a target. `update(table, data)` with no filter now takes the primary
+key out of `data` and uses it as the WHERE clause. With neither a filter nor the
+complete primary key, it raises and names the columns it wanted. `delete(table)`
+with no filter raises too. `truncate(table)` is the whole-table spelling, and it
+always was.
+
+A failed write raises rather than returning a falsy result the caller never
+inspected.
+
+Primary keys are read as a LIST, because a key can span several columns and every
+one of them belongs in the WHERE. Match a composite key on its first column alone
+and you hit every row that shares that value: the same data-loss shape the fix
+exists to prevent. Two of the four SQLite drivers had a second bug underneath that
+one. `PRAGMA table_info` returns `pk` as the 1-BASED POSITION within the key, not
+a boolean, so a composite key reports `pk=1, pk=2`. Code that tested `pk == 1` saw
+a key one column wide and truncated the rest.
+
+**Migration.** Two changes to make, both mechanical:
+
+1. An `update()` that relied on the primary key travelling inside `data` still
+   works, and now works on composite keys. An `update()` with neither a filter nor
+   a full primary key was already broken. Add the filter.
+2. Replace a deliberate delete-everything with `truncate(table)`.
+
+Nothing else in the write path moved. A filtered write behaves as it did before.
+
+### The Frond sandbox revokes capability, it does not skip a step
+
+`sandbox()` filtered the tag and filter lists but let a denied name fall through
+to the default path, so a template could still reach an escape filter it was never
+granted. A denied filter cannot confer safety now, and the tag gate collapsed to
+one check at dispatch instead of several that could disagree.
+
+The shared render corpus grew from 72 cases to 84, covering `|safe` and `|escape`.
+It is one committed fixture with one answer key, byte-identical across all four
+frameworks, so a divergence is a failing test rather than a discovery six months
+later.
+
+### Messenger: one name, one signature
+
+The dev branch and the send branch had drifted into two shapes of the same method,
+and capture keyed off debug mode rather than whether a transport was available.
+One signature behind one name now, and capture follows availability.
+
+### Base images that boot
+
+No CI had ever built or run a base image. Two of the four had therefore never
+served a request at all, and the two that did boot were each wrong in their own
+way. `docker run` is a supported entry point, so all four are now gated in CI on
+Docker Hub, on `/health`, and on the version they actually serve.
+
+The `FROM` to `COPY` recipe for adding your own database driver is documented in
+all four image headers, and in one case that documented line did not work until
+this release. An install instruction nobody runs is a claim, not a feature.
+
+### Frond, measured against the engines it replaces
+
+The benchmark page carried seven categories and none of them timed a template.
+That absence flattered us, because template rendering is the one axis where Frond
+competes head-on with the engine it replaced. It is a headline category now, and
+the numbers are not kind.
+
+Every engine renders the same page: a 20-row product list with a loop, an index,
+an even/odd class, an uppercase filter, two-decimal money, and a conditional
+footer. Output is compared byte for byte and proven identical before any timing
+counts, so nothing here is a strawman.
+
+Frond loses in all four languages, on its own compiled path rather than the
+interpreter fallback. The competition compiles a template to code the host runtime
+optimises. Frond walks a tree and calls back into engine primitives per hole. What
+Frond buys is the zero in the dependency column, and one template language that
+renders the same across four runtimes.
+
+The per-language multiples are in each framework's own note below. Publishing them
+costs us the comparison and buys the reader a real number.
+
+### Also in this release
+
+MQTT test infrastructure locks its password file to `0600` and the broker's own
+user, so a run cannot leave a world-readable credential behind.
+
+### Python specifics
+
+`primary_key()` took `next(c for c in columns if c.primary_key)`, the FIRST key
+column. On a composite key that reintroduced the exact bug the change existed to
+prevent. Verified against real SQLite on `order_items (order_id, product_id)`: the
+update popped `order_id`, built `WHERE order_id = 1`, and tried to set
+`product_id = 5` on both rows in that group. A UNIQUE constraint caught it. Without
+one it would have corrupted both rows in silence.
+
+The Kafka raw path only runs when `confluent-kafka` is absent, and CI installs it,
+so that code had never executed under test. It does now: a test forces the raw path
+against a real broker. CRC32C is built in-process, because the standard library has
+none and the framework carries no third-party runtime dependency.
+
+The published 3.13.92 image served `"version": "3.13.56"` on `/health`, 36 releases
+stale. `_resolve_version()` falls back from `pyproject.toml` to
+`importlib.metadata`, then to a floor literal. The Dockerfile pruned `dist-info`,
+which removed the only metadata path, so the literal won. The literal had never
+been bumped, because in a source checkout the first path always wins and no test
+ever reached it. The prune bought 20 KB of a 41 MB image. It is gone, and a test
+now reads the literal out of the source and checks it against `pyproject.toml`.
+
+**Frond:** 14.5x slower than Jinja2 and 37x slower than Mako on identical output.
+The harness confirms the AOT compiler engaged, so this is Frond's fastest path.
+
+
 ## tina4 CLI v3.8.63 (2026-07-27) - One launcher in every image
 
 No framework release accompanies this. The CLI is shared by all four, and this
