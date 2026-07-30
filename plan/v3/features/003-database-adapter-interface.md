@@ -186,6 +186,77 @@ the conformance numbers, which were measured independently.
   thirty implementations with engine-specific DDL. Worth considering a trait with
   a sensible `autocommit` default first, since that one is not engine-specific.
 
+## OPEN: is this contract the right SHAPE, or just PHP's list?
+
+Owner challenge, 2026-07-30: "Are we blindly copying PHP - did we check the
+database adapter layout makes sense?"
+
+Answering honestly: **partly yes, and the evidence is in this document.**
+
+**1. The conformance number is partly circular.** `adapter_contract.json` is
+substantially PHP's 18 methods plus `createTable`/`addColumn` from Node. So
+"PHP scores 17/20, the highest" is close to a tautology - it scores highest
+against a list derived from itself. What the measurement DOES show honestly is
+CONSISTENCY (ten adapters identical, versus Ruby's three levels), and that
+finding stands on its own. The ranking does not.
+
+**2. Twenty methods on one interface is a lot, and interface segregation is the
+principle this row was decided on.** The contract mixes five concerns:
+
+| concern | methods |
+| --- | --- |
+| connection lifecycle | open, close, autocommit |
+| CRUD | execute, executeMany, fetch, fetchOne, insert, update, delete |
+| transactions | startTransaction, commit, rollback |
+| introspection | getTables, getColumns, tableExists |
+| DDL | createTable, addColumn |
+| diagnostics | lastInsertId, error |
+
+An adapter that only ever reads has to implement writes and DDL. That is the
+same complaint the row makes about Node's optional members, one level up: the
+answer to "an optional method is not a contract" might be SEVERAL contracts
+rather than one fat required one.
+
+**3. PHP's interface had a hole only found by trying to use it.** No adapter
+could name its own dialect, so DDL could not be built from the adapter at all -
+`ORM::detectDialect()` type-checked the concrete class from outside. The
+framework that won this row on SOLID grounds contained a textbook
+depend-on-the-concrete-class defect, and reading it did not surface that.
+Implementing it did.
+
+**4. Ruby's split may be better, and we chose against it partly on the plan's
+say-so.** Ruby's facade builds the SQL and the driver executes it, which means
+ONE SQL builder rather than seven. The owner chose (a) - CRUD onto the adapter -
+but the DRY argument for Ruby's shape was never actually weighed, because the
+audit recorded Ruby's lack of an interface as the finding and moved on.
+
+**5. Two more decisions were taken from the plan without independent test.**
+`query` was dropped because "nothing needs a second read path", and dialect
+translation was placed off the adapter - and the D2 correction above shows the
+reasoning behind that placement was itself wrong about the code.
+
+### What this does NOT undermine
+
+The work landed so far is defensible independent of the shape question, because
+it is all about CONSISTENCY rather than about which list is right: Ruby having
+any declared contract at all, the silent-skip guards becoming loud, the ratchets,
+the naming convergence, autocommit existing in more than one framework, and an
+adapter being able to name its own dialect. Every one of those is right whether
+the final interface is one list of twenty or five smaller ones.
+
+### What it should gate
+
+`createTable` and `addColumn` are the two methods that most obviously belong to
+a SEPARATE schema concern, and they are the two still unimplemented. Adding them
+to a twenty-method required interface, across ten PHP adapters and five Node
+ones, is the most expensive way to be wrong. **They should wait for a decision on
+the shape**, not be pushed through because they are next on a list.
+
+Recommended: settle whether this is one interface or several (a read contract, a
+write contract, a schema contract, a diagnostics contract) BEFORE implementing
+the last two. That decision is cheap now and expensive after fifteen
+implementations exist.
+
 ## Verdict: PROMOTE php on the interface, then complete it from node
 
 Decided on **SOLID (single responsibility and interface segregation)**.
