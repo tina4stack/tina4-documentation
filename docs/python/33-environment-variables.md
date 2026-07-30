@@ -67,6 +67,7 @@ stdout is always on. With `TINA4_LOG_OUTPUT` unset, the log **file** is written 
 | `TINA4_LOG_DIR` | `logs` | Directory for log files. Joined with `TINA4_LOG_FILE` when the latter is relative. |
 | `TINA4_LOG_FUNC` | _(empty)_ | When truthy, includes the calling function name in each log line. |
 | `TINA4_LOG_STRICT` | `false` | When `true`, raises on a log-write failure instead of swallowing it. |
+| `TINA4_LOG_APPEND` | `true` | Append to the log file. Set `false` to overwrite it once at startup (one file per run). |
 
 ### Database
 

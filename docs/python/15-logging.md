@@ -22,10 +22,9 @@ Log.error("Database connection failed", host="db.internal", port=5432)
 Output:
 
 ```
-2026-04-02 09:14:01 [INFO]    Application started
-2026-04-02 09:14:01 [DEBUG]   Request received path=/api/users method=GET
-2026-04-02 09:14:01 [WARNING] Rate limit approaching remaining=10
-2026-04-02 09:14:01 [ERROR]   Database connection failed host=db.internal port=5432
+2026-07-30T14:52:12.786Z [INFO    ] Application started
+2026-07-30T14:52:12.786Z [WARNING ] Rate limit approaching {"remaining": 10}
+2026-07-30T14:52:12.786Z [ERROR   ] Database connection failed {"host": "db.internal", "port": 5432}
 ```
 
 Every message includes a UTC timestamp and level. Keyword arguments become structured key-value pairs appended to the message.

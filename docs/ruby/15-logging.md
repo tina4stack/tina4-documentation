@@ -39,11 +39,10 @@ Tina4::Log.error("Out of memory -- shutting down")
 Output (text format):
 
 ```
-[2026-04-02 09:00:01 UTC] DEBUG  Cache miss | key=products:list
-[2026-04-02 09:00:02 UTC] INFO   User logged in | user_id=42 email=alice@example.com
-[2026-04-02 09:00:03 UTC] WARN   Deprecated endpoint called | path=/api/v1/products
-[2026-04-02 09:00:04 UTC] ERROR  Database query failed | table=orders error=connection timeout
-[2026-04-02 09:00:05 UTC] ERROR  Out of memory -- shutting down
+2026-07-30T14:52:13.149Z [INFO    ] User logged in {"user_id":42}
+2026-07-30T14:52:13.149Z [WARNING ] Deprecated endpoint called {"path":"/api/v1/products"}
+2026-07-30T14:52:13.149Z [ERROR   ] Database query failed {"table":"orders"}
+2026-07-30T14:52:13.149Z [CRITICAL] Out of memory -- shutting down
 ```
 
 Each entry has a timestamp, level, message, and any keyword arguments you passed as structured fields.
@@ -177,7 +176,7 @@ One JSON object per line. Compatible with Datadog, Elastic, CloudWatch, and any 
 
 ## 10. Writing to a File
 
-stdout is always on. The log **file** follows your environment by default. In development (`TINA4_DEBUG` set to a truthy value) Tina4 writes `logs/tina4.log` and mirrors every line to stdout. In production, and inside containers, it writes to stdout only. No file. A log file in a container just bloats the writable layer and the disk, and the 12-factor approach wants logs on stdout so the platform captures them.
+stdout is always on. The log **file** follows your environment by default. In development (`TINA4_DEBUG` set to a truthy value) Tina4 writes `logs/tina4.log`, mirrors warnings and above into `logs/error.log`, and sends every line to stdout. In production, and inside containers, it writes to stdout only. No file. A log file in a container just bloats the writable layer and the disk, and the 12-factor approach wants logs on stdout so the platform captures them.
 
 Need a file in production anyway? Ask for one. Set `TINA4_LOG_OUTPUT` to `file` or `both`, or name a path with `TINA4_LOG_FILE`:
 

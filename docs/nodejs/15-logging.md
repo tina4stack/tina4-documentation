@@ -225,11 +225,11 @@ Search your log aggregator for `requestId` to see every log line from that reque
 
 ## 8. File Output: Dev Writes a File, Production Is stdout-Only
 
-stdout is always on. The logger writes a `logs/tina4.log` file too, but only in development. In production, the logger is stdout-only.
+stdout is always on. The logger writes `logs/tina4.log` too, plus `logs/error.log` carrying warnings and above, but only in development. In production, the logger is stdout-only.
 
 The rule is simple. When `TINA4_LOG_OUTPUT` is unset (the default), the framework checks `TINA4_DEBUG`:
 
-- **Development** (`TINA4_DEBUG` truthy): logs go to stdout **and** to `logs/tina4.log`.
+- **Development** (`TINA4_DEBUG` truthy): logs go to stdout **and** to `logs/tina4.log`, with warnings and above mirrored into `logs/error.log`.
 - **Production / containers** (`TINA4_DEBUG` unset or falsy): logs go to stdout **only**. No file.
 
 Why no file in production? A log file inside a container writes to the container's writable layer and grows on disk. The platform (Docker, Kubernetes, your process manager) already captures PID 1 stdout. That's where production logs belong. Writing a file as well bloats the image layer and the disk for no gain. This follows the 12-factor rule: treat logs as a stream, let the platform route it.
