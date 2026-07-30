@@ -244,8 +244,8 @@ reviewed and closed at a time, not batched.
 | 0 | Messenger (pilot) | SYNTHESISE | correctness | `messenger-contract.md` | **SHIPPED all 4**, 0 open (py `9075423`, php `721aba94`, node `c96ba9f`, ruby `33b25de`) |
 | 1 | DotEnv parser | SYNTHESISE | correctness | `features/001-dotenv.md` | **SHIPPED all 4** (2026-07-30) + named pairs against a shared fixture. Surface reconciliation (file-vs-directory arg, Ruby top-level names) still open. |
 | 2 | Structured logger | SYNTHESISE | correctness | `features/002-structured-logger.md` | **SHIPPED all 4** (2026-07-30): pad 8, error.log everywhere, configure takes a dir OR a file, object/binary coercion, stdout truncation, TINA4_LOG_APPEND. |
-| 3 | DB adapter interface | **REDESIGN** (was PROMOTE php, then SYNTHESISE) | SOLID + LOC | `features/003-database-adapter-interface.md` | **IN PROGRESS, verdict revised.** Consistency work shipped in all 4 (contract, ratchets, Ruby's interface, naming, autocommit, getDatabaseType). Verdict changed: PHP's LIST was partly circular and Ruby's facade-builds-SQL split is the one that produces less code. Contract splits by concern, CRUD leaves the adapter. Decision (a) reversed. |
-| 4 | SQLite adapter + write path | **GAP** (P1, was broken in 4 of 4) | correctness | `features/004-sqlite-adapter.md` | **P1 SHIPPED all 4; 3 OPEN** (PHP `getColumns()` key, ORM still single-key, row cap) |
+| 3 | DB adapter interface | **REDESIGN** (was PROMOTE php, then SYNTHESISE) | SOLID + LOC | `features/003-database-adapter-interface.md` | **IN PROGRESS. 1 OPEN: CRUD has not left the adapters.** Shipped all 4: contract + ratchets, Ruby's interface, naming, autocommit, getDatabaseType, and (2026-07-30/31) the BATCH WRITE collapse - executeMany looped one round-trip per ROW; measured 500 rows PostgreSQL 9848ms -> 34ms (302x), MySQL 199x, MSSQL 42x. Fallout fixed on the way: PHP Postgres `affectedRows` always 0 on update (only adapter not routing writes through execute()), and a MySQL `last_id` regression the collapse introduced (MySQL reports the FIRST id of a multi-row INSERT; normalised in each ADAPTER so get_last_id and the returned result agree). Firebird verified NOT collapsible (-104 Token unknown) but 2.1x available from cursor reuse - not done. |
+| 4 | SQLite adapter + write path | **GAP** (P1, was broken in 4 of 4) | correctness | `features/004-sqlite-adapter.md` | **EFFECTIVELY CLOSED 2026-07-31; 1 deferred.** (a) PHP `getColumns()` key: re-measured, the drift the plan described is GONE - PHP emits `primaryKey` in all 12 places, no consumer reads `'primary'`, and that matches the contract's idiomatic-casing rule. Plan was stale, not the code; pinned with a test. (b) ORM single-key: **FIXED all 4** (py `deefe50`, node `a253006`, ruby `12002c5`, php `29279b40`). Worse than parked: the INSERT-vs-UPDATE probe tested only the FIRST key column, so saving (acme,a2) was decided an UPDATE and OVERWROTE (acme,a1) - data loss on an ordinary insert. Also update/delete truncated the key, and createTable emitted one inline PRIMARY KEY per column (invalid DDL). PHP needed an ADDITIVE `$primaryKeys` array: widening `$primaryKey` to string|array fatals every existing model (PHP demands identical redeclared types). (c) row cap: **deferred to feature 18**, unchanged. |
 | 5 | DATABASE_URL parser | PROMOTE php | SOLID | `features/005-database-url-parser.md` | **SHIPPED all 4** (2026-07-30): php 12/17->17/17, node 0/17->17/17, python + ruby had no parser at all -> 17/17. D3 settled on live Firebird. |
 | 6 | Router + dispatch | SYNTHESISE | SOLID | `features/006-router-and-dispatch.md` | closed, sequenced first |
 | 13 | ORM base class | PROMOTE ruby (structure) | LOC/CC | `features/013-orm-base-class.md` | closed |
@@ -261,6 +261,20 @@ reviewed and closed at a time, not batched.
 | 37 | Auto-escaping | UNIFORM (html) + GAP (js/css/url) | correctness | `features/037-auto-escaping.md` | closed, 1 owner call |
 | 38 | Sandboxing | PROMOTE php (**P1**) + GAP (tags) | correctness | `features/038-sandboxing.md` | **SHIPPED all 4**, 0 open (both owner calls answered) |
 | 7-12, 21-27, 33-36, 39-93+ | remainder | - | - | - | not started |
+
+### Work done OUTSIDE the numbered walk (2026-07-30/31)
+
+Real bugs found while fixing something else. None of it advances the walk, and
+none of it had a numbered row, which is itself the finding: the matrix cannot
+see two of its four variant groups.
+
+| area | what | state |
+| --- | --- | --- |
+| Sessions | **memcached was missing as a SESSION backend in all 4** (it had been a CACHE backend since v3). Added as feature **42.6**; sessions restructured into a GROUP (42.1-42.6) so a new backend stops renumbering the matrix. | SHIPPED all 4 |
+| Sessions | **The sync transport spawned a `node -e` child PER COMMAND** (Node): spawn p50 41ms / p99 487ms plus a fresh TCP connection, and the tail tripped the child's own deadline. That is what made sessionHandlers flaky - the SET timed out for the caller while still LANDING on the server, so the next GET honestly saw nothing. Replaced with one persistent connection behind a worker + Atomics. Redis/Valkey/memcached p50 80ms -> 10.5ms; MongoDB (driver load per command too) p50 230ms -> 11.5ms. Flake: 2-3 failures in 6 runs -> 0 in 20. | SHIPPED (Node only; the other 3 have native sync sockets and never had this) |
+| Cache | **memcached `size` read the GLOBAL `curr_items`**, counting every other tenant's keys - the only leaky backend of seven. And **`clear()` sent `flush_all`, wiping the whole shared server** (Node's was the mirror bug: a no-op that cleared nothing, with a comment claiming a parity that was false in both directions). Both fixed by tracking our own keys + TTLs. | SHIPPED all 4 |
+
+
 
 PHP has now won three times: features 3 and 5 on SOLID, and feature 38 on the
 correctness of a security control. It is the only framework to win more than once.
@@ -361,4 +375,13 @@ Collected as they surface, because they change how the audit is read.
   reading is relative (which of the four is least bad) plus an absolute finding
   worth its own plan.
 
-## Status: In progress. Planning only, nothing implemented.
+## Status: In progress. Planning AND implementation.
+
+The "planning only" framing held for the first pass. It stopped being true once
+the owner switched to the walk model (2026-07-30): take features from the top,
+audit the next unaudited one, ship it. Rows 0-5 and 38 have shipped code in all
+four frameworks; 3 and 6 are the live edge.
+
+Next up: feature 3's remaining open item (move CRUD out of the adapters, the
+4.3x LOC finding), then feature 6 (planned, not implemented), then 7 - the first
+genuinely unaudited row.

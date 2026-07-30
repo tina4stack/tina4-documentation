@@ -10,6 +10,56 @@
 
 ---
 
+## Feature groups
+
+The phases below are DELIVERY order. This is the orthogonal view: capabilities
+that have several interchangeable implementations, where the group is the
+feature and each implementation is a feature inside it.
+
+Why it matters: adding memcached sessions as a flat row 47 would have pushed
+Swagger to 48 and renumbered every row after it. Sub-numbering inside a group
+absorbs a new backend without touching anything else. It also makes a gap
+obvious: a group with five backends in one language and three in another is a
+parity hole you can see at a glance, which a flat list hides.
+
+| Group | Members | Numbering | Status |
+|-------|---------|-----------|--------|
+| Session handling | file, Redis, Valkey, MongoDB, database, memcached | 42.1-42.6 | grouped |
+| Database adapters | SQLite, PostgreSQL, MySQL, MSSQL, Firebird, ODBC, MongoDB | 4, 21-26 | NOT grouped - separate flat rows |
+| Cache backends | memory, file, Redis, Valkey, memcached, MongoDB, database | none | NOT IN THE MATRIX AT ALL |
+| Queue backends | file, RabbitMQ, Kafka, MongoDB | 48 | NOT grouped - one row hides four backends |
+| Frond engine | lexer, parser, compiler, runtime, filters, tags, tests, functions, extensibility, escaping, sandbox, template cache, fragment cache | 28-40 | components, not variants |
+| ORM | base class, soft delete, relationships, scopes, field mapping, pagination, caching, validation | 13-20 | components, not variants |
+| CLI | init, serve, migrate, seed, test, routes | 59-64 | subcommands |
+
+Two kinds of group appear here and they are not the same thing:
+
+- **Variant groups** - interchangeable implementations of one contract
+  (sessions, database adapters, cache backends, queue backends). Every member
+  satisfies the SAME contract, so a member missing in one language is a parity
+  bug. These are the ones worth sub-numbering.
+- **Component groups** - parts that together make one feature (Frond, ORM, CLI).
+  A member is not interchangeable with its siblings, and "3 of 13" means an
+  unfinished feature rather than a missing variant.
+
+### Gaps this view exposes
+
+1. **Cache backends are absent from the matrix.** All four frameworks ship seven
+   (`TINA4_CACHE_BACKEND`: memory, file, redis, valkey, memcached, mongodb,
+   database) and all four document them, but not one has a feature row. The
+   matrix reports 100% parity on a subsystem it does not track.
+2. **Queue backends hide behind one row.** Row 48 reads "Queue (DB-backed,
+   zero-dep)" while the frameworks actually ship file, RabbitMQ, Kafka and
+   MongoDB. A backend could be missing in one language and the matrix would
+   still show a tick.
+3. **Database adapters are the same shape as sessions** - seven interchangeable
+   engines against one contract - but are spread across rows 4 and 21-26 rather
+   than grouped, so adding an eighth engine renumbers the matrix.
+
+Sessions (42) are the only variant group currently expressed as one. The other
+three should follow; that is a documentation change, not a code change, and it
+is not done yet.
+
 ## Phase 1: Foundation (Zero-Dep Core)
 
 | # | Feature | Python | PHP | Ruby | Node.js |
@@ -82,14 +132,40 @@
 | # | Feature | Python | PHP | Ruby | Node.js |
 |---|---------|--------|-----|------|---------|
 | 41 | JWT (zero-dep, HS256/RS256) | [x] | [x] | [x] | [x] |
-| 42 | Session: file backend | [x] | [x] | [x] | [x] |
-| 43 | Session: Redis backend | [x] | [x] | [x] | [x] |
-| 44 | Session: Valkey backend | [x] | [x] | [x] | [x] |
-| 45 | Session: MongoDB backend | [x] | [x] | [x] | [x] |
-| 46 | Session: database backend | [x] | [x] | [x] | [x] |
+| 42 | **Session handling** (group, see below) | [x] | [x] | [x] | [x] |
 | 47 | Swagger/OpenAPI generation | [x] | [x] | [x] | [x] |
 
-**Phase 4 totals:** Python 7/7 | PHP 7/7 | Ruby 7/7 | Node.js 7/7
+### 42. Session handling (feature group)
+
+A GROUP, not a flat row. Session handling is one capability with one contract;
+each storage backend is a feature INSIDE it. They are sub-numbered so adding a
+backend does not renumber every feature after it. Adding memcached as a flat
+row 47 would have pushed Swagger to 48 and shifted the remaining ~50 rows, which
+is why the group exists.
+
+Every backend implements the SAME contract (`read` / `write` / `destroy` / `gc`)
+and the same backend-failure policy: a genuine key miss is silent, a TRANSPORT
+failure raises so the Session layer can log-loud and degrade. Collapsing those
+two is how a dead backend silently logs every user out.
+
+| # | Backend | Python | PHP | Ruby | Node.js |
+|---|---------|--------|-----|------|---------|
+| 42.1 | file (default) | [x] | [x] | [x] | [x] |
+| 42.2 | Redis | [x] | [x] | [x] | [x] |
+| 42.3 | Valkey | [x] | [x] | [x] | [x] |
+| 42.4 | MongoDB | [x] | [x] | [x] | [x] |
+| 42.5 | database | [x] | [x] | [x] | [x] |
+| 42.6 | memcached | [x] | [x] | [x] | [x] |
+
+**42.6 memcached** was added 2026-07-30. It had been one of the seven CACHE
+backends in all four frameworks since v3, but was a session backend in NONE of
+them, even though it is the classic PHP session store. Zero-dependency text
+protocol in all four. Memcached has no persistence and no replication, so a
+restart drops every session; that is a deliberate trade (it is a cache) and is
+why file/database remain the defaults.
+
+**Phase 4 totals:** Python 3/3 | PHP 3/3 | Ruby 3/3 | Node.js 3/3
+(group 42 counts once; its six backends are all green in all four)
 
 ---
 
