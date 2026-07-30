@@ -252,10 +252,57 @@ to a twenty-method required interface, across ten PHP adapters and five Node
 ones, is the most expensive way to be wrong. **They should wait for a decision on
 the shape**, not be pushed through because they are next on a list.
 
-Recommended: settle whether this is one interface or several (a read contract, a
-write contract, a schema contract, a diagnostics contract) BEFORE implementing
-the last two. That decision is cheap now and expensive after fifteen
-implementations exist.
+### The answer, derived rather than asked
+
+Applying the principles already on record instead of putting another fork to the
+owner:
+
+- **"Maintainability means less code"** is the stated north star, and the
+  tiebreak.
+- **Interface segregation** is the axis this row was explicitly decided on.
+- **ADR-0004: the best implementation prevails**, and parity flows both ways.
+
+Run those over the evidence and the answer is not "PHP's list, completed":
+
+**1. CRUD belongs in the FACADE, not on the adapter. Ruby was right.**
+Building `INSERT INTO x (a, b) VALUES (?, ?)` is not engine-specific work. Ruby
+does it once in the facade and hands the driver a statement; the other three do
+it in every adapter. Adopting PHP's split means writing that builder SEVEN more
+times in Ruby; adopting Ruby's means DELETING it from PHP, Python and Node.
+One of those directions is less code by a wide margin, and the north star names
+which. Only the parts that genuinely differ per engine stay per-adapter -
+Postgres' `RETURNING *`, which Ruby already models as an opt-in seam.
+
+**2. The contract splits by concern.** Twenty required methods on one interface
+fails the principle the row was judged on. The split follows the concerns
+already visible in the table above:
+
+| contract | methods | who implements |
+| --- | --- | --- |
+| **Connection** | open, close, autocommit, getDatabaseType | every adapter |
+| **Execution** | execute, executeMany, fetch, fetchOne | every adapter |
+| **Transaction** | startTransaction, commit, rollback | every adapter |
+| **Introspection** | getTables, getColumns, tableExists | every adapter |
+| **Schema** | createTable, addColumn | every adapter |
+| **Diagnostics** | lastInsertId, error | every adapter |
+
+CRUD (insert/update/delete) leaves the adapter contract entirely. That is 20
+required methods down to 16, and seven fewer SQL builders in the family.
+
+**3. `getDatabaseType` joins the contract.** It is a Connection concern and the
+prerequisite for Schema; leaving it off is what made `createTable` impossible to
+put on the adapter in the first place.
+
+**This REVERSES decision (a).** (a) was the wrong question to have asked - it
+offered "adopt the reference's shape" versus "keep Ruby's" without weighing that
+Ruby's shape is the one that produces less code across all four. The DRY
+argument for it was never put, which is the defect in how the choice was framed,
+not in the choice the owner made from it.
+
+**Sequencing that follows:** split the contract first (declaration only, no
+behaviour change), then implement Schema on the fifteen adapters, then delete
+per-adapter CRUD from PHP, Python and Node rather than adding it to Ruby's
+seven drivers.
 
 ## Verdict: PROMOTE php on the interface, then complete it from node
 
