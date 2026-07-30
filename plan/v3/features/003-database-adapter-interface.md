@@ -107,6 +107,50 @@ driver to use and how to reach it. Feature 5 already moves URL parsing out to a
 value type, which takes a large bite out of this; what remains is a registry
 lookup that should be data, not branches.
 
+## D2 CORRECTED (2026-07-30): Python's separation already exists
+
+D2 says Python's adapter base "declares eight SQL-dialect translation methods"
+beside the connection and CRUD contract, making it "the only framework where
+'how do I talk to this engine' and 'how do I rewrite SQL for this dialect' are
+the same abstraction". Checked against the code before moving anything, per the
+methodology's own instruction to look for per-adapter overrides first:
+
+```
+DatabaseAdapter: 26 methods; dialect ones = ['quote_identifier']
+SQLTranslator:    7 methods; dialect ones = ['limit_to_rows', 'limit_to_top',
+                  'concat_pipes_to_func', 'boolean_to_int', 'ilike_to_like',
+                  'auto_increment_syntax', 'placeholder_style']
+```
+
+**Seven of the eight are already on a separate `SQLTranslator` class.** The
+separation D2 says Python lacks is there. What is true is narrower: that class
+lives in the same FILE as `DatabaseAdapter` (`database/adapter.py`), where
+PHP, Ruby and Node each give it its own file. That is file organisation, not an
+SRP violation of the abstraction, and it is worth a line in a tidy-up rather
+than being the reason Python "has the worst separation".
+
+**The eighth, `quote_identifier`, belongs exactly where it is.** It has three
+definitions - `adapter.py`, `firebird.py`, `connection.py` - so it is OVERRIDDEN
+PER ADAPTER. Identifier quoting genuinely differs by engine, and Firebird
+overrides it. Moving it to the translator would flatten that override, which is
+precisely the risk the methodology told us to check for:
+
+> D2 is a pure extraction and should be behaviour-neutral. If it is not, the
+> translation methods had per-adapter overrides that the extraction would
+> flatten - check for overrides in every Python adapter before moving anything.
+
+The check says: do not move it.
+
+**So the prescribed fix for D2 is wrong in both directions** - seven methods are
+already where the plan wants them, and the eighth must not go there. The only
+action left on this row for Python is optionally giving `SQLTranslator` its own
+file for parity with the other three.
+
+This also weakens one input to the verdict below: "Python has the worst
+separation (D2)" was a stated factor, and it does not hold. The verdict itself
+still stands on PHP having the only readable one-responsibility interface and on
+the conformance numbers, which were measured independently.
+
 ## Verdict: PROMOTE php on the interface, then complete it from node
 
 Decided on **SOLID (single responsibility and interface segregation)**.
