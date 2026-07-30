@@ -206,7 +206,33 @@ silent difference nobody runs both halves of.
   depends on a variable being silently missing, and nothing depends on a comment
   being part of a value.
 
-## Parked
+## SHIPPED all four (2026-07-30)
 
-Not implemented. Awaiting the owner's go-ahead, in particular on D2 being applied
-to all four rather than removed from PHP.
+D2 was applied to all four rather than removed from PHP, per the owner's
+go-ahead. All four now agree on every line of the shared fixture.
+
+Parser convergence landed first, the named test pairs followed:
+
+- **Ruby's two silent bugs**: `export FOO=bar` dropped the variable entirely,
+  and a trailing comment stayed inside the value.
+- **`${VAR}` interpolation added to Python, Ruby and Node** (Breaking). Single
+  quotes are the documented escape for a literal `${...}` and the migration path.
+- **PHP's unresolved reference resolved to the EMPTY STRING**, so
+  `URL=${DB_HOST}/db` with a typo silently became `/db`. PHP was the framework
+  the other three adopted interpolation from, and this was the half nobody had
+  exercised.
+- **PHP accepted any non-empty key**, so `1BAD=x` set a variable named `1BAD`
+  that no shell could export and no other framework would have created. Caught
+  by the shared fixture, after the parser work was already "done".
+
+`dotenv_corpus.json` is byte-identical in all four
+(`tests/fixtures/`, `spec/fixtures/`, `test/fixtures/`). The .env CONTENT lives
+in it too rather than in a sibling file: one file means one thing to keep in
+sync, and a fixture whose input and expectations can drift apart is not an
+answer key. Real files in a temp directory, real process environment, nothing
+mocked. Python 32, PHP 18, Ruby 31, Node 35.
+
+**Still open from this row:** the surface reconciliation (step 5 of the
+methodology). `load_env` takes a FILE path in Python, PHP and Node and a
+DIRECTORY in Ruby, and Ruby's helpers are only reachable as `Tina4::Env.*`
+rather than `Tina4.*`. The parser behaviour is uniform; the call shape is not.
