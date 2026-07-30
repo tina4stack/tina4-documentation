@@ -252,6 +252,52 @@ to a twenty-method required interface, across ten PHP adapters and five Node
 ones, is the most expensive way to be wrong. **They should wait for a decision on
 the shape**, not be pushed through because they are next on a list.
 
+## The deletions: scoped, NOT started (2026-07-30)
+
+Checked before touching anything, and the answer decides how big this is:
+**the facades DELEGATE, they do not already build the SQL.**
+
+```
+python  Database.insert -> adapter.insert(table, data)      (connection.py:687)
+php     Database::insert -> batch branch, then the adapter  (Database.php:562)
+ruby    Database#insert -> builds the SQL, calls execute    (the target shape)
+```
+
+So this is a real migration, not dead-code removal: the SQL building has to move
+OUT of 6 Python adapters, 10 PHP adapters and 7 Node adapters and INTO one
+builder per framework - the shape Ruby already has.
+
+**This is the single most dangerous change in the audit and it is deliberately
+not started here.** Three reasons, all specific:
+
+1. **It is the WRITE path.** A subtle break does not throw, it writes the wrong
+   rows. Feature 4 already established semantics the builder must preserve - a
+   write with no filter is an ERROR, not a full-table operation, and the primary
+   key may span several columns.
+2. **It needs live engines to verify**, five of them across three frameworks.
+   SQLite alone proves nothing: the whole point of per-adapter SQL was
+   placeholder style, RETURNING support and identifier quoting, and those only
+   differ where the engine differs.
+3. **Today already shows the failure mode.** Removing `getTableColumns` looked
+   equally safe, was equally "obviously composable", and broke the legacy
+   NOT NULL migration_id path - caught only because a regression test existed
+   for that exact bug. The write path has no equivalent safety net for every
+   engine.
+
+**The order that makes it safe**, when it is picked up:
+
+1. Write the write-path conformance suite FIRST, running against every live
+   engine, asserting the CURRENT behaviour of insert/update/delete including
+   feature 4's no-filter-is-an-error rule and composite keys. That suite is the
+   thing that makes the deletion checkable; without it the change is unverifiable
+   by construction.
+2. Move the builder into ONE framework's facade, keeping its adapters' methods
+   in place and unused, and run the suite against all five engines.
+3. Only then delete the adapter methods, one engine at a time.
+4. Repeat per framework. Ruby needs nothing - it is already the target.
+
+Doing 3 before 1 is how a data-loss bug ships.
+
 ## VERDICT: REDESIGN (owner, 2026-07-30)
 
 There is a fifth option the audit's verdict vocabulary does not contain, and it
