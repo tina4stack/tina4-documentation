@@ -161,7 +161,14 @@ echo ""
 # the keyboard), so read the answers from the controlling terminal. With no tty
 # (CI / non-interactive) we skip the launch — the commands above already tell
 # the user how to run it. A non-zero exit prints a clear retry hint.
-if [ -r /dev/tty ]; then
+# `[ -r /dev/tty ]` alone is NOT enough: it is a permission/stat test, and it
+# passes on a headless host where /dev/tty exists but the process has NO
+# controlling terminal. The open then fails and every such install ends on
+# "cannot open /dev/tty: No such device or address" -- verified on a real
+# headless box (sudo over ssh). Actually TRY the open in a subshell; only launch
+# the interactive wizard if that succeeds. Docker / CI / provisioning runs now
+# finish clean on the "run tina4 setup" hint already printed above.
+if [ -r /dev/tty ] && (exec < /dev/tty) 2>/dev/null; then
   echo "  Starting setup..."
   echo ""
   if ! "${INSTALL_DIR}/tina4" setup < /dev/tty; then

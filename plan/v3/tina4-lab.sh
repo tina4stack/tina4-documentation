@@ -85,6 +85,20 @@ SERVICES=(
   "mysql^mysql:8^3306:3306^MYSQL_DATABASE=tina4_test,MYSQL_USER=tina4,MYSQL_PASSWORD=tina4,MYSQL_ROOT_PASSWORD=tina4^mysqladmin ping -h 127.0.0.1 -ptina4"
   "mssql^mcr.microsoft.com/mssql/server:2022-latest^1433:1433^ACCEPT_EULA=Y,SA_PASSWORD=TinaSQL123!Secure,MSSQL_PID=Developer^/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'TinaSQL123!Secure' -C -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'TinaSQL123!Secure' -Q 'SELECT 1'"
   "kafka^apache/kafka:latest^9092:9092^KAFKA_NODE_ID=1,KAFKA_PROCESS_ROLES=broker+controller,KAFKA_LISTENERS=PLAINTEXT://:9092+CONTROLLER://:9093,KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092,KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER,KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT+PLAINTEXT:PLAINTEXT,KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:9093,KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1,KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0^/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"
+  # GreenMail: the ONLY real SMTP+IMAP the Messenger tests can round-trip
+  # against. Ruby had 16 IMAP examples pending and Python a matching set,
+  # every one reporting "GreenMail not reachable" -- a green skip, which is
+  # indistinguishable from "passing" in a suite summary and is exactly how
+  # dead coverage stays invisible. auth.disabled is REQUIRED, not laziness:
+  # both suites use a unique random recipient per example so each mailbox is
+  # created on first access, which cannot work if GreenMail demands a
+  # pre-registered user. Ports are GreenMail's plain (non-TLS) 3025/3143,
+  # matching the TINA4_MAIL_PORT / TINA4_MAIL_IMAP_PORT defaults in both
+  # suites. No readiness probe: the standalone image is a bare JRE with no
+  # nc/curl, and a probe that cannot run looks identical to a broken service
+  # (see the mongo cautionary note above), so this is deliberately PORT ONLY
+  # and the suites' own reachability gate is the real check.
+  "greenmail^greenmail/standalone:2.1.3^3025:3025,3143:3143^GREENMAIL_OPTS=-Dgreenmail.setup.test.all -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.auth.disabled^"
 )
 
 PREFIX="tina4-lab"
