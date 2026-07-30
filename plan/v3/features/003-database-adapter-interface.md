@@ -252,6 +252,43 @@ to a twenty-method required interface, across ten PHP adapters and five Node
 ones, is the most expensive way to be wrong. **They should wait for a decision on
 the shape**, not be pushed through because they are next on a list.
 
+### Measured on DRY, SOLID, LOC, CC (2026-07-30)
+
+The adapter layer in each framework, native engine, same scan shape:
+
+| | files | functions | LOC | avg CC | MI |
+| --- | --- | --- | --- | --- | --- |
+| python | 12 | 287 | 3971 | 3.58 | 24.5 |
+| php | 18 | **438** | **5823** | 3.14 | 26.1 |
+| **ruby** | **8** | **142** | **1335** | 2.89 | **30.7** |
+| node | 15 | 378 | 2677 | 2.29 | 28.6 |
+
+**Ruby does the same job in 1335 lines and 142 functions that PHP does in 5823
+and 438.** Four and a third times the code, three times the functions, for seven
+drivers versus ten adapters - so it is not a driver-count effect. Ruby also has
+the best maintainability index of the four (30.7 against PHP's 26.1) and the
+second-best average complexity behind Node, on half Node's function count.
+
+On the four axes this audit judges by:
+
+- **LOC**: Ruby, decisively. "Maintainability means less code" is the north star
+  and the tiebreak, and this is a 4.3x gap.
+- **DRY**: Ruby, structurally. One SQL builder in the facade versus one per
+  adapter. The 4.3x is largely that duplication made visible.
+- **CC**: Node on average (2.29), Ruby second (2.89) - but Ruby reaches it with
+  142 functions where Node needs 378, so Ruby carries less total complexity.
+- **SOLID**: PHP had the only DECLARED interface, which is what won it the row.
+  That is a real win and it is about having a contract, not about what is IN the
+  contract - and the contract it holds mixes six concerns and could not name its
+  own dialect.
+
+**The verdict inverts once the numbers are in.** PHP won on having an interface;
+Ruby wins on every axis that measures the code behind it. Promoting PHP's LIST
+would move the family toward 438 functions per adapter layer and away from 142.
+The right synthesis is PHP's DISCIPLINE (a declared, segregated contract, no
+optional members, loud on absence) applied to RUBY's SHAPE (CRUD in the facade,
+adapters thin).
+
 ### The answer, derived rather than asked
 
 Applying the principles already on record instead of putting another fork to the
