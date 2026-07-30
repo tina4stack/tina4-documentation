@@ -22,14 +22,26 @@ TINA4_SECRET=my-secret-key-change-in-production
 
 ### Rules
 
-Six rules govern the format:
+Eight rules govern the format, and all four frameworks follow every one of them:
 
 1. One variable per line.
-2. Format is `KEY=VALUE` -- no spaces around the `=`.
+2. Format is `KEY=VALUE`. Whitespace around the key is trimmed.
 3. Lines starting with `#` are comments.
 4. Blank lines are ignored.
-5. Values can be wrapped in double quotes (`"value"`) or single quotes (`'value'`).
-6. No variable interpolation -- `$OTHER_VAR` is treated as a literal string.
+5. A shell-style `export KEY=value` works. Paste straight from a shell profile.
+6. An unquoted value ends at the first ` #`, so `KEY=value # note` sets `value`.
+7. Quotes decide how the value is read:
+   - Double quotes (`"value"`) strip the quotes, process `\n`, `\t` and `\\`, and expand `${VAR}` references. A `#` inside stays a `#`.
+   - Single quotes (`'value'`) strip the quotes and change nothing else. No escapes, no expansion. This is how you keep a literal `${...}`.
+8. `${VAR}` expands against variables already loaded plus the real environment. A name that resolves to nothing is left exactly as written and warned about, so a typo is visible instead of silently becoming an empty string. A bare `$OTHER_VAR` without braces is always a literal.
+
+```
+HOST=example.com
+API=${HOST}/api          # becomes example.com/api
+LITERAL='${HOST}/api'    # stays ${HOST}/api
+```
+
+A line the parser cannot use, one with no `=` or an invalid key, is skipped with a warning naming the line number. It never fails in silence, and one bad line never stops the rest of the file loading.
 
 Simple format. No surprises. A developer who has never seen a `.env` file understands it in thirty seconds.
 
