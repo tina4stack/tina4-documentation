@@ -252,6 +252,82 @@ to a twenty-method required interface, across ten PHP adapters and five Node
 ones, is the most expensive way to be wrong. **They should wait for a decision on
 the shape**, not be pushed through because they are next on a list.
 
+## VERDICT: REDESIGN (owner, 2026-07-30)
+
+There is a fifth option the audit's verdict vocabulary does not contain, and it
+is the right one here.
+
+UNIFORM / PROMOTE x / SYNTHESISE / GAP / DEFER all pick from what already
+exists. None of them can express "all four are wrong in the same direction",
+which is why this row kept producing answers that had to be corrected: first
+PROMOTE php (PHP's list is partly circular), then SYNTHESISE php+ruby (still
+assembling from two existing shapes). **Add REDESIGN to the vocabulary** - a
+verdict for when the audit has learned enough to design better than any of the
+four, and use it here.
+
+### What the learning actually is
+
+Nine things came out of implementing this row, and together they describe a
+different adapter than any framework has:
+
+1. **DDL was NEVER an adapter concern.** PHP builds CREATE TABLE in
+   `ORM.php:1697`, Node in `migration.ts`, Python in `model.py:906`. We were
+   about to add `createTable`/`addColumn` to fifteen adapters for a job all four
+   frameworks already do ABOVE the adapter. The "gap" was an artefact of the
+   contract being written from Node's interface declaration rather than from
+   where the work happens.
+2. **CRUD is not engine-specific and costs 4.3x to duplicate.** Measured: Ruby
+   1335 LOC / 142 functions against PHP's 5823 / 438, for the same job.
+3. **The adapter could not name its own engine**, so callers type-checked the
+   concrete class. Fixed today, but it shows the contract was never derived from
+   what callers need.
+4. **Optional members are feature-detection in disguise** - Node's `?`, Ruby's
+   `respond_to?` - and both make a missing method a SILENT SKIP.
+5. **Two shapes for one concept survive because one is load-bearing.**
+   Collapsing `getTableColumns` into `getColumns` broke the legacy migration
+   path: one reads PRAGMA raw, the other goes through schema splitting. That is
+   not duplication to delete, it is two genuinely different questions wearing
+   similar names.
+6. **Dialect translation already lives outside the adapter in all four.** The
+   one framework thought to be mixing them was not (D2 correction).
+7. **The write path already has semantics the contract cannot express**: a write
+   with no filter is an ERROR, not a full-table operation (feature 4), and
+   `execute()` RAISES rather than returning false.
+8. **Naming drifted precisely where nothing forced agreement** - tables/columns,
+   open/connect, error/last_error.
+9. **Consistency, not completeness, is what a contract buys.** PHP's ten
+   adapters being identical mattered more than any of them being complete.
+
+### The adapter that follows
+
+An adapter should be ONLY what genuinely differs per engine. Everything
+engine-agnostic - SQL building, DDL, pagination, translation, filters - lives
+above it, once.
+
+| contract | methods | why it is engine-specific |
+| --- | --- | --- |
+| **Connection** | `open`, `close`, `getDatabaseType` | driver handshake, and the engine must be able to name itself |
+| **Execution** | `execute(sql, params)`, `fetch(sql, params, limit, offset)` | placeholder style, cursor handling, result shape |
+| **Transaction** | `startTransaction`, `commit`, `rollback`, `autocommit` | genuinely per-driver |
+| **Introspection** | `getTables`, `getColumns`, `tableExists` | system catalogs differ entirely |
+| **Diagnostics** | `lastInsertId`, `error` | driver-specific retrieval |
+
+**Fourteen methods, five contracts, and NOT on the list:** `insert`, `update`,
+`delete`, `executeMany`, `fetchOne`, `createTable`, `addColumn`, `query`. Every
+one is composable above the adapter from `execute` + `fetch` + the dialect name,
+and every one is currently duplicated per adapter in three of four frameworks.
+
+That is 20 required methods down to 14, and it deletes far more than it adds.
+
+### What this means for work already done
+
+All of it stands - it was consistency work, and consistency is right under any
+shape: Ruby's declared contract, the loud-on-absence guards, the ratchets, the
+naming convergence, `autocommit`, `getDatabaseType`. What changes is the
+DIRECTION of the remaining work: **delete `insert`/`update`/`delete` from the
+PHP, Python and Node adapters** rather than adding them to Ruby's seven drivers,
+and **do not implement `createTable`/`addColumn` on any adapter at all**.
+
 ### Measured on DRY, SOLID, LOC, CC (2026-07-30)
 
 The adapter layer in each framework, native engine, same scan shape:

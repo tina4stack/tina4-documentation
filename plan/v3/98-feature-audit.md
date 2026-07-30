@@ -178,6 +178,7 @@ folklore about which language is fast.
 | **SYNTHESISE** | No single framework is best. Take the pattern from one and specific pieces from others (the messenger case). |
 | **GAP** | Missing or non-functional in at least one framework. Build it to the agreed pattern. |
 | **DEFER** | Genuinely language-specific by design, with the reason recorded. Not a gap. |
+| **REDESIGN** | All four are wrong in the same direction, and the audit has learned enough to design better than any of them. Added 2026-07-30 from feature 3: the other five verdicts all PICK from what exists, so none of them can express this, and the row kept producing answers that had to be corrected (PROMOTE php, then SYNTHESISE) until the option existed. Use it sparingly and only with the learning written down. |
 
 A verdict of UNIFORM still requires steps 1 to 3. "Looks the same" is not a
 measurement, and 01-FEATURE-MATRIX.md has claimed 100% parity since 2026-04-03
@@ -243,7 +244,7 @@ reviewed and closed at a time, not batched.
 | 0 | Messenger (pilot) | SYNTHESISE | correctness | `messenger-contract.md` | **SHIPPED all 4**, 0 open (py `9075423`, php `721aba94`, node `c96ba9f`, ruby `33b25de`) |
 | 1 | DotEnv parser | SYNTHESISE | correctness | `features/001-dotenv.md` | **SHIPPED all 4** (2026-07-30) + named pairs against a shared fixture. Surface reconciliation (file-vs-directory arg, Ruby top-level names) still open. |
 | 2 | Structured logger | SYNTHESISE | correctness | `features/002-structured-logger.md` | **SHIPPED all 4** (2026-07-30): pad 8, error.log everywhere, configure takes a dir OR a file, object/binary coercion, stdout truncation, TINA4_LOG_APPEND. |
-| 3 | DB adapter interface | **SYNTHESISE** (was PROMOTE php) | SOLID | `features/003-database-adapter-interface.md` | **IN PROGRESS, verdict revised.** Consistency work shipped in all 4 (contract, ratchets, Ruby's interface, naming, autocommit, getDatabaseType). Verdict changed: PHP's LIST was partly circular and Ruby's facade-builds-SQL split is the one that produces less code. Contract splits by concern, CRUD leaves the adapter. Decision (a) reversed. |
+| 3 | DB adapter interface | **REDESIGN** (was PROMOTE php, then SYNTHESISE) | SOLID + LOC | `features/003-database-adapter-interface.md` | **IN PROGRESS, verdict revised.** Consistency work shipped in all 4 (contract, ratchets, Ruby's interface, naming, autocommit, getDatabaseType). Verdict changed: PHP's LIST was partly circular and Ruby's facade-builds-SQL split is the one that produces less code. Contract splits by concern, CRUD leaves the adapter. Decision (a) reversed. |
 | 4 | SQLite adapter + write path | **GAP** (P1, was broken in 4 of 4) | correctness | `features/004-sqlite-adapter.md` | **P1 SHIPPED all 4; 3 OPEN** (PHP `getColumns()` key, ORM still single-key, row cap) |
 | 5 | DATABASE_URL parser | PROMOTE php | SOLID | `features/005-database-url-parser.md` | **SHIPPED all 4** (2026-07-30): php 12/17->17/17, node 0/17->17/17, python + ruby had no parser at all -> 17/17. D3 settled on live Firebird. |
 | 6 | Router + dispatch | SYNTHESISE | SOLID | `features/006-router-and-dispatch.md` | closed, sequenced first |
