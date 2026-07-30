@@ -174,6 +174,37 @@ Field decisions, each settling a divergence found above:
 - **`toSafeString()` is mandatory in all four**, and it is the ONLY form allowed
   in a log line or an error message.
 
+## Baseline against the shared fixture (2026-07-30)
+
+Step 2 done: `database_url_corpus.json`, 17 cases plus 3 error cases, identical
+bytes in all four (`tests/fixtures/`, `spec/fixtures/`, `test/fixtures/`, md5
+`7c4c561d`). Run against the CURRENT implementations, this is the parity gap the
+methodology asks to capture before anything moves:
+
+| | result |
+| --- | --- |
+| php | **12 pass, 5 fail** |
+| node | **0 pass, 17 fail** |
+| python | **nothing to call** - no parser exists (D1) |
+| ruby | **nothing to call** - no parser exists (D1) |
+
+**PHP's 5** are exactly the defects already named: three alias cases
+(`postgresql`, `pgsql`, `sqlserver` are left unresolved in the public `scheme`
+property) and the two Firebird cases (the leading slash is eaten).
+
+**Node's 17** are dominated by one line: `toSafeString()` **does not exist**.
+Every case fails on it. That is worse than a formatting difference - it means
+Node has no way to put a connection target in a log without hand-rolling the
+redaction at each call site, and the D5 note predicted exactly this. Node also
+applies no default port (mysql/mssql/firebird come back null) and gets the
+Firebird path wrong in both directions: it keeps both leading slashes on the
+absolute form AND adds one to the relative form (`data/app.fdb` becomes
+`/data/app.fdb`), so neither Firebird case round-trips.
+
+The two frameworks with no parser are not a lighter lift than the two with one:
+they cannot fail a single case because there is nothing to call, which is the
+D1 finding stated as a number.
+
 ## Methodology
 
 1. Settle D3 first, on real Firebird (task #312 has the server). Decide what
