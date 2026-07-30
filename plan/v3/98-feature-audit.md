@@ -249,12 +249,12 @@ reviewed and closed at a time, not batched.
 | 6 | Router + dispatch | SYNTHESISE | SOLID | `features/006-router-and-dispatch.md` | closed, sequenced first |
 | 13 | ORM base class | PROMOTE ruby (structure) | LOC/CC | `features/013-orm-base-class.md` | closed |
 | 14 | Soft delete | **GAP** (broken in 3 of 4) | correctness | `features/014-soft-delete.md` | closed, 1 outstanding |
-| 15 | Relationships + eager load | PROVISIONAL PROMOTE python/ruby | correctness | `features/015-relationships.md` | closed, 2 outstanding |
+| 15 | Relationships + eager load | PROVISIONAL PROMOTE python/ruby | correctness | `features/015-relationships.md` | **closed, 0 open** (Node settled 2026-07-30: serialize-only, no accessor; `hasMany` truncates at 100 in 3 of 4) |
 | 16 | Scopes | SYNTHESISE | correctness | `features/016-scopes.md` | closed |
 | 17 | Field mapping | PROMOTE node (mechanism) | SOLID | `features/017-field-mapping.md` | closed, decided (ADR-0008) |
-| 18 | Paginated results | SYNTHESISE | wire contract | `features/018-paginated-results.md` | closed, 1 outstanding |
+| 18 | Paginated results | SYNTHESISE | wire contract | `features/018-paginated-results.md` | **closed, 0 open** (all 4 key sets enumerated 2026-07-30: py 10, php 10, ruby 12, node 13) |
 | 19 | Result / ORM caching | GAP (ruby) + SYNTHESISE | correctness | `features/019-orm-result-caching.md` | closed |
-| 20 | Input validation | SYNTHESISE | correctness | `features/020-input-validation.md` | closed, 1 outstanding |
+| 20 | Input validation | **PROMOTE node** + GAP (php) + P1 (python) | correctness | `features/020-input-validation.md` | **closed, 0 open; VERDICT REVISED 2026-07-30** - PHP's `validate()` is `return []`, so the parked SYNTHESISE leaned on an implementation that does not exist |
 | 28-31 | Frond engine (lexer/parser/compiler/runtime) | PROMOTE python (structure) | SOLID | `features/028-031-frond-engine.md` | closed as one row |
 | 32 | Frond filters | SYNTHESISE | template portability | `features/032-frond-filters.md` | closed |
 | 37 | Auto-escaping | UNIFORM (html) + GAP (js/css/url) | correctness | `features/037-auto-escaping.md` | closed, 1 owner call |
@@ -317,7 +317,7 @@ some related or filtered rows" currently caps at four different numbers:
 | path | default cap |
 | --- | --- |
 | `scope()` | 20 (python, php, node) / unbounded (ruby) |
-| `has_many()` | 100 (python, php) / unbounded (ruby DSL) |
+| `has_many()` | 100 (python, php, **node** - measured 2026-07-30) / unbounded (ruby DSL) |
 | `Model.where` | 20 (python, php, node) / nil (ruby) |
 | `Model.all` | 100 (python) |
 | `QueryBuilder#get` | unbounded - the `LIMIT 100` was **deliberately removed** |

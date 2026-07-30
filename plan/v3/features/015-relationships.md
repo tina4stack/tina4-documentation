@@ -2,8 +2,9 @@
 
 Audited 2026-07-28. Part of `98-feature-audit.md`. Phase 2, row 3. **Planning only.**
 
-**Status: CLOSED with one outstanding item** (Node detail). Python, Ruby and PHP
-verified by execution; the PHP blocker is resolved.
+**Status: CLOSED.** All four verified by execution. The Node outstanding item is
+resolved (2026-07-30): relations are reachable but serialize-only, and `hasMany`
+silently truncates at 100. See Outstanding below.
 
 ## Files
 
@@ -79,12 +80,57 @@ further ceremony. Node defers to a registry that must be populated, and PHP is
 imperative. The registry approach is the one that needs an extra step and is the
 one that failed.
 
-## Outstanding
+## Outstanding: CLOSED by execution (2026-07-30)
 
-- [ ] **Node: settle D2, and check its `has_many` limit default (D4) at the same time.** Check whether relations arrive via `toDict(include)` or
-      another accessor rather than as instance properties. If they do, this is a
-      surface divergence (fix: expose the same accessors as the other three). If
-      they do not, it is a broken documented feature and a P1 alongside feature 14.
+Probed against real SQLite: one author, 120 posts, both models registered, the FK
+declared exactly as `tina4-nodejs/CLAUDE.md` documents.
+
+**D2: the relations are reachable, so this is a surface divergence, not a broken
+feature - but it needs BOTH an include at fetch time AND an include at serialize
+time, and it never creates an accessor.**
+
+```
+instance keys (author)                   : _relCache, lastError, id, name
+author.posts as a property               : MISSING
+post.author as a property                : MISSING
+author.toDict(["posts"])                 : id, name          <- MISSING, fetched plain
+Author.find(1, ["posts"]).posts          : MISSING            <- still no accessor
+Author.find(1, ["posts"]).toDict(["posts"]) : id, name, posts  <- present
+```
+
+So the data is there, on exactly one path: `find(id, include)` **then**
+`toDict(include)`. Either half alone yields nothing, and no accessor is ever created
+on the instance.
+
+That makes four different shapes for one row, not three:
+
+| | how a relation is reached |
+| --- | --- |
+| python | auto-wired accessor (`author.posts`) |
+| ruby | auto-wired accessor (`author.posts`) |
+| php | imperative only (`$author->hasMany(Post::class, 'author_id')`) |
+| node | **serialize-only, double opt-in**: `find(id, include).toDict(include)` |
+
+**The documented claim is false as written.** `CLAUDE.md` says declaring the FK
+"auto-wires both `belongsTo` on the declaring model AND `hasMany` on the referenced
+model". No accessor is wired on either side. The doc has to change even if the
+mechanism does not.
+
+**D4: `hasMany` silently truncates at 100.** With 120 real rows:
+
+```
+author.hasMany(Post, "author_id") returned: 100 rows
+```
+
+No argument was passed, no warning was emitted, and 20 rows were dropped. This is the
+same 100-row default cap as feature 4's open row-cap item and feature 18's page size,
+reaching the caller through a third door. It should be settled once, in one decision,
+across all three surfaces rather than per feature.
+
+That also closes the open half of D4 below: it asked for Node's `has_many` limit to
+be checked against Python's and PHP's silent 100. Node has the same 100. Three of
+four truncate silently; only Ruby's DSL declares no limit.
+
 **PHP: resolved.** With the correct model shape (non-nullable typed properties with
 defaults, per `tina4-php/tests`), and using `load()` correctly - it returns `bool`
 and loads into `$this`, it does not return the model:

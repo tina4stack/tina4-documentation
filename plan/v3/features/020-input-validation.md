@@ -2,9 +2,10 @@
 
 Audited 2026-07-28. Part of `98-feature-audit.md`. Phase 2, row 8 (last). **Planning only.**
 
-**Status: CLOSED with one outstanding item** (PHP/Node message shapes). Python and
-Ruby verified by execution and source reading; PHP and Node from the documented
-field-option set.
+**Status: CLOSED, VERDICT REVISED.** All four verified by execution (2026-07-30).
+PHP's `validate()` is a stub that returns `[]`, so the parked SYNTHESISE verdict was
+leaning on an implementation that does not exist. Now PROMOTE node + GAP (php) +
+P1 (python). See Outstanding below.
 
 ## What differs
 
@@ -78,13 +79,74 @@ Node both document the fuller option set (`required`, `minLength`, `maxLength`, 
 but splits enforcement across a raise and a list. Ruby has one rule and no
 vocabulary. The matrix row claims a feature that only partly exists in two of four.
 
-## Outstanding
+## Outstanding: CLOSED by execution (2026-07-30), and it CHANGES the verdict
 
-- [ ] **Enumerate PHP's and Node's actual validation messages by execution** - which
-      constraints are checked, what the message strings are, and whether either also
-      raises rather than collects (Python's D1 pattern). The verdict does not change
-      (Ruby's single rule and Python's split already prove the divergence), but the
-      canonical message set cannot be fixed without it.
+Probed with a model declaring every constraint the docs claim, then constructed with
+a value violating each one, then constructed empty so `required` must fire.
+
+**PHP validates nothing. `ORM::validate()` is a stub.**
+
+```php
+// Tina4/ORM.php:1440
+public function validate(): array
+{
+    return [];
+}
+```
+
+That is the only `validate()` in the ORM, and `ORM.php` contains no occurrence of
+`minLength`, `maxLength`, `pattern` or any other constraint check. Confirmed by
+execution:
+
+```
+PHP validate() on a model violating length, min, max and pattern : array ( )
+PHP validate() on a completely empty model (required must fire)  : array ( )
+```
+
+**Node implements the documented contract in full, and is the only framework that
+does.** Real messages, collected not raised:
+
+```
+name  = "aaaaaaaaaaaa" (maxLength 5) -> "name must be at most 5 characters"
+age   = 999            (max 65)      -> "age must be at most 65"
+email = "not-an-email" (pattern)     -> "email does not match required pattern"
+empty model                          -> "name is required"
+assignment of an over-length value   -> no raise; the value is stored
+```
+
+Node returns `string[]` shaped `"<field> <message>"`; internally `validation.ts`
+carries `{field, message}` objects and `BaseModel.validate()` flattens them.
+
+### The corrected picture
+
+| | mechanism | vocabulary | raises at assignment |
+| --- | --- | --- | --- |
+| python | **split**: length/type raise, the rest collect | full | **yes (D1)** |
+| php | **none - `return []`** | none in code; full in docs | no |
+| ruby | nullability only | `nullable:` only | no |
+| node | full, collect-only | full | no |
+
+**This overturns the verdict recorded below.** It was written as "SYNTHESISE, leaning
+on PHP/Node's option set" on the strength of PHP and Node both *documenting* the fuller
+vocabulary. PHP implements none of it. There is nothing to synthesise from PHP, so the
+row is:
+
+**Revised verdict: PROMOTE node, plus GAP (php) and a P1 (python).**
+
+- **node** is the reference: the full option set, collected into a list, no raise.
+- **php is a GAP, and the sharpest kind**: a feature the matrix counts as shipped,
+  with a documented option vocabulary, backed by a method that returns an empty array.
+  Every PHP model that follows the documented `errors = model->validate()` pattern
+  has been silently accepting invalid input.
+- **python's D1 stays a P1** for the reason already recorded: it raises where its own
+  docs say it collects, so a route following the documented pattern returns 500
+  instead of 400.
+- **ruby needs the vocabulary built**, and `nullable: false` reconciled with
+  `required: true` (the inverted-flag defect from feature 2).
+
+This is the second time in this audit that a verdict formed from documentation
+disagreed with the code (the first was the messenger pilot). Both were caught by
+running it.
 
 ## Verdict: SYNTHESISE, leaning on PHP/Node's option set
 

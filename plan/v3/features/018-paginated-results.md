@@ -2,8 +2,9 @@
 
 Audited 2026-07-28. Part of `98-feature-audit.md`. Phase 2, row 6. **Planning only.**
 
-**Status: CLOSED with one outstanding item** (Ruby/PHP key sets). Python verified by
-execution; Node and PHP read from source.
+**Status: CLOSED.** All four key sets enumerated by execution (2026-07-30). The
+source reading undercounted Node by four keys and mis-read PHP twice; see
+Outstanding below.
 
 The matrix calls this row "standardized format". It is not standardized.
 
@@ -64,14 +65,52 @@ surfaced `total_pages`, Ruby's is unprobed. Nothing in the framework family decl
 what a paginated response looks like, which is exactly what the matrix row claims
 this feature provides.
 
-## Outstanding
+## Outstanding: CLOSED by execution (2026-07-30)
 
-- [ ] **Enumerate PHP's and Ruby's full key sets by execution**, the way Python's was
-      done. My grep caught only `total_pages` in PHP and nothing in Ruby, and a grep
-      is not an answer - three probe errors earlier in this audit came from exactly
-      that shortcut. This does not change the verdict (the format is already proven
-      unstandardized by Python versus Node alone), but the canonical key list cannot
-      be finalised without it.
+All four key sets enumerated under identical conditions: 25 rows, default paging,
+`to_paginate()` / `toPaginate()` with no arguments, keys sorted.
+
+| | keys | default page size | rows returned |
+| --- | --- | --- | --- |
+| python | 10 | 20 | 20 |
+| php | 10 | **100** | 25 (no slicing) |
+| ruby | 12 | 10 | 10 |
+| node | **13** | 10 | 10 |
+
+```
+python (10): count, data, limit, offset, page, per_page, records, total,
+             totalPages, total_pages
+php    (10): count, data, limit, offset, page, per_page, records, total,
+             totalPages, total_pages
+ruby   (12): the same 10, plus has_next, has_prev
+node   (13): the same 12, plus perPage
+```
+
+**The grep was wrong in both directions, and this is why the item existed.**
+
+- **PHP's key set is identical to Python's**, not the single `total_pages` the grep
+  suggested. PHP is not the outlier on keys at all.
+- **Node has 13 keys, not the nine recorded above from source reading.** It carries
+  `has_next` / `has_prev` like Ruby AND a fourth spelling of page size: `limit`,
+  `per_page` and `perPage` all appear in one response object, all `10`. Node is the
+  worst offender, not Python.
+- **PHP's default page size is 100, not "none".** `toPaginate()` takes no arguments,
+  so it derives page and per_page from the `DatabaseResult`'s own `limit` / `offset`,
+  and that limit defaults to 100. The "no default" reading was a signature reading,
+  not a behaviour reading.
+- **PHP does not slice.** With `limit` 100 and 25 rows it returns all 25 under a
+  `per_page` of 100. The other three slice to their page size. So PHP's response is
+  self-consistent but its page size is 10x Ruby/Node and 5x Python.
+
+**Three duplicate pairs are universal**: `records`/`data`, `count`/`total`,
+`totalPages`/`total_pages` appear in all four. That is not a Python defect as D2
+implied; it is the shared inheritance, and any canonical set has to drop one of each.
+
+Canonical set therefore resolves to: the 7 distinct facts (`records`, `count`,
+`limit`, `offset`, `page`, `total_pages`, plus `has_next`/`has_prev` as the genuine
+2-of-4 addition worth keeping), with `data`, `total`, `totalPages`, `per_page` and
+`perPage` dropped as aliases. Page size: one number across all four, and the
+`Breaking:` note has to name it because every framework changes.
 
 ## Verdict: SYNTHESISE
 
