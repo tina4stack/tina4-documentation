@@ -197,21 +197,51 @@ interface". Every adapter in every framework reflected against it:
 | **php** | 10 | **17/20** | yes - all ten identical |
 | python | 6 | 14/20 | yes - all six identical |
 | node | 7 | 14-15/20 | nearly - odbc and sqlite have one more |
-| **ruby** | 7 | **5-7/20** | **no** |
+| **ruby** | 7 | **9-11/20** | **no** |
 
 **PHP is confirmed as the reference by measurement, not just by reading.** Ten
 adapters, all missing exactly the same three (`createTable`, `addColumn`,
 `autocommit`). A contract that every implementation satisfies identically is a
 contract; that is what having one produces.
 
-**Ruby is not merely lower, it is INCONSISTENT WITH ITSELF.** FirebirdDriver and
-MongodbDriver 5/20, SqliteDriver and MysqlDriver and MssqlDriver 6/20,
-PostgresDriver 7/20. Seven drivers, four different levels of completeness. That
-is the D1 finding as a number: with no interface, each driver implements
-whatever its facade path happened to need, and the six `respond_to?` guards in
-`database.rb` paper over the rest. Nothing tells a contributor writing an eighth
-driver what to implement, and nothing tells a user which of the seven will
-silently skip.
+**Ruby is not merely lower, it is INCONSISTENT WITH ITSELF.** Firebird and
+Mongodb 9/20, Sqlite/Mysql/Mssql 10/20, Postgres 11/20. Seven drivers, three
+different levels of completeness. That is the D1 finding as a number: with no
+interface, each driver implements whatever its facade path happened to need, and
+the six `respond_to?` guards in `database.rb` paper over the rest. Nothing tells
+a contributor writing an eighth driver what to implement, and nothing tells a
+user which of the seven will silently skip.
+
+**CORRECTION (same day).** The first run of this probe reported 5-7/20 because it
+looked only for the contract's canonical names. Ruby spells several of them
+idiomatically - `connect` for `open`, `query` for `fetch`, `tables`/`columns`,
+`last_error` for `error`, `autocommit=`, `table_exists?` - and re-running with
+those variants gives 9-11/20. The corrected number is the one above. The shape of
+the finding is unchanged (lowest, and inconsistent with itself); the magnitude was
+overstated.
+
+**The corrected run surfaces something the raw count hid, and it changes the
+work.** Every Ruby driver is missing `fetch`, `fetch_one`, `insert`, `update` and
+`delete` - not because they were forgotten, but because **the FACADE does that
+work**. `Database#insert` builds the SQL and calls the driver's `execute`, and
+only consults `drv.insert` when a driver chooses to own it (PostgreSQL does, via
+`RETURNING *`). So Ruby splits responsibility between facade and driver
+differently from the other three, and the `respond_to?(:insert)` guard is not
+papering over a missing method - it is a deliberate opt-in seam.
+
+That means Ruby's step is NOT "add eleven missing methods to seven drivers". It
+is a genuine architectural decision that has to be made first, and the plan did
+not anticipate it:
+
+- **(a)** adopt the other three's split - CRUD lives on the adapter - which is a
+  large move touching all seven drivers, or
+- **(b)** keep the facade-builds-SQL split and make the contract state that CRUD
+  is facade-level in Ruby with the driver seam optional, which means the contract
+  is no longer one list for all four.
+
+**(a) is what the row's verdict implies** and (b) is what the code does today.
+This needs the owner before any Ruby driver is touched, because it decides
+whether the shared contract is genuinely shared.
 
 Common gaps worth naming:
 
