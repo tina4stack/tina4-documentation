@@ -65,10 +65,39 @@ our contract.
 result is the path.** `firebird://localhost:3050//path/to/db` is the form the
 CLAUDE.md files document for an absolute Firebird database path. PHP returns
 `path/to/db` (relative - both leading slashes gone). Node returns `//path/to/db`
-(both kept). Neither returns `/path/to/db`. Whether either is correct depends on
-what the driver does next, and that is exactly the problem: the audit cannot tell
-from the parse alone, and neither can a user. This one needs a real Firebird
-server to settle (task #312 already has one) before the pattern is fixed.
+(both kept). Neither returns `/path/to/db`.
+
+### D3: SETTLED on a live server (2026-07-30)
+
+Firebird 5.0.4 on the .99 test host, real `firebird-driver`, each candidate tried
+as an actual connection against `/var/lib/firebird/data/tina4test.fdb`:
+
+```
+fails     PHP parse  (relative, both slashes gone)  I/O error during "open" operation
+CONNECTS  Node parse (both slashes kept)            192.168.88.99/3050://var/lib/.../tina4test.fdb
+CONNECTS  absolute   (one leading slash)            192.168.88.99/3050:/var/lib/.../tina4test.fdb
+```
+
+**The driver accepts one OR two leading slashes and rejects none.** Firebird
+normalises the doubled slash; a relative path is looked up relative to the
+server's working directory and is not found.
+
+**The connection is not what is broken - the parsed VALUE is.** PHP connects
+end-to-end today (verified against the same server through
+`Database::create(...)`, returning a row), because the adapter rebuilds a usable
+path on its way to the driver. What PHP exposes as `DatabaseUrl::$database` is
+`var/lib/firebird/data/tina4test.fdb`, a relative path that would NOT open if a
+caller took that property at face value - logged it, passed it on, or compared
+it. So this is a value-correctness bug hiding behind a working connection, which
+is why reading the parse alone could not settle it and why nobody has reported it.
+
+**Canonical answer: the parsed database for an absolute Firebird path is
+`/var/lib/firebird/data/tina4test.fdb`** - exactly one leading slash. It is what
+the driver accepts, it is what the user wrote, and it is the only one of the
+three that is true as a standalone value. Node drops its redundant second slash;
+PHP stops eating the first one.
+
+This unblocks the row.
 
 **D4. The parsed struct uses different field names for the same concepts.** The
 owner's naming rule, applied to a data shape rather than a method:
@@ -201,5 +230,5 @@ is PHP.
 
 ## Parked
 
-Not implemented. Blocked on the owner's go-ahead plus the Firebird decision (D3),
-which needs the live server from task #312.
+Not implemented. The Firebird decision (D3) is SETTLED (see above, 2026-07-30,
+live Firebird 5.0.4 on the .99 host). Awaiting the owner's go-ahead only.
