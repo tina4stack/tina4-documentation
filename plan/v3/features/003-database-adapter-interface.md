@@ -184,6 +184,51 @@ Ruby's new interface is a module with every method raising
 "read 828 lines and infer" into "implement this module", and it turns a missing
 method from a silent runtime skip into a loud failure at the point of the call.
 
+## Conformance baseline (2026-07-30)
+
+Step 2 done, before any interface is touched. `adapter_contract.json` is the
+20-method contract as DATA, byte-identical in all four (md5 `a2bcf0d4`) - rather
+than four hand-maintained interface declarations, which is exactly how the
+frameworks ended up with four different answers to "implement the Tina4 adapter
+interface". Every adapter in every framework reflected against it:
+
+| framework | adapters | conformance | consistent with each other? |
+| --- | --- | --- | --- |
+| **php** | 10 | **17/20** | yes - all ten identical |
+| python | 6 | 14/20 | yes - all six identical |
+| node | 7 | 14-15/20 | nearly - odbc and sqlite have one more |
+| **ruby** | 7 | **5-7/20** | **no** |
+
+**PHP is confirmed as the reference by measurement, not just by reading.** Ten
+adapters, all missing exactly the same three (`createTable`, `addColumn`,
+`autocommit`). A contract that every implementation satisfies identically is a
+contract; that is what having one produces.
+
+**Ruby is not merely lower, it is INCONSISTENT WITH ITSELF.** FirebirdDriver and
+MongodbDriver 5/20, SqliteDriver and MysqlDriver and MssqlDriver 6/20,
+PostgresDriver 7/20. Seven drivers, four different levels of completeness. That
+is the D1 finding as a number: with no interface, each driver implements
+whatever its facade path happened to need, and the six `respond_to?` guards in
+`database.rb` paper over the rest. Nothing tells a contributor writing an eighth
+driver what to implement, and nothing tells a user which of the seven will
+silently skip.
+
+Common gaps worth naming:
+
+- **`autocommit` is missing from THREE frameworks** (php, node, ruby). The
+  autocommit contract - on for standalone writes, suppressed inside an explicit
+  transaction - is already agreed behaviour and is enforced in one framework.
+- **`createTable` / `addColumn` are missing almost everywhere**, which is what
+  makes them "optional" in Node's declaration. Every engine can do both.
+- **`error()` is missing from python, node and ruby.** Only PHP lets a caller ask
+  the adapter what went wrong.
+- **`open` is missing from python, node and ruby** because they spell it
+  `connect` or do it in the constructor. A naming divergence on the first method
+  anyone implements.
+
+This list IS the parity gap the methodology asks to capture. Nothing has moved
+yet.
+
 ## Methodology
 
 Order matters more here than in any other row, because everything else depends on
