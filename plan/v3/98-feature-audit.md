@@ -243,7 +243,7 @@ reviewed and closed at a time, not batched.
 | 0 | Messenger (pilot) | SYNTHESISE | correctness | `messenger-contract.md` | **SHIPPED all 4**, 0 open (py `9075423`, php `721aba94`, node `c96ba9f`, ruby `33b25de`) |
 | 1 | DotEnv parser | SYNTHESISE | correctness | `features/001-dotenv.md` | **SHIPPED all 4** (2026-07-30) + named pairs against a shared fixture. Surface reconciliation (file-vs-directory arg, Ruby top-level names) still open. |
 | 2 | Structured logger | SYNTHESISE | correctness | `features/002-structured-logger.md` | **SHIPPED all 4** (2026-07-30): pad 8, error.log everywhere, configure takes a dir OR a file, object/binary coercion, stdout truncation, TINA4_LOG_APPEND. |
-| 3 | DB adapter interface | PROMOTE php | SOLID | `features/003-database-adapter-interface.md` | closed |
+| 3 | DB adapter interface | PROMOTE php | SOLID | `features/003-database-adapter-interface.md` | **IN PROGRESS**: contract as data + conformance ratchet in all 4; Ruby has a real interface (7 drivers, guards converted); Python done (D2 was wrong - see the plan). Remaining: Ruby CRUD onto drivers, Node renames + optional members, PHP's 3 methods. |
 | 4 | SQLite adapter + write path | **GAP** (P1, was broken in 4 of 4) | correctness | `features/004-sqlite-adapter.md` | **P1 SHIPPED all 4; 3 OPEN** (PHP `getColumns()` key, ORM still single-key, row cap) |
 | 5 | DATABASE_URL parser | PROMOTE php | SOLID | `features/005-database-url-parser.md` | **SHIPPED all 4** (2026-07-30): php 12/17->17/17, node 0/17->17/17, python + ruby had no parser at all -> 17/17. D3 settled on live Firebird. |
 | 6 | Router + dispatch | SYNTHESISE | SOLID | `features/006-router-and-dispatch.md` | closed, sequenced first |

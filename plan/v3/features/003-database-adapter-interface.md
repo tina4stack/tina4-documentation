@@ -151,6 +151,41 @@ separation (D2)" was a stated factor, and it does not hold. The verdict itself
 still stands on PHP having the only readable one-responsibility interface and on
 the conformance numbers, which were measured independently.
 
+## Progress (2026-07-30)
+
+**Done:**
+
+- **The contract is DATA** (`adapter_contract.json`, byte-identical in all four)
+  rather than four hand-maintained declarations - which is how the frameworks
+  got four different answers in the first place.
+- **A conformance RATCHET in all four.** Each pins today's implemented count per
+  adapter, so it can go up but never down and a new adapter cannot ship at the
+  old level. PHP 17/20 x10, Python 15/20 x6, Node 16-17/20 x7, Ruby 8-10/20 x7.
+  PHP and Python also assert every adapter sits at the SAME level, which is the
+  property a real interface buys.
+- **Ruby has an interface.** `Tina4::DatabaseAdapter` declares all 20, each
+  raising with the driver and method name; all seven drivers include it. The six
+  `respond_to?` guards became `driver_implements?`, which asks whether the driver
+  actually OVERRODE the method - because including the module makes every driver
+  respond to everything, and answering that wrongly turns a working silent-skip
+  path into a runtime NotImplementedError.
+- **Python is finished.** D2's prescribed fix was wrong in both directions (see
+  the correction above); the real action was giving `SQLTranslator` its own file,
+  which is done. `quote_identifier` stays on the adapter, where its Firebird
+  override lives.
+
+**Remaining:**
+
+- **Ruby: CRUD onto the seven drivers** (owner decision (a)), raising each
+  driver's floor as it lands. The largest piece.
+- **Node: rename `tables`/`columns`, make the two optional members required.**
+  49 call sites across `devAdmin`, `mcp`, `cachedDatabase`, the adapters and the
+  tests, so it is mechanical but wide.
+- **PHP: `autocommit`, `createTable`, `addColumn`.** The ten adapters implement
+  the interface directly with no shared base, so adding three to the interface is
+  thirty implementations with engine-specific DDL. Worth considering a trait with
+  a sensible `autocommit` default first, since that one is not engine-specific.
+
 ## Verdict: PROMOTE php on the interface, then complete it from node
 
 Decided on **SOLID (single responsibility and interface segregation)**.
