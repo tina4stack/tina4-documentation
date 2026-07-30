@@ -259,7 +259,39 @@ is PHP.
 - **D2 looks harmless because a third-party default hides it.** Fix it anyway: the
   contract is the parsed struct, not what `pg` happens to assume.
 
-## Parked
+## SHIPPED all four (2026-07-30)
 
-Not implemented. The Firebird decision (D3) is SETTLED (see above, 2026-07-30,
-live Firebird 5.0.4 on the .99 host). Awaiting the owner's go-ahead only.
+| | before | after |
+| --- | --- | --- |
+| php | 12/17 | **17/17** |
+| node | 0/17 | **17/17** |
+| python | no parser to call | **17/17** |
+| ruby | no parser to call | **17/17** |
+
+Order: PHP (the reference), Node, Python, Ruby. Each carries the same value
+type - `engine` / `host` / `port` / `database` / `username` / `password`, plus
+`dsn()`, `fromEnv()` and `toSafeString()` - and each has a corpus test reading
+the shared fixture.
+
+**What implementing it found that reading it did not:**
+
+- **Node's `parseDatabaseUrl` added a slash to every Firebird path** (`"/" +
+  captured`), so a single-slash URL came back ABSOLUTE and the documented
+  double-slash form came back with two. Neither round-tripped.
+- **Ruby silently fell back to SQLite for an unknown scheme**, and had a spec
+  pinning it: `fakedb://localhost/test` detected as `sqlite`. The user names a
+  database at localhost, the app writes to a local file, boots fine, and nobody
+  learns the real database was never reached. Ruby's `detect_driver` also
+  matched on SUBSTRINGS, so a postgres database named `mysqldata` could be
+  detected as MySQL.
+- **`sqlite3://` was an exception in PHP and a working connection in Ruby.** PHP
+  removed the alias in v3 with a test asserting it raised. Owner decision: it is
+  accepted everywhere and normalises to the `sqlite` engine, because the driver
+  is literally named sqlite3 in all four.
+- **PHP connected fine while publishing a broken value.** `DatabaseUrl::$database`
+  handed back a relative Firebird path that would not open, because the adapter
+  rebuilt the path downstream. A value-correctness bug behind a working
+  connection - which is why nobody reported it.
+
+**Still open from this row:** `tina4-php/CLAUDE.md` lists `pgsql` and `sqlite3`
+as removed aliases. Both claims are wrong and the page needs correcting.
