@@ -537,8 +537,11 @@ Node". Measuring all four before fixing showed it was wider:
 - **`Router::methodsAllowedForPath` was private in PHP** and public in the
   other three. Now public.
 
-Fixed in all four; see ADR-0013 for the decision and why it deviates from every
-mainstream CORS library. Conformance suites with identical case names:
+Fixed in all four; see ADR-0013. It is CONFORMANCE, not a deviation: RFC 9110
+s9.3.7 says a successful OPTIONS response SHOULD carry `Allow`, and the
+frameworks' own OPTIONS handlers already emit it (Django's `View.options()`,
+Express's router). Only the add-on CORS libraries lose it, by short-circuiting
+ahead of the framework. Conformance suites with identical case names:
 
 ```
 tina4-ruby/spec/options_allow_conformance_spec.rb

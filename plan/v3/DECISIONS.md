@@ -816,12 +816,38 @@ the semantics are actually the familiar ones.
 - The Python/Ruby vs Node/PHP middleware-ordering drift is recorded as OPEN,
   with the evidence, rather than silently resolved either way.
 
+### Amendment, 2026-07-31: the standard outranks the frameworks
+
+Applying this ADR to the OPTIONS `Allow` question (ADR-0013) exposed a missing
+tier. "Compare against the real world" was read as "compare against the popular
+libraries", which gave the wrong answer: five CORS libraries omit `Allow` on a
+preflight, so the comparison said Tina4 was deviating - when RFC 9110 s9.3.7
+says a successful OPTIONS response SHOULD carry it, and the frameworks' OWN
+OPTIONS handlers (Django's `View.options()`, Express's router) already do.
+
+The order of authority, most binding first:
+
+1. **The standard.** An RFC, a W3C/WHATWG spec, the protocol itself. If a
+   normative MUST or SHOULD covers the question, that settles it. Deviating
+   from a MUST needs a very good reason; from a SHOULD, a written one.
+2. **What the frameworks themselves do** - Django, Laravel, Rails, ASP.NET
+   Core, Express. Their own built-in behaviour, not their plugins.
+3. **The popular add-on library** for that concern. WEAKEST signal. A library's
+   behaviour is often an artifact of where it is mounted rather than a
+   decision - a component that short-circuits ahead of the framework skips
+   whatever the framework would have done, and the difference is accidental.
+4. **Internal precedent**, including "Python is master". Tiebreak only, for
+   questions genuinely internal to Tina4 (naming, argument order).
+
+So: check the standard FIRST. Only where it is silent does the framework
+comparison decide, and a library's behaviour never outranks either.
+
 **Related:** ADR-0010, ADR-0011, and
 `plan/v3/features/006-router-and-dispatch.md`.
 
 ---
 
-## ADR-0013: A CORS preflight carries Allow, deviating from every CORS library
+## ADR-0013: A CORS preflight carries Allow (RFC 9110 s9.3.7 conformance)
 
 **Date:** 2026-07-31
 **Status:** Accepted
@@ -851,17 +877,27 @@ had a worse variant: `CorsMiddleware::beforeCors` short-circuited on ANY
 OPTIONS with no `Origin` check, so registering it swallowed the RFC 9110 path
 entirely. Node had that identical bug and was fixed earlier the same way.
 
-### What the rest of the industry does
+### What the standard and the frameworks do
 
-Per ADR-0012, checked first. **No mainstream CORS implementation sets `Allow`
-on a preflight** - not `cors` (npm), `django-cors-headers`, `rack-cors`,
-`asm89/stack-cors` (Laravel), nor ASP.NET Core's CORS middleware.
+Per ADR-0012, checked first - and the check has two layers that disagree.
 
-But that omission is a LAYERING artifact, not a considered decision. Each of
-those is a separate component bolted on ahead of the framework's own routing:
-when it short-circuits the preflight, it also skips the framework's OPTIONS
-handler and the `Allow` that handler would have produced. Nobody chose to drop
-the header; the seam dropped it.
+**The standard.** RFC 9110 s9.3.7 says a server generating a successful
+response to OPTIONS SHOULD send header fields indicating what is applicable to
+the target resource, naming `Allow` as the example. A preflight IS a successful
+OPTIONS response, so the SHOULD applies to it.
+
+**The frameworks' own OPTIONS handlers agree.** Django's
+`View.options()` sets `Allow` from `_allowed_methods()`; Express's router
+auto-answers an unhandled OPTIONS with an `Allow` header listing the route's
+methods. Emitting `Allow` on an OPTIONS response is the normal thing.
+
+**The CORS add-on libraries are where it goes missing.** `cors` (npm),
+`django-cors-headers`, `rack-cors`, `asm89/stack-cors` (Laravel) and ASP.NET
+Core's CORS middleware all answer a preflight without `Allow`. That is a
+LAYERING artifact, not a considered decision: each is a separate component
+sitting ahead of the framework's routing, so short-circuiting the preflight
+also skips the framework's own OPTIONS handler and the `Allow` it would have
+produced. Nobody chose to drop the header; the seam dropped it.
 
 ### Decision
 
@@ -870,8 +906,13 @@ real method set for that path.** Tina4 owns both the CORS handling and the RFC
 9110 OPTIONS handler in one dispatcher, so it costs exactly one header to
 answer both questions at once, and the two OPTIONS paths stop disagreeing.
 
-A deliberate, documented deviation - which is what ADR-0012 requires when Tina4
-departs from the mainstream answer.
+**This is conformance, not deviation.** It follows the RFC's SHOULD and matches
+what the frameworks' own OPTIONS handlers already do. The add-on CORS
+libraries are the outlier, and only by accident of where they sit. No
+"deviation budget" under ADR-0012 is being spent here - the earlier framing of
+this decision as a deliberate departure was simply wrong, because it compared
+Tina4's dispatcher against a set of bolt-on libraries rather than against the
+standard or against the frameworks themselves.
 
 Also settled here:
 
@@ -895,6 +936,10 @@ Also settled here:
   resource not the policy`.
 - Non-breaking: an added response header on a 204. No existing header changes
   value, and CORS behaviour is untouched.
+- The comparison lesson generalises: when checking "what does the real world
+  do" (ADR-0012), compare against the STANDARD and against the frameworks'
+  own behaviour, not only against the popular add-on for that concern. A
+  library's behaviour can be an artifact of where it is mounted.
 - PHP's `CorsMiddleware::isPreflight(string $method)` still returns true for
   ANY OPTIONS regardless of `Origin`, so its name overstates what it checks.
   The real short-circuit decision no longer uses it, and eight existing tests
