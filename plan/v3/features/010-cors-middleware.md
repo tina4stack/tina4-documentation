@@ -153,7 +153,7 @@ an explicit policy before any CORS header appears.
 
 The default is now deny. No `Access-Control-Allow-Origin` at all when nothing is
 configured, and the browser's own check does the blocking. `*` stays settable
-for anyone who wants it. See ADR-0014 for the decision and the migration.
+for anyone who wants it. See ADR-0018 for the decision and the migration.
 
 ## What was fixed
 

@@ -949,7 +949,7 @@ Also settled here:
 
 ---
 
-## ADR-0014: CORS denies by default, and never pairs the wildcard with credentials
+## ADR-0018: CORS denies by default, and never pairs the wildcard with credentials
 
 **Date:** 2026-07-31
 **Status:** Accepted
@@ -990,11 +990,17 @@ documented environment variable did nothing in the default pipeline.
 
 ### What the standard says
 
-**The wildcard and credentials.** The Fetch Standard's CORS check treats `*` as
-a literal origin string, not a wildcard, once the request's credentials mode is
-`include`. The check compares it against the request origin, fails, and the
-browser discards the response. A server that emits the pair is broken, and no
-browser will tell the operator why.
+**The wildcard and credentials.** Be precise about what is being cited here.
+Fetch is a WHATWG Living Standard, so it is genuinely normative, and the rule
+lives in its **CORS check algorithm** rather than in a prose MUST sentence. The
+algorithm is the normative text. Paraphrasing its steps: once the request's
+credentials mode is `include`, the check stops treating `*` as a wildcard and
+compares it to the request origin as a literal string. That comparison fails,
+and the response is rejected.
+
+So this is an algorithm citation, not a quoted MUST, and it is not weaker for
+that. A server emitting the pair produces a response no browser will accept,
+and no browser will tell the operator why.
 
 **Vary.** This is a caching requirement, so RFC 9111 and RFC 9110 govern it, not
 Fetch. RFC 9110 s12.5.5 defines Vary as a description of "what parts of a
