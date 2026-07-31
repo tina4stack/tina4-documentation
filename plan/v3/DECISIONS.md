@@ -818,3 +818,86 @@ the semantics are actually the familiar ones.
 
 **Related:** ADR-0010, ADR-0011, and
 `plan/v3/features/006-router-and-dispatch.md`.
+
+---
+
+## ADR-0013: A CORS preflight carries Allow, deviating from every CORS library
+
+**Date:** 2026-07-31
+**Status:** Accepted
+**Context:** Feature 6 (router and dispatch), OPTIONS conformance
+
+### Context
+
+There are two OPTIONS paths and they were answering different questions:
+
+- **bare OPTIONS** (no `Origin`) - protocol introspection, per RFC 9110 s9.3.7.
+  Link checkers, monitoring probes, `curl -X OPTIONS`. Answered 204 with `Allow`.
+- **CORS preflight** (`Origin` present) - a browser asking "may I send this?".
+  Answered 204 with the `Access-Control-*` policy headers and NO `Allow`.
+
+Measured 2026-07-31 on a route registered for GET and POST:
+
+| Framework | bare OPTIONS | preflight |
+| --- | --- | --- |
+| Ruby | `Allow: GET, POST, HEAD, OPTIONS` | no `Allow` |
+| Python | `Allow: GET, POST, HEAD, OPTIONS` | no `Allow` |
+| Node | `Allow: GET, POST, HEAD, OPTIONS` | no `Allow` |
+| PHP, CORS off | `Allow: GET, POST, HEAD, OPTIONS` | `Allow` kept |
+| PHP, CORS **on** | **no `Allow`** | **no `Allow`** |
+
+So the gap was in three frameworks, not the two originally recorded, and PHP
+had a worse variant: `CorsMiddleware::beforeCors` short-circuited on ANY
+OPTIONS with no `Origin` check, so registering it swallowed the RFC 9110 path
+entirely. Node had that identical bug and was fixed earlier the same way.
+
+### What the rest of the industry does
+
+Per ADR-0012, checked first. **No mainstream CORS implementation sets `Allow`
+on a preflight** - not `cors` (npm), `django-cors-headers`, `rack-cors`,
+`asm89/stack-cors` (Laravel), nor ASP.NET Core's CORS middleware.
+
+But that omission is a LAYERING artifact, not a considered decision. Each of
+those is a separate component bolted on ahead of the framework's own routing:
+when it short-circuits the preflight, it also skips the framework's OPTIONS
+handler and the `Allow` that handler would have produced. Nobody chose to drop
+the header; the seam dropped it.
+
+### Decision
+
+**A CORS preflight response also carries `Allow`, derived from the router's
+real method set for that path.** Tina4 owns both the CORS handling and the RFC
+9110 OPTIONS handler in one dispatcher, so it costs exactly one header to
+answer both questions at once, and the two OPTIONS paths stop disagreeing.
+
+A deliberate, documented deviation - which is what ADR-0012 requires when Tina4
+departs from the mainstream answer.
+
+Also settled here:
+
+- **`Allow` and `Access-Control-Allow-Methods` are not interchangeable.**
+  `Allow` is what the RESOURCE supports (derived from the router). `ACAM` is
+  what the CORS POLICY permits cross-origin (a configured static list -
+  `TINA4_CORS_METHODS`, matching every mainstream library, which is why the
+  static list is NOT a bug). They are different values on purpose: a policy
+  naming DELETE on a GET-only route is still a 405, so a client reading only
+  ACAM is misled. A conformance test asserts they differ.
+- **Only a real preflight short-circuits.** A bare OPTIONS belongs to the RFC
+  9110 handler in all four.
+- **`Router::methodsAllowedForPath` is public in PHP**, as its equivalent
+  already was in the other three.
+
+### Consequences
+
+- Four new conformance suites, same case names, each proven red against the
+  unfixed code: `a bare options carries allow`, `a cors preflight also carries
+  allow`, `a real preflight is still answered by cors`, `allow describes the
+  resource not the policy`.
+- Non-breaking: an added response header on a 204. No existing header changes
+  value, and CORS behaviour is untouched.
+- PHP's `CorsMiddleware::isPreflight(string $method)` still returns true for
+  ANY OPTIONS regardless of `Origin`, so its name overstates what it checks.
+  The real short-circuit decision no longer uses it, and eight existing tests
+  pin the current meaning. Recorded as a naming finding, not renamed here.
+
+**Related:** ADR-0012, and `plan/v3/features/006-router-and-dispatch.md`.

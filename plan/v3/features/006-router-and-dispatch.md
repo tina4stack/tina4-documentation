@@ -518,3 +518,43 @@ Each was proven to go red against the pre-change code.
 **Breaking, Python and Ruby only:** a global middleware now runs on requests it
 previously never saw. One written assuming an authenticated request must check
 for itself. Nothing changes for Node or PHP, which already behaved this way.
+
+---
+
+## RESOLVED: the preflight Allow gap (2026-07-31)
+
+Recorded earlier as "a real preflight returns 204 without `Allow` in Ruby and
+Node". Measuring all four before fixing showed it was wider:
+
+- **Python had the same gap** - three frameworks, not two.
+- **PHP had a worse variant**: `CorsMiddleware::beforeCors` short-circuited on
+  ANY OPTIONS with no `Origin` check, so registering it dropped `Allow` from
+  the BARE OPTIONS too, swallowing the RFC 9110 path. Node had the identical
+  bug and had already been fixed the same way.
+- **PHP read the `Origin` from `$_SERVER`**, so the header was invisible to
+  anything not under a web SAPI (the in-process TestClient, the CLI, a
+  hand-built Request). Now reads the Request first, `$_SERVER` as fallback.
+- **`Router::methodsAllowedForPath` was private in PHP** and public in the
+  other three. Now public.
+
+Fixed in all four; see ADR-0013 for the decision and why it deviates from every
+mainstream CORS library. Conformance suites with identical case names:
+
+```
+tina4-ruby/spec/options_allow_conformance_spec.rb
+tina4-python/tests/test_options_allow_conformance.py
+tina4-php/tests/OptionsAllowConformanceTest.php
+tina4-nodejs/test/optionsAllowConformance.test.ts
+```
+
+Each was proven red against the unfixed code before being accepted. The PHP
+proof initially reported a false OK because a shell-escaping error meant the
+revert never applied - the second attempt asserts the target text is present
+before removing it, so a no-op edit fails loudly instead of passing.
+
+### Still open
+
+`CorsMiddleware::isPreflight(string $method)` (PHP) returns true for any
+OPTIONS regardless of `Origin`, so the name overstates the check. The
+short-circuit no longer uses it and eight tests pin the current meaning, so it
+was left alone. Rename to `isOptionsMethod` when the tests are next touched.
