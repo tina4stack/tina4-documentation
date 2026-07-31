@@ -139,7 +139,7 @@ stdout is always on. With `TINA4_LOG_OUTPUT` unset, the log **file** is written 
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_CORS_ORIGINS` | `*` | Comma-separated allowed origins. Lock down to real domains in production. |
+| `TINA4_CORS_ORIGINS` | (unset) | Comma-separated allowed origins, or `*` for any. UNSET means DENY: no `Access-Control-Allow-Origin` is sent and the browser blocks the cross-origin request. |
 | `TINA4_CORS_METHODS` | `GET, POST, PUT, DELETE, PATCH, OPTIONS` | Allowed request methods. |
 | `TINA4_CORS_HEADERS` | `Content-Type,Authorization,X-Request-ID` | Allowed request headers. |
 | `TINA4_CORS_MAX_AGE` | `86400` | Preflight cache lifetime in seconds. |

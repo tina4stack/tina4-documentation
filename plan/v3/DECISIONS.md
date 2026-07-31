@@ -1615,3 +1615,152 @@ worktree set, so it is recorded here rather than faked.
 - The headline measurement table in
   `plan/v3/features/009-graceful-shutdown.md` is labelled as built-in-path for
   Python and Ruby rather than left looking like full coverage.
+---
+
+## ADR-0018: CORS denies by default, and never pairs the wildcard with credentials
+
+**Date:** 2026-07-31
+**Status:** Accepted
+**Context:** Feature 10 (CORS middleware)
+
+### Context
+
+The feature 10 audit measured all four CORS implementations through their real
+dispatch paths. Four defects came out of it, and they share one shape: a thing
+that quietly does not work.
+
+| Behaviour | Python | PHP | Ruby | Node `cors()` | Node `CorsMiddleware` |
+| --- | --- | --- | --- | --- | --- |
+| Default `TINA4_CORS_ORIGINS` | `*` | `*` | `*` | `*` | `*` |
+| ACAO on a normal response | yes | yes | **never** | yes | yes |
+| `TINA4_CORS_CREDENTIALS` honoured | yes | yes | yes | **ignored** | yes |
+| `ACAO: *` with `ACAC: true` | guarded | guarded | **emitted** | n/a | guarded |
+| `Vary: Origin` on an allow-list match | **no** | yes | **no** | yes | yes |
+| `Vary: Origin` on an allow-list miss | **no** | yes | **no** | **no** | **no** |
+
+PHP was the only implementation close to correct, so it became the reference
+shape rather than a fifth design.
+
+**Ruby could not do CORS at all.** `CorsMiddleware.apply_headers` was never
+called from the dispatch path. Only the preflight was answered. A browser sent
+its preflight, got a 204 saying yes, sent the real request, and received no
+`Access-Control-Allow-Origin`. The browser blocked it. The preflight promised
+something the response never delivered.
+
+**Ruby also shipped the pair the Fetch Standard forbids.** With
+`TINA4_CORS_CREDENTIALS=true` and the default wildcard origin, the preflight
+carried `Access-Control-Allow-Origin: *` and
+`Access-Control-Allow-Credentials: true` together. The other three guarded it.
+
+**Node ran two implementations of one feature.** The always-on `cors()` function
+never read `TINA4_CORS_CREDENTIALS`. The opt-in `CorsMiddleware` class did. A
+documented environment variable did nothing in the default pipeline.
+
+### What the standard says
+
+**The wildcard and credentials.** Be precise about what is being cited here.
+Fetch is a WHATWG Living Standard, so it is genuinely normative, and the rule
+lives in its **CORS check algorithm** rather than in a prose MUST sentence. The
+algorithm is the normative text. Paraphrasing its steps: once the request's
+credentials mode is `include`, the check stops treating `*` as a wildcard and
+compares it to the request origin as a literal string. That comparison fails,
+and the response is rejected.
+
+So this is an algorithm citation, not a quoted MUST, and it is not weaker for
+that. A server emitting the pair produces a response no browser will accept,
+and no browser will tell the operator why.
+
+**Vary.** This is a caching requirement, so RFC 9111 and RFC 9110 govern it, not
+Fetch. RFC 9110 s12.5.5 defines Vary as a description of "what parts of a
+request message, aside from the method and target URI, might have influenced the
+origin server's process for selecting the content of this response", and a field
+name list serves "To inform cache recipients that they MUST NOT use this
+response to satisfy a later request unless the later request has the same values
+for the listed header fields as the original request".
+
+That scoping decided two things. When an allow-list computes the ACAO from the
+request Origin, the response varies by Origin and needs the header. When the
+policy is a constant `*`, the response is identical for every caller and must
+not carry it, because a Vary there fragments a CDN cache per origin and buys
+nothing.
+
+It also settled a question we nearly got wrong. Spring's CORS processor adds
+`Access-Control-Request-Method` and `-Request-Headers` to Vary. Tina4's
+`Access-Control-Allow-Methods` and `-Allow-Headers` are static configured lists.
+The code never reads the request's `Access-Control-Request-*` headers when
+building them, so those fields influence nothing and listing them would be a
+false statement to every cache downstream. Spring lists them because Spring's
+preflight echoes the request. Ours does not. We measured rather than copied.
+
+### What the mainstream does
+
+Django, Rails and ASP.NET all require an explicit policy before any CORS header
+appears. None of them ship a permissive default. Under the ADR-0012 authority
+order the standard is silent on what the DEFAULT should be, so the frameworks
+decide, and they are unanimous.
+
+### Decision
+
+**1. CORS denies by default.** With `TINA4_CORS_ORIGINS` unset, no
+`Access-Control-Allow-Origin` is emitted at all. Not an empty one. Not a
+rejected one. The browser's own CORS check does the blocking, which produces the
+error message developers already recognise.
+
+`*` remains settable. An operator who writes `TINA4_CORS_ORIGINS=*` has made a
+choice and gets the old behaviour. Only the default moved.
+
+The status code of a denied preflight does not change. It stays 204. Adding a
+403 would be a second behaviour change, and the browser blocks it either way.
+
+Non-browser clients are unaffected and must stay that way. CORS is a browser
+mechanism. curl and server-to-server calls never consult it.
+
+**2. The wildcard and credentials never ship together.** When
+`TINA4_CORS_ORIGINS` is `*` and credentials are enabled, the wildcard wins and
+`Access-Control-Allow-Credentials` is dropped. This matches what Python, PHP and
+Node already did and fixes Ruby.
+
+**3. `Vary: Origin` whenever the ACAO is computed from the request.** On an
+allow-list match and on an allow-list miss. Never for a constant `*`. The miss
+case matters most: without it a shared cache can store the no-ACAO response for
+one origin and serve it to another.
+
+**4. Every rejection logs an actionable warning.** Naming the rejected origin,
+naming the environment variable, and giving the fix. Once per distinct reason
+per process, so a scripted probe cannot flood the log. The whole audit found the
+same disease four times over, and silence was the symptom every time.
+
+**5. One implementation per framework.** Node's `cors()` and `CorsMiddleware`
+now share a single `CorsPolicy`. Ruby's `CorsClassMiddleware` became an adapter
+over `Tina4::CorsMiddleware`. PHP's `beforeCors` delegates to `getHeaders`. Two
+copies of one policy is how the credentials bug survived.
+
+### Consequences
+
+**BREAKING.** An app that relied on the permissive default loses cross-origin
+access on upgrade. The fix is one line:
+
+```
+TINA4_CORS_ORIGINS=https://app.example.com
+```
+
+Or `TINA4_CORS_ORIGINS=*` to keep the old behaviour, with credentials still
+refused alongside it.
+
+Ruby gains CORS headers on normal responses for the first time. Node's default
+pipeline starts honouring `TINA4_CORS_CREDENTIALS`. Both are new headers on
+responses that previously carried none, and both are the feature working as
+documented rather than a change of contract.
+
+Four conformance suites carry the same case names and each was proven red
+against the unfixed code: `deny by default emits no allow origin`, `explicit
+wildcard still allows any origin`, `wildcard never pairs with credentials`,
+`allow list match reflects origin and credentials`, `allow list miss emits no
+allow origin`, `allow list always varies on origin`, `constant wildcard does not
+vary on origin`, `preflight status is unchanged when denied`.
+
+`Access-Control-Expose-Headers` remains unimplemented in all four. Nothing
+documents it, so nothing is lying. It is a gap, recorded and not built here.
+
+**Related:** ADR-0012, ADR-0013, and
+`plan/v3/features/010-cors-middleware.md`.
