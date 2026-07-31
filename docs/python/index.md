@@ -113,8 +113,16 @@ async def get_home(request, response):
 
 The default session handler stores data on the file system. Override `TINA4_SESSION_BACKEND` in `.env` to switch backends.
 
-The value is the backend name, not a class name. Unknown values fall back to the
-file backend, so a typo costs you the backend you asked for without raising.
+The value is the backend name, not a class name, and it is normalised: leading or
+trailing spaces and capitals are fine, so `` Redis `` resolves.
+
+An unrecognised value RAISES at startup, naming the bad value and the valid ones.
+It used to fall back to the file backend silently, which meant a typo produced a
+running app writing sessions to local disk while you believed they were in Redis:
+nothing logged, nothing failed, and the symptom only surfaced later as users being
+logged out whenever a request landed on another instance. Leaving
+`TINA4_SESSION_BACKEND` unset, or setting it to an empty value, still gives you the
+file default.
 
 | Value                    | Backend     | Required package |
 | ------------------------ | ----------- | ---------------- |

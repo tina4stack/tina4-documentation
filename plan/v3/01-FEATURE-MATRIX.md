@@ -267,10 +267,30 @@ deploy and present as an outage rather than a config error. Locked in by four
 assertions in `sessionHandlerErrors.test.ts`, verified to go red when the throw
 is disabled.
 
-**Open, not fixed here:** every OTHER unrecognised backend name still falls
-silently to `file` in all four frameworks. `redis-npm` is loud now; a typo is not.
-That is the same defect class and it wants one decision across all four rather
-than four separate patches.
+**FIXED the same day, all four.** Retiring `redis-npm` loudly exposed the wider
+version of itself: every OTHER unrecognised backend name still fell silently to
+`file`. `redis-npm` was loud, a typo was not, and a typo is far more likely. An
+unrecognised name now RAISES in all four, naming the bad value and the valid ones.
+
+Two things had to be settled first, and neither is cosmetic:
+
+1. **Normalisation was not uniform, so "unrecognised" did not mean the same thing
+   in each framework.** Python and Ruby trimmed and lowercased; PHP and Node did
+   neither. `TINA4_SESSION_BACKEND=Redis` therefore resolved on two frameworks and
+   silently became `file` on the other two. Raising before fixing that would have
+   turned a silent inconsistency into a loud one. All four now normalise.
+2. **A BLANK value must still mean file.** An env var set to `""` is a SET
+   variable, so it never reaches a language's default-value operator. Rejecting
+   blank would have broken every deployment that clears the var to take the
+   default - the same trap already recorded for `TINA4_MAIL_HOST`.
+
+PHP is where this paid best: its five separate `default =>` arms all fell to file,
+and validating once at construction closed all five without touching any of them.
+
+Locked in by the same seven named cases in all four
+(`test_session_backend_validation.py`, `SessionBackendValidationTest.php`,
+`session_backend_validation_spec.rb`, `sessionBackendValidation.test.ts`), each
+verified to go RED when the raise is removed.
 
 **42.6 memcached** was added 2026-07-30. It had been one of the seven CACHE
 
