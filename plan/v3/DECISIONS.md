@@ -1429,11 +1429,33 @@ database, exit 0.
   before SIGKILL. An unbounded wait does not avoid truncation, it only means
   SIGKILL truncates with no clean exit and no log line naming what was still in
   flight. An invalid or negative value warns and falls back to 30, never 0.
-- **Exit 0 on a clean drained shutdown.** Three frameworks already did; Node
-  reported 143 only because nothing handled the signal. Gunicorn and Puma both
-  halt 0 on a handled TERM. Operationally decisive: 143 is recorded as
-  signal-killed and counts as failure for a Kubernetes Job or
-  `restartPolicy: OnFailure`.
+- **Exit 0 on a clean drained shutdown, WHEN THE FRAMEWORK OWNS THE SOCKET.**
+  Three frameworks already did; Node reported 143 only because nothing handled
+  the signal. Gunicorn and Puma both halt 0 on a handled TERM. Operationally
+  decisive: 143 is recorded as signal-killed and counts as failure for a
+  Kubernetes Job or `restartPolicy: OnFailure`.
+
+  **AMENDED 2026-07-31, and this clause was wrong as first written.** It said
+  "exit 0" flat. Measured on the production path, uvicorn exits `-15`/143 BY
+  DESIGN - `Server.capture_signals` restores the default handler and re-raises
+  the signal, so a supervisor sees "terminated by SIGTERM", and uvicorn's own
+  log confirms the drain completed first. Puma behaves the same way unless
+  `raise_exception_on_sigterm` is turned off.
+
+  Forcing 0 there would mean overriding what the production server deliberately
+  does, which the mechanism-vs-outcome split below explicitly forbids. So the
+  contract is:
+
+  | who owns the socket | exit code |
+  | --- | --- |
+  | the framework's own server | **0** |
+  | a third party (uvicorn, Puma, hypercorn, granian) | **`128 + signum`**, whatever it chooses |
+
+  This is the one clause where the OUTCOME is genuinely not shared, and saying
+  so is better than asserting a number that misreports what happened. The
+  drain, the timeout and the resource close ARE shared - only the exit code
+  follows the owner. Tests assert `-signal.SIGTERM` on the production path and
+  state why, rather than being written to the flat rule and quietly skipped.
 - **RFC 6455 close code 1001 ("going away") to every live WebSocket.** This is
   conformance: s7.4.1 defines 1001 for a server going down. A client told 1001
   reconnects on a schedule; a vanished socket looks like a network fault and
