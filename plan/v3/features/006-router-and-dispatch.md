@@ -279,7 +279,7 @@ describe NONE of them, and the four do not describe each other either.
 | swagger | via static | via static | 5 | - |
 | session | 13 (save, LAST) | **3 (start, EARLY)** | - | - |
 | body parse | - | 5 | in `app` | - |
-| **static asset** | **6, BEFORE match** | **9, BEFORE match** | **fallback, AFTER match** | **none - SAPI serves it** |
+| **static asset** | **6, BEFORE match** | **9, BEFORE match** | **fallback, AFTER match** | **fallback, AFTER match** (corrected 2026-07-31 - see below) |
 | match route | 7 | 10 | 7 | 5 |
 | matched-route metadata for auth | - | - | 7a | **3** |
 | authorise | inside match | in middleware | inside match | **4** |
@@ -686,3 +686,50 @@ ships its own `tina4` bin alias, and npx/tsx prepend that directory, so plain
 output**. The gate then asserted against an empty result and reported nothing
 wrong. In Ruby the same name was owned by a bundler binstub. Both were found
 only because the helper raises on non-JSON instead of skipping.
+
+---
+
+## CORRECTION (2026-07-31): PHP does have a static stage
+
+The enumeration table recorded **"php: none - SAPI serves it"** for
+`static_asset`. That is WRONG, and finding #1 above ("`static_asset` has no
+agreed position ... PHP has no static stage at all, a runtime gift, category
+1") was built on it.
+
+`Router::dispatchInner` calls `StaticFiles::tryServe($request->path,
+self::$basePath, ...)` in the not-found fallback - after matching, which is
+exactly the ADR-0010 position Ruby and Node moved TO. The SAPI does serve a
+real file first in a production nginx/`php -S` deployment, but the dispatcher
+has its own lookup, and that is what a Tina4 test, the built-in server and any
+front-controller deployment hit.
+
+**So `static_asset` is not one-of-four; it is agreed by three of four**
+(PHP, Python and now Ruby and Node all resolve it after matching), and the
+finding's "matches exactly ONE framework" claim is retired.
+
+Measured, not read: `GET /probe.css` with `Router::$basePath` pointed at a
+fixture returns **200** with an `ETag` and `Last-Modified`, and a follow-up
+carrying either validator returns **304**.
+
+### How the error survived
+
+The first PHP characterisation case asserted a **404** for a static path and
+PASSED - because it wrote the fixture into a temp directory while leaving
+`Router::$basePath` at its default `'.'`. The file was never found, so the 404
+was a MISS, not a policy. A test that passes for the wrong reason is worse than
+no test: it converted an unverified table entry into an apparently-verified one.
+Corrected to point the base path at the fixture and assert 200 -> 304.
+
+### Static + conditional requests across the four
+
+| framework | serves static | honours a conditional request |
+| --- | --- | --- |
+| Ruby | yes, after match | **304** |
+| PHP | yes, after match | **304** |
+| Python | yes, in the fallback | **200** - re-sends the whole body |
+| Node | yes, after match | not yet measured |
+
+Python is the outlier, and it is worse than a missing optimisation: it sends
+`Cache-Control: no-cache, must-revalidate`, so the client dutifully
+revalidates on every request and is handed the full body every time. Recorded
+in the Python characterisation suite, to be fixed in step 6 with its own pair.
