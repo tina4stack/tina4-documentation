@@ -614,9 +614,9 @@ One trap worth recording: the metrics helper must run OUTSIDE bundler. Under
 `tina4ruby` binstub. With stderr discarded that looked like "not installed", so
 both complexity gates silently went PENDING and asserted nothing.
 
-### Found, not fixed here
+### Found here, FIXED separately (2026-07-31)
 
-A HEAD request for a static file returns a body, violating RFC 9110 s9.3.2.
+A HEAD request for a static file returned a body, violating RFC 9110 s9.3.2.
 The swagger and static branches `return` straight out of `#call` and skip every
 response stage, including `head_strip`. Preserved exactly during the extraction
 (`ctx.bypass_response_stages`) and to be fixed with its own test pair. Node
@@ -844,3 +844,45 @@ frameworks that changed.
 
 No double-run is possible: when the pre-match pass short-circuits, dispatch
 returns before the main after pass is reached - verified in both.
+
+---
+
+## RESOLVED: HEAD on a static asset shipped the body (2026-07-31)
+
+Found during the Ruby extraction and deliberately PRESERVED there
+(`ctx.bypass_response_stages`) so the refactor stayed behaviour-preserving and
+the fix could be its own change with its own tests. This is that change.
+
+| framework | `HEAD /asset.css` body |
+| --- | --- |
+| Ruby | **15 bytes** - the whole file |
+| PHP | 0 |
+| Python | 0 |
+| Node | 0 |
+
+A 3-1 outlier and a spec violation, not a missing optimisation. Ruby stripped
+the body for a routed response, a 404 and a 405, but its static and swagger
+branches `return` early out of `#call` and skipped the strip entirely.
+
+**Why it matters beyond conformance:** HEAD is what link checkers, monitoring
+probes and cache validators use precisely to AVOID transferring the body. A
+HEAD that returns the body makes every one of those checks cost a full
+download, silently - and the more aggressively something probes, the more it
+costs.
+
+### The fix
+
+`head_strip` moved from `RESPONSE_STAGES` to a new `ALWAYS_STAGES` group that
+runs whatever produced the response, including the early-return branches. The
+contract spec pins it in `ALWAYS_STAGES` specifically, so moving it back fails
+loudly instead of silently reintroducing the bug.
+
+Locked in all four by `head_no_body_conformance` (5 cases, same names): static
+asset, routed response, 404, the Content-Length the equivalent GET would have
+sent, and a NEGATIVE case proving GET still returns the body. Proven red
+against the old ordering in Ruby.
+
+The Content-Length case earns its place: s9.3.2's SHOULD is that a HEAD carries
+the same headers as the equivalent GET. Stripping the body while dropping the
+length would satisfy the MUST and still leave the probe useless, which is
+exactly the kind of half-fix a test suite should refuse.
