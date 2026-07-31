@@ -83,14 +83,15 @@ found one drift the flat list could not show:
    eighth engine would renumber the matrix. Now group 4; rows 21-26 are retired
    rather than reused, because reusing a retired number is how a matrix starts
    lying about its own history.
-4. **NEW: Node ships a second MECHANISM for session backend 42.2.** All four
-   have Redis sessions and 42.2 is genuinely green in all four, so this is not a
-   member gap. But Node alone offers `TINA4_SESSION_BACKEND=redis-npm`
-   (`RedisNpmSessionHandler`), which drives Redis through the optional `redis`
-   npm package instead of the raw-TCP RESP client every framework uses. It is
-   NOT a 42.7: a driver choice is not a backend, and giving it a member number
-   would show a phantom parity hole in the other three. See the note under
-   group 42 for why it is still worth a decision.
+4. **Node shipped a second MECHANISM for session backend 42.2. Now retired.**
+   All four have Redis sessions and 42.2 was green in all four, so this was never
+   a member gap, and it was deliberately NOT numbered 42.7: a driver choice is
+   not a backend, and a member number there would have shown a phantom hole in
+   the other three. Node alone promoted the choice to a selectable backend name
+   (`TINA4_SESSION_BACKEND=redis-npm`) wired to the old spawn-per-command
+   transport. Removed the same day on the owner's call. Full reasoning, including
+   the correction that Python and Ruby DO prefer the same optional driver
+   internally, is under group 42.
 
 A structural finding that is not a member gap, recorded because it is the kind of
 drift these groups exist to make visible: **the cache backends are one file per
@@ -237,19 +238,41 @@ two is how a dead backend silently logs every user out.
 | 42.5 | database | [x] | [x] | [x] | [x] |
 | 42.6 | memcached | [x] | [x] | [x] | [x] |
 
-**42.2 has two mechanisms in Node, one everywhere else.** Every framework talks
-to Redis over a hand-rolled raw-TCP RESP client, which is what keeps the backend
-zero-dependency. Node ALSO exposes `TINA4_SESSION_BACKEND=redis-npm`
-(`RedisNpmSessionHandler`), which uses the optional `redis` npm package and
-falls back to raw TCP when it is absent. The member is green in all four either
-way, so this is a mechanism question, not a gap. Two reasons it still needs an
-owner call rather than a shrug: it is the only session path in any framework
-that reaches for a third-party driver, and it drives that driver with
-`execFileSync` per command, which is the exact pattern measured as the cause of
-the sessionHandlers flakiness and replaced everywhere else by the persistent
-worker connection (p50 80ms to 10.5ms). Either it is a documented Node runtime
-gift that the other three cannot copy, or it is drift with a performance
-regression attached. Not decided here.
+**42.2: Node's `redis-npm` backend was RETIRED 2026-07-31 as drift.** Owner call,
+taken after the finding was corrected once. The correction matters, because the
+first version of it was wrong in a way that would have produced a worse fix.
+
+What is NOT the drift: preferring the optional `redis` driver when it is
+installed. Python (`redis_handler.py:41`) and Ruby (`redis_handler.rb:57`) both
+do exactly that, choosing the driver INSIDE their single `redis` handler and
+falling back to raw RESP when it is absent. PHP uses raw `fsockopen` only.
+
+What WAS the drift: Node alone promoted that driver choice to a user-selectable
+BACKEND NAME with its own class, and Node's copy alone still ran `execFileSync`
+per command - the spawn-per-command pattern every other handler had already
+abandoned for the persistent worker connection in `syncSocket` (p50 80ms to
+10.5ms, and the measured cause of the sessionHandlers flake).
+
+Removing it costs nothing, which is why the verdict is clean: Node's `redis`
+handler already routes through the fast worker transport, and an async npm client
+cannot serve a synchronous handler interface WITHOUT a child process - so folding
+the driver preference inward, Python-style, would have re-imported the exact bug.
+That is a genuine category-3 runtime-idiomatic difference with a checkable
+reason, not a gap.
+
+`TINA4_SESSION_BACKEND=redis-npm` now THROWS and names `redis` as the
+replacement. It deliberately does not fall through to the switch's `default`,
+which is `file`: a silent demotion to disk sessions would log every user out on
+deploy and present as an outage rather than a config error. Locked in by four
+assertions in `sessionHandlerErrors.test.ts`, verified to go red when the throw
+is disabled.
+
+**Open, not fixed here:** every OTHER unrecognised backend name still falls
+silently to `file` in all four frameworks. `redis-npm` is loud now; a typo is not.
+That is the same defect class and it wants one decision across all four rather
+than four separate patches.
+
+**42.6 memcached** was added 2026-07-30. It had been one of the seven CACHE
 
 **42.6 memcached** was added 2026-07-30. It had been one of the seven CACHE
 backends in all four frameworks since v3, but was a session backend in NONE of
@@ -447,9 +470,11 @@ MQTT and the live API index still have no row here. What grouping fixed is the
 shape, so those rows can land without renumbering anything.
 
 All 4 backend frameworks use **zero third-party dependencies** for core features.
-tina4-js is also zero-dep (1.5KB core gzipped). One exception is now visible and
-undecided: Node's `redis-npm` session mechanism reaches for an optional npm
-driver (see group 42).
+tina4-js is also zero-dep (1.5KB core gzipped). The one session path that reached
+for a third-party driver as a selectable backend, Node's `redis-npm`, was retired
+on 2026-07-31 (see group 42). Python and Ruby still PREFER an optional driver
+when it happens to be installed, which does not break the promise: both fall back
+to raw RESP and neither requires the package.
 
 ### Rust Unified CLI
 
