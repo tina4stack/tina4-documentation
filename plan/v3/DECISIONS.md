@@ -946,3 +946,113 @@ Also settled here:
   pin the current meaning. Recorded as a naming finding, not renamed here.
 
 **Related:** ADR-0012, and `plan/v3/features/006-router-and-dispatch.md`.
+
+## ADR-0015: Route precedence - does a specific route beat a catch-all? (OPEN)
+
+**Date:** 2026-07-31
+**Status:** OPEN. Scheduled as its own item, not yet decided. Do not implement
+against this entry until it is Accepted.
+**Context:** Feature 6 (router and dispatch), follow-on. Surfaced by the feature
+8 (health check) audit.
+**Number note:** ADR-0014 is claimed by the `feature/audit-007` branch
+(middleware return-value contract) and is not merged yet. This takes 0015 so the
+two cannot collide whichever lands first.
+
+### How this surfaced
+
+The feature 8 audit found a Ruby app serving its CMS catch-all on `/__health`.
+A container health check therefore got the app's page instead of the health
+payload, against a perfectly healthy app. Two separate causes, both already
+FIXED in `tina4-ruby 0ad2de1`:
+
+1. `find_route` built candidates as `ANY + method`, so an ANY route always won
+   regardless of registration order.
+2. `initialize!` ran `auto_discover` before `register_builtin_routes!`, so every
+   app route registered ahead of the framework's own.
+
+What remains open is the design question underneath, which the fix deliberately
+did not answer.
+
+### Measured, all four, 2026-07-31
+
+Registering `any("/{slug}")` and `get("/probe")` in both orders, then matching
+`GET /probe`:
+
+| framework | ANY registered first | GET registered first |
+| --- | --- | --- |
+| Ruby (before the fix) | ANY wins | ANY wins |
+| Ruby (after the fix) | ANY wins | GET wins |
+| Python | ANY wins | GET wins |
+| PHP | ANY wins | GET wins |
+| Node | ANY wins | GET wins |
+
+All four now agree: forward registration order, first match wins.
+
+### The open question
+
+Should a specific route beat a catch-all REGARDLESS of registration order?
+
+Today the answer is no, uniformly. A catch-all registered before a specific
+route still shadows it. That is defensible, and it is what the fix standardised
+on, because it was the 3-of-4 behaviour and it fixed the reported bug.
+
+### What must be verified BEFORE deciding
+
+Do not assume specificity-wins is the industry norm. The prior belief going in
+was that it is, and a first pass at the evidence suggests that belief is at
+least half wrong:
+
+- Django resolves `urlpatterns` in order, first match wins.
+- Rails resolves `routes.rb` in order, first match wins.
+- Express matches middleware and routes in registration order.
+- ASP.NET Core endpoint routing is the outlier: it ranks candidates by
+  specificity, with literal segments beating parameterised ones.
+
+If that holds, registration order is the mainstream and Tina4 is already
+conformant, making this ADR a no-change. VERIFY each of the four against its
+own primary documentation before writing the decision. Cite the doc, not a
+recollection and not a blog post.
+
+### The argument that specificity may still be right FOR US
+
+There is one real difference that the mainstream comparison does not capture.
+In Django and Rails the developer WRITES the order, in one file, explicitly. In
+Tina4 the order comes substantially from auto-discovery walking a directory, so
+"registration order" is partly a filesystem-traversal detail the developer never
+chose and cannot see. An ordering that is explicit and reviewable in Django is
+implicit and invisible here.
+
+That asymmetry, not a general appeal to specificity, is the strongest case for
+ranking candidates instead of taking the first match. It should be weighed
+against the cost: a ranking rule is more code in four languages, and it makes
+route resolution harder to reason about than "first one wins".
+
+### Options
+
+1. **No change.** Registration order everywhere, as it is now. Cheapest, matches
+   the mainstream if the verification above holds, and the reported bug is
+   already fixed. Documentation must then state plainly that a catch-all
+   registered before a specific route shadows it.
+2. **Method specificity only.** A method-specific route beats an ANY route on
+   the same path, regardless of order. Path matching stays first-match.
+   Narrower than full specificity and addresses the actual failure mode seen.
+3. **Full specificity ranking.** Literal segments beat parameterised, more
+   specific patterns beat less. Closest to ASP.NET Core. Most code, biggest
+   behaviour change, hardest to explain.
+
+### Recommendation
+
+Verify the four citations first. If registration order is confirmed as the
+mainstream, prefer option 1 and spend the effort on making the order VISIBLE
+instead: a startup warning when a catch-all is registered ahead of a route it
+would shadow, and `tina4 routes` output that shows resolution order. That
+targets the invisibility problem, which is the real complaint, without making
+route resolution harder to reason about.
+
+### Consequences of leaving it open
+
+None urgent. The reported bug is fixed and all four agree on one rule, so there
+is no live parity gap. This is a design question, not a defect.
+
+**Related:** ADR-0010 (routes beat files), ADR-0012 (settle a contract against
+real-world frameworks), and `plan/v3/features/006-router-and-dispatch.md`.
