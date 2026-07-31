@@ -242,9 +242,9 @@ reviewed and closed at a time, not batched.
 | # | feature | verdict | decided on | plan | state |
 | --- | --- | --- | --- | --- | --- |
 | 0 | Messenger (pilot) | SYNTHESISE | correctness | `messenger-contract.md` | **SHIPPED all 4**, 0 open (py `9075423`, php `721aba94`, node `c96ba9f`, ruby `33b25de`) |
-| 1 | DotEnv parser | SYNTHESISE | correctness | `features/001-dotenv.md` | **SHIPPED all 4** (2026-07-30) + named pairs against a shared fixture. Surface reconciliation (file-vs-directory arg, Ruby top-level names) still open. |
+| 1 | DotEnv parser | SYNTHESISE | correctness | `features/001-dotenv.md` | **CLOSED 2026-07-31.** Parser + named pairs shipped 2026-07-30; the surface reconciliation (step 5) closed today. `load_env` takes a ROOT DIRECTORY in all four and loads `.env.local` then `.env` itself, so the precedence rule stops being the caller's job. Ruby gained the top-level `Tina4.*` surface and `require_env!` was RENAMED to `require_env` (owner call, no alias). Two Breaking changes fell out that the plan had not seen: `load_env` returned what the FILE said rather than what WON, and Python's `require_env` called `SystemExit(1)` - a library terminating its host process. **The plan was WRONG on who was the outlier**: it says PHP's file-path arg is odd, but Python, PHP AND Node take a file and RUBY has the right shape. |
 | 2 | Structured logger | SYNTHESISE | correctness | `features/002-structured-logger.md` | **SHIPPED all 4** (2026-07-30): pad 8, error.log everywhere, configure takes a dir OR a file, object/binary coercion, stdout truncation, TINA4_LOG_APPEND. |
-| 3 | DB adapter interface | **REDESIGN** (was PROMOTE php, then SYNTHESISE) | SOLID + LOC | `features/003-database-adapter-interface.md` | **IN PROGRESS. 1 OPEN: CRUD has not left the adapters.** Shipped all 4: contract + ratchets, Ruby's interface, naming, autocommit, getDatabaseType, and (2026-07-30/31) the BATCH WRITE collapse - executeMany looped one round-trip per ROW; measured 500 rows PostgreSQL 9848ms -> 34ms (302x), MySQL 199x, MSSQL 42x. Fallout fixed on the way: PHP Postgres `affectedRows` always 0 on update (only adapter not routing writes through execute()), and a MySQL `last_id` regression the collapse introduced (MySQL reports the FIRST id of a multi-row INSERT; normalised in each ADAPTER so get_last_id and the returned result agree). Firebird verified NOT collapsible (-104 Token unknown) but 2.1x available from cursor reuse - not done. |
+| 3 | DB adapter interface | **REDESIGN** (was PROMOTE php, then SYNTHESISE) | SOLID + LOC | `features/003-database-adapter-interface.md` | **CLOSED 2026-07-31: CRUD has left the adapters in all four.** Shipped all 4: contract + ratchets, Ruby's interface, naming, autocommit, getDatabaseType, and (2026-07-30/31) the BATCH WRITE collapse - executeMany looped one round-trip per ROW; measured 500 rows PostgreSQL 9848ms -> 34ms (302x), MySQL 199x, MSSQL 42x. Fallout fixed on the way: PHP Postgres `affectedRows` always 0 on update (only adapter not routing writes through execute()), and a MySQL `last_id` regression the collapse introduced (MySQL reports the FIRST id of a multi-row INSERT; normalised in each ADAPTER so get_last_id and the returned result agree). Firebird verified NOT collapsible (-104 Token unknown) but 2.1x available from cursor reuse - not done. |
 | 4 | SQLite adapter + write path | **GAP** (P1, was broken in 4 of 4) | correctness | `features/004-sqlite-adapter.md` | **EFFECTIVELY CLOSED 2026-07-31; 1 deferred.** (a) PHP `getColumns()` key: re-measured, the drift the plan described is GONE - PHP emits `primaryKey` in all 12 places, no consumer reads `'primary'`, and that matches the contract's idiomatic-casing rule. Plan was stale, not the code; pinned with a test. (b) ORM single-key: **FIXED all 4** (py `deefe50`, node `a253006`, ruby `12002c5`, php `29279b40`). Worse than parked: the INSERT-vs-UPDATE probe tested only the FIRST key column, so saving (acme,a2) was decided an UPDATE and OVERWROTE (acme,a1) - data loss on an ordinary insert. Also update/delete truncated the key, and createTable emitted one inline PRIMARY KEY per column (invalid DDL). PHP needed an ADDITIVE `$primaryKeys` array: widening `$primaryKey` to string|array fatals every existing model (PHP demands identical redeclared types). (c) row cap: **deferred to feature 18**, unchanged. |
 | 5 | DATABASE_URL parser | PROMOTE php | SOLID | `features/005-database-url-parser.md` | **SHIPPED all 4** (2026-07-30): php 12/17->17/17, node 0/17->17/17, python + ruby had no parser at all -> 17/17. D3 settled on live Firebird. |
 | 6 | Router + dispatch | SYNTHESISE | SOLID | `features/006-router-and-dispatch.md` | closed, sequenced first |
@@ -396,6 +396,15 @@ the owner switched to the walk model (2026-07-30): take features from the top,
 audit the next unaudited one, ship it. Rows 0-5 and 38 have shipped code in all
 four frameworks; 3 and 6 are the live edge.
 
-Next up: feature 3's remaining open item (move CRUD out of the adapters, the
-4.3x LOC finding), then feature 6 (planned, not implemented), then 7 - the first
-genuinely unaudited row.
+Next up: **feature 6** (audited, planned, owner-sequenced FIRST, still not
+implemented - no named-stage pipeline exists in any framework as of 2026-07-31),
+then **7**, the first genuinely unaudited row.
+
+Feature 3's CRUD move landed 2026-07-31. Measured rather than assumed: the six
+Python adapters' INSERT statements were character-identical except for the
+parameter marker and PostgreSQL's RETURNING, and PHP's method bodies hashed
+identical across MySQL/MSSQL/Firebird and across SQLite3/ODBC. Python -199 lines,
+PHP -459. Node is a DRY win rather than a LOC win (net +130): its duplication was
+2-3 lines per method, not whole methods. **Ruby needed no change** - its only
+driver-level CRUD is Postgres' `RETURNING *` seam, which is what the plan
+predicted, and that is the check that the shape was right.
