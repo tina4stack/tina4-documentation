@@ -946,3 +946,248 @@ Also settled here:
   pin the current meaning. Recorded as a naming finding, not renamed here.
 
 **Related:** ADR-0012, and `plan/v3/features/006-router-and-dispatch.md`.
+
+## ADR-0017: Graceful shutdown - drain in-flight requests, bounded, exit 0
+
+**Date:** 2026-07-31
+**Status:** Accepted
+**Context:** Feature 9 (graceful shutdown), signal handling in all four frameworks
+
+### Context
+
+A container orchestrator sends SIGTERM and SIGKILLs after a grace period.
+Dropping in-flight requests on SIGTERM is a production defect, not a style
+question. The four frameworks disagreed on every part of it.
+
+Measured 2026-07-31 on macOS 26.5.2 (Darwin 25.5.0), arm64. Real spawned
+server, real request to a route occupying the handler for 2.0s, real signal
+0.6s in, exit code read from `waitpid`:
+
+| Framework | in-flight request | connection after signal | exit | drain |
+| --- | --- | --- | --- | --- |
+| Python | COMPLETED (200) | refused | 0 | 1.42s |
+| PHP | COMPLETED (200) | accepted, then RESET | 0 | 1.46s |
+| Ruby | COMPLETED (200) | accepted, 503 JSON | 0 | 1.43s |
+| Node, plain `startServer()` | **DROPPED** | refused | **143** | 0.15s |
+| Node, one `background()` task | n/a | still serving 200 | **never exits** | **HUNG** |
+
+SIGINT matched SIGTERM in every row. SIGHUP was trapped nowhere.
+
+A measurement trap worth recording: a signal makes a blocking `sleep`/`usleep`
+return early with EINTR, so PHP's handler first appeared to drain in 0.604s
+carrying the correct body. It had only been interrupted. Every slow route in
+these suites is now wall-clock bounded so an interrupted sleep cannot
+masquerade as a completed handler.
+
+### What the standard and the platforms do
+
+Per ADR-0012, checked before deciding.
+
+| Authority | Behaviour |
+| --- | --- |
+| Kubernetes | SIGTERM, then SIGKILL at `terminationGracePeriodSeconds` (default 30). The period covers the preStop hook AND shutdown together. |
+| Node `server.close()` | Documented as ASYNCHRONOUS: stops accepting, "keeps existing connections", fires the callback once all connections end. |
+| Gunicorn | `graceful_timeout` default 30s. TERM waits for workers to finish current requests. |
+| Puma | TERM: "the worker will attempt to finish then exit". `force_shutdown_after` defaults to `:forever`. SIGHUP reopens log files, else behaves like INT. |
+| Exit codes | `128 + signum` is a SHELL abstraction for a process killed BY a signal. It is not POSIX, and not what a process that traps and exits cleanly reports. |
+
+### Decision
+
+**One graceful shutdown contract in all four frameworks.** On SIGTERM or
+SIGINT: stop background tasks, close live WebSockets with RFC 6455 code 1001,
+close the listeners, drain in-flight requests within the budget, close the
+database, exit 0.
+
+- **`TINA4_SHUTDOWN_TIMEOUT`, default 30 seconds, all four.** Ruby's existing
+  spelling and default; Python, PHP and Node adopt it. The authorities split
+  (Gunicorn bounds at 30, Puma waits forever), so the tiebreak is operational:
+  30 matches the Kubernetes default grace period, so the drain finishes just
+  before SIGKILL. An unbounded wait does not avoid truncation, it only means
+  SIGKILL truncates with no clean exit and no log line naming what was still in
+  flight. An invalid or negative value warns and falls back to 30, never 0.
+- **Exit 0 on a clean drained shutdown.** Three frameworks already did; Node
+  reported 143 only because nothing handled the signal. Gunicorn and Puma both
+  halt 0 on a handled TERM. Operationally decisive: 143 is recorded as
+  signal-killed and counts as failure for a Kubernetes Job or
+  `restartPolicy: OnFailure`.
+- **RFC 6455 close code 1001 ("going away") to every live WebSocket.** This is
+  conformance: s7.4.1 defines 1001 for a server going down. A client told 1001
+  reconnects on a schedule; a vanished socket looks like a network fault and
+  errors. A WebSocket never "finishes" the way a request does, so it is not
+  drained - the close frame goes first, then the listeners close.
+- **The listener closes FIRST, so a late connection gets a clean refusal.**
+  Three frameworks did three different things and they cannot all be right.
+  PHP's accept-then-RESET is the worst: the client sees a transport error
+  indistinguishable from a network fault. Ruby's 503 is more informative but
+  keeps the listener open. All four converge on Python's refusal, which is what
+  a load balancer already handles correctly.
+- **SIGHUP stays untrapped**, terminating the process by default disposition.
+  Puma uses it to reopen logs and Gunicorn to reload config; neither is a Tina4
+  need, because the Rust CLI owns file watching and production logs go to
+  stdout. Adding it would be a new feature, not a parity fix. Pinned by a test
+  in all four so it is not restored by accident.
+
+**One owner per signal, in every framework.** Where a framework registered the
+same signal twice, the duplicate registration is DELETED rather than made
+coherent.
+
+### Rationale
+
+Two implementations of one lifecycle is the shape that produced every defect
+found here.
+
+Node had three. `startServer()` registered nothing. `background.ts` registered
+`process.on("SIGTERM", clearTimers)` and its comment called it "additive - it
+does not call `process.exit()`". That comment was the bug: registering ANY
+listener REPLACES Node's default disposition, so a handler that does not exit
+does not add to the default, it CANCELS it. A server with one background task
+ignored SIGTERM completely and ran until SIGKILL, burning the whole Kubernetes
+grace period on every rolling deploy. The CLI's `serve.ts` had the third:
+`server.close(); process.exit(0)`, which kills the very requests the
+asynchronous close was waiting to drain.
+
+PHP had the same shape with a far worse symptom, found after this ADR was
+first drafted. `Tina4\App` registered SIGTERM/SIGINT from its CONSTRUCTOR
+(`App.php:293`, inside `__construct` at line 194 - not from `start()`, line
+469). PHP dispatches a `pcntl_signal` handler only when
+`pcntl_signal_dispatch()` runs or `pcntl_async_signals(true)` is set, and
+neither happens without a server loop. So an App constructed WITHOUT running
+the server suppressed SIGTERM's default terminate action while never running
+the handler body: measured, the process SURVIVED SIGTERM, ran its full loop and
+exited 0 on its own. For an embedder, `kill` and `docker stop` were no-ops.
+That is not a shutdown gap, it is an unkillable process.
+
+The milder second half: `bin/tina4php` constructs the App (line 1028) then
+calls `$server->start()` (line 1073), which rebinds both signals to
+`Server::stop()`. `pcntl_signal` replaces rather than chains, so on the serve
+path Server won and App's handlers were dead code. The pair never fought, which
+is exactly why it survived unnoticed.
+
+### Consequences
+
+- Four suites with identical case names, each proven red against the unfixed
+  code: `SIGTERM lets the in-flight request finish`, `SIGTERM stops accepting
+  new connections`, `SIGTERM exits with code 0`, `SIGTERM releases the
+  listening port`, `SIGINT lets the in-flight request finish`, `SIGINT exits
+  with code 0`, `SIGHUP is not trapped and terminates the process`, `a
+  registered background task does not block shutdown`,
+  `TINA4_SHUTDOWN_TIMEOUT bounds the drain`.
+- Signal handling cannot be tested without a real process. Calling a handler
+  directly proves the function runs; it proves nothing about whether the signal
+  reaches it, whether the listener stops accepting, or what the process exits
+  with. Every case spawns a real detached child and signals its process GROUP.
+- **Breaking, low blast radius:** Python and PHP go from an unbounded drain to
+  a 30-second bound. A request still running at 30s is now force-closed instead
+  of waiting forever. Under any orchestrator it was already being SIGKILLed at
+  that point. Set `TINA4_SHUTDOWN_TIMEOUT` higher to restore the old behaviour.
+- **Breaking:** Ruby stops answering 503 during shutdown and refuses the
+  connection instead. A caller that distinguished 503-shutting-down from a
+  connection failure loses that signal.
+- Operators must set `terminationGracePeriodSeconds` ABOVE
+  `TINA4_SHUTDOWN_TIMEOUT`. At the Kubernetes default both are 30 and a drain
+  using its full budget would race SIGKILL.
+- Results are macOS-measured. Exit-code behaviour under a container init (PID 1
+  does not get default signal dispositions) and PHP's accept-then-RESET are
+  kernel- and init-specific, and need re-measuring on Linux.
+
+**Related:** ADR-0012, and `plan/v3/features/009-graceful-shutdown.md`.
+
+### Amendment (2026-07-31): the contract applies on the PRODUCTION server too
+
+The decision above was measured against each framework's BUILT-IN server. Two
+of the four hand the socket to a third-party production server, and everything
+above lived after the handoff, so none of it ran where operators actually
+deploy.
+
+| Framework | production server | feature 9 contract |
+| --- | --- | --- |
+| Python | hands to uvicorn / hypercorn / granian when `not is_debug` (`core/server.py:3219-3226`) | LOST |
+| Ruby | hands to Puma when `!is_debug` (`lib/tina4.rb:437-462`) | LOST |
+| PHP | own server throughout | applies |
+| Node | own `node:http` + cluster | applies |
+
+Ruby's case is the sharper one: `tina4ruby.gemspec:22` declares
+`spec.add_dependency "puma", "~> 6.0"`, so Puma is ALWAYS installed and the
+`rescue LoadError` fallback to WEBrick is unreachable in production.
+
+**Correction, recorded deliberately.** An earlier draft of this amendment said
+Ruby's Puma handoff was "not debug-gated at all" and that an operator with Puma
+installed had "no way to reach WEBrick". Both are FALSE. `lib/tina4.rb:438`
+gates the entire Puma block behind `if !is_debug`, and the only other `Puma`
+reference in `lib/` (line 291) is inside `print_banner` choosing a banner
+string, also debug-gated. `TINA4_DEBUG=true` reaches WEBrick today. The error
+came from reading the comment "Try Puma first (production-grade), fall back to
+WEBrick" and inferring control flow from it instead of reading the `if` around
+it - the same mistake as trusting a stale docblock. The production gap is real;
+that framing of it was not.
+
+### Decision
+
+**The feature 9 OUTCOMES are the framework's contract regardless of which
+server owns the socket. The MECHANISM is per-server.** This is ADR-0011's
+shape (HEAD keeps its per-runtime mechanism; parity is in the outcome) applied
+to shutdown. Split the work by who owns each piece:
+
+**The production server already does it - CONFIGURE it, never reimplement it:**
+
+- **Draining in-flight requests.** uvicorn and Puma both do this properly.
+  Wrapping or second-guessing them would add a second lifecycle, which is the
+  exact shape that produced every defect in this ADR.
+- **The drain deadline.** Map `TINA4_SHUTDOWN_TIMEOUT` onto the server's own
+  knob: uvicorn's `timeout_graceful_shutdown`, Puma's `force_shutdown_after`.
+  A documented env var that means one thing on the built-in server and nothing
+  on the production one is a lie on the path operators actually run. Puma's
+  default is `:forever`, so unmapped it silently meant "no bound" in production.
+
+**Tina4 owns it - the production server cannot know these exist:**
+
+- **ORM-bound database connections. P0.** Nothing outside Tina4 knows about
+  them. Closed in a `finally` / `ensure` around `starter(...)` and around the
+  Puma launcher run, covering the default connection and every named one. A
+  leaked connection per shutdown is a real resource leak and the cheapest thing
+  here to get right.
+- **WebSocket RFC 6455 1001.** The production server closes sockets; it does
+  not know to send a close frame first. Where this needs a per-server hook (an
+  ASGI lifespan shutdown handler, a Puma `on_stopped`) and that proves
+  expensive, it is SPECIFIED AND NOT BUILT rather than half-done. The database
+  close and the timeout mapping rank above it.
+
+### `TINA4_DEFAULT_WEBSERVER`, implemented in all four
+
+Documented at `tina4_python/CLAUDE.md:1652` with a stale reference in
+`tests/test_ws_auth.py:107`, and ZERO occurrences in code - Python-only doc
+drift. Implemented rather than deleted, keeping the documented name and
+semantics: `TINA4_DEFAULT_WEBSERVER=TRUE` pins the built-in server, unset or
+FALSE keeps existing behaviour. Non-breaking.
+
+Implemented in all four so the env surface stays uniform, including PHP and
+Node where it is a genuine no-op (both always use their own server) and must
+simply be accepted and documented as such.
+
+The justification is determinism, NOT reachability. `TINA4_DEBUG=true` already
+reaches the built-in server, so this is not the only route to it. But debug also
+changes toolbar injection, error overlays, log level and the AI port, so "turn
+on debug" is not an answer for anyone diagnosing a production shutdown, and it
+is not something CI should have to do to exercise the built-in path
+deterministically instead of depending on which server the runner happens to
+have installed.
+
+**It is explicitly NOT the fix for the handoff gap.** An operator must not have
+to give up uvicorn or Puma to get their databases closed.
+
+**Follow-up, specified not done:** the var should be registered in the Rust
+CLI's `known_vars()` (tina4stack/tina4). That repo is outside this audit's
+worktree set, so it is recorded here rather than faked.
+
+### Consequences of the amendment
+
+- Tests must boot a child under the REAL production server - uvicorn for
+  Python, Puma for Ruby - send a real signal, and observe the real outcome.
+  Where the server is absent the test SKIPS LOUDLY naming what is missing, and
+  never passes silently.
+- A child booted from a venv or a gem path must ASSERT it loaded the worktree
+  copy, not an installed one. A Ruby probe in this project once silently loaded
+  an installed `tina4ruby 3.13.92` gem and the run looked fine.
+- The headline measurement table in
+  `plan/v3/features/009-graceful-shutdown.md` is labelled as built-in-path for
+  Python and Ruby rather than left looking like full coverage.
