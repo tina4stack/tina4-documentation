@@ -321,6 +321,59 @@ describe NONE of them, and the four do not describe each other either.
    records.** The measurement is stale. It is the single largest function in the
    family and it is the last one scheduled, which remains right.
 
+### Owner call: honour PHP - and what that does and does not mean (2026-07-31)
+
+Owner decision: PHP is honoured on the dispatch ordering. Measuring what that
+actually costs turned up a coupling that a naive port would have broken.
+
+**PHP's CORS is NOT automatic.** The CORS-first pass runs inside
+`if (!empty($globalMiddleware))`, and `CorsMiddleware` is opt-in via
+`Middleware::use(...)`. So PHP's advantage is STRUCTURAL, not behavioural: it has
+a global-middleware stage BEFORE matching, with CORS ordered first inside it.
+Adopting it does not mean "always emit CORS".
+
+**Where each framework runs global middleware today:**
+
+| | global middleware runs | CORS on a short-circuited 401 |
+| --- | --- | --- |
+| php | **BEFORE match**, CORS first | yes, when registered |
+| ruby | AFTER match | no |
+| python | AFTER match | no |
+| node | AFTER match | no |
+
+**A naive port BREAKS something specific and nameable.** The other three run
+global middleware after matching for a REASON, and Python's own comment states
+it: "(e.g. CsrfMiddleware) can read handler metadata such as `_noauth`".
+`core/middleware.py:301` reads `request._handler` and `handler._noauth` to skip
+CSRF on a route marked `@noauth`. Move that pass before matching and the metadata
+is not there yet: a `@noauth` POST gets wrongly blocked with 403.
+
+That is not hypothetical - it is the exact bug PHP itself already fixed once. Its
+comment records that `$request->handler` stayed null and "that bypass was DEAD
+CODE on a real dispatch". Ruby's characterisation case
+`dispatch_noauth_write_route_is_not_blocked_by_csrf` covers the same behaviour
+and passes today.
+
+**Why PHP gets away with it:** PHP's CsrfMiddleware is attached as ROUTE
+middleware, which runs after matching and after `$request->handler = $route`. The
+other three register it GLOBALLY. So PHP's ordering is safe for PHP only because
+of a placement difference nobody wrote down.
+
+**The resolution, which honours PHP without inheriting the coupling:** split the
+global-middleware stage by DEPENDENCY rather than moving it wholesale.
+
+| pass | runs | contains | why |
+| --- | --- | --- | --- |
+| `global_middleware_pre` | BEFORE match | CORS, and anything needing no route metadata | must survive a short-circuited 401/403 |
+| `global_middleware_post` | AFTER match, after metadata is exposed | CSRF, and anything reading `noAuth`/`secured` | needs the matched route |
+
+That is PHP's CORS-first insight generalised, and it is behaviour-preserving for
+the other three: everything that runs after matching today keeps running after
+matching. Only CORS moves, and only when it is registered.
+
+**Answer to "does it break anything": not this way. It would have, done
+wholesale** - and the test that catches it already exists.
+
 ### Revised approach (supersedes the "ten stages" pattern above)
 
 The ten-stage list was derived from reading, before any framework was enumerated.
