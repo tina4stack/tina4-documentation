@@ -754,3 +754,68 @@ remaining audit rows: before recording a framework as lacking a behaviour,
 find the code that WOULD implement it and confirm the probe actually reaches
 that code. A green test proves the assertion held, not that the assertion was
 meaningful.
+
+---
+
+## OPEN: which middleware does the AFTER pass cover? (2026-07-31)
+
+**Status:** OPEN - measured, not applied. A behaviour change in two frameworks.
+
+Surfaced while finishing the PHP extraction, by a regression that made the
+question visible (see below).
+
+| framework | the after pass runs for |
+| --- | --- |
+| Ruby | the WHOLE global set |
+| PHP | the WHOLE global set |
+| Python | the POST-match group only |
+| Node | the POST-match group only |
+
+In Node and Python a PRE-match middleware's `after_*` hook runs **only when the
+pre-match pass short-circuits**. On the happy path it never runs at all, so a
+global access log or header-stamper declared `preMatch` sees the request and
+never sees the response.
+
+### What the mainstream does
+
+Per ADR-0012's order - standard first, then the frameworks. No RFC governs a
+framework's own middleware lifecycle, so the frameworks decide:
+
+- **Django**: `MIDDLEWARE` is ONE ordered list, and the response phase runs
+  back through all of it in reverse.
+- **Laravel**: global, group and route middleware all get their response /
+  terminate phase.
+- **Rails**: `after_action` runs for every filter that was declared.
+- **ASP.NET**: the pipeline unwinds through every component that was entered.
+
+Unanimous: **the response phase covers everything that ran in the request
+phase.** Splitting the BEFORE pass by dependency (ADR-0012) says nothing about
+the after pass - an after hook adds headers or logging and needs no route
+metadata either way. So Ruby and PHP look right and Python and Node are the
+drift.
+
+Not applied, because it changes behaviour in two frameworks.
+
+### How it surfaced: a regression, and why it hid
+
+The pre/post split (`tina4-php 538cf99f`, mine) replaced the block that assigned
+`$globalMiddleware` but left the READ at the end of `dispatchInner`. Nothing
+set the variable, and **PHP treats an undefined variable in `empty()` as
+empty**, so `!empty($globalMiddleware)` was permanently false: no global
+`after_*` hook ran at all, for every request, silently.
+
+It surfaced only because the extracted `finaliseResponse()` declares `array
+$globalMiddleware`, turning the silent null into a hard TypeError. **An untyped
+extraction would have carried the bug forward invisibly.**
+
+Nothing caught it because no test asserted that a global after hook runs -
+every middleware test covered the BEFORE pass. `tests/GlobalAfterMiddlewareTest.php`
+is that missing test, proven red against the regression.
+
+**Two lessons worth keeping:**
+
+1. A type declaration on an extracted parameter is a bug detector. Extracting
+   with types turns "silently empty" into "loudly wrong".
+2. When a contract has two halves (before/after, open/close, start/stop),
+   check that BOTH halves are tested. The before pass had extensive coverage;
+   the after pass had none, and that is exactly where the bug lived.
