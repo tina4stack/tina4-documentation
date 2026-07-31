@@ -757,9 +757,9 @@ meaningful.
 
 ---
 
-## OPEN: which middleware does the AFTER pass cover? (2026-07-31)
+## DECIDED: the AFTER pass covers every global middleware (2026-07-31)
 
-**Status:** OPEN - measured, not applied. A behaviour change in two frameworks.
+**Status:** DECIDED and applied in all four.
 
 Surfaced while finishing the PHP extraction, by a regression that made the
 question visible (see below).
@@ -819,3 +819,28 @@ is that missing test, proven red against the regression.
 2. When a contract has two halves (before/after, open/close, start/stop),
    check that BOTH halves are tested. The before pass had extensive coverage;
    the after pass had none, and that is exactly where the bug lived.
+
+### Outcome (2026-07-31)
+
+Applied. Node and Python now run the after pass over EVERY global middleware -
+both phases - matching Ruby and PHP and the mainstream.
+
+Measured before and after, 5 successful requests, a `preMatch` middleware that
+acquires in `before` and releases in `after`:
+
+| | before | after |
+| --- | --- | --- |
+| pre-match after-hook runs | **0** | 5 |
+| post-match after-hook runs | 5 | 5 |
+| acquire/release balance | **5 leaked** | 0 |
+
+The leak is the reason this was not cosmetic: one slot per request, unbounded,
+with nothing erroring.
+
+Locked in all four by `global_after_middleware` (4 cases, same names),
+including one that asserts the acquire/release balance directly rather than
+just counting hook invocations. Proven red against the old behaviour in both
+frameworks that changed.
+
+No double-run is possible: when the pre-match pass short-circuits, dispatch
+returns before the main after pass is reached - verified in both.
