@@ -561,3 +561,77 @@ before removing it, so a no-op edit fails loudly instead of passing.
 OPTIONS regardless of `Origin`, so the name overstates the check. The
 short-circuit no longer uses it and eight tests pin the current meaning, so it
 was left alone. Rename to `isOptionsMethod` when the tests are next touched.
+
+---
+
+## Step 5 measurements: Ruby extraction (2026-07-31)
+
+Steps 2 and 3 done for Ruby. `tina4 metrics`, the same tool the CI gate uses.
+
+| | before | after |
+| --- | --- | --- |
+| `RackApp#call` | **CC 53** | off the offender list |
+| `RackApp#handle_route` | **CC 24** | off the offender list |
+| `rack_app.rb` avg CC | 6.03 | **3.88** |
+| `rack_app.rb` MI | 4.2 | **7.8** |
+| `rack_app.rb` LOC | 948 | **765** |
+| `dispatch_pipeline.rb` (new) | - | MI **19.2**, avg CC 4.04, **zero** complexity offenders |
+
+Behaviour-preserving: 4611 examples, 0 failures (4604 before, +7 contract
+specs). The 13-case characterisation suite stayed green throughout.
+
+**MI did not reach the floor of 40 and that is honest.** Extracting `#call`
+ALONE made it slightly WORSE (4.2 -> 3.7): MI is penalised by file length and
+function count, and naming stages adds both. Only splitting the pipeline into
+its own file moved it. rack_app.rb still holds static serving, the swagger UI,
+WebSocket upgrades and error pages - four subsystems that have nothing to do
+with dispatch - so it stays a 765-line file with `enforce_route_auth` (CC 16)
+and `_extract_form_token` (CC 11) over the ceiling. Those are auth concerns,
+not pipeline stages, and are the next target.
+
+### The stage lists (Ruby)
+
+```
+REQUEST_STAGES   reset_request_caches, cors_preflight, websocket_upgrade,
+                 dev_routes, feedback_routes, global_middleware_pre,
+                 match_route, method_not_allowed, not_found
+RESPONSE_STAGES  head_strip, dev_inspector_capture, request_log,
+                 dev_toolbar_inject, feedback_inject, session_save
+ROUTE_STAGES     prepare_route_request, global_middleware_post,
+                 route_auth_handler, route_auth_gate, route_middleware
+                 (then invoke_route_handler -> finalise_route_response)
+```
+
+### The gate (spec/dispatch_pipeline_spec.rb)
+
+The lists are data and asserted in order; every listed stage exists and is
+private; arity proves each is callable with a context alone; no stage calls
+another stage (checked against the source); complexity is read from `tina4
+metrics` rather than a literal. All three gates proven able to fail.
+
+One trap worth recording: the metrics helper must run OUTSIDE bundler. Under
+`bundle exec`, bundler intercepts the `tina4` name and dies resolving it as a
+`tina4ruby` binstub. With stderr discarded that looked like "not installed", so
+both complexity gates silently went PENDING and asserted nothing.
+
+### Found, not fixed here
+
+A HEAD request for a static file returns a body, violating RFC 9110 s9.3.2.
+The swagger and static branches `return` straight out of `#call` and skip every
+response stage, including `head_strip`. Preserved exactly during the extraction
+(`ctx.bypass_response_stages`) and to be fixed with its own test pair. Node
+already asserts the correct behaviour on every path in its characterisation
+suite, so this is a Ruby-only gap.
+
+## Next: Node
+
+`packages/core/src/server.ts` measured 2026-07-31, before extraction:
+
+| function | CC |
+| --- | --- |
+| `dispatch` | **65** |
+| `startServer` | **45** |
+| file | MI **0.5**, 1208 LOC, 67 functions |
+
+Worse than Ruby's starting point on every axis. Characterisation is already
+green (`test/dispatchCharacterisation.test.ts`, 10 cases), so step 1 holds.
