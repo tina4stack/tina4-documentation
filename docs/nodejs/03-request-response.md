@@ -294,7 +294,7 @@ Router.get("/api/data", async (req, res) => {
 
 ### CORS Headers
 
-Tina4 handles CORS based on the `CORS_ORIGINS` setting in `.env`. The default `*` allows all origins. For production, lock it down:
+Tina4 handles CORS based on the `TINA4_CORS_ORIGINS` setting in `.env`. It is UNSET by default, which denies every cross-origin request. Name your origins:
 
 ```bash
 CORS_ORIGINS=https://myapp.com,https://admin.myapp.com
