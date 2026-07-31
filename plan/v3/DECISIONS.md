@@ -638,3 +638,100 @@ to run, so nightly rather than per-PR, and only over the features already migrat
 layout won here), the lazy feature-loading work, and
 `plan/v3/features/028-031-frond-engine.md`, where the split is a prerequisite for
 auditing four features that currently share one file.
+
+---
+
+## ADR-0010: Routes beat files - static assets resolve AFTER route matching
+
+**Status:** Accepted (owner, 2026-07-31). Feature 6.
+
+### Context
+
+Enumerating all four dispatchers found no agreed position for static-file
+serving:
+
+| | static asset |
+| --- | --- |
+| ruby | BEFORE route matching |
+| node | BEFORE route matching |
+| python | AFTER, in the fallback |
+| php | none - `php -S` / nginx serve files before `index.php` runs |
+
+The parked pattern said "stage 5, only when stage 3 found nothing", which matched
+exactly one framework. Ruby's ordering carries a tell: it SKIPS the static check
+entirely for `/api/` paths, a hack that exists only because file-first would
+otherwise shadow API routes.
+
+### Decision
+
+**A registered route always wins over a file at the same path.** Static resolution
+moves AFTER route matching, into the not-found fallback.
+
+### Rationale
+
+- **Code beats data.** A route is written and reviewed; a file in `public/` can
+  arrive from a build step, an upload directory, or a careless deploy. Data must
+  not silently override code.
+- **It closes a shadowing hazard.** With file-first, dropping `public/api/users`
+  shadows the `/api/users` route with no error anywhere. Ruby's `/api/` skip is a
+  partial patch for exactly this; route-first removes the need for it.
+- **PHP already behaves this way in effect.** The SAPI serves genuine static files
+  before `index.php` is reached, so anything arriving at the framework is not a
+  static file. Python does it explicitly. That is two of four already aligned.
+- The two frameworks that change are Ruby and Node, which the owner confirmed are
+  the less prominent deployments.
+
+### Consequences
+
+- **Breaking for Ruby and Node**, in the narrow case where a file and a route share
+  a path. That case previously resolved to the file and now resolves to the route.
+- Ruby's `/api/` static skip becomes dead code and is removed with the change.
+- Needs its own positive/negative pair (`a_route_wins_over_a_file_at_the_same_path`
+  / `a_file_is_still_served_when_no_route_matches`), not a silent edit inside the
+  pipeline extraction.
+- A genuinely static-heavy deployment should front the app with a web server, which
+  is what PHP already relies on.
+
+**Related:** ADR-0011, and `plan/v3/features/006-router-and-dispatch.md`.
+
+---
+
+## ADR-0011: HEAD keeps its per-runtime mechanism - outcome parity, not mechanism parity
+
+**Status:** Accepted (2026-07-31, derived). Feature 6.
+
+### Context
+
+All four strip the body from a HEAD response, at opposite ends of dispatch:
+
+- **Node** wraps `rawRes.write`/`end` EARLY, so every later path - explicit HEAD
+  handler, GET fallback, 404, 405, 500 - drops its body without knowing it must.
+- **Ruby and Python** strip content LATE, at their single return point.
+- **PHP** does not handle it in dispatch at all.
+
+### Decision
+
+**No change.** The contract is the OUTCOME - a HEAD response carries no body,
+whatever produced it - and the mechanism stays idiomatic per runtime.
+
+### Rationale
+
+Node writes to a stream, so there is no single exit to strip at; an early wrap is
+the only way to catch every path. Ruby and Python RETURN a response from one
+place, so a late strip at that point already guarantees the same thing. Forcing
+one mechanism onto both would make one of them worse for no observable gain.
+
+This is the audit's category 3 (runtime-idiomatic difference) applied honestly:
+the decisive test is "could this framework produce the canonical outcome without
+the divergence, using what its runtime offers", and the answer is that both
+already do.
+
+### Consequences
+
+- The stage list names a `head_response` CONCERN, not a fixed position - Node
+  satisfies it at the top, Ruby and Python at the bottom.
+- A conformance test asserts the outcome (no body on HEAD across handler, 404, 405
+  and 500 paths) rather than the mechanism, so neither implementation can drift
+  without a red test.
+
+**Related:** ADR-0010, and `plan/v3/features/006-router-and-dispatch.md`.
