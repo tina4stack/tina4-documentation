@@ -735,3 +735,86 @@ already do.
   without a red test.
 
 **Related:** ADR-0010, and `plan/v3/features/006-router-and-dispatch.md`.
+
+---
+
+## ADR-0012: Settle a contract against real-world frameworks, not internal precedent
+
+**Date:** 2026-07-31
+**Status:** Accepted
+**Context:** Feature 6 (router and dispatch), global middleware ordering
+
+### Context
+
+When the four frameworks disagree on a contract, the standing tiebreak has been
+"Python is master". Applied to middleware ordering it produced the wrong answer.
+
+The measured drift: does a global middleware run before or after the auth gate?
+
+| Framework | Position | Global middleware sees a 401 |
+| --- | --- | --- |
+| Python | after the gate | no |
+| Ruby | after the gate | no |
+| Node | before the gate | yes |
+| PHP | before the gate | yes |
+
+Two-two. "Python is master" resolves it to "after the gate", and that resolution
+was made and then reverted, because checking it against how the rest of the
+industry builds the same pipeline showed the opposite:
+
+| Framework | Where auth sits |
+| --- | --- |
+| Django | `CsrfViewMiddleware` ships BEFORE `AuthenticationMiddleware`; enforcement is `login_required`, a view decorator that runs after all MIDDLEWARE |
+| Laravel | `HandleCors` is global (pre-routing), `VerifyCsrfToken` is in the `web` group (post-routing), `auth` is route middleware - last |
+| Rails | Rack stack, then controller `before_action`s; `protect_from_forgery` conventionally precedes `authenticate_user!` |
+| ASP.NET Core | `UseCors()` then `UseAuthentication()` then `UseAuthorization()` then endpoints; anything registered earlier runs on rejected requests |
+| Express | one linear chain; `morgan` / `cors` / `rateLimit` are `app.use`d before `passport.authenticate` |
+
+Unanimous, and the operational argument is decisive: a rate limiter that cannot
+see failed logins cannot throttle brute force, and an access log that runs after
+the gate silently omits every 401. Both are real bugs, and both are caused by
+the "master-wins" answer.
+
+### Decision
+
+**Where a contract has a well-established real-world answer, that answer wins -
+over internal precedent, over a majority of our own implementations, and over
+the master framework.** "Python is master" remains the tiebreak for questions
+that are genuinely internal (naming, argument order, which of two equivalent
+spellings to keep). It is not a reason to ship an ordering the rest of the
+industry has already rejected.
+
+Before settling any cross-framework contract, check how Django, Laravel, Rails,
+ASP.NET Core and Express solve the same problem, and record what was found. If
+Tina4 deviates, the deviation is a deliberate, written decision - not an
+accident nobody compared.
+
+**Scope note:** this ADR settles the DECISION PROCEDURE. It does not by itself
+authorise changing Python and Ruby: an ordering change is a behaviour change,
+and it goes to the maintainer as an open question with the evidence attached
+(see `plan/v3/features/006-router-and-dispatch.md`).
+
+### Rationale
+
+Tina4 is re-implementing a well-understood pipeline with less ceremony, not
+inventing a new one. Where the shape is already settled, matching it is what
+makes the framework predictable to someone arriving from Laravel or Django;
+novelty there is a cost with no matching benefit. Deviation has to earn itself.
+
+The lean part is real and is the point: Laravel needs three registries (global,
+group, route) to express pre-routing / post-routing / per-route ordering. Tina4
+gets the same three positions from ONE flag plus the existing route list. Same
+semantics, less to learn - that is the streamlined wheel, and it only works if
+the semantics are actually the familiar ones.
+
+### Consequences
+
+- The audit gains a step: for each contract, name the mainstream answer before
+  choosing. A finding that does not cite one is incomplete.
+- A "we already do it this way in three of four" argument no longer settles a
+  contract on its own.
+- The Python/Ruby vs Node/PHP middleware-ordering drift is recorded as OPEN,
+  with the evidence, rather than silently resolved either way.
+
+**Related:** ADR-0010, ADR-0011, and
+`plan/v3/features/006-router-and-dispatch.md`.

@@ -409,3 +409,74 @@ that the plan's own target was wrong - which is exactly what step 1 is for.
 
 Not implemented. Awaiting the owner's go-ahead on the verdict and on the
 Ruby-first ordering.
+
+---
+
+## OPEN QUESTION: global middleware vs the auth gate (needs a decision)
+
+**Status:** OPEN - measured, not applied. Needs the maintainer's call.
+**Found:** 2026-07-31, while porting the pre/post middleware split.
+
+### The drift
+
+Does a global middleware run before or after the framework's auth gate? Measured
+by registering an unflagged (post-match) middleware that stamps a header, then
+hitting a secured write route with no token:
+
+| Framework | Result | Position |
+| --- | --- | --- |
+| Python | `POST /secured -> 401 stamp=ABSENT` | after the gate |
+| Ruby | `POST /secured -> 401 stamp=ABSENT` | after the gate |
+| Node | `POST /secured -> 401 stamp=present` | before the gate |
+| PHP | `POST /secured -> 401 stamp=present` | before the gate |
+
+Two-two, and pre-existing - the split did not cause it. It was found only because
+the split's test "a pre-match middleware's output survives a 401" PASSED in Node
+and PHP with the flag removed: there, everything survives a 401, so the assertion
+could not fail and proved nothing.
+
+### Why it matters
+
+A global middleware that only runs after the gate cannot:
+
+- throttle a brute-force login (a rate limiter never sees the failed attempts),
+- log a rejected request (every 401 is missing from the access log),
+- add response headers to a 401 (the CORS case the split already fixes for the
+  pre-match group).
+
+### What the rest of the industry does
+
+Unanimously: user middleware runs BEFORE auth, and enforcement is late and
+route-scoped. Django (`CsrfViewMiddleware` before `AuthenticationMiddleware`,
+`login_required` as a view decorator), Laravel (`auth` is route middleware, after
+the global and `web` group passes), Rails (`protect_from_forgery` before
+`authenticate_user!`), ASP.NET Core (`UseAuthorization` last before the
+endpoint), Express (`morgan`/`cors`/`rateLimit` `app.use`d before
+`passport.authenticate`). See ADR-0012.
+
+That makes Node and PHP correct and **Python and Ruby the drift** - the reverse
+of what "Python is master" gives.
+
+### Options
+
+1. **Align Python and Ruby to Node/PHP** (run global middleware before the gate).
+   Matches every mainstream framework and fixes the rate-limit / access-log
+   holes. Behaviour change in two frameworks: global middleware starts running
+   on requests it previously never saw, so a middleware written assuming an
+   authenticated request must now check. Recommended.
+2. **Align Node and PHP to Python/Ruby** (gate first). Fewer requests execute
+   user code, but it keeps the operational bugs above and puts Tina4 alone
+   against the field.
+3. **Leave the drift.** Rejected - it is exactly the class of difference this
+   audit exists to remove, and it silently breaks the split's own test.
+
+### If option 1 is chosen
+
+- Python: move the post-match global pass ahead of `_check_auth` in
+  `handle()`, keeping the route's own middleware after the gate.
+- Ruby: the same move in `RackApp#call`.
+- Lock it in all four with the pair already used in PHP: a post-match middleware
+  DOES run on a matched route, and does NOT run when no route matched (the real
+  discriminator between the groups - not the 401, which both groups survive by
+  design).
+- Breaking-change note in the changelog per the contract-change rule.
