@@ -720,16 +720,37 @@ was a MISS, not a policy. A test that passes for the wrong reason is worse than
 no test: it converted an unverified table entry into an apparently-verified one.
 Corrected to point the base path at the fixture and assert 200 -> 304.
 
-### Static + conditional requests across the four
+### Static + conditional requests across the four - ALL CORRECT
 
 | framework | serves static | honours a conditional request |
 | --- | --- | --- |
 | Ruby | yes, after match | **304** |
 | PHP | yes, after match | **304** |
-| Python | yes, in the fallback | **200** - re-sends the whole body |
-| Node | yes, after match | not yet measured |
+| Python | yes, in the fallback | **304** |
+| Node | yes, after match | **304** |
 
-Python is the outlier, and it is worse than a missing optimisation: it sends
-`Cache-Control: no-cache, must-revalidate`, so the client dutifully
-revalidates on every request and is handed the full body every time. Recorded
-in the Python characterisation suite, to be fixed in step 6 with its own pair.
+**RETRACTION.** This table first recorded Python as returning 200 and
+re-sending the whole body, called it the outlier, and scheduled a step-6 fix.
+That was WRONG and there is nothing to fix.
+
+Python answers 304 on both `If-None-Match` and `If-Modified-Since`, and emits
+an `ETag`. The measurement was taken at the wrong LAYER: `handle()` returns a
+Response, but the ETag is computed by `build_headers` and the conditional
+decision is made in `app()` on the way out. A test that stops at `handle()`
+cannot observe a 304 at all, because that layer never makes one.
+
+### Two false findings, one root cause
+
+Both errors in this feature came from measuring a layer that does not
+implement the behaviour being measured:
+
+| claim | why it was wrong |
+| --- | --- |
+| "PHP has no static stage" | the fixture wrote to a temp dir while `Router::$basePath` stayed `'.'`, so the 404 was a MISS, not a policy |
+| "Python ignores conditional requests" | measured at `handle()`, below the layer that builds the ETag and answers 304 |
+
+Both PASSED as tests while asserting something false. The lesson for the
+remaining audit rows: before recording a framework as lacking a behaviour,
+find the code that WOULD implement it and confirm the probe actually reaches
+that code. A green test proves the assertion held, not that the assertion was
+meaningful.
