@@ -412,9 +412,9 @@ Ruby-first ordering.
 
 ---
 
-## OPEN QUESTION: global middleware vs the auth gate (needs a decision)
+## DECIDED: global middleware vs the auth gate
 
-**Status:** OPEN - measured, not applied. Needs the maintainer's call.
+**Status:** DECIDED 2026-07-31 - option 1, aligned in all four.
 **Found:** 2026-07-31, while porting the pre/post middleware split.
 
 ### The drift
@@ -480,3 +480,41 @@ of what "Python is master" gives.
   discriminator between the groups - not the 401, which both groups survive by
   design).
 - Breaking-change note in the changelog per the contract-change rule.
+
+### Outcome (2026-07-31)
+
+Option 1 taken. The order is now identical in all four:
+
+```
+pre-match globals -> match -> post-match globals -> auth gate -> route middleware -> handler
+```
+
+Python and Ruby moved their post-match globals ahead of the gate. Two further
+divergences surfaced while doing it and were fixed in the same pass:
+
+- **Node ran the route's OWN middleware BEFORE the gate**, so middleware
+  attached to a secured route processed requests that were about to be
+  rejected. Moved after the gate, matching the other three and the mainstream
+  convention (Laravel orders `->middleware(['auth', ...])` this way, Django
+  puts `@login_required` outermost).
+- **Python's pre-match pass re-ran the post-match set.** `_run_before_middleware`
+  resolves through `_effective_middleware`, which PREPENDS the post-match
+  globals - so passing the pre-match list to it ran every post-match middleware
+  twice, once before matching and once after. A counter or a rate-limit bucket
+  would have double-counted every request. Fixed with an explicit
+  `include_globals` switch; locked by `test_a_pre_match_global_does_not_run_twice`,
+  proven red against the bug.
+
+Lock-in tests, same case names in all four:
+
+| Case | Proves |
+| --- | --- |
+| `post match middleware runs on a 401` | the globals are ahead of the gate (the behaviour change itself) |
+| `post match middleware does not run when no route matched` | the real pre/post discriminator - NOT the 401, which both groups survive by design |
+| `pre match middleware does not open a secured route` | the split did not weaken the gate |
+
+Each was proven to go red against the pre-change code.
+
+**Breaking, Python and Ruby only:** a global middleware now runs on requests it
+previously never saw. One written assuming an authenticated request must check
+for itself. Nothing changes for Node or PHP, which already behaved this way.
