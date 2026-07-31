@@ -946,3 +946,119 @@ Also settled here:
   pin the current meaning. Recorded as a naming finding, not renamed here.
 
 **Related:** ADR-0012, and `plan/v3/features/006-router-and-dispatch.md`.
+
+---
+
+## ADR-0014: A middleware's return value is the contract; response state is a legacy path
+
+**Date:** 2026-07-31
+**Status:** Accepted
+**Context:** Feature 7 (middleware pipeline), return-value handling and hook scope
+
+### Context
+
+The four frameworks agreed on what a middleware IS and disagreed on what it
+RETURNS. Measured against the live source in all four:
+
+| return value | Python | PHP | Ruby | Node |
+| --- | --- | --- | --- | --- |
+| the `[req, res]` pair | rebind, continue | rebind, continue | rebind, continue | rebind, continue |
+| a Response object | crash (TypeError, 500) | short-circuit | continue | continue |
+| `false` | crash (TypeError, 500) | short-circuit, 403 | short-circuit | continue |
+| nothing (`None`/`null`/`nil`) | continue | continue | continue | continue |
+
+Only the first row was a contract. The other three were four accidents.
+Python's crash is literal: `_run_before_middleware` did
+`if result is not None: request, response = result`, so returning `false`
+raised `TypeError: cannot unpack non-sequence bool` and the developer got a
+500 with no clue why.
+
+Three of the four also short-circuited when a before hook left the response at
+status >= 400, whatever it returned. Ruby nested that check inside the
+"did it return a 2-element array" branch, so a hook that set 403 and returned
+`nil` let the handler run anyway. That was proven with a real Request and
+Response, not read from the source.
+
+### The rule that decides it
+
+Per ADR-0012, check the real world first. The real world splits:
+
+- **Django** is return-value driven. A middleware that returns an
+  `HttpResponse` short-circuits; anything else continues.
+  (docs.djangoproject.com, topics/http/middleware.)
+- **Rails** ignores the return value. A `before_action` short-circuits on
+  response STATE. `AbstractController::Callbacks::ClassMethods` states it
+  verbatim: "If the callback renders or redirects, the action will not run. If
+  there are additional callbacks scheduled to run after that callback, they are
+  also cancelled." Note the Action Controller GUIDE is silent on this; the API
+  doc is the citation.
+- **Laravel** and **Express** are return/next driven.
+
+No unanimous answer, so ADR-0012's ladder does not settle this one and it was
+decided on the merits.
+
+The deciding argument is the redirect. A status >= 400 state check cannot
+express one. An auth middleware that sets 302 to `/login` and expects the
+handler not to run gets the handler run anyway, because 302 is not >= 400.
+Any rule built on error status alone has that hole in it, and the hole is in
+the most common middleware anyone writes.
+
+### Decision
+
+**One table, all four frameworks, every hook, every scope.**
+
+| return value | behaviour |
+| --- | --- |
+| a Response object | SHORT-CIRCUIT. That object IS the response. Any status. |
+| the `[req, res]` pair | rebind both, continue |
+| `false` | SHORT-CIRCUIT. Send the response as set; if it is still default or empty, send 403. |
+| nothing (`None`/`null`/`nil`/`undefined`) | continue |
+
+**Returning a Response is the primary rule.** It is explicit, it is
+language-neutral, and it covers every status code including the 3xx that the
+state check cannot reach.
+
+**The status >= 400 state check is retained as a legacy compatibility path,
+not as the mechanism.** Three of the four already had it, and removing it
+would break error middleware that sets 403 and returns nothing. It is
+documented in the code as compatibility, so nobody mistakes it for the design.
+
+Also settled here:
+
+- **Per-route class middleware runs both phases.** A class attached to a route
+  runs its `before_*` hooks AND its `after_*` hooks, in every framework. Python
+  already did. PHP ran only `before*`, so a route-scoped `after*` was dead code.
+  Ruby called `mw.call(request, response)` on the class, which raised
+  `NoMethodError`. Node invoked it as a plain function, so it was inert. An
+  after hook that never runs leaks the release half of an acquire, never stops
+  a timer its before half started, and never logs the response half of a
+  request.
+- **Before hooks run base class first, then subclass.** Measured: Python and
+  Ruby already do; PHP returned derived-then-base on PHP 8.5.7, contradicting
+  its own docblock; Node dropped inherited hooks entirely because
+  `Object.getOwnPropertyNames` returns own statics only.
+- **After hooks keep the same order as before hooks** for now. Zero of the four
+  unwind them across an inheritance chain today, so no unwind is invented here.
+
+### Consequences
+
+- **Breaking, and the risk differs per framework.** In PHP and Node, middleware
+  that is inert today starts executing. In Ruby, the same call raises
+  `NoMethodError` today, so it is broken-to-working. In Python, returning
+  `false` stops being a 500. Each repo's changelog carries a `Breaking:` line
+  saying which of those applies to it.
+- Four regression suites with identical case names, each proven red before the
+  fix, including `a before hook that returns a redirect response short
+  circuits` (the case that forces the Response rule) and `a before hook that
+  sets 4xx and returns nothing skips the handler` (the Ruby security hole).
+- **Not decided here, deliberately:** the after pass runs in REGISTRATION order
+  across middleware classes in all four, so any acquire/release pair spanning
+  two middlewares nests WRONGLY. That is a latent correctness bug, not a
+  stylistic deviation, and it is uniform across the four rather than a parity
+  defect. It changes behaviour in all four at once, so it gets its own ADR
+  instead of riding along in a parity pass that is already carrying three
+  breaking changes. The concrete failure, the measurements, and its
+  interaction with the ADR-0012 pre/post-match split are recorded in
+  `plan/v3/features/007-middleware-pipeline.md`.
+
+**Related:** ADR-0012, and `plan/v3/features/007-middleware-pipeline.md`.
