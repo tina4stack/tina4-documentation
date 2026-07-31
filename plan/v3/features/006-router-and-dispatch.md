@@ -216,6 +216,57 @@ to inline a stage gets a red test rather than a slightly worse number nobody
 reads. The stage-order fixture follows the pattern that worked for the Frond
 expression corpus: same bytes, one answer key, all four frameworks.
 
+## FINDING (2026-07-31): the canonical ten do not describe Ruby
+
+Step 1's characterisation suite is green (`tina4-ruby c7f3921`), and writing it
+required reading `RackApp#call` line by line. That read invalidates part of the
+pattern above, so it is recorded BEFORE any extraction rather than discovered
+half way through one.
+
+Ruby's dispatch has THIRTEEN concerns in this order:
+
+| # | Ruby, as it actually runs | in the canonical ten? |
+| --- | --- | --- |
+| 1 | request-scoped query-cache reset | no |
+| 2 | CORS preflight fast-path | partly - stage 2, but preflight ONLY |
+| 3 | WebSocket upgrade | **no** |
+| 4 | dev dashboard routes (`/__dev`) | **no** |
+| 5 | feedback widget routes (`/__feedback`) | **no** |
+| 6 | static file + swagger (skipped for `/api/`) | stage 5, but EARLIER |
+| 7 | route matching | stage 3 |
+| 8 | HEAD content strip (RFC 9110) | no |
+| 9 | dev inspector capture | no |
+| 10 | request log line | no |
+| 11 | dev overlay injection | no |
+| 12 | feedback widget injection | no |
+| 13 | session save + cookie | stage 10, finalise |
+
+Three things follow, and none of them are cosmetic:
+
+1. **`static_asset` runs BEFORE `match_route` in Ruby**, not after it. The
+   canonical order says stages 4, 5 and 6 run only when stage 3 found nothing.
+   Ruby checks the filesystem first and skips that check entirely for `/api/`.
+   Reordering it is a BEHAVIOUR change (a route and a file at the same path swap
+   precedence), so it cannot ride along inside the extraction.
+2. **Five concerns have no canonical name**: websocket upgrade, dev routes,
+   feedback routes, the dev inspector/logging/overlay group, and session
+   persistence. A ten-stage list forces them into `finalise` or leaves them
+   inline - which is the god-function again, wearing a list.
+3. **There is no `normalise_path` stage at all.** The trailing-slash behaviour
+   the characterisation test pins is not a distinct step here.
+
+The pattern was written from reading four implementations; this is the first one
+read closely enough to enumerate. The other three must be enumerated the same way
+BEFORE the canonical list is fixed, because a shared stage-order fixture (the
+plan's own parity test) is worth nothing if the list was derived from one
+framework's guess.
+
+**Proposed, not yet decided:** the canonical list grows to name the concerns that
+genuinely exist in every framework (upgrade, dev-surface, finalise-group), and
+`static_asset`'s position becomes an explicit decision with its own test pair
+rather than an assumption. Enumerate Node, Python and PHP next, then fix the list
+once, then extract against it.
+
 ## Risks
 
 - **This is the largest refactor in the audit and it touches every request.** The
