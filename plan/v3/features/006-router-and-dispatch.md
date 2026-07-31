@@ -261,11 +261,86 @@ BEFORE the canonical list is fixed, because a shared stage-order fixture (the
 plan's own parity test) is worth nothing if the list was derived from one
 framework's guess.
 
-**Proposed, not yet decided:** the canonical list grows to name the concerns that
-genuinely exist in every framework (upgrade, dev-surface, finalise-group), and
-`static_asset`'s position becomes an explicit decision with its own test pair
-rather than an assumption. Enumerate Node, Python and PHP next, then fix the list
-once, then extract against it.
+### All four enumerated (2026-07-31)
+
+Node, Python and PHP read the same way. The result is that the canonical ten
+describe NONE of them, and the four do not describe each other either.
+
+| concern | ruby | node | python | php |
+| --- | --- | --- | --- | --- |
+| request-cache reset | 1 | 1 | 6 | - |
+| trailing-slash redirect | - | - | 3 | **1** |
+| CORS | 2 (preflight only) | - | 1 (preflight only) | **2 (global mw, FIRST)** |
+| rate limiting | - | - | 2 | - |
+| global middleware (before) | - | 4 | - | 2 |
+| WebSocket upgrade | 3 | outside dispatch | outside dispatch | in routes |
+| dev routes (`/__dev`) | 4 | 8 | 4 | 9 |
+| feedback routes | 5 | - | injection only | 10 |
+| swagger | via static | via static | 5 | - |
+| session | 13 (save, LAST) | **3 (start, EARLY)** | - | - |
+| body parse | - | 5 | in `app` | - |
+| **static asset** | **6, BEFORE match** | **9, BEFORE match** | **fallback, AFTER match** | **none - SAPI serves it** |
+| match route | 7 | 10 | 7 | 5 |
+| matched-route metadata for auth | - | - | 7a | **3** |
+| authorise | inside match | in middleware | inside match | **4** |
+| route middleware | inside match | 4 | inside match | 6 |
+| invoke handler | inside match | 10 | 7 | 7 |
+| template fallback | - | 11 | fallback | 1325/1617 |
+| RFC 9110 405 / OPTIONS | in else-branch | 12 | 7b | - |
+| 404 | in else-branch | 13 | fallback | - |
+| HEAD strip | 8 (late) | **2 (early, wraps write/end)** | 8 (late) | - |
+| dev toolbar / inspector | 9-11 | 6-7 | - | 9 |
+| feedback injection | 12 | - | in `app` | 10 |
+| 500 handling | rescue | 14 | - | - |
+
+**Five findings, each of which changes the work:**
+
+1. **`static_asset` has no agreed position.** Ruby and Node check the filesystem
+   BEFORE matching a route; Python checks it AFTER, in its fallback; PHP has no
+   static stage at all because `php -S` and nginx serve files before `index.php`
+   ever runs (a runtime gift, category 1 - correct, not a gap). So the canonical
+   "stage 5, only when stage 3 found nothing" matches exactly ONE framework.
+   Whichever order wins is a BEHAVIOUR change for two frameworks: a route and a
+   file at the same path swap precedence.
+
+2. **Only PHP runs CORS as global middleware before matching.** That is the
+   ordering the pattern calls "provably correct", and it is why PHP alone emits
+   CORS on a short-circuited 401. Ruby and Python handle preflight only; Node
+   does not do CORS in dispatch at all. This is the same gap the Ruby
+   characterisation suite pinned - it is three frameworks wide, not one.
+
+3. **`authorise` is a real stage only in PHP.** Everywhere else it is buried
+   inside the route-matching block, which is why PHP is also the only framework
+   that had to write down "expose the matched route's metadata BEFORE auth".
+
+4. **HEAD is handled at opposite ends.** Node wraps `write`/`end` EARLY so every
+   later path drops its body; Ruby and Python strip content LATE. Same outcome,
+   opposite mechanism - a stage list has to pick one or admit two.
+
+5. **PHP's `dispatchInner` is 1029 lines (650 of code), not the 423 this plan
+   records.** The measurement is stale. It is the single largest function in the
+   family and it is the last one scheduled, which remains right.
+
+### Revised approach (supersedes the "ten stages" pattern above)
+
+The ten-stage list was derived from reading, before any framework was enumerated.
+It cannot be the shared fixture: a parity test whose answer key came from a guess
+just freezes the guess.
+
+So the sequence changes:
+
+1. The canonical list is DERIVED from the union above, not invented. It must name
+   every concern that exists in more than one framework, and admit the ones that
+   are genuinely single-framework (SAPI static, feedback routes) as optional
+   members rather than pretending they do not exist.
+2. `static_asset`'s position, the CORS ordering, and the HEAD mechanism are three
+   OWNER DECISIONS, because each is a behaviour change in at least two
+   frameworks. They are not refactor details.
+3. Only then does extraction start, and it starts with Ruby, whose behaviour is
+   already frozen (`tina4-ruby c7f3921`).
+
+Nothing has been extracted. Freezing Ruby cost one commit and bought the evidence
+that the plan's own target was wrong - which is exactly what step 1 is for.
 
 ## Risks
 
