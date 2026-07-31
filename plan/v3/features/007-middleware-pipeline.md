@@ -202,6 +202,57 @@ docblock was replaced with what the code does on a named PHP version, and
 Python's orchestrator gained the exception handling its own dispatcher already
 had.
 
+### Independent re-verification
+
+Every suite below was re-run by the auditor at the exact committed HEAD, not
+accepted from the implementing agent. Each run captured the suite's OWN exit
+code, because a run killed partway prints no failure lines and looks cleaner
+than a passing one.
+
+| framework | HEAD | result | exit |
+| --- | --- | --- | --- |
+| python | `b4578b0` | 4381 passed, 37 skipped, 2 failed | 1 |
+| php | `7554ea82` | 4575 tests, 14117 assertions, 0 failures, 48 skipped | 0 |
+| ruby | `fb2f931` | 4639 examples, 7 failures, 47 pending | 1 |
+| node | `ceaf9bc` | 6640 passed, 0 failed, across 217 of 217 files | 0 |
+
+Python's 2 and Ruby's 7 failures are all live-service tests on a machine with no
+services: MySQL and MSSQL connection refusals in `tests/test_batch_insert.py`,
+and a missing `bigdecimal` plus a missing `mongo` gem in Ruby. None is in the
+middleware, router or dispatch area, and the feature-7 commits touch no database
+file. Node was additionally checked for a signal death (`128 + signum`); its
+exit was a real 0, not a 143.
+
+### Negative proofs actually run
+
+A gate that has only ever passed proves nothing, so each was broken on purpose
+and watched go red with its own assertion text, then reverted. Python's
+`__pycache__` was cleared and the LOADED artifact re-checked between probes,
+and PHP runs with `opcache.enable_cli => On`, which is the same stale-bytecode
+hazard in a different cache.
+
+| probe | what was broken | what went red |
+| --- | --- | --- |
+| PY-1 | the Response short-circuit row | 4 cases: `assert skip is True, "a returned Response IS the response - the handler must not run"` |
+| PY-2 | the `False` row | 2 cases: `AssertionError: False means stop`; `assert 200 == 403` |
+| PY-3 | the orchestrator exception gate | 4 cases: `RuntimeError: before hook exploded` escaped |
+| RB-1 | re-nested the status check inside the array branch | `expected false, got true` on `a before hook that sets 4xx and returns nothing skips the handler` |
+| RB-2 | the Response row | `expected false, got true` on the redirect case |
+| RB-3 | route hook dispatch | `expected [] to include :route_before` |
+| RB-4 | the route-level after pass | `expected [:route_before, :handler] to include :route_after` |
+| PHP-1 | the Response row | 3 cases incl. `Failed asserting that 200 is identical to 302` |
+| PHP-2 | reverted discovery to raw `get_class_methods` | discovery returned `["beforeSub","beforeBase"]`; 2 cases red |
+| PHP-3 | route classes dropped from the after pass | exactly 1 case: `testRouteClassMiddlewareRunsItsAfterHook` |
+| N-1 | reverted discovery to own-statics-only | `trace=["sub"] - the inherited hook was dropped by discovery` |
+| N-2 | route middleware stopped recognising a class | 2 route cases, 500 `Class constructor cannot be invoked without 'new'` |
+| N-3 | the Response row and the `false` row | 3 cases incl. `a returned false was ignored` |
+
+Two probes were rejected and redone. A first PHP-3 referenced a variable that
+was not in scope, and a first N-3 replaced the whole result function; each made
+the entire suite fail rather than the named case. A probe that turns everything
+red proves nothing about the specific gate, which is the same trap as reading
+"no FAIL lines" as a pass.
+
 ## What was deliberately left
 
 **The after pass runs in REGISTRATION order across middleware classes, in all
@@ -239,6 +290,36 @@ middleware into pre-match and post-match phases, the after pass now runs over
 BOTH. A correct unwind of `[pre..., post...]` is `[post reversed..., pre
 reversed...]`, not a single reversal of the concatenated list. That interaction
 needs deciding as part of the same ADR.
+
+**The `generate middleware` scaffold teaches the wrong thing, and it is a
+four-way split.** This is a scheduled follow-on, not fixed here, because fixing
+one framework's copy would create fresh drift in the thing developers actually
+copy and paste.
+
+| framework | file:line | what the scaffold teaches |
+| --- | --- | --- |
+| python | `tina4-python/tina4_python/cli/__init__.py:1549` | class hooks; `return (request, response("error", 401))` - the LEGACY status path |
+| ruby | `tina4-ruby/lib/tina4/cli.rb:1633` | class hooks; `[request, response.json({error: ...}, 401)]` - the LEGACY status path |
+| php | `tina4-php/bin/tina4php:2116` | class hooks; "Return null to continue, or a Response to block" - ALREADY the primary rule |
+| node | `tina4-nodejs/packages/cli/src/commands/generate.ts:731` | not a class at all: an Express-style `(req, res, next)` FUNCTION |
+
+Two problems, not one. Python and Ruby teach the compatibility path as if it
+were the mechanism, so every scaffolded middleware inherits a shape that cannot
+redirect. And Node scaffolds a different mechanism entirely: `generate
+middleware` there produces function middleware, not the `before*`/`after*` class
+the other three produce, so the same command yields two different concepts
+depending on the language. PHP is the one that is already right.
+
+**The false cross-reference, now corrected in both places it appeared.** PHP's
+`Tina4/Middleware.php` and Node's `packages/core/src/middleware.ts` both claimed
+their orchestrator "Mirrors Python's `_middleware_500`". It never did:
+`_middleware_500` lived in Python's DISPATCHER, while Python's orchestrator had
+no exception handling at all, so both cited a behaviour that did not exist. The
+behaviour is now real and the symbol is `Middleware.middleware_500`; both
+docblocks name it. Node deliberately keeps one historical mention of the old
+name to explain the correction, which is the only surviving occurrence in the
+four repositories. Worth remembering as a pattern: a cross-reference to another
+language's internals is unverifiable at review time and gets copied onward.
 
 **Also left, and reported rather than unified:** the string-spec REGISTRIES
 disagree. Python knows five names (`ResponseCache`, `RateLimit`, `RateLimiter`,
