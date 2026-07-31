@@ -635,3 +635,54 @@ suite, so this is a Ruby-only gap.
 
 Worse than Ruby's starting point on every axis. Characterisation is already
 green (`test/dispatchCharacterisation.test.ts`, 10 cases), so step 1 holds.
+
+## Step 5 measurements: Node extraction (2026-07-31)
+
+Steps 2 and 3 done for Node, incrementally - five batches, one commit each, so
+a bisect lands on one batch.
+
+| | before | after |
+| --- | --- | --- |
+| `dispatch` | **CC 65**, 485 lines | **off the offender list**, 191 lines |
+| `runMatchedRoute` | - | under 10 (was 15 on first extraction, split again) |
+| `server.ts` avg CC | 4.54 | **3.77** |
+| `dispatchPipeline.ts` (new) | - | MI **34.8**, avg CC 3.88, no complexity offenders |
+
+**Every dispatch-path function is now under CC 10.** 6609 passed, 0 failed
+across 214 files.
+
+The batches: prologue (resetRequestCaches / headStripIntercept /
+sessionAutoStart) -> not-found fallback chain (FALLBACK_STAGES) -> error
+handler -> response-end wrappers -> matched-route pipeline.
+
+`runGlobalMiddlewarePass` is a DRY win rather than a move: the pre-match and
+post-match passes had byte-identical bodies, including the AFTER-ON-4xx rule.
+
+### What did NOT move, and is not pipeline debt
+
+`startServer` measures **CC 45 independently of dispatch** - it did not shift as
+dispatch went 65 -> under 10, so that is its own bootstrap complexity, not
+inherited from the nested function. Its `server.listen` banner callback is 13.
+Recorded so neither is mistaken for dispatch work. `server.ts` MI stays ~0.8
+because the file is still 1190 lines holding bootstrap, static, swagger and
+template concerns.
+
+### Two behaviour details worth recording
+
+1. The unified end-wrapper first NARROWED a behaviour: the original dropped
+   `content-length` for ANY `text/html` response, not only one carrying a body.
+   Caught on review of my own diff and restored - a refactor does not get to
+   change what it did not set out to change.
+2. `matchedPattern` became a HOLDER (`{ value }`) rather than a captured
+   `let`: the end-wrapper reads it at `end()` time, long after route matching
+   assigns it, so a plain string copy would always have read `""`.
+
+### The gate (test/dispatchPipeline.test.ts)
+
+Same shape as Ruby's. One trap, and it is the Ruby trap in a different costume:
+the metrics child must not see `node_modules/.bin` on its PATH. tina4-nodejs
+ships its own `tina4` bin alias, and npx/tsx prepend that directory, so plain
+`tina4 metrics` ran the FRAMEWORK CLI - no `metrics` command, **exit 0, no
+output**. The gate then asserted against an empty result and reported nothing
+wrong. In Ruby the same name was owned by a bundler binstub. Both were found
+only because the helper raises on non-JSON instead of skipping.
