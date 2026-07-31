@@ -5,7 +5,7 @@
     "Feature 8. Health is consumed by something EXTERNAL - a Kubernetes httpGet",
     "probe, a load balancer, an uptime monitor - so the path, the JSON key set",
     "and the status code ARE the feature. Everything below was decided in",
-    "ADR-0014 and is covered by a real, no-mock test in the named suite.",
+    "ADR-0016 and is covered by a real, no-mock test in the named suite.",
     "",
     "Kubernetes reads the STATUS CODE and never the body: HTTPGetAction has no",
     "body-matching field, and success is 200 <= code < 400. That is why the key",
@@ -41,7 +41,7 @@
   "invariants": [
     {
       "id": "liveness-is-process-only",
-      "adr": "ADR-0014",
+      "adr": "ADR-0016",
       "rule": "The health endpoint is a LIVENESS probe. It answers 200 whenever the process can answer at all. A recorded route error never changes the status code, and stale .broken sentinels from a previous run are cleared at boot.",
       "why": "A liveness failure tells Kubernetes to RESTART the container, so it may only react to conditions a restart repairs. A route that raised wrote a .broken sentinel from the request path; Python returned 503 while one existed and nothing cleared them, so ONE bad request took the endpoint down permanently and across restarts. Rails states the same reasoning for probing nothing: an app reporting down because a dependency is down 'may be restarted unnecessarily'.",
       "applies_to": [
@@ -59,7 +59,7 @@
     },
     {
       "id": "body-is-four-keys",
-      "adr": "ADR-0014",
+      "adr": "ADR-0016",
       "rule": "The body carries exactly status, version, uptime and framework. uptime is seconds as a float. Nothing else is added.",
       "why": "It is a wire contract whose whole point is being identical in four frameworks, and Kubernetes never reads it, so every extra key is weight on a probe path for no consumer. Python carried errors/latest_error; once those stopped driving the status code they were diagnostics, and diagnostics belong on the dev dashboard, which still reads .broken.",
       "suites": {
@@ -72,7 +72,7 @@
     },
     {
       "id": "health-path-is-only-ever-added",
-      "adr": "ADR-0014",
+      "adr": "ADR-0016",
       "rule": "The configured path (TINA4_HEALTH_PATH, default /__health) is registered, AND /health is registered as well, always. Setting the env var adds a path and never removes one.",
       "why": "PHP defaulted to /health and registered the configured path ONLY, so /__health 404ed on a default install and setting the env var silently deleted the path an existing load balancer was already using. Either one takes a pod out of rotation on upgrade.",
       "suites": {
@@ -87,7 +87,7 @@
     },
     {
       "id": "registration-cannot-be-suppressed",
-      "adr": "ADR-0014",
+      "adr": "ADR-0016",
       "rule": "Registering the health routes is unconditional. It is idempotent because Router.add replaces a repeated (method, path) in place, not because anything asks the router whether health is already there.",
       "why": "Ruby guarded with find_route('/health', 'GET') while the signature is find_route(METHOD, PATH). The swapped arguments usually matched nothing, but an ANY route matches any path, so an ordinary catch-all made the guard fire and health was never registered: a probe received the application's catch-all response instead. Asking the router 'does something answer here' can never distinguish 'health is registered' from 'something else matches'.",
       "suites": {
@@ -102,7 +102,7 @@
     },
     {
       "id": "python-body-renames",
-      "adr": "ADR-0014",
+      "adr": "ADR-0016",
       "rule": "Python emits `uptime` (float seconds) and `framework` \"tina4-python\", matching its three siblings and the published docs.",
       "why": "Python was the outlier on both, against the other three frameworks AND against its own documentation, which already said `uptime`. No standard prescribes `uptime_seconds`; the one convention covering JSON health bodies (draft-inadarei-api-health-check-06 s4.4) keeps the key bare and puts the unit in a sibling field.",
       "suites": {
@@ -117,14 +117,14 @@
   "specified_not_built": [
     {
       "id": "readiness-endpoint",
-      "adr": "ADR-0014",
+      "adr": "ADR-0016",
       "rule": "A readiness endpoint, separate from liveness, probes the dependencies an app has actually configured and returns 503 when one is down. Readiness withdraws traffic and never restarts.",
       "why": "Liveness restarts; readiness withdraws. A dependency check on liveness turns one database outage into a fleet-wide restart loop that cannot fix the database. No framework probes any dependency today, so this is a new feature rather than a fix.",
       "status": "scheduled separately"
     },
     {
       "id": "dockerfile-healthcheck",
-      "adr": "ADR-0014",
+      "adr": "ADR-0016",
       "rule": "Every Dockerfile, repo and generated, carries a HEALTHCHECK pointing at the liveness path.",
       "why": "Not one of the four repo Dockerfiles, and none of the generated ones, has a HEALTHCHECK today. Whoever adds it must BUILD each image and watch the container reach healthy: several images are Alpine or distroless, and a HEALTHCHECK calling curl in an image without curl fails every probe. Note for the docs: plain `docker run` does not restart a container on healthcheck failure; only Swarm and Kubernetes act on it.",
       "status": "not built - could not be verified on the audit machine (no Docker daemon)"

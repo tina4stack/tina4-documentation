@@ -949,7 +949,7 @@ Also settled here:
 
 ---
 
-## ADR-0014: Liveness is process-only; readiness is a separate endpoint
+## ADR-0016: Liveness is process-only; readiness is a separate endpoint
 
 **Date:** 2026-07-31
 **Status:** Accepted
@@ -1083,4 +1083,7 @@ env var existed keeps working.
 - Readiness, and a `HEALTHCHECK` instruction in the Dockerfiles, are specified
   and outstanding. Neither is built here.
 
-**Related:** ADR-0012, and `plan/v3/features/008-health-check.md`.
+**Related:** ADR-0012 (the decision procedure), ADR-0015 (route precedence -
+a catch-all ANY route shadowed the health route at dispatch; found by this audit,
+fixed separately because it is a framework-wide route contract, not a health
+concern), and `plan/v3/features/008-health-check.md`.

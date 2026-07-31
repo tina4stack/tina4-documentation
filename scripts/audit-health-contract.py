@@ -15,7 +15,7 @@ form all normalise to the same key - because the suites carry the same names in
 each language's own idiom.
 
 Entries under "specified_not_built" are deliberately NOT checked for suites;
-they are the record of what ADR-0014 specified and left for later. They are
+they are the record of what ADR-0016 specified and left for later. They are
 listed in the output so the outstanding work stays visible instead of silently
 becoming permanent.
 
@@ -79,7 +79,7 @@ def main() -> int:
 
     outstanding = fixture.get("specified_not_built", [])
     if outstanding:
-        print(f"\n{len(outstanding)} specified and NOT built (ADR-0014):")
+        print(f"\n{len(outstanding)} specified and NOT built (ADR-0016):")
         for item in outstanding:
             print(f"  - {item['id']}: {item['status']}")
 

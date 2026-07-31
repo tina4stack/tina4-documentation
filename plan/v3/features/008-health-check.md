@@ -180,7 +180,7 @@ Tests, every one proven red against the unfixed code first:
 **Readiness is specified, not built.** A readiness endpoint that probes only the
 dependencies an app actually configured, per backend, tested against real
 services in four languages, is a feature rather than an audit fix. It is
-specified in ADR-0014 and scheduled separately.
+specified in ADR-0016 and scheduled separately.
 
 **`Cache-Control: no-store` is still PHP-only.** A cached health response lets a
 load balancer keep routing to a dead instance. PHP sends the header globally;
@@ -196,13 +196,22 @@ every probe. Anyone adding it must build each image and watch the container reac
 `healthy`. Note for the docs when it lands: plain `docker run` does not restart a
 container on healthcheck failure. Only Swarm and Kubernetes act on it.
 
-**Route precedence was not touched.** A catch-all ANY route shadows a specific
-GET at dispatch, because `find_route` tries the ANY index before the method's own
-bucket (`tina4-ruby/lib/tina4/router.rb:449`) and returns the first match. So an
-app with a catch-all serves that catch-all on the health path even though the
-health route is now correctly registered. This is a framework-wide route contract
-owned by feature 6, not by health, and changing it affects every route in the
-framework. Measured in Ruby only; the other three were not checked.
+**Route precedence was reported, not fixed here, and has since been fixed on
+v3.** A catch-all ANY route shadowed a specific GET at dispatch, because
+`find_route` built its candidate list as `ANY + method` and returned the first
+match. So an app with a catch-all served that catch-all on the health path even
+though the health route was correctly registered. That is a framework-wide route
+contract rather than a health concern, so this audit reported it and left it
+alone; it was fixed separately on v3 in `tina4-ruby 0ad2de1` under ADR-0015,
+which also moved `register_builtin_routes!` into `initialize!` ahead of route
+discovery. That commit is merged into this branch.
+
+The two fixes are independent and both are needed. Reinstating the old
+swapped-argument guard on top of the merged router fix turns two specs red
+again, so removing the guard remains a fix and has not become redundant: the
+router change corrects which route WINS, while the guard bug decided whether
+health was ever REGISTERED. Precedence cannot help when the health route is not
+in the table at all.
 
 ## Migration
 
@@ -217,7 +226,7 @@ new  {"status":"ok","version":"...","uptime":<float>,
 ```
 
 A probe asserting 503-on-`.broken` must stop asserting it. There is nothing to
-probe for yet; dependency readiness arrives with ADR-0014. A consumer reading
+probe for yet; dependency readiness arrives with ADR-0016. A consumer reading
 `uptime_seconds` reads `uptime` instead and gets a float. A consumer matching
 `framework == "tina4py"` matches `"tina4-python"`. A consumer reading `errors` or
 `latest_error` reads them from the dev dashboard instead; `data/.broken` is still
