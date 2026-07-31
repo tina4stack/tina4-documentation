@@ -1231,3 +1231,143 @@ Also settled here:
   `plan/v3/features/007-middleware-pipeline.md`.
 
 **Related:** ADR-0012, and `plan/v3/features/007-middleware-pipeline.md`.
+---
+
+## ADR-0016: Liveness is process-only; readiness is a separate endpoint
+
+**Date:** 2026-07-31
+**Status:** Accepted
+**Context:** Feature 8 (health check endpoint)
+
+### Context
+
+Docker and Kubernetes are the default deployment target, so the health endpoint's
+consumer is an orchestrator, not a human. Measured across the four frameworks at
+3.13.94 (real servers, real HTTP), the endpoint had diverged badly:
+
+| | `/health` | `/__health` | reports failure | probes a dependency |
+| --- | --- | --- | --- | --- |
+| python | 200 | 200 | 503 on a route error | no |
+| php | 200 | 404 | never | no |
+| ruby | 200 | 200 | never | no |
+| node | 200 | 200 | never | no |
+
+No framework probed any dependency. Python was the only one that could report
+failure at all, and it reported the wrong thing:
+
+```
+GET /health                       -> 200
+GET /boom (a route that raises)   -> 500  and writes data/.broken/*.broken
+GET /health                       -> 503
+...process restarted...
+GET /health                       -> 503   nothing clears the sentinel
+```
+
+One ordinary bad request took the endpoint down permanently, across restarts.
+
+### What the authorities say
+
+Per ADR-0012, checked before deciding.
+
+**Kubernetes is unambiguous, and the body is invisible to it.** An `httpGet`
+probe succeeds when the status code is `>= 200 and < 400`
+(https://kubernetes.io/docs/concepts/workloads/pods/probes/, "Check mechanisms").
+The `HTTPGetAction` API has five fields (`path`, `port`, `host`, `scheme`,
+`httpHeaders`) and no body-matching field of any kind, so `200` carrying
+`{"status":"unhealthy"}` reads as healthy. The two failure modes differ
+completely: for liveness "the kubelet kills the container, and the container is
+subjected to its restart policy"; for readiness "the kubelet marks the container
+as not ready, and the Pod stops receiving traffic".
+
+**The IETF health+json draft agrees on the code mapping, and it is NOT a
+standard.** `draft-inadarei-api-health-check-06` expired 2022-04-19 and carries
+the disclaimer "This I-D is not endorsed by the IETF and has no formal standing
+in the IETF standards process". Cite it as a de-facto convention only. It says:
+"For 'pass' status, HTTP response code in the 2xx-3xx range MUST be used. For
+'fail' status, HTTP response code in the 4xx-5xx range MUST be used." It names
+`ok` as an explicitly acceptable alias for `pass`, which is what Tina4 already
+emits.
+
+**The frameworks that ship a health route deliberately probe nothing.**
+
+| framework | path | probes dependencies |
+| --- | --- | --- |
+| Rails 7.1+ | `/up` | no, deliberately |
+| Laravel 11+ | `/up` | no |
+| Django | none shipped | n/a |
+| Express | none shipped | n/a |
+| Spring Boot Actuator | `/actuator/health` | yes, and maps DOWN to 503 |
+| ASP.NET Core | mapped by the app | yes, Unhealthy 503, Degraded 200 |
+
+Rails states the reasoning Tina4 needs, in its own guides: "if a third-party
+service is down and your application reports that it's down due to the
+dependency, your application may be restarted unnecessarily". DHH, in the pull
+request that added it: "I'm not convinced that it's a good idea to have the app's
+health status, which determines whether it'll get yanked from an LB pool, for
+example, dependent on secondary storage. Those elements should have their own
+health checks."
+
+Spring and ASP.NET, which do probe dependencies, both map only hard-down to a
+non-2xx and keep a degraded state at 200.
+
+### Decision
+
+**A failing health check returns a non-2xx status.** 503. Never 200 with a
+failure reported in the body, because nothing reads the body.
+
+**Liveness and readiness are separate endpoints, because they mean opposite
+things.** A liveness failure restarts the container; a readiness failure
+withdraws traffic and restarts nothing. A dependency check on liveness turns one
+database outage into a fleet-wide restart loop that cannot fix the database.
+
+- **`/__health` is LIVENESS and checks the process only.** No database, no cache,
+  no queue, no outbound network. It answers 200 whenever it runs; the response
+  itself is the signal. The only way it fails is that the process cannot answer,
+  which is exactly what a restart repairs.
+- **Readiness is a separate endpoint** that probes configured dependencies and
+  returns 503 when one is down. **Specified here, not built.** It is scheduled
+  separately.
+
+**A recorded route error drives neither.** A restart cannot fix a route file that
+fails to import, so it is not liveness. One broken route should not withdraw all
+traffic from an app whose other routes serve, so it is not readiness. It belongs
+on the dev dashboard, which already reads `data/.broken` in all four frameworks.
+
+**The body is exactly four keys, identical in all four frameworks:**
+
+```json
+{"status": "ok", "version": "3.13.94", "uptime": 12.34, "framework": "tina4-python"}
+```
+
+`uptime` is seconds as a float to 2 decimal places. Note the authority here is
+thinner than it looks: **no standard prescribes `uptime_seconds`**, and the one
+convention that covers JSON health bodies does the opposite, keeping the key bare
+as `uptime` and putting the unit in a sibling `observedUnit: "s"` field
+(draft-inadarei-06 s4.4). The Prometheus base-unit suffix convention
+(https://prometheus.io/docs/practices/naming/) governs metric names in a
+line-delimited text format, not JSON. So `uptime` as a float wins on the only
+applicable convention as well as on internal consistency: three of four
+frameworks already emitted it, and the published docs documented it.
+
+**`/health` is always registered alongside the configured path.** Setting
+`TINA4_HEALTH_PATH` adds a path; it never removes one. A probe written before the
+env var existed keeps working.
+
+### Consequences
+
+- Python's health body changes shape. `Breaking:`, with a migration note.
+  `uptime_seconds` (int) becomes `uptime` (float); `framework` `"tina4py"`
+  becomes `"tina4-python"`; `errors` and `latest_error` are removed; the 503 path
+  is removed. Error diagnostics move to the dev dashboard.
+- PHP gains `/__health` and a permanent `/health` alias. Purely additive.
+- Ruby's registration guard is removed; it could be suppressed entirely by a
+  catch-all route.
+- All four now answer both paths, so one probe definition works against any Tina4
+  app.
+- Readiness, and a `HEALTHCHECK` instruction in the Dockerfiles, are specified
+  and outstanding. Neither is built here.
+
+**Related:** ADR-0012 (the decision procedure), ADR-0015 (route precedence -
+a catch-all ANY route shadowed the health route at dispatch; found by this audit,
+fixed separately because it is a framework-wide route contract, not a health
+concern), and `plan/v3/features/008-health-check.md`.
