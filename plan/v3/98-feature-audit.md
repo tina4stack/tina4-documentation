@@ -273,6 +273,20 @@ see two of its four variant groups.
 | Sessions | **memcached was missing as a SESSION backend in all 4** (it had been a CACHE backend since v3). Added as feature **42.6**; sessions restructured into a GROUP (42.1-42.6) so a new backend stops renumbering the matrix. | SHIPPED all 4 |
 | Sessions | **The sync transport spawned a `node -e` child PER COMMAND** (Node): spawn p50 41ms / p99 487ms plus a fresh TCP connection, and the tail tripped the child's own deadline. That is what made sessionHandlers flaky - the SET timed out for the caller while still LANDING on the server, so the next GET honestly saw nothing. Replaced with one persistent connection behind a worker + Atomics. Redis/Valkey/memcached p50 80ms -> 10.5ms; MongoDB (driver load per command too) p50 230ms -> 11.5ms. Flake: 2-3 failures in 6 runs -> 0 in 20. | SHIPPED (Node only; the other 3 have native sync sockets and never had this) |
 | Cache | **memcached `size` read the GLOBAL `curr_items`**, counting every other tenant's keys - the only leaky backend of seven. And **`clear()` sent `flush_all`, wiping the whole shared server** (Node's was the mirror bug: a no-op that cleared nothing, with a comment claiming a parity that was false in both directions). Both fixed by tracking our own keys + TTLs. | SHIPPED all 4 |
+| Write path | **`db.truncate()` was broken outright in Node on PostgreSQL, MySQL, MSSQL and Firebird.** Those four adapters accepted only an OBJECT filter, and truncate passes the string `"1 = 1"` - so `Object.keys("1 = 1")` yielded the string indices `["0","1",...]` and the statement went out as `WHERE "0" = $1 AND "1" = $2 ...` (PostgreSQL: `column "0" does not exist`). The same hole broke the contract's documented `db.delete(t, "id = ?", [1])` form on all four. sqlite/mongodb/odbc already carried the string branch. Ruby/Python/PHP are immune - their facades normalise the filter before it reaches a driver. | SHIPPED (node `93fd73b`) |
+| Write path | **Primary-key introspection returned NOTHING on PostgreSQL and MSSQL** in Ruby and Node - `columns()` hardcoded `primary_key: false` on both engines in both frameworks. Feature 4's filterless-write guard reads it, so `update(table, data)` keyed on the PK in the data RAISED against every table on those engines. Python and PHP were already correct (INFORMATION_SCHEMA LEFT JOIN); ported from the Python master, and the subquery yields every column of the key so a COMPOSITE key reports true on each. | SHIPPED (ruby `3912b90`, node `93fd73b`) |
+| Write path | **`affected_rows` reported 0 for a write that really changed rows** - Ruby's PostgreSQL and MSSQL drivers exposed no `affected_rows` at all, so `write_affected` fell through to its default of 0, indistinguishable from "matched nothing". MySQL computed the exact count but only INSIDE its INSERT branch. PostgreSQL now tracks `cmd_tuples`, MSSQL captures `TinyTds::Result#do` (which already computed the count and threw it away) plus `@@ROWCOUNT` in the SCOPE_IDENTITY batch, MySQL hoists its existing read. **Still open: Ruby's firebird/odbc/mongodb drivers have no `affected_rows` either** - not fixed because they cannot be verified against a live engine from here. | SHIPPED 3 of 6 engines (ruby `3912b90`) |
+
+**A finding about the audit's own instruments.** `write_path_contract.json` exists,
+byte-identical, in all four repos - and **nothing reads it**. Its two siblings
+(`adapter_contract.json`, `batch_write_contract.json`) ARE consumed by their runners
+in all four, and by production code; this one is orphaned. So the four write-path
+runners are hand-written independently, which is why they have different case counts
+(python 17, ruby 16, php 15, node 14) and divergent case names. That is not cosmetic:
+the fixture declares `a_string_filter_with_params_works_the_same_as_a_hash_filter`,
+**no runner executes it**, and that is exactly the case that would have caught the
+Node truncate bug above. A shared answer key that nothing asserts against is worse
+than none - it reads as coverage. Wiring the four runners to the fixture is queued.
 
 
 
