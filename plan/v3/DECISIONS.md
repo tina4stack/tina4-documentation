@@ -950,8 +950,9 @@ Also settled here:
 ## ADR-0015: Route precedence - does a specific route beat a catch-all? (OPEN)
 
 **Date:** 2026-07-31
-**Status:** OPEN. Scheduled as its own item, not yet decided. Do not implement
-against this entry until it is Accepted.
+**Status:** Accepted, 2026-07-31. Filed OPEN, then decided the same day once the
+four citations were verified against primary documentation. **Outcome: no change
+to route resolution.** A follow-on visibility item is scheduled (see below).
 **Context:** Feature 6 (router and dispatch), follow-on. Surfaced by the feature
 8 (health check) audit.
 **Number note:** ADR-0014 is claimed by the `feature/audit-007` branch
@@ -996,22 +997,48 @@ Today the answer is no, uniformly. A catch-all registered before a specific
 route still shadows it. That is defensible, and it is what the fix standardised
 on, because it was the 3-of-4 behaviour and it fixed the reported bug.
 
-### What must be verified BEFORE deciding
+### What the real world does - VERIFIED against primary documentation
 
-Do not assume specificity-wins is the industry norm. The prior belief going in
-was that it is, and a first pass at the evidence suggests that belief is at
-least half wrong:
+The prior belief going in was that specificity-wins is the industry norm. That
+belief was wrong. Each of the four was checked against its own documentation on
+2026-07-31, not against a recollection and not against a blog post:
 
-- Django resolves `urlpatterns` in order, first match wins.
-- Rails resolves `routes.rb` in order, first match wins.
-- Express matches middleware and routes in registration order.
-- ASP.NET Core endpoint routing is the outlier: it ranks candidates by
-  specificity, with literal segments beating parameterised ones.
+- **Django** - CONFIRMED, normative sentence: "Django runs through each URL
+  pattern, in order, and stops at the first one that matches the requested URL,
+  matching against `path_info`." The docs go further and tell you to exploit it:
+  "Feel free to exploit the ordering to insert special cases like this." No
+  specificity ranking anywhere.
+  Source: https://docs.djangoproject.com/en/stable/topics/http/urls/
+- **Rails** - CONFIRMED, normative sentence: "Order matters in the `routes.rb`
+  file. Rails routes are matched in the order they are specified." The guide's
+  own example shows `resources :photos` declared first swallowing a later
+  `get 'photos/poll'`, and instructs you to move the specific route above it.
+  Source: https://guides.rubyonrails.org/routing.html
+- **Express** - CONFIRMED in direction, WEAKER in kind. The docs demonstrate it
+  by example rather than stating a rule: of two handlers on the same path, "The
+  second route will not cause any problems, but it will never get called because
+  the first route ends the request-response cycle." Definition order decides, and
+  no specificity ranking appears anywhere in the routing or middleware guides.
+  Label this honestly when citing it: supported by primary docs, but not by a
+  single normative sentence the way Django and Rails are.
+  Source: https://expressjs.com/en/guide/using-middleware.html
+- **ASP.NET Core** - CONFIRMED as the outlier, and more strongly than expected.
+  It has explicit route-template precedence: literal segments beat parameter
+  segments, more segments beat fewer, constrained parameters beat unconstrained,
+  catch-all parameters rank last. And registration order is explicitly NOT a
+  factor: "The order of operations inside UseEndpoints doesn't influence the
+  behavior of routing", and endpoint routing "Doesn't provide ordering
+  guarantees. All endpoints are processed at once." Ambiguous matches throw.
+  Source: https://learn.microsoft.com/en-us/aspnet/core/fundamentals/routing
 
-If that holds, registration order is the mainstream and Tina4 is already
-conformant, making this ADR a no-change. VERIFY each of the four against its
-own primary documentation before writing the decision. Cite the doc, not a
-recollection and not a blog post.
+**Three of four resolve by registration order. Tina4 already matches the
+majority**, and has since `tina4-ruby 0ad2de1` brought Ruby into line.
+
+Worth recording for anyone tempted by the ASP.NET model later: it is not a
+tiebreak bolted onto first-match. It is a different architecture - every
+endpoint is evaluated, candidates are ranked, and an unresolvable tie is an
+exception rather than a silent winner. Adopting it is a rewrite of route
+resolution in four languages, not an added comparison.
 
 ### The argument that specificity may still be right FOR US
 
@@ -1040,19 +1067,52 @@ route resolution harder to reason about than "first one wins".
    specific patterns beat less. Closest to ASP.NET Core. Most code, biggest
    behaviour change, hardest to explain.
 
-### Recommendation
+### Decision
 
-Verify the four citations first. If registration order is confirmed as the
-mainstream, prefer option 1 and spend the effort on making the order VISIBLE
-instead: a startup warning when a catch-all is registered ahead of a route it
-would shadow, and `tina4 routes` output that shows resolution order. That
-targets the invisibility problem, which is the real complaint, without making
-route resolution harder to reason about.
+**Option 1. No change to route resolution.** Forward registration order,
+first match wins, in all four. Three of the four frameworks we measure against
+do exactly this, and the fourth achieves its ordering by an architecture we are
+not adopting. Tina4 is already conformant.
 
-### Consequences of leaving it open
+The specificity idea is rejected on its own merits, not merely on precedent:
+it is more code in four languages, it makes resolution harder to reason about
+than "first one wins", and the failure it was proposed to fix has already been
+fixed at its real cause.
 
-None urgent. The reported bug is fixed and all four agree on one rule, so there
-is no live parity gap. This is a design question, not a defect.
+### The one thing the citations do NOT settle
+
+Django, Rails and Express all have the developer WRITE the order, explicitly,
+in one file they can read top to bottom. Tina4 does not: order comes
+substantially from auto-discovery walking a directory, so it is a
+filesystem-traversal detail nobody chose and nobody can see. The mainstream
+comparison establishes that registration order is the right RULE; it says
+nothing about our order being invisible.
+
+That is the real complaint behind the original bug report, and it survives this
+decision.
+
+### Scheduled follow-on: make the order visible
+
+Filed as its own item, not built here. Two pieces, both additive and neither
+touching resolution:
+
+1. A startup warning when a catch-all is registered ahead of a route it would
+   shadow, naming both routes. Cheap, and it converts a silent shadowing into
+   an obvious one.
+2. Resolution order shown in `tina4 routes` output, so "which route wins" is a
+   question you can answer without reading the router.
+
+This targets invisibility directly and costs far less than a ranking rule.
+
+### Consequences
+
+- No code change. All four already behave this way.
+- The documentation must state plainly that a catch-all registered before a
+  specific route shadows it, and that discovery order is registration order.
+- `tina4-ruby 0ad2de1` (the parity fix and the built-ins-register-first fix)
+  stands as the resolution of the reported bug.
+- Anyone reopening this should read the ASP.NET note above first: that model is
+  a rewrite, not a tweak.
 
 **Related:** ADR-0010 (routes beat files), ADR-0012 (settle a contract against
 real-world frameworks), and `plan/v3/features/006-router-and-dispatch.md`.
