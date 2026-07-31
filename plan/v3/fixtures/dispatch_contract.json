@@ -143,6 +143,25 @@
       "cases": [
         "dispatch noauth write route is not blocked by csrf"
       ]
+    },
+    {
+      "id": "pipeline-order-is-data",
+      "adr": null,
+      "rule": "Each framework declares its dispatch stages as an ordered DATA structure, and a contract suite proves the declaration matches what dispatch really runs. Ordering lives in those lists - no stage calls another stage.",
+      "why": "Every invariant above is an ORDERING claim, and an ordering that lives only in the reading order of one long function is not checkable and regrows the moment someone inlines a step. This is the structural invariant the other seven rest on: it is what makes the four pipelines comparable line by line, and what turns 'the extraction happened' into 'the extraction holds'.",
+      "structural_not_behavioural": "Unlike the others, this describes how the code is ORGANISED rather than what a request does, so it is proved by a contract suite reading the source rather than by driving a request.",
+      "mechanism_is_per_runtime": "Ruby uses module-level symbol arrays, PHP class constants, Node exported const arrays, Python module tuples of the functions themselves. Two checks are legitimately per-language and are therefore NOT shared cases: privacy (PHP asserts ReflectionMethod::isPrivate, Python a leading underscore, Ruby module scope, Node absence from the package index - Node has no private functions) and the arity check (Node pins only the prologue, whose stages take the raw request/response).",
+      "suites": {
+        "ruby": "spec/dispatch_pipeline_spec.rb",
+        "python": "tests/test_dispatch_pipeline.py",
+        "php": "tests/DispatchPipelineTest.php",
+        "nodejs": "test/dispatchPipeline.test.ts"
+      },
+      "cases": [
+        "the pipeline declares its stages in order",
+        "has no unnamed stage",
+        "a stage does not reach into another stage"
+      ]
     }
   ]
 }
