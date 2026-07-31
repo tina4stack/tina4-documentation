@@ -1,0 +1,148 @@
+{
+  "_comment": [
+    "The dispatch contract: ONE answer key, four frameworks.",
+    "",
+    "Feature 6 step 4. The plan originally wanted a shared fixture of STAGE NAMES,",
+    "following the Frond expression corpus. Enumerating the four proved that cannot",
+    "work: the canonical ten stages described NONE of them, and the four do not",
+    "describe each other. Node streams and wraps write/end early where Ruby and",
+    "Python strip late; PHP has no WebSocket stage because its routes carry that;",
+    "only Python has rate limiting in dispatch. A fixture of names would freeze one",
+    "framework's shape and call the other three broken.",
+    "",
+    "What IS shared is the ORDERING and the OUTCOMES - and every entry below was",
+    "decided by an ADR and is already covered by a real test in all four. This file",
+    "is the index of that contract, so a fifth framework, or a rewrite of any of",
+    "these four, has one place to conform to.",
+    "",
+    "Each invariant names the suite that proves it. Those suites carry IDENTICAL",
+    "case names across the four, which is what makes them comparable line by line."
+  ],
+  "version": 1,
+  "decided": "2026-07-31",
+  "invariants": [
+    {
+      "id": "routes-beat-files",
+      "adr": "ADR-0010",
+      "rule": "A registered route always wins over a file at the same path. Static resolution happens AFTER route matching, never before.",
+      "why": "A file can arrive from a build step, an upload directory or a careless deploy. It must never silently shadow a reviewed route.",
+      "suites": {
+        "ruby": "spec/dispatch_characterisation_spec.rb",
+        "python": "tests/test_dispatch_characterisation.py",
+        "php": "tests/DispatchCharacterisationTest.php",
+        "nodejs": "test/dispatchCharacterisation.test.ts"
+      },
+      "cases": [
+        "a route wins over a file at the same path",
+        "a file is still served when no route matches",
+        "an api path needs no special case now that routes win"
+      ]
+    },
+    {
+      "id": "head-carries-no-body",
+      "adr": "ADR-0011",
+      "rule": "A HEAD response carries no content on EVERY path - routed, static, template, 404, 405, 500 - and still reports the Content-Length the equivalent GET would have sent.",
+      "why": "RFC 9110 s9.3.7 MUST, plus its SHOULD on matching headers. HEAD is what link checkers and monitoring probes use to AVOID transferring a body; returning one makes every check cost a full download.",
+      "mechanism_is_per_runtime": "Node wraps write/end early because it streams and has no single exit. Ruby, Python and PHP strip late at their single return. The CONTRACT is the outcome, not the mechanism.",
+      "suites": {
+        "ruby": "spec/head_no_body_conformance_spec.rb",
+        "python": "tests/test_head_no_body_conformance.py",
+        "php": "tests/HeadNoBodyConformanceTest.php",
+        "nodejs": "test/headNoBodyConformance.test.ts"
+      },
+      "cases": [
+        "a head on a static asset carries no body",
+        "a head on a routed response carries no body",
+        "a head on a 404 carries no body",
+        "a head still reports the content length the get would have sent",
+        "a get on a static asset still returns the body"
+      ]
+    },
+    {
+      "id": "middleware-order",
+      "adr": "ADR-0012",
+      "rule": "pre-match globals -> match -> post-match globals -> auth gate -> route middleware -> handler.",
+      "why": "The globals run BEFORE the gate so a rate limiter can throttle a brute-force login and an access log records the 401. The route's own middleware runs AFTER it, so middleware on a secured route never processes an unauthenticated request. Django, Laravel, Rails and ASP.NET all order it this way.",
+      "suites": {
+        "ruby": "spec/global_middleware_split_spec.rb",
+        "python": "tests/test_global_middleware_split.py",
+        "php": "tests/GlobalMiddlewareSplitTest.php",
+        "nodejs": "test/globalMiddlewareSplit.test.ts"
+      },
+      "cases": [
+        "pre match middleware runs on a path with no route at all",
+        "pre match middleware output survives a 401",
+        "pre match middleware does not open a secured route",
+        "post match middleware does not run when no route matched"
+      ]
+    },
+    {
+      "id": "after-pass-covers-both-phases",
+      "adr": "ADR-0012",
+      "rule": "The after pass runs over EVERY global middleware, both phases, not just the post-match group.",
+      "why": "The response phase must cover everything the request phase entered. Running only the post-match group leaked one slot per request from any acquire/release pair, unbounded, and inverted: the hook fired on the error path and not the happy one.",
+      "suites": {
+        "ruby": "spec/global_after_middleware_spec.rb",
+        "python": "tests/test_global_after_middleware.py",
+        "php": "tests/GlobalAfterMiddlewareTest.php",
+        "nodejs": "test/globalAfterMiddleware.test.ts"
+      },
+      "cases": [
+        "a global after hook runs on a matched route",
+        "a pre match middlewares after hook also runs",
+        "an acquire release pair stays balanced",
+        "a global after hook does not run on an unmatched path"
+      ]
+    },
+    {
+      "id": "options-carries-allow",
+      "adr": "ADR-0013",
+      "rule": "Every successful OPTIONS response carries Allow, derived from the router's real method set - including a CORS preflight. Allow and Access-Control-Allow-Methods are different values on purpose.",
+      "why": "RFC 9110 s9.3.7 SHOULD. Allow is what the RESOURCE supports; ACAM is what the CORS POLICY permits cross-origin. A policy naming DELETE on a GET-only route is still a 405, so a client reading only ACAM is misled.",
+      "suites": {
+        "ruby": "spec/options_allow_conformance_spec.rb",
+        "python": "tests/test_options_allow_conformance.py",
+        "php": "tests/OptionsAllowConformanceTest.php",
+        "nodejs": "test/optionsAllowConformance.test.ts"
+      },
+      "cases": [
+        "a bare options carries allow",
+        "a cors preflight also carries allow",
+        "a real preflight is still answered by cors",
+        "allow describes the resource not the policy"
+      ]
+    },
+    {
+      "id": "rfc-9110-status-shape",
+      "adr": null,
+      "rule": "A known path with an unsupported method is 405 with Allow, not 404. An unknown path is 404. OPTIONS on a known path is 204 with Allow.",
+      "why": "RFC 9110 s15.5.6 + s10.2.1. Answering 404 for a wrong-method request hides the resource's existence from a client that could have corrected itself.",
+      "suites": {
+        "ruby": "spec/dispatch_characterisation_spec.rb",
+        "python": "tests/test_dispatch_characterisation.py",
+        "php": "tests/DispatchCharacterisationTest.php",
+        "nodejs": "test/dispatchCharacterisation.test.ts"
+      },
+      "cases": [
+        "dispatch known path wrong method returns 405 with allow",
+        "dispatch options on known path returns 204 with allow",
+        "dispatch unknown path returns 404"
+      ]
+    },
+    {
+      "id": "matched-route-metadata-reaches-auth",
+      "adr": null,
+      "rule": "The matched route's metadata is on the request BEFORE the auth gate and before post-match middleware, so a route marked noAuth/@noauth is honoured.",
+      "why": "PHP shipped this bypass as DEAD CODE once: the metadata was assigned after the check, so a @noauth POST guarded by CSRF was wrongly blocked with 403.",
+      "suites": {
+        "ruby": "spec/dispatch_characterisation_spec.rb",
+        "python": "tests/test_dispatch_characterisation.py",
+        "php": "tests/DispatchCharacterisationTest.php",
+        "nodejs": "test/dispatchCharacterisation.test.ts"
+      },
+      "cases": [
+        "dispatch noauth write route is not blocked by csrf"
+      ]
+    }
+  ]
+}

@@ -886,3 +886,78 @@ The Content-Length case earns its place: s9.3.2's SHOULD is that a HEAD carries
 the same headers as the equivalent GET. Stripping the body while dropping the
 length would satisfy the MUST and still leave the probe useless, which is
 exactly the kind of half-fix a test suite should refuse.
+
+---
+
+## Step 4: the four stage lists compared (2026-07-31)
+
+Measured from the source, not read off the plan.
+
+| framework | dispatch stages | expressed AS DATA | lists | coverage |
+| --- | --- | --- | --- | --- |
+| Ruby | 20 | 20 | 4 | **100%** |
+| Python | 12 | 8 | 1 | 67% |
+| Node | 15 | 8 | 2 | 53% |
+| PHP | 16 | **0** | **0** | **0%** |
+
+### FINDING 1: "the list is data" is only true in Ruby
+
+The whole point of the extraction was that the pipeline becomes readable and
+comparable WITHOUT reading an implementation. Only Ruby delivers that. PHP has
+16 well-named, individually-tested dispatch methods and no list at all - the
+order lives in the reading order of `dispatchInner`, which is exactly what the
+extraction set out to replace.
+
+That is a parity gap in the DELIVERABLE, not in behaviour, and it is why PHP
+and Python still have no contract gate: there is no list for a gate to assert.
+
+**Not fixed here.** Adding a stage list to PHP and completing Python's and
+Node's is follow-on work, and it is mechanical rather than behavioural.
+
+### FINDING 2: a shared list of stage NAMES is impossible, and that is fine
+
+The plan wanted a fixture of stage names following the Frond expression corpus.
+Enumerating the four proved that cannot work - it is the same conclusion the
+"canonical ten describe NONE of them" finding reached, now confirmed after the
+extraction rather than before it:
+
+- **Node** wraps `write`/`end` early because it streams; Ruby, Python and PHP
+  strip late at their single return (ADR-0011).
+- **Only Python** has rate limiting as a dispatch stage.
+- **Only Node** has a landing-page stage.
+- **Only Ruby** has WebSocket upgrade in dispatch; PHP carries it on routes,
+  Node and Python handle it outside dispatch entirely.
+- **Trailing-slash redirect** is a stage in Python and PHP, absent in Ruby and
+  Node.
+
+A name fixture would freeze one framework's shape and call the other three
+broken.
+
+### What IS shared: `plan/v3/fixtures/dispatch_contract.json`
+
+Seven ORDERING and OUTCOME invariants - the things every framework must satisfy
+regardless of how it is built. Each names its ADR, the suite that proves it in
+each of the four, and the case names, which are identical across the four so
+the suites compare line by line.
+
+`scripts/audit-dispatch-contract.py` verifies the fixture describes reality:
+every named suite exists, and every named case is present in it. **96 (case x
+framework) pairs checked.**
+
+It found two real gaps on its first run - which is the point of writing it:
+
+1. PHP's `GlobalAfterMiddlewareTest` had no `an acquire release pair stays
+   balanced` case, so PHP alone was not asserting the thing that made the
+   after-pass bug serious rather than cosmetic.
+2. Node's characterisation suite had no `dispatch noauth write route is not
+   blocked by csrf` case - the one that catches the metadata-reaches-auth
+   bypass PHP once shipped as dead code.
+
+Both added. The checker is proven able to fail (a case no framework has reports
+4 problems and exits 1), so it can gate CI.
+
+Writing case 2 also caught an error of MINE before it became a bug report: the
+fixture route used `export const meta = { noAuth: true }`, but Node reads a
+TOP-LEVEL `export const noAuth`. The test failed with a 401 and looked exactly
+like a framework bug. Checking how the framework actually reads the flag, rather
+than filing it, was the difference.
