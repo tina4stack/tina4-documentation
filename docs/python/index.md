@@ -561,7 +561,7 @@ async def products(request, response):
 
 ### Health Endpoint <a href="#health" id="health"></a>
 
-Built-in at `/health`. Returns `{"status": "ok", "uptime": 123.4}`. Configure with `TINA4_HEALTH_PATH` env var.
+Built-in at `/__health`, with `/health` always registered too. Returns `{"status": "ok", "version": "3.13.94", "uptime": 123.4, "framework": "tina4-python"}`. Configure the path with `TINA4_HEALTH_PATH`. It is a liveness probe: it reports on the process, never on a database or cache.
 
 ### DI Container <a href="#container" id="container"></a>
 
