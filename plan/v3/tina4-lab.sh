@@ -174,7 +174,12 @@ check_env_contract() {
   # suite reads for its own purposes (TINA4_TEST_MODE, TINA4_TEST_WRITE_PATH...)
   # is not part of the infra contract and must not be flagged.
   local svc='MYSQL|MSSQL|PG|POSTGRES|MONGO|REDIS|VALKEY|MEMCACHED|RABBITMQ|KAFKA|SMTP|IMAP'
-  local suffix='USERNAME|PASSWORD|USER|PASS|HOST|PORT|DB|URL'
+  # NOTE: _URL is deliberately NOT here. A *_URL var is an OVERRIDE whose UNSET
+  # state is meaningful - the suites compose a credentialed URL from the parts
+  # when it is absent. Demanding it be exported made me export a credential-less
+  # URL that broke 13 PHP tests which had been passing. The contract this gate
+  # guards is the CREDENTIALS and COORDINATES, not the overrides.
+  local suffix='USERNAME|PASSWORD|USER|PASS|HOST|PORT|DB'
 
   local read_vars
   read_vars="$(grep -rhoE "TINA4_TEST_($svc)_($suffix)\b" \
@@ -586,15 +591,17 @@ export TINA4_TEST_MYSQL_HOST=localhost TINA4_TEST_MYSQL_PORT=3306
 # credential bug for months and, before that, TINA4_TEST_PG_DB2 (see above).
 # Passing by luck is not passing; export them so the lab is the source of truth.
 export TINA4_TEST_PG_USERNAME=tina4 TINA4_TEST_PG_PASSWORD=tina4
-export TINA4_TEST_PG_URL=postgres://tina4:tina4@localhost:55432/tina4_py
 export TINA4_TEST_MONGO_HOST=localhost TINA4_TEST_MONGO_PORT=27017
 export TINA4_TEST_REDIS_HOST=localhost TINA4_TEST_REDIS_PORT=6379
 export TINA4_TEST_MEMCACHED_HOST=localhost TINA4_TEST_MEMCACHED_PORT=11211
 # GreenMail is the ONLY real SMTP+IMAP the Messenger tests can round-trip.
 export TINA4_TEST_SMTP_HOST=localhost TINA4_TEST_SMTP_PORT=3025
 export TINA4_TEST_IMAP_HOST=localhost TINA4_TEST_IMAP_PORT=3143
-export TINA4_TEST_MYSQL_URL=mysql://localhost:3306/tina4_test
-export TINA4_TEST_MSSQL_URL=mssql://localhost:1433/tina4_test
+# NOT exported: TINA4_TEST_{MYSQL,MSSQL,PG}_URL. UNSET is LOAD-BEARING for these -
+# the suites treat an absent URL as "compose one from the parts above", and they
+# compose it WITH credentials. Exporting a credential-less URL displaced that and
+# produced 'Access denied for user ...' on 13 PHP tests. A *_URL var is an
+# OVERRIDE, not part of the credential contract; see check_env_contract.
 # The suites read _USERNAME/_PASSWORD (41 usages across the four); the short
 # _USER/_PASS form is read by NOTHING. Exporting only the short form made every
 # mysql/mssql test fall through to its own default (root, empty password) and fail
