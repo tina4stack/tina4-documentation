@@ -2129,3 +2129,232 @@ revert of the line it guards:
 `response_cache_never_stores_vary_asterisk`.
 
 **Related:** ADR-0012, ADR-0019, and `plan/v3/features/043-caching.md`.
+## ADR-0021: A session id is opaque, and an unverified credential is not an auth result
+
+**Date:** 2026-08-01
+**Status:** Accepted
+**Context:** Features 41 (JWT) and 42 (session handling)
+
+### Context
+
+The feature 41/42 audit measured all four implementations from source and then
+ran the measured behaviour against a real filesystem, a real HMAC, and the real
+route gates. Two of the findings are exploitable, and they share one shape:
+a value the CLIENT chooses is trusted by the framework for something it was
+never allowed to decide.
+
+**Finding 1 - the session cookie steered a filesystem path.** The
+`tina4_session` cookie value is used verbatim as a path component by the file
+session backend, which is the default backend in all four.
+
+| | id to filename | traversal outcome |
+| --- | --- | --- |
+| python | `sha256(id)` | safe |
+| ruby | `id.gsub(/[^a-zA-Z0-9_-]/, "")` | safe (but silently COLLAPSES distinct ids) |
+| php | `storagePath . '/' . id . '.json'` | **arbitrary file create/write** |
+| node | `join(storagePath, id + ".json")` | **arbitrary `.json` read + overwrite** |
+
+Reproduced, not inferred. On PHP 8.5.7 / macOS 26.5.2 a cookie of
+`tina4_session=../../../OUTSIDE/pwned` wrote an attacker-named `.json` file
+outside the session directory with partly attacker-chosen content. On Node
+24.9.0 a cookie of `tina4_session=../../../OUTSIDE/appconfig` made
+`session.all()` return the contents of a `.json` file outside the session
+directory and the subsequent `save()` overwrote it. Node is narrower only
+because `start()` discards an id whose read returns null, so the target must
+already exist and parse as JSON.
+
+RFC 6265 s4.1.1 permits `/` and `.` in a cookie-octet, so both are ordinary,
+legal cookies that any HTTP client can send. Neither needs authentication.
+
+**Finding 2 - Python returned a truthy auth result for credentials it never
+checked.** `Auth.authenticate_request()` decoded `Authorization: Basic` and
+returned `{"auth_type": "basic", "username": ..., "password": ...}`. Nothing
+verified those credentials against anything. PHP, Ruby and Node all returned
+null for a Basic header. The documented Python idiom is
+`auth = Auth.authenticate_request(request.headers)  # verified payload, or None`,
+so an application following the documentation authenticated every caller that
+sent a base64 string. The framework's own callers happened to survive because
+they read `user_id`/`sub`/`id`/`email`, which Basic never sets - but the public
+API is the product, and the public API was wrong.
+
+The existing Python test suite ASSERTED this behaviour as correct
+(`test_basic_auth` checked for a truthy payload carrying the submitted
+password), which is why it survived so long.
+
+### What the standards say
+
+Per ADR-0012, standards outrank internal precedent.
+
+**Session ids.** There is no RFC for session identifiers, so the authority is
+the OWASP Session Management Cheat Sheet, which requires the session id to be
+"meaningless to prevent information disclosure attacks" - a pure lookup token
+that carries no structure the server interprets. A value the server splits on
+`/` and resolves against a directory is the opposite of meaningless. CWE-22
+(Improper Limitation of a Pathname to a Restricted Directory) is the matching
+weakness class. Note the direction of the SHOULD/MUST distinction here: OWASP
+is guidance, not a MUST, but the traversal it prevents is a straightforward
+CWE-22 defect and does not need a standard to justify fixing.
+
+**`exp`.** RFC 7519 s4.1.4 is decisive and is a MUST: "The processing of the
+'exp' claim requires that the current date/time MUST be before the expiration
+date/time listed in the 'exp' claim." Acceptance therefore requires `now < exp`,
+so `now >= exp` MUST be rejected. Ruby alone had this right. PHP read an integer
+clock and tested `>`, so it accepted an expired token for a **full extra
+second** - a genuine one-second interop disagreement with Ruby. Python and Node
+tested `>` against a FLOAT clock, where `>` and `>=` differ only on an exactly
+integral instant, so their defect was theoretical rather than observable. Every
+mainstream library agrees with Ruby: PyJWT, `jsonwebtoken`, `firebase/php-jwt`
+and `ruby-jwt` all reject at `now >= exp`.
+
+**`exp` / `nbf` types.** RFC 7519 s2 defines both as a NumericDate, "a JSON
+numeric value". A claim that is present but not numeric is malformed. PHP, Ruby
+and Node all SKIPPED the check when the value was not numeric (`isset` is false
+for `null`; Ruby's `payload["exp"] &&` is falsy for `nil`; Node tested
+`typeof === "number"`), so a malformed `exp` read as a token that never expires.
+Python compared `bool` as an integer, dating `"exp": true` to 1970.
+
+**Cookies.** RFC 6265 s4.1.1 defines cookie-octet as including `/` and `.`, so
+the traversal payload is a conforming cookie. This is cited to establish that
+the attack needs no malformed input, not as a rule anyone violated.
+
+### Decision
+
+**1. A session id is OPAQUE, and only a KNOWN one is adopted.** All four
+frameworks apply two gates to an incoming session id, and failing either mints a
+fresh id instead of adopting the supplied one:
+
+- **Well-formed.** It must match `[A-Za-z0-9_-]{1,128}`. The file handlers
+  additionally refuse a non-conforming id as defence in depth, and derive the
+  filename from a SHA-256 of the id rather than from the id itself.
+- **Known (STRICT MODE).** The store must already hold that session. A
+  well-formed id the store has never seen is discarded too, because adopting one
+  is textbook session fixation: an attacker plants a cookie, the victim logs in
+  under it, and the attacker replays the id they chose.
+
+Strict mode is what PHP itself does by default (`session.use_strict_mode=1`),
+and what Django and Rails do. Tina4 for Node already behaved this way; Python,
+PHP and Ruby adopted any well-formed cookie id and are now stricter than they
+were. Per ADR-0012 the standard and the mainstream agree, so this is settled
+rather than a matter of internal taste.
+
+**Breaking, and it has an operational cost worth stating plainly:** deploying
+this logs every existing session out once, because an old cookie now misses (the
+filename derivation changed) and is discarded. `start("some-new-id")` also stops
+returning that id for a session the store does not hold - write the session
+first, or let the framework mint the id.
+
+The constraint is on the **alphabet, not the length**. Unguessability is
+guaranteed by the framework's own minting, not by inspecting an id a trusted
+caller passed on purpose; an application is entitled to run
+`session.start("my-session-id")` with an id it manages itself, and an entropy
+floor would break that without closing any attack. An entropy floor was tried
+first and broke five existing tests that legitimately used short programmatic
+ids - the failures were the design telling us the rule was wrong.
+
+The filename derivation is deliberately NOT changed for valid ids. Renaming
+existing session files would log every user out on deploy, and it buys nothing
+once the id is validated.
+
+**2. An unverified credential is never an auth result.** Python's `Basic`
+branch is deleted. `authenticate_request` verifies a Bearer JWT, then falls back
+to a Bearer API key, and returns null otherwise - the shape PHP, Ruby and Node
+already had. An application wanting Basic auth decodes the header itself and
+verifies against its own user store.
+
+**3. The API-key auth result key is `_auth` everywhere.** It was `_auth` in PHP
+and Node, `auth_type` in Python, and `api_key` in Ruby - one successful
+authentication reading three different ways. PHP and Node are the majority and
+the shape is already the more generic one, so Python and Ruby move. **Breaking**
+for Python and Ruby; both carry a migration note.
+
+**4. `exp` is tested with `>=` against an integer-second clock in all four.**
+The RFC requires it, every mainstream library does it, and truncating to integer
+seconds is what makes the boundary byte-identical across the family rather than
+merely close.
+
+**5. A present but malformed `exp` / `nbf` REJECTS the token.** A malformed
+constraint must never read as "no constraint". A token with no `exp`/`nbf` claim
+at all remains unconstrained, which keeps this non-breaking for tokens already
+in circulation.
+
+**6. A backend OUTAGE is not an unknown id.** Strict mode discards an id the
+store does not know. A store that does not ANSWER is not evidence of that, so an
+unreachable backend keeps the supplied id and degrades to an empty session. The
+first Python implementation got this wrong - its read helper swallowed the
+exception and returned empty, so an outage rotated the session id on every
+request, logging every user out and orphaning their stored sessions. Both the
+PHP and the Ruby ports independently refused to copy it, which is how it was
+caught. The backend-failure policy is degrade, never rotate.
+
+**7. The API key is compared in constant time everywhere, including the route
+gates.** Python's `core.server._check_auth` and Ruby's
+`RackApp.enforce_route_auth` compared the bearer token against `TINA4_API_KEY`
+with a plain `==`, while both frameworks already shipped a timing-safe
+`validate_api_key`. The gates now route through it.
+
+### Rejected alternative: an entropy floor on the session id
+
+The first implementation used `[A-Za-z0-9_-]{16,128}`, adding a 16-character
+minimum on the theory that a short id is brute-forceable. It was tried and
+REVERTED, and the reasoning is recorded so nobody re-proposes it.
+
+It broke five existing tests that passed legitimate short PROGRAMMATIC ids -
+`session.start("my-session-id")`, `"test-session"`, `"session-abc"`. Those are
+trusted callers managing their own id, not attackers. And the floor closes no
+attack: unguessability comes from the framework's own minting
+(`secrets.token_urlsafe(32)` and friends), never from inspecting an id an
+application passed on purpose. The vulnerability was the ALPHABET - the `.` and
+`/` that turn a cookie into a path - and never the length.
+
+The general rule this is an instance of: **a fix that breaks correct callers to
+defend against a threat it does not actually address is a worse bug than the one
+it closes.** The five failures were the design telling us the rule was wrong,
+not five tests needing an edit.
+
+### Three failure modes this audit hit, recorded because they generalise
+
+**1. A test can pin a vulnerability as intended behaviour.** Python's
+`test_basic_auth` asserted that `authenticate_request` returned a truthy dict
+carrying the submitted username and password. That IS the bypass, written down
+as the expected result and shipped green. The suite was passing the entire time
+the hole was open, and no amount of additional coverage would have caught it -
+only reading the assertion and asking what it actually claims. Treat a green
+security test as unverified until someone has read what it asserts.
+
+**2. A gate that greps source rather than parsing it eventually lies.** The
+first version of the timing-safe test asserted `"validate_api_key" in source`.
+When the break-it probe reverted the call to a plain `==`, the test still
+PASSED - satisfied by a COMMENT that mentioned the function name. It was rewritten
+to walk the AST and assert the function is actually CALLED. Any check that
+pattern-matches source text instead of parsing it has this failure mode.
+
+**3. You cannot prove a fix works by testing the fixed thing.** The first
+`exp`-boundary verification extracted `Tina4/Auth.php` from `HEAD` - by which
+point the port had already been committed, so it measured the FIXED file and
+reported the boundary as correct. Redone against the true pre-audit revision, the
+original PHP accepted a token at `exp == now`. A negative proof must name the
+revision it ran against, not "the current tree".
+
+### Deliberately NOT decided here
+
+**The API-key bypass in the write-route gate.** Python and Ruby honour a bearer
+`TINA4_API_KEY` at the route gate; PHP and Node do not, so the same API key
+authenticates a write in two frameworks and gets a 401 in the other two. Two-two,
+no standard governs it, and it is a capability question rather than a defect.
+Recorded, escalated, not resolved here.
+
+**Session identity never reaches a cache key.** The response cache keys on
+method plus URL with no header input in all four (`response:GET:${req.url}` in
+Node, `cacheKey(method, url)` in PHP and Ruby), so on a `@secured()` GET one
+user's response can be served to another. The session id lives only in the
+`Cookie` header, which is not an input to the key.
+
+The resolution is NOT to fold identity into the key. It is that an authenticated
+response is not stored at all, per RFC 9111 s3.5, which needs no identity in the
+key and avoids the per-user-key-on-a-shared-backend poisoning surface. That
+change belongs to feature 19/20 and is owned by ADR-0020; this audit supplies
+only the identity half and the reproduction.
+
+**Related:** ADR-0012 (standards outrank internal precedent), ADR-0020
+(response cache keying), and
+`plan/v3/features/041-042-auth.md`.
