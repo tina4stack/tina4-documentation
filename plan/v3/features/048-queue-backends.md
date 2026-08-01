@@ -117,6 +117,13 @@ backend (which is exactly what a restarted worker is).
 This is the same failure class as the original Mongo no-ack incident, in a
 different backend, and it is currently shipping.
 
+**`no-ack=true` is not an oversight here. It is forced.** See F2a: the connection
+is already gone by the time `pop()` returns, and an AMQP delivery tag is
+meaningless once its channel closes. Asking for `no-ack=false` in the current
+design would requeue the message the instant the child process exits, so `pop()`
+would hand back a job that is simultaneously still on the queue. The author had
+no third option.
+
 ### F2. Node Kafka never advances: every `pop()` re-reads offset 0 (QUEUE CANNOT DRAIN)
 
 `tina4-nodejs/packages/core/src/queueBackends/kafkaBackend.ts:465` hardcodes the
@@ -138,6 +145,38 @@ Live proof, on a pre-created topic holding two records:
 The first record is redelivered forever and every later record is unreachable.
 The existing test does not see this because it uses a fresh topic per assertion
 and never pops twice.
+
+### F2a. Root cause of F1 and F2: Node's external backends spawn a process per call
+
+Both of the above are one architectural fact, not two coding mistakes. Every
+RabbitMQ, Kafka and MongoDB operation in Node runs as a brand new child process:
+
+    // rabbitmqBackend.ts:570, and the same shape in kafkaBackend.ts and mongoBackend.ts
+    const result = execFileSync(process.execPath, ["-e", script], { ... });
+
+The generated script connects, performs exactly one operation, and calls
+`sock.destroy(); process.exit(...)`. No connection, channel, consumer or session
+survives between `push`, `pop` and `complete`.
+
+That makes acknowledgement impossible in principle, in both protocols:
+
+- **AMQP.** A delivery tag identifies a delivery on a CHANNEL. `pop()`'s channel
+  is closed before `pop()` returns, so there is no tag left to ack and no
+  connection on which to send the ack. Hence F1.
+- **Kafka.** A consumer group's offset belongs to a consumer SESSION. Every
+  `pop()` is a new process, so a new consumer, so a fresh session that has joined
+  no group and knows no committed offset. Hence F2, and hence the dead
+  `API_OFFSET_COMMIT` and unused `groupId`.
+
+**So F1 and F2 cannot be fixed by adding an ack.** Node needs a persistent
+connection held on the backend instance, the way Python, PHP and Ruby already do,
+before it can offer at-least-once on either broker. That is a redesign of the
+Node external queue transport, not a patch, and it should be scoped and sized
+before anyone attempts it.
+
+Node's MongoDB backend escapes the consequence only because Mongo's reservation
+model is stateless across connections: the reservation lives in the document, not
+in the session. It pays the same per-call process-spawn cost.
 
 ### F3. Python Kafka `fail()` destroys a job that still has retries (LOSES WORK) [FIXED]
 
