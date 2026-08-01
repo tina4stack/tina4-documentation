@@ -1879,10 +1879,29 @@ the attack needs no malformed input, not as a rule anyone violated.
 
 ### Decision
 
-**1. A session id is OPAQUE.** All four frameworks validate an incoming session
-id against `[A-Za-z0-9_-]{1,128}` and, on failure, DISCARD it and mint a fresh
-one rather than adopting it. The file handlers additionally refuse a
-non-conforming id as defence in depth.
+**1. A session id is OPAQUE, and only a KNOWN one is adopted.** All four
+frameworks apply two gates to an incoming session id, and failing either mints a
+fresh id instead of adopting the supplied one:
+
+- **Well-formed.** It must match `[A-Za-z0-9_-]{1,128}`. The file handlers
+  additionally refuse a non-conforming id as defence in depth, and derive the
+  filename from a SHA-256 of the id rather than from the id itself.
+- **Known (STRICT MODE).** The store must already hold that session. A
+  well-formed id the store has never seen is discarded too, because adopting one
+  is textbook session fixation: an attacker plants a cookie, the victim logs in
+  under it, and the attacker replays the id they chose.
+
+Strict mode is what PHP itself does by default (`session.use_strict_mode=1`),
+and what Django and Rails do. Tina4 for Node already behaved this way; Python,
+PHP and Ruby adopted any well-formed cookie id and are now stricter than they
+were. Per ADR-0012 the standard and the mainstream agree, so this is settled
+rather than a matter of internal taste.
+
+**Breaking, and it has an operational cost worth stating plainly:** deploying
+this logs every existing session out once, because an old cookie now misses (the
+filename derivation changed) and is discarded. `start("some-new-id")` also stops
+returning that id for a session the store does not hold - write the session
+first, or let the framework mint the id.
 
 The constraint is on the **alphabet, not the length**. Unguessability is
 guaranteed by the framework's own minting, not by inspecting an id a trusted
@@ -1926,13 +1945,6 @@ with a plain `==`, while both frameworks already shipped a timing-safe
 
 ### Deliberately NOT decided here
 
-**Strict session mode (session fixation).** Python, PHP and Ruby ADOPT a
-well-formed session id that the store has never seen; Node discards it and mints
-a new one. Node matches PHP's own `session.use_strict_mode=1`, Django and Rails,
-and is the better behaviour. Changing the other three is a behaviour change with
-a real blast radius (`start(id)` would stop round-tripping), so it is recorded
-here and escalated rather than taken unilaterally.
-
 **The API-key bypass in the write-route gate.** Python and Ruby honour a bearer
 `TINA4_API_KEY` at the route gate; PHP and Node do not, so the same API key
 authenticates a write in two frameworks and gets a 401 in the other two. Two-two,
@@ -1940,9 +1952,16 @@ no standard governs it, and it is a capability question rather than a defect.
 Recorded, escalated, not resolved here.
 
 **Session identity never reaches a cache key.** The response cache keys on
-method plus URL with no header input in all four, so on a `@secured()` GET one
-user's response can be served to another. That is feature 19/20 territory
-(ADR-0020) and is recorded in both audits.
+method plus URL with no header input in all four (`response:GET:${req.url}` in
+Node, `cacheKey(method, url)` in PHP and Ruby), so on a `@secured()` GET one
+user's response can be served to another. The session id lives only in the
+`Cookie` header, which is not an input to the key.
+
+The resolution is NOT to fold identity into the key. It is that an authenticated
+response is not stored at all, per RFC 9111 s3.5, which needs no identity in the
+key and avoids the per-user-key-on-a-shared-backend poisoning surface. That
+change belongs to feature 19/20 and is owned by ADR-0020; this audit supplies
+only the identity half and the reproduction.
 
 **Related:** ADR-0012 (standards outrank internal precedent), ADR-0020
 (response cache keying), and
