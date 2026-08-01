@@ -1786,3 +1786,204 @@ documents it, so nothing is lying. It is a gap, recorded and not built here.
 
 **Related:** ADR-0012, ADR-0013, and
 `plan/v3/features/010-cors-middleware.md`.
+
+---
+
+## ADR-0019: The rate limiter keys on the socket peer, and middleware never opens a gate
+
+**Date:** 2026-08-01
+**Status:** Accepted
+**Context:** Features 11 (rate limiter), 12 (response types), 79 (route groups)
+**Number note:** 0019 was assigned centrally so four parallel audit branches
+could not collide. 0020 is caching, 0021 auth, 0022 queues.
+
+### Context
+
+The routing-surface audit measured three defects that share one shape: a
+security control that could be turned off by something the developer never
+connected to security.
+
+**1. The rate limiter believed a header any client can write.** All four
+frameworks keyed the limiter on `X-Forwarded-For` (Ruby, PHP and Node also on
+`X-Real-IP`) with no trusted-proxy allow-list. Measured in Python through the
+real dispatch path, `TINA4_RATE_LIMIT=3`:
+
+| client behaviour | statuses over 6 requests |
+| --- | --- |
+| fixed `X-Forwarded-For` | 200, 200, 200, 429, 429, 429 |
+| rotating `X-Forwarded-For` | 200, 200, 200, 200, 200, 200 |
+
+A full bypass. The worse half is that the key is not just self-selected, it is
+selectable for OTHER PEOPLE: a client that forges a victim's address exhausts
+the victim's bucket. That is a denial-of-service primitive against a third
+party, not merely an evasion, and it is what justifies a breaking change.
+
+**2. Group middleware silently un-secured every write route inside the group,
+in Python only.** Measured through the real auth gate, same handler, no token:
+
+```
+POST /probe/plain      (no group)              -> 401   correctly gated
+POST /probe/grp/thing  (group with middleware) -> 200   gate gone
+```
+
+The middleware attached was a do-nothing audit hook. `Router.add` carried an
+`elif has_middleware: auth_required = False` branch, and group middleware is
+merged into that same list, so adding request logging to a group made every
+`POST`/`PUT`/`PATCH`/`DELETE` in it public.
+
+**3. PHP and Ruby discarded an explicitly-set status code**, so
+`$response->status(429)->json(...)` returned **200**. PHP's own rate-limit
+middleware ends in exactly that call, so PHP answered 200 to requests it was
+blocking. A client reads the status, not the prose, so a throttled client was
+told it succeeded and never backed off.
+
+### The authorities, checked against primary sources
+
+Per ADR-0012's order: standard first, then the frameworks' own behaviour, then
+add-on libraries, then internal precedent.
+
+**RFC 6585 section 4 (429 Too Many Requests)** governs the response and was read
+in full rather than recalled. Its normative content is weaker than the folklore:
+
+- "The response representations **SHOULD** include details explaining the
+  condition, and **MAY** include a Retry-After header indicating how long to
+  wait before making a new request."
+- "Responses with the 429 status code **MUST NOT** be stored by a cache."
+- It defines **no** `X-RateLimit-*` or `RateLimit-*` header fields at all.
+
+So `Retry-After` on a 429 is a MAY, not a MUST. We emit it in all four, which
+exceeds the requirement; that is a deliberate courtesy, not conformance, and it
+should not be written up as conformance.
+
+The `RateLimit-Limit` / `RateLimit-Remaining` / `RateLimit-Reset` header fields
+are **NOT a published RFC**. They remain an IETF draft. They are therefore not
+cited here as a standard, and the de-facto `X-RateLimit-*` spelling is kept.
+
+The cache MUST NOT binds **caches**, not origin servers, and 429 is not among
+the status codes a cache may store heuristically, so a conformant cache will not
+store our 429 even though we send no `Cache-Control`. Recorded as belt-and-braces
+worth adding later, explicitly **not** as a violation.
+
+**No standard covers which hop is the client**, so the frameworks decide, and
+they are unanimous that the forwarding header is not trusted by default.
+
+- **Express** - `trust proxy` **defaults to `false`**: "If `false`, the app is
+  understood as directly facing the client and the client's IP address is
+  derived from `req.socket.remoteAddress`. This is the default setting." When
+  enabled, `req.ip` is "populated based on the socket address and
+  `X-Forwarded-For` header, **starting at the first untrusted address**". The
+  docs also warn that without the last proxy overwriting the header "it may be
+  possible for the client to provide any value".
+  Source: https://expressjs.com/en/guide/behind-proxies.html
+- **Rails / Rack** - `Rack::Request#ip` rejects trusted proxies from the
+  forwarded chain and takes the last remaining entry;
+  `config.action_dispatch.trusted_proxies` extends the default private-range
+  list. Same rule, same direction.
+- **Django** - ships no trusted-proxy setting and its documentation directs you
+  to `REMOTE_ADDR`, treating `HTTP_X_FORWARDED_FOR` as untrusted input.
+- **ASP.NET Core** - forwarded headers are processed only by
+  `ForwardedHeadersMiddleware`, which is opt-in and whose `KnownProxies` /
+  `KnownNetworks` default to loopback only.
+
+Express's "starting at the first untrusted address" is decisive on the second
+question and matches Rack: within the chain, the **rightmost entry that is not
+itself a trusted proxy** is the client. Taking the leftmost - which is what all
+four Tina4 frameworks did - is no safer than trusting the header outright,
+because a client can PREPEND its own hop and a proxy appends rather than
+replaces.
+
+On middleware and the auth gate, the field is equally clear and ADR-0012 already
+settled the ordering half of it: middleware is additive, and enforcement is a
+separate, explicit, route-scoped decision. Nowhere does attaching a logging
+component remove an authentication requirement.
+
+### Decision
+
+**1. The client key is the raw socket peer unless the peer is a declared proxy.**
+A new `TINA4_TRUSTED_PROXIES` takes a comma-separated list of exact addresses
+and/or CIDR ranges, IPv4 and IPv6. It is **empty by default: trust nothing**.
+`X-Forwarded-For` and `X-Real-IP` are read only when the peer matches it, and
+within the chain the rightmost non-trusted hop wins.
+
+CIDR is supported as well as exact addresses because a Kubernetes deployment
+cannot enumerate pod IPs; an exact-only list would be unmaintainable there, and
+a control people cannot configure is a control they switch off. IPv4-mapped IPv6
+peers (`::ffff:10.0.0.1`) are unmapped before matching, because that is what a
+dual-stack listener hands out - notably `socket.remoteAddress` in Node.
+
+**This fails CLOSED.** An app behind an unconfigured proxy now buckets every
+client under the proxy address and over-limits. That is a degraded service. The
+previous behaviour was an open door plus a starvation primitive against third
+parties. For a security control that asymmetry decides it.
+
+A malformed entry is skipped and logged as an error, once per distinct config
+value. Skipping fails closed; staying silent about it would leave a real proxy
+untrusted and look like the app over-limiting everyone, which is an expensive
+typo to debug.
+
+**2. Middleware is purely additive and never changes the auth gate.** The
+`has_middleware` branch is deleted from Python. `@noauth()` remains the explicit
+way to open a write route.
+
+**3. `json`/`html`/`text`/`xml` preserve an explicitly-set status** in PHP and
+Ruby, via a null sentinel instead of a defaulted `200`.
+
+### The primitive already existed, and that is the strongest evidence
+
+This is rung 2 of the reuse ladder, not new code. Every framework already
+carried the trustworthy value under a name that says so:
+
+- `tina4-python` `request.remote_ip` - "Raw socket peer (never X-Forwarded-For)
+  - for trust decisions"
+- `tina4-php` `Request::$remoteIp` - "NEVER honours X-Forwarded-For (which any
+  caller can spoof), so it can be trusted for security decisions"
+- `tina4-ruby` `env["REMOTE_ADDR"]`, used by the MCP gate for exactly this reason
+- `tina4-nodejs` `req.socket.remoteAddress`
+
+The MCP authorisation gate already keys on it. Tina4 made this call once, wrote
+down why, and the rate limiter did not get it. That is what makes this a bug
+rather than a design choice, and it tells the next person where the correct
+primitive lives. Ruby and Node gained a named `remote_ip` / `remoteIp` here so
+all four now expose it.
+
+### "Python is master" was wrong again, and that is worth recording
+
+ADR-0012 demoted internal precedent below real-world behaviour. This audit is
+direct evidence the demotion was right:
+
+| defect | Python | PHP | Ruby | Node |
+| --- | --- | --- | --- | --- |
+| middleware disables the auth gate | **yes** | no | no | no |
+| nested group prefix dropped | **yes** | no | no | no |
+| group middleware runs twice | **yes** | no | no | no |
+| explicit status discarded | no | **yes** | **yes** | no |
+
+On the group-auth hole Python is the sole outlier, and the other three had
+already fixed it - `tina4-nodejs/packages/core/src/router.ts` annotates its own
+version "parity with PY-10-02", naming Python as the framework that had the bug.
+Applying "Python is master" here would have propagated a security hole into
+three healthy frameworks. Second occurrence in this programme after the
+middleware-ordering case in ADR-0012.
+
+### Consequences
+
+- **Breaking:** an app behind a proxy must set `TINA4_TRUSTED_PROXIES` or every
+  client shares one bucket. Migration: set it to the proxy or pod range, e.g.
+  `TINA4_TRUSTED_PROXIES=10.0.0.0/8`.
+- **Breaking, Python only:** a write route inside a group that carries
+  middleware is now GATED. An app that relied on middleware to open it must say
+  `@noauth()`. Any app that did rely on it was shipping an unintentionally
+  public endpoint.
+- **Breaking, Python only:** a nested group now registers at the path it
+  declares. A route that was silently landing on the outer prefix moves to the
+  correct one.
+- **Breaking, PHP and Ruby:** `json`/`html`/`text`/`xml` keep a status set by a
+  preceding `status(N)` instead of resetting it to 200.
+- `X-RateLimit-Reset` is an absolute Unix timestamp in PHP, Ruby and Node, and
+  a duration in seconds in Python. PHP emitted it nowhere and now does.
+  **Python remains the outlier and is NOT changed here** - see the difference
+  table in `plan/v3/features/011-012-079-routing-surface.md`.
+
+**Related:** ADR-0012 (settle a contract against real-world frameworks),
+ADR-0015 (route precedence), and
+`plan/v3/features/011-012-079-routing-surface.md`.
