@@ -459,3 +459,38 @@ The parity mandate is therefore NOT satisfied. Python has moved ahead of the
 other three on F3, F4 and F10, which is a new drift this audit created and which
 the follow-up must close. The fix designs are settled in ADR-0022 and the ports
 are mechanical; what is missing is the work and its live tests, not the decision.
+
+## Proof the gates can fail
+
+Each fix was reverted surgically, one behaviour at a time, and only the intended
+tests went red. A probe that reddens the whole suite proves nothing, so the
+green count is reported alongside each.
+
+| Probe | What was reverted | Red | Green |
+| --- | --- | --- | --- |
+| A | the else-branch re-produce in Kafka `fail()`, nothing else | the 3 `TestKafkaJobLifecycleLive` cases, with "was DROPPED", "buried the failed A" and "never reached the dead-letter topic" | 148 |
+| B | RabbitMQ `fail()` back to `reject(requeue=True)`, dead-letter branch untouched | `test_rabbitmq_fail_past_max_retries_reaches_dead_letters` and `test_rabbitmq_fail_carries_the_attempt_count_across_a_redelivery` | 149 |
+| C | the delivery-tag map made to behave as a single slot, storage shape kept so the "inert" tests stay valid | `test_rabbitmq_complete_acknowledges_that_job_not_the_last_popped` and the existing `test_full_enqueue_dequeue_acknowledge_cycle` | 149 |
+
+All three reverted cleanly and the suites returned to 151 passed.
+
+Separately, all six new tests were run RED against the unfixed code before any
+fix was written, and each failed with its own message rather than an error.
+
+## Test evidence
+
+Queue suites (`tests/test_queue.py`, `tests/test_queue_backends.py`,
+`tests/test_cli_queue.py`) with `TINA4_REQUIRE_SERVICES=1`:
+
+- before: 129 passed, 0 skipped, exit 0 (the CLI suite adds 16, the audit adds 6)
+- after: **151 passed, 0 skipped, exit 0**
+
+Full Python suite: 4429 passed, 26 skipped, 2 failed, 10 errors, exit 1. The 2
+failures (`test_mysql_batch_insert_list_of_dicts`,
+`test_mssql_batch_insert_list_of_dicts`) and the 10 MQTT-TLS errors are
+pre-existing and unrelated to the queue: the same 2 fail identically at the
+pre-audit tree, checked by restoring it and re-running.
+
+Measured on macOS 25.5.0 arm64, Python 3.14.5, RabbitMQ 3.13.7, Kafka
+localhost:9092, MongoDB 7.0.39. **Not run on Linux or Windows, and the PHP,
+Ruby and Node suites were not re-run because nothing was changed in them.**
