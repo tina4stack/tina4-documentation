@@ -229,6 +229,64 @@ session layer already fixed: `TINA4_SESSION_BACKEND` raises on an unknown name,
 naming the bad value and the valid set. Internal precedent is settled and
 consistent, so the cache now matches it in all four.
 
+## FINDING 6: the persistent DB query cache crashed every `fetch_one` in Python
+
+`fetch()` yields a `DatabaseResult`; `fetch_one()` yields a plain dict or None.
+Python's persistent serializer read `result.records` unconditionally, so the
+moment `TINA4_DB_CACHE=true` was set, every `fetch_one()` raised:
+
+```
+File "tina4_python/database/connection.py", line 260, in _serialize_result
+    "records": result.records, "count": result.count,
+AttributeError: 'dict' object has no attribute 'records'
+```
+
+The opt-in persistent cache was therefore unusable with `fetch_one`. PHP, Ruby
+and Node all already carried a shape marker in the cached envelope; Python was
+the 1-of-4 outlier again. Fixed with an explicit `_shape` field, and the
+cross-process write-invalidation path then verified end-to-end against live
+PostgreSQL and live Redis:
+
+```
+PROC A read  -> ORIGINAL   (populates the shared redis cache)
+PROC B read  -> ORIGINAL   (fresh process, cross-process hit)
+PROC C WRITE -> mutated
+PROC D read  -> MUTATED    (invalidation crossed the process boundary)
+```
+
+## FINDING 7 (OPEN, not fixed): `clear()` is a no-op on the raw RESP path
+
+`RedisBackend.clear()` deletes the namespace only when the native client
+library is present. On the zero-dependency raw RESP path it does nothing:
+
+- python: `elif self._use_raw:` ... `pass` ("let TTL handle cleanup")
+- php: `// Raw RESP path: no easy pattern delete - let TTL handle cleanup`
+- ruby: `elsif @use_raw` ... `# rely on TTL`
+- node: implements it, `KEYS prefix*` then `DEL`
+
+Three of four therefore never invalidate. Since the raw path is what a
+zero-dependency install uses, this is the DEFAULT configuration, not an edge
+case. Measured in PHP, with `TINA4_DB_CACHE=true`, redis backend, no ext-redis:
+
+```
+A read  -> ORIGINAL
+B read  -> ORIGINAL   (fresh process, shared cache working)
+C mutate
+D read  -> ORIGINAL   <- STALE. the write never invalidated anything
+```
+
+So the persistent DB cache's headline property, "multiple instances share one
+cache with global write-invalidation", does not hold on the default driver
+path in Python, PHP or Ruby. `cache_clear()` and the response cache's
+`clear_cache()` are equally inert there.
+
+Not fixed here, deliberately. Node's implementation is the obvious template,
+but `KEYS` is a blocking O(N) command that is explicitly discouraged against a
+production Redis, so copying it into three more frameworks is a decision about
+the invalidation strategy (`SCAN` with a cursor, a generation counter in the
+key prefix, or per-key tracking) rather than a typo fix. It needs its own ADR
+and its own cross-framework tests. Recorded with the repro instead of rushed.
+
 ## Confirmed correct, no change needed
 
 **The documented graceful fallback is real in all four.** Pointed at a genuinely
@@ -276,6 +334,7 @@ Named identically in all four so the gate is greppable across the stack:
 | `response_cache_never_stores_vary_asterisk` | yes | yes | yes | yes |
 | `cache_backend_unknown_name_raises` | yes | yes | yes | yes |
 | `cache_backend_known_names_do_not_raise` | yes | yes | yes | yes |
+| `db_cache_persistent_fetch_one_round_trips` | yes | - | - | - |
 | `frond_fragment_cache_defaults_to_sixty_seconds_without_ttl` | - | yes | - | - |
 | `frond_fragment_cache_ttl_zero_is_not_cached` | - | yes | - | - |
 
@@ -292,7 +351,7 @@ At the commit this ships:
 
 | | before | after | notes |
 | --- | --- | --- | --- |
-| python | 100 passed | 106 passed | `test_cache`, `test_cache_backends`, `test_db_query_cache` |
+| python | 100 passed | 109 passed | `test_cache`, `test_cache_backends`, `test_db_query_cache` |
 | php | 242 tests, 2234 assertions | 251 tests, 2257 assertions | 9 cache test files |
 | ruby | 144 examples, 1 pending | 152 examples, 1 pending | pending is the mongo gem, absent before and after |
 | node | 259 passed | 270 passed | 6 cache test files, 0 skipped, typecheck green |
