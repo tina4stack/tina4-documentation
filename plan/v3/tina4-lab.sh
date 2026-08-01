@@ -148,6 +148,61 @@ die() { c_bad "$*"; exit 1; }
 #
 # Every check names the fix. A preflight that only says "failed" makes the person
 # you handed this to come back and ask you.
+# --- env contract gate ------------------------------------------------------
+#
+# WHY THIS EXISTS. The credential env vars have TWO ends: this script EXPORTS
+# them (cmd_infra_env) and the four suites READ them. Nothing checked that the
+# two agreed, so they drifted: infra env exported TINA4_TEST_MYSQL_USER/_PASS
+# while all four suites read TINA4_TEST_MYSQL_USERNAME/_PASSWORD. Every mysql and
+# mssql test silently fell through to its own default (root, empty password).
+#
+# It survived for months because a long-lived container happened to allow
+# passwordless root - so the suites were GREEN for the wrong reason - and only
+# surfaced when the containers were recreated. It was then diagnosed, written
+# down, and STILL not fixed, so it cost a second debugging session.
+#
+# A note is not a fix. This is the fix: the contract is now machine-checked, so
+# the next drift fails here instead of six weeks later as "Access denied".
+check_env_contract() {
+  local repos="$1" fail=0
+  [ -d "$repos" ] || { c_warn "env contract: no repos at $repos -- run 'repos sync' to enable this check"; return 0; }
+
+  local exported
+  exported="$(cmd_infra_env 2>/dev/null)"
+
+  # Only CREDENTIAL/CONNECTION vars for services this script provisions. A var a
+  # suite reads for its own purposes (TINA4_TEST_MODE, TINA4_TEST_WRITE_PATH...)
+  # is not part of the infra contract and must not be flagged.
+  local svc='MYSQL|MSSQL|PG|POSTGRES|MONGO|REDIS|VALKEY|MEMCACHED|RABBITMQ|KAFKA|SMTP|IMAP'
+  local suffix='USERNAME|PASSWORD|USER|PASS|HOST|PORT|DB|URL'
+
+  local read_vars
+  read_vars="$(grep -rhoE "TINA4_TEST_($svc)_($suffix)\b" \
+                 "$repos"/tina4-python/tests \
+                 "$repos"/tina4-php/tests \
+                 "$repos"/tina4-ruby/spec \
+                 "$repos"/tina4-nodejs/test 2>/dev/null | sort -u)"
+
+  [ -n "$read_vars" ] || { c_warn "env contract: found no TINA4_TEST_* reads -- check the repo paths"; return 0; }
+
+  local missing=""
+  local v
+  for v in $read_vars; do
+    printf '%s\n' "$exported" | grep -q "\b$v=" || missing="$missing $v"
+  done
+
+  if [ -z "$missing" ]; then
+    c_ok "env contract: every credential var the suites read is exported ($(printf '%s\n' "$read_vars" | wc -l | tr -d ' ') checked)"
+  else
+    c_bad "env contract: READ by the suites but NOT exported by 'infra env':"
+    for v in $missing; do echo "       $v"; done
+    echo "       -> those tests will fall through to their own defaults and fail"
+    echo "          misleadingly (e.g. 'Access denied ... using password: NO')."
+    fail=1
+  fi
+  return $fail
+}
+
 cmd_doctor() {
   local fail=0
   echo "=== tina4-lab doctor ==="
@@ -246,6 +301,10 @@ cmd_doctor() {
     echo "  NOT ready -- fix the !! lines above, then re-run doctor"
     return 1
   fi
+
+  # The credential env vars have two ends and they have drifted before; check
+  # that what we export is what the suites actually read.
+  check_env_contract "$ROOT" || fail=1
 
   # A missing language client is as fatal to coverage as a missing service.
   clients_report
@@ -520,8 +579,32 @@ export TINA4_TEST_MQTT_TLS_URL=mqtts://127.0.0.1:8883
 export TINA4_TEST_MQTT_EMQX_URL=mqtt://127.0.0.1:1885
 export TINA4_TEST_MQTT_CA_FILE=MQTT_CA_PLACEHOLDER
 export TINA4_TEST_MYSQL_HOST=localhost TINA4_TEST_MYSQL_PORT=3306
+# --- vars the suites READ that this block never exported ------------------
+# Found by check_env_contract on 2026-08-01. Each was falling through to the
+# test's own default. Most of those defaults happen to be localhost + the right
+# port, so they passed BY LUCK - the same mechanism that hid the mysql
+# credential bug for months and, before that, TINA4_TEST_PG_DB2 (see above).
+# Passing by luck is not passing; export them so the lab is the source of truth.
+export TINA4_TEST_PG_USERNAME=tina4 TINA4_TEST_PG_PASSWORD=tina4
+export TINA4_TEST_PG_URL=postgres://tina4:tina4@localhost:55432/tina4_py
+export TINA4_TEST_MONGO_HOST=localhost TINA4_TEST_MONGO_PORT=27017
+export TINA4_TEST_REDIS_HOST=localhost TINA4_TEST_REDIS_PORT=6379
+export TINA4_TEST_MEMCACHED_HOST=localhost TINA4_TEST_MEMCACHED_PORT=11211
+# GreenMail is the ONLY real SMTP+IMAP the Messenger tests can round-trip.
+export TINA4_TEST_SMTP_HOST=localhost TINA4_TEST_SMTP_PORT=3025
+export TINA4_TEST_IMAP_HOST=localhost TINA4_TEST_IMAP_PORT=3143
+export TINA4_TEST_MYSQL_URL=mysql://localhost:3306/tina4_test
+export TINA4_TEST_MSSQL_URL=mssql://localhost:1433/tina4_test
+# The suites read _USERNAME/_PASSWORD (41 usages across the four); the short
+# _USER/_PASS form is read by NOTHING. Exporting only the short form made every
+# mysql/mssql test fall through to its own default (root, empty password) and fail
+# with 'Access denied ... using password: NO'. It survived for months only because
+# a long-lived container happened to allow passwordless root; recreating the
+# containers exposed it. Both spellings are emitted so neither side can drift.
+export TINA4_TEST_MYSQL_USERNAME=root TINA4_TEST_MYSQL_PASSWORD=tina4
 export TINA4_TEST_MYSQL_USER=tina4 TINA4_TEST_MYSQL_PASS=tina4 TINA4_TEST_MYSQL_DB=tina4_test
 export TINA4_TEST_MSSQL_HOST=localhost TINA4_TEST_MSSQL_PORT=1433
+export TINA4_TEST_MSSQL_USERNAME=sa TINA4_TEST_MSSQL_PASSWORD='TinaSQL123!Secure'
 export TINA4_TEST_MSSQL_USER=sa TINA4_TEST_MSSQL_PASS='TinaSQL123!Secure' TINA4_TEST_MSSQL_DB=tina4_test
 ENVBLOCK
 }
