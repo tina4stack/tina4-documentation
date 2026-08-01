@@ -1786,3 +1786,138 @@ documents it, so nothing is lying. It is a gap, recorded and not built here.
 
 **Related:** ADR-0012, ADR-0013, and
 `plan/v3/features/010-cors-middleware.md`.
+
+---
+
+## ADR-0022: The queue promises at-least-once, and each backend keeps that promise the way its protocol allows
+
+**Date:** 2026-08-01
+**Status:** Accepted
+**Context:** Feature 48 (queue backends), `plan/v3/features/048-queue-backends.md`
+
+### Context
+
+The queue offers one API over four backends: file/lite, RabbitMQ, Kafka and
+MongoDB. What that API promises when a job fails or a consumer dies had never
+been written down, so each backend answered it differently, and three of the
+answers lost work.
+
+Measured against live brokers (RabbitMQ 3.13.7, Kafka, MongoDB 7.0.39), not read
+from source:
+
+| | file/lite | RabbitMQ | Kafka | MongoDB |
+| --- | --- | --- | --- | --- |
+| python | at-least-once | poison job never dead-letters | failed job destroyed | at-least-once |
+| php | at-least-once | duplicates, original never acked | no ack at all, full replay | at-least-once |
+| ruby | at-least-once | failure never recorded | no commit, full replay | at-least-once |
+| node | at-least-once | at-most-once, loses work | cannot drain, replays record 0 | at-least-once |
+
+Only MongoDB and the file backend behaved the same everywhere. The two brokers
+that most users reach for behaved differently in all four frameworks, and in no
+framework did they behave the way the docs describe.
+
+### Per ADR-0012, the standard first
+
+**AMQP 0-9-1 s1.8.3.13 (`basic.nack` / `basic.reject`).** A message requeued with
+`requeue=1` returns to the queue UNMODIFIED. The protocol carries no delivery
+counter; `redelivered` is a boolean, not a count. So an attempt count cannot ride
+on a requeue. This is not a Tina4 limitation, it is the wire format.
+
+**AMQP 0-9-1 s1.8.3.12 (delivery-tag).** A delivery tag identifies one delivery
+on one channel. `basic.ack` with `multiple=0` acknowledges exactly that delivery.
+Keeping a single "last tag" and acking it therefore acknowledges whichever
+message happened to arrive last, which is a different message from the one the
+caller named.
+
+**Kafka commits a consumer-group OFFSET, not a record.** There is no per-record
+nack. A record cannot be returned to its position without replaying every record
+after it. Committing past a record is irreversible for that group.
+
+Then, what the ecosystem does with those constraints:
+
+| | how a failed message is retried |
+| --- | --- |
+| Celery (AMQP) | acknowledges and republishes with updated headers |
+| Spring AMQP | `RepublishMessageRecoverer` republishes to a retry or dead-letter queue |
+| laravel-queue-rabbitmq | republishes with an incremented `attempts` property |
+| Spring for Apache Kafka | `DefaultErrorHandler` retries, then `DeadLetterPublishingRecoverer` produces to a dead-letter topic |
+| Confluent's documented pattern | re-produce to a retry topic and commit past the original |
+
+Unanimous, across both protocols: **acknowledge the original and republish a new
+message carrying the new state.** Nobody counts attempts on a requeue, because
+the protocols do not let them.
+
+### Decision
+
+1. **The queue promises at-least-once delivery on every backend.** A job that has
+   been popped and not completed is redelivered. Duplicates are possible and are
+   the caller's problem; lost work is the framework's problem and is a bug.
+
+2. **A retry is an acknowledge plus a republish, never a bare requeue.** On
+   RabbitMQ, `fail()` below `max_retries` acknowledges the original delivery and
+   publishes a body carrying the incremented `attempts`. On Kafka it re-produces
+   the record and commits past the original. The republish happens BEFORE the
+   acknowledge, so a crash in between duplicates rather than loses.
+
+3. **An acknowledgement names its message.** Delivery tags and in-flight Kafka
+   records are keyed by message id, never held in a single slot.
+
+4. **`complete()` is terminal on every backend.** After it, the job is gone and
+   is never redelivered, including across a consumer restart.
+
+5. **Where a backend genuinely cannot offer a guarantee, record it rather than
+   fake it.** Named exceptions, which are correct behaviour and not bugs:
+   - Kafka `size()` returns 0. A log has no queue depth, and computing one means
+     an admin round-trip per call.
+   - Kafka reclaims a dead consumer's work after the consumer-group session
+     timeout, about 45s with librdkafka's defaults, not after the framework's
+     `TINA4_QUEUE_VISIBILITY_TIMEOUT`. That timeout applies to the file and
+     MongoDB backends only, which is already documented.
+   - Kafka and RabbitMQ have no native priority ordering in the shape the file
+     backend offers.
+
+6. **An argument that cannot be honoured must be rejected, not swallowed.**
+   `priority` and `delay_seconds` are currently accepted and discarded by every
+   external backend in all four frameworks. Silent acceptance of a no-op argument
+   is the `TINA4_CORS_CREDENTIALS` mistake. Either implement it or refuse it
+   loudly. This ADR does not settle which, because it is a behaviour change that
+   needs the maintainer; it settles that the current silence is wrong.
+
+7. **`size(status)` never answers a different question than the one asked.**
+   Returning the pending count when asked for the dead count, which PHP and Node
+   both do, is worse than returning 0 or raising, because the caller cannot tell.
+
+### Rationale
+
+At-least-once is the only promise all four backends can actually keep. At-most-
+once is achievable but nobody wants it from a job queue, and exactly-once is not
+available over either protocol without transactional outbox machinery that would
+dwarf the rest of the queue.
+
+Acknowledging before republishing would be simpler and is what a first draft
+reaches for. It is also the one ordering that loses work, so it is forbidden
+rather than merely discouraged.
+
+### Consequences
+
+- **Breaking:** on RabbitMQ, `job.fail()` with retries remaining now acknowledges
+  the original delivery and republishes. A consumer that relied on the broker
+  redelivering the identical body with `attempts` still at 0 sees the incremented
+  value instead. That is the point: it is what makes dead-lettering possible at
+  all. Migration: nothing to change in app code. If you were reading `attempts`
+  off the payload to detect a redelivery, read `job.attempts` instead, which is
+  now accurate rather than always 0.
+- **Breaking:** on Kafka, `job.fail()` with retries remaining now re-produces the
+  record. Consumers see a new record with the same payload and a higher
+  `attempts` rather than nothing at all. Offsets now advance past failed records,
+  so a restarted consumer no longer replays them.
+- Python moved first and is currently ahead of PHP, Ruby and Node on these three
+  fixes. That drift is recorded in
+  `plan/v3/features/048-queue-backends.md` and closing it is the follow-up.
+- Node's RabbitMQ backend is at-most-once today and violates decision 1 outright.
+  It needs `no-ack=false` plus a real ack path before it can claim the contract.
+- Node's Kafka backend cannot drain a topic and violates decision 4. It needs a
+  real offset commit.
+
+**Related:** ADR-0012 (the decision procedure), and
+`plan/v3/features/048-queue-backends.md`.
