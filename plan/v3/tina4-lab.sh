@@ -597,11 +597,23 @@ export TINA4_TEST_MEMCACHED_HOST=localhost TINA4_TEST_MEMCACHED_PORT=11211
 # GreenMail is the ONLY real SMTP+IMAP the Messenger tests can round-trip.
 export TINA4_TEST_SMTP_HOST=localhost TINA4_TEST_SMTP_PORT=3025
 export TINA4_TEST_IMAP_HOST=localhost TINA4_TEST_IMAP_PORT=3143
-# NOT exported: TINA4_TEST_{MYSQL,MSSQL,PG}_URL. UNSET is LOAD-BEARING for these -
-# the suites treat an absent URL as "compose one from the parts above", and they
-# compose it WITH credentials. Exporting a credential-less URL displaced that and
-# produced 'Access denied for user ...' on 13 PHP tests. A *_URL var is an
-# OVERRIDE, not part of the credential contract; see check_env_contract.
+# The *_URL overrides, WITH CREDENTIALS EMBEDDED. Both halves of that matter and
+# I got each one wrong once:
+#
+#   1. Exported WITHOUT credentials -> PHP's BatchInsertTest prefers the URL when
+#      set and otherwise composes mysql://user:pass@host/db from the parts. A
+#      credential-less URL displaced the composed one: 13 errors, "Access denied
+#      for user ''@'172.17.0.1'".
+#   2. Not exported at all -> Python COLLECTS 66 fewer tests. These vars are
+#      parametrisation inputs, not just configuration: 4647 collected with them,
+#      4581 without. Dropping them silently deleted coverage.
+#
+# So: export them, and embed the credentials. PG points at tina4_py to match
+# TINA4_TEST_PG_DB; do not point it elsewhere or the session tests write the
+# table in one database and look for it in another.
+export TINA4_TEST_MYSQL_URL=mysql://root:tina4@localhost:3306/tina4_test
+export TINA4_TEST_MSSQL_URL='mssql://sa:TinaSQL123!Secure@localhost:1433/tina4_test'
+export TINA4_TEST_PG_URL=postgres://tina4:tina4@localhost:55432/tina4_py
 # The suites read _USERNAME/_PASSWORD (41 usages across the four); the short
 # _USER/_PASS form is read by NOTHING. Exporting only the short form made every
 # mysql/mssql test fall through to its own default (root, empty password) and fail
