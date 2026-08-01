@@ -22,6 +22,86 @@ already marked closed and shipped. The July pass judged SOLID, DRY, LOC and CC -
 none of which ask whether the same code behaves the same on another provider, so
 nothing was looking.
 
+## fetch() result envelope - count semantics, the COUNT probe, and the LIMIT detector  (6)
+
+### A COLUMN NAMED `rate_limit` DEFEATS THE ROW CAP ENTIRELY - unbounded read in 3 of 4
+
+MEASURED 2026-08-01, real SQLite, 150 rows, table `t (id INTEGER PRIMARY KEY, rate_limit INTEGER)`:
+
+| query | python | ruby | node | php |
+| ----- | ------ | ---- | ---- | --- |
+| `SELECT id FROM t`             | 100 | 100 | 100 | 100 |
+| `SELECT id, rate_limit FROM t` | **150** | **150** | **150** | 100 |
+
+The "does this SQL already carry its own LIMIT?" test is a PLAIN SUBSTRING MATCH in Python,
+Ruby and Node (`sql.upper().split("--")[0]` contains `"LIMIT"`). Any identifier containing
+the letters l-i-m-i-t - `rate_limit`, `limit_amount`, `daily_limit`, `limit_reached` - reads
+as an existing LIMIT clause, so no cap is appended and the full table comes back. This is the
+exact unbounded full-table read the cap exists to prevent, reachable through an ordinary
+column name with no unusual SQL.
+
+PHP is correct here: `SqlNormalizerTrait::hasTrailingLimit` matches LIMIT ANCHORED to
+end-of-string. PHP's anchoring is the design to promote - but see the two PHP crashes below,
+because PHP pairs the right anchor with the wrong comment handling.
+
+### Ruby's `DatabaseResult.limit` is ALWAYS 10, whatever limit was applied
+
+MEASURED: a 150-row table, `db.fetch("SELECT * FROM t")` returns `records=100 count=100
+limit=10 offset=0`. `Database#fetch_direct` never passes `limit:`/`offset:`/`count:`, so the
+`limit: 10` default in `DatabaseResult#initialize` is what the envelope reports. The result
+describes a page size that was never used.
+
+That 10 is the SAME stale v2 number as the buried PHP test's asserted cap and the
+`limit=10` line in tina4-python CLAUDE.md - the fourth place the v2 value outlived v2.
+
+## fetch() result envelope - count semantics and the COUNT probe  (4)
+
+### `count` means "total matching rows" in Python/PHP and "rows returned" in Ruby/Node, so identical pagination code paginates differently
+
+MEASURED 2026-08-01 on a real 150-row SQLite table, `fetch()` with no limit argument (cap 100):
+
+| framework | records | count |
+| --------- | ------- | ----- |
+| python    | 100     | 150   |
+| php       | 100     | 150 (`total`) |
+| ruby      | 100     | 100   |
+| node      | 100     | 100   |
+
+`pages = ceil(result.count / limit)` yields 2 on Python/PHP and 1 on Ruby/Node. Same code,
+same data, same config - a paginated list silently loses every page after the first on two
+of four frameworks.
+
+Python/PHP are correct. Django's `Paginator.count`, Laravel's `total()` and Kaminari's
+`total_count` all mean TOTAL MATCHING (ADR-0012 authority order: mainstream frameworks over
+internal precedent). On the Ruby/Node reading `count` is redundant - it always equals
+`records.length` - so the whole `records`/`count`/`limit`/`offset` envelope carries no
+pagination information at all.
+
+BREAKING for Ruby and Node. Ruby's `fetch` runs no COUNT probe; Node's wrapper likewise.
+
+### PHP `fetch()` RAISES on a trailing line comment, because the COUNT wrapper swallows the closing paren
+
+MEASURED: `SELECT * FROM items LIMIT 3 -- c` raises
+`SQLite3 fetch() failed: Unable to prepare statement: incomplete input`. `fetch()` builds
+`SELECT COUNT(*) as total FROM ({$sql})`, and the trailing `--` comments out the `)`.
+Python, Ruby and Node all return 3 rows for the same query.
+
+### PHP `fetch()` RAISES on a trailing BLOCK comment, because the trailing-LIMIT detector only strips line comments
+
+MEASURED: `SELECT * FROM items LIMIT 3 /* c */` raises
+`Unable to prepare statement: near "LIMIT": syntax error`. `SqlNormalizerTrait::hasTrailingLimit`
+strips `--` comments and trailing semicolons but not `/* */`, so the anchored end-of-string
+LIMIT match fails and a SECOND `LIMIT 100 OFFSET 0` is appended. Python and Ruby avoid this
+by accident, not by design: their detector is the LOOSE `sql.upper().split("--")[0]` contains
+"LIMIT", which matches a LIMIT anywhere in the statement.
+
+### Python returns `count = 0` alongside 3 real records when the COUNT probe fails
+
+MEASURED: `SELECT * FROM items LIMIT 3 -- c` returns 3 records with `count = 0`. The probe is
+wrapped in a bare `except: total = 0`, so a broken probe is indistinguishable from an empty
+table. PHP fails LOUDLY on the same query and Ruby/Node get it right; Python is the only one
+that returns a WRONG NUMBER silently, which is the harder failure to notice.
+
 ## Session backends  (6)
 
 ### Ruby: TINA4_SESSION_TTL is honoured by the memcached backend ONLY — every other backend hard-codes 86400
