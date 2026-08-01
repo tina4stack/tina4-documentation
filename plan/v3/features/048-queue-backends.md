@@ -512,8 +512,11 @@ green count is reported alongside each.
 | A | the else-branch re-produce in Kafka `fail()`, nothing else | the 3 `TestKafkaJobLifecycleLive` cases, with "was DROPPED", "buried the failed A" and "never reached the dead-letter topic" | 148 |
 | B | RabbitMQ `fail()` back to `reject(requeue=True)`, dead-letter branch untouched | `test_rabbitmq_fail_past_max_retries_reaches_dead_letters` and `test_rabbitmq_fail_carries_the_attempt_count_across_a_redelivery` | 149 |
 | C | the delivery-tag map made to behave as a single slot, storage shape kept so the "inert" tests stay valid | `test_rabbitmq_complete_acknowledges_that_job_not_the_last_popped` and the existing `test_full_enqueue_dequeue_acknowledge_cycle` | 149 |
+| D | the Node refusal replaced by a no-op, backend resolution otherwise untouched | the 12 `queue refuses` / `queue refusal for` cases | 205 |
 
-All three reverted cleanly and the suites returned to 151 passed.
+All four reverted cleanly and the suites returned to 151 (python) and 217 (node).
+Probe D leaves `queue still accepts the file backend` green, which is the control:
+a probe that reddened it would have proved only that the constructor was broken.
 
 Separately, all six new tests were run RED against the unfixed code before any
 fix was written, and each failed with its own message rather than an error.
@@ -532,6 +535,23 @@ failures (`test_mysql_batch_insert_list_of_dicts`,
 pre-existing and unrelated to the queue: the same 2 fail identically at the
 pre-audit tree, checked by restoring it and re-running.
 
-Measured on macOS 25.5.0 arm64, Python 3.14.5, RabbitMQ 3.13.7, Kafka
-localhost:9092, MongoDB 7.0.39. **Not run on Linux or Windows, and the PHP,
-Ruby and Node suites were not re-run because nothing was changed in them.**
+Node suite (`npx tsx test/run-all.ts`) with `TINA4_REQUIRE_SERVICES=1`:
+**6701 passed, 0 failed across 219 files**, typecheck clean. The runner exits 1
+because the require-services gate reports 3 LOUD skips: `kafkaIntegration.test`,
+`queueBackends.test` (both create their Kafka topic by shelling out to
+`docker exec`, and the docker daemon is not running on this host) and
+`mqttAuthTls.test`. All three are pre-existing and environmental, and none is
+touched by the queue change. **The Node Kafka backend's own tests therefore did
+NOT execute here**, which is worth knowing when reading F2: that finding rests
+on a direct live probe against the broker on 9092, not on the suite.
+
+Measured on macOS 25.5.0 arm64, Python 3.14.5, Node 24.9.0, RabbitMQ 3.13.7,
+Kafka localhost:9092, MongoDB 7.0.39. **Not run on Linux or Windows. The PHP and
+Ruby suites were not re-run, because nothing was changed in them.**
+
+Known residue: the probes left empty durable `probe_*` queues on the local
+RabbitMQ. They could not be deleted from here - the broker runs in a container
+with no management plugin on 15672, no `rabbitmqctl` on PATH, and no reachable
+docker daemon, and AMQP offers no way to enumerate queues by prefix. The
+existing test suites leave the same residue on every run. The Kafka probe topics
+and the Mongo test database WERE cleaned up (240 topics, 1 database).
