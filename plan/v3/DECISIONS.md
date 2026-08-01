@@ -1887,6 +1887,60 @@ the protocols do not let them.
    Returning the pending count when asked for the dead count, which PHP and Node
    both do, is worse than returning 0 or raising, because the caller cannot tell.
 
+8. **A backend that cannot keep decision 1 is REFUSED, not documented.** Node's
+   RabbitMQ and Kafka backends now THROW on construction, naming the cause and
+   pointing here. They are not deprecated, not warned about, and carry no opt-in
+   escape hatch.
+
+   Documenting them as at-most-once was considered and rejected. A data-loss
+   footgun with a paper trail is still a data-loss footgun: nobody reads the
+   backend caveat before their consumer gets OOM-killed. This project already
+   settled the same question the same way for the `redis-npm` session backend,
+   which raises rather than falling through to disk, precisely because a silent
+   demotion looks like it is working while the operator believes otherwise.
+   Anyone "successfully" running Node with these backends today is already
+   losing jobs and does not know it, so breaking them loudly is a service.
+   Breaking changes are acceptable in v3.
+
+   No escape hatch: somebody may one day have a legitimate fire-and-forget use
+   case, but nobody has asked, and a knob for a hypothetical user contradicts
+   the north star. If a real request arrives, add it deliberately.
+
+   **This refusal is a HOLDING POSITION, not the settled design.** The fix is a
+   persistent connection held on the backend instance, the way Python, PHP and
+   Ruby already do it. That is not an enhancement to schedule someday; it is
+   what makes the backend correct, and the refusal stands only until it lands.
+
+### The testing lesson: no-mock is necessary, and not sufficient
+
+Worth stating separately because it generalises well beyond queues.
+
+Every queue test in all four frameworks is real. Zero mocks, stubs, fakes,
+spies or monkeypatches; no test asserts on a generated script's shape; the
+mock-based classes that let the original MongoDB redelivery bug ship were
+deleted, and each replacement says so in a comment. By the standard this
+project set after that incident, the queue was compliant.
+
+**And all three data-loss bugs still sat in one untested gap.** The live tests
+drove the CONNECTORS -- `enqueue`, `dequeue`, `acknowledge` against a real
+broker -- and not one of them drove `Job.fail()` through a real RabbitMQ or a
+real Kafka in ANY framework. A green suite that never calls the method under
+suspicion is not evidence about that method.
+
+So "we test against real services" is not a coverage claim. The rule to add:
+**name the code path, not the dependency.** For each public operation that can
+lose data, point at the test that exercises THAT operation against the real
+thing. Two failure modes seen here that a real-service suite does not catch on
+its own:
+
+- **A fresh fixture per test hides a stateful bug.** Node's Kafka assertions
+  each create a new topic and pop once, so a backend that always re-reads
+  offset 0 passes every time. Popping twice would have caught it instantly.
+- **A cache can answer an assertion instead of the service.** PHP asserts
+  `size() === 0` after an acknowledge, while `declareQueue()` returns a
+  hardcoded `0` on a cache hit -- so the assertion passes whether or not the
+  acknowledge did anything.
+
 ### Rationale
 
 At-least-once is the only promise all four backends can actually keep. At-most-
@@ -1914,10 +1968,14 @@ rather than merely discouraged.
 - Python moved first and is currently ahead of PHP, Ruby and Node on these three
   fixes. That drift is recorded in
   `plan/v3/features/048-queue-backends.md` and closing it is the follow-up.
-- Node's RabbitMQ backend is at-most-once today and violates decision 1 outright.
-  It needs `no-ack=false` plus a real ack path before it can claim the contract.
-- Node's Kafka backend cannot drain a topic and violates decision 4. It needs a
-  real offset commit.
+- **Breaking:** `new Queue({ backend: "rabbitmq" })` and `{ backend: "kafka" }`
+  now throw in tina4-nodejs, including via `TINA4_QUEUE_BACKEND` and the legacy
+  string constructor. Migration: switch to `backend: "mongodb"` (at-least-once,
+  with a real reservation and visibility timeout) or the default `"file"`
+  backend. The other three frameworks are unaffected and still offer both
+  brokers. `RabbitMQBackend` and `KafkaBackend` remain exported so the
+  persistent-connection rewrite has something to build on; only the `Queue`
+  facade refuses them.
 
 **Related:** ADR-0012 (the decision procedure), and
 `plan/v3/features/048-queue-backends.md`.

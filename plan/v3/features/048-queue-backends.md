@@ -78,15 +78,40 @@ audit playbook:
 | 7 | PHP management ops crash, Ruby silently no-ops | **CONFIRMED** for both |
 | 8 | Python `purge`/`clear` always hit the local filesystem | **REFUTED for python.** True of PHP and of Node |
 
-Two crash-recovery results that were not leads at all:
+## REFUTED: do not re-file these
 
-- Kafka **does** recover a killed consumer's job, after about 45 seconds. My
-  first probe called it lost because it only waited 20s. The delay is
-  librdkafka's default `session.timeout.ms`, which is correct Kafka behaviour
-  and should be documented, not fixed.
-- File, MongoDB and RabbitMQ all reclaim a SIGKILLed consumer's job in Python.
-  Verified by spawning a real child process, waiting for it to really pop, and
-  killing its process group.
+Recorded as prominently as the findings, because a parked lead that gets
+re-investigated every six months costs more than the bug. Each of the following
+was suspected, tested against a live broker, and found to be WRONG.
+
+**R1. Python's `purge`/`clear` do NOT always hit the local filesystem.** They
+route through `self._backend` (`queue/__init__.py:189` and `:241`) and every
+adapter implements both. The parked lead was mistaken about Python. It IS true
+of PHP (`Tina4/Queue.php:285` and `:431`) and of Node, which is finding F9.
+
+**R2. Kafka DOES reclaim a SIGKILLed consumer's job. It takes about 45
+seconds.** This was very nearly filed as data loss. The first probe waited 20
+seconds, saw nothing, and reported the job lost. The job was not lost: it came
+back at 44.9s, because a consumer group only evicts a dead member after
+`session.timeout.ms`, which defaults to **45000 ms in librdkafka 2.15.0**. That
+is correct Kafka behaviour, it is the broker's job and not the framework's, and
+the framework must NOT try to shorten it. Any future probe of Kafka crash
+recovery must wait longer than 45s before concluding anything.
+
+**R3. Node has no single-slot delivery-tag bug.** `deliveryTag` is declared at
+`rabbitmqBackend.ts:244` and never read or written anywhere in the tree. There
+is no slot to clobber, because F1 means there is nothing to acknowledge. Do not
+file the F10 bug against Node; file F1.
+
+**R4. There are no mocks anywhere in the queue tests.** Checked file by file in
+all four frameworks. Zero doubles, zero script-shape assertions. If a future
+audit suspects the queue tests are fake, they are not; see the section above for
+what is actually wrong with them.
+
+For completeness, the crash-recovery result that was never a lead: file,
+MongoDB and RabbitMQ all reclaim a SIGKILLed consumer's job in Python, verified
+by spawning a real child process, waiting for it to really pop, and killing its
+process group.
 
 ## Findings, worst first
 
@@ -398,7 +423,7 @@ what a developer writes should carry across frameworks.
 | python | at-least-once | at-least-once (after fix) | at-least-once (after fix) | at-least-once |
 | php | at-least-once | at-least-once, but attempts survive and the original is never acked, so duplicates | no ack, offsets process-local, full replay on reconnect | at-least-once |
 | ruby | at-least-once | at-least-once, but failures never recorded | no commit through the public API, full replay on restart | at-least-once |
-| node | at-least-once | **at-most-once, loses work** | cannot drain, replays record 0 forever | at-least-once |
+| node | at-least-once | **REFUSED** (was at-most-once, lost work) | **REFUSED** (could not drain) | at-least-once |
 
 Crash recovery, verified by SIGKILLing a real consumer between `pop()` and
 `complete()` in Python:
@@ -449,16 +474,32 @@ ADR-0012 requires:
 All six live in `tina4-python/tests/test_queue_backends.py` and all six talk to a
 real broker.
 
-**NOT fixed. These are open, and F1 and F2 are the most urgent things in this
-document:**
+**Contained, in Node: F1 and F2 now REFUSE rather than lose work.**
 
-F1, F2 (node, both lose or strand work), F5, F6, F7 (ruby), F8, F9, F11 (php and
-node), F12, F13, F14 (all four).
+Per the ADR-0022 ruling, `new Queue({ backend: "rabbitmq" })` and
+`{ backend: "kafka" }` throw on construction in tina4-nodejs, including through
+`TINA4_QUEUE_BACKEND` and the legacy string constructor. The error names the
+cause and points at this document. This is a **holding position, not a fix** -
+the fix is the persistent-connection rewrite (F2a), and the refusal stands only
+until that lands.
 
-The parity mandate is therefore NOT satisfied. Python has moved ahead of the
-other three on F3, F4 and F10, which is a new drift this audit created and which
-the follow-up must close. The fix designs are settled in ADR-0022 and the ports
-are mechanical; what is missing is the work and its live tests, not the decision.
+Thirteen named tests in `tina4-nodejs/test/queue.test.ts` pin it, including that
+the message names the backend, explains the child-process cause, cites ADR-0022,
+and offers a working alternative. They need no broker: the refusal happens
+before any socket opens, which is the point.
+
+**NOT fixed. These remain open:**
+
+F2a (the Node rewrite that makes the refusal removable), F5, F6, F7 (ruby), F8,
+F9, F11 (php and node), F12, F13, F14 (all four).
+
+The parity mandate is NOT satisfied. Python has moved ahead of the other three on
+F3, F4 and F10, and Node now differs from all three by refusing two backends they
+still offer. Both gaps are recorded rather than hidden, but recorded is not
+closed: nothing ships until PHP, Ruby and Node carry the same logic and the same
+tests. The fix designs are settled in ADR-0022 and the ports are mechanical for
+everything except F2a; what is missing is the work and its live tests, not the
+decision.
 
 ## Proof the gates can fail
 
