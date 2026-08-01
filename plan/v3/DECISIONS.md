@@ -1937,11 +1937,63 @@ constraint must never read as "no constraint". A token with no `exp`/`nbf` claim
 at all remains unconstrained, which keeps this non-breaking for tokens already
 in circulation.
 
-**6. The API key is compared in constant time everywhere, including the route
+**6. A backend OUTAGE is not an unknown id.** Strict mode discards an id the
+store does not know. A store that does not ANSWER is not evidence of that, so an
+unreachable backend keeps the supplied id and degrades to an empty session. The
+first Python implementation got this wrong - its read helper swallowed the
+exception and returned empty, so an outage rotated the session id on every
+request, logging every user out and orphaning their stored sessions. Both the
+PHP and the Ruby ports independently refused to copy it, which is how it was
+caught. The backend-failure policy is degrade, never rotate.
+
+**7. The API key is compared in constant time everywhere, including the route
 gates.** Python's `core.server._check_auth` and Ruby's
 `RackApp.enforce_route_auth` compared the bearer token against `TINA4_API_KEY`
 with a plain `==`, while both frameworks already shipped a timing-safe
 `validate_api_key`. The gates now route through it.
+
+### Rejected alternative: an entropy floor on the session id
+
+The first implementation used `[A-Za-z0-9_-]{16,128}`, adding a 16-character
+minimum on the theory that a short id is brute-forceable. It was tried and
+REVERTED, and the reasoning is recorded so nobody re-proposes it.
+
+It broke five existing tests that passed legitimate short PROGRAMMATIC ids -
+`session.start("my-session-id")`, `"test-session"`, `"session-abc"`. Those are
+trusted callers managing their own id, not attackers. And the floor closes no
+attack: unguessability comes from the framework's own minting
+(`secrets.token_urlsafe(32)` and friends), never from inspecting an id an
+application passed on purpose. The vulnerability was the ALPHABET - the `.` and
+`/` that turn a cookie into a path - and never the length.
+
+The general rule this is an instance of: **a fix that breaks correct callers to
+defend against a threat it does not actually address is a worse bug than the one
+it closes.** The five failures were the design telling us the rule was wrong,
+not five tests needing an edit.
+
+### Three failure modes this audit hit, recorded because they generalise
+
+**1. A test can pin a vulnerability as intended behaviour.** Python's
+`test_basic_auth` asserted that `authenticate_request` returned a truthy dict
+carrying the submitted username and password. That IS the bypass, written down
+as the expected result and shipped green. The suite was passing the entire time
+the hole was open, and no amount of additional coverage would have caught it -
+only reading the assertion and asking what it actually claims. Treat a green
+security test as unverified until someone has read what it asserts.
+
+**2. A gate that greps source rather than parsing it eventually lies.** The
+first version of the timing-safe test asserted `"validate_api_key" in source`.
+When the break-it probe reverted the call to a plain `==`, the test still
+PASSED - satisfied by a COMMENT that mentioned the function name. It was rewritten
+to walk the AST and assert the function is actually CALLED. Any check that
+pattern-matches source text instead of parsing it has this failure mode.
+
+**3. You cannot prove a fix works by testing the fixed thing.** The first
+`exp`-boundary verification extracted `Tina4/Auth.php` from `HEAD` - by which
+point the port had already been committed, so it measured the FIXED file and
+reported the boundary as correct. Redone against the true pre-audit revision, the
+original PHP accepted a token at `exp == now`. A negative proof must name the
+revision it ran against, not "the current tree".
 
 ### Deliberately NOT decided here
 
