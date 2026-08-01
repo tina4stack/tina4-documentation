@@ -1786,3 +1786,148 @@ documents it, so nothing is lying. It is a gap, recorded and not built here.
 
 **Related:** ADR-0012, ADR-0013, and
 `plan/v3/features/010-cors-middleware.md`.
+
+---
+
+## ADR-0020: The shared response cache obeys RFC 9111 on Authorization and Vary
+
+**Date:** 2026-08-01
+**Status:** Accepted
+**Context:** Feature 43 (cache backends), features 39 and 40 (template and
+fragment caching)
+
+### Context
+
+Tina4's `ResponseCache` keys entries on method plus URL. No request header
+enters the key in any of the four frameworks:
+
+| framework | key |
+| --- | --- |
+| python | `GET:{url}` plus sorted query params |
+| php | `GET:{url}` |
+| ruby | `GET:{url}` |
+| node | `response:GET:{url}` |
+
+It is a SHARED cache: one server-side store, every caller. So on a route marked
+`@secured()` / `->secure()` / `.secure()`, the first caller's response body is
+served to every later caller of the same URL.
+
+Measured end-to-end on a real secured GET route through each framework's real
+dispatcher, with the body derived from the caller's JWT. PHP: a valid token for
+`bob` returned `{"secret_for":"alice","balance":"alice-PRIVATE-DATA"}` with
+`X-Cache: HIT` and one handler invocation. Node is worse, because its route
+middleware runs before the auth gate: an ANONYMOUS request, and one with an
+invalid token, both returned 200 with alice's body. The control (same route,
+cache removed) 401s the anonymous caller, so the gate works and the cache is
+what defeats it.
+
+PHP is therefore an authorization bypass and Node an authentication bypass.
+Python and Ruby were not exploitable only because their middleware did not
+function at all (feature doc, finding 2); with that fixed they would have been.
+
+`Vary` was ignored in all four, so a response negotiated for one
+`Accept-Language` was served to every other.
+
+### Decision
+
+**The response cache follows RFC 9111 as a shared cache.**
+
+1. A response to a request carrying `Authorization` is NOT stored, unless the
+   response carries a `Cache-Control` directive that permits shared caching:
+   `public`, `s-maxage` or `must-revalidate`.
+2. `Vary` is honoured. The nominated request header values are recorded with the
+   entry and must match on lookup; an absent field matches only an absent field.
+   A response whose `Vary` contains `*` is never stored.
+
+Rule 1 is store-side only. A response that is never stored can never be
+replayed, so no lookup-side check is needed, and a genuinely public cached
+response is still served to a caller who happens to hold a token.
+
+### Rationale
+
+ADR-0012's amended order of authority puts the standard first, and RFC 9111
+covers this question directly with MUST NOTs rather than SHOULDs.
+
+Section 3, on storing:
+
+> if the cache is shared: the Authorization header field is not present in the
+> request (see Section 11.6.2 of [HTTP]) or a response directive is present that
+> explicitly allows shared caching (see Section 3.5)
+
+Section 3.5:
+
+> A shared cache MUST NOT use a cached response to a request with an
+> Authorization header field (Section 11.6.2 of [HTTP]) to satisfy any
+> subsequent request unless the response contains a Cache-Control field with a
+> response directive (Section 5.2.2) that allows it to be stored by a shared
+> cache, and the cache conforms to the requirements of that directive for that
+> response.
+
+Section 4.1:
+
+> the cache MUST NOT use that stored response without revalidation unless all
+> the presented request header fields nominated by that Vary field value match
+> those fields in the original request
+
+and
+
+> A stored response with a Vary header field value containing a member "*"
+> always fails to match.
+
+The mainstream tier agrees with the standard rather than pulling against it,
+which is the easiest case ADR-0012 admits. Varnish will not cache a request
+carrying `Authorization` unless the response is explicitly public; nginx's
+`proxy_cache` behaves the same way; Rails' `Rack::Cache` implements both rules
+from the RFC. There is no framework precedent for the permissive behaviour and
+no argument for keeping it.
+
+The three response directives named in rule 1 are not a Tina4 invention: they
+are exactly the list section 3.5 gives as having that effect.
+
+### Consequences
+
+**BREAKING.** An authenticated GET is no longer cached by default. An app that
+was (perhaps unknowingly) caching authenticated responses loses that caching
+until it opts back in per response:
+
+```
+# python
+response.add_header("Cache-Control", "public")
+# php
+$response->header('Cache-Control', 'public');
+# ruby
+response.headers["Cache-Control"] = "public"
+# node
+res.header("Cache-Control", "public");
+```
+
+Opting in is a deliberate assertion that the body is identical for every
+caller. Anything user-specific must not carry it. The old behaviour is not
+recoverable wholesale, and that is the point: it was serving one user's data to
+another.
+
+Public GET caching is unchanged, which the negative control test
+`response_cache_serves_an_unauthenticated_get` pins in all four. A fix that
+merely disabled caching would satisfy every bypass assertion, so that control
+is load-bearing.
+
+Honouring `Vary` means an app whose origin sends `Vary` now gets more cache
+misses than before, because it previously served mismatched variants. That is
+the correct behaviour arriving, not a regression.
+
+**Scope note.** This ADR settles the cache's own conformance. It does NOT
+settle whether route middleware may answer ahead of the auth gate, which is
+what makes Node's case an authentication rather than an authorization bypass.
+That ordering belongs to feature 6 and ADR-0019 and is filed there with the
+repro attached. Rule 1 closes the exploit on its own, so the two can be
+sequenced independently.
+
+Four suites carry the same case names, each proven red against a surgical
+revert of the line it guards:
+`response_cache_does_not_store_a_response_to_an_authorized_request`,
+`response_cache_stores_an_authorized_response_when_cache_control_public`,
+`response_cache_serves_an_unauthenticated_get`,
+`response_cache_honours_vary_on_a_nominated_request_header`,
+`response_cache_never_stores_vary_asterisk`.
+
+**Related:** ADR-0012, ADR-0019, and `plan/v3/features/043-caching.md`.
