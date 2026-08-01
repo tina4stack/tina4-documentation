@@ -274,7 +274,31 @@ infra_up_one() {
 
   local args=(-d --name "$cname" --restart unless-stopped)
   local IFS_SAVE="$IFS"
-  IFS=','; for p in $ports; do args+=(-p "$p"); done
+  # BIND ADDRESS -- the reason this is not a bare "-p host:container".
+  #
+  # `docker run -p 27017:27017` publishes on 0.0.0.0, ALL interfaces. That is
+  # docker's default and it is invisible in the port string. These mappings were
+  # lifted from the CI workflows, where 0.0.0.0 is harmless (ephemeral runner, no
+  # inbound route). On a long-lived box it is a door: on 2026-08-01 the mongo here
+  # was found by a mass scanner (45.156.87.252), its databases dropped and a
+  # READ_ME_TO_RECOVER_YOUR_DATA ransom note written. 86 distinct public IPs had
+  # reached it. Every service in this table is unauthenticated BY DESIGN, which is
+  # correct for tests and fatal when routable.
+  #
+  # A host firewall does NOT cover this: docker's DNAT sits in nat/PREROUTING,
+  # before ufw filters, so published ports bypass ufw entirely. The only chain
+  # governing container traffic is DOCKER-USER (see tina4-lab-firewall.service).
+  # Binding here is defence in depth, not the whole control.
+  #
+  # TINA4_LAB_BIND: comma-separated addresses to publish on. Default 127.0.0.1
+  # (loopback only -- reach it over an SSH tunnel). Add a LAN address to share the
+  # box. Set "0.0.0.0" only if you have explicitly decided to be reachable by
+  # anything that can route to this host.
+  local bind_addrs="${TINA4_LAB_BIND:-127.0.0.1}"
+  IFS=','
+  for p in $ports; do
+    for b in $bind_addrs; do args+=(-p "${b}:${p}"); done
+  done
   for e in $envs; do
     # '+' stands in for ',' inside a single env value (Kafka listener lists are
     # comma-separated, and ',' is already the field separator here).
