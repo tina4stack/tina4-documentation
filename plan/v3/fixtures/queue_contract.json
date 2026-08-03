@@ -75,9 +75,18 @@
       "adr": "ADR-0024",
       "rule": "A backend that genuinely cannot perform an operation RAISES, naming the backend and the operation. It may never silently no-op or return an empty result that is indistinguishable from success.",
       "why": "ADR-0024 rule 3: a method that exists and no-ops is worse than one that is absent, because absent fails loudly at the call site. Every silent-no-op finding in this subsystem would have been caught on the first run if this rule held.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_queue_backend_validation.py",
+        "php": "tests/QueueBackendValidationTest.php",
+        "ruby": "spec/queue_backend_validation_spec.rb",
+        "nodejs": "test/queueBackendValidation.test.ts"
+      },
+      "cases": [
+        "an unknown queue backend raises instead of silently using file",
+        "a queue backend name is normalised before it is resolved",
+        "the guard still accepts every documented backend name"
+      ],
+      "status": "PARTIALLY PROVEN in all four 2026-08-03: the BACKEND-SELECTION half. An unrecognised TINA4_QUEUE_BACKEND now RAISES naming the value and the valid set in all four (php + nodejs previously fell through to the local file store), and the name is normalised in all four (ruby previously normalised only the env var, so an explicit backend: 'FILE' raised). STILL OWED: the per-OPERATION half - php failed()/retryFailed()/deadLetters() still FATAL with 'Call to undefined method' on rabbitmq and kafka instead of raising a documented refusal."
     }
   ]
 }
