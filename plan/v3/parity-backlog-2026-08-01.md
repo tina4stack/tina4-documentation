@@ -146,7 +146,6 @@ describes a page size that was never used.
 That 10 is the SAME stale v2 number as the buried PHP test's asserted cap and the
 `limit=10` line in tina4-python CLAUDE.md - the fourth place the v2 value outlived v2.
 
-## fetch() result envelope - count semantics and the COUNT probe  (4)
 
 ### `count` means "total matching rows" in Python/PHP and "rows returned" in Ruby/Node, so identical pagination code paginates differently
 
