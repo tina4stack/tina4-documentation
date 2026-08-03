@@ -1,0 +1,89 @@
+{
+  "_comment": [
+    "SHARED FIXTURE - one answer key for the cache subsystem, all four frameworks.",
+    "",
+    "Covers all three cache layers, because they share one backend set and the",
+    "same defects reach all of them: the response cache, the KV cache, and the",
+    "persistent DB query cache. Backends: memory, file, redis, valkey, memcached,",
+    "mongodb, database.",
+    "",
+    "ADR-0024 rule 4 applies with unusual force here: THE ZERO-DEPENDENCY DEFAULT",
+    "COUNTS. It is the provider every developer starts on, so a break there is the",
+    "one most likely to reach production unnoticed - and the measured redis clear()",
+    "no-op is exactly that, on the raw RESP path that ships by default.",
+    "",
+    "These are INVARIANTS, not a bug list. Seven defects were measured on",
+    "2026-08-01; each is an instance of a rule below being broken.",
+    "",
+    "HOW THIS IS CHECKED: see scripts/audit-contract-fixtures.py. An empty 'cases'",
+    "list means OWED - declared, not yet proven."
+  ],
+  "version": 1,
+  "decided": "2026-08-03",
+  "adr": "ADR-0024",
+  "invariants": [
+    {
+      "id": "clear-really-invalidates-on-every-provider",
+      "adr": "ADR-0024",
+      "rule": "clear() removes every entry this cache can serve, on EVERY provider. It is never a no-op, and never limited to the keys the local process happens to have written.",
+      "why": "MEASURED: redis/valkey clear() is a NO-OP on the zero-dependency RESP transport - the default install - in Python, PHP and Ruby, so the persistent DB query cache never invalidates on a write. memcached gives no cross-instance invalidation at all: clear() only deletes keys the local process wrote, so a second instance keeps serving stale rows. The advertised global write-invalidation simply does not hold by default.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "the-cache-key-carries-database-identity",
+      "adr": "ADR-0024",
+      "rule": "A query-cache key identifies the DATABASE it came from. Two databases sharing one cache backend can never serve each other's rows.",
+      "why": "MEASURED: the DB query-cache key carries no database identity, so every SHARED backend cross-serves rows between different databases. Two apps pointed at one redis - or one app with a primary and an analytics connection - silently read each other's data. This is a data-isolation failure that looks like a caching optimisation.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "an-explicit-provider-is-honoured",
+      "adr": "ADR-0024",
+      "rule": "A provider requested explicitly is the provider used. It may not be overridden by ambient state such as another middleware instance already existing.",
+      "why": "MEASURED: in Node an explicitly-requested response-cache provider is silently IGNORED once any responseCache middleware exists. The developer names a backend, the framework quietly uses a different one, and the only symptom is cache behaviour that does not match the configuration.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "a-cached-null-round-trips-as-null",
+      "adr": "ADR-0024",
+      "rule": "A cached value of null/None/nil comes back as that value, not as the storage envelope that wrapped it, and not as a miss.",
+      "why": "MEASURED: Node's file backend hands back the storage ENVELOPE instead of the value when the cached value is null. The caller receives an object where it stored nothing - so `if (cached)` is true for a cached null, and the cache turns an absence into a presence.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "sweep-returns-a-real-count-everywhere",
+      "adr": "ADR-0024",
+      "rule": "sweep() evicts expired entries and returns how many it evicted, on every provider.",
+      "why": "MEASURED: sweep() behaves THREE different ways - real counts in Python/PHP, a NoMethodError crash on 6 of 7 providers in Ruby, and a permanent 0 in Node. A monitoring dashboard reading that number is reading three different things, and one of them is a crash.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "cache-clear-clears-the-persistent-layer",
+      "adr": "ADR-0024",
+      "rule": "The database-level cache_clear() clears the PERSISTENT shared backend, not only the in-process layer.",
+      "why": "MEASURED: Python's Database.cache_clear() never clears the persistent shared backend - it is a no-op on every provider. Code that clears the cache after a bulk import appears to work in development (where the cache is in-process) and does nothing in production (where it is shared).",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "an-unreachable-backend-degrades-visibly",
+      "adr": "ADR-0024",
+      "rule": "A backend whose driver is missing or whose service is unreachable logs a warning and falls back to a REAL persistent cache (the file backend), never to a silent no-op.",
+      "why": "This is the documented behaviour in all four and it is the guard that keeps the other rules honest: a cache that silently stops caching looks identical to a cache that is working, until the load arrives. Pinned here so the fallback path is exercised rather than assumed.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    }
+  ]
+}

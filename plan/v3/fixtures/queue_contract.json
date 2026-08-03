@@ -1,0 +1,83 @@
+{
+  "_comment": [
+    "SHARED FIXTURE - one answer key for the queue subsystem, all four frameworks.",
+    "",
+    "ADR-0024: the developer writes against the CONTRACT, never the PROVIDER.",
+    "Swapping file for rabbitmq, kafka or mongodb changes ONE env var and NOTHING",
+    "ELSE. Identical application code, identical OBSERVABLE outcome.",
+    "",
+    "These are INVARIANTS, not a bug list. Eleven defects were measured in this",
+    "subsystem on 2026-08-01; each one is an instance of one of the six rules",
+    "below being broken. Stating the rules is what stops the twelfth.",
+    "",
+    "Queues have the most open findings of any subsystem AND no fixture - which is",
+    "the whole correlation this file exists to break. Every subsystem that already",
+    "has a fixture (dispatch, health, dotenv, write-path) is one where drift stopped",
+    "being found by accident.",
+    "",
+    "HOW THIS IS CHECKED: scripts/audit-contract-fixtures.py asserts that every",
+    "invariant naming a suite+cases has those cases present in all four frameworks.",
+    "An invariant with an empty 'cases' list is OWED - declared and not yet proven.",
+    "Owed is reported loudly and does not fail the build; a case that was named and",
+    "has since disappeared DOES fail, because that is a test someone deleted."
+  ],
+  "version": 1,
+  "decided": "2026-08-03",
+  "adr": "ADR-0024",
+  "invariants": [
+    {
+      "id": "every-method-exists-on-every-backend",
+      "adr": "ADR-0024",
+      "rule": "Every public Queue method resolves and runs on EVERY configured backend. No method may be a fatal error, a NoMethodError, or a throw-at-construction on any backend the framework offers.",
+      "why": "MEASURED: PHP failed()/deadLetters()/retryFailed() are a FATAL Error on rabbitmq and kafka; Ruby queue.size raises NoMethodError on kafka; Node rabbitmq and kafka THROW at construction, so an app that developed on file cannot start at all after the env var changes. The upgrade path is severed rather than degraded - the exact scenario ADR-0024 exists to protect.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "operations-reach-the-configured-backend",
+      "adr": "ADR-0024",
+      "rule": "Every operation acts on the CONFIGURED backend. No method may silently read or write the local file store when another backend is selected.",
+      "why": "MEASURED: PHP clear() and purge() always hit the local FILE store whatever backend is configured; Node popBatch() and popById() always read the local file store even on mongodb. The call appears to succeed and operates on the wrong data - a silent wrong answer, which is the worst failure class because nothing surfaces it.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "the-failure-lifecycle-is-real-everywhere",
+      "adr": "ADR-0023",
+      "rule": "job.fail() reaches the backend on every provider, and a job past max_retries becomes observable through dead_letters() on every provider. A dead-letter handler written locally must find the same jobs after deploying onto a broker.",
+      "why": "MEASURED: on Ruby rabbitmq/kafka the whole failure lifecycle silently no-ops - job.fail() never reaches the backend and dead_letters() is always empty. A developer tests retry-and-dead-letter locally on file, ships it, and the dead-letter queue is permanently empty in production with no error anywhere.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "delay-is-honoured-on-every-backend",
+      "adr": "ADR-0024",
+      "rule": "delay_seconds / delay is honoured on every backend. A job pushed with a delay is not visible to a consumer before that delay elapses.",
+      "why": "MEASURED: delay is silently DROPPED on every non-file backend, in ALL FOUR frameworks. A scheduled job fires immediately in production and on time in development. This one is unanimous across the family, which makes it a contract that was never written down rather than four independent bugs.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "priority-and-availability-are-honoured",
+      "adr": "ADR-0024",
+      "rule": "priority orders delivery, and a job that is not yet available is not delivered, on every backend that claims to support them.",
+      "why": "MEASURED: Ruby + mongodb ignores priority and job availability entirely on the read path; Node + mongodb builds an availability predicate as an OR that always matches, so both delay and retryBackoff are inert. An always-true predicate is indistinguishable from a working one until timing matters.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "an-unsupported-operation-raises-naming-itself",
+      "adr": "ADR-0024",
+      "rule": "A backend that genuinely cannot perform an operation RAISES, naming the backend and the operation. It may never silently no-op or return an empty result that is indistinguishable from success.",
+      "why": "ADR-0024 rule 3: a method that exists and no-ops is worse than one that is absent, because absent fails loudly at the call site. Every silent-no-op finding in this subsystem would have been caught on the first run if this rule held.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "_comment": [
+    "SHARED FIXTURE - one answer key for the DocStore subsystem, all four frameworks.",
+    "",
+    "DocStore is the PUREST test of ADR-0024 in the whole framework, because",
+    "substitutability IS its feature: 'develop against a zero-dependency local",
+    "SQLite store and switch to MongoDB in production by setting one env var'.",
+    "Every other subsystem merely aspires to the swap - this one advertises it.",
+    "",
+    "It is also the subsystem with the least evidence. The last measured finding",
+    "below is the one that explains all the others: NO DocStore test in ANY of the",
+    "four frameworks has ever touched a real Mongo collection. The substitutability",
+    "promise has zero coverage, so nine defects accumulated behind a green suite.",
+    "",
+    "These are INVARIANTS, not a bug list. Nine defects were measured 2026-08-01.",
+    "",
+    "HOW THIS IS CHECKED: see scripts/audit-contract-fixtures.py. An empty 'cases'",
+    "list means OWED. Note that for THIS fixture, 'owed' is the entire point - the",
+    "gap is the finding."
+  ],
+  "version": 1,
+  "decided": "2026-08-03",
+  "adr": "ADR-0024",
+  "invariants": [
+    {
+      "id": "a-configured-uri-selects-the-real-provider",
+      "adr": "ADR-0024",
+      "rule": "When a Mongo URI is configured and the driver is present, get_collection() returns a REAL Mongo collection. It never silently returns the local SQLite fallback.",
+      "why": "MEASURED: on a default PHP production install TINA4_MONGO_URI is honoured by isServerless() - which reports 'not serverless' - while getCollection() still hands back local SQLite. The two disagree, so the app reports it is on Mongo while writing to a container-local file that vanishes on the next deploy. Production writes are lost with no error at any point.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "a-missing-driver-has-one-outcome-in-all-four",
+      "adr": "ADR-0024",
+      "rule": "URI configured + driver absent produces the SAME outcome in all four frameworks, and that outcome is loud. It must not silently degrade to the local file.",
+      "why": "MEASURED: one env produces THREE different outcomes - Python, PHP and Ruby silently degrade to the local SQLite file, Node crashes. Silent degradation here means production traffic writing to a local file nobody is reading. ADR-0024 rule 3: a provider that cannot honour an operation must RAISE, naming the provider and what is missing.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "the-call-site-surface-is-identical",
+      "adr": "ADR-0024",
+      "rule": "Every method and cursor operation available on the fallback exists with the same name and signature on the real driver, and vice versa. Code written against one runs unchanged against the other.",
+      "why": "MEASURED: PHP's every result accessor and the whole cursor chain is call-site incompatible with the real driver, and THREE of them fail SILENTLY as null. Ruby's find_one() does not exist on Mongo::Collection, and the cursor's two-argument sort(key, direction) is rejected by the driver. The swap is advertised at the call site and broken at the call site.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "the-sync-async-shape-does-not-change-with-the-provider",
+      "adr": "ADR-0024",
+      "rule": "A call returns the same KIND of thing on both providers. If one returns a value and the other a promise, un-awaited code silently changes meaning when the env var changes.",
+      "why": "MEASURED: in Node the fallback collection is fully SYNCHRONOUS while the driver is fully ASYNCHRONOUS. Un-awaited code returns a real value locally and a Promise in production - so `if (doc)` is true for every query, and a missing document reads as found. The type changed underneath identical source.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "query-semantics-match-on-both-providers",
+      "adr": "ADR-0024",
+      "rule": "A filter that matches on one provider matches on the other. Array-containment semantics in particular behave the same on the SQLite fallback as on Mongo.",
+      "why": "MEASURED: array fields do not match on the SQLite fallback - Mongo's array-containment semantics are absent in ALL FOUR frameworks. A query that returns documents in production returns nothing in development, or the reverse, with no error. Unanimous across the family, which marks it as a contract never written down.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "client-lifecycle-is-bounded",
+      "adr": "ADR-0024",
+      "rule": "Repeated get_collection() calls do not create unbounded client connections. Clients are reused or closed.",
+      "why": "MEASURED: a new Mongo client is constructed on EVERY get_collection() call and never closed, so connections grow without bound - on the real provider ONLY. The fallback has no connections, so this is invisible in development and exhausts the server in production. A resource leak that only exists after the swap.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "exported-types-are-accepted-by-the-real-driver",
+      "adr": "ADR-0024",
+      "rule": "A type the DocStore module exports for use in documents can be encoded by the real driver.",
+      "why": "MEASURED: the ObjectId class the DocStore module exports cannot be encoded by the real driver. The framework hands the developer a type and the production provider rejects it - so the documented way to construct an id works locally and fails after the swap.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "a-real-mongo-is-actually-exercised",
+      "adr": "ADR-0024",
+      "rule": "Every framework has at least one DocStore test that runs against a REAL Mongo collection, not only the SQLite fallback.",
+      "why": "MEASURED, and this is the root cause of the eight rules above: NO DocStore test in ANY of the four frameworks has ever touched a real Mongo collection. The entire substitutability promise has zero coverage, which is exactly how nine defects accumulated behind four green suites. The no-mock rule already forbids substituting a double for a real dependency; this states the positive obligation.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "_comment": [
+    "SHARED FIXTURE - one answer key for the session subsystem, all four frameworks.",
+    "",
+    "ADR-0024: swapping file for redis, valkey, mongodb, memcached or database",
+    "changes ONE env var and NOTHING ELSE. Identical application code, identical",
+    "OBSERVABLE outcome.",
+    "",
+    "These are INVARIANTS, not a bug list. Six defects were measured here on",
+    "2026-08-01 and each is an instance of one of the rules below being broken.",
+    "",
+    "Sessions carry a second weight the other subsystems do not: a session defect",
+    "is usually a SECURITY defect. A session that does not expire when told, or one",
+    "that silently becomes empty, is an auth outcome rather than a storage one.",
+    "",
+    "HOW THIS IS CHECKED: see scripts/audit-contract-fixtures.py. An invariant with",
+    "an empty 'cases' list is OWED - declared, not yet proven. A case that was named",
+    "and has since disappeared FAILS the build."
+  ],
+  "version": 1,
+  "decided": "2026-08-03",
+  "adr": "ADR-0024",
+  "invariants": [
+    {
+      "id": "ttl-is-honoured-by-every-backend",
+      "adr": "ADR-0024",
+      "rule": "TINA4_SESSION_TTL is honoured by EVERY backend. A session expires when the configured TTL says so, on file, redis, valkey, mongodb, memcached and database alike.",
+      "why": "MEASURED: in Ruby the TTL is honoured by the memcached backend ONLY - every other backend hard-codes 86400. An operator setting a 15-minute session gets 24 hours on five of six backends, and nothing reports it. This is a security outcome expressed as a storage default.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "ttl-units-are-normalised-per-provider",
+      "adr": "ADR-0024",
+      "rule": "A TTL is expressed in the same units by the caller regardless of provider, and each backend converts to whatever its wire protocol needs.",
+      "why": "MEASURED: memcached treats any TTL above 2592000 seconds (30 days) as an ABSOLUTE UNIX timestamp. A raw TTL above that threshold is read as a moment in 1970, so the session expires instantly. The caller wrote a number of seconds; the provider read a date. Providers differ - the contract must not.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "a-backend-failure-is-loud-then-degrades",
+      "adr": "ADR-0021",
+      "rule": "A backend that becomes unreachable mid-request is LOGGED and then degraded: the read yields an empty session, save() returns false, and the request still serves. It is never silent. TINA4_SESSION_STRICT re-raises instead.",
+      "why": "MEASURED: in Python a session-backend failure on the real HTTP path is SILENT - request.session becomes None with nothing logged. An operator sees users mysteriously logged out and has no signal at all. A genuinely EMPTY session is not an error and must never be logged as one - that distinction is the whole point.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "no-network-io-in-a-handler-constructor",
+      "adr": "ADR-0021",
+      "rule": "A session handler performs no network I/O in its constructor. Connection happens on first use, inside the log-loud-and-degrade policy.",
+      "why": "MEASURED: the database backend does network I/O in the HANDLER CONSTRUCTOR, which sits OUTSIDE the failure policy. So the one place the policy cannot protect is the first thing that runs, and an unreachable backend takes the app down at construction rather than degrading per-request as designed.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "every-backend-works-on-every-engine-it-claims",
+      "adr": "ADR-0024",
+      "rule": "A backend that advertises support for an engine works on that engine. The database session backend works on every engine the Database layer supports, not a subset.",
+      "why": "MEASURED: Node's database session backend is SQLite-only and THROWS at Session construction on any other engine. Develop on sqlite, deploy on postgres, and the app does not start - the founding scenario of ADR-0024, in the subsystem that decides whether anyone is logged in.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "zero-dependency-fallback-in-every-framework",
+      "adr": "ADR-0024",
+      "rule": "Where three frameworks ship a zero-dependency transport for a backend, the fourth does too. A backend must not hard-require a third-party client in one framework and not the others.",
+      "why": "MEASURED: Ruby's mongodb session backend hard-requires the `mongo` gem while the other three ship a zero-dependency wire-protocol fallback. The same .env therefore works in three frameworks and raises in the fourth - and it breaks the zero-dependency promise asymmetrically, which is worse than breaking it consistently.",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    }
+  ]
+}
