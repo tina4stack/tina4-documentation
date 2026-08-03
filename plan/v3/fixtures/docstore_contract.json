@@ -81,18 +81,28 @@
       "adr": "ADR-0024",
       "rule": "A type the DocStore module exports for use in documents can be encoded by the real driver.",
       "why": "MEASURED: the ObjectId class the DocStore module exports cannot be encoded by the real driver. The framework hands the developer a type and the production provider rejects it - so the documented way to construct an id works locally and fails after the swap.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_docstore_substitutability.py"
+      },
+      "cases": [
+        "the exported object id is usable as a document id",
+        "an object id round trips through its string form"
+      ],
+      "status": "proven in python; owed in php, ruby, nodejs"
     },
     {
       "id": "a-real-mongo-is-actually-exercised",
       "adr": "ADR-0024",
       "rule": "Every framework has at least one DocStore test that runs against a REAL Mongo collection, not only the SQLite fallback.",
       "why": "MEASURED, and this is the root cause of the eight rules above: NO DocStore test in ANY of the four frameworks has ever touched a real Mongo collection. The entire substitutability promise has zero coverage, which is exactly how nine defects accumulated behind four green suites. The no-mock rule already forbids substituting a double for a real dependency; this states the positive obligation.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_docstore_substitutability.py"
+      },
+      "cases": [
+        "a real mongo collection is reachable and used",
+        "is serverless agrees with what get collection returned"
+      ],
+      "status": "proven in python; owed in php, ruby, nodejs"
     }
   ]
 }

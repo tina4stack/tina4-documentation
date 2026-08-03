@@ -533,7 +533,28 @@ Dropped on the way out (read): tina4_python/queue/mongo_backend.py:38-40, kafka_
 - **discovered:** Silently in production for the un-awaited value reads (undefined propagates into stored documents and into branch conditions); loudly at first request for the `for..of` and `.toList()` cases. Local dev never fails because the sync path makes the missing `await` invisible.
 - **evidence:** Probe against live mongod: `[docs_example_noawait] sqlite "object" | mongo "undefined"` (typeof res.insertedId); `[findone_noawait] sqlite "string" | mongo "undefined"`; `[countdocs_noawait] sqlite 1 | mongo "type:Promise"`; `[forof_cursor] sqlite 1 | mongo THREW TypeError: ...is not a function or its return value is not iterable`; `[tolist] sqlite 1 | mongo THREW TypeError: c.find(...).toList is not a function`. Source: /Users/andrevanzuydam/IdeaProjects/tina4-nodejs/packages/orm/src/docstore.ts:472, :520, :547, :555, :485-487.
 
-### Array fields do not match on the SQLite fallback — Mongo's array-containment semantics are absent in all four frameworks
+### NO query against an array field matches ANYTHING on the SQLite fallback - wider than "containment is absent"
+
+CORRECTED 2026-08-03, measured against a real MongoDB rather than inferred. The
+original wording said array CONTAINMENT semantics were absent. Measured, the
+fallback matches nothing at all on an array field:
+
+| query                        | fallback | mongo |
+| ---------------------------- | -------- | ----- |
+| `{tags: "x"}` containment    | 0        | 1     |
+| `{tags: ["x","y"]}` exact    | 0        | 1     |
+| `{tags: {$in: ["x"]}}`       | 0        | 1     |
+| `{nums: 1}` numeric element  | 0        | 1     |
+| `{name: "a"}` control        | 1        | 1     |
+
+Mongo also correctly distinguishes element ORDER (`{tags: ["y","x"]}` returns 0),
+so it is doing real array semantics while the fallback does none. An array field
+on the fallback is effectively WRITE-ONLY: it stores and never matches.
+
+Found because the parent asserted "an exact array-equality filter works on both"
+in a new test without measuring it first, and the assertion failed. A second
+instance of the same error the audit keeps finding - a claim standing in for a
+measurement.
 
 - **frameworks:** Python, PHP, Ruby, Node (identical filter compiler in all four)
 - **confidence:** MEASURED
