@@ -27,9 +27,16 @@
       "adr": "ADR-0024",
       "rule": "When a Mongo URI is configured and the driver is present, get_collection() returns a REAL Mongo collection. It never silently returns the local SQLite fallback.",
       "why": "MEASURED: on a default PHP production install TINA4_MONGO_URI is honoured by isServerless() - which reports 'not serverless' - while getCollection() still hands back local SQLite. The two disagree, so the app reports it is on Mongo while writing to a container-local file that vanishes on the next deploy. Production writes are lost with no error at any point.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_docstore_substitutability.py",
+        "php": "tests/DocStoreSubstitutabilityTest.php",
+        "ruby": "spec/docstore_substitutability_spec.rb",
+        "nodejs": "test/docstoreSubstitutability.test.ts"
+      },
+      "cases": [
+        "serverless"
+      ],
+      "status": "PROVEN in all four 2026-08-03"
     },
     {
       "id": "a-missing-driver-has-one-outcome-in-all-four",
@@ -96,13 +103,15 @@
       "rule": "Every framework has at least one DocStore test that runs against a REAL Mongo collection, not only the SQLite fallback.",
       "why": "MEASURED, and this is the root cause of the eight rules above: NO DocStore test in ANY of the four frameworks has ever touched a real Mongo collection. The entire substitutability promise has zero coverage, which is exactly how nine defects accumulated behind four green suites. The no-mock rule already forbids substituting a double for a real dependency; this states the positive obligation.",
       "suites": {
-        "python": "tests/test_docstore_substitutability.py"
+        "python": "tests/test_docstore_substitutability.py",
+        "php": "tests/DocStoreSubstitutabilityTest.php",
+        "ruby": "spec/docstore_substitutability_spec.rb",
+        "nodejs": "test/docstoreSubstitutability.test.ts"
       },
       "cases": [
-        "a real mongo collection is reachable and used",
-        "is serverless agrees with what get collection returned"
+        "a real mongo"
       ],
-      "status": "proven in python; owed in php, ruby, nodejs"
+      "status": "PROVEN in all four 2026-08-03"
     }
   ]
 }
