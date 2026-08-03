@@ -48,9 +48,18 @@
       "adr": "ADR-0024",
       "rule": "Every operation acts on the CONFIGURED backend. No method may silently read or write the local file store when another backend is selected.",
       "why": "MEASURED: PHP clear() and purge() always hit the local FILE store whatever backend is configured; Node popBatch() and popById() always read the local file store even on mongodb. The call appears to succeed and operates on the wrong data - a silent wrong answer, which is the worst failure class because nothing surfaces it.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_queue_reaches_backend.py",
+        "php": "tests/QueueReachesBackendTest.php",
+        "ruby": "spec/queue_reaches_backend_spec.rb",
+        "nodejs": "test/queueReachesBackend.test.ts"
+      },
+      "cases": [
+        "clear acts on the configured backend not the local file store",
+        "pop by id claims the job from the configured backend",
+        "an operation the backend cannot perform refuses instead of silently using the file store"
+      ],
+      "status": "PROVEN in all four 2026-08-03 against a live MongoDB, RabbitMQ and Kafka. The measurement found MORE than this invariant originally recorded. Recorded: PHP clear()/purge() always hit the local FILE store, and Node popBatch()/popById() always read it. FOUND AS WELL: pop_by_id was broken in ALL FOUR - unanimous, which makes it a contract nobody had written down rather than four independent bugs - and Ruby's clear() was broken too. Each framework failed differently. Python: `if not isinstance(self._backend, LiteBackend): return None`, a silent no-op. PHP: clear()/purge() called liteBackend unconditionally and popById() returned null with the comment 'External backends don't support ID-based pop natively', which mongodb does. Ruby: MongoBackend had NEITHER clear nor find_by_id, and Queue guarded on respond_to?, so both returned 0/nil. Node: both read the local file store on every backend. FIXED: mongodb now implements clear, purge and pop-by-id everywhere (claiming one document by id exactly as the head claim does, so a crashed consumer's job is still reclaimed); the brokers RAISE naming the backend and the operation, because neither can address a single message by id nor purge by job status; Node's popBatch loops the atomic pop(). PHP additionally gained clear/purge/popById on the QueueBackend INTERFACE, so the type system enforces the routing, and LiteBackend::clear now returns its count. Mutation-proved in all four: restoring each fall-through kills exactly the dependent case."
     },
     {
       "id": "the-failure-lifecycle-is-real-everywhere",
