@@ -22,6 +22,98 @@ already marked closed and shipped. The July pass judged SOLID, DRY, LOC and CC -
 none of which ask whether the same code behaves the same on another provider, so
 nothing was looking.
 
+## Credential exposure  (9, all FIXED 2026-08-03)
+
+Seven measured defects plus two found while fixing them. Recorded because the
+SHAPE recurs, not because they are open.
+
+### PostgreSQL DSN parameter injection via the password (php) - FIXED, mutation-proven
+
+MEASURED on a live PostgreSQL. The password was concatenated UNESCAPED into a
+libpq space-separated keyword/value DSN, so a space in the password injected
+further parameters and last-occurrence-wins let them override earlier ones:
+
+    password "tina4"                 -> connected to tina4_py   (as the URL said)
+    password "tina4 dbname=postgres" -> connected to postgres   (a DIFFERENT database)
+
+The same mechanism reaches `sslmode=disable`, silently dropping TLS on a
+connection the operator believes is encrypted. Reverting the single call to
+`quoteDsnValue()` makes the live injection work again - that is the gate.
+
+### The dev server published the database URL, password included (php) - FIXED
+
+`/__dev/api/status` and `/__dev/api/system` are PUBLIC GETs and both returned
+`getenv("TINA4_DATABASE_URL")` VERBATIM. Anything that could reach the dev port
+could read a URL-embedded password. Found while fixing the cluster, not by the
+audit that went looking for credential leaks - which is the point: the audit
+looked at the URL PARSER, and the leak was in a status endpoint.
+
+### A malformed TINA4_DATABASE_URL wrote the password into the exception - ALL FOUR - FIXED
+
+That message reaches the boot log, a crash report, the error overlay and CI.
+Note the parent's first probe reported python SAFE; it was not - the probe had
+hit urllib's port-cast error instead of python's own `Invalid URL format`
+branch (database_url.py:187), which leaks like the other three. A single
+negative probe is not proof of absence; probe every branch.
+
+### The redaction helper had no call sites on any real path - ALL FOUR - FIXED
+
+`toSafeString`/`to_safe_string` had ZERO call sites in php and node, and in
+python and ruby was reached only from `__repr__`/`#inspect` - while its own
+docblock calls it "the ONLY form allowed in a log line".
+
+### to_safe_string() returned the ODBC string verbatim including PWD= - FIXED
+
+The negative test `to_safe_string_never_contains_the_password` EXISTED IN ALL
+FOUR AND PASSED, because the shared corpus had no odbc row. Identical to the
+dotenv corpus: the guard exists, the test is green, and it protects nothing
+because the fixture lacks the row that matters. THIS IS THE RECURRING SHAPE -
+when adding a guard, add the corpus row that can fail it.
+
+### KNOWN RESIDUAL: php var_export($url) still prints the password
+
+PHP gives objects no hook for `var_export` - `__debugInfo` covers only
+`print_r`/`var_dump`, and `__set_state` is for import. The real fix is to stop
+holding the password as a plain property. Flagged rather than bodged.
+
+### OWED: nobody has hunted for leak paths BEYOND these
+
+The adversarial verifier for this batch died on a usage limit before running.
+The two extra findings above were incidental. A deliberate sweep - malformed
+URL, dead-host connect, wrong credentials, dump/serialize, ODBC url, traceback,
+env-built url, across all four - has NOT been done.
+
+## Test-harness service gates  (1)
+
+### A service gate that tests REACHABILITY turns a skip into a FAILURE when the service is reachable but unusable
+
+MEASURED 2026-08-01 on the macOS dev box. `tests/test_batch_insert.py` guards its
+MySQL/MSSQL cases with:
+
+    @pytest.mark.skipif(not (_has_mysql_connector() and _reachable(_MYSQL_HOST, _MYSQL_PORT)), ...)
+
+A stray local MySQL container answers on localhost:3306, so `_reachable` is TRUE
+and the test does NOT skip. Nothing exports `TINA4_TEST_MYSQL_*` locally, so the
+test falls back to its defaults (`root`, empty password) and the real server
+answers:
+
+    Access denied for user 'root'@'172.17.0.1' (using password: NO)
+
+The result is a FAILURE where the intent was a SKIP - and because it presents as
+an ordinary red test, it gets normalised as "the known credential gap" and stops
+being read. It survived hours of runs that way today.
+
+The guard tests a PROXY (is the port open) instead of the real condition (can I
+authenticate and use this service). The same shape as the other defects in this
+backlog: a check standing in for the thing it is meant to verify.
+
+Fix direction: the gate should attempt a real connection+auth, not a socket
+probe, and distinguish three states - absent (skip), present-and-usable (run),
+present-but-unusable (FAIL LOUD with the credential contract named, or skip
+explicitly when TINA4_REQUIRE_SERVICES is unset). Note the lab exports BOTH
+`TINA4_TEST_MYSQL_USERNAME` and `TINA4_TEST_MYSQL_USER`, which is why .99 is
+green while a developer box is not.
+
 ## fetch() result envelope - count semantics, the COUNT probe, and the LIMIT detector  (6)
 
 ### A COLUMN NAMED `rate_limit` DEFEATS THE ROW CAP ENTIRELY - unbounded read in 3 of 4
