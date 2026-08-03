@@ -81,12 +81,19 @@
     },
     {
       "id": "query-semantics-match-on-both-providers",
-      "adr": "ADR-0024",
+      "adr": "ADR-0025",
       "rule": "A filter that matches on one provider matches on the other. Array-containment semantics in particular behave the same on the SQLite fallback as on Mongo.",
       "why": "MEASURED: array fields do not match on the SQLite fallback - Mongo's array-containment semantics are absent in ALL FOUR frameworks. A query that returns documents in production returns nothing in development, or the reverse, with no error. Unanimous across the family, which marks it as a contract never written down.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_docstore_substitutability.py",
+        "php": "tests/DocStoreSubstitutabilityTest.php",
+        "ruby": "spec/docstore_substitutability_spec.rb",
+        "nodejs": "test/docstoreSubstitutability.test.ts"
+      },
+      "cases": [
+        "array queries match identically on both providers"
+      ],
+      "status": "PROVEN in all four 2026-08-03 (ADR-0025 clause 4). EIGHT array-query behaviours diverged IDENTICALLY in all four - three of them FALSE POSITIVES where the fallback matched a document Mongo excludes. Fixed by implementing Mongo's rule over json_each: a condition on an array-valued field matches when ANY ELEMENT matches, a negation when NO element does. The test asserts the two providers return the SAME counts rather than a hard-coded number, so it cannot drift."
     },
     {
       "id": "client-lifecycle-is-bounded",
