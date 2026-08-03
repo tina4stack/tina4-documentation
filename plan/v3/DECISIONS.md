@@ -43,3 +43,6 @@ Conventions:
 | ADR-0020 | [The shared response cache obeys RFC 9111 on Authorization and Vary](decisions/ADR-0020.md) | Accepted |
 | ADR-0021 | [A session id is opaque, and an unverified credential is not an auth result](decisions/ADR-0021.md) | Accepted |
 | ADR-0022 | [The queue promises at-least-once, and each backend keeps that promise the way its protocol allows](decisions/ADR-0022.md) | Accepted |
+| ADR-0023 | [The queue ack surface is job-centric, and a dead letter is a QUEUE](decisions/ADR-0023.md) | Accepted |
+| ADR-0024 | [The swap must work - a provider is an env var, never a code change](decisions/ADR-0024.md) | Accepted |
+| ADR-0025 | [The DocStore fallback imitates the driver - it is never the driver's job to imitate us](decisions/ADR-0025.md) | Proposed |
