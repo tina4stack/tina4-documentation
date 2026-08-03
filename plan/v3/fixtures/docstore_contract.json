@@ -49,12 +49,18 @@
     },
     {
       "id": "the-call-site-surface-is-identical",
-      "adr": "ADR-0024",
+      "adr": "ADR-0025",
       "rule": "Every method and cursor operation available on the fallback exists with the same name and signature on the real driver, and vice versa. Code written against one runs unchanged against the other.",
       "why": "MEASURED: PHP's every result accessor and the whole cursor chain is call-site incompatible with the real driver, and THREE of them fail SILENTLY as null. Ruby's find_one() does not exist on Mongo::Collection, and the cursor's two-argument sort(key, direction) is rejected by the driver. The swap is advertised at the call site and broken at the call site.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "php": "tests/DocStoreSubstitutabilityTest.php",
+        "ruby": "spec/docstore_substitutability_spec.rb"
+      },
+      "cases": [
+        "the driver spelling works on both providers",
+        "the fallback only spelling is gone"
+      ],
+      "status": "PROVEN in php + ruby 2026-08-03 (ADR-0025). Python already satisfied it - its fallback is a perfect subset of pymongo. Node is OWED: its divergence is the sync/async one below."
     },
     {
       "id": "the-sync-async-shape-does-not-change-with-the-provider",
