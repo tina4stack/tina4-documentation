@@ -57,9 +57,19 @@
       "adr": "ADR-0024",
       "rule": "delay_seconds / delay is honoured on every backend. A job pushed with a delay is not visible to a consumer before that delay elapses.",
       "why": "MEASURED: delay is silently DROPPED on every non-file backend, in ALL FOUR frameworks. A scheduled job fires immediately in production and on time in development. This one is unanimous across the family, which makes it a contract that was never written down rather than four independent bugs.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_queue_delay_invariant.py",
+        "php": "tests/QueueDelayInvariantTest.php",
+        "ruby": "spec/queue_delay_invariant_spec.rb",
+        "nodejs": "test/queueDelayInvariant.test.ts"
+      },
+      "cases": [
+        "an undelayed job is visible immediately",
+        "a delayed job is not visible before its delay elapses",
+        "a delayed job becomes visible once its delay elapses",
+        "a backend that cannot delay refuses instead of dropping the delay"
+      ],
+      "status": "PROVEN in all four 2026-08-03, against a live MongoDB, RabbitMQ and Kafka. The fix splits by what each broker can actually do. MONGODB: implemented - a delayed job is stamped available_at in the future, which every dequeue already filtered on. Each framework dropped it in its OWN place, which is why the symptom was unanimous but the patch is not: python's adapter never passed delay_seconds to enqueue; PHP's Queue::push built a SEPARATE message array for the external-backend branch carrying neither priority nor delay_seconds, so the value never reached the backend at all; ruby never WROTE available_at and never FILTERED on it, so writing it alone would have changed nothing; node wrote delayUntil but put five conditions in ONE $or, making the reservation gate and the delay gate alternatives instead of requirements - a fresh delayed job has no availableAt, matched {$exists: false}, and was handed straight to a consumer. RABBITMQ and KAFKA: they RAISE naming the backend and the operation (invariant 6), because neither has a per-message delay - rabbitmq's delayed-message-exchange is a non-core plugin and the TTL+dead-letter workaround head-of-line blocks, and kafka reads a partition in offset order. Node satisfies this half by refusing those backends outright at construction (ADR-0022). Every case is mutation-proved: reverting each framework's fix kills exactly 'a delayed job is not visible before its delay elapses' and nothing else."
     },
     {
       "id": "priority-and-availability-are-honoured",
