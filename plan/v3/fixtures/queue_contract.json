@@ -76,9 +76,18 @@
       "adr": "ADR-0024",
       "rule": "priority orders delivery, and a job that is not yet available is not delivered, on every backend that claims to support them.",
       "why": "MEASURED: Ruby + mongodb ignores priority and job availability entirely on the read path; Node + mongodb builds an availability predicate as an OR that always matches, so both delay and retryBackoff are inert. An always-true predicate is indistinguishable from a working one until timing matters.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_queue_priority_invariant.py",
+        "php": "tests/QueuePriorityInvariantTest.php",
+        "ruby": "spec/queue_priority_invariant_spec.rb",
+        "nodejs": "test/queuePriorityInvariant.test.ts"
+      },
+      "cases": [
+        "a higher priority job is delivered before an older lower priority one",
+        "equal priority jobs are delivered oldest first",
+        "a backend that cannot prioritise refuses instead of dropping the priority"
+      ],
+      "status": "PROVEN in all four 2026-08-03, against a live MongoDB, RabbitMQ and Kafka. The AVAILABILITY half was closed first by delay-is-honoured-on-every-backend (Ruby never filtered on available_at; Node's predicate was an always-true OR) and is not re-tested here. PRIORITY was honoured only on the file backend: MEASURED before the fix, mongodb ignored it in PHP, Ruby AND Node, and every broker ignored it in all four. Each framework lost it somewhere different. PHP built a SEPARATE message for the external-backend branch carrying no priority, and even once unified stored priority only INSIDE the message sub-document where a sort cannot reach, sorting on created_at alone. Ruby never WROTE the field its own dequeue read back (doc['priority'] || 0), and also sorted on created_at alone. Node's sort was RIGHT all along ({priority: -1, createdAt: 1}) but priority never ARRIVED - the QueueBackend interface had no such parameter and Queue.push passed it only to liteBackend, so the sort ordered on a field no document carried. Python was already correct and is the reference. MONGODB now stores priority top-level and sorts highest-first with ties oldest-first, matching the file backend's policy. RABBITMQ and KAFKA RAISE naming the backend and the operation (invariant 6): a RabbitMQ queue is FIFO and native priority needs the queue DECLARED with x-max-priority, which an existing queue cannot be redeclared with (PRECONDITION_FAILED), so enabling it would break every queue already in service; Kafka has no priority concept at all. Node satisfies that half by refusing both backends at construction (ADR-0022). Mutation-proved in all four: reverting each framework's fix kills exactly 'a higher priority job is delivered before an older lower priority one', and removing a refusal guard kills exactly the refusal case."
     },
     {
       "id": "an-unsupported-operation-raises-naming-itself",
