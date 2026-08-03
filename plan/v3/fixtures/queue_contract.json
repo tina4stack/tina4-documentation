@@ -28,11 +28,20 @@
     {
       "id": "every-method-exists-on-every-backend",
       "adr": "ADR-0024",
-      "rule": "Every public Queue method resolves and runs on EVERY configured backend. No method may be a fatal error, a NoMethodError, or a throw-at-construction on any backend the framework offers.",
-      "why": "MEASURED: PHP failed()/deadLetters()/retryFailed() are a FATAL Error on rabbitmq and kafka; Ruby queue.size raises NoMethodError on kafka; Node rabbitmq and kafka THROW at construction, so an app that developed on file cannot start at all after the env var changes. The upgrade path is severed rather than degraded - the exact scenario ADR-0024 exists to protect.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "rule": "Every public Queue method resolves and runs on EVERY backend the framework OFFERS. No method may be a fatal error, a NoMethodError, or an undefined method. A backend the framework deliberately does NOT offer must refuse by name at construction (ADR-0022 decision 8), which is a documented refusal rather than a severed upgrade path.",
+      "why": "MEASURED 2026-08-03 across every framework and backend. PHP failed()/deadLetters()/retry()/retryFailed() were a FATAL 'Call to undefined method' on rabbitmq AND kafka, because the QueueBackend INTERFACE never declared them while Queue called them on everything. Ruby queue.size raised NoMethodError on kafka. Python clear() raised AttributeError on mongodb - the only one of that adapter's six _collection users that forgot to connect first. A separate PHP defect surfaced from the test itself: a failed broker connect stored FALSE in the socket while ensureConnected() only reconnects on null, so every later call did fwrite(false, ...) and died with a TypeError. CORRECTION to the original wording of this invariant: Node's rabbitmq/kafka throw-at-construction was listed here as a violation. It is NOT - ADR-0022 decision 8 chose it deliberately over documenting an at-most-once footgun, and records it as a HOLDING POSITION pending a persistent connection. The fixture was wrong, not the code.",
+      "suites": {
+        "python": "tests/test_queue_surface_invariant.py",
+        "php": "tests/QueueSurfaceInvariantTest.php",
+        "ruby": "spec/queue_surface_invariant_spec.rb",
+        "nodejs": "test/queueSurfaceInvariant.test.ts"
+      },
+      "cases": [
+        "every public queue method resolves on every backend",
+        "a backend that cannot answer a question refuses by name instead of lying",
+        "a supported method returns a real answer rather than a refusal"
+      ],
+      "status": "PROVEN in all four 2026-08-03, against a live MongoDB, RabbitMQ and Kafka. PHP: failed(), deadLetters() and retryFailed() are now DECLARED ON THE QueueBackend INTERFACE, so the type system enforces this invariant for them permanently, and the two brokers implement them as refusals naming the backend and the method - not as empty lists, which would claim nothing has failed (ADR-0022 decision 7). PHP also stopped storing FALSE in a broker socket after a failed connect. Ruby gained kafka size() -> 0, the answer ADR-0022 decision 5 already records and which Python and PHP already gave. Python's mongodb clear() now connects first. Node needed no code change: its broker refusal is ADR-0022 decision 8. Each test exercises every method in TWO modes - a FRESH queue per method and one SHARED across them - because they catch different bugs: fresh found Python's unconnected clear(), shared found PHP's dead socket. The first version of the Python test used only the shared mode and PASSED with the fix reverted, which is why both modes are now mandatory. Mutation-proved in all four: removing PHP's interface declarations plus implementations, Ruby's kafka size, Python's ensure_connected, or the backend name from Node's refusal each kills exactly the dependent cases."
     },
     {
       "id": "operations-reach-the-configured-backend",
