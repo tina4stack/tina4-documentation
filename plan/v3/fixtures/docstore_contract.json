@@ -90,12 +90,19 @@
     },
     {
       "id": "client-lifecycle-is-bounded",
-      "adr": "ADR-0024",
+      "adr": "ADR-0025",
       "rule": "Repeated get_collection() calls do not create unbounded client connections. Clients are reused or closed.",
       "why": "MEASURED: a new Mongo client is constructed on EVERY get_collection() call and never closed, so connections grow without bound - on the real provider ONLY. The fallback has no connections, so this is invisible in development and exhausts the server in production. A resource leak that only exists after the swap.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_docstore_substitutability.py",
+        "php": "tests/DocStoreSubstitutabilityTest.php",
+        "ruby": "spec/docstore_substitutability_spec.rb",
+        "nodejs": "test/docstoreSubstitutability.test.ts"
+      },
+      "cases": [
+        "repeated get collection does not grow connections"
+      ],
+      "status": "PROVEN in all four 2026-08-03 (ADR-0025). Fixed in node, python and ruby by caching one client per (uri, database); php was ALREADY bounded because ext-mongodb pools at the libmongoc level, and is asserted anyway so that correctness-by-accident cannot regress silently. Each suite drives 3 rounds + 100 further calls and asserts the growth PLATEAUS - a pool flattens, a leak keeps climbing."
     },
     {
       "id": "exported-types-are-accepted-by-the-real-driver",
