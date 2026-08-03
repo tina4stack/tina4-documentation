@@ -46,3 +46,4 @@ Conventions:
 | ADR-0023 | [The queue ack surface is job-centric, and a dead letter is a QUEUE](decisions/ADR-0023.md) | Accepted |
 | ADR-0024 | [The swap must work - a provider is an env var, never a code change](decisions/ADR-0024.md) | Accepted |
 | ADR-0025 | [The DocStore fallback imitates the driver - it is never the driver's job to imitate us](decisions/ADR-0025.md) | Accepted |
+| ADR-0026 | [The document store is named for the CATEGORY, never for one of its backends](decisions/ADR-0026.md) | Accepted |
