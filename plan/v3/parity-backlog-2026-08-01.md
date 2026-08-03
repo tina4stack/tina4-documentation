@@ -114,7 +114,7 @@ explicitly when TINA4_REQUIRE_SERVICES is unset). Note the lab exports BOTH
 `TINA4_TEST_MYSQL_USERNAME` and `TINA4_TEST_MYSQL_USER`, which is why .99 is
 green while a developer box is not.
 
-## fetch() result envelope - count semantics, the COUNT probe, and the LIMIT detector  (6)
+## fetch() result envelope - count semantics, the COUNT probe, and the LIMIT detector  (6, 3 FIXED 2026-08-02: the LIMIT detector, the append site and the postgres double-LIMIT crash. STILL OPEN: count semantics 2-vs-2, ruby DatabaseResult.limit stuck at 10, and the uncapped total)
 
 ### A COLUMN NAMED `rate_limit` DEFEATS THE ROW CAP ENTIRELY - unbounded read in 3 of 4
 
@@ -599,7 +599,7 @@ Dropped on the way out (read): tina4_python/queue/mongo_backend.py:38-40, kafka_
 - **discovered:** Only in production, only on the instances that happen to be PHP or Ruby, and only for binary payloads — as clients randomly dropping with close code 1007. Never locally on a single instance if that instance is the publisher (the publisher's own local delivery in Python/Node is correct).
 - **evidence:** Fed the identical envelope {"src":"OTHER-INSTANCE","kind":"all","b64":base64("\xff\xfe\x00binary")} through each relay and read the first frame byte off a real socket. RUBY (/tmp/wsaudit/opcode_rb.rb, real TCP peer): first byte 0x81, bytes=[129,9,255,254,0,98,105,110,97,114,121] — FIN|TEXT carrying invalid UTF-8. PHP (\Tina4\WebSocket::buildFrame): 0x81, 129,9,255,254,0,... PYTHON (build_frame(OP_BINARY,...)): 0x82, [130,9,255,254,0,...]. Cross-framework relay verified end to end over the real bus: Python published the b64 envelope, a PHP subscriber relayed it byte-exact (255,254,0,98,105,110,97,114,121) and would then frame it as 0x81.
 
-## feature 1 DotEnv parser  (3)
+## feature 1 DotEnv parser  (3, all FIXED 2026-08-01 - lab-verified all four)
 
 ### A quoted value with a trailing comment keeps its quote characters on 3 of 4
 
@@ -625,7 +625,7 @@ Dropped on the way out (read): tina4_python/queue/mongo_backend.py:38-40, kafka_
 - **least-code fix:** Delete the continuation loop from Node (4 lines removed, nothing added). It is undocumented in the env-var chapters, absent from the corpus, and absent from the other three. If continuation is genuinely wanted it has to land in all four with a corpus row - but the LESS_CODE answer is to remove it.
 - **evidence:** Probe: .env containing `CONT=part1\` newline `CONT_TAIL`. node CONT="part1CONT_TAIL", CONT_TAIL=null; python/php/ruby CONT="part1\\", CONT_TAIL=null with a 'no = in CONT_TAIL, line skipped' warning. Source: /Users/andrevanzuydam/IdeaProjects/tina4-nodejs/packages/core/src/dotenv.ts:105-109
 
-## feature 2 Structured logger  (4)
+## feature 2 Structured logger  (4, all FIXED 2026-08-01 - lab-verified all four)
 
 ### Production log format is selected from a DIFFERENT env var per framework - one container, two formats
 
