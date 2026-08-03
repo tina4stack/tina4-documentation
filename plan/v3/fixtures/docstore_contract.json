@@ -64,12 +64,20 @@
     },
     {
       "id": "the-sync-async-shape-does-not-change-with-the-provider",
-      "adr": "ADR-0024",
+      "adr": "ADR-0025",
       "rule": "A call returns the same KIND of thing on both providers. If one returns a value and the other a promise, un-awaited code silently changes meaning when the env var changes.",
       "why": "MEASURED: in Node the fallback collection is fully SYNCHRONOUS while the driver is fully ASYNCHRONOUS. Un-awaited code returns a real value locally and a Promise in production - so `if (doc)` is true for every query, and a missing document reads as found. The type changed underneath identical source.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "nodejs": "test/docstoreSubstitutability.test.ts"
+      },
+      "cases": [
+        "getCollection returns a promise",
+        "insertOne returns a promise",
+        "the cursor is async-iterable",
+        "the cursor is NOT sync-iterable",
+        "for-await over a cursor yields the documents"
+      ],
+      "status": "PROVEN in nodejs 2026-08-03 (ADR-0025 clause 3). Node-only by construction: python, php and ruby have a SYNCHRONOUS driver, so there is no sync/async axis for the fallback to diverge on. Each case asserts on BOTH providers."
     },
     {
       "id": "query-semantics-match-on-both-providers",
