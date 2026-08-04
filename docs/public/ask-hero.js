@@ -49,13 +49,92 @@
      canyon around every sample. Blank lines between paragraphs doubled up the
      same way. Lifting the blocks out means prose never sees the code's
      newlines, and the code never sees a <br>. */
+
+  /* Syntax highlighting that reuses the SITE'S OWN token classes.
+     tina4press highlights fenced code at BUILD time, so a runtime answer got
+     none. Rather than ship a palette, this emits the same tk-* spans the build
+     emits (tk-keyword, tk-string, tk-number, tk-comment, tk-fn). Those classes
+     are styled globally in theme.css from CSS variables, so the colours match
+     the rest of the site and follow the light/dark toggle for free.
+
+     It runs over ALREADY-ESCAPED text, so entities are stepped over as opaque
+     units and no span can ever be opened inside one. */
+  var KEYWORDS = {
+    php: "function class public private protected static return if else elseif for foreach while do switch case break continue new echo print try catch finally throw namespace use extends implements interface trait abstract final const var global instanceof as fn match null true false",
+    python: "def class return if elif else for while import from as try except finally raise with async await lambda pass break continue global nonlocal yield in is not and or None True False self",
+    javascript: "function class return if else for while do switch case break continue new const let var import export from default extends async await yield try catch finally throw typeof instanceof in of null undefined true false this super static get set",
+    ruby: "def class module return if elsif else unless while until for do end begin rescue ensure raise yield require require_relative attr_accessor attr_reader attr_writer self nil true false and or not then case when next break",
+    bash: "if then else elif fi for while do done case esac function return export local echo cd exit source set unset in"
+  };
+  KEYWORDS.js = KEYWORDS.javascript;
+  KEYWORDS.ts = KEYWORDS.typescript = KEYWORDS.javascript;
+  KEYWORDS.py = KEYWORDS.python;
+  KEYWORDS.rb = KEYWORDS.ruby;
+  KEYWORDS.sh = KEYWORDS.shell = KEYWORDS.bash;
+
+  function highlight(code, lang) {
+    var words = KEYWORDS[(lang || "").toLowerCase()];
+    if (!words) return code;                 // unknown language: leave it plain
+    var kw = Object.create(null);
+    words.split(" ").forEach(function (w) { kw[w] = 1; });
+
+    var out = "", i = 0, n = code.length;
+    function span(cls, text) { return '<span class="tk-' + cls + '">' + text + "</span>"; }
+
+    while (i < n) {
+      var c = code[i];
+
+      // an HTML entity is one opaque unit - never split it
+      if (c === "&") {
+        var semi = code.indexOf(";", i);
+        if (semi > -1 && semi - i <= 6) { out += code.slice(i, semi + 1); i = semi + 1; continue; }
+      }
+
+      // comments
+      if (code.startsWith("//", i) || c === "#") {
+        var eol = code.indexOf("\n", i); if (eol === -1) eol = n;
+        out += span("comment", code.slice(i, eol)); i = eol; continue;
+      }
+      if (code.startsWith("/*", i)) {
+        var close = code.indexOf("*/", i); close = close === -1 ? n : close + 2;
+        out += span("comment", code.slice(i, close)); i = close; continue;
+      }
+
+      // strings (single or double, backslash escapes respected)
+      if (c === '"' || c === "'") {
+        var j = i + 1;
+        while (j < n && code[j] !== c) { if (code[j] === "\\") j++; j++; }
+        out += span("string", code.slice(i, Math.min(j + 1, n))); i = j + 1; continue;
+      }
+
+      // numbers
+      if (/[0-9]/.test(c) && !/[\w$]/.test(code[i - 1] || "")) {
+        var m = /^[0-9][0-9_.]*/.exec(code.slice(i));
+        out += span("number", m[0]); i += m[0].length; continue;
+      }
+
+      // identifiers: keyword, or a function name when followed by (
+      if (/[A-Za-z_$]/.test(c)) {
+        var id = /^[A-Za-z0-9_$]+/.exec(code.slice(i))[0];
+        var after = code.slice(i + id.length);
+        if (kw[id]) out += span("keyword", id);
+        else if (/^\s*\(/.test(after)) out += span("fn", id);
+        else out += id;
+        i += id.length; continue;
+      }
+
+      out += c; i++;
+    }
+    return out;
+  }
+
   function md(t) {
     var h = esc(t);
 
     // 1) lift fenced blocks out, leaving an inert placeholder behind
     var blocks = [];
     h = h.replace(/```(\w*)\r?\n([\s\S]*?)```/g, function (_, lang, code) {
-      blocks.push(code.replace(/\s+$/, ""));
+      blocks.push({ code: code.replace(/\s+$/, ""), lang: lang });
       return "\u0000BLOCK" + (blocks.length - 1) + "\u0000";
     });
 
@@ -82,7 +161,8 @@
 
     // 4) put the code back
     return out.replace(/\u0000BLOCK(\d+)\u0000/g, function (_, i) {
-      return "<pre><code>" + blocks[Number(i)] + "</code></pre>";
+      var b = blocks[Number(i)];
+      return "<pre><code>" + highlight(b.code, b.lang) + "</code></pre>";
     });
   }
 
