@@ -57,63 +57,137 @@
       "adr": "ADR-0024",
       "rule": "A query-cache key identifies the DATABASE it came from. Two databases sharing one cache backend can never serve each other's rows.",
       "why": "MEASURED: the DB query-cache key carries no database identity, so every SHARED backend cross-serves rows between different databases. Two apps pointed at one redis - or one app with a primary and an analytics connection - silently read each other's data. This is a data-isolation failure that looks like a caching optimisation.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_cache_key_database_identity.py",
+        "php": "tests/CacheKeyDatabaseIdentityTest.php",
+        "ruby": "spec/cache_key_database_identity_spec.rb",
+        "nodejs": "test/cacheKeyDatabaseIdentity.test.ts"
+      },
+      "cases": [
+        "two databases sharing one cache backend do not cross serve",
+        "the cache key changes when the database changes",
+        "the cache key is stable for the same database",
+        "the cache key excludes credentials",
+        "two postgres databases do not cross serve"
+      ],
+      "status": "PROVEN in all four 2026-08-04 on the lab (Ubuntu 24.04.4) against a live PostgreSQL 16.14 and Redis 7.4.10, with TINA4_REQUIRE_SERVICES=1 and zero skips. BREAKING - see ADR-0030 and each framework's changelog. The key was the SQL and the params and nothing else in ALL FOUR (python sha256(sql+str(params)), php hash('sha256', sql.json_encode(params)), ruby SHA256(sql+params.to_s), node `query:${sql}:${paramStr}`), so on any SHARED backend two databases cross-served each other's rows. Reproduced before the fix on ONE real PostgreSQL server with two databases differing only in name: the analytics database was served the primary database's row. Identical SQL text across tenants is the COMMON case, not an edge case, so the collision was the normal outcome. The key is now sha256(engine://host:port/database NUL sql NUL params). Credentials are excluded deliberately - a password in the key cold-starts the cache on every rotation and leaks a secret into a namespace visible to every tenant of a shared backend. Nothing per-process is included either, which the 'stable for the same database' negative case pins: a pid or a salt would isolate the databases by accident and destroy the point of a shared cache. MIGRATION: every existing persistent entry becomes a MISS on upgrade; the cache refills on first read, so expect one cold-cache period per deploy sized by TINA4_DB_CACHE_TTL. A cold cache is safe; cross-served rows are not. Mutation-proved in all four (identity dropped from the key; identity replaced by the raw URL so credentials leak in). ONE FALSE GREEN FOUND AND FIXED WHILE PROVING THIS: the postgres case originally used a SHARED database pair that existed only because it had been created BY HAND, so it was red on a clean runner and green on ours. PHP then measured a worse form - its run failed 'database does not exist' SECONDS after listing both as present, because a sibling framework dropped the shared pair mid-run. Self-provisioning alone would have turned that hard failure into an intermittent race, so each framework now owns tina4_cache_ident_<lang>_a/_b and creates them if absent, verified from an empty state."
     },
     {
       "id": "an-explicit-provider-is-honoured",
       "adr": "ADR-0024",
       "rule": "A provider requested explicitly is the provider used. It may not be overridden by ambient state such as another middleware instance already existing.",
       "why": "MEASURED: in Node an explicitly-requested response-cache provider is silently IGNORED once any responseCache middleware exists. The developer names a backend, the framework quietly uses a different one, and the only symptom is cache behaviour that does not match the configuration.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_cache_provider_selection.py",
+        "php": "tests/CacheProviderSelectionTest.php",
+        "ruby": "spec/cache_provider_selection_spec.rb",
+        "nodejs": "test/cacheProviderSelection.test.ts"
+      },
+      "cases": [
+        "an explicitly named provider is used",
+        "an explicit provider is honoured after another instance exists",
+        "two explicit providers do not share a backend",
+        "an unrecognised provider raises"
+      ],
+      "status": "PROVEN in all four 2026-08-04 on the lab (Ubuntu 24.04.4) with TINA4_REQUIRE_SERVICES=1 and zero skips. The measured defect was Node's: _getResponseBackend(config) opened with `if (_responseBackend) return Promise.resolve(_responseBackend)`, returning the memoised backend BEFORE the config was read, so once any responseCache middleware existed an explicitly-requested provider was silently ignored. Python, PHP and Ruby were already correct and carry this as a parity lock-in, mutation-proved so it is a real gate rather than decoration. The load-bearing case is the NEGATIVE one, 'two explicit providers do not share a backend': a fix that records the requested provider NAME but still hands back the memoised object passes a name assertion and changes nothing observable, so the test writes to one store and requires the other to miss. 'an unrecognised provider raises' pins the other half - a typo like TINA4_CACHE_BACKEND=redsi must fail loudly rather than falling through to memory, which used to yield a running app with a per-process cache while the operator believed it was in Redis. NOTE the case name 'an explicitly named provider is used' is deliberately NOT 'an explicit provider is honoured': the auditor matches a case name as a SUBSTRING of the suite file, so the shorter name was a PREFIX of the longer one and deleting it would still have audited green - the exact vanished-test failure this fixture exists to catch."
     },
     {
       "id": "a-cached-null-round-trips-as-null",
       "adr": "ADR-0024",
       "rule": "A cached value of null/None/nil comes back as that value, not as the storage envelope that wrapped it, and not as a miss.",
       "why": "MEASURED: Node's file backend hands back the storage ENVELOPE instead of the value when the cached value is null. The caller receives an object where it stored nothing - so `if (cached)` is true for a cached null, and the cache turns an absence into a presence.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_cache_null_round_trip.py",
+        "php": "tests/CacheNullRoundTripTest.php",
+        "ruby": "spec/cache_null_round_trip_spec.rb",
+        "nodejs": "test/cacheNullRoundTrip.test.ts"
+      },
+      "cases": [
+        "a cached null comes back as null",
+        "a cached null is not the storage envelope",
+        "a cached null is a hit not a miss",
+        "a missing key is still a miss",
+        "other falsy values round trip intact"
+      ],
+      "status": "PROVEN in all four 2026-08-04 on the lab (Ubuntu 24.04.4) across every provider - memory, file, database, redis 7.4.10, valkey 8.1.9, memcached 1.6.45 and mongodb 7.0.39 - with TINA4_REQUIRE_SERVICES=1 and zero skips. The measured defect was Node's file backend: `return data.value ?? data` fell through for a cached null and handed back the storage ENVELOPE, so the caller got an object where it had stored nothing and `if (cached)` was TRUE for a cached null. Caching 'this lookup found nothing' is the most common reason to cache a null, so it was wrong exactly where the feature is used. Python, PHP and Ruby were already correct and carry this as a parity lock-in, mutation-proved in each by porting Node's bug in and watching it go red. The 'other falsy values round trip intact' negative is what stops the obvious wrong fix: false, 0, empty string, empty list and empty dict are VALUES, and any repair built on falsiness (`value || envelope`) breaks all of them. 'a missing key is still a miss' stops the other wrong fix - always reporting a hit and returning null. HONEST LIMIT, recorded rather than papered over: in Python and Ruby None/nil IS the miss sentinel of the backend contract, so a caller cannot separate a cached null from a miss by return value alone; the observable that DOES separate them is the backend's own hit/miss accounting, which is public through stats(), and that is what these cases assert. A distinguishable sentinel or a `default=` parameter (what Django and Rails expose) is a contract change beyond this invariant and is OWED, not smuggled in."
     },
     {
       "id": "sweep-returns-a-real-count-everywhere",
       "adr": "ADR-0024",
       "rule": "sweep() evicts expired entries and returns how many it evicted, on every provider.",
       "why": "MEASURED: sweep() behaves THREE different ways - real counts in Python/PHP, a NoMethodError crash on 6 of 7 providers in Ruby, and a permanent 0 in Node. A monitoring dashboard reading that number is reading three different things, and one of them is a crash.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_cache_sweep_counts.py",
+        "php": "tests/CacheSweepCountsTest.php",
+        "ruby": "spec/cache_sweep_counts_spec.rb",
+        "nodejs": "test/cacheSweepCounts.test.ts"
+      },
+      "cases": [
+        "sweep is available on every provider",
+        "sweep returns the number of entries it evicted",
+        "sweep evicts expired entries from the database backend",
+        "sweep returns zero when nothing has expired",
+        "sweep leaves entries without a ttl alone"
+      ],
+      "status": "PROVEN in all four 2026-08-04 on the lab (Ubuntu 24.04.4) across all seven providers with TINA4_REQUIRE_SERVICES=1 and zero skips. sweep() behaved THREE different ways: real counts in Python and PHP, a NoMethodError on 6 of 7 providers in Ruby (only the file backend had it), and a permanent 0 in Node (the module function called a backend sweep that NO backend defined). A monitoring dashboard reading that number was reading three different things and one of them was a crash - ADR-0024 rule 3 twice over, since a method absent on six providers cannot even reach a refusal and a permanent 0 is a method that exists and no-ops. See ADR-0032 for why returning 0 on redis/valkey/memcached/mongodb is a REAL answer rather than a silent no-op: the value is how many entries THIS CALL removed, and those providers expire server-side, so there is genuinely nothing left to evict. A DEFECT WAS FOUND IN PYTHON, THE REFERENCE IMPLEMENTATION, WHILE PROVING THIS, and Python was FIXED rather than mirrored outward: _DatabaseBackend had no sweep() and inherited that 0, but a SQL table expires nothing by itself, so expired rows were removed only when someone happened to re-read that exact key and tina4_cache grew without bound while the one API whose job is reclaiming that space reported success having done nothing. The `expires_at > 0` guard is load-bearing and is pinned by its own negative case: an entry stored with ttl <= 0 is permanent and carries 0, so a bare `now > expires_at` evicts every permanent entry on the first sweep, silently, and reports it as a successful reclaim. Mutation-proved in all four (sweep reverted to the inherited 0; the ttl guard removed)."
     },
     {
       "id": "cache-clear-clears-the-persistent-layer",
       "adr": "ADR-0024",
       "rule": "The database-level cache_clear() clears the PERSISTENT shared backend, not only the in-process layer.",
       "why": "MEASURED: Python's Database.cache_clear() never clears the persistent shared backend - it is a no-op on every provider. Code that clears the cache after a bulk import appears to work in development (where the cache is in-process) and does nothing in production (where it is shared).",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_cache_clear_persistent_layer.py",
+        "php": "tests/CacheClearPersistentLayerTest.php",
+        "ruby": "spec/cache_clear_persistent_layer_spec.rb",
+        "nodejs": "test/cacheClearPersistentLayer.test.ts"
+      },
+      "cases": [
+        "cache clear clears the persistent backend",
+        "cache clear is visible to another instance",
+        "cache clear leaves the backend usable",
+        "cache clear without a persistent backend is safe"
+      ],
+      "status": "PROVEN in all four 2026-08-04 on the lab (Ubuntu 24.04.4) against a live Redis 7.4.10 and real SQLite, with TINA4_REQUIRE_SERVICES=1 and zero skips. PYTHON WAS THE BROKEN ONE and was FIXED rather than the bug being mirrored outward: Database.cache_clear() cleared the in-process dict and the counters and never touched _cache_backend, so with TINA4_DB_CACHE=true it was a no-op on every provider - clearing the cache after a bulk import appeared to work in development, where the cache IS in-process, and did nothing in production, where it is shared. _cache_invalidate() on the WRITE path already routed to the backend, so the two ways of clearing the same cache disagreed and the explicit PUBLIC one was the broken one. That is the drift shape to watch for: four separate copies of `if self._cache_backend is not None`, and the fourth forgot. PHP, Ruby and Node already cleared the backend and carry this as a parity lock-in, mutation-proved in each. A SECOND DEFECT WAS FOUND WHILE WRITING THIS, by the Ruby port, and was present identically in Python: RedisBackend stats() computed size only when the driver was loaded, so on the ZERO-DEPENDENCY raw transport it returned a constant 0. That matters beyond the number - these very cases assert on stats()['size'], so on a real zero-dependency install they could never have been true; they were green only because a driver happened to be installed. Same root cause as the original clear() no-op. clear() and stats() now drive ONE scoped SCAN walk in all four, so the two can never disagree about what the cache holds. The cases count entries in the REAL backend rather than reconstructing a key, so they cannot go quietly green if the key format changes."
     },
     {
       "id": "a-ttl-is-expressed-in-one-unit-by-the-caller",
       "adr": "ADR-0024",
       "rule": "The caller expresses a TTL in ONE unit - seconds - on every provider. A backend converts to whatever its wire protocol needs, and never silently shortens or discards the lifetime the caller asked for.",
       "why": "MEASURED 2026-08-04 on a real memcached 1.6.45: 2592000 survives, 2592001 vanishes INSTANTLY. memcached reads the set exptime field as RELATIVE seconds at or below 2592000 (30 days) and as an ABSOLUTE UNIX TIMESTAMP above it, and all four cache backends interpolated the caller's ttl RAW - the constant 2592000 appeared NOWHERE in any of the four. So any TINA4_CACHE_TTL over 30 days made every cache write vanish the instant it landed: the caller wrote a number of seconds, the server read a date in 1970. memcached still answers STORED, so it presents as a 100 percent miss rate with nothing logged anywhere - a cache that looks like it is working and never returns a single hit. This rule is the cache-side twin of the session fixture's ttl-units-are-normalised-per-provider; the session handler was fixed first and this one was deliberately left out of that scope, which is exactly how a defect survives a fix to its own sibling.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_cache_memcached_exptime.py",
+        "php": "tests/CacheMemcachedExptimeTest.php",
+        "ruby": "spec/cache_memcached_exptime_spec.rb",
+        "nodejs": "test/cacheMemcachedExptime.test.ts"
+      },
+      "cases": [
+        "a ttl beyond the thirty day cliff survives",
+        "a ttl beyond the cliff keeps its full lifetime",
+        "the thirty day boundary itself stays relative",
+        "a short ttl still expires",
+        "the local write log uses the raw ttl"
+      ],
+      "status": "PROVEN in all four 2026-08-04 on the lab (Ubuntu 24.04.4) against a live memcached 1.6.45, with TINA4_REQUIRE_SERVICES=1 and zero skips. memcached reads the set exptime field as RELATIVE seconds at or below 2592000 (30 days) and as an ABSOLUTE UNIX TIMESTAMP above it; all four cache backends interpolated the caller's ttl RAW, and the constant 2592000 appeared NOWHERE in any of the four. So any TINA4_CACHE_TTL over 30 days made every write vanish the instant it landed while memcached still answered STORED - a 100 percent miss rate with nothing logged. MEASURED: 2592000 survives, 2592001 vanishes. Fixed as CONVERT (now + ttl above the cliff), never CLAMP: clamping to 2592000 also makes the entry survive and is ALSO wrong, silently discarding more than half the lifetime the operator configured. SURVIVAL IS THEREFORE NOT THE ASSERTION - it cannot tell a CONVERT from a CLAMP - so the cases read the server's OWN reported remaining lifetime via meta-get (mg <key> t v). THE BOUNDARY CASE NEEDED A SECOND CORRECTION, found by the PHP port and reproduced in Python before being fixed: the server CANNOT settle the boundary, because a relative 2592000 and an absolute now+2592000 describe the SAME instant and memcached reports an identical t2592000 for both. An off-by-one mutation (>= instead of >) left the file GREEN in three frameworks independently while the docstring claimed that case caught exactly that bug. The boundary is now settled on the COMPUTED exptime - a pure function over its inputs, no service and no stand-in - and the mutation now fails. The trap on the line AFTER the fix is pinned by its own case: the local write log computed its deadline from the SAME variable sent to memcached, so converting it and leaving that line alone puts the deadline about 166 years out and stats() reports expired entries as live forever; the log takes the RAW ttl. This rule is the cache-side twin of the session fixture's ttl-units-are-normalised-per-provider - the session handler was fixed first and the cache side was left out of that scope, which is exactly how a defect survives a fix to its own sibling."
     },
     {
       "id": "an-unreachable-backend-degrades-visibly",
       "adr": "ADR-0024",
       "rule": "A backend whose driver is missing or whose service is unreachable logs a warning and falls back to a REAL persistent cache (the file backend), never to a silent no-op.",
       "why": "This is the documented behaviour in all four and it is the guard that keeps the other rules honest: a cache that silently stops caching looks identical to a cache that is working, until the load arrives. Pinned here so the fallback path is exercised rather than assumed.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_cache_provider_selection.py",
+        "php": "tests/CacheProviderSelectionTest.php",
+        "ruby": "spec/cache_provider_selection_spec.rb",
+        "nodejs": "test/cacheProviderSelection.test.ts"
+      },
+      "cases": [
+        "an unreachable backend falls back to the file backend",
+        "the fallback backend actually caches",
+        "an unreachable backend logs a warning",
+        "a reachable backend is not replaced"
+      ],
+      "status": "PROVEN in all four 2026-08-04 on the lab (Ubuntu 24.04.4) with TINA4_REQUIRE_SERVICES=1 and zero skips. UNREACHABILITY IS REAL HERE, never simulated: each suite binds port 0, reads the number, releases it, and points a backend at that genuinely closed port, so connect() really fails at the OS level. All four were already correct, so this is the parity lock-in that keeps the other seven rules honest - a cache that silently stops caching looks identical to a cache that is working until the load arrives. The negatives carry the weight. 'the fallback backend actually caches' exists because a no-op backend passes a name check and every write: the case stores a value, reads it back, and confirms it reached the real filesystem, so a fallback that merely WEARS the file backend's name fails. 'a reachable backend is not replaced' pins the opposite direction: a probe that failed open would send every deployment to the file backend and still report a working cache. Mutation-proved in all four by making the fallback land on MEMORY instead of FILE - memory silently loses the cross-process sharing the operator configured, which is the same invisible degradation in a different costume."
     }
   ]
 }
