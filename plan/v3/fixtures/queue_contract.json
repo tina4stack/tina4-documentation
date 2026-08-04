@@ -136,7 +136,25 @@
         "a queue backend name is normalised before it is resolved",
         "the guard still accepts every documented backend name"
       ],
-      "status": "PARTIALLY PROVEN in all four 2026-08-03: the BACKEND-SELECTION half. An unrecognised TINA4_QUEUE_BACKEND now RAISES naming the value and the valid set in all four (php + nodejs previously fell through to the local file store), and the name is normalised in all four (ruby previously normalised only the env var, so an explicit backend: 'FILE' raised). STILL OWED: the per-OPERATION half - php failed()/retryFailed()/deadLetters() still FATAL with 'Call to undefined method' on rabbitmq and kafka instead of raising a documented refusal."
+      "status": "PROVEN in all four. The BACKEND-SELECTION half closed 2026-08-03: an unrecognised TINA4_QUEUE_BACKEND now RAISES naming the value and the valid set in all four (php + nodejs previously fell through to the local file store), and the name is normalised in all four (ruby previously normalised only the env var, so an explicit backend: 'FILE' raised). The per-OPERATION half closed 2026-08-04: php failed(), retryFailed() and deadLetters() were FATAL with 'Call to undefined method' on rabbitmq and kafka, because the two broker backends simply did not define them. All three are now DECLARED ON THE QueueBackend INTERFACE, so the type system enforces their presence permanently rather than a test catching each new backend later, and both brokers implement them as refusals naming the backend and the operation and explaining what to use instead. They are not empty lists: an empty list would claim nothing has failed, which ADR-0022 decision 7 forbids. Ruby's five remaining guards became refuse_operation! in the same pass."
+    },
+    {
+      "id": "closing-a-queue-releases-the-backend",
+      "adr": "ADR-0024",
+      "rule": "close() exists on the top-level Queue in every framework and releases whatever the configured backend holds. It is idempotent - closing twice is safe - and closing a file-backed queue is not an error.",
+      "why": "ADR-0024's swap test applies to shutdown, not just to work: if close() releases a Mongo client on one provider and throws on another, the same application shutdown code cannot survive changing one env var. A long-lived process that never releases a broker connection leaks it, and a guarded caller that probes respond_to?(:close) silently skips a backend that lacks the method - so an ABSENT close is indistinguishable from a close that did nothing.",
+      "suites": {
+        "python": "tests/test_queue_close_releases_backend.py",
+        "php": "tests/QueueCloseReleasesBackendTest.php",
+        "ruby": "spec/queue_close_releases_backend_spec.rb",
+        "nodejs": "test/queueClose.test.ts"
+      },
+      "cases": [
+        "closing a queue releases the backend connection",
+        "closing a queue twice is safe",
+        "closing a file backed queue is not an error"
+      ],
+      "status": "PROVEN in all four 2026-08-04 on the lab (Ubuntu 24.04.4) against a live MongoDB, RabbitMQ and Kafka, with TINA4_REQUIRE_SERVICES=1. PHP already had close() on the interface and on all four backends; only the top-level Queue::close() was missing, so the last inch was the whole defect. Python gained close() on the Queue and on all four adapters. Node gained it on the Queue, on liteBackend and on mongoBackend, and close() is now a REQUIRED member of QueueBackendInterface, mirroring PHP so the type system holds the line. Two further defects surfaced in Ruby while doing it: close was NOT IDEMPOTENT (a second call raised Bunny::ChannelAlreadyClosed: cannot use a closed channel, measured directly, now fixed with ensure-nil on rabbitmq and kafka), and LiteBackend had no close AT ALL - so every respond_to?(:close) guard in the tree silently skipped the DEFAULT backend, which is the one most installations run. Mutation-proved in all four: deleting Queue.close() turns the suite red at the call site, and making close() delegate nowhere fails on the retained handles by name (for example ['_producer','_consumer'] still held). Node's close() releases nothing today by design and says so in code: per ADR-0022 its Mongo backend spawns a child process per operation which closes its own client, so a handle assertion there would be theatre."
     }
   ]
 }
