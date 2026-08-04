@@ -26,9 +26,19 @@
       "adr": "ADR-0024",
       "rule": "TINA4_SESSION_TTL is honoured by EVERY backend. A session expires when the configured TTL says so, on file, redis, valkey, mongodb, memcached and database alike.",
       "why": "MEASURED: in Ruby the TTL is honoured by the memcached backend ONLY - every other backend hard-codes 86400. An operator setting a 15-minute session gets 24 hours on five of six backends, and nothing reports it. This is a security outcome expressed as a storage default.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_session_ttl_contract.py",
+        "php": "tests/SessionTtlContractTest.php",
+        "ruby": "spec/session_ttl_contract_spec.rb",
+        "nodejs": "test/sessionTtlContract.test.ts"
+      },
+      "cases": [
+        "session ttl env var expires the record on every backend",
+        "session ttl env var keeps a long lived record on every backend",
+        "session ttl env var reaches the stored deadline out of band",
+        "session ttl option on the session reaches the stored record"
+      ],
+      "status": "PROVEN in all four 2026-08-04 on the lab host (Ubuntu 24.04 x86_64) against a LIVE Redis 7, Valkey 8, memcached 1.6.45, MongoDB 7, PostgreSQL 16 and real SQLite files, TINA4_REQUIRE_SERVICES=1, real wall-clock expiry with no clock mocking anywhere. RE-MEASURED at v3 HEAD before any fix and the defect was still there at the line: Ruby read TINA4_SESSION_TTL in exactly ONE handler (memcached), while file, redis, mongodb and database each hard-coded `@ttl = options[:ttl] || 86400` and valkey read a Ruby-only TINA4_SESSION_VALKEY_TTL; the first run of the new spec went red with 'TINA4_SESSION_TTL=2 was ignored by: file, database, redis, valkey, mongodb' and 'file stored now+86400s, database stored now+86400s, redis stored now+86400s, valkey stored now+86400s'. FOUND AS WELL, and NOT in the original finding: Ruby's Session#save called safe_write(@id, @data) with NO ttl, so an explicit Session.new(ttl:) never reached the store at all - the cookie carried Max-Age and the record did not. Ruby's mongodb handler ALSO had no read-time expiry check, delegating entirely to a TTL index; mongod's TTL monitor sweeps once per 60 SECONDS, so a 2-second session stayed readable for up to a minute past expiry, and it stored updated_at where Python, PHP and Node all store an absolute expires_at. AND Python was broken too, narrowly: FileSessionHandler and DatabaseSessionHandler had no ttl at all, so a bare write(id, data) stored _expires = 0 meaning NEVER EXPIRES while the identical call on memcached expired in an hour - fixed in Python rather than mirrored, per the Python-is-master-unless-Python-is-broken rule. PHP already satisfied the invariant and is a pure lock-in. Node satisfies it end-to-end through Session, which is the only place it reads TINA4_SESSION_TTL for five of six backends; its HANDLER-boundary half is OWED and tracked by ADR-0027, because Node deliberately reads a zero ttl as 'never expires' and pins that with session_mongo_zero_ttl_never_expires - flipping a deliberate, test-locked decision needed an ADR, not a silent change. MUTATION-PROVED in every framework, each mutation asserted to APPLY before running: reverting Ruby's file default kills 2 cases naming 'file' and redis's kills 2 naming redis; removing Ruby's mongo read-time guard kills 1 naming mongodb; reverting Ruby's or Python's save-forwarding kills EXACTLY the Session-level case and nothing else; dropping Python's file or database default kills 2 naming that backend. Recorded because it nearly fooled me: the first Ruby mutation attempt used sed with a `|` delimiter against code containing `||`, silently failed to apply, and reported a meaningless 4-examples-0-failures green - a mutation that does not apply is not a mutation. Python 4772 passed / 27 skipped; Ruby 4908 examples / 0 failures / 8 pending at two different seeds, baseline 4904; PHP 4839 tests / 15295 assertions / 0 failures / 37 skipped; Node 7069 passed / 0 failed across 237 files."
     },
     {
       "id": "ttl-units-are-normalised-per-provider",
