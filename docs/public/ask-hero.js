@@ -59,6 +59,17 @@
 
      It runs over ALREADY-ESCAPED text, so entities are stepped over as opaque
      units and no span can ever be opened inside one. */
+
+  /* Inline SVG, not an icon font or an image: no extra request, it inherits
+     currentColor so it follows the theme and the copied state for free. */
+  var ICON_COPY = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" ' +
+    'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ' +
+    'aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect>' +
+    '<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+  var ICON_DONE = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" ' +
+    'stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" ' +
+    'aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>';
+
   var KEYWORDS = {
     php: "function class public private protected static return if else elseif for foreach while do switch case break continue new echo print try catch finally throw namespace use extends implements interface trait abstract final const var global instanceof as fn match null true false",
     python: "def class return if elif else for while import from as try except finally raise with async await lambda pass break continue global nonlocal yield in is not and or None True False self",
@@ -162,7 +173,13 @@
     // 4) put the code back
     return out.replace(/\u0000BLOCK(\d+)\u0000/g, function (_, i) {
       var b = blocks[Number(i)];
-      return "<pre><code>" + highlight(b.code, b.lang) + "</code></pre>";
+      // Same shell the build emits: a .tp-code wrapper with a .tp-copy button
+      // as a SIBLING of <pre>. That inherits the theme's copy styling, and the
+      // handler below mirrors what client.js binds - it cannot bind these
+      // itself because it runs on load and these blocks arrive later.
+      return '<div class="tp-code">' +
+             '<button class="tp-copy" type="button" aria-label="Copy code" title="Copy code">' + ICON_COPY + '</button>' +
+             "<pre><code>" + highlight(b.code, b.lang) + "</code></pre></div>";
     });
   }
 
@@ -198,6 +215,30 @@
       out.className = "tp-ask-answer" + (state ? " is-" + state : "");
       out.innerHTML = html;
       out.hidden = false;
+      bindCopy();
+    }
+
+    // client.js binds .tp-copy once on load, over the blocks the BUILD wrote.
+    // These arrive at runtime, long after, so they need binding here. Same
+    // behaviour: copy the pre's text, confirm, revert after a moment.
+    function bindCopy() {
+      out.querySelectorAll(".tp-copy").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var pre = btn.parentElement.querySelector("pre");
+          var text = pre ? pre.innerText : "";
+          if (!navigator.clipboard) return;
+          navigator.clipboard.writeText(text).then(function () {
+            btn.innerHTML = ICON_DONE;
+            btn.setAttribute("aria-label", "Copied");
+            btn.classList.add("tp-copied");
+            setTimeout(function () {
+              btn.innerHTML = ICON_COPY;
+              btn.setAttribute("aria-label", "Copy code");
+              btn.classList.remove("tp-copied");
+            }, 1400);
+          });
+        });
+      });
     }
 
     var inFlight = false;

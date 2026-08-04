@@ -157,14 +157,59 @@
 .tp-ask-a p { margin: 0 0 10px; }
 .tp-ask-a p:last-child { margin-bottom: 0; }
 
+/* The code shell: a positioning context for the copy button. */
+.tp-ask-a .tp-code {
+  position: relative;
+  margin: 4px 0 12px;
+}
+
+.tp-ask-a .tp-code:last-child { margin-bottom: 0; }
+
 .tp-ask-a pre {
-  background: var(--tp-code-bg);
+  /* --tp-code-bg is #f4f5f7 in light mode, which all but vanishes against the
+     answer card's own soft background: the sample had no edge and read as
+     loose text. A visible border plus a slightly deeper fill gives it one.
+     color-mix keeps it derived from the theme, so dark mode still follows. */
+  background: color-mix(in srgb, var(--tp-code-bg) 88%, var(--tp-fg) 6%);
+  border: 1px solid var(--tp-border-2, var(--tp-border));
   border-radius: 9px;
   padding: 12px 14px;
-  overflow-x: auto;   /* a wide sample scrolls itself, never the page */
-  /* Sits closer to the sentence that introduces it than to the next one, so a
-     sample reads as belonging to the line above rather than floating between. */
-  margin: 4px 0 12px;
+  padding-right: 48px;   /* room for the copy button, so code never runs under it */
+  overflow-x: auto;      /* a wide sample scrolls itself, never the page */
+  margin: 0;
+}
+
+/* Mirrors the theme's own copy button: hidden until the block is hovered or
+   the button is focused, so it never sits on top of the code while reading. */
+.tp-ask-a .tp-copy {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  opacity: 0;
+  border: 1px solid var(--tp-border);
+  border-radius: 7px;
+  background: var(--tp-bg);
+  color: var(--tp-fg-3);
+  /* Square icon button: the SVG is centred, not baseline-aligned like text. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  cursor: pointer;
+  transition: opacity .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.tp-ask-a .tp-code:hover .tp-copy,
+.tp-ask-a .tp-copy:focus-visible { opacity: 1; }
+.tp-ask-a .tp-copy:hover { color: var(--tp-fg); border-color: var(--tp-brand); }
+.tp-ask-a .tp-copy.tp-copied { color: var(--tp-brand); border-color: var(--tp-brand); opacity: 1; }
+
+/* Touch has no hover, so the button would be unreachable. Always show it. */
+@media (hover: none) {
+  .tp-ask-a .tp-copy { opacity: 1; }
 }
 
 .tp-ask-a pre:last-child { margin-bottom: 0; }
