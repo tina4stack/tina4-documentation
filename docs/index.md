@@ -37,6 +37,20 @@ hero:
 
 ---
 
+<link rel="stylesheet" href="/ask-hero.css">
+
+<div class="tp-ask-hero">
+  <form class="tp-ask-hero-form" role="search" autocomplete="off">
+    <input class="tp-ask-hero-input" type="search" name="q" aria-label="Ask Tina4" placeholder="Ask Tina4: how do I define a route?">
+    <button class="tp-ask-hero-go" type="submit">Ask Tina4</button>
+  </form>
+  <a class="tp-cta tp-ask-hero-cta" href="https://profile.tina4.com">Register Now</a>
+</div>
+
+<div class="tp-ask-pills"></div>
+
+<script src="/ask-hero.js" defer></script>
+
 ## Your AI doesn't know Tina4 yet. Give it 30 seconds.
 
 Copy this into Claude, Cursor, Copilot, or whatever you already have open. It reads the bootstrap protocol, installs what it needs, and hands you a running REST API with JWT auth. Same prompt, four languages.

@@ -1,0 +1,166 @@
+/* Ask Tina4 on the landing page: search box, register CTA, suggestion pills,
+   plus a pass over the floating chat widget's own input and buttons.
+
+   This lives in docs/public/ and is pulled in with a <link> rather than an
+   inline <style> in index.md ON PURPOSE. tina4press runs the markdown processor
+   over the contents of an inline <style> or <script>, which wraps the CSS and
+   the JS in <p> tags and silently breaks both. A tag with no inner content
+   (<link href>, <script src>) has nothing to wrap, so it survives. */
+
+/* ---- hero row: search box + register, side by side ---------------------- */
+
+.tp-ask-hero {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin: 0 0 10px;
+}
+
+.tp-ask-hero-form {
+  display: flex;
+  flex: 1 1 320px;
+  min-width: 0;
+  gap: 8px;
+  background: var(--tp-bg-soft);
+  border: 1px solid var(--tp-border);
+  border-radius: 12px;
+  padding: 6px 6px 6px 14px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.tp-ask-hero-form:focus-within {
+  border-color: var(--tp-brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tp-brand) 18%, transparent);
+}
+
+.tp-ask-hero-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--tp-fg);
+  font: inherit;
+  font-size: 15px;
+  padding: 9px 0;
+}
+
+.tp-ask-hero-input::placeholder { color: var(--tp-fg-3); }
+/* The native clear affordance sits under our submit button and looks broken. */
+.tp-ask-hero-input::-webkit-search-cancel-button { display: none; }
+
+.tp-ask-hero-go {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+  padding: 10px 18px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  background: var(--tp-brand);
+  color: #fff;
+  transition: filter .15s ease;
+}
+
+.tp-ask-hero-go:hover { filter: brightness(1.08); }
+.tp-ask-hero-go:active { filter: brightness(.95); }
+
+/* .tp-cta carries a margin-top for prose callouts. Cancel it so the register
+   button shares a baseline with the search box instead of dropping below. */
+.tp-ask-hero-cta {
+  margin-top: 0;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* ---- suggestion pills --------------------------------------------------- */
+
+.tp-ask-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 34px;
+}
+
+.tp-ask-pill {
+  border: 1px solid var(--tp-border);
+  background: var(--tp-bg-soft);
+  color: var(--tp-fg-2);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: border-color .15s ease, color .15s ease, background .15s ease;
+}
+
+.tp-ask-pill:hover {
+  border-color: var(--tp-brand);
+  color: var(--tp-brand);
+  background: color-mix(in srgb, var(--tp-brand) 8%, var(--tp-bg-soft));
+}
+
+.tp-ask-pill:focus-visible {
+  outline: 2px solid var(--tp-brand);
+  outline-offset: 2px;
+}
+
+@media (max-width: 620px) {
+  .tp-ask-hero-form { flex-basis: 100%; }
+  .tp-ask-hero-cta { flex: 1 1 100%; text-align: center; }
+}
+
+/* ---- the floating chat widget's own input and buttons ------------------- */
+/* The widget ships functional but plain: a square input with a default-looking
+   submit. These bring it in line with the hero box above so the two read as one
+   feature rather than two. Selectors only, no markup changes, so a tina4press
+   upgrade that restyles the widget simply wins. */
+
+.tp-chat-form {
+  gap: 8px;
+  padding: 10px;
+  border-top: 1px solid var(--tp-border);
+}
+
+.tp-chat-input {
+  border: 1px solid var(--tp-border);
+  border-radius: 10px;
+  background: var(--tp-bg-soft);
+  color: var(--tp-fg);
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: 0;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.tp-chat-input:focus {
+  border-color: var(--tp-brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tp-brand) 18%, transparent);
+}
+
+.tp-chat-form button[type="submit"] {
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 10px 16px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--tp-brand);
+  color: #fff;
+  transition: filter .15s ease;
+}
+
+.tp-chat-form button[type="submit"]:hover { filter: brightness(1.08); }
+
+.tp-chat-btn {
+  border-radius: 999px;
+  font-weight: 600;
+  transition: filter .15s ease, transform .15s ease;
+}
+
+.tp-chat-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
