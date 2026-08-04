@@ -49,6 +49,8 @@ hero:
 
 <div class="tp-ask-pills"></div>
 
+<div class="tp-ask-answer" hidden></div>
+
 <script src="/ask-hero.js" defer></script>
 
 ## Your AI doesn't know Tina4 yet. Give it 30 seconds.

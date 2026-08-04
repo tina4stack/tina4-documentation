@@ -113,6 +113,68 @@
   .tp-ask-hero-cta { flex: 1 1 100%; text-align: center; }
 }
 
+/* ---- inline answer ------------------------------------------------------ */
+/* The answer renders here, on the page, rather than in the floating panel.
+   Asking from the hero should not throw the reader into a corner popup. */
+
+.tp-ask-answer[hidden] { display: none; }
+
+.tp-ask-answer {
+  border: 1px solid var(--tp-border);
+  border-radius: 12px;
+  background: var(--tp-bg-soft);
+  padding: 16px 18px;
+  margin: 0 0 34px;
+}
+
+.tp-ask-answer.is-loading { border-style: dashed; }
+.tp-ask-answer.is-error { border-color: color-mix(in srgb, #d9534f 45%, var(--tp-border)); }
+
+.tp-ask-q {
+  font-weight: 600;
+  color: var(--tp-fg);
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--tp-border);
+}
+
+.tp-ask-a {
+  color: var(--tp-fg-2);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.tp-ask-a code {
+  background: var(--tp-code-bg);
+  border-radius: 5px;
+  padding: 2px 5px;
+  font-family: var(--tp-mono);
+  font-size: 13.5px;
+}
+
+.tp-ask-a pre {
+  background: var(--tp-code-bg);
+  border-radius: 9px;
+  padding: 12px 14px;
+  overflow-x: auto;   /* a wide sample scrolls itself, never the page */
+  margin: 10px 0;
+}
+
+.tp-ask-a pre code { background: none; padding: 0; }
+
+.tp-ask-thinking {
+  color: var(--tp-fg-3);
+  font-size: 14px;
+  /* No spinner: a pulse costs nothing and cannot desynchronise from state. */
+  animation: tp-ask-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes tp-ask-pulse { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .tp-ask-thinking { animation: none; opacity: .7; }
+}
+
 /* ---- the floating chat widget's own input and buttons ------------------- */
 /* The widget ships functional but plain: a square input with a default-looking
    submit. These bring it in line with the hero box above so the two read as one
