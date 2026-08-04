@@ -37,22 +37,52 @@
     });
   }
 
-  /* Minimal markdown: fenced code, inline code, links, bold, line breaks.
-     Mirrors the widget's own renderer so an answer reads the same in both
-     places. Everything is escaped FIRST, so nothing in a RAG answer can inject
-     markup into the page. */
+  /* Minimal markdown: fenced code, inline code, links, bold, paragraphs.
+     Everything is escaped FIRST, so nothing in a RAG answer can inject markup
+     into the page.
+
+     Code blocks are LIFTED OUT before any prose formatting and put back
+     afterwards. The obvious approach - replace every \n with <br>, then undo it
+     inside <pre> - is what the widget does, and it is why answers arrived full
+     of gaps: <pre> is already a block element with its own margins, so the
+     stray <br> either side of a fence stacked on top of that and opened a
+     canyon around every sample. Blank lines between paragraphs doubled up the
+     same way. Lifting the blocks out means prose never sees the code's
+     newlines, and the code never sees a <br>. */
   function md(t) {
     var h = esc(t);
-    h = h.replace(/```(\w*)\n([\s\S]*?)```/g, function (_, lang, code) {
-      return "<pre><code>" + code.replace(/\n$/, "") + "</code></pre>";
+
+    // 1) lift fenced blocks out, leaving an inert placeholder behind
+    var blocks = [];
+    h = h.replace(/```(\w*)\r?\n([\s\S]*?)```/g, function (_, lang, code) {
+      blocks.push(code.replace(/\s+$/, ""));
+      return "\u0000BLOCK" + (blocks.length - 1) + "\u0000";
     });
-    h = h.replace(/`([^`]+)`/g, "<code>$1</code>");
+
+    // 2) inline formatting on the prose only
+    h = h.replace(/`([^`\n]+)`/g, "<code>$1</code>");
     h = h.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>');
     h = h.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-    h = h.replace(/\n/g, "<br>");
-    // Undo the <br> substitution inside code blocks, where newlines are real.
-    return h.replace(/<pre>([\s\S]*?)<\/pre>/g, function (m) {
-      return m.replace(/<br>/g, "\n");
+
+    // 3) paragraphs: a blank line starts one, a single newline is a soft break.
+    //    Each chunk is split around its placeholders so a block is ALWAYS
+    //    emitted at top level. A <pre> inside a <p> is invalid: the browser
+    //    auto-closes the paragraph early, reopening the very gap this is meant
+    //    to remove. A fence mid-sentence is common in RAG answers.
+    var out = h.split(/\n{2,}/).map(function (part) {
+      part = part.trim();
+      if (!part) return "";
+      return part.split(/(\u0000BLOCK\d+\u0000)/).map(function (seg) {
+        if (!seg) return "";
+        if (/^\u0000BLOCK\d+\u0000$/.test(seg)) return seg;
+        seg = seg.trim();
+        return seg ? "<p>" + seg.replace(/\n/g, "<br>") + "</p>" : "";
+      }).join("");
+    }).join("");
+
+    // 4) put the code back
+    return out.replace(/\u0000BLOCK(\d+)\u0000/g, function (_, i) {
+      return "<pre><code>" + blocks[Number(i)] + "</code></pre>";
     });
   }
 

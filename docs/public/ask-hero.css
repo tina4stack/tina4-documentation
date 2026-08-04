@@ -152,12 +152,27 @@
   font-size: 13.5px;
 }
 
+/* Tight, explicit paragraph rhythm. The site's global prose margins are sized
+   for a full article and looked cavernous inside a compact answer card. */
+.tp-ask-a p { margin: 0 0 10px; }
+.tp-ask-a p:last-child { margin-bottom: 0; }
+
 .tp-ask-a pre {
   background: var(--tp-code-bg);
   border-radius: 9px;
   padding: 12px 14px;
   overflow-x: auto;   /* a wide sample scrolls itself, never the page */
-  margin: 10px 0;
+  /* Sits closer to the sentence that introduces it than to the next one, so a
+     sample reads as belonging to the line above rather than floating between. */
+  margin: 4px 0 12px;
+}
+
+.tp-ask-a pre:last-child { margin-bottom: 0; }
+
+.tp-ask-a pre code {
+  display: block;
+  line-height: 1.5;
+  white-space: pre;   /* never re-wrap a code sample */
 }
 
 .tp-ask-a pre code { background: none; padding: 0; }
