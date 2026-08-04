@@ -43,9 +43,18 @@
       "adr": "ADR-0024",
       "rule": "URI configured + driver absent produces the SAME outcome in all four frameworks, and that outcome is loud. It must not silently degrade to the local file.",
       "why": "MEASURED: one env produces THREE different outcomes - Python, PHP and Ruby silently degrade to the local SQLite file, Node crashes. Silent degradation here means production traffic writing to a local file nobody is reading. ADR-0024 rule 3: a provider that cannot honour an operation must RAISE, naming the provider and what is missing.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_docstore_substitutability.py",
+        "php": "tests/DocStoreSubstitutabilityTest.php",
+        "ruby": "spec/docstore_substitutability_spec.rb",
+        "nodejs": "test/docstoreSubstitutability.test.ts"
+      },
+      "cases": [
+        "a missing driver raises instead of using the local file",
+        "the same uri with the driver present still selects mongo",
+        "the message does not leak the uri credentials"
+      ],
+      "status": "PROVEN in all four 2026-08-04 (ADR-0033), re-measured first at v3 HEAD (python 75cb10b, php 867838a5, ruby b15749c, nodejs b23bf29) and unchanged since 2026-08-01: python, php and ruby silently returned the local SQLite collection; node threw a bare ERR_MODULE_NOT_FOUND naming an npm package rather than the framework decision. PHP had a SECOND door nobody had opened - ext-mongodb PRESENT with the mongodb/mongodb library absent (its real `composer install --no-dev` shape) made isServerless() report FALSE while getCollection() still returned SqliteCollection, the two disagreeing exactly as a-configured-uri-selects-the-real-provider forbids. All four now raise DocStoreDriverMissing at provider RESOLUTION, before any socket, with one message shape naming the env var that supplied the URI and never its VALUE (a Mongo URI carries user:password@; each suite asserts the leak negatively). is_serverless() became CONFIGURATION-ONLY in python, php and ruby - node already had those semantics and was right, so for once the master moved to match it. TESTED WITHOUT MOCKS in genuinely driverless environments: python a bare `python -m venv` with no pymongo; php `php -n` for the extension and a DocStore-only bootstrap for the library; ruby GEM_HOME/GEM_PATH at an empty dir with bundler's env scrubbed; node the module built into a directory outside the repo where `mongodb` is unresolvable, which is what `npm install --omit=optional` gives. Each probe reports whether it really was driverless, so a leaky environment FAILS rather than proving nothing. Mutation-proved in all four: removing the named raise, and reverting is_serverless() to driver-presence, each turn the suite red. NOT DECIDED HERE, and recorded as owed: DocStore has NO zero-dependency wire-protocol fallback in ANY framework - the hand-rolled OP_MSG transport exists only in the session handlers (python, php, nodejs) and PHP's cache backend - so the three-state model collapses to two, symmetrically, and no framework was made to degrade to match another."
     },
     {
       "id": "the-call-site-surface-is-identical",
