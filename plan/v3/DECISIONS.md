@@ -50,3 +50,4 @@ Conventions:
 | ADR-0030 | [A query-cache key names the DATABASE it came from](decisions/ADR-0030.md) | Accepted |
 | ADR-0031 | [memcached invalidates by NAMESPACE GENERATION, and redis clears by SCAN](decisions/ADR-0031.md) | Accepted |
 | ADR-0032 | [sweep() returns entries EVICTED, and a server-expiring provider honestly returns 0](decisions/ADR-0032.md) | Accepted |
+| ADR-0037 | [The no-skip gate is a deny-list, not a two-axis allow-list](decisions/ADR-0037.md) | Proposed |
