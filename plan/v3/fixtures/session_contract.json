@@ -45,9 +45,18 @@
       "adr": "ADR-0024",
       "rule": "A TTL is expressed in the same units by the caller regardless of provider, and each backend converts to whatever its wire protocol needs.",
       "why": "MEASURED: memcached treats any TTL above 2592000 seconds (30 days) as an ABSOLUTE UNIX timestamp. A raw TTL above that threshold is read as a moment in 1970, so the session expires instantly. The caller wrote a number of seconds; the provider read a date. Providers differ - the contract must not.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_session_ttl_units.py",
+        "php": "tests/SessionTtlUnitsTest.php",
+        "ruby": "spec/session_ttl_units_spec.rb",
+        "nodejs": "test/sessionTtlUnits.test.ts"
+      },
+      "cases": [
+        "session ttl above the memcached thirty day boundary survives",
+        "session ttl at the memcached thirty day boundary survives",
+        "session ttl below the boundary still really expires"
+      ],
+      "status": "PROVEN in all four 2026-08-04 on the lab host (Ubuntu 24.04 x86_64) against a LIVE memcached 1.6.45, TINA4_REQUIRE_SERVICES=1, real wall-clock expiry with no clock mocking. This defect was UNANIMOUS across all four frameworks - a grep for 2592000 returned ZERO hits in python, php, ruby AND nodejs - which makes it a contract nobody had written down rather than four independent bugs. Re-measured directly against the real server before fixing anything: ttl=60 SURVIVES, ttl=2592000 SURVIVES, ttl=2592001 VANISHED INSTANTLY, ttl=4000000 VANISHED INSTANTLY. So TINA4_SESSION_TTL=2592001, an ordinary 'about a month' remember-me setting, was sent as the absolute stamp 1970-01-31, already past, and the item expired the instant it was stored; memcached still answers STORED, so the write looks successful and the very next read is a miss. A silent logout on every request, from a config value that looks perfectly reasonable. The fix CONVERTS a ttl past the boundary into the absolute stamp the protocol is asking for rather than CLAMPING to the ceiling, because clamping a 60-day session to 30 days silently shortens a lifetime the operator explicitly asked to lengthen - the same class of lie in the other direction. PHP additionally emitted the raw ttl from touch(); Ruby and Python have no touch in the session handler, which was checked rather than assumed. THE TEST DESIGN POINT WORTH KEEPING: a survival-only assertion CANNOT tell a conversion from a clamp, because both survive - so every framework's over-boundary case runs 2592001 AND 5184000 (60 days) and asserts the SERVER's own reported remaining ttl via a memcached meta-get on a socket the test owns, never through the code under test. MUTATION-PROVED in all four, each mutation asserted to APPLY before the run: removing the conversion reproduces the shipped defect ('a ttl of 2592001s expired the session instantly'), and replacing it with a CLAMP is caught ONLY by the 60-day case ('asked for a 5184000s session; the server says 2592000s remain'). Converting EVERY ttl to absolute correctly does NOT fail - that is a semantically equivalent implementation, merely more sensitive to client/server clock skew, and the test deliberately does not over-constrain it. Python 4772 passed / 27 skipped; PHP 4839 tests / 15295 assertions / 0 failures / 37 skipped; Ruby 4911 examples / 0 failures / 8 pending. OWED and deliberately out of scope here: the identical unclamped exptime exists in the CACHE memcached backend in all four frameworks - a different subsystem under a different contract fixture. A trap for whoever ports it there: Ruby's cache backend keeps local bookkeeping as `@own[k] = Time.now.to_f + exptime`, which would double-add if handed a converted absolute stamp and must take the caller's ttl instead."
     },
     {
       "id": "a-backend-failure-is-loud-then-degrades",
