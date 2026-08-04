@@ -58,8 +58,8 @@
     },
     {
       "id": "the-call-site-surface-is-identical",
-      "adr": "ADR-0025",
-      "rule": "Every method and cursor operation available on the fallback exists with the same name and signature on the real driver, and vice versa. Code written against one runs unchanged against the other.",
+      "adr": "ADR-0025, amended by ADR-0035",
+      "rule": "Every method and cursor operation available on the fallback exists with the same name and meaning on WHAT get_collection RETURNS for the real provider, and vice versa. Code written against one runs unchanged against the other. Where the driver lacks a method, Tina4 MAY supply it on BOTH sides via a delegator - never on the fallback alone.",
       "why": "MEASURED: PHP's every result accessor and the whole cursor chain is call-site incompatible with the real driver, and THREE of them fail SILENTLY as null. Ruby's find_one() does not exist on Mongo::Collection, and the cursor's two-argument sort(key, direction) is rejected by the driver. The swap is advertised at the call site and broken at the call site.",
       "suites": {
         "php": "tests/DocStoreSubstitutabilityTest.php",
@@ -67,9 +67,10 @@
       },
       "cases": [
         "the driver spelling works on both providers",
-        "the fallback only spelling is gone"
+        "the uniform spelling works on both providers",
+        "the fallback surface resolves on the wrapped driver"
       ],
-      "status": "PROVEN in php + ruby 2026-08-03 (ADR-0025). Python already satisfied it - its fallback is a perfect subset of pymongo. Node is OWED: its divergence is the sync/async one below."
+      "status": "PROVEN in php + ruby 2026-08-03 (ADR-0025), RE-PROVEN against the WRAPPED surface 2026-08-04 (ADR-0035). Python already satisfied it - its fallback is a perfect subset of pymongo. Node is OWED: its divergence is the sync/async one below, and ADR-0035 deliberately does NOT restore Node's cursor [Symbol.iterator]/toList() because a real FindCursor is async-only. The comparison target CHANGED: ADR-0025 compared the fallback against the RAW driver, so a method the driver lacked could only be deleted; ADR-0035 compares against what get_collection RETURNS, which lets a delegator supply the method on both sides instead. Ruby wraps Mongo::Collection in MongoCollection and its View in MongoView; PHP wraps MongoDB\\Collection in DocStoreDelegator. Measured 2026-08-04 against a real MongoDB: 0 fallback-only COLLECTION methods in both, with aggregate/bulk_write/indexes/watch/withOptions all still reachable through the delegator - the objection ADR-0025 raised against a hand-written FACADE, which does not apply to a delegator. STILL OPEN and recorded rather than asserted: the PHP fallback Cursor carries sort/limit/skip that MongoDB\\Driver\\Cursor does not have (PHP's driver takes those as find() options and returns an executed cursor), and the Ruby fallback Cursor's two-argument sort(key, direction) is rejected by Mongo::Collection::View#sort, which takes one spec - the hash spelling sort({k => d}) is the one form both accept. Both predate ADR-0035 and closing them means redesigning find()/Cursor, not adding a delegator method."
     },
     {
       "id": "the-sync-async-shape-does-not-change-with-the-provider",
