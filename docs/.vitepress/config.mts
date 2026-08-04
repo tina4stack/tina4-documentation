@@ -58,16 +58,59 @@ function chapterTitle(filename: string): string {
         .replace(/\b\w/g, c => c.toUpperCase())
 }
 
-const SECTION_RANGES: Record<string, [number, number]> = {
-    'Foundations': [1, 10],
-    'Building Apps': [11, 19],
-    'APIs & Protocols': [20, 25],
-    'Advanced': [26, 29],
-    'Developer Tools': [30, 32],
-    'Operations': [33, 35],
-    'Releases': [36, 36],
-    'Appendix': [37, 39],
-}
+// Menu groups are declared by NAME, never derived from the filename number.
+//
+// This used to be SECTION_RANGES - a map of group name to a numeric range
+// ('Foundations': [1, 10]) - which made a chapter's menu placement a side
+// effect of its file number. Inserting one chapter renumbered every chapter
+// after it and silently moved pages into a different group, and a chapter
+// numbered past the last range (40+) vanished from the sidebar with no error at
+// all. It also produced placements nobody chose: realtime-webrtc landed in
+// "Appendix", beside upgrading-from-v2 and feature-list, purely because it is
+// numbered 39. It is a headline feature and now sits with the other protocols.
+//
+// The numbers still order chapters WITHIN a group (files are read in sorted
+// order), and every URL is unchanged - only the grouping stopped depending on
+// them.
+const BACKEND_GROUPS: { text: string; stems: string[] }[] = [
+    {
+        text: 'Foundations',
+        stems: ['getting-started', 'routing', 'request-response', 'templates',
+                'database', 'orm', 'query-builder', 'authentication',
+                'sessions-cookies', 'middleware-security'],
+    },
+    {
+        text: 'Building Apps',
+        stems: ['caching', 'queues', 'events', 'localization', 'logging',
+                'email', 'frontend', 'testing', 'scaffolding'],
+    },
+    {
+        text: 'APIs & Protocols',
+        stems: ['swagger', 'api-client', 'graphql', 'websocket', 'sse',
+                'wsdl-soap', 'realtime-webrtc'],
+    },
+    {
+        text: 'Advanced',
+        stems: ['di-container', 'service-runner', 'mcp-dev-tools',
+                'custom-mcp-servers'],
+    },
+    {
+        text: 'Developer Tools',
+        stems: ['dev-tools', 'cli', 'vibe-coding-with-ai'],
+    },
+    {
+        text: 'Operations',
+        stems: ['environment-variables', 'deployment', 'complete-app'],
+    },
+    {
+        text: 'Releases',
+        stems: ['releases'],
+    },
+    {
+        text: 'Reference',
+        stems: ['upgrading-from-v2', 'feature-list'],
+    },
+]
 
 // tina4-js has its own shape (a short, feature-driven chapter set), so it uses
 // an explicit, name-based grouping instead of the backend-oriented numeric
@@ -81,6 +124,14 @@ const SECTION_GROUPS: Record<string, { text: string; stems: string[] }[]> = {
         {text: 'Tooling', stems: ['debug', 'tina4-css']},
         {text: 'Guides', stems: ['backend-integration', 'building-a-complete-app', 'patterns-and-pitfalls', 'vibe-coding-with-ai']},
     ],
+    // The four backend framework docs share one chapter set (same stems, same
+    // numbering), so they share one grouping. A chapter a language does not
+    // have simply does not appear for it - upgrading-from-v2 exists only in
+    // python and php, and no group needs to know that.
+    python: BACKEND_GROUPS,
+    php: BACKEND_GROUPS,
+    ruby: BACKEND_GROUPS,
+    nodejs: BACKEND_GROUPS,
 }
 
 function chapterStem(filename: string): string {
@@ -113,43 +164,36 @@ function buildChapterSidebar(section: string, label: string, extras?: object[]):
     ]
 
     if (allChapters.length > 0) {
-        const groups = SECTION_GROUPS[section]
-        if (groups) {
-            // Explicit name-based grouping (tina4-js).
-            const seen = new Set<string>()
-            groups.forEach((group, i) => {
-                const chapters = allChapters.filter(c => group.stems.includes(c.stem))
-                chapters.forEach(c => seen.add(c.stem))
-                if (chapters.length > 0) {
-                    sidebar.push({
-                        text: group.text,
-                        collapsed: i !== 0,
-                        items: chapters.map(c => ({text: c.text, link: c.link}))
-                    })
-                }
-            })
-            // Any chapter not claimed by a group still appears (future-proof —
-            // a new file never silently vanishes from the sidebar).
-            const orphans = allChapters
-                .filter(c => !seen.has(c.stem))
-                .map(c => ({text: c.text, link: c.link}))
-            if (orphans.length > 0) {
-                sidebar.push({text: 'More', collapsed: true, items: orphans})
+        // ONE path for every section. There used to be two - explicit
+        // name-based grouping for tina4-js, numeric-range grouping for the
+        // backends - and only the js path had the orphan catch-all below, so a
+        // backend chapter that fell outside every range disappeared from the
+        // sidebar silently. Same code now serves both.
+        const groups = SECTION_GROUPS[section] ?? []
+        const seen = new Set<string>()
+
+        groups.forEach((group, i) => {
+            // Chapters keep their file order within a group, so the numbers
+            // still decide sequence - they just no longer decide membership.
+            const chapters = allChapters.filter(c => group.stems.includes(c.stem))
+            chapters.forEach(c => seen.add(c.stem))
+            if (chapters.length > 0) {
+                sidebar.push({
+                    text: group.text,
+                    collapsed: i !== 0,
+                    items: chapters.map(c => ({text: c.text, link: c.link}))
+                })
             }
-        } else {
-            // Numeric-range grouping (backend framework docs).
-            for (const [groupName, [start, end]] of Object.entries(SECTION_RANGES)) {
-                const items = allChapters
-                    .filter(c => c.num >= start && c.num <= end)
-                    .map(c => ({text: c.text, link: c.link}))
-                if (items.length > 0) {
-                    sidebar.push({
-                        text: groupName,
-                        collapsed: groupName !== 'Foundations',
-                        items
-                    })
-                }
-            }
+        })
+
+        // Any chapter not claimed by a group still appears. A new file must
+        // never silently vanish from the sidebar - it shows up here until
+        // someone files it deliberately.
+        const orphans = allChapters
+            .filter(c => !seen.has(c.stem))
+            .map(c => ({text: c.text, link: c.link}))
+        if (orphans.length > 0) {
+            sidebar.push({text: 'More', collapsed: true, items: orphans})
         }
     }
 
