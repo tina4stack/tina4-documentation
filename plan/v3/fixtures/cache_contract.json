@@ -13,7 +13,13 @@
     "no-op is exactly that, on the raw RESP path that ships by default.",
     "",
     "These are INVARIANTS, not a bug list. Seven defects were measured on",
-    "2026-08-01; each is an instance of a rule below being broken.",
+    "2026-08-01 and re-measured at v3 HEAD on 2026-08-04 - all seven were",
+    "still present. An EIGHTH rule was added on 2026-08-04: the memcached",
+    "30-day exptime cliff, found in the cache backend after the identical",
+    "defect was fixed in the SESSION handler and deliberately left out of",
+    "that scope. A defect surviving a fix to its own sibling is exactly",
+    "what a written contract is for, so it is pinned here rather than just",
+    "fixed. Each rule below is an instance of something that was broken.",
     "",
     "HOW THIS IS CHECKED: see scripts/audit-contract-fixtures.py. An empty 'cases'",
     "list means OWED - declared, not yet proven."
@@ -87,6 +93,15 @@
       "adr": "ADR-0024",
       "rule": "The database-level cache_clear() clears the PERSISTENT shared backend, not only the in-process layer.",
       "why": "MEASURED: Python's Database.cache_clear() never clears the persistent shared backend - it is a no-op on every provider. Code that clears the cache after a bulk import appears to work in development (where the cache is in-process) and does nothing in production (where it is shared).",
+      "suites": {},
+      "cases": [],
+      "status": "owed"
+    },
+    {
+      "id": "a-ttl-is-expressed-in-one-unit-by-the-caller",
+      "adr": "ADR-0024",
+      "rule": "The caller expresses a TTL in ONE unit - seconds - on every provider. A backend converts to whatever its wire protocol needs, and never silently shortens or discards the lifetime the caller asked for.",
+      "why": "MEASURED 2026-08-04 on a real memcached 1.6.45: 2592000 survives, 2592001 vanishes INSTANTLY. memcached reads the set exptime field as RELATIVE seconds at or below 2592000 (30 days) and as an ABSOLUTE UNIX TIMESTAMP above it, and all four cache backends interpolated the caller's ttl RAW - the constant 2592000 appeared NOWHERE in any of the four. So any TINA4_CACHE_TTL over 30 days made every cache write vanish the instant it landed: the caller wrote a number of seconds, the server read a date in 1970. memcached still answers STORED, so it presents as a 100 percent miss rate with nothing logged anywhere - a cache that looks like it is working and never returns a single hit. This rule is the cache-side twin of the session fixture's ttl-units-are-normalised-per-provider; the session handler was fixed first and this one was deliberately left out of that scope, which is exactly how a defect survives a fix to its own sibling.",
       "suites": {},
       "cases": [],
       "status": "owed"
