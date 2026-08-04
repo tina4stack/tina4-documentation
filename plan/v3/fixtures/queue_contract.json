@@ -66,9 +66,22 @@
       "adr": "ADR-0023",
       "rule": "job.fail() reaches the backend on every provider, and a job past max_retries becomes observable through dead_letters() on every provider. A dead-letter handler written locally must find the same jobs after deploying onto a broker.",
       "why": "MEASURED: on Ruby rabbitmq/kafka the whole failure lifecycle silently no-ops - job.fail() never reaches the backend and dead_letters() is always empty. A developer tests retry-and-dead-letter locally on file, ships it, and the dead-letter queue is permanently empty in production with no error anywhere.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_queue_failure_lifecycle.py",
+        "php": "tests/QueueFailureLifecycleTest.php",
+        "ruby": "spec/queue_failure_lifecycle_spec.rb",
+        "nodejs": "test/queueFailureLifecycle.test.ts"
+      },
+      "cases": [
+        "a failed job under max retries is retried rather than dead lettered",
+        "a job past max retries becomes a dead letter",
+        "a dead letter carries the attempt count and the failure reason",
+        "a completed job never appears in dead letters",
+        "reading dead letters does not consume them",
+        "failing a job reaches the configured backend and not just local memory",
+        "a backend that cannot enumerate retryable failures refuses by name"
+      ],
+      "status": "PROVEN in all four 2026-08-04, against a live MongoDB and a live RabbitMQ. The lifecycle cases are PARAMETRISED over file AND mongodb because the equality of the two IS the invariant. MEASURED defects, all silent: mongodb failed() queried status=\"failed\", which the retryable path never writes (it re-queues as \"pending\"), so it returned [] forever in python, node AND ruby - and ruby had no mongo failed() at all; mongo dead letters lost the attempt count and the error text; ruby's job.fail() NEVER REACHED rabbitmq or kafka because Job#fail was guarded by respond_to?(:fail) and neither broker defined one, so a failure was recorded in local memory while the delivery stayed unacked and no dead letter was written; ruby's five Queue methods each returned []/false/0 for a backend lacking the method, turning \"cannot\" into \"nothing has failed\"; max_retries never reached ruby's brokers so a job got 3 attempts on a broker and 2 on file; node's pop() and popById() returned external-backend jobs UNWRAPPED, so queue.pop().fail() was a TypeError on mongodb and worked on file. PHP's brokers REFUSED deadLetters() outright - a premise true of RabbitMQ's own dead-letter EXCHANGE but false of the <topic>.dead_letter queue Tina4 writes itself - and now answer it non-destructively (drain-and-republish on rabbitmq, offset rewind-and-restore on kafka), verified stable across three consecutive reads. failed()/retry_failed() still refuse on the brokers, correctly: a retryable failure is re-published to the MAIN topic where it cannot be told apart from pending work. Node satisfies the refusal half at CONSTRUCTION per ADR-0022 decision 8. MUTATION-PROVED in every framework, each mutation hitting exactly its own case. Recorded because it nearly fooled me: restoring ruby's respond_to? guard ALONE applied cleanly and proved NOTHING (12 examples, 0 failures), because the backend now HAS a fail method so the guard is inert - the original defect needed BOTH halves. A mutation that applies is not a mutation that reproduces. Kafka's lifecycle is written but NOT verified off-box: the lab broker advertises PLAINTEXT://localhost:9092, so any real client library dials localhost from another host; that verification belongs on the lab host."
     },
     {
       "id": "delay-is-honoured-on-every-backend",
