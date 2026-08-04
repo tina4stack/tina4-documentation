@@ -27,9 +27,24 @@
       "adr": "ADR-0024",
       "rule": "clear() removes every entry this cache can serve, on EVERY provider. It is never a no-op, and never limited to the keys the local process happens to have written.",
       "why": "MEASURED: redis/valkey clear() is a NO-OP on the zero-dependency RESP transport - the default install - in Python, PHP and Ruby, so the persistent DB query cache never invalidates on a write. memcached gives no cross-instance invalidation at all: clear() only deletes keys the local process wrote, so a second instance keeps serving stale rows. The advertised global write-invalidation simply does not hold by default.",
-      "suites": {},
-      "cases": [],
-      "status": "owed"
+      "suites": {
+        "python": "tests/test_cache_clear_invalidates.py",
+        "php": "tests/CacheClearInvalidatesTest.php",
+        "ruby": "spec/cache_clear_invalidates_spec.rb",
+        "nodejs": "test/cacheClearInvalidates.test.ts"
+      },
+      "cases": [
+        "clear on the raw resp transport is not a no op",
+        "clear removes entries written by another instance",
+        "clear leaves another tenants keys untouched",
+        "clear removes many entries not just the first page",
+        "clear invalidates on valkey too",
+        "memcached clear invalidates for a second instance",
+        "memcached clear leaves another tenants keys untouched",
+        "memcached entries written before a clear stay invalid",
+        "memcached clear does not strand live entries from other keys"
+      ],
+      "status": "PROVEN in all four 2026-08-04 on macOS 26.5.2 (Darwin 25.5.0, arm64) against a live Redis 7.4.10, Valkey 8.1.9 and memcached 1.6.45, each framework on its OWN container so no run could clear another's keys, with TINA4_REQUIRE_SERVICES=1 and zero skips. Both defects were re-measured at v3 HEAD before any test was written and both were still present. The raw-RESP clear() was a literal no-op in Python, PHP and Ruby and is now a scoped SCAN + DEL cursor loop; Node already cleared but used KEYS, which blocks the whole server and runs on EVERY write in persistent DB-cache mode, so it moved to SCAN too (ADR-0012: upstream guidance outranks internal precedent). memcached's clear() deleted only the keys the local process wrote in all four and is now the namespace-generation idiom, read from the server on every key computation - see ADR-0031 for why caching that generation in-process reintroduces the exact bug. The RESP reader had to be rewritten first in Python, PHP and Ruby: it did ONE recv(65536) and string-split the result, so any bulk value or key page larger than the buffer truncated silently - a latent data-corruption bug on large cached values, not just a blocker for the scan. WHY IT SHIPPED: the test environments install the redis client library, so every existing redis test took the DRIVER path and the zero-dependency transport had no coverage at all. THE PAGE COUNT IS LOAD-BEARING AND WAS MEASURED, NOT GUESSED: at 250 keys a SCAN COUNT 500 returns everything on the first page with cursor 0, so a cursor-loop mutation left the test GREEN in all four independently. Raised to 1200-2000 and the same mutation now fails. Mutation-proved in all four (raw clear reverted to no-op; scan stops after one page; multi-bulk reply truncated; MATCH unscoped to '*'; generation dropped from the key; generation memoised in-process). One honest gap: the memcached 'another tenant's keys survive' negative is asserted but NOT mutation-proved, because the only faithful mutation is sending flush_all at a shared service, which the working rules forbid."
     },
     {
       "id": "the-cache-key-carries-database-identity",
