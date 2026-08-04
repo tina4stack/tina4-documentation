@@ -1,4 +1,4 @@
-# Chapter 10: Middleware
+# Chapter 10: Middleware & Security
 
 ## 1. The Gatekeepers
 
@@ -743,15 +743,15 @@ end
 
 ---
 
-# Chapter 10: Security
+## 15. Security
 
-Every route you write is a door. Chapter 8 gave you locks. Chapter 10 gave you guards. Chapter 9 gave you session keys. This chapter ties them together into a defence that works without thinking about it.
+Every route you write is a door. Chapter 8 gave you locks. Chapter 9 gave you session keys. The first half of this chapter gave you guards. This section ties them together into a defence that works without thinking about it.
 
 Tina4 ships secure by default. POST routes require authentication. CSRF tokens protect forms. Security headers harden every response. The framework does the boring security work so you focus on building features. But you need to understand what it does (and why) so you don't accidentally undo it.
 
 ---
 
-## 1. Secure-by-Default Routing
+### 1. Secure-by-Default Routing
 
 Every POST, PUT, PATCH, and DELETE route requires a valid `Authorization: Bearer` token. No configuration needed. No method call to remember. The framework enforces this before your handler runs.
 
@@ -784,7 +784,7 @@ curl -X POST http://localhost:7147/api/orders \
 
 GET routes are public by default. Anyone can read. Writing requires proof of identity.
 
-### Making a Write Route Public
+#### Making a Write Route Public
 
 Some endpoints need to accept unauthenticated writes: webhooks, registration forms, public contact forms. Chain `.no_auth`:
 
@@ -795,7 +795,7 @@ Tina4::Router.post("/api/webhooks/stripe").no_auth do |request, response|
 end
 ```
 
-### Protecting a GET Route
+#### Protecting a GET Route
 
 Admin dashboards, user profiles, account settings: some pages need protection even though they only read data. Chain `.secure`:
 
@@ -806,7 +806,7 @@ Tina4::Router.get("/api/admin/users").secure do |request, response|
 end
 ```
 
-### The Rule
+#### The Rule
 
 | Method | Default | Override |
 |--------|---------|----------|
@@ -817,13 +817,13 @@ Two chainable methods. One rule. No surprises.
 
 ---
 
-## 2. CSRF Protection
+### 2. CSRF Protection
 
 Cross-Site Request Forgery tricks a user's browser into submitting a form to your server. The browser sends cookies automatically, including session cookies. Without CSRF protection, an attacker's page can submit forms as your logged-in user.
 
 Tina4 blocks this with form tokens.
 
-### How It Works
+#### How It Works
 
 <div v-pre>
 
@@ -834,7 +834,7 @@ Tina4 blocks this with form tokens.
 
 </div>
 
-### The Template
+#### The Template
 
 ```twig
 <form method="POST" action="/api/profile">
@@ -850,7 +850,7 @@ The `{{ form_token() }}` call generates a hidden input field containing a signed
 
 </div>
 
-### The Middleware
+#### The Middleware
 
 CSRF protection is on by default. Every POST, PUT, PATCH, and DELETE request must include a valid form token. The middleware checks two places:
 
@@ -859,7 +859,7 @@ CSRF protection is on by default. Every POST, PUT, PATCH, and DELETE request mus
 
 If the token is missing or invalid, the middleware returns 403 before your handler runs.
 
-### AJAX Requests
+#### AJAX Requests
 
 For JavaScript-driven forms, send the token as a header:
 
@@ -878,7 +878,7 @@ fetch("/api/profile", {
 });
 ```
 
-### Tokens in Query Strings - Blocked
+#### Tokens in Query Strings - Blocked
 
 Tokens must never appear in URLs. Query strings are logged in server access logs, browser history, and referrer headers. A token in the URL is a token anyone can steal.
 
@@ -889,7 +889,7 @@ CSRF token found in query string - rejected for security.
 Use POST body or X-Form-Token header instead.
 ```
 
-### Skipping CSRF Validation
+#### Skipping CSRF Validation
 
 Three scenarios skip CSRF checks automatically:
 
@@ -897,7 +897,7 @@ Three scenarios skip CSRF checks automatically:
 2. **Routes with `.no_auth`** - Public write endpoints don't need CSRF (they have no session to protect).
 3. **Requests with a valid Bearer token** - API clients authenticate with tokens, not cookies. CSRF only matters for cookie-based sessions.
 
-### Disabling CSRF Globally
+#### Disabling CSRF Globally
 
 For internal microservices behind a firewall (where no browser ever touches the API) you can disable CSRF entirely:
 
@@ -909,7 +909,7 @@ Leave it enabled for anything a browser can reach. The cost is one hidden field 
 
 ---
 
-## 3. Session-Bound Tokens
+### 3. Session-Bound Tokens
 
 A form token alone prevents cross-site forgery. But what if someone steals a token from a form? Session binding stops them.
 
@@ -921,7 +921,7 @@ When `{{ form_token() }}` generates a token, it embeds the current session ID in
 
 This happens automatically. No configuration. No extra code.
 
-### How Stolen Tokens Fail
+#### How Stolen Tokens Fail
 
 1. Attacker visits your site, gets a form token for session `abc-123`.
 2. Attacker sends that token from their own session `xyz-789`.
@@ -931,7 +931,7 @@ The token is cryptographically valid. But it belongs to the wrong session. The b
 
 ---
 
-## 4. Security Headers
+### 4. Security Headers
 
 Every response from Tina4 carries security headers. The `SecurityHeadersMiddleware` injects them before the response reaches the browser. No opt-in required.
 
@@ -944,7 +944,7 @@ Every response from Tina4 carries security headers. The `SecurityHeadersMiddlewa
 | `X-XSS-Protection` | `0` | Disabled. Modern CSP replaces this legacy header. Keeping it on can introduce vulnerabilities. |
 | `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | Disables browser APIs your app does not need. |
 
-### HSTS - Enforcing HTTPS
+#### HSTS - Enforcing HTTPS
 
 Strict Transport Security tells the browser to always use HTTPS. Disabled by default (it breaks local development on HTTP). Enable it in production:
 
@@ -954,7 +954,7 @@ TINA4_HSTS=31536000
 
 This sets a one-year HSTS policy with `includeSubDomains`. Once a browser sees this header, it refuses to connect over HTTP, even if the user types `http://`.
 
-### Customising Headers
+#### Customising Headers
 
 Override any header via environment variables:
 
@@ -967,7 +967,7 @@ TINA4_PERMISSIONS_POLICY=camera=(), microphone=(), geolocation=(), payment=()
 
 ---
 
-## 5. SameSite Cookies
+### 5. SameSite Cookies
 
 Session cookies control who can send them. The `SameSite` attribute tells the browser when to include the cookie in requests.
 
@@ -983,11 +983,11 @@ For most applications, `Lax` is the right choice. Change it only if you understa
 
 ---
 
-## 6. Login Flow - Complete Example
+### 6. Login Flow - Complete Example
 
 Authentication, sessions, tokens, and security converge in the login flow. Here is a complete implementation.
 
-### The Login Route
+#### The Login Route
 
 ```ruby
 Tina4::Router.post("/api/login").no_auth do |request, response|
@@ -1030,7 +1030,7 @@ end
 
 The `.no_auth` chain opens this route to unauthenticated requests. The handler validates credentials and issues a token. The session stores the user identity for server-side lookups.
 
-### The Login Form
+#### The Login Form
 
 ```twig
 {% extends "base.twig" %}
@@ -1068,7 +1068,7 @@ function handleLogin(result) {
 {% endblock %}
 ```
 
-### Protected Pages - Checking the Session
+#### Protected Pages - Checking the Session
 
 ```ruby
 Tina4::Router.get "/dashboard" do |request, response|
@@ -1085,7 +1085,7 @@ Tina4::Router.get "/dashboard" do |request, response|
 end
 ```
 
-### Logout - Destroying the Session
+#### Logout - Destroying the Session
 
 ```ruby
 Tina4::Router.post("/api/logout").no_auth do |request, response|
@@ -1096,11 +1096,11 @@ end
 
 ---
 
-## 7. Handling Expired Sessions
+### 7. Handling Expired Sessions
 
 Sessions expire. Tokens expire. The user clicks a link and finds themselves staring at a broken page or a cryptic error. A good security implementation handles expiry gracefully.
 
-### The Pattern: Redirect to Login, Then Back
+#### The Pattern: Redirect to Login, Then Back
 
 When a session expires mid-use, the user should:
 
@@ -1150,7 +1150,7 @@ function handleLogin(result) {
 }
 ```
 
-### Token Refresh
+#### Token Refresh
 
 Tokens expire based on `TINA4_TOKEN_LIMIT` (default: 60 minutes). The `frond.min.js` frontend library handles token refresh automatically: every response includes a `FreshToken` header with a new token. The client stores it and uses it for the next request.
 
@@ -1169,7 +1169,7 @@ if (freshToken) {
 
 ---
 
-## 8. Rate Limiting
+### 8. Rate Limiting
 
 Brute-force login attempts. Credential stuffing. API abuse. Rate limiting stops all of them.
 
@@ -1207,7 +1207,7 @@ end
 
 ---
 
-## 9. CORS and Credentials
+### 9. CORS and Credentials
 
 When your frontend runs on a different origin than your API (common in development), CORS controls whether the browser sends cookies and auth headers.
 
@@ -1233,7 +1233,7 @@ TINA4_CORS_CREDENTIALS=true
 
 ---
 
-## 10. Security Checklist
+### 10. Security Checklist
 
 Before you deploy, verify:
 
@@ -1251,27 +1251,27 @@ Before you deploy, verify:
 
 ---
 
-## Gotchas
+### Gotchas
 
-### 1. "My POST route returns 401 but I didn't add auth"
+#### 1. "My POST route returns 401 but I didn't add auth"
 
 **Cause:** Tina4 requires authentication on all write routes by default.
 
 **Fix:** Chain `.no_auth` onto the route definition if the endpoint should be public. Otherwise, send a valid Bearer token with the request.
 
-### 2. "CSRF validation fails on AJAX requests"
+#### 2. "CSRF validation fails on AJAX requests"
 
 **Cause:** The form token is not included in the request.
 
 **Fix:** Send the token as an `X-Form-Token` header. If using `frond.min.js`, call `saveForm()`: it handles tokens automatically.
 
-### 3. "I disabled CSRF but forms still fail"
+#### 3. "I disabled CSRF but forms still fail"
 
 **Cause:** The route still requires Bearer auth (separate from CSRF). CSRF and auth are independent checks.
 
 **Fix:** Either send a Bearer token or chain `.no_auth` onto the route.
 
-### 4. "My Content-Security-Policy blocks inline scripts"
+#### 4. "My Content-Security-Policy blocks inline scripts"
 
 **Cause:** The default CSP is `default-src 'self'`, which blocks inline `<script>` tags and `onclick` handlers.
 
@@ -1283,7 +1283,7 @@ TINA4_CSP=default-src 'self'; script-src 'self' 'unsafe-inline'
 
 Prefer external scripts. Inline scripts are an XSS vector.
 
-### 5. "User stays logged in after session expires"
+#### 5. "User stays logged in after session expires"
 
 **Cause:** The frontend stores a JWT in localStorage. The token is still valid even after the session is destroyed server-side.
 
@@ -1291,7 +1291,7 @@ Prefer external scripts. Inline scripts are an XSS vector.
 
 ---
 
-## Exercise: Secure Contact Form
+### Exercise: Secure Contact Form
 
 Build a public contact form that:
 
@@ -1305,7 +1305,7 @@ Build a public contact form that:
 
 </div>
 
-### Solution
+#### Solution
 
 ```ruby
 # src/routes/contact.rb

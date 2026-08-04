@@ -1,4 +1,4 @@
-# Chapter 36: Upgrading from v2 to v3
+# Chapter 37: Upgrading from v2 to v3
 
 ## 1. Overview
 

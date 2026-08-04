@@ -1,4 +1,4 @@
-# Chapter 27: MCP Dev Tools
+# Chapter 28: MCP Dev Tools
 
 ## 1. What is MCP?
 

@@ -1,4 +1,4 @@
-# Chapter 26: Service Runner
+# Chapter 27: Service Runner
 
 ## 1. Work That Runs Outside HTTP Requests
 

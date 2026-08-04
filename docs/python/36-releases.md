@@ -1,4 +1,4 @@
-# Chapter 35: Release Notes
+# Chapter 36: Release Notes
 
 ## v3.13.94 (2026-07-29) - A write with no filter is an error
 
