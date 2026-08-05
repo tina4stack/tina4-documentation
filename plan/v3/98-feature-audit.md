@@ -95,6 +95,172 @@ Where a concept genuinely cannot carry the same name (a language keyword clash,
 `delete` in Node being the classic), the plan states the substitute and the reason
 in the table itself.
 
+## The portability spec (mandatory in every plan, from 2026-08-05)
+
+Owner rule: while the audit runs, every feature plan must also be the SPEC you
+would hand someone adding Tina4 to a language it does not have yet.
+
+This is not extra work bolted onto the audit. A spec complete enough to build a
+FIFTH implementation from is, by construction, a spec that pins the contract the
+existing four must already share - and pinning that contract is the audit's
+whole job. Everything the four keep drifting on (argument order, env precedence,
+stored key shapes, what counts as an error) is exactly what a new implementer
+would have to ask about, so the questions they would ask ARE the audit's
+checklist. If a plan cannot answer them, the plan does not yet describe a
+contract; it describes four accidents that currently agree.
+
+**The surface table is not enough on its own.** It has one column per framework,
+so it is DESCRIPTIVE - it records what these four happen to call a thing. It
+cannot GENERATE a fifth spelling, and it says nothing about stored bytes,
+ordering, or failure modes. It stays mandatory; the six parts below sit
+alongside it.
+
+### 1. Concept and naming RULE
+
+The canonical concept name, plus the derivation rule that produces a spelling in
+any language - not just the four columns. State the rule, then let the table
+show it applied:
+
+    concept: get_token
+    rule:    snake_case in snake_case languages, camelCase in camelCase
+             languages, PascalCase for the type. Verb first, noun second.
+             Keyword clashes take the documented substitute (Node `delete` ->
+             `del`) and the plan names the clash.
+
+A fifth language derives its own name from the rule. It never copies Python's.
+
+### 2. Behaviour, stated without reference to any language
+
+Inputs to outputs for every case INCLUDING the failure cases: what raises, what
+returns empty, what is a silent no-op and why that is correct. Ordering where
+order is observable. Defaults for every optional argument.
+
+This is the part that reads as tedious and is not. "A missing key returns null,
+NOT an error" is one line here and was a cross-framework defect twice.
+
+### 3. The persisted and wire contract
+
+The exact bytes. Stored key names and their prefixes, JSON field names and
+types, SQL column names and types, HTTP headers and status codes, queue message
+envelopes, cookie attributes.
+
+THIS is what makes a fifth implementation interoperable rather than merely
+similar. A Go implementation must be able to read a session written by the PHP
+one, resume a queue the Python one filled, and answer a health check the same
+monitor scrapes. Nothing else in the plan establishes that.
+
+Where a fixture already carries the shape (`fixtures/*.json`), reference it
+rather than restating it.
+
+### 4. Configuration and PRECEDENCE
+
+Every env var the feature reads, its default, and - when more than one can
+supply the same value - the order they win in.
+
+Precedence is the part that gets skipped and the part that bites. MEASURED
+2026-08-05: a test set the LOWEST-precedence name in a three-name chain while
+the canonical name was set ambiently, so its own setenv never took effect; and
+separate probes read redis db 0 while the handler honoured
+TINA4_SESSION_REDIS_DB. Both read as framework defects. Both were unstated
+precedence.
+
+### 5. Conformance cases as DATA, not prose
+
+The fixtures currently carry `cases` as a list of NAMES. A name is not
+executable. A new implementation cannot run "session ttl env var expires the
+record on every backend" - it can only run inputs and compare outputs.
+
+Each case grows an input and an expected result, so the fixture becomes the
+answer key a fifth runner executes directly:
+
+    {
+      "name": "a missing key reads as empty, not an error",
+      "given": { "backend": "redis", "session_id": "absent-1" },
+      "when":  "read",
+      "then":  { "returns": {}, "raises": null }
+    }
+
+The existing four runners keep working; they gain the ability to assert against
+the same data instead of each hand-rolling the case.
+
+### 6. Allowed divergence, with the reason
+
+What a runtime may legitimately do differently, and why, in one line each. PHP
+is single-process; Ruby has Puma; Node has the cluster module; Python has
+asyncio. A plan that pretends these are identical produces a spec nobody can
+implement, and a plan that leaves the difference unstated produces four
+accidents again.
+
+Anything NOT listed here is a defect when it differs. That is the point of
+writing it down.
+
+### The test of a finished plan
+
+Hand it to someone fluent in a language Tina4 does not support, with no access
+to the four repos. If they can implement the feature and pass the fixture, the
+plan is done. If they have to read tina4-python to find out what actually
+happens, it is not - and whatever they had to look up is precisely the thing the
+four will drift on next.
+
+## Applying the portability spec WITHOUT wasting energy
+
+Owner rule, 2026-08-05: apply this to the audited AND the unaudited features, but
+do not burn effort where it buys nothing.
+
+MEASURED 2026-08-05, so the gap is known rather than guessed: **26 feature plans
+exist, 15 carry a surface table, and exactly ONE references a fixture.** Six
+fixtures exist (`cache`, `dispatch`, `docstore`, `health`, `queue`, `session`)
+and their `cases` are NAMES, not executable data.
+
+Retrofitting all six parts onto all 98 features is the wrong move. Most features
+do not need most of the spec, and a spec written where nothing consumes it is
+documentation nobody reads and everybody has to maintain.
+
+### The tier rule (decidable, not a taste call)
+
+Ask ONE question: **does anything outside this process consume what the feature
+produces, and does it survive the process?**
+
+| answer | tier | what the plan owes |
+| --- | --- | --- |
+| Yes, and it PERSISTS (a stored key, a row, a message, a document, a token another service validates) | **A** | all six parts, plus fixture cases as executable data |
+| Yes, but it is TRANSIENT (an HTTP response, a rendered page, a log line, a header) | **B** | parts 1, 2, 4, 6; part 3 only for the bytes that leave the process |
+| No - it is a local utility a caller uses and discards | **C** | parts 1 and 2. One short section. Nothing else. |
+
+Tier A is where a fifth language BREAKS, and it is where these four already
+drift: every cross-framework defect measured on 2026-08-05 was tier A (session
+key databases, mongo database selection, queue vhost naming, paginate envelope
+counts). Tier C is where a fifth language can be written freely and correctly
+from two paragraphs - HtmlElement, Testing, FakeData, the DI container, Events.
+
+Spending tier-A effort on a tier-C feature is the waste this section exists to
+prevent. So is the reverse, and the reverse is worse.
+
+### Order of work
+
+1. **The six existing fixtures first.** They are already consumed by all four
+   runners, so upgrading `cases` from names to executable data (part 5) makes
+   the answer key runnable by a fifth implementation with no new machinery. This
+   is the single highest-leverage change in the whole programme.
+2. **The remaining tier-A features**, whether audited or not. An AUDITED tier-A
+   feature with no wire contract written down is not actually closed - the audit
+   verified behaviour and left the interoperability contract implicit. Feature 18
+   is the worked example: closed on key-set enumeration, then found to have four
+   different `to_paginate` contracts underneath.
+3. **Tier B**, as each feature comes up in the walk. No separate pass.
+4. **Tier C**, inline, in the audit pass itself. Never a separate pass.
+
+### What this changes for the already-audited 32
+
+Nothing is re-audited. Each closed row gets ONE question asked of it: what tier
+is it, and does its plan carry that tier's parts? If yes, the row is genuinely
+done. If no, the row is reopened for the missing parts ONLY - not for a fresh
+verdict.
+
+That is the cheapest possible reconciliation, and it is also the honest one: a
+tier-A row closed without a wire contract was closed early, and today has three
+separate proofs that closing early is how the drift got in.
+
 ## Language-specific issues: when the runtime does the heavy lifting
 
 Owner question, 2026-07-28: "How do we deal with language specific issues -
