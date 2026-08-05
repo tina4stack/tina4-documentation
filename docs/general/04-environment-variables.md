@@ -171,7 +171,36 @@ TINA4_CSRF=false
 | `TINA4_DATABASE_USERNAME` | _(from URL)_ | Override the username in `TINA4_DATABASE_URL`. Useful when credentials contain special characters. |
 | `TINA4_DATABASE_PASSWORD` | _(from URL)_ | Override the password in `TINA4_DATABASE_URL`. |
 | `TINA4_DATABASE_CHARSET` | `UTF8` | Firebird connection charset. Set it when a legacy database created under `NONE` returns double-encoded UTF-8. A `?charset=` query on the connection URL takes precedence. |
+| `TINA4_DATABASE_CONNECT_TIMEOUT` | `10` | Seconds to wait for a database connection before giving up. Set `0` or a negative value to wait forever. |
 | `TINA4_AUTOCOMMIT` | `true` | Standalone writes auto-commit on their own connection (durable + visible across a pool); explicit transactions stay atomic. Set `false` for strict manual-commit mode. |
+
+**Why the connect timeout exists.** A database driver that accepts your TCP
+connection and then never answers leaves the application waiting forever. There
+is no error to catch and nothing in the log, because from the framework's point
+of view nothing has failed yet: it is still waiting. The process simply stops.
+
+Measured on a live Firebird 5 server, a driver in that state held a connection
+attempt for 16 minutes at zero CPU before anyone noticed. The bound turns that
+into an error you can see, retry or fail over on.
+
+The timeout covers establishing the connection only. It does not limit how long
+a query may run once connected.
+
+```bash
+# Wait 3 seconds, then fail loudly -- suits a container that will be restarted
+TINA4_DATABASE_CONNECT_TIMEOUT=3
+
+# Wait forever (the behaviour before this setting existed)
+TINA4_DATABASE_CONNECT_TIMEOUT=0
+```
+
+Raise it above the default when a database is genuinely slow to accept
+connections: a cold-starting managed instance, or a first connection that has to
+negotiate TLS over a slow link. Lower it when you would rather fail fast and let
+a supervisor restart you than have requests queue behind a connection that is
+never coming.
+
+A value that is not a number is ignored with a warning, and the default applies.
 
 **Connection string formats:**
 
