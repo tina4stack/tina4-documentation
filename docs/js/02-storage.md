@@ -1,4 +1,4 @@
-# Persistent Signals
+# Chapter 3: Persistent Signals
 
 A signal lives in memory. Refresh the page and it forgets. For values the user picked themselves -- theme, sidebar collapsed state, the last-used filter, draft text, a guest cart -- forgetting is rude. This chapter wraps a signal so its value survives a refresh, and draws the hard line around what you must never keep there.
 

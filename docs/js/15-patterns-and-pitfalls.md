@@ -1,4 +1,4 @@
-# Chapter 13: Patterns and Pitfalls
+# Chapter 17: Patterns and Pitfalls
 
 ## What We Learned the Hard Way
 
