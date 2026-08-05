@@ -259,14 +259,59 @@ documentation nobody reads and everybody has to maintain.
 
 ### The tier rule (decidable, not a taste call)
 
-Ask ONE question: **does anything outside this process consume what the feature
-produces, and does it survive the process?**
+**Correction, 2026-08-05, owner: "the 22 tier C features are important no matter
+how you feel."** He is right, and the first version of this rule was wrong in a
+specific way: it conflated IMPORTANCE with SPECIFICATION COST. Those are
+orthogonal. A tier is a statement about how much spec a feature needs to be
+portable, NEVER about how much the feature matters, and nothing in a lower tier
+is optional, deferred, or less carefully audited.
+
+The rule was also too NARROW. Asking only "does it persist" misses that a
+PUBLIC API SURFACE A DEVELOPER WRITES AGAINST is equally a contract: if
+`validate()` returns a list in one framework and a bool in another, user code
+breaks just as hard as a mis-keyed session. The proof is already in this
+document - feature 1, the `.env` loader, was classified by the first draft of
+this rule as a local utility. It carried FOUR defects, including quote
+characters left inside a credential handed to a driver, and a `loadEnv($file)`
+against `load_env(dir)` argument-shape split. Two paragraphs would have been
+indefensible.
+
+Ask TWO questions, not one:
+
+  1. does anything outside this process consume what the feature produces, and
+     does it survive the process? (persisted state, wire bytes)
+  2. does a DEVELOPER write code against its exact shape? (public API surface,
+     argument order, return type, error behaviour)
+
+A YES to either puts the feature above tier C.
 
 | answer | tier | what the plan owes |
 | --- | --- | --- |
-| Yes, and it PERSISTS (a stored key, a row, a message, a document, a token another service validates) | **A** | all six parts, plus fixture cases as executable data |
-| Yes, but it is TRANSIENT (an HTTP response, a rendered page, a log line, a header) | **B** | parts 1, 2, 4, 6; part 3 only for the bytes that leave the process |
-| No - it is a local utility a caller uses and discards | **C** | parts 1 and 2. One short section. Nothing else. |
+| PERSISTS or crosses a process boundary (a stored key, a row, a message, a document, a token another service validates, JSON another program parses) | **A** | all six parts, plus fixture cases as executable data |
+| TRANSIENT bytes, OR a public API surface developers write against (an HTTP response, a rendered page, a log line, a header, a validator result, an assertion API) | **B** | parts 1, 2, 4, 6; part 3 for any bytes or shapes that leave the feature |
+| Genuinely internal - no caller outside the framework depends on its shape | **C** | parts 1 and 2 |
+
+**Re-classified after the correction.** The keyword pass put these in C; every
+one of them fails question 1 or 2 and moves up:
+
+| feature | moves to | because |
+| --- | --- | --- |
+| 21 `get_next_id` | A | writes the `tina4_sequences` table, race-critical across processes |
+| 63 `.env` loader + env helpers | A | reads files, has precedence, and is audit feature 1 with four measured defects |
+| 66 CSRF protection | A | a token that crosses a request boundary, and a security control |
+| 86 Self-describing CLI manifest | A | emits JSON another program parses |
+| 88 Firebird driver | A | a database driver |
+| 22 SQL translator | B | emits SQL a real engine parses |
+| 27 Validator | B | its result shape is written against by user code |
+| 58 Inline testing framework | B | a public assertion API |
+| 62 DI container | B | a public API surface |
+| 95 Code generators | B | emit code that must compile in each framework |
+
+Tier C is what genuinely remains: the dev toolbar, the gallery, the CSS bundle,
+the broken-file tracker, the REPL, the docs search index. Internal or
+developer-facing surfaces with no cross-process contract and no shape user code
+binds to. They are still audited to the same standard on correctness - they
+simply need less written down to be PORTABLE.
 
 Tier A is where a fifth language BREAKS, and it is where these four already
 drift: every cross-framework defect measured on 2026-08-05 was tier A (session
@@ -274,8 +319,9 @@ key databases, mongo database selection, queue vhost naming, paginate envelope
 counts). Tier C is where a fifth language can be written freely and correctly
 from two paragraphs - HtmlElement, Testing, FakeData, the DI container, Events.
 
-Spending tier-A effort on a tier-C feature is the waste this section exists to
-prevent. So is the reverse, and the reverse is worse.
+Mis-tiering DOWN is the dangerous error, and the first draft of this rule made it
+five times over. Mis-tiering up costs some writing; mis-tiering down ships a
+contract nobody wrote and four implementations that agree by luck.
 
 ### Order of work
 
