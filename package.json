@@ -1,6 +1,6 @@
 {
   "devDependencies": {
-    "tina4press": "^0.1.11"
+    "tina4press": "^0.1.13"
   },
   "scripts": {
     "docs:sync": "bash scripts/sync-books.sh",

@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       tina4press:
-        specifier: ^0.1.11
-        version: 0.1.11
+        specifier: ^0.1.13
+        version: 0.1.13
 
 packages:
 
@@ -18,8 +18,8 @@ packages:
     resolution: {integrity: sha512-adRY20dcyqBPaTBHByoM9HLjT8AXwHPg2n1tHP6DT3pcwrLoLnaLN6FtUntgOQ/sKdUzwYvNbllr9+hH5lIzTw==}
     hasBin: true
 
-  tina4press@0.1.11:
-    resolution: {integrity: sha512-ddXjQ7N997CxwfiLP0UsYL6wD4tcviJkDlMbJmhldHXv8nlq46f7spGudHgu1Wz8h42xbbFLB8tDR5SHGLBBgw==}
+  tina4press@0.1.13:
+    resolution: {integrity: sha512-b7ABPpELn8ZqdryCmd+QMCYl6WlwduafKFzWVbbDOKOVJXncudYyGfHnWPhuwaDPt5UBBw3D5EKuzNX5FC775w==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -27,6 +27,6 @@ snapshots:
 
   tina4js@1.5.1: {}
 
-  tina4press@0.1.11:
+  tina4press@0.1.13:
     dependencies:
       tina4js: 1.5.1

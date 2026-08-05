@@ -907,7 +907,7 @@ for (let i = 0; i < 50; i++) {
 }
 ```
 
-\### Localization (i18n) {#localization}
+### Localization (i18n) {#localization}
 
 Set `TINA4_LOCALE` in `.env` to change the framework language. Supported: `en`, `fr`, `af`.
 
