@@ -53,6 +53,7 @@ const BACKEND_GROUPS = [
 export default {
   title: "Tina4",
   description: "One framework, four languages, ninety-seven features, zero runtime dependencies.",
+  hostname: "https://tina4.com",
   base: "/",
   cleanUrls: true,
   srcDir: "docs",
