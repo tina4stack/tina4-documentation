@@ -15,9 +15,51 @@
     "",
     "HOW THIS IS CHECKED: see scripts/audit-contract-fixtures.py. An invariant with",
     "an empty 'cases' list is OWED - declared, not yet proven. A case that was named",
-    "and has since disappeared FAILS the build."
+    "and has since disappeared FAILS the build.",
+    "",
+    "CASE SHAPE - each case is executable DATA, not a name:",
+    "",
+    "  name             the test's name, in the four suites' shared idiom. This is what the",
+    "                   auditor greps for, so it must stay in step with the code.",
+    "  given            the starting state: env vars, backends, engines, instruments.",
+    "  when             the action performed.",
+    "  then             the observable outcome asserted.",
+    "  fails_with       the message shape a failure produces, where the suite names one.",
+    "  guards_against   what breaks if this case is deleted. A negative control says so here.",
+    "  witness_must_resolve   see below. Present only on cases with an out-of-band observer.",
+    "",
+    "WITNESS_MUST_RESOLVE - the rule that cost the most to learn.",
+    "",
+    "A test that reaches PAST the framework to inspect the real server must agree with the",
+    "framework about every coordinate it uses. A hardcoded db=0, a literal 'tina4' database,",
+    "a literal 'tina4:session:' prefix - each is right only on the machine the test was",
+    "written on. MEASURED 2026-08-05: that one shape produced 13 failures across three",
+    "frameworks in three different costumes, and made a CORRECT framework look broken three",
+    "separate times.",
+    "",
+    "There are THREE legal strategies, and the failure is never picking the wrong one - it is",
+    "picking NONE and assuming a default:",
+    "",
+    "  resolve    read the same env var the framework reads. Use when the framework has one",
+    "             chain and the test needs to follow it. It must reach the connection that",
+    "             ASKS: a SELECT issued as a separate command on a per-command connection is",
+    "             closed before the read runs, which is how a correctly-resolved db number",
+    "             still probed database 0.",
+    "  control    set the coordinate yourself and own it. Use when the test can dictate the",
+    "             value - a log directory it created, a db number it pins in the config.",
+    "  delegate   ask the code under test for the coordinate. Use ONLY when the coordinate is",
+    "             NOT the property being asserted. Legal for a key name when the assertion is",
+    "             about a deadline; circular, and therefore forbidden, when the assertion is",
+    "             about the key itself.",
+    "",
+    "Each coordinate carries its strategy, the evidence tokens that prove it was handled, the",
+    "value that looks right and is not, and the symptom when it is assumed.",
+    "audit-contract-fixtures.py asserts at least one evidence token appears in every",
+    "framework's suite file. The check is crude on purpose: a probe that assumes the value",
+    "cannot mention any of them. It cannot prove the value is then USED correctly - that is",
+    "what the suite's own assertions are for - so it does not claim to."
   ],
-  "version": 1,
+  "version": 2,
   "decided": "2026-08-03",
   "adr": "ADR-0024",
   "invariants": [
@@ -33,10 +75,132 @@
         "nodejs": "test/sessionTtlContract.test.ts"
       },
       "cases": [
-        "session ttl env var expires the record on every backend",
-        "session ttl env var keeps a long lived record on every backend",
-        "session ttl env var reaches the stored deadline out of band",
-        "session ttl option on the session reaches the stored record"
+        {
+          "name": "session ttl env var expires the record on every backend",
+          "given": {
+            "env": {
+              "TINA4_SESSION_TTL": "2"
+            },
+            "backends": [
+              "file",
+              "database",
+              "redis",
+              "valkey",
+              "mongodb",
+              "memcached"
+            ]
+          },
+          "when": "write a session on each backend, then sleep 4 seconds of REAL wall clock",
+          "then": "every backend reports the record absent",
+          "fails_with": "TINA4_SESSION_TTL=2 was ignored by: <backends, by name>",
+          "guards_against": "a backend that hard-codes its own lifetime and never reads the variable"
+        },
+        {
+          "name": "session ttl env var keeps a long lived record on every backend",
+          "given": {
+            "env": {
+              "TINA4_SESSION_TTL": "3600"
+            },
+            "backends": [
+              "file",
+              "database",
+              "redis",
+              "valkey",
+              "mongodb",
+              "memcached"
+            ]
+          },
+          "when": "write a session on each backend, then sleep 4 seconds of REAL wall clock",
+          "then": "every backend still reports the record present",
+          "fails_with": "TINA4_SESSION_TTL=3600 still expired the record on: <backends>",
+          "guards_against": "NEGATIVE CONTROL. Deleting all expiry logic passes the positive case and ships a store that throws every session away"
+        },
+        {
+          "name": "session ttl env var reaches the stored deadline out of band",
+          "given": {
+            "env": {
+              "TINA4_SESSION_TTL": "1800"
+            },
+            "backends": [
+              "file",
+              "database",
+              "redis",
+              "valkey",
+              "mongodb"
+            ],
+            "excluded": {
+              "memcached": "its text protocol exposes no per-key TTL to read back, so it is proven behaviourally by cases 1 and 2 rather than through the code under test"
+            }
+          },
+          "when": "write one session per backend, then read the STORED DEADLINE back with a client THE TEST OWNS: the JSON straight off disk, a second SQL connection, a raw RESP socket, an independent mongo client",
+          "then": "every backend's stored deadline is within 60s of now+1800",
+          "fails_with": "the stored deadline did not come from TINA4_SESSION_TTL=1800: <backend> stored now+<n>s",
+          "guards_against": "cases 1 and 2 both ask the CODE UNDER TEST whether a record is alive. This one asks the SERVER, so a handler that lies consistently cannot pass",
+          "witness_must_resolve": [
+            {
+              "coordinate": "redis logical database number",
+              "strategy": "resolve",
+              "evidence": [
+                "TINA4_SESSION_REDIS_DB"
+              ],
+              "why_this_strategy": "the framework reads this variable, so the probe must read the same one. And it must reach the CONNECTION THAT ASKS: MEASURED 2026-08-05 in Ruby, a probe that read the variable correctly and then issued SELECT as a separate command still read database 0, because RespClient opens one short-lived connection per command and the SELECT was closed with its socket before the TTL ran",
+              "value_that_looks_right_and_is_not": 0,
+              "symptom_when_assumed": "TTL answers -2, which is redis for 'no such key', and the assertion reports it as a WRONG STORED DEADLINE rather than as a probe pointed at the wrong database",
+              "measured": "2026-08-05"
+            },
+            {
+              "coordinate": "valkey logical database number",
+              "strategy": "resolve",
+              "evidence": [
+                "TINA4_SESSION_VALKEY_DB"
+              ],
+              "why_this_strategy": "the framework reads this variable, so the probe must read the same one. And it must reach the CONNECTION THAT ASKS: MEASURED 2026-08-05 in Ruby, a probe that read the variable correctly and then issued SELECT as a separate command still read database 0, because RespClient opens one short-lived connection per command and the SELECT was closed with its socket before the TTL ran",
+              "value_that_looks_right_and_is_not": 0,
+              "symptom_when_assumed": "TTL answers -2, which is redis for 'no such key', and the assertion reports it as a WRONG STORED DEADLINE rather than as a probe pointed at the wrong database",
+              "measured": "2026-08-05"
+            },
+            {
+              "coordinate": "mongo database name",
+              "strategy": "resolve",
+              "evidence": [
+                "TINA4_SESSION_MONGO_DB",
+                "TINA4_SESSION_MONGO_URI",
+                "TINA4_SESSION_MONGO_URL"
+              ],
+              "why_this_strategy": "all THREE names are listed because the handler falls back _MONGO_URI -> _MONGO_URL -> a literal default, and honouring only the first moves the problem down one rung",
+              "value_that_looks_right_and_is_not": "tina4",
+              "symptom_when_assumed": "the document is simply absent and the case reports a missing or wrong deadline",
+              "measured": "2026-08-05"
+            },
+            {
+              "coordinate": "the session key on the wire (its prefix)",
+              "strategy": "delegate",
+              "evidence": [
+                "@prefix",
+                "_key",
+                "keyPrefix",
+                "key_prefix",
+                "prefix"
+              ],
+              "why_this_strategy": "there is no single chain to resolve. MEASURED 2026-08-05: Ruby's ValkeyHandler reads TINA4_SESSION_VALKEY_PREFIX while its RedisHandler reads NO prefix variable, and only 2 of 4 frameworks honour the valkey one at all. Delegating is legal here precisely because the key is NOT the property under test - the stored deadline is - so asking the code under test for it cannot make the assertion vacuous. Where the KEY ITSELF is what is asserted, as in the zero-dependency wire capture, delegation would be circular and the coordinate must be PINNED in the config instead",
+              "value_that_looks_right_and_is_not": "tina4:session:",
+              "symptom_when_assumed": "the probe asks for a key nobody wrote. MEASURED on the lab: redis PASSED because handler and probe were consistently literal, and valkey FAILED because the handler wrote tina4_rb_<id> while the probe asked for tina4:session:<id> - the same case, two backends, opposite outcomes, from one assumed coordinate",
+              "measured": "2026-08-05"
+            }
+          ]
+        },
+        {
+          "name": "session ttl option on the session reaches the stored record",
+          "given": {
+            "env": {
+              "TINA4_SESSION_TTL": "3600"
+            },
+            "session_ttl_argument": 2
+          },
+          "when": "construct the PUBLIC Session with its own ttl, save, then sleep past that ttl",
+          "then": "the stored record is gone, so the argument reached the store and not just the cookie",
+          "guards_against": "cases 1-3 drive handlers directly, so they gate handler defaults and nothing else. This catches a save() that drops the ttl on the way to the backend - the exact defect measured in Ruby, where the cookie carried Max-Age and the record did not"
+        }
       ],
       "status": "PROVEN in all four 2026-08-04 on the lab host (Ubuntu 24.04 x86_64) against a LIVE Redis 7, Valkey 8, memcached 1.6.45, MongoDB 7, PostgreSQL 16 and real SQLite files, TINA4_REQUIRE_SERVICES=1, real wall-clock expiry with no clock mocking anywhere. RE-MEASURED at v3 HEAD before any fix and the defect was still there at the line: Ruby read TINA4_SESSION_TTL in exactly ONE handler (memcached), while file, redis, mongodb and database each hard-coded `@ttl = options[:ttl] || 86400` and valkey read a Ruby-only TINA4_SESSION_VALKEY_TTL; the first run of the new spec went red with 'TINA4_SESSION_TTL=2 was ignored by: file, database, redis, valkey, mongodb' and 'file stored now+86400s, database stored now+86400s, redis stored now+86400s, valkey stored now+86400s'. FOUND AS WELL, and NOT in the original finding: Ruby's Session#save called safe_write(@id, @data) with NO ttl, so an explicit Session.new(ttl:) never reached the store at all - the cookie carried Max-Age and the record did not. Ruby's mongodb handler ALSO had no read-time expiry check, delegating entirely to a TTL index; mongod's TTL monitor sweeps once per 60 SECONDS, so a 2-second session stayed readable for up to a minute past expiry, and it stored updated_at where Python, PHP and Node all store an absolute expires_at. AND Python was broken too, narrowly: FileSessionHandler and DatabaseSessionHandler had no ttl at all, so a bare write(id, data) stored _expires = 0 meaning NEVER EXPIRES while the identical call on memcached expired in an hour - fixed in Python rather than mirrored, per the Python-is-master-unless-Python-is-broken rule. PHP already satisfied the invariant and is a pure lock-in. Node satisfies it end-to-end through Session, which is the only place it reads TINA4_SESSION_TTL for five of six backends; its HANDLER-boundary half is OWED and tracked by ADR-0027, because Node deliberately reads a zero ttl as 'never expires' and pins that with session_mongo_zero_ttl_never_expires - flipping a deliberate, test-locked decision needed an ADR, not a silent change. MUTATION-PROVED in every framework, each mutation asserted to APPLY before running: reverting Ruby's file default kills 2 cases naming 'file' and redis's kills 2 naming redis; removing Ruby's mongo read-time guard kills 1 naming mongodb; reverting Ruby's or Python's save-forwarding kills EXACTLY the Session-level case and nothing else; dropping Python's file or database default kills 2 naming that backend. Recorded because it nearly fooled me: the first Ruby mutation attempt used sed with a `|` delimiter against code containing `||`, silently failed to apply, and reported a meaningless 4-examples-0-failures green - a mutation that does not apply is not a mutation. Python 4772 passed / 27 skipped; Ruby 4908 examples / 0 failures / 8 pending at two different seeds, baseline 4904; PHP 4839 tests / 15295 assertions / 0 failures / 37 skipped; Node 7069 passed / 0 failed across 237 files."
     },
@@ -52,9 +216,55 @@
         "nodejs": "test/sessionTtlUnits.test.ts"
       },
       "cases": [
-        "session ttl above the memcached thirty day boundary survives",
-        "session ttl at the memcached thirty day boundary survives",
-        "session ttl below the boundary still really expires"
+        {
+          "name": "session ttl above the memcached thirty day boundary survives",
+          "given": {
+            "ttl_seconds": [
+              2592001,
+              5184000
+            ],
+            "backend": "memcached"
+          },
+          "when": "write a session, then ask the SERVER for its own reported remaining ttl via a meta-get on a socket the test owns",
+          "then": "the record survives AND the server reports roughly the ttl that was asked for",
+          "guards_against": "the headline defect - 2592001 read as an absolute stamp in 1970, so the record vanished the instant it was written. The 60-day value is what separates a CONVERSION from a CLAMP: clamping to 2592000 also survives, so a survival-only assertion cannot tell them apart",
+          "witness_must_resolve": [
+            {
+              "coordinate": "the memcached key on the wire (its prefix)",
+              "strategy": "delegate",
+              "evidence": [
+                "TINA4_SESSION_MEMCACHED_PREFIX",
+                "_key",
+                "keyPrefix",
+                "prefix"
+              ],
+              "why_this_strategy": "TINA4_SESSION_MEMCACHED_PREFIX is the one prefix variable all four frameworks DO read, so either resolving it or delegating to the handler is correct here",
+              "value_that_looks_right_and_is_not": "tina4:session:",
+              "symptom_when_assumed": "the probe asks for a key nobody wrote. MEASURED on the lab: redis PASSED because handler and probe were consistently literal, and valkey FAILED because the handler wrote tina4_rb_<id> while the probe asked for tina4:session:<id> - the same case, two backends, opposite outcomes, from one assumed coordinate",
+              "measured": "2026-08-05"
+            }
+          ]
+        },
+        {
+          "name": "session ttl at the memcached thirty day boundary survives",
+          "given": {
+            "ttl_seconds": 2592000,
+            "backend": "memcached"
+          },
+          "when": "write a session at exactly the boundary value",
+          "then": "the record survives, so the boundary itself is still legal relative seconds",
+          "guards_against": "a fix that converts AT or BELOW the boundary - still wrong, just less obviously"
+        },
+        {
+          "name": "session ttl below the boundary still really expires",
+          "given": {
+            "ttl_seconds": 2,
+            "backend": "memcached"
+          },
+          "when": "write a session, then sleep past the ttl in real wall clock",
+          "then": "the record is gone",
+          "guards_against": "NEGATIVE CONTROL. 'Never send an expiry at all' passes both cases above and ships a store where nothing ever expires, which on a session store is a security defect"
+        }
       ],
       "status": "PROVEN in all four 2026-08-04 on the lab host (Ubuntu 24.04 x86_64) against a LIVE memcached 1.6.45, TINA4_REQUIRE_SERVICES=1, real wall-clock expiry with no clock mocking. This defect was UNANIMOUS across all four frameworks - a grep for 2592000 returned ZERO hits in python, php, ruby AND nodejs - which makes it a contract nobody had written down rather than four independent bugs. Re-measured directly against the real server before fixing anything: ttl=60 SURVIVES, ttl=2592000 SURVIVES, ttl=2592001 VANISHED INSTANTLY, ttl=4000000 VANISHED INSTANTLY. So TINA4_SESSION_TTL=2592001, an ordinary 'about a month' remember-me setting, was sent as the absolute stamp 1970-01-31, already past, and the item expired the instant it was stored; memcached still answers STORED, so the write looks successful and the very next read is a miss. A silent logout on every request, from a config value that looks perfectly reasonable. The fix CONVERTS a ttl past the boundary into the absolute stamp the protocol is asking for rather than CLAMPING to the ceiling, because clamping a 60-day session to 30 days silently shortens a lifetime the operator explicitly asked to lengthen - the same class of lie in the other direction. PHP additionally emitted the raw ttl from touch(); Ruby and Python have no touch in the session handler, which was checked rather than assumed. THE TEST DESIGN POINT WORTH KEEPING: a survival-only assertion CANNOT tell a conversion from a clamp, because both survive - so every framework's over-boundary case runs 2592001 AND 5184000 (60 days) and asserts the SERVER's own reported remaining ttl via a memcached meta-get on a socket the test owns, never through the code under test. MUTATION-PROVED in all four, each mutation asserted to APPLY before the run: removing the conversion reproduces the shipped defect ('a ttl of 2592001s expired the session instantly'), and replacing it with a CLAMP is caught ONLY by the 60-day case ('asked for a 5184000s session; the server says 2592000s remain'). Converting EVERY ttl to absolute correctly does NOT fail - that is a semantically equivalent implementation, merely more sensitive to client/server clock skew, and the test deliberately does not over-constrain it. Python 4772 passed / 27 skipped; PHP 4839 tests / 15295 assertions / 0 failures / 37 skipped; Ruby 4911 examples / 0 failures / 8 pending. OWED and deliberately out of scope here: the identical unclamped exptime exists in the CACHE memcached backend in all four frameworks - a different subsystem under a different contract fixture. A trap for whoever ports it there: Ruby's cache backend keeps local bookkeeping as `@own[k] = Time.now.to_f + exptime`, which would double-add if handed a converted absolute stamp and must take the caller's ttl instead."
     },
@@ -70,10 +280,64 @@
         "nodejs": "test/sessionFailureRequestPath.test.ts"
       },
       "cases": [
-        "a backend failure on the request path is logged not silent",
-        "a backend failure on the request path still serves the request",
-        "an empty session on the request path is not logged as a failure",
-        "strict mode on the request path refuses instead of degrading"
+        {
+          "name": "a backend failure on the request path is logged not silent",
+          "given": {
+            "env": {
+              "TINA4_SESSION_BACKEND": "<a name the framework deliberately refuses>"
+            }
+          },
+          "when": "serve a real HTTP request through the real dispatch path",
+          "then": "the REAL logger has written bytes to a real log file naming the failure",
+          "guards_against": "a bare catch that swallows the refusal whole, leaving no signal an operator can find",
+          "witness_must_resolve": [
+            {
+              "coordinate": "the file the real logger writes to",
+              "strategy": "control",
+              "evidence": [
+                "TINA4_LOG_DIR",
+                "with_real_log_dir"
+              ],
+              "why_this_strategy": "the suite OWNS this coordinate rather than discovering it - it points the real logger at a directory it created, then reads the bytes back. Controlling is as valid as resolving; what is never valid is ASSUMING. A rule that demanded the env var be read would have called all four of these suites broken when they are the strongest of the set",
+              "value_that_looks_right_and_is_not": "logs/tina4.log",
+              "symptom_when_assumed": "the assertion reads an empty or absent file and is vacuous - it can never fail",
+              "measured": "2026-08-04"
+            }
+          ]
+        },
+        {
+          "name": "a backend failure on the request path still serves the request",
+          "given": {
+            "env": {
+              "TINA4_SESSION_BACKEND": "<a name the framework deliberately refuses>"
+            }
+          },
+          "when": "serve a real HTTP request through the real dispatch path",
+          "then": "the response is served rather than a 500, with no session attached",
+          "guards_against": "treating loud as the whole rule. Degrading means the user gets their page, not an outage"
+        },
+        {
+          "name": "an empty session on the request path is not logged as a failure",
+          "given": {
+            "env": {},
+            "cookie": null
+          },
+          "when": "serve a request from a first-time visitor with a healthy backend",
+          "then": "nothing is logged as an error",
+          "guards_against": "NEGATIVE CONTROL, and the one most likely to be got wrong. 'Log an error unconditionally' passes both cases above, puts a line in the log for every new visitor, and buries the real outage - the same blindness the fix exists to cure"
+        },
+        {
+          "name": "strict mode on the request path refuses instead of degrading",
+          "given": {
+            "env": {
+              "TINA4_SESSION_STRICT": "true",
+              "TINA4_SESSION_BACKEND": "<unreachable>"
+            }
+          },
+          "when": "serve a real HTTP request",
+          "then": "the request is refused rather than served without a session",
+          "guards_against": "an INERT strict mode. Swallowed by a bare except it returned a cheerful 200 while the session silently did not exist - precisely the outcome strict mode is chosen to prevent"
+        }
       ],
       "status": "PROVEN in all four 2026-08-04 on the lab host (Ubuntu 24.04 x86_64), TINA4_REQUIRE_SERVICES=1, against genuinely closed TCP ports and real Redis/PostgreSQL/SQLite. NO MOCKS: every case reads bytes the REAL logger wrote to a real file, each with a driver self-test so no log assertion can be vacuous. This invariant was owed on the REQUEST PATH specifically - all four already had a correct policy on the Session OBJECT, and all four failed to apply it where a Session is actually built. Each framework failed differently and each was WORSE than the original finding recorded. PYTHON: core/server.py:1404 was `except Exception: pass` with a comment claiming it covered a missing session module; it swallowed handler-construction failures, the deliberate unknown-backend ValueError, AND every strict-mode re-raise, so STRICT MODE WAS INERT. NODE: dispatchPipeline.ts:202-203 unguarded and save() unguarded inside the monkey-patched res.end while gc() four lines below WAS wrapped - and sessionAutoStart was called OUTSIDE the dispatch try, so the WORKER PROCESS DIED rather than returning 500. RUBY: session.rb:107 `@handler = create_handler` bare, plus a SECOND unguarded construction at rack_app.rb:1016 in the auth gate; measured pre-fix, unknown-backend, unreachable-database and strict mode all returned an identical 500, i.e. strict mode changed nothing observable. PHP: Router.php:670-672 constructed and started the Session with no try/catch at all. THE HALF MOST EASILY BROKEN, and the reason case 3 is not optional: a genuinely EMPTY session is NOT an error. A first-time visitor and a cookie for an unknown session are ordinary; logging them puts a line in the log for every new visitor and buries the real outage - the same blindness the fix was meant to cure. THREE DESIGN CORRECTIONS worth keeping. (a) Ruby's obvious fix - rescue inside Session#initialize - BROKE three existing examples that require an unknown backend to RAISE (the 2026-07-31 decision that a typo is a configuration error, not an outage); the fix ports Python's split instead, where Session raises and only the request path degrades. (b) Ruby cannot degrade to nil the way Python does: every session[...] in every app would become a NoMethodError and 500 the request the fix exists to save, so it degrades to an in-memory-only session whose reads are empty and whose save returns false. (c) Node's Tina4Request.session widens to `Tina4Session | null`, a type-level breaking change for app code doing req.session.get(...) - the old type was simply false, since after a degrade there is no session. MUTATION-PROVED in all four, each mutation asserted to APPLY before running: reverting the guard kills the loud/serves cases; dropping ONLY the strict re-raise kills EXACTLY the strict case; and an OVER-LOUD mutation that logs an empty read kills EXACTLY the empty-session control - that third one is what proves the control is a real gate rather than decoration. TWO near-misses recorded because they nearly produced false greens: in Ruby, mutating safe_read ALONE applies textually and fires NOWHERE (the request path resolves an empty session through existing_session_data, never through safe_read), and in Node case 1 SURVIVES the guard-only mutation because Node never had Python's silent-swallow mode - its honest kill is the full pre-fix pipeline, where the worker dies before it can answer. Python 4776 passed / 27 skipped; PHP 4843 tests / 15309 assertions / 0 failures / 37 skipped; Ruby 4915 examples / 0 failures / 8 pending; Node 7076 passed / 0 failed across 239 files, typecheck and build both exit 0."
     },
@@ -89,9 +353,54 @@
         "nodejs": "test/sessionHandlerConstruction.test.ts"
       },
       "cases": [
-        "a session handler constructor performs no network io",
-        "the backend connection happens on first use not construction",
-        "a healthy backend still works after lazy connection"
+        {
+          "name": "a session handler constructor performs no network io",
+          "given": {
+            "instrument": "a REAL TCP server the test starts, which counts accepted connections. It speaks no protocol and claims to be nothing, so the only thing it reports is a fact the KERNEL decided",
+            "backends_without_a_socket": {
+              "database": "measured by its SIDE EFFECT instead - drop the table or file, construct, and assert with a SECOND independent connection that it is still absent"
+            }
+          },
+          "when": "construct each handler pointed at the instrument",
+          "then": "the accepted-connection count is still zero, and no table or file was created",
+          "guards_against": "a constructor that dials, which sits OUTSIDE the log-loud-and-degrade policy and takes the app down instead of degrading per request",
+          "witness_must_resolve": [
+            {
+              "coordinate": "the config keys THAT handler reads",
+              "strategy": "control",
+              "evidence": [
+                "host",
+                "port"
+              ],
+              "why_this_strategy": "the instrument only works if the handler is really pointed at it, and one uniform config object is not enough. MEASURED in Node: RedisSessionHandler read redisHost/redisPort while the other three read host/port, so the wrong key was silently ignored and the handler dialled the REAL service - the instrument saw nothing and the case PASSED for the wrong reason",
+              "value_that_looks_right_and_is_not": "one {host, port} shape for every backend",
+              "symptom_when_assumed": "the case passes while measuring nothing",
+              "measured": "2026-08-04"
+            }
+          ]
+        },
+        {
+          "name": "the backend connection happens on first use not construction",
+          "given": {
+            "instrument": "the same counting listener"
+          },
+          "when": "perform ONE operation on the constructed handler",
+          "then": "the accepted-connection count rises",
+          "guards_against": "the false fix. 'Do no I/O in the constructor' is trivially satisfied by a handler that does no I/O at all, and case 1 would pass on a completely broken store. In Node this caught THREE separate ways case 1 was passing for the wrong reason"
+        },
+        {
+          "name": "a healthy backend still works after lazy connection",
+          "given": {
+            "backends": [
+              "redis",
+              "database"
+            ],
+            "services": "real"
+          },
+          "when": "drive a full write-then-read round trip",
+          "then": "the data comes back",
+          "guards_against": "NEGATIVE CONTROL. Deferring the connection is not an achievement if the handler no longer works"
+        }
       ],
       "status": "PROVEN in all four 2026-08-04 on the lab host (Ubuntu 24.04 x86_64), TINA4_REQUIRE_SERVICES=1, against live Redis 7, Valkey 8, memcached 1.6.45, MongoDB 7, PostgreSQL 16 and real SQLite. Broken in ALL FOUR at v3 HEAD, and in two of them worse than the original finding recorded. PYTHON: DatabaseSessionHandler.__init__ ran _ensure_table() - table_exists() + CREATE TABLE + commit(), real DDL on every request since the request path builds a Session per request - AND, NOT PREDICTED, MongoDBSessionHandler.__init__ called pymongo.MongoClient(url), which starts topology monitoring and DIALS IMMEDIATELY. The framework code looked lazy; the DRIVER was not. That one was caught only by the counting listener, which is the argument for the technique. PHP: DatabaseSessionHandler::__construct called Database::fromEnv(), and every Tina4 adapter constructor calls open() - pg_connect / mysqli / sqlsrv_connect / ibase_connect. RUBY: MongoHandler#initialize built a Mongo::Client then called ensure_ttl_index (a createIndexes round trip, and up to three network operations when it hits an IndexOptionsConflict and drops-and-recreates); DatabaseHandler#initialize constructed a Database and ran ensure_table. NODE: databaseHandler.ts:49-50 ran new DatabaseSync(dbPath) + PRAGMA journal_mode = WAL, which CREATES the .db plus its -wal and -shm siblings - three files on disk before a single session was read or written. THE PROOF TECHNIQUE IS THE POINT AND IS PORTED TO ALL FOUR: a real TCP server the test starts, which COUNTS accepted connections. Construct a handler pointed at it and the count must still be zero; do one operation and it must rise. It speaks no protocol and claims to be nothing, so it is a real server rather than a double, and the only thing it reports is a fact the KERNEL decided - a handler cannot connect without completing an accept() the test can see. No test double can answer that honestly. The database backends own no socket to watch, so they are measured by their SIDE EFFECT against a real engine instead (drop the table or the file, construct, and assert with a SECOND independent connection that it is still absent). CASE 2 IS THE ONE THAT STOPS A FALSE FIX: deferring the connection must not mean never connecting, because 'do no I/O in the constructor' is trivially satisfied by a handler that does no I/O at all. It earned its place - in Node it caught THREE separate ways case 1 was passing for the wrong reason, none of which review would have found: Atomics.wait BLOCKS the main thread so the listener's accept callback could never fire and the count could never rise; RedisSessionHandler reads redisHost/redisPort rather than host/port, so the wrong key was silently ignored and every construction dialled the REAL Redis on 6379 which the listener never saw; and the other three handlers DO use host/port, so one uniform config object is wrong for exactly one of the four. MUTATION-PROVED in all four, each mutation asserted present-exactly-once before replacing: putting the eager connect/DDL/open back in the constructor kills case 1 naming the backend, and making a handler INERT kills case 2 (and case 3 where the store is the same one). Python 4779 passed / 27 skipped; PHP 4846 tests / 15322 assertions / 0 failures / 37 skipped, run with --display-warnings and zero warnings; Ruby 4918 examples / 0 failures / 8 pending; Node 7079 passed / 0 failed across 240 files with typecheck and build both exit 0. OWED and stated rather than scoped out: Python's Database LAYER still connects in ITS own constructor, so Database() against a closed port raises rather than deferring. That is this same rule one level down, in a different subsystem under a different contract, and it is why the Python case measures the session handler's DDL side effect rather than its connect."
     },
@@ -107,8 +416,44 @@
         "nodejs": "test/sessionDatabaseEngines.test.ts"
       },
       "cases": [
-        "the database session backend works on every engine it claims",
-        "an unsupported engine refuses by name instead of degrading"
+        {
+          "name": "the database session backend works on every engine it claims",
+          "given": {
+            "engines": [
+              "sqlite",
+              "postgres",
+              "mysql",
+              "mssql"
+            ],
+            "minimum": "fewer than three engines reachable is a FAILURE, never a skip"
+          },
+          "when": "write and read a session on each engine",
+          "then": "every round trip is re-read OUT OF BAND on a second connection, usually through a different client library than the handler used",
+          "guards_against": "a silent demotion to a local file faking a pass, and the founding ADR-0024 scenario: develop on sqlite, deploy on postgres, app does not start. Insisting on three real engines is what exposed the Python TEXT PRIMARY KEY that MySQL rejects outright",
+          "witness_must_resolve": [
+            {
+              "coordinate": "the engine URL the handler was configured with",
+              "strategy": "resolve",
+              "evidence": [
+                "TINA4_DATABASE_URL",
+                "TINA4_SESSION_DATABASE_URL"
+              ],
+              "why_this_strategy": "the second, independent connection has to reach the same engine the handler wrote to",
+              "value_that_looks_right_and_is_not": "a local sqlite file",
+              "symptom_when_assumed": "the out-of-band read finds nothing, or worse finds a local file and PASSES while the real engine was never touched - which is the silent demotion this invariant exists to catch",
+              "measured": "2026-08-04"
+            }
+          ]
+        },
+        {
+          "name": "an unsupported engine refuses by name instead of degrading",
+          "given": {
+            "engine": "<a scheme no adapter supports>"
+          },
+          "when": "construct, then perform the first operation",
+          "then": "it refuses loudly, naming the scheme it was given, and never leaks the password into the message",
+          "guards_against": "falling through to some other engine, which looks exactly like working until sessions start disappearing. WHERE the refusal comes from differs by framework and is asserted as-is: Node refuses in the handler, Ruby and PHP in the Database layer on FIRST USE, because staying silent at construction is required by the no-network-io invariant"
+        }
       ],
       "status": "PROVEN in all four 2026-08-04 on the lab host (Ubuntu 24.04 x86_64), TINA4_REQUIRE_SERVICES=1, against REAL SQLite, PostgreSQL 16 and MySQL 8. NODE was the framework that failed this: resolveDbPath() THREW on any non-sqlite TINA4_DATABASE_URL, and two assertions in sessionExpiryContract.test.ts PINNED that throw as the contract. It now follows the configured connection on sqlite, postgres, mysql, mssql and firebird, riding the EXISTING syncBridge - the same sync-over-async plumbing RESP, memcached and MongoDB already use. ADR-0028 records the decision AND the wrong premise that nearly froze it: the claim that multi-engine 'would require building a synchronous Postgres bridge' was false, because that bridge already existed with FOUR consumers. The rule it leaves behind is one line - before accepting 'we would have to build X' as a reason not to do something, grep for X. THE LOCK-INS WERE NOT DECORATION: insisting that fewer than three engines is a FAILURE rather than a skip exposed TWO further real defects that SQLite-only testing had hidden for the entire life of the backend. PYTHON: _ensure_table() declared `session_id TEXT PRIMARY KEY`, which MySQL rejects outright (1170: BLOB/TEXT column used in key specification without a key length), so the database session backend did not work on MySQL AT ALL. Fixed to VARCHAR(255), portable across all five engines. PHP: ensureTable() emits `CREATE TABLE IF NOT EXISTS` unconditionally, which is not T-SQL, so MSSQL fails with 'Incorrect syntax near tina4_session'. That one is MEASURED AND OPEN, deliberately: the clause is redundant (ensureTable already guards on tableExists) and the byte-identical DDL without it succeeded against live SQL Server 2022, so the fix is 14 characters - but removing it also changes CONCURRENT first-use behaviour on sqlite/postgres/mysql, where engine-side idempotency becomes a raise for the loser of the race, and it has to land in all four. That is a framework change with its own parity work, not a lock-in. It is not hidden: MSSQL is exercised on every run, its error prints on every run, and a tripwire fails BOTH ways - if the failure changes shape AND if it is fixed. FIREBIRD IS UNTESTED in all four and shares the same no-IF-NOT-EXISTS dialect, so it is likely broken identically; no claim is made either way. WHERE THE REFUSAL COMES FROM DIFFERS BY FRAMEWORK and is asserted as-is rather than assumed: in Node the session handler refuses; in Ruby and PHP it is the Database layer, on FIRST USE rather than construction - construction staying silent is REQUIRED by invariant 4 / ADR-0021, so those cases assert both halves, and Ruby additionally asserts the password never rides along in the message. Every round trip is re-read OUT OF BAND on a second connection, usually through a different client library than the handler used, so a silent demotion to a local file cannot fake a pass - that anti-demotion guard is the one the old Node throw existed to provide and it is kept. MUTATION-PROVED in all four, each mutation asserted present AND unique before replacing and each restore verified byte-exact by md5: forcing the backend sqlite-only kills case 1 naming postgres and mysql, and making an unsupported scheme fall through silently kills case 2. Recorded because it nearly produced a false green a fourth time: PHP's first mutation attempt ABORTED rather than printing a meaningless pass, because its post-check was wrong for an additive mutation. Python 4887 passed / 26 skipped; PHP 4924 tests / 15771 assertions / 0 failures / 36 skipped (measured against a same-HEAD parked baseline of 4922/15761, so the delta is exactly +2/+10); Ruby 4984 examples / 0 failures / 8 pending; Node 7313 passed / 2 failed across 251 files, the 2 being migrateCli.test inherited from the v3 merge and proven to reproduce at the clean merged HEAD with this work stashed."
     },
@@ -124,9 +469,36 @@
         "nodejs": "test/sessionZeroDependencyFallback.test.ts"
       },
       "cases": [
-        "every backend has a zero dependency transport",
-        "the zero dependency transport really round trips",
-        "the third party client is still used when present"
+        {
+          "name": "every backend has a zero dependency transport",
+          "given": {
+            "instrument": "a REAL child process with the package manager's search path scrubbed - Python launches `python -S` with every PYTHON* var dropped; Node COPIES the source out of the repo to a temp dir with no node_modules above it. In NO framework is require/import stubbed or intercepted: every failure is the real resolver's",
+            "self_test": "the child reports its own count of resolvable packages FIRST, and that count must be 0"
+          },
+          "when": "construct AND drive every backend inside that child",
+          "then": "all six work with zero third-party packages available",
+          "guards_against": "a child that quietly inherited the full environment, which would make every case pass while proving nothing. That is not hypothetical - the same trap produced THREE false greens on this task"
+        },
+        {
+          "name": "the zero dependency transport really round trips",
+          "given": {
+            "backend": "mongodb",
+            "third_party_client": "absent"
+          },
+          "when": "write a session through the raw wire-protocol transport",
+          "then": "an INDEPENDENT client finds the document really in MongoDB",
+          "guards_against": "the pair that distinguishes 'cannot work' from 'silently does nothing'. Stubbing the transport to return empty passes the previous case and fails only this one"
+        },
+        {
+          "name": "the third party client is still used when present",
+          "given": {
+            "backend": "mongodb",
+            "third_party_client": "installed"
+          },
+          "when": "drive the handler in an ordinary environment",
+          "then": "the third-party path is the one actually taken",
+          "guards_against": "NEGATIVE CONTROL. Deleting the gem/driver path entirely passes both cases above"
+        }
       ],
       "status": "PROVEN in all four 2026-08-04 on the lab host (Ubuntu 24.04 x86_64), TINA4_REQUIRE_SERVICES=1, against a REAL MongoDB 7. RUBY was the framework that failed this: mongo_handler.rb did an unconditional `require \"mongo\"` and its rescue LoadError turned a missing gem into a hard raise, while Python, PHP and Node all shipped a raw wire-protocol fallback. The same .env therefore worked in three frameworks and raised in the fourth - breaking the zero-dependency promise ASYMMETRICALLY, which is worse than breaking it consistently, because nothing in the configuration says which one will fail. Ruby gained MongoWireClient, a zero-dep OP_MSG transport implementing only what the session handler needs (find_one, upsert, delete_one, delete_many by _id) rather than a general driver, sibling to the resp_client.rb that already did this for redis/valkey. The gem path is unchanged and still preferred when present. THE INSTRUMENT IS THE PART WORTH REVIEWING, and it differs per language because an honest answer has to. RUBY and PYTHON: a REAL subprocess with the package manager's search path scrubbed - Python launches `python -S` with every PYTHON* var dropped and PYTHONPATH set to the repo root alone, so `site` never runs and site-packages, user-site and .pth files are all absent (measured site_package_paths = 0). NODE: the source is COPIED OUT of the repository into a temp directory with no node_modules anywhere above it and run with plain `node --experimental-strip-types`, so module resolution - which walks up from the importing FILE - genuinely cannot find a bare specifier. PHP: dependencies are EXTENSIONS and cannot be unloaded at runtime, so there is no equivalent; it measures what IS true instead, that each transport is raw sockets, and proves the raw path is the one that really runs. In NO framework is `require`/`import` stubbed, shimmed or intercepted: every failure is the real resolver's. EVERY CHILD SELF-VERIFIES THE INSTRUMENT FIRST and reports an exact count of resolvable packages, which must be 0, because a child that quietly inherited the full environment would make every case pass while proving nothing. That is not hypothetical - the same trap produced THREE false greens elsewhere on this task. Node's instrument mutation is the proof it works: building the temp tree INSIDE the repo instead of in tmp makes the child inherit node_modules, and the suite reports 'THE INSTRUMENT FAILED: SELFTEST resolvable=3 [mongodb,redis,pg]' and fails BOTH dependent cases rather than passing them. Python is STRONGER than Ruby here and the suites say so rather than hiding it: Ruby has to excuse its `database` backend because sqlite3 is a declared runtime gem, while Python ships stdlib sqlite3, so database constructs and round-trips inside the zero-package subprocess against a real file. MUTATION-PROVED: restoring the hard-require kills cases 1 and 2; STUBBING the transport to return empty kills EXACTLY the round-trip case - the pair that proves the suite distinguishes 'cannot work' from 'silently does nothing'; deleting the gem path kills EXACTLY the third-party-still-used control. OWED: Node's transport-break mutation produced no output rather than a clean red and is NOT counted as proof - Node rests on its instrument mutation and three real round trips. Python 4887 passed / 26 skipped; PHP 4924 tests / 0 failures; Ruby 4984 examples / 0 failures / 8 pending; Node 7313 passed / 2 failed (the 2 inherited from the merge)."
     }

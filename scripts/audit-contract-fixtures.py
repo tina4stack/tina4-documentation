@@ -63,11 +63,50 @@ def normalise(name: str) -> str:
     return re.sub(r"[^a-z0-9]", "", name.lower())
 
 
-def check_fixture(path: pathlib.Path) -> tuple[list[str], int, int]:
-    """Return (failures, proven_count, owed_count) for one fixture."""
+def case_name(case) -> str:
+    """A case is either a bare name (version 1) or a {given,when,then} object.
+
+    Both shapes coexist on purpose: a fixture is upgraded to executable data when
+    someone walks that subsystem, and until then its bare names still gate.
+    """
+    return case["name"] if isinstance(case, dict) else case
+
+
+def check_witness(path, inv_id, framework, rel, raw, case) -> list[str]:
+    """Every coordinate an out-of-band observer needs must be RESOLVED, not assumed.
+
+    This is the mechanical form of the rule that cost the most to learn. A test
+    that reaches past the framework to inspect the real server has to resolve the
+    SAME configuration the framework resolved; a hardcoded db=0 or a literal
+    'tina4' database is right only on the machine the test was written on.
+
+    The check is deliberately crude and therefore honest: a probe that hardcodes
+    the value CANNOT mention the env var that would have resolved it, so
+    requiring the name to appear in the suite catches exactly the mistake. It
+    cannot prove the value is then USED correctly - that is what the suite's own
+    assertions are for - so it never claims to.
+    """
+    failures = []
+    for coordinate in case.get("witness_must_resolve") or []:
+        tokens = coordinate.get("evidence") or []
+        if not tokens:
+            continue
+        if not any(token in raw for token in tokens):
+            failures.append(
+                f"{path.name} :: {inv_id} :: {framework} :: {rel} ASSUMES "
+                f"{coordinate['coordinate']!r} - the declared strategy is "
+                f"{coordinate['strategy']!r} but none of {tokens} appears, so the probe is "
+                f"reading whatever this machine happens to be set to. Symptom: "
+                f"{coordinate['symptom_when_assumed']}"
+            )
+    return failures
+
+
+def check_fixture(path: pathlib.Path) -> tuple[list[str], int, int, int]:
+    """Return (failures, proven_count, owed_count, witnessed_count) for one fixture."""
     data = json.loads(path.read_text(encoding="utf-8"))
     failures: list[str] = []
-    proven = owed = 0
+    proven = owed = witnessed = 0
 
     for inv in data.get("invariants", []):
         inv_id = inv.get("id", "<unnamed>")
@@ -90,14 +129,23 @@ def check_fixture(path: pathlib.Path) -> tuple[list[str], int, int]:
                 failures.append(f"{path.name} :: {inv_id} :: {framework} suite missing: {rel}")
                 continue
 
-            body = normalise(suite.read_text(encoding="utf-8", errors="ignore"))
+            raw = suite.read_text(encoding="utf-8", errors="ignore")
+            body = normalise(raw)
             for case in cases:
-                if normalise(case) not in body:
+                name = case_name(case)
+                if normalise(name) not in body:
                     failures.append(
-                        f"{path.name} :: {inv_id} :: {framework} :: case not found in {rel}: {case!r}"
+                        f"{path.name} :: {inv_id} :: {framework} :: case not found in {rel}: {name!r}"
                     )
+                    continue
+                if isinstance(case, dict) and case.get("witness_must_resolve"):
+                    failures.extend(check_witness(path, inv_id, framework, rel, raw, case))
 
-    return failures, proven, owed
+        witnessed += sum(
+            1 for c in cases if isinstance(c, dict) and c.get("witness_must_resolve")
+        )
+
+    return failures, proven, owed, witnessed
 
 
 def main() -> int:
@@ -107,16 +155,20 @@ def main() -> int:
         return 1
 
     all_failures: list[str] = []
-    total_proven = total_owed = 0
+    total_proven = total_owed = total_witnessed = 0
     print(f"contract fixtures: {len(fixtures)}\n")
 
     for path in fixtures:
-        failures, proven, owed = check_fixture(path)
+        failures, proven, owed, witnessed = check_fixture(path)
         all_failures.extend(failures)
         total_proven += proven
         total_owed += owed
+        total_witnessed += witnessed
         state = "FAIL" if failures else ("owed" if owed else "ok")
-        print(f"  {state:4}  {path.name:26} proven {proven:>2}   owed {owed:>2}")
+        print(
+            f"  {state:4}  {path.name:26} proven {proven:>2}   owed {owed:>2}"
+            f"   witnessed {witnessed:>2}"
+        )
 
     if total_owed:
         print(f"\nOWED - declared and not yet proven ({total_owed} invariants):")
@@ -137,10 +189,15 @@ def main() -> int:
         for f in all_failures:
             print(f"  - {f}")
         print("\n  A named case that has vanished means a test a written contract depends on\n"
-              "  was deleted or renamed. Restore it, or amend the fixture deliberately.")
+              "  was deleted or renamed. Restore it, or amend the fixture deliberately.\n"
+              "  An unresolved witness means a probe is reading this machine rather than the\n"
+              "  property - resolve the coordinate from the env var the framework reads.")
         return 1
 
-    print(f"\n✓ {total_proven} invariants proven, {total_owed} owed, 0 broken")
+    print(
+        f"\n✓ {total_proven} invariants proven, {total_owed} owed, 0 broken"
+        f" ({total_witnessed} cases carry a witness rule)"
+    )
     return 0
 
 
