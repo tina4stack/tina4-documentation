@@ -202,6 +202,47 @@ plan is done. If they have to read tina4-python to find out what actually
 happens, it is not - and whatever they had to look up is precisely the thing the
 four will drift on next.
 
+## The spec IS the drift check
+
+Owner, 2026-08-05: "we can use the plan spec to check our drift."
+
+That is the point of writing the contract as DATA rather than prose, and it
+changes what a fixture is FOR. Today drift is found two ways, both bad: a human
+reads four implementations side by side (slow, and the reason 66 features are
+still unaudited), or production finds it. A fixture whose cases carry inputs and
+expected outputs is executed by all four runners, so a divergence stops being an
+archaeology exercise and becomes a RED TEST with a name.
+
+The loop, once a feature's cases are data:
+
+    spec (fixture) -> four runners execute it -> divergence IS a failing case
+
+Nothing new has to be built to start. All four already consume
+`fixtures/*.json`; what they consume is a list of case NAMES, and each framework
+then hand-rolls the case. That hand-rolling is exactly where they diverge - the
+write-path fixture is the proof: one shared answer key, four independently
+written runners, four different case counts (python 17, ruby 16, php 15,
+node 14), and the ONE case no runner executed
+(`a_string_filter_with_params_works_the_same_as_a_hash_filter`) was the case
+that would have caught the Node truncate bug.
+
+So the upgrade is small and the payoff compounds:
+
+- **A drifted framework fails a named case** instead of passing four green
+  suites that quietly disagree. Every defect measured on 2026-08-05 would have
+  been caught this way at the moment it was introduced.
+- **`status` becomes machine-verifiable.** Each invariant already records
+  "PROVEN in all four" as PROSE, asserted by a human. With executable cases the
+  runner asserts it, and a stale PROVEN is a red build rather than a sentence
+  nobody rechecked. This document drifted four times in exactly that way.
+- **A fifth language gets a pass/fail gate on day one.** The same fixture that
+  checks the four IS the acceptance test for the fifth, so the question "is the
+  Go port done" has an answer that is not an opinion.
+
+The four-way check and the portability spec are therefore the SAME artefact
+viewed twice: run it against the frameworks you have and it reports drift; hand
+it to a language you do not have and it reports readiness.
+
 ## Applying the portability spec WITHOUT wasting energy
 
 Owner rule, 2026-08-05: apply this to the audited AND the unaudited features, but
