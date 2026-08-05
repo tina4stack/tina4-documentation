@@ -231,3 +231,99 @@ mechanism for the cap decision rather than a note in a plan.
 
 Not implemented. Blocked on the Outstanding key-set enumeration and coupled to the
 row-cap decision. Order: 6, 4, 5, 3, 13, 14, 15, 16, 17, 18, then 2, 1, 0.
+
+---
+
+## RE-OPENED 2026-08-05: measured, and it is worse than parked
+
+The progress row in `98-feature-audit.md` read **"closed, 0 open"** while this plan
+read **"Parked. Not implemented."** Both cannot be true. The row was closed on the
+strength of ENUMERATING the four key sets, which unblocked this plan rather than
+implementing it, and the envelope was never checked for whether it tells the truth.
+
+### The measurement
+
+One query, all four frameworks, against a real 250-row SQLite table:
+`SELECT * FROM t` with `limit=20, offset=40`. That is page 3 of 13 by inspection.
+
+| | page | per_page | total | total_pages | records returned | keys |
+| --- | --- | --- | --- | --- | --- | --- |
+| Python | **1** | 20 | 250 | 13 | 20 | 10 |
+| PHP | 3 | 20 | 250 | 13 | 20 | 10 |
+| Ruby | 3 | 20 | **20** | **1** | **0** | 12 |
+| Node | **1** | **10** | **20** | **2** | **10** | 13 |
+
+**Only PHP is correct on all five values.** Ruby returns ZERO records for a valid
+page-3 fetch. Node re-slices a 20-row page down to 10 and calls it page 1 of 2.
+
+### Two root causes, both cross-framework
+
+1. **`.count` means two different things.** Python and PHP populate it from a
+   separate COUNT probe over the filter, so it is the TRUE total (250). Ruby and
+   Node populate it with the number of ROWS RETURNED (20). The envelope's `total`
+   is therefore 250 in two frameworks and 20 in the other two, for one query. This
+   is the exact failure this plan already names: the envelope launders a truncation
+   into a fact, and it does it in half the family.
+
+2. **`page` is derived only in PHP.** PHP computes `floor(offset / limit) + 1`.
+   Python and Node default `page = 1` and ignore the offset entirely, so every
+   offset fetch is mislabelled as the first page.
+
+A third, smaller one: Ruby and Node re-slice `records` by the ABSOLUTE offset
+against an array that is already just that page, which is why Ruby returns nothing
+(offset 40 into a 20-element array) and Node returns 10 of 20.
+
+### Verdict: PROMOTE php. Decided on correctness.
+
+Not on LOC or structure. PHP is the only implementation that reports the query it
+actually ran, and it is the only one that cannot lie, because it derives every
+field from the result rather than from caller-supplied arguments.
+
+### The pattern
+
+`toPaginate()` takes **NO arguments** in all four.
+
+```
+per_page    = the query's limit
+page        = floor(offset / limit) + 1
+total       = the true total for the filter (COUNT probe), NEVER rows returned
+total_pages = ceil(total / per_page)
+records     = the rows the query returned, VERBATIM, never re-sliced
+```
+
+To read page 3, FETCH page 3 (`limit=20, offset=40`) and call `toPaginate()` on
+that result. An argument form cannot be honest here: a `DatabaseResult` holds no
+connection, so `to_paginate(page: 6)` can only re-slice rows already in memory. It
+then reports `total_pages = 13` for pages it can never reach. That is why the
+arguments go rather than get fixed.
+
+**Passing an argument must RAISE, not be ignored.** PHP silently swallows extra
+arguments today, and that silence is precisely why the divergence survived a
+release: a caller porting Python code to PHP gets no signal at all. This follows
+the audit's own inverted-flag rule - a removed parameter gets a hard error, never a
+silent reinterpretation.
+
+### Owed before this can close
+
+- `.count` must mean the true total in Ruby and Node. This is the deep half: it
+  reaches into the adapters, it is BREAKING for anyone reading `.count` as a row
+  count, and it is the reason this is a separate implementation pass rather than a
+  patch to the four `toPaginate` methods.
+- One key set. Still divergent at py 10, php 10, ruby 12, node 13 (`has_next` /
+  `has_prev` in Ruby and Node, `perPage` camelCase in Node alone).
+
+### Tests (named, positive and negative, the same set in all four)
+
+Each must FAIL against today's code in at least one framework before the fix.
+
+- `paginate_page_is_derived_from_the_offset` - a `limit=20 offset=40` fetch reports
+  page 3. FAILS today in Python and Node (both report 1).
+- `paginate_total_is_the_true_total_not_rows_returned` - 250-row table, 20-row
+  page, `total == 250`. FAILS today in Ruby and Node (both report 20).
+- `paginate_records_are_the_rows_the_query_returned` - the envelope carries all 20
+  rows. FAILS today in Ruby (0 rows) and Node (10 rows).
+- `paginate_takes_no_arguments` - passing one RAISES. FAILS today in all four.
+- `paginate_key_set_is_identical_in_all_four` - the shared fixture asserts one key
+  list. FAILS today in Ruby and Node.
+
+No mocks: a real SQLite table with a known row count is a real dependency.

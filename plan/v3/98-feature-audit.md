@@ -253,7 +253,7 @@ reviewed and closed at a time, not batched.
 | 15 | Relationships + eager load | PROVISIONAL PROMOTE python/ruby | correctness | `features/015-relationships.md` | **closed, 0 open** (Node settled 2026-07-30: serialize-only, no accessor; `hasMany` truncates at 100 in 3 of 4) |
 | 16 | Scopes | SYNTHESISE | correctness | `features/016-scopes.md` | closed |
 | 17 | Field mapping | PROMOTE node (mechanism) | SOLID | `features/017-field-mapping.md` | closed, decided (ADR-0008) |
-| 18 | Paginated results | SYNTHESISE | wire contract | `features/018-paginated-results.md` | **closed, 0 open** (all 4 key sets enumerated 2026-07-30: py 10, php 10, ruby 12, node 13) |
+| 18 | Paginated results | **PROMOTE php** (was SYNTHESISE) | correctness | `features/018-paginated-results.md` | **RE-OPENED 2026-08-05. The row said "closed, 0 open" while the plan said "Parked. Not implemented." - the row was closed on ENUMERATING the key sets, which unblocked the plan rather than implementing it, and nobody checked whether the envelope tells the truth.** MEASURED, one query against a real 250-row table (`limit=20 offset=40`, page 3 of 13): **only PHP is correct on all five values.** Python and Node report `page=1` because they default the page and ignore the offset. Ruby and Node report `total=20` (rows returned) instead of 250, because **`.count` means the TRUE TOTAL from a COUNT probe in Python/PHP and ROWS RETURNED in Ruby/Node** - so the envelope's `total` is 250 in half the family and 20 in the other half, for one query. Ruby returns **ZERO records** for that valid page-3 fetch and Node returns 10 of the 20, because both re-slice by the ABSOLUTE offset against an array that is already just that page. This is the exact failure the plan already names (the envelope launders a truncation into a fact) shipping in three of four frameworks. Settled pattern: `toPaginate()` takes NO arguments in all four and derives every field from the query that ran; an argument RAISES rather than being silently swallowed, which is how PHP hid the divergence. The deep half is making `.count` mean the true total in Ruby and Node - it reaches into the adapters and is breaking. Key sets still divergent (py 10, php 10, ruby 12, node 13). |
 | 19 | Result / ORM caching | GAP (ruby) + SYNTHESISE | correctness | `features/019-orm-result-caching.md` | closed |
 | 20 | Input validation | **PROMOTE node** + GAP (php) + P1 (python) | correctness | `features/020-input-validation.md` | **closed, 0 open; VERDICT REVISED 2026-07-30** - PHP's `validate()` is `return []`, so the parked SYNTHESISE leaned on an implementation that does not exist |
 | 28-31 | Frond engine (lexer/parser/compiler/runtime) | PROMOTE python (structure) | SOLID | `features/028-031-frond-engine.md` | closed as one row |
@@ -365,7 +365,35 @@ before any extraction, one stage per commit.
 | PHP `autoSnakeCase` default (feature 17) | **`false`** - the property name is the column in all four; PHP takes the migration | **ADR-0008** |
 | Feature layout, all four (raised in Phase 3) | **one folder per feature**, so a feature can be deleted; Python is the reference | **ADR-0009** |
 
-## Cross-cutting decision still open: one default row cap
+## Cross-cutting decision: one default row cap. RESOLVED IN CODE 2026-08-05, no owner call owed.
+
+MEASURED across the four, by reading the signatures and running the reads, not by
+re-reading this section: the cap is **100 everywhere**, and the table below is
+stale in every row that claims otherwise.
+
+| path | cap now |
+| --- | --- |
+| `Model.all` / `where` / `select` / `scope()` / `has_many()` | 100 in all four (Node via a named `DEFAULT_ROW_CAP = 100`) |
+| `db.fetch()` | 100 rows returned; `.count` carries the true total from a separate COUNT probe (Python and PHP - see feature 18, this is NOT true in Ruby and Node) |
+| `db.fetchAll()` / `limit <= 0` | uncapped, deliberately |
+| `QueryBuilder#get` | uncapped |
+
+That is a coherent two-tier design - convenience reads capped, explicit
+escape hatches uncapped - not the "five paths, four defaults" inconsistency this
+section was filed to resolve. The 20-versus-100-versus-unbounded spread is gone.
+
+**Feature 18's correctness requirement is satisfied on the read side**: a 250-row
+table read with the default cap reports `total = 250`, not 100, because `total`
+comes from the COUNT probe rather than the capped read. Verified on a real table.
+
+**What survived is not a cap question at all.** It moved into the envelope: see
+feature 18, RE-OPENED, where `.count` means the true total in two frameworks and
+rows returned in the other two. Fix that there. Nothing here needs deciding.
+
+The section as originally written follows, kept because the reasoning that
+produced the current design is worth more than the verdict it reached.
+
+## Cross-cutting decision as originally filed: one default row cap
 
 Surfaced by features 15 and 16 together, plus a fix that already landed. "Give me
 some related or filtered rows" currently caps at four different numbers:
