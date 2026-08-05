@@ -1,4 +1,4 @@
-# Chapter 24: WSDL / SOAP
+# Chapter 25: WSDL / SOAP
 
 ## 1. When You Need SOAP
 

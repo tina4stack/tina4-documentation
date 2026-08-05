@@ -1,4 +1,4 @@
-# Chapter 30: Tina4 CLI
+# Chapter 31: Tina4 CLI
 
 ## 1. Getting a New Developer Up to Speed
 

@@ -1,4 +1,4 @@
-# Chapter 8: Core Utilities
+# Chapter 9: Core Utilities
 
 ## The Swiss Army Knife You Already Have
 

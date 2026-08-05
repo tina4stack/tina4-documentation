@@ -1,4 +1,4 @@
-# Chapter 11: Claude Code Integration
+# Chapter 12: Claude Code Integration
 
 ## Let AI Write Your Delphi
 

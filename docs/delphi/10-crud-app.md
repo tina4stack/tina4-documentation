@@ -1,4 +1,4 @@
-# Chapter 9: Building a CRUD Application
+# Chapter 10: Building a CRUD Application
 
 ## A Contact Manager From Scratch
 

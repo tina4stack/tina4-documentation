@@ -1,4 +1,4 @@
-# Chapter 28: Building Custom MCP Servers
+# Chapter 29: Building Custom MCP Servers
 
 ## 1. Beyond Dev Tools
 

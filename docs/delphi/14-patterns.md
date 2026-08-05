@@ -1,4 +1,4 @@
-# Chapter 13: Design Patterns & Best Practices
+# Chapter 14: Design Patterns & Best Practices
 
 ## What We Learned the Hard Way
 
