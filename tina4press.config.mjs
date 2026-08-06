@@ -190,10 +190,6 @@ export default {
           text: "Understanding Tina4",
           stems: ["what-is-tina4", "architecture", "choosing-your-language", "environment-variables"],
         },
-        {
-          text: "Getting Started",
-          stems: ["devops"],
-        },
       ],
     },
     search: true,

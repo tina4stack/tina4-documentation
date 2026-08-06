@@ -431,6 +431,29 @@ You called `this.prop('name')` but did not declare `name` in the component's `st
 
 ---
 
+## 13. Reactive `<select>`: Bind `?selected`, Not `.value`
+
+A `<select>` whose options come from a `${() => ...}` block loses its selection when those options re-render. Binding `.value` on the select is a separate effect: it tracks the bound signal, not the option list, so it never re-fires when the options rebuild. And setting `select.value` while the matching option is missing (the options render later, or get torn down and recreated) does nothing, then the browser clears the selection when the child list changes. The selection holds by luck when the timing lines up, and drops when it does not.
+
+Bind the selected state on each option instead. Every `<option>` gets its own `?selected` effect, so a re-render rebuilds the list already correct, in any order.
+
+```ts
+// Fragile: selection drops when the options re-render
+html`<select .value=${currency} @change=${e => { currency.value = e.target.value; }}>
+  ${() => currencies.value.map(c => html`<option value=${c}>${c}</option>`)}
+</select>`
+
+// Robust: each option owns its selected state
+html`<select @change=${e => { currency.value = e.target.value; }}>
+  ${() => currencies.value.map(c => html`
+    <option value=${c} ?selected=${() => c === currency.value}>${c}</option>`)}
+</select>`
+```
+
+Keep the `@change` handler: it writes the choice back to the signal. Option values are always strings, so when the signal holds a number, compare `String(c) === currency.value`. Otherwise the match never fires and the field shows nothing selected.
+
+---
+
 ## Summary
 
 | Pitfall | Fix |
@@ -444,3 +467,4 @@ You called `this.prop('name')` but did not declare `name` in the component's `st
 | Unnamed signals | Always add debug labels |
 | Multiple writes without batch | Wrap async signal writes in `batch()` |
 | Global signals for form state | Scope signals to route handlers or components |
+| `.value` on a `<select>` with reactive options | Bind `?selected` on each `<option>` instead |

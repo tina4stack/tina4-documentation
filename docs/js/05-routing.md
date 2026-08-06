@@ -476,6 +476,66 @@ router.start({ target: '#root', mode: 'hash' });
 
 ---
 
+## 12. Wildcard Imports -- Loading Every Route File
+
+The example above keeps every route in one `src/routes/index.ts`. That file grows. Split it per feature and the barrel becomes bookkeeping you have to remember:
+
+```typescript
+// src/routes/index.ts -- one line per file, forever
+import './home';
+import './products';
+import './checkout';
+import './admin';
+```
+
+Forget a line and the route silently does not exist. Vite expands a wildcard for you instead. `import.meta.glob` takes a glob pattern and turns it into one import per matching file at build time:
+
+```typescript
+// src/main.ts
+import { router } from 'tina4js';
+
+// Every file under src/routes/ is imported, so every route registers.
+import.meta.glob('./routes/*.ts', { eager: true });
+
+router.start({ target: '#root', mode: 'hash' });
+```
+
+This works because `route()` registers on import. Calling it appends to the router's table as the module body runs, so importing the file *is* registering its routes. There is no registry to populate and no return value to collect. Drop in `src/routes/reports.ts`, reload, and its routes are live.
+
+Use `**` to walk subdirectories: `./routes/**/*.ts` also picks up `routes/admin/users.ts`.
+
+**`{ eager: true }` is required.** Without it the glob gives you an object of loader functions and no module body has run, so nothing is registered and every path falls through:
+
+```typescript
+import.meta.glob('./routes/*.ts');                  // WRONG -- loaders, never called
+import.meta.glob('./routes/*.ts', { eager: true }); // Correct -- modules executed
+```
+
+### Keep the catch-all out of the glob
+
+Section 4 said to register `route('*')` last, because the router walks its table in registration order and takes the first pattern that matches. A glob does not respect your intent about order: it imports the files it finds, and a catch-all sitting in the globbed folder can register before the real routes and swallow all of them. Every page renders your 404.
+
+Register it explicitly, after the glob, where the order is yours to control:
+
+```typescript
+// src/main.ts
+import { route, router, html } from 'tina4js';
+
+import.meta.glob('./routes/*.ts', { eager: true });   // no 404 file in here
+
+route('*', () => html`<h1>404</h1><a href="/">Go home</a>`);
+
+router.start({ target: '#root', mode: 'hash' });
+```
+
+Renaming the file so it sorts last works too, and breaks the day someone renames it back. Keep the catch-all out of the folder.
+
+One constraint comes from the bundler rather than tina4-js: **the pattern must be a literal string.** Vite expands it while building, so it cannot be assembled from a variable at runtime.
+
+Components register the same way. See [Components](04-components.md), Section 12.
+
+---
+
 ## Summary
 
 | What | How |
@@ -490,3 +550,4 @@ router.start({ target: '#root', mode: 'hash' });
 | Listen for changes | `router.on('change', ({ path, params, pattern, durationMs }) => ...)` |
 | Async routes | Handler returns a `Promise` |
 | Link interception | Automatic for same-origin `<a href>` |
+| Load every route file | `import.meta.glob('./routes/*.ts', { eager: true })` |

@@ -164,6 +164,27 @@ sync_book() {
 }
 
 sync_book "book-0-understanding" "general"
+
+# The DevOps guide belongs on the GET STARTED menu, not inside "Understanding
+# Tina4". tina4press gives a root-level page a sidebar listing the other root
+# pages, so the file has to sit at docs/devops.md to appear there.
+#
+# It still lives in the BOOK (book-0-understanding/chapters/05-devops.md) so it
+# ships in Understanding-Tina4.pdf and cannot drift. This just relocates the
+# synced copy, which keeps ONE source and avoids publishing the page twice.
+# The DevOps guide belongs on the GET STARTED menu, not inside "Understanding
+# Tina4". With cleanUrls on, /get-started/ splits to ["get-started",""], so
+# sectionOf() treats it as its own SECTION - which is why that menu shows a
+# single entry. A page joins it by living in docs/get-started/.
+#
+# The source stays book-0-understanding/chapters/05-devops.md, so the guide
+# still ships in Understanding-Tina4.pdf and cannot drift from the book. This
+# only decides where the synced copy lands.
+if [ -f "$DOCS_ROOT/general/05-devops.md" ]; then
+  mkdir -p "$DOCS_ROOT/get-started"
+  mv "$DOCS_ROOT/general/05-devops.md" "$DOCS_ROOT/get-started/05-devops.md"
+  echo "  get-started/05-devops.md <- book-0-understanding/chapters/05-devops.md"
+fi
 sync_book "book-1-python"        "python"
 sync_book "book-2-php"           "php"
 sync_book "book-3-ruby"          "ruby"

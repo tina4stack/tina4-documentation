@@ -540,6 +540,43 @@ html`
 
 ---
 
+## 12. Wildcard Imports -- Registering Every Component
+
+`customElements.define()` runs at module scope, so a component registers the moment its file is imported. The import *is* the registration. Nothing scans your project for components, which means an app with thirty of them needs thirty import lines somewhere, and the tag silently fails to upgrade the day someone forgets one.
+
+Vite expands a wildcard instead. `import.meta.glob` takes a glob pattern and turns it into one import per matching file at build time:
+
+```typescript
+// src/main.ts
+import 'tina4js/debug';
+import { router } from 'tina4js';
+
+// Every file under src/components/ is imported, so every tag is defined.
+import.meta.glob('./components/*.ts', { eager: true });
+
+router.start({ target: '#root', mode: 'hash' });
+```
+
+Add `src/components/user-card.ts` and `<user-card>` works on the next reload. No list to update.
+
+Use `**` to walk subdirectories: `./components/**/*.ts` also picks up `components/forms/text-field.ts`.
+
+**`{ eager: true }` is required.** Without it the glob gives you an object of loader functions and no module body has run, so no tag is defined. Your components render as empty unknown elements:
+
+```typescript
+import.meta.glob('./components/*.ts');                  // WRONG -- loaders, never called
+import.meta.glob('./components/*.ts', { eager: true }); // Correct -- modules executed
+```
+
+Order does not matter here, unlike routes. `customElements.define()` upgrades any matching element already in the DOM, so a component defined late still renders. Routes are the opposite case, and [Routing](05-routing.md), Section 12 covers the trap.
+
+Two constraints come from the bundler rather than from tina4-js:
+
+- **The pattern must be a literal string.** Vite expands it while building, so it cannot be assembled from a variable at runtime.
+- **Every match ships.** An eager glob imports the whole folder, so tree-shaking cannot drop a component you have not used yet. That is the trade for dropping the import list. Keep half-finished experiments outside the globbed directory.
+
+---
+
 ## Summary
 
 | Feature | How |
@@ -554,3 +591,4 @@ html`
 | Before removal | `onUnmount()` |
 | Register tag | `customElements.define('tag-name', Class)` |
 | Shared state | Export signals from a module |
+| Register every component | `import.meta.glob('./components/*.ts', { eager: true })` |

@@ -270,3 +270,7 @@ One framework. One structure. One set of conventions. The AI becomes an extensio
 | Common AI mistake 3 | `disabled=` instead of `?disabled=` |
 | Common AI mistake 4 | Missing `() =>` for reactive conditionals |
 | Common AI mistake 5 | Array mutation instead of new reference |
+
+## Review the AI's work with the Tina4 Code Viewer
+
+When the AI has made its pass, review before you merge. The [Tina4 Code Viewer](https://tina4.com/download/code-viewer/) is a read-only desktop app that fingerprints your Tina4 layout, lets you leave line-anchored comments grounded against the Tina4 RAG, and exports a portable bundle the next agent can pick up and fix. It views and comments, it never edits your code. Signed builds for macOS, Windows, and Linux.

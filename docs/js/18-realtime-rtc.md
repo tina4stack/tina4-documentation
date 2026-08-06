@@ -53,6 +53,8 @@ const cfg = await rtc.config();         // same thing
 
 A non-2xx response throws `[tina4] rtc config fetch failed: <status>`.
 
+### `RtcConfig`
+
 ```typescript
 interface RtcConfig {
   backend: string;
@@ -64,7 +66,18 @@ interface RtcConfig {
 }
 ```
 
+| Field | Type | Meaning |
+|---|---|---|
+| `backend` | `string` | Backend identifier. |
+| `iceServers` | `RTCIceServer[]` | STUN/TURN servers for the peer connections. |
+| `signalling` | `string` | Call WS path template. |
+| `chat` | `string` | Chat WS path template. |
+| `messages` | `string` | REST history path template. |
+| `files` | `string` | File upload/download path. |
+
 A `{room}`, `{channel}`, or `{id}` placeholder in a path template is substituted with the value you pass. If the template has no placeholder, the client appends `/<value>` instead.
+
+### Fetch once, reuse everywhere
 
 Every `rtc.call()` fetches config unless you hand it one. If you open several rooms, fetch once and pass it along to skip the repeat network trips:
 
