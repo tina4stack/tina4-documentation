@@ -120,6 +120,40 @@ docker pull dunglas/frankenphp
 
 Docker is the most portable deployment path. Your app runs the same way on your laptop, in CI, and on the production server.
 
+### Choosing a Runtime
+
+PHP is the one Tina4 language where the process model is a deployment decision rather than a fixed property of the runtime. `tina4 deploy docker` writes a different image for each choice:
+
+```bash
+tina4 deploy docker                     # cli (default)
+tina4 deploy docker --runtime fpm       # nginx + php-fpm
+tina4 deploy docker --runtime swoole    # openswoole
+```
+
+| Runtime | Server | Pick it when |
+|---|---|---|
+| `cli` (default) | The framework's own server | You want one image, no extra moving parts. Since 3.13.95 it forks per request, so a slow handler no longer blocks the rest. |
+| `fpm` | nginx in front of php-fpm | You want the boring, safe option. Every request gets fresh process state, so nothing leaks between requests and a fatal cannot poison the next one. This is what most PHP hosting already runs. |
+| `swoole` | openswoole | You are serving an API and per-request bootstrap is your bottleneck. The app stays resident, so there is no rebuild per request, plus coroutines and long-lived connections. |
+
+Each runtime writes its own companion files, because the generated Dockerfile copies them. The `swoole` image adds `server.php`, the `fpm` image adds `nginx.fpm.conf` and `docker-entrypoint.fpm.sh`. Generate, read them, then commit them with your app.
+
+The flag applies to PHP only. Ask for it on a Python, Ruby or Node project and the CLI refuses rather than quietly writing the default image.
+
+### Swoole: What Changes About Your Code
+
+Swoole keeps your application resident between requests, and that one fact is the whole trade. Anything you write to a static or a global lives for the life of the **worker**, not the request. A cache you never bound is a memory leak that grows all day.
+
+Three rules follow:
+
+- Keep `TINA4_DEBUG=false`. The dev toolbar keeps its message log and request inspector in static arrays that only ever grow, so a debug-mode Swoole worker climbs until something kills it. The generated image pins this for you.
+- Bound anything you cache in a static yourself. Nothing else will.
+- Leave `max_request` alone unless you have a reason. It recycles a worker after a set number of requests, which caps the damage from a leak you have not found yet.
+
+If none of that appeals, the `cli` or `fpm` images cannot leak between requests, because they do not keep anything between requests.
+
+`App::__invoke()` is the seam that makes this work. It takes a Swoole request and returns a Tina4 response, so your routes, ORM, middleware and templates are untouched. Only the transport changes.
+
 ### Official Base Image
 
 Tina4 PHP provides an official Docker Hub base image: `tina4stack/tina4-php:v3`. It is an Alpine-based image (~154MB) with PHP 8.4, SQLite, OPcache, and the Tina4 framework pre-installed. Your app Dockerfile extends it and adds only your application code and Composer dependencies.
