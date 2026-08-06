@@ -104,6 +104,14 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 
 ## What's new
 
+**v3.13.95 (2026-08-06)** - [full notes](/python/36-releases.md)
+
+Parity: the same call now means the same thing in Python, PHP, Ruby and Node. Queues moved to one layout, so a job written by one framework is where the others look for it, and queue operations act on the backend you configured rather than a local file store. Logging settled on one format, one file layout and one input contract, with an explicit argument beating the environment everywhere. Every database connect is bounded by `TINA4_DATABASE_CONNECT_TIMEOUT`, so an unreachable host fails instead of hanging forever. An unknown connection scheme or session backend now raises at startup instead of quietly falling back to SQLite or to local disk. PHP gained a choice of production runtime through `tina4 deploy docker --runtime cli|fpm|swoole`, and a working Swoole integration. See the "Possible breaking" section in the full notes: method shapes and inputs did not change, so only an app relying on the previous wrong result is affected.
+
+**v3.13.57 - v3.13.94** - [full notes](/python/36-releases.md)
+
+Thirty-eight releases of hardening between the entry above and the one below: write-path safety (a write with no filter is an error, not a full-table operation), the `DatabaseResult` contract on insert, update and delete, HS512 token verification, a race-safe `get_next_id()`, Frond expression parity across all four, and a test suite moved onto live services with no mocks.
+
 **v3.13.56 (2026-07-08)** - [full notes](/python/36-releases.md)
 
 The AI skills now tell your assistant how to report themselves when they drift. Every skill, and every project context file the installer writes (CLAUDE.md, .cursorules, copilot-instructions, and the rest), carries one line: if Tina4 behaves differently from the skill, that is a bug in the skill, so tell the developer and report it at [tina4.com/report-a-skill](/report-a-skill). This release also corrects the skills themselves (ORM soft-delete now names the real `is_deleted` column, the tina4-js persistence reference ships with the skill, and the per-framework copies are back in sync). The framework runtime is unchanged; refresh your skills with `curl -fsSL https://tina4.com/install-skills.sh | sh`.

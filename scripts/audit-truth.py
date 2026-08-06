@@ -607,6 +607,44 @@ def _is_prefix_token(name: str) -> bool:
     return name.endswith("_")
 
 
+def check_landing_page_version() -> tuple[int, list[str]]:
+    """The landing page's "What's new" must lead with the current release.
+
+    docs/index.md is hand-written and is NOT book-synced, so nothing updated it
+    and nothing noticed. It sat on v3.13.56 (2026-07-08) while the frameworks
+    shipped 3.13.95 - THIRTY-NINE releases, the first thing a visitor reads.
+
+    The check is deliberately narrow: the newest version named on the landing
+    page must equal the newest version in the Python release notes. It does not
+    police the prose, only that the top entry is current.
+    """
+    lines = [f"\n{cyan('Landing-page check')} - docs/index.md leads with the current release"]
+    notes = REPO_ROOT / "docs" / "python" / "36-releases.md"
+    index = REPO_ROOT / "docs" / "index.md"
+    if not notes.exists() or not index.exists():
+        return 0, lines
+
+    note_versions = re.findall(r"^## v(\d+\.\d+\.\d+)", notes.read_text(), re.M)
+    if not note_versions:
+        return 0, lines
+    latest = note_versions[0]
+
+    page_versions = re.findall(r"\*\*v(\d+\.\d+\.\d+)", index.read_text())
+    if not page_versions:
+        lines.append(red(f"  ✗ docs/index.md names no version; latest release is v{latest}"))
+        return 1, lines
+
+    if page_versions[0] != latest:
+        lines.append(red(
+            f"  ✗ docs/index.md leads with v{page_versions[0]} but the latest "
+            f"release is v{latest} - update the \"What's new\" section"
+        ))
+        return 1, lines
+
+    lines.append(green(f"  ✓ landing page leads with v{latest}"))
+    return 0, lines
+
+
 def check_env() -> tuple[int, list[str]]:
     real, notes = real_env_vars()
     if not real:
@@ -869,6 +907,7 @@ CHECKS = {
     "frontmatter": check_frontmatter,
     "vue": check_vue_interp,
     "pyapi": check_python_api,
+    "landing": check_landing_page_version,
 }
 
 
