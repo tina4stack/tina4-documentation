@@ -1,0 +1,47 @@
+{
+  "_comment": "tina4css is ONE artefact shipped by four packages. This pins that it stays one artefact, served at one URL, and that the committed CSS is a current compile of its own source. scripts/build-tina4css.py is the checker for the build half; the suites below are the checker for the served half.",
+  "version": 1,
+  "decided": "2026-08-06",
+  "adr": "ADR-0004",
+  "invariants": [
+    {
+      "id": "tina4css-is-served-at-one-url-in-all-four",
+      "adr": "ADR-0004",
+      "rule": "Every framework serves the compiled tina4css at /css/tina4.css and the minified build at /css/tina4.min.css, from its own built-in public directory, with Content-Type text/css. The bytes are IDENTICAL in all four. The committed CSS is a current compile of that framework's own tina4css .scss source, and the four sources are byte-identical to each other; scripts/build-tina4css.py --check is the checker for that half and exits 1 on drift.",
+      "why": "MEASURED 2026-08-06 on real servers over real sockets, including a PHP project built by `composer require` whose own src/public/css is empty: all four answered 200 with 35962 bytes for tina4.css and 28472 for tina4.min.css. That parity was true by luck - nothing asserted it. Four packages ship the same asset at the same URL and a change in one would have gone unnoticed in the other three. The PHP copy lives under src/public rather than inside the framework namespace directory, so it is the most likely of the four to be moved or dropped by a packaging change. MEASURED 2026-08-06: tina4.css matched a fresh compile in all four, but tina4.min.css did NOT - shipped 28472 bytes against 28487 from the current toolchain. The difference was fifteen single bytes (@media(min-width vs @media (min-width), both valid CSS) and the producer was the per-framework SCSS compiler, which has since been deleted because the Rust CLI owns SCSS. So the minified artefact had no producer left and nothing would ever have reported it. Checked by scripts/build-tina4css.py --check rather than by a per-framework suite, because it is one question about four files on disk and needs no running server.",
+      "suites": {
+        "python": "tests/test_tina4css_served.py",
+        "php": "tests/Tina4CssServedTest.php",
+        "ruby": "spec/tina4css_served_spec.rb",
+        "nodejs": "test/tina4cssServed.test.ts"
+      },
+      "cases": [
+        {
+          "name": "tina4css is served at the canonical url",
+          "given": {
+            "server": "a real framework server on a real port"
+          },
+          "when": "GET /css/tina4.css",
+          "then": "200, Content-Type text/css, body is non-empty CSS containing the .container rule"
+        },
+        {
+          "name": "the minified build is served at the canonical url",
+          "given": {
+            "server": "a real framework server on a real port"
+          },
+          "when": "GET /css/tina4.min.css",
+          "then": "200, Content-Type text/css, and strictly smaller than the unminified file"
+        },
+        {
+          "name": "the served bytes are the shipped file byte for byte",
+          "given": {
+            "server": "a real framework server on a real port"
+          },
+          "when": "GET /css/tina4.css and read the shipped file from the package directory",
+          "then": "the response body equals the file on disk, so a truncated or half-written asset cannot pass"
+        }
+      ],
+      "checker": "scripts/build-tina4css.py --check"
+    }
+  ]
+}
