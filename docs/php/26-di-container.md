@@ -246,7 +246,7 @@ assert($container->has('db') === false);
 
 ## 9. A Full App Bootstrap
 
-`src/bootstrap.php`, all services registered in one place:
+`src/bootstrap.php` - all services registered in one place:
 
 ```php
 <?php
@@ -312,7 +312,7 @@ require 'src/routes/orders.php';
 
 **Cause:** A circular dependency in your service graph.
 
-**Fix:** Introduce a third service that both A and B depend on, or restructure to break the cycle. The container does not detect cycles automatically, you will see a PHP stack overflow.
+**Fix:** Introduce a third service that both A and B depend on, or restructure to break the cycle. The container does not detect cycles automatically; you will see a PHP stack overflow.
 
 ### 2. Forgetting to use singleton for stateful services
 

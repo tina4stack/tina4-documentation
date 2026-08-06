@@ -229,78 +229,6 @@ says what libpq said instead of dereferencing a null handle.
 with `FrondCompiler` engaged. Production mode buys little.
 
 
-## v3.13.93 (2026-07-27) - index.php tells you where the server actually is
-
-Run `php index.php` and you get one line saying Tina4 started, then the process
-exits 0 with nothing listening. That is correct. `index.php` is a front
-controller for Apache, nginx and php-fpm, and `handle()` returns early under the
-CLI SAPI so the CLI can include the file for bootstrap without emitting an HTTP
-body into its output.
-
-Correct, and it reads exactly like a crash. It now prints where the server is:
-
-```
-Routes bootstrapped. index.php is a front controller, not a server.
-To serve locally run: tina4 serve
-```
-
-Behaviour is unchanged. This is a signpost, nothing more.
-
-### Guarded twice, because the alternative is worse than the papercut
-
-The CLI includes `index.php`, and `tina4php commands --json` emits a machine-read
-manifest on stdout that the self-describing CLI depends on. A stray line there
-corrupts it. So the hint fires only when `index.php` is itself the entry script,
-and it is written to stderr, which nothing parsing that manifest reads. An
-unknown entry script stays silent: never guess into a machine-read stream.
-
-The decision is a pure static, `App::shouldHintCliServe`, so it is tested without
-spawning a process, and the tests pin both directions - fires for `index.php`,
-silent for `bin/tina4php` and `vendor/bin/tina4php`.
-
-### Not the Ruby fix
-
-Ruby shipped 3.13.93 the same day for a real bug: `Tina4.run!` never registered
-the built-in routes, so `app.rb` served 404 on `/health`. PHP was never broken.
-Reading an exit code and inferring a defect is how this was first misdiagnosed,
-and reading `handle()` is what corrected it.
-
-### Also in the CLI (tina4 v3.8.60 through v3.8.63)
-
-Every Tina4 production image now installs the `tina4` binary and launches through
-it, so one `tina4 serve --production` replaces four different per-language entry
-points. The image comes from `ghcr.io/tina4stack/tina4-cli`, copied into your
-build as a layer. No Rust toolchain, no compile step, no network fetch: the cost
-lives in our release, once, not in yours.
-
-It is a static musl binary on purpose. Two of the four base images are Alpine,
-where a glibc binary cannot exec at all, and one static build runs unchanged on
-both Alpine and Debian-slim. One artifact per architecture, four images.
-
-`tina4 serve` could never start a Python production image. A `.venv` was read as
-"uv is installed", and uv builds the virtualenv in the builder stage and is left
-out of the slim runtime by design. It now runs the virtualenv's own interpreter,
-which needs no uv and is the one uv would have picked anyway. The reason this
-took so long to find is its own fix: a failed spawn discarded the OS error, so a
-missing uv, a missing interpreter and a permissions error all printed the same
-blank "Failed to start server". The cause is printed now.
-
-The Node image was pinned to `node:20` while tina4-nodejs declares
-`engines.node >=22` and imports the built-in `node:sqlite`, added in 22.5. npm
-downgrades an engines mismatch to a warning, so the image built cleanly and died
-at start. It is `node:24` now, and a test reads the FROM lines out of the
-templates and checks each against its framework's published floor.
-
-Two release-pipeline defects were fixed in the same window, and the second
-matters more than it looks. Eight build jobs each uploaded to the same release,
-which is a race: concurrent writers lose assets, and one release shipped four of
-eight binaries while every job still reported success. Worse, the checksums file
-was generated over whatever happened to arrive, so the release carried an
-authoritative-looking SHA256SUMS covering half of itself, and `install.sh`
-verifies against that file and would have passed. A single job now publishes
-every asset, and it refuses to publish at all unless all seven binaries are
-present.
-
 ## v3.13.92 (2026-07-27) - HS512 no longer rejects every token you mint
 
 Set `TINA4_JWT_ALGORITHM=HS512` and your application locked everyone out. Not
@@ -575,9 +503,13 @@ nothing and its body rendered as ordinary content. The admin link went to every
 visitor. Worse than a broken page: the template reads as guarded, so a reviewer
 scrolling past sees a check that is not there.
 
+<div v-pre>
+
 The same shape hid behind any misspelling. `{% ifff %}`, `{% unles %}`,
 `{% i %}`, a tag copied from another engine. Each one silently removed its own
 condition.
+
+</div>
 
 An unrecognised tag now raises, naming it and listing what Frond does know:
 
@@ -590,8 +522,12 @@ Frond has no plugin system for tags, so an unrecognised name is always a typo,
 never an extension. Twig and Jinja2 both raise on one. Frond now does too.
 
 Two things deliberately still render nothing. A stray terminator, an
+<div v-pre>
+
 `{% endif %}` with no `{% if %}`, and an empty `{%  %}`. Neither has a body, so
 neither can expose anything, and both have always been silent.
+
+</div>
 
 **What to do:** run your templates once. A typo'd tag now fails on the page that
 contains it, which is where you want to find it.
@@ -609,8 +545,12 @@ contains it, which is where you want to find it.
 
 That is core syntax in both Twig and Jinja2, and until now it did the wrong
 thing in all four frameworks: the body printed inline where the block stood, and
+<div v-pre>
+
 the variable was never bound. `{% set g %}Hello{% endset %}[{{ g }}]` rendered
 `Hello[]` instead of `[Hello]`.
+
+</div>
 
 It captures now. The captured value is marked safe, so markup you wrote in the
 body renders as markup rather than as escaped angle brackets, matching both
@@ -627,8 +567,12 @@ the page:
 ```
 
 One rule decides which form you get: an `=` anywhere in the tag means
+<div v-pre>
+
 assignment. So `{% set label = "a = b" %}` stays an assignment and is never read
 as a block. The inline form is untouched.
+
+</div>
 
 ### The expression corpus grew to 82
 
@@ -651,8 +595,12 @@ represent used to escape as itself, or as nothing at all.
 
 ### json_encode emits JSON, not entities (Breaking, reverts 3.13.87)
 
+<div v-pre>
+
 `{{ product | json_encode }}` renders `{"id":1,"name":"Widget"}` again. Put it
 straight into a script block:
+
+</div>
 
 ```html
 <script>
@@ -775,11 +723,19 @@ Two things to check in your templates. A test against the rendered `1` now sees
 `true`. And a false value that used to render as nothing now renders the word
 `false`, so any layout that leaned on the blank output needs a conditional.
 
+<div v-pre>
+
 ### {% import "file" as alias %} now works (New)
 
+</div>
+
 The alias import form rendered as nothing at all. The tag parsed, the macros were
+<div v-pre>
+
 never registered, and `{{ forms.button("Save") }}` produced an empty string with
 no error and no warning. Only `{% from "file" import name %}` worked.
+
+</div>
 
 Both forms now work and behave identically. A dotted callee such as
 `forms.button` is recognised as a macro call, and the macro registry is checked
@@ -787,15 +743,23 @@ before the dotted-object path so an aliased macro resolves.
 
 ### The not operator in output
 
+<div v-pre>
+
 PHP has always handled `{{ not user.active }}` correctly.
+
+</div>
 
 The note records that Python, Ruby and Node.js dropped the standalone form
 entirely, rendering it as an empty string, and now match PHP.
 
 ### json_encode is HTML escaped (Breaking)
 
+<div v-pre>
+
 `{{ data | json_encode }}` used to return raw JSON. It is now escaped like any
 other value, which is what Python, Ruby and Node.js have always done.
+
+</div>
 
 Escaping is the secure default. Raw JSON dropped into an HTML attribute closes
 the attribute early and hands an attacker somewhere to write markup.
@@ -1042,18 +1006,6 @@ The session-cookie `Secure` fix itself shipped for PHP in 3.13.78, the proven re
 
 Reported by justin-k-bruce (php#178, php#179; #176).
 
-## v3.13.78 (2026-07-17) - Session cookies get Secure behind a TLS-terminating proxy
-
-If you run PHP behind nginx, HAProxy, an ALB, Cloudflare, or almost any container setup, your session cookies were missing `Secure` and stayed sendable over plain HTTP. This release fixes that.
-
-- **Security: `Secure` now follows the scheme the client actually used.** TLS is normally terminated at the proxy, which forwards plain HTTP to PHP, so `$_SERVER['HTTPS']` is unset on exactly the deployments that are encrypted. Both session cookies read that flag alone, concluded "plain HTTP", and dropped `Secure`. They now go through `Request::isSecureScheme()`, which honours `x-forwarded-proto` (and takes the first hop of a proxy chain, which is the client-facing one). The framework already did this when building `$request->url`, so `$request->url` reported `https://` on the very request where the cookies decided otherwise. That disagreement was the bug, and there is now one rule instead of two.
-- **`TINA4_SESSION_SECURE` now works on both session cookies.** The documented variable was only read by `Session.php`; the two cookies emitted by the router ignored it entirely, so setting it did nothing for `PHPSESSID` or `tina4_session`. All three now honour it.
-- **Plain HTTP is unchanged.** Without a proxy header and without TLS, neither cookie gets `Secure` - marking it eagerly would stop the browser returning the cookie at all and silently break every local session.
-
-Reported by justin-k-bruce as a follow-up to 3.13.77, with the proxy repro and the inconsistency already isolated. Pinned by tests that read the real `Set-Cookie` off a live server driven with a real `X-Forwarded-Proto` header.
-
-Correction: the other three did not merely lack proxy detection - their session-cookie emit path bypassed the cookie builder, so `TINA4_SESSION_SECURE` was a silent no-op there and none of them was proxy-aware. 3.13.79 brings Python, Ruby, and Node to this same contract.
-
 ## v3.13.77 (2026-07-16) - The native session cookie is no longer readable by JavaScript
 
 - **Security: `PHPSESSID` now carries `HttpOnly` and `SameSite`.** The framework starts PHP's native session so `$_SESSION` persists, but it let PHP emit the cookie with the stock ini defaults: no `HttpOnly`, no `SameSite`. Any app keeping a login in `$_SESSION` had a session cookie readable by any XSS and sent on cross-site requests. Tina4's own `tina4_session` cookie was correctly attributed twenty-five lines further down the same method; that asymmetry was the bug. The cookie is now configured before it is emitted, reusing `TINA4_SESSION_SAMESITE` (default `Lax`) and the same SameSite=None implies Secure rule. Scope is unchanged: lifetime, path and domain still come from your ini.
@@ -1112,51 +1064,51 @@ This release sharpens the Frond template engine, locks in a database error contr
   ```
 
   The rule holds at any nesting depth, including both branches of a ternary. (#171)
+<div v-pre>
+
 - **The sandbox allow-list covers every filter path (Security).** A filter applied inside a `~` concatenation or a ternary condition now respects the `{% sandbox %}` filter allow-list. A filter you did not allow-list no longer runs its code in sandbox mode. **Breaking:** in `{% sandbox %}` mode a blocked filter now skips and passes the value through unchanged, where PHP used to return an empty string. Both behaviours were secure; this only aligns PHP's output with Python, Ruby, and Node.
 - **A malformed request path was already safe here.** The Node worker gained a guard this release for a path like `//` (or `///`, `/\`); PHP never crashed on it and returns a normal 404.
 - **Database errors still fail loud (python#57).** `execute()` and `fetch()` raise on failure and record the message on `getError()` rather than returning `false` or an empty result. This shipped in 3.13.38; this release adds a real-PostgreSQL regression test across all four frameworks so it can never slip back to a silent failure.
 - **Dev dashboard parity (`TINA4_DEBUG`).** The dev-admin dependency installer (`deps/install`), the grounding-token proxy, and the Migrate, Test, and Seed run-chips now match across all four frameworks. This is development-only; nothing changes in production.
 
+</div>
+
 ## v3.13.71 (2026-07-11) - AI skills: sharper tina4_code guidance
 
 A skills-and-docs release; no change to the PHP package. The bundled Tina4 AI skills now state WHY `tina4_code` is deprecated: in a boot-and-verify gate (scaffold the output, boot it, run it) `tina4_code` failed where a strong model grounded with `tina4_context` passed, so the tools point to grounding plus a strong model over the self-hosted coder. The recommendation is unchanged - ground with `tina4_context` and write the code yourself; only the rationale is sharper. Running `curl -fsSL https://tina4.com/install-skills.sh | sh` now installs these updated skills by default.
 
-## v3.13.70 (2026-07-11) - Unset columns keep their database default, and Swagger stops overwriting
+## v3.13.70 (2026-07-11) - Column defaults on INSERT, a Firebird charset override, and stacked Swagger metadata
 
-**An unset column no longer forces a `NULL` into your `INSERT`.** Leave a column unset on a new model and the ORM now drops it from the `INSERT` entirely, so a `NOT NULL DEFAULT` column takes its database default instead of an explicit `NULL` that breaks the constraint. Set a column to `null` on purpose and it still writes `NULL`. When every insertable column is unset, the row inserts with the engine's all-defaults form: `DEFAULT VALUES` on SQLite, PostgreSQL, MSSQL, and Firebird, and `() VALUES ()` on MySQL. (#165)
+### ORM honours column defaults on INSERT (#165)
 
-**One PHP-specific edge.** PHP fires no `__set` for a declared public property, so a direct `$model->col = null` on a property that already defaults to `null` looks identical to leaving it unset. In that one case the column is omitted rather than written `NULL`, which you notice only on a `NOT NULL DEFAULT` column during an `INSERT`. Constructor data, `fill()` data, and a no-default typed property (`public ?int $qty;`) all behave exactly as you expect: an explicit `null` there writes `NULL`.
+An INSERT now omits any column you never set on the model, so the database applies that column's own DEFAULT. Previously `save()` serialised every declared column, sending an explicit NULL for the ones you left alone; a `NOT NULL DEFAULT <x>` column then failed the insert, because a DB default applies only when the column is omitted, not when NULL is passed. The rule is now precise: a column you never touch is omitted and the database fills it in; a column you explicitly set to null is written as NULL; a column with a non-null ORM default is still written. When every insertable column is unset, the row inserts with the engine's all-defaults form. UPDATE is unchanged. Shipped across all four frameworks, verified with real-SQLite positive and negative tests.
 
-### Firebird charset is now yours to set (#160)
+### Firebird connection charset override (#160)
 
-The Firebird adapter hardcoded `UTF8`, so bytes stored under a legacy `NONE` database came back double-encoded with no way out. You can now set the connection charset with a `?charset=` query on the URL (`firebird://host:3050/path?charset=NONE`) or the `TINA4_DATABASE_CHARSET` environment variable. The URL query wins, then the env var, then the `UTF8` default, so every existing connection behaves exactly as before.
+The Firebird adapter no longer hardcodes the connection charset to UTF8. You can override it, in precedence order, with a `?charset=` query on the connection URL (`firebird://host:port/path?charset=NONE`), an explicit `charset:` option on `connect()`, or the `TINA4_DATABASE_CHARSET` environment variable. The default stays UTF8, so nothing changes unless you ask for it. This fixes double-encoded UTF-8 bytes read from a legacy NONE database. Shipped across all four frameworks.
 
-### Swagger stops overwriting stacked metadata (#59)
+### Stacked Swagger metadata all survives (#59)
 
-`Router::swagger()` used to replace whatever metadata a route already carried, so a second call wiped the first. It now merges: each call adds its keys, a later call may override the same key, but no sibling key is ever dropped. Summary, description, and tags attached across separate calls all reach the OpenAPI spec, matching the Python master (where Node and Ruby were already correct too).
+Stacking summary, description, and tags on one route now keeps every value in the generated OpenAPI spec, whatever the order. This was a PHP-visible drift where all but the annotation nearest the route method were dropped; it is fixed here and in Node (Python and Ruby were already correct), and all four now carry a lock-in test so the behaviour cannot drift again.
 
-## v3.13.69 (2026-07-10) - Api file transfer, plus a cross-origin redirect fix
+## v3.13.69 (2026-07-10) - The Api client grows up, and a cross-origin redirect leak is closed
 
-**The `Api` HTTP client learns to move files, and it stops leaking your token on a redirect.** Five additions, all zero-dependency, all opt-in, none breaking:
+The built-in HTTP `Api` client gained four zero-dependency capabilities, shipped across all four frameworks.
 
-- **Multipart `upload()`** posts a `multipart/form-data` body from a file on disk or from in-memory bytes, with optional form fields. No temp file, no ext-curl.
-- **Streaming `download()`** writes a response body to disk 64KB at a time, so a large export never buffers whole in memory. It returns `path` instead of `body`.
-- **An injectable `transport` seam** lets you unit-test the code that calls an `Api` without a live server. Tina4's own suite never injects a canned fake: its transport-seam test injects a transport that performs real socket I/O.
-- **An opt-in in-memory cookie jar** (`cookies: true`) reads `Set-Cookie` and replays the `Cookie` header on later requests, so a session carries across a login.
+- **Multipart upload.** `Api::upload()` POSTs a `multipart/form-data` body from a file on disk (`filePath`) OR from in-memory bytes (`fileBytes` plus `filename`), with optional extra text fields, so you never need a temp file. The part Content-Type is guessed from the filename. A missing file or no source returns a clean error array, never throws, and sends nothing over the wire.
+- **Streaming download.** `Api::download()` writes a GET body straight to disk in 64KB chunks, so a multi-megabyte file never lands in memory whole. It returns the status, headers, and the on-disk `path` (there is no `body` key), and writes nothing on an error status.
+- **Transport seam.** An injectable `transport` callable lets application developers unit-test code that calls an `Api` without a live server. Tina4's own suite never injects a canned fake (the no-mock rule stands); its transport-seam test drives real socket I/O.
+- **Opt-in cookie jar.** Pass `cookies: true` for a per-client in-memory jar: the client parses `Set-Cookie` (leading `name=value`, last write wins) and replays the accumulated `Cookie` header on later requests.
 
 ### Security
 
-**The `Api` was following cross-origin redirects and forwarding your credentials to the new origin.** The old client used the `file_get_contents` stream wrapper, which auto-follows redirects and forwarded the `Authorization` header and the session `Cookie` to the redirect target, including a different host. A call to an endpoint that redirected to another origin handed your bearer token and session cookie to a host you never authenticated against. The client now follows redirects itself, one hop at a time, and strips the `Authorization` and `Cookie` headers whenever the origin (scheme, host, or port) changes. Same-origin redirects keep them. This is verified against a real two-origin localhost server, needs no code change, and adds no dependency (the stream wrapper only). **Upgrade recommended** for anyone using `Api` against endpoints that redirect.
+- **Cross-origin redirect leak closed.** PHP's http stream wrapper auto-follows redirects and, before this release, forwarded the `Authorization` and `Cookie` headers to a cross-origin target (a different scheme, host, or port). That leaked a bearer token or session cookie to a host you did not authenticate to, verified against a real two-origin localhost server. The client now follows redirects with a manual loop and strips both headers on a cross-origin hop; same-origin redirects keep them. No new dependency (stream wrapper only; ext-curl is not required).
 
-### Also shipping (previously held on v3)
+### Also shipping (previously held)
 
-- **Firebird `pdo_firebird` fallback.** The Firebird adapter auto-engages the `pdo_firebird` driver when the native `ext-interbase` extension is absent or broken (the macOS plus Firebird 5 clumplet case), so you get a working database either way. Force the choice with `TINA4_FIREBIRD_DRIVER=pdo` (or `interbase`) app-wide, or with a `?driver=pdo` query param on one connection. Migrations are engine-aware across the driver switch.
-- **The REPL console honours the database env.** `tina4 console` now reads `TINA4_DATABASE_URL` plus `TINA4_DATABASE_USERNAME` / `TINA4_DATABASE_PASSWORD` and binds the ORM, so models resolve a connection inside the console exactly as they do in a request.
-- **The AI Coder Rule Path.** The developer skill now ships the canonical guidance for where an AI coding tool reads and writes project rules, aligned across all four frameworks.
-
-### Docs
-
-- A dedicated **Real-time Collaboration (WebRTC)** chapter is now published: peer-to-peer calls, live chat, and file transfer, grounded in the shipped `realtime()` surface.
+- **Firebird `pdo_firebird` fallback.** The Firebird adapter prefers `ext-interbase` and silently falls back to `pdo_firebird` when the native extension is absent or broken (for example the macOS clumplet case). Force a driver with `TINA4_FIREBIRD_DRIVER=pdo` app-wide, or a `?driver=pdo` query param on one connection.
+- **REPL database env fix.** The interactive console now connects using the project database URL and credentials (it previously read a legacy `DATABASE_URL` and skipped the bind), matching the running application.
+- **AI coder rule-path skill.** The AI coding-assistant scaffolder writes each tool's rule and context files to the correct path, across all four frameworks.
 
 ## v3.13.68 (2026-07-10) - Firebird counts again
 
@@ -1233,26 +1185,6 @@ in Ruby and PHP. All four are fixed and locked in by the new tests.
 - **`generate` writes an extra test file per scaffold.** If you script generation and
   assert on the exact set of created files, expect one more file (the co-emitted test).
 
-## v3.13.57 (2026-07-08) - Realtime collaboration, and a test client that tells the truth
-
-**Tina4 ships realtime collaboration: peer-to-peer calls, live chat, and file sharing, from one call.** Mount the surface before you serve and the framework wires the whole thing. A WebRTC signalling channel relays offers and answers between peers. A chat channel carries messages, presence, typing, and read receipts, and persists its history through the ORM. An upload and download path moves files.
-
-```php
-use Tina4\Realtime\Realtime;
-
-Realtime::mount('', ['features' => ['calls', 'chat', 'files']]);
-```
-
-Calls run on a mesh backend by default, so a small room needs no media server at all. Set `TINA4_RTC_TURN_URL` and `TINA4_RTC_TURN_SECRET` and the framework mints time-limited coturn credentials for peers behind strict NATs. Chat history survives a restart, so a reconnecting client catches up. Files land on local disk by default, or in any S3-compatible bucket (MinIO included) when you set `TINA4_STORAGE_BACKEND=s3`.
-
-The browser half ships in tina4-js 1.5.0 as the `rtc` module. `rtc.call(room)` opens a call with perfect-negotiation handshaking. `rtc.chat(channel)` binds a live message list, a presence roster, and a typing signal straight into a template. `rtc.upload(channel, file)` sends a file. Every piece of live state is a signal, so the interface updates itself. Every Tina4 backend now vendors the tina4-js bundle that carries this module.
-
-The auth levels are deliberate. The call signalling socket is public, because the framework never reads your SDP. Chat, history, upload, and download each require a valid token, and chat rechecks channel membership on every frame.
-
-**The in-process TestClient now enforces the real auth gate.** This is the fail-loud fix. The PHP `TestClient` already dispatched through the real router, so it met the contract, but nothing pinned that at the client surface. A regression test now locks it in: a write with no token returns 401 through the test client exactly as it does on the live server, so a green test can never hide a live 401.
-
-**Breaking, tests only.** A test that posts to an auth-required route without a token sees 401, not the handler response. When the test checks plumbing rather than auth, open the route with `->noAuth()` or pass a valid bearer token. No production request path changes. Shipped across all four frameworks.
-
 ## v3.13.56 (2026-07-08) - Skills that own up when they drift
 
 **Every AI skill now tells the assistant how to report itself when it is wrong.** A skill is documentation, and documentation drifts. When a skill still describes a method, default, or column the framework no longer has, an assistant writes confident code against an API that is gone. This release closes that loop.
@@ -1311,7 +1243,11 @@ No new third-party dependencies.
 
 ## v3.13.52 (2026-07-04) - Frond live blocks, pgsql:// URL scheme, SCSS colour functions
 
+<div v-pre>
+
 **Frond live blocks.** A page can now carry a region that keeps itself current. Wrap the region in `{% live %}` and Frond paints it on the server with the first request, then refreshes it over the transport you name.
+
+</div>
 
 ```twig
 {% live "prices" poll 5 %}
@@ -1350,24 +1286,6 @@ No new third-party dependencies.
 A route path parameter like `{id}`, matched against a real HTTP request, must find an INTEGER primary-key row. On Ruby it did not. Rack delivers the request path as ASCII-8BIT, so an untyped `{id}` capture reached the SQL bind as a binary string, and the sqlite3 gem bound it as a BLOB. SQLite gives a BLOB no numeric affinity, so `WHERE id = ?` never matched an INTEGER column - `GET /api/users/{id}` returned 404 for a row that plainly existed (and `GET /api/users` listed it). The router now relabels path captures as UTF-8 so they bind as TEXT, which SQLite coerces to the column's integer affinity, and the row matches. Typed `{id:int}` params were never affected - they cast to an Integer. The SQLite driver is left alone on purpose: coercing every binary string there would corrupt genuine BLOB writes, so the encoding is fixed at the source (the router).
 
 Python, PHP, and Node were confirmed unaffected - their string path params already bind as TEXT - and each gains a real regression test: real router extraction feeding a real SQLite integer-primary-key lookup, no mocks, so the contract cannot silently drift. No new third-party dependencies.
-
-## v3.13.49 (2026-06-30) - Current tina4-js runtime bundle + reactive-select guidance
-
-Refreshes the bundled tina4-js runtime that every Tina4 app loads from `/js/tina4js.min.js`. The shipped script-tag bundle had drifted behind npm: it predated persistent signals and the i18n module, because the minified IIFE was never committed to the tina4-js repo, so `tina4 install tina4-js` downloaded a 404 and fell back to a stale copy. tina4-js 1.4.1 fixes the source of the drift (the bundle is now tracked in git and built in CI), and this release vendors the current bundle so a fresh install serves persistent signals and i18n out of the box. Run `tina4 install tina4-js` to refresh an existing app immediately.
-
-It also documents a reactive-`<select>` footgun in the bundled tina4-js skill. A `<select>` whose options come from a reactive block loses its selection when the options re-render if you bind `.value` on the select. Bind `?selected` on each `<option>` instead, so every option owns its selected state and survives a re-render. No framework code changed.
-
-## v3.13.48 (2026-06-29) - i18n hardening, swagger decorator-stacking fix, and skill env-name corrections
-
-Three threads, all verified against real dependencies, no mocks.
-
-**i18n now agrees across all four frameworks.** Interpolation is partial and never throws: a `{name}` token present in the parameters is replaced, and a missing or malformed placeholder (`{x.y}`, `{n:d}`, a stray brace) stays literal, so a broken template can no longer crash `t()`. Leaf-key aliasing is first-wins and never overwrites an explicit flat key, so a real top-level `home` beats a derived `nav.home` alias. Non-string locale values render JSON-native: `true`, `false`, `null`. Ruby also stops crashing on a malformed JSON or YAML locale file (it logs the file and skips it), loads a locale lazily on `set_locale`, and lists `available_locales` from the files on disk. **Breaking:** the PHP and Node `I18n` constructor argument order is now `(locale, path)` to match the Python master, and Ruby interpolation tokens are now `{name}`, not Rails-style `%{name}`. Update each `new I18n(...)` call to the new order, and change `%{name}` to `{name}` in shared locale files.
-
-**Swagger decorators stopped dropping metadata (Python).** Stacking `@description` above `@tags` above `@get` lost the description with no error: every decorator returned a new wrapper carrying only its own attribute, but `@get` is innermost and registers the bare handler, so only the decorator touching `@get` reached the generated spec. The decorators now annotate the handler in place and return the same object, so every field survives in any order. A regression test stacks five decorators through the real router and asserts each one lands in the OpenAPI operation. PHP, Ruby, and Node attach Swagger metadata through a single meta object, so they never had this bug; each gains a lock-in test that proves a combined annotation keeps every field.
-
-**The bundled AI skill shipped wrong env names.** The skill told assistants to write `SECRET=`, `SWAGGER_TITLE=`, and `API_KEY=` in `.env`. Tina4 3.12 made the `TINA4_` prefix mandatory, and the startup guard refuses to boot on a legacy un-prefixed name, so an app scaffolded from the skill never bound its port. The skill now teaches `TINA4_SECRET`, `TINA4_SWAGGER_TITLE`, and `TINA4_API_KEY`, and the connection-string examples use the schemes the driver registry accepts (`postgresql://`, `sqlite:`). The JWT secret reads from `TINA4_SECRET` only.
-
-No new third-party dependencies.
 
 ## v3.13.47 (2026-06-25) - Open-issue batch: migration comment splitting, global middleware, SCSS interpolation
 
@@ -3051,7 +2969,7 @@ Catch-up release covering v3.11.0 -> v3.11.9 across all 4 frameworks.
 
 Tina4 PHP follows semantic versioning. The major number changes when something breaks. The minor number changes when something new arrives. The patch number changes when something gets fixed. Each release is available on Packagist.
 
-This chapter covers the full v3 line -- from the first release candidate through the current stable release. If you are upgrading from v2, read Chapter 36 first. It covers every breaking change and gives you a migration checklist.
+This chapter covers the full v3 line -- from the first release candidate through the current stable release. If you are upgrading from v2, read Chapter 37 first. It covers every breaking change and gives you a migration checklist.
 
 ---
 
@@ -3886,7 +3804,7 @@ The v3.0.0 release is a ground-up rewrite. Zero Composer dependencies. The HTTP 
 
 ### Breaking Changes from v2
 
-These are the changes that will break existing code. See Chapter 29 for a full migration checklist.
+These are the changes that will break existing code. See Chapter 37 for a full migration checklist.
 
 **PHP version.** Requires PHP 8.0 or later.
 
@@ -3952,7 +3870,7 @@ Five release candidates shipped before the final v3.0.0 release. They covered th
 
 | From | To | Action Required |
 |------|----|----------------|
-| v2.x | v3.0.0 | Full migration -- see Chapter 29 |
+| v2.x | v3.0.0 | Full migration -- see Chapter 37 |
 | v3.0-3.3 | v3.4.0 | Update `fetch()` calls to use `->data` on DatabaseResult |
 | v3.0-3.8 | v3.9.1 | Add auth to POST/PUT/PATCH/DELETE routes or mark them `->allowAnonymous()` |
 | v3.9.x | v3.10.x | No breaking changes -- update and test |

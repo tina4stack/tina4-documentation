@@ -88,7 +88,7 @@ Keys use dot notation for nested structures. Placeholders in curly braces are re
 
 ## 4. The I18n Class
 
-For more control, such as setting the locale per request or loading custom locale paths, use the `I18n` class directly:
+For more control (setting the locale per request, loading custom locale paths) use the `I18n` class directly:
 
 ```python
 from tina4_python.i18n import I18n
@@ -467,7 +467,7 @@ async def create_user(request, response):
 
 **Problem:** JSON has `{firstName}` but code calls `t("greeting", first_name="Alice")`. The placeholder is not replaced.
 
-**Fix:** Placeholder names in JSON and keyword argument names in Python must match exactly. Use consistent naming conventions: either camelCase or snake_case throughout your locale files.
+**Fix:** Placeholder names in JSON and keyword argument names in Python must match exactly. Use consistent naming conventions, either camelCase or snake_case throughout your locale files.
 
 ### 3. TINA4_LOCALE not set, t() uses "en"
 

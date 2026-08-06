@@ -68,18 +68,6 @@ TINA4_DATABASE_FIREBIRD_PATH=C:\firebird\data\app.fdb
 TINA4_DATABASE_URL=firebird://SYSDBA:masterkey@localhost:3050/ignored
 ```
 
-### Firebird Connection Charset
-
-Firebird connects as `UTF8` by default. A database created under the `NONE` charset stores raw bytes, and reading UTF-8 text out of it as `UTF8` double-encodes every non-ASCII character. Override the charset with a `?charset=` query on the URL or the `TINA4_DATABASE_CHARSET` environment variable. The URL query wins, then the env var, then the `UTF8` default, so existing connections are unchanged.
-
-```bash
-# Connection URL query
-TINA4_DATABASE_URL=firebird://SYSDBA:masterkey@localhost:3050/app.fdb?charset=NONE
-
-# Or via the environment variable (applies to every Firebird connection)
-TINA4_DATABASE_CHARSET=WIN1252
-```
-
 The env override wins over whatever path is in the URL.
 
 ### Firebird: Dual-Driver Support
@@ -243,9 +231,9 @@ $result->toPaginate();  // ["records" => [...], "count" => 42, "limit" => 10, "o
 ```php
 $info = $result->columnInfo();
 // [
-//     ["name" => "id", "type" => "INTEGER", "size" => null, "decimals" => null, "nullable" => false, "primaryKey" => true],
-//     ["name" => "name", "type" => "TEXT", "size" => null, "decimals" => null, "nullable" => false, "primaryKey" => false],
-//     ["name" => "email", "type" => "TEXT", "size" => 255, "decimals" => null, "nullable" => true, "primaryKey" => false],
+//     ["name" => "id", "type" => "INTEGER", "size" => null, "decimals" => null, "nullable" => false, "primary_key" => true],
+//     ["name" => "name", "type" => "TEXT", "size" => null, "decimals" => null, "nullable" => false, "primary_key" => false],
+//     ["name" => "email", "type" => "TEXT", "size" => 255, "decimals" => null, "nullable" => true, "primary_key" => false],
 //     ...
 // ]
 ```
@@ -259,7 +247,7 @@ Each column entry contains:
 | `size` | Maximum size (or `null` if not applicable) |
 | `decimals` | Decimal places (or `null`) |
 | `nullable` | Whether the column allows `NULL` |
-| `primaryKey` | Whether the column is part of the primary key |
+| `primary_key` | Whether the column is part of the primary key |
 
 This is useful for building dynamic forms, generating documentation, or validating data before insert.
 
@@ -601,25 +589,6 @@ Third argument: WHERE clause. Fourth argument: parameters.
 $db->delete("products", "id = :id", ["id" => 7]);
 ```
 
-### What they return
-
-`insert()`, `update()`, and `delete()` each return a `DatabaseResult`. The object
-is truthy on success, so `if ($db->insert(...))` still reads naturally. It carries
-`->affectedRows` and `->lastId`. The new row id lands on `->lastId` after an
-`insert()`; it is `null` for `update()` and `delete()`.
-
-```php
-$result = $db->insert("products", ["name" => "Wireless Mouse", "price" => 34.99]);
-$result->lastId;        // the new row id
-$result->affectedRows;  // 1
-
-$changed = $db->update("products", ["price" => 39.99], "id = :id", ["id" => 7]);
-$changed->affectedRows; // rows updated
-```
-
-A failed write raises a `DatabaseException`. It never returns `false`, so wrap
-writes in `try/catch` rather than testing the return value.
-
 These helpers generate SQL for you. Use them for simple CRUD. For joins, subqueries, or aggregations, reach for raw queries.
 
 ---
@@ -688,40 +657,7 @@ Running migrations...
 Migrations complete. 1 applied.
 ```
 
-Tina4 applies pending files in **numeric-prefix order** -- the leading number drives the sort, so `9_create_x.sql` runs before `10_create_y.sql` (a plain alphabetical sort would put `10` first). Files without a numeric or timestamp prefix sort last and log a warning, since their order is undefined. Each call to `tina4 migrate` is a **batch**. All pending migrations applied in a single run share the same batch number. This matters for rollback.
-
-Each migration file is wrapped in its **own transaction**. Per-file atomicity is real only on engines with transactional DDL (PostgreSQL): there a failed statement rolls the whole file back. MySQL, Firebird, and SQLite auto-commit DDL, so a half-applied file leaves its earlier statements in place. Keep one logical change per file. A failed migration **stops the run and raises** -- already-applied files stay applied. Fix the SQL and re-run; the runner picks up where it left off.
-
-`CREATE TABLE` and `ALTER TABLE ... ADD` are idempotent on Firebird and MSSQL, which lack `IF NOT EXISTS`: the runner checks whether the table or column already exists and skips that statement on a re-run instead of erroring. Only a genuine already-exists is skipped -- every other error still raises. SQLite, MySQL, and PostgreSQL use native `IF NOT EXISTS`.
-
-### Automatic Migrations on Startup
-
-Tina4 runs your pending migrations the moment the server boots. It checks for a `migrations/` folder (with at least one migration file) and a resolvable database, then applies anything outstanding before the first request lands. No extra deploy step. Ship the code, start the service, and the schema catches up.
-
-This runs the same migration engine as the CLI, so the result matches `tina4 migrate`. The startup hook fires after routes and the database bind, just before the server accepts traffic.
-
-Startup migration is **non-breaking**. If a migration fails, Tina4 logs the error and the service still boots:
-
-```
-Startup auto-migration failed: <error> - the service is starting anyway. Run `tina4 migrate` to retry.
-```
-
-A successful run logs how many it applied:
-
-```
-Applied 2 pending migration(s) on startup
-```
-
-The explicit `tina4 migrate` CLI stays **fail-fast** - it exits non-zero on failure, so CI keeps a real exit code to gate on. Only the startup hook swallows the error to keep the service available.
-
-Set `TINA4_AUTO_MIGRATE=false` (or `0`, `no`, `off`) to turn the hook off. The default is `true`.
-
-**Multi-instance caveat.** When several instances boot at once against one database, they race to apply the same migrations. For multi-instance production, disable the hook and migrate as a separate deploy step:
-
-```bash
-TINA4_AUTO_MIGRATE=false   # in each instance's environment
-tina4 migrate              # run once, before rolling out the new instances
-```
+Each call to `tina4 migrate` is a **batch**. All pending migrations applied in a single run share the same batch number. This matters for rollback.
 
 ### Checking Migration Status
 
@@ -756,18 +692,16 @@ The `.down.sql` file must share the exact same base name as the migration. For `
 
 ### Tracking Table
 
-Tina4 creates a `tina4_migration` table to track applied migrations. It has six columns:
+Tina4 creates a `tina4_migration` table to track applied migrations. The table has four columns:
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | integer | Auto-increment primary key |
-| `migration_name` | VARCHAR(500) | The migration filename (unique) |
-| `description` | VARCHAR(500) | Human-readable description derived from the filename |
+| `migration` | VARCHAR(255) | The migration filename |
 | `batch` | integer | Batch number (increments each `tina4 migrate` run) |
-| `executed_at` | VARCHAR(50) | ISO-8601 timestamp string of when the migration ran |
-| `passed` | integer | `1` marks the migration as applied |
+| `applied_at` | timestamp | When the migration was applied |
 
-A migration counts as applied when a row exists for it with `passed = 1`. The runner writes only `passed = 1` rows. A failed file rolls back and writes no row, so the next `tina4 migrate` retries it. You should not modify this table directly, but inspecting it can help debug migration issues.
+You should not modify this table directly, but inspecting it can help debug migration issues.
 
 ### Advanced SQL: Stored Procedures and Block Comments
 
@@ -826,7 +760,7 @@ Its down file (`20260323091500_add_email_index_to_users.down.sql`), if you choos
 DROP INDEX IF EXISTS idx_users_email;
 ```
 
-Migrations run in numeric-prefix order. Each runs only once.
+Migrations run in filename order. Each runs only once.
 
 ---
 

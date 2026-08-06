@@ -17,7 +17,7 @@ Every feature below is present in all four Tina4 frameworks - Python, PHP, Ruby,
 | CORS middleware | Built-in preflight and headers. Instead of a cors package |
 | Rate limiting middleware | Built-in throttle. Instead of express-rate-limit or rack-attack |
 | Static file serving (cache-control revalidation) | Serves the public directory with ETag and 304. Instead of serve-static |
-| Health check endpoint | `/__health` and `/health`, liveness only: 200 while the process can answer |
+| Health check endpoint | `/health` and `/__health`, returns 503 on broken files |
 | Graceful shutdown | Clean SIGTERM and SIGINT drain |
 | SSE and streaming responses | Streams from a generator, hardened. Instead of an SSE library |
 | Convention auto-discovery (routes, models, seeds) | File location is configuration. Instead of manual registration |

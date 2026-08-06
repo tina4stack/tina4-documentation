@@ -136,56 +136,6 @@ The script tag becomes plain text. It never executes. If you need raw HTML outpu
 
 ---
 
-### The not Operator in Output
-
-`not` works in an output expression, not only in a condition:
-
-```html
-{{ not user.active }}
-```
-
-```html
-false
-```
-
-It reads the same way it does inside `{% if %}`, because both go through the same
-evaluator. `{% if not user.active %}` and `{{ not user.active }}` agree by
-construction.
-
-**Fixed in 3.13.87.** `{{ not x }}` rendered as nothing. Every logical operator
-was matched with spaces on both sides, so a leading `not` matched none of them and
-was looked up as a variable named "not x". `{% if not x %}` and `x and not y`
-always worked, which is why the gap went unnoticed for so long.
-
-### Printing a Boolean
-
-A boolean prints as `true` or `false`, lowercase, in every Tina4 framework.
-
-```html
-<div data-active="{{ user.active }}">
-```
-
-```html
-<div data-active="true">
-```
-
-Lowercase is the form the browser already understands. Read it back with
-`el.dataset.active === "true"` and it works. There is no casing to translate and
-no special case to write.
-
-A false value prints the word `false`. It does not print blank. That distinction
-earns its keep: a blank attribute reads as a missing value, and a template that
-shows nothing where it should show `false` is wrong in a way nobody notices.
-
-**Breaking in 3.13.87.** The four frameworks used to give four different answers
-here. Python printed Python's `True` and `False`. PHP printed `1` for true and an
-empty string for false. Ruby printed `false` for a comparison but an empty string
-for a stored false value. Node.js already printed `true` and `false`. All four now
-agree, and a 72 expression corpus in every test suite holds them there.
-
-Search your templates and tests for anything comparing the rendered text to
-`True` or `False`. Those comparisons now need `true` and `false`.
-
 ## 4. Filters
 
 Filters transform output. The pipe `|` applies them:
@@ -319,62 +269,13 @@ Filters transform output. The pipe `|` applies them:
 
 </div>
 
-### json_encode Is Ready for a Script Block
-
-`json_encode` gives you JSON that parses as JSON and runs as JavaScript. Frond
-does not HTML-escape it, because an entity-encoded payload is a syntax error the
-moment the browser reads it:
-
-```html
-<script>
-    const product = {{ product | json_encode }};
-</script>
-```
-
-```html
-<script>
-    const product = {"id":1,"name":"Widget"};
-</script>
-```
-
-The output is still safe on the page. Frond escapes the four characters that can
-break out of HTML, as JSON unicode escapes rather than entities, so `</script>`
-inside a string arrives as `\u003c/script\u003e` and cannot close the block
-early. A single quote becomes `\u0027`, so the same value drops straight into a
-single-quoted attribute:
-
-```html
-<div data-product='{{ product | json_encode }}'>
-```
-
-Use single quotes there. JSON is full of double quotes, so a double-quoted
-attribute needs `| e` on top:
-
-```html
-<div data-product="{{ product | json_encode | e }}">
-```
-
-A value JSON cannot represent becomes `null`. Infinity, NaN and anything the
-serializer refuses all serialize as `null`, so the payload always arrives and
-always parses. It is never blank, and it is never a bare token that
-`JSON.parse` would reject.
-
-`to_json` and `tojson` are the same filter under two more names.
-
-**Breaking in 3.13.88.** 3.13.87 HTML-escaped this filter in all four
-frameworks, which turned every `<script>` block that used it into a
-`SyntaxError`. That is reverted: `json_encode` no longer produces entities, and
-`| raw` after it is now a no-op you can delete. If you added `| raw` for
-3.13.87, nothing breaks by leaving it. Any double-quoted attribute holding
-`json_encode` output wants `| e` instead.
-
 ### Chaining Filters
 
 Filters chain left to right:
 
 ```html
 {{ name | trim | lower | capitalize }}
-{# "  alice smith  " -> "alice smith" -> "Alice smith" #}
+{# "  alice smith  " → "alice smith" → "Alice smith" #}
 
 {{ items | sort | reverse | first }}
 {# Sort, reverse, take first = largest item #}
@@ -399,7 +300,7 @@ The `dump` helper lets you inspect any variable mid-template. Two interchangeabl
 {{ dump(user) }}
 ```
 
-Both produce the same `<pre>`-wrapped, HTML-escaped `repr()` of the value. Handles nested dicts, lists, class instances, and cyclic references without crashing, since Python's `repr()` prints `{...}` for back-edges.
+Both produce the same `<pre>`-wrapped, HTML-escaped `repr()` of the value. Handles nested dicts, lists, class instances, and cyclic references without crashing; Python's `repr()` prints `{...}` for back-edges.
 
 ```html
 {{ dump(order) }}
@@ -527,54 +428,6 @@ When combining filters with arithmetic, assign the filtered values first:
 {% set balance = dr - cr %}
 <p>Balance: {{ balance }}</p>
 ```
-
-### set as a block -- capture rendered markup
-
-The block form captures whatever its body renders and binds it to the name.
-Nothing is printed where the block stands:
-
-```html
-{% set badge %}
-    <span class="badge">{{ order.status|upper }}</span>
-{% endset %}
-
-<td>{{ badge }}</td>
-<td class="mobile-only">{{ badge }}</td>
-```
-
-Build the markup once, use it twice. The capture is marked safe, so the badge
-renders as HTML rather than as escaped angle brackets. A value interpolated into
-the body is still escaped on the way in, which is the correct place for it: the
-escaping happens once, where the untrusted value enters.
-
-Which form you get is decided by one rule: an `=` in the tag means assignment,
-so `{% set label = "a = b" %}` is never mistaken for a block.
-
-This form is new in 3.13.89. Before that it printed its body inline and bound
-nothing.
-
-### An unknown tag is an error
-
-A tag Frond does not recognise raises, naming the tag and listing the ones it
-knows:
-
-```html
-{% iff user.is_admin %}
-    <a href="/admin">Admin</a>
-{% endiff %}
-```
-
-```
-Frond: unknown tag "iff" -- known tags are: autoescape, block, cache, extends,
-for, from, if, import, include, live, macro, raw, set, spaceless
-```
-
-That one is worth staring at. Before 3.13.89 the mistyped tag rendered nothing
-and its body rendered as ordinary content, so the admin link appeared for every
-visitor. The template looked guarded. It was not.
-
-Frond has no plugin system for tags, so an unrecognised name is always a typo.
-Twig and Jinja2 both raise on one too.
 
 ---
 
@@ -729,35 +582,6 @@ Use them:
 Change the macro once and every form in your application updates. Consistent markup across the entire project.
 
 ---
-
-### Two Ways to Import Macros
-
-Frond accepts both Twig import forms and they behave identically.
-
-Name the macros you want:
-
-```html
-{% from "macros/forms.html" import button, alert %}
-
-{{ button("Save", "", "primary") }}
-```
-
-Or bind the whole file to an alias:
-
-```html
-{% import "macros/forms.html" as forms %}
-
-{{ forms.button("Save", "", "primary") }}
-```
-
-The alias form keeps the names namespaced, which earns its keep the moment two
-macro files both define a `button`. Arguments bind the same way in either form:
-the first argument you pass is the first parameter the macro declares.
-
-**Fixed in 3.13.87.** The alias form used to shift every argument by one
-position, because the macros were installed as class attributes and bound as
-methods, so the alias itself arrived as the first argument. The `{% from %}`
-form was never affected. Both forms now agree.
 
 ## 8. Comments
 

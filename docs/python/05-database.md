@@ -127,23 +127,6 @@ TINA4_DATABASE_FIREBIRD_PATH=C:\firebird\data\app.fdb
 TINA4_DATABASE_URL=firebird://SYSDBA:masterkey@localhost:3050/ignored
 ```
 
-### Firebird Connection Charset
-
-Firebird connects as `UTF8` by default. A database created under the `NONE` charset stores raw bytes, and reading UTF-8 text out of it as `UTF8` double-encodes every non-ASCII character. Override the charset three ways, highest precedence first: a `?charset=` query on the URL, a `charset=` keyword on `Database(...)`, or the `TINA4_DATABASE_CHARSET` environment variable. The default stays `UTF8`, so existing connections are unchanged.
-
-```python
-# URL query
-db = Database("firebird://SYSDBA:masterkey@localhost:3050/app.fdb?charset=NONE")
-
-# Keyword argument
-db = Database("firebird://SYSDBA:masterkey@localhost:3050/app.fdb", charset="WIN1252")
-```
-
-```bash
-# Environment variable (applies to every Firebird connection)
-TINA4_DATABASE_CHARSET=WIN1252
-```
-
 The env override wins over whatever path is in the URL.
 
 ### Firebird Dual-Driver Support
@@ -579,7 +562,7 @@ Migration files live in a `migrations/` directory. Two naming patterns are suppo
 | Sequential | `000001_create_users.sql` |
 | Timestamp | `20260322160000_create_notes.sql` |
 
-Files run in numeric-prefix order -- the leading number drives the sort, so `9_` runs before `10_`. A file with no numeric or timestamp prefix sorts last and logs a warning, since its order is undefined. Pick one pattern and stick with it -- `000001_` sorts before `20260322_`, so mixing them leads to unexpected execution order.
+Files sort alphabetically when they run. Pick one pattern and stick with it -- `000001_` sorts before `20260322_`, so mixing them leads to unexpected execution order.
 
 ### Generating a Migration
 
@@ -638,40 +621,7 @@ tina4 migrate
 tina4python migrate
 ```
 
-Tina4 finds all pending `.sql` files in `migrations/` and applies them in **numeric-prefix order** -- the leading number drives the sort, so `9_create_x.sql` runs before `10_create_y.sql` (a plain alphabetical sort would put `10` first). Files without a numeric or timestamp prefix sort last and log a warning, since their order is undefined. Each migration file is wrapped in its **own transaction**. Each run receives a **batch number**. The batch groups every migration applied in that single run.
-
-Per-file atomicity is real only on engines with transactional DDL (PostgreSQL): there a failed statement rolls the whole file back. MySQL, Firebird, and SQLite auto-commit DDL, so a half-applied file leaves its earlier statements in place. Keep one logical change per file so a failure is easy to reason about. A failed migration **stops the run and raises** -- already-applied files stay applied. Fix the SQL and re-run; the runner picks up where it left off.
-
-`CREATE TABLE` and `ALTER TABLE ... ADD` are idempotent on Firebird and MSSQL, which lack `IF NOT EXISTS`: the runner checks whether the table or column already exists and skips that statement on a re-run instead of erroring. Only a genuine already-exists is skipped -- every other error still raises. SQLite, MySQL, and PostgreSQL use native `IF NOT EXISTS`.
-
-### Automatic Migrations on Startup
-
-Tina4 runs your pending migrations the moment the server boots. It checks for a `migrations/` folder (with at least one migration file) and a resolvable database, then applies anything outstanding before the first request lands. No extra deploy step. Ship the code, start the service, and the schema catches up.
-
-This runs the same migration engine as the CLI, so the result matches `tina4 migrate`. The startup hook fires after routes and the database bind, just before the server accepts traffic.
-
-Startup migration is **non-breaking**. If a migration fails, Tina4 logs the error and the service still boots:
-
-```
-Startup auto-migration failed: <error> - the service is starting anyway. Run `tina4 migrate` to retry.
-```
-
-A successful run logs how many it applied:
-
-```
-Applied 2 pending migration(s) on startup
-```
-
-The explicit `tina4 migrate` CLI stays **fail-fast**: it exits non-zero on failure, so CI keeps a real exit code to gate on. Only the startup hook swallows the error to keep the service available.
-
-Set `TINA4_AUTO_MIGRATE=false` (or `0`, `no`, `off`) to turn the hook off. The default is `true`.
-
-**Multi-instance caveat.** When several instances boot at once against one database, they race to apply the same migrations. For multi-instance production, disable the hook and migrate as a separate deploy step:
-
-```bash
-TINA4_AUTO_MIGRATE=false   # in each instance's environment
-tina4 migrate              # run once, before rolling out the new instances
-```
+Tina4 finds all pending `.sql` files in `migrations/`, sorts them alphabetically, and executes them in order. Each run receives a **batch number**. The batch groups every migration applied in that single run.
 
 ### Checking Status
 
@@ -696,20 +646,20 @@ Tina4 creates a `tina4_migration` table in your database to track what has run:
 | Column | Purpose |
 |--------|---------|
 | `id` | Primary key |
-| `migration_name` | The migration filename (unique) |
-| `description` | Human-readable description derived from the filename |
+| `migration_id` | The migration filename |
+| `description` | Human-readable description |
 | `batch` | Which batch this migration belonged to |
 | `executed_at` | When it ran |
-| `passed` | `1` marks the migration as applied |
+| `passed` | `1` if it succeeded, `0` if it failed |
 
-A migration counts as applied when a row exists for it with `passed = 1`. The runner writes only `passed = 1` rows. A failure raises and stops the run, writing nothing for that file, so the next `tina4 migrate` retries it automatically. Rollback deletes the row rather than flipping a flag.
+Failed migrations are recorded with `passed = 0`. On the next `tina4 migrate` run, the runner retries them.
 
 ### Advanced SQL Splitting
 
 Tina4's migration runner is not a naive line splitter. It correctly handles:
 
 - **`$$` delimited blocks** -- PostgreSQL stored procedures and functions that contain semicolons
-- **`//` blocks** -- alternative delimiter blocks (a `//` preceded by a colon does not count, so a URL like `https://...` inside your SQL is never mistaken for a delimiter)
+- **`//` blocks** -- alternative delimiter blocks
 - **`/* */` block comments** -- skipped during splitting
 - **`--` line comments** -- skipped during splitting
 
@@ -1111,7 +1061,7 @@ Every row gets `role = "member"` and `active = 1`. The field map generates the r
 
 **Cause:** `last_insert_rowid()` is a SQLite function. Other databases use different mechanisms.
 
-**Fix:** Use `db.insert()`, whose `DatabaseResult` carries `.last_id` regardless of engine. Or use database-specific syntax: PostgreSQL uses `RETURNING id` in the INSERT statement, MySQL uses `LAST_INSERT_ID()`.
+**Fix:** Use `db.insert()` which returns the last inserted ID regardless of engine. Or use database-specific syntax: PostgreSQL uses `RETURNING id` in the INSERT statement, MySQL uses `LAST_INSERT_ID()`.
 
 ### 3. String vs integer comparison
 
@@ -1133,9 +1083,9 @@ Every row gets `role = "member"` and `active = 1`. The field map generates the r
 
 **Problem:** A migration fails because it references a table that does not exist yet.
 
-**Cause:** Migrations run in numeric-prefix order. If migration B depends on the table created by migration A, migration A must sort earlier.
+**Cause:** Migrations run in alphabetical order. If migration B depends on the table created by migration A, migration A must sort earlier.
 
-**Fix:** Use `tina4 generate migration` which auto-generates a numeric prefix. The runner sorts on the leading number (so `9_` runs before `10_`), and a file with no numeric or timestamp prefix logs a warning because its order is undefined. Do not mix `000001_` and `YYYYMMDDHHMMSS_` patterns in the same project -- `000001_` sorts before `20240315_`, which scrambles your intended order.
+**Fix:** Use `tina4 generate migration` which auto-generates sequential numbers. Do not mix `000001_` and `YYYYMMDDHHMMSS_` patterns in the same project -- `000001_` sorts before `20240315_`, which scrambles your intended order.
 
 ### 6. Missing down migration
 
@@ -1149,9 +1099,9 @@ Every row gets `role = "member"` and `active = 1`. The field map generates the r
 
 **Problem:** A migration failed and now `tina4 migrate` keeps retrying it.
 
-**Cause:** A failed migration raises and stops the run without writing a tracking row. Because Tina4 treats a migration as applied only when it has a `passed = 1` row, a file with no such row is treated as pending and retried on the next `migrate` run. Files that already applied keep their rows and are skipped.
+**Cause:** Failed migrations are recorded in the `tina4_migration` table with `passed = 0`. Tina4 retries them on the next `migrate` run.
 
-**Fix:** Fix the SQL in the migration file, then run `tina4 migrate` again. The failed migration retries from a clean slate. On PostgreSQL the failed file rolled back atomically; on MySQL, Firebird, and SQLite (which auto-commit DDL) check that no partial objects were left behind before re-running.
+**Fix:** Fix the SQL in the migration file, then run `tina4 migrate` again. The failed migration retries. If you need to skip it entirely, update its `passed` column to `1` in the `tina4_migration` table manually -- but fix the root cause first.
 
 ### 8. SQL injection through string formatting
 

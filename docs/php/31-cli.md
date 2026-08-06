@@ -129,7 +129,7 @@ When the `--production` flag is passed, the CLI:
 4. Disables the dev toolbar and error overlay
 5. Enables graceful shutdown handling
 
-In practice, you rarely use `tina4 serve --production` directly. Instead, you use Docker or a process manager (Chapter 33). But this flag is useful for quick production testing.
+In practice, you rarely use `tina4 serve --production` directly. Instead, you use Docker or a process manager (Chapter 34). But this flag is useful for quick production testing.
 
 ---
 
@@ -798,8 +798,8 @@ tina4 books     # Download the complete Tina4 book (all languages) to tina4-book
 
 When `TINA4_DEBUG=true`, Tina4 automatically starts a second HTTP server on `port + 1000`:
 
-- **Main port** (e.g. 7145), hot-reload enabled, for AI dev tools
-- **Test port** (e.g. 8146), stable, no hot-reload, for user testing
+- **Main port** (e.g. 7145) - hot-reload enabled, for AI dev tools
+- **Test port** (e.g. 8146) - stable, no hot-reload, for user testing
 
 This prevents the browser from refreshing mid-test when AI tools edit files.
 

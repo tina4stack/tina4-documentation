@@ -245,20 +245,26 @@ runner.stop_service("cache_warmer")
 
 ## 8. Integrating with the App
 
-Tina4 imports every file under `src/` on boot, so start the runner where you define it. Put the setup in `src/worker_services.py` and call `start()` at the bottom:
+Start the runner in your `src/app.py`:
 
 ```python
-# src/worker_services.py
-from tina4_python.service import ServiceRunner
+# src/app.py
+import atexit
+from src.worker_services import runner
 
-runner = ServiceRunner()
-runner.register("email_worker", EmailWorker())
-runner.register("sms_worker", SmsWorker())
+runner.start()
 
-runner.start()   # runs when the server boots and imports this file
+# ServiceRunner does not stop itself, so hand it to atexit. The interpreter
+# runs this on a clean exit and on SIGTERM, which is what an orchestrator
+# sends before it stops the container.
+atexit.register(runner.stop)
 ```
 
-Stop them cleanly with the `SIGTERM`/`SIGINT` handler shown above, which calls `runner.stop()`.
+There is no app object and no lifecycle decorator. Tina4 for Python registers
+routes with bare `@get` and `@post`, and `src/app.py` runs at import time, so
+starting the runner is a plain call. `runner.start()` launches every registered
+service in a background thread and returns, which leaves the web server free to
+carry on serving.
 
 ---
 
@@ -367,7 +373,7 @@ runner.start()
 
 **Problem:** `runner.start()` blocks because a service's `run()` calls `runner.start()` again recursively, or a service does not return from `run()`.
 
-**Fix:** `run()` must contain the loop internally. `runner.start()` is non-blocking: it launches threads and returns. Each service owns its own loop.
+**Fix:** `run()` must contain the loop internally. `runner.start()` is non-blocking; it launches threads and returns. Each service owns its own loop.
 
 ### 2. No stop() method
 

@@ -465,7 +465,7 @@ return $response
 
 ## 7. File Uploads
 
-Uploaded files land in `$request->files` as an associative array keyed by field name. Each entry has the file metadata plus the raw bytes, Tina4 does not write a temporary file to disk, so there is no `tmp_path`.
+Uploaded files land in `$request->files` as an associative array keyed by field name. Each entry has the file metadata plus the raw bytes; Tina4 does not write a temporary file to disk, so there is no `tmp_path`.
 
 ```php
 $file = $request->files["avatar"];

@@ -257,11 +257,11 @@ Generates the full authentication scaffold: User model, migrations, login/regist
 
 AutoCRUD automatically generates REST API endpoints from your ORM models:
 
-- `GET /api/{table}`: List with pagination (`?limit=10&offset=0`)
-- `GET /api/{table}/{id}`: Get single record
-- `POST /api/{table}`: Create record
-- `PUT /api/{table}/{id}`: Update record
-- `DELETE /api/{table}/{id}`: Delete record
+- `GET /api/{table}` - List with pagination (`?limit=10&offset=0`)
+- `GET /api/{table}/{id}` - Get single record
+- `POST /api/{table}` - Create record
+- `PUT /api/{table}/{id}` - Update record
+- `DELETE /api/{table}/{id}` - Delete record
 
 ### Usage
 

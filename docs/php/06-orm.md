@@ -12,7 +12,7 @@ Picture a blog. Authors, posts, comments. Authors own many posts. Posts own many
 
 ## ORM at a Glance: Four Languages, One Shape
 
-The ORM does the same job in every Tina4 book. Define a model. Save it. Query it. Each language wears its own clothes, PHP uses typed properties, Python uses field class instances, Ruby uses a DSL, Node uses config objects, but the operations line up. If you know the API in one book, you can read the others.
+The ORM does the same job in every Tina4 book. Define a model. Save it. Query it. Each language wears its own clothes (PHP uses typed properties, Python uses field class instances, Ruby uses a DSL, Node uses config objects), but the operations line up. If you know the API in one book, you can read the others.
 
 ### Defining a Model
 
@@ -93,9 +93,9 @@ Same operation, four shapes:
 | Delete a record | `post.delete()` | `$post->delete()` | `post.delete` | `post.delete()` |
 | Count rows | `Post.count()` | `(new Post())->count()` | `Post.count` | `Post.count()` |
 
-A few details worth noting. `find()` takes attribute names and applies the field map; `where()` takes raw SQL and skips translation. PHP needs `(new Post())` for instance methods like `where()` and `all()`, the rest are static. Ruby methods drop the parentheses by convention.
+A few details worth noting. `find()` takes attribute names and applies the field map; `where()` takes raw SQL and skips translation. PHP needs `(new Post())` for instance methods like `where()` and `all()`; the rest are static. Ruby methods drop the parentheses by convention.
 
-For full detail on field options, relationships, eager loading, soft delete, validation, and Auto-CRUD, read the rest of this chapter, it shows the API for the language of this book.
+For full detail on field options, relationships, eager loading, soft delete, validation, and Auto-CRUD, read the rest of this chapter, which shows the API for the language of this book.
 
 ---
 
@@ -139,35 +139,8 @@ A complete model. Here is what each piece does:
 | `string` | `VARCHAR(255)` | Text strings |
 | `float` | `REAL` / `DOUBLE PRECISION` | Decimal numbers |
 | `bool` | `INTEGER` (0/1) | True/False |
-| `array` | `JSONB` (PG), `JSON` (MySQL), `TEXT` (SQLite) | JSON document column (see [JSON columns](#json-columns) below) |
 
 For foreign keys, use `int`. There is no separate foreign key type -- the relationship is defined through `$hasMany`, `$hasOne`, and `$belongsTo` array properties instead.
-
-### JSON columns
-
-Type a property `array` (or `?array`) and the ORM treats it as a JSON document column. It encodes the array to JSON on save and decodes it back to a PHP array on read, so the property holds native data, never a raw string:
-
-```php
-<?php
-
-use Tina4\ORM;
-
-class Event extends ORM
-{
-    public string $tableName = 'events';
-    public int $id = 0;
-    public string $name = '';
-    public ?array $payload = null;   // JSON document
-}
-
-$event = new Event(['name' => 'click', 'payload' => ['x' => 10, 'tags' => ['ui', 'beta']]]);
-$event->save();
-
-$fresh = (new Event())->load('id = ?', [$event->id]);
-$fresh->payload['x'];              // 10 -- an array, not a string
-```
-
-The column type follows the engine: `JSONB` on PostgreSQL, `JSON` on MySQL, `NVARCHAR(MAX)` on SQL Server, a text `BLOB` on Firebird, and `TEXT` on SQLite. A value that cannot be encoded to JSON makes `save()` fail loud (returns `false`, records the cause on `getError()`) rather than writing partial data.
 
 ### Field Mapping
 
@@ -496,7 +469,7 @@ echo $arr["name"];          // access as array key
 |--------|---------|-------------|
 | `toDict($include)` | `array` | Associative array, keyed by PHP property names |
 | `toAssoc($include)` | `array` | Alias for `toDict()` |
-| `toObject()` | `stdClass` | PHP object (NOT an array), properties match PHP property names |
+| `toObject()` | `stdClass` | PHP object (NOT an array) - properties match PHP property names |
 | `toJson($include)` | `string` | JSON string |
 | `toArray()` | `array` | Indexed array of values (no keys) |
 | `toList()` | `array` | Alias for `toArray()` |

@@ -95,7 +95,7 @@ Same operation, four shapes:
 
 A few details worth noting. `find()` takes attribute names and applies the field map; `where()` takes raw SQL and skips translation. PHP needs `(new Post())` for instance methods like `where()` and `all()`; the rest are static. Ruby methods drop the parentheses by convention.
 
-For full detail on field options, relationships, eager loading, soft delete, validation, and Auto-CRUD, read the rest of this chapter, which shows the API for the language of this book.
+For full detail on field options, relationships, eager loading, soft delete, validation, and Auto-CRUD, read the rest of this chapter; it shows the API for the language of this book.
 
 ---
 
@@ -137,31 +137,9 @@ A complete model. Here is what each piece does:
 | `DateTimeField` | `str` | `DATETIME` | Date and time |
 | `TextField` | `str` | `TEXT` | Long text |
 | `BlobField` | `bytes` | `BLOB` | Binary data |
-| `JSONField` | `dict` / `list` | `JSONB` (PG), `JSON` (MySQL), `TEXT` (SQLite) | JSON document column (see [JSON columns](#json-columns) below) |
-| `ForeignKeyField` | `int` | `INTEGER` | Foreign key, auto-wires `belongs_to` and `has_many` (see [Relationships](#_6-relationships)) |
+| `ForeignKeyField` | `int` | `INTEGER` | Foreign key - auto-wires `belongs_to` and `has_many` (see [Relationships](#6-relationships)) |
 
 Verbose names (`IntegerField`, `StringField`, `BooleanField`) are the standard. Short aliases (`IntField`, `StrField`, `BoolField`) also work.
-
-#### JSON columns
-
-`JSONField` stores a `dict` or a `list` as a JSON document. The framework encodes the value to JSON when it saves and decodes it back to a Python object when it reads, so the attribute is always native data, never a raw string:
-
-```python
-from tina4_python.orm import ORM, IntegerField, StringField, JSONField
-
-class Event(ORM):
-    id = IntegerField(primary_key=True, auto_increment=True)
-    name = StringField()
-    payload = JSONField()          # dict or list
-
-event = Event({"name": "click", "payload": {"x": 10, "tags": ["ui", "beta"]}})
-event.save()
-
-fresh = Event.find(event.id)
-fresh.payload["x"]                 # 10 (a dict, not a string)
-```
-
-The column type follows the engine: `JSONB` on PostgreSQL, `JSON` on MySQL, `NVARCHAR(MAX)` on SQL Server, a text `BLOB` on Firebird, and `TEXT` on SQLite. A value that is not JSON-serialisable makes `save()` fail loud (returns `False`, records the cause on the model) rather than writing partial data.
 
 
 ### Field Options
@@ -535,8 +513,8 @@ class BlogPost(ORM):
 
 With that single `ForeignKeyField` declaration, two accessors are auto-wired:
 
-- `post.author`, returns the `Author` instance (belongs_to)
-- `author.posts`, returns a list of `BlogPost` instances (has_many)
+- `post.author` - returns the `Author` instance (belongs_to)
+- `author.posts` - returns a list of `BlogPost` instances (has_many)
 
 No manual `has_many` or `belongs_to` calls required.
 

@@ -646,4 +646,4 @@ async def search_products(request, response):
     })
 ```
 
-The sort column is validated against a whitelist. The direction is constrained to `ASC` or `DESC`. User input never touches the SQL directly: it either goes through `?` placeholders or gets checked against known-safe values. QueryBuilder handles the assembly. The route handler stays readable.
+The sort column is validated against a whitelist. The direction is constrained to `ASC` or `DESC`. User input never touches the SQL directly; it either goes through `?` placeholders or gets checked against known-safe values. QueryBuilder handles the assembly. The route handler stays readable.

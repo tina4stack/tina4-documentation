@@ -141,7 +141,7 @@ Stock is validated before payment is charged, payment is charged before the conf
 
 ## 7. Async Event Support with emit_async
 
-For handlers that do I/O, such as sending HTTP requests, writing to a database, or publishing to a message broker, use `emit_async` with async handlers:
+For handlers that do I/O (sending HTTP requests, writing to a database, publishing to a message broker) use `emit_async` with async handlers:
 
 ```python
 import asyncio

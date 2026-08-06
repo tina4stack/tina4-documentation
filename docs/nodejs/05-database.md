@@ -74,18 +74,6 @@ TINA4_DATABASE_FIREBIRD_PATH=C:\firebird\data\app.fdb
 TINA4_DATABASE_URL=firebird://SYSDBA:masterkey@localhost:3050/ignored
 ```
 
-### Firebird Connection Charset
-
-Firebird connects as `UTF8` by default. A database created under the `NONE` charset stores raw bytes, and reading UTF-8 text out of it as `UTF8` double-encodes every non-ASCII character. Override the charset with a `?charset=` query on the URL or the `TINA4_DATABASE_CHARSET` environment variable. The URL query wins, then the env var, then the `UTF8` default, so existing connections are unchanged.
-
-```bash
-# Connection URL query
-TINA4_DATABASE_URL=firebird://SYSDBA:masterkey@localhost:3050/app.fdb?charset=NONE
-
-# Or via the environment variable (applies to every Firebird connection)
-TINA4_DATABASE_CHARSET=WIN1252
-```
-
 The env override wins over whatever path is in the URL.
 
 ### Separate Credentials
@@ -603,25 +591,6 @@ await db.update("products", { price: 39.99, in_stock: 1 }, { id: 7 });
 await db.delete("products", { id: 7 });
 ```
 
-### What they return
-
-`insert()`, `update()`, and `delete()` are async. Await them. Each resolves to a
-write result carrying `success`, `affectedRows`, and `lastId`. The new row id lands
-on `lastId` after an `insert()`. These names match the other Tina4 frameworks, so a
-write returns the same shape in every language.
-
-```typescript
-const result = await db.insert("products", { name: "Wireless Mouse", price: 34.99 });
-result.lastId;        // the new row id
-result.affectedRows;  // 1
-
-const changed = await db.update("products", { price: 39.99 }, { id: 7 });
-changed.affectedRows; // rows updated
-```
-
-A failed write raises. It never resolves to a falsy value, so wrap writes in
-`try/catch` rather than testing the return value.
-
 ---
 
 ## 11. Migrations
@@ -635,7 +604,7 @@ Tina4 supports two naming patterns for migration files:
 - **Sequential:** `000001_create_products.sql`
 - **Timestamp:** `YYYYMMDDHHMMSS_create_products.sql`
 
-Both patterns sort correctly. Tina4 applies files in **numeric-prefix order** -- the leading number drives the sort, so `9_create_x.sql` runs before `10_create_y.sql` (a plain alphabetical sort would put `10` first). Files without a numeric or timestamp prefix sort last and log a warning, since their order is undefined.
+Both patterns sort correctly. Tina4 uses BigInt comparison internally, so you can mix them in the same project without issues.
 
 ### Generating a Migration
 
@@ -684,39 +653,6 @@ tina4nodejs migrate
 
 Each run increments a batch number. Every migration applied during that run belongs to the same batch. This matters for rollback.
 
-Each migration file is wrapped in its **own transaction**. Per-file atomicity is real only on engines with transactional DDL (PostgreSQL): there a failed statement rolls the whole file back. MySQL, Firebird, and SQLite auto-commit DDL, so a half-applied file leaves its earlier statements in place. Keep one logical change per file. A failed migration **stops the run and raises** -- already-applied files stay applied. Fix the SQL and re-run; the runner picks up where it left off.
-
-`CREATE TABLE` and `ALTER TABLE ... ADD` are idempotent on Firebird and MSSQL, which lack `IF NOT EXISTS`: the runner checks whether the table or column already exists and skips that statement on a re-run instead of erroring. Only a genuine already-exists is skipped -- every other error still raises. SQLite, MySQL, and PostgreSQL use native `IF NOT EXISTS`.
-
-### Automatic Migrations on Startup
-
-Tina4 runs your pending migrations the moment the server boots. It checks for a `migrations/` folder (with at least one migration file) and a resolvable database, then applies anything outstanding before the first request lands. No extra deploy step. Ship the code, start the service, and the schema catches up.
-
-This runs the same migration engine as the CLI, so the result matches `tina4 migrate`. The startup hook fires after routes and the database bind, just before the server accepts traffic.
-
-Startup migration is **non-breaking**. If a migration fails, Tina4 logs the error and the service still boots:
-
-```
-Startup auto-migration failed: <error> - the service is starting anyway. Run `tina4 migrate` to retry.
-```
-
-A successful run logs how many it applied:
-
-```
-Applied 2 pending migration(s) on startup
-```
-
-The explicit `tina4 migrate` CLI stays **fail-fast**: it exits non-zero on failure, so CI keeps a real exit code to gate on. Only the startup hook swallows the error to keep the service available.
-
-Set `TINA4_AUTO_MIGRATE=false` (or `0`, `no`, `off`) to turn the hook off. The default is `true`.
-
-**Multi-instance caveat.** When several instances boot at once against one database, they race to apply the same migrations. For multi-instance production, disable the hook and migrate as a separate deploy step:
-
-```bash
-TINA4_AUTO_MIGRATE=false   # in each instance's environment
-tina4 migrate              # run once, before rolling out the new instances
-```
-
 ### Checking Status
 
 ```bash
@@ -740,13 +676,11 @@ Tina4 creates a `tina4_migration` table automatically. It has these columns:
 | Column | Purpose |
 |--------|---------|
 | `id` | Auto-incrementing primary key |
-| `migration_name` | The migration filename (unique) |
-| `description` | Human-readable description derived from the filename |
+| `description` | The migration filename |
+| `content` | Full SQL text of the migration (for audit) |
+| `passed` | Whether the migration ran successfully |
 | `batch` | Which batch this migration belongs to |
-| `executed_at` | ISO-8601 timestamp string of when the migration ran |
-| `passed` | `1` marks the migration as applied |
-
-A migration counts as applied when a row exists for it with `passed = 1`. The runner writes only `passed = 1` rows: a failed file rolls back and writes no row, so the next run retries it.
+| `run_at` | When the migration was applied |
 
 ### Advanced SQL Splitting
 

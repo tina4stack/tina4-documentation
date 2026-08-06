@@ -1,4 +1,4 @@
-# Chapter 15: Backend Integration
+# Chapter 13: Backend Integration
 
 ## The Full Stack
 

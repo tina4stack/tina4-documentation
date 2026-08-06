@@ -43,7 +43,7 @@ Visit `http://localhost:7146/api/soap/calculator?wsdl` to see the generated WSDL
 
 ## 3. The @wsdl_operation Decorator
 
-`@wsdl_operation` marks a method on a `WSDL` subclass as a SOAP operation. The single argument is the response schema, a dict mapping each output field name to its Python type.
+`@wsdl_operation` marks a method on a `WSDL` subclass as a SOAP operation. The single argument is the response schema: a dict mapping each output field name to its Python type.
 
 ```python
 class PriceService(WSDL):

@@ -74,9 +74,9 @@ Want the optional CSS framework included? The Rust CLI does not yet accept a `--
 tina4 init js my-app
 ```
 
-To add Tina4 CSS, edit `package.json` to add the `tina4-css` dependency, or use the fallback `npx tina4js create my-app --css` which accepts the flag directly. This adds `tina4-css` to your dependencies -- a utility CSS library with reset, grid, buttons, forms, tables, cards, and dark mode built in. More on this in Chapter 10.
+To add Tina4 CSS, edit `package.json` to add the `tina4-css` dependency, or use the fallback `npx tina4js create my-app --css` which accepts the flag directly. This adds `tina4-css` to your dependencies -- a utility CSS library with reset, grid, buttons, forms, tables, cards, and dark mode built in. More on this in Chapter 12.
 
-Want PWA support from the start? The Rust CLI also does not yet expose a `--pwa` flag on `init`. Scaffold with `tina4 init js my-app` and enable PWA manually (see Chapter 9), or use the fallback `npx tina4js create my-app --pwa` to get the PWA preset directly. You can combine the flags on the fallback: `npx tina4js create my-app --css --pwa`.
+Want PWA support from the start? The Rust CLI also does not yet expose a `--pwa` flag on `init`. Scaffold with `tina4 init js my-app` and enable PWA manually (see Chapter 10), or use the fallback `npx tina4js create my-app --pwa` to get the PWA preset directly. You can combine the flags on the fallback: `npx tina4js create my-app --css --pwa`.
 
 Now install and run:
 
@@ -136,7 +136,7 @@ import { homePage } from '@/pages/home';
 import { user } from '@/store';
 ```
 
-It is configured in two places, and **both must agree**: TypeScript uses `tsconfig.json` for editor go-to-definition and type-checking; Vite uses `vite.config.ts` for the actual build:
+It is configured in two places, and **both must agree**. TypeScript uses `tsconfig.json` for editor go-to-definition and type-checking; Vite uses `vite.config.ts` for the actual build:
 
 ```jsonc
 // tsconfig.json

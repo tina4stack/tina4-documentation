@@ -1,4 +1,4 @@
-# Chapter 8: WebSocket
+# Chapter 7: WebSocket
 
 ## Real-Time Without the Headache
 

@@ -18,7 +18,7 @@ The ORM does the same job in every Tina4 book. Define a model. Save it. Query it
 
 The same `Post` model with `id`, `title`, `body`, and `created_at`:
 
-**Python**: field class instances on the class body:
+**Python** - field class instances on the class body:
 
 ```python
 from tina4_python.orm import ORM, IntegerField, StringField, DateTimeField
@@ -32,7 +32,7 @@ class Post(ORM):
     created_at = DateTimeField()
 ```
 
-**PHP**: native typed properties:
+**PHP** - native typed properties:
 
 ```php
 <?php
@@ -49,7 +49,7 @@ class Post extends ORM
 }
 ```
 
-**Ruby**: class-level DSL declarations:
+**Ruby** - class-level DSL declarations:
 
 ```ruby
 class Post < Tina4::ORM
@@ -62,7 +62,7 @@ class Post < Tina4::ORM
 end
 ```
 
-**Node.js (TypeScript)**: config objects in a `static fields` block:
+**Node.js (TypeScript)** - config objects in a `static fields` block:
 
 ```typescript
 import { BaseModel } from "tina4-nodejs/orm";
@@ -95,7 +95,7 @@ Same operation, four shapes:
 
 A few details worth noting. `find()` takes attribute names and applies the field map; `where()` takes raw SQL and skips translation. PHP needs `(new Post())` for instance methods like `where()` and `all()`; the rest are static. Ruby methods drop the parentheses by convention.
 
-For full detail on field options, relationships, eager loading, soft delete, validation, and Auto-CRUD, read the rest of this chapter, which shows the API for the language of this book.
+For full detail on field options, relationships, eager loading, soft delete, validation, and Auto-CRUD, read the rest of this chapter; it shows the API for the language of this book.
 
 ---
 
@@ -138,32 +138,8 @@ A complete model. Here is what each piece does:
 | `"number"` | `number` | `REAL` | Decimal numbers |
 | `"boolean"` | `boolean` | `INTEGER` (0/1) | True/False |
 | `"datetime"` | `string` | `TEXT` | Date and time |
-| `"json"` | `object` / `array` | `JSONB` (PG), `JSON` (MySQL), `TEXT` (SQLite) | JSON document column (see [JSON columns](#json-columns) below) |
 
 For foreign keys, use `"integer"`. There is no separate foreign key type -- the relationship is defined through `hasMany`, `hasOne`, and `belongsTo` methods instead.
-
-#### JSON columns
-
-A `"json"` field stores an object or an array as a JSON document. The framework encodes the value to JSON on save and decodes it back to a JavaScript object on read, so the property holds native data, never a raw string:
-
-```typescript
-export default class Event extends BaseModel {
-  static tableName = "events";
-  static fields = {
-    id:      { type: "integer" as const, primaryKey: true, autoIncrement: true },
-    name:    { type: "string"  as const },
-    payload: { type: "json"    as const },   // object or array
-  };
-}
-
-const event = new Event({ name: "click", payload: { x: 10, tags: ["ui", "beta"] } });
-await event.save();
-
-const fresh = await Event.find(event.id);
-fresh.payload.x;                 // 10 -- an object, not a string
-```
-
-The column type follows the engine: `JSONB` on PostgreSQL, `JSON` on MySQL, `NVARCHAR(MAX)` on SQL Server, a text `BLOB` on Firebird, and `TEXT` on SQLite. A value that cannot be encoded to JSON (a circular reference, a `BigInt`) makes `save()` fail loud (returns `false`, records the cause) rather than writing partial data.
 
 ### Field Options
 

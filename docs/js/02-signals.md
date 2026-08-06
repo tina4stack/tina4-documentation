@@ -372,7 +372,7 @@ const username = signal('', 'username');
 const items = signal([], 'cart-items');
 ```
 
-Labels do nothing in production. In the debug overlay (Chapter 9), labels appear in the Signals panel. Instead of staring at `Signal<number>` with value `7` and wondering which signal that is, you see `count: 7`. That difference matters at 2 AM when something is not updating.
+Labels do nothing in production. In the debug overlay (Chapter 11), labels appear in the Signals panel. Instead of staring at `Signal<number>` with value `7` and wondering which signal that is, you see `count: 7`. That difference matters at 2 AM when something is not updating.
 
 Add labels to every signal you might need to debug. The overhead is zero when the debug module is not imported.
 

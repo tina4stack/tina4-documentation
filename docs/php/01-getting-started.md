@@ -254,7 +254,7 @@ Router::get("/api/greeting/{name}", function ($request, $response) {
 
 Save the file. The dev server picks it up. No restart needed if live reload is active. Otherwise, restart with `tina4 serve`.
 
-> **Cross-language note.** PHP, Ruby, and Node read path parameters from `$request->params` / `request.params` / `req.params`. Python passes them as function arguments instead. Same concept, two shapes, pick the chapter that matches your runtime.
+> **Cross-language note.** PHP, Ruby, and Node read path parameters from `$request->params` / `request.params` / `req.params`. Python passes them as function arguments instead. Same concept, two shapes: pick the chapter that matches your runtime.
 
 ### Test It
 
@@ -342,7 +342,7 @@ Router::post("/api/greeting", function ($request, $response) {
 ```
 
 ::: tip Why `->noAuth()`?
-Tina4 secures `POST`, `PUT`, `PATCH`, and `DELETE` routes by default, they require a valid bearer token. For public, untyped examples like this one, chain `->noAuth()` to disable that check. In production, remove `->noAuth()` and send an `Authorization: Bearer <token>` header instead. See [Authentication](./08-authentication.md) for token issuance.
+Tina4 secures `POST`, `PUT`, `PATCH`, and `DELETE` routes by default; they require a valid bearer token. For public, untyped examples like this one, chain `->noAuth()` to disable that check. In production, remove `->noAuth()` and send an `Authorization: Bearer <token>` header instead. See [Authentication](./08-authentication.md) for token issuance.
 :::
 
 Test the POST endpoint:
@@ -624,7 +624,7 @@ This overlay exists only when `TINA4_DEBUG=true`. Production never sees it.
 
 ## 8. Manual Setup (No CLI)
 
-The `tina4` CLI creates the project for you. But if you start from an empty folder, just Composer and a text editor, here is the minimum you need.
+The `tina4` CLI creates the project for you. But if you start from an empty folder (just Composer and a text editor), here is the minimum you need.
 
 ### Step 1: Install the Package
 

@@ -212,7 +212,7 @@ The `tina4` Rust CLI is the sole file watcher for the whole Tina4 stack. There i
  └────────────┘                           └────────────┘   GET /__dev/api/mtime└─────────┘
 ```
 
-1. The CLI watches `src/`, `migrations/`, `.env` with the `notify` crate. Events are filtered to real source changes: metadata/access events, `__pycache__`, `.git`, `node_modules`, `vendor`, `dist`, `target`, `logs`, `.log`/`.db*`/`.swp` files are ignored. A real mtime check defeats overlayfs / polling-mode spurious events (Podman, distrobox).
+1. The CLI watches `src/`, `migrations/`, `.env` with the `notify` crate. Events are filtered to real source changes; metadata/access events, `__pycache__`, `.git`, `node_modules`, `vendor`, `dist`, `target`, `logs`, `.log`/`.db*`/`.swp` files are ignored. A real mtime check defeats overlayfs / polling-mode spurious events (Podman, distrobox).
 2. On a real change, the CLI POSTs `/__dev/api/reload` to the running Node server. The server keeps running, with no process restart for file edits.
 3. `DevAdmin` bumps its in-memory `_reloadMtime` counter and broadcasts `{type: "reload"}` over WebSocket at `/__dev_reload`. `GET /__dev/api/mtime` returns the counter for browsers using the polling fallback.
 4. The dev-toolbar script reloads the browser. SCSS/CSS changes are signalled as `type: "css"` and swap the stylesheet without a full reload.

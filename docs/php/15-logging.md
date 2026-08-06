@@ -6,9 +6,9 @@
 
 Structured logging writes JSON. Every log entry is a machine-readable object with a timestamp, level, message, and whatever context you attach. Log aggregators (Datadog, Grafana Loki, AWS CloudWatch, Papertrail) can query, filter, and alert on structured logs.
 
-Tina4 provides `Tina4\Log` for structured logging. Each level has its own method, `Log::debug()`, `Log::info()`, `Log::warning()`, `Log::error()`, `Log::critical()`. Output is JSON by default. Zero external packages.
+Tina4 provides `Tina4\Log` for structured logging. Each level has its own method: `Log::debug()`, `Log::info()`, `Log::warning()`, `Log::error()`, `Log::critical()`. Output is JSON by default. Zero external packages.
 
-The historical `Tina4\Debug::message()` API still works as a compatibility shim that forwards to `Tina4\Log`, use it if you're upgrading from a v3.12.x codebase. New code should use the level-specific `Log` methods.
+The historical `Tina4\Debug::message()` API still works as a compatibility shim that forwards to `Tina4\Log`; use it if you're upgrading from a v3.12.x codebase. New code should use the level-specific `Log` methods.
 
 ---
 
@@ -24,7 +24,7 @@ Tina4 has five log levels, each with its own `Log` method:
 | `Log::error($msg, $context)` | A failure that needs attention |
 | `Log::critical($msg, $context)` | System is failing. Immediate action required |
 
-The levels rank `debug` < `info` < `warning` < `error` < `critical`. `critical` is the highest severity, it always emits like every other level, and it lands in `error.log` alongside `warning` and `error`. Lower levels are filtered by `TINA4_LOG_LEVEL`; a higher level is visible whenever it meets that threshold.
+Higher levels are always visible. Lower levels are filtered by `TINA4_LOG_LEVEL`.
 
 ---
 
@@ -87,42 +87,7 @@ Recommended levels by environment:
 
 ---
 
-## 5. Checking the Current Level
-
-Sometimes you want to skip building an expensive log payload that would never reach the console anyway. `Log::isEnabled()` answers one question: would a message at this level pass the configured minimum level?
-
-```php
-<?php
-use Tina4\Log;
-
-if (Log::isEnabled('debug')) {
-    // Only run the costly dump when DEBUG output is actually visible.
-    Log::debug("Cache snapshot", ['entries' => $cache->dumpAll()]);
-}
-```
-
-The level is case-insensitive, so `Log::isEnabled('DEBUG')` and `Log::isEnabled('debug')` behave the same.
-
-The predicate uses the exact threshold the logger uses to decide what to print, so it can never disagree with real output:
-
-```php
-<?php
-use Tina4\Log;
-
-// With TINA4_LOG_LEVEL=ERROR:
-Log::isEnabled('info');     // false - info is below the ERROR threshold
-Log::isEnabled('warning');  // false - also below ERROR
-Log::isEnabled('error');    // true  - at the threshold
-Log::isEnabled('critical'); // true  - critical outranks error
-```
-
-`critical` is the highest severity, `debug` < `info` < `warning` < `error` < `critical`. It flows through the same ordinary threshold as every other level, so `Log::critical()` always emits (subject only to `TINA4_LOG_LEVEL`) and `isEnabled('critical')` passes at every normal level.
-
-> **Console visibility only.** `Log::isEnabled()` reflects what reaches **stdout**. The log **file** always records every level regardless of the minimum level, so a `Log::debug()` you guarded out of the console still lands in `tina4.log`. Use `isEnabled()` to gate expensive work, not to decide what gets persisted.
-
----
-
-## 6. Logging with Context
+## 5. Logging with Context
 
 Pass a context array as the second argument. Context values are merged into the JSON log entry.
 
@@ -156,7 +121,7 @@ Context makes log lines searchable: `level:INFO AND user_id:42` finds every acti
 
 ---
 
-## 7. Logging in Route Handlers
+## 6. Logging in Route Handlers
 
 Log the lifecycle of an HTTP request. Incoming requests, decisions made, and outcomes:
 
@@ -205,7 +170,7 @@ Router::post('/api/payments', function ($request, $response) {
 
 ---
 
-## 8. Logging Exceptions
+## 7. Logging Exceptions
 
 Log exceptions with full context. Include the message, file, line, and trace:
 
@@ -244,7 +209,7 @@ function processOrder(array $order): array {
 
 ---
 
-## 9. Request Correlation
+## 8. Request Correlation
 
 Attach a request ID to every log message within a request. All log lines from the same request share one ID. This lets you filter a full request trace from thousands of concurrent requests.
 
@@ -277,7 +242,7 @@ With request correlation, a single `grep "request_id:a3f8c1d2"` finds every log 
 
 ---
 
-## 10. Performance Logging
+## 9. Performance Logging
 
 Log slow operations automatically. Time your expensive calls:
 
@@ -318,39 +283,27 @@ Any query slower than 50ms emits a `WARNING`. All others emit `DEBUG` and are su
 
 ---
 
-## 11. Environment Configuration
+## 10. Environment Configuration
 
 ```bash
 # Minimum level to log (DEBUG | INFO | WARNING | ERROR | CRITICAL)
 TINA4_LOG_LEVEL=WARNING
 
-# Log output destination (stdout | file | both)
-# Unset (the default): stdout is always on; the log FILE is written
-# ONLY in development (TINA4_DEBUG truthy). Set this to force a file.
-TINA4_LOG_OUTPUT=both
+# Log output destination (stderr | stdout | file)
+TINA4_LOG_OUTPUT=stderr
 
-# Log file path - an explicit path forces a file, even in production
+# Log file path (only used when TINA4_LOG_OUTPUT=file)
 TINA4_LOG_FILE=./logs/app.log
 
 # Log format (json | text)
 TINA4_LOG_FORMAT=json
 ```
 
-### Where do logs go by default?
-
-When `TINA4_LOG_OUTPUT` is **unset** (the default), the destination depends on whether you run in development:
-
-- **stdout is always on.** The built-in server logs to standard output so Docker, Kubernetes, or your shell captures every line, 12-factor wants logs on stdout for the platform to collect.
-- **The log file is written only in development** - when `TINA4_DEBUG` is truthy. A local `tail -f logs/tina4.log` keeps working.
-- **Production and containers are stdout-only.** No `tina4.log`, no `error.log`. A log file inside a container just bloats the writable layer and fills the disk, and the platform already captures stdout.
-
-Explicit settings always win. Set `TINA4_LOG_OUTPUT=file` or `TINA4_LOG_OUTPUT=both`, or point `TINA4_LOG_FILE` at a path, and Tina4 writes the file regardless of `TINA4_DEBUG`.
-
 In development, use `DEBUG` level with `text` format for human-readable output. In production, use `WARNING` or `ERROR` level with `json` format for log aggregators.
 
 ---
 
-## 12. Gotchas
+## 11. Gotchas
 
 ### 1. Logging sensitive data
 

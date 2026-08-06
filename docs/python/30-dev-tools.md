@@ -189,7 +189,7 @@ The `tina4` Rust CLI is the sole file watcher for the whole Tina4 stack: Python,
 
 The reload happens in under a second. Edit code. Switch to the browser. The changes are already there.
 
-If you run without the Rust CLI (e.g. Docker), set `TINA4_OVERRIDE_CLIENT=true`, since there is no automatic reload in that mode.
+If you run without the Rust CLI (e.g. Docker), set `TINA4_OVERRIDE_CLIENT=true`; there is no automatic reload in that mode.
 
 ---
 

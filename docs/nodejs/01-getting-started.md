@@ -267,7 +267,7 @@ Router.get("/api/greeting/{name}", async (req, res) => {
 
 Save the file. The dev server picks up the change. If live reload is off, restart with `tina4 serve`.
 
-> **Cross-language note.** Node, PHP, and Ruby read path parameters from `req.params` / `$request->params` / `request.params`. Python passes them as function arguments instead. Same concept, two shapes, so pick the chapter that matches your runtime.
+> **Cross-language note.** Node, PHP, and Ruby read path parameters from `req.params` / `$request->params` / `request.params`. Python passes them as function arguments instead. Same concept, two shapes; pick the chapter that matches your runtime.
 
 ### File-Based Routing Alternative
 
@@ -553,7 +553,7 @@ The important defaults for development:
 | `TINA4_PORT` | `7148` | Server runs on port 7148 |
 | `TINA4_DATABASE_URL` | `sqlite:///data/app.db` | SQLite database in the `data/` directory |
 | `TINA4_LOG_LEVEL` | `ALL` | All log messages are output |
-| `TINA4_CORS_ORIGINS` | (unset) | Deny by default. Set it to your origins, or `*` to allow any. |
+| `CORS_ORIGINS` | `*` | All origins allowed (fine for development) |
 | `TINA4_RATE_LIMIT` | `60` | 60 requests per minute per IP |
 
 **Log levels** control how much output Tina4 produces:

@@ -12,13 +12,13 @@ Picture a blog. Authors, posts, comments. Authors own many posts. Posts own many
 
 ## ORM at a Glance: Four Languages, One Shape
 
-The ORM does the same job in every Tina4 book. Define a model. Save it. Query it. Each language wears its own clothes (PHP uses typed properties, Python uses field class instances, Ruby uses a DSL, Node uses config objects), but the operations line up. If you know the API in one book, you can read the others.
+The ORM does the same job in every Tina4 book. Define a model. Save it. Query it. Each language wears its own clothes (PHP uses typed properties, Python uses field class instances, Ruby uses a DSL, Node uses config objects) but the operations line up. If you know the API in one book, you can read the others.
 
 ### Defining a Model
 
 The same `Post` model with `id`, `title`, `body`, and `created_at`:
 
-**Python** - field class instances on the class body:
+**Python**: field class instances on the class body:
 
 ```python
 from tina4_python.orm import ORM, IntegerField, StringField, DateTimeField
@@ -32,7 +32,7 @@ class Post(ORM):
     created_at = DateTimeField()
 ```
 
-**PHP** - native typed properties:
+**PHP**: native typed properties:
 
 ```php
 <?php
@@ -49,7 +49,7 @@ class Post extends ORM
 }
 ```
 
-**Ruby** - class-level DSL declarations:
+**Ruby**: class-level DSL declarations:
 
 ```ruby
 class Post < Tina4::ORM
@@ -62,7 +62,7 @@ class Post < Tina4::ORM
 end
 ```
 
-**Node.js (TypeScript)** - config objects in a `static fields` block:
+**Node.js (TypeScript)**: config objects in a `static fields` block:
 
 ```typescript
 import { BaseModel } from "tina4-nodejs/orm";
@@ -95,7 +95,7 @@ Same operation, four shapes:
 
 A few details worth noting. `find()` takes attribute names and applies the field map; `where()` takes raw SQL and skips translation. PHP needs `(new Post())` for instance methods like `where()` and `all()`; the rest are static. Ruby methods drop the parentheses by convention.
 
-For full detail on field options, relationships, eager loading, soft delete, validation, and Auto-CRUD, read the rest of this chapter: it shows the API for the language of this book.
+For full detail on field options, relationships, eager loading, soft delete, validation, and Auto-CRUD, read the rest of this chapter, which shows the API for the language of this book.
 
 ---
 
@@ -138,29 +138,9 @@ A complete model. Here is what each piece does:
 | `datetime_field` | `String` | `DATETIME` | Date and time |
 | `timestamp_field` | `String` | `TIMESTAMP` | Timestamps |
 | `blob_field` | `String` | `BLOB` | Binary data |
-| `json_field` | `Hash` / `Array` | `JSONB` (PG), `JSON` (MySQL), `TEXT` (SQLite) | JSON document column (see [JSON columns](#json-columns) below) |
+| `json_field` | `String` | `TEXT` | JSON stored as text |
 
 For foreign keys, use `integer_field`. There is no separate foreign key field type -- the relationship is defined through `has_many`, `has_one`, and `belongs_to` declarations instead.
-
-#### JSON columns
-
-`json_field` stores a `Hash` or an `Array` as a JSON document. The framework encodes the value to JSON on save and decodes it back to a Ruby object on read, so the attribute holds native data, never a raw string:
-
-```ruby
-class Event < Tina4::ORM
-  integer_field :id, primary_key: true, auto_increment: true
-  string_field :name
-  json_field :payload          # Hash or Array
-end
-
-event = Event.new(name: "click", payload: { "x" => 10, "tags" => %w[ui beta] })
-event.save
-
-fresh = Event.find(event.id)
-fresh.payload["x"]             # 10 -- a Hash, not a string
-```
-
-The column type follows the engine: `JSONB` on PostgreSQL, `JSON` on MySQL, `NVARCHAR(MAX)` on SQL Server, a text `BLOB` on Firebird, and `TEXT` on SQLite. A value that cannot be encoded to JSON makes `save` fail loud (returns `false`, records the cause) rather than writing partial data.
 
 ### Field Options
 
@@ -487,7 +467,7 @@ json_string = note.to_json
 
 Tina4 Ruby supports two styles of relationships: declarative (class-level DSL) and imperative (instance-level method calls). Both produce the same queries. Declarative relationships enable eager loading; imperative relationships are ad-hoc.
 
-### foreign_key_field - Auto-Wired Relationships
+### foreign_key_field: Auto-Wired Relationships
 
 Declaring a column with `foreign_key_field :user_id, references: User` automatically wires both sides of the relationship. The declaring class gets a `belongs_to` accessor (the column name with `_id` stripped), and the referenced class gets a `has_many` accessor (the declaring class name lowercased with `s` appended, or whatever you pass via `related_name:`).
 

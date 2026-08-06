@@ -22,9 +22,10 @@ Log.error("Database connection failed", host="db.internal", port=5432)
 Output:
 
 ```
-2026-07-30T14:52:12.786Z [INFO    ] Application started
-2026-07-30T14:52:12.786Z [WARNING ] Rate limit approaching {"remaining": 10}
-2026-07-30T14:52:12.786Z [ERROR   ] Database connection failed {"host": "db.internal", "port": 5432}
+2026-04-02 09:14:01 [INFO]    Application started
+2026-04-02 09:14:01 [DEBUG]   Request received path=/api/users method=GET
+2026-04-02 09:14:01 [WARNING] Rate limit approaching remaining=10
+2026-04-02 09:14:01 [ERROR]   Database connection failed host=db.internal port=5432
 ```
 
 Every message includes a UTC timestamp and level. Keyword arguments become structured key-value pairs appended to the message.
@@ -33,7 +34,7 @@ Every message includes a UTC timestamp and level. Keyword arguments become struc
 
 ## 3. Log Levels
 
-There are five severity levels, in ascending order (plus `ALL`, a filter-only setting):
+There are five levels, in ascending severity:
 
 | Level | Method | When to Use |
 |-------|--------|-------------|
@@ -42,9 +43,8 @@ There are five severity levels, in ascending order (plus `ALL`, a filter-only se
 | `INFO` | `Log.info()` | Normal operational events |
 | `WARNING` | `Log.warning()` | Unexpected conditions that are not errors |
 | `ERROR` | `Log.error()` | Failures that need investigation |
-| `CRITICAL` | `Log.critical()` | Unrecoverable, alert-worthy failures, the highest severity |
 
-Setting `TINA4_LOG_LEVEL=WARNING` hides `DEBUG` and `INFO` on the console; `WARNING`, `ERROR`, and `CRITICAL` stay visible. (The log file always records every level regardless; the level gates console output only.)
+Setting `TINA4_LOG_LEVEL=WARNING` suppresses `DEBUG` and `INFO` messages. Only warnings and errors reach the log file.
 
 ---
 
@@ -62,36 +62,6 @@ TINA4_LOG_LEVEL=WARNING
 ```
 
 The level is read at startup. Changing it requires a server restart (or, if you implement a reload endpoint, a signal to the process).
-
-### The default level is `INFO`: drop to `debug` to see everything
-
-When `TINA4_LOG_LEVEL` is **unset**, the console level defaults to `INFO` (since v3.13.14). On a fresh project `Log.info()`, `Log.warning()`, and `Log.error()` all print to the console; only `Log.debug()` is filtered out until you lower the level. If your `Log.debug()` calls seem to do nothing, that's why: raise the verbosity to see them.
-
-For local development, drop the level to `debug` so every call appears:
-
-```bash
-# .env - see everything while developing
-TINA4_LOG_LEVEL=debug
-TINA4_LOG_OUTPUT=both     # console AND logs/tina4.log
-```
-
-Two more things worth knowing:
-
-- **Production keeps console output; it just changes shape.** When `TINA4_ENV=production`, stdout stays on (containers and Kubernetes read PID 1's stdout) but logs switch to uncolored JSON lines instead of human-readable text. Console output is controlled by `TINA4_LOG_OUTPUT` (`stdout` / `file` / `both`), not by `TINA4_ENV`; set `TINA4_LOG_OUTPUT=file` if you want file-only.
-- **The file always receives every level.** `logs/tina4.log` is written with all levels (and `logs/error.log` with warnings and errors), independent of the console level. If the console is quiet, `tail -f logs/tina4.log` still shows the full stream.
-
-### Checking whether a level is enabled
-
-Use `Log.is_enabled(level)` to skip building an expensive log payload that the current level would hide:
-
-```python
-from tina4_python.debug import Log
-
-if Log.is_enabled("debug"):
-    Log.debug("Query plan", plan=db.explain(query))   # only built when debug is visible
-```
-
-`is_enabled` returns `True` when `level` meets the configured minimum console level (`level` is case-insensitive). It reflects **console (stdout) visibility**: the log file still records every level regardless, so this guards what you'd see on the console, not whether anything is written at all.
 
 ---
 
@@ -137,9 +107,7 @@ Write logs to a file:
 TINA4_LOG_FILE=logs/app.log
 ```
 
-Tina4 creates the file (and the `logs/` directory) if it does not exist. With an explicit `TINA4_LOG_FILE`, logs are written to both the file and stdout.
-
-Without an explicit `TINA4_LOG_FILE` (or `TINA4_LOG_OUTPUT`), the log **file is written only in development** (`TINA4_DEBUG=true`). In production and containers the logger is **stdout-only**: a `logs/tina4.log` inside a container just bloats the writable layer and disk, and 12-factor wants logs on stdout for the platform to capture. Setting `TINA4_LOG_FILE`, or `TINA4_LOG_OUTPUT=file`/`both`, always writes a file in any environment.
+Tina4 creates the file (and the `logs/` directory) if it does not exist. Logs are written to both the file and stdout.
 
 Enable rotation by size:
 

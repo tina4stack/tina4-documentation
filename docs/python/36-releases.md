@@ -224,47 +224,6 @@ now reads the literal out of the source and checks it against `pyproject.toml`.
 The harness confirms the AOT compiler engaged, so this is Frond's fastest path.
 
 
-## tina4 CLI v3.8.63 (2026-07-27) - One launcher in every image
-
-No framework release accompanies this. The CLI is shared by all four, and this
-window changed how every Tina4 production image starts.
-
-### Also in the CLI (tina4 v3.8.60 through v3.8.63)
-
-Every Tina4 production image now installs the `tina4` binary and launches through
-it, so one `tina4 serve --production` replaces four different per-language entry
-points. The image comes from `ghcr.io/tina4stack/tina4-cli`, copied into your
-build as a layer. No Rust toolchain, no compile step, no network fetch: the cost
-lives in our release, once, not in yours.
-
-It is a static musl binary on purpose. Two of the four base images are Alpine,
-where a glibc binary cannot exec at all, and one static build runs unchanged on
-both Alpine and Debian-slim. One artifact per architecture, four images.
-
-`tina4 serve` could never start a Python production image. A `.venv` was read as
-"uv is installed", and uv builds the virtualenv in the builder stage and is left
-out of the slim runtime by design. It now runs the virtualenv's own interpreter,
-which needs no uv and is the one uv would have picked anyway. The reason this
-took so long to find is its own fix: a failed spawn discarded the OS error, so a
-missing uv, a missing interpreter and a permissions error all printed the same
-blank "Failed to start server". The cause is printed now.
-
-The Node image was pinned to `node:20` while tina4-nodejs declares
-`engines.node >=22` and imports the built-in `node:sqlite`, added in 22.5. npm
-downgrades an engines mismatch to a warning, so the image built cleanly and died
-at start. It is `node:24` now, and a test reads the FROM lines out of the
-templates and checks each against its framework's published floor.
-
-Two release-pipeline defects were fixed in the same window, and the second
-matters more than it looks. Eight build jobs each uploaded to the same release,
-which is a race: concurrent writers lose assets, and one release shipped four of
-eight binaries while every job still reported success. Worse, the checksums file
-was generated over whatever happened to arrive, so the release carried an
-authoritative-looking SHA256SUMS covering half of itself, and `install.sh`
-verifies against that file and would have passed. A single job now publishes
-every asset, and it refuses to publish at all unless all seven binaries are
-present.
-
 ## v3.13.92 (2026-07-27) - A token header that tells the truth about its signature
 
 Configure `Auth` for HS512 and Tina4 minted a token whose header said HS512 over
@@ -535,9 +494,13 @@ nothing and its body rendered as ordinary content. The admin link went to every
 visitor. Worse than a broken page: the template reads as guarded, so a reviewer
 scrolling past sees a check that is not there.
 
+<div v-pre>
+
 The same shape hid behind any misspelling. `{% ifff %}`, `{% unles %}`,
 `{% i %}`, a tag copied from another engine. Each one silently removed its own
 condition.
+
+</div>
 
 An unrecognised tag now raises, naming it and listing what Frond does know:
 
@@ -550,8 +513,12 @@ Frond has no plugin system for tags, so an unrecognised name is always a typo,
 never an extension. Twig and Jinja2 both raise on one. Frond now does too.
 
 Two things deliberately still render nothing. A stray terminator, an
+<div v-pre>
+
 `{% endif %}` with no `{% if %}`, and an empty `{%  %}`. Neither has a body, so
 neither can expose anything, and both have always been silent.
+
+</div>
 
 **What to do:** run your templates once. A typo'd tag now fails on the page that
 contains it, which is where you want to find it.
@@ -569,8 +536,12 @@ contains it, which is where you want to find it.
 
 That is core syntax in both Twig and Jinja2, and until now it did the wrong
 thing in all four frameworks: the body printed inline where the block stood, and
+<div v-pre>
+
 the variable was never bound. `{% set g %}Hello{% endset %}[{{ g }}]` rendered
 `Hello[]` instead of `[Hello]`.
+
+</div>
 
 It captures now. The captured value is marked safe, so markup you wrote in the
 body renders as markup rather than as escaped angle brackets, matching both
@@ -587,8 +558,12 @@ the page:
 ```
 
 One rule decides which form you get: an `=` anywhere in the tag means
+<div v-pre>
+
 assignment. So `{% set label = "a = b" %}` stays an assignment and is never read
 as a block. The inline form is untouched.
+
+</div>
 
 ### The expression corpus grew to 82
 
@@ -611,8 +586,12 @@ represent used to escape as itself, or as nothing at all.
 
 ### json_encode emits JSON, not entities (Breaking, reverts 3.13.87)
 
+<div v-pre>
+
 `{{ product | json_encode }}` renders `{"id":1,"name":"Widget"}` again. Put it
 straight into a script block:
+
+</div>
 
 ```html
 <script>
@@ -718,8 +697,12 @@ point.
 
 ### Booleans print as true or false (Breaking)
 
+<div v-pre>
+
 `{{ flag }}` used to print Python's `True` and `False`. It now prints `true` and
 `false`, lowercase.
+
+</div>
 
 Lowercase is the only form a template can use directly. `data-active="true"`
 reads back from JavaScript as `el.dataset.active === "true"`. `True` needs
@@ -735,37 +718,61 @@ Search your templates and tests for comparisons against the rendered `True` or
 
 ### Both macro import forms now agree (Fixed)
 
+<div v-pre>
+
 `{% import "macros.twig" as forms %}` shifted every macro argument by one
 position. `{{ forms.greet("Andre") }}` arrived at the macro with the alias as the
 first argument and `"Andre"` as the second.
+
+</div>
 
 The macros were installed as class attributes, so Python bound them as methods
 and passed the namespace object in as `self`. They are now installed on a plain
 namespace object, which binds nothing.
 
+<div v-pre>
+
 `{% from "macros.twig" import greet %}` was never affected. Both forms now behave
 identically, which is what the two forms were always supposed to mean.
 
+</div>
+
 ### The not operator works in output (Fixed)
 
+<div v-pre>
+
 `{{ not user.active }}` rendered as nothing.
+
+</div>
 
 Every logical operator was matched with spaces on both sides, so a leading `not`
 with nothing to its left matched none of them, fell through to variable lookup,
 and was resolved as a variable literally named "not user.active". Finding no such
 variable, it rendered empty.
 
+<div v-pre>
+
 `{% if not x %}` and `{{ x and not y }}` always worked, so the operator itself was
 never broken. Only the standalone output expression was lost, and before booleans
 printed lowercase a dropped expression and a false value looked identical.
 
+</div>
+
+<div v-pre>
+
 A leading `not` now routes to the same evaluator `{% if %}` uses, so a condition
 means the same thing in a condition and in an output expression.
 
+</div>
+
 ### json_encode escaping
+
+<div v-pre>
 
 Python has always escaped `{{ data | json_encode }}`, and still does. Use
 `{{ data | json_encode | raw }}` inside a `<script>` block.
+
+</div>
 
 The note records that PHP returned raw JSON from this filter and was brought in
 line.
@@ -974,12 +981,6 @@ If you run Python behind nginx, an ALB, or any TLS-terminating proxy, your sessi
 
 Reported by justin-k-bruce (python#95). Real-server tests read the actual `Set-Cookie` off a live server driven with a real `X-Forwarded-Proto` header; the name test resumes a renamed cookie across two requests and proves the default is unchanged.
 
-## v3.13.78 (2026-07-17) - Version alignment
-
-No Python code changes. This release keeps the four frameworks on one version.
-
-Correction: the original 3.13.78 note said Python was never affected by the session-cookie `Secure` issue, and that it was verified. That was wrong. The check confirmed the cookie builder existed, not that the emit path called it - and it did not, so `TINA4_SESSION_SECURE` was a silent no-op and Python had no proxy-aware detection at all. 3.13.79 fixes this; see the 3.13.79 note above.
-
 ## v3.13.77 (2026-07-16) - A slow background task no longer runs on top of itself
 
 - **`background()` never overlaps a task with itself.** A sync callback that took longer than the loop's timeout used to have a second copy started alongside it, and every later tick piled on another. A callable already running in a thread pool cannot be cancelled, so the timeout abandoned the wrapper while the thread kept working. Each run is now awaited to completion before the next tick, and an overrun only logs a warning. The old warning claimed the task "was interrupted" when it was still running, which pointed away from the cause; it now says the task is still running and the next run is deferred.
@@ -1038,45 +1039,48 @@ This release sharpens the Frond template engine, locks in a database error contr
   ```
 
   The rule holds at any nesting depth, including both branches of a ternary. On Python it also clears a latent case where a pipe inside parentheses rendered empty. (php#171)
+<div v-pre>
+
 - **The sandbox allow-list covers every filter path (Security).** A filter applied inside a `~` concatenation or a ternary condition now respects the `{% sandbox %}` filter allow-list. A filter you did not allow-list no longer runs its code in sandbox mode.
 - **A malformed request path was already safe here.** The Node worker gained a guard this release for a path like `//` (or `///`, `/\`); Python never crashed on it and returns a normal 404.
 - **Database errors still fail loud (#57).** `execute()` and `fetch()` raise on failure and record the message on `get_error()` rather than returning `False` or an empty result. This shipped in 3.13.38; this release adds a real-PostgreSQL regression test across all four frameworks so it can never slip back to a silent failure.
 - **Dev dashboard parity (`TINA4_DEBUG`).** The dev-admin dependency installer (`deps/install`), the grounding-token proxy, and the Migrate, Test, and Seed run-chips now match across all four frameworks. This is development-only; nothing changes in production.
 
+</div>
+
 ## v3.13.71 (2026-07-11) - AI skills: sharper tina4_code guidance
 
 A skills-and-docs release; no change to the Python package. The bundled Tina4 AI skills now state WHY `tina4_code` is deprecated: in a boot-and-verify gate (scaffold the output, boot it, run it) `tina4_code` failed where a strong model grounded with `tina4_context` passed, so the tools point to grounding plus a strong model over the self-hosted coder. The recommendation is unchanged - ground with `tina4_context` and write the code yourself; only the rationale is sharper. Running `curl -fsSL https://tina4.com/install-skills.sh | sh` now installs these updated skills by default.
 
-## v3.13.70 (2026-07-11) - Unset columns keep their database default
+## v3.13.70 (2026-07-11) - Column defaults on INSERT, a Firebird charset override, and stacked Swagger metadata
 
-**An unset column no longer forces a `NULL` into your `INSERT`.** Leave a column unset on a new model and the ORM now drops it from the `INSERT` entirely, so a `NOT NULL DEFAULT` column takes its database default instead of an explicit `NULL` that breaks the constraint. Set a column to `None` on purpose and it still writes `NULL`. When every insertable column is unset, the row inserts with the engine's all-defaults form: `DEFAULT VALUES` on SQLite, PostgreSQL, MSSQL, and Firebird, and `() VALUES ()` on MySQL. Python tracks which fields the caller assigned, so an explicit `None` and an untouched field never look the same. (#165)
+### ORM honours column defaults on INSERT (#165)
 
-### Firebird charset is now yours to set (#160)
+An INSERT now omits any column you never set on the model, so the database applies that column's own DEFAULT. Previously `save()` serialised every declared column, sending an explicit NULL for the ones you left alone; a `NOT NULL DEFAULT <x>` column then failed the insert, because a DB default applies only when the column is omitted, not when NULL is passed. The rule is now precise: a column you never touch is omitted and the database fills it in; a column you explicitly set to `None` is written as NULL; a column with a non-None ORM default is still written. When every insertable column is unset, the row inserts with the engine's all-defaults form. UPDATE is unchanged. Shipped across all four frameworks, verified with real-SQLite positive and negative tests.
 
-The Firebird adapter hardcoded `UTF8`, so bytes stored under a legacy `NONE` database came back double-encoded with no way out. You can now set the connection charset three ways, highest precedence first: a `?charset=` query on the URL (`firebird://host:3050/path?charset=NONE`), a `charset=` keyword on `Database(...)`, or the `TINA4_DATABASE_CHARSET` environment variable. The default stays `UTF8`, so every existing connection behaves exactly as before.
+### Firebird connection charset override (#160)
 
-### Swagger keeps every stacked decorator (#59)
+The Firebird adapter no longer hardcodes the connection charset to UTF8. You can override it, in precedence order, with a `?charset=` query on the connection URL (`firebird://host:port/path?charset=NONE`), an explicit `charset=` argument on `connect()`, or the `TINA4_DATABASE_CHARSET` environment variable. The default stays UTF8, so nothing changes unless you ask for it. This fixes double-encoded UTF-8 bytes read from a legacy NONE database. Shipped across all four frameworks.
 
-Stack `@description`, `@tags`, and an example on one route and all of that metadata reaches the OpenAPI spec. Python already annotated the handler in place, so nothing was ever dropped here; this release adds a regression test that locks the behaviour in across all four frameworks.
+### Stacked Swagger metadata all survives (#59)
 
-## v3.13.69 (2026-07-10) - Api file transfer, and a testing seam
+Stacking `@summary`, `@description`, and `@tags` on one route now keeps every decorator's value in the generated OpenAPI spec, whatever the order. Python and Ruby were already correct; the fix landed in PHP and Node, and all four now carry a lock-in test so the behaviour cannot drift again.
 
-**The `Api` HTTP client learns to move files and to step out of the way in a test.** Five additions, all zero-dependency, all opt-in, none breaking:
+## v3.13.69 (2026-07-10) - The Api client grows up: uploads, downloads, and safe redirects
 
-- **Multipart `upload()`** posts a `multipart/form-data` body from a file on disk or from in-memory bytes, with optional form fields. No temp file, no extra library.
-- **Streaming `download()`** writes a response body to disk 64KB at a time, so a multi-gigabyte export never buffers whole in memory. It returns `path` instead of `body`.
-- **An injectable `transport` seam** lets you unit-test the code that calls an `Api` without a live server. Tina4's own suite never injects a fake: it follows the no-mock rule and drives the real network against a real local server.
-- **An opt-in in-memory cookie jar** (`cookies=True`) reads `Set-Cookie` and replays the `Cookie` header on later requests, so a session carries across a login.
-- **Redirect following with a cross-origin strip.** The client follows redirects and drops the `Authorization` header and the cookie-jar `Cookie` header on a cross-origin hop, so a bearer token or session cookie never leaks to a host you did not authenticate against.
+The built-in HTTP `Api` client gained four zero-dependency capabilities, shipped across all four frameworks. All are opt-in and non-breaking in Python.
 
-### Also shipping (previously held on v3)
+- **Multipart upload.** `Api.upload()` POSTs a `multipart/form-data` body from a file on disk (`file_path`) OR from in-memory bytes (`file_bytes` plus `filename`), with optional extra text fields, so you never need a temp file. The part Content-Type is guessed from the filename. A missing file or no source returns a clean error dict and never raises.
+- **Streaming download.** `Api.download()` streams a GET body straight to disk in 64KB chunks, so a multi-megabyte file never lands in memory whole. It returns the status, headers, and the on-disk `path` (there is no `body` key), and writes nothing on an error status.
+- **Transport seam.** An injectable `transport` lets application developers unit-test code that calls an `Api` without a live server. Tina4's own suite never injects a fake (the no-mock rule stands); every framework test hits a real local server.
+- **Opt-in cookie jar.** Pass `cookies=True` for a per-client in-memory jar: the client parses `Set-Cookie` (leading `name=value`, last write wins) and replays the accumulated `Cookie` header on later requests.
 
-- **The REPL console honours the database env.** `tina4 console` now reads `TINA4_DATABASE_URL` plus `TINA4_DATABASE_USERNAME` / `TINA4_DATABASE_PASSWORD` and binds the ORM, so models resolve a connection inside the console exactly as they do in a request.
-- **The AI Coder Rule Path.** The developer skill now ships the canonical guidance for where an AI coding tool reads and writes project rules, aligned across all four frameworks.
+The cross-origin redirect protection now also covers the cookie jar: on a redirect to a different scheme, host, or port the client strips BOTH the `Authorization` and the `Cookie` header, so neither a bearer token nor a session cookie can leak to a host you did not authenticate to. Same-origin redirects keep them.
 
-### Docs
+### Also shipping
 
-- A dedicated **Real-time Collaboration (WebRTC)** chapter is now published: peer-to-peer calls, live chat, and file transfer, grounded in the shipped `realtime()` surface.
+- **REPL database env fix.** The interactive console now connects using the project database URL, credentials, and bind, matching the running application, instead of a hand-rolled connection that ignored them.
+- **AI coder rule-path skill.** The AI coding-assistant scaffolder writes each tool's rule and context files to the correct path, across all four frameworks.
 
 ## v3.13.68 (2026-07-10) - Parity release
 
@@ -1151,28 +1155,6 @@ in Ruby and PHP. All four are fixed and locked in by the new tests.
 - **`generate` writes an extra test file per scaffold.** If you script generation and
   assert on the exact set of created files, expect one more file (the co-emitted test).
 
-## v3.13.57 (2026-07-08) - Realtime collaboration, and a test client that tells the truth
-
-**Tina4 ships realtime collaboration: peer-to-peer calls, live chat, and file sharing, from one call.** Add `realtime()` before `run()` and the framework wires the whole surface. A WebRTC signalling channel relays offers and answers between peers. A chat channel carries messages, presence, typing, and read receipts, and persists its history through the ORM. An upload and download path moves files.
-
-```python
-from tina4_python import realtime
-
-realtime(features=["calls", "chat", "files"])
-```
-
-Calls run on a mesh backend by default, so a small room needs no media server at all. Set `TINA4_RTC_TURN_URL` and `TINA4_RTC_TURN_SECRET` and the framework mints time-limited coturn credentials for peers behind strict NATs. Chat history survives a restart, so a reconnecting client catches up. Files land on local disk by default, or in any S3-compatible bucket (MinIO included) when you set `TINA4_STORAGE_BACKEND=s3`.
-
-The browser half ships in tina4-js 1.5.0 as the `rtc` module. `rtc.call(room)` opens a call with perfect-negotiation handshaking. `rtc.chat(channel)` binds a live message list, a presence roster, and a typing signal straight into a template. `rtc.upload(channel, file)` sends a file. Every piece of live state is a signal, so the interface updates itself. Every Tina4 backend now vendors the tina4-js bundle that carries this module.
-
-The auth levels are deliberate. The call signalling socket is public, because the framework never reads your SDP. Chat, history, upload, and download each require a valid token, and chat rechecks channel membership on every frame.
-
-**The in-process TestClient now enforces the real auth gate.** This is the fail-loud fix. The test client used to match a route and run its handler directly, skipping the secure-by-default check the live server applies. A write with no token returned 201 in a test while production returned 401. A green test hid a live failure, and the verification layer lied. The client now routes through the same gate the server uses, so a tokenless write to a secure route returns 401 in a test exactly as it does in production.
-
-**One more ORM fix (#61).** A callable field default, the timestamp idiom `DateTimeField(default=lambda: datetime.now())`, was stringified into the CREATE TABLE DDL as invalid SQL, so the table silently failed to create and a later `.save()` hit "no such table". Callable defaults belong at insert time, not in the schema. `create_table()` now omits them from the DDL and resolves them per row.
-
-**Breaking, tests only.** A test that posts to an auth-required route without a token now sees 401 instead of the handler response. When the test checks plumbing rather than auth, open the route with `@noauth()` or pass a valid bearer token. No production request path changes. Shipped across all four frameworks.
-
 ## v3.13.56 (2026-07-08) - Skills that own up when they drift
 
 **Every AI skill now tells the assistant how to report itself when it is wrong.** A skill is documentation, and documentation drifts. When a skill still describes a method, default, or column the framework no longer has, an assistant writes confident code against an API that is gone. This release closes that loop.
@@ -1231,7 +1213,11 @@ No new third-party dependencies.
 
 ## v3.13.52 (2026-07-04) - Frond live blocks, pgsql:// URL scheme, SCSS colour functions
 
+<div v-pre>
+
 **Frond live blocks.** A page can now carry a region that keeps itself current. Wrap the region in `{% live %}` and Frond paints it on the server with the first request, then refreshes it over the transport you name.
+
+</div>
 
 ```twig
 {% live "prices" poll 5 %}
@@ -1270,24 +1256,6 @@ No new third-party dependencies.
 A route path parameter like `{id}`, matched against a real HTTP request, must find an INTEGER primary-key row. On Ruby it did not. Rack delivers the request path as ASCII-8BIT, so an untyped `{id}` capture reached the SQL bind as a binary string, and the sqlite3 gem bound it as a BLOB. SQLite gives a BLOB no numeric affinity, so `WHERE id = ?` never matched an INTEGER column - `GET /api/users/{id}` returned 404 for a row that plainly existed (and `GET /api/users` listed it). The router now relabels path captures as UTF-8 so they bind as TEXT, which SQLite coerces to the column's integer affinity, and the row matches. Typed `{id:int}` params were never affected - they cast to an Integer. The SQLite driver is left alone on purpose: coercing every binary string there would corrupt genuine BLOB writes, so the encoding is fixed at the source (the router).
 
 Python, PHP, and Node were confirmed unaffected - their string path params already bind as TEXT - and each gains a real regression test: real router extraction feeding a real SQLite integer-primary-key lookup, no mocks, so the contract cannot silently drift. No new third-party dependencies.
-
-## v3.13.49 (2026-06-30) - Current tina4-js runtime bundle + reactive-select guidance
-
-Refreshes the bundled tina4-js runtime that every Tina4 app loads from `/js/tina4js.min.js`. The shipped script-tag bundle had drifted behind npm: it predated persistent signals and the i18n module, because the minified IIFE was never committed to the tina4-js repo, so `tina4 install tina4-js` downloaded a 404 and fell back to a stale copy. tina4-js 1.4.1 fixes the source of the drift (the bundle is now tracked in git and built in CI), and this release vendors the current bundle so a fresh install serves persistent signals and i18n out of the box. Run `tina4 install tina4-js` to refresh an existing app immediately.
-
-It also documents a reactive-`<select>` footgun in the bundled tina4-js skill. A `<select>` whose options come from a reactive block loses its selection when the options re-render if you bind `.value` on the select. Bind `?selected` on each `<option>` instead, so every option owns its selected state and survives a re-render. No framework code changed.
-
-## v3.13.48 (2026-06-29) - i18n hardening, swagger decorator-stacking fix, and skill env-name corrections
-
-Three threads, all verified against real dependencies, no mocks.
-
-**i18n now agrees across all four frameworks.** Interpolation is partial and never throws: a `{name}` token present in the parameters is replaced, and a missing or malformed placeholder (`{x.y}`, `{n:d}`, a stray brace) stays literal, so a broken template can no longer crash `t()`. Leaf-key aliasing is first-wins and never overwrites an explicit flat key, so a real top-level `home` beats a derived `nav.home` alias. Non-string locale values render JSON-native: `true`, `false`, `null`. Ruby also stops crashing on a malformed JSON or YAML locale file (it logs the file and skips it), loads a locale lazily on `set_locale`, and lists `available_locales` from the files on disk. **Breaking:** the PHP and Node `I18n` constructor argument order is now `(locale, path)` to match the Python master, and Ruby interpolation tokens are now `{name}`, not Rails-style `%{name}`. Update each `new I18n(...)` call to the new order, and change `%{name}` to `{name}` in shared locale files.
-
-**Swagger decorators stopped dropping metadata (Python).** Stacking `@description` above `@tags` above `@get` lost the description with no error: every decorator returned a new wrapper carrying only its own attribute, but `@get` is innermost and registers the bare handler, so only the decorator touching `@get` reached the generated spec. The decorators now annotate the handler in place and return the same object, so every field survives in any order. A regression test stacks five decorators through the real router and asserts each one lands in the OpenAPI operation. PHP, Ruby, and Node attach Swagger metadata through a single meta object, so they never had this bug; each gains a lock-in test that proves a combined annotation keeps every field.
-
-**The bundled AI skill shipped wrong env names.** The skill told assistants to write `SECRET=`, `SWAGGER_TITLE=`, and `API_KEY=` in `.env`. Tina4 3.12 made the `TINA4_` prefix mandatory, and the startup guard refuses to boot on a legacy un-prefixed name, so an app scaffolded from the skill never bound its port. The skill now teaches `TINA4_SECRET`, `TINA4_SWAGGER_TITLE`, and `TINA4_API_KEY`, and the connection-string examples use the schemes the driver registry accepts (`postgresql://`, `sqlite:`). The JWT secret reads from `TINA4_SECRET` only.
-
-No new third-party dependencies.
 
 ## v3.13.47 (2026-06-25) - Open-issue batch: migration comment splitting, global middleware, SCSS interpolation
 
@@ -3596,7 +3564,7 @@ def log_request(request, response):
     print(f"Request: {request.method} {request.url}")
     return request, response
 
-@get("/users")
+@app.get("/users")
 def get_users(request, response):
     # middleware never ran
     return response("OK")
@@ -3617,7 +3585,7 @@ def log_request(request, response):
     print(f"Request: {request.method} {request.url}")
     return request, response
 
-@get("/users")
+@app.get("/users")
 def get_users(request, response):
     # log_request fires before this handler
     return response("OK")
@@ -3689,7 +3657,7 @@ user.save()  # works on all database engines including SQLite
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
 
-@get("/public")
+@app.get("/public")
 @noauth
 def public_page(response):
     return response("Open to all")  # still required auth
@@ -3703,7 +3671,7 @@ def public_page(response):
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
 
-@get("/public")
+@app.get("/public")
 @noauth
 def public_page(response):
     return response("Open to all")  # accessible without token
@@ -3769,7 +3737,7 @@ results = QueryBuilder.table("orders") \
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
 
-@get("/users/{id}")
+@app.get("/users/{id}")
 def get_user(request, response):
     user_id = request.params["id"]
     return response(f"User {user_id}")
@@ -3783,7 +3751,7 @@ def get_user(request, response):
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
 
-@get("/users/{id:int}")
+@app.get("/users/{id:int}")
 def get_user(id, request, response):
     return response(f"User {id}")  # id is already an int
 ```
@@ -3791,7 +3759,7 @@ def get_user(id, request, response):
 **Auto-start sessions (v3.9.0).** Every route handler receives `request.session` with zero configuration. The session API covers `get`, `set`, `delete`, `has`, `clear`, `destroy`, `regenerate`, `flash`, and `get_flash`.
 
 ```python
-@get("/dashboard")
+@app.get("/dashboard")
 def dashboard(request, response):
     visits = request.session.get("visits", 0)
     request.session.set("visits", visits + 1)
@@ -4084,7 +4052,7 @@ token = Auth.get_token(payload, expires_in=60)          # minutes
 **Route-based WebSocket handlers (v3.3.0).** Define WebSocket endpoints with the same decorator pattern as HTTP routes.
 
 ```python
-@websocket("/ws/chat")
+@app.websocket("/ws/chat")
 def chat_handler(message, client):
     # message is the incoming data
     # client.send() to reply
@@ -4094,7 +4062,7 @@ def chat_handler(message, client):
 **File upload improvements (v3.3.0).** Uploaded files include raw bytes, a `data_uri` template filter, and consistent property names across all frameworks.
 
 ```python
-@post("/upload")
+@app.post("/upload")
 def handle_upload(request, response):
     file = request.files[0]
     print(file.filename)    # standardized from file_name
@@ -4191,7 +4159,7 @@ name = request.files[0].filename
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
 
-@get("/ping")
+@app.get("/ping")
 def ping():
     return "pong"
 
@@ -4204,7 +4172,7 @@ def ping():
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
 
-@get("/hello")
+@app.get("/hello")
 def hello(response):
     return response("Hello")
 
@@ -4217,7 +4185,7 @@ def hello(response):
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
 
-@post("/echo")
+@app.post("/echo")
 def echo(request: Request):
     return request.body
 
@@ -4230,7 +4198,7 @@ def echo(request: Request):
 - Feature count: 45 (was 44)
 - Full parity across Python, PHP, Ruby, Node.js
 
-@get("/users")
+@app.get("/users")
 def users(request, response):
     return response({"users": []})
 ```
@@ -4333,7 +4301,7 @@ The v3.0.0 release replaced the entire v2 codebase. Zero external dependencies. 
 
 - **New module structure.** `tina4_python.core` replaces the old flat namespace.
 - **Frond template engine.** Built-in Twig-compatible templates replace the Jinja2 dependency. Pre-compilation caches tokens for a 2.8x speedup on file renders.
-- **Decorator-based routing.** `@get`, `@post`, `@put`, `@delete`, `@patch` replace the old `Route` class.
+- **Decorator-based routing.** `@app.get`, `@app.post`, `@app.put`, `@app.delete`, `@app.patch` replace the old `Route` class.
 - **Built-in Dev Admin.** A browser-based dashboard shows routes, database tables, and queue status.
 - **Error overlay in debug mode.** Stack traces render in the browser with source context, request details, and suggested fixes.
 - **Swagger auto-registration.** Decorated routes appear in the Swagger UI without manual annotation.
@@ -4342,7 +4310,7 @@ The v3.0.0 release replaced the entire v2 codebase. Zero external dependencies. 
 - **`tina4 generate` scaffolding.** Generate models, routes, migrations, and middleware from the command line.
 - **Custom error pages.** Self-contained 404, 403, and 500 pages with clean, framework-neutral design.
 
-For the full migration guide, see Chapter 36: Upgrading from v2 to v3.
+For the full migration guide, see Chapter 37: Upgrading from v2 to v3.
 
 ---
 

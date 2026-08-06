@@ -53,18 +53,18 @@ Define WebSocket handlers with `Router::websocket()`:
 <?php
 use Tina4\Router;
 
-Router::websocket("/ws/echo", function ($connection, $data, $event) {
+Router::websocket("/ws/echo", function ($connection, $event, $data) {
     if ($event === "message") {
         $connection->send("Echo: " . $data);
     }
 });
 ```
 
-The simplest handler. It receives a message and sends it back with "Echo: " prepended. Three arguments arrive, **in this order** - the payload comes before the event type:
+The simplest handler. It receives a message and sends it back with "Echo: " prepended. Three arguments arrive:
 
 - **$connection**: The WebSocket connection object. Send messages through it.
-- **$data**: The message payload - the string for `"message"` events, `null` for `"open"` and `"close"`.
 - **$event**: The event type: `"open"`, `"message"`, or `"close"`.
+- **$data**: The message data. Present only for `"message"` events.
 
 ### Starting the Server
 
@@ -97,7 +97,7 @@ Fires when a client connects:
 <?php
 use Tina4\Router;
 
-Router::websocket("/ws/notifications", function ($connection, $data, $event) {
+Router::websocket("/ws/notifications", function ($connection, $event, $data) {
     if ($event === "open") {
         error_log("Client connected: " . $connection->id);
         $connection->send(json_encode([
@@ -114,7 +114,7 @@ Router::websocket("/ws/notifications", function ($connection, $data, $event) {
 Fires when a client sends data:
 
 ```php
-Router::websocket("/ws/notifications", function ($connection, $data, $event) {
+Router::websocket("/ws/notifications", function ($connection, $event, $data) {
     if ($event === "open") {
         $connection->send(json_encode([
             "type" => "welcome",
@@ -142,7 +142,7 @@ Router::websocket("/ws/notifications", function ($connection, $data, $event) {
 Fires when a client disconnects:
 
 ```php
-Router::websocket("/ws/notifications", function ($connection, $data, $event) {
+Router::websocket("/ws/notifications", function ($connection, $event, $data) {
     if ($event === "open") {
         error_log("Client connected: " . $connection->id);
     }
@@ -166,7 +166,7 @@ All three events in one handler:
 <?php
 use Tina4\Router;
 
-Router::websocket("/ws/chat", function ($connection, $data, $event) {
+Router::websocket("/ws/chat", function ($connection, $event, $data) {
     switch ($event) {
         case "open":
             error_log("[Chat] New connection: " . $connection->id);
@@ -204,7 +204,7 @@ Router::websocket("/ws/chat", function ($connection, $data, $event) {
 `$connection->send()` targets the specific client that triggered the event:
 
 ```php
-Router::websocket("/ws/private", function ($connection, $data, $event) {
+Router::websocket("/ws/private", function ($connection, $event, $data) {
     if ($event === "message") {
         $message = json_decode($data, true);
         $action = $message["action"] ?? "";
@@ -236,7 +236,7 @@ Only the sender receives the response. Other connected clients see nothing.
 `$connection->close()` terminates the connection from the server side:
 
 ```php
-Router::websocket("/ws/secure", function ($connection, $data, $event) {
+Router::websocket("/ws/secure", function ($connection, $event, $data) {
     if ($event === "open") {
         // Reject unauthenticated connections
         $token = $connection->params["token"] ?? "";
@@ -264,7 +264,7 @@ The client receives the close event. Use this for kicking users, enforcing authe
 <?php
 use Tina4\Router;
 
-Router::websocket("/ws/announcements", function ($connection, $data, $event) {
+Router::websocket("/ws/announcements", function ($connection, $event, $data) {
     if ($event === "open") {
         // Tell everyone about the new connection
         $connection->broadcast(json_encode([
@@ -334,7 +334,7 @@ Different WebSocket paths are walls. Clients connected to `/ws/chat/room-1` neve
 <?php
 use Tina4\Router;
 
-Router::websocket("/ws/chat/{room}", function ($connection, $data, $event) {
+Router::websocket("/ws/chat/{room}", function ($connection, $event, $data) {
     $room = $connection->params["room"];
 
     if ($event === "open") {
@@ -398,7 +398,7 @@ use Tina4\Router;
 
 $chatUsers = [];
 
-Router::websocket("/ws/livechat/{room}", function ($connection, $data, $event) use (&$chatUsers) {
+Router::websocket("/ws/livechat/{room}", function ($connection, $event, $data) use (&$chatUsers) {
     $room = $connection->params["room"];
 
     if ($event === "open") {
@@ -479,7 +479,7 @@ use Tina4\Router;
 use Tina4\Queue;
 
 // WebSocket handler for notifications
-Router::websocket("/ws/notifications/{userId}", function ($connection, $data, $event) {
+Router::websocket("/ws/notifications/{userId}", function ($connection, $event, $data) {
     $userId = $connection->params["userId"];
 
     if ($event === "open") {
@@ -500,7 +500,7 @@ Router::websocket("/ws/notifications/{userId}", function ($connection, $data, $e
 });
 
 // Inside the WebSocket handler, push to everyone on this path
-Router::websocket("/ws/notifications/{userId}", function ($connection, $data, $event) {
+Router::websocket("/ws/notifications/{userId}", function ($connection, $event, $data) {
     if ($event === "message") {
         $payload = json_decode($data, true);
         if (($payload["type"] ?? "") === "order-shipped") {
@@ -517,7 +517,7 @@ Router::websocket("/ws/notifications/{userId}", function ($connection, $data, $e
 });
 ```
 
-Broadcasting happens from inside the `Router::websocket()` handler through the `$connection` object, `$connection->send()` for one client, `$connection->broadcast()` for everyone on the same path, and `$connection->broadcastToRoom()` for a room. Request-response meets real-time.
+Broadcasting happens from inside the `Router::websocket()` handler through the `$connection` object: `$connection->send()` for one client, `$connection->broadcast()` for everyone on the same path, and `$connection->broadcastToRoom()` for a room. Request-response meets real-time.
 
 ---
 
@@ -770,7 +770,7 @@ use Tina4\Router;
 
 $roomUsers = [];
 
-Router::websocket("/ws/room/{roomName}", function ($connection, $data, $event) use (&$roomUsers) {
+Router::websocket("/ws/room/{roomName}", function ($connection, $event, $data) use (&$roomUsers) {
     $room = $connection->params["roomName"];
     $key = $room . ":" . $connection->id;
 
@@ -935,88 +935,7 @@ If `TINA4_WS_BACKPLANE` is not set (the default), Tina4 broadcasts only to local
 
 ---
 
-## 15. Securing a WebSocket Route
-
-A WebSocket route is **public by default** - exactly like a `GET` route. Anyone who can reach the URL can connect. To require a valid JWT on the connection, mark the route `@secured`. The framework then checks the token on the upgrade itself, **before** the handshake completes. A missing or invalid token is rejected with a 401 and the socket never opens. Your handler only ever runs for an authenticated client.
-
-### Mark the route secured
-
-Add an `@secured` docblock to the handler. This is the same annotation the HTTP routes use:
-
-```php
-use Tina4\Router;
-
-Router::websocket("/ws/admin",
-    /**
-     * @secured
-     */
-    function ($connection, $data, $event) {
-        if ($event === "open") {
-            // $connection->auth holds the verified token payload.
-            $connection->send("Welcome, user {$connection->auth['user_id']}");
-        }
-    }
-);
-```
-
-You can also secure a route imperatively, pass `true` as the third argument. Use this when the handler has no docblock or is built dynamically:
-
-```php
-Router::websocket("/ws/admin", $handler, true);
-```
-
-Both forms set `auth_required` on the route. Public routes stay public, so this change never breaks an existing endpoint.
-
-### Send the token from the client
-
-The token reaches the server through any of three transports. The framework checks them in this order:
-
-**1. Authorization header** - for server, CLI, and mobile clients that control their own headers:
-
-```
-Authorization: Bearer eyJhbGciOi...
-```
-
-**2. The `bearer` subprotocol** - the only way a **browser** can pass a token, because `new WebSocket()` cannot set request headers. Pass `['bearer', token]` as the second argument and the server echoes `bearer` back as the accepted subprotocol:
-
-```javascript
-const token = "eyJhbGciOi...";
-const ws = new WebSocket("ws://localhost:7145/ws/admin", ["bearer", token]);
-```
-
-**3. The `token` query parameter** - the simplest browser fallback:
-
-```javascript
-const ws = new WebSocket(`ws://localhost:7145/ws/admin?token=${token}`);
-```
-
-The token is validated with `Auth::validToken()`, the same validator your HTTP routes use, reading the same `TINA4_SECRET`.
-
-### The verified payload on `$connection->auth`
-
-On a secured route, `$connection->auth` holds the decoded token payload (an array). On a public route it is `null`. Read it to identify the user without a second database lookup:
-
-```php
-Router::websocket("/ws/notifications",
-    /**
-     * @secured
-     */
-    function ($connection, $data, $event) {
-        if ($event === "open") {
-            $userId = $connection->auth["user_id"];
-            $connection->joinRoom("user-{$userId}");
-        }
-    }
-);
-```
-
-::: tip Origin allow-list runs first
-The origin allow-list (`TINA4_WS_ALLOWED_ORIGINS`) is checked **before** the token. A request from a disallowed origin is rejected with a 403 and never reaches the auth check. Layer both for a locked-down endpoint.
-:::
-
----
-
-## 16. Gotchas
+## 15. Gotchas
 
 ### 1. WebSocket Needs a Persistent Server
 
@@ -1070,6 +989,6 @@ The origin allow-list (`TINA4_WS_ALLOWED_ORIGINS`) is checked **before** the tok
 
 **Problem:** Anyone can connect to your WebSocket endpoint and see all messages.
 
-**Cause:** The route is public. A WebSocket route, like a `GET` route, is public by default.
+**Cause:** The WebSocket upgrade request does not carry your JWT token in the `Authorization` header. Browsers do not support custom headers on WebSocket connections.
 
-**Fix:** Mark the route `@secured` (or pass `true` as the third argument to `Router::websocket()`). The framework then requires a valid JWT on the upgrade and rejects a missing or invalid token with a 401 before the handshake, your handler only runs for an authenticated client. The browser sends the token through the `bearer` subprotocol or a `?token=` query param; servers can use the `Authorization` header. The verified payload lands on `$connection->auth`. See [Securing a WebSocket Route](#_15-securing-a-websocket-route).
+**Fix:** Pass the token as a query parameter: `ws://localhost:7145/ws/chat?token=eyJ...`. In your `open` handler, validate the token and disconnect if invalid. Use a short-lived token for WebSocket connections. Or authenticate via HTTP first, store the session, and check the session cookie during the upgrade.

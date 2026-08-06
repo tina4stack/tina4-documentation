@@ -46,6 +46,7 @@ async def create_product(request, response):
 ### Quick Start
 
 ```bash
+pip install tina4-python
 tina4 init python my-project
 cd my-project
 tina4 serve
@@ -96,6 +97,7 @@ Router::post("/api/products", function ($request, $response) {
 ### Quick Start
 
 ```bash
+composer require tina4/tina4-php
 tina4 init php my-project
 cd my-project
 tina4 serve
@@ -141,6 +143,7 @@ end
 ### Quick Start
 
 ```bash
+gem install tina4
 tina4 init ruby my-project
 cd my-project
 tina4 serve
@@ -189,6 +192,7 @@ export default function handler(request, response) {
 ### Quick Start
 
 ```bash
+npm install tina4
 tina4 init nodejs my-project
 cd my-project
 tina4 serve
@@ -200,7 +204,7 @@ tina4 serve
 
 | Factor | Python | PHP | Ruby | Node.js |
 |--------|--------|-----|------|---------|
-| **Install** | `pip install tina4-python` | `composer require tina4stack/tina4php` | `gem install tina4ruby` | `npm install tina4-nodejs` |
+| **Install** | `pip install tina4-python` | `composer require tina4/tina4-php` | `gem install tina4` | `npm install tina4` |
 | **CLI** | `tina4` | `tina4` | `tina4` | `tina4` |
 | **Naming** | `snake_case` | `camelCase` | `snake_case` | `camelCase` |
 | **Async** | Native (asyncio) | Swoole extension | Rack-based | Native (event loop) |

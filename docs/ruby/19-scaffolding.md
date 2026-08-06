@@ -273,7 +273,7 @@ Tina4::AutoCrud.register(User)
 Tina4::AutoCrud.generate_routes(prefix: "/api")
 ```
 
-`AutoCrud.register` wires up a single model. `generate_routes` mounts the five standard endpoints automatically: no route files needed.
+`AutoCrud.register` wires up a single model. `generate_routes` mounts the five standard endpoints automatically, no route files needed.
 
 ---
 

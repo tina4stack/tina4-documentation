@@ -484,7 +484,7 @@ Include the CSRF token in every form:
 
 ### Validating the Token
 
-Register `CsrfMiddleware` and it validates the `formToken` on every state-changing request automatically, no manual check in the handler:
+Register `CsrfMiddleware` and it validates the `formToken` on every state-changing request automatically, with no manual check in the handler:
 
 ```php
 <?php

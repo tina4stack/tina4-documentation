@@ -938,7 +938,7 @@ All green. The application works.
 
 ## 12. Step 10: Docker Deployment
 
-Use the Dockerfile and docker-compose.yml from Chapter 33. Create `.env.production`:
+Use the Dockerfile and docker-compose.yml from Chapter 34. Create `.env.production`:
 
 ```bash
 TINA4_DEBUG=false
@@ -1043,7 +1043,7 @@ This chapter used every major concept from the book:
 | Frontend (tina4css dashboard) | Chapter 17 |
 | WebSocket (live updates) | Chapter 23 |
 | Testing (full test suite) | Chapter 18 |
-| Docker deployment | Chapter 33 |
+| Docker deployment | Chapter 34 |
 
 ---
 

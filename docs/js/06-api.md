@@ -1,4 +1,4 @@
-# Chapter 7: API
+# Chapter 6: API
 
 ## Talking to Your Backend
 

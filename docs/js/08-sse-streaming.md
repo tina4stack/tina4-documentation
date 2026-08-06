@@ -1,4 +1,4 @@
-# Chapter 9: SSE / NDJSON Streaming
+# Chapter 8: SSE / NDJSON Streaming
 
 ## Streaming Without WebSocket
 
@@ -16,10 +16,10 @@ tina4-js wraps both in a single module. One function call opens the stream. Six 
 
 The tina4-js SSE client provides:
 
-1. **Dual mode** - native EventSource for SSE, fetch+ReadableStream for NDJSON
-2. **Reactive signals** - `status`, `connected`, `lastMessage`, `lastEvent`, `error`, `reconnectCount`
-3. **Auto-reconnect** - exponential backoff, configurable attempts
-4. **Signal piping** - stream messages into signals with a reducer
+1. **Dual mode**: native EventSource for SSE, fetch+ReadableStream for NDJSON
+2. **Reactive signals**: `status`, `connected`, `lastMessage`, `lastEvent`, `error`, `reconnectCount`
+3. **Auto-reconnect**: exponential backoff, configurable attempts
+4. **Signal piping**: stream messages into signals with a reducer
 
 ```typescript
 import { sse } from 'tina4js';

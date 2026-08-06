@@ -1,4 +1,4 @@
-# Chapter 4: HTML Templates
+# Chapter 3: HTML Templates
 
 ## DOM Without the Framework Tax
 
@@ -301,7 +301,7 @@ content.value = '<em>Done!</em>';
 
 > **Inputs inside `${() => ...}` lose focus on every keystroke.** The most common mistake in tina4-js is wrapping `<input>` elements inside reactive arrow functions. When a signal changes, the reactive block re-renders its entire DOM subtree, destroying the input and creating a new one. The cursor disappears, the input loses focus, and typing is interrupted.
 
-**BAD - input inside a reactive block (broken):**
+**BAD: input inside a reactive block (broken):**
 
 ```typescript
 const name = signal('');
@@ -320,7 +320,7 @@ html`
 `;
 ```
 
-**GOOD - input outside, only dynamic content in reactive blocks:**
+**GOOD: input outside, only dynamic content in reactive blocks:**
 
 ```typescript
 const name = signal('');

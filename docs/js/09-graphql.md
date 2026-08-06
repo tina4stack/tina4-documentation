@@ -1,4 +1,4 @@
-# Chapter 10: GraphQL
+# Chapter 9: GraphQL
 
 ## One Method, Two Worlds
 

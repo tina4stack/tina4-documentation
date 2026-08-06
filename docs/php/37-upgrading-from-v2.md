@@ -436,11 +436,11 @@ v3 uses an enhanced migration tracking table with additional columns for better 
 
 When you run migrations on a database that was previously managed by v2, Tina4 v3 auto-detects the old tracking table format and upgrades it. The upgrade adds three columns:
 
-- **`migration_name`** -- The migration filename, used to match a file to its record.
+- **`migration_id`** -- Unique identifier for each migration record.
 - **`batch`** -- Groups migrations that ran together.
 - **`executed_at`** -- Timestamp of when the migration was executed.
 
-The v2 `migration_id` and `passed` columns stay in place. If the v2 table holds `passed = 0` rows (migrations that failed under v2), the upgrade logs a warning naming them. Those migrations re-apply on the next migration run: the runner deletes the stale `passed = 0` row and writes a fresh `passed = 1` row, so a previously-failed migration runs again cleanly instead of colliding on the unique `migration_name`. Existing migration records are preserved. The upgrade happens automatically on the first migration run. No manual intervention needed.
+Existing migration records are preserved. The upgrade happens automatically on the first migration run. No manual intervention needed.
 
 ---
 
@@ -456,7 +456,7 @@ Features that did not exist in v2. Each is covered in its own chapter:
 - **Email sending** -- Native SMTP, no SwiftMailer (Chapter 16).
 - **Caching layer** -- File, Redis, Valkey, Mongo backends (Chapter 11).
 - **GraphQL** -- Built-in GraphQL endpoint (Chapter 22).
-- **CLI tooling** -- `tina4` command for scaffolding, migrations, serving (Chapter 30).
+- **CLI tooling** -- `tina4` command for scaffolding, migrations, serving (Chapter 31).
 - **Auto-mapping in ORM** -- `$autoMap = true` eliminates manual field mappings (Chapter 6).
 - **Rate limiting** -- Per-IP rate limiting via env vars (Chapter 10).
 - **CSRF protection** -- Built-in, enabled by default (Chapter 10).
