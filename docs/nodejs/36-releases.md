@@ -1,5 +1,124 @@
 # Chapter 36: Release Notes
 
+## v3.13.95 (2026-08-06) - One behaviour in all four
+
+The largest parity release so far: roughly 190 to 210 commits per framework, and
+twenty of them change behaviour. The theme is single: where the four frameworks
+disagreed about what the same call meant, they now agree, and the disagreement is
+written down rather than left for you to discover.
+
+**Breaking.** Read the migration notes below before upgrading. Nothing here
+changes silently: every case either raises with a named cause or is listed here.
+
+### Configuration precedence: an explicit argument wins (BREAKING)
+
+`Log.configure("/srv/app/logs")` is one line that meant one thing and did three
+different things.
+
+| Framework | Where the log went | `TINA4_LOG_DIR` afterwards |
+| --- | --- | --- |
+| Python | the environment's directory | unchanged |
+| PHP | the environment's directory | unchanged |
+| Ruby | the argument's directory | unchanged |
+| Node | the argument's directory | overwritten |
+
+Python and PHP let the environment override an argument you passed at the call
+site, so "put the logs exactly here" could not be expressed at all. Node reached
+the right directory by writing into `process.env`, which destroyed the operator's
+value for the rest of the process and for every child process after it.
+
+The rule, now written down as ADR-0041 and applied everywhere: **an explicit
+argument beats the environment, which beats the built-in default.** Two
+supporting rules make it workable. A configuration parameter defaults to the
+language's null value so that "not passed" is distinguishable from "passed the
+default"; and reading configuration never writes it.
+
+The same correction reached the bootstraps, which is the half that only shows up
+in a running application. Ruby's `initialize!` passed the project root as an
+explicit argument, so `TINA4_LOG_DIR` was **entirely dead** in every booted Ruby
+app and `tina4.log` was written beside your `Gemfile` rather than into `logs/`.
+PHP's booted app honoured the variable only because its precedence was inverted,
+so fixing one without the other would have moved the bug rather than removed it.
+
+**Migration.** An application that sets `TINA4_LOG_DIR` *or* calls `configure()`
+is unaffected. If it does both, the directory named in code now wins: drop the
+argument, or point it where the variable pointed. Ruby deployments that read
+`tina4.log` from the project root should read `logs/tina4.log`. Node gains
+`Log.reset()` for a long-lived process that wants environment-driven resolution
+after having configured.
+
+### Databases
+
+`DatabaseUrl` is a value type with a canonical engine, and an unknown scheme now
+raises instead of quietly becoming SQLite. A connection string with a typo used
+to give you a working SQLite file and a confusing absence of data.
+
+Every database connect is bounded by `TINA4_DATABASE_CONNECT_TIMEOUT` (default
+10 seconds; `0` or a negative value waits forever). An unreachable host used to hang the
+application indefinitely rather than failing. On expiry the error names the host,
+the port, the elapsed seconds and the variable.
+
+`count()` returns the TRUE TOTAL in Ruby and Node, not the number of rows the
+last page returned, and `toPaginate` reports the page it is actually on.
+
+Firebird had three defects worth naming. A parameterised statement on the native
+driver held its table locked for the life of the process, so any later DDL from
+another connection waited forever. One abandoned adapter could kill every other
+connection in the process. Column names are folded back only when Firebird
+folded them.
+
+### Sessions
+
+An unrecognised `TINA4_SESSION_BACKEND` raises at startup, naming the bad value
+and the valid ones. It used to fall through to the file backend, so a typo
+produced a running application writing sessions to local disk while the operator
+believed they were in Redis.
+
+`TINA4_SESSION_REDIS_PREFIX` and `TINA4_SESSION_VALKEY_PREFIX` are honoured in
+all four. The Mongo session database default is `tina4` everywhere, and PHP
+gained `TINA4_SESSION_MONGO_COLLECTION` to match the others. Node's
+`redis-npm` backend is removed; it existed in no other framework. Setting it does
+not fall into the generic unknown-backend error: it names its replacement
+(`redis`, the same backend over a persistent connection) so a working config can
+be migrated rather than merely rejected.
+
+### Routing
+
+Routes beat files (ADR-0010): a static file no longer shadows a route that
+matches the same path. A bare `OPTIONS` gets its `Allow` header. Global
+middleware runs before the auth gate, so a middleware that authenticates can.
+
+### DocStore, Messenger, queues
+
+DocStore result objects use the driver's own getters (ADR-0025), and `find_one`
+is removed because the driver has no such method.
+
+Messenger's `inbox()` takes the folder first in all four, `read()` of a missing
+message returns a falsy value rather than raising, and the IMAP `uid` is a
+STRING everywhere. A strict `=== 1` comparison becomes `=== '1'`.
+
+The AMQP vhost is read as the path segment rather than `"/"` prefixed to it.
+Ruby's queue store moved to the canonical layout shared with the other three
+(ADR-0040), with a one-time job-preserving migration, and the dev-admin queue
+panel now lists the store it counts rather than a different one.
+
+### Logging and .env
+
+One logger format, one file layout and one input contract across all four. One
+`.env` parser behaviour table, so the same file parses the same way everywhere.
+
+### Test suites
+
+The four suites leaked temporary files. Measured on the build host: roughly
+2,700 orphaned files and 840 orphaned directories, growing every run. Most were
+not forgotten cleanups but a single idiom: `tempnam(dir, prefix) . '.db'` creates
+a file and then uses a different path, orphaning the one it made.
+
+Every suite now redirects its temporary files into one per-run directory that is
+removed wholesale, and the reapers are guarded on the owning process so a forked
+child cannot delete its parent's sandbox. This is test infrastructure and changes
+nothing for an application.
+
 ## v3.13.94 (2026-07-29) - A write with no filter is an error
 
 `update()` and `delete()` with no WHERE clause used to be accepted. Two of the
