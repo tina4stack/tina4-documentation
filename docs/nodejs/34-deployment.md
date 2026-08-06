@@ -260,15 +260,20 @@ TINA4_LOOP_LAG_WARN_MS=0     # silence it
 ### Cluster mode
 
 Cluster mode forks one worker per CPU core. The primary binds the port once and
-hands the socket to the workers, so they share it. Turn it on with an
-environment variable:
+hands the socket to the workers, so they share it. The `--production` flag turns
+it on:
 
 ```bash
-TINA4_PRODUCTION=true
+tina4 serve --production --no-browser
 ```
 
+That is what the generated Dockerfile already runs, so a `tina4 deploy docker`
+image clusters with no extra configuration. The flag works by setting
+`TINA4_PRODUCTION=true`, which you can also set yourself when you start the app
+some other way:
+
 ```bash
-TINA4_PRODUCTION=true tina4 serve --production --no-browser
+TINA4_PRODUCTION=true node app.js
 ```
 
 The banner tells you it took:
