@@ -55,6 +55,14 @@ Each writes a Dockerfile and the files that Dockerfile needs. The swoole image
 adds `server.php`. The fpm image adds `nginx.fpm.conf` and
 `docker-entrypoint.fpm.sh`. Read them, commit them, treat them as yours.
 
+The default image installs `pcntl` and forks a process per request out of the
+box, verified by building and running it: twenty requests, twenty pids. Switch
+to the worker pool at run time without rebuilding anything:
+
+```bash
+docker run -e TINA4_SERVE_WORKERS=8 -p 7145:7145 your-image
+```
+
 ### php-fpm is the safe default
 
 Every request gets fresh process state. Nothing leaks between requests. A fatal
@@ -83,6 +91,46 @@ php -m | grep -i pcntl
 
 The image `tina4 deploy docker` generates installs `pcntl` and fails the build
 if it does not load. If you write your own Dockerfile, do the same.
+
+### Forking is the default, so there is nothing to turn on
+
+With `pcntl` present, PHP's built-in server already forks a process per request.
+You do not enable it. You only lose it, and there are three ways to do that:
+
+| Cause | What you see | Fix |
+|-------|--------------|-----|
+| `pcntl` absent | The server answers from one process. No warning | Install `pcntl` |
+| `TINA4_SERVE_WORKERS` above 1 | The worker pool runs instead | Leave it at 1 |
+| `TINA4_SERVE_FORK=false` | You asked for one process | Remove the line |
+
+`TINA4_DEBUG` does not switch it off. That is deliberate. A slow route should
+never freeze your development server, and that is the case forking exists for.
+
+### Ask the server, do not trust the config
+
+The failure here is silent, so check the process table rather than the settings.
+Add a route that reports its own pid:
+
+```php
+\Tina4\Router::get("/pid", fn($rq, $rs) => $rs((string)getmypid(), 200, "text/plain"));
+```
+
+Then count how many processes answer twenty requests:
+
+```bash
+for i in $(seq 1 20); do curl -s http://127.0.0.1:7145/pid; echo; done | sort -u | wc -l
+```
+
+| Result | Meaning |
+|--------|---------|
+| 20 | A process per request. Forking is live |
+| 1 | One process. Work through the table above |
+| N | The pool is running with N workers, not fork per request |
+
+Run it once after any deployment change. This check is how we found that three
+benchmark runs had been measuring a single-process server while every
+configuration file said otherwise. The settings agreed with each other and
+disagreed with reality, and only the process table knew.
 
 ### Swoole keeps your application resident
 
