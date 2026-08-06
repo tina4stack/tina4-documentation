@@ -30,9 +30,6 @@ hero:
     - theme: alt
       text: Delphi
       link: /delphi/index.md
-    - theme: alt
-      text: Comparisons
-      link: /comparisons.md
 
 
 ---
