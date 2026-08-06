@@ -1,123 +1,108 @@
 # Chapter 36: Release Notes
 
-## v3.13.95 (2026-08-06) - One behaviour in all four
+## v3.13.95 (2026-08-06) - Preparing for the 3.14 stable release
 
-The largest parity release so far: roughly 190 to 210 commits per framework, and
-twenty of them change behaviour. The theme is single: where the four frameworks
-disagreed about what the same call meant, they now agree, and the disagreement is
-written down rather than left for you to discover.
+One of several releases still to come before **3.14 stable**. The theme is
+parity: the same call now means the same thing in Python, PHP, Ruby and Node.
+Method shapes and inputs are unchanged - this is bug fixes, optimizations, and
+a much harder test suite behind them. See "Possible breaking" at the end for
+the handful of behaviour corrections that could affect an app relying on the
+old, wrong result.
 
-**Breaking.** Read the migration notes below before upgrading. Nothing here
-changes silently: every case either raises with a named cause or is listed here.
+### Queues
 
-### Configuration precedence: an explicit argument wins (BREAKING)
+- Queue operations act on the backend you configured, not the local file store (`04da2b54`)
+- The dev dashboard queue panel lists the store it counts (`ef8bfae8`)
+- The AMQP vhost is read as the path segment (`769923e6`)
 
-`Log.configure("/srv/app/logs")` is one line that meant one thing and did three
-different things.
+### Logging
 
-| Framework | Where the log went | `TINA4_LOG_DIR` afterwards |
-| --- | --- | --- |
-| Python | the environment's directory | unchanged |
-| PHP | the environment's directory | unchanged |
-| Ruby | the argument's directory | unchanged |
-| Node | the argument's directory | overwritten |
-
-Python and PHP let the environment override an argument you passed at the call
-site, so "put the logs exactly here" could not be expressed at all. Node reached
-the right directory by writing into `process.env`, which destroyed the operator's
-value for the rest of the process and for every child process after it.
-
-The rule, now written down as ADR-0041 and applied everywhere: **an explicit
-argument beats the environment, which beats the built-in default.** Two
-supporting rules make it workable. A configuration parameter defaults to the
-language's null value so that "not passed" is distinguishable from "passed the
-default"; and reading configuration never writes it.
-
-The same correction reached the bootstraps, which is the half that only shows up
-in a running application. Ruby's `initialize!` passed the project root as an
-explicit argument, so `TINA4_LOG_DIR` was **entirely dead** in every booted Ruby
-app and `tina4.log` was written beside your `Gemfile` rather than into `logs/`.
-PHP's booted app honoured the variable only because its precedence was inverted,
-so fixing one without the other would have moved the bug rather than removed it.
-
-**Migration.** An application that sets `TINA4_LOG_DIR` *or* calls `configure()`
-is unaffected. If it does both, the directory named in code now wins: drop the
-argument, or point it where the variable pointed. Ruby deployments that read
-`tina4.log` from the project root should read `logs/tina4.log`. Node gains
-`Log.reset()` for a long-lived process that wants environment-driven resolution
-after having configured.
+- One logger format, file layout and input contract across all four (`6ba736ac`)
+- Text is the default format; `production` no longer picks it for you (`544bb606`)
+- The logger no longer needs `ext-mbstring`, and no longer masks the real error (`10355d5f`)
+- No unguarded `mb_*` calls anywhere; string handling extracted to `Tina4\Str` (`d1ade9ab`, `9780525e`)
+- An explicit argument beats the environment, which beats the default (`f6aab60a`)
 
 ### Databases
 
-`DatabaseUrl` is a value type with a canonical engine, and an unknown scheme now
-raises instead of quietly becoming SQLite. A connection string with a typo used
-to give you a working SQLite file and a confusing absence of data.
-
-Every database connect is bounded by `TINA4_DATABASE_CONNECT_TIMEOUT` (default
-10 seconds; `0` or a negative value waits forever). An unreachable host used to hang the
-application indefinitely rather than failing. On expiry the error names the host,
-the port, the elapsed seconds and the variable.
-
-`count()` returns the TRUE TOTAL in Ruby and Node, not the number of rows the
-last page returned, and `toPaginate` reports the page it is actually on.
-
-Firebird had three defects worth naming. A parameterised statement on the native
-driver held its table locked for the life of the process, so any later DDL from
-another connection waited forever. One abandoned adapter could kill every other
-connection in the process. Column names are folded back only when Firebird
-folded them.
+- Every connect is bounded by `TINA4_DATABASE_CONNECT_TIMEOUT`, default 10s; `0` waits forever (`5ee2d5f2`)
+- `count()` returns the true total, not the last page's row count (`0514d131`)
+- `toPaginate` reports the page it is on (`0d638532`)
+- `update()` matches the primary key in data case-insensitively (`0e3ccb72`)
+- Firebird: parameterised statements no longer hold the table for the process lifetime (`f956edcb`, `05da26c0`)
+- Firebird: one abandoned adapter no longer kills every other connection (`cfd4a761`)
+- Firebird: a column name is folded back only when Firebird folded it (`4fccb9aa`)
+- Firebird: `tableExists` matches either spelling Firebird may have stored (`2c7fc50d`)
 
 ### Sessions
 
-An unrecognised `TINA4_SESSION_BACKEND` raises at startup, naming the bad value
-and the valid ones. It used to fall through to the file backend, so a typo
-produced a running application writing sessions to local disk while the operator
-believed they were in Redis.
+- `TINA4_SESSION_REDIS_PREFIX` and `_VALKEY_PREFIX` are honoured (`b532ce91`)
+- `TINA4_SESSION_MONGO_COLLECTION` is honoured (`605a1fe3`)
 
-`TINA4_SESSION_REDIS_PREFIX` and `TINA4_SESSION_VALKEY_PREFIX` are honoured in
-all four. The Mongo session database default is `tina4` everywhere, and PHP
-gained `TINA4_SESSION_MONGO_COLLECTION` to match the others. Node's
-`redis-npm` backend is removed; it existed in no other framework. Setting it does
-not fall into the generic unknown-backend error: it names its replacement
-(`redis`, the same backend over a persistent connection) so a working config can
-be migrated rather than merely rejected.
+### PHP production runtimes
 
-### Routing
+- `tina4 deploy docker --runtime cli|fpm|swoole` writes a working image and its companion files for each
+- The Swoole integration works: request-type detection matched a PSR-7 shape before the Swoole one (`77942157`)
+- The development server serves each request in its own process on Linux and macOS (`b93f5f94`, `b55a8683`)
 
-Routes beat files (ADR-0010): a static file no longer shadows a route that
-matches the same path. A bare `OPTIONS` gets its `Allow` header. Global
-middleware runs before the auth gate, so a middleware that authenticates can.
+### Local by default, production by environment variable
 
-### DocStore, Messenger, queues
+The document store runs on a local SQLite file with no configuration and no
+services, and becomes a real MongoDB collection when you set one environment
+variable. The call sites are identical either way. The same shape holds across
+the framework: SQLite is the default database, the queue is file-backed until
+you point it at a broker, and the cache is in-memory until you give it a URL.
 
-DocStore result objects use the driver's own getters (ADR-0025), and `find_one`
-is removed because the driver has no such method.
+### Bulk insert
 
-Messenger's `inbox()` takes the folder first in all four, `read()` of a missing
-message returns a falsy value rather than raising, and the IMAP `uid` is a
-STRING everywhere. A strict `=== 1` comparison becomes `=== '1'`.
+Pass a list of rows to `insert()` and the framework builds one prepared
+statement and runs it inside a single transaction on a single connection,
+instead of a round trip per row. Same call in all four languages.
 
-The AMQP vhost is read as the path segment rather than `"/"` prefixed to it.
-Ruby's queue store moved to the canonical layout shared with the other three
-(ADR-0040), with a one-time job-preserving migration, and the dev-admin queue
-panel now lists the store it counts rather than a different one.
+```php
+$db->insert("orders", [
+    ["customer_id" => 1, "total" => 9.99],
+    ["customer_id" => 2, "total" => 14.50],
+    ["customer_id" => 3, "total" => 22.00],
+]);
+```
 
-### Logging and .env
+### Tooling
 
-One logger format, one file layout and one input contract across all four. One
-`.env` parser behaviour table, so the same file parses the same way everywhere.
+The `tina4` CLI reached 3.8.67 over this cycle:
 
-### Test suites
+- `tina4 init` now wires the project up rather than printing instructions for it
+- `tina4 deploy docker` gained `--runtime cli|fpm|swoole` for PHP
+- The skills installer worked on macOS but installed nothing on Debian/Ubuntu. Fixed
+- Skills install for Codex as well as Claude
+- `tina4 metrics` gained cross-file duplication detection, Rust support, and now refuses a file it cannot parse instead of scoring it
+- `tina4 serve` no longer opens a duplicate browser tab
 
-The four suites leaked temporary files. Measured on the build host: roughly
-2,700 orphaned files and 840 orphaned directories, growing every run. Most were
-not forgotten cleanups but a single idiom: `tempnam(dir, prefix) . '.db'` creates
-a file and then uses a different path, orphaning the one it made.
+The documentation site you are reading runs on **tina4press**, our own
+zero-Vue static site generator built on tina4-js. 271 pages, no framework
+runtime on the page.
 
-Every suite now redirects its temporary files into one per-run directory that is
-removed wholesale, and the reapers are guarded on the owning process so a forked
-child cannot delete its parent's sandbox. This is test infrastructure and changes
-nothing for an application.
+### Possible breaking
+
+Method shapes and inputs did not change. These are behaviour corrections, so
+they only affect an application that depended on the previous, incorrect
+result:
+
+- **`count()` in Ruby and Node** returned the number of rows the last page
+  produced. It now returns the true total. Code that treated it as a page size
+  will see a different number.
+- **The AMQP vhost** was read as `"/"` plus the path segment, so
+  `amqp://host/production` looked for `//production`. If you worked around this
+  by naming your vhost with a leading slash, remove it.
+- **Configuration precedence.** An explicit argument now beats the environment.
+  If you both set `TINA4_LOG_DIR` and passed a directory to `configure()`, the
+  code now wins. Setting only one is unaffected. Ruby deployments that read
+  `tina4.log` from the project root should read `logs/tina4.log`.
+- **The Mongo session database default in Node** is now `tina4`, matching the
+  other three. Set it explicitly if you relied on the old default.
+- **An unknown connection scheme, or an unknown `TINA4_SESSION_BACKEND`,**
+  raises instead of silently falling back to SQLite or to file sessions.
+- **A missing MongoDB driver** raises rather than falling through.
 
 ## v3.13.94 (2026-07-29) - A write with no filter is an error
 

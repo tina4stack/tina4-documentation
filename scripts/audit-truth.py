@@ -588,6 +588,16 @@ _ENV_NOISE = {
     # Read by the install-skills.sh/.ps1 scripts (tina4 CLI repo), not the
     # framework runtime, so it never appears in a scanned framework source tree.
     "TINA4_SKILLS_REF",
+    # Read by server.php, the Swoole entry point that `tina4 deploy docker
+    # --runtime swoole` GENERATES. Same situation as TINA4_SKILLS_REF: the file
+    # lives in the tina4 CLI repo as templates/deploy/server.php.swoole and is
+    # copied into the user's project, so it is never in a framework source tree
+    # for this script to find. They are real and documented; they just are not
+    # framework variables.
+    "TINA4_SWOOLE_HOST",
+    "TINA4_SWOOLE_PORT",
+    "TINA4_SWOOLE_WORKERS",
+    "TINA4_SWOOLE_MAX_REQUEST",
 }
 
 
