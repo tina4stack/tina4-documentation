@@ -64,10 +64,34 @@ stdout is always on. With `TINA4_LOG_OUTPUT` unset, the log **file** is written 
 | `TINA4_LOG_MAX_SIZE` | _(legacy alias)_ | Legacy alias for `TINA4_LOG_ROTATE_SIZE`. |
 | `TINA4_LOG_KEEP` | `5` | Legacy alias for `TINA4_LOG_ROTATE_KEEP`. |
 | `TINA4_LOG_FILE` | _(empty)_ | Path to a log file. Empty leaves logs on stdout. Relative paths resolve against `TINA4_LOG_DIR`; absolute paths are used verbatim. Setting any path forces file output. |
-| `TINA4_LOG_DIR` | `logs` | Directory for log files. Joined with `TINA4_LOG_FILE` when the latter is relative. |
+| `TINA4_LOG_DIR` | `logs` | Directory for log files. Joined with `TINA4_LOG_FILE` when the latter is relative. Used when the application passes no directory to `configure()`; an explicit argument wins. |
 | `TINA4_LOG_FUNC` | _(empty)_ | When truthy, includes the calling function name in each log line. |
 | `TINA4_LOG_STRICT` | `false` | When `true`, raises on a log-write failure instead of swallowing it. |
 | `TINA4_LOG_APPEND` | `true` | Append to the log file. Set `false` to overwrite it once at startup (one file per run). |
+
+#### Which value wins
+
+Configuration resolves in one order, and it is the same for every setting above:
+an explicit argument passed in code, then the environment variable, then the
+built-in default.
+
+So `TINA4_LOG_DIR` sets the log directory for an application that does not name
+one itself, which is the normal case. An application that calls
+`configure()` with a directory has said where its logs go, and that instruction
+is not overridden by the environment. If you need to relocate the logs of an
+application that names its own directory, change the argument rather than the
+variable.
+
+The framework's own startup does not name a directory, so `TINA4_LOG_DIR`
+applies to a stock application.
+
+Before 3.13.95 this was inconsistent, and it is worth knowing which way if you
+are upgrading. In Python and PHP the environment variable overrode an explicit
+argument, so an application could not choose its own log directory at all. In
+Ruby the startup path passed the project root as an explicit argument, which
+made `TINA4_LOG_DIR` have no effect on a running application and put
+`tina4.log` and `error.log` in the project root rather than in `logs/`. If you
+relied on either of those, see the migration note in the release notes.
 
 ### Database
 
