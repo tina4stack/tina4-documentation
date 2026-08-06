@@ -1,0 +1,88 @@
+{
+  "_comment": "Feature 47 (Swagger / OpenAPI). Written 2026-08-06 from a measured four-way audit: one identical app per framework, real servers, documents fetched over real sockets from /swagger/openapi.json and checked with openapi-spec-validator. TWO OF FOUR SHIPPED A STRUCTURALLY INVALID DOCUMENT. Every invariant below is OWED rather than proven: three P1s are fixed and have tests, but no rule here is yet gated in all four frameworks, and the auditor's own rule is that a named suite must exist in every framework it names. Owed is the honest state and it prints loudly rather than failing the build - see audit-contract-fixtures.py.",
+  "version": 1,
+  "decided": "2026-08-06",
+  "adr": "ADR-0004",
+  "invariants": [
+    {
+      "id": "the-document-validates",
+      "adr": "ADR-0004",
+      "rule": "The document fetched from /swagger/openapi.json passes a real OpenAPI validator for the version it declares, in every framework, for an app with routes, path params, a model and a secured route.",
+      "why": "MEASURED 2026-08-06 with openapi-spec-validator: python VALID, php INVALID, ruby VALID, node INVALID. Nothing anywhere validated the generated output, which is why two frameworks shipped a document no spec-compliant client or gateway can consume. This is the invariant that would have caught BOTH P1s below on its own, so it is the one worth building first. It needs a validator, which is a test-only dependency - the frameworks stay zero-dep.",
+      "suites": {},
+      "cases": []
+    },
+    {
+      "id": "every-template-expression-has-a-parameter",
+      "adr": "ADR-0004",
+      "rule": "Every {name} in a path key has a matching parameter entry with in:path and required:true, and the path key itself carries no framework type token.",
+      "why": "MEASURED: Node emitted NO in:path parameter anywhere, unconditionally - the framework registers /__frond/live/{name} itself, so an app with zero user routes already published an invalid document. Root cause: extractPathParams matched the FILE-SYSTEM spelling [id] while routeDiscovery converts [id] to {id} before a route is registered, so the regex never matched at runtime. PHP separately leaked the token into the key ('/api/typed/{id:int}') and declared no parameter for it. FIXED in both (tina4-nodejs f217a5e, tina4-php 5a4f838d) with the whole-document form of this rule asserted in test/swaggerPathParams.test.ts and tests/SwaggerTypedPathParamTest.php. OWED because Python and Ruby have no equivalent suite - they were already correct, which is exactly the state in which a regression goes unnoticed.",
+      "suites": {},
+      "cases": []
+    },
+    {
+      "id": "security-mirrors-the-runtime-gate",
+      "adr": "ADR-0004",
+      "rule": "An operation's `security` is derived from the same flag dispatch enforces, never a parallel one. A route the server answers 401 for is documented as requiring auth; a route explicitly opened is documented as public.",
+      "why": "MEASURED: POST /api/items with no Authorization header returned 401 in all four, but Ruby's document carried no security key at all - the write API was documented public while being enforced. Ruby carries two flags and Swagger read the wrong one: router.rb sets auth_required (what dispatch enforces, flipped by .secure/.no_auth) while swagger.rb branched on auth_handler, which defaults to nil. Every write route registered the ordinary way was affected, AutoCrud included, and .secure on a GET never reached the document. FIXED in tina4-ruby 665151d with spec/swagger_security_mirrors_gate_spec.rb (positive, .secure GET, and the .no_auth negative). OWED because Python, PHP and Node have no equivalent suite.",
+      "suites": {},
+      "cases": []
+    },
+    {
+      "id": "path-param-types-map-identically",
+      "adr": "ADR-0004",
+      "rule": "The same typed route token maps to the same JSON Schema fragment in all four: int/integer -> integer, float/number -> number, uuid -> string+format uuid, slug/alpha/alnum -> string+pattern, bare -> string. An unknown token degrades to string rather than dropping the parameter.",
+      "why": "MEASURED: python emitted {\"type\":\"integer\"} for a declared int, php emitted no parameter at all, ruby emitted integer, node emitted nothing. Python's _PARAM_TYPE_SCHEMA is the reference and PHP now mirrors it over exactly the token set Router::compilePath accepts. A generated client's argument type comes from this, so a divergence here is a divergence in every downstream SDK.",
+      "suites": {},
+      "cases": []
+    },
+    {
+      "id": "model-schemas-are-referenced-not-inlined",
+      "adr": "ADR-0004",
+      "rule": "An ORM model becomes ONE components.schemas entry keyed by the model CLASS name, with `required` derived from nullability, referenced by $ref rather than inlined.",
+      "why": "MEASURED, four different answers for one model: python keys ['Item'] with required:['name']; php keys ['Item'] but NO required array (Swagger::modelSchema never inspects nullability, so a NOT NULL column is documented optional); ruby emits NO components.schemas at all, so a requestBody degrades to {\"type\":\"object\"}; node keys ['items'] - the tableName - so a generated client gets class Items instead of Item. Python is right: the class name is the type name codegen wants, and `required` is what makes the schema worth having. The tina4-nodejs CLAUDE.md claim that models become $ref entries is true but mis-keyed.",
+      "suites": {},
+      "cases": []
+    },
+    {
+      "id": "info-and-servers-defaults-are-one-value",
+      "adr": "ADR-0004",
+      "rule": "With no TINA4_SWAGGER_* set, info.version, info.description and servers[0].url are identical in all four.",
+      "why": "MEASURED, every one differs. info.version: python 1.0.0, php 1.0.0, ruby 3.13.95 (the FRAMEWORK version, so an undocumented app claims API v3.13.95), node 0.0.1. servers[0].url: python and php hard-code http://localhost:7145, ruby and node emit '/'. The hard-coded port is measurably wrong off 7145 - a PHP server bound to 7146 advertised 7145, so Swagger UI 'Try it out' posts to the wrong port. Ruby and Node are right on servers ('/' is correct under any port, host or proxy); Python and PHP are right on version.",
+      "suites": {},
+      "cases": []
+    },
+    {
+      "id": "env-surface-is-identical",
+      "adr": "ADR-0041",
+      "rule": "Every documented TINA4_SWAGGER_* variable is read by all four frameworks with the same precedence. A variable documented in one and inert in another is a defect.",
+      "why": "MEASURED, all 17 documented vars set to distinctive values in one pass: 15 of 17 matched in every framework. PHP alone ignores TINA4_SWAGGER_CONTACT_TEAM and TINA4_SWAGGER_CONTACT_URL - its info.contact carried only the email while the other three carried name and url. Both are documented in the root and per-framework CLAUDE.md files, so this is drift under the repo's own First Principle. Legacy fallbacks diverge too: SWAGGER_CONTACT_TEAM/_URL are honoured by python and ruby only.",
+      "suites": {},
+      "cases": []
+    },
+    {
+      "id": "disabled-means-nothing-is-served",
+      "adr": "ADR-0004",
+      "rule": "With TINA4_SWAGGER_ENABLED=false, the UI path, the trailing-slash form, the spec endpoint AND the bundled UI assets all 404, in every framework.",
+      "why": "MEASURED and CURRENTLY PASSING in all four, verified against freshly-bound PIDs after a first reading was confounded by a stale process. Written down because it is the production exposure switch and it HAS regressed before - the 3.13.40 static-asset bypass left /swagger/index.html reachable while the gated routes 404'd. A rule that holds today and has broken once is exactly the kind worth pinning.",
+      "suites": {},
+      "cases": []
+    },
+    {
+      "id": "only-the-application-is-documented",
+      "adr": "ADR-0004",
+      "rule": "Framework-internal routes are excluded from the published document by one shared rule, not a per-framework list.",
+      "why": "MEASURED: internal paths documented - python 3, php 13, ruby 3, node 3. PHP additionally publishes /, /ai, /ai/api/chat, /embed, /image, /image/v1/images/generations, /rag, /vision, /__feedback/api/turn and /__feedback/widget.js in the public API document. The exclusion list is /swagger + /__dev in all four; PHP simply registers more internals outside those prefixes. /__feedback/widget.js also yields operationId get___feedback_widget.js - a dot in a generated method name.",
+      "suites": {},
+      "cases": []
+    },
+    {
+      "id": "operation-ids-are-stable-and-distinct",
+      "adr": "ADR-0004",
+      "rule": "Two distinct paths never collapse to the same operationId, and the same route produces the same id in all four.",
+      "why": "MEASURED on /__health versus /health: python and php preserve the leading underscores and produce get___health and get_health; ruby and node collapse both to get_health and de-duplicate the second to get_health_2. operationId is the generated client's METHOD NAME, so this decides what a consumer's SDK calls the endpoint - and which of two endpoints gets the suffix depends on registration order.",
+      "suites": {},
+      "cases": []
+    }
+  ]
+}
