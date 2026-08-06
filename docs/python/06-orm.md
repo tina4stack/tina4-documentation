@@ -137,7 +137,7 @@ A complete model. Here is what each piece does:
 | `DateTimeField` | `str` | `DATETIME` | Date and time |
 | `TextField` | `str` | `TEXT` | Long text |
 | `BlobField` | `bytes` | `BLOB` | Binary data |
-| `ForeignKeyField` | `int` | `INTEGER` | Foreign key - auto-wires `belongs_to` and `has_many` (see [Relationships](#6-relationships)) |
+| `ForeignKeyField` | `int` | `INTEGER` | Foreign key - auto-wires `belongs_to` and `has_many` (see [Relationships](#_6-relationships)) |
 
 Verbose names (`IntegerField`, `StringField`, `BooleanField`) are the standard. Short aliases (`IntField`, `StrField`, `BoolField`) also work.
 

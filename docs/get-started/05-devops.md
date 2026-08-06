@@ -227,7 +227,65 @@ escaped throw kills the worker.
 `TINA4_SWOOLE_PORT` tune it from the environment, so the file itself rarely
 needs editing.
 
-## 3. Environment Variables That Matter in Production
+## 3. Node.js and Ruby: What Each One Does With a Slow Handler
+
+PHP gets its own section because you choose its process model. Node and Ruby do
+not offer that choice, but they behave differently under load and the difference
+decides how you write handlers.
+
+Ruby's WEBrick serves each request on its own thread. A slow handler occupies
+its thread and nothing else. That is the model most people expect.
+
+Node serves every request on ONE event loop, and that changes what "slow" means.
+A handler that awaits gives the loop back while it waits, so it blocks nobody.
+A handler that computes does not, and every other request waits behind it.
+Measured on a Tina4 Node server, a trivial route answering while a second route
+was busy:
+
+| The other route was | Trivial route answered in |
+|---------------------|---------------------------|
+| idle | 0.032s |
+| awaiting a 2 second timer | 0.030s |
+| running a 2 second busy loop | 1.575s |
+
+The awaited route cost the trivial one nothing. The busy loop cost it a second
+and a half. Both took two seconds of wall clock, so you cannot spot the
+difference by timing the slow route itself.
+
+This is how every single-loop runtime works, so Tina4 does not try to engineer
+around it. It tells you instead. When a handler holds the loop past a threshold,
+the server logs a warning naming the duration:
+
+```
+Event loop blocked for 1204ms. Node serves every request on one loop, so a
+handler doing CPU-bound work or synchronous I/O stalls all the others for that
+long. Move the work to Tina4's queue, or await it.
+```
+
+The threshold is 250ms. Change it, or turn the warning off:
+
+```bash
+TINA4_LOOP_LAG_WARN_MS=500   # warn at half a second instead
+TINA4_LOOP_LAG_WARN_MS=0     # silence it
+```
+
+When you see that warning, you have three real fixes:
+
+1. Push the work to the queue and return straight away. Image resizing, PDF
+   generation, report building and bulk imports all belong there.
+2. Replace synchronous I/O with the awaiting version. `readFileSync` blocks the
+   loop; `await readFile` does not.
+3. Run more processes. `tina4 serve --production` forks one worker per CPU
+   core, so a blocked worker stalls only the requests routed to it. On a
+   single-core host it stays one process, because there is nothing to spread
+   the work across.
+
+Development runs a single process on purpose, because hot reload, the dev
+dashboard and the WebSocket registry all keep per-process state. So you will see
+the warning in development and not in production, which is the right way round:
+you find the blocking handler on your own machine.
+
+## 4. Environment Variables That Matter in Production
 
 Tina4 reads its configuration from the environment. Everything below has a
 default that works. These are the ones worth setting on purpose.
@@ -310,7 +368,7 @@ The dev dashboard, hot reload and the WebSocket registry are all per-process, so
 a pool in development would show you one worker's traffic and reload one
 worker's code. That reads as a framework bug, so the framework declines.
 
-## 4. Health Checks
+## 5. Health Checks
 
 Every Tina4 app answers a health check with no configuration:
 
@@ -329,7 +387,7 @@ Point your load balancer, your Docker `HEALTHCHECK` and your Kubernetes
 readiness probe at `/__health`. Set `TINA4_HEALTH_PATH` if you need it somewhere
 else.
 
-## 5. Graceful Shutdown
+## 6. Graceful Shutdown
 
 Send `SIGTERM` and Tina4 stops accepting first, then drains.
 
@@ -354,7 +412,7 @@ spec:
 Raise both together if your requests run long. Raise one alone and Kubernetes
 kills the pod while Tina4 is still politely draining.
 
-## 6. Logging
+## 7. Logging
 
 Containers log to stdout, and Tina4 does this without being asked.
 
@@ -372,7 +430,7 @@ Set `TINA4_LOG_FORMAT=json` when a log aggregator is parsing the stream. Text
 stays the default everywhere, because a human reading `docker logs` is the more
 common case and JSON makes that worse.
 
-## 7. A Checklist
+## 8. A Checklist
 
 Before the first deploy:
 
@@ -383,7 +441,8 @@ Before the first deploy:
 - `TINA4_SHUTDOWN_TIMEOUT` matches your orchestrator's grace period
 - Database credentials arrive as environment variables, not in a committed `.env`
 - `TINA4_DATABASE_CONNECT_TIMEOUT` set, so a database outage fails instead of hangs
+- Node deploys run `tina4 serve --production`, which forks a worker per CPU core
 
-Seven lines. Work through them once and the application runs the way its author
+Eight lines. Work through them once and the application runs the way its author
 intended, which is the only thing anyone deploying someone else's code actually
 wants.

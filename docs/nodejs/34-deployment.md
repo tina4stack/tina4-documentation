@@ -211,32 +211,97 @@ docker compose down
 
 ---
 
-## 5. Node.js Cluster for Production
+## 5. One Event Loop, and How to Get More
 
-For multi-core utilization, Tina4 supports Node.js cluster mode:
+Node serves every request on ONE event loop. That single fact decides how you
+write handlers and how you deploy.
 
-```bash
+### What "slow" means here
+
+A handler that awaits gives the loop back while it waits, so it blocks nobody.
+A handler that computes holds the loop, and every other request waits behind it.
+Measured on a Tina4 Node server, timing a trivial route while a second route was
+busy:
+
+| The other route was | Trivial route answered in |
+|---------------------|---------------------------|
+| idle | 0.032s |
+| awaiting a 2 second timer | 0.030s |
+| running a 2 second busy loop | 1.575s |
+
+Both slow routes took two seconds of wall clock. Only one of them cost anything
+to anybody else. You cannot tell them apart by timing the slow route, which is
+why this catches people out.
+
+The server watches for it and says so. When a handler holds the loop past a
+threshold, you get a warning naming the duration:
+
+```
+Event loop blocked for 1204ms. Node serves every request on one loop, so a
+handler doing CPU-bound work or synchronous I/O stalls all the others for that
+long. Move the work to Tina4's queue, or await it.
 ```
 
-Or set workers to `auto` to match CPU cores:
+The threshold is 250ms. Tune it or turn it off:
 
 ```bash
+TINA4_LOOP_LAG_WARN_MS=500   # warn at half a second instead
+TINA4_LOOP_LAG_WARN_MS=0     # silence it
 ```
 
-This spawns multiple worker processes. Each handles requests independently. A worker crashes. The cluster master respawns it. No downtime.
+### The three fixes
 
-### How Many Workers?
+1. Push the work to the queue and return. Image resizing, PDF generation,
+   report building and bulk imports all belong there.
+2. Await your I/O. `readFileSync` blocks the loop; `await readFile` does not.
+   `JSON.parse` on a 40MB payload blocks it too.
+3. Run more processes, so a blocked worker stalls only its own share.
 
-Start with the number of CPU cores on your server. For I/O-heavy applications (database queries, external API calls), double the core count. CPU-bound work benefits less from extra workers.
+### Cluster mode
 
-| CPU Cores | Workers | Use Case |
-|-----------|---------|----------|
-| 1 | 2 | Small VPS, hobbyist |
-| 2 | 4 | Small production app |
-| 4 | 8 | Medium production app |
-| 8 | 16 | High-traffic app |
+Cluster mode forks one worker per CPU core. The primary binds the port once and
+hands the socket to the workers, so they share it. Turn it on with an
+environment variable:
 
----
+```bash
+TINA4_PRODUCTION=true
+```
+
+```bash
+TINA4_PRODUCTION=true tina4 serve --production --no-browser
+```
+
+The banner tells you it took:
+
+```
+  Server:    http://localhost:7148 (cluster, 8 workers)
+```
+
+The worker count is the CPU core count. There is no setting to change it, and
+that is on purpose: the number that matters is how many cores the box has, and
+the box already knows. On a single-core host the server stays one process,
+because there is nothing to spread the work across.
+
+A worker that dies with a non-zero exit code gets replaced, so the pool does not
+quietly shrink. A worker that exits cleanly is treated as intentional and is not
+respawned.
+
+### What clustering costs you
+
+Workers are separate processes and share no memory. Anything you keep in a
+variable lives in one worker and is invisible to the other seven:
+
+- In-memory cache entries. Set `TINA4_CACHE_BACKEND` to Redis or Memcached so
+  all workers see the same cache.
+- In-memory sessions. Point `TINA4_SESSION_BACKEND` at the database, Redis or
+  Mongo.
+- Rate-limit counters held in a module-level object. Same answer: shared store.
+- WebSocket connections. A client is connected to ONE worker. Broadcasting from
+  another worker will not reach it without a shared backplane.
+
+If your app keeps state in memory and you switch clustering on, it will not
+break loudly. It will serve one request in eight from a worker that has never
+heard of the thing you cached. Move the state to a shared store first.
 
 ## 6. Health Checks
 
