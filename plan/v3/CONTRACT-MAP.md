@@ -67,11 +67,12 @@ Re-run it and re-sync this table whenever a fixture changes.
 subsystem with a fixture is now held to its contract four-way. Messenger closed
 last: the read/send shapes were already unified by the 3.13.96 parity commits
 (decisions G4-G7), so the suites prove shipped behaviour; ADR-0042 records the
-uid-is-the-IMAP-UID rule. TWO follow-ups fell out of the messenger round, filed
-not gated: read() attachment BYTES are retrievable only in Python
-(`attachments_data`) while the other three return metadata-only attachments; and
-PHP's read() carries `msgno` (a sequence number ADR-0042 says is not a public id)
-plus a `message_id` that duplicates `headers`.
+uid-is-the-IMAP-UID rule. Both messenger follow-ups closed 2026-08-07 (#69/#70)
+and are now GATED by `msg-read-item-shape`: attachment bytes fold into
+`attachments[i].content` in all four (the Python-only `attachments_data` retired),
+and PHP trimmed `msgno`/`message_id`/`seen`/`flagged`, so `read()` returns exactly
+the ten canonical keys everywhere - proven against real GreenMail with a real
+binary attachment.
 
 ## Layer 1 only: audited and decided, no machine-checked fixture yet
 

@@ -113,8 +113,8 @@
     {
       "id": "msg-read-item-shape",
       "adr": "ADR-0004",
-      "rule": "A read() result carries the same CONCEPT field set in all four - uid, subject, from, to, cc, date, body-text, body-html, attachments, headers - under ADR-0008 idiomatic casing (body_text/body_html in python/php/ruby, bodyText/bodyHtml in node; decision G5). The CONCEPTS must match; the spelling follows each language. Message-ID lives in headers. A framework may carry additional idiomatic keys (an OPEN follow-up, not gated here: attachment BYTES are retrievable only in Python via attachments_data, and PHP read() carries msgno - a sequence number ADR-0042 says is not a public id - plus a message_id that duplicates headers).",
-      "why": "MEASURED 2026-08-06 (before the parity commits): three body conventions, ruby+node returned NO attachments, php+ruby no headers. RESOLVED by G5/ADR-0008 - idiomatic casing, concepts must match: ruby renamed body/html to body_text/body_html, ruby+node added attachments, php+ruby added headers (all shipped on the 3.13.96 branch). Proven 2026-08-07 with a named suite in all four driving real GreenMail. The extras divergence (python attachments_data; php msgno/seen/flagged/message_id) is recorded as a follow-up rather than gated, because G5 settled concept-parity, not an exact key set.",
+      "rule": "read() returns EXACTLY the 10 canonical keys in all four - uid, subject, from, to, cc, date, body-text, body-html, attachments, headers - under ADR-0008/G5 idiomatic casing (body_text/body_html in python/php/ruby, bodyText/bodyHtml in node). Message-ID lives in headers. NO extra keys. attachments is a list of {filename, content-type, size, content} where content is the RAW DECODED BYTES of the part (bytes, the request.files convention) and size is that byte length, so an attachment is downloadable in every framework.",
+      "why": "MEASURED 2026-08-06 the read shapes diverged: three body conventions, ruby+node returned no attachments, php+ruby no headers, php also carried msgno (an IMAP sequence number ADR-0042 forbids as a public id), message_id, seen, flagged, and attachment BYTES were retrievable only in Python (a separate attachments_data). RESOLVED 2026-08-07 (#69/#70): all four fold the raw bytes into attachments[i].content, drop attachments_data, and return EXACTLY the 10 keys - php trimmed its four extras. Proven with a named suite in all four driving real GreenMail (read-attachments-carry-decoded-bytes sends a real binary attachment and asserts content == the original bytes; read-item-shape-is-exactly-ten-keys pins the key set), every gate mutation-proven.",
       "suites": {
         "python": "tests/test_messenger_contract.py",
         "php": "tests/MessengerContractTest.php",
@@ -122,7 +122,9 @@
         "nodejs": "test/messengerContract.test.ts"
       },
       "cases": [
-        "msg-read-item-shape"
+        "msg-read-item-shape",
+        "read-attachments-carry-decoded-bytes",
+        "read-item-shape-is-exactly-ten-keys"
       ]
     },
     {
