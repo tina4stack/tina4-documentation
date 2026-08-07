@@ -1,5 +1,80 @@
 # Release Notes
 
+## v3.13.96 (2026-08-07) - One paginate envelope, one message shape
+
+Another step toward **3.14 stable**, and the theme is still parity: the same
+call means the same thing in Python, PHP, Ruby and Node. This release settles
+two subsystems that had drifted into four shapes. Pagination returns one
+envelope of seven keys with a true total. The Messenger IMAP path returns one
+message shape, addresses mail by a real IMAP UID, and hands back attachments
+you can write straight to disk. Some of these are behaviour changes, so read
+"Possible breaking" at the end before you upgrade.
+
+### Pagination
+
+- `toPaginate()` takes no arguments and reads every field from the query that ran; pass one and it throws (`80257ecf`)
+- The envelope is exactly seven snake_case keys: `records`, `total`, `page`, `per_page`, `total_pages`, `limit`, `offset` (`80257ecf`)
+- `total` is a true `COUNT(*)` for the filter, never the page's row count (`80257ecf`)
+- The AutoCrud REST list endpoint returns the same seven keys (`51b54018`)
+
+```php
+// Fetch the page you want, then describe it. No arguments.
+$result = $db->fetch("SELECT * FROM orders", [], 20, 40);   // 20 per page, page 3
+return $response->json($result->toPaginate());
+// ["records" => [...], "total" => 250, "page" => 3, "per_page" => 20,
+//  "total_pages" => 13, "limit" => 20, "offset" => 40]
+```
+
+### Messenger
+
+- `send()` returns `{success, message, id}` on both paths, with `id` populated from a real `Message-ID` header (`48a7e6db`)
+- `inbox()` and `search()` items are exactly `{uid, subject, from, to, date, snippet, seen}`: `to` was added, `msgno`, `flagged` and `size` were dropped, `date` is ISO-8601, and `snippet` is decoded plain text (`48a7e6db`)
+- `read()` returns exactly the ten canonical keys `{uid, subject, from, to, cc, date, body_text, body_html, attachments, headers}`. The PHP-only extras `msgno`, `message_id`, `seen` and `flagged` are gone; read the Message-ID from `headers` (#70)
+- IMAP authenticated to the SMTP account before and could return the wrong mailbox. Credentials are separate now: `TINA4_MAIL_IMAP_USERNAME` / `TINA4_MAIL_IMAP_PASSWORD` (falling back to the SMTP pair), plus `imapUsername` / `imapPassword` and an `imapEncryption` constructor parameter (`48a7e6db`)
+- New methods: `markUnread()`, `sendTemplate()` (renders a Frond template) and `delete()` (`48a7e6db`)
+- `read()` folds each attachment's decoded bytes into `attachments[i]["content"]`, so an attachment downloads straight from `read()` (`1abb1b43`)
+
+### Swagger
+
+- `servers[0].url` defaults to `/`, not `http://localhost:7145`, and `info.description` defaults to an empty string (`8adb0256`)
+- `components.schemas` carries a `required` array derived from column nullability; `info.contact` emits `name` and `url`, not only `email` (`8adb0256`)
+- Framework-internal routes are excluded by one shared list, so PHP no longer publishes ten of its own service routes (`8adb0256`)
+- `operationId` keeps a path's leading underscores, so `/__health` and `/health` stay distinct (`8adb0256`)
+
+### Migrations
+
+- `code` is the canonical kind for a code migration, the same word in all four frameworks. An unknown kind throws and names the valid ones (`f0e76dda`)
+
+### Server
+
+- An oversized request body answers `413`, not `500` (`8a4c3793`)
+- `TINA4_PORT` is the port variable and wins; bare `PORT` still works but is deprecated and goes in 3.14 (`5b73b40a`)
+
+### Build and skills
+
+- The framework SCSS compilers are gone; the `tina4` Rust CLI owns SCSS now (`be86c157`)
+- tina4-css is pinned to one artefact and one URL (`21858bcb`)
+- The skills point at the ADRs and make `tina4 metrics`, Carbonah and mcp.tina4.com the lean, green, grounded workflow (`a2827203`)
+
+### Proven in all four
+
+The Messenger, Swagger and pagination behaviours are locked by machine-checked
+contract suites that run against real services in every framework: a live
+GreenMail server for the mailbox, a real 250-row SQLite table for pagination.
+No mocks.
+
+### Possible breaking
+
+Read these before you upgrade. Each affects an app that relied on the old shape:
+
+- **`toPaginate()` takes no arguments.** The old `toPaginate(page, perPage)` form throws. Fetch the page, then call `toPaginate()`.
+- **`total` is the true count.** It was the page's row count in some frameworks; it is now a `COUNT(*)` for the filter. Use `count($records)` for the page size.
+- **The paginate envelope is seven keys.** A reader of the dropped alias keys must move to the seven canonical keys.
+- **`inbox()` and `read()` changed keys.** `inbox()` dropped `msgno`, `flagged` and `size` and added `to`; `read()` returns exactly ten keys, dropping `msgno`, `message_id`, `seen` and `flagged`; dates are ISO-8601. Read the Message-ID from `headers`, and use `uid` (never the removed `msgno`) to address a message.
+- **Swagger defaults moved.** `servers[0].url` is `/`, `info.description` is empty. `TINA4_SWAGGER_SERVERS` and `TINA4_SWAGGER_DESCRIPTION` still override.
+- **An unknown migration kind throws** instead of being ignored.
+- **The framework no longer compiles SCSS.** Use the `tina4` Rust CLI.
+
 ## v3.13.95 (2026-08-06) - Preparing for the 3.14 stable release
 
 One of several releases still to come before **3.14 stable**. The theme is

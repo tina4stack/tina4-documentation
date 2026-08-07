@@ -104,6 +104,10 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 
 ## What's new
 
+**v3.13.96 (2026-08-07)** - [full notes](/python/36-releases.md)
+
+One paginate envelope, one message shape. Pagination returns a single seven-key envelope with a true total, and the AutoCrud REST list matches it. The Messenger IMAP path returns one message shape, addresses mail by a real IMAP UID, and hands back attachments you can write straight to disk. `Api.send()` becomes `Api.send_request()`. Swagger advertises `/` and only the response codes the framework really returns. The framework SCSS compilers are gone; the Rust CLI owns SCSS.
+
 **v3.13.95 (2026-08-06)** - [full notes](/python/36-releases.md)
 
 Parity: the same call now means the same thing in Python, PHP, Ruby and Node. Queues moved to one layout, so a job written by one framework is where the others look for it, and queue operations act on the backend you configured rather than a local file store. Logging settled on one format, one file layout and one input contract, with an explicit argument beating the environment everywhere. Every database connect is bounded by `TINA4_DATABASE_CONNECT_TIMEOUT`, so an unreachable host fails instead of hanging forever. An unknown connection scheme or session backend now raises at startup instead of quietly falling back to SQLite or to local disk. PHP gained a choice of production runtime through `tina4 deploy docker --runtime cli|fpm|swoole`, and a working Swoole integration. See the "Possible breaking" section in the full notes: method shapes and inputs did not change, so only an app relying on the previous wrong result is affected.

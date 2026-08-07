@@ -1,5 +1,84 @@
 # Release Notes
 
+## v3.13.96 (2026-08-07) - One paginate envelope, one message shape
+
+Another step toward **3.14 stable**, and the theme is still parity: the same
+call means the same thing in Python, PHP, Ruby and Node. This release settles
+two subsystems that had drifted into four shapes. Pagination returns one
+envelope of seven keys with a true total. The Messenger IMAP path returns one
+message shape, addresses mail by a real IMAP UID, and hands back attachments
+you can write straight to disk. Some of these are behaviour changes, so read
+"Possible breaking" at the end before you upgrade.
+
+### Pagination
+
+- `toPaginate()` takes no arguments and derives every field from the query that ran; pass one and it throws (`c1b8ae6`)
+- The envelope is exactly seven snake_case keys: `records`, `total`, `page`, `per_page`, `total_pages`, `limit`, `offset` (`c1b8ae6`)
+- Node carried the widest envelope of the four, thirteen keys. The camelCase `perPage` and `totalPages`, plus `data`, `count`, `has_next` and `has_prev`, are all dropped (`c1b8ae6`)
+- `.count` and the envelope `total` are a true `COUNT(*)` on both read paths. `QueryBuilder.get()` left `count` at the row count and now returns the true total, matching `db.fetch()` (`c1b8ae6`)
+- The AutoCrud REST list endpoint returns the same seven keys (`28dcb49`)
+
+```typescript
+// Fetch the page you want, then describe it. No arguments.
+const result = await db.fetch("SELECT * FROM orders", [], 20, 40);   // 20 per page, page 3
+return res.json(result.toPaginate());
+// { records: [...], total: 250, page: 3, per_page: 20,
+//   total_pages: 13, limit: 20, offset: 40 }
+```
+
+### Messenger
+
+- `send()` carries `{success, message, id}` on both paths. On failure `id` is present as `null` rather than omitted, so a caller reads one shape from both branches (`b1d16b4`)
+- `inbox()` items are exactly `{uid, subject, from, to, date, snippet, seen}`, `date` is ISO-8601, and `snippet` is real decoded body text where it was always empty (`b1d16b4`)
+- `read()` returns `date` as ISO-8601 and gains an `attachments` array (`b1d16b4`)
+- IMAP credentials are separate from SMTP, with an `imapEncryption` constructor option (`b1d16b4`)
+- `deleteMessage()` is renamed `delete()`, the one cross-framework name; `deleteMessage` stays a deprecated alias for one release. New: `markUnread()` and `sendTemplate()` (`b1d16b4`)
+- The `uid` from an IMAP read is a real IMAP UID, so it still addresses the right message after another client expunges the mailbox (`c1b28fd`)
+- `read()` folds each attachment's decoded bytes into its attachment item, so you write it straight to disk (`6fbf263`)
+
+### Swagger
+
+- `components.schemas` is keyed by the model class name (`Item`), not the table name (`items`), so a generated client gets `class Item` (`c9e0ec9`)
+- `info.version` defaults to `1.0.0` and `info.description` to an empty string (`c9e0ec9`)
+- A model write documents only `200`; the unconditional `422` and inferred `201` are dropped from the document, and `401` still appears on a secured route (`c9e0ec9`)
+- `operationId` keeps leading underscores, so `/__health` and `/health` stay distinct (`c9e0ec9`)
+
+### Migrations
+
+- `code` is the canonical kind for a code migration, the same word in all four frameworks. An unknown kind throws and names the valid ones (`fddb3e7`)
+
+### Server
+
+- An oversized request body answers `413`, not `500` (`d3e14e2`)
+- `TINA4_PORT` is the port variable and wins; bare `PORT` still works but is deprecated and goes in 3.14 (`a33930f`)
+- Cluster mode stopped killing its own workers, and the server warns when the event loop is blocked (`84a2a2b`)
+
+### Build and skills
+
+- The framework SCSS compilers are gone; the `tina4` Rust CLI owns SCSS now (`68fc0e9`)
+- tina4-css is pinned to one artefact and one URL (`6f45ae3`)
+- The skills point at the ADRs and make `tina4 metrics`, Carbonah and mcp.tina4.com the lean, green, grounded workflow (`11bfae6`)
+
+### Proven in all four
+
+The Messenger, Swagger and pagination behaviours are locked by machine-checked
+contract suites that run against real services in every framework: a live
+GreenMail server for the mailbox, a real 250-row SQLite table for pagination.
+No mocks.
+
+### Possible breaking
+
+Read these before you upgrade. Each affects an app that relied on the old shape:
+
+- **`.count` and `toPaginate().total` are the true total.** Node's `QueryBuilder.get()` left `count` at the row count; it is now a `COUNT(*)` for the filter. Read `records.length` for the page size.
+- **`toPaginate()` takes no arguments.** The old `toPaginate(page, perPage)` form throws. Fetch the page, then call `toPaginate()`.
+- **The paginate envelope is seven keys.** The dropped Node keys `data`, `count`, `perPage`, `totalPages`, `has_next` and `has_prev` are gone; move to the seven canonical keys.
+- **A Messenger `uid` is a real IMAP UID.** Discard any `uid` stored by an older version and re-read it; the old values were never stable across an expunge.
+- **`send()` and `read()` changed keys.** `send()` returns `id` as `null` on failure where it was omitted; `read()` dates are ISO-8601. `deleteMessage()` is now `delete()`, the alias is deprecated.
+- **Swagger defaults moved.** `info.version` is `1.0.0`, `info.description` is empty, schemas are keyed by class name. `TINA4_SWAGGER_VERSION` and `TINA4_SWAGGER_DESCRIPTION` still override.
+- **An unknown migration kind throws** instead of being ignored.
+- **The framework no longer compiles SCSS.** Use the `tina4` Rust CLI.
+
 ## v3.13.95 (2026-08-06) - Preparing for the 3.14 stable release
 
 One of several releases still to come before **3.14 stable**. The theme is

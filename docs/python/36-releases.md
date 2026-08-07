@@ -1,5 +1,90 @@
 # Release Notes
 
+## v3.13.96 (2026-08-07) - One paginate envelope, one message shape
+
+Another step toward **3.14 stable**, and the theme is still parity: the same
+call means the same thing in Python, PHP, Ruby and Node. This release settles
+two subsystems that had drifted into four shapes. Pagination returns one
+envelope of seven keys with a true total. The Messenger IMAP path returns one
+message shape, addresses mail by a real IMAP UID, and hands back attachments
+you can write straight to disk. Some of these are behaviour changes, so read
+"Possible breaking" at the end before you upgrade.
+
+### Pagination
+
+- `to_paginate()` takes no arguments and reads every field from the query that ran; pass one and it raises (`790f6bc`)
+- The envelope is exactly seven snake_case keys: `records`, `total`, `page`, `per_page`, `total_pages`, `limit`, `offset` (`790f6bc`)
+- `total` is a true `COUNT(*)` for the filter, never the row count the page returned (`790f6bc`)
+- The AutoCrud REST list endpoint returns the same seven keys (`891e9a2`)
+
+```python
+# Fetch the page you want, then describe it. No arguments.
+result = db.fetch("SELECT * FROM orders", [], 20, 40)   # 20 per page, page 3
+return response(result.to_paginate())
+# {"records": [...], "total": 250, "page": 3, "per_page": 20,
+#  "total_pages": 13, "limit": 20, "offset": 40}
+```
+
+### Messenger
+
+- `send()` returns `{success, message, id}` on both the real-send and dev-capture paths. `error` became `message`, `message_id` became `id`, and the capture-only `dev` key is gone (`5e912ca`)
+- `id` carries a real `Message-ID` header the message actually sets, so it is populated instead of always empty (`5e912ca`)
+- `inbox()` and `search()` return `snippet` as decoded, tag-stripped plain text truncated to 200 characters, not raw base64 (`5e912ca`)
+- `read()` of a UID that does not exist returns `None`, not `{}` (`5e912ca`)
+- IMAP credentials are their own now: `TINA4_MAIL_IMAP_USERNAME` and `TINA4_MAIL_IMAP_PASSWORD`, falling back to the SMTP pair, plus `imap_username` / `imap_password` and an `imap_encryption` constructor argument (`5e912ca`)
+- The `uid` from an IMAP read is a real IMAP UID, so it still addresses the right message after another client expunges the mailbox (`3237383`)
+- `read()` folds each attachment's decoded bytes into `attachments[i]["content"]`, so you write an attachment straight to disk (`dabd87d`)
+
+### Api client
+
+- `Api.send()` is renamed `Api.send_request()`, the one name PHP, Ruby and Node already use (Ruby's `send` is `Object#send` and cannot be an HTTP verb). There is no alias, the primary is renamed. The verb methods `get` / `post` / `put` / `patch` / `delete`, `upload` and `download` are unchanged (`e54ae00`)
+
+### Swagger
+
+- `servers[0].url` defaults to `/`, which resolves under any port, host or proxy, instead of a hard-coded `http://localhost:7145` (`d19fcac`)
+- `info.version` defaults to `1.0.0` and `info.description` to an empty string (`d19fcac`)
+- `components.schemas` is keyed by the model class name, with a `required` array derived from column nullability (`d19fcac`)
+- `operationId` keeps a path's leading underscores, so `/__health` and `/health` stay distinct (`d19fcac`)
+- An operation documents only the response codes the framework really returns (`d19fcac`)
+
+### Migrations
+
+- `code` is the canonical kind for a code migration, the same word in all four frameworks. An unknown kind raises and names the valid ones instead of being quietly accepted (`7ce89dd`)
+
+### Server
+
+- An oversized request body answers `413`, not `500` (`d448027`)
+- `TINA4_PORT` is the port variable and wins; bare `PORT` still works but is deprecated and goes in 3.14 (`a0b0dab`)
+- A public `asgi()` bootstrap exposes the app to any ASGI server (`a653908`)
+- A synchronous route handler runs in a worker thread, so a slow handler no longer blocks the event loop (`867b8d9`)
+
+### Build and skills
+
+- The framework SCSS compilers are gone; the `tina4` Rust CLI owns SCSS now (`9773bcc`)
+- tina4-css is pinned to one artefact and one URL (`546448f`)
+- The skills point at the ADRs and make `tina4 metrics`, Carbonah and mcp.tina4.com the lean, green, grounded workflow (`5cca039`)
+
+### Proven in all four
+
+The Messenger, Swagger and pagination behaviours are locked by machine-checked
+contract suites that run against real services in every framework: a live
+GreenMail server for the mailbox, a real 250-row SQLite table for pagination.
+No mocks.
+
+### Possible breaking
+
+Read these before you upgrade. Each affects an app that relied on the old shape:
+
+- **`Api.send()` is now `Api.send_request()`** with no alias. Replace `api.send(method, ...)` with `api.send_request(method, ...)`.
+- **`to_paginate()` takes no arguments.** The old `to_paginate(page, per_page)` form raises. Fetch the page you want, then call `to_paginate()`.
+- **`total` is the true count.** It was the page's row count in some frameworks; it is now a `COUNT(*)` for the filter. Read `len(records)` for the page size.
+- **The paginate envelope is seven keys.** A reader of the dropped alias keys must move to `records`, `total`, `page`, `per_page`, `total_pages`, `limit` and `offset`.
+- **A Messenger `uid` is a real IMAP UID.** Discard any `uid` stored by an older version and re-read it; the old values were never stable across an expunge.
+- **`send()` and `read()` changed keys.** `send()` returns `{success, message, id}`; `read()` of a missing UID returns `None`; dates are ISO-8601.
+- **Swagger defaults moved.** `servers[0].url` is `/`, `info.version` is `1.0.0`, `info.description` is empty. Set `TINA4_SWAGGER_SERVERS`, `TINA4_SWAGGER_VERSION` or `TINA4_SWAGGER_DESCRIPTION` to restore the old values.
+- **An unknown migration kind raises** instead of being ignored.
+- **The framework no longer compiles SCSS.** Use the `tina4` Rust CLI.
+
 ## v3.13.95 (2026-08-06) - Preparing for the 3.14 stable release
 
 One of several releases still to come before **3.14 stable**. The theme is
@@ -22,7 +107,7 @@ old, wrong result.
 
 - Every connect that can block is bounded, so a wedged server fails instead of hanging (`7c51d3d`)
 - `count()` returns the true total, not the last page's row count (`f9b8280`)
-- `toPaginate` reports the page it is on (`6f85c3f`)
+- `to_paginate` reports the page it is on (`6f85c3f`)
 - `update()` matches the primary key in data case-insensitively (`c122e6d`)
 - Firebird: a column name is folded back only when Firebird folded it (`ef6139d`)
 - Firebird: `table_exists` matches either spelling Firebird may have stored (`1c4dc34`)

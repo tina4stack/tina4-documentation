@@ -1,5 +1,83 @@
 # Release Notes
 
+## v3.13.96 (2026-08-07) - One paginate envelope, one message shape
+
+Another step toward **3.14 stable**, and the theme is still parity: the same
+call means the same thing in Python, PHP, Ruby and Node. This release settles
+two subsystems that had drifted into four shapes. Pagination returns one
+envelope of seven keys with a true total. The Messenger IMAP path returns one
+message shape, addresses mail by a real IMAP UID, and hands back attachments
+you can write straight to disk. Some of these are behaviour changes, so read
+"Possible breaking" at the end before you upgrade.
+
+### Pagination
+
+- `to_paginate` takes no arguments and reads every field from the query that ran; pass one and it raises (`52b44a8`)
+- The envelope is exactly seven snake_case keys: `records`, `total`, `page`, `per_page`, `total_pages`, `limit`, `offset` (`52b44a8`)
+- `total` is a true `COUNT(*)` for the filter, never the last page's row count (`52b44a8`)
+- The AutoCrud REST list endpoint returns the same seven keys (`d3edeeb`)
+
+```ruby
+# Fetch the page you want, then describe it. No arguments.
+result = db.fetch("SELECT * FROM orders", [], limit: 20, offset: 40)
+response.json(result.to_paginate)
+# { records: [...], total: 250, page: 3, per_page: 20,
+#   total_pages: 13, limit: 20, offset: 40 }
+```
+
+### Messenger
+
+- `send` returns `{success, message, id}` on both paths, with `id` from a real `Message-ID` header (`f90d10a`)
+- `inbox` items are exactly `{uid, subject, from, to, date, snippet, seen}`. `from` and `to` are header strings now, not arrays of `{name, email}`; the `read` key is renamed `seen`; `date` is ISO-8601; `flags` and `size` are dropped; `snippet` is decoded plain text (`f90d10a`)
+- `read` uses `body_text` / `body_html` where it used `body` / `html`, returns `from` / `to` / `cc` as strings, and puts the Message-ID in a `headers` hash (`f90d10a`)
+- `inbox` and `read` are callable positionally, `inbox("INBOX", 10, 0)` and `read(uid, "INBOX")`, as well as by keyword (`f90d10a`)
+- IMAP credentials are separate from SMTP: `TINA4_MAIL_IMAP_USERNAME` / `TINA4_MAIL_IMAP_PASSWORD` (falling back to the SMTP pair), plus `imap_username:` / `imap_password:` constructor args (`f90d10a`)
+- `uid` is a String now, and `inbox` pages newest first. `read` / `mark_read` / `delete` still accept a String or an Integer, and the newest-first order matches the other three (`5568071`)
+- `read` folds each attachment's decoded bytes into its attachment item, so you write it straight to disk (`68ac021`)
+
+### Swagger
+
+- `info.version` defaults to `1.0.0`, where it defaulted to the framework version so an undocumented app claimed API `v3.13.x`, and `info.description` defaults to an empty string (`2114f0b`)
+- An undecorated route emits only `200`; `401` appears only on a secured route (`2114f0b`)
+- `operationId` keeps a path's underscores, so `/__health` and `/health` stay distinct (`2114f0b`)
+- AutoCrud emits `components.schemas` keyed by the model class name, with a `required` array from column nullability (`2114f0b`)
+
+### Migrations
+
+- `code` is the canonical kind for a code migration, the same word in all four frameworks. An unknown kind raises and names the valid ones (`5f27c0f`)
+
+### Server
+
+- An oversized request body answers `413`, not `500` (`022c0a7`)
+- `TINA4_PORT` is the port variable and wins; bare `PORT` still works but is deprecated and goes in 3.14 (`0601e7c`)
+
+### Build and skills
+
+- The framework SCSS compilers are gone; the `tina4` Rust CLI owns SCSS now (`5e0ca63`)
+- tina4-css is pinned to one artefact and one URL (`580c475`)
+- The skills point at the ADRs and make `tina4 metrics`, Carbonah and mcp.tina4.com the lean, green, grounded workflow (`8f13a26`)
+
+### Proven in all four
+
+The Messenger, Swagger and pagination behaviours are locked by machine-checked
+contract suites that run against real services in every framework: a live
+GreenMail server for the mailbox, a real 250-row SQLite table for pagination.
+No mocks.
+
+### Possible breaking
+
+Read these before you upgrade. Each affects an app that relied on the old shape:
+
+- **`to_paginate` takes no arguments.** The old `to_paginate(page, per_page)` form raises. Fetch the page, then call `to_paginate`.
+- **`total` is the true count.** It was the last page's row count; it is now a `COUNT(*)` for the filter. Use `records.length` for the page size.
+- **The paginate envelope is seven keys.** A reader of the dropped alias keys must move to the seven canonical keys.
+- **A Messenger `uid` is a String** now, not an Integer. Code doing `uid.is_a?(Integer)` breaks; `uid == "3"` and `uid.to_i` keep working.
+- **`inbox` pages newest first.** `inbox(limit: n).first` returned the oldest message in that page and now returns the newest, matching the other three.
+- **`inbox` and `read` changed keys.** `from` / `to` are strings, not arrays; `read` renamed `body` / `html` to `body_text` / `body_html` and moved the Message-ID into `headers`; dates are ISO-8601.
+- **Swagger defaults moved.** `info.version` is `1.0.0`, `info.description` is empty. `TINA4_SWAGGER_VERSION` / `TINA4_SWAGGER_DESCRIPTION` still override.
+- **An unknown migration kind raises** instead of being ignored.
+- **The framework no longer compiles SCSS.** Use the `tina4` Rust CLI.
+
 ## v3.13.95 (2026-08-06) - Preparing for the 3.14 stable release
 
 One of several releases still to come before **3.14 stable**. The theme is
