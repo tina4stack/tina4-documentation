@@ -1,0 +1,91 @@
+{
+  "_comment": "Feature 18 (paginated results). The audit RE-OPENED this 2026-08-05: measured one query (limit=20 offset=40, page 3 of 13) against a real 250-row table, only PHP was correct on all five values - Ruby returned ZERO records for a valid page, Ruby+Node reported total=20 (rows returned) instead of 250, Python+Node reported page=1 ignoring the offset. Three root causes, all cross-framework: (1) .count means the TRUE total (COUNT probe) in python/php but ROWS RETURNED in ruby/node, so the envelope launders a truncation into a fact; (2) page is derived from the offset only in PHP; (3) ruby+node re-slice records by the ABSOLUTE offset against an array that is already just that page. The settled pattern (ADR-0043): toPaginate()/to_paginate() takes NO arguments in all four and derives every field from the query that ran; an argument RAISES (a DatabaseResult holds no connection, so an argument can only re-slice in-memory rows and lie about total_pages); the envelope is exactly seven snake_case keys with no duplicate spellings. BREAKING: .count/.total become the true total in ruby+node; the arg form is removed; the camelCase/alias keys (data, count, totalPages, perPage, has_next, has_prev) are dropped. The five to_paginate() invariants are PROVEN 2026-08-07 (named suite in all four: test_pagination_contract.py, PaginationContractTest.php, pagination_contract_spec.rb, paginationContract.test.ts, each on a real 250-row SQLite table, red-before-green + mutation-proven). The sixth (the AutoCrud REST envelope) is owed until that fleet lands.",
+  "version": 1,
+  "decided": "2026-08-07",
+  "adr": "ADR-0043",
+  "invariants": [
+    {
+      "id": "paginate-takes-no-arguments",
+      "adr": "ADR-0043",
+      "rule": "to_paginate()/toPaginate() takes NO arguments in all four; passing one RAISES rather than being silently swallowed. To read a page, FETCH that page (limit + offset) and call the method on the result.",
+      "why": "A DatabaseResult holds no connection, so an argument can only re-slice rows already in memory and then report total_pages for pages it can never reach. PHP silently swallowed extra arguments, and that silence is why the divergence survived a release - a caller porting Python to PHP got no signal. This follows the audit's inverted-flag rule: a removed parameter is a hard error, never a silent reinterpretation.",
+      "suites": {
+        "python": "tests/test_pagination_contract.py",
+        "php": "tests/PaginationContractTest.php",
+        "ruby": "spec/pagination_contract_spec.rb",
+        "nodejs": "test/paginationContract.test.ts"
+      },
+      "cases": [
+        "paginate-takes-no-arguments"
+      ]
+    },
+    {
+      "id": "paginate-page-is-derived-from-the-offset",
+      "adr": "ADR-0043",
+      "rule": "page = floor(offset / limit) + 1, derived from the query that actually ran. A limit=20 offset=40 fetch reports page 3.",
+      "why": "MEASURED (limit=20 offset=40, page 3 of 13): Python and Node default page=1 and ignore the offset entirely, so every offset fetch is mislabelled as the first page. Only PHP derived it. The page number in a paginated API response is wrong in two of four frameworks.",
+      "suites": {
+        "python": "tests/test_pagination_contract.py",
+        "php": "tests/PaginationContractTest.php",
+        "ruby": "spec/pagination_contract_spec.rb",
+        "nodejs": "test/paginationContract.test.ts"
+      },
+      "cases": [
+        "paginate-page-is-derived-from-the-offset"
+      ]
+    },
+    {
+      "id": "paginate-total-is-the-true-total",
+      "adr": "ADR-0043",
+      "rule": "total is the true total for the filter, from a COUNT probe, NEVER the number of rows returned. total_pages = ceil(total / per_page) follows from it.",
+      "why": "MEASURED: python/php populate the count from a separate COUNT probe (250), ruby/node populate it with rows returned (20), so the envelope's total is 250 in half the family and 20 in the other half for ONE query. This is the deep half - it reaches into the adapters and is BREAKING for anyone reading .count as a row count - and it is the reason this is a real implementation pass, not a patch to the four toPaginate methods.",
+      "suites": {
+        "python": "tests/test_pagination_contract.py",
+        "php": "tests/PaginationContractTest.php",
+        "ruby": "spec/pagination_contract_spec.rb",
+        "nodejs": "test/paginationContract.test.ts"
+      },
+      "cases": [
+        "paginate-total-is-the-true-total"
+      ]
+    },
+    {
+      "id": "paginate-records-are-the-rows-the-query-returned",
+      "adr": "ADR-0043",
+      "rule": "records are the rows the query returned, VERBATIM, never re-sliced. A 20-row page carries all 20 rows.",
+      "why": "MEASURED: ruby and node re-slice records by the ABSOLUTE offset against an array that is already just that page, so ruby returns ZERO records for a valid page-3 fetch (offset 40 into a 20-element array) and node returns 10 of 20. A valid page fetch returns the wrong rows, or none.",
+      "suites": {
+        "python": "tests/test_pagination_contract.py",
+        "php": "tests/PaginationContractTest.php",
+        "ruby": "spec/pagination_contract_spec.rb",
+        "nodejs": "test/paginationContract.test.ts"
+      },
+      "cases": [
+        "paginate-records-are-the-rows-the-query-returned"
+      ]
+    },
+    {
+      "id": "paginate-key-set-is-identical-in-all-four",
+      "adr": "ADR-0043",
+      "rule": "The envelope is EXACTLY seven snake_case keys in all four, no duplicate spellings: records, total, page, per_page, total_pages, limit, offset. No data (alias of records), no count (alias of total), no camelCase totalPages/perPage, no has_next/has_prev.",
+      "why": "MEASURED, key counts diverged py 10, php 10, ruby 12, node 13 - and Python AND Node each emit the SAME integer twice under two spellings in one dict (totalPages and total_pages, count and total, data and records; node adds perPage). A duplicated key is in every API response: it inflates the payload and forces every consumer to guess which spelling is canonical. A JSON key is data and does not change spelling by host language, so the payload is snake_case everywhere; only the METHOD name follows each language's convention.",
+      "suites": {
+        "python": "tests/test_pagination_contract.py",
+        "php": "tests/PaginationContractTest.php",
+        "ruby": "spec/pagination_contract_spec.rb",
+        "nodejs": "test/paginationContract.test.ts"
+      },
+      "cases": [
+        "paginate-key-set-is-identical-in-all-four"
+      ]
+    },
+    {
+      "id": "paginate-rest-list-envelope-is-the-seven-keys",
+      "adr": "ADR-0043",
+      "rule": "The AutoCrud REST list endpoint returns the SAME seven-key envelope as to_paginate() - records, total, page, per_page, total_pages, limit, offset - with total from a true COUNT, in all four. It must not build a divergent envelope (data/count/totalPages/perPage aliases) or report rows-returned as total.",
+      "why": "MEASURED 2026-08-07: AutoCrud builds its OWN envelope, bypassing to_paginate(). PHP shipped total=count($data) (rows-returned - a page-2 request reported total=pageSize, not the real count), Node used data + camelCase totalPages, Python emitted the 10-key duplicate set, Ruby carried extra keys. The REST list endpoint is the surface most apps hit, so a divergence here is a divergence in every generated client. Gated once all four AutoCrud suites carry paginate-rest-list-envelope-is-the-seven-keys.",
+      "suites": {},
+      "cases": []
+    }
+  ]
+}
