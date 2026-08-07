@@ -3,6 +3,13 @@
 > **Last updated:** 2026-04-03
 > **Current release:** v3.10.67 | tina4-js v1.0.15
 
+> **Spec backbone:** [CONTRACT-MAP.md](CONTRACT-MAP.md) is the live map from every
+> audited feature to its machine-checked contract fixture, ADRs, and
+> proven-in-all-four status - the seed of a future formal language spec. Keep it
+> synced with the audit ([98-feature-audit.md](98-feature-audit.md)) and the
+> contract auditor. The status figures below are from 2026-04-03 and are stale;
+> CONTRACT-MAP carries the current fixture counts.
+
 ## Status
 
 | Framework | Completeness | Tests | Zero-dep core |
