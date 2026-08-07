@@ -1,5 +1,35 @@
 # Release Notes
 
+## v3.13.97 (2026-08-07) - Behaviour corrections
+
+A small bug-fix release on the road to **3.14 stable**. No new methods, no
+renames. Four behaviours come back into line with the Python reference.
+`forceDelete()` removes the row instead of throwing. A destroyed session stays
+destroyed. DocStore's `distinct()` counts two equal dates as one. And the queue
+tests that guard all of this can no longer pass while the code is broken.
+
+### ORM
+
+- `forceDelete()` removes the row. It referenced an undefined `$whereParams`, so the `:id` never bound and the call threw a `TypeError` instead of deleting anything. It binds the id and deletes now (`91c33b5a`)
+
+### Sessions
+
+- `destroy()` no longer resurrects. A `set()` then `save()` after `destroy()` re-created the session under the id you just destroyed. `destroy()` clears the session id now, so a later `save()` writes nothing (`146b5088`)
+
+### DocStore
+
+- `distinct()` dedups by value. It compared non-ObjectId values by object identity, so two equal `DateTime` values came back as separate rows. It compares by value now, and equal dates collapse to one (`198b18bb`)
+
+### Under the hood
+
+- The broker queue already refused `clear()` and `purge()` by name. A real RabbitMQ test now locks that refusal so it cannot regress (`d2e66ebd`)
+- The queue-invariant tests were hiding a ghost. A `$this->fail()` inside a `catch (\RuntimeException)` was swallowed, because PHPUnit's `AssertionFailedError` extends `\RuntimeException`, so a test stayed green even after the code stopped refusing. The asserts moved outside the catch, and a mutation run proves they fail when the guard is gone (`f1ff3331`)
+
+### Possible breaking
+
+- **`forceDelete()` now removes the row.** It threw a `TypeError` and deleted nothing before. Code that caught that error and assumed the row survived will find it gone. That was the bug.
+- **A destroyed session no longer accepts a write.** A `set()` plus `save()` after `destroy()` used to re-create the session under the old id; it writes nothing now. Save before you destroy, or destroy last.
+
 ## v3.13.96 (2026-08-07) - One paginate envelope, one message shape
 
 Another step toward **3.14 stable**, and the theme is still parity: the same

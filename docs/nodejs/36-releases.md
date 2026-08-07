@@ -1,5 +1,32 @@
 # Release Notes
 
+## v3.13.97 (2026-08-07) - Behaviour corrections
+
+A small bug-fix release on the road to **3.14 stable**. No new surface, no
+renames. Two behaviours come back into line with the Python reference, and two
+correct ones get locked so they stay that way. `flash(key, null)` reads and
+clears instead of storing a null. A RabbitMQ queue refuses an operation it
+cannot honour instead of draining itself. Read "Possible breaking" before you
+upgrade.
+
+### Sessions
+
+- `flash(key, null)` reads and clears. `null` is the get sentinel, so passing it returns the stored value and removes it, the same as the one-argument call. Node used to store `null` under the key. The other three frameworks already read and cleared; Node matches them now (`89e0a02`)
+
+### Queues
+
+- `clear()` and `purge()` on a RabbitMQ backend raise a named refusal. A broker delivers messages to consumers and cannot address them by status, so neither call can be honoured. Both drained the live queue and destroyed its messages before; they raise now, rather than throw away data you meant to keep (`586b092`)
+
+### Proven
+
+- `forceDelete()` is locked by a regression test. Node was already correct; the test keeps it that way (`6b8cc2e`)
+- `distinct()` dedups values by equality, so two equal dates collapse to one row. A parity test now locks it across all four frameworks (`93cc61d`)
+
+### Possible breaking
+
+- **`clear()` and `purge()` raise on a RabbitMQ queue.** They drained the live queue and destroyed every message before. Catch the refusal, or guard the call. A database-backed queue still clears and purges as before.
+- **`flash(key, null)` no longer stores null.** It reads and clears now, because `null` is the get sentinel. Code that passed `null` to park a null under the key finds the key cleared instead.
+
 ## v3.13.96 (2026-08-07) - One paginate envelope, one message shape
 
 Another step toward **3.14 stable**, and the theme is still parity: the same

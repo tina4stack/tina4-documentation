@@ -1,5 +1,25 @@
 # Release Notes
 
+## v3.13.97 (2026-08-07) - Behaviour corrections
+
+A small bug-fix release on the road to **3.14 stable**. No new surface, no
+renames. Two behaviours come back into line with the contract. A broker queue
+refuses an operation it cannot honour instead of losing your data, and a parity
+test locks DocStore's date handling so it stays correct. Read "Possible
+breaking" if your app calls `clear()` or `purge()` on a Kafka or RabbitMQ queue.
+
+### Queues
+
+- `clear()` and `purge()` on a broker backend raise a named refusal. A broker delivers messages to consumers and cannot address them by status, so neither call can be honoured. Kafka's `clear()` returned `0` and `purge()` did nothing; RabbitMQ drained the live queue and destroyed its messages. Both raise now, rather than return a meaningless count or throw away data you meant to keep (`2a0cb8c`)
+
+### DocStore
+
+- `distinct()` dedups values by equality, so two equal dates collapse to one row. Python was already correct; a parity test now locks it across all four frameworks (`8de6025`)
+
+### Possible breaking
+
+- **`clear()` and `purge()` raise on a broker queue (Kafka, RabbitMQ).** The result never matched the call: Kafka returned `0`, RabbitMQ destroyed the live queue. Catch the refusal, or guard the call. A database-backed queue still clears and purges as before.
+
 ## v3.13.96 (2026-08-07) - One paginate envelope, one message shape
 
 Another step toward **3.14 stable**, and the theme is still parity: the same

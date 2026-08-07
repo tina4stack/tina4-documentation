@@ -1,5 +1,31 @@
 # Release Notes
 
+## v3.13.97 (2026-08-07) - Behaviour corrections
+
+A small bug-fix release on the road to **3.14 stable**. No new surface, no
+renames. Two behaviours come back into line with the Python reference, and two
+correct ones get locked so they stay that way. A destroyed session stays
+destroyed. A RabbitMQ queue refuses an operation it cannot honour instead of
+draining itself. Read "Possible breaking" before you upgrade.
+
+### Sessions
+
+- `destroy` no longer resurrects. A `set` then `save` after `destroy` re-created the session under the id you just destroyed. `destroy` clears the session id now, so a later `save` writes nothing (`100007f`)
+
+### Queues
+
+- `clear` and `purge` on a RabbitMQ backend raise a named refusal. A broker delivers messages to consumers and cannot address them by status, so neither call can be honoured. Both drained the live queue and destroyed its messages before; they raise now, rather than throw away data you meant to keep (`2894bcd`)
+
+### Proven
+
+- `force_delete` is locked by a regression test. Ruby was already correct; the test keeps it that way (`f96ad8a`)
+- `distinct` dedups values by equality, so two equal dates collapse to one row. A parity test now locks it across all four frameworks (`9459107`)
+
+### Possible breaking
+
+- **`clear` and `purge` raise on a RabbitMQ queue.** They drained the live queue and destroyed every message before. Catch the refusal, or guard the call. A database-backed queue still clears and purges as before.
+- **A destroyed session no longer accepts a write.** A `set` plus `save` after `destroy` used to re-create the session under the old id; it writes nothing now. Save before you destroy, or destroy last.
+
 ## v3.13.96 (2026-08-07) - One paginate envelope, one message shape
 
 Another step toward **3.14 stable**, and the theme is still parity: the same

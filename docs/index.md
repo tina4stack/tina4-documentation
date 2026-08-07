@@ -104,6 +104,10 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 
 ## What's new
 
+**v3.13.97 (2026-08-07)** - [full notes](/python/36-releases.md)
+
+Behaviour corrections. Force-delete no longer throws instead of deleting the row. Queue `clear()` and `purge()` on a broker refuse by name instead of a silent no-op or draining the live queue. Session `destroy()` no longer lets a later write resurrect the session, and `flash(key, null)` reads instead of storing null. DocStore `distinct()` dedups dates by value. A small, safe bug-fix release on the road to 3.14 stable.
+
 **v3.13.96 (2026-08-07)** - [full notes](/python/36-releases.md)
 
 One paginate envelope, one message shape. Pagination returns a single seven-key envelope with a true total, and the AutoCrud REST list matches it. The Messenger IMAP path returns one message shape, addresses mail by a real IMAP UID, and hands back attachments you can write straight to disk. `Api.send()` becomes `Api.send_request()`. Swagger advertises `/` and only the response codes the framework really returns. The framework SCSS compilers are gone; the Rust CLI owns SCSS.
