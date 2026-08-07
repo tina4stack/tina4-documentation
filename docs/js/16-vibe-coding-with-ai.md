@@ -1,4 +1,4 @@
-# Chapter 16: Vibe Coding with AI
+# Vibe Coding with AI
 
 ## Let AI Write Your tina4-js
 

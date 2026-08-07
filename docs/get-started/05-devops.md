@@ -1,4 +1,4 @@
-# Chapter 5: DevOps and Deployment
+# DevOps and Deployment
 
 Someone handed you a Tina4 application and asked you to run it. You have never
 seen the framework before. This page tells you what you need and nothing else.

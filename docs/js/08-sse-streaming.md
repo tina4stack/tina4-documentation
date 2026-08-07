@@ -1,4 +1,4 @@
-# Chapter 8: SSE / NDJSON Streaming
+# SSE / NDJSON Streaming
 
 ## Streaming Without WebSocket
 

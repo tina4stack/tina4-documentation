@@ -1,4 +1,4 @@
-# Chapter 12: tina4-css
+# tina4-css
 
 ## Optional Styling
 

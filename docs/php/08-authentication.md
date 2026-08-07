@@ -1,4 +1,4 @@
-# Chapter 8: Authentication
+# Authentication
 
 ## 1. Locking the Door
 

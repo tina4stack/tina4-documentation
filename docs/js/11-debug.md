@@ -1,4 +1,4 @@
-# Chapter 11: Debug Overlay
+# Debug Overlay
 
 ## See Everything
 

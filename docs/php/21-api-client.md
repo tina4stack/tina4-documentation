@@ -1,4 +1,4 @@
-# Chapter 21: API Client
+# API Client
 
 ## 1. Calling External APIs Without Dependencies
 

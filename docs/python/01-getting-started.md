@@ -1,4 +1,4 @@
-# Chapter 1: Getting Started with Tina4 Python
+# Getting Started with Tina4 Python
 
 ## 1. What Is Tina4 Python
 

@@ -1,4 +1,4 @@
-# Chapter 30: Dev Tools
+# Dev Tools
 
 ## 1. Debugging at 2am
 

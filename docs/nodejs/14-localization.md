@@ -1,4 +1,4 @@
-# Chapter 14: Localization
+# Localization
 
 ## 1. Your App Speaks One Language. Your Users Speak Many.
 

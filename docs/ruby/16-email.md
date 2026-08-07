@@ -1,4 +1,4 @@
-# Chapter 16: Email with Messenger
+# Email with Messenger
 
 ## 1. Every App Sends Email
 

@@ -1,4 +1,4 @@
-# Chapter 2: Architecture
+# Architecture
 
 ## The Request Lifecycle
 

@@ -1,4 +1,4 @@
-# Chapter 14: Localization
+# Localization
 
 ## 1. One App, Many Languages
 

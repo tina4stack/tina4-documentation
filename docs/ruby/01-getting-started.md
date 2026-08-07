@@ -4,7 +4,7 @@ outline: deep
 
 <div v-pre>
 
-# Chapter 1: Getting Started with Tina4 Ruby
+# Getting Started with Tina4 Ruby
 
 ## 1. What Is Tina4 Ruby
 

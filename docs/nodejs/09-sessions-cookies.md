@@ -1,4 +1,4 @@
-# Chapter 9: Sessions & Cookies
+# Sessions & Cookies
 
 ## 1. State in a Stateless World
 

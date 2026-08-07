@@ -1,4 +1,4 @@
-# Chapter 26: Dependency Injection Container
+# Dependency Injection Container
 
 ## 1. The Problem With Hard Dependencies
 

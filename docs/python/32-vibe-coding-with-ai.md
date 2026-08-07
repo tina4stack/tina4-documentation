@@ -1,4 +1,4 @@
-# Chapter 32: Vibe Coding with AI
+# Vibe Coding with AI
 
 ## Why Tina4 is Built for AI-Assisted Development
 

@@ -1,4 +1,4 @@
-# Chapter 5: Page Navigation
+# Page Navigation
 
 ## A Single-Page App Inside Your Desktop App
 

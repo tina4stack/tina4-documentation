@@ -1,4 +1,4 @@
-# Chapter 3: Request and Response
+# Request and Response
 
 ## 1. The Two Objects You Use Everywhere
 

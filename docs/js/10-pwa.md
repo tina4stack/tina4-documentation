@@ -1,4 +1,4 @@
-# Chapter 10: PWA
+# PWA
 
 ## Make It Installable
 

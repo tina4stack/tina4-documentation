@@ -1,4 +1,4 @@
-# Chapter 3: Choosing Your Language
+# Choosing Your Language
 
 Tina4 runs on four languages. Same API. Same project structure. Same template syntax. Same CLI commands. The framework disappears -- what remains is your team, your hosting, and your problem.
 

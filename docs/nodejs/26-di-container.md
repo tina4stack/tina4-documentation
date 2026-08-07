@@ -1,4 +1,4 @@
-# Chapter 26: DI Container
+# DI Container
 
 ## 1. Stop Passing Dependencies Through Every Function Call
 

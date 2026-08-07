@@ -27,7 +27,7 @@ Install the project dependencies (Hint: you can install and use pnpm for all the
 npm install
 ```
 
-Run Vitepress to spin up a local server
+Run tina4press to spin up a local server
 
 ```bash
 

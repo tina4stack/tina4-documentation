@@ -1,4 +1,4 @@
-# Chapter 26: DI Container
+# DI Container
 
 ## 1. The Problem with Global State
 

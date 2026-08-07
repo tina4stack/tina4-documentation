@@ -1,4 +1,4 @@
-# Chapter 17: Frontend with tina4css
+# Frontend with tina4css
 
 ## 1. The Problem with Frontend Toolchains
 

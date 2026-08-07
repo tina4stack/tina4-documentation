@@ -4,7 +4,7 @@ outline: deep
 
 <div v-pre>
 
-# Chapter 1: Getting Started with Tina4 PHP
+# Getting Started with Tina4 PHP
 
 ## 1. What Is Tina4 PHP
 

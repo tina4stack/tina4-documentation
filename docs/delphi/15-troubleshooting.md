@@ -1,4 +1,4 @@
-# Chapter 15: Troubleshooting
+# Troubleshooting
 
 ## When Things Go Wrong
 

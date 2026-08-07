@@ -1,5 +1,5 @@
 ---
-# https://vitepress.dev/reference/default-theme-home-page
+# tina4press home layout (config: tina4press.config.mjs)
 layout: home
 
 hero:

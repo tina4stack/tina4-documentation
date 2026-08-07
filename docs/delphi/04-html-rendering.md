@@ -1,4 +1,4 @@
-# Chapter 4: HTML Rendering
+# HTML Rendering
 
 ## A Web Browser Inside Your Desktop App
 

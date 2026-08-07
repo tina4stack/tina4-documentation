@@ -1,4 +1,4 @@
-# Chapter 19: Scaffolding
+# Scaffolding
 
 One command. Six files. A working CRUD feature with routes, templates, tests, and Swagger docs -- ready to run.
 

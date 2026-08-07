@@ -1,4 +1,4 @@
-# Chapter 1: What Is Tina4?
+# What Is Tina4?
 
 ## The AI Framework Philosophy
 

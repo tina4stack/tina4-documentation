@@ -1,4 +1,4 @@
-# Chapter 4: Components
+# Components
 
 ## Web Components That Don't Suck
 

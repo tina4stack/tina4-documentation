@@ -1,4 +1,4 @@
-# Chapter 18: Testing
+# Testing
 
 ## 1. Why Tests Matter More Than You Think
 

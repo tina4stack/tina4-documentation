@@ -1,4 +1,4 @@
-# Chapter 13: Events System
+# Events System
 
 ## 1. Decouple Without Wiring Everything Together
 

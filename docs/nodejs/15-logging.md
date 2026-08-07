@@ -1,4 +1,4 @@
-# Chapter 15: Structured Logging
+# Structured Logging
 
 ## 1. console.log Is Not a Logging Strategy
 

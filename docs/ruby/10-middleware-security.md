@@ -1,4 +1,4 @@
-# Chapter 10: Middleware & Security
+# Middleware & Security
 
 ## 1. The Gatekeepers
 

@@ -1,4 +1,4 @@
-# Chapter 11: Real-World Integration
+# Real-World Integration
 
 ## Making the Components Talk
 

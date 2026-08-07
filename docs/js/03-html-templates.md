@@ -1,4 +1,4 @@
-# Chapter 3: HTML Templates
+# HTML Templates
 
 ## DOM Without the Framework Tax
 

@@ -1,4 +1,4 @@
-# Chapter 13: Events
+# Events
 
 ## 1. Decouple Everything with Events
 

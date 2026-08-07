@@ -4,7 +4,7 @@ Documentation site for the Tina4 framework. See https://tina4.com for the live s
 
 ## Build
 
-- Framework: VitePress
+- Framework: tina4press (the tina4-js static site generator; config in `tina4press.config.mjs`). NOT VitePress - `docs:build` runs `tina4press build`.
 - Branch: `main` (active development + deploy branch)
 - Package manager: `pnpm` (v10.24.0)
 - Install: `pnpm install`

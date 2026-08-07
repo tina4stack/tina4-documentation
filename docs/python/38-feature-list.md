@@ -1,4 +1,4 @@
-# Chapter 38: Complete Feature List
+# Complete Feature List
 
 Tina4 Python ships **97 built-in features** with zero third-party runtime dependencies. This page is the "is it already in the box?" reference. Before you reach for a library, check here first: if Tina4 ships it, use the built-in.
 

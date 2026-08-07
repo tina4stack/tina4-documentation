@@ -1,4 +1,4 @@
-# Chapter 17: Frontend Integration
+# Frontend Integration
 
 ## 1. Beyond JSON APIs
 

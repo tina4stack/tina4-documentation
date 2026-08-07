@@ -1,4 +1,4 @@
-# Chapter 5: Routing
+# Routing
 
 ## Navigation Without the Router Library
 

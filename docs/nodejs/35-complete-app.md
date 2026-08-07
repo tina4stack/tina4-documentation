@@ -1,4 +1,4 @@
-# Chapter 35: Building a Complete App
+# Building a Complete App
 
 ## 1. Putting It All Together
 

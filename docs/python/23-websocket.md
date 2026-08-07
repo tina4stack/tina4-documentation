@@ -1,4 +1,4 @@
-# Chapter 23: Real-time with WebSocket
+# Real-time with WebSocket
 
 ## 1. The Refresh Button Problem
 

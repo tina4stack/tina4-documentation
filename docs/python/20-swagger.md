@@ -1,4 +1,4 @@
-# Chapter 20: Swagger / OpenAPI
+# Swagger / OpenAPI
 
 ## 1. The 47-Endpoint Problem
 

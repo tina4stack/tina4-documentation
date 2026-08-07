@@ -1,4 +1,4 @@
-# Chapter 2: Routing
+# Routing
 
 ## 1. How Routing Works in Tina4
 

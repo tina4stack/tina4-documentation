@@ -1,4 +1,4 @@
-# Chapter 9: Sessions and Cookies
+# Sessions and Cookies
 
 ## 1. Remembering Your Users
 

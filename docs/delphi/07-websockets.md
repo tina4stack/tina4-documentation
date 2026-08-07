@@ -1,4 +1,4 @@
-# Chapter 7: WebSockets
+# WebSockets
 
 ## Real-Time Without Polling
 

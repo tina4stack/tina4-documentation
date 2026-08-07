@@ -1,4 +1,4 @@
-# Chapter 25: WSDL / SOAP
+# WSDL / SOAP
 
 ## 1. SOAP Is Not Dead
 

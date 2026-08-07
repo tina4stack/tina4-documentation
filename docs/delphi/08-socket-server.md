@@ -1,4 +1,4 @@
-# Chapter 8: Socket Server
+# Socket Server
 
 ## Raw TCP Without the Ceremony
 

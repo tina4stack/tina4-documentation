@@ -1,4 +1,4 @@
-# Chapter 4: Environment Variables
+# Environment Variables
 
 Every piece of Tina4 configuration lives in one file. A `.env` at the root of your project. All optional. All with sensible defaults. Identical across Python, PHP, Ruby, and Node.js. This chapter is the complete reference.
 

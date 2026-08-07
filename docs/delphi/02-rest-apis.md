@@ -1,4 +1,4 @@
-# Chapter 2: REST APIs
+# REST APIs
 
 ## Two Ways to Talk to the Outside World
 

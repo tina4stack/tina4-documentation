@@ -1,4 +1,4 @@
-# Chapter 33: Environment Variables
+# Environment Variables
 
 > **⚠️ BREAKING CHANGE: Tina4 v3.12.0**
 >

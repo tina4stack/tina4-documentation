@@ -1,4 +1,4 @@
-# Chapter 3: JSON & Data Binding
+# JSON & Data Binding
 
 ## The Bridge Between APIs and Grids
 

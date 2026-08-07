@@ -1,4 +1,4 @@
-# Chapter 34: Deployment
+# Deployment
 
 ## 1. From Development to Production
 

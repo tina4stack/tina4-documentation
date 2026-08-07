@@ -1,4 +1,4 @@
-# Chapter 6: ORM
+# ORM
 
 ## 1. From SQL to Objects
 

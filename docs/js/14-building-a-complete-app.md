@@ -1,4 +1,4 @@
-# Chapter 14: Building a Complete App
+# Building a Complete App
 
 ## The Admin Dashboard
 

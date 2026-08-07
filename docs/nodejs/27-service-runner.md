@@ -1,4 +1,4 @@
-# Chapter 27: Service Runner
+# Service Runner
 
 ## 1. Work That Never Stops
 

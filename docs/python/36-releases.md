@@ -1,4 +1,4 @@
-# Chapter 36: Release Notes
+# Release Notes
 
 ## v3.13.95 (2026-08-06) - Preparing for the 3.14 stable release
 

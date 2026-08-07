@@ -1,4 +1,4 @@
-# Chapter 5: Database
+# Database
 
 ## 1. From Lists to Real Data
 

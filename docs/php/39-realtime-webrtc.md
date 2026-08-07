@@ -1,4 +1,4 @@
-# Chapter 39: Real-time Collaboration (WebRTC)
+# Real-time Collaboration (WebRTC)
 
 ## 1. The Media Server You Do Not Have to Run
 

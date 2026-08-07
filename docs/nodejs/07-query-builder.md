@@ -1,4 +1,4 @@
-# Chapter 7: QueryBuilder
+# QueryBuilder
 
 ## 1. Why a Query Builder?
 

@@ -1,4 +1,4 @@
-# Chapter 4: Templates
+# Templates
 
 ## 1. Beyond JSON -- Rendering HTML
 

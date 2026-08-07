@@ -1,4 +1,4 @@
-# Chapter 15: Patterns and Pitfalls
+# Patterns and Pitfalls
 
 ## What We Learned the Hard Way
 

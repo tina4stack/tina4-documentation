@@ -1,4 +1,4 @@
-# Chapter 15: Structured Logging
+# Structured Logging
 
 ## 1. Stop Using error_log
 

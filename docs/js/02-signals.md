@@ -1,4 +1,4 @@
-# Chapter 2: Signals
+# Signals
 
 ## Reactive State Without the Drama
 
