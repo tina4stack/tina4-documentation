@@ -61,12 +61,17 @@ Re-run it and re-sync this table whenever a fixture changes.
 | Swagger / OpenAPI | 47 | `swagger_contract.json` | 10 | 10 | 0 | 0004, 0041 | yes (added 2026-08-07) |
 | DocStore | - | `docstore_contract.json` | 9 | 9 | 0 | 0024, 0025, 0035, 0036 | yes |
 | tina4-css | - | `tina4css_contract.json` | 1 | 1 | 0 | 0004 | yes |
-| Messenger | 0 (pilot) | `messenger_contract.json` | 14 | 0 | 14 | 0004, 0041, 0042 | **in progress (3.13.96)** |
+| Messenger | 0 (pilot) | `messenger_contract.json` | 14 | 14 | 0 | 0004, 0041, 0042 | yes (real GreenMail) |
 
-**Totals: 68 invariants, 54 proven, 14 owed.** The 14 owed are the whole
-Messenger read/send path; the 3.13.96 round is completing that suite in all four
-(ADR-0042 records the uid-is-the-IMAP-UID rule). When it lands, this table reads
-68 / 68.
+**Totals: 68 invariants, 68 proven, 0 owed** (2026-08-07). Every pluggable
+subsystem with a fixture is now held to its contract four-way. Messenger closed
+last: the read/send shapes were already unified by the 3.13.96 parity commits
+(decisions G4-G7), so the suites prove shipped behaviour; ADR-0042 records the
+uid-is-the-IMAP-UID rule. TWO follow-ups fell out of the messenger round, filed
+not gated: read() attachment BYTES are retrievable only in Python
+(`attachments_data`) while the other three return metadata-only attachments; and
+PHP's read() carries `msgno` (a sequence number ADR-0042 says is not a public id)
+plus a `message_id` that duplicates `headers`.
 
 ## Layer 1 only: audited and decided, no machine-checked fixture yet
 
@@ -136,8 +141,8 @@ proven/owed. A row here that disagrees with the auditor is a bug in this file.
 ## Snapshot (2026-08-07)
 
 - 98 features: ~30 audited (Layer 1 or 2), 66 not started (Layer 0).
-- 9 contract fixtures, 68 invariants, **54 proven / 14 owed** (messenger round in
-  flight).
+- 9 contract fixtures, 68 invariants, **68 proven / 0 owed** (messenger closed
+  2026-08-07).
 - 41 ADRs allocated (`decisions/`), highest ADR-0041; ADR-0042 authored this
   release for the messenger uid rule.
 - The path to a formal language spec: every Layer-0 feature reaches Layer 2, the

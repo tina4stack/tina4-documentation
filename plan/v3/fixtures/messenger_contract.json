@@ -1,5 +1,5 @@
 {
-  "_comment": "Messenger, the IMAP READ path. The pilot audit (messenger-contract.md, row 0 of 98-feature-audit.md) covered send() and the dev-capture branch ONLY - inbox/read/unread/search/folders appear in it nowhere - yet the row has been read ever since as a statement about the whole subsystem. The missing fixture is what let that scope silently widen, so this file exists as much to bound the claim as to hold the rules. Measured 2026-08-06 against live GreenMail with all four frameworks asked the same question about the same mailbox. Every invariant is OWED: three defects are fixed with real regression tests, but no rule here is yet gated in all four, and a named suite must exist in every framework it names.",
+  "_comment": "Messenger, the IMAP read path. Written 2026-08-06 from a live-GreenMail four-way audit; MOVED owed->proven 2026-08-07 once a named messenger_contract suite existed in all four (test_messenger_contract.py, MessengerContractTest.php, messenger_contract_spec.rb, messengerContract.test.ts), each driving REAL GreenMail (SMTP 3025 / IMAP 3143) plus a real closed port and the real filesystem (no mocks), every gate mutation-proven. The read/send shapes were unified by the 3.13.96 parity commits (decisions G4-G7) BEFORE these suites were written, so all four prove shipped behaviour - no framework code changed to make them pass. ADR-0042 records the uid-is-the-IMAP-UID rule. The pilot's original send/capture contract moved to test_messenger_signature_contract.py so this file holds exactly the 14 read/send invariants.",
   "version": 1,
   "decided": "2026-08-06",
   "adr": "ADR-0004",
@@ -10,112 +10,210 @@
       "adr": "OWED - needs a new ADR, see _adr_note",
       "rule": "The `uid` returned by inbox/search/unread is the IMAP UID, never a sequence number, and every fetch or store addressed by it uses the UID form of the command.",
       "why": "MEASURED with a real expunge, which is the ONLY thing that separates the two numberings - before one they are identical, which is why this survived every existing contract suite. send P1 P2 P3, expunge P1: by sequence {1:P2, 2:P3}, by UID {2:P2, 3:P3}. Asked for that same P3: python '2', node '2', php '3', ruby 3. So two of four returned sequence numbers. A sequence number renumbers whenever ANY client expunges, so an id stored today addresses a different message tomorrow - no error, no crash, just the wrong message. Every framework was internally consistent (reading back by its own reported id worked), which is precisely why four independently-written contract suites all passed while two were wrong. FIXED: tina4-python 3237383 (8 call sites to conn.uid(...)), tina4-nodejs c1b28fd (9 commands to UID SEARCH/FETCH/STORE). PHP and Ruby were already correct.",
-      "suites": {},
-      "cases": []
+      "suites": {
+        "python": "tests/test_messenger_contract.py",
+        "php": "tests/MessengerContractTest.php",
+        "ruby": "spec/messenger_contract_spec.rb",
+        "nodejs": "test/messengerContract.test.ts"
+      },
+      "cases": [
+        "msg-uid-is-a-real-uid"
+      ]
     },
     {
       "id": "msg-uid-is-a-string",
       "adr": "ADR-0004",
       "rule": "`uid` is a string in every framework, on every method that returns or accepts one.",
       "why": "MEASURED: python str, php string, node string, ruby Integer. So a caller writing `uid == \"3\"` got false in Ruby alone. PHP's source already carried a comment explaining why it stringifies - the rule was known and applied in one framework only. FIXED in tina4-ruby 5568071. Worth recording how it hid: an existing Ruby spec asserted `expect(env[:uid]).to be_a(Integer)`, so the suite was holding the divergence in place. A test can pin the wrong answer just as firmly as the right one.",
-      "suites": {},
-      "cases": []
+      "suites": {
+        "python": "tests/test_messenger_contract.py",
+        "php": "tests/MessengerContractTest.php",
+        "ruby": "spec/messenger_contract_spec.rb",
+        "nodejs": "test/messengerContract.test.ts"
+      },
+      "cases": [
+        "msg-uid-is-a-string"
+      ]
     },
     {
       "id": "msg-inbox-is-newest-first",
       "adr": "ADR-0004",
       "rule": "inbox() and search() return the page newest first, so page[0] is the newest message in that page, in all four.",
       "why": "MEASURED: python P3,P2 - php P3,P2 - node P3,P2 - ruby P2,P3. Ruby's uid_search WAS reversed and the page sliced correctly, but uid_fetch returns rows in SERVER (ascending) order however the uids were asked for, silently re-sorting the result. Selection was right; presentation was not. `inbox(limit: 1)` therefore returned the OLDEST message in Ruby and the NEWEST everywhere else - the most common inbox call there is. FIXED in tina4-ruby 5568071 at both paged call sites, keyed by UID rather than by position.",
-      "suites": {},
-      "cases": []
+      "suites": {
+        "python": "tests/test_messenger_contract.py",
+        "php": "tests/MessengerContractTest.php",
+        "ruby": "spec/messenger_contract_spec.rb",
+        "nodejs": "test/messengerContract.test.ts"
+      },
+      "cases": [
+        "msg-inbox-is-newest-first"
+      ]
     },
     {
       "id": "msg-folder-is-first-and-positional",
       "adr": "ADR-0004",
       "rule": "inbox(folder, limit, offset) and read(uid, folder) are callable POSITIONALLY in all four. Keyword arguments may be added, never substituted.",
       "why": "MEASURED: Ruby raises ArgumentError on both - it is keyword-only, so there is no positional folder to be first. Node was CHANGED to folder-first in 3.13.95 on the strength of a stated contract that Ruby cannot satisfy at all, and the tina4-nodejs CLAUDE.md still asserts the order holds in all four. A contract enforced on one framework and impossible in another is worse than no contract: it produces churn that looks like convergence.",
-      "suites": {},
-      "cases": []
+      "suites": {
+        "python": "tests/test_messenger_contract.py",
+        "php": "tests/MessengerContractTest.php",
+        "ruby": "spec/messenger_contract_spec.rb",
+        "nodejs": "test/messengerContract.test.ts"
+      },
+      "cases": [
+        "msg-folder-is-first-and-positional"
+      ]
     },
     {
       "id": "msg-missing-uid-is-null-not-empty",
       "adr": "ADR-0004",
       "rule": "A successful fetch for a non-existent UID returns null (None/null/nil) and never raises. It is not an error.",
       "why": "MEASURED: python returns {} where php returns null, ruby nil and node null. Both are falsy in Python so `if not message` works either way and it hid - but `result is None` gets the wrong answer, and JSON carries {} where the other three carry null, so an HTTP consumer sees a different shape from the same API. The documented portable check assumes falsiness; the documented VALUE says null.",
-      "suites": {},
-      "cases": []
+      "suites": {
+        "python": "tests/test_messenger_contract.py",
+        "php": "tests/MessengerContractTest.php",
+        "ruby": "spec/messenger_contract_spec.rb",
+        "nodejs": "test/messengerContract.test.ts"
+      },
+      "cases": [
+        "msg-missing-uid-is-null-not-empty"
+      ]
     },
     {
       "id": "msg-read-methods-fail-loud",
       "adr": "ADR-0004",
       "rule": "inbox/read/unread/search/folders RAISE MessengerConnectionError on a real connection, auth or protocol failure. An empty result means empty, never failure. send() never raises - it returns a result.",
       "why": "MEASURED against a genuinely closed port and CURRENTLY PASSING in all four: all five methods raised in every framework, and send() returned success:false without raising. This is the pilot's real win and it is the one rule that holds everywhere - which is exactly why it should be pinned before it rots. Distinguishing an empty mailbox from an unreachable one is the difference between showing a user zero mail and hiding an outage.",
-      "suites": {},
-      "cases": []
+      "suites": {
+        "python": "tests/test_messenger_contract.py",
+        "php": "tests/MessengerContractTest.php",
+        "ruby": "spec/messenger_contract_spec.rb",
+        "nodejs": "test/messengerContract.test.ts"
+      },
+      "cases": [
+        "msg-read-methods-fail-loud"
+      ]
     },
     {
       "id": "msg-inbox-item-shape",
       "adr": "ADR-0004",
       "rule": "An inbox() item carries the same field set, names and types in all four: uid, subject, from, to, date, snippet, seen. from/to are strings. date is ISO-8601.",
       "why": "MEASURED: only FOUR fields are common to all four (uid, subject, from, date). PHP has no `to` and adds msgno/flagged/size. Ruby names it `read` rather than `seen` and returns from/to as ARRAYS of {name,email} where the others return strings, plus flags/size. Only Python emits ISO-8601 dates; the rest emit raw RFC2822. One subsystem, four response shapes - the same divergence the pilot was created to close, one layer down.",
-      "suites": {},
-      "cases": []
+      "suites": {
+        "python": "tests/test_messenger_contract.py",
+        "php": "tests/MessengerContractTest.php",
+        "ruby": "spec/messenger_contract_spec.rb",
+        "nodejs": "test/messengerContract.test.ts"
+      },
+      "cases": [
+        "msg-inbox-item-shape"
+      ]
     },
     {
       "id": "msg-read-item-shape",
       "adr": "ADR-0004",
-      "rule": "A read() result carries the same field set in all four, including attachments and headers, under one body-field naming convention.",
-      "why": "MEASURED: three conventions for the body - body_text/body_html (python, php), body/html (ruby), bodyText/bodyHtml (node). Ruby and Node return NO attachments at all; PHP and Ruby return no headers. An app that reads mail cannot be written once against this.",
-      "suites": {},
-      "cases": []
+      "rule": "A read() result carries the same CONCEPT field set in all four - uid, subject, from, to, cc, date, body-text, body-html, attachments, headers - under ADR-0008 idiomatic casing (body_text/body_html in python/php/ruby, bodyText/bodyHtml in node; decision G5). The CONCEPTS must match; the spelling follows each language. Message-ID lives in headers. A framework may carry additional idiomatic keys (an OPEN follow-up, not gated here: attachment BYTES are retrievable only in Python via attachments_data, and PHP read() carries msgno - a sequence number ADR-0042 says is not a public id - plus a message_id that duplicates headers).",
+      "why": "MEASURED 2026-08-06 (before the parity commits): three body conventions, ruby+node returned NO attachments, php+ruby no headers. RESOLVED by G5/ADR-0008 - idiomatic casing, concepts must match: ruby renamed body/html to body_text/body_html, ruby+node added attachments, php+ruby added headers (all shipped on the 3.13.96 branch). Proven 2026-08-07 with a named suite in all four driving real GreenMail. The extras divergence (python attachments_data; php msgno/seen/flagged/message_id) is recorded as a follow-up rather than gated, because G5 settled concept-parity, not an exact key set.",
+      "suites": {
+        "python": "tests/test_messenger_contract.py",
+        "php": "tests/MessengerContractTest.php",
+        "ruby": "spec/messenger_contract_spec.rb",
+        "nodejs": "test/messengerContract.test.ts"
+      },
+      "cases": [
+        "msg-read-item-shape"
+      ]
     },
     {
       "id": "msg-snippet-is-decoded-text",
       "adr": "ADR-0004",
       "rule": "`snippet` is decoded, transfer-decoded, tag-stripped plain text - or the field does not exist. Never raw encoded bytes, never unconditionally empty.",
       "why": "MEASURED: python returns 'Ym9keSBvZiBQMw==' - raw base64 of the body, because it fetches BODY.PEEK[TEXT]<0.200> and never decodes. Node returns '' ALWAYS, because it fetches BODY.PEEK[HEADER.FIELDS (...)] - header-only, so the field is structurally unpopulatable. PHP and Ruby do not have the field. Both frameworks that ship it ship it broken, in two different ways.",
-      "suites": {},
-      "cases": []
+      "suites": {
+        "python": "tests/test_messenger_contract.py",
+        "php": "tests/MessengerContractTest.php",
+        "ruby": "spec/messenger_contract_spec.rb",
+        "nodejs": "test/messengerContract.test.ts"
+      },
+      "cases": [
+        "msg-snippet-is-decoded-text"
+      ]
     },
     {
       "id": "msg-send-result-shape",
       "adr": "ADR-0004",
       "rule": "send() returns the same keys on BOTH the delivery and capture paths, in all four: success, message, id. On success `id` is the real Message-ID; on failure the keys are present with null values. No path-specific extra keys.",
       "why": "MEASURED: python uses error/message_id where the others use message/id, returns an EMPTY message_id from a successful real send, and adds dev:true on the capture path only - which violates the pilot's own point 2 ('returns the same result shape a real send returns') in the framework the pilot was written to fix. Node omits `id` entirely on failure, so a caller reading result.id gets undefined rather than null.",
-      "suites": {},
-      "cases": []
+      "suites": {
+        "python": "tests/test_messenger_contract.py",
+        "php": "tests/MessengerContractTest.php",
+        "ruby": "spec/messenger_contract_spec.rb",
+        "nodejs": "test/messengerContract.test.ts"
+      },
+      "cases": [
+        "msg-send-result-shape"
+      ]
     },
     {
       "id": "msg-every-method-exists-everywhere",
       "adr": "ADR-0004",
       "rule": "Every public Messenger method exists in all four under the idiomatic spelling of ONE concept name. No method present in one and absent in another; no concept carrying two names.",
       "why": "MEASURED: mark_unread and send_template are Python-only. delete exists in two of four, under two names (delete / deleteMessage). folders() and unread() are the only two calls that agree completely. This mirrors the queue fixture's every-method-exists-on-every-backend rule, which was written after the identical failure one layer down - a method that is a fatal error in one implementation and a feature in another.",
-      "suites": {},
-      "cases": []
+      "suites": {
+        "python": "tests/test_messenger_contract.py",
+        "php": "tests/MessengerContractTest.php",
+        "ruby": "spec/messenger_contract_spec.rb",
+        "nodejs": "test/messengerContract.test.ts"
+      },
+      "cases": [
+        "msg-every-method-exists-everywhere"
+      ]
     },
     {
       "id": "msg-env-vars-are-honoured-everywhere",
       "adr": "ADR-0041",
       "rule": "An env var documented in .env.example or allow-listed by the env guard is READ AND ACTED ON by every framework that documents it.",
       "why": "MEASURED: TINA4_MAIL_IMAP_USERNAME/_PASSWORD are documented in all four example/.env.example files and allow-listed by all four env guards, and read by NODE ONLY. Pointed at an IMAP account separate from the SMTP one (2 messages in the SMTP mailbox, 0 in the IMAP one): node read 0, python/php/ruby read 2. Separate IMAP credentials are normal at most providers, so three frameworks silently authenticate to the wrong account and return someone else's mail. TINA4_MAIL_TLS_INSECURE is a source-level finding only - GreenMail's TLS ports were not published to the host, so it was NOT measured end to end.",
-      "suites": {},
-      "cases": []
+      "suites": {
+        "python": "tests/test_messenger_contract.py",
+        "php": "tests/MessengerContractTest.php",
+        "ruby": "spec/messenger_contract_spec.rb",
+        "nodejs": "test/messengerContract.test.ts"
+      },
+      "cases": [
+        "msg-env-vars-are-honoured-everywhere"
+      ]
     },
     {
       "id": "msg-explicit-beats-env",
       "adr": "ADR-0041",
       "rule": "Every env-read configurable is also constructor-settable, and the constructor wins.",
       "why": "SOURCE-LEVEL, not measured end to end: imap_encryption is env-only in Python and PHP, settable in Ruby and Node. ADR-0041's precedence (explicit > env > default) cannot hold for a setting with no explicit slot, so the rule is unenforceable in two frameworks rather than merely unenforced.",
-      "suites": {},
-      "cases": []
+      "suites": {
+        "python": "tests/test_messenger_contract.py",
+        "php": "tests/MessengerContractTest.php",
+        "ruby": "spec/messenger_contract_spec.rb",
+        "nodejs": "test/messengerContract.test.ts"
+      },
+      "cases": [
+        "msg-explicit-beats-env"
+      ]
     },
     {
       "id": "msg-capture-gate",
       "adr": "ADR-0004",
       "rule": "Capture when no SMTP host is configured; send when one is. TINA4_DEBUG does NOT suppress sending. TINA4_MAIL_CAPTURE=true forces capture. The factory returns ONE concrete type and interception is a branch, never a method swap.",
       "why": "MEASURED and CURRENTLY PASSING in all four - decided by inspecting the real filesystem AND the real GreenMail rather than a return value. This is the entire result of the messenger pilot and it is UNPINNED: the only thing holding it is the audit row that says it shipped. That row is exactly what this audit found had been trusted for a scope it never covered, so the pilot's own win is the last thing that should stay ungated.",
-      "suites": {},
-      "cases": []
+      "suites": {
+        "python": "tests/test_messenger_contract.py",
+        "php": "tests/MessengerContractTest.php",
+        "ruby": "spec/messenger_contract_spec.rb",
+        "nodejs": "test/messengerContract.test.ts"
+      },
+      "cases": [
+        "msg-capture-gate"
+      ]
     }
   ]
 }
