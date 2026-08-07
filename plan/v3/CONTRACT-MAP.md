@@ -62,8 +62,9 @@ Re-run it and re-sync this table whenever a fixture changes.
 | DocStore | - | `docstore_contract.json` | 9 | 9 | 0 | 0024, 0025, 0035, 0036 | yes |
 | tina4-css | - | `tina4css_contract.json` | 1 | 1 | 0 | 0004 | yes |
 | Messenger | 0 (pilot) | `messenger_contract.json` | 14 | 14 | 0 | 0004, 0041, 0042 | yes (real GreenMail) |
+| Paginated results | 18 | `pagination_contract.json` | 6 | 6 | 0 | 0043 | yes (real 250-row SQLite; incl. the AutoCrud REST endpoint) |
 
-**Totals: 68 invariants, 68 proven, 0 owed** (2026-08-07). Every pluggable
+**Totals: 74 invariants, 74 proven, 0 owed** (2026-08-07), 10 fixtures. Every pluggable
 subsystem with a fixture is now held to its contract four-way. Messenger closed
 last: the read/send shapes were already unified by the 3.13.96 parity commits
 (decisions G4-G7), so the suites prove shipped behaviour; ADR-0042 records the
@@ -142,8 +143,8 @@ proven/owed. A row here that disagrees with the auditor is a bug in this file.
 ## Snapshot (2026-08-07)
 
 - 98 features: ~30 audited (Layer 1 or 2), 66 not started (Layer 0).
-- 9 contract fixtures, 68 invariants, **68 proven / 0 owed** (messenger closed
-  2026-08-07).
+- 10 contract fixtures, 74 invariants, **74 proven / 0 owed** (messenger, then
+  pagination + the AutoCrud REST envelope, closed 2026-08-07).
 - 41 ADRs allocated (`decisions/`), highest ADR-0041; ADR-0042 authored this
   release for the messenger uid rule.
 - The path to a formal language spec: every Layer-0 feature reaches Layer 2, the

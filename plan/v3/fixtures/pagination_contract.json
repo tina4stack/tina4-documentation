@@ -83,9 +83,16 @@
       "id": "paginate-rest-list-envelope-is-the-seven-keys",
       "adr": "ADR-0043",
       "rule": "The AutoCrud REST list endpoint returns the SAME seven-key envelope as to_paginate() - records, total, page, per_page, total_pages, limit, offset - with total from a true COUNT, in all four. It must not build a divergent envelope (data/count/totalPages/perPage aliases) or report rows-returned as total.",
-      "why": "MEASURED 2026-08-07: AutoCrud builds its OWN envelope, bypassing to_paginate(). PHP shipped total=count($data) (rows-returned - a page-2 request reported total=pageSize, not the real count), Node used data + camelCase totalPages, Python emitted the 10-key duplicate set, Ruby carried extra keys. The REST list endpoint is the surface most apps hit, so a divergence here is a divergence in every generated client. Gated once all four AutoCrud suites carry paginate-rest-list-envelope-is-the-seven-keys.",
-      "suites": {},
-      "cases": []
+      "why": "MEASURED 2026-08-07: AutoCrud builds its OWN envelope, bypassing to_paginate(). PHP shipped total=count($data) (rows-returned - a page-2 request reported total=pageSize, not the real count), Node used data + camelCase totalPages, Python emitted the 10-key duplicate set, Ruby carried extra keys. The REST list endpoint is the surface most apps hit, so a divergence here is a divergence in every generated client. PROVEN 2026-08-07: all four AutoCrud list handlers now route through to_paginate()/DatabaseResult and emit exactly the 7 keys with a true COUNT (PHP's total=count($data) and Ruby's capped/re-sliced filter branch fixed; Node dropped its nested {data,meta} + deleted the divergent FetchResult; Python culled its 10-key alias set). Named test in all four, red-before-green + mutation-proven.",
+      "suites": {
+        "python": "tests/test_crud.py",
+        "php": "tests/AutoCrudV3Test.php",
+        "ruby": "spec/auto_crud_paginate_envelope_spec.rb",
+        "nodejs": "test/autoCrudPaginateRestListEnvelope.test.ts"
+      },
+      "cases": [
+        "paginate-rest-list-envelope-is-the-seven-keys"
+      ]
     }
   ]
 }
