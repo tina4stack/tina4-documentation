@@ -51,8 +51,8 @@ clauses (next number after 0048). The four genuine calls:
   owner chose ON, so every app gets abuse protection out of the box. This makes two
   things mandatory: the health/readiness bypass (already decision 4) and a GENEROUS
   default limit that does not 429 shared-IP (NAT, corporate proxy) or SPA users.
-  Default limit value: **proposed 240 per 60s (4 req/s), owner to confirm** - 100/60
-  is too aggressive for an always-on global-IP limiter.
+  Default limit value: **240 per 60s (4 req/s), confirmed 2026-08-10** - 100/60 is too
+  aggressive for an always-on global-IP limiter.
 - **B: provider outage is fail-open + a degradation signal (ratified).** Store
   unreachable -> allow traffic, emit a bounded error diagnostic and a health/readiness
   degradation; never silently fall back to per-process memory. The limiter never causes
@@ -69,7 +69,7 @@ clauses (next number after 0048). The four genuine calls:
 
 The algorithm section, the proposed-decisions list and the response reset semantics
 below are rewritten for the token bucket and ON-by-default. This closes the DESIGN half
-of the FINAL bar for Feature 11 once the owner confirms the default limit value.
+of the FINAL bar for Feature 11 (default limit 240/60, confirmed 2026-08-10).
 Remaining: publish ADR-0049, materialize `rate_limit_contract.json`, wire the four
 runners.
 
@@ -78,8 +78,8 @@ runners.
 The audit recommends the following decisions as one coherent contract (items 1 and 2
 were overridden by the owner on 2026-08-10; see the APPROVED block above):
 
-1. Rate limiting is ENABLED by default with a generous limit (proposed 240 per 60s,
-   owner to confirm); native integer `0` disables it, and any positive value overrides
+1. Rate limiting is ENABLED by default with a generous limit (240 per 60s, confirmed
+   2026-08-10); native integer `0` disables it, and any positive value overrides
    the default. Health/readiness and valid preflight always bypass (decision 4), so an
    always-on limiter cannot take down probes. (Owner override 2026-08-10, replacing the
    audit's opt-in proposal.)
@@ -254,7 +254,7 @@ reread the policy per request.
 
 | Variable | Native value | Default | Rule |
 | --- | --- | --- | --- |
-| `TINA4_RATE_LIMIT` | integer | `240` (owner to confirm) | Enabled by default with a generous limit; `0` disables; any positive safe integer overrides; negative, fractional, boolean or string-after-Feature-1 conversion failure is invalid. |
+| `TINA4_RATE_LIMIT` | integer | `240` | Enabled by default with a generous limit (240 per 60s = 4 req/s, confirmed 2026-08-10); `0` disables; any positive safe integer overrides; negative, fractional, boolean or string-after-Feature-1 conversion failure is invalid. |
 | `TINA4_RATE_WINDOW` | number seconds | `60` | Finite value greater than zero; fractional seconds are valid for precise windows. It is validated even when a non-empty value accompanies disabled limiting. |
 | `TINA4_RATE_LIMIT_URL` | string URL | `memory://` | Scheme selects the provider. Credentials may come from Feature 1's standard URL/username/password handling. Unknown/unavailable providers fail startup. |
 | `TINA4_TRUSTED_PROXIES` | list of strings | `[]` | Exact IPv4/IPv6 addresses or CIDRs. Native list or Feature 1 comma-string OS form; invalid/empty/mixed entries fail startup. |
