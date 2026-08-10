@@ -36,6 +36,11 @@ The owner settled Feature 3's two open items on 2026-08-10.
   the language's async form. The current sync/async split and the sync stubs that
   throw "Use ...Async" are removed. Documented Node-specific breaking change.
 
+- **`getColumns` descriptor gains `primary_key_position` / `primaryKeyPosition`**
+  (amendment from Feature 4's Decision 7, 2026-08-10): null for non-key columns;
+  `primaryKey()` sorts by it and returns declared key order, so a composite
+  `PRIMARY KEY (b, a)` stays `(b, a)` instead of collapsing to table-column order.
+
 Everything else in the plan below stands.
 
 ## Why this feature exists

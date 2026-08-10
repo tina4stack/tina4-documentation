@@ -20,6 +20,31 @@ The old packet marked this feature closed after its original 22-case fixture
 passed. That status is withdrawn. The fixture proves part of the safe-write
 change, but it encodes stale boundaries and misses several four-for-four defects.
 
+## Owner decisions APPROVED (2026-08-10)
+
+The owner reviewed the eleven decisions below on 2026-08-10. Decisions 1-5, 9 and
+11 are accepted as written. The five that carried real trade-offs are settled:
+
+- **`affected_rows` = MATCHED rows on every provider** (Decision 6). MySQL uses
+  the `CLIENT_FOUND_ROWS` connection flag; SQLite/PostgreSQL/MSSQL already report
+  matched. A same-value UPDATE reports 1.
+- **Primary-key ordinal added** (Decision 7). Feature 3's `getColumns` descriptor
+  gains `primary_key_position` / `primaryKeyPosition` (null for non-key columns);
+  `primaryKey()` sorts by it and returns declared order. This AMENDS the Feature 3
+  contract.
+- **SQLite busy timeout = 5000 ms, overridable via `TINA4_SQLITE_BUSY_TIMEOUT`**
+  (Decision 8). Converges the 30000/5000/0/0 divergence and stays tunable.
+- **Node minimum raised to 24.15** (Decision 10). Built-in `node:sqlite` with its
+  native timeout, zero-dependency; drops Node 22.x as a documented breaking bump.
+- **MongoDB reaches FULL write conformance; atomic/transactional writes require a
+  replica set** (provider packet 4.6), documented as a prerequisite. Consistent
+  with Mongo being a first-class SQL adapter (Feature 3, 2026-08-10) and Feature
+  3's "require a deployment mode that can" rule.
+
+Feature 4 is now decisions-complete. Remaining to reach FINAL: materialize the
+central `write_path_contract.json` replacement fixture and wire the four
+fail-closed runners (build phase).
+
 ## Why this feature exists
 
 A developer should be able to write data through the same small Tina4 surface on
