@@ -2,31 +2,60 @@
 
 ## Identity and status
 
-- Matrix identity: 58 — Frond sandboxing
-- Audit state: auditing
-- Audit note: Structure migrated; closure checklist records remaining work
-- Dependencies: not yet extracted from the retained audit evidence
-- Dependants: not yet extracted from the retained audit evidence
-- Existing ADRs: see retained evidence and the central decision index
-- Shared fixtures: not yet confirmed
+- Matrix identity: 58 - Frond sandboxing
+- Audit state: decision-ready
+- Audit note: probed by execution 2026-07-28 with a live XSS payload, inside and outside the
+  sandbox - the most serious finding in the audit. The two P1 bypasses shipped fixes (Python
+  `bef0c6d`, PHP `cbe31184`, Ruby `167fe78`, Node `1eb1c4a`, plus escape lock-in tests). Not
+  released (owner holding releases). Prose completed from that evidence 2026-08-10. No framework
+  code changed here.
+- Dependencies: Feature 57 auto-escaping (the escape decision the sandbox must be able to
+  enforce), Feature 52 filters, Feature 53 tags, Feature 51 runtime
+- Dependants: any application rendering a template written by an untrusted author
+- Existing ADRs: ADR-0004 (best implementation prevails), the python-master-governance rule (if
+  Python is broken, FIX it, do not mirror it); ADR-0009
+- Shared fixtures: sandbox escaping cases added to `frond_expression_corpus.txt` BEFORE the
+  ADR-0009 split
+- Catalog phase: Frond template engine
 
 ## Why this feature exists
 
-The retained audit does not yet state the developer problem in one language-neutral sentence.
+An application sometimes renders a template written by someone it does not trust. The sandbox
+restricts what such a template can do to an allow-list of filters, tags and variables, so an
+untrusted author cannot reach arbitrary data or emit XSS. It is the ONLY thing standing between
+a user-supplied template and an attack, so it must actually hold that line in all four.
 
 ## Boundary
 
-The retained audit does not yet separate what this feature owns, delegates, and excludes.
+This feature owns the sandbox allow-list gates (filters, tags, variables), the ability to REVOKE
+the escaping opt-outs (`raw`/`safe`/`autoescape`), and the single tag gate at dispatch. It
+DELEGATES the escape mechanism to Feature 57, the filter/tag behaviour to Features 52/53, and the
+runtime to Feature 51. Its guarantee is negative: a capability NOT on the allow-list cannot be
+used, INCLUDING the ones that disable escaping.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
+| Evidence (probed by execution, both inside/outside the sandbox) | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
-| Public surface | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Startup/CLI integration | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Stored/wire format | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing focused tests | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing lab baseline | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| Deny `raw`/`safe` revokes escaping (P1) | BROKEN (unescaped) | correct | BROKEN | BROKEN |
+| Deny `autoescape` tag (P1b) | BROKEN | BROKEN | BROKEN | BROKEN |
+| Escaping decided from | filter DETECTED in chain (wrong) | filter that RAN (right) | detected | detected |
+| Tag gate coverage | subset | subset | ONE tag (`include`) | four tags (literal) |
+| Empty `[]` allow-list | allow-all (falsy bug) | permit-nothing | permit-nothing | permit-nothing |
+| Ordinary filter/var gate | uniform | uniform | uniform | uniform |
+| P1/P1b fixed + lock-in tests | shipped `bef0c6d` | `cbe31184` | `167fe78` | `1eb1c4a` |
+
+Two P1 bypasses of a documented security control were found by execution. P1: denying `raw`/
+`safe` (the two filters that turn OFF HTML escaping) had NO effect in Python, Ruby and Node -
+`{{ x|raw }}` with `raw` denied still rendered unescaped - because they SKIP a denied filter but
+decide escaping by DETECTING the filter in the chain; skip it and detection still fires, marking
+the value safe. PHP is correct because it decides escaping from what actually RAN. P1b:
+`{% autoescape false %}` bypassed the tag gate in ALL FOUR (a denied tag whose whole job is
+disabling escaping ran anyway), because the tag gate is a per-name conditional at a few call sites
+(Node four names, Ruby one), not a single check at dispatch. And an empty `[]` allow-list meant
+"allow all" in Python (`if allowed_filters` treats `[]` as falsy) while the other three read it as
+permit-nothing - the same intent, three immunities and one hole, purely from language falsy rules.
+All were fixed and lock-in-tested (not yet released).
 
 ### Retained introductory record
 
@@ -149,27 +178,61 @@ which is a category 3 runtime-idiomatic difference and fine. The naming is categ
 
 ## Inputs and outputs
 
-The audit has not yet fixed all native types, defaults, nullability, ordering, and serialized shapes.
+- Input: `sandbox(filters, tags, vars)` allow-lists (a list permits exactly those; `None`/`null`/
+  `nil` allows everything; `[]` permits NOTHING) and a template plus context.
+- Output: the rendered template with any capability outside the allow-list unavailable - a denied
+  filter/var skipped (empty), a denied tag not run, and CRUCIALLY escaping NOT revocable by a
+  denied `raw`/`safe`/`autoescape`.
+- A denied escape-opt-out leaves the value ESCAPED; the sandbox holds the XSS line.
+- `unsandbox()` restores full capability with no partial gate left behind.
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection, retry, rollback, and deletion path.
+1. `sandbox(filters, tags, vars)` records the allow-lists (empty means permit-nothing).
+2. At render, each filter is checked against the filter allow-list; a denied filter is skipped
+   AND cannot suppress escaping (escaping is decided from filters that RAN).
+3. Each tag is checked against the tag allow-list at DISPATCH (one gate), so every tag - including
+   `autoescape` - is gated; a denied `autoescape` cannot disable escaping.
+4. Each variable is checked against the var allow-list; a denied var renders empty.
+5. A security-relevant denial (a template reaching for `raw` inside a sandbox) is logged.
+6. `unsandbox()` clears the gates.
 
 ## Configuration and precedence
 
-The audit has not yet fixed argument, environment, project-file, default, and cache timing precedence.
+- An allow-list of names permits exactly those; `None`/`null`/`nil` allows everything; `[]`
+  permits NOTHING (Python's `[]`-is-falsy allow-all bug is fixed). The two must never be confused.
+- Escaping is decided by what RAN, not what was written; a denied opt-out cannot revoke it.
+- The tag gate is one check at dispatch, so a tag added later is gated by construction, not left
+  ungated because no one added it to a hardcoded list.
 
 ## Failures, side effects and security
 
-The audit has not yet closed every failure boundary, side effect, cleanup rule, and security concern.
+- P1 (fixed): a denied `raw`/`safe` MUST re-escape the value; deciding escaping from a DETECTED
+  filter rather than an EXECUTED one let a denied opt-out still suppress escaping. PHP's
+  decide-from-what-ran mechanism is the fix, ported to the other three.
+- P1b (fixed): a denied `autoescape` tag MUST NOT disable escaping; the per-name tag conditionals
+  are collapsed into one gate at dispatch so `autoescape` (and every tag) is gated.
+- EMPTY vs NULL: `[]` permits nothing, `None`/`null`/`nil` permits everything; a caller who
+  computes an allow-list and gets an empty result must not silently receive an open sandbox.
+- A denied filter/var stays SILENT (skip/empty) - failing closed while still rendering an
+  untrusted template beats raising on a hostile input - BUT a security-relevant denial is LOGGED,
+  because a template trying to reach `raw` in a sandbox is a signal.
+- GOVERNANCE (ADR-0004): a prior release converged PHP onto Python's skip-not-empty semantic
+  (correct) while Python was the BROKEN one on the escaping-revocation axis and PHP was already
+  right. The rule this proves: if Python is broken, FIX Python, do not mirror it; the audit is
+  what enforces it, because the convergence commit looked like good parity work.
 
 ## Wire and persistence contract
 
-The audit has not yet fixed every wire format, stored shape, encoding, identifier, timestamp, and compatibility rule.
+There is no persistence; the contract is the RENDERED OUTPUT under the allow-lists, byte-identical
+across the four for the sandbox corpus. A denied escape opt-out never yields unescaped output, in
+any of the four.
 
 ## Providers and substitutability
 
-The audit has not yet proved provider substitution or recorded deliberate capability exceptions.
+The sandbox is pure and engine-agnostic. A future runtime denies by REVOKING capability (not
+skipping a step), decides escaping from executed filters, gates every tag at dispatch, and reads
+`[]` as permit-nothing - proven by the sandbox corpus.
 
 ## Contradictions and defects
 
@@ -295,11 +358,23 @@ framework treats `[]`. **Open probe item.**
 
 ## Integration map
 
-The audit has not yet mapped every export, startup path, request hook, CLI, scaffolder, status command, document, and generated consumer.
+- Feature 57 owns the escape mechanism the sandbox must enforce; Feature 52 filters and Feature
+  53 tags are what the allow-lists gate; Feature 51 runs the render.
+- The sandbox escaping cases join the corpus BEFORE the ADR-0009 split, so the split carries a
+  correct implementation rather than a known bypass.
+- The docs name the sandbox as a control for untrusted templates; they update with the fix.
+- Central fixtures, four runners, the CI matrix and the Frond security docs update together.
 
 ## Breaking changes and migration
 
-The audit has not yet turned every parity break into an actionable pre-3.14 migration instruction.
+- The P1 fixes change behaviour for any template that previously ESCAPED the sandbox (through a
+  denied `raw`/`safe` or `autoescape`); breaking that reliance is the point, but it needs a
+  `Breaking:` entry stating plainly that such templates no longer bypass the sandbox.
+- The empty-`[]`-permits-nothing fix changes Python callers who passed `[]` expecting allow-all
+  (they were relying on a bug that opened the sandbox).
+- The Python parameter rename (`allowed_*` -> `filters`/`tags`/`vars`) rejects the old keyword
+  with a named error; it is NOT bundled with the security fix (two failure modes in one commit
+  makes a security fix harder to review and backport).
 
 ## Implementation backlog
 
@@ -355,18 +430,24 @@ what ran, never by what was written.**
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Existing-language contradictions recorded (P1 raw/safe, P1b autoescape, tag-gate subset, []-bug).
+- [x] Owner ambiguities decided and recorded ([]=permit-nothing; jump-the-queue - both answered).
+- [x] Proposed shared cases and mutation witnesses complete (deny-differs-from-allow first).
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule is clean-room sufficient.
 
-### Parked
+### State
 
-Not implemented, per the planning-only constraint. The recommendation above is the exception I
-am flagging rather than acting on.
+AUDIT decision-ready. The most serious finding in the audit: two P1 bypasses of a documented
+security control (denied `raw`/`safe` did not re-escape; denied `autoescape` disabled escaping in
+all four), plus a Python `[]`-allow-all bug. All were FIXED and lock-in-tested (Python `bef0c6d`,
+PHP `cbe31184`, Ruby `167fe78`, Node `1eb1c4a`) - the owner approved fixing the two P1s first -
+but NOT yet released (releases held). The 3.14 audit consolidates the contract (deny by revoking
+capability, decide escaping from what RAN, one tag gate at dispatch, `[]`=permit-nothing) and
+gates it with the sandbox corpus BEFORE the ADR-0009 split. The parameter rename is separate.
+Decision-ready; fixes shipped to v3, not released.
