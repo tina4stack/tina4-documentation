@@ -300,7 +300,7 @@ jobs:
       - name: Run tests
         run: tina4py test --db-all
         env:
-          DATABASE_URL: postgresql://tina4:tina4test@localhost:5432/tina4_test
+          DATABASE_URL: postgresql://tina4:$DB_PASS@localhost:5432/tina4_test
 
   build:
     needs: test

@@ -30,7 +30,7 @@ Each section × framework cell gets one verdict:
 
 ```
 docker run -d --name tina4-doctest-pg \
-  -e POSTGRES_USER=tina4 -e POSTGRES_PASSWORD=tina4 -e POSTGRES_DB=tina4 \
+  -e POSTGRES_USER=tina4 -e POSTGRES_PASSWORD=$PGPASS -e POSTGRES_DB=tina4 \
   -p 5432:5432 postgres:16
 # then create per-framework DBs: tina4_py, tina4_php, tina4_rb, tina4_node
 ```
@@ -39,10 +39,10 @@ docker run -d --name tina4-doctest-pg \
 
 | Framework | Scaffold | Port | `TINA4_DATABASE_URL` | Runtime |
 |---|---|---|---|---|
-| Python | `tina4 init python` | 7101 | `postgresql://tina4:tina4@localhost:5432/tina4_py` | 3.14 + `uv` (psycopg2 extra) |
-| PHP | `tina4 init php` | 7102 | `postgres://tina4:tina4@localhost:5432/tina4_php` | 8.5 + ext-pgsql |
-| Ruby | `tina4 init ruby` | 7103 | `postgres://tina4:tina4@localhost:5432/tina4_rb` | 4.0 + `pg` gem |
-| Node | `tina4 init node` | 7104 | `postgres://tina4:tina4@localhost:5432/tina4_node` | 24 + `pg` |
+| Python | `tina4 init python` | 7101 | `postgresql://tina4:$PGPASS@localhost:5432/tina4_py` | 3.14 + `uv` (psycopg2 extra) |
+| PHP | `tina4 init php` | 7102 | `postgres://tina4:$PGPASS@localhost:5432/tina4_php` | 8.5 + ext-pgsql |
+| Ruby | `tina4 init ruby` | 7103 | `postgres://tina4:$PGPASS@localhost:5432/tina4_rb` | 4.0 + `pg` gem |
+| Node | `tina4 init node` | 7104 | `postgres://tina4:$PGPASS@localhost:5432/tina4_node` | 24 + `pg` |
 
 Apps run under the installed-from-registry framework versions (Python 3.13.15, others 3.13.14) so we test **what users actually get**, not the working tree — with a noted option to re-point at local checkouts if we want to test unreleased fixes.
 

@@ -69,21 +69,21 @@ set -uo pipefail
 #
 # Field 6 (container-command) is optional and is passed to `docker run` AFTER the
 # image, so it replaces the image's default CMD. redis-auth is why it exists: the
-# cache tests expect `requirepass s3cret` and the readiness probe below already
+# cache tests expect `requirepass $REDIS_PASS` and the readiness probe below already
 # assumed it, but the container ran a bare `redis-server` with NO password, so the
-# probe's own `-a s3cret` was silently ignored and every auth test skipped. Setting
+# probe's own `-a $REDIS_PASS` was silently ignored and every auth test skipped. Setting
 # it live with `redis-cli CONFIG SET requirepass` worked and then vanished on the
 # next container restart. A runtime patch is not provisioning.
 SERVICES=(
   "redis^redis:7-alpine^6379:6379^^redis-cli ping"
-  "redis-auth^redis:7-alpine^6381:6379^^redis-cli -a s3cret ping^redis-server --requirepass s3cret"
+  "redis-auth^redis:7-alpine^6381:6379^^redis-cli -a $REDIS_PASS ping^redis-server --requirepass $REDIS_PASS"
   "valkey^valkey/valkey:8-alpine^6380:6379^^valkey-cli ping"
   "memcached^memcached:alpine^11211:11211^^"
   "mongo^mongo:7^27017:27017^^mongosh --quiet --eval 'db.runCommand({ping:1}).ok'"
-  "postgres^postgres:16^55432:5432^POSTGRES_USER=tina4,POSTGRES_PASSWORD=tina4,POSTGRES_DB=tina4_py^pg_isready -U tina4 -d tina4_py"
+  "postgres^postgres:16^55432:5432^POSTGRES_USER=tina4,POSTGRES_PASSWORD=$PGPASS,POSTGRES_DB=tina4_py^pg_isready -U tina4 -d tina4_py"
   "rabbitmq^rabbitmq:3-management^5672:5672,15672:15672^^rabbitmq-diagnostics -q ping"
-  "mysql^mysql:8^3306:3306^MYSQL_DATABASE=tina4_test,MYSQL_USER=tina4,MYSQL_PASSWORD=tina4,MYSQL_ROOT_PASSWORD=tina4^mysqladmin ping -h 127.0.0.1 -ptina4"
-  "mssql^mcr.microsoft.com/mssql/server:2022-latest^1433:1433^ACCEPT_EULA=Y,SA_PASSWORD=TinaSQL123!Secure,MSSQL_PID=Developer^/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'TinaSQL123!Secure' -C -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'TinaSQL123!Secure' -Q 'SELECT 1'"
+  "mysql^mysql:8^3306:3306^MYSQL_DATABASE=tina4_test,MYSQL_USER=tina4,MYSQL_PASSWORD=$MYSQL_PASS,MYSQL_ROOT_PASSWORD=$MYSQL_PASS^mysqladmin ping -h 127.0.0.1 -p$MYSQL_PASS"
+  "mssql^mcr.microsoft.com/mssql/server:2022-latest^1433:1433^ACCEPT_EULA=Y,SA_PASSWORD=$MSSQL_PASS,MSSQL_PID=Developer^/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P '$MSSQL_PASS' -C -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P '$MSSQL_PASS' -Q 'SELECT 1'"
   "kafka^apache/kafka:latest^9092:9092^KAFKA_NODE_ID=1,KAFKA_PROCESS_ROLES=broker+controller,KAFKA_LISTENERS=PLAINTEXT://:9092+CONTROLLER://:9093,KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092,KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER,KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT+PLAINTEXT:PLAINTEXT,KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:9093,KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1,KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0^/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"
   # GreenMail: the ONLY real SMTP+IMAP the Messenger tests can round-trip
   # against. Ruby had 16 IMAP examples pending and Python a matching set,
@@ -416,8 +416,8 @@ cmd_infra_up() {
     local ok=0
     for _ in $(seq 1 30); do
       if docker exec "$PREFIX-mssql" sh -c \
-        '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TinaSQL123!Secure" -C -Q "IF DB_ID('"'"'tina4_test'"'"') IS NULL CREATE DATABASE tina4_test" \
-         || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "TinaSQL123!Secure" -Q "IF DB_ID('"'"'tina4_test'"'"') IS NULL CREATE DATABASE tina4_test"' \
+        '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_PASS" -C -Q "IF DB_ID('"'"'tina4_test'"'"') IS NULL CREATE DATABASE tina4_test" \
+         || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$MSSQL_PASS" -Q "IF DB_ID('"'"'tina4_test'"'"') IS NULL CREATE DATABASE tina4_test"' \
         >/dev/null 2>&1; then ok=1; break; fi
       sleep 3
     done
@@ -552,14 +552,14 @@ cmd_infra_env() {
   cat <<'ENVBLOCK' | sed "s|MQTT_CA_PLACEHOLDER|$MQTT_HOME/certs/ca.crt|"
 export TINA4_REQUIRE_SERVICES=1
 export TINA4_TEST_PG_HOST=localhost TINA4_TEST_PG_PORT=55432
-export TINA4_TEST_PG_USER=tina4 TINA4_TEST_PG_PASS=tina4 TINA4_TEST_PG_DB=tina4_py
-export TINA4_TEST_POSTGRES_URL=postgres://tina4:tina4@localhost:55432/tina4_py
+export TINA4_TEST_PG_USER=tina4 TINA4_TEST_PG_PASS=$PGPASS TINA4_TEST_PG_DB=tina4_py
+export TINA4_TEST_POSTGRES_URL=postgres://tina4:$PGPASS@localhost:55432/tina4_py
 export TINA4_TEST_MONGO_URL=mongodb://localhost:27017
 export TINA4_TEST_REDIS_URL=redis://localhost:6379
 export TINA4_TEST_VALKEY_URL=redis://localhost:6380
 # redis-auth: password is set by the container command in SERVICES, db index 3 is
 # what the cache-backend tests use. Without this export the auth tests skipped.
-export TINA4_TEST_REDIS_AUTH_URL=redis://:s3cret@localhost:6381/3
+export TINA4_TEST_REDIS_AUTH_URL=redis://:$REDIS_PASS@localhost:6381/3
 export TINA4_TEST_RABBITMQ_URL=amqp://guest:guest@localhost:5672
 export TINA4_TEST_KAFKA_URL=localhost:9092
 export TINA4_KAFKA_BROKERS=localhost:9092
@@ -575,7 +575,7 @@ export TINA4_TEST_KAFKA_CONTAINER=tina4-lab-kafka
 # satisfied nothing. Python and PHP have no two-database test, so this pair is
 # the whole consumer set.
 export TINA4_TEST_PG_DB_2=tina4_analytics
-export TINA4_TEST_POSTGRES_URL_2=postgres://tina4:tina4@localhost:55432/tina4_analytics
+export TINA4_TEST_POSTGRES_URL_2=postgres://tina4:$PGPASS@localhost:55432/tina4_analytics
 # MQTT: mosquitto on 1883 (anon) / 1884 (auth) / 8883 (TLS), EMQX on 1885.
 # Provisioned by `infra up` via the in-repo tests/mqtt-infra.sh.
 export TINA4_TEST_MQTT_URL=mqtt://127.0.0.1:1883
@@ -590,7 +590,7 @@ export TINA4_TEST_MYSQL_HOST=localhost TINA4_TEST_MYSQL_PORT=3306
 # port, so they passed BY LUCK - the same mechanism that hid the mysql
 # credential bug for months and, before that, TINA4_TEST_PG_DB2 (see above).
 # Passing by luck is not passing; export them so the lab is the source of truth.
-export TINA4_TEST_PG_USERNAME=tina4 TINA4_TEST_PG_PASSWORD=tina4
+export TINA4_TEST_PG_USERNAME=tina4 TINA4_TEST_PG_PASSWORD=$PGPASS
 export TINA4_TEST_MONGO_HOST=localhost TINA4_TEST_MONGO_PORT=27017
 export TINA4_TEST_REDIS_HOST=localhost TINA4_TEST_REDIS_PORT=6379
 export TINA4_TEST_MEMCACHED_HOST=localhost TINA4_TEST_MEMCACHED_PORT=11211
@@ -611,20 +611,20 @@ export TINA4_TEST_IMAP_HOST=localhost TINA4_TEST_IMAP_PORT=3143
 # So: export them, and embed the credentials. PG points at tina4_py to match
 # TINA4_TEST_PG_DB; do not point it elsewhere or the session tests write the
 # table in one database and look for it in another.
-export TINA4_TEST_MYSQL_URL=mysql://root:tina4@localhost:3306/tina4_test
-export TINA4_TEST_MSSQL_URL='mssql://sa:TinaSQL123!Secure@localhost:1433/tina4_test'
-export TINA4_TEST_PG_URL=postgres://tina4:tina4@localhost:55432/tina4_py
+export TINA4_TEST_MYSQL_URL=mysql://root:$MYSQL_PASS@localhost:3306/tina4_test
+export TINA4_TEST_MSSQL_URL='mssql://sa:$MSSQL_PASS@localhost:1433/tina4_test'
+export TINA4_TEST_PG_URL=postgres://tina4:$PGPASS@localhost:55432/tina4_py
 # The suites read _USERNAME/_PASSWORD (41 usages across the four); the short
 # _USER/_PASS form is read by NOTHING. Exporting only the short form made every
 # mysql/mssql test fall through to its own default (root, empty password) and fail
 # with 'Access denied ... using password: NO'. It survived for months only because
 # a long-lived container happened to allow passwordless root; recreating the
 # containers exposed it. Both spellings are emitted so neither side can drift.
-export TINA4_TEST_MYSQL_USERNAME=root TINA4_TEST_MYSQL_PASSWORD=tina4
-export TINA4_TEST_MYSQL_USER=tina4 TINA4_TEST_MYSQL_PASS=tina4 TINA4_TEST_MYSQL_DB=tina4_test
+export TINA4_TEST_MYSQL_USERNAME=root TINA4_TEST_MYSQL_PASSWORD=$MYSQL_PASS
+export TINA4_TEST_MYSQL_USER=tina4 TINA4_TEST_MYSQL_PASS=$MYSQL_PASS TINA4_TEST_MYSQL_DB=tina4_test
 export TINA4_TEST_MSSQL_HOST=localhost TINA4_TEST_MSSQL_PORT=1433
-export TINA4_TEST_MSSQL_USERNAME=sa TINA4_TEST_MSSQL_PASSWORD='TinaSQL123!Secure'
-export TINA4_TEST_MSSQL_USER=sa TINA4_TEST_MSSQL_PASS='TinaSQL123!Secure' TINA4_TEST_MSSQL_DB=tina4_test
+export TINA4_TEST_MSSQL_USERNAME=sa TINA4_TEST_MSSQL_PASSWORD='$MSSQL_PASS'
+export TINA4_TEST_MSSQL_USER=sa TINA4_TEST_MSSQL_PASS='$MSSQL_PASS' TINA4_TEST_MSSQL_DB=tina4_test
 ENVBLOCK
 }
 
