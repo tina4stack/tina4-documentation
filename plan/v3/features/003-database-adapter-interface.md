@@ -18,6 +18,26 @@
 Breaking changes are permitted before 3.14.0. This packet is planning and
 contract data only. It does not authorize framework implementation changes.
 
+## Decisions superseding the plan below (finalized 2026-08-10)
+
+The owner settled Feature 3's two open items on 2026-08-10.
+
+- **MongoDB is a FIRST-CLASS SQL adapter**, not scoped out. `MongoDBAdapter`
+  implements the full 14-method contract, so the adapter contract OWNS SQL->Mongo
+  translation (prior art: `QueryBuilder.toMongo()`). Three sub-points the contract
+  must still nail (owed): what `getColumns` returns for a schemaless store (sampled
+  documents vs the ORM model), the expected Mongo result for each SQL conformance
+  case, and that Mongo transactions require a replica set. The provider list
+  (SQLite/PostgreSQL/MySQL/MSSQL/Firebird/MongoDB/ODBC) stands.
+
+- **Node is async to the public surface.** One async adapter contract: the Node
+  adapter AND the public `Database`/ORM surface are asynchronous; consumers await.
+  Concepts stay identical to the other three (same 14 capabilities); Node returns
+  the language's async form. The current sync/async split and the sync stubs that
+  throw "Use ...Async" are removed. Documented Node-specific breaking change.
+
+Everything else in the plan below stands.
+
 ## Why this feature exists
 
 A developer or a new language implementer needs one small, explicit contract

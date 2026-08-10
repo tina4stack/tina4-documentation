@@ -8,6 +8,27 @@ runner wiring wait for the full audit.**
 fixture define a clean-room implementation. The earlier focused fixes remain
 verified, but current green language suites do not prove the new contract.
 
+## Decisions superseding the plan below (finalized 2026-08-10)
+
+The owner resolved two decisions on 2026-08-10, overriding the "Approved
+2026-08-09" choices below.
+
+- **Decision 8 (threshold scope) -> SEPARATE FILE LEVEL, not one threshold.**
+  `TINA4_LOG_LEVEL` gates the console only; a new `TINA4_LOG_FILE_LEVEL` (default
+  `ALL`) gates the file, preserving the full-detail forensic file. `is_enabled`
+  becomes sink-aware. Add `TINA4_LOG_FILE_LEVEL` (string) to the Decision 19
+  environment manifest. Supersedes Decision 8 Option 1.
+
+- **Decision 20 (concurrent writers) -> SINGLE FILE, IN-PROCESS LOCK ONLY.** One
+  log file guarded by an in-process (thread) lock over size-check + rotate +
+  append. Cross-process exclusive locking and stale-lock recovery are removed;
+  concurrent PROCESSES writing the same file may interleave, and the contract
+  documents per-process files or a log shipper as the answer for that. The
+  concurrency fixture witness relaxes from real multi-process to thread
+  concurrency plus the documented caveat. Supersedes Decision 20 Option 1.
+
+Everything else in the plan below stands.
+
 ## Files
 
 | | path |

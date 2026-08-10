@@ -6,6 +6,33 @@ for the full audit.** The normative 3.14 contract begins at "Vanilla
 implementation plan". Earlier verdict/pattern/test sections and the final
 "shipped" record are historical evidence and are superseded where they differ.
 
+## Decisions superseding the plan below (finalized 2026-08-10)
+
+The owner resolved Feature 1's remaining open item on 2026-08-10. Where the
+"Vanilla implementation plan" and its owner-decision register below differ, THIS
+section wins.
+
+**`.env` structured values use STRICT JSON via each language's built-in parser -
+no bespoke parser, no references.** `get_env` decodes a `[...]` or `{...}` value
+with the language's standard JSON parser (`json.loads` / `JSON.parse` /
+`json_decode` / `JSON.parse`) and returns the native sequence or string-keyed map.
+Scalar `${VAR}` string interpolation stays. REMOVED from the contract:
+bare-identifier references to framework constants (`ENV=[TINA4_LOG_ALL]`),
+parentheses-as-tuples, single-quoted strings inside structures, trailing commas,
+the reference dependency graph, and cycle detection. Structure depth and duplicate
+map keys follow the language JSON parser's own rules, not a Tina4 depth-64 or
+duplicate-key contract. This DISSOLVES the Feature 1 <-> Feature 2 constant-registry
+seam: Feature 1 no longer reads a framework-constant registry, and Logging no
+longer needs to initialize one before dotenv.
+
+Superseded/rewritten below to strict-JSON + JSON-parser error semantics: the
+"Structured values" section, the bare-identifier reference rules in "Parser" and
+"Typed coercion", owner decisions 7A-7D, 9, 10, 11, 12, 14, 15, 22 and 24, and
+conformance cases `ENV-R04`-`R08` and `ENV-N06`-`N11`. Unchanged: scalar typed
+coercion (bool/int/float/null and the +/-9007199254740991 integer range),
+`${VAR}` interpolation, source precedence, reset ownership and missing-root
+bootstrap.
+
 ## Files
 
 | | path |
