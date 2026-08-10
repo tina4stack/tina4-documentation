@@ -2,31 +2,52 @@
 
 ## Identity and status
 
-- Matrix identity: 57 — Frond auto-escaping
-- Audit state: auditing
-- Audit note: Structure migrated; closure checklist records remaining work
-- Dependencies: not yet extracted from the retained audit evidence
-- Dependants: not yet extracted from the retained audit evidence
-- Existing ADRs: see retained evidence and the central decision index
-- Shared fixtures: not yet confirmed
+- Matrix identity: 57 - Frond auto-escaping
+- Audit state: decision-ready
+- Audit note: probed by execution 2026-07-28 with a live XSS payload; prose completed from that
+  evidence 2026-08-10. Audited out of matrix order deliberately (it is a security control and the
+  highest-risk part of the ADR-0009 split). No framework code changed.
+- Dependencies: Feature 51 runtime (applies escaping on output), Feature 52 filters (`e`/`escape`/
+  `js_escape`/`url_encode`/`css_escape`/`raw`/`safe`), Feature 49 parser
+- Dependants: every `{{ x }}` in every template; the XSS defense of every Frond-rendered page
+- Existing ADRs: ADR-0009 (removable Frond folder - escaping is its highest-risk piece); ADR-0005;
+  the snake_case-filter-names rule (Feature 52)
+- Shared fixtures: escaping cases added to `frond_expression_corpus.txt` BEFORE the ADR-0009 split
+- Catalog phase: Frond template engine
 
 ## Why this feature exists
 
-The retained audit does not yet state the developer problem in one language-neutral sentence.
+User data rendered into a page can carry a script. Auto-escaping neutralizes it: `{{ x }}` HTML-
+escapes by default, so a `<script>` in a variable becomes inert text, and a template cannot be an
+XSS vector unless the author EXPLICITLY opts out with `|raw`/`|safe`. This is the control that
+prevents XSS, and it must behave identically in all four.
 
 ## Boundary
 
-The retained audit does not yet separate what this feature owns, delegates, and excludes.
+This feature owns escape-by-default, the explicit `|raw`/`|safe` opt-out, and the escape filters
+and their mode argument (`|e`/`|escape` with `'js'`/`'url'`/`'css'`, plus `js_escape`/`url_encode`/
+`css_escape`). It DELEGATES the filter registry to Feature 52, the apply-on-output to Feature 51,
+and pipe parsing to Feature 49. It is the security control the ADR-0009 split must not break.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
+| Evidence (probed with a live XSS payload) | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
-| Public surface | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Startup/CLI integration | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Stored/wire format | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing focused tests | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing lab baseline | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| `{{ x }}` HTML-escapes by default | yes | BYTE-IDENTICAL | identical | identical |
+| `|raw`/`|safe` opt-out (explicit) | yes | identical | identical | identical |
+| Quotes/ampersands/angle brackets escaped | yes | identical | identical | identical |
+| `|e('js')`/`('url')`/`('css')` mode arg | ACCEPTED, SILENTLY IGNORED (returns HTML escaping) | same | same | same |
+| `js_escape` / `url_encode` filters exist | yes | yes | yes | yes |
+| `css_escape` filter | MISSING | MISSING | MISSING | MISSING |
+
+The best result in the whole audit: HTML escape-by-default is BYTE-IDENTICAL across all four -
+`<script>alert(1)</script>` becomes `&lt;script&gt;...`, `He said "hi" & <b>` covers quotes and
+ampersands too, and `|raw`/`|safe` opt out explicitly. Four independent implementations, zero
+divergence, on the control that prevents XSS. The finding is the MODE ARGUMENT: the matrix
+advertises html/js/css/url contexts, but `|e('js')`/`('url')`/`('css')` are accepted and SILENTLY
+IGNORED - every context returns HTML escaping (documented in Python CLAUDE.md as "ignored, not an
+error"). The real js/url capability exists under other names (`js_escape`, `url_encode`), and
+`css_escape` does not exist at all.
 
 ### Retained introductory record
 
@@ -48,31 +69,61 @@ that single sequencing choice removes most of the risk the split carries.
 
 ## Public surface contract
 
-The audit has not yet extracted a language-neutral public surface and its idiomatic spellings.
+`{{ x }}` HTML-escapes by default. `{{ x|raw }}` and `{{ x|safe }}` render verbatim (the explicit,
+only opt-out). `{{ x|e }}`/`{{ x|escape }}` escape HTML; a mode argument (`|e('js')`/`('url')`/
+`('css')`) must produce CONTEXT-CORRECT output or raise, never silently HTML-escape.
+`{{ x|js_escape }}`, `{{ x|url_encode }}` and (to be added) `{{ x|css_escape }}` do the
+context-specific escaping. Filter names are snake_case, identical across four.
 
 ## Inputs and outputs
 
-The audit has not yet fixed all native types, defaults, nullability, ordering, and serialized shapes.
+- Input: a value interpolated in `{{ }}`, and any escape filter/mode.
+- Output: the HTML-escaped value by default; the verbatim value only under `|raw`/`|safe`; the
+  context-escaped value under `js_escape`/`url_encode`/`css_escape` (or `|e('mode')` once modes
+  are honest).
+- The full character set is escaped (angle brackets, quotes, ampersands), not just `<`/`>`.
+- A mode argument NEVER silently produces weaker (HTML) escaping than requested.
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection, retry, rollback, and deletion path.
+1. The runtime resolves `{{ x }}` (Feature 51) and, unless the pipe is `raw`/`safe`, HTML-escapes
+   the value before writing it.
+2. An explicit `js_escape`/`url_encode`/`css_escape` applies the context escaping.
+3. A mode argument on `|e`/`|escape` resolves to the right context escaper (resolution a) or a
+   named error (resolution b) - never a silent HTML fallback.
+4. The escaped bytes are written; the compiled and interpreted paths escape identically (Feature
+   50).
 
 ## Configuration and precedence
 
-The audit has not yet fixed argument, environment, project-file, default, and cache timing precedence.
+- Escape-by-default is ON; the only way to render raw is the explicit `|raw`/`|safe`.
+- A mode argument's resolution (implement modes vs reject loudly) is the owner decision below.
+- Filter names are snake_case (Feature 52); the escape filters are `e`/`escape`/`js_escape`/
+  `url_encode`/`css_escape`/`raw`/`safe`.
 
 ## Failures, side effects and security
 
-The audit has not yet closed every failure boundary, side effect, cleanup rule, and security concern.
+- THE HAZARD (the reason this row exists): a mode argument (`|e('js')`) is accepted and SILENTLY
+  HTML-escapes instead of JS-escaping. This is the one shape a security control must NEVER have -
+  it accepts a request for STRONGER protection and quietly provides WEAKER. A developer writing
+  `<script>var n='{{ userInput|e('js') }}'</script>` believes they have JS-context escaping and
+  has HTML escaping, which does not neutralize a backslash, a newline, or a `</script>` sequence.
+- HTML escape-by-default is correct and byte-identical; the ONLY change is to lock it with corpus
+  cases so the ADR-0009 split cannot break it. Corpus BEFORE code, before the split.
+- `|raw`/`|safe` is the only escape opt-out and is explicit; no other filter disables escaping.
+- `css_escape` does not exist; the matrix claims a CSS context that is absent.
 
 ## Wire and persistence contract
 
-The audit has not yet fixed every wire format, stored shape, encoding, identifier, timestamp, and compatibility rule.
+There is no persistence; the contract is the ESCAPED OUTPUT, byte-identical across the four for
+the HTML corpus (the strongest parity in the audit). A mode argument's output is context-correct
+or the render errors; it is never silently HTML-escaped.
 
 ## Providers and substitutability
 
-The audit has not yet proved provider substitution or recorded deliberate capability exceptions.
+Escaping is pure string transformation and engine-agnostic. A future runtime escapes HTML by
+default byte-identically, opts out only via `|raw`/`|safe`, and either implements the modes or
+rejects a mode argument - never silently downgrades.
 
 ## Contradictions and defects
 
@@ -164,7 +215,21 @@ framework from either implementing the mode or rejecting it.
 
 ## Owner decisions
 
-No new owner decision is recorded in this migrated section. Retained decisions appear below when present.
+Proposed for owner ratification:
+
+1. HTML escape-by-default is UNIFORM and correct; LOCK it with escaping corpus cases (the XSS
+   payload, quotes/ampersands, the `raw`/`safe` opt-out, a JS payload) BEFORE the ADR-0009 split
+   moves any escaping code. This single sequencing choice removes most of the split's risk.
+2. Resolve the mode argument (the security hazard): either (a) IMPLEMENT the modes (`|e('js')`->
+   `js_escape`, `|e('url')`->`url_encode`, `|e('css')`->a new `css_escape`) so the Twig-shaped
+   syntax is actually correct, or (b) REJECT the argument with a named error pointing at the right
+   filter, and drop the html/js/css/url claim. Recommendation (a). The status quo - silently
+   HTML-escaping a JS-context request - is not acceptable.
+3. Add `css_escape` in all four regardless of (a)/(b); the matrix claims it and it does not exist.
+4. Escape filter names stay snake_case (`js_escape`, `url_encode`, `css_escape`), identical in all
+   four (Feature 52).
+5. HTML escaping itself is NOT touched (it is correct); the only change is corpus coverage so the
+   split cannot break it.
 
 ## Proposed conformance fixture
 
@@ -189,11 +254,20 @@ first. It fails in all four today and it describes the actual hazard.
 
 ## Integration map
 
-The audit has not yet mapped every export, startup path, request hook, CLI, scaffolder, status command, document, and generated consumer.
+- Feature 51 applies escaping on output; Feature 52 holds the escape filters; Feature 49 parses
+  the pipe; the ADR-0009 split moves this code and MUST have the escaping corpus first.
+- The matrix row ("Auto-escaping (html/js/css/url)") and the docs are corrected in the same
+  release as the resolution.
+- Central fixtures, four runners, the CI matrix and the Frond security docs update together.
 
 ## Breaking changes and migration
 
-The audit has not yet turned every parity break into an actionable pre-3.14 migration instruction.
+- Resolution (b) is breaking for any template using `|e('js')` - but those templates are ALREADY
+  getting HTML escaping, so the break reveals a latent XSS-shaped problem rather than creating one
+  (an argument for (b) being safer than it looks). Resolution (a) is non-breaking (the mode starts
+  working).
+- Adding `css_escape` is additive.
+- HTML escaping is unchanged; a template relying on escape-by-default is unaffected.
 
 ## Implementation backlog
 
@@ -245,18 +319,21 @@ does something weaker.**
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Existing-language contradictions recorded (HTML uniform; mode-arg silently-ignored; no css_escape).
+- [x] Owner ambiguities recorded (the (a)-vs-(b) mode resolution is the open call; 5 proposed).
+- [x] Proposed shared cases and mutation witnesses complete (the never-silently-ignored negative).
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule is clean-room sufficient.
 
-### Parked
+### State
 
-Not implemented. Blocked on the owner's (a)-versus-(b) decision. Step 1 (corpus cases)
-needs no decision and should go first regardless.
+AUDIT decision-ready. HTML escape-by-default is UNIFORM and correct (the best result in the audit)
+- lock it with corpus cases BEFORE the ADR-0009 split. The open owner call is (a) implement the
+`|e('mode')` escapes vs (b) reject the mode argument loudly; the status quo (silently HTML-escaping
+a JS-context request) is not acceptable. `css_escape` is added regardless. Step 1 (corpus cases)
+needs no decision and goes first. Decision-ready; the mode resolution and the build are not done.
