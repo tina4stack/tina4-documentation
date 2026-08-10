@@ -2,31 +2,53 @@
 
 ## Identity and status
 
-- Matrix identity: 25 — ORM result caching
-- Audit state: auditing
-- Audit note: Structure migrated; closure checklist records remaining work
-- Dependencies: not yet extracted from the retained audit evidence
-- Dependants: not yet extracted from the retained audit evidence
-- Existing ADRs: see retained evidence and the central decision index
-- Shared fixtures: not yet confirmed
+- Matrix identity: 25 - ORM result caching
+- Audit state: decision-ready
+- Audit note: measured 2026-07-28 (Ruby's absence and Python's behaviour by execution, PHP/
+  Node by source); prose sections completed 2026-08-10. No framework code changed.
+- Dependencies: Feature 17 ORM base class (`cached()` lives there), the `QueryCache` component
+  in the DB layer (the store), the DB query cache (`TINA4_AUTO_CACHING`/`TINA4_DB_CACHE`, a
+  separate cache layer this reports)
+- Dependants: the dev-admin dashboard and the MCP metrics tool (both read `cache_stats()`);
+  the ORM chapter of all four doc sections
+- Existing ADRs: the query-cache env split (`TINA4_AUTO_CACHING` vs `TINA4_DB_CACHE`)
+- Shared fixtures: `orm_cache_contract.json` is required; its cases mutate BEHIND the cache so
+  the staleness window and the observability bug are observable
 
 ## Why this feature exists
 
-The retained audit does not yet state the developer problem in one language-neutral sentence.
+A developer caches an ORM query's result for a TTL window so a hot read stops re-hitting the
+database, and asks one tool which caches are live and how each one invalidates. Today Ruby has
+no ORM cache at all, and the one introspection tool reports `off` while a cache is actively
+serving stale rows.
 
 ## Boundary
 
-The retained audit does not yet separate what this feature owns, delegates, and excludes.
+This feature owns `cached()` on the ORM (a TTL-windowed cached read) and the cache-reporting
+surface (`cache_stats()`, `clear_cache()`) that must see EVERY cache layer. It DELEGATES the
+actual store to the `QueryCache` component. The DB-level query cache
+(`TINA4_AUTO_CACHING`/`TINA4_DB_CACHE`) is a SEPARATE layer with its own flush-on-write policy;
+this feature does not own it but must REPORT it alongside the ORM cache.
 
 ## Existing implementation evidence
 
 | Evidence | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
-| Public surface | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Startup/CLI integration | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Stored/wire format | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing focused tests | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing lab baseline | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| ORM `cached()` present | yes | yes | NO (D1) | yes |
+| `QueryCache` component exists | yes | yes | yes (unused by ORM) | yes |
+| `cached()` signature | `cached(sql, params, ttl=60, limit=20, offset=0)` | same + `include` | absent | `cached(sql, params?, ttl?, limit?, offset?)` |
+| `cache_stats()` sees the ORM cache | NO (reports off while live -- D2) | no | n/a | no |
+| Independent cache layers | DB query cache + ORM cache | same | DB cache only | same |
+| DB query cache invalidation | flush on any write | same | same | same |
+| ORM `cached()` invalidation | TTL expiry only (D3) | TTL only | n/a | TTL only |
+
+Ruby is the only framework missing ORM caching, yet it SHIPS a `QueryCache` class
+(`lib/tina4/cache.rb`, with TTL, tagging and `remember`) that is simply never wired into the
+ORM -- the cheapest gap in the audit: connect an existing, tested component to an existing call
+site. In the three that have it, `cached()` works (Python verified: a second call inside the
+TTL served a stale 3-row result after a 4th row landed), but `cache_stats()` reports
+`enabled: False, mode: off, hits: 0` for a live cache, because there are TWO independent caches
+and `cache_stats()` reports only the DB one.
 
 ### Retained introductory record
 
@@ -41,31 +63,74 @@ and Node signatures read from source.
 
 ## Public surface contract
 
-The audit has not yet extracted a language-neutral public surface and its idiomatic spellings.
+`cached(sql, params=[], ttl=60, limit=20, offset=0)` runs a query and caches its rows for
+`ttl` seconds, returning the cached rows on a repeat call inside the window. `cache_stats()`
+returns a per-LAYER report (every cache, not one flattened blob), each layer declaring its
+`invalidates_on_write` policy. `clear_cache()` empties EVERY layer and returns what it cleared.
+The three signatures already agree (same order, `ttl=60`, `limit=20`); Ruby gains them from its
+existing `QueryCache`.
 
 ## Inputs and outputs
 
-The audit has not yet fixed all native types, defaults, nullability, ordering, and serialized shapes.
+- `cached()` input: a SQL string, bound params, a TTL, and a limit/offset; output: the rows,
+  served from cache within the TTL and re-queried after it.
+- `cache_stats()` output: a map keyed by layer (`query`, `orm`, `response`), each with
+  `enabled`, `mode`, `hits`, `misses`, `size`, `ttl`, `backend` and `invalidates_on_write`.
+- `clear_cache()` output: what was cleared per layer.
+- A live cache NEVER reports `enabled: false` (the D2 bug).
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection, retry, rollback, and deletion path.
+1. `cached(sql, params, ttl)` computes a key from the SQL and params and checks the store.
+2. A hit inside the TTL returns the cached rows without touching the database (it will serve
+   stale rows if a write landed behind it -- that is the opt-in-to-staleness contract).
+3. A miss runs the query, stores the rows under the key with the TTL, and returns them.
+4. TTL expiry evicts the entry; the ORM cache does NOT flush on write (D3), unlike the DB
+   query cache.
+5. `cache_stats()` reports every layer's live counters; `clear_cache()` empties them all.
 
 ## Configuration and precedence
 
-The audit has not yet fixed argument, environment, project-file, default, and cache timing precedence.
+- The DB query cache is off by default and enabled by `TINA4_AUTO_CACHING`/`TINA4_DB_CACHE`;
+  it flushes on any write (which is why it is opt-in: a read-after-write in one request would
+  otherwise serve pre-write state).
+- The ORM `cached()` cache is active whenever called, with a default `ttl=60` and `limit=20`,
+  and invalidates on TTL expiry only.
+- These two policies are DIFFERENT by design and must be documented, not silently unified.
 
 ## Failures, side effects and security
 
-The audit has not yet closed every failure boundary, side effect, cleanup rule, and security concern.
+- OBSERVABILITY: `cache_stats()` must never report `off` while a cache is serving. The current
+  behaviour (a live ORM cache reported as `enabled: false`) sends a developer chasing stale
+  data everywhere except the cache that is causing it -- the one tool built to answer the
+  question answers it wrongly.
+- The ORM cache serving stale rows within its TTL is intended (an explicit `cached(ttl=60)`
+  call accepts 60 seconds of staleness); it must NOT be "fixed" by making it flush on write,
+  which would silently change what the caller asked for.
+- A cache key is derived from the SQL and bound params; params are values, not concatenated,
+  so a cache lookup carries no injection.
+- `clear_cache()` is the escape hatch: one call empties every layer.
 
 ## Wire and persistence contract
 
-The audit has not yet fixed every wire format, stored shape, encoding, identifier, timestamp, and compatibility rule.
+The reported shape is the contract. `cache_stats()` returns one object per layer:
+
+```
+{
+  "query":    {"enabled": false, "mode": "off", "hits": 0,  "misses": 0, "size": 0, "ttl": 5,  "backend": "memory", "invalidates_on_write": true},
+  "orm":      {"enabled": true,  "mode": "ttl", "hits": 12, "misses": 3, "size": 4, "ttl": 60, "backend": "memory", "invalidates_on_write": false},
+  "response": { ... }
+}
+```
+
+`invalidates_on_write` is the field that makes the two-cache policy difference answerable
+without reading source; it is a fact about the layer, so it lives in the layer's stats.
 
 ## Providers and substitutability
 
-The audit has not yet proved provider substitution or recorded deliberate capability exceptions.
+The cache backend (memory, Redis, and so on) is pluggable behind `QueryCache`; the reporting
+and the `cached()`/`clear_cache()` surface are backend-agnostic. A future runtime wires its own
+`QueryCache` equivalent to the same ORM surface and reports the same layered stats.
 
 ## Contradictions and defects
 
@@ -160,7 +225,20 @@ category 4 - no runtime prevents any framework from reporting its own caches.
 
 ## Owner decisions
 
-No new owner decision is recorded in this migrated section. Retained decisions appear below when present.
+Proposed for owner ratification:
+
+1. Ruby gains `cached()` and `clear_cache()` by wiring its EXISTING `QueryCache` (TTL, tagging,
+   `remember`) to the ORM, matching the other three signatures exactly. Purely additive, the
+   cheapest change here, lands first.
+2. `cache_stats()` reports EVERY cache layer, keyed by layer, so a live cache can never read as
+   `off`. Breaking: the dev-admin dashboard and the MCP metrics tool read the flat keys and
+   change in the SAME commit.
+3. Each layer declares `invalidates_on_write`, so the two-cache policy difference is answerable
+   without reading source.
+4. `clear_cache()` clears every layer and reports what it cleared.
+5. The ORM cache's TTL-only invalidation is DOCUMENTED as intentional (on the method and in the
+   ORM chapter of all four doc sections); it is NOT changed to flush-on-write, because an
+   explicit `cached()` call opts into staleness and that is the deal.
 
 ## Proposed conformance fixture
 
@@ -186,11 +264,22 @@ developer will actually ask under pressure.
 
 ## Integration map
 
-The audit has not yet mapped every export, startup path, request hook, CLI, scaffolder, status command, document, and generated consumer.
+- Feature 17's base model hosts `cached()`/`clear_cache()`; the `QueryCache` component is the
+  store; the DB query cache (`TINA4_AUTO_CACHING`) is the second reported layer.
+- The dev-admin dashboard and the MCP metrics tool both consume `cache_stats()`, so the layered
+  reshape changes them in the same commit.
+- The response cache (a third layer) is reported under the same `cache_stats()` surface.
+- Central fixtures, four runners, the CI matrix, release notes and the ORM cache docs update
+  together.
 
 ## Breaking changes and migration
 
-The audit has not yet turned every parity break into an actionable pre-3.14 migration instruction.
+- `cache_stats()` moves from a flat blob to a per-layer map. `Breaking:` entry plus a migration
+  note; the dev-admin dashboard and the MCP metrics tool update in the same release or they
+  show nothing.
+- Ruby gaining `cached()`/`clear_cache()` is purely additive.
+- No change to the cached-read behaviour itself; the TTL-only policy is documented, not
+  altered.
 
 ## Implementation backlog
 
@@ -247,19 +336,22 @@ Surface table:
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Existing-language contradictions recorded (D1 Ruby gap, D2 observability, D3 policy).
+- [x] Owner ambiguities recorded (5 proposed; the genuine calls await owner ratification).
+- [x] Proposed shared cases and mutation witnesses complete (mutate behind the cache).
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule is clean-room sufficient.
 
-### Parked
+### State
 
-Not implemented. Ruby's gap can go early and independently; the `cache_stats()`
-reshape is coupled to the dev-admin and MCP consumers. Order: 6, 4, 5, 3, 13, 14, 15,
-16, 17, 18, 19, then 2, 1, 0.
+AUDIT decision-ready. GAP verdict for Ruby (no ORM cache, but the `QueryCache` component
+already exists unused -- wire it) plus a SYNTHESISE on observability (one layered
+`cache_stats()` that sees every cache; the current `off`-while-live report is the expensive
+bug). The IMPLEMENTATION is the build phase and is NOT done: Ruby's wiring is additive and
+lands first; the `cache_stats()` reshape is breaking (dev-admin + MCP consumers). Decision-
+ready is not built.
