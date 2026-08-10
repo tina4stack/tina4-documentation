@@ -79,7 +79,7 @@ remote only wires the already approved Feature 1 dotenv fixture and does not
 change middleware source.
 
 The serialized lab run used root through
-`/root/tina4-lab/with-lab-lock.sh` on `andre@192.168.88.99`. Its middleware
+`/root/tina4-lab/with-lab-lock.sh` on `the lab host`. Its middleware
 source modules at Python `12cc44bb`, PHP `46f96429`, Ruby `25ac783` and Node
 `96a5050e` have no diff from the audited local middleware modules. The green
 baseline therefore applies to the same implementation under audit.
