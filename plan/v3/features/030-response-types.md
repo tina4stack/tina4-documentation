@@ -204,7 +204,7 @@ Each language runner emits:
 
 ```json
 {
-  "feature": 12,
+  "feature": 30,
   "schema_version": 1,
   "language": "another-language",
   "passed": 0,
@@ -233,7 +233,43 @@ file or transport.
 
 ## Public surface contract
 
-The audit has not yet extracted a language-neutral public surface and its idiomatic spellings.
+Every language exposes the same neutral operations on one request-local response
+builder. Method names follow each language's conventions (snake_case in Python and
+Ruby, camelCase in PHP and Node); behavior, media types and result state do not vary.
+
+| Neutral operation | Python | PHP | Ruby | Node |
+| --- | --- | --- | --- | --- |
+| Set status | `status(code)` | `status($code)` | `status(code)` | `status(code)` |
+| Replace header | `header(name, value)` | `header($name, $value)` | `header(name, value)` | `header(name, value)` |
+| Append header | `add_header(name, value)` | `add_header($name, $value)` | `add_header(name, value)` | `addHeader(name, value)` |
+| Set cookie | `cookie(name, value, options)` | `cookie(...)` | `cookie(...)` | `cookie(...)` |
+| JSON | `json(data, status?)` | `json($data, $status?)` | `json(data, status:)` | `json(data, status?)` |
+| HTML | `html(content, status?)` | `html($content, $status?)` | `html(content, status:)` | `html(content, status?)` |
+| Text | `text(content, status?)` | `text($content, $status?)` | `text(content, status:)` | `text(content, status?)` |
+| XML | `xml(content, status?)` | `xml($content, $status?)` | `xml(content, status:)` | `xml(content, status?)` |
+| Binary | `binary(bytes, status?, type?)` | `binary(...)` | `binary(...)` | `binary(...)` |
+| Error | `error(code, message, status=400)` | `error($code, $message, $status=400)` | `error(code, message, status=400)` | `error(code, message, status?)` |
+| Redirect | `redirect(url, status=302)` | `redirect($url, $status=302)` | `redirect(url, status:)` | `redirect(url, status?)` |
+| File | `file(path, status?, content_type?, download?, filename?, root?)` | same canonical arguments | same | same |
+| Automatic send | `send(data?, status?, content_type?)` | `send(...)` | `send(...)` | `send(...)` |
+| Template | `render(template, data, status?)` | `render(...)` | `render(...)` | `render(...)` |
+| Stream | `stream(source, content_type?)` | `stream(...)` | `stream(...)` | `stream(...)` |
+| Inspect | status/header/body readers | `getStatusCode`/`getHeaders`/`getBody` | reader methods | readers |
+
+`render` binds Frond and is specified by the template feature; `stream` opens the
+streaming feature. Both mutate and return the same builder. A port may keep a native
+constructor, but portable examples and fixtures use these operations.
+
+The current surface diverges and must converge before 3.14. `file()` today has four
+different argument lists (Python `file(path, download_name, root)`, PHP
+`file(path, contentType, download, root)`, Ruby `file(path, content_type:, download:,
+root:)`, and no `status`/`filename` on some), so the canonical six-argument form above
+is the target. `binary()` is new where a port only reached octet-stream through `send`.
+Ruby's `csv()`, `add_cors_headers()`, the `call` path and `auto_detect` are not the
+portable contract: CSV is `text`/`file` with an attachment, and cross-origin headers
+belong to Feature 34. PHP's `withHeaders()` folds into `add_header`/`header`, and its
+large accessor set stays as inspection only. Node's helpers currently write to the
+transport; they must buffer (owner decision 1) and return the builder like the others.
 
 ## Inputs and outputs
 
@@ -284,11 +320,49 @@ so the media type cannot lie about the body.
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection, retry, rollback, and deletion path.
+Each request receives one buffered response builder. The path is:
+
+```text
+new response (status 200, empty registry, no representation, committed=false)
+  -> handler runs; return value or explicit helper selects representation state
+  -> automatic selection maps a native return to a representation, or a helper sets it
+  -> strict conversion/validation runs now; a failure raises before any bytes exist
+  -> Feature 33 after hooks unwind and may replace status/fields/representation
+  -> Feature 31 finalizer computes representation metadata (type, length, validators)
+  -> bodyless rules apply once (HEAD, 204, 205, 304)
+  -> delegated composers add their fields (Feature 34 CORS, rate-limit, security)
+  -> transport commits exactly once; committed=true
+  -> a file/stream representation streams bounded chunks, closing on end/error/disconnect
+```
+
+Producers of response state are the handler return, the explicit helpers, `send`,
+`render` and framework middleware. Every producer mutates the same builder and returns
+it; none writes to the socket. Inspection (`to_sql`-equivalent status/header/body
+readers) never commits. There is no retry or rollback: a conversion or validation
+error becomes the normal production 500 before commit, and a post-commit mutation or
+second commit raises `ResponseAlreadyCommitted`. The builder is request-local and is
+never shared across concurrent requests.
 
 ## Configuration and precedence
 
-The audit has not yet fixed argument, environment, project-file, default, and cache timing precedence.
+Response types has no environment variables or project files of its own. Its only
+precedence rules are local to a request:
+
+1. **Selection.** An explicit helper always wins over automatic selection. `json(x)`
+   is JSON even when `x` is a string; a bare handler return uses the automatic table.
+2. **Status.** A status passed to a helper wins over a chained `status(code)`, which
+   wins over the default 200. An omitted helper status preserves the current status;
+   it never resets to 200. Valid final status is an integer 200 through 599.
+3. **Content type.** An explicit `content_type` on `binary`/`send` wins; otherwise the
+   helper's fixed media type applies; a file uses its validated type or the shared MIME
+   table, then `application/octet-stream`.
+4. **Fields.** A singleton header set later replaces the earlier one case-insensitively;
+   `Set-Cookie` accumulates. Delegated composers (Feature 34 CORS, rate limiting,
+   security, compression) add their fields at finalization and own those names.
+
+Template rendering reads Frond's own configuration (template directory, cache) through
+the template feature; response caching timing belongs to the cache feature. Response
+types stores none of it and reads no cache at selection time.
 
 ## Failures, side effects and security
 
@@ -421,7 +495,28 @@ Content-Length lie.
 
 ## Providers and substitutability
 
-The audit has not yet proved provider substitution or recorded deliberate capability exceptions.
+Response types has no swappable storage backend the way the database, cache or session
+features do. Its substitutable units are the representation producers and the consumers
+that compose at commit.
+
+- **Representation producers** (JSON, HTML, text, XML, binary, redirect, file, template)
+  must emit byte-identical output for the same input in every language. The
+  `to_response_data` protocol is the substitution seam: real ORM models, `DatabaseResult`
+  and a documented application protocol register against it, and the JSON producer
+  recurses through it without knowing the concrete type. A port swaps its JSON library
+  but not the normalized bytes.
+- **Commit consumers** (Feature 31 finalizer, Feature 33 unwind, Feature 34 CORS, rate
+  limiting, security headers, compression/ETag, response caching) consume the buffered
+  state through the one status/one body/one case-insensitive field registry. Any of them
+  may be present or absent; none may bypass finalization or write bytes early.
+
+Deliberate capability exceptions, recorded so a port does not treat them as defects:
+`stream` and Server-Sent Events commit on their first chunk, so the bodyless and
+after-mutation rules that assume a buffered body do not apply to a committed stream;
+the streaming feature documents what remains legal. A compatibility raw-transport
+accessor may exist for advanced use, but normal dispatch commits once through the
+finalizer. Template rendering delegates its whole engine to Frond; response types only
+guarantees the rendered bytes reach commit as an HTML representation.
 
 ## Contradictions and defects
 
@@ -494,15 +589,84 @@ precision loss is not a convenience feature.
 
 ## Proposed conformance fixture
 
-The audit has not yet produced the complete shared cases and mutation witnesses required for a parity gate.
+`plan/v3/fixtures/response_types_contract.json` (version 1) holds the case groups
+listed under Shared executable contract above: automatic selection, explicit helpers and
+status preservation, exact JSON bytes, recursive ORM/`DatabaseResult`/protocol data,
+invalid-value errors, case-insensitive fields and Set-Cookie, HEAD/204/205/304, redirect
+status/URI/control vectors, and file directory/special/traversal/symlink/MIME/disposition
+cases. Every case records normalized values, not language spelling, and stores ordered
+maps as key-value arrays so object-key reordering cannot hide a defect.
+
+The fixture is considered wired only when these mutation witnesses are proven red:
+
+- a returned string is served as `text/html` (markup sniffing restored);
+- `NaN`/Infinity, a cycle or an unsupported value serializes to a value or an empty 200
+  instead of a pre-commit error;
+- an unsafe integer is emitted as a JSON number instead of failing;
+- a nested ORM/`DatabaseResult` value is left unconverted or stringified;
+- an omitted helper status resets a chained status to 200;
+- a helper writes to the socket before the finalizer runs;
+- a 204/205/304 or HEAD response carries a body;
+- `Content-Type` is stored twice under different casing;
+- a redirect keeps a CR/LF in its Location;
+- `file()` returns 200 for a directory, or loads the whole file into memory;
+- a caller-supplied download filename reaches the header without validation.
+
+A witness that only asserts a fake `Response`/`ServerResponse` shape does not count; the
+wire, bodyless, ORM and file witnesses run through the real transport, a real loaded ORM
+model and a real temporary filesystem.
 
 ## Integration map
 
-The audit has not yet mapped every export, startup path, request hook, CLI, scaffolder, status command, document, and generated consumer.
+Implementation must update these consumers together:
+
+| Consumer | Required integration |
+| --- | --- |
+| Feature 31 dispatch | interpret a handler return through automatic selection; own HEAD fallback and the single final socket commit |
+| Feature 33 middleware | run after hooks on the buffered builder before commit; never let an early return bypass finalization |
+| error handling | convert a serialization/validation/file error to the production 500 before commit; never send a partial 200 |
+| Feature 34 CORS / rate limiting / security | add their fields to allowed and error responses at finalization through the one field registry |
+| compression / ETag / ranges | consume the file/representation without forcing it into memory; must not make Content-Length lie |
+| response caching | store only an eligible committed representation; a 429/500/`no-store` is never cached |
+| Frond templates | `render` produces an HTML representation; response types owns only that the bytes reach commit |
+| Swagger | describe declared response media types from the helper contract, not sniffed types |
+| Feature 39 shutdown | file/stream cleanup registers with disconnect and shutdown so no descriptor leaks |
+| package exports | export the response builder and helpers; a native constructor stays optional |
+| scaffolders / docs / AI reference | show only the neutral helpers and the automatic table; never markup sniffing or integer-as-status |
+| central fixture + four runners | load `response_types_contract.json`, execute every case, report the hash |
+
+No CLI command or environment variable owns response-type configuration. The only
+startup dependency is Frond initialization for `render`.
 
 ## Breaking changes and migration
 
-The audit has not yet turned every parity break into an actionable pre-3.14 migration instruction.
+These are permitted 3.14 corrections. Release notes and startup diagnostics must give
+each one an actionable instruction:
+
+- **Returned strings are `text/plain`, not sniffed HTML.** A handler that returned
+  markup and relied on auto-HTML must call `html(...)` explicitly. (Ruby also stops
+  upgrading every callable string to HTML.)
+- **Strict JSON.** `NaN`/Infinity, cycles, unsupported objects, non-string map keys and
+  integers outside +/-(2^53-1) now raise before commit instead of emitting invalid or
+  empty JSON. Return an out-of-range id as a string.
+- **Buffered commit.** Node helpers and PHP `send()` no longer write to the socket; they
+  set state and the finalizer commits once. Code that read the wire immediately after a
+  helper must move to the response readers or the after-commit point.
+- **Status preservation.** Ruby stops resetting a chained status to 200 when a helper
+  status is omitted.
+- **One `file()` signature.** Callers adopt `file(path, status?, content_type?,
+  download?, filename?, root?)`; a directory or special file is now a 404, traversal is
+  403, and large files stream instead of loading into memory.
+- **Validated redirects and fields.** A redirect with a control character, an invalid
+  status, or a header name/value with CR/LF/NUL now fails at construction. Duplicate
+  singleton headers (mixed casing) collapse to one.
+- **Ruby surface trim.** `csv()` becomes `text`/`file` with an attachment; response-level
+  `add_cors_headers` is removed in favor of Feature 34.
+- **Automatic null is 204.** A handler returning nothing yields 204; use `json(null)` for
+  an intentional JSON `null` body.
+
+Migration notes must show each language's native `DatabaseResult`/model access and the
+explicit helper replacements. No compatibility mode is required before 3.14.0.
 
 ## Implementation backlog
 
@@ -543,16 +707,16 @@ must not need to read another language's Response class.
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Existing-language contradictions recorded.
+- [x] Owner ambiguities recorded (10 proposed; the three genuine calls await owner ratification).
+- [x] Proposed shared cases and mutation witnesses complete.
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule is clean-room sufficient.
 
 ### Canonical response state
 
