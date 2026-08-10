@@ -1,297 +1,502 @@
-# Feature 5: DATABASE_URL parser
+# Feature 5: Database URL and connection identity
 
-Audited 2026-07-28. Part of `98-feature-audit.md`. **Planning only.**
+## Identity and status
 
-Core Principle 6 names connection strings as something that must be *literally
-identical* across the four frameworks. This is the feature that decides that, so
-it gets a stricter reading than most.
+- Matrix identity: Feature 5, `DATABASE_URL` parser.
+- Audit state: **decisions APPROVED 2026-08-10; implementation deliberately not started (build phase pending runner wiring)**.
+- Original audit: 2026-07-28 to 2026-07-30.
+- Adversarial re-audit: 2026-08-10.
+- Release boundary: breaking corrections are permitted before 3.14.0.
+- Dependencies: Feature 1 typed environment, Feature 3 adapter interface and
+  Feature 4 provider contracts.
+- Dependants: database factories, connection pools, cache identity, migrations,
+  sessions, queues, dev-admin, doctor/status output and every provider adapter.
+- Existing fixture: four divergent copies of `database_url_corpus.json`.
+- Proposed authority: `plan/v3/fixtures/database_url_contract.json`.
 
-## Files
+The old packet says Feature 5 shipped in all four with byte-identical fixtures.
+That status is withdrawn. The copies now have different hashes and case counts,
+and all four database factories still parse or reinterpret connection data after
+the `DatabaseUrl` value has been constructed.
 
-| | path | shape |
-| --- | --- | --- |
-| python | `tina4_python/database/connection.py` | **inline** in `Database.__init__` / `_select_adapter` |
-| php | `Tina4/DatabaseUrl.php` | a value object with readonly properties |
-| ruby | `lib/tina4/database.rb` | **inline** in `Database#initialize` |
-| node | `packages/orm/src/database.ts` | `parseDatabaseUrl()` returning `ParsedDatabaseUrl` |
+## Owner decisions APPROVED (finalized 2026-08-10)
 
-## Measurements
+Andre stepped through the twelve owner decisions with the four genuine calls
+surfaced separately. Eleven stand as written; Decision 8 is amended.
 
-Rolled into feature 3's numbers (the parser is not separable in two of four).
-The one measurement that stands alone:
+**Ratified as written (1-7, 9-12):** parse exactly once (1); the value adds
+`protocol`, ordered `hosts`, option lists and credential-free `identity` (2);
+Mongo seed lists and `mongodb+srv` are required forms (3); query options are
+lossless (4); SQL/Firebird require host and database, Mongo without a database
+uses `tina4`, SQLite requires an explicit target (5); ports are 1-65535 and IPv6
+hosts store unbracketed (6); every component is percent-decoded once and
+canonically encoded on render (7); the alias table is exact - `mariadb` added,
+`mongo`/`pymongo` removed, `mongodb+srv` a protocol not an alias (9); fragments
+and malformed escapes fail outright (10); cache identity includes username, all
+endpoints, resolved SQLite location and non-secret routing options, never
+credentials (11); invalid input is never echoed (12).
 
-| | worst function | CC |
-| --- | --- | --- |
-| node | `parseDatabaseUrl` | **43** |
+**Decision 8 AMENDED - explicit argument outranks the URL.** The plan had the URL
+component (including an explicitly empty value) outrank an explicit
+constructor/factory argument. That contradicts ADR-0041 (an explicit argument is
+the highest authority everywhere else in the framework) and silently ignores a
+passed credential. The final credential precedence is:
 
-43 in a single pure function whose entire job is string-to-struct. For comparison,
-the whole PHP `DatabaseUrl` class - constructor, `fromEnv`, `getDriverClass`,
-`getDsn`, `toSafeString` - has no function above the warn threshold.
+1. an explicit constructor/factory argument, including an explicitly empty value;
+2. the URL component, including an explicitly empty value;
+3. `TINA4_DATABASE_USERNAME` / `TINA4_DATABASE_PASSWORD`;
+4. a documented provider default.
 
-## What differs
+So `postgres://user:@host/db` constructed with `password='secret'` resolves to
+`secret`, not empty. A null argument is absent and falls through to the URL; an
+explicitly empty argument is a value and wins. One precedence rule now governs the
+whole framework. The URL-source order (explicit URL argument, then
+`TINA4_DATABASE_URL`, then the default SQLite URL) is unchanged - only the
+per-component credential order flips.
 
-Nine connection strings through both parsers that can run without opening a
-connection. Verified by execution.
+The four genuine calls, stepped through with the owner:
 
-| url | PHP | Node |
-| --- | --- | --- |
-| `sqlite:///app.db` | db=`app.db` | path=`app.db` |
-| `postgres://user:pass@localhost:5432/mydb` | port=5432 user=user | port=5432 user=user |
-| `postgresql://localhost/mydb` | **port=5432** | **port=(unset)** |
-| `pgsql://localhost:5432/mydb` | postgres | postgres |
-| `mysql://root:secret@localhost:3306/db` | ok | ok |
-| `mssql://sa:pw@localhost:1433/db` | ok | ok |
-| `sqlserver://localhost:1433/db` | mssql | mssql |
-| `firebird://localhost:3050//path/to/db` | db=**`path/to/db`** | db=**`//path/to/db`** |
-| `postgres://u:p%40ss@localhost:5432/db` | pass=`p@ss` | pass=`p@ss` |
+- **A (value shape): ordered `hosts` list.** Ratifies Decision 2. The value carries
+  an ordered `{host, port}` list for every engine; single-host engines get a
+  one-element list; Mongo carries its full seed list. Breaks callers reading
+  singular `.host` / `.port` (migration note already recorded); a first-endpoint
+  helper eases the pre-3.14 transition.
+- **B (credential precedence): explicit argument wins.** The Decision 8 amendment
+  above.
+- **C (cache identity): corrected identity adopted.** Ratifies Decision 11. Identity
+  gains username and the resolved absolute SQLite path; the old username-excluding,
+  relative-path identity is dropped. Old cached results invalidate on upgrade
+  (in-memory, trivial), fixing wrong-user cache collisions and relative-versus-
+  absolute SQLite fragmentation.
+- **D (Mongo no-database default): `tina4`.** Ratifies Decision 5. A Mongo URL
+  without a database resolves to `tina4`, identical in all four; the parser records
+  "absent" and the adapter applies `tina4` when an operation needs one.
+  Deterministic and parity-safe; the driver's own default (often `test`) is
+  rejected because it diverges across drivers.
 
-**D1. There is no parser to compare in Python or Ruby.** Both inline URL handling
-into the `Database` constructor, so a URL cannot be parsed without building a
-connection object. Consequences, in order of severity: the parse cannot be unit
-tested on its own; the four cannot be compared without standing up a database;
-and `tina4 doctor` / the setup wizard / any tooling that wants to validate a URL
-before using it has nothing to call. Python compounds it by parsing twice in two
-ways - `urlparse` in `_select_adapter`, then a deliberate raw-string strip for
-sqlite because "urlparse collapses" the path (its own comment).
+This closes the DESIGN half of the FINAL bar for Feature 5. Remaining to reach
+FINAL: materialize `database_url_contract.json` and wire the four fail-closed
+runners (build phase).
 
-**D2. A URL with no port parses differently.** `postgresql://localhost/mydb`
-yields port 5432 on PHP and no port at all on Node. The downstream `pg` driver
-defaults to 5432 itself, so this probably does not break a connection today -
-which is precisely why it is worth recording now: the parsed struct for one input
-differs between frameworks, and the thing hiding it is a third-party default, not
-our contract.
+## Why this feature exists
 
-**D3. The documented Firebird absolute-path form parses three ways, and neither
-result is the path.** `firebird://localhost:3050//path/to/db` is the form the
-CLAUDE.md files document for an absolute Firebird database path. PHP returns
-`path/to/db` (relative - both leading slashes gone). Node returns `//path/to/db`
-(both kept). Neither returns `/path/to/db`.
+One connection string must select the same provider, endpoint, credentials,
+database and options in every Tina4 language without leaking its secrets or
+silently connecting somewhere else.
 
-### D3: SETTLED on a live server (2026-07-30)
+## Boundary
 
-Firebird 5.0.4 on the .99 test host, real `firebird-driver`, each candidate tried
-as an actual connection against `/var/lib/firebird/data/tina4test.fdb`:
+Feature 5 owns:
 
-```
-fails     PHP parse  (relative, both slashes gone)  I/O error during "open" operation
-CONNECTS  Node parse (both slashes kept)            192.168.88.99/3050://var/lib/.../tina4test.fdb
-CONNECTS  absolute   (one leading slash)            192.168.88.99/3050:/var/lib/.../tina4test.fdb
-```
+- recognizing supported connection-string forms and canonical aliases;
+- lossless conversion into one native value shape;
+- percent decoding, default ports, IPv6 and multi-host authorities;
+- URL, explicit-argument and environment precedence;
+- connection options and safe rendering;
+- a credential-free but authorization-aware connection identity;
+- named failures for malformed, ambiguous and unsupported input.
 
-**The driver accepts one OR two leading slashes and rejects none.** Firebird
-normalises the doubled slash; a relative path is looked up relative to the
-server's working directory and is not found.
+The public database factory consumes this value once. An adapter receives the
+resolved provider configuration and does not parse the raw URL again. Feature 3
+owns connecting. Feature 4.x packets decide which retained options each provider
+supports and how they map onto its driver.
 
-**The connection is not what is broken - the parsed VALUE is.** PHP connects
-end-to-end today (verified against the same server through
-`Database::create(...)`, returning a row), because the adapter rebuilds a usable
-path on its way to the driver. What PHP exposes as `DatabaseUrl::$database` is
-`var/lib/firebird/data/tina4test.fdb`, a relative path that would NOT open if a
-caller took that property at face value - logged it, passed it on, or compared
-it. So this is a value-correctness bug hiding behind a working connection, which
-is why reading the parse alone could not settle it and why nobody has reported it.
+The parser performs no I/O, imports no driver, resolves no DNS and opens no
+socket. Pure parsing tests are necessary; factory and live provider tests prove
+that the parsed value is actually used.
 
-**Canonical answer: the parsed database for an absolute Firebird path is
-`/var/lib/firebird/data/tina4test.fdb`** - exactly one leading slash. It is what
-the driver accepts, it is what the user wrote, and it is the only one of the
-three that is true as a standalone value. Node drops its redundant second slash;
-PHP stops eating the first one.
+## Existing implementation evidence
 
-This unblocks the row.
+### Current public value
 
-**D4. The parsed struct uses different field names for the same concepts.** The
-owner's naming rule, applied to a data shape rather than a method:
-
-| concept | php | node |
-| --- | --- | --- |
-| engine | `driver` (+ separate `scheme`) | `type` |
-| user | `username` | `user` |
-| sqlite file | `database` | `path` |
-| server db name | `database` | `database` |
-
-`driver` on PHP is not even the scheme - it holds an internal class name
-(`DataPostgresql`, `DataSQLite3`, `DataMySQL`), a v2-era naming that leaks
-implementation into a public readonly property.
-
-**D5. Only PHP has the useful extras.** `DatabaseUrl::fromEnv()`,
-`getDsn()`, and `toSafeString()` (a redacted form for logs). The last one matters:
-without it, every other framework that wants to log a connection target has to
-redact the password itself, and the audit of the logger will find out whether they
-all do.
-
-## Verdict: PROMOTE php (the shape), then fix it
-
-Decided on **SOLID (single responsibility)**. A parsed connection URL is a value,
-and PHP is the only framework that models it as one. Its class has no
-above-threshold function, it is unit-testable without a database, and it carries
-the two derived accessors the others lack.
-
-Node has the right idea (a pure function returning a struct) with a 43-CC body.
-Python and Ruby have no seam at all.
-
-So: adopt PHP's shape everywhere, and while adopting it, fix PHP's own defects -
-the leaked `DataXxx` class name in `driver`, and the Firebird path handling.
-
-## Pattern
-
-**A `DatabaseUrl` value type in all four, constructed from a string, with nothing
-else in it.**
-
-Surface table:
-
-| concept | python | php | ruby | node |
+| Evidence | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
-| parse | `DatabaseUrl(url)` | `new DatabaseUrl($url)` | `DatabaseUrl.new(url)` | `new DatabaseUrl(url)` |
-| from env | `DatabaseUrl.from_env(key=...)` | `DatabaseUrl::fromEnv($key)` | `DatabaseUrl.from_env(key:)` | `DatabaseUrl.fromEnv(key?)` |
-| engine | `.engine` | `->engine` | `.engine` | `.engine` |
-| host | `.host` | `->host` | `.host` | `.host` |
-| port | `.port` | `->port` | `.port` | `.port` |
-| database | `.database` | `->database` | `.database` | `.database` |
-| username | `.username` | `->username` | `.username` | `.username` |
-| password | `.password` | `->password` | `.password` | `.password` |
-| dsn | `.dsn()` | `->getDsn()` | `.dsn` | `.dsn()` |
-| redacted | `.to_safe_string()` | `->toSafeString()` | `.to_safe_string` | `.toSafeString()` |
+| Dedicated `DatabaseUrl` | yes | yes | yes | yes |
+| Canonical `engine` | yes | SQL engines only | yes | yes |
+| MongoDB represented | partial | no | partial | partial |
+| ODBC represented | yes | no | yes | yes |
+| Environment credential fallback | yes | **no** | yes | yes |
+| Factory consumes parsed value once | **no** | **no** | **no** | SQL fields only |
+| Downstream raw reparse | adapters + SQLite path | factory + adapters | drivers | Mongo raw URI; Firebird helpers |
+| Query options retained | no | no | no | no |
 
-Field decisions, each settling a divergence found above:
+PHP has `MongoDBAdapter` and `ODBCAdapter` registrations but its public
+`DatabaseUrl` rejects both schemes. The facade therefore accepts strings the
+value object says are unsupported. A developer, doctor command and factory do
+not share one answer.
 
-- **`engine`**, not `driver` and not `type`. It holds the canonical engine name
-  (`sqlite`, `postgres`, `mysql`, `mssql`, `firebird`, `mongodb`, `odbc`) after
-  alias resolution. The adapter class is looked up FROM the engine by the
-  registry; a public property never holds a class name (kills D4's leak).
-- **`username`**, not `user`, matching the `TINA4_DATABASE_USERNAME` env var that
-  already exists in all four. The env var is the tie-breaker: the property should
-  read the same as the setting it comes from.
-- **`database` for every engine, including sqlite.** A sqlite file IS the
-  database. `path` becomes an alias at most; one concept, one field name.
-- **Default ports are applied at parse time** and are part of the contract, not
-  the driver's business: postgres 5432, mysql 3306, mssql 1433, firebird 3050. A
-  URL with no port must yield the same struct in all four (kills D2).
-- **Alias resolution happens once, at parse.** `postgresql`/`pgsql` to `postgres`;
-  `sqlserver` to `mssql`; `sqlite3` to `sqlite`. The alias table is data, shared,
-  and asserted by the fixture below.
-- **Percent-decoding applies to username and password.** Both PHP and Node
-  already do it; making it contractual keeps it from regressing.
-- **`toSafeString()` is mandatory in all four**, and it is the ONLY form allowed
-  in a log line or an error message.
+### Fixture drift
 
-## Baseline against the shared fixture (2026-07-30)
+The existing copies all claim to be byte-identical:
 
-Step 2 done: `database_url_corpus.json`, 17 cases plus 3 error cases, identical
-bytes in all four (`tests/fixtures/`, `spec/fixtures/`, `test/fixtures/`, md5
-`7c4c561d`). Run against the CURRENT implementations, this is the parity gap the
-methodology asks to capture before anything moves:
+| Framework | SHA-1 | Positive cases | Material unique coverage |
+| --- | --- | ---: | --- |
+| Python | `64a5e64a3112b1b289aff5e3019aa05ec3a749ab` | 22 | two ODBC rows, including brace delimiter |
+| PHP | `6b9183722f347b5678ac22d060377721df2169cf` | 19 | neither ODBC nor explicit-empty-password row |
+| Ruby | `23d25dc62dd1fc52dc28eb55b4818838066a871c` | 20 | one differently named ODBC row |
+| Node | `415d7b68475c2de491c92b3ed2cc0db866b48498` | 21 | differently named empty-password and ODBC rows |
 
-| | result |
+Each runner executes its own copy, so every suite can be green while parity is
+red. Stable case IDs, a central authority and fail-closed copy/hash checks are
+required.
+
+### Focused execution
+
+The lab ran the current focused suites as root with live PostgreSQL and Firebird:
+
+| Framework | Existing-suite result |
 | --- | --- |
-| php | **12 pass, 5 fail** |
-| node | **0 pass, 17 fail** |
-| python | **nothing to call** - no parser exists (D1) |
-| ruby | **nothing to call** - no parser exists (D1) |
+| Python | 108 passed |
+| PHP | 84 tests, 335 assertions |
+| Ruby | 94 examples, 0 failures |
+| Node | all current parser, credential, path and Firebird checks passed |
 
-**PHP's 5** are exactly the defects already named: three alias cases
-(`postgresql`, `pgsql`, `sqlserver` are left unresolved in the public `scheme`
-property) and the two Firebird cases (the leading slash is eaten).
+Those green results establish a regression baseline only. The adversarial
+cross-language probes below are outside the current answer keys.
 
-**Node's 17** are dominated by one line: `toSafeString()` **does not exist**.
-Every case fails on it. That is worse than a formatting difference - it means
-Node has no way to put a connection target in a log without hand-rolling the
-redaction at each call site, and the D5 note predicted exactly this. Node also
-applies no default port (mysql/mssql/firebird come back null) and gets the
-Firebird path wrong in both directions: it keeps both leading slashes on the
-absolute form AND adds one to the relative form (`data/app.fdb` becomes
-`/data/app.fdb`), so neither Firebird case round-trips.
+## Canonical value contract
 
-The two frameworks with no parser are not a lighter lift than the two with one:
-they cannot fail a single case because there is nothing to call, which is the
-D1 finding stated as a number.
+`DatabaseUrl` is an immutable native value with these concepts:
 
-## Methodology
-
-1. Settle D3 first, on real Firebird (task #312 has the server). Decide what
-   `firebird://host:3050//path/to/db` must yield, write it down, and only then
-   build the parser. Building first and deciding later is how the current
-   three-way split happened.
-2. Build the shared fixture: a committed table of URL to expected-struct, one file,
-   read by all four suites. Same bytes, one answer key - the Frond corpus pattern.
-3. Write the tests below in all four against the fixture. Confirm red.
-4. PHP first this time, not Ruby: it already has the class, so the work is a rename
-   (`driver` to `engine`, drop the class-name leak) plus the Firebird fix. It
-   becomes the reference the other three are ported from.
-5. Node next: extract `parseDatabaseUrl`'s 43 CC into the value type, one branch
-   per engine, each engine's parse under CC 10. The `type`-to-`engine` and
-   `user`-to-`username` renames are breaking on a public interface, so they need a
-   `Breaking:` note.
-6. Python and Ruby: add the type, then make `Database.__init__` / `#initialize`
-   consume it instead of parsing inline. Python's sqlite raw-string special case
-   moves inside the type, where its comment can finally be tested.
-7. Re-measure. `parseDatabaseUrl` must be gone as an offender.
-
-## Tests to write
-
-Identical names in all four, driven off the shared fixture. Pure functions over
-strings - no database, no mocks, nothing to stand up.
-
-| pair | positive | negative |
+| Concept | Type | Rule |
 | --- | --- | --- |
-| parse without connecting | `database_url_parses_without_opening_a_connection` | `parsing_a_url_does_not_require_a_database` - no driver import, no socket |
-| default port | `a_url_without_a_port_gets_the_engine_default` (5432/3306/1433/3050) | `a_url_without_a_port_does_not_leave_the_port_unset` |
-| aliases | `postgresql_and_pgsql_resolve_to_postgres`, `sqlserver_resolves_to_mssql` | `an_unknown_scheme_raises_a_named_error` - not a silent fallback to sqlite |
-| credentials | `percent_encoded_password_is_decoded` (`p%40ss` to `p@ss`) | `credentials_in_the_url_do_not_appear_in_to_safe_string` |
-| sqlite | `sqlite_file_url_populates_database` | `sqlite_url_does_not_leave_database_empty` |
-| sqlite memory | `sqlite_memory_forms_all_resolve_to_memory` (`sqlite::memory:`, `sqlite:///:memory:`) | `sqlite_memory_is_not_treated_as_a_file_named_memory` |
-| firebird path | `firebird_double_slash_yields_the_agreed_absolute_path` (per step 1) | `firebird_absolute_path_is_not_silently_made_relative` |
-| engine field | `engine_holds_a_canonical_engine_name` | `engine_never_holds_an_adapter_class_name` - the D4 leak cannot return |
-| redaction | `to_safe_string_keeps_host_port_and_database` | `to_safe_string_never_contains_the_password` |
-| fixture parity | `all_four_frameworks_agree_on_the_url_fixture` | `no_framework_has_a_field_the_others_lack` |
+| `engine` | string | canonical provider: `sqlite`, `postgres`, `mysql`, `mssql`, `firebird`, `mongodb`, `odbc` |
+| `protocol` | string | canonical connection protocol; normally the engine, with `mongodb+srv` retained distinctly |
+| `hosts` | native list | ordered `{host, port}` records; empty for SQLite/ODBC; IPv6 host text excludes brackets |
+| `database` | string | decoded database name or SQLite/Firebird path |
+| `username` | string or null | decoded; null means absent, empty means explicitly empty |
+| `password` | string or null | decoded; null means absent, empty means explicitly empty |
+| `options` | native map | decoded option names to ordered native string lists; duplicates are retained |
+| `connection_string` | string or null | ODBC driver string only; never displayed without redaction |
 
-The redaction negative pair is worth its weight: a connection URL in a log is a
-credential leak, and the only framework that currently has the tool to prevent it
-is PHP.
+The same data keys are visible in every language. Method spelling remains
+idiomatic:
 
-## Risks
+| Concept | Python | PHP | Ruby | Node / another camelCase language |
+| --- | --- | --- | --- | --- |
+| construct | `DatabaseUrl(url, ...)` | `new DatabaseUrl($url, ...)` | `DatabaseUrl.new(url, ...)` | `new DatabaseUrl(url, ...)` |
+| from environment | `from_env(key=...)` | `fromEnv($key)` | `from_env(key)` | `fromEnv(key?)` |
+| safe form | `to_safe_string()` | `toSafeString()` | `to_safe_string` | `toSafeString()` |
+| driver target | `dsn()` | `getDsn()` | `dsn` | `dsn()` |
+| connection identity | `identity()` | `getIdentity()` | `identity` | `identity()` |
 
-- **D4's renames are breaking on Node's public `ParsedDatabaseUrl`.** `type` to
-  `engine`, `user` to `username`, `path` to `database`. Needs a `Breaking:` entry
-  plus a migration note; keeping the old names as deprecated aliases is the
-  tempting shortcut and it is against the no-aliases rule, so rename and note it.
-- **D3 is not decidable from source.** Do not guess the Firebird answer; the
-  parser is cheap to change once and expensive to change three times.
-- **D2 looks harmless because a third-party default hides it.** Fix it anyway: the
-  contract is the parsed struct, not what `pg` happens to assume.
+`dsn` is driver-facing and is not safe to log: ODBC necessarily includes its
+credential keywords. `toSafeString` is the display form.
 
-## SHIPPED all four (2026-07-30)
+## Supported protocols and aliases
 
-| | before | after |
+| Accepted input | Canonical engine | Canonical protocol |
 | --- | --- | --- |
-| php | 12/17 | **17/17** |
-| node | 0/17 | **17/17** |
-| python | no parser to call | **17/17** |
-| ruby | no parser to call | **17/17** |
+| `sqlite`, `sqlite3` | `sqlite` | `sqlite` |
+| `postgres`, `postgresql`, `pgsql` | `postgres` | `postgres` |
+| `mysql`, `mariadb` | `mysql` | `mysql` |
+| `mssql`, `sqlserver` | `mssql` | `mssql` |
+| `firebird` | `firebird` | `firebird` |
+| `mongodb` | `mongodb` | `mongodb` |
+| `mongodb+srv` | `mongodb` | `mongodb+srv` |
+| `odbc` | `odbc` | `odbc` |
 
-Order: PHP (the reference), Node, Python, Ruby. Each carries the same value
-type - `engine` / `host` / `port` / `database` / `username` / `password`, plus
-`dsn()`, `fromEnv()` and `toSafeString()` - and each has a corpus test reading
-the shared fixture.
+Implementation names such as `pymongo`, `DataPostgresql` and driver class names
+are never connection schemes. Ruby's current `mongo` shorthand is removed rather
+than creating an undocumented alias in the other languages. Unknown schemes
+throw and never fall back to SQLite.
 
-**What implementing it found that reading it did not:**
+Default ports are applied during parsing: PostgreSQL 5432, MySQL/MariaDB 3306,
+MSSQL 1433, Firebird 3050 and standard MongoDB 27017. An explicit port must be
+between 1 and 65535. Port zero is invalid, not an instruction to use the default.
+An SRV MongoDB URL does not carry an explicit port.
 
-- **Node's `parseDatabaseUrl` added a slash to every Firebird path** (`"/" +
-  captured`), so a single-slash URL came back ABSOLUTE and the documented
-  double-slash form came back with two. Neither round-tripped.
-- **Ruby silently fell back to SQLite for an unknown scheme**, and had a spec
-  pinning it: `fakedb://localhost/test` detected as `sqlite`. The user names a
-  database at localhost, the app writes to a local file, boots fine, and nobody
-  learns the real database was never reached. Ruby's `detect_driver` also
-  matched on SUBSTRINGS, so a postgres database named `mysqldata` could be
-  detected as MySQL.
-- **`sqlite3://` was an exception in PHP and a working connection in Ruby.** PHP
-  removed the alias in v3 with a test asserting it raised. Owner decision: it is
-  accepted everywhere and normalises to the `sqlite` engine, because the driver
-  is literally named sqlite3 in all four.
-- **PHP connected fine while publishing a broken value.** `DatabaseUrl::$database`
-  handed back a relative Firebird path that would not open, because the adapter
-  rebuilt the path downstream. A value-correctness bug behind a working
-  connection - which is why nobody reported it.
+## Provider URL forms
 
-**Still open from this row:** `tina4-php/CLAUDE.md` lists `pgsql` and `sqlite3`
-as removed aliases. Both claims are wrong and the page needs correcting.
+### SQLite
+
+- `sqlite::memory:` and `sqlite:///:memory:` mean the in-memory database.
+- `sqlite:///data/app.db` is relative.
+- `sqlite:////var/data/app.db` and `sqlite:/var/data/app.db` are absolute on
+  Unix-like systems.
+- `sqlite:///C:/data/app.db` is an absolute Windows drive path.
+- Percent-encoded path bytes are decoded once. A literal percent is `%25`.
+- An empty SQLite target throws. A bare filename is not a `DatabaseUrl`; callers
+  spell the provider explicitly.
+
+Feature 4.1 resolves relative paths against the application root. The parsed
+value retains relative versus absolute intent.
+
+### Single-host SQL and Firebird
+
+- Host and database are required. Tina4 does not silently select a local Unix
+  socket, OS username database or driver-specific default database.
+- IPv6 literals require brackets in input; the stored host excludes brackets and
+  canonical rendering adds them back.
+- The database/path is percent-decoded once.
+- Firebird strips exactly one URL path separator, so the documented double-slash
+  absolute form retains one leading slash.
+
+### MongoDB
+
+- Standard `mongodb://` accepts the complete ordered seed list.
+- `mongodb+srv://` retains its protocol and single SRV hostname.
+- Query options, including replica-set, TLS, authentication and read-preference
+  options, are retained without being reinterpreted by this feature.
+- An omitted MongoDB database normalizes to Tina4's conventional `tina4`.
+
+Standard MongoDB deployment URLs require multi-host seed lists and query options,
+and MongoDB recommends SRV URLs where possible. They are therefore part of a
+production-ready parser, not provider-specific text to discard. References:
+
+- <https://www.mongodb.com/docs/manual/reference/connection-string/index.html>
+- <https://www.mongodb.com/docs/manual/reference/connection-string-options/>
+
+### ODBC
+
+`odbc:///` is followed by the driver connection string. The parser retains it
+losslessly for the driver and recognizes brace quoting, semicolon delimiters and
+doubled `}}` escapes well enough to redact credential values completely.
+
+## Options and percent encoding
+
+- Query option names and values are percent-decoded exactly once.
+- Option order and repeated values survive parsing. The options map uses a list
+  for every key so no runtime silently keeps only the first or last duplicate.
+- Fragments are rejected. They have no database connection meaning and silently
+  dropping one can hide a malformed password or database name.
+- Unknown options are retained by the parser. The selected provider either maps
+  them through its Feature 4.x contract or throws an unsupported-option error;
+  it never ignores them silently.
+- Malformed percent encoding throws before adapter selection.
+- `toSafeString` emits a canonical percent-encoded URL, not decoded delimiters.
+
+The current implementations decode username/password but retain encoded database
+names and SQLite paths. They also emit a decoded username such as `user@corp`
+without re-encoding the `@`, producing an ambiguous safe URL. Both halves must
+be corrected together.
+
+## Configuration and precedence
+
+The public database factory resolves the URL source in this order:
+
+1. explicit URL argument;
+2. typed `TINA4_DATABASE_URL` from Feature 1;
+3. the framework's explicit default SQLite URL.
+
+Legacy `DATABASE_URL` and `DB_URL` are not fallback aliases. Feature 1's legacy
+guard names `TINA4_DATABASE_URL` and fails outright.
+
+Credentials resolve component by component (Decision 8, amended 2026-08-10 so an
+explicit argument outranks the URL, per ADR-0041):
+
+1. an explicit constructor/factory argument, including an explicitly empty value;
+2. the URL component, including an explicitly empty value;
+3. `TINA4_DATABASE_USERNAME` / `TINA4_DATABASE_PASSWORD`;
+4. a documented provider default, if that provider has one.
+
+Omitted arguments are null, not empty-string defaults, because the distinction
+controls fallback. PHP `DatabaseUrl::fromEnv()` currently ignores the separate
+credential environment variables; the other three apply them.
+
+Provider options follow the same pattern: URL option, explicit provider option,
+engine-specific typed environment, documented default. A URL value is never
+silently discarded downstream.
+
+## Lifecycle and operation graph
+
+```text
+explicit config / typed environment / default
+  -> construct DatabaseUrl once
+  -> validate protocol, authority, path, port and encoding
+  -> resolve credentials and options
+  -> registry selects adapter from canonical engine
+  -> adapter receives resolved provider config
+  -> connect and verify provider identity
+  -> safe status/log rendering or credential-free cache identity
+```
+
+Doctor, migrations, session database handlers, cache database backends and
+dev-admin use the same parser and registry path. None carries a private scheme
+switch or `parse_url` / `urlparse` / `URI.parse` copy.
+
+## Safe rendering and failures
+
+- Empty, malformed, unsupported and incomplete URLs throw a named
+  `DatabaseUrl` category before driver import or network I/O.
+- Error and log messages never contain the raw URL, password, ODBC credential,
+  token or secret option value.
+- The error names safe fields such as canonical protocol, bracketed host and
+  invalid port category. If safe extraction is impossible, it names no substring
+  from the input.
+- `toSafeString`, normal string conversion, debug inspection and JSON/debug
+  serialization replace every credential with `***` while retaining useful
+  endpoint and option information.
+- The live `password` and ODBC connection string remain available only because
+  the adapter needs them. Automatic framework persistence to caches, sessions,
+  queues or logs is forbidden.
+- A general `redactCredentials(raw)` is best-effort for recognizable URL and DSN
+  grammar. An invalid-URL error does not rely on best-effort redaction; it omits
+  the raw value.
+
+Malformed userinfo containing an unencoded `/` currently exposes a password
+fragment in Python, PHP and Node exception text. Ruby is correct. ODBC doubled
+brace escapes currently expose the password tail in PHP, Ruby and Node; Python
+is correct. Both shapes are release-blocking security cases.
+
+## Canonical connection identity
+
+`identity()` feeds database query caches and connection diagnostics. It contains:
+
+- canonical protocol;
+- every normalized host and port in order;
+- resolved absolute SQLite path or normalized database name;
+- username, because different roles can see different rows through grants,
+  row-level security and session defaults;
+- every non-secret connection option that can change routing or visibility.
+
+It excludes passwords, tokens and secret option values. The identity may be
+hashed before use as a cache key.
+
+The current four-language cache identity deliberately excludes username on the
+assumption that roles see the same data. That is false for row-level security.
+It also uses a relative SQLite path, so two applications both configured as
+`sqlite:///data/app.db` and sharing a persistent cache can collide. Feature 43
+must consume this canonical identity rather than rebuild its own subset.
+
+## Contradictions and defects
+
+| ID | Finding | Required correction |
+| --- | --- | --- |
+| DBU-01 | Four fixtures claim identical bytes but have four hashes and 19-22 cases | One central versioned fixture, exact-copy/hash guard and stable case IDs |
+| DBU-02 | Factories/adapters parse connection strings again in every runtime | Parse once; adapters consume resolved config |
+| DBU-03 | PHP value rejects registered MongoDB and ODBC adapters | Cover every Feature 3 provider in the value and registry |
+| DBU-04 | Query options disappear in all four; Node Firebird contaminates `database` with the query before later stripping it | Retain typed option data and pass it to the provider |
+| DBU-05 | PHP `fromEnv` drops separate username/password fallbacks | Apply the shared component precedence |
+| DBU-06 | Missing hosts/databases and port zero are accepted differently | Enforce provider-required fields and port range before connection |
+| DBU-07 | Python IPv6 rendering loses brackets; other runtimes store brackets in the host value | Store unbracketed host; bracket only during rendering |
+| DBU-08 | Database names and SQLite paths are not percent-decoded | Decode once and reject malformed escapes |
+| DBU-09 | Safe strings emit decoded user delimiters without re-encoding | Canonically percent-encode every rendered component |
+| DBU-10 | Python/PHP/Node malformed slash-password errors expose a credential fragment | Omit raw malformed input; add the adversarial sentinel case |
+| DBU-11 | PHP/Ruby/Node ODBC doubled-brace redaction leaks the password tail | Parse `}}` escape and redact the complete value |
+| DBU-12 | Mongo seed lists and `mongodb+srv` are not representable | Add ordered hosts and canonical protocol |
+| DBU-13 | Ruby accepts `mongo`; PHP facade accepts `pymongo`; neither is shared contract data | Remove implementation/private aliases |
+| DBU-14 | Cache identity excludes authorization role and resolved SQLite location | Use `DatabaseUrl.identity()` in Feature 43 |
+| DBU-15 | Current tests assert parsed fields but do not prove the factory connects using them | Add factory trace and live mutation witnesses |
+
+## Owner decisions
+
+The recommended rules for owner approval are:
+
+1. The public factory parses exactly once; adapters never reinterpret raw URLs.
+2. The canonical value adds `protocol`, ordered `hosts`, option lists and
+   credential-free `identity` rather than preserving a single-host-only shape.
+3. MongoDB seed lists and `mongodb+srv` are required production forms.
+4. Query options are lossless parser data and may never be silently ignored.
+5. SQL/Firebird URLs require host and database; Mongo without a database uses
+   `tina4`; SQLite requires an explicit file or memory target.
+6. Ports are 1-65535 and IPv6 hosts are stored without brackets.
+7. Database names, paths, credentials and options are percent-decoded once and
+   canonically encoded when rendered.
+8. Explicit arguments, including empty values, outrank URL values; URL values
+   outrank environment; environment outranks provider defaults. (Amended
+   2026-08-10 from URL-outranks-argument, per ADR-0041; see the APPROVED block.)
+9. Accepted aliases are exactly the table in this packet. `mariadb` is added;
+   `mongo` and `pymongo` are removed; `mongodb+srv` is a protocol, not an alias.
+10. Fragments and malformed percent escapes fail outright.
+11. Cache identity includes username, all endpoints, resolved SQLite location
+    and non-secret routing/visibility options, but never credentials.
+12. Invalid input is never echoed, even after best-effort redaction.
+
+The packet remains decision-ready until these are accepted or amended.
+
+## Proposed conformance fixture
+
+The replacement central fixture uses stable IDs and at least these groups:
+
+| Group | Required cases and witnesses |
+| --- | --- |
+| `DBU-S` schemes | every canonical scheme/alias, uppercase scheme, unknown/private aliases; registry selection witness |
+| `DBU-P` paths | SQLite relative/absolute/Windows/memory, encoded space/percent, Firebird relative/absolute/alias; actual opened target |
+| `DBU-H` hosts | default/explicit ports, zero/out-of-range, IPv4, IPv6, Mongo seed list and SRV; factory adapter config |
+| `DBU-C` credentials | encoded delimiters, absent versus empty, URL/argument/env precedence, wrong-password live failure; driver authentication result |
+| `DBU-O` options | Firebird charset, PostgreSQL TLS/search options, Mongo replica/TLS/read preferences, duplicates and empty values; provider-observed option |
+| `DBU-R` redaction | safe render, malformed slash password, multiple `@`, ODBC spaces/semicolons/doubled braces, secret query options; sentinel absent from message/log/dump |
+| `DBU-E` errors | empty, no scheme, missing host/database, fragment, malformed percent and port; no driver import/socket and no raw value |
+| `DBU-I` identity | different role, host list, database, option and resolved SQLite path produce different identities; password rotation does not |
+| `DBU-F` factory | parser called once, exact parsed fields reach selected adapter, no downstream raw parse; deliberate mutation of one parsed field changes live target |
+
+Every runtime discovers every ID exactly once. Pure cases use no service. Provider
+cases use real SQLite and the live PostgreSQL, MySQL, MSSQL, Firebird and MongoDB
+services on the lab. A service skip is not conformance.
+
+## Integration map
+
+Implementation must update together:
+
+- `DatabaseUrl` and its public exports;
+- database constructors, factories and registries;
+- every SQL, MongoDB and ODBC adapter constructor;
+- connection pooling and timeout diagnostics;
+- Feature 43 query-cache identity;
+- migration, session, cache and queue database consumers;
+- CLI migrate/status/doctor and project scaffolding;
+- dev-admin environment editing and display;
+- AI/framework reference text and all connection examples;
+- central fixture, four fail-closed runners and live lab gates;
+- release notes and the 3.14 migration guide.
+
+## Breaking changes and migration
+
+- Code reading singular `.host` / `.port` migrates to the ordered `hosts` value;
+  a helper may expose the first endpoint during pre-3.14 migration but is not the
+  clean-room contract.
+- Bare filenames become explicit `sqlite:` URLs.
+- Missing host/database, port zero, fragments and malformed encoding now throw.
+- Database and path fields return decoded native strings.
+- Safe rendering re-encodes delimiters and retains redacted query options.
+- Ruby `mongo://` becomes `mongodb://`; PHP `pymongo://` becomes `mongodb://`.
+- Node/other runtimes can use `mongodb+srv://` and multi-host URLs through the
+  same value instead of driver-only raw strings.
+- Cache keys change because authorization role and resolved location are added;
+  old cached database results must be invalidated during upgrade.
+- Credential precedence flips: an explicit username/password argument now outranks
+  the URL component (previously the URL won, even when explicitly empty). A caller
+  that passed an argument expecting the URL to override should drop the redundant
+  argument; a caller relying on the old order to blank a credential must now do so
+  in the URL, not the argument.
+
+## Implementation backlog
+
+1. Approve or amend the twelve owner decisions.
+2. Materialize the central fixture and exact-copy manifest.
+3. Rewire the current runners to that fixture without parser implementation
+   changes and capture the complete red matrix.
+4. Implement the value and safe redaction in the leanest runtime first, then
+   port the contract idiomatically.
+5. Make every factory and adapter consume the parsed value exactly once.
+6. Move provider option interpretation into the corresponding Feature 4.x
+   packet and remove downstream URL parsing.
+7. Change Feature 43 to the canonical identity and invalidate old cache data.
+8. Run pure, factory and live provider gates in all four.
+9. Update documentation/migrations and only then mark Feature 5 stable.
+
+## Porting capsule
+
+A new language implements one immutable, no-I/O `DatabaseUrl`. It recognizes the
+approved protocols, parses a complete ordered authority and option set, decodes
+each component once, preserves absent versus empty credentials, applies explicit
+precedence, validates required provider fields and renders only a canonical
+redacted display. It generates an authorization-aware identity without secrets.
+The database factory parses once, selects from `engine`, and passes resolved
+native configuration to the Feature 3 adapter. No adapter reads the URL again.
+
+The implementer uses this packet, Feature 1, Feature 3, the selected Feature 4.x
+provider packet and the central fixture. Another runtime's parser is evidence,
+not authority.
+
+## Audit closure checklist
+
+- [x] Boundary, value shape, lifecycle, precedence and failures drafted.
+- [x] Existing fixture drift and four-language contradictions recorded.
+- [x] Security and connection-identity effects recorded.
+- [x] Pure and live baseline measured.
+- [x] Owner decisions approved or amended (2026-08-10; Decision 8 amended, others ratified).
+- [ ] Central fixture materialized after approval.
+- [ ] Provider option mappings completed in Feature 4.1-4.7.
+- [x] Integration, migration and clean-room porting formula drafted.
