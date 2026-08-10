@@ -2,31 +2,46 @@
 
 ## Identity and status
 
-- Matrix identity: 21 — Declarative ORM relationships
-- Audit state: auditing
-- Audit note: Structure migrated; closure checklist records remaining work
-- Dependencies: not yet extracted from the retained audit evidence
-- Dependants: not yet extracted from the retained audit evidence
-- Existing ADRs: see retained evidence and the central decision index
-- Shared fixtures: not yet confirmed
+- Matrix identity: 21 - Declarative ORM relationships
+- Audit state: decision-ready
+- Audit note: measured 2026-07-28, both Outstanding items closed by execution 2026-07-30;
+  prose sections completed from that evidence 2026-08-10. No framework code changed.
+- Dependencies: Feature 17 ORM base class (relationships live there), Feature 6 query builder
+  (eager loading composes the queries), Feature 22 imperative relationships (the method form)
+- Dependants: any model graph an application navigates; AutoCrud; the Node CLAUDE.md doc that
+  currently claims an auto-wire that does not happen
+- Existing ADRs: the removed `QueryBuilder#get` `LIMIT 100` default (the same footgun D4 finds
+  in `has_many`); this feature shares the 100-row cap question with Feature 5 and Feature 23
+- Shared fixtures: `relationships_contract.json` is required; its N+1 case is the one no
+  framework asserts today
 
 ## Why this feature exists
 
-The retained audit does not yet state the developer problem in one language-neutral sentence.
+A developer declares a foreign key once and navigates both sides of the relationship
+(`post.author` and `author.posts`) without wiring each direction by hand. Today only Python
+and Ruby deliver that; PHP requires an imperative call and Node's documented auto-wire
+produces no accessor at all.
 
 ## Boundary
 
-The retained audit does not yet separate what this feature owns, delegates, and excludes.
+This feature owns declarative relationships: a foreign-key declaration wiring `belongs_to` on
+the declaring model and `has_many` on the referenced model as instance accessors, the
+has-many naming default, and eager loading (the N+1 avoidance). It DELEGATES the model to
+Feature 17, the queries to Feature 6, and the imperative `hasMany()`/`belongsTo()` method form
+to Feature 22. The 100-row cap it exposes is shared with Feature 5 and Feature 23 and is
+settled once, not here alone.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
+| Evidence (verified by execution vs real SQLite) | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
-| Public surface | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Startup/CLI integration | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Stored/wire format | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing focused tests | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing lab baseline | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| One FK declaration wires accessors | YES (metaclass) | NO (imperative only) | YES (DSL) | NO (serialize-only) |
+| `post.author` accessor | yes | via `belongsTo()` call | yes | MISSING |
+| `author.posts` accessor | yes | via `hasMany()` call | yes | MISSING |
+| How a relation is reached | auto-wired accessor | imperative method | auto-wired accessor | `find(id, include).toDict(include)` |
+| Has-many default name | declaring class + s (correct) | n/a | correct | doc claims it, none wired |
+| `has_many` silent 100-cap | YES (limit=100) | YES (limit=100) | no (no limit) | YES (100) |
+| Eager-load structure | `_eager_load` (ok) | `eagerLoad` (CC 35) | one loader per kind (best) | eager inside find |
 
 ### Retained introductory record
 
@@ -54,31 +69,70 @@ structural answer and it already exists.
 
 ## Public surface contract
 
-The audit has not yet extracted a language-neutral public surface and its idiomatic spellings.
+Declaring a foreign key (idiomatically per language: `ForeignKeyField(to=Author)`,
+`foreign_key_field :author_id, references: Author`, `{type: "foreignKey", references:
+"Author"}`) wires a `belongs_to` accessor on the declaring model (`post.author`) and a
+`has_many` accessor on the referenced model (`author.posts`), both as INSTANCE accessors with
+no further call. The has-many name defaults to the declaring class lowercased plus `s`,
+overridable by one named option (`related_name`/`relatedName`). Eager loading takes the
+relationship name: `find(id, include=["author"])`. Feature 22 owns the imperative
+`hasMany()`/`belongsTo()` method form.
 
 ## Inputs and outputs
 
-The audit has not yet fixed all native types, defaults, nullability, ordering, and serialized shapes.
+- Input: one foreign-key declaration on the declaring model.
+- Output: a `belongs_to` accessor and a `has_many` accessor, both on the instance; no
+  wrong-direction accessor is created (`author.authors` must not exist).
+- `has_many` returns ALL children, not a silently capped 100 (the D4 fix).
+- Eager `include` populates the relation in a BOUNDED number of query sets, never one query
+  per row (the N+1 the feature exists to prevent).
+- The same declaration yields the same accessor names in all four.
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection, retry, rollback, and deletion path.
+1. A foreign key is declared at class definition; both accessors are wired at declaration
+   time (Python metaclass, Ruby DSL) so no registry step is required.
+2. Accessing `post.author` or `author.posts` loads lazily, or eagerly when the read passed
+   `include`.
+3. Eager loading resolves each relationship kind through its own named loader
+   (`load_belongs_to`/`load_has_many`/`load_has_one`), issuing one query set per relationship
+   rather than one query per row.
+4. Serialization includes an eager-loaded relation via `toDict(include)`.
 
 ## Configuration and precedence
 
-The audit has not yet fixed argument, environment, project-file, default, and cache timing precedence.
+- `related_name`/`relatedName` overrides the has-many accessor name; the default is the
+  declaring class pluralized.
+- The `has_many` limit is NOT a silent default 100; the 100-row cap is removed and the cap
+  question is settled once across `has_many`, the query builder (Feature 5) and pagination
+  (Feature 23).
+- References are the class itself where the language allows (Python, Ruby, PHP); Node uses a
+  string plus a registry, which must resolve automatically at first use.
 
 ## Failures, side effects and security
 
-The audit has not yet closed every failure boundary, side effect, cleanup rule, and security concern.
+- `has_many` must NOT silently truncate at 100: an author with 150 posts returns 150, not
+  100 with 50 dropped and no warning. Silent truncation is data loss by omission (the same
+  footgun already removed from `QueryBuilder#get`).
+- Eager loading must not degrade to N+1 queries; the fixture asserts a bounded query count,
+  because a silent degradation to per-row queries is the production failure the feature
+  prevents.
+- A wrong-direction accessor is never created; navigation follows only the declared edge.
+- Node's documented auto-wire claim is FALSE as written (no accessor is created); the doc
+  changes even if the mechanism stays serialize-only.
 
 ## Wire and persistence contract
 
-The audit has not yet fixed every wire format, stored shape, encoding, identifier, timestamp, and compatibility rule.
+There is no new persistence; the foreign-key column is an ordinary column. The wire contract
+is the accessor NAMES and the serialized shape: the same declaration exposes `post.author`
+and `author.posts` (or the overridden name) in all four, and an eager-loaded relation appears
+under the same key in `toDict(include)`.
 
 ## Providers and substitutability
 
-The audit has not yet proved provider substitution or recorded deliberate capability exceptions.
+Relationships and eager loading are engine-agnostic: the accessor names and the bounded
+query behaviour are identical regardless of the provider. Eager loading composes standard
+`WHERE ... IN (...)` reads through Feature 6, so any provider satisfies it.
 
 ## Contradictions and defects
 
@@ -168,6 +222,24 @@ than as the class. Python and Ruby pass the class itself and need no registry at
   the TypeScript static-ordering problem entirely.
 
 ## Owner decisions
+
+Proposed for owner ratification (the execution evidence forces each):
+
+1. One foreign-key declaration wires BOTH accessors on the instance, at declaration time, in
+   all four (PROMOTE Python/Ruby, which already do this correctly including the naming
+   default). PHP gains auto-accessors; Node's wiring is fixed to match.
+2. Node's CLAUDE.md claim is FALSE and must change regardless: declaring the FK creates no
+   accessor. Fix the doc, and make the registry resolve automatically at FIRST relationship
+   access (lazy), avoiding the TypeScript static-ordering problem.
+3. Remove the silent `has_many` 100-row cap. This is the SAME 100-row footgun as Feature 5's
+   query-builder cap and Feature 23's page size; settle it ONCE, in one decision, across all
+   three surfaces rather than per feature. Ruby (no limit) is the reference.
+4. Eager loading is one named function per relationship kind (Ruby's `load_belongs_to`/
+   `load_has_many`/`load_has_one`), splitting PHP's CC-35 `eagerLoad`. Behaviour-neutral, can
+   land independently.
+5. Reference the class, not a string, where the language allows (Python/Ruby/PHP already);
+   Node keeps the string only because TypeScript static ordering forces it, and only if the
+   registry then works automatically.
 
 ### Outstanding: CLOSED by execution (2026-07-30)
 
@@ -276,11 +348,22 @@ failure mode that matters in production and the one nothing would catch today.
 
 ## Integration map
 
-The audit has not yet mapped every export, startup path, request hook, CLI, scaffolder, status command, document, and generated consumer.
+- Feature 17's base model hosts the accessors and the eager-load path; Feature 6 composes the
+  eager `WHERE ... IN` queries; Feature 22 owns the imperative method form.
+- The 100-row cap decision spans this feature, Feature 5 (query-builder cap) and Feature 23
+  (pagination page size); they share one owner decision and one fixture assertion.
+- Node's CLAUDE.md documents an auto-wire that does not happen; the docs update with the fix.
+- Central fixtures, four runners and the CI matrix update together; the N+1 assertion is new
+  and must run in CI.
 
 ## Breaking changes and migration
 
-The audit has not yet turned every parity break into an actionable pre-3.14 migration instruction.
+- Removing the silent `has_many` 100-cap changes result size: an author with 150 posts now
+  returns 150, not 100. This is a correctness fix, but a caller that unknowingly relied on the
+  cap sees more rows; note it and point at explicit `limit`/pagination for bounded reads.
+- Node gains real accessors (or, at minimum, a corrected doc); PHP gains auto-accessors. A
+  model relying on the imperative-only PHP path keeps working.
+- The PHP `eagerLoad` split is internal and behaviour-neutral.
 
 ## Implementation backlog
 
@@ -330,18 +413,22 @@ Surface table:
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Existing-language contradictions recorded (D1-D4, both Outstanding items closed).
+- [x] Owner ambiguities recorded (5 proposed; the genuine calls await owner ratification).
+- [x] Proposed shared cases and mutation witnesses complete (incl the N+1 assertion).
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule is clean-room sufficient.
 
-### Parked
+### State
 
-Not implemented. Sequenced after feature 16 (same file, same class) and behind its
-Outstanding items. Order: 6, 4, 5, 3, 13, 14, 15, then 2, 1, 0.
+AUDIT decision-ready; both Outstanding items closed by execution (2026-07-30). Corrected
+picture: Python/Ruby auto-wire accessors correctly, PHP is imperative-only, Node is
+serialize-only (`find(id, include).toDict(include)`) with a FALSE auto-wire doc, and
+`has_many` silently caps at 100 in three of four. The IMPLEMENTATION is the build phase and
+is NOT done. The 100-row cap must be settled jointly with Features 5 and 23, not here alone.
+Decision-ready is not built.
