@@ -150,7 +150,7 @@ Historical documents remain in `archive/`; active packets use this table.
 
 | # | Feature | Python evidence | PHP | Ruby | Node | Audit state |
 | ---: | --- | --- | --- | --- | --- | --- |
-| 81 | [Standard-library HTTP API client](features/081-api-client.md) | `tina4_python/api/__init__.py` | inventory pending | inventory pending | inventory pending | auditing |
+| 81 | [Standard-library HTTP API client](features/081-api-client.md) | `tina4_python/api/__init__.py` | `Tina4/Api.php` | `lib/tina4/api.rb` | `packages/core/src/api.ts` | decision-ready (Ruby result `.status` vs `http_code`; no fixture) |
 | 82 | [GraphQL](features/082-graphql.md) | `tina4_python/graphql/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
 | 83 | [WebSocket protocol and server](features/083-websocket.md) | `tina4_python/websocket/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
 | 84 | [Redis WebSocket backplane](features/084-websocket-redis-backplane.md) | `tina4_python/websocket/backplane.py` | inventory pending | inventory pending | inventory pending | queued |
