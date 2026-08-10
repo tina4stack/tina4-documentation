@@ -71,8 +71,9 @@ keeps one persistent worker-thread connection, reconnecting on drop (MC-02).
 - THE 30-DAY EXPTIME CLIFF is handled uniformly (session_contract.json ttl-units, proven): memcached
   treats an exptime > 2592000 as an ABSOLUTE unix timestamp; all four CONVERT a large relative ttl to
   an absolute stamp (never clamp), so `TINA4_SESSION_TTL=2592001` ("about a month") is not silently
-  expired-on-write. (The identical bug in the CACHE memcached backend is still OPEN - a different
-  subsystem under a different fixture, out of scope here.)
+  expired-on-write. (The identical guard is ALSO present in the CACHE memcached backend - verified
+  2026-08-10, all four guard the 2592000 cliff; the session_contract.json ttl-units narrative that
+  recorded the cache side as owed predates that fix.)
 - INJECTION is closed: a key that would contain a space/control char (including CRLF) is SHA-256
   hashed, so an arbitrary id cannot inject a protocol command; the coverage edge (MC-04) is
   fail-closed robustness, not a hole.
@@ -130,9 +131,10 @@ consistently; a CRLF-laden id not injecting a command; and a transport failure d
 - Feature 65 calls `read`/`write`/`destroy`; the text transport is memcached-specific.
 - `session_contract.json` already proves the shared invariants (including the exptime cliff) against a
   live memcached; the memcached-specific cases above are added there.
-- Cross-reference: the CACHE memcached backend has the SAME unclamped-exptime bug still OPEN (a
-  different subsystem/fixture) - noted so the fix is ported there too, with the caveat that Ruby's
-  cache backend keeps its own bookkeeping and must take the caller's ttl, not a converted absolute.
+- Cross-reference: the CACHE memcached backend carries the SAME exptime-cliff guard - verified fixed
+  in all four 2026-08-10, so the session and cache memcached backends now agree. Ruby's cache backend
+  keeps its own bookkeeping and takes the caller's ttl (not a converted absolute); the guard is in the
+  cache-side audit (Feature 77).
 
 ## Breaking changes and migration
 
@@ -146,7 +148,8 @@ consistently; a CRLF-laden id not injecting a command; and a transport failure d
 1. Add the session-memcached cases to the fixture and wire four runners against a real memcached.
 2. Pin the host (MC-01), timeout (MC-03) and unsafe-key predicate (MC-04); settle the connection-model
    and API-surface questions (MC-02, MC-05).
-3. Port the exptime-cliff fix to the CACHE memcached backend (cross-subsystem, tracked separately).
+3. (The cache memcached backend already carries the exptime-cliff guard - verified 2026-08-10; no
+   port owed. Confirmed at Feature 77.)
 4. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
 
 No framework implementation belongs in the audit commit.
