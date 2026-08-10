@@ -23,6 +23,36 @@ This audit changes no framework source. It replaces the old record of repairs
 with the clean-room contract and implementation formula required for this port
 and for any future Tina4 language.
 
+## Owner decisions APPROVED (finalized 2026-08-10)
+
+Feature 8 carried its decisions in the prose rather than a decisions section. The
+review surfaced four; Andre settled them.
+
+- **A: ADR-0016 is SUPERSEDED by a new ADR-0046, not amended in place.** The
+  system-route-tier, monotonic-uptime, readiness-body, strict-path and no-store
+  header clauses move into ADR-0046 (per the supersede-don't-silently-change
+  convention, matching ADR-0014 -> ADR-0045). ADR-0016's liveness/readiness split
+  stays correct and gets a Superseded-by pointer.
+- **B: the readiness timeout is enforced by bounding each probe's driver timeout,
+  not by runtime cancellation.** Each framework adapter check sets its driver
+  connect/statement timeout to `TINA4_READINESS_TIMEOUT` (reusing the shipped
+  connect-timeout work), so the blocking call itself returns at the deadline in
+  synchronous PHP and Ruby as well as async Node/Python. App-registered checks are
+  contractually required to be self-bounding, because the framework cannot interrupt
+  arbitrary blocking code in a sync runtime.
+- **C: `/health` and `/ready` stay strict and unshadowable (ratified).** An app that
+  declares an exact reserved path fails startup and moves its route. This is what
+  lets the generated Dockerfile HEALTHCHECK and k8s probes hardcode the permanent
+  `/health`; there is no opt-out, by design.
+- **D: a dependency is "required" when it is ACTIVATED (connection configured), not
+  merely package-installed.** Every activated adapter auto-registers a readiness
+  check (fail-safe: configured deps gate readiness). An app downgrades a genuinely
+  optional dependency (e.g. a performance cache) via the existing
+  `Readiness.unregister` so its outage does not withdraw traffic.
+
+FINAL bar unchanged: publish ADR-0046, materialize `health_contract.json` v2, wire
+the four runners, and pass the real-image + real-dependency lab matrix.
+
 ## Why this feature exists
 
 An operator needs two small, dependable signals:
@@ -260,20 +290,30 @@ Readiness.clear_application_checks()
 Names are non-empty lowercase identifiers matching `[a-z][a-z0-9_-]*`.
 Duplicate names fail registration; they do not silently replace a check. The
 list surface exposes name and owner, not secrets. Framework-owned adapter checks
-survive an application-check clear.
+survive an application-check clear, though `unregister` may target one to downgrade
+an optional dependency.
 
-An activated required database, cache, session store or queue registers one
-framework-owned check under its canonical name. A configured but optional
-integration does not become a required dependency merely because its package is
-installed. Applications may register other required checks explicitly.
+A dependency is "required" when it is ACTIVATED - its connection is configured and
+the framework wired it - not merely when its driver package is installed. Every
+activated database, cache, session store or queue registers one framework-owned
+check under its canonical name, so a configured dependency gates readiness by
+default. An application downgrades a genuinely optional dependency (for example a
+performance cache it can serve without) by calling `Readiness.unregister` on that
+canonical name after boot; its outage then no longer withdraws traffic.
+Applications may also register other required checks explicitly.
 
 Checks are side-effect-free and use the live adapter's cheapest native probe:
 no schema changes, writes, dequeue, publish, reconnect loop or outbound retry
 storm. All checks start concurrently and are collected in sorted-name order.
 `TINA4_READINESS_TIMEOUT` is a native Feature 1 number of seconds, defaults to
 `5`, must be greater than zero, and is one hard deadline for the whole request.
-Work still running at the deadline is cancelled where the runtime permits and
-reported as error. Consecutive requests do not share a result cache.
+The deadline is enforced by bounding each framework adapter probe's own driver
+connect/statement timeout by the readiness timeout, so the blocking call returns
+at the deadline in synchronous runtimes too, not only where the runtime can cancel
+an awaitable. An application-registered check must bound itself the same way,
+because the framework cannot interrupt arbitrary blocking code in a sync runtime.
+Work still running at the deadline is reported as error. Consecutive requests do
+not share a result cache.
 
 ## Path configuration
 
@@ -468,8 +508,8 @@ runtime primitives may differ; the observable contract may not.
 Feature 8 is complete only when:
 
 - H8-01 through H8-11 are closed in all four current ports;
-- ADR-0016 is amended with the system-route, uptime, readiness-body, path and
-  header decisions in this audit;
+- ADR-0046 is published, superseding ADR-0016's system-route, uptime,
+  readiness-body, path and header clauses (ADR-0016 keeps a Superseded-by pointer);
 - fixture version 2 and the four runners pass from the central checker;
 - every mutation witness is proven red;
 - real lab dependency failure changes readiness to 503 while liveness stays 200;

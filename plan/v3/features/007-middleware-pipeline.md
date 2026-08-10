@@ -226,9 +226,11 @@ An un-awaited coroutine/promise is never interpreted as “continue.”
 
 ## One effective pipeline
 
-Class hooks and continuation functions are not separate batches. The framework
-adapts both to one entered-layer stack while retaining the Feature 6 auth
-boundary:
+Class hooks and continuation functions are not separate batches. Reserved system
+routes (Feature 8 health/readiness) are selected in the Feature 6 system tier
+before this pipeline, so pre-match globals never run for them. For application
+requests the framework adapts both shapes to one entered-layer stack while
+retaining the Feature 6 auth boundary:
 
 ```text
 pre-match globals, declaration order
