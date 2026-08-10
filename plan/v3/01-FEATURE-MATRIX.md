@@ -118,7 +118,7 @@ Historical documents remain in `archive/`; active packets use this table.
 
 | # | Feature | Python evidence | PHP | Ruby | Node | Audit state |
 | ---: | --- | --- | --- | --- | --- | --- |
-| 64 | [JWT and request authentication](features/064-jwt-authentication.md) | `tina4_python/auth/__init__.py` | inventory pending | inventory pending | inventory pending | auditing |
+| 64 | [JWT and request authentication](features/064-jwt-authentication.md) | `tina4_python/auth/__init__.py` | `Tina4/Auth.php` | `lib/tina4/auth.rb` | `packages/core/src/auth.ts` + `authGate.ts` | decision-ready |
 
 ## Sessions and providers
 
