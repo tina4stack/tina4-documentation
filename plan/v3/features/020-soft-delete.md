@@ -2,31 +2,48 @@
 
 ## Identity and status
 
-- Matrix identity: 20 — Soft delete
-- Audit state: auditing
-- Audit note: Structure migrated; closure checklist records remaining work
-- Dependencies: not yet extracted from the retained audit evidence
-- Dependants: not yet extracted from the retained audit evidence
-- Existing ADRs: see retained evidence and the central decision index
-- Shared fixtures: not yet confirmed
+- Matrix identity: 20 - Soft delete (is_deleted, restore, withTrashed) -- the matrix row
+  title says `deleted_at`, which is WRONG in all four; the column is `is_deleted` (see D1)
+- Audit state: decision-ready
+- Audit note: measured 2026-07-28, all four verified by execution against real SQLite; prose
+  sections completed from that evidence 2026-08-10. No framework code changed.
+- Dependencies: Feature 17 ORM base class (the verbs live there), Feature 15 migrations and
+  Feature 7 SQL translator (where `create_table` emits the engine-aware column)
+- Dependants: any model that declares soft delete and calls `delete()`/`restore()`/
+  `with_trashed()`; the feature matrix, the docs site and the four skills (which carry the
+  stale `deleted_at` name)
+- Existing ADRs: the loud-failure rule (Feature 4/5 - never convert a raise into silent data
+  loss); this feature's fix depends on the Feature 7 translator and the create_table split
+- Shared fixtures: `soft_delete_contract.json` is required (real SQLite; the bug reproduces
+  in a two-line model)
 
 ## Why this feature exists
 
-The retained audit does not yet state the developer problem in one language-neutral sentence.
+A developer marks a row deleted without removing it, so it disappears from ordinary reads
+but stays recoverable through `restore()` and visible through `with_trashed()`. Today the
+column the flag requires is never created by `create_table()`, so the first `delete()` on a
+soft-delete model raises in all four -- the feature is declared, documented, and dead on the
+code-first path.
 
 ## Boundary
 
-The retained audit does not yet separate what this feature owns, delegates, and excludes.
+This feature owns the soft-delete flag, the emission of the `is_deleted` column from every
+table-creating path, the `delete`/`force_delete`/`restore`/`with_trashed` verbs, and the
+read-filtering that hides flagged rows. It DELEGATES the DDL emission to `create_table`
+(Feature 15/16) and the engine-aware column type to the Feature 7 translator. It does NOT own
+the raw delete SQL (Feature 5).
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
+| Evidence (verified by execution vs real SQLite) | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
-| Public surface | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Startup/CLI integration | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Stored/wire format | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing focused tests | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing lab baseline | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| `create_table()` emits `is_deleted` | NO | NO | NO | NO |
+| First `delete()` on a soft-delete model | raises `no such column: is_deleted` | raises | raises | raises |
+| Row after the failed delete | untouched (no data loss) | untouched | untouched | untouched |
+| Schema-sync path (`syncModels`) adds it | - | - | - | YES (documented) |
+| Column name | `is_deleted` (24 mentions) | `is_deleted` (19) | `is_deleted` via `soft_delete_field` | `is_deleted` (22) |
+| `deleted_at` mentions | 0 | 0 | 0 | 0 |
+| Configurable field name | no (hardcoded) | no | YES (`soft_delete_field`) | no |
 
 ### Retained introductory record
 
@@ -59,31 +76,64 @@ No separate file set.
 
 ## Public surface contract
 
-The audit has not yet extracted a language-neutral public surface and its idiomatic spellings.
+A model enables soft delete with a flag (`soft_delete = true`) and optionally names the
+column (`soft_delete_field`, default `is_deleted`, promoted to all four from Ruby). The
+verbs are `delete()` (set the flag), `force_delete()` (remove the row), `restore()` (clear
+the flag), and `with_trashed()` (include flagged rows in a read). All four already implement
+these verbs; they simply have no column to write to.
 
 ## Inputs and outputs
 
-The audit has not yet fixed all native types, defaults, nullability, ordering, and serialized shapes.
+- The stored column is `is_deleted`, `INTEGER NOT NULL DEFAULT 0`, emitted engine-aware via
+  the translator (INTEGER 0/1 is not how every engine spells a boolean).
+- `delete()` sets `is_deleted = 1` and leaves the row in place; the row count is unchanged.
+- An ordinary read excludes rows where `is_deleted = 1`; `with_trashed()` includes them.
+- `restore()` sets `is_deleted = 0`; `force_delete()` issues a real DELETE.
+- A model WITHOUT the flag gets no soft-delete column and `delete()` removes the row.
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection, retry, rollback, and deletion path.
+1. A model declares `soft_delete = true`; `create_table()` (and the schema-sync path) MUST
+   emit the `is_deleted` column -- this is the fix, and the two paths must share one DDL
+   builder so they cannot drift again.
+2. `delete()` sets the flag; the row survives.
+3. An ordinary read filters out flagged rows; `with_trashed()` opts back in.
+4. `restore()` clears the flag; `force_delete()` removes the row.
+5. If the column is missing at runtime, the framework raises a NAMED error (below), never
+   the raw engine message.
 
 ## Configuration and precedence
 
-The audit has not yet fixed argument, environment, project-file, default, and cache timing precedence.
+- `soft_delete_field` defaults to `is_deleted` and is overridable per model (Ruby's
+  capability, promoted). The default is `is_deleted`, never `deleted_at`.
+- The flag is declared on the model; there is no environment variable.
 
 ## Failures, side effects and security
 
-The audit has not yet closed every failure boundary, side effect, cleanup rule, and security concern.
+- A missing `is_deleted` column raises a NAMED framework error that says what to do ("Model
+  declares soft_delete but the table has no is_deleted column; run a migration or call
+  create_table() after upgrading"), not the raw `no such column: is_deleted`.
+- `delete()` NEVER falls back to a hard delete when the column is missing: converting a loud
+  failure into silent data loss is forbidden (the Feature 4 mistake in reverse).
+- A soft delete preserves the row, so nothing is lost; the security property is that a
+  "deleted" record remains auditable and recoverable.
+- Read-filtering must be applied consistently, so a soft-deleted row cannot leak through an
+  ordinary read.
 
 ## Wire and persistence contract
 
-The audit has not yet fixed every wire format, stored shape, encoding, identifier, timestamp, and compatibility rule.
+The persisted shape is one `is_deleted` INTEGER column per soft-delete table, `0` for live
+and `1` for deleted, emitted engine-aware by the translator. The two table-creating paths
+(`create_table` and the schema-sync `syncModels`) must produce the SAME columns; today only
+the sync path adds it, which is why the feature works in a running app and dies in a
+test/script/REPL.
 
 ## Providers and substitutability
 
-The audit has not yet proved provider substitution or recorded deliberate capability exceptions.
+The column type is engine-aware through the Feature 7 translator, because "INTEGER 0/1" is
+not universal. The soft-delete verbs and read-filtering are engine-agnostic above that. The
+real substitutability requirement is internal: the two table-creating paths share one DDL
+builder so a new engine or a new creation path cannot reintroduce the drift.
 
 ## Contradictions and defects
 
@@ -152,6 +202,22 @@ not a language one).
 
 ## Owner decisions
 
+Proposed for owner ratification (the execution evidence forces each):
+
+1. `create_table()` reads the soft-delete flag and emits the `is_deleted` column; the fix is
+   a BUILD in all four (GAP, no reference to port from).
+2. The two table-creating paths (`create_table` and the schema-sync `syncModels`) share ONE
+   DDL builder, so they cannot drift again. That shared builder is the real fix; the column
+   is the symptom. This sequences behind Feature 7 (the translator) and the create_table
+   split.
+3. A missing column at runtime raises a NAMED framework error, never the raw engine message;
+   `delete()` never falls back to a hard delete.
+4. `soft_delete_field` (Ruby's configurable column name) is promoted to all four; the default
+   is `is_deleted`.
+5. Fix the matrix row title: `Soft delete (deleted_at, ...)` -> `is_deleted`, and sweep the
+   docs site and the four skills for the same stale name. No framework has ever had a
+   `deleted_at` column.
+
 ### Outstanding: resolved
 
 The earlier PHP probe failed because I declared the model with nullable typed
@@ -190,11 +256,24 @@ The last pair matters because the fix must not add the column to every table.
 
 ## Integration map
 
-The audit has not yet mapped every export, startup path, request hook, CLI, scaffolder, status command, document, and generated consumer.
+- `create_table()` (Feature 15/16) and the schema-sync path both emit the column through the
+  one shared DDL builder; the Feature 7 translator gives it the engine-aware type.
+- Feature 17's base model hosts the `delete`/`force_delete`/`restore`/`with_trashed` verbs
+  and the read-filtering.
+- The feature matrix, the docs site and the four skills carry the stale `deleted_at` name and
+  update together with the fix.
+- Central fixtures, four runners and the CI matrix update together; the CI must run the
+  code-first `create_table()` path, because the schema-sync path hides the bug.
 
 ## Breaking changes and migration
 
-The audit has not yet turned every parity break into an actionable pre-3.14 migration instruction.
+- Adding the `is_deleted` column changes the DDL that `create_table()` emits for a
+  soft-delete model. Existing tables are unaffected (nothing migrates them), so a running app
+  sees no change; a test that snapshots DDL goes red, correctly.
+- Nobody can currently rely on the feature through this path, because it raises on first use,
+  which makes the fix unusually safe.
+- The matrix/docs title correction (`deleted_at` -> `is_deleted`) is a documentation fix, not
+  a code break.
 
 ## Implementation backlog
 
@@ -252,18 +331,22 @@ Surface table:
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Existing-language contradictions recorded (convergence-on-broken, D1/D2).
+- [x] Owner ambiguities recorded (5 proposed; the genuine calls await owner ratification).
+- [x] Proposed shared cases and mutation witnesses complete.
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule is clean-room sufficient.
 
-### Parked
+### State
 
-Not implemented. Sequenced after features 3 and 13 (both of which touch the
-`create_table` path this fix lands in). Order: 6, 4, 5, 3, 13, 14, then 2, 1, 0.
+AUDIT decision-ready. This is a GAP verdict: soft delete is declared, documented and
+NON-FUNCTIONAL on the code-first `create_table()` path in all four (verified by execution --
+"convergence on broken"). The IMPLEMENTATION is a build in every framework and sequences
+behind Feature 7 (the translator) and the create_table split, because that is where the
+column emission lands. The matrix/docs title correction (`deleted_at` -> `is_deleted`) is a
+standalone documentation fix that can happen immediately. Decision-ready is not built.
