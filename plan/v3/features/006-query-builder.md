@@ -155,7 +155,7 @@ Each language returns the native shape its MongoDB driver accepts. Python may us
 
 Supported filter forms are `=`, `!=`, `<>`, `>`, `>=`, `<`, `<=`, `LIKE`, `IN (?)`, `NOT IN (?)`, `IS NULL` and `IS NOT NULL`. Field names in this subset are simple identifiers. `LIKE` keeps the established case-insensitive MongoDB behavior but must escape regex metacharacters before converting `%` and `_`.
 
-`IS NULL` must match explicit null values. The audit fixture must also decide and test whether a missing MongoDB field counts as null; implementations may not silently differ.
+`IS NULL` matches an explicit null and a missing MongoDB field because neither carries a value. `IS NOT NULL` requires the field to exist and contain a non-null value.
 
 ## Providers and substitutability
 
@@ -204,7 +204,7 @@ Provider substitution must preserve:
 - `toMongo` supports a declared subset and fails on everything else. Silent semantic loss is forbidden.
 - The Mongo result uses driver-native containers while preserving one neutral semantic shape.
 - Current Mongo `LIKE` remains case-insensitive for compatibility, with correct regex escaping.
-- Explicit Mongo null and missing-field behavior must be fixed by the shared fixture before implementation closes.
+- Mongo `IS NULL` matches explicit null and a missing field. `IS NOT NULL` requires an existing, non-null field.
 
 ## Proposed conformance fixture
 
