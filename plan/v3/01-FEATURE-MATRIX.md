@@ -124,7 +124,7 @@ Historical documents remain in `archive/`; active packets use this table.
 
 | # | Feature | Python evidence | PHP | Ruby | Node | Audit state |
 | ---: | --- | --- | --- | --- | --- | --- |
-| 65 | [Session lifecycle](features/065-session-handling.md) | `tina4_python/session/__init__.py` | inventory pending | inventory pending | inventory pending | auditing |
+| 65 | [Session lifecycle](features/065-session-handling.md) | `tina4_python/session/__init__.py` | `Tina4/Session.php` | `lib/tina4/session.rb` | `packages/core/src/session.ts` | decision-ready |
 | 66 | [File session provider](features/066-session-file-provider.md) | `tina4_python/session/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
 | 67 | [Redis session provider](features/067-session-redis-provider.md) | `tina4_python/session_handlers/redis_handler.py` | inventory pending | inventory pending | inventory pending | queued |
 | 68 | [Valkey session provider](features/068-session-valkey-provider.md) | `tina4_python/session_handlers/valkey_handler.py` | inventory pending | inventory pending | inventory pending | queued |
