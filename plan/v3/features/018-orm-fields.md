@@ -2,31 +2,44 @@
 
 ## Identity and status
 
-- Matrix identity: 18 — ORM fields and column mapping
-- Audit state: auditing
-- Audit note: Structure migrated; closure checklist records remaining work
-- Dependencies: not yet extracted from the retained audit evidence
-- Dependants: not yet extracted from the retained audit evidence
-- Existing ADRs: see retained evidence and the central decision index
-- Shared fixtures: not yet confirmed
+- Matrix identity: 18 - ORM fields and column mapping
+- Audit state: decision-ready
+- Audit note: measured 2026-07-28 by execution (PHP/Python/Ruby) and source (Node); prose
+  sections completed from that evidence 2026-08-10. No framework code changed.
+- Dependencies: Feature 17 ORM base class (the fields live on it), Feature 15 migrations
+  (`create_table` uses the mapped columns), the four scaffolders
+- Dependants: every domain model's schema, migrations, AutoCrud, and any doc example that
+  names a column
+- Existing ADRs: ADR-0008 (PHP `autoSnakeCase` defaults to `false`, decided 2026-07-28 -
+  the central decision for this feature, already RATIFIED)
+- Shared fixtures: `orm_fields_contract.json` is required; the cross-framework "same model,
+  same columns" case is the whole point
 
 ## Why this feature exists
 
-The retained audit does not yet state the developer problem in one language-neutral sentence.
+A model's property names must map to the SAME database columns in all four languages, so one
+migration, one shared database, or one documented column works everywhere. Today PHP rewrites
+`firstName` to `first_name` and the other three keep it verbatim, so the same model produces
+two different schemas.
 
 ## Boundary
 
-The retained audit does not yet separate what this feature owns, delegates, and excludes.
+This feature owns the property-to-column mapping: the explicit `field_mapping`, the
+`get_db_column`/`get_property` resolvers, the `auto_snake_case` switch, and the
+`camel_to_snake`/`snake_to_camel` helpers. It DELEGATES the model itself to Feature 17, the
+DDL emission to Feature 15 migrations, and the generated model source to the scaffolders. It
+does not own field TYPES (that is the field-definition part of Feature 17/18's base).
 
 ## Existing implementation evidence
 
 | Evidence | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
-| Public surface | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Startup/CLI integration | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Stored/wire format | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing focused tests | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing lab baseline | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| `firstName` becomes | `firstName` (verbatim) | `first_name` (auto) | `firstName` (verbatim) | `firstName` (verbatim) |
+| Mechanism | none - property IS column | automatic `camelToSnake` | `field_mapping` empty default | `fieldMapping[prop] ?? prop` |
+| Can it be turned off | n/a | NO (the outlier) | yes (opt-in map) | yes (opt-in map) |
+| Verified by | execution | execution | execution | source |
+| Idiomatic column | `first_name` (snake habit) | `first_name` | `first_name` | `firstName` (camel habit, outlier) |
+| Resolver present | none | `getDbColumn` | none named | `getDbColumn` |
 
 ### Retained introductory record
 
@@ -45,31 +58,65 @@ Inside the ORM base class; measurements are feature 16's.
 
 ## Public surface contract
 
-The audit has not yet extracted a language-neutral public surface and its idiomatic spellings.
+Four names per language, one concept each (full spelling table in the porting capsule):
+`field_mapping` (an explicit property-to-column map, empty by default), `get_db_column(prop)`
+(resolve a property to its column, returning the mapped value or the property verbatim),
+`get_property(column)` (the reverse, resolving one column to its property), `auto_snake_case`
+(a switch, default `false` per ADR-0008), and the public helpers `camel_to_snake` /
+`snake_to_camel`. Node's `getReverseMapping()` becomes `getProperty(column)`; Ruby's
+`auto_map` is removed (it named a mechanism, not a concept).
 
 ## Inputs and outputs
 
-The audit has not yet fixed all native types, defaults, nullability, ordering, and serialized shapes.
+- Input: a declared property name; optionally an explicit `field_mapping` entry and the
+  `auto_snake_case` switch.
+- Output (default): the column name equals the property name, verbatim, in all four.
+- Output (explicit map): `field_mapping[prop]` wins over every other rule.
+- Output (`auto_snake_case = true`): a camelCase property yields a snake_case column; an
+  already-snake name is left unchanged (idempotent).
+- `get_db_column` and `get_property` round-trip: the property resolves to a column and back.
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection, retry, rollback, and deletion path.
+1. A model declares properties (Feature 17); this feature resolves each to a column via
+   `field_mapping[prop]`, else the `auto_snake_case` conversion when on, else verbatim.
+2. On write, the property-to-column mapping names the columns in the INSERT/UPDATE.
+3. On read, `get_property(column)` maps each returned column back to its property so a
+   column with no matching property is surfaced, never silently dropped.
+4. `create_table` (Feature 15) emits the mapped column names; the scaffolders generate
+   snake_case columns in the model source a developer reads.
 
 ## Configuration and precedence
 
-The audit has not yet fixed argument, environment, project-file, default, and cache timing precedence.
+- Precedence for a property's column: explicit `field_mapping` entry, then
+  `auto_snake_case` conversion (when `true`), then the verbatim property name.
+- `auto_snake_case` defaults to `false` in all four (ADR-0008); PHP keeps its converter but
+  it is now opt-in.
+- There is no environment variable; mapping is declared on the model.
 
 ## Failures, side effects and security
 
-The audit has not yet closed every failure boundary, side effect, cleanup rule, and security concern.
+- A column returned by the database that has no matching property does NOT silently vanish
+  on read; the resolver surfaces it.
+- `get_db_column` does not invent a column the table lacks.
+- The mapping operates on trusted schema identifiers, not request input; identifier quoting
+  stays with the trusted builder.
+- Changing `auto_snake_case`'s default is the one behaviour change (PHP), handled as a
+  breaking migration below.
 
 ## Wire and persistence contract
 
-The audit has not yet fixed every wire format, stored shape, encoding, identifier, timestamp, and compatibility rule.
+The persisted contract is the COLUMN SET: the same model definition emits the same columns in
+all four. That is exactly what accidental convergence does not guarantee today (Node's
+idiomatic camelCase is the outlier), and it is what the cross-framework fixture pins. A
+generated migration or a shared database then works across every language.
 
 ## Providers and substitutability
 
-The audit has not yet proved provider substitution or recorded deliberate capability exceptions.
+Column mapping sits above the provider layer, so it is engine-agnostic: the same property
+resolves to the same column regardless of SQLite, PostgreSQL, MySQL, MSSQL or Firebird
+underneath. The one interaction is Firebird's UPPERCASE identifier storage (Feature 12),
+which is a provider-level case-fold, separate from this property-to-column mapping.
 
 ## Contradictions and defects
 
@@ -169,7 +216,18 @@ All category 4. Every language can do either behaviour.
 
 ## Owner decisions
 
-No new owner decision is recorded in this migrated section. Retained decisions appear below when present.
+1. RATIFIED (ADR-0008, 2026-07-28): PHP's automatic `camelToSnake` becomes opt-in and
+   `auto_snake_case` defaults to `false` in all four. This is the one decision that already
+   has an owner sign-off; the rest below are proposed derivations of it.
+2. Proposed: the property name IS the column name by default, in all four (promote Node's
+   `fieldMapping[prop] ?? prop`, give Python the mechanism it lacks, align Ruby and Node
+   names).
+3. Proposed: `camel_to_snake` / `snake_to_camel` become PUBLIC helpers in all four, so a
+   developer who wants snake_case columns opts in anywhere, not only in PHP.
+4. Proposed: the four scaffolders GENERATE snake_case column names, so the convention lives
+   in code a developer reads, not in a silent rewrite.
+5. Proposed naming: Node's `getReverseMapping()` becomes `getProperty(column)`; Ruby's
+   `auto_map` is removed.
 
 ## Proposed conformance fixture
 
@@ -194,11 +252,25 @@ turns accidental convergence into an enforced contract.
 
 ## Integration map
 
-The audit has not yet mapped every export, startup path, request hook, CLI, scaffolder, status command, document, and generated consumer.
+- Feature 17's base model carries the fields; this mapping resolves them to columns.
+- Feature 15 `create_table` emits the mapped columns; the four scaffolders generate the
+  model source (and, after this change, snake_case columns).
+- AutoCrud and the REST layer read columns through the resolvers; any doc example that names
+  a column depends on the emitted column set being identical across languages.
+- Central fixtures, four runners, the CI matrix, release notes, the ORM docs and the four
+  scaffolders update together.
 
 ## Breaking changes and migration
 
-The audit has not yet turned every parity break into an actionable pre-3.14 migration instruction.
+- PHP `createTable()` on a camelCase model emits DIFFERENT column names after ADR-0008: a
+  `firstName` property now yields a `firstName` column, not `first_name`. This falls on the
+  framework with the largest installed base and is accepted because a schema that differs by
+  framework is the more expensive, compounding problem.
+- Required mitigations, all in the same release: a `Breaking:` changelog entry, a migration
+  note, and the one-line opt-back-in stated prominently in both -- an existing PHP app sets
+  `$autoSnakeCase = true` to keep its current schema.
+- Everything else in this feature is additive (new helpers, new resolvers, scaffolder
+  output).
 
 ## Implementation backlog
 
@@ -251,19 +323,20 @@ concept.
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Existing-language contradictions recorded (PHP auto-converts, three verbatim).
+- [x] Owner ambiguities recorded (ADR-0008 ratified; 4 derived proposals).
+- [x] Proposed shared cases and mutation witnesses complete (cross-framework column set).
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule is clean-room sufficient.
 
-### Parked
+### State
 
-Not implemented, but **no longer blocked** - the PHP default is decided
-(`false`, ADR-0008). Ready to implement in queue order: 6, 4, 5, 3, 13, 14, 15, 16,
-17, then 2, 1, 0.
+AUDIT decision-ready and the central decision RATIFIED (ADR-0008: `auto_snake_case` default
+`false`). Verified by execution in PHP/Python/Ruby and source in Node. The IMPLEMENTATION
+(PHP switch, Python's missing resolvers, public helpers, scaffolder snake_case) is the build
+phase and is NOT done. No longer blocked. Decision-ready is not built.
