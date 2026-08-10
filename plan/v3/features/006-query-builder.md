@@ -12,6 +12,30 @@
 - Catalog phase: Database and providers
 - Audit note: Decisions prepared from four-language source and focused local baselines; no framework code changed
 
+## Owner decisions APPROVED (finalized 2026-08-10)
+
+The audit is clean and its 11 defects, the `toMongo` fail-loud rule, `DatabaseResult`
+normalization, the no-implicit-limit rule and the database precedence are ratified as
+written; the Mongo null semantics (IS NULL = explicit-null-or-missing) settled in
+`76dca40` stand. The review surfaced three calls:
+
+- **A: `exists()` is a `LIMIT 1` probe, not a full `count()`.** It runs
+  `SELECT 1 FROM ... [WHERE/JOIN/GROUP/HAVING] LIMIT 1` and returns true when a row
+  comes back, stopping at the first match instead of scanning every matching row.
+  This overrides the audit's "exists derives from count."
+- **B: `count()` on a grouped builder is rejected.** `count()` promises a single
+  integer, which a `GROUP BY` query cannot satisfy (`SELECT COUNT(*) ... GROUP BY`
+  returns one row per group). Calling `count()` with a group set fails loud and names
+  the grouped state. Widening to subquery group-counting later is non-breaking;
+  grouped pagination is deferred.
+- **C: Mongo `LIKE` stays case-insensitive (ratified).** With correct regex escaping
+  (QB-08). SQL `LIKE` case-sensitivity already varies across engines, so `LIKE` is
+  explicitly NOT parity-guaranteed across providers; the contract states this rather
+  than break existing Mongo behavior.
+
+No ADR move: there is no Query Builder ADR predecessor to supersede (ADR-0043 governs
+only `count`). These fold into this document.
+
 ## Why this feature exists
 
 The builder gives an engineer one fluent path from a table name to a database result. It builds a portable `SELECT`, keeps values in bound parameters, and hands execution to the database layer.
@@ -83,7 +107,7 @@ Every builder method mutates the same builder and returns that instance. `select
 - `toSql` returns SQL only. It does not append limit or offset because the adapter owns portable pagination.
 - `get` returns a `DatabaseResult` in every language, whether the builder received a facade or a raw adapter.
 - `first` returns one native row mapping or `null`/`nil` when no row matches.
-- `count` returns a native integer. It ignores the current selected columns but preserves every filter, join, group, `HAVING` and parameter.
+- `count` returns a native integer. It ignores the current selected columns but preserves every filter, join and parameter. It rejects a builder that has a `GROUP BY` set, because a grouped query yields one count per group rather than a single integer; the error names the grouped state. Widening `count` to subquery group-counting later is non-breaking.
 - `exists` returns a native boolean.
 - Node uses promises because its database API is asynchronous. The result after awaiting it matches the other languages.
 
@@ -98,8 +122,8 @@ Raw SQL fragments remain raw. The builder must never quote a column expression o
 5. An explicitly supplied database wins. Otherwise, the builder uses the framework's active database. If neither exists, execution fails.
 6. `get` sends SQL, parameters, limit and offset through the database layer. The layer returns a normalized `DatabaseResult`.
 7. `first` fetches one row without changing builder state.
-8. `count` replaces the projection for its count SQL, restores the projection before I/O, and returns the count alias without changing later `toSql` output.
-9. `exists` derives its boolean from `count`.
+8. `count` rejects a grouped builder, then replaces the projection for its count SQL, restores the projection before I/O, and returns the count alias without changing later `toSql` output.
+9. `exists` runs a `SELECT 1 ... LIMIT 1` probe and returns true when a row is present. It stops at the first match rather than scanning every matching row, and does not change builder state.
 10. `toMongo` performs no database I/O. It validates and converts the supported builder state into driver-ready native options.
 
 The builder is mutable and not safe to share across concurrent requests or tasks. Each query starts with a new builder.
@@ -234,6 +258,8 @@ Required negative and mutation-witness cases:
 - negative limit or offset;
 - missing and extra parameters;
 - execution with no database;
+- `count()` on a grouped builder is rejected with the grouped state named;
+- `exists()` returns true after the first matching row without a full scan;
 - unsupported Mongo condition;
 - Mongo join, group or `HAVING` state;
 - projection functions and aliases in Mongo mode;
@@ -288,7 +314,7 @@ Implement a mutable fluent `SELECT` builder with one static factory. Store colum
 
 Emit SQL in standard clause order. Keep limit and offset out of the SQL string and pass them to the database layer. Resolve an explicit database first, then a model-bound database, then the active framework database. Fail when execution has no database.
 
-Return `DatabaseResult` from `get`, one native row or null from `first`, an integer from `count`, and a boolean from `exists`. Apply no implicit row cap. Preserve the builder after inspection and execution.
+Return `DatabaseResult` from `get`, one native row or null from `first`, an integer from `count` (rejecting a grouped builder), and a boolean from `exists` via a `SELECT 1 ... LIMIT 1` probe. Apply no implicit row cap. Preserve the builder after inspection and execution.
 
 Translate only the declared Mongo subset. Return driver-ready native containers with the neutral `filter`, `projection`, `sort`, `limit` and `skip` meaning. Preserve boolean precedence and parameter order. Reject every state whose meaning cannot survive translation. Never emit `$where` and never ignore part of the chain.
 
