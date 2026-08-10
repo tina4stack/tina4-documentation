@@ -125,12 +125,12 @@ Historical documents remain in `archive/`; active packets use this table.
 | # | Feature | Python evidence | PHP | Ruby | Node | Audit state |
 | ---: | --- | --- | --- | --- | --- | --- |
 | 65 | [Session lifecycle](features/065-session-handling.md) | `tina4_python/session/__init__.py` | `Tina4/Session.php` | `lib/tina4/session.rb` | `packages/core/src/session.ts` | decision-ready |
-| 66 | [File session provider](features/066-session-file-provider.md) | `tina4_python/session/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
-| 67 | [Redis session provider](features/067-session-redis-provider.md) | `tina4_python/session_handlers/redis_handler.py` | inventory pending | inventory pending | inventory pending | queued |
-| 68 | [Valkey session provider](features/068-session-valkey-provider.md) | `tina4_python/session_handlers/valkey_handler.py` | inventory pending | inventory pending | inventory pending | queued |
-| 69 | [MongoDB session provider](features/069-session-mongodb-provider.md) | `tina4_python/session_handlers/mongodb_handler.py` | inventory pending | inventory pending | inventory pending | queued |
-| 70 | [Database session provider](features/070-session-database-provider.md) | `tina4_python/session/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
-| 71 | [Memcached session provider](features/071-session-memcached-provider.md) | `tina4_python/session_handlers/memcached_handler.py` | inventory pending | inventory pending | inventory pending | queued |
+| 66 | [File session provider](features/066-session-file-provider.md) | `tina4_python/session/__init__.py` (inline) | `Tina4/Session.php` (inline) | `lib/tina4/session_handlers/file_handler.rb` | `packages/core/src/session.ts` (inline) | decision-ready |
+| 67 | [Redis session provider](features/067-session-redis-provider.md) | `tina4_python/session_handlers/redis_handler.py` | `Tina4/Session/RedisSessionHandler.php` | `lib/tina4/session_handlers/redis_handler.rb` + `resp_client.rb` | `session.ts` (inline) + `sessionHandlers/respClient.ts` | decision-ready |
+| 68 | [Valkey session provider](features/068-session-valkey-provider.md) | `tina4_python/session_handlers/valkey_handler.py` | `Tina4/Session/ValkeySessionHandler.php` | `lib/tina4/session_handlers/valkey_handler.rb` | `packages/core/src/sessionHandlers/valkeyHandler.ts` | decision-ready |
+| 69 | [MongoDB session provider](features/069-session-mongodb-provider.md) | `tina4_python/session_handlers/mongodb_handler.py` | `Tina4/Session/MongoSessionHandler.php` | `lib/tina4/session_handlers/mongo_handler.rb` + `mongo_wire_client.rb` | `packages/core/src/sessionHandlers/mongoHandler.ts` | decision-ready |
+| 70 | [Database session provider](features/070-session-database-provider.md) | `tina4_python/session/__init__.py` (DatabaseSessionHandler) | `Tina4/Session/DatabaseSessionHandler.php` | `lib/tina4/session_handlers/database_handler.rb` | `packages/core/src/sessionHandlers/databaseHandler.ts` | decision-ready (Python DDL breaks MSSQL/Firebird; PHP MSSQL open) |
+| 71 | [Memcached session provider](features/071-session-memcached-provider.md) | `tina4_python/session_handlers/memcached_handler.py` | `Tina4/Session/MemcachedSessionHandler.php` | `lib/tina4/session_handlers/memcached_handler.rb` | `packages/core/src/sessionHandlers/memcachedHandler.ts` | decision-ready |
 
 ## Cache and providers
 
