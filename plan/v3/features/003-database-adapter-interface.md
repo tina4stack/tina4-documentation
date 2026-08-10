@@ -1,15 +1,19 @@
-# Feature 3: Database adapter interface
+# Feature 003: Database adapter interface
 
 ## Identity and status
 
-- Matrix identity: Feature 3, database adapter interface.
-- Audit state: **contract complete; implementation and runner rewiring owed**.
+- Matrix identity: 3 — Database adapter interface
+- Audit state: decision-ready
+- Audit note: Contract complete; implementation and runner rewiring owed
+- Dependencies: Feature 1 typed environment, Feature 5 write result and safe
+  filters, Feature 4 database URL parsing, Feature 23 paginated results.
+- Dependants: every SQL/ORM/migration/session/cache/queue consumer.
+- Existing ADRs: see retained evidence and the central decision index
+- Shared fixtures: not yet confirmed
+
 - Original audit: 2026-07-28.
 - Adversarial re-audit: 2026-08-10.
 - Branch context: v3 staging, targeting the 3.14.0 stability boundary.
-- Dependencies: Feature 1 typed environment, Feature 4 write result and safe
-  filters, Feature 5 database URL parsing, Feature 18 paginated results.
-- Dependants: every SQL/ORM/migration/session/cache/queue consumer.
 - Decision: ADR-0044.
 - Authoritative fixture: `fixtures/adapter_contract.json`. Copying it into every
   framework and replacing the superseded structural runners is implementation
@@ -18,38 +22,45 @@
 Breaking changes are permitted before 3.14.0. This packet is planning and
 contract data only. It does not authorize framework implementation changes.
 
-## Decisions superseding the plan below (finalized 2026-08-10)
-
-The owner settled Feature 3's two open items on 2026-08-10.
-
-- **MongoDB is a FIRST-CLASS SQL adapter**, not scoped out. `MongoDBAdapter`
-  implements the full 14-method contract, so the adapter contract OWNS SQL->Mongo
-  translation (prior art: `QueryBuilder.toMongo()`). Three sub-points the contract
-  must still nail (owed): what `getColumns` returns for a schemaless store (sampled
-  documents vs the ORM model), the expected Mongo result for each SQL conformance
-  case, and that Mongo transactions require a replica set. The provider list
-  (SQLite/PostgreSQL/MySQL/MSSQL/Firebird/MongoDB/ODBC) stands.
-
-- **Node is async to the public surface.** One async adapter contract: the Node
-  adapter AND the public `Database`/ORM surface are asynchronous; consumers await.
-  Concepts stay identical to the other three (same 14 capabilities); Node returns
-  the language's async form. The current sync/async split and the sync stubs that
-  throw "Use ...Async" are removed. Documented Node-specific breaking change.
-
-- **`getColumns` descriptor gains `primary_key_position` / `primaryKeyPosition`**
-  (amendment from Feature 4's Decision 7, 2026-08-10): null for non-key columns;
-  `primaryKey()` sorts by it and returns declared key order, so a composite
-  `PRIMARY KEY (b, a)` stays `(b, a)` instead of collapsing to table-column order.
-
-Everything else in the plan below stands.
-
 ## Why this feature exists
 
 A developer or a new language implementer needs one small, explicit contract
 that makes every database engine interchangeable without converting Tina4
 results, guessing optional capabilities, or reading another runtime.
 
-## Re-audit result
+## Boundary
+
+The adapter owns only behavior that genuinely varies by database engine or
+driver:
+
+- connection lifecycle and canonical engine identity;
+- statement execution, batch execution, row fetching and first-row fetching;
+- transaction state and the effective autocommit policy;
+- engine catalog introspection.
+
+The facade owns application-facing composition:
+
+- `insert`, `update`, `delete` and `truncate` SQL construction;
+- safe filter rules from Feature 5;
+- query translation, pagination and count probes;
+- query caching and cache invalidation;
+- connection-pool selection and transaction pinning;
+- facade error state and convenience methods such as `fetchAll`.
+
+The adapter does not own URL parsing, ORM models, migrations, DDL builders,
+cache providers or language-independent SQL builders.
+
+## Existing implementation evidence
+
+| Evidence | Python | PHP | Ruby | Node |
+| --- | --- | --- | --- | --- |
+| Public surface | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| Startup/CLI integration | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| Stored/wire format | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| Existing focused tests | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| Existing lab baseline | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+
+### Re-audit result
 
 The old audit selected fourteen required methods, but excluded `executeMany`
 and `fetchOne` as facade conveniences. That conclusion is superseded.
@@ -74,7 +85,7 @@ diagnostic methods that duplicate existing channels:
   The public facade records the cause for `get_error` / `getError` before
   rethrowing it.
 
-## Exact-HEAD evidence
+### Exact-HEAD evidence
 
 The lab host `nvidia-rtx4500` ran focused suites as root against the same v3
 HEADs as the local repositories.
@@ -97,29 +108,28 @@ autocommit tried to COMMIT without a matching BEGIN. The rows and assertions
 were correct, but an expected success path must not produce transaction-failure
 warnings.
 
-## Boundary
+### Transaction and batch rules
 
-The adapter owns only behavior that genuinely varies by database engine or
-driver:
+- Autocommit is on by default.
+- `TINA4_AUTOCOMMIT=false` selects strict manual durability.
+- An explicit transaction pins one physical adapter/connection for every
+  operation until the matching commit or rollback.
+- A standalone `executeMany` under autocommit owns one transaction: begin once,
+  execute all parameter sets, commit once; any failure rolls back the owned
+  transaction and throws.
+- `executeMany` inside an explicit transaction joins it. It never begins,
+  commits or rolls back the caller's transaction. On failure it throws and the
+  caller retains responsibility for rollback.
+- A pool never rotates adapters inside a transaction or batch.
+- Expected native autocommit states do not log COMMIT-without-BEGIN warnings.
+- A provider unable to guarantee atomic batch writes must reject the operation
+  before the first write or require a deployment mode that can. It may not
+  silently provide partial durability. This is material for standalone MongoDB
+  deployments without transaction support.
 
-- connection lifecycle and canonical engine identity;
-- statement execution, batch execution, row fetching and first-row fetching;
-- transaction state and the effective autocommit policy;
-- engine catalog introspection.
+## Public surface contract
 
-The facade owns application-facing composition:
-
-- `insert`, `update`, `delete` and `truncate` SQL construction;
-- safe filter rules from Feature 4;
-- query translation, pagination and count probes;
-- query caching and cache invalidation;
-- connection-pool selection and transaction pinning;
-- facade error state and convenience methods such as `fetchAll`.
-
-The adapter does not own URL parsing, ORM models, migrations, DDL builders,
-cache providers or language-independent SQL builders.
-
-## Required adapter capabilities
+### Required adapter capabilities
 
 Every adapter implements all fourteen. None is optional. Method spelling follows
 the host language, but concepts and behavior do not change.
@@ -151,7 +161,7 @@ before the stability boundary.
 language may express it as a property or through idiomatic accessors; the
 behavioral contract does not require a method-shaped API.
 
-## Public database facade
+### Public database facade
 
 The public `Database` surface includes:
 
@@ -211,7 +221,7 @@ pinned for the current operation. It does not reimplement either by looping over
 - The adapter returns a native list of records and preserves native value types.
 - Adapter no-row success returns an empty native list, never null.
 - The public facade wraps those records in the shared `DatabaseResult` and owns
-  pagination, the true-total count and cache behavior defined by Feature 18.
+  pagination, the true-total count and cache behavior defined by Feature 23.
 - A bad statement throws; it never becomes an empty successful result.
 
 ### `fetchOne`
@@ -235,7 +245,7 @@ boolean.
 ## Lifecycle and operation graph
 
 ```text
-Database factory -> parse URL (Feature 5) -> construct adapter -> connect
+Database factory -> parse URL (Feature 4) -> construct adapter -> connect
   -> facade chooses one adapter
      -> explicit transaction: pin adapter until commit/rollback
      -> standalone operation: use selected adapter under autocommit policy
@@ -249,25 +259,6 @@ names the engine and endpoint without credentials. Calling `connect` on an
 already-connected adapter does not create a second hidden connection. `close`
 is idempotent and releases native statements, transactions and sockets owned by
 the adapter.
-
-## Transaction and batch rules
-
-- Autocommit is on by default.
-- `TINA4_AUTOCOMMIT=false` selects strict manual durability.
-- An explicit transaction pins one physical adapter/connection for every
-  operation until the matching commit or rollback.
-- A standalone `executeMany` under autocommit owns one transaction: begin once,
-  execute all parameter sets, commit once; any failure rolls back the owned
-  transaction and throws.
-- `executeMany` inside an explicit transaction joins it. It never begins,
-  commits or rolls back the caller's transaction. On failure it throws and the
-  caller retains responsibility for rollback.
-- A pool never rotates adapters inside a transaction or batch.
-- Expected native autocommit states do not log COMMIT-without-BEGIN warnings.
-- A provider unable to guarantee atomic batch writes must reject the operation
-  before the first write or require a deployment mode that can. It may not
-  silently provide partial durability. This is material for standalone MongoDB
-  deployments without transaction support.
 
 ## Configuration and precedence
 
@@ -296,6 +287,10 @@ errors.
   trusted SQL builder/translator, never by interpolating a user value.
 - Error text and logs redact passwords, tokens and URL user-info.
 
+## Wire and persistence contract
+
+The audit has not yet fixed every wire format, stored shape, encoding, identifier, timestamp, and compatibility rule.
+
 ## Providers and substitutability
 
 The contract applies to SQLite, PostgreSQL, MySQL/MariaDB, MSSQL, Firebird,
@@ -306,7 +301,9 @@ no-skip service gate on the lab; it is not a green conformance result.
 Engine-specific mechanisms are allowed. Observable types, transaction ownership,
 atomicity and failure boundaries are not.
 
-## Current contradictions and required changes
+## Contradictions and defects
+
+### Current contradictions and required changes
 
 | Area | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
@@ -332,7 +329,34 @@ Recorded from the 2026-08-10 review:
 ADR-0044 records the resulting boundary: both operations are required adapter
 primitives and public facade methods; diagnostic accessors leave the adapter.
 
-## Shared conformance fixture
+### Decisions superseding the plan below (finalized 2026-08-10)
+
+The owner settled Feature 3's two open items on 2026-08-10.
+
+- **MongoDB is a FIRST-CLASS SQL adapter**, not scoped out. `MongoDBAdapter`
+  implements the full 14-method contract, so the adapter contract OWNS SQL->Mongo
+  translation (prior art: `QueryBuilder.toMongo()`). Three sub-points the contract
+  must still nail (owed): what `getColumns` returns for a schemaless store (sampled
+  documents vs the ORM model), the expected Mongo result for each SQL conformance
+  case, and that Mongo transactions require a replica set. The provider list
+  (SQLite/PostgreSQL/MySQL/MSSQL/Firebird/MongoDB/ODBC) stands.
+
+- **Node is async to the public surface.** One async adapter contract: the Node
+  adapter AND the public `Database`/ORM surface are asynchronous; consumers await.
+  Concepts stay identical to the other three (same 14 capabilities); Node returns
+  the language's async form. The current sync/async split and the sync stubs that
+  throw "Use ...Async" are removed. Documented Node-specific breaking change.
+
+- **`getColumns` descriptor gains `primary_key_position` / `primaryKeyPosition`**
+  (amendment from Feature 5's Decision 7, 2026-08-10): null for non-key columns;
+  `primaryKey()` sorts by it and returns declared key order, so a composite
+  `PRIMARY KEY (b, a)` stays `(b, a)` instead of collapsing to table-column order.
+
+Everything else in the plan below stands.
+
+## Proposed conformance fixture
+
+### Shared conformance fixture
 
 The central `fixtures/adapter_contract.json` defines 40 cases across eight owed
 invariant groups. Its SHA-1 is
@@ -429,6 +453,9 @@ A new language implements Feature 3 without reading another runtime:
     integrations.
 
 ## Audit closure checklist
+
+- [ ] Wire/storage and provider contracts complete.
+- [ ] Owner ambiguities decided and recorded.
 
 - [x] Boundary and public surface complete.
 - [x] Lifecycle and every producer/consumer edge complete.

@@ -1,7 +1,7 @@
 # Task: adversarial re-audit of every previously audited feature
 
 Owner decision, 2026-08-08: re-audit the features already marked audited after
-Feature 27 exposed shipping contradictions behind fully green suites.
+Feature 14 exposed shipping contradictions behind fully green suites.
 
 Owner decision, 2026-08-08: the accumulated output must also be a clean-room
 formula for implementing Tina4 in another language. Every feature therefore
@@ -57,8 +57,8 @@ This re-audit checks for the missing path between public operations.
 
 Re-open every feature currently in Layer 1 or Layer 2 of `CONTRACT-MAP.md`, in
 strict numeric order starting with Feature 1. Messenger retains its existing
-matrix identity, **Feature 55**; its earlier "Feature 0" label described its role
-as the audit pilot and is retired. Feature 27 remains open and is revisited in
+matrix identity, **Feature 87**; its earlier "Feature 0" label described its role
+as the audit pilot and is retired. Feature 14 remains open and is revisited in
 sequence; this plan does not discard its findings.
 
 ## Required loop for each feature
@@ -122,31 +122,17 @@ implementation tasks. Green legacy suites establish a baseline only.
 
 ## Ordered dashboard
 
-| Feature | Prior state | Re-audit state |
-| --- | --- | --- |
-| 1 DotEnv | closed | **CONTRACT COMPLETE 2026-08-09; implementation pending after full audit** |
-| 2 Structured logger | auditing | **CONTRACT COMPLETE 2026-08-09; 59-case fixture and runner implementation pending after full audit** |
-| 3 DB adapter interface | closed | **CONTRACT COMPLETE 2026-08-10; ADR-0044 + 38-case fixture, implementation pending after full audit** |
-| 4 SQLite adapter/write path | effectively closed | queued |
-| 5 DATABASE_URL parser | shipped | queued |
-| 6 Router/dispatch | closed | queued |
-| 7 Middleware | closed | queued |
-| 8 Health | Layer 2 | queued |
-| 9 Shutdown | closed | queued |
-| 10 CORS | closed | queued |
-| 11-12,79 Routing surface | closed | queued |
-| 13-20 ORM/data | closed or re-opened | queued |
-| 27 Migrations | audit in progress | queued with known defects |
-| 28-32 Frond core/filters | closed | queued |
-| 37-38 Escaping/sandbox | closed | queued |
-| 41-43 Auth/session/cache | Layer 1/2 | queued |
-| 47 Swagger | Layer 2 | queued |
-| 48 Queue | Layer 2 | queued |
-| 50 HTTP client | shipped, no fixture | queued |
-| 55 Email / Messenger | Layer 2 / former pilot | queued in numeric order |
-| unnumbered DocStore/tina4-css | Layer 2 | queued after numbered rows |
+The ordered dashboard is generated from `FEATURE-CATALOG.json` at
+`01-FEATURE-MATRIX.md`. It contains Features 1-132 with one link per packet and
+the packet's current audit state. `98-feature-audit.md` maps every historically
+audited item to its new number.
 
-## Feature 55 planned work
+Feature 1, Feature 2 and Feature 3 have decision-complete contracts but still
+owe implementation work. The remaining packets keep their measured historical
+state where evidence exists and `queued` where it does not. No row is complete
+merely because its legacy suite is green.
+
+## Feature 87 planned work
 
 - [ ] Enumerate construction/factory, send, capture, folder/list, read, search,
       attachments, flags, delete/move and transport configuration surfaces.
@@ -204,10 +190,10 @@ implementation tasks. Green legacy suites establish a baseline only.
 - [ ] Feature 1: Node `Env.int`/`Env.float` use prefix parsers, so values such as
       `12px` and `1.5seconds` are silently accepted; Python, PHP and Ruby reject
       the entire malformed token and return the default.
-- [ ] Feature 27: Node-generated `.ts` migration is not runnable/discoverable.
-- [ ] Feature 27: Python/Node status/file surfaces omit native code migrations.
-- [ ] Feature 27: missing or failed rollback can erase applied history.
-- [ ] Feature 27: public outcomes differ four ways.
+- [ ] Feature 14: Node-generated `.ts` migration is not runnable/discoverable.
+- [ ] Feature 14: Python/Node status/file surfaces omit native code migrations.
+- [ ] Feature 14: missing or failed rollback can erase applied history.
+- [ ] Feature 14: public outcomes differ four ways.
 
 ## Commits
 

@@ -2,7 +2,7 @@
 
 Scoped 2026-07-28 at the owner's request, from a report of repeated trouble with
 multi-column primary keys. Follows the write-path P1
-(`features/004-sqlite-adapter.md`), which made the **raw** write path
+(`features/005-database-write-facade.md`), which made the **raw** write path
 composite-safe and left the ORM single-key.
 
 **Status: SCOPED, not started.** No code written.

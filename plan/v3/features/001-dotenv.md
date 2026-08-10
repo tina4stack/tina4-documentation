@@ -1,4 +1,34 @@
-# Feature 1: DotEnv parser (.env loading)
+# Feature 001: DotEnv and typed environment
+
+## Identity and status
+
+- Matrix identity: 1 — DotEnv and typed environment
+- Audit state: decision-ready
+- Audit note: Auditing — structure migrated; closure checklist records remaining work
+- Dependencies: not yet extracted from the retained audit evidence
+- Dependants: not yet extracted from the retained audit evidence
+- Existing ADRs: see retained evidence and the central decision index
+- Shared fixtures: not yet confirmed
+
+## Why this feature exists
+
+The retained audit does not yet state the developer problem in one language-neutral sentence.
+
+## Boundary
+
+The retained audit does not yet separate what this feature owns, delegates, and excludes.
+
+## Existing implementation evidence
+
+| Evidence | Python | PHP | Ruby | Node |
+| --- | --- | --- | --- | --- |
+| Public surface | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| Startup/CLI integration | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| Stored/wire format | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| Existing focused tests | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| Existing lab baseline | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+
+### Retained introductory record
 
 Audited 2026-07-28; adversarial contract completed 2026-08-09. Part of
 `98-feature-audit.md`. **Decision-complete planning only; implementation waits
@@ -6,34 +36,7 @@ for the full audit.** The normative 3.14 contract begins at "Vanilla
 implementation plan". Earlier verdict/pattern/test sections and the final
 "shipped" record are historical evidence and are superseded where they differ.
 
-## Decisions superseding the plan below (finalized 2026-08-10)
-
-The owner resolved Feature 1's remaining open item on 2026-08-10. Where the
-"Vanilla implementation plan" and its owner-decision register below differ, THIS
-section wins.
-
-**`.env` structured values use STRICT JSON via each language's built-in parser -
-no bespoke parser, no references.** `get_env` decodes a `[...]` or `{...}` value
-with the language's standard JSON parser (`json.loads` / `JSON.parse` /
-`json_decode` / `JSON.parse`) and returns the native sequence or string-keyed map.
-Scalar `${VAR}` string interpolation stays. REMOVED from the contract:
-bare-identifier references to framework constants (`ENV=[TINA4_LOG_ALL]`),
-parentheses-as-tuples, single-quoted strings inside structures, trailing commas,
-the reference dependency graph, and cycle detection. Structure depth and duplicate
-map keys follow the language JSON parser's own rules, not a Tina4 depth-64 or
-duplicate-key contract. This DISSOLVES the Feature 1 <-> Feature 2 constant-registry
-seam: Feature 1 no longer reads a framework-constant registry, and Logging no
-longer needs to initialize one before dotenv.
-
-Superseded/rewritten below to strict-JSON + JSON-parser error semantics: the
-"Structured values" section, the bare-identifier reference rules in "Parser" and
-"Typed coercion", owner decisions 7A-7D, 9, 10, 11, 12, 14, 15, 22 and 24, and
-conformance cases `ENV-R04`-`R08` and `ENV-N06`-`N11`. Unchanged: scalar typed
-coercion (bool/int/float/null and the +/-9007199254740991 integer range),
-`${VAR}` interpolation, source precedence, reset ownership and missing-root
-bootstrap.
-
-## Files
+### Files
 
 | | path |
 | --- | --- |
@@ -42,7 +45,7 @@ bootstrap.
 | ruby | `tina4-ruby/lib/tina4/env.rb` |
 | node | `tina4-nodejs/packages/core/src/dotenv.ts`, `env.ts` |
 
-## Historical measurements
+### Historical measurements
 
 | | LOC | fns | CC total | CC avg | worst fn | MI | flags |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -55,156 +58,7 @@ Leanest python (113), simplest per function ruby (2.71), best MI node (36.8),
 spread 2.0x. No errors anywhere. By the numbers this feature looks healthy, which
 is exactly why the numbers are not the audit.
 
-## Historical differences
-
-Verified by running all four loaders against one identical `.env`, not by reading.
-The file:
-
-```
-PLAIN=hello
-export EXPORTED=shellstyle
-QUOTED="double quoted"
-SINGLE='single quoted'
-HOST=example.com
-INTERP=${HOST}/api
-WITH_HASH=value # trailing comment
-EMPTY=
-```
-
-Results:
-
-| line | python | php | ruby | node |
-| --- | --- | --- | --- | --- |
-| `PLAIN=hello` | `hello` | `hello` | `hello` | `hello` |
-| `export EXPORTED=shellstyle` | `shellstyle` | `shellstyle` | **UNSET** | `shellstyle` |
-| `QUOTED="double quoted"` | stripped | stripped | stripped | stripped |
-| `SINGLE='single quoted'` | stripped | stripped | stripped | stripped |
-| `INTERP=${HOST}/api` | `${HOST}/api` | **`example.com/api`** | `${HOST}/api` | `${HOST}/api` |
-| `WITH_HASH=value # trailing comment` | `value` | `value` | **`value # trailing comment`** | `value` |
-| `EMPTY=` | `''` | `''` | `''` | `''` |
-
-Three divergences, all silent, all in the component that loads every other
-setting.
-
-**D1. Ruby drops `export FOO=bar` lines entirely.** Three frameworks accept the
-shell-style prefix; Ruby leaves the variable unset and says nothing. Copying a
-`.env` out of a shell profile or a deployment script is routine, and on Ruby the
-variable simply is not there. The failure then surfaces somewhere unrelated: a
-blank `TINA4_SECRET`, a missing database URL, a feature that silently defaults
-off.
-
-**D2. PHP is the only framework that interpolates `${VAR}`.** `INTERP=${HOST}/api`
-resolves to `example.com/api` on PHP and stays a literal `${HOST}/api` on the
-other three. A `.env` written against PHP produces a broken URL string in Python,
-Ruby and Node, and the value looks plausible enough to reach a connection attempt
-before failing.
-
-**D3. Ruby does not strip trailing comments.** `WITH_HASH=value # trailing
-comment` becomes the whole string on Ruby, `value` on the other three. Same class
-of failure: the value is wrong, not absent.
-
-**D4. The signatures disagree, three ways.** This is the owner's naming point in
-its most literal form:
-
-| | call | argument |
-| --- | --- | --- |
-| python | `load_env()` | none (cwd) |
-| php | `DotEnv::loadEnv($file)` | a FILE path |
-| ruby | `Tina4::Env.load_env($dir)` | a DIRECTORY |
-| node | `loadEnv()` | none (cwd) |
-
-Passing a directory to PHP raises `RuntimeException: Cannot read file`. Ruby's is
-not reachable as `Tina4.load_env` at all (it lives on the nested `Tina4::Env`
-module), so the obvious call fails with `NoMethodError` while the other three
-work off the top-level name.
-
-**D5. Capability sets differ beyond the parse.** Ruby is alone in offering typed
-getters (`Env.bool`, `Env.int`, `Env.float`, `Env.str`) and
-`check_legacy_env_vars!`. Python is alone in handling multiline values. Node and
-Python expose `require_env`/`requireEnv`; Ruby's public list does not.
-
-## Historical verdict: SYNTHESISE
-
-Decided on **correctness**. Two of the three divergences are silent wrong-value or
-missing-value bugs in Ruby, and the third is a PHP-only capability that makes a
-PHP-authored `.env` unportable. Neither "promote Ruby" nor "promote PHP" is right:
-Ruby has the best code shape (lowest CC per function) and the worst parser;
-PHP has the richest parser and the heaviest code.
-
-Take the **parser behaviour from the union of Python and Node** (they agree on
-every line above, and Node has the best MI), add **PHP's `${VAR}` interpolation**
-to all four, and keep **Ruby's typed getters** by promoting them everywhere.
-
-## Superseded 2026-07 pattern
-
-**One parser, one behaviour table, four language-idiomatic names.**
-
-Parsing rules, in order, identical in all four:
-
-1. Skip blank lines and lines whose first non-space character is `#`.
-2. Strip a leading `export ` (one or more spaces) before the key. Shell-style
-   lines are valid input, not an error.
-3. Split on the first `=` only. A key with no `=` is skipped with a warning
-   naming the line number, never silently.
-4. Trim whitespace around the key. Reject a key that is not
-   `[A-Za-z_][A-Za-z0-9_]*` with a warning naming the line.
-5. Value handling, in this order:
-   - a fully double-quoted value keeps its interior verbatim, minus the quotes,
-     and processes `\n`, `\t`, `\\` escapes;
-   - a fully single-quoted value keeps its interior verbatim, minus the quotes,
-     with NO escape processing and NO interpolation (shell semantics);
-   - an unquoted value is truncated at the first ` #` (space-hash), then trimmed.
-6. `${VAR}` interpolation runs on unquoted and double-quoted values only, against
-   already-loaded keys plus the real environment, with an unresolved name left
-   literal and warned about once.
-7. Precedence is real environment, then `.env.local`, then `.env`, first-wins.
-   An empty value is a value: `EMPTY=` sets the empty string, it does not unset.
-
-Surface, per the owner's rule (same names, language-idiomatic casing, same
-outcome):
-
-| concept | python | php | ruby | node |
-| --- | --- | --- | --- | --- |
-| load | `load_env(root=None)` | `DotEnv::loadEnv($root = null)` | `Tina4.load_env(root = nil)` | `loadEnv(root?)` |
-| get | `get_env(k, default=None)` | `Env::getEnv($k, $d = null)` | `Tina4.get_env(k, default: nil)` | `getEnv(k, d?)` |
-| require | `require_env(k)` | `Env::requireEnv($k)` | `Tina4.require_env(k)` | `requireEnv(k)` |
-| has | `has_env(k)` | `Env::hasEnv($k)` | `Tina4.has_env?(k)` | `hasEnv(k)` |
-| all | `all_env()` | `Env::allEnv()` | `Tina4.all_env` | `allEnv()` |
-| reset | `reset_env()` | `Env::resetEnv()` | `Tina4.reset_env` | `resetEnv()` |
-| truthy | `is_truthy(v)` | `Env::isTruthy($v)` | `Tina4.truthy?(v)` | `isTruthy(v)` |
-| typed | `env_bool/int/float/str` | `Env::bool/int/float/str` | `Tina4.env_bool/...` | `envBool/envInt/...` |
-
-Two contract points in that table:
-
-- **`load` takes a ROOT DIRECTORY in all four, or nothing.** PHP's file-path
-  argument is the odd one out and it is the one that throws. A file-path overload
-  may stay, but the directory form must exist and must be the documented one.
-- **Every helper is reachable from the top-level namespace** (`Tina4.load_env`,
-  not only `Tina4::Env.load_env`), because the other three are, and an obvious
-  call that raises `NoMethodError` is a parity defect.
-
-## Historical implementation methodology
-
-1. Build the shared behaviour fixture FIRST: one `.env` file, committed once, plus
-   one expected-values table. Same bytes, one answer key, all four frameworks read
-   it. This is the pattern that worked for the Frond expression corpus.
-2. Write the tests below in all four against the fixture. Confirm the expected
-   failures: Ruby red on export/comment, three red on interpolation.
-3. Fix Ruby's parser (export prefix, trailing comment). Smallest change, biggest
-   correctness win, and Ruby's function shape is already the best of the four so
-   there is nothing to restructure.
-4. Add `${VAR}` interpolation to Python, Ruby and Node, ported from PHP's
-   `interpolate`. Single-quoted values must be exempt.
-5. Reconcile the signatures: add the directory form to PHP, expose the top-level
-   Ruby aliases, add the missing `require_env` to Ruby.
-6. Promote the typed getters (Ruby's) to the other three, and
-   `check_legacy_env_vars!` if the audit of that feature agrees.
-7. Re-measure. The target is no regression in MI and no new offender; this feature
-   is currently the healthiest in the batch and must stay that way.
-
-Order: Ruby first (it holds both correctness bugs), then Python, Node, PHP.
-
-## Superseded 2026-07 test proposal
+### Superseded 2026-07 test proposal
 
 Identical names in all four, driven off the shared fixture. Real files on disk in
 a temp directory, real process environment; no mocks (a `.env` is a file, so the
@@ -227,71 +81,19 @@ The last pair is the one that keeps this closed. A shared fixture plus one answe
 key means the next divergence is a failing test in one framework rather than a
 silent difference nobody runs both halves of.
 
-## Historical risks
-
-- **D2 (interpolation) is a behaviour change on three frameworks.** A `.env`
-  containing a literal `${...}` that today survives as a literal will start
-  expanding. That is a `Breaking:` changelog entry with a migration note: escape
-  it as `$${...}` or single-quote the value.
-- **D1 and D3 are pure bug fixes on Ruby** and need no breaking note: nothing
-  depends on a variable being silently missing, and nothing depends on a comment
-  being part of a value.
-
-## 2026-08-08 adversarial re-audit: RE-OPENED
-
-The parser corpus remains byte-identical and its named parser cases remain
-valuable, but the feature is not closed. The stronger producer-to-consumer pass
-found five contradictions outside those green cases:
-
-1. **Present-empty requirement:** Python implements `require_env` with
-   `if not os.environ.get(k)`, so `EMPTY=` raises as missing. PHP, Ruby and Node
-   check key presence and return the empty string. This contradicts this plan's
-   own rule that an empty value is set, not absent.
-2. **Project bootstrap regressed in three languages:** Ruby `load_env(root)`
-   calls `create_default_env` when `.env` is absent. Python, PHP and Node return
-   an empty map instead. Owner decision 2026-08-08: **Ruby's creation behavior
-   is correct; Python and PHP used to do this.** Promote missing-root bootstrap
-   to all four. This decides the side effect, not the exact generated contents:
-   Ruby's time-derived MD5 API key must still be audited against Tina4's security
-   contract rather than copied blindly.
-3. **Two boolean answers in one runtime:** the public DotEnv truthiness table is
-   `true/1/yes/on`, but typed `Env.bool` in Python, PHP and Node still carries
-   the retired `y/t/n/f` table. For example, `is_truthy("y")` is false while
-   `Env.bool(NAME)` is true in those runtimes. Ruby is the only implementation
-   that actually uses one table.
-4. **Unknown bool plus default:** Python/PHP/Node return the caller's default for
-   a present unknown token, while Ruby classifies any present non-truthy token
-   false. Thus `MAYBE=perhaps` with default true produces true in three and
-   false in Ruby. The shared corpus already says `maybe` is falsy.
-5. **Node accepts numeric prefixes:** Node uses `Number.parseInt` and
-   `Number.parseFloat`, which accept `12px` as 12 and `1.5seconds` as 1.5.
-   Python's `int/float`, PHP's validators, and Ruby's `Integer/Float` reject the
-   whole malformed token and return the default.
-
-These escaped because `dotenv_corpus.json` exercises `is_truthy` but not the
-typed `Env.bool` consumer, no requirement case feeds it `EMPTY=`, no common case
-loads an entirely empty root and checks the generated filesystem afterward, and the typed
-number suites cover wholly invalid strings but not valid prefixes with junk
-suffixes. Green method-level tests did not check that adjacent public methods
-gave the same answer.
-
-Required closure evidence now includes shared cases for all five contradictions,
-the empty-root filesystem assertion, mutation witnesses, and exact-HEAD lab
-focused/full runs with zero skips.
-
-## Normative vanilla implementation plan for `.env` (3.14)
+### Normative vanilla implementation plan for `.env` (3.14)
 
 This is the language-neutral plan. Another Tina4 implementation must be able to
 build Feature 1 from this section without reading an existing runtime.
 
-### Purpose and boundary
+#### Purpose and boundary
 
 Feature 1 bootstraps project configuration, parses `.env` files into the process
 environment, exposes consistent lookup/coercion helpers, and owns the precedence
 and reset rules. It does not mint authentication secrets: the Auth feature owns
 the cryptographically-random development `TINA4_SECRET` in `.env.local`.
 
-### Public concepts
+#### Public concepts
 
 | Concept | Vanilla contract |
 | --- | --- |
@@ -308,7 +110,7 @@ Names use language-idiomatic casing only. These concepts must be reachable from
 the framework's ordinary one-package import/namespace; an internal parser module
 is allowed, but it is not the only public route.
 
-### Target resolution
+#### Target resolution
 
 1. An explicit function argument wins over environment configuration.
 2. With no argument, a non-empty `TINA4_ENV_FILE` selects the main file.
@@ -330,7 +132,7 @@ missing canonical `.env` of an existing project root is bootstrapped.
 Startup, CLI, workers and migration commands call the root form once. They do not
 reimplement file ordering or call the loader twice.
 
-### Missing-root bootstrap
+#### Missing-root bootstrap
 
 When a project root exists but its main `.env` does not, create it atomically and
 then load it. Never create `.env.local` merely because it is absent. Never
@@ -360,7 +162,7 @@ Where supported, create the file owner-readable/writable only. A write failure i
 a configuration error naming the path; the loader must not claim an empty
 successful load after bootstrap failed.
 
-### Source precedence and override
+#### Source precedence and override
 
 File precedence is invariant: `.env.local` always beats `.env`.
 
@@ -380,7 +182,7 @@ Within one file, the first declaration wins. The returned map must equal the
 value actually visible in the process environment; it may never report
 `.env.local` while the process is running on `.env`.
 
-### Parser
+#### Parser
 
 Process UTF-8 text as follows:
 
@@ -448,7 +250,7 @@ selected source set before mutating the process environment. Any hard parse
 failure installs none of that load's assignments; it cannot leave the process
 partially configured.
 
-### Typed coercion
+#### Typed coercion
 
 `get_env` is the ordinary application boundary and performs native conversion.
 After interpolation, it resolves values in this order:
@@ -493,7 +295,7 @@ numbers. The same spelling rules apply to structured numeric elements.
   and the empty string.
 - Invalid numeric input warns and returns the caller's default; it never raises.
 
-### Structured values
+#### Structured values
 
 The owner requires the dotenv surface to understand structured literals such
 as:
@@ -589,7 +391,7 @@ it cannot change the process-environment string, loader metadata, another
 returned result or a later read. Implementations may cache an immutable parsed
 form internally only if they return a deep copy at the public boundary.
 
-### Reset ownership
+#### Reset ownership
 
 Before the first mutation of a key, record whether it existed and its exact old
 value. `reset_env()` restores that snapshot and removes only keys that did not
@@ -599,7 +401,7 @@ Keys that lost precedence and were never mutated are not owned by the loader.
 This rule covers `override=true`: an overridden ambient value is restored rather
 than deleted.
 
-### Operation graph
+#### Operation graph
 
 ```
 initialize framework constants
@@ -616,7 +418,7 @@ initialize framework constants
 Every startup and CLI consumer uses this graph. No consumer maintains a private
 truthiness table or a second `.env` ordering implementation.
 
-### Conformance specification
+#### Conformance specification
 
 The byte-identical shared `dotenv_corpus.json` now carries the versioned
 `contract_3_14` answer key in all current framework fixture directories. The
@@ -712,7 +514,7 @@ files were restored after the run; all four clones had an empty tracked status
 and the original fixture SHA-1
 `2673df7b22ae81ba3d5ec077085c6a3b165e43b1`.
 
-### Porting capsule
+#### Porting capsule
 
 1. **Purpose and boundary:** bootstrap project configuration, resolve and parse
    dotenv sources, expose ready-to-use native values and restore owned process
@@ -753,7 +555,7 @@ and the original fixture SHA-1
     before Logging; 3.14 migration notes name native-return, strict-failure,
     precedence, structured grammar and reset changes.
 
-### Owner decisions: settled 2026-08-09
+#### Owner decisions: settled 2026-08-09
 
 | Decision | Settled rule |
 | --- | --- |
@@ -787,7 +589,7 @@ and the original fixture SHA-1
 
 There are no unresolved owner choices in Feature 1.
 
-## Historical shipped record (2026-07-30; superseded by normative 3.14 contract)
+### Historical shipped record (2026-07-30; superseded by normative 3.14 contract)
 
 D2 was applied to all four rather than removed from PHP, per the owner's
 go-ahead. All four now agree on every line of the shared fixture.
@@ -817,3 +619,292 @@ mocked. Python 32, PHP 18, Ruby 31, Node 35.
 methodology). `load_env` takes a FILE path in Python, PHP and Node and a
 DIRECTORY in Ruby, and Ruby's helpers are only reachable as `Tina4::Env.*`
 rather than `Tina4.*`. The parser behaviour is uniform; the call shape is not.
+
+## Public surface contract
+
+The audit has not yet extracted a language-neutral public surface and its idiomatic spellings.
+
+## Inputs and outputs
+
+The audit has not yet fixed all native types, defaults, nullability, ordering, and serialized shapes.
+
+## Lifecycle and operation graph
+
+The audit has not yet traced every producer, discovery, execution, inspection, retry, rollback, and deletion path.
+
+## Configuration and precedence
+
+The audit has not yet fixed argument, environment, project-file, default, and cache timing precedence.
+
+## Failures, side effects and security
+
+The audit has not yet closed every failure boundary, side effect, cleanup rule, and security concern.
+
+## Wire and persistence contract
+
+The audit has not yet fixed every wire format, stored shape, encoding, identifier, timestamp, and compatibility rule.
+
+## Providers and substitutability
+
+The audit has not yet proved provider substitution or recorded deliberate capability exceptions.
+
+## Contradictions and defects
+
+### Historical differences
+
+Verified by running all four loaders against one identical `.env`, not by reading.
+The file:
+
+```
+PLAIN=hello
+export EXPORTED=shellstyle
+QUOTED="double quoted"
+SINGLE='single quoted'
+HOST=example.com
+INTERP=${HOST}/api
+WITH_HASH=value # trailing comment
+EMPTY=
+```
+
+Results:
+
+| line | python | php | ruby | node |
+| --- | --- | --- | --- | --- |
+| `PLAIN=hello` | `hello` | `hello` | `hello` | `hello` |
+| `export EXPORTED=shellstyle` | `shellstyle` | `shellstyle` | **UNSET** | `shellstyle` |
+| `QUOTED="double quoted"` | stripped | stripped | stripped | stripped |
+| `SINGLE='single quoted'` | stripped | stripped | stripped | stripped |
+| `INTERP=${HOST}/api` | `${HOST}/api` | **`example.com/api`** | `${HOST}/api` | `${HOST}/api` |
+| `WITH_HASH=value # trailing comment` | `value` | `value` | **`value # trailing comment`** | `value` |
+| `EMPTY=` | `''` | `''` | `''` | `''` |
+
+Three divergences, all silent, all in the component that loads every other
+setting.
+
+**D1. Ruby drops `export FOO=bar` lines entirely.** Three frameworks accept the
+shell-style prefix; Ruby leaves the variable unset and says nothing. Copying a
+`.env` out of a shell profile or a deployment script is routine, and on Ruby the
+variable simply is not there. The failure then surfaces somewhere unrelated: a
+blank `TINA4_SECRET`, a missing database URL, a feature that silently defaults
+off.
+
+**D2. PHP is the only framework that interpolates `${VAR}`.** `INTERP=${HOST}/api`
+resolves to `example.com/api` on PHP and stays a literal `${HOST}/api` on the
+other three. A `.env` written against PHP produces a broken URL string in Python,
+Ruby and Node, and the value looks plausible enough to reach a connection attempt
+before failing.
+
+**D3. Ruby does not strip trailing comments.** `WITH_HASH=value # trailing
+comment` becomes the whole string on Ruby, `value` on the other three. Same class
+of failure: the value is wrong, not absent.
+
+**D4. The signatures disagree, three ways.** This is the owner's naming point in
+its most literal form:
+
+| | call | argument |
+| --- | --- | --- |
+| python | `load_env()` | none (cwd) |
+| php | `DotEnv::loadEnv($file)` | a FILE path |
+| ruby | `Tina4::Env.load_env($dir)` | a DIRECTORY |
+| node | `loadEnv()` | none (cwd) |
+
+Passing a directory to PHP raises `RuntimeException: Cannot read file`. Ruby's is
+not reachable as `Tina4.load_env` at all (it lives on the nested `Tina4::Env`
+module), so the obvious call fails with `NoMethodError` while the other three
+work off the top-level name.
+
+**D5. Capability sets differ beyond the parse.** Ruby is alone in offering typed
+getters (`Env.bool`, `Env.int`, `Env.float`, `Env.str`) and
+`check_legacy_env_vars!`. Python is alone in handling multiline values. Node and
+Python expose `require_env`/`requireEnv`; Ruby's public list does not.
+
+### Historical verdict: SYNTHESISE
+
+Decided on **correctness**. Two of the three divergences are silent wrong-value or
+missing-value bugs in Ruby, and the third is a PHP-only capability that makes a
+PHP-authored `.env` unportable. Neither "promote Ruby" nor "promote PHP" is right:
+Ruby has the best code shape (lowest CC per function) and the worst parser;
+PHP has the richest parser and the heaviest code.
+
+Take the **parser behaviour from the union of Python and Node** (they agree on
+every line above, and Node has the best MI), add **PHP's `${VAR}` interpolation**
+to all four, and keep **Ruby's typed getters** by promoting them everywhere.
+
+### Historical risks
+
+- **D2 (interpolation) is a behaviour change on three frameworks.** A `.env`
+  containing a literal `${...}` that today survives as a literal will start
+  expanding. That is a `Breaking:` changelog entry with a migration note: escape
+  it as `$${...}` or single-quote the value.
+- **D1 and D3 are pure bug fixes on Ruby** and need no breaking note: nothing
+  depends on a variable being silently missing, and nothing depends on a comment
+  being part of a value.
+
+### 2026-08-08 adversarial re-audit: RE-OPENED
+
+The parser corpus remains byte-identical and its named parser cases remain
+valuable, but the feature is not closed. The stronger producer-to-consumer pass
+found five contradictions outside those green cases:
+
+1. **Present-empty requirement:** Python implements `require_env` with
+   `if not os.environ.get(k)`, so `EMPTY=` raises as missing. PHP, Ruby and Node
+   check key presence and return the empty string. This contradicts this plan's
+   own rule that an empty value is set, not absent.
+2. **Project bootstrap regressed in three languages:** Ruby `load_env(root)`
+   calls `create_default_env` when `.env` is absent. Python, PHP and Node return
+   an empty map instead. Owner decision 2026-08-08: **Ruby's creation behavior
+   is correct; Python and PHP used to do this.** Promote missing-root bootstrap
+   to all four. This decides the side effect, not the exact generated contents:
+   Ruby's time-derived MD5 API key must still be audited against Tina4's security
+   contract rather than copied blindly.
+3. **Two boolean answers in one runtime:** the public DotEnv truthiness table is
+   `true/1/yes/on`, but typed `Env.bool` in Python, PHP and Node still carries
+   the retired `y/t/n/f` table. For example, `is_truthy("y")` is false while
+   `Env.bool(NAME)` is true in those runtimes. Ruby is the only implementation
+   that actually uses one table.
+4. **Unknown bool plus default:** Python/PHP/Node return the caller's default for
+   a present unknown token, while Ruby classifies any present non-truthy token
+   false. Thus `MAYBE=perhaps` with default true produces true in three and
+   false in Ruby. The shared corpus already says `maybe` is falsy.
+5. **Node accepts numeric prefixes:** Node uses `Number.parseInt` and
+   `Number.parseFloat`, which accept `12px` as 12 and `1.5seconds` as 1.5.
+   Python's `int/float`, PHP's validators, and Ruby's `Integer/Float` reject the
+   whole malformed token and return the default.
+
+These escaped because `dotenv_corpus.json` exercises `is_truthy` but not the
+typed `Env.bool` consumer, no requirement case feeds it `EMPTY=`, no common case
+loads an entirely empty root and checks the generated filesystem afterward, and the typed
+number suites cover wholly invalid strings but not valid prefixes with junk
+suffixes. Green method-level tests did not check that adjacent public methods
+gave the same answer.
+
+Required closure evidence now includes shared cases for all five contradictions,
+the empty-root filesystem assertion, mutation witnesses, and exact-HEAD lab
+focused/full runs with zero skips.
+
+## Owner decisions
+
+### Decisions superseding the plan below (finalized 2026-08-10)
+
+The owner resolved Feature 1's remaining open item on 2026-08-10. Where the
+"Vanilla implementation plan" and its owner-decision register below differ, THIS
+section wins.
+
+**`.env` structured values use STRICT JSON via each language's built-in parser -
+no bespoke parser, no references.** `get_env` decodes a `[...]` or `{...}` value
+with the language's standard JSON parser (`json.loads` / `JSON.parse` /
+`json_decode` / `JSON.parse`) and returns the native sequence or string-keyed map.
+Scalar `${VAR}` string interpolation stays. REMOVED from the contract:
+bare-identifier references to framework constants (`ENV=[TINA4_LOG_ALL]`),
+parentheses-as-tuples, single-quoted strings inside structures, trailing commas,
+the reference dependency graph, and cycle detection. Structure depth and duplicate
+map keys follow the language JSON parser's own rules, not a Tina4 depth-64 or
+duplicate-key contract. This DISSOLVES the Feature 1 <-> Feature 2 constant-registry
+seam: Feature 1 no longer reads a framework-constant registry, and Logging no
+longer needs to initialize one before dotenv.
+
+Superseded/rewritten below to strict-JSON + JSON-parser error semantics: the
+"Structured values" section, the bare-identifier reference rules in "Parser" and
+"Typed coercion", owner decisions 7A-7D, 9, 10, 11, 12, 14, 15, 22 and 24, and
+conformance cases `ENV-R04`-`R08` and `ENV-N06`-`N11`. Unchanged: scalar typed
+coercion (bool/int/float/null and the +/-9007199254740991 integer range),
+`${VAR}` interpolation, source precedence, reset ownership and missing-root
+bootstrap.
+
+## Proposed conformance fixture
+
+The audit has not yet produced the complete shared cases and mutation witnesses required for a parity gate.
+
+## Integration map
+
+The audit has not yet mapped every export, startup path, request hook, CLI, scaffolder, status command, document, and generated consumer.
+
+## Breaking changes and migration
+
+The audit has not yet turned every parity break into an actionable pre-3.14 migration instruction.
+
+## Implementation backlog
+
+### Historical implementation methodology
+
+1. Build the shared behaviour fixture FIRST: one `.env` file, committed once, plus
+   one expected-values table. Same bytes, one answer key, all four frameworks read
+   it. This is the pattern that worked for the Frond expression corpus.
+2. Write the tests below in all four against the fixture. Confirm the expected
+   failures: Ruby red on export/comment, three red on interpolation.
+3. Fix Ruby's parser (export prefix, trailing comment). Smallest change, biggest
+   correctness win, and Ruby's function shape is already the best of the four so
+   there is nothing to restructure.
+4. Add `${VAR}` interpolation to Python, Ruby and Node, ported from PHP's
+   `interpolate`. Single-quoted values must be exempt.
+5. Reconcile the signatures: add the directory form to PHP, expose the top-level
+   Ruby aliases, add the missing `require_env` to Ruby.
+6. Promote the typed getters (Ruby's) to the other three, and
+   `check_legacy_env_vars!` if the audit of that feature agrees.
+7. Re-measure. The target is no regression in MI and no new offender; this feature
+   is currently the healthiest in the batch and must stay that way.
+
+Order: Ruby first (it holds both correctness bugs), then Python, Node, PHP.
+
+## Porting capsule
+
+### Superseded 2026-07 pattern
+
+**One parser, one behaviour table, four language-idiomatic names.**
+
+Parsing rules, in order, identical in all four:
+
+1. Skip blank lines and lines whose first non-space character is `#`.
+2. Strip a leading `export ` (one or more spaces) before the key. Shell-style
+   lines are valid input, not an error.
+3. Split on the first `=` only. A key with no `=` is skipped with a warning
+   naming the line number, never silently.
+4. Trim whitespace around the key. Reject a key that is not
+   `[A-Za-z_][A-Za-z0-9_]*` with a warning naming the line.
+5. Value handling, in this order:
+   - a fully double-quoted value keeps its interior verbatim, minus the quotes,
+     and processes `\n`, `\t`, `\\` escapes;
+   - a fully single-quoted value keeps its interior verbatim, minus the quotes,
+     with NO escape processing and NO interpolation (shell semantics);
+   - an unquoted value is truncated at the first ` #` (space-hash), then trimmed.
+6. `${VAR}` interpolation runs on unquoted and double-quoted values only, against
+   already-loaded keys plus the real environment, with an unresolved name left
+   literal and warned about once.
+7. Precedence is real environment, then `.env.local`, then `.env`, first-wins.
+   An empty value is a value: `EMPTY=` sets the empty string, it does not unset.
+
+Surface, per the owner's rule (same names, language-idiomatic casing, same
+outcome):
+
+| concept | python | php | ruby | node |
+| --- | --- | --- | --- | --- |
+| load | `load_env(root=None)` | `DotEnv::loadEnv($root = null)` | `Tina4.load_env(root = nil)` | `loadEnv(root?)` |
+| get | `get_env(k, default=None)` | `Env::getEnv($k, $d = null)` | `Tina4.get_env(k, default: nil)` | `getEnv(k, d?)` |
+| require | `require_env(k)` | `Env::requireEnv($k)` | `Tina4.require_env(k)` | `requireEnv(k)` |
+| has | `has_env(k)` | `Env::hasEnv($k)` | `Tina4.has_env?(k)` | `hasEnv(k)` |
+| all | `all_env()` | `Env::allEnv()` | `Tina4.all_env` | `allEnv()` |
+| reset | `reset_env()` | `Env::resetEnv()` | `Tina4.reset_env` | `resetEnv()` |
+| truthy | `is_truthy(v)` | `Env::isTruthy($v)` | `Tina4.truthy?(v)` | `isTruthy(v)` |
+| typed | `env_bool/int/float/str` | `Env::bool/int/float/str` | `Tina4.env_bool/...` | `envBool/envInt/...` |
+
+Two contract points in that table:
+
+- **`load` takes a ROOT DIRECTORY in all four, or nothing.** PHP's file-path
+  argument is the odd one out and it is the one that throws. A file-path overload
+  may stay, but the directory form must exist and must be the documented one.
+- **Every helper is reachable from the top-level namespace** (`Tina4.load_env`,
+  not only `Tina4::Env.load_env`), because the other three are, and an obvious
+  call that raises `NoMethodError` is a parity defect.
+
+## Audit closure checklist
+
+- [ ] Boundary and public surface complete.
+- [ ] Lifecycle and every producer/consumer edge complete.
+- [ ] Configuration, failure, side-effect and security rules complete.
+- [ ] Wire/storage and provider contracts complete.
+- [ ] Existing-language contradictions recorded.
+- [ ] Owner ambiguities decided and recorded.
+- [ ] Proposed shared cases and mutation witnesses complete.
+- [ ] Integration map and breaking migrations complete.
+- [ ] Implementation backlog dependency-ordered.
+- [ ] Porting capsule is clean-room sufficient.

@@ -1,4 +1,34 @@
-# Feature 2: Structured logger (JSON/text, rotation)
+# Feature 002: Structured logger
+
+## Identity and status
+
+- Matrix identity: 2 — Structured logger
+- Audit state: decision-ready
+- Audit note: Auditing — structure migrated; closure checklist records remaining work
+- Dependencies: not yet extracted from the retained audit evidence
+- Dependants: not yet extracted from the retained audit evidence
+- Existing ADRs: see retained evidence and the central decision index
+- Shared fixtures: not yet confirmed
+
+## Why this feature exists
+
+The retained audit does not yet state the developer problem in one language-neutral sentence.
+
+## Boundary
+
+The retained audit does not yet separate what this feature owns, delegates, and excludes.
+
+## Existing implementation evidence
+
+| Evidence | Python | PHP | Ruby | Node |
+| --- | --- | --- | --- | --- |
+| Public surface | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| Startup/CLI integration | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| Stored/wire format | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| Existing focused tests | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| Existing lab baseline | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+
+### Retained introductory record
 
 Audited 2026-07-28. Adversarial contract completed 2026-08-09. Part of
 `98-feature-audit.md`. **Decision-complete planning only; implementation and
@@ -8,28 +38,7 @@ runner wiring wait for the full audit.**
 fixture define a clean-room implementation. The earlier focused fixes remain
 verified, but current green language suites do not prove the new contract.
 
-## Decisions superseding the plan below (finalized 2026-08-10)
-
-The owner resolved two decisions on 2026-08-10, overriding the "Approved
-2026-08-09" choices below.
-
-- **Decision 8 (threshold scope) -> SEPARATE FILE LEVEL, not one threshold.**
-  `TINA4_LOG_LEVEL` gates the console only; a new `TINA4_LOG_FILE_LEVEL` (default
-  `ALL`) gates the file, preserving the full-detail forensic file. `is_enabled`
-  becomes sink-aware. Add `TINA4_LOG_FILE_LEVEL` (string) to the Decision 19
-  environment manifest. Supersedes Decision 8 Option 1.
-
-- **Decision 20 (concurrent writers) -> SINGLE FILE, IN-PROCESS LOCK ONLY.** One
-  log file guarded by an in-process (thread) lock over size-check + rotate +
-  append. Cross-process exclusive locking and stale-lock recovery are removed;
-  concurrent PROCESSES writing the same file may interleave, and the contract
-  documents per-process files or a log shipper as the answer for that. The
-  concurrency fixture witness relaxes from real multi-process to thread
-  concurrency plus the documented caveat. Supersedes Decision 20 Option 1.
-
-Everything else in the plan below stands.
-
-## Files
+### Files
 
 | | path |
 | --- | --- |
@@ -38,13 +47,13 @@ Everything else in the plan below stands.
 | ruby | `lib/tina4/log.rb` |
 | node | `packages/core/src/logger.ts` |
 
-## Adversarial re-audit evidence (2026-08-09)
+### Adversarial re-audit evidence (2026-08-09)
 
 The earlier audit fixed five real defects. It did not cover the full logger
 lifecycle. This pass treats those fixes as evidence, not as proof that Feature 2
 has a complete contract.
 
-### Exact-HEAD focused baseline
+#### Exact-HEAD focused baseline
 
 The lab host `nvidia-rtx4500` ran each focused suite as root against the same
 HEADs as the local v3 worktrees. Every suite passed:
@@ -59,7 +68,7 @@ HEADs as the local v3 worktrees. Every suite passed:
 Those 333 checks form the compatibility baseline. They do not share one answer
 key, and each suite omits behavior that another suite assumes.
 
-### Current public surface
+#### Current public surface
 
 | Concept | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
@@ -74,7 +83,7 @@ This is not one language-neutral surface with idiomatic spelling. A new port
 cannot tell which operations belong to Tina4 and which ones leaked from a test
 helper.
 
-### Measured contradictions
+#### Measured contradictions
 
 Each probe used a fresh process and real stdout or files under `/tmp`. No mock
 or logger introspection supplied the result.
@@ -94,7 +103,7 @@ All four also turn one message containing a newline into two physical log
 lines. The code calls this a single safe line, but the persisted record has no
 event boundary. A user-controlled message can forge the next line of a text log.
 
-### Request-correlation failure
+#### Request-correlation failure
 
 Python stores the request ID in `threading.local`. Ruby and Node store it in one
 module or class variable. Two interleaved tasks produced `B, B` in all three
@@ -113,7 +122,7 @@ The request pipeline makes the gap wider:
 A request ID that crosses request boundaries is worse than no ID. It gives an
 operator a confident, false trace.
 
-### Configuration and rotation failures
+#### Configuration and rotation failures
 
 ADR-0041 fixes the authority order: explicit argument, then environment, then
 default. Python and PHP apply that rule to the directory but break it for a file
@@ -125,7 +134,7 @@ writer. A 100-byte threshold becomes 1 MB, and zero becomes 10 MB. Ruby delegate
 to a standard logger whose backup names start at `.0`. PHP and Node use `.1` for
 the newest backup. The same `TINA4_LOG_ROTATE_*` values create different files.
 
-### Resolved Feature 1 dependency
+#### Resolved Feature 1 dependency
 
 The owner resolved the bootstrap boundary on 2026-08-09. Feature 1 now generates:
 
@@ -138,7 +147,7 @@ conversion. Square brackets retain their general Feature 1 meaning as list
 syntax. Framework log constants remain available to application code, but the
 generated setting does not depend on a constant registry.
 
-### Shared-fixture result
+#### Shared-fixture result
 
 `fixtures/logger_contract.json` now contains 59 unique language-neutral cases
 across eight invariants, with native inputs, exact event outputs, sink bytes,
@@ -147,486 +156,14 @@ file trees, errors, reset state and mutation witnesses. Its SHA-1 is
 all eight invariants as owed and zero broken. This is honest: no framework runner
 executes the cases yet. Each future runner must discover every ID exactly once.
 
-## Owner decision register (re-audit)
-
-### Decision 1: Feature 1 must supply one scalar log level
-
-**Approved 2026-08-09: Option 1, plain scalar name.** Feature 1 generates
-`TINA4_LOG_LEVEL=ALL`; its native value is the string `"ALL"`. An OS-level value
-still has precedence under Feature 1's source rules.
-
-The approved Feature 1 line uses list syntax, but Feature 2 needs one threshold.
-Pick the language-neutral value that crosses this boundary.
-
-1. **Plain scalar name (recommended):** change the generated line to
-   `TINA4_LOG_LEVEL=ALL`. Keep the framework constants for application code,
-   but do not turn one scalar setting into a one-item collection. Feature 2
-   accepts `ALL`, `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` and `NONE` as
-   case-insensitive scalar names.
-2. **One-item native list:** keep `TINA4_LOG_LEVEL=[TINA4_LOG_ALL]` and require
-   the logger to unwrap exactly one item. This preserves the approved template
-   but gives one logger setting a collection-shaped input that no engineer
-   needs.
-3. **Special bracket reference:** make `[TINA4_LOG_ALL]` a scalar reference
-   instead of a one-item list. This keeps the text but breaks Feature 1's general
-   list grammar for the same token shape.
-
-No option changes OS precedence. An OS-level `TINA4_LOG_LEVEL` still beats the
-file assignment under Feature 1's approved source rules.
-
-### Decision 2: when configuration becomes stable
-
-**Approved 2026-08-09: Option 1, stable snapshot.** First use or explicit
-`configure` resolves one effective configuration. It stays unchanged until
-`reset`. Reset closes owned sinks, clears explicit logger state and request
-context, and makes the next use resolve configuration again.
-
-Environment changes after logger initialization can either alter live behavior
-or wait for an explicit reset. Pick one lifecycle rule for every language.
-
-1. **Stable snapshot (recommended):** resolve the complete effective
-   configuration on first use or explicit `configure`, then keep it unchanged.
-   `reset` closes owned sinks, clears explicit logger state and request context,
-   and makes the next use resolve configuration again. This makes one event use
-   one coherent configuration and follows ADR-0041.
-2. **Read on every event:** resolve environment-backed settings for each log
-   call. A process can change behavior without reset, but one logger instance
-   has no stable configuration and concurrent environment changes can divide a
-   request across sinks or formats.
-3. **Hybrid lifecycle:** keep explicit settings but re-read selected environment
-   values per event. This permits live changes for some fields, but every field
-   needs a separate timing rule and the public behavior is harder to predict.
-
-### Decision 3: default output format
-
-**Approved 2026-08-09: Option 1, debug-derived format.** Explicit
-`TINA4_LOG_FORMAT` selects `text` or `json`. Without it, truthy `TINA4_DEBUG`
-selects text; false or absent `TINA4_DEBUG` selects JSON. Every active sink uses
-the same selected format.
-
-The logger needs one language-neutral rule when no explicit format has been
-configured. This decision selects the format only; ANSI color is a separate
-decision.
-
-1. **Debug-derived format (recommended):** an explicit `TINA4_LOG_FORMAT` value
-   selects `text` or `json`. Without it, truthy `TINA4_DEBUG` selects text and a
-   false or absent value selects JSON. The selected format applies to every
-   active sink, so one event has the same representation on stdout and in files.
-2. **Text by default:** use text unless `TINA4_LOG_FORMAT=json` is explicit.
-   This favors local readability, but an undeclared production environment does
-   not receive structured output.
-3. **Sink-specific default:** use text on stdout and JSON in files unless each
-   sink has an explicit override. This suits different consumers, but one event
-   has two representations and needs per-sink format configuration and tests.
-
-### Decision 4: ANSI color boundary
-
-**Approved 2026-08-09: Option 1, interactive text stdout only.** ANSI color is
-valid only for text sent to an interactive terminal. JSON, files, pipes and
-captured stdout contain no ANSI bytes.
-
-ANSI escape bytes improve interactive text but damage structured records,
-redirected output and file searches. Choose where color is valid.
-
-1. **Interactive text stdout only (recommended):** add ANSI color only when the
-   selected format is text and stdout is an interactive terminal. JSON, files,
-   pipes and captured stdout contain no ANSI bytes. This preserves readable
-   terminals and clean machine-consumed output without a new setting.
-2. **Every text stdout:** add ANSI color to text written to stdout even when it
-   is redirected or captured. Files and JSON remain plain. This keeps current
-   Python and Ruby styling but sends terminal control bytes into pipelines and
-   test captures.
-3. **No framework color:** never emit ANSI bytes. Output is identical across
-   terminals, files and pipelines, but interactive development loses level
-   highlighting.
-
-### Decision 5: sink selection
-
-**Approved 2026-08-09: Option 1, output selects sinks.** Explicit `stdout`,
-`file` or `both` selects exactly those sinks. When absent, stdout is enabled and
-file output follows truthy `TINA4_DEBUG`. `TINA4_LOG_FILE` names a file but does
-not enable it. Any other output value is a hard configuration error.
-
-**Container clarification, confirmed 2026-08-09:** false or absent
-`TINA4_DEBUG` keeps the default at stdout only. Explicit `both` keeps stdout
-working in Docker and also enables bounded Tina4-owned files. Docker detection
-does not change sink selection.
-
-Rotation belongs to the file sink. When file output is active, every active
-framework-owned log file follows the approved rotation contract. When file
-output is inactive, the logger must not create, inspect or rotate log files.
-
-`TINA4_LOG_OUTPUT` currently cannot distinguish an absent value from explicit
-`stdout` in Python and Node. The four frameworks also disagree on whether a file
-path enables file output. Choose one rule for selecting sinks.
-
-1. **Output selects sinks (recommended):** explicit `stdout`, `file` or `both`
-   selects exactly those sinks. When the variable is absent, stdout is enabled
-   and file output is enabled only when `TINA4_DEBUG` is truthy. A configured
-   `TINA4_LOG_FILE` names the file but does not enable its sink. Any other output
-   value is a hard configuration error. This keeps selection separate from
-   destination and makes explicit `stdout` reliable.
-2. **A file path forces file output:** use the same three output values and
-   debug-derived default, but make `TINA4_LOG_FILE` enable file output even when
-   output is absent or explicitly `stdout`. This favors a supplied path over the
-   sink selector and makes `stdout` mean more than one thing.
-3. **Stdout-only default:** explicit `stdout`, `file` or `both` selects exactly
-   those sinks; when absent, enable stdout only in every environment. This is
-   the smallest default but removes automatic development log files.
-
-### Decision 6: rotation threshold and backup names
-
-**Approved 2026-08-09: Option 1, predict the next record with bounded
-retention.** Rotation uses positive byte limits, `.1` is the newest backup, and
-retention is finite. Zero or invalid size values and negative or invalid backup
-counts are hard configuration errors. There is no unlimited-growth mode.
-
-The rotation settings need byte-exact behavior that does not depend on a
-language's standard logging library. The owner added a governing requirement on
-2026-08-09: framework-owned logs must never have an unlimited-growth mode.
-
-1. **Predict the next record with bounded retention (recommended):**
-   `TINA4_LOG_ROTATE_SIZE` is a positive byte limit. Before appending a complete
-   encoded record, rotate a non-empty current file when its size plus that
-   record would exceed the limit. Number backups as `.1` newest through `.N`
-   oldest, where `N` is the non-negative `TINA4_LOG_ROTATE_KEEP`; zero keeps only
-   the current bounded file. Apply the rule independently to each active log
-   file. Zero, negative and invalid sizes, and negative or invalid retention
-   counts, are hard configuration errors. There is no disabled or unlimited
-   mode. Defaults are 10 MiB and five backups. The next decision defines an
-   event larger than the cap.
-2. **Rotate on the next write:** rotate before a write only when the current file
-   has already reached the limit. This also keeps records whole, but a file may
-   exceed its configured limit by one normal record. Size remains mandatory and
-   positive.
-3. **Use each runtime's native rotation:** keep the same settings but accept each
-   standard library's trigger point and backup names. This uses less framework
-   code but preserves the measured `.0` versus `.1` and byte-unit differences.
-
-### Decision 7: an event larger than the file cap
-
-**Selected 2026-08-09 under the owner's consistency rule: Option 1, bounded
-replacement record.** An oversized event is replaced by one bounded valid
-record with its level, timestamp, original byte count, SHA-256 digest and a
-truncation marker. The original bytes are not written and the ordinary logging
-call does not crash the application.
-
-A single serialized event can exceed `TINA4_LOG_ROTATE_SIZE`. Writing it in full
-would break the bounded-disk guarantee. Choose the loss behavior explicitly.
-
-1. **Bounded replacement record (recommended):** require a rotation size of at
-   least 1024 bytes. If one encoded event exceeds the cap, do not write its
-   original bytes. Write one valid text or JSON record within the cap containing
-   the original level and timestamp, `truncated=true`, the original byte count,
-   its SHA-256 digest and a fixed overflow message. This retains proof of the
-   dropped event without risking an unbounded file. The ordinary logging call
-   does not crash the application.
-2. **Truncate the original fields:** preserve as much message and context as can
-   fit, add truncation metadata, and write a valid record. This retains more
-   content but requires a byte-aware, format-aware truncation algorithm whose
-   result can differ around Unicode and nested structures.
-3. **Drop and warn on stderr:** omit the file record and send a short diagnostic
-   to stderr. This keeps the file bounded, but repeated oversized events can
-   fill Docker's captured stderr and the file contains no witness of the loss.
-
-### Decision 8: threshold scope
-
-**Approved 2026-08-09: Option 1, one threshold for every sink.**
-`TINA4_LOG_LEVEL` filters an event before routing. Stdout, the main file and any
-secondary file therefore receive the same selected levels. `is_enabled` reports
-whether the logger will emit that level to its active sinks. Docker does not
-disable stdout when file output is also active.
-
-All four current implementations and project memory agree that
-`TINA4_LOG_LEVEL` filters stdout only while the main file records every level.
-That preserves full forensic detail, but the setting's name does not reveal its
-limited scope and `is_enabled` reports only console visibility. This conflicts
-with the simple, no-hidden-behavior principle, so it requires an owner ruling.
-
-1. **One threshold for every sink (recommended for clarity):**
-   `TINA4_LOG_LEVEL` filters the event before any sink receives it.
-   `is_enabled` answers whether the event will be emitted anywhere. A developer
-   gets the same level behavior on stdout and in files.
-2. **Keep stdout-only filtering:** `TINA4_LOG_LEVEL` and `is_enabled` govern
-   stdout. The main file records every level whenever its sink is active. This
-   preserves the current four-language rule and complete file detail, but keeps
-   the setting's sink-specific meaning implicit.
-3. **Name separate thresholds:** `TINA4_LOG_LEVEL` governs stdout and a new
-   `TINA4_LOG_FILE_LEVEL` governs files, defaulting to `ALL`. This preserves the
-   current forensic default and makes it explicit, at the cost of another
-   setting and a two-answer `is_enabled` API.
-
-### Decision 9: severity ladder and invalid levels
-
-**Selected 2026-08-09 under the owner's consistency rule.** The ordered levels
-are `ALL`, `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`, `NONE`.
-Configuration is case-insensitive and normalizes to uppercase. `ALL` emits every
-event and `NONE` emits none. Event methods remain `debug`, `info`, `warning`,
-`error` and `critical` with language-idiomatic casing. There is no `warn` alias.
-An unknown configured level is a hard configuration error; it never falls back.
-
-This preserves the five-level rule already shared by all four frameworks,
-removes Node's prohibited alias, and follows Feature 1's approved scalar value.
-
-### Decision 10: default file layout and the secondary threshold
-
-**Approved 2026-08-09: Option 1, warning and above.** A directory destination
-owns `tina4.log` for every event that passes the global threshold and
-`error.log` for passing `WARNING`, `ERROR` and `CRITICAL` events. An explicitly
-named file owns only that file. All owned files use bounded rotation.
-
-Three frameworks treat an explicitly named file as one destination, while PHP
-also creates a sibling `error.log`. The consistent path rule is therefore
-settled: a directory destination owns `tina4.log` and `error.log`; an explicitly
-named file owns only that file. Every owned file uses the same global level and
-bounded rotation rules.
-
-The remaining threshold for the directory-owned `error.log` contradicts the
-earlier audit text:
-
-1. **Warning and above:** write `WARNING`, `ERROR` and `CRITICAL`. This is the
-   current behavior in all four frameworks and the stored project rule.
-2. **Error and above:** write `ERROR` and `CRITICAL`. This matches the file name
-   and the earlier Feature 2 audit pattern.
-3. **No secondary file:** write every selected event only to `tina4.log`. This
-   removes duplicate bytes but also removes the focused operational file.
-
-### Decision 11: one call produces one physical line
-
-**Selected 2026-08-09 under the owner's consistency rule.** Each accepted log
-call writes exactly one LF-terminated physical line to each selected sink. Text
-format escapes backslash first, then carriage return as `\r` and line feed as
-`\n`. JSON uses its encoder's equivalent escapes. No event may inject a second
-physical record, and output uses LF on every operating system.
-
-This closes the measured four-language newline injection defect and makes line
-count a reliable event count.
-
-### Decision 12: request correlation lifecycle
-
-**Selected 2026-08-09 under the owner's consistency rule.** Request IDs live in
-request, task or async-local context, never process-global or plain
-thread-local state. The request pipeline installs the resolved ID before the
-first request log and clears it in `finally` after the last request log. An
-overlapping request cannot read another request's ID. CLI and background work
-may install and clear an explicit ID through the same public methods.
-
-The logger does not decide whether to trust or generate an incoming request ID;
-the Request feature owns that policy. Logging consumes the resolved string and
-omits the field when no request scope has installed one.
-
-### Decision 13: sink write failures
-
-**Selected 2026-08-09 under the owner's consistency rule.** Configuration
-errors fail before logging starts. After configuration succeeds, an ordinary
-sink write failure does not crash application work. The logger disables the
-failed sink for the current configuration snapshot and emits at most one short,
-non-recursive diagnostic to another active sink. `TINA4_LOG_STRICT=true` instead
-raises one catchable logging error with the failed sink and operation. `reset`
-allows the next configuration snapshot to retry the sink.
-
-This preserves the established default and strict-mode project rule while
-preventing a failing sink from producing an unbounded diagnostic loop.
-
-### Decision 14: native message and context normalization
-
-**Selected 2026-08-09 under the owner's consistency rule.** Logging accepts the
-shared native value domain without making application code convert values first:
-string, null, boolean, finite number, sequence and string-keyed map. A message
-string stays a string; other message values use compact JSON spelling, including
-`null`, `true` and `false`. Context normalizes recursively and remains a native
-map in JSON output. Sequence order is preserved; map keys are sorted by their
-UTF-8 byte sequence at every depth so the same value produces the same bytes in
-every language.
-
-Valid UTF-8 bytes decode as text. Invalid bytes become a bounded marker with the
-byte count and SHA-256 digest. A repeated reference becomes the string
-`"[Circular]"`. A non-finite number or value outside the shared native domain
-becomes a bounded `"[Unsupported]"` marker. Normalization never calls arbitrary
-application stringification hooks and never raises during ordinary logging.
-
-This closes the measured null, boolean and circular-reference differences while
-keeping the logger safe around application objects.
-
-### Decision 15: canonical event representation
-
-**Selected 2026-08-09 under the owner's consistency rule.** Every event is
-normalized once before routing. Its timestamp is UTC RFC 3339 with exactly
-milliseconds and a `Z` suffix. Its level is uppercase.
-
-JSON uses one compact object and this key order:
-
-1. `timestamp`
-2. `level`
-3. `message`
-4. `request_id`, when installed
-5. `function`, when caller capture is enabled and resolved
-6. `context`, when the normalized map is non-empty
-
-Text uses `TIMESTAMP [LEVEL   ]`, with the uppercase level right-padded to eight
-characters, followed by optional `[request_id]` and `[function]`, the message,
-and compact JSON context when non-empty. Both formats use the same normalized
-values and the one-physical-line rule.
-
-### Decision 16: caller capture
-
-**Selected 2026-08-09 under the owner's consistency rule.** Caller capture is
-off by default. Truthy `TINA4_LOG_FUNC` enables it for both formats and every
-sink. The logger walks past its own public and private frames and records the
-first application function as `function`. If no application frame can be
-resolved, the field is omitted. Caller inspection must not make a log call fail.
-
-### Decision 17: explicit configuration surface
-
-**Selected 2026-08-09 under the owner's consistency rule.** Every language
-offers one `configure` operation with language-idiomatic named options for
-`log_dir`, `log_file`, `level`, `format`, `output`, `rotate_size`, `rotate_keep`
-and `strict`. Omitted options read their matching environment setting and then
-their framework default. An explicit option beats environment, which beats the
-default, as required by ADR-0041. Bootstrap must not pass invented explicit
-defaults.
-
-Directory and file are separate concepts; no extension or filesystem-existence
-heuristic guesses what one path means. A relative file resolves below the
-effective log directory. An absolute file remains absolute. Supplying a file
-selects a single file destination but does not enable the file sink. With no
-file, the directory destination owns `tina4.log` and `error.log` under Decision
-10. Invalid types and values fail configuration before a sink opens.
-
-### Decision 18: reset and observable configuration
-
-**Selected 2026-08-09 under the owner's consistency rule.** Every language
-exports language-idiomatic forms of `configure`, `reset`, `is_enabled`,
-`set_request_id`, `get_request_id` and `clear_request_id`, plus the five event
-methods. `reset` closes and flushes owned handles, clears the stable snapshot and
-request context, and is harmless when repeated. The next call resolves a fresh
-snapshot.
-
-One `configuration` operation returns a defensive native map of the effective
-snapshot, including resolved paths and enabled sinks. It initializes the logger
-if needed. This replaces language-specific collections of getters and gives
-tests and engineers one ready-to-use shape. No `warn`, production-polarity,
-`json_mode`, or file-writer aliases remain in the 3.14 public surface.
-
-### Decision 19: environment manifest and removed spellings
-
-**Selected 2026-08-09 under the owner's consistency rule.** Feature 2 reads only
-these logger settings, plus `TINA4_DEBUG` for the approved defaults:
-
-| Setting | Native type | Meaning |
-| --- | --- | --- |
-| `TINA4_LOG_LEVEL` | string | global severity threshold |
-| `TINA4_LOG_FORMAT` | string | `text` or `json` |
-| `TINA4_LOG_OUTPUT` | string | `stdout`, `file` or `both` |
-| `TINA4_LOG_DIR` | string | directory destination |
-| `TINA4_LOG_FILE` | string | optional single-file destination |
-| `TINA4_LOG_ROTATE_SIZE` | integer | positive bytes per current file |
-| `TINA4_LOG_ROTATE_KEEP` | integer | non-negative backup count |
-| `TINA4_LOG_STRICT` | boolean | raise on sink failures |
-| `TINA4_LOG_FUNC` | boolean | include application function |
-
-Files always append within their bounded rotation contract. The destructive
-`TINA4_LOG_APPEND=false` startup truncation option is removed. A developer who
-needs a clean file must perform that explicit operation outside logger startup.
-
-The removed `TINA4_LOG_MAX_SIZE`, `TINA4_LOG_KEEP`, `TINA4_LOG_APPEND`,
-`TINA4_DEBUG_LEVEL` and `TINA4_LOG_CRITICAL` settings cause a hard configuration
-error with their replacement or removal message. Legacy bracket level spellings
-such as `[TINA4_LOG_ERROR]` are invalid; use scalar `ERROR`. Framework severity
-constants remain application-code constants and are not extra environment
-settings.
-
-### Decision 20: concurrent file writers
-
-**Selected 2026-08-09 under the owner's consistency rule.** Append, size check,
-rotation and retention cleanup form one exclusive operation per destination
-across threads and processes. The implementation uses standard filesystem
-primitives only and leaves no unbounded family of lock or backup files. A
-crashed writer's stale lock is recoverable after a bounded interval. Waiting for
-the lock is also bounded and follows the ordinary or strict sink-failure policy
-when it expires.
-
-The current file and `.1` through `.N` are the only retained data files for one
-destination. A concurrent writer must not split an event, overwrite another
-event, reset a rotated file, or increase the retention count. Fixture witnesses
-must use real concurrent processes, not only threads or mocked writers.
-
-### Decision 21: framework defaults without environment
-
-**Selected 2026-08-09 under the owner's consistency rule.** When neither an
-explicit option nor environment setting supplies a value, the snapshot uses:
-
-| Concept | Default |
-| --- | --- |
-| level | `INFO` |
-| format | JSON because absent `TINA4_DEBUG` is false |
-| output | stdout only |
-| log directory | `logs` below the project root |
-| named log file | absent, so directory layout applies if file output is later selected |
-| rotation size | 10 MiB (`10485760` bytes) |
-| rotation backups | `5` |
-| strict sink errors | `false` |
-| caller capture | `false` |
-
-Feature 1's generated development file explicitly sets `TINA4_DEBUG=true` and
-`TINA4_LOG_LEVEL=ALL`, so a bootstrapped development project receives text and
-all five levels. The framework defaults remain safe for a process that logs
-before project bootstrap.
-
-### Decision 22: console stream and event bound
-
-**Selected 2026-08-09 under the owner's consistency rule.** When stdout is an
-active sink, every passing level writes to stdout and flushes the complete line
-before the call returns. Severity does not reroute application events to stderr.
-This keeps `docker logs`, shell capture and parity tests on one stream.
-
-One stdout record is limited to 8192 encoded UTF-8 bytes. A larger event uses
-the same valid bounded replacement shape as Decision 7, calculated from the
-original normalized event. The logger never cuts serialized JSON or a UTF-8
-code point. Event frequency and Docker's captured-log retention remain the
-container platform's responsibility.
-
-### Decision 23: call completion and input ownership
-
-**Selected 2026-08-09 under the owner's consistency rule.** Event methods
-return the language's ordinary void value. Before returning, the logger
-normalizes the message and a defensive snapshot of context, applies the global
-threshold, and completes each selected synchronous sink write or its failure
-policy. Later mutation of caller-owned lists or maps cannot alter an event.
-
-There is no hidden background queue, worker or flush delay in the core logger.
-This makes shutdown, tests and short CLI commands deterministic without another
-dependency or lifecycle service.
-
-### Decision 24: process lifecycle
-
-**Selected 2026-08-09 under the owner's consistency rule.** Graceful shutdown
-calls `reset` after the last application shutdown log. Normal process-exit hooks
-may perform a best-effort close but must not emit new events. After a process
-fork, the child discards inherited handles, locks and request context, then
-resolves a fresh configuration snapshot on first use. The parent snapshot stays
-unchanged.
-
-### Decision 25: public errors
-
-**Selected 2026-08-09 under the owner's consistency rule.** Invalid settings
-raise one catchable logger configuration error naming the setting, supplied
-value and accepted domain. Invalid public method arguments raise a catchable
-argument error. Strict sink failures raise one catchable logger write error
-naming the sink and operation. No branch terminates the process directly.
-
-Ordinary non-strict sink failures follow Decision 13. Native-value
-normalization and caller inspection use their bounded markers or omission rules
-instead of raising.
-
-## Normative vanilla implementation plan for structured logging (3.14)
+### Normative vanilla implementation plan for structured logging (3.14)
 
 This section is the clean-room contract. A new language implementation must be
 possible from this section and the shared fixture without reading another Tina4
 runtime. Historical evidence below explains why the rules exist but cannot
 override them.
 
-### 1. Purpose and ownership boundary
+#### 1. Purpose and ownership boundary
 
 Feature 2 accepts native application values, creates one normalized event,
 filters it once, and routes it to bounded stdout and file sinks. It owns logger
@@ -639,7 +176,7 @@ discovery and calls the logger without invented defaults. Graceful Shutdown owns
 the final call to `reset`. Docker or another process supervisor owns retention
 of captured stdout.
 
-### 2. Public surface
+#### 2. Public surface
 
 Use language-idiomatic casing for these concepts and no aliases:
 
@@ -656,7 +193,7 @@ Event methods return the ordinary void value. Configuration and reset do not
 terminate the process. Remove `warn`, production/development polarity flags,
 individual configuration getters and writer-specific close aliases.
 
-### 3. Constants, vocabulary and defaults
+#### 3. Constants, vocabulary and defaults
 
 The severity order is:
 
@@ -674,7 +211,7 @@ backups, non-strict writes and caller capture off. Feature 1's generated
 development configuration explicitly changes the level to `ALL`, format through
 `TINA4_DEBUG=true`, and file default through that same debug value.
 
-### 4. Configuration algorithm
+#### 4. Configuration algorithm
 
 On explicit `configure`, first event use, `is_enabled`, or `configuration`:
 
@@ -702,7 +239,7 @@ native booleans from Feature 1, not private truth-token parsing. Paths must be
 non-empty strings without NUL. `configuration` returns a deep copy containing
 canonical values, absolute resolved paths and final sink booleans.
 
-### 5. Event algorithm
+#### 5. Event algorithm
 
 For every event method:
 
@@ -724,7 +261,7 @@ All stdout and file destinations receive the same levels. `error.log` receives
 the passing subset at `WARNING` and above. File mode never disables stdout when
 output is `both`, including inside Docker.
 
-### 6. Native normalization and formats
+#### 6. Native normalization and formats
 
 The shared native domain is string, null, boolean, finite number, sequence and
 string-keyed map. Preserve sequence order and sort map keys recursively by UTF-8
@@ -751,7 +288,7 @@ segments without leaving doubled spaces. Add ANSI color only around text sent
 to an interactive stdout terminal. Never color JSON, files, pipes or captured
 stdout.
 
-### 7. Bounded sinks and rotation
+#### 7. Bounded sinks and rotation
 
 Stdout accepts at most 8192 encoded bytes per record and flushes each line. All
 levels use stdout, not stderr. Docker retains and rotates captured output; Tina4
@@ -778,7 +315,7 @@ fixed overflow message, omits request/function data, and supplies context keys
 `truncated=true`, `original_bytes` and lowercase hexadecimal `sha256`. Digest
 and byte count cover the original canonical record including its LF.
 
-### 8. Correlation, reset and process boundaries
+#### 8. Correlation, reset and process boundaries
 
 Store request IDs in request, task or async-local context. The request pipeline
 installs the resolved string before its first log and clears it in `finally`
@@ -790,7 +327,7 @@ the current execution context's request ID. Graceful shutdown calls it after the
 last application shutdown event. A forked child discards inherited logger state
 and resolves its own snapshot. No core background writer or delayed flush exists.
 
-### 9. Error taxonomy
+#### 9. Error taxonomy
 
 Use three catchable categories with language-idiomatic concrete classes:
 
@@ -805,7 +342,7 @@ most one bounded, non-recursive diagnostic through another active sink. If no
 sink remains, return normally. `reset` permits a later retry. Never silently
 fall back on malformed configuration.
 
-### 10. Shared parity fixture and implementation order
+#### 10. Shared parity fixture and implementation order
 
 Create byte-identical `logger_contract.json` copies in the standard fixture
 directory of every framework. Each case has a unique ID and language-neutral
@@ -844,7 +381,7 @@ The implementation is conformant only when the shared fixture, focused legacy
 tests, full framework suite and real multi-process file probes all pass with zero
 skips.
 
-## Measurements
+### Measurements
 
 | | LOC | fns | CC total | CC avg | worst fn | MI | flags |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -857,7 +394,37 @@ Tightest spread in the audit so far: 1.4x LOC, CC average within 0.7 of each
 other. `configure` is the worst function in three of four, which is the shape of
 the problem below - all the env resolution piles into one method.
 
-## What differs
+## Public surface contract
+
+The audit has not yet extracted a language-neutral public surface and its idiomatic spellings.
+
+## Inputs and outputs
+
+The audit has not yet fixed all native types, defaults, nullability, ordering, and serialized shapes.
+
+## Lifecycle and operation graph
+
+The audit has not yet traced every producer, discovery, execution, inspection, retry, rollback, and deletion path.
+
+## Configuration and precedence
+
+The audit has not yet fixed argument, environment, project-file, default, and cache timing precedence.
+
+## Failures, side effects and security
+
+The audit has not yet closed every failure boundary, side effect, cleanup rule, and security concern.
+
+## Wire and persistence contract
+
+The audit has not yet fixed every wire format, stored shape, encoding, identifier, timestamp, and compatibility rule.
+
+## Providers and substitutability
+
+The audit has not yet proved provider substitution or recorded deliberate capability exceptions.
+
+## Contradictions and defects
+
+### What differs
 
 Five levels emitted through each framework with `TINA4_DEBUG=true`, same message,
 same configured directory.
@@ -938,7 +505,7 @@ Ruby's `enabled?` is correct Ruby (a predicate takes `?`), so that one is catego
 and one absence. PHP's seven introspection getters are a real capability the other
 three lack, and they are what makes PHP's logger testable without reading a file.
 
-## Verdict: SYNTHESISE
+### Verdict: SYNTHESISE
 
 Decided on **correctness for D1 and D3, then SOLID for the `configure` shape.**
 
@@ -950,7 +517,572 @@ cannot set a level.
 Every divergence here is category 4. Nothing about JSON-in-dev, an 8-wide pad, a
 missing `error.log`, or an inverted boolean is forced by a runtime.
 
-## Pattern
+### Risks
+
+- **D4's flag polarity is the dangerous change.** Renaming PHP's `$development` to
+  `$production` inverts the meaning of an existing positional argument. Any PHP
+  caller passing `true` flips from dev to production output. This needs the
+  loudest migration note in the batch, and it is worth considering a hard error on
+  the old argument name rather than a silent reinterpretation.
+- **D1 changes what PHP dev logs look like.** Cosmetic to a human, breaking to any
+  tooling that parses PHP dev logs as JSON. `Breaking:` entry.
+- **D3 creates a new file** on Ruby and Node. Harmless, but worth a note for
+  anyone with log-rotation config.
+- Everything else is additive.
+
+## Owner decisions
+
+### Decisions superseding the plan below (finalized 2026-08-10)
+
+The owner resolved two decisions on 2026-08-10, overriding the "Approved
+2026-08-09" choices below.
+
+- **Decision 8 (threshold scope) -> SEPARATE FILE LEVEL, not one threshold.**
+  `TINA4_LOG_LEVEL` gates the console only; a new `TINA4_LOG_FILE_LEVEL` (default
+  `ALL`) gates the file, preserving the full-detail forensic file. `is_enabled`
+  becomes sink-aware. Add `TINA4_LOG_FILE_LEVEL` (string) to the Decision 19
+  environment manifest. Supersedes Decision 8 Option 1.
+
+- **Decision 20 (concurrent writers) -> SINGLE FILE, IN-PROCESS LOCK ONLY.** One
+  log file guarded by an in-process (thread) lock over size-check + rotate +
+  append. Cross-process exclusive locking and stale-lock recovery are removed;
+  concurrent PROCESSES writing the same file may interleave, and the contract
+  documents per-process files or a log shipper as the answer for that. The
+  concurrency fixture witness relaxes from real multi-process to thread
+  concurrency plus the documented caveat. Supersedes Decision 20 Option 1.
+
+Everything else in the plan below stands.
+
+### Owner decision register (re-audit)
+
+#### Decision 1: Feature 1 must supply one scalar log level
+
+**Approved 2026-08-09: Option 1, plain scalar name.** Feature 1 generates
+`TINA4_LOG_LEVEL=ALL`; its native value is the string `"ALL"`. An OS-level value
+still has precedence under Feature 1's source rules.
+
+The approved Feature 1 line uses list syntax, but Feature 2 needs one threshold.
+Pick the language-neutral value that crosses this boundary.
+
+1. **Plain scalar name (recommended):** change the generated line to
+   `TINA4_LOG_LEVEL=ALL`. Keep the framework constants for application code,
+   but do not turn one scalar setting into a one-item collection. Feature 2
+   accepts `ALL`, `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` and `NONE` as
+   case-insensitive scalar names.
+2. **One-item native list:** keep `TINA4_LOG_LEVEL=[TINA4_LOG_ALL]` and require
+   the logger to unwrap exactly one item. This preserves the approved template
+   but gives one logger setting a collection-shaped input that no engineer
+   needs.
+3. **Special bracket reference:** make `[TINA4_LOG_ALL]` a scalar reference
+   instead of a one-item list. This keeps the text but breaks Feature 1's general
+   list grammar for the same token shape.
+
+No option changes OS precedence. An OS-level `TINA4_LOG_LEVEL` still beats the
+file assignment under Feature 1's approved source rules.
+
+#### Decision 2: when configuration becomes stable
+
+**Approved 2026-08-09: Option 1, stable snapshot.** First use or explicit
+`configure` resolves one effective configuration. It stays unchanged until
+`reset`. Reset closes owned sinks, clears explicit logger state and request
+context, and makes the next use resolve configuration again.
+
+Environment changes after logger initialization can either alter live behavior
+or wait for an explicit reset. Pick one lifecycle rule for every language.
+
+1. **Stable snapshot (recommended):** resolve the complete effective
+   configuration on first use or explicit `configure`, then keep it unchanged.
+   `reset` closes owned sinks, clears explicit logger state and request context,
+   and makes the next use resolve configuration again. This makes one event use
+   one coherent configuration and follows ADR-0041.
+2. **Read on every event:** resolve environment-backed settings for each log
+   call. A process can change behavior without reset, but one logger instance
+   has no stable configuration and concurrent environment changes can divide a
+   request across sinks or formats.
+3. **Hybrid lifecycle:** keep explicit settings but re-read selected environment
+   values per event. This permits live changes for some fields, but every field
+   needs a separate timing rule and the public behavior is harder to predict.
+
+#### Decision 3: default output format
+
+**Approved 2026-08-09: Option 1, debug-derived format.** Explicit
+`TINA4_LOG_FORMAT` selects `text` or `json`. Without it, truthy `TINA4_DEBUG`
+selects text; false or absent `TINA4_DEBUG` selects JSON. Every active sink uses
+the same selected format.
+
+The logger needs one language-neutral rule when no explicit format has been
+configured. This decision selects the format only; ANSI color is a separate
+decision.
+
+1. **Debug-derived format (recommended):** an explicit `TINA4_LOG_FORMAT` value
+   selects `text` or `json`. Without it, truthy `TINA4_DEBUG` selects text and a
+   false or absent value selects JSON. The selected format applies to every
+   active sink, so one event has the same representation on stdout and in files.
+2. **Text by default:** use text unless `TINA4_LOG_FORMAT=json` is explicit.
+   This favors local readability, but an undeclared production environment does
+   not receive structured output.
+3. **Sink-specific default:** use text on stdout and JSON in files unless each
+   sink has an explicit override. This suits different consumers, but one event
+   has two representations and needs per-sink format configuration and tests.
+
+#### Decision 4: ANSI color boundary
+
+**Approved 2026-08-09: Option 1, interactive text stdout only.** ANSI color is
+valid only for text sent to an interactive terminal. JSON, files, pipes and
+captured stdout contain no ANSI bytes.
+
+ANSI escape bytes improve interactive text but damage structured records,
+redirected output and file searches. Choose where color is valid.
+
+1. **Interactive text stdout only (recommended):** add ANSI color only when the
+   selected format is text and stdout is an interactive terminal. JSON, files,
+   pipes and captured stdout contain no ANSI bytes. This preserves readable
+   terminals and clean machine-consumed output without a new setting.
+2. **Every text stdout:** add ANSI color to text written to stdout even when it
+   is redirected or captured. Files and JSON remain plain. This keeps current
+   Python and Ruby styling but sends terminal control bytes into pipelines and
+   test captures.
+3. **No framework color:** never emit ANSI bytes. Output is identical across
+   terminals, files and pipelines, but interactive development loses level
+   highlighting.
+
+#### Decision 5: sink selection
+
+**Approved 2026-08-09: Option 1, output selects sinks.** Explicit `stdout`,
+`file` or `both` selects exactly those sinks. When absent, stdout is enabled and
+file output follows truthy `TINA4_DEBUG`. `TINA4_LOG_FILE` names a file but does
+not enable it. Any other output value is a hard configuration error.
+
+**Container clarification, confirmed 2026-08-09:** false or absent
+`TINA4_DEBUG` keeps the default at stdout only. Explicit `both` keeps stdout
+working in Docker and also enables bounded Tina4-owned files. Docker detection
+does not change sink selection.
+
+Rotation belongs to the file sink. When file output is active, every active
+framework-owned log file follows the approved rotation contract. When file
+output is inactive, the logger must not create, inspect or rotate log files.
+
+`TINA4_LOG_OUTPUT` currently cannot distinguish an absent value from explicit
+`stdout` in Python and Node. The four frameworks also disagree on whether a file
+path enables file output. Choose one rule for selecting sinks.
+
+1. **Output selects sinks (recommended):** explicit `stdout`, `file` or `both`
+   selects exactly those sinks. When the variable is absent, stdout is enabled
+   and file output is enabled only when `TINA4_DEBUG` is truthy. A configured
+   `TINA4_LOG_FILE` names the file but does not enable its sink. Any other output
+   value is a hard configuration error. This keeps selection separate from
+   destination and makes explicit `stdout` reliable.
+2. **A file path forces file output:** use the same three output values and
+   debug-derived default, but make `TINA4_LOG_FILE` enable file output even when
+   output is absent or explicitly `stdout`. This favors a supplied path over the
+   sink selector and makes `stdout` mean more than one thing.
+3. **Stdout-only default:** explicit `stdout`, `file` or `both` selects exactly
+   those sinks; when absent, enable stdout only in every environment. This is
+   the smallest default but removes automatic development log files.
+
+#### Decision 6: rotation threshold and backup names
+
+**Approved 2026-08-09: Option 1, predict the next record with bounded
+retention.** Rotation uses positive byte limits, `.1` is the newest backup, and
+retention is finite. Zero or invalid size values and negative or invalid backup
+counts are hard configuration errors. There is no unlimited-growth mode.
+
+The rotation settings need byte-exact behavior that does not depend on a
+language's standard logging library. The owner added a governing requirement on
+2026-08-09: framework-owned logs must never have an unlimited-growth mode.
+
+1. **Predict the next record with bounded retention (recommended):**
+   `TINA4_LOG_ROTATE_SIZE` is a positive byte limit. Before appending a complete
+   encoded record, rotate a non-empty current file when its size plus that
+   record would exceed the limit. Number backups as `.1` newest through `.N`
+   oldest, where `N` is the non-negative `TINA4_LOG_ROTATE_KEEP`; zero keeps only
+   the current bounded file. Apply the rule independently to each active log
+   file. Zero, negative and invalid sizes, and negative or invalid retention
+   counts, are hard configuration errors. There is no disabled or unlimited
+   mode. Defaults are 10 MiB and five backups. The next decision defines an
+   event larger than the cap.
+2. **Rotate on the next write:** rotate before a write only when the current file
+   has already reached the limit. This also keeps records whole, but a file may
+   exceed its configured limit by one normal record. Size remains mandatory and
+   positive.
+3. **Use each runtime's native rotation:** keep the same settings but accept each
+   standard library's trigger point and backup names. This uses less framework
+   code but preserves the measured `.0` versus `.1` and byte-unit differences.
+
+#### Decision 7: an event larger than the file cap
+
+**Selected 2026-08-09 under the owner's consistency rule: Option 1, bounded
+replacement record.** An oversized event is replaced by one bounded valid
+record with its level, timestamp, original byte count, SHA-256 digest and a
+truncation marker. The original bytes are not written and the ordinary logging
+call does not crash the application.
+
+A single serialized event can exceed `TINA4_LOG_ROTATE_SIZE`. Writing it in full
+would break the bounded-disk guarantee. Choose the loss behavior explicitly.
+
+1. **Bounded replacement record (recommended):** require a rotation size of at
+   least 1024 bytes. If one encoded event exceeds the cap, do not write its
+   original bytes. Write one valid text or JSON record within the cap containing
+   the original level and timestamp, `truncated=true`, the original byte count,
+   its SHA-256 digest and a fixed overflow message. This retains proof of the
+   dropped event without risking an unbounded file. The ordinary logging call
+   does not crash the application.
+2. **Truncate the original fields:** preserve as much message and context as can
+   fit, add truncation metadata, and write a valid record. This retains more
+   content but requires a byte-aware, format-aware truncation algorithm whose
+   result can differ around Unicode and nested structures.
+3. **Drop and warn on stderr:** omit the file record and send a short diagnostic
+   to stderr. This keeps the file bounded, but repeated oversized events can
+   fill Docker's captured stderr and the file contains no witness of the loss.
+
+#### Decision 8: threshold scope
+
+**Approved 2026-08-09: Option 1, one threshold for every sink.**
+`TINA4_LOG_LEVEL` filters an event before routing. Stdout, the main file and any
+secondary file therefore receive the same selected levels. `is_enabled` reports
+whether the logger will emit that level to its active sinks. Docker does not
+disable stdout when file output is also active.
+
+All four current implementations and project memory agree that
+`TINA4_LOG_LEVEL` filters stdout only while the main file records every level.
+That preserves full forensic detail, but the setting's name does not reveal its
+limited scope and `is_enabled` reports only console visibility. This conflicts
+with the simple, no-hidden-behavior principle, so it requires an owner ruling.
+
+1. **One threshold for every sink (recommended for clarity):**
+   `TINA4_LOG_LEVEL` filters the event before any sink receives it.
+   `is_enabled` answers whether the event will be emitted anywhere. A developer
+   gets the same level behavior on stdout and in files.
+2. **Keep stdout-only filtering:** `TINA4_LOG_LEVEL` and `is_enabled` govern
+   stdout. The main file records every level whenever its sink is active. This
+   preserves the current four-language rule and complete file detail, but keeps
+   the setting's sink-specific meaning implicit.
+3. **Name separate thresholds:** `TINA4_LOG_LEVEL` governs stdout and a new
+   `TINA4_LOG_FILE_LEVEL` governs files, defaulting to `ALL`. This preserves the
+   current forensic default and makes it explicit, at the cost of another
+   setting and a two-answer `is_enabled` API.
+
+#### Decision 9: severity ladder and invalid levels
+
+**Selected 2026-08-09 under the owner's consistency rule.** The ordered levels
+are `ALL`, `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`, `NONE`.
+Configuration is case-insensitive and normalizes to uppercase. `ALL` emits every
+event and `NONE` emits none. Event methods remain `debug`, `info`, `warning`,
+`error` and `critical` with language-idiomatic casing. There is no `warn` alias.
+An unknown configured level is a hard configuration error; it never falls back.
+
+This preserves the five-level rule already shared by all four frameworks,
+removes Node's prohibited alias, and follows Feature 1's approved scalar value.
+
+#### Decision 10: default file layout and the secondary threshold
+
+**Approved 2026-08-09: Option 1, warning and above.** A directory destination
+owns `tina4.log` for every event that passes the global threshold and
+`error.log` for passing `WARNING`, `ERROR` and `CRITICAL` events. An explicitly
+named file owns only that file. All owned files use bounded rotation.
+
+Three frameworks treat an explicitly named file as one destination, while PHP
+also creates a sibling `error.log`. The consistent path rule is therefore
+settled: a directory destination owns `tina4.log` and `error.log`; an explicitly
+named file owns only that file. Every owned file uses the same global level and
+bounded rotation rules.
+
+The remaining threshold for the directory-owned `error.log` contradicts the
+earlier audit text:
+
+1. **Warning and above:** write `WARNING`, `ERROR` and `CRITICAL`. This is the
+   current behavior in all four frameworks and the stored project rule.
+2. **Error and above:** write `ERROR` and `CRITICAL`. This matches the file name
+   and the earlier Feature 2 audit pattern.
+3. **No secondary file:** write every selected event only to `tina4.log`. This
+   removes duplicate bytes but also removes the focused operational file.
+
+#### Decision 11: one call produces one physical line
+
+**Selected 2026-08-09 under the owner's consistency rule.** Each accepted log
+call writes exactly one LF-terminated physical line to each selected sink. Text
+format escapes backslash first, then carriage return as `\r` and line feed as
+`\n`. JSON uses its encoder's equivalent escapes. No event may inject a second
+physical record, and output uses LF on every operating system.
+
+This closes the measured four-language newline injection defect and makes line
+count a reliable event count.
+
+#### Decision 12: request correlation lifecycle
+
+**Selected 2026-08-09 under the owner's consistency rule.** Request IDs live in
+request, task or async-local context, never process-global or plain
+thread-local state. The request pipeline installs the resolved ID before the
+first request log and clears it in `finally` after the last request log. An
+overlapping request cannot read another request's ID. CLI and background work
+may install and clear an explicit ID through the same public methods.
+
+The logger does not decide whether to trust or generate an incoming request ID;
+the Request feature owns that policy. Logging consumes the resolved string and
+omits the field when no request scope has installed one.
+
+#### Decision 13: sink write failures
+
+**Selected 2026-08-09 under the owner's consistency rule.** Configuration
+errors fail before logging starts. After configuration succeeds, an ordinary
+sink write failure does not crash application work. The logger disables the
+failed sink for the current configuration snapshot and emits at most one short,
+non-recursive diagnostic to another active sink. `TINA4_LOG_STRICT=true` instead
+raises one catchable logging error with the failed sink and operation. `reset`
+allows the next configuration snapshot to retry the sink.
+
+This preserves the established default and strict-mode project rule while
+preventing a failing sink from producing an unbounded diagnostic loop.
+
+#### Decision 14: native message and context normalization
+
+**Selected 2026-08-09 under the owner's consistency rule.** Logging accepts the
+shared native value domain without making application code convert values first:
+string, null, boolean, finite number, sequence and string-keyed map. A message
+string stays a string; other message values use compact JSON spelling, including
+`null`, `true` and `false`. Context normalizes recursively and remains a native
+map in JSON output. Sequence order is preserved; map keys are sorted by their
+UTF-8 byte sequence at every depth so the same value produces the same bytes in
+every language.
+
+Valid UTF-8 bytes decode as text. Invalid bytes become a bounded marker with the
+byte count and SHA-256 digest. A repeated reference becomes the string
+`"[Circular]"`. A non-finite number or value outside the shared native domain
+becomes a bounded `"[Unsupported]"` marker. Normalization never calls arbitrary
+application stringification hooks and never raises during ordinary logging.
+
+This closes the measured null, boolean and circular-reference differences while
+keeping the logger safe around application objects.
+
+#### Decision 15: canonical event representation
+
+**Selected 2026-08-09 under the owner's consistency rule.** Every event is
+normalized once before routing. Its timestamp is UTC RFC 3339 with exactly
+milliseconds and a `Z` suffix. Its level is uppercase.
+
+JSON uses one compact object and this key order:
+
+1. `timestamp`
+2. `level`
+3. `message`
+4. `request_id`, when installed
+5. `function`, when caller capture is enabled and resolved
+6. `context`, when the normalized map is non-empty
+
+Text uses `TIMESTAMP [LEVEL   ]`, with the uppercase level right-padded to eight
+characters, followed by optional `[request_id]` and `[function]`, the message,
+and compact JSON context when non-empty. Both formats use the same normalized
+values and the one-physical-line rule.
+
+#### Decision 16: caller capture
+
+**Selected 2026-08-09 under the owner's consistency rule.** Caller capture is
+off by default. Truthy `TINA4_LOG_FUNC` enables it for both formats and every
+sink. The logger walks past its own public and private frames and records the
+first application function as `function`. If no application frame can be
+resolved, the field is omitted. Caller inspection must not make a log call fail.
+
+#### Decision 17: explicit configuration surface
+
+**Selected 2026-08-09 under the owner's consistency rule.** Every language
+offers one `configure` operation with language-idiomatic named options for
+`log_dir`, `log_file`, `level`, `format`, `output`, `rotate_size`, `rotate_keep`
+and `strict`. Omitted options read their matching environment setting and then
+their framework default. An explicit option beats environment, which beats the
+default, as required by ADR-0041. Bootstrap must not pass invented explicit
+defaults.
+
+Directory and file are separate concepts; no extension or filesystem-existence
+heuristic guesses what one path means. A relative file resolves below the
+effective log directory. An absolute file remains absolute. Supplying a file
+selects a single file destination but does not enable the file sink. With no
+file, the directory destination owns `tina4.log` and `error.log` under Decision
+10. Invalid types and values fail configuration before a sink opens.
+
+#### Decision 18: reset and observable configuration
+
+**Selected 2026-08-09 under the owner's consistency rule.** Every language
+exports language-idiomatic forms of `configure`, `reset`, `is_enabled`,
+`set_request_id`, `get_request_id` and `clear_request_id`, plus the five event
+methods. `reset` closes and flushes owned handles, clears the stable snapshot and
+request context, and is harmless when repeated. The next call resolves a fresh
+snapshot.
+
+One `configuration` operation returns a defensive native map of the effective
+snapshot, including resolved paths and enabled sinks. It initializes the logger
+if needed. This replaces language-specific collections of getters and gives
+tests and engineers one ready-to-use shape. No `warn`, production-polarity,
+`json_mode`, or file-writer aliases remain in the 3.14 public surface.
+
+#### Decision 19: environment manifest and removed spellings
+
+**Selected 2026-08-09 under the owner's consistency rule.** Feature 2 reads only
+these logger settings, plus `TINA4_DEBUG` for the approved defaults:
+
+| Setting | Native type | Meaning |
+| --- | --- | --- |
+| `TINA4_LOG_LEVEL` | string | global severity threshold |
+| `TINA4_LOG_FORMAT` | string | `text` or `json` |
+| `TINA4_LOG_OUTPUT` | string | `stdout`, `file` or `both` |
+| `TINA4_LOG_DIR` | string | directory destination |
+| `TINA4_LOG_FILE` | string | optional single-file destination |
+| `TINA4_LOG_ROTATE_SIZE` | integer | positive bytes per current file |
+| `TINA4_LOG_ROTATE_KEEP` | integer | non-negative backup count |
+| `TINA4_LOG_STRICT` | boolean | raise on sink failures |
+| `TINA4_LOG_FUNC` | boolean | include application function |
+
+Files always append within their bounded rotation contract. The destructive
+`TINA4_LOG_APPEND=false` startup truncation option is removed. A developer who
+needs a clean file must perform that explicit operation outside logger startup.
+
+The removed `TINA4_LOG_MAX_SIZE`, `TINA4_LOG_KEEP`, `TINA4_LOG_APPEND`,
+`TINA4_DEBUG_LEVEL` and `TINA4_LOG_CRITICAL` settings cause a hard configuration
+error with their replacement or removal message. Legacy bracket level spellings
+such as `[TINA4_LOG_ERROR]` are invalid; use scalar `ERROR`. Framework severity
+constants remain application-code constants and are not extra environment
+settings.
+
+#### Decision 20: concurrent file writers
+
+**Selected 2026-08-09 under the owner's consistency rule.** Append, size check,
+rotation and retention cleanup form one exclusive operation per destination
+across threads and processes. The implementation uses standard filesystem
+primitives only and leaves no unbounded family of lock or backup files. A
+crashed writer's stale lock is recoverable after a bounded interval. Waiting for
+the lock is also bounded and follows the ordinary or strict sink-failure policy
+when it expires.
+
+The current file and `.1` through `.N` are the only retained data files for one
+destination. A concurrent writer must not split an event, overwrite another
+event, reset a rotated file, or increase the retention count. Fixture witnesses
+must use real concurrent processes, not only threads or mocked writers.
+
+#### Decision 21: framework defaults without environment
+
+**Selected 2026-08-09 under the owner's consistency rule.** When neither an
+explicit option nor environment setting supplies a value, the snapshot uses:
+
+| Concept | Default |
+| --- | --- |
+| level | `INFO` |
+| format | JSON because absent `TINA4_DEBUG` is false |
+| output | stdout only |
+| log directory | `logs` below the project root |
+| named log file | absent, so directory layout applies if file output is later selected |
+| rotation size | 10 MiB (`10485760` bytes) |
+| rotation backups | `5` |
+| strict sink errors | `false` |
+| caller capture | `false` |
+
+Feature 1's generated development file explicitly sets `TINA4_DEBUG=true` and
+`TINA4_LOG_LEVEL=ALL`, so a bootstrapped development project receives text and
+all five levels. The framework defaults remain safe for a process that logs
+before project bootstrap.
+
+#### Decision 22: console stream and event bound
+
+**Selected 2026-08-09 under the owner's consistency rule.** When stdout is an
+active sink, every passing level writes to stdout and flushes the complete line
+before the call returns. Severity does not reroute application events to stderr.
+This keeps `docker logs`, shell capture and parity tests on one stream.
+
+One stdout record is limited to 8192 encoded UTF-8 bytes. A larger event uses
+the same valid bounded replacement shape as Decision 7, calculated from the
+original normalized event. The logger never cuts serialized JSON or a UTF-8
+code point. Event frequency and Docker's captured-log retention remain the
+container platform's responsibility.
+
+#### Decision 23: call completion and input ownership
+
+**Selected 2026-08-09 under the owner's consistency rule.** Event methods
+return the language's ordinary void value. Before returning, the logger
+normalizes the message and a defensive snapshot of context, applies the global
+threshold, and completes each selected synchronous sink write or its failure
+policy. Later mutation of caller-owned lists or maps cannot alter an event.
+
+There is no hidden background queue, worker or flush delay in the core logger.
+This makes shutdown, tests and short CLI commands deterministic without another
+dependency or lifecycle service.
+
+#### Decision 24: process lifecycle
+
+**Selected 2026-08-09 under the owner's consistency rule.** Graceful shutdown
+calls `reset` after the last application shutdown log. Normal process-exit hooks
+may perform a best-effort close but must not emit new events. After a process
+fork, the child discards inherited handles, locks and request context, then
+resolves a fresh configuration snapshot on first use. The parent snapshot stays
+unchanged.
+
+#### Decision 25: public errors
+
+**Selected 2026-08-09 under the owner's consistency rule.** Invalid settings
+raise one catchable logger configuration error naming the setting, supplied
+value and accepted domain. Invalid public method arguments raise a catchable
+argument error. Strict sink failures raise one catchable logger write error
+naming the sink and operation. No branch terminates the process directly.
+
+Ordinary non-strict sink failures follow Decision 13. Native-value
+normalization and caller inspection use their bounded markers or omission rules
+instead of raising.
+
+## Proposed conformance fixture
+
+### Tests to write
+
+Real files in a temp directory, real stdout captured. A log file is a file, so
+there is nothing to mock.
+
+| pair | positive | negative |
+| --- | --- | --- |
+| dev format | `dev_mode_emits_human_readable_text` | `dev_mode_does_not_emit_json` - the PHP reproduction |
+| prod format | `production_mode_emits_one_json_object_per_line` | `production_mode_does_not_emit_ansi_colour` |
+| level column | `every_level_name_fits_the_padded_column` - all five, same width | `no_level_breaks_the_column_alignment` - Python's CRITICAL reproduction |
+| level order | `critical_is_the_highest_severity` | `critical_is_not_treated_as_an_error_alias` |
+| threshold | `a_level_below_the_threshold_is_suppressed` | `a_level_at_or_above_the_threshold_is_never_suppressed` |
+| error file | `error_and_critical_are_written_to_error_log` | `info_is_not_written_to_error_log` - Ruby/Node reproduction |
+| log dir | `configure_treats_its_argument_as_the_log_directory` | `configure_does_not_append_a_logs_subdirectory` - Ruby reproduction |
+| flag polarity | `production_true_selects_json` | `production_true_does_not_select_text` - catches an inverted flag |
+| dev gating | `no_log_file_is_written_when_debug_is_falsy`, `an_explicit_log_file_forces_a_file_in_production` | `stdout_is_never_disabled` |
+| surface | `configure_accepts_a_level` - all four | `no_framework_exposes_an_alias_for_a_level_method` - kills Node's `warn` |
+| fixture parity | `all_four_frameworks_match_the_format_fixture` | `no_framework_emits_a_field_the_others_lack` |
+
+The format-fixture pair is the one that closes this permanently. Four independent
+format strings drifted to two pads and two formats precisely because no test ever
+compared one framework's output line to another's.
+
+## Integration map
+
+The audit has not yet mapped every export, startup path, request hook, CLI, scaffolder, status command, document, and generated consumer.
+
+## Breaking changes and migration
+
+The audit has not yet turned every parity break into an actionable pre-3.14 migration instruction.
+
+## Implementation backlog
+
+### Methodology
+
+1. Build the shared format fixture first: a committed table of
+   (level, message, mode) to expected line, one file, read by all four suites.
+   Timestamps normalised out, the way the Frond render-corpus normalises `0x`
+   addresses.
+2. Write the tests below in all four. Expect red: PHP on dev format, Python and
+   Ruby on the 8-wide pad, Ruby and Node on `error.log`, Ruby on `log_dir`
+   semantics, Node on `warn` and on `configure` accepting a level.
+3. **Ruby first** (leanest, and it holds two of the divergences), then Node, then
+   Python, then PHP last - PHP's `configure` has the highest CC (23) and its
+   format change is the largest behavioural move.
+4. While in `configure`, split it. It is the worst function in three of four for
+   the same reason: env resolution, directory setup, level parsing, format
+   selection and rotation config in one method. Target: `resolve_output()`,
+   `resolve_level()`, `resolve_format()`, `resolve_rotation()`, each under CC 10,
+   with `configure` calling them in order. Same stage-list discipline as feature 30,
+   at a much smaller scale.
+5. Re-measure. Every `configure` under CC 10; MI improved in all four.
+
+## Porting capsule
+
+### Pattern
 
 **One format table, one file layout, one `configure` signature.**
 
@@ -1002,63 +1134,20 @@ Four decisions in that table:
 PHP's seven introspection getters are promoted to all four, because they are what
 lets the tests below assert configuration without parsing a file.
 
-## Methodology
+## Audit closure checklist
 
-1. Build the shared format fixture first: a committed table of
-   (level, message, mode) to expected line, one file, read by all four suites.
-   Timestamps normalised out, the way the Frond render-corpus normalises `0x`
-   addresses.
-2. Write the tests below in all four. Expect red: PHP on dev format, Python and
-   Ruby on the 8-wide pad, Ruby and Node on `error.log`, Ruby on `log_dir`
-   semantics, Node on `warn` and on `configure` accepting a level.
-3. **Ruby first** (leanest, and it holds two of the divergences), then Node, then
-   Python, then PHP last - PHP's `configure` has the highest CC (23) and its
-   format change is the largest behavioural move.
-4. While in `configure`, split it. It is the worst function in three of four for
-   the same reason: env resolution, directory setup, level parsing, format
-   selection and rotation config in one method. Target: `resolve_output()`,
-   `resolve_level()`, `resolve_format()`, `resolve_rotation()`, each under CC 10,
-   with `configure` calling them in order. Same stage-list discipline as feature 6,
-   at a much smaller scale.
-5. Re-measure. Every `configure` under CC 10; MI improved in all four.
+- [ ] Boundary and public surface complete.
+- [ ] Lifecycle and every producer/consumer edge complete.
+- [ ] Configuration, failure, side-effect and security rules complete.
+- [ ] Wire/storage and provider contracts complete.
+- [ ] Existing-language contradictions recorded.
+- [ ] Owner ambiguities decided and recorded.
+- [ ] Proposed shared cases and mutation witnesses complete.
+- [ ] Integration map and breaking migrations complete.
+- [ ] Implementation backlog dependency-ordered.
+- [ ] Porting capsule is clean-room sufficient.
 
-## Tests to write
-
-Real files in a temp directory, real stdout captured. A log file is a file, so
-there is nothing to mock.
-
-| pair | positive | negative |
-| --- | --- | --- |
-| dev format | `dev_mode_emits_human_readable_text` | `dev_mode_does_not_emit_json` - the PHP reproduction |
-| prod format | `production_mode_emits_one_json_object_per_line` | `production_mode_does_not_emit_ansi_colour` |
-| level column | `every_level_name_fits_the_padded_column` - all five, same width | `no_level_breaks_the_column_alignment` - Python's CRITICAL reproduction |
-| level order | `critical_is_the_highest_severity` | `critical_is_not_treated_as_an_error_alias` |
-| threshold | `a_level_below_the_threshold_is_suppressed` | `a_level_at_or_above_the_threshold_is_never_suppressed` |
-| error file | `error_and_critical_are_written_to_error_log` | `info_is_not_written_to_error_log` - Ruby/Node reproduction |
-| log dir | `configure_treats_its_argument_as_the_log_directory` | `configure_does_not_append_a_logs_subdirectory` - Ruby reproduction |
-| flag polarity | `production_true_selects_json` | `production_true_does_not_select_text` - catches an inverted flag |
-| dev gating | `no_log_file_is_written_when_debug_is_falsy`, `an_explicit_log_file_forces_a_file_in_production` | `stdout_is_never_disabled` |
-| surface | `configure_accepts_a_level` - all four | `no_framework_exposes_an_alias_for_a_level_method` - kills Node's `warn` |
-| fixture parity | `all_four_frameworks_match_the_format_fixture` | `no_framework_emits_a_field_the_others_lack` |
-
-The format-fixture pair is the one that closes this permanently. Four independent
-format strings drifted to two pads and two formats precisely because no test ever
-compared one framework's output line to another's.
-
-## Risks
-
-- **D4's flag polarity is the dangerous change.** Renaming PHP's `$development` to
-  `$production` inverts the meaning of an existing positional argument. Any PHP
-  caller passing `true` flips from dev to production output. This needs the
-  loudest migration note in the batch, and it is worth considering a hard error on
-  the old argument name rather than a silent reinterpretation.
-- **D1 changes what PHP dev logs look like.** Cosmetic to a human, breaking to any
-  tooling that parses PHP dev logs as JSON. `Breaking:` entry.
-- **D3 creates a new file** on Ruby and Node. Harmless, but worth a note for
-  anyone with log-rotation config.
-- Everything else is additive.
-
-## Parked
+### Parked
 
 Not implemented. Recommend mid-queue: no data loss and no security exposure, but
 it is cheap (1.4x spread, small files) and it removes a whole class of "why does
