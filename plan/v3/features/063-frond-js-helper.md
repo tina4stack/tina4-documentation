@@ -34,9 +34,13 @@ The vendored JavaScript is one client build, copied byte-for-byte into every fra
 | `public/js/frond.js` across Python, PHP, Ruby, Node | md5-identical (`733bc95a35f1c67296e67c2bb78b5ed1`) |
 | Per-language JS behaviour | none - the bundles are language-agnostic |
 | Build provenance | esbuild output from `tina4-js`, rebuilt and committed per release |
+| Served-asset byte-identity FIXTURE | ABSENT - no `frondjs_served`-style contract exists (CSS has one, JS does not) |
 
 Because the bundles are identical in all four, there is nothing per-language to keep in parity: a
-compiled browser bundle is the same file wherever it is served.
+compiled browser bundle is the same file wherever it is served. But note the gap in the last row:
+the CSS half of this asset pair IS gated (`tina4css_contract.json`, ADR-0004, asserts all four serve
+byte-identical `tina4.css`), and the JS half is NOT. Four packages ship an identical `frond.js` today
+purely by discipline; nothing fails if one falls behind.
 
 ## The vendored asset STAYS (this is not the SCSS removal)
 
@@ -57,24 +61,33 @@ feature (Feature 37) on the server side and by `tina4-js` on the browser side; t
 It is audited there, not here. This packet only records that the browser bundle is a vendored client
 artifact.
 
-## Why there is no framework parity contract
+## The only cross-language contract is served-asset byte-identity (and it is NOT yet gated)
 
-A per-language parity contract exists when four frameworks must implement the same behaviour. Here
-they implement none: they serve identical compiled bundles that the client produced. There is no
-cross-language fixture, no defect register, and no per-language surface to gate. The one thing worth
-watching is drift between the vendored bundles and the current `tina4-js` build (see the owner
-decision).
+A per-language BEHAVIOUR contract exists when four frameworks must each implement the same logic.
+Here they implement none: they serve identical compiled bundles that the client produced. So there
+is no per-language JS surface to gate.
+
+There IS one cross-language invariant: all four must serve the SAME `frond.js` (and the other
+bundles) at one URL. Unlike the CSS side, that invariant is currently UNGATED - there is no
+`frondjs_served` fixture the way `tina4css_contract.json` (ADR-0004) gates the stylesheet. The four
+copies are byte-identical today (md5 `733bc95a...`) by convention alone. The natural gate is the JS
+parallel of the CSS fixture: a served-asset contract that asserts every framework answers
+`GET /js/frond.js` with identical bytes. See the owner decision.
 
 ## Owner decisions
 
 Proposed for owner ratification:
 
 1. The browser helpers are a CLIENT asset: the `tina4-js` repo owns the source and the build; the
-   frameworks only vendor and serve the compiled bundles. No four-language parity contract is owed.
-2. Decide the vendoring policy: keep committing the built `frond.js` and tina4-js bundles into each
-   framework's `public/js/` per release (current), OR pull them from the `tina4-js` package at
-   build/release time. The risk in the current approach is silent drift - a framework copy can fall
-   behind the tina4-js build; a release-time sync (or a checksum gate) closes that gap.
+   frameworks only vendor and serve the compiled bundles. No per-language BEHAVIOUR contract is
+   owed; the one cross-language invariant is served-asset byte-identity.
+2. Close the fixture gap. The CSS side of this vendored-asset pair is gated by
+   `tina4css_contract.json` (ADR-0004); the JS side is not. Add the parallel served-asset fixture
+   (a `frondjs_served`-style contract) asserting all four frameworks answer `GET /js/frond.js` (and
+   the other bundles) with byte-identical content, wired into all four suites with a build-half
+   checksum check. That closes the silent-drift risk the CSS fixture already closes for the
+   stylesheet. The vendoring MECHANISM (commit per release vs pull-from-`tina4-js`-at-build) is the
+   sub-decision.
 3. The `frond.js` <-> server CSRF token contract stays owned by Feature 37 (server) and `tina4-js`
    (browser); this packet does not re-audit it.
 
@@ -85,5 +98,6 @@ Proposed for owner ratification:
 - [x] Vendored-bundle byte-identity measured across all four frameworks.
 - [x] Recorded that the vendored `public/js/` STAYS (served; dev-admin + CSRF depend on it).
 - [x] The one real cross-boundary contract (CSRF token handshake) pointed to its owner (Feature 37).
-- [x] No four-language framework parity contract is owed here.
-- [x] Vendoring-drift owner decision recorded for ratification.
+- [x] No per-language BEHAVIOUR contract is owed; the served-asset byte-identity invariant is
+  recorded as currently UNGATED (unlike the CSS side), with the fixture to add.
+- [x] Fixture-gap and vendoring-mechanism owner decision recorded for ratification.
