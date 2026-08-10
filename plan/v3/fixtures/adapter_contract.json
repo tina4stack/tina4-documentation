@@ -1,0 +1,477 @@
+{
+  "_comment": [
+    "Feature 3 database adapter contract for Tina4 3.14.0.",
+    "This is the language-neutral answer key for current and future ports.",
+    "ADR-0044 supersedes the old fixture that excluded executeMany and fetchOne.",
+    "All invariant groups are owed until fail-closed runners execute every case ID",
+    "against real providers in all four frameworks."
+  ],
+  "version": 2,
+  "feature": 3,
+  "decided": "2026-08-10",
+  "status": "decision-complete; implementation and runners owed",
+  "contract": "plan/v3/features/003-database-adapter-interface.md",
+  "adr": "ADR-0044",
+  "schema": {
+    "given": "real adapter, public facade, connection/pool state, statement and native parameters",
+    "when": "one public or adapter operation, or a bounded transaction sequence",
+    "then": "native result, durable server state, connection state and facade error state",
+    "error": "required thrown category and diagnostic fields",
+    "witness": "fresh connection, server observation, driver call count or deliberate mutation"
+  },
+  "constants": {
+    "required_capabilities": [
+      "connect",
+      "close",
+      "getDatabaseType",
+      "execute",
+      "executeMany",
+      "fetch",
+      "fetchOne",
+      "startTransaction",
+      "commit",
+      "rollback",
+      "autocommit",
+      "getTables",
+      "getColumns",
+      "tableExists"
+    ],
+    "facade_operations": [
+      "execute",
+      "executeMany",
+      "fetch",
+      "fetchOne",
+      "fetchAll",
+      "insert",
+      "update",
+      "delete",
+      "truncate",
+      "startTransaction",
+      "commit",
+      "rollback",
+      "getTables",
+      "getColumns",
+      "tableExists"
+    ],
+    "not_required_on_adapter": [
+      "query",
+      "insert",
+      "update",
+      "delete",
+      "truncate",
+      "fetchAll",
+      "createTable",
+      "addColumn",
+      "lastInsertId",
+      "error",
+      "sqlTranslation"
+    ],
+    "providers": [
+      "sqlite",
+      "postgresql",
+      "mysql",
+      "mssql",
+      "firebird",
+      "mongodb",
+      "odbc"
+    ],
+    "column_descriptor_keys": [
+      "name",
+      "type",
+      "nullable",
+      "default",
+      "primary_key"
+    ]
+  },
+  "invariants": [
+    {
+      "id": "adapter-required-boundary",
+      "rule": "Every registered adapter provides exactly the required capabilities with no optional required member; engine-neutral CRUD, DDL, diagnostics and translation remain above or in operation results.",
+      "suites": {},
+      "cases": [
+        {
+          "id": "DBA-S01",
+          "name": "all fourteen capabilities are required",
+          "given": {"adapter": "each_registered_adapter"},
+          "when": {"operation": "reflect_declared_contract"},
+          "then": {"capabilities": "$constants.required_capabilities", "optional": [], "autocommit_type": "native_boolean", "autocommit_readable": true, "autocommit_writable": true},
+          "witness": "declared_interface_and_each_concrete_adapter"
+        },
+        {
+          "id": "DBA-S02",
+          "name": "incomplete adapter registration fails loud",
+          "given": {"adapter": "real_minimal_test_adapter", "remove": "executeMany"},
+          "when": {"operation": "register_or_open"},
+          "error": {"category": "adapter_contract", "includes": ["adapter name", "executeMany"]},
+          "witness": "negative_mutation_removes_one_required_method"
+        },
+        {
+          "id": "DBA-S03",
+          "name": "adapter boundary excludes engine neutral composition",
+          "given": {"adapter": "declared_interface"},
+          "when": {"operation": "reflect_declared_contract"},
+          "then": {"absent": "$constants.not_required_on_adapter"},
+          "witness": "declared_interface_not_fixture_only"
+        },
+        {
+          "id": "DBA-S04",
+          "name": "node contract has one usable async surface",
+          "given": {"framework": "node", "adapter": "each_registered_adapter"},
+          "when": {"operation": "invoke_each_required_operation_idiomatically"},
+          "then": {"sync_stub_that_only_redirects_to_async": false},
+          "witness": "real_sqlite_and_postgresql_calls"
+        }
+      ]
+    },
+    {
+      "id": "adapter-facade-delegation",
+      "rule": "The public facade exposes executeMany and fetchOne and delegates each operation once to the adapter pinned or selected for that call.",
+      "suites": {},
+      "cases": [
+        {
+          "id": "DBA-D01",
+          "name": "facade exposes the complete database surface",
+          "given": {"database": "public_facade"},
+          "when": {"operation": "reflect_public_surface"},
+          "then": {"operations": "$constants.facade_operations"},
+          "witness": "public_type_and_runtime_object"
+        },
+        {
+          "id": "DBA-D02",
+          "name": "execute many delegates to one adapter primitive",
+          "given": {"database": "pooled_facade", "statement": "insert", "parameter_sets": [[1], [2], [3]]},
+          "when": {"operation": "executeMany"},
+          "then": {"adapter_execute_many_calls": 1, "facade_row_loop": false},
+          "witness": "instrumented_real_adapter_boundary_and_server_rows"
+        },
+        {
+          "id": "DBA-D03",
+          "name": "fetch one delegates without count probe",
+          "given": {"database": "facade", "query": "select_many_matching_rows"},
+          "when": {"operation": "fetchOne"},
+          "then": {"adapter_fetch_one_calls": 1, "count_probe_calls": 0},
+          "witness": "real_driver_statement_trace"
+        },
+        {
+          "id": "DBA-D04",
+          "name": "transaction pin selects the same adapter",
+          "given": {"database": "pool_size_three"},
+          "when": {"operations": ["startTransaction", "executeMany", "fetchOne", "rollback"]},
+          "then": {"distinct_adapters_used": 1, "durable_rows": 0},
+          "witness": "adapter_identity_trace_and_fresh_connection"
+        }
+      ]
+    },
+    {
+      "id": "adapter-fetch-one",
+      "rule": "fetchOne returns one native record or null, preserves native values, never hides SQL failure and never invents row ordering.",
+      "suites": {},
+      "cases": [
+        {
+          "id": "DBA-F01",
+          "name": "fetch one returns one native record",
+          "given": {"rows": [{"id": 1, "active": true}, {"id": 2, "active": false}], "query": "select_ordered_by_id"},
+          "when": {"operation": "fetchOne"},
+          "then": {"record": {"id": 1, "active": true}, "native_map": true},
+          "witness": "real_table_and_driver_value_types"
+        },
+        {
+          "id": "DBA-F02",
+          "name": "fetch one no match returns null",
+          "given": {"query": "valid_select_with_no_match"},
+          "when": {"operation": "fetchOne"},
+          "then": {"return": null},
+          "witness": "real_empty_result"
+        },
+        {
+          "id": "DBA-F03",
+          "name": "fetch one bad sql throws and records cause",
+          "given": {"query": "select_from_missing_table"},
+          "when": {"operation": "fetchOne"},
+          "error": {"category": "database", "includes": ["engine cause"]},
+          "then": {"facade_error_present": true, "return": "no_value"},
+          "witness": "public_call_and_get_error"
+        },
+        {
+          "id": "DBA-F04",
+          "name": "fetch one does not cache a failed read as null",
+          "given": {"cache": "enabled", "query": "table_created_after_first_failed_read"},
+          "when": {"operations": ["fetchOne_before_table", "create_table_and_row", "fetchOne_after_table"]},
+          "then": {"first": "throws", "second": {"value": "visible"}},
+          "witness": "real_cache_and_late_table"
+        },
+        {
+          "id": "DBA-F05",
+          "name": "fetch one keeps database result order",
+          "given": {"rows": [3, 1, 2], "query": "select_ordered_descending"},
+          "when": {"operation": "fetchOne"},
+          "then": {"id": 3, "implicit_resort": false},
+          "witness": "real_ordered_query"
+        }
+      ]
+    },
+    {
+      "id": "adapter-execute-many",
+      "rule": "executeMany returns one aggregate DatabaseResult, performs no work for empty input, reports row totals and generated ids honestly, and keeps optimizations invisible.",
+      "suites": {},
+      "cases": [
+        {
+          "id": "DBA-B01",
+          "name": "empty batch is a zero row no op",
+          "given": {"statement": "insert", "parameter_sets": []},
+          "when": {"operation": "executeMany"},
+          "then": {"result_type": "DatabaseResult", "affected_rows": 0, "last_id": null, "transactions_opened": 0, "rows_after": 0},
+          "witness": "driver_trace_and_real_table"
+        },
+        {
+          "id": "DBA-B02",
+          "name": "single parameter set returns aggregate result",
+          "given": {"parameter_sets": [["one"]]},
+          "when": {"operation": "executeMany"},
+          "then": {"result_type": "DatabaseResult", "affected_rows": 1, "per_row_array": false},
+          "witness": "public_native_type_and_real_table"
+        },
+        {
+          "id": "DBA-B03",
+          "name": "three rows report three affected rows",
+          "given": {"parameter_sets": [["one"], ["two"], ["three"]]},
+          "when": {"operation": "executeMany"},
+          "then": {"affected_rows": 3, "rows_after": 3},
+          "witness": "fresh_connection_count"
+        },
+        {
+          "id": "DBA-B04",
+          "name": "batch last id is from the batch connection",
+          "given": {"table": "generated_integer_key", "parameter_sets": [["one"], ["two"], ["three"]]},
+          "when": {"operation": "executeMany"},
+          "then": {"last_id": "third_generated_id_or_null_if_provider_cannot_report", "unrelated_connection_probe": false},
+          "witness": "same_connection_result_and_read_back"
+        },
+        {
+          "id": "DBA-B05",
+          "name": "ragged parameter sets fail before durable partial success",
+          "given": {"statement_parameter_count": 2, "parameter_sets": [[1, 2], [3]]},
+          "when": {"operation": "executeMany"},
+          "error": {"category": "binding"},
+          "then": {"durable_rows": 0},
+          "witness": "fresh_connection_count"
+        },
+        {
+          "id": "DBA-B06",
+          "name": "chunking preserves aggregate result",
+          "given": {"rows": 500, "chunk_limit": "provider_limit"},
+          "when": {"operation": "executeMany"},
+          "then": {"affected_rows": 500, "result_type": "DatabaseResult", "row_order_preserved": true},
+          "witness": "server_rows_and_operation_result"
+        }
+      ]
+    },
+    {
+      "id": "adapter-transaction-ownership",
+      "rule": "A standalone autocommit batch owns one transaction; a nested batch joins the caller transaction; pools never scatter the operation.",
+      "suites": {},
+      "cases": [
+        {
+          "id": "DBA-T01",
+          "name": "standalone batch begins and commits once",
+          "given": {"autocommit": true, "parameter_sets": [[1], [2], [3]]},
+          "when": {"operation": "executeMany"},
+          "then": {"begin_calls": 1, "commit_calls": 1, "rollback_calls": 0, "fresh_connection_rows": 3},
+          "witness": "driver_trace_and_fresh_connection"
+        },
+        {
+          "id": "DBA-T02",
+          "name": "standalone mid batch failure rolls back all rows",
+          "given": {"autocommit": true, "constraint": "unique", "parameter_sets": [["dup"], ["dup"], ["later"]]},
+          "when": {"operation": "executeMany"},
+          "error": {"category": "database_constraint"},
+          "then": {"begin_calls": 1, "commit_calls": 0, "rollback_calls": 1, "fresh_connection_rows": 0},
+          "witness": "fresh_connection_count"
+        },
+        {
+          "id": "DBA-T03",
+          "name": "batch inside explicit transaction never commits caller",
+          "given": {"operations": ["startTransaction", "executeMany", "rollback"]},
+          "when": {"operation": "sequence"},
+          "then": {"inner_begin_calls": 0, "inner_commit_calls": 0, "durable_rows": 0},
+          "witness": "negative_mutation_unconditional_inner_commit_and_fresh_connection"
+        },
+        {
+          "id": "DBA-T04",
+          "name": "batch inside committed transaction is durable",
+          "given": {"operations": ["startTransaction", "executeMany", "commit"]},
+          "when": {"operation": "sequence"},
+          "then": {"fresh_connection_rows": 2},
+          "witness": "fresh_connection_count"
+        },
+        {
+          "id": "DBA-T05",
+          "name": "pool keeps one physical connection for batch",
+          "given": {"pool_size": 3, "parameter_sets": [[1], [2], [3]]},
+          "when": {"operation": "executeMany"},
+          "then": {"distinct_connections_used": 1, "affected_rows": 3},
+          "witness": "connection_identity_trace"
+        },
+        {
+          "id": "DBA-T06",
+          "name": "expected native autocommit emits no transaction warning",
+          "given": {"provider": "each", "autocommit": true, "operation": "standalone_write"},
+          "when": {"operation": "execute"},
+          "then": {"warning_records": [], "commit_without_begin": false},
+          "witness": "real_log_capture_and_driver_state"
+        }
+      ]
+    },
+    {
+      "id": "adapter-result-and-failure",
+      "rule": "Execution returns Tina4 DatabaseResult values, reads return native records, and every driver failure throws without a false or empty-success ambiguity.",
+      "suites": {},
+      "cases": [
+        {
+          "id": "DBA-R01",
+          "name": "execute returns database result not boolean",
+          "given": {"statement": "valid_update_matching_one_row"},
+          "when": {"operation": "execute"},
+          "then": {"result_type": "DatabaseResult", "affected_rows": 1, "bare_boolean": false},
+          "witness": "public_native_type_and_server_row"
+        },
+        {
+          "id": "DBA-R02",
+          "name": "execute bad sql throws",
+          "given": {"statement": "write_to_missing_table"},
+          "when": {"operation": "execute"},
+          "error": {"category": "database"},
+          "then": {"false_return": false, "success_false_object": false, "facade_error_present": true},
+          "witness": "public_call_and_get_error"
+        },
+        {
+          "id": "DBA-R03",
+          "name": "affected rows is never chunk count",
+          "given": {"rows": 500, "chunks": 3},
+          "when": {"operation": "executeMany"},
+          "then": {"affected_rows": 500},
+          "witness": "server_count_and_result"
+        },
+        {
+          "id": "DBA-R04",
+          "name": "generated id needs no second adapter call",
+          "given": {"statement": "insert_generated_key"},
+          "when": {"operation": "execute"},
+          "then": {"last_id": "generated_id", "lastInsertId_calls": 0},
+          "witness": "operation_result_and_read_back"
+        },
+        {
+          "id": "DBA-R05",
+          "name": "adapter fetch returns native records",
+          "given": {"query": "valid_select_with_two_rows"},
+          "when": {"operation": "adapter.fetch"},
+          "then": {"result_type": "native_list", "records": 2, "database_result": false, "native_values_preserved": true},
+          "witness": "direct_real_adapter_call"
+        },
+        {
+          "id": "DBA-R06",
+          "name": "facade fetch owns result envelope and true count",
+          "given": {"query": "valid_paginated_select", "matching_rows": 5, "limit": 2, "offset": 0},
+          "when": {"operation": "Database.fetch"},
+          "then": {"result_type": "DatabaseResult", "records": 2, "total_count": 5, "adapter_result_type": "native_list"},
+          "witness": "public_call_adapter_trace_and_count_probe"
+        }
+      ]
+    },
+    {
+      "id": "adapter-lifecycle-and-introspection",
+      "rule": "Connection lifecycle is idempotent and catalog operations return the same native concepts across engines.",
+      "suites": {},
+      "cases": [
+        {
+          "id": "DBA-L01",
+          "name": "connect makes adapter usable and repeated connect does not leak",
+          "given": {"adapter": "closed"},
+          "when": {"operations": ["connect", "connect", "fetchOne_probe"]},
+          "then": {"usable": true, "physical_connections_opened": 1},
+          "witness": "driver_connection_identity"
+        },
+        {
+          "id": "DBA-L02",
+          "name": "close is idempotent",
+          "given": {"adapter": "connected"},
+          "when": {"operations": ["close", "close"]},
+          "then": {"native_resources_open": 0, "error": null},
+          "witness": "driver_resource_state"
+        },
+        {
+          "id": "DBA-L03",
+          "name": "database type is canonical and credential free",
+          "given": {"adapter": "each_provider"},
+          "when": {"operation": "getDatabaseType"},
+          "then": {"value": "canonical_provider_name", "contains_credentials": false},
+          "witness": "native_string"
+        },
+        {
+          "id": "DBA-L04",
+          "name": "table introspection describes a real table",
+          "given": {"table": "contract_widget", "columns": ["id", "name"]},
+          "when": {"operations": ["getTables", "tableExists", "getColumns"]},
+          "then": {"table_listed": true, "table_exists": true, "column_names": ["id", "name"], "column_concepts": "$constants.column_descriptor_keys"},
+          "witness": "real_catalog"
+        },
+        {
+          "id": "DBA-L05",
+          "name": "missing table exists returns false",
+          "given": {"table": "definitely_missing_contract_table"},
+          "when": {"operation": "tableExists"},
+          "then": {"return": false},
+          "witness": "real_catalog"
+        }
+      ]
+    },
+    {
+      "id": "adapter-provider-substitutability",
+      "rule": "Every configured provider satisfies the same cases on a real engine; unsupported atomicity fails before the first write rather than degrading silently.",
+      "suites": {},
+      "cases": [
+        {
+          "id": "DBA-P01",
+          "name": "configured providers run without skip",
+          "given": {"providers": "$constants.providers", "lab": "configured_services"},
+          "when": {"operation": "run_provider_contract"},
+          "then": {"configured_skips": 0},
+          "witness": "no_skip_gate_and_real_connection",
+          "witness_must_resolve": [
+            {
+              "coordinate": "database endpoint and credentials",
+              "strategy": "resolve the same TINA4_TEST_* variables used by the framework factory",
+              "evidence": ["TINA4_TEST_", "lab-env-for.sh"],
+              "symptom_when_assumed": "a green run may have skipped or inspected a different database"
+            }
+          ]
+        },
+        {
+          "id": "DBA-P02",
+          "name": "provider without atomic batch support rejects before write",
+          "given": {"provider": "deployment_without_transactions", "parameter_sets": [[1], [1]]},
+          "when": {"operation": "executeMany"},
+          "error": {"category": "unsupported_atomic_batch", "includes": ["provider", "required deployment capability"]},
+          "then": {"durable_rows": 0},
+          "witness": "out_of_band_server_count"
+        },
+        {
+          "id": "DBA-P03",
+          "name": "remove atomicity mutation is caught",
+          "given": {"mutation": "execute rows without transaction"},
+          "when": {"operation": "run_mid_batch_failure_case"},
+          "then": {"contract_runner": "fails"},
+          "witness": "deliberate_old_code_mutation"
+        },
+        {
+          "id": "DBA-P04",
+          "name": "pool scatter mutation is caught",
+          "given": {"mutation": "rotate adapter per parameter set"},
+          "when": {"operation": "run_pool_batch_case"},
+          "then": {"contract_runner": "fails"},
+          "witness": "deliberate_connection_rotation_mutation"
+        }
+      ]
+    }
+  ]
+}

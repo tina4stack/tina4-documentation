@@ -1,696 +1,421 @@
 # Feature 3: Database adapter interface
 
-Audited 2026-07-28. Part of `98-feature-audit.md`. **Planning only.**
+## Identity and status
 
-**Status: CLOSED.** All four read from source; the interface declarations compared
-method by method.
+- Matrix identity: Feature 3, database adapter interface.
+- Audit state: **contract complete; implementation and runner rewiring owed**.
+- Original audit: 2026-07-28.
+- Adversarial re-audit: 2026-08-10.
+- Branch context: v3 staging, targeting the 3.14.0 stability boundary.
+- Dependencies: Feature 1 typed environment, Feature 4 write result and safe
+  filters, Feature 5 database URL parsing, Feature 18 paginated results.
+- Dependants: every SQL/ORM/migration/session/cache/queue consumer.
+- Decision: ADR-0044.
+- Authoritative fixture: `fixtures/adapter_contract.json`. Copying it into every
+  framework and replacing the superseded structural runners is implementation
+  work, deliberately deferred until the audit phase closes.
 
-Scope note: the URL parsing that lives in these same files is feature 5 and is not
-re-litigated here. This row is the **contract an adapter must satisfy** and the
-facade that calls it.
+Breaking changes are permitted before 3.14.0. This packet is planning and
+contract data only. It does not authorize framework implementation changes.
 
-## Files
+## Why this feature exists
 
-| | interface | facade |
+A developer or a new language implementer needs one small, explicit contract
+that makes every database engine interchangeable without converting Tina4
+results, guessing optional capabilities, or reading another runtime.
+
+## Re-audit result
+
+The old audit selected fourteen required methods, but excluded `executeMany`
+and `fetchOne` as facade conveniences. That conclusion is superseded.
+
+`executeMany` owns work that cannot be reconstructed safely above an adapter:
+one physical connection, native batching, transaction ownership, rollback,
+affected-row accounting and generated identifiers. Project measurements for a
+500-row PostgreSQL insert were 9848 ms row-by-row versus 15.8 ms batched, with
+measured gains of 625x on PostgreSQL, 216x on MySQL and 121x on MSSQL.
+
+`fetchOne` is also a primitive. Deriving it from the public paginated `fetch`
+path can trigger a count probe and build a result envelope only to discard it.
+Drivers already expose a native first-row operation. The public facade should
+delegate to that operation and return the native record or null.
+
+The final contract still has fourteen capabilities, but it removes the two
+diagnostic methods that duplicate existing channels:
+
+- `lastInsertId` is not a second call. `execute` and `executeMany` return the
+  generated id in `DatabaseResult.last_id` / `lastId`.
+- `error` is not an adapter return path. A failed database operation throws.
+  The public facade records the cause for `get_error` / `getError` before
+  rethrowing it.
+
+## Exact-HEAD evidence
+
+The lab host `nvidia-rtx4500` ran focused suites as root against the same v3
+HEADs as the local repositories.
+
+| Framework | HEAD | Focused lab result |
 | --- | --- | --- |
-| python | `database/adapter.py` (`DatabaseAdapter`) | `database/connection.py` (`Database`) |
-| php | `Database/DatabaseAdapter.php` | `Database/Database.php` |
-| ruby | **none** | `lib/tina4/database.rb` |
-| node | `orm/src/types.ts` (`DatabaseAdapter`) | `orm/src/database.ts` |
+| Python | `12cc44bb` | 18 passed |
+| PHP | `46f96429` | 16 tests, 58 assertions |
+| Ruby | `25ac783` | 37 examples, 0 failures |
+| Node | `96a5050e` | 18 structural + 38 batch + 6 facade transaction checks passed |
 
-## Measurements
+The live batch paths covered SQLite, PostgreSQL, MySQL and MSSQL. The green
+structural tests do not validate the claimed boundary: they read the same JSON
+that states `executeMany` and `fetchOne` are absent, then assert that statement.
+They do not compare the JSON to the declared interfaces, where both methods are
+present in Python, PHP and Node.
 
-| | LOC | fns | CC total | CC avg | worst fn | MI | flags |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| python | 1573 | 121 | 353 | 2.92 | `_connection_path` (14) | **7.9** | 2 error, 9 warn |
-| php | 872 | 75 | 221 | 2.95 | `createAdapter` (22) | **6.4** | 2 error, 4 warn |
-| ruby | 828 | 70 | 263 | 3.76 | `get_next_id` (20) | **5.5** | 1 error, 5 warn |
-| node | 897 | 71 | 254 | 3.58 | `parseDatabaseUrl` (43) | **4.5** | 2 error, 3 warn |
+Ruby's live MSSQL batch checks also emitted repeated warnings that a standalone
+autocommit tried to COMMIT without a matching BEGIN. The rows and assertions
+were correct, but an expected success path must not produce transaction-failure
+warnings.
 
-**The maintainability index is the story.** 4.5 to 7.9 against the scanner's floor
-of 40 - the worst of any feature measured, in the subsystem every other feature
-depends on. Python is 1.9x Ruby's size with 121 functions to 70, and still scores
-the least-bad MI, which tells you the problem is not simply length.
+## Boundary
 
-## The interface, method by method
+The adapter owns only behavior that genuinely varies by database engine or
+driver:
 
-| concept | python | php | ruby | node |
+- connection lifecycle and canonical engine identity;
+- statement execution, batch execution, row fetching and first-row fetching;
+- transaction state and the effective autocommit policy;
+- engine catalog introspection.
+
+The facade owns application-facing composition:
+
+- `insert`, `update`, `delete` and `truncate` SQL construction;
+- safe filter rules from Feature 4;
+- query translation, pagination and count probes;
+- query caching and cache invalidation;
+- connection-pool selection and transaction pinning;
+- facade error state and convenience methods such as `fetchAll`.
+
+The adapter does not own URL parsing, ORM models, migrations, DDL builders,
+cache providers or language-independent SQL builders.
+
+## Required adapter capabilities
+
+Every adapter implements all fourteen. None is optional. Method spelling follows
+the host language, but concepts and behavior do not change.
+
+| Contract | Capabilities | Why it belongs on the adapter |
+| --- | --- | --- |
+| Connection | `connect`, `close`, `getDatabaseType` | Native handshake, cleanup and engine identity |
+| Execution | `execute`, `executeMany`, `fetch`, `fetchOne` | Driver binding, cursor/result handling and native batching |
+| Transaction | `startTransaction`, `commit`, `rollback`, `autocommit` | Native transaction state and durability |
+| Introspection | `getTables`, `getColumns`, `tableExists` | Engine catalogs differ |
+
+Canonical language mappings:
+
+| Concept | Python | PHP | Ruby | Node / another camelCase language |
 | --- | --- | --- | --- | --- |
-| open a connection | `connect` | `open` | duck-typed | constructor |
-| close | `close` | `close` | duck-typed | `close` |
-| execute | `execute` | `execute` | duck-typed | `execute` |
-| batch execute | `execute_many` | `executeMany` | duck-typed | `executeMany` |
-| read many | `fetch` | `fetch` | duck-typed | `fetch` |
-| read one | `fetch_one` | `fetchOne` | duck-typed | `fetchOne` |
-| raw query | (absent) | `query` | duck-typed | `query` |
-| insert / update / delete | all three | all three | duck-typed | all three |
-| transaction | `start_transaction`, `commit`, `rollback` | same | duck-typed | same |
-| list tables | `get_tables` | `getTables` | duck-typed | **`tables`** |
-| list columns | `get_columns` | `getColumns` | duck-typed | **`columns`** |
-| table exists | `table_exists` | `tableExists` | duck-typed | `tableExists` |
-| last insert id | (absent) | `lastInsertId` | duck-typed | `lastInsertId` |
-| last error | (absent) | `error` | duck-typed | (absent) |
-| create table | (absent) | (absent) | duck-typed | `createTable` |
-| add column | (absent) | (absent) | duck-typed | `addColumn?` (optional) |
-| autocommit | `autocommit` | (absent) | duck-typed | (absent) |
-| **SQL dialect translation** | **8 methods on the adapter** | separate trait | separate class | separate class |
+| connect | `connect` | `connect` | `connect` | `connect` |
+| database type | `get_database_type` | `getDatabaseType` | `get_database_type` | `getDatabaseType` |
+| execute many | `execute_many` | `executeMany` | `execute_many` | `executeMany` |
+| fetch one | `fetch_one` | `fetchOne` | `fetch_one` | `fetchOne` |
+| start transaction | `start_transaction` | `startTransaction` | `start_transaction` | `startTransaction` |
+| table exists | `table_exists` | `tableExists` | `table_exists?` | `tableExists` |
 
-## What differs
+`open` may remain a temporary pre-3.14 migration alias for `connect`, but the
+3.14 contract and new ports expose `connect`. Compatibility aliases are not
+part of the clean-room formula and must be removed or explicitly deprecated
+before the stability boundary.
 
-**D1. Ruby has no adapter interface at all.** `Database` calls exactly four things
-on a driver - `connect`, `close`, `autocommit`, `respond_to?` - and guards the rest
-behind six `respond_to?` checks. There is no abstract base, no
-`NotImplementedError`, no declared method list. Consequences:
+`autocommit` is a readable and writable native boolean capability. A host
+language may express it as a property or through idiomatic accessors; the
+behavioral contract does not require a method-shaped API.
 
-- A driver missing a method is discovered at runtime, on whichever engine nobody
-  exercised. The `respond_to?` guards mean the failure is often a silent skip
-  rather than an exception, which is worse.
-- Nothing tells a contributor writing a fifth driver what to implement. The answer
-  is "read `database.rb` and infer", and it is 828 lines.
-- The audit itself could not compare Ruby's contract to the other three, because
-  Ruby does not have one to compare. That is the finding.
+## Public database facade
 
-**D2. Python's adapter base carries two responsibilities.** Alongside the
-connection and CRUD contract it declares eight SQL-dialect translation methods:
-`limit_to_rows`, `limit_to_top`, `concat_pipes_to_func`, `boolean_to_int`,
-`ilike_to_like`, `placeholder_style`, `auto_increment_syntax`, `quote_identifier`.
+The public `Database` surface includes:
 
-The other three keep dialect translation in its own unit - PHP's
-`SqlNormalizerTrait`, Ruby's `sql_translator.rb`, Node's `sqlTranslator.ts`. So
-Python is the only framework where "how do I talk to this engine" and "how do I
-rewrite SQL for this dialect" are the same abstraction. That is a textbook single-
-responsibility violation, it is a large part of the 1573-versus-828 LOC gap, and it
-means a new Python adapter must implement eight translation methods it may not
-need.
+- `execute(sql, params)`;
+- `executeMany(sql, parameter_sets)`;
+- `fetch(sql, params, limit, offset)`;
+- `fetchOne(sql, params)`;
+- `fetchAll(sql, params)`;
+- `insert`, `update`, `delete`, `truncate`;
+- transaction and introspection operations.
 
-**D3. Node names two introspection methods differently.** `tables()` and
-`columns()` against `get_tables`/`getTables` and `get_columns`/`getColumns`
-everywhere else. Straight naming-rule violation, on the interface that third-party
-adapters implement.
+The facade delegates `executeMany` and `fetchOne` to the adapter selected or
+pinned for the current operation. It does not reimplement either by looping over
+`execute` or by unwrapping paginated `fetch`.
 
-**D4. Four different method sets.** Beyond the naming: `query` exists in PHP and
-Node but not Python; `error` only in PHP; `lastInsertId` in PHP and Node but not
-Python's adapter (Python puts `get_last_id` on the facade instead); `createTable`
-only in Node; `autocommit` in Python and Ruby only. So "implement the Tina4
-adapter interface" means four different jobs.
+## Inputs and outputs
 
-**D5. Node's interface has optional members.** `getTableColumns?` and `addColumn?`
-are declared optional, which means the facade must feature-detect at every call
-site - the same `respond_to?` pattern that makes Ruby's absence of an interface
-hard to reason about, just written in TypeScript. An optional method on a contract
-is not a contract.
+### Parameter binding
 
-**D6. The facade's worst functions are all doing adapter selection.** PHP's
-`createAdapter` (CC 22), Python's `_connection_path` (14), Ruby's `get_next_id`
-(20). Three of four have their worst function in the same job: deciding which
-driver to use and how to reach it. Feature 5 already moves URL parsing out to a
-value type, which takes a large bite out of this; what remains is a registry
-lookup that should be data, not branches.
+- SQL and parameter values are separate inputs. User values are never
+  concatenated into SQL.
+- `params` defaults to an empty native list.
+- `parameter_sets` is a native list of native parameter lists.
+- Boolean values are bound using the engine's accepted native representation
+  without changing the public value.
+- A ragged parameter set or binding-count mismatch throws before a partial
+  durable batch can be reported as success.
 
-## D2 CORRECTED (2026-07-30): Python's separation already exists
+### `execute`
 
-D2 says Python's adapter base "declares eight SQL-dialect translation methods"
-beside the connection and CRUD contract, making it "the only framework where
-'how do I talk to this engine' and 'how do I rewrite SQL for this dialect' are
-the same abstraction". Checked against the code before moving anything, per the
-methodology's own instruction to look for per-adapter overrides first:
+- Returns the shared `DatabaseResult`, never a bare boolean, integer, driver
+  result or `success: false` object.
+- `affected_rows` / `affectedRows` is an integer greater than or equal to zero.
+- `last_id` / `lastId` is the generated scalar id or null. It is populated on
+  the same connection and statement lifecycle as the write.
+- Result-set statements may also populate the result records defined by the
+  shared result contract.
+- Driver failure is thrown and recorded by the facade; it is never converted to
+  false or an empty success result.
 
-```
-DatabaseAdapter: 26 methods; dialect ones = ['quote_identifier']
-SQLTranslator:    7 methods; dialect ones = ['limit_to_rows', 'limit_to_top',
-                  'concat_pipes_to_func', 'boolean_to_int', 'ilike_to_like',
-                  'auto_increment_syntax', 'placeholder_style']
-```
+### `executeMany`
 
-**Seven of the eight are already on a separate `SQLTranslator` class.** The
-separation D2 says Python lacks is there. What is true is narrower: that class
-lives in the same FILE as `DatabaseAdapter` (`database/adapter.py`), where
-PHP, Ruby and Node each give it its own file. That is file organisation, not an
-SRP violation of the abstraction, and it is worth a line in a tidy-up rather
-than being the reason Python "has the worst separation".
+- Takes one statement and zero or more parameter sets.
+- Returns one aggregate `DatabaseResult`, not an integer and not a per-row
+  result array.
+- Empty input is a successful no-op with `affected_rows = 0` and `last_id =
+  null`; it opens no transaction and performs no write.
+- `affected_rows` is the total number of rows affected, not the number of chunks
+  or statements issued.
+- `last_id` is the last generated id when the engine can report it reliably,
+  otherwise null. It is never guessed from an unrelated connection.
+- Chunking or native multi-row SQL is an invisible optimization. It cannot
+  change result fields, row order, atomicity or error behavior.
 
-**The eighth, `quote_identifier`, belongs exactly where it is.** It has three
-definitions - `adapter.py`, `firebird.py`, `connection.py` - so it is OVERRIDDEN
-PER ADAPTER. Identifier quoting genuinely differs by engine, and Firebird
-overrides it. Moving it to the translator would flatten that override, which is
-precisely the risk the methodology told us to check for:
+### `fetch`
 
-> D2 is a pure extraction and should be behaviour-neutral. If it is not, the
-> translation methods had per-adapter overrides that the extraction would
-> flatten - check for overrides in every Python adapter before moving anything.
+- The adapter returns a native list of records and preserves native value types.
+- Adapter no-row success returns an empty native list, never null.
+- The public facade wraps those records in the shared `DatabaseResult` and owns
+  pagination, the true-total count and cache behavior defined by Feature 18.
+- A bad statement throws; it never becomes an empty successful result.
 
-The check says: do not move it.
+### `fetchOne`
 
-**So the prescribed fix for D2 is wrong in both directions** - seven methods are
-already where the plan wants them, and the eighth must not go there. The only
-action left on this row for Python is optionally giving `SQLTranslator` its own
-file for parity with the other three.
+- Returns one native record/map or null.
+- It performs the driver's first-row operation without a pagination count
+  probe and without building a public pagination envelope.
+- If more than one row matches, it returns the first row in the database's
+  result order. Tina4 does not invent an order.
+- Native database value types are preserved.
+- A bad statement throws and is distinguishable from a valid no-row result.
 
-This also weakens one input to the verdict below: "Python has the worst
-separation (D2)" was a stated factor, and it does not hold. The verdict itself
-still stands on PHP having the only readable one-responsibility interface and on
-the conformance numbers, which were measured independently.
+### Introspection
 
-## Progress (2026-07-30)
+`getColumns` returns native records with the canonical concepts `name`, `type`,
+`nullable`, `default` and `primary_key` / `primaryKey`. Missing tables return an
+empty list only where the engine reports a normal no-match; a catalog error
+throws. `getTables` returns native strings. `tableExists` returns a native
+boolean.
 
-**Done:**
+## Lifecycle and operation graph
 
-- **The contract is DATA** (`adapter_contract.json`, byte-identical in all four)
-  rather than four hand-maintained declarations - which is how the frameworks
-  got four different answers in the first place.
-- **A conformance RATCHET in all four.** Each pins today's implemented count per
-  adapter, so it can go up but never down and a new adapter cannot ship at the
-  old level. PHP 17/20 x10, Python 15/20 x6, Node 16-17/20 x7, Ruby 8-10/20 x7.
-  PHP and Python also assert every adapter sits at the SAME level, which is the
-  property a real interface buys.
-- **Ruby has an interface.** `Tina4::DatabaseAdapter` declares all 20, each
-  raising with the driver and method name; all seven drivers include it. The six
-  `respond_to?` guards became `driver_implements?`, which asks whether the driver
-  actually OVERRODE the method - because including the module makes every driver
-  respond to everything, and answering that wrongly turns a working silent-skip
-  path into a runtime NotImplementedError.
-- **Python is finished.** D2's prescribed fix was wrong in both directions (see
-  the correction above); the real action was giving `SQLTranslator` its own file,
-  which is done. `quote_identifier` stays on the adapter, where its Firebird
-  override lives.
-
-**Remaining:**
-
-- **Ruby: CRUD onto the seven drivers** (owner decision (a)), raising each
-  driver's floor as it lands. The largest piece.
-- **Node: rename `tables`/`columns`, make the two optional members required.**
-  49 call sites across `devAdmin`, `mcp`, `cachedDatabase`, the adapters and the
-  tests, so it is mechanical but wide.
-- **PHP: `autocommit`, `createTable`, `addColumn`.** The ten adapters implement
-  the interface directly with no shared base, so adding three to the interface is
-  thirty implementations with engine-specific DDL. Worth considering a trait with
-  a sensible `autocommit` default first, since that one is not engine-specific.
-
-## OPEN: is this contract the right SHAPE, or just PHP's list?
-
-Owner challenge, 2026-07-30: "Are we blindly copying PHP - did we check the
-database adapter layout makes sense?"
-
-Answering honestly: **partly yes, and the evidence is in this document.**
-
-**1. The conformance number is partly circular.** `adapter_contract.json` is
-substantially PHP's 18 methods plus `createTable`/`addColumn` from Node. So
-"PHP scores 17/20, the highest" is close to a tautology - it scores highest
-against a list derived from itself. What the measurement DOES show honestly is
-CONSISTENCY (ten adapters identical, versus Ruby's three levels), and that
-finding stands on its own. The ranking does not.
-
-**2. Twenty methods on one interface is a lot, and interface segregation is the
-principle this row was decided on.** The contract mixes five concerns:
-
-| concern | methods |
-| --- | --- |
-| connection lifecycle | open, close, autocommit |
-| CRUD | execute, executeMany, fetch, fetchOne, insert, update, delete |
-| transactions | startTransaction, commit, rollback |
-| introspection | getTables, getColumns, tableExists |
-| DDL | createTable, addColumn |
-| diagnostics | lastInsertId, error |
-
-An adapter that only ever reads has to implement writes and DDL. That is the
-same complaint the row makes about Node's optional members, one level up: the
-answer to "an optional method is not a contract" might be SEVERAL contracts
-rather than one fat required one.
-
-**3. PHP's interface had a hole only found by trying to use it.** No adapter
-could name its own dialect, so DDL could not be built from the adapter at all -
-`ORM::detectDialect()` type-checked the concrete class from outside. The
-framework that won this row on SOLID grounds contained a textbook
-depend-on-the-concrete-class defect, and reading it did not surface that.
-Implementing it did.
-
-**4. Ruby's split may be better, and we chose against it partly on the plan's
-say-so.** Ruby's facade builds the SQL and the driver executes it, which means
-ONE SQL builder rather than seven. The owner chose (a) - CRUD onto the adapter -
-but the DRY argument for Ruby's shape was never actually weighed, because the
-audit recorded Ruby's lack of an interface as the finding and moved on.
-
-**5. Two more decisions were taken from the plan without independent test.**
-`query` was dropped because "nothing needs a second read path", and dialect
-translation was placed off the adapter - and the D2 correction above shows the
-reasoning behind that placement was itself wrong about the code.
-
-### What this does NOT undermine
-
-The work landed so far is defensible independent of the shape question, because
-it is all about CONSISTENCY rather than about which list is right: Ruby having
-any declared contract at all, the silent-skip guards becoming loud, the ratchets,
-the naming convergence, autocommit existing in more than one framework, and an
-adapter being able to name its own dialect. Every one of those is right whether
-the final interface is one list of twenty or five smaller ones.
-
-### What it should gate
-
-`createTable` and `addColumn` are the two methods that most obviously belong to
-a SEPARATE schema concern, and they are the two still unimplemented. Adding them
-to a twenty-method required interface, across ten PHP adapters and five Node
-ones, is the most expensive way to be wrong. **They should wait for a decision on
-the shape**, not be pushed through because they are next on a list.
-
-## The deletions: scoped, NOT started (2026-07-30)
-
-Checked before touching anything, and the answer decides how big this is:
-**the facades DELEGATE, they do not already build the SQL.**
-
-```
-python  Database.insert -> adapter.insert(table, data)      (connection.py:687)
-php     Database::insert -> batch branch, then the adapter  (Database.php:562)
-ruby    Database#insert -> builds the SQL, calls execute    (the target shape)
+```text
+Database factory -> parse URL (Feature 5) -> construct adapter -> connect
+  -> facade chooses one adapter
+     -> explicit transaction: pin adapter until commit/rollback
+     -> standalone operation: use selected adapter under autocommit policy
+  -> execute/fetch/introspect
+  -> normalize to Tina4 native result shapes
+  -> close idempotently
 ```
 
-So this is a real migration, not dead-code removal: the SQL building has to move
-OUT of 6 Python adapters, 10 PHP adapters and 7 Node adapters and INTO one
-builder per framework - the shape Ruby already has.
+`connect` either establishes a usable connection or throws a diagnostic that
+names the engine and endpoint without credentials. Calling `connect` on an
+already-connected adapter does not create a second hidden connection. `close`
+is idempotent and releases native statements, transactions and sockets owned by
+the adapter.
 
-**This is the single most dangerous change in the audit and it is deliberately
-not started here.** Three reasons, all specific:
+## Transaction and batch rules
 
-1. **It is the WRITE path.** A subtle break does not throw, it writes the wrong
-   rows. Feature 4 already established semantics the builder must preserve - a
-   write with no filter is an ERROR, not a full-table operation, and the primary
-   key may span several columns.
-2. **It needs live engines to verify**, five of them across three frameworks.
-   SQLite alone proves nothing: the whole point of per-adapter SQL was
-   placeholder style, RETURNING support and identifier quoting, and those only
-   differ where the engine differs.
-3. **Today already shows the failure mode.** Removing `getTableColumns` looked
-   equally safe, was equally "obviously composable", and broke the legacy
-   NOT NULL migration_id path - caught only because a regression test existed
-   for that exact bug. The write path has no equivalent safety net for every
-   engine.
+- Autocommit is on by default.
+- `TINA4_AUTOCOMMIT=false` selects strict manual durability.
+- An explicit transaction pins one physical adapter/connection for every
+  operation until the matching commit or rollback.
+- A standalone `executeMany` under autocommit owns one transaction: begin once,
+  execute all parameter sets, commit once; any failure rolls back the owned
+  transaction and throws.
+- `executeMany` inside an explicit transaction joins it. It never begins,
+  commits or rolls back the caller's transaction. On failure it throws and the
+  caller retains responsibility for rollback.
+- A pool never rotates adapters inside a transaction or batch.
+- Expected native autocommit states do not log COMMIT-without-BEGIN warnings.
+- A provider unable to guarantee atomic batch writes must reject the operation
+  before the first write or require a deployment mode that can. It may not
+  silently provide partial durability. This is material for standalone MongoDB
+  deployments without transaction support.
 
-**The order that makes it safe**, when it is picked up:
+## Configuration and precedence
 
-1. Write the write-path conformance suite FIRST, running against every live
-   engine, asserting the CURRENT behaviour of insert/update/delete including
-   feature 4's no-filter-is-an-error rule and composite keys. That suite is the
-   thing that makes the deletion checkable; without it the change is unverifiable
-   by construction.
-2. Move the builder into ONE framework's facade, keeping its adapters' methods
-   in place and unused, and run the suite against all five engines.
-3. Only then delete the adapter methods, one engine at a time.
-4. Repeat per framework. Ruby needs nothing - it is already the target.
+The facade resolves database configuration in this order:
 
-Doing 3 before 1 is how a data-loss bug ships.
+1. explicit constructor/factory arguments;
+2. typed environment returned by Feature 1;
+3. framework defaults.
 
-## VERDICT: REDESIGN (owner, 2026-07-30)
+The adapter receives resolved native values. It does not parse `.env` itself.
+`TINA4_AUTOCOMMIT` is a native boolean by the time it reaches the adapter.
+Credentials are never returned by `getDatabaseType`, cache identity, logs or
+errors.
 
-There is a fifth option the audit's verdict vocabulary does not contain, and it
-is the right one here.
+## Failures, side effects and security
 
-UNIFORM / PROMOTE x / SYNTHESISE / GAP / DEFER all pick from what already
-exists. None of them can express "all four are wrong in the same direction",
-which is why this row kept producing answers that had to be corrected: first
-PROMOTE php (PHP's list is partly circular), then SYNTHESISE php+ruby (still
-assembling from two existing shapes). **Add REDESIGN to the vocabulary** - a
-verdict for when the audit has learned enough to design better than any of the
-four, and use it here.
+- Missing required methods prevent an adapter from being registered or opened.
+- There are no optional contract members and no `respond_to?`, `method_exists`
+  or TypeScript `?` guards for required capabilities.
+- SQL errors, connection errors, transaction errors and binding errors throw.
+- The facade records the last failure for `get_error` / `getError`, then
+  rethrows the original or a cause-preserving framework exception.
+- Failed reads are not cached as empty results. Failed writes invalidate no
+  success state and are never reported as successful.
+- Parameter binding is mandatory. Identifier quoting is performed only by the
+  trusted SQL builder/translator, never by interpolating a user value.
+- Error text and logs redact passwords, tokens and URL user-info.
 
-### What the learning actually is
+## Providers and substitutability
 
-Nine things came out of implementing this row, and together they describe a
-different adapter than any framework has:
+The contract applies to SQLite, PostgreSQL, MySQL/MariaDB, MSSQL, Firebird,
+MongoDB and ODBC adapters. Each provider runs the same language-neutral cases
+against a real engine. A driver package that is unavailable must fail the
+no-skip service gate on the lab; it is not a green conformance result.
 
-1. **DDL was NEVER an adapter concern.** PHP builds CREATE TABLE in
-   `ORM.php:1697`, Node in `migration.ts`, Python in `model.py:906`. We were
-   about to add `createTable`/`addColumn` to fifteen adapters for a job all four
-   frameworks already do ABOVE the adapter. The "gap" was an artefact of the
-   contract being written from Node's interface declaration rather than from
-   where the work happens.
-2. **CRUD is not engine-specific and costs 4.3x to duplicate.** Measured: Ruby
-   1335 LOC / 142 functions against PHP's 5823 / 438, for the same job.
-3. **The adapter could not name its own engine**, so callers type-checked the
-   concrete class. Fixed today, but it shows the contract was never derived from
-   what callers need.
-4. **Optional members are feature-detection in disguise** - Node's `?`, Ruby's
-   `respond_to?` - and both make a missing method a SILENT SKIP.
-5. **Two shapes for one concept survive because one is load-bearing.**
-   Collapsing `getTableColumns` into `getColumns` broke the legacy migration
-   path: one reads PRAGMA raw, the other goes through schema splitting. That is
-   not duplication to delete, it is two genuinely different questions wearing
-   similar names.
-6. **Dialect translation already lives outside the adapter in all four.** The
-   one framework thought to be mixing them was not (D2 correction).
-7. **The write path already has semantics the contract cannot express**: a write
-   with no filter is an ERROR, not a full-table operation (feature 4), and
-   `execute()` RAISES rather than returning false.
-8. **Naming drifted precisely where nothing forced agreement** - tables/columns,
-   open/connect, error/last_error.
-9. **Consistency, not completeness, is what a contract buys.** PHP's ten
-   adapters being identical mattered more than any of them being complete.
+Engine-specific mechanisms are allowed. Observable types, transaction ownership,
+atomicity and failure boundaries are not.
 
-### The adapter that follows
+## Current contradictions and required changes
 
-An adapter should be ONLY what genuinely differs per engine. Everything
-engine-agnostic - SQL building, DDL, pagination, translation, filters - lives
-above it, once.
-
-| contract | methods | why it is engine-specific |
-| --- | --- | --- |
-| **Connection** | `open`, `close`, `getDatabaseType` | driver handshake, and the engine must be able to name itself |
-| **Execution** | `execute(sql, params)`, `fetch(sql, params, limit, offset)` | placeholder style, cursor handling, result shape |
-| **Transaction** | `startTransaction`, `commit`, `rollback`, `autocommit` | genuinely per-driver |
-| **Introspection** | `getTables`, `getColumns`, `tableExists` | system catalogs differ entirely |
-| **Diagnostics** | `lastInsertId`, `error` | driver-specific retrieval |
-
-**Fourteen methods, five contracts, and NOT on the list:** `insert`, `update`,
-`delete`, `executeMany`, `fetchOne`, `createTable`, `addColumn`, `query`. Every
-one is composable above the adapter from `execute` + `fetch` + the dialect name,
-and every one is currently duplicated per adapter in three of four frameworks.
-
-That is 20 required methods down to 14, and it deletes far more than it adds.
-
-### What this means for work already done
-
-All of it stands - it was consistency work, and consistency is right under any
-shape: Ruby's declared contract, the loud-on-absence guards, the ratchets, the
-naming convergence, `autocommit`, `getDatabaseType`. What changes is the
-DIRECTION of the remaining work: **delete `insert`/`update`/`delete` from the
-PHP, Python and Node adapters** rather than adding them to Ruby's seven drivers,
-and **do not implement `createTable`/`addColumn` on any adapter at all**.
-
-### Measured on DRY, SOLID, LOC, CC (2026-07-30)
-
-The adapter layer in each framework, native engine, same scan shape:
-
-| | files | functions | LOC | avg CC | MI |
-| --- | --- | --- | --- | --- | --- |
-| python | 12 | 287 | 3971 | 3.58 | 24.5 |
-| php | 18 | **438** | **5823** | 3.14 | 26.1 |
-| **ruby** | **8** | **142** | **1335** | 2.89 | **30.7** |
-| node | 15 | 378 | 2677 | 2.29 | 28.6 |
-
-**Ruby does the same job in 1335 lines and 142 functions that PHP does in 5823
-and 438.** Four and a third times the code, three times the functions, for seven
-drivers versus ten adapters - so it is not a driver-count effect. Ruby also has
-the best maintainability index of the four (30.7 against PHP's 26.1) and the
-second-best average complexity behind Node, on half Node's function count.
-
-On the four axes this audit judges by:
-
-- **LOC**: Ruby, decisively. "Maintainability means less code" is the north star
-  and the tiebreak, and this is a 4.3x gap.
-- **DRY**: Ruby, structurally. One SQL builder in the facade versus one per
-  adapter. The 4.3x is largely that duplication made visible.
-- **CC**: Node on average (2.29), Ruby second (2.89) - but Ruby reaches it with
-  142 functions where Node needs 378, so Ruby carries less total complexity.
-- **SOLID**: PHP had the only DECLARED interface, which is what won it the row.
-  That is a real win and it is about having a contract, not about what is IN the
-  contract - and the contract it holds mixes six concerns and could not name its
-  own dialect.
-
-**The verdict inverts once the numbers are in.** PHP won on having an interface;
-Ruby wins on every axis that measures the code behind it. Promoting PHP's LIST
-would move the family toward 438 functions per adapter layer and away from 142.
-The right synthesis is PHP's DISCIPLINE (a declared, segregated contract, no
-optional members, loud on absence) applied to RUBY's SHAPE (CRUD in the facade,
-adapters thin).
-
-### The answer, derived rather than asked
-
-Applying the principles already on record instead of putting another fork to the
-owner:
-
-- **"Maintainability means less code"** is the stated north star, and the
-  tiebreak.
-- **Interface segregation** is the axis this row was explicitly decided on.
-- **ADR-0004: the best implementation prevails**, and parity flows both ways.
-
-Run those over the evidence and the answer is not "PHP's list, completed":
-
-**1. CRUD belongs in the FACADE, not on the adapter. Ruby was right.**
-Building `INSERT INTO x (a, b) VALUES (?, ?)` is not engine-specific work. Ruby
-does it once in the facade and hands the driver a statement; the other three do
-it in every adapter. Adopting PHP's split means writing that builder SEVEN more
-times in Ruby; adopting Ruby's means DELETING it from PHP, Python and Node.
-One of those directions is less code by a wide margin, and the north star names
-which. Only the parts that genuinely differ per engine stay per-adapter -
-Postgres' `RETURNING *`, which Ruby already models as an opt-in seam.
-
-**2. The contract splits by concern.** Twenty required methods on one interface
-fails the principle the row was judged on. The split follows the concerns
-already visible in the table above:
-
-| contract | methods | who implements |
-| --- | --- | --- |
-| **Connection** | open, close, autocommit, getDatabaseType | every adapter |
-| **Execution** | execute, executeMany, fetch, fetchOne | every adapter |
-| **Transaction** | startTransaction, commit, rollback | every adapter |
-| **Introspection** | getTables, getColumns, tableExists | every adapter |
-| **Schema** | createTable, addColumn | every adapter |
-| **Diagnostics** | lastInsertId, error | every adapter |
-
-CRUD (insert/update/delete) leaves the adapter contract entirely. That is 20
-required methods down to 16, and seven fewer SQL builders in the family.
-
-**3. `getDatabaseType` joins the contract.** It is a Connection concern and the
-prerequisite for Schema; leaving it off is what made `createTable` impossible to
-put on the adapter in the first place.
-
-**This REVERSES decision (a).** (a) was the wrong question to have asked - it
-offered "adopt the reference's shape" versus "keep Ruby's" without weighing that
-Ruby's shape is the one that produces less code across all four. The DRY
-argument for it was never put, which is the defect in how the choice was framed,
-not in the choice the owner made from it.
-
-**Sequencing that follows:** split the contract first (declaration only, no
-behaviour change), then implement Schema on the fifteen adapters, then delete
-per-adapter CRUD from PHP, Python and Node rather than adding it to Ruby's
-seven drivers.
-
-## Verdict: PROMOTE php on the interface, then complete it from node
-
-Decided on **SOLID (single responsibility and interface segregation)**.
-
-PHP has the best contract: a declared 18-method interface holding exactly one
-responsibility, with dialect translation kept in a separate trait. It is also the
-only one whose interface a contributor can read in one screen.
-
-Node has the most *complete* contract (it declares `createTable`, which the others
-leave implicit) and the cleanest facade separation, but it weakens the contract
-with optional members and mis-names two methods.
-
-Python has the worst separation (D2) and Ruby has no contract at all (D1), so both
-gain the most.
-
-So: PHP's shape, Node's completeness, no optional members, and Python's dialect
-helpers move to the translator that already exists in all four.
-
-## Pattern
-
-**One declared interface, one responsibility, no optional members, in all four.**
-
-The adapter contract - every method required, no exceptions:
-
-```
-  open()                          connect and become usable
-  close()                         release the connection
-  execute(sql, params)            write; raises on error
-  executeMany(sql, paramsList)    batch write in one transaction
-  fetch(sql, params, limit, offset)   read many -> DatabaseResult
-  fetchOne(sql, params)           read one -> row or null
-  insert(table, data)             -> write result
-  update(table, data, filter, params)  -> write result
-  delete(table, filter, params)   -> write result
-  startTransaction() / commit() / rollback()
-  getTables()                     -> list of table names
-  getColumns(table)               -> list of column descriptors
-  tableExists(name)               -> bool
-  createTable(name, columns)      -> bool
-  addColumn(table, name, definition)  -> bool
-  lastInsertId()                  -> id or null
-  error()                         -> last error message or null
-  autocommit(on)                  set per-statement commit
-```
-
-Four decisions in that list:
-
-1. **`getTables` / `getColumns`**, not `tables` / `columns`. Node renames; the
-   majority and the `get`-prefix convention already used for `getColumns`
-   everywhere else win.
-2. **`addColumn` and `createTable` are required, not optional.** Every engine can
-   do both; an adapter that cannot is not finished. This removes the
-   feature-detection branches from the facade.
-3. **`error()` and `lastInsertId()` are required in all four.** Python's facade
-   already needs both; it currently reaches around the interface to get them.
-4. **`autocommit` is required in all four.** PHP and Node gain it, which matters
-   because the autocommit contract (autocommit on for standalone writes, suppressed
-   inside an explicit transaction) is already agreed behaviour and is currently
-   enforced in only half the family.
-
-**SQL dialect translation is NOT on the adapter.** It lives in the `SQLTranslator`
-unit that PHP, Ruby and Node already have; Python's eight methods move there. An
-adapter declares its dialect name and the translator does the rewriting.
-
-Surface table for the facade, which is what application code touches:
-
-| concept | python | php | ruby | node |
+| Area | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
-| interface name | `DatabaseAdapter` | `DatabaseAdapter` | `DatabaseAdapter` (new) | `DatabaseAdapter` |
-| declare a driver | `register_driver(scheme, cls)` | `registerDriver($scheme, $class)` | `register_driver(scheme, klass)` | `registerDriver(scheme, cls)` |
-| dialect helpers | `SQLTranslator.*` | `SQLTranslator::*` | `SQLTranslator.*` | `SQLTranslator.*` |
+| Declared boundary | Fat base still includes CRUD; `connect` spelling | Interface still includes `query` + CRUD and omits two required declarations | Lean module excludes `execute_many` and `fetch_one`; several methods remain facade fallbacks | Fat sync interface includes CRUD/DDL and optional members |
+| `executeMany` result | Aggregate `DatabaseResult` | Adapter integer/union, facade integer | Aggregate `DatabaseResult` at facade | Adapter `{totalAffected}`, facade per-row array |
+| `fetchOne` | Adapter + facade | Adapter + facade | Facade/driver query path, not required contract | Adapter + facade, split sync/async |
+| Failure type | Mostly raises | Union/bool signatures permit silent failure | Raises, but expected MSSQL autocommit produces warnings | Several adapter CRUD methods return `success:false`; sync stubs deliberately throw for async engines |
+| Contract runner | Checks JSON floors, not actual boundary | Same | Same | Same plus allows optional members |
 
-Ruby's new interface is a module with every method raising
-`NotImplementedError`, and each of the six existing drivers includes it. That turns
-"read 828 lines and infer" into "implement this module", and it turns a missing
-method from a silent runtime skip into a loud failure at the point of the call.
+The previous fixture's statement that `executeMany` and `fetchOne` must not be
+on an adapter is therefore both architecturally wrong and contradicted by the
+code it claims to describe.
 
-## Conformance baseline (2026-07-30)
+## Owner decisions
 
-Step 2 done, before any interface is touched. `adapter_contract.json` is the
-20-method contract as DATA, byte-identical in all four (md5 `a2bcf0d4`) - rather
-than four hand-maintained interface declarations, which is exactly how the
-frameworks ended up with four different answers to "implement the Tina4 adapter
-interface". Every adapter in every framework reflected against it:
+Recorded from the 2026-08-10 review:
 
-| framework | adapters | conformance | consistent with each other? |
-| --- | --- | --- | --- |
-| **php** | 10 | **17/20** | yes - all ten identical |
-| python | 6 | 14/20 | yes - all six identical |
-| node | 7 | 14-15/20 | nearly - odbc and sqlite have one more |
-| **ruby** | 7 | **9-11/20** | **no** |
+1. The public framework must expose `fetchOne` and `executeMany` or batch.
+2. The audit may choose the consistent design without presenting artificial
+   options, and should ask only when project knowledge contradicts it.
+3. The audit finishes before framework coding.
 
-**PHP is confirmed as the reference by measurement, not just by reading.** Ten
-adapters, all missing exactly the same three (`createTable`, `addColumn`,
-`autocommit`). A contract that every implementation satisfies identically is a
-contract; that is what having one produces.
+ADR-0044 records the resulting boundary: both operations are required adapter
+primitives and public facade methods; diagnostic accessors leave the adapter.
 
-**Ruby is not merely lower, it is INCONSISTENT WITH ITSELF.** Firebird and
-Mongodb 9/20, Sqlite/Mysql/Mssql 10/20, Postgres 11/20. Seven drivers, three
-different levels of completeness. That is the D1 finding as a number: with no
-interface, each driver implements whatever its facade path happened to need, and
-the six `respond_to?` guards in `database.rb` paper over the rest. Nothing tells
-a contributor writing an eighth driver what to implement, and nothing tells a
-user which of the seven will silently skip.
+## Shared conformance fixture
 
-**CORRECTION (same day).** The first run of this probe reported 5-7/20 because it
-looked only for the contract's canonical names. Ruby spells several of them
-idiomatically - `connect` for `open`, `query` for `fetch`, `tables`/`columns`,
-`last_error` for `error`, `autocommit=`, `table_exists?` - and re-running with
-those variants gives 9-11/20. The corrected number is the one above. The shape of
-the finding is unchanged (lowest, and inconsistent with itself); the magnitude was
-overstated.
+The central `fixtures/adapter_contract.json` defines 40 cases across eight owed
+invariant groups. Its SHA-1 is
+`42468149fa21d64e293c7447c96a4a06235300c8`.
 
-**The corrected run surfaces something the raw count hid, and it changes the
-work.** Every Ruby driver is missing `fetch`, `fetch_one`, `insert`, `update` and
-`delete` - not because they were forgotten, but because **the FACADE does that
-work**. `Database#insert` builds the SQL and calls the driver's `execute`, and
-only consults `drv.insert` when a driver chooses to own it (PostgreSQL does, via
-`RETURNING *`). So Ruby splits responsibility between facade and driver
-differently from the other three, and the `respond_to?(:insert)` guard is not
-papering over a missing method - it is a deliberate opt-in seam.
+1. exact required boundary and no optional capabilities;
+2. facade delegation without facade reimplementation;
+3. native `fetchOne` result and error semantics;
+4. aggregate `executeMany` result semantics;
+5. standalone and nested transaction ownership;
+6. result types and fail-loud behavior;
+7. connection lifecycle and introspection;
+8. real-provider substitutability and mutation witnesses.
 
-That means Ruby's step is NOT "add eleven missing methods to seven drivers". It
-is a genuine architectural decision that has to be made first, and the plan did
-not anticipate it:
+Every framework runner must discover every case ID exactly once. A structural
+reflection check is necessary but not sufficient. Each behavioral invariant
+names an out-of-band witness such as a fresh connection, server row count,
+transaction probe or deliberate old-code mutation.
 
-- **(a)** adopt the other three's split - CRUD lives on the adapter - which is a
-  large move touching all seven drivers, or
-- **(b)** keep the facade-builds-SQL split and make the contract state that CRUD
-  is facade-level in Ruby with the driver seam optional, which means the contract
-  is no longer one list for all four.
+## Integration map
 
-**(a) is what the row's verdict implies** and (b) is what the code does today.
-This needs the owner before any Ruby driver is touched, because it decides
-whether the shared contract is genuinely shared.
+Implementation must update all of these together:
 
-Common gaps worth naming:
+- adapter interface/base/module/type declaration;
+- every built-in adapter and cache wrapper;
+- database factory and registry validation;
+- public `Database` facade;
+- connection pool and transaction pinning;
+- ORM write paths and migrations;
+- dev-admin and MCP database tools;
+- generated type declarations/package exports;
+- shared fixtures and four fail-closed runners;
+- framework docs, release notes and 3.14 migration notes.
 
-- **`autocommit` is missing from THREE frameworks** (php, node, ruby). The
-  autocommit contract - on for standalone writes, suppressed inside an explicit
-  transaction - is already agreed behaviour and is enforced in one framework.
-- **`createTable` / `addColumn` are missing almost everywhere**, which is what
-  makes them "optional" in Node's declaration. Every engine can do both.
-- **`error()` is missing from python, node and ruby.** Only PHP lets a caller ask
-  the adapter what went wrong.
-- **`open` is missing from python, node and ruby** because they spell it
-  `connect` or do it in the constructor. A naming divergence on the first method
-  anyone implements.
+## Breaking changes and migration
 
-This list IS the parity gap the methodology asks to capture. Nothing has moved
-yet.
+- Adapter authors add `executeMany`, `fetchOne`, `getDatabaseType` and
+  `autocommit` where missing, and implement the idiomatic async form in Node.
+- Adapter authors expose canonical `connect`; a temporary `open` alias must be
+  removed or explicitly deprecated before 3.14.0.
+- Adapter `fetch` returns a native record list; the public facade, not the
+  adapter, constructs the paginated `DatabaseResult`.
+- Adapter `executeMany` return values change from integer, `{totalAffected}` or
+  per-row array to the shared aggregate `DatabaseResult`.
+- Adapter `execute` changes from boolean/unknown/driver result unions to
+  `DatabaseResult`.
+- `query`, adapter CRUD, adapter DDL, `lastInsertId` and adapter `error` leave
+  the required interface. Public CRUD remains on `Database`.
+- Node adapter calls become consistently asynchronous; sync methods that only
+  say "Use ...Async" are removed from the contract.
+- Required optional members become hard requirements or move above the adapter.
+- Callers read generated ids from the operation result rather than performing a
+  second adapter `lastInsertId` call.
 
-## Methodology
+No removed name is silently reinterpreted. Any temporary alias needs an explicit
+deprecation and removal point before 3.14.0.
 
-Order matters more here than in any other row, because everything else depends on
-this layer.
+## Implementation backlog
 
-1. **Land feature 5 first.** It moves URL parsing into a value type, which removes
-   the largest single contributor to `createAdapter` (CC 22) and
-   `parseDatabaseUrl` (CC 43) before this row touches them. Doing 3 before 5 means
-   doing the same surgery twice.
-2. **Write the conformance suite before changing any interface** - one shared set
-   of contract tests that every adapter in every framework must pass (below). Run
-   it against all six engines in all four frameworks and record the baseline. Some
-   adapters will fail today; that list IS the parity gap and must be captured
-   before anything moves.
-3. **Ruby first**: add the `DatabaseAdapter` module with every method raising, make
-   all six drivers include it, then delete the `respond_to?` guards one at a time.
-   Each deleted guard either passes (the method exists) or surfaces a real gap.
-4. **Python second**: move the eight dialect methods to `SQLTranslator`. Pure
-   extraction, no behaviour change, and it should visibly move the LOC and MI
-   numbers. Then add `lastInsertId`, `error`, `query` to the interface.
-5. **Node third**: rename `tables`/`columns`, make the two optional members
-   required, implement them where missing.
-6. **PHP last**: add `autocommit` and `createTable`/`addColumn`. Smallest change,
-   because PHP's interface is the model.
-7. Re-measure. The MI floor of 40 is not reachable in one pass on a 1573-line
-   file; the target for this row is **no regression and a measurable improvement in
-   Python** (from the D2 extraction). Getting all four to 40 is a separate,
-   larger plan and should be filed as such rather than pretended at here.
+1. Wire new fail-closed runners to every fixture case and capture the expected
+   red baseline at the four exact HEADs.
+2. Define the shared `DatabaseResult` adapter signatures and registration-time
+   completeness check.
+3. Implement Python boundary cleanup and remove facade/adapter duplicated CRUD.
+4. Implement PHP interface cleanup, uniform result types and direct delegation.
+5. Implement Ruby required `execute_many` / `fetch_one` primitives and remove
+   fallback/feature-detection paths; fix expected autocommit warnings.
+6. Replace Node's sync/async split with one async adapter contract, normalize
+   batch results and make the facade delegate.
+7. Run SQLite plus live PostgreSQL, MySQL, MSSQL, Firebird, MongoDB and ODBC
+   where provisioned. A configured service may not skip.
+8. Run deliberate mutations: remove a required method, restore Node per-row
+   results, force a nested batch commit, swallow a bad fetch, scatter a batch
+   across pool connections and disable atomicity.
+9. Run all four full suites on the lab at the implementation HEADs.
+10. Add the 3.14 breaking migration guide and flip each fixture invariant from
+    owed to proven only after all four runners pass.
 
-## Tests to write
+## Porting capsule
 
-A **conformance suite**, not per-framework unit tests: one contract, run against
-every adapter. This is the pattern that already worked for the migration bookkeeping
-table and the Frond corpus.
+A new language implements Feature 3 without reading another runtime:
 
-Real engines only. SQLite always; PostgreSQL, MySQL, MSSQL, Mongo from the live
-infra; Firebird from the server in task #312. No mocks - an adapter test that does
-not touch its engine tests nothing.
+1. Define the fourteen required adapter capabilities above with no optionals.
+2. Define the shared native `DatabaseResult` and record shapes.
+3. Implement one real SQLite adapter first.
+4. Build the public facade so `executeMany` and `fetchOne` delegate directly.
+5. Add explicit adapter registration that rejects incomplete implementations.
+6. Add one-connection transaction pinning and the autocommit rules.
+7. Add PostgreSQL or another network adapter to prove the interface is not
+   SQLite-specific.
+8. Run every shared fixture case against real engines.
+9. Prove the negative mutations fail.
+10. Only then expose the adapter through ORM, migration, cache and tooling
+    integrations.
 
-| pair | positive | negative |
-| --- | --- | --- |
-| contract completeness | `every_adapter_implements_every_interface_method` - reflect over the interface and the class | `no_interface_method_is_optional` - kills Node's `?` members and Ruby's duck-typing |
-| loud absence | `an_incomplete_adapter_raises_not_implemented` | `an_incomplete_adapter_is_never_silently_skipped` - the Ruby `respond_to?` reproduction |
-| naming | `introspection_is_named_get_tables_and_get_columns` | `no_framework_exposes_tables_or_columns_unprefixed` |
-| separation | `the_adapter_declares_no_sql_translation_method` | `sql_translation_is_reachable_only_through_the_translator` - the Python D2 reproduction |
-| read contract | `fetch_returns_a_result_with_records_and_count`, `fetch_one_returns_null_when_no_row_matches` | `fetch_raises_on_bad_sql_and_records_the_cause` |
-| write contract | `insert_reports_a_last_insert_id`, `execute_many_is_atomic` | `execute_never_returns_false_on_error` |
-| introspection | `get_tables_lists_a_created_table`, `get_columns_describes_every_column` | `table_exists_is_false_for_a_missing_table` |
-| schema | `create_table_then_add_column_both_report_success` | `create_table_on_an_existing_table_does_not_raise_already_exists` |
-| transaction | `a_rolled_back_write_is_not_visible` | `a_committed_write_is_never_lost` |
-| autocommit | `a_standalone_write_is_durable_without_an_explicit_commit` | `a_write_inside_a_transaction_is_not_committed_early` |
-| engine parity | `every_engine_returns_the_same_shape_for_the_same_query` | `no_engine_returns_a_field_the_others_lack` |
+## Audit closure checklist
 
-The contract-completeness pair is the one that makes this stick: it reflects over
-the declared interface and asserts the class implements it, so a future adapter
-cannot ship half-finished and a future interface addition cannot be quietly
-skipped by three of six drivers.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Provider and transaction behavior complete.
+- [x] Existing-language contradictions recorded.
+- [x] Owner direction recorded.
+- [x] Proposed shared cases and mutation witnesses complete.
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule is clean-room sufficient.
 
-## Risks
-
-- **This is the highest-risk row in the audit.** Every feature reaches the
-  database through this layer, so a mistake here surfaces everywhere at once. That
-  is the argument for the conformance suite landing before any interface edit.
-- **Ruby's `respond_to?` removal will surface real gaps.** Expect drivers missing
-  methods the facade quietly worked around. Each one is a genuine bug that has been
-  invisible; do not fix it inside the interface change, file it and fix it with its
-  own test.
-- **D2 is a pure extraction and should be behaviour-neutral.** If it is not, the
-  translation methods had per-adapter overrides that the extraction would flatten -
-  check for overrides in every Python adapter before moving anything.
-- **Making optional members required is breaking for any third-party adapter.**
-  Unlikely to exist outside the repo, but it is a public interface, so it needs a
-  `Breaking:` entry.
-
-## Parked
-
-Not implemented. Sequenced **after feature 5** (which removes the URL parsing this
-row would otherwise refactor twice) and after feature 4 (the write-path P1, which
-touches the same facade methods). Recommend: 6, 4, 5, then 3.
+**Audit conclusion:** Feature 3 is contract-complete and implementation-red. It
+must not be described as shipped or parity-complete until the new behavioral
+fixture is executed by all four runners on real providers.
