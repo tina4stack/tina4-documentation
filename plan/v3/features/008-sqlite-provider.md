@@ -2,7 +2,7 @@
 
 ## Identity and status
 
-- Matrix identity: 8 — SQLite provider
+- Matrix identity: 8 - SQLite provider
 - Audit state: decision-ready
 - Audit note: Decision-ready; implementation deliberately not started
 - Dependencies: Features 3, 4 and 5.

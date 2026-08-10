@@ -2,7 +2,7 @@
 
 ## Identity and status
 
-- Matrix identity: 9 — PostgreSQL provider
+- Matrix identity: 9 - PostgreSQL provider
 - Audit state: decision-ready
 - Dependencies: Feature 3 adapter interface, Feature 4 URL parser, Feature 5 write
   facade, Feature 7 SQL translator

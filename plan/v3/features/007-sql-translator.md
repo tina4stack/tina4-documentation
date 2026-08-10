@@ -2,9 +2,9 @@
 
 ## Identity and status
 
-- Matrix identity: 7 — SQL translator
+- Matrix identity: 7 - SQL translator
 - Audit state: decision-ready
-- Dependencies: Feature 3 — Database adapter interface; Feature 6 — Query builder
+- Dependencies: Feature 3 - Database adapter interface; Feature 6 - Query builder
 - Dependants: Features 8-14 database providers, Feature 15 migrations, Feature 17 ORM
   base class, Feature 24 paginated results
 - Existing ADRs: ADR-0044 governs batch and first-row execution as adapter primitives;

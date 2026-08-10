@@ -2,7 +2,7 @@
 
 ## Identity and status
 
-- Matrix identity: 10 — MySQL provider
+- Matrix identity: 10 - MySQL provider
 - Audit state: decision-ready
 - Dependencies: Feature 3 adapter interface, Feature 4 URL parser, Feature 5 write facade
   (decision A: affected_rows = matched rows), Feature 7 SQL translator (batch, FIRST_ID)
