@@ -1,237 +1,480 @@
-# Feature 8: The health check endpoint
+# Feature 008: Health and readiness endpoints
 
-Audited 2026-07-31. Part of `98-feature-audit.md`. Measured, fixed, and shipped
-on `feature/audit-008` in all four framework repos.
+## Identity and status
 
-This is a wire contract. A Kubernetes probe, a load balancer, or an uptime
-monitor reads it, so the path, the JSON shape and the status code matter more
-than anything inside the handler.
+- Matrix identity: 8 — Health check endpoint
+- Audit state: decision-ready; implementation is deliberately deferred
+- Release boundary: v3 / 3.14.0; parity-breaking corrections are permitted
+- Dependencies: Feature 1 dotenv, Feature 6 dispatch and Feature 7 middleware
+- Dependants: Docker images, generated deployment manifests and monitoring
+- Existing decision: ADR-0016
+- Current shared fixture: `fixtures/health_contract.json` version 1
+- Re-audit date: 2026-08-10
 
-## Files
+Feature 8 is **not complete**. All four focused suites pass and all four ports
+produce the approved four-key liveness body, but those suites only prove the
+happy path. In every port application middleware can turn liveness into a 503,
+and application routing can replace or shadow the endpoint. Readiness is absent,
+three ports emit cacheable responses, three use wall-clock time for uptime, no
+Dockerfile has a `HEALTHCHECK`, and the shared fixture checker does not execute
+the contract it reports as proven.
 
-| | handler | registration |
-| --- | --- | --- |
-| python | `tina4-python/tina4_python/core/server.py` (`_health_handler`) | same file, module level |
-| php | `tina4-php/Tina4/App.php` (`getHealthData`) | same file (`registerHealthCheck`) |
-| ruby | `tina4-ruby/lib/tina4/health.rb` (`handle`) | same file (`register!`) |
-| node | `tina4-nodejs/packages/core/src/health.ts` (`buildHandler`) | same file (`createHealthRoutes`) |
+This audit changes no framework source. It replaces the old record of repairs
+with the clean-room contract and implementation formula required for this port
+and for any future Tina4 language.
 
-## Measurements
+## Why this feature exists
 
-Real servers, real HTTP over loopback, no mocks. macOS 26.5 (darwin arm64),
-Python 3.13, PHP 8.5.7, Ruby 4.0.2, Node 24.9.0, all four at 3.13.94.
+An operator needs two small, dependable signals:
 
-State BEFORE this audit:
+- **liveness:** can this Tina4 process answer HTTP at all? Failure permits a
+  restart;
+- **readiness:** can this instance serve its configured application workload
+  now? Failure withdraws traffic but does not restart the process.
 
-| | default path | `/health` | `/__health` | degraded | probes a dependency |
-| --- | --- | --- | --- | --- | --- |
-| python | `/__health` | 200 | 200 | **503** | no |
-| php | `/health` | 200 | **404** | never | no |
-| ruby | `/__health` | 200 | 200 | never | no |
-| node | `/__health` | 200 | 200 | never | no |
+These endpoints are machine contracts, not diagnostic pages. They must keep
+working when application authentication, rate limiting, middleware, routes or a
+dependency are failing. An engineer must not write a probe handler, translate a
+language-specific payload, install `curl` in a production image, or know Tina4
+internals to deploy an application safely.
 
-The bodies, exactly as they came off the wire:
+## Boundary
 
-```
-python  {"status":"ok","uptime_seconds":0,"version":"3.13.94","framework":"tina4py","errors":0}
-php     {"status":"ok","version":"3.13.94","uptime":0,"framework":"tina4-php"}
-ruby    {"status":"ok","version":"3.13.94","uptime":0.86,"framework":"tina4-ruby"}
-node    {"status":"ok","version":"3.13.94","uptime":0.08,"framework":"tina4-nodejs"}
-```
+Feature 8 owns:
 
-**No framework probes any dependency.** Not the database, not the cache, not the
-queue, not the network. Every one of these endpoints reports process state only.
-That was confirmed in the source of all four and on the wire: pointing the app at
-a dead database changes nothing in the response.
+- reserved liveness and readiness paths and their aliases;
+- bootstrap timing, path validation and route-conflict behavior;
+- isolation from the application middleware and route pipeline;
+- exact methods, status codes, headers and JSON schemas;
+- the liveness uptime clock and lifecycle;
+- the readiness-check registry, execution, timeout and aggregation rules;
+- framework-provided checks for activated dependencies;
+- Swagger descriptions for both system endpoints;
+- repository and generated Dockerfile `HEALTHCHECK` instructions;
+- generated Kubernetes probes;
+- the executable parity fixture and four language runners.
 
-## What differed
+It delegates:
 
-**1. Python could report failure. The other three could not.** Python returned
-503 when a `.broken` sentinel existed. PHP, Ruby and Node have no failure path at
-all; they always answer 200 with `"status":"ok"`. They satisfied "never falsely
-restart" by being blind, not by design.
+- environment parsing and OS-over-dotenv precedence to Feature 1;
+- ordinary route matching and HTTP method semantics to Feature 6;
+- application middleware behavior to Feature 7;
+- database, cache, session and queue connection mechanics to their adapters;
+- diagnostic `.broken` files and error presentation to the dev/error features;
+- graceful process termination to Feature 9.
 
-**2. Python's 503 was the worst bug in the feature.** `_write_broken()` is called
-from the REQUEST path, so any unhandled exception in any route wrote
-`data/.broken/<timestamp>_<ErrorType>.broken`, and the handler returned 503 while
-one existed. Nothing cleared the directory at boot. Measured end to end:
+The adapter features own a cheap, non-mutating dependency probe. Feature 8 owns
+when those probes run and how their results become readiness.
 
-```
-GET /health                        -> 200
-GET /boom  (a route that raises)   -> 500   and writes data/.broken/*.broken
-GET /health                        -> 503
-.broken files on disk              -> ["2026-07-31T180350_ValueError.broken"]
-...process restarted...
-GET /health                        -> 503   still
-```
+## Existing implementation evidence
 
-Under a Kubernetes `livenessProbe` that is a CrashLoopBackOff caused by one bad
-request. It is worse than a dependency outage, because a dependency comes back
-and a file on disk does not. And it is the wrong signal in the first place: a
-liveness failure means RESTART, and a restart cannot repair a route file that
-fails to import. It will fail to import again.
+| Evidence | Python | PHP | Ruby | Node |
+| --- | --- | --- | --- | --- |
+| Handler and registration | `tina4_python/core/server.py` | `Tina4/App.php` | `lib/tina4/health.rb` | `packages/core/src/health.ts` |
+| Default path | `/__health` | `/__health` | `/__health` | `/__health` |
+| Permanent alias | `/health` | `/health` | `/health` | `/health` |
+| Exact four-key body | yes | yes | yes | yes |
+| Process-only when called directly | yes | yes | yes | yes |
+| Immune to application middleware | **no** | **no** | **no** | **no** |
+| Immune to application routing | **no** | **no** | **no** | **no** |
+| Monotonic uptime source | **no** | **no** | yes | **no** |
+| `Cache-Control: no-store` | **no** | yes | **no** | **no** |
+| Readiness endpoint | no | no | no | no |
+| Dockerfile `HEALTHCHECK` | no | no | no | no |
 
-**3. PHP answered neither documented path reliably.** `/__health` returned 404 on
-a default install, though `docs/php/33-environment-variables.md` documents
-`/__health` as the default in all four languages. Worse, PHP registered the
-configured path ONLY, so setting the env var deleted the old path:
+Audited source heads were Python `29feeab`, PHP `c75c7b0e`, Ruby `ea3aa88` and
+Node `813b50b`, all on the staging `v3` branch. Their one local commit ahead of
+origin only wires the approved Feature 1 fixture and does not change Feature 8.
 
-```
-TINA4_HEALTH_PATH=/healthz
-  /healthz -> 200
-  /health  -> 404      (Python, Ruby and Node all keep /health here)
-```
+The serialized lab baseline used root through
+`/root/tina4-lab/with-lab-lock.sh`. Results against the current v3 lab clones:
 
-An operator adding a Kubernetes-friendly path silently removed the path their
-load balancer was already using.
+| Framework | Focused result |
+| --- | --- |
+| Python | 7 passed |
+| PHP | 10 tests, 17 assertions |
+| Ruby | 11 examples |
+| Node | 7 passed over real HTTP |
 
-**4. Ruby's registration could be suppressed entirely.** `Health.register!`
-guarded itself with `find_route("/health", "GET")`, but the signature is
-`find_route(METHOD, PATH)`. The arguments were swapped. Usually that matched
-nothing and the guard did nothing, but an ANY route matches any path, so an
-ordinary catch-all made the guard fire and health was never registered:
+Those green numbers are characterization, not parity proof. Version 1 of the
+fixture names selected test files and case-title strings; its checker searches
+normalized source text. It runs none of the four implementations and covers
+only 15 case/language pairs instead of applying every portable invariant to all
+four languages.
 
-```
-Tina4::Router.any("/{slug}") { ... }   # a CMS catch-all
-Tina4::Health.register!
-routes         -> ["ANY /{slug}"]      # health absent entirely
-GET /__health  -> {"page":"cms catch-all"}
-```
+## Platform authority
 
-**5. Three smaller wire divergences.** Python emitted `uptime_seconds` as an int
-where the other three emit `uptime` as a float to 2 decimal places. Python named
-itself `tina4py`; the others use the hyphenated package name. Only PHP sent
-`Cache-Control: no-store`.
+ADR-0016's liveness/readiness split remains correct. Kubernetes defines
+liveness failure as a reason to restart a container and readiness failure as a
+reason to remove a Pod from Service endpoints. It also warns that incorrect
+liveness probes can cause cascading failures. A startup probe can suppress both
+until initialization succeeds. See the current
+[Kubernetes probe documentation](https://kubernetes.io/docs/concepts/workloads/pods/probes/).
 
-**6. The docs described a contract no framework implemented.** All four language
-docs claim "returns 503 on broken files" and a `/__health` default. Only Python
-did the first; PHP did not do the second. `docs/python/index.md` documents
-`{"status": "ok", "uptime": 123.4}`, which Python did not emit.
+Docker assigns health from the probe command's exit status: `0` is healthy,
+`1` is unhealthy and `2` is reserved. It supplies interval, timeout,
+start-period and retry controls, and only the final `HEALTHCHECK` instruction in
+a Dockerfile applies. See the current
+[Dockerfile reference](https://docs.docker.com/reference/dockerfile/#healthcheck).
 
-## The decision, and whose authority it rests on
+Neither platform requires a particular JSON body. Tina4 therefore owns that
+small wire schema and keeps it identical in every language.
 
-Per ADR-0012 the authority order is standard, then the platforms' own behaviour,
-then add-on libraries, then internal precedent. For a health endpoint the
-governing authority is the deployment target, and Docker plus Kubernetes is the
-default target for Tina4.
+## Bootstrap and system-route ownership
 
-**A failing health check returns a non-2xx status.** Nothing reads the body. A
-`kubectl` httpGet probe and `curl -f` inside a Docker `HEALTHCHECK` both act on
-the status code alone, so 200 with `"status":"unhealthy"` in the payload is
-invisible to the thing meant to act on it. No Tina4 framework did this, so
-nothing had to be removed. It is recorded so nothing introduces it.
+Health routes are reserved **system routes**, not ordinary application routes.
+Bootstrap order is:
 
-**Liveness and readiness are different questions and must not share an
-endpoint.** A liveness failure restarts the container. A readiness failure
-withdraws traffic and restarts nothing. Wiring a dependency check into liveness
-turns one database outage into a fleet-wide restart, and the restart does not fix
-the database. That is the decisive split, and it settles Python's 503:
+1. initialize framework constants and load Feature 1 dotenv;
+2. resolve the effective paths using OS-over-dotenv precedence;
+3. validate every path and reserve it in the system-route table;
+4. discover application routes and reject an exact reserved-path declaration;
+5. initialize activated dependency adapters and their readiness checks;
+6. start accepting traffic;
+7. capture the monotonic server-instance start point exactly once.
 
-- A recorded route error is not a liveness failure. A restart cannot fix it.
-- It is not a readiness failure either. One broken route should not withdraw all
-  traffic from an app whose other routes serve fine.
-- So it belongs in the body as a diagnostic and nowhere near a status code.
+The system-route table is dispatched before application route matching and
+before all user/global/group/route middleware. Authentication, sessions, CSRF,
+rate limiting, response caching and dependency middleware never run for these
+paths. Framework-owned transport behavior may still add request IDs, security
+headers and request logs provided it cannot short-circuit or change the probe
+status.
 
-**Liveness is process-only, and the response itself is the signal.** `/__health`
-answers 200 whenever it runs. The only way it fails is that the process cannot
-answer, which is exactly the condition a restart repairs.
+An application declaring an exact `GET`, `HEAD`, `OPTIONS` or catch-all-method
+route on a reserved literal path fails startup with the path and source. A
+parameterized application catch-all is allowed, but the exact system route wins.
+System registration is idempotent and cannot be replaced by later route or
+hot-reload registration.
 
-## What was fixed
+This is intentionally stronger than ordinary Feature 6 specificity. A probe
+must never receive an application's CMS catch-all body while still returning
+200.
 
-| Fix | Frameworks | Breaking |
-| --- | --- | --- |
-| `/health` no longer 503s on a route error | python | yes |
-| stale `.broken` sentinels cleared at boot | python | no |
-| `uptime_seconds` int becomes `uptime` float | python | yes |
-| `framework` becomes `tina4-python` | python | yes |
-| `/__health` registered | php | no, additive |
-| `/health` always kept as an alias | php | no, additive |
-| `register!` no longer suppressed by a catch-all | ruby | no |
-| `errors` / `latest_error` dropped from the body | python | yes |
-| `_start_time` seeded at import | python | no |
+## Liveness contract
 
-All four now answer both `/__health` and `/health`, so one probe definition works
-against any Tina4 app. Python, Ruby and Node already did this; PHP was the gap.
+### Paths and methods
 
-The body is now exactly four keys in all four frameworks: `status`, `version`,
-`uptime`, `framework`. Python's `errors` and `latest_error` went with the 503.
-Once they stopped driving the status code they were pure diagnostics, and
-diagnostics do not belong on a probe path that Kubernetes never reads. Removing
-one key from one framework is also less code than pulling an error count out of
-three different internal trackers and inventing a fourth wire field.
+- `TINA4_HEALTH_PATH` selects the primary path; default `/__health`.
+- `/health` is always present as a permanent compatibility alias.
+- A custom primary path replaces the default `/__health`; it does not remove
+  `/health`.
+- `GET` and `HEAD` are supported. `HEAD` has the same status and headers as
+  `GET` and no body.
+- `OPTIONS` follows the Feature 6 automatic method contract.
+- Other methods receive the canonical 405 and can never fall through to an
+  application route.
 
-The `.broken` machinery stays. It has real consumers beyond health: the dev
-dashboard reads it in all four frameworks, and Python's MCP tools read it too. It
-was checked before being touched, and it is not dead code. Error diagnostics live
-there now.
+### Status and body
 
-One latent bug surfaced while measuring `uptime`: Python's `_start_time` defaulted
-to `0`, so any read before `run()` stamped it reported seconds since 1970 rather
-than seconds since boot. It is now seeded at import.
+Liveness returns 200 whenever the server's system dispatcher can answer. It
+does not inspect a database, cache, queue, filesystem sentinel, route import,
+outbound network or recent application errors. A process too deadlocked or
+broken to dispatch HTTP produces no successful response, which is the failure
+signal the orchestrator needs.
 
-Tests, every one proven red against the unfixed code first:
+The GET body has exactly these four keys:
 
-- `tina4-python/tests/test_health_liveness.py`, 6 cases, 4 confirmed red
-- `tina4-php/tests/HealthCharacterisationTest.php`, 10 cases, 2 confirmed red
-- `tina4-ruby/spec/health_registration_spec.rb`, 5 cases, 2 confirmed red
-
-## What was deliberately left
-
-**Readiness is specified, not built.** A readiness endpoint that probes only the
-dependencies an app actually configured, per backend, tested against real
-services in four languages, is a feature rather than an audit fix. It is
-specified in ADR-0016 and scheduled separately.
-
-**`Cache-Control: no-store` is still PHP-only.** A cached health response lets a
-load balancer keep routing to a dead instance. PHP sends the header globally;
-Python, Ruby and Node send none. Worth closing, not closed here.
-
-**No `HEALTHCHECK` in any Dockerfile.** Not one of the four repo Dockerfiles, and
-none of the generated ones, carries a `HEALTHCHECK` instruction. This was left
-undone rather than half done: the Docker daemon was unavailable on the audit
-machine, so the instruction could not be built and run. The risk that makes
-verification necessary is concrete: several of these images are Alpine or
-distroless, and a `HEALTHCHECK` calling `curl` in an image without `curl` fails
-every probe. Anyone adding it must build each image and watch the container reach
-`healthy`. Note for the docs when it lands: plain `docker run` does not restart a
-container on healthcheck failure. Only Swarm and Kubernetes act on it.
-
-**Route precedence was reported, not fixed here, and has since been fixed on
-v3.** A catch-all ANY route shadowed a specific GET at dispatch, because
-`find_route` built its candidate list as `ANY + method` and returned the first
-match. So an app with a catch-all served that catch-all on the health path even
-though the health route was correctly registered. That is a framework-wide route
-contract rather than a health concern, so this audit reported it and left it
-alone; it was fixed separately on v3 in `tina4-ruby 0ad2de1` under ADR-0015,
-which also moved `register_builtin_routes!` into `initialize!` ahead of route
-discovery. That commit is merged into this branch.
-
-The two fixes are independent and both are needed. Reinstating the old
-swapped-argument guard on top of the merged router fix turns two specs red
-again, so removing the guard remains a fix and has not become redundant: the
-router change corrects which route WINS, while the guard bug decided whether
-health was ever REGISTERED. Precedence cannot help when the health route is not
-in the table at all.
-
-## Migration
-
-The Python health body changed shape. Old and new, side by side:
-
-```
-old  {"status":"ok"|"error","uptime_seconds":<int>,"version":"...",
-      "framework":"tina4py","errors":<int>,
-      "latest_error":{...}}                          503 when errors > 0
-new  {"status":"ok","version":"...","uptime":<float>,
-      "framework":"tina4-python"}                    always 200
+```json
+{
+  "status": "ok",
+  "version": "3.14.0",
+  "uptime": 12.34,
+  "framework": "tina4-python"
+}
 ```
 
-A probe asserting 503-on-`.broken` must stop asserting it. There is nothing to
-probe for yet; dependency readiness arrives with ADR-0016. A consumer reading
-`uptime_seconds` reads `uptime` instead and gets a float. A consumer matching
-`framework == "tina4py"` matches `"tina4-python"`. A consumer reading `errors` or
-`latest_error` reads them from the dev dashboard instead; `data/.broken` is still
-written and the dashboard still surfaces it.
+Rules:
 
-Both renames move Python onto the shape its three siblings already used and the
-shape the published docs already described. Python was the outlier against its
-own documentation.
+- `status` is exactly `"ok"`;
+- `version` is the runtime's public Tina4 version and must match the packaged
+  artifact/release tag;
+- `uptime` is a JSON number of elapsed seconds, non-negative and rounded to two
+  decimal places;
+- uptime comes from a monotonic clock and never decreases for one server
+  instance, even if the system clock changes;
+- creating or re-registering routes never resets uptime;
+- `framework` is exactly `tina4-python`, `tina4-php`, `tina4-ruby` or
+  `tina4-nodejs`; another port uses its canonical published package ID;
+- no diagnostic or dependency keys are added.
+
+JSON has one number type, so the old fixture's requirement that uptime be a
+“float” is not portable. `0`, `0.0` and `0.00` are semantically the same JSON
+number. The portable requirement is a non-negative number rounded to hundredths.
+
+### Headers
+
+Both successful methods send:
+
+- `Content-Type: application/json` for GET;
+- `Cache-Control: no-store`;
+- no `ETag` or `Last-Modified` validator.
+
+A liveness response is instance- and time-specific. Caching or revalidating it
+can return an old healthy answer for the wrong moment. HEAD retains the GET
+representation headers, including content length when the transport normally
+provides it, while suppressing the body.
+
+## Readiness contract
+
+### Paths and status
+
+- `TINA4_READINESS_PATH` selects the primary path; default `/__ready`.
+- `/ready` is always present as a permanent compatibility alias.
+- The same validation, reservation, methods, middleware isolation and cache
+  headers as liveness apply.
+- No registered checks means ready: 200 with an empty `checks` object.
+- Every required check passing returns 200.
+- Any thrown, malformed, failed or timed-out check returns 503.
+- A readiness failure never changes liveness and never writes `.broken`.
+
+The GET body has exactly five top-level keys:
+
+```json
+{
+  "status": "error",
+  "version": "3.14.0",
+  "uptime": 12.34,
+  "framework": "tina4-python",
+  "checks": {
+    "database": {"status": "error", "latency_ms": 5000}
+  }
+}
+```
+
+`status` is `"ok"` or `"error"`. The first four fields reuse the liveness
+rules. `checks` is an object sorted by canonical check name. Every value has
+exactly `status` and non-negative integer `latency_ms`; no exception text,
+connection string, host, credential, query or stack trace is exposed.
+
+### Registry and execution
+
+Each port exposes idiomatic equivalents of:
+
+```text
+Readiness.register(name, check)
+Readiness.unregister(name)
+Readiness.list()
+Readiness.clear_application_checks()
+```
+
+Names are non-empty lowercase identifiers matching `[a-z][a-z0-9_-]*`.
+Duplicate names fail registration; they do not silently replace a check. The
+list surface exposes name and owner, not secrets. Framework-owned adapter checks
+survive an application-check clear.
+
+An activated required database, cache, session store or queue registers one
+framework-owned check under its canonical name. A configured but optional
+integration does not become a required dependency merely because its package is
+installed. Applications may register other required checks explicitly.
+
+Checks are side-effect-free and use the live adapter's cheapest native probe:
+no schema changes, writes, dequeue, publish, reconnect loop or outbound retry
+storm. All checks start concurrently and are collected in sorted-name order.
+`TINA4_READINESS_TIMEOUT` is a native Feature 1 number of seconds, defaults to
+`5`, must be greater than zero, and is one hard deadline for the whole request.
+Work still running at the deadline is cancelled where the runtime permits and
+reported as error. Consecutive requests do not share a result cache.
+
+## Path configuration
+
+Both configured paths use the Feature 6 exact literal system-path validator:
+
+- absolute and beginning with one `/`;
+- no parameter, wildcard, query, fragment or backslash syntax;
+- no control characters, whitespace-only segments or traversal segments;
+- not `/`, and not equal to another reserved system path;
+- no silent trimming, leading-slash insertion or other repair.
+
+An unset or empty variable selects its default. A non-empty invalid value fails
+startup outright with the variable name and value location. Resolution occurs
+after dotenv, so an OS value wins and a `.env` value is not lost to an early
+module-import snapshot. The effective path is fixed for that server instance;
+changing the process environment later does not mutate a live routing table.
+
+## Swagger contract
+
+Both primary system endpoints and their permanent aliases are described under
+the `System` tag even when Swagger serving is disabled by default. Their
+descriptions state the operational meaning, status codes, exact response schema
+and that no authentication is required. Readiness documents 503. Generated
+clients may omit system operations, but the OpenAPI document must not invent a
+different body or mark the routes secure.
+
+## Docker and Kubernetes contract
+
+Every repository Dockerfile and every generated Dockerfile includes exactly one
+runtime-native liveness `HEALTHCHECK`. It targets `/health`, not a configurable
+path, because that alias is permanent. It checks for an HTTP success status and
+exits 1 otherwise. It uses a runtime standard library already present in the
+image rather than assuming `curl` or `wget` exists.
+
+The common policy is:
+
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 CMD <runtime-native GET /health or exit 1>
+```
+
+The command must have a hard client timeout below the Docker timeout and must
+not treat a received 404/503 as success. Each image is built and run on the lab;
+CI waits until `docker inspect` reports `healthy`, then proves an intentionally
+wrong probe reports `unhealthy`. The existing image gate that verifies `/health`
+over the published port and matches the served version to the tag remains.
+
+Generated Kubernetes manifests use:
+
+- `startupProbe` on `/health` with a budget suitable for application startup;
+- `livenessProbe` on `/health`;
+- `readinessProbe` on `/ready`.
+
+They never point readiness at liveness. Generated values expose probe timing,
+not alternate body schemas. Deployment documentation explains that liveness
+restarts, readiness withdraws traffic, and Docker health status alone does not
+promise an automatic restart policy.
+
+## Contradictions and defects measured on 2026-08-10
+
+| ID | Severity | Measured contradiction | Required correction |
+| --- | --- | --- | --- |
+| H8-01 | P1 | A dependency-style global middleware made `/health` return 503 in all four ports. Liveness therefore depends on application middleware despite ADR-0016's process-only rule. | dispatch reserved system routes before the application middleware pipeline |
+| H8-02 | P1 | Python, PHP and Ruby allowed a later exact app route to replace `/health`; Node served a previously registered `/{slug}` catch-all body on `/health`. | reserve exact system paths, reject literal conflicts and give system routes an unshadowable dispatch tier |
+| H8-03 | P1 | Readiness is absent in all four ports. Existing deployment plans/manifests point both readiness and liveness at `/health`, so a dependency outage cannot withdraw traffic without abusing liveness. | implement the readiness registry/endpoint and generate distinct probes |
+| H8-04 | P2 | Python uses `time.time`, PHP `microtime(true)` and Node `Date.now`; all are wall clocks that can jump. Node also resets its module start time whenever health routes are created. Only Ruby uses `CLOCK_MONOTONIC`. | capture one monotonic server start point and calculate nondecreasing elapsed time |
+| H8-05 | P2 | Only PHP sends `Cache-Control: no-store`. Python, Ruby and Node omit it; Python also emitted an ETag for the dynamic body. | canonical no-store/no-validator response finalization for GET and HEAD |
+| H8-06 | P2 | Python resolves `TINA4_HEALTH_PATH` at module import. Its package imports the server before CLI dotenv loading, so a `.env` path can arrive too late; the other ports resolve during setup. | resolve after Feature 1 and snapshot during server bootstrap |
+| H8-07 | P2 | Invalid-path behavior differs: Node trims and inserts `/`, PHP/Ruby insert `/`, and Python accepts the raw value. | use one strict literal-path validator and fail startup instead of repairing input |
+| H8-08 | P2 | `health_contract.json` v1 applies most invariants to only one or two ports. `audit-health-contract.py` searches case-title text and prints OK without executing behavior. | replace with executable data, four consumers and a central result validator |
+| H8-09 | P2 | No repository or generated Dockerfile has a `HEALTHCHECK`, although the lab Docker daemon is available for real image verification. | add runtime-native checks and gate healthy/unhealthy transitions on built images |
+| H8-10 | P2 | Deployment and console plans still describe Python's removed `.broken`-driven 503 and use `/health` for readiness. | update deployment, environment and error-handling documentation from the approved contract |
+| H8-11 | P3 | Existing suites prove advancing uptime by sleeping and do not test clock rollback, middleware isolation, reserved paths, headers, HEAD, env timing, readiness, fixture consumption or images. | add deterministic clock seams and the full parity matrix below |
+
+No framework source was changed during this audit.
+
+## Executable parity fixture version 2
+
+`health_contract.json` becomes runtime-neutral input and expected output, not a
+catalogue of English case names. It contains:
+
+- fixture version and canonical SHA-256;
+- framework IDs and coordinated release version input;
+- default, alias, custom and invalid path cases;
+- exact liveness and readiness schemas;
+- fake monotonic-clock sequences, including wall-clock rollback;
+- route-error, `.broken`, middleware short-circuit, auth, rate-limit, exact
+  conflict and catch-all cases;
+- readiness pass, failure, throw, malformed result, timeout, duplicate name,
+  empty registry and concurrent timing cases;
+- GET, HEAD, OPTIONS, 405, cache header and validator expectations;
+- Docker liveness and Kubernetes path expectations.
+
+Each language runner consumes the same file and emits one JSON report containing
+at least:
+
+```json
+{
+  "feature": 8,
+  "fixture_version": 2,
+  "fixture_sha256": "...",
+  "framework": "tina4-python",
+  "consumed_case_ids": ["..."],
+  "failures": []
+}
+```
+
+The central checker executes all four runners, rejects a stale hash, requires
+the exact case-ID set from every language, validates the report schema and exits
+non-zero on any failure. Text presence in a test file proves nothing.
+
+Mutation witnesses must demonstrate that the suite fails when:
+
+- health is moved behind application middleware;
+- a catch-all or exact app route owns a reserved path;
+- `no-store` is removed or an ETag is added;
+- a wall clock replaces the monotonic clock or registration resets uptime;
+- readiness maps a failed check to 200 or liveness to 503;
+- dependency checks run serially;
+- a runner reports an old fixture hash;
+- a Docker probe merely connects but accepts 404.
+
+## Required test matrix
+
+All behavioral cases run through real dispatch; wire cases additionally use a
+real loopback socket. Dependency cases use real lab services as well as a
+deterministic check seam for timeout/throw ordering.
+
+| Area | Required proof in every language |
+| --- | --- |
+| Bootstrap | dotenv path is visible; OS wins; late env mutation does not alter routes; invalid/colliding values fail startup |
+| Reservation | exact app conflict fails; parameterized catch-all cannot shadow; re-registration and reload cannot replace system routes |
+| Isolation | blocking pre/post middleware, auth, CSRF, sessions, cache and rate limiter never execute on system routes |
+| Liveness | both paths 200; route throw/import error/dead configured dependency/`.broken` do not change it; exact body |
+| Uptime | deterministic monotonic values, rollback witness, non-negative hundredths and no reset on route registration |
+| Transport | GET/HEAD/OPTIONS/405, JSON content type, no-store, no validators, HEAD without body |
+| Readiness | empty/pass 200; fail/throw/malformed/timeout 503; exact sorted redacted body; liveness remains 200 |
+| Dependencies | each activated adapter's non-mutating check against a real available and unavailable lab service |
+| Concurrency | two slow checks complete within one timeout window rather than their summed duration |
+| Swagger | paths, aliases, schemas, 503 and no security requirement match the runtime contract |
+| Images | build each repo/generated image, observe healthy, prove wrong status becomes unhealthy, confirm version/tag match |
+| Fixture | four reports use the current hash and exact complete case-ID set |
+
+The current 35 focused tests/examples remain useful characterization and should
+be migrated into the runners rather than discarded.
+
+## Implementation formula for another language
+
+1. Implement Feature 1 loading and Feature 6 literal-path validation first.
+2. Create a system-route registry that is dispatched before application routes
+   and Feature 7 middleware.
+3. Resolve, validate and reserve liveness/readiness primary paths plus permanent
+   aliases after dotenv and before route discovery.
+4. Capture one monotonic start point for the server instance and implement the
+   exact four-key liveness representation.
+5. Implement response finalization for GET/HEAD with no-store and no validators.
+6. Implement the readiness registry, concurrent deadline-bound executor and
+   exact five-key representation.
+7. Give activated dependency adapters side-effect-free probes and register them
+   under canonical names.
+8. Add Swagger metadata, a runtime-native Docker `HEALTHCHECK` and separate
+   Kubernetes startup/liveness/readiness probes.
+9. Consume fixture version 2, emit the standard report and pass every case plus
+   mutation witnesses locally.
+10. Build and run the real image and real dependency matrix on the serialized
+    lab before marking the feature proven.
+
+A future language is complete only when its runner can be added to the central
+checker without changing the fixture or expected behavior. Language syntax and
+runtime primitives may differ; the observable contract may not.
+
+## Migration to 3.14.0
+
+- Application routes that explicitly claim a reserved health/readiness path now
+  fail startup. Move the application route.
+- Invalid configured paths no longer receive a leading slash or whitespace
+  repair. Correct the environment value.
+- Health endpoints bypass all application middleware. Move probe-specific
+  telemetry to framework transport instrumentation.
+- Uptime remains seconds under `uptime`, but becomes monotonic and is defined per
+  server instance.
+- Python/PHP/Node clock behavior and Python dotenv timing change internally
+  without changing the approved happy-path body.
+- Python/Ruby/Node add `Cache-Control: no-store`; Python drops its ETag on these
+  endpoints.
+- `/__ready` and `/ready` are additive. Generated Kubernetes readiness changes
+  from `/health` to `/ready`.
+- Images gain a Docker health status. Deployment tooling must not assume that an
+  `unhealthy` status alone selects a restart policy.
+
+## Completion gate
+
+Feature 8 is complete only when:
+
+- H8-01 through H8-11 are closed in all four current ports;
+- ADR-0016 is amended with the system-route, uptime, readiness-body, path and
+  header decisions in this audit;
+- fixture version 2 and the four runners pass from the central checker;
+- every mutation witness is proven red;
+- real lab dependency failure changes readiness to 503 while liveness stays 200;
+- all four repository images and generated images reach Docker `healthy`;
+- generated Kubernetes manifests use `/health` for startup/liveness and `/ready`
+  for readiness;
+- documentation no longer describes `.broken` as probe state;
+- local and serialized lab parity runs are green with zero unexplained skips.
