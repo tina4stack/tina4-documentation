@@ -68,7 +68,7 @@
 47. [ ] **Swagger/OpenAPI** — keep existing, add auth scheme support
 
 ### Phase 5: Extended Features
-48. [ ] **Queue (DB-backed)** — NEW, zero-dep, uses connected database
+49. [ ] **Queue (DB-backed)** — NEW, zero-dep, uses connected database
 49. [ ] **SCSS compiler** — NEW, build native TypeScript SCSS parser
 50. [ ] **API client** — NEW, using `node:http`/`node:https` (no `fetch` polyfill needed in Node 20+)
 51. [ ] **GraphQL** — NEW, port from Python/Ruby zero-dep parser

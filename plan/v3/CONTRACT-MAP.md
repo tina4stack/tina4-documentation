@@ -58,7 +58,7 @@ A feature is "specified" only when it has walked all seven steps. This mirrors t
 audit method in [98-feature-audit.md](98-feature-audit.md).
 
 1. **Audit** - measure LOC/CC/MI four-way, read all four, pick the best mechanism.
-2. **Plan** - park it as `features/NNN-<name>.md` (132 exist).
+2. **Plan** - park it as `features/NNN-<name>.md` (133 exist).
 3. **Decide** - any behaviour fork gets an `ADR-NNNN.md`.
 4. **Fixture** - write `fixtures/<name>_contract.json` with the invariants + the
    conformance cases as data.
@@ -81,16 +81,16 @@ Re-run it and re-sync this table whenever a fixture changes.
 |---|---|---|---:|---:|---:|---|---|
 | Structured logger | 2 | `logger_contract.json` | 8 | 0 | 8 | 0041 | owed; 59 cases not wired |
 | Database adapter | 3 | `adapter_contract.json` | 8 | 0 | 8 | 0044 | owed; old structural runners superseded |
-| Router + dispatch | 30 | `dispatch_contract.json` | 8 | 8 | 0 | 0010-0013 | yes |
-| Health check | 37 | `health_contract.json` | 5 | 5 | 0 | 0016 | yes |
-| JWT + session | 63-64 | `session_contract.json` | 6 | 6 | 0 | 0021, 0024 | yes (5 carry a witness rule) |
-| Cache backends | 71 | `cache_contract.json` | 8 | 8 | 0 | 0020, 0024 | yes |
-| Queue backends | 88 | `queue_contract.json` | 7 | 7 | 0 | 0022-0024 | yes |
-| Swagger / OpenAPI | 44 | `swagger_contract.json` | 10 | 10 | 0 | 0004, 0041 | yes (added 2026-08-07) |
-| DocStore | 94 | `docstore_contract.json` | 9 | 9 | 0 | 0024, 0025, 0035, 0036 | yes |
-| tina4-css | 61 | `tina4css_contract.json` | 1 | 1 | 0 | 0004 | yes |
-| Messenger | 87 | `messenger_contract.json` | 14 | 14 | 0 | 0004, 0041, 0042 | yes (real GreenMail) |
-| Paginated results | 23 | `pagination_contract.json` | 6 | 6 | 0 | 0043 | yes (real 250-row SQLite; incl. the AutoCrud REST endpoint) |
+| Router + dispatch | 31 | `dispatch_contract.json` | 8 | 8 | 0 | 0010-0013 | yes |
+| Health check | 38 | `health_contract.json` | 5 | 5 | 0 | 0016 | yes |
+| JWT + session | 64-65 | `session_contract.json` | 6 | 6 | 0 | 0021, 0024 | yes (5 carry a witness rule) |
+| Cache backends | 72 | `cache_contract.json` | 8 | 8 | 0 | 0020, 0024 | yes |
+| Queue backends | 89 | `queue_contract.json` | 7 | 7 | 0 | 0022-0024 | yes |
+| Swagger / OpenAPI | 45 | `swagger_contract.json` | 10 | 10 | 0 | 0004, 0041 | yes (added 2026-08-07) |
+| DocStore | 95 | `docstore_contract.json` | 9 | 9 | 0 | 0024, 0025, 0035, 0036 | yes |
+| tina4-css | 62 | `tina4css_contract.json` | 1 | 1 | 0 | 0004 | yes |
+| Messenger | 88 | `messenger_contract.json` | 14 | 14 | 0 | 0004, 0041, 0042 | yes (real GreenMail) |
+| Paginated results | 24 | `pagination_contract.json` | 6 | 6 | 0 | 0043 | yes (real 250-row SQLite; incl. the AutoCrud REST endpoint) |
 
 **Totals: 90 invariants, 74 proven, 16 owed** (2026-08-10), 12 fixtures. Proven
 subsystems remain held to their contract four-way. Logger and database adapter
@@ -115,29 +115,29 @@ their plan and ADR, and are the first candidates to promote to Layer 2.
 | 1 DotEnv parser | `features/001-dotenv.md` | SYNTHESISE | **contract complete 2026-08-09; implementation pending after full audit** |
 | 2 Structured logger | `features/002-structured-logger.md` | SYNTHESISE | **contract complete 2026-08-09; 59-case shared fixture exists, all 8 invariant groups owed in runners** |
 | 3 DB adapter interface | `features/003-database-adapter-interface.md` | ADR-0044 REDESIGN | **contract complete 2026-08-10; 40 cases across 8 owed invariant groups; implementation pending** |
-| 5 Database facade + safe write path | `features/005-database-write-facade.md` | GAP (P1) | closed, 1 deferred to Feature 23 |
+| 5 Database facade + safe write path | `features/005-database-write-facade.md` | GAP (P1) | closed, 1 deferred to Feature 24 |
 | 4 DATABASE_URL parser | `features/004-database-url-parser.md` | PROMOTE php | shipped all 4 |
-| 32 Middleware pipeline | `features/032-middleware-pipeline.md` | ADR-0014 | closed, merged to v3 |
-| 38 Graceful shutdown | `features/038-graceful-shutdown.md` | ADR-0017 | closed, merged to v3 |
-| 33 CORS middleware | `features/033-cors-middleware.md` | ADR-0018 | closed (deny by default) |
-| 34, 29, 31 Rate limiter / response types / route groups | - | ADR-0019 | closed, merged to v3 |
-| 16 ORM base class | `features/016-orm-base-class.md` | PROMOTE ruby | closed |
-| 19 Soft delete | `features/019-soft-delete.md` | GAP | closed, 1 outstanding |
-| 20 Relationships + eager load | `features/020-relationships.md` | PROVISIONAL | closed |
-| 22 Scopes | `features/022-scopes.md` | SYNTHESISE | closed |
-| 17 Field mapping | `features/017-orm-fields.md` | ADR-0008 | closed |
-| 23 Paginated results | `features/023-paginated-results.md` | PROMOTE php | **RE-OPENED 2026-08-05** - `.count` means true-total in 2 of 4, rows-returned in the other 2; the envelope launders a truncation. Breaking fix pending. |
-| 24 Result / ORM caching | `features/024-orm-result-caching.md` | GAP (ruby) | closed |
-| 18 Input validation | `features/018-input-validation.md` | PROMOTE node | closed |
-| 14 Migrations | `features/014-migrations.md` | SYNTHESISE (provisional) | **audit in progress 2026-08-08** - confirmed code-discovery, rollback-history, and four-way result-shape defects; fixture and fixes owed |
-| 47 Frond lexer | `features/047-frond-lexer.md` | historical bundle promoted Python structure | reopened / queued |
-| 48 Frond parser | `features/048-frond-parser.md` | historical bundle promoted Python structure | reopened / queued |
-| 49 Frond compiler | `features/049-frond-compiler.md` | historical bundle promoted Python structure | reopened / queued |
-| 50 Frond runtime | `features/050-frond-runtime.md` | historical bundle promoted Python structure | reopened / queued |
-| 51 Frond filters | `features/051-frond-filters.md` | SYNTHESISE | closed |
-| 56 Auto-escaping | `features/056-auto-escaping.md` | UNIFORM | closed, 1 owner call |
-| 57 Sandboxing | `features/057-sandboxing.md` | PROMOTE php (P1) | shipped all 4 |
-| 80 Api / HTTP client | `features/080-api-client.md` | frameworks-outrank-internal | `send_request` unified 2026-08-07 (Python was the outlier; Ruby cannot use bare `send`). No fixture yet. |
+| 33 Middleware pipeline | `features/033-middleware-pipeline.md` | ADR-0014 | closed, merged to v3 |
+| 39 Graceful shutdown | `features/039-graceful-shutdown.md` | ADR-0017 | closed, merged to v3 |
+| 34 CORS middleware | `features/034-cors-middleware.md` | ADR-0018 | closed (deny by default) |
+| 35, 30, 32 Rate limiter / response types / route groups | - | ADR-0019 | closed, merged to v3 |
+| 17 ORM base class | `features/017-orm-base-class.md` | PROMOTE ruby | closed |
+| 20 Soft delete | `features/020-soft-delete.md` | GAP | closed, 1 outstanding |
+| 21 Relationships + eager load | `features/021-relationships.md` | PROVISIONAL | closed |
+| 23 Scopes | `features/023-scopes.md` | SYNTHESISE | closed |
+| 18 Field mapping | `features/018-orm-fields.md` | ADR-0008 | closed |
+| 24 Paginated results | `features/024-paginated-results.md` | PROMOTE php | **RE-OPENED 2026-08-05** - `.count` means true-total in 2 of 4, rows-returned in the other 2; the envelope launders a truncation. Breaking fix pending. |
+| 25 Result / ORM caching | `features/025-orm-result-caching.md` | GAP (ruby) | closed |
+| 19 Input validation | `features/019-input-validation.md` | PROMOTE node | closed |
+| 15 Migrations | `features/015-migrations.md` | SYNTHESISE (provisional) | **audit in progress 2026-08-08** - confirmed code-discovery, rollback-history, and four-way result-shape defects; fixture and fixes owed |
+| 48 Frond lexer | `features/048-frond-lexer.md` | historical bundle promoted Python structure | reopened / queued |
+| 49 Frond parser | `features/049-frond-parser.md` | historical bundle promoted Python structure | reopened / queued |
+| 50 Frond compiler | `features/050-frond-compiler.md` | historical bundle promoted Python structure | reopened / queued |
+| 51 Frond runtime | `features/051-frond-runtime.md` | historical bundle promoted Python structure | reopened / queued |
+| 52 Frond filters | `features/052-frond-filters.md` | SYNTHESISE | closed |
+| 57 Auto-escaping | `features/057-auto-escaping.md` | UNIFORM | closed, 1 owner call |
+| 58 Sandboxing | `features/058-sandboxing.md` | PROMOTE php (P1) | shipped all 4 |
+| 81 Api / HTTP client | `features/081-api-client.md` | frameworks-outrank-internal | `send_request` unified 2026-08-07 (Python was the outlier; Ruby cannot use bare `send`). No fixture yet. |
 
 ## Layer 0: not yet audited
 
@@ -145,8 +145,8 @@ Every audited feature so far found something broken and invisible - none came
 back clean - so these are unexamined, not "probably fine" (98-feature-audit.md).
 Each still owes the full pipeline: audit -> plan -> ADR -> fixture -> proven.
 
-- **Feature 14 Migrations moved to Layer 1 on 2026-08-08.** See
-  `features/014-migrations.md` for the in-progress audit.
+- **Feature 15 Migrations moved to Layer 1 on 2026-08-08.** See
+  `features/015-migrations.md` for the in-progress audit.
 - Every other queued packet is listed in numeric order in
   [01-FEATURE-MATRIX.md](01-FEATURE-MATRIX.md).
 

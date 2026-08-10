@@ -71,7 +71,7 @@
 45. [ ] **Swagger/OpenAPI** — keep existing, standardize output
 
 ### Phase 5: Extended Features
-46. [ ] **Queue (DB-backed)** — NEW, zero-dep, uses connected database
+47. [ ] **Queue (DB-backed)** — NEW, zero-dep, uses connected database
 47. [ ] **SCSS compiler** — replace `scssphp/scssphp`, build native PHP SCSS parser
 48. [ ] **API client** — keep existing `curl`-based, it's stdlib
 49. [ ] **GraphQL** — NEW, port from Python/Ruby zero-dep parser

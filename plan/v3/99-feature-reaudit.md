@@ -1,7 +1,7 @@
 # Task: adversarial re-audit of every previously audited feature
 
 Owner decision, 2026-08-08: re-audit the features already marked audited after
-Feature 14 exposed shipping contradictions behind fully green suites.
+Feature 15 exposed shipping contradictions behind fully green suites.
 
 Owner decision, 2026-08-08: the accumulated output must also be a clean-room
 formula for implementing Tina4 in another language. Every feature therefore
@@ -57,8 +57,8 @@ This re-audit checks for the missing path between public operations.
 
 Re-open every feature currently in Layer 1 or Layer 2 of `CONTRACT-MAP.md`, in
 strict numeric order starting with Feature 1. Messenger retains its existing
-matrix identity, **Feature 87**; its earlier "Feature 0" label described its role
-as the audit pilot and is retired. Feature 14 remains open and is revisited in
+matrix identity, **Feature 88**; its earlier "Feature 0" label described its role
+as the audit pilot and is retired. Feature 15 remains open and is revisited in
 sequence; this plan does not discard its findings.
 
 ## Required loop for each feature
@@ -123,7 +123,7 @@ implementation tasks. Green legacy suites establish a baseline only.
 ## Ordered dashboard
 
 The ordered dashboard is generated from `FEATURE-CATALOG.json` at
-`01-FEATURE-MATRIX.md`. It contains Features 1-132 with one link per packet and
+`01-FEATURE-MATRIX.md`. It contains Features 1-133 with one link per packet and
 the packet's current audit state. `98-feature-audit.md` maps every historically
 audited item to its new number.
 
@@ -132,7 +132,7 @@ owe implementation work. The remaining packets keep their measured historical
 state where evidence exists and `queued` where it does not. No row is complete
 merely because its legacy suite is green.
 
-## Feature 87 planned work
+## Feature 88 planned work
 
 - [ ] Enumerate construction/factory, send, capture, folder/list, read, search,
       attachments, flags, delete/move and transport configuration surfaces.
@@ -190,10 +190,10 @@ merely because its legacy suite is green.
 - [ ] Feature 1: Node `Env.int`/`Env.float` use prefix parsers, so values such as
       `12px` and `1.5seconds` are silently accepted; Python, PHP and Ruby reject
       the entire malformed token and return the default.
-- [ ] Feature 14: Node-generated `.ts` migration is not runnable/discoverable.
-- [ ] Feature 14: Python/Node status/file surfaces omit native code migrations.
-- [ ] Feature 14: missing or failed rollback can erase applied history.
-- [ ] Feature 14: public outcomes differ four ways.
+- [ ] Feature 15: Node-generated `.ts` migration is not runnable/discoverable.
+- [ ] Feature 15: Python/Node status/file surfaces omit native code migrations.
+- [ ] Feature 15: missing or failed rollback can erase applied history.
+- [ ] Feature 15: public outcomes differ four ways.
 
 ## Commits
 

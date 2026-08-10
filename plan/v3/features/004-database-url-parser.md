@@ -120,7 +120,7 @@ cross-language probes below are outside the current answer keys.
 - An empty SQLite target throws. A bare filename is not a `DatabaseUrl`; callers
   spell the provider explicitly.
 
-Feature 7 resolves relative paths against the application root. The parsed
+Feature 8 resolves relative paths against the application root. The parsed
 value retains relative versus absolute intent.
 
 #### Single-host SQL and Firebird
@@ -189,7 +189,7 @@ hashed before use as a cache key.
 The current four-language cache identity deliberately excludes username on the
 assumption that roles see the same data. That is false for row-level security.
 It also uses a relative SQLite path, so two applications both configured as
-`sqlite:///data/app.db` and sharing a persistent cache can collide. Feature 71
+`sqlite:///data/app.db` and sharing a persistent cache can collide. Feature 72
 must consume this canonical identity rather than rebuild its own subset.
 
 ## Public surface contract
@@ -343,7 +343,7 @@ An SRV MongoDB URL does not carry an explicit port.
 | DBU-11 | PHP/Ruby/Node ODBC doubled-brace redaction leaks the password tail | Parse `}}` escape and redact the complete value |
 | DBU-12 | Mongo seed lists and `mongodb+srv` are not representable | Add ordered hosts and canonical protocol |
 | DBU-13 | Ruby accepts `mongo`; PHP facade accepts `pymongo`; neither is shared contract data | Remove implementation/private aliases |
-| DBU-14 | Cache identity excludes authorization role and resolved SQLite location | Use `DatabaseUrl.identity()` in Feature 71 |
+| DBU-14 | Cache identity excludes authorization role and resolved SQLite location | Use `DatabaseUrl.identity()` in Feature 72 |
 | DBU-15 | Current tests assert parsed fields but do not prove the factory connects using them | Add factory trace and live mutation witnesses |
 
 ## Owner decisions
@@ -459,7 +459,7 @@ Implementation must update together:
 - database constructors, factories and registries;
 - every SQL, MongoDB and ODBC adapter constructor;
 - connection pooling and timeout diagnostics;
-- Feature 71 query-cache identity;
+- Feature 72 query-cache identity;
 - migration, session, cache and queue database consumers;
 - CLI migrate/status/doctor and project scaffolding;
 - dev-admin environment editing and display;
@@ -498,7 +498,7 @@ Implementation must update together:
 5. Make every factory and adapter consume the parsed value exactly once.
 6. Move provider option interpretation into the corresponding Feature 5.x
    packet and remove downstream URL parsing.
-7. Change Feature 71 to the canonical identity and invalidate old cache data.
+7. Change Feature 72 to the canonical identity and invalidate old cache data.
 8. Run pure, factory and live provider gates in all four.
 9. Update documentation/migrations and only then mark Feature 4 stable.
 
@@ -535,5 +535,5 @@ not authority.
 - [x] Pure and live baseline measured.
 - [x] Owner decisions approved or amended (2026-08-10; Decision 8 amended, others ratified).
 - [ ] Central fixture materialized after approval.
-- [ ] Provider option mappings completed in Features 7-13.
+- [ ] Provider option mappings completed in Features 8-13.
 - [x] Integration, migration and clean-room porting formula drafted.

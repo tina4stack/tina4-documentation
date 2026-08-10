@@ -6,7 +6,7 @@
 - Audit state: decision-ready
 - Audit note: Decision-ready; implementation deliberately not started
 - Dependencies: Feature 1 typed environment, Feature 3 adapter interface,
-  Feature 4 database URL parser and Feature 23 paginated results.
+  Feature 4 database URL parser and Feature 24 paginated results.
 - Dependants: ORM, migrations, sessions, cache, queues, dev-admin and every
   application call to `insert`, `update`, `delete` or `truncate`.
 - Existing ADRs: see retained evidence and the central decision index
@@ -45,9 +45,9 @@ Feature 5 owns the public, engine-neutral write composition performed by the
 - application-level parity across every database provider.
 
 Feature 3 owns native execution, batching, transactions, connection lifecycle
-and catalog access. Feature 23 owns fetch envelopes and pagination. ORM identity,
-dirty tracking and model persistence belong to Features 16-25. Provider-specific
-connection and catalog mechanisms belong in Features 7-13.
+and catalog access. Feature 24 owns fetch envelopes and pagination. ORM identity,
+dirty tracking and model persistence belong to Features 17-25. Provider-specific
+connection and catalog mechanisms belong in Features 8-13.
 
 CRUD construction is not an adapter capability. Moving it back onto individual
 adapters would recreate the drift this feature exists to prevent.
@@ -196,7 +196,7 @@ The audit has not yet fixed every wire format, stored shape, encoding, identifie
 
 ## Providers and substitutability
 
-### SQLite provider contract (Feature 7)
+### SQLite provider contract (Feature 8)
 
 - The default URL and `:memory:` open SQLite through one registered provider.
 - Absolute paths remain absolute; relative paths resolve from the application
@@ -284,7 +284,7 @@ The owner reviewed the eleven decisions below on 2026-08-10. Decisions 1-5, 9 an
 - **Node minimum raised to 24.15** (Decision 10). Built-in `node:sqlite` with its
   native timeout, zero-dependency; drops Node 22.x as a documented breaking bump.
 - **MongoDB reaches FULL write conformance; atomic/transactional writes require a
-  replica set** (Feature 13), documented as a prerequisite. Consistent
+  replica set** (Feature 14), documented as a prerequisite. Consistent
   with Mongo being a first-class SQL adapter (Feature 3, 2026-08-10) and Feature 3's "require a deployment mode that can" rule.
 
 Feature 5 is now decisions-complete. Remaining to reach FINAL: materialize the
@@ -309,7 +309,7 @@ unknown, missing or duplicate IDs.
 | `SQL-*` SQLite | memory/file path, FK, WAL exception in memory, 5000 ms lock timeout, user-table catalog, PK ordinals, native types, PRAGMA fetchOne, idempotent close |
 
 MongoDB and ODBC cannot be declared green by this SQL-shaped fixture alone.
-Features 12 and 13 must map the same application invariants onto
+Features 13 and 13 must map the same application invariants onto
 real provider operations and explicitly record any unsupported capability. A
 provider exception is contract data, not a skipped test.
 
@@ -349,7 +349,7 @@ Implementation must update these together after the audit phase closes:
 5. Correct the shared facade/filter builder first.
 6. Correct SQLite lifecycle, catalog and runtime gaps in all four.
 7. Correct Firebird introspection and affected-row accounting.
-8. Audit and implement Features 7-13 independently.
+8. Audit and implement Features 8-13 independently.
 9. Run the complete no-skip provider matrix and only then mark Feature 5 stable.
 
 ## Porting capsule
@@ -384,6 +384,6 @@ fixture. Reading another Tina4 runtime is neither required nor authoritative.
 - [x] Existing-language and live-provider contradictions recorded.
 - [ ] Owner decisions approved or amended.
 - [ ] Central replacement fixture materialized after decisions.
-- [ ] Features 7-13 provider packets completed.
+- [ ] Features 8-13 provider packets completed.
 - [x] Integration and breaking migrations identified.
 - [x] Porting capsule is clean-room sufficient for the parent write contract.

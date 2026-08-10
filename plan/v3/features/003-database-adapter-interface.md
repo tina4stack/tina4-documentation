@@ -6,7 +6,7 @@
 - Audit state: decision-ready
 - Audit note: Contract complete; implementation and runner rewiring owed
 - Dependencies: Feature 1 typed environment, Feature 5 write result and safe
-  filters, Feature 4 database URL parsing, Feature 23 paginated results.
+  filters, Feature 4 database URL parsing, Feature 24 paginated results.
 - Dependants: every SQL/ORM/migration/session/cache/queue consumer.
 - Existing ADRs: see retained evidence and the central decision index
 - Shared fixtures: not yet confirmed
@@ -221,7 +221,7 @@ pinned for the current operation. It does not reimplement either by looping over
 - The adapter returns a native list of records and preserves native value types.
 - Adapter no-row success returns an empty native list, never null.
 - The public facade wraps those records in the shared `DatabaseResult` and owns
-  pagination, the true-total count and cache behavior defined by Feature 23.
+  pagination, the true-total count and cache behavior defined by Feature 24.
 - A bad statement throws; it never becomes an empty successful result.
 
 ### `fetchOne`

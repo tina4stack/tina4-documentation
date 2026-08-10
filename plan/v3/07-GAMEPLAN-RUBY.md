@@ -67,7 +67,7 @@
 46. [ ] **Swagger/OpenAPI** — keep existing, standardize output
 
 ### Phase 5: Extended Features
-47. [ ] **Queue (DB-backed)** — rewrite lite backend to use connected database
+48. [ ] **Queue (DB-backed)** — rewrite lite backend to use connected database
 48. [ ] **SCSS compiler** — build native Ruby SCSS parser
 49. [ ] **API client** — keep existing Net::HTTP (stdlib), align API
 50. [ ] **GraphQL** — keep existing zero-dep parser, align API

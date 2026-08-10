@@ -44,1018 +44,1026 @@
     {
       "id": 6,
       "slug": "query-builder",
-      "name": "Query builder and SQL translation",
+      "name": "Query builder",
       "phase": "Database and providers",
-      "python_evidence": "tina4_python/query_builder/__init__.py; tina4_python/database/sql_translator.py",
+      "python_evidence": "tina4_python/query_builder/__init__.py",
       "packet": "features/006-query-builder.md"
     },
     {
       "id": 7,
+      "slug": "sql-translator",
+      "name": "SQL translator",
+      "phase": "Database and providers",
+      "python_evidence": "tina4_python/database/sql_translator.py",
+      "packet": "features/007-sql-translator.md"
+    },
+    {
+      "id": 8,
       "slug": "sqlite-provider",
       "name": "SQLite provider",
       "phase": "Database and providers",
       "python_evidence": "tina4_python/database/sqlite.py",
-      "packet": "features/007-sqlite-provider.md"
+      "packet": "features/008-sqlite-provider.md"
     },
     {
-      "id": 8,
+      "id": 9,
       "slug": "postgresql-provider",
       "name": "PostgreSQL provider",
       "phase": "Database and providers",
       "python_evidence": "tina4_python/database/postgres.py",
-      "packet": "features/008-postgresql-provider.md"
+      "packet": "features/009-postgresql-provider.md"
     },
     {
-      "id": 9,
+      "id": 10,
       "slug": "mysql-provider",
       "name": "MySQL provider",
       "phase": "Database and providers",
       "python_evidence": "tina4_python/database/mysql.py",
-      "packet": "features/009-mysql-provider.md"
+      "packet": "features/010-mysql-provider.md"
     },
     {
-      "id": 10,
+      "id": 11,
       "slug": "mssql-provider",
       "name": "MSSQL provider",
       "phase": "Database and providers",
       "python_evidence": "tina4_python/database/mssql.py",
-      "packet": "features/010-mssql-provider.md"
+      "packet": "features/011-mssql-provider.md"
     },
     {
-      "id": 11,
+      "id": 12,
       "slug": "firebird-provider",
       "name": "Firebird provider",
       "phase": "Database and providers",
       "python_evidence": "tina4_python/database/firebird.py",
-      "packet": "features/011-firebird-provider.md"
+      "packet": "features/012-firebird-provider.md"
     },
     {
-      "id": 12,
+      "id": 13,
       "slug": "odbc-provider",
       "name": "ODBC provider",
       "phase": "Database and providers",
       "python_evidence": "tina4_python/database/odbc.py",
-      "packet": "features/012-odbc-provider.md"
+      "packet": "features/013-odbc-provider.md"
     },
     {
-      "id": 13,
+      "id": 14,
       "slug": "mongodb-sql-provider",
       "name": "MongoDB SQL-translation provider",
       "phase": "Database and providers",
       "python_evidence": "tina4_python/database/mongodb.py",
-      "packet": "features/013-mongodb-sql-provider.md"
+      "packet": "features/014-mongodb-sql-provider.md"
     },
     {
-      "id": 14,
+      "id": 15,
       "slug": "migrations",
       "name": "Migrations",
       "phase": "Database and providers",
       "python_evidence": "tina4_python/migration/__init__.py; tina4_python/migration/runner.py",
-      "packet": "features/014-migrations.md"
+      "packet": "features/015-migrations.md"
     },
     {
-      "id": 15,
+      "id": 16,
       "slug": "database-next-id",
       "name": "Race-safe database sequences",
       "phase": "Database and providers",
       "python_evidence": "tina4_python/database/__init__.py",
-      "packet": "features/015-database-next-id.md"
+      "packet": "features/016-database-next-id.md"
     },
     {
-      "id": 16,
+      "id": 17,
       "slug": "orm-base-class",
       "name": "ORM base class",
       "phase": "ORM and data layer",
       "python_evidence": "tina4_python/orm/model.py",
-      "packet": "features/016-orm-base-class.md"
+      "packet": "features/017-orm-base-class.md"
     },
     {
-      "id": 17,
+      "id": 18,
       "slug": "orm-fields",
       "name": "ORM fields and column mapping",
       "phase": "ORM and data layer",
       "python_evidence": "tina4_python/orm/fields.py",
-      "packet": "features/017-orm-fields.md"
+      "packet": "features/018-orm-fields.md"
     },
     {
-      "id": 18,
+      "id": 19,
       "slug": "input-validation",
       "name": "Input and request validation",
       "phase": "ORM and data layer",
       "python_evidence": "tina4_python/validator/__init__.py; tina4_python/orm/fields.py",
-      "packet": "features/018-input-validation.md"
+      "packet": "features/019-input-validation.md"
     },
     {
-      "id": 19,
+      "id": 20,
       "slug": "soft-delete",
       "name": "Soft delete",
       "phase": "ORM and data layer",
       "python_evidence": "tina4_python/orm/model.py",
-      "packet": "features/019-soft-delete.md"
+      "packet": "features/020-soft-delete.md"
     },
     {
-      "id": 20,
+      "id": 21,
       "slug": "relationships",
       "name": "Declarative ORM relationships",
       "phase": "ORM and data layer",
       "python_evidence": "tina4_python/orm/__init__.py; tina4_python/orm/model.py",
-      "packet": "features/020-relationships.md"
+      "packet": "features/021-relationships.md"
     },
     {
-      "id": 21,
+      "id": 22,
       "slug": "imperative-relationships",
       "name": "Imperative ORM relationships",
       "phase": "ORM and data layer",
       "python_evidence": "tina4_python/orm/model.py",
-      "packet": "features/021-imperative-relationships.md"
+      "packet": "features/022-imperative-relationships.md"
     },
     {
-      "id": 22,
+      "id": 23,
       "slug": "scopes",
       "name": "ORM scopes",
       "phase": "ORM and data layer",
       "python_evidence": "tina4_python/orm/model.py",
-      "packet": "features/022-scopes.md"
+      "packet": "features/023-scopes.md"
     },
     {
-      "id": 23,
+      "id": 24,
       "slug": "paginated-results",
       "name": "Paginated database and ORM results",
       "phase": "ORM and data layer",
       "python_evidence": "tina4_python/database/__init__.py; tina4_python/orm/model.py",
-      "packet": "features/023-paginated-results.md"
+      "packet": "features/024-paginated-results.md"
     },
     {
-      "id": 24,
+      "id": 25,
       "slug": "orm-result-caching",
       "name": "ORM result caching",
       "phase": "ORM and data layer",
       "python_evidence": "tina4_python/orm/model.py; tina4_python/core/cache.py",
-      "packet": "features/024-orm-result-caching.md"
+      "packet": "features/025-orm-result-caching.md"
     },
     {
-      "id": 25,
+      "id": 26,
       "slug": "orm-load",
       "name": "ORM instance loading",
       "phase": "ORM and data layer",
       "python_evidence": "tina4_python/orm/model.py",
-      "packet": "features/025-orm-load.md"
+      "packet": "features/026-orm-load.md"
     },
     {
-      "id": 26,
+      "id": 27,
       "slug": "auto-crud",
       "name": "Automatic CRUD from models",
       "phase": "ORM and data layer",
       "python_evidence": "tina4_python/crud/__init__.py",
-      "packet": "features/026-auto-crud.md"
+      "packet": "features/027-auto-crud.md"
     },
     {
-      "id": 27,
+      "id": 28,
       "slug": "seeder-fake-data",
       "name": "Seeder and fake data",
       "phase": "ORM and data layer",
       "python_evidence": "tina4_python/seeder/__init__.py",
-      "packet": "features/027-seeder-fake-data.md"
+      "packet": "features/028-seeder-fake-data.md"
     },
     {
-      "id": 28,
+      "id": 29,
       "slug": "request",
       "name": "HTTP request model",
       "phase": "HTTP core",
       "python_evidence": "tina4_python/core/request.py",
-      "packet": "features/028-request.md"
+      "packet": "features/029-request.md"
     },
     {
-      "id": 29,
+      "id": 30,
       "slug": "response-types",
       "name": "HTTP response model and representation types",
       "phase": "HTTP core",
       "python_evidence": "tina4_python/core/response.py",
-      "packet": "features/029-response-types.md"
+      "packet": "features/030-response-types.md"
     },
     {
-      "id": 30,
+      "id": 31,
       "slug": "router-and-dispatch",
       "name": "Router and dispatch",
       "phase": "HTTP core",
       "python_evidence": "tina4_python/core/router.py; tina4_python/core/server.py",
-      "packet": "features/030-router-and-dispatch.md"
+      "packet": "features/031-router-and-dispatch.md"
     },
     {
-      "id": 31,
+      "id": 32,
       "slug": "route-groups",
       "name": "Route groups",
       "phase": "HTTP core",
       "python_evidence": "tina4_python/core/router.py",
-      "packet": "features/031-route-groups.md"
+      "packet": "features/032-route-groups.md"
     },
     {
-      "id": 32,
+      "id": 33,
       "slug": "middleware-pipeline",
       "name": "Middleware pipeline",
       "phase": "HTTP core",
       "python_evidence": "tina4_python/core/middleware.py; tina4_python/core/server.py",
-      "packet": "features/032-middleware-pipeline.md"
+      "packet": "features/033-middleware-pipeline.md"
     },
     {
-      "id": 33,
+      "id": 34,
       "slug": "cors-middleware",
       "name": "CORS middleware",
       "phase": "HTTP policies",
       "python_evidence": "tina4_python/core/middleware.py",
-      "packet": "features/033-cors-middleware.md"
+      "packet": "features/034-cors-middleware.md"
     },
     {
-      "id": 34,
+      "id": 35,
       "slug": "rate-limiting",
       "name": "Rate limiting",
       "phase": "HTTP policies",
       "python_evidence": "tina4_python/core/rate_limiter.py; tina4_python/core/middleware.py",
-      "packet": "features/034-rate-limiting.md"
+      "packet": "features/035-rate-limiting.md"
     },
     {
-      "id": 35,
+      "id": 36,
       "slug": "security-headers",
       "name": "Security headers middleware",
       "phase": "HTTP policies",
       "python_evidence": "tina4_python/core/middleware.py",
-      "packet": "features/035-security-headers.md"
+      "packet": "features/036-security-headers.md"
     },
     {
-      "id": 36,
+      "id": 37,
       "slug": "csrf",
       "name": "CSRF protection",
       "phase": "HTTP policies",
       "python_evidence": "tina4_python/core/middleware.py",
-      "packet": "features/036-csrf.md"
+      "packet": "features/037-csrf.md"
     },
     {
-      "id": 37,
+      "id": 38,
       "slug": "health-check",
       "name": "Health and readiness endpoints",
       "phase": "HTTP runtime",
       "python_evidence": "tina4_python/core/server.py",
-      "packet": "features/037-health-check.md"
+      "packet": "features/038-health-check.md"
     },
     {
-      "id": 38,
+      "id": 39,
       "slug": "graceful-shutdown",
       "name": "Graceful shutdown",
       "phase": "HTTP runtime",
       "python_evidence": "tina4_python/core/server.py",
-      "packet": "features/038-graceful-shutdown.md"
+      "packet": "features/039-graceful-shutdown.md"
     },
     {
-      "id": 39,
+      "id": 40,
       "slug": "compression-etag",
       "name": "HTTP compression and ETag",
       "phase": "HTTP runtime",
       "python_evidence": "tina4_python/core/response.py; tina4_python/core/server.py",
-      "packet": "features/039-compression-etag.md"
+      "packet": "features/040-compression-etag.md"
     },
     {
-      "id": 40,
+      "id": 41,
       "slug": "static-assets",
       "name": "Static assets and cache revalidation",
       "phase": "HTTP runtime",
       "python_evidence": "tina4_python/core/server.py; tina4_python/public/",
-      "packet": "features/040-static-assets.md"
+      "packet": "features/041-static-assets.md"
     },
     {
-      "id": 41,
+      "id": 42,
       "slug": "error-pages",
       "name": "Configurable error pages",
       "phase": "HTTP runtime",
       "python_evidence": "tina4_python/core/server.py; tina4_python/templates/errors/",
-      "packet": "features/041-error-pages.md"
+      "packet": "features/042-error-pages.md"
     },
     {
-      "id": 42,
+      "id": 43,
       "slug": "request-id",
       "name": "Request ID tracking",
       "phase": "HTTP runtime",
       "python_evidence": "tina4_python/core/request.py; tina4_python/core/server.py",
-      "packet": "features/042-request-id.md"
+      "packet": "features/043-request-id.md"
     },
     {
-      "id": 43,
+      "id": 44,
       "slug": "file-upload",
       "name": "File upload contract",
       "phase": "HTTP runtime",
       "python_evidence": "tina4_python/core/request.py",
-      "packet": "features/043-file-upload.md"
+      "packet": "features/044-file-upload.md"
     },
     {
-      "id": 44,
+      "id": 45,
       "slug": "swagger-openapi",
       "name": "Swagger and OpenAPI",
       "phase": "HTTP runtime",
       "python_evidence": "tina4_python/swagger/__init__.py",
-      "packet": "features/044-swagger-openapi.md"
+      "packet": "features/045-swagger-openapi.md"
     },
     {
-      "id": 45,
+      "id": 46,
       "slug": "default-landing-page",
       "name": "Default landing page",
       "phase": "HTTP runtime",
       "python_evidence": "tina4_python/core/server.py",
-      "packet": "features/045-default-landing-page.md"
+      "packet": "features/046-default-landing-page.md"
     },
     {
-      "id": 46,
+      "id": 47,
       "slug": "background-tasks",
       "name": "In-process background tasks",
       "phase": "HTTP runtime",
       "python_evidence": "tina4_python/core/server.py",
-      "packet": "features/046-background-tasks.md"
+      "packet": "features/047-background-tasks.md"
     },
     {
-      "id": 47,
+      "id": 48,
       "slug": "frond-lexer",
       "name": "Frond lexer",
       "phase": "Frond template engine",
       "python_evidence": "tina4_python/frond/parser.py",
-      "packet": "features/047-frond-lexer.md"
+      "packet": "features/048-frond-lexer.md"
     },
     {
-      "id": 48,
+      "id": 49,
       "slug": "frond-parser",
       "name": "Frond parser",
       "phase": "Frond template engine",
       "python_evidence": "tina4_python/frond/parser.py",
-      "packet": "features/048-frond-parser.md"
+      "packet": "features/049-frond-parser.md"
     },
     {
-      "id": 49,
+      "id": 50,
       "slug": "frond-compiler",
       "name": "Frond compiler",
       "phase": "Frond template engine",
       "python_evidence": "tina4_python/frond/compiler.py",
-      "packet": "features/049-frond-compiler.md"
+      "packet": "features/050-frond-compiler.md"
     },
     {
-      "id": 50,
+      "id": 51,
       "slug": "frond-runtime",
       "name": "Frond runtime",
       "phase": "Frond template engine",
       "python_evidence": "tina4_python/frond/engine.py",
-      "packet": "features/050-frond-runtime.md"
+      "packet": "features/051-frond-runtime.md"
     },
     {
-      "id": 51,
+      "id": 52,
       "slug": "frond-filters",
       "name": "Frond filters",
       "phase": "Frond template engine",
       "python_evidence": "tina4_python/frond/engine.py",
-      "packet": "features/051-frond-filters.md"
+      "packet": "features/052-frond-filters.md"
     },
     {
-      "id": 52,
+      "id": 53,
       "slug": "frond-tags",
       "name": "Frond tags",
       "phase": "Frond template engine",
       "python_evidence": "tina4_python/frond/engine.py",
-      "packet": "features/052-frond-tags.md"
+      "packet": "features/053-frond-tags.md"
     },
     {
-      "id": 53,
+      "id": 54,
       "slug": "frond-tests",
       "name": "Frond expression tests",
       "phase": "Frond template engine",
       "python_evidence": "tina4_python/frond/engine.py",
-      "packet": "features/053-frond-tests.md"
+      "packet": "features/054-frond-tests.md"
     },
     {
-      "id": 54,
+      "id": 55,
       "slug": "frond-functions",
       "name": "Frond functions",
       "phase": "Frond template engine",
       "python_evidence": "tina4_python/frond/engine.py",
-      "packet": "features/054-frond-functions.md"
+      "packet": "features/055-frond-functions.md"
     },
     {
-      "id": 55,
+      "id": 56,
       "slug": "frond-extensibility",
       "name": "Frond extensibility API",
       "phase": "Frond template engine",
       "python_evidence": "tina4_python/frond/__init__.py; tina4_python/frond/engine.py",
-      "packet": "features/055-frond-extensibility.md"
+      "packet": "features/056-frond-extensibility.md"
     },
     {
-      "id": 56,
+      "id": 57,
       "slug": "auto-escaping",
       "name": "Frond auto-escaping",
       "phase": "Frond template engine",
       "python_evidence": "tina4_python/frond/engine.py",
-      "packet": "features/056-auto-escaping.md"
+      "packet": "features/057-auto-escaping.md"
     },
     {
-      "id": 57,
+      "id": 58,
       "slug": "sandboxing",
       "name": "Frond sandboxing",
       "phase": "Frond template engine",
       "python_evidence": "tina4_python/frond/engine.py",
-      "packet": "features/057-sandboxing.md"
+      "packet": "features/058-sandboxing.md"
     },
     {
-      "id": 58,
+      "id": 59,
       "slug": "template-caching",
       "name": "Frond template caching",
       "phase": "Frond template engine",
       "python_evidence": "tina4_python/frond/engine.py",
-      "packet": "features/058-template-caching.md"
+      "packet": "features/059-template-caching.md"
     },
     {
-      "id": 59,
+      "id": 60,
       "slug": "fragment-caching",
       "name": "Frond fragment caching",
       "phase": "Frond template engine",
       "python_evidence": "tina4_python/frond/engine.py",
-      "packet": "features/059-fragment-caching.md"
+      "packet": "features/060-fragment-caching.md"
     },
     {
-      "id": 60,
+      "id": 61,
       "slug": "scss-compiler",
       "name": "SCSS compiler",
       "phase": "Frontend assets",
       "python_evidence": "tina4_python/scss/; framework SCSS compiler surface",
-      "packet": "features/060-scss-compiler.md"
+      "packet": "features/061-scss-compiler.md"
     },
     {
-      "id": 61,
+      "id": 62,
       "slug": "tina4-css",
       "name": "Tina4 CSS",
       "phase": "Frontend assets",
       "python_evidence": "tina4_python/public/css/; tina4_python/scss/",
-      "packet": "features/061-tina4-css.md"
+      "packet": "features/062-tina4-css.md"
     },
     {
-      "id": 62,
+      "id": 63,
       "slug": "frond-js-helper",
       "name": "Frond and Tina4 browser helpers",
       "phase": "Frontend assets",
       "python_evidence": "tina4_python/public/js/",
-      "packet": "features/062-frond-js-helper.md"
+      "packet": "features/063-frond-js-helper.md"
     },
     {
-      "id": 63,
+      "id": 64,
       "slug": "jwt-authentication",
       "name": "JWT and request authentication",
       "phase": "Authentication",
       "python_evidence": "tina4_python/auth/__init__.py",
-      "packet": "features/063-jwt-authentication.md"
+      "packet": "features/064-jwt-authentication.md"
     },
     {
-      "id": 64,
+      "id": 65,
       "slug": "session-handling",
       "name": "Session lifecycle",
       "phase": "Sessions and providers",
       "python_evidence": "tina4_python/session/__init__.py",
-      "packet": "features/064-session-handling.md"
+      "packet": "features/065-session-handling.md"
     },
     {
-      "id": 65,
+      "id": 66,
       "slug": "session-file-provider",
       "name": "File session provider",
       "phase": "Sessions and providers",
       "python_evidence": "tina4_python/session/__init__.py",
-      "packet": "features/065-session-file-provider.md"
+      "packet": "features/066-session-file-provider.md"
     },
     {
-      "id": 66,
+      "id": 67,
       "slug": "session-redis-provider",
       "name": "Redis session provider",
       "phase": "Sessions and providers",
       "python_evidence": "tina4_python/session_handlers/redis_handler.py",
-      "packet": "features/066-session-redis-provider.md"
+      "packet": "features/067-session-redis-provider.md"
     },
     {
-      "id": 67,
+      "id": 68,
       "slug": "session-valkey-provider",
       "name": "Valkey session provider",
       "phase": "Sessions and providers",
       "python_evidence": "tina4_python/session_handlers/valkey_handler.py",
-      "packet": "features/067-session-valkey-provider.md"
+      "packet": "features/068-session-valkey-provider.md"
     },
     {
-      "id": 68,
+      "id": 69,
       "slug": "session-mongodb-provider",
       "name": "MongoDB session provider",
       "phase": "Sessions and providers",
       "python_evidence": "tina4_python/session_handlers/mongodb_handler.py",
-      "packet": "features/068-session-mongodb-provider.md"
+      "packet": "features/069-session-mongodb-provider.md"
     },
     {
-      "id": 69,
+      "id": 70,
       "slug": "session-database-provider",
       "name": "Database session provider",
       "phase": "Sessions and providers",
       "python_evidence": "tina4_python/session/__init__.py",
-      "packet": "features/069-session-database-provider.md"
+      "packet": "features/070-session-database-provider.md"
     },
     {
-      "id": 70,
+      "id": 71,
       "slug": "session-memcached-provider",
       "name": "Memcached session provider",
       "phase": "Sessions and providers",
       "python_evidence": "tina4_python/session_handlers/memcached_handler.py",
-      "packet": "features/070-session-memcached-provider.md"
+      "packet": "features/071-session-memcached-provider.md"
     },
     {
-      "id": 71,
+      "id": 72,
       "slug": "cache-interface",
       "name": "Cache interface and provider selection",
       "phase": "Cache and providers",
       "python_evidence": "tina4_python/cache/__init__.py; tina4_python/core/cache.py",
-      "packet": "features/071-cache-interface.md"
+      "packet": "features/072-cache-interface.md"
     },
     {
-      "id": 72,
+      "id": 73,
       "slug": "cache-memory-provider",
       "name": "Memory cache provider",
       "phase": "Cache and providers",
       "python_evidence": "tina4_python/cache/__init__.py",
-      "packet": "features/072-cache-memory-provider.md"
+      "packet": "features/073-cache-memory-provider.md"
     },
     {
-      "id": 73,
+      "id": 74,
       "slug": "cache-file-provider",
       "name": "File cache provider",
       "phase": "Cache and providers",
       "python_evidence": "tina4_python/cache/__init__.py",
-      "packet": "features/073-cache-file-provider.md"
+      "packet": "features/074-cache-file-provider.md"
     },
     {
-      "id": 74,
+      "id": 75,
       "slug": "cache-redis-provider",
       "name": "Redis cache provider",
       "phase": "Cache and providers",
       "python_evidence": "tina4_python/cache/__init__.py",
-      "packet": "features/074-cache-redis-provider.md"
+      "packet": "features/075-cache-redis-provider.md"
     },
     {
-      "id": 75,
+      "id": 76,
       "slug": "cache-valkey-provider",
       "name": "Valkey cache provider",
       "phase": "Cache and providers",
       "python_evidence": "tina4_python/cache/__init__.py",
-      "packet": "features/075-cache-valkey-provider.md"
+      "packet": "features/076-cache-valkey-provider.md"
     },
     {
-      "id": 76,
+      "id": 77,
       "slug": "cache-memcached-provider",
       "name": "Memcached cache provider",
       "phase": "Cache and providers",
       "python_evidence": "tina4_python/cache/__init__.py",
-      "packet": "features/076-cache-memcached-provider.md"
+      "packet": "features/077-cache-memcached-provider.md"
     },
     {
-      "id": 77,
+      "id": 78,
       "slug": "cache-mongodb-provider",
       "name": "MongoDB cache provider",
       "phase": "Cache and providers",
       "python_evidence": "tina4_python/cache/__init__.py",
-      "packet": "features/077-cache-mongodb-provider.md"
+      "packet": "features/078-cache-mongodb-provider.md"
     },
     {
-      "id": 78,
+      "id": 79,
       "slug": "cache-database-provider",
       "name": "Database cache provider",
       "phase": "Cache and providers",
       "python_evidence": "tina4_python/cache/__init__.py",
-      "packet": "features/078-cache-database-provider.md"
+      "packet": "features/079-cache-database-provider.md"
     },
     {
-      "id": 79,
+      "id": 80,
       "slug": "response-cache",
       "name": "HTTP response cache",
       "phase": "Cache and providers",
       "python_evidence": "tina4_python/cache/__init__.py",
-      "packet": "features/079-response-cache.md"
+      "packet": "features/080-response-cache.md"
     },
     {
-      "id": 80,
+      "id": 81,
       "slug": "api-client",
       "name": "Standard-library HTTP API client",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/api/__init__.py",
-      "packet": "features/080-api-client.md"
+      "packet": "features/081-api-client.md"
     },
     {
-      "id": 81,
+      "id": 82,
       "slug": "graphql",
       "name": "GraphQL",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/graphql/__init__.py",
-      "packet": "features/081-graphql.md"
+      "packet": "features/082-graphql.md"
     },
     {
-      "id": 82,
+      "id": 83,
       "slug": "websocket",
       "name": "WebSocket protocol and server",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/websocket/__init__.py",
-      "packet": "features/082-websocket.md"
+      "packet": "features/083-websocket.md"
     },
     {
-      "id": 83,
+      "id": 84,
       "slug": "websocket-redis-backplane",
       "name": "Redis WebSocket backplane",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/websocket/backplane.py",
-      "packet": "features/083-websocket-redis-backplane.md"
+      "packet": "features/084-websocket-redis-backplane.md"
     },
     {
-      "id": 84,
+      "id": 85,
       "slug": "websocket-nats-backplane",
       "name": "NATS WebSocket backplane",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/websocket/backplane.py",
-      "packet": "features/084-websocket-nats-backplane.md"
+      "packet": "features/085-websocket-nats-backplane.md"
     },
     {
-      "id": 85,
+      "id": 86,
       "slug": "wsdl-soap",
       "name": "WSDL and SOAP",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/wsdl/__init__.py",
-      "packet": "features/085-wsdl-soap.md"
+      "packet": "features/086-wsdl-soap.md"
     },
     {
-      "id": 86,
+      "id": 87,
       "slug": "localization-i18n",
       "name": "Localization and i18n",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/i18n/__init__.py; tina4_python/translations/",
-      "packet": "features/086-localization-i18n.md"
+      "packet": "features/087-localization-i18n.md"
     },
     {
-      "id": 87,
+      "id": 88,
       "slug": "email-messenger",
       "name": "Email and messenger",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/messenger/__init__.py",
-      "packet": "features/087-email-messenger.md"
+      "packet": "features/088-email-messenger.md"
     },
     {
-      "id": 88,
+      "id": 89,
       "slug": "queue",
       "name": "Queue lifecycle",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/queue/__init__.py",
-      "packet": "features/088-queue.md"
+      "packet": "features/089-queue.md"
     },
     {
-      "id": 89,
+      "id": 90,
       "slug": "queue-lite-provider",
       "name": "Lite queue provider",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/queue/lite_backend.py",
-      "packet": "features/089-queue-lite-provider.md"
+      "packet": "features/090-queue-lite-provider.md"
     },
     {
-      "id": 90,
+      "id": 91,
       "slug": "queue-rabbitmq-provider",
       "name": "RabbitMQ queue provider",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/queue/rabbitmq_backend.py; tina4_python/queue_backends/rabbitmq_backend.py",
-      "packet": "features/090-queue-rabbitmq-provider.md"
+      "packet": "features/091-queue-rabbitmq-provider.md"
     },
     {
-      "id": 91,
+      "id": 92,
       "slug": "queue-kafka-provider",
       "name": "Kafka queue provider",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/queue/kafka_backend.py; tina4_python/queue_backends/kafka_backend.py",
-      "packet": "features/091-queue-kafka-provider.md"
+      "packet": "features/092-queue-kafka-provider.md"
     },
     {
-      "id": 92,
+      "id": 93,
       "slug": "queue-mongodb-provider",
       "name": "MongoDB queue provider",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/queue/mongo_backend.py; tina4_python/queue_backends/mongo_backend.py",
-      "packet": "features/092-queue-mongodb-provider.md"
+      "packet": "features/093-queue-mongodb-provider.md"
     },
     {
-      "id": 93,
+      "id": 94,
       "slug": "mqtt",
       "name": "MQTT client",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/mqtt/__init__.py; tina4_python/mqtt/message.py",
-      "packet": "features/093-mqtt.md"
+      "packet": "features/094-mqtt.md"
     },
     {
-      "id": 94,
+      "id": 95,
       "slug": "docstore",
       "name": "Document store interface",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/docstore/__init__.py",
-      "packet": "features/094-docstore.md"
+      "packet": "features/095-docstore.md"
     },
     {
-      "id": 95,
+      "id": 96,
       "slug": "docstore-sqlite-provider",
       "name": "SQLite document store provider",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/docstore/__init__.py",
-      "packet": "features/095-docstore-sqlite-provider.md"
+      "packet": "features/096-docstore-sqlite-provider.md"
     },
     {
-      "id": 96,
+      "id": 97,
       "slug": "docstore-mongodb-provider",
       "name": "MongoDB document store provider",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/docstore/__init__.py",
-      "packet": "features/096-docstore-mongodb-provider.md"
+      "packet": "features/097-docstore-mongodb-provider.md"
     },
     {
-      "id": 97,
+      "id": 98,
       "slug": "realtime-collaboration",
       "name": "Realtime collaboration",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/realtime/__init__.py; tina4_python/realtime/models/",
-      "packet": "features/097-realtime-collaboration.md"
+      "packet": "features/098-realtime-collaboration.md"
     },
     {
-      "id": 98,
+      "id": 99,
       "slug": "realtime-local-storage",
       "name": "Local realtime attachment storage",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/realtime/storage.py",
-      "packet": "features/098-realtime-local-storage.md"
+      "packet": "features/099-realtime-local-storage.md"
     },
     {
-      "id": 99,
+      "id": 100,
       "slug": "realtime-s3-storage",
       "name": "S3 realtime attachment storage",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/realtime/storage.py",
-      "packet": "features/099-realtime-s3-storage.md"
+      "packet": "features/100-realtime-s3-storage.md"
     },
     {
-      "id": 100,
+      "id": 101,
       "slug": "mcp-server",
       "name": "Model Context Protocol server",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/mcp/__init__.py; tina4_python/mcp/protocol.py; tina4_python/mcp/tools.py",
-      "packet": "features/100-mcp-server.md"
+      "packet": "features/101-mcp-server.md"
     },
     {
-      "id": 101,
+      "id": 102,
       "slug": "context-index",
       "name": "Local source and documentation context index",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/context/__init__.py; tina4_python/context/chunker.py",
-      "packet": "features/101-context-index.md"
+      "packet": "features/102-context-index.md"
     },
     {
-      "id": 102,
+      "id": 103,
       "slug": "live-api-index",
       "name": "Live framework and application API index",
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/docs.py",
-      "packet": "features/102-live-api-index.md"
+      "packet": "features/103-live-api-index.md"
     },
     {
-      "id": 103,
+      "id": 104,
       "slug": "events",
       "name": "Event and listener system",
       "phase": "Application runtime",
       "python_evidence": "tina4_python/core/events.py",
-      "packet": "features/103-events.md"
+      "packet": "features/104-events.md"
     },
     {
-      "id": 104,
+      "id": 105,
       "slug": "dependency-injection",
       "name": "Dependency injection container",
       "phase": "Application runtime",
       "python_evidence": "tina4_python/container/__init__.py",
-      "packet": "features/104-dependency-injection.md"
+      "packet": "features/105-dependency-injection.md"
     },
     {
-      "id": 105,
+      "id": 106,
       "slug": "service-runner",
       "name": "Service runner",
       "phase": "Application runtime",
       "python_evidence": "tina4_python/service/__init__.py",
-      "packet": "features/105-service-runner.md"
+      "packet": "features/106-service-runner.md"
     },
     {
-      "id": 106,
+      "id": 107,
       "slug": "html-element",
       "name": "HTML element builder",
       "phase": "Application runtime",
       "python_evidence": "tina4_python/HtmlElement.py",
-      "packet": "features/106-html-element.md"
+      "packet": "features/107-html-element.md"
     },
     {
-      "id": 107,
+      "id": 108,
       "slug": "ai-tool-integration",
       "name": "AI coding-tool integration",
       "phase": "Application runtime",
       "python_evidence": "tina4_python/ai/__init__.py",
-      "packet": "features/107-ai-tool-integration.md"
+      "packet": "features/108-ai-tool-integration.md"
     },
     {
-      "id": 108,
+      "id": 109,
       "slug": "feature-preload",
       "name": "Lazy feature loading and preload manifest",
       "phase": "Application runtime",
       "python_evidence": "tina4_python/__init__.py",
-      "packet": "features/108-feature-preload.md"
+      "packet": "features/109-feature-preload.md"
     },
     {
-      "id": 109,
+      "id": 110,
       "slug": "cli-init",
       "name": "CLI project initialization",
       "phase": "CLI",
       "python_evidence": "tina4_python/cli/__init__.py",
-      "packet": "features/109-cli-init.md"
+      "packet": "features/110-cli-init.md"
     },
     {
-      "id": 110,
+      "id": 111,
       "slug": "cli-serve",
       "name": "CLI development server",
       "phase": "CLI",
       "python_evidence": "tina4_python/cli/__init__.py",
-      "packet": "features/110-cli-serve.md"
+      "packet": "features/111-cli-serve.md"
     },
     {
-      "id": 111,
+      "id": 112,
       "slug": "cli-migrate",
       "name": "CLI migrations",
       "phase": "CLI",
       "python_evidence": "tina4_python/cli/__init__.py",
-      "packet": "features/111-cli-migrate.md"
+      "packet": "features/112-cli-migrate.md"
     },
     {
-      "id": 112,
+      "id": 113,
       "slug": "cli-seed",
       "name": "CLI seeding",
       "phase": "CLI",
       "python_evidence": "tina4_python/cli/__init__.py",
-      "packet": "features/112-cli-seed.md"
+      "packet": "features/113-cli-seed.md"
     },
     {
-      "id": 113,
+      "id": 114,
       "slug": "cli-test",
       "name": "CLI test runner",
       "phase": "CLI",
       "python_evidence": "tina4_python/cli/__init__.py",
-      "packet": "features/113-cli-test.md"
+      "packet": "features/114-cli-test.md"
     },
     {
-      "id": 114,
+      "id": 115,
       "slug": "cli-routes",
       "name": "CLI route inspection",
       "phase": "CLI",
       "python_evidence": "tina4_python/cli/__init__.py",
-      "packet": "features/114-cli-routes.md"
+      "packet": "features/115-cli-routes.md"
     },
     {
-      "id": 115,
+      "id": 116,
       "slug": "cli-console",
       "name": "CLI interactive console",
       "phase": "CLI",
       "python_evidence": "tina4_python/cli/__init__.py",
-      "packet": "features/115-cli-console.md"
+      "packet": "features/116-cli-console.md"
     },
     {
-      "id": 116,
+      "id": 117,
       "slug": "cli-env",
       "name": "CLI environment management",
       "phase": "CLI",
       "python_evidence": "tina4_python/cli/__init__.py",
-      "packet": "features/116-cli-env.md"
+      "packet": "features/117-cli-env.md"
     },
     {
-      "id": 117,
+      "id": 118,
       "slug": "cli-queue",
       "name": "CLI queue management",
       "phase": "CLI",
       "python_evidence": "tina4_python/cli/__init__.py",
-      "packet": "features/117-cli-queue.md"
+      "packet": "features/118-cli-queue.md"
     },
     {
-      "id": 118,
+      "id": 119,
       "slug": "cli-build",
       "name": "CLI container build",
       "phase": "CLI",
       "python_evidence": "tina4_python/cli/__init__.py; tina4_python/templates/docker/",
-      "packet": "features/118-cli-build.md"
+      "packet": "features/119-cli-build.md"
     },
     {
-      "id": 119,
+      "id": 120,
       "slug": "cli-generate",
       "name": "CLI code generation",
       "phase": "CLI",
       "python_evidence": "tina4_python/cli/__init__.py; tina4_python/templates/",
-      "packet": "features/119-cli-generate.md"
+      "packet": "features/120-cli-generate.md"
     },
     {
-      "id": 120,
+      "id": 121,
       "slug": "cli-metrics",
       "name": "CLI code metrics",
       "phase": "CLI",
       "python_evidence": "tina4_python/cli/__init__.py; tina4_python/dev_admin/metrics.py",
-      "packet": "features/120-cli-metrics.md"
+      "packet": "features/121-cli-metrics.md"
     },
     {
-      "id": 121,
+      "id": 122,
       "slug": "cli-commands",
       "name": "CLI command discovery and help",
       "phase": "CLI",
       "python_evidence": "tina4_python/cli/__init__.py",
-      "packet": "features/121-cli-commands.md"
+      "packet": "features/122-cli-commands.md"
     },
     {
-      "id": 122,
+      "id": 123,
       "slug": "cli-doctor",
       "name": "CLI doctor",
       "phase": "CLI",
       "python_evidence": "delegated by tina4_python/cli/__init__.py",
-      "packet": "features/122-cli-doctor.md"
+      "packet": "features/123-cli-doctor.md"
     },
     {
-      "id": 123,
+      "id": 124,
       "slug": "cli-setup",
       "name": "CLI guided setup",
       "phase": "CLI",
       "python_evidence": "delegated by tina4_python/cli/__init__.py",
-      "packet": "features/123-cli-setup.md"
+      "packet": "features/124-cli-setup.md"
     },
     {
-      "id": 124,
+      "id": 125,
       "slug": "cli-deploy",
       "name": "CLI deployment",
       "phase": "CLI",
       "python_evidence": "delegated by tina4_python/cli/__init__.py",
-      "packet": "features/124-cli-deploy.md"
+      "packet": "features/125-cli-deploy.md"
     },
     {
-      "id": 125,
+      "id": 126,
       "slug": "debug-overlay",
       "name": "Development error overlay",
       "phase": "Developer runtime",
       "python_evidence": "tina4_python/debug/error_overlay.py",
-      "packet": "features/125-debug-overlay.md"
+      "packet": "features/126-debug-overlay.md"
     },
     {
-      "id": 126,
+      "id": 127,
       "slug": "dev-admin",
       "name": "Development admin dashboard",
       "phase": "Developer runtime",
       "python_evidence": "tina4_python/dev_admin/__init__.py",
-      "packet": "features/126-dev-admin.md"
+      "packet": "features/127-dev-admin.md"
     },
     {
-      "id": 127,
+      "id": 128,
       "slug": "dual-test-port",
       "name": "Dual development and test ports",
       "phase": "Developer runtime",
       "python_evidence": "tina4_python/core/server.py",
-      "packet": "features/127-dual-test-port.md"
+      "packet": "features/128-dual-test-port.md"
     },
     {
-      "id": 128,
+      "id": 129,
       "slug": "port-takeover",
       "name": "Development port takeover",
       "phase": "Developer runtime",
       "python_evidence": "tina4_python/core/server.py; tina4_python/cli/__init__.py",
-      "packet": "features/128-port-takeover.md"
+      "packet": "features/129-port-takeover.md"
     },
     {
-      "id": 129,
+      "id": 130,
       "slug": "dynamic-version",
       "name": "Dynamic framework version",
       "phase": "Developer runtime",
       "python_evidence": "tina4_python/__init__.py",
-      "packet": "features/129-dynamic-version.md"
+      "packet": "features/130-dynamic-version.md"
     },
     {
-      "id": 130,
+      "id": 131,
       "slug": "test-client",
       "name": "In-process HTTP test client",
       "phase": "Testing and verification tools",
       "python_evidence": "tina4_python/test_client/__init__.py",
-      "packet": "features/130-test-client.md"
+      "packet": "features/131-test-client.md"
     },
     {
-      "id": 131,
+      "id": 132,
       "slug": "inline-testing",
       "name": "Inline testing API",
       "phase": "Testing and verification tools",
       "python_evidence": "tina4_python/Testing.py; tina4_python/test/__init__.py",
-      "packet": "features/131-inline-testing.md"
+      "packet": "features/132-inline-testing.md"
     },
     {
-      "id": 132,
+      "id": 133,
       "slug": "carbonah-benchmarks",
       "name": "Carbonah benchmark contract",
       "phase": "Testing and verification tools",
       "python_evidence": "benchmarks/ and plan/v3/CARBONAH.md",
-      "packet": "features/132-carbonah-benchmarks.md"
+      "packet": "features/133-carbonah-benchmarks.md"
     }
   ]
 }
