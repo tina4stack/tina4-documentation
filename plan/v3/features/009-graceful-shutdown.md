@@ -9,7 +9,7 @@
   server/worker transport
 - Dependants: background tasks, WebSockets, queues, services, database/cache/
   session clients, logging and generated deployments
-- Existing decision: ADR-0017
+- Existing decision: ADR-0017 (state-machine/deadline/validation/hook/worker clauses superseded by ADR-0047)
 - Current shared executable fixture: none
 - Re-audit date: 2026-08-10
 
@@ -26,6 +26,35 @@ and no shared fixture proves any of it.
 This audit changes no framework source. It defines the clean-room lifecycle,
 the executable parity plan and the implementation formula for every current or
 future Tina4 language.
+
+## Owner decisions APPROVED (finalized 2026-08-10)
+
+Feature 9 carried its decisions in the prose. The review surfaced three; Andre
+settled them.
+
+- **A: ADR-0017 is SUPERSEDED by a new ADR-0047, not amended in place** (the third
+  such supersession, after ADR-0014 -> ADR-0045 and ADR-0016 -> ADR-0046). ADR-0047
+  records the six-state machine, the deadline model below, fail-on-invalid timeout
+  validation, the programmatic/hook surface, the worker supervisor and long-running
+  modes; ADR-0017 keeps a Superseded-by pointer.
+- **B: the budget is a bounded DRAIN plus a guaranteed CLEANUP reserve, not one
+  whole-lifecycle deadline.** `TINA4_SHUTDOWN_TIMEOUT` stays the total budget measured
+  from `QUIESCING` (k8s grace = timeout + 5 unchanged), but the drain is bounded by
+  `timeout - reserve` and cleanup (hooks, resource close, final log flush) is
+  guaranteed the reserve, so a slow drain can never starve it. The reserve is
+  `min(5s, timeout/4)`, identical in all four for parity. Production adapters map the
+  DRAIN portion (`timeout - reserve`) to the server's native graceful timeout (uvicorn
+  `timeout_graceful_shutdown`, Puma `force_shutdown_after`); cleanup runs after, within
+  the reserve. This is what makes the guarantee hold on third-party servers, where the
+  native knob bounds only the drain.
+- **C: reverse-dependency order is authoritative for cleanup; logging is pinned last.**
+  The closeable registry closes each resource before those it depends on, with
+  reverse-registration as the tiebreak for independent resources, and logging always
+  closed last so every prior step can still log. The category list (queues/backplanes
+  -> DBs -> cache/session -> logging) is the expected illustration, not a separate rule.
+
+FINAL bar unchanged: publish ADR-0047, materialize `shutdown_contract.json`, wire the
+four runners, and pass the real-signal/container/broker lab matrix.
 
 ## Why this feature exists
 
@@ -154,10 +183,10 @@ STARTING -> RUNNING -> QUIESCING -> DRAINING -> CLEANUP -> STOPPED
 - `RUNNING`: listeners, workers and schedulers may accept new work.
 - `QUIESCING`: entered exactly once by SIGTERM, SIGINT or programmatic shutdown;
   admission and scheduling stop immediately.
-- `DRAINING`: work accepted before the transition may finish within the shared
-  deadline.
+- `DRAINING`: work accepted before the transition may finish within the drain
+  deadline (the total timeout minus the cleanup reserve).
 - `CLEANUP`: application hooks and framework-owned resources close in defined
-  order using whatever budget remains.
+  order within the guaranteed cleanup reserve.
 - `STOPPED`: completion is observable and the owning process can exit.
 
 Repeated shutdown requests are idempotent. They neither install another timer
@@ -191,9 +220,11 @@ The coordinator performs these phases in order:
    work cut off by the deadline remains unacknowledged for at-least-once
    redelivery.
 7. Run application shutdown hooks in reverse registration order.
-8. Close framework-owned resources in reverse dependency/registration order:
-   queue consumers/backends and WebSocket backplanes, named/default databases,
-   process-owned cache/session clients, then flush/close logging last.
+8. Close framework-owned resources in reverse dependency order (close each before
+   the resources it depends on), using reverse-registration as the tiebreak for
+   independent resources, and always flush/close logging last. The typical result
+   is queue consumers/backends and WebSocket backplanes, then named/default
+   databases, then process-owned cache/session clients, then logging.
 9. Log `shutdown_completed` with elapsed time, outcome and remaining counts,
    resolve the programmatic completion and exit according to the owner table.
 
@@ -207,9 +238,12 @@ re-open admission, register new work or extend the deadline.
 
 ## Timeout contract
 
-`TINA4_SHUTDOWN_TIMEOUT` is the maximum duration of the **whole shutdown
-lifecycle**, measured with a monotonic clock from the first transition into
-`QUIESCING`, not a fresh timer around only the HTTP drain.
+`TINA4_SHUTDOWN_TIMEOUT` is the total budget for the **whole shutdown lifecycle**,
+measured with a monotonic clock from the first transition into `QUIESCING`, not a
+fresh timer around only the HTTP drain. Within that total the drain phase is bounded
+by `timeout - reserve` and cleanup (hooks, resource close, final log flush) is
+guaranteed a `reserve` of `min(5s, timeout/4)`, so a slow drain can never starve
+cleanup. The reserve is identical in all four languages.
 
 - unset or empty selects 30 seconds;
 - a configured value is a finite native Feature 1 number greater than zero;
@@ -219,17 +253,18 @@ lifecycle**, measured with a monotonic clock from the first transition into
   banker rounding to a shorter grace period;
 - the deadline is resolved once at startup and cannot change mid-shutdown.
 
-This intentionally amends ADR-0017's “warn and fall back” rule. The approved
-Feature 1 principle is that invalid configuration must fail when the developer
-expects it to work. A misspelled shutdown budget must not silently become 30,
+This intentionally supersedes ADR-0017's “warn and fall back” rule via ADR-0047.
+The approved Feature 1 principle is that invalid configuration must fail when the
+developer expects it to work. A misspelled shutdown budget must not silently become 30,
 and an explicit zero must not mean immediate request loss in only Ruby and Node.
 
-At deadline expiry Tina4 logs `shutdown_timeout` with remaining HTTP,
-background, job, worker and WebSocket counts; force-closes network connections;
-cancels what the runtime can cancel; leaves an interrupted claimed job
-unacknowledged; performs bounded best-effort resource/log cleanup; and completes
-the process outcome. It does not wait indefinitely in a thread-pool destructor,
-user hook, database driver or worker join after claiming the deadline is real.
+At the drain deadline (`timeout - reserve`) Tina4 logs `shutdown_timeout` with
+remaining HTTP, background, job, worker and WebSocket counts; force-closes network
+connections; cancels what the runtime can cancel; and leaves an interrupted claimed
+job unacknowledged. Cleanup then runs within the reserve; if cleanup itself exceeds
+the reserve, Tina4 performs bounded best-effort resource/log close and completes the
+process outcome. It does not wait indefinitely in a thread-pool destructor, user
+hook, database driver or worker join after a deadline is real.
 
 ## Signals, process trees and exit status
 
@@ -291,15 +326,17 @@ developers use `on_shutdown`; they do not manipulate the internal registry.
 The observable outcomes are shared; the mechanism follows the socket owner:
 
 - **Python built-in:** Tina4 closes listeners, drains tasks and owns exit.
-- **uvicorn:** map the deadline to `timeout_graceful_shutdown`; use ASGI lifespan
-  for Tina4 resources and WebSocket/application hooks not owned by uvicorn.
-- **Hypercorn:** map to `graceful_timeout`; prove the same fixture cases.
+- **uvicorn:** map the DRAIN deadline (timeout minus the cleanup reserve) to
+  `timeout_graceful_shutdown`; run Tina4 resource/hook cleanup afterward within the
+  reserve via ASGI lifespan for resources uvicorn does not own.
+- **Hypercorn:** map the drain deadline to `graceful_timeout`; prove the same fixture cases.
 - **Granian:** either map a real drain deadline and lifecycle hooks or fail
   startup when selected with an unsupported Feature 9 contract. A warning that
   `TINA4_SHUTDOWN_TIMEOUT` is ignored is not parity.
 - **Ruby built-in:** Tina4 coordinates WEBrick.
-- **Puma:** configure `force_shutdown_after` and supported shutdown hooks; run
-  Tina4 cleanup before live peers/resources become unreachable.
+- **Puma:** set `force_shutdown_after` to the drain deadline and use supported
+  shutdown hooks; run Tina4 cleanup within the reserve before live peers/resources
+  become unreachable.
 - **PHP:** the Tina4 primary, pool workers and request children use one
   supervisor protocol.
 - **Node:** both single and cluster modes use the same worker-aware coordinator;
@@ -377,7 +414,7 @@ countdown before running `preStop`.
 | H9-05 | P2 | ADR-0017/Python/PHP require a positive timeout; Ruby and Node explicitly accept zero. PHP accepts only whole integers while the others accept fractions; Python rounds a production value instead of ceiling it. | one Feature 1 numeric rule, startup failure for non-positive/invalid, monotonic deadline and safe ceiling for integer knobs |
 | H9-06 | P2 | Only PHP exposes `onShutdown`; it runs after server/database cleanup. Python, Ruby and Node have no portable application hook. | removable LIFO hooks before framework resource teardown, sync/async as supported |
 | H9-07 | P2 | Programmatic shutdown is not the signal lifecycle. Node's returned `close()` is non-awaitable, omits WebSocket 1001/hooks, and launches database cleanup without waiting. Other ports expose different or internal controls. | one public idempotent completion-bearing shutdown operation used by signals and explicit callers |
-| H9-08 | P2 | Existing timeout logic primarily bounds HTTP drain. User hooks, thread-pool callbacks, worker joins and resource drivers can outlive the advertised budget; Python cancels background runners then uses a non-waiting executor close whose threads may still delay interpreter exit. | one absolute whole-lifecycle deadline and remaining-budget-aware phases |
+| H9-08 | P2 | Existing timeout logic primarily bounds HTTP drain. User hooks, thread-pool callbacks, worker joins and resource drivers can outlive the advertised budget; Python cancels background runners then uses a non-waiting executor close whose threads may still delay interpreter exit. | one monotonic budget from QUIESCING, split into a bounded drain deadline plus a guaranteed cleanup reserve |
 | H9-09 | P2 | Cleanup is hard-coded around some databases/background/WebSockets rather than a lifecycle registry. Activated queue/backplane/cache/session/log resources can be outside the path. | feature-owned closeable registry populated by each activated subsystem; reverse, idempotent cleanup |
 | H9-10 | P2 | Production coverage is fragmented: Python proves uvicorn only and Granian explicitly warns it ignores the timeout; Ruby Puma proves DB/HTTP but not a live 1001 frame; PHP pool proves shutdown/port but not an in-flight worker request; Node cluster proves startup only. | run the full fixture against every automatically selectable server and worker mode |
 | H9-11 | P2 | Existing harnesses commonly signal detached process groups. That is useful for cleanup but not the container contract, which signals process 1. It hid H9-01. | signal the exact primary/container PID for behavior; kill the group only in unconditional test cleanup |
@@ -506,8 +543,9 @@ mechanisms may differ; state transitions and observable outcomes may not.
 Feature 9 is complete only when:
 
 - H9-01 through H9-13 are closed in all four current ports;
-- ADR-0017 is amended with the state machine, whole-lifecycle deadline,
-  validation, programmatic hooks, workers and long-running-mode decisions;
+- ADR-0047 is published, superseding ADR-0017's state machine, deadline model
+  (bounded drain + cleanup reserve), validation, programmatic-hook, worker and
+  long-running-mode clauses (ADR-0017 keeps a Superseded-by pointer);
 - the fixture, four runners and central checker pass with current hashes;
 - every mutation witness is proven red;
 - TERM sent to each real container's process 1 drains single and worker modes;
