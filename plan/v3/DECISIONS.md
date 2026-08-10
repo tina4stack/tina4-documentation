@@ -58,6 +58,7 @@ Conventions:
 | ADR-0048 | [CORS wildcard-credentials fails startup; per-origin warnings bounded](decisions/ADR-0048.md) (supersedes ADR-0018 clauses) | Proposed |
 | ADR-0049 | [Rate limiting on by default, token bucket, canonical-IP keyed](decisions/ADR-0049.md) (supersedes ADR-0019 clauses) | Proposed |
 | ADR-0050 | [One buffered response, strict recursive JSON, explicit representation types](decisions/ADR-0050.md) (supersedes ADR-0019 clauses) | Proposed |
+| ADR-0051 | [Systemic ORM row-cap: unbounded reads, pagination the only limiter](decisions/ADR-0051.md) (net-new; consolidates Features 5/21/22/23/24 row-cap clauses) | Proposed |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
