@@ -53,19 +53,72 @@ evidence for the rows above.
 
 ## Public surface contract
 
-The audit has not yet extracted a language-neutral public surface and its idiomatic spellings.
+The SQLite provider implements the Feature 3 adapter interface; it exposes no public
+surface of its own beyond construction. Every language provides the same adapter
+capabilities, selected from a `sqlite:` URL by the registry:
+
+- connection: `connect`, `close`, `getDatabaseType` (returns `sqlite`);
+- execution: `execute`, `executeMany`, `fetch`, `fetchOne`;
+- transaction: `startTransaction`, `commit`, `rollback`, `autocommit`;
+- introspection: `getTables`, `getColumns`, `tableExists`.
+
+Names follow each language's Feature 3 spelling (snake_case in Python/Ruby, camelCase in
+PHP/Node). Identifier quoting stays on the adapter (`quote_identifier`), because SQLite's
+`"..."`/`[...]` rules are its own. The provider adds no query methods; a query is built by
+Feature 6 and executed through these primitives. The only construction input is the
+resolved target (`:memory:` or a filesystem path) that Feature 4 hands it.
 
 ## Inputs and outputs
 
-The audit has not yet fixed all native types, defaults, nullability, ordering, and serialized shapes.
+- SQLite's five storage classes cross the adapter boundary as native values: NULL as
+  null/nil/None, INTEGER as a native integer, REAL as a native float, TEXT as a string,
+  and BLOB as native bytes. SQLite's dynamic typing is not disguised as a native boolean;
+  a 0/1 column reads back as an integer.
+- `fetch` returns a native list of record maps; `fetchOne` returns one record map or
+  null. `execute` returns a `DatabaseResult` (write result), `executeMany` one aggregate
+  `DatabaseResult`.
+- `getColumns` returns the Feature 3 descriptor per column, including name, declared type,
+  nullability, default, and the SQLite `pk` ordinal exposed as
+  `primary_key_position`/`primaryKeyPosition`. `primaryKey` returns the key columns sorted
+  by positive ordinal, so a reversed composite-key declaration preserves declared order.
+- `getTables` returns application/user tables only, excluding every `sqlite_%` internal
+  table (including `sqlite_sequence`, which an AUTOINCREMENT table creates).
+- Binding preserves parameter order; a null in a keyed map compiles to `IS NULL` (a
+  Feature 5 builder rule), not `= NULL` which matches zero rows.
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection, retry, rollback, and deletion path.
+1. Feature 4 parses the `sqlite:` URL and hands the provider a resolved target
+   (`:memory:` or an absolute/relative path already resolved against the app root).
+2. `connect` opens exactly that target through the host's maintained SQLite binding,
+   then, before any application SQL: enables foreign-key enforcement, sets the busy
+   timeout, and requests WAL for a file-backed database (in-memory reports `memory`).
+3. A partially opened handle is closed if setup fails; `connect` is idempotent and hides
+   no second connection.
+4. `execute`/`fetch`/`fetchOne`/`executeMany` run statements; a lock waits up to the busy
+   timeout, then throws.
+5. Transactions bracket through `startTransaction`/`commit`/`rollback`; `autocommit`
+   reflects and sets the native mode.
+6. `close` releases the handle and is idempotent (a second close is a safe no-op in every
+   language, including Node).
+
+There is no retry policy beyond the busy-timeout wait; a deletion is an ordinary
+statement. Catalog inspection (`getTables`/`getColumns`/`tableExists`) reads SQLite's
+schema tables and never mutates.
 
 ## Configuration and precedence
 
-The audit has not yet fixed argument, environment, project-file, default, and cache timing precedence.
+- The busy timeout defaults to 5000 ms and is overridable by `TINA4_SQLITE_BUSY_TIMEOUT`
+  (the Feature 5 SQLite decision). Today it diverges (Python 30000, PHP 5000, Ruby 0,
+  Node 0) and converges to 5000.
+- Foreign-key enforcement is always on; it is not configurable off (a silent-off would
+  make cross-provider behavior diverge).
+- WAL is requested for file-backed connections; an in-memory database keeps its native
+  journal mode and may report `memory`.
+- Native extension loading is disabled and has no enabling env var in 3.14; a future
+  security-reviewed configuration is the only path to enable it.
+- The path comes only from Feature 4's resolution; the provider never prefixes, rewrites
+  or invents a path. There are no other environment variables or project files.
 
 ## Failures, side effects and security
 
@@ -79,7 +132,16 @@ The audit has not yet fixed argument, environment, project-file, default, and ca
 
 ## Wire and persistence contract
 
-The audit has not yet fixed every wire format, stored shape, encoding, identifier, timestamp, and compatibility rule.
+SQLite is embedded, so there is no network wire format; the persistence contract is the
+on-disk/in-memory storage and how values round-trip. Values are stored by SQLite storage
+class and read back as the native type above. Text is UTF-8. SQLite has no native
+date/time or boolean type, so a timestamp is stored and returned as the application's
+chosen TEXT/INTEGER shape and a flag as an integer; the provider does not invent a
+conversion. A file-backed database in WAL mode carries the standard `-wal`/`-shm`
+sidecar files, which are the database's, not the provider's, to manage. Identifiers are
+quoted only by the trusted builder; values are always bound, never interpolated. A
+database file written by one language's provider is byte-compatible with every other,
+because all four use the host's standard SQLite library over the same file format.
 
 ## Providers and substitutability
 
@@ -161,7 +223,19 @@ claim provider conformance.
 
 ## Integration map
 
-The audit has not yet mapped every export, startup path, request hook, CLI, scaffolder, status command, document, and generated consumer.
+- The adapter registry selects this provider from a `sqlite:`/`sqlite3:` scheme; the
+  database factory constructs it with Feature 4's resolved target.
+- Feature 5's write facade composes CRUD onto the adapter primitives; Feature 6 builds the
+  SQL; Feature 7 supplies the `AUTOINCREMENT` DDL rewrite and placeholder style.
+- `getColumns`/`primaryKey` feed the Feature 3 descriptor to migrations, the ORM and
+  `getColumns` consumers; the `pk` ordinal reaches them as `primary_key_position`.
+- `get_next_id` sequence support (the `tina4_sequences` table) is created on first use for
+  SQLite.
+- CLI `migrate`/`doctor`/`generate`, the central `write_path_contract.json` and
+  `sqlite_contract.json` fixtures, the four runners, release notes and the database
+  documentation all reference this provider and update together.
+- Node's package `engines` declares the runtime floor; the framework CI matrix runs
+  SQLite on every language.
 
 ## Breaking changes and migration
 
@@ -181,7 +255,22 @@ Migration effects:
 
 ## Implementation backlog
 
-The audit has not yet produced a dependency-ordered backlog for all current languages and future ports.
+1. Materialize `sqlite_contract.json` and wire the four runners against real memory and
+   temporary-file databases.
+2. Converge the busy timeout to 5000 ms with the `TINA4_SQLITE_BUSY_TIMEOUT` override in
+   all four.
+3. Exclude `sqlite_%` internal tables in Python's `getTables`.
+4. Preserve primary-key ordinals (`primary_key_position`) in all four, including reversed
+   composite keys.
+5. Make Node's `close` idempotent (it currently throws on a second close).
+6. Stop Ruby's `fetch_one` from appending `LIMIT` to a PRAGMA statement.
+7. Remove Ruby's stale second SQLite implementation and its export; keep only the
+   registry-selected driver.
+8. Raise Tina4 Node's declared and tested minimum runtime to 24.15.
+9. Compile null keyed-map filters as `IS NULL` in the Feature 5 builder.
+10. Run the fixture locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
+
+No framework implementation belongs in the audit commit.
 
 ## Porting capsule
 
@@ -194,19 +283,19 @@ memory and temporary-file databases.
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Existing-language contradictions recorded.
+- [x] Owner ambiguities recorded (no new decision; inherits Feature 5's, which are ratified).
+- [x] Proposed shared cases and mutation witnesses complete.
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule is clean-room sufficient.
 
 - [x] Boundary, configuration, lifecycle and failure rules drafted.
 - [x] Existing contradictions measured in all four runtimes.
-- [ ] Parent Feature 5 owner decisions approved or amended.
-- [ ] Central SQLite fixture materialized.
-- [ ] Implementation and all four runners completed after the audit phase.
+- [x] Parent Feature 5 owner decisions ratified (2026-08-10).
+- [ ] Central SQLite fixture materialized (build phase).
+- [ ] Implementation and all four runners completed after the audit phase (build phase).
