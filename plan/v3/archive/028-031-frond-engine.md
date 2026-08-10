@@ -1,4 +1,9 @@
-# Features 28-31: Frond engine (lexer, parser, compiler, runtime)
+# Historical bundle: Features 28-31 Frond engine
+
+> Archived when the feature inventory moved to one numbered file per feature.
+> Current packets: `../features/028-frond-lexer.md`,
+> `../features/029-frond-parser.md`, `../features/030-frond-compiler.md` and
+> `../features/031-frond-runtime.md`.
 
 Audited 2026-07-28. Part of `98-feature-audit.md`. Phase 3, rows 1-4. **Planning only.**
 

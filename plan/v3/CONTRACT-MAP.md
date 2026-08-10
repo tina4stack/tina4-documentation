@@ -131,7 +131,10 @@ their plan and ADR, and are the first candidates to promote to Layer 2.
 | 19 Result / ORM caching | `features/019-orm-result-caching.md` | GAP (ruby) | closed |
 | 20 Input validation | `features/020-input-validation.md` | PROMOTE node | closed |
 | 27 Migrations | `features/027-migrations.md` | SYNTHESISE (provisional) | **audit in progress 2026-08-08** - confirmed code-discovery, rollback-history, and four-way result-shape defects; fixture and fixes owed |
-| 28-31 Frond engine | `features/028-031-frond-engine.md` | PROMOTE python | closed as one row |
+| 28 Frond lexer | `features/028-frond-lexer.md` | historical bundle promoted Python structure | reopened / queued |
+| 29 Frond parser | `features/029-frond-parser.md` | historical bundle promoted Python structure | reopened / queued |
+| 30 Frond compiler | `features/030-frond-compiler.md` | historical bundle promoted Python structure | reopened / queued |
+| 31 Frond runtime | `features/031-frond-runtime.md` | historical bundle promoted Python structure | reopened / queued |
 | 32 Frond filters | `features/032-frond-filters.md` | SYNTHESISE | closed |
 | 37 Auto-escaping | `features/037-auto-escaping.md` | UNIFORM | closed, 1 owner call |
 | 38 Sandboxing | `features/038-sandboxing.md` | PROMOTE php (P1) | shipped all 4 |

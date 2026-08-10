@@ -1,6 +1,11 @@
-# Feature 43: cache backends, + 39 template caching, + 40 fragment caching
+# Feature 043: Cache backends
 
 Audited 2026-08-01. Part of `98-feature-audit.md`.
+
+This file now owns Feature 43 only. Historical measurements that crossed into
+compiled-template and fragment caching are retained as dependency evidence;
+their feature contracts live in `039-template-caching.md` and
+`040-fragment-caching.md`.
 
 Measured on macOS 26.5.2 (Darwin 25.5.0, arm64) with Python 3.14.5, PHP 8.5.7,
 Ruby 4.0.2, Node 24.9.0, against live Redis 6379, Valkey 6380, memcached 11211,

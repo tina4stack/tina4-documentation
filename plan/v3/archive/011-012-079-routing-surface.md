@@ -1,4 +1,9 @@
-# Features 11, 12, 79, 64: the rest of the routing surface
+# Historical bundle: Features 11, 12, 79 and 64
+
+> Archived when the feature inventory moved to one numbered file per feature.
+> Current packets: `../features/011-rate-limiting.md`,
+> `../features/012-response-types.md`, `../features/064-routes-cli.md` and
+> `../features/079-route-groups.md`.
 
 Audited 2026-08-01 on macOS 26.5.2 (Darwin 25.5.0), Python 3.14.5, PHP 8.5.7,
 Ruby 4.0.2, Node 24.9.0. Part of `98-feature-audit.md`. Feature 6 (router and
