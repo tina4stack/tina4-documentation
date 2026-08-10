@@ -2,31 +2,46 @@
 
 ## Identity and status
 
-- Matrix identity: 17 — ORM base class
-- Audit state: auditing
-- Audit note: Structure migrated; closure checklist records remaining work
-- Dependencies: not yet extracted from the retained audit evidence
-- Dependants: not yet extracted from the retained audit evidence
-- Existing ADRs: see retained evidence and the central decision index
-- Shared fixtures: not yet confirmed
+- Matrix identity: 17 - ORM base class
+- Audit state: decision-ready
+- Audit note: measured 2026-07-28 (LOC/CC/MI + real-SQLite behaviour probes below); prose
+  sections completed from that evidence 2026-08-10. No framework code changed.
+- Dependencies: Feature 3 adapter interface (connection, execute, transaction), Feature 5
+  write facade, Feature 6 query builder, Feature 7 SQL translator (where `create_table`'s
+  dialect branches belong), Feature 18 ORM fields, Feature 16 get_next_id
+- Dependants: every domain model extends this class; AutoCrud, the REST layer, migrations
+  and any reflection-driven tooling read its field definitions and relationships
+- Existing ADRs: the no-aliases rule (D2), ADR-0002 (metrics used for the measurements);
+  Feature 20 (soft delete) owns `is_deleted`
+- Shared fixtures: `orm_base_contract.json` is required (the D1 behaviour table plus the
+  no-alias and structure gates below)
 
 ## Why this feature exists
 
-The retained audit does not yet state the developer problem in one language-neutral sentence.
+A developer defines a domain model once and gets save, find, validate, serialize and
+relationships from a single base class whose observable behavior is identical in all four
+languages, so the same model code and the same tests move between them unchanged.
 
 ## Boundary
 
-The retained audit does not yet separate what this feature owns, delegates, and excludes.
+This feature owns the base model: construction from a map or a JSON object, the
+fluent-save contract, find and find-or-fail, validate, serialization, and relationship
+wiring. It DELEGATES the SQL to Feature 6/7, the connection and transaction to Feature 3,
+the id to Feature 16, the field definitions and column mapping to Feature 18, the
+validation rules to Feature 19, and soft delete to Feature 20. `create_table`'s dialect
+branching is explicitly OUT of scope: it belongs in the Feature 7 translator (D5).
 
 ## Existing implementation evidence
 
 | Evidence | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
-| Public surface | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Startup/CLI integration | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Stored/wire format | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing focused tests | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing lab baseline | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| File | `orm/model.py`, `orm/fields.py` | `Tina4/ORM.php` | `orm.rb`, `field_types.rb` | `orm/src/baseModel.ts` |
+| Size (LOC / fns / CC avg) | 1370 / 86 / 4.49 | 1391 / 79 / 4.66 | 839 / 85 / 3.79 | 1028 / 84 / 3.8 |
+| Worst function (CC) | `create_table` (41) | `eagerLoad` (35) | `save` (32) | `save` (37) |
+| Maintainability index | 7.3 | 0.0 (floor) | 10.0 (best) | 2.4 |
+| Behaviour (D1) | fluent save, null-on-miss, []=valid | same | same | same |
+| Serialization aliases (D2) | `to_dict`/`to_assoc`/`to_object` + `to_array`/`to_list` | camel equivalents | camel equivalents | `to_h` + 3 more |
+| Relationship declaration (D3) | field option + `has_many()` | `hasMany`/`hasOne`/`belongsTo` | DSL | static arrays |
 
 ### Retained introductory record
 
@@ -69,31 +84,65 @@ So the feature matrix itself carries a stale name for the row. Fix it when featu
 
 ## Public surface contract
 
-The audit has not yet extracted a language-neutral public surface and its idiomatic spellings.
+Construct with a map or a JSON object string; a list/array raises. `save()` returns the
+model instance (not `true`, not a row count) on success and `false` on a write failure,
+without raising. `find(pk)` returns the model or null; `find_or_fail(pk)` returns the model
+or raises a named error. `validate()` returns a list of messages, empty when valid, and
+never raises. Serialization is ONE map method and ONE list method per language after the
+cull (`to_dict`/`to_h`, `to_array`, plus `to_json`); every alias is deleted. Relationships
+are declared idiomatically per language (D3) but the OUTCOME is identical: declaring a
+foreign key wires both sides. `count()` returns the row count.
 
 ## Inputs and outputs
 
-The audit has not yet fixed all native types, defaults, nullability, ordering, and serialized shapes.
+- Input to the constructor is a map or a JSON object string; a list/array is rejected with
+  a language-native type error (Python `TypeError`, Ruby `ArgumentError`, equivalents in
+  PHP and Node).
+- `save()` outputs the model instance (identity, verified `save() is self`) or `false`.
+- `find` outputs the model or the language null (`None`/`nil`/`null`); never an empty model.
+- `validate` outputs an empty list for a valid model and one message per broken rule.
+- Serialization outputs the SAME JSON in all four for the same model (Ruby's symbol keys
+  versus Python's string keys collapse to identical JSON); every declared field appears.
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection, retry, rollback, and deletion path.
+1. Construct: accept a map or JSON object, hydrate declared fields, reject a list.
+2. Save: validate, decide insert-versus-update (the branch worth naming), write, then
+   refresh the instance from the write result (the generated id from Feature 16/providers).
+3. Find: build the SELECT, return the hydrated model or null.
+4. Relationships: declaring a foreign key wires `belongs_to` on the declaring model and
+   `has_many` on the referenced model, with the has-many name defaulting to the declaring
+   class lowercased plus `s`, overridable by one named option; eager-load resolves,
+   batch-loads and attaches (the three named steps that replace the `eagerLoad` walk).
+5. Serialize: project declared fields to a map/list/JSON.
 
 ## Configuration and precedence
 
-The audit has not yet fixed argument, environment, project-file, default, and cache timing precedence.
+- Model metadata (table name, primary key, field definitions, relationships) is declared on
+  the class; there is no environment variable and no runtime precedence chain.
+- An explicit relationship name option beats the pluralized default.
 
 ## Failures, side effects and security
 
-The audit has not yet closed every failure boundary, side effect, cleanup rule, and security concern.
+- A failed save returns `false` and does not raise and does not return the model, so a
+  caller can branch on the write outcome without a try/catch.
+- `validate()` never raises; a broken rule is a message, not an exception.
+- A list constructor raises rather than silently building a malformed model.
+- Values reach the database only through the bound write facade (Feature 5); the base model
+  never concatenates a value into SQL.
 
 ## Wire and persistence contract
 
-The audit has not yet fixed every wire format, stored shape, encoding, identifier, timestamp, and compatibility rule.
+The persisted shape is the model's declared fields mapped to columns (Feature 18 owns the
+property-to-column mapping). The serialized wire shape is the same JSON across all four for
+the same model; the cross-framework fixture pins that byte-for-byte. A generated id is read
+back into the instance after save.
 
 ## Providers and substitutability
 
-The audit has not yet proved provider substitution or recorded deliberate capability exceptions.
+The base model runs over any Feature 3 adapter; its behavior (D1) is identical regardless of
+the engine underneath. Ruby's structure is the reference to port to (the verdict below); a
+future runtime implements the same public surface and passes the same behaviour fixture.
 
 ## Contradictions and defects
 
@@ -191,7 +240,23 @@ D2 (the alias sprawl) and D5 (the god-methods) are the work. Both are category 4
 
 ## Owner decisions
 
-No new owner decision is recorded in this migrated section. Retained decisions appear below when present.
+Proposed for owner ratification (the D1-D5 measurement forces each):
+
+1. LOCK the behaviour (D1) with the contract suite before any structural work: fluent save
+   returns the instance, find returns null on a miss, validate returns an empty list when
+   valid, a list constructor raises. All four already agree; the tests defend it.
+2. DELETE the serialization aliases (D2), not deprecate them: keep one map method
+   (`to_dict`, and `to_h` in Ruby by convention), `to_array`, and `to_json`; remove
+   `to_assoc`, `to_object`, `to_list`, `to_hash`. Breaking, with an entry naming every
+   removed name across code, docs and the four skills.
+3. Keep each language's idiomatic relationship DECLARATION (D3, category 3) but make the
+   OUTCOME identical and tested: a foreign key wires both sides, has-many name defaults to
+   the pluralized declaring class.
+4. PROMOTE Ruby's structure (D5): every method under CC 12; split the four god-methods
+   (`create_table`, `eagerLoad`, `save`) into named steps. `create_table`'s dialect
+   branches move to the Feature 7 translator, so this step sequences AFTER Feature 3/7.
+5. Verdict: UNIFORM on behaviour, PROMOTE Ruby on structure, decided on LOC and CC because
+   correctness is already settled.
 
 ## Proposed conformance fixture
 
@@ -218,11 +283,25 @@ somebody wants a convenience name.
 
 ## Integration map
 
-The audit has not yet mapped every export, startup path, request hook, CLI, scaffolder, status command, document, and generated consumer.
+- Every domain model in an application extends this base class; it is the most widely
+  consumed public surface in the framework.
+- AutoCrud and the REST layer read its field definitions and relationships; migrations use
+  its schema; reflection-driven tooling depends on `getFieldDefinitions`-style access.
+- Feature 18 supplies fields and column mapping; Feature 19 supplies validation rules;
+  Feature 20 supplies soft delete; Feature 7 will receive `create_table`'s dialect code.
+- Central fixtures, four runners, the CI matrix, release notes, the ORM docs and the four
+  Tina4 skills update together (the alias removal touches the skills).
 
 ## Breaking changes and migration
 
-The audit has not yet turned every parity break into an actionable pre-3.14 migration instruction.
+- Alias removal (D2): `to_assoc`, `to_object`, `to_list`, and Ruby `to_hash`/`to_dict` are
+  DELETED. The `Breaking:` changelog entry must list every removed name, and the docs pass
+  plus the four skills update in the SAME release, because each name is a call site
+  somewhere. Migration: replace with `to_dict`/`to_h`, `to_array`, `to_json`.
+- The structural god-method split (D5) is internal and not breaking, but sequences AFTER
+  Feature 3/7 so `create_table`'s dialect branches have a home in the translator.
+- Behaviour (D1) does not change; the contract suite exists to make an accidental change
+  during the structural split impossible.
 
 ## Implementation backlog
 
@@ -286,18 +365,21 @@ dialect helpers have to have somewhere to go.
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Existing-language contradictions recorded (D1-D5).
+- [x] Owner ambiguities recorded (5 proposed; the genuine calls await owner ratification).
+- [x] Proposed shared cases and mutation witnesses complete (the fixture table above).
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule is clean-room sufficient.
 
-### Parked
+### State
 
-Not implemented. Sequenced after feature 3 (which gives `create_table`'s dialect
-branches a home). Full order now: 6, 4, 5, 3, 13, then 2, 1, 0.
+AUDIT decision-ready: measured (the most degraded file set in the matrix), D1-D5 recorded,
+5 decisions proposed, contract fixture specified. The IMPLEMENTATION (lock D1, delete
+aliases D2, split the god-methods D5) is the build phase and is NOT done. The `create_table`
+dialect split depends on Feature 7 landing first, so the structural work sequences after the
+Database phase. Decision-ready is not built.
