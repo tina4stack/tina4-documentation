@@ -110,8 +110,8 @@ Historical documents remain in `archive/`; active packets use this table.
 
 | # | Feature | Python evidence | PHP | Ruby | Node | Audit state |
 | ---: | --- | --- | --- | --- | --- | --- |
-| 61 | [SCSS compiler](features/061-scss-compiler.md) | `tina4_python/scss/; framework SCSS compiler surface` | inventory pending | inventory pending | inventory pending | queued |
-| 62 | [Tina4 CSS](features/062-tina4-css.md) | `tina4_python/public/css/; tina4_python/scss/` | inventory pending | inventory pending | inventory pending | queued |
+| 61 | [SCSS compiler](features/061-scss-compiler.md) | MOVED TO CLIENT: compiler in tina4 CLI (`tina4/src/scss.rs`), source in `tina4-css` repo; framework bundle removed | n/a (client) | n/a (client) | n/a (client) | client |
+| 62 | [Tina4 CSS](features/062-tina4-css.md) | `tina4_python/public/css/` (compiled css served static; the `scss/` source moved to the client) | inventory pending | inventory pending | inventory pending | queued |
 | 63 | [Frond and Tina4 browser helpers](features/063-frond-js-helper.md) | `tina4_python/public/js/` | inventory pending | inventory pending | inventory pending | queued |
 
 ## Authentication

@@ -2,108 +2,65 @@
 
 ## Identity and status
 
-- Matrix identity: 61 — SCSS compiler
-- Audit state: queued
-- Dependencies: not yet mapped
-- Dependants: not yet mapped
-- Existing ADRs: see the central decision index
-- Shared fixtures: not yet defined
+- Matrix identity: 61 - SCSS compiler
+- Audit state: NOT A FRAMEWORK FEATURE - moved to the tina4 client (2026-08-10)
+- Audit note: SCSS compilation is NOT a runtime framework concern. It belongs to the tina4
+  client (the Rust CLI). This packet records that decision; there is no four-language framework
+  parity contract to audit here.
+- Owner: the tina4 CLI (`tina4/src/scss.rs`) and the canonical `tina4-css` design-system repo
+- Catalog phase: Front-end (client tooling)
 
-- Catalog phase: Frontend assets
+## Decision: SCSS lives in the client, not the framework
 
-## Why this feature exists
+SCSS is a BUILD concern, not a request-time runtime concern, so it belongs to the tooling the
+developer runs at build time - the tina4 CLI - not to each language framework.
 
-This feature gives an application one portable scss compiler contract across
-every Tina4 language.
+- The COMPILER lives in the tina4 Rust CLI: `tina4/src/scss.rs` compiles the non-partial SCSS
+  files in an input directory to CSS, and the CLI's watcher recompiles on change. `tina4 init`
+  scaffolds a project's `src/scss` directory.
+- The canonical tina4css design-system SOURCE lives in the `tina4-css` repo
+  (`tina4-css/src/scss`), which is the single authoritative copy.
+- The frameworks previously BUNDLED a byte-identical duplicate of the tina4css source
+  (`tina4_python/scss/tina4css`, `lib/tina4/scss/tina4css`, `packages/core/scss/tina4css`, 17
+  files each, md5-identical). That copy was source-only (no compiler), never compiled or served
+  at runtime (the router skips the `scss` dir), and unreferenced by any framework code - pure
+  dead weight.
 
-## Boundary
+## What was done (2026-08-10)
 
-This packet owns the public behavior and integration boundary for SCSS compiler. The
-audit must separate that behavior from private helpers and adjacent features.
+The bundled duplicate was REMOVED from all three frameworks that carried it (PHP never did):
 
-## Existing implementation evidence
+| repo | removed | commit |
+| --- | --- | --- |
+| tina4-python | `tina4_python/scss/` | `386cd6d` (v3) |
+| tina4-ruby | `lib/tina4/scss/` | `c61250c` (v3) |
+| tina4-nodejs | `packages/core/scss/` | `26be920` (v3) |
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Public surface | `tina4_python/scss/; framework SCSS compiler surface` | Not yet inventoried | Not yet inventoried | Not yet inventoried |
-| Startup/CLI integration | Not yet traced | Not yet traced | Not yet traced | Not yet traced |
-| Stored/wire format | Not yet traced | Not yet traced | Not yet traced | Not yet traced |
-| Existing focused tests | Not yet counted | Not yet counted | Not yet counted | Not yet counted |
-| Existing lab baseline | Not yet run | Not yet run | Not yet run | Not yet run |
+Smoke-verified after removal: `import tina4_python` and `require 'tina4'` load cleanly; Node has
+no reference to the folder in `src`, `package.json` or `tsconfig`. A scaffolded project's own
+`src/scss` (compiled by the CLI) is unaffected - the framework's `src/scss` skip-set, the
+metrics stylesheet count, and the project scaffold list are about the USER project, not the
+removed bundle, and are correct as-is.
 
-## Public surface contract
+## Boundary (for the client, not this audit)
 
-The audit has not yet extracted the language-neutral surface and idiomatic
-spellings for this feature.
+The tina4 CLI owns: discovering `.scss` in the project's `src/scss`, compiling non-partial files
+to CSS (skipping `_partials`), watch-mode recompilation, and scaffolding `src/scss` on `init`.
+The `tina4-css` repo owns the canonical design-system source. Neither is a four-language
+framework parity concern.
 
-## Inputs and outputs
+## Why there is no framework parity contract
 
-The audit has not yet fixed native types, defaults, nullability, ordering and
-serialized shapes.
-
-## Lifecycle and operation graph
-
-The audit has not yet traced every producer, discovery, execution, inspection,
-retry, rollback and deletion path.
-
-## Configuration and precedence
-
-The audit has not yet fixed arguments, environment values, project files,
-defaults and cache timing.
-
-## Failures, side effects and security
-
-The audit has not yet closed failure boundaries, external effects, cleanup and
-security behavior.
-
-## Wire and persistence contract
-
-The audit has not yet fixed wire formats, stored shapes, encodings, identifiers,
-timestamps and compatibility rules.
-
-## Providers and substitutability
-
-The audit has not yet proved substitution or recorded capability exceptions.
-
-## Contradictions and defects
-
-No cross-language contradiction register exists yet for this standalone packet.
-
-## Owner decisions
-
-No owner decision has been recorded for this standalone packet.
-
-## Proposed conformance fixture
-
-The audit has not yet defined positive, negative, malformed, stale, duplicate,
-partial-state and mutation-witness cases.
-
-## Integration map
-
-The audit has not yet mapped exports, startup, request lifecycle, CLI,
-scaffolders, status tools, documentation and generated consumers.
-
-## Breaking changes and migration
-
-The audit has not yet converted parity breaks into 3.14 migration instructions.
-
-## Implementation backlog
-
-The audit has not yet produced a dependency-ordered implementation backlog.
-
-## Porting capsule
-
-This packet is not yet sufficient for a clean-room implementation.
+A Frond template renders at request time; SCSS compiles at BUILD time. The frameworks serve the
+COMPILED `.css` as a static asset (Feature 41), which is language-agnostic bytes. There is no
+per-language SCSS runtime behaviour to keep in parity, because no framework compiles SCSS at
+runtime. So this row has no cross-language fixture, no defect register, and no owner decision
+beyond the one recorded above.
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Decision recorded: SCSS is a client (CLI) feature, not a framework feature.
+- [x] The bundled framework duplicate removed in all three carrying frameworks, with commits.
+- [x] Removal smoke-verified (imports load; no references remain).
+- [x] Canonical source (tina4-css) and compiler (CLI scss.rs) locations recorded.
+- [x] No four-language framework parity contract is owed here.
