@@ -2,31 +2,55 @@
 
 ## Identity and status
 
-- Matrix identity: 52 — Frond filters
-- Audit state: auditing
-- Audit note: Structure migrated; closure checklist records remaining work
-- Dependencies: not yet extracted from the retained audit evidence
-- Dependants: not yet extracted from the retained audit evidence
-- Existing ADRs: see retained evidence and the central decision index
-- Shared fixtures: not yet confirmed
+- Matrix identity: 52 - Frond filters
+- Audit state: decision-ready
+- Audit note: registries enumerated LIVE 2026-07-28 (not grepped - a grep gave 127/42/28/91,
+  obvious noise); prose sections completed from that evidence 2026-08-10. No framework code
+  changed.
+- Dependencies: Feature 49 parser (parses the `|` pipe), Feature 51 runtime (applies the
+  filter), Feature 57 escaping (a filter interacts with autoescape), Feature 55 functions and
+  Feature 56 extensibility (siblings)
+- Dependants: every template using `{{ x|filter }}`; the promise that a Frond template renders
+  on any of the four
+- Existing ADRs: ADR-0009 (removable Frond folder); the no-aliases rule; the data-not-host-
+  casing rule (Feature 24's JSON keys)
+- Shared fixtures: `frond_filter_corpus` (the canonical filter list) plus `frond_expression_
+  corpus.txt`
 
 ## Why this feature exists
 
-The retained audit does not yet state the developer problem in one language-neutral sentence.
+A template transforms a value with a filter: `{{ name|upper }}`, `{{ list|join(', ') }}`,
+`{{ token|form_token }}`. The filter NAMES live inside the template file, so for a Frond template
+to render on any of the four frameworks - Frond's whole reason to exist over each language's
+incumbent engine - every filter must have the SAME name in all four.
 
 ## Boundary
 
-The retained audit does not yet separate what this feature owns, delegates, and excludes.
+This feature owns the filter registry (the canonical filter set), the `|` application and
+chaining, and the `add_filter` registration API. It DELEGATES pipe parsing to Feature 49, the
+apply-at-render to Feature 51, escaping to Feature 57, and template functions to Feature 55. A
+filter NAME is data (snake_case, identical across four); the registration API keeps host casing.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
+| Evidence (registries enumerated live) | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
-| Public surface | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Startup/CLI integration | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Stored/wire format | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing focused tests | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing lab baseline | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| Registered filters | 58 | 61 | 58 | 61 |
+| Shared across all four | 58 of 61 (best parity in the audit) | same | same | same |
+| camelCase alias (`formToken`) | no | YES | no | YES |
+| `form_token_value` filter | MISSING | present | MISSING | present |
+| Internal alias pairs | 3 (`base64decode`/`base64_decode`, etc.) | - | - | - |
+| Registry shape | data map | data map | control-flow (CC 63) | data map |
+| `add_filter` API | `add_filter(name, fn)` | `addFilter($name, $fn)` | `add_filter(name, &block)` | `addFilter(name, fn)` |
+
+Enumerated at runtime (reading each engine's `_filters`/`@filters`/`filters`), the family shares
+58 of 61 filter names - by far the best parity of any feature, backed by the byte-identical
+82-case expression corpus. The three non-universal names are all in the form-token family and are
+NOT a missing CSRF filter (`form_token` is in all four). They are: D1 a camelCase alias
+(`formToken`) in PHP/Node only; D2 a genuinely missing `form_token_value` filter in Python/Ruby (a
+real capability gap); and D3 Python's own internal alias sprawl (three pairs). Ruby's
+`default_filters` measures CC 63 because the registry is BUILT WITH BRANCHING instead of declared
+as a name-to-function map.
 
 ### Retained introductory record
 
@@ -78,31 +102,60 @@ canonical.
 
 ## Public surface contract
 
-The audit has not yet extracted a language-neutral public surface and its idiomatic spellings.
+A canonical set of ~56 filters (61 names minus the 5 aliases), each with ONE snake_case name
+identical across the four, applied with `{{ expr|filter(args) }}` and chainable (`|a|b`).
+`add_filter(name, fn)` (host casing on the API) registers a custom filter under a snake_case
+name. A filter name is data: `formToken`, `formTokenValue`, `base64decode`, `base64encode` and
+`tojson` are deleted in favour of `form_token`, `form_token_value`, `base64_decode`,
+`base64_encode` and `to_json`.
 
 ## Inputs and outputs
 
-The audit has not yet fixed all native types, defaults, nullability, ordering, and serialized shapes.
+- Input: a value (the piped expression) and any filter arguments; the filter name resolved in
+  the registry.
+- Output: the transformed value; a chain applies filters left to right.
+- A filter name that is not in the registry is a positioned error, not a silent pass-through.
+- `form_token_value` returns the token value alone (added to Python/Ruby); `form_token` returns
+  the rendered hidden input.
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection, retry, rollback, and deletion path.
+1. Feature 49 parses `expr|filter(args)` into an AST with the filter name and args.
+2. At render, Feature 51 resolves the filter name in the registry (one map, name to function).
+3. The filter runs on the value with its arguments; a chain feeds each output to the next.
+4. The result is escaped by Feature 57 unless the filter is a raw/safe filter.
 
 ## Configuration and precedence
 
-The audit has not yet fixed argument, environment, project-file, default, and cache timing precedence.
+- The canonical filter list is a committed fixture read by all four runners (the same mechanism
+  as the expression corpus).
+- `add_filter` registers under a snake_case name; it must not silently replace a builtin
+  (Feature 56's boundary).
+- There is no per-template filter configuration.
 
 ## Failures, side effects and security
 
-The audit has not yet closed every failure boundary, side effect, cleanup rule, and security concern.
+- An unknown filter name is a positioned error, so a template typo is found, not silently
+  rendered as the raw value.
+- A filter's output flows into autoescape (Feature 57): a filter that produces HTML must mark it
+  safe explicitly, or it is escaped; a filter cannot become an escape-bypass by accident.
+- The registry is a data map, not control flow: Ruby's CC-63 branching registry is both a
+  maintainability problem and a place a bug can hide; one table removes both.
+- A custom `add_filter` runs in the same context; under sandboxing (Feature 58) it is subject to
+  the sandbox rules.
 
 ## Wire and persistence contract
 
-The audit has not yet fixed every wire format, stored shape, encoding, identifier, timestamp, and compatibility rule.
+There is no persistence; the contract is the FILTER NAME SET as data. Filter names are
+snake_case and identical across the four, so a template using `{{ x|to_json }}` renders on every
+framework - the portability that a per-language casing rule (allowed for method names) would
+break. The canonical list is a committed fixture.
 
 ## Providers and substitutability
 
-The audit has not yet proved provider substitution or recorded deliberate capability exceptions.
+The filter registry is a pure data map from name to function; a future runtime registers the same
+canonical snake_case names bound to functions with the same behaviour, proven by the shared
+filter and expression corpora.
 
 ## Contradictions and defects
 
@@ -162,7 +215,21 @@ All category 4. Nothing about a filter name is runtime-forced - a template is te
 
 ## Owner decisions
 
-No new owner decision is recorded in this migrated section. Retained decisions appear below when present.
+Proposed for owner ratification:
+
+1. Filter NAMES are template data: one canonical snake_case name per filter, IDENTICAL in all
+   four. The per-language method-casing rule (`to_paginate`/`toPaginate`) does NOT extend to
+   filter names, because a filter name lives in a portable template file.
+2. Delete the five aliases (`formToken`, `formTokenValue`, `base64decode`, `base64encode`,
+   `tojson`); the snake_case forms are canonical. This is the one place in the audit where a
+   ONE-RELEASE deprecation WARNING (naming the canonical replacement) is argued FOR, because the
+   broken artifact is a user's template, which the framework cannot auto-migrate.
+3. Add `form_token_value` to Python and Ruby (the one real capability gap); additive, lands
+   first.
+4. The filter registry is a DATA map (name to function), not control flow; Ruby's CC-63
+   `default_filters` is converted to a table.
+5. The canonical filter list is a committed fixture read by all four runners, so parity is
+   gated, not periodically re-audited.
 
 ## Proposed conformance fixture
 
@@ -186,11 +253,22 @@ aspiration.
 
 ## Integration map
 
-The audit has not yet mapped every export, startup path, request hook, CLI, scaffolder, status command, document, and generated consumer.
+- Feature 49 parses the `|` pipe; Feature 51 applies filters; Feature 57 escapes the output;
+  Feature 55 (functions) and Feature 56 (extensibility/`add_filter`) are siblings.
+- The canonical filter list joins the expression corpus in the shared Frond fixtures; the
+  portability test renders one template using every filter through all four engines.
+- Central fixtures, four runners, the CI matrix and the Frond filter docs update together.
 
 ## Breaking changes and migration
 
-The audit has not yet turned every parity break into an actionable pre-3.14 migration instruction.
+- Deleting the five aliases is BREAKING for templates in the wild, and templates are user files
+  the framework cannot auto-migrate. The `Breaking:` entry lists each removed name and its
+  canonical replacement, and (uniquely in this audit) a ONE-RELEASE deprecation warning that
+  names the replacement when an alias is used is recommended, because the broken artifact is a
+  user's template.
+- Adding `form_token_value` to Python/Ruby is additive.
+- Converting Ruby's registry to a data table is internal (behaviour-neutral), gated by the
+  corpus.
 
 ## Implementation backlog
 
@@ -234,18 +312,21 @@ Surface table - the registration API keeps host casing, the filter names do not:
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Existing-language contradictions recorded (D1-D3 plus the CC-63 registry).
+- [x] Owner ambiguities recorded (5 proposed; the snake_case-names-are-data rule is key).
+- [x] Proposed shared cases and mutation witnesses complete (the portability corpus).
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule is clean-room sufficient.
 
-### Parked
+### State
 
-Not implemented. Steps 3 and 5 can proceed independently of the ADR-0009 folder split;
-step 5 is easier after it. Order unchanged.
+AUDIT decision-ready. Best-parity feature in the matrix (58/61 shared, live-enumerated). The work
+is the naming cleanup (delete 5 aliases, add form_token_value, snake_case-identical names), the
+registry-as-data conversion (Ruby CC 63), and the committed portability corpus. The IMPLEMENTATION
+is the build phase and is NOT done; steps 3 (add filter) and 5 (registry to data) can proceed
+independently of the ADR-0009 folder split. Decision-ready is not built.
