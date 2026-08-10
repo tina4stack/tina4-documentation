@@ -38,15 +38,55 @@ parity plan and implementation formula for the four current ports and any
 future Tina4 language. The combined document remains historical evidence for
 Features 12 and 79.
 
+## Owner decisions APPROVED (finalized 2026-08-10)
+
+The audit's nine proposed decisions were reviewed. Six are ratified as written (one
+coordinator/store, probe + valid-preflight bypass with everything else counted,
+validated trusted-proxies that fail startup, the reset / `Retry-After` serialization,
+the framework-owned 429 with CORS + `no-store`, and the shared-fixture oracle).
+Governance is already supersede-correct: ADR-0049 supersedes ADR-0019's changed
+clauses (next number after 0048). The four genuine calls:
+
+- **A (OVERRIDE): rate limiting is ON by default.** The audit proposed OFF/opt-in; the
+  owner chose ON, so every app gets abuse protection out of the box. This makes two
+  things mandatory: the health/readiness bypass (already decision 4) and a GENEROUS
+  default limit that does not 429 shared-IP (NAT, corporate proxy) or SPA users.
+  Default limit value: **proposed 240 per 60s (4 req/s), owner to confirm** - 100/60
+  is too aggressive for an always-on global-IP limiter.
+- **B: provider outage is fail-open + a degradation signal (ratified).** Store
+  unreachable -> allow traffic, emit a bounded error diagnostic and a health/readiness
+  degradation; never silently fall back to per-process memory. The limiter never causes
+  an outage.
+- **C: `memory://` + multiple workers + limiting enabled fails startup (ratified).**
+  With ON-by-default this bites the default multi-worker deploy: it must set a shared
+  `TINA4_RATE_LIMIT_URL`, run one worker, or disable limiting. A clear forcing function
+  against the silent quota-times-workers bug.
+- **D (OVERRIDE): the algorithm is a token bucket, not a sliding-window log.** O(1)
+  memory per IP (token count + refill timestamp) instead of O(limit x active-IPs) -
+  robust for a now-always-on limiter under a distributed attack, and the
+  industry-standard choice. Still rejection-safe; capacity = limit, refill =
+  limit/window per second; `X-RateLimit-Remaining` is the floored token count.
+
+The algorithm section, the proposed-decisions list and the response reset semantics
+below are rewritten for the token bucket and ON-by-default. This closes the DESIGN half
+of the FINAL bar for Feature 11 once the owner confirms the default limit value.
+Remaining: publish ADR-0049, materialize `rate_limit_contract.json`, wire the four
+runners.
+
 ## Decisions proposed for owner review
 
-The audit recommends the following decisions as one coherent contract:
+The audit recommends the following decisions as one coherent contract (items 1 and 2
+were overridden by the owner on 2026-08-10; see the APPROVED block above):
 
-1. Rate limiting is disabled by default. A positive `TINA4_RATE_LIMIT` enables
-   it; absent or native integer `0` disables it. This aligns three current ports
-   and prevents an invisible default from taking down health probes.
-2. The algorithm is an atomic sliding-window log, keyed globally by canonical
-   client IP. Rejected attempts do not extend the window.
+1. Rate limiting is ENABLED by default with a generous limit (proposed 240 per 60s,
+   owner to confirm); native integer `0` disables it, and any positive value overrides
+   the default. Health/readiness and valid preflight always bypass (decision 4), so an
+   always-on limiter cannot take down probes. (Owner override 2026-08-10, replacing the
+   audit's opt-in proposal.)
+2. The algorithm is an atomic token bucket (capacity = limit, refill = limit/window per
+   second), keyed globally by canonical client IP. A rejected attempt consumes no token
+   and does not extend the block. (Owner override 2026-08-10: token bucket for O(1)
+   memory, replacing the audit's sliding-window log.)
 3. One process has exactly one rate-limit policy and one bucket-store owner.
    Public middleware and service APIs delegate to it; they never create another
    store.
@@ -99,7 +139,7 @@ Feature 11 owns:
 - one immutable policy resolved after Feature 1 loads environment data;
 - request classification and bypasses;
 - canonical client-IP resolution for the limiter key;
-- the sliding-window algorithm, exact boundary behavior and atomic consume;
+- the token-bucket algorithm, refill boundary behavior and atomic consume;
 - memory and shared-store contracts, cleanup and bounded state;
 - allowed-response rate headers and the exact 429 response;
 - placement in the request/final-response lifecycle;
@@ -214,7 +254,7 @@ reread the policy per request.
 
 | Variable | Native value | Default | Rule |
 | --- | --- | --- | --- |
-| `TINA4_RATE_LIMIT` | integer | `0` | `0` disables; positive safe integer enables; negative, fractional, boolean or string-after-Feature-1 conversion failure is invalid. |
+| `TINA4_RATE_LIMIT` | integer | `240` (owner to confirm) | Enabled by default with a generous limit; `0` disables; any positive safe integer overrides; negative, fractional, boolean or string-after-Feature-1 conversion failure is invalid. |
 | `TINA4_RATE_WINDOW` | number seconds | `60` | Finite value greater than zero; fractional seconds are valid for precise windows. It is validated even when a non-empty value accompanies disabled limiting. |
 | `TINA4_RATE_LIMIT_URL` | string URL | `memory://` | Scheme selects the provider. Credentials may come from Feature 1's standard URL/username/password handling. Unknown/unavailable providers fail startup. |
 | `TINA4_TRUSTED_PROXIES` | list of strings | `[]` | Exact IPv4/IPv6 addresses or CIDRs. Native list or Feature 1 comma-string OS form; invalid/empty/mixed entries fail startup. |
@@ -299,40 +339,45 @@ error paths and makes the global IP policy useful for brute-force pressure. The
 decision is stored on Feature 6's dispatch context. Feature 7's final unwind,
 not an early middleware return, owns the wire headers and CORS composition.
 
-## Sliding-window and store contract
+## Token-bucket and store contract
 
-The logical operation is one atomic `consume`:
+The logical operation is one atomic `consume`. The bucket holds a fractional token
+count and the monotonic time it was last updated; capacity is `limit` and the refill
+rate is `limit / window` tokens per second:
 
 ```text
 consume(key, limit, window, monotonic_now, epoch_now):
-    cutoff = monotonic_now - window
-    remove timestamps <= cutoff
+    rate = limit / window                           # tokens per second
+    load {tokens, updated} or start full {tokens: limit, updated: monotonic_now}
 
-    if count < limit:
-        append monotonic_now
+    elapsed = max(0, monotonic_now - updated)
+    tokens  = min(limit, tokens + elapsed * rate)   # refill
+    updated = monotonic_now
+
+    if tokens >= 1:
+        tokens  = tokens - 1
         allowed = true
     else:
-        allowed = false
+        allowed = false                             # rejected: no token consumed
 
-    oldest = first retained timestamp
-    remaining_duration = max(0, oldest + window - monotonic_now)
-    reset_epoch = ceil(epoch_now + remaining_duration)
+    remaining   = floor(tokens)
+    full_in     = (limit - tokens) / rate           # seconds until the bucket is full
+    reset_epoch = ceil(epoch_now + full_in)
+    retry_after = allowed ? 0 : ceil((1 - tokens) / rate)   # minimum 1 on a 429
 
-    return allowed, limit, max(0, limit - count_after),
-           reset_epoch, ceil(remaining_duration)
+    return allowed, limit, remaining, reset_epoch, retry_after
 ```
 
-A timestamp exactly at `now - window` is expired. A rejected attempt is not
-appended and therefore cannot keep a client blocked indefinitely. Remaining is
-the capacity after the current attempt. On an allowed first request, reset is
-the expiration of that oldest accepted request, not `now + window` recalculated
-on later requests.
+A rejected attempt consumes no token and therefore cannot extend a client's block.
+`remaining` is the floored token count after the attempt. `reset_epoch` is the epoch
+at which the bucket returns to full capacity; `retry_after` on a 429 is the ceiling of
+the time until the next whole token, minimum one.
 
-The process-local algorithm uses a monotonic clock for expiry and samples epoch
-time only to serialize reset. A wall-clock correction cannot create capacity or
-extend denial. The store operation is atomic across threads/tasks in memory and
-across workers in a shared provider. A Redis provider may use a script or
-transaction, but its result must match the fixture rather than expose Redis
+The process-local algorithm uses a monotonic clock for refill and samples epoch time
+only to serialize reset, so a wall-clock correction cannot create capacity or extend
+denial. The bucket is O(1) per key. The store operation is atomic across threads/tasks
+in memory and across workers in a shared provider; a Redis provider may use a script
+or transaction, but its result must match the fixture rather than expose Redis
 details.
 
 The provider interface is minimal:
@@ -341,7 +386,7 @@ The provider interface is minimal:
 - `peek(key, policy, clock) -> RateLimitDecision` never consumes;
 - `reset(key)` deletes one bucket and returns whether it existed;
 - `close()` releases timers/connections idempotently through Feature 9;
-- expired keys disappear without request traffic and empty buckets are deleted.
+- a bucket refilled to full carries no state and is deleted; idle keys disappear without request traffic.
 
 Do not keep an overloaded public `check()` whose mutating behavior differs by
 port. Compatibility shims may call `consume`, but one coordinator owns the
@@ -373,9 +418,10 @@ X-RateLimit-Reset: 1786363000
 ```
 
 All numeric fields are base-10 integers with no whitespace or decimals.
-`Retry-After` is delay seconds, `ceil(remaining_duration)`, minimum 1 on 429.
-`X-RateLimit-Reset` is absolute Unix seconds and equals the epoch at which the
-oldest accepted entry expires. The JSON value equals the header value.
+`Retry-After` is delay seconds, the ceiling of the time until the next whole token,
+minimum 1 on 429. `X-RateLimit-Reset` is absolute Unix seconds and equals the epoch at
+which the token bucket returns to full capacity. The JSON `retry_after` equals the
+`Retry-After` header.
 
 Rate-limit fields are reserved framework headers while the policy is enabled;
 application code cannot overwrite or remove them. Existing unrelated response
@@ -417,7 +463,7 @@ Create `plan/v3/fixtures/rate_limit_contract.json` with:
 - request classification including both health/readiness forms, valid
   preflight, bare OPTIONS, HEAD, 404 and failed auth;
 - ordered consume events with monotonic and epoch times;
-- exact-cutoff, fractional-window, rejection and clock-jump vectors;
+- refill-boundary, fractional-window, rejection and clock-jump vectors;
 - exact allowed/denied decision fields;
 - exact 429 status, headers and compact JSON bytes;
 - memory cleanup/reset vectors;
@@ -510,8 +556,9 @@ Feature 11 may move from decision-ready to final only when:
 
 ## Audit conclusion
 
-Feature 11 has a sound common core - sliding-window logs, trusted-peer gating
-and familiar compatibility headers - but it is not one framework feature yet.
+Feature 11 has a sound common core - per-IP limiting, trusted-peer gating and
+familiar compatibility headers - though the algorithm moves from the ports' current
+sliding-window logs to one token bucket, and it is not one framework feature yet.
 The green suites conceal missing application wiring, always-on Node behavior,
 probe exhaustion, invalid typed configuration, attacker-selected malformed keys,
 duplicate bucket owners and topology-dependent quotas.
