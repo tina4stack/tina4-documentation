@@ -1,7 +1,7 @@
 # Tina4 Decision Log (ADRs)
 
 The durable record of architecture/API decisions across all four frameworks: WHAT we
-decided, WHEN, and — the part that gets lost over months — WHY, and which alternatives we
+decided, WHEN, and (the part that gets lost over months) WHY, and which alternatives we
 rejected at the time. Search this before changing a contract. You may not silently
 re-decide a logged decision: supersede its ADR explicitly (new entry, mark the old
 `Superseded by ADR-NNNN`).
@@ -51,6 +51,12 @@ Conventions:
 | ADR-0031 | [memcached invalidates by NAMESPACE GENERATION, and redis clears by SCAN](decisions/ADR-0031.md) | Accepted |
 | ADR-0032 | [sweep() returns entries EVICTED, and a server-expiring provider honestly returns 0](decisions/ADR-0032.md) | Accepted |
 | ADR-0037 | [The no-skip gate is a deny-list, not a two-axis allow-list](decisions/ADR-0037.md) | Proposed |
+| ADR-0038 | [One canonical TINA4_TEST_* set, enforced by a gate](decisions/ADR-0038.md) | Accepted |
+| ADR-0039 | [Defend, report, then replace. Never fork a dependency.](decisions/ADR-0039.md) | Accepted |
+| ADR-0040 | [Ruby's file queue adopts the canonical store layout](decisions/ADR-0040.md) | Accepted |
+| ADR-0041 | [An explicit argument always beats the environment](decisions/ADR-0041.md) | Accepted |
+| ADR-0042 | [The messenger uid is the IMAP UID, never a sequence number](decisions/ADR-0042.md) | Accepted |
+| ADR-0043 | [The paginate envelope is seven snake_case keys, derived from the query](decisions/ADR-0043.md) | Accepted |
 | ADR-0044 | [Batch and first-row execution are adapter primitives](decisions/ADR-0044.md) | Accepted |
 | ADR-0045 | [Middleware before/after hooks use phase-specific result tables](decisions/ADR-0045.md) (supersedes ADR-0014 clause) | Proposed |
 | ADR-0046 | [Health owns a system-route tier, monotonic uptime and readiness](decisions/ADR-0046.md) (supersedes ADR-0016 clauses) | Proposed |

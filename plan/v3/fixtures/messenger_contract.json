@@ -3,11 +3,11 @@
   "version": 1,
   "decided": "2026-08-06",
   "adr": "ADR-0004",
-  "_adr_note": "The read-path IDENTITY rule (msg-uid-is-a-real-uid) is not covered by an existing ADR. ADR-0041 is the highest allocated; 0042 is free. Deliberately NOT allocated here - a number is the owner's to assign.",
+  "_adr_note": "The read-path IDENTITY rule (msg-uid-is-a-real-uid) is ratified by ADR-0042 (The messenger uid is the IMAP UID, never a sequence number), Accepted. This note previously said 0042 was free and unallocated; the owner has since written and accepted it.",
   "invariants": [
     {
       "id": "msg-uid-is-a-real-uid",
-      "adr": "OWED - needs a new ADR, see _adr_note",
+      "adr": "ADR-0042",
       "rule": "The `uid` returned by inbox/search/unread is the IMAP UID, never a sequence number, and every fetch or store addressed by it uses the UID form of the command.",
       "why": "MEASURED with a real expunge, which is the ONLY thing that separates the two numberings - before one they are identical, which is why this survived every existing contract suite. send P1 P2 P3, expunge P1: by sequence {1:P2, 2:P3}, by UID {2:P2, 3:P3}. Asked for that same P3: python '2', node '2', php '3', ruby 3. So two of four returned sequence numbers. A sequence number renumbers whenever ANY client expunges, so an id stored today addresses a different message tomorrow - no error, no crash, just the wrong message. Every framework was internally consistent (reading back by its own reported id worked), which is precisely why four independently-written contract suites all passed while two were wrong. FIXED: tina4-python 3237383 (8 call sites to conn.uid(...)), tina4-nodejs c1b28fd (9 commands to UID SEARCH/FETCH/STORE). PHP and Ruby were already correct.",
       "suites": {
