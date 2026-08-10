@@ -1,441 +1,520 @@
-# Feature 9: Graceful shutdown (signal handling)
+# Feature 009: Graceful shutdown
 
-Audited 2026-07-31. Part of `98-feature-audit.md`.
+## Identity and status
 
-A container orchestrator sends SIGTERM and kills the process after a grace
-period. Dropping in-flight requests on SIGTERM is a production defect, not a
-style question. This audit measured what each framework really does, and found
-two defects in Node that reach production on every rolling deploy.
+- Matrix identity: 9 — Graceful shutdown and signal handling
+- Audit state: decision-ready; implementation is deliberately deferred
+- Release boundary: v3 / 3.14.0; parity-breaking corrections are permitted
+- Dependencies: Feature 1 dotenv, Feature 8 health/readiness and the active
+  server/worker transport
+- Dependants: background tasks, WebSockets, queues, services, database/cache/
+  session clients, logging and generated deployments
+- Existing decision: ADR-0017
+- Current shared executable fixture: none
+- Re-audit date: 2026-08-10
 
-## Files
+Feature 9 is **not complete**. The original audit repaired serious
+single-process defects and its real-signal suites remain green, but this
+re-audit reached the deployment paths those suites omit. Node's actual
+`TINA4_PRODUCTION=true` cluster drops an in-flight request when the container's
+primary PID receives SIGTERM. Python's uvicorn path did not accept the audited
+WebSocket upgrade, so it cannot send the promised 1001 close frame. Ruby and
+Node disagree with ADR-0017 by accepting a zero-second timeout, only PHP has an
+application shutdown hook, programmatic close is not one portable lifecycle,
+and no shared fixture proves any of it.
 
-| | signal handling | shutdown work |
-| --- | --- | --- |
-| python | `tina4-python/tina4_python/core/server.py` (`_signal_handler`) | same file, after `await shutdown.wait()` |
-| php | `tina4-php/Tina4/Server.php` (`start`, `stop`, `cleanup`) | same file |
-| ruby | `tina4-ruby/lib/tina4/shutdown.rb` | same file (`initiate_shutdown`) |
-| node | `tina4-nodejs/packages/core/src/server.ts` (`gracefulShutdown`) | same file |
+This audit changes no framework source. It defines the clean-room lifecycle,
+the executable parity plan and the implementation formula for every current or
+future Tina4 language.
 
-## How this was measured
+## Why this feature exists
 
-No mocks, and no in-process seam. Calling a handler function directly proves
-that the function runs. It proves nothing about whether the signal reaches it,
-whether the listener stops accepting, or what the process exits with.
+An engineer should be able to stop a Tina4 application without knowing which
+web server, worker model or language runtime currently owns the socket. Tina4
+must stop admitting work, finish work it already accepted within a bounded
+period, tell persistent clients it is leaving, release every framework-owned
+resource and report an honest process outcome.
 
-Every number below comes from the same probe: spawn a real server as a child
-process, issue a real HTTP request to a route that occupies the handler for 2.0
-seconds, send a real POSIX signal to that process 0.6 seconds into the request,
-then record the response, the listener state, and the exit code from `waitpid`.
+This is not just a web-server nicety. A rolling deployment, queue worker,
+service runner, Ctrl-C during development and an explicit application stop all
+need the same lifecycle. Requiring application developers to install signal
+handlers, await a language-specific close primitive or remember which database
+and queue handles Tina4 opened misses the framework's production-ready and DX
+principles.
 
-One trap surfaced during measurement and is worth recording, because it
-produced a false green. A signal makes a blocking `sleep` or `usleep` return
-early with EINTR. The PHP handler looked like it drained when the signal had
-only interrupted its sleep: the response came back in 0.604 seconds instead of
-2.0, carrying the correct body. Every slow route in these tests is now
-wall-clock bounded (`while (microtime(true) < $end)`) so an interrupted sleep
-cannot masquerade as a completed handler.
+## Boundary
 
-Platform: macOS 26.5.2, Darwin 25.5.0, arm64. PHP 8.5.7, Ruby 4.0.2,
-Node 24.9.0.
+Feature 9 owns:
 
-Python needs a note. The first-pass measurements in the table below ran on an
-ad-hoc 3.14.5 virtualenv; the per-framework work and its suite ran on the
-project's own uv-pinned 3.13.5. Both are above the 3.12 floor where
-`asyncio.Server.wait_closed()` began waiting for open connections, which is the
-mechanism the drain depends on, so the measured outcome is the same on both.
-The 3.13.5 figure is the representative one because it is the interpreter the
-project actually pins.
+- the shutdown state machine and exactly one lifecycle coordinator per process;
+- SIGTERM and SIGINT ownership for Tina4-owned processes;
+- programmatic shutdown and application shutdown hooks;
+- listener admission stop, in-flight accounting and deadline enforcement;
+- worker/cluster propagation, respawn suppression and straggler termination;
+- background/service/queue-consumer quiescing and draining;
+- WebSocket close code 1001 during normal shutdown;
+- the framework-owned resource cleanup registry and ordering;
+- shutdown logging and exit semantics;
+- production-server adapter configuration and lifecycle hooks;
+- Docker PID 1 signal delivery and generated Kubernetes grace settings;
+- executable parity data and language-runner reports.
 
-Signal delivery and socket teardown differ on Linux, which is where this
-deploys. See "Linux re-measurement" below.
+It delegates:
 
-## Measurements (before any fix) - BUILT-IN servers only
+- path/status behavior of liveness and readiness to Feature 8;
+- HTTP dispatch and response completion to Feature 6;
+- the actual `close` operation of a database, queue, cache, session store,
+  WebSocket backplane or logger to its owning feature;
+- at-least-once job acknowledgement/redelivery to the queue contract;
+- production server internals to uvicorn/Hypercorn/Granian, Puma and equivalent
+  language-native servers;
+- Rust CLI child-process-tree cleanup to the Tina4 CLI.
 
-Read the scope of this table before trusting it. **The Python and Ruby rows
-measured the BUILT-IN server, not the production one.** Python's uvicorn was not
-installed in the probe venv, so `run()` never took its production branch, and
-Ruby's row is WEBrick. Both frameworks hand the socket to a third-party server
-in production, and none of the behaviour below survives that handoff. See "The
-production server owns the socket" for the gap and how it is closed.
+Those features must register resources or in-flight work with Feature 9; they
+must not install competing SIGTERM handlers.
 
-| framework | server measured | in-flight request | connection after signal | exit | drain |
-| --- | --- | --- | --- | --- | --- |
-| python | built-in asyncio | COMPLETED (200) | refused | 0 | 1.42s |
-| php | own server (the only one) | COMPLETED (200) | accepted, then RESET | 0 | 1.46s |
-| ruby | WEBrick | COMPLETED (200) | accepted, 503 JSON | 0 | 1.43s |
-| node, plain `startServer()` | own `node:http` (the only one) | DROPPED | refused | 143 | 0.15s |
-| node, one `background()` task | own `node:http` | n/a | still serving 200 | never exits | HUNG |
+## Current implementation evidence
 
-SIGINT matched SIGTERM in all five rows. SIGHUP is trapped nowhere: `waitpid`
-reported killed-by-signal in all four.
+| Evidence | Python | PHP | Ruby | Node |
+| --- | --- | --- | --- | --- |
+| Built-in server coordinator | `core/server.py` | `Tina4/Server.php` | `lib/tina4/shutdown.rb` | `core/src/server.ts` |
+| Production transport | uvicorn/Hypercorn/Granian | Tina4 server/worker pool | Puma | `node:http` cluster |
+| Real-signal focused suite | 20 passed | 14 tests / 95 assertions | 11 examples | 23 passed |
+| Production-variant suite | uvicorn included above | worker pool: 7 / 23 assertions | Puma: 8 examples | cluster startup: 2 tests |
+| SIGTERM drains single server | yes | yes | yes | yes |
+| SIGTERM drains production workers | unproven beyond one uvicorn process | only pool exit/port proven | HTTP proven under Puma | **no** |
+| WebSocket 1001, built-in | yes | yes | yes | yes |
+| WebSocket 1001, production | **no proof; lab upgrade returned 404** | same server | structurally too late/unproven under Puma | unproven in cluster |
+| Positive timeout only | yes | yes | **no: zero accepted** | **no: zero accepted** |
+| Portable application hook | no | `App::onShutdown` only | no | no |
+| Awaitable programmatic lifecycle | no common surface | no common surface | no common surface | `close()` returns immediately |
+| Shared fixture/checker | no | no | no | no |
 
-The Python and Ruby rows are honest about what they cover and useless as
-production evidence. That distinction is the finding, not a caveat on it: a
-measurement that silently exercises the dev path reports the framework as
-healthy on exactly the path nobody deploys.
+Audited source heads were Python `29feeab`, PHP `c75c7b0e`, Ruby `ea3aa88` and
+Node `813b50b`, all on staging `v3`. Python's unrelated local `uv.lock` change
+was preserved and excluded from this audit.
 
-## The two Node defects
+The serialized lab ran as root through `/root/tina4-lab/with-lab-lock.sh` on
+Linux with real child processes, signals and sockets. The focused total was 68
+tests/examples plus 95 PHP assertions. Additional production suites were green,
+but the adversarial cluster probe sent SIGTERM only to Node's primary PID while
+a four-second request was running:
 
-### 1. A plain app trapped nothing
-
-`startServer()` registered no signal handler at all. SIGTERM therefore hit
-Node's default disposition. The process died in 150 milliseconds, the in-flight
-response came back as "connection closed without response", and the exit code
-was 143.
-
-The CLI had a handler, and it was worse than none:
-
-```ts
-const shutdown = () => { server.close(); process.exit(0); };
+```text
+primary exit      143
+in-flight request TypeError: fetch failed
+new connection    refused
 ```
 
-Node's own documentation says `server.close()` is asynchronous and "keeps
-existing connections". The close callback is the only honest signal that
-everything drained. Exiting on the next line kills the very requests the close
-was waiting for. That code was not dead. It was a lie about what it did.
+That is the container behavior: Kubernetes asks the runtime to signal process
+1, not every descendant as a process group. The existing Node shutdown suite
+sets `TINA4_PRODUCTION` off and signals the complete detached process group, so
+it cannot detect this failure.
 
-### 2. Registering a background task made it hang forever
+The organization issue sweep found no open issue specifically tracking this
+Feature 9 regression. Existing server issues concern separate CLI/PHP-FPM and
+malformed-request paths; absence of an issue is not evidence of parity.
 
-This is the finding that only a real signal to a real process could surface.
+## Platform authority
 
-`background.ts` bound `process.on("SIGTERM", cleanup)` where `cleanup` cleared
-timers and never exited. The comment described it as "additive: it does not
-call process.exit() or interfere with other shutdown logic". That description
-was the bug.
+Kubernetes sends the configured stop signal—SIGTERM by default—to process 1,
+marks terminating endpoints not ready, and sends SIGKILL to processes still
+running after the grace period. The grace countdown includes any `preStop`
+hook. See the current
+[Kubernetes Pod lifecycle](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/)
+and [container lifecycle hook](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/)
+documentation.
 
-Registering any listener for SIGTERM REPLACES Node's default disposition. A
-handler that does not exit does not add to the default. It cancels it. Measured:
-a server with one registered background task ignored SIGTERM completely, kept
-answering 200s, and was still running when the probe gave up after 40 seconds.
+Node documents that `server.close()` stops accepting new connections and waits
+for active HTTP work, while `closeAllConnections()` is forceful and does not
+close upgraded WebSocket/HTTP2 sockets. See the
+[Node HTTP server documentation](https://nodejs.org/api/http.html#serverclosecallback).
 
-Under Kubernetes that means every pod burns the full
-`terminationGracePeriodSeconds` and dies by SIGKILL on every rolling deploy.
-Docker and Kubernetes are the default deployment target, so this was hitting
-production.
+RFC 6455 defines WebSocket close code 1001 for an endpoint going away, including
+a server going down. The existing ADR decision remains correct; see
+[RFC 6455 section 7.4.1](https://www.rfc-editor.org/rfc/rfc6455.html#section-7.4.1).
 
-The handler also bought nothing. `_arm()` calls `timer.unref()` on every
-background timer, so a background task never holds the event loop open and never
-needed clearing to let the process exit.
+ASGI lifespan provides startup and shutdown messages but does not replace the
+server's own signal/drain implementation. Tina4 uses it for resources the ASGI
+server cannot know about; see the
+[ASGI lifespan specification](https://asgi.readthedocs.io/en/latest/specs/lifespan.html).
 
-## The worst defect found: PHP made an embedded App unkillable
+## One state machine
 
-This is not a graceful-shutdown gap. It is a process that ignores `kill` and
-`docker stop`.
+Every Tina4-owned long-running process has one atomic lifecycle:
 
-`Tina4\App` registered SIGTERM and SIGINT handlers from its **constructor**
-(`App.php:293`, inside `__construct` declared at line 194 - not from `start()`,
-which is line 469), binding both to `$this->shutdown()`.
+```text
+STARTING -> RUNNING -> QUIESCING -> DRAINING -> CLEANUP -> STOPPED
+                                      |                     ^
+                                      +---- deadline --------+
+```
 
-PHP dispatches a `pcntl_signal` handler only when `pcntl_signal_dispatch()` runs
-or `pcntl_async_signals(true)` is set. Neither happens unless a server loop is
-running. Constructing an App without running the server therefore produced the
-worst of both worlds:
+- `STARTING`: resources may initialize; startup failure is not a graceful stop
+  and exits non-zero after best-effort cleanup.
+- `RUNNING`: listeners, workers and schedulers may accept new work.
+- `QUIESCING`: entered exactly once by SIGTERM, SIGINT or programmatic shutdown;
+  admission and scheduling stop immediately.
+- `DRAINING`: work accepted before the transition may finish within the shared
+  deadline.
+- `CLEANUP`: application hooks and framework-owned resources close in defined
+  order using whatever budget remains.
+- `STOPPED`: completion is observable and the owning process can exit.
 
-- Registering the handler **suppressed SIGTERM's default terminate action**.
-- Nothing ever dispatched it, so **the handler body never ran either**.
+Repeated shutdown requests are idempotent. They neither install another timer
+nor repeat hooks/cleanup. SIGKILL is intentionally unhandled. SIGHUP remains
+untrapped by Tina4; file watching belongs to the Rust CLI and log rotation must
+not require an application-level competing signal handler.
 
-Measured: a probe process that constructed an App and then looped **survived
-SIGTERM**, ran its full six seconds, and exited 0 on its own. For any embedder,
-`kill` and `docker stop` were no-ops, with no operator workaround.
+Exactly one coordinator owns INT/TERM for each process role. A constructor,
+background helper, queue class, CLI wrapper and application callback may not
+each install their own handler. Where a third-party production server owns the
+signals, Tina4 installs no competing handlers and integrates through that
+server's supported configuration and lifecycle hooks.
 
-The milder second half of the same mistake: `bin/tina4php` constructs the App
-(line 1028) then calls `$server->start()` (line 1073), which binds the same two
-signals to `$this->stop()`. `pcntl_signal` replaces rather than chains, so on the
-serve path Server's registration won and App's handlers were dead code.
+## Canonical shutdown sequence
 
-Fixed by deleting `registerSignalHandlers()` outright. Server owns the signals;
-`App::shutdown()` and its `onShutdown()` callbacks now run from
-`register_shutdown_function`, firing on every exit route without a second handler
-that can fight or mask the first. A named regression test pins that an embedded
-App with no event loop is still killable by SIGTERM.
+The coordinator performs these phases in order:
 
-This is the same shape as the Node defect: two implementations of one lifecycle,
-neither aware of the other. Node's pair fought and produced a hang. PHP's pair
-does not fight only because the later registration silently wins.
+1. Atomically enter `QUIESCING`, capture the monotonic start/deadline and log
+   the reason.
+2. Mark Feature 8 readiness unavailable. If an already accepted connection can
+   still ask `/ready`, it receives 503.
+3. Close every public/AI/listener socket and stop worker respawn. A new TCP
+   connection is refused; an existing keep-alive connection cannot begin a new
+   application request after quiescing.
+4. Tell every worker/service/consumer to quiesce. Stop polling and scheduling
+   new background/queue/service work.
+5. Send WebSocket close frame 1001 with reason `server shutting down`, including
+   application, dev-reload and backplane-managed connections.
+6. Drain HTTP requests, the currently executing background/service callback and
+   the currently claimed queue job. A completed queue job is acknowledged;
+   work cut off by the deadline remains unacknowledged for at-least-once
+   redelivery.
+7. Run application shutdown hooks in reverse registration order.
+8. Close framework-owned resources in reverse dependency/registration order:
+   queue consumers/backends and WebSocket backplanes, named/default databases,
+   process-owned cache/session clients, then flush/close logging last.
+9. Log `shutdown_completed` with elapsed time, outcome and remaining counts,
+   resolve the programmatic completion and exit according to the owner table.
 
-## The production server owns the socket, and everything above ran after it
+Listener closure comes before WebSocket frames because upgraded connections no
+longer depend on the listening socket. The order rejects late work immediately
+while still giving existing peers an explicit departure signal.
 
-Python and Ruby hand the listening socket to a third-party production server.
-Every shutdown behaviour described above lives AFTER that handoff and never
-executes where operators deploy.
+No cleanup exception aborts the remaining cleanup. Every failure is logged with
+resource/hook identity and redacted error details. A shutdown hook cannot
+re-open admission, register new work or extend the deadline.
 
-| Framework | production server | contract |
-| --- | --- | --- |
-| Python | uvicorn / hypercorn / granian when `not is_debug` (`core/server.py:3219-3226`) | LOST |
-| Ruby | Puma when `!is_debug` (`lib/tina4.rb:437-462`) | LOST |
-| PHP | own server throughout | applies |
-| Node | own `node:http` + cluster | applies |
+## Timeout contract
 
-Both call the starter and `return`. Ruby is the sharper case: `tina4ruby.gemspec:22`
-declares `spec.add_dependency "puma", "~> 6.0"`, so Puma is ALWAYS installed and
-the `rescue LoadError` fallback to WEBrick cannot be reached in production.
-Ruby's Puma path does call `Tina4::Shutdown.setup`, but with a nil `@server`, so
-its listener shutdown is a no-op and it only traps signals Puma already traps.
+`TINA4_SHUTDOWN_TIMEOUT` is the maximum duration of the **whole shutdown
+lifecycle**, measured with a monotonic clock from the first transition into
+`QUIESCING`, not a fresh timer around only the HTTP drain.
 
-Both handoffs ARE gated on debug, so `TINA4_DEBUG=true` reaches the built-in
-server. An earlier draft of this document's ADR claimed Ruby's was ungated and
-that WEBrick was unreachable; both were wrong, and the correction is recorded in
-ADR-0017 rather than quietly removed. The gap is real; that description of it
-was not.
+- unset or empty selects 30 seconds;
+- a configured value is a finite native Feature 1 number greater than zero;
+- invalid, zero or negative configuration fails startup outright;
+- fractional seconds are accepted by Tina4-owned servers;
+- a third-party whole-second setting receives `ceil(value)`, never truncation or
+  banker rounding to a shorter grace period;
+- the deadline is resolved once at startup and cannot change mid-shutdown.
 
-The resolution follows ADR-0011's shape: **the outcomes are the contract, the
-mechanism is per-server.** Draining and the deadline belong to uvicorn and Puma
-and are CONFIGURED, never reimplemented - `TINA4_SHUTDOWN_TIMEOUT` maps onto
-uvicorn's `timeout_graceful_shutdown` and Puma's `force_shutdown_after`, because
-an env var that means one thing on the built-in server and nothing on the
-production one is a lie on the path that matters. The database close and the
-WebSocket 1001 belong to Tina4, because no third-party server can know those
-exist.
+This intentionally amends ADR-0017's “warn and fall back” rule. The approved
+Feature 1 principle is that invalid configuration must fail when the developer
+expects it to work. A misspelled shutdown budget must not silently become 30,
+and an explicit zero must not mean immediate request loss in only Ruby and Node.
 
-## Decisions
+At deadline expiry Tina4 logs `shutdown_timeout` with remaining HTTP,
+background, job, worker and WebSocket counts; force-closes network connections;
+cancels what the runtime can cancel; leaves an interrupted claimed job
+unacknowledged; performs bounded best-effort resource/log cleanup; and completes
+the process outcome. It does not wait indefinitely in a thread-pool destructor,
+user hook, database driver or worker join after claiming the deadline is real.
 
-Recorded as **ADR-0017** in `plan/v3/DECISIONS.md`. Settled under ADR-0012:
-standard and convention first, then what the mainstream frameworks and
-platforms actually do, then add-on libraries, and only then internal precedent.
+## Signals, process trees and exit status
 
-### Authorities checked
-
-| authority | what it does |
+| Process/socket owner | SIGTERM/SIGINT after completed or bounded shutdown |
 | --- | --- |
-| Kubernetes | Sends SIGTERM, waits `terminationGracePeriodSeconds` (default 30), then SIGKILL. The grace period covers the preStop hook AND the shutdown together. |
-| Node `server.close()` | Documented as asynchronous. Stops accepting new connections, keeps existing ones, fires the callback once all connections end. |
-| Gunicorn | `graceful_timeout` default 30 seconds. TERM starts a graceful shutdown and waits for workers to finish current requests. |
-| Puma | TERM: "the worker will attempt to finish then exit". `force_shutdown_after` defaults to `:forever`. SIGHUP reopens log files, or behaves like INT when no `stdout_redirect` is set. |
-| Exit codes | `128 + signum` is a shell abstraction for reporting a process killed BY a signal. It is not POSIX, and it is not what a process that traps and exits cleanly reports. |
+| Tina4 built-in single server | exit 0 |
+| Tina4 primary/supervisor | quiesce all descendants, wait/force within the one deadline, exit 0 |
+| Tina4 worker | report completion to parent and exit 0; never respawn during shutdown |
+| Third-party server | preserve its documented post-drain status/signal behavior |
+| Programmatic shutdown | resolve successfully and leave exit choice to the caller |
+| Startup/fatal failure | non-zero; cleanup must not disguise the failure as success |
+| SIGHUP default disposition | terminated by signal, non-zero |
 
-### D1: `TINA4_SHUTDOWN_TIMEOUT`, default 30 seconds, all four
+Cluster/supervisor behavior is part of the feature, not a deployment option
+outside it. The primary receives the real container signal, disables respawn,
+requests graceful worker shutdown, waits for acknowledgements/exit using the
+same absolute deadline, then force-kills only stragglers. Each worker owns its
+accepted requests and resources and runs the normal phases. Killing the primary
+and relying on IPC teardown is not graceful shutdown.
 
-The authorities split: Gunicorn bounds at 30, Puma waits forever. Internally
-Ruby already had `TINA4_SHUTDOWN_TIMEOUT` at 30 while Python and PHP waited
-without bound.
+Docker repository and generated images use exec-form `ENTRYPOINT`/`CMD` so the
+runtime/primary is process 1. Tests inspect `/proc/1/cmdline` in the running
+image and send SIGTERM to the container, not to a process group assembled by
+the test harness.
 
-The other three adopt Ruby's spelling. 30 matches both Gunicorn and the
-Kubernetes default grace period, so the drain finishes just before the SIGKILL
-rather than being truncated by it. An unbounded wait does not avoid truncation.
-It only means SIGKILL does the truncating, with no clean exit and no log line
-naming what was still in flight.
+## Programmatic and hook surface
 
-An invalid or negative value warns and falls back to 30. A typo must not turn
-shutdown into a zero-second force-kill.
+Every language exposes idiomatic equivalents of:
 
-### D2: exit 0 on a clean drained shutdown, all four
-
-Python, PHP and Ruby already exited 0. Node exited 143 only because nothing
-handled the signal.
-
-A process that was asked to stop and did so cleanly should report success.
-Gunicorn and Puma both halt 0 on a handled TERM. The Kubernetes consequence
-decides it: 143 is recorded as signal-killed and counts as a failure for a Job
-or `restartPolicy: OnFailure`, while 0 is a clean termination.
-
-### D3: RFC 6455 close code 1001 on every live WebSocket
-
-No framework sent a close frame. PHP closed its WebSocket clients with no frame
-at all; the other three let the sockets vanish with the process.
-
-RFC 6455 section 7.4.1 defines 1001 "going away" for exactly this case, a server
-going down. This is conformance, not invention. A client told 1001 reconnects on
-a schedule. A socket that simply vanishes looks like a network fault and
-produces an error.
-
-A WebSocket never "finishes" the way a request does, so waiting for one to drain
-would burn the whole budget every time. The close frame goes out first, then the
-listeners close.
-
-### D4: close the listener so a late connection gets a clean refusal
-
-Three frameworks did three different things to a connection arriving after the
-signal. They cannot all be right.
-
-PHP's accept-then-RESET is the worst of the three. The client sees a transport
-error indistinguishable from a network fault. Ruby's 503 is more informative but
-still keeps the listener open. Python refuses, which is simplest and which a load
-balancer already handles correctly.
-
-All four converge on Python's behaviour: stop accepting first, then drain what
-was already accepted.
-
-### D5: SIGHUP stays untrapped
-
-No framework traps it, so the default disposition terminates the process. Puma
-uses SIGHUP to reopen log files and Gunicorn to reload config. Neither is a
-Tina4 need: the Rust CLI owns file watching, and production logs go to stdout
-(see `TINA4_LOG_OUTPUT`).
-
-Adding it would be a new feature, not a parity fix. The tests pin the current
-behaviour so nobody restores it by accident.
-
-## Tests
-
-Identical case names across all four, so the suites compare line for line:
-
-```
-SIGTERM lets the in-flight request finish
-SIGTERM stops accepting new connections
-SIGTERM exits with code 0
-SIGTERM releases the listening port
-SIGINT lets the in-flight request finish
-SIGINT exits with code 0
-SIGHUP is not trapped and terminates the process
-a registered background task does not block shutdown
-TINA4_SHUTDOWN_TIMEOUT bounds the drain
+```text
+server.shutdown(reason = "application") -> awaitable/completion
+server.shutting_down?                    -> boolean
+on_shutdown(callback)                    -> removable registration
 ```
 
-| framework | file |
+The signal path calls the same `shutdown` operation. An explicit close cannot
+bypass WebSockets, hooks or resources, and completion does not resolve before
+drain/cleanup finishes. Synchronous runtimes block on completion; asynchronous
+runtimes return an awaitable. A fire-and-forget `close()` that starts database
+cleanup later is not the contract.
+
+Application hooks may be synchronous and, in async-capable runtimes,
+asynchronous. They run once in reverse registration order because resources
+normally unwind opposite to acquisition. Duplicate callbacks are distinct
+registrations. The returned handle removes one registration for hot reload,
+tests or application ownership. Registration after quiescing fails explicitly.
+Hook exceptions are logged and the next hook still runs.
+
+PHP's current `App::onShutdown` is the design seed, but not the final parity
+surface: it is PHP-only, fluent rather than removable, runs after server cleanup
+and therefore cannot reliably use resources it may need to flush.
+
+Framework subsystems use an internal closeable registration carrying stable
+name, owner, dependency order and idempotent close operation. Application
+developers use `on_shutdown`; they do not manipulate the internal registry.
+
+## Production server adapters
+
+The observable outcomes are shared; the mechanism follows the socket owner:
+
+- **Python built-in:** Tina4 closes listeners, drains tasks and owns exit.
+- **uvicorn:** map the deadline to `timeout_graceful_shutdown`; use ASGI lifespan
+  for Tina4 resources and WebSocket/application hooks not owned by uvicorn.
+- **Hypercorn:** map to `graceful_timeout`; prove the same fixture cases.
+- **Granian:** either map a real drain deadline and lifecycle hooks or fail
+  startup when selected with an unsupported Feature 9 contract. A warning that
+  `TINA4_SHUTDOWN_TIMEOUT` is ignored is not parity.
+- **Ruby built-in:** Tina4 coordinates WEBrick.
+- **Puma:** configure `force_shutdown_after` and supported shutdown hooks; run
+  Tina4 cleanup before live peers/resources become unreachable.
+- **PHP:** the Tina4 primary, pool workers and request children use one
+  supervisor protocol.
+- **Node:** both single and cluster modes use the same worker-aware coordinator;
+  the primary may not take the default SIGTERM path.
+
+`TINA4_DEFAULT_WEBSERVER` may select a deterministic built-in path, but it is not
+a remedy for a broken production adapter. Every server Tina4 automatically
+selects must meet Feature 9 or fail selection explicitly.
+
+## Long-running Tina4 modes
+
+The web server is not the only container process. Language CLI queue workers
+currently handle Ctrl-C inconsistently and do not share one proven SIGTERM
+lifecycle: Python catches `KeyboardInterrupt`, PHP and Node install SIGINT-only
+handlers, and Ruby relies on default termination around its consume loop.
+
+Queue workers, service runners and future schedulers consume the same
+coordinator:
+
+- SIGTERM and SIGINT stop polling for new work;
+- the current job/callback receives the remaining deadline;
+- completion is acknowledged only after the handler succeeds;
+- deadline interruption leaves the job available for redelivery;
+- backend connections and logs close before exit;
+- process exit and logging follow the same rules as the server;
+- `--once` remains a normal finite run and needs no signal.
+
+This feature owns lifecycle integration. Queue acknowledgement details remain
+owned by the queue feature and are tested with real brokers.
+
+## Logs and observability
+
+Feature 2 emits the same structured lifecycle events in every language:
+
+| Event | Required fields |
 | --- | --- |
-| python | `tina4-python/tests/test_graceful_shutdown.py` |
-| php | `tina4-php/tests/GracefulShutdownTest.php` |
-| ruby | `tina4-ruby/spec/graceful_shutdown_spec.rb` |
-| node | `tina4-nodejs/test/gracefulShutdown.test.ts` |
+| `shutdown_started` | reason/signal, timeout_seconds, pid, role |
+| `shutdown_draining` | http_requests, background_tasks, claimed_jobs, workers, websockets |
+| `shutdown_timeout` | elapsed_ms and the same remaining counts |
+| `shutdown_resource_error` | redacted resource/hook name and error type/message |
+| `shutdown_completed` | elapsed_ms, `drained` or `forced`, resources_closed, exit_owner |
 
-Two cases need explanation. "SIGHUP is not trapped" asserts the process is gone
-AND that a signal killed it rather than a clean exit 0, which pins the
-deliberate non-handling. "TINA4_SHUTDOWN_TIMEOUT bounds the drain" boots with
-the timeout set to 1 against a 6-second handler and asserts the process exits in
-well under 4 seconds. The in-flight request is cut short there, which is the
-whole point of a bound.
+The completed or timeout record is flushed to stdout and the selected log file
+before exit. A shutdown must not recursively fill logs or wait forever for a
+broken sink; Feature 2's sink failure policy remains in force.
 
-Each test spawns a detached child in its own process group, redirects the child's
-stdout and stderr to a file, and kills the process group in a finally block. An
-inherited file descriptor keeps the runner's pipe open and wedges a piped test
-run forever, even after the runner itself has finished.
+## Deployment contract
 
-## Negative proofs
-
-Every gate was proven able to fail. Node, run at the committed HEAD:
-
-| probe | result |
-| --- | --- |
-| Remove the `process.on("SIGTERM")` registration from `startServer` | 8 failures. "SIGTERM lets the in-flight request finish" reported `socket hang up`; "SIGTERM exits with code 0" reported `code=143`. Exactly the original defect. |
-| Reinstate the `background.ts` listener, keeping the new one | 12 passed. The old handler is redundant now, not harmful, because `startServer` also handles the signal and exits. Recorded because it shows the probe alone does not prove the gate. |
-| Both together (the exact original code) | "a registered background task does not block shutdown" failed with `timedOut=true`. The hang reproduces. |
-| Ignore `TINA4_SHUTDOWN_TIMEOUT` in the race | "TINA4_SHUTDOWN_TIMEOUT bounds the drain" failed: exited after 9654ms against a 1-second budget. |
-
-## Two process-hygiene traps this audit hit
-
-Both cost real time, and the next person testing signal handling will meet them.
-
-**A dead child handle is not proof the server died.** `tsx` runs the real server
-as a CHILD of the process the test handle points at. A signal that kills the
-wrapper but not the server sets `exitCode` on the handle while the server keeps
-listening. Cleanup code guarded with "only kill if the handle still looks alive"
-therefore skips the one case that actually leaks. This audit's own measurement
-run left three orphaned servers holding ports 49402, 49564 and 49607, all from
-the SIGHUP cases, where SIGHUP killed the wrapper and the server survived.
-
-Call `killpg` unconditionally and let the ESRCH throw be caught, rather than
-gating it on the handle. Then verify with `lsof -ti:<port>` on every port used.
-The process handle lies; the port does not.
-
-**`pkill -f` is machine-wide, and every framework repo has identically named
-processes.** Four parallel audits each run `tsx test/run-all.ts` from their own
-worktree. `pkill -f "run-all"` matches all four. During this audit a broad pkill
-killed other agents' suites, and a suite here died from the same hazard in
-reverse.
-
-Kill by explicit PID, or include the worktree path in the pattern
-(`.worktrees/audit-009/`). A process name alone does not identify whose process
-it is.
-
-## A wrapper's exit status is not the suite's
-
-This one is not specific to shutdown, and it nearly defeated the verification
-for this feature. It generalises to any suite run under any harness, so it is
-recorded here rather than in a commit message that nobody will read again.
-
-A long test run started through a background task, a job runner, a CI step or a
-shell wrapper reports TWO exit statuses, and they are not the same number. The
-wrapper reports whether the wrapper finished. The suite reports whether the
-tests passed. A harness that surfaces the first one is telling the truth about
-the wrong process.
-
-Measured here: a full Node run was killed by SIGTERM at file 49 of 217. Its own
-log ended with `NODE_FINAL_EXIT=143`. The task notification said the command
-completed with exit code 0. Both statements were accurate. Only one of them was
-about the tests.
-
-The failure mode is worse than a missing result, because a killed run and a
-passing run look identical from outside: no failures printed, no error, a clean
-"completed". Nothing distinguishes them except the child's own final line, and
-a run that dies partway simply stops printing rather than announcing that it
-stopped.
-
-The practice that catches it, and the reason every suite in this audit is run
-this way:
-
-```sh
-npm test > run.log 2>&1; echo "EXIT=$?" >> run.log
-```
-
-Then read `EXIT` out of the log, and check the file count against the expected
-total. `128 + signum` in that field means a signal killed the run: 143 is
-SIGTERM, 137 is SIGKILL, 130 is SIGINT. None of them is a pass. "No FAIL lines"
-is not a pass either, because a run that was killed before reaching a failing
-test also has no FAIL lines.
-
-Never report a suite green on a status you did not read from the suite itself.
-
-## Deployment guidance
-
-Two operational notes that belong beside the probe YAML, neither of which the
-framework can fix.
-
-**Set `terminationGracePeriodSeconds` above `TINA4_SHUTDOWN_TIMEOUT`.** At the
-Kubernetes default both are 30, so a drain that used its full budget would race
-SIGKILL. Measured drain is about 1.5 seconds, so this is theoretical today, but
-the ordering should be explicit:
+Generated Kubernetes manifests set:
 
 ```yaml
 spec:
-  terminationGracePeriodSeconds: 45   # above TINA4_SHUTDOWN_TIMEOUT
-  containers:
-    - name: app
-      env:
-        - name: TINA4_SHUTDOWN_TIMEOUT
-          value: "30"
+  terminationGracePeriodSeconds: 35
 ```
 
-**Endpoint removal is not instant.** During termination there is a window where
-kube-proxy may still route to a pod whose endpoint removal has not propagated.
-The fix is a `preStop` hook sleep, which is the operator's concern:
+The generated grace period is at least `ceil(TINA4_SHUTDOWN_TIMEOUT) + 5`.
+Feature 8 startup/liveness/readiness probes remain separate. Kubernetes already
+marks terminating endpoints not ready; Tina4 also enters its internal
+quiescing/readiness state for non-Kubernetes supervisors and already accepted
+connections.
 
-```yaml
-      lifecycle:
-        preStop:
-          exec:
-            command: ["sh", "-c", "sleep 5"]
+A generated `preStop` hook is optional, never silently subtracted from the
+shutdown budget, and only used when the deployment needs extra load-balancer
+propagation time. The documentation states that Kubernetes starts the grace
+countdown before running `preStop`.
+
+## Contradictions and defects measured on 2026-08-10
+
+| ID | Severity | Measured contradiction | Required correction |
+| --- | --- | --- | --- |
+| H9-01 | P1 | On Linux, SIGTERM to the Node production-cluster primary exited 143 and dropped a four-second in-flight request. The single-process suite stayed green because it disables production and signals a process group. | primary-owned graceful protocol: stop respawn, quiesce/drain workers, enforce one deadline, exit 0 |
+| H9-02 | P1 | A real WebSocket upgrade through Python's selected production uvicorn path returned HTTP 404 on the lab, so no shutdown 1001 frame was possible. Existing 1001 coverage pins only the built-in server. | make the selected production transport support the route and prove 1001, or reject that unsupported server configuration |
+| H9-03 | P1 | Long-running queue CLI paths do not share Feature 9: Python catches Ctrl-C, PHP/Node register SIGINT only, Ruby has no graceful coordinator. Container SIGTERM can interrupt a claimed job and skip backend cleanup. | reuse one coordinator and prove current-job ack/redelivery against real backends |
+| H9-04 | P1 | No `shutdown_contract.json` or central runner exists. Four independently named suites can all be green while exercising different modes and rules. | add executable fixture data, four complete reports and a central checker |
+| H9-05 | P2 | ADR-0017/Python/PHP require a positive timeout; Ruby and Node explicitly accept zero. PHP accepts only whole integers while the others accept fractions; Python rounds a production value instead of ceiling it. | one Feature 1 numeric rule, startup failure for non-positive/invalid, monotonic deadline and safe ceiling for integer knobs |
+| H9-06 | P2 | Only PHP exposes `onShutdown`; it runs after server/database cleanup. Python, Ruby and Node have no portable application hook. | removable LIFO hooks before framework resource teardown, sync/async as supported |
+| H9-07 | P2 | Programmatic shutdown is not the signal lifecycle. Node's returned `close()` is non-awaitable, omits WebSocket 1001/hooks, and launches database cleanup without waiting. Other ports expose different or internal controls. | one public idempotent completion-bearing shutdown operation used by signals and explicit callers |
+| H9-08 | P2 | Existing timeout logic primarily bounds HTTP drain. User hooks, thread-pool callbacks, worker joins and resource drivers can outlive the advertised budget; Python cancels background runners then uses a non-waiting executor close whose threads may still delay interpreter exit. | one absolute whole-lifecycle deadline and remaining-budget-aware phases |
+| H9-09 | P2 | Cleanup is hard-coded around some databases/background/WebSockets rather than a lifecycle registry. Activated queue/backplane/cache/session/log resources can be outside the path. | feature-owned closeable registry populated by each activated subsystem; reverse, idempotent cleanup |
+| H9-10 | P2 | Production coverage is fragmented: Python proves uvicorn only and Granian explicitly warns it ignores the timeout; Ruby Puma proves DB/HTTP but not a live 1001 frame; PHP pool proves shutdown/port but not an in-flight worker request; Node cluster proves startup only. | run the full fixture against every automatically selectable server and worker mode |
+| H9-11 | P2 | Existing harnesses commonly signal detached process groups. That is useful for cleanup but not the container contract, which signals process 1. It hid H9-01. | signal the exact primary/container PID for behavior; kill the group only in unconditional test cleanup |
+| H9-12 | P2 | The current tests do not prove active background callbacks or claimed queue jobs finish, callbacks stop being scheduled, resource failures continue cleanup, or logs flush before forced exit. | add real bounded positive/negative cases and mutation witnesses |
+| H9-13 | P3 | Shutdown log wording and fields differ across languages, making rolling-deploy diagnosis and timeout counts non-portable. | Feature 2 structured event contract above |
+
+No framework source was changed during this audit.
+
+## Executable parity fixture
+
+Create `fixtures/shutdown_contract.json` version 1 as runtime-neutral inputs and
+expected outcomes. It defines:
+
+- signals and programmatic reasons;
+- state transitions and phase ordering;
+- timeout default, valid fractions and invalid values;
+- fast/slow HTTP, keep-alive and late-connection scenarios;
+- active/idle WebSocket scenarios and close-frame bytes;
+- background callback and queue-job timing/ack expectations;
+- hook ordering, removal, async completion and exception continuation;
+- framework resource close order and injected real close failure;
+- single, production-server, worker/cluster and CLI-consumer modes;
+- expected process-owner exit class and structured log events;
+- Docker PID 1 and Kubernetes grace expectations.
+
+Each language runner consumes the same file and emits:
+
+```json
+{
+  "feature": 9,
+  "fixture_version": 1,
+  "fixture_sha256": "...",
+  "framework": "tina4-python",
+  "modes": ["builtin", "uvicorn", "queue-worker"],
+  "consumed_case_ids": ["..."],
+  "failures": [],
+  "needs": []
+}
 ```
 
-Remember that the grace period covers the preStop hook and the shutdown
-together.
+The central checker executes all four runners, rejects stale hashes, requires
+every case for every applicable automatically selected mode and fails when a
+required production server/service is missing on the lab. A declared
+unsupported optional mode appears under `needs`; it never turns into a green
+skip.
 
-## Linux re-measurement
+## Required real-process test matrix
 
-These results are macOS-measured. Re-measure on Linux before trusting any of the
-following in production:
+Every signal case uses a real child or container, real socket and monotonic
+wall-clock witness. Blocking fixture work is deadline-looped or async so EINTR
+cannot fake completion.
 
-- **Exit codes and `waitpid` reporting** under a container init (PID 1 does not
-  get default signal dispositions, so an unhandled SIGTERM behaves differently
-  in a container than it does here).
-- **PHP's accept-then-RESET.** The listen backlog behaviour that produced it is
-  kernel-specific.
-- **The SIGHUP timings.** Ruby's process exited at the moment the in-flight
-  request finished rather than at the signal, which suggests the VM defers the
-  terminating signal to a checkpoint. The outcome (killed by signal) is stable;
-  the timing is not.
+| Area | Required proof in every language/mode |
+| --- | --- |
+| Signal delivery | exact primary PID gets TERM/INT; HUP retains default; no duplicate handlers |
+| Admission | all listeners close first; late TCP refused; no new keep-alive request starts |
+| HTTP | accepted slow request completes; timeout cuts it; response bytes are actually received |
+| Workers | primary stops respawn, every worker drains, straggler forced, no descendant/orphan remains |
+| WebSocket | real upgrade then real close frame 1001 before socket close; does not consume drain budget |
+| Background | scheduler stops; active callback finishes inside budget; over-budget callback cannot hold process |
+| Queue worker | real broker job completes+acks; timeout case is redelivered; backend closes |
+| Hooks | removable, LIFO, once, sync/async, error continues, no late registration |
+| Resources | real named/default DB and live backend clients close in reverse order; one close failure does not skip later cleanup |
+| Programmatic | completion waits for identical phases and leaves process exit to caller |
+| Timeout | invalid startup failure, positive fraction, monotonic deadline, whole lifecycle bound |
+| Logs | exact event fields reach real stdout and file before normal/forced exit |
+| Images | exec-form PID 1, `docker stop` drains, no orphan processes, port released |
+| Fixture | current hash and exact case set reported for each selected mode |
 
-The assertions in all four suites are written against outcomes (drained,
-refused, exit code) rather than Darwin timings, so they should hold on Linux.
-That is a prediction until someone runs them there.
+Mutation witnesses must make the suite red when the primary takes default
+SIGTERM, worker respawn remains enabled, `close()` resolves early, zero is
+accepted, a group signal replaces PID1 delivery, 1001 is removed, a claimed job
+is acknowledged before completion, a shutdown hook runs FIFO/after database
+close, the deadline resets between phases, or the final log is not flushed.
 
-## Cleanup
+## Implementation formula for another language
 
-Three half-implementations of one lifecycle became one. `background.ts` and the
-CLI's `serve.ts` no longer register signal handlers; `startServer()` owns the
-whole path and calls `stopAllBackgroundTasks()` as its first step. A process
-using `background()` without a server now keeps Node's correct default and
-terminates on SIGTERM.
+1. Implement Feature 1 typed configuration and validate one positive shutdown
+   timeout during startup.
+2. Model the six lifecycle states with one atomic, idempotent coordinator.
+3. Make the coordinator the sole INT/TERM owner for every Tina4-owned process
+   role; integrate rather than compete when a production server owns signals.
+4. Expose completion-bearing programmatic shutdown and removable application
+   hooks using the language's idioms.
+5. Register every listener, worker, scheduler, consumer, WebSocket manager and
+   closeable framework resource with stable ownership.
+6. Implement the exact quiesce/drain/hook/cleanup sequence against one monotonic
+   deadline.
+7. Add supervisor IPC so one signal to process 1 drains all workers, disables
+   respawn and force-kills only deadline stragglers.
+8. Adapt every automatically selected production server using its native drain
+   and deadline controls plus supported lifecycle hooks.
+9. Integrate queue/service runners so current work finishes or remains safely
+   redeliverable.
+10. Emit and flush the Feature 2 lifecycle events, preserving fatal/startup
+    failure status.
+11. Generate exec-form images and Kubernetes grace greater than the Tina4
+    timeout.
+12. Consume the shared fixture and pass every mode, real-resource case and
+    mutation witness locally and on the serialized Linux lab.
 
-Two implementations of one lifecycle is the shape that produced this bug. The
-handler that clears timers and the handler that exits were never going to agree,
-because neither knew the other existed.
+A future language is complete only when it adds a runner/mode report without
+changing fixture expectations. Syntax, process APIs and production-server
+mechanisms may differ; state transitions and observable outcomes may not.
+
+## Migration to 3.14.0
+
+- `TINA4_SHUTDOWN_TIMEOUT=0`, negative, non-finite and malformed values fail
+  startup. Use a positive number; omit it for 30 seconds.
+- Ruby and Node lose the zero-second immediate-close behavior. Python's
+  production integer mapping changes from rounding to ceiling.
+- Node production cluster begins exiting 0 after draining rather than dying 143
+  and dropping work.
+- Programmatic close becomes completion-bearing and runs the full lifecycle;
+  callers in async runtimes must await it when they need shutdown complete.
+- Application hooks become portable and run LIFO before framework resources;
+  PHP code depending on FIFO/closed-database timing must migrate.
+- Queue/service containers handle SIGTERM gracefully instead of relying on
+  Ctrl-C/default termination.
+- Generated Kubernetes grace becomes at least timeout plus five seconds.
+- Automatically selected production servers that cannot honor the contract
+  fail explicitly rather than warn and continue with partial shutdown.
+
+## Completion gate
+
+Feature 9 is complete only when:
+
+- H9-01 through H9-13 are closed in all four current ports;
+- ADR-0017 is amended with the state machine, whole-lifecycle deadline,
+  validation, programmatic hooks, workers and long-running-mode decisions;
+- the fixture, four runners and central checker pass with current hashes;
+- every mutation witness is proven red;
+- TERM sent to each real container's process 1 drains single and worker modes;
+- every selected production server passes the full applicable matrix;
+- real WebSocket peers receive 1001 in production;
+- real queue jobs complete or redeliver correctly across TERM/deadline cases;
+- final logs and resource closure are observed before process exit;
+- generated deployment grace safely exceeds the Tina4 deadline;
+- local and serialized Linux lab runs are green with zero unexplained skips or
+  surviving descendant processes.
