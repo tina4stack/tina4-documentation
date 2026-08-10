@@ -8,7 +8,7 @@
 - Dependency: Feature 6 router and dispatch
 - Dependants: CORS, CSRF, authentication, rate limiting, response cache,
   request logging, sessions and application middleware
-- Existing decisions: ADR-0012 and ADR-0014
+- Existing decisions: ADR-0012, ADR-0014 (result-table clause superseded by ADR-0045)
 - Current shared executable fixture: none
 - Re-audit date: 2026-08-10
 
@@ -18,6 +18,40 @@ middleware stack. Adversarial execution found missing unwinds, after hooks for
 middleware that never entered, non-functional `next()` behavior in Node, async
 authorization bypass in Python, response mutation after transport commit and
 several incompatible public middleware shapes.
+
+## Owner decisions APPROVED (finalized 2026-08-10)
+
+This packet declared no open product choices. The re-audit review surfaced three
+genuine calls; Andre settled them, and one clean-room nit is fixed.
+
+- **A: ADR-0014 is SUPERSEDED by a new ADR-0045, not amended in place.** The
+  phase-specific before/after result tables replace ADR-0014's single-table rule.
+  Per the decision-log convention (supersede, do not silently change), ADR-0045
+  records the new tables and marks ADR-0014's result-table clause superseded;
+  ADR-0014 stays as the historical record with a Superseded-by pointer. Backlog
+  item 1 publishes ADR-0045.
+- **B: pair rebinding is REMOVED - mutation-only.** A hook can no longer return
+  `[request, response]` to swap object identities. Request and response are mutable
+  framework objects; hooks mutate in place, and response replacement stays covered
+  by the 'return Response' row. This drops a return shape from BOTH tables, and one
+  more semantic table a future language must implement, consistent with the other
+  3.14 removals (blocks, two-argument filters, status sniffing). The before and
+  after tables, the removed-forms list, defect M7-15, the fixture cases and the
+  migration notes are updated to match.
+- **C: a bare `false` before-hook keeps the canonical 403 (ratified as written).**
+  `return false` = deny/forbidden -> 403; a middleware wanting another status
+  returns an explicit Response. 403 is the correct default for a policy denial.
+
+Ratified: normal HTTP responses stay buffered and mutable until the unwind finishes
+so every after hook can change them, with explicit streaming carved out as a
+separate commit-on-first-chunk mode - a conscious memory tradeoff, accepted.
+
+Clean-room nit fixed: the canonical 403 body follows the same response-surface
+contract as the 500 (the delegation now names both).
+
+These close the DESIGN half of the FINAL bar for Feature 7. Remaining to reach
+FINAL: publish ADR-0045, materialize `middleware_contract.json`, and wire the four
+executable runners (backlog items 1, 2, 12).
 
 ## Why this feature exists
 
@@ -39,7 +73,7 @@ Feature 7 owns:
 - class-hook and continuation-function middleware shapes;
 - middleware discovery, validation and inspection;
 - effective ordering when scopes and shapes are combined;
-- continuation, short-circuit, response replacement and pair rebinding rules;
+- continuation, short-circuit and response replacement rules;
 - entered-layer tracking and reverse unwinding;
 - sync/async invocation where the runtime supports both;
 - middleware exception conversion and cleanup guarantees;
@@ -55,7 +89,7 @@ It delegates:
 - request and response object details to the routing-surface feature;
 - the policy inside CORS, CSRF, rate limiting, cache and logging middleware to
   those features;
-- the canonical 500 body and response serialization to the response surface;
+- the canonical 500 and 403 bodies and response serialization to the response surface;
 - explicit streaming and WebSocket lifecycle to their own features.
 
 Feature 7 still owns whether the delegated policy is invoked at the correct
@@ -156,9 +190,9 @@ The spelling and await syntax are language-idiomatic. The semantics are not:
   an immediate result.
 
 The canonical `next()` takes no arguments. Request and response are mutable
-framework objects. A continuation that needs a different object returns the
-canonical pair from a class hook or uses the framework's explicit mutation
-surface; ports must not invent a language-specific `next(req, res)` contract.
+framework objects. A continuation that needs a different object uses the
+framework's explicit mutation surface; ports must not invent a language-specific
+`next(req, res)` contract.
 
 ### Class hooks — retained public API
 
@@ -229,14 +263,14 @@ the owed unwind is B then A; C gets neither before nor after.
 
 ADR-0014 correctly made an explicit returned Response the primary answer, but
 its “same table on every hook” and retained status sniffing do not survive a
-real unwind. This re-audit requires an amendment before implementation.
+real unwind. This re-audit supersedes that clause with ADR-0045 before
+implementation.
 
 ### Before hooks
 
 | Return | Behavior |
 | --- | --- |
 | Response | replace the current response and stop descent at any status |
-| `[request, response]` pair | rebind both and continue within the layer/pipeline |
 | `false` | stop descent; preserve an explicit response, otherwise create canonical 403 |
 | null/nil/undefined | continue |
 | anything else | protocol error -> clean 500 |
@@ -252,8 +286,7 @@ copy. Pre-3.14 is the allowed point to remove it with a migration message.
 | Return | Behavior |
 | --- | --- |
 | Response | replace the current response; continue unwinding owed layers |
-| `[request, response]` pair | rebind both; continue unwinding owed layers |
-| null/nil/undefined | keep current pair; continue unwinding owed layers |
+| null/nil/undefined | keep the current response; continue unwinding owed layers |
 | `false` or anything else | protocol error -> clean 500; continue unwinding owed layers |
 
 An after hook cannot cancel cleanup already owed to outer layers. That is why
@@ -318,10 +351,10 @@ publishes one canonical name everywhere or removes the name everywhere.
 | M7-09 | P2 | Mixed shapes do not share an order: Python/PHP/Ruby extract functions and run classes first; Node preserves loop order but lacks continuation semantics. | adapt every shape to one ordered chain |
 | M7-10 | P2 | Python treats any three-argument callable as async. A synchronous three-argument middleware fails with `TypeError: object Response can't be used in 'await' expression`. | accept immediate or awaitable result |
 | M7-11 | P2 | Python deduplicates configured instances by `type`; two distinct instances become one effective layer. | remove type/class deduplication |
-| M7-12 | P2 | The after-result contract is already split: Python/PHP/Node stop remaining after hooks on `false`; Ruby continues. Ruby also continues after a returned Response. ADR-0014 claims one table. | adopt the phase-specific tables above and amend ADR-0014 |
+| M7-12 | P2 | The after-result contract is already split: Python/PHP/Node stop remaining after hooks on `false`; Ruby continues. Ruby also continues after a returned Response. ADR-0014 claims one table. | adopt the phase-specific tables above; supersede ADR-0014 with ADR-0045 |
 | M7-13 | P2 | Ruby pattern blocks run twice when any pre-match class exists because both passes call the global block registry. The same block uses a different result contract from class hooks. | remove the Ruby-only block form from the portable surface |
 | M7-14 | P2 | Ruby/PHP retain two-argument filter middleware; Python silently treats a two-argument function as an inert class-like object; Node's type admits the three-argument form only. | remove the legacy filter shape; continuation or class hooks only |
-| M7-15 | P2 | Node route-class runner discards a replacement `[request,response]` pair because its public return type is boolean. | return/rebind the canonical pair through the unified chain |
+| M7-15 | P2 | Node route-class runner's boolean return type cannot carry a replacement Response through the unified chain. | return/replace the Response through the unified chain (pair rebinding removed, decision B) |
 | M7-16 | P2 | Hook validation is absent. Wrong or exact `before`/`after` names can register and silently do nothing, with language-specific prefix matching. | validate at registration/startup and fail explicitly |
 | M7-17 | P2 | Node merges `Router` class middleware and `MiddlewareRunner` globals; reset and inspection have two authorities. | one registry and one reset seam |
 | M7-18 | P2 | String registries disagree: Python exposes five aliases/names, the other three one. | central named registry; feature-owned names identical everywhere |
@@ -337,6 +370,8 @@ The 3.14 portable surface removes:
 - Ruby-only `Middleware.before(pattern) { ... }` and `.after` block registries;
 - two-argument callable/filter middleware;
 - implicit short-circuit by response status;
+- class-hook `[request, response]` pair rebinding (mutate the framework objects in
+  place, or replace the response by returning a Response);
 - class/type deduplication;
 - silent acceptance of a class with no valid hook;
 - language-specific `next(request, response)` continuation signatures.
@@ -407,10 +442,10 @@ or wire response.
 ### Result and error cases
 
 - before returns Response at 200, 302, 403 and 500;
-- before returns pair, false, null and invalid scalar;
+- before returns false, null and invalid scalar;
 - a hook merely sets 403 then returns null: handler continues, proving status
   sniffing is gone;
-- after returns Response, pair, null, false and invalid scalar;
+- after returns Response, null, false and invalid scalar;
 - after Response replacement still runs outer cleanup;
 - before, downstream and after throw paths with exact final 500 behavior;
 - sync and async hook/function combinations in async-capable runtimes;
@@ -474,11 +509,11 @@ following decisions for review:
 - class hooks accept immediate or awaitable results where supported;
 - before and after use phase-specific result tables;
 - after failure never cancels outer cleanup;
-- the legacy status check, Ruby blocks and two-argument filters are removed;
+- the legacy status check, Ruby blocks, two-argument filters and pair rebinding are removed;
 - normal HTTP response commit is after middleware unwind;
 - every explicit registration is a layer; no type/class deduplication;
 - a bad hook or spec fails explicitly;
-- ADR-0014 must be amended rather than copied into another language.
+- ADR-0014's result-table clause is superseded by ADR-0045, not copied into another language.
 
 If any decision is intentionally different product policy, change it before
 implementation and record the replacement in an ADR. Otherwise approval makes
@@ -513,6 +548,8 @@ Release notes and startup diagnostics must call out:
 - Python awaits async hooks and accepts synchronous continuation functions;
 - double next becomes a 500 protocol error instead of duplicate handler work;
 - response status alone no longer short-circuits; return Response or false;
+- class-hook `[request, response]` pair rebinding is removed; mutate the framework
+  objects in place, or return a Response to replace it;
 - Ruby block and Ruby/PHP two-argument filter forms are removed;
 - wrong/no-hook classes and unknown named specs fail startup;
 - distinct configured instances and repeated explicit registrations all run;
@@ -526,8 +563,9 @@ No compatibility mode is required before 3.14.0.
 Audit-first rule: do not execute this backlog until this audit is approved for
 implementation.
 
-1. Publish the ADR-0014 amendment for nested unwinding, phase-specific result
-   tables and removal of response-status sniffing.
+1. Publish ADR-0045 superseding ADR-0014's result-table clause: nested unwinding,
+   phase-specific result tables, and removal of response-status sniffing and pair
+   rebinding.
 2. Materialize `middleware_contract.json` with the lifecycle, wire and mutation
    cases above.
 3. Define the canonical registration record, one registry and source-owned
@@ -575,7 +613,7 @@ A clean-room language port implements Feature 7 in this order:
 
 The port is incomplete if it copies only `before` and `after` method names. It
 is complete when the same registration data and request produce the same exact
-entry trace, handler count, unwind trace, native pair, final wire response,
+entry trace, handler count, unwind trace, native request/response, final wire response,
 diagnostic and inspection order.
 
 ## Audit closure checklist
@@ -593,5 +631,5 @@ diagnostic and inspection order.
 
 Feature 7 is **audit-complete and decision-ready**, not implementation-complete
 and not 3.14-stable. Approval records the contract; implementation must then
-amend ADR-0014, create the executable fixture and make all four runtimes
+publish ADR-0045 superseding ADR-0014, create the executable fixture and make all four runtimes
 conform before Feature 7 can be called complete.
