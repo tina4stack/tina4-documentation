@@ -9,6 +9,15 @@
 > synced with the audit ([98-feature-audit.md](98-feature-audit.md)) and the
 > contract auditor. The status figures below are from 2026-04-03 and are stale;
 > CONTRACT-MAP carries the current fixture counts.
+>
+> **New-language target:** [PORTING-FORMULA.md](PORTING-FORMULA.md) defines the
+> clean-room output required from the audit: enough surface, lifecycle, wire,
+> failure, fixture and integration detail to implement Tina4 in another language
+> without copying an existing runtime.
+>
+> **Release target:** 3.14.0 is the stable-contract boundary. Correctness and
+> parity may require breaking any earlier 3.x behavior; every such break is
+> fixture-proven and carries an explicit migration path.
 
 ## Status
 
@@ -59,6 +68,9 @@
 | 15 | [DEPLOYMENT-SPEC.md](15-DEPLOYMENT-SPEC.md) | Dev vs prod servers, Docker (40-80MB), K8s, CLI build/stage/deploy |
 | 16 | [DEV-WORKFLOW.md](16-DEV-WORKFLOW.md) | Development → Staging → Production best practices and CLI workflow |
 | 17 | [TINA4PRESS.md](17-TINA4PRESS.md) | VitePress-style docs site generator built on tina4-js, powers tina4.com |
+| 99 | [PORTING-FORMULA.md](PORTING-FORMULA.md) | Clean-room formula and acceptance gates for implementing Tina4 in another language |
+| 99b | [features/FEATURE-TEMPLATE.md](features/FEATURE-TEMPLATE.md) | Required one-feature/one-file contract and porting packet schema |
+| 99c | [AUDITED-FEATURE-REAUDIT-TABLE.md](AUDITED-FEATURE-REAUDIT-TABLE.md) | Table of every feature the audit file actually records as historically audited |
 
 ## Key Decisions Made
 - Template engine name: **Frond** (twig-like, zero-dep, identical syntax across all four)

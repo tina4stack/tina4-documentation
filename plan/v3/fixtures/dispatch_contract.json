@@ -12,7 +12,7 @@
     "",
     "What IS shared is the ORDERING and the OUTCOMES - and every entry below was",
     "decided by an ADR and is already covered by a real test in all four. This file",
-    "is the index of that contract, so a fifth framework, or a rewrite of any of",
+    "is the index of that contract, so another framework, or a rewrite of any of",
     "these four, has one place to conform to.",
     "",
     "Each invariant names the suite that proves it. Those suites carry IDENTICAL",

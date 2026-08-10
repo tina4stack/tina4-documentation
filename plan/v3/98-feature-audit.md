@@ -1,5 +1,10 @@
 # Task: audit every feature, pick the best implementation, park a plan
 
+> **2026-08-08 re-audit:** every previously audited row is being re-opened for
+> adversarial contract-coverage review under `99-feature-reaudit.md`. Feature 27
+> proved that zero-skip green suites can still omit contradictions between
+> public operations. A prior "closed" label is now a baseline, not final proof.
+
 Owner request (2026-07-28): "a feature by feature audit - each one checked -
 decision made as to which is the best implemented - evaluated for performance,
 SOLID, DRY, LOC, CC, parked for implementation as a plan. All 98 checked."
@@ -100,9 +105,9 @@ in the table itself.
 Owner rule: while the audit runs, every feature plan must also be the SPEC you
 would hand someone adding Tina4 to a language it does not have yet.
 
-This is not extra work bolted onto the audit. A spec complete enough to build a
-FIFTH implementation from is, by construction, a spec that pins the contract the
-existing four must already share - and pinning that contract is the audit's
+This is not extra work bolted onto the audit. A spec complete enough to build
+Tina4 in another language is, by construction, a spec that pins the contract
+the existing four must already share - and pinning that contract is the audit's
 whole job. Everything the four keep drifting on (argument order, env precedence,
 stored key shapes, what counts as an error) is exactly what a new implementer
 would have to ask about, so the questions they would ask ARE the audit's
@@ -111,7 +116,7 @@ contract; it describes four accidents that currently agree.
 
 **The surface table is not enough on its own.** It has one column per framework,
 so it is DESCRIPTIVE - it records what these four happen to call a thing. It
-cannot GENERATE a fifth spelling, and it says nothing about stored bytes,
+cannot GENERATE another language's spelling, and it says nothing about stored bytes,
 ordering, or failure modes. It stays mandatory; the six parts below sit
 alongside it.
 
@@ -127,7 +132,7 @@ show it applied:
              Keyword clashes take the documented substitute (Node `delete` ->
              `del`) and the plan names the clash.
 
-A fifth language derives its own name from the rule. It never copies Python's.
+Another language derives its own name from the rule. It never copies Python's.
 
 ### 2. Behaviour, stated without reference to any language
 
@@ -144,7 +149,7 @@ The exact bytes. Stored key names and their prefixes, JSON field names and
 types, SQL column names and types, HTTP headers and status codes, queue message
 envelopes, cookie attributes.
 
-THIS is what makes a fifth implementation interoperable rather than merely
+THIS is what makes another implementation interoperable rather than merely
 similar. A Go implementation must be able to read a session written by the PHP
 one, resume a queue the Python one filled, and answer a health check the same
 monitor scrapes. Nothing else in the plan establishes that.
@@ -171,7 +176,7 @@ executable. A new implementation cannot run "session ttl env var expires the
 record on every backend" - it can only run inputs and compare outputs.
 
 Each case grows an input and an expected result, so the fixture becomes the
-answer key a fifth runner executes directly:
+answer key another language's runner executes directly:
 
     {
       "name": "a missing key reads as empty, not an error",
@@ -235,8 +240,8 @@ So the upgrade is small and the payoff compounds:
   "PROVEN in all four" as PROSE, asserted by a human. With executable cases the
   runner asserts it, and a stale PROVEN is a red build rather than a sentence
   nobody rechecked. This document drifted four times in exactly that way.
-- **A fifth language gets a pass/fail gate on day one.** The same fixture that
-  checks the four IS the acceptance test for the fifth, so the question "is the
+- **Another language gets a pass/fail gate on day one.** The same fixture that
+  checks the four IS the acceptance test for that implementation, so the question "is the
   Go port done" has an answer that is not an opinion.
 
 The four-way check and the portability spec are therefore the SAME artefact
@@ -313,10 +318,10 @@ developer-facing surfaces with no cross-process contract and no shape user code
 binds to. They are still audited to the same standard on correctness - they
 simply need less written down to be PORTABLE.
 
-Tier A is where a fifth language BREAKS, and it is where these four already
+Tier A is where another language BREAKS, and it is where these four already
 drift: every cross-framework defect measured on 2026-08-05 was tier A (session
 key databases, mongo database selection, queue vhost naming, paginate envelope
-counts). Tier C is where a fifth language can be written freely and correctly
+counts). Tier C is where another language can be written freely and correctly
 from two paragraphs - HtmlElement, Testing, FakeData, the DI container, Events.
 
 Mis-tiering DOWN is the dangerous error, and the first draft of this rule made it
@@ -327,7 +332,7 @@ contract nobody wrote and four implementations that agree by luck.
 
 1. **The six existing fixtures first.** They are already consumed by all four
    runners, so upgrading `cases` from names to executable data (part 5) makes
-   the answer key runnable by a fifth implementation with no new machinery. This
+   the answer key runnable by another implementation with no new machinery. This
    is the single highest-leverage change in the whole programme.
 2. **The remaining tier-A features**, whether audited or not. An AUDITED tier-A
    feature with no wire contract written down is not actually closed - the audit
@@ -494,10 +499,10 @@ reviewed and closed at a time, not batched.
 
 | # | feature | verdict | decided on | plan | state |
 | --- | --- | --- | --- | --- | --- |
-| 0 | Messenger (pilot) | SYNTHESISE | correctness | `messenger-contract.md` | **SHIPPED all 4**, 0 open (py `9075423`, php `721aba94`, node `c96ba9f`, ruby `33b25de`) |
-| 1 | DotEnv parser | SYNTHESISE | correctness | `features/001-dotenv.md` | **RE-CLOSED 2026-08-01, lab-verified all four (python 4680 / php 4725 / ruby 4796 / node 6997, ZERO failures).** The 2026-07-31 closure was premature: a re-audit under ADR-0024 found FOUR more defects. (a) A trailing comment after a QUOTED value left the quote characters IN the value in Python, Ruby AND Node -- `PW="s3cret" # comment` yielded the 8-character string including quotes, a credential handed to a driver with quotes baked in. PHP alone was right; its closing-quote scan was ported to the other three. (b) Node alone implemented shell-style backslash line-continuation, so one .env produced a DIFFERENT SET OF VARIABLES on Node -- deleted, not ported (no mainstream dotenv joins lines that way). (c) Ruby's `Env.bool` accepted y/t/n/f while Ruby's OWN `Log.truthy?` did not, so `TINA4_LOG_FUNC=y` enabled function logging while `TINA4_DEBUG=y` left debug off, same process, same file. One table now, `true 1 yes on`; the FALSY table and the default-for-unknown behaviour were DELETED. (d) `mcp.rb` defined `Tina4.truthy?` a second time on the same module and was silently overwritten -- dead code on the MCP remote-access gate. **The corpus was the lesson:** all four passed it byte-identically while three were wrong, because it had no row for the most common line in a real .env. A shared fixture is only as good as its rows. Original 2026-07-31 note follows. **CLOSED 2026-07-31.** Parser + named pairs shipped 2026-07-30; the surface reconciliation (step 5) closed today. `load_env` takes a ROOT DIRECTORY in all four and loads `.env.local` then `.env` itself, so the precedence rule stops being the caller's job. Ruby gained the top-level `Tina4.*` surface and `require_env!` was RENAMED to `require_env` (owner call, no alias). Two Breaking changes fell out that the plan had not seen: `load_env` returned what the FILE said rather than what WON, and Python's `require_env` called `SystemExit(1)` - a library terminating its host process. **The plan was WRONG on who was the outlier**: it says PHP's file-path arg is odd, but Python, PHP AND Node take a file and RUBY has the right shape. |
-| 2 | Structured logger | SYNTHESISE | correctness | `features/002-structured-logger.md` | **CLOSED 2026-08-05. All 5 defects re-measured and fixed in all four; the row had been left RE-OPENED after the fixes landed.** Re-measurement, by running the four loggers with identical env rather than by reading the code: (1) lazy read - `TINA4_LOG_FORMAT=json` reached the logger in Python and PHP with NO `configure()` call, so the vars are no longer inert. (2) defaults no longer opposite - all four emit to stdout in text. (3) the production->JSON switch is gone - all four emit TEXT with `TINA4_DEBUG` unset and JSON only under `TINA4_LOG_FORMAT=json`, with a byte-comparable `{timestamp, level, message}` envelope; `TINA4_DEBUG` now selects COLOUR only. (4) `TINA4_LOG_STRICT` is implemented in all four (was Ruby only). (5) `TINA4_LOG_KEEP` / `TINA4_LOG_MAX_SIZE` are DELETED from the code in Python and PHP - only the migration comment remains - so the documented-everywhere/implemented-in-two split is closed. The Ruby JSON log FILE now opens with valid JSON on line 1 (the `# Logfile created on ...` header is gone), so a line-oriented shipper no longer fails on the first line. Original RE-OPENED note follows. **RE-OPENED 2026-08-01 -- 5 defects MEASURED, was marked SHIPPED.** (1) `TINA4_LOG_*` is inert until `configure()` runs in Python AND PHP; Ruby and Node read it lazily on first use. Any script, worker, CLI tool or test that logs without booting a server silently gets defaults. (2) Those defaults are OPPOSITE: python = stdout + text + no file; php = NO stdout + files in ./logs + json. (3) **'Production' is defined FOUR different ways and it silently selects the log FORMAT** -- node `!TINA4_DEBUG`, ruby `TINA4_ENV|RACK_ENV|RUBY_ENV == production`, python only via `configure(production=True)`, php no switch (json always). Same machine, same .env, four different formats; node emits JSON while documenting `default: "text"` at logger.ts:211. (4) `TINA4_LOG_STRICT` is documented on ALL FOUR env-var pages, implemented ONLY in Ruby -- a documented no-op in three frameworks. (5) `TINA4_LOG_KEEP` / `TINA4_LOG_MAX_SIZE` documented as legacy aliases for all four, implemented in Python + PHP only. Plus: Ruby's JSON log FILE opens with a non-JSON line (`# Logfile created on ... by logger.rb/v1.7.0`), so a line-oriented shipper fails on line 1. **Owner decision 2026-08-01: text is the default; JSON encoding applies only to an OBJECT passed as the message** (all four already coerce objects correctly). That makes the implicit production->JSON switch a DELETION in all four. |
-| 3 | DB adapter interface | **REDESIGN** (was PROMOTE php, then SYNTHESISE) | SOLID + LOC | `features/003-database-adapter-interface.md` | **CLOSED 2026-07-31: CRUD has left the adapters in all four.** Shipped all 4: contract + ratchets, Ruby's interface, naming, autocommit, getDatabaseType, and (2026-07-30/31) the BATCH WRITE collapse - executeMany looped one round-trip per ROW; measured 500 rows PostgreSQL 9848ms -> 34ms (302x), MySQL 199x, MSSQL 42x. Fallout fixed on the way: PHP Postgres `affectedRows` always 0 on update (only adapter not routing writes through execute()), and a MySQL `last_id` regression the collapse introduced (MySQL reports the FIRST id of a multi-row INSERT; normalised in each ADAPTER so get_last_id and the returned result agree). Firebird verified NOT collapsible (-104 Token unknown) but 2.1x available from cursor reuse - not done. |
+| 55 | Messenger (historical audit pilot) | SYNTHESISE | correctness | `features/055-email-messenger.md` | **SHIPPED all 4**, 0 open under the original pilot; queued for the adversarial re-audit in numeric order (py `9075423`, php `721aba94`, node `c96ba9f`, ruby `33b25de`) |
+| 1 | DotEnv parser | SYNTHESISE | correctness | `features/001-dotenv.md` | **CONTRACT COMPLETE 2026-08-09; implementation pending until the full audit closes.** Owner decisions settle bootstrap/template, hard transactional failures, precedence, native scalar/structured returns, constant/environment references, dependency-graph resolution, portable numeric grammar/ranges, multiline structures, duplicate/cycle/depth rules, case sensitivity and reset. Exact named conformance cases and the ten-part porting capsule are in the plan; the prior shipped narrative remains only as historical evidence. |
+| 2 | Structured logger | SYNTHESISE | correctness | `features/002-structured-logger.md` | **CONTRACT COMPLETE 2026-08-09; implementation pending until the full audit closes.** The 25-rule decision register and ten-part normative plan settle configuration lifecycle, format, ANSI, sinks, global levels, file layout, bounded concurrent rotation, oversized records, native normalization, request locality, failure policy, public API and process lifecycle. The shared fixture contains 59 unique cases across 8 owed invariant groups (SHA-1 `1aca82f6e0309f17eb11313334abacf2184509c8`). Focused exact-HEAD lab baseline remains Python 82 passed, PHP 91 tests/217 assertions, Ruby 75 examples and Node 85 passed. Those 333 checks are compatibility evidence, not 3.14 conformance. No framework code changed during the audit. |
+| 3 | DB adapter interface | **REDESIGN, superseded execution boundary in ADR-0044** | correctness + SOLID + measured batching | `features/003-database-adapter-interface.md` | **CONTRACT COMPLETE 2026-08-10; implementation pending.** The old shared fixture excluded `executeMany` and `fetchOne` while Python, PHP and Node declared both; its runners passed by checking the JSON against itself. Re-audit makes both required adapter primitives and public facade methods, removes duplicate adapter diagnostics, requires aggregate `DatabaseResult`, one-connection atomic batches and a native async Node contract. Exact-HEAD lab baseline is green, but that is compatibility evidence. New 38-case fixture has 8 owed invariant groups. |
 | 4 | SQLite adapter + write path | **GAP** (P1, was broken in 4 of 4) | correctness | `features/004-sqlite-adapter.md` | **EFFECTIVELY CLOSED 2026-07-31; 1 deferred.** (a) PHP `getColumns()` key: re-measured, the drift the plan described is GONE - PHP emits `primaryKey` in all 12 places, no consumer reads `'primary'`, and that matches the contract's idiomatic-casing rule. Plan was stale, not the code; pinned with a test. (b) ORM single-key: **FIXED all 4** (py `deefe50`, node `a253006`, ruby `12002c5`, php `29279b40`). Worse than parked: the INSERT-vs-UPDATE probe tested only the FIRST key column, so saving (acme,a2) was decided an UPDATE and OVERWROTE (acme,a1) - data loss on an ordinary insert. Also update/delete truncated the key, and createTable emitted one inline PRIMARY KEY per column (invalid DDL). PHP needed an ADDITIVE `$primaryKeys` array: widening `$primaryKey` to string|array fatals every existing model (PHP demands identical redeclared types). (c) row cap: **deferred to feature 18**, unchanged. |
 | 5 | DATABASE_URL parser | PROMOTE php | SOLID | `features/005-database-url-parser.md` | **SHIPPED all 4** (2026-07-30): php 12/17->17/17, node 0/17->17/17, python + ruby had no parser at all -> 17/17. D3 settled on live Firebird. |
 | 6 | Router + dispatch | SYNTHESISE | SOLID | `features/006-router-and-dispatch.md` | **closed, 1 OPEN decision filed.** Stage lists are data + a contract gate in all four; 8 invariants in `fixtures/dispatch_contract.json`, 108 (case x framework) pairs checked. Route precedence (does a specific route beat a catch-all?) is **ADR-0015, ACCEPTED: no change**. The reported bug (a Ruby app catch-all shadowing `/__health`, so a container health check got the app's page) is FIXED in `tina4-ruby 0ad2de1`. Citations verified against primary docs: Django, Rails and Express all resolve by registration order, first match wins; ASP.NET Core is the lone specificity outlier and gets there by a different architecture (all endpoints ranked, ties throw) that we are not adopting. The prior belief that specificity-wins is the norm was WRONG. One follow-on scheduled: our order is filesystem-derived rather than written, so make it VISIBLE (startup warning on a shadowing catch-all, resolution order in `tina4 routes`). |
@@ -521,7 +526,8 @@ reviewed and closed at a time, not batched.
 | 41-42 | JWT + session handling | SYNTHESISE | **security** | ADR-0021 | **CLOSED 2026-08-01, merged to v3.** ADR-0021: a session id is OPAQUE - never a path component - and an unverified credential is not an auth result. Closed a real CWE-22: the id arrives in an attacker-controlled cookie and became a filename. The obvious fix was worse than the bug - a lossy `gsub(/[^a-zA-Z0-9_-]/, "")` collapsed `a/b` and `ab` onto ONE file, so two users shared one session record. Now sha256(id). BREAKING and backend-dependent: file and memcached sessions are invalidated, redis/valkey/mongo/database SURVIVE (their keys are the raw id). Also: `start()` refuses to adopt an id the store never issued (session fixation), the api-key result renamed `{api_key: true}` -> `{_auth: "api_key"}`, Python's unverified Basic branch deleted, `>=` on `exp` per RFC 7519 s4.1.4, malformed exp/nbf rejected, constant-time api-key compare. |
 | 43 | Cache backends | CONFORMANCE (not a fork) | **security** | ADR-0020 | **CLOSED 2026-08-01, merged to v3.** RFC 9111 s3.5: a shared cache MUST NOT store a response to a request carrying `Authorization`. MEASURED cross-user leak - PHP served one user's private balance to a DIFFERENT user's token with `X-Cache: HIT`. Python and Ruby were not exploitable only because their middleware did not function at all (feature 7). BREAKING: authenticated GETs are no longer stored; opt back in per route with `Cache-Control: public`. **Filed as an ADR but it is not a decision** - RFC 9111 answers it with MUST NOTs and Varnish, nginx proxy_cache and Rack::Cache all agree; three independent reviews said reclassify it as conformance. Kept for its migration note. |
 | 48 | Queue backends | SYNTHESISE | correctness | ADR-0022 | **CLOSED 2026-08-01, merged to v3. The caveat below is RESOLVED as of 2026-08-05:** the four-way claim is now true. PHP carries 12 queue commits and Ruby 19 since 2026-07-30 (Python 16, Node 17), and all four carry both the failure-lifecycle and the `close()` suites (`QueueFailureLifecycleTest.php` / `queue_failure_lifecycle_spec.rb` / `test_queue_failure_lifecycle.py` / `queueFailureLifecycle.test.ts`, plus the matching close-releases-backend files). Ruby's `Job#fail` never reaching the broker was fixed on the way. The caveat as originally written follows, kept because it records how a four-way promise came to be stated from a two-framework branch. ADR-0022: the queue promises at-least-once and each backend keeps it the way its protocol allows (AMQP 0-9-1 s1.8.3.12/13 ack-and-republish; Kafka offset-commit). Node's RabbitMQ and Kafka backends now THROW at construction - a HOLDING POSITION, not the settled design, pending the persistent-connection rewrite; an app with `backend: "rabbitmq"` no longer starts. **The caveat: the branch carried 1 commit in tina4-python and 1 in tina4-nodejs and ZERO in tina4-php and tina4-ruby**, while the ADR states the promise across all four and its own trigger records "PHP Kafka had no ack at all". The four-way claim is NOT yet true. |
-| 21-27, 33-36, 39-40, 44-47, 49-78, 80-98 | remainder (66 features) | - | - | - | **not started.** Includes migrations (21-27), Frond tags/tests/functions/extensibility (33-36), template + fragment caching (39-40) and Swagger/OpenAPI (47). Base rate so far: **every audited feature found something broken and invisible** - none came back clean - so these are unexamined, not "probably fine". |
+| 27 | Migrations (run + create + rollback) | **SYNTHESISE (provisional)** | correctness | `features/027-migrations.md` | **AUDIT IN PROGRESS 2026-08-08. LAB BASELINE VERIFIED:** Python 93/0 skipped, PHP 105 tests + 331 assertions/0 skipped, Ruby 94/0 pending, Node 272 passed; exact v3 HEADs recorded in the plan. Live matrix correction: 21-26 are retired adapter rows folded into group 4, not migration features. Confirmed: Node creates `.ts` migrations its runner never discovers; Python/Node file/status surfaces omit native-code migrations; PHP/Ruby/Node can remove tracking when no down implementation exists; Node also removes tracking after down SQL fails; public result shapes differ four ways. Shared fixture + implementation still owed. |
+| 33-36, 39-40, 44-46, 49-78, 80-98 | remainder | - | - | - | **not started.** Includes Frond tags/tests/functions/extensibility (33-36), template + fragment caching (39-40), data/ORM remainder (44-46), and the service/tooling features. Base rate so far: **every audited feature found something broken and invisible** - none came back clean - so these are unexamined, not "probably fine". Feature 47 Swagger is already Layer 2 and must not be counted here. |
 
 ### Work done OUTSIDE the numbered walk (2026-07-30/31)
 
@@ -558,8 +564,8 @@ than none - it reads as coverage. Wiring the four runners to the fixture is queu
 
 
 
-PHP has now won three times: features 3 and 5 on SOLID, and feature 38 on the
-correctness of a security control. It is the only framework to win more than once.
+PHP won features 5 and 38. Feature 3 is now a redesign derived from cross-language
+and live transaction evidence, not a promotion of PHP's interface.
 Most other rows went SYNTHESISE because no single framework held the whole answer.
 **"Python is master" would have been the wrong call on nearly every row**, and
 feature 38 is the sharpest case: Python is the broken implementation there, and a
@@ -723,7 +729,8 @@ Next up: **feature 6** (audited, planned, owner-sequenced FIRST, still not
 implemented - no named-stage pipeline exists in any framework as of 2026-07-31),
 then **7**, the first genuinely unaudited row.
 
-Feature 3's CRUD move landed 2026-07-31. Measured rather than assumed: the six
+Feature 3's earlier CRUD move landed 2026-07-31 and remains valid evidence, but
+it no longer closes the feature. Measured rather than assumed: the six
 Python adapters' INSERT statements were character-identical except for the
 parameter marker and PostgreSQL's RETURNING, and PHP's method bodies hashed
 identical across MySQL/MSSQL/Firebird and across SQLite3/ODBC. Python -199 lines,

@@ -5,6 +5,26 @@
 > backbone of a future formal Tina4 language specification.
 > **Last synced:** 2026-08-07 (release 3.13.96 in progress)
 
+> **Adversarial re-audit started 2026-08-08:** a zero-skip live-lab migration
+> baseline still omitted contradictory public paths (generated code migration
+> not discoverable; failed rollback erasing history). Every row previously
+> labelled closed is being re-checked under `99-feature-reaudit.md`. Existing
+> proven counts remain true for the invariants they name; they are not treated
+> as proof that the fixture is complete.
+>
+> **Portability target, 2026-08-08:** this map must converge on the clean-room
+> implementation formula in [PORTING-FORMULA.md](PORTING-FORMULA.md). A feature
+> is not fully specified until another language can implement it from the
+> language-neutral contract packet without reading an existing framework.
+> That packet is also the parity oracle run back against every current language;
+> the flow is audit -> neutral contract -> all implementations, never permanent
+> promotion of one language as the master.
+>
+> **3.14.0 stability boundary:** breaking changes are permitted before 3.14.0
+> to establish the correct, simple parity contract. They require conformance
+> proof and migration notes, not automatic compatibility aliases. The resulting
+> audited contracts become the stable baseline at 3.14.0.
+
 ## Why this map exists
 
 Tina4 is one framework in four languages. A "spec" that lives only as prose
@@ -34,7 +54,7 @@ accumulates into a language spec instead of scattering.
 
 ## The pipeline (how a feature reaches the spec)
 
-A feature is "specified" only when it has walked all six steps. This mirrors the
+A feature is "specified" only when it has walked all seven steps. This mirrors the
 audit method in [98-feature-audit.md](98-feature-audit.md).
 
 1. **Audit** - measure LOC/CC/MI four-way, read all four, pick the best mechanism.
@@ -45,14 +65,23 @@ audit method in [98-feature-audit.md](98-feature-audit.md).
 5. **Prove** - a named suite carrying those case names in ALL FOUR; the auditor
    green; the full suites green on the lab.
 6. **Fold** - reflect the proven contract into MASTER-SPEC.
+7. **Package for a new language** - complete the ten-part porting capsule in
+   `PORTING-FORMULA.md` and prove that it contains no "copy runtime X" gaps.
 
-## Layer 2: machine-checked contracts (proven behaviour)
+Each feature and variant member has one atomic packet in `features/`, based on
+`features/FEATURE-TEMPLATE.md`. Combined historical plans are evidence only and
+are split as the re-audit reaches them. Retired identifiers retain tombstone
+packets so an old feature number never silently changes meaning.
+
+## Layer 2: machine-checked contract ledger
 
 Source of truth for the counts: `python3 scripts/audit-contract-fixtures.py`.
 Re-run it and re-sync this table whenever a fixture changes.
 
 | Subsystem | Feature # | Fixture | Invariants | Proven | Owed | ADRs | Named suites (all 4) |
 |---|---|---|---:|---:|---:|---|---|
+| Structured logger | 2 | `logger_contract.json` | 8 | 0 | 8 | 0041 | owed; 59 cases not wired |
+| Database adapter | 3 | `adapter_contract.json` | 8 | 0 | 8 | 0044 | owed; old structural runners superseded |
 | Router + dispatch | 6 | `dispatch_contract.json` | 8 | 8 | 0 | 0010-0013 | yes |
 | Health check | 8 | `health_contract.json` | 5 | 5 | 0 | 0016 | yes |
 | JWT + session | 41-42 | `session_contract.json` | 6 | 6 | 0 | 0021, 0024 | yes (5 carry a witness rule) |
@@ -61,11 +90,12 @@ Re-run it and re-sync this table whenever a fixture changes.
 | Swagger / OpenAPI | 47 | `swagger_contract.json` | 10 | 10 | 0 | 0004, 0041 | yes (added 2026-08-07) |
 | DocStore | - | `docstore_contract.json` | 9 | 9 | 0 | 0024, 0025, 0035, 0036 | yes |
 | tina4-css | - | `tina4css_contract.json` | 1 | 1 | 0 | 0004 | yes |
-| Messenger | 0 (pilot) | `messenger_contract.json` | 14 | 14 | 0 | 0004, 0041, 0042 | yes (real GreenMail) |
+| Messenger | 55 | `messenger_contract.json` | 14 | 14 | 0 | 0004, 0041, 0042 | yes (real GreenMail) |
 | Paginated results | 18 | `pagination_contract.json` | 6 | 6 | 0 | 0043 | yes (real 250-row SQLite; incl. the AutoCrud REST endpoint) |
 
-**Totals: 74 invariants, 74 proven, 0 owed** (2026-08-07), 10 fixtures. Every pluggable
-subsystem with a fixture is now held to its contract four-way. Messenger closed
+**Totals: 90 invariants, 74 proven, 16 owed** (2026-08-10), 12 fixtures. Proven
+subsystems remain held to their contract four-way. Logger and database adapter
+now have decision-complete answer keys whose runners are honestly owed. Messenger closed
 last: the read/send shapes were already unified by the 3.13.96 parity commits
 (decisions G4-G7), so the suites prove shipped behaviour; ADR-0042 records the
 uid-is-the-IMAP-UID rule. Both messenger follow-ups closed 2026-08-07 (#69/#70)
@@ -75,7 +105,7 @@ and PHP trimmed `msgno`/`message_id`/`seen`/`flagged`, so `read()` returns exact
 the ten canonical keys everywhere - proven against real GreenMail with a real
 binary attachment.
 
-## Layer 1 only: audited and decided, no machine-checked fixture yet
+## Layer 1 only: audited and decided, no fully proven machine-checked fixture yet
 
 These closed through an audit + a `features/NNN` plan (+ an ADR where a fork
 existed), but do not yet have a JSON contract fixture. They are specified by
@@ -83,9 +113,9 @@ their plan and ADR, and are the first candidates to promote to Layer 2.
 
 | Feature | Plan | Decision / ADR | State |
 |---|---|---|---|
-| 1 DotEnv parser | `features/001-dotenv.md` | SYNTHESISE | closed (4 defects re-closed 2026-08-01) |
-| 2 Structured logger | `features/002-structured-logger.md` | SYNTHESISE | closed 2026-08-05 |
-| 3 DB adapter interface | `features/003-database-adapter-interface.md` | REDESIGN | closed (CRUD left the adapters) |
+| 1 DotEnv parser | `features/001-dotenv.md` | SYNTHESISE | **contract complete 2026-08-09; implementation pending after full audit** |
+| 2 Structured logger | `features/002-structured-logger.md` | SYNTHESISE | **contract complete 2026-08-09; 59-case shared fixture exists, all 8 invariant groups owed in runners** |
+| 3 DB adapter interface | `features/003-database-adapter-interface.md` | ADR-0044 REDESIGN | **contract complete 2026-08-10; 40 cases across 8 owed invariant groups; implementation pending** |
 | 4 SQLite adapter + write path | `features/004-sqlite-adapter.md` | GAP (P1) | closed, 1 deferred to feat 18 |
 | 5 DATABASE_URL parser | `features/005-database-url-parser.md` | PROMOTE php | shipped all 4 |
 | 7 Middleware pipeline | `features/007-middleware-pipeline.md` | ADR-0014 | closed, merged to v3 |
@@ -100,22 +130,22 @@ their plan and ADR, and are the first candidates to promote to Layer 2.
 | 18 Paginated results | `features/018-paginated-results.md` | PROMOTE php | **RE-OPENED 2026-08-05** - `.count` means true-total in 2 of 4, rows-returned in the other 2; the envelope launders a truncation. Breaking fix pending. |
 | 19 Result / ORM caching | `features/019-orm-result-caching.md` | GAP (ruby) | closed |
 | 20 Input validation | `features/020-input-validation.md` | PROMOTE node | closed |
+| 27 Migrations | `features/027-migrations.md` | SYNTHESISE (provisional) | **audit in progress 2026-08-08** - confirmed code-discovery, rollback-history, and four-way result-shape defects; fixture and fixes owed |
 | 28-31 Frond engine | `features/028-031-frond-engine.md` | PROMOTE python | closed as one row |
 | 32 Frond filters | `features/032-frond-filters.md` | SYNTHESISE | closed |
 | 37 Auto-escaping | `features/037-auto-escaping.md` | UNIFORM | closed, 1 owner call |
 | 38 Sandboxing | `features/038-sandboxing.md` | PROMOTE php (P1) | shipped all 4 |
 | 50 Api / HTTP client | (this release) | frameworks-outrank-internal | `send_request` unified 2026-08-07 (Python was the outlier; Ruby cannot use bare `send`). No fixture yet. |
 
-## Layer 0: not yet audited (66 features)
+## Layer 0: not yet audited
 
 Every audited feature so far found something broken and invisible - none came
 back clean - so these are unexamined, not "probably fine" (98-feature-audit.md).
 Each still owes the full pipeline: audit -> plan -> ADR -> fixture -> proven.
 
-- **21-27 Migrations** - **NEXT UP.** Extensive per-framework suites already
-  exist (kind-contract, passed-column, footguns, auto-migrate, CLI, default-path
-  in all four); the owed work is the four-way measurement + a shared
-  `migrations_contract.json`.
+- **Feature 27 Migrations moved to Layer 1 on 2026-08-08.** Rows 21-26 are
+  retired database-adapter numbers folded into feature group 4; they were never
+  migration features. See `features/027-migrations.md` for the in-progress audit.
 - **33-36** Frond tags / tests / functions / extensibility
 - **39-40** Template cache / fragment cache
 - **44-46** (data/ORM remainder)
@@ -142,9 +172,10 @@ proven/owed. A row here that disagrees with the auditor is a bug in this file.
 
 ## Snapshot (2026-08-07)
 
-- 98 features: ~30 audited (Layer 1 or 2), 66 not started (Layer 0).
-- 10 contract fixtures, 74 invariants, **74 proven / 0 owed** (messenger, then
-  pagination + the AutoCrud REST envelope, closed 2026-08-07).
+- 98 numbered rows, with 21-26 retired into database-adapter group 4; feature 27
+  is now under audit. Do not derive a remaining count from the retired numbers.
+- 12 contract fixtures, 90 invariants, **74 proven / 16 owed**. Logger and
+  database adapter are the two decision-complete, implementation-red packets.
 - 41 ADRs allocated (`decisions/`), highest ADR-0041; ADR-0042 authored this
   release for the messenger uid rule.
 - The path to a formal language spec: every Layer-0 feature reaches Layer 2, the
