@@ -2,460 +2,216 @@
 
 ## Identity and status
 
-- Matrix identity: 72 — Cache interface and provider selection
-- Audit state: auditing
-- Audit note: Structure migrated; closure checklist records remaining work
-- Dependencies: not yet extracted from the retained audit evidence
-- Dependants: not yet extracted from the retained audit evidence
-- Existing ADRs: see retained evidence and the central decision index
-- Shared fixtures: not yet confirmed
+- Matrix identity: 72 - Cache interface and provider selection
+- Audit state: decision-ready
+- Audit note: measured from four-language source 2026-08-10 (the cache backend interface, the provider
+  factory, and the graceful-fallback path in each repo) at Python `386cd6d`, PHP `743b7469`, Ruby
+  `c61250c8`, Node `26be920`. No framework code changed.
+- Dependencies: the seven cache providers (Features 73-79), the Database/ORM query-cache layer, the
+  logger
+- Dependants: the HTTP response cache (Feature 80), the persistent DB query cache, the module KV
+  helpers (`cache_get`/`cache_set`/...)
+- Existing ADRs: ADR-0024 (a provider is an env var; an explicit provider is honoured), ADR-0030 (a
+  cache key names the database it came from), ADR-0031 (memcached invalidates by namespace generation,
+  redis by SCAN), ADR-0032 (sweep returns evicted; a server-expiring provider returns 0), ADR-0020
+  (the response cache, Feature 80)
+- Shared fixtures: `cache_contract.json` (ADR-0024) PROVES all 8 interface invariants in all four -
+  8/8 proven per CONTRACT-MAP. This packet records the (well-built) contract and the few remaining
+  divergences.
+- Catalog phase: Cache
 
 ## Why this feature exists
 
-The retained audit does not yet state the developer problem in one language-neutral sentence.
+An application needs one cache surface with a pluggable backend, chosen by a single env var, that
+behaves identically whichever backend is active - so switching from the in-memory default to Redis is
+a config change, not a code change, and a `clear()` really clears, a cached `null` comes back as
+`null`, and two databases sharing one backend never serve each other's rows.
 
 ## Boundary
 
-The retained audit does not yet separate what this feature owns, delegates, and excludes.
+This feature owns the cache backend INTERFACE (`get`/`set`/`delete`/`clear`/`stats`/`name`/`sweep`/
+`available?`), the provider FACTORY (selection from `TINA4_CACHE_BACKEND`, the unknown-name error, the
+graceful fallback to file), and the three cache MODES and their selector env vars. It DELEGATES the
+per-backend wire behaviour to Features 73-79 and the response-cache middleware to Feature 80. The
+in-process `QueryCache`/`Cache` facade class (which carries `has`/`remember`) is a SEPARATE surface,
+not the pluggable backend.
 
 ## Existing implementation evidence
 
 | Evidence | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
-| Public surface | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Startup/CLI integration | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Stored/wire format | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing focused tests | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing lab baseline | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| Backend interface | get/set/delete/clear/stats/name/sweep/is_available | same | same (`available?`) | same (`isAvailable`) |
+| `has`/`remember` on the backend | no (on a separate class) | no | no | no |
+| Unknown backend name | RAISES | RAISES | RAISES | THROWS |
+| Explicit provider beats env (ADR-0024) | yes (locked) | yes | yes | yes |
+| Graceful fallback to file (real probe) | yes | yes | yes | yes |
+| `clear()` invalidates every provider | yes (locked) | yes | yes | yes |
+| `sweep()` returns count; server-expiring = 0 (ADR-0032) | yes (locked) | yes | yes | yes |
+| TTL in seconds; memcached convert-not-clamp | yes (locked) | yes | yes | yes |
+| Cached null round-trips (envelope) | yes (locked) | yes | yes | yes |
+| Key carries database identity (ADR-0030) | yes (locked) | yes | yes | yes |
+| Persistent-layer clear | yes (locked) | yes | yes | yes |
+| Namespace invalidation (memcached gen / redis SCAN, ADR-0031) | yes | yes | yes | yes |
+| `TINA4_DB_CACHE_BACKEND` typo | SWALLOWED (silent degrade) | raises (via factory) | raises (via factory) | throws (via factory) |
 
-### Retained introductory record
-
-Audited 2026-08-01. Part of `98-feature-audit.md`.
-
-This file now owns Feature 72 only. Historical measurements that crossed into
-compiled-template and fragment caching are retained as dependency evidence;
-their feature contracts live in `058-template-caching.md` and
-`059-fragment-caching.md`.
-
-Measured on macOS 26.5.2 (Darwin 25.5.0, arm64) with Python 3.14.5, PHP 8.5.7,
-Ruby 4.0.2, Node 24.9.0, against live Redis 6379, Valkey 6380, memcached 11211,
-MongoDB 27017 and PostgreSQL 5432/55432.
-
-### Files
-
-| | KV + backends | response cache | fragment cache |
-| --- | --- | --- | --- |
-| python | `tina4-python/tina4_python/cache/__init__.py` | same file (`ResponseCache`) | `tina4_python/frond/engine.py` (`_handle_cache`) |
-| php | `tina4-php/Tina4/Cache/` + `CacheFactory.php` | `Tina4/Middleware/ResponseCache.php` | `Tina4/Frond.php` (`renderCache`) |
-| ruby | `tina4-ruby/lib/tina4/cache_backends.rb` + `cache_backends/` | `lib/tina4/response_cache.rb` | `lib/tina4/frond.rb` (`handle_cache`) |
-| node | `tina4-nodejs/packages/core/src/cache.ts` | same file (`responseCache`) | `packages/frond/src/engine.ts` (`handleCache`) |
-
-`tina4-ruby/lib/tina4/cache.rb` is NOT a backend: it is `QueryCache`, the
-in-memory tagged TTL cache used by the DB query layer. The unified backend
-family lives in `cache_backends.rb`.
-
-### Method
-
-Every claim below was measured from the live source and then confirmed by
-running it. The response-cache findings were driven end-to-end through each
-framework's REAL dispatcher (`TestClient` in all four), not through stubs,
-because the decisive defects were invisible to the existing stub-based tests.
-
-### What differed, before the fix
-
-| Aspect | python | php | ruby | node |
-| --- | --- | --- | --- | --- |
-| Response cache key | `GET:{url}` + sorted params | `GET:{url}` | `GET:{url}` | `response:GET:{url}` |
-| Any request header in the key | no | no | no | no |
-| `Vary` honoured | no | no | no | no |
-| `Authorization` respected | no | no | no | no |
-| Middleware works on a real route | NO (500) | class form NO, string spec yes | NO (no short-circuit) | yes |
-| Authenticated user B gets user A's body | n/a | YES | no | YES |
-| Anonymous gets an authenticated body | no | no | no | YES |
-| `Set-Cookie` replayed to another caller | no | no | no | no |
-| Responses stored in the configured backend | NO | yes | yes | yes |
-| Cross-process response sharing on redis | NO | yes | yes | yes |
-| `X-Cache-TTL` on a HIT | remaining | configured | remaining | configured |
-| Unknown backend name | silent memory | silent memory | silent memory | silent memory |
-| Unreachable backend | file | file | file | file |
-| `backend.sweep()` exists | no | yes | file only | no |
-| `cache_stats()` keys | 4 | 5 (`keys`) | 5 (`keys`) | 4 |
-| KV `cache_set(k, v, 0)` | no expiry | default TTL | default TTL | no expiry |
-| KV key namespace | raw | `direct:` prefix | `direct:` prefix | raw |
-| `{% cache "k" %}` default TTL | 60 | **0** | 60 | 60 |
-| `{% cache "k" 0 %}` | not cached | **cached forever** | not cached | not cached |
-| `clear_cache()` clears fragments | no | no | no | no |
-
-### Confirmed correct, no change needed
-
-**The documented graceful fallback is real in all four.** Pointed at a genuinely
-unreachable endpoint (a port bound then closed, so `connect` gets ECONNREFUSED)
-for redis, valkey, memcached, mongodb and database, every framework logged the
-warning, reported `file`, and round-tripped a real value through the file
-backend. Wrong Redis credentials against the live server on 6379 also fell back
-to `file` in all four, so the probe is a genuine AUTH handshake and not just a
-TCP connect.
-
-**Async vs sync is genuine runtime necessity, not drift.** Node's KV API and
-middleware are async because its backend clients are; Python, PHP and Ruby are
-synchronous for the same reason. The observable contract is identical. The
-divergences found were behavioural (above), not a consequence of the async split.
-
-### Still open, not fixed here
-
-- **Node route middleware runs before the auth gate.** Filed to feature 30 /
-  ADR-0019 with the repro. Rule 1 closes the exploit; the ordering is a
-  separate, wider decision.
-- **`X-Cache-TTL` on a HIT** is remaining seconds in Python and Ruby, the
-  configured TTL in PHP and Node. Cosmetic, unresolved, low priority.
-- **KV key namespacing differs**: Python and Node write the raw key, PHP and
-  Ruby prefix `direct:`. Two frameworks sharing one Redis cannot read each
-  other's `cache_set` values. No caller depends on cross-framework KV sharing
-  today, so this is recorded rather than changed.
-- **`cache_set(key, value, 0)`** means "no expiry" in Python and Node, "use the
-  default TTL" in PHP and Ruby. A 2-2 split with no standard to appeal to.
-- **`Frond.clear_cache()` does not clear the fragment cache** in any of the
-  four, so a fragment can only be invalidated by TTL expiry. Consistent across
-  all four, so it is a design question rather than drift.
-- **`backend.sweep()`** exists on PHP's backends and now on Python's memory and
-  file backends; Ruby has it on the file backend only and Node has none.
-
-### Suite results
-
-At the commit this ships:
-
-| | before | after | notes |
-| --- | --- | --- | --- |
-| python | 100 passed | 109 passed | `test_cache`, `test_cache_backends`, `test_db_query_cache` |
-| php | 242 tests, 2234 assertions | 251 tests, 2257 assertions | 9 cache test files |
-| ruby | 144 examples, 1 pending | 152 examples, 1 pending | pending is the mongo gem, absent before and after |
-| node | 259 passed | 270 passed | 6 cache test files, 0 skipped, typecheck green |
-
-Every gate was proven able to fail: each named test was watched going red
-against a surgical revert of exactly the line it guards, with the right message,
-and the rest of the suite staying green.
+Eleven of twelve rows are at full parity and PROVEN (`cache_contract.json`, 8/8, mutation-tested,
+locked by named per-invariant tests in each framework). This is a reference-quality subsystem. The one
+behavioural outlier is Python's swallowed DB-cache-backend typo.
 
 ## Public surface contract
 
-The audit has not yet extracted a language-neutral public surface and its idiomatic spellings.
+The backend interface is `get(key) -> value | miss`, `set(key, value, ttl_seconds)`,
+`delete(key) -> bool`, `clear()`, `stats() -> {hits, misses, size, backend}`, `name()`, `sweep() ->
+evicted_count`, `available?() -> bool`. `has`/`remember`/`exists` are NOT on this interface in any
+framework - they live on a separate in-process facade class. The provider is selected by
+`TINA4_CACHE_BACKEND` (one of memory/file/redis/valkey/memcached/mongodb/database, aliases
+memcache/mongo/db); an unknown name raises (never a silent fall-through to memory); an explicitly
+passed backend beats the env (ADR-0024).
 
 ## Inputs and outputs
 
-The audit has not yet fixed all native types, defaults, nullability, ordering, and serialized shapes.
+- `set(key, value, ttl)`: `ttl` is SECONDS (`<=0` = no expiry) on every provider; the backend converts
+  to its wire unit (Redis `SETEX` seconds, memcached exptime with the 30-day convert-not-clamp).
+- `get(key)`: returns the stored value, and a stored `null`/`None`/`nil` comes back as that value (a
+  HIT), not the storage envelope and not a miss - the miss decision is key-presence, never
+  value-truthiness.
+- `sweep()`: evicts expired entries and returns the count; a server-expiring provider (redis, valkey,
+  memcached, mongodb) honestly returns 0.
+- provider selection: `TINA4_CACHE_BACKEND` (response/KV), `TINA4_DB_CACHE_BACKEND` (persistent DB
+  cache); an explicit argument wins.
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection, retry, rollback, and deletion path.
+1. SELECT: the factory reads `TINA4_CACHE_BACKEND` (or the explicit arg), normalises it, and switches
+   to the provider; an unknown name RAISES.
+2. PROBE: for a networked backend the factory calls `available?()` - a real handshake (Redis
+   AUTH+PING, memcached `version`, mongo `ping`, database `CREATE TABLE`) - and on failure logs a
+   warning and returns a real FILE backend, never a no-op. Wrong credentials also fall back.
+3. OPERATE: `get`/`set`/`delete` run against the selected backend; `clear()` invalidates every entry
+   (SCAN+DEL, generation bump, or DELETE, never FLUSHALL); `sweep()` reclaims expired entries.
+4. INVALIDATE: a write invalidates the query cache across every instance sharing the backend; the
+   key carries the database identity so tenants never collide.
 
 ## Configuration and precedence
 
-The audit has not yet fixed argument, environment, project-file, default, and cache timing precedence.
+Env vars (uniform): `TINA4_CACHE_BACKEND` (default memory), `TINA4_CACHE_URL` (per-backend default),
+`TINA4_CACHE_MAX_ENTRIES` (1000), `TINA4_CACHE_DIR` (`data/cache`), `TINA4_CACHE_TTL` (60, response
+cache only), `TINA4_CACHE_USERNAME`/`_PASSWORD`. The three modes select their backend independently:
+request-scoped auto-cache (`TINA4_AUTO_CACHING`, in-process, no backend), persistent DB cache
+(`TINA4_DB_CACHE` + `TINA4_DB_CACHE_BACKEND`), response/KV cache (`TINA4_CACHE_BACKEND`). An explicit
+argument beats the env (ADR-0024). PHP reads some cache env via raw `getenv` and some via
+`DotEnv::getEnv` - an internal inconsistency (CI-03).
 
 ## Failures, side effects and security
 
-The audit has not yet closed every failure boundary, side effect, cleanup rule, and security concern.
+- UNKNOWN NAME RAISES (all four): a typo in `TINA4_CACHE_BACKEND` names the bad value and the valid
+  set, rather than silently running on the memory backend while the operator believes it is on Redis.
+- GRACEFUL FALLBACK is loud and real (proven, all four): a missing driver or unreachable/mis-
+  credentialled service logs a warning and degrades to a persistent FILE backend, never a silent
+  no-op. The probe is a real handshake, so wrong credentials also fall back.
+- SWALLOWED DB-CACHE TYPO (CI-01): Python's persistent DB-cache call site wraps the factory in
+  `except Exception: self._cache_backend = None` (`connection.py:278`), so a typo'd
+  `TINA4_DB_CACHE_BACKEND` silently degrades to the in-process dict - the OPPOSITE of the raise the
+  response-cache selector performs, and of the other three, which route the persistent cache through
+  the same raising factory. An operator's typo runs silently on Python's DB cache.
+- MID-LIFE DEGRADATION IS SILENT (CI-02, shared): the visible-fallback guarantee is SELECTION-TIME
+  only. A backend that dies AFTER selection yields silent misses and silent `set` no-ops, with no
+  warning and no re-fallback, in all four. The invariant "an-unreachable-backend-degrades-visibly"
+  holds at startup but not at runtime.
+- CACHE-OF-THE-CACHE is avoided: the database backend forces `TINA4_AUTO_CACHING`/`TINA4_DB_CACHE`
+  off around its own connection so the cache's own reads do not recurse into caching.
 
 ## Wire and persistence contract
 
-The audit has not yet fixed every wire format, stored shape, encoding, identifier, timestamp, and compatibility rule.
+Each backend has its own wire/persistence (Features 73-79); the INTERFACE contract is: a value set with
+a TTL is gone after the TTL; a `clear()` removes every entry the cache can serve; a cached null
+round-trips; the query-cache key is `sha256(engine://host:port/database NUL sql NUL params)` with
+credentials deliberately excluded so a shared backend's entries are reused across instances (ADR-0030).
 
 ## Providers and substitutability
 
-The audit has not yet proved provider substitution or recorded deliberate capability exceptions.
+The whole point (ADR-0024): a provider is one env var. The seven providers (Features 73-79) implement
+the same interface; the factory selects one and falls back to file when it is unreachable. An explicit
+argument overrides the env. The response cache (Feature 80) and the persistent DB cache both consume
+this interface, isolated only by which env var names their backend.
 
 ## Contradictions and defects
 
-### FINDING 1 (SECURITY): the key ignores every request header
+| ID | Finding | Required outcome |
+| --- | --- | --- |
+| CI-01 | Python swallows a `TINA4_DB_CACHE_BACKEND` typo (`connection.py:278` `except Exception -> None`), silently degrading to the in-process dict, while its response-cache selector and the other three frameworks RAISE on an unknown name. | Python raises on an unknown `TINA4_DB_CACHE_BACKEND` too, matching the response-cache contract and the other three. Confirm PHP/Ruby/Node do not wrap the factory call (they route through the raising factory; wrapping not observed). |
+| CI-02 | The graceful fallback is SELECTION-TIME only; a backend that dies mid-life yields silent misses and `set` no-ops with no warning and no re-fallback, in all four. | Decide the runtime-death policy: log at least once (rate-limited) on a mid-life backend failure so a dead cache is visible, not just a startup one. |
+| CI-03 | PHP reads some cache env via raw `getenv` (`Cache.php`, `ResponseCache.php`) and some via `DotEnv::getEnv` (factory, backends, `CachedDatabase`), with different `.env`-visibility semantics. | Read cache env through one path in PHP (the `DotEnv` reader), matching the single-path env reads elsewhere. |
+| CI-04 | The `set` verb takes a positional `ttl` on the backend but a keyword `ttl:` on Ruby's `QueryCache` facade; a couple of module aliases (`cache_clear` for `clear_cache`) exist. | Minor: align the facade `set` signature; document the intentional back-compat alias. |
 
-The key is method plus URL in all four. Nothing about the caller enters it. On a
-route that is `@secured()` / `->secure()` / `.secure()`, that means the first
-caller's response body is replayed to every later caller of the same URL.
-
-Reproduced end-to-end on a real secured GET route whose body is derived from the
-caller's JWT. PHP, before the fix:
-
-```
-A_alice.status=200 body={"secret_for":"alice","balance":"alice-PRIVATE-DATA"} x_cache=MISS
-B_bob.status=200   body={"secret_for":"alice","balance":"alice-PRIVATE-DATA"} x_cache=HIT
-C_anon.status=401  D_bad.status=401
-me.invocations=1
-```
-
-Node, before the fix, is worse, because its route middleware runs BEFORE the
-auth gate, so a cache hit returns without the gate ever running:
-
-```
-A_alice.status=200 body={"secret_for":"alice",...} x_cache=MISS
-B_bob.status=200   body={"secret_for":"alice",...} x_cache=HIT
-C_anon.status=200  body={"secret_for":"alice",...} x_cache=HIT
-D_bad.status=200   body={"secret_for":"alice",...} x_cache=HIT
-```
-
-Control, same Node route with the cache removed: `anon=401`, `authed=200`. The
-gate works; the cache is what defeats it. So PHP is an authorization bypass and
-Node is an authentication bypass.
-
-Clean negative: no framework replays `Set-Cookie` or any other response header.
-Only body, content type and status code are stored, so one caller's session
-cookie is never handed to another. Each response carries its own fresh cookie.
-
-#### Authority
-
-RFC 9111 is directly on point and normative, so per ADR-0012's order of
-authority it settles this above any framework comparison.
-
-Section 3, constraints on storing:
-
-> if the cache is shared: the Authorization header field is not present in the
-> request (see Section 11.6.2 of [HTTP]) or a response directive is present that
-> explicitly allows shared caching (see Section 3.5)
-
-Section 3.5, Storing Responses to Authenticated Requests:
-
-> A shared cache MUST NOT use a cached response to a request with an
-> Authorization header field (Section 11.6.2 of [HTTP]) to satisfy any
-> subsequent request unless the response contains a Cache-Control field with a
-> response directive (Section 5.2.2) that allows it to be stored by a shared
-> cache, and the cache conforms to the requirements of that directive for that
-> response.
-
-Section 4.1, Calculating Cache Keys with the Vary Header Field:
-
-> the cache MUST NOT use that stored response without revalidation unless all
-> the presented request header fields nominated by that Vary field value match
-> those fields in the original request
-
-and
-
-> A stored response with a Vary header field value containing a member "*"
-> always fails to match.
-
-These are MUST NOTs, not SHOULDs. Tina4's ResponseCache is a shared cache by
-construction: one server-side store, every caller. The mainstream tier agrees
-with the standard here, which is the easiest case ADR-0012 admits: Varnish
-refuses to cache a request carrying Authorization unless the response is
-explicitly public, nginx's `proxy_cache` does the same, and Rails' `Rack::Cache`
-follows RFC 9111 for both rules.
-
-#### Fix
-
-One store-side rule closes both bypasses, because a response that is never
-stored can never be replayed:
-
-- On store, if the request carried `Authorization`, refuse unless the response
-  carries `public`, `s-maxage` or `must-revalidate` (section 3.5's own list).
-- On store, record the response's `Vary` fields and the values they had on this
-  request. On lookup, every nominated field must match; absent matches only
-  absent. `Vary: *` is never stored.
-
-No lookup-side Authorization rule is needed. Section 3.5 constrains reuse of a
-response stored FOR an authorized request; if section 3 stops it being stored,
-3.5 is satisfied. Serving a genuinely public cached response to a caller who
-happens to hold a token stays correct.
-
-The Node ordering problem is NOT fixed here. It belongs to feature 30 and
-ADR-0019, and is filed there with this repro. Rule 1 closes the exploit on its
-own, so the ordering fix can be sequenced separately.
-
-### FINDING 2: the response cache did not work at all in two of four
-
-The existing suites were green throughout, because all four drove stubs.
-
-**Python.** `before_cache` did `request._cache_key = cache_key`. The framework
-`Request` uses `__slots__`, so that raised `AttributeError: 'Request' object has
-no attribute '_cache_key' and no __dict__ for setting new attributes`, and every
-`@middleware(ResponseCache)` request became a 500. The cache suite passed because
-it drove a `MockRequest` class with a plain `__dict__`. That stub is deleted; the
-tests now build a real `Request` and `Response`.
-
-**Ruby.** `before_cache` returned the `[request, response]` pair on a HIT. Per
-Ruby's own middleware contract that only REBINDS and continues, so the handler
-ran on every request while `X-Cache: HIT` was stamped anyway:
-
-```
-r1 body={"n":1} x_cache=MISS
-r2 body={"n":2} x_cache=HIT      <- fresh body, header lying
-handler_invocations=2
-```
-
-Python turned out to have the identical defect once the `__slots__` crash was
-cleared: `Middleware.apply_hook_result` short-circuits on a returned `Response`
-OBJECT, never on the pair. PHP's class-form hook path is the same shape.
-
-**PHP, class form.** `->middleware([ResponseCache::class])`, the spelling the PHP
-docs show, was a SILENT no-op. `Middleware::discoverMethods()` only collects
-PUBLIC STATIC methods, and `beforeCache`/`afterCache` are instance methods, so no
-hook was ever discovered. No warning, no header, no caching.
-
-**Ruby, class form.** `middleware: [Tina4::ResponseCache]` had the same shape:
-`discover_methods` walks `klass.singleton_class` and calls `klass.send(...)`, so
-it finds class methods only.
-
-Both now expose static/class-level `beforeResponseCache` / `after_response_cache`
-delegating to the module singleton.
-
-**`@cached(max_age=N)` was inert in Python.** It stamped `_cached` and
-`_cache_max_age` on the handler and nothing in the framework read either. It is
-now read off `request._handler`, which the dispatcher already attaches.
-
-### FINDING 3: Python built the backend and never used it
-
-`ResponseCache.__init__` called `_create_backend()` and stored the result, then
-the request path wrote responses into a private per-instance `OrderedDict`. With
-`TINA4_CACHE_BACKEND=redis` the stats reported `redis` while nothing was shared.
-Measured before the fix:
-
-```
-PROC A: backend_reported=redis  same_instance_hit="PROC-A-RESPONSE-BODY"
-        second_instance_same_process_hit=""
-PROC B: backend_reported=redis  second_process_response_hit=""
-                                second_process_kv_hit="KV-FROM-PROC-A"
-```
-
-The last line is the control: the KV surface DOES cross the process boundary, so
-Redis was working. Only the response cache ignored it. PHP, Ruby and Node all
-returned the stored body for both reads. Python was the 1-of-4 outlier, so
-"Python is master" does not apply; the governance rule is that a broken Python
-gets fixed, not mirrored. Responses now route through the backend, memoised at
-module level so a dispatcher that builds a fresh middleware instance per request
-still reads one store.
-
-### FINDING 4: `{% cache %}` disagreed with itself across frameworks
-
-PHP parsed a missing TTL as 0 and then treated 0 as "cache forever". Python,
-Ruby and Node default a missing TTL to 60 and treat `now + 0` as already
-expired, so 0 means NOT cached. Both ends of the contract were inverted:
-
-- `{% cache "k" %}` never re-rendered for the life of a PHP process.
-- `{% cache "k" 0 %}` meant "never cache" in three frameworks and "cache
-  forever" in PHP.
-
-Three of four agree and the disagreement is internal, so the majority answer
-stands and PHP moved. This is a breaking change for PHP templates relying on
-`0`.
-
-### FINDING 5: a typo in `TINA4_CACHE_BACKEND` silently gave you a memory cache
-
-All four fell through to the memory backend on an unrecognised name.
-`TINA4_CACHE_BACKEND=redsi` produced a running app with a per-process cache
-while the operator believed it was Redis. This is exactly the footgun the
-session layer already fixed: `TINA4_SESSION_BACKEND` raises on an unknown name,
-naming the bad value and the valid set. Internal precedent is settled and
-consistent, so the cache now matches it in all four.
-
-### FINDING 6: the persistent DB query cache crashed every `fetch_one` in Python
-
-`fetch()` yields a `DatabaseResult`; `fetch_one()` yields a plain dict or None.
-Python's persistent serializer read `result.records` unconditionally, so the
-moment `TINA4_DB_CACHE=true` was set, every `fetch_one()` raised:
-
-```
-File "tina4_python/database/connection.py", line 260, in _serialize_result
-    "records": result.records, "count": result.count,
-AttributeError: 'dict' object has no attribute 'records'
-```
-
-The opt-in persistent cache was therefore unusable with `fetch_one`. PHP, Ruby
-and Node all already carried a shape marker in the cached envelope; Python was
-the 1-of-4 outlier again. Fixed with an explicit `_shape` field, and the
-cross-process write-invalidation path then verified end-to-end against live
-PostgreSQL and live Redis:
-
-```
-PROC A read  -> ORIGINAL   (populates the shared redis cache)
-PROC B read  -> ORIGINAL   (fresh process, cross-process hit)
-PROC C WRITE -> mutated
-PROC D read  -> MUTATED    (invalidation crossed the process boundary)
-```
-
-### FINDING 7 (OPEN, not fixed): `clear()` is a no-op on the raw RESP path
-
-`RedisBackend.clear()` deletes the namespace only when the native client
-library is present. On the zero-dependency raw RESP path it does nothing:
-
-- python: `elif self._use_raw:` ... `pass` ("let TTL handle cleanup")
-- php: `// Raw RESP path: no easy pattern delete - let TTL handle cleanup`
-- ruby: `elsif @use_raw` ... `# rely on TTL`
-- node: implements it, `KEYS prefix*` then `DEL`
-
-Three of four therefore never invalidate. Since the raw path is what a
-zero-dependency install uses, this is the DEFAULT configuration, not an edge
-case. Measured in PHP, with `TINA4_DB_CACHE=true`, redis backend, no ext-redis:
-
-```
-A read  -> ORIGINAL
-B read  -> ORIGINAL   (fresh process, shared cache working)
-C mutate
-D read  -> ORIGINAL   <- STALE. the write never invalidated anything
-```
-
-So the persistent DB cache's headline property, "multiple instances share one
-cache with global write-invalidation", does not hold on the default driver
-path in Python, PHP or Ruby. `cache_clear()` and the response cache's
-`clear_cache()` are equally inert there.
-
-Not fixed here, deliberately. Node's implementation is the obvious template,
-but `KEYS` is a blocking O(N) command that is explicitly discouraged against a
-production Redis, so copying it into three more frameworks is a decision about
-the invalidation strategy (`SCAN` with a cursor, a generation counter in the
-key prefix, or per-key tracking) rather than a typo fix. It needs its own ADR
-and its own cross-framework tests. Recorded with the repro instead of rushed.
+Not defects (settled, uniform, PROVEN): the 8 `cache_contract.json` invariants - unknown-name-raises,
+explicit-provider, graceful-fallback, clear-invalidates, sweep-count, ttl-seconds, cached-null,
+key-database-identity, persistent-clear, and namespace invalidation - all hold in all four and are
+locked by named tests.
 
 ## Owner decisions
 
-No new owner decision is recorded in this migrated section. Retained decisions appear below when present.
+Proposed for owner ratification. The interface is settled and proven; these are the open calls:
+
+1. DB-CACHE TYPO (CI-01): Python raises on an unknown `TINA4_DB_CACHE_BACKEND` (remove the swallow),
+   so a typo never runs silently on any selector in any framework. This is the clear defect.
+2. MID-LIFE DEGRADATION (CI-02): decide whether a backend that dies after selection must log (once,
+   rate-limited) rather than silently miss, in all four. The startup fallback is already loud; this is
+   about the runtime path.
+3. PHP ENV PATH (CI-03) and the facade `set` signature (CI-04): housekeeping - one env-read path in
+   PHP, one `set` spelling.
 
 ## Proposed conformance fixture
 
-### Tests
-
-Named identically in all four so the gate is greppable across the stack:
-
-| test | python | php | ruby | node |
-| --- | --- | --- | --- | --- |
-| `response_cache_does_not_store_a_response_to_an_authorized_request` | yes | yes | yes | yes |
-| `response_cache_stores_an_authorized_response_when_cache_control_public` | yes | yes | yes | yes |
-| `response_cache_serves_an_unauthenticated_get` | yes | yes | yes | yes |
-| `response_cache_honours_vary_on_a_nominated_request_header` | yes | yes | yes | yes |
-| `response_cache_never_stores_vary_asterisk` | yes | yes | yes | yes |
-| `cache_backend_unknown_name_raises` | yes | yes | yes | yes |
-| `cache_backend_known_names_do_not_raise` | yes | yes | yes | yes |
-| `db_cache_persistent_fetch_one_round_trips` | yes | - | - | - |
-| `frond_fragment_cache_defaults_to_sixty_seconds_without_ttl` | - | yes | - | - |
-| `frond_fragment_cache_ttl_zero_is_not_cached` | - | yes | - | - |
-
-The fragment-cache pair is PHP-only because PHP is the only framework whose
-behaviour changed; the other three already had the correct semantics.
-
-`response_cache_serves_an_unauthenticated_get` is the negative control. Without
-it, a "fix" that simply disabled caching everywhere would satisfy every
-bypass assertion.
+`cache_contract.json` already gates the 8 interface invariants (8/8 proven). Add two cases: a typo'd
+`TINA4_DB_CACHE_BACKEND` RAISES on every framework (closes CI-01, over a real selection), and a
+backend that becomes unreachable AFTER selection is logged rather than silently missing (CI-02, over a
+real stopped backend). Both run in all four runners with no doubles.
 
 ## Integration map
 
-The audit has not yet mapped every export, startup path, request hook, CLI, scaffolder, status command, document, and generated consumer.
+- Features 73-79 are the providers behind this interface; Feature 80 is the response cache that
+  consumes it; the Database layer's query cache consumes it for the persistent mode.
+- `cache_contract.json` proves the interface invariants; the two new cases above extend it.
+- ADR-0024/0030/0031/0032 govern the contract; the cache docs describe the env vars and modes.
 
 ## Breaking changes and migration
 
-The audit has not yet turned every parity break into an actionable pre-3.14 migration instruction.
+- CI-01 makes a Python `TINA4_DB_CACHE_BACKEND` typo raise instead of silently degrading: a Python
+  deployment with a typo'd DB-cache backend that "worked" (on the in-process dict) now fails loudly.
+  `Breaking:` and a correctness fix - the typo was never doing what the operator intended.
+- CI-02/CI-03/CI-04 are additive/internal; no app breaks.
 
 ## Implementation backlog
 
-The audit has not yet produced a dependency-ordered backlog for all current languages and future ports.
+1. Add the two cases to `cache_contract.json` and wire four runners.
+2. Fix CI-01 (Python DB-cache typo raises); decide and gate CI-02 (mid-life logging).
+3. Fold in CI-03 (PHP one env path) and CI-04 (facade `set`).
+4. Run locally and on the root lab, then confirm the CONTRACT-MAP row stays 8/8 (plus the two new).
+
+No framework implementation belongs in the audit commit.
 
 ## Porting capsule
 
-This packet is not yet sufficient for a clean-room implementation without reading an existing runtime.
+Implement the cache interface: a backend exposes `get`/`set(key, value, ttl_seconds)`/`delete`/`clear`/
+`stats`/`name`/`sweep`/`available?`. A factory selects the backend from `TINA4_CACHE_BACKEND` (raising
+on an unknown name, honouring an explicit argument over the env, ADR-0024), probes a networked backend
+with a real handshake, and degrades LOUDLY to a persistent file backend when it is unreachable.
+`clear()` removes every entry the cache serves (SCAN+DEL / generation bump / DELETE, never FLUSHALL);
+`sweep()` returns the evicted count (0 for a server-expiring provider); a stored null round-trips as
+null; the query-cache key carries the `engine://host:port/database` identity (ADR-0030); memcached
+invalidates by generation and redis by SCAN (ADR-0031). Raise on a typo in EVERY selector. Prove the
+port with the 8 invariants plus the typo-raises and mid-life-visible cases.
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete (interface, factory, three modes).
+- [x] Lifecycle and every producer/consumer edge complete (select/probe/operate/invalidate).
+- [x] Configuration, failure, side-effect and security rules complete (unknown-name, fallback, typo).
+- [x] Wire/storage and provider contracts complete (interface contract; providers deferred to 73-79).
+- [x] Existing-language contradictions recorded (CI-01..04; the interface is otherwise proven parity).
+- [x] Owner ambiguities recorded (3 proposed; the Python DB-cache typo swallow is the one real defect).
+- [x] Proposed shared cases and mutation witnesses complete (8 proven + 2 new, no doubles).
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule is clean-room sufficient.

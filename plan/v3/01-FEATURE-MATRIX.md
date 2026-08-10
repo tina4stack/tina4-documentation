@@ -136,15 +136,15 @@ Historical documents remain in `archive/`; active packets use this table.
 
 | # | Feature | Python evidence | PHP | Ruby | Node | Audit state |
 | ---: | --- | --- | --- | --- | --- | --- |
-| 72 | [Cache interface and provider selection](features/072-cache-interface.md) | `tina4_python/cache/__init__.py; tina4_python/core/cache.py` | inventory pending | inventory pending | inventory pending | auditing |
-| 73 | [Memory cache provider](features/073-cache-memory-provider.md) | `tina4_python/cache/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
-| 74 | [File cache provider](features/074-cache-file-provider.md) | `tina4_python/cache/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
-| 75 | [Redis cache provider](features/075-cache-redis-provider.md) | `tina4_python/cache/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
-| 76 | [Valkey cache provider](features/076-cache-valkey-provider.md) | `tina4_python/cache/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
-| 77 | [Memcached cache provider](features/077-cache-memcached-provider.md) | `tina4_python/cache/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
-| 78 | [MongoDB cache provider](features/078-cache-mongodb-provider.md) | `tina4_python/cache/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
-| 79 | [Database cache provider](features/079-cache-database-provider.md) | `tina4_python/cache/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
-| 80 | [HTTP response cache](features/080-response-cache.md) | `tina4_python/cache/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
+| 72 | [Cache interface and provider selection](features/072-cache-interface.md) | `tina4_python/cache/__init__.py; database/connection.py` | `Tina4/Cache/CacheFactory.php` | `lib/tina4/cache_backends.rb` | `packages/core/src/cache.ts` | decision-ready |
+| 73 | [Memory cache provider](features/073-cache-memory-provider.md) | `tina4_python/cache/__init__.py` | `Tina4/Cache/` | `lib/tina4/cache_backends/` | `packages/core/src/cache.ts` | decision-ready |
+| 74 | [File cache provider](features/074-cache-file-provider.md) | `tina4_python/cache/__init__.py` | `Tina4/Cache/` | `lib/tina4/cache_backends/` | `packages/core/src/cache.ts` | decision-ready |
+| 75 | [Redis cache provider](features/075-cache-redis-provider.md) | `tina4_python/cache/__init__.py` | `Tina4/Cache/` | `lib/tina4/cache_backends/` | `packages/core/src/cache.ts` | decision-ready |
+| 76 | [Valkey cache provider](features/076-cache-valkey-provider.md) | `tina4_python/cache/__init__.py` | `Tina4/Cache/` | `lib/tina4/cache_backends/` | `packages/core/src/cache.ts` | decision-ready |
+| 77 | [Memcached cache provider](features/077-cache-memcached-provider.md) | `tina4_python/cache/__init__.py` | `Tina4/Cache/` | `lib/tina4/cache_backends/` | `packages/core/src/cache.ts` | decision-ready |
+| 78 | [MongoDB cache provider](features/078-cache-mongodb-provider.md) | `tina4_python/cache/__init__.py` | `Tina4/Cache/` | `lib/tina4/cache_backends/` | `packages/core/src/cache.ts` | decision-ready |
+| 79 | [Database cache provider](features/079-cache-database-provider.md) | `tina4_python/cache/__init__.py` | `Tina4/Cache/` | `lib/tina4/cache_backends/` | `packages/core/src/cache.ts` | decision-ready |
+| 80 | [HTTP response cache](features/080-response-cache.md) | `tina4_python/cache/__init__.py` | `Tina4/Middleware/ResponseCache.php` | `lib/tina4/response_cache.rb` | `packages/core/src/cache.ts` | decision-ready (ADR-0020; fixture owed) |
 
 ## Integrations and storage
 

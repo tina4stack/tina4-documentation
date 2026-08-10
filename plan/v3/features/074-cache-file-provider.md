@@ -2,108 +2,145 @@
 
 ## Identity and status
 
-- Matrix identity: 74 — File cache provider
-- Audit state: queued
-- Dependencies: not yet mapped
-- Dependants: not yet mapped
-- Existing ADRs: see the central decision index
-- Shared fixtures: not yet defined
-
-- Catalog phase: Cache providers
+- Matrix identity: 74 - File cache provider
+- Audit state: decision-ready
+- Audit note: measured from four-language source 2026-08-10 (the file backend in each cache module) at
+  Python `386cd6d`, PHP `743b7469`, Ruby `c61250c8`, Node `26be920`. No framework code changed.
+- Dependencies: Feature 72 (interface + factory), the filesystem
+- Dependants: any deployment on `TINA4_CACHE_BACKEND=file`; the graceful-fallback target for every
+  networked cache backend
+- Existing ADRs: ADR-0024 (interface), ADR-0032 (sweep returns count)
+- Shared fixtures: `cache_contract.json` (8/8 PROVEN) exercises the file backend for every invariant.
+- Catalog phase: Cache (providers)
 
 ## Why this feature exists
 
-This feature gives an application one portable file cache provider contract across
-every Tina4 language.
+The file backend is the persistent cache that needs no service, and it is the graceful-fallback target
+when a networked backend is unreachable (Feature 72). It writes each entry to a JSON file under
+`TINA4_CACHE_DIR`, expires on read and on sweep, and survives a restart.
 
 ## Boundary
 
-This packet owns the public behavior and integration boundary for File cache provider. The
-audit must separate that behavior from private helpers and adjacent features.
+This feature owns the file backend's `get`/`set`/`delete`/`clear`/`sweep`: the on-disk file per entry,
+the envelope shape, and the expiry. It DELEGATES selection and fallback to Feature 72. It is the cache
+sibling of the session file provider (Feature 66) but stores CACHE entries (already-hashed keys), not
+session records.
 
 ## Existing implementation evidence
 
 | Evidence | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
-| Public surface | `tina4_python/cache/__init__.py` | Not yet inventoried | Not yet inventoried | Not yet inventoried |
-| Startup/CLI integration | Not yet traced | Not yet traced | Not yet traced | Not yet traced |
-| Stored/wire format | Not yet traced | Not yet traced | Not yet traced | Not yet traced |
-| Existing focused tests | Not yet counted | Not yet counted | Not yet counted | Not yet counted |
-| Existing lab baseline | Not yet run | Not yet run | Not yet run | Not yet run |
+| Filename | hashed cache key `.json` | same | same | same |
+| Storage dir (`TINA4_CACHE_DIR`) | `data/cache` | same | same | same |
+| Stored shape | `{key, value, expires_at}` envelope | same | same | same |
+| Cached null (envelope unwrap) | HIT | HIT | HIT | HIT |
+| `sweep()` unlinks expired, returns count | yes | yes | yes | yes |
+| `clear()` unlinks every `*.json` | yes | yes | yes | yes |
+| Atomic write | no (direct write) | no | no | no |
+| File permissions | umask default | umask default | umask default | umask default |
+
+The file cache backend is at parity and proven for the interface invariants. It shares two shared gaps
+with the session file provider (Feature 66): no atomic write and no restrictive file permissions.
 
 ## Public surface contract
 
-The audit has not yet extracted the language-neutral surface and idiomatic
-spellings for this feature.
-
-## Inputs and outputs
-
-The audit has not yet fixed native types, defaults, nullability, ordering and
-serialized shapes.
-
-## Lifecycle and operation graph
-
-The audit has not yet traced every producer, discovery, execution, inspection,
-retry, rollback and deletion path.
+`get(key) -> value | miss` (read the JSON envelope, return `value`, a stored null is a HIT; a past
+`expires_at` is a miss); `set(key, value, ttl)` (write `{key, value, expires_at}` to a file named for
+the hashed key); `delete(key)` (unlink); `clear()` (unlink every `*.json` in the dir); `sweep() ->
+evicted` (unlink expired files, return the count). The envelope distinguishes a stored null from a
+miss.
 
 ## Configuration and precedence
 
-The audit has not yet fixed arguments, environment values, project files,
-defaults and cache timing.
+`TINA4_CACHE_DIR` (default `data/cache`) is the storage directory. TTL is seconds. There is no service,
+no credentials. Unlike the session file provider, the cache key is already a hash (the interface's
+query key), so the filename derivation is a hash of a hash - no traversal surface from a raw id.
 
 ## Failures, side effects and security
 
-The audit has not yet closed failure boundaries, external effects, cleanup and
-security behavior.
+- CRASH-TORN WRITE (FC-74-01, shared with Feature 66): no framework does a temp-file + atomic rename,
+  so a crash mid-write can corrupt a cache file. A corrupt cache file is less severe than a corrupt
+  session (a cache miss re-computes), but a torn write still surfaces as a parse error the read must
+  treat as a miss.
+- FILE PERMISSIONS (FC-74-02): the cache file is written at the default umask (world-readable). Cache
+  data can be sensitive (a cached query result), so restrictive (0600) permissions are worth pinning -
+  though the sensitivity is lower than a session credential.
+- No injection surface: the filename is a hash of the already-hashed key.
 
 ## Wire and persistence contract
 
-The audit has not yet fixed wire formats, stored shapes, encodings, identifiers,
-timestamps and compatibility rules.
+Each entry is a JSON file `{key, value, expires_at}` named for the hashed key. A stored null round-trips
+via the envelope; a past `expires_at` is a miss (and the file is unlinked). The store survives a
+restart, which is why it is the graceful-fallback target. The envelope shape is uniform across the
+four.
 
 ## Providers and substitutability
 
-The audit has not yet proved substitution or recorded capability exceptions.
+The file backend is the persistent fallback and a first-class cache backend behind the Feature 72
+interface. It substitutes any networked backend (with lower throughput but no service). It is the cache
+analog of the session file provider (Feature 66); the two share the atomic-write and permissions gaps.
 
 ## Contradictions and defects
 
-No cross-language contradiction register exists yet for this standalone packet.
+| ID | Finding | Required outcome |
+| --- | --- | --- |
+| FC-74-01 | No atomic write (temp+rename); a crash mid-write can corrupt a cache file (shared with the session file provider FP-01). | Temp-file + rename in all four (resolve together with Feature 66 FP-01). |
+| FC-74-02 | The cache file is world-readable (umask default); cache data can be sensitive. | Create cache files 0600 in all four (resolve together with Feature 66 FP-02). |
+
+Everything else is proven parity (cached-null, sweep-count, clear, ttl-seconds via
+`cache_contract.json`).
 
 ## Owner decisions
 
-No owner decision has been recorded for this standalone packet.
+Proposed for owner ratification:
+
+1. ATOMIC WRITE + 0600 (FC-74-01, FC-74-02): resolve together with the session file provider (Feature
+   66) - temp-file + rename and mode 0600 across both file backends in all four.
+
+No other open questions - the file cache backend is proven parity.
 
 ## Proposed conformance fixture
 
-The audit has not yet defined positive, negative, malformed, stale, duplicate,
-partial-state and mutation-witness cases.
+`cache_contract.json` already gates the file backend for every invariant. Add the two shared file cases
+(shared with Feature 66): a crash-torn write does not corrupt a prior good entry (temp+rename); a cache
+file is created 0600.
 
 ## Integration map
 
-The audit has not yet mapped exports, startup, request lifecycle, CLI,
-scaffolders, status tools, documentation and generated consumers.
+- Feature 72 selects this backend and uses it as the fallback target.
+- Feature 66 is the session file sibling; the atomic-write and permissions fixes land together.
+- `cache_contract.json` proves the interface invariants for this backend.
 
 ## Breaking changes and migration
 
-The audit has not yet converted parity breaks into 3.14 migration instructions.
+- Atomic write and 0600 are internal; no app breaks (a redeploy re-creates cache files, which are
+  disposable).
 
 ## Implementation backlog
 
-The audit has not yet produced a dependency-ordered implementation backlog.
+1. Resolve FC-74-01/FC-74-02 alongside Feature 66 FP-01/FP-02 (one atomic-write + 0600 change per file
+   backend).
+2. Run locally and on the root lab; the CONTRACT-MAP row stays proven.
+
+No framework implementation belongs in the audit commit.
 
 ## Porting capsule
 
-This packet is not yet sufficient for a clean-room implementation.
+Implement the file cache backend: write each entry as `{key, value, expires_at}` JSON to a temp file
+and rename it atomically with mode 0600, named for the hashed cache key under `TINA4_CACHE_DIR`. `get`
+reads the envelope and returns `value` (a stored null is a hit; a past `expires_at` is a miss and
+unlinks); `clear` unlinks every entry; `sweep` unlinks expired files and returns the count. Prove the
+port with a cached-null hit, an expiry, a clear, a sweep count, a torn-write case, and a 0600 check.
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete (file per entry + envelope + expiry).
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete (torn write, permissions).
+- [x] Wire/storage and provider contracts complete (envelope, hashed filename).
+- [x] Existing-language contradictions recorded (FC-74-01/02, shared with Feature 66).
+- [x] Owner ambiguities recorded (1 proposed; atomic-write + 0600, shared with the session file provider).
+- [x] Proposed shared cases and mutation witnesses complete (proven + torn-write + 0600).
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule is clean-room sufficient.
