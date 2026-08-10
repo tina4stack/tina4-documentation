@@ -2,13 +2,19 @@
 
 ## Identity and status
 
-- Matrix identity: 15 — Migrations
-- Audit state: auditing
-- Audit note: Structure migrated; closure checklist records remaining work
-- Dependencies: not yet extracted from the retained audit evidence
-- Dependants: not yet extracted from the retained audit evidence
-- Existing ADRs: see retained evidence and the central decision index
-- Shared fixtures: not yet confirmed
+- Matrix identity: 15 - Migrations
+- Audit state: decision-ready
+- Audit note: measured 2026-08-08 (LOC/CC/MI + lab-verified baselines below); prose
+  sections completed from that evidence 2026-08-10. No framework code changed.
+- Dependencies: Feature 3 adapter interface (connection, transaction, execute), Feature 4
+  URL parser, Feature 5 write facade, the seven providers (008-014) for the actual DDL, and
+  the CLI for the `migrate`/`rollback`/`status`/`create` commands
+- Dependants: application startup (auto-migrate), the CLI migrate commands, the ORM (schema
+  it reads must exist), and any scaffolder that generates a migration
+- Existing ADRs: ADR-0041 (explicit directory beats default), ADR-0024 (no provider claims
+  a rollback it did not perform), ADR-0002 (metrics engine used for the measurements)
+- Shared fixtures: `migrations_contract.json` is required (14 cases below); it runs on
+  SQLite locally and swaps providers on the .99 lab
 
 ## Why this feature exists
 
@@ -28,11 +34,12 @@ Feature 15 is therefore the next standalone migration feature.
 
 | Evidence | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
-| Public surface | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Startup/CLI integration | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Stored/wire format | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing focused tests | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing lab baseline | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| Implementation | `migration/runner.py` | `Migration.php`, `MigrationBase.php` | `migration.rb` | `orm/src/migration.ts` |
+| Size (LOC / fns / CC) | 801 / 38 / 192 | 881 / 43 / 200 | 457 / 38 / 131 | 989 / 63 / 249 |
+| Kinds discovered | `.sql` + `.py` | `.sql` + code | `.sql` + code | `.sql` only runs; `.ts` created-but-invisible |
+| migrate result shape | applied name list; raises | `{applied,skipped,errors}` | per-file `{name,status,error?}` | `{applied,skipped,failed}` |
+| Rollback with no down | raises, RETAINS row | warns, REMOVES row | warns, REMOVES row | warns, REMOVES row (worst) |
+| Lab baseline (green) | 93/0 skip (`12cc44bb`) | 105 tests 331 assert (`46f96429`) | 94/0 pending (`25ac783`) | 272 pass incl real PG (`96a5050e`) |
 
 ### Retained introductory record
 
@@ -142,15 +149,46 @@ primary names, and remove redundant aliases with a Breaking migration note.
 
 ## Public surface contract
 
-The audit has not yet extracted a language-neutral public surface and its idiomatic spellings.
+One `Migration` object, one name per concept, no aliases (the full idiomatic spelling table
+is in Breaking changes below). The neutral surface is: construct with `(db, migrationsDir,
+delimiter)`; `migrate()` applies pending migrations and returns `{applied, skipped, failed}`;
+`rollback(steps=1)` reverses the last batch and returns `{rolledBack, failed}`; `status()`
+returns `{completed, pending}` as filename strings; `create(description, kind="sql")` writes
+a migration and returns the up-file path; and `getApplied()`, `getPending()`, `getFiles()`
+return filename lists that include BOTH `.sql` and native-code migrations. A detailed-record
+inspection (the tracking rows themselves) is a separately named method, never `status()`.
 
 ## Inputs and outputs
 
-The audit has not yet fixed all native types, defaults, nullability, ordering, and serialized shapes.
+- A migration is a file on disk: either a `.sql` file (with a deterministic sibling
+  `.down.sql`) or a native-code file (`.py`/`.php`/`.rb`/`.ts`) exposing an up and a down.
+- Discovery orders by numeric prefix: `9_` applies before `10_` (numeric, not
+  lexicographic); an unprefixed file sorts last and warns.
+- The tracking row carries `id`, `migration_name`, `description`, `batch`, `executed_at`
+  and `passed`; `passed = 1` is the only "applied" state.
+- `migrate()` returns `{applied, skipped, failed}` where `failed` carries the migration name
+  and the error; `rollback()` returns `{rolledBack, failed}`; `status()` returns
+  `{completed, pending}` filename strings. These three shapes are the same in all four
+  (the current four-way divergence in divergence 4 is what the contract closes).
+- `create()` returns the up-file path; a caller derives the `.down.sql` sibling from it
+  rather than receiving a second path (closing the Node-only `{upPath, downPath}` shape).
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection, retry, rollback, and deletion path.
+1. Discovery scans the resolved migrations directory for `.sql` AND native-code files, and
+   orders them by numeric prefix (divergences 1 and 2 close the current `.sql`-only scans).
+2. `migrate()` applies each pending migration in order inside a transaction where the engine
+   supports transactional DDL; a success writes exactly one `passed = 1` row; a second run
+   skips an already-applied migration.
+3. Apply stops at the FIRST failure; later files do not run, and a failed multi-statement
+   file gains no applied row.
+4. `status()`/`getApplied()`/`getPending()`/`getFiles()` inspect without mutating and
+   include both kinds.
+5. `rollback(steps=1)` runs a batch in reverse apply order; it removes a tracking row ONLY
+   after that migration's down operation completes. A missing down is a failure, not a
+   no-op; a failing down SQL is a failure. Either way the row is RETAINED (divergence 3).
+6. Startup auto-migrate (`TINA4_AUTO_MIGRATE`, default on) runs `migrate()` during boot; a
+   failure logs and still allows boot, whereas an explicit CLI migrate exits non-zero.
 
 ## Configuration and precedence
 
@@ -165,7 +203,20 @@ The audit has not yet traced every producer, discovery, execution, inspection, r
 
 ## Failures, side effects and security
 
-The audit has not yet closed every failure boundary, side effect, cleanup rule, and security concern.
+- A failed apply stops the run at the first failure and writes NO applied row for the failed
+  file; later files do not run.
+- A rollback whose down is missing or errors is a FAILURE that retains the tracking row, so
+  observable state never says "pending" while the schema is still applied (divergence 3, the
+  replay-DDL-over-live-objects hazard).
+- Tracking-table write and migration body share one transaction where the engine supports
+  transactional DDL; no provider records a rollback it did not perform (ADR-0024).
+- Startup auto-migrate degrades on failure (logs, boots); explicit CLI migrate exits
+  non-zero, so a human-run migration cannot fail silently.
+- Statement splitting parses `SET TERM` and line-boundary `//` blocks as syntax; a `//`
+  inside a URL or string literal is NOT treated as a delimiter.
+- Migration SQL is trusted developer input (it is DDL the team wrote), so the security
+  boundary is directory resolution: an explicit directory beats the default (ADR-0041) and
+  the legacy `src/migrations/` is fallback-only.
 
 ## Wire and persistence contract
 
@@ -179,7 +230,14 @@ Legacy tracking schemas upgrade in place before state is read.
 
 ## Providers and substitutability
 
-The audit has not yet proved provider substitution or recorded deliberate capability exceptions.
+The same SQL migration fixture runs with the same outcome on SQLite, PostgreSQL, MySQL,
+MSSQL and Firebird. Where an engine cannot offer transactional DDL (MySQL commits DDL
+implicitly, so a mid-migration failure cannot roll back), the public contract NARROWS to
+what every engine can guarantee rather than becoming a per-provider caveat (ADR-0024): a
+multi-statement migration on a non-transactional-DDL engine is documented as
+non-atomic, and the recommendation is one DDL statement per migration there. No provider
+claims a rollback it did not perform. The tracking table (`tina4_migration`) is identical
+across providers; a legacy tracking schema upgrades in place before state is read.
 
 ## Contradictions and defects
 
@@ -192,7 +250,27 @@ contract hole or a materially larger mechanism.
 
 ## Owner decisions
 
-No new owner decision is recorded in this migrated section. Retained decisions appear below when present.
+Proposed for owner ratification (the measured divergences force each call):
+
+1. One result shape per operation across all four (closing divergence 4): `migrate() ->
+   {applied, skipped, failed}`, `rollback() -> {rolledBack, failed}`, `status() ->
+   {completed, pending}` as filename strings. This is the breaking change with the widest
+   blast radius, because application and CLI code currently observes four shapes.
+2. A tracking row is removed ONLY after its down operation succeeds; a missing or failing
+   down is a rollback failure that retains the row (Python's fail-safe rule, closing
+   divergence 3). This is a correctness decision, not a preference.
+3. SQL and native-code migrations participate in identical discovery, numeric ordering,
+   status, apply and rollback (closing divergences 1 and 2); Node's created-but-invisible
+   `.ts` and Python's `.py`-runs-but-hidden-from-status are bugs, not design.
+4. `create()` returns the up-file path only; the caller derives the `.down.sql` sibling
+   (closing the Node-only two-path shape).
+5. One public name per concept, no aliases (closing divergence 5): remove
+   `get_applied_migrations`, the Ruby `run` alias and the legacy function APIs, with a
+   Breaking migration note.
+6. Overall verdict SYNTHESISE, decided on correctness: adopt Ruby's leaner orchestration
+   structure, Python's fail-safe rollback rule and the PHP/Node summary-object result. No
+   implementation is promoted wholesale, because each has either a contract hole or a
+   materially larger mechanism.
 
 ## Proposed conformance fixture
 
@@ -233,7 +311,17 @@ locally; provider-swap cases run on the .99 lab with zero skips.
 
 ## Integration map
 
-The audit has not yet mapped every export, startup path, request hook, CLI, scaffolder, status command, document, and generated consumer.
+- The `Migration` class is exported from each framework's public API and constructed with a
+  live database adapter (Feature 3).
+- Startup boot calls `migrate()` when `TINA4_AUTO_MIGRATE` is on; the CLI exposes
+  `migrate`, `rollback`, `status` and `create` (Python `cli/__init__.py`, PHP `bin/tina4php`,
+  Ruby `cli.rb`, Node `packages/cli/src/commands/migrate*.ts`).
+- The scaffolder writes migration files into the resolved directory; discovery and the
+  numeric-prefix ordering consume them.
+- The providers (008-014) execute the DDL and own transaction mechanics; the ORM depends on
+  the migrated schema existing.
+- Central fixtures, four runners, the CI matrix, release notes and the migrations docs
+  update together when the contract lands.
 
 ## Breaking changes and migration
 
@@ -256,7 +344,19 @@ Concept names are verb-first. Snake-case languages use `get_applied` and
 
 ## Implementation backlog
 
-The audit has not yet produced a dependency-ordered backlog for all current languages and future ports.
+1. Materialize `fixtures/migrations_contract.json` from the 14 cases above and wire four
+   fail-closed runners (SQLite locally, provider-swap on the .99 lab, zero skips).
+2. Converge the result shapes (decision 1) in all four; update every application/CLI caller.
+3. Make code and SQL migrations share one discovery/status/apply/rollback path (decisions 3)
+   -- fix Node's invisible `.ts` and Python's `.py`-hidden-from-status.
+4. Enforce the fail-safe rollback rule (decision 2) in PHP, Ruby and Node (Python already
+   retains the row); prove missing-down and failing-down both retain history.
+5. Remove the aliases (decision 5) with the Breaking migration note.
+6. Prove the provider-narrowing rule (non-transactional-DDL engines) on the lab across
+   SQLite, PostgreSQL, MySQL, MSSQL and Firebird.
+7. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
+
+No framework implementation belongs in the audit commit; the above is the build phase.
 
 ## Porting capsule
 
@@ -280,19 +380,21 @@ The audit has not yet produced a dependency-ordered backlog for all current lang
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Existing-language contradictions recorded (5 divergences).
+- [x] Owner ambiguities recorded (6 proposed; the genuine calls await owner ratification).
+- [x] Proposed shared cases and mutation witnesses complete (14 cases).
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule is clean-room sufficient.
 
 ### State
 
-Audit measured and provisional contract written. Implementation and the shared
-fixture are not yet complete; this row must not be marked closed until all
-cases are proven in all four on the lab.
+AUDIT decision-ready: measured (LOC/CC + lab baselines), all contract sections written, 5
+divergences recorded, 6 decisions proposed. The IMPLEMENTATION and the shared fixture are
+the build phase (backlog above) and are NOT done: this feature is not "shipped" until all
+14 cases are proven in all four on the .99 lab with zero skips. Decision-ready is not
+built.
