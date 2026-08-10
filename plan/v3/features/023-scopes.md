@@ -2,31 +2,43 @@
 
 ## Identity and status
 
-- Matrix identity: 23 — ORM scopes
-- Audit state: auditing
-- Audit note: Structure migrated; closure checklist records remaining work
-- Dependencies: not yet extracted from the retained audit evidence
-- Dependants: not yet extracted from the retained audit evidence
-- Existing ADRs: see retained evidence and the central decision index
-- Shared fixtures: not yet confirmed
+- Matrix identity: 23 - ORM scopes
+- Audit state: decision-ready
+- Audit note: measured 2026-07-28 (all four from source, Python/Ruby by execution); prose
+  sections completed from that evidence 2026-08-10. No framework code changed.
+- Dependencies: Feature 17 ORM base class (scopes live there), Feature 6 query builder (a
+  scope composes a `where`)
+- Dependants: any model exposing a named, reusable filter; AutoCrud
+- Existing ADRs: the removed `QueryBuilder#get` `LIMIT 100`; this feature surfaces the
+  SYSTEMIC row-cap finding (five read paths, four silent defaults) that needs one dedicated
+  cross-cutting ADR spanning Features 5, 21, 22, 23 and 24
+- Shared fixtures: `scopes_contract.json` is required; its cases MUST use more rows than the
+  cap so truncation is observable
 
 ## Why this feature exists
 
-The retained audit does not yet state the developer problem in one language-neutral sentence.
+A developer registers a named, reusable filter on a model (`Item.scope("active", "state =
+?", ["on"])`) and calls it by name (`Item.active()`), so a common WHERE clause is defined
+once and read everywhere instead of being retyped.
 
 ## Boundary
 
-The retained audit does not yet separate what this feature owns, delegates, and excludes.
+This feature owns scope registration (`scope(name, filter_sql, params)`), scope invocation
+(`Model.name(limit, offset)`), and the unknown-scope error. It DELEGATES the actual read to
+`where` (Feature 6) and the model to Feature 17. The default-row-cap it exposes is one of five
+inconsistent caps across the ORM and is settled once, not here alone.
 
 ## Existing implementation evidence
 
 | Evidence | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
-| Public surface | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Startup/CLI integration | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Stored/wire format | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing focused tests | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing lab baseline | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| Registration signature | `scope(name, filter_sql, params=None)` | `scope($name, $filterSql, $params=[])` | `scope(name, filter_sql, params=[])` | `static scope(name, filterSql, params?)` |
+| Filtering correct | yes (verified) | yes (source) | yes (verified) | yes (source) |
+| `limit`/`offset` reach `where` | YES | YES | NO (declared, dropped -- D1 bug) | YES |
+| Default row cap from a scope | 20 | 20 | unbounded | 20 |
+| Invocation mechanism | class-attr closure | `__callStatic` registry | `define_singleton_method` | function on class |
+| Unknown-scope error | bare missing-attr | NAMED (`BadMethodCallException`, best) | bare missing-method | bare missing-attr |
+| Registration site | class method | instance method writing static state (odd) | class method | static method |
 
 ### Retained introductory record
 
@@ -51,11 +63,20 @@ Both filter correctly and Python fails loud on an unresolvable column.
 
 ## Public surface contract
 
-The audit has not yet extracted a language-neutral public surface and its idiomatic spellings.
+`scope(name, filter_sql, params=[])` registers a named filter on the model (a class/static
+method in all four). Invoking `Model.name(limit, offset)` runs the filter and returns the
+matching rows. An unknown scope raises a named error identifying the scope and the model. The
+registration signature is already identical across the four (the operation graph below); this
+is the first feature in the audit whose public surface needs no reconciliation.
 
 ## Inputs and outputs
 
-The audit has not yet fixed all native types, defaults, nullability, ordering, and serialized shapes.
+- Input to registration: a scope name, a filter SQL fragment (`state = ?`), and its bound
+  params. Input to invocation: optional `limit` and `offset`.
+- Output: the list of matching rows; `limit` and `offset` are HONORED (Ruby currently drops
+  them -- D1).
+- A scope over an unknown column raises loudly (Python verified), never returns an empty list.
+- An unknown scope raises a named error, not a bare missing-method error.
 
 ## Lifecycle and operation graph
 
@@ -71,21 +92,39 @@ The audit has not yet fixed all native types, defaults, nullability, ordering, a
 Same name, same argument order, same return. This is the first row in the audit
 where the surface needs no reconciliation at all.
 
+Operation graph: `scope()` records the name, filter and params on the class. Invoking the
+scope composes `where(filter_sql, params, limit, offset)` and returns the rows. An unknown
+scope name resolves to the named error rather than a bare attribute/method miss.
+
 ## Configuration and precedence
 
-The audit has not yet fixed argument, environment, project-file, default, and cache timing precedence.
+- An explicit `limit`/`offset` at invocation must reach `where` (Ruby's D1 bug drops them).
+- The default row cap when no limit is given is the SYSTEMIC decision below; it must be one
+  number across all five ORM read paths, not four.
+- There is no environment variable; scopes are declared in model code.
 
 ## Failures, side effects and security
 
-The audit has not yet closed every failure boundary, side effect, cleanup rule, and security concern.
+- Ruby's scope declares `limit:`/`offset:` and silently discards them (D1). A declared-and-
+  ignored keyword is worse than a missing one: a missing keyword raises so the caller learns,
+  while a silent no-op lets the caller believe the cap applied.
+- An unknown scope must raise a NAMED error identifying the scope and the model (PHP's
+  `BadMethodCallException` is the reference); a bare missing-method error tells the developer
+  nothing about scopes.
+- A scope over an unknown column raises loudly, never returns an empty list.
+- The filter SQL is developer-written and its params are bound, so there is no injection
+  through a scope; the filter fragment itself is trusted model code.
 
 ## Wire and persistence contract
 
-The audit has not yet fixed every wire format, stored shape, encoding, identifier, timestamp, and compatibility rule.
+There is no persistence; a scope is a named `where`. The contract is the returned row set and
+the honored `limit`/`offset`. The same scope over the same rows returns the same set in all
+four, once the default cap is unified.
 
 ## Providers and substitutability
 
-The audit has not yet proved provider substitution or recorded deliberate capability exceptions.
+A scope composes a standard `where` through Feature 6, so it is engine-agnostic; any provider
+satisfies it identically.
 
 ## Contradictions and defects
 
@@ -199,7 +238,23 @@ All category 4. Nothing here is runtime-forced.
 
 ## Owner decisions
 
-No new owner decision is recorded in this migrated section. Retained decisions appear below when present.
+Proposed for owner ratification:
+
+1. Fix Ruby's scope to pass `limit:`/`offset:` through to `where` (D1). One line, the
+   highest-value change here, and safe: passing a declared parameter through cannot regress.
+   It should NOT wait for the cap decision.
+2. THE SYSTEMIC ROW-CAP DECISION (the cross-cutting call): the ORM has FIVE read paths with
+   FOUR silent default caps -- `scope` (20 / unbounded), `has_many` (100 / unbounded),
+   `QueryBuilder#get` (unbounded, its `LIMIT 100` was deliberately removed), `Model.where`
+   (20 / nil), `Model.all` (100). Choose ONE rule for the whole ORM: either every read is
+   genuinely unbounded with explicit opt-in pagination (matching the `QueryBuilder#get` fix),
+   or every read caps at the same stated number. This warrants a DEDICATED ADR spanning
+   Features 5, 21, 22, 23 and 24; it is breaking whichever way it goes, and a silent cap is
+   the one behaviour a caller cannot detect without counting rows they do not have.
+3. Promote PHP's named unknown-scope error to Python, Ruby and Node.
+4. `scope()` is a class/static method in all four; PHP's instance declaration that writes
+   static state becomes a proper static method.
+5. Keep the registration surface as-is: it is already identical across the four.
 
 ## Proposed conformance fixture
 
@@ -224,11 +279,22 @@ it - my own first probe returned 2 rows and looked fine.
 
 ## Integration map
 
-The audit has not yet mapped every export, startup path, request hook, CLI, scaffolder, status command, document, and generated consumer.
+- Feature 17's base model hosts scope registration and invocation; each scope composes a
+  `where` through Feature 6.
+- The systemic row-cap decision spans `scope` (23), `has_many` (21/22), `QueryBuilder#get`
+  and `where`/`all` (5), and pagination (24); it is one dedicated ADR, one fixture assertion.
+- AutoCrud may expose scopes; the docs describe the register-then-call pattern.
+- Central fixtures, four runners and the CI matrix update together; the truncation cases must
+  use more rows than the cap.
 
 ## Breaking changes and migration
 
-The audit has not yet turned every parity break into an actionable pre-3.14 migration instruction.
+- The default-row-cap unification (decision 2) is breaking whichever way it is decided:
+  capping Ruby changes what its scopes return, uncapping the others changes what theirs
+  return. One `Breaking:` entry, decided once for the whole systemic table.
+- Ruby's D1 fix (pass `limit`/`offset` through) is a correctness fix; a caller that passed a
+  limit now gets it honored.
+- Making PHP's `scope()` static is a signature tidy that already behaves statically.
 
 ## Implementation backlog
 
@@ -265,19 +331,21 @@ Surface table - unchanged, because it is already right:
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Existing-language contradictions recorded (D1-D3 plus the systemic cap table).
+- [x] Owner ambiguities recorded (5 proposed; the systemic cap needs a dedicated ADR).
+- [x] Proposed shared cases and mutation witnesses complete (truncation cases use >cap rows).
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule is clean-room sufficient.
 
-### Parked
+### State
 
-Not implemented. The Ruby one-line fix (D1) can go early and independently; the cap
-decision (D2) blocks on the owner and should be taken once across every path in the
-systemic table. Order: 6, 4, 5, 3, 13, 14, 15, 16, then 2, 1, 0.
+AUDIT decision-ready. The registration surface is already uniform. The work is D1 (Ruby drops
+`limit`/`offset` -- a real bug, fix early and independently) and the SYSTEMIC row-cap decision
+(five read paths, four silent defaults) that must be taken ONCE across Features 5, 21, 22, 23,
+24 in a dedicated ADR. The IMPLEMENTATION is the build phase and is NOT done. Decision-ready is
+not built.
