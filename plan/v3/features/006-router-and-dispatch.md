@@ -17,6 +17,40 @@ Feature 6 is **not stable**. The original fixture checker is green, but it only
 proves that named test text exists in four files. Adversarial execution found
 multiple public-contract defects outside those names.
 
+## Owner decisions APPROVED (finalized 2026-08-10)
+
+This packet declared no open product choices. The re-audit review surfaced three
+genuine calls hiding inside "resolved from accepted policy"; Andre settled them,
+and two clean-room precision fixes are folded in.
+
+- **A: trailing-slash redirect is method-aware.** GET/HEAD redirect with 301;
+  POST/PUT/PATCH/DELETE redirect with 308 Permanent Redirect (RFC 7538), which
+  preserves the method and body. The doc's flat 301-for-every-method would let a
+  client drop a POST body and downgrade to GET (RFC 7231 permits the change). The
+  trailing-slash section, the fixture HTTP cases and the migration notes are
+  updated to match; the redirect still fires before handler, route middleware and
+  auth, and HEAD still carries no body.
+- **B: numeric grammar stays strict (ratified as written).** `{:int}` is
+  `[0-9]+`; `{:float}` is the non-negative decimal shapes. `-5`, `-1.5`, `1e3`,
+  NaN and infinity do not match and fall through. Widening later (a sign or an
+  exponent) is non-breaking, so strict is the safe default; a real need is a
+  one-line, backward-compatible extension via ADR.
+- **C: lab-host references are redacted from the plan.** The concrete lab host is
+  written as "the lab host" / "the lab" across `plan/`, matching the convention
+  every feature doc already uses (repo-wide sweep, separate from the contract).
+
+Clean-room precision fixes (answering the two poked nits):
+- The numeric match column is shown fully anchored with a literal (escaped) dot,
+  so a clean-room reader cannot compile `.` as regex-any.
+- `ANY` is clarified: it registers the handler for the five content methods; the
+  path still answers HEAD via GET fallback and automatic OPTIONS, and contributes
+  all seven methods to the Allow/auth calculation. ANY does not register explicit
+  HEAD/OPTIONS routes and so does not suppress automatic OPTIONS.
+
+These close the DESIGN half of the FINAL bar for Feature 6. Remaining to reach
+FINAL (unchanged): materialize fixture v2 with native/wire expectations and
+mutation witnesses, and wire the four executable runners (backlog items 2, 11).
+
 ## Why this feature exists
 
 An engineer declares an HTTP endpoint once and Tina4 deterministically turns a
@@ -64,7 +98,7 @@ upgrade framing and connection lifecycle are not part of HTTP dispatch.
 | Focused lab baseline | 91 passed | 88 tests / 213 assertions | 58 examples | 119 cases/assertions |
 
 The lab run used root under `/root/tina4-lab/with-lab-lock.sh` on
-`andre@192.168.88.99`. All selected suites passed. This does not close the
+`the lab host`. All selected suites passed. This does not close the
 feature: the adversarial probes below fail outside the indexed cases.
 
 ## Public surface contract
@@ -150,17 +184,18 @@ escaping every literal segment.
 | --- | --- | --- |
 | omitted / `string` | one non-empty segment | string |
 | `int` / `integer` | ASCII digits `[0-9]+` | native integer |
-| `float` / `number` | `[0-9]+`, `[0-9]+.[0-9]+`, or `.[0-9]+` | native floating number |
+| `float` / `number` | `^[0-9]+$`, `^[0-9]+\.[0-9]+$`, or `^\.[0-9]+$` (literal dot) | native floating number |
 | `alpha` | ASCII letters | string |
 | `alnum` | ASCII letters or digits | string |
 | `slug` | lowercase ASCII letters, digits and `-` | string |
 | `uuid` | canonical 8-4-4-4-12 hexadecimal shape | string |
 | `path` / `.*` | one or more remaining path characters | string |
 
-The numeric grammar is deliberately strict. `..`, `1.2.3`, `.`, signs,
-exponents, NaN and infinity do not match the current portable contract. A
-successful typed match always gives the declared native type; cast failure
-cannot fall back to a string or silently become zero.
+The numeric grammar is deliberately strict and anchored to a complete segment;
+every `.` in these patterns is a literal dot, never regex-any. `..`, `1.2.3`,
+`.`, signs, exponents, NaN and infinity do not match the current portable
+contract. A successful typed match always gives the declared native type; cast
+failure cannot fall back to a string or silently become zero.
 
 ## Request-target normalization and decoding
 
@@ -189,7 +224,10 @@ Node-only double meaning such as a single `{id}` receiving `a/b` from `a%2Fb`.
 
 - false: `/items` and `/items/` select the same route without redirect;
 - true: a non-root trailing-slash request redirects to the canonical
-  no-trailing-slash path with status 301 and preserves the exact query string;
+  no-trailing-slash path and preserves the exact query string. GET and HEAD use
+  status 301; POST, PUT, PATCH and DELETE use 308 Permanent Redirect, which
+  preserves the method and body (RFC 7538). A flat 301 would let a client drop a
+  POST body and downgrade to GET;
 - `/` never redirects;
 - redirect selection happens before handler, route middleware and auth;
 - HEAD still carries no response body on the redirect.
@@ -219,11 +257,15 @@ their effective positions. It does not silently reorder them.
 
 ### ANY
 
-Portable `ANY` covers GET, POST, PUT, PATCH, DELETE, HEAD and OPTIONS. It does
-not opt an application into TRACE, CONNECT or arbitrary extension methods.
-Method-derived auth remains in force: write requests are secure by default;
-GET, HEAD and OPTIONS are public by default. An explicit route auth override
-applies consistently to every expanded method.
+Portable `ANY` registers the handler for the five content methods GET, POST,
+PUT, PATCH and DELETE. The path still answers HEAD via GET fallback and automatic
+OPTIONS; `ANY` does not register explicit HEAD or OPTIONS routes and so does not
+suppress the automatic OPTIONS response. For the Allow calculation and auth,
+`ANY` contributes the canonical seven methods. It does not opt an application
+into TRACE, CONNECT or arbitrary extension methods. Method-derived auth remains
+in force: write requests are secure by default; GET, HEAD and OPTIONS are public
+by default. An explicit route auth override applies consistently to every method.
+To own the OPTIONS response, declare an explicit OPTIONS route.
 
 ## Discovery and hot reload
 
@@ -419,8 +461,8 @@ did not consume the current fixture hash.
 - HEAD on route, redirect, 404, 405, static, template and error has no body;
 - OPTIONS explicit override and automatic known/unknown responses;
 - 405 and both OPTIONS paths share canonical Allow calculation;
-- redirect off aliases trailing slash; redirect on returns 301 and preserves
-  raw query; root never redirects;
+- redirect off aliases trailing slash; redirect on returns 301 for GET/HEAD and
+  308 for POST/PUT/PATCH/DELETE, preserves raw query, and never redirects root;
 - route/static/template precedence and known-path/wrong-method fallback.
 
 ### Middleware/auth hand-off
@@ -490,6 +532,8 @@ Pre-3.14 corrections are allowed. Release notes must call out:
 - regex metacharacters in literal paths stop acting as wildcards;
 - Node duplicate replacement no longer changes precedence;
 - Node trailing slash and encoded parameter behavior changes;
+- trailing-slash redirect now uses 301 for GET/HEAD and 308 for unsafe methods,
+  so a redirected POST/PUT keeps its method and body instead of being downgraded;
 - Python/Ruby ANY auth/method behavior aligns with the canonical seven-method
   rule;
 - route inspection output and ordering become authoritative.

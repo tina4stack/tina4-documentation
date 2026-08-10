@@ -33,7 +33,7 @@ conflicts where "keep ours" would have silently dropped a security ADR.
 
 ## Test state
 
-Verified on the Linux lab (192.168.88.99) against live services, at the exact
+Verified on the Linux lab (the lab host) against live services, at the exact
 commits pushed to origin/v3.
 
 | framework | commit    | result                                        |
@@ -136,7 +136,7 @@ ransom note written demanding 0.0079 BTC. 86 distinct public IPs appear in the
 mongod log. Do not pay - this campaign drops data and bluffs exfiltration.
 
 Closed:
-- All 12 lab containers now bind 127.0.0.1 + 192.168.88.99 instead of 0.0.0.0.
+- All 12 lab containers now bind 127.0.0.1 + the lab host instead of 0.0.0.0.
 - DOCKER-USER firewall restricts every published container port to the LAN,
   persisted via tina4-lab-firewall.service, mutation-proven enforced.
 - Root cause fixed in tina4-lab.sh: port specs were lifted from the CI workflows,
