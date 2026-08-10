@@ -41,6 +41,30 @@ The old combined file has been archived. Rate limiting now lives in
 `034-rate-limiting.md`, the routes CLI in `114-cli-routes.md`, and route groups
 in `031-route-groups.md`.
 
+## Owner decisions APPROVED (finalized 2026-08-10)
+
+The 10 proposed decisions are ratified as the Feature 30 contract. The three genuine
+owner calls were confirmed:
+
+- **A: a returned string is `text/plain`; no markup sniffing.** HTML requires an
+  explicit `html()` call. Returned or interpolated data can no longer auto-activate as
+  active HTML, and the content type never depends on the user's bytes (removes H12-06;
+  Ruby also stops upgrading every callable string).
+- **B: JSON integers outside +/-(2^53-1) are rejected before commit.** The engineer
+  returns a large id as a string (or gives the model field a string JSON
+  representation). No silent precision loss and no silent type change; the failure is a
+  `ResponseSerializationError` that dispatch turns into the production 500.
+- **C: the response is buffered and committed once.** Helpers set state and return the
+  builder; Feature 31's finalizer commits after Feature 33's unwind. Node's write-on-call
+  helpers and PHP `send()` I/O are removed. This is the only model under which the
+  middleware after-pass, CORS, rate-limit and security headers can own the final response
+  (consistent with Features 32/33/34/35).
+
+Governance: ADR-0050 supersedes ADR-0019's response-type clauses; ADR-0019's
+rate-limiter clauses are separately superseded by ADR-0049, and its routing-surface
+security intent otherwise stands. The audit is complete and decision-ready; the build
+phase materializes `response_types_contract.json` and the four runners.
+
 ## Why this feature exists
 
 An engineer should be able to return native application and Tina4 values and

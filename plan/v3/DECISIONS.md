@@ -39,7 +39,7 @@ Conventions:
 | ADR-0016 | [Liveness is process-only; readiness is a separate endpoint](decisions/ADR-0016.md) (clauses superseded by ADR-0046) | Accepted |
 | ADR-0017 | [Graceful shutdown - drain in-flight requests, bounded, exit 0](decisions/ADR-0017.md) (clauses superseded by ADR-0047) | Accepted |
 | ADR-0018 | [CORS denies by default, and never pairs the wildcard with credentials](decisions/ADR-0018.md) (enforcement clauses superseded by ADR-0048) | Accepted |
-| ADR-0019 | [The rate limiter keys on the socket peer, and middleware never opens a gate](decisions/ADR-0019.md) (clauses superseded by ADR-0049) | Accepted |
+| ADR-0019 | [The rate limiter keys on the socket peer, and middleware never opens a gate](decisions/ADR-0019.md) (clauses superseded by ADR-0049 and ADR-0050) | Accepted |
 | ADR-0020 | [The shared response cache obeys RFC 9111 on Authorization and Vary](decisions/ADR-0020.md) | Accepted |
 | ADR-0021 | [A session id is opaque, and an unverified credential is not an auth result](decisions/ADR-0021.md) | Accepted |
 | ADR-0022 | [The queue promises at-least-once, and each backend keeps that promise the way its protocol allows](decisions/ADR-0022.md) | Accepted |
@@ -57,6 +57,7 @@ Conventions:
 | ADR-0047 | [Graceful shutdown: six-state machine, bounded drain + cleanup reserve](decisions/ADR-0047.md) (supersedes ADR-0017 clauses) | Proposed |
 | ADR-0048 | [CORS wildcard-credentials fails startup; per-origin warnings bounded](decisions/ADR-0048.md) (supersedes ADR-0018 clauses) | Proposed |
 | ADR-0049 | [Rate limiting on by default, token bucket, canonical-IP keyed](decisions/ADR-0049.md) (supersedes ADR-0019 clauses) | Proposed |
+| ADR-0050 | [One buffered response, strict recursive JSON, explicit representation types](decisions/ADR-0050.md) (supersedes ADR-0019 clauses) | Proposed |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
@@ -72,3 +73,4 @@ carry a `Superseded (in part) by ADR-004N` marker.
 | ADR-0047 | ADR-0017 state-machine/deadline/validation/hook/worker clauses | drain-bounded-exit-0 intent |
 | ADR-0048 | ADR-0018 wildcard-credentials fallback + per-origin warning | deny-by-default, 204-on-denial, allow-list Vary |
 | ADR-0049 | ADR-0019 skip-and-log malformed trusted-proxy | socket-peer keying + trusted-proxy allow-list, middleware-never-opens-a-gate |
+| ADR-0050 | ADR-0019 response-type status/429 clauses | routing-surface security intent (rate-limiter clauses -> ADR-0049) |
