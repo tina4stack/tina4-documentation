@@ -34,11 +34,11 @@ Conventions:
 | ADR-0011 | [HEAD keeps its per-runtime mechanism - outcome parity, not mechanism parity](decisions/ADR-0011.md) | Accepted |
 | ADR-0012 | [Settle a contract against real-world frameworks, not internal precedent](decisions/ADR-0012.md) | Accepted |
 | ADR-0013 | [A CORS preflight carries Allow (RFC 9110 s9.3.7 conformance)](decisions/ADR-0013.md) | Accepted |
-| ADR-0014 | [A middleware's return value is the contract; response state is a legacy path](decisions/ADR-0014.md) | Accepted |
+| ADR-0014 | [A middleware's return value is the contract; response state is a legacy path](decisions/ADR-0014.md) (result-table clause superseded by ADR-0045) | Accepted |
 | ADR-0015 | [Route precedence - does a specific route beat a catch-all?](decisions/ADR-0015.md) | Accepted |
-| ADR-0016 | [Liveness is process-only; readiness is a separate endpoint](decisions/ADR-0016.md) | Accepted |
-| ADR-0017 | [Graceful shutdown - drain in-flight requests, bounded, exit 0](decisions/ADR-0017.md) | Accepted |
-| ADR-0018 | [CORS denies by default, and never pairs the wildcard with credentials](decisions/ADR-0018.md) | Accepted |
+| ADR-0016 | [Liveness is process-only; readiness is a separate endpoint](decisions/ADR-0016.md) (clauses superseded by ADR-0046) | Accepted |
+| ADR-0017 | [Graceful shutdown - drain in-flight requests, bounded, exit 0](decisions/ADR-0017.md) (clauses superseded by ADR-0047) | Accepted |
+| ADR-0018 | [CORS denies by default, and never pairs the wildcard with credentials](decisions/ADR-0018.md) (enforcement clauses superseded by ADR-0048) | Accepted |
 | ADR-0019 | [The rate limiter keys on the socket peer, and middleware never opens a gate](decisions/ADR-0019.md) | Accepted |
 | ADR-0020 | [The shared response cache obeys RFC 9111 on Authorization and Vary](decisions/ADR-0020.md) | Accepted |
 | ADR-0021 | [A session id is opaque, and an unverified credential is not an auth result](decisions/ADR-0021.md) | Accepted |
@@ -52,3 +52,21 @@ Conventions:
 | ADR-0032 | [sweep() returns entries EVICTED, and a server-expiring provider honestly returns 0](decisions/ADR-0032.md) | Accepted |
 | ADR-0037 | [The no-skip gate is a deny-list, not a two-axis allow-list](decisions/ADR-0037.md) | Proposed |
 | ADR-0044 | [Batch and first-row execution are adapter primitives](decisions/ADR-0044.md) | Accepted |
+| ADR-0045 | [Middleware before/after hooks use phase-specific result tables](decisions/ADR-0045.md) (supersedes ADR-0014 clause) | Proposed |
+| ADR-0046 | [Health owns a system-route tier, monotonic uptime and readiness](decisions/ADR-0046.md) (supersedes ADR-0016 clauses) | Proposed |
+| ADR-0047 | [Graceful shutdown: six-state machine, bounded drain + cleanup reserve](decisions/ADR-0047.md) (supersedes ADR-0017 clauses) | Proposed |
+| ADR-0048 | [CORS wildcard-credentials fails startup; per-origin warnings bounded](decisions/ADR-0048.md) (supersedes ADR-0018 clauses) | Proposed |
+
+### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
+
+ADR-0045..0048 are the feature re-audit decisions taken 2026-08-10. Each supersedes
+only the named clauses of its predecessor; the predecessors otherwise stay in force.
+When each is Accepted in the build phase, flip the superseded predecessor's file to
+carry a `Superseded (in part) by ADR-004N` marker.
+
+| New | Supersedes | Predecessor keeps |
+| --- | --- | --- |
+| ADR-0045 | ADR-0014 "same table on every hook" | return-value-is-the-contract core |
+| ADR-0046 | ADR-0016 system-route/uptime/readiness/path/header clauses | liveness/readiness split |
+| ADR-0047 | ADR-0017 state-machine/deadline/validation/hook/worker clauses | drain-bounded-exit-0 intent |
+| ADR-0048 | ADR-0018 wildcard-credentials fallback + per-origin warning | deny-by-default, 204-on-denial, allow-list Vary |
