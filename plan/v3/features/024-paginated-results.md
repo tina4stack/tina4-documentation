@@ -12,9 +12,10 @@
   Feature 6 query builder (the limit/offset that define the page)
 - Dependants: every REST/CRUD/ORM endpoint that returns a paginated envelope; tina4-js
   frontends that read the envelope; the REST/CRUD/ORM doc chapters in all four sections
-- Existing ADRs: this feature FORCES the systemic row-cap decision (a paginate envelope is
-  only honest if `total` is a true total) - one dedicated ADR spanning Features 5, 21, 22, 23,
-  24; ADR-0043 already fixed the AutoCrud REST list envelope to a canonical key set
+- Existing ADRs: ADR-0043 (Accepted 2026-08-07) IS the ratified decision for this envelope -
+  seven snake_case keys, no arguments, derived from the query - and it SUPERSEDES the earlier
+  SYNTHESISE verdict retained below. ADR-0051 extends the same unbounded-by-default rule across
+  all five ORM read paths (a paginate envelope is only honest if `total` is a true `COUNT(*)`).
 - Shared fixtures: `pagination_contract.json` is required; every case uses more rows than one
   page so the arithmetic and the honest-total are observable
 
@@ -208,11 +209,12 @@ this feature provides.
 
 ### Verdict: SYNTHESISE
 
-> SUPERSEDED by the RE-OPENED 2026-08-05 section at the end of this document. This verdict and
-> its argument-form contract were formed before the envelope was measured for whether it tells
-> the truth. The canonical contract is `toPaginate()` with NO arguments, PROMOTE PHP, `total`
-> from a real `COUNT(*)`. The analysis below is retained as the record of how the finding
-> evolved, not as the contract.
+> SUPERSEDED by ADR-0043 (Accepted 2026-08-07), which ratified the RE-OPENED 2026-08-05
+> measurement below. This verdict and its argument-form contract were formed before the
+> envelope was measured for whether it tells the truth. The ratified contract is `toPaginate()`
+> with NO arguments, PROMOTE PHP, `total` from a real `COUNT(*)`, exactly seven snake_case keys
+> (`has_next`/`has_prev` removed). The analysis below is retained as the record of how the
+> finding evolved, not as the contract.
 
 Decided on **correctness of the wire contract**.
 
@@ -235,8 +237,9 @@ All category 4. Nothing about a JSON key name is runtime-forced.
 
 ## Owner decisions
 
-Proposed for owner ratification (the RE-OPENED 2026-08-05 measurement is the authority; it
-supersedes the earlier SYNTHESISE verdict retained below):
+RATIFIED in ADR-0043 (Accepted 2026-08-07), which supersedes the earlier SYNTHESISE verdict
+retained below. The decisions below are the ratified contract, not open proposals; only the
+build (making `.count` a true total in Ruby/Node) remains:
 
 1. `toPaginate()` takes NO arguments in all four (PROMOTE PHP). The caller fetches the page it
    wants and paginates that result. An argument RAISES, never silently swallowed.
@@ -251,13 +254,13 @@ supersedes the earlier SYNTHESISE verdict retained below):
    and every other duplicate spelling. This is BREAKING for any API consumer (including
    tina4-js frontends); the `Breaking:` entry names every removed key and its replacement, and
    the REST/CRUD/ORM doc chapters change in the SAME release.
-5. OPEN sub-decision: whether `has_next`/`has_prev` (present in Ruby and Node) join the
-   canonical set. They are pure derivations of `page` and `total_pages`. Recommendation: DROP
-   them for a minimal, honest envelope (a client derives them trivially); the owner may keep
-   them on the 2-of-4 precedent. Decide once so all four match.
-6. This feature FORCES the systemic row-cap decision: take it as unbounded-by-default with
-   pagination the only thing that limits rows, so `total` cannot be laundered. This is where
-   the cap decision stops being a preference and becomes a correctness requirement.
+5. `has_next`/`has_prev` are REMOVED from the envelope (ADR-0043 decided this, not left open):
+   they are pure derivations of `page` and `total_pages`, so the minimal honest envelope drops
+   them and a client derives them trivially. The canonical set is exactly the seven keys above.
+6. This feature FORCED the systemic row-cap decision, now ADR-0051: unbounded-by-default with
+   pagination the only thing that limits rows, so `total` cannot be laundered. ADR-0043 already
+   states this is a correctness requirement, not a preference; ADR-0051 makes it the rule
+   across all five ORM read paths.
 
 ### Outstanding: CLOSED by execution (2026-07-30)
 
@@ -440,7 +443,7 @@ Surface table:
 - [x] Configuration, failure, side-effect and security rules complete.
 - [x] Wire/storage and provider contracts complete.
 - [x] Existing-language contradictions recorded (measured page-3 divergence, all four).
-- [x] Owner ambiguities recorded (6 proposed; has_next/has_prev is the one open sub-decision).
+- [x] Owner ambiguities recorded and RATIFIED in ADR-0043 (Accepted); no open sub-decisions.
 - [x] Proposed shared cases and mutation witnesses complete (each fails today somewhere).
 - [x] Integration map and breaking migrations complete.
 - [x] Implementation backlog dependency-ordered.
@@ -448,12 +451,13 @@ Surface table:
 
 ### State
 
-AUDIT decision-ready on the RE-OPENED 2026-08-05 contract (the authority; the earlier
-SYNTHESISE verdict is superseded and retained only as record). The canonical envelope is
-`toPaginate()` with no arguments, PROMOTE PHP, `total` from a real `COUNT(*)`, seven snake_case
-keys. The IMPLEMENTATION is a SEPARATE pass, not a patch: making `.count` the true total in
-Ruby and Node reaches into the adapters and is breaking. It is coupled to the systemic row-cap
-decision (Features 5, 21, 22, 23, 24) and blocks on that one ADR. Decision-ready is not built.
+AUDIT decision-ready; the envelope contract is RATIFIED in ADR-0043 (Accepted 2026-08-07),
+which supersedes the earlier SYNTHESISE verdict (retained only as record). The canonical
+envelope is `toPaginate()` with no arguments, PROMOTE PHP, `total` from a real `COUNT(*)`,
+exactly seven snake_case keys (`has_next`/`has_prev` removed). The IMPLEMENTATION is a SEPARATE
+pass, not a patch: making `.count` the true total in Ruby and Node reaches into the adapters
+and is breaking. The systemic row-cap it depends on is ADR-0051 (Features 5, 21, 22, 23, 24).
+Decision-ready and RATIFIED; not yet built.
 
 ---
 
