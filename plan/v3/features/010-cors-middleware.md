@@ -29,6 +29,34 @@ This audit changes no framework source. It replaces the repair narrative with
 the clean-room contract, executable parity plan and implementation formula for
 the four current ports and any future Tina4 language.
 
+## Owner decisions APPROVED (finalized 2026-08-10)
+
+Feature 10 was the most decision-complete of the re-audit batch, and its governance
+was already correct: ADR-0048 supersedes only the changed clauses of ADR-0018 (now
+created and indexed in DECISIONS.md). The 14 defects and the standards-locked
+contract are approved wholesale. The two remaining product calls:
+
+- **1: CORS list-valued env vars accept a comma-separated string AND a JSON array
+  (ratified).** A comma-string (`TINA4_CORS_ORIGINS=https://a.com,https://b.com`) is
+  the ergonomic form for Docker/k8s/shell env, where JSON brackets are painful; a
+  bracketed value is strict JSON per Feature 1. Refinement: this list parsing (JSON
+  array OR comma-string, with trim / drop-empty / dedupe) should live in Feature 1's
+  env manifest for every list-typed key, so it is uniform framework-wide rather than
+  a CORS-only special case.
+- **2: `TINA4_CORS_EXPOSE_HEADERS` defaults to `[X-Request-ID]` (ratified).**
+  X-Request-ID is the framework's own non-sensitive correlation ID; exposing it
+  cross-origin fulfills its purpose (an SPA can correlate with server logs) at no real
+  security cost, and is consistent with the framework already adding and allowing it.
+
+Accepted as written: CORS is global-only for 3.14 (no per-route override; a future
+feature composes through the same policy type), wildcard+credentials fails startup,
+no-Origin emits nothing, the ACRM-required preflight predicate, `Vary: *` preserved,
+bounded denial diagnostics and final-unwind policy ownership.
+
+This closes the DESIGN half of the FINAL bar for Feature 10. Remaining to reach FINAL:
+accept ADR-0048, materialize `cors_contract.json`, and wire the four thin runners.
+This completes the 6-10 re-audit batch.
+
 ## Why this feature exists
 
 An engineer should be able to state which browser origins may call a Tina4
