@@ -25,9 +25,11 @@ a model in place from a filter with `load()`. This is the imperative counterpart
 ## Boundary
 
 This feature owns the instance methods `has_one`/`has_many`/`belongs_to` (each taking a
-related CLASS and an optional foreign key) and `load(filter, params, include)` (populate this
-instance from a filter, optionally eager-loading relations). It DELEGATES the read to Feature
-6, the model to Feature 17, and the declaration-time auto-wiring to Feature 21. The two
+related CLASS and an optional foreign key). `load(filter, params, include)` (populate this
+instance from a filter) is owned by Feature 26, not here; this feature references it only
+because its `include` eager-loads relationships. It DELEGATES the read to Feature 6, the model
+to Feature 17, the instance-load to Feature 26, and the declaration-time auto-wiring to Feature
+21. The two
 features are the two idioms for one concept; the owner decision is which idioms every language
 must support.
 
