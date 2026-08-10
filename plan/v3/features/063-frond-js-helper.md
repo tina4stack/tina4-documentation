@@ -2,108 +2,88 @@
 
 ## Identity and status
 
-- Matrix identity: 63 — Frond and Tina4 browser helpers
-- Audit state: queued
-- Dependencies: not yet mapped
-- Dependants: not yet mapped
-- Existing ADRs: see the central decision index
-- Shared fixtures: not yet defined
+- Matrix identity: 63 - Frond and Tina4 browser helpers
+- Audit state: NOT A FRAMEWORK FEATURE - client asset vendored by the framework (2026-08-10)
+- Audit note: the browser-side JavaScript (`frond.js` and the tina4-js helpers) is authored and
+  BUILT in the client (the `tina4-js` repo). The frameworks vendor the COMPILED bundles byte-for-byte
+  and serve them as static assets. There is no four-language framework parity contract to audit here.
+- Owner: the `tina4-js` repo (source in `tina4-js/src`, build via esbuild to the IIFE/`frond.js`
+  bundle)
+- Catalog phase: Front-end (client asset)
 
-- Catalog phase: Frontend assets
+## Decision: the browser helpers live in the client, not the framework
 
-## Why this feature exists
+`public/js/` holds the client's compiled JavaScript, not framework runtime code. Every file there is
+a BUILD product of `tina4-js`:
 
-This feature gives an application one portable frond and tina4 browser helpers contract across
-every Tina4 language.
+- `frond.js` / `frond.min.js` - the Frond reactive browser runtime (esbuild output; never
+  hand-edited - the `.js` is generated).
+- `tina4.min.js` / `tina4js.min.js` - the tina4-js core browser helpers.
+- `tina4-dev-admin.min.js` - the dev-admin UI bundle.
 
-## Boundary
+The tina4-js repo owns the source and the build. Each framework VENDORS the compiled bundles into
+its own `public/js/` so the built-in server can serve them as static assets (Feature 41), and the
+dev-admin UI can load its reactive front-end with zero external dependencies.
 
-This packet owns the public behavior and integration boundary for Frond and Tina4 browser helpers. The
-audit must separate that behavior from private helpers and adjacent features.
+## Measured evidence (2026-08-10)
 
-## Existing implementation evidence
+The vendored JavaScript is one client build, copied byte-for-byte into every framework:
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Public surface | `tina4_python/public/js/` | Not yet inventoried | Not yet inventoried | Not yet inventoried |
-| Startup/CLI integration | Not yet traced | Not yet traced | Not yet traced | Not yet traced |
-| Stored/wire format | Not yet traced | Not yet traced | Not yet traced | Not yet traced |
-| Existing focused tests | Not yet counted | Not yet counted | Not yet counted | Not yet counted |
-| Existing lab baseline | Not yet run | Not yet run | Not yet run | Not yet run |
+| Check | Result |
+| --- | --- |
+| `public/js/frond.js` across Python, PHP, Ruby, Node | md5-identical (`733bc95a35f1c67296e67c2bb78b5ed1`) |
+| Per-language JS behaviour | none - the bundles are language-agnostic |
+| Build provenance | esbuild output from `tina4-js`, rebuilt and committed per release |
 
-## Public surface contract
+Because the bundles are identical in all four, there is nothing per-language to keep in parity: a
+compiled browser bundle is the same file wherever it is served.
 
-The audit has not yet extracted the language-neutral surface and idiomatic
-spellings for this feature.
+## The vendored asset STAYS (this is not the SCSS removal)
 
-## Inputs and outputs
+Unlike Feature 61 (the `scss/` source folder, which was dead and was removed), `public/js/` is LIVE.
+The framework serves `frond.js` to the browser, and running apps depend on it: the dev-admin UI is
+built on the Frond reactive runtime, and the CSRF flow rides on it (the server reads the form token
+that `frond.js` sends and returns a `FreshToken` header that `frond.js` consumes -
+`core/server.py:1602` and `:1611`). Deleting `public/js/` would break the dev-admin UI and the CSRF
+token refresh. So the reclassification is a matrix and ownership change only; the compiled bundles
+remain where the server can serve them.
 
-The audit has not yet fixed native types, defaults, nullability, ordering and
-serialized shapes.
+## Where a real contract does live (and where it does not)
 
-## Lifecycle and operation graph
+The ASSET is a client build with no per-language framework behaviour. But the CSRF handshake that
+`frond.js` speaks IS a client-to-server contract: the browser sends the form token in the request
+body, and the server issues a fresh token in a response header. That contract is owned by the CSRF
+feature (Feature 37) on the server side and by `tina4-js` on the browser side; the two must agree.
+It is audited there, not here. This packet only records that the browser bundle is a vendored client
+artifact.
 
-The audit has not yet traced every producer, discovery, execution, inspection,
-retry, rollback and deletion path.
+## Why there is no framework parity contract
 
-## Configuration and precedence
-
-The audit has not yet fixed arguments, environment values, project files,
-defaults and cache timing.
-
-## Failures, side effects and security
-
-The audit has not yet closed failure boundaries, external effects, cleanup and
-security behavior.
-
-## Wire and persistence contract
-
-The audit has not yet fixed wire formats, stored shapes, encodings, identifiers,
-timestamps and compatibility rules.
-
-## Providers and substitutability
-
-The audit has not yet proved substitution or recorded capability exceptions.
-
-## Contradictions and defects
-
-No cross-language contradiction register exists yet for this standalone packet.
+A per-language parity contract exists when four frameworks must implement the same behaviour. Here
+they implement none: they serve identical compiled bundles that the client produced. There is no
+cross-language fixture, no defect register, and no per-language surface to gate. The one thing worth
+watching is drift between the vendored bundles and the current `tina4-js` build (see the owner
+decision).
 
 ## Owner decisions
 
-No owner decision has been recorded for this standalone packet.
+Proposed for owner ratification:
 
-## Proposed conformance fixture
-
-The audit has not yet defined positive, negative, malformed, stale, duplicate,
-partial-state and mutation-witness cases.
-
-## Integration map
-
-The audit has not yet mapped exports, startup, request lifecycle, CLI,
-scaffolders, status tools, documentation and generated consumers.
-
-## Breaking changes and migration
-
-The audit has not yet converted parity breaks into 3.14 migration instructions.
-
-## Implementation backlog
-
-The audit has not yet produced a dependency-ordered implementation backlog.
-
-## Porting capsule
-
-This packet is not yet sufficient for a clean-room implementation.
+1. The browser helpers are a CLIENT asset: the `tina4-js` repo owns the source and the build; the
+   frameworks only vendor and serve the compiled bundles. No four-language parity contract is owed.
+2. Decide the vendoring policy: keep committing the built `frond.js` and tina4-js bundles into each
+   framework's `public/js/` per release (current), OR pull them from the `tina4-js` package at
+   build/release time. The risk in the current approach is silent drift - a framework copy can fall
+   behind the tina4-js build; a release-time sync (or a checksum gate) closes that gap.
+3. The `frond.js` <-> server CSRF token contract stays owned by Feature 37 (server) and `tina4-js`
+   (browser); this packet does not re-audit it.
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Decision recorded: the browser helpers are a client asset, not a framework feature.
+- [x] Source and build ownership (`tina4-js`, esbuild) recorded.
+- [x] Vendored-bundle byte-identity measured across all four frameworks.
+- [x] Recorded that the vendored `public/js/` STAYS (served; dev-admin + CSRF depend on it).
+- [x] The one real cross-boundary contract (CSRF token handshake) pointed to its owner (Feature 37).
+- [x] No four-language framework parity contract is owed here.
+- [x] Vendoring-drift owner decision recorded for ratification.
