@@ -1,963 +1,564 @@
-# Feature 6: Router (pattern matching, params) + the request dispatch pipeline
+# Feature 006: Router and dispatch
 
-Audited 2026-07-28. Part of `98-feature-audit.md`. **Planning only.**
+## Identity and status
 
-## Files
+- Matrix identity: 6 — Router and dispatch
+- Audit state: decision-ready; implementation is deliberately deferred
+- Release boundary: v3 / 3.14.0; parity-breaking corrections are permitted
+- Dependencies: Feature 1 environment, Feature 2 logging, request/response surface
+- Dependants: Feature 7 middleware, Feature 8 health, Feature 10 CORS,
+  authentication, Swagger, static files, templates, WebSockets, dev reload and MCP
+- Existing decisions: ADR-0010, ADR-0011, ADR-0012, ADR-0013 and ADR-0015
+- Current shared index: `fixtures/dispatch_contract.json`, version 1, eight
+  invariants
+- Re-audit date: 2026-08-10
 
-| | route table + matching | dispatch pipeline |
-| --- | --- | --- |
-| python | `tina4-python/tina4_python/core/router.py` | `tina4-python/tina4_python/core/server.py` (`app`) |
-| php | `tina4-php/Tina4/Router.php` | same file (`Router::dispatchInner`) |
-| ruby | `tina4-ruby/lib/tina4/router.rb` | `tina4-ruby/lib/tina4/rack_app.rb` (`call`) |
-| node | `tina4-nodejs/packages/core/src/router.ts` | `tina4-nodejs/packages/core/src/server.ts` (`dispatch`) |
+Feature 6 is **not stable**. The original fixture checker is green, but it only
+proves that named test text exists in four files. Adversarial execution found
+multiple public-contract defects outside those names.
 
-Two tables below, because the two concerns live in one file in PHP and in two
-files everywhere else. Comparing `Router.php` against `router.py` alone would
-flatter Python by measuring half the work.
+## Why this feature exists
 
-## Measurements
+An engineer declares an HTTP endpoint once and Tina4 deterministically turns a
+request into the intended handler call or a complete protocol response, without
+the engineer writing server plumbing, decoding parameters, converting declared
+types, implementing HEAD/OPTIONS, or guessing which fallback won.
 
-Route table and matching only:
+## Boundary
 
-| | LOC | fns | CC total | CC avg | worst fn | MI | flags |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| python | 614 | 64 | 138 | 2.16 | Router.add (15) | 11.2 | 1 error, 3 warn |
-| php | 1002 | 43 | 263 | 6.12 | Router.dispatchInner (72) | 2.6 | 3 error, 4 warn |
-| ruby | 413 | 50 | 120 | 2.4 | methods_allowed_for_path (13) | 14.2 | 1 error, 2 warn |
-| node | 552 | 72 | 134 | 1.86 | Router.(anonymous) (15) | 11.0 | 1 error, 3 warn |
+Feature 6 owns:
 
-The dispatch pipeline, measured where it actually lives:
+- route registration, grouping, discovery and inspection;
+- route-pattern parsing and validation;
+- request-target path normalization and parameter decoding;
+- method selection, first-match precedence and duplicate replacement;
+- implicit HEAD, automatic OPTIONS, 404 and 405 selection;
+- the order of routing relative to system routes, middleware, auth and fallbacks;
+- dispatch-stage visibility as runtime data;
+- hand-off of a matched route, native parameters and route metadata.
 
-| | LOC | fns | CC total | CC avg | **worst fn** | MI | flags |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| python | 2265 | 89 | 492 | 5.53 | **`app` (37)** | 0.0 | 6 error, 8 warn |
-| php | 1002 | 43 | 263 | 6.12 | **`dispatchInner` (72)** | 2.6 | 3 error, 4 warn |
-| ruby | 931 | 32 | 187 | 5.84 | **`call` (51)** | 4.5 | 2 error, 5 warn |
-| node | 1197 | 67 | 300 | 4.48 | **`dispatch` (61)** | 0.6 | 3 error, 4 warn |
+It delegates:
 
-Read the LOC column in that second table with care: Python's `server.py` also
-holds background tasks, auto-discovery, the health handler, the landing page, the
-gallery and the WebSocket handlers, so its 2265 is not 2265 lines of dispatch.
-The comparable number is the worst-function column, and that column is the
-finding.
+- request and response object details to the routing-surface feature;
+- middleware hook semantics to Feature 7;
+- health payloads to Feature 8;
+- CORS policy to Feature 10;
+- auth token validation to authentication;
+- serialization of handler return values to the response surface;
+- static-file confinement, template rendering and Swagger generation to their
+  own features.
 
-## What differs
+WebSocket route registration reuses the pattern grammar and registry rules, but
+upgrade framing and connection lifecycle are not part of HTTP dispatch.
 
-**The route table is in good shape in three of four.** Ruby is leanest (413 LOC)
-and most maintainable (MI 14.2); Node has the lowest complexity per function
-(1.86); Python is close behind on both. All three keep matching, casting and
-registration in small functions.
+## Existing implementation evidence
 
-**PHP's router is the outlier, and the reason is structural.** It carries the
-dispatch pipeline in the same class, in one function.
-`Router::dispatchInner` runs from line 736 to line 1158: **423 lines, 64 branch
-keywords, cyclomatic complexity 72**, in a single private static method. Read from
-its own comment markers, it holds at least eight distinct responsibilities:
-
-1. trailing-slash 301 redirect (`TINA4_TRAILING_SLASH_REDIRECT`)
-2. global middleware, with a separate CORS pass that must run first
-3. short-circuit on a middleware-set non-default status
-4. RFC 9110 405-vs-404 conformance, plus the OPTIONS 204 variant
-5. static file serving, including conditional-request 304 handling
-6. template auto-routing (`/hello` to `hello.twig`)
-7. exposing matched-route metadata on the request before middleware
-8. auth enforcement (write-secure-by-default, dev-admin exemption)
-
-...then route middleware, handler invocation and response finalisation.
-
-**But PHP is not uniquely guilty, and that is the real finding.** Every framework
-has a god-function on the dispatch path:
-
-| framework | function | CC | file MI |
-| --- | --- | --- | --- |
-| python | `app` | 37 | 0.0 |
-| ruby | `call` | 51 | 4.5 |
-| node | `dispatch` | 61 | 0.6 |
-| php | `dispatchInner` | 72 | 2.6 |
-
-Four independent implementations converged on the same shape. That is not four
-mistakes; it is one missing abstraction. The request pipeline has roughly eight
-ordered stages and nobody ever named them, so each framework grew a single
-function that does all eight inline, and each grew it in a different order with
-different early-exits. The behavioural drift the audit keeps finding downstream
-(405 versus 404, whether CORS headers survive a 401, whether a HEAD on a template
-path behaves like GET) lives inside these four functions, and it is undiscoverable
-because no stage has a name to compare.
-
-A CC of 72 also means the function cannot be covered. Branch coverage of 64
-decision points needs far more paths than any suite has, so the tests that exist
-assert end-to-end outcomes and the stage interactions go untested.
-
-## Verdict: SYNTHESISE
-
-Decided on **SOLID (single responsibility), with correctness as the motive.**
-
-No framework wins. Ruby has the best route table (leanest, most maintainable) and
-Node the lowest complexity per function, so the **table** pattern comes from Ruby
-with Node's parameter-casting shape. The **pipeline** comes from none of them: all
-four adopt a named-stage pipeline that does not exist anywhere yet.
-
-This is not a refactor for taste. It is the enabling change for every downstream
-parity verdict in this audit, because a stage that has a name can be compared
-across four frameworks and a stage that is a line 900 of a 423-line function
-cannot.
-
-## Pattern
-
-**One named stage per responsibility, in one fixed order, in all four frameworks.**
-Each stage takes `(request, response, context)` and returns either a response
-(short-circuit) or nothing (continue). The order is the contract:
-
-```
- 1. normalise_path        trailing-slash redirect, decode, collapse
- 2. global_middleware     CORS first, then registered global before-hooks
- 3. match_route           table lookup -> matched route or null
- 4. method_not_allowed    405 + Allow, or the OPTIONS 204 variant (RFC 9110)
- 5. static_asset          file + conditional-request 304
- 6. template_route        auto-routing to a template file
- 7. authorise             write-secure-by-default, ->secure()/->noAuth() overrides
- 8. route_middleware      per-route before-hooks
- 9. invoke_handler        the user's function
-10. finalise              after-hooks, headers, dev-toolbar injection
-```
-
-Rules that make it a contract rather than a suggestion:
-
-- **Stages 4, 5 and 6 only run when stage 3 found nothing.** That ordering is why
-  a 405 beats a 404 and why a template path can still answer a HEAD.
-- **Stage 2 runs before stage 3** so CORS headers are present on a short-circuited
-  401 or 403. Browsers report a CORS error otherwise, and this is the one piece of
-  PHP's ordering that is provably correct and must be preserved.
-- **Stage 7 runs after stage 3** and reads the matched route's metadata, so
-  `noAuth` is visible to middleware. PHP's own comment records that this
-  assignment was once missing and the `@noauth` bypass was dead code on a real
-  dispatch.
-- **Each stage is independently callable and independently testable.** The target
-  is no stage above CC 10, and the pipeline runner itself a loop.
-- **The stage list is data, not control flow.** One ordered list per framework,
-  identical order, so a drift is a diff of a list rather than a reading of four
-  functions.
-
-Route table pattern (from Ruby, with Node's casting):
-
-- `add(method, path, handler, **options)` replaces a same-`(method, path)` entry
-  in place rather than appending, so a hot-reload's fresh handler wins.
-- Path compilation returns a matcher plus a parameter-type map; casting is one
-  small function per type (`int`, `float`, `path`), not a branch chain.
-- `methods_allowed_for_path` is a table scan that returns the method set, and it
-  is what stage 4 consumes. It already exists in Ruby, PHP and Python; it is the
-  single input the 405 stage needs.
-
-## Methodology
-
-Per framework, in this order. Do not start framework N+1 before N is green.
-
-1. **Freeze the behaviour first.** Before touching a line, write the
-   characterisation tests (below) against the CURRENT dispatch function and get
-   them GREEN. They are the safety net: the refactor must not change a single
-   observable outcome. This step is not optional and not reorderable.
-2. **Name the stages, extract nothing.** Add the ordered stage list as data plus
-   a runner, with every stage still delegating into the existing function body.
-   Verify the suite is still green. The pipeline is now visible with no behaviour
-   moved.
-3. **Extract one stage at a time, lowest risk first** (`normalise_path`, then
-   `static_asset`, then `template_route`, then `method_not_allowed`, then
-   `authorise`, then the middleware stages). Run the full suite after each
-   extraction. One commit per stage, so a bisect lands on one stage.
-4. **Compare the four stage lists.** Any stage present in one framework and
-   absent in another, or ordered differently, is a parity finding: file it, decide
-   it against the pattern above, do not "fix" it silently inside the refactor.
-5. **Re-measure.** `feature-audit.py` must show every dispatch function under CC
-   10 and the file MI materially improved. Record the before and after numbers in
-   this file.
-6. **Then, and only then**, fix any behavioural drift step 4 surfaced, each with
-   its own positive/negative test pair.
-
-Order across frameworks: **Ruby first** (leanest pipeline, 187 total CC, so the
-smallest blast radius and the fastest signal that the pattern holds), then Node,
-then Python, then PHP last (highest complexity, most to lose, most to gain from
-three prior passes).
-
-## Tests to write
-
-All four frameworks, identical names, real HTTP through the framework's own test
-client (no mocks). Two groups.
-
-**Group A: characterisation, written FIRST and green BEFORE any change.** These
-pin today's behaviour so the refactor is provably behaviour-preserving.
-
-| test | asserts |
-| --- | --- |
-| `dispatch_get_known_route_returns_handler_body` | the happy path is untouched |
-| `dispatch_unknown_path_returns_404` | 404 still reached after static + template miss |
-| `dispatch_known_path_wrong_method_returns_405_with_allow` | 405 and the `Allow` header, not 404 |
-| `dispatch_options_on_known_path_returns_204_with_allow` | RFC 9110 OPTIONS shape, empty body |
-| `dispatch_trailing_slash_redirects_301_preserving_query` | redirect keeps the query string |
-| `dispatch_static_asset_returns_304_on_matching_validator` | conditional request answered cheaply |
-| `dispatch_template_path_renders_for_get_and_head` | HEAD behaves like GET on a template route |
-| `dispatch_cors_headers_present_on_401` | CORS survives an auth short-circuit |
-| `dispatch_noauth_write_route_is_not_blocked_by_csrf` | the matched-route metadata is visible to middleware |
-| `dispatch_middleware_runs_in_registration_order` | ordering contract holds |
-
-**Group B: the pipeline contract, positive and negative pairs.** These are new
-behaviour (the named stages) and must FAIL before the change.
-
-| pair | positive | negative |
-| --- | --- | --- |
-| stage list | `pipeline_declares_the_ten_stages_in_order` - the list is data and matches the canonical order | `pipeline_has_no_unnamed_stage` - no stage function is anonymous or inlined |
-| complexity | `every_stage_is_under_complexity_ten` - asserted from `tina4 metrics --json`, so the gate cannot rot | `no_dispatch_function_exceeds_complexity_ten` - the god-function cannot come back |
-| isolation | `each_stage_is_callable_on_its_own` - a stage can be invoked with a request and a response alone | `a_stage_does_not_reach_into_a_later_stage` - no stage calls another stage directly |
-| short-circuit | `a_stage_returning_a_response_stops_the_pipeline` | `a_stage_returning_nothing_does_not_stop_the_pipeline` |
-| parity | `stage_order_is_identical_across_frameworks` - the ordered list is a committed fixture, one shared answer key | `no_framework_adds_a_stage_the_others_lack` |
-
-The complexity pair is the one that keeps this fixed. A refactor with no gate
-regrows; a `tina4 metrics --fail-on` assertion in the suite means the next person
-to inline a stage gets a red test rather than a slightly worse number nobody
-reads. The stage-order fixture follows the pattern that worked for the Frond
-expression corpus: same bytes, one answer key, all four frameworks.
-
-## FINDING (2026-07-31): the canonical ten do not describe Ruby
-
-Step 1's characterisation suite is green (`tina4-ruby c7f3921`), and writing it
-required reading `RackApp#call` line by line. That read invalidates part of the
-pattern above, so it is recorded BEFORE any extraction rather than discovered
-half way through one.
-
-Ruby's dispatch has THIRTEEN concerns in this order:
-
-| # | Ruby, as it actually runs | in the canonical ten? |
-| --- | --- | --- |
-| 1 | request-scoped query-cache reset | no |
-| 2 | CORS preflight fast-path | partly - stage 2, but preflight ONLY |
-| 3 | WebSocket upgrade | **no** |
-| 4 | dev dashboard routes (`/__dev`) | **no** |
-| 5 | feedback widget routes (`/__feedback`) | **no** |
-| 6 | static file + swagger (skipped for `/api/`) | stage 5, but EARLIER |
-| 7 | route matching | stage 3 |
-| 8 | HEAD content strip (RFC 9110) | no |
-| 9 | dev inspector capture | no |
-| 10 | request log line | no |
-| 11 | dev overlay injection | no |
-| 12 | feedback widget injection | no |
-| 13 | session save + cookie | stage 10, finalise |
-
-Three things follow, and none of them are cosmetic:
-
-1. **`static_asset` runs BEFORE `match_route` in Ruby**, not after it. The
-   canonical order says stages 4, 5 and 6 run only when stage 3 found nothing.
-   Ruby checks the filesystem first and skips that check entirely for `/api/`.
-   Reordering it is a BEHAVIOUR change (a route and a file at the same path swap
-   precedence), so it cannot ride along inside the extraction.
-2. **Five concerns have no canonical name**: websocket upgrade, dev routes,
-   feedback routes, the dev inspector/logging/overlay group, and session
-   persistence. A ten-stage list forces them into `finalise` or leaves them
-   inline - which is the god-function again, wearing a list.
-3. **There is no `normalise_path` stage at all.** The trailing-slash behaviour
-   the characterisation test pins is not a distinct step here.
-
-The pattern was written from reading four implementations; this is the first one
-read closely enough to enumerate. The other three must be enumerated the same way
-BEFORE the canonical list is fixed, because a shared stage-order fixture (the
-plan's own parity test) is worth nothing if the list was derived from one
-framework's guess.
-
-### All four enumerated (2026-07-31)
-
-Node, Python and PHP read the same way. The result is that the canonical ten
-describe NONE of them, and the four do not describe each other either.
-
-| concern | ruby | node | python | php |
+| Evidence | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
-| request-cache reset | 1 | 1 | 6 | - |
-| trailing-slash redirect | - | - | 3 | **1** |
-| CORS | 2 (preflight only) | - | 1 (preflight only) | **2 (global mw, FIRST)** |
-| rate limiting | - | - | 2 | - |
-| global middleware (before) | - | 4 | - | 2 |
-| WebSocket upgrade | 3 | outside dispatch | outside dispatch | in routes |
-| dev routes (`/__dev`) | 4 | 8 | 4 | 9 |
-| feedback routes | 5 | - | injection only | 10 |
-| swagger | via static | via static | 5 | - |
-| session | 13 (save, LAST) | **3 (start, EARLY)** | - | - |
-| body parse | - | 5 | in `app` | - |
-| **static asset** | **6, BEFORE match** | **9, BEFORE match** | **fallback, AFTER match** | **fallback, AFTER match** (corrected 2026-07-31 - see below) |
-| match route | 7 | 10 | 7 | 5 |
-| matched-route metadata for auth | - | - | 7a | **3** |
-| authorise | inside match | in middleware | inside match | **4** |
-| route middleware | inside match | 4 | inside match | 6 |
-| invoke handler | inside match | 10 | 7 | 7 |
-| template fallback | - | 11 | fallback | 1325/1617 |
-| RFC 9110 405 / OPTIONS | in else-branch | 12 | 7b | - |
-| 404 | in else-branch | 13 | fallback | - |
-| HEAD strip | 8 (late) | **2 (early, wraps write/end)** | 8 (late) | - |
-| dev toolbar / inspector | 9-11 | 6-7 | - | 9 |
-| feedback injection | 12 | - | in `app` | 10 |
-| 500 handling | rescue | 14 | - | - |
+| Router | `tina4_python/core/router.py` | `Tina4/Router.php` | `lib/tina4/router.rb` | `packages/core/src/router.ts` |
+| Dispatch | `tina4_python/core/server.py` | `Tina4/Router.php` | `lib/tina4/dispatch_pipeline.rb` | `packages/core/src/dispatchPipeline.ts` |
+| Discovery | sorted recursive Python import | `RouteDiscovery.php` | sorted recursive `load` | `routeDiscovery.ts` |
+| Route inspection | CLI + MCP + registry | registry + MCP; no route CLI found | CLI + MCP + registry | CLI + MCP + registry |
+| Pipeline stages are data | yes | yes | yes | yes |
+| Focused local baseline | 91 passed | 88 tests / 213 assertions | 58 examples | 119 cases/assertions |
+| Focused lab baseline | 91 passed | 88 tests / 213 assertions | 58 examples | 119 cases/assertions |
 
-**Five findings, each of which changes the work:**
+The lab run used root under `/root/tina4-lab/with-lab-lock.sh` on
+`andre@192.168.88.99`. All selected suites passed. This does not close the
+feature: the adversarial probes below fail outside the indexed cases.
 
-1. **`static_asset` has no agreed position.** Ruby and Node check the filesystem
-   BEFORE matching a route; Python checks it AFTER, in its fallback; PHP has no
-   static stage at all because `php -S` and nginx serve files before `index.php`
-   ever runs (a runtime gift, category 1 - correct, not a gap). So the canonical
-   "stage 5, only when stage 3 found nothing" matches exactly ONE framework.
-   Whichever order wins is a BEHAVIOUR change for two frameworks: a route and a
-   file at the same path swap precedence.
+## Public surface contract
 
-2. **Only PHP runs CORS as global middleware before matching.** That is the
-   ordering the pattern calls "provably correct", and it is why PHP alone emits
-   CORS on a short-circuited 401. Ruby and Python handle preflight only; Node
-   does not do CORS in dispatch at all. This is the same gap the Ruby
-   characterisation suite pinned - it is three frameworks wide, not one.
+Every language must expose idiomatic equivalents of these concepts:
 
-3. **`authorise` is a real stage only in PHP.** Everywhere else it is buried
-   inside the route-matching block, which is why PHP is also the only framework
-   that had to write down "expose the matched route's metadata BEFORE auth".
+| Concept | Required behavior |
+| --- | --- |
+| register | add one method + pattern + handler + metadata record |
+| verbs | GET, POST, PUT, PATCH, DELETE, HEAD and OPTIONS |
+| any | declare the same handler for the canonical supported method set |
+| group | compose a prefix and middleware, including nested groups |
+| secure/no-auth | explicit route auth override; middleware never changes auth |
+| cache | explicit route cache metadata |
+| match | return route + native params, or no match |
+| allowed methods | stable canonical method list for a path |
+| list | return the effective registry in actual resolution order |
+| clear | empty HTTP and WebSocket registries for isolation/testing |
+| discover/rescan | deterministically load new and changed route files |
 
-4. **HEAD is handled at opposite ends.** Node wraps `write`/`end` EARLY so every
-   later path drops its body; Ruby and Python strip content LATE. Same outcome,
-   opposite mechanism - a stage list has to pick one or admit two.
+Framework ports may add language-idiomatic aliases, but the portable pattern
+grammar below must work unchanged in every language. An alias cannot alter the
+meaning of the portable grammar.
 
-5. **PHP's `dispatchInner` is 1029 lines (650 of code), not the 423 this plan
-   records.** The measurement is stale. It is the single largest function in the
-   family and it is the last one scheduled, which remains right.
+## Canonical route record
 
-### Owner call: honour PHP - and what that does and does not mean (2026-07-31)
+Internally, every registered route must be inspectable as one record containing:
 
-Owner decision: PHP is honoured on the dispatch ordering. Measuring what that
-actually costs turned up a coupling that a naive port would have broken.
+```text
+method                 canonical uppercase method
+pattern                canonical declared path
+handler                callable reference and inspectable handler identity
+source                  file/module and line when available
+registration_index     stable effective resolution position
+origin                  system | programmatic | discovered | generated
+parameter_schema       ordered name/type/catch-all declarations
+middleware             ordered route middleware declarations
+auth                    default | required | public
+cache                   enabled flag and policy metadata
+swagger                 complete metadata map
+template                optional template binding
+```
 
-**PHP's CORS is NOT automatic.** The CORS-first pass runs inside
-`if (!empty($globalMiddleware))`, and `CorsMiddleware` is opt-in via
-`Middleware::use(...)`. So PHP's advantage is STRUCTURAL, not behavioural: it has
-a global-middleware stage BEFORE matching, with CORS ordered first inside it.
-Adopting it does not mean "always emit CORS".
+The same records feed dispatch, `tina4 routes`, MCP route inspection, Swagger,
+doctor/status tooling and shadow diagnostics. Those consumers must not rebuild
+their own partial route tables by scanning source.
 
-**Where each framework runs global middleware today:**
+## Portable route-pattern grammar
 
-| | global middleware runs | CORS on a short-circuited 401 |
+### Valid declarations
+
+```text
+/                         root
+/users                    literal segments
+/users/{id}               one string segment
+/users/{id:int}           typed segment
+/files/{path:path}        named catch-all, final segment only
+/files/*                   bare catch-all, final segment only; parameter key "*"
+```
+
+Parameter names match `[A-Za-z_][A-Za-z0-9_]*` and are unique within one
+pattern. A route pattern must:
+
+- start with `/`;
+- contain no query, fragment, NUL or backslash;
+- contain no empty interior segment (`//`);
+- place a catch-all only in the final position;
+- use a known type name;
+- contain no duplicate parameter name.
+
+Invalid declarations fail synchronously at registration. They are developer
+errors, not routes that quietly never match. In particular, relative paths,
+`{}`, duplicate names, unknown types and a non-final catch-all must fail.
+
+Literal text is literal. Regex metacharacters such as `.`, `+`, `(`, `)`, `[`,
+`]`, `#`, `?` and `*` have no special meaning unless they form one of the
+documented parameter tokens. Implementations may compile to a regex only after
+escaping every literal segment.
+
+### Canonical parameter types
+
+| Declaration | Match grammar | Native handler value |
 | --- | --- | --- |
-| php | **BEFORE match**, CORS first | yes, when registered |
-| ruby | AFTER match | no |
-| python | AFTER match | no |
-| node | AFTER match | no |
+| omitted / `string` | one non-empty segment | string |
+| `int` / `integer` | ASCII digits `[0-9]+` | native integer |
+| `float` / `number` | `[0-9]+`, `[0-9]+.[0-9]+`, or `.[0-9]+` | native floating number |
+| `alpha` | ASCII letters | string |
+| `alnum` | ASCII letters or digits | string |
+| `slug` | lowercase ASCII letters, digits and `-` | string |
+| `uuid` | canonical 8-4-4-4-12 hexadecimal shape | string |
+| `path` / `.*` | one or more remaining path characters | string |
 
-**A naive port BREAKS something specific and nameable.** The other three run
-global middleware after matching for a REASON, and Python's own comment states
-it: "(e.g. CsrfMiddleware) can read handler metadata such as `_noauth`".
-`core/middleware.py:301` reads `request._handler` and `handler._noauth` to skip
-CSRF on a route marked `@noauth`. Move that pass before matching and the metadata
-is not there yet: a `@noauth` POST gets wrongly blocked with 403.
+The numeric grammar is deliberately strict. `..`, `1.2.3`, `.`, signs,
+exponents, NaN and infinity do not match the current portable contract. A
+successful typed match always gives the declared native type; cast failure
+cannot fall back to a string or silently become zero.
 
-That is not hypothetical - it is the exact bug PHP itself already fixed once. Its
-comment records that `$request->handler` stayed null and "that bypass was DEAD
-CODE on a real dispatch". Ruby's characterisation case
-`dispatch_noauth_write_route_is_not_blocked_by_csrf` covers the same behaviour
-and passes today.
+## Request-target normalization and decoding
 
-**Why PHP gets away with it:** PHP's CsrfMiddleware is attached as ROUTE
-middleware, which runs after matching and after `$request->handler = $route`. The
-other three register it GLOBALLY. So PHP's ordering is safe for PHP only because
-of a placement difference nobody wrote down.
+Routing consumes the path component only. Query parameters never participate in
+matching and are preserved unchanged by redirects.
 
-**The resolution, which honours PHP without inheriting the coupling:** split the
-global-middleware stage by DEPENDENCY rather than moving it wholesale.
+The portable algorithm is:
 
-| pass | runs | contains | why |
+1. retain the raw request-target path when the server API exposes it;
+2. require a leading `/` and normalize transport backslashes to rejection, not
+   separators;
+3. split raw path segments on literal `/`;
+4. percent-decode each segment exactly once as UTF-8; `+` remains `+`;
+5. reject malformed percent escapes or invalid UTF-8 with 400;
+6. reject a decoded `/`, `\` or NUL inside an ordinary single-segment
+   parameter; only a final `path` catch-all may contain decoded separators;
+7. compare decoded literal segments and validate decoded parameter values;
+8. expose decoded native parameter values to the handler.
+
+This rule prevents encoded separators from changing route structure and avoids
+Node-only double meaning such as a single `{id}` receiving `a/b` from `a%2Fb`.
+
+### Trailing slash
+
+`TINA4_TRAILING_SLASH_REDIRECT` is false by default.
+
+- false: `/items` and `/items/` select the same route without redirect;
+- true: a non-root trailing-slash request redirects to the canonical
+  no-trailing-slash path with status 301 and preserves the exact query string;
+- `/` never redirects;
+- redirect selection happens before handler, route middleware and auth;
+- HEAD still carries no response body on the redirect.
+
+## Registration, identity and precedence
+
+Route identity is `(uppercase method, canonical pattern)`.
+
+Registration order is resolution order and first match wins (ADR-0015). The
+router does not rank specificity. Therefore a catch-all registered before a
+specific application route may shadow it; inspection and warnings must make
+that outcome visible.
+
+Re-registering the same identity replaces the route **in its existing slot**.
+The newest handler and metadata win, but replacement must not move the route or
+change its precedence relative to overlapping patterns. This is required for
+safe hot reload.
+
+System routes are registered before application routes in a documented system
+tier. A user catch-all cannot shadow health, dev-admin, feedback, Swagger or
+other enabled framework endpoints. Within each tier the same first-match rule
+applies. The effective combined order is visible in the canonical registry.
+
+At registration/startup, warn when an earlier route can shadow a later route
+for an overlapping method. The warning includes both identities, sources and
+their effective positions. It does not silently reorder them.
+
+### ANY
+
+Portable `ANY` covers GET, POST, PUT, PATCH, DELETE, HEAD and OPTIONS. It does
+not opt an application into TRACE, CONNECT or arbitrary extension methods.
+Method-derived auth remains in force: write requests are secure by default;
+GET, HEAD and OPTIONS are public by default. An explicit route auth override
+applies consistently to every expanded method.
+
+## Discovery and hot reload
+
+Discovery walks only the configured application route root and processes
+normalized relative paths in ascending lexical order. Filesystem enumeration
+order is never a contract.
+
+Every discovery pass must distinguish:
+
+- new file: load and register;
+- unchanged file: do nothing;
+- changed safe file: remove all prior routes owned by that source, reload and
+  register the file's current routes;
+- deleted file: remove all routes owned by that source;
+- failed file: do not leave a partial new registration set; record a visible
+  broken-import diagnostic and keep the server alive where the language allows.
+
+Replacing only identical patterns is insufficient: renamed and deleted routes
+otherwise survive as ghosts. A rescan is idempotent and does not accumulate
+duplicate middleware, routes, modules or WebSocket entries.
+
+The discovery convention and imperative registration API produce the same
+canonical route record. File syntax such as `[id]` is a discovery convention,
+not a second public matching grammar.
+
+## Method selection and protocol outcomes
+
+Matching first tries the exact request method in registration order.
+
+- HEAD: use an explicit HEAD match for that path; otherwise fall back to the
+  matching GET route for that path. The existence of an unrelated explicit
+  HEAD route cannot disable fallback.
+- OPTIONS: use an explicit OPTIONS route when one matches; otherwise return the
+  automatic response.
+- known path, unsupported method: 405 with `Allow`;
+- unknown path, non-OPTIONS method: 404;
+- unknown path, automatic OPTIONS: 204 with an empty `Allow` value, preserving
+  the accepted ADR-0013 behavior.
+
+`Allow` is emitted in this exact order when applicable:
+
+```text
+GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
+```
+
+Only present methods are included. GET implies HEAD. Every known path implies
+OPTIONS. ANY contributes the canonical seven methods. The same calculation is
+used for automatic OPTIONS, CORS preflight and 405; there is one producer.
+
+HEAD invokes the selected HEAD or GET handler normally so headers match GET,
+then strips content unconditionally on every response path while retaining the
+equivalent Content-Length when known (ADR-0011).
+
+## Dispatch lifecycle
+
+Stage **names** may be idiomatic because streaming and server integration differ.
+Stage order and externally visible outcomes are the shared contract. Each
+runtime publishes its truthful stage lists as immutable data and gates that the
+listed stages exist and are the order actually executed.
+
+The required behavioral order is:
+
+```text
+transport request
+  -> request-target validation / trailing-slash redirect
+  -> enabled system endpoint selection
+  -> pre-match global middleware
+  -> application route match
+  -> matched route metadata attached to request
+  -> post-match global middleware
+  -> auth gate
+  -> route middleware
+  -> handler
+  -> route/template/static/not-found fallback selection
+  -> after hooks for every global that entered
+  -> response finalization
+  -> unconditional HEAD stripping and policy headers
+  -> logging / session / inspector integrations
+  -> transport response
+```
+
+Accepted ordering rules remain:
+
+- routes beat same-path static files (ADR-0010);
+- post-match globals run before auth and route middleware runs after auth
+  (ADR-0012);
+- matched metadata reaches auth before the gate;
+- every global middleware instance that entered gets its after hook, including
+  short-circuit paths;
+- successful OPTIONS, including CORS preflight, carries the router-derived
+  `Allow` header (ADR-0013).
+
+## Failures, side effects and security
+
+| Condition | Required result |
+| --- | --- |
+| invalid route declaration | synchronous registration exception with pattern and reason |
+| malformed request percent encoding / UTF-8 | 400; no handler or route middleware |
+| typed value outside grammar | no match for that route; continue resolution |
+| known path / wrong method | 405 + canonical `Allow` |
+| unknown path | 404 |
+| handler/middleware exception | framework error event/response; never converted to 404 |
+| discovery import failure | visible log + broken diagnostic; no partial new route set |
+| shadowed route | startup warning + visible order; no silent reordering |
+
+Literal matching and encoded-separator rejection are security requirements: a
+route must not expand merely because its literal contains regex syntax, and an
+encoded slash must not bypass a one-segment authorization boundary.
+
+## Contradictions and defects measured on 2026-08-10
+
+| ID | Severity | Measured contradiction | Required correction |
 | --- | --- | --- | --- |
-| `global_middleware_pre` | BEFORE match | CORS, and anything needing no route metadata | must survive a short-circuited 401/403 |
-| `global_middleware_post` | AFTER match, after metadata is exposed | CSRF, and anything reading `noAuth`/`secured` | needs the matched route |
+| R6-01 | P1 | PHP falls back HEAD to GET only when the entire HEAD table is empty. Registering `HEAD /b` breaks implicit `HEAD /a` for `GET /a`. | decide fallback per requested path |
+| R6-02 | P1 | PHP and Node compile literal route text as regex. `/v1.0/{id}` matches `/v1x0/7`. PHP delimiter characters can also invalidate the regex. | parse tokens and escape all literals |
+| R6-03 | P1 | `[\d.]+` accepts `..` and `1.2.3`; Python returns strings after failed casts, PHP/Ruby produce zero or prefixes, and Node truncates prefixes. | strict numeric grammar; successful match always native |
+| R6-04 | P1 | Node decodes captured params while the other core matchers return percent text; encoded slash and invalid escapes have divergent structural/error behavior. | implement one raw-path, decode-once contract |
+| R6-05 | P2 | Node removes and appends a duplicate route. Replacing an early dynamic route after a later literal route changes the winner; the other three preserve the slot. | replace in place |
+| R6-06 | P2 | With redirect disabled, Python/PHP/Ruby accept `/x/`; Node does not. With it enabled, Node aliases the route rather than producing the documented 301. | implement the shared trailing-slash rule |
+| R6-07 | P2 | Duplicate or empty parameter names register in Python/Node; duplicate names collapse to the last value in Python/Ruby; PHP emits a regex warning and never matches. | validate and fail registration |
+| R6-08 | P2 | Relative patterns are normalized in Python/PHP/Ruby but silently do not match in Node. | require leading slash and fail registration |
+| R6-09 | P2 | Node discovery uses raw `readdirSync` recursion without an explicit sort. | sort normalized relative paths |
+| R6-10 | P2 | Hot reload deletion/rename ownership is incomplete outside Python; identical-pattern replacement cannot remove ghosts. | source-owned atomic replacement set |
+| R6-11 | P2 | Route inspection is not one effective registry: PHP has no route CLI; Node CLI scans only discovered files and sorts away resolution order; Python CLI imports only `app.py`; Ruby reports `auth_handler`, not effective `auth_required`. | make every consumer read the canonical live manifest |
+| R6-12 | P2 | Portable grammar differs: Node publicly accepts `:id` and `[id]`; Ruby accepts `*name`; Python alone accepts `{}`. | gate the canonical grammar; document aliases separately |
+| R6-13 | P2 | ANY is a true wildcard/public route in Python/Ruby but an expanded method set with method auth behavior in PHP/Node. | canonical seven-method expansion and auth rule |
+| R6-14 | P3 | `audit-dispatch-contract.py` normalizes source text and searches for case-name substrings; it never runs a runtime or proves the fixture was consumed. | replace index-only checking with executable fixture runners |
 
-That is PHP's CORS-first insight generalised, and it is behaviour-preserving for
-the other three: everything that runs after matching today keeps running after
-matching. Only CORS moves, and only when it is registered.
+No framework source was changed during this audit.
 
-**Answer to "does it break anything": not this way. It would have, done
-wholesale** - and the test that catches it already exists.
+## Existing fixture assessment
 
-### Revised approach (supersedes the "ten stages" pattern above)
+`dispatch_contract.json` currently records eight valuable invariants:
 
-The ten-stage list was derived from reading, before any framework was enumerated.
-It cannot be the shared fixture: a parity test whose answer key came from a guess
-just freezes the guess.
+1. routes beat files;
+2. HEAD carries no body;
+3. middleware order;
+4. after-pass coverage;
+5. OPTIONS carries Allow;
+6. 404/405/OPTIONS status shape;
+7. route metadata reaches auth;
+8. pipeline order is data.
 
-So the sequence changes:
+The file is an index, not executable input. `audit-dispatch-contract.py` checks
+that each suite file exists and that normalized case-name text occurs somewhere
+inside it. Its green `108 (case x framework) pairs checked` result must be
+reported as **wiring presence**, not behavioral parity.
 
-1. The canonical list is DERIVED from the union above, not invented. It must name
-   every concern that exists in more than one framework, and admit the ones that
-   are genuinely single-framework (SAPI static, feedback routes) as optional
-   members rather than pretending they do not exist.
-2. `static_asset`'s position, the CORS ordering, and the HEAD mechanism are three
-   OWNER DECISIONS, because each is a behaviour change in at least two
-   frameworks. They are not refactor details.
-3. Only then does extraction start, and it starts with Ruby, whose behaviour is
-   already frozen (`tina4-ruby c7f3921`).
+Version 2 must contain request/registration inputs and expected native/wire
+outputs. Each runtime runner must load the JSON and execute every applicable
+case. The central gate must collect runner result JSON and fail if a runtime
+did not consume the current fixture hash.
 
-Nothing has been extracted. Freezing Ruby cost one commit and bought the evidence
-that the plan's own target was wrong - which is exactly what step 1 is for.
+## Proposed conformance fixture v2
 
-## Risks
+### Registration and grammar
 
-- **This is the largest refactor in the audit and it touches every request.** The
-  characterisation suite in step 1 is the entire safety argument. If it is thin,
-  stop and thicken it before extracting anything.
-- **PHP has the most to gain and the most to break.** Doing it last means three
-  frameworks' worth of learned pattern before the 423-line function is opened.
-- **Do not bundle behavioural fixes into the extraction.** Every drift step 4
-  finds gets its own commit and its own test pair, after the refactor is green.
+- every verb and nested group registers one inspectable record;
+- literal metacharacters match themselves and a near miss does not match;
+- unknown type, empty name, duplicate name, relative path, query/fragment,
+  interior `//` and non-final catch-all fail registration;
+- same identity replacement changes handler/metadata but preserves index;
+- replacement of an overlapping earlier route does not change the winner;
+- ANY expands to seven methods with method-derived auth defaults.
 
-## Parked
+### Matching and native values
 
-Not implemented. Awaiting the owner's go-ahead on the verdict and on the
-Ruby-first ordering.
+- untyped, int, integer, float, number, alpha, alnum, slug, UUID and path;
+- mutation cases `..`, `.`, `1.2.3`, `-1`, `1e3`, NaN spelling and overflow;
+- Unicode literal/parameter and literal `+`;
+- percent-encoded UTF-8 decodes once;
+- `%252F` does not double-decode;
+- `%2F` in a scalar parameter is rejected and is permitted only by the defined
+  catch-all policy;
+- malformed `%`, `%ZZ` and invalid UTF-8 return 400;
+- query text never affects route selection.
 
----
+### Precedence and lifecycle
 
-## DECIDED: global middleware vs the auth gate
+- first registered overlapping route wins;
+- system route beats an earlier application catch-all at live startup;
+- deterministic lexical discovery produces identical order on shuffled file
+  creation order;
+- new, changed, renamed, deleted and broken source rescans;
+- no ghost routes and no duplicate middleware after repeated rescan;
+- shadow warning names both routes and exact order;
+- route CLI/MCP/Swagger view the same manifest hash and effective order.
 
-**Status:** DECIDED 2026-07-31 - option 1, aligned in all four.
-**Found:** 2026-07-31, while porting the pre/post middleware split.
+### HTTP protocol
 
-### The drift
+- explicit HEAD for `/b` does not disable implicit HEAD for `/a`;
+- explicit HEAD beats GET fallback only on its own matching path;
+- HEAD on route, redirect, 404, 405, static, template and error has no body;
+- OPTIONS explicit override and automatic known/unknown responses;
+- 405 and both OPTIONS paths share canonical Allow calculation;
+- redirect off aliases trailing slash; redirect on returns 301 and preserves
+  raw query; root never redirects;
+- route/static/template precedence and known-path/wrong-method fallback.
 
-Does a global middleware run before or after the framework's auth gate? Measured
-by registering an unflagged (post-match) middleware that stamps a header, then
-hitting a secured write route with no token:
+### Middleware/auth hand-off
 
-| Framework | Result | Position |
-| --- | --- | --- |
-| Python | `POST /secured -> 401 stamp=ABSENT` | after the gate |
-| Ruby | `POST /secured -> 401 stamp=ABSENT` | after the gate |
-| Node | `POST /secured -> 401 stamp=present` | before the gate |
-| PHP | `POST /secured -> 401 stamp=present` | before the gate |
+- pre-global -> match -> metadata -> post-global -> auth -> route middleware ->
+  handler;
+- short-circuit at each point still runs exactly the after hooks owed;
+- middleware attachment never changes auth;
+- matched params and metadata visible consistently to auth, middleware and
+  handler.
 
-Two-two, and pre-existing - the split did not cause it. It was found only because
-the split's test "a pre-match middleware's output survives a 401" PASSED in Node
-and PHP with the flag removed: there, everything survives a 401, so the assertion
-could not fail and proved nothing.
+### Mutation witnesses
 
-### Why it matters
+The fixture is considered wired only if temporary mutations are proven red:
 
-A global middleware that only runs after the gate cannot:
+- swap two overlapping route registrations;
+- change strict float grammar back to `[\d.]+`;
+- append rather than replace a duplicate;
+- disable per-path HEAD fallback;
+- remove literal escaping;
+- skip one runtime's fixture load or report an old fixture hash.
 
-- throttle a brute-force login (a rate limiter never sees the failed attempts),
-- log a rejected request (every 401 is missing from the access log),
-- add response headers to a 401 (the CORS case the split already fixes for the
-  pre-match group).
+## Owner decisions
 
-### What the rest of the industry does
+No unresolved product-choice question is required to begin implementation. The
+rules above follow already accepted ADRs and the established Tina4 principles:
+simple declarations, native values, deterministic behavior, explicit failure
+and safe defaults.
 
-Unanimously: user middleware runs BEFORE auth, and enforcement is late and
-route-scoped. Django (`CsrfViewMiddleware` before `AuthenticationMiddleware`,
-`login_required` as a view decorator), Laravel (`auth` is route middleware, after
-the global and `web` group passes), Rails (`protect_from_forgery` before
-`authenticate_user!`), ASP.NET Core (`UseAuthorization` last before the
-endpoint), Express (`morgan`/`cors`/`rateLimit` `app.use`d before
-`passport.authenticate`). See ADR-0012.
+The re-audit resolves previously implicit points as follows:
 
-That makes Node and PHP correct and **Python and Ruby the drift** - the reverse
-of what "Python is master" gives.
+- duplicate registration is latest definition in the original slot;
+- strict numeric matching preserves the currently intended non-negative shapes;
+- aliases may exist, but the brace grammar is the portable contract;
+- trailing-slash redirect uses the already documented 301 behavior;
+- ANY means the canonical safe application method set, not arbitrary TRACE or
+  CONNECT;
+- route visibility means the effective live manifest, not a source-code scan.
 
-### Options
+If any of those is intentionally different product policy, it requires an ADR
+before implementation because it changes the future-language formula.
 
-1. **Align Python and Ruby to Node/PHP** (run global middleware before the gate).
-   Matches every mainstream framework and fixes the rate-limit / access-log
-   holes. Behaviour change in two frameworks: global middleware starts running
-   on requests it previously never saw, so a middleware written assuming an
-   authenticated request must now check. Recommended.
-2. **Align Node and PHP to Python/Ruby** (gate first). Fewer requests execute
-   user code, but it keeps the operational bugs above and puts Tina4 alone
-   against the field.
-3. **Leave the drift.** Rejected - it is exactly the class of difference this
-   audit exists to remove, and it silently breaks the split's own test.
+## Integration map
 
-### If option 1 is chosen
-
-- Python: move the post-match global pass ahead of `_check_auth` in
-  `handle()`, keeping the route's own middleware after the gate.
-- Ruby: the same move in `RackApp#call`.
-- Lock it in all four with the pair already used in PHP: a post-match middleware
-  DOES run on a matched route, and does NOT run when no route matched (the real
-  discriminator between the groups - not the 401, which both groups survive by
-  design).
-- Breaking-change note in the changelog per the contract-change rule.
-
-### Outcome (2026-07-31)
-
-Option 1 taken. The order is now identical in all four:
-
-```
-pre-match globals -> match -> post-match globals -> auth gate -> route middleware -> handler
-```
-
-Python and Ruby moved their post-match globals ahead of the gate. Two further
-divergences surfaced while doing it and were fixed in the same pass:
-
-- **Node ran the route's OWN middleware BEFORE the gate**, so middleware
-  attached to a secured route processed requests that were about to be
-  rejected. Moved after the gate, matching the other three and the mainstream
-  convention (Laravel orders `->middleware(['auth', ...])` this way, Django
-  puts `@login_required` outermost).
-- **Python's pre-match pass re-ran the post-match set.** `_run_before_middleware`
-  resolves through `_effective_middleware`, which PREPENDS the post-match
-  globals - so passing the pre-match list to it ran every post-match middleware
-  twice, once before matching and once after. A counter or a rate-limit bucket
-  would have double-counted every request. Fixed with an explicit
-  `include_globals` switch; locked by `test_a_pre_match_global_does_not_run_twice`,
-  proven red against the bug.
-
-Lock-in tests, same case names in all four:
-
-| Case | Proves |
+| Consumer | Required integration |
 | --- | --- |
-| `post match middleware runs on a 401` | the globals are ahead of the gate (the behaviour change itself) |
-| `post match middleware does not run when no route matched` | the real pre/post discriminator - NOT the 401, which both groups survive by design |
-| `pre match middleware does not open a secured route` | the split did not weaken the gate |
-
-Each was proven to go red against the pre-change code.
-
-**Breaking, Python and Ruby only:** a global middleware now runs on requests it
-previously never saw. One written assuming an authenticated request must check
-for itself. Nothing changes for Node or PHP, which already behaved this way.
-
----
-
-## RESOLVED: the preflight Allow gap (2026-07-31)
-
-Recorded earlier as "a real preflight returns 204 without `Allow` in Ruby and
-Node". Measuring all four before fixing showed it was wider:
-
-- **Python had the same gap** - three frameworks, not two.
-- **PHP had a worse variant**: `CorsMiddleware::beforeCors` short-circuited on
-  ANY OPTIONS with no `Origin` check, so registering it dropped `Allow` from
-  the BARE OPTIONS too, swallowing the RFC 9110 path. Node had the identical
-  bug and had already been fixed the same way.
-- **PHP read the `Origin` from `$_SERVER`**, so the header was invisible to
-  anything not under a web SAPI (the in-process TestClient, the CLI, a
-  hand-built Request). Now reads the Request first, `$_SERVER` as fallback.
-- **`Router::methodsAllowedForPath` was private in PHP** and public in the
-  other three. Now public.
-
-Fixed in all four; see ADR-0013. It is CONFORMANCE, not a deviation: RFC 9110
-s9.3.7 says a successful OPTIONS response SHOULD carry `Allow`, and the
-frameworks' own OPTIONS handlers already emit it (Django's `View.options()`,
-Express's router). Only the add-on CORS libraries lose it, by short-circuiting
-ahead of the framework. Conformance suites with identical case names:
-
-```
-tina4-ruby/spec/options_allow_conformance_spec.rb
-tina4-python/tests/test_options_allow_conformance.py
-tina4-php/tests/OptionsAllowConformanceTest.php
-tina4-nodejs/test/optionsAllowConformance.test.ts
-```
-
-Each was proven red against the unfixed code before being accepted. The PHP
-proof initially reported a false OK because a shell-escaping error meant the
-revert never applied - the second attempt asserts the target text is present
-before removing it, so a no-op edit fails loudly instead of passing.
-
-### Still open
-
-`CorsMiddleware::isPreflight(string $method)` (PHP) returns true for any
-OPTIONS regardless of `Origin`, so the name overstates the check. The
-short-circuit no longer uses it and eight tests pin the current meaning, so it
-was left alone. Rename to `isOptionsMethod` when the tests are next touched.
-
----
-
-## Step 5 measurements: Ruby extraction (2026-07-31)
-
-Steps 2 and 3 done for Ruby. `tina4 metrics`, the same tool the CI gate uses.
-
-| | before | after |
-| --- | --- | --- |
-| `RackApp#call` | **CC 53** | off the offender list |
-| `RackApp#handle_route` | **CC 24** | off the offender list |
-| `rack_app.rb` avg CC | 6.03 | **3.88** |
-| `rack_app.rb` MI | 4.2 | **7.8** |
-| `rack_app.rb` LOC | 948 | **765** |
-| `dispatch_pipeline.rb` (new) | - | MI **19.2**, avg CC 4.04, **zero** complexity offenders |
-
-Behaviour-preserving: 4611 examples, 0 failures (4604 before, +7 contract
-specs). The 13-case characterisation suite stayed green throughout.
-
-**MI did not reach the floor of 40 and that is honest.** Extracting `#call`
-ALONE made it slightly WORSE (4.2 -> 3.7): MI is penalised by file length and
-function count, and naming stages adds both. Only splitting the pipeline into
-its own file moved it. rack_app.rb still holds static serving, the swagger UI,
-WebSocket upgrades and error pages - four subsystems that have nothing to do
-with dispatch - so it stays a 765-line file with `enforce_route_auth` (CC 16)
-and `_extract_form_token` (CC 11) over the ceiling. Those are auth concerns,
-not pipeline stages, and are the next target.
-
-### The stage lists (Ruby)
-
-```
-REQUEST_STAGES   reset_request_caches, cors_preflight, websocket_upgrade,
-                 dev_routes, feedback_routes, global_middleware_pre,
-                 match_route, method_not_allowed, not_found
-RESPONSE_STAGES  head_strip, dev_inspector_capture, request_log,
-                 dev_toolbar_inject, feedback_inject, session_save
-ROUTE_STAGES     prepare_route_request, global_middleware_post,
-                 route_auth_handler, route_auth_gate, route_middleware
-                 (then invoke_route_handler -> finalise_route_response)
-```
-
-### The gate (spec/dispatch_pipeline_spec.rb)
-
-The lists are data and asserted in order; every listed stage exists and is
-private; arity proves each is callable with a context alone; no stage calls
-another stage (checked against the source); complexity is read from `tina4
-metrics` rather than a literal. All three gates proven able to fail.
-
-One trap worth recording: the metrics helper must run OUTSIDE bundler. Under
-`bundle exec`, bundler intercepts the `tina4` name and dies resolving it as a
-`tina4ruby` binstub. With stderr discarded that looked like "not installed", so
-both complexity gates silently went PENDING and asserted nothing.
-
-### Found here, FIXED separately (2026-07-31)
-
-A HEAD request for a static file returned a body, violating RFC 9110 s9.3.2.
-The swagger and static branches `return` straight out of `#call` and skip every
-response stage, including `head_strip`. Preserved exactly during the extraction
-(`ctx.bypass_response_stages`) and to be fixed with its own test pair. Node
-already asserts the correct behaviour on every path in its characterisation
-suite, so this is a Ruby-only gap.
-
-## Next: Node
-
-`packages/core/src/server.ts` measured 2026-07-31, before extraction:
-
-| function | CC |
-| --- | --- |
-| `dispatch` | **65** |
-| `startServer` | **45** |
-| file | MI **0.5**, 1208 LOC, 67 functions |
-
-Worse than Ruby's starting point on every axis. Characterisation is already
-green (`test/dispatchCharacterisation.test.ts`, 10 cases), so step 1 holds.
-
-## Step 5 measurements: Node extraction (2026-07-31)
-
-Steps 2 and 3 done for Node, incrementally - five batches, one commit each, so
-a bisect lands on one batch.
-
-| | before | after |
-| --- | --- | --- |
-| `dispatch` | **CC 65**, 485 lines | **off the offender list**, 191 lines |
-| `runMatchedRoute` | - | under 10 (was 15 on first extraction, split again) |
-| `server.ts` avg CC | 4.54 | **3.77** |
-| `dispatchPipeline.ts` (new) | - | MI **34.8**, avg CC 3.88, no complexity offenders |
-
-**Every dispatch-path function is now under CC 10.** 6609 passed, 0 failed
-across 214 files.
-
-The batches: prologue (resetRequestCaches / headStripIntercept /
-sessionAutoStart) -> not-found fallback chain (FALLBACK_STAGES) -> error
-handler -> response-end wrappers -> matched-route pipeline.
-
-`runGlobalMiddlewarePass` is a DRY win rather than a move: the pre-match and
-post-match passes had byte-identical bodies, including the AFTER-ON-4xx rule.
-
-### What did NOT move, and is not pipeline debt
-
-`startServer` measures **CC 45 independently of dispatch** - it did not shift as
-dispatch went 65 -> under 10, so that is its own bootstrap complexity, not
-inherited from the nested function. Its `server.listen` banner callback is 13.
-Recorded so neither is mistaken for dispatch work. `server.ts` MI stays ~0.8
-because the file is still 1190 lines holding bootstrap, static, swagger and
-template concerns.
-
-### Two behaviour details worth recording
-
-1. The unified end-wrapper first NARROWED a behaviour: the original dropped
-   `content-length` for ANY `text/html` response, not only one carrying a body.
-   Caught on review of my own diff and restored - a refactor does not get to
-   change what it did not set out to change.
-2. `matchedPattern` became a HOLDER (`{ value }`) rather than a captured
-   `let`: the end-wrapper reads it at `end()` time, long after route matching
-   assigns it, so a plain string copy would always have read `""`.
-
-### The gate (test/dispatchPipeline.test.ts)
-
-Same shape as Ruby's. One trap, and it is the Ruby trap in a different costume:
-the metrics child must not see `node_modules/.bin` on its PATH. tina4-nodejs
-ships its own `tina4` bin alias, and npx/tsx prepend that directory, so plain
-`tina4 metrics` ran the FRAMEWORK CLI - no `metrics` command, **exit 0, no
-output**. The gate then asserted against an empty result and reported nothing
-wrong. In Ruby the same name was owned by a bundler binstub. Both were found
-only because the helper raises on non-JSON instead of skipping.
-
----
-
-## CORRECTION (2026-07-31): PHP does have a static stage
-
-The enumeration table recorded **"php: none - SAPI serves it"** for
-`static_asset`. That is WRONG, and finding #1 above ("`static_asset` has no
-agreed position ... PHP has no static stage at all, a runtime gift, category
-1") was built on it.
-
-`Router::dispatchInner` calls `StaticFiles::tryServe($request->path,
-self::$basePath, ...)` in the not-found fallback - after matching, which is
-exactly the ADR-0010 position Ruby and Node moved TO. The SAPI does serve a
-real file first in a production nginx/`php -S` deployment, but the dispatcher
-has its own lookup, and that is what a Tina4 test, the built-in server and any
-front-controller deployment hit.
-
-**So `static_asset` is not one-of-four; it is agreed by three of four**
-(PHP, Python and now Ruby and Node all resolve it after matching), and the
-finding's "matches exactly ONE framework" claim is retired.
-
-Measured, not read: `GET /probe.css` with `Router::$basePath` pointed at a
-fixture returns **200** with an `ETag` and `Last-Modified`, and a follow-up
-carrying either validator returns **304**.
-
-### How the error survived
-
-The first PHP characterisation case asserted a **404** for a static path and
-PASSED - because it wrote the fixture into a temp directory while leaving
-`Router::$basePath` at its default `'.'`. The file was never found, so the 404
-was a MISS, not a policy. A test that passes for the wrong reason is worse than
-no test: it converted an unverified table entry into an apparently-verified one.
-Corrected to point the base path at the fixture and assert 200 -> 304.
-
-### Static + conditional requests across the four - ALL CORRECT
-
-| framework | serves static | honours a conditional request |
-| --- | --- | --- |
-| Ruby | yes, after match | **304** |
-| PHP | yes, after match | **304** |
-| Python | yes, in the fallback | **304** |
-| Node | yes, after match | **304** |
-
-**RETRACTION.** This table first recorded Python as returning 200 and
-re-sending the whole body, called it the outlier, and scheduled a step-6 fix.
-That was WRONG and there is nothing to fix.
-
-Python answers 304 on both `If-None-Match` and `If-Modified-Since`, and emits
-an `ETag`. The measurement was taken at the wrong LAYER: `handle()` returns a
-Response, but the ETag is computed by `build_headers` and the conditional
-decision is made in `app()` on the way out. A test that stops at `handle()`
-cannot observe a 304 at all, because that layer never makes one.
-
-### Two false findings, one root cause
-
-Both errors in this feature came from measuring a layer that does not
-implement the behaviour being measured:
-
-| claim | why it was wrong |
-| --- | --- |
-| "PHP has no static stage" | the fixture wrote to a temp dir while `Router::$basePath` stayed `'.'`, so the 404 was a MISS, not a policy |
-| "Python ignores conditional requests" | measured at `handle()`, below the layer that builds the ETag and answers 304 |
-
-Both PASSED as tests while asserting something false. The lesson for the
-remaining audit rows: before recording a framework as lacking a behaviour,
-find the code that WOULD implement it and confirm the probe actually reaches
-that code. A green test proves the assertion held, not that the assertion was
-meaningful.
-
----
-
-## DECIDED: the AFTER pass covers every global middleware (2026-07-31)
-
-**Status:** DECIDED and applied in all four.
-
-Surfaced while finishing the PHP extraction, by a regression that made the
-question visible (see below).
-
-| framework | the after pass runs for |
-| --- | --- |
-| Ruby | the WHOLE global set |
-| PHP | the WHOLE global set |
-| Python | the POST-match group only |
-| Node | the POST-match group only |
-
-In Node and Python a PRE-match middleware's `after_*` hook runs **only when the
-pre-match pass short-circuits**. On the happy path it never runs at all, so a
-global access log or header-stamper declared `preMatch` sees the request and
-never sees the response.
-
-### What the mainstream does
-
-Per ADR-0012's order - standard first, then the frameworks. No RFC governs a
-framework's own middleware lifecycle, so the frameworks decide:
-
-- **Django**: `MIDDLEWARE` is ONE ordered list, and the response phase runs
-  back through all of it in reverse.
-- **Laravel**: global, group and route middleware all get their response /
-  terminate phase.
-- **Rails**: `after_action` runs for every filter that was declared.
-- **ASP.NET**: the pipeline unwinds through every component that was entered.
-
-Unanimous: **the response phase covers everything that ran in the request
-phase.** Splitting the BEFORE pass by dependency (ADR-0012) says nothing about
-the after pass - an after hook adds headers or logging and needs no route
-metadata either way. So Ruby and PHP look right and Python and Node are the
-drift.
-
-Not applied, because it changes behaviour in two frameworks.
-
-### How it surfaced: a regression, and why it hid
-
-The pre/post split (`tina4-php 538cf99f`, mine) replaced the block that assigned
-`$globalMiddleware` but left the READ at the end of `dispatchInner`. Nothing
-set the variable, and **PHP treats an undefined variable in `empty()` as
-empty**, so `!empty($globalMiddleware)` was permanently false: no global
-`after_*` hook ran at all, for every request, silently.
-
-It surfaced only because the extracted `finaliseResponse()` declares `array
-$globalMiddleware`, turning the silent null into a hard TypeError. **An untyped
-extraction would have carried the bug forward invisibly.**
-
-Nothing caught it because no test asserted that a global after hook runs -
-every middleware test covered the BEFORE pass. `tests/GlobalAfterMiddlewareTest.php`
-is that missing test, proven red against the regression.
-
-**Two lessons worth keeping:**
-
-1. A type declaration on an extracted parameter is a bug detector. Extracting
-   with types turns "silently empty" into "loudly wrong".
-2. When a contract has two halves (before/after, open/close, start/stop),
-   check that BOTH halves are tested. The before pass had extensive coverage;
-   the after pass had none, and that is exactly where the bug lived.
-
-### Outcome (2026-07-31)
-
-Applied. Node and Python now run the after pass over EVERY global middleware -
-both phases - matching Ruby and PHP and the mainstream.
-
-Measured before and after, 5 successful requests, a `preMatch` middleware that
-acquires in `before` and releases in `after`:
-
-| | before | after |
-| --- | --- | --- |
-| pre-match after-hook runs | **0** | 5 |
-| post-match after-hook runs | 5 | 5 |
-| acquire/release balance | **5 leaked** | 0 |
-
-The leak is the reason this was not cosmetic: one slot per request, unbounded,
-with nothing erroring.
-
-Locked in all four by `global_after_middleware` (4 cases, same names),
-including one that asserts the acquire/release balance directly rather than
-just counting hook invocations. Proven red against the old behaviour in both
-frameworks that changed.
-
-No double-run is possible: when the pre-match pass short-circuits, dispatch
-returns before the main after pass is reached - verified in both.
-
----
-
-## RESOLVED: HEAD on a static asset shipped the body (2026-07-31)
-
-Found during the Ruby extraction and deliberately PRESERVED there
-(`ctx.bypass_response_stages`) so the refactor stayed behaviour-preserving and
-the fix could be its own change with its own tests. This is that change.
-
-| framework | `HEAD /asset.css` body |
-| --- | --- |
-| Ruby | **15 bytes** - the whole file |
-| PHP | 0 |
-| Python | 0 |
-| Node | 0 |
-
-A 3-1 outlier and a spec violation, not a missing optimisation. Ruby stripped
-the body for a routed response, a 404 and a 405, but its static and swagger
-branches `return` early out of `#call` and skipped the strip entirely.
-
-**Why it matters beyond conformance:** HEAD is what link checkers, monitoring
-probes and cache validators use precisely to AVOID transferring the body. A
-HEAD that returns the body makes every one of those checks cost a full
-download, silently - and the more aggressively something probes, the more it
-costs.
-
-### The fix
-
-`head_strip` moved from `RESPONSE_STAGES` to a new `ALWAYS_STAGES` group that
-runs whatever produced the response, including the early-return branches. The
-contract spec pins it in `ALWAYS_STAGES` specifically, so moving it back fails
-loudly instead of silently reintroducing the bug.
-
-Locked in all four by `head_no_body_conformance` (5 cases, same names): static
-asset, routed response, 404, the Content-Length the equivalent GET would have
-sent, and a NEGATIVE case proving GET still returns the body. Proven red
-against the old ordering in Ruby.
-
-The Content-Length case earns its place: s9.3.2's SHOULD is that a HEAD carries
-the same headers as the equivalent GET. Stripping the body while dropping the
-length would satisfy the MUST and still leave the probe useless, which is
-exactly the kind of half-fix a test suite should refuse.
-
----
-
-## Step 4: the four stage lists compared (2026-07-31)
-
-Measured from the source, not read off the plan.
-
-| framework | dispatch stages | expressed AS DATA | lists | coverage |
-| --- | --- | --- | --- | --- |
-| Ruby | 20 | 20 | 4 | **100%** |
-| Python | 12 | 8 | 1 | 67% |
-| Node | 15 | 8 | 2 | 53% |
-| PHP | 16 | **0** | **0** | **0%** |
-
-### FINDING 1: "the list is data" is only true in Ruby
-
-The whole point of the extraction was that the pipeline becomes readable and
-comparable WITHOUT reading an implementation. Only Ruby delivers that. PHP has
-16 well-named, individually-tested dispatch methods and no list at all - the
-order lives in the reading order of `dispatchInner`, which is exactly what the
-extraction set out to replace.
-
-That is a parity gap in the DELIVERABLE, not in behaviour, and it is why PHP
-and Python still have no contract gate: there is no list for a gate to assert.
-
-**Not fixed here.** Adding a stage list to PHP and completing Python's and
-Node's is follow-on work, and it is mechanical rather than behavioural.
-
-### FINDING 2: a shared list of stage NAMES is impossible, and that is fine
-
-The plan wanted a fixture of stage names following the Frond expression corpus.
-Enumerating the four proved that cannot work - it is the same conclusion the
-"canonical ten describe NONE of them" finding reached, now confirmed after the
-extraction rather than before it:
-
-- **Node** wraps `write`/`end` early because it streams; Ruby, Python and PHP
-  strip late at their single return (ADR-0011).
-- **Only Python** has rate limiting as a dispatch stage.
-- **Only Node** has a landing-page stage.
-- **Only Ruby** has WebSocket upgrade in dispatch; PHP carries it on routes,
-  Node and Python handle it outside dispatch entirely.
-- **Trailing-slash redirect** is a stage in Python and PHP, absent in Ruby and
-  Node.
-
-A name fixture would freeze one framework's shape and call the other three
-broken.
-
-### What IS shared: `plan/v3/fixtures/dispatch_contract.json`
-
-Seven ORDERING and OUTCOME invariants - the things every framework must satisfy
-regardless of how it is built. Each names its ADR, the suite that proves it in
-each of the four, and the case names, which are identical across the four so
-the suites compare line by line.
-
-`scripts/audit-dispatch-contract.py` verifies the fixture describes reality:
-every named suite exists, and every named case is present in it. **96 (case x
-framework) pairs checked.**
-
-It found two real gaps on its first run - which is the point of writing it:
-
-1. PHP's `GlobalAfterMiddlewareTest` had no `an acquire release pair stays
-   balanced` case, so PHP alone was not asserting the thing that made the
-   after-pass bug serious rather than cosmetic.
-2. Node's characterisation suite had no `dispatch noauth write route is not
-   blocked by csrf` case - the one that catches the metadata-reaches-auth
-   bypass PHP once shipped as dead code.
-
-Both added. The checker is proven able to fail (a case no framework has reports
-4 problems and exits 1), so it can gate CI.
-
-Writing case 2 also caught an error of MINE before it became a bug report: the
-fixture route used `export const meta = { noAuth: true }`, but Node reads a
-TOP-LEVEL `export const noAuth`. The test failed with a 401 and looked exactly
-like a framework bug. Checking how the framework actually reads the flag, rather
-than filing it, was the difference.
+| server startup | register system tier, programmatic routes, discovered routes, then validate shadows |
+| middleware/auth | receive the same matched record and native params |
+| Swagger | consume canonical records and complete metadata |
+| CORS | use the router's one Allow calculation |
+| health | reserved system route cannot be shadowed |
+| static/templates | run only after no route/method response claims the path |
+| WebSockets | reuse pattern validation, decoding and source ownership |
+| dev reload | atomic source-owned replace/remove |
+| `tina4 routes` | show actual resolution order, origin, source, auth and shadows |
+| MCP route list | same records and order as CLI |
+| doctor/status | report broken imports and shadow warnings |
+| tests | load fixture v2 and report fixture hash/results |
+| docs/scaffolders | emit only canonical portable pattern syntax |
+
+## Breaking changes and migration
+
+Pre-3.14 corrections are allowed. Release notes must call out:
+
+- malformed numeric paths that previously reached a handler now do not match;
+- relative, empty-name and duplicate-name declarations now fail at startup;
+- regex metacharacters in literal paths stop acting as wildcards;
+- Node duplicate replacement no longer changes precedence;
+- Node trailing slash and encoded parameter behavior changes;
+- Python/Ruby ANY auth/method behavior aligns with the canonical seven-method
+  rule;
+- route inspection output and ordering become authoritative.
+
+Migration messages must include the invalid pattern/source and the canonical
+replacement. No compatibility mode is required before 3.14.0.
+
+## Implementation backlog
+
+Audit-first rule: do not execute this backlog until the full feature audit is
+approved for implementation.
+
+1. Publish ADRs for the canonical grammar/decoding, route manifest and fixture
+   runner protocol.
+2. Materialize fixture v2 with exact native/wire expectations and mutation
+   witnesses.
+3. Implement a segment parser and declaration validator in all four runtimes.
+4. Replace numeric regex/cast fallback behavior with strict match-before-cast.
+5. Implement raw-path decode-once validation and encoded-separator rules at the
+   HTTP adapter boundary.
+6. Fix PHP per-path HEAD fallback and Node trailing-slash response behavior.
+7. Make duplicate replacement preserve its slot everywhere.
+8. Implement deterministic discovery and atomic source ownership for change,
+   rename, delete and failure.
+9. Normalize ANY expansion and method-derived auth.
+10. Build the canonical effective route manifest and point CLI, MCP, Swagger,
+    doctor and startup warnings at it.
+11. Wire four executable fixture runners and make the central checker execute
+    them, verify the fixture hash and aggregate exact failures.
+12. Run local suites, serialized lab suites and real HTTP wire probes for every
+    encoded/redirect/HEAD case.
+13. Update public Tina4 documentation, scaffolders, migration notes and the
+    release checklist.
+
+## Porting capsule
+
+A clean-room language port implements Feature 6 in this order:
+
+1. define the canonical route record and stable registry;
+2. parse and validate portable patterns without treating literals as regex;
+3. register verbs/groups/ANY and replace duplicate identities in place;
+4. deterministically discover sources and own registrations by source;
+5. normalize and decode raw request paths exactly once;
+6. match system tier then application tier, first registration wins;
+7. produce native typed params or no match—never a fallback type;
+8. compute exact method, HEAD fallback, OPTIONS, Allow, 404 and 405 outcomes;
+9. execute the behavioral dispatch order and unconditional final policies;
+10. expose the same live manifest to every inspection/generation consumer;
+11. load fixture v2, execute every case and report its fixture hash;
+12. prove mutation witnesses fail before claiming parity.
+
+The port is incomplete if it only copies method names or stage names. Completion
+means the same declaration, request target and registry order produce the same
+native parameters, selected handler, protocol status/headers/body rule,
+diagnostics and inspection order.
+
+## Audit closure checklist
+
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and producer/consumer edges complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire behavior and decoding contract complete.
+- [x] Existing-language contradictions recorded with executable probes.
+- [x] Owner ambiguities resolved from accepted policy; ADR escape hatch recorded.
+- [x] Proposed shared cases and mutation witnesses complete.
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule is clean-room sufficient.
+
+Feature 6 is **audit-complete and decision-ready**, not implementation-complete
+and not 3.14-stable. Approval records the contract; a later implementation phase
+must make the executable fixture and all four runtimes conform.
