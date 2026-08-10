@@ -354,11 +354,10 @@ class Model:
     # Scopes
     scope(name, filter_fn) → registers reusable query filter
 
-    # Soft delete (when enabled)
-    soft_delete() → sets deleted_at
-    restore() → clears deleted_at
-    force_delete() → permanent delete
-    with_trashed() → includes soft-deleted in queries
+    # Soft delete (when enabled); delete() above sets is_deleted = 1
+    restore() -> clears the flag (set is_deleted = 0)
+    force_delete() -> permanent delete (bypasses the flag)
+    with_trashed() -> includes soft-deleted in queries
 ```
 
 ## PaginatedResult Format (standardized JSON)

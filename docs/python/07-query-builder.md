@@ -87,7 +87,7 @@ The first condition in the chain never gets a connector prefix. Every subsequent
 Some conditions do not need parameters. Pass the condition string alone.
 
 ```python
-qb.where("deleted_at IS NULL")
+qb.where("is_deleted = 0")
 ```
 
 ---

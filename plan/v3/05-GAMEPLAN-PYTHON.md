@@ -30,7 +30,7 @@
 
 ### Phase 2: ORM & Data Layer — COMPLETE (14/14)
 12. [x] **ORM rewrite** — SQL-first, Active Record, field types, `.save()/.load()/.delete()/.select()/.create_table()`
-13. [x] **Soft delete** — `deleted_at` field, auto-filtering, `restore()`, `force_delete()`, `with_trashed()`
+13. [x] **Soft delete** - `is_deleted` flag (INTEGER 0/1), auto-filtering, `delete()`, `restore()`, `force_delete()`, `with_trashed()`
 14. [x] **Relationships** — `has_one()`, `has_many()`, `belongs_to()` with eager loading
 15. [x] **Scopes** — reusable query filters via `scope()` classmethod
 16. [x] **Field mapping** — IntField, StrField, FloatField, BoolField, DateTimeField, TextField, BlobField, ForeignKeyField

@@ -28,7 +28,7 @@
 
 ### Phase 2: ORM & Data Layer
 13. [ ] **ORM refactor** — SQL-first, standardize API surface
-14. [ ] **Soft delete** — `deleted_at` field, auto-filtering, `restore`, `force_delete`, `with_trashed`
+14. [ ] **Soft delete** - `is_deleted` flag (INTEGER 0/1), auto-filtering, `delete`, `restore`, `force_delete`, `with_trashed`
 15. [ ] **Relationships** — `has_one`, `has_many` with eager loading
 16. [ ] **Scopes** — reusable query filters on models
 17. [ ] **Field mapping** — NEW, map Ruby property names to column names

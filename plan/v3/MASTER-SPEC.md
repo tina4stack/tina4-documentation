@@ -402,7 +402,7 @@ class Model (extends ORM):
     # Class-level configuration
     table_name: string                    # Database table name
     primary_key: string = "id"            # Primary key column
-    soft_delete: boolean = false          # Enable soft delete (deleted_at column)
+    soft_delete: boolean = false          # Enable soft delete (is_deleted column, INTEGER 0/1)
     field_mapping: dict = {}              # {property_name: column_name}
     table_filter: string | null = null    # Default WHERE clause for all queries
 
@@ -434,10 +434,9 @@ class Model (extends ORM):
     has_many(related_model, foreign_key, options?) -> [related]
     belongs_to(related_model, foreign_key) -> related | null
 
-    # Soft delete (when soft_delete=true)
-    soft_delete() -> self                 # Set deleted_at timestamp
-    restore() -> self                     # Clear deleted_at
-    force_delete() -> boolean             # Permanent delete
+    # Soft delete (when soft_delete=true); delete() above sets is_deleted = 1
+    restore() -> boolean                  # Clear the flag: set is_deleted = 0
+    force_delete() -> boolean             # Permanent delete (bypasses the flag)
     with_trashed() -> query modifier      # Include soft-deleted records
 
     # Scopes
@@ -2101,7 +2100,7 @@ Attach test assertions directly to functions via docblock comments. Same syntax 
 
 ### Other v3.2 Items
 - Validation rules on routes (`@validate({"email": "required|email"})`)
-- Soft delete on ORM models (`deleted_at` column)
+- Soft delete on ORM models (`is_deleted` column, INTEGER 0/1)
 - Security headers middleware (Helmet-style)
 - File storage abstraction (`TINA4_STORAGE_BACKEND=local|s3`)
 - tina4press — Markdown docs site generator
