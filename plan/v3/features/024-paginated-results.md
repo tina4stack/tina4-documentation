@@ -2,31 +2,59 @@
 
 ## Identity and status
 
-- Matrix identity: 24 — Paginated database and ORM results
-- Audit state: auditing
-- Audit note: Structure migrated; closure checklist records remaining work
-- Dependencies: not yet extracted from the retained audit evidence
-- Dependants: not yet extracted from the retained audit evidence
-- Existing ADRs: see retained evidence and the central decision index
-- Shared fixtures: not yet confirmed
+- Matrix identity: 24 - Paginated database and ORM results
+- Audit state: decision-ready
+- Audit note: measured 2026-07-30 and RE-MEASURED 2026-08-05 against a real 250-row table.
+  The RE-OPENED section below is AUTHORITATIVE and supersedes the earlier SYNTHESISE verdict
+  and its argument-form porting capsule. Prose sections completed 2026-08-10. No framework
+  code changed.
+- Dependencies: `DatabaseResult` in each framework, Feature 3 adapter (the COUNT probe),
+  Feature 6 query builder (the limit/offset that define the page)
+- Dependants: every REST/CRUD/ORM endpoint that returns a paginated envelope; tina4-js
+  frontends that read the envelope; the REST/CRUD/ORM doc chapters in all four sections
+- Existing ADRs: this feature FORCES the systemic row-cap decision (a paginate envelope is
+  only honest if `total` is a true total) - one dedicated ADR spanning Features 5, 21, 22, 23,
+  24; ADR-0043 already fixed the AutoCrud REST list envelope to a canonical key set
+- Shared fixtures: `pagination_contract.json` is required; every case uses more rows than one
+  page so the arithmetic and the honest-total are observable
 
 ## Why this feature exists
 
-The retained audit does not yet state the developer problem in one language-neutral sentence.
+A developer fetches one page of a large result and gets back an envelope that says which page
+it is, how many rows match in total, and how many pages there are - the same envelope, telling
+the truth, in all four languages. Today the envelope diverges four ways and, worse, lies:
+against a 250-row table, two of the four report `total = 20` because they count the returned
+page instead of the whole result.
 
 ## Boundary
 
-The retained audit does not yet separate what this feature owns, delegates, and excludes.
+This feature owns the paginated envelope: `toPaginate()` on a `DatabaseResult`, the derived
+`page`/`per_page`/`total_pages`, and the true `total`. It DELEGATES the actual read (the
+`limit`/`offset` that define the page) to Feature 6 and the COUNT probe for `total` to Feature
+3. It does NOT re-slice rows: the envelope reports the query that was run, it does not run a
+new one. The row-cap that makes `total` honest is the systemic decision it shares with
+Features 5, 21, 22 and 23.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
+| Evidence (250-row table, limit=20 offset=40, i.e. page 3 of 13) | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
-| Public surface | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Startup/CLI integration | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Stored/wire format | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing focused tests | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing lab baseline | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| `page` reported | 1 (wrong) | 3 (correct) | 3 | 1 (wrong) |
+| `total` reported | 250 (correct) | 250 (correct) | 20 (wrong) | 20 (wrong) |
+| `total_pages` | 13 | 13 | 1 (wrong) | 2 (wrong) |
+| records returned | 20 | 20 | 0 (wrong) | 10 (wrong) |
+| `.count` source | COUNT probe (true) | COUNT probe (true) | rows returned | rows returned |
+| `page` derived from offset | no (defaults 1) | YES (`floor(offset/limit)+1`) | yes | no (defaults 1) |
+| key count | 10 | 10 | 12 (+has_next/prev) | 13 (+perPage) |
+| Signature | `to_paginate(page, per_page)` | `toPaginate()` (no args) | `to_paginate(page:, per_page:)` | `toPaginate(page, perPage)` |
+
+Only PHP is correct on all five values, because it derives every field from the result it
+holds rather than from caller-supplied arguments. Ruby and Node populate `.count` (and thus
+`total`) with the number of ROWS RETURNED, so the envelope launders a truncation into a fact.
+Ruby and Node also re-slice `records` by the ABSOLUTE offset against an array that is already
+just that page, so Ruby returns nothing (offset 40 into a 20-element array) and Node returns 10
+of 20. Three duplicate key pairs (`records`/`data`, `total`/`count`, `total_pages`/`totalPages`)
+are universal; Node alone adds a fourth page-size spelling (`perPage`).
 
 ### Retained introductory record
 
@@ -51,31 +79,84 @@ The matrix calls this row "standardized format". It is not standardized.
 
 ## Public surface contract
 
-The audit has not yet extracted a language-neutral public surface and its idiomatic spellings.
+`toPaginate()` takes NO arguments in all four (PHP's shape, promoted). It reports the query
+that was already run: to read page 3, the caller FETCHES page 3 (`limit=20, offset=40`) and
+calls `toPaginate()` on that `DatabaseResult`. An argument form is rejected: a `DatabaseResult`
+holds no connection, so `to_paginate(page: 6)` could only re-slice rows already in memory and
+would then report `total_pages = 13` for pages it can never reach. Passing an argument RAISES
+(PHP silently swallows extra arguments today, which is exactly why the divergence survived a
+release); this follows the audit's removed-parameter rule -- a hard error, never a silent
+reinterpretation. The method name follows each language's convention (`to_paginate` /
+`toPaginate`); the payload does not.
 
 ## Inputs and outputs
 
-The audit has not yet fixed all native types, defaults, nullability, ordering, and serialized shapes.
+- Input: a `DatabaseResult` carrying the rows of one page plus the `limit`/`offset` that
+  produced them, and a true `total` from a COUNT probe over the filter. No caller arguments.
+- Output: the envelope below - `records`, `total`, `page`, `per_page`, `total_pages`,
+  `limit`, `offset` - as snake_case JSON keys, identical in all four.
+- `records` are the rows the query returned, VERBATIM, never re-sliced.
+- `total` is the full matching count, never the page length and never a capped read.
+- `page` is 1-based and derived (`floor(offset / limit) + 1`); `total_pages` is
+  `ceil(total / per_page)`; `per_page` is the query's `limit`.
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection, retry, rollback, and deletion path.
+1. The caller runs a query with a `limit` and `offset` for the desired page (Feature 6).
+2. The `DatabaseResult` obtains the true `total` from a `COUNT(*)` over the same filter
+   (Feature 3), independent of the returned page length.
+3. `toPaginate()` derives `per_page` from the query's `limit`, `page` from
+   `floor(offset / limit) + 1`, and `total_pages` from `ceil(total / per_page)`.
+4. It returns the envelope with `records` verbatim; it never issues a second read and never
+   re-slices the array it already holds.
 
 ## Configuration and precedence
 
-The audit has not yet fixed argument, environment, project-file, default, and cache timing precedence.
+- There is no argument and no environment variable: the envelope is a pure function of the
+  `DatabaseResult`. This is the point - a pure function of the result cannot lie about it.
+- The page size is whatever `limit` the caller applied; there is no separate default page
+  size in the method, because the method does not run the query.
+- `total`'s honesty depends on the systemic row-cap decision: the read feeding the result
+  must be bounded ONLY by the page's `limit`, never by a hidden default cap.
 
 ## Failures, side effects and security
 
-The audit has not yet closed every failure boundary, side effect, cleanup rule, and security concern.
+- `total` MUST come from a `COUNT(*)` over the filter, never from the length of the returned
+  page and never from a capped read. Otherwise the envelope launders a truncation into a fact:
+  a 250-row table read under a silent 100-cap reports `total = 100`, `total_pages = 5`, both
+  wrong in a way that looks authoritative.
+- `records` are returned verbatim; re-slicing by absolute offset (Ruby, Node) drops rows or
+  returns none for a valid page.
+- Passing an argument RAISES rather than being silently ignored.
+- `toPaginate()` has no side effects: it reads the result and returns the envelope, touching
+  no database (the COUNT probe happened at fetch time, not here).
 
 ## Wire and persistence contract
 
-The audit has not yet fixed every wire format, stored shape, encoding, identifier, timestamp, and compatibility rule.
+The envelope is the wire contract, and a JSON key is data, not a language surface - it does not
+change spelling by host language. The canonical keys are snake_case in all four:
+
+```
+{
+  "records":     [ ... ],   the rows the query returned, verbatim
+  "total":       250,       the true matching total (COUNT probe), never rows returned
+  "page":        3,         1-based, floor(offset / limit) + 1
+  "per_page":    20,        the query's limit
+  "total_pages": 13,        ceil(total / per_page)
+  "limit":       20,        the SQL limit actually applied
+  "offset":      40         the SQL offset actually applied
+}
+```
+
+`data`, `count`, `totalPages`, `per_page`-vs-`perPage` and the other duplicate spellings are
+DELETED from the payload. Whether `has_next`/`has_prev` join the canonical set is the one open
+sub-decision below (they are pure derivations of `page` and `total_pages`).
 
 ## Providers and substitutability
 
-The audit has not yet proved provider substitution or recorded deliberate capability exceptions.
+The envelope is engine-agnostic: `toPaginate()` is arithmetic over a `DatabaseResult`, and the
+`total` COUNT probe is a standard `SELECT COUNT(*)` any provider answers. The same page fetch
+against any engine yields the same envelope.
 
 ## Contradictions and defects
 
@@ -127,6 +208,12 @@ this feature provides.
 
 ### Verdict: SYNTHESISE
 
+> SUPERSEDED by the RE-OPENED 2026-08-05 section at the end of this document. This verdict and
+> its argument-form contract were formed before the envelope was measured for whether it tells
+> the truth. The canonical contract is `toPaginate()` with NO arguments, PROMOTE PHP, `total`
+> from a real `COUNT(*)`. The analysis below is retained as the record of how the finding
+> evolved, not as the contract.
+
 Decided on **correctness of the wire contract**.
 
 Nobody wins. Python has the most complete data and the worst duplication. Node has
@@ -147,6 +234,30 @@ All category 4. Nothing about a JSON key name is runtime-forced.
   in the release note; it is the right trade for consistency but it is a visible one.
 
 ## Owner decisions
+
+Proposed for owner ratification (the RE-OPENED 2026-08-05 measurement is the authority; it
+supersedes the earlier SYNTHESISE verdict retained below):
+
+1. `toPaginate()` takes NO arguments in all four (PROMOTE PHP). The caller fetches the page it
+   wants and paginates that result. An argument RAISES, never silently swallowed.
+2. `total` is the true matching count from a `COUNT(*)` probe over the filter, in all four.
+   Ruby and Node currently report rows-returned; fixing this reaches into the adapters and is
+   BREAKING for anyone reading `.count` as a page-row count. This is the deep half and the
+   reason this is a separate implementation pass, not a patch to four methods.
+3. `page` is derived `floor(offset / limit) + 1`; `records` are verbatim, never re-sliced;
+   `per_page` is the query's `limit`; `total_pages` is `ceil(total / per_page)`.
+4. One canonical snake_case key set in the JSON payload: `records`, `total`, `page`,
+   `per_page`, `total_pages`, `limit`, `offset`. Drop `data`, `count`, `totalPages`, `perPage`
+   and every other duplicate spelling. This is BREAKING for any API consumer (including
+   tina4-js frontends); the `Breaking:` entry names every removed key and its replacement, and
+   the REST/CRUD/ORM doc chapters change in the SAME release.
+5. OPEN sub-decision: whether `has_next`/`has_prev` (present in Ruby and Node) join the
+   canonical set. They are pure derivations of `page` and `total_pages`. Recommendation: DROP
+   them for a minimal, honest envelope (a client derives them trivially); the owner may keep
+   them on the 2-of-4 precedent. Decide once so all four match.
+6. This feature FORCES the systemic row-cap decision: take it as unbounded-by-default with
+   pagination the only thing that limits rows, so `total` cannot be laundered. This is where
+   the cap decision stops being a preference and becomes a correctness requirement.
 
 ### Outstanding: CLOSED by execution (2026-07-30)
 
@@ -238,11 +349,27 @@ mechanism for the cap decision rather than a note in a plan.
 
 ## Integration map
 
-The audit has not yet mapped every export, startup path, request hook, CLI, scaffolder, status command, document, and generated consumer.
+- `DatabaseResult` in each framework hosts `toPaginate()`; Feature 3's adapter supplies the
+  COUNT probe for `total`; Feature 6 supplies the `limit`/`offset` that define the page.
+- Every REST/CRUD/ORM endpoint that returns a paginated list emits this envelope; tina4-js
+  frontends read it, so the key cull is a client-visible breaking change.
+- The systemic row-cap decision spans Features 5, 21, 22, 23 and 24; `total`'s honesty is the
+  enforcement point, so the shared fixture's honest-total case gates the whole cap decision.
+- The paginated shape appears in the REST and CRUD chapters of all four doc sections; every
+  example changes with the key cull (First Principle: docs ship in the same release).
 
 ## Breaking changes and migration
 
-The audit has not yet turned every parity break into an actionable pre-3.14 migration instruction.
+- The key cull removes `data`, `count`, `totalPages`, `perPage` (and any other duplicate) from
+  the payload. `Breaking:` entry naming each removed key and its canonical replacement
+  (`data` -> `records`, `count` -> `total`, `totalPages` -> `total_pages`, `perPage` ->
+  `per_page`). A tina4-js frontend reading the old key updates in the same release.
+- `.count` becoming the true total in Ruby and Node is breaking for any caller reading it as a
+  page-row count.
+- `toPaginate()` becoming argument-rejecting is breaking for a Python/Ruby/Node caller passing
+  `page`/`per_page`; the migration is to fetch the desired page and paginate that result.
+- Node's effective page size changes as a consequence (it no longer re-slices to 10); state it
+  in the release note.
 
 ## Implementation backlog
 
@@ -263,63 +390,70 @@ The audit has not yet turned every parity break into an actionable pre-3.14 migr
 
 ### Pattern
 
-**One paginated envelope, seven keys, no duplicates, one page size.**
+**One paginated envelope, seven snake_case keys, derived from the result - no arguments.**
+
+This capsule reflects the RE-OPENED 2026-08-05 contract; it supersedes the earlier
+argument-form sketch (a `DatabaseResult` holds no connection, so an argument form can only
+re-slice memory and misreport `total_pages`).
 
 ```
 {
-  "records":     [ ... ],   the rows, always this key
-  "total":       25,        total matching rows, ignoring pagination
-  "page":        1,         1-based
-  "per_page":    20,        rows per page
-  "total_pages": 2,         ceil(total / per_page)
+  "records":     [ ... ],   the rows the query returned, VERBATIM, never re-sliced
+  "total":       250,       true matching total from a COUNT(*) probe, NEVER rows returned
+  "page":        3,         1-based, floor(offset / limit) + 1
+  "per_page":    20,        the query's limit
+  "total_pages": 13,        ceil(total / per_page)
   "limit":       20,        the SQL limit actually applied
-  "offset":      0          the SQL offset actually applied
+  "offset":      40         the SQL offset actually applied
 }
 ```
 
-Decisions inside that envelope, each killing a divergence:
+Rules, each killing a divergence:
 
-1. **`records`, not `data`.** `records` is what `DatabaseResult` already exposes as a
-   property in all four, so the envelope matches the object. `data` is deleted.
-2. **`total`, not `count`.** `count` is ambiguous - it reads as "count in this page".
-   `total` cannot. `count` is deleted from the envelope; `DatabaseResult.count` stays
-   as a property because it means something different there.
-3. **snake_case keys in the JSON, in all four.** This is the wire format, not a
-   language surface: a JSON key is data, and data does not change spelling by host
-   language. `totalPages` and `perPage` are deleted. The **method** name still follows
-   each language's convention (`to_paginate` / `toPaginate`) - that is the surface
-   table's job; the **payload** does not.
-4. **One default page size: 20.** Python's, because it is the only one of the four
-   that is both specified and not 10 - and 10 is small enough that it doubles the
-   round trips for no benefit. PHP gains parameters, Ruby gains defaults, Node's 10
-   becomes 20.
-5. **`page` is 1-based everywhere**, and `limit`/`offset` report what was actually
-   applied so a caller can see the translation rather than infer it.
+1. **`toPaginate()` takes no arguments.** It reports the query that was run. To read page 3,
+   fetch page 3 (`limit=20, offset=40`) and paginate that result. Passing an argument RAISES.
+2. **`total` is a true `COUNT(*)` over the filter**, never the length of `records` and never a
+   capped read. This is the field Ruby and Node get wrong today, and it is the one that makes
+   the envelope honest.
+3. **`records`, not `data`; `total`, not `count`.** `records` matches the `DatabaseResult`
+   property; `count` is ambiguous ("count in this page"). `data` and the payload `count` are
+   deleted. `DatabaseResult.count` may stay as a property because it means something else
+   there.
+4. **snake_case keys in the JSON, in all four.** A JSON key is data; it does not change
+   spelling by host language. `totalPages`, `perPage` and every other duplicate are deleted.
+   The METHOD name still follows each language's convention (`to_paginate` / `toPaginate`).
+5. **`page` is derived from the offset** (`floor(offset / limit) + 1`), never defaulted to 1;
+   `records` are verbatim, never re-sliced by an absolute offset.
 
 Surface table:
 
 | concept | python | php | ruby | node |
 | --- | --- | --- | --- | --- |
-| paginate | `to_paginate(page=1, per_page=20)` | `toPaginate($page = 1, $perPage = 20)` | `to_paginate(page: 1, per_page: 20)` | `toPaginate(page = 1, perPage = 20)` |
+| paginate | `to_paginate()` | `toPaginate()` | `to_paginate()` | `toPaginate()` |
+| passing an argument | raises | raises | raises | raises |
 | envelope keys | identical snake_case in all four | | | |
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Existing-language contradictions recorded (measured page-3 divergence, all four).
+- [x] Owner ambiguities recorded (6 proposed; has_next/has_prev is the one open sub-decision).
+- [x] Proposed shared cases and mutation witnesses complete (each fails today somewhere).
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule is clean-room sufficient (no-argument form).
 
-### Parked
+### State
 
-Not implemented. Blocked on the Outstanding key-set enumeration and coupled to the
-row-cap decision. Order: 6, 4, 5, 3, 13, 14, 15, 16, 17, 18, then 2, 1, 0.
+AUDIT decision-ready on the RE-OPENED 2026-08-05 contract (the authority; the earlier
+SYNTHESISE verdict is superseded and retained only as record). The canonical envelope is
+`toPaginate()` with no arguments, PROMOTE PHP, `total` from a real `COUNT(*)`, seven snake_case
+keys. The IMPLEMENTATION is a SEPARATE pass, not a patch: making `.count` the true total in
+Ruby and Node reaches into the adapters and is breaking. It is coupled to the systemic row-cap
+decision (Features 5, 21, 22, 23, 24) and blocks on that one ADR. Decision-ready is not built.
 
 ---
 
