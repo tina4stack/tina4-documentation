@@ -2,31 +2,46 @@
 
 ## Identity and status
 
-- Matrix identity: 19 — Input and request validation
-- Audit state: auditing
-- Audit note: Structure migrated; closure checklist records remaining work
-- Dependencies: not yet extracted from the retained audit evidence
-- Dependants: not yet extracted from the retained audit evidence
-- Existing ADRs: see retained evidence and the central decision index
-- Shared fixtures: not yet confirmed
+- Matrix identity: 19 - Input and request validation
+- Audit state: decision-ready
+- Audit note: measured 2026-07-28, verdict REVISED by execution 2026-07-30; prose sections
+  completed from that evidence 2026-08-10. No framework code changed.
+- Dependencies: Feature 17 ORM base class (`validate()` lives on the model), Feature 18 ORM
+  fields (the constraint options are declared there)
+- Dependants: every route that builds a model from request input and returns a 400 with the
+  messages; AutoCrud; the four CLAUDE.md docs that show the collect-then-inspect pattern
+- Existing ADRs: the no-aliases rule (the `nullable`->`required` rename), the inverted-flag
+  lesson from Feature 2 (`production` vs `development`)
+- Shared fixtures: `validation_contract.json` is required; it is pure in-memory (no DB), the
+  cheapest suite in the audit, and its cross-framework message case is the point
 
 ## Why this feature exists
 
-The retained audit does not yet state the developer problem in one language-neutral sentence.
+A developer builds a model from request input, calls `validate()`, and returns a 400 with
+the collected messages when it is not empty. That one pattern must work identically in all
+four. Today PHP validates nothing, Python raises before `validate()` is reached, and Ruby
+checks only nullability, so the same route returns a 400, a 500, or silently accepts bad
+input depending on the language.
 
 ## Boundary
 
-The retained audit does not yet separate what this feature owns, delegates, and excludes.
+This feature owns `validate()`, the constraint vocabulary (`required`, `min_length`,
+`max_length`, `min`, `max`, `pattern`), and the message format. It DELEGATES field
+declaration to Feature 18 and the model itself to Feature 17. A TYPE error (assigning a dict
+to an integer field) is a programming error and stays a raise; a CONSTRAINT violation is user
+input and is always collected, never raised. The DDL sizing hint `length` is out of scope for
+validation; it sizes the column only.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
+| Evidence (verified by execution 2026-07-30) | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
-| Public surface | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Startup/CLI integration | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Stored/wire format | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing focused tests | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing lab baseline | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
+| `validate()` mechanism | SPLIT: length/type raise, rest collect | NONE - `return []` stub (ORM.php:1440) | nullability only | full, collect-only |
+| Constraint vocabulary | full (options exist) | full in docs, NONE in code | `nullable:` only | full |
+| Raises at assignment | YES (D1) | no | no | no |
+| Over-long value on a route | 500 (unhandled) | silently accepted | silently accepted | 400 with message |
+| Result shape | list of messages | always `[]` | list (nullability) | `string[]` "<field> <msg>" |
+| Verdict role | P1 (stop raising) | GAP (build it) | build vocabulary + rename | REFERENCE (promote) |
 
 ### Retained introductory record
 
@@ -39,31 +54,65 @@ P1 (python). See Outstanding below.
 
 ## Public surface contract
 
-The audit has not yet extracted a language-neutral public surface and its idiomatic spellings.
+`validate()` returns a list of message strings, empty when the model is valid, and never
+raises for a constraint violation. The constraint vocabulary is `required`, `min_length`,
+`max_length`, `min`, `max`, `pattern`, declared on the field (Feature 18) with identical
+option names in all four (Ruby's `nullable: false` is RENAMED to `required: true`, not
+aliased). The DDL sizing hint `length` is a separate option that never validates. Each
+message is formatted `"<field>: <what was wrong>"`.
 
 ## Inputs and outputs
 
-The audit has not yet fixed all native types, defaults, nullability, ordering, and serialized shapes.
+- Input: a model whose fields declare constraints, populated from request input.
+- Output: a list of strings, one per violated constraint, empty when valid. Never null,
+  never `false`, never a raised exception for a constraint.
+- A single bad value can produce one message; an empty model produces one `required` message
+  per missing field.
+- Message text is stable and identical across the four for the same bad model (the
+  cross-framework fixture pins the strings).
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection, retry, rollback, and deletion path.
+1. A route builds a model from request input; construction stores values and does NOT raise
+   for a constraint violation (an over-long value is stored, to be reported by `validate()`).
+2. Construction MAY raise only for a type error the value cannot survive (a dict assigned to
+   an integer field) -- a programming error, not user input.
+3. `validate()` walks the field constraints and collects every violation into the list.
+4. The caller returns a 400 with the list when it is non-empty, or proceeds when it is empty.
 
 ## Configuration and precedence
 
-The audit has not yet fixed argument, environment, project-file, default, and cache timing precedence.
+- The constraint options are declared per field; there is no environment variable.
+- `length` (DDL size) and `max_length` (validation) are distinct options; a column can be
+  `VARCHAR(255)` while the value is capped at 50.
+- `nullable` is removed in favour of `required` (inverted polarity); the old option name is
+  REJECTED with a clear error, never silently reinterpreted.
 
 ## Failures, side effects and security
 
-The audit has not yet closed every failure boundary, side effect, cleanup rule, and security concern.
+- SECURITY: `validate()` that returns `[]` unconditionally (PHP today) means every model
+  following the documented `errors = validate()` pattern silently ACCEPTS invalid input.
+  This is a shipped-but-absent feature and the sharpest gap in the audit; validation must
+  actually check.
+- A constraint violation is collectable user input and must NEVER become a 500; Python's
+  raise-at-assignment (D1) turns the documented 400 into a 500 and is a P1.
+- A type error (dict into an integer field) still raises, because it is a programming error;
+  it is not returned as a validation message.
+- `validate()` has no side effects: it reads the model and returns messages, touching no
+  database and no external state.
 
 ## Wire and persistence contract
 
-The audit has not yet fixed every wire format, stored shape, encoding, identifier, timestamp, and compatibility rule.
+There is no persistence; the wire contract is the MESSAGE SET. For one model with one set of
+bad values, all four produce the same list of messages, so a 400 body reads the same
+regardless of language. That message fixture is the artifact that turns four divergent
+behaviours into one contract.
 
 ## Providers and substitutability
 
-The audit has not yet proved provider substitution or recorded deliberate capability exceptions.
+Validation is pure in-memory and engine-agnostic; it needs no database and no provider. A
+future runtime implements `validate()` with the same vocabulary and the same message strings
+and passes the same fixture.
 
 ## Contradictions and defects
 
@@ -166,6 +215,25 @@ All category 4. Every language can collect errors into a list.
 
 ## Owner decisions
 
+Proposed for owner ratification (the execution evidence forces each):
+
+1. `validate()` COLLECTS every constraint violation into a list and never raises for a
+   constraint; a valid model returns an empty list. This is the contract in all four.
+2. PROMOTE Node as the reference (the only complete, collect-only implementation with the
+   full vocabulary).
+3. PHP is a GAP to build: replace the `return []` stub with real checks. This is the
+   sharpest finding -- a shipped, documented feature that validates nothing -- and should be
+   treated as the highest-priority defect in this feature.
+4. Python stops raising a constraint at assignment and collects instead (D1, P1). Breaking:
+   code relying on the raise as a guard loses it; needs a `Breaking:` entry and a release
+   callout because it silently changes control flow.
+5. Ruby gains the five missing constraints AND renames `nullable: false` to `required: true`
+   (inverted polarity), rejecting the old option name with a clear error -- never a silent
+   polarity flip.
+6. One message format `"<field>: <what was wrong>"` and one option vocabulary
+   (`required`, `min_length`, `max_length`, `min`, `max`, `pattern`); `length` stays a
+   DDL-only sizing hint distinct from `max_length`.
+
 ### Outstanding: CLOSED by execution (2026-07-30), and it CHANGES the verdict
 
 Probed with a model declaring every constraint the docs claim, then constructed with
@@ -258,11 +326,26 @@ difference between a 400 with a useful body and a 500.
 
 ## Integration map
 
-The audit has not yet mapped every export, startup path, request hook, CLI, scaffolder, status command, document, and generated consumer.
+- Route handlers build a model from request input and call `validate()` to return a 400;
+  this is the most common validation consumer.
+- Feature 18 declares the constraint options on the field; Feature 17 hosts `validate()`.
+- AutoCrud validates before a write; the four CLAUDE.md docs show the collect-then-inspect
+  pattern and must match the corrected behaviour.
+- Central fixtures, four runners, the CI matrix, release notes and the ORM/validation docs
+  update together (the docs currently describe a pattern PHP does not implement).
 
 ## Breaking changes and migration
 
-The audit has not yet turned every parity break into an actionable pre-3.14 migration instruction.
+- Python: `validate()`-related construction no longer raises for a constraint; a route that
+  relied on the constructor raising as a guard must call `validate()` instead. `Breaking:`
+  entry plus a release-note callout, because it silently changes control flow from a 500 to
+  a collectable 400.
+- Ruby: `nullable: false` becomes `required: true` (inverted). The old option name is
+  rejected with a clear error, never silently reinterpreted -- a silent polarity flip is the
+  worst possible failure mode. `Breaking:` entry; every Ruby model declaring `nullable`
+  migrates.
+- PHP and Node: message wording aligns; PHP additionally gains the real checks (a fix, not a
+  break, since the old behaviour validated nothing).
 
 ## Implementation backlog
 
@@ -317,19 +400,22 @@ Surface table:
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Existing-language contradictions recorded (D1-D4 plus the PHP-stub finding).
+- [x] Owner ambiguities recorded (6 proposed; the genuine calls await owner ratification).
+- [x] Proposed shared cases and mutation witnesses complete (pure in-memory message fixture).
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule is clean-room sufficient.
 
-### Parked
+### State
 
-Not implemented. Order: 6, 4, 5, 3, 13, 14, 15, 16, 17, 18, 19, 20, then 2, 1, 0.
-
-**This closes Phase 2.**
+AUDIT decision-ready, verdict REVISED by execution (2026-07-30): PROMOTE Node, GAP (PHP
+`validate()` is a `return []` stub -- shipped but absent), P1 (Python raises where its docs
+collect), Ruby needs the vocabulary built plus the `nullable`->`required` rename. The
+IMPLEMENTATION is the build phase and is NOT done. The PHP gap is a live correctness/security
+issue on the shipping branch (silent accept of invalid input), so it should lead the build.
+Decision-ready is not built.
