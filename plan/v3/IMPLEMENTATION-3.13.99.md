@@ -31,7 +31,7 @@ negative, no mocks) -> dead/dup code removed -> run the fixture + the feature's 
 ## Phase 1 - security cluster (highest value first)
 
 - [x] 37 CSRF - DONE 2026-08-11, lab-green all four (py 59 / php 56 / ruby 44 / node 46; consolidated rc=0, independently re-verified). Pushed py 3249495, php 001f966a, ruby dbcd6a2, node cc6642a, fixture doc 3dd9608. Removed PHP default-secret + `$_ENV` mutation; aligned Node gen/validator; `TINA4_CSRF` attaches; session-bind + type=form; SEC-01 ported all four; 403 body unified to `{error,code,message,status}`.
-- [ ] 127 dev-admin - fail-closed same-origin gate (drive-by RCE); `.env`/dotfile denylist; localhost-default bind; escape toolbar path (py+node); merge MCP-02 gate to v3; real-dispatch conformance tests
+- [x] 127 dev-admin - DONE 2026-08-11, lab-green all four (9/9/9/9; consolidated rc=0, independently re-verified). Pushed py 41b3aeb, php 698e6a6, ruby ab06e5c, node 97d4f22, fixture fc42718. Same-origin gate + `.env` denylist + localhost-default bind + mcp/call gate (ADDED to Python) + toolbar escape. Fixed in passing: PHP DEC-02 landed in a dead App::run path (real fix in `bin/tina4php resolveHostPort`); Ruby 404 error-page reflected the raw path (XSS) - audit had marked Ruby n/a for DEC-04, it was NOT (correct the 127 doc).
 - [ ] 41 static assets - realpath+sep confinement to py/ruby/node; block dotfiles; honour `TINA4_PUBLIC_DIR` ruby+node
 - [ ] 43 request-id - build in all 4 (honour inbound + response header + log correlation); sanitize inbound; Python -> contextvars
 - [ ] 53 Frond tags - confine include/extends under templates dir (realpath + reject `..`/absolute)
