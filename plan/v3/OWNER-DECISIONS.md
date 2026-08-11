@@ -100,9 +100,19 @@ runtime).
 ## Status
 
 ALL v3 audit owner-decisions run through and ratified 2026-08-11 (Batches 1-4 + the standing compiler
-decision). Every DEC-* across the feature docs is OWNER-DECIDED. Next phase: IMPLEMENTATION in all four
-frameworks with real (no-mock) tests and shared conformance fixtures, feature by feature, highest-value first
-(security cluster -> data-loss/no-op -> parity), per [[feedback_parity]] and the porting capsules in each doc.
+decision). Every DEC-* across the feature docs is OWNER-DECIDED.
+
+**IMPLEMENTATION - 3.13.98 (owner target, 2026-08-11).** A single "first pass" from feature 1 to the end,
+implementing every decided fix in all four frameworks with real (no-mock) tests + shared conformance
+fixtures, shipped as the 3.13.98 release (feature/release3.13.98 -> v3 -> tag, per the release discipline).
+"First pass" = a solid first implementation sweep, highest-value first within the walk (security cluster ->
+data-loss/no-op -> parity); iterate after. Each feature doc's porting capsule + proposed fixture is the spec.
+PER-FEATURE GATE (owner, 2026-08-11): after EACH feature is implemented in all four, RUN the shared
+conformance fixture + the feature's tests ON THE .99 LAB BOX; a real green there (no mocks, real services) is
+the gate to commit that feature and move to the next. Never self-report green, never advance on a red.
+Per [[feedback_parity]] (logic AND tests in all four), [[feedback_no_mock_testing]],
+[[feedback_conformance_testing]], [[feedback_run_tests_on_99]] (lab-verify before the tag),
+[[feedback_no_parallel_workers_one_tree]] (never two workers in one git tree).
 
 Remaining genuine decisions still to run (next batches): the Frond |date convention (52), ORM cascade/FK
 (21), the write-result contract + field-model divergence (17/18), error-page 403 rendering + content
