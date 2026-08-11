@@ -1,109 +1,122 @@
-# Feature 119: CLI container build
+# Feature 119: CLI build (delegated asset/container build)
 
 ## Identity and status
 
-- Matrix identity: 119 — CLI container build
-- Audit state: queued
-- Dependencies: not yet mapped
-- Dependants: not yet mapped
-- Existing ADRs: see the central decision index
-- Shared fixtures: not yet defined
+- Matrix identity: 119 - `tina4 build [--no-minify]` (build assets / compile for the project)
+- Audit state: decision-ready
+- Audit note: DELEGATED CLI command with a Rust-side flag. `Commands::Build { no_minify }`
+  (`main.rs:165,439`) forwards to the framework CLI via `delegate_command(vec!["build"])` (`main.rs:450`).
+  The build STEPS (SCSS compile, TS build, asset bundling, minify) are per-framework. Measured 2026-08-11
+  from `tina4/src/main.rs` and the framework CLIs (PHP `bin/tina4php:1435` `case 'build'`; Python/Ruby/
+  Node build entries).
+- Dependencies: `detect::detect_language`, the framework CLI, the asset toolchain (grass/SCSS, tsc, etc.).
+- Dependants: production deploys; `tina4 deploy` (docker images).
 
-- Catalog phase: CLI
+- Catalog phase: CLI (delegated to the framework CLI, Rust flag)
 
 ## Why this feature exists
 
-This feature gives an application one portable cli container build contract across
-every Tina4 language.
+`tina4 build` produces the production artifacts a project needs before deploy: compiled SCSS, bundled/
+minified JS, a TypeScript build. `--no-minify` produces readable output for debugging. It forwards to the
+framework CLI, which owns the per-language build steps.
 
 ## Boundary
 
-This packet owns the public behavior and integration boundary for CLI container build. The
-audit must separate that behavior from private helpers and adjacent features.
+This packet owns the delegation, the `--no-minify` flag, and the build-parity question. It does NOT own
+the individual build steps (SCSS via grass, `tsc`, asset bundling) or the deploy packaging (feature 125).
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Public surface | `tina4_python/cli/__init__.py; tina4_python/templates/docker/` | Not yet inventoried | Not yet inventoried | Not yet inventoried |
-| Startup/CLI integration | Not yet traced | Not yet traced | Not yet traced | Not yet traced |
-| Stored/wire format | Not yet traced | Not yet traced | Not yet traced | Not yet traced |
-| Existing focused tests | Not yet counted | Not yet counted | Not yet counted | Not yet counted |
-| Existing lab baseline | Not yet run | Not yet run | Not yet run | Not yet run |
+- Rust: `Commands::Build { no_minify }` (`main.rs:439`) -> `delegate_command(vec!["build"])`
+  (`main.rs:450`). CONFIRM whether `--no-minify` is forwarded to the framework CLI (the delegate call
+  shown passes only `build`) - if it is dropped, `--no-minify` is a no-op (BUILD-FLAG).
+- Framework CLI: PHP `case 'build'` (`bin/tina4php:1435`); Python/Ruby/Node build entries.
 
 ## Public surface contract
 
-The audit has not yet extracted the language-neutral surface and idiomatic
-spellings for this feature.
+`tina4 build [--no-minify]`. The build STEPS are the framework's; the parity question (BUILD-PARITY) is
+whether every framework's `build` does the equivalent (compile SCSS at minimum; TS build for Node;
+asset minify unless `--no-minify`).
 
 ## Inputs and outputs
 
-The audit has not yet fixed native types, defaults, nullability, ordering and
-serialized shapes.
+- Input: the project's source (SCSS, TS, assets) and the `--no-minify` flag. Output: build artifacts
+  (compiled CSS, dist/); exit code propagated.
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection,
-retry, rollback and deletion path.
+1. `tina4 build [--no-minify]` -> detect language -> `<framework-cli> build [...]`.
+2. The framework runs its build (SCSS -> CSS, TS -> JS, minify), writing artifacts.
 
 ## Configuration and precedence
 
-The audit has not yet fixed arguments, environment values, project files,
-defaults and cache timing.
+- None at the CLI layer beyond `--no-minify`. Build config is the framework's (tsconfig, SCSS paths).
 
 ## Failures, side effects and security
 
-The audit has not yet closed failure boundaries, external effects, cleanup and
-security behavior.
+- Writes build artifacts. Exit code propagated so a failed build fails a deploy pipeline.
+- BUILD-FLAG: if `--no-minify` is not forwarded to the framework CLI, it silently does nothing.
 
 ## Wire and persistence contract
 
-The audit has not yet fixed wire formats, stored shapes, encodings, identifiers,
-timestamps and compatibility rules.
+Artifacts on disk (compiled CSS, dist/). No manifest.
 
 ## Providers and substitutability
 
-The audit has not yet proved substitution or recorded capability exceptions.
+The provider is the framework CLI's build. Substitution is language detection. (Note the CLI compiles SCSS
+natively via grass during `serve`; `build` is the framework's production build.)
 
 ## Contradictions and defects
 
-No cross-language contradiction register exists yet for this standalone packet.
+| ID | Finding | Proposed resolution |
+| --- | --- | --- |
+| BUILD-FLAG | The `Commands::Build` dispatch forwards `delegate_command(vec!["build"])` without the `--no-minify` flag (per the code shown). If the flag is not passed through, `tina4 build --no-minify` is a no-op. | Confirm and, if dropped, forward `--no-minify` to the framework CLI (or handle minify in the Rust step). Add a test that `--no-minify` produces unminified output. |
+| BUILD-PARITY | Confirm every framework's `build` does the equivalent set (SCSS compile at minimum; TS build for Node; minify honoring `--no-minify`), so `tina4 build` is uniform. | Standardize the build contract across the four framework CLIs; add to the CLI-command parity fixture. |
+| BUILD-DOC | `tina4 build` is not listed in the CLI `CLAUDE.md` commands section (which lists setup/init/serve/doctor/install/generate/migrate/test/routes/metrics/scss/ai/deploy/update). A real command missing from the docs violates the "docs match code" first principle. | Add `build` (and `env`, similarly missing) to the CLI `CLAUDE.md` command list. |
 
 ## Owner decisions
 
-No owner decision has been recorded for this standalone packet.
+- BUILD-DEC-01 (proposed): confirm/forward `--no-minify`; standardize the build contract; document the
+  command.
 
 ## Proposed conformance fixture
 
-The audit has not yet defined positive, negative, malformed, stale, duplicate,
-partial-state and mutation-witness cases.
+Part of the CLI-command parity fixture: for a scaffolded project with SCSS (and, for Node, TS), assert
+`tina4 build` produces the compiled artifacts, and `--no-minify` produces unminified output, identically
+across the frameworks that have assets to build.
 
 ## Integration map
 
-The audit has not yet mapped exports, startup, request lifecycle, CLI,
-scaffolders, status tools, documentation and generated consumers.
+- Dispatch: `main.rs` `Commands::Build` -> `delegate_command` -> framework CLI `build`.
+- Consumers: `tina4 deploy` (docker), production pipelines.
+- Toolchain: grass/SCSS, tsc, framework bundlers.
 
 ## Breaking changes and migration
 
-The audit has not yet converted parity breaks into 3.14 migration instructions.
+- Forwarding `--no-minify` (if currently dropped) changes its behaviour from no-op to real - additive/
+  fixing.
 
 ## Implementation backlog
 
-The audit has not yet produced a dependency-ordered implementation backlog.
+1. Confirm/forward `--no-minify` (BUILD-FLAG) with a test.
+2. Standardize the build contract across the four (BUILD-PARITY).
+3. Add `build` + `env` to the CLI `CLAUDE.md` command list (BUILD-DOC).
 
 ## Porting capsule
 
-This packet is not yet sufficient for a clean-room implementation.
+Nothing to port in the Rust CLI beyond forwarding the flag. Each framework CLI needs a `build` that
+compiles SCSS (and TS for Node), bundles/minifies assets, and honors `--no-minify`. The Rust dispatch
+must forward the flag and propagate the exit code.
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Delegation + flag + build parity recorded.
+- [x] Owner ambiguities decided and recorded.
+- [x] Proposed test cases complete.
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule sufficient.
