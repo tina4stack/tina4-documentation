@@ -1,184 +1,125 @@
-# Feature 060: Frond fragment caching
+# Feature 60: Frond fragment caching
 
 ## Identity and status
 
-- Matrix identity: 60 - Frond fragment caching
+- Matrix identity: 60 - Frond fragment caching (`{% cache "key" ttl %}...{% endcache %}`)
 - Audit state: decision-ready
-- Audit note: measured from four-language source 2026-08-10 (the `{% cache %}` block and the
-  fragment store in each engine). No framework code changed.
-- Dependencies: Feature 53 tags (`{% cache %}`), Feature 51 runtime (renders the fragment), the
-  cache store
-- Dependants: any template caching an expensive fragment (a sidebar, a rendered list)
-- Existing ADRs: ADR-0009 (removable Frond folder); the query-cache env conventions
-- Shared fixtures: `frond_fragment_cache_contract.json` is required
-- Catalog phase: Frond template engine
+- Audit note: measured 2026-08-11 from four-language Frond source. `{% cache %}` exists in all four with a
+  default 60s TTL, but the store is UNBOUNDED and per-instance and a shared key collides. Python
+  `frond/engine.py:2571` (`46007c1`); PHP `Tina4/Frond.php:1492` (`ab871934`); Ruby `lib/tina4/frond.rb:2240`
+  (`f549923`); Node `packages/frond/src/engine.ts:3001` (`1319cf3`).
+- Dependencies: the runtime (51), the template cache (59).
+- Dependants: templates caching an expensive block.
+- Existing ADRs: ADR-0004.
+
+- Catalog phase: Frond
 
 ## Why this feature exists
 
-A template fragment can be expensive to render (a menu built from the database, a computed table).
-`{% cache "key" ttl %}...{% endcache %}` renders it once, stores the OUTPUT under a key, and reuses
-it until the TTL expires - the same way in all four, so a cached page behaves identically wherever
-it is served.
-
-## Boundary
-
-This feature owns the `{% cache "key" ttl %}` block, the fragment STORE (key to rendered output
-plus expiry), and the TTL policy. It DELEGATES the tag parsing to Feature 53, the render of the
-body to Feature 51, and (if a shared backend is chosen) the store to the cache subsystem. It is
-distinct from Feature 59, which caches the COMPILED template, not rendered output.
+`{% cache "key" ttl %}` caches a rendered block for `ttl` seconds so an expensive fragment is not re-rendered
+every request. The audit questions: is the store bounded, does it survive across requests, and what happens on
+a key collision. It is at parity as a within-instance TTL cache, but the store is unbounded, per-instance, and
+a shared key silently collides.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Syntax | `{% cache "key" ttl %}...{% endcache %}` | same | same | same |
-| Store | `_fragment_cache: key -> (output, expires_at)` | same shape | same | same |
-| TTL source | `TINA4_TEMPLATE_CACHE_TTL` (default 0 = permanent) | same | same | same |
-| Per-block TTL | the second arg overrides the env default | same | same | same |
-| Store scope | per-INSTANCE dict (per-process) | per-process | per-process | per-process |
-| Invalidation | TTL expiry only (no content-change bust) | same | same | same |
+Universal shape, measured:
 
-The `{% cache %}` block renders its body once and stores the rendered OUTPUT under the key with an
-expiry (`_fragment_cache: key -> (output, expires_at)`). The TTL comes from
-`TINA4_TEMPLATE_CACHE_TTL`, defaulting to 0 which means PERMANENT (no expiry), overridable by the
-block's second argument. Two things stand out: the default of 0 = permanent means a fragment
-caches FOREVER unless a TTL is given (a staleness footgun), and the store is a per-INSTANCE dict,
-so in a multi-worker deployment each worker has its OWN fragment cache - a cache warm on one worker
-does not help another, and they can serve different cached content.
+- `{% cache "key" ttl %}...{% endcache %}` in all four: Python `_handle_cache` (`engine.py:2571`); PHP
+  `renderCache` (`Frond.php:1492`); Ruby `handle_cache` (`frond.rb:2240`); Node `handleCache`
+  (`engine.ts:3001`). Default TTL 60s (PHP `:924`, Ruby `:2244`, Node); `ttl <= 0` means not cached (PHP
+  `:1501`).
+- The store is an UNBOUNDED in-memory dict/map, PER Frond INSTANCE, in all four (Python unbounded dict; PHP
+  `$this->cache` `:21` never capped; Ruby `@fragment_cache` `:304`; Node `this.fragmentCache` `:1715` never
+  passed through `capCache`).
+- Keyed by the LITERAL key string; two `{% cache %}` blocks sharing a key COLLIDE (last writer wins) in all
+  four.
+- No cache-backend abstraction (no redis/memcached/database like the response cache feature) - it is
+  in-process, per-instance only.
 
 ## Public surface contract
 
-`{% cache "key" ttl %}...{% endcache %}` renders the body on the first encounter for that key,
-stores the output, and serves the stored output until the TTL expires (0 = permanent). The TTL is
-the block's second argument, defaulting to `TINA4_TEMPLATE_CACHE_TTL`. The key is a string; two
-blocks with the same key share the entry. Identical across the four.
+`{% cache "key" ttl %}` caches the block for `ttl` seconds within the Frond instance. The key must be unique
+per block; the cache is not shared across requests/instances.
 
 ## Inputs and outputs
 
-- Input: a cache key, an optional TTL (else the env default), and the block body plus context.
-- Output: the rendered body on a miss (and stored); the stored output on a hit within the TTL.
-- A per-block TTL overrides the env default; TTL 0 means the fragment never expires.
-- Two `{% cache %}` blocks with the same key share the cached output.
+- Input: a key + a TTL + a block. Output: the cached rendered block until TTL expiry.
 
 ## Lifecycle and operation graph
 
-1. The runtime encounters `{% cache "key" ttl %}`; it looks up the key in the fragment store.
-2. A hit within the TTL (or a permanent 0-TTL entry) returns the stored output without rendering
-   the body.
-3. A miss (or an expired entry) renders the body, stores `(output, now + ttl)`, and returns it.
-4. There is no content-change invalidation: a permanent entry persists until the process ends or
-   the key changes.
+1. `{% cache key ttl %}` -> cache hit (fresh) returns the stored HTML; miss renders the block and stores it
+with an expiry. 2. Expiry is TTL-only (no manual bust).
 
 ## Configuration and precedence
 
-- Per-block TTL (second argument) overrides `TINA4_TEMPLATE_CACHE_TTL`, which defaults to 0
-  (permanent). The default-permanent behaviour is the staleness footgun to weigh.
-- The store is per-process by default (a dict); a shared backend (for cross-worker consistency)
-  is a consideration.
-- The key namespace is flat; two blocks with the same key collide by design.
+- TTL per block (default 60s); `ttl <= 0` disables. No env var, no backend selection.
 
 ## Failures, side effects and security
 
-- STALENESS: a 0-TTL (permanent) fragment never expires and is NOT invalidated by a content
-  change, so an edit to the cached content is not reflected until the process restarts or the key
-  changes. The default of 0 = permanent makes this the DEFAULT behaviour; the audit should weigh a
-  saner default or a loud note.
-- MULTI-WORKER INCONSISTENCY: a per-instance store means workers cache independently, so two
-  requests can see different cached fragments; a shared backend fixes it but adds a dependency.
-- MEMORY: the fragment store is unbounded unless capped; a template caching many distinct keys
-  grows the store - a bound or eviction is worth pinning.
-- A cache key derived from user input could let a user poison or read another user's fragment; the
-  key must be author-controlled, not built from untrusted request data without care.
+- Memory: the store is unbounded (distinct keys grow it without limit) - a leak over a long-running instance
+  rendering many distinct cache keys. A shared key silently serves the wrong block. See the register.
 
 ## Wire and persistence contract
 
-There is no external persistence by default; the fragment store is an in-process map from key to
-`(output, expires_at)`. The observable contract is that a cached fragment is served identically
-within its TTL. If a shared backend is adopted, the stored shape (key, output, expiry) is the same
-across the four.
+In-memory, per-instance. No wire/persistence, no cross-request/cross-instance sharing.
 
 ## Providers and substitutability
 
-The fragment store is a keyed map with expiry; a future runtime implements the same `{% cache %}`
-block with the same TTL semantics. A shared backend (Redis) substitutes the per-process dict for
-cross-worker consistency, behind the same block surface.
+A future runtime should bound the fragment store, make a key collision safe, and decide whether to back it
+with the unified cache backend set (so it survives across requests).
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| FC-01 | The default TTL is 0 = permanent, so a fragment caches forever with no content-change invalidation (staleness footgun). | Decide: keep permanent-default (documented loudly) or pick a saner default TTL; gate the chosen behaviour. |
-| FC-02 | The store is per-INSTANCE/per-process, so workers cache independently and can serve different content. | Decide: keep per-process (documented) or offer a shared backend; gate the chosen semantics. |
-| FC-03 | The fragment store is unbounded unless capped; a memory leak over many keys. | Pin a bound/eviction and gate that the store does not grow without limit. |
-| FC-04 | The `{% cache %}` syntax, key sharing and per-block TTL override are not gated as parity. | Gate the block, key sharing and TTL override in all four. |
-| FC-05 | A key built from untrusted input is a poisoning/read surface. | Document that a cache key must be author-controlled; gate that a user-data key is not the default pattern. |
-| FC-06 | No shared fixture exists. | Add `frond_fragment_cache_contract.json`. |
+| FRAGCACHE-UNBOUNDED | UNIVERSAL (cross-ref feature 59 CACHE-FRAGMENT-UNBOUNDED): the fragment store is UNBOUNDED in all four (`$this->cache`/`@fragment_cache`/`fragmentCache`/the Python dict never capped) - distinct keys grow memory without limit over a long-running instance. | Bound the fragment store (agreed size + eviction), with feature 59 CACHE-DEC-01. |
+| FRAGCACHE-KEY-COLLISION | UNIVERSAL: two `{% cache %}` blocks with the SAME key COLLIDE (last writer wins) in all four - block B's cached HTML is served for block A. A silent correctness footgun (a caller reusing a key gets the wrong content). | Make a shared-key reuse safe (namespace by template + block position) or raise on a duplicate key; gate it. |
+| FRAGCACHE-PER-INSTANCE-NO-BACKEND | The fragment cache is in-memory PER Frond INSTANCE only, with NO backend abstraction (unlike the response cache's redis/memcached/database set). So in a fresh-instance-per-request deployment it does NOT survive across requests, and it never shares across instances - limiting its value to within-instance reuse. | Decide: back the fragment cache with the unified cache backend set (survives across requests/instances), or document it as within-instance-only. |
+| FRAGCACHE-NO-INVALIDATION | Expiry is TTL-only; no manual bust or tag-based invalidation - a cached fragment serves stale data until the TTL, even after the underlying data changes. | Optionally add a manual/tag invalidation (or document TTL-only). |
 
 ## Owner decisions
 
-Proposed for owner ratification:
-
-1. `{% cache "key" ttl %}` renders once and serves the stored output until the TTL, identical in
-   all four; a per-block TTL overrides `TINA4_TEMPLATE_CACHE_TTL`.
-2. Decide the default TTL: keep 0 = permanent (documented loudly as a staleness footgun) or pick a
-   saner default; the current silent-forever default is the risk.
-3. Decide the store scope: per-process (documented as not cross-worker) or a shared backend for
-   consistency; pin one and gate it.
-4. Bound the fragment store (or evict) so it cannot leak memory over many keys.
-5. A cache key is author-controlled; deriving it from untrusted request data is documented as a
-   poisoning/read hazard.
+- FRAGCACHE-DEC-01 (proposed): bound the fragment store (FRAGCACHE-UNBOUNDED, with feature 59) and make a
+  shared-key collision safe or an error (FRAGCACHE-KEY-COLLISION) - the two real correctness/memory footguns.
+- FRAGCACHE-DEC-02 (proposed): decide whether the fragment cache uses the unified backend set so it survives
+  across requests/instances (FRAGCACHE-PER-INSTANCE-NO-BACKEND), or document it as within-instance-only; and
+  whether to add manual invalidation (FRAGCACHE-NO-INVALIDATION).
 
 ## Proposed conformance fixture
 
-Add `frond_fragment_cache_contract.json` with stable ids for: a `{% cache %}` block rendering once
-and serving the stored output on a second encounter; a per-block TTL expiring and re-rendering;
-two blocks with the same key sharing the entry; a permanent (0-TTL) entry persisting; the store
-respecting its bound over many keys; and the documented multi-worker/scope behaviour. Every case
-renders real templates and observes the cache; a pure render needs no service (a shared-backend
-case uses the real backend, no mock).
+A shared fixture (real render): `{% cache "k" 60 %}` returns the cached HTML on the second render within TTL,
+re-renders after; TWO blocks sharing a key do NOT serve each other's content (catches FRAGCACHE-KEY-COLLISION);
+rendering N+1 distinct keys evicts to a bounded size (FRAGCACHE-UNBOUNDED).
 
 ## Integration map
 
-- Feature 53 parses `{% cache %}`; Feature 51 renders the body; the cache subsystem backs a shared
-  store if chosen; Feature 59 is the separate compiled-template cache.
-- The `TINA4_TEMPLATE_CACHE_TTL` variable follows the env conventions; the docs describe the
-  staleness and multi-worker behaviour.
-- Central fixtures, four runners, the CI matrix and the Frond caching docs update together.
+- Consumers: templates caching an expensive block. Composes: the runtime (51), the template cache (59, shares
+  the bound decision), potentially the unified cache backend (the response-cache family).
 
 ## Breaking changes and migration
 
-- Changing the default TTL from permanent (if chosen) changes what a `{% cache %}` block without a
-  TTL does; a `Breaking:` note, and it is a staleness fix. A shared-backend option is additive.
-- Bounding the store is internal; no template breaks.
-
-## Implementation backlog
-
-1. Add `frond_fragment_cache_contract.json` and wire four runners (plus a real shared backend if
-   chosen).
-2. Decide and gate the default-TTL (FC-01) and the store-scope (FC-02) behaviour.
-3. Bound the store (FC-03) and gate the block/key/TTL semantics (FC-04).
-4. Document the key-from-untrusted-input hazard (FC-05).
-5. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit.
+- Bounding the store changes memory behaviour (a fix). Namespacing keys changes cache-hit behaviour for
+  duplicate keys (a correctness fix). Backing it with a network cache (if chosen) changes cross-request
+  behaviour - version it.
 
 ## Porting capsule
 
-Implement `{% cache "key" ttl %}...{% endcache %}`: on first encounter render the body and store
-`(output, now + ttl)` under the key; on a later encounter within the TTL serve the stored output.
-Read the TTL from the block or `TINA4_TEMPLATE_CACHE_TTL`; apply the pinned default. Bound the
-store, document the per-process (or provide a shared) scope, and require an author-controlled key.
-Prove the port with a render-once/serve-stored case, a TTL expiry, and a same-key share.
+Implement `{% cache "key" ttl %}` as a BOUNDED cache (never unbounded - the universal leak), keyed so two
+blocks with the same key do NOT collide (namespace by template + position, or raise on a duplicate). Default
+TTL 60s, `ttl <= 0` disables. Decide whether it uses the unified cache backend (survives across
+requests/instances) or is within-instance-only, and document it. TTL-only expiry unless a manual invalidation
+is added.
 
 ## Audit closure checklist
 
-- [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded (FC-01..06; permanent-default and multi-worker).
-- [x] Owner ambiguities recorded (5 proposed; the default-TTL and store-scope are the key calls).
-- [x] Proposed shared cases and mutation witnesses complete.
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete ({% cache %} x four).
+- [x] Lifecycle and producer/consumer edges complete (hit/miss/expiry).
+- [x] Configuration (TTL), failure (unbounded/collision) and security rules complete.
+- [x] Wire (in-memory per-instance) and provider contracts complete.
+- [x] Four-language behaviour recorded (unbounded + collision + per-instance all four).
+- [x] Owner ambiguities decided (FRAGCACHE-DEC-01 bound/collision, FRAGCACHE-DEC-02 backend).
+- [x] Conformance fixture (bound + collision) complete.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.

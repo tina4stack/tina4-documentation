@@ -1,186 +1,140 @@
-# Feature 036: Security headers middleware
+# Feature 36: Security headers middleware
 
 ## Identity and status
 
 - Matrix identity: 36 - Security headers middleware
 - Audit state: decision-ready
-- Audit note: measured from four-language source 2026-08-10 (PHP `Middleware/SecurityHeaders.php`,
-  Python/Ruby/Node in their middleware modules). No framework code changed.
-- Dependencies: Feature 33 middleware pipeline (this is a before-hook), Feature 30 response
-  model (it sets headers), Feature 29 request (to detect HTTPS for HSTS)
-- Dependants: every response; the CORS and CSP posture; browser security behaviour
-- Existing ADRs: the routing-surface security intent (ADR-0019); the env-uniformity rule
-- Shared fixtures: `security_headers_contract.json` is required
+- Audit note: measured 2026-08-11 from four-language source (correcting a stub that claimed "protected by
+  default" and an "HTTPS guard" - both FALSE). The middleware EXISTS in all four with byte-identical good
+  defaults, but is OFF BY DEFAULT in all four (never registered). Python `core/middleware.py:455` (`46007c1`);
+  PHP `Tina4/Middleware/SecurityHeaders.php:26` (`ab871934`); Ruby `lib/tina4/middleware.rb:685` (`f549923`);
+  Node `packages/core/src/middleware.ts:816` (`1319cf3`).
+- Dependencies: the middleware pipeline (feature 7), the response builder, env config.
+- Dependants: every response's security posture.
+- Existing ADRs: none dedicated.
+
 - Catalog phase: Routing and middleware
 
 ## Why this feature exists
 
-A browser trusts the headers a response carries. One middleware sets the security headers -
-frame options, content-type sniffing, HSTS, CSP, referrer and permissions policy - the same way
-in all four languages, so an application is protected by default rather than by remembering to
-set each header on every route.
-
-## Boundary
-
-This feature owns the security-header set, its defaults, and the environment variables that
-tune it. It DELEGATES header writing to Feature 30, the before-hook wiring to Feature 33, and
-the HTTPS detection (for HSTS) to Feature 29. It does not own CORS (Feature 34) or CSRF
-(Feature 37), which are separate middlewares.
+Security headers (X-Frame-Options, X-Content-Type-Options, HSTS, CSP, Referrer-Policy, X-XSS-Protection,
+Permissions-Policy) defend against clickjacking, MIME-sniffing, and downgrade attacks. The audit questions:
+are the headers and defaults the same, is the middleware ON by default, and is HSTS HTTPS-guarded. The header
+set and defaults are byte-identical and sensible, but the middleware is OFF by default in all four and HSTS
+has no HTTPS guard.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Location | `core/middleware.py` | dedicated `SecurityHeaders` class | `middleware.rb` | `middleware.ts` |
-| X-Frame-Options | SAMEORIGIN | SAMEORIGIN | SAMEORIGIN | SAMEORIGIN |
-| X-Content-Type-Options | nosniff | nosniff | nosniff | nosniff |
-| X-XSS-Protection | `0` | `0` | `0` | `0` |
-| Content-Security-Policy | `default-src 'self'` | same | same | same |
-| Referrer-Policy | strict-origin-when-cross-origin | same | same | same |
-| Permissions-Policy | camera=(), microphone=(), geolocation=() | same | same | same |
-| HSTS | opt-in via TINA4_HSTS | same | default "" = off | same |
-| Env config | TINA4_FRAME_OPTIONS/HSTS/CSP/REFERRER_POLICY/PERMISSIONS_POLICY | same | same | same |
+Measured, all four:
 
-This is one of the most converged features in the matrix: the same seven headers, the same
-defaults, the same five environment variables, and the same modern `X-XSS-Protection: 0` (which
-DISABLES the deprecated, vulnerability-prone XSS auditor rather than the old `1; mode=block`).
-The one structural difference is that PHP carries a dedicated `SecurityHeaders` class with a
-`beforeSecurity` hook, while Python, Ruby and Node keep the logic inside their general
-middleware module.
+- A `SecurityHeadersMiddleware` (PHP: `SecurityHeaders`) with a `before_security`/`beforeSecurity` hook exists
+  in all four and sets 7 headers with BYTE-IDENTICAL defaults: `X-Frame-Options: SAMEORIGIN`,
+  `X-Content-Type-Options: nosniff`, `Strict-Transport-Security: max-age=<TINA4_HSTS>; includeSubDomains` (only
+  when `TINA4_HSTS` set), `Content-Security-Policy: default-src 'self'`, `Referrer-Policy:
+  strict-origin-when-cross-origin`, `X-XSS-Protection: 0` (the modern value), `Permissions-Policy: camera=(),
+  microphone=(), geolocation=()`. Five are env-overridable; `X-Content-Type-Options` and `X-XSS-Protection`
+  are hardcoded.
+- OFF BY DEFAULT in ALL FOUR: the class is NEVER registered in any framework's default middleware chain (the
+  default chain wires CORS + rate-limit + logger; Node `server.ts:1648-1650`). So by default NO response
+  carries any of these headers. An app must opt in with `Router.use(SecurityHeadersMiddleware)`.
+- HSTS has NO HTTPS guard in any language (`if hsts:` / `if ($hsts !== '')` / `unless hsts.empty?` / `if
+  (hsts)` - no scheme check), so it would be emitted on plain HTTP too when `TINA4_HSTS` is set.
+- ZERO test coverage in all four (no test references the class or any header name). No shared fixture.
+- Divergences: PHP's class is `SecurityHeaders` (not `SecurityHeadersMiddleware`); Python emits lowercase
+  header names (cosmetic - HTTP is case-insensitive); PHP `nginx.conf.example` ships the DEPRECATED
+  `X-XSS-Protection: 1; mode=block`, contradicting the framework's modern `0`.
 
 ## Public surface contract
 
-The middleware runs as a before-hook and sets, on every response: `X-Frame-Options`
-(SAMEORIGIN), `X-Content-Type-Options` (nosniff), `X-XSS-Protection` (0), `Content-Security-Policy`
-(`default-src 'self'`), `Referrer-Policy` (strict-origin-when-cross-origin), and
-`Permissions-Policy` (camera=(), microphone=(), geolocation=()). `Strict-Transport-Security` is
-added only when `TINA4_HSTS` is set AND the request is HTTPS. Each header's value is overridable
-by its environment variable.
+`Router.use(SecurityHeadersMiddleware)` attaches the 7 headers to responses; env vars tune 5 of them. Today it
+is opt-in, so the default contract is "no security headers".
 
 ## Inputs and outputs
 
-- Input: the environment variables (or their defaults) and the request (for the HTTPS check).
-- Output: the six always-on security headers on every response, plus HSTS when configured and
-  over HTTPS.
-- An overriding environment variable replaces the default value verbatim.
-- The header names and default values are identical across the four.
+- Input: the response + env (`TINA4_FRAME_OPTIONS`/`TINA4_HSTS`/`TINA4_CSP`/`TINA4_REFERRER_POLICY`/
+  `TINA4_PERMISSIONS_POLICY`). Output: the 7 headers on the response (only if registered).
 
 ## Lifecycle and operation graph
 
-1. The before-hook reads each header's env var or default.
-2. It sets the six always-on headers on the response.
-3. If `TINA4_HSTS` is set and the request is HTTPS, it adds `Strict-Transport-Security` with
-   the configured max-age and `includeSubDomains`.
-4. The response proceeds through the rest of the pipeline; a later handler may override a
-   header, but the secure defaults are present unless deliberately changed.
+1. The app registers the middleware (today: manually). 2. A `before` hook sets the 7 headers on each routed
+response. Not registered -> no headers.
 
 ## Configuration and precedence
 
-- `TINA4_FRAME_OPTIONS`, `TINA4_HSTS`, `TINA4_CSP`, `TINA4_REFERRER_POLICY`,
-  `TINA4_PERMISSIONS_POLICY` override the defaults; an unset variable uses the secure default.
-- HSTS is OFF by default (empty `TINA4_HSTS`) and is sent only over HTTPS, because HSTS over
-  plain HTTP is meaningless and a wrong max-age can lock users out.
-- The enable mechanism (on-by-default versus opt-in) must be identical across the four -- a
-  security default that is on in three languages and off in one is the dangerous case.
+- 5 headers env-overridable; 2 hardcoded. `TINA4_HSTS` blank by default (HSTS off). No env to enable the
+  middleware itself - it is code-registration only.
 
 ## Failures, side effects and security
 
-- These headers ARE the security posture; the audit's job is to guarantee they are set
-  identically, so an app is not protected on PHP and exposed on Node.
-- HSTS is HTTPS-only and opt-in: sending it over HTTP is ignored by browsers, and a careless
-  default max-age can pin a bad certificate, so it stays deliberate.
-- `X-XSS-Protection: 0` is intentional and modern; reverting to `1; mode=block` would
-  reintroduce the auditor-based vulnerabilities and is a regression, not a hardening.
-- A per-route override is allowed (a route may loosen CSP for an embed) but the DEFAULT is
-  strict; loosening is explicit, never the baseline.
+- SECURITY (the crux): the framework SHIPS a good security-headers middleware but leaves it OFF, so a default
+  Tina4 app has NO clickjacking/MIME/CSP protection unless the developer knows to register it. And HSTS, once
+  enabled, is emitted on any scheme (no HTTPS guard). See the register.
 
 ## Wire and persistence contract
 
-There is no persistence; the wire output is the response header set. The exact header names and
-default values are the contract and are byte-identical across the four. A consumer (a browser)
-sees the same protection regardless of which language served the response.
+The 7 response headers (when registered). No persisted state. The default wire contract today is "none of
+them".
 
 ## Providers and substitutability
 
-The middleware is transport-level and engine-agnostic. A future runtime sets the same seven
-headers with the same defaults and the same env overrides, and applies the same HSTS
-HTTPS-only opt-in.
+A future runtime must ship the same header set + defaults, decide the on-by-default posture, and HTTPS-guard
+HSTS.
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| SEC-01 | The enable mechanism (on-by-default vs opt-in) is not proven identical across the four; a security default on in three and off in one is dangerous. | Pin ONE enable mechanism (recommend on-by-default with secure values) identical in all four; gate that the headers are present by default. |
-| SEC-02 | HSTS must be opt-in AND HTTPS-only; the HTTPS guard is not gated as parity. | Gate that HSTS is absent by default, absent over HTTP even when configured, and present over HTTPS when configured, in all four. |
-| SEC-03 | Structural divergence: PHP has a dedicated `SecurityHeaders` class; the others inline it. | Converge on one entry-point name/shape so the middleware is registered and named the same way. |
-| SEC-04 | The seven-header set and defaults are converged but not gated; a drift (a changed default, a missing header) would be silent. | Gate the full header set and every default (including `X-XSS-Protection: 0`) in all four. |
-| SEC-05 | No shared fixture exists. | Add `security_headers_contract.json`. |
+| SECHDR-OFF-BY-DEFAULT | The `SecurityHeadersMiddleware` exists in all four with byte-identical GOOD defaults, but is NEVER registered in any framework's default chain (the default chain is CORS + rate-limit + logger; `server.ts:1648`). So a default Tina4 app ships with NO security headers - the stub's "protected by default" is FALSE. The middleware is effectively dead code until an app opts in. | Decide (SECHDR-DEC-01): REGISTER it in the default chain (secure-by-default - a Tina4 app then ships with security headers) or keep it opt-in and document it loudly. This is the security-posture call. |
+| SECHDR-HSTS-NO-HTTPS-GUARD | HSTS is emitted on ANY scheme when `TINA4_HSTS` is set (no HTTPS check) in all four - the stub's "added only when the request is HTTPS" is FALSE. Inert on HTTP (browsers ignore it) but the HTTPS-only contract does not exist, and a bad `max-age` would be sent on every scheme. | Add a scheme guard: emit HSTS only on an HTTPS request, in all four. |
+| SECHDR-ZERO-TESTS | ZERO tests assert the headers on a real response in any language. | Add a wire test (register the middleware, assert the 7 headers + defaults) in all four. |
+| SECHDR-PARTIAL-OVERRIDE | `X-Content-Type-Options` and `X-XSS-Protection` are HARDCODED (not env-overridable) - the stub's "each header overridable by its env var" is false (5 of 7). | Document which are fixed vs env-tunable (or make all overridable). |
+| SECHDR-CLASS-NAME-DIVERGE | PHP's class is `SecurityHeaders`; the other three are `SecurityHeadersMiddleware`. A cross-language surface divergence. | Rename PHP to `SecurityHeadersMiddleware` for parity (or agree the name). |
+| SECHDR-NGINX-DRIFT | PHP's `nginx.conf.example` ships the DEPRECATED `X-XSS-Protection: 1; mode=block`, contradicting the framework's modern `0` (and omitting CSP/Referrer/Permissions/HSTS). | Align the nginx example with the framework's header set + modern `0`. |
 
 ## Owner decisions
 
-Proposed for owner ratification:
-
-1. The canonical set is the seven headers with the measured defaults, identical in all four:
-   X-Frame-Options SAMEORIGIN, X-Content-Type-Options nosniff, X-XSS-Protection 0, CSP
-   `default-src 'self'`, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy
-   camera=()/microphone=()/geolocation=(), and HSTS opt-in.
-2. One enable mechanism across the four (recommend on-by-default with the secure values so an
-   app is protected without ceremony); an app loosens a header explicitly.
-3. HSTS is opt-in via `TINA4_HSTS` and HTTPS-only; it is never sent over plain HTTP.
-4. `X-XSS-Protection` stays `0` (modern); it is not reverted to the deprecated auditor value.
-5. One entry-point name/shape (PHP's dedicated middleware is the reference); the others expose
-   the same registration.
+- SECHDR-DEC-01 (proposed, THE call): decide the on-by-default posture (SECHDR-OFF-BY-DEFAULT). Registering the
+  middleware in the default chain makes a Tina4 app secure-by-default (the headers + defaults are already
+  good); keeping it opt-in requires loud documentation. Today it ships off in all four - a security-posture
+  gap.
+- SECHDR-DEC-02 (proposed): HTTPS-guard HSTS (SECHDR-HSTS-NO-HTTPS-GUARD); rename PHP's class
+  (SECHDR-CLASS-NAME-DIVERGE); add wire tests (SECHDR-ZERO-TESTS); fix the nginx example (SECHDR-NGINX-DRIFT).
 
 ## Proposed conformance fixture
 
-Add `security_headers_contract.json` with stable ids for: the six always-on headers present
-with their exact default values on a plain response; each env override replacing its default;
-HSTS ABSENT by default; HSTS absent over HTTP even when `TINA4_HSTS` is set; HSTS present with
-`includeSubDomains` over HTTPS when set; `X-XSS-Protection` exactly `0`; and the same enable
-mechanism producing the headers by default. Every case inspects a real response from a real
-request through the real middleware; no mock can claim conformance.
+A shared fixture (real server): with the middleware registered, a response carries all 7 headers with the
+agreed defaults, identical across the four; HSTS appears ONLY on an HTTPS request (catches
+SECHDR-HSTS-NO-HTTPS-GUARD); and (after SECHDR-DEC-01) a default app either does or does not carry them per the
+decided posture.
 
 ## Integration map
 
-- Feature 33 wires the before-hook; Feature 30 writes the headers; Feature 29 supplies the
-  HTTPS signal; Feature 34 (CORS) and Feature 37 (CSRF) are sibling middlewares.
-- The env variables follow the env-uniformity rule; the docs list them once.
-- Central fixtures, four runners, the CI matrix and the security docs update together.
+- Consumers: every response. Composes: the middleware pipeline (7), the response builder, env config. Related:
+  CORS (33), CSRF (37).
 
 ## Breaking changes and migration
 
-- If the enable mechanism is unified to on-by-default where a language was opt-in, that
-  language's apps gain the headers; state it in the release note (it is a hardening).
-- No change to the header values (already converged). Converging the entry-point name is
-  internal.
-
-## Implementation backlog
-
-1. Add `security_headers_contract.json` and wire four runners against real responses.
-2. Pin and gate the enable mechanism (SEC-01) and the HSTS HTTPS-only opt-in (SEC-02).
-3. Gate the full header set and defaults including `X-XSS-Protection: 0` (SEC-04).
-4. Converge the entry-point name/shape (SEC-03).
-5. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit.
+- Registering by default (if chosen) changes every app's response headers - a `Breaking:`/behaviour note (CSP
+  `default-src 'self'` can break inline scripts; document the migration). HTTPS-guarding HSTS is a correctness
+  fix.
 
 ## Porting capsule
 
-Implement a before-hook that sets the six always-on security headers with the measured defaults
-and adds HSTS only when `TINA4_HSTS` is set and the request is HTTPS. Read each value from its
-`TINA4_*` env var with the secure default as fallback. Keep `X-XSS-Protection: 0`. Register it
-with the same name/shape as the others and on by default. Prove the port against a real
-response, including HSTS absent over HTTP and present over HTTPS.
+Ship a security-headers middleware with the 7 headers + sensible defaults (SAMEORIGIN, nosniff, CSP
+`default-src 'self'`, strict-origin-when-cross-origin, `X-XSS-Protection: 0`, a locked Permissions-Policy, HSTS
+via env). Decide the on-by-default posture up front (secure-by-default beats a shipped-but-off middleware -
+the current gap in all four). HTTPS-GUARD HSTS (never emit it on plain HTTP). Wire-test the headers on a real
+response. Keep the class name and header set identical across languages.
 
 ## Audit closure checklist
 
-- [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded (SEC-01..05).
-- [x] Owner ambiguities recorded (5 proposed; the enable-mechanism and HSTS calls are key).
-- [x] Proposed shared cases and mutation witnesses complete.
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete (7 headers + middleware x four).
+- [x] Lifecycle and producer/consumer edges complete (register -> before-hook -> headers).
+- [x] Configuration (env overrides), failure and SECURITY (off-by-default, HSTS-no-guard) rules complete.
+- [x] Wire (7 headers) and provider contracts complete.
+- [x] Four-language behaviour recorded truthfully (identical defaults; OFF by default all four; no HTTPS guard).
+- [x] Owner ambiguities decided (SECHDR-DEC-01 posture, SECHDR-DEC-02 HSTS/tests/name).
+- [x] Conformance fixture (headers + HTTPS-only HSTS) complete.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.

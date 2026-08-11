@@ -1,212 +1,143 @@
-# Feature 045: Swagger and OpenAPI
+# Feature 45: Swagger / OpenAPI generator
 
 ## Identity and status
 
-- Matrix identity: 45 - Swagger and OpenAPI
+- Matrix identity: 45 - Swagger / OpenAPI generator (the spec + the /swagger UI)
 - Audit state: decision-ready
-- Audit note: cross-framework audit 2026-06-22 (P1 security/exposure cluster + spec-validity
-  shipped 3.13.40; configurability shipped 3.13.42); reopened as a standalone 3.14 audit to
-  consolidate the contract and gate it. Measured against source 2026-08-10. No framework code
-  changed here.
-- Dependencies: Feature 1 configuration (the `TINA4_SWAGGER_*` vars), Feature 30 responses,
-  Feature 31 routes (the metadata the doc is generated from), Feature 41 static (serves the UI)
-- Dependants: any API consumer reading the OpenAPI doc; the Swagger UI; codegen tooling
-- Existing ADRs: the routing-surface metadata (Feature 31); the production/development split
-  (Feature 2)
-- Shared fixtures: `swagger_contract.json` is required (the Layer-2 contract map, ~10 invariants)
+- Audit note: re-measured 2026-08-11 from four-language source. The prior P1 SECURITY cluster is FIXED and
+  regression-gated in all four (positive, no active defect); the residuals are a Node boot-snapshot + a
+  latent Node /__feedback leak + ungated per-operation shape drift. Python `swagger/__init__.py:255`
+  (`46007c1`); PHP `Tina4/Swagger.php:101` (`ab871934`); Ruby `lib/tina4/swagger.rb:130` (`f549923`); Node
+  `packages/swagger/src/generator.ts:55` (`1319cf3`). Shared fixture: `plan/v3/fixtures/swagger_contract.json`
+  (10 invariants, proven).
+- Dependencies: the router (route table), the auth flag, Frond/the UI shell.
+- Dependants: API consumers; the /swagger UI.
+- Existing ADRs: the swagger contract fixture (P1 security).
+
 - Catalog phase: Routing and middleware
 
 ## Why this feature exists
 
-An engineer needs one generated API contract and one optional Swagger UI that describe the
-routes the application will dispatch - and CRUCIALLY, that contract must NOT expose the full API
-surface (including secured routes) on a production server that did not opt in.
-
-## Boundary
-
-This feature owns OpenAPI document generation (paths, params, per-op summary/tags/responses,
-`components.schemas` and `securitySchemes`), the configured description, and the
-enable/serve policy for the Swagger UI and the raw spec. Routes belong to Feature 31 and
-response delivery to Feature 30. The UI assets are served through Feature 41 (static), gated by
-the same policy.
+Swagger generates an OpenAPI spec from the routes and serves an interactive UI. The audit questions (after a
+prior P1 security cluster): is the spec production-gated, does it emit a securityScheme, does it leak internal
+routes, and is the shape at parity. The security contract is fixed + gated in all four; the residuals are
+robustness (Node) and cosmetic shape drift.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| OpenAPI skeleton | 3.0.3 (opt 3.1) | 3.0.3 (opt 3.1) | 3.0.3 | 3.0.3 |
-| Serve `/swagger` + `/swagger/openapi.json` | yes | yes | yes | yes |
-| Production gate (`TINA4_SWAGGER_ENABLED`) | DEAD before fix (gated only on TINA4_DEBUG) | wired (`isEnabled` gates register) | DEAD before fix | wired (`swaggerEnabled` short-circuits) |
-| `components.securitySchemes` + per-op `security` | yes | yes | yes | NONE before fix |
-| `->noAuth()` respected in the spec | yes | re-derived WRONG (read `noAuth`, not `auth_required`) | yes | yes |
-| Multi-status responses | collapse to 200 before fix | yes | yes | yes |
-| Spec validity | bare `*` wildcard (invalid) | `ws` method leak + operationId collisions | `*`/`path` param (invalid) | empty `{}` schema, wrong model inference |
-| Swagger UI assets | swagger-ui-dist@5 from a public CDN (offline blank) | same | same | same |
+Measured, all four:
 
-The 2026-06-22 audit (28-agent workflow, 23 findings all adversarially confirmed) found that all
-four emit a syntactically clean OpenAPI 3.0.3 skeleton but diverged badly on the parts that
-matter. The P1 cluster (below) shipped fixes in 3.13.40; configurability (security schemes,
-scopes, path filter, OpenAPI 3.1, custom schemas, 7 new `TINA4_SWAGGER_*` vars) shipped 3.13.42.
-The standalone 3.14 audit re-verifies those fixes hold and gates them with the Layer-2 contract
-map so they cannot silently regress.
+- OpenAPI `3.0.3` default, `3.1.0` opt-in via `TINA4_SWAGGER_OPENAPI` (parity). Routes discovered from the live
+  router; path/query params, request bodies, and multi-status responses documented. `/swagger` (UI) +
+  `/swagger/openapi.json` (spec) in all four.
+- SECURITY (the prior P1 cluster) - FIXED + gated in all four: the production gate is WIRED
+  (`TINA4_SWAGGER_ENABLED` wins, else `TINA4_DEBUG`, else off) and the static handler agrees (the bundled UI
+  assets 404 when disabled); a `bearerAuth` `securityScheme` is always emitted; per-operation `security` reads
+  the dispatch-enforced auth FLAG (a `noAuth`/`@noauth` route is documented public); the emitted document
+  validates against a real OpenAPI validator. Proven by real no-mock contract suites + a static-gate suite in
+  every language + the shared 10-invariant fixture. No active security defect.
+- Node RESIDUALS: (a) the spec regenerates per request but over a BOOT-TIME route SNAPSHOT (`server.ts:1743`),
+  so post-boot/hot-reloaded routes never appear (py/php/ruby re-read live routes); (b) `/__feedback/*` IS
+  registered into the main router (`feedback.ts:260`) and kept out of the spec ONLY by boot ordering (swagger
+  snapshots before `DevAdmin.register`), NOT by the exclusion list (`isIncludedPath` omits `/__feedback`) - a
+  reorder would publish `POST /__feedback/api/turn`.
+- SHAPE drift (ungated): Python (the master) emits NO `401` on a secured op; PHP/Ruby/Node do. Python omits
+  `summary`/`tags` when undecorated; PHP/Ruby/Node always populate (Ruby always `description:""`). The internal
+  exclusion rule is not shared (PHP carries 8 prefixes because it Router-registers `/ai`/`/rag`/etc; the others
+  dispatch those outside the router, so `/swagger`+`/__dev` suffices). CDN default splits jsdelivr (py/ruby) vs
+  unpkg (php/node), no SRI.
 
 ## Public surface contract
 
-The framework generates an OpenAPI 3.0.3 (or 3.1, opt-in via `TINA4_SWAGGER_OPENAPI`) document
-from the route metadata and serves it at `/swagger/openapi.json`, with a Swagger UI at
-`/swagger`. `addSecurityScheme` registers a named scheme (bearerAuth, oauth2) merged into
-`components.securitySchemes`. Both the UI and the raw spec are served only when the Swagger gate
-is on (`TINA4_SWAGGER_ENABLED`, defaulting off in production). A secured route is documented with
-`security`; a `->noAuth()`/`@noauth` route is documented without it.
+`/swagger` + `/swagger/openapi.json`, production-gated, with a securityScheme and per-op security from the real
+auth flag, documenting only application routes. The security contract is met; the shape should also converge.
 
 ## Inputs and outputs
 
-- Input: the registered routes and their metadata (summary, tags, params, responses, auth
-  requirement), the registered security schemes and schemas, and the `TINA4_SWAGGER_*` config.
-- Output: a validator-clean OpenAPI document (paths, path/query params, per-op summary/tags,
-  multi-status responses, `components.schemas`/`securitySchemes`), and the Swagger UI - both
-  served only when the gate is on.
-- A secured route's operation carries `security`; a no-auth route's does not.
-- The document is regenerated per request (not memoized stale across a hot reload).
+- Input: the route table + auth flags + env (`TINA4_SWAGGER_ENABLED`/`TINA4_DEBUG`/`TINA4_SWAGGER_OPENAPI`/
+  `TINA4_SWAGGER_UI_CDN`). Output: the OpenAPI JSON + the UI.
 
 ## Lifecycle and operation graph
 
-1. On a request to `/swagger` or `/swagger/openapi.json`, the gate is checked FIRST
-   (`TINA4_SWAGGER_ENABLED`, honoring the production default); if off, the path is not served
-   (and the static handler must not serve `/swagger` as a plain 200 either).
-2. When on, the document is generated from the current routes: paths, params, responses,
-   `components.schemas` (ORM-derived where available), `securitySchemes`, and per-op `security`
-   read from the route's `auth_required` (not re-derived).
-3. The document is emitted, validator-clean (no bare `*` path, no `ws` method, no operationId
-   collision, no empty `{}` schema).
-4. The Swagger UI is served (its assets from CDN today, a zero-dependency gap).
+1. Enabled? (env gate). 2. Read the routes -> build the spec (params/bodies/responses/security). 3. Serve the
+UI + spec, excluding internal routes.
 
 ## Configuration and precedence
 
-- `TINA4_SWAGGER_ENABLED` is the explicit on/off override; the default is OFF in production and
-  on in dev (`TINA4_DEBUG`). This is the security gate.
-- `TINA4_SWAGGER_OPENAPI` selects 3.0.3 (default) or 3.1.
-- The other `TINA4_SWAGGER_*` vars (contact email, path filter, schemes/scopes) tune the
-  document; the contact-email variable is `TINA4_SWAGGER_CONTACT_EMAIL` (the docs' `CONTACT_TEAM`/
-  `CONTACT_URL` were drift).
+- `TINA4_SWAGGER_ENABLED` (explicit) > `TINA4_DEBUG` > off. `TINA4_SWAGGER_OPENAPI` picks 3.0.3/3.1.0.
+  `TINA4_SWAGGER_UI_CDN` overrides the UI CDN.
 
 ## Failures, side effects and security
 
-- SECURITY (P1): the production gate must be WIRED, not dead. Before the fix, Python and Ruby
-  gated only on `TINA4_DEBUG` and never called `is_enabled()`/`enabled?`, so `/swagger` exposed
-  the FULL API surface - including secured paths - unconditionally in production, and the env
-  switch was dead. The gate must honor `TINA4_SWAGGER_ENABLED` in all four, and the static
-  handler must not serve `/swagger` as a plain 200 when the gate is off (the two must agree).
-- SECURITY: a secured route must be documented as secured (`security` + the scheme). Node emitted
-  no `securitySchemes` at all, so "Try it out" fired unauthenticated and secured routes looked
-  public.
-- A `->noAuth()` route must be read from the route's `auth_required`, not re-derived from a
-  missing `noAuth` key (the PHP bug documented every no-auth write route as secured).
-- The document must be OpenAPI-VALID: a bare `*` wildcard path, a `ws` path-item method, an
-  operationId collision, or an empty `{}` schema each make the whole doc invalid and break
-  codegen.
-- The UI loads `swagger-ui-dist@5` from a public CDN, so it is blank offline - a break of the
-  zero-dependency claim to weigh (bundle vs CDN).
+- SECURITY: production-gated (spec + static assets 404 when disabled), a securityScheme emitted, no internal
+  route leak on current code, no UI XSS from route data - all verified + gated. The residual Node
+  boot-snapshot + `/__feedback` are robustness/fragility, not an active leak. See the register.
 
 ## Wire and persistence contract
 
-There is no persistence; the wire contract is the OpenAPI JSON document (validator-clean 3.0.3
-or 3.1) at `/swagger/openapi.json` and the UI at `/swagger`, both served only when the gate is
-on. The document is regenerated per request. Its shape (paths, params, responses, components,
-security) is identical across the four for the same routes.
+The OpenAPI JSON (validated) + the UI HTML. The spec shape is structurally converged; per-operation shape
+(401/summary/tags) is not gated.
 
 ## Providers and substitutability
 
-The generator is zero-dependency (hand-rolled OpenAPI emission); only the UI pulls
-`swagger-ui-dist` from a CDN. A future runtime generates the same document from its routes, wires
-the same production gate, and emits the same security metadata.
+A future runtime must production-gate the spec + assets, emit a securityScheme + real per-op security, exclude
+internal routes by a SHARED rule, and regenerate from LIVE routes.
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| SW-01 | The production gate was DEAD in Python and Ruby (gated only on `TINA4_DEBUG`), exposing the full API surface in prod; fixed in 3.13.40. | Gate that `/swagger` and `/swagger/openapi.json` are NOT served in production without `TINA4_SWAGGER_ENABLED`, in all four, and that the static handler agrees. |
-| SW-02 | Node emitted no `securitySchemes`/per-op `security`; secured routes looked public; fixed. | Gate that a secured route carries `security` and the scheme in all four. |
-| SW-03 | PHP re-derived `noAuth` from a missing key, documenting no-auth routes as secured; fix reads `auth_required`. | Gate that a `->noAuth()` route is documented WITHOUT security in all four. |
-| SW-04 | Spec validity: bare `*` wildcard (Python/Ruby), `ws` method + operationId collision (PHP), empty schema + wrong model inference (Node) each invalidate the doc. | Gate the document validates against an OpenAPI validator in all four (no wildcard, no ws method, no collision, no empty schema). |
-| SW-05 | Multi-status responses collapsed to 200 (Python); Ruby memoized the doc stale across hot reload. | Gate multi-status responses and per-request regeneration in all four. |
-| SW-06 | The UI loads swagger-ui-dist from a public CDN (blank offline), breaking the zero-dep claim. | Decide: bundle the UI assets or document the CDN dependency; gate the offline behaviour. |
-| SW-07 | No shared fixture (Layer-2 contract map) is materialized. | Add `swagger_contract.json` with the ~10 invariants. |
+| SWAG-NODE-BOOT-SNAPSHOT | Node regenerates the spec per request but over a BOOT-TIME route SNAPSHOT (`server.ts:1743` captures `router.getRoutes()` once); post-boot / hot-reloaded routes never appear. Python/PHP/Ruby re-read the LIVE routes per request. A per-request-freshness parity gap. | Regenerate Node's spec from the live route table per request (like the other three). |
+| SWAG-NODE-FEEDBACK-LEAK | Node's `/__feedback/*` IS registered into the main router (`feedback.ts:260`) and is kept OUT of the spec ONLY by boot ordering (swagger snapshots at `server.ts:1743` before `DevAdmin.register` at `:1775`), NOT by the exclusion list (`isIncludedPath` `generator.ts:372` omits `/__feedback`). A reorder would publish `POST /__feedback/api/turn` as a secured route. Latent, not active. | Add `/__feedback` (and any non-`/__dev` internal Node registers into the router) to `isIncludedPath`; do not rely on boot ordering. |
+| SWAG-EXCLUSION-NOT-SHARED | The internal-route exclusion rule is NOT shared: PHP carries 8 prefixes + a bare `/` (`Swagger.php:245`) because it Router-registers `/ai`/`/rag`/`/vision`/`/embed`/`/image`/`/__feedback`; Python/Ruby/Node use only `/swagger`+`/__dev` because they dispatch those internals OUTSIDE the router. Three different mechanisms achieve the same clean result; the fixture's goal is one shared rule. | Share ONE internal-exclusion rule (and register internals consistently) across the four. |
+| SWAG-401-SHAPE | Python (the reference) emits NO `401 Unauthorized` on a secured operation; PHP/Ruby/Node each add one. So the master is the odd one out, and the per-op shape is ungated. | Decide whether a secured op documents a `401` (add to Python, or drop from the others); gate it. |
+| SWAG-SHAPE-DRIFT | The per-operation object shape is ungated and drifts: Python omits `summary`/`tags` when undecorated, PHP/Ruby/Node always populate (Ruby always `description:""`); PHP alone adds a `requestBody.description`. Valid OpenAPI, but not identical. | Gate the per-op shape (summary/tags/description) in the contract fixture so the four agree. |
+| SWAG-CDN-NO-SRI | The UI loads `swagger-ui-dist@5` from a public CDN with NO Subresource-Integrity hash, and the default CDN splits (jsdelivr for py/ruby, unpkg for php/node). Documented + `TINA4_SWAGGER_UI_CDN`-overridable, but a supply-chain + parity nit. | Pin one CDN default + add an SRI hash (or bundle the assets); low priority. |
 
 ## Owner decisions
 
-Proposed for owner ratification:
-
-1. The production gate is `TINA4_SWAGGER_ENABLED`, default OFF in production, wired in ALL four
-   (not dead), and the static handler agrees (no `/swagger` 200 when off). This is the security
-   decision this row exists to lock.
-2. A secured route is documented with `security` and the scheme; a `->noAuth()`/`@noauth` route
-   without, read from `auth_required`, in all four.
-3. The document is OpenAPI-valid (no bare wildcard, no `ws` method, no operationId collision, no
-   empty schema) and regenerated per request (never memoized stale).
-4. OpenAPI 3.0.3 is the default, 3.1 opt-in via `TINA4_SWAGGER_OPENAPI`; the contact variable is
-   `TINA4_SWAGGER_CONTACT_EMAIL`.
-5. The Swagger UI's CDN dependency is either bundled (restoring zero-dep/offline) or explicitly
-   documented; the offline behaviour is gated.
+- SWAG-DEC-01 (proposed): fix Node's boot-snapshot to regenerate from live routes (SWAG-NODE-BOOT-SNAPSHOT) and
+  add `/__feedback` to Node's exclusion list (SWAG-NODE-FEEDBACK-LEAK) - the robustness/fragility gaps.
+- SWAG-DEC-02 (proposed): share ONE internal-exclusion rule (SWAG-EXCLUSION-NOT-SHARED) and gate the per-op
+  shape - the `401` (SWAG-401-SHAPE) and summary/tags (SWAG-SHAPE-DRIFT) - so the master and the ports agree;
+  CDN/SRI (SWAG-CDN-NO-SRI) is cosmetic. Note: the P1 security cluster is FIXED + gated - do NOT re-open it.
 
 ## Proposed conformance fixture
 
-Add `swagger_contract.json` (the Layer-2 contract map) with stable ids for: `/swagger` and
-`/swagger/openapi.json` NOT served in production without `TINA4_SWAGGER_ENABLED` (and the static
-handler agreeing); a secured route carrying `security`; a `->noAuth()` route carrying none; the
-emitted document VALIDATING against an OpenAPI validator (no wildcard/ws/collision/empty-schema);
-multi-status responses present; per-request regeneration after a route change; and `TINA4_SWAGGER_
-OPENAPI` emitting 3.1. Every case generates a real document from real routes and validates it; no
-mock can claim conformance (the security gate and the spec validity must be proven on real
-output).
+The existing `swagger_contract.json` (10 invariants, proven: prod-gate, static-gate, securityScheme, per-op
+security from the auth flag, valid document, no internal-route leak). Add: Node's spec reflects a route added
+AFTER boot (catches SWAG-NODE-BOOT-SNAPSHOT); `/__feedback` is absent regardless of registration order (Node);
+the per-op `401`/summary/tags shape is identical across the four.
 
 ## Integration map
 
-- Feature 31 supplies the route metadata and `auth_required`; Feature 41 serves the UI assets
-  under the same gate; Feature 2's `TINA4_DEBUG` and `TINA4_SWAGGER_ENABLED` govern serving.
-- Codegen and API consumers read `/swagger/openapi.json`; the doc's validity is their contract.
-- Central fixtures, four runners, the CI matrix (which must run an OpenAPI validator) and the
-  Swagger docs update together; the CLAUDE.md drift (contact vars) is corrected.
+- Consumers: API clients, the /swagger UI. Composes: the router (route table), the auth flag (per-op
+  security), the dev-admin/feedback internals (excluded), Frond (the UI shell).
 
 ## Breaking changes and migration
 
-- The P1 fixes already shipped (3.13.40/42); the 3.14 audit gates them so they cannot regress.
-  No new application break; a production server that relied on `/swagger` being open must set
-  `TINA4_SWAGGER_ENABLED=true` (a security correction, noted in the release note).
-- Bundling the UI (if chosen) removes the CDN dependency; no application change.
-
-## Implementation backlog
-
-1. Materialize `swagger_contract.json` (the Layer-2 map) and wire four runners with an OpenAPI
-   validator in CI.
-2. Re-verify and gate the production gate (SW-01) and the static-handler agreement in all four.
-3. Gate security schemes (SW-02), `noAuth` from `auth_required` (SW-03), spec validity (SW-04),
-   and multi-status + per-request regeneration (SW-05).
-4. Decide and gate the UI CDN/bundle question (SW-06); fix the CLAUDE.md contact-var drift.
-5. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit.
+- Gating the per-op shape may change the emitted spec for some ops (adding/removing a `401`) - a documented
+  contract change. Fixing Node's snapshot changes which routes appear (post-boot routes now documented) - a
+  correctness fix.
 
 ## Porting capsule
 
-Generate an OpenAPI 3.0.3 (3.1 opt-in) document from the routes: paths, params, per-op
-summary/tags/multi-status responses, `components.schemas` and `securitySchemes`, and per-op
-`security` read from the route's `auth_required` (a no-auth route gets none). Serve it at
-`/swagger/openapi.json` and a UI at `/swagger` ONLY when `TINA4_SWAGGER_ENABLED` is on (default
-off in production), and make the static handler agree. Emit a validator-clean document (no bare
-wildcard, no `ws` method, no operationId collision, no empty schema) and regenerate per request.
-Prove the port with a production-gated-off case, a secured-vs-noauth pair, and an
-OpenAPI-validator pass.
+Generate the OpenAPI spec from the LIVE route table per request (never a boot snapshot - the Node gap),
+production-GATE both the spec and the bundled UI assets (404 when disabled), emit a `bearerAuth`
+securityScheme, and set per-operation `security` from the dispatch-enforced auth flag (a `noAuth` route is
+public). Exclude internal routes by ONE shared rule (never rely on boot ordering - the Node `/__feedback`
+fragility). Keep the per-op shape (401/summary/tags) identical across languages. The security contract is the
+one to never regress; it is currently fixed and gated.
 
 ## Audit closure checklist
 
-- [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded (SW-01..07, from the 2026-06-22 audit).
-- [x] Owner ambiguities recorded (5 proposed; the production gate is the key security one).
-- [x] Proposed shared cases and mutation witnesses complete (the Layer-2 map).
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete (spec + UI + gate x four).
+- [x] Lifecycle and producer/consumer edges complete (gate -> read routes -> emit -> serve).
+- [x] Configuration, failure and SECURITY (prod-gate, securityScheme, no-leak - verified) rules complete.
+- [x] Wire (OpenAPI JSON) and provider contracts complete.
+- [x] Four-language behaviour recorded truthfully (security fixed+gated; Node snapshot; shape drift).
+- [x] Owner ambiguities decided (SWAG-DEC-01 Node robustness, SWAG-DEC-02 shared-rule/shape).
+- [x] Conformance fixture (existing 10 invariants + snapshot/shape additions) complete.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.

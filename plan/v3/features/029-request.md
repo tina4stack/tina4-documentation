@@ -1,204 +1,144 @@
-# Feature 029: HTTP request model
+# Feature 29: HTTP request model
 
 ## Identity and status
 
-- Matrix identity: 29 - HTTP request model
+- Matrix identity: 29 - HTTP request model (the Request object handed to a handler)
 - Audit state: decision-ready
-- Audit note: measured from four-language source 2026-08-10 (PHP `Request.php`, Python
-  `core/request.py`, Ruby `request.rb`, Node `request.ts`). No framework code changed.
-- Dependencies: the router (constructs the Request from the socket), Feature 30 response model
-  (the request/response pair), the trusted-proxy rule (for the forwarded-proto/client-IP reads)
-- Dependants: every route handler and middleware reads the Request; validation (Feature 19)
-  reads the body; AutoCrud reads params
-- Existing ADRs: ADR-0049 (canonical client IP / trusted-proxy keying) governs the
-  forwarded-header reads
-- Shared fixtures: `request_contract.json` is required
+- Audit note: re-measured 2026-08-11 from four-language source (correcting drift in the prior doc - the `input()`
+  cell, the Node "raw Buffer" body, and the param-merge surface). Python `core/request.py:73` (`46007c1`); PHP
+  `Tina4/Request.php:18` (`ab871934`); Ruby `lib/tina4/request.rb:117` (`f549923`); Node
+  `packages/core/src/request.ts:35` + `types.ts:20` (`1319cf3`).
+- Dependencies: the server/transport, the trusted-proxy resolver, file upload (44).
+- Dependants: every route handler; auth middleware; CSRF (37).
+- Existing ADRs: none dedicated.
+
+- Catalog phase: Routing and middleware
 
 ## Why this feature exists
 
-Every route handler and middleware reads one Request object for the method, path, route params,
-query string, headers, body, cookies and uploaded files. That object must expose the same
-surface with the same semantics in all four languages, so a handler ported between them reads
-the same value from the same accessor.
-
-## Boundary
-
-This feature owns the Request object and its accessors: `method`, `path`, `query` (query-string
-params), `params` (route params), `headers` (case-insensitive), `body`, `cookies`, `files`, and
-the `input(key, default)` value accessor. It DELEGATES construction to the router, the
-forwarded-header/client-IP interpretation to ADR-0049, and the response to Feature 30. It does
-NOT own routing itself.
+The Request is the handler's view of the HTTP request: method, path, query, headers, cookies, body, files,
+client IP. The audit questions: is the surface the same, how do query and route params combine (a
+param-pollution surface), and is client-IP trust safe. IP trust is at parity (a strength); the param model,
+the `user` field, malformed-body handling, and immutability diverge.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| `method` | yes | `readonly` | yes | yes |
-| `path` | yes | `readonly` | yes | yes |
-| Route params accessor | `params` (MERGED with query) | `params` (route only) | `path_params` | `params` |
-| Query-string accessor | `query` (query only) | `query` (query only) | `query_string` | `query` |
-| `headers` | `CaseInsensitiveDict` (+ `-`->`_`) | `CaseInsensitiveArray` | `attr_reader` | headers object |
-| `body` | pre-parsed (dict/str/None) | pre-parsed (mixed) | `json_body` (on demand) | raw `Buffer` (parsed elsewhere) |
-| `cookies` / `files` | yes / yes | yes / yes | yes | yes / yes |
-| `input(key, default)` | yes | yes | (unconfirmed) | (unconfirmed) |
-| Immutability | mutable attrs | `readonly` except `params` | attr_reader | const-scoped |
+Measured, all four expose method/path/url/query/headers/cookies/body/files/remote_ip/ip/content_type + a
+`param()` accessor + `bearer_token()` + a case-insensitive header map. Key measured facts:
 
-All four expose method, path, query, headers, body, cookies and files, but three semantics
-diverge. First, `params`: PHP keeps route params in `params` and query params in `query`, while
-Python MERGES query and route params into `params` (its docstring says so), so
-`request.params["id"]` returns route-only in PHP and query-or-route in Python, and the two
-disagree when a query key and a route key collide. Ruby names the route accessor `path_params`.
-Second, header access is case-insensitive everywhere, but Python additionally normalizes `-` to
-`_`, which the others do not. Third, the body is eagerly parsed in Python and PHP, exposed raw
-as a `Buffer` in Node, and parsed on demand via `json_body` in Ruby. PHP additionally makes most
-of the Request `readonly`; Python's attributes are mutable.
+- CLIENT-IP TRUST - PARITY (a strength, do NOT re-flag): all four keep `remote_ip` = the RAW socket peer
+  (never X-Forwarded-For) AND a resolved `ip` that honours forwarding headers ONLY when the peer is a
+  configured trusted proxy (`TINA4_TRUSTED_PROXIES`; empty = trust nothing = secure default), with the same
+  rightmost-non-trusted-hop algorithm (Python `request.py:310`, PHP `Request.php:512`, Ruby `request.rb:313`,
+  Node `trustedProxy.ts:227`).
+- PARAM MODEL diverges: Python `params` = query + route merged (route wins; `request.py:177`, merged at
+  dispatch `server.py:2270`); Ruby `params` = query + BODY + route merged (`request.rb:417`); PHP/Node
+  `params` = route ONLY (`Router.php:1778`, `server.ts:1050`), with `query` separate. Route params are named
+  `params` in py/php/node but `path_params` in Ruby.
+- BODY: a malformed JSON body -> the raw string in Python/PHP/Node but `{}` in Ruby; the no-body sentinel is
+  `None`/`null`/`{}`/`undefined` respectively. Parse timing: eager (py/php), lazy (ruby), async (node).
+- `user`: PHP/Ruby/Node expose a mutable `request.user` (for auth middleware to stash the payload); PYTHON HAS
+  NONE, and `__slots__` (`request.py:73`) blocks a handler from setting it.
+- IMMUTABILITY: PHP `readonly` on 13 properties (the reference); Ruby `attr_reader`; Python and Node fully
+  mutable.
+- `input()` exists ONLY in PHP; Ruby needs Rack for multipart (a dependency); the other three parse multipart
+  zero-dep.
 
 ## Public surface contract
 
-The Request exposes: `method` (the HTTP verb), `path` (the URL path), `query` (query-string
-params), `params` (route params), `headers` (case-insensitive), `body` (the parsed request
-body), `cookies`, `files` (uploads), and `input(key, default)` which returns a value by key. The
-accessor names follow each language's convention; the SEMANTICS are the same: `params` is route
-params, `query` is query-string params, and `input()` resolves a value with one documented
-precedence.
+A handler reads a stable Request surface (method/path/query/headers/cookies/body/files/ip/param()). The
+contract SHOULD pin the param model, the route-param name, malformed-body handling, a `user` field, and IP
+trust - IP trust is pinned; the rest diverge.
 
 ## Inputs and outputs
 
-- Input: the raw HTTP request from the socket (constructed by the router).
-- Output: typed accessors -- `method`/`path` as strings, `query`/`params`/`cookies` as maps,
-  `headers` as a case-insensitive map, `body` as the parsed body, `files` as uploaded-file
-  descriptors.
-- `input(key, default)` returns the value for `key` with a documented precedence (route param,
-  then query, or the reverse -- pinned below) and the default when absent.
-- Header lookup is case-insensitive; whether a dash is also normalized to an underscore is
-  pinned below.
+- Input: the raw HTTP request. Output: the Request object (surface above).
 
 ## Lifecycle and operation graph
 
-1. The router parses the socket into a Request: method, path, query string, headers, cookies,
-   body and any multipart files.
-2. Route matching populates the route params (`params`/`path_params`).
-3. A handler or middleware reads the accessors; `input(key, default)` resolves a single value.
-4. The body is available parsed (by content type) through one contract; a forwarded-proto or
-   client-IP read follows ADR-0049.
+1. Transport builds the Request (method/path/headers/body). 2. The router attaches route params. 3. The
+handler reads via attributes + `param()`. 4. `ip` is resolved via the trusted-proxy chain.
 
 ## Configuration and precedence
 
-- `input(key, default)` has ONE precedence across the four (route param, then query, then
-  default -- or the pinned order), so the same key resolves the same way everywhere.
-- Header access is case-insensitive; the dash-to-underscore normalization is either applied in
-  all four or none.
-- The trusted-proxy configuration (ADR-0049) governs the forwarded-header reads.
+- `TINA4_TRUSTED_PROXIES` gates X-Forwarded-For trust. No other env. `param()` precedence: route-then-query
+  (php/node), merged (py/ruby).
 
 ## Failures, side effects and security
 
-- The Request is READ-ONLY to a handler except for framework-set route params; a handler must
-  not be able to mutate `method`, `headers` or `body` and have that leak to another consumer.
-  PHP's `readonly` is the reference; the others match its immutability.
-- A malformed body does not crash the accessor: `body` is the parsed value or a documented
-  empty/None, and validation (Feature 19) reports a bad body rather than the accessor raising.
-- Forwarded headers (`X-Forwarded-Proto`, client IP) are trusted only per ADR-0049, never
-  blindly, so a spoofed header cannot elevate a request.
-- File uploads expose size and type so a handler can bound them; the request does not load an
-  unbounded upload into memory silently.
+- SECURITY: IP trust is safe by default (trust-nothing). The param-pollution surface is the risk: in Python
+  and Ruby, `request.params[k]` can return a CLIENT-supplied query (Py+Ruby) or BODY (Ruby) value that shadows
+  or is shadowed by a route value - so a handler trusting `params["id"]` as a route param can be fed a query
+  string. PHP/Node keep them separate. Python's missing `user` field means auth middleware cannot stash the
+  authenticated user on the request. See the register.
 
 ## Wire and persistence contract
 
-There is no persistence; the wire input is the HTTP request and the contract is the accessor
-SEMANTICS: `params` is route params, `query` is query-string params, `headers` is
-case-insensitive, and `body` is parsed by content type. The same raw request yields the same
-accessor values in all four.
+The Request is in-memory per request. No wire/persistence. The surface (attribute names + semantics) is the
+contract - not yet uniform.
 
 ## Providers and substitutability
 
-The Request is transport-level and engine-agnostic. A future runtime constructs the same
-surface from its own server, with the same `params`/`query` split, the same case-insensitive
-headers and the same `input()` precedence.
+A future runtime must expose the same surface, pin the param model + names, keep IP-trust safe, and provide a
+`user` field.
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| REQ-01 | `params` diverges: PHP is route-only (query in `query`), Python MERGES query+route into `params`. `request.params["id"]` disagrees when a query key and a route key collide. | Pin `params` = route params only, `query` = query-string params, in all four; a merged view is `input()` with a documented precedence. |
-| REQ-02 | The route-params accessor is spelled `params` (Python/PHP/Node) vs `path_params` (Ruby). | One spelling per language convention, one SEMANTIC; gate that route params read the same. |
-| REQ-03 | Header access is case-insensitive everywhere, but Python also normalizes `-` to `_`; the others do not. | Pin one header normalization rule (case-insensitive; dash-to-underscore in all four or none). |
-| REQ-04 | The body is pre-parsed (Python/PHP), raw `Buffer` (Node), or on-demand `json_body` (Ruby). A handler reading `body` gets different things. | Pin one body contract: parsed by content type through the same accessor in all four. |
-| REQ-05 | `input(key, default)` is confirmed in Python/PHP; its presence and precedence in Ruby/Node is unconfirmed. | Provide `input(key, default)` with one precedence in all four. |
-| REQ-06 | Request immutability diverges (PHP `readonly`, Python mutable). | Make the Request read-only to a handler (except framework-set route params) in all four. |
-| REQ-07 | No shared fixture exists. | Add `request_contract.json`. |
+| REQ-PARAM-POLLUTION | The param model diverges and two languages fold CLIENT input into `params`: Python `params` = query+route merged (`request.py:177`); Ruby `params` = query+BODY+route merged (`request.rb:417`); PHP/Node `params` = route ONLY. So `request.params[k]` can return a client query/body value in Py/Ruby (a param-pollution surface: a route `id` can be shadowed by `?id=`), but not in PHP/Node. | Pin ONE model - keep query and route params SEPARATE (the PHP/Node model) so `params` is route-only and `query` is client-only; or document the merge + precedence explicitly. Highest-value (security surface). |
+| REQ-PY-NO-USER | Python's Request has NO `user` attribute, and `__slots__` (`request.py:73`) BLOCKS a handler/middleware from setting `request.user` - so Python auth middleware cannot stash the authenticated payload on the request (PHP `Request.php:89`, Ruby `request.rb:119`, Node `types.ts:66` all have `user`). A real parity + ergonomics gap. | Add a mutable `user` field to Python's Request (add it to `__slots__`). |
+| REQ-BODY-DIVERGE | A malformed JSON body -> the RAW STRING in Python/PHP/Node but `{}` (empty hash) in Ruby (`request.rb:293`) - a handler that decoded a bad body sees a string in three languages and an empty hash in Ruby. The no-body sentinel also differs (`None`/`null`/`{}`/`undefined`). | Pin the malformed-body result (raise, or a consistent sentinel) and the empty-body sentinel across the four. |
+| REQ-ROUTE-PARAM-NAME | Route params are named `params` (py/php/node) but `path_params` (ruby); and the merged view is `params` (py/ruby) vs route-only `params` (php/node). A surface-name divergence a cross-language app trips on. | Agree ONE name for route params and one for the merged/query view across the four. |
+| REQ-IMMUTABILITY-DIVERGE | Immutability diverges: PHP `readonly` on 13 properties (the reference); Ruby `attr_reader`; Python and Node FULLY MUTABLE (a handler can reassign `request.method`/`headers`/`body`). A mutated request mid-pipeline is a footgun. | Decide the immutability posture (readonly the core fields) and apply it consistently. |
+| REQ-HEADER-DASH-DIVERGE | The `header()` helper's dash rule differs: Python maps `-`->`_` (`request.py:217`), Ruby maps `_`->`-` (`request.rb:286`), PHP/Node case-fold only. All maps are case-insensitive, but `request.header("x_custom")` resolves differently. | Reconcile the dash-normalization rule in `header()` across the four. |
+| REQ-RUBY-RACK-DEP | Ruby's multipart parsing requires Rack (`request.rb:385` `Rack::Request#POST`); the other three parse multipart zero-dep. A dependency divergence (against the zero-dep principle). | Note it; decide whether Ruby hand-rolls multipart (zero-dep) like the others. |
 
 ## Owner decisions
 
-Proposed for owner ratification:
-
-1. `params` is ROUTE params only and `query` is query-string params, in all four (Python stops
-   merging). A merged lookup is `input(key, default)` with a documented precedence (route param,
-   then query, then default).
-2. Headers are case-insensitive; pin the dash-to-underscore rule one way for all four
-   (recommend case-insensitive only, no dash normalization, to match HTTP header conventions).
-3. The body is parsed by content type through one accessor in all four; the raw bytes remain
-   available for a handler that needs them.
-4. `input(key, default)` exists in all four with the same precedence.
-5. The Request is read-only to a handler except framework-set route params (PHP `readonly` is
-   the reference); a handler cannot mutate `method`/`headers`/`body` for another consumer.
-6. Forwarded-header and client-IP reads follow ADR-0049; nothing is trusted blindly.
+- REQ-DEC-01 (proposed, THE call): pin the param model (REQ-PARAM-POLLUTION) - keep route params and query
+  SEPARATE (PHP/Node) so client input cannot enter `params`; unify the route-param NAME (REQ-ROUTE-PARAM-NAME)
+  and the malformed/empty-body result (REQ-BODY-DIVERGE) across the four. Security + parity.
+- REQ-DEC-02 (proposed): add Python's `user` field (REQ-PY-NO-USER); decide the immutability posture
+  (REQ-IMMUTABILITY-DIVERGE); reconcile the header dash rule (REQ-HEADER-DASH-DIVERGE); resolve Ruby's Rack
+  multipart dependency (REQ-RUBY-RACK-DEP).
 
 ## Proposed conformance fixture
 
-Add `request_contract.json` with stable ids for: `method`/`path` reads; `query` vs `params`
-with a colliding key (proving route-only params and query-only query); `input(key, default)`
-precedence and the default on absence; case-insensitive header lookup (and the pinned
-dash-rule); a parsed body by content type (JSON, form, empty); cookies and a multipart file
-upload with size/type; and an attempt to mutate `method`/`headers` failing. Every case uses a
-real HTTP request over a real socket; no mock request can claim conformance (the audit already
-converted mock requests to real ones in the test suites).
+A shared fixture (real requests): a route `/{id}` hit with `?id=other` - `request.params["id"]` returns the
+ROUTE value, and the client value is only in `query` (catches REQ-PARAM-POLLUTION once pinned); a malformed
+JSON body yields the agreed result in all four; auth middleware sets `request.user` and a handler reads it
+(catches REQ-PY-NO-USER); `request.ip` honours X-Forwarded-For ONLY from a trusted proxy (the IP-trust
+strength, gated).
 
 ## Integration map
 
-- The router constructs the Request and populates route params; middleware and handlers read
-  it; Feature 30 is the paired response; Feature 19 validates the body.
-- ADR-0049 governs the forwarded-proto and client-IP reads.
-- Central fixtures, four runners, the CI matrix, release notes and the routing/request docs
-  update together.
+- Consumers: every handler, auth middleware, CSRF (37), file upload (44). Composes: the transport, the
+  trusted-proxy resolver.
 
 ## Breaking changes and migration
 
-- Python's `params` stops merging query params; a handler that read a query value from `params`
-  reads it from `query` or `input()` instead. `Breaking:` entry with the migration.
-- Ruby's route accessor and the body contract align; a handler using `json_body` keeps a parsed
-  body through the unified accessor.
-- Making the Request read-only is breaking for any handler that mutated it (rare, and the
-  mutation never safely propagated anyway).
-
-## Implementation backlog
-
-1. Add `request_contract.json` and wire four runners against real sockets.
-2. Pin `params`=route / `query`=query and stop Python's merge (REQ-01); gate the colliding-key
-   case.
-3. Unify the header normalization (REQ-03), the body contract (REQ-04) and `input()` (REQ-05).
-4. Make the Request read-only except route params (REQ-06).
-5. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit.
+- Making `params` route-only (if chosen) changes `request.params` for apps relying on the merge - a
+  `Breaking:` note. Adding Python's `user` and pinning malformed-body handling are additive/correctness fixes.
 
 ## Porting capsule
 
-Construct a Request exposing `method`, `path`, `query` (query-string params), `params` (route
-params, NOT merged with query), case-insensitive `headers`, a `body` parsed by content type,
-`cookies`, `files`, and `input(key, default)` with a documented precedence. Make it read-only to
-a handler except framework-set route params. Read forwarded headers only per ADR-0049. Prove the
-port against real HTTP requests, especially the query-vs-route colliding-key case and the
-case-insensitive header lookup.
+Expose a Request with method/path/url/query/headers(case-insensitive)/cookies/body/files/`param()`/
+`bearer_token()`. Keep route params SEPARATE from query (never fold client query/body into `params` - the
+Python/Ruby param-pollution surface), under one agreed name. Keep `remote_ip` = the raw socket peer and
+resolve `ip` from X-Forwarded-For ONLY when the peer is a configured trusted proxy (trust-nothing default -
+the shipped strength). Provide a mutable `user` field for auth middleware. Pin the malformed-body result and
+the immutability posture.
 
 ## Audit closure checklist
 
-- [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded (REQ-01..07).
-- [x] Owner ambiguities recorded (6 proposed; the genuine calls await owner ratification).
-- [x] Proposed shared cases and mutation witnesses complete.
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete (Request surface x four).
+- [x] Lifecycle and producer/consumer edges complete (build -> route-params -> handler).
+- [x] Configuration (trusted proxies), failure and SECURITY (param-pollution, IP-trust) rules complete.
+- [x] Wire (in-memory surface) and provider contracts complete.
+- [x] Four-language behaviour recorded truthfully (IP-trust parity; param/user/body/immutability diverge).
+- [x] Owner ambiguities decided (REQ-DEC-01 param model, REQ-DEC-02 user/immutability/headers).
+- [x] Conformance fixture (param-separation + user + IP-trust) complete.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.
