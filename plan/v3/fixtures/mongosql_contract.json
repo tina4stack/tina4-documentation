@@ -1,0 +1,113 @@
+{
+  "_comment": [
+    "The MongoDB SQL-provider fail-closed contract: ONE answer key, four frameworks. Feature 14.",
+    "",
+    "The MongoDB provider translates a SQL WHERE into a Mongo filter with a",
+    "hand-rolled regex parser (it does NOT use the shared SQLTranslator). Before",
+    "MONGO-DEC-01 that parser QUIETLY GUESSED: an unparseable or unsupported WHERE",
+    "condition fell through to an EMPTY filter, and a DELETE/UPDATE then reached",
+    "delete_many({}) / update_many({}) and matched EVERY document -- a silent mass",
+    "wipe. A no-WHERE DELETE did the same, and Node additionally acknowledged a",
+    "no-WHERE UPDATE as a silent no-op while deleteAsync carried an explicit",
+    "'empty filter = delete all' branch. The whole parse/CRUD path had ZERO",
+    "functional tests in any of the four frameworks, which is exactly how the",
+    "most dangerous provider in the DB band shipped (MONGO-MASSWRITE /",
+    "MONGO-ZERO-TESTS). See tina4-documentation/plan/v3/features/014-mongodb-sql-provider.md",
+    "and tina4-documentation/plan/v3/OWNER-DECISIONS.md (Batch 1, MONGO-DEC-01).",
+    "",
+    "MONGO-DEC-01 makes the parser FAIL CLOSED, in all four:",
+    "  Guard 1 (fail-closed parse): a WHERE condition the parser does not",
+    "    recognise RAISES a clear error instead of degrading to an empty/partial",
+    "    filter. An unparseable WHERE can therefore NEVER become match-all -- not",
+    "    on a SELECT, an UPDATE, or a DELETE.",
+    "  Guard 2 (reject a filterless write): ONE shared helper per language, reused",
+    "    by the DELETE and the UPDATE path, RAISES when the write has no WHERE",
+    "    clause (which would translate to an empty filter and affect the whole",
+    "    collection).",
+    "",
+    "The explicit whole-collection spelling is truncate(), which passes",
+    "'WHERE 1 = 1' -- a non-blank clause that is untouched by this fix, so the",
+    "guard NEVER breaks the intentional path. The native driver",
+    "(db.adapter._collection() / getConnection()) remains the escape hatch for",
+    "anything the SQL subset cannot express. Maintainability (owner directive):",
+    "ONE shared guard reused by both write paths per language; ZERO new runtime",
+    "deps.",
+    "",
+    "Every case runs against a REAL MongoDB (require-services-gated, no mocks): the",
+    "framework performs the write (the code under test) and the resulting document",
+    "state is read back -- the witness is a real side effect, the collection",
+    "count/status is UNCHANGED after the guard fires and drops by EXACTLY the",
+    "matches on a scoped write. Mutation-proved live (macOS + lab MongoDB 7):",
+    "disabling the fail-closed parse makes the compound-WHERE delete drop the",
+    "wrong document (id=1 deleted although its status did not match), and",
+    "restoring the original {}-fallback makes the no-WHERE delete WIPE the whole",
+    "collection -- each guard's case goes red, then green again on restore.",
+    "",
+    "The 'partially unparseable' case is the one that isolates Guard 1: a compound",
+    "'id = 1 AND UPPER(status) = ...' leaves a NON-empty but WRONG filter {id:1}",
+    "if the unsupported part is silently dropped, which the empty-filter guard",
+    "waves through -- only the fail-closed parse catches it. This is a real",
+    "footgun ('DELETE WHERE active = 1 AND UPPER(name) = ?' silently deleting",
+    "every active row), not a contrivance.",
+    "",
+    "Each invariant names a REAL suite file per framework and a list of case",
+    "names. The four suites carry the SAME case names in each language's own idiom",
+    "(Python snake_case method, PHP testPascalCase method, Ruby it-description,",
+    "Node assert label), which scripts/audit-contract-fixtures.py normalises and",
+    "matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-11",
+  "feature": "14 - MongoDB SQL provider (fail-closed WHERE + mass-delete guard)",
+  "invariants": [
+    {
+      "id": "mongosql-unparseable-where-fails-closed",
+      "adr": "MONGO-DEC-01",
+      "rule": "An unparseable or unsupported SQL WHERE condition RAISES when translated for MongoDB -- it never degrades to an empty (match-all) or a partial filter. This holds on a DELETE and an UPDATE, and for a compound WHERE where only one AND-part is unsupported (the whole statement raises rather than dropping the part and silently narrowing/widening the write). Nothing is deleted or changed.",
+      "why": "A parser that quietly guesses is a parser that quietly loses data: before MONGO-DEC-01 an unparseable WHERE became delete_many({})/update_many({}) -- a whole-collection wipe -- or, on a compound clause, a wrong-but-non-empty filter that deleted the wrong rows. Failing closed at the parse turns silent data loss into a clear error. Mutation-proved: with the fail-closed parse disabled, the compound-WHERE delete removes id=1 although its status did not match.",
+      "suites": {
+        "ruby": "spec/mongo_sql_fail_closed_spec.rb",
+        "python": "tests/test_mongo_sql_fail_closed.py",
+        "php": "tests/MongoSqlFailClosedTest.php",
+        "nodejs": "test/mongosqlFailClosed.test.ts"
+      },
+      "cases": [
+        "an unparseable where delete raises and deletes nothing",
+        "a partially unparseable where delete raises and deletes nothing",
+        "an unparseable where update raises and changes nothing"
+      ]
+    },
+    {
+      "id": "mongosql-filterless-write-rejected",
+      "adr": "MONGO-DEC-01",
+      "rule": "A DELETE or an UPDATE with NO WHERE clause is REFUSED (raises) rather than translating to an empty filter that affects every document. One shared guard per language enforces this for both write paths. truncate() (which passes WHERE 1 = 1, a non-blank clause) is the explicit whole-collection spelling and is unaffected.",
+      "why": "The other half of the mass-write footgun: DELETE FROM coll / UPDATE coll SET x=? with no WHERE would empty or rewrite the whole collection. Node additionally used to acknowledge a no-WHERE UPDATE as a silent no-op and carried an explicit 'empty filter = delete all' branch. Rejecting a filterless write closes it uniformly. Mutation-proved: restoring the original blank-WHERE -> {} behaviour makes the no-WHERE delete WIPE the collection, and the count-unchanged case goes red.",
+      "suites": {
+        "ruby": "spec/mongo_sql_fail_closed_spec.rb",
+        "python": "tests/test_mongo_sql_fail_closed.py",
+        "php": "tests/MongoSqlFailClosedTest.php",
+        "nodejs": "test/mongosqlFailClosed.test.ts"
+      },
+      "cases": [
+        "a no where delete is rejected and deletes nothing",
+        "a no where update is rejected and changes nothing"
+      ]
+    },
+    {
+      "id": "mongosql-valid-where-scoped",
+      "adr": "MONGO-DEC-01",
+      "rule": "A DELETE or UPDATE with a real, supported WHERE still works and affects ONLY the matching documents: a scoped DELETE drops exactly the matches (the collection count falls by exactly that many and the non-matching documents remain), and a scoped UPDATE rewrites only the matching document.",
+      "why": "The fail-closed guard must DISCRIMINATE, not blanket-deny: an ordinary scoped write is the common case and must keep working after the guard is added. This positive pair proves a real 'status = ?' delete and an 'id = ?' update reach only their matches on a real MongoDB.",
+      "suites": {
+        "ruby": "spec/mongo_sql_fail_closed_spec.rb",
+        "python": "tests/test_mongo_sql_fail_closed.py",
+        "php": "tests/MongoSqlFailClosedTest.php",
+        "nodejs": "test/mongosqlFailClosed.test.ts"
+      },
+      "cases": [
+        "a valid where delete removes only matching docs",
+        "a valid where update changes only matching docs"
+      ]
+    }
+  ]
+}
