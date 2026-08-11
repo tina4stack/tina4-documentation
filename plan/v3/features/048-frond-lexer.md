@@ -1,191 +1,125 @@
-# Feature 048: Frond lexer
+# Feature 48: Frond lexer
 
 ## Identity and status
 
-- Matrix identity: 48 - Frond lexer
+- Matrix identity: 48 - Frond lexer (tokenization)
 - Audit state: decision-ready
-- Audit note: historical audit 2026-07-28 (bundled with 49-50); measured against source
-  2026-08-10. No framework code changed.
-- Dependencies: the Frond source template; Feature 49 (parser) consumes the token stream
-- Dependants: Feature 49 parser, Feature 50 compiler, every Frond template render
-- Existing ADRs: ADR-0009 (one folder per feature so Frond is removable, and an explicit lexer
-  behind the unchanged public `Frond` entry point)
-- Shared fixtures: `frond_expression_corpus.txt` (82 expression cases) plus a token-level
-  fixture this audit adds
-- Catalog phase: Frond template engine
+- Audit note: re-measured 2026-08-11 from four-language Frond source (correcting a prior-session doc whose
+  unverified cells and "trim is a parse concern" claim did not hold). NO language has a distinct lexer
+  MODULE - tokenization is embedded. Python `frond/parser.py:57` (`46007c1`); PHP `Tina4/Frond.php:458`
+  (`ab871934`); Ruby `lib/tina4/frond.rb:78` (`f549923`); Node `packages/frond/src/engine.ts:358`
+  (`1319cf3`). (All HEADs are docs-only commits atop the measured framework code.)
+- Dependencies: none (the front of the pipeline).
+- Dependants: the parser (49), the compiler (50), the runtime (51).
+- Existing ADRs: ADR-0004 (best implementation prevails).
+
+- Catalog phase: Frond
 
 ## Why this feature exists
 
-The lexer turns Frond template source into one portable token stream - text, output, block,
-comment - with the whitespace-control markers recognized and useful source positions, so the
-parser (Feature 49) builds the same AST from the same tokens in all four languages.
-
-## Boundary
-
-This feature owns tokenization: splitting source into TEXT / OUTPUT (`{{ }}`) / BLOCK (`{% %}`) /
-COMMENT (`{# #}`) tokens, extracting `{% raw %}` content first as literal, RECOGNIZING the
-whitespace-control markers (`{{-`, `-}}`, `{%-`, `-%}`) and recording them on each token, source
-positions, and lexical errors. It DELEGATES AST construction, the actual whitespace TRIM, and
-everything downstream to Feature 49; it owns recognizing the markers, not applying them.
+The lexer turns template source into tokens. The audit questions: is there a real lexer stage, do tokens
+carry source positions (so errors can point at a line), and is tokenization quote-aware. The answers are no,
+no, and no - uniformly. This feature is a set of shared gaps, not a divergence.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Frond location | `frond/` folder (parser/compiler/engine) | `Frond.php` + `FrondCompiler.php` | `frond.rb` (one file) | `frond/` package (`engine.ts` one file) |
-| Explicit lexer module | NO (embedded in parser) | NO | NO | NO (embedded in engine) |
-| Tokenizer | regex | regex | regex | `TOKEN_RE` regex (reference) |
-| Token kinds | TEXT, OUTPUT `{{ }}`, BLOCK `{% %}`, COMMENT `{# #}` | same | same | same |
-| Raw blocks | `{% raw %}...{% endraw %}` extracted before tokenizing | same | same | same |
-| Whitespace-control markers | `{{-`/`-}}`/`{%-`/`-%}` recognized; trim is a PARSE concern | same | same | same |
-| Source positions (line/col) | (to confirm - regex tokenizer) | (to confirm) | (to confirm) | (to confirm) |
+Universal shape, measured in all four:
 
-There is NO standalone lexer module in any framework yet: tokenization is embedded (Python in
-`parser.py`, Node in `engine.ts`, Ruby in the one-file `frond.rb`, PHP in `Frond`/`FrondCompiler`).
-The tokenizer is REGEX-based - Node's `TOKEN_RE` matches `{%-? ... -?%}`, `{{-? ... -?}}` and
-`{# ... #}`, with everything else TEXT, and `{% raw %}` blocks extracted first so their content is
-literal. Whitespace control is recognized by the lexer (the `-` markers) but the actual trim is a
-parse concern (Python: `_apply_whitespace_control` on TEXT nodes). ADR-0009 requires the Frond
-folder to be removable and an EXPLICIT lexer behind the unchanged `Frond` entry point, so
-extracting the embedded tokenizer into a real lexer module - producing one agreed token stream -
-is the structural work this audit specifies.
+- NO distinct lexer module: tokenization is an embedded function/method (Python regex in `parser.py`; PHP a
+  `strpos` scan in `Frond.php`; Ruby a regex in `frond.rb`; Node a regex in `engine.ts`).
+- Tokens are 2-element `[type, rawString]` (PHP adds `lstrip`/`rstrip` flags); kinds are TEXT / VAR (`{{ }}`) /
+  BLOCK (`{% %}`) / COMMENT (`{# #}`). The prior docs call the VAR kind "OUTPUT". NO token carries a source
+  position (line/col), and there is NO EOF token, in any language.
+- `{% raw %}` is extracted BEFORE tokenizing (regex) and restored as literal TEXT in all four.
+- Whitespace-control markers (`-`) are recognized in all four, but the TRIM is applied at DIFFERENT stages:
+  Python in the parser (`_apply_whitespace_control`), PHP in the LEXER (`applyWhitespaceControl` inside
+  `tokenize`), Ruby and Node inline at RENDER (`stripTag`). So the prior "trim is a parse concern" is true
+  only for Python.
+- The tokenizer is NOT quote-aware in any language (non-greedy regex in py/ruby/node, `strpos` in php), so a
+  `%}` or `}}` inside a quoted string within a tag mis-terminates it. An unterminated delimiter becomes
+  literal TEXT with no error.
 
 ## Public surface contract
 
-The lexer (behind the unchanged `Frond` entry point) takes source and produces a token stream:
-each token is a kind (TEXT, OUTPUT, BLOCK, COMMENT, plus EOF), its raw text, its whitespace-
-control flags (leading `-`, trailing `-`), and its source position (line/column). `{% raw %}`
-content is one TEXT token. A malformed delimiter produces a positioned lexical error.
+Internal: source -> a token list. There is no public lexer API. The tokens feed the parser/interpreter.
 
 ## Inputs and outputs
 
-- Input: the Frond source string.
-- Output: an ordered token stream ending in EOF; each token carries kind, text, whitespace-
-  control flags, and a source position.
-- OUTPUT tokens hold the `{{ ... }}` inner expression text (parsed later); BLOCK tokens hold the
-  `{% ... %}` inner tag text; COMMENT tokens are dropped or preserved per the pinned rule.
-- Malformed input is PRESERVED, not fixed (a malformed `{% for %}` is tokenized as encountered),
-  matching the engine's preserve-not-fix rule.
+- Input: template source. Output: a flat token list `[type, value]` (no positions, no EOF).
 
 ## Lifecycle and operation graph
 
-1. `{% raw %}...{% endraw %}` blocks are extracted first; their content becomes literal TEXT.
-2. The remaining source is scanned by the tokenizer: each `{{ }}`/`{% %}`/`{# #}` becomes an
-   OUTPUT/BLOCK/COMMENT token, and the runs between them become TEXT tokens.
-3. Each delimiter's whitespace-control markers (`-`) are recorded on the token; the trim itself
-   is applied later by Feature 49.
-4. Each token is stamped with its source position for the parser's error messages.
-5. The stream, ending in EOF, is passed to Feature 49.
+1. Extract `{% raw %}` to placeholders. 2. Scan for `{{`/`{%`/`{#` delimiters. 3. Emit TEXT/VAR/BLOCK/COMMENT
+tokens. 4. (PHP) apply whitespace trim here; (Python) later in the parser; (Ruby/Node) at render.
 
 ## Configuration and precedence
 
-- The delimiters are fixed (`{{ }}`, `{% %}`, `{# #}`) and the whitespace-control marker is `-`,
-  matching Twig/Jinja2 (ADR-0005).
-- `{% raw %}` extraction runs before tokenization, so a `{{ }}` inside a raw block is literal.
-- There is no per-template lexer configuration.
+- None. No env var.
 
 ## Failures, side effects and security
 
-- A lexical error (an unterminated `{{`/`{%`/`{#`) is reported with its source position, not
-  swallowed; a positionless error makes a template bug unfindable.
-- Malformed input is preserved as tokens, not silently repaired, so the parser and compiler make
-  the same decision on the same input.
-- The lexer is pure over its input (no I/O, no state leak between templates); a regex tokenizer
-  must not mis-tokenize a delimiter inside a string literal (a `{{ }}` inside a `{% %}` string),
-  which is the classic regex-lexer hazard to gate.
-- Source positions must be accurate; a global-regex tokenizer that loses line/column would give
-  the parser wrong positions - the audit gates positions on multi-line input.
+- An unterminated delimiter or a delimiter inside a quoted string mis-tokenizes with NO error and NO position
+  (see the register). No security surface of its own (but the parser/runtime inherit the missing positions).
 
 ## Wire and persistence contract
 
-There is no persistence; the token stream is the internal contract between the lexer and Feature
-49. Its shape (kind, text, whitespace flags, position) is identical across the four, so the same
-source yields the same tokens everywhere - the precondition for the same AST and the same render.
+No wire/persistence. The token list is in-memory and (for templates) cached downstream (feature 59).
 
 ## Providers and substitutability
 
-The lexer is pure and engine-agnostic. A future runtime tokenizes the same delimiters into the
-same token kinds with the same whitespace-control recognition and the same positions, behind the
-same `Frond` entry point.
+A future runtime should decide whether to build a real lexer (positions + EOF) - see the register - and keep
+tokenization quote-aware.
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| LEX-01 | No explicit lexer module exists; tokenization is embedded, against ADR-0009's removable-folder + explicit-lexer requirement. | Extract an explicit lexer module in the Frond folder in all four, producing one agreed token stream, behind the unchanged `Frond` entry point. |
-| LEX-02 | The tokenizer is regex-based and its exact behaviour (delimiters, raw-first, whitespace markers) is not gated as parity. | Gate the token stream (kinds, text, whitespace flags) for a shared token-level corpus in all four. |
-| LEX-03 | Source positions (line/column) may be lost by a global-regex tokenizer; not gated. | Gate accurate line/column on multi-line source in all four. |
-| LEX-04 | A delimiter inside a string within a `{% %}` (a regex-lexer hazard) may mis-tokenize; not gated. | Gate that a `{{`/`%}` inside a quoted string is not mis-tokenized in all four. |
-| LEX-05 | Lexical errors (unterminated delimiter) and their positions are not gated. | Gate a positioned lexical error for an unterminated delimiter in all four. |
-| LEX-06 | No token-level fixture exists (the 82-case corpus is expression-level). | Add a token-level fixture alongside `frond_expression_corpus.txt`. |
+| LEX-NO-POSITIONS | UNIVERSAL: tokens carry NO source position (line/col) and there is NO EOF token in any language (Python tuples `parser.py:51`; PHP arrays `Frond.php:530`; Ruby tuples `frond.rb:602`; Node tuples `engine.ts:274`). So NO lexical/parse/runtime error can ever be POSITIONED - the prior docs' "positioned error" contract is unbuildable on this token shape. The unverified positions cells resolve to ABSENT. | Decide (LEX-DEC-01): add source positions (line/col) to tokens + an EOF token in all four, so errors can point at a line - the foundation for the parser's positioned-error contract (49) and a real compiler (50). |
+| LEX-STRING-DELIMITER | UNIVERSAL: the tokenizer is NOT quote-aware - a `%}`/`}}` inside a quoted string in a tag (e.g. `{% if x == "%}" %}`) mis-terminates the tag (non-greedy regex py/ruby/node, `strpos` php `Frond.php:538`). | Make the tag scan quote-aware in all four. |
+| LEX-UNTERMINATED-SILENT | UNIVERSAL: an unterminated `{{`/`{%` becomes literal TEXT with no error and no position, in all four. | Raise a positioned lexical error on an unterminated delimiter (depends on LEX-NO-POSITIONS). |
+| LEX-TRIM-STAGE-DIVERGE | The whitespace-trim STAGE diverges: Python parser, PHP lexer, Ruby/Node inline-at-render. The prior doc's "trim is a parse concern" holds only for Python. | Unify the trim stage across the four (a lexer or parser stage, once). |
+| LEX-NO-MODULE | UNIVERSAL, by design: no distinct lexer MODULE - tokenization is embedded (in the parser file for Python, the engine for PHP/Ruby/Node). Not a defect, but it means "the lexer" is not a separable unit today. | Decide whether to extract a real lexer stage (with LEX-DEC-01) or document that tokenization is embedded. |
 
 ## Owner decisions
 
-Proposed for owner ratification:
-
-1. An explicit lexer module is extracted into the removable Frond folder in all four (ADR-0009),
-   behind the unchanged public `Frond` entry point; it produces one agreed token stream.
-2. The token kinds are TEXT, OUTPUT (`{{ }}`), BLOCK (`{% %}`), COMMENT (`{# #}`) and EOF, with
-   `{% raw %}` content as one literal TEXT token, matching Twig/Jinja2 (ADR-0005).
-3. The lexer RECOGNIZES the whitespace-control markers (`-`) and records them on the token; the
-   parser (Feature 49) applies the trim.
-4. Every token carries an accurate source position (line/column) for the parser's error
-   messages.
-5. Malformed input is preserved as tokens (not repaired); an unterminated delimiter is a
-   positioned lexical error.
+- LEX-DEC-01 (proposed): decide whether Frond gets a REAL lexer stage - tokens with source positions (line/col)
+  and an EOF token - so lexical, parse (49), and runtime (51) errors can be POSITIONED (today none can, in any
+  language). This pairs with the owner's compiler decision (50): a positioned token stream makes a real
+  compiler and real diagnostics worthwhile.
+- LEX-DEC-02 (proposed): make the tokenizer quote-aware (LEX-STRING-DELIMITER), raise on an unterminated
+  delimiter (LEX-UNTERMINATED-SILENT), and unify the whitespace-trim stage (LEX-TRIM-STAGE-DIVERGE), all four.
 
 ## Proposed conformance fixture
 
-Add a token-level fixture (alongside `frond_expression_corpus.txt`) with stable ids for:
-tokenizing text/output/block/comment into the right kinds; `{% raw %}` content as one literal
-TEXT token; whitespace-control markers recorded on the token; accurate line/column on multi-line
-source; a delimiter inside a quoted string NOT mis-tokenized; and an unterminated delimiter
-raising a positioned lexical error. Every case tokenizes real source and compares the stream; a
-pure-logic lexer needs no service, but the corpus is shared across all four runners.
+A shared fixture: a `{% if x == "%}" %}` tokenizes correctly (catches LEX-STRING-DELIMITER); an unterminated
+`{{` raises a positioned error (after LEX-DEC-01); whitespace-control trims identically across the four.
 
 ## Integration map
 
-- The lexer feeds Feature 49 (parser), which feeds Feature 50 (compiler); the public `Frond`
-  entry point is unchanged (ADR-0009).
-- The token-level fixture joins the expression corpus in the shared Frond fixtures.
-- Central fixtures, four runners, the CI matrix and the Frond docs update together.
+- Consumers: the parser (49) / interpreter (51). Composes: nothing upstream.
 
 ## Breaking changes and migration
 
-- Extracting the lexer is internal (behind the unchanged `Frond` entry point); no template
-  breaks. A template relying on a mis-tokenization bug (a delimiter in a string) changes to the
-  correct behaviour - a fix, noted in the release note.
-- The token stream is an internal contract; no application depends on it directly.
-
-## Implementation backlog
-
-1. Add the token-level fixture and wire four runners.
-2. Extract an explicit lexer module in each Frond folder (LEX-01), behind the `Frond` entry.
-3. Gate the token stream (LEX-02), source positions (LEX-03), string-delimiter safety (LEX-04)
-   and lexical errors (LEX-05) in all four.
-4. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit.
+- Adding positions is additive to the token shape (internal). Making the scan quote-aware and raising on
+  unterminated delimiters changes behaviour for currently-mis-tokenized templates - a correctness fix, note it.
 
 ## Porting capsule
 
-Implement a lexer that scans Frond source into a token stream: extract `{% raw %}` content as
-literal TEXT first, then tokenize `{{ }}`/`{% %}`/`{# #}` into OUTPUT/BLOCK/COMMENT and the runs
-between into TEXT, ending in EOF. Record the whitespace-control markers (`-`) on each token
-(the trim is the parser's), stamp each token with an accurate line/column, and raise a positioned
-error for an unterminated delimiter. Do not mis-tokenize a delimiter inside a quoted string. Keep
-it pure and behind the unchanged `Frond` entry point (ADR-0009). Prove the port against the
-token-level fixture.
+Tokenize template source into TEXT/VAR/BLOCK/COMMENT tokens, extracting `{% raw %}` first. Carry a source
+position (line/col) on every token and emit an EOF token (none of the four do this today - it is the
+foundation for positioned errors and a real compiler). Make the tag scan quote-aware (a `%}` inside a string
+must not terminate the tag). Apply whitespace-control trim at ONE agreed stage. Raise a positioned error on an
+unterminated delimiter, not silent TEXT.
 
 ## Audit closure checklist
 
-- [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded (LEX-01..06).
-- [x] Owner ambiguities recorded (5 proposed; the explicit-lexer extraction and positions are key).
-- [x] Proposed shared cases and mutation witnesses complete.
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete (embedded tokenizer x four).
+- [x] Lifecycle and producer/consumer edges complete (raw-extract -> scan -> emit).
+- [x] Configuration (none), failure (unterminated/quote-blind) and security rules complete.
+- [x] Wire (token list) and provider contracts complete.
+- [x] Four-language behaviour recorded truthfully (no positions/EOF anywhere; trim-stage diverges).
+- [x] Owner ambiguities decided (LEX-DEC-01 positions/lexer, LEX-DEC-02 quote-aware/unify).
+- [x] Conformance fixture (quote-aware + positioned error) complete.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.

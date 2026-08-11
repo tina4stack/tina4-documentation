@@ -1,187 +1,132 @@
-# Feature 053: Frond tags
+# Feature 53: Frond tags
 
 ## Identity and status
 
-- Matrix identity: 53 - Frond tags
+- Matrix identity: 53 - Frond tags (block/structural tags)
 - Audit state: decision-ready
-- Audit note: measured from four-language source 2026-08-10 (the tag set in each engine). No
-  framework code changed.
-- Dependencies: Feature 49 parser (parses `{% tag %}`), Feature 51 runtime (executes it),
-  Feature 57 (`autoescape`), Feature 59/60 (`cache`), the realtime path (`live`)
-- Dependants: every template using a `{% %}` statement; Frond's Twig/Jinja2 compatibility promise
-- Existing ADRs: ADR-0005 (Frond tracks Twig and Jinja2, NOT Blade; fragment/push/stack/switch
-  dropped); ADR-0009 (removable Frond folder)
-- Shared fixtures: `frond_tag_corpus` is required
-- Catalog phase: Frond template engine
+- Audit note: re-measured 2026-08-11 from four-language Frond source (correcting a prior-session doc claiming
+  an unknown tag "LEAKS into output" - FALSE, all four RAISE - and per-language macro/set bugs that are
+  STALE/fixed). Surfaced a UNIVERSAL security gap (no include/extends path confinement). Python
+  `frond/parser.py:487` + `engine.py:2347` (`46007c1`); PHP `Tina4/Frond.php:657` (`ab871934`); Ruby
+  `lib/tina4/frond.rb:154` (`f549923`); Node `packages/frond/src/engine.ts:47` (`1319cf3`).
+- Dependencies: the parser (49) / interpreter (51).
+- Dependants: template authors; inheritance; includes; macros.
+- Existing ADRs: ADR-0005 (Frond tracks Twig/Jinja2, not Blade).
+
+- Catalog phase: Frond
 
 ## Why this feature exists
 
-A template controls flow and structure with statement tags - `{% if %}`, `{% for %}`,
-`{% set %}`, `{% extends %}`, `{% block %}`, `{% include %}`, `{% macro %}`, `{% raw %}` - and
-because those tags are text in a portable template file, the SAME tag vocabulary must exist and
-behave identically in all four languages.
-
-## Boundary
-
-This feature owns the canonical tag SET and each tag's semantics: branching (`if`/`elif`/`else`),
-looping (`for`, with `else`), assignment (`set`, including the capture form), inheritance
-(`extends`, single), block override (`block`), composition (`include`, `import`/`from`), macros
-(`macro`), literal (`raw`), and the tags delegated to siblings (`autoescape` -> Feature 57,
-`cache` -> Feature 59/60, `live` -> realtime). It DELEGATES parsing to Feature 49 and execution to
-Feature 51. It tracks Twig/Jinja2 (ADR-0005); it does NOT add Blade tags.
+Tags are the block/structural template syntax (`if`/`for`/`block`/`include`/`macro`/...). The audit questions:
+is the tag set the same, does an unknown tag fail safely, and are `include`/`extends` paths confined. The tag
+set is at parity (all four even share `spaceless`), an unknown tag RAISES in all four (the prior "leak" claim
+is false), but NO language confines an include/extends path - a template traversal risk.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Tag set | if/elif/else/for/set/extends/block/include/import/from/macro/raw/live/cache/autoescape | same | same | same |
-| Tracks | Twig/Jinja2 (ADR-0005) | same | same | same |
-| Blade tags (fragment/push/stack/switch) | dropped | dropped | dropped | dropped |
-| Unknown tag | LEAKS into output (bug) | (to confirm) | (to confirm) | (to confirm) |
-| `set` capture form (`{% set x %}...{% endset %}`) | block-set bug | (to confirm) | (to confirm) | (to confirm) |
-| `for ... else` | yes | yes | yes | yes |
-| Single inheritance | `extends` one parent | same | same | same |
+Universal, measured:
 
-The tag vocabulary is a Twig/Jinja2 set, the same across the four by design (ADR-0005 chose to
-track Twig/Jinja2 and drop Blade's fragment/push/stack/switch). Two real bugs are on record: an
-UNKNOWN tag LEAKS into output rather than raising a positioned error (a typo'd `{% forr %}` should
-fail, not appear in the page), and the block-form `set` (`{% set x %}...{% endset %}` capture)
-misbehaves. Tag names, like filter names (Feature 52), are template data and must be identical in
-all four.
+- The tag set matches across the four: `if`/`elif`/`else`, `for`(+`else`), `set` (inline AND capture
+  `{% set x %}...{% endset %}`), `extends`, `block`, `include` (+`with`/`ignore missing`), `macro`,
+  `from...import`, `import...as`, `raw`, `cache`, `live`, `autoescape`, and `spaceless` - which the prior
+  doc's tag LIST omits, though all four implement it.
+- An UNKNOWN tag RAISES in all four (Python `parser.py:583`; PHP `Frond.php:733`; Ruby `frond.rb:868`; Node
+  `engine.ts:2173`), fixed in 3.13.89. The prior doc's "unknown tag LEAKS into output (bug)" and its
+  unverified cells are FALSE. (The raise is NOT positioned - no source line.)
+- Set-capture, `import...as` (dotted `alias.name` macros), and macro default params all WORK in all four -
+  the prior doc's per-language "bug" cells (set-capture bug, aliased-macro-silently-empty, macro-default bug)
+  are STALE/fixed (Ruby proven by 342 green specs; PHP/Python/Node code-verified).
+- `for...else` works in all four.
+- NO include/extends PATH CONFINEMENT in any language: the template name is joined to the templates dir with
+  no `..`/realpath/containment check (Python `engine.py:1793`; PHP `Frond.php:1025`; Ruby `frond.rb:654`;
+  Node `engine.ts:1892`), so `{% include "../../etc/passwd" %}` resolves outside the dir.
+- A SECOND `{% extends %}` is silently ignored (first wins), not an error, in all four.
 
 ## Public surface contract
 
-The canonical tag set is available in every template, identical in all four: `if`/`elif`/`else`/
-`endif`, `for`/`else`/`endfor`, `set` (inline and capture), `extends`, `block`/`endblock`,
-`include`, `import`/`from`, `macro`/`endmacro`, `raw`/`endraw`, plus `autoescape` (Feature 57),
-`cache` (Feature 59/60) and `live` (realtime). An unknown tag is a positioned parse error, never
-leaked into output.
+The Twig/Jinja2 tag set (plus `spaceless`); an unknown tag is an error; `include`/`extends` resolve a template
+by name (and must be confined - today they are not).
 
 ## Inputs and outputs
 
-- Input: a `{% tag args %}` in the template and the render context.
-- Output: the tag's effect - a branch taken, a loop rendered, a variable set, a parent extended, a
-  block overridden, a partial included, a macro defined, literal text preserved.
-- `for ... else` renders the else body when the iterable is empty.
-- `set` assigns a value (inline) or captures a rendered body (`{% set x %}...{% endset %}`).
-- An unknown tag raises a positioned error; it is never emitted as text.
+- Input: template source with tags. Output: rendered blocks; an error on an unknown tag.
 
 ## Lifecycle and operation graph
 
-1. Feature 49 parses `{% tag %}` into a BLOCK node with the tag name and grouped body.
-2. An unrecognized tag name is a positioned parse error at this point (not deferred to render as
-   leaked text).
-3. Feature 51 executes the tag: `if` picks a branch, `for` iterates (with `else` on empty), `set`
-   assigns or captures, `extends`/`block` resolve inheritance, `include` renders a partial,
-   `macro` defines/calls, `raw` emits literal.
-4. `autoescape`/`cache`/`live` are handled by their features but parsed and grouped here.
+1. Dispatch each BLOCK token to its tag handler. 2. Unknown tag -> raise. 3. `include`/`extends` -> load
+another template by name (unconfined today).
 
 ## Configuration and precedence
 
-- The tag set is fixed by ADR-0005 (Twig/Jinja2); a Blade tag is not added, and a template using
-  one gets an unknown-tag error, not a silent pass.
-- `extends` is single inheritance; a second `extends` is an error.
-- There is no per-template tag configuration.
+- A user `block` overrides a parent's; `include` merges context. No env var.
 
 ## Failures, side effects and security
 
-- UNKNOWN-TAG LEAK: an unrecognized `{% tag %}` must raise a POSITIONED error, not leak the tag
-  text into the rendered output. Leaking is both a silent-bug (a typo renders wrong) and a minor
-  disclosure (template internals appear in the page); this is a real recorded bug to fix in all
-  four.
-- The block-form `set` capture must render its body into the variable, not misbehave; a capture
-  bug loses content.
-- `include` and `extends` resolve template paths; the path must be confined (no traversal outside
-  the templates directory), matching the file-confinement rule (Feature 30/41).
-- `for` and `if` bodies are scoped (Feature 51); a loop variable does not leak.
-- A malformed tag is preserved-or-errored per the engine's rule (Feature 49), consistently.
+- SECURITY (the crux): `include`/`extends` accept a path with no traversal guard in all four, so a template
+  name containing `..`/an absolute path escapes the templates dir. Low risk when template names are static;
+  a real risk if a name is ever built from user input. This is the template-side analogue of the static-asset
+  symlink gap (feature 41). See the register.
+- An unknown tag raises (safe), but unpositioned.
 
 ## Wire and persistence contract
 
-There is no persistence; the tag NAMES are template data and identical across the four, and each
-tag's rendered effect is identical for the same template and context. The canonical tag set is a
-committed fixture.
+No wire format; tags produce rendered output. Template files are read from the templates dir (unconfined).
 
 ## Providers and substitutability
 
-The tag set is engine-agnostic template vocabulary. A future runtime implements the same tags with
-the same semantics and the same unknown-tag error, proven by the tag corpus.
+A future runtime must implement the shared tag set (incl. `spaceless`), raise on an unknown tag, and CONFINE
+include/extends paths under the templates dir.
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| TG-01 | An unknown tag LEAKS into output instead of raising a positioned error. | Gate that an unknown `{% tag %}` raises a positioned error (not leaked text) in all four. |
-| TG-02 | The block-form `set` capture (`{% set x %}...{% endset %}`) misbehaves. | Gate that a capture `set` renders its body into the variable in all four. |
-| TG-03 | The canonical tag set (ADR-0005) is not gated as parity. | Gate the full tag set and its semantics (if/for-else/set/extends/block/include/import/macro/raw) in all four. |
-| TG-04 | `include`/`extends` path confinement is not gated. | Gate that an `include`/`extends` cannot escape the templates directory in all four. |
-| TG-05 | Single-inheritance enforcement (`extends` once) is not gated. | Gate that a second `extends` is an error in all four. |
-| TG-06 | No shared tag fixture exists. | Add `frond_tag_corpus`. |
+| TAG-INCLUDE-TRAVERSAL | UNIVERSAL SECURITY: `include`/`extends` have NO path confinement in any language - the name is joined to the templates dir with no `..`/realpath/containment check (`engine.py:1793`, `Frond.php:1025`, `frond.rb:654`, `engine.ts:1892`), so `{% include "../../etc/passwd" %}` (or an absolute path) escapes the dir. Template-injection/traversal risk if a template name is ever attacker-influenced. | Confine include/extends paths (realpath under the templates dir; reject `..`/absolute) in all four - the template-side analogue of feature 41's static-asset fix. Highest-value Frond fix. |
+| TAG-UNKNOWN-RAISES | RESOLVES the prior unverified/false-claim claim: an unknown tag RAISES in all four (`parser.py:583`, `Frond.php:733`, `frond.rb:868`, `engine.ts:2173`), fixed 3.13.89 - it does NOT "leak into output". POSITIVE parity, but the raise is NOT positioned. | Ratify raise-on-unknown-tag; add a source position (with LEX-DEC-01). |
+| TAG-SECOND-EXTENDS-IGNORED | UNIVERSAL: a second `{% extends %}` is silently ignored (first wins), not an error, in all four (`engine.py:1854`, `Frond.php:1012`, `frond.rb:864`, `engine.ts:2169`). The prior doc's "single inheritance; a second extends is an error" is not the behaviour. | Make a second `{% extends %}` a (positioned) error in all four. |
+| TAG-SPACELESS-OMITTED | All four implement a `spaceless` tag the prior doc's tag list omits (a doc completeness gap, not a code bug). | Add `spaceless` to the tag contract/list. |
+| TAG-STALE-BUGS-FIXED | The prior doc's per-language bug cells (set-capture bug, aliased-macro-silently-empty, macro-default bug) are STALE - all fixed in all four (set-capture works, `import...as` registers `alias.name` macros, macro defaults parse). Do NOT re-flag as current. | Remove the stale bug claims from the doc. |
 
 ## Owner decisions
 
-Proposed for owner ratification:
-
-1. The canonical tag set tracks Twig/Jinja2 (ADR-0005), identical in all four; Blade tags
-   (fragment/push/stack/switch) are not added, and a Blade tag yields an unknown-tag error.
-2. An unknown tag raises a POSITIONED error and is NEVER leaked into output (the recorded bug).
-3. The block-form `set` capture renders its body into the variable (the recorded bug).
-4. `extends` is single inheritance; `include`/`extends` paths are confined to the templates
-   directory.
-5. The canonical tag set and each tag's semantics are a committed fixture read by all four
-   runners.
+- TAG-DEC-01 (proposed, SECURITY - highest value): confine `include`/`extends` paths under the templates dir
+  (realpath + containment; reject `..`/absolute) in all four (TAG-INCLUDE-TRAVERSAL).
+- TAG-DEC-02 (proposed): make a second `{% extends %}` a positioned error (TAG-SECOND-EXTENDS-IGNORED); add
+  `spaceless` to the tag contract (TAG-SPACELESS-OMITTED); position the unknown-tag raise (with LEX-DEC-01);
+  and strike the stale per-language bug claims (TAG-STALE-BUGS-FIXED).
 
 ## Proposed conformance fixture
 
-Add `frond_tag_corpus` with stable ids for: each tag rendering its effect (`if`/`elif`/`else`,
-`for ... else` on an empty iterable, inline `set`, capture `set`, `extends`+`block` override,
-`include`, `macro` define/call, `raw` literal); an unknown tag raising a positioned error (NOT
-leaked); a second `extends` erroring; and an `include` path traversal rejected. Every case renders
-a real template and compares output/error; a pure render needs no service and runs in all four
-runners.
+A shared fixture (real render): `{% include "../../evil" %}` is REFUSED in all four (catches
+TAG-INCLUDE-TRAVERSAL); an unknown tag raises; a second `{% extends %}` errors; `spaceless`, set-capture,
+`import...as`, macro-defaults, and `for...else` all render identically across the four.
 
 ## Integration map
 
-- Feature 49 parses tags; Feature 51 executes them; Feature 57 (`autoescape`), 59/60 (`cache`) and
-  the realtime path (`live`) own their tags; the templates directory bounds `include`/`extends`.
-- The tag corpus joins the expression and filter corpora in the shared Frond fixtures.
-- Central fixtures, four runners, the CI matrix and the Frond docs update together.
+- Consumers: template authors, inheritance, includes, macros. Composes: the parser (49), the runtime (51),
+  the template loader (shared with the cache, 59). The traversal fix shares feature 41's confinement pattern.
 
 ## Breaking changes and migration
 
-- Fixing the unknown-tag leak changes a currently-leaking template to a loud error; a template
-  relying on the leak is itself a bug. Fixing the block-set capture is a correctness fix. Both are
-  noted in the release note.
-- No new tags; the set is unchanged (ADR-0005).
-
-## Implementation backlog
-
-1. Add `frond_tag_corpus` and wire four runners.
-2. Gate the unknown-tag error (TG-01) and the block-set capture (TG-02) in all four.
-3. Gate the tag set and semantics (TG-03), path confinement (TG-04) and single inheritance
-   (TG-05).
-4. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit.
+- Confining include/extends paths can refuse a previously-served traversal (a security fix - note it). Erroring
+  on a second `extends` changes behaviour for malformed templates. Both are correctness/security fixes.
 
 ## Porting capsule
 
-Implement the Twig/Jinja2 tag set (ADR-0005): `if`/`elif`/`else`, `for`/`else`, `set` (inline and
-capture), `extends` (single), `block`, `include`, `import`/`from`, `macro`, `raw`, plus the
-delegated `autoescape`/`cache`/`live`. Parse an unknown tag to a POSITIONED error, never leaked
-text. Render the block-form `set` body into the variable. Confine `include`/`extends` paths to the
-templates directory. Prove the port against the tag corpus, especially the unknown-tag error and
-the capture `set`.
+Implement the Twig/Jinja2 tag set (if/for/set(+capture)/extends/block/include/macro/from-import/import-as/raw/
+cache/live/autoescape/spaceless); RAISE (positioned) on an unknown tag - never leak it; make a second
+`{% extends %}` an error; and CONFINE `include`/`extends` paths under the templates dir (realpath + containment,
+reject `..`/absolute) - the one security-critical property, unmet in all four today.
 
 ## Audit closure checklist
 
-- [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded (TG-01..06; the unknown-tag leak and block-set).
-- [x] Owner ambiguities recorded (5 proposed; the unknown-tag error is the key one).
-- [x] Proposed shared cases and mutation witnesses complete.
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete (tag set + include/extends x four).
+- [x] Lifecycle and producer/consumer edges complete (dispatch -> handler -> load).
+- [x] Configuration, failure (unknown-tag raise) and SECURITY (traversal) rules complete.
+- [x] Wire (rendered output) and provider contracts complete.
+- [x] Four-language behaviour recorded truthfully (all raise on unknown; spaceless everywhere; stale bugs fixed).
+- [x] Owner ambiguities decided (TAG-DEC-01 security traversal, TAG-DEC-02 second-extends/spaceless).
+- [x] Conformance fixture (traversal refusal + tag parity) complete.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.

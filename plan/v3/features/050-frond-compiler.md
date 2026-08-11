@@ -1,207 +1,147 @@
-# Feature 050: Frond compiler
+# Feature 50: Frond compiler
 
 ## Identity and status
 
-- Matrix identity: 50 - Frond compiler
+- Matrix identity: 50 - Frond compiler (AOT)
 - Audit state: decision-ready
-- Audit note: historical audit 2026-07-28 (bundled with 48/49); measured against source
-  2026-08-10. No framework code changed.
-- Dependencies: Feature 49 (the AST), the filter definitions (used, not owned), the template
-  cache
-- Dependants: every Frond template render; `{% live %}` server-rendered blocks; `{% cache %}`
-- Existing ADRs: ADR-0009 (removable Frond folder); ADR-0001 (the ahead-of-time compile layer,
-  prototype-gated)
-- Shared fixtures: `frond_expression_corpus.txt` (82 cases) plus a render-parity fixture this
-  audit adds
-- Catalog phase: Frond template engine
+- Audit note: re-measured 2026-08-11 from four-language Frond source, and CARRIES AN OWNER DECISION (Andre,
+  2026-08-11): all four languages get a Frond compiler. Ground truth: Python + PHP have a REAL AOT compiler;
+  Ruby + Node have NONE (interpreters). The prior doc's provenance ("Python derived from PHP") is BACKWARDS
+  and its Node "faster (compiled)" cell is fabricated. Python `frond/compiler.py:81` (`46007c1`); PHP
+  `Tina4/FrondCompiler.php:70` (a PORT of the Python master, `FrondCompiler.php:11`) (`ab871934`); Ruby - NO
+  compiler (`f549923`); Node - NO compiler (`engine.ts`, no `new Function`/`eval`) (`1319cf3`).
+- Dependencies: the parser/AST (49) - a compiler needs a tree to compile.
+- Dependants: the runtime (51) - the compiled path front-runs the interpreter.
+- Existing ADRs: ADR-0001 (AOT compile layer), ADR-0004 (best implementation prevails).
+
+- Catalog phase: Frond
 
 ## Why this feature exists
 
-The compiler turns the Frond AST into a validated, executable, cacheable template - so a render
-CALLS a compiled function instead of walking the tree every time, and a compiled template renders
-BYTE-IDENTICALLY to the interpreted one. That byte-identity is the safety property that lets the
-compile layer exist at all.
-
-## Boundary
-
-This feature owns conversion of the Feature 49 AST into executable form, compile-time
-validation, the cacheable compiled identity, and the hot-path-compile-with-interpreter-fallback
-policy. It DELEGATES tokenization to Feature 48, parsing to Feature 49, and the filter and runtime
-context definitions to their own features (it USES filters, it does not define them).
+A compiler turns the parsed template into native host code so the VM runs it, instead of walking a tree per
+render. Python and PHP do this; Ruby and Node interpret. The owner has decided all four should have a compiler
+- a parity/architecture decision (uniform pipeline across the four), made with eyes open that Node is already
+fast without one and Ruby is the slow outlier.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Compile layer | AOT compiler (ADR-0001) - compiles AST to a function | AST-based (Python derived from it) | INTERPRETER only (no compile layer) | (to confirm) |
-| Render path | calls the compiled function, no tree-walk | compiled | per-render tree-walk (slow) | (to confirm) |
-| Compiled == interpreted | byte-identical (the invariant) | byte-identical | n/a (interpreted only) | byte-identical |
-| Hot-path only + fallback | yes (text, `{{ var }}`, whitespace) | yes | n/a | yes |
-| Cacheable compiled identity | yes | yes | (interprets) | yes |
-| Macros | supported | supported | aliased macro rendered SILENTLY EMPTY (bug) | supported |
-| `{% live %}` / `{% cache %}` blocks | supported | supported | supported | supported |
-| Benchmark | faster (compiled) | faster | slower (loses to Twig/ERB) | faster |
+Measured, an architectural divergence the owner has now resolved toward parity:
 
-Python's `compiler.py` is an ahead-of-time compiler (ADR-0001): it compiles the AST into a
-function so `render()` pays no per-render tree-walk, and it compiles ONLY the common hot-path
-constructs (text, `{{ var }}`, whitespace control), falling back to the interpreter for the rest.
-The governing invariant is stated in the source: "a compiled template renders BYTE-IDENTICALLY to
-the interpreted one," because both consume the same AST from Feature 49 and call the same
-primitives. Ruby is the outlier: it INTERPRETS (a per-render tree-walk) with no compile layer,
-which is the measured performance gap (Frond loses to Twig/ERB there) and the "Ruby needs a compile
-layer" finding; it also had a real macro bug where an aliased macro rendered silently empty.
+- PYTHON - REAL AOT compiler (`compiler.py:81-110`): emits Python source (`def _rendered(engine, ctx): ...`),
+  `compile()` + `exec()` into a callable; every value-producing hole calls the interpreter's OWN primitives
+  (`engine._eval_var`, `_eval_comparison`, ...) so output is byte-identical; unsupported constructs raise
+  `_Unsupported` and the whole template falls back to the interpreter; compiled callables cached
+  (`_compiled_fn`); compilation skipped under sandbox.
+- PHP - REAL AOT compiler (`FrondCompiler.php:70`): a PORT OF the Python master (`FrondCompiler.php:11-12`);
+  emits PHP source, `eval()` into a `\Closure::bind($fn, null, Frond::class)` that calls `$engine->...`
+  primitives per hole; hot-path `text/output/set/if/for`, else returns null -> interpreter fallback; cached
+  (`$compiledFn`, memoises even the null outcome); disabled under sandbox.
+- RUBY - NO compiler. Pure interpreter (`render_tokens` `frond.rb:777`); caches TOKENS + an expr-form memo
+  that still calls the real evaluators. No AOT.
+- NODE - NO compiler. Interpreter over cached TOKENS (`engine.ts:2069`); no `new Function`/`eval`/`vm`
+  (grep-confirmed); "compiled"/"compiledStrings" hold token lists, not functions. Fast because V8 interprets
+  the token walk quickly.
+- The compiled==interpreted byte-identity invariant (Python + PHP) is a design property (shared primitives +
+  a twinned output-coercion `_tostr`/`_to_output`), NOT gated by a running fixture.
 
 ## Public surface contract
 
-Behind the unchanged `Frond` entry point, the compiler takes the AST and produces a cacheable
-compiled template; a render invokes it and produces output. A compiled template renders
-byte-identically to the interpreted one. Only hot-path constructs are compiled; the rest fall back
-to the interpreter, transparently. Macros, template inheritance (`extends`/`block`), `include`,
-`{% live %}` and `{% cache %}` all render correctly. The compiled result is cached by a stable
-identity and invalidated when the template changes.
+Internal: (Python/PHP) parse -> compile -> run the compiled callable, falling back to the interpreter for the
+unsupported subset; (Ruby/Node) parse-and-interpret. Public render output must be identical whether compiled
+or interpreted.
 
 ## Inputs and outputs
 
-- Input: the Feature 49 AST and the runtime context at render time.
-- Output: rendered template output, identical whether produced by the compiled path or the
-  interpreter.
-- The compiled template is cached; a template-source change invalidates it.
-- A compile-time validation error (an unsupported construct, a bad macro) is raised at compile
-  time with position, not silently mis-rendered.
+- Input: the AST (Python/PHP). Output: a compiled callable (or null -> interpreter). Ruby/Node: no compile
+  step today.
 
 ## Lifecycle and operation graph
 
-1. The compiler validates the AST and compiles the hot-path constructs into an executable form,
-   leaving the rest to the interpreter fallback.
-2. The compiled template is cached under a stable identity.
-3. A render calls the compiled function (or the interpreter for a fallback node), applying
-   filters and the runtime context.
-4. A template-source change invalidates the cached compiled template (and hot-reload
-   re-compiles).
-5. `{% live %}` blocks register for server-side re-render; `{% cache %}` blocks cache their
-   output.
+1. (Python/PHP) AST -> emit host source for the hot-path subset -> compile/eval -> cache the callable. 2. At
+render: run the compiled callable if present, else interpret. 3. (Ruby/Node) interpret the token list.
 
 ## Configuration and precedence
 
-- The compile layer is prototype-gated (ADR-0001): it is enabled only where byte-identity to the
-  interpreter is proven; otherwise the interpreter is authoritative.
-- Only hot-path constructs are compiled; the fallback boundary is the same across the frameworks
-  that compile.
-- The template cache is invalidated on source change and hot-reload.
+- Compilation is disabled under sandbox (Python/PHP). Dev keys the compiled artifact by content so an edit
+  recompiles. No public env var.
 
 ## Failures, side effects and security
 
-- BYTE-IDENTITY is the safety invariant: if a compiled template ever renders differently from the
-  interpreted one, the compile layer is WRONG and must fall back; the audit gates byte-identity on
-  the whole corpus. This is why the compiler consumes the same AST and calls the same primitives
-  as the interpreter.
-- A macro must render its body, not silently empty (the Ruby aliased-macro bug); a silently-empty
-  render is a data-loss-shaped bug in a template.
-- Output escaping (autoescape) is a security property: a `{{ var }}` must escape by default so a
-  template cannot inject HTML/script from user data; the compiled and interpreted paths must
-  escape identically.
-- A compile error is raised at compile time with position, never a partial or mis-rendered
-  template at runtime.
-- The cache must invalidate on a template change, or a stale compiled template serves old content
-  after an edit (the Ruby memoization-staleness class of bug).
+- A codegen/compile error returns null and falls back to the interpreter, so a render is never broken by the
+  compiler (Python/PHP). The compiler `exec`/`eval`s source it GENERATED from template nodes (not user input),
+  so it is not an injection surface - but a Ruby/Node port must keep that property (generate from the parsed
+  tree, never from raw template text).
 
 ## Wire and persistence contract
 
-There is no external wire format; the compiled template is an in-process cached artifact keyed by
-a stable identity. The observable contract is the RENDERED OUTPUT, which is byte-identical across
-the four for the same template and context, and byte-identical between the compiled and
-interpreted paths within a framework.
+The compiled callable is in-memory, cached (feature 59). No wire format. Byte-identity to the interpreter is
+the contract.
 
 ## Providers and substitutability
 
-The compiler is engine-agnostic over the AST. A framework may compile (a function) or interpret
-(a tree-walk), but the RENDERED OUTPUT must be identical either way. A future runtime either
-compiles with proven byte-identity or interprets; the corpus gates that its output matches.
+The owner decision makes the compiler a required, uniform layer. Ruby and Node must build one (Python + PHP
+are the reference; PHP is the port pattern to follow).
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| CP-01 | Ruby has no compile layer (interprets every render); the measured performance gap (loses to Twig/ERB). | Decide: add a Ruby compile layer, or keep Ruby interpreted with proven byte-identity (correctness holds, perf lags); pin the choice. |
-| CP-02 | Byte-identity between the compiled and interpreted paths is the safety invariant but is not gated across four. | Gate that the compiled output equals the interpreted output for the whole corpus, in every framework that compiles. |
-| CP-03 | Ruby rendered an aliased macro SILENTLY EMPTY. | Gate that a macro (including an aliased one) renders its body in all four. |
-| CP-04 | Autoescape (a `{{ var }}` escapes by default) is a security property not gated as parity. | Gate that user data in `{{ }}` is escaped identically (compiled and interpreted) in all four. |
-| CP-05 | The compiled-template cache invalidation on source change/hot-reload is not gated (Ruby memoization staleness). | Gate that a template edit invalidates the cached compiled template in all four. |
-| CP-06 | The hot-path/fallback boundary is not gated as consistent. | Gate that a fallback construct renders identically to a fully-interpreted render in all four. |
-| CP-07 | No render-parity fixture exists (the corpus is expression-level). | Add a render-parity fixture over the full template corpus. |
+| CP-COMPILER-DIVERGENCE | Python and PHP have a REAL AOT compiler (`compiler.py:81`, `FrondCompiler.php:70`); Ruby and Node have NONE (interpreters). So "the Frond compiler" exists in only two of four. The prior doc's provenance cell ("PHP AST-based, Python derived from it") is BACKWARDS - PHP's `FrondCompiler` is a PORT OF the Python master (`FrondCompiler.php:11`). | OWNER-DECIDED (CP-DEC-01): build a compiler for Ruby and Node matching Python + PHP. Requires the parser/AST stage (PARSE-DEC-01). |
+| CP-NODE-FABRICATED | The prior doc's Node cells "Hot-path only + fallback: yes" (`:39`) and "Benchmark: faster (compiled)" (`:43`) are FALSE - Node has NO compiler and no hot-path/fallback split; its speed is V8 interpreting a token walk. The "compiled" attribution is fabricated (same class as the HTTP-band fabrications). | Correct the doc; the Node "compiled" cells describe a machine Node does not have (until CP-DEC-01 builds one). |
+| CP-BYTE-IDENTITY-UNTESTED | The compiled==interpreted byte-identity invariant (Python + PHP) is a design property (shared primitives + twinned coercion) but is NOT gated by a running fixture in any language. | Gate byte-identity with a real fixture; when Ruby/Node get compilers, the fixture must prove it for all four. |
+| CP-COMPILE-SUBSET | The compiled subset is `text`/`output`/`set`/`if`/`for` (Python + PHP); everything else (extends/block/include/macro/from-import/cache/live/spaceless/autoescape) falls back to the interpreter. A Ruby/Node compiler must at least match this subset + the fallback boundary. | Define the canonical compilable subset + fallback contract for all four; build Ruby/Node to it. |
+| CP-PROD-CACHE-STALE | The compiled/token cache never mtime-invalidates in production (cross-ref feature 59). | See feature 59 (CACHE-DEC). |
 
 ## Owner decisions
 
-Proposed for owner ratification:
-
-1. BYTE-IDENTITY is the compile layer's acceptance gate (ADR-0001): a compiled template MUST
-   render byte-identically to the interpreted one over the whole corpus; where it cannot be
-   proven, the interpreter is authoritative and the compile layer falls back.
-2. Ruby's missing compile layer: decide add-it (close the perf gap) versus keep-interpreted-with-
-   byte-identity (correctness parity now, perf later); pin one.
-3. A macro (including an aliased one) renders its body; the silently-empty render is a defect.
-4. `{{ var }}` autoescapes by default, identically on the compiled and interpreted paths; a raw
-   output is explicit.
-5. The compiled-template cache invalidates on a source change and hot-reload; no stale render
-   after an edit.
+- CP-DEC-01 (OWNER-DECIDED, Andre, 2026-08-11): ALL FOUR languages get a Frond compiler. Ruby and Node build
+  an AOT compiler matching Python + PHP: emit NATIVE HOST SOURCE that reuses the interpreter's own primitives
+  per hole (so output is byte-identical), a hot-path subset with interpreter FALLBACK for unsupported
+  constructs, the compiled artifact cached and disabled under sandbox, generated only from the parsed tree
+  (never raw text). This requires the parser/AST stage first (PARSE-DEC-01 for Ruby/Node). RATIONALE: this is
+  a PARITY/architecture decision (one uniform pipeline across the four), NOT a throughput one - the
+  measurement showed Node is already V8-fast without a compiler and Ruby is the slow outlier; the owner has
+  chosen the uniform compiled architecture regardless. (Supersedes the prior measurement-only recommendation
+  in [[project_frond_compile_parity]].)
+- CP-DEC-02 (proposed): gate the compiled==interpreted byte-identity invariant with a real fixture across all
+  four (CP-BYTE-IDENTITY-UNTESTED); correct the provenance (PHP is a port of the Python master) and drop the
+  fabricated Node "compiled" benchmark cell (CP-NODE-FABRICATED).
 
 ## Proposed conformance fixture
 
-Add a render-parity fixture over the full template corpus with stable ids for: the compiled
-output equalling the interpreted output byte-for-byte for every template; a macro (and an aliased
-macro) rendering its body; a `{{ user_data }}` escaping by default identically on both paths;
-template inheritance, `include`, `{% live %}` and `{% cache %}` rendering correctly; a
-template edit invalidating the cache; and a fallback construct matching a fully-interpreted
-render. Every case renders a real template with a real context and compares bytes; a pure render
-needs no service, and the corpus runs in all four runners.
+A shared fixture (real render): for every template in the corpus, the COMPILED render is byte-identical to the
+INTERPRETED render, in all four (after CP-DEC-01 builds the Ruby/Node compilers); an unsupported construct
+falls back cleanly; a sandboxed engine never compiles.
 
 ## Integration map
 
-- Feature 49 supplies the AST; the filter and context features supply the runtime; the template
-  cache holds compiled templates; `{% live %}` ties to the realtime/server-render path.
-- ADR-0001 governs the compile layer; the byte-identity gate is its prototype acceptance.
-- Central fixtures, four runners, the CI matrix (running the render-parity corpus) and the Frond
-  docs update together.
+- Consumers: the runtime (51). Composes: the parser/AST (49), the cache (59). Reference: Python master +
+  the PHP port.
 
 ## Breaking changes and migration
 
-- Adding a Ruby compile layer (if chosen) is internal and byte-identity-gated; no template breaks.
-  Fixing the aliased-macro-empty bug changes a currently-empty render to correct output - a fix,
-  noted in the release note.
-- Autoescape and cache-invalidation fixes are correctness/security; a template relying on the old
-  behaviour is itself a bug.
-
-## Implementation backlog
-
-1. Add the render-parity fixture and wire four runners over the full corpus.
-2. Gate byte-identity compiled-vs-interpreted (CP-02) and the macro fix (CP-03) in all four.
-3. Gate autoescape parity (CP-04) and cache invalidation (CP-05) in all four.
-4. Decide and implement the Ruby compile-layer question (CP-01); gate the fallback boundary
-   (CP-06).
-5. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit.
+- Building Ruby/Node compilers is a large additive framework change (behaviour-preserving if byte-identity
+  holds). It changes performance characteristics; keep the interpreter as the fallback and the correctness
+  reference.
 
 ## Porting capsule
 
-Compile the Feature 49 AST into a cacheable executable template for the hot-path constructs
-(text, `{{ var }}`, whitespace), falling back to the interpreter for the rest, behind the
-unchanged `Frond` entry point. Guarantee BYTE-IDENTITY: the compiled output must equal the
-interpreter's for the whole corpus, or fall back. Autoescape `{{ var }}` by default identically
-on both paths. Render macros (including aliased) to their body. Cache by a stable identity and
-invalidate on source change. A runtime may interpret instead of compile, but the rendered output
-must match. Prove the port with the render-parity corpus, a macro case, an autoescape case, and a
-cache-invalidation case.
+A Frond compiler (owner-decided for all four) emits NATIVE host source from the parsed AST, compiles it to a
+callable, and runs it in place of the tree-walk - but every value-producing hole must call the SAME primitives
+the interpreter uses, so a compiled template renders BYTE-IDENTICALLY to the interpreted one. Compile only a
+hot-path subset (text/output/set/if/for) and FALL BACK to the interpreter for everything else; cache the
+compiled callable; disable compilation under sandbox; generate source only from the parsed tree, never from
+raw template text. Python is the master, PHP is the port to follow.
 
 ## Audit closure checklist
 
-- [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded (CP-01..07).
-- [x] Owner ambiguities recorded (5 proposed; byte-identity and the Ruby compile layer are key).
-- [x] Proposed shared cases and mutation witnesses complete.
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete (compiler py/php; none ruby/node).
+- [x] Lifecycle and producer/consumer edges complete (parse -> compile -> run/fallback).
+- [x] Configuration (sandbox-disable), failure (fallback) and security (generate-from-tree) rules complete.
+- [x] Wire (compiled callable, byte-identity) and provider contracts complete.
+- [x] Four-language behaviour recorded truthfully (real compiler py/php; none ruby/node; provenance corrected).
+- [x] Owner ambiguities decided (CP-DEC-01 OWNER: all four get a compiler; CP-DEC-02 gate byte-identity).
+- [x] Conformance fixture (byte-identity across four) complete.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.

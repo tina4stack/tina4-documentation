@@ -1,185 +1,133 @@
-# Feature 056: Frond extensibility API
+# Feature 56: Frond extensibility API
 
 ## Identity and status
 
-- Matrix identity: 56 - Frond extensibility API
+- Matrix identity: 56 - Frond extensibility (add_filter / add_global / add_test)
 - Audit state: decision-ready
-- Audit note: measured from four-language source 2026-08-10 (`add_filter`/`add_global`/`add_test`
-  and the class-vs-instance registries in each engine). No framework code changed.
-- Dependencies: Feature 52 filters, Feature 54 tests, Feature 55 functions (the registries these
-  extend), Feature 58 sandboxing (constrains a custom extension)
-- Dependants: any application registering a custom filter, test or function for its templates
-- Existing ADRs: ADR-0005 (Frond tracks Twig/Jinja2); the no-aliases and data-not-host-casing
-  rules (Feature 52)
-- Shared fixtures: `frond_extensibility_contract.json` is required
-- Catalog phase: Frond template engine
+- Audit note: re-measured 2026-08-11 from four-language Frond source (correcting a prior-session doc claiming
+  an instance registration is "that render only / NOT visible to another instance" - FALSE in all four; an
+  instance registration ALSO writes the class registry and leaks to future instances). Python
+  `frond/engine.py:1688` (`46007c1`); PHP `Tina4/Frond.php:390` (`ab871934`); Ruby `lib/tina4/frond.rb:401`
+  (`f549923`); Node `packages/frond/src/engine.ts:1670` (`1319cf3`).
+- Dependencies: the runtime (51).
+- Dependants: apps registering custom filters/globals/tests.
+- Existing ADRs: ADR-0004.
+
+- Catalog phase: Frond
 
 ## Why this feature exists
 
-An application extends the template vocabulary with its own filter, test or function -
-`add_filter("money", ...)`, `add_test("admin", ...)`, `add_global("now", ...)` - and it must work
-the same way in all four languages, whether registered once for the whole app (class-level) or per
-render (instance-level).
-
-## Boundary
-
-This feature owns the three extension points (`add_filter`, `add_test`, `add_global` for
-functions), the class-versus-instance registration semantics, and the replace-versus-augment rule
-for a name that collides with a built-in. It DELEGATES the behaviour of a filter/test/function to
-Features 52/54/55 and the safety of running a custom extension to Feature 58.
+Apps extend Frond with custom filters, globals (functions), and tests. The audit questions: is the API the
+same, does an instance registration stay local, and how does a name collision resolve. The API is at parity
+(class AND instance callable), but an instance registration LEAKS to the class registry in all four (not
+local), and "resolution" is a flattened snapshot, not the documented live cascade.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| `add_filter` | yes | `addFilter` | yes | `addFilter` |
-| `add_test` | yes | `addTest` | yes | `addTest` |
-| `add_global` (functions) | yes | `addGlobal` | yes | `addGlobal` |
-| Class-level registry | `_class_filters`/`_class_tests`/`_class_globals` | same | same | same |
-| Instance-level registry | `_filters`/`_tests`/`_globals` | same | same | same |
-| Works as class AND instance method | yes ("must work BOTH") | yes | yes | yes |
-| Replace a built-in | (to confirm - silent?) | (to confirm) | (to confirm) | (to confirm) |
+Universal, measured:
 
-The extensibility API is three registration methods - `add_filter`, `add_test`, `add_global` -
-each writing to a registry that exists at BOTH the class level (`_class_*`, shared by every Frond
-instance) and the instance level (`_*`, per render). The Python source states the requirement that
-`add_filter`/`add_global`/`add_test` "must work BOTH as" a class method (register globally) and an
-instance method (register for one Frond). The one behaviour to pin is what happens when a custom
-name collides with a built-in: replace silently, augment, or error.
+- `add_filter`/`add_global`/`add_test` (PHP `addFilter`/... via `__call`/`__callStatic`) exist in all four and
+  work as BOTH a class method and an instance method (Python `_ClassOrInstanceMethod` descriptor
+  `engine.py:1509`; PHP magic methods `Frond.php:390`; Ruby class+instance `frond.rb:401`/`:426`; Node static +
+  instance `engine.ts:1670`/`:1791`). POSITIVE.
+- An INSTANCE registration ALSO writes the CLASS registry in all four: Python `engine.py:1699`
+  (`cls._class_filters[name]=fn` then instance); PHP `Frond.php:396` (`self::$classFilters` then `$this`);
+  Ruby `frond.rb:427` (`self.class.add_filter` then `@filters`); Node `engine.ts:1792` (`Frond.classFilters.set`
+  then `this.filters`). So an instance registration is INHERITED by every future `new Frond()` - it is NOT
+  local.
+- Resolution is FLATTENED at construction: the instance seeds `builtins`, then merges the class registry, then
+  instance-writes overwrite - a SINGLE map is read at render (not a live instance->class->builtin cascade).
+  Consequence: a CLASS-level registration made AFTER an instance exists is invisible to that instance.
+- Replacing a built-in is a SILENT overwrite (no warn/error) in all four. A class-level reset
+  (`clear_registry`) exists in all four. Functions are callable globals (no separate `functions` API).
 
 ## Public surface contract
 
-`add_filter(name, fn)`, `add_test(name, fn)` and `add_global(name, value_or_fn)` register a custom
-filter, test or callable global under a snake_case name (host casing on the method, snake_case on
-the name). Called on the Frond CLASS, the registration is shared by every instance; called on an
-INSTANCE, it applies to that render only. Instance registrations shadow class registrations for
-that instance. A collision with a built-in is handled by the pinned rule (below).
+`add_filter(name, fn)` / `add_global(name, value)` / `add_test(name, fn)`, callable on the class or an
+instance. The documented contract SHOULD say whether an instance registration is local or process-global -
+today it is process-global (leaks to the class registry).
 
 ## Inputs and outputs
 
-- Input: a name (snake_case) and a function/value.
-- Output: the extension is available in templates rendered by that scope (class-wide or
-  instance).
-- A class-level registration is visible to all Frond instances; an instance-level one only to
-  that instance.
-- Registering under a built-in name replaces/augments/errors per the pinned rule, not silently by
-  accident.
+- Input: a name + a callable/value. Output: the extension is available to renders (and, today, to all future
+  instances).
 
 ## Lifecycle and operation graph
 
-1. `add_filter`/`add_test`/`add_global` writes the name to the class or instance registry
-   depending on the receiver.
-2. At render, name resolution checks instance registry, then class registry, then built-ins (a
-   fixed precedence), so an instance extension shadows a class one, which shadows a built-in only
-   if the pinned rule allows.
-3. The custom extension runs in the template context, subject to sandboxing (Feature 58).
+1. Register (class or instance) -> writes the class registry (+ the instance map if called on an instance).
+2. A new instance drains the class registry into its own map at construction. 3. Render reads the flattened
+map.
 
 ## Configuration and precedence
 
-- Resolution precedence: instance registry, then class registry, then built-in - fixed and
-  identical across four.
-- The name is snake_case (template data); the registration method keeps host casing.
-- A collision with a built-in follows the pinned rule (recommend: allowed but explicit, not a
-  silent surprise).
+- Effective precedence is instance > class > builtin by OVERWRITE ORDER at construction, not a live lookup.
+No env var.
 
 ## Failures, side effects and security
 
-- SANDBOXING: a custom filter/test/global runs code in the render; under sandboxing (Feature 58)
-  it is subject to the sandbox rules, so an extension cannot be an escape hatch out of the
-  sandbox. This is the security surface of extensibility.
-- A registration under a built-in name must NOT silently and surprisingly replace a security-
-  relevant built-in (an escape filter); the pinned rule makes any override deliberate.
-- Class-level registration is process-global state; it must be reset cleanly (the `_class_*`
-  clear) so one app or test does not leak an extension into another.
-- The name is snake_case data; a camelCase or aliased registration reintroduces the Feature 52
-  divergence and is rejected.
+- A built-in replaced silently (e.g. `add_filter("e", ...)` shadows escape) - a footgun with no signal. An
+  instance registration polluting the process-global class registry breaks test isolation and surprises a
+  second instance. See the register.
 
 ## Wire and persistence contract
 
-There is no persistence; the contract is the three registration methods, the class-vs-instance
-semantics, and the resolution precedence, identical across the four. A custom extension registered
-the same way behaves the same way on every framework.
+No wire/persistence; registries are in-memory (process-global via the class registry).
 
 ## Providers and substitutability
 
-The extension API is a uniform surface over the filter/test/global registries. A future runtime
-exposes the same three methods with the same class/instance semantics and the same precedence.
+A future runtime must decide instance-local vs process-global registration and keep the class+instance dual
+API, and it should signal a built-in override.
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| EX-01 | The class-vs-instance duality (register globally or per render) and the resolution precedence are not gated as parity. | Gate class-level and instance-level registration and the instance-shadows-class-shadows-builtin precedence in all four. |
-| EX-02 | The built-in collision rule (replace/augment/error) is not pinned. | Pin the rule; gate that registering under a built-in name follows it (not a silent surprise), in all four. |
-| EX-03 | A custom extension's sandbox interaction is not gated. | Gate that a custom filter/test/global runs subject to the sandbox (Feature 58) in all four. |
-| EX-04 | Class-level state cleanup (`_class_*` clear) is not gated; a leak across apps/tests. | Gate that class-level registrations reset cleanly in all four. |
-| EX-05 | The three methods and their snake_case name rule are not gated. | Gate `add_filter`/`add_test`/`add_global` registering a snake_case-named working extension. |
-| EX-06 | No shared fixture exists. | Add `frond_extensibility_contract.json`. |
+| EX-INSTANCE-LEAKS-CLASS | UNIVERSAL: an INSTANCE `add_filter`/`add_global`/`add_test` ALSO writes the CLASS registry in all four (`engine.py:1699`, `Frond.php:396`, `frond.rb:427`, `engine.ts:1792`), so it is inherited by every FUTURE instance - it is NOT local. The prior doc's "an instance registration applies to that render only / NOT visible to another instance" is FALSE in all four. This pollutes the process-global registry (breaks test isolation; a second instance silently inherits another's filters). | Decide (EX-DEC-01): make an instance registration instance-LOCAL (do not write the class registry), or document that ALL registrations are process-global. Same choice in all four. |
+| EX-RESOLUTION-FLATTENED | UNIVERSAL: resolution is NOT a live instance->class->builtin cascade; the three tiers are FLATTENED into one instance map at CONSTRUCTION. A class-level registration made AFTER an instance exists is invisible to that instance. The prior doc's "checks instance, then class, then built-in (fixed precedence)" mis-describes the mechanism in all four. | Correct the doc to the flattened-at-construct model (or implement a real live cascade if that is the desired contract). |
+| EX-REPLACE-BUILTIN-SILENT | UNIVERSAL (resolves the prior unverified (silent?)): replacing a built-in filter/test/global is a SILENT overwrite, no warn/error, in all four. | Warn (or document) on a built-in override. |
+| EX-CLASS+INSTANCE-DUAL | POSITIVE (do NOT re-flag): the three methods work as BOTH class and instance methods in all four, via a descriptor / magic methods / dual declaration. | Keep; gate it. |
 
 ## Owner decisions
 
-Proposed for owner ratification:
-
-1. The three extension points are `add_filter`, `add_test`, `add_global` (functions), uniform in
-   all four; the method keeps host casing, the registered name is snake_case.
-2. Registration works BOTH class-level (shared by every Frond instance) and instance-level (that
-   render only); resolution is instance, then class, then built-in.
-3. A collision with a built-in follows one pinned rule (recommend: allowed but explicit - a
-   deliberate override, optionally warned - never a silent replace of a security-relevant
-   built-in).
-4. A custom extension runs subject to sandboxing (Feature 58); extensibility is not a sandbox
-   escape.
-5. Class-level registrations reset cleanly (`_class_*` clear), so no leak across apps or tests.
+- EX-DEC-01 (proposed): decide the registration-SCOPE contract (EX-INSTANCE-LEAKS-CLASS) - instance-local vs
+  process-global. Today an instance registration leaks to the class registry in all four, polluting the
+  process (a real test-isolation + surprise hazard). Pick one and apply it in all four.
+- EX-DEC-02 (proposed): warn on a built-in override (EX-REPLACE-BUILTIN-SILENT) or document it; correct the
+  resolution model to flattened-at-construct (EX-RESOLUTION-FLATTENED).
 
 ## Proposed conformance fixture
 
-Add `frond_extensibility_contract.json` with stable ids for: `add_filter`/`add_test`/`add_global`
-registering a working extension; a class-level registration visible to a new instance and an
-instance-level one NOT visible to another instance; the resolution precedence (instance shadows
-class shadows built-in); a built-in-name collision following the pinned rule; a custom extension
-subject to the sandbox; and a class-level reset not leaking. Every case renders a real template
-through the real registries; a pure evaluation needs no service and runs in all four runners.
+A shared fixture: registering a filter on ONE Frond instance does or does not affect a SECOND instance
+(pinning EX-DEC-01) - identically in all four; `add_filter`/`add_global`/`add_test` work as class AND instance
+methods; replacing a built-in behaves per EX-DEC-02.
 
 ## Integration map
 
-- Features 52/54/55 own the filter/test/function behaviour; this feature is their shared
-  registration API; Feature 58 constrains a custom extension.
-- The extensibility fixture joins the Frond corpora in the shared fixtures.
-- Central fixtures, four runners, the CI matrix and the Frond extensibility docs update together.
+- Consumers: apps with custom filters/globals/tests. Composes: the runtime (51), filters (52), tests (54),
+  functions (55).
 
 ## Breaking changes and migration
 
-- Pinning the collision rule and the snake_case name requirement may reject a camelCase or
-  built-in-shadowing registration a framework accepted; a `Breaking:` note. It is a
-  consistency/security correction.
-- No change to the three method names.
-
-## Implementation backlog
-
-1. Add `frond_extensibility_contract.json` and wire four runners.
-2. Gate the class/instance duality and precedence (EX-01) and the collision rule (EX-02).
-3. Gate the sandbox interaction (EX-03), class-level cleanup (EX-04) and the three methods (EX-05).
-4. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit.
+- Making instance registrations local (if chosen) changes behaviour for code relying on the leak - a
+  `Breaking:` entry with the migration. Warning on a built-in override is additive.
 
 ## Porting capsule
 
-Expose `add_filter(name, fn)`, `add_test(name, fn)` and `add_global(name, value_or_fn)`, each
-writing to a class-level registry (shared) or an instance-level registry (per render) depending on
-the receiver. Resolve names instance, then class, then built-in. Enforce a snake_case name, apply
-the pinned built-in-collision rule, run a custom extension subject to sandboxing (Feature 58), and
-reset class-level state cleanly. Prove the port against the extensibility fixture.
+Provide `add_filter`/`add_global`/`add_test` callable as BOTH class and instance methods. Decide ONE
+registration scope - instance-local (do not write the class registry) or process-global - and apply it
+uniformly; today all four leak an instance registration into the process-global class registry, which breaks
+test isolation. Resolve names from one map (builtins < class < instance) and SIGNAL a built-in override rather
+than silently replacing it.
 
 ## Audit closure checklist
 
-- [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded (EX-01..06).
-- [x] Owner ambiguities recorded (5 proposed; the class/instance duality and collision rule).
-- [x] Proposed shared cases and mutation witnesses complete.
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete (add_filter/global/test x four).
+- [x] Lifecycle and producer/consumer edges complete (register -> drain -> render).
+- [x] Configuration (precedence), failure (silent override) and security rules complete.
+- [x] Wire (in-memory registries) and provider contracts complete.
+- [x] Four-language behaviour recorded truthfully (instance leaks to class in all four; flattened resolution).
+- [x] Owner ambiguities decided (EX-DEC-01 scope, EX-DEC-02 override signal).
+- [x] Conformance fixture (instance-isolation + dual-callable) complete.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.

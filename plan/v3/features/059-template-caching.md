@@ -1,167 +1,136 @@
-# Feature 059: Frond template caching
+# Feature 59: Frond template caching
 
 ## Identity and status
 
 - Matrix identity: 59 - Frond template caching
 - Audit state: decision-ready
-- Audit note: measured from four-language source 2026-08-10 (the compiled-template cache in each
-  engine). No framework code changed.
-- Dependencies: Feature 50 compiler (what is cached), Feature 51 runtime, the template source
-- Dependants: every repeated render of the same template
-- Existing ADRs: ADR-0001 (the compile layer); ADR-0009 (removable Frond folder)
-- Shared fixtures: `frond_template_cache_contract.json` is required
-- Catalog phase: Frond template engine
+- Audit note: re-measured 2026-08-11 from four-language Frond source (correcting a prior-session doc claiming a
+  "compiled-template cache `@lru_cache(maxsize=1024)`, bound 1024 (LRU), same in all four" - FABRICATED; NO
+  language has a 1024-LRU template cache). Python's template caches are UNBOUNDED; PHP/Ruby/Node cap a
+  token/template cache at 256 insertion-order. Prod NEVER invalidates on source change in any language. Python
+  `frond/engine.py:1571` (`46007c1`); PHP `Tina4/Frond.php:145` (`ab871934`); Ruby `lib/tina4/frond.rb:207`
+  (`f549923`); Node `packages/frond/src/engine.ts:333` (`1319cf3`).
+- Dependencies: the parser (49) / compiler (50) - what is cached.
+- Dependants: every repeated render; production throughput.
+- Existing ADRs: ADR-0004; ADR-0001 (AOT).
+
+- Catalog phase: Frond
 
 ## Why this feature exists
 
-Compiling a template is work; doing it on every render is wasteful. Template caching keeps the
-compiled template so a repeated render reuses it - and invalidates it when the source changes so a
-developer's edit is picked up. It must behave the same way in all four, including the memory bound
-and the invalidation.
-
-## Boundary
-
-This feature owns the compiled-template cache: its key, its memory BOUND, and its invalidation on
-source change (and hot-reload). It DELEGATES compilation to Feature 50 and the render to Feature
-51. It is NOT the fragment cache (`{% cache %}`, Feature 60), which caches rendered OUTPUT rather
-than the compiled template.
+Caching the parsed/compiled template avoids re-tokenizing and re-parsing on every render. The audit questions:
+what is cached, is the cache bounded, and does it invalidate when the template file changes. The answers: a
+token/AST/compiled artifact; bounded inconsistently (Python unbounded, the others 256); and NO - production
+never invalidates on an on-disk edit, in any language.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Compiled-template cache | `@lru_cache(maxsize=1024)` (bounded) | cache | cache | cache |
-| Memory bound | 1024 (LRU) | (to confirm) | (to confirm - memoization) | (to confirm) |
-| Key | template content/path | same | same | same |
-| Invalidation on source change | yes | yes | memoized stale (Feature 50 bug) | yes |
-| Hot-reload re-compile | yes | yes | (to confirm) | yes |
+Measured, and it diverges:
 
-Python bounds the compiled-template cache with `@lru_cache(maxsize=1024)`, so a long-running
-process caching many templates cannot grow without limit. The memory bound and the invalidation
-are the two things to gate: a cache that never invalidates serves a stale compiled template after
-an edit (the Ruby memoization-staleness class from Feature 50), and an unbounded cache leaks memory
-over a process's life.
+- Python: the template caches (`_compiled`, `_compiled_strings`, `_compiled_fn`) are plain UNBOUNDED dicts
+  (`engine.py:1571-1581`). The `@lru_cache(maxsize=1024)` in the file is on EXPRESSION helpers
+  (`_split_dotted`, `_split_on_pipe`, `_expr_descriptor`), NOT templates.
+- PHP: `$compiled`/`$compiledStrings`/`$compiledFn` bound at `TEMPLATE_CACHE_MAX = 256`, INSERTION-ORDER
+  eviction (explicitly "not true LRU", `Frond.php:145,310-335`); the `{% cache %}` FRAGMENT store is UNBOUNDED.
+- Ruby: token cache bound 256 FIFO-half-drop (`frond.rb:207,574`); the expr-form memo 2048; but three
+  per-expression memos (`@filter_chain_cache`/`@resolve_cache`/`@dotted_split_cache`) are UNBOUNDED
+  (`frond.rb:311-316`).
+- Node: token cache bound 256 insertion-order (`engine.ts:333,347`); the `{% cache %}` FRAGMENT store is
+  UNBOUNDED (`engine.ts:1715`).
+- UNIVERSAL: production NEVER invalidates on source change - the file mtime is STORED but never COMPARED
+  (Python `:1729` comment unimplemented; PHP `Frond.php:216`; Ruby `frond.rb:365`; Node
+  `engine.ts:1840-1849`). Freshness is TTL-only (`TINA4_TEMPLATE_CACHE_TTL`, default 0 = forever) or the
+  `TINA4_DEBUG` dev bypass (which re-reads every render). Keys: template NAME/path for files, `md5(source)`
+  for strings.
 
 ## Public surface contract
 
-Template caching is automatic and internal: a compiled template is cached under a stable key and
-reused on the next render, up to a bounded size (LRU eviction). A change to the template source
-invalidates its cached entry, and hot-reload re-compiles. There is no public API beyond the
-render; the cache is transparent.
+Repeated renders of the same template reuse the cached artifact. `TINA4_TEMPLATE_CACHE_TTL` bounds staleness;
+`TINA4_DEBUG` bypasses the cache. The cache should be bounded and should pick up an edited template - today
+neither holds uniformly.
 
 ## Inputs and outputs
 
-- Input: a template (source or path) and, on re-render, whether its source changed.
-- Output: the compiled template - from cache on a hit, freshly compiled on a miss or after an
-  invalidation.
-- The cache is bounded; the least-recently-used entries are evicted under pressure.
-- An edited template misses the cache (invalidated) and recompiles.
+- Input: a template name/source. Output: the cached token/AST/compiled artifact (or a fresh parse in dev).
 
 ## Lifecycle and operation graph
 
-1. A render looks up the compiled template by key; a hit returns the cached compiled form.
-2. A miss compiles (Feature 50), stores under the key (evicting LRU if at the bound), and returns
-   it.
-3. A source change (mtime or content) invalidates the entry; the next render recompiles.
-4. Hot-reload (dev) invalidates and recompiles on change so a developer sees edits immediately.
+1. Render -> cache miss -> tokenize/parse/(compile) -> store keyed by name/md5. 2. Render -> cache hit ->
+reuse (prod) / re-read (dev). 3. Eviction: 256 half-drop (PHP/Ruby/Node) or never (Python).
 
 ## Configuration and precedence
 
-- The cache size is bounded (Python 1024 LRU); the same bound applies in all four.
-- Invalidation is by source change; a stale entry is never served after an edit.
-- In production the cache persists for the process; hot-reload applies in dev.
+- `TINA4_TEMPLATE_CACHE_TTL` (default 0 = forever); `TINA4_DEBUG` bypasses. No cache-size env var.
 
 ## Failures, side effects and security
 
-- STALENESS: a cache that does not invalidate on source change serves an old compiled template
-  after an edit (the Ruby memoization bug); invalidation is mandatory.
-- MEMORY: the cache is bounded (LRU), so a process caching many distinct templates cannot exhaust
-  memory; an unbounded cache is a slow leak.
-- The cache holds compiled templates, not user data; it is per-process and carries no
-  cross-request confidentiality concern.
-- A cache key collision (two templates hashing to one key) would render the wrong template; the
-  key must be collision-safe.
+- A long-running production worker serves a STALE template after an on-disk edit (no mtime compare) unless a
+  TTL is set. Python's unbounded template caches leak memory over a process's life when many distinct
+  templates/strings are rendered. The fragment cache is unbounded and collides on a shared key. See the
+  register.
 
 ## Wire and persistence contract
 
-There is no external persistence; the compiled-template cache is an in-process, bounded, keyed
-store. The observable contract is that a repeated render is faster and byte-identical to a fresh
-compile, and an edited template recompiles. Behaviour is identical across the four.
+In-memory, per-instance. No wire format. The invalidation contract SHOULD be "an edited template is re-read" -
+met only in dev today.
 
 ## Providers and substitutability
 
-The cache is engine-agnostic (an LRU or bounded map). A future runtime caches compiled templates
-under a stable key with a memory bound and source-change invalidation.
+A future runtime must bound the template cache (agreed size + policy), invalidate on source change in prod, and
+bound the fragment cache.
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| TC-01 | The memory bound (Python LRU 1024) is not proven identical; an unbounded cache leaks. | Pin one bound and gate that the cache does not grow without limit in all four. |
-| TC-02 | Invalidation on source change is not gated (Ruby memoization staleness, Feature 50). | Gate that an edited template recompiles in all four. |
-| TC-03 | The cache key's collision-safety is not gated. | Gate that two distinct templates do not share a cache entry in all four. |
-| TC-04 | Hot-reload re-compile parity is not gated. | Gate that a dev-mode edit is picked up on the next render in all four. |
-| TC-05 | No shared fixture exists. | Add `frond_template_cache_contract.json`. |
+| CACHE-LRU-FABRICATED | The prior doc's "compiled-template cache `@lru_cache(maxsize=1024)`, bound 1024 (LRU), same in all four" is FABRICATED - NO language has a 1024-LRU template cache. Python's template caches are UNBOUNDED dicts (`engine.py:1571`); the 1024 `lru_cache` is on EXPRESSION helpers, not templates. PHP/Ruby/Node use a 256 INSERTION-ORDER (not LRU) cache. Same fabrication class as the HTTP band (a number lifted from an unrelated site). | Correct the doc; pin one real bound + policy (CACHE-DEC-01). |
+| CACHE-PYTHON-UNBOUNDED | Python's template caches (`_compiled`/`_compiled_strings`/`_compiled_fn`) are UNBOUNDED - a long-running process rendering many DISTINCT named templates or `render_string` sources grows memory without limit. PHP/Ruby/Node cap at 256. Python is the leak outlier. | Bound Python's template caches to the agreed size (CACHE-DEC-01). |
+| CACHE-PROD-STALE | UNIVERSAL: production NEVER invalidates on source change - the file mtime is STORED but never COMPARED in all four (`engine.py:1729` comment unimplemented, `Frond.php:216`, `frond.rb:365`, `engine.ts:1840`). A prod worker serves a STALE template after an on-disk edit unless `TINA4_TEMPLATE_CACHE_TTL>0`. | Compare the stored mtime (or a content hash) so a prod worker picks up an edited template, in all four (the mtime is already stored - just read it). |
+| CACHE-FRAGMENT-UNBOUNDED | UNIVERSAL: the `{% cache key ttl %}` FRAGMENT store is UNBOUNDED in all four (distinct keys grow it without limit), and a SHARED key collides (last writer wins). | Bound the fragment cache; make a shared-key collision safe (or documented). |
+| CACHE-BOUND-DIVERGE | The template/token cache bound diverges: Python unbounded; PHP/Ruby/Node 256 insertion-order (Ruby also has 3 UNBOUNDED per-expression memos, `frond.rb:311-316`). Not "same in all four". | Agree one bound + policy across the four; bound Ruby's per-expression memos. |
 
 ## Owner decisions
 
-Proposed for owner ratification:
-
-1. The compiled-template cache is BOUNDED (recommend the Python LRU 1024) in all four; it never
-   grows without limit.
-2. A source change (mtime or content) invalidates the cached entry; a stale compiled template is
-   never served after an edit.
-3. The cache key is collision-safe; two distinct templates never share an entry.
-4. Hot-reload re-compiles on a dev-mode edit; production caches for the process life.
-5. The cache is transparent (no public API) and holds compiled templates only.
+- CACHE-DEC-01 (proposed): pin ONE template-cache bound + eviction policy across the four (CACHE-LRU-FABRICATED,
+  CACHE-BOUND-DIVERGE) - bound Python's currently-UNBOUNDED template caches (CACHE-PYTHON-UNBOUNDED), agree the
+  size and policy (256 insertion-order is the de-facto majority; or a real LRU), and bound the fragment cache
+  (CACHE-FRAGMENT-UNBOUNDED) + Ruby's three unbounded memos.
+- CACHE-DEC-02 (proposed): fix production staleness (CACHE-PROD-STALE) - COMPARE the already-stored mtime (or a
+  content hash) so a prod worker picks up an edited template, in all four.
 
 ## Proposed conformance fixture
 
-Add `frond_template_cache_contract.json` with stable ids for: a repeated render hitting the cache
-(byte-identical, no recompile); an edited template invalidating and recompiling; the cache
-respecting its bound under many distinct templates (LRU eviction, no unbounded growth); two
-distinct templates not colliding; and a hot-reload edit picked up. Every case renders real
-templates and observes cache behaviour; a pure render needs no service and runs in all four
-runners.
+A shared fixture: rendering N+1 distinct templates evicts to a bounded size in ALL four (catches
+CACHE-PYTHON-UNBOUNDED); an on-disk edit to a cached template is picked up on the next render WITHOUT
+`TINA4_DEBUG` (catches CACHE-PROD-STALE); the fragment cache is bounded and a shared-key reuse is safe.
 
 ## Integration map
 
-- Feature 50 compiles what is cached; Feature 51 renders from it; Feature 60 is the separate
-  fragment cache; hot-reload ties to the dev server.
-- Central fixtures, four runners, the CI matrix and the Frond performance docs update together.
+- Consumers: every repeated render. Composes: the parser (49), the compiler (50). `TINA4_TEMPLATE_CACHE_TTL` +
+  `TINA4_DEBUG` gate it.
 
 ## Breaking changes and migration
 
-- Pinning the bound and invalidation is internal; no template breaks. Fixing the Ruby memoization
-  staleness (Feature 50) is a correctness fix a stale template relied on being a bug.
-- No public API change.
-
-## Implementation backlog
-
-1. Add `frond_template_cache_contract.json` and wire four runners.
-2. Pin and gate the memory bound (TC-01) and source-change invalidation (TC-02) in all four.
-3. Gate key collision-safety (TC-03) and hot-reload (TC-04).
-4. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit.
+- Bounding Python's cache changes memory behaviour (a fix). Invalidating on mtime changes prod behaviour
+  (edited templates now refresh) - a correctness fix; note it (a worker that relied on the permanent cache).
 
 ## Porting capsule
 
-Cache the compiled template under a stable, collision-safe key in a bounded store (an LRU of ~1024
-or equivalent), returning the cached compiled form on a hit and compiling on a miss. Invalidate the
-entry on a source change (mtime or content) so an edit recompiles, and re-compile on a hot-reload
-in dev. Keep it transparent (no public API) and per-process. Prove the port with a repeated-render
-hit, an edit-invalidation, and a bounded-growth case.
+Cache the parsed/compiled template keyed by name (files) or content md5 (strings), BOUNDED to one agreed size +
+policy across the four (Python's unbounded dicts are the leak to avoid). In production, COMPARE the stored file
+mtime (or a content hash) so an edited template is re-read - do not serve a permanently stale template. Bound
+the `{% cache %}` fragment store too, and make a shared fragment key safe. Keep the `TINA4_DEBUG` re-read-every-
+render dev path.
 
 ## Audit closure checklist
 
-- [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded (TC-01..05).
-- [x] Owner ambiguities recorded (5 proposed; the bound and invalidation are key).
-- [x] Proposed shared cases and mutation witnesses complete.
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete (template + fragment cache x four).
+- [x] Lifecycle and producer/consumer edges complete (miss -> store -> hit/evict).
+- [x] Configuration (TTL/DEBUG), failure (stale/unbounded) and security rules complete.
+- [x] Wire (in-memory cache) and provider contracts complete.
+- [x] Four-language behaviour recorded truthfully (python unbounded; others 256; prod never invalidates).
+- [x] Owner ambiguities decided (CACHE-DEC-01 bound, CACHE-DEC-02 invalidate).
+- [x] Conformance fixture (bound + prod-invalidation) complete.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.
