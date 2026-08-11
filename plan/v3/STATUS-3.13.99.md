@@ -5,7 +5,7 @@ fixture, lab-green on the .99 lab) before the next. This table is updated, commi
 feature lands. Detail: [IMPLEMENTATION-3.13.99.md](IMPLEMENTATION-3.13.99.md). Decisions:
 [OWNER-DECISIONS.md](OWNER-DECISIONS.md).
 
-**Progress: 8 / 53 features lab-green.** Done: 37, 127, 41, 43, 53, 14, 36, 129. In progress: 126 (next).
+**Progress: 9 / 53 features lab-green.** Done: 37, 127, 41, 43, 53, 14, 36, 129, 126. In progress: 132 (next).
 
 Status: DONE = lab-green all four (independently re-verified) . WIP = in progress . TODO = not started.
 Lab column = per-framework test counts py/php/ruby/node in the consolidated green run.
@@ -22,7 +22,7 @@ Lab column = per-framework test counts py/php/ruby/node in the consolidated gree
 | 14 | Mongo mass-delete guard | DONE | 7/7/7/7 | 3315d1c / baf1af5 / d45c119 / ad62c2d |
 | 36 | Security headers | DONE | 4/4/4/5 | bfc1597 / 853c47c / 6e44205 / aa73dbf |
 | 129 | Port takeover safety | DONE | 5/16/5/5 | fdd7d86 / 40cd4c0 / 75f78ae / ae7332d |
-| 126 | Debug overlay redaction | TODO | - | - |
+| 126 | Debug overlay redaction | DONE | 22/22/22/48 | 7b460ea / df860de / 93c1e06 / f9afed3 |
 | 132 | Inline testing | TODO | - | - |
 
 ## Phase 2 - data-loss / silent no-op
