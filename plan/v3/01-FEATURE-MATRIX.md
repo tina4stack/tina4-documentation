@@ -178,7 +178,7 @@ Historical documents remain in `archive/`; active packets use this table.
 
 | # | Feature | Python evidence | PHP | Ruby | Node | Audit state |
 | ---: | --- | --- | --- | --- | --- | --- |
-| 104 | [Event and listener system](features/104-events.md) | `tina4_python/core/events.py` | inventory pending | inventory pending | inventory pending | queued |
+| 104 | [Event and listener system](features/104-events.md) | `tina4_python/core/events.py` | `Tina4/Events.php` | `lib/tina4/events.rb` | `packages/core/src/events.ts` | decision-ready (STRONG core parity: priority higher-first+stable, emit->results array in prio order, error ISOLATION default + strict re-raise + always-log, one internal emitter `tina4.request.error` {exception,request} all 4, no env; Node is the cleanest impl. Latent divergences: EV-01 emit_async return - ruby returns THREADS vs py/php/node results; EV-02 once+async broken py+ruby; EV-03 php removes once AFTER call (re-entrant re-fire); EV-04 python iterates LIVE list (unsafe re-entrant register); EV-05 strict spelling 3 forms py/ruby kwarg, php emitStrict(), node {strict} opts - php CLAUDE.md omits them; EV-06 py+ruby empty-bucket leak; no fixture/ADR) |
 | 105 | [Dependency injection container](features/105-dependency-injection.md) | `tina4_python/container/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
 | 106 | [Service runner](features/106-service-runner.md) | `tina4_python/service/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
 | 107 | [HTML element builder](features/107-html-element.md) | `tina4_python/HtmlElement.py` | inventory pending | inventory pending | inventory pending | queued |
