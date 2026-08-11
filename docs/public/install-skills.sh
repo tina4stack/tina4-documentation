@@ -6,6 +6,7 @@
 # Examples:
 #   curl -fsSL https://tina4.com/install-skills.sh | TINA4_SKILLS_TARGET=claude sh
 #   curl -fsSL https://tina4.com/install-skills.sh | TINA4_SKILLS_TARGET=codex sh
+#   curl -fsSL https://tina4.com/install-skills.sh | TINA4_SKILLS_TARGET=cursor sh
 #
 # POSIX sh ONLY. Every documented invocation pipes into `sh`, and on
 # Debian/Ubuntu that is dash. This file used `set -euo pipefail`, so the
