@@ -94,8 +94,9 @@ Re-run it and re-sync this table whenever a fixture changes.
 | Paginated results | 24 | `pagination_contract.json` | 6 | 6 | 0 | 0043 | yes (real 250-row SQLite; incl. the AutoCrud REST endpoint) |
 | Dev admin dashboard | 127 | `devadmin_contract.json` | 6 | 6 | 0 | DEVADMIN-DEC-01..06 | yes (real-dispatch, no mocks; 2026-08-11) |
 | Static assets | 41 | `static_contract.json` | 5 | 5 | 0 | 0050, ST-DEC-01 | yes (real symlinks + temp dirs; 2026-08-11) |
+| Request id / correlation | 43 | `requestid_contract.json` | 4 | 4 | 0 | RID-DEC-01/02 | yes (real pipeline + real HTTP; real log file; 2026-08-11) |
 
-**Totals: 112 invariants, 96 proven, 16 owed** (2026-08-11), 15 fixtures. Proven
+**Totals: 116 invariants, 100 proven, 16 owed** (2026-08-11), 16 fixtures. Proven
 subsystems remain held to their contract four-way. Logger and database adapter
 now have decision-complete answer keys whose runners are honestly owed. Messenger closed
 last: the read/send shapes were already unified by the 3.13.96 parity commits

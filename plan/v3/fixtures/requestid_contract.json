@@ -1,0 +1,99 @@
+{
+  "_comment": [
+    "The request-id / correlation-id contract: ONE answer key, four frameworks. Feature 43.",
+    "",
+    "Every request carries a correlation id: an inbound X-Request-ID is HONOURED",
+    "when it is well-formed, else one is GENERATED; the id is ECHOED on the",
+    "response X-Request-ID header and threaded into every log line for the",
+    "request. The inbound value is SANITIZED first (allow-list charset",
+    "[A-Za-z0-9._-], length cap 128, CR/LF and every other control char rejected)",
+    "so an attacker-controlled header can never inject a second response header or",
+    "forge a log line - RID-DEC-02. Before this feature the full behaviour existed",
+    "ONLY in Python (with two live defects); PHP minted one id PER PROCESS, and",
+    "Ruby/Node had the setter but never called it in the request path. RID-DEC-01",
+    "(OWNER-DECIDED 2026-08-11) built it in all four - see",
+    "tina4-documentation/plan/v3/OWNER-DECISIONS.md and",
+    "tina4-documentation/plan/v3/features/043-request-id.md.",
+    "",
+    "Every case is driven through the REAL request pipeline - Python's TestClient",
+    "and PHP/Ruby TestClients dispatch through the real front controller; Node",
+    "boots a REAL server and makes REAL HTTP requests over a socket - with NO",
+    "mocks. The logger case reads a REAL log file the framework wrote. The witness",
+    "is a real side effect: the response X-Request-ID header, the id the handler",
+    "reads back, and the [id] in a log line the framework wrote to disk.",
+    "",
+    "The four suites carry the SAME case names in each language's idiom (Python",
+    "snake_case method, PHP testPascalCase method, Ruby it-description, Node assert",
+    "label), which scripts/audit-contract-fixtures.py normalises and matches. Each",
+    "framework also carries request-scoped storage tests (Python contextvars, Ruby",
+    "thread-local, Node AsyncLocalStorage, PHP per-request) that are NOT in this",
+    "shared set because the concurrency mechanism differs per runtime."
+  ],
+  "version": 1,
+  "decided": "2026-08-11",
+  "feature": "43 - Request ID / correlation id",
+  "invariants": [
+    {
+      "id": "request-id-inbound-honoured",
+      "adr": "RID-DEC-01",
+      "rule": "A well-formed inbound X-Request-ID ([A-Za-z0-9._-], 1..128 chars) is HONOURED - the same id is echoed on the response X-Request-ID header AND read back by the handler for this request - so a client or an upstream service can thread its own correlation id through the app.",
+      "why": "A correlation id is only useful end to end if the app respects the one the caller already assigned. Before RID-DEC-01 only Python honoured the inbound header; PHP/Ruby/Node ignored it, so a downstream trace id was silently dropped in three of four.",
+      "suites": {
+        "ruby": "spec/request_id_spec.rb",
+        "python": "tests/test_request_id.py",
+        "php": "tests/RequestIdTest.php",
+        "nodejs": "test/requestid.test.ts"
+      },
+      "cases": [
+        "inbound id is honoured and echoed"
+      ]
+    },
+    {
+      "id": "request-id-generated",
+      "adr": "RID-DEC-01",
+      "rule": "When no inbound X-Request-ID is sent, the framework GENERATES a well-formed id ([A-Za-z0-9._-], 1..128 chars) and echoes it on the response X-Request-ID header - and the handler reads back the SAME id.",
+      "why": "Every request must be correlatable whether or not the caller supplied an id. Before RID-DEC-01 PHP generated one id per PROCESS (useless under the long-running server) and Ruby/Node put no id on the wire at all.",
+      "suites": {
+        "ruby": "spec/request_id_spec.rb",
+        "python": "tests/test_request_id.py",
+        "php": "tests/RequestIdTest.php",
+        "nodejs": "test/requestid.test.ts"
+      },
+      "cases": [
+        "absent id is generated and echoed"
+      ]
+    },
+    {
+      "id": "request-id-sanitized",
+      "adr": "RID-DEC-02",
+      "rule": "A hostile inbound X-Request-ID is SANITIZED before it is used: a value carrying CR/LF, one longer than 128 chars, or one with any character outside [A-Za-z0-9._-] is rejected wholesale and a fresh id is generated - so the raw value NEVER reflects into the response header or a log line. Mutation-proved: disabling the sanitizer reflects the raw value into the response X-Request-ID header (proven live in all four).",
+      "why": "The inbound header is attacker-controlled. Reflecting it raw into a response header is HTTP response-splitting (a CR/LF forges a second header, e.g. Set-Cookie) and into a log line is log injection - RID-PY-INJECTION, which was a LIVE defect in Python and would have been reintroduced by naively wiring the dormant setter in Ruby/Node. CR/LF cannot travel intact over a compliant HTTP client (the transport itself blocks it), so Node proves the CR/LF case at the sanitizer function; the over-long and illegal-charset cases travel over real HTTP in every framework.",
+      "suites": {
+        "ruby": "spec/request_id_spec.rb",
+        "python": "tests/test_request_id.py",
+        "php": "tests/RequestIdTest.php",
+        "nodejs": "test/requestid.test.ts"
+      },
+      "cases": [
+        "crlf id is sanitized",
+        "overlong id is sanitized",
+        "illegal charset id is sanitized"
+      ]
+    },
+    {
+      "id": "request-id-log-correlation",
+      "adr": "RID-DEC-01",
+      "rule": "A log line written while serving the request CARRIES the request's id: the framework writes the id into every log line (text form [<id>], JSON form request_id) so logs for one request are correlatable and match the id echoed on the response. Witnessed by reading a REAL log file the framework wrote and finding the request's id on the marker line.",
+      "why": "Log correlation is the whole point of a request id. Before RID-DEC-01 Ruby and Node never called the setter in the request path, so get_request_id was nil during a real request and no log line carried an id; PHP's one process id made every request's lines look identical.",
+      "suites": {
+        "ruby": "spec/request_id_spec.rb",
+        "python": "tests/test_request_id.py",
+        "php": "tests/RequestIdTest.php",
+        "nodejs": "test/requestid.test.ts"
+      },
+      "cases": [
+        "log line carries the request id"
+      ]
+    }
+  ]
+}
