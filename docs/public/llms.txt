@@ -95,20 +95,15 @@ The tina4 **skills** are the single highest-leverage thing for an AI building
 Tina4. They are the source of truth for the framework's patterns and stop the
 guessing that breaks builds. **Install them and use them.**
 
-- **What:** `tina4-developer` (backend - routing, ORM, auth, queues, migrations,
-  ...) and `tina4-js` (the reactive frontend).
-- **Install:** `tina4 setup` installs them automatically. To (re)install on any
-  machine, standalone:
-  ```bash
-  curl -fsSL https://tina4.com/install-skills.sh | sh   # macOS / Linux
-  irm https://tina4.com/install-skills.ps1 | iex        # Windows PowerShell
-  ```
-- **Where they live:** `~/.claude/skills/tina4-developer` and
-  `~/.claude/skills/tina4-js`. Claude Code and Claude Desktop auto-load skills
-  from there.
-- **Use:** follow `tina4-developer` for backend work and `tina4-js` for the
-  frontend. Unsure of an API? The skill has the exact, current pattern - read it
-  instead of guessing.
+- **What:** six skills: one developer skill for each Tina4 backend, plus
+  `tina4-js` and `tina4-maintainer`.
+- **Install:** `tina4 setup` installs the selected tool's skills. To install or
+  refresh them later, run `tina4 skills` and choose Claude, Codex, Cursor, or
+  all three. `tina4 update` also refreshes each installed Tina4 skills target.
+- **Where they live:** Claude uses `~/.claude/skills`, Codex uses
+  `~/.agents/skills`, and Cursor uses `~/.cursor/skills`.
+- **Use:** follow the matching developer skill for backend work and `tina4-js`
+  for the frontend. Unsure of an API? Read the skill before guessing.
 
 ---
 
@@ -275,11 +270,11 @@ names:
      -d '{"question":"How do I define a POST route with auth in Python?","language":"python"}'
    # -> {"query": "...", "answer": "...", "sources": [...]}
    ```
-3. **The installed skills** (Claude Code / Claude Desktop only). `tina4 setup`
-   installs `tina4-developer-<language>`, `tina4-js` and `tina4-maintainer` into
-   `~/.claude/skills`, auto-loaded from there. If you are Cursor, Copilot,
-   Windsurf, Gemini or anything else, you will NOT have these - use 1 and 2,
-   which are tool-agnostic, and read the generated scaffold (below).
+3. **The installed skills.** `tina4 setup` and `tina4 skills` support Claude,
+   Codex, and Cursor. The client installs the matching developer skill,
+   `tina4-js`, and `tina4-maintainer` into that tool's user skills directory.
+   Other tools can use the RAG and documentation above, then read the generated
+   scaffold before changing code.
 4. **The docs:** https://tina4.com
 
 The essentials look like this in Python (the reference backend):
