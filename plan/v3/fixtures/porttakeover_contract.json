@@ -1,0 +1,98 @@
+{
+  "_comment": [
+    "Development port takeover, made a SAFETY feature. Feature 129, TAKEOVER-DEC-01/02/03.",
+    "",
+    "`tina4 serve` reclaims a busy port so a restart does not fail with 'address",
+    "already in use'. Before this fixture BOTH takeover paths -- the CLI",
+    "(killProcessOnPort) and the runtime bind-failure fallback",
+    "(_kill_port/freePort/free_port/killPort) -- SIGTERM'd WHATEVER held the port,",
+    "with NO check that the victim was a Tina4 dev server (TAKEOVER-NO-IDENTITY). A",
+    "foreign holder (another developer's server, a database, a stray http.server)",
+    "was killed. The runtime path was the weaker, UNGUARDED twin: no container",
+    "guard, no PID-safety filter, no identity check (TAKEOVER-UNGUARDED-RUNTIME).",
+    "There was no way to disable it (TAKEOVER-NO-OPTOUT) and it was not gated to dev",
+    "(TAKEOVER-NOT-DEV-GATED). See",
+    "tina4-documentation/plan/v3/features/129-port-takeover.md and",
+    "tina4-documentation/plan/v3/OWNER-DECISIONS.md (Batch 5, TAKEOVER-DEC-01/02/03).",
+    "",
+    "The fix, in all four, is ONE shared takeover helper both paths call",
+    "(tina4_python.core.port_takeover / Tina4\\PortTakeover / Tina4::PortTakeover /",
+    "@tina4/core portTakeover), so the runtime path can never again be a weaker",
+    "twin (TAKEOVER-DEC-02):",
+    "  1. IDENTITY (TAKEOVER-DEC-01): a Tina4 dev server writes a per-port PID file",
+    "     (data/.tina4-serve-<port>.pid) when it binds and removes it on clean exit.",
+    "     Takeover signals a holder ONLY when its PID matches that file; a holder",
+    "     with no matching Tina4 PID file is REFUSED, never killed, with a clear",
+    "     'port N is held by a non-Tina4 process' message.",
+    "  2. DEV GATE + OPT-OUT (TAKEOVER-DEC-03): takeover runs ONLY in dev",
+    "     (TINA4_DEBUG truthy) and ONLY when not opted out (TINA4_NO_TAKEOVER env /",
+    "     `tina4 serve --no-kill`, which sets the env for the whole process). A",
+    "     production bind never kills a port holder.",
+    "  3. The existing PID safety filter (selectable_pids) and container guard stay,",
+    "     unchanged, on top -- foreign PIDs are still SELECTED by the filter; the",
+    "     identity check is a SEPARATE, later gate, so the existing selectable_pids",
+    "     lock-in tests keep passing.",
+    "The runtime bind-failure path RAISES on a refused foreign holder, so a bind",
+    "onto a foreign-held port fails loudly instead of killing an innocent process.",
+    "",
+    "Refusing is always safe (the developer frees the port by hand); over-killing",
+    "was the bug. tina4: identity is a PID+port match against a file Tina4 wrote; the",
+    "only false match is PID reuse after an uncleaned crash on the SAME port -- a",
+    "tiny window whose failure mode is a refusal, never a wrong kill.",
+    "",
+    "Every case runs with REAL PROCESSES on REAL PORTS, NO MOCKS: each framework",
+    "starts a real child that binds a real port (a Tina4 child records its identity",
+    "through the REAL framework write_pidfile) and asserts the outcome BY PID -- a",
+    "foreign holder is still alive afterwards; a Tina4 holder is gone. The runtime",
+    "case drives the real runtime entrypoint (Python _kill_port, PHP Server::freePort",
+    "via reflection, Ruby WebServer#free_port, Node killPort).",
+    "",
+    "Mutation-proved (macOS, all four): removing the identity filter in the shared",
+    "helper's take_over_port (kill every selectable holder, not just",
+    "PID-file-confirmed ones) turns the foreign-holder-spared case AND the",
+    "runtime-path-spares-foreign case RED (the foreign child is SIGTERM'd). Restoring",
+    "it returns to green.",
+    "",
+    "Each invariant names a REAL suite file per framework and a list of case names;",
+    "the four suites carry the SAME case names in each language's own idiom, which",
+    "scripts/audit-contract-fixtures.py normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-11",
+  "feature": "129 - Development port takeover (identity-checked, dev-gated, opt-out)",
+  "invariants": [
+    {
+      "id": "takeover-identity-check",
+      "adr": "TAKEOVER-DEC-01",
+      "rule": "Port takeover signals a holder ONLY when the holder's PID matches the per-port PID file a Tina4 dev server wrote (data/.tina4-serve-<port>.pid). A holder with no matching Tina4 PID file is REFUSED with a clear 'port N is held by a non-Tina4 process' message and NOT killed. A confirmed Tina4 holder is reclaimed (SIGTERM). Both the CLI path and the runtime bind-failure fallback route through the ONE shared helper, so the runtime path enforces the SAME identity gate (TAKEOVER-DEC-02) and RAISES on a refused foreign holder instead of killing it.",
+      "why": "Both takeover paths killed whatever held the port with no Tina4-identity check, so a foreign dev server / database / stray listener was SIGTERM'd on `tina4 serve` (TAKEOVER-NO-IDENTITY), and the runtime path did it with none of the CLI's guards (TAKEOVER-UNGUARDED-RUNTIME). Identifying the victim via a PID file the dev server wrote makes takeover reclaim ONLY a real Tina4 instance. Mutation-proved: dropping the identity filter makes the foreign-holder-spared and runtime-path-spares-foreign cases go RED (the foreign process is killed).",
+      "suites": {
+        "ruby": "spec/port_takeover_contract_spec.rb",
+        "python": "tests/test_port_takeover_contract.py",
+        "php": "tests/PortTakeoverContractTest.php",
+        "nodejs": "test/portTakeoverContract.test.ts"
+      },
+      "cases": [
+        "a foreign holder is not killed and takeover refuses",
+        "a tina4 dev server holder is reclaimed",
+        "the runtime path also spares a foreign holder"
+      ]
+    },
+    {
+      "id": "takeover-dev-gate-and-optout",
+      "adr": "TAKEOVER-DEC-03",
+      "rule": "Takeover is gated to dev mode and is opt-out. With takeover opted out (TINA4_NO_TAKEOVER truthy, set by `tina4 serve --no-kill`) it refuses to kill even a confirmed Tina4 holder. Outside dev mode (TINA4_DEBUG not truthy) it refuses to kill any holder -- a production bind never takes over a port. In both cases the holder is left running.",
+      "why": "There was no way to disable takeover (TAKEOVER-NO-OPTOUT) and it ran under a production bind too (TAKEOVER-NOT-DEV-GATED) -- killing a port holder in production is surprising. An opt-out env/flag and a dev gate make takeover a dev-only convenience. The gate and opt-out are resolved once and passed into the ONE shared helper, so the CLI and runtime paths honour them identically.",
+      "suites": {
+        "ruby": "spec/port_takeover_contract_spec.rb",
+        "python": "tests/test_port_takeover_contract.py",
+        "php": "tests/PortTakeoverContractTest.php",
+        "nodejs": "test/portTakeoverContract.test.ts"
+      },
+      "cases": [
+        "opt out refuses to kill the holder",
+        "production mode refuses to kill the holder"
+      ]
+    }
+  ]
+}

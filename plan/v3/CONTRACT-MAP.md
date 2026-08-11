@@ -3,7 +3,7 @@
 > The living index that ties every audited feature to its machine-checked
 > contract, its decisions, and its proven-in-all-four status. This is the
 > backbone of a future formal Tina4 language specification.
-> **Last synced:** 2026-08-11 (3.13.99 pass: +csrf/devadmin/static/requestid/frondtags fixtures)
+> **Last synced:** 2026-08-11 (3.13.99 pass: +csrf/devadmin/static/requestid/frondtags/securityheaders/porttakeover fixtures)
 
 > **Adversarial re-audit started 2026-08-08:** a zero-skip live-lab migration
 > baseline still omitted contradictory public paths (generated code migration
@@ -98,8 +98,9 @@ Re-run it and re-sync this table whenever a fixture changes.
 | Frond tag path confinement | 53 | `frondtags_contract.json` | 4 | 4 | 0 | TAG-DEC-01 | yes (real templates + real symlink + real dirs; one shared loader per lang; 2026-08-11) |
 | MongoDB SQL provider | 14 | `mongosql_contract.json` | 3 | 3 | 0 | MONGO-DEC-01 | yes (real MongoDB; fail-closed parse + one shared filterless-write guard per lang; mutation-proved; 2026-08-11) |
 | Security headers | 36 | `securityheaders_contract.json` | 2 | 2 | 0 | SECHDR-DEC-01, SECHDR-DEC-02 | yes (real pipeline: py `server.handle`, php `Router::dispatch`, ruby `RackApp#call`, node real HTTP; secure-by-default register + HTTPS-guarded HSTS + CSP `default-src 'self'`; PHP class renamed; mutation-proved; 2026-08-11) |
+| Port takeover | 129 | `porttakeover_contract.json` | 2 | 2 | 0 | TAKEOVER-DEC-01, TAKEOVER-DEC-02, TAKEOVER-DEC-03 | yes (real processes on real ports, no mocks; ONE shared identity-checked helper per lang reused by the CLI + runtime paths; PID-file Tina4 identity + dev-gate + `TINA4_NO_TAKEOVER`/`--no-kill` opt-out; runtime path raises on a foreign holder; mutation-proved; 2026-08-11) |
 
-**Totals: 125 invariants, 109 proven, 16 owed** (2026-08-11), 19 fixtures. Proven
+**Totals: 127 invariants, 111 proven, 16 owed** (2026-08-11), 20 fixtures. Proven
 subsystems remain held to their contract four-way. Logger and database adapter
 now have decision-complete answer keys whose runners are honestly owed. Messenger closed
 last: the read/send shapes were already unified by the 3.13.96 parity commits
