@@ -71,6 +71,8 @@ No abstraction.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - IMPREL-DEC-01 (proposed): decide whether imperative relationships are a required distinct API in all four
   (IMPREL-MODEL-DIVERGENCE) - the parity call for this feature.
 - IMPREL-DEC-02 (proposed): fix Node's orphaned serialization (IMPREL-NODE-ORPHAN), de-duplicate PHP's

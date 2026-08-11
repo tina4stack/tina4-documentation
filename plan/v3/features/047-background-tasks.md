@@ -102,6 +102,8 @@ built-in), expose one surface (a stop-handle + a count), isolate errors, and sto
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - BG-DEC-01 (proposed, THE call - a silent production no-op): make Python `background()` actually run under the
   default production ASGI server (BG-PY-PROD-NOOP) by starting tasks from the lifespan startup, and guard/warn
   PHP under PHP-FPM/Swoole (BG-PHP-FPM-SWOOLE-NOOP). Today the feature silently does nothing in the common

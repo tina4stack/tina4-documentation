@@ -96,6 +96,8 @@ internal routes by a SHARED rule, and regenerate from LIVE routes.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - SWAG-DEC-01 (proposed): fix Node's boot-snapshot to regenerate from live routes (SWAG-NODE-BOOT-SNAPSHOT) and
   add `/__feedback` to Node's exclusion list (SWAG-NODE-FEEDBACK-LEAK) - the robustness/fragility gaps.
 - SWAG-DEC-02 (proposed): share ONE internal-exclusion rule (SWAG-EXCLUSION-NOT-SHARED) and gate the per-op

@@ -96,6 +96,8 @@ A future runtime must expose the same surface, pin the param model + names, keep
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - REQ-DEC-01 (proposed, THE call): pin the param model (REQ-PARAM-POLLUTION) - keep route params and query
   SEPARATE (PHP/Node) so client input cannot enter `params`; unify the route-param NAME (REQ-ROUTE-PARAM-NAME)
   and the malformed/empty-body result (REQ-BODY-DIVERGE) across the four. Security + parity.

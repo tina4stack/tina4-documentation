@@ -79,6 +79,8 @@ The LIMIT/OFFSET pushdown is per-engine (feature 9-14); `to_paginate` only descr
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - PAGE-DEC-01 (proposed): clamp `page >= 1` in Python/Ruby/Node (PAGE-NEGATIVE-OFFSET) - the real bug (a PG
   500 / silent-wrong on SQLite) - and cap the max per-page size (PAGE-NO-MAX-LIMIT).
 

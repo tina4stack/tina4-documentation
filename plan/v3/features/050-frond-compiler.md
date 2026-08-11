@@ -94,6 +94,8 @@ are the reference; PHP is the port pattern to follow).
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - CP-DEC-01 (OWNER-DECIDED, Andre, 2026-08-11): ALL FOUR languages get a Frond compiler. Ruby and Node build
   an AOT compiler matching Python + PHP: emit NATIVE HOST SOURCE that reuses the interpreter's own primitives
   per hole (so output is byte-identical), a hot-path subset with interpreter FALLBACK for unsupported

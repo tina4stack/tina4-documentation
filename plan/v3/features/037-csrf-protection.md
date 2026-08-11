@@ -94,6 +94,8 @@ and bind the token to the session.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - CSRF-DEC-01 (proposed, SECURITY - highest priority in the audit): remove PHP's `'tina4-default-secret'`
   fallback + `$_ENV` mutation (CSRF-PHP-DEFAULT-SECRET) and fix Node's generator/validator secret split
   (CSRF-NODE-SECRET-SPLIT) - both are live token-forgery -> CSRF + write-auth bypass. Port the Python SEC-01

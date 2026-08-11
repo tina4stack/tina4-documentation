@@ -91,6 +91,8 @@ bound the fragment cache.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - CACHE-DEC-01 (proposed): pin ONE template-cache bound + eviction policy across the four (CACHE-LRU-FABRICATED,
   CACHE-BOUND-DIVERGE) - bound Python's currently-UNBOUNDED template caches (CACHE-PYTHON-UNBOUNDED), agree the
   size and policy (256 insertion-order is the de-facto majority; or a real LRU), and bound the fragment cache

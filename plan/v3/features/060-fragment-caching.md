@@ -80,6 +80,8 @@ with the unified cache backend set (so it survives across requests).
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - FRAGCACHE-DEC-01 (proposed): bound the fragment store (FRAGCACHE-UNBOUNDED, with feature 59) and make a
   shared-key collision safe or an error (FRAGCACHE-KEY-COLLISION) - the two real correctness/memory footguns.
 - FRAGCACHE-DEC-02 (proposed): decide whether the fragment cache uses the unified backend set so it survives

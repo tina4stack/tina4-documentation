@@ -89,6 +89,8 @@ API, and it should signal a built-in override.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - EX-DEC-01 (proposed): decide the registration-SCOPE contract (EX-INSTANCE-LEAKS-CLASS) - instance-local vs
   process-global. Today an instance registration leaks to the class registry in all four, polluting the
   process (a real test-isolation + surprise hazard). Pick one and apply it in all four.

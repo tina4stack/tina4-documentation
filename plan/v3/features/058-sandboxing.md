@@ -85,6 +85,8 @@ DISABLE the compiler under sandbox.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - SANDBOX-DEC-01 (proposed): pin the DENIED-filter behaviour (SANDBOX-DENIED-FILTER-DIVERGE) - a denied filter
   should raise or drop the value, not silently pass it through (PHP's current footgun) - and decide whether
   tests are gated (SANDBOX-TESTS-UNGATED).

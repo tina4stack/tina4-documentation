@@ -78,6 +78,8 @@ The generators are fixed; the RNG is seedable.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - SEED-DEC-01 (proposed): fix the PHP `seed_table` engine portability (SEED-PHP-BACKTICK) - it breaks the
   dev-admin seed on PG/MSSQL/Firebird - and make `seed_table(seed=)` deterministic or remove it
   (SEED-TABLE-SEED-INERT).

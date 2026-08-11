@@ -105,6 +105,8 @@ raw bytes, the same size bound WITH a running counter, and the same untrusted-fi
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - UP-DEC-01 (proposed): pin ONE descriptor - keys + the raw-bytes representation (already uniform) - and
   reconcile the naming (`type` vs `content_type`, `content` vs `bytes`) and the optional keys
   (`fieldName`/`tempfile`) (UP-DESCRIPTOR-KEYS). Fix the stale PHP base64 docblock (UP-PHP-BASE64-FALSE).

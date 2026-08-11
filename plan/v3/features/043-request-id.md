@@ -100,6 +100,8 @@ response header + log correlation + consistent error-page id), request-scoped (c
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - RID-DEC-01 (proposed, THE call): decide the feature's scope. A per-request correlation id (honour inbound,
   emit response header, log correlation, consistent error-page id) is fully wired only in Python. Either build
   it in PHP/Ruby/Node (PHP needs per-request generation; Ruby/Node need the request path to actually call the

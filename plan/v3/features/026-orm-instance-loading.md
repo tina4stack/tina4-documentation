@@ -80,6 +80,8 @@ No provider abstraction; the driver's row shape is the input (feature 3 guarante
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - LOAD-DEC-01 (proposed): stop re-enforcing business constraints on read in Python (LOAD-PY-REVALIDATE) -
   the highest-value fix (it can make existing data unreadable) - and unify Ruby's two read paths
   (LOAD-RUBY-ASYMMETRY).

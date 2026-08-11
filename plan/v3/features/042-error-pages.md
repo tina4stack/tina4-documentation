@@ -90,6 +90,8 @@ allow the same override convention.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - ERR-DEC-01 (proposed): converge the 403 rendering (ERR-403-SPLIT), the app-overridable code-set
   (ERR-OVERRIDABLE-CODES-DIVERGE), and Ruby's HTML-only fallback (ERR-RUBY-FALLBACK-HTML) so an error response
   is consistent across the four.

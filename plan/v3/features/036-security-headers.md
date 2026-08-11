@@ -93,6 +93,8 @@ HSTS.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - SECHDR-DEC-01 (proposed, THE call): decide the on-by-default posture (SECHDR-OFF-BY-DEFAULT). Registering the
   middleware in the default chain makes a Tina4 app secure-by-default (the headers + defaults are already
   good); keeping it opt-in requires loud documentation. Today it ships off in all four - a security-posture

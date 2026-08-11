@@ -80,6 +80,8 @@ No provider abstraction; the relationship types are fixed.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - REL-DEC-01 (proposed): decide the cascade story (REL-NO-CASCADE) - emit real FK constraints or document
   read-side-only + stop Python's `on_delete` silently no-op'ing. This is the biggest relationship call.
 - REL-DEC-02 (proposed): make Node's documented declarative auto-wire actually work + add lazy loading

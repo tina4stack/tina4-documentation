@@ -99,6 +99,8 @@ current Python-only-plus-three-static-variants split.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - CE-DEC-01 (proposed, THE call): decide the feature's true scope. Compression + a dynamic ETag + dynamic
   conditional-GET are Python-only today. Either (a) implement them in PHP/Ruby/Node to make this a real
   four-language feature, or (b) document them as Python-only and rewrite the matrix/contract to stop claiming

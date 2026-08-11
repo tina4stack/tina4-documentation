@@ -101,6 +101,8 @@ model), block dotfiles, and use the agreed ETag format.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - ST-DEC-01 (proposed, SECURITY - top priority, and INVERTED from the prior doc): adopt PHP's realpath +
   separator confinement (`StaticFiles.php:130-141`) as the reference and port it to Python/Ruby/Node so a
   symlink and sibling-prefix escape is blocked (ST-SYMLINK-ESCAPE, ST-NODE-SIBLING-PREFIX); block dotfiles

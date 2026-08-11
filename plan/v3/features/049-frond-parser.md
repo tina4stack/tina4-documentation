@@ -84,6 +84,8 @@ added (Python/PHP are the reference).
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - PARSE-DEC-01 (proposed, shaped by the owner's compiler decision on 50): give Ruby and Node a real
   parser/AST stage so all four parse to ONE tree that both the interpreter and the (owner-decided) compiler
   consume, with `if`/`for` grouping decided once rather than re-derived per render. Python + PHP are the

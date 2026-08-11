@@ -41,7 +41,68 @@ is the authoritative "what was decided", the feature docs carry the detail.
   dynamic content-hash ETag (40) and the real request-id (honour inbound, emit response header, log
   correlation) (43) to PHP/Ruby/Node. Parity is the v3 goal.
 
-## Pending batches
+## Batch 2 - 2026-08-11 (all DECIDED)
+
+- Frond |date convention (52, FILT-DEC-01) - DECIDED: `|date` uses strftime `%`-codes (the cross-language
+  standard, Python/Ruby/Node already). PHP switches its `|date` from native `date()` codes to strftime, so a
+  `{{ d|date(fmt) }}` arg is portable.
+- ORM relationships cascade (21, REL-DEC-01) - DECIDED: relationships are READ-SIDE-ONLY. Referential
+  integrity is the migrations/DB's job (consistent with the no-FK Firebird rule). DROP Python's `on_delete=`
+  param that silently no-ops (a phantom API - do not ship a param that does nothing).
+- AutoCrud invalid-create status (27, CRUD-DEC-01) - DECIDED: return 422 Unprocessable Entity with the FIELD
+  errors, consistent across all four (fixes PHP/Ruby's buggy 500 and Python's 400).
+- ORM result caching (25, CACHE-DEC-01) - DECIDED (owner overrode the drop-it recommendation): KEEP the
+  explicit `Model.cached()` but FIX its invalidation - bust on ALL writes (save AND delete/force_delete/
+  restore), tag a cached query by every table it touches, treat `ttl=0` as no-cache (not infinite) - and ADD
+  `cached()` to Node for parity (Node has only the adapter auto-cache today).
+
+## Batch 3 - 2026-08-11 (all DECIDED)
+
+- ORM field model (18, FIELD-DEC-01) - DECIDED (owner overrode the Python-master default): reconcile the
+  field model BEHAVIOUR-BY-BEHAVIOUR (ADR-0004 best-implementation-prevails), not a single language as master.
+  Pick the best per behaviour; do not inherit any one language's quirk wholesale.
+- Frond lexer/parser positions (48/49, LEX-DEC-01 + PARSE-DEC-02) - DECIDED: ADD source positions (line/col)
+  + an EOF token to Frond tokens in all four, so lexical/parse/runtime errors are POSITIONED. Foundation for
+  the owner-decided compiler (50) and real template diagnostics. Ruby+Node also gain a parser/AST stage.
+- Error-page rendering (42, ERR-DEC-01 + ERR-DEC-02) - DECIDED: content-NEGOTIATE - a JSON error body for a
+  JSON/API request, the HTML `errors/{code}.twig` page for a browser - uniformly across the four (this also
+  resolves the 4-way 403 split; Ruby gains a JSON error path).
+- Frond extensibility scope (56, EX-DEC-01) - DECIDED: an INSTANCE registration is instance-LOCAL (does not
+  write the class registry); class-level `add_filter` is the process-wide one. Clean test isolation.
+  Breaking for the rare code relying on the current global leak.
+
+## Batch 4 - 2026-08-11 (owner delegated "pick the best" - ratified with principled defaults)
+
+Ratified fixes: 24 clamp page>=1 + cap max per-page; 40 the 304 preserves ETag/Last-Modified + pin ONE weak
+static ETag `W/"<size>-<mtime>"`; 41 honour `TINA4_PUBLIC_DIR` in Ruby+Node + one search-dir order; 28 fix
+PHP's `seed_table` backtick quoting (breaks PG/MSSQL/Firebird + the dev-admin seed); 15 fix `migrate:status`
+(py+php crash) + make the Node CLI use the real migrator + keep auto-migrate default-ON with
+`TINA4_AUTO_MIGRATE=false` prod opt-out; 16 fix the generic next-id TOCTOU (lock/atomic) + the Mongo
+no-increment; 22 fix Node's serialize-orphan + de-dup PHP's parallel impl + unify Python's cap; 23 fix PHP's
+scope global-registry collision; 26 stop Python re-enforcing write constraints on READ + unify Ruby's two
+read paths; 44 repeated field name -> a LIST in all four (no silent drop) + a safe-save helper + a running
+per-chunk size counter in PHP/Ruby; 47 make Python run under production ASGI + guard PHP under FPM/Swoole; 45
+fix Node's swagger boot-snapshot + add `/__feedback` to the exclusion list; 55 add Ruby's dotted
+`obj.method()` call resolution; 58 disable the new Ruby/Node compilers under sandbox; 59/60 bound Python's
+unbounded template caches + the fragment cache + compare mtime in prod.
+
+Decided defaults: 47 background surface = a stop-handle + a `count()` in all four; 45 secured swagger ops
+document a `401` (Python adds it); 52 `|join` default separator `", "` and `|default` keeps boolean `false`
+(both 3-of-4 majority); 54 `even`/`odd` require a real integer (no PHP int-cast); 55 add `range()` as a global
+in py/ruby/node + register the camelCase `formToken` alias everywhere; 57 `|tojson` uses the `\u`-escape model
+everywhere + escaped charset `& < > " '` identical; 58 a denied filter RAISES (not PHP's silent pass-through);
+59 template cache bound 256 insertion-order everywhere; 60 fragment cache within-instance-only but bounded +
+keys namespaced (no network backend for now); 32 converge slash-normalization on PHP's grammar; 28 remove the
+inert `seed_table(seed=)` param (same principle as the no-op `on_delete`); 22 imperative relationships are a
+per-language idiom (do NOT force Ruby to add a distinct API - Ruby's is the declarative method invoked at
+runtime).
+
+## Status
+
+ALL v3 audit owner-decisions run through and ratified 2026-08-11 (Batches 1-4 + the standing compiler
+decision). Every DEC-* across the feature docs is OWNER-DECIDED. Next phase: IMPLEMENTATION in all four
+frameworks with real (no-mock) tests and shared conformance fixtures, feature by feature, highest-value first
+(security cluster -> data-loss/no-op -> parity), per [[feedback_parity]] and the porting capsules in each doc.
 
 Remaining genuine decisions still to run (next batches): the Frond |date convention (52), ORM cascade/FK
 (21), the write-result contract + field-model divergence (17/18), error-page 403 rendering + content

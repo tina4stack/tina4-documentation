@@ -87,6 +87,8 @@ write-auth gate intact.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - RG-DEC-01 (proposed): converge the prefix slash-normalization on PHP's grammar (RG-SLASH-NORMALIZE) in
   Python/Ruby/Node and gate it - the real live divergence (a route mis-registers at `/apiusers`).
 - RG-DEC-02 (proposed): decide group-level auth parity (RG-RUBY-ONLY-AUTH) and add the shared fixture

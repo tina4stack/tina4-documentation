@@ -84,6 +84,8 @@ uses the in-process store.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - CACHE-DEC-01 (proposed): fix the explicit-cache stale-on-write (CACHE-EXPLICIT-STALE) - invalidate on all
   writes, or drop the explicit method for the adapter auto-cache (Node's correct model). Highest value (silent
   stale/deleted-row reads).

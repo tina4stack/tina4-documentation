@@ -82,6 +82,8 @@ tokenization quote-aware.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - LEX-DEC-01 (proposed): decide whether Frond gets a REAL lexer stage - tokens with source positions (line/col)
   and an EOF token - so lexical, parse (49), and runtime (51) errors can be POSITIONED (today none can, in any
   language). This pairs with the owner's compiler decision (50): a positioned token stream makes a real

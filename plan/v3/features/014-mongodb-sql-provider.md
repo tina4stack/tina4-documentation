@@ -92,6 +92,8 @@ One translator per language; no fallback. It is a bridge, not a first-class SQL 
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - MONGO-DEC-01 (proposed): make the parser FAIL CLOSED (MONGO-MASSWRITE) - an unparseable WHERE raises, an
   empty-filter DELETE/UPDATE is rejected. This prevents silent mass data loss and is the top DB-band fix.
 - MONGO-DEC-02 (proposed): add the real-Mongo conformance fixture and gate it (MONGO-ZERO-TESTS) - which

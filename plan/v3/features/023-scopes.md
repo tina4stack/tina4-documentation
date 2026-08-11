@@ -75,6 +75,8 @@ No abstraction.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - SCOPE-DEC-01 (proposed): fix the PHP global-registry collision (SCOPE-PHP-COLLISION) - a real correctness
   bug (one model's scope silently rewrites another's).
 - SCOPE-DEC-02 (proposed, optional): decide whether scopes should compose (SCOPE-NO-COMPOSE) and accept

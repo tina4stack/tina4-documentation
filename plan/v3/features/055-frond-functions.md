@@ -80,6 +80,8 @@ resolve dotted `obj.method()` calls.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - FUNC-DEC-01 (proposed): decide `range()` (FUNC-RANGE-PHP-ONLY) - add it as a global in Python/Ruby/Node, or
   document PHP-only - and agree the shared built-in function set; gate it.
 - FUNC-DEC-02 (proposed): reconcile the camelCase `formToken` global (FUNC-FORMTOKEN-CAMEL-GAP) and add Ruby's

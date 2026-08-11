@@ -80,6 +80,8 @@ and use the agreed JSON-filter model.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - AUTOESC-DEC-01 (proposed): gate the escaped character set identical across the four (AUTOESC-CHARSET-PARITY)
   and pin the JSON-filter model (AUTOESC-JSON-MODEL). Both are XSS-adjacent parity items.
 - AUTOESC-DEC-02 (proposed): confirm `|raw`/`SafeString` are forbidden under sandbox in all four

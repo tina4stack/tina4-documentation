@@ -94,6 +94,8 @@ path or it falls to the racy generic fallback.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - NEXTID-DEC-01 (proposed): make the generic fallback atomic and fix the PostgreSQL first-use race
   (NEXTID-GENERIC-TOCTOU + NEXTID-PG-FIRSTUSE) - these are the real duplicate-id windows.
 - NEXTID-DEC-02 (proposed): give Mongo one correct, tested atomic next-id in all four and remove PHP's

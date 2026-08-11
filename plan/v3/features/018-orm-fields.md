@@ -94,6 +94,8 @@ The DDL type per engine is the substitution axis (engine-aware). No plugin abstr
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - FIELD-DEC-01 (proposed): decide the canonical field-declaration model (FIELD-MODEL-DIVERGENCE) - the
   defining ORM parity call - and add PHP callable defaults (FIELD-CALLABLE-DEFAULT-PHP).
 - FIELD-DEC-02 (proposed): convert the Python engine-DDL test to real engines (FIELD-ENGINE-DDL-MOCK); fix

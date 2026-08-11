@@ -82,6 +82,8 @@ No provider abstraction; the routes are generated from the model.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - CRUD-DEC-01 (proposed): return a consistent 4xx with field errors on a failed create (CRUD-VALIDATION-STATUS)
   - fix PHP/Ruby's 500 - and validate the PUT body (CRUD-PUT-NOVALIDATE). Highest value (a client error
   currently reads as a server error, and updates skip validation).

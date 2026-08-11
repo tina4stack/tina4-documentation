@@ -83,6 +83,8 @@ same defaults.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** The DEC-* below are ratified by the owner (Andre); see [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) for the exact call. Next phase: implementation in all four frameworks with real (no-mock) tests.
+
 - FILT-DEC-01 (proposed): pin ONE `|date` format convention (FILT-DATE-FORMAT-DIVERGE) - the real portability
   bug (a date filter arg does not carry across languages).
 - FILT-DEC-02 (proposed): reconcile the form-token filter aliases (FILT-FORMTOKEN-ALIAS-GAP) and the PHP
