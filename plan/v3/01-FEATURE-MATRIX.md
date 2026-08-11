@@ -189,7 +189,7 @@ Historical documents remain in `archive/`; active packets use this table.
 
 | # | Feature | Python evidence | PHP | Ruby | Node | Audit state |
 | ---: | --- | --- | --- | --- | --- | --- |
-| 110 | [CLI project initialization](features/110-cli-init.md) | `tina4_python/cli/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
+| 110 | [CLI project initialization](features/110-cli-init.md) | `tina4/src/init.rs` (Rust CLI, SINGLE impl) | n/a (one binary) | n/a (one binary) | n/a (one binary) | decision-ready (SINGLE Rust impl, scaffolds 5 targets py/php/ruby/nodejs/tina4js directly - no delegation; flow check-runtime->pkg-mgr->scaffold->install->serve; zero-config SQLite .env for backends. **INIT-05 BUG: PHP-specific .env (with SECRET=) is NEVER written - common .env written first + write_file skips-if-exists, so scaffold_php's override is a silent no-op; docstring "overrides for PHP" is false; test only checks sqlite: so misses it.** INIT-INSTALL: init brew-installs runtimes + curl|sh for uv with no opt-out. INIT-JS-ALIAS `js`=frontend not node backend (documented footgun). Light tests (1)) |
 | 111 | [CLI development server](features/111-cli-serve.md) | `tina4_python/cli/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
 | 112 | [CLI migrations](features/112-cli-migrate.md) | `tina4_python/cli/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
 | 113 | [CLI seeding](features/113-cli-seed.md) | `tina4_python/cli/__init__.py` | inventory pending | inventory pending | inventory pending | queued |
