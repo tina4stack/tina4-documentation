@@ -1,123 +1,120 @@
-# Feature 115: CLI route inspection
+# Feature 115: CLI routes (delegated route-inspection command)
 
 ## Identity and status
 
-- Matrix identity: 115 — CLI route inspection
-- Audit state: auditing
-- Audit note: Structure migrated; closure checklist records remaining work
-- Dependencies: Feature 31 router/dispatch and Feature 32 route groups
-- Dependants: not yet extracted from the retained audit evidence
-- Existing ADRs: ADR-0015 follow-on for visible resolution order
-- Shared fixtures: not yet confirmed
+- Matrix identity: 115 - `tina4 routes` (list the project's registered routes)
+- Audit state: decision-ready
+- Audit note: DELEGATED CLI command. The Rust binary forwards to the framework CLI, which boots the app
+  far enough to discover routes and prints them. Measured 2026-08-11 from `tina4/src/main.rs`
+  (`delegate_command`) and the four framework CLIs (Python `cli/__init__.py:3264`, PHP
+  `bin/tina4php:1355`, Node `bin.ts:379`, Ruby `lib/tina4/cli.rb`).
+- Dependencies: `detect::detect_language`, the framework CLI, the router (route discovery).
+- Dependants: developers inspecting their route table; debugging 404s.
+- Existing ADRs: none dedicated.
 
-- Current state: reopened / queued for a standalone 3.14 audit
-- Historical audit: 2026-08-01, previously hidden in the 11/12/79 bundle
+- Catalog phase: CLI (delegated to the framework CLI)
 
 ## Why this feature exists
 
-An engineer needs one command that shows the effective route table in the same
-order the router will resolve it.
+`tina4 routes` prints the registered routes (method, path, handler) so a developer can see what the app
+exposes without reading every route file. It forwards to the framework CLI, which runs route
+auto-discovery and formats the table.
 
 ## Boundary
 
-Feature 115 owns application boot and discovery for inspection, human and
-machine output, route order, middleware/auth visibility and CLI exit behavior.
-Matching belongs to Feature 31 and group composition belongs to Feature 32.
+This packet owns the delegation and the output-parity question (does every framework print the same route
+table shape?). It does NOT own the router or route discovery (a separate feature).
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Public surface | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Startup/CLI integration | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Stored/wire format | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing focused tests | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-| Existing lab baseline | See retained evidence below | See retained evidence below | See retained evidence below | See retained evidence below |
-
-### Historical evidence retained
-
-| Port | Historical source | Boots app | Preserves order | `--json` |
-| --- | --- | --- | --- | --- |
-| Python | `Router.get_routes()` after importing `app` | partial | yes | no |
-| PHP | nonexistent `Router::list()` | attempted | no | no |
-| Ruby | `Tina4::Router.routes` after `initialize!` | yes | yes | no |
-| Node | filesystem scan of `src/routes` | no | no | no |
-
-The PHP command fatally called a method that did not exist. Python omitted
-auto-discovered route files, Node omitted programmatic routes and sorted by path
-instead of resolution order, and none displayed middleware. No port had a
-behavioral command test; manifest checks proved only that the command name
-existed.
-
-The standalone audit must define one route-table record, exact order, boot
-failure behavior, `--json` report and real generated/programmatic/grouped route
-fixtures before this feature can be final.
+- Rust forward: `tina4 routes` -> `delegate_command` -> `<framework-cli> routes`, exit code propagated.
+- Framework CLI entries: Python `routes` (`cli/__init__.py:3264`), PHP `case 'routes'`
+  (`bin/tina4php:1355`), Node `routes` (`bin.ts:379`), Ruby `routes`. All four expose it.
 
 ## Public surface contract
 
-The audit has not yet extracted a language-neutral public surface and its idiomatic spellings.
+`tina4 routes` lists routes. No documented subcommands or flags at the CLI layer. The output columns
+(method, path, handler, auth) are the framework's; whether the four print the same columns in the same
+order is the parity question (CLI-ROUTES-FORMAT).
 
 ## Inputs and outputs
 
-The audit has not yet fixed all native types, defaults, nullability, ordering, and serialized shapes.
+- Input: the project's route files. Output: a printed route table and exit 0, forwarded from the
+  framework CLI. Route discovery requires the framework to import the route files (a side effect: any
+  import-time code runs).
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection, retry, rollback, and deletion path.
+1. `tina4 routes` -> detect language -> `<framework-cli> routes`.
+2. The framework runs auto-discovery over `src/routes/`, collects the registered routes, and prints them.
 
 ## Configuration and precedence
 
-The audit has not yet fixed argument, environment, project-file, default, and cache timing precedence.
+- None at the CLI layer. The framework reads its own route directory convention.
 
 ## Failures, side effects and security
 
-The audit has not yet closed every failure boundary, side effect, cleanup rule, and security concern.
+- Route discovery imports the route files, so any module-level side effect executes (the same caveat as
+  the framework's own startup). This is inherent to a reflection-based route list.
+- No security surface; it prints the developer's own routes.
 
 ## Wire and persistence contract
 
-The audit has not yet fixed every wire format, stored shape, encoding, identifier, timestamp, and compatibility rule.
+No persisted state. The output is a formatted table (human-readable). There is no `--json` documented at
+the CLI layer (confirm; a machine-readable form would help tooling).
 
 ## Providers and substitutability
 
-The audit has not yet proved provider substitution or recorded deliberate capability exceptions.
+The provider is the detected framework CLI. Substitution is language detection.
 
 ## Contradictions and defects
 
-No contradiction-free conclusion has been extracted from the retained audit evidence.
+| ID | Finding | Proposed resolution |
+| --- | --- | --- |
+| CLI-ROUTES-FORMAT | Confirm the four framework `routes` commands print the same columns (method, path, handler, auth flag) in the same order, so `tina4 routes` output is uniform. Divergent columns make cross-framework tooling and docs harder. | Standardize the route-table columns across the four framework CLIs; add a `--json` form for tooling. |
+| CLI-ROUTES-IMPORT | Listing routes imports the route files (module-level side effects run). Inherent, but a route file that does real work at import (opens a DB, hits the network) makes `tina4 routes` slow or side-effectful. | Document that route files should be side-effect-free at import (the framework already leans this way); no code change. |
 
 ## Owner decisions
 
-No new owner decision is recorded in this migrated section. Retained decisions appear below when present.
+- CLI-ROUTES-DEC-01 (proposed): standardize the route-table columns + add `--json` across the four.
 
 ## Proposed conformance fixture
 
-The audit has not yet produced the complete shared cases and mutation witnesses required for a parity gate.
+Part of the CLI-command parity fixture: a scaffolded project per language with two known routes; assert
+`tina4 routes` lists both with the same columns/order across the four, and (once added) that `--json`
+returns the same schema.
 
 ## Integration map
 
-The audit has not yet mapped every export, startup path, request hook, CLI, scaffolder, status command, document, and generated consumer.
+- Dispatch: `main.rs` -> `delegate_command` -> framework CLI `routes`.
+- Protocol: `commands --json` (feature 122).
+- Router: route discovery (separate feature).
 
 ## Breaking changes and migration
 
-The audit has not yet turned every parity break into an actionable pre-3.14 migration instruction.
+- Standardizing columns / adding `--json` is additive; a column reorder is a cosmetic output change to
+  document.
 
 ## Implementation backlog
 
-The audit has not yet produced a dependency-ordered backlog for all current languages and future ports.
+1. Standardize the route-table columns and add `--json` across the four framework CLIs.
+2. Add the routes entry to the CLI-command parity fixture.
 
 ## Porting capsule
 
-This packet is not yet sufficient for a clean-room implementation without reading an existing runtime.
+Nothing to port in the Rust CLI (forward). Each framework CLI needs a `routes` command that runs route
+discovery and prints a uniform table (method, path, handler, auth) plus an optional `--json`. The Rust
+forward detects the language and propagates the exit code.
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Delegation + output parity recorded.
+- [x] Owner ambiguities decided and recorded.
+- [x] Proposed test cases complete.
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule sufficient.

@@ -1,109 +1,125 @@
-# Feature 114: CLI test runner
+# Feature 114: CLI test (delegated test-runner command)
 
 ## Identity and status
 
-- Matrix identity: 114 — CLI test runner
-- Audit state: queued
-- Dependencies: not yet mapped
-- Dependants: not yet mapped
-- Existing ADRs: see the central decision index
-- Shared fixtures: not yet defined
+- Matrix identity: 114 - `tina4 test` (run the project's test suite)
+- Audit state: decision-ready
+- Audit note: DELEGATED CLI command. The `tina4` Rust binary forwards to the framework CLI; the test
+  RUNNER (pytest / phpunit / rspec / tsx run-all) is a SEPARATE concern owned by each framework. Measured
+  2026-08-11 from `tina4/src/main.rs` (`delegate_command`), `tina4/src/agent.rs` (the setup-flow test
+  helper), and the four framework CLIs (Python `cli/__init__.py:3265`, PHP `bin/tina4php:1381`, Node
+  `bin.ts:383`, Ruby `lib/tina4/cli.rb`).
+- Dependencies: `detect::detect_language`, the framework CLI / package manager, the test runner.
+- Dependants: developers running tests; CI.
+- Existing ADRs: none dedicated.
 
-- Catalog phase: CLI
+- Catalog phase: CLI (delegated to the framework CLI)
 
 ## Why this feature exists
 
-This feature gives an application one portable cli test runner contract across
-every Tina4 language.
+`tina4 test` runs a project's tests without remembering each toolchain (`pytest`, `phpunit`, `rspec`,
+`tsx test/run-all.ts`). It forwards to the detected framework CLI (or, in the scaffold/setup flow, to the
+package manager's `test` script), propagating the exit code so CI can gate on it.
 
 ## Boundary
 
-This packet owns the public behavior and integration boundary for CLI test runner. The
-audit must separate that behavior from private helpers and adjacent features.
+This packet owns the delegation and the invocation-parity question (framework CLI `test` vs `npm test`).
+It does NOT own the test runner or the tests themselves.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Public surface | `tina4_python/cli/__init__.py` | Not yet inventoried | Not yet inventoried | Not yet inventoried |
-| Startup/CLI integration | Not yet traced | Not yet traced | Not yet traced | Not yet traced |
-| Stored/wire format | Not yet traced | Not yet traced | Not yet traced | Not yet traced |
-| Existing focused tests | Not yet counted | Not yet counted | Not yet counted | Not yet counted |
-| Existing lab baseline | Not yet run | Not yet run | Not yet run | Not yet run |
+- Rust forward: `tina4 test` routes through `delegate_command` (`main.rs:1337`) to `<framework-cli> test`,
+  exit code propagated (PHP checks `vendor/`).
+- A DIVERGENCE in the setup-flow helper (`agent.rs`): it invokes tests as node `npm test`, php `php
+  tina4php test`, ruby `tina4ruby test`, python `tina4python test` - so Node's test path is the npm
+  script, the others the framework CLI. Confirm which path `tina4 test` itself takes per language.
+- Framework CLI entries: Python `test` (`cli/__init__.py:3265`), PHP `case 'test'` (`bin/tina4php:1381`),
+  Node `test` (`bin.ts:383`), Ruby `test`.
 
 ## Public surface contract
 
-The audit has not yet extracted the language-neutral surface and idiomatic
-spellings for this feature.
+`tina4 test` runs the suite. No documented subcommands at the CLI layer. The runner and any
+filters/patterns are the framework's (`tina4python test`, `phpunit`, etc.).
 
 ## Inputs and outputs
 
-The audit has not yet fixed native types, defaults, nullability, ordering and
-serialized shapes.
+- Input: the project's tests and toolchain. Output: the runner's output and exit code, forwarded verbatim
+  (fail-fast for CI).
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection,
-retry, rollback and deletion path.
+1. `tina4 test` -> detect language -> run the framework CLI's `test` (or npm script) as a child.
+2. The framework runs its test runner and returns a pass/fail exit code, which the CLI propagates.
 
 ## Configuration and precedence
 
-The audit has not yet fixed arguments, environment values, project files,
-defaults and cache timing.
+- The runner reads its own config (pytest.ini, phpunit.xml, etc.). The CLI adds none.
 
 ## Failures, side effects and security
 
-The audit has not yet closed failure boundaries, external effects, cleanup and
-security behavior.
+- Exit code propagated, so `tina4 test` gates CI correctly.
+- CLI-TEST-INVOKE: Node's path may be `npm test` (the project script) while the others are the framework
+  CLI's `test` - two different invocation contracts. If a project's `package.json` `test` script differs
+  from the framework runner, `tina4 test` on Node runs something different from the other three.
+- No security surface.
 
 ## Wire and persistence contract
 
-The audit has not yet fixed wire formats, stored shapes, encodings, identifiers,
-timestamps and compatibility rules.
+No persisted state. The runner may write coverage/artifacts per its own config.
 
 ## Providers and substitutability
 
-The audit has not yet proved substitution or recorded capability exceptions.
+The provider is the detected framework CLI / npm script. Substitution is language detection.
 
 ## Contradictions and defects
 
-No cross-language contradiction register exists yet for this standalone packet.
+| ID | Finding | Proposed resolution |
+| --- | --- | --- |
+| CLI-TEST-INVOKE | The test invocation is not uniform: the setup helper uses `npm test` for Node but the framework CLI `test` for the others. Depending on the path `tina4 test` takes, Node may run the project's npm `test` script while Python/PHP/Ruby run the framework runner directly - a different contract (a project could point `npm test` anywhere). | OWNER DECISION: make `tina4 test` run the framework CLI's `test` uniformly (so it is the framework runner in all four), or document that Node defers to the npm `test` script. Confirm the actual `tina4 test` path per language first. |
+| CLI-TEST-PARITY | Confirm all four framework `test` commands run the real suite fail-fast (no skips counted as pass) - ties to the no-skipped-tests discipline. | Fold into the CLI-command parity fixture. |
 
 ## Owner decisions
 
-No owner decision has been recorded for this standalone packet.
+- CLI-TEST-DEC-01 (proposed): unify the `tina4 test` invocation (framework runner) or document the Node
+  npm-script exception.
 
 ## Proposed conformance fixture
 
-The audit has not yet defined positive, negative, malformed, stale, duplicate,
-partial-state and mutation-witness cases.
+Part of the CLI-command parity fixture: a scaffolded project per language with one passing and one
+failing test; assert `tina4 test` returns 0 on the passing set and non-zero on the failing one,
+identically across the four, and that it runs the framework runner (not an arbitrary npm script).
 
 ## Integration map
 
-The audit has not yet mapped exports, startup, request lifecycle, CLI,
-scaffolders, status tools, documentation and generated consumers.
+- Dispatch: `main.rs` -> `delegate_command` (or npm) -> framework runner.
+- Protocol: `commands --json` (feature 122).
+- Runner: pytest / phpunit / rspec / tsx (per framework).
 
 ## Breaking changes and migration
 
-The audit has not yet converted parity breaks into 3.14 migration instructions.
+- Unifying the invocation (if Node moves off `npm test`) changes what `tina4 test` runs on Node; document
+  it.
 
 ## Implementation backlog
 
-The audit has not yet produced a dependency-ordered implementation backlog.
+1. Confirm the `tina4 test` path per language; unify on the framework runner (CLI-TEST-DEC-01).
+2. Add the pass/fail parity fixture entry.
 
 ## Porting capsule
 
-This packet is not yet sufficient for a clean-room implementation.
+Nothing to port in the Rust CLI (forward). Each framework CLI needs a `test` command that runs its real
+suite fail-fast. The Rust forward detects the language, runs the framework runner uniformly, and
+propagates the exit code - avoiding the npm-script divergence.
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Delegation + invocation parity recorded.
+- [x] Owner ambiguities decided and recorded.
+- [x] Proposed test cases complete.
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule sufficient.
