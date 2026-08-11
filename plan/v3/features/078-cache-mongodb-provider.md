@@ -39,9 +39,13 @@ Feature 72. It shares the OP_MSG transport with the session mongo provider (Feat
 | Injection (`_id` bound) | safe | safe | safe | safe |
 
 The mongo cache backend is at parity and proven for the interface invariants. `clear()` is a
-`deleteMany({})`, the value round-trips a stored null, and the `_id` is bound (no injection). The one
-thing to confirm is the TTL-enforcement mechanism (read-time check vs a server TTL index), the same
-question as the session mongo provider (Feature 69).
+`deleteMany({})`, the value round-trips a stored null, and the `_id` is bound (no injection). TTL
+enforcement was measured 2026-08-11: it is a MongoDB SERVER TTL INDEX (`expireAfterSeconds`) in all four
+(Node `packages/core/src/cache.ts:1187` `createIndex({expiresAt:1},{expireAfterSeconds:0})`; PHP
+`Tina4/Cache/MongoBackend.php:183` `expireAfterSeconds:0`; Ruby `cache_backends/mongo_backend` "MongoDB
+TTL collection"; Python `core/cache.py` mongo backend), PLUS a read-time `expires_at` check for
+determinism (the TTL index sweeps lazily - explicit in Node `cache.ts:1213`). So it is BOTH mechanisms,
+at parity - the same shape as the session mongo provider (Feature 69).
 
 ## Public surface contract
 

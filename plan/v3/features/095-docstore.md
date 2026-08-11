@@ -160,8 +160,9 @@ release speaks the proven contract.
 
 ## Implementation backlog
 
-1. Nothing on the interface - it is proven. Re-run the docstore contract runners on the lab against a
-   live Mongo to confirm 9/9 at the current HEAD (routine).
+1. Nothing on the interface - it is proven (9/9). A routine lab re-run of the docstore contract runners
+   against a live Mongo re-verifies 9/9 at the current HEAD (a re-check of an already-proven contract, not
+   an open claim).
 
 ## Porting capsule
 

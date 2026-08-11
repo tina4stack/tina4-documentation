@@ -74,7 +74,7 @@ The provider is the detected framework CLI; substitution is language detection. 
 
 | ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| CLI-SEED-PRODGUARD | `tina4 seed` writes to whatever database the `.env` points at, with no dev/production guard at the CLI or (to confirm) the engine. Seeding a production database is a foot-gun. | OWNER DECISION: add a guard that refuses to seed unless `TINA4_DEBUG` is truthy (or a `--force`/`--production` is passed), in the engine so all four inherit it. Verify current behaviour first. |
+| CLI-SEED-PRODGUARD | `tina4 seed` writes to whatever database the `.env` points at, with NO dev/production guard at the CLI OR the engine - measured 2026-08-11, confirmed ABSENT in both in all four (no `TINA4_DEBUG`/production/`--force` check in any seeder or seed CLI command: Python `cli/__init__.py:927` `_seed`, Node `packages/cli/src/commands/seed.ts`, PHP/Ruby seed commands). Seeding a production database is a foot-gun. | OWNER DECISION: add a guard that refuses to seed unless `TINA4_DEBUG` is truthy (or a `--force`/`--production` is passed), in the ENGINE so all four inherit it (the guard is absent everywhere today). |
 | CLI-SEED-PARITY | Confirm all four framework CLIs discover the SAME seed directory (`src/seeds/`) and run seeders in the same order, so `tina4 seed` is identical everywhere. | Fold into the CLI-command parity fixture (feature 122) and the seeder subsystem's own contract. |
 
 ## Owner decisions
