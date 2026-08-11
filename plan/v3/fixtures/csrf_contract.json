@@ -1,0 +1,192 @@
+{
+  "_comment": [
+    "The CSRF contract: ONE answer key, four frameworks. Feature 37.",
+    "",
+    "CSRF protection uses a signed formToken (a JWT) delivered in the form body or",
+    "the X-Form-Token header and validated on state-changing writes by CsrfMiddleware.",
+    "This fixture pins the behaviour every framework must share after the CSRF-DEC-01",
+    "(secret fail-closed) and CSRF-DEC-02 (env auto-wire + session-bind + type=form)",
+    "owner decisions - see tina4-documentation/plan/v3/OWNER-DECISIONS.md (Batch 1) and",
+    "tina4-documentation/plan/v3/features/037-csrf-protection.md.",
+    "",
+    "Each invariant names a REAL suite file per framework and a list of case names.",
+    "The four suites carry the SAME case names in each language's own idiom (Python",
+    "snake_case method, PHP testPascalCase method, Ruby it-description, Node assert",
+    "label), which scripts/audit-contract-fixtures.py normalises and matches. Python",
+    "is the REFERENCE implementation; the shapes asserted here are the canonical ones",
+    "the other three move to. Real HS256, real Request pipeline, real Frond token",
+    "generation, real sessions - NO MOCKS."
+  ],
+  "version": 1,
+  "decided": "2026-08-11",
+  "feature": "37 - CSRF protection",
+  "invariants": [
+    {
+      "id": "csrf-no-default-secret",
+      "adr": "SEC-01 / CSRF-DEC-01",
+      "rule": "With TINA4_SECRET unset the CSRF middleware fails CLOSED: a formToken forged with the retired public 'tina4-default-secret', AND one forged with the blank '' key, are both REJECTED 403. There is no shipped named default, and a blank HMAC key is publicly reproducible, so no token can be trusted when the secret is blank.",
+      "why": "The formToken doubles as a write-route auth credential, so a forgeable token is a CSRF bypass AND an auth bypass. PHP shipped a live 'tina4-default-secret' fallback (plus an $_ENV mutation that poisoned the whole process JWT secret); Node's generator signed with 'tina4-default-secret' while its validator used '' - legit tokens rejected AND ''-forged tokens accepted. Both are closed here.",
+      "suites": {
+        "ruby": "spec/csrf_middleware_spec.rb",
+        "python": "tests/test_csrf_middleware.py",
+        "php": "tests/CsrfMiddlewareTest.php",
+        "nodejs": "test/csrfMiddleware.test.ts"
+      },
+      "cases": [
+        "forged default secret token is rejected",
+        "forged blank secret token is rejected"
+      ]
+    },
+    {
+      "id": "csrf-frond-token-validates",
+      "adr": "CSRF-DEC-01",
+      "rule": "A formToken produced by the REAL Frond generator ({{ form_token() }}) with TINA4_SECRET set validates and passes the middleware. Generator and validator resolve the SAME fail-closed secret, so a legitimately-rendered token is never self-rejected.",
+      "why": "Node's generator/validator secret split rejected legitimately-rendered tokens (a self-inflicted 403 for real users), and PHP's generator signed with the wrong value entirely. The positive case proves the generator and validator agree.",
+      "suites": {
+        "ruby": "spec/csrf_middleware_spec.rb",
+        "python": "tests/test_csrf_middleware.py",
+        "php": "tests/CsrfMiddlewareTest.php",
+        "nodejs": "test/csrfMiddleware.test.ts"
+      },
+      "cases": [
+        "a frond emitted form token passes csrf"
+      ]
+    },
+    {
+      "id": "csrf-type-must-be-form",
+      "adr": "CSRF-DEC-02",
+      "rule": "The token's type claim MUST be \"form\". A validly-signed but non-form JWT (e.g. an auth/session token) presented in the formToken slot is REJECTED 403 even though its signature verifies.",
+      "why": "Without the type check any valid JWT was accepted in the formToken slot, widening the credential that satisfies a write. Enforcing type==form scopes the formToken to its purpose.",
+      "suites": {
+        "ruby": "spec/csrf_middleware_spec.rb",
+        "python": "tests/test_csrf_middleware.py",
+        "php": "tests/CsrfMiddlewareTest.php",
+        "nodejs": "test/csrfMiddleware.test.ts"
+      },
+      "cases": [
+        "a non form jwt in the form token slot is rejected"
+      ]
+    },
+    {
+      "id": "csrf-session-binding",
+      "adr": "CSRF-DEC-02",
+      "rule": "When the token carries a session_id and the request session's id differs, the write is REJECTED 403. A token minted for one session cannot be replayed against another.",
+      "why": "A signed nonce with no session binding rests entirely on secret secrecy; binding the token to the session defeats cross-session replay.",
+      "suites": {
+        "ruby": "spec/csrf_middleware_spec.rb",
+        "python": "tests/test_csrf_middleware.py",
+        "php": "tests/CsrfMiddlewareTest.php",
+        "nodejs": "test/csrfMiddleware.test.ts"
+      },
+      "cases": [
+        "a token bound to a foreign session is rejected"
+      ]
+    },
+    {
+      "id": "csrf-safe-methods-skipped",
+      "adr": "CSRF-DEC-02",
+      "rule": "GET, HEAD and OPTIONS are safe methods and skip CSRF validation entirely - a GET with no token passes.",
+      "why": "CSRF gates state change; safe methods do not change state and must never be blocked for lacking a token.",
+      "suites": {
+        "ruby": "spec/csrf_middleware_spec.rb",
+        "python": "tests/test_csrf_middleware.py",
+        "php": "tests/CsrfMiddlewareTest.php",
+        "nodejs": "test/csrfMiddleware.test.ts"
+      },
+      "cases": [
+        "a safe get request skips csrf"
+      ]
+    },
+    {
+      "id": "csrf-write-methods-gated",
+      "adr": "CSRF-DEC-02",
+      "rule": "POST, PUT, PATCH and DELETE are gated: a write with no formToken is REJECTED 403.",
+      "why": "State-changing methods are exactly what CSRF must protect; a missing token is a failed check, not a pass.",
+      "suites": {
+        "ruby": "spec/csrf_middleware_spec.rb",
+        "python": "tests/test_csrf_middleware.py",
+        "php": "tests/CsrfMiddlewareTest.php",
+        "nodejs": "test/csrfMiddleware.test.ts"
+      },
+      "cases": [
+        "a post without a token is rejected"
+      ]
+    },
+    {
+      "id": "csrf-noauth-exempt",
+      "adr": "CSRF-DEC-02",
+      "rule": "A write route marked @noauth / ->noAuth() / .noAuth / secure:false skips CSRF - a genuinely public endpoint (login, webhook) has no session to protect.",
+      "why": "CSRF binds to a session; a public endpoint has none, so the token requirement would only break legitimate public POSTs.",
+      "suites": {
+        "ruby": "spec/csrf_middleware_spec.rb",
+        "python": "tests/test_csrf_middleware.py",
+        "php": "tests/CsrfMiddlewareTest.php",
+        "nodejs": "test/csrfMiddleware.test.ts"
+      },
+      "cases": [
+        "a noauth write route skips csrf"
+      ]
+    },
+    {
+      "id": "csrf-bearer-exempt",
+      "adr": "CSRF-DEC-02",
+      "rule": "A request with a valid Authorization: Bearer JWT skips CSRF - an API client authenticating per-request is not subject to the cookie-replay attack CSRF defends against.",
+      "why": "CSRF is a browser/cookie attack; a Bearer-authenticated API client supplies its own credential each call and cannot be CSRF'd.",
+      "suites": {
+        "ruby": "spec/csrf_middleware_spec.rb",
+        "python": "tests/test_csrf_middleware.py",
+        "php": "tests/CsrfMiddlewareTest.php",
+        "nodejs": "test/csrfMiddleware.test.ts"
+      },
+      "cases": [
+        "a valid bearer token skips csrf"
+      ]
+    },
+    {
+      "id": "csrf-query-token-rejected",
+      "adr": "CSRF-DEC-02",
+      "rule": "A formToken presented in the URL query string is REJECTED 403 - a token in the URL leaks through logs, referers and history.",
+      "why": "A URL query is logged and shared; accepting a token there would leak the credential. The token must ride the body or the X-Form-Token header only.",
+      "suites": {
+        "ruby": "spec/csrf_middleware_spec.rb",
+        "python": "tests/test_csrf_middleware.py",
+        "php": "tests/CsrfMiddlewareTest.php",
+        "nodejs": "test/csrfMiddleware.test.ts"
+      },
+      "cases": [
+        "a form token in the query string is rejected"
+      ]
+    },
+    {
+      "id": "csrf-env-attach",
+      "adr": "CSRF-DEC-02",
+      "rule": "CSRF is OFF by default (the middleware is NOT attached, so a default app has no CSRF gate); setting TINA4_CSRF=true (or 1/yes/on) ATTACHES CsrfMiddleware at boot so every write is gated. The env flag is the switch - it is no longer inert.",
+      "why": "Before this the flag was read only AFTER a manual attach, so TINA4_CSRF=true alone did nothing and the docstrings claimed protection a default app did not have. Now the flag genuinely controls attachment.",
+      "suites": {
+        "ruby": "spec/csrf_middleware_spec.rb",
+        "python": "tests/test_csrf_middleware.py",
+        "php": "tests/CsrfMiddlewareTest.php",
+        "nodejs": "test/csrfMiddleware.test.ts"
+      },
+      "cases": [
+        "csrf is off by default",
+        "csrf true attaches the middleware"
+      ]
+    },
+    {
+      "id": "csrf-403-envelope",
+      "adr": "CSRF-DEC-02",
+      "rule": "Every CSRF rejection is an HTTP 403 whose JSON body carries the CSRF_INVALID code. The rejection envelope is identical across the four frameworks.",
+      "why": "A real client must be able to recognise a CSRF failure by one stable code and status regardless of the framework serving it.",
+      "suites": {
+        "ruby": "spec/csrf_middleware_spec.rb",
+        "python": "tests/test_csrf_middleware.py",
+        "php": "tests/CsrfMiddlewareTest.php",
+        "nodejs": "test/csrfMiddleware.test.ts"
+      },
+      "cases": [
+        "the rejection body is the csrf invalid envelope"
+      ]
+    }
+  ]
+}

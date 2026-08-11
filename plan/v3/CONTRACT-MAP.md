@@ -82,6 +82,7 @@ Re-run it and re-sync this table whenever a fixture changes.
 | Structured logger | 2 | `logger_contract.json` | 8 | 0 | 8 | 0041 | owed; 59 cases not wired |
 | Database adapter | 3 | `adapter_contract.json` | 8 | 0 | 8 | 0044 | owed; old structural runners superseded |
 | Router + dispatch | 31 | `dispatch_contract.json` | 8 | 8 | 0 | 0010-0013 | yes |
+| CSRF protection | 37 | `csrf_contract.json` | 11 | 11 | 0 | SEC-01, CSRF-DEC-01/02 | yes (real HS256 pipeline, no mocks; 2026-08-11) |
 | Health check | 38 | `health_contract.json` | 5 | 5 | 0 | 0016 | yes |
 | JWT + session | 64-65 | `session_contract.json` | 6 | 6 | 0 | 0021, 0024 | yes (5 carry a witness rule) |
 | Cache backends | 72 | `cache_contract.json` | 8 | 8 | 0 | 0020, 0024 | yes |
@@ -92,7 +93,7 @@ Re-run it and re-sync this table whenever a fixture changes.
 | Messenger | 88 | `messenger_contract.json` | 14 | 14 | 0 | 0004, 0041, 0042 | yes (real GreenMail) |
 | Paginated results | 24 | `pagination_contract.json` | 6 | 6 | 0 | 0043 | yes (real 250-row SQLite; incl. the AutoCrud REST endpoint) |
 
-**Totals: 90 invariants, 74 proven, 16 owed** (2026-08-10), 12 fixtures. Proven
+**Totals: 101 invariants, 85 proven, 16 owed** (2026-08-11), 13 fixtures. Proven
 subsystems remain held to their contract four-way. Logger and database adapter
 now have decision-complete answer keys whose runners are honestly owed. Messenger closed
 last: the read/send shapes were already unified by the 3.13.96 parity commits
