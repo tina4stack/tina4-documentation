@@ -116,9 +116,33 @@ decided posture.
 
 ## Breaking changes and migration
 
-- Registering by default (if chosen) changes every app's response headers - a `Breaking:`/behaviour note (CSP
-  `default-src 'self'` can break inline scripts; document the migration). HTTPS-guarding HSTS is a correctness
-  fix.
+**Implemented 2026-08-11 (3.13.99), all four frameworks** per SECHDR-DEC-01/02. `SecurityHeadersMiddleware`
+is now registered in the DEFAULT middleware chain at boot (Python `attach_security_headers()` from
+`server.run`; PHP `SecurityHeadersMiddleware::attach()` from `App::start`; Ruby
+`SecurityHeadersMiddleware.attach` from `Tina4.initialize!`; Node `MiddlewareRunner.use(SecurityHeadersMiddleware)`
+in `startServer`). PHP's class was renamed `SecurityHeaders` -> `SecurityHeadersMiddleware` (no dead alias -
+there were no other callers). HSTS is now HTTPS-guarded, and the header names are byte-identical across the four.
+
+**Breaking: a default Tina4 app now sends the security headers on every response.** The one that can break an
+existing app is **`Content-Security-Policy: default-src 'self'`** - it blocks inline `<script>`/`<style>` and any
+third-party origin (CDNs, analytics, fonts, external images/iframes). If your app needs those, set `TINA4_CSP` to
+a policy that allows them, for example:
+
+```
+# allow inline scripts/styles and one CDN (tighten to nonces/hashes when you can)
+TINA4_CSP=default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.example.com; style-src 'self' 'unsafe-inline'
+```
+
+The other five headers (`X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`,
+`Referrer-Policy: strict-origin-when-cross-origin`, `X-XSS-Protection: 0`,
+`Permissions-Policy: camera=(), microphone=(), geolocation=()`) are safe defaults for the overwhelming majority of
+apps; each is overridable by its env var (`TINA4_FRAME_OPTIONS`, `TINA4_REFERRER_POLICY`, `TINA4_PERMISSIONS_POLICY`;
+`X-Content-Type-Options`/`X-XSS-Protection` are fixed). HSTS stays OFF until you set `TINA4_HSTS` (e.g. `31536000`),
+and even then it is emitted **only on HTTPS** (proxy-aware via `x-forwarded-proto`) - so enabling it can never strand
+a plain-HTTP deployment. HTTPS-guarding HSTS is a pure correctness fix (it was previously emitted on any scheme).
+
+Conformance: `tina4-documentation/plan/v3/fixtures/securityheaders_contract.json` (2 invariants, proven all four,
+real request pipeline, no mocks, mutation-proved).
 
 ## Porting capsule
 

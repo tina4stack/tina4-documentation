@@ -1,0 +1,94 @@
+{
+  "_comment": [
+    "Security headers, secure-by-default. Feature 36, SECHDR-DEC-01/02.",
+    "",
+    "The SecurityHeadersMiddleware existed in all four with byte-identical GOOD",
+    "defaults but was NEVER registered in any default middleware chain, so a",
+    "default Tina4 app shipped with NO clickjacking/MIME/CSP protection unless the",
+    "developer knew to opt in (SECHDR-OFF-BY-DEFAULT). And HSTS had no HTTPS guard:",
+    "with TINA4_HSTS set it would be emitted on plain HTTP too",
+    "(SECHDR-HSTS-NO-HTTPS-GUARD). There was ZERO test coverage (SECHDR-ZERO-TESTS).",
+    "PHP's class was SecurityHeaders, diverging from the other three's",
+    "SecurityHeadersMiddleware (SECHDR-CLASS-NAME-DIVERGE). See",
+    "tina4-documentation/plan/v3/features/036-security-headers.md and",
+    "tina4-documentation/plan/v3/OWNER-DECISIONS.md (Batch 1, SECHDR-DEC-01).",
+    "",
+    "SECHDR-DEC-01 makes it secure-by-default, in all four:",
+    "  1. REGISTER SecurityHeadersMiddleware in the DEFAULT middleware chain at",
+    "     boot, UNCONDITIONALLY (no opt-in) -- a default app emits the headers.",
+    "  2. HTTPS-guard HSTS: emit Strict-Transport-Security ONLY on an HTTPS request",
+    "     (proxy-aware: x-forwarded-proto first hop, then the native TLS scheme),",
+    "     NEVER on plain HTTP -- reusing each framework's existing secure-scheme",
+    "     detector (Python request.is_secure_scheme(), PHP Request::isSecureScheme(),",
+    "     Ruby Request.secure_scheme?(env), Node x-forwarded-proto + socket.encrypted).",
+    "  3. CSP default-src 'self' by default (relax via TINA4_CSP).",
+    "  4. PHP's class renamed SecurityHeaders -> SecurityHeadersMiddleware (parity).",
+    "  5. The canonical header set + exact VALUES are identical across the four",
+    "     (X-Frame-Options SAMEORIGIN, X-Content-Type-Options nosniff, CSP",
+    "     default-src 'self', Referrer-Policy strict-origin-when-cross-origin,",
+    "     X-XSS-Protection 0, Permissions-Policy camera=(), microphone=(),",
+    "     geolocation=()). HTTP header names are case-insensitive; the tests compare",
+    "     names case-insensitively and values byte-exactly.",
+    "",
+    "MIGRATION (breaking, documented in the feature doc + commit body): registering",
+    "by default changes every app's response headers. CSP default-src 'self' blocks",
+    "inline <script>/<style> and third-party CDNs -- an app that needs them sets",
+    "TINA4_CSP (e.g. \"default-src 'self'; script-src 'self' 'unsafe-inline' cdn.example\").",
+    "",
+    "Every case runs through the REAL request pipeline of each framework with NO",
+    "MOCKS: Python drives tina4_python.core.server.handle with a real ASGI scope and",
+    "reads response._headers; PHP drives Router::dispatch with a real Request and",
+    "reads the Response headers; Ruby drives the real Tina4::RackApp#call (the object",
+    "Puma calls) with a real Rack env; Node boots a REAL @tina4/core server via",
+    "startServer and makes REAL HTTP requests, asserting the actual emitted headers.",
+    "The middleware is attached exactly the way boot attaches it (the same",
+    "registration call the framework makes), never a per-test hand-wire that a real",
+    "app would not do.",
+    "",
+    "Mutation-proved (macOS, all four): unregistering the middleware turns the",
+    "canonical-set case RED (the default app then carries none of the headers);",
+    "dropping the HTTPS guard (emit HSTS on any scheme) turns the",
+    "hsts-absent-on-plain-http case RED. Restoring each returns to green.",
+    "",
+    "Each invariant names a REAL suite file per framework and a list of case names;",
+    "the four suites carry the SAME case names in each language's own idiom, which",
+    "scripts/audit-contract-fixtures.py normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-11",
+  "feature": "36 - Security headers (secure-by-default register + HTTPS-guarded HSTS + CSP default-src 'self')",
+  "invariants": [
+    {
+      "id": "secheaders-secure-by-default",
+      "adr": "SECHDR-DEC-01",
+      "rule": "SecurityHeadersMiddleware is registered in the DEFAULT middleware chain at boot, unconditionally (no opt-in). A default Tina4 app response therefore carries the canonical security header set with byte-identical VALUES across the four frameworks -- X-Frame-Options: SAMEORIGIN, X-Content-Type-Options: nosniff, Content-Security-Policy: default-src 'self', Referrer-Policy: strict-origin-when-cross-origin, X-XSS-Protection: 0, Permissions-Policy: camera=(), microphone=(), geolocation=() -- with header names compared case-insensitively (HTTP is case-insensitive). CSP defaults to default-src 'self' (relax via TINA4_CSP).",
+      "why": "The middleware shipped OFF in all four (never registered), so a default app had no clickjacking/MIME/CSP protection -- the exact SECHDR-OFF-BY-DEFAULT gap. Registering it at boot makes Tina4 secure-by-default. Mutation-proved: unregistering the middleware makes the default app carry none of these headers and this case goes RED.",
+      "suites": {
+        "ruby": "spec/security_headers_contract_spec.rb",
+        "python": "tests/test_security_headers_contract.py",
+        "php": "tests/SecurityHeadersContractTest.php",
+        "nodejs": "test/securityHeadersContract.test.ts"
+      },
+      "cases": [
+        "a default app response carries the canonical security header set",
+        "csp defaults to default src self"
+      ]
+    },
+    {
+      "id": "secheaders-hsts-https-guard",
+      "adr": "SECHDR-DEC-02",
+      "rule": "Strict-Transport-Security is emitted ONLY on an HTTPS request (proxy-aware: x-forwarded-proto first hop, else the native TLS scheme) and is ABSENT on a plain-HTTP request, even when TINA4_HSTS is set. When present it is exactly max-age=<TINA4_HSTS>; includeSubDomains.",
+      "why": "HSTS had no scheme guard in any framework, so with TINA4_HSTS set it would be emitted on plain HTTP too -- a false HTTPS-only contract, and a bad max-age would go out on every scheme. Guarding it at the scheme makes the HTTPS-only contract real. Mutation-proved: dropping the guard (emit on any scheme) makes the hsts-absent-on-plain-http case go RED.",
+      "suites": {
+        "ruby": "spec/security_headers_contract_spec.rb",
+        "python": "tests/test_security_headers_contract.py",
+        "php": "tests/SecurityHeadersContractTest.php",
+        "nodejs": "test/securityHeadersContract.test.ts"
+      },
+      "cases": [
+        "hsts is present on an https request",
+        "hsts is absent on a plain http request"
+      ]
+    }
+  ]
+}
