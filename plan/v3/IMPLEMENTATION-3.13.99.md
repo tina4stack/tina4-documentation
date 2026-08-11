@@ -32,7 +32,7 @@ negative, no mocks) -> dead/dup code removed -> run the fixture + the feature's 
 
 - [x] 37 CSRF - DONE 2026-08-11, lab-green all four (py 59 / php 56 / ruby 44 / node 46; consolidated rc=0, independently re-verified). Pushed py 3249495, php 001f966a, ruby dbcd6a2, node cc6642a, fixture doc 3dd9608. Removed PHP default-secret + `$_ENV` mutation; aligned Node gen/validator; `TINA4_CSRF` attaches; session-bind + type=form; SEC-01 ported all four; 403 body unified to `{error,code,message,status}`.
 - [x] 127 dev-admin - DONE 2026-08-11, lab-green all four (9/9/9/9; consolidated rc=0, independently re-verified). Pushed py 41b3aeb, php 698e6a6, ruby ab06e5c, node 97d4f22, fixture fc42718. Same-origin gate + `.env` denylist + localhost-default bind + mcp/call gate (ADDED to Python) + toolbar escape. Fixed in passing: PHP DEC-02 landed in a dead App::run path (real fix in `bin/tina4php resolveHostPort`); Ruby 404 error-page reflected the raw path (XSS) - audit had marked Ruby n/a for DEC-04, it was NOT (correct the 127 doc).
-- [ ] 41 static assets - realpath+sep confinement to py/ruby/node; block dotfiles; honour `TINA4_PUBLIC_DIR` ruby+node
+- [x] 41 static assets - DONE 2026-08-11, lab-green all four (40/43/30/52; consolidated rc=0, independently re-verified). Pushed py c51c686, php c422f4b, ruby e24a3fa, node 77592ad, fixture 1978abc. realpath+separator confinement (ADR-0050) ported to py/ruby/node; symlink-escape + dotfile blocked; `TINA4_PUBLIC_DIR` honoured ruby+node; one search-dir order.
 - [ ] 43 request-id - build in all 4 (honour inbound + response header + log correlation); sanitize inbound; Python -> contextvars
 - [ ] 53 Frond tags - confine include/extends under templates dir (realpath + reject `..`/absolute)
 - [ ] 14 Mongo SQL provider - fail-closed on unparseable WHERE; reject empty-filter delete/update; real-Mongo fixture
@@ -119,6 +119,13 @@ Small, orthogonal items found while implementing a feature - fold into the named
 - 37 (CSRF): form-token TTL env var name diverges - Python reads `TINA4_TOKEN_EXPIRES_IN`, PHP/Ruby/Node read `TINA4_TOKEN_LIMIT`. Unify in a later env-uniformity pass (or with feature 64 JWT).
 - 37 (CSRF): Ruby's blank-secret hard-fail also rejects writes in RS256 mode (blank `TINA4_SECRET` + `.keys/` present + `TINA4_CSRF=true`) - kept fail-closed-uniform for parity (auto-attach is new, no existing app regresses); revisit if RS256-defer is wanted.
 - 57/42 (SECURITY - Frond auto-escape parity): Ruby's Frond/TwigEngine does NOT auto-escape `{{ }}` by default, while Python and PHP Frond DO (you opt out via `{% autoescape false %}`). This surfaced a reflected XSS in Ruby's 404 error page (raw path reflected) - patched acutely in 127 (`ab06e5c`, escape at `handle_404`). ROOT fix is feature 57 (auto-escaping): make Ruby auto-escape by default at parity + confirm Node's default. Feature 42 (error pages) must also verify no 404/403/500 template reflects raw request data unescaped in any framework. Assessed 2026-08-11: Python/PHP/Node error templates show NO raw-path reflection, so this is a Ruby-centric parity gap, NOT a live 4-way vuln.
+
+## Breaking changes (for the 3.13.99 changelog)
+
+Compiled as features land; each is a security/parity fix, not an accidental break. Migration detail in each feature doc.
+- 37 (CSRF): 403 body unified to `{error, code, message, status}` (Ruby/Node changed from `{error: "CSRF_INVALID"}`); `TINA4_CSRF=true` now ATTACHES the middleware (was inert); a blank `TINA4_SECRET` now fails closed (no forgeable public-default token).
+- 127 (dev-admin): dev server binds `127.0.0.1` by default (set `TINA4_HOST=0.0.0.0` to expose); cross-origin `/__dev` mutations refused; `.env` never served via the file endpoints.
+- 41 (static): a symlink whose realpath escapes the public dir is refused; dotfiles (`.env`, `.git`) return 404; Ruby drops the `src/assets`/`assets` search dirs; PHP app-dir order is `public` before `src/public`; `TINA4_PUBLIC_DIR` now honoured in Ruby + Node.
 
 ## Close
 

@@ -5,7 +5,7 @@ fixture, lab-green on the .99 lab) before the next. This table is updated, commi
 feature lands. Detail: [IMPLEMENTATION-3.13.99.md](IMPLEMENTATION-3.13.99.md). Decisions:
 [OWNER-DECISIONS.md](OWNER-DECISIONS.md).
 
-**Progress: 2 / 53 features lab-green.** Done: 37, 127. In progress: 41 (next).
+**Progress: 3 / 53 features lab-green.** Done: 37, 127, 41. In progress: 43 (next).
 
 Status: DONE = lab-green all four (independently re-verified) . WIP = in progress . TODO = not started.
 Lab column = per-framework test counts py/php/ruby/node in the consolidated green run.
@@ -16,7 +16,7 @@ Lab column = per-framework test counts py/php/ruby/node in the consolidated gree
 |---|---------|--------|----------------------|------------------------------|
 | 37 | CSRF protection | DONE | 59/56/44/46 | 3249495 / 001f966a / dbcd6a2 / cc6642a |
 | 127 | Dev-admin security | DONE | 9/9/9/9 | 41b3aeb / 698e6a6 / ab06e5c / 97d4f22 |
-| 41 | Static assets | TODO | - | - |
+| 41 | Static assets | DONE | 40/43/30/52 | c51c686 / c422f4b / e24a3fa / 77592ad |
 | 43 | Request-id | TODO | - | - |
 | 53 | Frond tag traversal | TODO | - | - |
 | 14 | Mongo mass-delete guard | TODO | - | - |

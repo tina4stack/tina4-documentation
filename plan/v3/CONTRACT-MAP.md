@@ -3,7 +3,7 @@
 > The living index that ties every audited feature to its machine-checked
 > contract, its decisions, and its proven-in-all-four status. This is the
 > backbone of a future formal Tina4 language specification.
-> **Last synced:** 2026-08-10 (3.14 flat-catalog migration)
+> **Last synced:** 2026-08-11 (3.13.99 pass: +csrf/devadmin/static fixtures)
 
 > **Adversarial re-audit started 2026-08-08:** a zero-skip live-lab migration
 > baseline still omitted contradictory public paths (generated code migration
@@ -92,8 +92,10 @@ Re-run it and re-sync this table whenever a fixture changes.
 | tina4-css | 62 | `tina4css_contract.json` | 1 | 1 | 0 | 0004 | yes |
 | Messenger | 88 | `messenger_contract.json` | 14 | 14 | 0 | 0004, 0041, 0042 | yes (real GreenMail) |
 | Paginated results | 24 | `pagination_contract.json` | 6 | 6 | 0 | 0043 | yes (real 250-row SQLite; incl. the AutoCrud REST endpoint) |
+| Dev admin dashboard | 127 | `devadmin_contract.json` | 6 | 6 | 0 | DEVADMIN-DEC-01..06 | yes (real-dispatch, no mocks; 2026-08-11) |
+| Static assets | 41 | `static_contract.json` | 5 | 5 | 0 | 0050, ST-DEC-01 | yes (real symlinks + temp dirs; 2026-08-11) |
 
-**Totals: 101 invariants, 85 proven, 16 owed** (2026-08-11), 13 fixtures. Proven
+**Totals: 112 invariants, 96 proven, 16 owed** (2026-08-11), 15 fixtures. Proven
 subsystems remain held to their contract four-way. Logger and database adapter
 now have decision-complete answer keys whose runners are honestly owed. Messenger closed
 last: the read/send shapes were already unified by the 3.13.96 parity commits
