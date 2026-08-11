@@ -1,351 +1,117 @@
-# Feature 023: ORM scopes
+# Feature 23: ORM scopes
 
 ## Identity and status
 
-- Matrix identity: 23 - ORM scopes
+- Matrix identity: 23 - ORM scopes (`tina4_python/orm/model.py`)
 - Audit state: decision-ready
-- Audit note: measured 2026-07-28 (all four from source, Python/Ruby by execution); prose
-  sections completed from that evidence 2026-08-10. No framework code changed.
-- Dependencies: Feature 17 ORM base class (scopes live there), Feature 6 query builder (a
-  scope composes a `where`)
-- Dependants: any model exposing a named, reusable filter; AutoCrud
-- Existing ADRs: the removed `QueryBuilder#get` `LIMIT 100`; this feature surfaces the
-  SYSTEMIC row-cap finding (five read paths, four silent defaults) that needs one dedicated
-  cross-cutting ADR spanning Features 5, 21, 22, 23 and 24
-- Shared fixtures: `scopes_contract.json` is required; its cases MUST use more rows than the
-  cap so truncation is observable
+- Audit note: FOUR-language feature, consistent design with a PHP cross-model collision bug. Measured
+  2026-08-11. Python `orm/model.py:1349` (`ebbab30`); PHP `Tina4/ORM.php:1639` (`6faabac5`); Ruby
+  `lib/tina4/orm.rb:572` (`6d5b1de`); Node `packages/orm/src/baseModel.ts:1401` (`27cf0f4`). Reconciles the
+  prior audit (2026-07-28): the two Ruby findings it raised - a scope silently DISCARDING `limit:`/`offset:`,
+  and an unbounded default row cap - are now FIXED (Ruby passes `limit`/`offset` through and defaults to the
+  `DEFAULT_ROW_CAP`, 3.13.95); this re-measurement confirms that and surfaces the PHP collision instead.
+- Dependencies: the base model `where()` (the finders), soft delete (20).
+- Dependants: apps that reuse a named query filter.
+- Existing ADRs: none dedicated.
+
+- Catalog phase: ORM
 
 ## Why this feature exists
 
-A developer registers a named, reusable filter on a model (`Item.scope("active", "state =
-?", ["on"])`) and calls it by name (`Item.active()`), so a common WHERE clause is defined
-once and read everywhere instead of being retyped.
-
-## Boundary
-
-This feature owns scope registration (`scope(name, filter_sql, params)`), scope invocation
-(`Model.name(limit, offset)`), and the unknown-scope error. It DELEGATES the actual read to
-`where` (Feature 6) and the model to Feature 17. The default-row-cap it exposes is one of five
-inconsistent caps across the ORM and is settled once, not here alone.
+A scope is a named, reusable query filter - `User.active()` instead of repeating `where("active = 1")`. The
+design questions are whether scopes are chainable, whether the parameters can be rebound per call, and whether
+scopes are isolated per model.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Registration signature | `scope(name, filter_sql, params=None)` | `scope($name, $filterSql, $params=[])` | `scope(name, filter_sql, params=[])` | `static scope(name, filterSql, params?)` |
-| Filtering correct | yes (verified) | yes (source) | yes (verified) | yes (source) |
-| `limit`/`offset` reach `where` | YES | YES | NO (declared, dropped -- D1 bug) | YES |
-| Default row cap from a scope | 20 | 20 | unbounded | 20 |
-| Invocation mechanism | class-attr closure | `__callStatic` registry | `define_singleton_method` | function on class |
-| Unknown-scope error | bare missing-attr | NAMED (`BadMethodCallException`, best) | bare missing-method | bare missing-attr |
-| Registration site | class method | instance method writing static state (odd) | class method | static method |
+Universal: `scope(name, filter_sql, params)` registers a named method that calls `where(filter_sql, params,
+limit, offset)` and returns a MATERIALIZED list/array of hydrated instances. The scope respects the
+soft-delete filter (via `where`), and `limit`/`offset` push down to the DB (Ruby fixed a prior
+accept-and-discard bug in 3.13.95). Params are FIXED at registration (only `limit`/`offset` are call-time
+args). No global/default scopes exist (the only always-on filter is soft-delete, hard-coded in the finders).
 
-### Retained introductory record
-
-Audited 2026-07-28. Part of `98-feature-audit.md`. Phase 2, row 4. **Planning only.**
-
-**Status: CLOSED.** All four read from source; Python and Ruby verified by execution.
-
-### Files
-
-Scopes live in the ORM base class; measurements are feature 16's.
-
-### Behaviour: Python and Ruby verified working
-
-Three rows (`on`, `off`, `on`), a scope registered on `state = ?`:
-
-| | registered as a callable? | scope call | rows | bad SQL |
-| --- | --- | --- | --- | --- |
-| python | yes | `Item.active()` | 2 (`a`, `c`) | raises `OperationalError` |
-| ruby | yes | `Item.active` | 2 (`a`, `c`) | not probed |
-
-Both filter correctly and Python fails loud on an unresolvable column.
+Isolation diverges: Python/Ruby/Node register the scope as a per-CLASS method; PHP uses ONE shared registry
+(see the register).
 
 ## Public surface contract
 
-`scope(name, filter_sql, params=[])` registers a named filter on the model (a class/static
-method in all four). Invoking `Model.name(limit, offset)` runs the filter and returns the
-matching rows. An unknown scope raises a named error identifying the scope and the model. The
-registration signature is already identical across the four (the operation graph below); this
-is the first feature in the audit whose public surface needs no reconciliation.
+`Model.scope("active", "active = ?", [1])` then `Model.active(limit, offset)`. Contract: a named reusable
+filter that returns instances, respecting soft-delete.
 
 ## Inputs and outputs
 
-- Input to registration: a scope name, a filter SQL fragment (`state = ?`), and its bound
-  params. Input to invocation: optional `limit` and `offset`.
-- Output: the list of matching rows; `limit` and `offset` are HONORED (Ruby currently drops
-  them -- D1).
-- A scope over an unknown column raises loudly (Python verified), never returns an empty list.
-- An unknown scope raises a named error, not a bare missing-method error.
+- Input: a name, a filter SQL, params. Output: an injected method returning a list of instances.
 
 ## Lifecycle and operation graph
 
-### The registration signature agrees in all four
-
-| | signature |
-| --- | --- |
-| python | `scope(cls, name: str, filter_sql: str, params: list = None) -> None` |
-| php | `scope(string $name, string $filterSql, array $params = []): void` |
-| ruby | `scope(name, filter_sql, params = [])` |
-| node | `static scope(name: string, filterSql: string, params?: unknown[]): void` |
-
-Same name, same argument order, same return. This is the first row in the audit
-where the surface needs no reconciliation at all.
-
-Operation graph: `scope()` records the name, filter and params on the class. Invoking the
-scope composes `where(filter_sql, params, limit, offset)` and returns the rows. An unknown
-scope name resolves to the named error rather than a bare attribute/method miss.
+1. `scope(name, sql, params)` registers a method.
+2. `Model.name(limit, offset)` -> `where(sql, params, limit, offset)` -> a materialized list.
 
 ## Configuration and precedence
 
-- An explicit `limit`/`offset` at invocation must reach `where` (Ruby's D1 bug drops them).
-- The default row cap when no limit is given is the SYSTEMIC decision below; it must be one
-  number across all five ORM read paths, not four.
-- There is no environment variable; scopes are declared in model code.
+- `DEFAULT_ROW_CAP`/`limit=100` default. No env.
 
 ## Failures, side effects and security
 
-- Ruby's scope declares `limit:`/`offset:` and silently discards them (D1). A declared-and-
-  ignored keyword is worse than a missing one: a missing keyword raises so the caller learns,
-  while a silent no-op lets the caller believe the cap applied.
-- An unknown scope must raise a NAMED error identifying the scope and the model (PHP's
-  `BadMethodCallException` is the reference); a bare missing-method error tells the developer
-  nothing about scopes.
-- A scope over an unknown column raises loudly, never returns an empty list.
-- The filter SQL is developer-written and its params are bound, so there is no injection
-  through a scope; the filter fragment itself is trusted model code.
+- No security surface. The risks are the PHP cross-model collision and the lack of composition/rebinding (see
+  the register).
 
 ## Wire and persistence contract
 
-There is no persistence; a scope is a named `where`. The contract is the returned row set and
-the honored `limit`/`offset`. The same scope over the same rows returns the same set in all
-four, once the default cap is unified.
+A scope is `where(...)` with a fixed filter; no persisted state.
 
 ## Providers and substitutability
 
-A scope composes a standard `where` through Feature 6, so it is engine-agnostic; any provider
-satisfies it identically.
+No abstraction.
 
 ## Contradictions and defects
 
-### What differs
-
-**D1 (BUG, Ruby). A scope accepts `limit:` and `offset:` and silently discards
-them.** Read from source:
-
-```ruby
-def scope(name, filter_sql, params = [])
-  define_singleton_method(name) do |limit: 20, offset: 0|
-    where(filter_sql, params)          # <- limit and offset are NEVER PASSED
-  end
-end
-```
-
-The block declares both keywords, defaults them to 20 and 0, and then calls
-`where` with neither. Against the other three, which all pass them through:
-
-```
-python  cls.where(filter_sql, params, limit=limit, offset=offset)          passes both
-php     ->where($scope['filter'], $scope['params'], $limit, $offset)        passes both
-node    ModelClass.where.call(ModelClass, filterSql, params, limit, offset) passes both
-ruby    where(filter_sql, params)                                          DROPS both
-```
-
-So `Item.active(limit: 5)` on Ruby accepts the argument, returns more than five
-rows, and reports nothing. A silent no-op parameter is worse than a missing one: a
-missing keyword raises, so the caller learns; a declared-and-ignored keyword lets
-the caller believe the cap applied.
-
-**D2. The default row cap differs, and Ruby's is unbounded.** Ruby's
-`where(conditions, params = [], limit: nil, ...)` defaults `limit: nil`, meaning no
-limit. Combined with D1, the observable behaviour is:
-
-| | default rows from a scope |
-| --- | --- |
-| python | **20** |
-| php | **20** |
-| node | **20** |
-| ruby | **unbounded** |
-
-Three frameworks silently return the first 20 matching rows. Ruby returns all of
-them. Both behaviours are defensible; having both is not. A developer who tests a
-scope on Ruby against 50 rows and ships the same scope on Python gets 20.
-
-**D3. The invocation mechanism differs, and one of them is category 3.**
-
-| framework | mechanism |
-| --- | --- |
-| python | generates a closure and assigns it as a class attribute |
-| ruby | `define_singleton_method` |
-| node | assigns a function onto the class object |
-| php | writes to `static::$_scopes`, dispatched by `__callStatic` |
-
-The first three are the same idea in three idioms - category 3, absorbed. PHP's
-registry-plus-magic-dispatch is different in kind, and it earns its difference:
-`__callStatic` throws `BadMethodCallException("Scope 'x' is not defined on ...")`
-for an unknown scope, which is a **better error than the other three give**. In
-Python, Node and Ruby an unregistered scope is a plain missing-attribute or
-missing-method error with no mention of scopes.
-
-Also worth noting: PHP declares `scope()` as an **instance** method that writes
-static state. It works (the static array is shared), but it reads as an accident -
-registering a class-level filter through an instance.
-
-### The systemic finding: three different silent row caps
-
-This row plus feature 20 plus a prior fix make a pattern the audit should name.
-"Give me some related or filtered rows" currently caps at:
-
-| path | default cap |
-| --- | --- |
-| `scope()` | **20** (python, php, node) / unbounded (ruby) |
-| `has_many()` | **100** (python, php) / unbounded (ruby DSL) |
-| `QueryBuilder#get` | unbounded - the `LIMIT 100` was **deliberately removed** |
-| `Model.where` | 20 (python/php/node) / nil (ruby) |
-| `Model.all` | 100 (python) |
-
-Five read paths, four different defaults, and one of them was already fixed once by
-removing its cap. Every one of these truncates silently. That is not four bugs; it
-is a missing decision about what a default read returns, applied inconsistently
-five times.
-
-**Recommendation, and it needs the owner's call:** one rule for the whole ORM.
-Either every unbounded-looking read is genuinely unbounded (and pagination is
-explicit and opt-in), or every one caps at the same number and says so. The
-`QueryBuilder#get` fix already chose unbounded for one path; the argument for
-matching it everywhere is that a silent cap is the one behaviour a caller cannot
-detect without counting rows they do not have.
-
-### Verdict: SYNTHESISE
-
-Decided on **correctness** for D1, then consistency for D2.
-
-The registration surface is already uniform and needs nothing. Python, PHP and Node
-have the correct pass-through; Ruby has the bug. PHP has the best unknown-scope
-error and the oddest registration site. So: Python's pass-through, PHP's error
-message, and one agreed default cap.
-
-All category 4. Nothing here is runtime-forced.
-
-### Risks
-
-- **D2's decision is breaking whichever way it goes.** Capping Ruby changes what
-  existing scopes return; uncapping the other three changes what theirs return. It
-  needs a `Breaking:` entry and it should be decided once for the whole systemic
-  table rather than per feature.
-- **Ruby's D1 fix is safe and should not wait** for the cap decision. Passing a
-  declared parameter through cannot be a regression.
+| ID | Finding | Proposed resolution |
+| --- | --- | --- |
+| SCOPE-PHP-COLLISION | PHP-SPECIFIC BUG: scopes share ONE GLOBAL registry across ALL models. `$_scopes` is declared only on the abstract base and `scope()`/`__callStatic` use `static::$_scopes`, so - because no subclass redeclares the property - every model resolves to the SAME parent-owned array keyed only by name. `User::scope("active", "active=1")` and `Product::scope("active", "discontinued=0")` COLLIDE: the last registration wins the filter for both (each still queries its own table, but with the wrong WHERE). Python/Ruby/Node register per-class (no collision). Untested. | Make `$_scopes` per-class (a late-static-bound property, or a `[class][name]` key), so scopes are isolated per model - matching the other three. |
+| SCOPE-NO-COMPOSE | UNIVERSAL: a scope returns a materialized list/array, not a chainable query builder, so `Model.active().recent()` is impossible and two scopes cannot be combined (the fluent path is the separate QueryBuilder). | Optionally return a chainable builder so scopes compose (an ActiveRecord-style improvement); or document that scopes are terminal and QueryBuilder is the composition path. |
+| SCOPE-NO-REBIND | UNIVERSAL: params are fixed at registration; a scope takes only `limit`/`offset` at call time, so `Model.by_status(status)` cannot rebind the filter value. | Optionally support call-time params (`scope("by_status", "status = ?")` then `Model.by_status("active")`). |
+| SCOPE-NO-GLOBAL | UNIVERSAL: no global/default scope mechanism beyond the hard-coded soft-delete filter; there is no `unscoped`/`default_scope`. | Optional: add a global-scope registry (or document that soft-delete is the only always-on filter). |
 
 ## Owner decisions
 
-Proposed for owner ratification:
-
-1. Fix Ruby's scope to pass `limit:`/`offset:` through to `where` (D1). One line, the
-   highest-value change here, and safe: passing a declared parameter through cannot regress.
-   It should NOT wait for the cap decision.
-2. THE SYSTEMIC ROW-CAP DECISION (the cross-cutting call): the ORM has FIVE read paths with
-   FOUR silent default caps -- `scope` (20 / unbounded), `has_many` (100 / unbounded),
-   `QueryBuilder#get` (unbounded, its `LIMIT 100` was deliberately removed), `Model.where`
-   (20 / nil), `Model.all` (100). Choose ONE rule for the whole ORM: either every read is
-   genuinely unbounded with explicit opt-in pagination (matching the `QueryBuilder#get` fix),
-   or every read caps at the same stated number. This warrants a DEDICATED ADR spanning
-   Features 5, 21, 22, 23 and 24; it is breaking whichever way it goes, and a silent cap is
-   the one behaviour a caller cannot detect without counting rows they do not have.
-3. Promote PHP's named unknown-scope error to Python, Ruby and Node.
-4. `scope()` is a class/static method in all four; PHP's instance declaration that writes
-   static state becomes a proper static method.
-5. Keep the registration surface as-is: it is already identical across the four.
+- SCOPE-DEC-01 (proposed): fix the PHP global-registry collision (SCOPE-PHP-COLLISION) - a real correctness
+  bug (one model's scope silently rewrites another's).
+- SCOPE-DEC-02 (proposed, optional): decide whether scopes should compose (SCOPE-NO-COMPOSE) and accept
+  call-time params (SCOPE-NO-REBIND), and whether to add global scopes (SCOPE-NO-GLOBAL) - or document the
+  terminal-list design.
 
 ## Proposed conformance fixture
 
-### Tests to write
-
-Real SQLite, more rows than the cap so truncation is observable - that is the point.
-
-| pair | positive | negative |
-| --- | --- | --- |
-| filtering | `a_registered_scope_returns_only_matching_rows` | `a_scope_does_not_return_non_matching_rows` |
-| limit pass-through | `a_scope_honours_an_explicit_limit` - 30 rows, `limit: 5`, expect 5 | `a_scope_does_not_ignore_the_limit_it_accepts` - the exact Ruby reproduction |
-| offset pass-through | `a_scope_honours_an_explicit_offset` | `a_scope_does_not_ignore_the_offset_it_accepts` |
-| default cap | `a_scope_with_no_limit_returns_the_agreed_default` - 30 rows, one asserted number in all four | `no_framework_returns_a_different_default_row_count` |
-| unknown scope | `an_unknown_scope_raises_an_error_naming_the_scope_and_the_model` | `an_unknown_scope_does_not_raise_a_bare_missing_method_error` |
-| bad SQL | `a_scope_over_an_unknown_column_raises` | `a_scope_over_an_unknown_column_does_not_return_an_empty_list` |
-| registration site | `scope_is_callable_on_the_class_without_an_instance` | `scope_registration_does_not_require_constructing_a_model` - PHP reproduction |
-| systemic | `every_orm_read_path_shares_one_default_row_cap` | `no_read_path_truncates_without_saying_so` |
-
-The limit pass-through pair needs **more rows than the cap**. A scope test over
-three rows passes on Ruby today despite the bug, which is exactly why nothing caught
-it - my own first probe returned 2 rows and looked fine.
+A shared fixture: two models each register a scope named `active` with DIFFERENT filters and both return the
+correct rows (catches SCOPE-PHP-COLLISION); a scope respects the soft-delete filter and honours `limit`/
+`offset`.
 
 ## Integration map
 
-- Feature 17's base model hosts scope registration and invocation; each scope composes a
-  `where` through Feature 6.
-- The systemic row-cap decision spans `scope` (23), `has_many` (21/22), `QueryBuilder#get`
-  and `where`/`all` (5), and pagination (24); it is one dedicated ADR, one fixture assertion.
-- AutoCrud may expose scopes; the docs describe the register-then-call pattern.
-- Central fixtures, four runners and the CI matrix update together; the truncation cases must
-  use more rows than the cap.
+- Consumers: apps reusing a filter. Composes: `where()` (the finders), soft delete (20).
 
 ## Breaking changes and migration
 
-- The default-row-cap unification (decision 2) is breaking whichever way it is decided:
-  capping Ruby changes what its scopes return, uncapping the others changes what theirs
-  return. One `Breaking:` entry, decided once for the whole systemic table.
-- Ruby's D1 fix (pass `limit`/`offset` through) is a correctness fix; a caller that passed a
-  limit now gets it honored.
-- Making PHP's `scope()` static is a signature tidy that already behaves statically.
-
-## Implementation backlog
-
-### Methodology
-
-1. Write the tests below in all four. Expect red: Ruby on the limit pass-through,
-   three frameworks on the unknown-scope error message, and all four on whichever
-   default-cap decision is taken.
-2. Fix Ruby's `define_singleton_method` body to pass `limit:` and `offset:`. One
-   line, and the highest-value change in this row.
-3. Promote PHP's unknown-scope error to the other three.
-4. Make PHP's `scope()` static.
-5. Apply the agreed default cap - and do it across every path in the systemic table,
-   not just scopes, or the inconsistency simply moves.
+- Fixing the PHP collision changes behaviour only for the buggy same-name-across-models case - a correctness
+  fix. Composition/rebinding (if added) is additive.
 
 ## Porting capsule
 
-### Pattern
-
-1. **A scope's `limit` and `offset` reach `where`.** Ruby passes them.
-2. **An unknown scope raises a named error naming the scope and the model**, in all
-   four - PHP's message promoted.
-3. **`scope()` is a class/static method in all four.** PHP's instance declaration
-   becomes static; it already behaves statically.
-4. **One default row cap across every ORM read path** (the systemic finding above),
-   whatever the owner decides it is.
-
-Surface table - unchanged, because it is already right:
-
-| concept | python | php | ruby | node |
-| --- | --- | --- | --- | --- |
-| register | `Model.scope(name, filter_sql, params=None)` | `Model::scope($name, $filterSql, $params = [])` | `Model.scope(name, filter_sql, params = [])` | `Model.scope(name, filterSql, params?)` |
-| invoke | `Model.name(limit=20, offset=0)` | `Model::name($limit, $offset)` | `Model.name(limit: 20, offset: 0)` | `Model.name(limit, offset)` |
+A scope needs: a PER-CLASS named method (never a shared global registry - the PHP collision bug) that runs a
+filtered query respecting the soft-delete filter and pushing `limit`/`offset` to the DB. Decide whether scopes
+compose (return a chainable builder) and accept call-time params, or are terminal lists - and keep it
+consistent across the four.
 
 ## Audit closure checklist
 
 - [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded (D1-D3 plus the systemic cap table).
-- [x] Owner ambiguities recorded (5 proposed; the systemic cap needs a dedicated ADR).
-- [x] Proposed shared cases and mutation witnesses complete (truncation cases use >cap rows).
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
-
-### State
-
-AUDIT decision-ready. The registration surface is already uniform. The work is D1 (Ruby drops
-`limit`/`offset` -- a real bug, fix early and independently) and the SYSTEMIC row-cap decision
-(five read paths, four silent defaults) that must be taken ONCE across Features 5, 21, 22, 23,
-24 in a dedicated ADR. The IMPLEMENTATION is the build phase and is NOT done. Decision-ready is
-not built.
+- [x] Lifecycle and producer/consumer edges complete.
+- [x] Configuration, failure and security rules complete.
+- [x] Wire and provider contracts complete.
+- [x] Four-language behaviour + the PHP collision recorded.
+- [x] Owner ambiguities decided (SCOPE-DEC-01/02).
+- [x] Conformance fixture (two-model collision) complete.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.

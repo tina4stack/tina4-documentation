@@ -76,14 +76,16 @@ No provider abstraction; the driver's row shape is the input (feature 3 guarante
 | LOAD-RUBY-ASYMMETRY | Ruby has TWO read paths with different coercion: `from_hash` (the primary finder path) JSON-decodes json columns, but the instance `load()` does NOT (it feeds the raw driver value to the setter). So `Model.find(id).payload` returns a parsed Hash while `model.load(id).payload` stays a raw JSON String - the same row, different type, by read path. Unguarded (no spec calls `load()` with a json field). | Route `load()` through the same coercion as `from_hash` (one hydration path), and add a `load()`+json regression. |
 | LOAD-JSON-ONLY | PHP/Ruby/Node coerce ONLY JSON on read - booleans hydrate as numbers and datetimes as driver strings (no `Date`/`bool` reconstitution); the round-trip type of a boolean/datetime is engine-dependent. Consistent within a language but a cross-engine surprise, and asymmetric with Python (which coerces scalars too). | Decide the read-coercion contract: coerce scalars to native types (matching Python) or document that non-JSON scalars are driver-typed. Make it consistent across the four. |
 | LOAD-NODE-SERIALIZE-OMIT | Node's `to_dict()`/`to_json()` silently OMIT any relation not previously eager-loaded (they cannot lazy-load - a sync serializer), with no error at serialize time (the warning fires only at eager-load). A developer who forgets `include` gets a serialized object missing the relation and no signal. | Warn (or error) at serialize time when a declared relation is omitted because it was not loaded, so the omission is not silent. |
+| LOAD-RUBY-SIGNATURE | Ruby's `load(arg, params)` diverges from the other three's `load(filter, params, include)`: it is positional, names the first argument generically, and takes NO `include` - so Ruby alone cannot eager-load relations during a `load()` (Python/PHP/Node can). A parity gap on the public signature, not just the coercion (LOAD-RUBY-ASYMMETRY). | Align Ruby on `load(filter, params, include)` and add the `include` eager-load, matching the other three. |
 
 ## Owner decisions
 
 - LOAD-DEC-01 (proposed): stop re-enforcing business constraints on read in Python (LOAD-PY-REVALIDATE) -
   the highest-value fix (it can make existing data unreadable) - and unify Ruby's two read paths
   (LOAD-RUBY-ASYMMETRY).
-- LOAD-DEC-02 (proposed): decide the scalar read-coercion contract (LOAD-JSON-ONLY) and make Node's
-  serialize-omit non-silent (LOAD-NODE-SERIALIZE-OMIT).
+- LOAD-DEC-02 (proposed): decide the scalar read-coercion contract (LOAD-JSON-ONLY); make Node's
+  serialize-omit non-silent (LOAD-NODE-SERIALIZE-OMIT); align Ruby's `load()` signature + add `include`
+  (LOAD-RUBY-SIGNATURE).
 
 ## Proposed conformance fixture
 

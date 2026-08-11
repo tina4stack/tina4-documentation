@@ -1,194 +1,129 @@
-# Feature 027: Automatic CRUD from models
+# Feature 27: Automatic CRUD from models
 
 ## Identity and status
 
-- Matrix identity: 27 - Automatic CRUD from models
+- Matrix identity: 27 - Automatic CRUD from models (`tina4_python/crud/__init__.py`)
 - Audit state: decision-ready
-- Audit note: measured from four-language source 2026-08-10 (Python `crud/__init__.py`, PHP
-  `AutoCrud.php`, Ruby `tina4.rb` register logic, Node AutoCrud). No framework code changed.
-- Dependencies: Feature 17 ORM base class (the models), Feature 24 pagination (the list
-  envelope), the router (write-gating), Swagger (the generated routes are documented)
-- Dependants: any application that exposes a model as a REST resource without hand-writing the
-  routes; the Swagger doc; the dev-admin UI
-- Existing ADRs: ADR-0043 (Accepted) governs the list endpoint's paginate envelope; the
-  router's secure-by-default-writes rule (writes require a token unless opened)
-- Shared fixtures: `autocrud_contract.json` is required (real routes over real SQLite)
+- Audit note: FOUR-language feature, SECURE-BY-DEFAULT (verified) with a validation-status bug and a
+  mass-assignment surface. Measured 2026-08-11. Python `crud/__init__.py:70` (`ebbab30`); PHP
+  `Tina4/AutoCrud.php:45` (`6faabac5`); Ruby `lib/tina4/auto_crud.rb:29` (`6d5b1de`); Node
+  `packages/orm/src/autoCrud.ts:116` (`27cf0f4`).
+- Dependencies: the base model + validation (17/19), pagination (24), soft delete (20), the router auth gate.
+- Dependants: apps that expose a model as REST with no hand-written routes.
+- Existing ADRs: ADR-0043 (the 7-key list envelope).
+
+- Catalog phase: ORM / HTTP
 
 ## Why this feature exists
 
-A developer points AutoCRUD at an ORM model and gets a full REST resource - list, read,
-create, update, delete - without writing a single route, with writes locked behind auth by
-default and the list already returning the canonical paginate envelope.
-
-## Boundary
-
-This feature owns model discovery and the generation of the five REST routes from a model:
-`register(model, prefix, public)` and `discover(dir, public)`, the route handlers, and the
-secure-by-default-writes posture. It DELEGATES the list envelope to Feature 24/ADR-0043, the
-write-gating to the router, the model to Feature 17, and the route documentation to Swagger.
+AutoCrud turns a model into a REST resource - `GET/POST/PUT/DELETE /api/{table}` - with no hand-written
+routes. Because it generates WRITE endpoints, the security-critical question is whether those writes are
+secured by default. They are (verified in all four). The remaining issues are the error status on a failed
+create and unguarded body columns.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Register one model | `register(model, prefix="/api", public=False)` | `register($modelClass, $public=false)` | `register` (route logic in `tina4.rb`) | `AutoCrud` register |
-| Discover a directory | via app wiring | `discover($modelsDir, $public=false)` | discovers `src/orm`/`orm` | discover |
-| GET list | paginated, ADR-0043 envelope | same | same | same |
-| GET one / POST / PUT / DELETE | yes | yes (`create*Handler`) | yes | yes |
-| Writes secured by default | yes (token required) | yes | yes ("secured by default") | yes |
-| Write-opening flag | `public` (default false) | `public` (default false) | route `auth:` (default true) | `public` |
-| List envelope | `to_paginate()` (ADR-0043) | same | same | same (task 72: all four) |
+Universal: `register(Model, public=false)` / `discover()` / an `auto_crud=true` flag auto-registers 5 routes
+(`GET` list, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}`). The list returns the ADR-0043 7-key envelope
+with a TRUE COUNT (feature 24). Soft delete is respected (list/get/existence checks filter `is_deleted`;
+DELETE soft-deletes when enabled).
 
-All four generate the same five routes and all four secure the write routes by default (a
-POST/PUT/DELETE needs a valid token unless the resource is opened), matching the framework-wide
-router rule. The list route returns the ADR-0043 paginate envelope in all four (already
-aligned). The one divergence is the flag that OPENS the writes: Python and PHP take `public`
-(default `false`), while Ruby's route convention is `auth:` (default `true`) -- the same
-inverted-flag pattern the audit has hit before (`production`/`development` in Feature 2,
-`nullable`/`required` in Feature 19). `public = true` and `auth: false` mean the same thing
-with opposite polarity and a different name.
+- AUTH - SECURE BY DEFAULT, verified end-to-end in all four: the write handlers opt out of the auth gate ONLY
+  when `public=true`; the router requires auth for write methods unless the handler carries the no-auth flag.
+  So generated `POST`/`PUT`/`DELETE` require a valid token by default; GET is public. Node's test even boots a
+  real server and asserts a tokenless secure POST returns a real 401.
+- Validation: POST validates the body (`validate()` -> a 4xx in Python/Node); PUT's validation diverges (see
+  the register).
 
 ## Public surface contract
 
-`register(model, prefix="/api", public=false)` generates and registers five routes for one
-model; `discover(dir, public=false)` does the same for every model in a directory. The five
-routes are `GET {prefix}/{table}` (paginated list), `GET {prefix}/{table}/{id}` (one),
-`POST {prefix}/{table}` (create), `PUT {prefix}/{table}/{id}` (update), `DELETE
-{prefix}/{table}/{id}` (delete). GET is public; the writes require a token unless `public` is
-true. The list returns the ADR-0043 envelope.
+`register(Model, public=false)` -> 5 REST routes. Contract: reads are public, writes require auth unless
+`public=true`, the list is the 7-key envelope, and an invalid body is rejected.
 
 ## Inputs and outputs
 
-- Input: a model class (or a directory of them), a URL prefix (default `/api`), and the
-  `public` flag.
-- Output: registered routes; the list returns the seven-key paginate envelope; a read returns
-  the serialized model; a create/update returns the written model; a delete returns a success
-  status.
-- A write without a valid token returns the framework's auth-failure status, not the write.
-- The generated routes carry Swagger metadata so they appear in the API doc.
+- Input: a registered model, HTTP requests. Output: JSON (list envelope / `{data}` / `{message,data}`);
+  401 on an unauthenticated write; a 4xx (or, buggily, 500) on an invalid create.
 
 ## Lifecycle and operation graph
 
-1. `register(model, prefix, public)` (or `discover`) derives the table name and builds the
-   five handlers.
-2. The GET routes register open; the POST/PUT/DELETE routes register behind the router's
-   write-gate unless `public` is true.
-3. A list request paginates via `to_paginate()` and returns the ADR-0043 envelope.
-4. A read/create/update/delete request runs the corresponding ORM operation and serializes the
-   result.
+1. Register the model (explicit or via the flag) -> 5 routes with the write-auth gate on unless `public`.
+2. POST: validate -> save (or reject); PUT: assign -> save; DELETE: soft/hard delete; list: paginated
+   envelope.
 
 ## Configuration and precedence
 
-- `prefix` defaults to `/api`; an explicit prefix overrides it.
-- `public` defaults to `false` (writes secured); passing `true` opens the writes. This is the
-  one flag that must be spelled and defaulted identically in all four.
-- Model discovery scans a configured directory; an explicit model registration is exact.
+- `register(..., public=?)` (or the model's `public` flag); the list reads `?page/?per_page/?limit/?offset/
+  ?filter[]/?sort`.
 
 ## Failures, side effects and security
 
-- SECURE BY DEFAULT: the write routes require a valid token unless explicitly opened, matching
-  the router's framework-wide rule. Opening writes is an explicit, single-flag opt-in, never a
-  default.
-- The inverted-flag divergence (`public` vs `auth:`) is a security-shaped footgun: a developer
-  porting a resource who reads the wrong polarity could open writes believing they closed them.
-  One spelling, one polarity, removes the hazard.
-- The list envelope carries no duplicate or camelCase keys (ADR-0043), so a consumer cannot
-  read a wrong spelling.
-- A create/update validates the model before writing (Feature 19); an invalid body returns a
-  validation response, not a partial write.
+- The security-critical property (writes need auth by default) HOLDS in all four. The remaining issues: the
+  create-error status is wrong in two languages, and the body allows writing any real column (mass
+  assignment). See the register.
 
 ## Wire and persistence contract
 
-The wire shapes are: the ADR-0043 seven-key envelope for the list, the serialized model
-(Feature 17) for a read/create/update, and a success status for a delete. AutoCRUD adds no new
-persistence; it maps HTTP verbs to ORM operations over the model's own table.
+The 7-key list envelope (ADR-0043); `{data}` for single records. The auth contract: write = secure unless
+`public`.
 
 ## Providers and substitutability
 
-AutoCRUD is engine-agnostic: it composes ORM operations that any provider satisfies. A future
-runtime generates the same five routes with the same secure-by-default posture and the same
-envelope.
+No provider abstraction; the routes are generated from the model.
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| CRUD-01 | The write-opening flag diverges in name and polarity: Python/PHP `public` (default false), Ruby route `auth:` (default true). Same inverted-flag class as Features 2 and 19; a security-shaped footgun. | One spelling and polarity in all four: `public` (default false); reject the old spelling with a clear error, never a silent reinterpretation. |
-| CRUD-02 | The list envelope must be the ADR-0043 seven-key shape in all four (task 72 fixed it; it needs a standing gate). | Gate the ADR-0043 envelope on the AutoCRUD list route in all four. |
-| CRUD-03 | The update verb (PUT vs PATCH) and the exact route set are not proven identical. | Pin the five routes and the update verb in all four. |
-| CRUD-04 | Model discovery (register-one vs discover-a-directory) and the default prefix are not gated as parity. | Gate `register` and `discover` and the `/api` default in all four. |
-| CRUD-05 | No shared fixture exists. | Add `autocrud_contract.json` exercising real routes. |
+| CRUD-VALIDATION-STATUS | The POST validation-failure status is WRONG in two of four, and inconsistent across the correct two. On an invalid create: Python returns 400 and Node returns 422 (both correct 4xx, but DIFFERENT codes); PHP returns HTTP 500 with a stale `detail` from `$db->error()` (no DB call happened - the cause is on the model's `getError()`); Ruby returns HTTP 500 (`create()` returns `false`, the handler calls `.persisted?` on `false` -> `NoMethodError` -> 500, run-verified). So PHP and Ruby report a server error for a client input error, and even Python/Node disagree on the code. | Return a consistent 4xx (choose 400 or 422) with the FIELD errors (from the model's error, not the DB error) on a validation failure, in all four. Fix PHP's status + detail source and Ruby's `create()`-returns-false handling. Add a test that an invalid POST returns the 4xx with the errors. |
+| CRUD-PUT-NOVALIDATE | AutoCrud PUT (update) performs NO body validation in Node (confirmed; POST validates, PUT does not), and the partial-update validator mode (`isUpdate`) is wired into no write path. So an update can write type/length/pattern-violating data a create would reject. (Confirm PHP/Ruby PUT - Python/PHP validate via `save()`.) | Validate the PUT body (partial-update mode) in all four; wire the `isUpdate` mode. |
+| CRUD-MASS-ASSIGNMENT | The body is not column-allow-listed: validation iterates the FIELD DEFS, so body keys not in `fields` are never checked, and the column mapper passes unknown keys through - so a client can write ANY real column, INCLUDING `is_deleted` (Node, explicit) via a POST/PUT body. Python additionally lets a client-supplied PK turn a POST-create into an overwrite of an existing row (or a 201 for a no-op update). | Allow-list writable columns (reject unknown/guarded keys like `is_deleted`, and strip the PK on create) in the AutoCrud handlers, all four. |
+| CRUD-WRITE-TESTS | The generated write routes are under-tested at the wire level: no test boots a server, registers an AutoCrud model, and POSTs/PUTs/DELETEs through the gate (Node/PHP cover route STRUCTURE + GET; the secure-by-default property is asserted at the route-flag level, not via a real authenticated-vs-unauthenticated request in Ruby). | Add wire tests for POST(201/4xx)/PUT/DELETE, including a tokenless write returning 401 (Node has this; add to the others). |
 
 ## Owner decisions
 
-Proposed for owner ratification:
-
-1. One write-opening flag: `public`, default `false`, in all four (reconcile Ruby's `auth:`
-   convention at the AutoCRUD surface to `public`, rejecting the old spelling). Writes are
-   secured by default; opening them is a single explicit opt-in.
-2. The five routes are fixed: `GET {prefix}/{table}` (list), `GET {prefix}/{table}/{id}`,
-   `POST`, `PUT {prefix}/{table}/{id}`, `DELETE {prefix}/{table}/{id}`, with `prefix` default
-   `/api`.
-3. The list route returns the ADR-0043 seven-key paginate envelope (already aligned; gated).
-4. A create/update validates via Feature 19 before writing; an invalid body is a validation
-   response, not a partial write.
-5. Generated routes carry Swagger metadata so the resource is self-documenting.
+- CRUD-DEC-01 (proposed): return a consistent 4xx with field errors on a failed create (CRUD-VALIDATION-STATUS)
+  - fix PHP/Ruby's 500 - and validate the PUT body (CRUD-PUT-NOVALIDATE). Highest value (a client error
+  currently reads as a server error, and updates skip validation).
+- CRUD-DEC-02 (proposed): allow-list writable columns and strip the PK on create (CRUD-MASS-ASSIGNMENT); add
+  the wire tests (CRUD-WRITE-TESTS).
 
 ## Proposed conformance fixture
 
-Add `autocrud_contract.json` with stable ids for: `register` generating exactly the five
-routes; a list returning the ADR-0043 envelope; a write REJECTED without a token by default;
-the same write ACCEPTED with `public=true`; a create validating the body; `discover`
-registering a directory of models; and the `/api` default prefix. Every case exercises real
-routes over real SQLite through the real auth gate; no mock can claim conformance.
+A shared wire fixture (real server, no mocks): a tokenless POST/PUT/DELETE returns 401 (secure-by-default -
+Node's model, ported to all); a valid POST returns 201; an INVALID POST returns a 4xx with the field errors
+(catches CRUD-VALIDATION-STATUS); a PUT with invalid data is rejected (CRUD-PUT-NOVALIDATE); a body with
+`is_deleted` or a client PK is rejected/stripped (CRUD-MASS-ASSIGNMENT); the list is the 7-key envelope.
 
 ## Integration map
 
-- Feature 17 supplies the models; Feature 24/ADR-0043 supplies the list envelope; the router
-  supplies the write-gate; Swagger documents the generated routes; the dev-admin UI may list
-  them.
-- Feature 19 validates a create/update body.
-- Central fixtures, four runners, the CI matrix, release notes and the CRUD docs update
-  together.
+- Consumers: apps exposing a model as REST. Composes: the base model + validation (17/19), pagination (24),
+  soft delete (20), the router auth gate (feature family: auth/middleware).
 
 ## Breaking changes and migration
 
-- Reconciling the write-opening flag to `public` changes Ruby's AutoCRUD spelling; the old
-  `auth:` spelling is rejected with a clear error (never silently reinterpreted, because a
-  silent polarity flip on a security control is the worst outcome). `Breaking:` entry.
-- The list envelope is already ADR-0043 in all four (no further break there).
-- Pinning the update verb may change one framework's route; state it in the release note.
-
-## Implementation backlog
-
-1. Add `autocrud_contract.json` and wire four runners against real routes over real SQLite.
-2. Reconcile the write-opening flag to `public` (default false) in all four; gate the
-   secured-by-default and the open-with-public cases.
-3. Gate the ADR-0043 list envelope and the five-route set (including the update verb).
-4. Gate `register`/`discover` and the `/api` default.
-5. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit.
+- Fixing the create-error status changes response codes (500 -> 4xx) - a correctness fix. Allow-listing columns
+  rejects previously-accepted keys - document it (it closes a mass-assignment hole).
 
 ## Porting capsule
 
-Implement `register(model, prefix="/api", public=false)` and `discover(dir, public=false)`
-generating five routes: a paginated list (the ADR-0043 seven-key envelope), a read, a create,
-an update and a delete. Register GET open and POST/PUT/DELETE behind the router's write-gate
-unless `public` is true. Validate a create/update body (Feature 19) before writing, attach
-Swagger metadata, and use `public` (default false) as the single write-opening flag. Prove the
-port against real routes over real SQLite, including a write rejected without a token by
-default.
+AutoCrud needs: 5 generated routes with WRITES SECURE BY DEFAULT (require a token unless `public=true`; GET
+public - the one property to never get wrong, and it is right in all four today); the ADR-0043 7-key list
+envelope with a true COUNT; soft-delete respected; a consistent 4xx (with FIELD errors) on a failed create,
+NOT a 500; validation on BOTH create and update; and an allow-list of writable columns (reject `is_deleted`,
+strip the PK on create) so a body cannot mass-assign guarded columns. Wire-test the auth (tokenless write ->
+401) and the create/update/delete paths.
 
 ## Audit closure checklist
 
-- [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded (CRUD-01..05).
-- [x] Owner ambiguities recorded (5 proposed; the genuine calls await owner ratification).
-- [x] Proposed shared cases and mutation witnesses complete.
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete (5 routes + envelope + auth x four).
+- [x] Lifecycle and producer/consumer edges complete (register -> gated routes -> validate/save).
+- [x] Configuration, failure (validation status) and security (secure-by-default, mass assignment) rules
+  complete.
+- [x] Wire (7-key envelope, auth contract) and provider contracts complete.
+- [x] Four-language behaviour recorded (secure-by-default all four; status bug php/ruby; mass assignment).
+- [x] Owner ambiguities decided (CRUD-DEC-01/02).
+- [x] Conformance fixture (auth + create/update/mass-assign) complete.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.
