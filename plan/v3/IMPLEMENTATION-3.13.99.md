@@ -1,4 +1,4 @@
-# Implementation pass - 3.13.98 (first pass)
+# Implementation pass - 3.13.99 (first pass, re-numbered from 3.13.98 - the skills release took the .98 slot)
 
 Every ratified fix, implemented in all four frameworks, one feature fully finished before the next.
 Decisions: `OWNER-DECISIONS.md` (Batches 1-5 + standing compiler). Spec per feature = its doc's porting
@@ -24,7 +24,7 @@ negative, no mocks) -> dead/dup code removed -> run the fixture + the feature's 
 
 ## Phase 0 - setup (branch only, NO baseline)
 
-- [x] Cut `feature/release3.13.98` off v3 in each repo; bump version to 3.13.98 (done by the setup worker)
+- [x] Cut `feature/release3.13.99` off v3 in each repo (renamed from feature/release3.13.98 when the skills release claimed .98); version bumped to 3.13.99 (manifest + lock)
 - [ ] Carry the two audit HEADs into v3 as part of feature 37/127: feature/csrf-fail-closed (py) +
       feature/mcp-call-gate (php/ruby/node). No standalone baseline - they land with their features.
 
@@ -122,4 +122,4 @@ Small, orthogonal items found while implementing a feature - fold into the named
 ## Close
 
 - [ ] All ~53 features lab-green in all four; 1-133 green for dev
-- [ ] Merge feature/release3.13.98 -> v3; tag 3.13.98; update release notes + the book
+- [ ] Merge feature/release3.13.99 -> v3; tag 3.13.99; update release notes + the book

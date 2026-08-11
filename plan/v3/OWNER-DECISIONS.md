@@ -175,8 +175,8 @@ ALL v3 audit owner-decisions are ratified 2026-08-11 (Batches 1-5 + the standing
 Every DEC-* across the 133 in-scope feature docs is OWNER-DECIDED. About 53 features carry at least one
 ratified fix; the remaining features in 1-133 are already green and must STAY green.
 
-**IMPLEMENTATION - 3.13.98 (owner target). Execution model REVISED by the owner 2026-08-11 - read this
-before any code:**
+**IMPLEMENTATION - 3.13.99 (owner target; re-numbered from 3.13.98 on 2026-08-11 - the skills release
+took the .98 slot). Execution model REVISED by the owner 2026-08-11 - read this before any code:**
 
 1. NO BASELINE RUN. The owner is explicit: "No baseline run" and "I am not comfortable with a base line
    run on python - everytime we do this we lose parity." We do NOT run the full suites up front to chase
@@ -198,8 +198,8 @@ before any code:**
 
 PER-FEATURE GATE (owner): implement in all four -> run the shared fixture + the feature's tests ON THE
 .99 LAB BOX (real services, no mocks) -> a real GREEN in all four is the gate to commit + advance. Never
-self-report green, never advance on a red. Branch discipline: feature/release3.13.98 -> v3 -> tag.
+self-report green, never advance on a red. Branch discipline: feature/release3.13.99 -> v3 -> tag.
 Per [[feedback_parity]], [[feedback_no_mock_testing]], [[feedback_conformance_testing]],
 [[feedback_run_tests_on_99]], [[feedback_independent_verification]],
 [[feedback_no_parallel_workers_one_tree]], [[feedback_maintainability_means_less_code]].
-Tracker: `IMPLEMENTATION-3.13.98.md`.
+Tracker: `IMPLEMENTATION-3.13.99.md`.
