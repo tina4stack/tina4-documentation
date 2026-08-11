@@ -105,6 +105,8 @@ package.json).
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** Owner call: ADD a `Tina4/<version>` User-Agent to the outbound HTTP client in all four (VERSION-DEC-03 = yes). VERSION-DEC-01 (single-resolver convergence PHP+Node) and VERSION-DEC-02 (cross-source drift test) ride as fixes. See [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) (Batch 5). Next phase: implementation in all four with real (no-mock) tests.
+
 - VERSION-DEC-01 (proposed): converge PHP and Node on a single-resolver model (the Ruby/Python pattern) so
   every surface reports one version (VERSION-MULTI-SOURCE); delete PHP's stale docblock + deleted-method
   reference.

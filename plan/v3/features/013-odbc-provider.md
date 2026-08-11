@@ -86,6 +86,8 @@ One ODBC layer per language; the underlying DBMS is opaque. No fallback.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** Owner call: ODBC is FIRST-CLASS - provision a real ODBC source in CI and run the shared write-path fixture through it (ODBC-DEC-01), NOT "mark it experimental"; ODBC-DEC-02 rides as fixes. See [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) (Batch 5). Next phase: implementation in all four with real (no-mock) tests.
+
 - ODBC-DEC-01 (proposed): provision a real ODBC source in CI and run the shared write-path fixture through it
   (ODBC-UNTESTED) - this is the single highest-value action; it converts every latent finding below into a
   caught bug. If ODBC will not be provisioned, mark it experimental.

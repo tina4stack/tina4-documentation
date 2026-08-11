@@ -122,6 +122,8 @@ No provider abstraction. The xUnit surface substitutes its HTTP via the TestClie
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** Owner call: wire ONE inline-testing surface (the decorator/`@tests` model) with a real exit code + discovery so `tina4 test` works end-to-end (INLINE-DEC-01); resolve the assertion name collision, REMOVE PHP's `eval`/blanket `require_once` (arbitrary code execution), and de-couple the global registry in tests (INLINE-DEC-02). See [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) (Batch 5). Next phase: implementation in all four with real (no-mock) tests.
+
 - INLINE-DEC-01 (proposed): pick and wire ONE inline-testing story per framework so `tina4 test` actually
   discovers and runs the advertised tests with a real exit code (INLINE-ORPHANED-RUNNER +
   INLINE-SILENT-IGNORE + INLINE-NO-EXITCODE-TAP), and fix the CLAUDE.md/docstring claims to match. This is

@@ -157,6 +157,8 @@ the four.
 
 ## Owner decisions
 
+> **RATIFIED 2026-08-11 - OWNER-DECIDED.** Owner call: BIND THE DEV SERVER TO LOCALHOST BY DEFAULT (DEVADMIN-DEC-02). The full security package DEVADMIN-DEC-01/03/04/05/06 is ratified as fixes (fail-closed same-origin gate, `.env`/dotfile denylist, toolbar escaping py+node, merge the MCP-02 gate to v3, real-dispatch conformance tests). See [../OWNER-DECISIONS.md](../OWNER-DECISIONS.md) (Batch 5). Next phase: implementation in all four with real (no-mock) tests.
+
 - DEVADMIN-DEC-01 (proposed): implement the fail-closed same-origin gate on the dev-admin mutation surface in
   all four (DEVADMIN-CSRF). This is the highest-value fix and the one that closes drive-by RCE.
 - DEVADMIN-DEC-02 (proposed): bind the dev server to localhost by default, or refuse mutation routes on a
