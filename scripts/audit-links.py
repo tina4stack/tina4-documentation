@@ -75,7 +75,10 @@ _anchor_cache: dict = {}
 def file_anchors(p: Path) -> set:
     if p in _anchor_cache:
         return _anchor_cache[p]
-    if not p.exists():
+    # A link may resolve to a directory (e.g. /get-started -> docs/get-started/).
+    # is_file() is False for both a missing path AND a directory, so this guard
+    # keeps read_text() from raising IsADirectoryError on a directory target.
+    if not p.is_file():
         _anchor_cache[p] = set()
         return set()
     text = p.read_text(encoding='utf-8', errors='ignore')
@@ -118,8 +121,18 @@ def resolve(target: str, source: Path):
 
     for c in candidates:
         c = c.resolve()
-        if c.exists():
+        if c.is_file():
             return c, anchor, 'file'
+        if c.is_dir():
+            # A directory link (/get-started) is served by its index.md in the
+            # built site; resolve to it so anchors are checked against the page,
+            # not the directory (which read_text() cannot open).
+            idx = c / 'index.md'
+            if idx.exists():
+                return idx, anchor, 'file'
+            # A directory with no index.md is not a linkable page; try the next
+            # candidate, then fall through to 'missing'.
+            continue
         if c.suffix == '':
             md = c.with_suffix('.md')
             if md.exists():
