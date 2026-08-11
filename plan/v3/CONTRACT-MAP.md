@@ -3,7 +3,7 @@
 > The living index that ties every audited feature to its machine-checked
 > contract, its decisions, and its proven-in-all-four status. This is the
 > backbone of a future formal Tina4 language specification.
-> **Last synced:** 2026-08-12 (3.13.99 pass: +csrf/devadmin/static/requestid/frondtags/securityheaders/porttakeover/overlay fixtures)
+> **Last synced:** 2026-08-12 (3.13.99 pass: +csrf/devadmin/static/requestid/frondtags/securityheaders/porttakeover/overlay/inlinetesting fixtures)
 
 > **Adversarial re-audit started 2026-08-08:** a zero-skip live-lab migration
 > baseline still omitted contradictory public paths (generated code migration
@@ -100,8 +100,9 @@ Re-run it and re-sync this table whenever a fixture changes.
 | Security headers | 36 | `securityheaders_contract.json` | 2 | 2 | 0 | SECHDR-DEC-01, SECHDR-DEC-02 | yes (real pipeline: py `server.handle`, php `Router::dispatch`, ruby `RackApp#call`, node real HTTP; secure-by-default register + HTTPS-guarded HSTS + CSP `default-src 'self'`; PHP class renamed; mutation-proved; 2026-08-11) |
 | Port takeover | 129 | `porttakeover_contract.json` | 2 | 2 | 0 | TAKEOVER-DEC-01, TAKEOVER-DEC-02, TAKEOVER-DEC-03 | yes (real processes on real ports, no mocks; ONE shared identity-checked helper per lang reused by the CLI + runtime paths; PID-file Tina4 identity + dev-gate + `TINA4_NO_TAKEOVER`/`--no-kill` opt-out; runtime path raises on a foreign holder; mutation-proved; 2026-08-11) |
 | Development error overlay | 126 | `overlay_contract.json` | 4 | 4 | 0 | OVERLAY-DEC-01, OVERLAY-DEC-02, OVERLAY-DEC-03, OVERLAY-DEC-04 | yes (real dispatch / a real thrown 500, no mocks; dead `render_production_error` DELETED in all four + a wired-path prod-no-leak test replaces the dead-sibling unit test; ONE redaction helper per lang masks Authorization/Cookie/Set-Cookie + password-like body/param keys; PHP now renders headers deliberately; 50-frame cap; guarded overlay render falls back to the safe page; gate unified on `is_debug_mode`; mutation-proved; 2026-08-12) |
+| Inline testing | 132 | `inlinetesting_contract.json` | 3 | 3 | 0 | INLINE-DEC-01, INLINE-DEC-02 | yes (real `tina4 <lang> test` child process, no mocks; ONE wired surface -- the `@tests`/expect_* descriptor model -- discovered + run with a real exit code, 0 on pass / non-zero on fail; PHP `Testing::discover()` eval() RCE REMOVED (literal-only parser) + confined to an explicit tests dir (no blanket require of src); descriptor builders renamed assert_*->expect_* so they no longer collide with the xUnit assert_*; Python meta-test snapshots/restores the global registry; mutation-proved; 2026-08-12) |
 
-**Totals: 131 invariants, 115 proven, 16 owed** (2026-08-12), 21 fixtures. Proven
+**Totals: 134 invariants, 118 proven, 16 owed** (2026-08-12), 22 fixtures. Proven
 subsystems remain held to their contract four-way. Logger and database adapter
 now have decision-complete answer keys whose runners are honestly owed. Messenger closed
 last: the read/send shapes were already unified by the 3.13.96 parity commits

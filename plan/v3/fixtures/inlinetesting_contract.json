@@ -1,0 +1,102 @@
+{
+  "_comment": [
+    "Inline testing — wire ONE surface with a real exit code + remove the PHP eval RCE.",
+    "Feature 132, INLINE-DEC-01 / INLINE-DEC-02.",
+    "",
+    "Tina4 advertises a batteries-included inline test surface: decorate a function",
+    "with test expectations and run them all with `tina4 test`. The audit found the",
+    "flow did not work end-to-end anywhere -- the CLI ran pytest / phpunit / a file",
+    "runner and never the inline runner (Python/PHP/Node), or ran only the describe/it",
+    "surface (Ruby). Every case here runs the REAL `tina4 <lang> test` CLI as a child",
+    "process against a real throwaway project and asserts the REAL process exit code",
+    "and REAL filesystem side effects -- NO MOCKS. See",
+    "tina4-documentation/plan/v3/features/132-inline-testing.md and",
+    "tina4-documentation/plan/v3/OWNER-DECISIONS.md (Batch 5, INLINE-DEC-01/02).",
+    "",
+    "INLINE-DEC-01 (the headline fix): the chosen surface is the decorator/@tests",
+    "descriptor model. `tina4 <lang> test` now DISCOVERS it (Python imports src/*.py",
+    "that carry @tests; PHP discovers @tests docblocks from the tests dir; Node imports",
+    "src/*.ts that call tests(); Ruby loads the test/route dirs) and RUNS it via the",
+    "inline runner, folding pass/fail into a real process exit code -- 0 when the inline",
+    "test passes, non-zero when it fails. The existing external suite (pytest/phpunit/",
+    "rspec/file-runner) still runs when present, so a project that keeps tests in tests/",
+    "is unaffected. The false CLAUDE.md/docstring claims were corrected to match.",
+    "",
+    "INLINE-DEC-02 (SECURITY + collision): PHP's Testing::discover() used to",
+    "require_once EVERY scanned *.php AND eval() the @tests argument expressions --",
+    "arbitrary code execution from any scanned file. Discovery is now confined to an",
+    "EXPLICIT tests directory (realpath-contained), and the docblock args are parsed as",
+    "LITERALS ONLY (no eval; a non-literal arg is refused, never executed). In all four,",
+    "discovery imports/loads ONLY files that carry the inline marker (or live in the",
+    "tests dir), so scanning never runs an unrelated source file's side effect. The name",
+    "collision is resolved by renaming the descriptor builders to expect_* (Python",
+    "expect_equal, PHP expectEqual, Ruby Testing.expect_equal, Node expectEqual) --",
+    "distinct from the xUnit immediate assert_* (tina4_python.test / Tina4Test /",
+    "TestContext), so importing the wrong surface can no longer silently change call",
+    "semantics. Python's meta-test snapshots/restores the global @tests registry and",
+    "asserts on its own filtered subset, never the global total.",
+    "",
+    "Mutation-proved (macOS, all four): break the CLI's exit-code fold and the",
+    "'exits non zero when it fails' case goes RED; drop the inline-marker discovery",
+    "filter (Python/Node) or point PHP discover() at the project root / restore the",
+    "eval / broaden Ruby cmd_test to load all of src, and the 'does not run a non test",
+    "file side effect' case goes RED (the scanned file's side effect runs); re-expose",
+    "the colliding assert_equal on the descriptor surface and the 'surfaces are",
+    "distinct' case goes RED. Restoring each returns to green.",
+    "",
+    "Each invariant names a REAL suite file per framework and the SAME case name in",
+    "each language's own idiom, which scripts/audit-contract-fixtures.py normalises",
+    "and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "132 - Inline testing (wire one tina4 test surface with a real exit code, remove the PHP eval RCE, fix the assertion collision)",
+  "invariants": [
+    {
+      "id": "inline-cli-real-exit-code",
+      "adr": "INLINE-DEC-01",
+      "rule": "`tina4 <lang> test` discovers a function decorated with the inline @tests/expect_* builders in a project's source and runs it through the inline runner with a REAL process exit code: it exits 0 when the inline test passes and NON-ZERO when it fails. Driven by spawning the real CLI as a child process against a real one-inline-test project and asserting the child's exit status.",
+      "why": "The advertised inline-testing flow did not work end-to-end: the CLI ran pytest/phpunit/a file-runner and never the inline runner (Python/PHP/Node), or only the describe/it surface (Ruby), so a green `tina4 test` could execute ZERO of a developer's inline tests (INLINE-ORPHANED-RUNNER + INLINE-SILENT-IGNORE + INLINE-NO-EXITCODE-TAP). Wiring discovery + the runner + a real exit code makes the batteries-included promise real. Mutation-proved: breaking the exit-code fold makes the failing-inline case exit 0, turning it RED.",
+      "suites": {
+        "ruby": "spec/inline_testing_contract_spec.rb",
+        "python": "tests/test_inline_testing_contract.py",
+        "php": "tests/InlineTestingContractTest.php",
+        "nodejs": "test/inlineTestingContract.test.ts"
+      },
+      "cases": [
+        "tina4 test exits zero when the inline test passes",
+        "tina4 test exits non zero when the inline test fails"
+      ]
+    },
+    {
+      "id": "inline-discovery-no-arbitrary-code",
+      "adr": "INLINE-DEC-02",
+      "rule": "Running `tina4 <lang> test` never executes a scanned source file's arbitrary code during discovery. A project source file with an observable side effect that is NOT an inline test (Python/Node: it does not carry the inline marker; PHP: it lives outside the tests dir; Ruby: it is a plain src file, not a route/orm/test file) is not imported/required/loaded, so its side effect does not run. PHP additionally parses @tests docblock arguments as LITERALS ONLY -- a function-call argument is never eval'd.",
+      "why": "PHP's Testing::discover() require_once'd every scanned *.php AND eval()'d the @tests argument expressions -- arbitrary code execution from any scanned file (INLINE-PHP-EVAL). Confining discovery to an explicit tests directory (realpath-contained), parsing args as literals (no eval), and importing only inline-marked files in all four closes it. Mutation-proved: pointing PHP discover() at the project root (or restoring the eval), or dropping the inline-marker filter in Python/Node, or broadening Ruby cmd_test to load all of src, makes the scanned file's side effect run, turning the case RED.",
+      "suites": {
+        "ruby": "spec/inline_testing_contract_spec.rb",
+        "python": "tests/test_inline_testing_contract.py",
+        "php": "tests/InlineTestingContractTest.php",
+        "nodejs": "test/inlineTestingContract.test.ts"
+      },
+      "cases": [
+        "inline discovery does not run a non test file side effect"
+      ]
+    },
+    {
+      "id": "inline-assert-surfaces-do-not-collide",
+      "adr": "INLINE-DEC-02",
+      "rule": "The decorator/descriptor surface exposes expect_* builders (Python expect_equal, PHP Testing::expectEqual, Ruby Testing.expect_equal, Node expectEqual) that RECORD an expectation, and does NOT expose the colliding assert_equal. The xUnit immediate assert_* (tina4_python.test.assert_equal(actual, expected, message) / Tina4Test / Ruby TestContext) remains a separate surface. The descriptor expect_equal builds a spec object; the colliding assert_equal name is absent from the descriptor surface, so importing the wrong one is a loud error, never a silent change of semantics.",
+      "why": "In all four, the descriptor builder assert_equal(args, expected) and the xUnit assert_equal(actual, expected, message) exported the SAME name with INCOMPATIBLE signatures, so importing the wrong module silently changed call semantics with no error (INLINE-NAME-COLLISION). Renaming the descriptor builders to expect_* namespaces the two surfaces apart. Mutation-proved: re-exposing assert_equal on the descriptor surface makes the case RED.",
+      "suites": {
+        "ruby": "spec/inline_testing_contract_spec.rb",
+        "python": "tests/test_inline_testing_contract.py",
+        "php": "tests/InlineTestingContractTest.php",
+        "nodejs": "test/inlineTestingContract.test.ts"
+      },
+      "cases": [
+        "the descriptor expect builders and xunit assert are distinct"
+      ]
+    }
+  ]
+}
