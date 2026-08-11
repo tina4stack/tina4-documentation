@@ -30,7 +30,7 @@ negative, no mocks) -> dead/dup code removed -> run the fixture + the feature's 
 
 ## Phase 1 - security cluster (highest value first)
 
-- [ ] 37 CSRF - remove PHP public default-secret + `$_ENV` mutation; fix Node gen/validator split; `TINA4_CSRF` attaches; port SEC-01 test to php/ruby/node
+- [x] 37 CSRF - DONE 2026-08-11, lab-green all four (py 59 / php 56 / ruby 44 / node 46; consolidated rc=0, independently re-verified). Pushed py 3249495, php 001f966a, ruby dbcd6a2, node cc6642a, fixture doc 3dd9608. Removed PHP default-secret + `$_ENV` mutation; aligned Node gen/validator; `TINA4_CSRF` attaches; session-bind + type=form; SEC-01 ported all four; 403 body unified to `{error,code,message,status}`.
 - [ ] 127 dev-admin - fail-closed same-origin gate (drive-by RCE); `.env`/dotfile denylist; localhost-default bind; escape toolbar path (py+node); merge MCP-02 gate to v3; real-dispatch conformance tests
 - [ ] 41 static assets - realpath+sep confinement to py/ruby/node; block dotfiles; honour `TINA4_PUBLIC_DIR` ruby+node
 - [ ] 43 request-id - build in all 4 (honour inbound + response header + log correlation); sanitize inbound; Python -> contextvars
@@ -112,6 +112,12 @@ each is deleted as part of its feature so the diff nets DOWN, not up:
 - 126 delete the dead `render_production_error` in all four + its misleading docstring
 - 130 collapse PHP's three version sources + Node's four package.json readers to one resolver each
 - 133 replace the hand-maintained `CARBONAH.md` with a generator
+
+## Follow-ups surfaced during the pass
+
+Small, orthogonal items found while implementing a feature - fold into the named later feature; do NOT expand the current feature to chase them:
+- 37 (CSRF): form-token TTL env var name diverges - Python reads `TINA4_TOKEN_EXPIRES_IN`, PHP/Ruby/Node read `TINA4_TOKEN_LIMIT`. Unify in a later env-uniformity pass (or with feature 64 JWT).
+- 37 (CSRF): Ruby's blank-secret hard-fail also rejects writes in RS256 mode (blank `TINA4_SECRET` + `.keys/` present + `TINA4_CSRF=true`) - kept fail-closed-uniform for parity (auto-attach is new, no existing app regresses); revisit if RS256-defer is wanted.
 
 ## Close
 
