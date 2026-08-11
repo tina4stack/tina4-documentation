@@ -1,0 +1,123 @@
+{
+  "_comment": [
+    "The dev-admin security contract: ONE answer key, four frameworks. Feature 127.",
+    "",
+    "The /__dev dashboard can read files, run SQL, install packages and write routes,",
+    "so its whole security model rests on being dev-only AND safe on a dev machine that",
+    "also browses the web. This fixture pins the behaviour every framework must share",
+    "after the DEVADMIN-DEC-01/02/03/04/05/06 owner decisions - see",
+    "tina4-documentation/plan/v3/OWNER-DECISIONS.md (Batch 5) and",
+    "tina4-documentation/plan/v3/features/127-dev-admin.md.",
+    "",
+    "Every case is driven through the REAL dispatch pipeline (a real ASGI scope / a real",
+    "PSR request / a real Rack env / a real fetch against a bound server) - NO mocked",
+    "req/resp, because the audit found the prior Python+Node dev-admin tests mocked",
+    "req/resp and BYPASSED the gate. The witness is a real side effect: a file that is",
+    "NOT written, a DB row that is NOT inserted, a secret that is NOT returned. Python is",
+    "the REFERENCE implementation; the shapes asserted here are the canonical ones the",
+    "other three move to.",
+    "",
+    "Each invariant names a REAL suite file per framework and a list of case names. The",
+    "four suites carry the SAME case names in each language's own idiom (Python",
+    "snake_case method, PHP testPascalCase method, Ruby it-description, Node assert",
+    "label), which scripts/audit-contract-fixtures.py normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-11",
+  "feature": "127 - Development admin dashboard security",
+  "invariants": [
+    {
+      "id": "devadmin-prod-absent",
+      "adr": "DEVADMIN-DEC-06",
+      "rule": "With TINA4_DEBUG off the whole /__dev surface is ABSENT: a GET /__dev returns 404 AND a POST /__dev/api/file/save returns 404 and writes nothing. Proven behaviourally through the real server, not by inspecting a stage list or a route dict.",
+      "why": "The gate is the one strong control and it was never behaviourally locked - only structural stage-list/route-dict inspection existed, and the primary Python+Node tests drove handlers through mock req/resp that bypassed the mount gate entirely. A behavioural prod-404 makes the dev-only contract a test, not a claim.",
+      "suites": {
+        "ruby": "spec/dev_admin_conformance_spec.rb",
+        "python": "tests/test_dev_admin_conformance.py",
+        "php": "tests/DevAdminConformanceTest.php",
+        "nodejs": "test/devAdminConformance.test.ts"
+      },
+      "cases": [
+        "dev admin is absent without debug"
+      ]
+    },
+    {
+      "id": "devadmin-same-origin-gate",
+      "adr": "DEVADMIN-DEC-01",
+      "rule": "With TINA4_DEBUG on, every /__dev mutation route (POST/PUT/PATCH/DELETE) is fail-closed same-origin: a cross-site request (Sec-Fetch-Site: cross-site, or an Origin whose host differs from the request Host) is REFUSED and writes nothing; a same-origin request (Sec-Fetch-Site: same-origin, or a matching Origin) is ALLOWED and performs the write. Closes drive-by CSRF/RCE from any page the developer visits.",
+      "why": "The mutation routes had NO CSRF/Origin/Sec-Fetch/same-origin check in all four, and the body parsers accept no-preflight content-types (form-encoded/text-plain), so a cross-origin POST to /file/save then /reload was drive-by RCE on the dev machine. The framework CSRF middleware is post-match and never sees the pre-match /__dev stage, so the dashboard needs its own gate. Both cases together prove the gate DISCRIMINATES rather than blanket-denies.",
+      "suites": {
+        "ruby": "spec/dev_admin_conformance_spec.rb",
+        "python": "tests/test_dev_admin_conformance.py",
+        "php": "tests/DevAdminConformanceTest.php",
+        "nodejs": "test/devAdminConformance.test.ts"
+      },
+      "cases": [
+        "a cross origin write is refused and writes nothing",
+        "a same origin write is allowed"
+      ]
+    },
+    {
+      "id": "devadmin-env-denylist",
+      "adr": "DEVADMIN-DEC-03",
+      "rule": "The file endpoints NEVER serve secret material: GET /__dev/api/file?path=.env and GET /__dev/api/file/raw?path=.env are REFUSED (never return the .env contents / TINA4_SECRET), and the /__dev/api/files listing does NOT list .env. The denylist covers .env, .env.* (except the .env.example template), .git/, secrets/, and private-key material.",
+      "why": "All four returned .env verbatim (Ruby+Node explicitly UN-hid .env in the listing), leaking TINA4_SECRET, the DB password, and TINA4_MCP_TOKEN/TINA4_API_KEY in cleartext - which nullifies the DB-URL redaction elsewhere and the leaked MCP token then unlocks REMOTE MCP. The witness is the secret string never appearing in any response body.",
+      "suites": {
+        "ruby": "spec/dev_admin_conformance_spec.rb",
+        "python": "tests/test_dev_admin_conformance.py",
+        "php": "tests/DevAdminConformanceTest.php",
+        "nodejs": "test/devAdminConformance.test.ts"
+      },
+      "cases": [
+        "the file read endpoint refuses dotenv secrets",
+        "the file listing hides dotenv"
+      ]
+    },
+    {
+      "id": "devadmin-loopback-mutations",
+      "adr": "DEVADMIN-DEC-02",
+      "rule": "Defense-in-depth on top of the localhost-default bind: a /__dev mutation from a NON-loopback socket peer is REFUSED (reusing the MCP loopback check on the RAW socket peer, never X-Forwarded-For), while a loopback peer is ALLOWED. A spoofed X-Forwarded-For: 127.0.0.1 from a remote peer does NOT bypass it.",
+      "why": "The default bind was 0.0.0.0 with no localhost restriction and no admin token, so a TINA4_DEBUG box on a shared network/container/WSL exposed the whole unauthenticated mutation+RCE+secret surface. The bind now defaults to 127.0.0.1 in dev; this invariant locks the request-level loopback refusal so a deliberately-exposed (TINA4_HOST) box still refuses remote mutations.",
+      "suites": {
+        "ruby": "spec/dev_admin_conformance_spec.rb",
+        "python": "tests/test_dev_admin_conformance.py",
+        "php": "tests/DevAdminConformanceTest.php",
+        "nodejs": "test/devAdminConformance.test.ts"
+      },
+      "cases": [
+        "a non loopback peer cannot mutate",
+        "a loopback peer may mutate"
+      ]
+    },
+    {
+      "id": "devadmin-toolbar-escape",
+      "adr": "DEVADMIN-DEC-04",
+      "rule": "The injected dev toolbar HTML-escapes the reflected request path (and method): a request whose path contains <script> yields a toolbar in which the sequence appears escaped (&lt;script&gt;) and NEVER as a raw executable <script> tag.",
+      "why": "Python and Node interpolated the raw request path into the toolbar HTML with no escaping, injected into every text/html response (including 404s), so a crafted path reflected <script> that runs in the dev-server origin and can then drive every ungated /__dev mutation route. PHP already escapes (htmlspecialchars); Ruby's toolbar is a static shell that never reflects the path - both keep a lock-in test so the property can never regress.",
+      "suites": {
+        "ruby": "spec/dev_admin_conformance_spec.rb",
+        "python": "tests/test_dev_admin_conformance.py",
+        "php": "tests/DevAdminConformanceTest.php",
+        "nodejs": "test/devAdminConformance.test.ts"
+      },
+      "cases": [
+        "the injected toolbar escapes the request path"
+      ]
+    },
+    {
+      "id": "devadmin-mcp-call-gate",
+      "adr": "DEVADMIN-DEC-05",
+      "rule": "The POST /__dev/api/mcp/call tool-invocation shim enforces the same two-layer MCP gate every other MCP surface enforces: a REMOTE UNAUTHENTICATED caller gets 404 BEFORE any tool runs (asserted by the real database_execute tool's write NOT landing in a real row), using the raw socket peer; a loopback caller runs the tool.",
+      "why": "Python was the only framework whose /call shim was fail-open (its four siblings all gate); on a TINA4_DEBUG 0.0.0.0 box a remote unauthenticated caller could invoke database_execute/file_write. PHP/Ruby/Node already gate /call; this ports the gate to Python and locks all four with a real-dispatch, real-DB-write witness.",
+      "suites": {
+        "ruby": "spec/dev_admin_conformance_spec.rb",
+        "python": "tests/test_dev_admin_conformance.py",
+        "php": "tests/DevAdminConformanceTest.php",
+        "nodejs": "test/devAdminConformance.test.ts"
+      },
+      "cases": [
+        "a remote unauthenticated mcp call is refused and the tool does not run"
+      ]
+    }
+  ]
+}
