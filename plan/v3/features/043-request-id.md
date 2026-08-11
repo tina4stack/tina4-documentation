@@ -1,192 +1,151 @@
-# Feature 043: Request ID tracking
+# Feature 43: Request ID (correlation id)
 
 ## Identity and status
 
-- Matrix identity: 43 - Request ID tracking
+- Matrix identity: 43 - Request ID / correlation id
 - Audit state: decision-ready
-- Audit note: measured from four-language source 2026-08-10 (server request-id generation, the
-  Log context, and the error-page use). No framework code changed.
-- Dependencies: Feature 29 request (an incoming `X-Request-ID`), Feature 30 response (emits it),
-  the Log subsystem (carries it on every line), Feature 42 error pages (shows it in production)
-- Dependants: every log line, the production error page, any downstream service correlating by
-  request id
-- Existing ADRs: the response-model contract (ADR-0050)
-- Shared fixtures: `request_id_contract.json` is required
+- Audit note: re-measured 2026-08-11 from four-language source (correcting a prior-session doc that treated
+  the log-context + error-page use as a working four-language convergence - it is NOT; the feature is wired
+  end-to-end ONLY in Python, process-scoped in PHP, and DORMANT in Ruby/Node). Python `core/server.py:2559` +
+  `debug/__init__.py:115` (`ebbab30`); PHP `Tina4/App.php:304,1700` + `Tina4/Log.php:43` (`6faabac5`); Ruby
+  `lib/tina4/log.rb:246` (defined, never called) (`6d5b1de`); Node `packages/core/src/server.ts:1843` +
+  `logger.ts:237` (setter never called) (`27cf0f4`).
+- Dependencies: the logger, the response builder, the error-page renderer.
+- Dependants: log correlation; cross-service tracing; the production error page.
+- Existing ADRs: none dedicated.
+
 - Catalog phase: Routing and middleware
 
 ## Why this feature exists
 
-When something goes wrong, an operator needs to find every log line for the one request that
-failed. A request id gives each request a unique tag that appears on its logs, in its response
-header, and on its production error page - the same way in all four languages, and correlatable
-across services.
-
-## Boundary
-
-This feature owns the request id: its generation, the honoring of an incoming `X-Request-ID`,
-its storage in a request-scoped context, its propagation onto every log line, and its emission
-in the response header. It DELEGATES the incoming header read to Feature 29, the response header
-to Feature 30, the log formatting to the Log subsystem, and the production error-page display to
-Feature 42.
+A per-request correlation id ties a request's log lines together and lets a client (or a downstream service)
+reference one request. The audit question is whether this works in all four. It does not: only Python
+generates a per-request id, honours an inbound header, emits a response header, and threads it into logs and
+the error page. PHP has one id per PROCESS; Ruby and Node have the API but never call it in the request path,
+so their logs never carry an id.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Generation | `uuid4()[:8]` (8 hex) | `md5(uniqid())[:12]` (12 hex) | (to confirm) | (to confirm) |
-| Honors incoming `X-Request-ID` | YES (`headers.get("x-request-id", ...)`) | NO (always generates) | (to confirm) | (to confirm) |
-| Emits `X-Request-ID` in response | YES (`response.header("x-request-id", ...)`) | (to confirm) | (to confirm) | (to confirm) |
-| On the Log context | `set_request_id` / `Log.getRequestId` | `Log::getRequestId` | yes | yes |
-| In the production error page | yes (500.twig `request_id`) | yes (`request_id`) | yes | yes |
-| Storage isolation | request-scoped (to confirm contextvars) | per-request | (to confirm) | (to confirm AsyncLocalStorage) |
-
-The request id is used consistently as a Log-context value and in the production error page (the
-Feature 42 tie), but the GENERATION and the INCOMING-HEADER handling diverge. Python honors an
-incoming `x-request-id` (so a proxy or an upstream service can propagate a trace id) and falls
-back to an 8-hex `uuid4` prefix, then emits it in the response. PHP always generates a 12-hex
-`md5(uniqid())` and does not appear to read an incoming header. So the id FORMAT differs (8 vs 12
-hex, uuid vs md5) and only Python currently supports cross-service correlation.
+- PYTHON - full feature, with two live defects. `server.py:2559` `request_id =
+  request.headers.get("x-request-id", str(uuid.uuid4())[:8])` (honours inbound, else an 8-hex uuid4 prefix);
+  `:2564` `response.header("x-request-id", request_id)` (emits it); `:2560` `set_request_id(...)`; logs carry
+  it (`debug/__init__.py:570,588`); the 500 page shows the SAME id (`server.py:604` -> `500.twig:33`).
+  DEFECTS: the inbound value is used UNSANITIZED; storage is `threading.local` (`debug/__init__.py:115`) under
+  an asyncio event loop, so concurrent requests share one slot (no isolation). See the register.
+- PHP - one id per PROCESS. `App.php:304` `Log::setRequestId($this->generateRequestId())` runs in the
+  constructor; `App.php:1702` `substr(bin2hex(random_bytes(8)), 0, 16)` (16 hex). Under the persistent
+  built-in server every request in the process shares that one id. Honours no inbound header, emits no
+  response header. The prod 500 page uses a SEPARATE fresh `md5(uniqid())[:12]` (`Router.php:833`) that does
+  not match the log id - and this throwaway is the formula the prior doc mis-cited as PHP's generation.
+- RUBY - DORMANT. `set_request_id` is defined (`log.rb:246`) but never called outside specs; the request path
+  never sets an id, so logs never carry one. The only per-request id is a throwaway `SecureRandom.hex(6)` for
+  the 500 page (`rack_app.rb:699`); the dev toolbar shows `-`.
+- NODE - cosmetic only. `server.ts:1843` `Date.now().toString(36)` per request (a base36 ms clock,
+  collision-prone) used ONLY by the dev toolbar; a separate one for the 500 page (`server.ts:1304`). Never on
+  logs (`Log.setRequestId` never called; `logger.ts:372`), never on the wire, never honours inbound.
 
 ## Public surface contract
 
-Each request gets an id: an incoming `X-Request-ID` (sanitized) if present, else a generated one.
-The id is stored in a request-scoped context so every log line for that request carries it, and
-it is emitted in the response `X-Request-ID` header so a client can report it. A production error
-page shows the id (Feature 42). The id format is one value across the four.
+Intended: every request has an id (inbound `x-request-id` honoured, else generated), echoed in the response
+`x-request-id`, attached to every log line, and shown on the error page. Today this contract holds only in
+Python (with defects).
 
 ## Inputs and outputs
 
-- Input: the request's `X-Request-ID` header (optional) and a generator.
-- Output: the id on the Log context, in the response `X-Request-ID` header, and in the
-  production error body.
-- An incoming id is honored for correlation but SANITIZED (length-capped, control characters
-  stripped) before it reaches a log line or a header.
-- The id is unique per request and isolated between concurrent requests.
+- Input: an optional inbound `x-request-id`. Output (Python): the id in the response header, the log lines,
+  and the error page. Output (PHP): a process-constant id in logs only. Output (Ruby/Node): none in practice.
 
 ## Lifecycle and operation graph
 
-1. At the start of a request, the server reads `X-Request-ID`; if present and valid it is used
-   (after sanitization), else a new id is generated.
-2. The id is stored in a REQUEST-SCOPED context (contextvars in Python, AsyncLocalStorage in
-   Node, a thread/fiber-local in Ruby, per-request state in PHP) so a concurrent request cannot
-   read or overwrite it.
-3. Every log line emitted during the request carries the id.
-4. The response sets `X-Request-ID` to the id.
-5. On a production error, the error page shows the id for log correlation (Feature 42).
+1. (Python) per request: read `x-request-id` or generate -> store -> emit response header -> log lines use it
+   -> error page uses it. 2. (PHP) once per process: generate -> store -> logs use it. 3. (Ruby/Node) no
+   request-path wiring.
 
 ## Configuration and precedence
 
-- An incoming, valid `X-Request-ID` takes precedence over generation; otherwise the id is
-  generated.
-- The id format is fixed (one algorithm and length across the four).
-- There is no per-request configuration beyond the incoming header.
+- No env var, no configurable header name, in any language. The header is hardcoded `x-request-id`
+  (Python only).
 
 ## Failures, side effects and security
 
-- LOG INJECTION: an incoming `X-Request-ID` is attacker-controlled, so it MUST be sanitized
-  (capped to a fixed max length, control characters and newlines stripped) before it reaches a
-  log line or a response header; an unsanitized id could forge log entries or split headers.
-- CONCURRENCY: the id must be request-scoped, never a process global; a global would leak one
-  request's id onto another's logs under concurrency, which is both a correctness and a
-  confidentiality bug.
-- The id is opaque and non-sensitive; it must not encode user identity or a secret.
-- Generation must not collide within a realistic window (a uuid or a sufficiently long random
-  hash), so two concurrent requests get distinct ids.
+- SECURITY (Python): the inbound `x-request-id` is reflected UNSANITIZED into a response header and log lines
+  (`server.py:2559,2564`, `debug/__init__.py:589`) - a header/log-injection vector (an attacker sets the
+  header). See the register.
+- CORRECTNESS (Python): `threading.local` under asyncio does not isolate concurrent requests - one request's
+  id can overwrite another's, so a log line or response can carry the WRONG id under load.
+- The error-page id is disconnected from the log id in PHP/Ruby/Node (a user cannot correlate it to logs).
 
 ## Wire and persistence contract
 
-There is no persistence; the wire contract is the response `X-Request-ID` header and the id's
-appearance on every log line and on the production error page. The id format (one algorithm and
-length) is identical across the four, and an incoming id round-trips (sanitized) so a caller sees
-the id it sent.
+The only wire output is Python's `x-request-id` response header. No persisted state. There is NO cross-language
+wire contract today (three of four emit nothing).
 
 ## Providers and substitutability
 
-Request-id tracking is transport-level and engine-agnostic. A future runtime honors an incoming
-`X-Request-ID` (sanitized), generates the same id format otherwise, stores it request-scoped,
-propagates it to logs, and emits it in the response.
+Transport/logging-level. A future runtime should implement one per-request id contract (inbound honoured +
+response header + log correlation + consistent error-page id), request-scoped (contextvars / AsyncLocalStorage
+/ fiber-local), with the inbound value sanitized.
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| RID-01 | The id format diverges (Python `uuid4()[:8]`, PHP `md5(uniqid())[:12]`). | Pin ONE format and length across the four (recommend a uuid or a fixed-length random hex). |
-| RID-02 | Only Python honors an incoming `X-Request-ID`; PHP always generates. Cross-service correlation works in one language. | Decide and unify: honor an incoming `X-Request-ID` (sanitized) in all four, else generate. |
-| RID-03 | An incoming id is attacker-controlled; sanitization (length cap, control-char strip) is not proven. | Gate that an incoming id with a newline or over-length is sanitized before it reaches a log line or header, in all four. |
-| RID-04 | The request-scoped storage (contextvars/AsyncLocalStorage/thread-local) is not proven isolated under concurrency. | Gate that two concurrent requests get distinct ids with no cross-leak, in all four. |
-| RID-05 | Response emission (`X-Request-ID`) and log propagation are converged in intent but not gated. | Gate that the id appears in the response header and on a log line, in all four. |
-| RID-06 | No shared fixture exists. | Add `request_id_contract.json`. |
+| RID-PY-ONLY | The full request-id feature (honour inbound + emit response header + log correlation + error-page) exists ONLY in Python (`server.py:2559-2566`). PHP is process-scoped (no wire I/O); Ruby and Node are DORMANT - `set_request_id`/`setRequestId` are defined but NEVER called in the request path, so their logs never carry an id. The prior doc's "used consistently as a Log-context value and in the production error page" is unfounded for PHP/Ruby/Node. | Decide scope (RID-DEC-01): build the feature (per-request id, honour inbound, emit response header, log correlation) in PHP/Ruby/Node, or document it as Python-only and stop claiming parity. |
+| RID-PY-INJECTION | SECURITY, Python: the inbound `x-request-id` is used UNSANITIZED (`server.py:2559`) straight into a response header (`:2564`) and log lines (`debug/__init__.py:589`) - an attacker-controlled header/log-injection vector (CR/LF, control chars, unbounded length). RID-03 in the prior doc was hypothetical; it is live. | Sanitize the inbound id (allow-list charset, cap length, strip CR/LF) or regenerate; never reflect a raw header. |
+| RID-PY-NO-ISOLATION | Python stores the id in `threading.local` (`debug/__init__.py:115`), but dispatch is async (one OS thread runs all coroutines), so a second concurrent request's `set_request_id` overwrites the first's - the first's later log lines and response carry the WRONG id. RID-04 was hypothetical; it is live under load. | Store the request id in a `contextvars.ContextVar` (async-safe), not `threading.local`. |
+| RID-PHP-PROCESS-SCOPED | PHP generates one id per PROCESS (`App.php:304` in the constructor), not per request - under the built-in server every request shares it (useless for correlation). It honours no inbound header and emits no response header. And the prod-error-page id (`Router.php:833` `md5(uniqid())[:12]`) is a fresh throwaway disconnected from the log id (and is the wrong path the prior doc cited as PHP's generation). | Generate the id per request, honour inbound, emit the response header, and use the ONE id on the error page (with RID-DEC-01). |
+| RID-DORMANT-RUBY-NODE | Ruby and Node have the log-context API but never call it in the request path (`log.rb:246` / `logger.ts:372` setters have no request-path caller), so `get_request_id` is nil during real requests and logs carry no id. The only per-request id is a throwaway for the 500 page. | Wire the request path to set the id (with RID-DEC-01). |
+| RID-ERRORPAGE-DISCONNECT | The prod error-page `request_id` is a freshly-generated throwaway in PHP/Ruby/Node (`Router.php:833`, `rack_app.rb:699`, `server.ts:1304`), NOT correlatable with the log context or any response header - so a user reporting the error-page id cannot be matched to logs. Only Python is consistent (same id everywhere). | Render the ONE request id on the error page in all four. |
+| RID-NO-FIXTURE | No shared request-id/correlation fixture exists. | Add it once RID-DEC-01 sets the scope. |
 
 ## Owner decisions
 
-Proposed for owner ratification:
-
-1. One id format across the four (a uuid or a fixed-length random hex); pin the algorithm and
-   length so log tooling parses one shape.
-2. An incoming `X-Request-ID` is honored in all four for cross-service correlation, SANITIZED
-   first (length-capped, control characters and newlines stripped); otherwise the id is
-   generated.
-3. The id is stored REQUEST-SCOPED (contextvars/AsyncLocalStorage/thread-local/per-request),
-   never a process global, so concurrent requests never cross-leak.
-4. The id is emitted in the response `X-Request-ID` header and appears on every log line for the
-   request.
-5. The production error page shows the id (Feature 42); the id is opaque and encodes no secret
-   or identity.
+- RID-DEC-01 (proposed, THE call): decide the feature's scope. A per-request correlation id (honour inbound,
+  emit response header, log correlation, consistent error-page id) is fully wired only in Python. Either build
+  it in PHP/Ruby/Node (PHP needs per-request generation; Ruby/Node need the request path to actually call the
+  setter), or document it as Python-only and correct the matrix/contract. The prior doc mis-stated it as
+  working in all four.
+- RID-DEC-02 (proposed, SECURITY + correctness, do regardless): in Python, SANITIZE the inbound
+  `x-request-id` (RID-PY-INJECTION) and move storage to `contextvars` for concurrent isolation
+  (RID-PY-NO-ISOLATION). Both are live defects today, not hypotheticals.
 
 ## Proposed conformance fixture
 
-Add `request_id_contract.json` with stable ids for: a request without `X-Request-ID` getting a
-generated id in the response header and on a log line; a request WITH a valid `X-Request-ID`
-having it honored and round-tripped; an incoming id with a newline or over-length being
-SANITIZED (no log-line split, no header injection); two CONCURRENT requests getting distinct ids
-with no cross-leak; and a production error page carrying the id. Every case runs a real request
-through the real server and inspects real log output; no mock can claim conformance (the
-concurrency isolation must be proven with real concurrent requests).
+A shared fixture (real requests): a request WITHOUT `x-request-id` gets a generated id echoed in the response
+header AND present in its log lines AND on its error page - the same id in all three (once RID-DEC-01 lands);
+an inbound `x-request-id` is honoured but SANITIZED (a CR/LF or over-long value is rejected/trimmed, not
+reflected - catches RID-PY-INJECTION); two concurrent requests keep DISTINCT ids in their logs/responses
+(catches RID-PY-NO-ISOLATION).
 
 ## Integration map
 
-- Feature 29 reads the incoming header; Feature 30 emits it; the Log subsystem carries it;
-  Feature 42 displays it on the production error page.
-- Downstream services correlate by the emitted `X-Request-ID`; a proxy may set it upstream.
-- Central fixtures, four runners, the CI matrix and the logging/observability docs update
-  together.
+- Consumers: the logger (correlation), the response builder (header), the error page. Composes: dispatch.
 
 ## Breaking changes and migration
 
-- Unifying the id format changes the shape a log parser sees; state it in the release note.
-- Honoring an incoming `X-Request-ID` where a language ignored it enables correlation; it is
-  additive but changes the emitted id when a caller supplies one.
-- Sanitizing an incoming id is a security fix, not a breaking change for a well-behaved caller.
-
-## Implementation backlog
-
-1. Add `request_id_contract.json` and wire four runners against real requests and log output.
-2. Pin the id format (RID-01) and unify incoming-header honoring with sanitization (RID-02,
-   RID-03) in all four.
-3. Gate request-scoped isolation under concurrency (RID-04) and response/log propagation
-   (RID-05).
-4. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit.
+- Building the feature in PHP/Ruby/Node adds a response header + log field a client did not previously see -
+  additive, note it. Sanitizing the inbound id changes what a crafted header produces (a security fix).
+  Moving Python to contextvars is a correctness fix.
 
 ## Porting capsule
 
-At request start, read `X-Request-ID`; if present, sanitize it (cap length, strip control
-characters and newlines) and use it; otherwise generate the pinned id format. Store it in a
-request-scoped context (contextvars/AsyncLocalStorage/thread-local/per-request), never a global.
-Carry it on every log line for the request, emit it in the response `X-Request-ID` header, and
-show it on the production error page. Prove the port with a generated-id round-trip, an incoming
-sanitized id, two concurrent requests with distinct ids, and the id on a log line.
+A request id needs: per-REQUEST generation (never per-process - the PHP bug), honouring an inbound
+`x-request-id` but SANITIZED (allow-list charset, cap length, strip CR/LF - never reflect a raw header),
+request-SCOPED storage (contextvars / AsyncLocalStorage / fiber-local, never a process/thread global under an
+async or threaded server), the SAME id echoed in the response header, threaded into every log line, and shown
+on the error page. Prove it with a generated-id round-trip, an inbound-id sanitization, and two concurrent
+requests keeping distinct ids.
 
 ## Audit closure checklist
 
-- [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded (RID-01..06).
-- [x] Owner ambiguities recorded (5 proposed; format, incoming-header and concurrency are key).
-- [x] Proposed shared cases and mutation witnesses complete.
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete (per-language wiring x four).
+- [x] Lifecycle and producer/consumer edges complete (generate -> store -> emit -> log -> error page).
+- [x] Configuration (none), failure and SECURITY (injection, no-isolation) rules complete.
+- [x] Wire (Python-only response header) and provider contracts complete.
+- [x] Four-language behaviour recorded truthfully (Python-only full; PHP process-scoped; Ruby/Node dormant) -
+  correcting the prior convergence claim.
+- [x] Owner ambiguities decided (RID-DEC-01 scope, RID-DEC-02 security).
+- [x] Conformance fixture (round-trip + sanitization + concurrency) complete.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.

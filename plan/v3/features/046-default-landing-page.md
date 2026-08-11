@@ -1,163 +1,129 @@
-# Feature 046: Default landing page
+# Feature 46: Default landing page
 
 ## Identity and status
 
-- Matrix identity: 46 - Default landing page
+- Matrix identity: 46 - Default landing page (the built-in welcome page at `/` when no user route matches)
 - Audit state: decision-ready
-- Audit note: measured from four-language source 2026-08-10 (the landing-page registration in
-  each app bootstrap). No framework code changed.
-- Dependencies: Feature 31 router (the `/` route and its precedence), route auto-discovery
-- Dependants: a fresh app with no `/` route yet; the "it works" first-run experience
-- Existing ADRs: the routing precedence (Feature 31)
-- Shared fixtures: `landing_page_contract.json` is required
+- Audit note: re-measured 2026-08-11 from four-language source (correcting a prior-session doc that left
+  production behaviour unverified and RECOMMENDED allowing the page in production - the OPPOSITE of shipped
+  code, which is DEV-ONLY, 404 in prod, and test-gated). Python `core/server.py:2001` `_handle_no_route`
+  (`ebbab30`); PHP `Tina4/App.php:632` `registerLandingPage` (`6faabac5`); Ruby `lib/tina4/rack_app.rb:342`
+  `handle_404` (`6d5b1de`); Node `packages/core/src/server.ts:1362` `serveLandingPage` (`27cf0f4`).
+- Dependencies: the router (fallback ordering), `TINA4_DEBUG`, the response builder.
+- Dependants: first-run developer experience.
+- Existing ADRs: none dedicated.
+
 - Catalog phase: Routing and middleware
 
 ## Why this feature exists
 
-A developer who just started a Tina4 app and opens `http://localhost` should see a branded
-"it works" page confirming the server is up - but the MOMENT they define their own `/` route,
-that page must vanish and their route must win, in all four languages.
-
-## Boundary
-
-This feature owns the default `/` landing page: its registration, its content, and the rule
-that it never shadows a user-defined `/` route. It DELEGATES routing and precedence to Feature
-31 and the response to Feature 30. It does not own any other route.
+A fresh app should show a branded welcome page at `/` so a developer sees the framework is running - but that
+page carries the framework version, a `/__dev` admin link, and a gallery, so it must NEVER appear in
+production. The audit question (production behaviour) is already decided and shipped: DEV-ONLY, 404 in prod.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Default landing at `/` | yes | `registerLandingPage()` | yes | yes |
-| Registered when | route discovery, if no `/` route | after discovery, only if no `/` route exists | same | same |
-| User `/` route precedence | wins | wins ("takes precedence over the landing page") | wins | wins |
-| Content | branded Tina4 welcome | branded welcome | branded welcome | branded welcome |
-| Production behaviour | (to confirm) | (to confirm) | (to confirm) | (to confirm) |
-
-The default landing page is registered during app bootstrap and, per the PHP source, renders at
-`/` ONLY when the application has not defined its own `/` route: "a user route takes precedence
-over the landing page." This no-shadow rule is the important behaviour, and it must be identical
-in all four so that defining a `/` route reliably replaces the default everywhere.
+- DEV-ONLY, 404 in production, in all four (gated on `TINA4_DEBUG`): Python `server.py:2001` `elif
+  request.path == "/" and _is_dev_mode()`; PHP `App.php:877` `if (!$this->isDevelopment()) return;` (the
+  route is not even registered in prod); Ruby `rack_app.rb:342` `render_landing_page if path == "/" &&
+  dev_mode?`; Node `server.ts:1364` `if (ctx.pathname !== "/" || !isDevMode()) return false`. Each source
+  comment states the reason: the version/dev-admin/gallery must not leak to real users.
+- A user-defined `/` route ALWAYS wins in all four.
+- MECHANISM DIVERGES: PHP REGISTERS a route during bootstrap (`App.php:632`); Python/Ruby/Node serve from a
+  request-time fallback (no-route / 404 / FALLBACK_STAGES) - not a registration.
+- Content is self-contained HTML (branded title `Tina4Python`/`Tina4Php`/`Tina4Ruby`/`Tina4NodeJs`, version,
+  gallery), no external CDN asset. Status 200, `text/html`.
+- Prod-hide is proven by a REAL end-to-end `GET /` test only in Ruby (`landing_page_spec.rb:214`) and Node
+  (`landingPage.test.ts:331`); Python and PHP test only the dev-mode FLAG helper, not the `/` response.
 
 ## Public surface contract
 
-When an application has no `/` route, the framework serves a branded default landing page at
-`/`. When the application defines a `/` route, that route serves and the default landing page is
-never registered or is overridden. The developer takes no action to remove the default; defining
-their route is the action.
+In DEV, a GET `/` with no user `/` route returns the branded welcome page (200). In PRODUCTION, the same GET
+returns 404. A user `/` route always takes precedence.
 
 ## Inputs and outputs
 
-- Input: whether the application registered a `/` route (checked during bootstrap).
-- Output: the branded landing page at `/` when no user route exists; otherwise the user route's
-  response.
-- The landing page is a simple, self-contained HTML response (no external dependency), so it
-  renders offline.
+- Input: GET `/`, `TINA4_DEBUG`. Output: the welcome page (dev) or 404 (prod).
 
 ## Lifecycle and operation graph
 
-1. Route auto-discovery registers the application's routes.
-2. After discovery, the framework checks whether a `/` route exists.
-3. If none exists, it registers the default landing page at `/`.
-4. If one exists, the default is not registered, so the user's `/` route serves.
+1. Routing misses `/`. 2. (PHP) a bootstrap-registered route (dev only) renders it; (Python/Ruby/Node) a
+   request-time fallback renders it IF dev-mode, else falls through to 404.
 
 ## Configuration and precedence
 
-- A user-defined `/` route ALWAYS takes precedence; the default is a fallback only.
-- The registration happens AFTER user routes are discovered, so the check sees the user's route.
-- Whether the default landing shows in production (framework fingerprinting) is the one policy
-  question below.
+- `TINA4_DEBUG` gates it (dev-only). A user `/` route wins. PHP additionally suppresses it when a
+  `src/templates/pages/index.*` exists; Python/Node run a template fallback first; Ruby's equivalent
+  index-template check is dead code (see the register).
 
 ## Failures, side effects and security
 
-- PRECEDENCE: the default must NEVER shadow a user `/` route; a bootstrap-ordering bug that
-  registered the default before user discovery would break every fresh app's first custom route.
-- FINGERPRINTING: the branded page reveals "this is a Tina4 app", which is minor information
-  disclosure. The policy question is whether the default landing shows in production or only in
-  development; a production server usually has its own `/` route, so this is an edge case, but it
-  should be a deliberate decision, not an accident.
-- The page is self-contained (no CDN), so it cannot break offline or leak a request to a third
-  party.
+- SECURITY (why dev-only matters): in DEV the page exposes the framework version, a `/__dev` admin link, and
+  the gallery. This is correctly gated behind `TINA4_DEBUG`, so production (404) leaks nothing. The prior
+  doc's recommendation to "allow it in production" would REINTRODUCE this fingerprinting leak - reject it.
 
 ## Wire and persistence contract
 
-There is no persistence; the wire output is a self-contained HTML page at `/` with a 200 status.
-The presence-or-absence rule (shown only when no user `/` route) is the contract and is identical
-across the four.
+A self-contained HTML page at `/` with a 200 in DEV; a 404 in production. No persisted state.
 
 ## Providers and substitutability
 
-The landing page is transport-level and engine-agnostic. A future runtime registers the same
-default at `/` after discovery, with the same no-shadow precedence and the same
-self-contained content.
+Presentation-level. A future runtime must keep the page DEV-ONLY (404 in prod), let a user `/` route win, and
+avoid any external asset load.
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| LP-01 | The no-shadow precedence (user `/` route wins) and the after-discovery registration timing are not gated as parity. | Gate that a user `/` route replaces the default, and that the default shows only when absent, in all four. |
-| LP-02 | The production behaviour (show the branded page or not) is not a stated decision. | Decide whether the default landing shows in production; gate the chosen behaviour in all four. |
-| LP-03 | The page's self-containment (no external asset) is not gated. | Gate that the landing page renders offline (no CDN/asset request) in all four. |
-| LP-04 | No shared fixture exists. | Add `landing_page_contract.json`. |
+| LAND-PROD-DECIDED | The prior doc left production behaviour unverified (its LP-02 cell) and Owner-decision #2 RECOMMENDED "allow it in production". GROUND TRUTH: the page is DEV-ONLY, 404 in production, in all four, and the source comments cite avoiding a version/dev-admin/gallery leak as the reason. So it is decided, shipped, AND test-gated - and the prior recommendation is a regression + info-leak. | Ratify DEV-ONLY (the shipped behaviour); explicitly REJECT "allow in production". Correct LP-02. |
+| LAND-MECHANISM-DIVERGE | The prior doc described a bootstrap ROUTE REGISTRATION as the uniform mechanism; only PHP registers (`App.php:632`). Python (`server.py:1979` no-route), Ruby (`rack_app.rb:334` 404), and Node (`server.ts:1362` fallback) serve from a request-time fallback, not a registration. Observable behaviour converges; the mechanism does not. | Document both mechanisms; decide whether to converge on one (low priority - behaviour already matches). |
+| LAND-TEST-PARITY | Prod-hide is proven by a REAL end-to-end `GET /` (200 dev / 404 prod) only in Ruby (`landing_page_spec.rb:214`) and Node (`landingPage.test.ts:331`). Python (`test_landing_page.py`) and PHP (`LandingPageTest.php`) assert only the dev-mode FLAG helper (`_is_dev_mode()` / `DotEnv::isTruthy`), not the actual `/` response - so the shipped 404-in-prod is end-to-end-gated in only 2 of 4. | Add an end-to-end `GET /` test (200 dev, 404 prod, no banner) to Python and PHP. |
+| LAND-SUPPRESS-DIVERGE | Suppression conditions differ: PHP suppresses on an existing GET `/` route AND a `src/templates/pages/index.*` template (`App.php:855-872`); Python/Node run a template fallback before the landing; Ruby's index-template check `should_show_landing_page?` (`rack_app.rb:357`) is DEAD CODE (unreferenced in the main checkout), so Ruby lacks the pages-index suppression the others have. | Unify the suppression conditions across the four (and fix Ruby's dead check). |
+| LAND-DEADCODE | Node's `renderLandingPage(routes, port)` never references `routes` (`server.ts:657`) yet the caller builds `ctx.router.getRoutes().map(...)` every request and passes it (`:1366-1372`) - wasted work (NOT a routes leak; the list never reaches the page). Ruby's `should_show_landing_page?` (`:357`) and `try_serve_index_template` (`:434`) are unreferenced in the main checkout. | Delete the dead param/work (Node) and the unreferenced methods (Ruby). |
+| LAND-NO-FIXTURE | No shared `landing_page_contract.json` exists. | Add it (dev shows / prod 404 / user-route-wins). |
 
 ## Owner decisions
 
-Proposed for owner ratification:
-
-1. The default landing page shows at `/` ONLY when the application has no `/` route; a user `/`
-   route always wins, and the check runs after route discovery, in all four.
-2. Decide the production behaviour: either the default landing shows in production (simple,
-   confirms the server is up) or it is suppressed there to avoid framework fingerprinting;
-   pin one, identical across four. Recommendation: allow it, since a production app almost always
-   defines its own `/`, and suppress only if fingerprinting is a stated concern.
-3. The landing page is self-contained HTML with no external asset, so it renders offline.
+- LAND-DEC-01 (proposed): RATIFY dev-only (LAND-PROD-DECIDED) - the code already does this and it prevents a
+  production fingerprinting leak; explicitly REJECT the prior doc's "allow in production" recommendation. Add
+  the end-to-end `GET /` test to Python and PHP (LAND-TEST-PARITY) so the 404-in-prod is gated in all four.
+- LAND-DEC-02 (proposed, low): unify the suppression conditions (LAND-SUPPRESS-DIVERGE, incl. Ruby's dead
+  index check), delete the dead code (LAND-DEADCODE), and optionally converge the mechanism
+  (LAND-MECHANISM-DIVERGE).
 
 ## Proposed conformance fixture
 
-Add `landing_page_contract.json` with stable ids for: a fresh app (no `/` route) serving the
-branded landing page at `/` with a 200; the same app after defining a `/` route serving the
-user's response instead (the default gone); the landing page containing no external asset
-request (offline-safe); and the chosen production behaviour. Every case runs a real app through a
-real request; no mock can claim conformance.
+A shared fixture (real `GET /`): dev-mode with no user `/` route -> 200 + the branded banner; production ->
+404 + NO banner/version/dev-admin link (catches the info-leak and LAND-PROD-DECIDED); a user `/` route wins in
+both modes.
 
 ## Integration map
 
-- Feature 31 owns routing and the precedence; the app bootstrap registers the default after
-  discovery.
-- The first-run/getting-started docs reference the landing page.
-- Central fixtures, four runners, the CI matrix and the getting-started docs update together.
+- Consumers: first-run developers. Composes: the router fallback ordering, `TINA4_DEBUG`, the response
+  builder, the template fallback (a `pages/index.*` beats the landing).
 
 ## Breaking changes and migration
 
-- No application break; the audit gates the no-shadow precedence and the offline-safety. If the
-  production behaviour is changed (suppressed), state it in the release note; a fresh app is
-  unaffected because it has no `/` route to conflict.
-
-## Implementation backlog
-
-1. Add `landing_page_contract.json` and wire four runners.
-2. Gate the no-shadow precedence and after-discovery timing (LP-01) in all four.
-3. Decide and gate the production behaviour (LP-02) and the offline-safety (LP-03).
-4. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit.
+- None to the shipped behaviour (it is already correct). Deleting the dead code is internal. Adding the
+  end-to-end tests is additive.
 
 ## Porting capsule
 
-After route discovery, check whether a `/` route exists; if not, register a branded,
-self-contained (no external asset) landing page at `/`. A user `/` route always wins - never
-register the default over it. Apply the chosen production behaviour. Prove the port with a
-fresh-app landing case and a user-route-replaces-default case.
+Serve a branded welcome page at `/` ONLY in dev (`TINA4_DEBUG`) and ONLY when the app has no `/` route (a user
+route wins) and no `pages/index.*` template; in production return 404 so the framework version, the dev-admin
+link, and the gallery never leak. Keep the page self-contained (no external asset). Prove it with a real `GET
+/`: 200 + banner in dev, 404 + no banner in prod.
 
 ## Audit closure checklist
 
-- [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded (LP-01..04).
-- [x] Owner ambiguities recorded (3 proposed; the no-shadow precedence and production behaviour).
-- [x] Proposed shared cases and mutation witnesses complete.
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete (dev-only page + user-route precedence x four).
+- [x] Lifecycle and producer/consumer edges complete (route-miss -> dev-gate -> render/404).
+- [x] Configuration (TINA4_DEBUG), failure and SECURITY (prod info-leak) rules complete.
+- [x] Wire (200 dev / 404 prod) and provider contracts complete.
+- [x] Four-language behaviour recorded truthfully (dev-only all four; mechanism diverges) - correcting the
+  prior unverified + the reversed prod recommendation.
+- [x] Owner ambiguities decided (LAND-DEC-01 ratify dev-only, LAND-DEC-02 cleanup).
+- [x] Conformance fixture (dev 200 / prod 404) complete.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.

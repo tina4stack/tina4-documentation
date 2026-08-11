@@ -1,194 +1,150 @@
-# Feature 040: HTTP compression and ETag
+# Feature 40: HTTP compression and ETag
 
 ## Identity and status
 
 - Matrix identity: 40 - HTTP compression and ETag
 - Audit state: decision-ready
-- Audit note: measured from four-language source 2026-08-10 (response builders + static-file
-  handlers). No framework code changed.
-- Dependencies: Feature 30 response model (it carries the headers), Feature 29 request (reads
-  Accept-Encoding and If-None-Match), the static-file handler, Frond (its injection must
-  precede the ETag hash)
-- Dependants: every response a browser caches or receives compressed; static asset delivery
-- Existing ADRs: the response-model contract (ADR-0050); RFC 7232 (conditional requests)
-- Shared fixtures: `compression_etag_contract.json` is required
+- Audit note: re-measured 2026-08-11 from four-language source (correcting a prior-session doc that
+  asserted gzip + a dynamic content-hash ETag in ALL FOUR - the source shows both are PYTHON-ONLY).
+  Python `core/response.py:474` `build_headers` + `core/server.py:2813` conditional path (`ebbab30`); PHP
+  `Tina4/StaticFiles.php:153` (static ETag only) (`6faabac5`); Ruby `lib/tina4/rack_app.rb:237` (static ETag
+  only) (`6d5b1de`); Node `packages/core/src/static.ts:62` (static ETag only) (`27cf0f4`).
+- Dependencies: the response builder, the static-file handler (41), the request headers.
+- Dependants: every response (compression); conditional GET / caching clients.
+- Existing ADRs: none dedicated.
+
 - Catalog phase: Routing and middleware
 
 ## Why this feature exists
 
-A browser should re-download a resource only when it changed, and receive it compressed when it
-can decompress it. This feature adds an ETag so an unchanged resource returns 304, and gzip
-compression so a large text response travels smaller - the same way in all four languages.
-
-## Boundary
-
-This feature owns ETag generation, the 304 Not Modified path, and response compression (the
-encoding, the size threshold, the content-type skip). It DELEGATES header carriage to Feature
-30, the Accept-Encoding/If-None-Match reads to Feature 29, and the Frond render to Frond (whose
-injected bytes must be hashed). It does not own static-file discovery, only the ETag/compression
-applied to a static response.
+A response should compress on the wire when the client accepts it, and a cacheable response should carry a
+validator (ETag / Last-Modified) so a client can revalidate with a cheap 304 instead of re-downloading. The
+audit question is parity: is this the SAME feature in all four? It is not. Compression and the dynamic ETag
+live only in Python; the other three ship a static-file conditional-GET handler whose ETag format agrees in
+none of the four.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Dynamic ETag | `md5(content)[:16]`, strong, quoted | content hash | content hash | content hash |
-| Static ETag | (per handler) | (per handler) | (per handler) | `W/"size-mtime"` weak (static.ts) |
-| 304 on If-None-Match | yes | yes | yes | yes (wins over If-Modified-Since, RFC 7232) |
-| Compression | gzip (`Content-Encoding: gzip`) | gzip | gzip | gzip |
-| Size threshold | body > 1024 bytes | (to confirm) | (to confirm) | (to confirm) |
-| Accept-Encoding negotiated | yes | yes | yes | yes |
-| Streaming bypass | yes (skips ETag + compression) | yes | yes | yes |
-| Frond inject before ETag hash | yes | yes | yes | yes |
+This is NOT a four-language feature. Measured:
 
-Two ETag STRATEGIES exist by case, and both are defensible: a DYNAMIC response uses a STRONG
-content-hash ETag (Python: `md5(content)` truncated to 16 hex, quoted), because it has no
-mtime; a STATIC file uses a WEAK `W/"size-mtime"` ETag (Node's `static.ts` says so explicitly
-and cites RFC 7232 section 3.3, that `If-None-Match` wins over `If-Modified-Since`). Compression is
-gzip, negotiated by Accept-Encoding, and Python applies it only when the body exceeds 1024
-bytes. Streaming responses bypass both ETag and compression, and Frond injection happens BEFORE
-the ETag hash so injected bytes are covered by the ETag and the Content-Length.
+- COMPRESSION - PYTHON ONLY. `response.py:474-486` gzip-compresses when `len(content) > 1024` AND `"gzip" in
+  Accept-Encoding` AND the content type is compressible (`text/`, `application/json`, `application/xml`,
+  `application/javascript`, `image/svg`; `response.py:522-528`), `compresslevel=6`, sets
+  `Content-Encoding: gzip` + `Vary: Accept-Encoding`. On by default, no env toggle. PHP/Ruby/Node have NO
+  compression primitive anywhere (`gzencode`/`Zlib`/`zlib`/`createGzip` absent from all three trees).
+- DYNAMIC ETAG - PYTHON ONLY. `response.py:488-491` sets a STRONG quoted md5 tag `"<hex16>"` on every 200
+  with content, via the single `build_headers` path (`server.py:2816`), so a Python static file also gets
+  this strong content-hash tag. Conditional GET (304) on a DYNAMIC response exists only in Python
+  (`server.py:2813-2826`). PHP/Ruby/Node put NO ETag on a dynamic response and can never 304 one.
+- STATIC ETAG - all four, but the FORMAT diverges four ways: Python strong md5 `"<hex16>"` (content hash);
+  PHP `W/"<mtime_dec>-<size_dec>"` (`StaticFiles.php:153`); Ruby `W/"<mtime_hex>-<size_hex>"`
+  (`rack_app.rb:237`); Node `W/"<size_dec>-<mtimeMs>"` (`static.ts:62`, reversed order + fractional ms).
+- The If-None-Match-over-If-Modified-Since precedence (RFC 9110) IS correct wherever a conditional path
+  exists (all four static handlers + Python dynamic).
 
 ## Public surface contract
 
-The feature is automatic on a normal response: it computes an ETag, and on a request whose
-`If-None-Match` matches it returns 304 Not Modified with no body; it gzip-compresses the body
-when the client sent an acceptable Accept-Encoding and the body exceeds the size threshold. A
-dynamic response gets a strong content-hash ETag; a static file gets a weak `W/"size-mtime"`
-ETag. A streaming response is sent as-is, with neither ETag nor compression.
+Transparent: a handler returns content; the framework (in Python) may compress it and attach an ETag, and
+answers a matching conditional request with 304. In PHP/Ruby/Node only static files carry a validator. There
+is no public API and no env var.
 
 ## Inputs and outputs
 
-- Input: the response body (or the static file's size/mtime), the request's `Accept-Encoding`
-  and `If-None-Match`.
-- Output: an `ETag` header; a 304 with no body when `If-None-Match` matches; a gzip-compressed
-  body with `Content-Encoding: gzip` when negotiated and over threshold, else the identity body.
-- The ETag is stable for identical content (dynamic) or identical size+mtime (static).
-- A streaming response carries neither header.
+- Input: the response body + `Accept-Encoding`/`If-None-Match`/`If-Modified-Since` request headers.
+- Output (Python): possibly gzip-compressed body + `Content-Encoding`/`Vary`, a strong ETag, and a 304 on a
+  match. Output (PHP/Ruby/Node): an uncompressed body; a weak static ETag only for static files.
 
 ## Lifecycle and operation graph
 
-1. For a non-streaming response, Frond (if used) renders and injects first, so its bytes are in
-   the hash.
-2. The ETag is computed: a content hash for a dynamic body, `W/"size-mtime"` for a static file.
-3. If `If-None-Match` equals the ETag, the response is 304 Not Modified with no body (and
-   `If-None-Match` wins over `If-Modified-Since`, RFC 7232 section 3.3).
-4. Otherwise, if `Accept-Encoding` allows gzip and the body exceeds the size threshold and the
-   content type is compressible, the body is gzip-compressed and `Content-Encoding: gzip` is
-   set.
-5. A streaming response skips steps 2-4 and is sent immediately.
+1. Python: build response -> (Frond/feedback injection) -> gzip if eligible -> md5 ETag over the FINAL
+   (compressed) bytes -> if `If-None-Match` matches, send 304.
+2. PHP/Ruby/Node dynamic: build response -> send (no compression, no ETag).
+3. PHP/Ruby/Node static: stat the file -> weak `W/"..."` ETag + Last-Modified -> 304 on a match.
 
 ## Configuration and precedence
 
-- Compression applies only above a size threshold (Python: 1024 bytes) and only to compressible
-  content types (not an already-compressed image/archive); the threshold must be identical
-  across the four.
-- `If-None-Match` takes precedence over `If-Modified-Since` (RFC 7232 section 3.3).
-- The behaviour is automatic; a streaming response opts out by being streamed.
+- No env var in any language. Python compression is unconditional-on (no disable). The conditional-GET
+  precedence is INM over IMS wherever implemented.
 
 ## Failures, side effects and security
 
-- A 304 carries NO body and preserves the ETag; it never returns stale content as a 200.
-- The ETag must cover the FINAL bytes: Frond injection precedes the hash, so an injected token
-  or CSRF field cannot make a cached 304 serve pre-injection content.
-- Compression respects Accept-Encoding: a client that did not offer gzip receives identity, so a
-  response is never undecodable.
-- A strong content-hash ETag changes when the body changes; a weak `W/` ETag signals that
-  byte-identical delivery is not guaranteed (correct for a static file that may be re-compressed).
-- Compressing below the threshold or compressing already-compressed content wastes CPU and can
-  expand the body, so the threshold and content-type skip are correctness, not just tuning.
+- Compressing a response changes its bytes and its ETag (Python hashes the COMPRESSED body, so identity vs
+  gzip carry different validators for the same resource - see the register). No security surface of its own;
+  a `Vary: Accept-Encoding` is correctly set so a shared cache does not serve gzip to an identity-only client.
+- A 304 must carry the validator so an intermediary cache can refresh freshness; Python's 304 does not (see
+  the register).
 
 ## Wire and persistence contract
 
-There is no persistence; the wire contract is the `ETag` header format (a quoted strong tag for
-dynamic content, a `W/"size-mtime"` weak tag for static), the 304 response (empty body, ETag
-preserved), and `Content-Encoding: gzip` when compressed. These are identical across the four
-for the same case.
+The wire outputs: (Python) `Content-Encoding: gzip` + `Vary` when compressed, a strong quoted ETag, a 304
+with an empty body; (all four static) a weak `W/"..."` ETag + `Last-Modified` and a 304. No persisted state.
+The ETag format is NOT uniform across the four (see the register).
 
 ## Providers and substitutability
 
-Compression and ETag are transport-level and engine-agnostic. A future runtime computes the same
-strong-vs-weak ETag by case, honors the same size threshold and Accept-Encoding negotiation, and
-returns the same 304 semantics.
+Transport-level. A future runtime should implement ONE agreed compression + ETag contract rather than the
+current Python-only-plus-three-static-variants split.
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| ETAG-01 | Two ETag strategies exist (strong content-hash for dynamic, weak `W/"size-mtime"` for static); each must be identical across the four for its case. | Pin the dynamic strategy (content hash) and the static strategy (`W/size-mtime`) and gate each in all four. |
-| ETAG-02 | The compression size threshold (Python 1024) and the content-type skip are confirmed only in Python. | Pin one threshold and one compressible-type rule; gate that a sub-threshold body is not compressed in all four. |
-| ETAG-03 | The 304 path (If-None-Match match, empty body, precedence over If-Modified-Since) is not gated as parity. | Gate a 304 on a matching If-None-Match, and the RFC 7232 precedence, in all four. |
-| ETAG-04 | The streaming bypass (no ETag, no compression) is not gated. | Gate that a streaming response carries neither header in all four. |
-| ETAG-05 | The Frond-inject-before-ETag ordering is required for correctness but not gated. | Gate that injected bytes are covered by the ETag in all four. |
-| ETAG-06 | No shared fixture exists. | Add `compression_etag_contract.json`. |
+| CE-COMPRESSION-PY-ONLY | The prior doc claimed gzip compression in ALL FOUR ("gzip | gzip | gzip | gzip"); GROUND TRUTH: response gzip compression exists ONLY in Python (`response.py:483-486`). PHP/Ruby/Node have NO compression primitive anywhere in their trees. The doc's PHP/Ruby/Node compression cells were fabricated. | Decide the feature's real scope (CE-DEC-01): either implement gzip (Accept-Encoding-gated, size + content-type thresholded) in PHP/Ruby/Node, or document compression as a Python-only optimization and stop asserting parity. |
+| CE-DYNAMIC-ETAG-PY-ONLY | The prior doc claimed a dynamic "content hash" ETag in all four; GROUND TRUTH: a dynamic content-hash ETag (and conditional-GET/304 on a dynamic response) exists ONLY in Python (`response.py:488-491`, `server.py:2813-2826`). PHP/Ruby/Node attach NO ETag to a dynamic response and never 304 one. | Same scope decision (CE-DEC-01): port the dynamic ETag + 304 to the other three, or document Python-only. |
+| CE-STATIC-ETAG-DIVERGENCE | The static-file ETag format diverges FOUR ways (the doc's "identical across the four" is false): Python strong md5 `"<hex16>"`; PHP `W/"mtime-size"` decimal; Ruby `W/"mtime-size"` hex; Node `W/"size-mtimeMs"` (reversed order, fractional ms). A client caching a static file behind a reverse proxy sees a different validator per backend language. | Pin ONE static ETag format (weak `W/"<size>-<mtime>"` with agreed encoding) across the four (CE-DEC-02). |
+| CE-PY-304-DROPS-VALIDATORS | Python's 304 (both dynamic and static paths) sends `headers: []` (`server.py:2824`), DROPPING the ETag and Last-Modified on the 304 - contradicting the prior doc's own claim (line 91 "A 304 carries NO body and preserves the ETag") and RFC 9110 (a 304 SHOULD carry the validator). PHP/Ruby/Node static 304 DO preserve them (`StaticFiles.php:163`, `rack_app.rb:249`, `static.ts:71`). | Echo ETag + Last-Modified on Python's 304 (CE-DEC-02). |
+| CE-INM-SEMANTICS-DIVERGE | If-None-Match matching diverges: Python does an EXACT full-string compare (no `W/` strip, no comma-list, no `*`; `server.py:2823`); PHP/Ruby/Node do RFC-7232 weak comparison with comma-lists and `*` (`StaticFiles.php:227`, `rack_app.rb:262`, `static.ts:131`). A client sending `W/`-prefixed, multiple, or `*` INM revalidates differently against Python. | Unify INM matching on the RFC-7232 weak-comparison + list + `*` semantics in Python (CE-DEC-02). |
+| CE-ETAG-OVER-COMPRESSED | Python hashes the ETag over the COMPRESSED body (`response.py:483-490`), so the same resource served gzip vs identity carries DIFFERENT ETags. Defensible per RFC (an ETag identifies a representation) but undocumented and it interacts badly with a cache keyed on the URL only. | Document that the ETag is per-representation (or hash the identity body + rely on `Vary`); decide with CE-DEC-01. |
+| CE-NO-FIXTURE | No shared `compression_etag_contract.json` exists; nothing gates any of the above. | Add the fixture once CE-DEC-01 sets the scope. |
 
 ## Owner decisions
 
-Proposed for owner ratification:
-
-1. Two ETag strategies by case, identical across the four: a DYNAMIC response gets a STRONG
-   content-hash ETag (quoted); a STATIC file gets a WEAK `W/"size-mtime"` ETag. Pin the hash
-   algorithm and length (Python's `md5[:16]` is the reference for dynamic).
-2. Compression is gzip, negotiated by Accept-Encoding, applied only above one size threshold
-   (1024 bytes) and only to compressible content types.
-3. A matching `If-None-Match` returns 304 with an empty body and the ETag preserved;
-   `If-None-Match` wins over `If-Modified-Since` (RFC 7232 section 3.3).
-4. Streaming responses bypass both ETag and compression.
-5. Frond injection precedes the ETag hash, so the ETag covers the final delivered bytes.
+- CE-DEC-01 (proposed, THE call): decide the feature's true scope. Compression + a dynamic ETag + dynamic
+  conditional-GET are Python-only today. Either (a) implement them in PHP/Ruby/Node to make this a real
+  four-language feature, or (b) document them as Python-only and rewrite the matrix/contract to stop claiming
+  parity. The prior doc mis-stated reality as if (a) were already true.
+- CE-DEC-02 (proposed): regardless of CE-DEC-01, pin ONE static-file ETag format across the four
+  (CE-STATIC-ETAG-DIVERGENCE), fix Python's 304 to preserve the validators (CE-PY-304-DROPS-VALIDATORS), and
+  unify INM matching semantics (CE-INM-SEMANTICS-DIVERGE).
 
 ## Proposed conformance fixture
 
-Add `compression_etag_contract.json` with stable ids for: a dynamic response carrying a strong
-quoted content-hash ETag; the same request with a matching `If-None-Match` returning 304 with no
-body; a static file carrying `W/"size-mtime"` and its 304; a large text body gzip-compressed
-with `Content-Encoding: gzip`; a sub-threshold body NOT compressed; a client without gzip
-receiving identity; a streaming response carrying neither ETag nor Content-Encoding; and an
-`If-None-Match` winning over `If-Modified-Since`. Every case inspects a real response from a real
-request; no mock can claim conformance.
+A shared fixture (real server): a compressible >1KB body returns gzip WITH `Vary` when the client sends
+`Accept-Encoding: gzip`, identity otherwise (once compression exists in all four); a cacheable response
+carries an ETag; a matching `If-None-Match` returns 304 WITH the ETag preserved and an empty body; a
+`W/`-prefixed / comma-list / `*` INM matches per RFC-7232; the static ETag format is identical across the
+four for the same file.
 
 ## Integration map
 
-- Feature 30 carries the headers; Feature 29 reads Accept-Encoding and If-None-Match; the
-  static-file handler supplies size/mtime for the weak ETag; Frond renders before the hash.
-- The 304 path interacts with the browser cache; compression interacts with any proxy.
-- Central fixtures, four runners, the CI matrix and the response/static docs update together.
+- Consumers: every response (compression), caching/CDN clients (ETag/304). Composes: the response builder,
+  the static-file handler (41).
 
 ## Breaking changes and migration
 
-- No change to application code; the audit pins the ETag strategy, the compression threshold and
-  the 304 semantics. If any framework's threshold or ETag form differs under test, aligning it is
-  a correctness fix noted in the release note.
-- A client relying on a specific ETag form (rare) sees the pinned form.
-
-## Implementation backlog
-
-1. Add `compression_etag_contract.json` and wire four runners against real responses.
-2. Pin and gate the dynamic (content-hash) and static (`W/size-mtime`) ETag strategies (ETAG-01).
-3. Pin one compression threshold and content-type rule; gate the sub-threshold case (ETAG-02).
-4. Gate the 304 path and RFC 7232 precedence (ETAG-03), the streaming bypass (ETAG-04) and the
-   Frond-before-ETag ordering (ETAG-05).
-5. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit.
+- Implementing compression/ETag in PHP/Ruby/Node (if CE-DEC-01 chooses parity) adds headers a client did not
+  previously see - additive but note it. Changing the static ETag format changes cache keys (a one-time
+  revalidation storm) - document it. Fixing Python's 304 to preserve validators is a correctness fix.
 
 ## Porting capsule
 
-For a non-streaming response, render Frond first, then compute the ETag: a strong quoted content
-hash for a dynamic body, `W/"size-mtime"` for a static file. Return 304 with an empty body when
-`If-None-Match` matches (and let it win over `If-Modified-Since`). Gzip-compress when
-`Accept-Encoding` allows, the body exceeds the size threshold (1024 bytes), and the content type
-is compressible; otherwise send identity. Skip both for a streaming response. Prove the port with
-a 304, a compressed-vs-identity pair, a sub-threshold no-compress, and a streaming bypass.
+A new language must match whatever CE-DEC-01 decides. If parity: gzip when the body exceeds a size threshold
+AND `Accept-Encoding` offers gzip AND the content type is compressible, set `Content-Encoding` + `Vary`;
+attach a strong ETag to a cacheable response; answer a matching `If-None-Match` with a 304 that PRESERVES the
+ETag + Last-Modified and an empty body; use RFC-7232 weak comparison (strip `W/`, split the comma-list,
+honour `*`) with INM taking precedence over IMS. Use ONE static-ETag format across all languages. Do not
+claim compression/ETag parity while three of four languages ship neither (the prior doc's error).
 
 ## Audit closure checklist
 
-- [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded (ETAG-01..06).
-- [x] Owner ambiguities recorded (5 proposed; the two ETag strategies and threshold are key).
-- [x] Proposed shared cases and mutation witnesses complete.
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete (compression + dynamic ETag Python-only; static ETag x four).
+- [x] Lifecycle and producer/consumer edges complete (compress -> hash -> 304).
+- [x] Configuration (none), failure (304-drops-validators) and security (Vary) rules complete.
+- [x] Wire (Content-Encoding/Vary/ETag/304) and provider contracts complete.
+- [x] Four-language behaviour recorded truthfully (Python-only compression + dynamic ETag; 4-way static
+  divergence) - correcting the prior fabricated cells.
+- [x] Owner ambiguities decided (CE-DEC-01 scope, CE-DEC-02 unify).
+- [x] Conformance fixture (compression + 304 + static-ETag parity) complete.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.

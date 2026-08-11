@@ -1,202 +1,150 @@
-# Feature 041: Static assets and cache revalidation
+# Feature 41: Static asset serving
 
 ## Identity and status
 
-- Matrix identity: 41 - Static assets and cache revalidation
+- Matrix identity: 41 - Static asset serving
 - Audit state: decision-ready
-- Audit note: measured from four-language source 2026-08-10 (PHP `StaticFiles.php`, Node
-  `static.ts`, Python/Ruby static serving in their servers). No framework code changed.
-- Dependencies: Feature 40 (ETag/compression/304 revalidation), Feature 30 response model
-  (its `file()` confinement is the same traversal rule), Feature 31 router (static routes fall
-  through after dynamic ones)
-- Dependants: every SPA/Vite build, every JS/CSS/image asset, the Swagger UI assets
-- Existing ADRs: ADR-0050 (response model, including `file()` root confinement and traversal
-  rejection)
-- Shared fixtures: `static_assets_contract.json` is required
+- Audit note: re-measured 2026-08-11 from four-language source (correcting a prior-session doc whose security
+  finding was INVERTED - it called PHP's guard "blunt" when PHP is the ONLY one that confines a symlink
+  escape; Python/Ruby/Node do not). Python `core/server.py:2851` `_try_static` + `core/response.py:365`
+  (`ebbab30`); PHP `Tina4/StaticFiles.php:72` (`6faabac5`); Ruby `lib/tina4/rack_app.rb:188` (`6d5b1de`);
+  Node `packages/core/src/static.ts:25` (`27cf0f4`).
+- Dependencies: the router (static runs after routing), the response builder, the ETag path (40).
+- Dependants: any app serving CSS/JS/images from a public dir.
+- Existing ADRs: ADR-0050 (file confinement); ADR-0010 (routes beat files).
+
 - Catalog phase: Routing and middleware
 
 ## Why this feature exists
 
-An application ships JavaScript, CSS, images and an `index.html`, and the framework serves them
-from a public directory with the right content type, a revalidation policy, and a path guard
-that a request cannot escape - the same way in all four languages.
-
-## Boundary
-
-This feature owns public-directory resolution, extension-to-MIME mapping, the `Cache-Control`
-policy, directory-traversal protection, and index-file resolution. It DELEGATES the ETag, the
-304 revalidation and compression to Feature 40, the response carriage to Feature 30, and the
-same-file traversal confinement rule to Feature 30's `file()` (ADR-0050). It does not own
-dynamic routing.
+Serving a file from a public directory must NEVER let a crafted path read a file outside that directory. The
+audit question is whether the traversal guard actually confines in all four. It does not: PHP resolves the
+real path and confines it; Python, Ruby, and Node use a bare lexical `..` check that a symlink (and, in Node,
+a sibling-prefix) defeats. The prior doc had this exactly backwards.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Handler | server static path | `StaticFiles.php` | `api.rb` static | `static.ts` |
-| Public dir | app public | `TINA4_PUBLIC_DIR` override, app public | app public | `staticDir` |
-| Traversal guard | (to confirm) | string `str_contains($path, '..')` | (to confirm) | prevent traversal |
-| MIME by extension | yes | yes | yes | `MIME_TYPES[ext]`, fallback `application/octet-stream` |
-| Cache-Control | `no-cache, must-revalidate` | `no-cache, must-revalidate` | same | `no-cache, must-revalidate` |
-| Index resolution | `/`,`/foo/` -> index.html | same (SPA/Vite) | same | join(dir, path, index.html) |
-| ETag / 304 | via Feature 40 | via Feature 40 | via Feature 40 | `W/"size-mtime"` (Feature 40) |
-
-The static handlers agree on the important behaviour: serve a file from the public directory,
-set the content type from the extension (falling back to `application/octet-stream`), send
-`Cache-Control: no-cache, must-revalidate` so the browser revalidates via the Feature 40 ETag
-rather than serving blindly from cache, and resolve `/` or `/foo/` to `index.html` so a SPA or
-Vite build serves at its URL. The one place to scrutinize is the traversal guard: PHP rejects
-any path containing `..` with a string check (`str_contains($path, '..')`), which is blunt and
-must be confirmed as robust and identical in the other three (a string check can miss an
-encoded or symlink escape that a realpath-confinement check catches).
+- HANDLERS: Python `_try_static` (`server.py:2851`); PHP `StaticFiles::tryServe` (`StaticFiles.php:72`); Ruby
+  `try_static`/`serve_static_file` (`rack_app.rb:188`, NOT `api.rb` as the prior doc said); Node
+  `tryServeStatic` (`static.ts:25`). Static runs AFTER dynamic routing in all four (ADR-0010).
+- TRAVERSAL GUARD - diverges, and only PHP is robust:
+  - PHP (`StaticFiles.php:75,130-141`): lexical `..` reject PLUS `realpath()` + `str_starts_with($realPath,
+    $realDir . DIRECTORY_SEPARATOR)` - resolves symlinks and confines under the root (the trailing separator
+    defeats the sibling-prefix escape). Blocks `../`, absolute, AND symlink. Reference quality.
+  - Python (`response.py:365`): only `".." in raw.parts` (the realpath containment at `:395` is gated on a
+    `root` that static serving never passes). `raw.resolve()` follows symlinks with no containment. Blocks
+    `../`, NOT symlink.
+  - Ruby (`rack_app.rb:189`): only `path.include?("..")`; `File.file?` follows symlinks. Blocks `../`, NOT
+    symlink.
+  - Node (`static.ts:53`): only `filePath.startsWith(staticDir)` (no trailing separator, no realpath);
+    `statSync` follows symlinks. Blocks `../` (incidentally, via URL normalization + `join`), NOT symlink,
+    and a sibling-prefix (`/app/publicsecret`) is latent via the malformed-URL fallback.
+- MIME: a hardcoded map in PHP/Ruby/Node; Python uses stdlib `mimetypes` (so its Content-Type differs, e.g.
+  no `; charset=utf-8`).
+- CACHING: `Cache-Control: no-cache, must-revalidate` in all four; ETag format diverges four ways (see 40 -
+  Python strong md5; PHP `W/"mtime-size"` dec; Ruby hex; Node `W/"size-mtimeMs"`).
+- `TINA4_PUBLIC_DIR` override is read only by Python and PHP; Ruby and Node ignore it. The search-dir SET and
+  ORDER differ across all four (Ruby adds `src/assets`/`assets`).
+- No auto directory listing anywhere. No hidden/dotfile block anywhere (a `public/.env`, if present, serves).
 
 ## Public surface contract
 
-Static serving is automatic: a GET whose path maps to a file under the public directory returns
-that file with its content type and `Cache-Control: no-cache, must-revalidate`; a directory or
-root path resolves to `index.html`; a path that would escape the public directory is rejected.
-The ETag and 304 revalidation come from Feature 40. The public directory is the app's public
-folder, overridable by `TINA4_PUBLIC_DIR`.
+A GET for a file under the public dir returns the file with a MIME Content-Type, `Cache-Control`, and an ETag,
+and 304s on a match. A path that escapes the public dir must be refused - and today only `../` is refused
+everywhere; a symlink escape is refused only by PHP.
 
 ## Inputs and outputs
 
-- Input: a request path, the public directory (and its `TINA4_PUBLIC_DIR` override), and the
-  request's `If-None-Match` (for revalidation).
-- Output: the file bytes with its content type and `Cache-Control: no-cache, must-revalidate`,
-  a 304 when the ETag matches, or a 404 when no file resolves, or a rejection when the path
-  escapes the directory.
-- A directory or root path outputs `index.html` when present.
-- The content type is the extension's MIME type, else `application/octet-stream`.
+- Input: a GET/HEAD path + conditional headers. Output: the file bytes + headers, a 304, or a 404.
 
 ## Lifecycle and operation graph
 
-1. A request falls through to static serving after dynamic routing finds no match.
-2. The path is resolved against the public directory (TINA4_PUBLIC_DIR override, then app
-   public), and confined so it cannot escape the directory.
-3. `/` or a trailing-slash path resolves to `index.html`.
-4. The file's content type is set from its extension; `Cache-Control: no-cache, must-revalidate`
-   is set.
-5. Feature 40 computes the `W/"size-mtime"` ETag and returns 304 when `If-None-Match` matches;
-   otherwise the bytes are sent (compressed when negotiated).
+1. Routing misses -> static handler. 2. Reject `..`; resolve candidate under the public dir(s). 3. (PHP only)
+realpath-confine. 4. Set MIME + Cache-Control + ETag; 304 on a match; else send (HEAD strips the body).
 
 ## Configuration and precedence
 
-- `TINA4_PUBLIC_DIR` overrides the public directory; otherwise the app's public folder is used,
-  searched in a defined order.
-- `Cache-Control: no-cache, must-revalidate` is the fixed policy for a served asset, so the
-  browser always revalidates via the ETag rather than trusting a stale cache.
-- Static serving runs AFTER dynamic routing, so an application route wins over a same-path file.
+- Public dir: `TINA4_PUBLIC_DIR` (Python `server.py:2883`, PHP `StaticFiles.php:104`); Ruby/Node do NOT read
+  it. Search order differs per language. Routes beat static (ADR-0010).
 
 ## Failures, side effects and security
 
-- SECURITY: the traversal guard must CONFINE the resolved path to the public directory, so no
-  request can read outside it. A robust guard resolves the real path and checks it is within the
-  directory (matching Feature 30's `file()` confinement, ADR-0050); a bare string `..` check is
-  weaker and must be proven equivalent or replaced. This is the security surface of the feature.
-- A path that resolves outside the public directory is rejected (404 or 403), never served.
-- `no-cache, must-revalidate` prevents a browser from serving a stale asset without checking the
-  ETag, so a deploy's new bytes are picked up on the next revalidation.
-- A directory listing is never produced; a directory resolves to `index.html` or 404s.
-- The MIME fallback `application/octet-stream` means an unknown type downloads rather than
-  executing inline, which is the safe default.
+- SECURITY (the crux): static serving does NOT confine a symlink escape in Python/Ruby/Node - a symlink placed
+  inside the public dir that targets outside is served. Only PHP confines (realpath + separator). Node
+  additionally has a latent sibling-prefix escape. No language blocks a dotfile (`public/.env` serves). This
+  is the real, inverted ST-01. See the register.
+- A missing file 404s; no directory listing is ever produced.
 
 ## Wire and persistence contract
 
-There is no persistence; the wire contract is the file bytes, the `Content-Type`, the
-`Cache-Control: no-cache, must-revalidate` header, and the Feature 40 ETag/304. These are
-identical across the four for the same file and request.
+The file bytes + `Content-Type` + `Cache-Control` + an ETag. The wire is NOT identical across the four (ETag
+format, some Content-Types, and 304 comparison all differ - see the register and feature 40).
 
 ## Providers and substitutability
 
-Static serving is transport-level and engine-agnostic. A future runtime resolves the same public
-directory with the same override, applies the same confinement, the same MIME mapping, the same
-`Cache-Control`, and the same index resolution.
+Transport-level. A future runtime must resolve the real path and confine it under the public root (PHP's
+model), block dotfiles, and use the agreed ETag format.
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| ST-01 | The traversal guard differs (PHP string `..` check; others to confirm); a weak guard is a path-escape vulnerability. | Pin ONE robust confinement (resolve the real path, confirm it is inside the public directory, matching Feature 30's `file()`); gate an escape attempt (`../../etc/passwd`, encoded, and a symlink) rejected in all four. |
-| ST-02 | The `Cache-Control: no-cache, must-revalidate` policy is converged but not gated. | Gate the header on a served asset in all four. |
-| ST-03 | Index resolution (`/`, `/foo/` -> index.html) is converged but not gated. | Gate root/dir-to-index resolution in all four. |
-| ST-04 | Public-directory resolution (`TINA4_PUBLIC_DIR` override + app public + order) is not gated as parity. | Gate the override and the default in all four. |
-| ST-05 | The extension-to-MIME map (and the `application/octet-stream` fallback) is not gated. | Gate a representative MIME set and the fallback in all four. |
-| ST-06 | The ETag/304 revalidation is Feature 40's; its interaction with static serving is not gated here. | Gate a 304 on a matching `If-None-Match` for a static asset in all four (with Feature 40). |
-| ST-07 | No shared fixture exists. | Add `static_assets_contract.json`. |
+| ST-SYMLINK-ESCAPE | SECURITY, Python/Ruby/Node: static serving does NOT confine a symlink inside the public dir that targets outside - Python `response.py:372` resolves with no containment (the `root` guard is never passed by static), Ruby `rack_app.rb:206` `File.file?` follows, Node `static.ts:49` `statSync` follows behind a lexical guard. PHP alone confines (`StaticFiles.php:130-141` realpath + separator). The prior doc INVERTED this (called PHP's guard "blunt"). | Adopt PHP's realpath + separator confinement as the reference (ADR-0050) and port it to Python (pass `root=` into `file()` or confine in `_try_static`), Ruby (`File.realpath` under-root check), and Node (`realpathSync` + `startsWith(staticDir + sep)`). |
+| ST-NODE-SIBLING-PREFIX | SECURITY (latent), Node: the guard `filePath.startsWith(staticDir)` has NO trailing separator, so `/app/publicsecret` matches the `/app/public` root; reachable via the malformed-URL fallback (`request.ts:69-80`) that passes the raw target unnormalized. | Confine with `staticDir + path.sep` (folded into ST-SYMLINK-ESCAPE's realpath fix). |
+| ST-DOTFILE-UNBLOCKED | All four: no hidden/dotfile block - a `public/.env`, `.git`, or `.htpasswd` served if present (only PHP's `.php` refusal exists). | Block a leading-dot path segment (or an allow-list of extensions) in all four. |
+| ST-ETAG-DIVERGENCE | The static ETag format diverges four ways and the 304 comparison differs (Python strong-exact vs weak-comparison in the other three) - the prior doc's "identical wire contract" is false. Cross-refs feature 40 CE-STATIC-ETAG-DIVERGENCE. | Pin ONE static ETag format + 304 semantics across the four (with feature 40's CE-DEC-02). |
+| ST-PUBLICDIR-ENV-PARTIAL | `TINA4_PUBLIC_DIR` is honoured only by Python and PHP; Ruby and Node ignore it (grep-empty), so the documented override silently does nothing in two languages. | Read `TINA4_PUBLIC_DIR` in Ruby and Node. |
+| ST-SEARCHDIR-DIVERGE | The public search-dir SET and ORDER differ four ways (Python `public,src/public,fw`; PHP `src/public,public,fw`; Ruby adds `src/assets,assets`; Node `public,src/public,builtin`), so the same relative path can resolve to different files per language. | Agree ONE search set + order. |
+| ST-INDEX-DIVERGE | An extensionless `/foo` resolves to `foo/index.html` in PHP/Ruby/Node but NOT Python (`server.py:2881` only treats `""`/trailing-slash as an index). | Unify the index-resolution rule. |
+| ST-DELEGATE-FALSE | The prior doc claimed static "delegates confinement to Feature 30 `file()` (ADR-0050)"; FALSE - only Python static calls `Response.file()`, and it passes NO `root`, so `file()`'s containment is inactive; PHP/Ruby/Node have standalone handlers. | Correct the boundary text; make static actually use the confinement (ST-SYMLINK-ESCAPE). |
+| ST-NO-FIXTURE | No shared `static_assets_contract.json` exists. | Add it once ST-DEC-01/02 land. |
 
 ## Owner decisions
 
-Proposed for owner ratification:
-
-1. ONE robust traversal confinement in all four: resolve the real path and confirm it is inside
-   the public directory (the same rule as Feature 30's `file()`, ADR-0050). A bare string `..`
-   check is replaced or proven equivalent. This is the security decision this row exists to
-   settle.
-2. A served asset carries `Cache-Control: no-cache, must-revalidate`, so the browser always
-   revalidates via the Feature 40 ETag.
-3. `TINA4_PUBLIC_DIR` overrides the public directory; otherwise the app public folder is used in
-   a defined search order.
-4. `/` and a trailing-slash path resolve to `index.html` (SPA/Vite support); a directory is
-   never listed.
-5. The content type is the extension's MIME type, with `application/octet-stream` as the safe
-   fallback.
+- ST-DEC-01 (proposed, SECURITY - top priority, and INVERTED from the prior doc): adopt PHP's realpath +
+  separator confinement (`StaticFiles.php:130-141`) as the reference and port it to Python/Ruby/Node so a
+  symlink and sibling-prefix escape is blocked (ST-SYMLINK-ESCAPE, ST-NODE-SIBLING-PREFIX); block dotfiles
+  (ST-DOTFILE-UNBLOCKED). PHP is the model here, not the problem.
+- ST-DEC-02 (proposed): pin one static ETag format + 304 semantics (with feature 40), honour
+  `TINA4_PUBLIC_DIR` in all four (ST-PUBLICDIR-ENV-PARTIAL), agree the search-dir set + order
+  (ST-SEARCHDIR-DIVERGE), and unify extensionless-index resolution (ST-INDEX-DIVERGE).
 
 ## Proposed conformance fixture
 
-Add `static_assets_contract.json` with stable ids for: serving a CSS/JS/image with the right
-content type and `Cache-Control: no-cache, must-revalidate`; a root and a trailing-slash path
-resolving to `index.html`; a traversal attempt (`../../etc/passwd`, a percent-encoded variant,
-and a symlink pointing outside) REJECTED; `TINA4_PUBLIC_DIR` overriding the directory; an unknown
-extension falling back to `application/octet-stream`; a dynamic route winning over a same-path
-file; and a 304 on a matching `If-None-Match`. Every case serves a real file over a real request
-from a real directory; no mock can claim conformance (a mocked filesystem would not prove the
-traversal confinement).
+A shared fixture (real files): a `../` escape is refused (all four); a SYMLINK inside the public dir pointing
+outside is refused (catches ST-SYMLINK-ESCAPE - fails today in Python/Ruby/Node); a sibling-prefix path is
+refused (Node); a `public/.env` dotfile is refused (ST-DOTFILE-UNBLOCKED); the same file yields the same
+Content-Type, Cache-Control, and ETag in all four; `TINA4_PUBLIC_DIR` relocates the root in all four.
 
 ## Integration map
 
-- Feature 31 routes dynamic requests first; static serving is the fallthrough. Feature 40
-  supplies the ETag/304/compression; Feature 30's `file()` shares the confinement rule.
-- The Swagger UI assets are served through this path (gated by `TINA4_SWAGGER_ENABLED`).
-- Central fixtures, four runners, the CI matrix and the static/deployment docs update together.
+- Consumers: any static asset request. Composes: the router (ADR-0010 routes-beat-files), the ETag path (40),
+  the response builder. The confinement rule is shared with feature 30 `file()` (ADR-0050).
 
 ## Breaking changes and migration
 
-- If a framework's traversal guard is found weaker than the confinement rule, hardening it is a
-  security fix; a legitimate asset path is unaffected. `Breaking:` only if an app relied on a
-  path that a robust guard now rejects (which would itself have been an escape).
-- No change to the served content or the Cache-Control policy (converged).
-
-## Implementation backlog
-
-1. Add `static_assets_contract.json` and wire four runners against a real public directory.
-2. Pin and gate the robust traversal confinement (ST-01) in all four, including an escape and a
-   symlink case.
-3. Gate the Cache-Control policy (ST-02), index resolution (ST-03), public-dir config (ST-04)
-   and the MIME map/fallback (ST-05).
-4. Gate the static 304 revalidation with Feature 40 (ST-06).
-5. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit.
+- Adding realpath confinement can refuse a previously-served symlink (a security fix - note it). Blocking
+  dotfiles can 404 a previously-served hidden file (a security fix). Honouring `TINA4_PUBLIC_DIR` in Ruby/Node
+  changes resolution where that env is set. Pinning the ETag format changes cache keys (a revalidation storm).
 
 ## Porting capsule
 
-Serve files from the public directory (resolved with a `TINA4_PUBLIC_DIR` override) after
-dynamic routing. Confine the resolved real path inside the public directory and reject any
-escape (matching Feature 30's `file()`). Set the content type from the extension with an
-`application/octet-stream` fallback, send `Cache-Control: no-cache, must-revalidate`, and
-resolve `/` or a trailing-slash path to `index.html`. Let Feature 40 add the ETag and the 304.
-Prove the port with a served asset, an index resolution, a rejected traversal (including a
-symlink), and a 304.
+Serve a file under a public root ONLY after resolving its REAL path and confirming it is confined under the
+root (realpath + a trailing-separator prefix check - PHP's model; a bare `..` string check is NOT enough,
+it misses symlinks). Block dotfiles. Set a MIME Content-Type (agreed source), `Cache-Control`, and the agreed
+ETag format; 304 on a weak-comparison match; strip the body on HEAD. Honour `TINA4_PUBLIC_DIR`. Never produce
+a directory listing. Prove it with a `../` refusal, a symlink-escape refusal, and a dotfile refusal.
 
 ## Audit closure checklist
 
-- [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded (ST-01..07).
-- [x] Owner ambiguities recorded (5 proposed; the traversal-confinement security call is key).
-- [x] Proposed shared cases and mutation witnesses complete.
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete (handlers + confinement x four).
+- [x] Lifecycle and producer/consumer edges complete (route-miss -> confine -> serve).
+- [x] Configuration (TINA4_PUBLIC_DIR partial), failure and SECURITY (symlink/dotfile) rules complete.
+- [x] Wire (MIME/Cache-Control/ETag) and provider contracts complete.
+- [x] Four-language behaviour recorded truthfully (PHP is the reference guard; py/ruby/node miss symlinks) -
+  correcting the prior INVERTED finding.
+- [x] Owner ambiguities decided (ST-DEC-01 security, ST-DEC-02 unify).
+- [x] Conformance fixture (symlink + dotfile + wire parity) complete.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.

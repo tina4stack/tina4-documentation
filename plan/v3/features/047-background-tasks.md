@@ -1,189 +1,153 @@
-# Feature 047: In-process background tasks
+# Feature 47: In-process background tasks
 
 ## Identity and status
 
-- Matrix identity: 47 - In-process background tasks
+- Matrix identity: 47 - Background tasks (in-process fire-and-forget periodic work, distinct from the durable
+  Queue, feature 89)
 - Audit state: decision-ready
-- Audit note: measured from four-language source 2026-08-10 (`background()`/`BackgroundTask` in
-  each server). No framework code changed.
-- Dependencies: the persistent server process (built-in server or openswoole for PHP), Feature
-  39 graceful shutdown (tasks stop on drain), the Log subsystem (a task's errors log)
-- Dependants: heartbeats, periodic cache sweeps, poll loops, any recurring in-process work that
-  does not warrant the queue
-- Existing ADRs: the graceful-shutdown drain (Feature 39)
-- Shared fixtures: `background_tasks_contract.json` is required
+- Audit note: re-measured 2026-08-11 from four-language source (correcting a prior-session doc that called
+  Python's mechanism "a thread + a lock" - it is an asyncio coroutine - claimed PHP "openswoole" support that
+  does not exist, and left the shutdown cell unverified though all four resolve it). Python
+  `core/server.py:102` `background` + `:234` `background_tick_loop` (`ebbab30`); PHP `Tina4/App.php:1176` +
+  `Tina4/Server.php:610` (`6faabac5`); Ruby `lib/tina4/background.rb:22` (`6d5b1de`); Node
+  `packages/core/src/background.ts:55` (`27cf0f4`).
+- Dependencies: the server run loop (where ticks fire), graceful shutdown (38).
+- Dependants: periodic in-process work (cache sweeps, heartbeats) that does not need durability.
+- Existing ADRs: none dedicated.
+
 - Catalog phase: Routing and middleware
 
 ## Why this feature exists
 
-An application needs a small recurring job - a heartbeat, a cache sweep, a poll - running inside
-the server process without standing up the full queue. `background(callback, interval)` runs a
-callback every `interval` seconds and returns a handle to stop it, the same way in the languages
-whose deployment model has a persistent process.
-
-## Boundary
-
-This feature owns `background(callback, interval)`: registration of a recurring in-process task,
-the returned handle with `.stop()`, the task count, error isolation, and the requirement that
-tasks stop on graceful shutdown. It DELEGATES the drain to Feature 39 and error logging to the
-Log subsystem. It is NOT the durable queue (that is the queue subsystem); a background task is
-in-memory and dies with the process.
+An app sometimes needs periodic in-process work without a durable queue. The audit questions: does it run
+where the app actually deploys, is it stopped cleanly on shutdown, and is the surface the same in all four?
+The feature is real in all four, but it SILENTLY DOES NOTHING under the default production server in Python
+(and under PHP-FPM/Swoole in PHP), and the surface diverges.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Register | `background(callback, interval=1.0)` | background task API | background task | background task |
-| Handle | `BackgroundTask` with `.stop()` | stop | stop | stop |
-| Count | `background_task_count()` | `backgroundTaskCount()` | count | count |
-| Recurring | every `interval` seconds | same | same | same |
-| Concurrency model | thread + `threading.Lock` | built-in server / openswoole only | thread/fiber | event-loop timer |
-| Requires a persistent process | yes | YES (NOT under PHP-FPM) | yes | yes |
-| Stops on graceful shutdown | (to confirm) | (to confirm) | (to confirm) | (to confirm) |
+Real in all four, but different mechanisms and a production gap:
 
-`background(callback, interval)` registers a RECURRING task that runs the callback every
-`interval` seconds and returns a handle whose `.stop()` ends and deregisters it;
-`background_task_count()` reports how many run. Python uses a thread guarded by a lock; Node uses
-an event-loop timer. The critical deployment fact: in-process background tasks REQUIRE a
-persistent server process, so PHP under FPM (a fresh process per request) cannot run them - they
-work only under the PHP built-in server or openswoole. Python, Ruby and Node have a persistent
-process by default.
+- PYTHON: `background(callback, interval=1.0) -> BackgroundTask` (`server.py:102`), a handle with `.stop()`
+  (`:74`); `background_task_count()` (`:120`), `stop_all_background_tasks()` (`:126`). Runs as an asyncio
+  COROUTINE per task (`:234` via `asyncio.create_task`), NOT a thread; a sync callback is offloaded to a
+  shared threadpool (`:266`); the `threading.Lock` (`:50`) guards ONLY the registry. CRITICAL:
+  `_start_background_tasks` is called at ONE site (`:3697`) inside the built-in asyncio `_serve()`; the
+  production ASGI path returns earlier (`:3527-3530`) and the lifespan handler starts nothing - so under
+  uvicorn/hypercorn/granian, tasks NEVER START (silent no-op). See the register.
+- PHP: `background(callable, interval=1.0): self` (`App.php:1176`) - returns `$this`, NOT a handle; stop by
+  callback identity (`stopBackground`, `:1200`); `backgroundTaskCount()` (`:1229`). Runs INLINE in the
+  single-threaded `stream_select` accept loop (`Server.php:610` idle branch), no thread. FOOTGUN: under
+  PHP-FPM or the Swoole/RoadRunner/FrankenPHP per-request adapter there is no accept loop, so the task
+  silently never runs; the prior doc's "openswoole" support is unfounded.
+- RUBY: `register/background(callback, interval:)` returns a Hash DESCRIPTOR (`background.rb:27`), NOT a handle
+  with `.stop()`; `stop_task`/`stop_all`; there is NO count method (only `tasks`). Runs as a real dedicated OS
+  THREAD per task (`:82`), no fiber.
+- NODE: `background(callback, intervalSeconds=1): {stop}` (`background.ts:55`), a real handle;
+  `stopAllBackgroundTasks()`, `backgroundTaskCount()`. Runs as an event-loop TIMER (re-armed `setTimeout`,
+  `unref`'d; `:89-93`), not a thread.
+- ERROR ISOLATION: a callback error is caught + logged and never crashes the server, in all four. NON-OVERLAP
+  is enforced in all four (await-before-next / re-arm-after-settle / synchronous inline / sequential thread).
+- SHUTDOWN: stopped on drain where tasks actually run, proven by REAL graceful-shutdown tests in all four
+  (Python built-in server, PHP `GracefulShutdownTest`, Ruby `graceful_shutdown_spec`, Node
+  `gracefulShutdown.test`).
 
 ## Public surface contract
 
-`background(callback, interval=1.0)` registers a recurring task and returns a handle; the handle
-`.stop()` ends and deregisters the task. `background_task_count()` returns the number of active
-tasks. The callback runs every `interval` seconds until stopped or until the server drains. A
-task's callback error is isolated: it logs and does not crash the server or stop other tasks.
+`background(callback, interval)` schedules periodic in-process work; a handle (or callback identity) stops it;
+a count reports how many run; errors are isolated; shutdown stops them. The surface is NOT uniform (see the
+register), and the "it runs" guarantee is broken under some production deployments.
 
 ## Inputs and outputs
 
-- Input: a callback and an interval (default 1.0 seconds).
-- Output: a task handle (`.stop()`), and a running recurring task; `background_task_count()`
-  returns the active count.
-- The task is in-memory: it does not persist across a restart (unlike the queue).
-- A throwing callback produces a log line, not a crash and not a stopped sibling.
+- Input: a callback + an interval. Output: a running periodic task (where the run loop exists) + a stop
+  mechanism. NO output under production ASGI (Python) or PHP-FPM/Swoole (PHP) - the task never starts.
 
 ## Lifecycle and operation graph
 
-1. `background(callback, interval)` registers the task under a lock and starts its timer/thread.
-2. The callback runs every `interval` seconds; an exception in it is caught, logged, and the
-   task continues (or stops just itself, per the pinned rule).
-3. `.stop()` ends the task and removes it from the registry; `background_task_count()` drops.
-4. On graceful shutdown (Feature 39), all background tasks are stopped as part of the drain, so a
-   task loop does not keep the process alive past the shutdown deadline.
+1. Register (append to the registry). 2. Start: Ruby/Node at registration; Python at built-in-server boot
+   (NOT under ASGI); PHP in the accept loop (NOT under FPM/Swoole). 3. Tick: run the callback, catch errors,
+   do not overlap. 4. Shutdown: stop/cancel/join the tasks.
 
 ## Configuration and precedence
 
-- The interval is per task (default 1.0 seconds); there is no global config.
-- Background tasks require a persistent process; under PHP-FPM they are unavailable and calling
-  `background()` should FAIL LOUDLY or be a documented no-op, not silently appear to register.
-- The drain (Feature 39) stops all tasks.
+- Interval per task (default 1.0s); no global config, no env var, no concurrency cap, in any language.
 
 ## Failures, side effects and security
 
-- ERROR ISOLATION: a callback exception is caught and logged; it never crashes the server and
-  never stops another task. A background task that could take the whole server down would make
-  the feature too dangerous to use.
-- SHUTDOWN: a background task must stop on the graceful-shutdown drain; a task that ignores the
-  drain would hold the process open past the deadline and force a hard kill (Feature 39).
-- DEPLOYMENT: under PHP-FPM there is no persistent process, so `background()` cannot work; it
-  must fail loudly or be a clearly documented no-op, never silently accept a task that never
-  runs.
-- The interval timing must not drift unbounded; a long callback should not stack invocations
-  (measure the next run from completion, or skip a missed tick).
+- A callback error is caught + logged; the server does not crash and other tasks continue (all four). No
+  security surface. The dangerous failure is SILENT: the task never runs under the default production server
+  (Python ASGI, PHP FPM/Swoole) with no error - see the register.
 
 ## Wire and persistence contract
 
-There is no wire format and NO persistence: a background task lives only in the process and dies
-with it. This is the line between this feature and the durable queue - a background task is not
-retried, not persisted, and not delivered elsewhere.
+None (in-process only). No persisted state; this is NOT the durable queue (89).
 
 ## Providers and substitutability
 
-Background tasks depend on a persistent process and the language's concurrency primitive (thread,
-fiber, or event-loop timer). A future runtime with a persistent process implements the same
-`background(callback, interval)` + handle + count + error isolation + drain-stop; a
-request-per-process runtime documents them as unavailable.
+Runtime-level. A future runtime should run background tasks under its ACTUAL production server (not only a dev
+built-in), expose one surface (a stop-handle + a count), isolate errors, and stop them on shutdown.
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| BG-01 | The surface (`background`/count/handle/`.stop()`, default interval) is not gated as parity. | Pin one surface and default; gate register/run/stop/count in all four (that support it). |
-| BG-02 | The stop-on-graceful-shutdown behaviour is not gated; a task ignoring the drain holds the process open. | Gate that all background tasks stop on the Feature 39 drain in all four. |
-| BG-03 | Error isolation (a throwing callback logs, does not crash or stop siblings) is not gated. | Gate that a throwing callback is isolated in all four. |
-| BG-04 | Under PHP-FPM there is no persistent process; `background()` cannot run and must not silently appear to. | Pin PHP-FPM behaviour: fail loudly or documented no-op; gate that it does not silently accept a never-running task. |
-| BG-05 | Interval drift / overlapping invocations on a slow callback are not defined. | Pin the timing rule (measure next run from completion, or skip a missed tick); gate it. |
-| BG-06 | No shared fixture exists. | Add `background_tasks_contract.json`. |
+| BG-PY-PROD-NOOP | Python `background()` tasks are REGISTERED but NEVER STARTED under the default production ASGI server (uvicorn/hypercorn/granian): `_start_background_tasks` is called only inside the built-in asyncio `_serve()` (`server.py:3697`); the production path returns earlier (`:3527-3530`) and the ASGI lifespan startup starts nothing. So `background()` is a SILENT no-op in production, and the graceful-shutdown tests exercise only the built-in server, so it is untested. | Start background tasks from the ASGI lifespan startup (and stop them on lifespan shutdown), or loudly warn/document that they require the built-in server. |
+| BG-PHP-FPM-SWOOLE-NOOP | PHP `background()` appends with NO deployment guard (`App.php:1178`); under PHP-FPM (per-request) or the Swoole/RoadRunner/FrankenPHP adapter (`App.php:1423-1484`, per-request, never calls `runTickCallbacks`) there is no accept loop, so the task silently never runs. The prior doc's "openswoole" background support is unfounded. | Detect a non-persistent SAPI and warn (or refuse) at `background()` registration; correct the openswoole claim. |
+| BG-PY-ASYNC-NOT-THREAD | The prior doc states Python runs "a thread guarded by a lock"; FALSE - it is an asyncio coroutine (`server.py:234` via `create_task`); the `threading.Lock` guards only the registry, and only a SYNC callback touches a threadpool. | Correct the doc: Python is an event-loop coroutine, not a thread-per-task. |
+| BG-SURFACE-DIVERGE | The surface diverges: Python/Node return a stop-HANDLE; PHP returns `$this` (stop by callback identity); Ruby returns a Hash descriptor (no `.stop()`); Ruby has NO count method (only `tasks`, so a caller uses `.length`). The prior doc's uniform "stop"/"count" cells hide this. | Pin ONE surface (a handle with `.stop()` + a `count`) across the four (Ruby gains a handle + count; PHP gains a handle). |
+| BG-PHP-FPM-FOOTGUN | (Subsumed by BG-PHP-FPM-SWOOLE-NOOP) the prior doc's BG-04 (PHP-FPM silently registers a never-running task) is CONFIRMED real and open. | See BG-PHP-FPM-SWOOLE-NOOP. |
+| BG-OVERLAP-STALE | The prior doc's BG-05 says interval-drift / overlapping invocations "are not defined"; the CODE defines NON-OVERLAP in all four (await-before-next `server.py:275`, re-arm-after-settle `background.ts:70-86`, synchronous inline PHP, sequential thread Ruby). Only the shared FIXTURE is missing, not the behaviour. | Gate non-overlap with a fixture; drop the "not defined" framing. |
+| BG-NO-FIXTURE | No shared `background_tasks_contract.json` exists; nothing gates the surface, error isolation, non-overlap, or stop-on-shutdown. | Add it once BG-DEC-01/02 land. |
 
 ## Owner decisions
 
-Proposed for owner ratification:
-
-1. The surface is `background(callback, interval=1.0)` returning a handle with `.stop()`, plus
-   `background_task_count()`, uniform across the four that support it.
-2. Background tasks REQUIRE a persistent process; under PHP-FPM `background()` fails loudly or is
-   a documented no-op (never a silent never-running task). This is a stated deployment
-   constraint, like the built-in server's forking requirement.
-3. A callback exception is caught, logged, and isolated: it never crashes the server and never
-   stops another task.
-4. All background tasks stop on the graceful-shutdown drain (Feature 39).
-5. The interval timing does not stack invocations on a slow callback (next run measured from
-   completion, or a missed tick skipped).
+- BG-DEC-01 (proposed, THE call - a silent production no-op): make Python `background()` actually run under the
+  default production ASGI server (BG-PY-PROD-NOOP) by starting tasks from the lifespan startup, and guard/warn
+  PHP under PHP-FPM/Swoole (BG-PHP-FPM-SWOOLE-NOOP). Today the feature silently does nothing in the common
+  production deployment for two of four languages.
+- BG-DEC-02 (proposed): pin ONE surface - a stop-handle + a count - across the four (BG-SURFACE-DIVERGE);
+  correct the Python-thread (BG-PY-ASYNC-NOT-THREAD) and PHP-openswoole claims; add the shared fixture gating
+  the surface, error isolation, non-overlap, and stop-on-shutdown (BG-OVERLAP-STALE, BG-NO-FIXTURE).
 
 ## Proposed conformance fixture
 
-Add `background_tasks_contract.json` with stable ids for: registering a task that runs the
-callback N times over N intervals; `.stop()` ending it and `background_task_count()` dropping; a
-throwing callback logging and NOT crashing the server nor stopping a sibling task; all tasks
-stopping on a graceful-shutdown drain; and the PHP-FPM behaviour (loud failure or documented
-no-op). Every case runs a real task in a real persistent server; no mock can claim conformance
-(the concurrency and the drain interaction must be real).
+A shared fixture (real server): a registered task ACTUALLY RUNS under the language's PRODUCTION server (catches
+BG-PY-PROD-NOOP and BG-PHP-FPM-SWOOLE-NOOP), a callback error is isolated (the server survives, other tasks
+continue), invocations do not overlap, and the task is stopped on graceful shutdown (exit 0, no leaked
+thread/timer). The surface (handle `.stop()` + count) is identical across the four.
 
 ## Integration map
 
-- Feature 39 (graceful shutdown) stops the tasks on drain; the Log subsystem records a callback
-  error; the persistent-server requirement ties to the deployment model (built-in server /
-  openswoole for PHP).
-- The queue subsystem is the durable alternative for work that must survive a restart.
-- Central fixtures, four runners, the CI matrix and the deployment docs update together.
+- Consumers: periodic in-process work. Composes: the server run loop (where ticks fire), graceful shutdown
+  (38). Distinct from the durable Queue (89).
 
 ## Breaking changes and migration
 
-- Pinning the PHP-FPM behaviour to a loud failure (if it silently no-ops today) changes what a
-  PHP-FPM app sees; state it in the release note. It is a correctness fix (a silent never-running
-  task is worse).
-- No change to the persistent-process frameworks beyond gating.
-
-## Implementation backlog
-
-1. Add `background_tasks_contract.json` and wire four runners against real persistent servers.
-2. Pin and gate the surface (BG-01), the drain-stop (BG-02), and error isolation (BG-03).
-3. Pin and gate the PHP-FPM behaviour (BG-04) and the interval-timing rule (BG-05).
-4. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit.
+- Starting Python tasks under ASGI changes behaviour (they now run in production) - a correctness fix, note
+  it. Pinning the surface (Ruby/PHP gain a handle; Ruby gains a count) is additive. Guarding PHP under FPM is
+  a new warning.
 
 ## Porting capsule
 
-Implement `background(callback, interval=1.0)` returning a handle with `.stop()`, plus
-`background_task_count()`. Run the callback every `interval` seconds on the language's
-concurrency primitive, guarded for thread-safe registration. Catch and log a callback exception
-and keep going (never crash the server, never stop a sibling). Stop all tasks on the
-graceful-shutdown drain. Require a persistent process; on a request-per-process runtime, fail
-loudly or document the no-op. Prove the port with an N-runs case, a stop/count case, a
-throwing-callback isolation case, and a drain-stop case.
+Background tasks must RUN under the language's ACTUAL production server (not only a dev built-in - the Python
+ASGI and PHP-FPM/Swoole silent-no-op bug), expose ONE surface (`background(cb, interval)` returning a handle
+with `.stop()`, plus a `count`), isolate a callback error (catch + log, never crash the server, other tasks
+continue), never overlap invocations (await/re-arm after each run), and stop cleanly on graceful shutdown.
+Prove it with a task that runs under the production server, an error that is isolated, and a clean stop on
+shutdown.
 
 ## Audit closure checklist
 
-- [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded (BG-01..06).
-- [x] Owner ambiguities recorded (5 proposed; the PHP-FPM constraint and drain-stop are key).
-- [x] Proposed shared cases and mutation witnesses complete.
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete (background + stop + count x four).
+- [x] Lifecycle and producer/consumer edges complete (register -> start -> tick -> stop) - INCLUDING the
+  production start gap.
+- [x] Configuration (none), failure (silent prod no-op) and security rules complete.
+- [x] Wire (none, in-process) and provider contracts complete.
+- [x] Four-language behaviour recorded truthfully (asyncio not thread; prod no-op; surface diverges) -
+  correcting the prior thread/openswoole claims and the unverified shutdown cell.
+- [x] Owner ambiguities decided (BG-DEC-01 prod-run, BG-DEC-02 surface).
+- [x] Conformance fixture (runs-in-prod + isolation + shutdown) complete.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.
