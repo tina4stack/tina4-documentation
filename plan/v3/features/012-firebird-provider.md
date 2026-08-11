@@ -1,202 +1,143 @@
-# Feature 012: Firebird provider
+# Feature 12: Firebird provider
 
 ## Identity and status
 
-- Matrix identity: 12 - Firebird provider
+- Matrix identity: 12 - Firebird provider (`tina4_python/database/firebird.py`)
 - Audit state: decision-ready
-- Dependencies: Feature 3 adapter interface, Feature 4 URL parser, Feature 5 write facade,
-  Feature 7 SQL translator (ROWS/FIRST-SKIP rewrite, `MAX_BIND_PARAMS = 0`)
-- Dependants: migrations, ORM, pagination, Firebird-backed session/cache/queue
-- Existing ADRs: ADR-0044 (batch/first-row primitives, `connect` canonical name); the
-  connect-timeout contract applies and is CURRENTLY UNMET here (FB-02)
-- Shared fixtures: `write_path_contract.json`; a `firebird_contract.json` is required
-- Catalog phase: Database providers
-- Open issues: statement-leak parity (task 56), node-firebird SRP flakiness (task 60), PHP
-  ORM vs real FB5 (issue 132); the PHP IBASE_WAIT hang (issue 55) and column-case (task 59)
-  are fixed but need parity proof
-- Audit note: measured from four-language source; no framework code changed
+- Audit note: FOUR-language feature, first-class LOGIC but with real surface gaps and one no-mock violation.
+  Measured 2026-08-11. Python `database/firebird.py` (`ebbab30`); PHP `FirebirdAdapter.php` +
+  `PdoFirebirdAdapter` (`6faabac5`); Ruby `lib/tina4/drivers/firebird_driver.rb` (`6d5b1de`); Node
+  `packages/orm/src/adapters/firebird.ts` (`27cf0f4`).
+- Dependencies: the driver - `firebird.driver`/`fdb` (Python); `ext-interbase` + PDO `pdo_firebird` (PHP);
+  `fb` gem (Ruby); `node-firebird` (Node) - OPTIONAL + lazy.
+- Dependants: apps on Firebird 2.5-5; the ORM.
+- Existing ADRs: none dedicated; issue #132 (PHP ORM vs real FB5), #160 (charset), the column-case + IBASE_WAIT
+  memories.
+
+- Catalog phase: database
 
 ## Why this feature exists
 
-Firebird gives a Tina4 application an embedded-or-server SQL database whose behavior stays
-interchangeable with the other providers. Firebird is the strictest engine on identifier
-case, generated ids and connection bounding, so it exposes contract gaps the other
-providers hide.
-
-## Boundary
-
-This provider owns Firebird connection construction, native binding and round-trip,
-generated-id capture, catalog queries and lifecycle. Feature 3 owns the adapter
-capabilities, Feature 4 parses the URL, Feature 5 composes CRUD, and Feature 7 rewrites
-`LIMIT`/`OFFSET` to `ROWS m TO n` (or `FIRST/SKIP`) and sets the zero bind-collapse ceiling.
-Identifier quoting (double quotes, case-sensitive) stays on the adapter.
+Firebird is the legacy/embedded engine Tina4 supports for existing installs. It is the hardest adapter: no
+`RETURNING` (generators instead), asymmetric identifier case-folding, a C client (fbclient) that no socket
+timeout reaches, and blob handles that must be read out. The provider absorbs all of that.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Driver | `fdb`/`firebird-driver` | `interbase`/`pdo_firebird` | `fb` | `node-firebird` |
-| Placeholder | `?` | `?` | `?` | `?` |
-| INSERT id capture | `INSERT ... RETURNING` | `INSERT ... RETURNING` | driver id, no RETURNING | driver id, no RETURNING |
-| Row limiting | `ROWS`/`FIRST SKIP` | `ROWS` | `ROWS` | `ROWS` |
-| Identifier case | maps UPPERCASE -> lowercase | maps (issue 132) | maps (task 59) | maps in `baseModel` |
-| Connect bound | timeout referenced | IBASE_WAIT fixed (issue 55) | timeout referenced | SRP login flaky ~12% (task 60) |
-| Batch collapse | none (`MAX_BIND_PARAMS = 0`) | none | none | none |
+First-class LOGIC in all four (connect, execute/fetch, transactions, get_columns with real PK introspection,
+column-case handling), with these known behaviours HANDLED across the languages:
 
-Firebird supports `INSERT ... RETURNING`, and Python and PHP use it to capture the
-generated id; Ruby and Node instead read the driver's own last-id and do not emit
-RETURNING (FB-01). Firebird stores an unquoted identifier in UPPERCASE, so every port maps
-column names to the Python master's lowercase (FB-05). Firebird has no cheap multi-row
-`VALUES`, so `MAX_BIND_PARAMS = 0` keeps a batch per-row rather than collapsing it. The PHP
-rollback path and `IBASE_WAIT` hang were fixed with live CI; that is regression evidence,
-not full parity evidence.
+- Column-name case (the classic Firebird trap): unquoted `AS x` folds to `"X"`; the adapter folds ALL-CAPS
+  back to lowercase for portability (Python `firebird.py:384`, PHP `:376`, Ruby `firebird_driver.rb:416`,
+  Node `firebird.ts:185`). All four preserve a quoted mixed-case name.
+- Watchdog connect (fbclient is a ctypes/native call no socket timeout reaches - Python `call_with_deadline`,
+  PHP, Node's outer bound; Ruby admits the attach is un-boundable and only bounds reachability).
+- Last-id via a generator (`GEN_{TABLE}_ID`) + `WHERE id = ?` (Python `firebird.py:301`, PHP) - or NOT
+  provided (Ruby returns nil `:252`, Node returns null `:622`).
+- Blob read-out (memoryview/handle -> bytes) - verified in Python; ASSERTED-not-verified in Node
+  (`decodeBlobs` no-op claiming node-firebird returns Buffers).
+- IBASE_WAIT lock policy for the long-lived read transaction (PHP `FirebirdAdapter.php:1034`).
+- PHP has a silent PDO `pdo_firebird` fallback and a broken-native retry; NB `ext-interbase` has no PHP 8
+  build, so on PHP 8 the native path is unreachable and pdo_firebird runs.
 
 ## Public surface contract
 
-The provider implements the Feature 3 adapter interface with no extra public surface:
-connection (`connect`, `close`, `getDatabaseType` -> `firebird`), execution (`execute`,
-`executeMany`, `fetch`, `fetchOne`), transactions and introspection. Construction takes
-Feature 4's resolved connection parameters.
+`Database("firebird://...")` -> execute/fetch/transactions/introspection. Last-id is generator-derived (Python/
+PHP) or absent (Ruby/Node - see the register). Fail-loud on the main query.
 
 ## Inputs and outputs
 
-- Native types round-trip: `INTEGER`/`BIGINT`, `NUMERIC`/`DECIMAL`, `DOUBLE PRECISION`,
-  `VARCHAR`/`CHAR`/`BLOB SUB_TYPE TEXT`, `BLOB` as raw bytes, and `TIMESTAMP`/`DATE`/`TIME`.
-  Firebird has no native boolean before 3.0; a boolean maps to the engine's boolean on 3.0+
-  and to a small integer below it.
-- `execute` on an INSERT returns a `DatabaseResult` carrying the generated id from
-  RETURNING (Python/PHP) or the driver's last id (Ruby/Node) -- these must converge.
-- Column names in a result are lowercased to match the Python master, hiding Firebird's
-  UPPERCASE storage.
-- `getColumns` returns the Feature 3 descriptor including the PK ordinal; `getTables`
-  returns user tables and excludes `RDB$` system tables.
-- Binding preserves parameter order; a null keyed-map value compiles to `IS NULL`.
+- Input: a `firebird://` URL (+ `?charset=`), SQL + params. Output: rows (column-case-folded), a generator-
+  based last-id or none, or a raised error.
 
 ## Lifecycle and operation graph
 
-1. Feature 4 resolves the `firebird:`/`fb:` URL to host, port/path, database, credentials.
-2. `connect` opens the connection; the connect MUST be bounded (FB-02) so an unreachable
-   server cannot hang forever.
-3. A write captures the generated id (converging on RETURNING); a batch stays per-row.
-4. Transactions bracket through the native mode; `autocommit` reflects and sets it; a
-   prepared statement is closed after use so handles do not leak (FB-04).
-5. `close` releases the connection and is idempotent; catalog inspection never mutates.
+1. Lazy-import the driver (guarded); connect (charset resolution URL/env/UTF8; watchdog).
+2. Translate SQL (Firebird `ROWS x TO y` / `SELECT FIRST/SKIP`), bind, execute; transparent reconnect on a
+   dead connection (Python/PHP/Ruby).
+3. Fold ALL-CAPS column names to lowercase; read blobs to bytes; derive last-id from the generator (or not).
 
 ## Configuration and precedence
 
-- The connect MUST be bounded by `TINA4_DATABASE_CONNECT_TIMEOUT` (default 10). This is
-  currently unmet: a Firebird connect to an unreachable host hangs past the bound (FB-02).
-- Connection identity comes only from Feature 4. There are no other Firebird-specific
-  environment variables.
+- The `firebird://` URL + `?charset=` (or `TINA4_...` charset env). PHP: `TINA4_FIREBIRD_DRIVER` / `?driver=`
+  forces native vs PDO.
 
 ## Failures, side effects and security
 
-- Values are always bound (`?`); identifiers are quoted with double quotes by the trusted
-  builder only.
-- A prepared statement is released after execution; an unreleased handle exhausts the
-  server's statement pool over time (FB-04).
-- The connect must fail within the timeout naming host, port, elapsed seconds and the
-  timeout variable; today it can hang (FB-02).
-- A driver error throws and retains Firebird's cause; it never becomes an empty read or a
-  false write result.
+- Fail-loud main query; transparent reconnect on dead-connection markers. IBASE_WAIT blocks on a lock
+  conflict rather than erroring (deliberate, PHP). Credentials from the URL, redacted. The known
+  node-firebird SRP-login flakiness is NOT mitigated in-adapter (Node).
 
 ## Wire and persistence contract
 
-Communication is the Firebird wire protocol through the host driver. Values round-trip as
-their native types; `BLOB` is raw bytes, `TIMESTAMP` preserves the value, and identifiers
-round-trip case-folded to lowercase in results. The generated id comes from RETURNING.
-The `ROWS`/`FIRST SKIP` rewrite and per-row batching change only SQL shape, never
-parameter order.
+Firebird wire via the driver. Column names are lowercased (one-way - see the register). Last-id contract is
+generator-based where present.
 
 ## Providers and substitutability
 
-Each language uses its host's Firebird driver over `?` placeholders. PHP carries a native
-`interbase` path and a `pdo_firebird` fallback as one family. A future runtime satisfies
-the same fixture with its own driver, including the bounded connect.
+PHP has native + PDO legs (native unreachable on PHP 8); the others use one driver. Firebird tests are
+EXCLUDED from the require-services CI gate (lab-only enforcement).
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| FB-01 | INSERT id capture diverges: Python/PHP use `RETURNING`, Ruby/Node read the driver last-id. A UUID or trigger-assigned PK returns a different value across ports. | Converge on `INSERT ... RETURNING` in all four. |
-| FB-02 | The connect is NOT bounded: an unreachable Firebird host hangs past `TINA4_DATABASE_CONNECT_TIMEOUT`. This is an open defect on the shipping branch. | Bound the connect (a watchdog if the driver cannot) and gate an unreachable-host timeout in all four. |
-| FB-03 | node-firebird SRP login fails intermittently (~12%) against Firebird 5. | Reproduce and fix the SRP handshake so connect is deterministic. |
-| FB-04 | Statement-handle leak parity is unverified in Python, Ruby and Node. | Prove a prepared statement is released after use in all four (a long loop must not exhaust the pool). |
-| FB-05 | Identifier case-folding (UPPERCASE storage -> lowercase result) is fixed per-port but not gated as parity. | Gate a mixed-case column read returning the Python master's lowercase in all four. |
-| FB-06 | Boolean handling differs between Firebird versions (native 3.0+ vs integer below). | Pin one boolean representation the fixture proves on the lab Firebird version. |
-| FB-07 | PHP ORM behavior against a real Firebird 5 (issue 132) is not fully closed. | Run the ORM fixture against live FB5 in PHP. |
-| FB-08 | No shared Firebird fixture exists. | Add `firebird_contract.json`. |
+| FB-RUBY-MOCK | Ruby's `spec/firebird_reconnect_spec.rb:66-118` uses RSpec doubles + `allow(driver).to receive(:open_connection)` to avoid a real Firebird server - the reconnect/retry path (4 of 9 examples) is proven only against fakes. This VIOLATES the project's absolute no-mock rule; the reconnect behaviour is not actually verified. | Convert to a real Firebird reconnect test (kill/restore a real connection), or drop the mocked examples. This is a direct no-mock-rule violation and should be fixed regardless of the audit. |
+| FB-LASTID-GAP | Ruby (`firebird_driver.rb:252`) and Node (`firebird.ts:622`) NEVER return a last-insert-id (nil/null), while Python/PHP derive it from the generator. So on Firebird, Ruby/Node writes cannot report the new id - a parity gap in the write contract. | Derive the last-id from the generator in Ruby/Node (as Python/PHP do), or document Firebird as not supporting last-id in those languages. |
+| FB-AFFECTED-FAB | Node FABRICATES `affectedRows: 1` on every insert/update/delete (`firebird.ts:447`/`:473`/`:505`) regardless of rows touched; Ruby lacks `affected_rows` entirely (facade returns a best-effort default). So a Firebird write's affected-count is not real in Ruby/Node. | Return the real affected count from the driver (or document it as unavailable). |
+| FB-COLUMN-CASE-TRAP | The ALL-CAPS->lowercase fold is one-way: a genuinely quoted ALL-CAPS `AS "MYCOL"` is indistinguishable from a folded one and gets lowercased too (documented in Ruby `:411`). The one spelling that cannot round-trip. | Document the limitation prominently (it is inherent to Firebird's case-folding); no clean fix without tracking quoting through the query. |
+| FB-BLOB-SRP-UNVERIFIED | Node's blob-as-Buffer claim is a no-op ASSERTED not verified (`firebird.ts:387`), and node-firebird's SRP-login negotiation is left entirely to the driver (unmitigated flakiness, ~12% failure measured). Neither is proven in a read-only pass. | Verify blob handling against a live Firebird; add SRP-login retry/handling in-adapter (or pin a driver version) given the measured flakiness. |
+| FB-GATE-EXCLUDED | Firebird real-DB tests are EXCLUDED from the require-services gate (Python conftest; Node `_serviceGate.ts:65` lists firebird in EXCLUDED_KEYWORDS), and the Node driver is declared only as a devDependency. So real-Firebird coverage is enforced only where the URL happens to be set (lab), not by CI - contradicting the CLAUDE.md "Firebird is not excluded" claim (true only for the lab run). | Provision Firebird in CI (or keep the lab-only policy but fix the CLAUDE.md claim - it currently over-states coverage). Declare the Node driver as an optional dependency, not devDependency. |
 
 ## Owner decisions
 
-1. `INSERT ... RETURNING` is the canonical generated-id capture in all four (converging
-   Ruby and Node onto it), because a generator/trigger PK is otherwise wrong.
-2. The connect is bounded by `TINA4_DATABASE_CONNECT_TIMEOUT`; if a driver cannot bound its
-   own login, the provider wraps it in a watchdog so an unreachable host fails within the
-   bound. FB-02 blocks provider sign-off.
-3. A prepared statement is always released after execution; leak-freedom is gated.
-4. Result column names are lowercased to the Python master in all four.
-5. `MAX_BIND_PARAMS = 0` keeps a Firebird batch per-row; there is no VALUES collapse.
+- FB-DEC-01 (proposed): fix the no-mock violation (FB-RUBY-MOCK) - non-negotiable per the project rule.
+- FB-DEC-02 (proposed): close the write-contract gaps in Ruby/Node - generator last-id (FB-LASTID-GAP) and
+  real affected-count (FB-AFFECTED-FAB).
+- FB-DEC-03 (proposed): verify blob + add SRP-login handling (FB-BLOB-SRP-UNVERIFIED); fix the CI-gate/
+  CLAUDE.md coverage claim (FB-GATE-EXCLUDED); document the case-fold trap (FB-COLUMN-CASE-TRAP).
 
 ## Proposed conformance fixture
 
-Add `firebird_contract.json` (with `write_path_contract.json`) with stable ids for: a
-bounded connect and an unreachable-host timeout that RETURNS (not hangs); `INSERT ...
-RETURNING` id capture including a trigger-assigned PK; a mixed-case column read returning
-lowercase; a `ROWS`/`FIRST SKIP` paginated read; `BLOB` round-trip; a boolean on the lab
-Firebird version; a long insert loop proving no statement-handle leak; `getTables`
-excluding `RDB$` system tables; `getColumns` PK ordinal. Every behavioral case uses the
-live lab Firebird 5; no mock can claim conformance, and FB-02/FB-03 must be proven against
-a real unreachable host and a real SRP login.
+Real Firebird 5, no mocks (the existing column-case/charset/url specs are the base): a real reconnect after a
+dropped connection (replacing the mocked Ruby spec); an insert reports the generator last-id in ALL four; a
+multi-row write reports the real affected count; a blob round-trips intact; a column-case round-trip. Gate it
+so CI provisions Firebird (or document the lab-only policy accurately).
 
 ## Integration map
 
-- The registry selects this provider from `firebird:`/`fb:`; the factory constructs it with
-  Feature 4's parameters.
-- Feature 5 composes CRUD; Feature 6 builds SQL; Feature 7 owns the ROWS/FIRST-SKIP rewrite,
-  double-quote quoting and the zero bind-collapse ceiling.
-- Migrations, ORM, pagination and any Firebird-backed session/cache/queue consume the
-  adapter; `get_next_id` uses a Firebird generator.
-- Central fixtures, four runners, CI matrix, release notes and docs update together.
+- Consumers: ORM, migrations, the Database facade, the SQL translator (feature 7). Related: the Firebird
+  statement-leak parity check and the SRP-login flakiness (open items).
 
 ## Breaking changes and migration
 
-- Ruby and Node move to `INSERT ... RETURNING`; a generator/trigger PK now returns the
-  correct id.
-- The connect becomes bounded; an application pointed at a dead host now fails fast instead
-  of hanging.
-- No application SQL changes; corrections are provider-internal.
+- Adding the generator last-id and real affected-count in Ruby/Node changes those `DatabaseResult` fields
+  (previously nil/fabricated) - a correctness fix; document it.
 
 ## Implementation backlog
 
-1. Add `firebird_contract.json` and wire four runners against the live lab Firebird 5.
-2. Bound the connect (watchdog if needed); gate an unreachable-host timeout (FB-02).
-3. Fix node-firebird SRP flakiness (FB-03).
-4. Converge INSERT id capture on RETURNING in Ruby and Node (FB-01).
-5. Gate statement-leak-freedom (FB-04) and column-case parity (FB-05).
-6. Run the ORM fixture against live FB5 in PHP (FB-07).
-7. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit.
+1. FB-DEC-01: real reconnect test (fix the no-mock violation).
+2. FB-DEC-02: generator last-id + real affected-count in Ruby/Node, with regressions.
+3. FB-DEC-03: verify blob; SRP-login handling; fix the CI-gate/CLAUDE.md claim; document the case trap.
 
 ## Porting capsule
 
-Use the host's Firebird driver over `?` placeholders. Bound the connect (wrap the login in
-a watchdog if the driver will not honor a timeout), capture the generated id with `INSERT
-... RETURNING`, release every prepared statement after use, and lowercase result column
-names to the Python master. Quote identifiers with double quotes, exclude `RDB$` system
-tables, keep a batch per-row (`MAX_BIND_PARAMS = 0`), and make lifecycle idempotent. Prove
-the port against a live Firebird 5, including a real unreachable-host timeout that returns.
+A Firebird adapter needs: a lazy/optional driver; a watchdog around the un-boundable native connect;
+charset resolution; ALL-CAPS->lowercase column folding (documenting the one-way trap); blob read-out to
+bytes (VERIFIED against a live server); a generator-based last-id AND a real affected-count in EVERY
+language; transparent reconnect proven against a REAL dropped connection (never a mock); and, given the
+measured node-firebird SRP flakiness, in-adapter login handling. Provision Firebird in CI or state plainly
+that coverage is lab-only.
 
 ## Audit closure checklist
 
 - [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded.
-- [x] Owner ambiguities recorded (5 proposed; the genuine calls await owner ratification).
-- [x] Proposed shared cases and mutation witnesses complete.
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Lifecycle and producer/consumer edges complete.
+- [x] Configuration, failure and security rules complete.
+- [x] Wire/type contracts complete (column-case, generator last-id, blobs).
+- [x] Four-language behaviour recorded (column-case universal; last-id/affected gaps Ruby/Node; PHP legs).
+- [x] Owner ambiguities decided (FB-DEC-01..03).
+- [x] Conformance fixture (real reconnect, last-id, affected, blob) recorded.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.

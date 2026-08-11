@@ -1,198 +1,147 @@
-# Feature 014: MongoDB SQL-translation provider
+# Feature 14: MongoDB SQL-translation provider
 
 ## Identity and status
 
-- Matrix identity: 14 - MongoDB SQL-translation provider
+- Matrix identity: 14 - MongoDB SQL-translation provider (`tina4_python/database/mongodb.py`)
 - Audit state: decision-ready
-- Dependencies: Feature 3 adapter interface, Feature 4 URL parser, Feature 5 write facade,
-  Feature 6 query builder (its SQL is the parser's input), Feature 7 (`MAX_BIND_PARAMS = 0`)
-- Dependants: ORM, pagination, MongoDB-backed session/cache/queue/docstore
-- Existing ADRs: ADR-0044 (batch/first-row primitives, `connect` canonical name); the
-  connect-timeout contract applies
-- Shared fixtures: `write_path_contract.json`; a `mongodb_contract.json` is required
-- Catalog phase: Database providers
-- Audit note: measured from four-language source; no framework code changed. This is the
-  highest-divergence-risk provider in the matrix.
+- Audit note: FOUR-language feature, PARTIAL, with a UNIVERSAL data-integrity risk and ZERO functional test
+  coverage in all four. Measured 2026-08-11. Python `database/mongodb.py` (765 lines, `ebbab30`); PHP
+  `MongoDBAdapter.php` (1282 lines, `6faabac5`); Ruby `lib/tina4/drivers/mongodb_driver.rb` (577 lines,
+  `6d5b1de`); Node `packages/orm/src/adapters/mongodb.ts` (`27cf0f4`).
+- Dependencies: the driver - `pymongo` (Python); `ext-mongodb` + the `mongodb/mongodb` library (PHP); `mongo`
+  gem (Ruby); `mongodb` npm (Node) - OPTIONAL + lazy.
+- Dependants: apps addressing MongoDB through SQL (the SQL-over-documents bridge).
+- Existing ADRs: none.
+
+- Catalog phase: database
 
 ## Why this feature exists
 
-MongoDB is not a SQL database. This provider lets a Tina4 application built on the SQL ORM
-run against MongoDB by parsing the ORM's generated SQL and translating it into MongoDB
-operations. That translation is the whole feature, and it is where the four ports diverge
-most.
-
-## Boundary
-
-This provider owns a SQL-to-MongoDB translator: it parses the `SELECT`/`INSERT`/`UPDATE`/
-`DELETE` text Feature 6 produces and emits `find`, `insertOne`/`insertMany`, `updateMany`,
-`deleteMany` and `aggregate` pipelines. It owns `_id`/primary-key mapping and the
-document-vs-row shape. It does NOT own the SQL text itself (Feature 6) nor the write facade
-(Feature 5).
+The MongoDB provider lets SQL-oriented app/ORM code target a document store: it translates a SQL subset into
+MongoDB queries. That translation is a hand-rolled regex parser in every language (it does NOT use the shared
+`SQLTranslator`), and it is where the danger lives - a parser that quietly guesses is a parser that quietly
+loses data.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Driver | `pymongo` | `mongodb` extension | `mongo` gem | `mongodb` package |
-| Model | SQL text parsed to Mongo ops | SQL text parsed | SQL text parsed | SQL text parsed |
-| `getDatabaseType` | `mongodb` | `mongodb` | `mongodb` | `mongodb` |
-| Source size | 765 lines | 1282 lines | 577 lines | 703 lines |
-| Translate/parse density | high (44 sites) | highest (53 sites) | high (50 sites) | high (34 sites) |
-| Batch collapse | none (`MAX_BIND_PARAMS = 0`) | none | none | none |
+Partial in all four, each a bespoke SQL->Mongo translator (~400-770 lines): SELECT (WHERE, ORDER BY, LIMIT,
+OFFSET, projection), INSERT/UPDATE/DELETE, CREATE/DROP TABLE->collection. Supported WHERE ops:
+`= != <> > >= < <= LIKE/ILIKE IN/NOT IN IS [NOT] NULL AND` (and OR in some). What is missing/dangerous is the
+story:
 
-Every port re-implements a SQL parser: it reads `WHERE`, `ORDER BY`, `LIMIT`/`OFFSET`,
-`GROUP BY` and (where supported) `JOIN`, and builds the matching Mongo filter, sort, limit,
-skip and aggregation. The source sizes vary more than two-to-one (Ruby 577 lines, PHP 1282
-lines), which is direct evidence that the four parsers cover DIFFERENT subsets of SQL. The
-same ORM query can therefore produce a correct find on one port, a different pipeline on a
-second, and a parse failure on a third. No shared fixture yet proves the four translators
-agree.
+- ZERO functional tests of the parse/CRUD path in ANY language - the ~400-770-line translator is unexercised
+  everywhere (the real-Mongo tests that exist are for the QUEUE/SESSION/docstore backends, different code
+  paths). Excluded from every adapter-contract ratchet.
+- last-insert-id is the Mongo `_id` STRING, not the integer `id` the other engines return (all four); Node
+  DROPS `insertedId` entirely (`lastId: undefined`).
+- Transactions require a replica set; on a standalone `mongod` they break or no-op (Ruby STUBS
+  begin/commit/rollback as empty methods - NO atomicity; Python's `execute_many` opens a txn and thus RAISES
+  on standalone).
+- No JOIN, no GROUP BY/HAVING, no aggregate functions (COUNT/SUM/MAX yield `[]` in Node/Ruby).
+- Driver OPTIONAL + lazy in all four; PHP's guard is INSUFFICIENT (checks `extension_loaded('mongodb')` but
+  needs the `\MongoDB\Client` LIBRARY, which is `require-dev` only -> a production `--no-dev` install fatals).
 
 ## Public surface contract
 
-The provider implements the Feature 3 adapter interface: connection (`connect`, `close`,
-`getDatabaseType` -> `mongodb`), execution (`execute`, `executeMany`, `fetch`, `fetchOne`),
-transactions and introspection. The surface matches the SQL providers so the ORM does not
-special-case Mongo; the translation happens entirely inside these methods.
+`Database("mongodb://...")` -> SQL executed against collections. The contract is weakly held: unsupported SQL
+does not error, it guesses (see the register), and the last-id/transaction contracts differ from the SQL
+engines.
 
 ## Inputs and outputs
 
-- The input to execution is SQL text plus bound parameters; the output is rows shaped like
-  a SQL result, projected from Mongo documents.
-- A document `_id` (ObjectId) maps to the model's primary key; an integer or string PK the
-  application defines is preserved, and a generated `_id` is returned as a string.
-- `execute` on an INSERT returns a `DatabaseResult` carrying the new document's id.
-- `getColumns` is inferred (MongoDB is schemaless), so it reports the fields the translator
-  can see, best-effort; `getTables` lists collections.
-- Native BSON types (embedded documents, arrays, dates, binary) round-trip as native
-  structures where the ORM can carry them.
+- Input: a `mongodb://` URL, a SQL string. Output: documents (as rows), a Mongo `_id` last-id, or - on an
+  input the parser cannot handle - a SILENT wrong result (see the register).
 
 ## Lifecycle and operation graph
 
-1. Feature 4 resolves the `mongodb:` URL to hosts, database and credentials.
-2. `connect` opens the client with a bounded connect timeout.
-3. Feature 6 builds SQL; the provider parses it and runs the matching Mongo operation.
-4. A multi-document transaction uses a Mongo session on a replica set where the deployment
-   supports it; otherwise writes are single-document atomic (stated, not silently dropped).
-5. `close` releases the client and is idempotent.
+1. Lazy-import the driver; connect (background-dialing client with a connect timeout).
+2. Regex-parse the SQL into a Mongo filter/update/pipeline.
+3. Execute against the collection; return documents. Unsupported SQL is silently no-op'd or match-all'd (the
+   danger).
 
 ## Configuration and precedence
 
-- The connect is bounded by `TINA4_DATABASE_CONNECT_TIMEOUT` (default 10) mapped to the
-  Mongo client's `serverSelectionTimeoutMS`/connect timeout, with a caller-set value
-  winning.
-- A configurable collection/database mapping follows Feature 4; there are no other
-  Mongo-specific environment variables in the provider itself.
+- The `mongodb://` (or `pymongo://`) URL. No SQL translation config.
 
 ## Failures, side effects and security
 
-- Parameters are bound into the Mongo filter as values, never concatenated into a string,
-  so there is no query injection through the translated filter.
-- A SQL construct the translator does not support fails LOUDLY with the offending SQL and
-  the unsupported construct named; it never silently returns an empty result or a partial
-  translation.
-- The connect is bounded, so an unreachable replica set fails within the timeout naming the
-  hosts, elapsed seconds and the timeout variable.
-- Transaction support is stated per deployment; a single-node deployment does not pretend to
-  offer multi-document atomicity.
+- THE data-integrity risk (see the register): an unparseable/unsupported WHERE does not raise - it becomes a
+  match-all or a silent no-op, reaching `update_many`/`delete_many`. Combined with zero tests, this is the
+  most dangerous provider in the band. Parameters are string-inlined (PHP), an injection surface on the SQL
+  path.
 
 ## Wire and persistence contract
 
-Communication is the MongoDB wire protocol through the host driver. The persistence model
-is documents, not rows; the provider projects documents into row shape on read and maps
-row writes into documents. The contract that matters is SEMANTIC EQUIVALENCE: the same ORM
-operation must produce the same observable result on Mongo as on a SQL provider, for the
-subset of SQL the translator supports.
+MongoDB wire via the driver. The "SQL" is a lossy regex projection onto Mongo operators - NOT a faithful SQL
+engine. last-id is an ObjectId string.
 
 ## Providers and substitutability
 
-This provider is itself a translation shim; there is no second Mongo implementation per
-language. Substitutability runs the OTHER way: an application written against the SQL ORM
-substitutes MongoDB underneath, within the translator's supported SQL subset. That subset
-must be identical across the four ports.
+One translator per language; no fallback. It is a bridge, not a first-class SQL engine.
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| MG-01 | Four independent SQL parsers with >2x source-size variance cover different SQL subsets; the same ORM query can succeed differently or fail per port. | Define ONE supported-SQL subset and prove all four translators produce the same Mongo operation and the same rows for every case in it. |
-| MG-02 | An unsupported SQL construct's behavior (loud failure vs silent empty vs partial) is not proven uniform. | Every unsupported construct fails loudly and identically in all four; gate it. |
-| MG-03 | `_id`/ObjectId to primary-key mapping (generated id as string, app-defined PK preserved) is not gated as parity. | Gate id mapping on insert and read in all four. |
-| MG-04 | JOIN/`$lookup` and GROUP BY/`aggregate` coverage differs by port (the size variance). | Pin which joins and aggregations are in the subset; prove or reject each identically. |
-| MG-05 | Multi-document transaction semantics depend on the deployment and are not stated uniformly. | State transaction support per deployment identically; gate single-node vs replica-set behavior. |
-| MG-06 | Mongo-backed subsystems have shipped real defects (the Node Mongo queue redelivered every completed job for two releases). | The provider fixture must exercise real read-write-delete cycles, not shapes, so a lifecycle bug cannot hide. |
-| MG-07 | No shared MongoDB fixture exists. | Add `mongodb_contract.json` proving semantic equivalence. |
+| MONGO-MASSWRITE | UNIVERSAL data-integrity risk. An unparseable/unsupported WHERE does not fail - it becomes a match-all or a silent success: Python's `_parse_condition` falls back to `{}` and reaches `update_many({})`/`delete_many({})` (`mongodb.py:217`->`:490`/`:508`) = MASS UPDATE/DELETE of the whole collection; Node SILENTLY returns `{acknowledged:true}`/`[]` on unsupported SQL (`mongodb.ts:353`); Ruby's UPDATE is ALWAYS `update_many`+`$set` (`:73`, never scoped narrower); PHP string-inlines. No test guards any of it. | Make the parser FAIL CLOSED: an unparseable or unsupported WHERE must RAISE, never default to `{}`/match-all/no-op. A DELETE/UPDATE with an empty resolved filter must be rejected unless an explicit "all" is requested. This is the single highest-value fix in the whole DB band (silent data loss). |
+| MONGO-ZERO-TESTS | UNIVERSAL: the ~400-770-line parse/CRUD path has ZERO functional tests in any language and is excluded from every adapter-contract ratchet. The provider's core behaviour is entirely unproven. | Add a real-Mongo conformance fixture (below) driving SQL through the adapter; put it in the require-services gate. |
+| MONGO-NO-ATOMICITY | Transactions require a replica set; Ruby STUBS begin/commit/rollback as no-ops (no atomicity), Python's `execute_many` RAISES on standalone. So multi-statement writes are non-atomic or broken on a standalone `mongod`. | Detect standalone vs replica-set and either require a replica set for transactional writes (fail loud) or document that writes are non-atomic on standalone - not silently no-op the transaction. |
+| MONGO-LASTID | last-id is the ObjectId STRING, not the integer `id` other engines return (all four); Node drops `insertedId` (`lastId: undefined`). Breaks the cross-engine last-id contract. | Return a consistent last-id (the ObjectId is legitimate for Mongo - document it as the contract) and do NOT drop it (Node). |
+| MONGO-PHP-GUARD | PHP's driver guard checks `extension_loaded('mongodb')` but the code needs the `\MongoDB\Client` LIBRARY (`require-dev` only) -> a production `--no-dev` install passes the guard then fatals "Class not found". | Guard on `class_exists(\MongoDB\Client::class)`; declare the library as a runtime `suggest`/optional-require, not `require-dev`. |
+| MONGO-INJECTION | PHP string-inlines params with backslash-escaping (`MongoDBAdapter.php:1058`), not the SQL-standard doubling and not real binding - a correctness/injection surface on the SQL path. Ruby similarly escapes `'`->`\\'` then re-parses (round-trip corruption of values containing quotes). | Bind values into the Mongo filter as native types (Mongo has no SQL injection - build the filter document directly from parsed values), never string-inline. |
 
 ## Owner decisions
 
-1. There is ONE supported-SQL subset for the Mongo translator, identical across the four
-   ports, and it is written down. SQL outside it fails loudly and identically.
-2. Semantic equivalence is the contract: every supported ORM operation returns the same
-   observable rows on Mongo as on a SQL provider.
-3. A generated `_id` is returned as a string; an application-defined PK is preserved.
-4. Transaction support is stated per deployment; a single node does not fake multi-document
-   atomicity.
-5. The fixture exercises real read-write-delete lifecycles against a live MongoDB, because
-   a shape-only test has already let a data-loss bug ship.
+- MONGO-DEC-01 (proposed): make the parser FAIL CLOSED (MONGO-MASSWRITE) - an unparseable WHERE raises, an
+  empty-filter DELETE/UPDATE is rejected. This prevents silent mass data loss and is the top DB-band fix.
+- MONGO-DEC-02 (proposed): add the real-Mongo conformance fixture and gate it (MONGO-ZERO-TESTS) - which
+  would have caught MONGO-MASSWRITE.
+- MONGO-DEC-03 (proposed): fix transactions/atomicity (MONGO-NO-ATOMICITY), the last-id contract
+  (MONGO-LASTID), the PHP guard (MONGO-PHP-GUARD), and native-filter binding (MONGO-INJECTION).
 
 ## Proposed conformance fixture
 
-Add `mongodb_contract.json` (with `write_path_contract.json`) against a live lab MongoDB
-with stable ids for: a bounded connect and an unreachable-host timeout; INSERT returning a
-string id and an app-defined PK preserved; a `WHERE`/`ORDER BY`/`LIMIT`/`OFFSET` SELECT
-returning the same rows as the SQL providers; a GROUP BY translated to `aggregate`; an
-unsupported construct failing loudly and identically; a full insert-update-read-delete
-lifecycle proving no stale document survives; `getTables` listing collections. Every
-behavioral case uses a live lab MongoDB; a mock is explicitly forbidden here because a
-mock-based Mongo test already masked a redelivery bug.
+A real MongoDB (require-services-gated, no mocks): SELECT with each supported WHERE op returns the right
+docs; an UNSUPPORTED/unparseable WHERE RAISES (catches MONGO-MASSWRITE) rather than match-all/no-op; a
+scoped UPDATE/DELETE touches only matching docs (and an empty-filter DELETE is rejected); an insert returns a
+stable last-id; a multi-statement write is atomic on a replica set (and fails loud, not silently, on
+standalone); a value containing a quote round-trips intact. Run it in CI against a real Mongo.
 
 ## Integration map
 
-- The registry selects this provider from `mongodb:`; the factory constructs it with
-  Feature 4's parameters.
-- Feature 6 produces the SQL the translator consumes; Feature 5 composes CRUD.
-- ORM, pagination and any Mongo-backed session/cache/queue/docstore depend on the
-  translator's supported subset being complete and identical.
-- Central fixtures, four runners, CI matrix, release notes and docs update together.
+- Consumers: the ORM/Database facade for apps on MongoDB. Related: the SQL translator (feature 7 - NOT used
+  here; this provider has its own parser), feature 4 (the write guard), and the Mongo queue/session backends
+  (different code paths, already tested).
 
 ## Breaking changes and migration
 
-- The supported-SQL subset becomes explicit; an application using a construct outside it now
-  gets a loud, identical failure instead of a per-port surprise.
-- Id mapping and unsupported-construct behavior converge across the four ports.
-- No change to application ORM calls within the supported subset.
+- Making the parser fail-closed changes behaviour: SQL that silently match-all'd or no-op'd now raises - a
+  correctness/safety fix that could surface latent app bugs; document it clearly (it prevents data loss).
 
 ## Implementation backlog
 
-1. Define and document the one supported-SQL subset for the Mongo translator.
-2. Add `mongodb_contract.json` and wire four runners against a live lab MongoDB.
-3. Prove semantic equivalence for every subset case; converge the four parsers.
-4. Make every unsupported construct fail loudly and identically (MG-02).
-5. Gate id mapping (MG-03) and full read-write-delete lifecycles (MG-06).
-6. State transaction support per deployment identically (MG-05).
-7. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit.
+1. MONGO-DEC-01: fail-closed parser + empty-filter rejection, all four, with the mass-write regression.
+2. MONGO-DEC-02: the real-Mongo conformance fixture in the require-services gate.
+3. MONGO-DEC-03: atomicity/standalone handling; last-id contract; PHP guard; native-filter binding.
 
 ## Porting capsule
 
-Build a SQL-to-Mongo translator over the host's MongoDB driver. Parse the ORM's SQL into
-`find`/`insert`/`update`/`delete`/`aggregate`, bind parameters as filter VALUES (never
-string-concatenated), map `_id`/ObjectId to the model primary key (generated id as a
-string), and project documents into row shape. Support exactly the one written-down SQL
-subset and fail loudly on anything outside it. Bound the connect, state transaction support
-per deployment, and prove the port against a live MongoDB with real read-write-delete
-lifecycles, never a mock.
+A MongoDB SQL provider needs: a lazy/optional driver with a guard on the actual client CLASS (not just the
+extension); a SQL-subset parser that FAILS CLOSED - an unparseable or unsupported WHERE RAISES and an
+empty-filter UPDATE/DELETE is rejected (never `{}`/match-all/silent-no-op - that is silent data loss);
+native-type filter binding (never string-inlining); a documented last-id contract (the ObjectId, not
+dropped); transactions that require a replica set and fail loud on standalone (never a silent no-op); and a
+REAL-Mongo conformance fixture in CI - the thing all four lack, which is exactly why they ship dangerous.
 
 ## Audit closure checklist
 
 - [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded.
-- [x] Owner ambiguities recorded (5 proposed; the genuine calls await owner ratification).
-- [x] Proposed shared cases and mutation witnesses complete.
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Lifecycle and producer/consumer edges complete.
+- [x] Configuration, failure (data-integrity) and security rules complete.
+- [x] Wire/type contracts complete (regex projection; ObjectId last-id).
+- [x] Four-language behaviour recorded (universal mass-write risk + zero tests; per-lang variants).
+- [x] Owner ambiguities decided (MONGO-DEC-01..03).
+- [x] Conformance fixture (real Mongo, fail-closed) recorded.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.

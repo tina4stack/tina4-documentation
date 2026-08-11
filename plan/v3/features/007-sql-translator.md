@@ -1,299 +1,145 @@
-# Feature 007: SQL translator
+# Feature 7: SQL translator
 
 ## Identity and status
 
-- Matrix identity: 7 - SQL translator
+- Matrix identity: 7 - SQL translator (`tina4_python/database/sql_translator.py`)
 - Audit state: decision-ready
-- Dependencies: Feature 3 - Database adapter interface; Feature 6 - Query builder
-- Dependants: Features 8-14 database providers, Feature 15 migrations, Feature 17 ORM
-  base class, Feature 24 paginated results
-- Existing ADRs: ADR-0044 governs batch and first-row execution as adapter primitives;
-  no SQL-translator-specific ADR exists
-- Shared fixtures: `batch_write_contract.json` (byte-identical in all four); a SQL
-  translation fixture is required
-- Catalog phase: Database and providers
-- Audit note: measured from four-language source; no framework code changed
+- Audit note: FOUR-language feature. Measured 2026-08-11 from shipped source by four parallel readers.
+  Python `database/sql_translator.py:19` (`feature/csrf-fail-closed` HEAD `ebbab30`); PHP
+  `Tina4/SQLTranslator.php:14` (`feature/mcp-call-gate` HEAD `6faabac5`); Ruby `lib/tina4/sql_translator.rb:18`
+  (`6d5b1de`); Node `packages/orm/src/sqlTranslator.ts:23` (`27cf0f4`).
+- Dependencies: none (pure string transforms + a hash for the query-cache key).
+- Dependants: the six SQL providers (features 9-14) which call it to adapt the canonical SQL to their
+  dialect; the batch-insert collapse; the ORM `create_table` DDL (autoincrement).
+- Existing ADRs: none dedicated.
+
+- Catalog phase: database
 
 ## Why this feature exists
 
-The translator gives every database provider one small set of stateless SQL rewrites so
-dialect rules live in exactly one place instead of being copied into each provider and
-into application queries. A provider calls the rules its dialect needs; the rules are
-pure string and parameter transforms with no database contact.
-
-## Boundary
-
-Feature 7 owns the shared dialect rewrites, the engine-alias table, the per-engine
-bind-parameter ceilings, the safe multi-row batch-insert construction, and the
-generated-id normalization that collapsing a batch requires. It owns pagination
-rewriting (LIMIT to Firebird `ROWS` and MSSQL `TOP`), placeholder-style conversion,
-`||` concatenation, boolean literals, `ILIKE` and `AUTOINCREMENT` DDL.
-
-Feature 6 constructs the query. Feature 3 executes it. Each provider decides which
-rewrites its dialect needs and owns its own identifier quoting (`quote_identifier` stays
-on the adapter, because quoting genuinely differs per engine and a shared version would
-flatten the Firebird override). Query result caching is NOT a translation concern and is
-owned by the cache feature, not by this module.
-
-The translator holds no state and performs no I/O. Every rule is a pure function of its
-input, so the rules are checkable without a database and the live-engine runners prove
-the rewritten SQL still lands correctly.
+Tina4 writes one canonical, SQLite-flavoured SQL and lets each engine adapter translate it to its dialect,
+so app and ORM code stays portable. The translator is that shared rulebook: LIMIT/OFFSET shapes, boolean
+literals, string concatenation, autoincrement syntax, placeholder styles, and the batch-insert collapse.
+Get it right and one query runs everywhere; get it wrong and it silently emits invalid SQL on an engine the
+developer never tested against.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Public surface | `tina4_python/database/sql_translator.py` | `Tina4/SQLTranslator.php` | `lib/tina4/sql_translator.rb` | `packages/orm/src/sqlTranslator.ts` |
-| Core rewrites | 7 static methods | 7 static methods | 7 module methods | 7 static methods |
-| Batch machinery | `build_batch_inserts`, `batch_last_id` | `buildBatchInserts`, `batchLastId` | `build_batch_inserts`, `batch_last_id` | `buildBatchInserts`, `batchLastId` |
-| Shared constants | `MAX_BIND_PARAMS`, `ENGINE_ALIASES`, `FIRST_ID_ENGINES` | same three | same three | same three |
-| RETURNING inspection | batch guard only | `hasReturning` + `extractReturning` | batch guard only | `parseReturning` |
-| Named -> positional | no | `namedToPositional` | no | no |
-| Dialect dispatcher | no | `translate(sql, dialect)` | no | no |
-| Function-mapping registry | no | `registerFunction`/`applyFunctionMappings` | no | no |
-| Query cache in this module | re-exports `Cache` as `QueryCache` | full cache (get/set/remember/sweep/clear/size/ttl) | `query_key` only | a `QueryCache` class in the same file |
-| Existing focused tests | `tests/test_sql_translation.py` | `tests/SQLTranslatorTest.php` | `spec/sql_translator_spec.rb` | `test/sqlTranslator.test.ts` |
+All four ship a static `SQLTranslator` with the same rule set, canonical input = SQLite/ANSI (`?`
+placeholders, `AUTOINCREMENT`, `LIMIT/OFFSET`, `||`, `TRUE/FALSE`, `ILIKE`). The transforms: `limit_to_rows`
+(Firebird `ROWS x TO y`), `limit_to_top` (MSSQL `TOP n`), `boolean_to_int`, `concat_pipes_to_func`
+(`||`->`CONCAT`), `auto_increment_syntax` (per-engine), `placeholder_style`, `ilike_to_like`, and
+`build_batch_inserts` (row-at-a-time -> chunked multi-row VALUES, with per-engine `MAX_BIND_PARAMS`).
 
-The core rewrites and the batch machinery are aligned. The three constants agree because
-the byte-identical `batch_write_contract.json` fixture is their source: `MAX_BIND_PARAMS`
-is sqlite 999, postgres 65535, mysql 65535, mssql 2100, and 0 (never collapse) for
-firebird, odbc and mongodb; `ENGINE_ALIASES` maps postgresql/pgsql to postgres, sqlite3
-to sqlite, sqlserver/sqlsrv to mssql and mariadb to mysql; `FIRST_ID_ENGINES` is mysql
-alone. `batch_last_id` exists because a single multi-row INSERT reports the FIRST
-generated id on MySQL while a row-at-a-time loop reported the last; verified live (a
-3-row insert reports 1 while `MAX(id)` is 3), and the ids are consecutive so the last is
-`first + rows - 1`.
-
-The surface above the core is where the four diverge, and the divergence is the audit.
+A key architectural divergence: Python, PHP, and Node WIRE the translator into each adapter's execute/fetch
+path; Ruby's drivers largely BYPASS it (see the register) and own their own dialect handling.
 
 ## Public surface contract
 
-Every language exposes the same core rewrites and batch machinery. Names are idiomatic;
-behavior is identical. Each takes SQL (and where noted an engine name or style) and
-returns rewritten SQL or a batch plan; none touches a database.
-
-| Neutral operation | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| LIMIT/OFFSET -> Firebird ROWS | `limit_to_rows(sql)` | `limitToRows($sql)` | `limit_to_rows(sql)` | `limitToRows(sql)` |
-| LIMIT -> MSSQL TOP | `limit_to_top(sql)` | `limitToTop($sql)` | `limit_to_top(sql)` | `limitToTop(sql)` |
-| `\|\|` -> CONCAT() | `concat_pipes_to_func(sql)` | `concatPipesToFunc($sql)` | `concat_pipes_to_func(sql)` | `concatPipesToFunc(sql)` |
-| TRUE/FALSE -> 1/0 | `boolean_to_int(sql)` | `booleanToInt($sql)` | `boolean_to_int(sql)` | `booleanToInt(sql)` |
-| ILIKE -> LOWER LIKE LOWER | `ilike_to_like(sql)` | `ilikeToLike($sql)` | `ilike_to_like(sql)` | `ilikeToLike(sql)` |
-| AUTOINCREMENT per engine | `auto_increment_syntax(sql, engine)` | `autoIncrementSyntax($sql, $dialect)` | `auto_increment_syntax(sql, engine)` | `autoIncrementSyntax(sql, engine)` |
-| `?` -> engine placeholder | `placeholder_style(sql, style)` | `placeholderStyle($sql, $style)` | `placeholder_style(sql, style)` | `placeholderStyle(sql, style)` |
-| Collapse INSERT batch | `build_batch_inserts(sql, rows, engine)` | `buildBatchInserts(...)` | `build_batch_inserts(...)` | `buildBatchInserts(...)` |
-| Normalize batch last id | `batch_last_id(id, rows, engine)` | `batchLastId(...)` | `batch_last_id(...)` | `batchLastId(...)` |
-| Bind-param ceiling | `MAX_BIND_PARAMS` | `MAX_BIND_PARAMS` | `MAX_BIND_PARAMS` | `MAX_BIND_PARAMS` |
-| Engine aliases | `ENGINE_ALIASES` | `ENGINE_ALIASES` | `ENGINE_ALIASES` | `ENGINE_ALIASES` |
-| First-id engines | `FIRST_ID_ENGINES` | `FIRST_ID_ENGINES` | `FIRST_ID_ENGINES` | `FIRST_ID_ENGINES` |
-
-The methods that exist in only one or two ports are NOT yet contract and are decided
-below: a RETURNING inspector (`extractReturning`/`parseReturning`), named-to-positional
-conversion (`namedToPositional`), a dialect dispatcher (`translate`), and a
-function-mapping registry (`registerFunction`). The embedded query cache is removed from
-this module entirely.
+`SQLTranslator` static methods that take SQL (+ an engine string) and return transformed SQL, plus
+`build_batch_inserts` and a `query_key`/cache-key hash. No instance state. Identifier quoting is deliberately
+NOT here (it lives on each adapter); UPSERT/ON CONFLICT and date/time functions are deliberately NOT
+translated (portability by omission).
 
 ## Inputs and outputs
 
-- Input is a SQL string with `?` placeholders and, where the rule needs it, a native
-  engine name or a placeholder style. Rewrites preserve every caller fragment verbatim
-  except the specific token they translate.
-- `placeholder_style` accepts `?` (unchanged), `%s` (MySQL/PostgreSQL) or a `:` prefix
-  (numbered `:1, :2, ...` for Firebird/Oracle). Placeholder order is preserved exactly.
-- `build_batch_inserts(sql, rows, engine)` returns a list of `(sql, params)` statements
-  to run instead of the per-row loop, or an EMPTY list meaning "not collapsible, keep
-  looping". Empty is always a correct answer, so anything unrecognized falls back to the
-  existing loop rather than guessing.
-- `batch_last_id(reported_id, rows_in_chunk, engine)` returns the LAST row's id, adjusting
-  only on `FIRST_ID_ENGINES`.
-- Engine names are normalized through `ENGINE_ALIASES` before any cap or first-id lookup;
-  without this, a provider reporting `postgresql` misses the `postgres` cap and the
-  collapse silently does nothing on the engine with the largest win.
+- Input: canonical SQL, the target engine, and (for batch) the rows. Output: dialect SQL, or a collapsed
+  multi-row INSERT, or a cache key.
 
 ## Lifecycle and operation graph
 
-1. A provider or the batch-write path receives constructed SQL and native parameters.
-2. It normalizes the engine name through `ENGINE_ALIASES`.
-3. It applies the rewrites its dialect needs (Firebird `ROWS`, MSSQL `TOP`, boolean and
-   `||` and `ILIKE` where the engine lacks them, DDL `AUTOINCREMENT` on create-table).
-4. It converts placeholders to the engine style.
-5. For a multi-row INSERT it calls `build_batch_inserts`; a non-empty result replaces the
-   loop, and after execution `batch_last_id` restores the last-row id contract.
-6. The rewritten SQL and parameters go to Feature 3 for execution. The translator keeps
-   no state between calls.
-
-The rules compose in any order that a dialect needs; they are individually idempotent on
-already-correct SQL (a statement with no LIMIT is returned unchanged).
+1. An adapter (or the ORM) calls the translator with the canonical SQL + its engine.
+2. The translator applies the rules that engine needs (placeholders, limit shape, autoincrement, booleans,
+   concat, ilike).
+3. `build_batch_inserts` collapses a row-at-a-time INSERT into chunked VALUES, refusing to collapse anything
+   containing `RETURNING`/`ON CONFLICT`/`ON DUPLICATE KEY`.
 
 ## Configuration and precedence
 
-The translator reads no environment variables or project files. Its only tables are the
-three shared constants, which are code, not configuration:
-
-- `MAX_BIND_PARAMS` sets the hard per-statement bind ceiling per engine. Zero means
-  "never collapse a batch on this engine" (Firebird has no multi-row VALUES; ODBC's real
-  ceiling depends on the driver behind it, so emitting SQL it cannot parse to save a
-  round-trip is not a trade worth making).
-- `ENGINE_ALIASES` is the single source of engine-name normalization; a provider must
-  route its self-reported name through it before any lookup.
-- `FIRST_ID_ENGINES` lists the engines whose multi-row INSERT reports the first generated
-  id. A provider override may extend a rewrite, but must not fork these tables.
+- No configuration. `MAX_BIND_PARAMS` per engine (sqlite 999, pg/mysql 65535, mssql 2100, firebird/odbc/mongo
+  0 = never collapse) governs the batch chunking.
 
 ## Failures, side effects and security
 
-Translation must reject or decline rather than change a statement's meaning:
-
-- `build_batch_inserts` returns empty (declines to collapse) when the statement carries
-  `RETURNING`, `ON CONFLICT` or `ON DUPLICATE KEY` (a collapsed statement returns N rows
-  where the caller expects one, and conflict arbitration changes once rows share a
-  statement), when any VALUES slot is not a bare `?` (a `now()` repeated inside one
-  statement is not the same write as `now()` evaluated per statement), when row widths
-  disagree, or when the per-chunk row count would be below two.
-- Rewrites operate on trusted SQL fragments and never quote or reinterpret a value;
-  values stay in bound parameters.
-- `concat_pipes_to_func` must not corrupt a string literal that itself contains `||`; the
-  current naive split is a defect (SQLT-06). No rule may split, drop or reorder text
-  inside a quoted literal or a comment.
-- The module performs no I/O, opens no connection and logs nothing; a translation error
-  surfaces to the calling provider, which owns the failure.
+- No side effects (pure string work). The risk is CORRECTNESS: a transform that emits invalid or wrong SQL
+  for an engine the developer did not test. Two such bugs are universal (see the register). No SQL-injection
+  surface of its own (parameters are bound by the adapters), except where an adapter string-inlines params
+  (MongoDB/MSSQL in some languages - covered in their own packets).
 
 ## Wire and persistence contract
 
-The output is executable SQL plus native parameters in unchanged order. `WHERE`
-parameters precede `HAVING` parameters, and a batch chunk flattens its rows' parameters
-in row order. A placeholder-style conversion changes the placeholder token only, never
-the count or order of parameters. A collapsed batch produces one statement per chunk of
-`floor(cap / columns)` rows, each carrying that chunk's flattened parameters.
+No persisted state. The contract is the dialect SQL it emits; the batch-collapse output must be semantically
+identical to the row-at-a-time form.
 
 ## Providers and substitutability
 
-Every SQL provider applies the same shared rule where its dialect needs that rule and
-supplies its own identifier quoting. A provider may not reimplement a rewrite locally or
-carry its own copy of the three constants. A future engine adds its cap, aliases and any
-needed rewrite to the shared tables rather than to provider code. The MongoDB provider
-consumes none of these SQL rewrites; it translates through Feature 6's `toMongo`.
+The engine string selects the rule subset; adding an engine means adding its cases. No plugin abstraction.
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| SQLT-01 | A query cache is embedded in the SQL translator, differently in each port: PHP carries a full cache (`setCacheTtl`/`cacheGet`/`cacheSet`/`remember`/`cacheSweep`/`cacheClear`/`cacheSize`), Node ships a `QueryCache` class in the same file, Python re-exports the core `Cache`, Ruby exposes only `query_key`. Caching is not a translation concern. | Remove caching from the translator; the cache feature owns it. Keep the translator stateless. |
-| SQLT-02 | PHP exposes ~8 methods the others lack (`namedToPositional`, `hasReturning`, `extractReturning`, `registerFunction`, `applyFunctionMappings`, `clearFunctions`, `translate`), so the public surface is not parity. | Decide which belong to the contract; add to all four or remove from PHP. |
-| SQLT-03 | RETURNING inspection diverges: PHP `hasReturning`/`extractReturning`, Node `parseReturning`, Python/Ruby have only the batch guard. | One canonical RETURNING helper in all four, or none exposed. |
-| SQLT-04 | Named-to-positional parameter conversion is PHP-only, so named parameters are supported on one framework and not the others. | Decide named-parameter support: all four or none. |
-| SQLT-05 | A `translate(sql, dialect)` dispatcher exists only in PHP; the other three require the provider to call individual rewrites. | Decide whether one dispatcher is the contract or providers compose rules explicitly. |
-| SQLT-06 | `concat_pipes_to_func` splits on `\|\|` without protecting string literals, so a literal containing `\|\|` is mis-split. | Rewrite must be literal- and comment-safe; add adversarial fixtures. |
-| SQLT-07 | The batch fixture is byte-identical, but the CORE rewrites (limit/top/concat/boolean/ilike/autoincrement/placeholder) have no shared fixture. | Add a SQL-translation fixture covering every rewrite with positive, negative and edge cases. |
+| SQLTRANS-CONCAT-MANGLE | UNIVERSAL correctness bug in all four: `concat_pipes_to_func`/`concatPipesToFunc` splits the ENTIRE statement on `||` and wraps the whole thing in `CONCAT(...)` - `SELECT a \|\| b FROM t` becomes `CONCAT(SELECT a, b FROM t)`, invalid SQL. It runs on EVERY MySQL/MSSQL statement in Python (`mysql.py:245`/`mssql.py:299`), PHP (`SQLTranslator.php:597`), and Node (`mysql.ts:132`/`mssql.ts:157`); in Ruby it is present but currently dead (unwired). Every language's test covers only the bare-expression case, so the bug is unguarded. | Rewrite the concat transform to operate on `\|\|` only OUTSIDE string literals and only within expression contexts (reuse the existing literal-scrubber - Python `_scrub_sql_text`, Node `scrubSqlText`), or drop it and require `CONCAT` in canonical SQL. Add a regression with a real `SELECT a \|\| b FROM t` asserting valid dialect SQL. Fix once, port to all four. |
+| SQLTRANS-LITERAL-REWRITE | UNIVERSAL: `boolean_to_int` and `ilike_to_like` rewrite matches INSIDE string literals (`WHERE name = 'TRUE'` -> `'1'`), and `ilike_to_like`'s `\S+`/greedy capture truncates a multi-word LIKE pattern. None reuse the literal-scrubber the codebase already has. (Python's `named_to_positional` and PHP's `namedToPositional` DO skip literals - inconsistent within the same file.) | Route every literal-sensitive transform through the scrubber (mask literals/comments, transform, restore), matching the placeholder transform that already does it. |
+| SQLTRANS-RUBY-UNWIRED | Ruby DIVERGES: 6 of 10 translator methods (`limit_to_rows`, `limit_to_top`, `concat_pipes_to_func`, `boolean_to_int`, `ilike_to_like`, `placeholder_style`) have ZERO runtime callers - the Ruby drivers each own their dialect handling (Firebird `SELECT FIRST/SKIP`, MSSQL `OFFSET/FETCH`, per-driver placeholders). Only `auto_increment_syntax` + `build_batch_inserts` are live, and `query_key` is duplicated in `cache.rb`. So Ruby's translator is largely vestigial, exercised only by its own unit specs. | Decide: either wire Ruby's drivers through the translator (parity with py/php/node, one dialect source) OR delete the dead methods and treat per-driver dialect handling as the Ruby design (and remove them from the shared "translator" contract). Do not leave a documented API that nothing calls. |
+| SQLTRANS-DEAD-DUP | UNIVERSAL dead/duplicated code: `limit_to_top` is dead in Python (it uses OFFSET/FETCH) but live in PHP (TOP); `batch_last_id` has no caller (MySQL re-implements the first-id+rowcount math inline); Node's `placeholder_style` is dead (adapters roll their own `convertPlaceholders`). | Remove the dead methods or wire them; de-duplicate the batch-last-id math to the one helper. Note the MSSQL pagination DIVERGENCE (TOP vs OFFSET/FETCH) and pick one. |
+| SQLTRANS-AUTOINC-BIGINT | The PostgreSQL autoincrement transform only special-cases `INTEGER PRIMARY KEY AUTOINCREMENT`; a `BIGINT ... AUTOINCREMENT` just has the keyword stripped, yielding a plain `BIGINT` with no sequence (no `BIGSERIAL`). Confirmed Python + PHP. | Handle BIGINT (and reordered DDL) in the autoincrement transform, or document that only `INTEGER PRIMARY KEY AUTOINCREMENT` is portable. |
+| SQLTRANS-NO-UPSERT-DATETIME | No UPSERT/ON CONFLICT and no date/time-function translation in any language (portability by omission). The batch-collapse correctly REFUSES to collapse `RETURNING`/`ON CONFLICT`/`ON DUPLICATE` batches (good, all four). | Document the omission (CLAUDE.md already warns off `NOW()`/`GETDATE()`); consider a portable `upsert` helper if cross-engine upsert is wanted. No code change required. |
+| SQLTRANS-TEST-COUNT | The CARBONAH report claims "SQL Translation: 54 tests" but the real counts are PHP 44 (or 59 with named-to-positional) and Ruby 42 - the tracker number matches nothing. Ties to the feature-133 CARBONAH-REPORT-INCONSISTENT finding. | Regenerate the report count from the real suites (see feature 133). No translator change. |
 
 ## Owner decisions
 
-The audit proposes these decisions as one contract:
-
-1. The SQL translator is stateless string and parameter transforms. It holds no cache and
-   no per-call state.
-2. Query result caching leaves this module entirely and is owned by the cache feature.
-   PHP's cache methods, Node's in-file `QueryCache` class and Python's `QueryCache`
-   re-export are removed from the translator surface.
-3. The shared contract is the seven core rewrites plus `build_batch_inserts`,
-   `batch_last_id`, and the three constants `MAX_BIND_PARAMS`, `ENGINE_ALIASES`,
-   `FIRST_ID_ENGINES`, byte-aligned across all four.
-4. RETURNING inspection is one canonical helper (`parse_returning` returning the stripped
-   SQL and the column list) in all four, replacing PHP's two-method and Node's
-   single-method spellings.
-5. Named-to-positional conversion becomes the contract in all four OR is removed from PHP.
-   Given `?` is already the portable placeholder everywhere, the recommendation is to
-   remove it unless a provider genuinely needs named binds.
-6. A dialect dispatcher is NOT the contract: providers compose the specific rewrites they
-   need, because a single `translate(dialect)` hides which rules ran and each provider
-   already knows its dialect. PHP's `translate` is removed.
-7. The function-mapping registry (`registerFunction`) is out of scope for 3.14; a custom
-   SQL-function mapping is a later, ADR-gated extension, not a translator method that only
-   one framework carries.
-8. `concat_pipes_to_func` must never alter text inside a quoted string literal or comment.
+- SQLTRANS-DEC-01 (proposed): fix the concat mangle + the literal-rewrite (SQLTRANS-CONCAT-MANGLE +
+  SQLTRANS-LITERAL-REWRITE) via the existing literal-scrubber, in all four, with real full-statement
+  regressions. Highest value - these emit invalid/wrong SQL today.
+- SQLTRANS-DEC-02 (proposed): resolve the Ruby unwiring and the dead/duplicated code (SQLTRANS-RUBY-UNWIRED +
+  SQLTRANS-DEAD-DUP) - one dialect source per language, no dead public API, one MSSQL pagination strategy.
+- SQLTRANS-DEC-03 (proposed, low): BIGINT autoincrement + document the UPSERT/date-time omission.
 
 ## Proposed conformance fixture
 
-Reuse `batch_write_contract.json` for the batch machinery and add
-`sql_translation_contract.json` covering every core rewrite. Required positive cases:
-
-- LIMIT and LIMIT/OFFSET to Firebird `ROWS a TO b`, and to MSSQL `TOP n`;
-- `\|\|` concatenation to `CONCAT(...)`, including a literal that contains `\|\|`;
-- TRUE/FALSE to 1/0 respecting word boundaries;
-- ILIKE to `LOWER(col) LIKE LOWER(val)`;
-- `AUTOINCREMENT` to `AUTO_INCREMENT` (mysql), `SERIAL` (postgres), `IDENTITY(1,1)`
-  (mssql) and stripped (firebird);
-- `?` to `%s` and to numbered `:1, :2` with order preserved;
-- engine-alias normalization for every alias;
-- batch collapse chunking at each engine cap and the `first + rows - 1` last-id.
-
-Required negative and mutation-witness cases:
-
-- a statement with no LIMIT/boolean/ILIKE returned unchanged (idempotent);
-- batch declined for RETURNING, ON CONFLICT, ON DUPLICATE KEY, a non-`?` VALUES slot,
-  ragged row widths and a below-two chunk;
-- a `\|\|` inside a quoted literal left untouched;
-- an aliased engine name resolving to the correct cap (the silent-miss regression);
-- MySQL first-id normalization applied, and NOT applied on postgres/mssql/sqlite;
-- removal of the query cache from the translator surface (mutation: a cache method
-  reappearing on the translator fails the surface gate).
+A shared per-language fixture (the pure-function tests already exist - extend them): assert
+`SELECT a \|\| b FROM t` translates to VALID MySQL/MSSQL (catches the concat mangle); a boolean/ilike inside a
+string literal is NOT rewritten; a multi-word ILIKE pattern survives; `BIGINT ... AUTOINCREMENT` yields a
+sequence-backed column; and the batch-collapse output is semantically identical to the row-at-a-time INSERT
+and refuses RETURNING/ON CONFLICT. Run the same fixture across all four so the dialect output matches.
 
 ## Integration map
 
-- Every SQL provider (Features 8-13) imports the rewrites its dialect needs and the three
-  constants; none carries its own copy.
-- The batch-write path in Feature 5 calls `build_batch_inserts` and `batch_last_id`.
-- Feature 6 hands constructed SQL and parameters that these rules rewrite.
-- Feature 15 migrations use `auto_increment_syntax` for cross-engine DDL.
-- Feature 24 pagination relies on the `ROWS`/`TOP` rewrites for Firebird and MSSQL.
-- The cache feature owns query caching that this module currently misplaces.
-- Documentation and scaffolders reference the neutral rewrite names.
+- Consumers: the six providers (9-14) via their `translate`/`_translate_sql`, the batch-insert path, and the
+  ORM `create_table` DDL (autoincrement). Related: the query-cache key (feature 25) reuses the hash.
 
 ## Breaking changes and migration
 
-- The query cache is removed from the SQL translator in all four; callers using
-  `SQLTranslator.cacheGet`/`remember`/`QueryCache` move to the cache feature's API.
-- PHP loses `translate`, `namedToPositional` (unless retained by decision 5), and the
-  function-mapping registry from the translator surface.
-- RETURNING inspection converges on `parse_returning`; callers of `hasReturning`/
-  `extractReturning`/`parseReturning` adopt it.
-- `concat_pipes_to_func` becomes literal-safe; a query that previously mis-translated a
-  `\|\|` inside a literal now translates correctly.
-- No application SQL changes; these are internal provider-facing corrections.
+- Fixing the concat/literal transforms changes the emitted SQL for statements that were previously mangled -
+  those were producing invalid SQL, so this is a correctness fix; document it. Removing dead methods is
+  internal. Choosing one MSSQL pagination strategy may change generated SQL for MSSQL - document it.
 
 ## Implementation backlog
 
-1. Add `sql_translation_contract.json` and four thin runners for the core rewrites.
-2. Remove query caching from the translator in all four; point callers at the cache
-   feature.
-3. Converge RETURNING inspection on one `parse_returning` helper.
-4. Settle named-to-positional (remove or add-to-all) and remove the PHP-only `translate`
-   dispatcher and function registry.
-5. Make `concat_pipes_to_func` literal- and comment-safe with adversarial fixtures.
-6. Confirm the three constants stay byte-aligned with `batch_write_contract.json`.
-7. Run the fixture locally and on the root lab against every live engine.
-
-No framework implementation belongs in the audit commit.
+1. SQLTRANS-DEC-01: literal-safe concat + bool/ilike, all four, with full-statement regressions.
+2. SQLTRANS-DEC-02: Ruby wiring decision + dead-code removal + one MSSQL pagination strategy.
+3. SQLTRANS-DEC-03: BIGINT autoincrement; document UPSERT/date-time omission; fix the report count.
 
 ## Porting capsule
 
-Implement a stateless module of pure SQL and parameter transforms. Provide the seven core
-rewrites (Firebird `ROWS`, MSSQL `TOP`, `||` to `CONCAT`, boolean to int, ILIKE to
-LOWER-LIKE, per-engine `AUTOINCREMENT`, placeholder style), the batch collapse and
-last-id normalization, and the three shared constants byte-aligned with the fixture.
-Normalize every engine name through `ENGINE_ALIASES` before any lookup. Never quote a
-value, never alter text inside a literal or comment, and decline (return empty) rather
-than change meaning. Hold no cache and no state. Prove the port with the shared fixture
-and the live-engine batch runners; the runner adapts names only, never behavior.
+A clean-room translator needs literal-safe transforms (mask string literals + comments before any regex
+rewrite - the codebase already has the scrubber; USE it for every transform), a single wiring model (every
+adapter goes through the translator, or none do - do not ship dead public methods), one MSSQL pagination
+strategy, autoincrement that handles BIGINT, and a batch-collapse that refuses RETURNING/ON CONFLICT/ON
+DUPLICATE. Test with FULL statements, not bare expressions - the concat bug hides behind expression-only
+tests in all four today.
 
 ## Audit closure checklist
 
-- [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded.
-- [x] Owner ambiguities recorded (8 proposed; the genuine calls await owner ratification).
-- [x] Proposed shared cases and mutation witnesses complete.
+- [x] Boundary and public surface complete (the transform set x four).
+- [x] Lifecycle and every producer/consumer edge complete (adapters, batch, DDL).
+- [x] Configuration, failure (correctness) and security rules complete.
+- [x] Wire (dialect SQL) and provider contracts complete.
+- [x] Four-language behaviour + divergences recorded (concat mangle universal, Ruby unwired, MSSQL
+  pagination).
+- [x] Owner ambiguities decided and recorded (SQLTRANS-DEC-01..03).
+- [x] Proposed conformance fixture (full-statement) complete.
 - [x] Integration map and breaking migrations complete.
 - [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Porting capsule sufficient.
