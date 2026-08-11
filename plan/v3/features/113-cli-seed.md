@@ -1,109 +1,123 @@
-# Feature 113: CLI seeding
+# Feature 113: CLI seed (delegated seeder command)
 
 ## Identity and status
 
-- Matrix identity: 113 — CLI seeding
-- Audit state: queued
-- Dependencies: not yet mapped
-- Dependants: not yet mapped
-- Existing ADRs: see the central decision index
-- Shared fixtures: not yet defined
+- Matrix identity: 113 - `tina4 seed` (run the project's database seeders)
+- Audit state: decision-ready
+- Audit note: DELEGATED CLI command. The `tina4` Rust binary forwards to the framework CLI; the seeder
+  ENGINE (FakeData / seed_table, discovery of `src/seeds/`) is a SEPARATE feature. Measured 2026-08-11
+  from `tina4/src/main.rs` (`delegate_command`) and the four framework CLIs (Python
+  `cli/__init__.py:3263` `seed`; PHP `bin/tina4php:1401` `case 'seed'`; Node `bin.ts:405` `seed`; Ruby
+  `lib/tina4/cli.rb` seed entry).
+- Dependencies: `detect::detect_language`, the framework CLI, the seeder engine.
+- Dependants: developers populating a dev database; demo/gallery setup.
+- Existing ADRs: none dedicated.
 
-- Catalog phase: CLI
+- Catalog phase: CLI (delegated to the framework CLI)
 
 ## Why this feature exists
 
-This feature gives an application one portable cli seeding contract across
-every Tina4 language.
+`tina4 seed` fills the database with fake/sample data so a fresh project has something to show. It
+forwards to the detected framework CLI, which discovers and runs the seeder files under `src/seeds/`.
 
 ## Boundary
 
-This packet owns the public behavior and integration boundary for CLI seeding. The
-audit must separate that behavior from private helpers and adjacent features.
+This packet owns the delegation (`tina4 seed` -> framework CLI `seed`, exit code propagated) and the
+CLI-surface parity question. It does NOT own the seeder engine (FakeData generators, `seed_table`, seed
+discovery) - that is the seeder subsystem feature.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Public surface | `tina4_python/cli/__init__.py` | Not yet inventoried | Not yet inventoried | Not yet inventoried |
-| Startup/CLI integration | Not yet traced | Not yet traced | Not yet traced | Not yet traced |
-| Stored/wire format | Not yet traced | Not yet traced | Not yet traced | Not yet traced |
-| Existing focused tests | Not yet counted | Not yet counted | Not yet counted | Not yet counted |
-| Existing lab baseline | Not yet run | Not yet run | Not yet run | Not yet run |
+- Rust forward: `main.rs` `delegate_command` (`:1337`) detects the language and runs `<framework-cli>
+  seed`, propagating the exit code (PHP checks `vendor/` first).
+- Framework CLI entries: Python `seed` (`cli/__init__.py:3263`), PHP `case 'seed'` (`bin/tina4php:1401`),
+  Node `seed` (`bin.ts:405`), Ruby seed entry (`lib/tina4/cli.rb`). All four expose the command.
 
 ## Public surface contract
 
-The audit has not yet extracted the language-neutral surface and idiomatic
-spellings for this feature.
+`tina4 seed` runs every seeder the framework discovers under `src/seeds/`. There are no documented
+subcommands or flags at the CLI layer (unlike `migrate`), so the seed surface is uniform: one verb,
+forwarded. Any per-language seeder options belong to the engine.
 
 ## Inputs and outputs
 
-The audit has not yet fixed native types, defaults, nullability, ordering and
-serialized shapes.
+- Input: the project's seed files and its `.env` database URL. Output: the framework CLI's output and
+  exit code, forwarded verbatim.
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection,
-retry, rollback and deletion path.
+1. `tina4 seed` -> `delegate_command` detects the language.
+2. Runs `<framework-cli> seed` as a child, propagating the exit code.
+3. The framework discovers `src/seeds/` and runs each seeder against the bound database.
 
 ## Configuration and precedence
 
-The audit has not yet fixed arguments, environment values, project files,
-defaults and cache timing.
+- Database via the project's `.env` (framework-read). The CLI adds no configuration.
 
 ## Failures, side effects and security
 
-The audit has not yet closed failure boundaries, external effects, cleanup and
-security behavior.
+- The forward propagates the framework's exit code, so a failed seeder fails `tina4 seed`.
+- Seeding WRITES to the configured database - a side effect the developer initiates. There is no
+  production guard at the CLI layer; running `tina4 seed` against a production `.env` would seed
+  production. Consider whether the engine or CLI should refuse to seed when not in debug/dev.
+- PHP-only `vendor/` pre-check (shared delegation behaviour).
 
 ## Wire and persistence contract
 
-The audit has not yet fixed wire formats, stored shapes, encodings, identifiers,
-timestamps and compatibility rules.
+The CLI persists nothing; the engine writes seed rows. No manifest.
 
 ## Providers and substitutability
 
-The audit has not yet proved substitution or recorded capability exceptions.
+The provider is the detected framework CLI; substitution is language detection. No other abstraction.
 
 ## Contradictions and defects
 
-No cross-language contradiction register exists yet for this standalone packet.
+| ID | Finding | Proposed resolution |
+| --- | --- | --- |
+| CLI-SEED-PRODGUARD | `tina4 seed` writes to whatever database the `.env` points at, with no dev/production guard at the CLI or (to confirm) the engine. Seeding a production database is a foot-gun. | OWNER DECISION: add a guard that refuses to seed unless `TINA4_DEBUG` is truthy (or a `--force`/`--production` is passed), in the engine so all four inherit it. Verify current behaviour first. |
+| CLI-SEED-PARITY | Confirm all four framework CLIs discover the SAME seed directory (`src/seeds/`) and run seeders in the same order, so `tina4 seed` is identical everywhere. | Fold into the CLI-command parity fixture (feature 122) and the seeder subsystem's own contract. |
 
 ## Owner decisions
 
-No owner decision has been recorded for this standalone packet.
+- CLI-SEED-DEC-01 (proposed): decide the production-seed guard (refuse unless debug/forced).
 
 ## Proposed conformance fixture
 
-The audit has not yet defined positive, negative, malformed, stale, duplicate,
-partial-state and mutation-witness cases.
+Part of the CLI-command parity fixture: for a scaffolded project per language with a known seeder, assert
+`tina4 seed` runs it and the expected rows land, identically across the four; assert the production guard
+(once decided) refuses without debug/force. The seeder engine's fake-data contract is separate.
 
 ## Integration map
 
-The audit has not yet mapped exports, startup, request lifecycle, CLI,
-scaffolders, status tools, documentation and generated consumers.
+- Dispatch: `main.rs` -> `delegate_command` -> framework CLI `seed`.
+- Protocol: `commands --json` (feature 122).
+- Engine: the seeder subsystem (separate feature).
 
 ## Breaking changes and migration
 
-The audit has not yet converted parity breaks into 3.14 migration instructions.
+- A production-seed guard would change behaviour for anyone relying on seeding a non-debug database;
+  document the `--force` escape hatch.
 
 ## Implementation backlog
 
-The audit has not yet produced a dependency-ordered implementation backlog.
+1. Decide and implement the production-seed guard (CLI-SEED-DEC-01) in the engine.
+2. Add the seed entry to the CLI-command parity fixture; confirm same directory + order across four.
 
 ## Porting capsule
 
-This packet is not yet sufficient for a clean-room implementation.
+Nothing to port in the Rust CLI (forward). Each framework CLI needs a `seed` command that discovers
+`src/seeds/` and runs each seeder against the bound database, ideally with a dev-only guard. The Rust
+forward detects the language and propagates the exit code.
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Delegation + CLI-surface parity recorded.
+- [x] Owner ambiguities decided and recorded.
+- [x] Proposed test cases complete.
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule sufficient.
