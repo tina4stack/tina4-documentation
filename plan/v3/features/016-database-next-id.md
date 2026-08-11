@@ -1,199 +1,152 @@
-# Feature 016: Race-safe database sequences
+# Feature 16: Race-safe database sequences (get_next_id)
 
 ## Identity and status
 
-- Matrix identity: 16 - Race-safe database sequences
+- Matrix identity: 16 - Race-safe database sequences (`tina4_python/database/__init__.py`)
 - Audit state: decision-ready
-- Dependencies: Feature 3 adapter interface (execute, fetchOne, transaction, table_exists),
-  Feature 5 write facade, the seven providers (008-014) for the native mechanisms
-- Dependants: the ORM (an insert without a native auto-id calls this), any application code
-  that needs a gap-free-ish id before insert
-- Existing ADRs: the connection-pinning and no-autocommit rules apply
-- Shared fixtures: `sequences_contract.json` is required, and it MUST include a real
-  concurrency case
-- Catalog phase: Database
-- Audit note: measured from four-language source; no framework code changed
+- Audit note: FOUR-language feature, a SOUND core design with a universal race hole in one fallback and a
+  broken Mongo path. Measured 2026-08-11. Python `database/connection.py:1301` (`ebbab30`); PHP
+  `Tina4/Database/Database.php:1384` (`6faabac5`); Ruby `lib/tina4/database.rb:1177` (`6d5b1de`); Node
+  `packages/orm/src/database.ts:1377` (`27cf0f4`).
+- Dependencies: the DB adapters (a pinned connection), engine-native sequences/generators, and a portable
+  `tina4_sequences` table.
+- Dependants: the ORM (allocating a primary key before insert), any code needing a portable next id.
+- Existing ADRs: none dedicated.
+
+- Catalog phase: database
 
 ## Why this feature exists
 
-Two requests insert into the same table at the same instant. The old pattern reads
-`SELECT MAX(id)` and adds one; both read the same maximum and collide on the primary key.
-This feature replaces that race with an atomic next-id, so concurrent callers can never
-receive the same value.
-
-## Boundary
-
-This feature owns `get_next_id(table, pk_column, generator_name)`: the per-engine strategy
-that returns the next id, the `tina4_sequences` fallback table, the seed-from-MAX rule, and
-the single-adapter pinning that keeps seed and increment on one connection. Feature 3 owns
-the connection and transaction primitives; the providers own their native sequence and
-generator SQL.
+The ORM needs a primary-key value before it inserts a row, portably across engines that generate ids very
+differently (PostgreSQL sequences, Firebird generators, MySQL auto-increment, SQL Server identity, MongoDB
+ObjectIds). `get_next_id` is the one call that returns the next id safely - and "safely" means under
+concurrency, which is where a naive `MAX(id)+1` loses. The design deliberately removed `MAX+1`; the audit
+confirms that, and finds where the safety still leaks.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Entry point | `_sequence_next` via get-next-id | `sequenceNext` | `get_next_id` | `sequenceNext` via `getNextId` |
-| PostgreSQL | native `nextval`, auto-create | native `nextval` | native `nextval`, auto-create | native `nextval` (fixed #255) |
-| Firebird | `GEN_ID(gen, 1)`, auto-create | `GEN_ID` | `GEN_ID(gen, 1)`, auto-create | `GEN_ID` |
-| SQLite/MySQL/MSSQL | atomic `tina4_sequences` | atomic `tina4_sequences` | atomic `tina4_sequences` | atomic `tina4_sequences` |
-| Seed a new row | `MAX(pk)` best-effort, 0 if empty | `sequenceSeedValue` MAX(pk) | MAX(pk) | `sequenceSeedValue` MAX(pk) |
-| Adapter pinning | one adapter for seed+increment | same | same | one adapter (pin) |
-| Engine-branch bug | - | - | - | took SQLite branch on PG (#255, fixed) |
+SOUND shared design in all four: `get_next_id(table, pk_column="id", generator_name=None)` pins ONE
+connection and returns an ATOMIC increment - never `MAX+1` at return time (`MAX(pk)` is used only as a
+one-time seed). Per engine:
 
-All four converge on the SAME strategy, documented most fully in the Ruby source: try the
-native mechanism first (Postgres `nextval`, Firebird `GEN_ID`), auto-creating the sequence
-or generator if it is missing, and fall back to an atomic UPDATE on a shared
-`tina4_sequences` table for SQLite, MySQL and MSSQL. A new sequence row is seeded from
-`SELECT MAX(pk)` so a sequence created for a populated table does not restart at 1 and
-collide. The seed and the increment are pinned to a single adapter so a connection pool
-cannot split them. Node carried a real defect (#255) where `getNextId` took the SQLite
-table branch on PostgreSQL and hit the non-existent `tina4_sequences` table instead of the
-native sequence; it is fixed, and the fix must be gated as parity.
+- PostgreSQL: `nextval('<table>_<pk>_seq')` (reuses the real SERIAL sequence; auto-creates seeded from
+  `MAX+1` if missing) - atomic.
+- Firebird: `GEN_ID(GEN_<TABLE>_ID, 1)` - atomic.
+- MySQL: `UPDATE tina4_sequences SET current_value = LAST_INSERT_ID(current_value + 1)` + `SELECT
+  LAST_INSERT_ID()` on the pinned connection - per-connection atomic.
+- MSSQL: single `UPDATE tina4_sequences SET current_value = current_value + 1 OUTPUT inserted.current_value`
+  - atomic.
+- SQLite: an atomic increment under a write lock - the MECHANISM diverges but all are safe (PHP `BEGIN
+  IMMEDIATE` takes the file write-lock up front = cross-process; Python/Ruby a process Mutex + `UPDATE ...
+  RETURNING`; Node a synchronous `node:sqlite` burst).
+
+The portable `tina4_sequences(seq_name PK, current_value)` table backs the SQLite/MySQL/MSSQL/fallback paths.
+The design (atomic, `MAX+1` removed, PG sequence name matching the SERIAL column's own sequence) is correct -
+credit where due.
 
 ## Public surface contract
 
-`get_next_id(table, pk_column="id", generator_name=None)` (snake case in Python and Ruby;
-`getNextId(table, pkColumn, generatorName)` camel case in PHP and Node) returns the next
-integer id for the table, race-safe under concurrency. `generator_name` overrides the
-derived sequence/generator name. The `tina4_sequences` table (`seq_name`, `current_value`)
-and the per-engine helpers are internal, not public surface.
+`db.get_next_id(table, pk_column="id", generator_name=None) -> int` returns the next id, allocated atomically.
+The contract is uniqueness under concurrency.
 
 ## Inputs and outputs
 
-- Input: a table name, a primary-key column (default `id`), and an optional explicit
-  sequence/generator name.
-- Output: a native integer strictly greater than every id already handed out for that
-  sequence, and greater than `MAX(pk)` at seed time.
-- The value is monotonically increasing per sequence; it does NOT guarantee zero gaps
-  (a rolled-back transaction may consume a value, exactly like a native sequence).
-- On a table with no rows, the first value is 1; on a populated table adopting a sequence,
-  the first value is `MAX(pk) + 1`.
+- Input: the table, the PK column, an optional generator/sequence name. Output: the next integer id (or an
+  ObjectId string on Mongo, where present).
 
 ## Lifecycle and operation graph
 
-1. `get_next_id` derives the sequence name from the table (or takes `generator_name`) and
-   pins a single adapter for the whole operation.
-2. On PostgreSQL it calls `nextval`, auto-creating the sequence if it does not exist; on
-   Firebird it calls `GEN_ID(gen, 1)`, auto-creating the generator.
-3. On SQLite, MySQL and MSSQL it ensures `tina4_sequences`, seeds the row from `MAX(pk)` if
-   new, and atomically increments (`UPDATE ... current_value = current_value + 1`) then
-   reads the value back, using the engine's atomic idiom.
-4. The increment runs in its own transaction unless already inside one, so it neither
-   dangles nor double-brackets a caller's transaction.
-5. The returned value is used as the primary key for the pending insert.
+1. Pin one connection/adapter.
+2. Dispatch by engine: native sequence/generator (PG/Firebird), or the `tina4_sequences` atomic increment
+   (SQLite/MySQL/MSSQL), or the generic fallback (see the register).
+3. Seed from `MAX(pk)` once (insert-if-absent); return the atomic increment.
 
 ## Configuration and precedence
 
-- An explicit `generator_name` beats the derived name.
-- There is no environment variable; the strategy is chosen by `getDatabaseType`, so the
-  branch MUST match the real engine (the #255 class of bug is a mis-branch).
-- The `tina4_sequences` table name is fixed.
+- None. The sequence/generator/table names are derived from the table + PK column.
 
 ## Failures, side effects and security
 
-- The whole point is atomicity: under concurrent callers no two values are equal. A
-  non-atomic increment (a read then a separate write) is a defect even when it passes a
-  single-threaded test.
-- The seed read and the increment share one pinned adapter; a pool that split them across
-  connections would reintroduce the race.
-- A vanished sequence row mid-increment raises a clear error (`sequence row vanished
-  mid-increment`) rather than returning a wrong id.
-- Auto-creating a Postgres sequence or Firebird generator is idempotent and safe to race.
-- The table name and column come from trusted schema, not request input.
+- Side effect: creates the `tina4_sequences` row / a native sequence/generator on first use. The failure
+  mode is a DUPLICATE id under concurrency on the non-atomic paths (the generic fallback and Mongo - see the
+  register). Identifiers are string-interpolated into SQL (table/pk/seq names, not user input) - a footgun,
+  not an injection.
 
 ## Wire and persistence contract
 
-The `tina4_sequences` table has `seq_name` and `current_value`; a value is applied when the
-atomic UPDATE commits. On Postgres and Firebird the state lives in the native sequence or
-generator, not the table. The two mechanisms MUST hand out the same guarantee: strictly
-increasing, never-duplicated values.
+Native sequences/generators, or the `tina4_sequences` table. The contract is a strictly increasing, unique id
+per (table, pk).
 
 ## Providers and substitutability
 
-Postgres and Firebird use their native, already-atomic mechanisms; SQLite, MySQL and MSSQL
-use the shared table with an engine-atomic UPDATE. A future runtime picks native where the
-engine offers one and the shared table otherwise, and proves the same concurrency guarantee.
+Per-engine dispatch; the `tina4_sequences` table is the portable fallback. Adding an engine means an atomic
+path or it falls to the racy generic fallback.
 
 ## Contradictions and defects
 
-| ID | Finding | Required outcome |
+| ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| SEQ-01 | The race-safety CLAIM is only as good as its proof; a single-threaded test cannot show atomicity. | The fixture MUST run many concurrent callers against each real engine and assert every returned id is distinct. |
-| SEQ-02 | Node mis-branched on PostgreSQL (#255): it hit `tina4_sequences` instead of the native sequence. Parity of engine-branch selection is unproven for the others. | Gate that each engine takes its correct branch (native for PG/Firebird, table for SQLite/MySQL/MSSQL) in all four. |
-| SEQ-03 | Seed-from-MAX correctness (a populated table adopting a sequence must start above MAX) is not gated. | Gate first-value = MAX(pk)+1 on a populated table in all four. |
-| SEQ-04 | Adapter pinning under a real connection pool is asserted in comments but not gated. | Gate seed+increment on one connection under a pool in all four. |
-| SEQ-05 | Behaviour inside an existing transaction (own-transaction vs join) differs per engine helper. | Gate get_next_id called inside a caller transaction: it must not dangle or double-commit. |
-| SEQ-06 | Auto-create of the PG sequence / Firebird generator when missing is not gated as parity. | Gate the missing-sequence auto-create path in all four. |
-| SEQ-07 | No shared sequences fixture exists. | Add `sequences_contract.json`. |
+| NEXTID-GENERIC-TOCTOU | UNIVERSAL: the generic fallback (`_sequence_next_generic`/`sequenceNextGeneric`) does `UPDATE ... +1` then a SEPARATE `SELECT current_value`, with NO lock / `FOR UPDATE` - a genuine TOCTOU where two concurrent callers read the same post-both-increment value and return a DUPLICATE id. It is reachable in all four via the PostgreSQL FIRST-USE race (two concurrent callers both `CREATE SEQUENCE`; the loser's error is swallowed and it falls through to this generic path) and for ODBC/other/Mongo engines. | Make the fallback atomic (a `SELECT ... FOR UPDATE` under an explicit transaction, or an atomic `UPDATE ... RETURNING`/`OUTPUT` where the engine supports it). Fix the PG first-use race (create the sequence idempotently, or serialize first-create) so the loser does not fall to the racy path. |
+| NEXTID-MONGO-BROKEN | Mongo `get_next_id` is broken or dangerous in ALL four, each differently: Python and PHP have a dedicated `findOneAndUpdate($inc)` (atomic), but PHP's swallows ANY error and `return 1` (`Database.php:1540`) - a DUPLICATE-PK collision with an existing row; Ruby has NO Mongo path at all (a Mongo DB falls to the relational generic path, inapplicable); Node also has no dedicated path and falls to the generic SQL path, where `parseSql`'s SET-clause parser matches only `col = ?`/literal and NOT `current_value + 1`, so the increment is SILENTLY DROPPED (empty `$set`, the value never advances -> duplicate ids) and un-indexed seed rows accumulate. NONE has a Mongo next-id test. | Give Mongo one correct, tested atomic path in all four (`findOneAndUpdate({seq}, {$inc:{current_value:1}}, {upsert, returnAfter})` with a unique index on `seq_name`); PHP must not `return 1` on error (raise); Ruby/Node must not fall to the relational generic path. |
+| NEXTID-SQLITE-ONLY-TESTS | UNIVERSAL: concurrency is proven ONLY on SQLite in all four (PHP a 60-way `pcntl_fork` cross-process test, Python/Ruby 100 threads, Node 100 `Promise.allSettled` - which cannot even interleave a synchronous `node:sqlite` burst). There is NO real concurrency test for PostgreSQL-native, MySQL `LAST_INSERT_ID`, MSSQL `OUTPUT`, the generic fallback, or Mongo in ANY language - the cross-engine race-safety claim is asserted by construction only. Given "zero doubles still shipped 3 data-loss bugs", this is the highest-value gap. | Add a real, gated concurrency test per engine (N concurrent callers -> N distinct contiguous ids) for PostgreSQL, MySQL, MSSQL, and Mongo, plus a test that the generic fallback DOES produce a duplicate (proving the finding) before it is fixed. |
+| NEXTID-PG-FIRSTUSE | The PostgreSQL first-use bootstrap has a race in all four: concurrent first callers both attempt `CREATE SEQUENCE`; the loser falls to the racy generic path (NEXTID-GENERIC-TOCTOU) and can draw a duplicate during that window. Narrow (first-creation burst only) but real and untested. | Create the sequence idempotently (`CREATE SEQUENCE IF NOT EXISTS`) or serialize the first-create so the loser retries `nextval` rather than falling to the generic path. |
+| NEXTID-MYSQL-POOLING | Node: MySQL's per-connection `LAST_INSERT_ID` safety depends on connection pooling; with a single shared connection, two concurrent async callers interleave at the `await` between the UPDATE and the `SELECT LAST_INSERT_ID()`. | Document the pooling assumption, or make the MySQL path a single atomic statement that does not depend on a per-connection session var across an await. |
 
 ## Owner decisions
 
-1. `get_next_id` is race-safe by contract, and race-safety is proven only by a real
-   concurrency test against each engine (no single-threaded test satisfies this).
-2. The strategy is native-first (Postgres `nextval`, Firebird `GEN_ID`, both auto-created)
-   and shared-table atomic for SQLite, MySQL and MSSQL; the engine-branch must match
-   `getDatabaseType` (closing the #255 class).
-3. A new sequence seeds from `MAX(pk)`, so adopting a sequence on a populated table starts
-   above the existing maximum.
-4. Seed and increment are pinned to one adapter; a pool never splits them.
-5. Values are strictly increasing but not gap-free, exactly like a native sequence; a
-   rolled-back transaction may consume a value.
+- NEXTID-DEC-01 (proposed): make the generic fallback atomic and fix the PostgreSQL first-use race
+  (NEXTID-GENERIC-TOCTOU + NEXTID-PG-FIRSTUSE) - these are the real duplicate-id windows.
+- NEXTID-DEC-02 (proposed): give Mongo one correct, tested atomic next-id in all four and remove PHP's
+  `return 1`-on-error (NEXTID-MONGO-BROKEN).
+- NEXTID-DEC-03 (proposed): add per-engine concurrency tests (NEXTID-SQLITE-ONLY-TESTS) - the coverage that
+  would prove (or disprove) every atomic-by-construction claim.
 
 ## Proposed conformance fixture
 
-Add `sequences_contract.json` with stable ids for: a single next-id on an empty table (=1);
-first next-id on a populated table (= MAX(pk)+1); auto-create of a missing PG sequence and
-Firebird generator; get_next_id inside a caller transaction (no dangle, no double-commit);
-and THE core case: N concurrent callers (real threads or processes) against SQLite, MySQL,
-MSSQL, PostgreSQL and Firebird, asserting all N returned ids are distinct and the count
-matches. The concurrency case runs against the live lab engines; a mock cannot prove
-atomicity and is explicitly forbidden here.
+A real, gated concurrency fixture per engine (no mocks): N concurrent callers to `get_next_id` return N
+DISTINCT contiguous ids on SQLite (exists), PostgreSQL, MySQL, MSSQL, and Mongo; a test that the generic
+fallback and the PG first-use race CAN duplicate (red before the fix, green after); and a Mongo test that the
+increment actually advances (catches the Node dropped-`+1` and the PHP `return 1`). Gate the real-engine parts
+in the require-services CI.
 
 ## Integration map
 
-- The ORM calls `get_next_id` when inserting into a table whose engine has no usable native
-  auto-id for the chosen strategy.
-- Feature 3's transaction primitives bracket the atomic increment; the providers supply the
-  native sequence/generator SQL.
-- Central fixtures, four runners, the CI matrix (which must run the concurrency case),
-  release notes and the database docs update together.
+- Consumers: the ORM (PK allocation before insert), apps. Related: the DB providers (9-14, whose native
+  sequence/generator this uses) and feature 5 (the Database facade / pinned connection / transactions).
 
 ## Breaking changes and migration
 
-- None to the public signature. The audit hardens the race-safety guarantee and gates the
-  engine-branch selection; an application already calling `get_next_id` sees the same call
-  with a proven guarantee.
+- Fixing the generic fallback and the Mongo path changes behaviour only in the duplicate-producing windows
+  (a correctness/data-integrity fix) - document it.
 
 ## Implementation backlog
 
-1. Add `sequences_contract.json`, including the concurrent-callers case, and wire four
-   fail-closed runners against the live lab engines.
-2. Gate the concurrency guarantee (SEQ-01) on SQLite, MySQL, MSSQL, PostgreSQL, Firebird.
-3. Gate engine-branch selection (SEQ-02), seed-from-MAX (SEQ-03), pinning (SEQ-04),
-   in-transaction behaviour (SEQ-05) and auto-create (SEQ-06) in all four.
-4. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit.
+1. NEXTID-DEC-01: atomic generic fallback + idempotent PG sequence create (fix the TOCTOU + first-use race),
+   with a proving test.
+2. NEXTID-DEC-02: one correct tested Mongo next-id in all four; remove PHP `return 1`.
+3. NEXTID-DEC-03: per-engine concurrency tests (PG/MySQL/MSSQL/Mongo).
 
 ## Porting capsule
 
-Implement `get_next_id(table, pk_column="id", generator_name=None)`. Pin one connection for
-the whole call. Try the engine's native mechanism first (Postgres `nextval`, Firebird
-`GEN_ID`), auto-creating it if missing; otherwise ensure `tina4_sequences`, seed a new row
-from `MAX(pk)`, and atomically increment then read. Own the increment's transaction only
-when not already inside one. Return a strictly increasing integer. Prove atomicity with a
-real concurrent-callers test against every engine, never a mock and never a single thread.
+A race-safe `get_next_id` needs: NEVER `MAX+1` at return time (seed only); a native atomic path per engine
+(`nextval`/`GEN_ID`/`LAST_INSERT_ID`/`OUTPUT`/an atomic `UPDATE ... RETURNING`); a portable `tina4_sequences`
+table for engines without one; an ATOMIC fallback (`SELECT ... FOR UPDATE` or `RETURNING` - never a separate
+`UPDATE` then `SELECT`, which is a TOCTOU); an idempotent first-create for the native sequence (so a
+concurrent first-use loser does not fall to the racy path); one correct atomic Mongo path
+(`findOneAndUpdate($inc)` with a unique `seq_name` index, never `return 1` on error); and a REAL per-engine
+concurrency test (N callers -> N distinct ids) - not SQLite-only, the gap that leaves every other engine's
+safety unproven.
 
 ## Audit closure checklist
 
 - [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded (the #255 mis-branch and the atomicity-proof gap).
-- [x] Owner ambiguities recorded (5 proposed; the genuine calls await owner ratification).
-- [x] Proposed shared cases and mutation witnesses complete (concurrency case is mandatory).
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
+- [x] Lifecycle and producer/consumer edges complete (pin, dispatch, seed, atomic increment).
+- [x] Configuration, failure (duplicate id) and security rules complete.
+- [x] Wire/persistence (native sequences + `tina4_sequences`) and provider contracts complete.
+- [x] Four-language behaviour + divergences recorded (generic TOCTOU universal; Mongo broken 4 ways;
+  SQLite-only tests).
+- [x] Owner ambiguities decided (NEXTID-DEC-01..03).
+- [x] Conformance fixture (per-engine concurrency) complete.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.

@@ -1,400 +1,157 @@
-# Feature 015: Migrations
+# Feature 15: Migrations
 
 ## Identity and status
 
-- Matrix identity: 15 - Migrations
+- Matrix identity: 15 - Migrations (`tina4_python/migration/__init__.py`; `tina4_python/migration/runner.py`)
 - Audit state: decision-ready
-- Audit note: measured 2026-08-08 (LOC/CC/MI + lab-verified baselines below); prose
-  sections completed from that evidence 2026-08-10. No framework code changed.
-- Dependencies: Feature 3 adapter interface (connection, transaction, execute), Feature 4
-  URL parser, Feature 5 write facade, the seven providers (008-014) for the actual DDL, and
-  the CLI for the `migrate`/`rollback`/`status`/`create` commands
-- Dependants: application startup (auto-migrate), the CLI migrate commands, the ORM (schema
-  it reads must exist), and any scaffolder that generates a migration
-- Existing ADRs: ADR-0041 (explicit directory beats default), ADR-0024 (no provider claims
-  a rollback it did not perform), ADR-0002 (metrics engine used for the measurements)
-- Shared fixtures: `migrations_contract.json` is required (14 cases below); it runs on
-  SQLite locally and swaps providers on the .99 lab
+- Audit note: FOUR-language feature, strong shared design with real per-language footguns. Measured
+  2026-08-11. Python `migration/runner.py` (`ebbab30`); PHP `Tina4/Migration.php` (1573 lines, `6faabac5`);
+  Ruby `lib/tina4/migration.rb` (`6d5b1de`); Node `packages/orm/src/migration.ts` + `packages/cli/src/
+  commands/migrate.ts` (`27cf0f4`).
+- Dependencies: the database facade + adapters (transactions, execute), the CLI, the auto-migrate boot hook.
+- Dependants: every app that evolves its schema; the server boot path (auto-migrate).
+- Existing ADRs: none dedicated; the "auto-migrate + footgun overhaul" memory.
+
+- Catalog phase: database
 
 ## Why this feature exists
 
-An engineer needs one migration surface that creates, applies, inspects and
-rolls back database changes in the same order on every Tina4 language.
-
-## Boundary
-
-Feature 15 owns SQL and code migrations, discovery and ordering, the tracking
-table, apply/status/rollback, startup auto-migration and the public `Migration`
-surface. Database providers own connection and transaction mechanics.
-
-The live feature matrix retired rows 21-26 into database-adapter group 4.
-Feature 15 is therefore the next standalone migration feature.
+Migrations evolve a schema forward reproducibly: numbered/timestamped files applied once, in order, recorded
+in a ledger so they never re-run. The hard parts are crash-safety (the ledger row must land atomically with
+the DDL), cross-engine idempotency (engines without `IF NOT EXISTS`), and the boot-time convenience of
+auto-applying pending migrations without turning it into a production footgun.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Implementation | `migration/runner.py` | `Migration.php`, `MigrationBase.php` | `migration.rb` | `orm/src/migration.ts` |
-| Size (LOC / fns / CC) | 801 / 38 / 192 | 881 / 43 / 200 | 457 / 38 / 131 | 989 / 63 / 249 |
-| Kinds discovered | `.sql` + `.py` | `.sql` + code | `.sql` + code | `.sql` only runs; `.ts` created-but-invisible |
-| migrate result shape | applied name list; raises | `{applied,skipped,errors}` | per-file `{name,status,error?}` | `{applied,skipped,failed}` |
-| Rollback with no down | raises, RETAINS row | warns, REMOVES row | warns, REMOVES row | warns, REMOVES row (worst) |
-| Lab baseline (green) | 93/0 skip (`12cc44bb`) | 105 tests 331 assert (`46f96429`) | 94/0 pending (`25ac783`) | 272 pass incl real PG (`96a5050e`) |
+Strong shared design in all four: a `tina4_migration` ledger (`migration_name UNIQUE, batch, executed_at,
+passed`, applied = `passed = 1`), numeric-aware ordering (`9_` before `10_`, both `NNNNNN_` and timestamp
+prefixes; unprefixed files warn and sort last), a `migrations/` dir (+ legacy `src/migrations/`), `.sql` +
+code migrations, a quote/comment/proc-block-aware statement splitter, delete-before-insert recording (at most
+one row per name), per-file transactions, and Firebird/MSSQL `CREATE`/`ADD` idempotency skips. Universal
+behaviours confirmed:
 
-### Retained introductory record
-
-Audited 2026-08-08. Part of `98-feature-audit.md`.
-
-### Files
-
-| | implementation | CLI |
-| --- | --- | --- |
-| python | `tina4-python/tina4_python/migration/runner.py` | `tina4-python/tina4_python/cli/__init__.py` |
-| php | `tina4-php/Tina4/Migration.php`, `MigrationBase.php` | `tina4-php/bin/tina4php` |
-| ruby | `tina4-ruby/lib/tina4/migration.rb` | `tina4-ruby/lib/tina4/cli.rb` |
-| node | `tina4-nodejs/packages/orm/src/migration.ts` | `tina4-nodejs/packages/cli/src/commands/migrate*.ts` |
-
-### Measurements
-
-Measured with the native Tina4 metrics engine (ADR-0002). The installed
-`/opt/homebrew/bin/tina4` lacks the native `metrics` command despite reporting
-3.8.56, so the current tracked CLI binary at `tina4/target/debug/tina4` was put
-first on PATH for the audit harness.
-
-| | LOC | fns | CC total | CC avg | worst fn | MI | flags |
-| --- | ---: | ---: | ---: | ---: | --- | ---: | --- |
-| python | 801 | 38 | 192 | 5.05 | `_split_statements` (40) | 9.6 | 2 error, 5 warn |
-| php | 881 | 43 | 200 | 4.65 | `Migration.splitStatements` (41) | 5.7 | 1 error, 9 warn |
-| ruby | 457 | 38 | 131 | 3.45 | `split_sql_statements` (40) | 12.9 | 1 error, 2 warn |
-| node | 989 | 63 | 249 | 3.95 | `splitStatements` (40) | 13.3 | 1 error, 10 warn |
-
-Ruby is leanest and simplest per function. That does not settle the verdict:
-correctness outranks size, and the public/wire contract currently diverges.
-
-### Existing verification baseline
-
-Focused real-SQLite runs at the audited HEADs:
-
-| | result | qualification |
-| --- | --- | --- |
-| python | 76 passed, 2 skipped | live PostgreSQL cases did not run locally |
-| php | 78 passed, 3 skipped | live-engine cases did not run locally |
-| ruby | 86 passed, 3 pending | live PostgreSQL cases did not run locally |
-| node | 249 standalone assertions + 4 Vitest cases passed | correct `tsx` runner used for standalone files |
-
-The initial macOS runs were characterization only because service cases skipped.
-The suites were then re-run as root on the lab host with
-`TINA4_REQUIRE_SERVICES=1`, the isolated `lab-env-for.sh` namespace, all lab
-services healthy, and each clone reset to the exact `origin/v3` HEAD below:
-
-| | HEAD | lab result |
-| --- | --- | --- |
-| python | `12cc44bb` | 93 passed, 0 skipped |
-| php | `46f96429` | 105 tests, 331 assertions, 0 skipped |
-| ruby | `25ac783` | 94 examples, 0 pending |
-| node | `96a5050e` | 272 assertions/tests passed, including real PostgreSQL |
-
-Logs: `/root/tina4-lab/migration-audit-{python,php,ruby,node}.log` on the lab.
-This proves the existing baseline, not the missing cases below: none of those
-green suites asks Node to execute a generated `.ts` migration or asserts that a
-failed/missing rollback retains its tracking row.
-
-### Confirmed divergences
-
-#### 1. Node creates code migrations that its runner cannot execute
-
-`createMigration(..., {kind: "code"})` creates a `.ts` migration, but
-`migrate()`, `status()`, and `Migration.getFiles()` scan only `.sql`. The CLI
-successfully creates an artefact that is invisible to every execution/status
-path. Python, PHP, and Ruby discover and execute their native code migrations.
-
-#### 2. The public file/status surfaces omit runnable migrations
-
-Python's `Migration.get_files()` and `_status()` scan only `.sql`, although
-`_migrate()` runs `.py`. Node has the same split for `.ts`. A code migration can
-run yet never appear in `getFiles()` or status (Python), or be created and never
-run nor appear (Node).
-
-#### 3. Rollback can erase history without reversing the schema
-
-Python raises and retains the tracking row when neither a code migration nor a
-`.down.sql` file exists. PHP, Ruby, and Node warn and remove the tracking row.
-Node is worse on an actual rollback SQL error: it logs the error and still
-removes the row. The observable state then says "pending" while the schema is
-still applied, so the next migrate can replay DDL over live objects.
-
-Canonical rule: a migration record is removed only after its down operation
-completed successfully. Missing down code is a rollback failure, not a
-successful no-op.
-
-#### 4. The public outcomes are four contracts
-
-| concept | python | php | ruby | node |
-| --- | --- | --- | --- | --- |
-| migrate | applied filename list; raises | `{applied,skipped,errors}` | per-file `{name,status,error?}` | `{applied,skipped,failed}` |
-| rollback | rolled-back filename list; raises | `{rolledBack,errors}` | per-file `{name,status,error?}` | filename list; logs errors |
-| status.completed | record objects | record objects | filenames | filenames |
-| create SQL | up-file path only | up-file path only | up-file path only | `{upPath,downPath}` |
-
-This makes identical application/CLI code observe different success and failure
-states. The result shape needs one contract before another implementation can
-be written.
-
-#### 5. Alias debt contradicts the standing no-alias rule
-
-The migration surface carries `get_applied` plus `get_applied_migrations`, PHP
-equivalents, Ruby `run` as an alias of `migrate`, and legacy function APIs beside
-the object API. The audit must identify real external call sites, choose the
-primary names, and remove redundant aliases with a Breaking migration note.
+- LEDGER ROW WRITTEN IN THE SAME TRANSACTION AS THE DDL (the crash-safety design) - `start_transaction` ->
+  statements -> `record_applied` -> `commit`, on the ORM path in all four.
+- ATOMICITY is truly atomic only on transactional-DDL engines (PostgreSQL). MySQL/Firebird implicit-commit
+  DDL, so a multi-statement file that fails midway leaves earlier statements applied while the ledger row is
+  not written (re-run). All four document this; the idempotency skips cover Firebird/MSSQL, not MySQL.
+- AUTO-MIGRATE-ON-STARTUP is DEFAULT ON in all four (`TINA4_AUTO_MIGRATE`, applies pending `.sql` at every
+  boot), non-breaking (a failure is logged and the service still boots), with the multi-instance concurrent-
+  first-apply race documented as the reason to disable it.
+- Migrations do NOT route their SQL through the feature-7 SQL translator - the author writes engine-specific
+  DDL ("one logical change per file").
 
 ## Public surface contract
 
-One `Migration` object, one name per concept, no aliases (the full idiomatic spelling table
-is in Breaking changes below). The neutral surface is: construct with `(db, migrationsDir,
-delimiter)`; `migrate()` applies pending migrations and returns `{applied, skipped, failed}`;
-`rollback(steps=1)` reverses the last batch and returns `{rolledBack, failed}`; `status()`
-returns `{completed, pending}` as filename strings; `create(description, kind="sql")` writes
-a migration and returns the up-file path; and `getApplied()`, `getPending()`, `getFiles()`
-return filename lists that include BOTH `.sql` and native-code migrations. A detailed-record
-inspection (the tracking rows themselves) is a separately named method, never `status()`.
+`migrate()` / `rollback(steps)` / `status()` / `create()` and the `tina4 migrate[:create|:rollback|:status]`
+CLI. Contract: pending migrations apply once in order, each recorded atomically with its DDL; `rollback` runs
+the `.down` and removes the ledger row; auto-migrate applies pending at boot unless disabled.
 
 ## Inputs and outputs
 
-- A migration is a file on disk: either a `.sql` file (with a deterministic sibling
-  `.down.sql`) or a native-code file (`.py`/`.php`/`.rb`/`.ts`) exposing an up and a down.
-- Discovery orders by numeric prefix: `9_` applies before `10_` (numeric, not
-  lexicographic); an unprefixed file sorts last and warns.
-- The tracking row carries `id`, `migration_name`, `description`, `batch`, `executed_at`
-  and `passed`; `passed = 1` is the only "applied" state.
-- `migrate()` returns `{applied, skipped, failed}` where `failed` carries the migration name
-  and the error; `rollback()` returns `{rolledBack, failed}`; `status()` returns
-  `{completed, pending}` filename strings. These three shapes are the same in all four
-  (the current four-way divergence in divergence 4 is what the contract closes).
-- `create()` returns the up-file path; a caller derives the `.down.sql` sibling from it
-  rather than receiving a second path (closing the Node-only `{upPath, downPath}` shape).
+- Input: migration files in `migrations/`, the DB, `TINA4_AUTO_MIGRATE`. Output: applied DDL + ledger rows,
+  or a halted run with an error (fail-fast on the CLI), or a swallowed boot-time failure.
 
 ## Lifecycle and operation graph
 
-1. Discovery scans the resolved migrations directory for `.sql` AND native-code files, and
-   orders them by numeric prefix (divergences 1 and 2 close the current `.sql`-only scans).
-2. `migrate()` applies each pending migration in order inside a transaction where the engine
-   supports transactional DDL; a success writes exactly one `passed = 1` row; a second run
-   skips an already-applied migration.
-3. Apply stops at the FIRST failure; later files do not run, and a failed multi-statement
-   file gains no applied row.
-4. `status()`/`getApplied()`/`getPending()`/`getFiles()` inspect without mutating and
-   include both kinds.
-5. `rollback(steps=1)` runs a batch in reverse apply order; it removes a tracking row ONLY
-   after that migration's down operation completes. A missing down is a failure, not a
-   no-op; a failing down SQL is a failure. Either way the row is RETAINED (divergence 3).
-6. Startup auto-migrate (`TINA4_AUTO_MIGRATE`, default on) runs `migrate()` during boot; a
-   failure logs and still allows boot, whereas an explicit CLI migrate exits non-zero.
+1. Ensure the `tina4_migration` ledger (engine-aware, v2->v3 auto-upgrade).
+2. List pending files (numeric-aware sort), skipping applied (`passed = 1`).
+3. Per file: `start_transaction` -> split + execute statements (Firebird/MSSQL idempotency skips) ->
+   `record_applied` -> `commit`; on error `rollback` + halt.
+4. Boot: auto-migrate runs the same path if enabled.
 
 ## Configuration and precedence
 
-- Default directory: project-root `migrations/`.
-- Explicit constructor/CLI directory beats every default (ADR-0041).
-- Legacy `src/migrations/` is fallback-only when the default directory was not
-  explicitly supplied and project-root `migrations/` does not exist.
-- Default delimiter: `;`; `SET TERM` and line-boundary `//` blocks are parsed as
-  syntax, never inferred from `//` inside a URL/string.
-- `TINA4_AUTO_MIGRATE` defaults on; false/0/no/off disables it. Startup failure
-  logs and allows boot; explicit CLI migration fails with a non-zero exit.
+- `TINA4_AUTO_MIGRATE` (default on) gates the boot hook. The migrations dir defaults to `migrations/` (legacy
+  `src/migrations/`). No SQL-translation config.
 
 ## Failures, side effects and security
 
-- A failed apply stops the run at the first failure and writes NO applied row for the failed
-  file; later files do not run.
-- A rollback whose down is missing or errors is a FAILURE that retains the tracking row, so
-  observable state never says "pending" while the schema is still applied (divergence 3, the
-  replay-DDL-over-live-objects hazard).
-- Tracking-table write and migration body share one transaction where the engine supports
-  transactional DDL; no provider records a rollback it did not perform (ADR-0024).
-- Startup auto-migrate degrades on failure (logs, boots); explicit CLI migrate exits
-  non-zero, so a human-run migration cannot fail silently.
-- Statement splitting parses `SET TERM` and line-boundary `//` blocks as syntax; a `//`
-  inside a URL or string literal is NOT treated as a delimiter.
-- Migration SQL is trusted developer input (it is DDL the team wrote), so the security
-  boundary is directory resolution: an explicit directory beats the default (ADR-0041) and
-  the legacy `src/migrations/` is fallback-only.
+- Side effect: applies DDL (schema change) - at boot by default. The failure mode is a partial apply on
+  non-transactional-DDL engines and the boot-time footgun (destructive DDL auto-applied). See the register
+  for the broken `migrate:status`, the divergent Node CLI path, and the rollback-drops-ledger footgun.
 
 ## Wire and persistence contract
 
-### Persisted contract
-
-The tracking table remains `tina4_migration` with canonical columns
-`id`, `migration_name`, `description`, `batch`, `executed_at`, and `passed`.
-A migration is applied iff one row with `passed = 1` exists for its canonical
-filename/stem. A failed apply or rollback never writes a successful state.
-Legacy tracking schemas upgrade in place before state is read.
+The `tina4_migration` ledger is the persistence contract (name/batch/executed_at/passed). The crash-safety
+contract is "ledger row in the same transaction as the DDL" (honoured on transactional-DDL engines).
 
 ## Providers and substitutability
 
-The same SQL migration fixture runs with the same outcome on SQLite, PostgreSQL, MySQL,
-MSSQL and Firebird. Where an engine cannot offer transactional DDL (MySQL commits DDL
-implicitly, so a mid-migration failure cannot roll back), the public contract NARROWS to
-what every engine can guarantee rather than becoming a per-provider caveat (ADR-0024): a
-multi-statement migration on a non-transactional-DDL engine is documented as
-non-atomic, and the recommendation is one DDL statement per migration there. No provider
-claims a rollback it did not perform. The tracking table (`tina4_migration`) is identical
-across providers; a legacy tracking schema upgrades in place before state is read.
+Engine-aware only in the bookkeeping DDL and the idempotency skips; the migration bodies are engine-specific
+author SQL.
 
 ## Contradictions and defects
 
-### Provisional verdict
-
-**SYNTHESISE, decided on correctness.** Promote Ruby's smaller orchestration
-structure, Python's fail-safe rollback rule, and the PHP/Node summary-object
-idea. Do not promote any implementation wholesale: each one has either a
-contract hole or a materially larger mechanism.
+| ID | Finding | Proposed resolution |
+| --- | --- | --- |
+| MIG-CLI-STATUS-BROKEN | `tina4 migrate:status` is broken in TWO of four, each differently and untested: Python raises `KeyError` (`_migrate_status` prints `m['migration_id']` but the dicts are keyed `migration_name` - crashes the moment there is >=1 migration); PHP raises `TypeError` at construction (`new Migration($migrationsDir)` passes the dir STRING into the `?DatabaseAdapter $db` ctor param, and status never resolves a `$db`). Ruby/Node not flagged. No test exercises the CLI status print path in Python/PHP. | Fix the key/argument bug in Python and PHP; add a CLI-level `migrate:status` test (run it against a real migrated DB and assert the printed output) in all four. |
+| MIG-NODE-CLI-DIVERGENT | Node has TWO migration code paths, and the CLI one is unsafe. `tina4 migrate` (`migrate.ts` `runMigrations`) does NOT use the ORM `migrate()`: it uses naive `sql.split(";")` (breaks a `;` inside a string/comment/proc block that the ORM splitter handles), has NO per-file transaction (a mid-file failure leaves earlier statements applied on ALL engines including PostgreSQL, with no rollback), has NO Firebird/MSSQL idempotency skips, and records the ledger AFTER the loop (not in-transaction). All untested. | Make the Node CLI call the ORM `migrate()` (one code path), so the CLI gets the transactional, robust-split, idempotent behaviour the ORM path already has. |
+| MIG-ROLLBACK-DROPS-LEDGER | In Ruby, PHP, and Node, `rollback` REMOVES the ledger row even when the schema was not successfully reversed - a missing `.down.sql` (Ruby/PHP) or a failed down script (Node) logs a warning but still deletes the tracking row, leaving the schema in place and untracked. Python is the fail-safe outlier (it RAISES on a missing down artifact). | Do not remove the ledger row unless the down actually succeeded; on a missing/failed down, RAISE (Python's behaviour) rather than silently drop tracking. Align all four on fail-safe rollback. |
+| MIG-FBMSSQL-MOCK | Firebird/MSSQL migration idempotency is verified against FAKES in TWO of four: Ruby's `migration_footguns_spec` uses a hand-rolled `FakeDB`; Node's `migrationFootguns.test` uses fake adapters with a spoofed `constructor.name`. PHP converted its fakes to a REAL-engine test (`MigrationFootgunsLiveEngineTest`, "NO DOUBLES"). This violates the no-mock rule for those engine-specific paths (the real MySQL/MSSQL/Firebird migration path is unproven in Ruby/Node). | Convert the Ruby/Node Firebird+MSSQL migration idempotency tests to real engines (PHP's live-engine test is the model), gated in the require-services CI. |
+| MIG-AUTO-DEFAULT-ON | Auto-migrate-on-startup is DEFAULT ON in all four, applying pending DDL at every boot - a footgun in production (destructive DDL auto-applied; multi-instance first-apply race). It is non-breaking (swallowed) which HIDES a failed migration behind a running server. | Consider defaulting `TINA4_AUTO_MIGRATE` OFF in production (or requiring an explicit opt-in), and surfacing a swallowed auto-migrate failure more loudly (a health-check degradation, not just a log line). Owner call. |
+| MIG-SQLITE-DOC-DRIFT | Python's CLAUDE.md and Ruby's docstring state SQLite auto-commits DDL and leaves partial applies - but Python's shipped test proves SQLite ROLLS BACK (SQLite has transactional DDL and Tina4 autocommit is off). The doc is wrong for SQLite (accurate for MySQL/Firebird). | Correct the SQLite atomicity claim in the Python/Ruby docs (First Principle: docs match code). |
+| MIG-NO-TRANSLATOR | Migrations bypass the SQL translator in all four (author writes engine-specific DDL). Documented design, not a bug, but it means a migration is not portable across engines unless the author makes it so. | Document prominently; optionally offer a portable-DDL helper. No code change required. |
 
 ## Owner decisions
 
-Proposed for owner ratification (the measured divergences force each call):
-
-1. One result shape per operation across all four (closing divergence 4): `migrate() ->
-   {applied, skipped, failed}`, `rollback() -> {rolledBack, failed}`, `status() ->
-   {completed, pending}` as filename strings. This is the breaking change with the widest
-   blast radius, because application and CLI code currently observes four shapes.
-2. A tracking row is removed ONLY after its down operation succeeds; a missing or failing
-   down is a rollback failure that retains the row (Python's fail-safe rule, closing
-   divergence 3). This is a correctness decision, not a preference.
-3. SQL and native-code migrations participate in identical discovery, numeric ordering,
-   status, apply and rollback (closing divergences 1 and 2); Node's created-but-invisible
-   `.ts` and Python's `.py`-runs-but-hidden-from-status are bugs, not design.
-4. `create()` returns the up-file path only; the caller derives the `.down.sql` sibling
-   (closing the Node-only two-path shape).
-5. One public name per concept, no aliases (closing divergence 5): remove
-   `get_applied_migrations`, the Ruby `run` alias and the legacy function APIs, with a
-   Breaking migration note.
-6. Overall verdict SYNTHESISE, decided on correctness: adopt Ruby's leaner orchestration
-   structure, Python's fail-safe rollback rule and the PHP/Node summary-object result. No
-   implementation is promoted wholesale, because each has either a contract hole or a
-   materially larger mechanism.
+- MIG-DEC-01 (proposed): fix the broken `migrate:status` (Python + PHP) and add a CLI-status test
+  (MIG-CLI-STATUS-BROKEN); unify Node's CLI onto the ORM `migrate()` (MIG-NODE-CLI-DIVERGENT). These are real
+  broken/unsafe CLI paths.
+- MIG-DEC-02 (proposed): make rollback fail-safe (never drop the ledger row without a successful reverse -
+  Python's behaviour) across all four (MIG-ROLLBACK-DROPS-LEDGER).
+- MIG-DEC-03 (proposed): convert the Ruby/Node Firebird+MSSQL migration tests to real engines
+  (MIG-FBMSSQL-MOCK); decide the auto-migrate default + failure visibility (MIG-AUTO-DEFAULT-ON); fix the
+  SQLite doc drift (MIG-SQLITE-DOC-DRIFT).
 
 ## Proposed conformance fixture
 
-### Contract cases to encode as data
-
-1. SQL create writes an up/down pair and returns the up path.
-2. Code create writes one native file which discovery, status, migrate, and
-   rollback all recognize.
-3. Numeric prefixes apply `9_` before `10_`; unprefixed files sort last and warn.
-4. A successful apply records exactly one passed row and a second run skips it.
-5. Apply stops at the first failure and does not run later files.
-6. A failed multi-statement file does not gain an applied row.
-7. Rollback runs a batch in reverse apply order.
-8. Missing down fails and retains the applied row.
-9. Failing down SQL fails and retains the applied row.
-10. Successful down removes the row only after schema reversal succeeds.
-11. `status`, `get_applied`, `get_pending`, and `get_files` include SQL and code
-    migrations with the same filename semantics.
-12. An unknown migration kind raises; `code` and the runtime's documented legacy
-    spelling are the only non-SQL values during the breaking transition.
-13. Startup auto-migrate degrades on failure; explicit CLI migrate exits non-zero.
-14. The same SQL fixture runs with the same outcome on SQLite, PostgreSQL,
-    MySQL, MSSQL, and Firebird; any impossible DDL guarantee narrows the public
-    contract rather than becoming a provider caveat (ADR-0024).
-
-### Tests to write first
-
-- `a generated code migration is discovered and applied` / `an unknown kind raises`
-- `status includes every runnable migration` / `a down file is never pending`
-- `rollback removes history after down succeeds` / `missing down retains history`
-- `rollback failure retains history` / `later rollbacks do not run after failure`
-- `apply stops at the first failure` / `a failed file is never marked applied`
-- `startup failure degrades` / `explicit CLI failure exits non-zero`
-
-Each case is mutation-proved and run from one shared
-`fixtures/migrations_contract.json` in all four frameworks. SQLite cases run
-locally; provider-swap cases run on the .99 lab with zero skips.
+A shared fixture against real engines (no mocks): a multi-statement file rolls back cleanly on a
+transactional-DDL engine (PostgreSQL) on a mid-file failure; the ledger row commits atomically with the DDL;
+`migrate:status` prints without crashing on a migrated DB; a missing/failed `down` does NOT drop the ledger
+row; Firebird/MSSQL `CREATE`/`ADD` idempotency is proven against REAL Firebird 5 + SQL Server; and the CLI
+and ORM paths produce identical results (Node). Gate the real-engine parts in the require-services CI.
 
 ## Integration map
 
-- The `Migration` class is exported from each framework's public API and constructed with a
-  live database adapter (Feature 3).
-- Startup boot calls `migrate()` when `TINA4_AUTO_MIGRATE` is on; the CLI exposes
-  `migrate`, `rollback`, `status` and `create` (Python `cli/__init__.py`, PHP `bin/tina4php`,
-  Ruby `cli.rb`, Node `packages/cli/src/commands/migrate*.ts`).
-- The scaffolder writes migration files into the resolved directory; discovery and the
-  numeric-prefix ordering consume them.
-- The providers (008-014) execute the DDL and own transaction mechanics; the ORM depends on
-  the migrated schema existing.
-- Central fixtures, four runners, the CI matrix, release notes and the migrations docs
-  update together when the contract lands.
+- Consumers: the CLI (`tina4 migrate*`), the server boot hook (auto-migrate), apps. Related: feature 5 (the
+  Database facade / transactions), feature 7 (NOT used - migrations bypass the translator), the DB providers
+  (9-14) whose idempotency skips this relies on.
 
 ## Breaking changes and migration
 
-### Surface naming rule
-
-Concept names are verb-first. Snake-case languages use `get_applied` and
-`get_pending`; camel-case languages use `getApplied` and `getPending`.
-`Migration` is PascalCase. There is one public name per concept, with no aliases.
-
-| concept | python | php | ruby | node |
-| --- | --- | --- | --- | --- |
-| construct | `Migration(db, migrations_dir, delimiter)` | `new Migration(db, migrationsDir, delimiter)` | `Migration.new(db, migrations_dir:)` | `new Migration(db, {migrationsDir, delimiter})` |
-| apply | `migrate()` | `migrate()` | `migrate()` | `migrate()` |
-| rollback | `rollback(steps=1)` | `rollback(steps=1)` | `rollback(steps=1)` | `rollback(steps=1)` |
-| status | `status()` | `status()` | `status()` | `status()` |
-| create | `create(description, kind="sql")` | `create(description, kind="sql")` | `create(description, kind="sql")` | `create(description, kind="sql")` |
-| applied names | `get_applied()` | `getApplied()` | `get_applied()` | `getApplied()` |
-| pending names | `get_pending()` | `getPending()` | `get_pending()` | `getPending()` |
-| discovered files | `get_files()` | `getFiles()` | `get_files()` | `getFiles()` |
+- Fixing rollback to be fail-safe changes behaviour (a missing/failed down now raises instead of dropping
+  tracking) - document it. Unifying Node's CLI path changes CLI behaviour (safer) - document it. Defaulting
+  auto-migrate off in production is a behaviour change - document + migrate.
 
 ## Implementation backlog
 
-1. Materialize `fixtures/migrations_contract.json` from the 14 cases above and wire four
-   fail-closed runners (SQLite locally, provider-swap on the .99 lab, zero skips).
-2. Converge the result shapes (decision 1) in all four; update every application/CLI caller.
-3. Make code and SQL migrations share one discovery/status/apply/rollback path (decisions 3)
-   -- fix Node's invisible `.ts` and Python's `.py`-hidden-from-status.
-4. Enforce the fail-safe rollback rule (decision 2) in PHP, Ruby and Node (Python already
-   retains the row); prove missing-down and failing-down both retain history.
-5. Remove the aliases (decision 5) with the Breaking migration note.
-6. Prove the provider-narrowing rule (non-transactional-DDL engines) on the lab across
-   SQLite, PostgreSQL, MySQL, MSSQL and Firebird.
-7. Run locally and on the root lab, then flip owed->proven in CONTRACT-MAP.
-
-No framework implementation belongs in the audit commit; the above is the build phase.
+1. MIG-DEC-01: fix `migrate:status` (Python/PHP) + a CLI-status test; unify Node CLI onto ORM `migrate()`.
+2. MIG-DEC-02: fail-safe rollback (all four).
+3. MIG-DEC-03: real-engine Firebird/MSSQL migration tests (Ruby/Node); auto-migrate default/visibility; SQLite
+   doc fix.
 
 ## Porting capsule
 
-### Canonical pattern to implement
-
-- `migrate()` returns `{applied, skipped, failed}`; `failed` carries migration
-  name plus the error, and processing stops at the first failure.
-- `rollback(steps=1)` returns `{rolled_back, failed}` and stops at the first
-  failure. A missing down implementation is a failure. The tracking row remains
-  until down completes.
-- `status()` returns `{completed, pending}` using filename strings; detailed
-  tracking rows belong to an explicitly named inspection method, not `status`.
-- SQL and native-code migrations participate in identical discovery, numeric
-  ordering, status, apply, and rollback paths.
-- `create(description, kind="sql")` returns the created up path. SQL also
-  creates the deterministic sibling `.down.sql`; callers derive it from the up
-  path rather than receiving a Node-only second return shape.
-- Tracking-table writes and the migration body share the same transaction where
-  the engine supports transactional DDL. No provider may claim a rollback it did
-  not perform (ADR-0024).
+A migrations engine needs: a `tina4_migration` ledger (name UNIQUE, batch, executed_at, passed) with the row
+written IN THE SAME TRANSACTION as the DDL (crash-safe on transactional-DDL engines); numeric-aware ordering;
+a quote/comment/proc-block-aware statement splitter (never a naive `split(";")`); per-file transactions with
+Firebird/MSSQL idempotency skips; delete-before-insert recording; a `migrate:status` that actually runs; a
+FAIL-SAFE rollback that never drops the ledger row without a successful reverse; ONE code path for CLI and
+programmatic use (not a weaker CLI re-implementation); and real-engine tests for the Firebird/MSSQL idempotency
+(never fakes). Auto-migrate-on-startup should be opt-in-safe (consider off-by-default in production) and must
+not hide a failed migration behind a running server.
 
 ## Audit closure checklist
 
 - [x] Boundary and public surface complete.
-- [x] Lifecycle and every producer/consumer edge complete.
-- [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage and provider contracts complete.
-- [x] Existing-language contradictions recorded (5 divergences).
-- [x] Owner ambiguities recorded (6 proposed; the genuine calls await owner ratification).
-- [x] Proposed shared cases and mutation witnesses complete (14 cases).
-- [x] Integration map and breaking migrations complete.
-- [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule is clean-room sufficient.
-
-### State
-
-AUDIT decision-ready: measured (LOC/CC + lab baselines), all contract sections written, 5
-divergences recorded, 6 decisions proposed. The IMPLEMENTATION and the shared fixture are
-the build phase (backlog above) and are NOT done: this feature is not "shipped" until all
-14 cases are proven in all four on the .99 lab with zero skips. Decision-ready is not
-built.
+- [x] Lifecycle and producer/consumer edges complete (ledger, per-file txn, boot hook).
+- [x] Configuration, failure (partial apply, boot footgun) and security rules complete.
+- [x] Wire/persistence (the ledger) and provider contracts complete.
+- [x] Four-language behaviour + divergences recorded (broken status, Node CLI, rollback footgun, FB/MSSQL
+  mocks).
+- [x] Owner ambiguities decided (MIG-DEC-01..03).
+- [x] Conformance fixture (real-engine, crash-safety, status, rollback) complete.
+- [x] Integration map and migrations complete.
+- [x] Backlog ordered.
+- [x] Porting capsule sufficient.
