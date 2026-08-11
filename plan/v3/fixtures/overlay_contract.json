@@ -1,0 +1,141 @@
+{
+  "_comment": [
+    "Development error overlay — dead-code removal + secret redaction + robustness.",
+    "Feature 126, OVERLAY-DEC-01/02/03/04.",
+    "",
+    "The overlay is the dev half of a two-faced error path: a rich page while you",
+    "build (exception type + message, the full stack with a seven-line source window",
+    "per frame, request details, environment), a silent generic page in production.",
+    "Four findings are fixed here, all driven through REAL dispatch / a real thrown",
+    "500 in each framework -- NO MOCKS. See",
+    "tina4-documentation/plan/v3/features/126-debug-overlay.md and",
+    "tina4-documentation/plan/v3/OWNER-DECISIONS.md (Batch 5, OVERLAY-DEC-01..04).",
+    "",
+    "OVERLAY-DEC-01 (dead code + a test that proved nothing): render_production_error",
+    "/ renderProductionError was DEFINED, DOCUMENTED as THE production entry, and",
+    "unit-tested for no-leak in all four -- but NEVER invoked by runtime code. The real",
+    "production 500 renders errors/500.twig with an empty error_message (CWE-209). So",
+    "the old no-leak UNIT test exercised a dead sibling and proved nothing about the",
+    "live path. The dead function is DELETED in all four (the maintainability win), its",
+    "misleading docstrings are corrected, and a REAL WIRED-PATH production-no-leak test",
+    "replaces the dead-sibling unit test (Python tests/test_overlay_contract.py, PHP",
+    "tests/OverlayContractTest.php, Node test/overlayContract.test.ts; Ruby already had",
+    "spec/router_error_event_spec.rb and now spec/overlay_contract_spec.rb). A real",
+    "production 500 leaks neither the exception message nor a traceback/backtrace.",
+    "",
+    "OVERLAY-DEC-02 (SECURITY): the dev overlay rendered request headers + body/params",
+    "verbatim, so an Authorization: Bearer token, a Cookie, or a submitted password was",
+    "shown in cleartext on any 500 whenever an operator ran TINA4_DEBUG=true on a shared",
+    "or staging box (PHP alone dodged headers by an accident -- the router hands headers",
+    "in as a CaseInsensitiveArray and the overlay only expanded plain arrays). Now ONE",
+    "redaction helper per framework masks any field whose KEY matches",
+    "/password|passwd|secret|token|authorization|cookie|key/i (covering the",
+    "Authorization/Cookie/Set-Cookie headers and password/token/secret/api_key body/",
+    "param keys) with '[redacted]'. PHP's header hiding is made DELIBERATE: the overlay",
+    "now RENDERS headers (accepting the CaseInsensitiveArray) and redacts the sensitive",
+    "ones, instead of relying on the array-only skip. Over-matching a benign field (a",
+    "field name containing 'key') is the SAFE direction in a dev tool: over-masking",
+    "hides nothing that matters, under-masking leaks a secret.",
+    "",
+    "OVERLAY-DEC-03 (robustness): (a) the dev-overlay render is now GUARDED at the",
+    "dispatch call site (it sat inside the dispatch catch with no inner guard, so an",
+    "overlay-render throw double-faulted out of the crash handler). On any overlay",
+    "failure the dispatch falls back to the same safe production page, so a 500 is",
+    "always served. (b) The rendered frames are CAPPED at 50: a deep/recursive stack",
+    "(a RecursionError-class trace of thousands of frames) would otherwise do one",
+    "source-file read per frame and emit an unbounded page; now only the innermost 50",
+    "render, with a '... N more stack frames hidden' note.",
+    "",
+    "OVERLAY-DEC-04 (one gate + suspect tests): the overlay gate is unified on the",
+    "module's is_debug_mode()/isDebugMode() -- Python's ctx.is_dev, Ruby's dev_mode?",
+    "and Node's isDevMode() now derive from it (PHP already called it), so the gate has",
+    "ONE definition. Two suspect tests are fixed while here: Ruby's error_overlay_spec",
+    "asserted the overlay emits 'TINA4_DEBUG_LEVEL', a string it never emits (corrected",
+    "to the real footer text); Node's co-located packages/core/src/errorOverlay.test.ts",
+    "(never collected by the runner, and referencing the deleted function) is deleted.",
+    "",
+    "Every case runs with NO MOCKS: a real route throw through the REAL dispatcher",
+    "(Python server.handle, PHP Router::dispatch, Ruby RackApp#call, Node a real HTTP",
+    "request to a started server), or render_error_overlay over a genuinely deep real",
+    "recursion. The self-throw case feeds the overlay a REAL, genuinely-unrenderable",
+    "request value (an object whose __str__/toString/jsonSerialize/to_s raises) -- that",
+    "is INPUT DATA the real overlay really fails on (the 'malformed edge' the guard",
+    "exists for), not a stand-in for the overlay or dispatch.",
+    "",
+    "Mutation-proved (macOS, all four): make the redaction helper return the value",
+    "unchanged and the redaction case goes RED (the bearer token + password appear);",
+    "remove the frame-cap slice and the frame-cap case goes RED (~5000 frame blocks, no",
+    "note); remove the try/catch around the overlay at the dispatch call site and the",
+    "self-throw case goes RED (the overlay throw double-faults out of dispatch instead",
+    "of a safe 500). Restoring each returns to green.",
+    "",
+    "Each invariant names a REAL suite file per framework and one case name; the four",
+    "suites carry the SAME case name in each language's own idiom, which",
+    "scripts/audit-contract-fixtures.py normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "126 - Development error overlay (dead-code removal, secret redaction, frame cap, self-throw guard)",
+  "invariants": [
+    {
+      "id": "overlay-wired-production-no-leak",
+      "adr": "OVERLAY-DEC-01",
+      "rule": "The dead render_production_error / renderProductionError is DELETED in all four; the real production 500 renders errors/500.twig with an empty error_message (CWE-209). Driven through the REAL dispatcher in production mode (TINA4_DEBUG off), a route that throws yields a 500 whose body contains NEITHER the exception message NOR any traceback/backtrace/source marker. This wired-path test replaces the old unit test that only exercised the never-invoked dead sibling.",
+      "why": "render_production_error was defined, documented as THE production entry, and unit-tested for no-leak, but nothing in the framework ever called it -- the real production 500 is the template renderer -- so the no-leak unit test proved nothing about the live path (OVERLAY-PROD-DEAD). Deleting it is the less-code win and removes the false belief; a wired-path test guards the actual CWE-209 contract. Mutation aside: the production path is the template, so this stays green only while the dispatch keeps error_message empty.",
+      "suites": {
+        "ruby": "spec/overlay_contract_spec.rb",
+        "python": "tests/test_overlay_contract.py",
+        "php": "tests/OverlayContractTest.php",
+        "nodejs": "test/overlayContract.test.ts"
+      },
+      "cases": [
+        "a wired production 500 does not leak the exception"
+      ]
+    },
+    {
+      "id": "overlay-redacts-sensitive-request-fields",
+      "adr": "OVERLAY-DEC-02",
+      "rule": "The dev overlay masks every request field whose KEY matches /password|passwd|secret|token|authorization|cookie|key/i with '[redacted]' -- the Authorization/Cookie/Set-Cookie headers and password/token/secret/api_key body/param keys -- even under TINA4_DEBUG. A request carrying Authorization: Bearer <secret>, a session Cookie, and a password body/param renders the overlay with all three masked while a non-sensitive field (username) is shown verbatim (proving redaction masks, it does not hide the whole section). PHP renders headers deliberately (a CaseInsensitiveArray) and redacts them, no longer relying on the array-only skip.",
+      "why": "The dev overlay showed bearer tokens, cookies and submitted passwords in cleartext on any 500 under TINA4_DEBUG=true (OVERLAY-SENSITIVE) -- a real secret exposure on a shared/staging box. PHP hid headers only by an accident (an object, not an array), not a deliberate redaction. One shared redaction helper per framework, applied to the request-table key, closes it. Mutation-proved: making the helper return the value unchanged makes the bearer token + password appear, turning the case RED.",
+      "suites": {
+        "ruby": "spec/overlay_contract_spec.rb",
+        "python": "tests/test_overlay_contract.py",
+        "php": "tests/OverlayContractTest.php",
+        "nodejs": "test/overlayContract.test.ts"
+      },
+      "cases": [
+        "the dev overlay redacts authorization and secret body fields"
+      ]
+    },
+    {
+      "id": "overlay-caps-the-frame-count",
+      "adr": "OVERLAY-DEC-03",
+      "rule": "The overlay renders at most 50 stack frames (the innermost) and appends a '... N more stack frames hidden' note for the rest. A genuinely deep recursive stack (a real ~5000-deep recursion) therefore renders a BOUNDED page -- at most 50 frame blocks plus the truncation note -- rather than one source-file read and one frame block per frame.",
+      "why": "There was no frame cap: a deep/recursive stack did one source-file read per frame and produced an unbounded HTML page (a RecursionError-class stack yielded a huge response) (OVERLAY-NO-FRAME-CAP). Capping the rendered frames bounds both the reads and the page. Mutation-proved: removing the cap slice makes a 5000-deep stack render ~5000 frame blocks with no note, turning the case RED.",
+      "suites": {
+        "ruby": "spec/overlay_contract_spec.rb",
+        "python": "tests/test_overlay_contract.py",
+        "php": "tests/OverlayContractTest.php",
+        "nodejs": "test/overlayContract.test.ts"
+      },
+      "cases": [
+        "a deep recursive stack renders a frame capped page"
+      ]
+    },
+    {
+      "id": "overlay-render-is-guarded",
+      "adr": "OVERLAY-DEC-03",
+      "rule": "The dev-overlay render is wrapped in a guard at the dispatch call site. If the overlay render itself raises (a malformed frame, a genuinely-unrenderable request value), the dispatch catches it, logs a warning, and falls back to the SAME safe production page -- so a real thrown 500 is always served and the overlay failure never double-faults out of the crash handler nor leaks the underlying error.",
+      "why": "The dev-overlay call sat INSIDE the dispatch catch/rescue with no inner guard, so an overlay-render throw double-faulted out (the dev path could crash the crash handler) (OVERLAY-SELF-THROW). Guarding the render and degrading to the generic page makes a 500 always reachable. Mutation-proved: removing the try/catch around the overlay makes the overlay throw escape dispatch (the request double-faults instead of returning a safe 500), turning the case RED.",
+      "suites": {
+        "ruby": "spec/overlay_contract_spec.rb",
+        "python": "tests/test_overlay_contract.py",
+        "php": "tests/OverlayContractTest.php",
+        "nodejs": "test/overlayContract.test.ts"
+      },
+      "cases": [
+        "a throwing overlay render still returns a safe 500"
+      ]
+    }
+  ]
+}
