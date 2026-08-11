@@ -1,109 +1,157 @@
-# Feature 112: CLI migrations
+# Feature 112: CLI migrate (delegated migration command)
 
 ## Identity and status
 
-- Matrix identity: 112 — CLI migrations
-- Audit state: queued
-- Dependencies: not yet mapped
-- Dependants: not yet mapped
-- Existing ADRs: see the central decision index
-- Shared fixtures: not yet defined
+- Matrix identity: 112 - `tina4 migrate` (and `migrate:create` / `migrate:status` / `migrate:rollback`)
+- Audit state: decision-ready
+- Audit note: this is a DELEGATED CLI command. The `tina4` Rust binary is a thin forwarder; the actual
+  migration CLI lives in each framework. Measured 2026-08-11 from `tina4/src/main.rs`
+  (`delegate_command` :1337, `commands --json` via `manifest.rs`) and the four framework CLI registries
+  (Python `cli/__init__.py:3258-3259`, Node `bin.ts:361-375`, PHP `bin/tina4php`, Ruby `lib/tina4/cli.rb`).
+  The migration ENGINE (the runner, tracking table, transactional semantics) is a SEPARATE feature (the
+  migrations subsystem, tracked separately); this packet audits only the CLI command surface + the
+  delegation.
+- Dependencies: `detect::detect_language`, the framework CLI, the `commands --json` protocol (feature 122).
+- Dependants: developers running migrations; CI deploy steps.
+- Existing ADRs: none dedicated to the command; the migration engine has its own decisions.
+- Shared fixtures: NONE for the CLI surface (the engine has its own contract).
 
-- Catalog phase: CLI
+- Catalog phase: CLI (delegated to the framework CLI)
 
 ## Why this feature exists
 
-This feature gives an application one portable cli migrations contract across
-every Tina4 language.
+`tina4 migrate` runs pending database migrations without the developer remembering each framework's
+invocation (`tina4python migrate`, `php tina4php migrate`, `tina4ruby migrate`, `npx tina4nodejs
+migrate`). The unified CLI detects the project language and forwards. `migrate:create` scaffolds a new
+migration file; `migrate:status` and `migrate:rollback` (where present) report and undo.
 
 ## Boundary
 
-This packet owns the public behavior and integration boundary for CLI migrations. The
-audit must separate that behavior from private helpers and adjacent features.
+This packet owns the DELEGATION: `tina4 migrate ...` -> detect language -> run the framework CLI with the
+same arguments, propagating the exit code. It also owns the CLI-SURFACE parity question (does every
+framework CLI expose the same migrate subcommands?).
+
+It does NOT own the migration engine (runner, `tina4_migration` tracking table, per-file transaction,
+idempotency, auto-migrate-on-startup) - that is the migrations subsystem feature. The CLI command is the
+thin entry to that engine.
 
 ## Existing implementation evidence
 
-| Evidence | Python | PHP | Ruby | Node |
-| --- | --- | --- | --- | --- |
-| Public surface | `tina4_python/cli/__init__.py` | Not yet inventoried | Not yet inventoried | Not yet inventoried |
-| Startup/CLI integration | Not yet traced | Not yet traced | Not yet traced | Not yet traced |
-| Stored/wire format | Not yet traced | Not yet traced | Not yet traced | Not yet traced |
-| Existing focused tests | Not yet counted | Not yet counted | Not yet counted | Not yet counted |
-| Existing lab baseline | Not yet run | Not yet run | Not yet run | Not yet run |
+- Rust forward: `main.rs` routes `migrate` (and unknown subcommands) through `delegate_command`
+  (`main.rs:1337`): `detect_language` -> `resolve_cli(&info)` -> run `<framework-cli> migrate ...`,
+  exiting with the child's code. For PHP it first checks `vendor/` exists (`main.rs:1341`).
+- Blind forward: unknown/versioned subcommands (`migrate:create`, `migrate:status`) are forwarded blind;
+  the framework rejects an unknown, so a `commands --json` manifest miss never breaks the command
+  (`manifest.rs:9`).
+- Framework CLI entries (the actual work): Python `migrate` + `migrate:create` (`cli/__init__.py:3258-
+  3259`); Node `migrate` + `migrate:create` + `migrate:status` + `migrate:rollback` (`bin.ts:361-375`);
+  PHP and Ruby expose `migrate` (and their own create/rollback) in `bin/tina4php` / `lib/tina4/cli.rb`.
 
 ## Public surface contract
 
-The audit has not yet extracted the language-neutral surface and idiomatic
-spellings for this feature.
+`tina4 migrate` runs pending migrations. `tina4 migrate:create <desc>` scaffolds a migration file. Node
+additionally documents `migrate:status` and `migrate:rollback`; Python documents `migrate:create`. The
+subcommand SET is not identical across the four framework CLIs (CLI-MIGRATE-PARITY below) - the shared
+core is `migrate` + `migrate:create`; `status`/`rollback` are present unevenly at the CLI layer even where
+the engine supports rollback.
 
 ## Inputs and outputs
 
-The audit has not yet fixed native types, defaults, nullability, ordering and
-serialized shapes.
+- Input: the subcommand and its args (a description for `migrate:create`), plus the project's `.env`
+  database URL.
+- Output: the framework CLI's output and exit code, forwarded verbatim. `tina4 migrate` is fail-fast (a
+  failed migration returns non-zero) - the explicit CLI path, as opposed to the non-fatal
+  auto-migrate-on-startup.
 
 ## Lifecycle and operation graph
 
-The audit has not yet traced every producer, discovery, execution, inspection,
-retry, rollback and deletion path.
+1. `tina4 migrate` -> `delegate_command` detects the language (PHP checks `vendor/`).
+2. It runs `<framework-cli> migrate ...` as a child and propagates the exit code.
+3. The framework CLI invokes the migration engine (runs pending files in numeric order, each in its own
+   transaction where the engine supports it, tracked in `tina4_migration`).
+
+The CLI command is a pass-through; all migration semantics belong to the engine feature.
 
 ## Configuration and precedence
 
-The audit has not yet fixed arguments, environment values, project files,
-defaults and cache timing.
+- The database is configured by the project's `.env` (`TINA4_DATABASE_URL`), read by the framework, not
+  the CLI.
+- `TINA4_AUTO_MIGRATE` (engine, default on) governs the SEPARATE startup auto-migration; the explicit
+  `tina4 migrate` command is unaffected and stays fail-fast.
+- The CLI adds no configuration of its own.
 
 ## Failures, side effects and security
 
-The audit has not yet closed failure boundaries, external effects, cleanup and
-security behavior.
+- The forward propagates the framework's exit code, so `tina4 migrate` fails CI on a bad migration.
+- PHP-only precondition: `delegate_command` refuses if `vendor/` is missing (composer not installed),
+  with an actionable message - a good guard, but note it is PHP-specific (the other three do not
+  pre-check their deps at the CLI layer).
+- No CLI-level security surface; the engine owns SQL execution.
 
 ## Wire and persistence contract
 
-The audit has not yet fixed wire formats, stored shapes, encodings, identifiers,
-timestamps and compatibility rules.
+The CLI persists nothing. The engine persists the `tina4_migration` tracking table (a separate feature's
+contract). `migrate:create` writes a migration file under `migrations/`.
 
 ## Providers and substitutability
 
-The audit has not yet proved substitution or recorded capability exceptions.
+The provider is the detected framework CLI. The substitution is language detection; the same
+`tina4 migrate` maps to four different CLI invocations. No other abstraction.
 
 ## Contradictions and defects
 
-No cross-language contradiction register exists yet for this standalone packet.
+| ID | Finding | Proposed resolution |
+| --- | --- | --- |
+| CLI-MIGRATE-PARITY | The migrate SUBCOMMAND set differs across the framework CLIs: all expose `migrate`; Python documents `migrate:create`; Node documents `migrate:create`/`migrate:status`/`migrate:rollback`. `status`/`rollback` are unevenly exposed at the CLI even where the engine supports rollback. So `tina4 migrate:rollback` works on Node but may be a blind-forward miss on another framework. | OWNER DECISION: standardize the CLI-level migrate subcommand set across all four framework CLIs (`migrate`, `migrate:create`, `migrate:status`, `migrate:rollback`) so `tina4 migrate:<x>` behaves identically everywhere. This is a framework-CLI parity fix, not a Rust-CLI change. |
+| CLI-DELEGATE-PHPGUARD | The `vendor/` pre-check is PHP-only; the other three do not pre-verify their dependencies at the CLI layer, so a missing dep surfaces as a raw framework-CLI error instead of an actionable message. | Low priority: either add an equivalent dep pre-check for the other three or document that the guard is PHP-specific. |
 
 ## Owner decisions
 
-No owner decision has been recorded for this standalone packet.
+- CLI-MIGRATE-DEC-01 (proposed): unify the migrate subcommand set across the four framework CLIs.
 
 ## Proposed conformance fixture
 
-The audit has not yet defined positive, negative, malformed, stale, duplicate,
-partial-state and mutation-witness cases.
+Part of a CLI-command parity fixture (see feature 122): for a scaffolded project per language, assert
+`tina4 migrate` and `tina4 migrate:create <desc>` run and produce the same shape (a migration file
+created; pending migrations applied), and that `migrate:status`/`migrate:rollback` either exist
+everywhere or are documented as unsupported. The engine's own contract fixture (transaction, tracking
+table) is separate.
 
 ## Integration map
 
-The audit has not yet mapped exports, startup, request lifecycle, CLI,
-scaffolders, status tools, documentation and generated consumers.
+- Dispatch: `main.rs` -> `delegate_command` -> framework CLI.
+- Protocol: `commands --json` (feature 122) discovers/renders the subcommands.
+- Engine: the migrations subsystem (separate feature) does the work.
+- Documentation: the CLI `CLAUDE.md` `tina4 migrate` line; each framework's migration docs.
 
 ## Breaking changes and migration
 
-The audit has not yet converted parity breaks into 3.14 migration instructions.
+- Unifying the subcommand set is additive per framework (adding missing `migrate:status`/`rollback`
+  entries). No migration for existing projects.
 
 ## Implementation backlog
 
-The audit has not yet produced a dependency-ordered implementation backlog.
+1. Standardize the migrate subcommand set across the four framework CLIs (CLI-MIGRATE-DEC-01).
+2. Add the CLI-command parity fixture entry for migrate.
+3. Decide the PHP-only `vendor/` guard (extend or document).
 
 ## Porting capsule
 
-This packet is not yet sufficient for a clean-room implementation.
+There is nothing to port in the Rust CLI (it forwards). The framework-CLI side needs, in each language:
+a `migrate` command that runs the engine's pending migrations fail-fast, a `migrate:create <desc>` that
+scaffolds a numbered migration file, and (for parity) `migrate:status` and `migrate:rollback`. The Rust
+forward detects the language, checks the language's deps where cheap (the PHP `vendor/` lesson), and
+propagates the exit code.
 
 ## Audit closure checklist
 
-- [ ] Boundary and public surface complete.
-- [ ] Lifecycle and every producer/consumer edge complete.
-- [ ] Configuration, failure, side-effect and security rules complete.
-- [ ] Wire/storage and provider contracts complete.
-- [ ] Existing-language contradictions recorded.
-- [ ] Owner ambiguities decided and recorded.
-- [ ] Proposed shared cases and mutation witnesses complete.
-- [ ] Integration map and breaking migrations complete.
-- [ ] Implementation backlog dependency-ordered.
-- [ ] Porting capsule is clean-room sufficient.
+- [x] Boundary and public surface complete.
+- [x] Lifecycle and every producer/consumer edge complete.
+- [x] Configuration, failure, side-effect and security rules complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Delegation + CLI-surface parity recorded.
+- [x] Owner ambiguities decided and recorded.
+- [x] Proposed test cases complete.
+- [x] Integration map and breaking migrations complete.
+- [x] Implementation backlog dependency-ordered.
+- [x] Porting capsule sufficient.
