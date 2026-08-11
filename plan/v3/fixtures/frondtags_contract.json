@@ -1,0 +1,104 @@
+{
+  "_comment": [
+    "The Frond tag path-confinement contract: ONE answer key, four frameworks. Feature 53.",
+    "",
+    "A path-taking Frond tag ({% include %}, {% extends %}, and the {% import %} /",
+    "{% from ... import %} family) resolves another template BY NAME under the",
+    "templates directory. That name must NEVER escape the templates dir: a `..`",
+    "up-level traversal, an absolute path, or a symlink whose realpath resolves",
+    "outside the dir is REFUSED with a clear error -- the outside file is never",
+    "read (TAG-DEC-01). Before this feature NO language confined the path: the",
+    "name was joined to the templates dir with no `..`/realpath/containment check,",
+    "so {% include \"../../etc/passwd\" %} (or an absolute path, or a template",
+    "symlink pointing outside) resolved outside the dir -- the template-side",
+    "analogue of the static-asset symlink gap (feature 41 / ADR-0050). See",
+    "tina4-documentation/plan/v3/OWNER-DECISIONS.md (Batch 1, TAG-DEC-01) and",
+    "tina4-documentation/plan/v3/features/053-frond-tags.md.",
+    "",
+    "Maintainability (owner directive): ONE shared containment helper per language,",
+    "reused by every path-taking tag -- Python Frond._load, Ruby",
+    "Frond#load_template, Node Frond#load, and PHP Frond::resolveTemplatePath",
+    "(extracted from four duplicated inline path-joins). Zero new runtime deps",
+    "(stdlib realpath / File.realpath / realpathSync / realpath).",
+    "",
+    "Every case is driven with REAL template files, a REAL secret file OUTSIDE the",
+    "templates dir, and a REAL symlink on disk -- NO mocks. The witness is a real",
+    "side effect: a legit include/extends UNDER the dir renders its content; an",
+    "escaping include/extends is REFUSED (render raises/throws a clear error) and",
+    "the outside file's SECRET marker never appears in the output or the error.",
+    "Mutation-proved: deleting the containment guard renders the outside file's",
+    "SECRET instead of raising -- the traversal / absolute / symlink cases go red",
+    "in all four (proven live on macOS; gated on the .99 lab).",
+    "",
+    "Each invariant names a REAL suite file per framework and a list of case names.",
+    "The four suites carry the SAME case names in each language's own idiom (Python",
+    "snake_case method, PHP testPascalCase method, Ruby it-description, Node assert",
+    "label), which scripts/audit-contract-fixtures.py normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-11",
+  "feature": "53 - Frond tags (include/extends path confinement)",
+  "invariants": [
+    {
+      "id": "frondtags-legit-include-extends-render",
+      "adr": "TAG-DEC-01",
+      "rule": "A legit {% include %} and a legit {% extends %} that name a template UNDER the templates directory still render after confinement is added -- the security guard DISCRIMINATES, it does not blanket-deny. The included partial's content appears, and the extended parent shell wraps the child block.",
+      "why": "The confinement fix must not regress ordinary template composition. This positive pair proves a real partial one directory deep still includes and a real parent still extends once realpath containment is in the shared loader.",
+      "suites": {
+        "ruby": "spec/frond_tags_spec.rb",
+        "python": "tests/test_frond_tags.py",
+        "php": "tests/FrondTagsTest.php",
+        "nodejs": "test/frondtags.test.ts"
+      },
+      "cases": [
+        "a legit include renders under the templates dir",
+        "a legit extends renders under the templates dir"
+      ]
+    },
+    {
+      "id": "frondtags-traversal-include-refused",
+      "adr": "TAG-DEC-01",
+      "rule": "An {% include \"../secret.txt\" %} whose `..` climbs OUT of the templates directory is REFUSED with a clear error and the outside file's bytes never reach the output. Rejected by the shared loader (a `..` up-level segment is refused on the way in, in front of the realpath containment).",
+      "why": "The realistic vulnerable spelling joins a template name onto the templates dir; a `..` that climbs out lands on a secret one directory above. Before TAG-DEC-01 no language confined it. Mutation-proved: disabling the guard renders the outside secret.",
+      "suites": {
+        "ruby": "spec/frond_tags_spec.rb",
+        "python": "tests/test_frond_tags.py",
+        "php": "tests/FrondTagsTest.php",
+        "nodejs": "test/frondtags.test.ts"
+      },
+      "cases": [
+        "a dot dot traversal include is refused"
+      ]
+    },
+    {
+      "id": "frondtags-absolute-include-refused",
+      "adr": "TAG-DEC-01",
+      "rule": "An {% include \"/abs/path/secret.txt\" %} naming an ABSOLUTE path is REFUSED with a clear error and the outside file's bytes never reach the output. The shared loader refuses an absolute name before touching the filesystem.",
+      "why": "An absolute path is the other direct escape: in Python/PHP/Ruby joining an absolute right-hand side replaces the templates root, reading the target verbatim. Refusing an absolute name closes it uniformly (Node's join already neutralises it, but the same clear refusal is emitted for parity).",
+      "suites": {
+        "ruby": "spec/frond_tags_spec.rb",
+        "python": "tests/test_frond_tags.py",
+        "php": "tests/FrondTagsTest.php",
+        "nodejs": "test/frondtags.test.ts"
+      },
+      "cases": [
+        "an absolute path include is refused"
+      ]
+    },
+    {
+      "id": "frondtags-symlink-escape-refused",
+      "adr": "TAG-DEC-01",
+      "rule": "A REAL symlink placed INSIDE the templates dir whose target resolves OUTSIDE it is REFUSED -- {% include \"sneaky.twig\" %} (a symlink to the secret) does not render the secret. Enforced by resolving the real path (realpath) and confirming it stays under the resolved templates root with a trailing-separator prefix check.",
+      "why": "This is the INVERTED case a bare lexical `..` check misses: the symlink's name has no `..` and is not absolute, so only the realpath containment catches it. It fails today in all four and is the whole point of the realpath layer. Mutation-proved: disabling the realpath containment reds exactly this case.",
+      "suites": {
+        "ruby": "spec/frond_tags_spec.rb",
+        "python": "tests/test_frond_tags.py",
+        "php": "tests/FrondTagsTest.php",
+        "nodejs": "test/frondtags.test.ts"
+      },
+      "cases": [
+        "a symlink escaping the templates dir is refused"
+      ]
+    }
+  ]
+}

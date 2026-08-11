@@ -3,7 +3,7 @@
 > The living index that ties every audited feature to its machine-checked
 > contract, its decisions, and its proven-in-all-four status. This is the
 > backbone of a future formal Tina4 language specification.
-> **Last synced:** 2026-08-11 (3.13.99 pass: +csrf/devadmin/static fixtures)
+> **Last synced:** 2026-08-11 (3.13.99 pass: +csrf/devadmin/static/requestid/frondtags fixtures)
 
 > **Adversarial re-audit started 2026-08-08:** a zero-skip live-lab migration
 > baseline still omitted contradictory public paths (generated code migration
@@ -95,8 +95,9 @@ Re-run it and re-sync this table whenever a fixture changes.
 | Dev admin dashboard | 127 | `devadmin_contract.json` | 6 | 6 | 0 | DEVADMIN-DEC-01..06 | yes (real-dispatch, no mocks; 2026-08-11) |
 | Static assets | 41 | `static_contract.json` | 5 | 5 | 0 | 0050, ST-DEC-01 | yes (real symlinks + temp dirs; 2026-08-11) |
 | Request id / correlation | 43 | `requestid_contract.json` | 4 | 4 | 0 | RID-DEC-01/02 | yes (real pipeline + real HTTP; real log file; 2026-08-11) |
+| Frond tag path confinement | 53 | `frondtags_contract.json` | 4 | 4 | 0 | TAG-DEC-01 | yes (real templates + real symlink + real dirs; one shared loader per lang; 2026-08-11) |
 
-**Totals: 116 invariants, 100 proven, 16 owed** (2026-08-11), 16 fixtures. Proven
+**Totals: 120 invariants, 104 proven, 16 owed** (2026-08-11), 17 fixtures. Proven
 subsystems remain held to their contract four-way. Logger and database adapter
 now have decision-complete answer keys whose runners are honestly owed. Messenger closed
 last: the read/send shapes were already unified by the 3.13.96 parity commits
