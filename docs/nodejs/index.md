@@ -490,12 +490,12 @@ console.log(created.body);
 ### Inline Testing <a href="#inline-testing" id="inline-testing"></a>
 
 ```typescript
-import { tests, assertEqual, assertRaises } from "tina4-nodejs";
+import { tests, expectEqual, expectRaises } from "tina4-nodejs";
 
 @tests(
-    assertEqual([7, 7], 1),
-    assertEqual([-1, 1], -1),
-    assertRaises(Error, [5, 0]),
+    expectEqual([7, 7], 1),
+    expectEqual([-1, 1], -1),
+    expectRaises(Error, [5, 0]),
 )
 function divide(a: number, b: number): number {
     if (b === 0) throw new Error("division by zero");

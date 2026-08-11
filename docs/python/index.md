@@ -367,9 +367,9 @@ print(result["body"])
 from tina4_python import tests
 
 @tests(
-    assert_equal((7, 7), 1),
-    assert_equal((-1, 1), -1),
-    assert_raises(ZeroDivisionError, (5, 0)),
+    expect_equal((7, 7), 1),
+    expect_equal((-1, 1), -1),
+    expect_raises(ZeroDivisionError, (5, 0)),
 )
 def divide(a: int, b: int) -> float:
     if b == 0:

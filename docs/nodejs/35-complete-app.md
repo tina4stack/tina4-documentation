@@ -1072,7 +1072,7 @@ The server returns the rendered HTML. Open `http://localhost:7148/admin` in your
 Create `tests/TaskFlowTest.ts`:
 
 ```typescript
-import { tests, assertEqual, assertTrue, runAll, Auth } from "tina4-nodejs";
+import { tests, expectEqual, expectTrue, runAll, Auth } from "tina4-nodejs";
 import { TestClient } from "tina4-nodejs/test";
 
 const client = new TestClient();
@@ -1098,7 +1098,7 @@ async function registerAndLogin(): Promise<string> {
 
 // Test registration
 const testRegister = tests(
-    assertEqual([201])
+    expectEqual([201])
 )(async function testRegister(): Promise<number> {
     const resp = await client.post("/api/auth/register", {
         name: "Alice",
@@ -1110,7 +1110,7 @@ const testRegister = tests(
 
 // Test login returns a token
 const testLogin = tests(
-    assertTrue([true])
+    expectTrue([true])
 )(async function testLogin(): Promise<boolean> {
     const email = randomEmail();
     await client.post("/api/auth/register", {
@@ -1127,7 +1127,7 @@ const testLogin = tests(
 
 // Test task creation
 const testCreateTask = tests(
-    assertTrue([true])
+    expectTrue([true])
 )(async function testCreateTask(): Promise<boolean> {
     const token = await registerAndLogin();
     const resp = await client.post("/api/tasks", {
@@ -1140,7 +1140,7 @@ const testCreateTask = tests(
 
 // Test listing tasks
 const testListTasks = tests(
-    assertTrue([true])
+    expectTrue([true])
 )(async function testListTasks(): Promise<boolean> {
     const token = await registerAndLogin();
     await client.post("/api/tasks", { title: "List Task 1" }, { headers: { Authorization: `Bearer ${token}` } });
@@ -1151,7 +1151,7 @@ const testListTasks = tests(
 
 // Test updating task status
 const testUpdateTaskStatus = tests(
-    assertTrue([true])
+    expectTrue([true])
 )(async function testUpdateTaskStatus(): Promise<boolean> {
     const token = await registerAndLogin();
     const createResp = await client.post("/api/tasks", { title: "Status Task" },
@@ -1164,7 +1164,7 @@ const testUpdateTaskStatus = tests(
 
 // Test deleting a task
 const testDeleteTask = tests(
-    assertEqual([204])
+    expectEqual([204])
 )(async function testDeleteTask(): Promise<number> {
     const token = await registerAndLogin();
     const createResp = await client.post("/api/tasks", { title: "Delete Me" },
@@ -1177,7 +1177,7 @@ const testDeleteTask = tests(
 
 // Test dashboard stats
 const testDashboardStats = tests(
-    assertTrue([true])
+    expectTrue([true])
 )(async function testDashboardStats(): Promise<boolean> {
     const token = await registerAndLogin();
     await client.post("/api/tasks", { title: "Stats Task" },
@@ -1189,7 +1189,7 @@ const testDashboardStats = tests(
 
 // Test unauthorized access
 const testUnauthorizedAccess = tests(
-    assertEqual([401])
+    expectEqual([401])
 )(async function testUnauthorizedAccess(): Promise<number> {
     const resp = await client.get("/api/tasks");
     return resp.statusCode;
@@ -1197,7 +1197,7 @@ const testUnauthorizedAccess = tests(
 
 // Test that token creation and validation round-trips correctly
 const testTokenRoundTrip = tests(
-    assertTrue([{ userId: 1, role: "admin" }]),
+    expectTrue([{ userId: 1, role: "admin" }]),
 )(function testTokenRoundTrip(payload: Record<string, unknown>): boolean {
     const secret = process.env.TINA4_SECRET || "test-secret";
     const token = Auth.getToken(payload, secret);
@@ -1207,7 +1207,7 @@ const testTokenRoundTrip = tests(
 
 // Test that password hashing and checking works
 const testPasswordHash = tests(
-    assertTrue(["securePass123"]),
+    expectTrue(["securePass123"]),
 )(function testPasswordHash(password: string): boolean {
     const hash = Auth.hashPassword(password);
     return Auth.checkPassword(password, hash);

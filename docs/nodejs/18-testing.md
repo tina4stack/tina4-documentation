@@ -30,25 +30,25 @@ Tina4 ships an inline testing framework. No external packages. No Jest configura
 
 ## 2. Your First Test
 
-Tina4's testing framework uses a decorator-style pattern. Attach test assertions directly to functions using `tests()`, `assertEqual()`, `assertRaises()`, `assertTrue()`, and `assertFalse()`. Then call `runAll()` to execute them.
+Tina4's testing framework uses a decorator-style pattern. Attach test assertions directly to functions using `tests()`, `expectEqual()`, `expectRaises()`, `expectTrue()`, and `expectFalse()`. Then call `runAll()` to execute them.
 
 Create `tests/basic.ts`:
 
 ```typescript
-import { tests, assertEqual, assertRaises, assertTrue, assertFalse, runAll } from "tina4-nodejs";
+import { tests, expectEqual, expectRaises, expectTrue, expectFalse, runAll } from "tina4-nodejs";
 
 const add = tests(
-    assertEqual([5, 3], 8),
-    assertEqual([0, 0], 0),
-    assertRaises(Error, [null]),
+    expectEqual([5, 3], 8),
+    expectEqual([0, 0], 0),
+    expectRaises(Error, [null]),
 )(function add(a: number, b: number | null = null): number {
     if (b === null) throw new Error("b required");
     return a + b;
 });
 
 const isEven = tests(
-    assertTrue([4]),
-    assertFalse([3]),
+    expectTrue([4]),
+    expectFalse([3]),
 )(function isEven(n: number): boolean {
     return n % 2 === 0;
 });
@@ -88,32 +88,32 @@ tina4 test
 
 | Function | Description |
 |----------|-------------|
-| `assertEqual(args, expected)` | Call the function with `args` array, expect `expected` as the return value |
-| `assertRaises(ErrorClass, args)` | Call the function with `args` array, expect it to throw `ErrorClass` |
-| `assertTrue(args)` | Call the function with `args` array, expect a truthy return value |
-| `assertFalse(args)` | Call the function with `args` array, expect a falsy return value |
+| `expectEqual(args, expected)` | Call the function with `args` array, expect `expected` as the return value |
+| `expectRaises(ErrorClass, args)` | Call the function with `args` array, expect it to throw `ErrorClass` |
+| `expectTrue(args)` | Call the function with `args` array, expect a truthy return value |
+| `expectFalse(args)` | Call the function with `args` array, expect a falsy return value |
 
 Each assertion specifies the arguments to pass and the expected outcome. The `args` parameter is always an array of arguments.
 
-### assertEqual
+### expectEqual
 
 ```typescript
-assertEqual([5, 3], 8)     // Call with 5, 3 -- expect 8
-assertEqual(["hello"], 5)  // Call with "hello" -- expect 5
+expectEqual([5, 3], 8)     // Call with 5, 3 -- expect 8
+expectEqual(["hello"], 5)  // Call with "hello" -- expect 5
 ```
 
-### assertRaises
+### expectRaises
 
 ```typescript
-assertRaises(Error, [null])         // Expect Error when called with null
-assertRaises(TypeError, ["bad"])    // Expect TypeError when called with "bad"
+expectRaises(Error, [null])         // Expect Error when called with null
+expectRaises(TypeError, ["bad"])    // Expect TypeError when called with "bad"
 ```
 
-### assertTrue / assertFalse
+### expectTrue / expectFalse
 
 ```typescript
-assertTrue([4])     // Expect a truthy return value
-assertFalse([0])    // Expect a falsy return value
+expectTrue([4])     // Expect a truthy return value
+expectFalse([0])    // Expect a falsy return value
 ```
 
 ---
@@ -121,14 +121,14 @@ assertFalse([0])    // Expect a falsy return value
 ## 4. Testing Business Logic
 
 ```typescript
-import { tests, assertEqual, assertRaises, runAll } from "tina4-nodejs";
+import { tests, expectEqual, expectRaises, runAll } from "tina4-nodejs";
 
 const calculateDiscount = tests(
-    assertEqual([100, 10], 90),
-    assertEqual([50, 0], 50),
-    assertEqual([200, 50], 100),
-    assertRaises(Error, [100, -5]),
-    assertRaises(Error, [100, 101]),
+    expectEqual([100, 10], 90),
+    expectEqual([50, 0], 50),
+    expectEqual([200, 50], 100),
+    expectRaises(Error, [100, -5]),
+    expectRaises(Error, [100, 101]),
 )(function calculateDiscount(price: number, discountPercent: number): number {
     if (discountPercent < 0 || discountPercent > 100) {
         throw new Error("Discount must be between 0 and 100");
@@ -148,11 +148,11 @@ The function works in production. The tests run only when you call `runAll()`.
 Test your models by writing functions that exercise create, read, update, and delete:
 
 ```typescript
-import { tests, assertTrue, assertEqual, runAll } from "tina4-nodejs";
+import { tests, expectTrue, expectEqual, runAll } from "tina4-nodejs";
 import { Database } from "tina4-nodejs/orm";
 
 const testCreateProduct = tests(
-    assertTrue([]),
+    expectTrue([]),
 )(function testCreateProduct(): boolean {
     const product = new Product({
         name: "Test Widget",
@@ -164,7 +164,7 @@ const testCreateProduct = tests(
 });
 
 const testLoadProduct = tests(
-    assertTrue([]),
+    expectTrue([]),
 )(function testLoadProduct(): boolean {
     const product = new Product({ name: "Load Test", price: 29.99 });
     product.save();
@@ -174,7 +174,7 @@ const testLoadProduct = tests(
 });
 
 const testUpdateProduct = tests(
-    assertTrue([]),
+    expectTrue([]),
 )(function testUpdateProduct(): boolean {
     const product = new Product({ name: "Update Test", price: 10 });
     product.save();
@@ -188,7 +188,7 @@ const testUpdateProduct = tests(
 });
 
 const testDeleteProduct = tests(
-    assertTrue([]),
+    expectTrue([]),
 )(function testDeleteProduct(): boolean {
     const product = new Product({ name: "Delete Me", price: 5 });
     product.save();
@@ -218,12 +218,12 @@ TINA4_DATABASE_URL=sqlite:///data/test.db
 The `TestClient` lets you exercise your API endpoints end-to-end without starting a server. It builds a mock request, matches the route, runs the handler, and returns a `TestResponse`. Construct one instance and reuse it across test functions.
 
 ```typescript
-import { tests, assertTrue, runAll, TestClient } from "tina4-nodejs";
+import { tests, expectTrue, runAll, TestClient } from "tina4-nodejs";
 
 const client = new TestClient();
 
 const testHealthEndpoint = tests(
-    assertTrue([]),
+    expectTrue([]),
 )(async function testHealthEndpoint(): Promise<boolean> {
     const resp = await client.get("/health");
     const body = resp.json() as { status?: string } | null;
@@ -231,7 +231,7 @@ const testHealthEndpoint = tests(
 });
 
 const testCreateProduct = tests(
-    assertTrue([]),
+    expectTrue([]),
 )(async function testCreateProduct(): Promise<boolean> {
     const resp = await client.post("/api/products", {
         json: {
@@ -245,7 +245,7 @@ const testCreateProduct = tests(
 });
 
 const testGetNotFound = tests(
-    assertTrue([]),
+    expectTrue([]),
 )(async function testGetNotFound(): Promise<boolean> {
     const resp = await client.get("/api/products/99999");
     return resp.status === 404;
@@ -297,12 +297,12 @@ resp.contentType   // Content-Type header value
 ## 7. Testing Authentication
 
 ```typescript
-import { tests, assertTrue, runAll, Auth } from "tina4-nodejs";
+import { tests, expectTrue, runAll, Auth } from "tina4-nodejs";
 
 const secret = "test-secret";
 
 const testTokenRoundTrip = tests(
-    assertTrue([{ userId: 1, role: "admin" }]),
+    expectTrue([{ userId: 1, role: "admin" }]),
 )(function testTokenRoundTrip(payload: Record<string, unknown>): boolean {
     const token = Auth.getToken(payload, secret);
     const decoded = Auth.validToken(token, secret);
@@ -310,15 +310,15 @@ const testTokenRoundTrip = tests(
 });
 
 const testPasswordHash = tests(
-    assertTrue(["securePass123"]),
-    assertTrue(["another-password"]),
+    expectTrue(["securePass123"]),
+    expectTrue(["another-password"]),
 )(function testPasswordHash(password: string): boolean {
     const hash = Auth.hashPassword(password);
     return Auth.checkPassword(password, hash);
 });
 
 const testInvalidToken = tests(
-    assertTrue([]),
+    expectTrue([]),
 )(function testInvalidToken(): boolean {
     const decoded = Auth.validToken("invalid.token.here", secret);
     return decoded === null;
@@ -334,13 +334,13 @@ runAll();
 When running tests across multiple files, use `reset()` to clear the registry:
 
 ```typescript
-import { reset, tests, assertEqual, runAll } from "tina4-nodejs";
+import { reset, tests, expectEqual, runAll } from "tina4-nodejs";
 
 reset();
 
 const multiply = tests(
-    assertEqual([3, 4], 12),
-    assertEqual([0, 5], 0),
+    expectEqual([3, 4], 12),
+    expectEqual([0, 5], 0),
 )(function multiply(a: number, b: number): number {
     return a * b;
 });
@@ -426,7 +426,7 @@ Each test function should verify one behavior. When it fails, you know exactly w
 ```typescript
 // Good: each function tests one thing
 const testCreateReturnsId = tests(
-    assertTrue([]),
+    expectTrue([]),
 )(function testCreateReturnsId(): boolean {
     const product = new Product({ name: "Widget", price: 9.99 });
     product.save();
@@ -434,7 +434,7 @@ const testCreateReturnsId = tests(
 });
 
 const testCreateSetsDefaults = tests(
-    assertTrue([]),
+    expectTrue([]),
 )(function testCreateSetsDefaults(): boolean {
     const product = new Product({ name: "Widget", price: 9.99 });
     product.save();
@@ -446,12 +446,12 @@ const testCreateSetsDefaults = tests(
 
 ```typescript
 // Good: readable test names
-const testLoginRejects = tests(assertTrue([]))(
+const testLoginRejects = tests(expectTrue([]))(
     function testLoginRejectsInvalidPassword(): boolean { /* ... */ }
 );
 
 // Bad: anonymous function
-const test = tests(assertTrue([]))(
+const test = tests(expectTrue([]))(
     () => { /* shows as "anonymous" in output */ }
 );
 ```
@@ -524,31 +524,31 @@ Write inline tests for the following functions:
 ## 14. Solution
 
 ```typescript
-import { tests, assertEqual, assertRaises, runAll } from "tina4-nodejs";
+import { tests, expectEqual, expectRaises, runAll } from "tina4-nodejs";
 
 const slugify = tests(
-    assertEqual(["Hello World"], "hello-world"),
-    assertEqual(["  Multiple   Spaces  "], "multiple-spaces"),
-    assertEqual(["UPPERCASE"], "uppercase"),
-    assertEqual(["already-slugged"], "already-slugged"),
+    expectEqual(["Hello World"], "hello-world"),
+    expectEqual(["  Multiple   Spaces  "], "multiple-spaces"),
+    expectEqual(["UPPERCASE"], "uppercase"),
+    expectEqual(["already-slugged"], "already-slugged"),
 )(function slugify(input: string): string {
     return input.trim().toLowerCase().replace(/\s+/g, "-");
 });
 
 const clamp = tests(
-    assertEqual([5, 0, 10], 5),
-    assertEqual([-5, 0, 10], 0),
-    assertEqual([15, 0, 10], 10),
-    assertEqual([0, 0, 0], 0),
+    expectEqual([5, 0, 10], 5),
+    expectEqual([-5, 0, 10], 0),
+    expectEqual([15, 0, 10], 10),
+    expectEqual([0, 0, 0], 0),
 )(function clamp(value: number, min: number, max: number): number {
     return Math.min(Math.max(value, min), max);
 });
 
 const parsePrice = tests(
-    assertEqual(["$19.99"], 19.99),
-    assertEqual(["$0.50"], 0.5),
-    assertRaises(Error, ["not-a-price"]),
-    assertRaises(Error, [""]),
+    expectEqual(["$19.99"], 19.99),
+    expectEqual(["$0.50"], 0.5),
+    expectRaises(Error, ["not-a-price"]),
+    expectRaises(Error, [""]),
 )(function parsePrice(input: string): number {
     const match = input.match(/\$?([\d.]+)/);
     if (!match) throw new Error("Invalid price format");
@@ -570,7 +570,7 @@ The wrapped function works identically in production. Tests only run when you ca
 
 ### 2. Arguments Are Passed as an Array
 
-`assertEqual([5, 3], 8)` means "call the function with arguments `5` and `3`, expect `8`." The first argument is always an array.
+`expectEqual([5, 3], 8)` means "call the function with arguments `5` and `3`, expect `8`." The first argument is always an array.
 
 ### 3. Named Functions Are Required for Readable Output
 
