@@ -5,7 +5,7 @@ fixture, lab-green on the .99 lab) before the next. This table is updated, commi
 feature lands. Detail: [IMPLEMENTATION-3.13.99.md](IMPLEMENTATION-3.13.99.md). Decisions:
 [OWNER-DECISIONS.md](OWNER-DECISIONS.md).
 
-**Progress: 5 / 53 features lab-green.** Done: 37, 127, 41, 43, 53. In progress: 14 (next).
+**Progress: 6 / 53 features lab-green.** Done: 37, 127, 41, 43, 53, 14. In progress: 36 (next).
 
 Status: DONE = lab-green all four (independently re-verified) . WIP = in progress . TODO = not started.
 Lab column = per-framework test counts py/php/ruby/node in the consolidated green run.
@@ -19,7 +19,7 @@ Lab column = per-framework test counts py/php/ruby/node in the consolidated gree
 | 41 | Static assets | DONE | 40/43/30/52 | c51c686 / c422f4b / e24a3fa / 77592ad |
 | 43 | Request-id | DONE | 9/9/9/11 | 1d324d5 / 1d9d607 / 1bfc060 / 0828904 |
 | 53 | Frond tag confinement | DONE | 5/5/5/5 | f858c11 / 42a0723 / a1ff8af / 22e6057 |
-| 14 | Mongo mass-delete guard | TODO | - | - |
+| 14 | Mongo mass-delete guard | DONE | 7/7/7/7 | 3315d1c / baf1af5 / d45c119 / ad62c2d |
 | 36 | Security headers | TODO | - | - |
 | 129 | Port takeover safety | TODO | - | - |
 | 126 | Debug overlay redaction | TODO | - | - |

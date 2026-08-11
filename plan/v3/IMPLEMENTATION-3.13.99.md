@@ -35,7 +35,7 @@ negative, no mocks) -> dead/dup code removed -> run the fixture + the feature's 
 - [x] 41 static assets - DONE 2026-08-11, lab-green all four (40/43/30/52; consolidated rc=0, independently re-verified). Pushed py c51c686, php c422f4b, ruby e24a3fa, node 77592ad, fixture 1978abc. realpath+separator confinement (ADR-0050) ported to py/ruby/node; symlink-escape + dotfile blocked; `TINA4_PUBLIC_DIR` honoured ruby+node; one search-dir order.
 - [x] 43 request-id - DONE 2026-08-11, lab-green all four (9/9/9/11; consolidated rc=0, independently re-verified). Pushed py 1d324d5, php 1d9d607, ruby 1bfc060, node 0828904, fixture 234ec05. Honour+emit X-Request-ID; sanitize inbound (CRLF/charset/length); request-scoped storage all four (py contextvars, ruby thread-local, node AsyncLocalStorage, php per-request) - mutation-proved isolation.
 - [x] 53 Frond tags - DONE 2026-08-11, lab-green all four (5/5/5/5; consolidated rc=0, independently re-verified). Pushed py f858c11, php 42a0723, ruby a1ff8af, node 22e6057, fixture bc0b9ff. One shared containment helper per language (PHP extracted `resolveTemplatePath` from 4 duplicated joins - less code); include/extends/import confined under the templates dir (lexical `..`/absolute reject + realpath containment; symlink-escape refused).
-- [ ] 14 Mongo SQL provider - fail-closed on unparseable WHERE; reject empty-filter delete/update; real-Mongo fixture
+- [x] 14 Mongo SQL provider - DONE 2026-08-11, lab-green all four (7/7/7/7; consolidated rc=0, independently re-verified on real Mongo). Pushed py 3315d1c, php baf1af5, ruby d45c119, node ad62c2d, fixture 837b936. Fail-closed: unparseable/partial WHERE raises (never match-all); empty-filter delete/update rejected; one shared guard per language; `truncate()` (explicit `1=1`) unaffected. Removed dead `?:[]`/`|| {}` fallbacks (less code).
 - [ ] 36 security headers - REGISTER by default; HTTPS-guard HSTS; rename PHP class; wire tests; CSP migration note
 - [ ] 129 port-takeover - Tina4-identity check before kill; guard the runtime path; `TINA4_NO_TAKEOVER`/`--no-kill` opt-out; dev-gate
 - [ ] 126 debug overlay - DELETE dead `render_production_error` + wired-path no-leak test; redact Authorization/Cookie/Set-Cookie; guard render + frame cap
@@ -48,6 +48,7 @@ negative, no mocks) -> dead/dup code removed -> run the fixture + the feature's 
 - [ ] 25 ORM cache - fix `cached()` invalidation (bust on all writes, tag by table, ttl=0=no-cache); add `cached()` to Node
 - [ ] 16 next-id - fix generic TOCTOU (lock/atomic); fix Mongo no-increment
 - [ ] 7 SQL translator - literal-safe concat + bool/ilike; resolve Ruby unwiring + remove dead/dup code; BIGINT autoincrement
+- [ ] 14b Mongo truncate() parity (found during 14, fix-on-discovery) - `truncate()` empties in PHP (`1=1` -> `[]` match-all) but SILENTLY NO-OPS in py/ruby/node (`1=1` -> `{"1":1}` matches nothing). Make the explicit `1=1` tautology translate to match-all so `truncate()` actually empties, all four, with a real-Mongo regression (seed N -> truncate -> count 0). Does NOT weaken 14 (`1=1` is explicit, not unparseable).
 
 ## Phase 3 - DB providers / write-path correctness
 
@@ -128,6 +129,7 @@ Compiled as features land; each is a security/parity fix, not an accidental brea
 - 41 (static): a symlink whose realpath escapes the public dir is refused; dotfiles (`.env`, `.git`) return 404; Ruby drops the `src/assets`/`assets` search dirs; PHP app-dir order is `public` before `src/public`; `TINA4_PUBLIC_DIR` now honoured in Ruby + Node.
 - 43 (request-id): a hostile inbound `X-Request-ID` (CRLF / illegal charset / over-long) is now sanitized to a fresh id instead of echoed raw (response-header + log-injection fix); a well-formed id passes through unchanged. Storage moved to request-scoped (contextvars / thread-local / AsyncLocalStorage) - internal, no API change.
 - 53 (Frond tags): `{% include %}`/`{% extends %}`/`{% import %}` are now confined to the templates dir - a template that referenced a path outside it (`..`, absolute, or a symlink escaping the dir) now raises instead of reading the file. Legit in-dir includes unaffected.
+- 14 (Mongo SQL): an unparseable/unsupported WHERE now RAISES instead of silently matching all documents (was a mass-delete/update data-loss footgun); a DELETE/UPDATE with no WHERE is rejected. Code relying on the old silent match-all must add an explicit WHERE (or use `truncate()`).
 
 ## Close
 
