@@ -118,6 +118,7 @@ each is deleted as part of its feature so the diff nets DOWN, not up:
 Small, orthogonal items found while implementing a feature - fold into the named later feature; do NOT expand the current feature to chase them:
 - 37 (CSRF): form-token TTL env var name diverges - Python reads `TINA4_TOKEN_EXPIRES_IN`, PHP/Ruby/Node read `TINA4_TOKEN_LIMIT`. Unify in a later env-uniformity pass (or with feature 64 JWT).
 - 37 (CSRF): Ruby's blank-secret hard-fail also rejects writes in RS256 mode (blank `TINA4_SECRET` + `.keys/` present + `TINA4_CSRF=true`) - kept fail-closed-uniform for parity (auto-attach is new, no existing app regresses); revisit if RS256-defer is wanted.
+- 57/42 (SECURITY - Frond auto-escape parity): Ruby's Frond/TwigEngine does NOT auto-escape `{{ }}` by default, while Python and PHP Frond DO (you opt out via `{% autoescape false %}`). This surfaced a reflected XSS in Ruby's 404 error page (raw path reflected) - patched acutely in 127 (`ab06e5c`, escape at `handle_404`). ROOT fix is feature 57 (auto-escaping): make Ruby auto-escape by default at parity + confirm Node's default. Feature 42 (error pages) must also verify no 404/403/500 template reflects raw request data unescaped in any framework. Assessed 2026-08-11: Python/PHP/Node error templates show NO raw-path reflection, so this is a Ruby-centric parity gap, NOT a live 4-way vuln.
 
 ## Close
 
