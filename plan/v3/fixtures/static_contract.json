@@ -1,0 +1,108 @@
+{
+  "_comment": [
+    "The static-asset contract: ONE answer key, four frameworks. Feature 41.",
+    "",
+    "Serving a file from a public directory must NEVER let a crafted path read a",
+    "file outside that directory. PHP's realpath + directory-separator confinement",
+    "(Tina4/StaticFiles.php, ADR-0050) is the REFERENCE guard; this fixture pins",
+    "the behaviour every framework must share after the ST-DEC-01 (adopt PHP's",
+    "confinement in Python/Ruby/Node + block dotfiles) and Batch-4 (honour",
+    "TINA4_PUBLIC_DIR in Ruby+Node, one search-dir order) owner decisions - see",
+    "tina4-documentation/plan/v3/OWNER-DECISIONS.md and",
+    "tina4-documentation/plan/v3/features/041-static-assets.md.",
+    "",
+    "Every case is driven with REAL files, a REAL symlink and (for the env case in",
+    "Node) a REAL server over a REAL socket - NO mocks. The witness is a real side",
+    "effect: a request that resolves OUTSIDE the public dir (via ../ or a symlink)",
+    "or names a dotfile is REFUSED and its bytes never appear in a response; a",
+    "legit asset returns 200 with its content type; TINA4_PUBLIC_DIR relocates the",
+    "served root. PHP is the REFERENCE implementation for the confinement guard;",
+    "the shapes asserted here are the canonical ones the other three move to.",
+    "",
+    "Each invariant names a REAL suite file per framework and a list of case names.",
+    "The four suites carry the SAME case names in each language's own idiom (Python",
+    "snake_case method, PHP testPascalCase method, Ruby it-description, Node assert",
+    "label), which scripts/audit-contract-fixtures.py normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-11",
+  "feature": "41 - Static asset serving",
+  "invariants": [
+    {
+      "id": "static-legit-asset-served",
+      "adr": "ADR-0010 / ADR-0050",
+      "rule": "A GET for a real file under the public dir is served 200 with a MIME Content-Type derived from its extension. Confinement must not break the happy path - a legitimate nested asset (css/app.css) still serves.",
+      "why": "The confinement fix must DISCRIMINATE, not blanket-deny. The positive case proves a real asset one directory deep is still served with the right content type after realpath containment is added, so the security fix did not regress serving.",
+      "suites": {
+        "ruby": "spec/static_files_spec.rb",
+        "python": "tests/test_static.py",
+        "php": "tests/StaticFilesTest.php",
+        "nodejs": "test/static.test.ts"
+      },
+      "cases": [
+        "a legit asset is served with its content type"
+      ]
+    },
+    {
+      "id": "static-traversal-confined",
+      "adr": "ST-DEC-01 / ADR-0050",
+      "rule": "A path that escapes the public dir with a `..` up-level segment (e.g. /css/../../secret.env) is REFUSED and its bytes never reach the client. Rejected before touching the filesystem (a leading-dot segment is refused), so a secret one directory above the public root is never read.",
+      "why": "The realistic vulnerable spelling joins user input onto the public dir; a `..` that climbs out lands on .env / passwd. Refusing an up-level segment on the way in closes it - the lexical belt every framework already had, kept as defense in depth in front of the realpath containment.",
+      "suites": {
+        "ruby": "spec/static_files_spec.rb",
+        "python": "tests/test_static.py",
+        "php": "tests/StaticFilesTest.php",
+        "nodejs": "test/static.test.ts"
+      },
+      "cases": [
+        "a dot dot traversal path is refused"
+      ]
+    },
+    {
+      "id": "static-symlink-escape-confined",
+      "adr": "ST-DEC-01 / ADR-0050",
+      "rule": "A REAL symlink placed INSIDE the public dir whose target resolves OUTSIDE it is REFUSED - the response is not the asset and the secret bytes never appear. Enforced by resolving the real path (realpath) and confirming it stays under the resolved public dir with a trailing-separator prefix check, so a sibling-prefix dir (publicsecret) is refused too.",
+      "why": "This is the INVERTED finding: a bare lexical `..` check passes a symlink whose name has no `..`, and statSync/File.file?/is_file follow it, so Python/Ruby/Node served a symlink escape while only PHP confined it. This case fails today in three frameworks and is the whole point of ST-DEC-01. Mutation-proved: disabling the realpath containment reds exactly this case in all four.",
+      "suites": {
+        "ruby": "spec/static_files_spec.rb",
+        "python": "tests/test_static.py",
+        "php": "tests/StaticFilesTest.php",
+        "nodejs": "test/static.test.ts"
+      },
+      "cases": [
+        "a symlink escaping the public dir is refused"
+      ]
+    },
+    {
+      "id": "static-dotfile-blocked",
+      "adr": "ST-DEC-01",
+      "rule": "A dotfile inside the public dir is NEVER served: a GET for /.env and a GET for /.git/config are both REFUSED and the secret/repo bytes never appear in a response. A leading-dot path segment is refused in the request AND on the resolved path (so a symlink pointing at a dotfile inside the public dir is refused too).",
+      "why": "No framework blocked a hidden file, so a public/.env (TINA4_SECRET, DB password) or a public/.git checkout served verbatim if present. Blocking a leading-dot segment closes ST-DOTFILE-UNBLOCKED in all four.",
+      "suites": {
+        "ruby": "spec/static_files_spec.rb",
+        "python": "tests/test_static.py",
+        "php": "tests/StaticFilesTest.php",
+        "nodejs": "test/static.test.ts"
+      },
+      "cases": [
+        "a dotenv file is refused",
+        "a dotgit file is refused"
+      ]
+    },
+    {
+      "id": "static-public-dir-env-honoured",
+      "adr": "Batch 4 (TINA4_PUBLIC_DIR)",
+      "rule": "TINA4_PUBLIC_DIR relocates the served public root in ALL FOUR frameworks: with it set to a directory the app's own public/ does not contain, a GET for an asset present only there returns 200 with the file's bytes. It is the FIRST entry in the one shared search order (TINA4_PUBLIC_DIR, public, src/public, framework built-in).",
+      "why": "The documented override was read only by Python and PHP; Ruby and Node ignored it (grep-empty), so the same .env silently did nothing in two languages. Honouring it everywhere closes ST-PUBLICDIR-ENV-PARTIAL and converges the search-dir order (ST-SEARCHDIR-DIVERGE).",
+      "suites": {
+        "ruby": "spec/static_files_spec.rb",
+        "python": "tests/test_static.py",
+        "php": "tests/StaticFilesTest.php",
+        "nodejs": "test/static.test.ts"
+      },
+      "cases": [
+        "tina4 public dir env relocates the root"
+      ]
+    }
+  ]
+}
