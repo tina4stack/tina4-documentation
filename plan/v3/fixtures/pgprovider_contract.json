@@ -1,0 +1,153 @@
+{
+  "_comment": [
+    "PostgreSQL provider as the WRITE-PATH ORACLE -- feature 9 (OWNER-DECISIONS.md",
+    "Batch 5; feature doc 009-postgresql-provider.md PG-DEC-01). PostgreSQL is",
+    "Tina4's production-grade reference engine: it is the adapter that most",
+    "exercises the write contract -- native RETURNING, a real generated last-id,",
+    "transactions, exact affected counts -- and the model the other providers are",
+    "measured against.",
+    "",
+    "PG-DEC-01: make the adapter-contract test assert real BEHAVIOUR (not just",
+    "method presence) with PostgreSQL as the reference model, in all four. The old",
+    "adapter-contract runners proved a method EXISTED; these invariants prove the",
+    "write path BEHAVES, on a REAL PostgreSQL, no mocks.",
+    "",
+    "SCOPE: this fixture pins exactly what PostgreSQL-as-the-oracle needs -- the",
+    "write-path behaviours below. The full 14-method adapter interface redesign",
+    "(feature 3, ADR-0044, adapter_contract.json) is a separate, larger piece of",
+    "work and its runners remain OWED; nothing here depends on it.",
+    "",
+    "NO MOCKS. Every case drives the lab's real PostgreSQL :55432 (tina4/tina4)",
+    "through the public Database facade -> the PostgreSQLAdapter, and reads durable",
+    "state back on a SECOND, FRESH connection where durability is the property",
+    "under test. The oracle table is a real SERIAL-key table so the generated",
+    "last-id comes from PostgreSQL's own sequence via RETURNING, not a guess; each",
+    "case first TRUNCATE ... RESTART IDENTITY so the generated ids are deterministic.",
+    "",
+    "The behaviours, each an invariant proven in all four:",
+    "  1. pg-insert-returning-last-id  -- an insert returns a DatabaseResult whose",
+    "     last_id is the RETURNING-generated key and whose affected count is 1; a",
+    "     second insert returns the NEXT generated id, never a stale earlier one.",
+    "  2. pg-write-affected-count      -- update/delete report the EXACT number of",
+    "     rows they touched, and report last_id null (last_id is insert-only).",
+    "  3. pg-filterless-write-guard    -- an update with neither a filter nor a",
+    "     primary key, and a delete with no filter, RAISE and change nothing",
+    "     (verified on a fresh connection); truncate() is the explicit empty.",
+    "  4. pg-executemany-atomicity     -- a standalone execute_many owns ONE",
+    "     transaction: a mid-batch failure rolls the whole batch back, so a FRESH",
+    "     connection sees ZERO rows; empty input is a zero-row no-op that opens no",
+    "     transaction.",
+    "  5. pg-fetch-shape               -- fetch returns a native list of row maps",
+    "     (records), keyed by the selected columns with each value preserved in the",
+    "     host language's own idiom (Python/Ruby/Node get a native int for an",
+    "     INTEGER column; PHP's ext-pgsql returns the value as a string -- native",
+    "     for that driver -- so the cross-language gate is value-correctness + the",
+    "     list-of-maps shape, NOT one language's type map, per the write-path",
+    "     contract's own note that type mapping varies by engine); fetch_one returns",
+    "     one native record or null.",
+    "",
+    "Mutation-proved (all four): make execute_many commit each row instead of",
+    "owning one transaction and 'execute many mid batch failure rolls back on a",
+    "fresh connection' goes RED (the first row survives on the fresh connection);",
+    "drop the filterless-write guard and the guard cases go RED (rows change / a",
+    "whole table empties); return a bare affected-count instead of a DatabaseResult",
+    "and the last-id / affected-count cases go RED. Restoring each returns to green.",
+    "",
+    "Each invariant names a REAL suite file per framework carrying the SAME case",
+    "names in each language's own idiom, which scripts/audit-contract-fixtures.py",
+    "normalises and matches.",
+    "",
+    "Env contract (identical to the write-path runner): TINA4_TEST_PG_URL /",
+    "TINA4_TEST_PG_USERNAME / TINA4_TEST_PG_PASSWORD, falling back to the shared",
+    "TINA4_TEST_WRITE_PATH_URL / _USERNAME / _PASSWORD, then TINA4_DATABASE_*."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "9 - PostgreSQL provider as the write-path oracle (PG-DEC-01: the adapter-contract test asserts write-path BEHAVIOUR against a real PostgreSQL, all four)",
+  "oracle": "postgresql",
+  "invariants": [
+    {
+      "id": "pg-insert-returning-last-id",
+      "adr": "PG-DEC-01",
+      "rule": "On a real PostgreSQL, db.insert() returns a DatabaseResult whose last_id is the key PostgreSQL generated for that row via native RETURNING (not a guessed or probed value), whose affected_rows is 1, and a second insert returns the NEXT generated id -- never the earlier row's id. Identical in all four (Python Database.insert -> PostgreSQLAdapter.execute; PHP Database::insert -> PostgresAdapter; Ruby Database#insert -> PostgresDriver; Node Database.insert -> PostgresAdapter).",
+      "why": "PostgreSQL is the oracle for the last-insert-id contract because RETURNING gives the TRUE generated key on the same statement and connection as the write. A stale or wrong last_id silently corrupts the next row a caller writes keyed on it. Proven on a real SERIAL-key table with RESTART IDENTITY so the generated id is deterministic (first insert -> 1, second -> 2), no mocks.",
+      "suites": {
+        "ruby": "spec/pgprovider_contract_spec.rb",
+        "python": "tests/test_pgprovider_contract.py",
+        "php": "tests/PgProviderContractTest.php",
+        "nodejs": "test/pgProviderContract.test.ts"
+      },
+      "cases": [
+        "insert returns the returning generated last id",
+        "insert reports affected rows of one",
+        "a second insert returns the next generated id not a stale one"
+      ]
+    },
+    {
+      "id": "pg-write-affected-count",
+      "adr": "PG-DEC-01",
+      "rule": "On a real PostgreSQL, db.update() and db.delete() return a DatabaseResult whose affected_rows is EXACTLY the number of rows the write touched (never the number of statements, never a bare boolean), and whose last_id is null because last_id is insert-only. Identical in all four.",
+      "why": "A write that reports the wrong affected count lets a caller believe a no-op succeeded or a multi-row write hit one row. PostgreSQL reports an exact rowcount, so it is the oracle for the affected-count contract. Proven on a real table with a known seed, no mocks: an update whose filter matches two of three rows reports 2, a delete of one row reports 1.",
+      "suites": {
+        "ruby": "spec/pgprovider_contract_spec.rb",
+        "python": "tests/test_pgprovider_contract.py",
+        "php": "tests/PgProviderContractTest.php",
+        "nodejs": "test/pgProviderContract.test.ts"
+      },
+      "cases": [
+        "update reports the exact number of rows changed",
+        "update reports a null last id",
+        "delete reports the exact number of rows removed"
+      ]
+    },
+    {
+      "id": "pg-filterless-write-guard",
+      "adr": "PG-DEC-01",
+      "rule": "On a real PostgreSQL, an update with neither an explicit filter nor a primary key in its data RAISES rather than rewriting every row, and a delete with no filter RAISES rather than emptying the table; in both cases the table is UNCHANGED, verified by reading every row back on a fresh connection. truncate() is the explicit, separate whole-table empty. Identical in all four.",
+      "why": "The single most dangerous write-path bug is a filterless UPDATE/DELETE that silently touches every row and reports success. PostgreSQL makes the data-loss real, so the guard is proven where it matters. Proven on a real seeded table, no mocks: after the raise, a fresh connection still sees exactly the seeded rows.",
+      "suites": {
+        "ruby": "spec/pgprovider_contract_spec.rb",
+        "python": "tests/test_pgprovider_contract.py",
+        "php": "tests/PgProviderContractTest.php",
+        "nodejs": "test/pgProviderContract.test.ts"
+      },
+      "cases": [
+        "update without a filter or primary key raises and changes nothing",
+        "delete without a filter raises and removes nothing"
+      ]
+    },
+    {
+      "id": "pg-executemany-atomicity",
+      "adr": "PG-DEC-01",
+      "rule": "On a real PostgreSQL, a standalone db.execute_many() owns ONE transaction: it begins once, runs every parameter set, and commits once; a mid-batch failure rolls the WHOLE batch back so a FRESH connection sees ZERO rows from the batch, and the call raises. Empty input is a successful zero-row no-op that opens no transaction and writes nothing. Identical in all four.",
+      "why": "executeMany owns work that cannot be reconstructed above the adapter -- one physical connection, transaction ownership, rollback and affected-row accounting. If it committed each row instead of owning one transaction, a batch that fails partway would leave the earlier rows durable -- a silent partial write. PostgreSQL's real transaction is the oracle. Proven no-mocks by forcing a UNIQUE violation on the second set (the first set already executed within the batch) and reading COUNT(*) = 0 on a fresh connection. Mutation-proved: commit each row instead of owning the transaction and the first row survives on the fresh connection -> RED.",
+      "suites": {
+        "ruby": "spec/pgprovider_contract_spec.rb",
+        "python": "tests/test_pgprovider_contract.py",
+        "php": "tests/PgProviderContractTest.php",
+        "nodejs": "test/pgProviderContract.test.ts"
+      },
+      "cases": [
+        "execute many mid batch failure rolls back on a fresh connection",
+        "execute many empty input is a zero row no op"
+      ]
+    },
+    {
+      "id": "pg-fetch-shape",
+      "adr": "PG-DEC-01",
+      "rule": "On a real PostgreSQL, db.fetch() returns a DatabaseResult whose records are a native list of row maps keyed by the selected columns with each value preserved (compared in the host language's idiom: Python/Ruby/Node yield a native int for an INTEGER column, PHP's ext-pgsql yields the same value as a string -- native for that driver), and db.fetch_one() returns exactly one native record for a match or null for no match. The cross-language gate is the list-of-maps shape + value-correctness + the one-or-null result, not a single language's type map (the write-path contract already records that INTEGER type mapping varies by engine). Identical in all four.",
+      "why": "The read contract is that the caller gets a native list of row maps with values preserved, not a scalar, a stringified blob, or an envelope-only result; PostgreSQL's typed protocol is the oracle. A fetch that loses the rows, or a fetch_one that returns an empty envelope instead of null, breaks every consumer downstream. Proven no-mocks against a real seeded table.",
+      "suites": {
+        "ruby": "spec/pgprovider_contract_spec.rb",
+        "python": "tests/test_pgprovider_contract.py",
+        "php": "tests/PgProviderContractTest.php",
+        "nodejs": "test/pgProviderContract.test.ts"
+      },
+      "cases": [
+        "fetch returns a native list of rows with native types",
+        "fetch one returns a single native record",
+        "fetch one with no match returns null"
+      ]
+    }
+  ]
+}
