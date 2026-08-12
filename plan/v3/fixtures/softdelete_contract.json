@@ -1,0 +1,176 @@
+{
+  "_comment": [
+    "Soft delete -- feature 20. Two owner decisions (020-soft-delete.md",
+    "SOFTDEL-DEC-01 + SOFTDEL-DEC-02).",
+    "",
+    "Universal in all four: a `soft_delete` class flag + an `is_deleted` INTEGER",
+    "0/1 column (NOT a `deleted_at` timestamp). delete() sets is_deleted=1 when",
+    "soft-delete is on (else hard delete); every high-level finder appends",
+    "is_deleted=0 (Python also `OR is_deleted IS NULL`); force_delete() ALWAYS",
+    "hard-removes (transaction-wrapped, raises on a missing PK); restore() clears",
+    "the flag; with_trashed() omits the filter. Ruby's column is CONFIGURABLE",
+    "via soft_delete_field (default :is_deleted); Python/PHP/Node hard-code",
+    "is_deleted.",
+    "",
+    "SOFTDEL-DEC-02 (the main fix) -- SOFTDEL-CREATETABLE-COLUMN: create_table()",
+    "built the table from DECLARED fields ONLY, so a soft_delete=true model that",
+    "never declared is_deleted produced a table with NO such column, and every",
+    "soft-delete read/write then errored on the missing column (the save-path DX",
+    "hint existed -- evidence the footgun was known -- but the DDL gap was",
+    "unaddressed and untested). create_table() now INJECTS the flag column",
+    "(INTEGER 0/1, default 0) for a soft-delete model that does not declare it, in",
+    "ALL FOUR:",
+    "  * Python (tina4_python/orm/model.py): injects field_mapping-aware (see",
+    "    SOFTDEL-PY-FILTER-MAPPING below).",
+    "  * PHP (Tina4/ORM.php): injects the literal is_deleted.",
+    "  * Node (packages/orm/src/baseModel.ts): injects is_deleted on BOTH the",
+    "    adapter-createTable path and the manual-DDL fallback (syncModels() already",
+    "    added it on boot; createTable() did not -- now it does too).",
+    "  * Ruby (lib/tina4/orm.rb): the audit named only Python/PHP/Node, but Ruby",
+    "    ALSO lacked the injection -- VERIFIED against the live source and fixed.",
+    "    Ruby injects the CONFIGURED soft_delete_field name (default :is_deleted),",
+    "    never a hard-coded is_deleted (softdelete-ruby-configurable-field).",
+    "  After this a soft-delete model's create_table() produces a usable schema",
+    "  with NO manual column declaration.",
+    "",
+    "SOFTDEL-DEC-02 -- SOFTDEL-PY-FILTER-MAPPING (Python-only): Python's",
+    "soft-delete finder filter hard-coded the literal is_deleted and was NOT",
+    "field_mapping-aware. A small _soft_delete_column()/_soft_delete_filter()",
+    "helper now routes every finder filter AND the delete()/restore() writes AND",
+    "the create_table injection through field_mapping, so a model that remaps",
+    "is_deleted filters and writes on the mapped column",
+    "(softdelete-py-filter-field-mapping). Behaviour is IDENTICAL for an unmapped",
+    "model (the helper returns 'is_deleted').",
+    "",
+    "SOFTDEL-DEC-01 -- SOFTDEL-PHP-RESTORE-UNTESTED: PHP's restore() and",
+    "withTrashed() had NO tests (soft-delete write, read-exclusion and",
+    "force_delete were covered; un-delete and trashed-inclusive read were not).",
+    "The PHP suite now carries them as testRestoreUndeletesTheRowSoItReappears...",
+    "and testWithTrashedReturnsTheSoftDeletedRow.",
+    "",
+    "SOFTDEL-DEC-01 -- SOFTDEL-FORCE-WAS-PHP (RECORD CORRECTION, NO CODE CHANGE):",
+    "the 'ORM force-delete broken, fixed across all four in 3.13.97' record was",
+    "OVERSTATED. The throw-instead-of-delete bug was PHP-ONLY (an undefined",
+    "$whereParams); Python and Ruby were already correct (their 3.13.97 changes",
+    "were test-only lock-ins), and Node's fix + composite-PK hardening had landed.",
+    "At HEAD force_delete WORKS and is regression-tested in all four -- VERIFIED",
+    "against the live source (PHP forceDelete() reads $whereParams from",
+    "pkWhere('id'); Python/Ruby/Node hard-remove in a real transaction). The",
+    "'force delete hard removes the row even from with trashed' case IS that",
+    "regression: it force-deletes a real row and asserts COUNT(*)=0 on the raw",
+    "table AND absence from with_trashed, in all four. Do NOT carry",
+    "'Python/Ruby force-delete was broken' forward.",
+    "",
+    "NO MOCKS anywhere. Every case drives a REAL database -- real SQLite AND the",
+    "lab's real PostgreSQL (:55432, tina4/tina4 by default) -- with real rows and",
+    "real ORM writes. Row presence/absence is asserted by querying the real table:",
+    "a soft-deleted row is COUNT=1 in the raw table but ABSENT from the finders; a",
+    "force-deleted row is COUNT=0. Under TINA4_REQUIRE_SERVICES a postgres skip is",
+    "a hard failure, so PG is exercised for real, never silently skipped.",
+    "",
+    "Mutation-proven on the .99 lab: revert the create_table injection -> the",
+    "create-table-injects case (and the field_mapping / configurable-field cases)",
+    "go RED on the missing column; break force_delete's hard-remove (make it a",
+    "soft UPDATE) -> the 'gone even from with_trashed' case goes RED; all restore",
+    "GREEN.",
+    "",
+    "BREAKING (additive, documented in the changelog): create_table() now emits an",
+    "is_deleted column for a soft-delete model -- generated DDL changes for",
+    "soft-delete models (an additive column, default 0).",
+    "",
+    "Each invariant names a REAL suite file per framework carrying the SAME case",
+    "names in each language's own idiom, normalised + matched by",
+    "scripts/audit-contract-fixtures.py."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "20 - Soft delete (SOFTDEL-DEC-01: PHP restore/with_trashed tests + correct the force-delete-was-PHP record; SOFTDEL-DEC-02: create_table injects is_deleted in all four -- Ruby via the configurable soft_delete_field -- and route the Python filter through field_mapping)",
+  "invariants": [
+    {
+      "id": "softdelete-delete-flags-not-removes",
+      "adr": "SOFTDEL-DEC-01",
+      "rule": "delete() on a soft-delete model FLAGS the row instead of removing it: is_deleted is set to 1 and the row is STILL in the raw table (a raw COUNT with no soft-delete filter is 1), but it is EXCLUDED from every high-level finder (all(), count(), find/findById, where()). Proven against a real SQLite database and a real PostgreSQL, in all four frameworks.",
+      "why": "The correctness core of soft delete: a delete must be recoverable (the row persists) yet invisible to ordinary reads. The raw-table COUNT=1 alongside the finder returning nothing is the real-DB proof that the row was FLAGGED, not removed (no mock, no smoke test). Behaviour is independent of the create_table injection here (the model declares is_deleted), so a mutation to the injection cannot mask a broken filter.",
+      "suites": {
+        "python": "tests/test_softdelete_contract.py",
+        "php": "tests/SoftDeleteContractTest.php",
+        "ruby": "spec/softdelete_contract_spec.rb",
+        "nodejs": "test/softDeleteContract.test.ts"
+      },
+      "cases": [
+        "delete flags the row instead of removing it",
+        "a soft deleted row is excluded from the default finder"
+      ]
+    },
+    {
+      "id": "softdelete-with-trashed-and-restore",
+      "adr": "SOFTDEL-DEC-01",
+      "rule": "with_trashed() returns the soft-deleted row the default finder excludes, and restore() un-deletes it: after restore() the row reappears in the default finder and its is_deleted flag is back to 0. Proven against a real SQLite database and a real PostgreSQL, in all four frameworks (this adds the previously-UNTESTED PHP restore()/withTrashed() coverage, SOFTDEL-PHP-RESTORE-UNTESTED).",
+      "why": "with_trashed and restore are the recovery half of the contract. SOFTDEL-PHP-RESTORE-UNTESTED: PHP had no test for either -- restore() and withTrashed() shipped unproven. These two cases (the trashed-inclusive read, and the un-delete making the row reappear with the flag cleared) close that gap in PHP and pin the same behaviour four-way against a real database.",
+      "suites": {
+        "python": "tests/test_softdelete_contract.py",
+        "php": "tests/SoftDeleteContractTest.php",
+        "ruby": "spec/softdelete_contract_spec.rb",
+        "nodejs": "test/softDeleteContract.test.ts"
+      },
+      "cases": [
+        "with trashed returns the soft deleted row",
+        "restore undeletes the row so it reappears in the finder"
+      ]
+    },
+    {
+      "id": "softdelete-force-delete-hard-removes",
+      "adr": "SOFTDEL-DEC-01",
+      "rule": "force_delete() ALWAYS hard-removes the row even on a soft-delete model: after force_delete() the row is gone from the raw table (a raw COUNT is 0) AND from with_trashed(). Proven against a real SQLite database and a real PostgreSQL, in all four frameworks.",
+      "why": "This is the real hard-remove regression that catches the PHP-class throw-instead-of-delete bug (an undefined $whereParams). SOFTDEL-FORCE-WAS-PHP corrects the record: that bug was PHP-ONLY, and at HEAD force_delete works in all four -- this case is the four-way proof, asserting COUNT(*)=0 on the raw table and absence from with_trashed after a real force_delete. Mutation-proven: make force_delete a soft UPDATE instead of a DELETE -> this case goes RED (the row survives).",
+      "suites": {
+        "python": "tests/test_softdelete_contract.py",
+        "php": "tests/SoftDeleteContractTest.php",
+        "ruby": "spec/softdelete_contract_spec.rb",
+        "nodejs": "test/softDeleteContract.test.ts"
+      },
+      "cases": [
+        "force delete hard removes the row even from with trashed"
+      ]
+    },
+    {
+      "id": "softdelete-createtable-injects-column",
+      "adr": "SOFTDEL-DEC-02",
+      "rule": "create_table() INJECTS the is_deleted flag column (INTEGER 0/1, default 0) for a soft-delete model that does NOT declare it, so a full soft-delete round-trip (save -> delete flags -> finder excludes -> with_trashed includes -> restore -> force_delete hard-removes) works on the generated schema with no manual column. Proven against a real SQLite database and a real PostgreSQL, in all four frameworks (SOFTDEL-CREATETABLE-COLUMN).",
+      "why": "The main SOFTDEL-DEC-02 fix. Before it, a soft_delete=true model that never declared is_deleted built a table with no such column and every soft-delete read/write errored on the missing column; the DX hint pointed at the footgun but the DDL gap was unaddressed. The audit named Python/PHP/Node; Ruby was VERIFIED to have the same gap and fixed too. This case runs the whole lifecycle on a model with NO manual is_deleted, so it is the direct proof that the injected column is real and usable. Mutation-proven: revert the injection -> this case goes RED on the missing column.",
+      "suites": {
+        "python": "tests/test_softdelete_contract.py",
+        "php": "tests/SoftDeleteContractTest.php",
+        "ruby": "spec/softdelete_contract_spec.rb",
+        "nodejs": "test/softDeleteContract.test.ts"
+      },
+      "cases": [
+        "create table injects a usable is deleted column for a soft delete model"
+      ]
+    },
+    {
+      "id": "softdelete-py-filter-field-mapping",
+      "adr": "SOFTDEL-DEC-02",
+      "rule": "Python-only: the soft-delete finder filter and the delete()/restore() writes route the flag column through field_mapping, so a model that remaps is_deleted to a different DB column filters and writes on the MAPPED column -- create_table injects the mapped column, delete() flags it, and the finders exclude on it. Python-only: PHP/Node hard-code is_deleted and Ruby uses the configurable soft_delete_field (softdelete-ruby-configurable-field).",
+      "why": "SOFTDEL-PY-FILTER-MAPPING: Python's finder filter hard-coded the literal is_deleted and was not field_mapping-aware, so a model remapping is_deleted would filter on the wrong column. Unlikely but real. A _soft_delete_column()/_soft_delete_filter() helper now makes the read side, the write side and the create_table injection all agree on the mapped column. Proven end to end against a real database with a model whose is_deleted maps to deleted_flag.",
+      "suites": {
+        "python": "tests/test_softdelete_contract.py"
+      },
+      "cases": [
+        "the soft delete finder filters through field mapping"
+      ]
+    },
+    {
+      "id": "softdelete-ruby-configurable-field",
+      "adr": "SOFTDEL-DEC-02",
+      "rule": "Ruby-only: create_table() injects the CONFIGURED soft_delete_field column name (e.g. :archived), never a hard-coded is_deleted -- the injected column carries the configured name, the write flags it, and the finders exclude on it. Ruby-only: the soft-delete column is configurable in Ruby (soft_delete_field, default :is_deleted); Python/PHP/Node fix the name at is_deleted.",
+      "why": "The audit's SOFTDEL-CREATETABLE-COLUMN scoping named only Python/PHP/Node, but Ruby ALSO lacked the injection and its column is configurable, so a naive is_deleted injection would be wrong for a model that set soft_delete_field. This case proves Ruby injects the configured name and drives the soft-delete lifecycle on that column, so the create_table injection honours Ruby's configurability.",
+      "suites": {
+        "ruby": "spec/softdelete_contract_spec.rb"
+      },
+      "cases": [
+        "create table injects the configured soft delete field name"
+      ]
+    }
+  ]
+}
