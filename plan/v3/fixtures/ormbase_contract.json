@@ -1,0 +1,101 @@
+{
+  "_comment": [
+    "ORM base class contract -- feature 17. One decision, OWNER-DECIDED",
+    "(OWNER-DECISIONS.md Batch 5, ORM17-DEC-01):",
+    "",
+    "ORM17-DEC-01 (FIX + MAINTAINABILITY = LESS CODE): remove the VESTIGIAL state",
+    "from the ORM base class. The removal is BEHAVIOUR-PRESERVING -- the removed",
+    "state is genuinely unused, so removing it changes NO observable ORM behaviour.",
+    "Per-language scope, MEASURED against the live source (the audit is a guide; the",
+    "code wins):",
+    "",
+    "  * Node: BaseModel `_exists` was WRITTEN at three sites (find/load/save) and",
+    "    NEVER READ (grep-confirmed: zero reads in packages/orm/src). It was set via",
+    "    `(x as any)._exists = true` -- not even a declared field -- so any future",
+    "    is-this-persisted? logic keyed on it would have been wrong (finder paths",
+    "    findById/select/where/all never set it). The three assignments are DELETED.",
+    "    Node's `tableFilter` is NOT vestigial -- it is a DECLARED static and is read",
+    "    in findById/all/where/count/withTrashed and used by AutoCrud -- so it STAYS.",
+    "",
+    "  * PHP: `tableFilter` was READ in count() but was NEVER DECLARED on the base",
+    "    class, so it routed through __get -> null and was silently skipped (always",
+    "    null on the base, a typo'd subclass property silently ignored). The count()",
+    "    read and the two getColumnDefinitions()/getModelProperties() exclusion-list",
+    "    entries are DELETED. PHP's `_exists` is NOT vestigial -- it is READ in save()",
+    "    (the insert-vs-update shortcut for a finder-loaded instance) -- so it STAYS.",
+    "",
+    "  * Python / PHP / Node also carried DEAD LOCALS in delete/force_delete/restore,",
+    "    left over from the pk-where refactor (Python `table_sql` + `pk_db_col`, plus",
+    "    `pk`/`pk_value` in restore which has no null-check; PHP `$pkColumn` in",
+    "    delete(); Node `pkCol` in delete/forceDelete/restore). Every write path now",
+    "    addresses the row via pk_where()/pkWhere()/pk_filter, so these locals are",
+    "    unread. DELETED.",
+    "",
+    "  * Ruby carried NO vestigial state: it has no `_exists` (it uses `@persisted`,",
+    "    which IS read in save()), no `tableFilter`, and its delete/force_delete/",
+    "    restore locals (`pk`/`pk_value`) are all read by the missing-PK raise guard.",
+    "    Ruby's ORM base is already clean, so it removes NOTHING -- it carries the",
+    "    round-trip characterisation suite for parity only.",
+    "",
+    "This fixture is the SAFETY NET for that cleanup: a real ORM model round-trip",
+    "(save -> load -> query -> re-save/update -> count -> delete) that must pass",
+    "IDENTICALLY before AND after the removal. It pins the lifecycle the removed",
+    "state could only have affected if it had ever been read.",
+    "",
+    "NO MOCKS. Every case drives a REAL database (a real SQLite file / :memory:) with",
+    "REAL rows and REAL ORM writes. Positive cases: a save loads back with identical",
+    "values; count() returns the live total (guards PHP's removed tableFilter read);",
+    "where() finds a row by a non-key column; a re-saved found instance UPDATEs in",
+    "place. Negative cases: the re-save does NOT insert a duplicate (row total stays",
+    "the same -- guards Node's removed _exists, since the insert-vs-update decision",
+    "never depended on it); a deleted model is ABSENT from find() and count() (guards",
+    "the dead-local removal in delete()).",
+    "",
+    "Behaviour-preserving proof (run by the maintainer): the suite is green on the",
+    "PRE-removal code (proving it exercises the real lifecycle, not a ghost) and",
+    "green IDENTICALLY on the POST-removal code (proving the removal changed nothing",
+    "observable). A grep confirms ZERO remaining references to the removed state.",
+    "",
+    "Each invariant names a REAL suite file per framework carrying the SAME case",
+    "names in each language's own idiom, which scripts/audit-contract-fixtures.py",
+    "normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "17 - ORM base class (ORM17-DEC-01: remove vestigial state -- Node _exists, PHP tableFilter, dead locals in delete/force_delete/restore -- behaviour-preserving, less code)",
+  "invariants": [
+    {
+      "id": "ormbase-write-read-roundtrip",
+      "adr": "ORM17-DEC-01",
+      "rule": "A real ORM model round-trips correctly against a real database and the round-trip is IDENTICAL before and after the ORM17-DEC-01 vestigial-state removal: save() inserts a new row and returns the instance (not false); a finder loads it back with identical field values; count() returns the live row total; where() finds the row by a NON-key column; and re-saving a loaded/found instance UPDATEs in place -- the changed value is persisted and the row total stays the SAME (never a duplicate insert). Identical in all four (Python ORM, PHP ORM, Ruby ORM, Node BaseModel).",
+      "why": "This pins the ORM base lifecycle the ORM17-DEC-01 cleanup must not disturb. The removed state is vestigial: Node's _exists was written on find/load/save but never read (so the insert-vs-update decision never consulted it -- the 're-saved updates in place not a duplicate' case is its guard); PHP's tableFilter was read in count() but never declared (always null -- the 'count returns the live row total' case is its guard); Python/PHP/Node delete-path dead locals were unread. Removing all of it is BEHAVIOUR-PRESERVING: this round-trip passes IDENTICALLY before and after. Proven against a REAL SQLite database with real rows and real ORM writes -- no mocks.",
+      "suites": {
+        "ruby": "spec/ormbase_contract_spec.rb",
+        "python": "tests/test_ormbase_contract.py",
+        "php": "tests/OrmBaseContractTest.php",
+        "nodejs": "test/ormBaseContract.test.ts"
+      },
+      "cases": [
+        "a saved model loads back with identical values",
+        "count returns the live row total",
+        "where returns a row matched by a non key column",
+        "a re-saved model updates in place not a duplicate"
+      ]
+    },
+    {
+      "id": "ormbase-delete-removes-row",
+      "adr": "ORM17-DEC-01",
+      "rule": "delete() on a persisted model removes its row and this is IDENTICAL before and after the ORM17-DEC-01 cleanup: after model.delete() a find() by primary key returns null/none and count() drops by one. Identical in all four.",
+      "why": "delete/force_delete/restore carried dead locals left over from the pk-where refactor (Python table_sql + pk_db_col; PHP $pkColumn; Node pkCol) -- computed and never read, the write path addresses the row via pk_where()/pkWhere()/pk_filter. Removing them must not change delete's observable behaviour: this NEGATIVE case (the row is ABSENT from find() and count() after delete) passes identically before and after. Proven against a REAL SQLite database -- no mocks.",
+      "suites": {
+        "ruby": "spec/ormbase_contract_spec.rb",
+        "python": "tests/test_ormbase_contract.py",
+        "php": "tests/OrmBaseContractTest.php",
+        "nodejs": "test/ormBaseContract.test.ts"
+      },
+      "cases": [
+        "a deleted model is absent from find and count"
+      ]
+    }
+  ]
+}
