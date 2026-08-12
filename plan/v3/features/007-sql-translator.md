@@ -96,6 +96,44 @@ The engine string selects the rule subset; adding an engine means adding its cas
   SQLTRANS-DEAD-DUP) - one dialect source per language, no dead public API, one MSSQL pagination strategy.
 - SQLTRANS-DEC-03 (proposed, low): BIGINT autoincrement + document the UPSERT/date-time omission.
 
+## Implementation (3.13.99) - RATIFIED + SHIPPED
+
+Proven by `fixtures/sqltranslator_contract.json` (2 invariants, proven all four against real MySQL +
+PostgreSQL, no mocks, mutation-proved). See CONTRACT-MAP.md.
+
+- **SQLTRANS-DEC-01 (data-corruption fix, all four).** concat/bool/ilike are now LITERAL-SAFE: each masks
+  string literals / quoted identifiers / comments to opaque tokens, rewrites the masked SQL, then restores
+  the tokens (Python `SQLTranslator._mask_literals`, PHP `maskLiterals`, Ruby `mask_literals`, Node
+  `maskLiterals`). concat rewrites ONLY the `||` operand chain, never the whole statement, so
+  `SELECT a || b FROM t` -> `SELECT CONCAT(a, b) FROM t` and `WHERE data = 'a||b'` is left untouched. The
+  multi-word ILIKE pattern that the old greedy `\S+` truncated now survives whole.
+- **SQLTRANS-DEC-02 (Ruby unwiring + dead code).** concat/ilike are WIRED into the MySQL query path in Ruby
+  (`Drivers::MysqlDriver#translate_dialect`, called from `execute_query`/`execute`) and PHP
+  (`MySQLAdapter::translateDialect`, called from `query`/`execute`), matching the already-wired Python
+  (`_translate_sql`) and Node (`translateSql`) adapters - so a portable `||`/`ILIKE` query RUNS on real
+  MySQL in all four. Ruby's dead-and-wrong `limit_to_rows`, `limit_to_top`, `placeholder_style` were
+  DELETED (the Ruby drivers own pagination via `SELECT FIRST/SKIP` + `OFFSET ... FETCH` and placeholders
+  via `?`/`$1`; the translator helpers emitted an inferior shape that nothing called), and the duplicate
+  `SQLTranslator.query_key` was removed (the live `Tina4::QueryCache.query_key` is the single source). The
+  MSSQL-pagination unification named in SQLTRANS-DEAD-DUP (Node `TOP` vs the drivers' `OFFSET/FETCH`) is a
+  larger cross-cutting change and is NOT bundled here - it stays a tracked follow-up so this feature stays
+  shippable and verified. Firebird/MSSQL wiring for PHP/Ruby (parity with Python/Node's existing wiring)
+  is likewise a follow-up: the fix + the fixture are engine-agnostic and MySQL+PostgreSQL exercise every
+  code path.
+- **SQLTRANS-DEC-03 (BIGINT autoincrement + documented omissions).** `BIGINT PRIMARY KEY AUTOINCREMENT`
+  now translates to a real 64-bit auto-increment column: PostgreSQL `BIGSERIAL`, MySQL
+  `BIGINT ... AUTO_INCREMENT`, MSSQL `BIGINT ... IDENTITY(1,1)` (INTEGER stays `SERIAL` / `INT AUTO_INCREMENT`
+  / `INT IDENTITY`). Before the fix the PostgreSQL branch matched only `INTEGER PRIMARY KEY AUTOINCREMENT`
+  and a BIGINT merely had the keyword stripped, leaving a plain BIGINT primary key with no sequence.
+
+  **UPSERT and date/time functions are deliberately NOT translated (portability by omission).** There is
+  no `ON CONFLICT` / `ON DUPLICATE KEY` / `MERGE` translation and no `NOW()`/`GETDATE()`/`CURRENT_TIMESTAMP`
+  translation in any language - the shapes differ too much across engines to translate safely, and the
+  batch-collapse correctly REFUSES to collapse a `RETURNING`/`ON CONFLICT`/`ON DUPLICATE` batch (all four).
+  Portable app code writes engine-neutral SQL and reaches for a per-engine escape hatch (or a future
+  dedicated `upsert` helper) when it needs conflict handling; CLAUDE.md already warns app authors off
+  `NOW()`/`GETDATE()` in migrations. This omission is intentional and requires no code change.
+
 ## Proposed conformance fixture
 
 A shared per-language fixture (the pure-function tests already exist - extend them): assert
