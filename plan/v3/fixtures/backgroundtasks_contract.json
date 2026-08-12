@@ -1,0 +1,106 @@
+{
+  "_comment": [
+    "Background tasks contract -- feature 47. Two decisions, both OWNER-DECIDED",
+    "(OWNER-DECISIONS.md Batch 4):",
+    "",
+    "BG-DEC-01 (the silent production no-op): a task scheduled via background()",
+    "must ACTUALLY RUN under the language's PRODUCTION runtime, not only a dev",
+    "built-in. Python's background() was a SILENT NO-OP under the default",
+    "production ASGI server (uvicorn/hypercorn/granian): _start_background_tasks",
+    "was called only inside the built-in asyncio _serve(); the production path",
+    "returned earlier and the ASGI lifespan started nothing. Fixed by starting the",
+    "tasks from the ASGI lifespan startup (and stopping them on lifespan shutdown)",
+    "-- one shared _spin_up_background_tasks() now runs on BOTH the built-in and",
+    "the production server. PHP's background() had no deployment guard: under",
+    "PHP-FPM / apache / php -S (per-request, no accept loop) the task silently",
+    "never ran. Fixed with a loud SAPI guard -- background() warns with the exact",
+    "remedy under a non-persistent web SAPI (App::backgroundSapiWarning, a pure",
+    "decision function), never a silent drop. Ruby (a real dedicated OS thread per",
+    "task) and Node (an unref'd event-loop timer) already run the task in their",
+    "actual runtime, so they had no silent-no-op bug -- the cases prove that",
+    "positively.",
+    "",
+    "BG-DEC-02 (ONE surface): pin a stop-handle + a count() across the four. Python",
+    "and Node already returned a handle; Ruby returned a Hash descriptor and had no",
+    "count; PHP returned $this (fluent). Now all four expose background(cb,interval)",
+    "-> a HANDLE with a boolean stop(), plus a count (background_task_count /",
+    "backgroundTaskCount / Tina4::Background.count). BREAKING: PHP background() now",
+    "returns a Tina4\\BackgroundTask handle instead of $this -- split a chained",
+    "->background(a)->background(b) into two calls. Ruby's handle is Hash-accessible",
+    "(task[:thread]/[:running] still read), so the old descriptor introspection is",
+    "unchanged; Node's stop() now returns bool (was void).",
+    "",
+    "NO MOCKS. Every case exercises a REAL runtime with a REAL side effect: Python",
+    "boots a REAL uvicorn subprocess AND drives the REAL ASGI lifespan protocol in",
+    "process; PHP boots the REAL persistent socket server child AND drives the REAL",
+    "private Server::runTickCallbacks() sweep; Ruby uses a REAL OS thread writing a",
+    "REAL temp file; Node uses the REAL event-loop timer writing a REAL temp file.",
+    "",
+    "Mutation-proved (all four): unwire the production start and 'runs under the",
+    "production runtime' goes RED -- Python (drop the lifespan _spin_up call: the",
+    "uvicorn child writes nothing and the in-process lifespan ticks 0), PHP (drop",
+    "run()'s onTick wiring: the socket server writes nothing), Ruby (start_task",
+    "starts no thread), Node (stop never deregisters). Make the PHP guard return",
+    "null for fpm-fcgi and 'a non persistent runtime is guarded not a silent drop'",
+    "goes RED. Break count() and the count case goes red; make stop() a no-op / a",
+    "never-false and the stop-handle / second-stop cases go red. Restoring each",
+    "returns to green.",
+    "",
+    "Each invariant names a REAL suite file per framework carrying the SAME case",
+    "names in each language's own idiom, which scripts/audit-contract-fixtures.py",
+    "normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "47 - Background tasks (run under the production runtime + ONE handle+count surface)",
+  "invariants": [
+    {
+      "id": "bg-runs-under-production",
+      "adr": "BG-DEC-01",
+      "rule": "A task scheduled via background(callback, interval) ACTUALLY RUNS under the language's PRODUCTION runtime -- not only a dev built-in -- and it is never a silent no-op. Python starts the tasks from the ASGI lifespan startup so they tick under uvicorn/hypercorn/granian (and stop on lifespan shutdown); PHP runs them in the persistent socket server (`tina4 serve`) and warns LOUDLY with the remedy under a non-persistent SAPI (php-fpm/apache/php -S) rather than dropping the task in silence; Ruby runs each task in a real dedicated OS thread started at registration; Node runs it as an unref'd event-loop timer. Proven by a REAL runtime writing a REAL side effect (a file / a counter), plus the guard: the production/non-persistent path is never a silent drop.",
+      "why": "background() SILENTLY DID NOTHING in the common production deployment for two of four languages: Python under the default production ASGI server (BG-PY-PROD-NOOP -- _start_background_tasks ran only in the built-in _serve(); the lifespan started nothing) and PHP under PHP-FPM/Swoole (BG-PHP-FPM-SWOOLE-NOOP -- no accept loop, per-request adapter never calls runTickCallbacks). The fix starts Python's tasks from the ASGI lifespan and adds a loud PHP SAPI guard. Mutation-proved: unwire the production start (Python's lifespan _spin_up call / PHP run()'s onTick wiring / Ruby's thread start / Node's deregister) and 'a scheduled task runs under the production runtime' goes RED; make the PHP guard return null for fpm-fcgi and 'a non persistent runtime is guarded not a silent drop' goes RED.",
+      "suites": {
+        "ruby": "spec/background_contract_spec.rb",
+        "python": "tests/test_background_contract.py",
+        "php": "tests/BackgroundContractTest.php",
+        "nodejs": "test/backgroundContract.test.ts"
+      },
+      "cases": [
+        "a scheduled task runs under the production runtime",
+        "a non persistent runtime is guarded not a silent drop"
+      ]
+    },
+    {
+      "id": "bg-count-surface",
+      "adr": "BG-DEC-02",
+      "rule": "A count of registered background tasks is exposed identically across the four (Python background_task_count(), PHP App::backgroundTaskCount(), Ruby Tina4::Background.count, Node backgroundTaskCount()). It reflects pending/running tasks -- climbing by one per registration -- and returns to 0 when a task is stopped, because a stopped task LEAVES the registry (it is never reported as still registered). Proven by counting across register -> register -> stop -> stop against the real registry.",
+      "why": "The surface diverged (BG-SURFACE-DIVERGE): Ruby had no count method at all (only `tasks`), and PHP/Ruby/Node/Python spelled the count four ways with no shared contract. BG-DEC-02 pins ONE count surface, and pairs it with a deregister-on-stop guarantee so the count never lies about what is running. Mutation-proved: break count() (return 0) and 'count reflects pending and running tasks' goes RED; make stop() skip deregistration and 'count returns to zero when a task is stopped' goes RED.",
+      "suites": {
+        "ruby": "spec/background_contract_spec.rb",
+        "python": "tests/test_background_contract.py",
+        "php": "tests/BackgroundContractTest.php",
+        "nodejs": "test/backgroundContract.test.ts"
+      },
+      "cases": [
+        "count reflects pending and running tasks",
+        "count returns to zero when a task is stopped"
+      ]
+    },
+    {
+      "id": "bg-stop-handle",
+      "adr": "BG-DEC-02",
+      "rule": "background(callback, interval) returns a HANDLE whose stop() ends and DEREGISTERS the task: it cancels a task that is actually ticking (the side effect stops), and it is idempotent -- true the first time it removes a live task, false thereafter, never raising. Identical across the four: Python BackgroundTask.stop() -> bool, PHP Tina4\\BackgroundTask::stop() -> bool, Ruby Tina4::Background::Task#stop -> bool, Node handle.stop() -> bool. Proven against a real ticking task: after stop() the real side effect stops, and a second stop() returns false.",
+      "why": "The stop mechanism diverged (BG-SURFACE-DIVERGE): Python/Node returned a stop-handle, PHP returned $this (stop by callback identity only), Ruby returned a Hash descriptor with no .stop(). BG-DEC-02 pins ONE handle with a boolean stop() across the four (PHP gains the handle -- BREAKING from the old fluent $this; Ruby gains a handle that stays Hash-accessible; Node's stop() now returns bool). Mutation-proved: make stop() a no-op / never deregister and 'the stop handle cancels a running task' goes RED; make stop() always return true and 'a second stop is a safe no op' goes RED.",
+      "suites": {
+        "ruby": "spec/background_contract_spec.rb",
+        "python": "tests/test_background_contract.py",
+        "php": "tests/BackgroundContractTest.php",
+        "nodejs": "test/backgroundContract.test.ts"
+      },
+      "cases": [
+        "the stop handle cancels a running task",
+        "a second stop is a safe no op"
+      ]
+    }
+  ]
+}
