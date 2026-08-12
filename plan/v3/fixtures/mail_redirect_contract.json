@@ -1,0 +1,79 @@
+{
+  "_comment": [
+    "TINA4_MAIL_REDIRECT_TO -- owner-directed feature MAIL-DEC-01 (Andre, 2026-08-12).",
+    "A SECOND, independent knob on Messenger#send's REAL-SEND (SMTP) path, sitting",
+    "alongside the existing TINA4_MAIL_CAPTURE dev-capture gate:",
+    "",
+    "  * TINA4_MAIL_REDIRECT_TO is a COMMA-SEPARATED email list. Parse rule",
+    "    (identical all four): split on comma, trim each address, drop blanks.",
+    "    Empty/unset -> [] -> redirect OFF, zero behaviour change.",
+    "  * PRECEDENCE: capture wins. shouldCapture() (TINA4_MAIL_CAPTURE truthy, or",
+    "    no SMTP host configured) is checked FIRST and, when true, returns from",
+    "    the local DevMailbox exactly as before -- redirect code never runs.",
+    "  * When the list is non-empty AND send() is genuinely talking to SMTP: To",
+    "    is REPLACED with the full redirect list, Cc and Bcc are CLEARED (so no",
+    "    original recipient -- direct, cc'd or bcc'd -- gets a copy), and the",
+    "    original recipients (To+Cc+Bcc, comma-joined) are preserved in a new",
+    "    header, X-Tina4-Original-To. Subject/body/attachments and send()'s",
+    "    return shape are unchanged.",
+    "",
+    "Implementation is a small rewrite at the top of the real-send branch of",
+    "send(), reusing each framework's existing recipient-list handling and",
+    "custom-header plumbing -- zero new runtime dependency, near-identical diff",
+    "in all four (Python tina4_python/messenger/__init__.py, PHP",
+    "Tina4/Messenger.php, Ruby lib/tina4/messenger.rb, Node",
+    "packages/core/src/messenger.ts).",
+    "",
+    "NO MOCKS. Every case drives a REAL GreenMail (SMTP :3025 / IMAP :3143, the",
+    "SAME live server the messenger_contract.json suites use) with a REAL SMTP",
+    "send and a REAL IMAP fetch to prove delivery or non-delivery -- 'the dev",
+    "list received it and the real recipient did not' is measured on the wire,",
+    "never asserted from the sender's own return value alone. Verified 2026-08-12",
+    "against the live GreenMail on the .99 lab (all three cases 3/3 green,",
+    "individually and together, in all four frameworks).",
+    "",
+    "Mutation-proved (all four): temporarily disabling the recipient-rewrite (the",
+    "redirect branch neutralised to a no-op) turns",
+    "'redirect_delivers_to_every_address_on_the_list' RED in every framework --",
+    "the dev-list poll times out because the mail went to the real recipient",
+    "instead -- and restoring the branch returns it to green. Each framework was",
+    "independently mutated and restored on the lab against the same live",
+    "GreenMail; RED/green captured for python, php, ruby and nodejs."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "MAIL-DEC-01 - redirect outbound mail to a comma-separated dev list",
+  "invariants": [
+    {
+      "id": "mail-redirect-rewrites-real-send-recipients",
+      "adr": "MAIL-DEC-01",
+      "rule": "On the REAL-SEND (SMTP) path only, a non-empty TINA4_MAIL_REDIRECT_TO (comma-separated, each address trimmed, blanks dropped) REPLACES every recipient: To becomes the full redirect list, Cc and Bcc are cleared, and the original To+Cc+Bcc (comma-joined) is preserved in a new header X-Tina4-Original-To. Subject/body/attachments and send()'s return shape are unchanged. Unset or empty (after parsing) is a complete no-op -- current behaviour, unchanged.",
+      "why": "MEASURED against a real GreenMail on the .99 lab: a send to a real@ recipient with TINA4_MAIL_REDIRECT_TO set to two dev addresses (one with a deliberate space after the comma, proving the trim) is fetched via real IMAP from BOTH dev mailboxes and is ABSENT from the real recipient's mailbox after a full poll budget, and the fetched message's headers carry X-Tina4-Original-To equal to the real recipient's address. The unset/negative control (same fixture, TINA4_MAIL_REDIRECT_TO absent) confirms the real recipient DOES receive the mail when redirect is off -- so the positive case is proven against a genuine baseline, not an assumption. All four frameworks green 3/3 individually and together on first measurement (2026-08-12); each was then separately mutated (the recipient-rewrite short-circuited to a no-op) and reproved RED before being restored to green -- the redirect_delivers_to_every_address_on_the_list case is the one that flips.",
+      "suites": {
+        "python": "tests/test_mail_redirect_contract.py",
+        "php": "tests/MailRedirectContractTest.php",
+        "ruby": "spec/mail_redirect_contract_spec.rb",
+        "nodejs": "test/mailRedirectContract.test.ts"
+      },
+      "cases": [
+        "redirect_delivers_to_every_address_on_the_list",
+        "redirect_unset_delivers_normally"
+      ]
+    },
+    {
+      "id": "mail-redirect-capture-takes-precedence",
+      "adr": "MAIL-DEC-01",
+      "rule": "shouldCapture() (TINA4_MAIL_CAPTURE truthy, or no SMTP host configured) is evaluated BEFORE the redirect branch and, when true, returns from the local DevMailbox exactly as it did before this feature existed -- redirect code never runs, even when TINA4_MAIL_REDIRECT_TO is also set. Nothing reaches SMTP; the local DevMailbox receives exactly the one captured message.",
+      "why": "MEASURED against a real GreenMail on the .99 lab, with a REAL SMTP host configured (so capture wins on the merits of TINA4_MAIL_CAPTURE, not merely because sending was unavailable): with TINA4_MAIL_CAPTURE=true and TINA4_MAIL_REDIRECT_TO set to two dev addresses, a send to a real@ recipient leaves BOTH dev mailboxes and the real mailbox empty after a real poll (proven by IMAP, not by trusting send()'s own report), and the local DevMailbox contains EXACTLY 1 captured message. Green 3/3 in all four frameworks on first measurement (2026-08-12); the ordering itself (capture-check strictly precedes the redirect-parse) is a direct read of the diff in all four, not merely inferred from this one case passing.",
+      "suites": {
+        "python": "tests/test_mail_redirect_contract.py",
+        "php": "tests/MailRedirectContractTest.php",
+        "ruby": "spec/mail_redirect_contract_spec.rb",
+        "nodejs": "test/mailRedirectContract.test.ts"
+      },
+      "cases": [
+        "capture_takes_precedence_over_redirect"
+      ]
+    }
+  ]
+}
