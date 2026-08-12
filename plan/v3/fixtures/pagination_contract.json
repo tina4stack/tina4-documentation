@@ -1,5 +1,5 @@
 {
-  "_comment": "Feature 18 (paginated results). The audit RE-OPENED this 2026-08-05: measured one query (limit=20 offset=40, page 3 of 13) against a real 250-row table, only PHP was correct on all five values - Ruby returned ZERO records for a valid page, Ruby+Node reported total=20 (rows returned) instead of 250, Python+Node reported page=1 ignoring the offset. Three root causes, all cross-framework: (1) .count means the TRUE total (COUNT probe) in python/php but ROWS RETURNED in ruby/node, so the envelope launders a truncation into a fact; (2) page is derived from the offset only in PHP; (3) ruby+node re-slice records by the ABSOLUTE offset against an array that is already just that page. The settled pattern (ADR-0043): toPaginate()/to_paginate() takes NO arguments in all four and derives every field from the query that ran; an argument RAISES (a DatabaseResult holds no connection, so an argument can only re-slice in-memory rows and lie about total_pages); the envelope is exactly seven snake_case keys with no duplicate spellings. BREAKING: .count/.total become the true total in ruby+node; the arg form is removed; the camelCase/alias keys (data, count, totalPages, perPage, has_next, has_prev) are dropped. The five to_paginate() invariants are PROVEN 2026-08-07 (named suite in all four: test_pagination_contract.py, PaginationContractTest.php, pagination_contract_spec.rb, paginationContract.test.ts, each on a real 250-row SQLite table, red-before-green + mutation-proven). The sixth (the AutoCrud REST envelope) is owed until that fleet lands.",
+  "_comment": "Feature 18 (paginated results). The audit RE-OPENED this 2026-08-05: measured one query (limit=20 offset=40, page 3 of 13) against a real 250-row table, only PHP was correct on all five values - Ruby returned ZERO records for a valid page, Ruby+Node reported total=20 (rows returned) instead of 250, Python+Node reported page=1 ignoring the offset. Three root causes, all cross-framework: (1) .count means the TRUE total (COUNT probe) in python/php but ROWS RETURNED in ruby/node, so the envelope launders a truncation into a fact; (2) page is derived from the offset only in PHP; (3) ruby+node re-slice records by the ABSOLUTE offset against an array that is already just that page. The settled pattern (ADR-0043): toPaginate()/to_paginate() takes NO arguments in all four and derives every field from the query that ran; an argument RAISES (a DatabaseResult holds no connection, so an argument can only re-slice in-memory rows and lie about total_pages); the envelope is exactly seven snake_case keys with no duplicate spellings. BREAKING: .count/.total become the true total in ruby+node; the arg form is removed; the camelCase/alias keys (data, count, totalPages, perPage, has_next, has_prev) are dropped. The five to_paginate() invariants are PROVEN 2026-08-07 (named suite in all four: test_pagination_contract.py, PaginationContractTest.php, pagination_contract_spec.rb, paginationContract.test.ts, each on a real 250-row SQLite table, red-before-green + mutation-proven). The sixth (the AutoCrud REST envelope) landed 2026-08-07. PAGE-DEC-01 (feature 24, OWNER-DECISIONS.md Batch 4, 2026-08-12): the list-handler page/limit arithmetic - upstream of to_paginate(), which only describes an already-run query - had two more defects. PAGE-NEGATIVE-OFFSET: page < 1 was not clamped in Python/Ruby/Node, so offset=(page-1)*per_page went negative - a hard PostgreSQL error ('OFFSET must not be negative', MEASURED on the lab's real :55432) and a silent-wrong envelope (page:0) on SQLite; PHP already clamped (page<=1 -> offset 0) and is the reference. PAGE-NO-MAX-LIMIT: an oversized ?limit=/?per_page= was honoured verbatim in all four (not just Node as first suspected) - a client could request the whole table in one query. FIXED: Python/Ruby/Node's AutoCrud list handler now clamps page>=1 before deriving offset (matching PHP); all four cap the per-page size at 100 (MAX_PER_PAGE in Python/PHP/Ruby, Node's own DEFAULT_ROW_CAP, reused not reinvented). Node also stopped recomputing limit/offset/page a second time for the envelope (dropped 3 duplicate lines from autoCrud.ts) - buildQuery() now returns the exact clamped/capped values it used, so the envelope cannot drift from the query that ran. PROVEN 2026-08-12: real SQLite + real PostgreSQL :55432 tina4/tina4, mutation-proven (revert the clamp -> the postgres case surfaces the real 'OFFSET must not be negative' driver error; revert the cap -> the oversized-limit case reports the requested value verbatim).",
   "version": 1,
   "decided": "2026-08-07",
   "adr": "ADR-0043",
@@ -92,6 +92,38 @@
       },
       "cases": [
         "paginate-rest-list-envelope-is-the-seven-keys"
+      ]
+    },
+    {
+      "id": "paginate-page-zero-clamps-to-page-one",
+      "adr": "ADR-0043",
+      "decision": "PAGE-DEC-01",
+      "rule": "A page < 1 (0, or negative) in the AutoCrud list handler is clamped to page 1 BEFORE offset is derived, so offset=(page-1)*per_page is NEVER negative. The envelope reports page:1, offset:0 (never page:0 or a negative offset), and returns the full row set. PHP already did this (page<=1 -> offset 0); Python/Ruby/Node were fixed to match.",
+      "why": "MEASURED (feature 24 audit, 2026-08-11): page < 1 was not clamped in Python/Ruby/Node, so offset=(page-1)*per_page went negative. On real PostgreSQL :55432 this is a hard driver ERROR ('OFFSET must not be negative') - a page=0 request 500s instead of listing. On SQLite the driver silently treats a negative OFFSET as 0 (the rows happen to come back right), but the envelope still reported page:0 - a wrong number in every response. PROVEN 2026-08-12 on real SQLite + real PostgreSQL :55432 tina4/tina4, mutation-proven: reverting the clamp reproduces the exact PostgreSQL 'OFFSET must not be negative' error and the SQLite page:0 envelope bug.",
+      "suites": {
+        "python": "tests/test_pagination_clamp_contract.py",
+        "php": "tests/PaginationClampContractTest.php",
+        "ruby": "spec/pagination_clamp_contract_spec.rb",
+        "nodejs": "test/paginationClampContract.test.ts"
+      },
+      "cases": [
+        "page_zero_clamps_to_page_one"
+      ]
+    },
+    {
+      "id": "oversized-per-page-is-capped",
+      "adr": "ADR-0043",
+      "decision": "PAGE-DEC-01",
+      "rule": "An oversized ?limit=/?per_page= in the AutoCrud list handler is capped at MAX_PER_PAGE (100) - the envelope's per_page and limit report the CAP, never the requested huge value. 100 is not a new number: it is the same row cap ORM.all()/db.fetch() already default to in Python/PHP/Ruby, and Node's own DEFAULT_ROW_CAP constant, reused rather than reinvented.",
+      "why": "MEASURED (feature 24 audit, 2026-08-11): Node's AutoCrud list honoured ?limit=1000000 verbatim - no maximum-page-size cap - so a client could request the whole table in one query. Re-measured while implementing: NONE of the four capped an oversized per-page size at the list-handler boundary (Python/PHP/Ruby also passed an explicit huge limit straight to the driver), so this is a four-way fix, not a Node-only one. PROVEN 2026-08-12 on real SQLite + real PostgreSQL :55432 tina4/tina4, mutation-proven: reverting the cap makes the envelope echo the requested huge value verbatim.",
+      "suites": {
+        "python": "tests/test_pagination_clamp_contract.py",
+        "php": "tests/PaginationClampContractTest.php",
+        "ruby": "spec/pagination_clamp_contract_spec.rb",
+        "nodejs": "test/paginationClampContract.test.ts"
+      },
+      "cases": [
+        "oversized_per_page_is_capped"
       ]
     }
   ]
