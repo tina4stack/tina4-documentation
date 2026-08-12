@@ -1,0 +1,101 @@
+{
+  "_comment": [
+    "Race-safe database next-id (get_next_id) contract -- feature 16. Two owner-",
+    "decided fixes (OWNER-DECISIONS.md Batch 4; feature doc 016-database-next-id.md",
+    "NEXTID-DEC-01 / NEXTID-DEC-02), each proven against REAL databases with REAL",
+    "concurrency (threads / pcntl_fork / Promise.all over independent connections --",
+    "NO mocks):",
+    "",
+    "NEXTID-DEC-01 -- the generic next-id TOCTOU + the PostgreSQL first-use race.",
+    "  The generic sequence fallback did an UPDATE then a SEPARATE SELECT: between",
+    "  the two, another concurrent caller could increment and commit, so both read",
+    "  the same post-increment value and returned a DUPLICATE id (a Time-Of-Check-",
+    "  To-Time-Of-Use race). It is reachable on PostgreSQL because the first-use",
+    "  bootstrap let two concurrent first-callers each CREATE a separate sequence;",
+    "  the loser's error was swallowed and it fell to that racy table, drawing an",
+    "  id from a SECOND, independent counter that duplicated the native sequence's.",
+    "  Fixed in all four:",
+    "    * the generic fallback is now a SINGLE atomic statement --",
+    "      UPDATE tina4_sequences SET current_value = current_value + 1",
+    "      WHERE seq_name = ? RETURNING current_value -- so the value read is",
+    "      exactly the one that statement wrote (PostgreSQL supports RETURNING; it",
+    "      is the engine that reaches this fallback);",
+    "    * the PostgreSQL bootstrap is CREATE SEQUENCE IF NOT EXISTS + always draw",
+    "      from nextval(), so two concurrent first-callers share ONE counter and no",
+    "      caller ever falls to the second mechanism.",
+    "",
+    "NEXTID-DEC-02 -- the MongoDB no-increment. Mongo was broken four ways: PHP's",
+    "  dedicated path swallowed ANY error into `return 1` (a duplicate-PK collision",
+    "  with an existing row); Ruby and Node had NO Mongo path at all and fell to the",
+    "  relational generic path, where the Mongo SET-clause parser matched only",
+    "  `col = ?` and DROPPED the arithmetic `current_value + 1` (empty $set), so the",
+    "  counter never advanced and every call returned the SAME id. Fixed in all four:",
+    "  one DEDICATED atomic path -- findOneAndUpdate({_id: seq}, {$inc:{current_value",
+    "  :1}}, {upsert, returnDocument:after}) on a tina4_sequences counters",
+    "  collection, keyed by _id so its built-in unique index makes concurrent",
+    "  first-use upserts race-safe. PHP no longer returns 1 on error (it raises);",
+    "  Ruby and Node no longer route Mongo through the relational path.",
+    "",
+    "MAINTAINABILITY (owner directive): one next-id path per backend, ZERO new",
+    "runtime dependencies -- the atomic increment reuses each engine's own SQL",
+    "(UPDATE ... RETURNING) and the Mongo path reuses the driver already present.",
+    "",
+    "NO MOCKS. Every case drives a REAL database with REAL concurrent callers: the",
+    "lab's PostgreSQL :55432 (tina4/tina4), MySQL :3306 (tina4/tina4 -> tina4_test)",
+    "and MongoDB :27017. N concurrent callers each on their OWN connection (Python",
+    "threads, PHP pcntl_fork children, Ruby threads, Node Promise.all over N",
+    "independent adapters); the assertion is N DISTINCT ids. The generic-fallback",
+    "case invokes the fallback path directly (its private sequence method) against",
+    "real PostgreSQL so the TOCTOU fix is proven where a real client reaches it.",
+    "",
+    "Mutation-proved (all four): revert the generic fallback to the racy",
+    "UPDATE-then-separate-SELECT and 'concurrent generic sequence next id yields",
+    "distinct ids' goes RED with a duplicate id under concurrency; drop the $inc",
+    "(or restore the swallow-to-1 / relational fallback) from the Mongo path and",
+    "'mongo next id increments monotonically' goes RED (id2 == id1). Restoring each",
+    "returns to green; the atomic UPDATE ... RETURNING and the atomic $inc are",
+    "distinct at any concurrency.",
+    "",
+    "Each invariant names a REAL suite file per framework carrying the SAME case",
+    "names in each language's own idiom, which scripts/audit-contract-fixtures.py",
+    "normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "16 - Race-safe database next-id (fix the generic get_next_id TOCTOU + the PostgreSQL first-use race; give MongoDB one correct atomic findOneAndUpdate($inc) path in all four)",
+  "invariants": [
+    {
+      "id": "nextid-no-duplicate-under-concurrency",
+      "adr": "NEXTID-DEC-01",
+      "rule": "get_next_id() is ATOMIC: N concurrent callers for the same table, each on its OWN real connection, return N DISTINCT ids -- never a duplicate. This holds on a FRESH PostgreSQL table (the first-use sequence-create race: the loser must share the one native sequence, not draw from a second counter), through the generic tina4_sequences fallback directly (a single atomic UPDATE ... RETURNING, never an UPDATE then a separate SELECT), and on MySQL's per-connection LAST_INSERT_ID sequence path. Identical in all four (Python Database.get_next_id / _sequence_next, PHP Database::getNextId / sequenceNext, Ruby Database#get_next_id / sequence_next, Node Database.getNextId / sequenceNext).",
+      "why": "A duplicate primary key allocated under concurrency is silent data corruption -- two rows collide, or an insert fails, at random under load. Proven with a REAL PostgreSQL and a REAL MySQL and N REAL concurrent callers (threads / forked processes / independent async connections), no mocks: the ONLY way N concurrent callers can all get distinct ids is that the increment is atomic. Mutation-proved: revert the generic fallback to UPDATE-then-separate-SELECT and 'concurrent generic sequence next id yields distinct ids' goes RED (a duplicate id under concurrency).",
+      "suites": {
+        "ruby": "spec/nextid_contract_spec.rb",
+        "python": "tests/test_nextid_contract.py",
+        "php": "tests/NextIdContractTest.php",
+        "nodejs": "test/nextIdContract.test.ts"
+      },
+      "cases": [
+        "concurrent get next id on a fresh table yields distinct ids",
+        "concurrent generic sequence next id yields distinct ids",
+        "concurrent get next id on mysql yields distinct ids"
+      ]
+    },
+    {
+      "id": "nextid-mongo-atomic-increment",
+      "adr": "NEXTID-DEC-02",
+      "rule": "MongoDB get_next_id() ADVANCES and is concurrency-safe: it returns a strictly increasing counter via an atomic findOneAndUpdate($inc) keyed by _id, so id2 > id1 across sequential calls (never the SAME id -- the pre-fix relational fallback dropped the '+ 1', and PHP swallowed errors into `return 1`), and N concurrent callers return N DISTINCT ids. Identical in all four -- one dedicated atomic path reached uniformly (Python routes Database.get_next_id -> MongoDBAdapter.get_next_id; PHP Database::mongoNextId raises instead of returning 1; Ruby MongodbDriver#get_next_id + a Database#get_next_id branch; Node MongodbAdapter.getNextId + a Database.getNextId branch).",
+      "why": "A next-id that does not increment hands the SAME id to every caller -- guaranteed duplicate primary keys on Mongo. Proven with a REAL MongoDB, real sequential and real concurrent calls, no mocks: id2 > id1 can only hold if the counter actually advanced, and N concurrent distinct ids can only hold if the $inc is atomic. Mutation-proved: drop the $inc (or restore the swallow-to-1 / relational fallback) and 'mongo next id increments monotonically' goes RED (id2 == id1).",
+      "suites": {
+        "ruby": "spec/nextid_contract_spec.rb",
+        "python": "tests/test_nextid_contract.py",
+        "php": "tests/NextIdContractTest.php",
+        "nodejs": "test/nextIdContract.test.ts"
+      },
+      "cases": [
+        "mongo next id increments monotonically",
+        "concurrent mongo next id yields distinct ids"
+      ]
+    }
+  ]
+}
