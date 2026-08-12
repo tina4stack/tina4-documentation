@@ -1,0 +1,111 @@
+{
+  "_comment": [
+    "ORM result caching contract -- feature 25. One decision, OWNER-DECIDED",
+    "(OWNER-DECISIONS.md Batch 2, CACHE-DEC-01):",
+    "",
+    "CACHE-DEC-01 (owner OVERRODE the drop-it recommendation): KEEP the explicit",
+    "Model.cached(sql, ttl) in Python/PHP/Ruby and FIX its invalidation, and ADD",
+    "the same explicit cached() to Node for parity. The correctness-critical part",
+    "is INVALIDATION: a cached read must never return rows a later write changed.",
+    "Three fixes, identical in all four frameworks:",
+    "",
+    "  1. BUST ON ALL WRITES. A save AND a delete AND a force_delete AND a restore",
+    "     THROUGH THE ORM invalidate the cached read. Before this, only Python's",
+    "     save() busted; delete/force_delete/restore never did; PHP and Ruby never",
+    "     busted automatically at all; Node's cached() (which had drifted into",
+    "     existence since the audit) was a per-class, untagged, never-busted store.",
+    "     So a read-after-write through the ORM served stale/deleted rows until TTL.",
+    "",
+    "  2. TAG BY EVERY TABLE THE QUERY TOUCHES. A cached query is tagged with the",
+    "     model's own table PLUS every table named in its FROM/JOIN clauses, so a",
+    "     write to ANY of those tables busts it -- a multi-table JOIN cached on one",
+    "     model is invalidated when the OTHER model writes through the ORM. Before",
+    "     this the tag was the CLASS name, so a cross-model JOIN went stale. A write",
+    "     to an UNRELATED table leaves the entry intact (tag-scoped, never a",
+    "     wholesale flush).",
+    "",
+    "  3. ttl=0 (or negative) MEANS NO-CACHE, not infinite. cached(sql, ttl=0) runs",
+    "     the query and returns rows but stores NOTHING, so every read hits the DB.",
+    "     Before this ttl=0 stored a never-expiring entry (Python/Node) -- the worst",
+    "     possible reading of 'zero'.",
+    "",
+    "The explicit Model.cached() store is process-wide and SHARED across every model",
+    "(so a write on one model can bust a cross-table read cached on another). It is",
+    "the SAME tag-aware TTL query-cache subsystem each framework already had (Python",
+    "core/cache.py Cache, Ruby/Node/PHP QueryCache) -- ZERO new runtime dependency.",
+    "This is separate from, and unaffected by, the adapter-level auto-cache",
+    "(TINA4_DB_CACHE / TINA4_AUTO_CACHING), which stays OFF by default.",
+    "",
+    "NO MOCKS. Every case drives a REAL database (a real SQLite file, real rows) and",
+    "REAL ORM writes. 'It cached' is proven positively: a DIRECT db write (raw SQL,",
+    "bypassing the ORM's bust) BETWEEN two cached() reads is NOT seen by the second",
+    "read -- the only way the second read can be stale is if it came from cache.",
+    "",
+    "Mutation-proved (all four): disable the write-bust (drop the clear_cache/",
+    "clearCache call from save/delete/force_delete/restore) and every",
+    "'busts-on-orm-writes' case AND the cross-table case go RED -- a stale/deleted",
+    "row is served after the write. Make ttl=0 cache (store on the ttl<=0 path) and",
+    "'ttl zero does not cache' goes RED. Make the write-bust a wholesale flush (clear",
+    "everything instead of clear-by-table) and 'a write to an unrelated table leaves",
+    "the cached read intact' goes RED. Restoring each returns to green.",
+    "",
+    "Each invariant names a REAL suite file per framework carrying the SAME case",
+    "names in each language's own idiom, which scripts/audit-contract-fixtures.py",
+    "normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "25 - ORM result caching (fix cached() invalidation: bust on all writes, tag by table, ttl=0=no-cache; add cached() to Node)",
+  "invariants": [
+    {
+      "id": "ormcache-caches-and-ttl-zero",
+      "adr": "CACHE-DEC-01",
+      "rule": "Model.cached(sql, params, ttl) with ttl > 0 caches the query's ORM instances in a process-wide TTL store: a second read within the TTL returns the cached rows without touching the database, PROVEN by a DIRECT (non-ORM) db write made BETWEEN the two reads being INVISIBLE to the second read. ttl <= 0 means NO-CACHE: cached(sql, ttl=0) runs the query and returns rows but stores nothing, so a direct db write between two ttl=0 reads IS seen by the second read (every read hits the DB). Identical in all four (Python Model.cached, PHP ORM::cached, Ruby Model.cached, Node BaseModel.cached).",
+      "why": "The cache must actually cache (or the feature is pointless), and ttl=0 must not become an infinite-lived entry (the pre-fix Python/Node behaviour, the worst reading of zero). Proven with a REAL SQLite DB, real rows, and a REAL direct SQL mutation between reads -- no mocks: the ONLY way the second within-TTL read can return the pre-mutation value is that it came from the cache, and the ONLY way the second ttl=0 read can return the post-mutation value is that it hit the DB. Mutation-proved: make the ttl<=0 path store an entry and 'ttl zero does not cache' goes RED.",
+      "suites": {
+        "ruby": "spec/ormcache_contract_spec.rb",
+        "python": "tests/test_ormcache_contract.py",
+        "php": "tests/OrmCacheContractTest.php",
+        "nodejs": "test/ormCacheContract.test.ts"
+      },
+      "cases": [
+        "a cached query is served from cache within ttl",
+        "ttl zero does not cache"
+      ]
+    },
+    {
+      "id": "ormcache-busts-on-orm-writes",
+      "adr": "CACHE-DEC-01",
+      "rule": "A write THROUGH THE ORM to a table a cached query touches BUSTS that cached read: after model.save(), model.delete(), model.force_delete() and model.restore(), the next Model.cached() of a query over that model's table reflects the write, never a stale/deleted row. All four writes bust in all four frameworks (before the fix only Python's save() busted; delete/force_delete/restore never did; PHP and Ruby never busted at all; Node's drifted-in cached() never busted).",
+      "why": "This is the stale-read data footgun the feature exists to close: a cached read that returns rows a subsequent write changed or deleted. Proven with real ORM writes against a real SQLite DB (positive rows before, correct rows after) -- no mocks. Mutation-proved: drop the clear_cache/clearCache call from any of save/delete/force_delete/restore and that write's case goes RED (the pre-write cached rows are served after the write).",
+      "suites": {
+        "ruby": "spec/ormcache_contract_spec.rb",
+        "python": "tests/test_ormcache_contract.py",
+        "php": "tests/OrmCacheContractTest.php",
+        "nodejs": "test/ormCacheContract.test.ts"
+      },
+      "cases": [
+        "a save through the orm busts the cached read",
+        "a delete through the orm busts the cached read",
+        "a force delete through the orm busts the cached read",
+        "a restore through the orm busts the cached read"
+      ]
+    },
+    {
+      "id": "ormcache-tags-by-table",
+      "adr": "CACHE-DEC-01",
+      "rule": "A cached query is tagged by EVERY table it touches (the model's own table plus every table named in its FROM/JOIN clauses), so a write through the ORM to ANY of those tables busts it: a cached JOIN over table A and table B, cached on model A, is invalidated when model B writes to table B. A write to an UNRELATED table (one the query does not touch) leaves the entry intact -- the bust is tag-scoped, never a wholesale flush.",
+      "why": "The cross-model staleness (CACHE-CROSS-MODEL): before the fix the cache was tagged by the CALLING class, so a cached JOIN went stale when the OTHER table's model wrote. Tagging by table fixes it; the unrelated-table case proves the bust stays scoped (a wholesale flush would pass the cross-table case but is wrong). Proven with two REAL related tables (author/book), a real ORM write to the joined table, and a real ORM write to an unrelated table, all against real SQLite -- no mocks. Mutation-proved: tag only by the class (not the tables) and 'a write to a joined table busts the cross table cached read' goes RED; make the bust a wholesale clear() and 'a write to an unrelated table leaves the cached read intact' goes RED.",
+      "suites": {
+        "ruby": "spec/ormcache_contract_spec.rb",
+        "python": "tests/test_ormcache_contract.py",
+        "php": "tests/OrmCacheContractTest.php",
+        "nodejs": "test/ormCacheContract.test.ts"
+      },
+      "cases": [
+        "a write to a joined table busts the cross table cached read",
+        "a write to an unrelated table leaves the cached read intact"
+      ]
+    }
+  ]
+}
