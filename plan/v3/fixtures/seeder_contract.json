@@ -1,0 +1,170 @@
+{
+  "_comment": [
+    "Seeder and fake data -- feature 28 (OWNER-DECISIONS.md Batch 4, feature",
+    "doc 028-seeder-fake-data.md, SEED-DEC-01 required + SEED-DEC-02 low).",
+    "",
+    "SEED-DEC-01 (SEED-PHP-BACKTICK, the real bug): PHP's seed_table quoted",
+    "identifiers with BACKTICKS (MySQL/SQLite only), so every INSERT raised a",
+    "syntax error on PostgreSQL/Firebird (double-quote) and MSSQL (brackets) --",
+    "the dev-admin POST /__dev/api/seed endpoint delegates to seed_table, so",
+    "dashboard seeding was BROKEN on those three engines. Fixed by routing",
+    "PHP's seedTable through the PARAMETERIZED Database::insert() adapter path",
+    "(the same one seedOrm already used via ORM::save()), deleting the",
+    "raw-SQL backtick-building code entirely -- zero new dialect-specific SQL.",
+    "",
+    "SEED-DEC-01 (SEED-TABLE-SEED-INERT, universal): seed_table's seed",
+    "argument was a silent no-op in all four -- it has no generators of its",
+    "own to seed (field_map/columns callables are opaque). The ledger",
+    "(OWNER-DECISIONS.md Batch 4) explicitly RATIFIED REMOVAL over threading a",
+    "seeded FakeData through it, the same principle as the no-op",
+    "ForeignKeyField on_delete: 'remove the inert seed_table(seed=) param'.",
+    "seed_table's seed parameter now RAISES/THROWS if a non-default value is",
+    "passed (Python ValueError, PHP InvalidArgumentException, Node Error; Ruby",
+    "drops the keyword entirely so passing it raises Ruby's own ArgumentError),",
+    "and determinism is achieved by the caller building their own seeded",
+    "FakeData and closing over it in field_map/columns/fieldMap -- exactly the",
+    "pattern seed_orm/seed_models already use internally. Ruby's seed_table",
+    "was, uniquely, NOT fully inert for the plain type-symbol columns form (an",
+    "internal FakeData WAS threaded by the old seed: kwarg for that one path)",
+    "-- it is unified anyway for consistency with the ratified decision and",
+    "because the old behaviour was a footgun: determinism silently stopped",
+    "working the moment a caller supplied a generator callable that ignored",
+    "the internal FakeData.",
+    "",
+    "SEED-DEC-02 (low): Node's FakeData.forField() always returned a field's",
+    "declared default (the code's own comment promised 'sometimes' -- dead),",
+    "so every seeded row got an IDENTICAL value for a defaulted field; fixed",
+    "to use the default only PROBABILISTICALLY (a coin-flip on the same",
+    "instance PRNG, so it stays reproducible under a seed). Ruby's",
+    "FakeData#boolean returned 0/1 (Integer) instead of a native true/false --",
+    "fixed, with seed_table/seed_orm's internal _validate_types type-check",
+    "updated to match (a native boolean is now the expected type for a",
+    ":boolean field, not Integer). Ruby's seed_orm idempotency short-circuit",
+    "used to run UNCONDITIONALLY, silently skipping an explicit seed request",
+    "whenever the target table already held >= count rows -- even rows",
+    "unrelated to this seeder -- returning seeded=0 with only an INFO log;",
+    "it is now OPT-IN via idempotent: true (default false), matching",
+    "Python/PHP/Node, which never had this behaviour. SEED-DETERMINISM-PERLANG",
+    "(the RNG is per-language -- Python Mersenne Twister, PHP per-instance",
+    "Mt19937, Ruby Random, Node mulberry32 -- so the SAME seed does NOT",
+    "reproduce across languages, only within one) and SEED-SECRETS-DOC (the",
+    "PRNG is NON-CRYPTOGRAPHIC, never for secrets/tokens) are documented on",
+    "the FakeData class docblock in all four. SEED-VOCAB-PARITY pins the",
+    "generator vocabulary below (name/first_name/last_name/email/phone/",
+    "address/city/country/zip_code/company/job_title/sentence/paragraph/text/",
+    "word/integer/numeric/boolean/date/datetime/uuid/url/color_hex/currency/",
+    "ip_address/credit_card/choice/for_field, idiomatic spelling per",
+    "language) present and gated in all four.",
+    "",
+    "NO MOCKS. seed_table_inserts_on_every_engine drives the lab's real",
+    "PostgreSQL :55432 (tina4/tina4), real MSSQL :1433 (sa), and real Firebird",
+    "5 :3050 (SYSDBA/masterkey) -- the direct regression guard for",
+    "SEED-PHP-BACKTICK, catching a raw-SQL identifier-quoting bug no",
+    "SQLite-only suite could ever see. The other four invariants are",
+    "seeder-LOGIC properties (RNG determinism, FK topo-order, failure",
+    "counting, generator presence) that are engine-agnostic once routed",
+    "through the already adapter-contract-proven insert()/ORM save() paths",
+    "(features 9/10/11/12), so they run on real SQLite + real PostgreSQL for",
+    "a genuine multi-engine sanity check without re-proving the adapter",
+    "contracts a second time.",
+    "",
+    "Mutation-proved (all four, restored after): reinstate the backtick-quoted",
+    "raw SQL in PHP's seedTable -> seed_table_inserts_on_every_engine goes RED",
+    "on PostgreSQL/MSSQL/Firebird (a syntax error at or near the backtick/",
+    "bracket character); make a field_map/fieldMap/columns closure rebuild an",
+    "UNSEEDED FakeData per call instead of reading the caller-seeded one ->",
+    "seeded_run_reproduces_identical_rows goes RED (two runs diverge).",
+    "",
+    "Each invariant names a REAL suite file per framework carrying the SAME",
+    "case names in each language's own idiom, which",
+    "scripts/audit-contract-fixtures.py normalises and matches.",
+    "",
+    "Env contract (identical to the write-path/pgprovider/mssqlprovider/",
+    "firebirdprovider runners): TINA4_TEST_PG_HOST/_PORT/_USERNAME/_PASSWORD/",
+    "_DB (default 127.0.0.1:55432, tina4/tina4); TINA4_TEST_MSSQL_HOST/_PORT/",
+    "_USERNAME/_PASSWORD/_DB (default 127.0.0.1:1433, sa/TinaSQL123!Secure);",
+    "TINA4_TEST_FIREBIRD_URL (a live Firebird 5 URL; unset means the Firebird",
+    "case is skipped locally, but the lab gate's own preflight FATALs if it is",
+    "unreachable there -- a skipped required engine is a ghost)."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "28 - Seeder and fake data (SEED-DEC-01 required: PHP backtick portability fix + universal seed_table(seed=) removal; SEED-DEC-02 low: Node default-variety, Ruby native boolean + opt-in idempotency, per-language-determinism + not-for-secrets docs, pinned generator vocabulary)",
+  "invariants": [
+    {
+      "id": "seed-table-inserts-on-every-engine",
+      "adr": "SEED-DEC-01",
+      "rule": "seed_table() builds an INSERT that is valid on every supported real engine -- SQLite, PostgreSQL, MSSQL, and Firebird -- by routing through the language's PARAMETERIZED adapter insert path (never hand-built, dialect-specific SQL with a fixed quote character). On a real PostgreSQL/MSSQL/Firebird table, 5 rows seeded through seed_table are all inserted (0 failures) and every value reads back correctly on the SAME engine. Identical in all four (Python db.insert(table, row); PHP Database::insert(); Ruby db.insert(table_name, row); Node adapterExecute() with engine-neutral double-quoted identifiers).",
+      "why": "SEED-PHP-BACKTICK: PHP's old seed_table quoted every identifier with backticks (MySQL/SQLite syntax only), so on PostgreSQL/Firebird (which require double-quotes) and MSSQL (which requires brackets) every single INSERT raised a syntax error before a row landed -- and the dev-admin POST /__dev/api/seed endpoint delegates straight to seed_table, so the dashboard's seed button was completely broken on three of the framework's five supported engines, silently, because the seeder suite was SQLite-only. Proven no-mocks against real PostgreSQL, real MSSQL, and real Firebird 5 -- not a SQLite-only regression lock.",
+      "suites": {
+        "python": "tests/test_seeder_contract.py",
+        "php": "tests/SeederContractTest.php",
+        "ruby": "spec/seeder_contract_spec.rb",
+        "nodejs": "test/seederContract.test.ts"
+      },
+      "cases": [
+        "seed_table_inserts_on_every_engine"
+      ]
+    },
+    {
+      "id": "seeded-run-reproduces-identical-rows",
+      "adr": "SEED-DEC-01",
+      "rule": "seed_orm/seed_models, given a fixed seed, produce IDENTICAL generated rows across two independent runs (per-language determinism -- unchanged, they build and seed their own FakeData internally). seed_table has NO seed parameter of its own any more (SEED-TABLE-SEED-INERT removal, ratified 2026-08-11): passing one now raises/throws instead of silently doing nothing. The DOCUMENTED replacement -- the caller builds their own seeded FakeData and closes over it in field_map/columns/fieldMap -- reproduces identical rows across two independent runs, proving the removal did not regress the only pattern that ever actually worked.",
+      "why": "A caller who reads seed_table's signature and passes seed=42 expecting reproducibility got silent, wrong behaviour in three of four languages (Ruby's internal auto-generation path was the one partial exception, and even it broke silently the moment a caller supplied their own generator). A dead parameter that LOOKS load-bearing is worse than no parameter: it invites a wrong assumption with no error to catch it. Removing it and making any real use raise/throw converts a silent correctness bug into a loud, actionable one, matching the on_delete precedent (feature 21). Proven no-mocks: two independent SQLite databases seeded with the same caller-seeded FakeData produce byte-identical rows; a real PostgreSQL run confirms it is not an SQLite-only fluke.",
+      "suites": {
+        "python": "tests/test_seeder_contract.py",
+        "php": "tests/SeederContractTest.php",
+        "ruby": "spec/seeder_contract_spec.rb",
+        "nodejs": "test/seederContract.test.ts"
+      },
+      "cases": [
+        "seeded_run_reproduces_identical_rows"
+      ]
+    },
+    {
+      "id": "seed-models-orders-parents-before-children",
+      "adr": "SEED-DEC-01",
+      "rule": "seed_models(), given a list of related ORM models in ANY declared order (even children before parents), topologically sorts by the foreign-key dependency graph so parent tables are always seeded first, and fills every child foreign-key column from a pool of REAL parent primary keys -- never a guessed or sequential value. Proven on a real table with an enforced FK constraint: 0 failures, 0 orphan child rows.",
+      "why": "A seeder that seeds children before parents either violates the database's own FK constraint (a real failure) or, worse, fills the FK column with a value that happens to not violate anything but does not reference a real row (a silent data-integrity gap invisible until a join is run in production). Proven no-mocks on real SQLite (FK enforcement on) and real PostgreSQL (a real REFERENCES constraint): children declared BEFORE parents in the input list still seed correctly, and a LEFT JOIN from child to parent finds zero orphans.",
+      "suites": {
+        "python": "tests/test_seeder_contract.py",
+        "php": "tests/SeederContractTest.php",
+        "ruby": "spec/seeder_contract_spec.rb",
+        "nodejs": "test/seederContract.test.ts"
+      },
+      "cases": [
+        "seed_models_orders_parents_before_children"
+      ]
+    },
+    {
+      "id": "failures-are-counted-not-silent",
+      "adr": "SEED-DEC-01",
+      "rule": "A row that fails to insert (a real constraint violation) is COUNTED in the returned SeedSummary's failed field and recorded in errors -- never silently dropped, and never a crash that aborts the whole run. With strict=true/strict: true, the FIRST failure RE-RAISES instead of being counted and skipped. Identical in all four.",
+      "why": "A seeder that silently swallows a failed row (or one that crashes the whole batch on the first bad row) both lie about what actually happened to the caller -- 'seeded 10' when only 6 landed is a correctness bug a caller has no way to detect without counting rows themselves. Proven no-mocks: a NOT NULL violation on every generated row (real SQLite and real PostgreSQL) returns seeded=0, failed=N, N error entries, and a raw COUNT(*) confirms zero rows actually landed; strict=true re-raises on the first failure.",
+      "suites": {
+        "python": "tests/test_seeder_contract.py",
+        "php": "tests/SeederContractTest.php",
+        "ruby": "spec/seeder_contract_spec.rb",
+        "nodejs": "test/seederContract.test.ts"
+      },
+      "cases": [
+        "failures_are_counted_not_silent"
+      ]
+    },
+    {
+      "id": "generator-vocabulary-present",
+      "adr": "SEED-DEC-02",
+      "rule": "SEED-VOCAB-PARITY: FakeData exposes this exact generator vocabulary in all four, idiomatic spelling per language (snake_case Python/Ruby, camelCase PHP/Node) -- name, first_name/firstName, last_name/lastName, email, phone, address, city, country, zip_code/zipCode, company, job_title/jobTitle, sentence, paragraph, text, word, integer, numeric, boolean, date, datetime, uuid, url, color_hex/colorHex, currency, ip_address/ipAddress, credit_card/creditCard, choice, for_field/forField -- each callable and returning a value of the expected shape (a string, an in-range number, a native boolean, etc.).",
+      "why": "Before this pass only Python's generator set was fully measured; the other three could silently drift (a generator present in one language and missing in another breaks a ported field_map/seed script with no warning until it runs). Pinning and gating the vocabulary means a future removal or rename in any one language is caught by this fixture, not discovered by an app developer's broken seed script.",
+      "suites": {
+        "python": "tests/test_seeder_contract.py",
+        "php": "tests/SeederContractTest.php",
+        "ruby": "spec/seeder_contract_spec.rb",
+        "nodejs": "test/seederContract.test.ts"
+      },
+      "cases": [
+        "generator_vocabulary_present"
+      ]
+    }
+  ]
+}
