@@ -5,7 +5,7 @@ fixture, lab-green on the .99 lab) before the next. This table is updated, commi
 feature lands. Detail: [IMPLEMENTATION-3.13.99.md](IMPLEMENTATION-3.13.99.md). Decisions:
 [OWNER-DECISIONS.md](OWNER-DECISIONS.md).
 
-**Progress: 20 / 52 features lab-green** (feature 50 Frond compiler DEFERRED to 3.13.100 fast-follow, owner call 2026-08-12). Done: Phase 1 + Phase 2 + 9, 10, 11, 12. In progress: 13 (Phase 3, next).
+**Progress: 21 / 52 features lab-green** (feature 50 Frond compiler DEFERRED to 3.13.100 fast-follow, owner call 2026-08-12). Done: Phase 1 + Phase 2 + Phase 3 (9-13). In progress: 17 (Phase 4 ORM, next).
 
 Status: DONE = lab-green all four (independently re-verified) . WIP = in progress . TODO = not started.
 Lab column = per-framework test counts py/php/ruby/node in the consolidated green run.
@@ -44,7 +44,7 @@ Lab column = per-framework test counts py/php/ruby/node in the consolidated gree
 | 10 | MySQL provider | DONE | 12/10/10/10 | 99487c9 / 1551c9d / af1ee43 / 979b1c0 |
 | 11 | MSSQL provider | DONE | 9/7/8/7 | 4491cf8 / 1deb9d6 / 937a35c / 2de3fa4 |
 | 12 | Firebird provider | DONE | 11/10/28/10 | de441c5 / 27dd66e / 286cd03 / 47d3d4e |
-| 13 | ODBC provider | TODO | - | - |
+| 13 | ODBC provider | DONE | 11/10/10/11 | a3c89bd / ae6e83b / 6c3c8ab / ceef906 |
 
 ## Phase 4 - ORM / validation / correctness
 
