@@ -1,0 +1,192 @@
+{
+  "_comment": [
+    "Firebird provider -- feature 12 (OWNER-DECISIONS.md Batch 5; feature doc",
+    "012-firebird-provider.md FB-DEC-01 + FB-DEC-02 + FB-DEC-03).",
+    "",
+    "Firebird is the hardest adapter Tina4 ships: no generic last_insert_id (a",
+    "GENERATOR/sequence assigns the key), an asymmetric identifier case-fold, a",
+    "native C client no socket timeout reaches, and blob columns that must be read",
+    "OUT of a handle. This fixture pins the write-path + resilience behaviours a",
+    "caller depends on against a REAL Firebird 5 :3050 (SYSDBA -> the per-framework",
+    "tina4_<fw>.fdb), no mocks. Under TINA4_REQUIRE_SERVICES a skip here is a hard",
+    "FAILURE.",
+    "",
+    "MEASURED on the lab (Firebird 5.0.4) 2026-08-12, because the drivers diverge",
+    "and none of this may be assumed:",
+    "  * Python firebird-driver: cursor.rowcount is the REAL affected count for",
+    "    UPDATE/DELETE (3/0), -1 for INSERT; blobs arrive as memoryview -> bytes.",
+    "  * Ruby fb gem: Fb::Connection#execute RETURNS the affected row count as an",
+    "    Integer (1/2/0); blobs SUB_TYPE 0 arrive as a raw String.",
+    "  * Node node-firebird: query()/execute() give NO affected count for DML",
+    "    (callback result is undefined), BUT Firebird 5 multi-row RETURNING does",
+    "    surface every affected row, so `... RETURNING *` + rows.length IS the real",
+    "    count; a blob arrives as a STREAMING FUNCTION, never a Buffer, so it must",
+    "    be read out; SRP login over WireCrypt is intermittently flaky (~12%",
+    "    historically), so connect() carries a bounded retry.",
+    "  * PHP: on PHP 8 ext-interbase's native path is present but the shipped",
+    "    libfbclient cannot always negotiate SRP/WireCrypt; Database::create picks",
+    "    the native FirebirdAdapter, which reads ibase_affected_rows() and a",
+    "    RETURNING row for the last-id. pdo_firebird is the documented fallback.",
+    "",
+    "FB-DEC-02 (generator last-id + real affected count). The audit framed the",
+    "write-contract gap as Ruby/Node-only, but MEASURING db.insert()/update()/",
+    "delete() through the public facade on real Firebird showed it broken in ALL",
+    "FOUR (drift reported): db.insert().last_id was None/0/nil/null everywhere, and",
+    "the affected count was fabricated (Node hardcoded 1) or wrong (PHP native read",
+    "ibase_affected_rows() from the LINK's implicit transaction instead of the",
+    "long-lived READ COMMITTED transaction the statement actually ran on -> 0). The",
+    "uniform contract, pinned four-way: db.insert(table, data) returns a",
+    "DatabaseResult whose last_id is the GENERATOR-assigned primary key (each",
+    "adapter reads GEN_ID(GEN_<TABLE>_ID, 0) after the INSERT, or -- Python -- via",
+    "the INSERT ... RETURNING * emulation) and whose affected_rows is 1; a second",
+    "insert returns the NEXT id; update/delete report the EXACT rows changed (a",
+    "multi-row change reports N, a no-match reports 0). Firebird-adapter-local in",
+    "every language; ZERO new runtime deps. Mutation-proved: fabricate the count /",
+    "drop the generator read -> the matching case goes RED.",
+    "",
+    "FB-DEC-02 (non-`id` PK). Only Python EMULATES RETURNING (it strips the clause",
+    "and re-selects the inserted row); it re-selected by a HARDCODED `id` column",
+    "(`... WHERE id = ?`), so a table whose PK is NOT named `id` raised a Firebird",
+    "'Dynamic SQL Error' -- MEASURED. Python now re-selects by the table's REAL",
+    "primary key (introspected + cached + quoted), the same defect+fix features 10",
+    "and 11 applied to mysql.py and mssql.py. The generator last-id itself is",
+    "COLUMN-NAME-INDEPENDENT (GEN_ID reads the sequence, not a column), so a",
+    "non-`id`-PK insert already returns the right last-id in all four -- pinned",
+    "four-way as `firebird-nonid-pk-generated-id`. The Python-only re-select fix is",
+    "additionally witnessed by the Python suite's returning_* test (revert -> the",
+    "'WHERE id' Dynamic SQL Error RED).",
+    "",
+    "FB-DEC-03 (blob + SRP). A binary blob carrying a NUL byte and high bytes",
+    "round-trips byte-for-byte through db.insert + a read back on a SECOND fresh",
+    "connection -- exactly what a naive text decode or an unread blob handle",
+    "corrupts. This is where Node's decodeBlobs no-op (it returned the driver's",
+    "streaming blob FUNCTION unchanged, asserting-not-verifying a Buffer) is fixed:",
+    "the adapter now reads the blob stream into a Buffer. node-firebird's flaky SRP",
+    "handshake is handled by a BOUNDED retry inside connect() (a transient",
+    "handshake failure recovers; a genuine bad credential still fails after the",
+    "bound -- never skipped, never papered over).",
+    "",
+    "FB-DEC-01 (real reconnect, the no-mock rule -- non-negotiable). The Ruby",
+    "reconnect spec used RSpec doubles (`allow(driver).to receive(:open_connection)`)",
+    "to fake a Firebird server, so the reconnect path was proven only against a",
+    "mock -- a direct violation of the project's absolute no-mock rule, and in fact",
+    "NONE of the four frameworks had a real end-to-end reconnect test (Python",
+    "monkeypatched, PHP was matcher-only + a manual-QA note, Node had no reconnect",
+    "at all). This invariant is that test, REAL in every language: open a real",
+    "connection, force a server-side disconnect (DELETE FROM MON$ATTACHMENTS on the",
+    "adapter's own attachment id, from a second connection -> Firebird raises",
+    "'Connection shutdown' -- MEASURED), and prove the adapter transparently",
+    "reconnects so the NEXT query succeeds. A logical SQL error (a syntax error) is",
+    "the negative control: it must NOT trigger a reconnect (retrying would mask the",
+    "bug). Node gains a reconnect path (dead-connection markers + one-shot",
+    "re-attach + retry, skipped inside an explicit transaction) to match",
+    "Python/PHP/Ruby -- the parity gap the feature doc named is closed.",
+    "",
+    "FB-COLUMN-CASE-TRAP (documented, inherent -- no code fix). Firebird folds an",
+    "UNQUOTED identifier to UPPERCASE (`CREATE TABLE foo` stores FOO; `SELECT 1 AS",
+    "x` returns column X), while a QUOTED identifier keeps its case (`AS \"MyCol\"`",
+    "stays MyCol). Every adapter folds an ALL-CAPS column name back to lowercase",
+    "for portability so row[\"x\"] works across engines, and preserves a quoted",
+    "mixed-case name -- but a genuinely-quoted ALL-CAPS name (`AS \"MYCOL\"`) is",
+    "INDISTINGUISHABLE from a folded one and is lowercased too. That single spelling",
+    "cannot round-trip; it is inherent to Firebird's asymmetric folding, not a Tina4",
+    "bug, and is documented rather than 'fixed' (a fix would need to track quoting",
+    "through the whole query). Unquoted-folds-to-UPPERCASE is the rule to remember.",
+    "",
+    "Env contract (canonical TINA4_TEST_FIREBIRD_* convention, identical to the",
+    "other live Firebird tests): TINA4_TEST_FIREBIRD_URL (an embedded-credential",
+    "URL, e.g. firebird://SYSDBA:masterkey@127.0.0.1:3050//var/lib/firebird/data/",
+    "tina4_<fw>.fdb). Unset -> the suite SKIPS cleanly (green) -- a machine with no",
+    "Firebird is the skip case, not the design. Firebird is EXCLUDED from the",
+    "require-services CI gate (GitHub CI provisions no Firebird); coverage is",
+    "LAB-ONLY and enforced there, which is what the CLAUDE.md claims now say",
+    "accurately (FB-GATE-EXCLUDED). Node's node-firebird driver is declared an",
+    "optionalDependency of @tina4/orm, not a devDependency."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "12 - Firebird provider (FB-DEC-01 real reconnect replacing the Ruby no-mock violation; FB-DEC-02 generator-derived last-id + real affected-count through db.insert/update/delete four-way, and Python's real-PK RETURNING re-select for a non-`id` PK; FB-DEC-03 byte-for-byte blob round-trip, bounded SRP-login retry, and the case-fold trap documented), against a real Firebird 5",
+  "oracle": "firebird",
+  "invariants": [
+    {
+      "id": "firebird-generator-last-id",
+      "adr": "FB-DEC-02",
+      "rule": "On a real Firebird, db.insert(table, data) into a table whose id is assigned by a BEFORE INSERT trigger from a GEN_<TABLE>_ID generator returns a DatabaseResult whose last_id is the generator-assigned key (each adapter derives it -- Python via the INSERT ... RETURNING * emulation, PHP via native RETURNING *, Ruby/Node via a GEN_ID(GEN_<TABLE>_ID, 0) read after the INSERT) and whose affected_rows is 1; a SECOND insert returns the NEXT generated id, never a stale earlier one; the row is durably keyed and read back on a SECOND fresh connection. Identical in all four (Python Database.insert -> FirebirdAdapter; PHP Database::insert -> FirebirdAdapter; Ruby Database#insert -> FirebirdDriver; Node Database.insert -> FirebirdAdapter).",
+      "why": "FB-LASTID-GAP: Firebird has no generic last_insert_id, so before this Ruby returned nil and Node returned null, while Python's db.insert() returned None (INSERT_RETURNING was empty so the generator emulation never fired) and PHP's native insert returned 0 (no RETURNING clause on the native path) -- MEASURED, so the gap was four-way, not the Ruby/Node the audit named. Each adapter now derives the generator key so db.insert().last_id is the real new id in all four. Mutation-proved: drop the generator read (Ruby/Node) / the RETURNING clause (Python/PHP) -> the last-id cases go RED. No mocks.",
+      "suites": {
+        "ruby": "spec/firebirdprovider_contract_spec.rb",
+        "python": "tests/test_firebirdprovider_contract.py",
+        "php": "tests/FirebirdProviderContractTest.php",
+        "nodejs": "test/firebirdProviderContract.test.ts"
+      },
+      "cases": [
+        "an insert returns the generator last id",
+        "a second insert returns the next generated id",
+        "an insert reports affected rows of one"
+      ]
+    },
+    {
+      "id": "firebird-affected-count",
+      "adr": "FB-DEC-02",
+      "rule": "On a real Firebird, db.update(...) and db.delete(...) return a DatabaseResult whose affected_rows is the EXACT number of rows changed: a multi-row update over a matching predicate reports N, an update whose predicate matches nothing reports 0, and a multi-row delete reports the number removed. Read the real count from the driver (Python cursor.rowcount, Ruby the Fb::Connection#execute return, PHP ibase_affected_rows() on the transaction that ran the statement, Node the row count of a `... RETURNING *`). Identical observable in all four.",
+      "why": "FB-AFFECTED-FAB: Node FABRICATED affectedRows:1 on every insert/update/delete regardless of rows touched, Ruby had no affected_rows so the facade defaulted it, and PHP's native adapter read ibase_affected_rows() off the LINK's implicit transaction rather than the long-lived READ COMMITTED transaction the write actually ran on -> 0 (MEASURED; the 'best-effort, not verified against live Firebird' comment was the tell). All four now report the driver's real count. Proven with a multi-row change and a zero-match negative. Mutation-proved: restore the hardcoded 1 (Node) / read the wrong tx handle (PHP) -> the count and zero-match cases go RED. No mocks.",
+      "suites": {
+        "ruby": "spec/firebirdprovider_contract_spec.rb",
+        "python": "tests/test_firebirdprovider_contract.py",
+        "php": "tests/FirebirdProviderContractTest.php",
+        "nodejs": "test/firebirdProviderContract.test.ts"
+      },
+      "cases": [
+        "a multi row update reports the real affected count",
+        "an update matching no rows reports zero affected",
+        "a delete reports the real affected count"
+      ]
+    },
+    {
+      "id": "firebird-blob-roundtrip",
+      "adr": "FB-DEC-03",
+      "rule": "On a real Firebird, a binary blob (bytes carrying a NUL byte and high bytes 0xFD..0xFF) written into a BLOB SUB_TYPE 0 column via db.insert round-trips BYTE-FOR-BYTE when read back on a SECOND fresh connection. The adapter reads the blob out to the language's raw-bytes type (Python bytes, PHP string, Ruby String, Node Buffer). Identical observable in all four.",
+      "why": "FB-BLOB-SRP-UNVERIFIED: Node's decodeBlobs was a no-op that ASSERTED node-firebird returns Buffers; MEASURED, a BLOB column arrives as a STREAMING FUNCTION, so the raw function leaked to the caller and no bytes round-tripped -- it now reads the stream into a Buffer. Python/PHP/Ruby already materialise the blob (memoryview->bytes / resource->string / String), pinned here so it can never regress. A NUL + high-byte payload is exactly what a text decode corrupts. Mutation-proved: revert Node's decode -> the blob case goes RED (the payload is a function, not bytes). No mocks.",
+      "suites": {
+        "ruby": "spec/firebirdprovider_contract_spec.rb",
+        "python": "tests/test_firebirdprovider_contract.py",
+        "php": "tests/FirebirdProviderContractTest.php",
+        "nodejs": "test/firebirdProviderContract.test.ts"
+      },
+      "cases": [
+        "a binary blob round trips byte for byte"
+      ]
+    },
+    {
+      "id": "firebird-reconnect",
+      "adr": "FB-DEC-01",
+      "rule": "On a real Firebird, after the adapter's own attachment is force-disconnected server-side (DELETE FROM MON$ATTACHMENTS on its MON$ATTACHMENT_ID, issued from a SECOND connection -> Firebird's next statement on the dead attachment raises 'Connection shutdown'), the adapter transparently reconnects on the next query and that query SUCCEEDS -- outside an explicit transaction. A logical SQL error (a syntax error) is the negative control: it is NOT a dead-connection marker, so it must surface to the caller WITHOUT a reconnect. Real Firebird, no test double.",
+      "why": "FB-RUBY-MOCK (the no-mock violation, non-negotiable): Ruby's firebird_reconnect_spec faked the server with RSpec doubles, so the reconnect/retry path was proven only against a mock; and in fact no framework had a real end-to-end reconnect test. This is that test, real in every language against a genuinely killed connection. Node gains the reconnect path itself (dead-connection markers + one-shot re-attach + retry, skipped inside a transaction) so the invariant is four-way. Mutation-proved: neutralise the reconnect (return the dead handle) -> the reconnect case goes RED; make the matcher treat a syntax error as dead -> the negative case goes RED. No mocks.",
+      "suites": {
+        "ruby": "spec/firebirdprovider_contract_spec.rb",
+        "python": "tests/test_firebirdprovider_contract.py",
+        "php": "tests/FirebirdProviderContractTest.php",
+        "nodejs": "test/firebirdProviderContract.test.ts"
+      },
+      "cases": [
+        "a forced disconnect reconnects and the next query succeeds",
+        "a logical sql error does not trigger a reconnect"
+      ]
+    },
+    {
+      "id": "firebird-nonid-pk-generated-id",
+      "adr": "FB-DEC-02",
+      "rule": "On a real Firebird, db.insert() into a table whose PRIMARY KEY is NOT named `id` (its key assigned by a GEN_<TABLE>_ID generator via a BEFORE INSERT trigger) returns a DatabaseResult whose last_id is the generator-assigned key -- the generator read is COLUMN-NAME-INDEPENDENT, so this is green four-way. Identical in all four.",
+      "why": "FB-RETURNING-ID: the user-observable symptom of Python's hardcoded-`id` RETURNING emulation was 'an insert into a table whose PK is not id returns a wrong/no last-id'. Only Python emulates RETURNING (re-selecting the inserted row), and it fetched `... WHERE id = ?`, raising a Firebird 'Dynamic SQL Error' on a non-`id` PK (MEASURED). Python now re-selects by the table's REAL introspected+quoted primary key (the feature-10/11 fix shared with mysql.py/mssql.py). This case pins the correct observable four-way; the Python-only re-select fix is additionally witnessed by the Python suite's returning_* test (revert -> the 'WHERE id' Dynamic SQL Error RED). No mocks.",
+      "suites": {
+        "ruby": "spec/firebirdprovider_contract_spec.rb",
+        "python": "tests/test_firebirdprovider_contract.py",
+        "php": "tests/FirebirdProviderContractTest.php",
+        "nodejs": "test/firebirdProviderContract.test.ts"
+      },
+      "cases": [
+        "a non id primary key insert returns the generated last id"
+      ]
+    }
+  ]
+}
