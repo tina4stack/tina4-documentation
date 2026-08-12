@@ -1,0 +1,102 @@
+{
+  "_comment": [
+    "Feature 23 - ORM scopes. Two owner decisions (OWNER-DECISIONS.md Batch 4 +",
+    "the feature doc):",
+    "",
+    "SCOPE-DEC-01 (ratified FIX): PHP-SPECIFIC BUG -- scopes shared ONE GLOBAL",
+    "registry across ALL models. `$_scopes` was declared only on the abstract ORM",
+    "base and `scope()`/`__callStatic` read/wrote `static::$_scopes[$name]`; because",
+    "no subclass redeclared the property, PHP's static-property inheritance",
+    "resolved every subclass's `static::$_scopes` to the SAME shared array, keyed",
+    "only by scope NAME. `User::scope('active','active=1')` followed by",
+    "`Product::scope('active','discontinued=0')` COLLIDED: the last registration",
+    "won the filter for BOTH models (each still queried its own table, but with the",
+    "WRONG WHERE). Fixed by keying the shared array by the calling class:",
+    "`static::$_scopes[static::class][$name]` -- isolates each model's scopes",
+    "inside the one shared array, with NO change to how models are declared and NO",
+    "new property redeclaration burden on every subclass. MEASURED: Python (a",
+    "`@classmethod` closes over the exact `cls` it was called on and `setattr`s",
+    "the generated method onto THAT class), Ruby (`scope` runs inside `class << self`",
+    "on the ORM base, but a class method's implicit receiver is the CALLING class,",
+    "so `define_singleton_method` lands on the caller's own singleton class), and",
+    "Node (a static method's `this` is the calling class, so the generated method is",
+    "assigned directly onto it) were ALREADY per-class -- verified by code reading",
+    "AND by this fixture's collision case passing unmodified. CODE WINS: reported,",
+    "not \"fixed\", for those three.",
+    "",
+    "SCOPE-DEC-02 (feature doc, optional -- NOT separately ratified in",
+    "OWNER-DECISIONS.md, so the ledger's silence is the decision): scopes stay",
+    "TERMINAL LISTS. No compose/rebind/global-scope mechanism was added --",
+    "`Model.scope(name, sql, params)` still registers a method that runs ONE fixed",
+    "query and returns a materialized list, matching the documented",
+    "'porting capsule' default. QueryBuilder remains the composition path for",
+    "multi-condition queries; soft-delete stays the only always-on filter.",
+    "",
+    "NO MOCKS. Every case drives a REAL database -- real SQLite AND the lab's real",
+    "PostgreSQL (:55432, tina4/tina4). Row identity is asserted by reading real",
+    "columns back; positive AND negative in every case (the collision case checks",
+    "BOTH models are individually correct; the soft-delete case checks the raw row",
+    "still physically exists; the limit/offset case checks a smaller explicit limit",
+    "is honoured and two pages are disjoint, not just that SOME rows come back).",
+    "",
+    "Mutation-proven (PHP): reverting the `[static::class]` key back to a bare",
+    "`[$name]` key reproduces the SCOPE-PHP-COLLISION bug and turns",
+    "`two_models_same_scope_name_return_different_rows` RED; restoring the fix",
+    "turns it GREEN again. Python/Ruby/Node needed no mutation (already correct) --",
+    "the case passing at HEAD on unmodified framework code is itself the proof.",
+    "",
+    "Each invariant names a REAL suite file per framework carrying the SAME case",
+    "names in each language's own idiom, which scripts/audit-contract-fixtures.py",
+    "normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "23 - ORM scopes (SCOPE-DEC-01: fix PHP's global-registry collision by keying the one shared static array per calling class -- Python/Ruby/Node verified already per-class, reported not fixed; SCOPE-DEC-02: scopes stay terminal lists, no compose/rebind/global-scope added -- the ledger did not ratify it)",
+  "invariants": [
+    {
+      "id": "scope-per-class-isolation",
+      "adr": "SCOPE-DEC-01",
+      "rule": "TWO DIFFERENT models each register a scope with the SAME name ('active') but a DIFFERENT filter, and BOTH return exactly the rows their OWN filter matches -- one model's scope registration must never overwrite or leak into another model's. This is the SCOPE-PHP-COLLISION regression: before the fix, PHP's shared `$_scopes` array (declared once on the abstract base, never redeclared per subclass) meant the SECOND model's registration silently overwrote the FIRST model's filter for the SAME scope name, so both models' generated method ran the wrong WHERE against their own table.",
+      "why": "SCOPE-PHP-COLLISION was UNTESTED and real: `User::scope('active','active=1')` then `Product::scope('active','discontinued=0')` left BOTH `User::active()` and `Product::active()` running `discontinued=0` (the last registration), which either mismatches or errors depending on column overlap. Fixed by keying the one shared array `[static::class][name]`. Python's `@classmethod` binds `cls` to the actual caller and `setattr(cls, name, ...)` writes onto that specific class; Ruby's `class << self` method has the calling class as its implicit receiver so `define_singleton_method` lands on the caller's OWN singleton class; Node's static method reads `this` as the calling class and assigns directly onto it -- all three verified ALREADY isolated by this same case passing unmodified. Proven against REAL SQLite and REAL PostgreSQL rows -- no mocks. Mutation-proved in PHP: revert `[static::class]` -> RED (wrong filter / SQL error on the mismatched column); restore -> GREEN.",
+      "suites": {
+        "python": "tests/test_scopes_contract.py",
+        "php": "tests/ScopesContractTest.php",
+        "ruby": "spec/scopes_contract_spec.rb",
+        "nodejs": "test/scopesContract.test.ts"
+      },
+      "cases": [
+        "two_models_same_scope_name_return_different_rows"
+      ]
+    },
+    {
+      "id": "scope-soft-delete-respected",
+      "adr": "SCOPE-DEC-02",
+      "rule": "A scope's generated method runs through the SAME finder path as every other query (`where()`), so it automatically respects the soft-delete filter: a soft-deleted row is EXCLUDED from a scope's result even though it still matches the scope's own filter SQL. NEGATIVE: the row is still PHYSICALLY present -- a raw COUNT(*) on the table (no soft-delete filter) sees it.",
+      "why": "The porting capsule documents soft-delete as 'the only always-on filter' a scope inherits, since a scope is implemented as a thin wrapper over the shared finder rather than a separate query path. This proves it against a REAL soft-delete model: create 3 rows all matching the scope's filter, soft-delete one, and confirm the scope returns only 2 while the raw table still holds 3. No framework code changed for this case (already correct in all four) -- it is a lock-in, not a fix.",
+      "suites": {
+        "python": "tests/test_scopes_contract.py",
+        "php": "tests/ScopesContractTest.php",
+        "ruby": "spec/scopes_contract_spec.rb",
+        "nodejs": "test/scopesContract.test.ts"
+      },
+      "cases": [
+        "scope_excludes_a_soft_deleted_row"
+      ]
+    },
+    {
+      "id": "scope-limit-offset-pushdown",
+      "adr": "SCOPE-DEC-02",
+      "rule": "A scope's generated method accepts call-time `limit`/`offset` and pushes them to the DATABASE (not a client-side slice): an explicit smaller limit returns exactly that many rows, and two pages (limit N offset 0, limit N offset N) are DISJOINT sets read from a REAL row set larger than either page.",
+      "why": "This is the reconciled Ruby finding from the 2026-07-28 audit (a scope's generated method advertised `limit:`/`offset:` keyword arguments but silently DISCARDED them, calling `where(filter_sql, params)` with neither) -- FIXED in Ruby at 3.13.95 and now locked in four-way so it can never silently regress in any language. Proven against a REAL row set (15 rows, more than any single page) with the offset page's primary keys asserted DISJOINT from the first page's -- a no-op offset would return the SAME rows twice, not a genuinely later slice.",
+      "suites": {
+        "python": "tests/test_scopes_contract.py",
+        "php": "tests/ScopesContractTest.php",
+        "ruby": "spec/scopes_contract_spec.rb",
+        "nodejs": "test/scopesContract.test.ts"
+      },
+      "cases": [
+        "scope_honours_limit_and_offset"
+      ]
+    }
+  ]
+}
