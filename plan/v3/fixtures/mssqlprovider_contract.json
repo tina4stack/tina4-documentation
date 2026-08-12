@@ -1,0 +1,119 @@
+{
+  "_comment": [
+    "MSSQL provider -- feature 11 (OWNER-DECISIONS.md Batch 5; feature doc",
+    "011-mssql-provider.md MSSQL-DEC-01 + MSSQL-DEC-02).",
+    "",
+    "SQL Server is a first-class provider in all four frameworks. Its adapter papers",
+    "over three T-SQL facts: it has no RETURNING, its pagination syntax differs, and",
+    "the INSERT + last-id probe run in separate scopes. This fixture pins the",
+    "write-path + parameter behaviours a caller depends on, against a REAL SQL Server",
+    ":1433 (sa -> tina4_test), no mocks. Under TINA4_REQUIRE_SERVICES a skip here is",
+    "a hard FAILURE.",
+    "",
+    "MSSQL-DEC-01 (safe parameter handling): the audit found two unsafe param paths.",
+    "  * Ruby hand-interpolates params and its `else param.to_s` fell through to a",
+    "    BAREWORD for any unrecognised type (a Symbol became `VALUES (foo)` -> an",
+    "    invalid / injected statement). It now emits ASCII-8BIT bytes as a `0x`",
+    "    varbinary literal and RAISES ArgumentError on a genuinely unbindable type --",
+    "    never a bareword. Witnessed Ruby-only by `an unbindable parameter raises",
+    "    instead of a bareword` (revert -> RED).",
+    "  * Node inferred the TDS param type from the JS type (NVarChar default, else",
+    "    Int/Float/Bit/DateTime) with NO Buffer branch, so a Buffer bound as NVarChar",
+    "    and corrupted binary writes. It now maps a Buffer -> VarBinary (checked",
+    "    first). Witnessed by the four-way binary case (revert -> RED in Node).",
+    "  The FOUR-WAY observable is `a binary parameter round trips intact`: Python's",
+    "  pymssql binds bytes natively; Node binds VarBinary; PHP and Ruby inline a `0x`",
+    "  literal because FreeTDS (pdo_dblib / tiny_tds) CANNOT carry raw binary through",
+    "  a `?` bind -- MEASURED on the lab: a NUL byte breaks the TDS stream (even",
+    "  PDO::PARAM_LOB fails), while a `0x` literal round-trips byte-for-byte. A",
+    "  companion `a text parameter round trips intact` guards that the binary",
+    "  detection never mis-routes ordinary UTF-8 text through the 0x path.",
+    "",
+    "MSSQL-DEC-02 (real-PK RETURNING): SQL Server has no RETURNING, so the PYTHON",
+    "adapter strips it and re-selects the inserted row. It fetched by a HARDCODED",
+    "`id` column (`... WHERE id = %s`), so a table whose PK is NOT named `id` raised",
+    "'Invalid column name id'. Python now re-selects by the table's REAL primary key",
+    "(introspected, bracket-quoted with embedded `]` escaped, cached) -- the same",
+    "defect + fix feature 10 applied to mysql.py, shared with firebird.py.",
+    "IMPORTANT SCOPE (verified against all four live adapters): the RETURNING *record*",
+    "emulation exists ONLY in the Python adapter. PHP/Ruby/Node do NOT emulate MSSQL",
+    "RETURNING; they surface the generated key through SCOPE_IDENTITY, which is tied",
+    "to the IDENTITY column and is therefore COLUMN-NAME-INDEPENDENT -- so a non-`id`-",
+    "PK insert already returns the correct generated last-id in all four (invariant",
+    "1). Per the owner governance rule (fix the broken one, do NOT mirror a mechanism",
+    "the others do not need), the hardcoded-`id` fix is Python-adapter-local; the",
+    "observable contract is proven four-way. The Python-only `returning_*` tests are",
+    "the direct mutation witness (revert -> 'Invalid column name id' RED).",
+    "",
+    "MSSQL-DEC-02 (one pagination strategy): the MSSQL pagination strategy DIVERGED --",
+    "Python/PHP/Ruby append OFFSET/FETCH (the modern standard, with an injected",
+    "`ORDER BY (SELECT NULL)` when none is present), while NODE branched to `TOP n`",
+    "for the first page (skip 0) and OFFSET/FETCH only for a non-zero skip. All four",
+    "now use the ONE strategy -- OFFSET/FETCH -- so `fetchAsync` no longer emits TOP",
+    "for a page-one read (TOP 0 remains only for the degenerate limit=0 = zero-rows",
+    "case OFFSET/FETCH cannot express). Proven four-way by the offset window: a",
+    "TOP-only strategy that ignores the offset returns the FIRST page for a later-",
+    "page request. ZERO new runtime dependencies in any framework.",
+    "",
+    "Env contract (the canonical TINA4_TEST_MSSQL_* convention, identical to the",
+    "other live MSSQL tests): TINA4_TEST_MSSQL_HOST / _PORT / _USERNAME / _PASSWORD /",
+    "_DB, defaulting to 127.0.0.1:1433 sa / TinaSQL123!Secure -> tina4_test. On the",
+    "lab only the pdo_dblib / FreeTDS PHP leg runs (ext-sqlsrv is unverified there);",
+    "the 0x-literal binary fix is standard T-SQL and applies to BOTH PHP backends."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "11 - MSSQL provider (MSSQL-DEC-01 safe parameter handling - Ruby unknown-type bareword, Node Buffer->VarBinary, four-way binary round-trip; MSSQL-DEC-02 real-PK RETURNING emulation Python-local with a non-`id`-PK regression proven four-way, and ONE OFFSET/FETCH pagination strategy across all four), against a real SQL Server",
+  "oracle": "mssql",
+  "invariants": [
+    {
+      "id": "mssql-nonid-pk-generated-id",
+      "adr": "MSSQL-DEC-02",
+      "rule": "On a real SQL Server, db.insert() into a table whose PRIMARY KEY is NOT named `id` returns a DatabaseResult whose last_id is the generated IDENTITY key (surfaced via the column-independent SCOPE_IDENTITY, never a hardcoded-`id` fetch) and whose affected_rows is 1; a second insert returns the NEXT generated id, never a stale earlier one; the row is durably keyed by the real primary key, read back on a SECOND fresh connection. Identical in all four (Python Database.insert -> MSSQLAdapter; PHP Database::insert -> MSSQLAdapter; Ruby Database#insert -> MssqlDriver; Node Database.insert -> MssqlAdapter).",
+      "why": "MSSQL-RETURNING-ID: the user-observable symptom of the hardcoded-`id` emulation was 'an insert into a table whose PK is NOT `id` returns the wrong / no last-id'. This pins the correct observable -- the generated key comes back for a non-`id` PK -- against a real IDENTITY table with a non-`id` PK. It is green four-way because SCOPE_IDENTITY() is tied to the IDENTITY column, not to a column named `id`; it is the regression lock that guards against ever deriving the last-id from a hardcoded-`id` fetch. The Python adapter's RETURNING *record* emulation (the actual defect site) is additionally mutation-witnessed by the Python suite's `returning_*` tests. No mocks.",
+      "suites": {
+        "ruby": "spec/mssqlprovider_contract_spec.rb",
+        "python": "tests/test_mssqlprovider_contract.py",
+        "php": "tests/MssqlProviderContractTest.php",
+        "nodejs": "test/mssqlProviderContract.test.ts"
+      },
+      "cases": [
+        "a non id primary key insert returns the generated last id",
+        "a second non id primary key insert returns the next generated id",
+        "a non id primary key insert reports affected rows of one"
+      ]
+    },
+    {
+      "id": "mssql-safe-params",
+      "adr": "MSSQL-DEC-01",
+      "rule": "On a real SQL Server, a binary parameter (Python bytes, PHP/Ruby a raw-byte string, Node a Buffer) written through the public write path round-trips byte-for-byte into a VARBINARY column, read back on a SECOND fresh connection: Node binds it as TDS VarBinary; Python's pymssql binds bytes natively; PHP and Ruby inline it as a `0x` varbinary literal (FreeTDS cannot bind raw binary through a `?` placeholder). An ordinary UTF-8 text parameter still round-trips intact on the bound / quoted path, with correct quote-escaping, and is never mis-routed through the binary path. Identical observable in all four.",
+      "why": "MSSQL-BUFFER-NODE + MSSQL-INTERP-RUBY: a Buffer used to bind as NVarChar in Node (a text encoding applied to bytes -> corruption), and Ruby's hand-rolled interpolator emitted a bareword for an unrecognised type. Binary is the concrete 'unusual-typed param' MSSQL-DEC-01 centres on; proven four-way against a real VARBINARY column with a payload that carries a NUL byte and high bytes -- exactly what a text bind / quoted string corrupts. MEASURED on the lab: pdo_dblib CANNOT bind that payload through `?` (even PDO::PARAM_LOB fails), a `0x` literal round-trips. Mutation-proved: revert Node Buffer->VarBinary -> the binary case RED in Node; revert Ruby's binary branch -> RED in Ruby. The Ruby unknown-type BAREWORD fix is additionally mutation-witnessed Ruby-only by the suite's `an unbindable parameter raises instead of a bareword` test (a Symbol raises ArgumentError instead of splicing a bareword). No mocks.",
+      "suites": {
+        "ruby": "spec/mssqlprovider_contract_spec.rb",
+        "python": "tests/test_mssqlprovider_contract.py",
+        "php": "tests/MssqlProviderContractTest.php",
+        "nodejs": "test/mssqlProviderContract.test.ts"
+      },
+      "cases": [
+        "a binary parameter round trips intact",
+        "a text parameter round trips intact"
+      ]
+    },
+    {
+      "id": "mssql-offset-fetch-pagination",
+      "adr": "MSSQL-DEC-02",
+      "rule": "On a real SQL Server, a paginated read db.fetch(sql, params, limit, offset) with an explicit ORDER BY returns the correct WINDOW via OFFSET ... ROWS FETCH NEXT ... ROWS ONLY -- the FIRST page (limit 2, offset 0 -> rows 1,2) and a LATER page (limit 2, offset 2 -> rows 3,4) each return exactly their window. All four frameworks use the ONE OFFSET/FETCH strategy; Node no longer branches to `TOP n` for the first page. Identical in all four.",
+      "why": "MSSQL-PAGINATION-DIVERGE: Python/PHP/Ruby appended OFFSET/FETCH while Node used `TOP n` for skip 0 (same window, divergent SQL, and the `^SELECT` regex could not prefix a CTE / leading-comment SELECT). Converging on OFFSET/FETCH removes the divergence with zero new deps. Proven behaviourally by the offset window on a real 5-row table: a TOP-only strategy that ignores the offset returns the FIRST page [1,2] for a later-page (offset 2) request, so the case is a real gate. Mutation-proved: force TOP / drop the offset -> 'a paginated query returns a later page window with offset' goes RED. No mocks.",
+      "suites": {
+        "ruby": "spec/mssqlprovider_contract_spec.rb",
+        "python": "tests/test_mssqlprovider_contract.py",
+        "php": "tests/MssqlProviderContractTest.php",
+        "nodejs": "test/mssqlProviderContract.test.ts"
+      },
+      "cases": [
+        "a paginated query returns the first page window",
+        "a paginated query returns a later page window with offset"
+      ]
+    }
+  ]
+}
