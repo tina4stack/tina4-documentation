@@ -1,0 +1,163 @@
+{
+  "_comment": [
+    "ORM fields and column mapping -- feature 18. Two owner decisions",
+    "(OWNER-DECISIONS.md Batch 3 FIELD-DEC-01 + Batch 5 FIELD-DEC-02):",
+    "",
+    "FIELD-DEC-01 (owner overrode the Python-master default): reconcile the field",
+    "model BEHAVIOUR-BY-BEHAVIOUR (ADR-0004 best-implementation-prevails), NOT a",
+    "single language as master. The DECLARATION SURFACE stays each language's",
+    "idiom -- Python field OBJECTS (IntegerField(...)), PHP reflection on typed",
+    "properties, Ruby DSL class-methods (integer_field), Node declarative",
+    "FieldDefinition objects -- and only the BEHAVIOUR on top is reconciled. The",
+    "one gap FIELD-DEC-01 names is closed here: callable defaults now work in ALL",
+    "FOUR (PHP was the hold-out).",
+    "",
+    "FIELD-DEC-02 (fixes): DELETE the Python cross-engine DDL MOCK",
+    "(test_orm_v3_13_11::test_engine_dispatch monkeypatched execute/",
+    "get_database_type and asserted a SQL STRING) and replace it with a",
+    "REAL-engine DDL test; fix the Ruby decimal precision (decimal_field emitted",
+    "REAL, dropping the declared scale); anchor the PHP datetime NAME heuristic;",
+    "fix the Ruby FK auto related_name.",
+    "",
+    "The five reconciled behaviours proven here, NO MOCKS -- every case drives a",
+    "REAL database (SQLite for the type/JSON/default/decimal-DDL cases, and REAL",
+    "PostgreSQL/MySQL/MSSQL/Firebird for the engine-DDL cases):",
+    "",
+    "  1. PHP CALLABLE DEFAULTS (FIELD-CALLABLE-DEFAULT-PHP): a PHP typed property",
+    "     cannot hold a Closure default, so the idiomatic channel is a",
+    "     fieldDefaults() method hook -- resolved PER INSTANCE on construct,",
+    "     DROPPED from the DDL. Python (_resolve_default), Ruby (per-instance",
+    "     lambda) and Node (typeof===function) already did this; the four-way",
+    "     'callable default' cases prove all four now agree.",
+    "",
+    "  2. DECIMAL(p,s) PARITY (FIELD-DECIMAL-PRECISION): a decimal field produces",
+    "     a real DECIMAL(precision, scale) column, identical on",
+    "     PG/MySQL/MSSQL/Firebird/SQLite. Ruby's decimal_field was emitting REAL",
+    "     and silently dropping precision/scale (the named bug); MEASURED, none of",
+    "     the four had a decimal->DECIMAL(p,s) path, so each got its idiomatic one:",
+    "     Ruby fixes decimal_field's type_map; Python adds DecimalField(precision,",
+    "     scale); Node adds type:'decimal' + precision/scale to FieldDefinition;",
+    "     PHP adds a $decimals overlay ([prop => [p, s]], the same array-property",
+    "     idiom as $foreignKeys, because a PHP float property cannot carry a",
+    "     precision/scale). FloatField/NumericField stay REAL (documented float",
+    "     default -- for exact money store minor units in an integer).",
+    "",
+    "  3. REAL-ENGINE DDL, NOT A MOCK (FIELD-ENGINE-DDL-MOCK -> REAL): create the",
+    "     table on the REAL engine and read the column type back from the engine's",
+    "     OWN catalog (information_schema for PG/MySQL/MSSQL, RDB$ for Firebird).",
+    "     BOOLEAN -> PG boolean / MySQL tinyint(1) / MSSQL bit / Firebird INTEGER;",
+    "     JSON -> PG jsonb / MySQL json / MSSQL nvarchar(max) / Firebird BLOB",
+    "     SUB_TYPE TEXT; DECIMAL(12,4) -> precision 12 scale 4 (Firebird scale -4,",
+    "     a scaled INT64). The real test caught a divergence the mock could not:",
+    "     Node mapped a Firebird boolean to SMALLINT while Python/PHP/Ruby (and the",
+    "     documented contract) map it to INTEGER -- Node is aligned to INTEGER.",
+    "",
+    "  4. PHP DATETIME HEURISTIC ANCHOR (FIELD-PHP-DATETIME-HEURISTIC, PHP-only):",
+    "     the /(_at$|date|time)/i SUBSTRING match wrongly inferred 'datetime' for",
+    "     updated_by (has 'date' in up-date-d), runtime and downtime (end in",
+    "     'time'). Anchored to /(_at$)|((?:^|_)(?:date|time|datetime|timestamp)$)/i",
+    "     -- a whole trailing segment -- so created_at, updated_at, a *_date and a",
+    "     *_time column still resolve while the substrings do not. This is a",
+    "     PHP-only behaviour: Python/Ruby/Node declare the type explicitly, they do",
+    "     not infer it from a name.",
+    "",
+    "  5. RUBY FK RELATED-NAME (FIELD-FK-RELATEDNAME-RUBY, Ruby-only):",
+    "     foreign_key_field's auto related_name used a naive downcase + 's'",
+    "     (Category -> 'categorys'); it now routes through a new Tina4.pluralize",
+    "     that mirrors the existing Tina4.singularize (Category -> 'categories').",
+    "     This is scoped Ruby-only per the owner call; MEASURED, Python/PHP/Node",
+    "     still derive the FK has-many name as declaring-class-lowercased + 's'",
+    "     (a latent cross-language parity gap, flagged for a follow-up, not widened",
+    "     here).",
+    "",
+    "NOT converged: the DECLARATION SURFACE. Each language keeps its idiom.",
+    "",
+    "Each invariant names a REAL suite file per framework carrying the SAME case",
+    "names in each language's own idiom, which scripts/audit-contract-fixtures.py",
+    "normalises and matches. The two PHP-only / Ruby-only invariants name only the",
+    "framework whose declaration model has that behaviour."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "18 - ORM fields and column mapping (FIELD-DEC-01 reconcile behaviour-by-behaviour + PHP callable defaults; FIELD-DEC-02 real-engine DDL replacing the mock, Ruby DECIMAL(p,s), PHP datetime anchor, Ruby FK name)",
+  "invariants": [
+    {
+      "id": "ormfields-type-roundtrip-and-defaults",
+      "adr": "FIELD-DEC-01",
+      "rule": "Each declared field type round-trips through a REAL database (write coercion -> DDL column -> read hydration): a JSON field serializes on write and parses back to a NATIVE object on read; a CALLABLE default is resolved PER INSTANCE (per-row values differ) and is NOT present in the CREATE TABLE DDL (now including PHP, via fieldDefaults()); and a value a JSON field cannot serialize makes save() return FALSE and log the cause (never raise, never silently persist). Identical in all four (Python field objects, PHP reflection, Ruby DSL, Node FieldDefinition).",
+      "why": "This pins the reconciled field-model behaviour on top of the four DIVERGENT declaration surfaces (FIELD-DEC-01, kept idiomatic per language). Callable defaults were the one parity gap the audit named -- Python/Ruby/Node resolved a callable default per-instance and dropped it from DDL, PHP could not (a PHP property default cannot be a Closure); PHP now provides them through a fieldDefaults() method hook, so all four agree. The non-serializable-JSON negative pins the fail-loud contract; MEASURED, Python actually RAISED out of save() (its to_db serialization ran outside the transaction try) and was fixed to return False + log like PHP/Ruby/Node. Proven against a REAL SQLite database with real rows and real ORM writes -- no mocks.",
+      "suites": {
+        "python": "tests/test_ormfields_contract.py",
+        "php": "tests/OrmFieldsContractTest.php",
+        "ruby": "spec/ormfields_contract_spec.rb",
+        "nodejs": "test/ormFieldsContract.test.ts"
+      },
+      "cases": [
+        "each declared field type round trips through a real database",
+        "a json field round trips to a native object",
+        "a callable default is resolved per instance",
+        "a callable default is not present in the create table ddl",
+        "a non serializable json value makes save return false and is logged"
+      ]
+    },
+    {
+      "id": "ormfields-decimal-precision",
+      "adr": "FIELD-DECIMAL-PRECISION",
+      "rule": "A decimal field produces a real DECIMAL(precision, scale) column in the generated DDL, in all four frameworks -- via Ruby decimal_field precision:/scale:, Python DecimalField(precision, scale), Node { type: 'decimal', precision, scale }, and PHP a $decimals overlay. FloatField/NumericField (and their per-language equivalents) stay a floating REAL column.",
+      "why": "FIELD-DECIMAL-PRECISION: Ruby's decimal_field STORED precision/scale but emitted REAL, silently dropping the declared scale -- the named bug. MEASURED, none of the four actually emitted DECIMAL(p,s), so each gained an idiomatic decimal declaration that does. The DDL column type is the fix; the in-memory value stays a float (the documented money guidance -- for exact arithmetic store minor units in an integer). Proven against a REAL SQLite database (the declared DECIMAL(12,4) is read back from the created table); the per-engine DECIMAL(p,s) precision/scale is proven on real engines by ormfields-engine-ddl. No mocks.",
+      "suites": {
+        "python": "tests/test_ormfields_contract.py",
+        "php": "tests/OrmFieldsContractTest.php",
+        "ruby": "spec/ormfields_contract_spec.rb",
+        "nodejs": "test/ormFieldsContract.test.ts"
+      },
+      "cases": [
+        "a decimal field produces a decimal precision scale column"
+      ]
+    },
+    {
+      "id": "ormfields-engine-ddl",
+      "adr": "FIELD-DEC-02",
+      "rule": "The engine-specific DDL column types are created on the REAL engine and read back from the engine's OWN catalog match: a BOOLEAN column is PG boolean / MySQL tinyint(1) / MSSQL bit / Firebird INTEGER; a JSON column is PG jsonb / MySQL json / MSSQL nvarchar(max) / Firebird BLOB SUB_TYPE TEXT; a DECIMAL(12,4) column has precision 12 and scale 4 (Firebird stores it as a scaled INT64, scale -4); and a real row of {bool, json object, decimal, datetime} round-trips through those columns. Proven on real PostgreSQL, MySQL, MSSQL and Firebird in all four frameworks.",
+      "why": "FIELD-ENGINE-DDL-MOCK -> REAL: the cross-engine DDL mapping was covered ONLY by a Python MOCK (test_orm_v3_13_11::test_engine_dispatch monkeypatched execute + get_database_type and asserted the SQL STRING) -- a no-mock-rule violation that never proved a real engine accepts the DDL. That mock is DELETED; this creates the table on the REAL engine and reads the column type from information_schema (PG/MySQL/MSSQL) or RDB$RELATION_FIELDS/RDB$FIELDS (Firebird). The real test immediately caught a divergence the mock could not: Node emitted SMALLINT for a Firebird boolean while Python/PHP/Ruby emit INTEGER (the documented contract) -- Node is aligned to INTEGER. Gated in require-services (a PG/MySQL/MSSQL skip is a hard failure); Firebird runs when TINA4_TEST_FIREBIRD_URL is set (the lab sets it). No mocks anywhere.",
+      "suites": {
+        "python": "tests/test_ormfields_contract.py",
+        "php": "tests/OrmFieldsContractTest.php",
+        "ruby": "spec/ormfields_contract_spec.rb",
+        "nodejs": "test/ormFieldsContract.test.ts"
+      },
+      "cases": [
+        "a boolean column is created with the engine native boolean type",
+        "a json column is created with the engine native json type",
+        "a decimal column is created with decimal precision and scale on the engine",
+        "the engine ddl types round trip a real row"
+      ]
+    },
+    {
+      "id": "ormfields-php-datetime-heuristic",
+      "adr": "FIELD-PHP-DATETIME-HEURISTIC",
+      "rule": "PHP infers a 'datetime' logical column type from a property NAME only via an ANCHORED whole-suffix pattern, so a substring never misfires: updated_by (contains 'date' inside 'up-date-d'), runtime and downtime (end in 'time') are NOT inferred as datetime, while created_at (a _at suffix), a *_date column and a *_time column still ARE. PHP-only: Python, Ruby and Node declare the field type explicitly, they never infer it from a name.",
+      "why": "FIELD-PHP-DATETIME-HEURISTIC: the old /(_at$|date|time)/i matched INSIDE a word, so updated_by/runtime/downtime were wrongly typed 'datetime' in the DDL/seeding -- an untested false-positive path. Anchored to /(_at$)|((?:^|_)(?:date|time|datetime|timestamp)$)/i, only reached when the property is not an explicitly \\DateTime-typed one (the real type is preferred). This invariant names only the PHP suite because the name heuristic is PHP's alone -- the other three carry the field type on the declaration, so there is no substring to misfire.",
+      "suites": {
+        "php": "tests/OrmFieldsContractTest.php"
+      },
+      "cases": [
+        "updated_by is not inferred as datetime",
+        "runtime and downtime are not inferred as datetime",
+        "created_at and a date column and a time column are still inferred as datetime"
+      ]
+    },
+    {
+      "id": "ormfields-ruby-fk-related-name",
+      "adr": "FIELD-FK-RELATEDNAME-RUBY",
+      "rule": "Ruby's foreign_key_field auto related_name is SMART-pluralized from the DECLARING class name: a Category model declaring a foreign_key_field wires has_many :categories on the referenced model, never the naive :categorys. Ruby-only.",
+      "why": "FIELD-FK-RELATEDNAME-RUBY: the auto related_name used a naive downcase + 's' (Category -> 'categorys' -- a broken accessor name), while the hand-written has_many already used smart inflection. It now routes through a new Tina4.pluralize that mirrors Tina4.singularize (y->ies, s/sh/ch/x/z->es, else +s). Scoped Ruby-only per the owner call; this invariant names only the Ruby suite. MEASURED, Python/PHP/Node still derive the FK has-many name as declaring-class-lowercased + 's' -- a latent cross-language parity gap flagged for a follow-up, deliberately not widened in this feature.",
+      "suites": {
+        "ruby": "spec/ormfields_contract_spec.rb"
+      },
+      "cases": [
+        "a foreign key to Category wires categories not categorys"
+      ]
+    }
+  ]
+}
