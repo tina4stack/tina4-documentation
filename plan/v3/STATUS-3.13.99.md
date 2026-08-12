@@ -5,7 +5,7 @@ fixture, lab-green on the .99 lab) before the next. This table is updated, commi
 feature lands. Detail: [IMPLEMENTATION-3.13.99.md](IMPLEMENTATION-3.13.99.md). Decisions:
 [OWNER-DECISIONS.md](OWNER-DECISIONS.md).
 
-**Progress: 21 / 52 features lab-green** (feature 50 Frond compiler DEFERRED to 3.13.100 fast-follow, owner call 2026-08-12). Done: Phase 1 + Phase 2 + Phase 3 (9-13). In progress: 17 (Phase 4 ORM, next).
+**Progress: 22 / 52 features lab-green** (feature 50 Frond compiler DEFERRED to 3.13.100 fast-follow, owner call 2026-08-12). Done: Phase 1 + Phase 2 + Phase 3 (9-13) + 17. In progress: 18 (Phase 4 ORM fields, next).
 
 Status: DONE = lab-green all four (independently re-verified) . WIP = in progress . TODO = not started.
 Lab column = per-framework test counts py/php/ruby/node in the consolidated green run.
@@ -50,7 +50,7 @@ Lab column = per-framework test counts py/php/ruby/node in the consolidated gree
 
 | # | Feature | Status | Lab (py/php/rb/node) | Commits py / php / rb / node |
 |---|---------|--------|----------------------|------------------------------|
-| 17 | ORM base class | TODO | - | - |
+| 17 | ORM base class | DONE | 5/5/5/5 | a18da9d / 4e454f2 / bbf35b6 / 39931bd |
 | 18 | ORM fields | TODO | - | - |
 | 19 | Input validation | TODO | - | - |
 | 20 | Soft delete | TODO | - | - |
