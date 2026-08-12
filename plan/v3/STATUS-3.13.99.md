@@ -5,7 +5,7 @@ fixture, lab-green on the .99 lab) before the next. This table is updated, commi
 feature lands. Detail: [IMPLEMENTATION-3.13.99.md](IMPLEMENTATION-3.13.99.md). Decisions:
 [OWNER-DECISIONS.md](OWNER-DECISIONS.md).
 
-**Progress: 19 / 53 features lab-green.** Done: Phase 1 + Phase 2 + 9, 10, 11. In progress: 12 (Phase 3, next).
+**Progress: 19 / 52 features lab-green** (feature 50 Frond compiler DEFERRED to 3.13.100 fast-follow, owner call 2026-08-12). Done: Phase 1 + Phase 2 + 9, 10, 11. In progress: 12 (Phase 3, next).
 
 Status: DONE = lab-green all four (independently re-verified) . WIP = in progress . TODO = not started.
 Lab column = per-framework test counts py/php/ruby/node in the consolidated green run.
@@ -83,7 +83,7 @@ Lab column = per-framework test counts py/php/ruby/node in the consolidated gree
 | # | Feature | Status | Lab (py/php/rb/node) | Commits py / php / rb / node |
 |---|---------|--------|----------------------|------------------------------|
 | 48/49 | Lexer/parser positions | TODO | - | - |
-| 50 | Frond compiler (ruby+node, BIG - confirm .99 vs fast-follow) | TODO | - | - |
+| 50 | Frond compiler (ruby+node) | DEFERRED -> 3.13.100 | - | fast-follow (owner call 2026-08-12) |
 | 52 | Frond filters | TODO | - | - |
 | 54 | Frond tests | TODO | - | - |
 | 55 | Frond functions | TODO | - | - |

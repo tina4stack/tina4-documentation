@@ -89,7 +89,7 @@ negative, no mocks) -> dead/dup code removed -> run the fixture + the feature's 
 ## Phase 6 - Frond
 
 - [ ] 48/49 lexer/parser - add source positions + EOF; parser/AST stage for ruby+node
-- [ ] 50 Frond compiler - BUILD the AOT compiler for Ruby + Node (BIG; depends on 48/49; byte-identical to interpreter; sandbox-disabled). CONFIRM in-scope for .98 vs fast-follow before starting - it is the single largest item in the pass.
+- [DEFERRED -> 3.13.100] 50 Frond compiler - the AOT compiler for Ruby + Node is a FAST-FOLLOW in 3.13.100 (owner call 2026-08-12), OUT of the .99 scope. CP-DEC-01 (all four get a compiler) still stands; 48/49 (source positions + EOF) land in .99 as the foundation. The compiler build ships in 3.13.100.
 - [ ] 52 Frond filters - `|date` strftime everywhere; `|join` default ", "; `|default` keeps false
 - [ ] 54 Frond tests - even/odd require a real integer (no PHP int-cast)
 - [ ] 55 Frond functions - add `range()` py/ruby/node; camelCase `formToken` alias; Ruby dotted-call resolution
@@ -151,5 +151,5 @@ Compiled as features land; each is a security/parity fix, not an accidental brea
 
 ## Close
 
-- [ ] All ~53 features lab-green in all four; 1-133 green for dev
+- [ ] All ~52 features lab-green in all four (feature 50 Frond compiler DEFERRED to 3.13.100 fast-follow); 1-133 green for dev
 - [ ] Merge feature/release3.13.99 -> v3; tag 3.13.99; update release notes + the book

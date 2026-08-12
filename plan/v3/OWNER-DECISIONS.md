@@ -9,6 +9,8 @@ is the authoritative "what was decided", the feature docs carry the detail.
 
 - Frond compiler (50, CP-DEC-01) - DECIDED 2026-08-11: ALL FOUR languages get a Frond compiler (Ruby + Node
   build one matching Python/PHP; requires a parser/AST stage first). Parity/architecture call.
+  BUILD DEFERRED to 3.13.100 as a fast-follow (owner call 2026-08-12) - the decision stands; only the
+  .99 build is deferred. 48/49 (lexer/parser positions) still land in .99 as the compiler's foundation.
 
 ## Batch 1 - 2026-08-11
 
