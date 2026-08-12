@@ -1,0 +1,151 @@
+{
+  "_comment": [
+    "MySQL provider -- feature 10 (OWNER-DECISIONS.md Batch 5; feature doc",
+    "010-mysql-provider.md MYSQL-DEC-01 + MYSQL-DEC-02).",
+    "",
+    "MySQL/MariaDB is the second reference SQL engine. Its adapter papers over two",
+    "MySQL quirks: it has no RETURNING, and its driver reports the FIRST id of a",
+    "multi-row INSERT (not the last). This fixture pins the write-path behaviours a",
+    "caller depends on, against a REAL MySQL :3306 (tina4/tina4 -> tina4_test), no",
+    "mocks. Under TINA4_REQUIRE_SERVICES a skip here is a hard FAILURE.",
+    "",
+    "MYSQL-DEC-01 (real-PK RETURNING emulation): MySQL has no RETURNING, so the",
+    "provider emulates it by RE-SELECTING the inserted row. The Python adapter did",
+    "that against a HARDCODED `id` column (`... WHERE id = ?`), so a model whose",
+    "primary key is NOT named `id` got a wrong / empty returned row (a raised",
+    "'Unknown column id' on a non-`id`-PK table). The Python adapter now re-selects",
+    "by the table's REAL primary key (introspected, cached), never a hardcoded",
+    "`id`. IMPORTANT SCOPE, verified against all four live adapters: the RETURNING",
+    "*record* emulation exists ONLY in the Python adapter. PHP/Ruby/Node do NOT",
+    "emulate MySQL RETURNING; they surface the generated key through the driver's",
+    "own last_insert_id, which is tied to the AUTO_INCREMENT column and is",
+    "therefore COLUMN-NAME-INDEPENDENT -- so a non-`id`-PK insert already returns",
+    "the correct generated last-id in all four (invariant 1). Per the owner's",
+    "governance rule (fix the broken one, do NOT mirror a mechanism the others do",
+    "not need), the hardcoded-`id` fix is Python-adapter-local; the observable",
+    "contract (correct generated id for a non-`id` PK) is proven four-way. The same",
+    "hardcoded-`id` pattern also lives in Python's mssql.py + firebird.py adapters",
+    "(features 11/12) and is NOT touched here.",
+    "",
+    "MYSQL-DEC-02: (a) the DESCRIBE introspection took an unparameterised, unquoted",
+    "table name (`DESCRIBE ` + name) in all four (Python/PHP/Ruby interpolated raw;",
+    "Node back-quoted but did not ESCAPE an embedded backtick) -- an injection /",
+    "breakage footgun. All four now STRICT-quote the identifier (backticks,",
+    "embedded backticks doubled), schema-aware. DESCRIBE takes an identifier, not a",
+    "bind parameter, so a crafted name becomes ONE escaped identifier (a clean",
+    "'unknown table', never runnable SQL) and an odd-but-valid name introspects",
+    "instead of erroring. (b) the FIRST->LAST batch-id normalisation was",
+    "re-implemented inline in each MySQL adapter (Python once, Ruby once, PHP TWICE",
+    "-- prepared + non-prepared paths) instead of calling the shared, otherwise-",
+    "dead SQLTranslator.batch_last_id / batchLastId helper. Python + Ruby now route",
+    "through the helper; PHP collapses its two duplicated blocks into ONE",
+    "captureInsertId() that calls the helper. Node loops a batch row-at-a-time",
+    "(each single-row INSERT reports its own id), so it has no first->last block to",
+    "de-duplicate. ZERO new runtime dependencies.",
+    "",
+    "The MYSQL-RETURNING-ID fix is additionally proven + MUTATION-WITNESSED in the",
+    "Python suite by the two `returning_*` tests (an `INSERT ... RETURNING *` /",
+    "`RETURNING <pk>` into a non-`id`-PK table returns the row re-selected by the",
+    "REAL pk) -- revert the real-PK to hardcoded `id` and both go RED ('Unknown",
+    "column id'). They are Python-only because only the Python adapter emulates",
+    "MySQL RETURNING.",
+    "",
+    "The four-way behaviours, each an invariant proven against real MySQL:",
+    "  1. mysql-nonid-pk-generated-id -- a db.insert() into a table whose PK is NOT",
+    "     `id` returns a DatabaseResult whose last_id is the generated key + a",
+    "     second returns the NEXT id + affected 1; the row is durably keyed by the",
+    "     real pk (read on a fresh connection). This is the user-observable of",
+    "     MYSQL-RETURNING-ID: 'a non-`id`-PK insert returns the correct generated",
+    "     last-id'. Green in all four (driver last_insert_id is column-independent).",
+    "  2. mysql-write-affected-count -- insert/update/delete report the EXACT rows",
+    "     touched, and update/delete report last_id null (insert-only).",
+    "  3. mysql-describe-safe -- get_columns() of a table with a crafted/odd name",
+    "     (embedded backtick + special chars) introspects correctly and cannot",
+    "     inject; a sentinel table survives a malicious name. Mutation-proved:",
+    "     revert the strict-quote and the odd-name case breaks (syntax error).",
+    "  4. mysql-batch-sequential-ids -- a batch db.insert([...]) returns the LAST",
+    "     sequential generated id and every row gets a consecutive id (read back).",
+    "     MEASURED against the live lab: only RUBY's db.insert collapses a 3-row",
+    "     batch into ONE multi-row INSERT, so batch_last_id is mutation-witnessed",
+    "     there (neutralise it -> the LAST-id case reports the FIRST id, RED).",
+    "     Python/PHP/Node run this db.insert row-at-a-time (each single-row INSERT",
+    "     reports its own id), so their case is a green regression lock and their",
+    "     batch_last_id de-dup is behaviour-preserving (a no-op at row-count 1).",
+    "",
+    "Env contract (the canonical TINA4_TEST_MYSQL_* convention, identical to the",
+    "sql-translator + write-path runners): TINA4_TEST_MYSQL_HOST / _PORT / _USERNAME",
+    "/ _PASSWORD / _DB, defaulting to 127.0.0.1:3306 tina4/tina4 -> tina4_test."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "10 - MySQL provider (MYSQL-DEC-01 real-PK RETURNING emulation with a non-`id`-PK regression; MYSQL-DEC-02 parameterize/strict-quote DESCRIBE + de-duplicate the batch-id math onto the shared helper), all four against a real MySQL",
+  "oracle": "mysql",
+  "invariants": [
+    {
+      "id": "mysql-nonid-pk-generated-id",
+      "adr": "MYSQL-DEC-01",
+      "rule": "On a real MySQL, db.insert() into a table whose PRIMARY KEY is NOT named `id` returns a DatabaseResult whose last_id is the generated AUTO_INCREMENT key (surfaced via the driver's column-independent last_insert_id, never a hardcoded-`id` fetch) and whose affected_rows is 1; a second insert returns the NEXT generated id, never a stale earlier one; the row is durably keyed by the real primary key, read back on a SECOND fresh connection. Identical in all four (Python Database.insert -> MySQLAdapter; PHP Database::insert -> MySQLAdapter; Ruby Database#insert -> MysqlDriver; Node Database.insert -> MysqlAdapter).",
+      "why": "MYSQL-RETURNING-ID: the user-observable symptom of the hardcoded-`id` emulation was 'an insert into a table whose PK is NOT `id` returns the wrong / no last-id'. This pins the correct observable -- the generated key comes back for a non-`id` PK -- against a real AUTO_INCREMENT table with a non-`id` PK. It is green four-way because last_insert_id() is tied to the AUTO_INCREMENT column, not to a column named `id`; it is the regression lock that guards against ever deriving the last-id from a hardcoded-`id` fetch. The Python adapter's RETURNING *record* emulation (the actual defect site) is additionally mutation-witnessed by the Python suite's `returning_*` tests. No mocks.",
+      "suites": {
+        "ruby": "spec/mysqlprovider_contract_spec.rb",
+        "python": "tests/test_mysqlprovider_contract.py",
+        "php": "tests/MysqlProviderContractTest.php",
+        "nodejs": "test/mysqlProviderContract.test.ts"
+      },
+      "cases": [
+        "a non id primary key insert returns the generated last id",
+        "a second non id primary key insert returns the next generated id",
+        "a non id primary key insert reports affected rows of one"
+      ]
+    },
+    {
+      "id": "mysql-write-affected-count",
+      "adr": "MYSQL-DEC-01",
+      "rule": "On a real MySQL, db.update() and db.delete() return a DatabaseResult whose affected_rows is EXACTLY the number of rows the write touched (never the number of statements, never a bare boolean), and whose last_id is null because last_id is insert-only; a single insert reports affected_rows 1. Identical in all four.",
+      "why": "A write that reports the wrong affected count lets a caller believe a no-op succeeded or a multi-row write hit one row. Proven on a real seeded table, no mocks: an update whose filter matches two of three rows reports 2, a delete of one row reports 1, and update/delete report last_id null.",
+      "suites": {
+        "ruby": "spec/mysqlprovider_contract_spec.rb",
+        "python": "tests/test_mysqlprovider_contract.py",
+        "php": "tests/MysqlProviderContractTest.php",
+        "nodejs": "test/mysqlProviderContract.test.ts"
+      },
+      "cases": [
+        "update reports the exact number of rows changed",
+        "delete reports the exact number of rows removed",
+        "an update reports a null last id"
+      ]
+    },
+    {
+      "id": "mysql-describe-safe",
+      "adr": "MYSQL-DEC-02",
+      "rule": "On a real MySQL, get_columns()/DESCRIBE of a table whose name is odd/crafted -- containing an embedded backtick and special characters -- introspects its columns correctly, because the identifier is STRICT-quoted (backticks, embedded backticks doubled), schema-aware, rather than interpolated raw. A crafted name is one escaped identifier (a clean 'unknown table', never runnable SQL): a sentinel table is untouched by a malicious name. Identical in all four (Python _quote_mysql_ident; PHP quoteMysqlIdentifier; Ruby quote_mysql_identifier; Node the escaped back-quote in columnsAsync).",
+      "why": "MYSQL-DESCRIBE-UNPARAM: DESCRIBE builds `DESCRIBE ` + table_name with no bind parameter (a bind is not accepted there). Python/PHP/Ruby interpolated it raw; Node back-quoted but did not escape an embedded backtick -- an injection / breakage footgun and a parity inconsistency with the parameterised information_schema queries elsewhere. Mutation-proved: revert the strict-quote and 'describe of an odd table name returns its columns' goes RED (a special-char/backtick name is a syntax error unquoted, or the embedded backtick closes the quote early in Node). Proven no-mocks by creating a real table with an embedded-backtick name and introspecting it.",
+      "suites": {
+        "ruby": "spec/mysqlprovider_contract_spec.rb",
+        "python": "tests/test_mysqlprovider_contract.py",
+        "php": "tests/MysqlProviderContractTest.php",
+        "nodejs": "test/mysqlProviderContract.test.ts"
+      },
+      "cases": [
+        "describe of an odd table name returns its columns",
+        "describe of a crafted table name does not inject"
+      ]
+    },
+    {
+      "id": "mysql-batch-sequential-ids",
+      "adr": "MYSQL-DEC-02",
+      "rule": "On a real MySQL, a batch db.insert([...]) of N rows returns a DatabaseResult whose last_id is the LAST row's generated id (MySQL reports the FIRST id of a collapsed multi-row INSERT; the provider normalises FIRST->LAST via the shared SQLTranslator.batch_last_id / batchLastId helper), and every inserted row received a consecutive id, verified by reading the rows back. Identical in all four.",
+      "why": "MYSQL-BATCH-ID-DUP: the FIRST->LAST normalisation was re-implemented inline in each MySQL adapter (PHP TWICE) instead of calling the shared, otherwise-dead helper. Routing through the one helper keeps the ids correct (the case stays green) and removes the duplication. MEASURED on the live lab, only RUBY's db.insert collapses a 3-row batch into ONE multi-row INSERT, so batch_last_id is mutation-witnessed there: neutralise it (return the reported id unchanged) and 'a batch insert returns the last sequential generated id' goes RED (it reports the FIRST id 1 for a 3-row batch whose last id is 3). Python/PHP/Node run this db.insert row-at-a-time (each single-row INSERT reports its own consecutive id), so their case is a green regression lock and their batch_last_id de-dup is behaviour-preserving (a no-op at row-count 1). NOTE: Node's MySQL adapter carries NO first->last normalisation at all (a hand-written multi-row INSERT via db.execute would report the FIRST id there) -- a latent parity gap outside this feature's scope, flagged not fixed. No mocks.",
+      "suites": {
+        "ruby": "spec/mysqlprovider_contract_spec.rb",
+        "python": "tests/test_mysqlprovider_contract.py",
+        "php": "tests/MysqlProviderContractTest.php",
+        "nodejs": "test/mysqlProviderContract.test.ts"
+      },
+      "cases": [
+        "a batch insert returns the last sequential generated id",
+        "a batch insert assigns consecutive ids to every row"
+      ]
+    }
+  ]
+}
