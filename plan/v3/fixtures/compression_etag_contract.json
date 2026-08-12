@@ -1,0 +1,136 @@
+{
+  "_comment": [
+    "The HTTP compression + ETag contract: ONE answer key, four frameworks. Feature 40.",
+    "",
+    "CE-DEC-01 (OWNER-DECISIONS.md Batch 1) - DECIDED: BUILD IN ALL FOUR. Compression",
+    "+ the dynamic content-hash ETag + dynamic conditional-GET were Python-only;",
+    "ported to PHP/Ruby/Node so this is a real four-language feature, not a",
+    "Python-only optimization the other three merely tolerate.",
+    "",
+    "CE-DEC-02 (OWNER-DECISIONS.md Batch 4) - DECIDED: the 304 preserves",
+    "ETag/Last-Modified (fixes CE-PY-304-DROPS-VALIDATORS, a Python-only bug -",
+    "PHP/Ruby/Node's static 304 already preserved them) + pin ONE weak static",
+    "ETag format `W/\"<size>-<mtime>\"` (decimal, integer-second mtime) across",
+    "all four (fixes CE-STATIC-ETAG-DIVERGENCE - Python strong md5, PHP",
+    "mtime-size decimal, Ruby mtime-size hex, Node size-mtimeMs reversed with",
+    "fractional ms, were four different formats for the same file) + unify",
+    "If-None-Match matching on RFC-7232 weak comparison + comma-list + `*`",
+    "(fixes CE-INM-SEMANTICS - Python did an exact full-string compare;",
+    "PHP/Ruby/Node were already RFC-7232-correct and are REUSED, not",
+    "reimplemented, by each language's new dynamic conditional-GET path).",
+    "",
+    "See tina4-documentation/plan/v3/OWNER-DECISIONS.md and",
+    "tina4-documentation/plan/v3/features/040-compression-etag.md.",
+    "",
+    "Every case is driven with a REAL server (uvicorn / php -S / Tina4::WebServer",
+    "/ a real @tina4/core server) over REAL HTTP (a genuine TCP socket) - NO",
+    "mocks. Compression is verified by decoding the wire bytes with a real gzip",
+    "decoder (never trusting a header alone); the static ETag case pins a file",
+    "with a FIXED mtime so the format is asserted byte-exact.",
+    "",
+    "Zero new runtime dependencies: PHP uses core `gzencode`, Ruby uses stdlib",
+    "`Zlib`, Node uses `node:zlib` `gzipSync` - all three already shipped in",
+    "their respective language runtimes.",
+    "",
+    "Each invariant names a REAL suite file per framework and a list of case",
+    "names. The four suites carry the SAME case names in each language's own",
+    "idiom (Python snake_case function, PHP testPascalCase method, Ruby",
+    "it-description, Node assert label), which scripts/audit-contract-fixtures.py",
+    "normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "40 - HTTP compression and ETag",
+  "invariants": [
+    {
+      "id": "ce-compressible-body-gzips-with-vary",
+      "adr": "CE-DEC-01",
+      "rule": "A compressible response body over 1024 bytes, requested with `Accept-Encoding: gzip`, is returned gzip-compressed: `Content-Encoding: gzip` + `Vary: Accept-Encoding` are set and the wire body is a valid gzip stream that decodes to the original content. WITHOUT that header the same body is served identity (no Content-Encoding).",
+      "why": "CE-COMPRESSION-PY-ONLY: a prior doc claimed gzip in all four; the source showed PHP/Ruby/Node had no compression primitive anywhere. This proves the ported gzip actually compresses REAL bytes a REAL client can decode, and that the negative (no header) path stays identity - the Vary header is what keeps a shared cache from serving gzip to an identity-only client.",
+      "suites": {
+        "python": "tests/test_compression_etag_contract.py",
+        "php": "tests/CompressionEtagContractTest.php",
+        "ruby": "spec/compression_etag_contract_spec.rb",
+        "nodejs": "test/compressionEtagContract.test.ts"
+      },
+      "cases": [
+        "compressible_body_over_1kb_gzips_with_vary"
+      ]
+    },
+    {
+      "id": "ce-small-or-incompressible-not-gzipped",
+      "adr": "CE-DEC-01",
+      "rule": "A body under 1024 bytes is never gzipped even when the client offers `Accept-Encoding: gzip`. A body over 1024 bytes with a NON-compressible declared Content-Type (e.g. `application/octet-stream`) is also never gzipped, even when the underlying bytes are highly compressible - the gate is the DECLARED content type, not measured entropy.",
+      "why": "The negative half of CE-COMPRESSION-PY-ONLY: proves both gates (size AND content-type) are real thresholds, not always-on compression that happens to pass the positive case.",
+      "suites": {
+        "python": "tests/test_compression_etag_contract.py",
+        "php": "tests/CompressionEtagContractTest.php",
+        "ruby": "spec/compression_etag_contract_spec.rb",
+        "nodejs": "test/compressionEtagContract.test.ts"
+      },
+      "cases": [
+        "small_or_incompressible_body_not_gzipped"
+      ]
+    },
+    {
+      "id": "ce-cacheable-response-carries-etag",
+      "adr": "CE-DEC-01",
+      "rule": "A 200 response with content carries an ETag validator. Dynamic (non-static-file) responses now get one in all four - before CE-DEC-01, PHP/Ruby/Node attached NO ETag to a dynamic response and could never answer it with a 304.",
+      "why": "CE-DYNAMIC-ETAG-PY-ONLY: the dynamic content-hash ETag (and the conditional-GET it enables) existed only in Python. This is the direct positive proof the port landed in the other three.",
+      "suites": {
+        "python": "tests/test_compression_etag_contract.py",
+        "php": "tests/CompressionEtagContractTest.php",
+        "ruby": "spec/compression_etag_contract_spec.rb",
+        "nodejs": "test/compressionEtagContract.test.ts"
+      },
+      "cases": [
+        "cacheable_response_carries_an_etag"
+      ]
+    },
+    {
+      "id": "ce-304-preserves-validators",
+      "adr": "CE-DEC-02",
+      "rule": "A matching `If-None-Match` returns 304 Not Modified with an EMPTY body that PRESERVES the ETag (dynamic and static responses) and Last-Modified (static responses, which carry one) - the SAME validators the 200 would have carried.",
+      "why": "CE-PY-304-DROPS-VALIDATORS: Python's 304 (both the dynamic and static paths) sent `headers: []`, silently dropping ETag/Last-Modified and violating RFC 9110 S15.4.5 (a 304 SHOULD carry the validator so an intermediary cache can refresh freshness) - while PHP/Ruby/Node's static 304 already preserved them. This proves Python's fix AND that the newly-added dynamic 304 in PHP/Ruby/Node preserves validators from the start (no equivalent bug to fix there - CE-DEC-01 ports the WHOLE contract, not just the compression half).",
+      "suites": {
+        "python": "tests/test_compression_etag_contract.py",
+        "php": "tests/CompressionEtagContractTest.php",
+        "ruby": "spec/compression_etag_contract_spec.rb",
+        "nodejs": "test/compressionEtagContract.test.ts"
+      },
+      "cases": [
+        "matching_if_none_match_returns_304_preserving_validators"
+      ]
+    },
+    {
+      "id": "ce-rfc7232-weak-list-star-inm",
+      "adr": "CE-DEC-02",
+      "rule": "If-None-Match matching follows RFC 7232 S3.2 weak comparison in all four: a `W/`-prefixed candidate matches a strong ETag of the same underlying value, a comma-separated candidate list matches on ANY member, and `*` always matches. A genuinely non-matching tag does NOT 304.",
+      "why": "CE-INM-SEMANTICS-DIVERGE: Python did an EXACT full-string compare (no W/ strip, no list, no wildcard) while PHP/Ruby/Node were already RFC-7232-correct. This proves Python's unification onto the SAME semantics the other three already had, plus the negative control (a non-match must still serve 200) so the fix cannot be a rubber-stamp always-304.",
+      "suites": {
+        "python": "tests/test_compression_etag_contract.py",
+        "php": "tests/CompressionEtagContractTest.php",
+        "ruby": "spec/compression_etag_contract_spec.rb",
+        "nodejs": "test/compressionEtagContract.test.ts"
+      },
+      "cases": [
+        "rfc7232_weak_list_star_inm_matches"
+      ]
+    },
+    {
+      "id": "ce-static-etag-format-identical",
+      "adr": "CE-DEC-02",
+      "rule": "The static-file ETag format is IDENTICAL across all four: weak `W/\"<size>-<mtime>\"`, decimal-encoded, integer-second mtime. Pinned by requesting a real file with a FIXED mtime and asserting the exact byte-for-byte header value.",
+      "why": "CE-STATIC-ETAG-DIVERGENCE: the prior doc's 'identical across the four' claim was false - Python used a strong md5 content hash, PHP used `W/\"mtime-size\"` decimal, Ruby used `W/\"mtime-size\"` hex, Node used `W/\"size-mtimeMs\"` reversed with fractional milliseconds. A client caching the SAME static file behind a reverse proxy saw a different validator per backend language. This pins the single agreed format so the same file yields the same ETag regardless of which backend served it.",
+      "suites": {
+        "python": "tests/test_compression_etag_contract.py",
+        "php": "tests/CompressionEtagContractTest.php",
+        "ruby": "spec/compression_etag_contract_spec.rb",
+        "nodejs": "test/compressionEtagContract.test.ts"
+      },
+      "cases": [
+        "static_etag_format_identical_across_the_four"
+      ]
+    }
+  ]
+}
