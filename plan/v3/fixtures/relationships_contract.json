@@ -1,0 +1,150 @@
+{
+  "_comment": [
+    "Feature 21 - Declarative ORM relationships. Two owner decisions:",
+    "",
+    "REL-DEC-01 (OWNER-DECISIONS.md Batch 2): relationships are READ-SIDE-ONLY.",
+    "The framework wires up traversal accessors but emits NO DB-level FK /",
+    "ON DELETE clause (consistent with the no-foreign-key Firebird rule), so",
+    "referential integrity is the migration/DDL's job and deleting a parent does",
+    "NOT cascade to children at the engine level. Python's phantom `on_delete=`",
+    "parameter -- which silently did nothing -- is DROPPED: passing it now raises a",
+    "clear read-side-only error instead of implying a cascade that never happens.",
+    "PHP/Ruby/Node never had an on_delete option and emit no FK constraint, so they",
+    "were already read-side-only (code wins over the audit; verified, not 'fixed').",
+    "",
+    "REL-DEC-02 (feature doc 021, the fix bundle): the traversal itself is made",
+    "correct and consistent in all four:",
+    "  * REL-NODE-AUTOWIRE-DEAD (the big one): Node's DOCUMENTED declarative FK",
+    "    auto-wire produced NO accessors and had NO lazy load -- post.author /",
+    "    author.posts were missing and include did not populate them (the eager",
+    "    grouping also mismatched an FK that round-tripped as \"1.0\" against an",
+    "    INTEGER pk). Node now attaches belongsTo/hasMany/hasOne LAZY accessors on",
+    "    both sides (reusing the imperative path + the cross-model registry) and",
+    "    normalizes the eager join key, so declarative relationships FUNCTION and",
+    "    match Python/PHP/Ruby. toDict serializes a relation once it has been",
+    "    loaded (eager or awaited) -- a sync serializer cannot await a lazy read.",
+    "  * REL-SOFTDELETE-TRAVERSAL: the soft-delete `is_deleted = 0` filter is",
+    "    applied to relationship TRAVERSAL (lazy AND eager) in all four, so a",
+    "    soft-deleted child is NOT returned through parent.children (Python's lazy",
+    "    + all four's eager did not filter; PHP's lazy already did via where()).",
+    "  * REL-EAGER-UNBOUNDED: the eager `WHERE fk IN (...)` list is CHUNKED (one",
+    "    query per <=500-parent chunk) so a huge parent set never builds an",
+    "    unbounded IN list; and the lazy has_many is now PAGED/uncapped (Python's",
+    "    silent 1000-cap and PHP/Ruby's 100-cap are gone -- the tail is reachable).",
+    "  * REL-PHP-EAGERLOAD-STATIC: the public static ORM::eagerLoad($rows,$include)",
+    "    with no $db called the INSTANCE getDb() in a static context and fatalled;",
+    "    it now resolves the DB via the static resolveDb() path. (PHP's eager path",
+    "    also now merges the FK registry so an FK-wired has-many resolves through",
+    "    eager, matching __get's lazy merge.)",
+    "",
+    "NO MOCKS. Every case drives a REAL database -- real SQLite AND the lab's real",
+    "PostgreSQL (:55432, tina4/tina4). Row presence/absence is asserted by querying",
+    "the real table; the no-N+1 invariant is proven with a REAL executed-statement",
+    "counter that instruments the real adapter's fetch (observation, not a mock);",
+    "the tail-reachable case inserts > every old cap (1001 children) and reads them",
+    "all back. Positive AND negative throughout.",
+    "",
+    "Mutation-proven (per framework, restored after): neuter the lazy soft-delete",
+    "filter -> the soft-deleted-child-excluded case RED (Python/Ruby); revert PHP's",
+    "static resolveDb -> the public static eagerLoad ERRORS 'getDb() cannot be",
+    "called statically'; no-op Node's _wireRelationshipAccessors -> the",
+    "lazy-attribute-access case RED (declarative relationships dead again).",
+    "",
+    "Each invariant names a REAL suite file per framework carrying the SAME case",
+    "names in each language's own idiom, which scripts/audit-contract-fixtures.py",
+    "normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "21 - Declarative ORM relationships (REL-DEC-01 read-side-only cascade + drop Python on_delete; REL-DEC-02 Node declarative auto-wire + lazy load, soft-delete traversal filter, bounded eager IN + paged lazy, PHP static eagerLoad)",
+  "invariants": [
+    {
+      "id": "rel-eager-one-query-per-relation",
+      "adr": "REL-DEC-02",
+      "rule": "Eager-loading a relation via include= runs EXACTLY ONE query for that relation across all parents (batched WHERE fk IN (...)), never one query per parent (no N+1). Proven by a REAL executed-statement counter on the real adapter: loading 3 parents each with 2 children issues exactly ONE query touching the child table, and the 6 children are grouped onto the right parents. Identical in all four (Python, PHP, Ruby, Node). For PHP this also exercises the public static ORM::eagerLoad($rows, $include) with no $db (REL-PHP-EAGERLOAD-STATIC).",
+      "why": "The whole point of eager loading is N+1 avoidance. Counting real adapter queries (instrumentation, not a mock) proves the batched IN is issued once per relation, not per parent. The IN list is chunked at 500 parents per query so a huge parent set stays bounded; the tested set is one chunk, hence one query.",
+      "suites": {
+        "ruby": "spec/relationships_contract_spec.rb",
+        "python": "tests/test_relationships_contract.py",
+        "php": "tests/RelationshipsContractTest.php",
+        "nodejs": "test/relationshipsContract.test.ts"
+      },
+      "cases": [
+        "eager_include_runs_one_query_per_relation"
+      ]
+    },
+    {
+      "id": "rel-softdelete-traversal",
+      "adr": "REL-DEC-02",
+      "rule": "A soft-deleted child is EXCLUDED from relationship traversal -- both the lazy accessor (parent.children) and the eager include= path append the soft-delete filter (is_deleted = 0). A real soft-deleted row is COUNT=1 in the raw table (negative control) but ABSENT from the parent's children in all four.",
+      "why": "REL-SOFTDELETE-TRAVERSAL: traversal must be consistent with the finders' default exclusion (feature 20). Python's lazy + all four's eager did not filter; PHP's lazy already filtered via where(). Both lazy and eager are pinned so a soft-deleted child cannot reappear through a relationship. Proven against a REAL soft-deleted row -- no mocks.",
+      "suites": {
+        "ruby": "spec/relationships_contract_spec.rb",
+        "python": "tests/test_relationships_contract.py",
+        "php": "tests/RelationshipsContractTest.php",
+        "nodejs": "test/relationshipsContract.test.ts"
+      },
+      "cases": [
+        "soft_deleted_child_excluded_from_lazy_traversal",
+        "soft_deleted_child_excluded_from_eager_traversal"
+      ]
+    },
+    {
+      "id": "rel-bounded-eager-and-paged-lazy",
+      "adr": "REL-DEC-02",
+      "rule": "A parent with more than one page of children returns ALL of them through traversal -- the tail is reachable, never silently truncated. Proven by inserting 1001 children (over every old cap: Python lazy 1000, PHP/Ruby lazy 100) and reading all 1001 back through the lazy accessor. Identical in all four.",
+      "why": "REL-EAGER-UNBOUNDED: Python's lazy has_many silently capped at 1000 and PHP/Ruby at 100, losing the tail with no signal; the lazy read is now paged (uncapped) so every child is reachable, and the eager IN list is chunked so it never grows unbounded. Proven against a REAL 1001-row child set -- no mocks.",
+      "suites": {
+        "ruby": "spec/relationships_contract_spec.rb",
+        "python": "tests/test_relationships_contract.py",
+        "php": "tests/RelationshipsContractTest.php",
+        "nodejs": "test/relationshipsContract.test.ts"
+      },
+      "cases": [
+        "large_child_set_is_fully_reachable_not_truncated"
+      ]
+    },
+    {
+      "id": "rel-lazy-attribute-access",
+      "adr": "REL-DEC-02",
+      "rule": "Reading a declared relationship as an attribute (lazy) returns the related rows: parent.children yields the child instances and child.parent yields the parent instance, in all four. This is the REL-NODE-AUTOWIRE-DEAD proof -- Node's declarative FK auto-wire now attaches working lazy accessors on both sides (previously non-functional), matching Python/PHP/Ruby.",
+      "why": "Node's documented declarative auto-wire produced NO accessors and had NO lazy load, so post.author / author.posts were missing. It now attaches belongsTo/hasMany/hasOne lazy accessors (async, cached) reusing the imperative path + the cross-model registry, so declarative relationships function four-way. Proven against a REAL database -- no mocks.",
+      "suites": {
+        "ruby": "spec/relationships_contract_spec.rb",
+        "python": "tests/test_relationships_contract.py",
+        "php": "tests/RelationshipsContractTest.php",
+        "nodejs": "test/relationshipsContract.test.ts"
+      },
+      "cases": [
+        "lazy_attribute_access_returns_related_rows"
+      ]
+    },
+    {
+      "id": "rel-read-side-only-no-db-cascade",
+      "adr": "REL-DEC-01",
+      "rule": "Relationships are READ-SIDE-ONLY: the framework emits no DB-level ON DELETE cascade, so deleting a parent leaves its children in the database. After hard-deleting a parent that has two children, the parent row is gone (COUNT=0) but both child rows survive (COUNT=2) in all four. Referential integrity is the migration/DDL's job.",
+      "why": "REL-DEC-01: no engine-level referential action is emitted (consistent with the no-FK Firebird rule). This NEGATIVE-control case proves there is no phantom cascade -- children are NOT removed by a parent delete. Proven by a raw COUNT on the real table -- no mocks.",
+      "suites": {
+        "ruby": "spec/relationships_contract_spec.rb",
+        "python": "tests/test_relationships_contract.py",
+        "php": "tests/RelationshipsContractTest.php",
+        "nodejs": "test/relationshipsContract.test.ts"
+      },
+      "cases": [
+        "deleting_a_parent_leaves_children_in_the_db"
+      ]
+    },
+    {
+      "id": "rel-python-on-delete-dropped",
+      "adr": "REL-DEC-01",
+      "rule": "Python-only: the phantom `on_delete=` parameter on ForeignKeyField -- which silently did nothing -- is DROPPED. Declaring on_delete now RAISES a clear read-side-only ValueError ('relationships are read-side-only and emit no ON DELETE / REFERENCES clause; enforce referential integrity in your migration DDL instead') rather than misleading the developer into thinking a DB cascade is configured. PHP/Ruby/Node never accepted an on_delete option, so there is nothing to drop there.",
+      "why": "REL-DEC-01 (do not ship a param that does nothing): a silent no-op parameter is a phantom API. Dropping it and failing loudly is the honest behaviour -- the error names the read-side-only contract and the remedy. This is a Python-only mechanism (the other three have no such option), so the invariant is Python-scoped.",
+      "suites": {
+        "python": "tests/test_relationships_contract.py"
+      },
+      "cases": [
+        "declaring_on_delete_raises_read_side_only"
+      ]
+    }
+  ]
+}
