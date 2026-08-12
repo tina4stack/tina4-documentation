@@ -1,0 +1,115 @@
+{
+  "_comment": [
+    "Feature 22 - Imperative ORM relationships. Two owner decisions:",
+    "",
+    "IMPREL-DEC-01 (OWNER-DECISIONS.md Batch 4): imperative relationships are a",
+    "PER-LANGUAGE IDIOM -- NOT a required distinct API in all four. Python, PHP and",
+    "Node expose a distinct instance-method API (has_one/has_many/belongs_to taking",
+    "a related CLASS + fk, one per-call query, uncached). Ruby has NO separate",
+    "instance-level builder: its imperative form is the DECLARATIVE class method",
+    "(has_one/has_many/belongs_to) INVOKED AT RUNTIME, then read through the",
+    "generated accessor. The ledger's call was explicit: do NOT force a new API onto",
+    "Ruby -- document Ruby's form and exercise the runtime-invoked class method. So",
+    "the Ruby runner defines the relationship at runtime and asserts the SAME rows,",
+    "and Ruby's framework code is UNCHANGED for this feature.",
+    "",
+    "IMPREL-DEC-02 (feature doc 022, the fix bundle) -- three fixes in the distinct-",
+    "API languages:",
+    "  * IMPREL-NODE-ORPHAN (Node): the imperative hasOne/hasMany/belongsTo wrote",
+    "    the loaded relation onto this[tableName.toLowerCase()] and returned it but",
+    "    NEVER populated _relCache; toDict reads _relCache. So an imperatively-loaded",
+    "    relation -- stored under the TABLE name -- was ORPHANED from serialization",
+    "    whenever the table name differs from the lowercased model name (model",
+    "    ImpRelPostNode, table imp_rel_post). Fixed: the imperative methods now also",
+    "    populate _relCache[relKey] under the same key the serializer reads, so an",
+    "    imperatively-loaded relation serializes.",
+    "  * IMPREL-PHP-PARALLEL (PHP): PHP had TWO parallel implementations of the same",
+    "    three relationship queries -- the public imperative hasOne/hasMany/belongsTo",
+    "    and the private hasOneMethod/hasManyMethod/belongsToMethod used by the",
+    "    declarative path. DE-DUPLICATED onto the ONE public implementation (the",
+    "    three private methods are DELETED and the declarative _loadRelationship now",
+    "    calls the public methods); the public imperative methods -- which had NO",
+    "    direct test -- are now covered here. Net PHP LOC DOWN.",
+    "  * IMPREL-PY-CAP (Python): the imperative has_many defaulted limit=100 while",
+    "    the lazy descriptor pages the whole set (feature 21), so the SAME",
+    "    relationship returned a different row count by access path. Unified: the",
+    "    imperative has_many now pages ALL rows by default (parity with the lazy",
+    "    path, no silent truncation); an explicit limit still pages. The same",
+    "    silent-100-cap existed on PHP's public hasMany and Node's imperative hasMany",
+    "    and is fixed there too, so all three distinct-API languages now agree with",
+    "    their own lazy/eager path.",
+    "",
+    "BREAKING (both correctness fixes, permitted pre-3.14.0): Node toDict now",
+    "INCLUDES an imperatively-loaded relation (was omitted); the imperative has_many",
+    "default row cap changes from a silent 100 to the whole set (Python/PHP/Node).",
+    "",
+    "NO MOCKS. Every case drives a REAL database -- real SQLite AND the lab's real",
+    "PostgreSQL (:55432, tina4/tina4). Row counts and serialized shapes are asserted",
+    "against real rows; the cap case inserts 150 children (> the old 100 cap).",
+    "Positive AND negative throughout (the serialize case's negative: WITHOUT include",
+    "the relation is not serialized; the cap case's negative: an explicit limit still",
+    "pages; the surface case's negative: belongs_to whose FK resolves to no parent",
+    "returns null).",
+    "",
+    "Mutation-proven (per framework, restored after): remove Node's imperative",
+    "_relCache population -> imperative_relation_serializes RED (serialized=0);",
+    "reintroduce the 100-cap on the imperative has_many in Python, PHP AND Node ->",
+    "imperative_and_lazy_same_row_count RED (imperative 100 vs lazy 150). Ruby's",
+    "framework is unchanged (IMPREL-DEC-01), so its cases assert the runtime-invoked",
+    "class method already returns the full set -- a parity assertion, not a fix.",
+    "",
+    "Each invariant names a REAL suite file per framework carrying the SAME case",
+    "names in each language's own idiom, which scripts/audit-contract-fixtures.py",
+    "normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "22 - Imperative ORM relationships (IMPREL-DEC-01 per-language idiom -- Ruby is the declarative method invoked at runtime, no new API; IMPREL-DEC-02 fix Node's serialize-orphan + de-duplicate PHP's parallel impl + unify the imperative has_many cap with the lazy path)",
+  "invariants": [
+    {
+      "id": "imprel-serializes",
+      "adr": "IMPREL-DEC-02",
+      "rule": "An imperatively-loaded relation SERIALIZES: after loading a relation via the imperative idiom, serializing the parent with include=[rel] contains the related rows. In Node this is the IMPREL-NODE-ORPHAN proof -- the imperative methods now populate _relCache (the key toDict reads) so an imperatively-loaded relation is no longer orphaned; the model's table name differs from its lowercased class name so the orphan bug would bite. In Python/PHP/Ruby the relation serializes through the declared accessor the include= path triggers. NEGATIVE: without include the relation is not serialized (fields only).",
+      "why": "IMPREL-NODE-ORPHAN: Node's imperative store wrote this[tableName] but toDict reads _relCache, so a pure-imperative relation never serialized. Proven against a REAL database with a model whose table name != lowercased class name; mutation-proved in Node (remove the _relCache population -> serialized=0, RED).",
+      "suites": {
+        "ruby": "spec/imperative_relationships_contract_spec.rb",
+        "python": "tests/test_imperative_relationships_contract.py",
+        "php": "tests/ImperativeRelationshipsContractTest.php",
+        "nodejs": "test/imperativeRelationshipsContract.test.ts"
+      },
+      "cases": [
+        "imperative_relation_serializes"
+      ]
+    },
+    {
+      "id": "imprel-cap-parity",
+      "adr": "IMPREL-DEC-02",
+      "rule": "The imperative and lazy/eager paths return the SAME row count for the same relationship, with no silent truncation. Proven by 150 children (> the old imperative cap of 100): the imperative has_many and the lazy accessor both return 150. In Ruby (no distinct API) the runtime-invoked has_many and the eager include= path both return 150. NEGATIVE: an EXPLICIT limit still pages (limit=100 returns exactly 100), proving the default is genuinely uncapped, not a larger fixed cap.",
+      "why": "IMPREL-PY-CAP: the imperative has_many silently capped at 100 while the lazy path (feature 21) pages the whole set, so the same relationship gave a different count by access path. Unified to page/uncapped in Python, PHP and Node. Proven against a REAL 150-row child set; mutation-proved in Python/PHP/Node (reintroduce the 100-cap -> imperative 100 vs lazy 150, RED). Ruby was already uncapped (feature 21) -- its case asserts parity.",
+      "suites": {
+        "ruby": "spec/imperative_relationships_contract_spec.rb",
+        "python": "tests/test_imperative_relationships_contract.py",
+        "php": "tests/ImperativeRelationshipsContractTest.php",
+        "nodejs": "test/imperativeRelationshipsContract.test.ts"
+      },
+      "cases": [
+        "imperative_and_lazy_same_row_count"
+      ]
+    },
+    {
+      "id": "imprel-surface",
+      "adr": "IMPREL-DEC-01",
+      "rule": "The imperative surface behaves the same in all four (per-language idiom): has_one returns a single related child, has_many returns all the children, belongs_to returns the parent. Python/PHP/Node call the distinct instance methods (related CLASS + fk); Ruby invokes the declarative has_one/has_many/belongs_to class methods AT RUNTIME and reads the generated accessors. NEGATIVE: belongs_to whose FK resolves to no parent (a dangling FK -- read-side-only, so no DB FK constraint) returns null.",
+      "why": "IMPREL-DEC-01 (per-language idiom): imperative relationships are NOT forced into one API shape. This case exercises all three relationship kinds through each language's imperative idiom -- the distinct instance methods in Python/PHP/Node, the runtime-invoked class methods in Ruby -- and pins the same observable results against a REAL database, so the surfaces stay behaviourally equivalent without forcing a new instance builder onto Ruby.",
+      "suites": {
+        "ruby": "spec/imperative_relationships_contract_spec.rb",
+        "python": "tests/test_imperative_relationships_contract.py",
+        "php": "tests/ImperativeRelationshipsContractTest.php",
+        "nodejs": "test/imperativeRelationshipsContract.test.ts"
+      },
+      "cases": [
+        "imperative_surface_behaves_same_all_four"
+      ]
+    }
+  ]
+}
