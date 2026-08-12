@@ -1,0 +1,169 @@
+{
+  "_comment": [
+    "Feature 27 (Automatic CRUD from models) -- CRUD-DEC-01 (a consistent 422",
+    "with FIELD errors on an invalid create/update) + CRUD-DEC-02 (allow-list",
+    "writable columns -- guard is_deleted, strip the PK -- and add wire tests).",
+    "",
+    "Audit findings (027-auto-crud.md): the write-auth gate was ALREADY correct",
+    "in all four (secure-by-default, verified), but the validation-failure",
+    "status diverged (Python 400, Node 422, PHP HTTP 500 reading the stale/",
+    "unrelated $db->error() when no DB call ever ran, Ruby HTTP 500 from",
+    "create() returning literal false then .persisted? raising NoMethodError),",
+    "and the write body was not column-allow-listed (a client could set",
+    "is_deleted, and on Python/PHP a client-supplied auto-increment PK on",
+    "create could flip save() onto its update() branch and silently overwrite",
+    "an unrelated existing row).",
+    "",
+    "FIXED, all four, small diffs at the AutoCrud handler boundary (no ORM/",
+    "Router changes): Python crud/__init__.py adds _allow_listed_data() +",
+    "wraps create/update in try/except so a coercion failure is 422 not an",
+    "uncaught exception, and checks save()'s False return instead of the dead",
+    "except-that-never-fires; PHP AutoCrud.php calls $model->validate() BEFORE",
+    "save() (422 with the field array) and reads $model->getError() (save()'s",
+    "own recorded cause) instead of the adapter's bare error() on a genuine",
+    "driver failure; Ruby auto_crud.rb's POST switches from",
+    "model_class.create(attrs) + .persisted? to model_class.new(attrs) + save()",
+    "-- the SAME safe pattern its own PUT handler already used, so create and",
+    "update are symmetric; Node autoCrud.ts (already 422-correct on both verbs",
+    "per feature 19) adds the allow-list ahead of validate()/persistence.",
+    "",
+    "Allow-list design (identical intent, adapted per language): only DECLARED",
+    "fields are read from the body; is_deleted is ALWAYS guarded (soft-delete is",
+    "mutated only by delete()/restore(), never a POST/PUT body); the primary",
+    "key is stripped from the body on every UPDATE (the row is addressed by the",
+    "URL {id} alone -- independently confirmed, by reading each save()/update()",
+    "path, that a body PK would otherwise redirect the WHERE clause, or on Node",
+    "rename the row's own identity column, off the URL-addressed row) and on",
+    "CREATE except a genuinely natural (single-column, non-auto-increment) key,",
+    "which stays client-suppliable -- the documented way to create a",
+    "natural-key row (each language's own Swagger-example builder already",
+    "keeps such a key in the sample body). PHP's allow-list is a DENY-list of",
+    "just these two dangerous keys, not a strict allow-list of declared typed",
+    "properties: PHP supports fully dynamic (undeclared-property) models by",
+    "design (ORM::getModelProperties() explicitly merges __set()-captured",
+    "dynamic properties), and AutoCrudV3Test's own CrudItem fixture declares NO",
+    "typed properties at all -- measured directly: a strict allow-list on",
+    "getFieldDefinitions() alone turned testCreateItem/testUpdateItem/",
+    "testCreateMultipleItems red (name never reached the row, NOT NULL failed)",
+    "before the design was corrected to a deny-list.",
+    "",
+    "NO MOCKS. Every case boots a REAL server per language (Python: uvicorn in",
+    "a child process; PHP: php -S via the existing TestServer helper; Ruby:",
+    "Tina4::TestClient, which dispatches through the SAME RackApp#call +",
+    "enforce_route_auth a live socket uses -- the established, already-blessed",
+    "'no mocks' pattern this repo's own auto_crud_paginate_envelope_spec.rb and",
+    "test_client_auth_spec.rb use for exactly this class of test; Node: a real",
+    "node:http server via the real startServer(), with a model file discovered",
+    "from a real src/models/ directory on disk, mirroring secureByDefault.test.ts).",
+    "Each drives a REAL AutoCrud-registered model over REAL SQLite with a REAL",
+    "JWT (minted via each framework's own Auth.get_token/getToken), and reads",
+    "the persisted row back independently of the ORM (raw SQL) to prove what",
+    "was actually written, not merely what the response claimed. Verified",
+    "2026-08-12 against the .99 lab (all four green together in one run:",
+    "results: python=0 php=0 ruby=0 node=0).",
+    "",
+    "Mutation-proved (all four, individually, on the .99 lab in the same",
+    "session): neutralising the is_deleted guard turns mass_assignment_is_blocked",
+    "RED (the row's is_deleted really lands as 1 -- on Python/Node, whose test",
+    "model has soft_delete enabled, the row also silently vanishes from the",
+    "list total, a second RED signal from the same mutation); neutralising the",
+    "write-security flag (forcing every write route open) turns",
+    "tokenless_write_returns_401 RED (a tokenless write returns 2xx instead of",
+    "401). Each mutation was restored and reproved green before moving on."
+  ],
+  "version": 1,
+  "decided": "2026-08-11",
+  "feature": "CRUD-DEC-01/CRUD-DEC-02 - consistent 422+field-errors on invalid create/update, writable-column allow-list",
+  "invariants": [
+    {
+      "id": "autocrud-tokenless-write-returns-401",
+      "adr": "0043",
+      "rule": "A generated POST/PUT/DELETE with NO Authorization token returns 401 -- secure-by-default, unless the model was registered with public=true. This property was already correct in all four (the audit's main finding here); this invariant is the wire-level proof the audit's route-flag-only Ruby coverage (CRUD-WRITE-TESTS) was missing, ported from Node's existing real-server model to the others.",
+      "why": "MEASURED against a real server in all four (uvicorn/php -S/TestClient-via-RackApp/node:http): a tokenless POST, PUT and DELETE against a secure-by-default AutoCrud-registered model each return a genuine 401 over the real dispatch path, not an in-test route-flag assertion. Mutation-proved on the .99 lab: forcing the write-security flag open (as if public defaulted to true) turns this case RED in every framework (a tokenless write returns 2xx); restoring the flag returns it to green.",
+      "suites": {
+        "python": "tests/test_autocrud_contract.py",
+        "php": "tests/AutocrudContractTest.php",
+        "ruby": "spec/autocrud_contract_spec.rb",
+        "nodejs": "test/autocrudContract.test.ts"
+      },
+      "cases": [
+        "tokenless_write_returns_401"
+      ]
+    },
+    {
+      "id": "autocrud-valid-create-returns-201-and-persists",
+      "adr": "0043",
+      "rule": "A valid authenticated POST creates the record, returns 201 with the persisted fields (including the engine-assigned id), and the row is really readable back from the database independently of the ORM.",
+      "why": "MEASURED: the response body's id is used to read the row back via a raw SQL query on the SAME database file/connection the server wrote to, confirming the create is not merely a well-formed response but a durable write. Proven in all four on the .99 lab.",
+      "suites": {
+        "python": "tests/test_autocrud_contract.py",
+        "php": "tests/AutocrudContractTest.php",
+        "ruby": "spec/autocrud_contract_spec.rb",
+        "nodejs": "test/autocrudContract.test.ts"
+      },
+      "cases": [
+        "valid_authenticated_post_returns_201"
+      ]
+    },
+    {
+      "id": "autocrud-invalid-create-returns-422-with-field-errors",
+      "adr": "CRUD-DEC-01",
+      "rule": "An invalid POST body (missing a required field) returns a consistent 422 Unprocessable Entity with the FIELD errors (from the model's own validation, never a database error), and writes NOTHING -- the row count is unchanged. Before the fix: Python returned 400, PHP returned HTTP 500 reading a stale/unrelated $db->error() (no DB call ever ran), Ruby returned HTTP 500 (create() returned the literal false, then .persisted? on false raised NoMethodError, caught by the generic rescue as a stray 500). Node was already 422-correct.",
+      "why": "MEASURED against a real server in all four: an invalid create (name omitted, which is required) returns exactly 422 with a field-error array naming 'name', and a raw COUNT(*) taken before and after is identical -- the invalid model never reached the driver. PHP and Ruby were run-verified as the two languages this fixes (both previously 500); Python's status changes 400->422; Node is reconfirmed unchanged (already 422). Proven together on the .99 lab: results: python=0 php=0 ruby=0 node=0.",
+      "suites": {
+        "python": "tests/test_autocrud_contract.py",
+        "php": "tests/AutocrudContractTest.php",
+        "ruby": "spec/autocrud_contract_spec.rb",
+        "nodejs": "test/autocrudContract.test.ts"
+      },
+      "cases": [
+        "invalid_post_returns_422_with_field_errors"
+      ]
+    },
+    {
+      "id": "autocrud-invalid-update-returns-422",
+      "adr": "CRUD-DEC-01",
+      "rule": "An invalid PUT body (a field violating a length/pattern/type constraint) is validated and rejected with 422, and the row is UNCHANGED in the database (read back and compared to its pre-PUT value). Node already validated PUT (feature 19, VALID-NODE-PUT-NOVALIDATE) -- confirmed unchanged here. Python/PHP/Ruby's PUT already ran through validate()/save()'s own validation (load-then-overlay-then-validate, so an untouched required field naturally keeps its already-valid DB value -- a working partial-update check with no separate isUpdate flag needed); Python's per-field assignment loop is hardened so a value that cannot even be COERCED to its type is a 422, not an uncaught exception (the prior code called field.validate(value), which raises, uncaught, on a coercion failure).",
+      "why": "MEASURED: a PUT with an over-length name (100 chars against a 20-char maxLength) returns 422 in all four, and the row read back afterward still carries its ORIGINAL name -- the invalid PUT never wrote through. Proven together on the .99 lab.",
+      "suites": {
+        "python": "tests/test_autocrud_contract.py",
+        "php": "tests/AutocrudContractTest.php",
+        "ruby": "spec/autocrud_contract_spec.rb",
+        "nodejs": "test/autocrudContract.test.ts"
+      },
+      "cases": [
+        "invalid_put_is_rejected"
+      ]
+    },
+    {
+      "id": "autocrud-mass-assignment-is-blocked",
+      "adr": "CRUD-DEC-02",
+      "rule": "A POST/PUT body carrying is_deleted and/or a client-supplied primary key is rejected/stripped at the AutoCrud handler boundary, before the value ever reaches the model or the driver -- is_deleted is NEVER written by a write body (guarded even when a model declares it as a real field, the worst case measured here), and a client-chosen id on CREATE never wins (a fresh engine-assigned id is used instead, proven by reading the row back under the RETURNED id, not the client-supplied 999999). A PUT carrying only guarded/unknown keys is a benign no-op (200, nothing changed) rather than an error.",
+      "why": "MEASURED against a real server in all four with a soft-delete-enabled model that explicitly DECLARES is_deleted as a real field (the worst case for the guard, since an undeclared column would already be invisible to some languages' field enumeration): a POST body of {name, is_deleted:1, id:999999} returns 201 with a FRESH id (never 999999), and a raw SQL read of the created row shows is_deleted=0; a follow-up PUT carrying only {is_deleted:1} returns 200 (a no-op write) and a raw SQL read still shows is_deleted=0. Mutation-proved on the .99 lab: removing the is_deleted guard from each framework's allow-list turns this case RED in every framework -- the row's is_deleted really lands as 1 (on Python/Node, whose CrudItem test model also has soft_delete enabled, the row additionally vanishes from the list total, a second RED signal from the identical mutation); restoring the guard returns it to green in every framework.",
+      "suites": {
+        "python": "tests/test_autocrud_contract.py",
+        "php": "tests/AutocrudContractTest.php",
+        "ruby": "spec/autocrud_contract_spec.rb",
+        "nodejs": "test/autocrudContract.test.ts"
+      },
+      "cases": [
+        "mass_assignment_is_blocked"
+      ]
+    },
+    {
+      "id": "autocrud-list-is-seven-key-envelope",
+      "adr": "0043",
+      "rule": "GET (list) returns EXACTLY the seven canonical snake_case keys ADR-0043 fixed to_paginate()/toPaginate() to (records, total, page, per_page, total_pages, limit, offset), and total is the TRUE row count for the table (a real COUNT), never the number of rows returned on the page. This property was already correct in all four (feature 24); this invariant re-confirms it composes correctly on the AutoCrud-generated list route specifically, alongside the write-path fixes in this same fixture.",
+      "why": "MEASURED: after the fixture's other cases have created several real rows, GET on the collection route returns a body whose key set is exactly the seven ADR-0043 keys (no data/count/totalPages aliases), and total equals a raw COUNT(*) against the same table. Proven together with the write-path cases on the .99 lab in the same run.",
+      "suites": {
+        "python": "tests/test_autocrud_contract.py",
+        "php": "tests/AutocrudContractTest.php",
+        "ruby": "spec/autocrud_contract_spec.rb",
+        "nodejs": "test/autocrudContract.test.ts"
+      },
+      "cases": [
+        "list_is_the_seven_key_envelope"
+      ]
+    }
+  ]
+}
