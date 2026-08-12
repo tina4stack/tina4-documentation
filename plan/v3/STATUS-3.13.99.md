@@ -5,7 +5,7 @@ fixture, lab-green on the .99 lab) before the next. This table is updated, commi
 feature lands. Detail: [IMPLEMENTATION-3.13.99.md](IMPLEMENTATION-3.13.99.md). Decisions:
 [OWNER-DECISIONS.md](OWNER-DECISIONS.md).
 
-**Progress: 26 / 52 features lab-green** (feature 50 Frond compiler DEFERRED to 3.13.100 fast-follow, owner call 2026-08-12). Done: Phase 1 + Phase 2 + Phase 3 (9-13) + 17 + 18 + 19 + 20 + 21. In progress: 22 (Phase 4 imperative relationships, next).
+**Progress: 27 / 52 features lab-green** (feature 50 Frond compiler DEFERRED to 3.13.100 fast-follow, owner call 2026-08-12). Done: Phase 1 + Phase 2 + Phase 3 (9-13) + 17 + 18 + 19 + 20 + 21 + 22. In progress: 23 (Phase 4 scopes, next).
 
 Status: DONE = lab-green all four (independently re-verified) . WIP = in progress . TODO = not started.
 Lab column = per-framework test counts py/php/ruby/node in the consolidated green run.
@@ -55,7 +55,7 @@ Lab column = per-framework test counts py/php/ruby/node in the consolidated gree
 | 19 | Input validation | DONE | 21/38/44/24 | b9fbd7e / cd9ab0d / b427f8b / bf0ea6a |
 | 20 | Soft delete | DONE | 14/12/14/12 | 6c190c2 / 3d10d5e / a6ce6ad / f33ed9b |
 | 21 | Relationships | DONE | 12/10/10/10 | 2e9a69a / 94ccf77 / df9bbe6 / ad51731 |
-| 22 | Imperative relationships | TODO | - | - |
+| 22 | Imperative relationships | DONE | 5/5/5/5 | 558a000 / 4e1d5df / 236f894 / 4126c4a |
 | 23 | Scopes | TODO | - | - |
 | 24 | Paginated results | TODO | - | - |
 | 26 | Instance loading | TODO | - | - |
