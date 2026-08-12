@@ -43,7 +43,7 @@ negative, no mocks) -> dead/dup code removed -> run the fixture + the feature's 
 
 ## Phase 2 - data-loss / silent no-op
 
-- [ ] 44 file upload - repeated field -> LIST all 4 (no silent drop); running per-chunk size counter php/ruby; safe-save helper
+- [x] 44 file upload - DONE 2026-08-12, lab-green all four ON LINUX (6/6/6/8; consolidated rc=0, independently re-verified - initial red was a `$HOME`-under-sudo harness bug in the gate script, NOT the code). Pushed py 9fd483c, php a6bb4b3, ruby dab136f, node 5a9bdbe, fixture 68b5e12. Repeated FILE field -> a list (no silent drop; files-scoped, matching Node + UP-MULTIFILE-LOSS); safe-save helper (sanitize filename + realpath-confine) all four; per-chunk running size guard brought to PHP/Ruby (413 mid-stream, not after buffering).
 - [ ] 47 background tasks - run under production ASGI (py) + guard FPM/Swoole (php); one surface (handle+count) all 4
 - [ ] 25 ORM cache - fix `cached()` invalidation (bust on all writes, tag by table, ttl=0=no-cache); add `cached()` to Node
 - [ ] 16 next-id - fix generic TOCTOU (lock/atomic); fix Mongo no-increment
@@ -117,6 +117,9 @@ each is deleted as part of its feature so the diff nets DOWN, not up:
 ## Follow-ups surfaced during the pass
 
 Small, orthogonal items found while implementing a feature - fold into the named later feature; do NOT expand the current feature to chase them:
+- 44 (file upload, UP-DEC-01 - pre-existing, NOT fixed): `tina4-php/Tina4/Request.php:296` docblock still says `content => string (base64)` but the code returns raw bytes - a false docblock governed by UP-DEC-01 (descriptor-key/base64 correction), out of feature-44 scope. Fold into UP-DEC-01.
+- 44 scoping note: the repeated-field->list fix is FILES-only (repeated TEXT fields stay last-wins, matching Node + the UP-MULTIFILE-LOSS finding); repeated text-field semantics are governed separately by REQ-DEC-01 (feature 29).
+- LAB GATE HARNESS: `lab-fileupload.sh` used `$HOME/rel-3.13.99`, which breaks under `sudo` (HOME=/root) - the main loop's re-run showed "MISSING clone" rc=1 until run with `sudo HOME=/home/andre`. Gate scripts MUST hardcode `BASE=/home/andre/rel-3.13.99`, never `$HOME` (the other gates already do).
 - SKILL DRIFT - DONE 2026-08-12 (report-a-skill issue #49): removed the `render_production_error` "Production error" row from `references/subsystems.md` in all four repos' tina4-maintainer skill (the fn was deleted in feature 126). Applied right after 132 landed (had been the fix-on-discovery live-collision defer).
 - 37 (CSRF): form-token TTL env var name diverges - Python reads `TINA4_TOKEN_EXPIRES_IN`, PHP/Ruby/Node read `TINA4_TOKEN_LIMIT`. Unify in a later env-uniformity pass (or with feature 64 JWT).
 - 37 (CSRF): Ruby's blank-secret hard-fail also rejects writes in RS256 mode (blank `TINA4_SECRET` + `.keys/` present + `TINA4_CSRF=true`) - kept fail-closed-uniform for parity (auto-attach is new, no existing app regresses); revisit if RS256-defer is wanted.
@@ -134,6 +137,7 @@ Compiled as features land; each is a security/parity fix, not an accidental brea
 - 36 (security headers): security headers now emit by DEFAULT (secure-by-default) in all four - notably `Content-Security-Policy: default-src 'self'`, which blocks inline scripts and third-party CDNs. Relax it with `TINA4_CSP`. HSTS emits only on HTTPS when `TINA4_HSTS` is set.
 - 129 (port takeover): `tina4 serve` on a busy port no longer kills whatever holds it - it reclaims only a port held by an identifiable Tina4 dev server (per-port PID file), refuses on a foreign holder, is dev-gated, and honours `TINA4_NO_TAKEOVER`/`--no-kill`. Anyone relying on serve force-killing an arbitrary process must free the port themselves.
 - 126 (debug overlay): the dead `render_production_error`/`renderProductionError` public function is removed in all four (nothing invoked it; the real prod 500 renders `500.twig`) - a stale caller must use the template path. The dev overlay now redacts `Authorization`/`Cookie`/`Set-Cookie` + secret body fields and caps the rendered stack at 50 frames.
+- 44 (file upload): a repeated multipart FILE field name now yields a LIST (was last-wins silent drop) - code reading `request.files['x']` for a single upload should handle a list when multiple files are sent under one name. The new safe-save helper rejects `..`/absolute filenames. PHP/Ruby now 413 an over-limit upload mid-stream (per-chunk), not after buffering the whole body.
 - 132 (inline testing): the inline `@tests` DESCRIPTOR builders are renamed `assert_*` -> `expect_*` (Python `expect_equal`/`expect_raises`/`expect_true`/`expect_false`, PHP `Testing::expectEqual`/..., Ruby `Tina4::Testing.expect_equal`/..., Node `expectEqual`/...). Code using the descriptor surface must rename its calls; the xUnit IMMEDIATE `assert_*` (`tina4_python.test` / `Tina4Test` / Ruby `TestContext`) is unchanged. `tina4 <lang> test` now DISCOVERS + RUNS the inline surface with a real exit code, so a previously-"green" run that executed zero of a developer's inline tests may now actually run (and possibly fail) them. PHP `Testing::discover()` now scans only an EXPLICIT tests directory and parses `@tests` args as literals (no `eval`): a `@tests` docblock in a source file OUTSIDE the tests dir, or one whose argument is not a literal, is no longer discovered/executed.
 
 ## Close
