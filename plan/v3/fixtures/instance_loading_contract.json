@@ -1,0 +1,189 @@
+{
+  "_comment": [
+    "Feature 26 (ORM instance loading / hydration). LOAD-DEC-01 (OWNER-DECISIONS.md",
+    "Batch 4) + LOAD-DEC-02 (Batch 5), ratified 2026-08-11.",
+    "",
+    "LOAD-PY-REVALIDATE (LOAD-DEC-01, Python, the highest-value fix): hydration",
+    "(_populate) reused Field.validate() -- the SAME method save() uses -- so a",
+    "read RE-ENFORCED write-path business constraints (required/length/range/",
+    "regex/choices). A stored row that violated a constraint, or one TIGHTENED",
+    "after the row was written, raised ValueError out of cls(row) and ABORTED THE",
+    "WHOLE select() -- not just the offending row. FIXED: Field gained a new",
+    "coerce() (type coercion + JSON parse only, extracted from validate() via a",
+    "shared _coerce_type/_resolve_callable so the write path's behaviour is",
+    "byte-for-byte unchanged) and _populate now calls coerce() instead of",
+    "validate(). validate() (business constraints) stays write-path-only --",
+    "save()/ORM.validate() and AutoCrud's PUT handler are untouched. READ-ONLY",
+    "change: a bad save is still rejected (proven in the fixture).",
+    "",
+    "LOAD-RUBY-ASYMMETRY + LOAD-RUBY-SIGNATURE (LOAD-DEC-01 + LOAD-DEC-02, Ruby):",
+    "Ruby had TWO hydration paths with different coercion -- from_hash (the",
+    "primary finder path) JSON-decoded json columns, but the instance load()",
+    "fed the raw driver value straight to the setter, so Model.find(id).payload",
+    "returned a parsed Hash while model.load(id).payload stayed a raw JSON",
+    "String -- the SAME row, a different type, purely by which read path was",
+    "called. FIXED: load() now hydrates via from_hash -- ONE hydration path, not",
+    "two -- and its signature is aligned to load(filter, params, include:),",
+    "matching Python's load(filter, params, include) and PHP's",
+    "load(?string $filter, array $params, ?array $include) exactly. BREAKING:",
+    "the old load(id) scalar-primary-key shortcut is REMOVED (it built the",
+    "malformed fragment \"WHERE <id>\", valid-but-wrong SQL that matches the",
+    "table's first row rather than raising) -- callers set the PK attribute",
+    "then call load with no args, or pass an explicit \"pk = ?\" filter. A",
+    "non-nil, non-String filter now raises ArgumentError naming the fix.",
+    "",
+    "LOAD-NODE-SERIALIZE-OMIT (LOAD-DEC-02, Node): toDict()/toJson() SILENTLY",
+    "omitted a declared relation that was requested via `include` but never",
+    "eager-loaded (a synchronous serializer cannot lazy-load it) -- no signal at",
+    "all, so a developer who forgot `include` on the finder got a serialized",
+    "object silently missing the relation. FIXED: the omission now calls",
+    "Log.warning() naming the model, the relation, and that `include` on the",
+    "finder is needed. It still does NOT throw (serialization keeps working)",
+    "and the returned shape is UNCHANGED (the relation is still absent) --",
+    "Node-scoped, since only Node's serializer is synchronous-over-a-cache in",
+    "this way (Python/PHP/Ruby relationships are lazy descriptors that load on",
+    "access, so there is nothing to omit).",
+    "",
+    "LOAD-JSON-ONLY (LOAD-DEC-02, the scalar read-coercion contract): PINNED as",
+    "JSON-only (OWNER-DECISIONS.md Batch 5 -- \"pin the scalar read-coercion",
+    "contract (JSON-only today)\"). Only JSON columns parse to a native object on",
+    "read; non-JSON scalars stay driver-typed in PHP/Ruby/Node (booleans hydrate",
+    "as numbers, datetimes as driver strings -- no Date/bool reconstitution) and",
+    "unchanged in Python (Python's own, separate, pre-existing scalar coercion in",
+    "fields.py -- str->datetime, int/bool normalising across driver shapes -- is",
+    "TYPE COERCION, not a business constraint, and stays intact; it is a",
+    "documented Python-specific enhancement the ledger's \"pin the JSON-only",
+    "contract\" does not ask the other three to adopt, and does not ask Python to",
+    "drop). No scalar-coercion code changed in any of the four frameworks.",
+    "",
+    "Already-correct, reported not fixed: PHP's business-constraint overlay",
+    "($fields, read by validate()) was NEVER consulted by fill() -- LOAD-PY-",
+    "REVALIDATE never existed for PHP's OWN validation vocabulary. PHP DID have",
+    "a same-symptom bug via a different mechanism (below). Ruby's dynamic typing",
+    "and Node's erased TypeScript types mean neither language was ever at risk",
+    "of a required/length/range read-time crash -- the",
+    "constraint_violating_stored_row_still_hydrates case is a regression LOCK",
+    "for Ruby/Node, not a fix. Node's load() already delegated to selectOne()",
+    "(one hydration path) and already had the load(filter, params, include)",
+    "shape -- no LOAD-RUBY-ASYMMETRY/-SIGNATURE twin in Node.",
+    "",
+    "LOAD-PHP-NONNULLABLE-HYDRATE (found during this pass, same symptom as",
+    "LOAD-PY-REVALIDATE via a different mechanism -- PHP's OWN type system, not",
+    "a re-run of the $fields overlay): the documented PHP idiom for a required",
+    "column is a NON-NULLABLE typed property (`public string $name = '';` +",
+    "$fields['name']['required']=true, see OrmValidateConstraintsTest.php).",
+    "fill()'s plain `$this->$propName = $value` THREW TypeError",
+    "(\"Cannot assign null to property ...$name of type string\") on a stored",
+    "NULL, unhandled, aborting the whole find()/all()/select() for one row --",
+    "empirically verified against a real SQLite table with a raw NULL insert",
+    "before this pass touched the code. FIXED: fill() now catches ONLY a",
+    "null-into-non-nullable TypeError and leaves the property at its already-",
+    "initialized class default (the stored NULL cannot be literally represented",
+    "by a non-nullable property, so the class default is the closest coercion",
+    "target); any OTHER TypeError (a genuinely un-coercible non-null value)",
+    "still propagates -- that is real data corruption, not a business",
+    "constraint. #165's _assignedFields tracking moved to AFTER a successful",
+    "assignment so a skipped null-into-non-nullable set is correctly NOT",
+    "recorded as caller-touched.",
+    "",
+    "Case names are shared verbatim (each language's own idiom) across the four",
+    "frameworks and gated by scripts/audit-contract-fixtures.py.",
+    "",
+    "NO MOCKS: real SQLite (always) + real PostgreSQL :55432 tina4/tina4 (gated --",
+    "skips cleanly when unreachable locally, a hard failure under",
+    "TINA4_REQUIRE_SERVICES, e.g. on the lab). Mutation-proven in all four,",
+    "2026-08-12: reinstating Python's field.validate() call in _populate turns",
+    "constraint_violating_stored_row_still_hydrates RED with the exact",
+    "\"Field 'name' is required\" ValueError out of hydration; reverting Ruby's",
+    "load() to the raw setattr loop turns json_column_round_trips_via_load RED",
+    "(\"expected a native Hash, got String\"); reverting PHP's fill() try/catch",
+    "turns the same constraint case RED with the exact TypeError",
+    "(\"Cannot assign null to property LoadContractItemV2::$name of type",
+    "string\"); reverting Node's toDict() warning turns",
+    "unloaded_relation_serialization_warns_not_silent RED (no warning text",
+    "captured). All four restored to green after each proof.",
+    "",
+    "Maintainability: Python's read path is SIMPLER (coerce() has no constraint",
+    "branches at all vs validate()'s five); Ruby COLLAPSED to one hydration path",
+    "(the from_hash-duplicating setter loop in load() deleted, ~15 lines -> a",
+    "single from_hash() call + a field-copy loop). Zero new runtime deps in any",
+    "of the four."
+  ],
+  "version": 1,
+  "decided": "2026-08-11",
+  "feature": "LOAD-DEC-01 / LOAD-DEC-02 - ORM instance loading / hydration",
+  "invariants": [
+    {
+      "id": "instance-loading-json-round-trips-via-finder",
+      "adr": "LOAD-DEC-02",
+      "rule": "A JSON column hydrates to a native object (dict/array/Hash) through every FINDER path (find/findById/all/where/select/selectOne), never a raw JSON string.",
+      "why": "The baseline JSON-parse-on-read contract every finder must uphold -- the positive control that json_column_round_trips_via_load (below) is compared against.",
+      "suites": {
+        "python": "tests/test_instance_loading_contract.py",
+        "php": "tests/InstanceLoadingContractTest.php",
+        "ruby": "spec/instance_loading_contract_spec.rb",
+        "nodejs": "test/instanceLoadingContract.test.ts"
+      },
+      "cases": [
+        "json_column_round_trips_via_finder"
+      ]
+    },
+    {
+      "id": "instance-loading-json-round-trips-via-load",
+      "adr": "LOAD-DEC-01",
+      "rule": "The SAME JSON column hydrates to a native object through the instance load() path too -- load() must coerce IDENTICALLY to the finder path, not leave a JSON column as a raw string.",
+      "why": "Catches LOAD-RUBY-ASYMMETRY directly: pre-fix, Ruby's load() fed the raw driver value to the setter (from_hash was the only JSON-decoding path), so the SAME row read via load() vs find() returned two different types for the same column. Mutation-proven: reverting Ruby's load() to the raw setattr loop turns this case RED.",
+      "suites": {
+        "python": "tests/test_instance_loading_contract.py",
+        "php": "tests/InstanceLoadingContractTest.php",
+        "ruby": "spec/instance_loading_contract_spec.rb",
+        "nodejs": "test/instanceLoadingContract.test.ts"
+      },
+      "cases": [
+        "json_column_round_trips_via_load"
+      ]
+    },
+    {
+      "id": "instance-loading-constraint-violating-row-still-hydrates",
+      "adr": "LOAD-DEC-01",
+      "rule": "A stored row that violates a constraint TIGHTENED after the row was written (a `required` field storing NULL, read through a model version that now declares it required) STILL hydrates through a finder -- it does NOT raise and does NOT abort a page of results. The SAME model's write path (save()) still REJECTS a new row missing the required field -- this is a read-only fix, not a deleted constraint.",
+      "why": "Catches LOAD-PY-REVALIDATE: pre-fix, Python's _populate reused Field.validate(), so a required-but-NULL stored row raised ValueError out of cls(row) and aborted the WHOLE select(), not just the offending row -- tightening a constraint could make existing data unreadable. Also catches LOAD-PHP-NONNULLABLE-HYDRATE, found during this pass: PHP's documented required-field idiom is a non-nullable typed property, and fill()'s plain assignment threw an unhandled TypeError on a stored NULL, aborting find()/all() the same way, via PHP's own type system rather than a re-run of $fields. Ruby's dynamic typing and Node's erased types mean this is a regression LOCK for those two, not a fix. Mutation-proven: reinstating Python's field.validate() call reproduces the exact 'Field name is required' ValueError; reverting PHP's fill() try/catch reproduces the exact 'Cannot assign null to property ...$name of type string' TypeError. Both restored green after the proof.",
+      "suites": {
+        "python": "tests/test_instance_loading_contract.py",
+        "php": "tests/InstanceLoadingContractTest.php",
+        "ruby": "spec/instance_loading_contract_spec.rb",
+        "nodejs": "test/instanceLoadingContract.test.ts"
+      },
+      "cases": [
+        "constraint_violating_stored_row_still_hydrates"
+      ]
+    },
+    {
+      "id": "instance-loading-partial-select-yields-partial-instance",
+      "adr": "LOAD-DEC-01",
+      "rule": "A SELECT naming only some columns yields an instance with the selected fields set from the row and every OTHER declared field at its class default -- never a crash, never a stale/wrong value.",
+      "why": "A pre-existing behaviour (every hydration path only assigns keys present in the row) this fixture locks in as a permanent regression guard alongside the LOAD-DEC-01/02 fixes, so a future change to any hydration path cannot quietly break partial-select support.",
+      "suites": {
+        "python": "tests/test_instance_loading_contract.py",
+        "php": "tests/InstanceLoadingContractTest.php",
+        "ruby": "spec/instance_loading_contract_spec.rb",
+        "nodejs": "test/instanceLoadingContract.test.ts"
+      },
+      "cases": [
+        "partial_select_yields_partial_instance"
+      ]
+    },
+    {
+      "id": "instance-loading-node-serialize-omit-warns",
+      "adr": "LOAD-DEC-02",
+      "rule": "Node-scoped (Python/PHP/Ruby relationships are lazy descriptors with nothing to omit): toDict()/toJson() requesting a relation via `include` that was never eager-loaded still OMITS it from the result (the shape does not change -- a synchronous serializer cannot lazy-load), but now calls Log.warning() naming the model, the relation, and that `include` on the finder is needed. It never throws.",
+      "why": "Pre-fix the omission was completely silent -- a developer who forgot `include` on the finder that produced the instance got a serialized object silently missing the relation, with no signal at all (the warning that DOES exist today only fires for an unrecognised include name, a different code path). Mutation-proven: reverting the warning call turns unloaded_relation_serialization_warns_not_silent RED (no warning text captured in the same run that still shows the relation correctly omitted).",
+      "suites": {
+        "nodejs": "test/instanceLoadingContract.test.ts"
+      },
+      "cases": [
+        "unloaded_relation_serialization_warns_not_silent"
+      ]
+    }
+  ]
+}
