@@ -1,0 +1,155 @@
+{
+  "_comment": [
+    "HTTP request model -- feature 29 (OWNER-DECISIONS.md Batch 1, feature doc",
+    "features/029-request.md, REQ-DEC-01 required + REQ-DEC-02).",
+    "",
+    "REQ-DEC-01 (THE call, security + breaking): request.params is now",
+    "ROUTE-ONLY in all four -- a client's query/body value can never enter",
+    "params (REQ-PARAM-POLLUTION). Python's params was query+route merged",
+    "(route won on a same-name collision, but any OTHER client-controlled",
+    "query key rode along in params under a route-derived-looking",
+    "namespace); Ruby's params was query+BODY+route merged (same pollution,",
+    "plus a body leak); PHP/Node were already route-only (the reference).",
+    "BREAKING for Python/Ruby apps that read a query/body value via params.",
+    "The route-param accessor NAME is unified to `params` (py/php/node",
+    "already used it; Ruby renamed path_params -> params, deleting the old",
+    "merged params/build_params outright -- no back-compat alias). The",
+    "malformed-body result is pinned to the 3-of-4 majority (Python/PHP/Node",
+    "already agreed): a malformed JSON body -> the RAW STRING (Ruby changed",
+    "from {} via json_body's own always-a-Hash convenience method, which",
+    "keeps its documented contract unchanged for direct callers -- only the",
+    "parity-facing request.body path changed). The no-body sentinel is",
+    "pinned to each language's OWN native absence-value (None/null/nil/",
+    "undefined), checked BEFORE any content-type-specific parsing, matching",
+    "the pattern Python/PHP already had (Ruby's parse_body now returns nil",
+    "for an empty raw body instead of {}, and #body's own memoisation moved",
+    "off `||=` to a computed-flag, because nil is now a legitimate result).",
+    "",
+    "REQ-DEC-02 (ratified by derivation from this same ledger's own stated",
+    "method -- majority-of-four / 'the reference' / RFC 7230 standard --",
+    "consistent with how Batch 4 of this ledger settled several other",
+    "either/or filter defaults by explicit 3-of-4-majority reasoning):",
+    "Python gains a mutable `user` field (REQ-PY-NO-USER) -- added to",
+    "__slots__, set by the secure-by-default auth gate AND by the (until now",
+    "silently broken) opt-in AuthMiddleware.before_request, which assigned",
+    "the nonexistent request.auth and raised AttributeError on every",
+    "SUCCESSFUL authentication against the real Request class (only its own",
+    "mock-based test hid this -- fixed here, no-mock, alongside the field).",
+    "Immutability (REQ-IMMUTABILITY-DIVERGE) is reconciled to the PHP",
+    "`readonly` / Ruby writer-less-attr_reader reference (both ALREADY",
+    "correct, no change): Python blocks reassignment of the 14 core",
+    "wire-derived fields once from_scope() completes (__setattr__ guard,",
+    "params/session/user/_-prefixed fields stay writable); Node marks the 8",
+    "matching TS interface fields `readonly` (compile-time; a Writable<T>",
+    "local view lets createRequest() still build them once). The header()",
+    "dash rule (REQ-HEADER-DASH-DIVERGE) is reconciled to the PHP/Node",
+    "reference (case-fold only, matching RFC 7230 3.2 -- no `-`/`_`",
+    "substitution): Python drops its `-`->`_` remap, Ruby drops its `_`->`-`",
+    "remap. Ruby's Rack multipart dependency (REQ-RUBY-RACK-DEP) is NOTED,",
+    "not changed -- Ruby's own HTTP server IS Rack, so this is not an extra",
+    "runtime dependency the way it would be for a language with no Rack in",
+    "its request path; hand-rolling multipart would be a net LOSS against",
+    "the maintainability-means-less-code principle for zero real benefit.",
+    "",
+    "DO NOT REGRESS: client-IP trust was already PARITY (a strength) --",
+    "remote_ip is always the raw socket peer (never X-Forwarded-For); ip",
+    "honours X-Forwarded-For ONLY when the peer is a configured",
+    "TINA4_TRUSTED_PROXIES entry (empty/unset = trust nothing), same",
+    "rightmost-non-trusted-hop algorithm in all four. The algorithm itself",
+    "is UNCHANGED by this feature -- ip-honours-xff-only-from-trusted-proxy",
+    "locks it under the shared fixture name; the deeper per-language suites",
+    "(test_trusted_proxy.py / TrustedProxyTest.php / trusted_proxy_spec.rb /",
+    "trustedProxy.test.ts) are untouched and still the primary coverage.",
+    "",
+    "NO MOCKS. Every case drives a REAL registered route through the REAL",
+    "front controller/dispatch (TestClient in all four, backed by",
+    "Router.dispatch in PHP, RackApp#call in Ruby, core.server.app in",
+    "Python, Router.match+enforceRouteAuth in Node) or, where TestClient",
+    "cannot control the socket peer, a real ASGI app dispatch (Python) / a",
+    "real Request constructed with an explicit remoteIp then",
+    "Router::dispatch (PHP) / a real Rack env with REMOTE_ADDR then",
+    "RackApp#call (Ruby) / a REAL node:http server + a real loopback TCP",
+    "connection (Node, matching test/trustedProxy.test.ts's own",
+    "gold-standard pattern) for the IP-trust case.",
+    "",
+    "Mutation-proved (Python, Ruby -- the two languages REQ-PARAM-POLLUTION",
+    "actually changed; PHP/Node were never vulnerable, so there is nothing to",
+    "mutate there): reinstating the query-seeded-then-route-merged `params`",
+    "construction (Python: `req.params = dict(req.query)` in from_scope() +",
+    "`self.params.update(...)` instead of overwrite in the route-attach step;",
+    "Ruby: re-adding a `query.each { |k,v| result[k]=v }` line before the",
+    "path-params loop in the `params` getter) turns",
+    "route_param_not_shadowed_by_query RED in both -- the unrelated `extra`",
+    "query key leaks into `params`, which is exactly the pollution surface",
+    "this feature closes. Restored after in both.",
+    "",
+    "Each invariant names a REAL suite file per framework carrying the SAME",
+    "case names in each language's own idiom, which",
+    "scripts/audit-contract-fixtures.py normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "29 - HTTP request model (REQ-DEC-01 required: params route-only in all four + unified route-param name `params` + pinned malformed/empty-body result; REQ-DEC-02: Python request.user + immutability posture (PHP/Ruby already correct, Python/Node now match) + header() dash rule reconciled to PHP/Node + Ruby Rack multipart noted not changed)",
+  "invariants": [
+    {
+      "id": "route-param-not-shadowed-by-query",
+      "adr": "REQ-DEC-01",
+      "rule": "request.params is ROUTE-ONLY in all four -- a client query-string value can never enter it, under its own name or any other. A route `/{id}` hit as `/{route-id}?id={other}&extra=leak` yields params[\"id\"] == the ROUTE value, query[\"id\"] == the client value, and \"extra\" (a client-only key with no route counterpart) never appears in params at all. Identical in all four (Python request.params/request.query; PHP $request->params/$request->query; Ruby request.params/request.query; Node req.params/req.query).",
+      "why": "REQ-PARAM-POLLUTION (the security finding): Python's params used to be query+route merged (route won a same-name collision, but ANY other client-controlled query key rode along in params too -- a handler trusting request.params[\"admin\"] as route-derived data could actually be reading an attacker-supplied query value for a key that happens to have no route segment at all); Ruby's params merged query+BODY+route the same way. PHP/Node were already route-only (the reference this release aligns Python/Ruby to). Mutation-proved on Python and Ruby: reinstating the old query-seeded-then-merged construction turns this RED (the `extra` key leaks into params); restored after.",
+      "suites": {
+        "python": "tests/test_request_contract.py",
+        "php": "tests/RequestContractTest.php",
+        "ruby": "spec/request_contract_spec.rb",
+        "nodejs": "test/requestContract.test.ts"
+      },
+      "cases": [
+        "route_param_not_shadowed_by_query"
+      ]
+    },
+    {
+      "id": "malformed-json-body-agreed-result",
+      "adr": "REQ-DEC-01",
+      "rule": "A malformed (unparseable) JSON body with Content-Type: application/json yields the RAW STRING (the unparsed body bytes, decoded as text) as request.body, in all four -- pinned to the Python/PHP/Node majority. Ruby changed from returning {} (an empty Hash indistinguishable from a genuinely-empty valid JSON object) to the raw string; Ruby's separate json_body convenience method (Hash-only, {} on failure, not part of this parity contract) is unchanged for its own direct callers.",
+      "why": "REQ-BODY-DIVERGE: before this release a handler that decoded a bad body saw a STRING in three languages and an EMPTY HASH in Ruby -- silently indistinguishable from `{}` sent as valid JSON, so a malformed-body bug could pass Ruby-only testing unnoticed. Pinning to the 3-of-4 majority is the same tie-break method this ledger already used elsewhere (OWNER-DECISIONS.md Batch 4, `|join`/`|default` filter defaults, '3-of-4 majority').",
+      "suites": {
+        "python": "tests/test_request_contract.py",
+        "php": "tests/RequestContractTest.php",
+        "ruby": "spec/request_contract_spec.rb",
+        "nodejs": "test/requestContract.test.ts"
+      },
+      "cases": [
+        "malformed_json_body_agreed_result"
+      ]
+    },
+    {
+      "id": "auth-middleware-sets-request-user",
+      "adr": "REQ-DEC-02",
+      "rule": "The secure-by-default auth gate stashes the verified JWT payload on request.user (mutable), and a route handler behind that gate reads the same claims back. Identical field name and shape in all four (Python request.user; PHP $request->user; Ruby request.user; Node req.user).",
+      "why": "REQ-PY-NO-USER: Python's Request had no `user` attribute at all, and __slots__ actively BLOCKED a handler or middleware from setting one -- PHP/Ruby/Node already exposed it. Python's own opt-in AuthMiddleware.before_request tried to set the (never-declared) request.auth and raised AttributeError on every successful authentication against the real Request class; its only test used a hand-rolled mock with no __slots__, which silently accepted the assignment and hid the break entirely (fixed here, no-mock, alongside adding the field). PHP/Ruby/Node were already correct -- locked in here under the shared fixture name, not re-fixed.",
+      "suites": {
+        "python": "tests/test_request_contract.py",
+        "php": "tests/RequestContractTest.php",
+        "ruby": "spec/request_contract_spec.rb",
+        "nodejs": "test/requestContract.test.ts"
+      },
+      "cases": [
+        "auth_middleware_sets_request_user"
+      ]
+    },
+    {
+      "id": "ip-honours-xff-only-from-trusted-proxy",
+      "adr": "DO-NOT-REGRESS",
+      "rule": "request.remote_ip is ALWAYS the raw socket peer, never X-Forwarded-For. request.ip honours X-Forwarded-For ONLY when the raw peer is listed in TINA4_TRUSTED_PROXIES (empty/unset = trust nothing); otherwise ip == remote_ip regardless of any forwarding header the client sends. Identical rightmost-non-trusted-hop algorithm in all four -- this feature does not touch it, only locks it under the shared fixture name.",
+      "why": "Already measured PARITY (a strength) in the feature-29 audit -- included here so the new shared fixture carries a positive proof of the one property that was already correct, not just the three that changed, and so a future regression on ANY of the four is caught by the SAME fixture the breaking param-pollution fix lives in.",
+      "suites": {
+        "python": "tests/test_request_contract.py",
+        "php": "tests/RequestContractTest.php",
+        "ruby": "spec/request_contract_spec.rb",
+        "nodejs": "test/requestContract.test.ts"
+      },
+      "cases": [
+        "ip_honours_xff_only_from_trusted_proxy"
+      ]
+    }
+  ]
+}
