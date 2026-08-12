@@ -2,11 +2,11 @@
 
 ## 1. What Is Tina4 Python
 
-Tina4 Python is a web framework for Python 3.12+. The core package declares no required third-party dependencies. Optional packages enable selected database, cache, queue, MongoDB, and S3 providers. Tina4 Python contributes to the framework family's 135-entry feature catalog; the catalog is an inventory, not a claim that every entry has reached parity.
+Tina4 Python is a zero-dependency web framework for Python 3.12+. The core package declares no required third-party dependencies; optional packages enable selected database, cache, queue, MongoDB, and S3 providers. Routing, ORM, template engine, authentication, queues, and WebSocket are all built in. Tina4 Python contributes to the framework family's 135-entry feature catalog, listed in [Chapter 38: Complete Feature List](38-feature-list.md); the catalog is an inventory, not a claim that every entry has reached parity.
 
 It belongs to the Tina4 family: four backend implementations in Python, PHP, Ruby, and Node.js. They share contracts, project structure, template syntax, CLI commands, and `.env` variables. The parity audit records where an implementation still differs.
 
-Tina4 Python follows Python convention: `snake_case` for methods and functions (`fetch_one()`, `soft_delete()`, `has_many()`), `PascalCase` for classes, `UPPER_SNAKE_CASE` for constants. Route handlers are `async def` functions decorated with `@get`, `@post`, and friends.
+Tina4 Python follows Python convention: `snake_case` for methods and functions (`fetch_one()`, `soft_delete()`, `has_many()`), `PascalCase` for classes, `UPPER_SNAKE_CASE` for constants. Route handlers are decorated with `@get`, `@post`, and friends, and are written `async def` by convention -- the server is asyncio, so an `async` handler can `await` without blocking it.
 
 By the end of this chapter, you will have a running Tina4 Python project with an API endpoint and a rendered HTML page.
 
@@ -27,10 +27,13 @@ python3 --version
 You should see output like:
 
 ```
-Python 3.12.3
+Python 3.x.x
 ```
 
-If you see a version lower than 3.12, upgrade Python first.
+If you see a version lower than 3.12, or no Python at all, install it from
+[python.org/downloads](https://www.python.org/downloads/). On Windows, tick *Add python.exe to
+PATH* in the installer, or the `tina4` CLI will not find it -- and Windows names the command
+`python`, not `python3`.
 
 2. **uv** -- a fast Python package manager and project tool. Check with:
 
@@ -41,20 +44,17 @@ uv --version
 You should see:
 
 ```
-uv 0.6.9
+uv 0.x.x
 ```
 
-If uv is not installed, get it from [https://docs.astral.sh/uv/](https://docs.astral.sh/uv/):
+If uv is not installed, get it from
+[docs.astral.sh/uv/getting-started/installation](https://docs.astral.sh/uv/getting-started/installation/),
+which covers every platform including Homebrew, winget and pipx. Python and uv are other
+people's tools, so this book links their instructions rather than copying them -- installers
+change, and a copy here would go stale without anyone noticing.
 
-```bash
-# macOS / Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Windows (PowerShell)
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-3. **The Tina4 CLI** -- a Rust-based binary that manages all four Tina4 frameworks:
+3. **The Tina4 CLI** -- a Rust-based binary that manages all four Tina4 frameworks. This one is
+ours, so the commands are here:
 
 **macOS (Homebrew):**
 
@@ -65,13 +65,13 @@ brew install tina4stack/tap/tina4
 **Linux / macOS (install script):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/tina4stack/tina4/main/install.sh | bash
+curl -fsSL https://tina4.com/install.sh | sh
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-irm https://raw.githubusercontent.com/tina4stack/tina4/main/install.ps1 | iex
+irm https://tina4.com/install.ps1 | iex
 ```
 
 Verify the CLI is installed:
@@ -81,18 +81,41 @@ tina4 --version
 ```
 
 ```
-tina4 0.1.0
+tina4 3.x.x
 ```
 
-## Installing the Tina4 CLI
+The `tina4` CLI manages project scaffolding, development servers, migrations, and more across all Tina4 frameworks. Binaries are also on [GitHub Releases](https://github.com/tina4stack/tina4/releases).
+
+### Check What the CLI Found
+
+Before scaffolding anything, ask the CLI what it can see:
 
 ```bash
-cargo install tina4
+tina4 doctor
 ```
 
-Or download from [GitHub Releases](https://github.com/tina4stack/tina4/releases).
+```
+  Tina4 Doctor - Environment Check
 
-The `tina4` CLI manages project scaffolding, development servers, migrations, and more across all Tina4 frameworks.
+  Language     Status     Version              Pkg Mgr      Version
+  ──────────────────────────────────────────────────────────────────────
+  Python       ✓          3.x.x                ✓ uv         0.x.x
+  PHP          ✓          8.x.x                ✓ composer   2.x.x
+  Ruby         ✓          3.x.x                ✓ bundler    2.x.x
+  Node.js      ✓          22.x.x               ✓ npm        10.x.x
+
+  Tina4 CLIs
+  ──────────────────────────────────────────────────────────────────────
+  ✓ tina4python      Python       installed (global)
+  ✓ tina4php         PHP          installed (global)
+  ✓ tina4ruby        Ruby         installed (global)
+  ✗ tina4nodejs      Node.js      not found  ->  run: npm install -g tina4-nodejs
+  ✗ vite             tina4js      not found  ->  run: npm install vite
+```
+
+Only the Python row matters for this chapter. A `✗` on a language you are not using is fine.
+`doctor` also reports the installed Tina4 AI skills and which ports are free; both are trimmed
+here.
 
 ### Creating a New Project
 
@@ -102,73 +125,74 @@ One command. One package. No dependency tree.
 tina4 init python my-store
 ```
 
-`tina4 init` installs the Tina4 CLI globally (via cargo, homebrew, or direct download), then scaffolds a complete project with routes, templates, database, and configuration.
+`tina4 init` takes a language and a **path**, and the path is not optional. It scaffolds a complete project at that path -- routes, templates, database, configuration -- builds a virtual environment inside it, and installs the dependency. There is no separate `uv sync` step.
+
+`tina4 setup` is the guided alternative: it asks once where your projects should live, remembers the answer in `~/.tina4/setup.conf`, and scaffolds there. From then on `tina4 serve my-store` finds the project from any directory.
 
 You should see:
 
 ```
-Creating Tina4 project in ./my-store ...
-  Detected language: Python (pyproject.toml)
-  Created .env
-  Created .env.example
-  Created .gitignore
-  Created src/routes/
-  Created src/orm/
-  Created migrations/
-  Created src/seeds/
-  Created src/templates/
-  Created src/templates/errors/
-  Created src/public/
-  Created src/public/js/
-  Created src/public/css/
-  Created src/public/scss/
-  Created src/public/images/
-  Created src/public/icons/
-  Created src/locales/
-  Created data/
-  Created logs/
-  Created secrets/
-  Created tests/
+▶ Initialising python project at /home/you/my-store
 
-Project created! Next steps:
-  cd my-store
-  uv sync
-  tina4 serve
+▶ Checking python runtime...
+  ✓ python3 found
+
+▶ Checking package manager...
+  ✓ uv found
+  ✓ Created directory /home/you/my-store
+
+▶ Scaffolding python project...
+  ✓ Created directory structure
+  ✓ Created .env
+  ✓ Created app.py
+  ✓ Created .gitignore
+  ✓ Created pyproject.toml
+  ✓ Created Python scaffold
+
+▶ Installing dependencies...
+  ▶ Running: uv sync (in /home/you/my-store)
+Using CPython 3.x.x interpreter at: /usr/bin/python3
+Creating virtual environment at: .venv
+Resolved 2 packages in 3.81s
+Installed 1 package in 15ms
+ + tina4-python==3.x.x
+  ✓ Dependencies installed
+
+✓ Project created at /home/you/my-store
+
+  Start the server now? [Y/n]:
 ```
 
-Install the Python dependencies:
+`Resolved 2 packages` is the whole dependency graph: your project and `tina4-python`. One
+package. No dependency tree. No version conflicts.
 
-```bash
-cd my-store
-uv sync
-```
+Everything the project needs lives under that one directory, `.venv/` included, so there is
+nothing installed globally and nothing to clean up elsewhere. Delete the directory and the
+project is gone.
 
-```
-Resolved 1 package in 0.8s
-Installed 1 package in 0.3s
- + tina4-python==3.1.0
-```
-
-One package. No dependency tree. No version conflicts. Just `tina4-python`.
+Answer `n` for now -- we will start the server deliberately in the next section.
 
 ### Starting the Dev Server
 
 ```bash
+cd my-store
 tina4 serve
 ```
 
 ```
- _____ _             _  _
-|_   _(_)_ __   __ _| || |
-  | | | | '_ \ / _` | || |_
-  | | | | | | | (_| |__   _|
-  |_| |_|_| |_|\__,_|  |_|
+  ______ _             __ __
+ /_  __/(_)___  ____ _/ // /
+  / /  / / __ \/ __ `/ // /_
+ / /  / / / / / /_/ /__  __/
+/_/  /_/_/ /_/\__,_/  /_/
 
-  Tina4 Python v3.2.0
-  Server running at http://0.0.0.0:7146
-  Debug mode: ON
-  Database: sqlite:///data/app.db
-  Press Ctrl+C to stop
+  Tina4 Python v3.x.x - The Intelligent Native Application 4ramework
+
+  Server:    http://localhost:7146 (asyncio)
+  Swagger:   http://localhost:7146/swagger
+  Dashboard: http://localhost:7146/__dev
+  Debug:     ON (Log level: ALL)
+  Test Port: http://localhost:8146 (stable - no hot-reload)
 ```
 
 Open your browser to `http://localhost:7146`. The Tina4 welcome page greets you.
@@ -180,14 +204,11 @@ curl http://localhost:7146/health
 ```
 
 ```json
-{
-  "status": "ok",
-  "database": "connected",
-  "uptime_seconds": 12,
-  "version": "3.2.0",
-  "framework": "tina4-python"
-}
+{"status":"ok","version":"3.x.x","uptime":0.83,"framework":"tina4-python"}
 ```
+
+`/health` and `/__health` both answer. It is a liveness probe for the process, so it reports
+no database or cache state.
 
 Your Tina4 Python project is running.
 
@@ -195,14 +216,16 @@ Your Tina4 Python project is running.
 
 ## 3. Project Structure Walkthrough
 
-Here is what `tina4 init` created:
+Here is what you have after `tina4 init` and the first `tina4 serve`:
 
 ```
 my-store/
+├── app.py                  # Entry point -- imports the framework and calls run()
 ├── .env                    # Your configuration (gitignored)
-├── .env.example            # Template for other developers
+├── .env.local              # Dev auth secret, written on first serve (gitignored)
 ├── .gitignore              # Pre-configured
 ├── pyproject.toml          # Python project definition (uv / pip)
+├── uv.lock                 # Resolved dependency lock file
 ├── .venv/                  # Virtual environment (gitignored)
 ├── migrations/             # SQL migration files (project root)
 ├── src/
@@ -210,22 +233,23 @@ my-store/
 │   ├── orm/                # Your ORM model classes go here
 │   ├── seeds/              # Database seed files
 │   ├── templates/          # Frond templates
-│   │   └── errors/         # Custom 404.html, 500.html
-│   ├── public/             # Static files (CSS, JS, images)
+│   │   └── errors/         # Your custom error pages
+│   ├── public/             # Static files, served from /
 │   │   ├── js/
-│   │   │   └── frond.js    # Auto-provided JS helper library
 │   │   ├── css/
-│   │   │   └── tina4.css   # Built-in CSS utility framework
-│   │   ├── scss/
 │   │   ├── images/
 │   │   └── icons/
+│   ├── scss/               # SCSS sources, compiled into src/public/css/
 │   └── locales/            # Translation files
-│       └── en.json
 ├── data/                   # SQLite databases (gitignored)
 ├── logs/                   # Log files (gitignored)
 ├── secrets/                # JWT keys (gitignored)
 └── tests/                  # Your test files
 ```
+
+`init` writes `app.py`, `.env`, `.gitignore` and `pyproject.toml`; the convention directories
+are created and kept in place by the server. They start empty -- there is no sample route,
+template or locale file to delete.
 
 **Key directories:**
 
@@ -356,6 +380,17 @@ curl -X POST http://localhost:7146/api/greeting \
 ```json
 {"message":"Hola, Carlos!","language":"es"}
 ```
+
+> **On Windows**, run these from PowerShell as `curl.exe`, on a single line. Plain `curl` is an
+> alias for `Invoke-WebRequest`, which takes different arguments, and `\` is not a line
+> continuation character:
+>
+> ```powershell
+> curl.exe -X POST http://localhost:7146/api/greeting -H "Content-Type: application/json" -d '{"name": "Carlos", "language": "es"}'
+> ```
+>
+> The same applies to every `curl` example below. Everything else in this chapter -- the
+> `tina4` CLI, `uv`, `.env` variables -- is identical on Linux, macOS and Windows.
 
 The HTTP status code is `201 Created` (the second argument to `response.json()`).
 
@@ -506,7 +541,9 @@ Eight steps. All automatic.
 
 ### About tina4css
 
-The `tina4.css` file is Tina4's built-in CSS utility framework. Layout utilities. Typography. Common UI patterns. No Bootstrap. No Tailwind. No download. It ships with every scaffolded project.
+The `tina4.css` file is Tina4's built-in CSS utility framework. Layout utilities. Typography. Common UI patterns. No Bootstrap. No Tailwind. No download.
+
+It is served by the framework itself, so there is no copy in your project to find or maintain -- link it at `/css/tina4.css`. The same is true of `frond.js` at `/js/frond.js`.
 
 ---
 
@@ -527,8 +564,9 @@ The important defaults for development:
 | `TINA4_PORT` | `7146` | Default server port (override with `tina4 serve --port`) |
 | `TINA4_DATABASE_URL` | `sqlite:///data/app.db` | SQLite database in the `data/` directory |
 | `TINA4_LOG_LEVEL` | `ALL` | All log messages are output |
-| `CORS_ORIGINS` | `*` | All origins allowed (fine for development) |
-| `TINA4_RATE_LIMIT` | `60` | 60 requests per minute per IP |
+| `TINA4_CORS_ORIGINS` | unset | Deny by default -- no cross-origin request is allowed until you list the origins (`*` has to be asked for) |
+| `TINA4_RATE_LIMIT` | `100` | Requests allowed per window, per IP |
+| `TINA4_RATE_WINDOW` | `60` | Window length in seconds, so the default is 100 requests per minute |
 
 **Log levels** control how much output Tina4 produces:
 
@@ -556,14 +594,19 @@ TINA4_PORT=8080
 
 Restart the server. It now runs on port 8080.
 
-**How port resolution works:** The Rust CLI (`tina4 serve`) determines the port using this priority order:
+**Setting the port.** Three ways, and the framework default if you use none of them:
 
-1. **CLI flag** (highest priority): `tina4 serve --port 8080`
-2. **`.env` file**: `TINA4_PORT=8080`
-3. **Environment variable**: `PORT=8080`
-4. **Framework default** (PHP: 7145, Python: 7146, Ruby: 7147, Node.js: 7148)
+```bash
+tina4 serve --port 8080        # for one run
+```
 
-The CLI reads your `.env` file and checks for `TINA4_PORT` (and falls back to `PORT`). The resolved port is passed to the Python server. All three methods work -- use whichever fits your workflow.
+```bash
+TINA4_PORT=8080                # in .env, for every run
+```
+
+A bare `PORT` variable is also read, for hosts that set it, but it is deprecated and goes away
+in 3.14 -- use `TINA4_PORT`. The defaults per framework are PHP 7145, Python 7146, Ruby 7147
+and Node.js 7148.
 
 For the complete `.env` reference with all 68 variables, see [Environment Variables](./33-environment-variables.md).
 
@@ -650,6 +693,12 @@ Create the directories:
 
 ```bash
 mkdir -p src/routes src/templates src/public
+```
+
+On Windows, from PowerShell:
+
+```powershell
+New-Item -ItemType Directory -Force -Path src/routes, src/templates, src/public
 ```
 
 ### Step 4: Create `.env`
@@ -1077,27 +1126,25 @@ async def store_page(request, response):
 
 **Problem:** You created a route file but nothing happens when you visit the URL.
 
-**Cause:** The file is not in `src/routes/`. It must be inside `src/routes/` (or a subdirectory), and the file must end with `.py`.
+**Cause:** The file is not in `src/routes/`. It must be inside `src/routes/` (or a subdirectory), and the file must end with `.py`. Names beginning with `_` are treated as private and not loaded.
 
 **Fix:** Move the file to `src/routes/your-file.py` and restart the server.
 
-### 2. Missing import
+### 2. Route file did not import
 
-**Problem:** `NameError: name 'get' is not defined` or similar.
+**Problem:** The URL 404s.
 
-**Cause:** You forgot to import the route decorator.
+**Cause:** The file did not import, so none of its routes registered -- a missing decorator import is the usual reason. The framework logs the reason and keeps serving the rest of the app.
 
-**Fix:** Start your route file with the correct import: `from tina4_python.core.router import get, post` (include whichever decorators you need).
+**Fix:** Read the server output. The reason is there:
 
-### 3. Handler not async
+```
+[ERROR] Failed to load /home/you/my-store/src/routes/greeting.py: name 'get' is not defined
+```
 
-**Problem:** Your route handler runs but returns an error about a coroutine object.
+Start your route file with the correct import: `from tina4_python.core.router import get, post` (include whichever decorators you need). A route that 404s unexpectedly is usually a file that did not load.
 
-**Cause:** You defined the handler with `def` instead of `async def`. Tina4 Python expects all route handlers to be async.
-
-**Fix:** Change `def greeting(request, response):` to `async def greeting(request, response):`. Every route handler must be `async def`.
-
-### 4. Template not found
+### 3. Template not found
 
 **Problem:** `Template "my-page.html" not found` error.
 
@@ -1105,21 +1152,21 @@ async def store_page(request, response):
 
 **Fix:** Check that the file exists at `src/templates/my-page.html`. The name in `response.render()` is relative to `src/templates/`.
 
-### 5. Port already in use
+### 4. Port already in use
 
-**Problem:** `Error: Address already in use (port 7146)`
+**Problem:** Another process is on port 7146.
 
-**Cause:** Another process (or another Tina4 instance) is using port 7146.
+**Cause:** Another process -- often a Tina4 server you forgot to stop.
 
-**Fix:** Stop the other process, or change the port with the CLI flag:
+**Fix:** Stop the other process, or move Tina4 with the CLI flag:
 
 ```bash
 tina4 serve --port 8080
 ```
 
-The CLI will also auto-increment the port if it detects the default port is in use.
+Or set `TINA4_PORT` in `.env` if you want it to stick.
 
-### 6. Changes not reflected
+### 5. Changes not reflected
 
 **Problem:** You edited a file but the browser shows the old version.
 
@@ -1127,7 +1174,7 @@ The CLI will also auto-increment the port if it detects the default port is in u
 
 **Fix:** Hard-refresh the browser (`Ctrl+Shift+R` or `Cmd+Shift+R`). If that fails, restart the dev server with `Ctrl+C` and `tina4 serve`.
 
-### 7. .env not loaded
+### 6. .env not loaded
 
 **Problem:** Environment variables have no effect.
 
