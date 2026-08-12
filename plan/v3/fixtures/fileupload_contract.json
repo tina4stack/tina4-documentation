@@ -1,0 +1,105 @@
+{
+  "_comment": [
+    "File upload contract -- repeated field name -> a LIST (no silent drop), a",
+    "safe-save helper that confines the write, and a running per-chunk size guard.",
+    "Feature 44, UP-DEC-02 / UP-DEC-03 (OWNER-DECISIONS Batch 4).",
+    "",
+    "Three data-loss / footgun defects the audit found in the multipart path, now",
+    "fixed in all four frameworks with real (no-mock) tests -- real multipart bytes",
+    "through the real parser, real temp files on the real filesystem, and a real",
+    "over-limit body refused as it arrives.",
+    "",
+    "UP-MULTIFILE-LOSS (upload-repeated-field-list): two files posted under the SAME",
+    "field name silently lost all but the last in Python, Ruby and the PHP socket",
+    "server (result[name] = {...} overwrote). Only Node kept a list. Now all four",
+    "produce a LIST for a repeated file field name (Node's model); a single",
+    "occurrence stays a plain descriptor (backward compatible). Python parses the",
+    "list in _parse_multipart + _is_file_value; PHP in parseMultipartBody; Ruby",
+    "hand-scans the raw body (Rack's POST collapses a repeated non-bracket name to",
+    "last-wins, so the file extraction can no longer delegate that to Rack); Node",
+    "was already correct.",
+    "",
+    "UP-FILENAME-UNTRUSTED (upload-safe-save-confines): the client filename reached",
+    "the descriptor verbatim and no framework save sanitised it. A save built from a",
+    "'../../evil' name wrote outside the target dir. Each framework now ships ONE",
+    "safe-save helper (Python save_upload, PHP Request::saveUpload, Ruby",
+    "Tina4::Request.save_upload, Node saveUpload) that strips directory components",
+    "from the untrusted name (so '../../evil' becomes 'evil' written INSIDE the",
+    "target dir), refuses an unusable name ('', '.', '..', a NUL byte), and confirms",
+    "the resolved parent is the target dir (realpath containment) before writing.",
+    "",
+    "UP-CHUNKED-BYPASS (upload-per-chunk-size-guard): PHP and Ruby enforced the",
+    "upload cap on the DECLARED Content-Length only, so a chunked or under-declared",
+    "over-size body was buffered whole before being refused (or never refused).",
+    "Python and Node already ran a running per-chunk counter. PHP now counts the",
+    "ACTUAL body bytes as they arrive in Server::enforceRequestLimits (driven by",
+    "TINA4_MAX_UPLOAD_SIZE) and answers 413 the moment they exceed the cap; Ruby",
+    "reads rack.input through read_stream_capped, which raises PayloadTooLarge the",
+    "moment the running total exceeds the cap (rescued into 413 by the pipeline).",
+    "",
+    "Mutation-proved (all four): revert the repeated-field merge to last-wins and",
+    "'two files ... arrive as a list' goes RED (only one file survives); drop the",
+    "basename strip in the safe-save helper and 'safe save writes a traversal",
+    "filename inside the target dir' goes RED (the escaped path appears outside the",
+    "target dir); remove the running per-chunk counter (PHP enforceRequestLimits /",
+    "Ruby read_stream_capped) and 'an over limit upload is refused with 413' goes",
+    "RED (the over-limit body is accepted). Restoring each returns to green.",
+    "",
+    "Each invariant names a REAL suite file per framework carrying the SAME case",
+    "names in each language's own idiom, which scripts/audit-contract-fixtures.py",
+    "normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-12",
+  "feature": "44 - File upload (repeated field name -> list, safe-save helper, running per-chunk size guard)",
+  "invariants": [
+    {
+      "id": "upload-repeated-field-list",
+      "adr": "UP-DEC-02",
+      "rule": "When a multipart body sends the SAME field name more than once, every uploaded file under that name is collected into a LIST (an array) in the files map -- no file is silently dropped. A field name that occurs exactly once stays a single descriptor (backward compatible). Proven by parsing a real multipart body carrying two files under one field name and asserting both arrive, plus a single-file control that stays a scalar descriptor.",
+      "why": "Two files posted under one field name silently lost all but the last in Python (_parse_multipart), Ruby (extract_files) and the PHP socket server (parseMultipartBody) -- real data loss with no signal (UP-MULTIFILE-LOSS); only Node kept a list. The fix collects repeated file field names into a list in all four (Node's model), so an upload form with a repeated <input multiple> or a repeated field never drops a file. Mutation-proved: reverting the merge to last-wins makes only one file survive, turning the 'two files ... arrive as a list' case RED.",
+      "suites": {
+        "ruby": "spec/file_upload_contract_spec.rb",
+        "python": "tests/test_file_upload_contract.py",
+        "php": "tests/FileUploadContractTest.php",
+        "nodejs": "test/fileUploadContract.test.ts"
+      },
+      "cases": [
+        "two files under one field name arrive as a list",
+        "a single file stays a single descriptor"
+      ]
+    },
+    {
+      "id": "upload-safe-save-confines",
+      "adr": "UP-DEC-03",
+      "rule": "The safe-save helper writes an uploaded file's content only INSIDE the target directory. It derives a safe name from the untrusted client filename by stripping directory components (both / and \\), so a '../../evil' name is written as 'evil' inside the target dir and never escapes it; it refuses an unusable name ('', '.', '..', or one containing a NUL byte) by raising. Proven by saving with a traversal filename and asserting the file lands inside the target dir while the would-be escaped path does NOT exist, plus a negative case that an unusable name raises.",
+      "why": "The client filename reached the file descriptor verbatim in all four with no sanitisation, and no framework save existed, so an application that saved to target_dir + client_filename could be driven to write outside target_dir with a '../' name (UP-FILENAME-UNTRUSTED). One safe-save helper per language (Python save_upload, PHP Request::saveUpload, Ruby Tina4::Request.save_upload, Node saveUpload) sanitises + confines. Mutation-proved: dropping the basename strip lets the traversal name write to the parent, so the escaped path exists and the case goes RED.",
+      "suites": {
+        "ruby": "spec/file_upload_contract_spec.rb",
+        "python": "tests/test_file_upload_contract.py",
+        "php": "tests/FileUploadContractTest.php",
+        "nodejs": "test/fileUploadContract.test.ts"
+      },
+      "cases": [
+        "safe save writes a traversal filename inside the target dir",
+        "safe save refuses an unusable filename"
+      ]
+    },
+    {
+      "id": "upload-per-chunk-size-guard",
+      "adr": "UP-DEC-02",
+      "rule": "An upload whose ACTUAL body exceeds TINA4_MAX_UPLOAD_SIZE is refused with 413 as the bytes arrive (a running per-chunk counter), not after the whole body has been buffered -- so a body with an under-declared or absent Content-Length is still bounded. A body under the limit is accepted. Proven against a real server / real dispatch: an over-limit body (whose declared length does not itself trip the declared-length guard) answers 413, and a small body still serves.",
+      "why": "PHP and Ruby enforced the cap on the DECLARED Content-Length only, so a chunked or under-declared over-size body bypassed it and was buffered whole (UP-CHUNKED-BYPASS); Python and Node already ran a running counter. PHP now counts actual body bytes in Server::enforceRequestLimits and Ruby reads rack.input through read_stream_capped, both refusing the moment the running total exceeds TINA4_MAX_UPLOAD_SIZE. Mutation-proved: removing the running counter makes the over-limit body accepted, turning the 'an over limit upload is refused with 413' case RED.",
+      "suites": {
+        "ruby": "spec/file_upload_contract_spec.rb",
+        "python": "tests/test_file_upload_contract.py",
+        "php": "tests/FileUploadContractTest.php",
+        "nodejs": "test/fileUploadContract.test.ts"
+      },
+      "cases": [
+        "an over limit upload is refused with 413",
+        "a body under the limit is accepted"
+      ]
+    }
+  ]
+}

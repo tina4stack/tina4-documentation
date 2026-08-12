@@ -3,7 +3,7 @@
 > The living index that ties every audited feature to its machine-checked
 > contract, its decisions, and its proven-in-all-four status. This is the
 > backbone of a future formal Tina4 language specification.
-> **Last synced:** 2026-08-12 (3.13.99 pass: +csrf/devadmin/static/requestid/frondtags/securityheaders/porttakeover/overlay/inlinetesting fixtures)
+> **Last synced:** 2026-08-12 (3.13.99 pass: +csrf/devadmin/static/requestid/frondtags/securityheaders/porttakeover/overlay/inlinetesting/fileupload fixtures)
 
 > **Adversarial re-audit started 2026-08-08:** a zero-skip live-lab migration
 > baseline still omitted contradictory public paths (generated code migration
@@ -101,8 +101,9 @@ Re-run it and re-sync this table whenever a fixture changes.
 | Port takeover | 129 | `porttakeover_contract.json` | 2 | 2 | 0 | TAKEOVER-DEC-01, TAKEOVER-DEC-02, TAKEOVER-DEC-03 | yes (real processes on real ports, no mocks; ONE shared identity-checked helper per lang reused by the CLI + runtime paths; PID-file Tina4 identity + dev-gate + `TINA4_NO_TAKEOVER`/`--no-kill` opt-out; runtime path raises on a foreign holder; mutation-proved; 2026-08-11) |
 | Development error overlay | 126 | `overlay_contract.json` | 4 | 4 | 0 | OVERLAY-DEC-01, OVERLAY-DEC-02, OVERLAY-DEC-03, OVERLAY-DEC-04 | yes (real dispatch / a real thrown 500, no mocks; dead `render_production_error` DELETED in all four + a wired-path prod-no-leak test replaces the dead-sibling unit test; ONE redaction helper per lang masks Authorization/Cookie/Set-Cookie + password-like body/param keys; PHP now renders headers deliberately; 50-frame cap; guarded overlay render falls back to the safe page; gate unified on `is_debug_mode`; mutation-proved; 2026-08-12) |
 | Inline testing | 132 | `inlinetesting_contract.json` | 3 | 3 | 0 | INLINE-DEC-01, INLINE-DEC-02 | yes (real `tina4 <lang> test` child process, no mocks; ONE wired surface -- the `@tests`/expect_* descriptor model -- discovered + run with a real exit code, 0 on pass / non-zero on fail; PHP `Testing::discover()` eval() RCE REMOVED (literal-only parser) + confined to an explicit tests dir (no blanket require of src); descriptor builders renamed assert_*->expect_* so they no longer collide with the xUnit assert_*; Python meta-test snapshots/restores the global registry; mutation-proved; 2026-08-12) |
+| File upload | 44 | `fileupload_contract.json` | 3 | 3 | 0 | UP-DEC-02, UP-DEC-03 | yes (real multipart bytes through the real parser + real temp files + a real over-limit body, no mocks; a REPEATED file field name -> a LIST in all four (no silent drop; Python `_parse_multipart`/`_is_file_value`, PHP `parseMultipartBody`, Ruby a raw-body hand-scan since Rack collapses repeats, Node already listed), single stays a scalar descriptor; ONE safe-save helper per lang (`save_upload`/`saveUpload`/`Request::saveUpload`) strips path components + realpath-confines so a `../` name is written INSIDE the target dir and an unusable name is refused; a RUNNING per-chunk size guard brings PHP (`Server::enforceRequestLimits` on actual bytes) and Ruby (`read_stream_capped` over `rack.input`) to Python/Node parity, refusing 413 as the bytes arrive; mutation-proved; 2026-08-12) |
 
-**Totals: 134 invariants, 118 proven, 16 owed** (2026-08-12), 22 fixtures. Proven
+**Totals: 137 invariants, 121 proven, 16 owed** (2026-08-12), 23 fixtures. Proven
 subsystems remain held to their contract four-way. Logger and database adapter
 now have decision-complete answer keys whose runners are honestly owed. Messenger closed
 last: the read/send shapes were already unified by the 3.13.96 parity commits
