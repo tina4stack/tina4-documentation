@@ -52,7 +52,7 @@ negative, no mocks) -> dead/dup code removed -> run the fixture + the feature's 
 
 ## Phase 3 - DB providers / write-path correctness
 
-- [ ] 9 PostgreSQL - adapter-contract test asserts BEHAVIOUR (PG as oracle), all 4
+- [x] 9 PostgreSQL - DONE 2026-08-12, lab-green all four ON LINUX (13/13/13/13; consolidated rc=0, independently re-verified on real PG). Pushed py f67e73d, php 2258bbb, ruby 09e254a, node 5fe1778, fixture 4b9e35a. ZERO framework code changed (the PG write path was already correct - the oracle is healthy); this is the shared behavioural contract pinning insert-RETURNING-last-id + affected count + filterless-write guard + executeMany atomicity (mid-batch rollback) + fetch/fetchOne shape against real PG - 5 invariants owed->proven, mutation-proved each. adapter_contract.json (feature 3, ADR-0044) stays 8-owed (the 14-method interface redesign is separate).
 - [ ] 10 MySQL - real-PK RETURNING emulation (non-`id` regression); parameterize DESCRIBE; de-dup batch-id
 - [ ] 11 MSSQL - safe param handling (Ruby unknown-type, Node Buffer->VarBinary); real-PK RETURNING; one pagination
 - [ ] 12 Firebird - replace Ruby no-mock VIOLATION with a real reconnect test; generator last-id + real affected-count ruby/node; blob + SRP; fix CI-gate claim
@@ -117,6 +117,7 @@ each is deleted as part of its feature so the diff nets DOWN, not up:
 ## Follow-ups surfaced during the pass
 
 Small, orthogonal items found while implementing a feature - fold into the named later feature; do NOT expand the current feature to chase them:
+- 9 (found, Feature-3/ADR-0044 scope - NOT fixed here): Ruby `Database#autocommit_standalone_write` issues a bare `COMMIT` on the pg-gem libpq-autocommit connection, so real PG warns `there is no transaction in progress` on EVERY standalone write (86x in write_path_contract_spec). Pre-existing; correctness unaffected (rows land); it is exactly adapter-contract invariant DBA-T06. Fixing touches the autocommit/txn model (ADR-0044, owner-sensitive) - fold into feature 3 / the ORM adapter work.
 - 7 (SQL translator, partial parity - documented in 007-sql-translator.md): concat/bool/ilike were wired for MySQL (matching py/node) but the MSSQL + Firebird wiring for PHP/Ruby remains OPEN, and the MSSQL-pagination-strategy unification (Node `TOP` vs the drivers' `OFFSET/FETCH`, SQLTRANS-DEAD-DUP) is a larger cross-cutting change not bundled. The literal-safe fix itself is engine-agnostic (MySQL+PG exercise every code path); this is parity-completeness, low-pri.
 - 25 (ORM cache) LATENT: the underlying cache `ttl<=0` semantics DIVERGE - Python core `Cache` treats `ttl<=0` as never-expire; PHP/Ruby/Node `QueryCache` treat `ttl=0` as immediate-expiry. Feature 25's explicit `ttl<=0` gate in `cached()` neutralises it there (never reaches `set()` with ttl<=0), but the backend divergence could bite other cache callers. Low-pri: unify with the caching features (59/72).
 - 44 (file upload, UP-DEC-01 - pre-existing, NOT fixed): `tina4-php/Tina4/Request.php:296` docblock still says `content => string (base64)` but the code returns raw bytes - a false docblock governed by UP-DEC-01 (descriptor-key/base64 correction), out of feature-44 scope. Fold into UP-DEC-01.
