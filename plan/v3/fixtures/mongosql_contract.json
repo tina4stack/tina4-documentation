@@ -26,12 +26,27 @@
     "    collection).",
     "",
     "The explicit whole-collection spelling is truncate(), which passes",
-    "'WHERE 1 = 1' -- a non-blank clause that is untouched by this fix, so the",
-    "guard NEVER breaks the intentional path. The native driver",
-    "(db.adapter._collection() / getConnection()) remains the escape hatch for",
-    "anything the SQL subset cannot express. Maintainability (owner directive):",
-    "ONE shared guard reused by both write paths per language; ZERO new runtime",
-    "deps.",
+    "'WHERE 1 = 1'. That clause is non-blank, so feature 14's filterless-write",
+    "guard never fires on it -- the intentional whole-collection path is not a",
+    "filterless write. The native driver (db.adapter._collection() /",
+    "getConnection()) remains the escape hatch for anything the SQL subset cannot",
+    "express. Maintainability (owner directive): ONE shared guard reused by both",
+    "write paths per language; ZERO new runtime deps.",
+    "",
+    "FEATURE 14b (fix-on-discovery, surfaced during feature 14): the 1=1",
+    "tautology is a PARSEABLE condition, so feature 14's fail-closed parse did not",
+    "raise on it -- but Python/Ruby/Node translated 'WHERE 1 = 1' to the field",
+    "filter {\"1\": 1}, which matches NOTHING, so truncate() silently deleted 0",
+    "documents while the caller believed the collection was emptied. PHP already",
+    "special-cased 'WHERE 1 = 1' -> [] (match-all) in parseWhere. 14b brings the",
+    "other three to that behaviour: the explicit 1=1 tautology translates to a",
+    "match-all {} filter (mongosql-truncate-tautology-empties), so truncate()",
+    "empties the collection in all four. This does NOT weaken feature 14's guard:",
+    "1=1 is an explicit tautology, not an unparseable WHERE (still raises) and not",
+    "a blank/absent WHERE (still rejected); the match is tight, so id = 1 stays",
+    "scoped. Node additionally re-guarded on the PARSED filter, so it carries an",
+    "explicit match-all signal to let the intentional whole-collection write",
+    "through the requireWriteFilter guard while still refusing a blank WHERE.",
     "",
     "Every case runs against a REAL MongoDB (require-services-gated, no mocks): the",
     "framework performs the write (the code under test) and the resulting document",
@@ -56,9 +71,9 @@
     "Node assert label), which scripts/audit-contract-fixtures.py normalises and",
     "matches."
   ],
-  "version": 1,
+  "version": 2,
   "decided": "2026-08-11",
-  "feature": "14 - MongoDB SQL provider (fail-closed WHERE + mass-delete guard)",
+  "feature": "14 - MongoDB SQL provider (fail-closed WHERE + mass-delete guard; + 14b truncate 1=1 -> match-all)",
   "invariants": [
     {
       "id": "mongosql-unparseable-where-fails-closed",
@@ -107,6 +122,22 @@
       "cases": [
         "a valid where delete removes only matching docs",
         "a valid where update changes only matching docs"
+      ]
+    },
+    {
+      "id": "mongosql-truncate-tautology-empties",
+      "adr": "MONGO-DEC-01",
+      "rule": "truncate() -- which issues DELETE ... WHERE 1 = 1 -- empties the WHOLE collection in all four frameworks. The explicit 1=1 tautology translates to a match-all {} filter, so the write reaches delete_many({}) and every document is removed. This does NOT weaken the fail-closed guard: 1=1 is an EXPLICIT tautology, distinct from an unparseable WHERE (which still RAISES) and from a blank/absent WHERE (which is still REJECTED). The match is TIGHT -- only a lone 1=1 -- so an ordinary numeric equality such as id = 1 stays SCOPED and never widens to match-all.",
+      "why": "Feature 14 made the parser fail closed, but 1=1 -- the WHERE truncate() passes -- is a PARSEABLE condition, so it did not raise; it fell through to the field=value pattern as {\"1\": 1}, which matches NOTHING. So truncate() silently deleted 0 documents in Python/Ruby/Node while the caller believed the collection was emptied -- a silent-no-op data footgun surfaced during feature 14 (14b). PHP already special-cased \"1 = 1\" -> [] (match-all) in parseWhere; 14b brings the other three to that behaviour. Node additionally re-guarded on the PARSED filter (deleteAsync + the executor's requireWriteFilter), so it carries an explicit match-all signal to let the intentional whole-collection write through while still refusing a blank/absent WHERE. Mutation-proved: revert the 1=1 -> match-all translation and 'a truncate empties the collection' goes red (count unchanged) while the feature-14 guard cases stay green; broaden the tautology match and 'a scoped equality is not widened to match all' goes red (id = 1 deletes every row).",
+      "suites": {
+        "ruby": "spec/mongo_sql_fail_closed_spec.rb",
+        "python": "tests/test_mongo_sql_fail_closed.py",
+        "php": "tests/MongoSqlFailClosedTest.php",
+        "nodejs": "test/mongosqlFailClosed.test.ts"
+      },
+      "cases": [
+        "a truncate empties the collection",
+        "a scoped equality is not widened to match all"
       ]
     }
   ]
