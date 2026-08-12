@@ -5,7 +5,7 @@ fixture, lab-green on the .99 lab) before the next. This table is updated, commi
 feature lands. Detail: [IMPLEMENTATION-3.13.99.md](IMPLEMENTATION-3.13.99.md). Decisions:
 [OWNER-DECISIONS.md](OWNER-DECISIONS.md).
 
-**Progress: 29 / 52 features lab-green** (feature 50 Frond compiler DEFERRED to 3.13.100 fast-follow, owner call 2026-08-12). Done: Phase 1 + Phase 2 + Phase 3 (9-13) + 17 + 18 + 19 + 20 + 21 + 22 + 23 + 24. In progress: MAIL-REDIRECT (new owner-directed feature TINA4_MAIL_REDIRECT_TO, MAIL-DEC-01), then 26.
+**Progress: 29 / 52 features lab-green + 1 new (MAIL-REDIRECT `TINA4_MAIL_REDIRECT_TO`) done** (feature 50 Frond compiler DEFERRED to 3.13.100 fast-follow, owner call 2026-08-12). Done: Phase 1 + Phase 2 + Phase 3 (9-13) + 17 + 18 + 19 + 20 + 21 + 22 + 23 + 24 + MAIL-REDIRECT. In progress: 26 (Phase 4 instance loading, next).
 
 Status: DONE = lab-green all four (independently re-verified) . WIP = in progress . TODO = not started.
 Lab column = per-framework test counts py/php/ruby/node in the consolidated green run.
