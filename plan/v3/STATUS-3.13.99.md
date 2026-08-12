@@ -5,7 +5,7 @@ fixture, lab-green on the .99 lab) before the next. This table is updated, commi
 feature lands. Detail: [IMPLEMENTATION-3.13.99.md](IMPLEMENTATION-3.13.99.md). Decisions:
 [OWNER-DECISIONS.md](OWNER-DECISIONS.md).
 
-**Progress: 31 / 52 features lab-green + 1 new (MAIL-REDIRECT `TINA4_MAIL_REDIRECT_TO`) done** (feature 50 Frond compiler DEFERRED to 3.13.100 fast-follow, owner call 2026-08-12). Done: Phase 1 + Phase 2 + Phase 3 (9-13) + 17 + 18 + 19 + 20 + 21 + 22 + 23 + 24 + 26 + 27 + MAIL-REDIRECT. In progress: 28 (Phase 4 seeder, next).
+**Progress: 32 / 52 features lab-green + 1 new (MAIL-REDIRECT `TINA4_MAIL_REDIRECT_TO`) done** (feature 50 Frond compiler DEFERRED to 3.13.100 fast-follow, owner call 2026-08-12). Done: Phase 1 + Phase 2 + Phase 3 (9-13) + 17 + 18 + 19 + 20 + 21 + 22 + 23 + 24 + 26 + 27 + 28 + MAIL-REDIRECT. In progress: 29 (Phase 4 request model, breaking, next).
 
 Status: DONE = lab-green all four (independently re-verified) . WIP = in progress . TODO = not started.
 Lab column = per-framework test counts py/php/ruby/node in the consolidated green run.
@@ -60,7 +60,7 @@ Lab column = per-framework test counts py/php/ruby/node in the consolidated gree
 | 24 | Paginated results | DONE | 37/31/11/38 | 761873a / a8088ec / c8f8a93 / feaf660 |
 | 26 | Instance loading | DONE | 2/2/2/40 | 6095243 / 4807b62 / 1c6d0c5 / 5b5cdcc |
 | 27 | AutoCrud | DONE | 6/6/6/6 | 9941536 / 51cd524 / d5cdd95 / 1c4f7cd |
-| 28 | Seeder / fake data | TODO | - | - |
+| 28 | Seeder / fake data | DONE | 75/133/155/265 | 80e897b / 6208fbb / 3dc8ee8 / 248a0ee |
 | 29 | Request model | TODO | - | - |
 | 15 | Migrations | TODO | - | - |
 
