@@ -5,7 +5,7 @@ fixture, lab-green on the .99 lab) before the next. This table is updated, commi
 feature lands. Detail: [IMPLEMENTATION-3.13.99.md](IMPLEMENTATION-3.13.99.md). Decisions:
 [OWNER-DECISIONS.md](OWNER-DECISIONS.md).
 
-**Progress: 12 / 53 features lab-green.** Done: Phase 1 + 44, 47. In progress: 25 (Phase 2, next).
+**Progress: 13 / 53 features lab-green.** Done: Phase 1 + 44, 47, 25. In progress: 16 (Phase 2, next).
 
 Status: DONE = lab-green all four (independently re-verified) . WIP = in progress . TODO = not started.
 Lab column = per-framework test counts py/php/ruby/node in the consolidated green run.
@@ -31,7 +31,7 @@ Lab column = per-framework test counts py/php/ruby/node in the consolidated gree
 |---|---------|--------|----------------------|------------------------------|
 | 44 | File upload | DONE | 6/6/6/8 | 9fd483c / a6bb4b3 / dab136f / 5a9bdbe |
 | 47 | Background tasks | DONE | 6/6/6/7 | 1d4fb4d / 9f62bde / 32f9539 / fe6e069 |
-| 25 | ORM result caching | TODO | - | - |
+| 25 | ORM result caching | DONE | 8/8/8/8 | 9329fbc / d6fca93 / cdbeee3 / c472089 |
 | 16 | Database next-id | TODO | - | - |
 | 7 | SQL translator | TODO | - | - |
 
