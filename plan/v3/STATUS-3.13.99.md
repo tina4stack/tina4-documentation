@@ -5,7 +5,7 @@ fixture, lab-green on the .99 lab) before the next. This table is updated, commi
 feature lands. Detail: [IMPLEMENTATION-3.13.99.md](IMPLEMENTATION-3.13.99.md). Decisions:
 [OWNER-DECISIONS.md](OWNER-DECISIONS.md).
 
-**Progress: 17 / 53 features lab-green.** Done: Phase 1 + Phase 2 + 9. In progress: 10 (Phase 3, next).
+**Progress: 18 / 53 features lab-green.** Done: Phase 1 + Phase 2 + 9, 10. In progress: 11 (Phase 3, next).
 
 Status: DONE = lab-green all four (independently re-verified) . WIP = in progress . TODO = not started.
 Lab column = per-framework test counts py/php/ruby/node in the consolidated green run.
@@ -41,7 +41,7 @@ Lab column = per-framework test counts py/php/ruby/node in the consolidated gree
 | # | Feature | Status | Lab (py/php/rb/node) | Commits py / php / rb / node |
 |---|---------|--------|----------------------|------------------------------|
 | 9 | PostgreSQL provider | DONE | 13/13/13/13 | f67e73d / 2258bbb / 09e254a / 5fe1778 |
-| 10 | MySQL provider | TODO | - | - |
+| 10 | MySQL provider | DONE | 12/10/10/10 | 99487c9 / 1551c9d / af1ee43 / 979b1c0 |
 | 11 | MSSQL provider | TODO | - | - |
 | 12 | Firebird provider | TODO | - | - |
 | 13 | ODBC provider | TODO | - | - |
