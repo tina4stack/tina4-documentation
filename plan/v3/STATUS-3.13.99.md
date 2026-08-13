@@ -5,7 +5,9 @@ fixture, lab-green on the .99 lab) before the next. This table is updated, commi
 feature lands. Detail: [IMPLEMENTATION-3.13.99.md](IMPLEMENTATION-3.13.99.md). Decisions:
 [OWNER-DECISIONS.md](OWNER-DECISIONS.md).
 
-**Progress: 41 / 52 features lab-green + 1 new (MAIL-REDIRECT `TINA4_MAIL_REDIRECT_TO`) done** (feature 50 Frond compiler DEFERRED to 3.13.100 fast-follow, owner call 2026-08-12). Done: Phase 1 + Phase 2 + Phase 3 (9-13) + 17 + 18 + 19 + 20 + 21 + 22 + 23 + 24 + 26 + 27 + 28 + 29 + 15 + MAIL-REDIRECT. **Phase 4 COMPLETE (13/13).** Write-path fixes: WRITE-PATH (Node insert fail-loud) + FIREBIRD-KEY-TYPE (Ruby FB Symbol keys) both DONE. 40 + 42 + 45 + 32 + 46 + 128 + 130 DONE. Next: 131 (Phase 5 test client). Phase 5: 8/9.
+**Progress: 42 / 52 features lab-green + 1 new (MAIL-REDIRECT `TINA4_MAIL_REDIRECT_TO`) done.** Done: Phase 1 + Phase 2 + Phase 3 (9-13) + 17 + 18 + 19 + 20 + 21 + 22 + 23 + 24 + 26 + 27 + 28 + 29 + 15 + MAIL-REDIRECT. **Phase 4 COMPLETE (13/13).** Write-path fixes: WRITE-PATH (Node insert fail-loud) + FIREBIRD-KEY-TYPE (Ruby FB Symbol keys) both DONE. 40 + 42 + 45 + 32 + 46 + 128 + 130 + 131 DONE. Phase 5: 8/9 (133 Carbonah = last).
+
+**RELEASE CUT (owner 2026-08-13): 3.13.99 = Phases 1-5 only. Phase 6 Frond (48/49, 52, 54-60) DEFERRED to 3.13.100 fast-follow, alongside the already-deferred feature 50 Frond compiler.** Remaining before the 3.13.99 merge+tag: (1) 133 Carbonah; (2) two real pre-existing bugs found during Phase-5 verification - PHP Router literal-paren-path 404 + PHP built-in-Server first-time session-cookie not emitted (both cross-checked all four); (3) pre-merge test hygiene (PHP/Ruby stale request-id regex, PHP DevAdmin risky-handler, PHP 7146->7145 stray refs; Python overlay test already fixed d619af0). Then merge feature/release3.13.99 -> v3, full-suite green at merged HEAD on the lab, PAUSE for owner go-ahead, tag.
 
 Status: DONE = lab-green all four (independently re-verified) . WIP = in progress . TODO = not started.
 Lab column = per-framework test counts py/php/ruby/node in the consolidated green run.
@@ -75,10 +77,12 @@ Lab column = per-framework test counts py/php/ruby/node in the consolidated gree
 | 46 | Default landing page | DONE | 5/4/4/15 | 77a872a / 196e334 / 430d63a / 246702c |
 | 128 | Dual test port | DONE | 4/5/7/7 | f529bf2 / fdf27d3 / 838a0ac / 1fb4d4a |
 | 130 | Dynamic version | DONE | 4/4/4/4 | 4275713 / 6a6ddc2 / 80a8d6a / 925a3a0 |
-| 131 | Test client | TODO | - | - |
+| 131 | Test client | DONE | 4/4/4/4 | 21bc198 / 1881b0a / eeac73d / 32a468c |
 | 133 | Carbonah benchmarks | TODO | - | - |
 
-## Phase 6 - Frond
+## Phase 6 - Frond  --  DEFERRED TO 3.13.100 (owner cut 2026-08-13)
+
+**Not in 3.13.99.** All rows below ship in the 3.13.100 Frond fast-follow (with feature 50). Listed here for continuity only.
 
 | # | Feature | Status | Lab (py/php/rb/node) | Commits py / php / rb / node |
 |---|---------|--------|----------------------|------------------------------|
