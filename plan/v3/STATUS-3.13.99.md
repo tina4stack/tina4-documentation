@@ -5,7 +5,7 @@ fixture, lab-green on the .99 lab) before the next. This table is updated, commi
 feature lands. Detail: [IMPLEMENTATION-3.13.99.md](IMPLEMENTATION-3.13.99.md). Decisions:
 [OWNER-DECISIONS.md](OWNER-DECISIONS.md).
 
-**Progress: 40 / 52 features lab-green + 1 new (MAIL-REDIRECT `TINA4_MAIL_REDIRECT_TO`) done** (feature 50 Frond compiler DEFERRED to 3.13.100 fast-follow, owner call 2026-08-12). Done: Phase 1 + Phase 2 + Phase 3 (9-13) + 17 + 18 + 19 + 20 + 21 + 22 + 23 + 24 + 26 + 27 + 28 + 29 + 15 + MAIL-REDIRECT. **Phase 4 COMPLETE (13/13).** Write-path fixes: WRITE-PATH (Node insert fail-loud) + FIREBIRD-KEY-TYPE (Ruby FB Symbol keys) both DONE. 40 + 42 + 45 + 32 + 46 + 128 DONE. Next: 130 (Phase 5 dynamic version). Phase 5: 7/9.
+**Progress: 41 / 52 features lab-green + 1 new (MAIL-REDIRECT `TINA4_MAIL_REDIRECT_TO`) done** (feature 50 Frond compiler DEFERRED to 3.13.100 fast-follow, owner call 2026-08-12). Done: Phase 1 + Phase 2 + Phase 3 (9-13) + 17 + 18 + 19 + 20 + 21 + 22 + 23 + 24 + 26 + 27 + 28 + 29 + 15 + MAIL-REDIRECT. **Phase 4 COMPLETE (13/13).** Write-path fixes: WRITE-PATH (Node insert fail-loud) + FIREBIRD-KEY-TYPE (Ruby FB Symbol keys) both DONE. 40 + 42 + 45 + 32 + 46 + 128 + 130 DONE. Next: 131 (Phase 5 test client). Phase 5: 8/9.
 
 Status: DONE = lab-green all four (independently re-verified) . WIP = in progress . TODO = not started.
 Lab column = per-framework test counts py/php/ruby/node in the consolidated green run.
@@ -74,7 +74,7 @@ Lab column = per-framework test counts py/php/ruby/node in the consolidated gree
 | 32 | Route groups | DONE | 5/5/5/5 | 14df0ed / 7b8dc44 / 6eb11bd / 94c6cb0 |
 | 46 | Default landing page | DONE | 5/4/4/15 | 77a872a / 196e334 / 430d63a / 246702c |
 | 128 | Dual test port | DONE | 4/5/7/7 | f529bf2 / fdf27d3 / 838a0ac / 1fb4d4a |
-| 130 | Dynamic version | TODO | - | - |
+| 130 | Dynamic version | DONE | 4/4/4/4 | 4275713 / 6a6ddc2 / 80a8d6a / 925a3a0 |
 | 131 | Test client | TODO | - | - |
 | 133 | Carbonah benchmarks | TODO | - | - |
 
