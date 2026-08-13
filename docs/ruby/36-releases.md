@@ -46,7 +46,7 @@ agreement across all four frameworks. Ruby has the longest list this release.
 - `validate()` on save now enforces length, type, and format, where it used to check only for `null`. A model that previously saved an over-length or wrong-format value now returns `false` from `save()` and writes nothing (`b427f8b`)
 - The two validators now speak one canonical message vocabulary; `in_list` renders a compact JSON list (`must be one of ["a","b","c"]`) (`b427f8b`)
 - `create_table()` now injects the configured `soft_delete_field` for a soft-delete model that does not declare it itself (`a6ce6ad`)
-- A soft-deleted child is no longer returned through relationship traversal, lazy or eager (`94ccf77` / `df9bbe6`)
+- A soft-deleted child is no longer returned through relationship traversal, lazy or eager (`df9bbe6`)
 - A REST list `?page` below 1 now clamps to page 1, instead of handing a negative offset to the driver (`c8f8a93`)
 - `load()` now JSON-coerces json columns, where it used to return a raw string through that path, and its signature changes to `load(filter, params, include)`, from `load(arg, params)` with no `include` (`1c6d0c5`)
 - AutoCrud returns `422` with field errors for an invalid create or update, where it used to return `500`. The write body is now allow-listed: `is_deleted` is never client-writable, and a client-supplied primary key is stripped on both create and update, closing a mass-assignment hole and an IDOR-shaped redirect (`d5cdd95`)

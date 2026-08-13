@@ -42,7 +42,8 @@ agreement across all four frameworks, plus two genuine additions: declarative
 relationships now work in Node at all.
 
 - **Declarative relationships now function and lazy-load.** Before 3.13.99, a field declared with `type: "foreignKey"` never attached its accessors; only the imperative `post.belongsTo(Author, "author_id")` form worked. Both now work (`ad51731`)
-- `toDict()` now includes an imperatively-loaded relation that used to be silently omitted whenever the table name differed from the lowercased model name; `toDict()`/`toJson()` now log a warning when a declared relation is skipped because it was not eager-loaded, instead of dropping it silently. The imperative `hasMany` default row cap changes from a silent 100 to the whole result set (`4126c4a`)
+- `toDict()` now includes an imperatively-loaded relation that used to be silently omitted whenever the table name differed from the lowercased model name. The imperative `hasMany` default row cap changes from a silent 100 to the whole result set (`4126c4a`)
+- `toDict()`/`toJson()` now log a warning when a declared relation is skipped because it was not eager-loaded, instead of dropping it silently (`5b5cdcc`)
 - AutoCrud PUT now validates the request body, where it used to validate only on create. An update with a type, length, pattern, or required violation now gets a `422`, and the `isUpdate` partial-update mode no longer demands unrelated fields. The regex validation message becomes `"does not match the required format"` (`bf0ea6a`)
 - `createTable()` now injects the `is_deleted` column for a soft-delete model that does not declare it itself (`f33ed9b`)
 - A soft-deleted child is no longer returned through relationship traversal, lazy or eager (`ad51731`)
@@ -72,8 +73,8 @@ failed to parse, and an empty body returns each language's native null
 
 ### Dev tooling
 
-- `TestClient` now dispatches through the real request pipeline, where it used to short-circuit around it. A route middleware that used to run on a would-be-401 request no longer runs, and session auth is genuinely exercised now; a test leaning on the old low-fidelity client may see a different outcome, because that outcome is now correct (`1881b0a`)
-- `sessionAutoStart` now uses `appendHeader`, so a route that also sets a cookie no longer has it clobbered. This was a real bug on the live server too, not only in tests (`1881b0a`)
+- `TestClient` now dispatches through the real request pipeline, where it used to short-circuit around it. A route middleware that used to run on a would-be-401 request no longer runs, and session auth is genuinely exercised now; a test leaning on the old low-fidelity client may see a different outcome, because that outcome is now correct (`32a468c`)
+- `sessionAutoStart` now uses `appendHeader`, so a route that also sets a cookie no longer has it clobbered. This was a real bug on the live server too, not only in tests (`32a468c`)
 - The banner and health check report the real framework version now, instead of `0.0.0` in a relocated or published layout (`925a3a0`)
 - The inline `tests()` descriptor builders are renamed: `assertEqual`/`assertRaises`/`assertTrue`/`assertFalse` become `expectEqual`, `expectRaises`, `expectTrue`, `expectFalse`. `tina4 test` now discovers and runs the inline surface with a real exit code (`e4202b5`)
 
