@@ -7,7 +7,7 @@
   "version": 1,
   "feature": 2,
   "decided": "2026-08-09",
-  "status": "decision-complete; implementation owed",
+  "status": "proven",
   "contract": "plan/v3/features/002-structured-logger.md",
   "schema": {
     "given": "project root, native environment, explicit options, sink state and native inputs",
@@ -17,10 +17,31 @@
     "witness": "out-of-band observation proving the property rather than an internal mock"
   },
   "constants": {
-    "levels": ["ALL", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "NONE"],
-    "event_levels": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-    "formats": ["text", "json"],
-    "outputs": ["stdout", "file", "both"],
+    "levels": [
+      "ALL",
+      "DEBUG",
+      "INFO",
+      "WARNING",
+      "ERROR",
+      "CRITICAL",
+      "NONE"
+    ],
+    "event_levels": [
+      "DEBUG",
+      "INFO",
+      "WARNING",
+      "ERROR",
+      "CRITICAL"
+    ],
+    "formats": [
+      "text",
+      "json"
+    ],
+    "outputs": [
+      "stdout",
+      "file",
+      "both"
+    ],
     "default": {
       "level": "INFO",
       "format": "json",
@@ -32,7 +53,14 @@
       "strict": false,
       "caller": false
     },
-    "json_key_order": ["timestamp", "level", "message", "request_id", "function", "context"],
+    "json_key_order": [
+      "timestamp",
+      "level",
+      "message",
+      "request_id",
+      "function",
+      "context"
+    ],
     "stdout_max_bytes": 8192,
     "minimum_rotate_size": 1024,
     "overflow_message": "Log event omitted: encoded size exceeds sink limit",
@@ -42,87 +70,237 @@
     {
       "id": "logger-configuration",
       "rule": "Configuration is typed, fail-loud, transactional and stable until reset. Explicit option beats environment, which beats the default.",
-      "suites": {},
+      "suites": {
+        "python": "tests/test_logger_fixture_contract.py",
+        "php": "tests/LoggerFixtureContractTest.php",
+        "ruby": "spec/logger_fixture_contract_spec.rb",
+        "nodejs": "test/loggerFixtureContract.test.ts"
+      },
       "cases": [
         {
           "id": "LOG-C01",
           "name": "logger defaults without environment",
-          "given": {"project_root": "$ROOT", "environment": {}, "options": {}},
-          "when": {"operation": "configuration"},
-          "then": {"configuration": "$constants.default", "created": []},
+          "given": {
+            "project_root": "$ROOT",
+            "environment": {},
+            "options": {}
+          },
+          "when": {
+            "operation": "configuration"
+          },
+          "then": {
+            "configuration": "$constants.default",
+            "created": []
+          },
           "witness": "effective_native_map_and_empty_filesystem"
         },
         {
           "id": "LOG-C02",
           "name": "generated development values select all text and both sinks",
-          "given": {"environment": {"TINA4_DEBUG": true, "TINA4_LOG_LEVEL": "ALL"}},
-          "when": {"operation": "configuration"},
-          "then": {"level": "ALL", "format": "text", "stdout_enabled": true, "file_enabled": true},
+          "given": {
+            "environment": {
+              "TINA4_DEBUG": true,
+              "TINA4_LOG_LEVEL": "ALL"
+            }
+          },
+          "when": {
+            "operation": "configuration"
+          },
+          "then": {
+            "level": "ALL",
+            "format": "text",
+            "stdout_enabled": true,
+            "file_enabled": true
+          },
           "witness": "native_env_consumed_without_private_conversion"
         },
         {
           "id": "LOG-C03",
           "name": "explicit option beats environment",
-          "given": {"environment": {"TINA4_LOG_LEVEL": "ERROR", "TINA4_LOG_FORMAT": "json", "TINA4_LOG_OUTPUT": "file"}, "options": {"level": "debug", "format": "text", "output": "both"}},
-          "when": {"operation": "configure"},
-          "then": {"level": "DEBUG", "format": "text", "output": "both"},
+          "given": {
+            "environment": {
+              "TINA4_LOG_LEVEL": "ERROR",
+              "TINA4_LOG_FORMAT": "json",
+              "TINA4_LOG_OUTPUT": "file"
+            },
+            "options": {
+              "level": "debug",
+              "format": "text",
+              "output": "both"
+            }
+          },
+          "when": {
+            "operation": "configure"
+          },
+          "then": {
+            "level": "DEBUG",
+            "format": "text",
+            "output": "both"
+          },
           "witness": "effective_map_and_real_sinks"
         },
         {
           "id": "LOG-C04",
           "name": "environment beats framework default",
-          "given": {"environment": {"TINA4_LOG_LEVEL": "critical", "TINA4_LOG_ROTATE_SIZE": 2048, "TINA4_LOG_ROTATE_KEEP": 0}},
-          "when": {"operation": "configuration"},
-          "then": {"level": "CRITICAL", "rotate_size": 2048, "rotate_keep": 0},
+          "given": {
+            "environment": {
+              "TINA4_LOG_LEVEL": "critical",
+              "TINA4_LOG_ROTATE_SIZE": 2048,
+              "TINA4_LOG_ROTATE_KEEP": 0
+            }
+          },
+          "when": {
+            "operation": "configuration"
+          },
+          "then": {
+            "level": "CRITICAL",
+            "rotate_size": 2048,
+            "rotate_keep": 0
+          },
           "witness": "effective_native_map"
         },
         {
           "id": "LOG-C05",
           "name": "snapshot ignores later environment mutation",
-          "given": {"environment": {"TINA4_LOG_LEVEL": "INFO"}},
-          "when": {"operations": ["configuration", {"set_environment": {"TINA4_LOG_LEVEL": "CRITICAL"}}, "configuration"]},
-          "then": {"levels": ["INFO", "INFO"]},
+          "given": {
+            "environment": {
+              "TINA4_LOG_LEVEL": "INFO"
+            }
+          },
+          "when": {
+            "operations": [
+              "configuration",
+              {
+                "set_environment": {
+                  "TINA4_LOG_LEVEL": "CRITICAL"
+                }
+              },
+              "configuration"
+            ]
+          },
+          "then": {
+            "levels": [
+              "INFO",
+              "INFO"
+            ]
+          },
           "witness": "same_process_real_environment_mutation"
         },
         {
           "id": "LOG-C06",
           "name": "reset reloads environment",
-          "given": {"environment": {"TINA4_LOG_LEVEL": "INFO"}},
-          "when": {"operations": ["configuration", {"set_environment": {"TINA4_LOG_LEVEL": "CRITICAL"}}, "reset", "configuration"]},
-          "then": {"levels": ["INFO", "CRITICAL"], "reset_return": null},
+          "given": {
+            "environment": {
+              "TINA4_LOG_LEVEL": "INFO"
+            }
+          },
+          "when": {
+            "operations": [
+              "configuration",
+              {
+                "set_environment": {
+                  "TINA4_LOG_LEVEL": "CRITICAL"
+                }
+              },
+              "reset",
+              "configuration"
+            ]
+          },
+          "then": {
+            "levels": [
+              "INFO",
+              "CRITICAL"
+            ],
+            "reset_return": null
+          },
           "witness": "same_process_real_environment_mutation"
         },
         {
           "id": "LOG-C07",
           "name": "failed reconfiguration preserves prior snapshot",
-          "given": {"active": {"level": "INFO"}, "options": {"rotate_size": 0}},
-          "when": {"operation": "configure"},
-          "then": {"configuration": {"level": "INFO"}, "filesystem_mutated": false},
-          "error": {"category": "configuration", "setting": "rotate_size"},
+          "given": {
+            "active": {
+              "level": "INFO"
+            },
+            "options": {
+              "rotate_size": 0
+            }
+          },
+          "when": {
+            "operation": "configure"
+          },
+          "then": {
+            "configuration": {
+              "level": "INFO"
+            },
+            "filesystem_mutated": false
+          },
+          "error": {
+            "category": "configuration",
+            "setting": "rotate_size"
+          },
           "witness": "effective_map_and_file_tree_before_after"
         },
         {
           "id": "LOG-C08",
           "name": "file name does not enable file sink",
-          "given": {"environment": {"TINA4_DEBUG": false, "TINA4_LOG_FILE": "app.log"}},
-          "when": {"operation": "configuration"},
-          "then": {"output": "stdout", "stdout_enabled": true, "file_enabled": false, "resolved_file": "$ROOT/logs/app.log"},
+          "given": {
+            "environment": {
+              "TINA4_DEBUG": false,
+              "TINA4_LOG_FILE": "app.log"
+            }
+          },
+          "when": {
+            "operation": "configuration"
+          },
+          "then": {
+            "output": "stdout",
+            "stdout_enabled": true,
+            "file_enabled": false,
+            "resolved_file": "$ROOT/logs/app.log"
+          },
           "witness": "effective_map_and_no_file"
         },
         {
           "id": "LOG-C09",
           "name": "relative and absolute paths resolve without guessing",
-          "given": {"project_root": "$ROOT", "options": {"log_dir": "var/log", "log_file": "app.data", "output": "file"}},
-          "when": {"operation": "configuration"},
-          "then": {"log_dir": "$ROOT/var/log", "log_file": "$ROOT/var/log/app.data", "layout": "single"},
+          "given": {
+            "project_root": "$ROOT",
+            "options": {
+              "log_dir": "var/log",
+              "log_file": "app.data",
+              "output": "file"
+            }
+          },
+          "when": {
+            "operation": "configuration"
+          },
+          "then": {
+            "log_dir": "$ROOT/var/log",
+            "log_file": "$ROOT/var/log/app.data",
+            "layout": "single"
+          },
           "witness": "effective_absolute_paths"
         },
         {
           "id": "LOG-C10",
           "name": "configuration result is a defensive copy",
-          "given": {"environment": {"TINA4_LOG_LEVEL": "INFO"}},
-          "when": {"operations": ["configuration", "mutate_returned_map", "configuration"]},
-          "then": {"level": "INFO", "internal_state_mutated": false},
+          "given": {
+            "environment": {
+              "TINA4_LOG_LEVEL": "INFO"
+            }
+          },
+          "when": {
+            "operations": [
+              "configuration",
+              "mutate_returned_map",
+              "configuration"
+            ]
+          },
+          "then": {
+            "level": "INFO",
+            "internal_state_mutated": false
+          },
           "witness": "two_independent_native_maps"
         }
       ]
@@ -130,51 +308,162 @@
     {
       "id": "logger-invalid-configuration",
       "rule": "Malformed or removed logger configuration fails before any filesystem or sink mutation.",
-      "suites": {},
+      "suites": {
+        "python": "tests/test_logger_fixture_contract.py",
+        "php": "tests/LoggerFixtureContractTest.php",
+        "ruby": "spec/logger_fixture_contract_spec.rb",
+        "nodejs": "test/loggerFixtureContract.test.ts"
+      },
       "cases": [
         {
           "id": "LOG-V01",
           "name": "invalid enum values fail",
-          "given": {"each": [{"TINA4_LOG_LEVEL": "verbose"}, {"TINA4_LOG_FORMAT": "yaml"}, {"TINA4_LOG_OUTPUT": "stout"}]},
-          "when": {"operation": "configuration"},
-          "then": {"filesystem_mutated": false},
-          "error": {"category": "configuration", "includes": ["setting", "value", "accepted domain"]},
+          "given": {
+            "each": [
+              {
+                "TINA4_LOG_LEVEL": "verbose"
+              },
+              {
+                "TINA4_LOG_FORMAT": "yaml"
+              },
+              {
+                "TINA4_LOG_OUTPUT": "stout"
+              }
+            ]
+          },
+          "when": {
+            "operation": "configuration"
+          },
+          "then": {
+            "filesystem_mutated": false
+          },
+          "error": {
+            "category": "configuration",
+            "includes": [
+              "setting",
+              "value",
+              "accepted domain"
+            ]
+          },
           "witness": "fresh_process_and_file_tree"
         },
         {
           "id": "LOG-V02",
           "name": "invalid rotation values fail",
-          "given": {"each": [{"TINA4_LOG_ROTATE_SIZE": 0}, {"TINA4_LOG_ROTATE_SIZE": 1023}, {"TINA4_LOG_ROTATE_SIZE": "large"}, {"TINA4_LOG_ROTATE_KEEP": -1}, {"TINA4_LOG_ROTATE_KEEP": 1.5}]},
-          "when": {"operation": "configuration"},
-          "then": {"filesystem_mutated": false},
-          "error": {"category": "configuration"},
+          "given": {
+            "each": [
+              {
+                "TINA4_LOG_ROTATE_SIZE": 0
+              },
+              {
+                "TINA4_LOG_ROTATE_SIZE": 1023
+              },
+              {
+                "TINA4_LOG_ROTATE_SIZE": "large"
+              },
+              {
+                "TINA4_LOG_ROTATE_KEEP": -1
+              },
+              {
+                "TINA4_LOG_ROTATE_KEEP": 1.5
+              }
+            ]
+          },
+          "when": {
+            "operation": "configuration"
+          },
+          "then": {
+            "filesystem_mutated": false
+          },
+          "error": {
+            "category": "configuration"
+          },
           "witness": "fresh_process_and_file_tree"
         },
         {
           "id": "LOG-V03",
           "name": "invalid path and boolean types fail",
-          "given": {"each": [{"TINA4_LOG_DIR": ""}, {"TINA4_LOG_FILE": "bad\u0000name"}, {"TINA4_LOG_STRICT": "maybe"}, {"TINA4_LOG_FUNC": 1}]},
-          "when": {"operation": "configuration"},
-          "then": {"filesystem_mutated": false},
-          "error": {"category": "configuration"},
+          "given": {
+            "each": [
+              {
+                "TINA4_LOG_DIR": ""
+              },
+              {
+                "TINA4_LOG_FILE": "bad\u0000name"
+              },
+              {
+                "TINA4_LOG_STRICT": "maybe"
+              },
+              {
+                "TINA4_LOG_FUNC": 1
+              }
+            ]
+          },
+          "when": {
+            "operation": "configuration"
+          },
+          "then": {
+            "filesystem_mutated": false
+          },
+          "error": {
+            "category": "configuration"
+          },
           "witness": "native_type_and_file_tree"
         },
         {
           "id": "LOG-V04",
           "name": "removed settings fail with migration detail",
-          "given": {"each_setting": ["TINA4_LOG_MAX_SIZE", "TINA4_LOG_KEEP", "TINA4_LOG_APPEND", "TINA4_DEBUG_LEVEL", "TINA4_LOG_CRITICAL"]},
-          "when": {"operation": "configuration"},
-          "then": {"filesystem_mutated": false},
-          "error": {"category": "configuration", "includes": ["removed setting", "replacement or removal"]},
+          "given": {
+            "each_setting": [
+              "TINA4_LOG_MAX_SIZE",
+              "TINA4_LOG_KEEP",
+              "TINA4_LOG_APPEND",
+              "TINA4_DEBUG_LEVEL",
+              "TINA4_LOG_CRITICAL"
+            ]
+          },
+          "when": {
+            "operation": "configuration"
+          },
+          "then": {
+            "filesystem_mutated": false
+          },
+          "error": {
+            "category": "configuration",
+            "includes": [
+              "removed setting",
+              "replacement or removal"
+            ]
+          },
           "witness": "one_fresh_process_per_setting"
         },
         {
           "id": "LOG-V05",
           "name": "legacy bracket level fails",
-          "given": {"environment": {"TINA4_LOG_LEVEL": "[TINA4_LOG_ERROR]"}},
-          "when": {"operation": "configuration"},
-          "then": {"filesystem_mutated": false},
-          "error": {"category": "configuration", "setting": "TINA4_LOG_LEVEL", "accepted": ["ALL", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "NONE"]},
+          "given": {
+            "environment": {
+              "TINA4_LOG_LEVEL": "[TINA4_LOG_ERROR]"
+            }
+          },
+          "when": {
+            "operation": "configuration"
+          },
+          "then": {
+            "filesystem_mutated": false
+          },
+          "error": {
+            "category": "configuration",
+            "setting": "TINA4_LOG_LEVEL",
+            "accepted": [
+              "ALL",
+              "DEBUG",
+              "INFO",
+              "WARNING",
+              "ERROR",
+              "CRITICAL",
+              "NONE"
+            ]
+          },
           "witness": "fresh_process"
         }
       ]
@@ -182,46 +471,170 @@
     {
       "id": "logger-levels-and-routing",
       "rule": "One threshold filters an event before every active sink; directory error.log receives warning and above.",
-      "suites": {},
+      "suites": {
+        "python": "tests/test_logger_fixture_contract.py",
+        "php": "tests/LoggerFixtureContractTest.php",
+        "ruby": "spec/logger_fixture_contract_spec.rb",
+        "nodejs": "test/loggerFixtureContract.test.ts"
+      },
       "cases": [
         {
           "id": "LOG-L01",
           "name": "every threshold has one shared level matrix",
-          "given": {"events": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]},
-          "when": {"operation": "emit_for_each_threshold"},
-          "then": {"ALL": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], "DEBUG": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], "INFO": ["INFO", "WARNING", "ERROR", "CRITICAL"], "WARNING": ["WARNING", "ERROR", "CRITICAL"], "ERROR": ["ERROR", "CRITICAL"], "CRITICAL": ["CRITICAL"], "NONE": []},
+          "given": {
+            "events": [
+              "DEBUG",
+              "INFO",
+              "WARNING",
+              "ERROR",
+              "CRITICAL"
+            ]
+          },
+          "when": {
+            "operation": "emit_for_each_threshold"
+          },
+          "then": {
+            "ALL": [
+              "DEBUG",
+              "INFO",
+              "WARNING",
+              "ERROR",
+              "CRITICAL"
+            ],
+            "DEBUG": [
+              "DEBUG",
+              "INFO",
+              "WARNING",
+              "ERROR",
+              "CRITICAL"
+            ],
+            "INFO": [
+              "INFO",
+              "WARNING",
+              "ERROR",
+              "CRITICAL"
+            ],
+            "WARNING": [
+              "WARNING",
+              "ERROR",
+              "CRITICAL"
+            ],
+            "ERROR": [
+              "ERROR",
+              "CRITICAL"
+            ],
+            "CRITICAL": [
+              "CRITICAL"
+            ],
+            "NONE": []
+          },
           "witness": "real_stdout_and_real_files"
         },
         {
           "id": "LOG-L02",
           "name": "level configuration is case insensitive",
-          "given": {"each_level": ["all", "Debug", "INFO", "warning", "Error", "critical", "none"]},
-          "when": {"operation": "configuration"},
-          "then": {"canonical": ["ALL", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "NONE"]},
+          "given": {
+            "each_level": [
+              "all",
+              "Debug",
+              "INFO",
+              "warning",
+              "Error",
+              "critical",
+              "none"
+            ]
+          },
+          "when": {
+            "operation": "configuration"
+          },
+          "then": {
+            "canonical": [
+              "ALL",
+              "DEBUG",
+              "INFO",
+              "WARNING",
+              "ERROR",
+              "CRITICAL",
+              "NONE"
+            ]
+          },
           "witness": "effective_map"
         },
         {
           "id": "LOG-L03",
           "name": "is enabled matches real routing",
-          "given": {"level": "WARNING", "output": "both"},
-          "when": {"operation": "is_enabled_and_emit_each_level"},
-          "then": {"DEBUG": false, "INFO": false, "WARNING": true, "ERROR": true, "CRITICAL": true, "stdout_equals_main_file_levels": true},
+          "given": {
+            "level": "WARNING",
+            "output": "both"
+          },
+          "when": {
+            "operation": "is_enabled_and_emit_each_level"
+          },
+          "then": {
+            "DEBUG": false,
+            "INFO": false,
+            "WARNING": true,
+            "ERROR": true,
+            "CRITICAL": true,
+            "stdout_equals_main_file_levels": true
+          },
           "witness": "predicate_and_real_sink_bytes"
         },
         {
           "id": "LOG-L04",
           "name": "unknown is enabled argument fails",
-          "given": {"argument": "verbose"},
-          "when": {"operation": "is_enabled"},
-          "error": {"category": "argument", "argument": "level"},
+          "given": {
+            "argument": "verbose"
+          },
+          "when": {
+            "operation": "is_enabled"
+          },
+          "error": {
+            "category": "argument",
+            "argument": "level"
+          },
           "witness": "public_call"
         },
         {
           "id": "LOG-L05",
           "name": "directory and named file layouts are exact",
-          "given": {"events": ["INFO", "WARNING", "ERROR", "CRITICAL"]},
-          "when": {"operation": "emit_in_directory_then_named_file_mode"},
-          "then": {"directory": {"tina4.log": ["INFO", "WARNING", "ERROR", "CRITICAL"], "error.log": ["WARNING", "ERROR", "CRITICAL"]}, "named_file": {"app.log": ["INFO", "WARNING", "ERROR", "CRITICAL"], "not_created": ["error.log"]}},
+          "given": {
+            "events": [
+              "INFO",
+              "WARNING",
+              "ERROR",
+              "CRITICAL"
+            ]
+          },
+          "when": {
+            "operation": "emit_in_directory_then_named_file_mode"
+          },
+          "then": {
+            "directory": {
+              "tina4.log": [
+                "INFO",
+                "WARNING",
+                "ERROR",
+                "CRITICAL"
+              ],
+              "error.log": [
+                "WARNING",
+                "ERROR",
+                "CRITICAL"
+              ]
+            },
+            "named_file": {
+              "app.log": [
+                "INFO",
+                "WARNING",
+                "ERROR",
+                "CRITICAL"
+              ],
+              "not_created": [
+                "error.log"
+              ]
+            }
+          },
           "witness": "real_file_tree_and_lines"
         }
       ]
@@ -229,102 +642,294 @@
     {
       "id": "logger-format-and-values",
       "rule": "Text and JSON share one normalized event, emit one LF line, and never leak ANSI or control bytes outside an interactive text terminal.",
-      "suites": {},
+      "suites": {
+        "python": "tests/test_logger_fixture_contract.py",
+        "php": "tests/LoggerFixtureContractTest.php",
+        "ruby": "spec/logger_fixture_contract_spec.rb",
+        "nodejs": "test/loggerFixtureContract.test.ts"
+      },
       "cases": [
         {
           "id": "LOG-F01",
           "name": "canonical json bytes",
-          "given": {"frozen_time": "$T0", "format": "json", "level": "INFO", "message": "ready"},
-          "when": {"operation": "info"},
-          "then": {"record": "{\"timestamp\":\"2026-08-09T10:11:12.345Z\",\"level\":\"INFO\",\"message\":\"ready\"}\n", "physical_lines": 1},
+          "given": {
+            "frozen_time": "$T0",
+            "format": "json",
+            "level": "INFO",
+            "message": "ready"
+          },
+          "when": {
+            "operation": "info"
+          },
+          "then": {
+            "record": "{\"timestamp\":\"2026-08-09T10:11:12.345Z\",\"level\":\"INFO\",\"message\":\"ready\"}\n",
+            "physical_lines": 1
+          },
           "witness": "raw_sink_bytes"
         },
         {
           "id": "LOG-F02",
           "name": "canonical text bytes",
-          "given": {"frozen_time": "$T0", "format": "text", "level": "INFO", "message": "ready", "tty": false},
-          "when": {"operation": "info"},
-          "then": {"record": "2026-08-09T10:11:12.345Z [INFO    ] ready\n", "physical_lines": 1, "ansi": false},
+          "given": {
+            "frozen_time": "$T0",
+            "format": "text",
+            "level": "INFO",
+            "message": "ready",
+            "tty": false
+          },
+          "when": {
+            "operation": "info"
+          },
+          "then": {
+            "record": "2026-08-09T10:11:12.345Z [INFO    ] ready\n",
+            "physical_lines": 1,
+            "ansi": false
+          },
           "witness": "raw_sink_bytes"
         },
         {
           "id": "LOG-F03",
           "name": "optional fields and sorted context have exact order",
-          "given": {"frozen_time": "$T0", "format": "json", "request_id": "req-1", "caller": "handle", "context": {"z": 1, "a": {"y": 2, "b": 3}}},
-          "when": {"operation": "info", "message": "ready"},
-          "then": {"record": "{\"timestamp\":\"2026-08-09T10:11:12.345Z\",\"level\":\"INFO\",\"message\":\"ready\",\"request_id\":\"req-1\",\"function\":\"handle\",\"context\":{\"a\":{\"b\":3,\"y\":2},\"z\":1}}\n"},
+          "given": {
+            "frozen_time": "$T0",
+            "format": "json",
+            "request_id": "req-1",
+            "caller": "handle",
+            "context": {
+              "z": 1,
+              "a": {
+                "y": 2,
+                "b": 3
+              }
+            }
+          },
+          "when": {
+            "operation": "info",
+            "message": "ready"
+          },
+          "then": {
+            "record": "{\"timestamp\":\"2026-08-09T10:11:12.345Z\",\"level\":\"INFO\",\"message\":\"ready\",\"request_id\":\"req-1\",\"function\":\"handle\",\"context\":{\"a\":{\"b\":3,\"y\":2},\"z\":1}}\n"
+          },
           "witness": "raw_sink_bytes"
         },
         {
           "id": "LOG-F04",
           "name": "native scalar messages use json spelling",
-          "given": {"messages": [null, true, false, 42, 1.5]},
-          "when": {"operation": "info_each"},
-          "then": {"message_strings": ["null", "true", "false", "42", "1.5"]},
+          "given": {
+            "messages": [
+              null,
+              true,
+              false,
+              42,
+              1.5
+            ]
+          },
+          "when": {
+            "operation": "info_each"
+          },
+          "then": {
+            "message_strings": [
+              "null",
+              "true",
+              "false",
+              "42",
+              "1.5"
+            ]
+          },
           "witness": "parsed_json_records"
         },
         {
           "id": "LOG-F05",
           "name": "map and sequence messages use compact sorted json",
-          "given": {"messages": [["x", 2], {"z": 1, "a": true}]},
-          "when": {"operation": "info_each"},
-          "then": {"message_strings": ["[\"x\",2]", "{\"a\":true,\"z\":1}"]},
+          "given": {
+            "messages": [
+              [
+                "x",
+                2
+              ],
+              {
+                "z": 1,
+                "a": true
+              }
+            ]
+          },
+          "when": {
+            "operation": "info_each"
+          },
+          "then": {
+            "message_strings": [
+              "[\"x\",2]",
+              "{\"a\":true,\"z\":1}"
+            ]
+          },
           "witness": "parsed_json_records"
         },
         {
           "id": "LOG-F06",
           "name": "embedded line breaks cannot inject records",
-          "given": {"message": "one\\path\r\ntwo", "context": {"value": "a\nb"}},
-          "when": {"operation": "emit_in_both_formats"},
-          "then": {"physical_lines_per_event": 1, "text_message": "one\\\\path\\r\\ntwo", "json_parseable": true},
+          "given": {
+            "message": "one\\path\r\ntwo",
+            "context": {
+              "value": "a\nb"
+            }
+          },
+          "when": {
+            "operation": "emit_in_both_formats"
+          },
+          "then": {
+            "physical_lines_per_event": 1,
+            "text_message": "one\\\\path\\r\\ntwo",
+            "json_parseable": true
+          },
           "witness": "raw_bytes_line_count_and_json_parse"
         },
         {
           "id": "LOG-F07",
           "name": "ansi exists only on interactive text stdout",
-          "given": {"matrix": [{"format": "text", "sink": "stdout", "tty": true}, {"format": "text", "sink": "stdout", "tty": false}, {"format": "text", "sink": "file", "tty": false}, {"format": "json", "sink": "stdout", "tty": true}]},
-          "when": {"operation": "warning"},
-          "then": {"ansi": [true, false, false, false]},
+          "given": {
+            "matrix": [
+              {
+                "format": "text",
+                "sink": "stdout",
+                "tty": true
+              },
+              {
+                "format": "text",
+                "sink": "stdout",
+                "tty": false
+              },
+              {
+                "format": "text",
+                "sink": "file",
+                "tty": false
+              },
+              {
+                "format": "json",
+                "sink": "stdout",
+                "tty": true
+              }
+            ]
+          },
+          "when": {
+            "operation": "warning"
+          },
+          "then": {
+            "ansi": [
+              true,
+              false,
+              false,
+              false
+            ]
+          },
           "witness": "raw_sink_bytes"
         },
         {
           "id": "LOG-F08",
           "name": "circular context is marked without raising",
-          "given": {"context": "$CIRCULAR_MAP"},
-          "when": {"operation": "info"},
-          "then": {"context": {"self": "[Circular]"}, "json_parseable": true, "return": null},
+          "given": {
+            "context": "$CIRCULAR_MAP"
+          },
+          "when": {
+            "operation": "info"
+          },
+          "then": {
+            "context": {
+              "self": "[Circular]"
+            },
+            "json_parseable": true,
+            "return": null
+          },
           "witness": "real_self_referential_native_map"
         },
         {
           "id": "LOG-F09",
           "name": "invalid utf8 binary has a digest marker",
-          "given": {"message": {"$bytes_base64": "/wA="}},
-          "when": {"operation": "info"},
-          "then": {"message_pattern": "^<binary 2 bytes sha256=[0-9a-f]{64}>$", "raw_invalid_bytes_present": false},
+          "given": {
+            "message": {
+              "$bytes_base64": "/wA="
+            }
+          },
+          "when": {
+            "operation": "info"
+          },
+          "then": {
+            "message_pattern": "^<binary 2 bytes sha256=[0-9a-f]{64}>$",
+            "raw_invalid_bytes_present": false
+          },
           "witness": "raw_sink_bytes_and_sha256"
         },
         {
           "id": "LOG-F10",
           "name": "unsupported value does not run application stringification",
-          "given": {"message": "$OBJECT_WITH_THROWING_STRINGIFIER"},
-          "when": {"operation": "info"},
-          "then": {"message": "[Unsupported]", "stringifier_called": false, "return": null},
+          "given": {
+            "message": "$OBJECT_WITH_THROWING_STRINGIFIER"
+          },
+          "when": {
+            "operation": "info"
+          },
+          "then": {
+            "message": "[Unsupported]",
+            "stringifier_called": false,
+            "return": null
+          },
           "witness": "real_object_with_counter_and_throw"
         },
         {
           "id": "LOG-F11",
           "name": "later context mutation cannot change event",
-          "given": {"context": {"items": [1]}},
-          "when": {"operations": ["info", {"mutate_context": {"append": 2}}, "read_sink"]},
-          "then": {"context": {"items": [1]}},
+          "given": {
+            "context": {
+              "items": [
+                1
+              ]
+            }
+          },
+          "when": {
+            "operations": [
+              "info",
+              {
+                "mutate_context": {
+                  "append": 2
+                }
+              },
+              "read_sink"
+            ]
+          },
+          "then": {
+            "context": {
+              "items": [
+                1
+              ]
+            }
+          },
           "witness": "real_mutable_native_value_and_sink_bytes"
         },
         {
           "id": "LOG-F12",
           "name": "oversized event becomes bounded valid replacement",
-          "given": {"frozen_time": "$T0", "rotate_size": 1024, "message": {"repeat": ["x", 5000]}},
-          "when": {"operation": "info"},
-          "then": {"max_bytes": 1024, "message": "$constants.overflow_message", "context": {"truncated": true, "original_bytes": "$POSITIVE_INTEGER", "sha256": "$LOWER_HEX_64"}, "json_parseable": true},
+          "given": {
+            "frozen_time": "$T0",
+            "rotate_size": 1024,
+            "message": {
+              "repeat": [
+                "x",
+                5000
+              ]
+            }
+          },
+          "when": {
+            "operation": "info"
+          },
+          "then": {
+            "max_bytes": 1024,
+            "message": "$constants.overflow_message",
+            "context": {
+              "truncated": true,
+              "original_bytes": "$POSITIVE_INTEGER",
+              "sha256": "$LOWER_HEX_64"
+            },
+            "json_parseable": true
+          },
           "witness": "raw_bytes_size_and_recomputed_sha256"
         }
       ]
@@ -332,102 +937,261 @@
     {
       "id": "logger-sinks-and-rotation",
       "rule": "Sink selection is exact and every framework-owned file has predictive, finite, concurrent-safe rotation.",
-      "suites": {},
+      "suites": {
+        "python": "tests/test_logger_fixture_contract.py",
+        "php": "tests/LoggerFixtureContractTest.php",
+        "ruby": "spec/logger_fixture_contract_spec.rb",
+        "nodejs": "test/loggerFixtureContract.test.ts"
+      },
       "cases": [
         {
           "id": "LOG-S01",
           "name": "explicit stdout creates no files",
-          "given": {"environment": {"TINA4_DEBUG": true, "TINA4_LOG_OUTPUT": "stdout", "TINA4_LOG_FILE": "app.log"}},
-          "when": {"operation": "info", "message": "ready"},
-          "then": {"stdout_lines": 1, "created": []},
+          "given": {
+            "environment": {
+              "TINA4_DEBUG": true,
+              "TINA4_LOG_OUTPUT": "stdout",
+              "TINA4_LOG_FILE": "app.log"
+            }
+          },
+          "when": {
+            "operation": "info",
+            "message": "ready"
+          },
+          "then": {
+            "stdout_lines": 1,
+            "created": []
+          },
           "witness": "captured_process_stdout_and_file_tree"
         },
         {
           "id": "LOG-S02",
           "name": "explicit file silences stdout",
-          "given": {"environment": {"TINA4_LOG_OUTPUT": "file"}},
-          "when": {"operation": "info", "message": "ready"},
-          "then": {"stdout": "", "created": ["logs/tina4.log"]},
+          "given": {
+            "environment": {
+              "TINA4_LOG_OUTPUT": "file"
+            }
+          },
+          "when": {
+            "operation": "info",
+            "message": "ready"
+          },
+          "then": {
+            "stdout": "",
+            "created": [
+              "logs/tina4.log"
+            ]
+          },
           "witness": "child_process_stdout_and_file_tree"
         },
         {
           "id": "LOG-S03",
           "name": "explicit both writes stdout and files in production",
-          "given": {"environment": {"TINA4_DEBUG": false, "TINA4_LOG_OUTPUT": "both"}},
-          "when": {"operation": "warning", "message": "ready"},
-          "then": {"stdout_lines": 1, "created": ["logs/tina4.log", "logs/error.log"], "same_level_and_format": true},
+          "given": {
+            "environment": {
+              "TINA4_DEBUG": false,
+              "TINA4_LOG_OUTPUT": "both"
+            }
+          },
+          "when": {
+            "operation": "warning",
+            "message": "ready"
+          },
+          "then": {
+            "stdout_lines": 1,
+            "created": [
+              "logs/tina4.log",
+              "logs/error.log"
+            ],
+            "same_level_and_format": true
+          },
           "witness": "child_process_stdout_and_file_bytes"
         },
         {
           "id": "LOG-S04",
           "name": "unset output is stdout only in production",
-          "given": {"environment": {"TINA4_DEBUG": false}},
-          "when": {"operation": "warning", "message": "ready"},
-          "then": {"stdout_lines": 1, "created": []},
+          "given": {
+            "environment": {
+              "TINA4_DEBUG": false
+            }
+          },
+          "when": {
+            "operation": "warning",
+            "message": "ready"
+          },
+          "then": {
+            "stdout_lines": 1,
+            "created": []
+          },
           "witness": "child_process_stdout_and_file_tree"
         },
         {
           "id": "LOG-S05",
           "name": "unset output writes stdout and bounded files in development",
-          "given": {"environment": {"TINA4_DEBUG": true}},
-          "when": {"operation": "warning", "message": "ready"},
-          "then": {"stdout_lines": 1, "created": ["logs/tina4.log", "logs/error.log"]},
+          "given": {
+            "environment": {
+              "TINA4_DEBUG": true
+            }
+          },
+          "when": {
+            "operation": "warning",
+            "message": "ready"
+          },
+          "then": {
+            "stdout_lines": 1,
+            "created": [
+              "logs/tina4.log",
+              "logs/error.log"
+            ]
+          },
           "witness": "child_process_stdout_and_file_tree"
         },
         {
           "id": "LOG-R01",
           "name": "exact rotation boundary does not rotate",
-          "given": {"rotate_size": 1024, "rotate_keep": 2, "current_bytes": 1000, "record_bytes": 24},
-          "when": {"operation": "append_record"},
-          "then": {"current_bytes": 1024, "backups": []},
+          "given": {
+            "rotate_size": 1024,
+            "rotate_keep": 2,
+            "current_bytes": 1000,
+            "record_bytes": 24
+          },
+          "when": {
+            "operation": "append_record"
+          },
+          "then": {
+            "current_bytes": 1024,
+            "backups": []
+          },
           "witness": "real_file_sizes"
         },
         {
           "id": "LOG-R02",
           "name": "next record is predicted before append",
-          "given": {"rotate_size": 1024, "rotate_keep": 2, "current_bytes": 1000, "record_bytes": 25},
-          "when": {"operation": "append_record"},
-          "then": {"current_bytes": 25, "backups": [{"name": ".1", "bytes": 1000}]},
+          "given": {
+            "rotate_size": 1024,
+            "rotate_keep": 2,
+            "current_bytes": 1000,
+            "record_bytes": 25
+          },
+          "when": {
+            "operation": "append_record"
+          },
+          "then": {
+            "current_bytes": 25,
+            "backups": [
+              {
+                "name": ".1",
+                "bytes": 1000
+              }
+            ]
+          },
           "witness": "real_file_sizes_and_bytes"
         },
         {
           "id": "LOG-R03",
           "name": "backup names and retention are deterministic",
-          "given": {"rotate_size": 1024, "rotate_keep": 2, "writes": "$THREE_OVERFLOWING_GENERATIONS"},
-          "when": {"operation": "write_all"},
-          "then": {"files": ["app.log", "app.log.1", "app.log.2"], "newest": "app.log.1", "oldest": "app.log.2", "not_created": ["app.log.0", "app.log.3"]},
+          "given": {
+            "rotate_size": 1024,
+            "rotate_keep": 2,
+            "writes": "$THREE_OVERFLOWING_GENERATIONS"
+          },
+          "when": {
+            "operation": "write_all"
+          },
+          "then": {
+            "files": [
+              "app.log",
+              "app.log.1",
+              "app.log.2"
+            ],
+            "newest": "app.log.1",
+            "oldest": "app.log.2",
+            "not_created": [
+              "app.log.0",
+              "app.log.3"
+            ]
+          },
           "witness": "real_file_tree_and_generation_markers"
         },
         {
           "id": "LOG-R04",
           "name": "zero retention keeps only bounded current file",
-          "given": {"rotate_size": 1024, "rotate_keep": 0, "writes": "$TWO_OVERFLOWING_GENERATIONS"},
-          "when": {"operation": "write_all"},
-          "then": {"files": ["app.log"], "current_at_most": 1024},
+          "given": {
+            "rotate_size": 1024,
+            "rotate_keep": 0,
+            "writes": "$TWO_OVERFLOWING_GENERATIONS"
+          },
+          "when": {
+            "operation": "write_all"
+          },
+          "then": {
+            "files": [
+              "app.log"
+            ],
+            "current_at_most": 1024
+          },
           "witness": "real_file_tree_and_size"
         },
         {
           "id": "LOG-R05",
           "name": "preexisting oversized file rotates before append",
-          "given": {"rotate_size": 1024, "rotate_keep": 1, "current_bytes": 1500, "record_bytes": 20},
-          "when": {"operation": "append_record"},
-          "then": {"current_bytes": 20, "backups": [{"name": ".1", "bytes": 1500}]},
+          "given": {
+            "rotate_size": 1024,
+            "rotate_keep": 1,
+            "current_bytes": 1500,
+            "record_bytes": 20
+          },
+          "when": {
+            "operation": "append_record"
+          },
+          "then": {
+            "current_bytes": 20,
+            "backups": [
+              {
+                "name": ".1",
+                "bytes": 1500
+              }
+            ]
+          },
           "witness": "real_preexisting_file_and_sizes"
         },
         {
           "id": "LOG-R06",
           "name": "main and error files rotate independently",
-          "given": {"rotate_size": 1024, "rotate_keep": 1, "events": "$MIXED_LEVEL_GENERATIONS"},
-          "when": {"operation": "write_all"},
-          "then": {"independent_generation_markers": true, "each_file_at_most": 1024, "each_backup_count_at_most": 1},
+          "given": {
+            "rotate_size": 1024,
+            "rotate_keep": 1,
+            "events": "$MIXED_LEVEL_GENERATIONS"
+          },
+          "when": {
+            "operation": "write_all"
+          },
+          "then": {
+            "independent_generation_markers": true,
+            "each_file_at_most": 1024,
+            "each_backup_count_at_most": 1
+          },
           "witness": "real_file_bytes_and_tree"
         },
         {
           "id": "LOG-R07",
           "name": "concurrent processes preserve records and retention",
-          "given": {"rotate_size": 4096, "rotate_keep": 2, "processes": 4, "records_per_process": 100},
-          "when": {"operation": "emit_concurrently"},
-          "then": {"partial_lines": 0, "duplicate_event_ids": 0, "unexpected_files": 0, "backup_count_at_most": 2, "lock_files_after_exit": 0},
+          "given": {
+            "rotate_size": 4096,
+            "rotate_keep": 2,
+            "processes": 4,
+            "records_per_process": 100
+          },
+          "when": {
+            "operation": "emit_concurrently"
+          },
+          "then": {
+            "partial_lines": 0,
+            "duplicate_event_ids": 0,
+            "unexpected_files": 0,
+            "backup_count_at_most": 2,
+            "lock_files_after_exit": 0
+          },
           "witness": "real_child_processes_and_file_tree"
         }
       ]
@@ -435,46 +1199,137 @@
     {
       "id": "logger-request-and-lifecycle",
       "rule": "Request IDs are execution-local, always cleared, and logger lifecycle is deterministic across reset, shutdown and fork.",
-      "suites": {},
+      "suites": {
+        "python": "tests/test_logger_fixture_contract.py",
+        "php": "tests/LoggerFixtureContractTest.php",
+        "ruby": "spec/logger_fixture_contract_spec.rb",
+        "nodejs": "test/loggerFixtureContract.test.ts"
+      },
       "cases": [
         {
           "id": "LOG-Q01",
           "name": "set get and clear request id",
-          "given": {"request_id": "req-1"},
-          "when": {"operations": ["set_request_id", "get_request_id", "clear_request_id", "get_request_id"]},
-          "then": {"values": ["req-1", null]},
+          "given": {
+            "request_id": "req-1"
+          },
+          "when": {
+            "operations": [
+              "set_request_id",
+              "get_request_id",
+              "clear_request_id",
+              "get_request_id"
+            ]
+          },
+          "then": {
+            "values": [
+              "req-1",
+              null
+            ]
+          },
           "witness": "public_methods"
         },
         {
           "id": "LOG-Q02",
           "name": "overlapping requests never exchange ids",
-          "given": {"tasks": [{"id": "A", "sequence": ["set", "yield", "log"]}, {"id": "B", "sequence": ["set", "log", "yield"]}]},
-          "when": {"operation": "run_deterministic_interleave"},
-          "then": {"records": [{"task": "A", "request_id": "A"}, {"task": "B", "request_id": "B"}]},
+          "given": {
+            "tasks": [
+              {
+                "id": "A",
+                "sequence": [
+                  "set",
+                  "yield",
+                  "log"
+                ]
+              },
+              {
+                "id": "B",
+                "sequence": [
+                  "set",
+                  "log",
+                  "yield"
+                ]
+              }
+            ]
+          },
+          "when": {
+            "operation": "run_deterministic_interleave"
+          },
+          "then": {
+            "records": [
+              {
+                "task": "A",
+                "request_id": "A"
+              },
+              {
+                "task": "B",
+                "request_id": "B"
+              }
+            ]
+          },
           "witness": "real_async_or_task_scheduler"
         },
         {
           "id": "LOG-Q03",
           "name": "request pipeline clears id in finally",
-          "given": {"requests": [{"id": "A", "result": "throws"}, {"id": "B", "result": "ok"}]},
-          "when": {"operation": "dispatch_sequentially"},
-          "then": {"second_request_ids": ["B"], "after_requests": null},
+          "given": {
+            "requests": [
+              {
+                "id": "A",
+                "result": "throws"
+              },
+              {
+                "id": "B",
+                "result": "ok"
+              }
+            ]
+          },
+          "when": {
+            "operation": "dispatch_sequentially"
+          },
+          "then": {
+            "second_request_ids": [
+              "B"
+            ],
+            "after_requests": null
+          },
           "witness": "real_request_pipeline_and_logs"
         },
         {
           "id": "LOG-Q04",
           "name": "reset is idempotent and reloads a clean snapshot",
-          "given": {"active_file_sink": true, "request_id": "A"},
-          "when": {"operations": ["reset", "reset", "configuration"]},
-          "then": {"request_id": null, "handles_closed": true, "fresh_snapshot": true},
+          "given": {
+            "active_file_sink": true,
+            "request_id": "A"
+          },
+          "when": {
+            "operations": [
+              "reset",
+              "reset",
+              "configuration"
+            ]
+          },
+          "then": {
+            "request_id": null,
+            "handles_closed": true,
+            "fresh_snapshot": true
+          },
           "witness": "public_methods_and_reopenable_files"
         },
         {
           "id": "LOG-Q05",
           "name": "forked child discards inherited logger state",
-          "given": {"parent_request_id": "parent", "parent_file_sink": true},
-          "when": {"operation": "fork_and_log_in_child"},
-          "then": {"child_request_id": null, "child_snapshot_resolved_fresh": true, "parent_snapshot_unchanged": true},
+          "given": {
+            "parent_request_id": "parent",
+            "parent_file_sink": true
+          },
+          "when": {
+            "operation": "fork_and_log_in_child"
+          },
+          "then": {
+            "child_request_id": null,
+            "child_snapshot_resolved_fresh": true,
+            "parent_snapshot_unchanged": true
+          },
           "witness": "real_process_fork_where_supported_or_equivalent_spawn_contract"
         }
       ]
@@ -482,48 +1337,115 @@
     {
       "id": "logger-failure-policy",
       "rule": "Configuration fails before mutation; ordinary runtime sink failures degrade once; strict runtime failures raise a catchable write error.",
-      "suites": {},
+      "suites": {
+        "python": "tests/test_logger_fixture_contract.py",
+        "php": "tests/LoggerFixtureContractTest.php",
+        "ruby": "spec/logger_fixture_contract_spec.rb",
+        "nodejs": "test/loggerFixtureContract.test.ts"
+      },
       "cases": [
         {
           "id": "LOG-E01",
           "name": "inaccessible selected sink fails configuration",
-          "given": {"output": "file", "log_dir": "$REAL_UNWRITABLE_PATH"},
-          "when": {"operation": "configure"},
-          "then": {"snapshot_replaced": false},
-          "error": {"category": "configuration", "includes": ["sink", "open"]},
+          "given": {
+            "output": "file",
+            "log_dir": "$REAL_UNWRITABLE_PATH"
+          },
+          "when": {
+            "operation": "configure"
+          },
+          "then": {
+            "snapshot_replaced": false
+          },
+          "error": {
+            "category": "configuration",
+            "includes": [
+              "sink",
+              "open"
+            ]
+          },
           "witness": "real_filesystem_permissions"
         },
         {
           "id": "LOG-E02",
           "name": "non strict write failure disables sink and diagnoses once",
-          "given": {"strict": false, "output": "both", "file_fails_after_configuration": true, "events": 3},
-          "when": {"operation": "emit_all"},
-          "then": {"raises": false, "file_attempts": 1, "stdout_diagnostics": 1, "stdout_event_lines": 3},
+          "given": {
+            "strict": false,
+            "output": "both",
+            "file_fails_after_configuration": true,
+            "events": 3
+          },
+          "when": {
+            "operation": "emit_all"
+          },
+          "then": {
+            "raises": false,
+            "file_attempts": 1,
+            "stdout_diagnostics": 1,
+            "stdout_event_lines": 3
+          },
           "witness": "real_sink_failure_after_successful_open"
         },
         {
           "id": "LOG-E03",
           "name": "strict write failure raises catchable error",
-          "given": {"strict": true, "output": "file", "file_fails_after_configuration": true},
-          "when": {"operation": "info", "message": "ready"},
-          "error": {"category": "write", "includes": ["sink", "operation"]},
+          "given": {
+            "strict": true,
+            "output": "file",
+            "file_fails_after_configuration": true
+          },
+          "when": {
+            "operation": "info",
+            "message": "ready"
+          },
+          "error": {
+            "category": "write",
+            "includes": [
+              "sink",
+              "operation"
+            ]
+          },
           "witness": "real_sink_failure_after_successful_open"
         },
         {
           "id": "LOG-E04",
           "name": "reset permits failed sink retry",
-          "given": {"strict": false, "first_sink_fails": true, "repair_after_reset": true},
-          "when": {"operations": ["info", "repair_sink", "reset", "info"]},
-          "then": {"first_written": false, "second_written": true},
+          "given": {
+            "strict": false,
+            "first_sink_fails": true,
+            "repair_after_reset": true
+          },
+          "when": {
+            "operations": [
+              "info",
+              "repair_sink",
+              "reset",
+              "info"
+            ]
+          },
+          "then": {
+            "first_written": false,
+            "second_written": true
+          },
           "witness": "real_repaired_filesystem"
         },
         {
           "id": "LOG-E05",
           "name": "lock timeout follows sink failure policy",
-          "given": {"lock_held_by_other_process": true},
-          "when": {"operation": "emit_in_non_strict_and_strict_modes"},
-          "then": {"non_strict_raises": false, "wait_is_bounded": true},
-          "error": {"strict_category": "write", "strict_operation": "lock"},
+          "given": {
+            "lock_held_by_other_process": true
+          },
+          "when": {
+            "operation": "emit_in_non_strict_and_strict_modes"
+          },
+          "then": {
+            "non_strict_raises": false,
+            "wait_is_bounded": true
+          },
+          "error": {
+            "strict_category": "write",
+            "strict_operation": "lock"
+          },
           "witness": "real_lock_holder_process_and_elapsed_time"
         }
       ]
@@ -531,46 +1453,108 @@
     {
       "id": "logger-public-surface-and-integration",
       "rule": "Every language exposes the same concepts, no aliases, and framework integration uses the public lifecycle exactly once.",
-      "suites": {},
+      "suites": {
+        "python": "tests/test_logger_fixture_contract.py",
+        "php": "tests/LoggerFixtureContractTest.php",
+        "ruby": "spec/logger_fixture_contract_spec.rb",
+        "nodejs": "test/loggerFixtureContract.test.ts"
+      },
       "cases": [
         {
           "id": "LOG-A01",
           "name": "public surface contains every required concept",
-          "given": {"concepts": ["configure", "debug", "info", "warning", "error", "critical", "is_enabled", "set_request_id", "get_request_id", "clear_request_id", "configuration", "reset"]},
-          "when": {"operation": "introspect_public_surface"},
-          "then": {"all_present": true},
+          "given": {
+            "concepts": [
+              "configure",
+              "debug",
+              "info",
+              "warning",
+              "error",
+              "critical",
+              "is_enabled",
+              "set_request_id",
+              "get_request_id",
+              "clear_request_id",
+              "configuration",
+              "reset"
+            ]
+          },
+          "when": {
+            "operation": "introspect_public_surface"
+          },
+          "then": {
+            "all_present": true
+          },
           "witness": "runtime_public_introspection"
         },
         {
           "id": "LOG-A02",
           "name": "prohibited aliases are absent",
-          "given": {"concepts": ["warn", "development_flag", "production_flag", "json_mode", "close_file_logger", "individual_config_getters"]},
-          "when": {"operation": "introspect_public_surface"},
-          "then": {"all_absent": true},
+          "given": {
+            "concepts": [
+              "warn",
+              "development_flag",
+              "production_flag",
+              "json_mode",
+              "close_file_logger",
+              "individual_config_getters"
+            ]
+          },
+          "when": {
+            "operation": "introspect_public_surface"
+          },
+          "then": {
+            "all_absent": true
+          },
           "witness": "runtime_public_introspection"
         },
         {
           "id": "LOG-A03",
           "name": "event methods return void and finish writes",
-          "given": {"output": "file"},
-          "when": {"operation": "info", "message": "ready"},
-          "then": {"return": null, "record_visible_before_return": true},
+          "given": {
+            "output": "file"
+          },
+          "when": {
+            "operation": "info",
+            "message": "ready"
+          },
+          "then": {
+            "return": null,
+            "record_visible_before_return": true
+          },
           "witness": "public_return_and_real_file_read"
         },
         {
           "id": "LOG-I01",
           "name": "bootstrap does not invent explicit defaults",
-          "given": {"environment": {"TINA4_LOG_LEVEL": "ERROR"}},
-          "when": {"operation": "framework_bootstrap"},
-          "then": {"effective_level": "ERROR", "configure_calls": 1},
+          "given": {
+            "environment": {
+              "TINA4_LOG_LEVEL": "ERROR"
+            }
+          },
+          "when": {
+            "operation": "framework_bootstrap"
+          },
+          "then": {
+            "effective_level": "ERROR",
+            "configure_calls": 1
+          },
           "witness": "real_boot_and_effective_map"
         },
         {
           "id": "LOG-I02",
           "name": "graceful shutdown logs before one reset",
-          "given": {"output": "file"},
-          "when": {"operation": "framework_graceful_shutdown"},
-          "then": {"shutdown_record_present": true, "reset_calls": 1, "handles_closed_after_record": true},
+          "given": {
+            "output": "file"
+          },
+          "when": {
+            "operation": "framework_graceful_shutdown"
+          },
+          "then": {
+            "shutdown_record_present": true,
+            "reset_calls": 1,
+            "handles_closed_after_record": true
+          },
           "witness": "real_shutdown_path_and_reopenable_files"
         }
       ]
