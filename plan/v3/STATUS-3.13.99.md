@@ -5,7 +5,7 @@ fixture, lab-green on the .99 lab) before the next. This table is updated, commi
 feature lands. Detail: [IMPLEMENTATION-3.13.99.md](IMPLEMENTATION-3.13.99.md). Decisions:
 [OWNER-DECISIONS.md](OWNER-DECISIONS.md).
 
-**Progress: 36 / 52 features lab-green + 1 new (MAIL-REDIRECT `TINA4_MAIL_REDIRECT_TO`) done** (feature 50 Frond compiler DEFERRED to 3.13.100 fast-follow, owner call 2026-08-12). Done: Phase 1 + Phase 2 + Phase 3 (9-13) + 17 + 18 + 19 + 20 + 21 + 22 + 23 + 24 + 26 + 27 + 28 + 29 + 15 + MAIL-REDIRECT. **Phase 4 COMPLETE (13/13).** Write-path fixes: WRITE-PATH (Node insert fail-loud) + FIREBIRD-KEY-TYPE (Ruby FB Symbol keys) both DONE. 40 + 42 DONE. In progress: 45 (Phase 5 Swagger/OpenAPI, next). Phase 5: 3/9.
+**Progress: 37 / 52 features lab-green + 1 new (MAIL-REDIRECT `TINA4_MAIL_REDIRECT_TO`) done** (feature 50 Frond compiler DEFERRED to 3.13.100 fast-follow, owner call 2026-08-12). Done: Phase 1 + Phase 2 + Phase 3 (9-13) + 17 + 18 + 19 + 20 + 21 + 22 + 23 + 24 + 26 + 27 + 28 + 29 + 15 + MAIL-REDIRECT. **Phase 4 COMPLETE (13/13).** Write-path fixes: WRITE-PATH (Node insert fail-loud) + FIREBIRD-KEY-TYPE (Ruby FB Symbol keys) both DONE. 40 + 42 + 45 DONE. In progress: 32 (Phase 5 route groups, next). Phase 5: 4/9.
 
 Status: DONE = lab-green all four (independently re-verified) . WIP = in progress . TODO = not started.
 Lab column = per-framework test counts py/php/ruby/node in the consolidated green run.
@@ -70,7 +70,7 @@ Lab column = per-framework test counts py/php/ruby/node in the consolidated gree
 |---|---------|--------|----------------------|------------------------------|
 | 40 | Compression / ETag | DONE | 6/6/6/6 | 4a389f9 / 5f8e85e / aa2f2d4 / ce7e672 |
 | 42 | Error pages | DONE | 14/14/14/54 | 7af21c6 / ac26239 / f2b8d84 / a03d752 |
-| 45 | Swagger / OpenAPI | TODO | - | - |
+| 45 | Swagger / OpenAPI | DONE | 13/13/13/13 | 47fbcf2 / e28a08b / d7d1514 / cc8c739 |
 | 32 | Route groups | TODO | - | - |
 | 46 | Default landing page | TODO | - | - |
 | 128 | Dual test port | TODO | - | - |
