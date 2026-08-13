@@ -1,0 +1,129 @@
+{
+  "_comment": [
+    "Route groups: ONE answer key, four frameworks. Feature 32.",
+    "",
+    "RG-DEC-01 (converge): the prefix+path JOIN grammar diverged and was",
+    "UNGATED. PHP fully normalizes (Tina4/Router.php addRoute - the",
+    "reference: one separator, no double slash, a single leading slash, no",
+    "trailing slash). Python bare-concatenated (core/router.py, `path =",
+    "cls._group_prefix + path`), so group(\"/api\") + get(\"users\") silently",
+    "mis-registered at \"/apiusers\". Ruby's GroupContext bare-concatenated",
+    "(\"#{@prefix}#{path}\") the same way. Node's RouteGroup did NO",
+    "normalization at all - the worst of the four, since its prefix isn't",
+    "even trailing-slash-trimmed on construction. Python/Ruby/Node now port",
+    "PHP's exact three-step grammar via ONE shared helper per language",
+    "(_join_group_path / join_group_path / joinGroupPath): join with one",
+    "separator, wrap to a single leading slash with no trailing slash, then",
+    "collapse any run of slashes to one. PHP needed no code change (it was",
+    "already correct) - this fixture proves PHP too, locking in the shared",
+    "contract rather than merely asserting the other three converged on it.",
+    "",
+    "RG-DEC-02 (group-level auth parity): only Ruby's group() accepts a",
+    "group-level auth_handler: kwarg (dispatched for real since RG-03 was",
+    "corrected - dispatch_pipeline.rb). The owner ledger (OWNER-DECISIONS.md",
+    "Batch 4) ratifies ONLY the slash-normalization convergence for feature",
+    "32 - it does not require a group-level auth declaration surface in",
+    "Python/PHP/Node. This is documented as a Ruby-only convenience, not a",
+    "security gap: writes are secure-by-default in all four regardless of",
+    "group middleware (RG-04, the write-auth-gate invariant below), with or",
+    "without a group-level auth_handler. No new surface was added to",
+    "Python/PHP/Node.",
+    "",
+    "Every case is driven through a REAL request pipeline: Python's",
+    "TestClient (-> core.server.app, the real front controller), PHP's",
+    "TestClient (-> Router::dispatch), Ruby's TestClient (->",
+    "Tina4::RackApp#call) all dispatch with NO mocks; Node boots a REAL",
+    "server (startServer) and makes REAL HTTP requests over a real socket.",
+    "The four suites carry the SAME case names in each language's own idiom",
+    "(Python snake_case method, PHP testPascalCase method, Ruby it-",
+    "description, Node assert label), which",
+    "scripts/audit-contract-fixtures.py normalises and matches.",
+    "",
+    "Mutation-proved (Python, Ruby, Node): reverting each language's fix",
+    "back to its old bare concatenation reds exactly",
+    "group_prefix_joins_to_a_single_slash_path and",
+    "nested_groups_concatenate_the_prefix (Node additionally reds",
+    "trailing_slash_on_the_prefix_is_normalized, since it never trimmed the",
+    "group prefix at all) - restored and re-verified green."
+  ],
+  "version": 1,
+  "decided": "2026-08-11",
+  "feature": "32 - Route groups",
+  "invariants": [
+    {
+      "id": "route-groups-prefix-joins-single-slash",
+      "adr": "RG-DEC-01",
+      "rule": "group(prefix) + get(path) where path carries NO leading slash (e.g. group(\"/api\") + get(\"users\")) registers at the single-separator canonical path \"/api/users\" - not the bare-concatenation mis-registration \"/apiusers\".",
+      "why": "RG-SLASH-NORMALIZE: Python bare-concatenated cls._group_prefix + path with no separator logic; Ruby's GroupContext did the same (\"#{@prefix}#{path}\"); Node's RouteGroup did the same (this.prefix + path). A route silently mis-registered at the wrong path in three of four languages, and no slash test existed in any language before this feature.",
+      "suites": {
+        "python": "tests/test_route_groups_contract.py",
+        "php": "tests/RouteGroupsContractTest.php",
+        "ruby": "spec/route_groups_contract_spec.rb",
+        "nodejs": "test/routeGroupsContract.test.ts"
+      },
+      "cases": [
+        "group_prefix_joins_to_a_single_slash_path"
+      ]
+    },
+    {
+      "id": "route-groups-leading-slash-normalized",
+      "adr": "RG-DEC-01",
+      "rule": "group(prefix) + get(path) where path ALREADY carries its own leading slash (e.g. group(\"/api\") + get(\"/users\")) ALSO registers at \"/api/users\" - the identical canonical path the no-leading-slash form resolves to, never a doubled separator (\"/api//users\").",
+      "why": "A naive fix that always inserts a separator without first stripping the route's own leading slash would introduce a NEW double-slash regression. Proving this case alongside the bare-concat case (route-groups-prefix-joins-single-slash) locks the join grammar to converge on ONE canonical path regardless of which form the developer writes.",
+      "suites": {
+        "python": "tests/test_route_groups_contract.py",
+        "php": "tests/RouteGroupsContractTest.php",
+        "ruby": "spec/route_groups_contract_spec.rb",
+        "nodejs": "test/routeGroupsContract.test.ts"
+      },
+      "cases": [
+        "leading_slash_on_the_route_is_normalized"
+      ]
+    },
+    {
+      "id": "route-groups-trailing-slash-prefix-normalized",
+      "adr": "RG-DEC-01",
+      "rule": "group(prefix) where prefix carries a trailing slash (e.g. group(\"/api/\") + get(\"/users\")) ALSO registers at \"/api/users\" - the SAME canonical path, never a doubled separator (\"/api//users\").",
+      "why": "RG-SLASH-NORMALIZE named this exact repro for Ruby (\"chomp strips only ONE trailing slash\") and it is unguarded in Node (no trailing-slash trim on the group prefix at all - Node reds this case under mutation while Python/Ruby do not, since Node's RouteGroup constructor never trimmed the prefix to begin with).",
+      "suites": {
+        "python": "tests/test_route_groups_contract.py",
+        "php": "tests/RouteGroupsContractTest.php",
+        "ruby": "spec/route_groups_contract_spec.rb",
+        "nodejs": "test/routeGroupsContract.test.ts"
+      },
+      "cases": [
+        "trailing_slash_on_the_prefix_is_normalized"
+      ]
+    },
+    {
+      "id": "route-groups-nested-prefix-concatenates",
+      "adr": "RG-DEC-01",
+      "rule": "Nested groups compose the prefix through the SAME normalized join: group(\"/api\") > group(\"/v1\") + get(\"users\") registers at \"/api/v1/users\" - not the missing-separator mis-registration \"/api/v1users\".",
+      "why": "The prefix-join bug is not confined to a single group level - the innermost route's own path still needs the same one-separator join against the fully-composed nested prefix. Proven with a real nested registration, not merely asserted from the single-level case.",
+      "suites": {
+        "python": "tests/test_route_groups_contract.py",
+        "php": "tests/RouteGroupsContractTest.php",
+        "ruby": "spec/route_groups_contract_spec.rb",
+        "nodejs": "test/routeGroupsContract.test.ts"
+      },
+      "cases": [
+        "nested_groups_concatenate_the_prefix"
+      ]
+    },
+    {
+      "id": "route-groups-middleware-never-opens-write-auth-gate",
+      "adr": "RG-04 (locked, re-proven not reopened)",
+      "rule": "Attaching an ordinary (non-auth) middleware to a route group NEVER disables the secure-by-default write-auth gate - a tokenless POST to a grouped route still 401s, including under the newly-normalized prefix join.",
+      "why": "The one SECURITY-relevant property of this feature. Feature 79's RG-04 already locked this in all four (Python router.py, PHP Router.php, Ruby router.rb, Node router.ts); this case re-proves it specifically against the route_groups_contract fixture scope, under the new normalization, so the slash-join fix is never reported done at the cost of quietly reopening RG-04.",
+      "suites": {
+        "python": "tests/test_route_groups_contract.py",
+        "php": "tests/RouteGroupsContractTest.php",
+        "ruby": "spec/route_groups_contract_spec.rb",
+        "nodejs": "test/routeGroupsContract.test.ts"
+      },
+      "cases": [
+        "group_middleware_never_opens_the_write_auth_gate"
+      ]
+    }
+  ]
+}
