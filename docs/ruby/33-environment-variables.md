@@ -241,7 +241,7 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_LOG_LEVEL` | `[TINA4_LOG_ALL]` | Console log level. Options: `[TINA4_LOG_ALL]`, `[TINA4_LOG_DEBUG]`, `[TINA4_LOG_INFO]`, `[TINA4_LOG_WARNING]`, `[TINA4_LOG_ERROR]`, `[TINA4_LOG_NONE]`. Also accepts plain `DEBUG`, `INFO`, `ERROR`, etc. |
+| `TINA4_LOG_LEVEL` | `ALL` | Console log level. Options: `ALL`, `DEBUG`, `INFO`, `WARNING`, `ERROR`, `NONE`. The legacy bracket-wrapped spelling that repeated the variable name inside the brackets is rejected as of 3.13.99; use the plain names above. |
 | `TINA4_LOG_MAX_SIZE` | `10` | Per-file log size limit in megabytes. Rotated when exceeded. |
 | `TINA4_LOG_KEEP` | `5` | Number of rotated log files to retain. |
 

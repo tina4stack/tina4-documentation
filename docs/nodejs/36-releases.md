@@ -1,5 +1,127 @@
 # Release Notes
 
+## v3.13.99 (2026-08-13) - Stability, parity, and secure by default
+
+The biggest step yet on the road to **3.14 stable**. This release closes out
+Phases 1 through 5 of the v3 parity audit: roughly thirty breaking changes,
+and every one of them is a security fix, a parity fix, or a correctness fix,
+never a change made for its own sake. Two conformance grids, logging and
+database adapters, are now fully proven against real services in all four
+frameworks, and a small batch of genuinely new bugs gets fixed alongside
+them. Read "Possible breaking" before you upgrade: Node carries a real
+`Database.executeMany()` contract change and a `Log.warn` removal this time.
+
+### Security
+
+Security now defaults on instead of requiring opt-in.
+
+- Security headers emit by default, including `Content-Security-Policy: default-src 'self'`, which blocks inline scripts and third-party CDNs. Relax the policy with `TINA4_CSP`; HSTS emits only on HTTPS, when `TINA4_HSTS` is set (`aa73dbf`)
+- The CSRF `403` body is unified to `{error, code, message, status}`, where Node used to send `{error: "CSRF_INVALID"}`. `TINA4_CSRF=true` now actually attaches the CSRF middleware, where it used to be inert, and a blank `TINA4_SECRET` fails closed now instead of minting a forgeable public-default token (`cc6642a`)
+- The dev server binds `127.0.0.1` by default; set `TINA4_HOST=0.0.0.0` to expose it. A cross-origin `/__dev` mutation is refused, and `.env` is never served through the file endpoints (`97d4f22`)
+- A symlink whose real path escapes the public directory is refused, dotfiles (`.env`, `.git`) 404 instead of serving, and `TINA4_PUBLIC_DIR` is honoured now (`77592ad`)
+- `{% include %}`, `{% extends %}`, and `{% import %}` in a Frond template are confined to the templates directory. A path that escapes it, with `..`, an absolute path, or a symlink, now raises (`22e6057`)
+- `tina4 serve` on a busy port no longer kills whatever holds it. It reclaims only a port held by an identifiable Tina4 dev server, refuses a foreign holder, and honours `TINA4_NO_TAKEOVER` / `--no-kill` (`ae7332d`)
+- A hostile inbound `X-Request-ID` (CRLF, illegal characters, an over-long value) is sanitized to a fresh id instead of echoed back raw, closing a response-header and log-injection path (`0828904`)
+- The dead `renderProductionError` function is removed; nothing called it. The dev error overlay now redacts `Authorization`, `Cookie`, and `Set-Cookie` headers plus secret-looking body fields, and caps the rendered stack at 50 frames (`f9afed3`)
+- A repeated multipart file field now yields a list instead of silently dropping every upload but the last. The new safe-save helper rejects `..` and absolute filenames (`5a9bdbe`)
+
+### Data integrity
+
+Footguns that used to fail silently now fail loud, or stop failing at all.
+
+- An unparseable or unsupported MongoDB WHERE clause now raises instead of silently matching every document. A DELETE or UPDATE with no WHERE is rejected outright. Write an explicit WHERE, or call `truncate()` for the whole collection (`ad62c2d`)
+- `truncate()` on a Mongo collection now actually empties it. It used to report success while leaving every document in place (`5d2afea`)
+- MSSQL pagination converges on `OFFSET`/`FETCH` in all four frameworks; Node no longer uses `TOP` for page one (`2de3fa4`)
+- Firebird write results are correct now: `db.insert()`/`db.update()`/`db.delete()` return real `affectedRows`/`lastId` values instead of missing or zero ones. `node-firebird` moves from a devDependency to an optionalDependency of `@tina4/orm`, so it installs only when you actually use Firebird (`47d3d4e`)
+- `handle.stop()` on a background task now returns a boolean instead of `void` (`fe6e069`)
+
+### ORM and validation
+
+Six fixes bring the ORM's write path, validation, and generated schema into
+agreement across all four frameworks, plus two genuine additions: declarative
+relationships now work in Node at all.
+
+- **Declarative relationships now function and lazy-load.** Before 3.13.99, a field declared with `type: "foreignKey"` never attached its accessors; only the imperative `post.belongsTo(Author, "author_id")` form worked. Both now work (`ad51731`)
+- `toDict()` now includes an imperatively-loaded relation that used to be silently omitted whenever the table name differed from the lowercased model name; `toDict()`/`toJson()` now log a warning when a declared relation is skipped because it was not eager-loaded, instead of dropping it silently. The imperative `hasMany` default row cap changes from a silent 100 to the whole result set (`4126c4a`)
+- AutoCrud PUT now validates the request body, where it used to validate only on create. An update with a type, length, pattern, or required violation now gets a `422`, and the `isUpdate` partial-update mode no longer demands unrelated fields. The regex validation message becomes `"does not match the required format"` (`bf0ea6a`)
+- `createTable()` now injects the `is_deleted` column for a soft-delete model that does not declare it itself (`f33ed9b`)
+- A soft-deleted child is no longer returned through relationship traversal, lazy or eager (`ad51731`)
+- A REST list `?page` below 1 now clamps to page 1, instead of handing a negative offset to the driver; an oversized `?limit`/`?per_page` is capped at 100 (`feaf660`)
+- The write body on an AutoCrud create or update is now allow-listed: `is_deleted` is never client-writable, and a client-supplied primary key is stripped on both create and update, closing a mass-assignment hole and an IDOR-shaped redirect (`1c4f7cd`)
+
+### Request model - the big one
+
+`req.params` is route-params-only now, in all four frameworks, closing a
+param-pollution surface in the other three languages where the query string
+or body could shadow a route parameter. Client input lives only in
+`req.query` and `req.body`. A malformed JSON body returns the raw string it
+failed to parse, and an empty body returns each language's native null
+(`c3acf40`).
+
+### Migrations
+
+- `rollback` is fail-safe now: a missing `.down.sql` file or a failed down script raises and leaves the `tina4_migration` ledger row in place, instead of deleting the tracking row and leaving the schema applied but untracked
+- The `tina4 migrate` CLI runs the same ORM `migrate()` now (transactional, a robust `;` split, Firebird/MSSQL idempotency skips), replacing its own naive `split(";")` re-implementation. A mid-file failure now rolls back on a transactional-DDL engine (`9e79da6`)
+
+### HTTP
+
+- Your responses now gzip-compress when eligible (body over 1024 bytes, `Accept-Encoding: gzip`, a compressible content type); a cacheable 200 gets a strong ETag and a matching `If-None-Match` gets a 304. The static-file ETag format is unified to `W/"<size>-<mtime>"` on all four frameworks, so a cache revalidates once instead of on every deploy (`ce7e672`)
+- A `403` now returns a real negotiated body (HTML or JSON), where it used to return a bare empty body. `404` carries a `request_id` too (`a03d752`)
+- The OpenAPI spec now includes routes registered or hot-reloaded after boot, where it used to freeze at a boot-time snapshot. The spec converges on one shape across languages: a secured operation documents a `401`, and `summary`/`tags` always populate. The Swagger UI CDN default moves to jsdelivr, off unpkg (`cc8c739`)
+- Python, PHP, and Ruby's route-group prefix join is normalized to match your existing behaviour, so a route no longer mis-registers on a bare concatenation or an uncollapsed double slash (`94c6cb0`)
+
+### Dev tooling
+
+- `TestClient` now dispatches through the real request pipeline, where it used to short-circuit around it. A route middleware that used to run on a would-be-401 request no longer runs, and session auth is genuinely exercised now; a test leaning on the old low-fidelity client may see a different outcome, because that outcome is now correct (`1881b0a`)
+- `sessionAutoStart` now uses `appendHeader`, so a route that also sets a cookie no longer has it clobbered. This was a real bug on the live server too, not only in tests (`1881b0a`)
+- The banner and health check report the real framework version now, instead of `0.0.0` in a relocated or published layout (`925a3a0`)
+- The inline `tests()` descriptor builders are renamed: `assertEqual`/`assertRaises`/`assertTrue`/`assertFalse` become `expectEqual`, `expectRaises`, `expectTrue`, `expectFalse`. `tina4 test` now discovers and runs the inline surface with a real exit code (`e4202b5`)
+
+### Proven in all four
+
+Two conformance grids close out fully proven, tested against real services in
+every framework, no mocks:
+
+- **Logging.** A real per-language runner now exercises the shared logger contract end to end. **`Log.warn` is removed - use `Log.warning`.** Node also gains `TINA4_LOG_FILE_LEVEL`, an independent level for the file sink from the console's `TINA4_LOG_LEVEL` (additive, defaults to `ALL`), and environment variables now resolve once at startup instead of being re-read on every call (`15c6941`)
+- **Database adapters** (ADR-0044). A real runner against SQLite, PostgreSQL, MySQL, MSSQL, and Firebird proved every adapter implements the same interface; the interface and six adapters were missing `getDatabaseType`/`autocommit`, caught by the typecheck. **`Database.executeMany()` used to loop per row, returning one result per row; it now delegates once through `adapterExecuteMany()` and returns a single aggregate `DatabaseResult`, matching `insert`/`update`/`delete`.** The rewiring surfaced two more real bugs: `CachedDatabaseAdapter` had no `executeManyAsync` passthrough, so a standalone `executeMany` against any network adapter threw, and `SQLiteAdapter`'s `executeMany` issued an unguarded raw `BEGIN` (`fc52fe8`)
+
+### Bug fixes
+
+- A route path containing a literal parenthesis, like `/products/(sale)`, now matches correctly everywhere. Python and Ruby were already correct; `router.ts`'s `compilePattern()` compiled the literal characters as regex syntax instead of escaping them (`57f375d`)
+
+### Possible breaking
+
+Read these before you upgrade. Every entry here is a security, parity, or
+correctness fix, none is a change made for its own sake.
+
+- **`req.params` is route-params-only.** Read query-string values from `req.query` and body values from `req.body`. This is the single largest behaviour change in the release.
+- **`Log.warn` is removed.** Use `Log.warning` at every call site.
+- **`Database.executeMany()` now returns one aggregate `DatabaseResult`**, not an array of one result per row. Update any code that iterated the old per-row array.
+- **Security headers, including CSP, emit by default.** An app depending on inline scripts or a third-party CDN needs `TINA4_CSP` to relax the policy.
+- **The CSRF `403` body shape changed** from `{error: "CSRF_INVALID"}` to `{error, code, message, status}`.
+- **`TINA4_CSRF=true` now actually attaches the CSRF middleware.** If you set it and never noticed CSRF enforcement, it enforces now.
+- **A blank `TINA4_SECRET` fails closed.** Set a real secret; the framework no longer falls back to a guessable public default.
+- **The dev server binds `127.0.0.1` by default.** Set `TINA4_HOST=0.0.0.0` to expose it on your network.
+- **An unparseable Mongo WHERE now raises instead of matching everything.** Add an explicit WHERE, or call `truncate()`.
+- **`handle.stop()` returns a boolean**, not `void`.
+- **`node-firebird` is now an optionalDependency**, not a devDependency, of `@tina4/orm`.
+- **AutoCrud PUT now validates the body.** An update payload that previously skipped validation may now fail with a `422`.
+- **The imperative `hasMany` no longer caps at 100 rows**, and a declared relation Node used to silently drop from `toDict()` now appears (or logs a warning if still not eager-loaded).
+- **`createTable()` adds `is_deleted` for a soft-delete model automatically.** A model that already declares the column is unaffected.
+- **`?limit`/`?per_page` caps at 100.** A client can no longer request the whole table in one page.
+- **AutoCrud never accepts `is_deleted` or a client-supplied primary key in the write body.**
+- **The static-file `ETag` format changed**, so every cache revalidates once on upgrade.
+- **A `403` now returns a real body**, where it used to return nothing.
+- **`TestClient` dispatches through the real pipeline now.** A test that depended on the old short-circuit may see a different, correct, outcome.
+- **The inline testing descriptors are renamed** `assert*` to `expect*`, and `tina4 test` now actually runs them.
+
+### Coming in 3.13.100
+
+Frond's compiler, extensibility, auto-escaping, sandboxing, and caching work
+(features 48 through 60) is deferred to the 3.13.100 fast-follow, alongside a
+refreshed Carbonah benchmark harness and a configurable database column-name
+casing option.
+
 ## v3.13.97 (2026-08-07) - Behaviour corrections
 
 A small bug-fix release on the road to **3.14 stable**. No new surface, no

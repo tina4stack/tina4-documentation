@@ -1,5 +1,136 @@
 # Release Notes
 
+## v3.13.99 (2026-08-13) - Stability, parity, and secure by default
+
+The biggest step yet on the road to **3.14 stable**. This release closes out
+Phases 1 through 5 of the v3 parity audit: roughly thirty breaking changes,
+and every one of them is a security fix, a parity fix, or a correctness fix,
+never a change made for its own sake. Two conformance grids, logging and
+database adapters, are now fully proven against real services in all four
+frameworks, and a small batch of genuinely new bugs gets fixed alongside
+them. Read "Possible breaking" before you upgrade: Ruby carries more of these
+than any other framework this time, including a renamed route-param accessor
+and a corrected request-body merge.
+
+### Security
+
+Security now defaults on instead of requiring opt-in.
+
+- Security headers emit by default, including `Content-Security-Policy: default-src 'self'`, which blocks inline scripts and third-party CDNs. Relax the policy with `TINA4_CSP`; HSTS emits only on HTTPS, when `TINA4_HSTS` is set (`6e44205`)
+- The CSRF `403` body is unified to `{error, code, message, status}`, where Ruby used to send `{error: "CSRF_INVALID"}`. `TINA4_CSRF=true` now actually attaches the CSRF middleware, where it used to be inert, and a blank `TINA4_SECRET` fails closed now instead of minting a forgeable public-default token (`dbcd6a2`)
+- The dev server binds `127.0.0.1` by default; set `TINA4_HOST=0.0.0.0` to expose it. A cross-origin `/__dev` mutation is refused, and `.env` is never served through the file endpoints (`ab06e5c`)
+- A symlink whose real path escapes the public directory is refused, dotfiles (`.env`, `.git`) 404 instead of serving, and the `src/assets` / `assets` search directories are dropped. `TINA4_PUBLIC_DIR` is honoured now (`e24a3fa`)
+- `{% include %}`, `{% extends %}`, and `{% import %}` in a Frond template are confined to the templates directory. A path that escapes it, with `..`, an absolute path, or a symlink, now raises (`a1ff8af`)
+- `tina4 serve` on a busy port no longer kills whatever holds it. It reclaims only a port held by an identifiable Tina4 dev server, refuses a foreign holder, and honours `TINA4_NO_TAKEOVER` / `--no-kill` (`75f78ae`)
+- A hostile inbound `X-Request-ID` (CRLF, illegal characters, an over-long value) is sanitized to a fresh id instead of echoed back raw, closing a response-header and log-injection path (`1bfc060`)
+- The dead `render_production_error` function is removed; nothing called it. The dev error overlay now redacts `Authorization`, `Cookie`, and `Set-Cookie` headers plus secret-looking body fields, and caps the rendered stack at 50 frames (`93c1e06`)
+- A repeated multipart file field now yields a list instead of silently dropping every upload but the last. The new safe-save helper rejects `..` and absolute filenames, and an over-limit upload now answers `413` mid-stream, per chunk, instead of after buffering the whole body (`dab136f`)
+- A reflected XSS in the `403` error page is closed: the raw request path is now `CGI.escapeHTML`-escaped before it renders (`f2b8d84`)
+
+### Data integrity
+
+Footguns that used to fail silently now fail loud, or stop failing at all.
+
+- An unparseable or unsupported MongoDB WHERE clause now raises instead of silently matching every document. A DELETE or UPDATE with no WHERE is rejected outright. Write an explicit WHERE, or call `truncate()` for the whole collection (`d45c119`)
+- `truncate()` on a Mongo collection now actually empties it. It used to report success while leaving every document in place (`abc5aa5`)
+- The MSSQL adapter now raises on a genuinely unbindable parameter type instead of emitting it as a bareword. Code relying on the old silent stringify now errors, which is the point: it was preventing an injection/corruption risk. MSSQL pagination converges on `OFFSET`/`FETCH` in all four frameworks, and binary parameters travel as `0x` literals (`937a35c`)
+- Firebird write results are correct now: `db.insert.last_id` and `db.update` / `db.delete` `.affected_rows` return real values instead of `nil` or `0` (`286cd03`)
+
+### ORM and validation
+
+Ten fixes bring the ORM's write path, validation, and generated schema into
+agreement across all four frameworks. Ruby has the longest list this release.
+
+- `decimal_field` now emits a real `DECIMAL(p,s)` column, where it used to emit `REAL` and silently drop precision and scale. Generated DDL changes; an existing `REAL` column is unaffected until you re-create it (`df93891`)
+- A foreign-key auto `related_name` is now smart-pluralized (`Category` becomes `categories`, not `categorys`). Code using the misspelled accessor must update (`df93891`)
+- `validate()` on save now enforces length, type, and format, where it used to check only for `null`. A model that previously saved an over-length or wrong-format value now returns `false` from `save()` and writes nothing (`b427f8b`)
+- The two validators now speak one canonical message vocabulary; `in_list` renders a compact JSON list (`must be one of ["a","b","c"]`) (`b427f8b`)
+- `create_table()` now injects the configured `soft_delete_field` for a soft-delete model that does not declare it itself (`a6ce6ad`)
+- A soft-deleted child is no longer returned through relationship traversal, lazy or eager (`94ccf77` / `df9bbe6`)
+- A REST list `?page` below 1 now clamps to page 1, instead of handing a negative offset to the driver (`c8f8a93`)
+- `load()` now JSON-coerces json columns, where it used to return a raw string through that path, and its signature changes to `load(filter, params, include)`, from `load(arg, params)` with no `include` (`1c6d0c5`)
+- AutoCrud returns `422` with field errors for an invalid create or update, where it used to return `500`. The write body is now allow-listed: `is_deleted` is never client-writable, and a client-supplied primary key is stripped on both create and update, closing a mass-assignment hole and an IDOR-shaped redirect (`d5cdd95`)
+- `seed_table`'s `seed` keyword is dropped; `FakeData#boolean` now returns a native `true`/`false` instead of `0`/`1`; and `seed_orm`'s idempotency skip, which used to silently return `seeded: 0` whenever the table already held enough rows, is opt-in now via `idempotent:` (`3dc8ee8`)
+
+### Request model - the big one
+
+`request.params` is route-params-only now, in all four frameworks. Ruby had
+the worst version of this bug: it used to merge the query string, the parsed
+body, AND the route params into `params`, so `request.params["id"]` could
+silently return a client-supplied `?id=` or body value that shadowed the
+real route parameter. Client input lives only in `request.query` and
+`request.body` now.
+
+**The route-param accessor itself is renamed: `path_params` becomes
+`params`, with no alias.** A malformed JSON body used to parse to `{}`; it
+now returns the raw string it failed to parse. An empty body used to
+parse to `{}`; it now returns Ruby's native `nil`. `header()` lookup is
+case-fold only now (it no longer also converts `_` to `-`) (`776b3c0`).
+
+### Migrations
+
+- `rollback` is fail-safe now: a missing `.down.sql` file or a failed down script raises and leaves the `tina4_migration` ledger row in place, instead of deleting the tracking row and leaving the schema applied but untracked (`8f8640b`)
+
+### HTTP
+
+- Your responses now gzip-compress when eligible (body over 1024 bytes, `Accept-Encoding: gzip`, a compressible content type); a cacheable 200 gets a strong ETag and a matching `If-None-Match` gets a 304. The static-file ETag format is unified to `W/"<size>-<mtime>"` on all four frameworks, so a cache revalidates once instead of on every deploy (`aa2f2d4`)
+- Error pages can emit JSON now, not only HTML: `403`, `404`, and `500` all negotiate `Accept` the way the other three frameworks do, and `404` carries a `request_id` too (`f2b8d84`)
+- The OpenAPI spec converges on one shape across languages: an undecorated route emits only `200`, `summary`/`tags` always populate, and `description` is omitted when unset instead of emitting `description:""` (`d7d1514`)
+- Your route-group prefix join is normalized now, matching PHP, so a route no longer mis-registers on a bare concatenation or an uncollapsed double slash (`6eb11bd`)
+
+### Dev tooling
+
+- `tina4ruby serve` now honours `TINA4_PORT`, where it used to read only the bare `PORT` variable. A Ruby app that already sets `TINA4_PORT` binds its main, AI, and supervisor ports off that base now (`838a0ac`)
+- `serverInfo.version` over MCP now reports the real framework version instead of `1.0.0`, a bug Ruby shared with Python (`80a8d6a`)
+- The inline `@tests` descriptor builders are renamed: `Tina4::Testing.assert_equal`/`assert_raises`/`assert_true`/`assert_false` become `expect_equal`, `expect_raises`, `expect_true`, `expect_false`. `tina4ruby test` now discovers and runs the inline surface with a real exit code (`e477caf`)
+
+### Proven in all four
+
+Two conformance grids close out fully proven, tested against real services in
+every framework, no mocks:
+
+- **Logging.** A real per-language runner now exercises the shared logger contract end to end. Ruby now rejects a legacy bracket-wrapped log-level spelling that duplicated the variable name inside the brackets; use the plain level name instead, for example `TINA4_LOG_LEVEL=ALL` (`f108b7c`)
+- **Database adapters** (ADR-0044). A real runner against SQLite, PostgreSQL, MySQL, MSSQL, and Firebird proved every adapter implements the same interface. Ruby's `DatabaseAdapter::CONTRACT` turned out to be fictional: it named methods (`open`, `fetch`, `autocommit`) that no driver actually implemented, and omitted `execute_many`/`fetch_one` entirely. `get_database_type` existed on none of the seven drivers and is added to all of them now, closing a gap that would have broken every non-SQLite, non-Postgres `Database.new` the moment the contract was enforced (`2f56a8e`)
+
+### Bug fixes
+
+- A route path containing a literal parenthesis, like `/products/(sale)`, now matches correctly everywhere. Ruby and Python were already correct; PHP and Node compiled the literal characters as regex syntax (`4c69cff`)
+
+### Possible breaking
+
+Read these before you upgrade. Every entry here is a security, parity, or
+correctness fix, none is a change made for its own sake.
+
+- **`request.params` is route-params-only.** Ruby used to merge the query string, the body, AND the route params into it. Read query values from `request.query` and body values from `request.body` now. This is the single largest behaviour change in the release.
+- **`path_params` is renamed `params`, with no alias.** Update every call site.
+- **Security headers, including CSP, emit by default.** An app depending on inline scripts or a third-party CDN needs `TINA4_CSP` to relax the policy.
+- **The CSRF `403` body shape changed** from `{error: "CSRF_INVALID"}` to `{error, code, message, status}`.
+- **`TINA4_CSRF=true` now actually attaches the CSRF middleware.** If you set it and never noticed CSRF enforcement, it enforces now.
+- **A blank `TINA4_SECRET` fails closed.** Set a real secret; the framework no longer falls back to a guessable public default.
+- **The dev server binds `127.0.0.1` by default.** Set `TINA4_HOST=0.0.0.0` to expose it on your network.
+- **The static-file search path drops `src/assets`/`assets`.** Move assets under the configured public directory.
+- **An unparseable Mongo WHERE now raises instead of matching everything.** Add an explicit WHERE, or call `truncate()`.
+- **The MSSQL adapter raises on an unbindable parameter type** instead of silently stringifying it.
+- **`decimal_field` emits real `DECIMAL(p,s)` DDL.** Existing `REAL` columns are unaffected until re-created.
+- **A misspelled `related_name` accessor (`categorys`) is now correctly `categories`.** Update the accessor name.
+- **`validate()` now enforces length/type/format on save**, where it used to check only for `null`. A previously-saving value may now fail to save.
+- **`load()`'s signature changes** to `load(filter, params, include)`, and it JSON-coerces json columns.
+- **AutoCrud returns `422`, not `500`, on invalid input**, and never accepts `is_deleted` or a client-supplied primary key in the write body.
+- **`seed_table`'s `seed:` keyword is dropped**, and `seed_orm`'s idempotency skip is opt-in now via `idempotent:`.
+- **`FakeData#boolean` returns `true`/`false`**, not `0`/`1`.
+- **A malformed JSON body returns the raw string, and an empty body returns `nil`**, where both used to return `{}`.
+- **The static-file `ETag` format changed**, so every cache revalidates once on upgrade.
+- **`tina4ruby serve` now honours `TINA4_PORT`.** An app that sets it but expected `PORT` to win must reconcile the two.
+- **A legacy bracket-wrapped log-level spelling is rejected.** Use the plain level name, for example `TINA4_LOG_LEVEL=ALL`.
+- **The inline testing descriptors are renamed** `assert_*` to `expect_*`, and `tina4ruby test` now actually runs them.
+
+### Coming in 3.13.100
+
+Frond's compiler, extensibility, auto-escaping, sandboxing, and caching work
+(features 48 through 60) is deferred to the 3.13.100 fast-follow, alongside a
+refreshed Carbonah benchmark harness and a configurable database column-name
+casing option.
+
 ## v3.13.97 (2026-08-07) - Behaviour corrections
 
 A small bug-fix release on the road to **3.14 stable**. No new surface, no
@@ -1658,7 +1789,7 @@ Every request now logs one line through `Tina4::Log` (-> stdout), on by default 
 ### What changed (stdout)
 
 1. **`$stdout.sync = true`** is set in `Log.configure` (unless output is file-only). Logs now flush to the container's stdout immediately.
-2. **Default log level is `INFO`** (was `[TINA4_LOG_ALL]`). Surfaces request/startup/warn/error without debug noise.
+2. **Default log level is `INFO`** (was the legacy bracket-wrapped `ALL` spelling). Surfaces request/startup/warn/error without debug noise.
 3. **`TINA4_LOG_LEVEL` now accepts plain names** (`ERROR`, `info`) in addition to the legacy bracket form (`[TINA4_LOG_ERROR]`) - so the env value is portable with Python/PHP/Node. Unknown values fall back to INFO.
 
 ```ruby
