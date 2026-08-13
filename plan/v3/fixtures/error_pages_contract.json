@@ -1,0 +1,181 @@
+{
+  "_comment": [
+    "Configurable error pages: ONE answer key, four frameworks. Feature 42.",
+    "",
+    "ERR-DEC-01 (converge): the 403 renders through the SAME negotiated renderer",
+    "404/500 use in all four - a user template if the app ships one, the",
+    "framework's errors/403.twig otherwise, negotiated JSON for an API client.",
+    "Before this feature: Python emitted a bare un-negotiated JSON 403",
+    "(middleware.py apply_hook_result), PHP/Ruby rendered HTML for the",
+    "PER-ROUTE 403 path but PHP's GLOBAL class-based middleware pass and",
+    "Ruby's generic before_* denial both fell back to a bare un-negotiated",
+    "JSON body too, and Node set a BARE 403 status with NO body at all",
+    "(middleware.ts interpretHookResult). The overridable code-set converges",
+    "on {403, 404, 500} in all four (PHP additionally keeps its existing,",
+    "backward-compatible 405 override capability - a strict superset, not",
+    "removed).",
+    "",
+    "ERR-DEC-02 (negotiate): Accept: application/json yields the canonical",
+    "JSON error envelope {error: true, code, message, status, request_id} -",
+    "the SAME shape already shared by each framework's error()/errorResponse()",
+    "helper (CSRF, app-level errors); a browser Accept (text/html, the",
+    "wildcard media range, or no header at all) yields the HTML",
+    "errors/{code}.twig page. The negotiation itself is ONE shared decision",
+    "per language (Python Request.wants_json()/accept_prefers_json(), PHP",
+    "Request::wantsJson()/acceptPrefersJson(), Ruby",
+    "Tina4::Template.wants_json?, Node wantsJson()/acceptPrefersJson() in",
+    "response.ts), reused by every 403/404/500 call site - not reimplemented",
+    "per status code. request_id now rides the negotiated JSON body on the",
+    "404 too (PHP/Ruby/Node gained this; Python's template data already",
+    "carried it, matching what 500 already did in all four).",
+    "",
+    "SECURITY (feature 127/57 duty, not a new decision): no 404/403/500",
+    "error template reflects raw request data unescaped. Python/PHP/Node's",
+    "Frond already auto-escapes {{ }} output; Ruby's legacy Template/TwigEngine",
+    "(render_error, used ONLY for error pages) does not, so each Ruby call",
+    "site escapes explicitly with CGI.escapeHTML before the data ever reaches",
+    "the template - feature 127 already did this for handle_404, this feature",
+    "closes the SAME gap on the 403 path (Tina4::Middleware.forbid and",
+    "RackApp#handle_403), which had NOT been fixed and reflected a path raw.",
+    "Fixing that surfaced a second, unrelated latent Ruby bug: 403.twig ships",
+    "a literal UTF-8 em-dash and lib/tina4/template.rb's File.read calls never",
+    "forced an encoding, so on any process whose Encoding.default_external",
+    "isn't UTF-8 (no LANG/LC_ALL - a bare/minimal locale, common in a",
+    "container) rendering 403.twig raised ArgumentError and the OLD code's",
+    "broad rescue silently swallowed it, falling back to a bare string on",
+    "EVERY 403 response on such a host. Fixed to match lib/tina4/frond.rb,",
+    "which already forces encoding: 'utf-8'. Node has its own, DIFFERENT",
+    "belt-and-suspenders: node:http's own URL parsing percent-encodes '<'/'>'",
+    "in the request path before the framework ever sees it (verified with a",
+    "raw, unencoded socket write, not just a client library) - Node's contract",
+    "case therefore proves the escaping with an apostrophe payload (which",
+    "survives URL parsing unencoded) rather than the literal <script> tag the",
+    "other three reflect and escape directly; both are real, verified",
+    "properties of what a live request actually experiences on each stack.",
+    "",
+    "The gated CWE-209 guarantee (a production 500 leaks neither the message",
+    "nor a stack trace) is NOT reopened by this feature - it is re-proven as",
+    "part of the negotiated 500 path (the JSON branch's message field is the",
+    "same generic string the HTML branch's error_message='' already",
+    "guarantees never leaks the real exception).",
+    "",
+    "Every case is driven through a REAL request pipeline - Python's",
+    "TestClient, PHP's TestClient (Router::dispatch), Ruby's TestClient",
+    "(Tina4::RackApp#call) all dispatch through the real front controller with",
+    "NO mocks; Node boots a REAL server (startServer) and makes REAL HTTP",
+    "requests over a real socket. The four suites carry the SAME case names",
+    "in each language's own idiom (Python snake_case function, PHP",
+    "testPascalCase method, Ruby it-description, Node assert label), which",
+    "scripts/audit-contract-fixtures.py normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-11",
+  "feature": "42 - Configurable error pages",
+  "invariants": [
+    {
+      "id": "error-pages-prod-500-no-leak-request-id",
+      "adr": "CWE-209 (locked, re-proven not reopened)",
+      "rule": "A production 500 (TINA4_DEBUG off) leaks neither the exception message nor a stack trace, on EITHER the HTML branch (error_message='') or the negotiated JSON branch (message is the generic 'Internal Server Error'/'Server Error', never the real exception) - and both branches carry a request_id that matches the X-Request-ID response header.",
+      "why": "The gated CWE-209 guarantee must survive content negotiation unchanged - a JSON API client must never get the exception detail a browser is already denied. This is the ONE invariant this feature is forbidden from weakening.",
+      "suites": {
+        "python": "tests/test_error_pages_contract.py",
+        "php": "tests/ErrorPagesContractTest.php",
+        "ruby": "spec/error_pages_contract_spec.rb",
+        "nodejs": "test/errorPagesContract.test.ts"
+      },
+      "cases": [
+        "prod_500_has_no_stack_and_a_request_id"
+      ]
+    },
+    {
+      "id": "error-pages-json-negotiation",
+      "adr": "ERR-DEC-02",
+      "rule": "Accept: application/json on a 404, 403, or 500 yields the canonical JSON error envelope {error: true, code, message, status, request_id} directly - no HTML template is even attempted. This is UNIVERSAL: before this feature no error path in any of the four read Accept at all.",
+      "why": "ERR-NO-CONTENT-NEGOTIATION: an API client asking for JSON got an HTML page in all four languages, and Ruby could never emit a JSON error for 403/404/500 at all (ERR-RUBY-FALLBACK-HTML).",
+      "suites": {
+        "python": "tests/test_error_pages_contract.py",
+        "php": "tests/ErrorPagesContractTest.php",
+        "ruby": "spec/error_pages_contract_spec.rb",
+        "nodejs": "test/errorPagesContract.test.ts"
+      },
+      "cases": [
+        "json_accept_yields_a_json_error_body"
+      ]
+    },
+    {
+      "id": "error-pages-html-negotiation",
+      "adr": "ERR-DEC-02",
+      "rule": "A browser Accept (text/html, the wildcard media range, or no Accept header at all) yields the HTML errors/{code}.twig page on a 404, 403, or 500 - the pre-existing template resolution (user override, then framework default) is otherwise unchanged.",
+      "why": "The negotiation must be genuinely bidirectional and backward-compatible: an unspecified or browser-shaped Accept must keep getting the branded HTML page a default Tina4 app has always served, not silently flip to JSON.",
+      "suites": {
+        "python": "tests/test_error_pages_contract.py",
+        "php": "tests/ErrorPagesContractTest.php",
+        "ruby": "spec/error_pages_contract_spec.rb",
+        "nodejs": "test/errorPagesContract.test.ts"
+      },
+      "cases": [
+        "browser_accept_yields_the_html_error_page"
+      ]
+    },
+    {
+      "id": "error-pages-403-converged",
+      "adr": "ERR-DEC-01",
+      "rule": "A 403 (a middleware denial that set no response of its own) renders through the SAME negotiated path 404/500 use, in ALL FOUR: the same JSON envelope shape for a JSON client, the same errors/403.twig-or-fallback HTML page for a browser - not the OLD per-language special case (Python: bare un-negotiated JSON; PHP global middleware / Ruby generic denial: bare un-negotiated JSON despite the per-route path already using the template; Node: a bare 403 status with NO body at all).",
+      "why": "ERR-403-SPLIT: a client received four DIFFERENT bodies for the identical scenario (a middleware saying no without saying what to send), the worst case being Node's empty body. Converging it is the headline of ERR-DEC-01.",
+      "suites": {
+        "python": "tests/test_error_pages_contract.py",
+        "php": "tests/ErrorPagesContractTest.php",
+        "ruby": "spec/error_pages_contract_spec.rb",
+        "nodejs": "test/errorPagesContract.test.ts"
+      },
+      "cases": [
+        "the_403_renders_identically_across_the_four"
+      ]
+    },
+    {
+      "id": "error-pages-override",
+      "adr": "ERR-DEC-01",
+      "rule": "A custom src/templates/errors/{code}.twig shipped by the app is used over the framework's built-in template, for BOTH 404 and 500 (already correct/pre-existing in all four - proven here, not fixed, per ERR-OVERRIDE-UNTESTED which noted this path was previously exercised only incidentally).",
+      "why": "ERR-OVERRIDE-UNTESTED: no test asserted the override actually won in any language before this feature, despite the override convention being the feature's whole public surface.",
+      "suites": {
+        "python": "tests/test_error_pages_contract.py",
+        "php": "tests/ErrorPagesContractTest.php",
+        "ruby": "spec/error_pages_contract_spec.rb",
+        "nodejs": "test/errorPagesContract.test.ts"
+      },
+      "cases": [
+        "a_custom_error_template_overrides_the_builtin"
+      ]
+    },
+    {
+      "id": "error-pages-reflected-path-escaped",
+      "adr": "feature 127/57 security duty (not a new ADR)",
+      "rule": "A malicious path (a <script> tag, or - where a route pattern with literal angle brackets cannot itself be exercised over a real request, see the Node porting note below - an apostrophe payload that IS reflected raw by the platform) hitting a 404, 403, or 500 is escaped in the rendered HTML body: no live <script> tag ever appears, and the HTML-entity-escaped form of whatever the platform actually reflects raw is present (proving genuine reflection-then-escaping, not merely absent content). 500 is exempt from the escaped-form assertion because the built-in 500.twig never shows the path at all (only error_message, empty in prod, and request_id).",
+      "why": "Feature 127 found and fixed a LIVE reflected-XSS on Ruby's 404 (the raw request path, unescaped, because Ruby's legacy Template/TwigEngine does not auto-escape {{ }} the way Python/PHP/Node's Frond does). The 403 path (Tina4::Middleware.forbid, RackApp#handle_403) had the SAME gap and had NOT been fixed - this feature closes it. Every other framework's escaping is proven here too, not merely assumed safe by construction.",
+      "suites": {
+        "python": "tests/test_error_pages_contract.py",
+        "php": "tests/ErrorPagesContractTest.php",
+        "ruby": "spec/error_pages_contract_spec.rb",
+        "nodejs": "test/errorPagesContract.test.ts"
+      },
+      "cases": [
+        "a_reflected_path_in_an_error_page_is_escaped"
+      ]
+    },
+    {
+      "id": "error-pages-404-request-id",
+      "adr": "ERR-DEC-02",
+      "rule": "The negotiated JSON body of a 404 carries a request_id matching the X-Request-ID response header - PHP/Ruby/Node gained this (ERR-404-REQUESTID; only Python's template data carried it before, and even Python's own default 404.twig does not visibly render it, matching the new behaviour: the data is available to the body/an app override, whether or not the built-in template chooses to display it).",
+      "why": "ERR-404-REQUESTID: a 404 could not be correlated to a log line or a user bug report in three of four languages, while the 500 already carried request_id in all four - a correlation-parity gap on the single most common error response.",
+      "suites": {
+        "python": "tests/test_error_pages_contract.py",
+        "php": "tests/ErrorPagesContractTest.php",
+        "ruby": "spec/error_pages_contract_spec.rb",
+        "nodejs": "test/errorPagesContract.test.ts"
+      },
+      "cases": [
+        "the_404_carries_a_request_id"
+      ]
+    }
+  ]
+}
