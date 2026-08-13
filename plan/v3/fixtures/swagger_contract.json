@@ -1,6 +1,6 @@
 {
-  "_comment": "Feature 47 (Swagger / OpenAPI). Written 2026-08-06 from a measured four-way audit; MOVED owed->proven 2026-08-07 once a named swagger_contract suite existed in all four frameworks (tests/test_swagger_contract.py, tests/SwaggerContractTest.php, spec/swagger_contract_spec.rb, test/swaggerContract.test.ts). Each suite fetches the real /swagger/openapi.json over a real socket (no mocks), validates it with a real OpenAPI validator declared test-only (the frameworks stay zero runtime-dependency), and each of the 10 assertions is proven a real gate by mutation. Node's generator dropped typed path params (fixed here); the other three shipped all 10 invariants correctly. The originating audit found TWO OF FOUR shipped a structurally invalid document; that is now gated in all four.",
-  "version": 1,
+  "_comment": "Feature 47 (Swagger / OpenAPI). Written 2026-08-06 from a measured four-way audit; MOVED owed->proven 2026-08-07 once a named swagger_contract suite existed in all four frameworks (tests/test_swagger_contract.py, tests/SwaggerContractTest.php, spec/swagger_contract_spec.rb, test/swaggerContract.test.ts). Each suite fetches the real /swagger/openapi.json over a real socket (no mocks), validates it with a real OpenAPI validator declared test-only (the frameworks stay zero runtime-dependency), and each of the 10 assertions is proven a real gate by mutation. Node's generator dropped typed path params (fixed here); the other three shipped all 10 invariants correctly. The originating audit found TWO OF FOUR shipped a structurally invalid document; that is now gated in all four. EXTENDED 2026-08-13 (SWAG-DEC-01/02, OWNER-DECISIONS.md 2026-08-11) with 3 more invariants (10->13): Node's spec regenerated per request but over a boot-time router.getRoutes() snapshot (fixed, live routes now); Node's /__feedback/* was excluded only by boot ordering, not by its exclusion list, so a shared 8-prefix internal-exclusion list now backs all four frameworks (python/ruby/node widened from /swagger+/__dev only; php already carried it); the per-operation shape (401/summary/tags/description) is now gated identical across all four (python added the 401 + summary/tags defaults it was missing, ruby dropped its always-on empty description). All 13 proven by mutation in every framework named below.",
+  "version": 2,
   "decided": "2026-08-06",
   "adr": "ADR-0004",
   "invariants": [
@@ -152,6 +152,51 @@
       },
       "cases": [
         "operation-ids-are-stable-and-distinct"
+      ]
+    },
+    {
+      "id": "spec-reflects-a-route-added-after-boot",
+      "adr": "ADR-0004",
+      "rule": "The document reflects a route registered AFTER an earlier fetch to the same running server. The spec re-reads the LIVE route table on every request; it is never a snapshot frozen at server boot.",
+      "why": "MEASURED 2026-08-11 (SWAG-NODE-BOOT-SNAPSHOT): Node's swagger routes closed over `const allRoutes = router.getRoutes()`, captured ONCE in server.ts before DevAdmin.register runs, and `getSpec = () => swagger.generate(allRoutes, modelDefs)` reused that frozen array on every request thereafter - the spec regenerated per request, but always over the SAME boot-time route list, so a route added after boot (a hot-reload, or DevAdmin.register itself, which registers AFTER this block) never appeared. Python/PHP/Ruby always re-read the live route table inside generate() and were never the gap. FIXED in Node (tina4-nodejs packages/core/src/server.ts) by reading router.getRoutes() live inside getSpec() and deleting the boot-time capture; proven here by mutation in every framework (Node's case drives a real hot-reload: a route file is dropped after boot and POST /__dev/api/reload registers it on the live router mid-process).",
+      "suites": {
+        "python": "tests/test_swagger_contract.py",
+        "php": "tests/SwaggerContractTest.php",
+        "ruby": "spec/swagger_contract_spec.rb",
+        "nodejs": "test/swaggerContract.test.ts"
+      },
+      "cases": [
+        "spec-reflects-a-route-added-after-boot"
+      ]
+    },
+    {
+      "id": "internal-feedback-route-is-never-in-the-spec",
+      "adr": "ADR-0004",
+      "rule": "/__feedback/* is absent from the published document REGARDLESS of registration order or timing - excluded by the shared internal-exclusion RULE, never by an accident of when it happens to be registered relative to the swagger route snapshot.",
+      "why": "MEASURED 2026-08-11 (SWAG-NODE-FEEDBACK-LEAK): Node's /__feedback/* IS registered into the main router (feedback.ts registerFeedbackRoutes, called unconditionally at the top of DevAdmin.register) and was kept out of the document ONLY by BOOT ORDERING - the swagger route snapshot (server.ts) predated DevAdmin.register, so /__feedback simply had not been added yet when the (frozen) route list was captured, not because any rule excluded it. Fixing the boot-snapshot invariant above removes that accidental protection, so /__feedback (and the same 8-prefix internal list PHP already carried - /swagger, /__dev, /__feedback, /ai, /rag, /vision, /embed, /image) was added to Node's isIncludedPath exclusion (SWAG-EXCLUSION-NOT-SHARED) - the SAME list python and ruby also widened from /swagger+/__dev only, so one shared rule now backs all four frameworks rather than three different mechanisms. A reorder of DevAdmin.register before the swagger block would previously have published `POST /__feedback/api/turn` as a secured route; it cannot now, proven by mutation (Node: remove /__feedback from the exclusion list with a real TINA4_DEBUG=true server and the route leaks into the real served document).",
+      "suites": {
+        "python": "tests/test_swagger_contract.py",
+        "php": "tests/SwaggerContractTest.php",
+        "ruby": "spec/swagger_contract_spec.rb",
+        "nodejs": "test/swaggerContract.test.ts"
+      },
+      "cases": [
+        "internal-feedback-route-is-never-in-the-spec"
+      ]
+    },
+    {
+      "id": "secured-op-per-op-shape-is-identical",
+      "adr": "ADR-0004",
+      "rule": "A secured operation's `security` requirement, its `401` response, and its `summary`/`tags` are byte-identical across all four frameworks for the same route; an undecorated operation never fabricates a `description`.",
+      "why": "MEASURED 2026-08-11 (SWAG-401-SHAPE, SWAG-SHAPE-DRIFT): python emitted NO 401 on a secured operation and omitted summary/tags entirely when undecorated - the odd one out on both counts, since php/ruby/node always populated them. ruby always stamped `description: \"\"` on every undecorated operation - the odd one out there, since python/php/node only add description when a caller explicitly sets one. Per OWNER-DECISIONS.md (2026-08-11, Batch 4): secured swagger ops document a 401 (python adds it, matching the other three); summary/tags converge on ALWAYS-POPULATE (python now defaults an undecorated operation's summary to `METHOD path` and its tag to the first path segment, matching php/ruby/node's existing fallback); description converges on OMIT-WHEN-UNSET (ruby drops its fabricated empty-string default, matching python/php/node). FIXED in python (tina4_python/swagger/__init__.py) and ruby (lib/tina4/swagger.rb); php and node already matched the converged shape and needed no change. A positive control (a plain secured POST) and a negative control (the same route made explicitly public) both prove summary/tags populate regardless of security while no description is ever fabricated.",
+      "suites": {
+        "python": "tests/test_swagger_contract.py",
+        "php": "tests/SwaggerContractTest.php",
+        "ruby": "spec/swagger_contract_spec.rb",
+        "nodejs": "test/swaggerContract.test.ts"
+      },
+      "cases": [
+        "secured-op-per-op-shape-is-identical"
       ]
     }
   ]
