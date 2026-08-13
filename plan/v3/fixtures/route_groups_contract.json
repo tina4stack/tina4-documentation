@@ -124,6 +124,21 @@
       "cases": [
         "group_middleware_never_opens_the_write_auth_gate"
       ]
+    },
+    {
+      "id": "route-literal-regex-metacharacters-match-themselves",
+      "adr": "real-bug audit 3.13.99 (pre-merge)",
+      "rule": "A route path containing a literal regex metacharacter (`(` `)` `.` `+` `?` `[` etc.) matches ONLY that literal path - the router's pattern compiler quotes every literal segment before it reaches the compiled regex, and only the {param}/{param:type} placeholder syntax becomes a capture group.",
+      "why": "CONFIRMED broken in PHP and Node.js: both compiled a literal path segment straight into the final regex pattern UNESCAPED, so a metacharacter changed what the pattern actually matched. Registering `/blocked-xss(1)` compiled the trailing `(1)` as a REGEX CAPTURE GROUP, so the compiled pattern required the URL WITHOUT the parens - the exact literal path the route was registered for 404'd on the exact request for it. Isolated to metacharacters (not letters/digits/hyphens); a `.` in a path segment behaved as a regex any-char wildcard instead of a literal dot, an overly-loose-match footgun of the same defect. Python (`re.escape`) and Ruby (`Regexp.escape`) already quoted every literal segment correctly - CODE WINS there, empirically re-proven here, not merely re-read from source.",
+      "suites": {
+        "python": "tests/test_route_groups_contract.py",
+        "php": "tests/RouteGroupsContractTest.php",
+        "ruby": "spec/route_groups_contract_spec.rb",
+        "nodejs": "test/routeGroupsContract.test.ts"
+      },
+      "cases": [
+        "literal_regex_metacharacters_in_a_route_path_match_themselves"
+      ]
     }
   ]
 }
