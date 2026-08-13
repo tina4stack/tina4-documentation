@@ -1,0 +1,153 @@
+{
+  "_comment": [
+    "Dual development/test port -- the 'AI port' at base + 1000. Feature 128,",
+    "DUALPORT-DEC-01/02. See tina4-documentation/plan/v3/features/128-dual-test-port.md",
+    "and OWNER-DECISIONS.md (Batch 5).",
+    "",
+    "While a developer edits code, the main dev port hot-reloads: the browser",
+    "auto-refreshes and the reload WebSocket pushes updates. That churn is",
+    "hostile to a long-lived client -- an AI agent, a test runner, an MCP",
+    "session -- that wants a steady connection. So in debug mode the server",
+    "ALSO opens a second listener at base + 1000 serving the identical",
+    "application with the reload signal turned off. One app, two doors: the",
+    "noisy one for the browser, the quiet one for tools.",
+    "",
+    "'Stable' (DUALPORT-STABLE-SEMANTICS) means CONNECTION and reload-SIGNAL",
+    "stable, never a pinned code version -- a hot-reload via",
+    "/__dev/api/reload is reflected on base + 1000 too, on the very next",
+    "request there. A tool wanting an immutable code snapshot does not get",
+    "one from this feature.",
+    "",
+    "DUALPORT-DEC-01 (DUALPORT-TEST-GAP, the core of this fixture): before",
+    "this work the bound base + 1000 port had NO real test in Python, PHP, or",
+    "Ruby -- every server-boot test forced TINA4_NO_AI_PORT=true (Python's",
+    "conftest.boot_child_server, 8 Ruby specs each in their own boot env) or",
+    "tested only the toolbar-suppression UNIT (PHP's DualPortReloadTest,",
+    "whose own docblock admitted the socket behaviour was 'verified live via",
+    "tina4 serve' -- i.e. never). Node's test/aiPortRange.test.ts was the",
+    "ONLY real dual-port test of the four, and it stays exactly as it was --",
+    "a separate, narrower regression pinning a specific historical bug (an",
+    "out-of-range derived port hanging startServer()). This fixture's suites",
+    "are NEW, additional files in every language (test/dualPortContract.test.ts",
+    "in Node too), ported from aiPortRange.test.ts's real-sockets shape onto",
+    "the four case names below.",
+    "",
+    "A REAL BUG was found and fixed while implementing the PHP suite",
+    "(DUALPORT-PHP-CRASH, not previously catalogued): Tina4\\Server::start()",
+    "set $this->aiSocket = stream_socket_server(...) DIRECTLY, and",
+    "stream_socket_server() returns FALSE (not null) on a bind failure. The",
+    "accept loop's read-set builder tests `$this->aiSocket !== null`, and",
+    "false !== null is true, so an unreset false was fed straight into",
+    "stream_select() as an invalid stream resource on the very next loop",
+    "tick -- crashing the WHOLE PHP process, base port included, the instant",
+    "a busy AI port was actually exercised. Exactly what DUALPORT-TEST-GAP",
+    "predicted: a path with zero real coverage. Fixed by binding through a",
+    "explicit `$this->aiSocket = null;` reset on every failure branch (a",
+    "bind failure AND a caught exception) instead of leaving the FALSE the",
+    "failed bind returned sitting in the property -- see Tina4/Server.php.",
+    "",
+    "DUALPORT-DEC-02 (low, both proven by a per-repo regression test, NOT",
+    "part of this shared fixture -- Python/PHP were already correct on the",
+    "Ruby item, and PHP's item is a single-file default): Ruby's CLI",
+    "resolve_config(:port) read bare PORT only, ignoring TINA4_PORT, while",
+    "Tina4.resolve_bind_port (WebServer/Tina4.run!) and Tina4.mcp_port (the",
+    "+2000 supervisor/agent proxy port -- a DIFFERENT construct from the AI",
+    "port, untouched by this feature) both already preferred TINA4_PORT --",
+    "so under `tina4ruby serve` with only TINA4_PORT set, the main/AI/",
+    "supervisor ports derived from DIFFERENT bases. Fixed to the same",
+    "TINA4_PORT > PORT > default precedence (tina4-ruby lib/tina4/cli.rb);",
+    "regression in tina4-ruby spec/dual_port_base_precedence_spec.rb. PHP's",
+    "Server::__construct defaulted port=7146, disagreeing with the",
+    "documented 7145 (bin/tina4php, App::resolveBindPort) -- masked because",
+    "every real caller passes an explicit port. Aligned to 7145; regression",
+    "in tina4-php tests/LiveReloadTest.php + tests/WebSocketTest.php",
+    "(pre-existing testServerConstructorDefaults/testServerDefaultHostPort",
+    "cases, which had been asserting the WRONG value, 7146, and now assert",
+    "7145) and tests/DualPortContractTest.php::testDefaultConstructedServerUsesPort7145.",
+    "",
+    "Every case below is driven through a REAL server boot on a REAL",
+    "ephemeral port pair chosen so base + 1000 never collides with anything",
+    "already running -- NO MOCKS: Python subprocess.Popen(python app.py),",
+    "PHP proc_open(php dual_port_server.php), Ruby spawn(ruby app.rb) via",
+    "the framework's own Tina4::WebServer/Tina4.run! path, Node's real",
+    "startServer() over a real HTTP socket. Positive AND negative cases: the",
+    "no_ai_port_env and busy_ai_port cases ARE the negative controls.",
+    "Mutation-proved in all four (2026-08-13, macOS + the Linux lab):",
+    "temporarily changing each language's dual-port gate to ignore",
+    "TINA4_NO_AI_PORT turns no_ai_port_env_leaves_only_the_base_port RED --",
+    "the AI port opens anyway. Reverted. PHP's crash fix was separately",
+    "mutation-proved by reverting to the direct (bug-reproducing) assignment:",
+    "a_busy_ai_port_is_skipped_without_failing_the_base_port goes RED (the",
+    "whole process crashes instead of skipping).",
+    "",
+    "The four suites carry the SAME case names in each language's own idiom",
+    "(Python snake_case function, PHP testPascalCase method, Ruby it-",
+    "description, Node assert label), which scripts/audit-contract-fixtures.py",
+    "normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-13",
+  "feature": "128 - Dual development and test ports (the stable AI port at base + 1000)",
+  "invariants": [
+    {
+      "id": "dualport-ai-port-serves-the-same-app",
+      "adr": "DUALPORT-DEC-01",
+      "rule": "In debug mode (TINA4_DEBUG truthy) with TINA4_NO_AI_PORT unset, a real connection to base + 1000 is accepted and a known route (/health) returns its real body from the SAME in-process application -- proven by a byte match on the framework identity string (tina4-python/tina4-php/tina4-ruby/tina4-nodejs) in the response.",
+      "why": "This is the feature's whole point: a stable second door onto the SAME app for a long-lived tool client. Before this fixture the second listener's socket behaviour was untested in three of four languages -- PHP's own suite admitted it was 'verified live via tina4 serve' only.",
+      "suites": {
+        "python": "tests/test_dual_port_contract.py",
+        "php": "tests/DualPortContractTest.php",
+        "ruby": "spec/dual_port_contract_spec.rb",
+        "nodejs": "test/dualPortContract.test.ts"
+      },
+      "cases": [
+        "debug_mode_opens_the_ai_port_at_base_plus_1000"
+      ]
+    },
+    {
+      "id": "dualport-ai-port-refuses-reload-websocket",
+      "adr": "DUALPORT-DEC-01",
+      "rule": "A reload-WebSocket upgrade request to /__dev_reload on base + 1000 is REFUSED -- it never completes the RFC 6455 handshake (never a 101 status). The AI port is tagged at accept (a contextvar / a connection flag / a request env key / a marker) and the reload channel is gated on that tag, so an AI tool driving base + 1000 is never interrupted by its own edits. Ruby's WEBrick has no rack.hijack at all, so EVERY upgrade attempt on EITHER port answers 426 rather than reaching the AI-port-specific gate for that exact request shape; Ruby's suite additionally proves the AI-port-specific gate (RackApp dev_routes) is real and wired by comparing a PLAIN (non-upgrade) GET to /__dev_reload on both ports -- the AI port alone answers 404 'Not available on AI port'.",
+      "why": "The main port's dev toolbar and reload client must never reach an AI tool's stable connection -- a live-reload firing on every AI-driven edit would defeat the whole purpose of the second port.",
+      "suites": {
+        "python": "tests/test_dual_port_contract.py",
+        "php": "tests/DualPortContractTest.php",
+        "ruby": "spec/dual_port_contract_spec.rb",
+        "nodejs": "test/dualPortContract.test.ts"
+      },
+      "cases": [
+        "the_ai_port_refuses_a_reload_websocket_upgrade"
+      ]
+    },
+    {
+      "id": "dualport-no-ai-port-env-suppresses",
+      "adr": "DUALPORT-DEC-01",
+      "rule": "With TINA4_NO_AI_PORT truthy, NOTHING listens on base + 1000 -- a fresh bind attempt on that exact port succeeds (proving it was never claimed) while the base port continues to serve normally. This is the NEGATIVE CONTROL: without it, a fix that merely deletes the whole dual-port feature would still pass the 'refuses reload WS' case vacuously.",
+      "why": "An explicit, documented opt-out must actually opt out -- an operator or CI job that sets TINA4_NO_AI_PORT to keep a port range clear must be able to trust it.",
+      "suites": {
+        "python": "tests/test_dual_port_contract.py",
+        "php": "tests/DualPortContractTest.php",
+        "ruby": "spec/dual_port_contract_spec.rb",
+        "nodejs": "test/dualPortContract.test.ts"
+      },
+      "cases": [
+        "no_ai_port_env_leaves_only_the_base_port"
+      ]
+    },
+    {
+      "id": "dualport-busy-ai-port-is-non-fatal",
+      "adr": "DUALPORT-DEC-01",
+      "rule": "When base + 1000 is already bound by something else (pre-bound by the test itself, BEFORE the server under test even starts), the server logs a WARNING naming the busy port and continues serving the base port normally -- non-fatal, deliberately the OPPOSITE of the main port's takeover behaviour (feature 129, which kills a stale Tina4 holder to reclaim ITS port). The pre-bound listener is left completely untouched.",
+      "why": "The AI port is a courtesy, not a hard requirement -- a developer running two Tina4 projects side by side, or a CI job with a crowded port range, must never have the WHOLE app refuse to start over a busy convenience port. This is also where DUALPORT-PHP-CRASH was found: PHP's busy-port path did not merely warn, it crashed the entire process (see the fixture-level comment above) -- proof that an untested 'non-fatal' path can be fatal.",
+      "suites": {
+        "python": "tests/test_dual_port_contract.py",
+        "php": "tests/DualPortContractTest.php",
+        "ruby": "spec/dual_port_contract_spec.rb",
+        "nodejs": "test/dualPortContract.test.ts"
+      },
+      "cases": [
+        "a_busy_ai_port_is_skipped_without_failing_the_base_port"
+      ]
+    }
+  ]
+}
