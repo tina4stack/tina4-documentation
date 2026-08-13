@@ -108,6 +108,10 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 
 Stability, parity, and secure by default. About thirty breaking changes, and every one is a security, parity, or correctness fix: security headers and CSP on by default, CSRF actually enforced, the dev server bound to `127.0.0.1`, Mongo's mass-delete footgun closed, and `request.params` now holding route params only instead of merging in client input. Two conformance grids, logging and database adapters, are fully proven against real services in all four frameworks. See "Possible breaking" in the full notes before you upgrade.
 
+**v3.13.98 (2026-08-11)** - [full notes](/python/36-releases.md)
+
+A maintenance release, no app behaviour changed. The bundled AI coding skills moved onto one shared plan discipline (one plan format; a checkbox ticks only on verified-green work, never on a claim), and the framework shed internal dead code (duplicate design-system source that was never compiled or served). Re-run `tina4.com/install-skills.sh` for the skills.
+
 **v3.13.97 (2026-08-07)** - [full notes](/python/36-releases.md)
 
 Behaviour corrections. Force-delete no longer throws instead of deleting the row. Queue `clear()` and `purge()` on a broker refuse by name instead of a silent no-op or draining the live queue. Session `destroy()` no longer lets a later write resurrect the session, and `flash(key, null)` reads instead of storing null. DocStore `distinct()` dedups dates by value. A small, safe bug-fix release on the road to 3.14 stable.

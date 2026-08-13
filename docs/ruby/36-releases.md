@@ -131,6 +131,23 @@ Frond's compiler, extensibility, auto-escaping, sandboxing, and caching work
 refreshed Carbonah benchmark harness and a configurable database column-name
 casing option.
 
+## v3.13.98 (2026-08-11) - Skills discipline
+
+A maintenance release. No API changed, and no behaviour changed in your app.
+
+The bundled AI coding skills - the ones that install with
+`curl -fsSL https://tina4.com/install-skills.sh | sh` - moved onto one shared
+plan discipline. A plan file has one format (Scope, Tests, Bugs, Commits), and a
+checkbox is ticked only when the work is verified green at HEAD, never on a
+claim. That keeps an agent's plan file honest, so it always reflects what
+actually shipped.
+
+The framework package also shed internal dead weight: duplicate design-system
+source files that were never compiled or served at runtime. Nothing your code
+imports or renders changed.
+
+Nothing to upgrade. If you use the Tina4 AI skills, re-run the installer.
+
 ## v3.13.97 (2026-08-07) - Behaviour corrections
 
 A small bug-fix release on the road to **3.14 stable**. No new surface, no
