@@ -1,0 +1,131 @@
+{
+  "_comment": [
+    "Default landing page: ONE answer key, four frameworks. Feature 46.",
+    "",
+    "LAND-DEC-01 (ratify dev-only): the built-in welcome page at GET / is",
+    "DEV-ONLY (TINA4_DEBUG truthy) in all four - production always 404s. This",
+    "was already the shipped behaviour; a prior-session audit doc had left",
+    "production unverified and RECOMMENDED 'allow it in production', which",
+    "would reopen a fingerprinting leak (the page exposes the framework",
+    "version, a /__dev admin link, and a gallery). That recommendation is",
+    "REJECTED here - the 404-in-prod info-leak guard is now end-to-end-gated",
+    "by a REAL GET / in all four (previously only Ruby and Node proved it",
+    "end-to-end; Python and PHP asserted only the TINA4_DEBUG flag helper).",
+    "",
+    "LAND-DEC-02 (maintainability + parity, low priority): unify the",
+    "suppression precedence and delete dead code.",
+    "  - Suppression precedence, unified across all four: a user-registered",
+    "    GET / route wins outright; failing that, a src/templates/pages/",
+    "    index.* template wins over the landing page; failing that, the page",
+    "    renders in dev / 404s in production. PHP and Python already did",
+    "    this. Node's request-time fallback chain already ran the template",
+    "    stage before the landing stage. Ruby's WORKING template-auto-routing",
+    "    path (#resolve_template / #try_serve_template, called first inside",
+    "    #handle_404) ALREADY resolved src/templates/pages/index.* - verified",
+    "    empirically before writing this fixture (a real RackApp#call with a",
+    "    real pages/index.twig on disk returns 200 with the template body and",
+    "    no landing banner). Ruby's SEPARATE should_show_landing_page? /",
+    "    try_serve_index_template pair checked a DIFFERENT, never-wired",
+    "    convention (src/templates/index.* - no pages/ subdirectory) and was",
+    "    unreferenced in the main checkout (a stray uncommitted worktree still",
+    "    called it - not the working tree this fixture was proven against).",
+    "    So Ruby needed NO suppression fix, only the dead-code deletion below,",
+    "    plus a real test proving the (already-correct) precedence.",
+    "  - Dead code deleted, not wired: Node's renderLandingPage(routes, port)",
+    "    never referenced routes (server.ts) yet the caller built",
+    "    ctx.router.getRoutes().map(...) on EVERY request that reaches the",
+    "    fallback chain and threw the result away - deleted the parameter and",
+    "    the wasted per-request map(). Ruby's should_show_landing_page? and",
+    "    try_serve_index_template (see above) were deleted outright.",
+    "",
+    "LAND-MECHANISM-DIVERGE (documented, not converged - low priority per the",
+    "ledger): PHP REGISTERS the landing page as a bootstrap route inside",
+    "App::start() (registerLandingPage(), only when dev AND no user / route",
+    "AND no pages/index.* template) - it is a real entry in the route table.",
+    "Python, Ruby and Node instead serve it from a REQUEST-TIME FALLBACK (no-",
+    "route / 404 handler / FALLBACK_STAGES) that runs only when nothing",
+    "matched. Observable behaviour converges (proven by this fixture); the",
+    "mechanism does not, and the ledger does not require forcing convergence.",
+    "This is also why the PHP suite below drives the REAL App::start() boot",
+    "path (TestClient alone would never see the bootstrap-registered route),",
+    "while Python/Ruby/Node dispatch a real GET / with no separate boot step.",
+    "",
+    "Every case is driven through a REAL request pipeline - Python's",
+    "TestClient (core.server.app), PHP's real Tina4\\App::start() bootstrap +",
+    "TestClient (Router::dispatch - the only way to exercise PHP's actual",
+    "mechanism), Ruby's TestClient-equivalent RackApp#call, and Node's real",
+    "startServer() over a real HTTP socket - NO mocks anywhere. Positive AND",
+    "negative cases; the production-leak case is mutation-proved (temporarily",
+    "dropping the dev gate in each language's source turns it RED, restoring",
+    "the gate turns it back green) as part of implementing this fixture.",
+    "The four suites carry the SAME case names in each language's own idiom",
+    "(Python snake_case function, PHP testPascalCase method, Ruby it-",
+    "description, Node assert label), which scripts/audit-contract-fixtures.py",
+    "normalises and matches."
+  ],
+  "version": 1,
+  "decided": "2026-08-13",
+  "feature": "46 - Default landing page",
+  "invariants": [
+    {
+      "id": "landing-dev-mode-shows-banner",
+      "adr": "LAND-DEC-01",
+      "rule": "With TINA4_DEBUG truthy and no user GET / route, a real GET / returns 200 and the body contains the branded banner (the framework's own title - Tina4Python/Tina4Php/Tina4Ruby/Tina4NodeJs).",
+      "why": "The whole point of the feature: a fresh app shows a branded welcome page in dev so a developer sees the framework is running.",
+      "suites": {
+        "python": "tests/test_landing_page_contract.py",
+        "php": "tests/LandingPageContractTest.php",
+        "ruby": "spec/landing_page_contract_spec.rb",
+        "nodejs": "test/landingPageContract.test.ts"
+      },
+      "cases": [
+        "dev_mode_serves_the_branded_landing_page"
+      ]
+    },
+    {
+      "id": "landing-prod-404-no-leak",
+      "adr": "LAND-DEC-01",
+      "rule": "With TINA4_DEBUG falsy, a real GET / returns 404, and the body carries NONE of: the branded banner, the framework version string, a /__dev link, or the gallery section - in all four. This is the SECURITY case (LAND-PROD-DECIDED): the page would otherwise fingerprint the framework version and expose a dev-admin link to a production caller. REJECTS the prior-session doc's 'allow it in production' recommendation, which would reopen exactly this leak.",
+      "why": "LAND-PROD-DECIDED / LAND-TEST-PARITY: production behaviour was previously end-to-end-gated in only Ruby and Node (Python and PHP asserted the TINA4_DEBUG flag helper only, never the actual / response) - a regression here would have shipped silently in two of four languages.",
+      "suites": {
+        "python": "tests/test_landing_page_contract.py",
+        "php": "tests/LandingPageContractTest.php",
+        "ruby": "spec/landing_page_contract_spec.rb",
+        "nodejs": "test/landingPageContract.test.ts"
+      },
+      "cases": [
+        "production_returns_404_and_leaks_nothing"
+      ]
+    },
+    {
+      "id": "landing-user-route-wins",
+      "adr": "LAND-DEC-02",
+      "rule": "A user-registered GET / handler always answers a real GET / instead of the landing page or a 404 - in BOTH dev and production, in all four.",
+      "why": "The landing page must never shadow a real app's own homepage; this is the precedence a default app depends on the moment it defines its own /.",
+      "suites": {
+        "python": "tests/test_landing_page_contract.py",
+        "php": "tests/LandingPageContractTest.php",
+        "ruby": "spec/landing_page_contract_spec.rb",
+        "nodejs": "test/landingPageContract.test.ts"
+      },
+      "cases": [
+        "a_user_root_route_always_wins"
+      ]
+    },
+    {
+      "id": "landing-pages-index-suppresses",
+      "adr": "LAND-DEC-02",
+      "rule": "When the app ships src/templates/pages/index.* (twig/html), a real GET / serves THAT template's content (200) instead of the landing page - in dev, in all four, now unified (Ruby's already-correct #resolve_template/#try_serve_template precedence proven here for the first time; its separate DEAD should_show_landing_page?/try_serve_index_template pair, which checked an unwired src/templates/index.* convention, is deleted rather than wired - see LAND-SUPPRESS-DIVERGE).",
+      "why": "LAND-SUPPRESS-DIVERGE: the prior doc believed Ruby lacked this suppression entirely (reading only the dead, unreferenced pair) - unproven and, per a real dispatch, false. Every framework must let a project's own pages/index.* win over the framework's own welcome page, matching the Next.js/Nuxt-style pages/ convention the auto-router already uses everywhere else.",
+      "suites": {
+        "python": "tests/test_landing_page_contract.py",
+        "php": "tests/LandingPageContractTest.php",
+        "ruby": "spec/landing_page_contract_spec.rb",
+        "nodejs": "test/landingPageContract.test.ts"
+      },
+      "cases": [
+        "a_pages_index_template_suppresses_the_landing"
+      ]
+    }
+  ]
+}
