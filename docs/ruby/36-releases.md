@@ -1,5 +1,38 @@
 # Release Notes
 
+## v3.13.100 (2026-08-14) - Frond keeps the whole page
+
+This fast-follow release fixes template inheritance and puts a ceiling on
+Frond's caches. The template engine now rejects a second `{% extends %}` tag,
+preserves nested root blocks, and evicts stale compiled state instead of
+letting a long-running process grow without limit.
+
+### Template inheritance
+
+- A template may declare one parent. A second `{% extends %}` now raises a clear error instead of changing the parent without warning (`6bed111`)
+- Multi-level inheritance now resolves each parent without recursing through the same child again. Nested root blocks survive the final substitution pass (`914bc16`, `1a85fe4`)
+
+### Bounded caches
+
+- Template, fragment, and expression caches now have size bounds and TTL sweeps. Long-running workers release stale entries while rendered output stays unchanged (`5f49e32`)
+
+### AI skill installer
+
+- Skill downloads retry transient network and HTTP failures. A short GitHub raw-content outage no longer drops the whole install (`386dfa8`)
+
+### Release consistency
+
+- `Tina4::VERSION` and both current-version markers in the AI-facing guide now agree on `3.13.100`. The version guard caught the stale guide before release (`f4b0383`)
+
+### Upgrade notes
+
+No valid template syntax changes. A template with two `{% extends %}` tags was
+already contradictory; it now fails at the line that needs fixing. Cache
+eviction may trigger a reparse, but it does not change the rendered bytes.
+
+The Frond AOT compiler is not part of this release. Parser and compiler parity
+for Ruby and Node.js remains planned for `3.13.101`.
+
 ## v3.13.99 (2026-08-13) - Stability, parity, and secure by default
 
 The biggest step yet on the road to **3.14 stable**. This release closes out

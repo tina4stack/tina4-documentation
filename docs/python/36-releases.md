@@ -1,5 +1,38 @@
 # Release Notes
 
+## v3.13.100 (2026-08-14) - Frond keeps the whole page
+
+This fast-follow release fixes template inheritance and puts a ceiling on
+Frond's caches. The template engine now rejects a second `{% extends %}` tag,
+preserves nested root blocks, and evicts stale compiled state instead of
+letting a long-running process grow without limit.
+
+### Template inheritance
+
+- A template may declare one parent. A second `{% extends %}` now raises a clear error instead of changing the parent without warning (`9bb7279`)
+- The final block-substitution pass now tracks nesting depth. A block nested inside another root block no longer causes the outer content to disappear (`91828ce`)
+
+### Bounded caches
+
+- Template, fragment, and expression caches now have size bounds and TTL sweeps. Long-running workers release stale entries while rendered output stays unchanged (`82e02de`)
+
+### AI skill installer
+
+- Skill downloads retry transient network and HTTP failures. A short GitHub raw-content outage no longer drops the whole install (`09dd6b8`)
+
+### Release consistency
+
+- `pyproject.toml`, `uv.lock`, the packaged fallback version, and the AI-facing guide now agree on `3.13.100`. New version guards stop a partial bump before release (`1aec8c7`, `44188a6`)
+
+### Upgrade notes
+
+No valid template syntax changes. A template with two `{% extends %}` tags was
+already contradictory; it now fails at the line that needs fixing. Cache
+eviction may trigger a reparse, but it does not change the rendered bytes.
+
+The Frond AOT compiler is not part of this release. Parser and compiler parity
+for Ruby and Node.js remains planned for `3.13.101`.
+
 ## v3.13.99 (2026-08-13) - Stability, parity, and secure by default
 
 The biggest step yet on the road to **3.14 stable**. This release closes out
