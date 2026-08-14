@@ -48,9 +48,12 @@ Owner cut this session: "open Frond bugs first" (compiler deferred within .100).
 | Frond: cache bound + TTL-sweep (template + `{% cache %}` fragment + expr memos) | ✅ | ✅ | ✅ | ✅ | py `82e02de`; php `236dbabc`; rb `5f49e32`; node `d1e6b42` |
 | Frond: ruby multi-level `{% extends %}` recursion (+depth-aware extract_blocks) | — | — | ✅ | — | rb `914bc16` |
 | Frond: depth-aware block substitution — root-nested `{% block %}` no longer drops content | ✅ | ✅ test | ✅ | ✅ | py `91828ce`; php `955c66e0` (test-only, source unchanged); rb `1a85fe4`; node `5a57300` |
-| version bump -> 3.13.100 | ✅ | ✅ | ✅ | ✅ | in each repo |
+| version bump -> 3.13.100, including package/lock/guide guards | ✅ | ✅ | ✅ | ✅ | py `1aec8c7`+`44188a6`; php `aaf5ffa9`; rb `f4b0383`; node `70ffce8` |
+| Node skill retry is status-aware (transient retries, permanent 4xx final) | — | — | — | ✅ | node `4b75fe7` |
+| `.100` CHANGELOGs + four-language release notes | ✅ | ✅ | ✅ | ✅ | py `7cba239`; php `3850bd3a`; rb `573ced6`; node `0e6eeff`; docs `0b21600` |
 
-Branch HEADs (final for this session): py `91828ce` / php `955c66e0` / rb `1a85fe4` / node `5a57300`.
+Current local branch HEADs (NOT pushed): py `7cba239` / php `3850bd3a` / rb `573ced6` /
+node `0e6eeff`. Docs `main` is `0b21600`, one commit ahead of origin.
 (Transitive cache invalidation was RE-MEASURED and found already-fixed — parents always re-read
 from disk; the old audit note was stale. No change made.)
 
@@ -61,6 +64,32 @@ pairing an outer block's open tag with a NESTED block's `{% endblock %}`. Fix: a
 `_substitute_blocks`/`substituteBlocks`/`substitute_blocks` (open/close scanner) ported from the
 Python master to Node + Ruby; PHP was already correct (AST) and got only a regression test.
 **Maintainer re-verified independently — the repro outputs `<section>LEAF</section>` in ALL FOUR.**
+
+### PRE-MERGE LAB GATE (2026-08-14)
+
+Run as root on `andre@192.168.88.99` against live isolated services, including the real
+PostgreSQL ODBC DSN and `TINA4_REQUIRE_SERVICES=1`. Gate directory:
+`/home/andre/rel-3.13.100`.
+
+| Framework | Code-tested HEAD | Result |
+|---|---|---|
+| Python | `44188a6` | ✅ 5,551 passed, 0 failed, 3 warnings (10m39s) |
+| PHP | `aaf5ffa9` | ⚠️ 5,493 non-network tests green; only `AISkillInstallTest` failed while raw GitHub returned 503 |
+| Ruby | `f4b0383` | ⚠️ 5,495 non-network examples green; only the real-network AI installer failed while raw GitHub returned 503 |
+| Node | `70ffce8` | ✅ qualified: 8,395 non-network tests green; the sole full-run failure was `aiSkillInstall.test`, then isolated retry passed 15/15 |
+
+The PHP/Ruby installer failures are not inferred: direct `curl` checks from the lab returned
+503 for the exact `raw.githubusercontent.com` skill/reference URLs, while sibling URLs returned
+200. Repeated isolated runs missed DIFFERENT reference files. Do not loop under the rate limit;
+rerun each isolated after the CDN/IP window clears. No application/framework assertion failed.
+
+The Node full runner completed all 318 files on the lab, so the earlier `task_e9641ace`
+"stops after syncSocketTransport" flag is resolved for the live-service environment. The only
+red file was the qualified GitHub raw-content flake above.
+
+Docs gate at `0b21600`: `pnpm docs:build` built 272 pages; truth audit passed CLI grammar,
+ASCII punctuation, YAML, Python imports, and the `v3.13.100` landing lead. Its existing
+Rust-CLI-only env catalog still reports 215 framework env references but exits 0; `.100` added none.
 
 ### PENDING OWNER DECISION (do not change without the owner)
 - **`add_filter`/`add_global`/`add_test` registry scoping.** Calling these on an INSTANCE also
@@ -78,25 +107,18 @@ Python master to Node + Ruby; PHP was already correct (AST) and got only a regre
 - **Carbonah 133** benchmarks (deferred from .99).
 - **`TINA4_DATABASE_COLUMN_UPPERCASE`** switch, all 4 (deferred from .99). Owner wants a switch so
   Firebird/PHP lowercase field results can be forced uppercase across all frameworks.
-- **Node retry status-awareness** (small): node's install_skills retry fires on ANY failure incl a
-  permanent 404 (one wasted request, no backoff); py/php/ruby correctly skip a genuine 4xx. Align it.
-- **Flagged (`task_e9641ace`):** node `npm test` (`test/run-all.ts`) does NOT complete on a machine
-  with no live services — it stops deterministically after `syncSocketTransport.test.ts` and exits 1
-  (leading theory: maxBuffer). Every frond file passed before that point. Run node's full suite on
-  the LAB (all services), or fix the harness. Unrelated to Frond.
 
 ### 3.13.100 STATE AT SESSION END
-All owner-approved Frond bug fixes + the install retry are DONE, committed on
-`feature/release3.13.100` (NOT pushed, NOT tagged), and independently verified by the maintainer.
-Remaining before a .100 tag: pick up the `add_filter` registry decision (if wanted in .100), then
-merge -> v3, lab-gate at the merged HEADs, write .100 release notes + CHANGELOGs, tag on owner go.
+All owner-approved Frond bug fixes, retry parity, version guards, CHANGELOGs, and release notes are
+DONE and committed on `feature/release3.13.100` (NOT pushed, NOT tagged). Remaining before a .100
+tag: decide `add_filter` registry scoping, let the PHP/Ruby isolated GitHub checks clear their live
+503 window, then push/merge -> v3, lab-gate the merged HEADs, and tag only on owner go.
 The Frond compiler (CP-DEC-01, §6 below), Carbonah 133, and `TINA4_DATABASE_COLUMN_UPPERCASE` are
 the 3.13.101 backlog.
 
 ### After the above
-Merge `feature/release3.13.100` -> `v3` (all 4), lab-gate at the merged HEADs, then tag on the
-owner's go (tag publishes). Update `.100` release notes (docs `36-releases.md` all 4 + landing
-`docs/index.md`) and the CHANGELOGs BEFORE the tag.
+Push and merge `feature/release3.13.100` -> `v3` (all 4), lab-gate at the merged HEADs, then tag on
+the owner's go (tag publishes). `.100` release notes and CHANGELOGs are already committed locally.
 
 ---
 
