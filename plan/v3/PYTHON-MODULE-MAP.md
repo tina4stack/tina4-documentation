@@ -10,7 +10,8 @@ a feature.
 | `tina4_python/HtmlElement.py` | 107 | HTML builder |
 | `tina4_python/Testing.py` | 132 | inline testing |
 | `tina4_python/__init__.py` | 31, 64, 83, 89, 109, 130 | exports, lazy loading and version |
-| `tina4_python/ai/__init__.py` | 108 | AI coding-tool setup |
+| `tina4_python/ai/__init__.py` | 135 | app-facing LLM client |
+| `tina4_python/ai/client.py` | 135 | app-facing LLM client |
 | `tina4_python/api/__init__.py` | 81 | HTTP API client |
 | `tina4_python/auth/__init__.py` | 64 | authentication |
 | `tina4_python/cache/__init__.py` | 72-80 | cache providers and response cache |
@@ -23,6 +24,7 @@ a feature.
 | `tina4_python/core/constants.py` | 30 | HTTP response constants |
 | `tina4_python/core/events.py` | 104 | event system |
 | `tina4_python/core/middleware.py` | 33-37 | middleware and HTTP policies |
+| `tina4_python/core/port_takeover.py` | 29-47, 104 | HTTP/application core |
 | `tina4_python/core/rate_limiter.py` | 35 | rate-limit engine |
 | `tina4_python/core/request.py` | 29, 43, 44 | request, IDs and uploads |
 | `tina4_python/core/response.py` | 30, 40 | response, compression and ETag |

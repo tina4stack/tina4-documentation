@@ -1,6 +1,6 @@
 # Tina4 3.14 feature audit ledger
 
-The active audit now follows the flat 133-feature catalog in
+The active audit now follows the flat 135-feature catalog in
 `01-FEATURE-MATRIX.md`. Every capability and selectable provider has one whole
 number. The old grouped audit remains intact at
 `archive/98-feature-audit-pre-flat.md`.
@@ -68,11 +68,11 @@ it does not mean 32 packets meet the 3.14 closure bar.
 
 ## Current audit rule
 
-The walk runs from Feature 1 through Feature 133. Each audit must complete its
+The walk runs from Feature 1 through Feature 135. Each audit must complete its
 template, owner decisions, shared fixture, mutation witnesses, integration map,
 migration notes and clean-room porting capsule. The audit commits each approved
 packet as it closes.
 
 The catalog count is not a parity claim. Python code ownership is inventoried;
 the PHP, Ruby and Node columns stay marked `inventory pending` until their code
-surfaces are checked against the same 133 rows.
+surfaces are checked against the same 135 rows.

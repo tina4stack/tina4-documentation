@@ -2,11 +2,11 @@
 
 ## 1. What Is Tina4 Node.js
 
-Tina4 Node.js is a zero-dependency web framework. One npm package. It hands you routing, an ORM, a template engine, authentication, queues, WebSocket, and 70 other features. Node.js 22+ and TypeScript.
+Tina4 Node.js is a TypeScript-first web framework for Node.js 22+. Its core, Frond, and Swagger packages declare no required third-party packages. The ORM and root package declare optional packages for selected providers. Tina4 Node.js contributes to the framework family's 135-entry feature catalog; the catalog is an inventory, not a claim that every entry has reached parity.
 
-Truly zero runtime dependencies means no native C++ addons, no `node-gyp`, no platform-specific binaries. SQLite support uses Node's built-in `node:sqlite` module (available in Node 22+), so even database access requires nothing beyond what ships with Node.js itself.
+SQLite support uses Node's built-in `node:sqlite` module, so the default database path needs no extra package. Remote database, MongoDB, Redis, and S3 providers install their optional driver or SDK packages when selected.
 
-It belongs to the Tina4 family -- four identical frameworks in Python, PHP, Ruby, and Node.js. Learn one, know all four. Same project structure. Same template syntax. Same CLI commands. Same `.env` variables.
+It belongs to the Tina4 family: four backend implementations in Python, PHP, Ruby, and Node.js. They share contracts, project structure, template syntax, CLI commands, and `.env` variables. The parity audit records where an implementation still differs.
 
 Tina4 Node.js uses `camelCase` for method names (`fetchOne()`, `softDelete()`, `hasMany()`). JavaScript convention. Class names are `PascalCase`. Constants are `UPPER_SNAKE_CASE`.
 

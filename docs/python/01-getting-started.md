@@ -2,9 +2,9 @@
 
 ## 1. What Is Tina4 Python
 
-Tina4 Python is a zero-dependency web framework for Python 3.12+. One package. Routing, ORM, template engine, authentication, queues, WebSocket, and 70 other features -- all built in.
+Tina4 Python is a web framework for Python 3.12+. The core package declares no required third-party dependencies. Optional packages enable selected database, cache, queue, MongoDB, and S3 providers. Tina4 Python contributes to the framework family's 135-entry feature catalog; the catalog is an inventory, not a claim that every entry has reached parity.
 
-It belongs to the Tina4 family -- four identical frameworks in Python, PHP, Ruby, and Node.js. Everything you learn here transfers to the other three. Same project structure. Same template syntax. Same CLI commands. Same `.env` variables.
+It belongs to the Tina4 family: four backend implementations in Python, PHP, Ruby, and Node.js. They share contracts, project structure, template syntax, CLI commands, and `.env` variables. The parity audit records where an implementation still differs.
 
 Tina4 Python follows Python convention: `snake_case` for methods and functions (`fetch_one()`, `soft_delete()`, `has_many()`), `PascalCase` for classes, `UPPER_SNAKE_CASE` for constants. Route handlers are `async def` functions decorated with `@get`, `@post`, and friends.
 

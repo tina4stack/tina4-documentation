@@ -8,9 +8,9 @@ outline: deep
 
 ## 1. What Is Tina4 PHP
 
-Tina4 PHP is a batteries-included web framework for PHP 8.1+ with zero runtime dependencies. One Composer package. Routing, an ORM, a template engine, authentication, queues, WebSocket, and 70 other features -- all written in-house, none pulled from the PHP ecosystem. You install Tina4 itself via Composer, but that is the entire supply chain.
+Tina4 PHP is a batteries-included web framework for PHP 8.2+. The core declares no required third-party packages. PHP extensions are part of the language runtime and do not count as dependencies; selected providers can still require an extra package, such as the MongoDB library. Tina4 PHP contributes to the framework family's 135-entry feature catalog; the catalog is an inventory, not a claim that every entry has reached parity.
 
-It belongs to the Tina4 family: four identical frameworks in Python, PHP, Ruby, and Node.js. Learn one, know all four. Same project structure. Same template syntax. Same CLI commands. Same `.env` variables.
+It belongs to the Tina4 family: four backend implementations in Python, PHP, Ruby, and Node.js. They share contracts, project structure, template syntax, CLI commands, and `.env` variables. The parity audit records where an implementation still differs.
 
 Tina4 PHP follows PHP conventions. Method names are `camelCase` -- `fetchOne()`, `softDelete()`, `hasMany()`. Class names are `PascalCase`. Constants are `UPPER_SNAKE_CASE`.
 
@@ -24,7 +24,7 @@ By the end of this chapter you will have a working project with an API endpoint 
 
 Four things. Nothing exotic.
 
-1. **PHP 8.1 or later** -- check with:
+1. **PHP 8.2 or later** -- check with:
 
 ```bash
 php -v
@@ -39,7 +39,7 @@ Zend Engine v4.3.4, Copyright (c) Zend Technologies
     with Zend OPcache v8.3.4, Copyright (c), by Zend Technologies
 ```
 
-If you see a version lower than 8.1, upgrade PHP first.
+If you see a version lower than 8.2, upgrade PHP first.
 
 2. **Composer** -- PHP's package manager. Check with:
 

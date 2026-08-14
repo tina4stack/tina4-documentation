@@ -186,7 +186,7 @@ their plan and ADR, and are the first candidates to promote to Layer 2.
 | 57 Auto-escaping | `features/057-auto-escaping.md` | UNIFORM | closed, 1 owner call |
 | 58 Sandboxing | `features/058-sandboxing.md` | PROMOTE php (P1) | shipped all 4 |
 | 81 Api / HTTP client | `features/081-api-client.md` | frameworks-outrank-internal | `send_request` unified 2026-08-07 (Python was the outlier; Ruby cannot use bare `send`). No fixture yet. |
-| 135 App-facing AI client | `features/135-llm-client.md` | ADR-0053 | **3.13.101 candidate: `ai_client_contract.json` proves 10/10 invariant groups across four real-socket runners; all 40 targeted mutations went red and restored green. Lab release gate pending.** |
+| 135 App-facing AI client | `features/135-llm-client.md` | ADR-0053 | **Shipped in 3.13.101: `ai_client_contract.json` proves 10/10 invariant groups across four real-socket runners; all 40 targeted mutations went red and restored green.** |
 
 ## Layer 0: not yet audited
 
@@ -214,13 +214,12 @@ the matching row here in the SAME change:
 The auditor's own numbers, never a hand count, are the source of truth for
 proven/owed. A row here that disagrees with the auditor is a bug in this file.
 
-## Snapshot (2026-08-07)
+## Snapshot (2026-08-14)
 
-- 98 numbered rows, with 21-26 retired into database-adapter group 4; feature 27
-  is now under audit. Do not derive a remaining count from the retired numbers.
-- 12 contract fixtures, 90 invariants, **74 proven / 16 owed**. Logger and
-  database adapter are the two decision-complete, implementation-red packets.
-- 41 ADRs allocated (`decisions/`), highest ADR-0041; ADR-0042 authored this
-  release for the messenger uid rule.
+- 135 contiguous catalog entries and 135 feature packets. A catalog entry is an
+  inventory unit, not proof of four-language parity.
+- 55 contract fixtures, 282 invariants, **282 proven / 0 owed / 0 broken** within
+  the fixture-covered contracts.
+- 53 ADR files allocated under `decisions/`, through ADR-0053.
 - The path to a formal language spec: every Layer-0 feature reaches Layer 2, the
   owed count reaches 0, and MASTER-SPEC is regenerated from the fixtures + ADRs.

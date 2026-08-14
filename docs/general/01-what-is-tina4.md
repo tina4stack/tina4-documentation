@@ -119,7 +119,7 @@ Tina4 ships with everything you need to build a production web application. 44 f
 - Interactive gallery with 7 deployable examples
 - Live reload, AI tool integration
 
-All of this fits in a single package per language, with zero runtime dependencies. The biggest component, the Frond template engine, runs about 1,500 lines. Most features need fewer than 200.
+Each language packages these capabilities in its native format. A dependency means an extra package that the package manager installs; a language or runtime extension does not count. Python and PHP core declare no required third-party packages. Ruby declares runtime gems, while Node's root package installs optional provider packages by default. The biggest component, the Frond template engine, runs about 1,500 lines. Most features need fewer than 200.
 
 ---
 
@@ -129,20 +129,20 @@ Tina4 projects follow a predictable structure. Run `tina4 init` and you get:
 
 ```
 my-project/
-├── .env                    # Configuration
-├── src/
-│   ├── routes/             # Route handlers (auto-discovered)
-│   ├── orm/                # ORM models (auto-discovered)
-│   ├── templates/          # Frond templates
-│   ├── public/             # Static files (served directly)
-│   │   ├── css/
-│   │   ├── js/
-│   │   └── images/
-│   └── scss/               # SCSS source files (auto-compiled)
-├── migrations/             # SQL migration files
-├── data/                   # SQLite databases (gitignored)
-├── logs/                   # Log files with rotation (gitignored)
-└── tests/                  # Test files
+|-- .env                    # Configuration
+|-- src/
+|   |-- routes/             # Route handlers (auto-discovered)
+|   |-- orm/                # ORM models (auto-discovered)
+|   |-- templates/          # Frond templates
+|   |-- public/             # Static files (served directly)
+|   |   |-- css/
+|   |   |-- js/
+|   |   `-- images/
+|   `-- scss/               # SCSS source files (auto-compiled)
+|-- migrations/             # SQL migration files
+|-- data/                   # SQLite databases (gitignored)
+|-- logs/                   # Log files with rotation (gitignored)
+`-- tests/                  # Test files
 ```
 
 Five rules. No exceptions:
@@ -159,16 +159,16 @@ No routing table to maintain. No service container to wire up. No middleware sta
 
 ## The Four-Language Paradigm
 
-Tina4 is not one framework. It is four:
+Tina4 is one framework with four backend implementations:
 
 - **tina4-python** - Python 3.12+
 - **tina4-php** - PHP 8.2+
 - **tina4-ruby** - Ruby 3.1+
-- **tina4-nodejs** - Node.js 20+ (TypeScript)
+- **tina4-nodejs** - Node.js 22+ (TypeScript)
 
-All four share the same project structure, the same `.env` variables, the same template syntax, the same CLI commands, and the same API contracts.
+All four target the same project structure, `.env` variables, template syntax, CLI commands, and API contracts. The audit records gaps until fixtures prove those contracts in every implementation.
 
-The only difference is naming convention:
+Each implementation follows its language's naming convention:
 
 | Concept | Python / Ruby | PHP / Node.js |
 |---------|--------------|---------------|

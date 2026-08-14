@@ -4,6 +4,7 @@
   },
   "scripts": {
     "docs:sync": "bash scripts/sync-books.sh",
+    "audit:features": "python3 scripts/audit-feature-catalog.py",
     "docs:dev": "tina4press dev .",
     "docs:build": "tina4press build .",
     "docs:preview": "npx --yes serve docs/.vitepress/dist"

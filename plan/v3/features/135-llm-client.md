@@ -3,13 +3,12 @@
 ## Identity and status
 
 - Matrix identity: 135 - App-facing LLM client (`Ai.chat` / `Ai.embed` from application code)
-- Audit state: approved for 3.13.101 implementation (GREENFIELD - not yet written in any of the four frameworks)
-- Audit note: this is a DESIGN spec, not an audit of shipped code. There is no LLM client today (see
-  `plan/v3/AI-SURFACE-MAP.md`, commit `4e78642`): only feature-108 AI-tool integration, a DEV-only
-  `/ai/api/chat` verbatim proxy to `TINA4_AI_URL`, the Rust agent proxy, and MCP (inbound tools). The design
-  below reuses the existing `TINA4_AI_*` wire conventions so the contract does not change, resolves the
-  known issues carried in the prior design (`TINA4_AI_TIMEOUT` overload, fragile JSON parsing), and holds to
-  the zero-dependency and secure-by-default mandates. Written 2026-08-11.
+- Audit state: shipped in 3.13.101 across Python, PHP, Ruby, and Node.js.
+- Audit note: this packet began as a greenfield design and now records the shipped contract. ADR-0053 and
+  `ai_client_contract.json` govern the implementation: 10/10 invariant groups pass through real sockets in
+  all four frameworks, and 40/40 targeted mutations went red before restoration. The client reuses the
+  `TINA4_AI_*` wire conventions, separates total and connect timeouts, normalizes provider responses, and
+  keeps the core free from provider SDK dependencies.
 - Dependencies: the language stdlib HTTP + JSON only (NO provider SDK - zero-dep mandate); the existing
   `TINA4_AI_*` env family; the framework `Log` (for redacted diagnostics).
 - Dependants: application routes, models, and services that want a completion / embedding; optionally the
@@ -20,10 +19,10 @@
 
 ## Why this feature exists
 
-A Tina4 application should be able to call an LLM as easily as it calls the database: one import, one method,
-a normalized reply. Today it cannot - the only chat path is a dev-gated proxy that forwards bytes verbatim to
-an external server, with no provider abstraction, no error handling, and no key management, and it does not
-exist in production. This feature adds the missing library: a public `Ai` client that app code calls to get
+A Tina4 application can call an LLM as easily as it calls the database: one import, one method,
+a normalized reply. Before 3.13.101, the only chat path was a dev-gated proxy that forwarded bytes verbatim to
+an external server. It had no provider abstraction, error taxonomy, or key management, and it did not
+exist in production. Feature 135 adds the public `Ai` client that app code calls to get
 a chat completion or an embedding, backed by the local OpenAI-compatible server the ecosystem already assumes
 or by hosted OpenAI / Anthropic, with one uniform surface and one uniform response.
 
@@ -32,16 +31,16 @@ or by hosted OpenAI / Anthropic, with one uniform surface and one uniform respon
 This packet owns the app-facing client: the `Ai` surface, the provider adapters, the config resolution, the
 error taxonomy, response normalization, and streaming. It does NOT own the dev-admin proxy (feature 127, a
 separate dev tool), the AI-tool integration (feature 108, skills/context), MCP (feature 101, inbound tools),
-or the Rust coding agent (a separate process). It is the OUTBOUND client the framework has been missing.
+or the Rust coding agent (a separate process). It is the framework's outbound application client.
 
-## Existing surface and the gap
+## Pre-3.13.101 surface and the resolved gap
 
-- Existing (per the map): `TINA4_AI_URL` (default `http://localhost:11437/api/chat`, OpenAI-compatible),
+- Before 3.13.101, the map contained `TINA4_AI_URL` (default `http://localhost:11437/api/chat`, OpenAI-compatible),
   `TINA4_AI_MODEL`, `TINA4_EMBED_URL` (`.../api/embeddings`), `TINA4_VISION_URL`, `TINA4_IMAGE_URL` - all
-  read only by the dev-admin proxy/probes; no public app-facing consumer. The assumed wire shape is an
+  read only by the dev-admin proxy/probes; no public app-facing consumer. The assumed wire shape was an
   OpenAI-compatible chat + embeddings API.
-- The gap: a public client. Nothing lets a route do `reply = Ai.chat([...])`. This design fills exactly that,
-  reusing the env conventions above so no wire contract changes.
+- Feature 135 closes that gap. A route can call `reply = Ai.chat([...])` while the client reuses the existing
+  environment conventions.
 
 ## Public surface contract
 
@@ -153,7 +152,7 @@ rest of the framework holds.
 - `embed` is included in 3.13.101. `vision` and `image` are deferred.
 - The unimplemented tina4-python#109 `Llm.ask`/`ask_json` proposal does not create a second public API.
 
-## Proposed conformance fixture
+## Shipped conformance fixture
 
 A shared, per-language fixture driving a REAL local HTTP server (no client doubles):
 
@@ -185,13 +184,13 @@ A shared, per-language fixture driving a REAL local HTTP server (no client doubl
   changed) - existing `TINA4_AI_URL`/`_MODEL` keep their meaning; `TINA4_AI_TIMEOUT` is given ONE clear
   meaning (total) which the prior fragile design lacked (document it as the definition, not a change).
 
-## Implementation backlog
+## Implementation status
 
-1. Python master: the `Ai` client (chat/complete/embed), the three provider adapters, config resolution, the
-   error taxonomy, response + stream normalization, secure key handling.
-2. The no-mock fixture (real local HTTP server) covering the nine cases above; lock the contract.
-3. Port to PHP, Ruby, Node at identical surface/env/response; run the shared fixture against all four.
-4. Optional follow-up: `vision`/`image`; re-point the dev-admin chat panel at the client.
+1. Complete: `Ai` client, three provider adapters, config resolution, error taxonomy, response and stream
+   normalization, and secure key handling in all four frameworks.
+2. Complete: the shared no-mock fixture drives real local HTTP sockets in all four frameworks.
+3. Complete: the shared fixture proves the public surface, environment contract, and response shape.
+4. Excluded from 3.13.101: `vision` and `image`. Re-pointing the dev-admin panel remains outside this feature.
 
 ## Porting capsule
 
@@ -201,8 +200,8 @@ interface, transport-shared; config resolved per-call > env > default with a CLE
 (`TINA4_AI_TIMEOUT` total, `TINA4_AI_CONNECT_TIMEOUT` connect); secure-by-default key handling (env only,
 never logged/echoed/inspected, fail-closed on a missing required key, TLS on, transient-only bounded
 retries, no PII at INFO); a tolerant per-provider JSON/SSE normalizer that never assumes a field; ZERO new
-dependencies (hand-rolled HTTP + JSON); and a real-server no-mock fixture. Build Python first, lock the
-contract, then port to identical surfaces. Do NOT reuse the dev-admin verbatim proxy as the client - it is
+dependencies (hand-rolled HTTP + JSON); and a real-server no-mock fixture. Implement another language from
+ADR-0053, the fixture, and this capsule; do not copy one existing runtime. Do NOT reuse the dev-admin verbatim proxy as the client - it is
 dev-gated and does none of this.
 
 ## Audit closure checklist

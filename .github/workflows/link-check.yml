@@ -22,3 +22,6 @@ jobs:
         # AND stale anchors. Anchor count is 0 across the docs as of the
         # cross-book sync rewriter landing — tightening here so any new
         # broken anchor blocks the build before it reaches main.
+
+      - name: Audit feature catalog facts
+        run: python3 scripts/audit-feature-catalog.py

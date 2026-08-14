@@ -207,7 +207,7 @@
       "name": "ORM instance loading",
       "phase": "ORM and data layer",
       "python_evidence": "tina4_python/orm/model.py",
-      "packet": "features/026-orm-load.md"
+      "packet": "features/026-orm-instance-loading.md"
     },
     {
       "id": 27,
@@ -295,7 +295,7 @@
       "name": "CSRF protection",
       "phase": "HTTP policies",
       "python_evidence": "tina4_python/core/middleware.py",
-      "packet": "features/037-csrf.md"
+      "packet": "features/037-csrf-protection.md"
     },
     {
       "id": 38,
@@ -1064,6 +1064,22 @@
       "phase": "Testing and verification tools",
       "python_evidence": "benchmarks/ and plan/v3/CARBONAH.md",
       "packet": "features/133-carbonah-benchmarks.md"
+    },
+    {
+      "id": 134,
+      "slug": "cli-ai-skills",
+      "name": "CLI AI-skills installation and refresh",
+      "phase": "CLI",
+      "python_evidence": "tina4/src/main.rs; tina4/src/setup.rs; tina4/src/doctor.rs",
+      "packet": "features/134-cli-ai-skills.md"
+    },
+    {
+      "id": 135,
+      "slug": "llm-client",
+      "name": "App-facing LLM client",
+      "phase": "Integrations and storage",
+      "python_evidence": "tina4_python/ai/client.py",
+      "packet": "features/135-llm-client.md"
     }
   ]
 }

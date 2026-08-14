@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Generate the human catalog and Python module coverage map."""
+"""Validate the feature catalog and generate the Python module coverage map.
+
+The audited feature matrix contains measured per-language evidence. This tool
+must never replace that evidence with inventory placeholders.
+"""
 
 from __future__ import annotations
 
 import json
-import re
-from itertools import groupby
 from pathlib import Path
 
 
@@ -41,6 +43,8 @@ def display_phase(number: int) -> str:
         (110, 125, "CLI"),
         (126, 130, "Developer runtime"),
         (131, 133, "Testing and verification tools"),
+        (134, 134, "CLI"),
+        (135, 135, "Integrations and storage"),
     ]
     for start, end, label in ranges:
         if start <= number <= end:
@@ -96,7 +100,7 @@ def module_owner(relative: str) -> tuple[str, str]:
     if relative in exact:
         return exact[relative]
     prefixes = [
-        ("ai/", "108", "AI coding-tool setup"),
+        ("ai/", "135", "app-facing LLM client"),
         ("api/", "81", "HTTP API client"),
         ("auth/", "64", "authentication"),
         ("cache/", "72-80", "cache providers and response cache"),
@@ -138,55 +142,47 @@ def module_owner(relative: str) -> tuple[str, str]:
     raise ValueError(f"unmapped Python module: {relative}")
 
 
-def audit_state(packet: Path) -> str:
-    text = packet.read_text(encoding="utf-8")
-    match = re.search(r"^- Audit state:\s*(.+)$", text, flags=re.M)
-    return match.group(1).strip() if match else "missing"
+def validate_catalog(features: list[dict[str, object]]) -> None:
+    expected_ids = list(range(1, 136))
+    actual_ids = [feature["id"] for feature in features]
+    if actual_ids != expected_ids:
+        raise ValueError(f"catalog IDs must be contiguous 1-135, got {actual_ids}")
+
+    names = [feature["name"] for feature in features]
+    slugs = [feature["slug"] for feature in features]
+    if len(names) != len(set(names)):
+        raise ValueError("catalog feature names must be unique")
+    if len(slugs) != len(set(slugs)):
+        raise ValueError("catalog feature slugs must be unique")
+
+    for feature in features:
+        expected_phase = display_phase(feature["id"])
+        if feature["phase"] != expected_phase:
+            raise ValueError(
+                f'feature {feature["id"]} phase is {feature["phase"]!r}; '
+                f"expected {expected_phase!r}"
+            )
+        packet = ROOT / feature["packet"]
+        if not packet.is_file():
+            raise ValueError(f"feature {feature['id']} packet is missing: {packet}")
+
+
+def validate_matrix(features: list[dict[str, object]]) -> None:
+    matrix = (ROOT / "01-FEATURE-MATRIX.md").read_text(encoding="utf-8")
+    for feature in features:
+        needle = f'| {feature["id"]} | [{feature["name"]}]({feature["packet"]}) |'
+        count = matrix.count(needle)
+        if count != 1:
+            raise ValueError(
+                f'feature {feature["id"]} must appear once in the matrix; found {count}'
+            )
 
 
 def main() -> None:
     data = json.loads(CATALOG.read_text(encoding="utf-8"))
     features = data["features"]
-    for feature in features:
-        feature["phase"] = display_phase(feature["id"])
-    CATALOG.write_text(
-        json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-    )
-    matrix = [
-        "# Tina4 3.14 flat feature matrix",
-        "",
-        "This catalog follows the code. Every public capability and every selectable",
-        "provider has one whole-number identifier. Private helpers stay inside their",
-        "owner. Verification suites prove features; they are not counted as product",
-        "features.",
-        "",
-        "Numbers are contiguous and append-only from this baseline. The 3.14 reset",
-        "retires the old grouped identifiers such as `4.2`, `42.6` and `48.4`.",
-        "Historical documents remain in `archive/`; active packets use this table.",
-        "",
-        f"**Current catalog: {len(features)} flat features.**",
-        "",
-    ]
-    for phase, rows_iter in groupby(features, key=lambda row: display_phase(row["id"])):
-        rows = list(rows_iter)
-        matrix.extend(
-            [
-                f"## {phase}",
-                "",
-                "| # | Feature | Python evidence | PHP | Ruby | Node | Audit state |",
-                "| ---: | --- | --- | --- | --- | --- | --- |",
-            ]
-        )
-        for row in rows:
-            packet = ROOT / row["packet"]
-            rel = packet.relative_to(ROOT).as_posix()
-            matrix.append(
-                f'| {row["id"]} | [{row["name"]}]({rel}) | '
-                f'`{row["python_evidence"]}` | inventory pending | inventory pending | '
-                f'inventory pending | {audit_state(packet)} |'
-            )
-        matrix.append("")
-    (ROOT / "01-FEATURE-MATRIX.md").write_text("\n".join(matrix).rstrip() + "\n", encoding="utf-8")
+    validate_catalog(features)
+    validate_matrix(features)
 
     module_map = [
         "# Python module-to-feature map",
