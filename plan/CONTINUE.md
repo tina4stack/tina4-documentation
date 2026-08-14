@@ -9,7 +9,7 @@ first. Branch model: `feature/release<ver>` -> `v3` (the active release mainline
 
 Published to PyPI / Packagist / RubyGems / npm. Tags `3.13.99` (bare, no `v`) on all 4 repos'
 `v3`. GitHub CI green on all 4 (Tests + Docker). Docs pushed (`.98` + `.99` release notes live).
-Skills installer on `tina4/main` pins `3.13.99`.
+The skills installer moved to `3.13.100` after the `.100` framework tags went live.
 
 Final shipped v3 SHAs (for reference): py `af13de7` / php `b451fb1e` / rb `1ca5ce1` / node `8c33e4e`
 (then tags were cut). 3.13.99 = Phases 1-5 (~30 breaking parity/security fixes + logger & adapter
@@ -30,13 +30,31 @@ file** (503 != 404 — every 3.13.99 skill file returns 200). Cause: `raw.github
 503s intermittently under load — a freshly cut tag is "cold" on GitHub's CDN for minutes, and the
 lab/dev machine's IP was rate-limited from many test runs. Transient; clears within ~an hour.
 
-**Fix deployed:** `tina4/install-skills.sh` + `.ps1` now retry (`--retry 3 --retry-delay 2` /
-`-MaximumRetryCount 3 -RetryIntervalSec 2`) — committed + pushed to `tina4/main` (`20fc6a1`), served
-live via the tina4.com shim. (An earlier `retry 8 x 5s` was reverted — 40s hang was worse UX.)
+**Final fix deployed:** `tina4/install-skills.sh` + `.ps1` retry three times with a two-second delay,
+then fall back from GitHub Raw to jsDelivr for every file. PowerShell uses an explicit retry loop that
+works on Windows PowerShell 5.1; it no longer passes unsupported retry parameters to
+`Invoke-WebRequest`. The signed canonical installers pin `3.13.100` in `tina4/main` commit
+`a0bc36d`. Native Windows CI verified both the retry/fallback contract and the Authenticode signature
+of the exact GitHub Raw script. All six tagged skill entry points return HTTP 200 from `.100`.
 
 ---
 
-## 3. 3.13.100 — IN PROGRESS (branch `feature/release3.13.100` in all 4, NOTHING pushed/tagged)
+## 3. 3.13.100 — SHIPPED (2026-08-14)
+
+Merged to `v3`, lab-gated at the merged release commits, tagged with bare `3.13.100` tags, and
+published to PyPI, Packagist, RubyGems, and npm. GitHub Releases are live in all four repositories.
+
+| Framework | Tagged commit | Final lab result |
+|---|---|---|
+| Python | `48018ee` | 5,552 passed, 0 failed |
+| PHP | `f8cb2cfc` | 5,495 passed, 19,274 assertions, 0 failed |
+| Ruby | `94ca18b` | 5,497 examples, 0 failures |
+| Node | `ace5f90` | 8,413 passed, 0 failed |
+
+The Python Snyk PR check errored while detecting `pyproject.toml`; it reported no package,
+vulnerability, severity, or CVE. This was recorded as a scanner-infrastructure exception, not a
+security finding. Python issue #110 (dev-toolbar reflected XSS) was closed against the live `.100`
+release after the escaped-path regression passed.
 
 Owner cut this session: "open Frond bugs first" (compiler deferred within .100).
 
@@ -122,17 +140,15 @@ Rust-CLI-only env catalog still reports 215 framework env references but exits 0
 - **`TINA4_DATABASE_COLUMN_UPPERCASE`** switch, all 4 (deferred from .99). Owner wants a switch so
   Firebird/PHP lowercase field results can be forced uppercase across all frameworks.
 
-### 3.13.100 STATE AT SESSION END
-All owner-approved Frond bug fixes, retry parity, version guards, CHANGELOGs, and release notes are
-DONE and committed on `feature/release3.13.100` (NOT pushed, NOT tagged). ADR-0052 registry scope is
-implemented consistently in all four. Remaining before a .100 tag: finish recording the exact-head lab
-gate, then push/merge -> v3, lab-gate the merged HEADs, and tag only on owner go.
+### 3.13.100 FINAL STATE
+All owner-approved Frond bug fixes, retry parity, version guards, CHANGELOGs, release notes, merged-head
+lab gates, tags, package publications, and GitHub Releases are complete. ADR-0052 registry scope is
+implemented consistently in all four.
 The Frond compiler (CP-DEC-01, §6 below), Carbonah 133, and `TINA4_DATABASE_COLUMN_UPPERCASE` are
 the 3.13.101 backlog.
 
-### After the above
-Push and merge `feature/release3.13.100` -> `v3` (all 4), lab-gate at the merged HEADs, then tag on
-the owner's go (tag publishes). `.100` release notes and CHANGELOGs are already committed locally.
+### Next release work
+Start from the 3.13.101 backlog above; do not repeat the `.100` merge, gate, tag, or publication work.
 
 ---
 
@@ -140,8 +156,8 @@ the owner's go (tag publishes). `.100` release notes and CHANGELOGs are already 
 
 - **Lab:** `ssh andre@192.168.88.99` (Ubuntu, passwordless sudo). Full live services. Full-suite env:
   `set -a; source /root/tina4-lab/lab-env-for.sh <py|php|rb|node>; set +a` + ODBC DSN (NOT set by
-  lab-env-for.sh) + `TINA4_REQUIRE_SERVICES=1`. Release dir `~/rel-3.13.99/<repo>` (reusable; rename
-  or reuse for .100). Parallel gate script: scratchpad `lab-fullsuite-v3.sh` (fetches origin,
+  lab-env-for.sh) + `TINA4_REQUIRE_SERVICES=1`. Latest release gate directory:
+  `/home/andre/rel-3.13.100/<repo>`. Parallel gate script: scratchpad `lab-fullsuite-v3.sh` (fetches origin,
   checks out the SHA, runs 4 langs concurrently). NOTE the AI skill-install test flakes under
   4-parallel GitHub load (GitHub-raw rate-limit) — a lone skill-install failure is that flake;
   re-verify it isolated (it passes one-at-a-time). Python provisioning on lab: `/snap/bin/uv sync

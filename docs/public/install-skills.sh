@@ -19,7 +19,8 @@
 # users reported a broken install.
 set -eu
 
-url="https://raw.githubusercontent.com/tina4stack/tina4/main/install-skills.sh"
+primary_url="https://raw.githubusercontent.com/tina4stack/tina4/main/install-skills.sh"
+mirror_url="https://cdn.jsdelivr.net/gh/tina4stack/tina4@main/install-skills.sh"
 
 # Download to a file and CHECK it, rather than `curl ... | sh`.
 #
@@ -31,13 +32,14 @@ url="https://raw.githubusercontent.com/tina4stack/tina4/main/install-skills.sh"
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT INT TERM
 
-if ! curl -fsSL "$url" -o "$tmp"; then
-  echo "error: could not download the Tina4 skills installer from $url" >&2
+if ! curl -fsSL --retry 3 --retry-delay 2 "$primary_url" -o "$tmp" &&
+   ! curl -fsSL --retry 3 --retry-delay 2 "$mirror_url" -o "$tmp"; then
+  echo "error: could not download the Tina4 skills installer from either source" >&2
   exit 1
 fi
 
 if [ ! -s "$tmp" ]; then
-  echo "error: the Tina4 skills installer downloaded empty from $url" >&2
+  echo "error: the Tina4 skills installer downloaded an empty response" >&2
   exit 1
 fi
 
