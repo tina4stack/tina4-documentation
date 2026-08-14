@@ -12,9 +12,9 @@ Outcome: 3.13.101 ships one production-capable, zero-dependency `Ai` client at p
 - [x] Port the proven contract to Node.js/TypeScript with idiomatic spelling only where the language requires it.
 - [x] Export the public API and document identical `.env` configuration in every framework.
 - [x] Update feature 135, the feature matrix, contract map, release notes, and versions for 3.13.101.
-- [ ] Close tina4-python#109 only after the released four-way contract supersedes its narrower proposal.
+- [x] Close tina4-python#109 only after the released four-way contract supersedes its narrower proposal.
 - [x] Commit approved work in each repository with the Tina4 co-author trailer.
-- [ ] Tag and publish 3.13.101 only after the clean-room lab gate is green in all four frameworks.
+- [x] Tag and publish 3.13.101 only after the clean-room lab gate is green in all four frameworks.
 
 ## Parity
 
@@ -71,4 +71,4 @@ Outcome: 3.13.101 ships one production-capable, zero-dependency `Ai` client at p
 - `45df537` Ruby — AI client plus native metrics handoff.
 - `69ba401` Node — AI client plus native metrics handoff.
 
-## Status: Release-ready — exact-HEAD Linux gates green; tag and issue closure remain.
+## Status: Complete — 3.13.101 is live on PyPI, Packagist, RubyGems, and npm; tina4-python#109 is closed.

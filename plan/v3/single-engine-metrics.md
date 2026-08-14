@@ -109,6 +109,10 @@ Measured census-vs-engine, which is what justified keeping the census local:
 
 ## Bugs found BY doing this (the argument for one engine)
 
+- [x] **Framework CI excluded the native metrics handoff instead of installing
+      the CLI that owns it.** Install the checksummed CLI in all four main jobs,
+      remove the exclusions, and require all four CI runs to pass.
+
 - [x] CLI `module_has_tests` had no class-symbol stage: a class referenced by a
       test through the package root was reported UNTESTED, and raised a false
       "untested" offender. Invisible while four analyzers each had their own
@@ -179,5 +183,9 @@ Measured census-vs-engine, which is what justified keeping the census local:
 - `tina4-php fa9af870` remove census/CLI; browser-shape handoff regression
 - `tina4-ruby 45df537` remove census/CLI; browser-shape handoff regression
 - `tina4-nodejs 69ba401` remove census/CLI; browser-shape handoff regression
+- `tina4-python 4d970fb, 43dbccf` install and checksum the native CLI in CI
+- `tina4-php af5fc4cd, cc190387` install and checksum the native CLI in CI
+- `tina4-ruby 35ab279, 27dd0ae` install and checksum the native CLI in CI
+- `tina4-nodejs 35a9647, 5ca22dd` install and checksum the native CLI in CI
 
-## Status: Complete — implementation, focused gates, and exact-HEAD Linux release gates are green in all four.
+## Status: Complete — 3.13.101 is published and every framework CI proves the native handoff.
