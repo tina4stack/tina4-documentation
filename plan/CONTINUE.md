@@ -34,8 +34,9 @@ lab/dev machine's IP was rate-limited from many test runs. Transient; clears wit
 then fall back from GitHub Raw to jsDelivr for every file. PowerShell uses an explicit retry loop that
 works on Windows PowerShell 5.1; it no longer passes unsupported retry parameters to
 `Invoke-WebRequest`. The signed canonical installers pin `3.13.100` in `tina4/main` commit
-`a0bc36d`. Native Windows CI verified both the retry/fallback contract and the Authenticode signature
-of the exact GitHub Raw script. All six tagged skill entry points return HTTP 200 from `.100`.
+`a0bc36d`, tagged `3.13.100` in the CLI repository as the immutable skills-installer release.
+Native Windows CI verified both the retry/fallback contract and the Authenticode signature of the
+exact GitHub Raw script. All six tagged skill entry points return HTTP 200 from `.100`.
 
 ---
 
@@ -173,7 +174,8 @@ Start from the 3.13.101 backlog above; do not repeat the `.100` merge, gate, tag
   claimed `<section>LEAF</section>` was actually `<section></section>` (a real shared py/node bug).
   Always re-run the repro yourself.
 - One writer per tree: don't commit into a repo a worker is editing.
-- Frameworks tags are BARE (`3.13.100`); the tina4 CLI repo uses `v`-tags.
+- Framework package tags are bare (`3.13.100`); the tina4 CLI executable uses `v`-tags, while its
+  independently pinned skills installer uses the matching bare framework tag.
 - Commit trailers: `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` +
   `Co-Authored-By: Tina4 <82961293+tina4stack@users.noreply.github.com>`.
 
