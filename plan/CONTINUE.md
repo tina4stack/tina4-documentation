@@ -47,21 +47,20 @@ Owner cut this session: "open Frond bugs first" (compiler deferred within .100).
 | Frond: 2nd `{% extends %}` raises + tests | ✅ | ✅ | ✅ | ✅ | py `9bb7279`; php `c7739aa0`; rb `6bed111`; node `831bd57` |
 | Frond: cache bound + TTL-sweep (template + `{% cache %}` fragment + expr memos) | ✅ | ✅ | ✅ | ✅ | py `82e02de`; php `236dbabc`; rb `5f49e32`; node `d1e6b42` |
 | Frond: ruby multi-level `{% extends %}` recursion (+depth-aware extract_blocks) | — | — | ✅ | — | rb `914bc16` |
+| Frond: depth-aware block substitution — root-nested `{% block %}` no longer drops content | ✅ | ✅ test | ✅ | ✅ | py `91828ce`; php `955c66e0` (test-only, source unchanged); rb `1a85fe4`; node `5a57300` |
 | version bump -> 3.13.100 | ✅ | ✅ | ✅ | ✅ | in each repo |
 
-Branch HEADs at handoff: py `82e02de` / php `236dbabc` / rb `5f49e32` / node `d1e6b42`.
+Branch HEADs (final for this session): py `91828ce` / php `955c66e0` / rb `1a85fe4` / node `5a57300`.
 (Transitive cache invalidation was RE-MEASURED and found already-fixed — parents always re-read
 from disk; the old audit note was stale. No change made.)
 
-### IN FLIGHT — verify when it lands
-Worker `ab0076f37a2c7faaa` (tina4-dev): **depth-aware block substitution** — fixes a CONFIRMED
-content-loss bug where a ROOT template with a `{% block %}` nested inside another block drops
-content. Live outputs of the repro (root nests `inner` inside `body`, leaf overrides `inner`):
-Python `<section></section>`, Node `<section></section>`, Ruby `<section></section>` = **WRONG**;
-PHP `<section>LEAF</section>` = **CORRECT** (AST-based, depth-aware). **Owner approved fixing now.**
-Fix lands in py/node/ruby (make the final block substitution depth-aware, matching PHP). PHP is the
-reference for correct behaviour — do NOT change PHP. When the worker reports: re-run the repro in
-all 4 yourself; all must output `<section>LEAF</section>`; run each full frond suite.
+### DONE this session (was in flight) — verified
+Depth-aware block substitution shipped: a root template that nests `{% block %}` inside another
+block no longer drops content. Root cause: the final substitution pass used a flat non-greedy regex,
+pairing an outer block's open tag with a NESTED block's `{% endblock %}`. Fix: a depth-counting
+`_substitute_blocks`/`substituteBlocks`/`substitute_blocks` (open/close scanner) ported from the
+Python master to Node + Ruby; PHP was already correct (AST) and got only a regression test.
+**Maintainer re-verified independently — the repro outputs `<section>LEAF</section>` in ALL FOUR.**
 
 ### PENDING OWNER DECISION (do not change without the owner)
 - **`add_filter`/`add_global`/`add_test` registry scoping.** Calling these on an INSTANCE also
@@ -81,6 +80,18 @@ all 4 yourself; all must output `<section>LEAF</section>`; run each full frond s
   Firebird/PHP lowercase field results can be forced uppercase across all frameworks.
 - **Node retry status-awareness** (small): node's install_skills retry fires on ANY failure incl a
   permanent 404 (one wasted request, no backoff); py/php/ruby correctly skip a genuine 4xx. Align it.
+- **Flagged (`task_e9641ace`):** node `npm test` (`test/run-all.ts`) does NOT complete on a machine
+  with no live services — it stops deterministically after `syncSocketTransport.test.ts` and exits 1
+  (leading theory: maxBuffer). Every frond file passed before that point. Run node's full suite on
+  the LAB (all services), or fix the harness. Unrelated to Frond.
+
+### 3.13.100 STATE AT SESSION END
+All owner-approved Frond bug fixes + the install retry are DONE, committed on
+`feature/release3.13.100` (NOT pushed, NOT tagged), and independently verified by the maintainer.
+Remaining before a .100 tag: pick up the `add_filter` registry decision (if wanted in .100), then
+merge -> v3, lab-gate at the merged HEADs, write .100 release notes + CHANGELOGs, tag on owner go.
+The Frond compiler (CP-DEC-01, §6 below), Carbonah 133, and `TINA4_DATABASE_COLUMN_UPPERCASE` are
+the 3.13.101 backlog.
 
 ### After the above
 Merge `feature/release3.13.100` -> `v3` (all 4), lab-gate at the merged HEADs, then tag on the
