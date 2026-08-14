@@ -113,3 +113,77 @@ owner's go (tag publishes). Update `.100` release notes (docs `36-releases.md` a
 - Frameworks tags are BARE (`3.13.100`); the tina4 CLI repo uses `v`-tags.
 - Commit trailers: `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` +
   `Co-Authored-By: Tina4 <82961293+tina4stack@users.noreply.github.com>`.
+
+---
+
+## 6. Frond compiler (CP-DEC-01) — scoped plan (flagship of 3.13.101)
+
+**Owner decision (Andre, 2026-08-11):** all four languages get a Frond AOT compiler. It is a
+**parity/architecture** call (one uniform pipeline across the four), NOT throughput — made with
+eyes open that Node is already fast and Ruby is the slow outlier. Recorded in
+`plan/v3/features/050-frond-compiler.md`; ADRs: ADR-0001 (AOT compile layer), ADR-0004 (best
+implementation prevails).
+
+### Ground truth (verify before starting)
+- **Python** — REAL AOT compiler: `tina4_python/frond/compiler.py:81-110`. Emits Python source
+  (`def _rendered(engine, ctx): ...`), `compile()`+`exec()` into a callable. **This is the reference.**
+- **PHP** — REAL AOT compiler: `Tina4/FrondCompiler.php:70` (a faithful PORT of the Python master).
+  Emits PHP source, `eval()` into `\Closure::bind($fn, null, Frond::class)`.
+- **Ruby** — NO compiler, NO AST. Pure interpreter over cached TOKENS (`lib/tina4/frond.rb`,
+  `render_tokens`). **Needs both.**
+- **Node** — NO compiler, NO AST. Interpreter over cached TOKENS (`packages/frond/src/engine.ts`,
+  no `new Function`/`eval`/`vm`). **Needs both.**
+
+### The hard prerequisite: parser/AST for Ruby + Node (feature 49)
+A compiler needs a TREE. Ruby + Node today walk a FLAT token list and re-derive `if`/`for` grouping
+at render time — there is no AST. **Phase 0 is a parser** that turns the token stream into an AST
+(node kinds mirror Python's `frond/parser.py`: Text, Output/Var, Set, If/ElseIf/Else, For, Block,
+Include, Extends, Macro, Raw, Comment, Cache, …). Keep the interpreter working off the same AST (or
+keep the token path as fallback) throughout — never break rendering mid-migration.
+
+### The compiler (feature 50) — port the Python design exactly
+1. **Emit native host source from the AST** for the **hot-path subset only**: `text`, `output`
+   (var/expr), `set`, `if`, `for`. Anything outside the subset → mark unsupported → **fall back to
+   the interpreter for the whole template** (Python/PHP semantics; Python raises `_Unsupported`).
+2. **Byte-identity invariant (THE acceptance gate, ADR-0001):** every value-producing hole in the
+   emitted source calls the interpreter's OWN primitives (Ruby: the real evaluators in `frond.rb`;
+   Node: `engine.ts`'s eval fns), and the output-coercion is twinned (`_tostr`/`_to_output`), so
+   **compiled output === interpreted output, byte-for-byte.** Do NOT reimplement evaluation in the
+   compiler — that is what guarantees identity. Reuse/port Python's compiled-vs-interpreted parity
+   test as the gate.
+3. **Compile step:** Ruby → build the source string, `eval`/`class_eval` into a lambda/method bound
+   to the engine. Node → **`new Function(...)`** (NOT `eval`) producing `(engine, ctx) => string`.
+4. **Security (keep the Python invariant):** generate source ONLY from the parsed AST nodes, NEVER
+   from raw template text — the compiler `exec`/`eval`s code IT generated, so it is not an injection
+   surface. A Ruby/Node port MUST preserve this.
+5. **Fallback:** any codegen/compile error → return `null`/`nil` → interpret. A render is never
+   broken by the compiler.
+6. **Cache** the compiled callable (feature 59 cache; key by content in dev so an edit recompiles).
+   **Disable under sandbox** (compiled path skipped, interpreter runs).
+
+### Phasing (multi-session; commit each phase, suite green between)
+- **A.** Ruby parser/AST (feature 49) + AST-shape tests (parity with Python's node kinds).
+- **B.** Ruby compiler (feature 50) + the byte-identity gate + fallback/sandbox/cache tests.
+- **C.** Node parser/AST + tests.
+- **D.** Node compiler + byte-identity gate + fallback/sandbox/cache tests.
+- Measure Ruby with **Carbonah before/after** (it should help the slow outlier most); confirm Node
+  does not regress (its value here is parity, not speed).
+
+### Tests (real, no mocks — render through the real engine)
+Per language: each hot-path construct + a mixed corpus → compiled === interpreted (byte-identical);
+an unsupported construct → falls back and still renders correctly; sandbox → compiler skipped,
+correct output; cache → compiled callable cached, dev edit recompiles; a template whose text looks
+like code → output is correct/escaped (proves generation is from the AST, not raw text).
+
+### Risks
+- Building an AST is a real refactor of the current token-walk render — keep the interpreter path
+  (the fallback) working throughout.
+- Byte-identity is strict; the shared-primitives design is the ONLY way to hold it — resist the urge
+  to inline evaluation into the emitted source.
+- Node is already fast (V8); do not regress it chasing a compile step whose payoff there is parity,
+  not throughput.
+
+### References
+`tina4_python/frond/{parser.py, compiler.py}` (compiler.py:81-110, the master) ·
+`tina4-php/Tina4/FrondCompiler.php:70` (the PHP port) ·
+`plan/v3/features/{049-frond-parser.md, 050-frond-compiler.md}` · ADR-0001, ADR-0004.
