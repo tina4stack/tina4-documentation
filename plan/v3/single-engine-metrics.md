@@ -96,7 +96,16 @@ Measured census-vs-engine, which is what justified keeping the census local:
 - [x] Browser assets call only `/metrics/full` and `/metrics/file`
 - [x] File detail returns `function_count` plus a native `functions` array for the browser
 - [x] Framework formula, offender, census, and CLI-command tests removed
-- [ ] Linux lab full suites at the exact release HEAD
+- [x] Linux lab full suites at the exact release HEAD
+
+### Linux release gate (2026-08-14, real services, CLI 3.8.71)
+
+| Framework | Exact commit | Result |
+| --- | --- | --- |
+| Python 3.13.3 | `a0e9cff` | 5,516 passed, 11 skipped, 0 failed |
+| PHP 8.3.6 | `fa9af870` | 5,443 tests, 19,070 assertions, 0 failures, 10 skipped |
+| Ruby 3.2.3 | `45df537` | 5,449 examples, 0 failures, 10 pending (ODBC DSN absent) |
+| Node.js 24.18.0 | `69ba401` | 8,422 passed, 0 failed, 11 skipped (ODBC DSN absent); typecheck green |
 
 ## Bugs found BY doing this (the argument for one engine)
 
@@ -166,8 +175,9 @@ Measured census-vs-engine, which is what justified keeping the census local:
 - `tina4-ruby 4c57296` one engine, -747 lines (4366 examples, 0 failures)
 - (tina4-nodejs pending: -774 lines, awaiting the full-suite re-run)
 - `tina4-python 46a9234` remove census/CLI; browser-shape handoff regression
+- `tina4-python a0e9cff` update the dev-admin handler count after removing the census route
 - `tina4-php fa9af870` remove census/CLI; browser-shape handoff regression
 - `tina4-ruby 45df537` remove census/CLI; browser-shape handoff regression
 - `tina4-nodejs 69ba401` remove census/CLI; browser-shape handoff regression
 
-## Status: implementation and focused gates complete in all four; Linux release gate pending.
+## Status: Complete — implementation, focused gates, and exact-HEAD Linux release gates are green in all four.

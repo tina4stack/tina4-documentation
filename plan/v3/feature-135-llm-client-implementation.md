@@ -13,7 +13,7 @@ Outcome: 3.13.101 ships one production-capable, zero-dependency `Ai` client at p
 - [x] Export the public API and document identical `.env` configuration in every framework.
 - [x] Update feature 135, the feature matrix, contract map, release notes, and versions for 3.13.101.
 - [ ] Close tina4-python#109 only after the released four-way contract supersedes its narrower proposal.
-- [ ] Commit approved work in each repository with the Tina4 co-author trailer.
+- [x] Commit approved work in each repository with the Tina4 co-author trailer.
 - [ ] Tag and publish 3.13.101 only after the clean-room lab gate is green in all four frameworks.
 
 ## Parity
@@ -45,7 +45,16 @@ Outcome: 3.13.101 ships one production-capable, zero-dependency `Ai` client at p
 - [x] Malformed JSON, malformed SSE, and missing provider fields fail consistently and never fabricate success.
 - [x] Per-call configuration overrides env, which overrides defaults.
 - [x] Mutation-proof every invariant, restore the mutation, and rerun the named suite (40/40 red, then all four restored green).
-- [ ] Run each full framework suite locally, then all four on the Linux lab as root with required services.
+- [x] Run focused suites locally, then all four full suites on the Linux lab as root with required services.
+
+### Linux release gate (2026-08-14)
+
+| Framework | Exact commit | Result |
+| --- | --- | --- |
+| Python 3.13.3 | `a0e9cff` | 5,516 passed, 11 skipped, 0 failed |
+| PHP 8.3.6 | `fa9af870` | 5,443 tests, 19,070 assertions, 0 failures, 10 skipped |
+| Ruby 3.2.3 | `45df537` | 5,449 examples, 0 failures, 10 pending (ODBC DSN absent) |
+| Node.js 24.18.0 | `69ba401` | 8,422 passed, 0 failed, 11 skipped (ODBC DSN absent); typecheck green |
 
 ## Bugs
 
@@ -57,8 +66,9 @@ Outcome: 3.13.101 ships one production-capable, zero-dependency `Ai` client at p
 
 - `8ab5bd7` documentation — approve Feature 135 and ADR-0053.
 - `46a9234` Python — AI client plus native metrics handoff.
+- `a0e9cff` Python — update the dev-admin handler count after removing the census route.
 - `fa9af870` PHP — AI client plus native metrics handoff.
 - `45df537` Ruby — AI client plus native metrics handoff.
 - `69ba401` Node — AI client plus native metrics handoff.
 
-## Status: In Progress
+## Status: Release-ready — exact-HEAD Linux gates green; tag and issue closure remain.
