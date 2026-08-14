@@ -48,12 +48,13 @@ Owner cut this session: "open Frond bugs first" (compiler deferred within .100).
 | Frond: cache bound + TTL-sweep (template + `{% cache %}` fragment + expr memos) | ✅ | ✅ | ✅ | ✅ | py `82e02de`; php `236dbabc`; rb `5f49e32`; node `d1e6b42` |
 | Frond: ruby multi-level `{% extends %}` recursion (+depth-aware extract_blocks) | — | — | ✅ | — | rb `914bc16` |
 | Frond: depth-aware block substitution — root-nested `{% block %}` no longer drops content | ✅ | ✅ test | ✅ | ✅ | py `91828ce`; php `955c66e0` (test-only, source unchanged); rb `1a85fe4`; node `5a57300` |
+| Frond: class registration global, instance registration local (ADR-0052) | ✅ | ✅ | ✅ | ✅ | py `ecf66e6`; php `f6fb7f23`; rb `ad4e696`+`bb1e8d6`; node `e10b830` |
 | version bump -> 3.13.100, including package/lock/guide guards | ✅ | ✅ | ✅ | ✅ | py `1aec8c7`+`44188a6`; php `aaf5ffa9`; rb `f4b0383`; node `70ffce8` |
 | Node skill retry is status-aware (transient retries, permanent 4xx final) | — | — | — | ✅ | node `4b75fe7` |
 | `.100` CHANGELOGs + four-language release notes | ✅ | ✅ | ✅ | ✅ | py `7cba239`; php `3850bd3a`; rb `573ced6`; node `0e6eeff`; docs `0b21600` |
 
-Current local branch HEADs (NOT pushed): py `7cba239` / php `3850bd3a` / rb `573ced6` /
-node `0e6eeff`. Docs `main` is `0b21600`, one commit ahead of origin.
+Current code-tested branch HEADs (NOT pushed): py `ecf66e6` / php `f6fb7f23` / rb `bb1e8d6` /
+node `e10b830`. Docs `main` is still local-only and ahead of origin.
 (Transitive cache invalidation was RE-MEASURED and found already-fixed — parents always re-read
 from disk; the old audit note was stale. No change made.)
 
@@ -87,15 +88,28 @@ The Node full runner completed all 318 files on the lab, so the earlier `task_e9
 "stops after syncSocketTransport" flag is resolved for the live-service environment. The only
 red file was the qualified GitHub raw-content flake above.
 
+#### Feature 56 exact code-HEAD gate (ADR-0052, 2026-08-14)
+
+| Framework | Code-tested HEAD | Result |
+|---|---|---|
+| Python | `ecf66e6` | ✅ full suite: 5,550 passed; the two ODBC-auth cases skipped because the first run used the wrong username variable, then the corrected ODBC suite passed 11/11 |
+| PHP | `f6fb7f23` | ✅ full suite: 5,495 tests, 19,274 assertions, 0 failures; corrected ODBC environment included |
+| Ruby | `bb1e8d6` | ✅ full suite: 5,497 examples, 0 failures; corrected ODBC environment included |
+| Node | `e10b830` | ✅ qualified: full suite 8,396 passed with only the transient network installer red; corrected ODBC suite passed 11/11 and the isolated installer passed 15/15 |
+
+The four plan-only closure commits after those code gates are py `61e1cc8`, php `2f63ef1a`, rb
+`4d676a9`, and node `cdd45f3`. They do not change runtime or test code.
+
 Docs gate at `0b21600`: `pnpm docs:build` built 272 pages; truth audit passed CLI grammar,
 ASCII punctuation, YAML, Python imports, and the `v3.13.100` landing lead. Its existing
 Rust-CLI-only env catalog still reports 215 framework env references but exits 0; `.100` added none.
 
-### PENDING OWNER DECISION (do not change without the owner)
-- **`add_filter`/`add_global`/`add_test` registry scoping.** Calling these on an INSTANCE also
-  writes the shared CLASS registry (documented dual-call parity, identical in all 4). Test-isolation
-  risk (only Python's test fixture resets between tests). Keep global (current) or make
-  instance-scoped (breaking)? Owner has not decided.
+### OWNER DECISION IMPLEMENTED (ADR-0052)
+- **`add_filter`/`add_global`/`add_test` registry scoping.** A class call writes the process-global
+  registry; an instance call writes only that instance. The rule and regression coverage are identical in
+  Python, PHP, Ruby, and Node. Existing instances retain their construction-time flattened snapshot.
+- **Still separate:** replacing a built-in filter/global/test remains a silent overwrite in all four. Whether
+  to warn or only document that override is not decided by ADR-0052.
 
 ### NOT STARTED (remaining .100 backlog)
 - **Frond compiler (CP-DEC-01)** — the flagship, deferred. Owner decision: ALL 4 get a Frond
@@ -110,9 +124,9 @@ Rust-CLI-only env catalog still reports 215 framework env references but exits 0
 
 ### 3.13.100 STATE AT SESSION END
 All owner-approved Frond bug fixes, retry parity, version guards, CHANGELOGs, and release notes are
-DONE and committed on `feature/release3.13.100` (NOT pushed, NOT tagged). Remaining before a .100
-tag: decide `add_filter` registry scoping, let the PHP/Ruby isolated GitHub checks clear their live
-503 window, then push/merge -> v3, lab-gate the merged HEADs, and tag only on owner go.
+DONE and committed on `feature/release3.13.100` (NOT pushed, NOT tagged). ADR-0052 registry scope is
+implemented consistently in all four. Remaining before a .100 tag: finish recording the exact-head lab
+gate, then push/merge -> v3, lab-gate the merged HEADs, and tag only on owner go.
 The Frond compiler (CP-DEC-01, §6 below), Carbonah 133, and `TINA4_DATABASE_COLUMN_UPPERCASE` are
 the 3.13.101 backlog.
 

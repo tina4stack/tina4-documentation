@@ -1,0 +1,44 @@
+{
+  "_comment": [
+    "Feature 56 Frond extensibility scope contract, governed by ADR-0052.",
+    "Class calls are process-global; instance calls are instance-local.",
+    "The same four pure in-memory cases run in all four frameworks without mocks."
+  ],
+  "version": 1,
+  "decided": "2026-08-14",
+  "feature": "56 - Frond extensibility registration scope",
+  "invariants": [
+    {
+      "id": "frond-extension-class-registration-process-global",
+      "adr": "ADR-0052",
+      "rule": "A class registration is inherited by every Frond instance constructed afterward.",
+      "why": "Applications need one explicit startup-level mechanism for process-wide Frond extensions.",
+      "suites": {"python": "tests/test_parity_group_c.py", "php": "tests/FrondStaticFacadeTest.php", "ruby": "spec/frond_static_facade_spec.rb", "nodejs": "test/frondStaticFacade.test.ts"},
+      "cases": ["class registration is process global"]
+    },
+    {
+      "id": "frond-extension-instance-filter-local",
+      "adr": "ADR-0052",
+      "rule": "An instance filter registration affects that Frond instance only.",
+      "why": "An instance call must not contaminate later renderers or tests.",
+      "suites": {"python": "tests/test_parity_group_c.py", "php": "tests/FrondStaticFacadeTest.php", "ruby": "spec/frond_static_facade_spec.rb", "nodejs": "test/frondStaticFacade.test.ts"},
+      "cases": ["instance filter registration is instance local"]
+    },
+    {
+      "id": "frond-extension-instance-global-local",
+      "adr": "ADR-0052",
+      "rule": "An instance global registration affects that Frond instance only.",
+      "why": "Per-renderer values must not become process-global state.",
+      "suites": {"python": "tests/test_parity_group_c.py", "php": "tests/FrondStaticFacadeTest.php", "ruby": "spec/frond_static_facade_spec.rb", "nodejs": "test/frondStaticFacade.test.ts"},
+      "cases": ["instance global registration is instance local"]
+    },
+    {
+      "id": "frond-extension-instance-test-local",
+      "adr": "ADR-0052",
+      "rule": "An instance test registration affects that Frond instance only.",
+      "why": "Custom predicates must obey the same scope rule as filters and globals.",
+      "suites": {"python": "tests/test_parity_group_c.py", "php": "tests/FrondStaticFacadeTest.php", "ruby": "spec/frond_static_facade_spec.rb", "nodejs": "test/frondStaticFacade.test.ts"},
+      "cases": ["instance test registration is instance local"]
+    }
+  ]
+}

@@ -16,6 +16,10 @@ letting a long-running process grow without limit.
 
 - Template, fragment, and expression caches now have size bounds and TTL sweeps. Long-running workers release stale entries while rendered output stays unchanged (`d1e6b42`)
 
+### Frond extension scope
+
+- Class calls to `addFilter`, `addGlobal`, and `addTest` remain process-global. Instance calls now affect that renderer only, so one request or test cannot seed every Frond instance created later (`e10b830`)
+
 ### AI skill installer
 
 - Skill downloads retry transport failures and transient HTTP statuses. Permanent 4xx responses fail after one request, while a short GitHub raw-content outage gets another attempt (`b859bcf`, `4b75fe7`)
@@ -26,7 +30,8 @@ letting a long-running process grow without limit.
 
 ### Upgrade notes
 
-No valid template syntax changes. A template with two `{% extends %}` tags was
+No valid template syntax changes. Code that relied on an instance extension
+leaking globally must register on `Frond` itself. A template with two `{% extends %}` tags was
 already contradictory; it now fails at the line that needs fixing. Cache
 eviction may trigger a reparse, but it does not change the rendered bytes.
 
