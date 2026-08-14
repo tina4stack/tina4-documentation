@@ -1,5 +1,35 @@
 # Release Notes
 
+## v3.13.101 (2026-08-14) - One AI client, four languages
+
+One class. Three methods. No provider SDK.
+Tina4 applications can now call local models, OpenAI, and Anthropic through the
+same small API: `Ai.chat`, `Ai.complete`, and `Ai.embed`.
+
+### What ships
+
+- The native `tina4 metrics` CLI now owns every code-health calculation. Framework-level metrics commands and quick census implementations are gone.
+- Dev-admin keeps its metrics tab through two thin native-JSON adapters: full analysis and file detail.
+
+- `Ai.chat` returns one `ChatResponse` with text, model, token usage, finish reason, and the raw provider response.
+- `Ai.complete` sends one user message and returns its text.
+- `Ai.embed` accepts one string or a list and preserves that input shape in its output.
+- `stream=True` yields ordered text deltas from OpenAI-compatible and Anthropic streams.
+
+### Failure is data
+
+Hosted providers refuse to send a request without `TINA4_AI_KEY`. Connection and
+total-request deadlines stay separate. Retries cover connection failures, HTTP 429,
+and HTTP 5xx responses, but stop after the first streamed delta. Errors never include
+the key, prompt, or provider response body.
+
+### Upgrade notes
+
+This release adds a new API. It does not add the unimplemented `Llm.ask` or
+`Llm.ask_json` proposal. Vision, image generation, tools, agents, and conversation
+state remain outside this release. The client uses Python's standard library; your
+dependency tree does not grow.
+
 ## v3.13.100 (2026-08-14) - Frond keeps the whole page
 
 This fast-follow release fixes template inheritance and puts a ceiling on

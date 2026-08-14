@@ -1,5 +1,5 @@
 {
-  "_comment": "Feature 135 app-facing AI client contract for 3.13.101. Accepted in ADR-0053 on 2026-08-14. Initially owed while the test-first real-socket runners are written; it moves to proven only when all four named suites and cases exist and have been mutation-checked. The deterministic collaborator is a real local HTTP server reached over a real socket, never a client mock.",
+  "_comment": "Feature 135 app-facing AI client contract for 3.13.101. Accepted in ADR-0053 on 2026-08-14. All ten invariant groups are proven by four real-socket suites and 40 targeted mutation checks. The deterministic collaborator is a real local HTTP server reached over a real socket, never a client mock.",
   "version": 1,
   "decided": "2026-08-14",
   "adr": "ADR-0053",
@@ -9,80 +9,80 @@
       "adr": "ADR-0053",
       "rule": "Ai exposes chat, complete, and embed in every framework. Vision, image, ask, ask_json, agents, tools, and conversation state are not aliases or hidden second surfaces in 3.13.101.",
       "why": "One small portable API is the feature. Shipping both the audited Ai contract and the older unimplemented Llm proposal would create divergence before the first release.",
-      "suites": {},
-      "cases": []
+      "suites": {"python": "tests/test_ai_client_contract.py", "php": "tests/AIClientContractTest.php", "ruby": "spec/ai_client_contract_spec.rb", "nodejs": "test/aiClientContract.test.ts"},
+      "cases": ["ai-public-surface"]
     },
     {
       "id": "ai-chat-response-normalized",
       "adr": "ADR-0053",
       "rule": "OpenAI-compatible and Anthropic non-streaming chat responses normalize to text, model, usage(prompt/completion/total tokens), finish reason, and raw provider response; missing required content raises AiParseError.",
       "why": "Application code must not contain provider-specific field traversal or mistake malformed success payloads for valid empty replies.",
-      "suites": {},
-      "cases": []
+      "suites": {"python": "tests/test_ai_client_contract.py", "php": "tests/AIClientContractTest.php", "ruby": "spec/ai_client_contract_spec.rb", "nodejs": "test/aiClientContract.test.ts"},
+      "cases": ["ai-chat-response-normalized"]
     },
     {
       "id": "ai-complete-is-single-turn-text",
       "adr": "ADR-0053",
       "rule": "complete(prompt) sends exactly one user message through chat and returns only normalized response text.",
       "why": "The convenience method must be a thin route through the proven chat path, not a second transport implementation.",
-      "suites": {},
-      "cases": []
+      "suites": {"python": "tests/test_ai_client_contract.py", "php": "tests/AIClientContractTest.php", "ruby": "spec/ai_client_contract_spec.rb", "nodejs": "test/aiClientContract.test.ts"},
+      "cases": ["ai-complete-is-single-turn-text"]
     },
     {
       "id": "ai-embedding-cardinality",
       "adr": "ADR-0053",
       "rule": "embed(string) returns one numeric vector and embed(list of strings) returns one numeric vector per input in input order; malformed or missing vectors raise AiParseError.",
       "why": "A caller can use embeddings immediately without provider-shape conversion or guessing which input a vector belongs to.",
-      "suites": {},
-      "cases": []
+      "suites": {"python": "tests/test_ai_client_contract.py", "php": "tests/AIClientContractTest.php", "ruby": "spec/ai_client_contract_spec.rb", "nodejs": "test/aiClientContract.test.ts"},
+      "cases": ["ai-embedding-cardinality"]
     },
     {
       "id": "ai-stream-is-ordered-deltas",
       "adr": "ADR-0053",
       "rule": "OpenAI-compatible and Anthropic streams yield only ordered text deltas; provider metadata events are ignored, malformed content raises AiParseError, and no retry occurs after the first delta is yielded.",
       "why": "Streaming must be provider-neutral and must never duplicate already-observed output.",
-      "suites": {},
-      "cases": []
+      "suites": {"python": "tests/test_ai_client_contract.py", "php": "tests/AIClientContractTest.php", "ruby": "spec/ai_client_contract_spec.rb", "nodejs": "test/aiClientContract.test.ts"},
+      "cases": ["ai-stream-is-ordered-deltas"]
     },
     {
       "id": "ai-configuration-precedence",
       "adr": "ADR-0041",
       "rule": "Every configurable call option resolves explicit argument over TINA4_AI_* environment over documented default, identically in all four frameworks.",
       "why": "The engineer must be able to override one request without rewriting process configuration, and the same deployment variables must behave everywhere.",
-      "suites": {},
-      "cases": []
+      "suites": {"python": "tests/test_ai_client_contract.py", "php": "tests/AIClientContractTest.php", "ruby": "spec/ai_client_contract_spec.rb", "nodejs": "test/aiClientContract.test.ts"},
+      "cases": ["ai-configuration-precedence"]
     },
     {
       "id": "ai-hosted-key-fails-closed-and-redacted",
       "adr": "ADR-0053",
       "rule": "OpenAI and Anthropic send no request when TINA4_AI_KEY is absent. The key, prompt, and response body never appear in logs, inspection, or error text. Local works without a key.",
       "why": "A secret must not leak through the developer surfaces this framework provides, and a missing hosted credential is configuration failure rather than an anonymous network request.",
-      "suites": {},
-      "cases": []
+      "suites": {"python": "tests/test_ai_client_contract.py", "php": "tests/AIClientContractTest.php", "ruby": "spec/ai_client_contract_spec.rb", "nodejs": "test/aiClientContract.test.ts"},
+      "cases": ["ai-hosted-key-fails-closed-and-redacted"]
     },
     {
       "id": "ai-retries-only-safe-transients",
       "adr": "ADR-0053",
       "rule": "Retries are bounded by TINA4_AI_MAX_RETRIES and occur only before output for connection failures, HTTP 429, and HTTP 5xx. Retry-After is honoured within the total deadline. Other 4xx and parse failures are attempted once.",
       "why": "Bounded transient recovery adds resilience without hiding permanent failures or duplicating streamed output.",
-      "suites": {},
-      "cases": []
+      "suites": {"python": "tests/test_ai_client_contract.py", "php": "tests/AIClientContractTest.php", "ruby": "spec/ai_client_contract_spec.rb", "nodejs": "test/aiClientContract.test.ts"},
+      "cases": ["ai-retries-only-safe-transients"]
     },
     {
       "id": "ai-timeouts-are-distinct-and-bounded",
       "adr": "ADR-0053",
       "rule": "TINA4_AI_CONNECT_TIMEOUT bounds connection establishment and TINA4_AI_TIMEOUT bounds the whole request including retries and body/stream reads; both paths raise AiTimeoutError without an unbounded hang.",
       "why": "One overloaded socket timeout cannot promise an end-to-end deadline, especially across retries and streaming reads.",
-      "suites": {},
-      "cases": []
+      "suites": {"python": "tests/test_ai_client_contract.py", "php": "tests/AIClientContractTest.php", "ruby": "spec/ai_client_contract_spec.rb", "nodejs": "test/aiClientContract.test.ts"},
+      "cases": ["ai-timeouts-are-distinct-and-bounded"]
     },
     {
       "id": "ai-zero-runtime-dependencies-real-socket",
       "adr": "ADR-0053",
       "rule": "The client uses only each language standard library and its deterministic contract suite reaches a real local HTTP server over a real socket; no provider SDK or mocked client collaborator is used.",
       "why": "The feature must preserve Tina4's zero-dependency promise while proving the real transport, headers, body, deadlines, and streaming parser.",
-      "suites": {},
-      "cases": []
+      "suites": {"python": "tests/test_ai_client_contract.py", "php": "tests/AIClientContractTest.php", "ruby": "spec/ai_client_contract_spec.rb", "nodejs": "test/aiClientContract.test.ts"},
+      "cases": ["ai-zero-runtime-dependencies-real-socket"]
     }
   ]
 }

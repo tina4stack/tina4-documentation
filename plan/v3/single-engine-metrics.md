@@ -1,4 +1,4 @@
-# Task: one metrics engine across all four frameworks (ADR-0002)
+# Task: one metrics engine across all four frameworks (ADR-0002, ADR-0054)
 
 ## Goal
 
@@ -25,8 +25,10 @@ backs", camelCase-per-language paradigm for names.
 
 | Surface | Verdict | Why |
 | --- | --- | --- |
-| `full_analysis` / `offenders` / `file_detail` | ENGINE | this IS the analyzer; it duplicated the CLI |
-| `quick_metrics` | STAYS in-process | a FILE CENSUS (globs, line counts, a cheap symbol count). Measured: census 60-78ms vs engine ~1.0-1.4s on ~100 files. The dashboard hits it on every load, so a subprocess there is a visible regression |
+| Native `tina4 metrics` | OWNS | every calculation, offender rule, output, and CI exit code |
+| Dev-admin `full_analysis` / `file_detail` | ADAPTER | shells the native engine and shapes the existing chart payload |
+| Framework `metrics` commands | REMOVED | duplicate ownership created recursion and stale-binary failures |
+| `quick_metrics` / `quickMetrics` | REMOVED | even a census is metrics logic inside the framework; the tab loads the full native payload |
 
 No fallback anywhere: a missing/stale CLI raises and names the install command.
 `/metrics/full` -> 503, `/metrics/file` -> 404 for a bad path else 503.
@@ -35,10 +37,9 @@ No fallback anywhere: a missing/stale CLI raises and names the install command.
 
 - [x] Verify the engine holds the 3.13.91 protections BEFORE cutting
       (nested complexity not double-counted; function LOC == file LOC rule)
-- [x] Python (master): cut analyzer, fold shim in, rewire 3 endpoints + CLI
-- [x] Python: re-point 12 tests, rewrite test_metrics_engine.py
+- [x] Python: keep only the full/file adapter; remove quick endpoint and framework CLI command
 - [x] CLI: fix the gap the cut exposed (class-symbol test detection)
-- [x] PHP: cut analyzer, rewire DevAdmin + bin/tina4php, re-point tests
+- [x] PHP: keep only the full/file adapter; remove quick endpoint and framework CLI command
 - [x] Ruby: same
 - [x] Node: same
 - [x] Four full suites green at the shipping HEAD (see Lines removed + Verification)
@@ -49,11 +50,11 @@ No fallback anywhere: a missing/stale CLI raises and names the install command.
 | Item | Python | PHP | Ruby | Node |
 | --- | --- | --- | --- | --- |
 | analyzer deleted | ✅ | ✅ | ✅ | ✅ |
-| engine-backed full/offenders/fileDetail | ✅ | ✅ | ✅ | ✅ |
-| census stays local | ✅ | ✅ | ✅ | ✅ |
+| engine-backed full/fileDetail | ✅ | ✅ | ✅ | ✅ |
+| local census removed | ✅ | ✅ | ✅ | ✅ |
 | no fallback, loud failure | ✅ | ✅ | ✅ | ✅ |
 | dev-admin 503/404 split | ✅ | ✅ | ✅ | ✅ |
-| CLI ONE engine run | ✅ | ✅ | ✅ | ✅ |
+| framework CLI command removed | ✅ | ✅ | ✅ | ✅ |
 | tests re-pointed + green | ✅ | ✅ | ✅ | ✅ |
 | payload key set identical | ✅ | ✅ | ✅ | ✅ |
 
@@ -86,14 +87,16 @@ Measured census-vs-engine, which is what justified keeping the census local:
 | Node 24 | **5960 passed, 18 failed** | every failure is `sessionHandlers` on ECONNREFUSED 27017 (no local Mongo); metrics files 178/178 |
 | CLI (Rust) | **216 passed, 0 failed** | |
 
-## Tests (real, no doubles - the engine IS the dependency)
+## 3.13.101 completion gate (real CLI 3.8.71, macOS 15)
 
-- [x] Python: 13 engine-contract tests, real binary over real source
-- [x] Python: quick_metrics emits no `engine` key (proves it never became a call)
-- [x] CLI: 4 Rust tests incl. the negative (an unreferenced class is untested)
-- [x] PHP: 63 tests / 231 assertions
-- [x] Ruby: 59 examples
-- [x] Node: 178 across 4 metrics files
+- [x] Python: 10 adapter tests
+- [x] PHP 8.5.7: 3 tests, 12 assertions
+- [x] Ruby 4.0: 3 examples
+- [x] Node: 7 adapter assertions plus TypeScript typecheck
+- [x] Browser assets call only `/metrics/full` and `/metrics/file`
+- [x] File detail returns `function_count` plus a native `functions` array for the browser
+- [x] Framework formula, offender, census, and CLI-command tests removed
+- [ ] Linux lab full suites at the exact release HEAD
 
 ## Bugs found BY doing this (the argument for one engine)
 
@@ -129,6 +132,10 @@ Measured census-vs-engine, which is what justified keeping the census local:
 - [x] The CLI in **PHP, Ruby AND Node** each made TWO engine calls where one
       would do, each carrying the same stale "it is cached" comment. One bug
       copied three times.
+- [x] **Dev-admin file detail exposed `functions` as a number while the browser
+      called `functions.map(...)`.** The adapter now preserves that count as
+      `function_count` and supplies the native function records as `functions`.
+      A real CLI regression failed in all four before the fix and passed after it.
 
 ## Corrections I had to make to my own claims
 
@@ -158,7 +165,9 @@ Measured census-vs-engine, which is what justified keeping the census local:
 - `tina4-php 58e557b8` one engine, -1135 lines (4388 tests, 0 failures)
 - `tina4-ruby 4c57296` one engine, -747 lines (4366 examples, 0 failures)
 - (tina4-nodejs pending: -774 lines, awaiting the full-suite re-run)
+- `tina4-python 46a9234` remove census/CLI; browser-shape handoff regression
+- `tina4-php fa9af870` remove census/CLI; browser-shape handoff regression
+- `tina4-ruby 45df537` remove census/CLI; browser-shape handoff regression
+- `tina4-nodejs 69ba401` remove census/CLI; browser-shape handoff regression
 
-## Status: code + tests DONE in all four. Unreleased on v3 / main.
-Remaining: CLAUDE.md metrics sections, and the `Breaking:` changelog entries
-for the removed keys (see DECISIONS-PENDING-REVIEW.md 1.4-1.7).
+## Status: implementation and focused gates complete in all four; Linux release gate pending.

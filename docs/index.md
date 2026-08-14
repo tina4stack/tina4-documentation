@@ -104,7 +104,7 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 
 ## What's new
 
-**v3.13.100 (2026-08-14)** - [full notes](/python/36-releases.md)
+**v3.13.101 (2026-08-14)** - [full notes](/python/36-releases.md)
 
 Frond keeps the whole page. A second `{% extends %}` now fails with a clear error, nested root blocks keep their content, and Ruby resolves multi-level inheritance without recursing through the same child. Bounded template, fragment, and expression caches stop long-running workers from collecting stale entries. Skill downloads retry transient failures, and release-version guards now keep every package and guide on the same number.
 

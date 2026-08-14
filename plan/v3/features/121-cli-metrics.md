@@ -8,11 +8,11 @@
 - Audit note: NATIVE Rust engine (ADR-0002), not delegated. Scans SOURCE directly via tree-sitter for
   Python / PHP / Ruby / TypeScript+JS / Rust, with NO Tina4 project and NO running framework required.
   Measured 2026-08-11 from `tina4/src/metrics.rs` and the CLI `CLAUDE.md` (which documents it in depth),
-  cross-referenced with the framework metrics engine (`tina4_python/dev_admin/metrics.py`, the formula
-  master) and two known-open memories (the DRY fingerprint-collision bug; the PHP offender-cap gap).
+  cross-referenced with the thin framework dev-admin adapters and two known-open memories (the DRY
+  fingerprint-collision bug; the PHP offender-cap gap).
 - Dependencies: tree-sitter + the per-language grammar crates (~6MB in the release binary). No framework.
 - Dependants: developers checking code health; CI gates (`--fail-on`).
-- Existing ADRs: ADR-0002 (native, language-agnostic metrics).
+- Existing ADRs: ADR-0002 (native engine), ADR-0054 (framework adapter boundary).
 
 - Catalog phase: CLI (native Rust engine)
 
@@ -28,19 +28,18 @@ tree-sitter, so the same numbers come out whatever the project is written in, an
 
 This packet owns the native metrics engine: the per-file metrics (LOC, cyclomatic complexity,
 maintainability index, coupling, function count), the offender ranking, the DRY duplicate detector, the
-parse-health guard, and the flags. It shares its FORMULAS with the Python master (`metrics.py`) by design
-(locked by a parity test) but is a separate implementation.
+parse-health guard, and the flags. It is the only implementation.
 
-It does NOT own the framework's own `dev_admin/metrics.py` runtime (the in-app metrics), though it must
-stay formula-compatible with it.
+Framework dev-admin modules do not calculate metrics. They call this engine's JSON form and shape the
+payload for the existing chart. Framework CLIs do not expose a second `metrics` command.
 
 ## Existing implementation evidence
 
 - Dispatch: `main.rs:405` `Commands::Metrics { path, fail_on, json, top }` -> `metrics.rs`.
 - Engine (per the CLI `CLAUDE.md`): scans source directly for Python/PHP/Ruby/TS+JS/Rust via tree-sitter;
   per-file LOC / CC / MI / coupling / function count; offenders with `--fail-on warn|error`.
-- Formula parity: CC/MI/thresholds identical to the Python master `metrics.py`, locked by a real parity
-  test.
+- Formula ownership: CC, MI, thresholds, test detection, and offender ranking live here and are locked
+  by Rust tests.
 - DRY detection: cross-file duplicate detection via AST-shape hashing (Baxter-style), language-agnostic;
   finds Type-1 (exact) clones plus consistent identifier and same-kind literal renaming. NOT full Type-2
   (comments are hashed, so adding a comment breaks the match - measured in all five languages, locked by a
