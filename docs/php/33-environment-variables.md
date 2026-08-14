@@ -293,26 +293,28 @@ Logs default to stdout. Set `TINA4_LOG_OUTPUT=file` plus `TINA4_LOG_FILE=app.log
 
 ---
 
-## AI and MCP Tooling
+## Application AI Client and Developer AI Tools
 
-The dashboard AI chat and the framework's RAG-based code search both default to a **local qwen2.5-coder model served via Ollama**. Nothing leaves your machine unless you point `TINA4_AI_URL` at a remote endpoint.
+The app-facing `Ai` client and the developer dashboard share the `TINA4_AI_*` namespace. The client supports local OpenAI-compatible servers, OpenAI, and Anthropic. See [Chapter 40: AI Client](40-ai-client.md) for code examples.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_AI_URL` | `http://localhost:11434` | OpenAI-compatible HTTP endpoint for the chat/completion model (Ollama by default). |
-| `TINA4_AI_MODEL` | `qwen2.5-coder` | Model identifier the endpoint should serve. |
-| `TINA4_RAG_URL` | _(inherits `TINA4_AI_URL`)_ | Embedding endpoint for the framework RAG index. |
-| `TINA4_RAG_TOPK` | `4` | Number of nearest-neighbour matches the dev dashboard RAG search returns per query. |
-| `TINA4_AI_MODEL` | `nomic-embed-text` | Embedding model used to index the framework and `src/`. |
-| `TINA4_VISION_URL` | `http://andrevanzuydam.com:11434` | Vision-model endpoint surfaced by the dev dashboard `/__dev/api/vision` probe. |
-| `TINA4_EMBED_URL` | `http://andrevanzuydam.com:11435` | Embeddings endpoint surfaced by the dev dashboard `/__dev/api/embed` probe. |
-| `TINA4_IMAGE_URL` | `http://andrevanzuydam.com:11436` | Image-generation endpoint (e.g. SDXL Turbo) for the dev dashboard image tools. |
-| `TINA4_SUPERVISOR_URL` | _(framework port + 2000)_ | Override the URL of the Rust agent supervisor that the dev dashboard proxies for `/__dev/api/supervise/*` and `/__dev/api/execute`. Defaults to `http://127.0.0.1:9145` when `TINA4_PORT=7145`. |
-| `TINA4_MCP` | _(inherits `TINA4_DEBUG`)_ | Master switch for the MCP subsystem. When unset, follows `TINA4_DEBUG`: MCP is on in dev and off in prod. Set to `false` to keep MCP disabled while leaving debug mode on, or to `true` to expose MCP from a production server (combine with `TINA4_MCP_REMOTE` if binding off-localhost). |
-| `TINA4_MCP_PORT` | _(framework port + 2000)_ | Port the MCP server listens on. Defaults to `TINA4_PORT + 2000` (so `7145` → `9145`). Set explicitly when running multiple Tina4 instances on the same host. |
-| `TINA4_MCP_REMOTE` | `false` | Allow the MCP server to bind on non-localhost interfaces. **Never enable in production.** |
-| `TINA4_NO_AI_PORT` | `false` | Disables the MCP port listener in dev mode. |
-| `TINA4_OVERRIDE_CLIENT` | `false` | Allow the framework to start without the Rust CLI (`tina4 serve`). Used in Docker images and CI runners; bypasses SCSS compilation, the file watcher, and live reload. |
+| `TINA4_AI_PROVIDER` | `local` | Provider used by the app-facing client: `local`, `openai`, or `anthropic`. |
+| `TINA4_AI_URL` | Provider-specific | Base URL or full endpoint. Local defaults to `http://localhost:11437`; OpenAI and Anthropic use their public API bases. |
+| `TINA4_AI_MODEL` | Provider-specific | Default model. Local uses `llama3.2`, OpenAI uses `gpt-4o-mini`, and Anthropic uses `claude-3-5-haiku-latest`. |
+| `TINA4_AI_KEY` | _(none)_ | Required before an OpenAI or Anthropic request. Local requests need no key. |
+| `TINA4_AI_TIMEOUT` | `60` | Total request deadline in seconds, including retries and response reads. |
+| `TINA4_AI_CONNECT_TIMEOUT` | `10` | Connection-establishment deadline in seconds. |
+| `TINA4_AI_MAX_RETRIES` | `2` | Retries before output for connection failures, HTTP 429, and HTTP 5xx. |
+| `TINA4_EMBED_URL` | _(inherits `TINA4_AI_URL`)_ | Optional embedding base URL or full endpoint. |
+| `TINA4_RAG_URL` | `http://localhost:11438` | RAG service used by the developer dashboard. |
+| `TINA4_RAG_TOPK` | `4` | Number of RAG matches returned per query. |
+| `TINA4_VISION_URL` | `http://localhost:11437/api/chat` | Vision endpoint used by developer tools, not the app-facing AI client. |
+| `TINA4_IMAGE_URL` | `http://localhost:11437/api/generate` | Image endpoint used by developer tools, not the app-facing AI client. |
+| `TINA4_SUPERVISOR_URL` | `http://localhost:9999` | Rust supervisor URL used by developer tools. |
+| `TINA4_MCP_REMOTE` | `false` | Allows MCP to bind beyond localhost. Do not enable it on a public production interface. |
+| `TINA4_NO_AI_PORT` | `false` | Disables the developer AI port listener. |
+| `TINA4_OVERRIDE_CLIENT` | `false` | Lets the framework start without the Rust client in containers and CI. |
 
 ---
 

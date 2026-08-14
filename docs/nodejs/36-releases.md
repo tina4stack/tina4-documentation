@@ -32,14 +32,22 @@ modules; your dependency tree does not grow.
 ## v3.13.100 (2026-08-14) - Frond keeps the whole page
 
 This fast-follow release fixes template inheritance and puts a ceiling on
+<div v-pre>
+
 Frond's caches. The template engine now rejects a second `{% extends %}` tag,
 preserves nested root blocks, and evicts stale compiled state instead of
 letting a long-running process grow without limit.
 
+</div>
+
 ### Template inheritance
+
+<div v-pre>
 
 - A template may declare one parent. A second `{% extends %}` now raises a clear error instead of changing the parent without warning (`831bd57`)
 - The final block-substitution pass now tracks nesting depth. A block nested inside another root block no longer causes the outer content to disappear (`5a57300`)
+
+</div>
 
 ### Bounded caches
 
@@ -60,9 +68,13 @@ letting a long-running process grow without limit.
 ### Upgrade notes
 
 No valid template syntax changes. Code that relied on an instance extension
+<div v-pre>
+
 leaking globally must register on `Frond` itself. A template with two `{% extends %}` tags was
 already contradictory; it now fails at the line that needs fixing. Cache
 eviction may trigger a reparse, but it does not change the rendered bytes.
+
+</div>
 
 The Frond AOT compiler is not part of this release. Parser and compiler parity
 for Ruby and Node.js remains planned for `3.13.101`.
@@ -86,11 +98,15 @@ Security now defaults on instead of requiring opt-in.
 - The CSRF `403` body is unified to `{error, code, message, status}`, where Node used to send `{error: "CSRF_INVALID"}`. `TINA4_CSRF=true` now actually attaches the CSRF middleware, where it used to be inert, and a blank `TINA4_SECRET` fails closed now instead of minting a forgeable public-default token (`cc6642a`)
 - The dev server binds `127.0.0.1` by default; set `TINA4_HOST=0.0.0.0` to expose it. A cross-origin `/__dev` mutation is refused, and `.env` is never served through the file endpoints (`97d4f22`)
 - A symlink whose real path escapes the public directory is refused, dotfiles (`.env`, `.git`) 404 instead of serving, and `TINA4_PUBLIC_DIR` is honoured now (`77592ad`)
+<div v-pre>
+
 - `{% include %}`, `{% extends %}`, and `{% import %}` in a Frond template are confined to the templates directory. A path that escapes it, with `..`, an absolute path, or a symlink, now raises (`22e6057`)
 - `tina4 serve` on a busy port no longer kills whatever holds it. It reclaims only a port held by an identifiable Tina4 dev server, refuses a foreign holder, and honours `TINA4_NO_TAKEOVER` / `--no-kill` (`ae7332d`)
 - A hostile inbound `X-Request-ID` (CRLF, illegal characters, an over-long value) is sanitized to a fresh id instead of echoed back raw, closing a response-header and log-injection path (`0828904`)
 - The dead `renderProductionError` function is removed; nothing called it. The dev error overlay now redacts `Authorization`, `Cookie`, and `Set-Cookie` headers plus secret-looking body fields, and caps the rendered stack at 50 frames (`f9afed3`)
 - A repeated multipart file field now yields a list instead of silently dropping every upload but the last. The new safe-save helper rejects `..` and absolute filenames (`5a9bdbe`)
+
+</div>
 
 ### Data integrity
 
@@ -312,6 +328,7 @@ Read these before you upgrade. Each affects an app that relied on the old shape:
 - **Swagger defaults moved.** `info.version` is `1.0.0`, `info.description` is empty, schemas are keyed by class name. `TINA4_SWAGGER_VERSION` and `TINA4_SWAGGER_DESCRIPTION` still override.
 - **An unknown migration kind throws** instead of being ignored.
 - **The framework no longer compiles SCSS.** Use the `tina4` Rust CLI.
+
 
 ## v3.13.95 (2026-08-06) - Preparing for the 3.14 stable release
 

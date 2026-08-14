@@ -8,6 +8,8 @@ With Tina4, the AI reads one file -- `CLAUDE.md` -- and knows everything. Every 
 
 This is not accidental. Tina4 was built from the ground up as the best framework for AI-assisted development.
 
+This chapter explains coding assistants and the `tina4 ai` skills installer. To call a model from your application, see [Chapter 39: AI Client](39-ai-client.md).
+
 ---
 
 ## The Zero-Dependency Advantage

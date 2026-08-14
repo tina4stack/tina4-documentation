@@ -113,6 +113,43 @@ def test_source_version_reads_package_table_not_deps(tmp_path, monkeypatch):
     assert at._cli_source_version() == (3, 8, 53)
 
 
+def test_real_env_vars_uses_stable_ripgrep_flags(tmp_path, monkeypatch):
+    """Ripgrep 15 treats ``-h`` as help, so the audit must use long flags."""
+    rg = at.shutil.which("rg")
+    if rg is None:
+        pytest.skip("ripgrep is not installed")
+
+    framework = tmp_path / "framework"
+    framework.mkdir()
+    (framework / "config.py").write_text(
+        'debug = "TINA4_DEBUG"\nai_key = "TINA4_AI_KEY"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(at, "WORKSPACE_ROOT", tmp_path)
+    monkeypatch.setattr(at, "FRAMEWORK_SOURCES", {"test": ("framework",)})
+    monkeypatch.setattr(
+        at.shutil,
+        "which",
+        lambda name: rg if name == "rg" else None,
+    )
+
+    found, notes = at.real_env_vars()
+    assert notes == []
+    assert found == {"TINA4_DEBUG", "TINA4_AI_KEY"}
+
+
+def test_doc_env_mentions_ignores_bracketed_framework_constants(tmp_path, monkeypatch):
+    page = tmp_path / "environment.md"
+    page.write_text(
+        "TINA4_LOG_LEVEL=[TINA4_LOG_ALL]\nTINA4_AI_KEY=secret\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(at, "find_doc_files", lambda: [page])
+
+    mentions = at.doc_env_mentions()
+    assert set(mentions) == {"TINA4_LOG_LEVEL", "TINA4_AI_KEY"}
+
+
 # ── The core regression: resolver must not trust a stale PATH binary ──
 
 def test_resolver_prefers_sibling_build_over_stale_path(tmp_path, monkeypatch):

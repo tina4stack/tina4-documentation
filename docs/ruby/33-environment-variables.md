@@ -241,7 +241,7 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_LOG_LEVEL` | `ALL` | Console log level. Options: `ALL`, `DEBUG`, `INFO`, `WARNING`, `ERROR`, `NONE`. The legacy bracket-wrapped spelling that repeated the variable name inside the brackets is rejected as of 3.13.99; use the plain names above. |
+| `TINA4_LOG_LEVEL` | `[TINA4_LOG_ALL]` | Console log level. Options: `[TINA4_LOG_ALL]`, `[TINA4_LOG_DEBUG]`, `[TINA4_LOG_INFO]`, `[TINA4_LOG_WARNING]`, `[TINA4_LOG_ERROR]`, `[TINA4_LOG_NONE]`. Also accepts plain `DEBUG`, `INFO`, `ERROR`, etc. |
 | `TINA4_LOG_MAX_SIZE` | `10` | Per-file log size limit in megabytes. Rotated when exceeded. |
 | `TINA4_LOG_KEEP` | `5` | Number of rotated log files to retain. |
 
@@ -285,19 +285,28 @@ Logs default to stdout. Set `TINA4_LOG_OUTPUT=file` plus `TINA4_LOG_FILE=app.log
 
 ---
 
-## AI and MCP Tooling
+## Application AI Client and Developer AI Tools
 
-The dashboard AI chat and the framework's RAG-based code search both default to a **local qwen2.5-coder model served via Ollama**. Nothing leaves your machine unless you point `TINA4_AI_URL` at a remote endpoint.
+The app-facing `Ai` client and the developer dashboard share the `TINA4_AI_*` namespace. The client supports local OpenAI-compatible servers, OpenAI, and Anthropic. See [Chapter 39: AI Client](39-ai-client.md) for code examples.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_AI_URL` | `http://localhost:11434` | OpenAI-compatible HTTP endpoint for the chat/completion model (Ollama by default). |
-| `TINA4_AI_MODEL` | `qwen2.5-coder` | Model identifier the endpoint should serve. |
-| `TINA4_RAG_URL` | _(inherits `TINA4_AI_URL`)_ | Embedding endpoint for the framework RAG index. |
-| `TINA4_AI_MODEL` | `nomic-embed-text` | Embedding model used to index the framework and `src/`. |
-| `TINA4_MCP_REMOTE` | `false` | Allow the MCP server to bind on non-localhost interfaces. **Never enable in production.** |
-| `TINA4_NO_AI_PORT` | `false` | Disables the MCP port listener in dev mode. |
-| `TINA4_OVERRIDE_CLIENT` | `false` | Allow the framework to start without the Rust CLI (`tina4 serve`). Used in Docker images and CI runners; bypasses SCSS compilation, the file watcher, and live reload. |
+| `TINA4_AI_PROVIDER` | `local` | Provider used by the app-facing client: `local`, `openai`, or `anthropic`. |
+| `TINA4_AI_URL` | Provider-specific | Base URL or full endpoint. Local defaults to `http://localhost:11437`; OpenAI and Anthropic use their public API bases. |
+| `TINA4_AI_MODEL` | Provider-specific | Default model. Local uses `llama3.2`, OpenAI uses `gpt-4o-mini`, and Anthropic uses `claude-3-5-haiku-latest`. |
+| `TINA4_AI_KEY` | _(none)_ | Required before an OpenAI or Anthropic request. Local requests need no key. |
+| `TINA4_AI_TIMEOUT` | `60` | Total request deadline in seconds, including retries and response reads. |
+| `TINA4_AI_CONNECT_TIMEOUT` | `10` | Connection-establishment deadline in seconds. |
+| `TINA4_AI_MAX_RETRIES` | `2` | Retries before output for connection failures, HTTP 429, and HTTP 5xx. |
+| `TINA4_EMBED_URL` | _(inherits `TINA4_AI_URL`)_ | Optional embedding base URL or full endpoint. |
+| `TINA4_RAG_URL` | `http://localhost:11438` | RAG service used by the developer dashboard. |
+| `TINA4_RAG_TOPK` | `4` | Number of RAG matches returned per query. |
+| `TINA4_VISION_URL` | `http://localhost:11437/api/chat` | Vision endpoint used by developer tools, not the app-facing AI client. |
+| `TINA4_IMAGE_URL` | `http://localhost:11437/api/generate` | Image endpoint used by developer tools, not the app-facing AI client. |
+| `TINA4_SUPERVISOR_URL` | `http://localhost:9999` | Rust supervisor URL used by developer tools. |
+| `TINA4_MCP_REMOTE` | `false` | Allows MCP to bind beyond localhost. Do not enable it on a public production interface. |
+| `TINA4_NO_AI_PORT` | `false` | Disables the developer AI port listener. |
+| `TINA4_OVERRIDE_CLIENT` | `false` | Lets the framework start without the Rust client in containers and CI. |
 
 ---
 

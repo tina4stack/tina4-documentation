@@ -155,7 +155,7 @@ sync_book() {
     [ -f "$chapter" ] || continue
     rewrite_crossbook_paths < "$chapter" \
       | escape_twig \
-      | sed 's/^```env$/```bash/' \
+      | sed -E -e 's/^# Chapter [0-9]+: /# /' -e 's/^```env$/```bash/' \
       > "$dest/$(basename "$chapter")"
     count=$((count + 1))
   done

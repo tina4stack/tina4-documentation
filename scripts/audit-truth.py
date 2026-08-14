@@ -549,7 +549,13 @@ def real_env_vars() -> tuple[set[str], list[str]]:
             # python walk if rg isn't installed.
             if shutil.which("rg"):
                 out = subprocess.run(
-                    ["rg", "-oh", r"TINA4_[A-Z][A-Z0-9_]+", str(root)],
+                    [
+                        "rg",
+                        "--only-matching",
+                        "--no-filename",
+                        r"TINA4_[A-Z][A-Z0-9_]+",
+                        str(root),
+                    ],
                     capture_output=True, text=True, check=False,
                 ).stdout
             else:
@@ -573,6 +579,11 @@ def doc_env_mentions() -> dict[str, list[Path]]:
     for path in find_doc_files():
         text = path.read_text(encoding="utf-8", errors="replace")
         for m in _DOC_ENV_RE.finditer(text):
+            # Bracketed names are framework constants resolved by the .env
+            # parser, not operating-system environment variables.
+            if m.start() > 0 and m.end() < len(text):
+                if text[m.start() - 1] == "[" and text[m.end()] == "]":
+                    continue
             seen[m.group(0)].append(path)
     return seen
 
