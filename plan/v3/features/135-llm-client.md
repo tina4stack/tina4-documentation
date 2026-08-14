@@ -3,7 +3,7 @@
 ## Identity and status
 
 - Matrix identity: 135 - App-facing LLM client (`Ai.chat` / `Ai.embed` from application code)
-- Audit state: design-ready (GREENFIELD - not yet written in any of the four frameworks)
+- Audit state: approved for 3.13.101 implementation (GREENFIELD - not yet written in any of the four frameworks)
 - Audit note: this is a DESIGN spec, not an audit of shipped code. There is no LLM client today (see
   `plan/v3/AI-SURFACE-MAP.md`, commit `4e78642`): only feature-108 AI-tool integration, a DEV-only
   `/ai/api/chat` verbatim proxy to `TINA4_AI_URL`, the Rust agent proxy, and MCP (inbound tools). The design
@@ -14,7 +14,7 @@
   `TINA4_AI_*` env family; the framework `Log` (for redacted diagnostics).
 - Dependants: application routes, models, and services that want a completion / embedding; optionally the
   dev-admin chat panel (which could be re-pointed at the client instead of its verbatim proxy).
-- Existing ADRs: none dedicated (propose one for the provider abstraction + timeout contract).
+- Governing ADR: ADR-0053 (accepted 2026-08-14); shared fixture: `ai_client_contract.json`.
 
 - Catalog phase: AI (application capability)
 
@@ -149,10 +149,9 @@ rest of the framework holds.
 
 ## Owner decisions
 
-- AILLM-DEC-01..08 above are the design decisions; the proposed resolutions are the recommended build. The
-  one genuinely open question for the owner: whether the MVP includes `embed` (recommended yes - it reuses
-  `TINA4_EMBED_URL` and is cheap) and whether `vision`/`image` ship in v1 (recommended: defer to a follow-up
-  once `chat`/`embed` are proven).
+- AILLM-DEC-01..08 were approved for 3.13.101 and ratified by ADR-0053 on 2026-08-14.
+- `embed` is included in 3.13.101. `vision` and `image` are deferred.
+- The unimplemented tina4-python#109 `Llm.ask`/`ask_json` proposal does not create a second public API.
 
 ## Proposed conformance fixture
 

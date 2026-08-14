@@ -66,6 +66,7 @@ Conventions:
 | ADR-0050 | [One buffered response, strict recursive JSON, explicit representation types](decisions/ADR-0050.md) (supersedes ADR-0019 clauses) | Proposed |
 | ADR-0051 | [Systemic ORM row-cap: unbounded reads, pagination the only limiter](decisions/ADR-0051.md) (net-new; consolidates Features 5/21/22/23/24 row-cap clauses) | Proposed |
 | ADR-0052 | [Frond extension registration scope follows the call target](decisions/ADR-0052.md) (resolves Feature 56 EX-DEC-01) | Accepted |
+| ADR-0053 | [One zero-dependency app-facing AI client contract](decisions/ADR-0053.md) (resolves Feature 135) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
