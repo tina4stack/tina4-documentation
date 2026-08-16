@@ -82,6 +82,6 @@ The Tina4 client itself reports 19 Rust files, 796 functions, average CC 4.67, a
 
 ## Commits
 
-- Pending audit commit.
+- `fffb85c` - re-audit the native metrics feature, correct stale claims, and record the measured framework evaluation.
 
 ## Status: Evaluation complete; owner decisions pending
