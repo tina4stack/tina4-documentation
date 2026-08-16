@@ -1,160 +1,152 @@
-# Feature 121: CLI metrics (native code-health engine)
+# Feature 121: CLI code metrics
 
 ## Identity and status
 
-- Matrix identity: 121 - `tina4 metrics` (code-health offenders: complexity, MI, large files, untested,
-  duplication)
-- Audit state: decision-ready
-- Audit note: NATIVE Rust engine (ADR-0002), not delegated. Scans SOURCE directly via tree-sitter for
-  Python / PHP / Ruby / TypeScript+JS / Rust, with NO Tina4 project and NO running framework required.
-  Measured 2026-08-11 from `tina4/src/metrics.rs` and the CLI `CLAUDE.md` (which documents it in depth),
-  cross-referenced with the thin framework dev-admin adapters and two known-open memories (the DRY
-  fingerprint-collision bug; the PHP offender-cap gap).
-- Dependencies: tree-sitter + the per-language grammar crates (~6MB in the release binary). No framework.
-- Dependants: developers checking code health; CI gates (`--fail-on`).
+- Matrix identity: 121 — CLI code metrics
+- Audit state: auditing
+- Audit note: remeasured 2026-08-16 with the published Tina4 `v3.8.75` binary against the active Python, PHP, Ruby, Node.js, and tina4-js source trees. Focused fixtures and the native Rust source were also inspected. Framework metrics modules are thin dev-admin adapters; they do not calculate metrics.
+- Dependencies: tree-sitter and the supported language grammar crates in the Tina4 client binary. Language runtimes and extensions are not dependencies.
+- Dependants: developers, CI gates using `--fail-on`, and the framework dev-admin adapters.
 - Existing ADRs: ADR-0002 (native engine), ADR-0054 (framework adapter boundary).
-
-- Catalog phase: CLI (native Rust engine)
+- Shared fixtures: native Rust metric fixtures plus released-binary framework corpus evaluation.
 
 ## Why this feature exists
 
-`tina4 metrics` reports the worst offenders in a codebase - high cyclomatic complexity, low
-maintainability index, large files, untested code, and duplication - so a team can find the risky code
-without a running app. It is native and language-agnostic: one Rust engine parses five languages through
-tree-sitter, so the same numbers come out whatever the project is written in, and it can gate CI with
-`--fail-on`.
+`tina4 metrics` finds code-health risks without starting an application. One native engine gives every supported language the same command, thresholds, JSON contract, and CI gate.
 
 ## Boundary
 
-This packet owns the native metrics engine: the per-file metrics (LOC, cyclomatic complexity,
-maintainability index, coupling, function count), the offender ranking, the DRY duplicate detector, the
-parse-health guard, and the flags. It is the only implementation.
+This packet owns source discovery, parsing, metrics, offender ranking, duplicate detection, parse-health reporting, test-reference detection, and CLI flags. The engine is implemented once in `tina4/src/metrics.rs`.
 
-Framework dev-admin modules do not calculate metrics. They call this engine's JSON form and shape the
-payload for the existing chart. Framework CLIs do not expose a second `metrics` command.
+Framework dev-admin modules only run the native client in JSON mode and adapt its response for the existing chart. Framework CLIs do not own another metrics implementation.
 
 ## Existing implementation evidence
 
-- Dispatch: `main.rs:405` `Commands::Metrics { path, fail_on, json, top }` -> `metrics.rs`.
-- Engine (per the CLI `CLAUDE.md`): scans source directly for Python/PHP/Ruby/TS+JS/Rust via tree-sitter;
-  per-file LOC / CC / MI / coupling / function count; offenders with `--fail-on warn|error`.
-- Formula ownership: CC, MI, thresholds, test detection, and offender ranking live here and are locked
-  by Rust tests.
-- DRY detection: cross-file duplicate detection via AST-shape hashing (Baxter-style), language-agnostic;
-  finds Type-1 (exact) clones plus consistent identifier and same-kind literal renaming. NOT full Type-2
-  (comments are hashed, so adding a comment breaks the match - measured in all five languages, locked by a
-  test). Type-3/4 are NOT detected.
-- Parse-health guard: a file under 95% of lines parsing cleanly, or an AST nesting deeper than 800 levels
-  (which used to abort the whole scan with a stack overflow), is REFUSED - excluded from every average,
-  listed under `unparsed` in `--json`, counted as `files_refused`, and raised as a `warn` offender.
-- No Pascal/Delphi grammar: the only crate (tree-sitter-pascal 0.10.2) leaves 51.5% of the real
-  tina4delphi corpus unparsed, so `.pas` is NOT claimed rather than reported wrong.
+| Evidence | Python | PHP | Ruby | Node |
+| --- | --- | --- | --- | --- |
+| Public surface | Native `tina4 metrics`; thin dev-admin JSON adapter | Native `tina4 metrics`; thin dev-admin JSON adapter | Native `tina4 metrics`; thin dev-admin JSON adapter | Native `tina4 metrics`; thin dev-admin JSON adapter |
+| Startup/CLI integration | Rust client scans source directly | Rust client scans source directly | Rust client scans source directly | Rust client scans `packages/*/src` directly |
+| Stored/wire format | Shared JSON response | Shared JSON response | Shared JSON response | Shared JSON response |
+| Existing focused tests | Native formula and parser fixtures | Native formula and parser fixtures | Native formula and parser fixtures | Native formula and parser fixtures |
+| Existing lab baseline | 95 core files; 0 refused | 151 core files; 0 refused | 113 core files; 0 refused | 125 core files; 0 refused |
+
+tina4-js uses the same TypeScript/JavaScript parser and JSON contract; its baseline is 29 core files with zero refusals.
+
+- Dispatch: `main.rs` `Commands::Metrics { path, fail_on, json, top }` calls `metrics.rs`.
+- Supported source: Python, PHP, Ruby, TypeScript/JavaScript, and Rust through tree-sitter.
+- Metrics: LOC, cyclomatic complexity (CC), maintainability index (MI), coupling, and function count.
+- Thresholds: function CC above 10 is a warning and above 20 is an error; file LOC above 500 and function count above 20 are warnings; MI below 40 warns only when average CC is at least 5, and MI below 20 errors.
+- DRY detection: AST-shape Type-1 clones plus consistent identifier and same-kind literal renaming. Comments affect the hash; Type-3 and Type-4 clones are not detected.
+- Parse health: files below 95% clean parsing or above 800 AST nesting levels are refused, reported in JSON, and excluded from averages.
+- `--top` limits displayed offenders only. Summary totals, file metrics, and exit gating still use the complete result.
+- Test presence is a lexical reference heuristic over `tests`, `test`, and `spec`; it is not test execution or coverage.
+- No Pascal/Delphi grammar is claimed because the available grammar does not parse the corpus reliably.
 
 ## Public surface contract
 
-`tina4 metrics [--top N] [--json] [--fail-on warn|error] [--path DIR|FILE]`. Human table by default;
-`--json` for tooling (includes `unparsed` + `files_refused`). `--fail-on` gates CI (non-zero exit on a
-warn/error offender, including a refused file).
+`tina4 metrics [--top N] [--json] [--fail-on warn|error] [--path DIR|FILE]`
+
+Human-readable output is the default. JSON includes file metrics, offenders, parse refusals, and summary totals. `--fail-on` returns a non-zero exit when an offender at the selected severity exists. An `untested` signal is informational and does not fail `warn` or `error` gates.
 
 ## Inputs and outputs
 
-- Input: a directory or file of source (any of the five supported languages). Output: ranked offenders
-  (or JSON), and an exit code gated by `--fail-on`.
-- A file the engine cannot parse cleanly is refused (not silently dropped, not reported with wrong
-  numbers) - the honest failure mode.
+- Input: one source file or directory, or automatic project source discovery when `--path` is omitted.
+- Output: ranked offenders or JSON plus a severity-gated process exit code.
+- Default discovery checks `src`, then `packages/*/src`, then the current directory.
+- Default ignored directories include `node_modules`, `vendor`, `.git`, `target`, `dist`, `build`, `__pycache__`, and virtual environments.
+- Generated minified and bundle assets are ignored. Declaration files, test files, galleries, and dev-admin source are not generally excluded.
 
 ## Lifecycle and operation graph
 
-1. Walk the path (skipping node_modules/vendor/.git/target/dist/build/__pycache__).
-2. Parse each file with the matching tree-sitter grammar; apply the parse-health guard (refuse < 95% /
-   > 800 nesting).
-3. Compute per-file metrics; hash AST shapes for DRY across files.
-4. Rank offenders; print the table or JSON; set the exit code per `--fail-on`.
+1. Discover source and skip known dependency, build, cache, and minified-asset paths.
+2. Parse each supported file and refuse files that fail the parse-health rule.
+3. Calculate file and function metrics and AST-shape duplicate fingerprints.
+4. Search conventional test directories for lexical references to each source file.
+5. Rank all offenders, truncate presentation only when `--top` is supplied, emit human or JSON output, and apply the exit gate.
 
 ## Configuration and precedence
 
-- Flags only (`--top`, `--json`, `--fail-on`, `--path`). No env. The thresholds match the Python master.
+The public controls are `--top`, `--json`, `--fail-on`, and `--path`. There is no environment configuration and no repeatable exclusion flag.
 
 ## Failures, side effects and security
 
-- Read-only over source; no side effects, no security surface.
-- Parse-health guard is the safety mechanism: it turned a whole-scan stack-overflow abort (deep nesting)
-  into a per-file refusal - a good robustness fix.
-- METRICS-DRY-COLLISION (known open): the shipped DRY detector has a fingerprint-collision bug (per the
-  design memory) - distinct code can share a fingerprint and be reported as a clone (a false positive), or
-  the reverse. This is a real accuracy defect in the duplicate detector.
-- METRICS-OFFENDER-CAP (known open): the offender cap was fixed in four languages but PHP is pending -
-  so PHP metrics may over- or under-report offenders relative to the others.
+- The engine is read-only over source and creates no project state.
+- Parse failures are surfaced instead of silently producing misleading numbers.
+- A refused file is a warning and can fail a warning-level CI gate.
+- The test-reference heuristic produces both false positives and false negatives; it must not be presented as coverage.
 
 ## Wire and persistence contract
 
-`--json` is the machine contract: per-file metrics plus `unparsed` (refused files) and `files_refused` in
-the summary. No persisted state. The formula constants (CC/MI thresholds) are the shared contract with
-`metrics.py`.
+JSON is the machine contract. It contains per-file metrics, offender details, `has_tests`, `unparsed`, and `files_refused`. No state is persisted. `has_tests` currently means that a conventional test file appears to reference the source, not that a test executed or covered it.
 
 ## Providers and substitutability
 
-The provider is the tree-sitter grammar per language (Python/PHP/Ruby/TS+JS/Rust). Delphi is deliberately
-absent (the grammar is inadequate). Adding a language means adding a grammar + a metrics mapping.
+Each supported language is provided by a tree-sitter grammar plus the engine's node mapping. Adding another language requires a reliable grammar, callable/decision mappings, representative fixtures, parse-health checks, and comparison against the existing thresholds and output contract.
 
 ## Contradictions and defects
 
 | ID | Finding | Proposed resolution |
 | --- | --- | --- |
-| METRICS-DRY-COLLISION | The DRY duplicate detector has a known fingerprint-collision bug (AST-shape hashing can collide distinct code, or miss a real clone). This produces false clone reports (or misses), undermining the duplication metric. | FIX per the design memory: strengthen the fingerprint (include a discriminator that distinguishes colliding shapes) and add a regression with the known colliding pair. This is the highest-value metrics fix. |
-| METRICS-OFFENDER-CAP | The offender cap (limit on reported offenders) was fixed in four languages but PHP is pending, so PHP output can differ from the others. | Finish the PHP offender-cap fix so all five languages cap identically. |
-| METRICS-DRY-TYPE2 | DRY is Type-1 + renaming only; adding a COMMENT breaks the match (comments are hashed), and Type-3/4 are not detected. This is documented and locked by a test, but a user may expect comment-insensitive matching. | No code change required (it is honest and tested); consider hashing code tokens only (ignore comments) so a comment does not defeat clone detection - an accuracy improvement, owner call. |
-| METRICS-NO-DELPHI | `.pas`/Delphi is not measured (the grammar is inadequate). Documented and correct (better than reporting wrong numbers), but leaves tina4delphi uncovered. | No action; revisit if a capable Delphi grammar appears. |
+| METRICS-SCAN-SCOPE | There is no `--exclude`. Dev-admin, galleries, declarations, and test sources can contaminate a project score. The audit required post-processing to compare core framework source fairly. | Add a repeatable `--exclude GLOB`; exclude declarations and conventional test/spec files from production scoring by default, while allowing an explicit override. |
+| METRICS-TEST-FALSE-NEGATIVE | Real tests can be missed. Examples include tina4-js multiline and dynamic imports and PHP tests whose generic filename references exported classes rather than the module stem. | Parse imports/requires and exported symbols instead of relying on line and filename substrings. Include dynamic imports. |
+| METRICS-TEST-FALSE-POSITIVE | Ruby files that only share `module Tina4` are all reported as tested when one unrelated test references `Tina4`. | Ignore namespace wrappers as evidence and rename the field to `has_referencing_test` so the contract remains honest. |
+| METRICS-SCOPE-PARITY | TypeScript arrow functions are separate callable scopes, while PHP anonymous functions and Ruby blocks/lambdas roll their decisions into the parent. Equivalent code therefore receives different function counts and offender thresholds. | Define one nested-callable rule and implement it consistently. Measuring PHP and Ruby closures separately best matches TypeScript and developer expectations. |
+| METRICS-DRY-TYPE2 | Comments affect duplicate hashes, so otherwise identical code separated only by comments is not detected. Type-3/4 duplication is also outside the stated capability. | Keep the limitation explicit; decide whether Type-2 should become comment-insensitive. |
+| METRICS-NO-DELPHI | Delphi is not measured because the available grammar is not sufficiently reliable. | Keep the language unsupported until a grammar passes representative corpus fixtures. |
+
+The earlier audit's claimed DRY fingerprint collision and language-specific PHP offender-cap defect were not reproduced and do not match the single native-engine architecture. They are removed from the backlog unless a concrete fixture is supplied.
 
 ## Owner decisions
 
-- METRICS-DEC-01 (proposed): fix the DRY fingerprint collision (highest value) and finish the PHP
-  offender-cap; decide whether to make DRY comment-insensitive.
+1. Add repeatable exclusions and safe production-source defaults.
+2. Rename the heuristic result to `has_referencing_test` and repair its parser-based detection.
+3. Measure nested PHP and Ruby callables separately to align scope across languages.
+4. Decide whether comments should be ignored for Type-2 duplicate matching.
 
 ## Proposed conformance fixture
 
-Native Rust tests (they already exist for the formula parity and the DRY comment-break): add the DRY
-collision regression (a known colliding pair that must NOT be reported as a clone, and a real clone that
-MUST be), the PHP offender-cap parity (same cap as the other four), and a parse-health case (a > 800-deep
-file is refused, not crashed, and appears under `files_refused`).
+- Scan-scope fixtures prove repeatable exclusions and the default treatment of declaration and test files.
+- Positive and negative test-reference fixtures cover single-line, multiline, aliased, and dynamic imports plus generic test filenames.
+- A shared Ruby namespace without a source reference must remain untested.
+- Equivalent nested-callable fixtures in Python, PHP, Ruby, TypeScript, JavaScript, and Rust must produce the same callable boundaries and decision allocation.
+- `--top 1` must retain complete totals and gating.
+- An informational missing-test result must not fail `--fail-on warn`; a real error must fail `--fail-on error`.
+- Every framework corpus must complete with zero silent parse omissions.
 
 ## Integration map
 
-- Dispatch: `main.rs` `Commands::Metrics` -> `metrics.rs`.
-- Formula master: `tina4_python/dev_admin/metrics.py` (parity-locked).
-- Grammars: tree-sitter Python/PHP/Ruby/TypeScript/Rust.
-- Consumers: CI (`--fail-on`), tooling (`--json`).
+- Formula and implementation owner: `tina4/src/metrics.rs`.
+- Dispatch: `tina4/src/main.rs`.
+- Thin consumers only: Python `dev_admin/metrics.py`, PHP `Metrics.php`, Ruby `metrics.rb`, and Node.js `metrics.ts`.
+- Other consumers: CI through exit codes and tooling through JSON.
 
 ## Breaking changes and migration
 
-- Fixing the DRY collision changes some duplicate reports (fewer false positives / more true positives) -
-  an accuracy improvement, document it.
-- The PHP offender-cap fix aligns PHP output with the others.
+- Renaming `has_tests` is a JSON breaking change, acceptable before the 3.14.0 stable contract. A temporary alias may be emitted only if external consumers require migration time.
+- Correct nested-callable scopes and exclusions will change historical totals and offender ranks. Release notes must identify this as an accuracy correction.
+- The dev-admin adapters must pass exclusions through and accept the corrected JSON field without recreating metric logic.
 
 ## Implementation backlog
 
-1. Fix METRICS-DRY-COLLISION with the colliding-pair regression.
-2. Finish the PHP offender-cap (METRICS-OFFENDER-CAP).
-3. Decide DRY comment-insensitivity (METRICS-DRY-TYPE2).
+1. Add `--exclude` and production-source defaults.
+2. Correct and rename the test-reference signal.
+3. Normalize nested-callable scope across languages.
+4. Decide and, if approved, implement comment-insensitive Type-2 matching.
+5. Lock the released framework corpus and focused fixtures into parity tests.
 
 ## Porting capsule
 
-`tina4 metrics` is one native Rust engine; there is nothing to port across the frameworks (it replaces
-per-language metrics for the CLI). A clean-room reimplementation needs: tree-sitter parsing for the five
-languages, per-file CC/MI/LOC/coupling matching the `metrics.py` formulas, AST-shape DRY hashing with a
-collision-resistant fingerprint, a parse-health guard (refuse < 95% clean or > 800 nesting, never crash
-the scan), offender ranking with a consistent cap, and `--top`/`--json`/`--fail-on`/`--path`. Do not
-claim a language whose grammar cannot parse it (the Delphi lesson).
+Keep metrics as one native engine rather than porting calculations into each framework. To add another language: add and validate its grammar; map files, imports, declarations, callables, decisions, and nested callable boundaries; apply the shared thresholds and JSON schema; prove parse health on a representative corpus; run positive/negative test-reference and duplicate fixtures; compare equivalent callable fixtures across every supported language; and add it to the released-binary framework evaluation. Never claim support when the grammar or scope mapping makes the result misleading.
 
 ## Audit closure checklist
 
 - [x] Boundary and public surface complete.
 - [x] Lifecycle and every producer/consumer edge complete.
 - [x] Configuration, failure, side-effect and security rules complete.
-- [x] Wire/storage (JSON) and grammar contracts complete.
-- [x] Native single-implementation + known defects recorded.
-- [x] Owner ambiguities decided and recorded.
-- [x] Proposed test cases (DRY collision, PHP cap, parse-health) complete.
+- [x] Wire/storage and provider contracts complete.
+- [x] Existing-language contradictions recorded.
+- [ ] Owner ambiguities decided and recorded.
+- [x] Proposed shared cases and mutation witnesses complete.
 - [x] Integration map and breaking migrations complete.
 - [x] Implementation backlog dependency-ordered.
-- [x] Porting capsule sufficient.
+- [x] Porting capsule is clean-room sufficient.
