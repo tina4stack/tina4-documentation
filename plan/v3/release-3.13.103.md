@@ -16,9 +16,9 @@ notes covering the native metrics contract and Frond maintenance work.
       plus the documentation landing page.
 - [x] Add publish guards that reject a tag/source version mismatch.
 - [x] Build the four distributable artifacts and verify embedded versions.
-- [ ] Merge release PRs into v3 and verify the exact merge heads.
-- [ ] Tag 3.13.103, wait for all publish workflows, and verify registries.
-- [ ] Delete the release branches and record final release commits.
+- [x] Merge release PRs into v3 and verify the exact merge heads.
+- [x] Tag 3.13.103, wait for all publish workflows, and verify registries.
+- [x] Delete the release branches and record final release commits.
 
 ## Parity
 
@@ -28,7 +28,7 @@ notes covering the native metrics contract and Frond maintenance work.
 | Changelog present | ✅ | ✅ | ✅ | ✅ |
 | Tag/source guard | ✅ | ✅ | ✅ | ✅ |
 | Full suite green | ✅ | ✅ | ✅ | ✅ |
-| Public registry 3.13.103 | ⏳ | ⏳ | ⏳ | ⏳ |
+| Public registry 3.13.103 | ✅ | ✅ | ✅ | ✅ |
 
 ## Tests
 
@@ -39,7 +39,7 @@ notes covering the native metrics contract and Frond maintenance work.
 - [x] Node tarball metadata reports 3.13.103.
 - [x] Documentation and book audits pass with matching release notes.
 - [x] Publish workflows fail before registry mutation when tag and source differ.
-- [ ] Post-merge v3 workflows pass at the tagged commits.
+- [x] Post-merge v3 workflows pass at the tagged commits.
 
 ## Bugs
 
@@ -47,6 +47,11 @@ notes covering the native metrics contract and Frond maintenance work.
 - [x] RELEASE-102-NODE: tag 3.13.102 built 3.13.101 and npm rejected it.
 - [x] RELEASE-VERSION-GUARD: publish workflows do not uniformly prove the tag
       matches the source package/runtime version before publishing.
+- [x] RELEASE-103-NODE-PUBLISH: Node 22/npm 10 rejected optional Vitest/esbuild
+      peer metadata omitted by the npm 11 lock generator. The exact tested
+      package was published with the authenticated `tina4stack` account, and
+      PR 47 completes the lock metadata without changing `package.json` or
+      runtime dependencies.
 
 ## Lab evidence
 
@@ -63,13 +68,21 @@ signed native client from 3.8.71 to 3.8.76:
   entries aligned.
 - Book: the JavaScript reference build reproduced byte for byte.
 
-## Commits
+## Tagged release commits
 
-- Python: `81f3d566977b41a2c9a9186151966a3e21866ca5`
-- PHP: `4546f0b6a9c782fe378a2ac7bb2e2406fb9dd2e9`
-- Ruby: `306274e23abb02cb88843e8d9875487a60f2e364`
-- Node.js: `38541c021653bd34f4b726fe8aeb7d3a2fb6c61b`
-- Documentation: `75df822` (release evidence update pending)
-- Book: `0628094`
+- Python: `915ec30d7a853dc051316150499543dee6f89e9d`
+- PHP: `d2af43f2b7243d8c508341d24e4458f75652d384`
+- Ruby: `4c915473c9e439bf0953cf9285bbb5d3557916d5`
+- Node.js: `24668fe4906242e9326ea0c791db9783e206453a`
+- Documentation: `15b1d0db39e616f0a806a616c8a5800663b7c59c`
+- Book: `a48dae4fddf2d026277035e5670b6598c375830d`
 
-## Status: Lab green; awaiting merge and registry publication
+## Publication
+
+- PyPI: `tina4-python 3.13.103`
+- Packagist: `tina4stack/tina4php 3.13.103`
+- RubyGems: `tina4ruby 3.13.103`
+- npm: `tina4-nodejs 3.13.103`
+- GitHub: four non-draft, non-prerelease `3.13.103` releases.
+
+## Status: Complete
