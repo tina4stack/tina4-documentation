@@ -13,7 +13,7 @@ boundary/cluster regressions exposed by the rerun are fixed rather than hidden.
 - [x] Pin and checksum client 3.8.76 in Python, PHP, Ruby, and Node CI.
 - [x] Fix PHP timeout-boundary classification against libpq's real wording.
 - [x] Make Node's cluster distribution test use distinct TCP connections.
-- [ ] Run focused tests and complete framework CI at the exact pushed heads.
+- [x] Run focused tests and complete framework CI at the exact pushed heads.
 
 ## Parity
 
@@ -40,6 +40,10 @@ boundary/cluster regressions exposed by the rerun are fixed rather than hidden.
 - [x] PHP timeout boundary, real black-hole connect, and instant-refusal
       negative pass: 3 tests / 25 assertions.
 - [x] Node cluster-mode suite passes three consecutive runs: 2 tests each.
-- [ ] Four GitHub Actions test workflows pass at the final v3 commits.
+- [x] Four GitHub Actions test workflows pass at the final v3 commits:
+      Python `ac905b2` (5,477 passed / 4 skipped), PHP `b1d24fa0`
+      (5,444 tests / 18,877 assertions / 58 skipped), Ruby `caf5cbb8`
+      (5,446 examples / 32 pending), and Node `b54ced12`
+      (8,391 passed / 30 skipped); zero failures.
 
-## Status: In progress
+## Status: Complete
