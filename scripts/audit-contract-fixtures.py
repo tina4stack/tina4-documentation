@@ -45,6 +45,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 REPOS = ROOT.parent
 FIXTURE_DIR = ROOT / "plan" / "v3" / "fixtures"
 REPO_DIRS = {
+    "native": REPOS / "tina4",
     "ruby": REPOS / "tina4-ruby",
     "python": REPOS / "tina4-python",
     "php": REPOS / "tina4-php",

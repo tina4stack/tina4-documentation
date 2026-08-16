@@ -1,0 +1,56 @@
+{
+  "_comment": "Feature 121 native metrics contract for the 3.14.0 stability boundary. ADR-0055 was accepted on 2026-08-16. The framework adapters consume this JSON; they do not implement these rules.",
+  "version": 1,
+  "decided": "2026-08-16",
+  "adr": "ADR-0055",
+  "invariants": [
+    {
+      "id": "metrics-production-source-scope",
+      "adr": "ADR-0055",
+      "rule": "Conventional tests, specs, declarations, and conftest.py are excluded from production scoring by default; repeatable --exclude globs remove project paths and --include-non-production restores the default exclusions.",
+      "why": "A production score must describe shipped source while retaining an explicit way to inspect every file.",
+      "suites": {"native": "src/metrics.rs"},
+      "cases": ["production_source_defaults_and_globs_are_explicit", "target_resolution_applies_repeatable_exclusions_and_allows_an_override"]
+    },
+    {
+      "id": "metrics-test-signal-is-honest",
+      "adr": "ADR-0055",
+      "rule": "JSON emits has_referencing_test and never emits has_tests; a missing reference is informational no_test_reference rather than a coverage claim.",
+      "why": "Import or symbol evidence cannot prove execution or coverage.",
+      "suites": {"native": "src/metrics.rs"},
+      "cases": ["json_names_the_test_signal_honestly", "offender_too_many_functions_and_no_test_reference"]
+    },
+    {
+      "id": "metrics-reference-detection",
+      "adr": "ADR-0055",
+      "rule": "Parsed multiline and dynamic imports and exported symbols count as references; a shared Ruby namespace does not.",
+      "why": "The signal must reject both known false negatives and the framework-wide Ruby false positive.",
+      "suites": {"native": "src/metrics.rs"},
+      "cases": ["multiline_and_dynamic_typescript_imports_are_test_references", "a_barrel_import_can_reference_an_exported_function", "a_shared_ruby_namespace_is_not_a_test_reference"]
+    },
+    {
+      "id": "metrics-callable-scope-parity",
+      "adr": "ADR-0055",
+      "rule": "Nested callables own their decisions in Python, PHP, Ruby, TypeScript and JavaScript, and Rust.",
+      "why": "Equivalent code must retain its score when ported to another supported language.",
+      "suites": {"native": "src/metrics.rs"},
+      "cases": ["nested_callable_boundaries_match_in_all_languages"]
+    },
+    {
+      "id": "metrics-type-two-comments",
+      "adr": "ADR-0055",
+      "rule": "Comments do not change Type-2 clone fingerprints; executable Python docstrings remain significant.",
+      "why": "Comments should not hide a structural clone, while runtime syntax must remain part of the fingerprint.",
+      "suites": {"native": "src/metrics.rs"},
+      "cases": ["comments_are_ignored_for_type_2_duplication"]
+    },
+    {
+      "id": "metrics-formula-calibration",
+      "adr": "ADR-0055",
+      "rule": "The accepted scope-neutral LOC, complexity, function-count, maintainability, and average-complexity baseline remains fixed in the native engine.",
+      "why": "The retired Python adapter delegates to the native engine and cannot serve as an independent oracle.",
+      "suites": {"native": "src/metrics.rs"},
+      "cases": ["scope_neutral_formula_fixture_stays_stable"]
+    }
+  ]
+}

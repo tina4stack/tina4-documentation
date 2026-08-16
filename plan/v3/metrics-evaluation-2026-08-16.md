@@ -1,6 +1,8 @@
 # Tina4 Metrics Evaluation
 
-**Outcome:** Establish whether the released native `tina4 metrics` engine produces a fair, actionable, cross-language worklist for the Tina4 framework family, with dev-admin excluded and test presence reported honestly.
+**Outcome:** The released engine exposed four correctness gaps. ADR-0055 resolves
+them in the rebuilt engine: production-source controls, an honest test-reference
+signal, equal callable scopes, and comment-insensitive Type-2 matching.
 
 ## Scope
 
@@ -72,16 +74,41 @@ The Tina4 client itself reports 19 Rust files, 796 functions, average CC 4.67, a
 3. Nested callable scope differs by language: TypeScript arrows are separate functions, while PHP anonymous functions and Ruby blocks/lambdas contribute decisions to the parent.
 4. Comment-sensitive duplicate hashes detect less than users may expect from Type-2 duplication.
 
-## Recommended remediation order
+All four findings above describe the published `v3.8.75` baseline. The corrected
+engine closes them and retains this section as the before-state evidence.
 
-1. Add repeatable `--exclude GLOB` and safe production-source defaults.
-2. Rename `has_tests` to `has_referencing_test` and use parsed imports, dynamic imports, and exported symbols.
-3. Measure nested PHP and Ruby callables separately to align with TypeScript and the conceptual function boundary.
-4. Decide whether Type-2 duplication should ignore comments.
-5. Lock all framework corpora and focused cross-language fixtures into the native metrics test suite.
+## Implemented remediation
+
+1. Added repeatable `--exclude GLOB`, safe production defaults, and
+   `--include-non-production`.
+2. Renamed `has_tests` to `has_referencing_test`; parsed imports, dynamic imports,
+   and public symbols now supply evidence.
+3. Assigned nested Python, PHP, Ruby, TypeScript/JavaScript, and Rust callables
+   their own decision scopes.
+4. Made Type-2 fingerprints ignore comments while retaining executable Python
+   docstrings.
+5. Added `metrics_contract.json`, 84 focused native checks, real framework
+   handoff tests, and five production-corpus scans with zero refusals.
+
+## Corrected-engine dashboard
+
+| Check | Python | PHP | Ruby | Node.js | tina4-js |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Production files measured | 107 | 158 | 122 | 146 | 29 |
+| Reference evidence | 99 | 136 | 109 | 111 | 23 |
+| Parse refusals | 0 | 0 | 0 | 0 | 0 |
+| Legacy `has_tests` field | 0 | 0 | 0 | 0 | 0 |
+
+The framework adapters pass against the rebuilt binary: Python 10 tests, PHP 3,
+Ruby 3, and Node.js 12. Node.js also passes its typecheck.
+
+Warm tina4-js scans move from 0.10s on the released binary to 0.15–0.16s on the
+corrected engine. The Python corpus moves from 1.71s to 2.04s. The added work
+parses conventional tests once and reuses their import index; it does not repeat
+that parse for every production file.
 
 ## Commits
 
 - `fffb85c` - re-audit the native metrics feature, correct stale claims, and record the measured framework evaluation.
 
-## Status: Evaluation complete; owner decisions pending
+## Status: Evaluation complete; approved corrections implemented and verified locally
