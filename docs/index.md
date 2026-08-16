@@ -50,6 +50,14 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
+## Current framework release: 3.13.103
+
+Python, PHP, Ruby, and Node.js are aligned on 3.13.103. This release makes the
+native Tina4 client the single owner of metrics, preserves Frond parity, and
+prevents a mismatched source version from reaching a package registry.
+
+[Read the release notes](/python/36-releases.md)
+
 ## Your AI doesn't know Tina4 yet. Give it 30 seconds.
 
 Copy this into Claude, Cursor, Copilot, or whatever you already have open. It reads the bootstrap protocol, installs what it needs, and hands you a running REST API with JWT auth. Same prompt, four languages.

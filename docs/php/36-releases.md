@@ -1,6 +1,34 @@
 # Release Notes
 
-## v3.13.101 (2026-08-14) - One AI client, four languages
+## v3.13.103 (2026-08-16) - Metrics you can trust, releases that cannot lie
+
+This release restores one public version across Python, PHP, Ruby, and Node.js.
+Version 3.13.102 reached PyPI and Packagist, but its RubyGems and npm packages
+still contained 3.13.101. Skip 3.13.102 and upgrade to 3.13.103.
+
+### What changed
+
+- Dev-admin hands metrics work to the signed Tina4 client 3.8.76. Frameworks do
+  not keep a second metrics analyser or silently fall back to one.
+- `has_referencing_test` means that test source refers to the file. It does not
+  claim that the test ran, passed, or covered the file.
+- Frond expression parsing and evaluation are split into smaller internal steps,
+  while public APIs and the shared 84-case expression corpus remain unchanged.
+- Tina4 skills lead with `tina4 init` and `tina4 serve`, and keep scaffolding
+  prominent in every language.
+- Release workflows now reject a tag that differs from the source package
+  version before publishing.
+
+No runtime packages were added. Language extensions remain extensions, not
+framework dependencies.
+
+### PHP connection timeout diagnosis
+
+PostgreSQL's explicit `timeout expired` result is now classified as the configured
+connection timeout at the clock boundary. Immediate connection refusals remain
+ordinary connection errors.
+
++## v3.13.101 (2026-08-14) - One AI client, four languages
 
 One class. Three methods. No provider SDK.
 Tina4 applications can now call local models, OpenAI, and Anthropic through the
