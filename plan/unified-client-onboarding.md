@@ -47,5 +47,6 @@
 - `8b202bc` - Ruby and shared frontend skills synchronized.
 - `985884c` - Node.js and shared frontend skills synchronized.
 - `bfaceb6` - books use the unified client for project startup.
+- `75e8f05` - PHP and JavaScript book PDFs rebuilt and visually verified.
 
 ## Status: Complete
