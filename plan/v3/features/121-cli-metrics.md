@@ -160,6 +160,8 @@ scope, Type-2 comment handling, and formula calibration to named native tests.
 - Production corpus: five language trees, zero refused files, zero legacy fields.
 - Framework handoffs: Python 10, PHP 3, Ruby 3, and Node.js 12 passing.
 - Node.js typecheck: passing.
+- Linux lab root gate: native 84, Python 10, PHP 3, Ruby 3, Node.js 12,
+  contract ledger 288/288; five production corpora completed with zero refusals.
 - Warm tina4-js benchmark: released `v3.8.75` 0.10s; corrected engine 0.15–0.16s.
 - Python corpus benchmark: released engine 1.71s; corrected engine 2.04s.
 
@@ -190,8 +192,8 @@ These breaks are intentional before 3.14.0. No temporary JSON alias is required.
 ## Implementation backlog
 
 No engine or adapter work remains for the approved audit decisions. Release
-integration must run the same focused handoffs and contract checker on the Linux
-lab. Delphi support remains a separate language-provider task until a grammar
+integration must preserve the green focused handoffs and contract checker.
+Delphi support remains a separate language-provider task until a grammar
 passes representative corpus fixtures.
 
 ## Porting capsule
