@@ -5,7 +5,7 @@
 Friday afternoon. Your client reports a critical bug in production. You fix it -- one line of code. But did that fix break something else? 47 routes. 12 ORM models. 3 middleware functions. Clicking through every page: an hour. Running the test suite: 2 seconds.
 
 ```bash
-tina4ruby test
+tina4 test
 ```
 
 ```
@@ -27,7 +27,7 @@ tina4ruby test
 
 Everything still passes. Deploy with confidence. Weekend intact.
 
-Tina4 ships an inline testing framework -- no RSpec, no Minitest, no setup ceremony. The `Tina4::Testing` module gives you `describe`/`it` blocks, a full set of `assert_*` helpers, and an in-process HTTP test client. `tina4ruby test` discovers `*_test.rb` and `test_*.rb` files under `tests/`, `test/`, `spec/`, or `src/tests/` and runs them.
+Tina4 ships an inline testing framework -- no RSpec, no Minitest, no setup ceremony. The `Tina4::Testing` module gives you `describe`/`it` blocks, a full set of `assert_*` helpers, and an in-process HTTP test client. `tina4 test` discovers `*_test.rb` and `test_*.rb` files under `tests/`, `test/`, `spec/`, or `src/tests/` and runs them.
 
 ---
 
@@ -60,7 +60,7 @@ end
 Run it:
 
 ```bash
-tina4ruby test
+tina4 test
 ```
 
 ```
@@ -77,7 +77,7 @@ tina4ruby test
 1. `Tina4::Testing.describe` opens a suite. The block defines the suite's tests.
 2. Each `it` registers a single test case. The description string becomes the label printed to the console.
 3. Inside an `it` block you call `assert_*` helpers to check behaviour. Any assertion that fails raises `Tina4::Testing::TestFailure` and marks the test as failed.
-4. `Tina4::Testing.run_all` runs every registered suite. `tina4ruby test` calls it for you.
+4. `Tina4::Testing.run_all` runs every registered suite. `tina4 test` calls it for you.
 
 ---
 
@@ -411,10 +411,10 @@ There is no per-suite hook. If you need one-off setup that applies to every test
 
 ```bash
 # Run every discovered test file
-tina4ruby test
+tina4 test
 ```
 
-The runner walks `tests/`, `test/`, `spec/`, and `src/tests/` (in that order) and loads every `*_test.rb` and `test_*.rb` file it finds. Inline tests declared inside route files are picked up automatically because `tina4ruby test` also loads `routes/`.
+The runner walks `tests/`, `test/`, `spec/`, and `src/tests/` (in that order) and loads every `*_test.rb` and `test_*.rb` file it finds. Inline tests declared inside route files are picked up automatically because `tina4 test` also loads `routes/`.
 
 Output uses ANSI colours: green checks for passes, red crosses for failures, and yellow bangs for unexpected exceptions. Exit code is non-zero if any test fails or errors -- perfect for CI.
 
@@ -685,7 +685,7 @@ end
 
 **Problem:** `NameError: uninitialized constant Product` when the test loads.
 
-**Cause:** Routes and ORM models are normally loaded by the server boot path. `tina4ruby test` calls `Tina4.initialize!(Dir.pwd)` followed by route discovery, but a model file that isn't `require`d anywhere won't load on its own.
+**Cause:** Routes and ORM models are normally loaded by the server boot path. `tina4 test` calls `Tina4.initialize!(Dir.pwd)` followed by route discovery, but a model file that isn't `require`d anywhere won't load on its own.
 
 **Fix:** Either `require_relative "../src/orm/product"` at the top of the test file, or move the model into the autoloaded `src/orm/` directory.
 

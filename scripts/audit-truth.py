@@ -24,6 +24,10 @@ What it checks
    appear in at least one framework source tree (read from a getenv()-
    style call). Source of truth: ripgrep across the four framework repos.
 
+3. **Onboarding facts** — package identifiers, public documentation links,
+   primary lifecycle commands, scaffold syntax, and the tina4-js development
+   port must match the package manifests and unified Tina4 client source.
+
 The script discovers source trees by walking ``..`` from the docs repo,
 looking for the CLI repo ``tina4`` and the framework repos
 ``tina4-{python,php,ruby,nodejs,js}``. If a sibling is missing, the
@@ -455,10 +459,12 @@ def check_cli() -> tuple[int, list[str]]:
     missing_second: dict[tuple[str, str], list[Path]] = defaultdict(list)
 
     for (cmd, second), paths in mentions.items():
-        # Colon-form: ``migrate:create`` / ``make:migration`` — never a
-        # real Tina4 form, always fake.
+        # Colon forms owned by a blind-forwarded framework command are real:
+        # the client passes ``migrate:status`` / ``migrate:rollback`` through
+        # verbatim. A colon form whose base is not forwarded is still fake.
         if ":" in cmd:
-            missing_first[cmd].extend(paths)
+            if cmd.split(":", 1)[0] not in FORWARDED_SUBCOMMANDS:
+                missing_first[cmd].extend(paths)
             continue
         if cmd not in real_top:
             missing_first[cmd].extend(paths)
@@ -909,6 +915,87 @@ def check_python_api() -> tuple[int, list[str]]:
     return drift, lines
 
 
+# ── Onboarding facts: manifests + unified client are authoritative ─────
+
+_LEGACY_PRIMARY_CMD_RE = re.compile(
+    r"\b(tina4php|tina4ruby|tina4nodejs) "
+    r"(serve|generate|migrate(?::[a-z-]+)?|test|routes)\b"
+)
+_BAD_DOC_LINK_RE = re.compile(
+    r"https://github\.com/tina4stack/tina4-documentation/blob/main/"
+    r"(?:python|php|ruby|nodejs|js)/index\.md"
+)
+_BAD_PACKAGE_COMMANDS = (
+    ("composer require tina4/tina4-php", re.compile(r"\bcomposer require tina4/tina4-php(?![A-Za-z0-9_-])")),
+    ("gem install tina4", re.compile(r"\bgem install tina4(?![A-Za-z0-9_-])")),
+    ("npm install tina4", re.compile(r"\bnpm install tina4(?![A-Za-z0-9_-])")),
+)
+
+
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def _tina4js_scaffold_port() -> int | None:
+    source = CLI_REPO / "src" / "init.rs"
+    if not source.exists():
+        return None
+    match = re.search(r"vite\.config\.ts.*?port:\s*(\d+)",
+                      source.read_text(encoding="utf-8", errors="replace"),
+                      re.DOTALL)
+    return int(match.group(1)) if match else None
+
+
+def check_onboarding() -> tuple[int, list[str]]:
+    """Block stale developer setup facts that command-name validation misses.
+
+    The generic CLI check proves that ``tina4 generate`` exists, but cannot
+    tell whether a page makes a package CLI the primary entry point, names the
+    wrong package, links to a dead path, or combines the current scaffold with
+    an old Vite port. Those are the mismatches developers actually experience.
+    """
+    lines = [f"\n{cyan('Onboarding check')} — package names, links, unified "
+             "commands, scaffold syntax, and tina4-js port"]
+    bad: set[tuple[str, str]] = set()
+    js_port = _tina4js_scaffold_port()
+
+    for path in find_doc_files():
+        if path.name == "36-releases.md":
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        rel = _display_path(path)
+
+        for label, pattern in _BAD_PACKAGE_COMMANDS:
+            if pattern.search(text):
+                bad.add((rel, f"wrong package command: {label}"))
+        for match in _BAD_DOC_LINK_RE.finditer(text):
+            bad.add((rel, f"dead documentation link: {match.group(0)}"))
+        for match in _LEGACY_PRIMARY_CMD_RE.finditer(text):
+            bad.add((rel, f"primary workflow bypasses tina4: {match.group(0)}"))
+
+        if rel.endswith("docs/js/13-backend-integration.md"):
+            if re.search(r"\btina4 create\b.*--(?:php|python|ruby|nodejs|js)\b", text):
+                bad.add((rel, "old project syntax: use tina4 init <language> <path>"))
+            if "port: 3000" in text:
+                bad.add((rel, "old Vite scaffold port: 3000"))
+        if js_port and rel.endswith("docs/js/01-getting-started.md"):
+            if f"localhost:{js_port}" not in text or "localhost:3000" in text:
+                bad.add((rel, f"tina4-js URL does not match scaffold port {js_port}"))
+
+    if not bad:
+        suffix = f" {js_port}" if js_port else " (CLI source unavailable)"
+        lines.append(green(f"  ✓ onboarding facts match code; tina4-js port{suffix}"))
+        return 0, lines
+
+    lines.append(red(f"  ✗ {len(bad)} stale onboarding fact(s):"))
+    for rel, detail in sorted(bad):
+        lines.append(f"    {red('•')} {rel}: {dim(detail)}")
+    return len(bad), lines
+
+
 # ── Driver ────────────────────────────────────────────────────────────
 
 CHECKS = {
@@ -919,6 +1006,7 @@ CHECKS = {
     "vue": check_vue_interp,
     "pyapi": check_python_api,
     "landing": check_landing_page_version,
+    "onboarding": check_onboarding,
 }
 
 
@@ -974,6 +1062,7 @@ def main() -> int:
         + json_payload.get("frontmatter", 0)
         + json_payload.get("vue", 0)
         + json_payload.get("pyapi", 0)
+        + json_payload.get("onboarding", 0)
     )
     if args.strict and strict_drift > 0:
         return 1

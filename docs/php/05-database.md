@@ -648,7 +648,7 @@ The `.down.sql` file is optional but recommended for production projects. It con
 ```bash
 tina4 migrate
 # or
-tina4php migrate
+tina4 migrate
 ```
 
 ```
@@ -662,7 +662,7 @@ Each call to `tina4 migrate` is a **batch**. All pending migrations applied in a
 ### Checking Migration Status
 
 ```bash
-tina4php migrate:status
+tina4 migrate:status
 ```
 
 ```
@@ -677,7 +677,7 @@ Shows which migrations have been applied and which are still pending.
 ### Rolling Back
 
 ```bash
-tina4php migrate:rollback
+tina4 migrate:rollback
 ```
 
 ```
@@ -1219,11 +1219,11 @@ Every row gets `role = "member"` and `active = 1`. The field map generates the r
 
 **Cause:** Tina4 tracks applied migrations by filename in the `tina4_migration` table. Once applied, a migration will not run again regardless of content changes.
 
-**Fix:** Create a new migration for schema changes. Never edit applied migrations. For early development, use `tina4php migrate:rollback` first, then `tina4 migrate` to reapply.
+**Fix:** Create a new migration for schema changes. Never edit applied migrations. For early development, use `tina4 migrate:rollback` first, then `tina4 migrate` to reapply.
 
 ### 7. Down Migration Not Found During Rollback
 
-**Problem:** `tina4php migrate:rollback` removes the tracking record but does not reverse the schema change.
+**Problem:** `tina4 migrate:rollback` removes the tracking record but does not reverse the schema change.
 
 **Cause:** The `.down.sql` file is missing, or its name does not match the migration. For `20260322143000_create_products_table.sql`, the down file must be `20260322143000_create_products_table.down.sql` -- same base name with `.down.sql` appended before the extension.
 

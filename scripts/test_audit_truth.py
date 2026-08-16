@@ -150,6 +150,41 @@ def test_doc_env_mentions_ignores_bracketed_framework_constants(tmp_path, monkey
     assert set(mentions) == {"TINA4_LOG_LEVEL", "TINA4_AI_KEY"}
 
 
+def test_onboarding_flags_wrong_packages_legacy_commands_links_and_js_port(
+        tmp_path, monkeypatch):
+    page = tmp_path / "docs" / "js" / "13-backend-integration.md"
+    page.parent.mkdir(parents=True)
+    page.write_text(
+        "composer require tina4/tina4-php\n"
+        "tina4ruby generate model Product\n"
+        "https://github.com/tina4stack/tina4-documentation/blob/main/js/index.md\n"
+        "tina4 create demo --php\n"
+        "port: 3000\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(at, "find_doc_files", lambda: [page])
+    monkeypatch.setattr(at, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(at, "_tina4js_scaffold_port", lambda: 5173)
+
+    drift, lines = at.check_onboarding()
+    assert drift == 5, "\n".join(lines)
+
+
+def test_onboarding_accepts_unified_current_workflow(tmp_path, monkeypatch):
+    page = tmp_path / "docs" / "js" / "01-getting-started.md"
+    page.parent.mkdir(parents=True)
+    page.write_text(
+        "tina4 init js my-app\ntina4 serve\nhttp://localhost:5173\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(at, "find_doc_files", lambda: [page])
+    monkeypatch.setattr(at, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(at, "_tina4js_scaffold_port", lambda: 5173)
+
+    drift, lines = at.check_onboarding()
+    assert drift == 0, "\n".join(lines)
+
+
 # ── The core regression: resolver must not trust a stale PATH binary ──
 
 def test_resolver_prefers_sibling_build_over_stale_path(tmp_path, monkeypatch):
@@ -207,6 +242,19 @@ def test_fake_command_is_still_flagged(tmp_path, monkeypatch):
     })
     drift, lines = at.check_cli()
     assert drift == 1, "\n".join(lines)
+
+
+def test_framework_colon_subcommand_is_forwarded(tmp_path, monkeypatch):
+    repo = _fake_cli_repo(tmp_path / "tina4", "3.9.0", built_binary=True)
+    monkeypatch.setattr(at, "CLI_REPO", repo)
+    monkeypatch.setattr(at.shutil, "which", lambda name: None)
+    monkeypatch.delenv("TINA4_CLI_BIN", raising=False)
+    monkeypatch.setattr(at, "doc_cli_mentions", lambda: {
+        ("migrate:status", None): [at.REPO_ROOT / "docs/database.md"],
+        ("migrate:rollback", None): [at.REPO_ROOT / "docs/database.md"],
+    })
+    drift, lines = at.check_cli()
+    assert drift == 0, "\n".join(lines)
 
 
 # ── Integration: the real sibling repo, if present, has zero CLI drift ─

@@ -11,7 +11,7 @@ That is Tina4's scaffolding system. It generates the boilerplate you write by ha
 This is the generator most developers reach for first. It creates everything a feature needs in one shot.
 
 ```bash
-tina4nodejs generate crud Product --fields "name:string,price:float"
+tina4 generate crud Product --fields "name:string,price:float"
 ```
 
 That single command creates six files:
@@ -158,8 +158,8 @@ describe("Products API", () => {
 After generating, run the migration and start the server:
 
 ```bash
-tina4nodejs migrate
-tina4nodejs serve
+tina4 migrate
+tina4 serve
 ```
 
 Open Swagger UI at `http://localhost:7148/swagger` and test every endpoint. The scaffolded code works out of the box.
@@ -173,7 +173,7 @@ The CRUD generator calls several smaller generators under the hood. You can call
 ### Model
 
 ```bash
-tina4nodejs generate model Product --fields "name:string,price:float"
+tina4 generate model Product --fields "name:string,price:float"
 ```
 
 Creates three files: the ORM model (`src/orm/Product.ts`), the UP migration, and the DOWN migration. No routes, no templates, no tests.
@@ -181,7 +181,7 @@ Creates three files: the ORM model (`src/orm/Product.ts`), the UP migration, and
 ### Route
 
 ```bash
-tina4nodejs generate route products --model Product
+tina4 generate route products --model Product
 ```
 
 Creates one file: `src/routes/products.ts` with CRUD endpoints and Swagger annotations. The model must exist first.
@@ -189,7 +189,7 @@ Creates one file: `src/routes/products.ts` with CRUD endpoints and Swagger annot
 ### Migration
 
 ```bash
-tina4nodejs generate migration add_category_to_product
+tina4 generate migration add_category_to_product
 ```
 
 Creates two files: `migrations/20260401_add_category_to_product.sql` and `migrations/20260401_add_category_to_product.down.sql`. Both are empty stubs. You write the SQL.
@@ -197,7 +197,7 @@ Creates two files: `migrations/20260401_add_category_to_product.sql` and `migrat
 ### Middleware
 
 ```bash
-tina4nodejs generate middleware AuthLog
+tina4 generate middleware AuthLog
 ```
 
 Creates one file with before and after stubs:
@@ -219,7 +219,7 @@ middleware("AuthLogAfter", "after", async (request, response) => {
 ### Test
 
 ```bash
-tina4nodejs generate test products --model Product
+tina4 generate test products --model Product
 ```
 
 Creates one file: `test/products.test.ts` with CRUD stubs using the built-in test runner.
@@ -227,7 +227,7 @@ Creates one file: `test/products.test.ts` with CRUD stubs using the built-in tes
 ### Form
 
 ```bash
-tina4nodejs generate form Product --fields "name:string,price:float"
+tina4 generate form Product --fields "name:string,price:float"
 ```
 
 Creates one file: `src/templates/products/form.html` with typed inputs and `form_token`.
@@ -235,7 +235,7 @@ Creates one file: `src/templates/products/form.html` with typed inputs and `form
 ### View
 
 ```bash
-tina4nodejs generate view Product --fields "name:string,price:float"
+tina4 generate view Product --fields "name:string,price:float"
 ```
 
 Creates two templates: a list view and a detail view in `src/templates/products/`.
@@ -243,7 +243,7 @@ Creates two templates: a list view and a detail view in `src/templates/products/
 ### CRUD
 
 ```bash
-tina4nodejs generate crud Product --fields "name:string,price:float"
+tina4 generate crud Product --fields "name:string,price:float"
 ```
 
 Shorthand for running all generators at once: model, migration, route, form, view, and test.
@@ -251,7 +251,7 @@ Shorthand for running all generators at once: model, migration, route, form, vie
 ### Auth
 
 ```bash
-tina4nodejs generate auth
+tina4 generate auth
 ```
 
 Generates the full authentication scaffold: User model, migrations, login/register/logout routes, templates, and tests.
@@ -284,7 +284,7 @@ Place your ORM models in `src/models/` and the framework discovers and mounts al
 Authentication needs more than one file. The auth generator creates seven:
 
 ```bash
-tina4nodejs generate auth
+tina4 generate auth
 ```
 
 | # | File | Purpose |
@@ -302,8 +302,8 @@ The generated routes handle password hashing, JWT token creation, and session ma
 Run the migration, start the server, and you have working auth:
 
 ```bash
-tina4nodejs migrate
-tina4nodejs serve
+tina4 migrate
+tina4 serve
 ```
 
 ---
@@ -333,7 +333,7 @@ Tina4 uses singular table names. The model name `Product` maps to the table `pro
 Sometimes you want a model with routes but no form. Or a model with a migration but no test. The `--with` flags let you compose:
 
 ```bash
-tina4nodejs generate model Product --fields "name:string,price:float" --with-route --with-migration
+tina4 generate model Product --fields "name:string,price:float" --with-route --with-migration
 ```
 
 Available flags:
@@ -357,25 +357,25 @@ Build a blog with three resources using generators.
 **Step 1:** Generate the auth system.
 
 ```bash
-tina4nodejs generate auth
+tina4 generate auth
 ```
 
 **Step 2:** Scaffold the Post resource.
 
 ```bash
-tina4nodejs generate crud Post --fields "title:string,body:text,published:bool"
+tina4 generate crud Post --fields "title:string,body:text,published:bool"
 ```
 
 **Step 3:** Scaffold the Category resource.
 
 ```bash
-tina4nodejs generate crud Category --fields "name:string,description:text"
+tina4 generate crud Category --fields "name:string,description:text"
 ```
 
 **Step 4:** Add a migration to link posts to categories.
 
 ```bash
-tina4nodejs generate migration add_category_id_to_post
+tina4 generate migration add_category_id_to_post
 ```
 
 Edit the migration to add the foreign key:
@@ -387,8 +387,8 @@ ALTER TABLE post ADD COLUMN category_id INTEGER REFERENCES category(id);
 **Step 5:** Run all migrations and start the server.
 
 ```bash
-tina4nodejs migrate
-tina4nodejs serve
+tina4 migrate
+tina4 serve
 ```
 
 You now have a working blog with authentication, posts, categories, and Swagger documentation. Total commands: five. Total hand-written SQL: one line.
@@ -403,7 +403,7 @@ If a file exists, the generator skips it and prints a warning. This protects you
 
 ### Run Migrate After Generate
 
-The model generator creates migration files. Those files do nothing until you run `tina4nodejs migrate`. Generate and migrate are separate steps by design.
+The model generator creates migration files. Those files do nothing until you run `tina4 migrate`. Generate and migrate are separate steps by design.
 
 ### File Naming Matters
 
@@ -422,7 +422,7 @@ Tina4 uses singular table names: `product`, not `products`. The route paths use 
 If `tina4nodejs` is not in your PATH, use `npx`:
 
 ```bash
-npx tina4nodejs generate crud Product --fields "name:string,price:float"
+npx tina4 generate crud Product --fields "name:string,price:float"
 ```
 
 All generator commands work the same way through npx.

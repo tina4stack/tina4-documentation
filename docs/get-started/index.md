@@ -117,7 +117,7 @@ tina4 serve
 
 Access your app at `http://localhost:7146`
 
-Take a deeper dive into the [documentation](https://github.com/tina4stack/tina4-documentation/blob/main/python/index.md)
+Take a deeper dive into the [Python documentation](/python/).
 
 ### Node.js
 
@@ -129,7 +129,7 @@ tina4 serve
 
 Access your app at `http://localhost:7148`
 
-Take a deeper dive into the [documentation](https://github.com/tina4stack/tina4-documentation/blob/main/nodejs/index.md)
+Take a deeper dive into the [Node.js documentation](/nodejs/).
 
 ### PHP
 
@@ -141,7 +141,7 @@ tina4 serve
 
 Access your app at `http://localhost:7145`
 
-Take a deeper dive into the [documentation](https://github.com/tina4stack/tina4-documentation/blob/main/php/index.md)
+Take a deeper dive into the [PHP documentation](/php/).
 
 ### Ruby
 
@@ -153,7 +153,7 @@ tina4 serve
 
 Access your app at `http://localhost:7147`
 
-Take a deeper dive into the [documentation](https://github.com/tina4stack/tina4-documentation/blob/main/ruby/index.md)
+Take a deeper dive into the [Ruby documentation](/ruby/).
 
 ## JavaScript (tina4-js)
 
@@ -168,7 +168,7 @@ tina4 serve
 
 Access your app at `http://localhost:5173`
 
-Take a deeper dive into the [documentation](https://github.com/tina4stack/tina4-documentation/blob/main/js/index.md)
+Take a deeper dive into the [tina4-js documentation](/js/).
 
 ## Delphi 10.4+
 

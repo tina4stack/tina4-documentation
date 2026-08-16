@@ -28,7 +28,7 @@ But tina4-js works with any backend that sends JSON and accepts Bearer tokens. T
 Backend (tina4-php):
 
 ```bash
-tina4 create my-backend --php
+tina4 init php my-backend
 cd my-backend
 tina4 serve
 # Running on http://localhost:7145
@@ -39,7 +39,6 @@ Frontend (tina4-js):
 ```bash
 tina4 init js my-frontend
 cd my-frontend
-npm install
 ```
 
 > In npm-only environments where the `tina4` Rust CLI isn't available, the fallback is `npx tina4js create my-frontend`.
@@ -52,12 +51,18 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   server: {
-    port: 3000,
+    port: 5173,
     proxy: {
       '/api': 'http://localhost:7145',
     },
   },
 });
+```
+
+Start the frontend through the Tina4 client:
+
+```bash
+tina4 serve
 ```
 
 Configure the API client:
@@ -125,13 +130,13 @@ The backend defines the endpoints. The frontend consumes them. The proxy bridges
 Backend (tina4-python):
 
 ```bash
-tina4 create my-backend --python
+tina4 init python my-backend
 cd my-backend
 tina4 serve
-# Running on http://localhost:7145
+# Running on http://localhost:7146
 ```
 
-The Vite proxy and API configuration are identical to the PHP setup. Same config. Same proxy. Same port.
+The API configuration is identical to the PHP setup. Change the Vite proxy target to `http://localhost:7146` for the Python backend.
 
 ### tina4-python Routes
 
@@ -461,7 +466,7 @@ my-project/
     src/
 ```
 
-The frontend runs on `localhost:3000` with Vite. The backend runs on `localhost:7145`. Vite proxies API calls. Each team works in its own directory, its own repository, its own deployment pipeline.
+The frontend runs on `localhost:5173` with Vite. The backend runs on `localhost:7145`. Vite proxies API calls. Each team works in its own directory, its own repository, its own deployment pipeline.
 
 ### Embedded Frontend
 

@@ -648,7 +648,7 @@ Down migrations are optional. If you skip them, rollback will warn you but still
 ```bash
 tina4 migrate
 # or
-tina4nodejs migrate
+tina4 migrate
 ```
 
 Each run increments a batch number. Every migration applied during that run belongs to the same batch. This matters for rollback.
@@ -656,7 +656,7 @@ Each run increments a batch number. Every migration applied during that run belo
 ### Checking Status
 
 ```bash
-tina4nodejs migrate:status
+tina4 migrate:status
 ```
 
 This shows which migrations have been applied and which are still pending.
@@ -664,7 +664,7 @@ This shows which migrations have been applied and which are still pending.
 ### Rolling Back
 
 ```bash
-tina4nodejs migrate:rollback
+tina4 migrate:rollback
 ```
 
 Rollback undoes the entire last batch. It finds each migration in the batch, runs its `.down.sql` file, and removes the tracking record. If a `.down.sql` file is missing, rollback warns but still cleans up the tracking entry.
@@ -946,11 +946,11 @@ Router.delete("/api/notes/{id:int}", async (req, res) => {
 
 **Cause:** Once applied, a migration will not run again.
 
-**Fix:** Create a new migration for schema changes. Do not edit applied migrations. If you need to undo, run `tina4nodejs migrate:rollback` first, then fix the migration and re-run.
+**Fix:** Create a new migration for schema changes. Do not edit applied migrations. If you need to undo, run `tina4 migrate:rollback` first, then fix the migration and re-run.
 
 ### 8. Down Migration Missing on Rollback
 
-**Problem:** You ran `tina4nodejs migrate:rollback` but the table was not dropped.
+**Problem:** You ran `tina4 migrate:rollback` but the table was not dropped.
 
 **Cause:** The `.down.sql` file is missing. Rollback removes the tracking record but cannot undo the schema change without it.
 

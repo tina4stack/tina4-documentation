@@ -451,7 +451,7 @@ function send(text) { chat.send(JSON.stringify({ type: "message", body: text }))
 Start it the usual way. The WebSockets run alongside the HTTP server:
 
 ```bash
-tina4ruby serve
+tina4 serve
 ```
 
 The signalling socket is public: anyone with the room name joins. The chat socket and the history and file endpoints require a valid JWT and channel membership. Two browser tabs, both members of channel `42`, joined to room `standup`, see each other's video peer to peer and each other's messages through the relay.

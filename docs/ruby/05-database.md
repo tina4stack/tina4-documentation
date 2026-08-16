@@ -661,7 +661,7 @@ Migrations complete. 1 applied.
 ### Checking Migration Status
 
 ```bash
-tina4ruby migrate:status
+tina4 migrate:status
 ```
 
 ```
@@ -674,7 +674,7 @@ Migration                                    Status     Applied At
 ### Rolling Back
 
 ```bash
-tina4ruby migrate:rollback
+tina4 migrate:rollback
 ```
 
 ```
@@ -1212,7 +1212,7 @@ Files run in alphabetical order. Prefix with numbers to control sequence. Files 
 
 **Cause:** Tina4 tracks applied migrations by filename in the `tina4_migration` table. Once applied, a migration will not run again even if you change its contents.
 
-**Fix:** Create a new migration for schema changes. Do not edit applied migrations. If you are in early development and want to start fresh, use `tina4ruby migrate:rollback` to undo the last batch and then `tina4 migrate` to reapply. Use `tina4ruby migrate:status` to see which migrations are applied and which are pending.
+**Fix:** Create a new migration for schema changes. Do not edit applied migrations. If you are in early development and want to start fresh, use `tina4 migrate:rollback` to undo the last batch and then `tina4 migrate` to reapply. Use `tina4 migrate:status` to see which migrations are applied and which are pending.
 
 ### 7. fetch Returns Empty Array, Not Nil
 

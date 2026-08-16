@@ -11,7 +11,7 @@ That is Tina4's scaffolding system. It generates the boilerplate you write by ha
 This is the generator most developers reach for first. It creates everything a feature needs in one shot.
 
 ```bash
-tina4php generate crud Product --fields "name:string,price:float"
+tina4 generate crud Product --fields "name:string,price:float"
 ```
 
 That single command creates six files:
@@ -191,7 +191,7 @@ The CRUD generator calls several smaller generators under the hood. You can call
 ### Model
 
 ```bash
-tina4php generate model Product --fields "name:string,price:float"
+tina4 generate model Product --fields "name:string,price:float"
 ```
 
 Creates three files: the ORM model (`src/orm/Product.php`), the UP migration, and the DOWN migration. No routes, no templates, no tests.
@@ -199,7 +199,7 @@ Creates three files: the ORM model (`src/orm/Product.php`), the UP migration, an
 ### Route
 
 ```bash
-tina4php generate route products --model Product
+tina4 generate route products --model Product
 ```
 
 Creates one file: `src/routes/products.php` with CRUD endpoints and Swagger annotations. The model must exist first.
@@ -207,7 +207,7 @@ Creates one file: `src/routes/products.php` with CRUD endpoints and Swagger anno
 ### Migration
 
 ```bash
-tina4php generate migration add_category_to_product
+tina4 generate migration add_category_to_product
 ```
 
 Creates two files: `migrations/20260401_add_category_to_product.sql` and `migrations/20260401_add_category_to_product.down.sql`. Both are empty stubs. You write the SQL.
@@ -215,7 +215,7 @@ Creates two files: `migrations/20260401_add_category_to_product.sql` and `migrat
 ### Middleware
 
 ```bash
-tina4php generate middleware AuthLog
+tina4 generate middleware AuthLog
 ```
 
 Creates one file with before and after stubs:
@@ -239,7 +239,7 @@ Middleware::add("AuthLogAfter", function ($request, $response) {
 ### Test
 
 ```bash
-tina4php generate test products --model Product
+tina4 generate test products --model Product
 ```
 
 Creates one file: `tests/ProductTest.php` with PHPUnit CRUD stubs.
@@ -247,7 +247,7 @@ Creates one file: `tests/ProductTest.php` with PHPUnit CRUD stubs.
 ### Form
 
 ```bash
-tina4php generate form Product --fields "name:string,price:float"
+tina4 generate form Product --fields "name:string,price:float"
 ```
 
 Creates one file: `src/templates/products/form.html` with typed inputs and `form_token`.
@@ -255,7 +255,7 @@ Creates one file: `src/templates/products/form.html` with typed inputs and `form
 ### View
 
 ```bash
-tina4php generate view Product --fields "name:string,price:float"
+tina4 generate view Product --fields "name:string,price:float"
 ```
 
 Creates two templates: a list view and a detail view in `src/templates/products/`.
@@ -263,7 +263,7 @@ Creates two templates: a list view and a detail view in `src/templates/products/
 ### CRUD
 
 ```bash
-tina4php generate crud Product --fields "name:string,price:float"
+tina4 generate crud Product --fields "name:string,price:float"
 ```
 
 Shorthand for running all generators at once: model, migration, route, form, view, and test.
@@ -271,7 +271,7 @@ Shorthand for running all generators at once: model, migration, route, form, vie
 ### Auth
 
 ```bash
-tina4php generate auth
+tina4 generate auth
 ```
 
 Generates the full authentication scaffold: User model, migrations, login/register/logout routes, templates, and tests.
@@ -305,7 +305,7 @@ $crud->generateRoutes();
 Authentication needs more than one file. The auth generator creates seven:
 
 ```bash
-tina4php generate auth
+tina4 generate auth
 ```
 
 | # | File | Purpose |
@@ -354,7 +354,7 @@ Tina4 uses singular table names. The model name `Product` maps to the table `pro
 Sometimes you want a model with routes but no form. Or a model with a migration but no test. The `--with` flags let you compose:
 
 ```bash
-tina4php generate model Product --fields "name:string,price:float" --with-route --with-migration
+tina4 generate model Product --fields "name:string,price:float" --with-route --with-migration
 ```
 
 Available flags:
@@ -378,25 +378,25 @@ Build a blog with three resources using generators.
 **Step 1:** Generate the auth system.
 
 ```bash
-tina4php generate auth
+tina4 generate auth
 ```
 
 **Step 2:** Scaffold the Post resource.
 
 ```bash
-tina4php generate crud Post --fields "title:string,body:text,published:bool"
+tina4 generate crud Post --fields "title:string,body:text,published:bool"
 ```
 
 **Step 3:** Scaffold the Category resource.
 
 ```bash
-tina4php generate crud Category --fields "name:string,description:text"
+tina4 generate crud Category --fields "name:string,description:text"
 ```
 
 **Step 4:** Add a migration to link posts to categories.
 
 ```bash
-tina4php generate migration add_category_id_to_post
+tina4 generate migration add_category_id_to_post
 ```
 
 Edit the migration to add the foreign key:
@@ -424,7 +424,7 @@ If a file exists, the generator skips it and prints a warning. This protects you
 
 ### Run Migrate After Generate
 
-The model generator creates migration files. Those files do nothing until you run `tina4php migrate`. Generate and migrate are separate steps by design.
+The model generator creates migration files. Those files do nothing until you run `tina4 migrate`. Generate and migrate are separate steps by design.
 
 ### File Naming Matters
 
