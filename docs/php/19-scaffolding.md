@@ -176,8 +176,8 @@ class ProductTest extends TestCase
 After generating, run the migration and start the server:
 
 ```bash
-tina4php migrate
-tina4php serve
+tina4 migrate
+tina4 serve
 ```
 
 Open Swagger UI at `http://localhost:7145/swagger` and test every endpoint. The scaffolded code works out of the box.
@@ -323,8 +323,8 @@ The generated routes handle password hashing, JWT token creation, and session ma
 Run the migration, start the server, and you have working auth:
 
 ```bash
-tina4php migrate
-tina4php serve
+tina4 migrate
+tina4 serve
 ```
 
 ---
@@ -408,8 +408,8 @@ ALTER TABLE post ADD COLUMN category_id INTEGER REFERENCES category(id);
 **Step 5:** Run all migrations and start the server.
 
 ```bash
-tina4php migrate
-tina4php serve
+tina4 migrate
+tina4 serve
 ```
 
 You now have a working blog with authentication, posts, categories, and Swagger documentation. Total commands: five. Total hand-written SQL: one line.

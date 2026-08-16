@@ -33,7 +33,7 @@ Every tina4-js project includes a `CLAUDE.md` file at the root. AI assistants (C
 
 `CLAUDE.md` contains:
 
-- **Build and test commands** -- `npm run build`, `npm run test`, `npm run dev`
+- **Build and test commands** -- `npm run build`, `npm run test`, `tina4 serve`
 - **Project structure** -- where signals, components, routes, and pages live
 - **Key conventions** -- `route(pattern, handler)` pattern-first, `api.get(path, options)` with `{ params, headers }`
 - **Template binding syntax** -- the complete table of `${signal}`, `@click`, `?disabled`, `.value`, etc.
@@ -209,7 +209,7 @@ Claude reads the existing file and replicates the pattern -- same signal structu
 "Create a counter component and show me it works"
 ```
 
-Claude creates the component, adds it to a route, and runs `npm run dev` to verify. The feedback loop is immediate.
+Claude creates the component, adds it to a route, and runs `tina4 serve` to verify. The feedback loop is immediate.
 
 ### Review Generated Templates
 

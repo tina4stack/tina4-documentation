@@ -157,13 +157,13 @@ Take a deeper dive into the [documentation](https://github.com/tina4stack/tina4-
 
 ## JavaScript (tina4-js)
 
-The frontend framework runs separately from the backend. Scaffold it with npx:
+The frontend framework runs separately from the backend. Use the same Tina4 client as every other
+framework:
 
 ```bash
-npx tina4js create my-app
+tina4 init js my-app
 cd my-app
-npm install
-npm run dev
+tina4 serve
 ```
 
 Access your app at `http://localhost:5173`

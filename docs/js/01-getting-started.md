@@ -78,12 +78,11 @@ To add Tina4 CSS, edit `package.json` to add the `tina4-css` dependency, or use 
 
 Want PWA support from the start? The Rust CLI also does not yet expose a `--pwa` flag on `init`. Scaffold with `tina4 init js my-app` and enable PWA manually (see Chapter 10), or use the fallback `npx tina4js create my-app --pwa` to get the PWA preset directly. You can combine the flags on the fallback: `npx tina4js create my-app --css --pwa`.
 
-Now install and run:
+Now start the project through the unified client:
 
 ```bash
 cd my-app
-npm install
-npm run dev
+tina4 serve
 ```
 
 Open `http://localhost:3000`. A welcome page appears with a counter. Click the minus button. Click the plus button. The number updates. No page reload. No visible delay. That is signals at work -- reactive state flowing from data to DOM without you writing a single line of update logic.
@@ -354,7 +353,7 @@ The rest of this book goes deep on each of these. But you already have a working
 | Create project | `tina4 init js my-app` (fallback: `npx tina4js create my-app`) |
 | With CSS framework | `tina4 init js my-app` + add `tina4-css` dep (fallback: `npx tina4js create my-app --css`) |
 | With PWA | `tina4 init js my-app` + enable PWA manually (fallback: `npx tina4js create my-app --pwa`) |
-| Dev server | `npm run dev` |
+| Dev server | `tina4 serve` |
 | Production build | `npm run build` |
 | Reactive state | `signal(initialValue)` |
 | Derived state | `computed(() => expression)` |

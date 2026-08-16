@@ -14,10 +14,9 @@
 ### Installation <a href="#installation" id="installation"></a>
 
 ```bash
-npx tina4js create my-app
+tina4 init js my-app
 cd my-app
-npm install
-npm run dev
+tina4 serve
 ```
 
 [More details](01-getting-started.md) on project setup, CLI options, and PWA scaffolding.
