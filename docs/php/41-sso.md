@@ -19,7 +19,7 @@ SSO is off unless the required values are present. When configured, `tina4 serve
 Use the existing secured-route mechanism. The normalized identity is available as `$request->user`; provider tokens remain in reserved Session data and never appear in `Session::all()`.
 
 ```php
-use Tina4Sso;
+use Tina4\Sso;
 
 $sso = Sso::fromIssuer();
 $identity = $sso->identity($request->session);
