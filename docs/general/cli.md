@@ -1,305 +1,167 @@
-# Tina4 CLI Reference
+# Tina4 CLI reference
 
-The Tina4 CLI is a single binary that manages all four backend languages. It detects your project language, manages runtimes, compiles SCSS, watches files for dev-reload, and delegates to the language-specific CLI.
+The Tina4 client is one signed binary for Python, PHP, Ruby, Node.js, and
+tina4-js. It creates projects, starts servers, manages local tooling, and
+measures source code without loading a framework runtime.
 
-## Installation
+## Install the client
 
-**macOS (Homebrew):**
-
-```bash
-brew install tina4stack/tap/tina4
-```
-
-**Linux / macOS (install script):**
+macOS and Linux:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/tina4stack/tina4/main/install.sh | bash
+curl -fsSL https://tina4.com/install.sh | sh
 ```
 
-**Windows (PowerShell):**
+Windows PowerShell:
 
 ```powershell
-irm https://raw.githubusercontent.com/tina4stack/tina4/main/install.ps1 | iex
+irm https://tina4.com/install.ps1 | iex
 ```
 
-Verify:
+Check the installed version:
 
 ```bash
 tina4 --version
 ```
 
----
+## Command map
 
-All available commands:
+| Command | Purpose |
+| --- | --- |
+| `tina4 setup` | Run guided setup and create a ready-to-run project. |
+| `tina4 init` | Create a project for Python, PHP, Ruby, Node.js, or tina4-js. |
+| `tina4 serve` | Start the detected framework with file watching and SCSS compilation. |
+| `tina4 doctor` | Report installed runtimes, package managers, and Tina4 tools. |
+| `tina4 install` | Install a supported language runtime. |
+| `tina4 scss` | Compile SCSS into CSS. |
+| `tina4 build` | Build production front-end assets. |
+| `tina4 deploy` | Generate Docker, systemd, nginx, or cPanel deployment files. |
+| `tina4 env` | Inspect, migrate, and synchronize environment variables. |
+| `tina4 metrics` | Measure production source and rank code-health findings. |
+| `tina4 ai` | Detect coding assistants and install Tina4 context. |
+| `tina4 skills` | Install current Tina4 skills for Claude, Codex, Cursor, or all three. |
+| `tina4 docs` | Download framework documentation into `.tina4-docs/`. |
+| `tina4 books` | Download the matching Tina4 book. |
+| `tina4 agent` | Start the Code With Me agent server. |
+| `tina4 update` | Update the signed client and refresh installed skills. |
 
-```
-Usage: tina4 <COMMAND>
+Run `tina4 <command> --help` for the command's current arguments and options.
 
-Commands:
-  doctor    Check installed languages and tools
-  install   Install a language runtime (python, php, ruby, nodejs)
-  init      Scaffold a new Tina4 project: tina4 init <language> <path>
-  serve     Start the server with file watcher and SCSS compilation
-  scss      Compile SCSS files from src/scss/ to src/public/css/
-  migrate   Run database migrations (delegates to language CLI)
-  test      Run tests (delegates to language CLI)
-  routes    List registered routes (delegates to language CLI)
-  generate  Generate scaffolding: model, route, migration, middleware
-  ai        Detect AI coding tools and install framework context/skills
-  upgrade   Upgrade a v2 Tina4 project to v3 structure
-  update    Self-update the tina4 binary
-  books     Download the Tina4 book into the current directory
-```
+## Start a project
 
-## Commands
-
-### tina4 doctor
-
-Check which languages and tools are installed on your machine.
+One command creates the project. One command runs it.
 
 ```bash
+tina4 init python my-app
+cd my-app
+tina4 serve
+```
+
+Replace `python` with `php`, `ruby`, `nodejs`, or `js`. The `js` option creates
+a tina4-js front-end project.
+
+`tina4 serve` detects the framework from the project files. You can also name a
+configured project from another directory:
+
+```bash
+tina4 serve my-app
+```
+
+Common server options:
+
+| Option | Purpose |
+| --- | --- |
+| `-p, --port <PORT>` | Override the framework's default port. |
+| `--host <HOST>` | Bind to another address. The default is `0.0.0.0`. |
+| `--dev` | Force the development server. |
+| `--production` | Install and use the preferred production server. |
+| `--no-browser` | Do not open a browser after startup. |
+| `--no-reload` | Disable the file watcher's reload signal. |
+
+## Measure code health
+
+`tina4 metrics` reads source files directly. It does not start the application
+or import the framework. One native engine applies the same formulas to Python,
+PHP, Ruby, TypeScript/JavaScript, and Rust.
+
+Run it from a project:
+
+```bash
+tina4 metrics
+```
+
+Scan an explicit source directory and show the ten highest-ranked findings:
+
+```bash
+tina4 metrics --path src --top 10
+```
+
+The report measures lines of code, cyclomatic complexity, maintainability,
+coupling, function count, duplicate blocks, and test-reference evidence. It
+reports evidence that a test refers to a source file. It does not claim that
+the test ran, passed, or covered each branch.
+
+### Metrics options
+
+| Option | Purpose |
+| --- | --- |
+| `--path <PATH>` | Scan one directory or file. Without it, the client detects the source root. |
+| `--top <N>` | Limit the displayed ranked list. The default is 20. Totals stay unchanged. |
+| `--json` | Emit the machine contract used by dev-admin and CI. |
+| `--fail-on warn` | Exit with code 1 for warning or error findings. |
+| `--fail-on error` | Exit with code 1 for error findings. |
+| `--exclude <GLOB>` | Exclude a path. Repeat the option for more paths. |
+| `--include-non-production` | Include tests, specs, and declaration files. |
+
+Production scans ignore conventional tests, specs, generated bundles, minified
+assets, declarations, dependencies, build output, caches, and version-control
+data. Use explicit exclusions for project-specific production trees:
+
+```bash
+tina4 metrics --exclude '**/dev_admin/**' --exclude '**/gallery/**'
+```
+
+### CI gate
+
+Use JSON for stored reports and `--fail-on` for the gate:
+
+```bash
+tina4 metrics --json --fail-on error > metrics.json
+```
+
+`--top` changes presentation only. It never hides a finding from the exit gate.
+Informational `no_test_reference` findings do not fail warning or error gates.
+
+### Reading offender totals
+
+An offender is one finding, not one file. A file can carry several findings:
+high function complexity, excessive size, low maintainability, duplication, and
+too many functions. Count unique file names when you need the size of the
+refactoring worklist. Count findings when you need the gate pressure.
+
+## Manage environment variables
+
+The client can list the variables that source code uses, generate
+`.env.example`, synchronize missing entries, and migrate legacy unprefixed
+names.
+
+```bash
+tina4 env --list
+tina4 env --example
+tina4 env --sync
+tina4 env --migrate
+```
+
+Migration creates `.env.bak` before it writes the canonical `TINA4_*` names.
+Use `--yes` to skip confirmation in CI.
+
+## Keep tools current
+
+```bash
+tina4 update
+tina4 skills all
 tina4 doctor
 ```
 
-Example output:
-
-```
-Tina4 Doctor - Environment Check
-
-  Language     Status     Version              Pkg Mgr      Version
-  ──────────────────────────────────────────────────────────────────────
-  Python       ✓          3.13.5               ✓ uv         0.8.19
-  PHP          ✓          8.5.4                ✓ composer   2.9.5
-  Ruby         ✓          4.0.1                ✓ bundler    4.0.8
-  Node.js      ✓          24.9.0               ✓ npm        11.6.0
-
-  Tina4 CLIs
-  ──────────────────────────────────────────────────────────────────────
-  ✓ tina4python      Python       installed
-  ✓ tina4php         PHP          installed
-  ✓ tina4ruby        Ruby         installed
-  ✓ tina4nodejs      Node.js      installed
-```
-
-Shows installed languages, their versions, package managers, and whether the language-specific Tina4 CLIs are available.
-
----
-
-### tina4 install
-
-Install a language runtime.
-
-```bash
-tina4 install <language>
-```
-
-| Argument | Description |
-|----------|-------------|
-| `python` | Install Python runtime |
-| `php` | Install PHP runtime |
-| `ruby` | Install Ruby runtime |
-| `nodejs` | Install Node.js runtime |
-
----
-
-### tina4 init
-
-Scaffold a new Tina4 project.
-
-```bash
-tina4 init <language> <path>
-```
-
-| Argument | Description |
-|----------|-------------|
-| `language` | `python`, `php`, `ruby`, or `nodejs` |
-| `path` | Project directory (absolute or relative) |
-
-Creates the standard Tina4 project structure:
-
-```
-my-app/
-  src/
-    routes/        # Route handlers
-    orm/           # ORM models
-    templates/     # Twig templates
-    public/        # Static files (CSS, JS, images)
-    scss/          # SCSS source files
-  migrations/      # Database migration files
-  .env             # Environment variables
-```
-
----
-
-### tina4 serve
-
-Start the development server with file watcher and SCSS compilation.
-
-```bash
-tina4 serve [options]
-```
-
-| Option | Description |
-|--------|-------------|
-| `-p, --port <PORT>` | Port number. Defaults: Python 7145, PHP 7146, Ruby 7147, Node.js 7148 |
-| `--host <HOST>` | Host address (default: 0.0.0.0) |
-| `--dev` | Force dev server even if a production server is available |
-| `--production` | Install and use the best production server for the detected language |
-
-The CLI auto-detects your project language from the project files. It watches for file changes, recompiles SCSS, and reloads the server.
-
-Production servers per language:
-- **Python**: Hypercorn (ASGI)
-- **PHP**: Tina4's built-in server
-- **Ruby**: Puma
-- **Node.js**: Node's built-in HTTP server
-
----
-
-### tina4 scss
-
-Compile SCSS files to CSS.
-
-```bash
-tina4 scss [options]
-```
-
-| Option | Description |
-|--------|-------------|
-| `-i, --input <DIR>` | Input directory (default: `src/scss`) |
-| `-o, --output <DIR>` | Output directory (default: `src/public/css`) |
-| `-m, --minify` | Minify the output |
-| `-w, --watch` | Watch for changes and recompile |
-
----
-
-### tina4 migrate
-
-Run database migrations. Delegates to the language-specific CLI.
-
-```bash
-tina4 migrate                          # Run pending migrations
-tina4 migrate --create <description>   # Create a new migration file
-```
-
-| Option | Description |
-|--------|-------------|
-| `--create <NAME>` | Create a new migration file with this description |
-
-Migration files are created in the `migrations/` directory with sequential numbering.
-
----
-
-### tina4 test
-
-Run tests. Delegates to the language-specific CLI.
-
-```bash
-tina4 test
-```
-
----
-
-### tina4 routes
-
-List all registered routes. Delegates to the language-specific CLI.
-
-```bash
-tina4 routes
-```
-
-Shows the HTTP method, path, and handler for every route in your project.
-
----
-
-### tina4 generate
-
-Generate scaffolding for common project components.
-
-```bash
-tina4 generate <what> <name>
-```
-
-| Argument | Description |
-|----------|-------------|
-| `model` | Generate an ORM model class |
-| `route` | Generate a route file |
-| `migration` | Generate a migration file |
-| `middleware` | Generate a middleware class |
-
-Examples:
-
-```bash
-tina4 generate model User
-tina4 generate route api/products
-tina4 generate migration create_users_table
-tina4 generate middleware AuthCheck
-```
-
----
-
-### tina4 ai
-
-Detect AI coding tools and install framework context files.
-
-```bash
-tina4 ai [options]
-```
-
-| Option | Description |
-|--------|-------------|
-| `--all` | Install context for ALL known AI tools (not just detected ones) |
-| `--force` | Overwrite existing context files |
-
-This detects tools like Claude Code, Cursor, GitHub Copilot, and installs CLAUDE.md, .cursorrules, or other context files that help AI assistants understand your Tina4 project.
-
----
-
-### tina4 update
-
-Upgrade a v2 Tina4 project to the v3 structure.
-
-```bash
-tina4 update
-```
-
-Restructures your project to follow the v3 conventions (src/routes, src/orm, src/templates, etc.).
-
----
-
-### tina4 update
-
-Self-update the tina4 binary to the latest version.
-
-```bash
-tina4 update
-```
-
----
-
-### tina4 books
-
-Download the Tina4 book into the current directory.
-
-```bash
-tina4 books
-```
-
-Downloads the complete documentation book for your detected language.
-
----
-
-## Environment Variables
-
-The `.env` file in your project root configures the framework:
-
-```bash
-PROJECT_NAME="My Project"
-VERSION=1.0.0
-TINA4_LOG_LEVEL=ALL
-DATABASE_NAME=sqlite3:data.db
-TINA4_SECRET=your-secret-key
-TINA4_LOCALE=en
-```
-
-All Tina4 frameworks read from the same `.env` format. The `tina4 init` command creates a default `.env` with sensible values.
+The update command refreshes the signed binary and installed Tina4 skills. The
+doctor command then shows which runtimes and framework clients are ready.

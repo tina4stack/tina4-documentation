@@ -5,7 +5,7 @@ layout: home
 hero:
   name: "Tina4"
   text: "Documentation"
-  tagline: One framework, four languages, ninety-seven features, zero runtime dependencies.
+  tagline: One framework, four languages, 137 features, zero runtime dependencies.
   image:
     src: '/images/tina4-animated.svg'
   actions:
@@ -50,11 +50,11 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.103
+## Current framework release: 3.13.104
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.103. This release makes the
-native Tina4 client the single owner of metrics, preserves Frond parity, and
-prevents a mismatched source version from reaching a package registry.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.104. This release adds GIS
+point support and provider-neutral OpenID Connect SSO. Both features follow one
+configuration-first contract across all four frameworks.
 
 [Read the release notes](/python/36-releases.md)
 
@@ -111,6 +111,16 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.104 (2026-08-17)** - [full notes](/python/36-releases.md)
+
+GIS points now store longitude-first coordinates in PostGIS, build GiST
+indexes, calculate distances in metres, and return GeoJSON. Configuration-first
+SSO adds OpenID Connect discovery, Authorization Code with PKCE, Session
+handoff, refresh, logout, secured-route identity, and Swagger integration. The
+runtime stays provider-neutral. The documentation includes Keycloak as an
+implementation example, not as a framework requirement. No runtime package
+dependency was added.
 
 **v3.13.103 (2026-08-16)** - [full notes](/python/36-releases.md)
 
