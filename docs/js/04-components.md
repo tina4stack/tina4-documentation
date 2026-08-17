@@ -554,7 +554,7 @@ import { router } from 'tina4js';
 // Every file under src/components/ is imported, so every tag is defined.
 import.meta.glob('./components/*.ts', { eager: true });
 
-router.start({ target: '#root', mode: 'hash' });
+router.start({ target: '#root', mode: 'history' });
 ```
 
 Add `src/components/user-card.ts` and `<user-card>` works on the next reload. No list to update.

@@ -174,7 +174,7 @@ import './routes/index';
 // api.configure({ baseUrl: '/api', auth: true });
 
 // Start router
-router.start({ target: '#root', mode: 'hash' });
+router.start({ target: '#root', mode: 'history' });
 ```
 
 Three things happen here:
@@ -183,7 +183,7 @@ Three things happen here:
 2. **Import your routes.** The route file calls `route()` to register paths and handlers.
 3. **Start the router.** It finds `#root` in the DOM and renders matched routes into it.
 
-The `mode: 'hash'` means URLs look like `http://localhost:5173/#/about`. For clean URLs without the hash, use `mode: 'history'` -- but you will need server-side URL rewriting in production.
+History mode is canonical and gives clean URLs such as `http://localhost:5173/about`. Your production server must return `index.html` for unknown application paths. Use `mode: 'hash'` only when a static host cannot provide that fallback. In either mode, links and `navigate()` use a bare path such as `/about`; never add the hash yourself.
 
 ---
 

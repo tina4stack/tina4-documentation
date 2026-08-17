@@ -126,7 +126,7 @@ pwa.register({
 });
 
 // Start router
-router.start({ target: '#root', mode: 'hash' });
+router.start({ target: '#root', mode: 'history' });
 ```
 
 The entry point is the wiring diagram. API configured. Interceptor registered. PWA enabled. Debug overlay loaded in development. Router started. Every cross-cutting concern lives here, declared once, applied everywhere.

@@ -183,12 +183,12 @@ Two options:
 
 | Mode | URLs | Requires |
 |---|---|---|
-| `'history'` | `/about`, `/users/42` | Server-side URL rewriting |
-| `'hash'` | `/#/about`, `/#/users/42` | Nothing -- works everywhere |
+| `'history'` | `/about`, `/users/42` | Server-side `index.html` fallback |
+| `'hash'` | `/#/about`, `/#/users/42` | Nothing -- static-host fallback |
 
-**Hash mode** is the default in scaffolded projects. URLs carry a `#` prefix. No server configuration needed. Works on static hosts, GitHub Pages, S3, anywhere you can drop files.
+**History mode** is canonical and is used by scaffolded projects. It gives clean URLs without the hash. The server must return `index.html` for application routes. When a user bookmarks `https://myapp.com/users/42` and loads it, the server needs to serve the SPA -- not search for a `/users/42` file that does not exist.
 
-**History mode** gives clean URLs without the hash. But the server must return `index.html` for all routes. When a user bookmarks `https://myapp.com/users/42` and loads it, the server needs to serve the SPA -- not search for a `/users/42` file that does not exist.
+**Hash mode** is the fallback for static hosts that cannot rewrite unknown paths. URLs carry a `#` prefix, but application code still passes bare paths such as `/users/42` to links and `navigate()`. Never add the hash yourself.
 
 Vite dev server handles this automatically. For production, configure your web server:
 
@@ -471,7 +471,7 @@ route('*', () => html`
 import { router } from 'tina4js';
 import './routes/index';
 
-router.start({ target: '#root', mode: 'hash' });
+router.start({ target: '#root', mode: 'history' });
 ```
 
 ---
@@ -497,7 +497,7 @@ import { router } from 'tina4js';
 // Every file under src/routes/ is imported, so every route registers.
 import.meta.glob('./routes/*.ts', { eager: true });
 
-router.start({ target: '#root', mode: 'hash' });
+router.start({ target: '#root', mode: 'history' });
 ```
 
 This works because `route()` registers on import. Calling it appends to the router's table as the module body runs, so importing the file *is* registering its routes. There is no registry to populate and no return value to collect. Drop in `src/routes/reports.ts`, reload, and its routes are live.
@@ -525,7 +525,7 @@ import.meta.glob('./routes/*.ts', { eager: true });   // no 404 file in here
 
 route('*', () => html`<h1>404</h1><a href="/">Go home</a>`);
 
-router.start({ target: '#root', mode: 'hash' });
+router.start({ target: '#root', mode: 'history' });
 ```
 
 Renaming the file so it sorts last works too, and breaks the day someone renames it back. Keep the catch-all out of the folder.
