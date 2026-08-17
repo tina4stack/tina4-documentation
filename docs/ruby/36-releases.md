@@ -1,5 +1,13 @@
 # Release Notes
 
+## v3.13.104 - GIS and configuration-first SSO
+
+- `Tina4::Point` and `point_field` add PostGIS-first point storage, metre-based distance queries, GiST indexes, and GeoJSON output. Tina4 uses longitude-first coordinates and fails clearly on unsupported engines.
+- `Tina4::Sso` adds provider-neutral OpenID Connect discovery, Authorization Code with PKCE, introspection, Session handoff, refresh, logout, and automatic `/auth/*` routes.
+- Existing secured routes accept the normalized SSO identity through `request.user`; provider tokens remain reserved Session data.
+- Swagger publishes the configured OpenID Connect discovery scheme.
+- No runtime package dependency was added. Database and cryptography language extensions remain capabilities, not framework dependencies.
+
 ## v3.13.103 (2026-08-16) - Metrics you can trust, releases that cannot lie
 
 Version 3.13.102 was a skills-only release, so framework runtime packages
