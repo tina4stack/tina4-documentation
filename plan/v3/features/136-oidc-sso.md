@@ -197,8 +197,9 @@ refresh rotation and local-first logout gates can go red.
 - Export one `Sso`/`SSO` class from the normal framework root.
 - Startup mounts canonical routes only when configured; SSO remains off by default.
 - Request pipeline: Session -> SSO -> existing Auth gate -> route.
-- `tina4 init` adds commented generic OIDC configuration, not enabled defaults.
-- Doctor reports configured/reachable without printing credentials.
+- A later signed Tina4 client release should add commented generic OIDC configuration
+  to `tina4 init` and a credential-safe doctor check. This is client work, not part of
+  the four framework package release.
 - Documentation/book/skills teach configuration first, then tested provider recipes.
 - Swagger and release notes update with the implementation.
 
@@ -218,8 +219,10 @@ mounting or move those routes. `_tina4_sso` is reserved and not an application A
 - [x] Write four baseline runners and observe the core flow red before implementation.
 - [x] Implement configure/discover/login/callback/session handoff in all four.
 - [x] Implement resume/refresh/logout/roles/Swagger in all four.
+- [x] Publish framework docs, four book chapters and four developer-skill references.
 - [ ] Mutation-prove every security witness.
-- [ ] Run full suites and the final real-provider lab gate as root.
+- [x] Run full suites and the final real-provider lab gate as root.
+- [ ] Extend the signed Tina4 client's `init` and doctor commands in a separate client release.
 - [ ] Move fixture cases owed -> proven and sync CONTRACT-MAP.
 
 ### Parity
@@ -245,7 +248,12 @@ mounting or move those routes. `_tina4_sso` is reserved and not an application A
 
 ### Commits
 
-- (none; planning packet not committed)
+- Python: `c0c901b` (runtime), `3ff4148` (release), `a2f9026` (skills)
+- PHP: `87106ecf` (runtime), `6b9667e8` (release), `ff48b444` (skills)
+- Ruby: `f68e788` (runtime), `bc0a0fd` (release), `5409582` (skills)
+- Node.js: `42c59a2` (runtime), `ac76bea` (release), `f95a1f5` (runner), `bf8206c` (skills)
+- Documentation: `b5ec94e`, `c7ce745`
+- Books: `15b0699`
 
 ## Porting capsule
 

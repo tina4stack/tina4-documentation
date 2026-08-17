@@ -135,6 +135,8 @@ time. Every mutation must turn its named witness red.
 - Keep the feature lazy: applications without a PointField pay no database or startup
   cost.
 - Add commented GIS/PostGIS setup to project examples, the four books and skills.
+- Extend the signed Tina4 client's scaffold/doctor output in a later client release; it
+  is not part of the four framework package release.
 
 ## Breaking changes and migration
 
@@ -158,9 +160,10 @@ or swap those columns.
 - [x] Port the implementation to PHP, Ruby and Node.js.
 - [x] Run targeted GIS suites against real PostGIS on the lab as root.
 - [ ] Mutation-prove the six security/correctness witnesses.
-- [ ] Run all four full framework suites at release HEAD.
+- [x] Run all four full framework suites at release HEAD.
 - [x] Publish four GIS chapters.
-- [ ] Update the four framework skills with GIS scaffolding guidance.
+- [x] Update the four framework skills with GIS scaffolding guidance.
+- [ ] Extend the signed Tina4 client's scaffold/doctor output in a separate client release.
 - [ ] Move fixture groups from owed to proven after every named witness passes.
 - [x] Sync the honest owed state into CONTRACT-MAP.
 
@@ -182,7 +185,7 @@ or swap those columns.
 - [ ] Every proposed fixture case runs against PostGIS 16 with the PostGIS extension enabled.
 - [x] SQLite proves the unsupported-engine error only.
 - [x] The lab gate records the PostGIS connection and version.
-- [ ] No skipped GIS case may pass the final release gate.
+- [x] No skipped GIS case may pass the final release gate.
 
 ### Bugs
 
@@ -190,7 +193,12 @@ or swap those columns.
 
 ### Commits
 
-- (none)
+- Python: `97daf1f` (GIS), `3ff4148` (release), `a2f9026` (skills)
+- PHP: `be547d6f` (GIS), `6b9667e8` (release), `ff48b444` (skills)
+- Ruby: `26b693d` (GIS), `bc0a0fd` (release), `5409582` (skills)
+- Node.js: `872e3d9` (GIS), `ac76bea` (release), `bf8206c` (skills)
+- Documentation: `b5ec94e`
+- Books: `15b0699`
 
 ## Porting capsule
 
