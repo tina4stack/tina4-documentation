@@ -9,7 +9,7 @@ Numbers are contiguous and append-only from this baseline. The 3.14 reset
 retires the old grouped identifiers such as `4.2`, `42.6` and `48.4`.
 Historical documents remain in `archive/`; active packets use this table.
 
-**Current catalog: 135 flat features. Feature 134 covers CLI AI-skills installation; Feature 135 is the app-facing LLM client shipped in 3.13.101.**
+**Current catalog: 137 flat features. Features 136 and 137 add provider-neutral OIDC SSO and GIS spatial support for 3.13.104.**
 
 ## Foundation
 
@@ -208,6 +208,13 @@ Historical documents remain in `archive/`; active packets use this table.
 
 | 134 | [CLI AI-skills installation and refresh](features/134-cli-ai-skills.md) | `tina4/src/main.rs`, `setup.rs`, `doctor.rs`, and `install-skills.{sh,ps1}` (Rust CLI, NATIVE) | n/a (one binary) | n/a (one binary) | n/a (one binary) | decision-ready (NATIVE Rust CLI `tina4 skills [claude|codex|cursor|all]`, measured 2026-08-11 after pulling the CLI to cb7ad13/v3.8.69 - the local checkout was 5 commits behind and lacked Commands::Skills, so this re-measured the shipped code. Installs 6 skills (tina4-developer-python/php/ruby/nodejs + tina4-js + tina4-maintainer) + a .tina4-skills-ref marker into the target home (~/.claude/skills, ~/.agents/skills, ~/.cursor/skills). POSITIVES: skill CONTENT is TAG-pinned (ref=3.13.97, reproducible); staging tempdir + set-e = all-or-nothing (a failed download leaves the dest untouched); atomic per-skill replace; legacy cleanup scoped to exactly tina4-developer; refresh-on-update (tina4 update/upgrade) touches ONLY already-installed homes + never fails the client update. FINDINGS: SKILLS-INSTALLER-UNPINNED (the documented .sh one-liner fetches install-skills.sh from `main` (moving) + is unsigned/unchecksummed while the .ps1 IS Authenticode-signed - asymmetric supply chain; the fetched skill files have no integrity check beyond TLS); SKILLS-CURRENCY-ORACLE (doctor currency = the ref in the LIVE hosted install-skills.sh, so it tracks main not a stable release tag); SKILLS-INSTALLER-PARITY (.sh/.ps1 are parallel hand-maintained - the pipefail-on-dash break once made .sh install NOTHING while mac/.ps1 were fine; no automated parity check); SKILLS-NO-UNINSTALL (no tina4 skills remove); SKILLS-PARTIAL-PUBLISH (per-skill atomic, not txn across the 6; re-run recovers, doctor flags). DEC-01 harden .sh to match .ps1 (pinned tina4.com mirror + checksum/sign); DEC-02 decide the doctor oracle (release tag vs main); DEC-03 add a .sh/.ps1 parity check + optional skills remove. No ADR) |
 | 135 | [App-facing LLM client](features/135-llm-client.md) | `tina4_python.ai.Ai` | `Tina4\AI` | `Tina4::Ai` | `@tina4/core` `Ai` | SHIPPED in 3.13.101 (ADR-0053; 10/10 shared invariant groups proven by real sockets in all four; 40/40 targeted mutations red then restored green). Public chat/complete/embed, streaming, normalized ChatResponse, local OpenAI-compatible + OpenAI + Anthropic, zero provider SDK dependencies, explicit>env>default, distinct total/connect timeouts, fail-closed hosted keys, redaction, transient-only bounded retries. Vision/image and tina4-python#109's unimplemented Llm.ask/ask_json surface remain excluded. |
+
+## Authentication and spatial extensions
+
+| # | Feature | Python evidence | PHP | Ruby | Node | Audit state |
+| ---: | --- | --- | --- | --- | --- | --- |
+| 136 | [Configuration-first OpenID Connect SSO](features/136-oidc-sso.md) | `tina4_python/sso.py` | `Tina4/Sso.php` | `lib/tina4/sso.rb` | `packages/core/src/sso.ts` | accepted for 3.13.104; provider-neutral discovery, PKCE, introspection, Session handoff, refresh/logout and real OIDC lab proof |
+| 137 | [GIS spatial points and queries](features/137-gis-spatial.md) | `tina4_python/orm/point.py` | `Tina4/Point.php` | `lib/tina4/point.rb` | `packages/orm/src/point.ts` | accepted for 3.13.104; shared Point/PostGIS/GeoJSON fixture and real PostGIS lab proof |
 
 ## Developer runtime
 

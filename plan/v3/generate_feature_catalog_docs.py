@@ -45,6 +45,8 @@ def display_phase(number: int) -> str:
         (131, 133, "Testing and verification tools"),
         (134, 134, "CLI"),
         (135, 135, "Integrations and storage"),
+        (136, 136, "Authentication"),
+        (137, 137, "ORM and data layer"),
     ]
     for start, end, label in ranges:
         if start <= number <= end:
@@ -63,6 +65,8 @@ def module_owner(relative: str) -> tuple[str, str]:
         "Testing.py": ("132", "inline testing"),
         "docs.py": ("103", "live API index"),
         "env.py": ("1, 117", "typed environment and CLI environment support"),
+        "sso.py": ("136", "provider-neutral OpenID Connect SSO"),
+        "orm/point.py": ("137", "GIS Point value"),
         "core/cache.py": ("25, 72", "ORM/general cache bridge"),
         "core/constants.py": ("30", "HTTP response constants"),
         "core/events.py": ("104", "event system"),
@@ -143,10 +147,10 @@ def module_owner(relative: str) -> tuple[str, str]:
 
 
 def validate_catalog(features: list[dict[str, object]]) -> None:
-    expected_ids = list(range(1, 136))
+    expected_ids = list(range(1, 138))
     actual_ids = [feature["id"] for feature in features]
     if actual_ids != expected_ids:
-        raise ValueError(f"catalog IDs must be contiguous 1-135, got {actual_ids}")
+        raise ValueError(f"catalog IDs must be contiguous 1-137, got {actual_ids}")
 
     names = [feature["name"] for feature in features]
     slugs = [feature["slug"] for feature in features]

@@ -44,10 +44,18 @@ def fail(message: str) -> None:
 def main() -> None:
     data = json.loads(CATALOG.read_text(encoding="utf-8"))
     features = data.get("features", [])
-    expected_ids = list(range(1, 136))
+    expected_ids = list(range(1, len(features) + 1))
     ids = [feature.get("id") for feature in features]
     if ids != expected_ids:
-        fail(f"catalog IDs must be contiguous 1-135; found {ids}")
+        fail(f"catalog IDs must be contiguous 1-{len(features)}; found {ids}")
+
+    packet_ids = sorted(
+        int(match.group(1))
+        for packet in (PLAN / "features").glob("[0-9][0-9][0-9]-*.md")
+        if (match := re.match(r"^(\d{3})-", packet.name))
+    )
+    if packet_ids != expected_ids:
+        fail(f"feature packet IDs must be contiguous 1-{len(features)}; found {packet_ids}")
 
     names = [feature.get("name") for feature in features]
     slugs = [feature.get("slug") for feature in features]
@@ -73,7 +81,10 @@ def main() -> None:
             page.read_text(encoding="utf-8")
         )]
         if sorted(rows) != expected_rows or len(rows) != len(set(rows)):
-            fail(f"{page.relative_to(ROOT)} does not match all 135 catalog entries")
+            fail(
+                f"{page.relative_to(ROOT)} does not match all "
+                f"{len(features)} catalog entries"
+            )
 
     for page in ACTIVE_FACT_PAGES:
         text = page.read_text(encoding="utf-8")
@@ -81,7 +92,10 @@ def main() -> None:
             if claim in text:
                 fail(f"{page.relative_to(ROOT)} contains stale claim: {claim!r}")
 
-    print("Feature catalog: 135 contiguous entries, 135 packets, 4 public pages aligned")
+    print(
+        f"Feature catalog: {len(features)} contiguous entries, "
+        f"{len(packet_ids)} packets, 4 public pages aligned"
+    )
 
 
 if __name__ == "__main__":
