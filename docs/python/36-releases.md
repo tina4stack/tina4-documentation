@@ -1,6 +1,6 @@
 # Release Notes
 
-## v3.13.104 - GIS and configuration-first SSO
+## v3.13.104 (2026-08-17) - GIS and configuration-first SSO
 
 - `Point` and `PointField` add PostGIS-first point storage, metre-based distance queries, GiST indexes, and GeoJSON output. Tina4 uses longitude-first coordinates and fails clearly on unsupported engines.
 - `Sso` adds provider-neutral OpenID Connect discovery, Authorization Code with PKCE, introspection, Session handoff, refresh, logout, and automatic `/auth/*` routes.

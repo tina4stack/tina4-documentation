@@ -3,8 +3,8 @@
 ## Identity and status
 
 - Matrix identity: 121 — CLI code metrics
-- Audit state: implementation-ready; approved decisions are implemented and awaiting release integration
-- Audit note: remeasured 2026-08-16 with a rebuilt native client against Python, PHP, Ruby, Node.js, and tina4-js. Every corpus completed with zero parse refusals.
+- Audit state: released in Tina4 client 3.8.76; framework consumers released in 3.13.104
+- Audit note: remeasured 2026-08-17 on the Linux lab against released Python, PHP, Ruby, and Node.js 3.13.104 source. Every corpus completed with zero parse refusals.
 - Dependencies: tree-sitter and supported grammar crates compiled into the Tina4 client. Language runtimes and extensions are not dependencies.
 - Dependants: developers, CI gates, dev-admin, and tools that consume JSON.
 - Decisions: ADR-0002, ADR-0054, and ADR-0055.
@@ -35,6 +35,12 @@ Those adapters run `tina4 metrics --json`; they never calculate a second answer.
 
 The corpus counts describe the checked-out source on 2026-08-16. They are a
 regression baseline, not fixed framework quotas.
+
+The post-release 3.13.104 worklist is recorded in
+`metrics-evaluation-2026-08-16.md`: 1,389 findings across 387 files after
+dev-admin exclusions. Of these, 165 are errors, 1,147 are warnings, and 77 are
+informational `no_test_reference` signals. The counts are evidence from Tina4
+client 3.8.76, not fixed quotas or coverage claims.
 
 ## Public surface contract
 
@@ -191,7 +197,7 @@ These breaks are intentional before 3.14.0. No temporary JSON alias is required.
 
 ## Implementation backlog
 
-No engine or adapter work remains for the approved audit decisions. Release
+No engine or adapter work remains for the approved audit decisions. Released
 integration must preserve the green focused handoffs and contract checker.
 Delphi support remains a separate language-provider task until a grammar
 passes representative corpus fixtures.
