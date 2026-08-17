@@ -28,7 +28,7 @@ PostgreSQL's explicit `timeout expired` result is now classified as the configur
 connection timeout at the clock boundary. Immediate connection refusals remain
 ordinary connection errors.
 
-+## v3.13.101 (2026-08-14) - One AI client, four languages
+## v3.13.101 (2026-08-14) - One AI client, four languages
 
 One class. Three methods. No provider SDK.
 Tina4 applications can now call local models, OpenAI, and Anthropic through the

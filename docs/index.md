@@ -112,6 +112,10 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 
 ## What's new
 
+**v3.13.103 (2026-08-16)** - [full notes](/python/36-releases.md)
+
+Metrics you can trust, and releases that cannot lie. This release restores one public version across Python, PHP, Ruby, and Node.js; skip 3.13.102, whose RubyGems and npm packages still contained 3.13.101. Dev-admin now hands code-health analysis to the signed Tina4 client, `has_referencing_test` means exactly that a test refers to the source file, and release workflows reject tags that disagree with package versions. Tina4 skills lead with `tina4 init` and `tina4 serve`. No runtime packages were added; language extensions remain extensions, not dependencies.
+
 **v3.13.101 (2026-08-14)** - [full notes](/python/36-releases.md)
 
 One AI client across all four backends. Applications can call local models, OpenAI, and Anthropic through the same three operations: chat, complete, and embed. Streaming returns ordered text deltas; timeouts and retries are bounded; failures do not expose keys, prompts, or provider response bodies. The client uses each language's built-in HTTP support, so it adds no runtime package dependency. This release also moves code-health analysis fully into the native `tina4 metrics` command while the dev dashboard consumes its JSON output.

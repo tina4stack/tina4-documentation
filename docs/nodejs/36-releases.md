@@ -22,7 +22,7 @@ still contained 3.13.101. Skip 3.13.102 and upgrade to 3.13.103.
 No runtime packages were added. Language extensions remain extensions, not
 framework dependencies.
 
-+## v3.13.101 (2026-08-14) - One AI client, four languages
+## v3.13.101 (2026-08-14) - One AI client, four languages
 
 One class. Three methods. No provider SDK.
 Tina4 applications can now call local models, OpenAI, and Anthropic through the
