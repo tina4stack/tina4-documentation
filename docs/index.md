@@ -114,7 +114,7 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 
 **v3.13.103 (2026-08-16)** - [full notes](/python/36-releases.md)
 
-Metrics you can trust, and releases that cannot lie. This release restores one public version across Python, PHP, Ruby, and Node.js; skip 3.13.102, whose RubyGems and npm packages still contained 3.13.101. Dev-admin now hands code-health analysis to the signed Tina4 client, `has_referencing_test` means exactly that a test refers to the source file, and release workflows reject tags that disagree with package versions. Tina4 skills lead with `tina4 init` and `tina4 serve`. No runtime packages were added; language extensions remain extensions, not dependencies.
+Metrics you can trust, and releases that cannot lie. Version 3.13.102 was a skills-only release, so framework runtime packages correctly remained at 3.13.101. Version 3.13.103 is the next framework release. Dev-admin now hands code-health analysis to the signed Tina4 client, `has_referencing_test` means exactly that a test refers to the source file, and framework release workflows reject tags that disagree with package versions. Tina4 skills lead with `tina4 init` and `tina4 serve`. No runtime packages were added; language extensions remain extensions, not dependencies.
 
 **v3.13.101 (2026-08-14)** - [full notes](/python/36-releases.md)
 

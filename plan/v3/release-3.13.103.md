@@ -43,8 +43,7 @@ notes covering the native metrics contract and Frond maintenance work.
 
 ## Bugs
 
-- [x] RELEASE-102-RUBY: tag 3.13.102 built 3.13.101 and RubyGems rejected it.
-- [x] RELEASE-102-NODE: tag 3.13.102 built 3.13.101 and npm rejected it.
+- [x] RELEASE-102-SKILLS: 3.13.102 was a skills-only release; framework runtime packages correctly remained at 3.13.101.
 - [x] RELEASE-VERSION-GUARD: publish workflows do not uniformly prove the tag
       matches the source package/runtime version before publishing.
 - [x] RELEASE-103-NODE-PUBLISH: Node 22/npm 10 rejected optional Vitest/esbuild
