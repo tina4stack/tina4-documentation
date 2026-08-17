@@ -186,6 +186,6 @@ the explicit exclusion makes the audit boundary visible.
 ## Commits
 
 - `fffb85c` - re-audit the native metrics feature, correct stale claims, and record the measured framework evaluation.
-- Pending - record the released 3.13.104 metrics baseline and publish the current CLI contract.
+- `67ff8be` - record the released 3.13.104 metrics baseline and publish the current CLI contract.
 
 ## Status: Evaluation complete; corrected engine and 3.13.104 baseline verified on the Linux lab as root
