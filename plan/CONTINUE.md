@@ -103,6 +103,53 @@ to `MichaelC8E/tina4-book:docs/python-consistency-fixes`, PR head
 the PR body's explicit "both PRs should land together" note --
 `sync-books.sh` would otherwise overwrite the docs-site copy of Chapter 1).
 
+**All four .105 branches — VERSION BUMPED + CHANGELOG DRAFTED and pushed
+to origin.** Python `44e149f`, PHP `e16991a5`, Ruby `19f1381`, Node
+`d445b0f`. Each commit bumps the manifest / version constant / (Node
+package-lock) / `CLAUDE.md` pointer to 3.13.105, and prepends the
+framework-specific CHANGELOG entry (common intro + per-framework
+extras). No other code touched. Ruby and Node .105 branches are now on
+origin for the first time (previously local-only). Python's
+`test_version_constant.py` still passes with the new literal.
+
+Every .105 code fix landed this session is on the pushed branches:
+
+| Framework | Branch HEAD | Ahead of origin/v3 |
+| --- | --- | ---:|
+| tina4-python | `44e149f` | 4 |
+| tina4-php | `e16991a5` | 6 |
+| tina4-ruby | `19f1381` | 2 |
+| tina4-nodejs | `d445b0f` | 4 |
+
+### What is left before .105 can ship
+
+Only steps that need lab access (`andre@192.168.88.99`) or owner
+approval. Per the "Recommended order" section below (steps 6-8):
+
+1. **Merged-head lab suites** on the .105 branches under
+   `TINA4_REQUIRE_SERVICES=1` on the lab, one framework at a time, and
+   quote the summary line (never the exit code). Record any skips,
+   warnings, and qualified infrastructure failures.
+2. **Merge `feature/release3.13.105` -> `v3` in each repo**, then re-run
+   lab suites on the merged commits to catch any semantic-merge issue.
+3. **Request owner approval for tags.** `.105` on all four repos is a
+   bug release; no breaking changes; but the "Do not cut tags or
+   publish packages without Andre's approval" rule still stands.
+4. **Bare tag `3.13.105`, publish** to PyPI / Packagist / RubyGems / npm
+   (the tag triggers each repo's publish workflow), verify each
+   registry lists 3.13.105, then update the docs release-notes
+   chapter (`docs/<framework>/36-releases.md`) with the release date +
+   framework-specific highlights.
+5. **Close the shipped issues** once the release is live: tina4-python
+   #104 (safe routes), #103 (auth log), #102 (hot-reload cascade).
+6. **After .105 ships, the .106 backlog is:**
+   - CSP-clean dev toolbar port to Python + Node (tina4-python#115 with
+     measurable drift counts and PHP reference implementation).
+   - Node hot-reload cascade parity for the same issue #102 mechanism
+     (Node ESM `import` captures by reference like Python).
+   - Docs PR #50 + book PR #152 landed post-release (they only touch
+     Python docs, no code coupling).
+
 **Branches pushed to origin (both were local-only before this session):**
 `tina4-python/feature/release3.13.105` and
 `tina4-php/feature/release3.13.105`. Ruby and Node .105 branches remain
