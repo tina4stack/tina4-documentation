@@ -11,7 +11,7 @@ staging from each language email guide and environment-variable registry.
 - [x] Register both variables in all four language environment references and the general registry.
 - [x] Remove the false claim that `TINA4_DEBUG` disables SMTP delivery.
 - [x] Synchronize the corrected chapters into `tina4-book`.
-- [ ] Build, audit, merge, and verify the live pages and regenerated PDFs.
+- [x] Build, audit, merge, and verify the live pages and regenerated PDFs.
 
 ## Parity
 
@@ -27,8 +27,8 @@ staging from each language email guide and environment-variable registry.
 - [x] Strict link and anchor audit passes.
 - [x] Feature catalog audit passes.
 - [x] Tina4Press builds every page.
-- [ ] Source-book PDF build passes and mirrors the PDFs.
-- [ ] Live email and environment pages show both settings.
+- [x] Source-book PDF build passes and mirrors the PDFs.
+- [x] Live email and environment pages show both settings.
 
 ## Bugs
 
@@ -39,5 +39,9 @@ staging from each language email guide and environment-variable registry.
 ## Commits
 
 - `f4955cc` - correct and expand the source-book mail safety documentation.
+- `5fa2150` - publish the matching website chapters and registries.
+- `9fb30b6` - merge tina4-book pull request 155.
+- `b98ed99` - merge tina4-documentation pull request 60.
+- `4411fd6` / `f867446` - regenerate and mirror the corrected PDFs.
 
-## Status: In progress
+## Status: Complete
