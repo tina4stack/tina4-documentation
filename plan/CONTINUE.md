@@ -52,6 +52,33 @@ tina4-python#115 for `.106`.** Measurable drift filed with counts (Python 22
 inline styles / 4 onclick / 6 inline scripts; Node 22 / 4 / 5; Ruby already
 clean). References the PHP commits so the port has a working model.
 
+**Python issue #102 (hot-reload does not re-register ORM field metadata) —
+FIXED on .105 and pushed.** Root cause: `_auto_discover` re-imported the
+changed model module (`src.orm.Todo`) but left every OTHER `src/*` module
+that did `from src.orm.Todo import Todo` holding a reference to the OLD
+class object. Python's `from X import Y` binds by object, not name, so a
+route module that captured `Todo` at ITS first import kept using the stale
+class -- with the stale `_fields` list -- so a newly added column was
+silently absent from `to_dict()` output. The DB write was correct; the API
+just lied. Fix in `tina4_python/core/server.py`: new
+`_cascade_reload_dependents` helper walks in-scope modules in `sys.modules`,
+detects any attribute whose `__module__` matches the reloaded module (the
+fingerprint of a `from X import Y` binding into an unchanged file), and
+re-imports those dependents so their `from` bindings refresh. Recursive
+with a visited-set (transitive dependents refresh, cycles safe), bounded
+to the discovery scope, fail-loud. Regression at
+`tests/test_hot_reload_cascade.py` (3 cases: direct dependent, transitive
+across two hops, negative "no cascade when no dependent"). Proven a real
+gate by mutation. 87/87 across the broader router+hot-reload+auto-discover
+suites still green. Commit `3df8895` on `feature/release3.13.105`.
+
+**Cross-framework note for #102 (do in .106):** PHP resolves classes by
+name at call-time (`use App\Models\User` doesn't capture a class object),
+and Ruby's constants go through the constant-lookup chain, so both are
+safe. Node ESM `import` DOES capture by reference, same as Python, so
+Node's hot-reload path may exhibit the same shape -- an audit is owed.
+Tracked as a follow-up alongside the CSP-toolbar port in `.106`.
+
 **Branches pushed to origin (both were local-only before this session):**
 `tina4-python/feature/release3.13.105` and
 `tina4-php/feature/release3.13.105`. Ruby and Node .105 branches remain
