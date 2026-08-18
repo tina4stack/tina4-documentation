@@ -14,7 +14,8 @@ language quick reference and sidebar, with examples that match the released
 - [x] Add SSO, GIS, and IoT/MQTT to all four quick references.
 - [x] Register all three chapter stems in the shared backend sidebar.
 - [x] Build the site, run strict truth/link/catalog audits, and check rendered pages.
-- [ ] Merge to documentation `main` and verify tina4.com navigation.
+- [x] Merge to documentation `main` and verify tina4.com navigation.
+- [x] Update the source books and regenerate the four backend PDFs.
 
 ## Parity
 
@@ -33,7 +34,7 @@ language quick reference and sidebar, with examples that match the released
 - [x] The feature catalog audit passes.
 - [x] Tina4Press builds every page.
 - [x] Rendered navigation contains SSO, GIS, and IoT/MQTT for all four backends.
-- [ ] Live chapter URLs return 200 after deployment.
+- [x] Live chapter URLs return 200 after deployment.
 
 ## Bugs
 
@@ -44,5 +45,8 @@ language quick reference and sidebar, with examples that match the released
 ## Commits
 
 - `ac52dbe` - complete the SSO, GIS, and IoT/MQTT documentation across all four backends.
+- `7145d32` - merge documentation pull request 58.
+- `76bc0f8` - synchronize the source books in tina4-book pull request 154.
+- `dea762f` - mirror the regenerated PDFs back into the documentation repository.
 
-## Status: In progress
+## Status: Complete
