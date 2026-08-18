@@ -1,254 +1,293 @@
-# CONTINUE — session handoff (2026-08-14)
+# CONTINUE - Tina4 maintainer handover (2026-08-18, updated during-session)
 
-Pick-up notes for the next Tina4 maintainer session. Read `.claude/skills/tina4-maintainer`
-first. Branch model: `feature/release<ver>` -> `v3` (the active release mainline) -> tag.
+## Session log — 2026-08-18 (added by Claude)
 
----
+Work done during this session, on top of what the "Start here" section below
+already records. All landed commits ride on the `.105` release branches; no
+tag was cut, and nothing has flowed back into `v3`.
 
-## 1. 3.13.99 — SHIPPED (done, do not redo)
+**Node PR #48 (rate limit) — CLOSED.** Owner decided to keep parity at 100/60s
+across all four frameworks. Closed with a public comment explaining the
+parity-preserving reasoning; the `TINA4_RATE_LIMIT_MAX` / `_WINDOW` overrides
+remain the escape hatch for any deployment that needs more headroom.
 
-Published to PyPI / Packagist / RubyGems / npm. Tags `3.13.99` (bare, no `v`) on all 4 repos'
-`v3`. GitHub CI green on all 4 (Tests + Docker). Docs pushed (`.98` + `.99` release notes live).
-The skills installer moved to `3.13.100` after the `.100` framework tags went live.
+**Python issue #103 (misleading `auth=required` log on `@noauth()` routes) —
+FIXED on .105 and pushed.** Root cause: Python decorators apply bottom-up, so
+`@post()` runs before the outer `@noauth()` and `_register_route` logs the
+default auth value while the outer decorator flips it a microsecond later.
+Fix in `tina4_python/core/router.py`: `@noauth()` and `@secured()` now emit a
+corrective `Log.debug("Route auth updated: ... via @noauth|@secured")` line
+whenever they flip the flag on an already-registered route. Real regression at
+`tests/test_router_auth_log_honesty.py` (5 cases: positive per decorator,
+negative "no corrective line when nothing changed", and the exact three-route
+scenario from the issue). Proven a real gate by mutation. Cross-framework
+audit: Ruby's registration log does not include an auth field, and PHP/Node
+don't log at register time — this bug was Python-only, no sibling fix needed.
+Commit `92f2884` on `feature/release3.13.105`.
 
-Final shipped v3 SHAs (for reference): py `af13de7` / php `b451fb1e` / rb `1ca5ce1` / node `8c33e4e`
-(then tags were cut). 3.13.99 = Phases 1-5 (~30 breaking parity/security fixes + logger & adapter
-conformance grids). Frond Phase 6 was deferred to 3.13.100.
+**PHP PR #195 (CSP-clean dev toolbar) — LANDED on .105, PR left open for
+release-time auto-close.** Owner scope: ship PHP only in `.105`, defer Python
++ Node parity to `.106`. Merged the PR's commit `ca670a84` into
+`feature/release3.13.105` as commit `7966c55b`; the three failing tests
+(`DualPortReloadTest::testMainPortInjectsReloadScript`,
+`::testSuppressionTogglesPerRequest`,
+`DevReloadWsTest::testInjectedClientIsWebSocketPrimary`) were updated to
+assert against the new external-asset shape (`data-reload="1|0"` on the
+toolbar root, `<script src="/__dev/toolbar.js">`, WS-primary spelling verified
+inside the JS via reflection on the private `DevAdmin::toolbarJs()`). Two
+previously-vacuous suppression tests (`testAiPortSuppressesReloadScript`,
+`testInjectedClientSuppressedOnAiPort`) were also strengthened to assert on
+`data-reload="0"`; without that, pinning `$reload = '1'` in `DevAdmin.php`
+(broken suppression) would have left them green. Proven a real gate by
+mutation. 11/11 pass in the two files, 181/181 across the broader
+DevAdmin/reload/toolbar suite locally. Commit `7d7777cf`.
 
-**Notable .99 late fixes worth remembering:** example app was importing feature-132's renamed
-`assert_*` test descriptors (broke the Docker image); node `tina4_migration` table used ANSI
-double-quotes MySQL parses as a string literal (failed on fresh MySQL); node docs reflection
-re-walk blew CI's time budget; GitHub CI had no ODBC/Firebird-in-main provisioning (fixed in each
-repo's `.github/workflows/test.yml`).
+**PR #195 will close automatically when `feature/release3.13.105` merges to
+`v3` at release time — do not close it manually.** A public comment on the PR
+records the plan and credits @justin-k-bruce (co-authored on the merge
+commit).
 
----
+**Python + Node parity for the CSP-clean toolbar — TRACKED as
+tina4-python#115 for `.106`.** Measurable drift filed with counts (Python 22
+inline styles / 4 onclick / 6 inline scripts; Node 22 / 4 / 5; Ruby already
+clean). References the PHP commits so the port has a working model.
 
-## 2. install_skills 503 — root cause + status (a live user issue)
+**Branches pushed to origin (both were local-only before this session):**
+`tina4-python/feature/release3.13.105` and
+`tina4-php/feature/release3.13.105`. Ruby and Node .105 branches remain
+local-only.
 
-`curl tina4.com/install-skills.sh | sh` (and `tina4 ai`) hit `curl: (56) ... 503`. **Not a missing
-file** (503 != 404 — every 3.13.99 skill file returns 200). Cause: `raw.githubusercontent.com`
-503s intermittently under load — a freshly cut tag is "cold" on GitHub's CDN for minutes, and the
-lab/dev machine's IP was rate-limited from many test runs. Transient; clears within ~an hour.
+### Remaining .105 work (unchanged from the plan below, minus what shipped)
 
-**Final fix deployed:** `tina4/install-skills.sh` + `.ps1` retry three times with a two-second delay,
-then fall back from GitHub Raw to jsDelivr for every file. PowerShell uses an explicit retry loop that
-works on Windows PowerShell 5.1; it no longer passes unsupported retry parameters to
-`Invoke-WebRequest`. The signed canonical installers pin `3.13.100` in `tina4/main` commit
-`a0bc36d`, tagged `3.13.100` in the CLI repository as the immutable skills-installer release.
-Native Windows CI verified both the retry/fallback contract and the Authenticode signature of the
-exact GitHub Raw script. All six tagged skill entry points return HTTP 200 from `.100`.
+1. **Python #102** — reproduce the hot-reload ORM field-metadata staleness on
+   a minimal real-file case, fix class/module invalidation, audit the same
+   reload path in PHP, Ruby, Node.
+2. **Docs PR #50** (`tina4-documentation`) + **book PR #152** — rebase against
+   current `main` and fact-check each claim against released code.
+3. **Version bumps + changelogs** — only once code scope stops moving.
+4. **Merged-head lab suites** for all four frameworks under
+   `TINA4_REQUIRE_SERVICES=1`.
+5. **Merge `feature/release3.13.105` -> `v3` in each repo, retest, request
+   Andre's approval, tag bare, publish.**
 
----
-
-## 3. 3.13.100 — SHIPPED (2026-08-14)
-
-Merged to `v3`, lab-gated at the merged release commits, tagged with bare `3.13.100` tags, and
-published to PyPI, Packagist, RubyGems, and npm. GitHub Releases are live in all four repositories.
-
-| Framework | Tagged commit | Final lab result |
-|---|---|---|
-| Python | `48018ee` | 5,552 passed, 0 failed |
-| PHP | `f8cb2cfc` | 5,495 passed, 19,274 assertions, 0 failed |
-| Ruby | `94ca18b` | 5,497 examples, 0 failures |
-| Node | `ace5f90` | 8,413 passed, 0 failed |
-
-The Python Snyk PR check errored while detecting `pyproject.toml`; it reported no package,
-vulnerability, severity, or CVE. This was recorded as a scanner-infrastructure exception, not a
-security finding. Python issue #110 (dev-toolbar reflected XSS) was closed against the live `.100`
-release after the escaped-path regression passed.
-
-Owner cut this session: "open Frond bugs first" (compiler deferred within .100).
-
-### Done + independently verified (main loop re-ran the tests, not just worker green)
-| Item | py | php | rb | node | Commits |
-|---|---|---|---|---|---|
-| install_skills 503 retry + real local-socket test | ✅ | ✅ | ✅ | ✅ | py `09dd6b8`; php `aaeba4fc`+`45730d7f`; rb `386dfa8`; node `b859bcf` |
-| Frond: 2nd `{% extends %}` raises + tests | ✅ | ✅ | ✅ | ✅ | py `9bb7279`; php `c7739aa0`; rb `6bed111`; node `831bd57` |
-| Frond: cache bound + TTL-sweep (template + `{% cache %}` fragment + expr memos) | ✅ | ✅ | ✅ | ✅ | py `82e02de`; php `236dbabc`; rb `5f49e32`; node `d1e6b42` |
-| Frond: ruby multi-level `{% extends %}` recursion (+depth-aware extract_blocks) | — | — | ✅ | — | rb `914bc16` |
-| Frond: depth-aware block substitution — root-nested `{% block %}` no longer drops content | ✅ | ✅ test | ✅ | ✅ | py `91828ce`; php `955c66e0` (test-only, source unchanged); rb `1a85fe4`; node `5a57300` |
-| Frond: class registration global, instance registration local (ADR-0052) | ✅ | ✅ | ✅ | ✅ | py `ecf66e6`; php `f6fb7f23`; rb `ad4e696`+`bb1e8d6`; node `e10b830` |
-| version bump -> 3.13.100, including package/lock/guide guards | ✅ | ✅ | ✅ | ✅ | py `1aec8c7`+`44188a6`; php `aaf5ffa9`; rb `f4b0383`; node `70ffce8` |
-| Node skill retry is status-aware (transient retries, permanent 4xx final) | — | — | — | ✅ | node `4b75fe7` |
-| `.100` CHANGELOGs + four-language release notes | ✅ | ✅ | ✅ | ✅ | py `7cba239`; php `3850bd3a`; rb `573ced6`; node `0e6eeff`; docs `0b21600` |
-
-Current code-tested branch HEADs (NOT pushed): py `ecf66e6` / php `f6fb7f23` / rb `bb1e8d6` /
-node `e10b830`. Docs `main` is still local-only and ahead of origin.
-(Transitive cache invalidation was RE-MEASURED and found already-fixed — parents always re-read
-from disk; the old audit note was stale. No change made.)
-
-### DONE this session (was in flight) — verified
-Depth-aware block substitution shipped: a root template that nests `{% block %}` inside another
-block no longer drops content. Root cause: the final substitution pass used a flat non-greedy regex,
-pairing an outer block's open tag with a NESTED block's `{% endblock %}`. Fix: a depth-counting
-`_substitute_blocks`/`substituteBlocks`/`substitute_blocks` (open/close scanner) ported from the
-Python master to Node + Ruby; PHP was already correct (AST) and got only a regression test.
-**Maintainer re-verified independently — the repro outputs `<section>LEAF</section>` in ALL FOUR.**
-
-### PRE-MERGE LAB GATE (2026-08-14)
-
-Run as root on `andre@192.168.88.99` against live isolated services, including the real
-PostgreSQL ODBC DSN and `TINA4_REQUIRE_SERVICES=1`. Gate directory:
-`/home/andre/rel-3.13.100`.
-
-| Framework | Code-tested HEAD | Result |
-|---|---|---|
-| Python | `44188a6` | ✅ 5,551 passed, 0 failed, 3 warnings (10m39s) |
-| PHP | `aaf5ffa9` | ⚠️ 5,493 non-network tests green; only `AISkillInstallTest` failed while raw GitHub returned 503 |
-| Ruby | `f4b0383` | ⚠️ 5,495 non-network examples green; only the real-network AI installer failed while raw GitHub returned 503 |
-| Node | `70ffce8` | ✅ qualified: 8,395 non-network tests green; the sole full-run failure was `aiSkillInstall.test`, then isolated retry passed 15/15 |
-
-The PHP/Ruby installer failures are not inferred: direct `curl` checks from the lab returned
-503 for the exact `raw.githubusercontent.com` skill/reference URLs, while sibling URLs returned
-200. Repeated isolated runs missed DIFFERENT reference files. Do not loop under the rate limit;
-rerun each isolated after the CDN/IP window clears. No application/framework assertion failed.
-
-The Node full runner completed all 318 files on the lab, so the earlier `task_e9641ace`
-"stops after syncSocketTransport" flag is resolved for the live-service environment. The only
-red file was the qualified GitHub raw-content flake above.
-
-#### Feature 56 exact code-HEAD gate (ADR-0052, 2026-08-14)
-
-| Framework | Code-tested HEAD | Result |
-|---|---|---|
-| Python | `ecf66e6` | ✅ full suite: 5,550 passed; the two ODBC-auth cases skipped because the first run used the wrong username variable, then the corrected ODBC suite passed 11/11 |
-| PHP | `f6fb7f23` | ✅ full suite: 5,495 tests, 19,274 assertions, 0 failures; corrected ODBC environment included |
-| Ruby | `bb1e8d6` | ✅ full suite: 5,497 examples, 0 failures; corrected ODBC environment included |
-| Node | `e10b830` | ✅ qualified: full suite 8,396 passed with only the transient network installer red; corrected ODBC suite passed 11/11 and the isolated installer passed 15/15 |
-
-The four plan-only closure commits after those code gates are py `61e1cc8`, php `2f63ef1a`, rb
-`4d676a9`, and node `cdd45f3`. They do not change runtime or test code.
-
-Docs gate at `0b21600`: `pnpm docs:build` built 272 pages; truth audit passed CLI grammar,
-ASCII punctuation, YAML, Python imports, and the `v3.13.100` landing lead. Its existing
-Rust-CLI-only env catalog still reports 215 framework env references but exits 0; `.100` added none.
-
-### OWNER DECISION IMPLEMENTED (ADR-0052)
-- **`add_filter`/`add_global`/`add_test` registry scoping.** A class call writes the process-global
-  registry; an instance call writes only that instance. The rule and regression coverage are identical in
-  Python, PHP, Ruby, and Node. Existing instances retain their construction-time flattened snapshot.
-- **Still separate:** replacing a built-in filter/global/test remains a silent overwrite in all four. Whether
-  to warn or only document that override is not decided by ADR-0052.
-
-### NOT STARTED (remaining .100 backlog)
-- **Frond compiler (CP-DEC-01)** — the flagship, deferred. Owner decision: ALL 4 get a Frond
-  compiler. Python + PHP have a real AOT compiler; **Ruby + Node have none** and have **no AST** —
-  they must build a parser/AST FIRST, then the compiler (emit native host source reusing the
-  interpreter primitives per hole; hot-path subset text/output/set/if/for + interpreter fallback;
-  cached; sandbox-disabled; generated from the parsed tree). Recorded as CP-DEC-01 in
-  `plan/v3/features/050-frond-compiler.md`. Large, multi-session.
-- **Carbonah 133** benchmarks (deferred from .99).
-- **`TINA4_DATABASE_COLUMN_UPPERCASE`** switch, all 4 (deferred from .99). Owner wants a switch so
-  Firebird/PHP lowercase field results can be forced uppercase across all frameworks.
-
-### 3.13.100 FINAL STATE
-All owner-approved Frond bug fixes, retry parity, version guards, CHANGELOGs, release notes, merged-head
-lab gates, tags, package publications, and GitHub Releases are complete. ADR-0052 registry scope is
-implemented consistently in all four.
-The Frond compiler (CP-DEC-01, §6 below), Carbonah 133, and `TINA4_DATABASE_COLUMN_UPPERCASE` are
-the 3.13.101 backlog.
-
-### Next release work
-Start from the 3.13.101 backlog above; do not repeat the `.100` merge, gate, tag, or publication work.
+Ruby and Node .105 branches still have only the safe-routes commit locally
+and need whatever `.106`-adjacent bug fixes the owner scopes in before merge
+back to `v3`.
 
 ---
 
-## 4. Environment recipe (lab + CI)
+# CONTINUE - Tina4 maintainer handover (2026-08-18)
 
-- **Lab:** `ssh andre@192.168.88.99` (Ubuntu, passwordless sudo). Full live services. Full-suite env:
-  `set -a; source /root/tina4-lab/lab-env-for.sh <py|php|rb|node>; set +a` + ODBC DSN (NOT set by
-  lab-env-for.sh) + `TINA4_REQUIRE_SERVICES=1`. Latest release gate directory:
-  `/home/andre/rel-3.13.100/<repo>`. Parallel gate script: scratchpad `lab-fullsuite-v3.sh` (fetches origin,
-  checks out the SHA, runs 4 langs concurrently). NOTE the AI skill-install test flakes under
-  4-parallel GitHub load (GitHub-raw rate-limit) — a lone skill-install failure is that flake;
-  re-verify it isolated (it passes one-at-a-time). Python provisioning on lab: `/snap/bin/uv sync
-  --extra test`. Ruby: `bundle config set --local with "databases:firebird:odbc"`. Node:
-  `npm run build --workspaces` then `npx tsx test/run-all.ts`.
-- **GitHub CI** now provisions ODBC + Firebird + MySQL-over-TCP in each repo's `test.yml` (fixed
-  this session). MySQL host MUST be `127.0.0.1` not `localhost` (localhost = unix socket).
-- **docs:** `cd tina4-documentation && python3 scripts/audit-truth.py --strict` (CI gate) +
-  `pnpm docs:build` must be green before pushing docs. ASCII only, no em dashes.
+This file records the current release state. Read
+`/Users/andrevanzuydam/.agents/skills/tina4-maintainer/SKILL.md` before changing a Tina4 repository.
 
-## 5. Discipline reminders (this session's lessons)
-- Verify, don't trust: a worker's "premise" can be wrong — worker a2115b03 caught that Python's
-  claimed `<section>LEAF</section>` was actually `<section></section>` (a real shared py/node bug).
-  Always re-run the repro yourself.
-- One writer per tree: don't commit into a repo a worker is editing.
-- Framework package tags are bare (`3.13.100`); the tina4 CLI executable uses `v`-tags, while its
-  independently pinned skills installer uses the matching bare framework tag.
-- Commit trailers: `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` +
+## Start here
+
+- Current public framework release: **3.13.104** for Python, PHP, Ruby, and Node.js.
+- Current work: **3.13.105 bug release**.
+- Release state: **not released, not tagged, and not pushed as release branches**.
+- Release branches must start from each framework's `v3` branch and flow back into `v3` before tagging.
+- Use isolated worktrees. The main documentation checkout contains unrelated, uncommitted SSO audit files.
+- Run framework tests on `andre@192.168.88.99` with `sudo` or as root.
+- Do not cut tags or publish packages without Andre's approval.
+
+The release has three proven fixes: safe route inspection in all four frameworks, Firebird migration
+ledger handling in Node.js and PHP, and removal of PHP's tracked `sqlite::memory:` file. Several open
+pull requests still need decisions or more work. Do not merge them because they happen to be open.
+
+## Public release history
+
+| Version | State | Release fact |
+| --- | --- | --- |
+| 3.13.100 | Shipped | Frond fixes, skill installer retry/fallback work, and framework parity fixes. |
+| 3.13.101 | Shipped | Provider-neutral application AI client in all four frameworks. Framework-owned metrics commands were removed. |
+| 3.13.102 | Skills only | No framework runtime package was broken or republished for this number. |
+| 3.13.103 | Shipped | Tina4 Metrics handoff, release truth guards, corrected skills and documentation. |
+| 3.13.104 | Shipped | Provider-neutral OIDC SSO and GIS Point support at parity, with shared fixtures and lab proof. |
+| 3.13.105 | In progress | Bug release. No tag, registry publication, or GitHub Release exists yet. |
+
+Do not repeat the `.100` through `.104` release work. The old handover ended at `.100` and is no
+longer a valid guide.
+
+## 3.13.105 worktrees and commits
+
+The isolated release root is:
+
+`/Users/andrevanzuydam/IdeaProjects/.worktrees/release-3.13.105/`
+
+| Repository | Branch | Current local HEAD | State |
+| --- | --- | --- | --- |
+| tina4-python | `feature/release3.13.105` | `1232afc` | One local route-inspection commit over `v3`. |
+| tina4-php | `feature/release3.13.105` | `eca78c90` | Route fix plus merged PHP PRs #196 and #197 from `v3`; two commits ahead of `origin/v3`. |
+| tina4-ruby | `feature/release3.13.105` | `b914531` | One local route-inspection commit over `v3`. |
+| tina4-nodejs | `feature/release3.13.105` | `0454a7c` | Route fix plus merged Node PR #49 and its verification plan. |
+| tina4-documentation | `feature/routes-safe-3.13.105` | `8bd38f5` | ADR, fixture, feature packet, matrix, and user docs for safe `tina4 routes`. |
+
+Recheck these hashes before resuming. Remote merges can move `v3`.
+
+## Completed and validated for 3.13.105
+
+### Safe `tina4 routes`
+
+Feature 115 and ADR-0058 define the rule: route inspection scans canonical route files without
+executing the application entrypoint or starting its server.
+
+| Framework | Commit | Result |
+| --- | --- | --- |
+| Python | `1232afc` | Uses route-only discovery; does not run `app.py`. |
+| PHP | `7dc07a2c` | Uses `Router::getRoutes()` and does not include `index.php`. |
+| Ruby | `b914531` | Uses route-only discovery; does not run `app.rb` or `index.rb`. |
+| Node.js | `33f005d` | Uses route-only discovery; does not load `app.ts`. |
+
+The shared fixture is `plan/v3/fixtures/cli_routes_contract.json`. The documentation commit is
+`8bd38f5`. Human table columns and a possible `--json` form remain separate owner decisions; they
+do not block the safety fix.
+
+Python issue #104 describes the destructive old behavior. Close it only after the fix reaches `v3`
+and the release is available.
+
+### Firebird migration ledger
+
+- Node.js PR #49 is merged into `v3` at `3651f11`.
+- The Node.js `.105` branch merged that `v3` state at `fac49a2`.
+- Node.js plan commit: `0454a7c`.
+- PHP PR #196 is merged into `v3` at `0913adcc`.
+- PHP PR #197 is merged into `v3` at `5bb20ebd`.
+- The PHP `.105` branch merged both at `eca78c90`.
+
+The Firebird fix handles generated migration-ledger IDs without assuming one database-specific
+result-column case. PHP PR #197 also removes a tracked file named `sqlite::memory:`. The colon made
+Windows checkouts fail.
+
+### Lab evidence
+
+Node.js merged-head gate:
+
+- Full suite: **8,302 passed, 0 failed, 33 skipped across 325 files**.
+- Live Firebird ledger: **3/3 passed**.
+- Firebird column-case coverage: **2/2 passed**.
+- Verification plan:
+  `/Users/andrevanzuydam/IdeaProjects/.worktrees/release-3.13.105/tina4-nodejs/plan/firebird-migration-ledger-3.13.105.md`.
+
+PHP PR #196 and #197 combined gate:
+
+- Live Firebird ledger: **1 test, 4 assertions, passed**.
+- Route safety: **1 test, 4 assertions, passed**.
+- Full suite: **5,456 tests, 18,999 assertions, 3 failures, 57 skipped**.
+- All three failures are the unchanged baseline `SessionDatabaseEnginesTest` MSSQL connection
+  failures against `127.0.0.1`. The same failures occur without these PRs. Do not report this run as
+  fully green; report it as qualified by the unavailable MSSQL service.
+
+Lab review copies used during validation can be removed after confirming no process uses them:
+
+- `/home/andre/php-pr196-197-review-20260818`
+- local review worktree `/tmp/tina4-php-pr196-197-review-20260818`
+
+## Open pull requests that need work or a decision
+
+| PR | Current state | Required action |
+| --- | --- | --- |
+| [tina4-nodejs#48](https://github.com/tina4stack/tina4-nodejs/pull/48) | Targets stale `main`; raises only Node's default request limit from 100 to 1,000. | **Do not merge as written.** All four frameworks use 100 requests per 60 seconds. Andre must choose: keep 100 and close the PR, or define a shared contract and move all four to 1,000. Keeping 100 is the parity-preserving recommendation. |
+| [tina4-php#195](https://github.com/tina4stack/tina4-php/pull/195) | CSP-clean dev-toolbar assets, but the main PHP test job is red. The same CSP concern may exist in the other frameworks. | Repair the three stale reload tests, audit all four dev toolbars, add a parity fixture, then merge only after the shared behavior is proven. |
+| [tina4-documentation#50](https://github.com/tina4stack/tina4-documentation/pull/50) | Python quick-reference corrections; conflicts with current `main`. | Rebase and reconcile each claim against released code. Do not resolve conflicts by choosing one side wholesale. |
+| [tina4-book#152](https://github.com/tina4stack/tina4-book/pull/152) | Companion Chapter 1 corrections; conflicts with current `main`. | Reconcile with documentation PR #50 and current generated-book source. Keep the website, books, and PDFs aligned. |
+
+PHP PRs #196 and #197 and Node.js PR #49 are already merged. Do not repeat those merges.
+
+Other open organization PRs are outside the four-framework `.105` line unless Andre expands the
+scope: `tina4delphi` #1 and #7, `tina4php-postgresql` #3, `tina4php-shopify` #18, and `tina4-cms` #6.
+Audit their age and target branches before touching them.
+
+## Open issues relevant to the release audit
+
+| Issue | State | Next step |
+| --- | --- | --- |
+| [tina4-python#104](https://github.com/tina4stack/tina4-python/issues/104) | Fixed on the local `.105` route branch. | Land, release, verify, then close. |
+| [tina4-python#103](https://github.com/tina4stack/tina4-python/issues/103) | Reproduced on current `v3`: an outer `@noauth()` route can log `auth=required` during registration even though the route is public. | Fix the misleading log and add a regression. Check visible logging behavior in the other frameworks before calling it parity. |
+| [tina4-python#102](https://github.com/tina4stack/tina4-python/issues/102) | Still unresolved: hot reload can retain stale ORM field metadata through an unchanged route module's old model import. | Build a minimal real reload reproduction, fix class/module invalidation, and check the equivalent reload path in every framework. |
+| [tina4-book#148](https://github.com/tina4stack/tina4-book/issues/148) | Documentation discrepancy around `tina4 serve -p/--port` and project launchers. | Verify current CLI behavior and correct all affected chapters and quick references. |
+| [tina4-book#144](https://github.com/tina4stack/tina4-book/issues/144) | Old queue audit findings. Some may already be fixed. | Reproduce each claim against 3.13.104 before closing or scheduling work. |
+| [tina4-book#142](https://github.com/tina4stack/tina4-book/issues/142) | Old ORM audit findings. Some may already be fixed. | Reproduce each claim against 3.13.104 before closing or scheduling work. |
+
+The Tina4 client clustering/tuning issue is backlog work, not an automatic `.105` blocker.
+
+## Recommended order of work
+
+1. Ask Andre for the rate-limit decision on Node.js PR #48.
+2. Reproduce and fix Python issues #103 and #102. Audit the same contracts in PHP, Ruby, and Node.js.
+3. Decide whether the CSP toolbar repair belongs in `.105`. If yes, repair PHP PR #195 and implement
+   one shared behavior across all four frameworks.
+4. Rebase and fact-check documentation PR #50 and book PR #152. Regenerate and verify PDFs when the
+   source chapters change.
+5. Add versions and changelogs only after the `.105` code scope stops moving.
+6. Run clean, merged-head lab suites for all four frameworks. Use live database services and record
+   skips, warnings, and qualified infrastructure failures without hiding them.
+7. Merge the release branches into `v3`, retest the exact merge commits, and request Andre's release
+   approval.
+8. Tag, publish, verify public registries and GitHub Releases, update website release notes, then
+   close only the issues proven fixed by the public release.
+
+## Release gates
+
+Before tagging `.105`, prove all of the following:
+
+- Package and runtime versions agree in every framework.
+- The shared fixtures pass in all four framework runners.
+- `tina4 routes` lists a canonical route and never executes the application entrypoint.
+- Firebird migration ledgers work against the real lab service.
+- Full suites run from the exact merged release commits.
+- Docker images start and report the release version.
+- Changelogs, four language release chapters, quick references, landing-page notes, and PDFs state
+  the same facts.
+- The framework source does not regain a second metrics engine. Dev Admin hands analysis to the
+  signed Tina4 client.
+- No package list calls a language extension a dependency. A dependency is an extra package that a
+  developer must install for the feature to work.
+- Tags are bare framework tags such as `3.13.105`; do not invent a `v3.13.105` package tag.
+
+## Lab recipe
+
+Connect with:
+
+```sh
+ssh andre@192.168.88.99
+sudo -i
+```
+
+Use `/root/tina4-lab/lab-env-for.sh <py|php|rb|node>` for the framework service environment. Add the
+ODBC DSN variables when testing ODBC; the helper does not set them. Use
+`TINA4_REQUIRE_SERVICES=1` when a gate must fail instead of skipping unavailable services.
+
+For PHP Firebird ledger validation, the proven URL was:
+
+```sh
+TINA4_TEST_FIREBIRD_URL='firebird://SYSDBA:masterkey@localhost:3050//var/lib/firebird/data/tina4test.fdb'
+```
+
+Do not run four network-heavy skill-installer tests in parallel. GitHub Raw has produced transient
+503 responses under that load. The installer has retry and jsDelivr fallback logic, but a release
+gate should still record which endpoint failed.
+
+## Documentation checkout warning
+
+`/Users/andrevanzuydam/IdeaProjects/tina4-documentation` is on local `main`, 19 commits behind
+`origin/main`, and contains unrelated uncommitted SSO audit work under `plan/v3`. Do not pull,
+rebase, reset, clean, or commit the whole checkout. Preserve these files:
+
+- modified feature matrix, contract map, decisions, catalog, and generator files;
+- untracked `plan/v3/decisions/ADR-0056.md`;
+- untracked `plan/v3/features/136-oidc-sso.md`;
+- untracked `plan/v3/fixtures/sso_contract.json`.
+
+Use an isolated worktree for `.105` documentation. This `CONTINUE.md` replacement is the only
+intentional change in the main checkout for this handover.
+
+## Commit discipline
+
+- Keep one subject per commit.
+- Include tests or recorded verification with each runtime fix.
+- Use the Tina4 trailer on maintainer commits:
   `Co-Authored-By: Tina4 <82961293+tina4stack@users.noreply.github.com>`.
+- Never call a release complete until the public package registries and GitHub Releases agree.
 
----
-
-## 6. Frond compiler (CP-DEC-01) — scoped plan (flagship of 3.13.101)
-
-**Owner decision (Andre, 2026-08-11):** all four languages get a Frond AOT compiler. It is a
-**parity/architecture** call (one uniform pipeline across the four), NOT throughput — made with
-eyes open that Node is already fast and Ruby is the slow outlier. Recorded in
-`plan/v3/features/050-frond-compiler.md`; ADRs: ADR-0001 (AOT compile layer), ADR-0004 (best
-implementation prevails).
-
-### Ground truth (verify before starting)
-- **Python** — REAL AOT compiler: `tina4_python/frond/compiler.py:81-110`. Emits Python source
-  (`def _rendered(engine, ctx): ...`), `compile()`+`exec()` into a callable. **This is the reference.**
-- **PHP** — REAL AOT compiler: `Tina4/FrondCompiler.php:70` (a faithful PORT of the Python master).
-  Emits PHP source, `eval()` into `\Closure::bind($fn, null, Frond::class)`.
-- **Ruby** — NO compiler, NO AST. Pure interpreter over cached TOKENS (`lib/tina4/frond.rb`,
-  `render_tokens`). **Needs both.**
-- **Node** — NO compiler, NO AST. Interpreter over cached TOKENS (`packages/frond/src/engine.ts`,
-  no `new Function`/`eval`/`vm`). **Needs both.**
-
-### The hard prerequisite: parser/AST for Ruby + Node (feature 49)
-A compiler needs a TREE. Ruby + Node today walk a FLAT token list and re-derive `if`/`for` grouping
-at render time — there is no AST. **Phase 0 is a parser** that turns the token stream into an AST
-(node kinds mirror Python's `frond/parser.py`: Text, Output/Var, Set, If/ElseIf/Else, For, Block,
-Include, Extends, Macro, Raw, Comment, Cache, …). Keep the interpreter working off the same AST (or
-keep the token path as fallback) throughout — never break rendering mid-migration.
-
-### The compiler (feature 50) — port the Python design exactly
-1. **Emit native host source from the AST** for the **hot-path subset only**: `text`, `output`
-   (var/expr), `set`, `if`, `for`. Anything outside the subset → mark unsupported → **fall back to
-   the interpreter for the whole template** (Python/PHP semantics; Python raises `_Unsupported`).
-2. **Byte-identity invariant (THE acceptance gate, ADR-0001):** every value-producing hole in the
-   emitted source calls the interpreter's OWN primitives (Ruby: the real evaluators in `frond.rb`;
-   Node: `engine.ts`'s eval fns), and the output-coercion is twinned (`_tostr`/`_to_output`), so
-   **compiled output === interpreted output, byte-for-byte.** Do NOT reimplement evaluation in the
-   compiler — that is what guarantees identity. Reuse/port Python's compiled-vs-interpreted parity
-   test as the gate.
-3. **Compile step:** Ruby → build the source string, `eval`/`class_eval` into a lambda/method bound
-   to the engine. Node → **`new Function(...)`** (NOT `eval`) producing `(engine, ctx) => string`.
-4. **Security (keep the Python invariant):** generate source ONLY from the parsed AST nodes, NEVER
-   from raw template text — the compiler `exec`/`eval`s code IT generated, so it is not an injection
-   surface. A Ruby/Node port MUST preserve this.
-5. **Fallback:** any codegen/compile error → return `null`/`nil` → interpret. A render is never
-   broken by the compiler.
-6. **Cache** the compiled callable (feature 59 cache; key by content in dev so an edit recompiles).
-   **Disable under sandbox** (compiled path skipped, interpreter runs).
-
-### Phasing (multi-session; commit each phase, suite green between)
-- **A.** Ruby parser/AST (feature 49) + AST-shape tests (parity with Python's node kinds).
-- **B.** Ruby compiler (feature 50) + the byte-identity gate + fallback/sandbox/cache tests.
-- **C.** Node parser/AST + tests.
-- **D.** Node compiler + byte-identity gate + fallback/sandbox/cache tests.
-- Measure Ruby with **Carbonah before/after** (it should help the slow outlier most); confirm Node
-  does not regress (its value here is parity, not speed).
-
-### Tests (real, no mocks — render through the real engine)
-Per language: each hot-path construct + a mixed corpus → compiled === interpreted (byte-identical);
-an unsupported construct → falls back and still renders correctly; sandbox → compiler skipped,
-correct output; cache → compiled callable cached, dev edit recompiles; a template whose text looks
-like code → output is correct/escaped (proves generation is from the AST, not raw text).
-
-### Risks
-- Building an AST is a real refactor of the current token-walk render — keep the interpreter path
-  (the fallback) working throughout.
-- Byte-identity is strict; the shared-primitives design is the ONLY way to hold it — resist the urge
-  to inline evaluation into the emitted source.
-- Node is already fast (V8); do not regress it chasing a compile step whose payoff there is parity,
-  not throughput.
-
-### References
-`tina4_python/frond/{parser.py, compiler.py}` (compiler.py:81-110, the master) ·
-`tina4-php/Tina4/FrondCompiler.php:70` (the PHP port) ·
-`plan/v3/features/{049-frond-parser.md, 050-frond-compiler.md}` · ADR-0001, ADR-0004.
+One branch. One gate. One set of facts. The tag comes last.
