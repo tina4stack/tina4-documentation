@@ -103,9 +103,25 @@ to `MichaelC8E/tina4-book:docs/python-consistency-fixes`, PR head
 the PR body's explicit "both PRs should land together" note --
 `sync-books.sh` would otherwise overwrite the docs-site copy of Chapter 1).
 
+**Critical tina4-python skill drift — FIXED on .105.** Owner reported: the
+`tina4-developer-python` skill's `references/deployment.md` said
+`JWT_SECRET` in three sites (docker-compose env block, `docker run -e ...`,
+deployment checklist). The framework reads only `TINA4_SECRET`. Following
+the skill produced a container that boots with `TINA4_SECRET` blank; the
+v3.12 boot guard does NOT catch `JWT_SECRET` (the name was invented by the
+skill and was never a legacy alias), and in production `Auth.ensureDevSecret`
+only warns on a blank secret rather than refusing to boot. Result: JWTs
+signed with the empty string -- **forgeable tokens shipped straight from
+the deployment checklist**. Cross-framework audit: `deployment.md` in the
+PHP, Ruby and Node developer skills does NOT carry the same drift; shared
+skills (tina4-maintainer, tina4-js) are clean. Fix on
+`feature/release3.13.105`: commit `86abc01`. The `tina4/install-skills.sh`
+installer ref stays at `3.13.102` until `.105` tags, then bumps to
+`3.13.105` so a `curl … | sh` reinstall picks the fix up.
+
 **All four .105 branches — VERSION BUMPED + CHANGELOG DRAFTED and pushed
-to origin.** Python `44e149f`, PHP `e16991a5`, Ruby `19f1381`, Node
-`d445b0f`. Each commit bumps the manifest / version constant / (Node
+to origin.** Python `86abc01` (was `44e149f` before the skill-drift fix
+above), PHP `e16991a5`, Ruby `19f1381`, Node `d445b0f`. Each commit bumps the manifest / version constant / (Node
 package-lock) / `CLAUDE.md` pointer to 3.13.105, and prepends the
 framework-specific CHANGELOG entry (common intro + per-framework
 extras). No other code touched. Ruby and Node .105 branches are now on
@@ -116,7 +132,7 @@ Every .105 code fix landed this session is on the pushed branches:
 
 | Framework | Branch HEAD | Ahead of origin/v3 |
 | --- | --- | ---:|
-| tina4-python | `44e149f` | 4 |
+| tina4-python | `86abc01` | 5 |
 | tina4-php | `e16991a5` | 6 |
 | tina4-ruby | `19f1381` | 2 |
 | tina4-nodejs | `d445b0f` | 4 |
