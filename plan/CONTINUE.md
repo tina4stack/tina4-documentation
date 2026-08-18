@@ -79,6 +79,30 @@ safe. Node ESM `import` DOES capture by reference, same as Python, so
 Node's hot-reload path may exhibit the same shape -- an audit is owed.
 Tracked as a follow-up alongside the CSP-toolbar port in `.106`.
 
+**Docs PR #50 (Python quick-reference + Chapter 1) — REBASED and updated.**
+`main` had moved forward with SSO / GIS / IoT / mail-safety / metrics-baseline
+work since the PR was branched, but nothing else touched the two files in
+the PR (`docs/python/01-getting-started.md`, `docs/python/index.md`), so
+the rebase produced a single-hunk conflict on the intro paragraph. Resolved
+as a hybrid: kept the PR's zero-dependency emphasis AND the Chapter 38
+link, plus `main`'s careful "135-entry feature catalog; inventory, not a
+claim that every entry has reached parity" framing (the count is now 135,
+not 97; `docs/python/38-feature-list.md` confirms the link resolves). Also
+resolved the PR's open `assert_*` vs `expect_*` question against released
+code: `tina4_python.Testing` on 3.13.104 exports only `expect_*` -- the
+rename shipped after 3.13.98, so the PR's original `assert_*` snippets were
+now wrong; four lines updated to `expect_*`. `audit-truth.py --strict`
+passes cleanly on the result. Force-pushed to `MichaelC8E/tina4-documentation:
+docs/python-consistency-fixes`, PR head is now `799dbef`, mergeable.
+
+**Book PR #152 (Chapter 1 Python) — REBASED with the same hybrid fix.**
+Same intro-paragraph conflict, same resolution. Book Chapter 1 doesn't
+touch the Testing section so no `expect_*` change was needed here. Pushed
+to `MichaelC8E/tina4-book:docs/python-consistency-fixes`, PR head
+`82aaffe`, mergeable. Both PRs are ready for owner merge as a pair (per
+the PR body's explicit "both PRs should land together" note --
+`sync-books.sh` would otherwise overwrite the docs-site copy of Chapter 1).
+
 **Branches pushed to origin (both were local-only before this session):**
 `tina4-python/feature/release3.13.105` and
 `tina4-php/feature/release3.13.105`. Ruby and Node .105 branches remain
