@@ -6,7 +6,7 @@ Your SaaS app needs signup confirmations. Password resets. Weekly digests. Attac
 
 Email is plumbing. Every application needs it. Nobody wants to build it. SMTP configuration. Plain text fallbacks. Attachment encoding. Connection timeouts. Bounce handling. The details pile up.
 
-Tina4's `Messenger` class handles all of it. Configure in `.env`. Create an instance. Send. In development mode, emails land in the dev dashboard -- not in real inboxes. No accidents.
+Tina4's `Messenger` class handles all of it. Configure in `.env`. Create an instance. Send. Without an SMTP host, Messenger captures mail in the dev mailbox. An SMTP host enables real delivery, so staging needs an explicit safety setting.
 
 ---
 
@@ -33,6 +33,34 @@ TINA4_MAIL_FROM_NAME=My Store
 | `TINA4_MAIL_ENCRYPTION` | Encryption method | `tls` (recommended), `ssl`, `none` |
 | `TINA4_MAIL_FROM` | Default "From" address | `noreply@yourdomain.com` |
 | `TINA4_MAIL_FROM_NAME` | Default "From" display name | `My Store`, `Acme Corp` |
+| `TINA4_MAIL_CAPTURE` | Disable SMTP and capture each message locally | `true` on staging when no external delivery is allowed |
+| `TINA4_MAIL_REDIRECT_TO` | Replace every SMTP recipient with a safety list | `qa@example.com,product@example.com` |
+
+### Staging delivery safety
+
+`TINA4_DEBUG` controls developer tools. It does not disable SMTP delivery. Pick
+one explicit mail policy for staging:
+
+```bash
+# No message leaves the application. Inspect it in the dev mailbox.
+TINA4_MAIL_CAPTURE=true
+```
+
+Capture wins even when an SMTP host exists. A missing SMTP host also captures
+mail. `TINA4_MAILBOX_DIR` only selects the dev mailbox directory; it does not
+turn capture on or off.
+
+Use real SMTP without risking customer delivery by replacing all recipients:
+
+```bash
+TINA4_MAIL_REDIRECT_TO=qa@example.com,product@example.com
+```
+
+Tina4 trims each comma-separated address and drops blank entries. On the SMTP
+path, the safety list replaces `To`; Tina4 clears `Cc` and `Bcc` and stores all
+original recipients in `X-Tina4-Original-To`. An unset or empty list leaves
+delivery unchanged. If capture and redirect are both set, capture wins and
+nothing reaches SMTP.
 
 ### Common Provider Configurations
 
@@ -473,9 +501,11 @@ Pass the `folder` option to read from any IMAP folder. The default is `"INBOX"`.
 
 ---
 
-## 10. Dev Mode: Email Interception
+## 10. Dev Mailbox Capture
 
-When `TINA4_DEBUG=true`, all outgoing emails are intercepted. They appear in the dev dashboard instead of reaching real recipients. No accidents during development.
+Messenger captures outgoing mail when no SMTP host exists or when
+`TINA4_MAIL_CAPTURE=true`. `TINA4_DEBUG` only makes the dev dashboard available;
+it does not change delivery.
 
 Navigate to `/__dev` and find the "Mail" section. You see:
 
@@ -485,17 +515,13 @@ Navigate to `/__dev` and find the "Mail" section. You see:
 - Attachments (viewable inline)
 - The timestamp
 
-Test email without configuring a real SMTP server. Inspect the output without polluting anyone's inbox.
+Test email without configuring a real SMTP server. Enable `TINA4_DEBUG=true` to inspect captured messages in the dashboard.
 
-### Disabling Interception
+### Sending from a development environment
 
-To test real email delivery during development:
-
-```bash
-TINA4_MAILBOX_DIR=false
-```
-
-Emails now reach real recipients even when `TINA4_DEBUG=true`. Use with caution. You do not want to email your entire user base from a dev machine.
+Configure an SMTP host and leave `TINA4_MAIL_CAPTURE` unset or false. The
+`TINA4_DEBUG` value does not matter to delivery. To test SMTP without reaching
+customers, set `TINA4_MAIL_REDIRECT_TO` to controlled inboxes.
 
 ---
 
@@ -618,7 +644,7 @@ curl -X POST http://localhost:7145/api/register \
 }
 ```
 
-With `TINA4_DEBUG=true`, the email appears in the dev dashboard. Inspect the rendered HTML. Check that template variables were substituted. Verify the layout.
+With `TINA4_MAIL_CAPTURE=true`, the email stays in the dev mailbox instead of reaching a real inbox. Enable `TINA4_DEBUG=true` to inspect the rendered HTML and verify the template values in the dashboard.
 
 ---
 
@@ -950,9 +976,9 @@ The HTML response includes the success flash message.
 
 **Problem:** You set up SMTP. No emails arrive. No errors either.
 
-**Cause:** `TINA4_DEBUG=true` intercepts all emails and shows them in the dev dashboard. The email never reaches the SMTP server.
+**Cause:** `TINA4_MAIL_CAPTURE=true` or a missing SMTP host sends mail to the dev mailbox. `TINA4_DEBUG` does not control delivery.
 
-**Fix:** Check the dev dashboard at `/__dev` for intercepted emails. If you need real email delivery during development, set `TINA4_MAILBOX_DIR=false`. Remove this setting before committing.
+**Fix:** Check `/__dev` for captured mail. To use SMTP, configure `TINA4_MAIL_HOST` and remove `TINA4_MAIL_CAPTURE`. On staging, set `TINA4_MAIL_REDIRECT_TO` so tests cannot reach customer addresses.
 
 ### 6. Email Template Variables Not Substituted
 

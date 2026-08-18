@@ -234,7 +234,11 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 | `TINA4_MAIL_IMAP_USERNAME` | _(none)_ | IMAP authentication username. |
 | `TINA4_MAIL_IMAP_PASSWORD` | _(none)_ | IMAP authentication password. |
 | `TINA4_MAIL_IMAP_ENCRYPTION` | `tls` | IMAP transport encryption. Accepts `tls`, `starttls`, or `none`; any other value is silently coerced back to `tls`. Independent of `TINA4_MAIL_ENCRYPTION` so Gmail-style setups can use IMAPS on 993 alongside SMTP STARTTLS on 587. |
-| `TINA4_MAILBOX_DIR` | `data/mailbox` | Dev mailbox directory. All outbound mail lands here when `TINA4_DEBUG=true`. |
+| `TINA4_MAIL_CAPTURE` | `false` | Force local DevMailbox capture and skip SMTP, even when an SMTP host exists. A missing host also captures. |
+| `TINA4_MAIL_REDIRECT_TO` | _(none)_ | Comma-separated safety recipients for real SMTP delivery. Replaces To, Cc, and Bcc. |
+| `TINA4_MAILBOX_DIR` | `data/mailbox` | Storage directory for captured mail. This setting does not enable or disable capture. |
+
+> `TINA4_DEBUG` does not suppress email. On staging, set `TINA4_MAIL_CAPTURE=true` to keep every message local, or set `TINA4_MAIL_REDIRECT_TO=qa@example.com,product@example.com` to exercise SMTP without reaching original recipients. Capture takes precedence when both are set.
 
 > `TINA4_MAIL_HOST`, `TINA4_MAIL_PORT`, `TINA4_MAIL_USERNAME`, `TINA4_MAIL_PASSWORD` are also accepted as aliases for the `TINA4_MAIL_*` equivalents. New projects should use the `TINA4_MAIL_*` names.
 
