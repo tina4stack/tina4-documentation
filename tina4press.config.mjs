@@ -101,7 +101,8 @@ const BACKEND_GROUPS = [
   {
     text: "APIs & Protocols",
     stems: ["swagger", "api-client", "graphql", "websocket", "sse",
-            "wsdl-soap", "realtime-webrtc", "ai-client"],
+            "wsdl-soap", "realtime-webrtc", "ai-client", "sso", "gis",
+            "iot-mqtt"],
   },
   {
     text: "Advanced",
