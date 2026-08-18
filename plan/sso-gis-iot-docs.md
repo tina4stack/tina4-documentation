@@ -43,6 +43,6 @@ language quick reference and sidebar, with examples that match the released
 
 ## Commits
 
-- Pending.
+- `ac52dbe` - complete the SSO, GIS, and IoT/MQTT documentation across all four backends.
 
 ## Status: In progress
