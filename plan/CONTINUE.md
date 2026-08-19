@@ -1,5 +1,78 @@
 # CONTINUE - Tina4 maintainer handover (2026-08-18, updated during-session)
 
+## Session log — 2026-08-18 second pass (added by Claude)
+
+**Audit bug batch for 3.13.105 — Python master shipped, 3 sibling ports in
+flight.** Answering the owner's question "why don't our test fixtures solve
+for these bugs?" revealed the queue-contract fixture's 7 invariants all test
+SURFACE (does this method exist and reach a backend) — none test cross-API
+consistency between two spellings of the same intent. Every bug in this batch
+lived in exactly that seam.
+
+Python master commit `38b7bfd` on `feature/release3.13.105` fixes 4 of 5 audit
+bugs test-first + mutation-proven, plus doc-parity docstrings on
+`Queue.size()`/`failed()`/`dead_letters()`:
+
+- **PY-06-22** — `Model.clear_cache()` now cascades to `db.cache_clear()` on
+  the model's bound connection so an out-of-band write / deliberate refresh /
+  race under `TINA4_AUTO_CACHING=true` + `TINA4_DB_CACHE=true` cannot leave
+  stale rows in `db.fetch()`'s persistent cache. Regression:
+  `tests/test_model_clear_cache_cascades_to_db.py` (2 cases, both mutation-
+  proven).
+- **PY-12-04** — `Queue.retry()` no-arg materialises the `retry_job()` call
+  over every dead letter before reducing. The old
+  `any(backend.retry_job(j.id) for j in dead)` generator inside `any`
+  short-circuited on the first truthy result, so a queue with N dead letters
+  revived exactly one and silently left N-1 in the store. Regression:
+  `tests/test_queue_retry_all_revives_all.py` (2 cases, mutation-proven).
+- **PY-12-05** — `LiteBackend.retry(job)` now unlinks the dead-letter file
+  before requeuing. A caller iterating `dead_letters()` and calling
+  `job.retry()` on each used to leave the store carrying every "revived"
+  job, so the next `dead_letters()` re-returned them and consumers processed
+  each twice. Regression: `tests/test_queue_job_retry_removes_dead_letter.py`.
+- **MongoDB `retry_job(id)` + `purge(status)`** — `retry_job` now looks the
+  doc up in the `.dead_letter` topic namespace by `data.id`, deletes the
+  DL record, and upserts the original back to pending. Pre-fix the filter
+  `{_id, self._topic, "failed"}` could never match a dead letter (three
+  reasons: wrong `_id`, wrong topic, wrong status). `purge` now returns
+  `deleted_count`, honours every status, and scopes the delete so
+  `purge("pending")` no longer nukes completed/reserved docs under the same
+  topic. Regression: `tests/test_queue_mongo_retry_and_purge.py` — real
+  MongoDB, **skips-if-unreachable**, mutation-proven locally against a
+  transient container that has been stopped (Docker was killing the
+  workstation). Needs re-verification on the .99 lab.
+
+- **PY-12-06/08 — RECLASSIFIED as API-naming semantics, not a bug.**
+  `_DEAD_STATES = ("failed","dead","dead_letter")` is intentional:
+  `size("failed")` counts the dead-letter store (matching `dead_letters()`
+  length), while `failed()` returns retryable-but-attempted jobs that live
+  in the pending queue. An attempted fix broke 4 dev-admin panel tests that
+  lock in the historical semantics. **Owner decision received: keep the
+  current behaviour and get documentation into strict parity across the 4
+  frameworks.** Docstrings on `size()`/`failed()`/`dead_letters()` in
+  Python (this commit) call out the alias grouping under `size()` and the
+  fact that `failed()` results ALSO count under `size("pending")`. The 3
+  sibling ports are propagating the same docstring text.
+
+**Ports in flight (background, this session).** Three parallel `tina4-dev`
+agents were launched to port the 4 fixes + docstring parity to
+`.worktrees/release-3.13.105/tina4-{php,ruby,nodejs}` on
+`feature/release3.13.105`. Each agent is briefed to: read Python master
+`38b7bfd`, apply the 4 fixes test-first + mutation-proven with a
+skip-if-unreachable Mongo test, propagate the docstring parity, and push
+one atomic commit per framework. They will report back independently.
+
+**Still to do before .105 tags** (task 81):
+1. Land sibling ports (waiting on the 3 agents).
+2. Extend `plan/v3/fixtures/queue_contract.json` with 3 cross-API invariants
+   once all 4 frameworks are green: `retry-all-revives-all`,
+   `job-retry-clears-dead-letter`, `retry-job-round-trips`. NOTE:
+   `size-per-status-agrees-with-list-per-status` was dropped from the
+   original plan — the size/failed disagreement is API-naming, not a bug.
+3. Lab-verify all 4 (MongoDB retry_job test needs the live Mongo the lab
+   provisions under `TINA4_REQUIRE_SERVICES=1`).
+4. Owner tag approval, merge to v3, cut `v3.13.105`.
+
 ## Session log — 2026-08-18 (added by Claude)
 
 Work done during this session, on top of what the "Start here" section below
