@@ -1,5 +1,147 @@
 # Release Notes
 
+## v3.13.105 (2026-08-19) - Cross-API invariants, honest logs, portable tests
+
+A bug release with teeth. Five audit bugs closed in the queue and ORM cache
+seams — the places where two spellings of the same intent quietly disagreed.
+Route inspection stops booting the app. The startup log stops lying about
+`@noauth`. Hot reload reaches the modules that captured the changed one.
+Firebird's migration ledger tolerates any case the driver hands back. And every
+framework developer skill gained a spine: it announces every step before taking
+it, and it warns with 💩 when it is out of date.
+
+### Queue and ORM audit bugs — five fixed
+
+- **`Model.clear_cache()` invalidates the DB layer too.** When both
+  `TINA4_AUTO_CACHING` and `TINA4_DB_CACHE` are enabled, a manual
+  `clear_cache()` used to leave the DB-layer cache holding stale rows. It now
+  cascades to `db.cache_clear()` on this model's bound connection.
+- **`Queue.retry()` revives every dead letter.** The no-arg form used a
+  generator inside `any(...)`, which short-circuits after the first success.
+  Now it materialises the loop so all N dead letters revive, not just one.
+- **`Job.retry()` removes the dead-letter file.** Iterating `dead_letters()`
+  and calling `.retry()` on each used to leave the failed directory carrying
+  every revived job. The next `dead_letters()` call re-reported them and
+  consumers processed each job twice.
+- **MongoDB `retry_job(id)` finds the dead letter.** The old filter looked
+  for `{_id: job_id, topic: self._topic, status: "failed"}` — three reasons
+  that combination could never match a real dead-letter doc (fresh `_id`,
+  `.dead_letter` topic namespace, `dead` status). The new filter reads the
+  dead-letter namespace by `data.id`, deletes the record, and upserts the
+  original back to pending.
+- **MongoDB `purge(status)` returns a count.** Used to return `None` and
+  honour only the `pending` status. Now returns `deleted_count`, honours every
+  status, and scopes the delete so `purge("pending")` no longer nukes
+  completed or reserved docs under the same topic.
+
+### Route inspection scans, never boots
+
+`tina4 routes` walks canonical route files without executing `app.py` or
+starting the server. The prior implementation booted the app on the same port
+and terminated whichever process was holding it — a nasty surprise for anyone
+running `tina4 routes` in a live shell. Closes tina4-python #104.
+
+### Startup log tells the truth about @noauth / @secured
+
+Python decorators apply bottom-up, so `@post()` logged the route as
+`auth=required` a microsecond before the outer `@noauth()` flipped the flag.
+`@noauth()` and `@secured()` now emit a corrective `Route auth updated:` line
+whenever they change the auth default on a route another decorator already
+logged. Closes tina4-python #103, where a public login endpoint appeared to
+log its own security bug. Python-only — PHP, Ruby and Node do not log an auth
+field at registration time.
+
+### Hot reload reaches every module that imports the changed one
+
+A route file that did `from src.orm.Todo import Todo` kept its stale `Todo`
+reference after the model changed — the API then lied about the schema on the
+next request. `_auto_discover` now cascades a re-import to every module that
+captured a binding from the changed one, recursive with a visited set, bounded
+to the discovery scope, fail-loud. Closes tina4-python #102.
+
+### Firebird migration ledger is case-agnostic
+
+`tina4_migration` reads and writes work regardless of the case the Firebird
+driver returns for the `migration_name` column. Uses the atomic sequence
+pattern the other engines already have.
+
+### Test-harness fixes
+
+- **SIGTERM port probe checks both interfaces.** The graceful-shutdown test
+  probed only `0.0.0.0` with `SO_REUSEADDR`, which succeeds on macOS while
+  the framework's default `127.0.0.1` listener holds the port — a silent
+  false negative on every Mac dev machine. Now probes both interfaces and
+  refuses to conclude the port is free until both agree.
+- **MySQL connect-timeout assertion tolerates driver cleanup time.** The
+  assertion compared the outer clock to the wrapper's rendered message.
+  mysql-connector adds around 0.7 seconds of cleanup after aborting, so the
+  two stopwatches legitimately differed. The assertion now parses the reported
+  elapsed via regex and checks it against the configured bound, not against
+  the outer clock.
+
+### Skills grow a spine
+
+- **Announce before you act.** Every framework developer skill now instructs
+  itself to say what it is about to do — one line before each file write,
+  migration, or dependency install — so the developer can stop the work
+  before it spends their afternoon. Same rhythm across Python, PHP, Ruby and
+  Node.
+- **💩 stale-skill detection.** Every framework developer skill also checks
+  whether a newer skill is available (compared against the latest published
+  skill version at `https://tina4.com/skills/<name>/version`, never against
+  the project's framework version) and prepends 💩 to every reply if it is
+  behind. Your framework version stays your call; the skill just refuses to
+  pretend its advice is current.
+
+### Upgrade notes
+
+- No API changes. All fixes preserve existing signatures.
+- Consumers iterating `dead_letters()` and calling `job.retry()` on each — now
+  safe. Previously it produced duplicates on the next `dead_letters()` call.
+- `Model.clear_cache()` under `TINA4_DB_CACHE=true` now also flushes the
+  DB-layer cache. This is the expected behaviour.
+- Lab full-suite verified: 25,263 tests across all four frameworks, zero
+  failures, zero skips.
+
+## v3.13.104 (2026-08-17) - OIDC SSO and PostGIS land
+
+Two big features, uniform across all four frameworks: a provider-neutral OIDC
+handoff for SSO logins, and a shared `Point` contract for PostGIS geospatial
+queries. Both wire through the same small API in Python, PHP, Ruby and Node.
+
+### OIDC / OpenID Connect — provider-neutral, session handoff
+
+`Sso.from_issuer(...)` discovers a real OIDC provider (Keycloak, Auth0, Okta,
+anything speaking the standard) via its `.well-known/openid-configuration`
+endpoint and hands a validated identity into an existing Tina4 `Session`. The
+`login` / `callback` / `refresh` / `logout` cycle runs against the real
+provider — no mock. PKCE with S256 by default. Reserved SSO session keys
+(`Sso.PENDING_KEY`, `Sso.SESSION_KEY`) never leak through `session.all()`.
+
+Opt in with `TINA4_SSO_ISSUER` plus the client id, secret and redirect URI.
+
+### PostGIS spatial support
+
+`PointField` on an ORM model creates the right column for whichever engine
+you are on — PostGIS `geometry(Point, SRID)` on PostgreSQL, JSON on the
+others. `select_distance`, `intersects` and `bbox` predicates read the same
+way across engines but use each engine's native functions where available.
+GeoJSON in, GeoJSON out. Refuses hostile input (garbage geometry, injected
+column names, NaN or Inf ordinates) before any SQL runs.
+
+Opt in by declaring a `PointField` on a model. Existing models unchanged.
+
+### Swagger is SSO-aware
+
+The Swagger generator recognises OIDC-secured routes and emits the right
+`security` scheme in the OpenAPI 3.0.3 spec.
+
+## v3.13.102 (2026-08-15) - Unified client and CI hardening
+
+Small release. Framework developer skills teach the unified `tina4 init` /
+`tina4 serve` workflow consistently across the four languages, and CI now
+verifies the downloaded native CLI asset before running the metrics handoff.
+
 ## v3.13.103 (2026-08-16) - Metrics you can trust, releases that cannot lie
 
 Version 3.13.102 was a skills-only release, so framework runtime packages

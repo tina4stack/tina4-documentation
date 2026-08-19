@@ -50,11 +50,15 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.103
+## Current framework release: 3.13.105
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.103. This release makes the
-native Tina4 client the single owner of metrics, preserves Frond parity, and
-prevents a mismatched source version from reaching a package registry.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.105. A bug release with
+teeth: five queue and ORM audit bugs closed in the seams where two spellings
+of the same intent disagreed, route inspection stops booting the app, the
+startup log stops lying about `@noauth`, hot reload reaches every module
+that captured a changed one, and every framework developer skill gained a
+spine (announce every step, warn with 💩 when out of date). Lab-verified at
+25,263 tests across all four frameworks, zero failures, zero skips.
 
 [Read the release notes](/python/36-releases.md)
 
@@ -111,6 +115,14 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.105 (2026-08-19)** - [full notes](/python/36-releases.md)
+
+Cross-API invariants, honest logs, portable tests. Five queue and ORM audit bugs closed in the seams where two spellings of the same intent quietly disagreed: `Model.clear_cache()` now cascades to the DB layer under `TINA4_DB_CACHE=true`, `Queue.retry()` revives every dead letter (no more `any()` short-circuit), `Job.retry()` unlinks the dead-letter file, and MongoDB's `retry_job(id)` + `purge(status)` actually find and count what they claim. Route inspection stops booting the app. `@noauth()` / `@secured()` emit a corrective startup log so the log stops lying. Hot reload reaches every module that captured a changed one. Firebird's migration ledger tolerates any case the driver hands back. And every framework developer skill gained a spine: it announces every step before taking it, and it warns with 💩 when a newer skill is published.
+
+**v3.13.104 (2026-08-17)** - [full notes](/python/36-releases.md)
+
+OIDC SSO and PostGIS land, uniform across all four frameworks. `Sso.from_issuer(...)` discovers a real OIDC provider (Keycloak, Auth0, Okta) and hands a validated identity into an existing Tina4 `Session`, with PKCE-S256 by default. `PointField` on an ORM model creates the right column for whichever engine you are on (PostGIS `geometry(Point, SRID)` on PostgreSQL, JSON on the others); `select_distance`, `intersects`, and `bbox` predicates read the same way across engines. Swagger recognises OIDC-secured routes and emits the right scheme.
 
 **v3.13.103 (2026-08-16)** - [full notes](/python/36-releases.md)
 
