@@ -348,6 +348,8 @@ Tina4 supports two naming conventions for SMTP variables. The `SMTP_*` variables
 | `TINA4_MAIL_FROM` | `TINA4_MAIL_FROM` | `noreply@localhost` | Default sender address. |
 | `TINA4_MAIL_FROM_NAME` | `TINA4_MAIL_FROM_NAME` | _(none)_ | Sender display name. |
 | `TINA4_MAIL_ENCRYPTION` | - | `tls` | Connection encryption. `tls`, `ssl`, or `none`. |
+| `TINA4_MAIL_CAPTURE` | - | `false` | Force local DevMailbox capture and skip SMTP, even when a host exists. |
+| `TINA4_MAIL_REDIRECT_TO` | - | _(none)_ | Replace every SMTP recipient with a comma-separated safety list. |
 
 #### IMAP (for reading email)
 
@@ -396,7 +398,21 @@ Tina4 supports two naming conventions for SMTP variables. The `SMTP_*` variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_MAILBOX_DIR` | `data/mailbox` | Directory for captured dev emails. |
+| `TINA4_MAILBOX_DIR` | `data/mailbox` | Directory for captured mail. It does not control whether capture runs. |
+
+`TINA4_DEBUG` exposes the mailbox in the developer dashboard but does not stop
+SMTP. On staging, choose one explicit safety policy:
+
+```bash
+# Keep all mail inside the application.
+TINA4_MAIL_CAPTURE=true
+
+# Or exercise SMTP while replacing every original To, Cc, and Bcc recipient.
+TINA4_MAIL_REDIRECT_TO=qa@example.com,product@example.com
+```
+
+Capture wins if both settings exist. Redirect applies only to real SMTP
+delivery and records the original recipients in `X-Tina4-Original-To`.
 
 ---
 
@@ -575,15 +591,15 @@ TINA4_SWAGGER_VERSION=1.0.0
 | 14 | Sessions (base + Redis + Valkey + MongoDB) |
 | 15 | Queue (base + RabbitMQ + Kafka + MongoDB) |
 | 5 | Response cache |
-| 8 | Messenger (SMTP + IMAP) |
+| 10 | Messenger (SMTP + IMAP + staging safety) |
 | 2 | Localization |
 | 3 | Swagger |
 | 1 | File uploads |
 | 3 | WebSocket |
 | 2 | Services |
 | 1 | Dev mailbox |
-| **82** | **Total** |
+| **84** | **Total** |
 
 Every variable follows the same priority chain: constructor > `.env` > default. Every boolean is interpreted consistently across all four frameworks. Every variable has a sensible default that works for development without any configuration.
 
-One file. Eighty-two knobs. Turn what you need. Leave the rest alone.
+One file. Eighty-four knobs. Turn what you need. Leave the rest alone.

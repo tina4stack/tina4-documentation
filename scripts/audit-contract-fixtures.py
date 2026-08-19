@@ -37,6 +37,7 @@ Exit 1 on a broken invariant. Exit 0 with a loud OWED report otherwise, so this
 can gate CI from the day a contract is written.
 """
 import json
+import os
 import pathlib
 import re
 import sys
@@ -45,11 +46,11 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 REPOS = ROOT.parent
 FIXTURE_DIR = ROOT / "plan" / "v3" / "fixtures"
 REPO_DIRS = {
-    "native": REPOS / "tina4",
-    "ruby": REPOS / "tina4-ruby",
-    "python": REPOS / "tina4-python",
-    "php": REPOS / "tina4-php",
-    "nodejs": REPOS / "tina4-nodejs",
+    "native": pathlib.Path(os.environ.get("TINA4_NATIVE_REPO", REPOS / "tina4")),
+    "ruby": pathlib.Path(os.environ.get("TINA4_RUBY_REPO", REPOS / "tina4-ruby")),
+    "python": pathlib.Path(os.environ.get("TINA4_PYTHON_REPO", REPOS / "tina4-python")),
+    "php": pathlib.Path(os.environ.get("TINA4_PHP_REPO", REPOS / "tina4-php")),
+    "nodejs": pathlib.Path(os.environ.get("TINA4_NODEJS_REPO", REPOS / "tina4-nodejs")),
 }
 
 

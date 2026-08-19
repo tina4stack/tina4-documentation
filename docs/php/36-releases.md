@@ -103,44 +103,13 @@ pattern the other engines already have.
 - Lab full-suite verified: 25,263 tests across all four frameworks, zero
   failures, zero skips.
 
-## v3.13.104 (2026-08-17) - OIDC SSO and PostGIS land
+## v3.13.104 (2026-08-17) - GIS and configuration-first SSO
 
-Two big features, uniform across all four frameworks: a provider-neutral OIDC
-handoff for SSO logins, and a shared `Point` contract for PostGIS geospatial
-queries. Both wire through the same small API in Python, PHP, Ruby and Node.
-
-### OIDC / OpenID Connect — provider-neutral, session handoff
-
-`Sso.from_issuer(...)` discovers a real OIDC provider (Keycloak, Auth0, Okta,
-anything speaking the standard) via its `.well-known/openid-configuration`
-endpoint and hands a validated identity into an existing Tina4 `Session`. The
-`login` / `callback` / `refresh` / `logout` cycle runs against the real
-provider — no mock. PKCE with S256 by default. Reserved SSO session keys
-(`Sso.PENDING_KEY`, `Sso.SESSION_KEY`) never leak through `session.all()`.
-
-Opt in with `TINA4_SSO_ISSUER` plus the client id, secret and redirect URI.
-
-### PostGIS spatial support
-
-`PointField` on an ORM model creates the right column for whichever engine
-you are on — PostGIS `geometry(Point, SRID)` on PostgreSQL, JSON on the
-others. `select_distance`, `intersects` and `bbox` predicates read the same
-way across engines but use each engine's native functions where available.
-GeoJSON in, GeoJSON out. Refuses hostile input (garbage geometry, injected
-column names, NaN or Inf ordinates) before any SQL runs.
-
-Opt in by declaring a `PointField` on a model. Existing models unchanged.
-
-### Swagger is SSO-aware
-
-The Swagger generator recognises OIDC-secured routes and emits the right
-`security` scheme in the OpenAPI 3.0.3 spec.
-
-## v3.13.102 (2026-08-15) - Unified client and CI hardening
-
-Small release. Framework developer skills teach the unified `tina4 init` /
-`tina4 serve` workflow consistently across the four languages, and CI now
-verifies the downloaded native CLI asset before running the metrics handoff.
+- `Point` and model `pointFields` add PostGIS-first point storage, metre-based distance queries, GiST indexes, and GeoJSON output. Tina4 uses longitude-first coordinates and fails clearly on unsupported engines.
+- `Sso` adds provider-neutral OpenID Connect discovery, Authorization Code with PKCE, introspection, Session handoff, refresh, logout, and automatic `/auth/*` routes.
+- Existing secured routes accept the normalized SSO identity through `$request->user`; provider tokens remain reserved Session data.
+- Swagger publishes the configured OpenID Connect discovery scheme.
+- No runtime package dependency was added. Database and cryptography language extensions remain capabilities, not framework dependencies.
 
 ## v3.13.103 (2026-08-16) - Metrics you can trust, releases that cannot lie
 

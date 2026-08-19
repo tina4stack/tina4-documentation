@@ -5,7 +5,7 @@ layout: home
 hero:
   name: "Tina4"
   text: "Documentation"
-  tagline: One framework, four languages, ninety-seven features, zero runtime dependencies.
+  tagline: One framework, four languages, 137 features, zero runtime dependencies.
   image:
     src: '/images/tina4-animated.svg'
   actions:
@@ -122,7 +122,13 @@ Cross-API invariants, honest logs, portable tests. Five queue and ORM audit bugs
 
 **v3.13.104 (2026-08-17)** - [full notes](/python/36-releases.md)
 
-OIDC SSO and PostGIS land, uniform across all four frameworks. `Sso.from_issuer(...)` discovers a real OIDC provider (Keycloak, Auth0, Okta) and hands a validated identity into an existing Tina4 `Session`, with PKCE-S256 by default. `PointField` on an ORM model creates the right column for whichever engine you are on (PostGIS `geometry(Point, SRID)` on PostgreSQL, JSON on the others); `select_distance`, `intersects`, and `bbox` predicates read the same way across engines. Swagger recognises OIDC-secured routes and emits the right scheme.
+GIS points now store longitude-first coordinates in PostGIS, build GiST
+indexes, calculate distances in metres, and return GeoJSON. Configuration-first
+SSO adds OpenID Connect discovery, Authorization Code with PKCE, Session
+handoff, refresh, logout, secured-route identity, and Swagger integration. The
+runtime stays provider-neutral. The documentation includes Keycloak as an
+implementation example, not as a framework requirement. No runtime package
+dependency was added.
 
 **v3.13.103 (2026-08-16)** - [full notes](/python/36-releases.md)
 

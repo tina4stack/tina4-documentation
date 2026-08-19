@@ -614,6 +614,21 @@ fake.sentence()  # "The quick brown fox..."
 fake.integer()   # 4821
 ```
 
+### OpenID Connect SSO <a href="#sso" id="sso"></a>
+
+Configure any standard OIDC issuer, then use the normal secured-route gate and
+Tina4 Session. See [OpenID Connect SSO](./41-sso.md) for the complete client API.
+
+### GIS and PostGIS <a href="#gis" id="gis"></a>
+
+Declare a `PointField`, query metres, and return GeoJSON. Coordinates are
+longitude then latitude. See [GIS and PostGIS](./42-gis.md).
+
+### IoT and MQTT <a href="#iot-mqtt" id="iot-mqtt"></a>
+
+Use the MQTT 3.1.1 client for QoS 0/1 telemetry, retained state, Last Will, and
+verified TLS. See [IoT and MQTT](./43-iot-mqtt.md).
+
 ***
 
 ## 📕 Download the book

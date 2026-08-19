@@ -69,6 +69,8 @@ Conventions:
 | ADR-0053 | [One zero-dependency app-facing AI client contract](decisions/ADR-0053.md) (resolves Feature 135) | Accepted |
 | ADR-0054 | [Frameworks consume metrics; the native CLI owns metrics](decisions/ADR-0054.md) (completes ADR-0002) | Accepted |
 | ADR-0055 | [Metrics measures production code and reports evidence honestly](decisions/ADR-0055.md) (resolves Feature 121) | Accepted |
+| ADR-0056 | [Configuration-first OIDC hands identity into Tina4 sessions](decisions/ADR-0056.md) (introduces Feature 136) | Accepted |
+| ADR-0057 | [PostGIS-first Point contract with GeoJSON output](decisions/ADR-0057.md) (introduces Feature 137) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 

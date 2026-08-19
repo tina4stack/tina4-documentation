@@ -209,6 +209,13 @@ The Ruby gem declares runtime gems for Rack/Puma serving, SQLite, mail, XML, log
 | 102 | Local source and documentation context index |
 | 103 | Live framework and application API index |
 | 135 | App-facing LLM client |
+| 137 | GIS spatial points and queries |
+
+## Enterprise authentication
+
+| # | Catalog entry |
+|---:|---|
+| 136 | Configuration-first OpenID Connect SSO |
 
 ## Application runtime
 

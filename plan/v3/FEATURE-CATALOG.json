@@ -1080,6 +1080,22 @@
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/ai/client.py",
       "packet": "features/135-llm-client.md"
+    },
+    {
+      "id": 136,
+      "slug": "oidc-sso",
+      "name": "Configuration-first OpenID Connect SSO",
+      "phase": "Authentication",
+      "python_evidence": "tina4_python/sso.py",
+      "packet": "features/136-oidc-sso.md"
+    },
+    {
+      "id": 137,
+      "slug": "gis-spatial",
+      "name": "GIS spatial points and queries",
+      "phase": "ORM and data layer",
+      "python_evidence": "tina4_python/orm/point.py; tina4_python/orm/fields.py",
+      "packet": "features/137-gis-spatial.md"
     }
   ]
 }

@@ -101,7 +101,8 @@ const BACKEND_GROUPS = [
   {
     text: "APIs & Protocols",
     stems: ["swagger", "api-client", "graphql", "websocket", "sse",
-            "wsdl-soap", "realtime-webrtc", "ai-client"],
+            "wsdl-soap", "realtime-webrtc", "ai-client", "sso", "gis",
+            "iot-mqtt"],
   },
   {
     text: "Advanced",
@@ -116,7 +117,7 @@ const BACKEND_GROUPS = [
 
 export default {
   title: "Tina4",
-  description: "One framework, four languages, ninety-seven features, zero runtime dependencies.",
+  description: "One framework, four languages, 137 features, zero runtime dependencies.",
   hostname: "https://tina4.com",
   base: "/",
   cleanUrls: true,
@@ -190,6 +191,7 @@ export default {
           text: "Understanding Tina4",
           stems: ["what-is-tina4", "architecture", "choosing-your-language", "environment-variables"],
         },
+        { text: "Developer tools", stems: ["cli"] },
       ],
     },
     search: true,
