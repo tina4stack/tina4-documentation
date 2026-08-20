@@ -1,16 +1,39 @@
 # Release Notes
 
+## v3.13.107 (2026-08-20) - RBAC: role and permission guards
+
+Authorization arrives as two decorators. `@role("admin")` and `@can("posts.delete")`
+read the cryptographically verified `roles` and `permissions` claims from the signed
+token, so there is no per-rule middleware to hand-roll. Several names in one guard are
+OR (`@role("admin", "editor")` admits either); stack two decorators for AND. Granted
+permissions may carry a wildcard on the dot boundary, so a token holding `posts.*` (or
+a bare `*`) satisfies a required `posts.delete`, while the required side stays concrete.
+A guarded route implies auth: no or invalid token returns 401, an authenticated caller
+missing the role or permission returns 403, and the handler never runs on a miss. Roles
+and permissions are independent signed claims - the core never expands a role into
+permissions, and a legacy singular `role` claim is coerced to a list. Feature 138 /
+ADR-0058. See [Authentication](/python/08-authentication).
+
+## v3.13.106 (2026-08-20) - @websocket callable from the package name
+
+Bug release. `from tina4_python import websocket` is now callable. The
+`tina4_python.websocket` subpackage forwards to `core.router.websocket`, so the
+documented landing-page form no longer raises `TypeError: 'module' object is not
+callable` and auto-discovery no longer drops the rest of that route file.
+`from tina4_python.websocket import WebSocketServer` is unchanged. Python-only - the
+import-machinery collision has no equivalent in PHP, Ruby, or Node.
+
 ## v3.13.105 (2026-08-19) - Cross-API invariants, honest logs, portable tests
 
 A bug release with teeth. Five audit bugs closed in the queue and ORM cache
-seams — the places where two spellings of the same intent quietly disagreed.
+seams - the places where two spellings of the same intent quietly disagreed.
 Route inspection stops booting the app. The startup log stops lying about
 `@noauth`. Hot reload reaches the modules that captured the changed one.
 Firebird's migration ledger tolerates any case the driver hands back. And every
 framework developer skill gained a spine: it announces every step before taking
 it, and it warns with 💩 when it is out of date.
 
-### Queue and ORM audit bugs — five fixed
+### Queue and ORM audit bugs - five fixed
 
 - **`Model.clear_cache()` invalidates the DB layer too.** When both
   `TINA4_AUTO_CACHING` and `TINA4_DB_CACHE` are enabled, a manual
@@ -24,7 +47,7 @@ it, and it warns with 💩 when it is out of date.
   every revived job. The next `dead_letters()` call re-reported them and
   consumers processed each job twice.
 - **MongoDB `retry_job(id)` finds the dead letter.** The old filter looked
-  for `{_id: job_id, topic: self._topic, status: "failed"}` — three reasons
+  for `{_id: job_id, topic: self._topic, status: "failed"}` - three reasons
   that combination could never match a real dead-letter doc (fresh `_id`,
   `.dead_letter` topic namespace, `dead` status). The new filter reads the
   dead-letter namespace by `data.id`, deletes the record, and upserts the
@@ -38,7 +61,7 @@ it, and it warns with 💩 when it is out of date.
 
 `tina4 routes` walks canonical route files without executing `app.py` or
 starting the server. The prior implementation booted the app on the same port
-and terminated whichever process was holding it — a nasty surprise for anyone
+and terminated whichever process was holding it - a nasty surprise for anyone
 running `tina4 routes` in a live shell. Closes tina4-python #104.
 
 ### Startup log tells the truth about @noauth / @secured
@@ -48,13 +71,13 @@ Python decorators apply bottom-up, so `@post()` logged the route as
 `@noauth()` and `@secured()` now emit a corrective `Route auth updated:` line
 whenever they change the auth default on a route another decorator already
 logged. Closes tina4-python #103, where a public login endpoint appeared to
-log its own security bug. Python-only — PHP, Ruby and Node do not log an auth
+log its own security bug. Python-only - PHP, Ruby and Node do not log an auth
 field at registration time.
 
 ### Hot reload reaches every module that imports the changed one
 
 A route file that did `from src.orm.Todo import Todo` kept its stale `Todo`
-reference after the model changed — the API then lied about the schema on the
+reference after the model changed - the API then lied about the schema on the
 next request. `_auto_discover` now cascades a re-import to every module that
 captured a binding from the changed one, recursive with a visited set, bounded
 to the discovery scope, fail-loud. Closes tina4-python #102.
@@ -69,7 +92,7 @@ pattern the other engines already have.
 
 - **SIGTERM port probe checks both interfaces.** The graceful-shutdown test
   probed only `0.0.0.0` with `SO_REUSEADDR`, which succeeds on macOS while
-  the framework's default `127.0.0.1` listener holds the port — a silent
+  the framework's default `127.0.0.1` listener holds the port - a silent
   false negative on every Mac dev machine. Now probes both interfaces and
   refuses to conclude the port is free until both agree.
 - **MySQL connect-timeout assertion tolerates driver cleanup time.** The
@@ -82,8 +105,8 @@ pattern the other engines already have.
 ### Skills grow a spine
 
 - **Announce before you act.** Every framework developer skill now instructs
-  itself to say what it is about to do — one line before each file write,
-  migration, or dependency install — so the developer can stop the work
+  itself to say what it is about to do - one line before each file write,
+  migration, or dependency install - so the developer can stop the work
   before it spends their afternoon. Same rhythm across Python, PHP, Ruby and
   Node.
 - **💩 stale-skill detection.** Every framework developer skill also checks
@@ -96,7 +119,7 @@ pattern the other engines already have.
 ### Upgrade notes
 
 - No API changes. All fixes preserve existing signatures.
-- Consumers iterating `dead_letters()` and calling `job.retry()` on each — now
+- Consumers iterating `dead_letters()` and calling `job.retry()` on each - now
   safe. Previously it produced duplicates on the next `dead_letters()` call.
 - `Model.clear_cache()` under `TINA4_DB_CACHE=true` now also flushes the
   DB-layer cache. This is the expected behaviour.

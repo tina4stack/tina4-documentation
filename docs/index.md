@@ -50,15 +50,17 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.105
+## Current framework release: 3.13.107
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.105. A bug release with
-teeth: five queue and ORM audit bugs closed in the seams where two spellings
-of the same intent disagreed, route inspection stops booting the app, the
-startup log stops lying about `@noauth`, hot reload reaches every module
-that captured a changed one, and every framework developer skill gained a
-spine (announce every step, warn with 💩 when out of date). Lab-verified at
-25,263 tests across all four frameworks, zero failures, zero skips.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.107. Authorization arrives as
+two guards, `role(...)` and `can(...)`, that read the cryptographically verified
+`roles` and `permissions` claims from the signed token: OR within a guard, AND by
+stacking, granted-side wildcards (`posts.*`, `*`), and a legacy singular `role`
+claim coerced to a list. A guarded route implies auth: no or invalid token returns
+401, an authenticated caller missing the role or permission returns 403, and the
+handler never runs on a miss. Feature 138 / ADR-0058, at parity across all four
+frameworks. Lab-verified at 25,329 tests across all four frameworks, zero failures,
+zero skips.
 
 [Read the release notes](/python/36-releases.md)
 
@@ -115,6 +117,14 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.107 (2026-08-20)** - [full notes](/python/36-releases.md)
+
+RBAC: role and permission guards, at parity across Python, PHP, Ruby, and Node. `role("admin")` and `can("posts.delete")` read the cryptographically verified `roles` and `permissions` claims from the signed token: several names in one guard are OR, stacking or chaining guards is AND, and granted permissions may carry a wildcard on the dot boundary (`posts.*` satisfies `posts.delete`, a bare `*` satisfies everything) while the required side stays concrete. A guarded route implies auth: no or invalid token returns 401, an authenticated caller missing the role or permission returns 403, and the handler never runs on a miss. Roles and permissions are independent signed claims - the core never expands a role into permissions, and a legacy singular `role` claim is coerced to a list. Feature 138 / ADR-0058.
+
+**v3.13.106 (2026-08-20)** - [full notes](/python/36-releases.md)
+
+`@websocket` is callable from the package name. `from tina4_python import websocket` no longer raises `TypeError: 'module' object is not callable`, so auto-discovery stops dropping the rest of that route file. Python-only: the import-machinery collision has no equivalent in PHP, Ruby, or Node, which keep the shared version bump unchanged.
 
 **v3.13.105 (2026-08-19)** - [full notes](/python/36-releases.md)
 

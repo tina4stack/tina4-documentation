@@ -234,6 +234,22 @@ async def verify(request, response):
     return response({"valid": payload is not None})
 ```
 
+Guard a route by role or permission with `role()` and `can()`. Both read the verified `roles` and `permissions` claims from the signed token. A missing token returns 401, a valid token without the role or permission returns 403.
+
+```python
+from tina4_python import get, delete, role, can
+
+@role("admin")
+@get("/admin/stats")
+async def stats(request, response):
+    return response({"active_users": 42})
+
+@can("posts.delete")
+@delete("/api/posts/{id:int}")
+async def remove_post(id, request, response):
+    return response({"deleted": id})
+```
+
 ### HTML Forms and Tokens <a href="#html-forms-and-tokens" id="html-forms-and-tokens"></a>
 
 ```twig

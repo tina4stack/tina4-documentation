@@ -175,6 +175,18 @@ Tina4::Router.get("/api/account") do |request, response|
 end
 ```
 
+Guard a route by role or permission with the chainable `role` and `can`. Both read the verified `roles` and `permissions` claims from the signed token. A missing token returns 401, a valid token without the role or permission returns 403.
+
+```ruby
+Tina4::Router.get("/admin/stats") do |request, response|
+  response.json({ active_users: 42 })
+end.role("admin")
+
+Tina4::Router.delete("/api/posts/{id}") do |request, response|
+  response.json({ deleted: true })
+end.can("posts.delete")
+```
+
 ### HTML Forms and Tokens <a href="#html-forms-and-tokens" id="html-forms-and-tokens"></a>
 
 ```html

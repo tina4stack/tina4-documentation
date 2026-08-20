@@ -477,6 +477,47 @@ Router.delete("/api/users/:id", async (req, res) => {
 }, [requireRole("admin")]);
 ```
 
+### Authorization - roles and permissions (RBAC)
+
+The closure above works, but you write it again for every rule. Tina4 ships the same job as two chainable methods: `role()` and `can()`. Both read claims the server already verified. `role("admin")` passes when the signed `roles` claim contains `admin`. `can("posts.delete")` passes when the signed `permissions` claim contains `posts.delete`. Chain the guard onto the route, next to `.secure()`.
+
+```typescript
+import { Router, Auth } from "tina4-nodejs";
+
+Router.get("/admin/stats", async (req, res) => {
+    return res.json({ active_users: 42 });
+}).role("admin");
+
+Router.delete("/api/posts/:id", async (req, res) => {
+    return res.json({ deleted: true });
+}).can("posts.delete");
+```
+
+Pass several names to one guard and any one of them opens the door. `role("admin", "editor")` admits an admin or an editor. Need both checks to hold? Chain them. Every guard in the chain must pass, so the checks combine with AND.
+
+```typescript
+Router.delete("/api/posts/:id", async (req, res) => {
+    return res.json({ purged: true });
+}).role("admin").can("posts.delete");
+```
+
+Granted permissions may carry a wildcard on the dot boundary. A token granted `posts.*` satisfies a required `posts.delete`. A token granted a bare `*` satisfies everything. The required side stays concrete: you always ask for the exact permission, never a pattern.
+
+A guarded route requires a token. No token or a bad one returns `401`. A valid token that lacks the role or permission returns `403` -- the caller is who they say, but they cannot do this. Pass both and the handler runs.
+
+Roles and permissions are separate claims. Tina4 reads them only from the signed token, so a forged `roles` header changes nothing. The core never turns a role into permissions: a role is not a permission. A legacy singular `role: "admin"` claim still works, and Tina4 reads it as `roles: ["admin"]`.
+
+Mint the token with the claims you want to check:
+
+```typescript
+const secret = process.env.TINA4_SECRET || "tina4-default-secret";
+const token = Auth.getToken({
+    sub: "u1",
+    roles: ["admin"],
+    permissions: ["posts.*"]
+}, secret);
+```
+
 ---
 
 ## 8. CSRF Protection

@@ -431,6 +431,51 @@ async def delete_user(request, response):
     return response.json({"deleted": True})
 ```
 
+### Authorization - roles and permissions (RBAC)
+
+The hand-rolled middleware above works, but you write it again for every rule. Tina4 ships the same job as two decorators: `role()` and `can()`. Both read claims the server already verified. `role("admin")` passes when the signed `roles` claim contains `admin`. `can("posts.delete")` passes when the signed `permissions` claim contains `posts.delete`. Stack the guard above the route, in the same spot as `@secured`.
+
+```python
+from tina4_python import get, delete, role, can
+from tina4_python.auth import get_token
+
+@role("admin")
+@get("/admin/stats")
+async def stats(request, response):
+    return response.json({"active_users": 42})
+
+@can("posts.delete")
+@delete("/api/posts/{id:int}")
+async def remove_post(id, request, response):
+    return response.json({"deleted": id})
+```
+
+Pass several names to one guard and any one of them opens the door. `role("admin", "editor")` admits an admin or an editor. Need both a role and a permission? Stack two decorators. Every guard on the stack must pass, so the checks combine with AND.
+
+```python
+@role("admin")
+@can("posts.delete")
+@delete("/api/posts/{id:int}")
+async def purge_post(id, request, response):
+    return response.json({"purged": id})
+```
+
+Granted permissions may carry a wildcard on the dot boundary. A token granted `posts.*` satisfies a required `posts.delete`. A token granted a bare `*` satisfies everything. The required side stays concrete: you always ask for the exact permission, never a pattern.
+
+A guarded route requires a token. No token or a bad one returns `401`. A valid token that lacks the role or permission returns `403` -- the caller is who they say, but they cannot do this. Pass both and the handler runs.
+
+Roles and permissions are separate claims. Tina4 reads them only from the signed token, so a forged `roles` header changes nothing. The core never turns a role into permissions: a role is not a permission. A legacy singular `role: "admin"` claim still works, and Tina4 reads it as `roles: ["admin"]`.
+
+Mint the token with the claims you want to check:
+
+```python
+token = get_token({
+    "sub": "u1",
+    "roles": ["admin"],
+    "permissions": ["posts.*"]
+})
+```
+
 ---
 
 ## 8. CSRF Protection

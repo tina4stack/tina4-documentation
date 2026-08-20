@@ -201,6 +201,18 @@ $token = Auth::getToken(["userId" => 1, "role" => "admin"]);
 $payload = Auth::validToken($token);
 ```
 
+Guard a route by role or permission with the chainable `role()` and `can()`. Both read the verified `roles` and `permissions` claims from the signed token. A missing token returns 401, a valid token without the role or permission returns 403.
+
+```php
+Router::get("/admin/stats", function ($request, $response) {
+    return $response->json(["active_users" => 42]);
+})->role("admin");
+
+Router::delete("/api/posts/{id}", function ($request, $response) {
+    return $response->json(["deleted" => true]);
+})->can("posts.delete");
+```
+
 ### HTML Forms and Tokens <a href="#html-forms-and-tokens" id="html-forms-and-tokens"></a>
 
 Form tokens protect POST routes from cross-site forgery. Add one with a Twig filter.

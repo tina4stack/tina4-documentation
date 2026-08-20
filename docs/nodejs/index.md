@@ -283,6 +283,18 @@ Router.get("/api/account", async (req, res) => {
 }).secure().cache();
 ```
 
+Guard a route by role or permission with the chainable `.role()` and `.can()`. Both read the verified `roles` and `permissions` claims from the signed token. A missing token returns 401, a valid token without the role or permission returns 403.
+
+```typescript
+Router.get("/admin/stats", async (req, res) => {
+    return res.json({ active_users: 42 });
+}).role("admin");
+
+Router.delete("/api/posts/:id", async (req, res) => {
+    return res.json({ deleted: true });
+}).can("posts.delete");
+```
+
 ### HTML Forms and Tokens <a href="#html-forms-and-tokens" id="html-forms-and-tokens"></a>
 
 Tina4 embeds a CSRF form token into every POST form. The framework validates it on submission.
