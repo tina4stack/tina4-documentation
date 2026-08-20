@@ -94,6 +94,31 @@ four suites:
 - `rbac-verified-payload-only` - spoofed role header is ignored
 - `rbac-legacy-singular-role` - legacy singular role is coerced
 
+## Documentation home
+
+Where the SHIPPED feature is documented for developers. These land in the SAME
+release that flips the fixture to proven - the `audit-truth.py` CI gate fails on
+any documented symbol the framework does not actually expose, so docs and code
+move together (First Principle).
+
+- **Primary reference, per framework:** `docs/<lang>/08-authentication.md` gains an
+  "Authorization - roles and permissions (RBAC)" section: `role()`/`can()`, the
+  OR-within / AND-by-stacking rule, granted-side wildcards, the 401-vs-403
+  behaviour, and the token claim shape (`roles`, `permissions`). It sits beside the
+  existing `secured()`/`noauth()` copy. `<lang>` = `python`, `php`, `ruby`, `nodejs`.
+- **Quick reference, per framework:** the `### Authentication` block in
+  `docs/<lang>/index.md` (anchor `#authentication`, already in the top nav) gains a
+  two-line RBAC blurb and one `role()/can()` example next to `secured()`/`noauth()`.
+- **Cross-framework contract (this planning set, NOT developer docs):**
+  `plan/v3/decisions/ADR-0058.md`, `features/138-rbac.md`,
+  `fixtures/rbac_contract.json` - the language-neutral spec.
+- **Book (optional follow-up):** a short "Roles and permissions" section in the
+  security chapter of `tina4-book`, once the docs-site pages are stable.
+
+> Convention: every feature packet from here on carries a "Documentation home"
+> section naming the exact `docs/**` pages the shipped feature lives in, so the
+> doc surface is planned up front and never lags the code.
+
 ## Out of scope (deferred)
 
 Policy objects, resource ownership, ABAC attribute rules, role hierarchies, and
