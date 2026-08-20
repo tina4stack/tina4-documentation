@@ -5,7 +5,7 @@ layout: home
 hero:
   name: "Tina4"
   text: "Documentation"
-  tagline: One framework, four languages, 137 features, zero runtime dependencies.
+  tagline: One framework, four languages, 138 features, zero runtime dependencies.
   image:
     src: '/images/tina4-animated.svg'
   actions:

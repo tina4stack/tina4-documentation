@@ -10,7 +10,7 @@ Four words. Each one carries weight.
 
 **Native.** Zero third-party dependencies. Every feature (the template engine, the JWT library, the SCSS compiler, the queue system, the GraphQL parser) is built from scratch using the language's standard library. No supply chain risk. No version conflicts. No surprises.
 
-**Application.** This builds real production applications. Routing, ORM, authentication, queues, WebSocket, email, GraphQL, SOAP, 44 features, all included. One package. One install. Ship today.
+**Application.** This builds real production applications. Routing, ORM, authentication, queues, WebSocket, email, GraphQL, SOAP, 138 features, all included. One package. One install. Ship today.
 
 **4ramework.** Four languages. One API. Python, PHP, Ruby, Node.js: learn the conventions once, build in any of them. The "4" is both the number and "for", a framework *for* developers who value their time.
 
@@ -78,9 +78,9 @@ Database drivers are the exception. You cannot talk to PostgreSQL without a Post
 
 ---
 
-## 44 Features at 100% Parity
+## 138 Built-in Features
 
-Tina4 ships with everything you need to build a production web application. 44 features, all implemented identically across Python, PHP, Ruby, and Node.js. 9,311 tests across 280 test files. Here is what every installation includes:
+Tina4 ships with everything you need to build a production web application. 138 built-in features across Python, PHP, Ruby, and Node.js, sharing one API. Here is what every installation includes:
 
 **Core Web**
 - HTTP router with path parameters, typed params, middleware, and auth guards
@@ -220,4 +220,4 @@ The code you don't write is the code that never breaks.
 | Discovery | Automatic (routes, models, templates) |
 | CLI | Unified Rust binary |
 | Tests | 9,311 across all four frameworks |
-| Features | 44 at 100% parity |
+| Features | 138 built-in |
