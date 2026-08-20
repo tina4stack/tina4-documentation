@@ -3,7 +3,7 @@
 > The living index that ties every audited feature to its machine-checked
 > contract, its decisions, and its proven-in-all-four status. This is the
 > backbone of a future formal Tina4 language specification.
-> **Last synced:** 2026-08-17 (Features 136-137 release contracts)
+> **Last synced:** 2026-08-20 (Feature 138 RBAC promoted to PROVEN; Feature 139 graph catalogued)
 
 > **Adversarial re-audit started 2026-08-08:** a zero-skip live-lab migration
 > baseline still omitted contradictory public paths (generated code migration
@@ -136,7 +136,8 @@ Re-run it and re-sync this table whenever a fixture changes.
 | Default landing page | 46 | `landing_page_contract.json` | 4 | 4 | 0 | LAND-DEC-01, LAND-DEC-02 | yes (real front-controller dispatch, no mocks -- Python/PHP `TestClient`, Ruby real `RackApp#call`, Node real `startServer` + real HTTP socket; LAND-DEC-01 end-to-end-gates the dev-only/404-in-prod info-leak guard in Python + PHP too (was Ruby+Node only); LAND-DEC-02 unifies the suppression precedence [user `/` route > `pages/index.*` template > landing] -- Ruby's `pages/index.*` path was already correct [empirically verified against a real dispatch before writing the fixture]; only Ruby's SEPARATE dead `should_show_landing_page?`/`try_serve_index_template` pair [an unwired, different `src/templates/index.*` convention] needed deleting; Node's unused `renderLandingPage(routes, port)` param + the per-request `getRoutes().map()` building it were deleted too; mutation-proved in all four: dropping the dev gate turns the prod-leak case red, restored after) |
 | OpenID Connect SSO | 136 | `sso_contract.json` | 10 | 0 | 10 | 0056 | baseline live PKCE/callback/Session/refresh/logout flow is green in all four against one real standards-compliant provider; the named adversarial and Session-provider witnesses remain owed |
 | GIS spatial points and queries | 137 | `gis_contract.json` | 12 | 0 | 12 | 0057 | implementation and focused real-PostGIS suites are green in all four; invariant promotion waits for every named case and mutation witness |
-| RBAC role/permission guards | 138 | `rbac_contract.json` | 8 | 0 | 8 | 0058 | OWED, greenfield - no framework ships role()/can() yet. 8 invariants / 13 cases authored from ADR-0058 as the pre-implementation oracle (PORTING-FORMULA: contract before code). Ships lockstep across all four when implemented |
+| RBAC role/permission guards | 138 | `rbac_contract.json` | 8 | 8 | 0 | 0058 | **PROVEN all four (shipped 3.13.107).** role()/can() claim-first guards; audit-contract-fixtures.py verifies every case name across tests/test_rbac.py, tests/RbacTest.php, spec/rbac_spec.rb, test/rbac.test.ts (real tokens, real dispatch, no mocks) |
+| Graph databases (multi-engine) | 139 | `graph_contract.json` | 11 | 0 | 11 | 0059 | OWED, greenfield (decision-ready). 11 invariants from ADR-0059 (Database-shaped GraphDatabase, unified + raw, URL-selected Ultipa/Neo4j/Memgraph/ArangoDB adapters; standalone Ultipa drivers under tina4stack). Runs per-engine on the lab when implemented |
 **Totals: 310 invariants, 288 proven, 22 owed** (2026-08-17), 58 fixtures. Proven
 subsystems remain held to their contract four-way. Logger (feature 2) closed
 2026-08-13 -- all 8 invariant groups / 59 shared cases now proven four-way,
@@ -194,7 +195,8 @@ their plan and ADR, and are the first candidates to promote to Layer 2.
 | 135 App-facing AI client | `features/135-llm-client.md` | ADR-0053 | **Shipped in 3.13.101: `ai_client_contract.json` proves 10/10 invariant groups across four real-socket runners; all 40 targeted mutations went red and restored green.** |
 | 136 OpenID Connect SSO | `features/136-oidc-sso.md` | ADR-0056 | **Baseline implementation green in all four; Layer 2 ledger records 10 owed adversarial groups.** |
 | 137 GIS spatial points and queries | `features/137-gis-spatial.md` | ADR-0057 | **Baseline implementation green against real PostGIS in all four; Layer 2 ledger records 12 owed groups.** |
-| 138 RBAC role/permission guards | `features/138-rbac.md` | ADR-0058 | **Parity plan + contract fixture authored; OWED in all four (greenfield). Ready to implement per PORTING-FORMULA.** |
+| 138 RBAC role/permission guards | `features/138-rbac.md` | ADR-0058 | **Shipped 3.13.107, PROVEN all four: `rbac_contract.json` 8/8 invariants (role()/can(), OR-within/AND-by-stacking, granted-side wildcards, 401-vs-403, verified-claim-only, legacy singular role coerced).** |
+| 139 Graph databases | `features/139-graph-databases.md` | ADR-0059 | **Parity plan + contract fixture authored; OWED (decision-ready, greenfield). URL-selected GraphDatabase adapters, unified + raw, standalone Ultipa drivers. Ready to implement per PORTING-FORMULA.** |
 
 ## Layer 0: not yet audited
 
