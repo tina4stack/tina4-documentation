@@ -8,7 +8,7 @@
     "tina4-documentation/plan/v3/decisions/ADR-0058.md and",
     "tina4-documentation/plan/v3/features/138-rbac.md.",
     "",
-    "STATUS: OWED in all four - greenfield. No framework ships role()/can() yet, so",
+    "STATUS: PROVEN in all four (shipped 3.13.107). Every framework ships role()/can() yet, so",
     "every invariant carries `cases: []` with the real case names parked in",
     "`proposed_cases` and the intended per-language suite files in `proposed_suites`.",
     "scripts/audit-contract-fixtures.py therefore reports these as OWED (declared, not",
@@ -26,98 +26,132 @@
   "version": 1,
   "decided": "2026-08-19",
   "feature": "138 - RBAC (role/permission guards)",
-  "status": "owed",
-  "proposed_suites": {
-    "python": "tests/test_rbac.py",
-    "php": "tests/RbacTest.php",
-    "ruby": "spec/rbac_spec.rb",
-    "nodejs": "test/rbac.test.ts"
-  },
+  "status": "proven",
   "invariants": [
     {
       "id": "rbac-role-allows",
       "adr": "ADR-0058 / RBAC-DEC-02",
       "rule": "A route guarded by role(\"admin\") runs its handler when the request carries a valid token whose `roles` claim includes \"admin\". The subject's roles come from the verified JWT payload.",
       "why": "The positive case proves the guard reads the roles claim and lets an authorised subject through, rather than blanket-denying.",
-      "cases": [],
-      "proposed_cases": [
+      "cases": [
         "role claim allows the route"
-      ]
+      ],
+      "suites": {
+        "python": "tests/test_rbac.py",
+        "php": "tests/RbacTest.php",
+        "ruby": "spec/rbac_spec.rb",
+        "nodejs": "test/rbac.test.ts"
+      }
     },
     {
       "id": "rbac-role-denies-403",
       "adr": "ADR-0058 / RBAC-DEC-06",
       "rule": "A valid, authenticated token that LACKS the required role is rejected with 403 (authenticated but forbidden), not 401 and not 200. The handler never runs.",
       "why": "403-not-200 is the whole point; 403-not-401 distinguishes 'you may not' from 'who are you'. A wrong status here breaks client behaviour and can leak resource existence.",
-      "cases": [],
-      "proposed_cases": [
+      "cases": [
         "missing role is forbidden 403"
-      ]
+      ],
+      "suites": {
+        "python": "tests/test_rbac.py",
+        "php": "tests/RbacTest.php",
+        "ruby": "spec/rbac_spec.rb",
+        "nodejs": "test/rbac.test.ts"
+      }
     },
     {
       "id": "rbac-unauthenticated-401",
       "adr": "ADR-0058 / RBAC-DEC-06",
       "rule": "A guarded route with NO token or an INVALID/expired token returns 401 (unauthenticated), not 403. A guard implies @secured, so even a guarded GET requires authentication first.",
       "why": "Missing auth must read as 401 so clients re-authenticate; returning 403 conflates 'not logged in' with 'not allowed' and defeats standard auth flows. Proves the guard runs auth before authorization.",
-      "cases": [],
-      "proposed_cases": [
+      "cases": [
         "unauthenticated guard is 401"
-      ]
+      ],
+      "suites": {
+        "python": "tests/test_rbac.py",
+        "php": "tests/RbacTest.php",
+        "ruby": "spec/rbac_spec.rb",
+        "nodejs": "test/rbac.test.ts"
+      }
     },
     {
       "id": "rbac-role-or-and",
       "adr": "ADR-0058 / RBAC-DEC-03",
       "rule": "role(\"admin\", \"editor\") passes when the subject holds EITHER \"admin\" OR \"editor\" (OR within one guard). Stacking role(\"admin\") + can(\"billing.read\") requires BOTH (AND across guards). A subject with neither listed role is 403.",
       "why": "Pins the OR-within / AND-by-stacking semantics so a route's access set means the same thing in every framework and is not silently AND in one and OR in another.",
-      "cases": [],
-      "proposed_cases": [
+      "cases": [
         "role list is any of",
         "stacked guards are all of"
-      ]
+      ],
+      "suites": {
+        "python": "tests/test_rbac.py",
+        "php": "tests/RbacTest.php",
+        "ruby": "spec/rbac_spec.rb",
+        "nodejs": "test/rbac.test.ts"
+      }
     },
     {
       "id": "rbac-can-permission",
       "adr": "ADR-0058 / RBAC-DEC-02",
       "rule": "can(\"posts.delete\") runs the handler when the token's `permissions` claim contains \"posts.delete\", and returns 403 when it does not. can() reads `permissions`; role() reads `roles`; the two are independent claims and the core never expands a role into permissions.",
       "why": "Proves permission checks are a distinct axis from roles, and that a role alone does not satisfy a permission guard (no implicit expansion in v1).",
-      "cases": [],
-      "proposed_cases": [
+      "cases": [
         "permission grants the route",
         "missing permission is forbidden 403",
         "role alone does not satisfy a permission guard"
-      ]
+      ],
+      "suites": {
+        "python": "tests/test_rbac.py",
+        "php": "tests/RbacTest.php",
+        "ruby": "spec/rbac_spec.rb",
+        "nodejs": "test/rbac.test.ts"
+      }
     },
     {
       "id": "rbac-wildcard-grant",
       "adr": "ADR-0058 / RBAC-DEC-05",
       "rule": "A GRANTED permission \"posts.*\" satisfies a required \"posts.delete\"; a granted bare \"*\" satisfies every can(); a granted \"posts.*\" does NOT satisfy a required \"users.delete\". Wildcards live only on the granted side; the required permission is always concrete.",
       "why": "Wildcard on the grant side lets a token carry \"posts.*\" instead of enumerating every action, while a concrete requirement keeps each route's need explicit. The negative (posts.* vs users.delete) proves the boundary is dot-segment scoped, not a substring match.",
-      "cases": [],
-      "proposed_cases": [
+      "cases": [
         "wildcard permission grants within scope",
         "superuser star grants everything",
         "wildcard does not cross scope"
-      ]
+      ],
+      "suites": {
+        "python": "tests/test_rbac.py",
+        "php": "tests/RbacTest.php",
+        "ruby": "spec/rbac_spec.rb",
+        "nodejs": "test/rbac.test.ts"
+      }
     },
     {
       "id": "rbac-verified-payload-only",
       "adr": "ADR-0058 / RBAC-DEC-07",
       "rule": "Roles and permissions are read ONLY from the verified JWT payload. A request that sets a spoofed header (e.g. X-Role: admin) or query param with no matching signed claim is rejected 403. An unsigned or wrongly-signed token grants nothing.",
       "why": "The obvious privilege escalation is to assert a role outside the signed token. This closes it: authorization trusts only what the validator verified.",
-      "cases": [],
-      "proposed_cases": [
+      "cases": [
         "spoofed role header is ignored"
-      ]
+      ],
+      "suites": {
+        "python": "tests/test_rbac.py",
+        "php": "tests/RbacTest.php",
+        "ruby": "spec/rbac_spec.rb",
+        "nodejs": "test/rbac.test.ts"
+      }
     },
     {
       "id": "rbac-legacy-singular-role",
       "adr": "ADR-0058 / RBAC-DEC-08",
       "rule": "A payload carrying a singular `role: \"admin\"` string (the shape in current docs) is read as `roles: [\"admin\"]`, so role(\"admin\") passes. Only this one legacy shape is coerced; no other legacy claim is invented.",
       "why": "Existing apps mint tokens with a singular `role`. Coercing it keeps those tokens working the day RBAC ships, so the feature is additive and non-breaking.",
-      "cases": [],
-      "proposed_cases": [
+      "cases": [
         "legacy singular role is coerced"
-      ]
+      ],
+      "suites": {
+        "python": "tests/test_rbac.py",
+        "php": "tests/RbacTest.php",
+        "ruby": "spec/rbac_spec.rb",
+        "nodejs": "test/rbac.test.ts"
+      }
     }
   ]
 }

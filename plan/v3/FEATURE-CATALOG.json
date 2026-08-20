@@ -1096,6 +1096,22 @@
       "phase": "ORM and data layer",
       "python_evidence": "tina4_python/orm/point.py; tina4_python/orm/fields.py",
       "packet": "features/137-gis-spatial.md"
+    },
+    {
+      "id": 138,
+      "slug": "rbac",
+      "name": "RBAC (role/permission guards)",
+      "phase": "Routing and middleware / Auth family",
+      "python_evidence": "tina4_python/core/router.py; tina4_python/core/server.py",
+      "packet": "features/138-rbac.md"
+    },
+    {
+      "id": 139,
+      "slug": "graph-databases",
+      "name": "Graph databases (Ultipa, Neo4j, Memgraph, ArangoDB)",
+      "phase": "Data layer / Persistence family",
+      "python_evidence": "",
+      "packet": "features/139-graph-databases.md"
     }
   ]
 }

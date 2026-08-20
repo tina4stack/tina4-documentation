@@ -1,6 +1,6 @@
 # Feature Catalog
 
-Tina4 3.14 has **135 numbered catalog entries**. The number describes the framework family's implementation and audit inventory. It does not mean that 135 features have reached four-language parity, and it does not mean that every entry lives inside each backend package.
+Tina4 3.14 has **139 numbered catalog entries**. The number describes the framework family's implementation and audit inventory. It does not mean that 139 features have reached four-language parity, and it does not mean that every entry lives inside each backend package.
 
 This chapter is the map. The earlier chapters explain the public APIs available to PHP applications. The numbered audit packets define the parity work and the clean-room formula for another language.
 
@@ -19,7 +19,7 @@ Do not collapse those states into one green tick. At version 3.13.101, the contr
 
 | Range | Owner | Meaning |
 |---|---|---|
-| 1-109, 126-132, 135 | Backend frameworks | Runtime, developer, testing, and application-facing capabilities. Availability and maturity still require per-feature evidence. |
+| 1-109, 126-132, 135-139 | Backend frameworks | Runtime, developer, testing, and application-facing capabilities. Availability and maturity still require per-feature evidence. |
 | 110-125 and 134 | Shared Rust CLI | One language-neutral client used with all four backends. These are not four separate backend implementations. |
 | 133 | Verification contract | Carbonah benchmark and report shape, not an application runtime API. |
 | Provider entries | Selected integration | Each selectable provider has its own number because another language must implement and test it separately. Providers can require an external service, driver, language extension, or extra package. |
@@ -210,6 +210,8 @@ The PHP core declares no required third-party packages. PHP 8.2 or newer and lan
 | 103 | Live framework and application API index |
 | 135 | App-facing LLM client |
 | 137 | GIS spatial points and queries |
+| 138 | RBAC (role/permission guards) |
+| 139 | Graph databases (Ultipa, Neo4j, Memgraph, ArangoDB) |
 
 ## Enterprise authentication
 
