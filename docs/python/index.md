@@ -8,7 +8,7 @@
 * Run `tina4 serve` to start the dev server on port 7146
 :::
 
-[Installation](index.md#installation) • [Static Websites](index.md#static-websites) • [Routing](index.md#basic-routing) • [Middleware](index.md#middleware) • [Templates](index.md#templates) • [Sessions](index.md#session-handling) • [SCSS](index.md#scss-stylesheets) • [Environments](index.md#environments) • [Authentication](index.md#authentication) • [Forms & Tokens](index.md#html-forms-and-tokens) • [AJAX](index.md#ajax) • [OpenAPI](index.md#swagger) • [Databases](index.md#databases) • [Database Results](index.md#database-results) • [Migrations](index.md#migrations) • [ORM](index.md#orm) • [CRUD](index.md#crud) • [REST Client](index.md#consuming-rest-apis) • [Testing](index.md#inline-testing) • [Services](index.md#services) • [Websockets](index.md#websockets) • [Queues](index.md#queues) • [WSDL](index.md#wsdl) • [GraphQL](index.md#graphql) • [Localization](index.md#localization) • [HTML Builder](index.md#html-builder) • [Events](index.md#events) • [Logging](index.md#logging) • [Cache](index.md#response-cache) • [Health](index.md#health) • [DI Container](index.md#container) • [Error Overlay](index.md#error-overlay) • [Dev Admin](index.md#dev-admin) • [CLI](index.md#cli) • [MCP](index.md#mcp) • [FakeData](index.md#fakedata)
+[Installation](index.md#installation) • [Static Websites](index.md#static-websites) • [Routing](index.md#basic-routing) • [Middleware](index.md#middleware) • [Templates](index.md#templates) • [Sessions](index.md#session-handling) • [SCSS](index.md#scss-stylesheets) • [Environments](index.md#environments) • [Authentication](index.md#authentication) • [Forms & Tokens](index.md#html-forms-and-tokens) • [AJAX](index.md#ajax) • [OpenAPI](index.md#swagger) • [Databases](index.md#databases) • [Database Results](index.md#database-results) • [Graph](index.md#graph) • [Migrations](index.md#migrations) • [ORM](index.md#orm) • [CRUD](index.md#crud) • [REST Client](index.md#consuming-rest-apis) • [Testing](index.md#inline-testing) • [Services](index.md#services) • [Websockets](index.md#websockets) • [Queues](index.md#queues) • [WSDL](index.md#wsdl) • [GraphQL](index.md#graphql) • [Localization](index.md#localization) • [HTML Builder](index.md#html-builder) • [Events](index.md#events) • [Logging](index.md#logging) • [Cache](index.md#response-cache) • [Health](index.md#health) • [DI Container](index.md#container) • [Error Overlay](index.md#error-overlay) • [Dev Admin](index.md#dev-admin) • [CLI](index.md#cli) • [MCP](index.md#mcp) • [FakeData](index.md#fakedata)
 
 ### Installation <a href="#installation" id="installation"></a>
 
@@ -309,6 +309,22 @@ json_data = result.to_json()
 ```
 
 Looking at detailed [Usage](05-database.md) will deepen your understanding.
+
+### Graph <a href="#graph" id="graph"></a>
+
+Graph engines work exactly like databases: one URL-selected factory, one portable node and edge surface, and a driver that loads only when you use it. The scheme picks the engine (Ultipa, Neo4j, Memgraph, or ArangoDB).
+
+```python
+from tina4_python.graph import GraphDatabase
+
+graph = GraphDatabase.create("ultipa://localhost:60061/mygraph")
+
+alice = graph.add_node("Person", {"name": "Alice"})
+bob = graph.add_node("Person", {"name": "Bob"})
+graph.add_edge(alice.id, bob.id, "KNOWS", {"since": 2020})
+```
+
+Follow the link for more on the [Graph data layer](graph-databases.md).
 
 ### Migrations <a href="#migrations" id="migrations"></a>
 

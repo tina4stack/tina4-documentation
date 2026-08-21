@@ -3,7 +3,7 @@
 > The living index that ties every audited feature to its machine-checked
 > contract, its decisions, and its proven-in-all-four status. This is the
 > backbone of a future formal Tina4 language specification.
-> **Last synced:** 2026-08-20 (Feature 138 RBAC promoted to PROVEN; Feature 139 graph catalogued)
+> **Last synced:** 2026-08-21 (Feature 139 graph databases promoted to PROVEN, ships 3.13.111; Feature 138 RBAC promoted to PROVEN)
 
 > **Adversarial re-audit started 2026-08-08:** a zero-skip live-lab migration
 > baseline still omitted contradictory public paths (generated code migration
@@ -137,7 +137,7 @@ Re-run it and re-sync this table whenever a fixture changes.
 | OpenID Connect SSO | 136 | `sso_contract.json` | 10 | 0 | 10 | 0056 | baseline live PKCE/callback/Session/refresh/logout flow is green in all four against one real standards-compliant provider; the named adversarial and Session-provider witnesses remain owed |
 | GIS spatial points and queries | 137 | `gis_contract.json` | 12 | 0 | 12 | 0057 | implementation and focused real-PostGIS suites are green in all four; invariant promotion waits for every named case and mutation witness |
 | RBAC role/permission guards | 138 | `rbac_contract.json` | 8 | 8 | 0 | 0058 | **PROVEN all four (shipped 3.13.107).** role()/can() claim-first guards; audit-contract-fixtures.py verifies every case name across tests/test_rbac.py, tests/RbacTest.php, spec/rbac_spec.rb, test/rbac.test.ts (real tokens, real dispatch, no mocks) |
-| Graph databases (multi-engine) | 139 | `graph_contract.json` | 11 | 0 | 11 | 0059 | OWED, greenfield (decision-ready). 11 invariants from ADR-0059 (Database-shaped GraphDatabase, unified + raw, URL-selected Ultipa/Neo4j/Memgraph/ArangoDB adapters; standalone Ultipa drivers under tina4stack). Runs per-engine on the lab when implemented |
+| Graph databases (multi-engine) | 139 | `graph_contract.json` | 11 | 11 | 0 | 0059 | PROVEN in all four (ships 3.13.111). Database-shaped `GraphDatabase.create(url)`/`fromEnv()`: URL-selected adapters (`ultipa://` -> Ultipa/GQL, `neo4j://`/`bolt://`/`memgraph://` -> Bolt/Cypher one adapter, `arango://`/`arangodb://` -> Arango/AQL; default ports 60061/7687/8529), portable addNode/addEdge/getNode/updateNode/deleteNode/neighbors/traverse core plus raw `query()`/`execute()` in the native dialect, neutral GraphNode/GraphEdge/GraphResult, optional lazy-loaded drivers (tina4stack/tina4-ultipa; neo4j / neo4j-driver / laudis; python-arango / arangojs / triagens; Bolt+Arango zero-dep in Ruby), `TINA4_GRAPH_URL` + `TINA4_GRAPH_USERNAME`/`_PASSWORD` + `TINA4_GRAPH_CONNECT_TIMEOUT`. 11 invariants proven per-engine against Ultipa + Neo4j + Memgraph + ArangoDB on the lab, NO mocks; suites `tests/test_graph.py`, `tests/GraphTest.php`, `spec/graph_spec.rb`, `test/graph.test.ts`. `graph-driver-optional` runs driver-free |
 **Totals: 310 invariants, 288 proven, 22 owed** (2026-08-17), 58 fixtures. Proven
 subsystems remain held to their contract four-way. Logger (feature 2) closed
 2026-08-13 -- all 8 invariant groups / 59 shared cases now proven four-way,
@@ -196,7 +196,7 @@ their plan and ADR, and are the first candidates to promote to Layer 2.
 | 136 OpenID Connect SSO | `features/136-oidc-sso.md` | ADR-0056 | **Baseline implementation green in all four; Layer 2 ledger records 10 owed adversarial groups.** |
 | 137 GIS spatial points and queries | `features/137-gis-spatial.md` | ADR-0057 | **Baseline implementation green against real PostGIS in all four; Layer 2 ledger records 12 owed groups.** |
 | 138 RBAC role/permission guards | `features/138-rbac.md` | ADR-0058 | **Shipped 3.13.107, PROVEN all four: `rbac_contract.json` 8/8 invariants (role()/can(), OR-within/AND-by-stacking, granted-side wildcards, 401-vs-403, verified-claim-only, legacy singular role coerced).** |
-| 139 Graph databases | `features/139-graph-databases.md` | ADR-0059 | **Parity plan + contract fixture authored; OWED (decision-ready, greenfield). URL-selected GraphDatabase adapters, unified + raw, standalone Ultipa drivers. Ready to implement per PORTING-FORMULA.** |
+| 139 Graph databases | `features/139-graph-databases.md` | ADR-0059 | **PROVEN in all four (ships 3.13.111). URL-selected GraphDatabase adapters (Ultipa/Neo4j/Memgraph/ArangoDB), unified + raw, optional lazy drivers, standalone Ultipa drivers under tina4stack. 11 invariants proven per-engine on the lab, NO mocks.** |
 
 ## Layer 0: not yet audited
 

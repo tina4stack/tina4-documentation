@@ -16,148 +16,196 @@
     "suite parameterises the same case names over every provisioned engine (Ultipa,",
     "Neo4j, Memgraph, ArangoDB) - provider substitutability, exactly like the SQL",
     "engine matrix. NO MOCKS: real connections, real round-trips against live",
-    "engines on the lab (Ultipa community edition is already up; Neo4j/Memgraph/",
-    "ArangoDB are provisioned via Docker behind the require-services gate, each with",
-    "its own TINA4_TEST_<ENGINE>_URL). The `graph-driver-optional` invariant is the",
-    "one case that runs WITHOUT a live engine (it asserts the missing-driver error",
-    "and that the core imports driver-free).",
+    "engines on the lab (Ultipa community edition, plus Neo4j/Memgraph/ArangoDB via",
+    "Docker behind the require-services gate, each with its own TINA4_TEST_<ENGINE>_URL).",
+    "The `graph-driver-optional` invariant is the one case that runs WITHOUT a live",
+    "engine (it asserts the missing-driver error and that the core imports driver-free).",
     "",
-    "STATUS: OWED in all four - greenfield. No framework ships a graph layer yet, so",
-    "every invariant carries `cases: []` with the real case names parked in",
-    "`proposed_cases` and the intended per-language suite files in `proposed_suites`.",
-    "scripts/audit-contract-fixtures.py therefore reports these as OWED (declared,",
-    "not yet proven) rather than FAIL. Contract authored BEFORE any code, per",
-    "PORTING-FORMULA.md (audit -> neutral contract -> all implementations).",
-    "",
-    "Build order (ADR-0059): the standalone tina4stack/ultipa-<lang> drivers first,",
-    "then per framework the graph/ module (mirroring database/) with adapters",
-    "ultipa / bolt [Neo4j+Memgraph] / arango. Flip owed -> proven per",
-    "framework+engine only when the named suite carries the case against that engine."
+    "STATUS: PROVEN in all four. The GraphDatabase layer ships in 3.13.111 and every",
+    "invariant is carried by a named case in each framework's suite, run against all",
+    "four engines on the lab. Each invariant names its per-language suite in `suites`",
+    "and its proven case label(s) in `cases`; the case label is the invariant id, the",
+    "shared string every suite tags its case with (test_graph_add_node /",
+    "testGraphAddNode / \"graph-add-node: ...\" / ok(\"graph-add-node\", ...)), so the",
+    "same name resolves in all four idioms. Contract authored BEFORE any code, per",
+    "PORTING-FORMULA.md (audit -> neutral contract -> all implementations), then",
+    "flipped owed -> proven once the four suites carried the cases against every engine."
   ],
   "version": 1,
   "decided": "2026-08-20",
   "feature": "139 - Graph databases (Ultipa, Neo4j, Memgraph, ArangoDB)",
-  "status": "owed",
-  "engines": ["ultipa", "neo4j", "memgraph", "arango"],
-  "proposed_suites": {
-    "python": "tests/test_graph.py",
-    "php": "tests/GraphTest.php",
-    "ruby": "spec/graph_spec.rb",
-    "nodejs": "test/graph.test.ts"
-  },
+  "status": "proven",
+  "engines": [
+    "ultipa",
+    "neo4j",
+    "memgraph",
+    "arango"
+  ],
   "invariants": [
     {
       "id": "graph-connect-by-url",
       "adr": "ADR-0059 / GRAPH-DEC-01",
       "rule": "GraphDatabase.create(url) selects the adapter from the URL scheme (ultipa:// -> Ultipa, neo4j://|bolt:// -> Bolt/Neo4j, memgraph:// -> Bolt/Memgraph, arango://|arangodb:// -> Arango) and returns a connected adapter. fromEnv() does the same from TINA4_GRAPH_URL.",
       "why": "URL-driven selection is the whole point of the Database-shaped design: one factory, engine chosen by scheme, no per-engine construction code in the app.",
-      "cases": [],
-      "proposed_cases": [
-        "a URL scheme selects the right adapter and connects"
-      ]
+      "cases": [
+        "graph-connect-by-url"
+      ],
+      "suites": {
+        "python": "tests/test_graph.py",
+        "php": "tests/GraphTest.php",
+        "ruby": "spec/graph_spec.rb",
+        "nodejs": "test/graph.test.ts"
+      }
     },
     {
       "id": "graph-add-node",
       "adr": "ADR-0059 / GRAPH-DEC-02",
       "rule": "addNode(label, properties) creates a vertex and returns a GraphNode { id, labels, properties } with a non-null id and the stored properties echoed back.",
       "why": "The portable node create is the base of the unified surface; the returned id is what every edge and read depends on.",
-      "cases": [],
-      "proposed_cases": [
-        "addNode returns a node with an id, labels and properties"
-      ]
+      "cases": [
+        "graph-add-node"
+      ],
+      "suites": {
+        "python": "tests/test_graph.py",
+        "php": "tests/GraphTest.php",
+        "ruby": "spec/graph_spec.rb",
+        "nodejs": "test/graph.test.ts"
+      }
     },
     {
       "id": "graph-add-edge",
       "adr": "ADR-0059 / GRAPH-DEC-02",
       "rule": "addEdge(fromId, toId, type, properties) links two existing nodes and returns a GraphEdge { id, type, from, to, properties } with from/to matching the arguments.",
       "why": "Edges are the reason a graph engine exists; the from/to/type contract must mean the same thing on every engine.",
-      "cases": [],
-      "proposed_cases": [
-        "addEdge links two nodes with a type and properties"
-      ]
+      "cases": [
+        "graph-add-edge"
+      ],
+      "suites": {
+        "python": "tests/test_graph.py",
+        "php": "tests/GraphTest.php",
+        "ruby": "spec/graph_spec.rb",
+        "nodejs": "test/graph.test.ts"
+      }
     },
     {
       "id": "graph-get-node",
       "adr": "ADR-0059 / GRAPH-DEC-02",
       "rule": "getNode(id) returns the stored GraphNode with its properties intact (round-trip), and returns a null/None/nil for an id that does not exist (a miss is not an error).",
       "why": "Read-back parity proves the write persisted and the neutral node shape survives the engine's own storage/types.",
-      "cases": [],
-      "proposed_cases": [
-        "getNode round-trips the stored properties",
-        "getNode of a missing id returns a falsy value, not an error"
-      ]
+      "cases": [
+        "graph-get-node"
+      ],
+      "suites": {
+        "python": "tests/test_graph.py",
+        "php": "tests/GraphTest.php",
+        "ruby": "spec/graph_spec.rb",
+        "nodejs": "test/graph.test.ts"
+      }
     },
     {
       "id": "graph-update-delete-node",
       "adr": "ADR-0059 / GRAPH-DEC-02",
       "rule": "updateNode(id, properties) merges the properties (verified by re-read); deleteNode(id) removes the node so a subsequent getNode(id) is a miss.",
       "why": "Mutation + removal complete the portable node lifecycle and prove the changes are durable, not client-side.",
-      "cases": [],
-      "proposed_cases": [
-        "updateNode merges properties, verified by re-read",
-        "deleteNode removes the node, verified by re-read"
-      ]
+      "cases": [
+        "graph-update-delete-node"
+      ],
+      "suites": {
+        "python": "tests/test_graph.py",
+        "php": "tests/GraphTest.php",
+        "ruby": "spec/graph_spec.rb",
+        "nodejs": "test/graph.test.ts"
+      }
     },
     {
       "id": "graph-neighbors",
       "adr": "ADR-0059 / GRAPH-DEC-03",
       "rule": "neighbors(id, { direction, edgeType, limit }) returns the directly-connected nodes filtered by direction (out/in/both) and optional edge type; an unmatched filter returns empty, not an error.",
       "why": "One-hop traversal is the most common graph read; direction and edge-type filtering must be uniform across engines.",
-      "cases": [],
-      "proposed_cases": [
-        "neighbors returns the connected nodes for a direction and edge type"
-      ]
+      "cases": [
+        "graph-neighbors"
+      ],
+      "suites": {
+        "python": "tests/test_graph.py",
+        "php": "tests/GraphTest.php",
+        "ruby": "spec/graph_spec.rb",
+        "nodejs": "test/graph.test.ts"
+      }
     },
     {
       "id": "graph-traverse-depth",
       "adr": "ADR-0059 / GRAPH-DEC-03",
       "rule": "traverse(startId, { depth }) returns the set of nodes reachable within `depth` hops from the start (the start's own inclusion is defined and consistent across engines).",
       "why": "Bounded multi-hop traversal is the portable stand-in for each engine's native path query; the reachable set must agree on all engines for the same graph.",
-      "cases": [],
-      "proposed_cases": [
-        "traverse to depth N returns the reachable set"
-      ]
+      "cases": [
+        "graph-traverse-depth"
+      ],
+      "suites": {
+        "python": "tests/test_graph.py",
+        "php": "tests/GraphTest.php",
+        "ruby": "spec/graph_spec.rb",
+        "nodejs": "test/graph.test.ts"
+      }
     },
     {
       "id": "graph-raw-query",
       "adr": "ADR-0059 / GRAPH-DEC-04",
       "rule": "query(text, params) runs the engine's NATIVE read language (GQL/UQL on Ultipa, Cypher on Neo4j/Memgraph, AQL on ArangoDB) with bound params and returns a GraphResult (records + columns), same shape as the relational DatabaseResult. execute(text, params) does the same for a write.",
       "why": "The raw pass-through is the escape hatch that keeps the portable core small; it must bind params (no string interpolation) and return the uniform result shape.",
-      "cases": [],
-      "proposed_cases": [
-        "a native-dialect query round-trips through query() with bound params"
-      ]
+      "cases": [
+        "graph-raw-query"
+      ],
+      "suites": {
+        "python": "tests/test_graph.py",
+        "php": "tests/GraphTest.php",
+        "ruby": "spec/graph_spec.rb",
+        "nodejs": "test/graph.test.ts"
+      }
     },
     {
       "id": "graph-write-fails-loud",
       "adr": "ADR-0059 / GRAPH-DEC-06",
       "rule": "A malformed or failing raw statement RAISES (never a falsy return); the cause is readable via getError() after the raise. Mirrors the relational execute()/fetch() fail-loud contract.",
       "why": "A swallowed graph write is the same silent-data-loss footgun the SQL layer already outlawed; the negative proves errors surface.",
-      "cases": [],
-      "proposed_cases": [
-        "a bad raw statement raises and records the cause on getError()"
-      ]
+      "cases": [
+        "graph-write-fails-loud"
+      ],
+      "suites": {
+        "python": "tests/test_graph.py",
+        "php": "tests/GraphTest.php",
+        "ruby": "spec/graph_spec.rb",
+        "nodejs": "test/graph.test.ts"
+      }
     },
     {
       "id": "graph-driver-optional",
       "adr": "ADR-0059 / GRAPH-DEC-05",
       "rule": "The graph core imports and runs with NO engine driver installed. Opening a connection whose engine driver is absent raises an actionable error naming the missing package and the install command. (Runs without a live engine.)",
       "why": "The zero-dependency-core rule is load-bearing: a graph driver must be a cost paid only when the engine is used, exactly like the SQL drivers.",
-      "cases": [],
-      "proposed_cases": [
-        "a missing engine driver raises an actionable install error",
-        "the graph core imports with no graph driver present"
-      ]
+      "cases": [
+        "graph-driver-optional"
+      ],
+      "suites": {
+        "python": "tests/test_graph.py",
+        "php": "tests/GraphTest.php",
+        "ruby": "spec/graph_spec.rb",
+        "nodejs": "test/graph.test.ts"
+      }
     },
     {
       "id": "graph-connect-timeout",
       "adr": "ADR-0059 / GRAPH-DEC-06",
       "rule": "A connect to an unreachable host throws within TINA4_GRAPH_CONNECT_TIMEOUT seconds, naming the host, port and elapsed seconds (mirrors the relational TINA4_DATABASE_CONNECT_TIMEOUT contract).",
       "why": "An unbounded graph connect hangs the app with no signal, the exact failure the relational connect-timeout contract exists to prevent; the graph layer must inherit it.",
-      "cases": [],
-      "proposed_cases": [
-        "an unreachable host times out within the configured bound, naming host and port"
-      ]
+      "cases": [
+        "graph-connect-timeout"
+      ],
+      "suites": {
+        "python": "tests/test_graph.py",
+        "php": "tests/GraphTest.php",
+        "ruby": "spec/graph_spec.rb",
+        "nodejs": "test/graph.test.ts"
+      }
     }
   ]
 }
