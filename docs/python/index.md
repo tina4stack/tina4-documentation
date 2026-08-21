@@ -5,6 +5,7 @@
 * Routes go in `src/routes/`, templates in `src/templates/`, static files in `src/public/`
 * GET routes are public by default; POST/PUT/PATCH/DELETE require a token
 * Return a `dict` from `response()` and the framework sets `application/json`
+* A route file whose name starts with `_` is treated as private and not loaded
 * Run `tina4 serve` to start the dev server on port 7146
 :::
 
@@ -13,7 +14,8 @@
 ### Installation <a href="#installation" id="installation"></a>
 
 ```bash
-# Install the tina4 CLI once. Windows: irm https://tina4.com/install.ps1 | iex
+# Install the tina4 CLI once. macOS: brew install tina4stack/tap/tina4
+# Windows (PowerShell): irm https://tina4.com/install.ps1 | iex
 curl -fsSL https://tina4.com/install.sh | sh
 
 tina4 init python my-app
@@ -21,17 +23,27 @@ cd my-app
 tina4 serve
 ```
 
-The CLI scaffolds your project, installs the dependencies, and starts the server. No dependency tree. No version conflicts. Your browser opens to `http://localhost:7146` and the welcome page greets you.
+`init` takes a language and a path, and the path is required. It scaffolds the project and installs the dependency -- one package, no tree, no version conflicts -- then asks `Start the server now? [Y/n]`. `serve` starts the server and opens your browser on `http://localhost:7146`, where the welcome page greets you.
+
+`tina4 setup` is the guided alternative: it asks once where your projects live, scaffolds there, and `tina4 serve my-app` then finds the project from any directory.
+
+The `tina4` CLI, `uv`, `.env` variables and the framework itself behave identically on Linux, macOS and Windows.
 
 [More details](01-getting-started.md) on project setup and customization.
 
 ### Static Websites <a href="#static-websites" id="static-websites"></a>
 
-Put `.twig` files in `./src/templates` and assets in `./src/public`. The framework serves them without additional configuration.
+Anything in `./src/public` is served from `/` with no configuration: `src/public/images/logo.png` is at `/images/logo.png`.
 
-```twig
-<!-- src/templates/index.twig -->
-<h1>Hello Static World</h1>
+Templates in `./src/templates` render through a route. Return one from a handler, or use `@template`, which sits below the route decorator:
+
+```python
+from tina4_python.core.router import get, template
+
+@get("/about")
+@template("about.twig")
+async def about(request, response):
+    return {"title": "About us"}
 ```
 
 [More details](04-templates.md) on static website routing.
@@ -64,6 +76,8 @@ Follow the links for [basic routing](02-routing.md) and [dynamic routing](02-rou
 
 Middleware runs before and after your route handler. Define a class with static methods, then attach it with the `@middleware` decorator.
 
+Hooks are discovered by prefix: `before_*` runs before the handler, `after_*` runs after. `response.content` holds **bytes**, so append bytes.
+
 ```python
 from tina4_python import get, middleware
 
@@ -71,24 +85,21 @@ class RunSomething:
 
     @staticmethod
     def before_something(request, response):
-        response.content += "Before"
+        response.content += b"Before"
         return request, response
 
     @staticmethod
     def after_something(request, response):
-        response.content += "After"
-        return request, response
-
-    @staticmethod
-    def before_and_after_something(request, response):
-        response.content += "[Before / After Something]"
+        response.content += b"After"
         return request, response
 
 @middleware(RunSomething)
 @get("/middleware")
 async def get_middleware(request, response):
-    return response("Route") # Before[Before / After Something]Route[Before / After Something]After
+    return response("Route")
 ```
+
+Use `before_*` to inspect or reject a request, and `after_*` to modify the outgoing body. Middleware is additive and does not change a route's auth requirement: POST, PUT, PATCH and DELETE stay token-gated. Use `@noauth()` to open a write route.
 
 Follow the links for more on [Middleware Declaration](10-middleware-security.md) and [Linking to Routes](10-middleware-security.md#routes).
 
@@ -116,13 +127,8 @@ The default session handler stores data on the file system. Override `TINA4_SESS
 The value is the backend name, not a class name, and it is normalised: leading or
 trailing spaces and capitals are fine, so `` Redis `` resolves.
 
-An unrecognised value RAISES at startup, naming the bad value and the valid ones.
-It used to fall back to the file backend silently, which meant a typo produced a
-running app writing sessions to local disk while you believed they were in Redis:
-nothing logged, nothing failed, and the symptom only surfaced later as users being
-logged out whenever a request landed on another instance. Leaving
-`TINA4_SESSION_BACKEND` unset, or setting it to an empty value, still gives you the
-file default.
+An unrecognised value RAISES at startup, naming the bad value and the valid ones. Leave
+`TINA4_SESSION_BACKEND` unset, or set it to an empty value, for the file default.
 
 | Value                    | Backend     | Required package |
 | ------------------------ | ----------- | ---------------- |
@@ -130,7 +136,10 @@ file default.
 | `redis`                  | Redis       | `redis`          |
 | `valkey`                 | Valkey      | `valkey`         |
 | `mongodb`                | MongoDB     | `pymongo`        |
+| `memcached`              | Memcached   | --               |
 | `database`               | Your ORM DB | --               |
+
+Aliases are accepted: `filesystem`, `mongo`, `memcache`, `db`. The memcached handler speaks the text protocol over a socket, so it needs no client library.
 
 ```bash
 TINA4_SESSION_BACKEND=mongodb
@@ -183,7 +192,7 @@ The `.env` file holds your project configuration. The framework reads it at star
 
 ```
 TINA4_DEBUG=true
-TINA4_PORT=7145
+TINA4_PORT=7146
 TINA4_DATABASE_URL=sqlite:///data/app.db
 TINA4_LOG_LEVEL=ALL
 TINA4_API_KEY=ABC1234
@@ -202,15 +211,19 @@ from tina4_python.dotenv import load_env, get_env, has_env, require_env, is_trut
 
 load_env()                          # Load .env file (auto on server start)
 get_env("TINA4_DATABASE_URL")             # Get value or None
-get_env("PORT", "7145")             # Get value with default
+get_env("PORT", "7146")             # Get value with default
 has_env("TINA4_DEBUG")              # True if set
 require_env("TINA4_DATABASE_URL")         # Raises if missing
 is_truthy(get_env("TINA4_DEBUG"))   # True for "true", "1", "yes"
 ```
 
+All 68 variables: [Chapter 33: Environment Variables](33-environment-variables.md).
+
 ### Authentication <a href="#authentication" id="authentication"></a>
 
 POST, PUT, PATCH, and DELETE routes require a Bearer token by default. Pass `Authorization: Bearer TINA4_API_KEY` in the request header. Use `@noauth()` to open a route to everyone. Use `@secured()` to lock a GET route behind authentication.
+
+Without `@noauth()`, an unauthenticated POST returns `{"error":"Unauthorized","message":"Valid authorization token required","status":401}`.
 
 ```python
 from tina4_python import get, post, noauth, secured
@@ -252,9 +265,11 @@ async def remove_post(id, request, response):
 
 ### HTML Forms and Tokens <a href="#html-forms-and-tokens" id="html-forms-and-tokens"></a>
 
+`form_token` works as a function or a filter. Both emit the hidden `formToken` input that satisfies the POST auth check for browser form submissions.
+
 ```twig
 <form method="POST" action="/register">
-    {{ ("Register" ~ RANDOM()) | form_token }}
+    {{ form_token() }}
     <input name="email">
     <button>Save</button>
 </form>
@@ -270,7 +285,7 @@ Tina4 ships with frond.js, a small zero-dependency JavaScript library for AJAX c
 
 ### OpenAPI and Swagger UI <a href="#swagger" id="swagger"></a>
 
-Visit `http://localhost:7145/swagger`. Decorated routes appear in the Swagger UI without manual annotation.
+Visit `http://localhost:7146/swagger`. Decorated routes appear in the Swagger UI without manual annotation. The generated spec itself is at `/swagger/openapi.json` (OpenAPI 3.0.3; set `TINA4_SWAGGER_OPENAPI=3.1` for 3.1.0).
 
 ```python
 from tina4_python import get
@@ -332,8 +347,10 @@ Follow the link for more on the [Graph data layer](graph-databases.md).
 tina4 migrate:create create_users_table
 ```
 
+Migration files are timestamp-prefixed, so they sort in creation order. Fill it in:
+
 ```sql
--- migrations/00001_create_users_table.sql
+-- migrations/20260812104512_create_users_table.sql
 CREATE TABLE users
 (
     id   INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -345,7 +362,7 @@ CREATE TABLE users
 tina4 migrate
 ```
 
-[Migrations](05-database.md) have limitations worth knowing before you use them at scale.
+More on writing and running them: [Migrations](05-database.md).
 
 ### ORM <a href="#orm" id="orm"></a>
 
@@ -362,21 +379,38 @@ user = User()
 user.load("id = ?", [1])
 ```
 
+The table has to exist first. Run a migration before the first `save()` -- [Databases](05-database.md) covers writing one.
+
 ORM covers more ground than this snippet shows. Study the [Advanced Detail](06-orm.md) to get the full value.
 
 ### CRUD <a href="#crud" id="crud"></a>
 
-```python
-from tina4_python import get
+Set `auto_crud` on a model and the framework registers the CRUD routes for it:
 
-@get("/users/dashboard")
-async def dashboard(request, response):
-    users = User().select("id, name, email")
-    return response.render("users/dashboard.twig", {"crud": users.to_crud(request)})
+```python
+from tina4_python.orm import ORM, IntegerField, StringField
+
+class User(ORM):
+    auto_crud = True
+
+    id   = IntegerField(primary_key=True, auto_increment=True)
+    name = StringField()
 ```
 
-```twig
-{{ crud }}
+On boot it logs `AutoCrud: registered 5 routes for User (/api/user)`:
+
+```
+GET    /api/user         list
+POST   /api/user         create
+GET    /api/user/{id}    read
+PUT    /api/user/{id}    update
+DELETE /api/user/{id}    delete
+```
+
+Or scaffold the files and edit them:
+
+```bash
+tina4 generate crud User
 ```
 
 [More details](19-scaffolding.md) on how CRUD generates its files and where they live.
@@ -395,13 +429,15 @@ print(result["body"])
 
 ### Inline Testing <a href="#inline-testing" id="inline-testing"></a>
 
+Each assertion is built from the *arguments* to call with and the expected result. Import all three names from `tina4_python.Testing`:
+
 ```python
-from tina4_python import tests
+from tina4_python.Testing import assert_equal, assert_raises, tests
 
 @tests(
-    expect_equal((7, 7), 1),
-    expect_equal((-1, 1), -1),
-    expect_raises(ZeroDivisionError, (5, 0)),
+    assert_equal((7, 7), 1),
+    assert_equal((-1, 1), -1),
+    assert_raises(ZeroDivisionError, (5, 0)),
 )
 def divide(a: int, b: int) -> float:
     if b == 0:
@@ -409,18 +445,41 @@ def divide(a: int, b: int) -> float:
     return a / b
 ```
 
-Run: `tina4 test`
+Run them with `tina4 test`. Add a test runner to the project first:
+
+```bash
+uv add pytest
+tina4 test
+```
 
 ### Services <a href="#services" id="services"></a>
 
-Due to the nature of Python, services are not necessary.
+Background work that outlives a request runs under the service runner, which starts each one in a background thread so the web server keeps serving. Use `register_service()` for a class-based service and `register()` for a callable:
+
+```python
+from tina4_python.service import Service, ServiceRunner
+
+class Heartbeat(Service):
+    def run(self):
+        while not self.should_stop():
+            ...
+
+runner = ServiceRunner()
+runner.register_service("heartbeat", Heartbeat())
+runner.register("cleanup", lambda ctx: purge_old_rows(), interval=300)
+runner.start()
+```
+
+[More details](27-service-runner.md) on the start/stop lifecycle and graceful shutdown.
 
 ### Websockets <a href="#websockets" id="websockets"></a>
 
 WebSocket support is built in. No extra dependencies. Define a handler with the `@websocket` decorator, and the framework manages the connection alongside your HTTP routes on the same port.
 
+Import `websocket` from `tina4_python.core.router`. Events are `open`, `message` and `close`.
+
 ```python
-from tina4_python import websocket
+from tina4_python.core.router import websocket
 
 @websocket("/ws/chat")
 async def chat_ws(connection, event, data):
@@ -441,8 +500,12 @@ from tina4_python.queue import Queue
 queue = Queue(topic="emails")
 queue.produce("emails", {"to": "alice@example.com", "subject": "Welcome"})
 
-# Consume messages
+# Consume messages - a worker loop, it does not return
 for job in queue.consume("emails"):
+    print(job.payload)
+
+# Drain a fixed number of times instead of looping forever
+for job in queue.consume("emails", iterations=1):
     print(job.payload)
 ```
 
@@ -450,10 +513,12 @@ for job in queue.consume("emails"):
 
 ### WSDL <a href="#wsdl" id="wsdl"></a>
 
-Subclass `WSDL` and decorate each operation with `@wsdl_operation`, giving the return shape. Drop the file in `src/routes/` and the framework serves the SOAP endpoint plus its generated WSDL.
+Subclass `WSDL` and decorate each operation with `@wsdl_operation`, giving the return shape. Hand the request to it from a route: `handle()` answers both the WSDL document (GET) and the SOAP call (POST).
 
 ```python
 from typing import List
+
+from tina4_python.core.router import get, noauth, post
 from tina4_python.wsdl import WSDL, wsdl_operation
 
 
@@ -466,34 +531,35 @@ class Calculator(WSDL):
     @wsdl_operation({"Numbers": List[int], "Total": int})
     def SumList(self, Numbers: List[int]):
         return {"Numbers": Numbers, "Total": sum(Numbers)}
+
+
+@get("/calculator")
+async def calculator_wsdl(request, response):
+    return response(Calculator(request).handle())
+
+
+@post("/calculator")
+@noauth()
+async def calculator_soap(request, response):
+    return response(Calculator(request).handle())
 ```
 
 [More Details](25-wsdl-soap.md) on WSDL configuration and usage.
 
 ### GraphQL <a href="#graphql" id="graphql"></a>
 
+`GraphQL()` takes no arguments. Build the schema on the instance: `add_type` for object types, `add_query` for a field plus its resolver. A resolver receives `(root, args, ctx)`.
+
 ```python
 from tina4_python.graphql import GraphQL
 
-schema = """
-type Query {
-    hello(name: String!): String
-    users: [User]
-}
+gql = GraphQL()
+gql.schema.add_type("User", {"id": "ID", "name": "String", "email": "String"})
+gql.schema.add_query("hello", {"name": "String!"}, "String",
+                     lambda root, args, ctx: f"Hello, {args['name']}!")
 
-type User {
-    id: Int
-    name: String
-    email: String
-}
-"""
-
-resolvers = {
-    "hello": lambda info, name: f"Hello, {name}!",
-    "users": lambda info: db.fetch("SELECT * FROM users").records,
-}
-
-graphql = GraphQL(schema, resolvers)
+gql.execute('{ hello(name: "Ada") }')
+# {'data': {'hello': 'Hello, Ada!'}}
 ```
 
 Register the endpoint:
@@ -504,11 +570,10 @@ from tina4_python import post, noauth
 @post("/graphql")
 @noauth()
 async def handle_graphql(request, response):
-    result = graphql.execute(request.body.get("query", ""))
-    return response(result)
+    return response(gql.execute(request.body.get("query", "")))
 ```
 
-GraphiQL UI available at `/__dev/graphql` in debug mode.
+`execute_json`, `introspect` and `schema_sdl` are also available, and `auto_register` generates a schema from your ORM models.
 
 ### Localization (i18n) <a href="#localization" id="localization"></a>
 
@@ -593,7 +658,7 @@ async def products(request, response):
 
 ### Health Endpoint <a href="#health" id="health"></a>
 
-Built-in at `/__health`, with `/health` always registered too. Returns `{"status": "ok", "version": "3.13.94", "uptime": 123.4, "framework": "tina4-python"}`. Configure the path with `TINA4_HEALTH_PATH`. It is a liveness probe: it reports on the process, never on a database or cache.
+Built-in at `/__health`, with `/health` always registered too. Returns `{"status": "ok", "version": "3.x.x", "uptime": 123.4, "framework": "tina4-python"}`. Configure the path with `TINA4_HEALTH_PATH`. It is a liveness probe: it reports on the process, never on a database or cache.
 
 ### DI Container <a href="#container" id="container"></a>
 
@@ -617,21 +682,32 @@ Available at `/__dev` in debug mode. Includes route inspector, database tab, req
 ### CLI Commands <a href="#cli" id="cli"></a>
 
 ```bash
-tina4 init python my-app    # Scaffold project
+tina4 setup                  # Guided setup: install what is missing, scaffold a project
+tina4 init python my-app     # Scaffold a project at a path you choose
 tina4 serve                  # Start dev server
 tina4 serve --production     # Production mode
 tina4 doctor                 # Check environment
 tina4 env                    # Configure .env
+tina4 scss                   # Compile src/scss/ to src/public/css/
 tina4 docs                   # Download documentation
 tina4 generate model User    # Generate scaffolding
 tina4 migrate                # Run migrations
 tina4 test                   # Run tests
 tina4 ai                     # Install AI context
+tina4 update                 # Self-update the CLI
 ```
 
 ### MCP Server <a href="#mcp" id="mcp"></a>
 
-Auto-starts on `/__mcp` in debug mode. Exposes 24 dev tools via JSON-RPC 2.0 over SSE. Works with Claude Code, Cursor, and other MCP clients.
+Mounted at `/__dev/mcp` in debug mode. Exposes 49 dev tools via JSON-RPC 2.0 -- `database_query`, `route_list`, `route_test` and friends. Works with Claude Code, Cursor, and other MCP clients.
+
+```bash
+curl -X POST http://localhost:7146/__dev/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+Set `TINA4_MCP` to force it on or off; remote access additionally needs `TINA4_MCP_REMOTE=true` and a valid token.
 
 ### FakeData <a href="#fakedata" id="fakedata"></a>
 
