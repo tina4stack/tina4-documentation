@@ -105,6 +105,21 @@
       ]
     },
     {
+      "id": "devadmin-toolbar-csp-clean",
+      "adr": "DEVADMIN-DEC-07",
+      "rule": "The injected dev toolbar carries NO inline style= attribute, NO onclick= (or any inline event handler) and NO inline <script> block - every script it emits is an external <script src=...> reference - so it renders under the framework's default default-src 'self' CSP with no violations. This is a mechanism-agnostic OUTCOME: PHP/Python/Node serve the CSS/JS as external /__dev/toolbar.{css,js} routes, Ruby's toolbar is a static inline-free shell, and all four must satisfy the same no-inline property.",
+      "why": "tina4stack #115: under the strict default-src 'self' CSP the framework serves, an injected toolbar with inline style=/onclick=/<script> renders unstyled + non-functional and spews CSP violations (Node's toolbar alone had carried 22 inline style=, 4 onclick= and 5 inline <script> blocks). Python and Node moved the CSS/JS to external assets and wired every handler via addEventListener; PHP already served external /__dev/toolbar.{css,js}; Ruby's shell was already inline-free. This invariant locks the CSP-clean OUTCOME in all four so it can never regress, via a real-dispatch assertion on the ACTUAL injected toolbar bytes (no inline style=, no onclick=, no non-src <script>).",
+      "suites": {
+        "ruby": "spec/dev_admin_conformance_spec.rb",
+        "python": "tests/test_dev_admin_conformance.py",
+        "php": "tests/DevAdminConformanceTest.php",
+        "nodejs": "test/devAdminConformance.test.ts"
+      },
+      "cases": [
+        "injected toolbar has no inline style onclick or inline script"
+      ]
+    },
+    {
       "id": "devadmin-mcp-call-gate",
       "adr": "DEVADMIN-DEC-05",
       "rule": "The POST /__dev/api/mcp/call tool-invocation shim enforces the same two-layer MCP gate every other MCP surface enforces: a REMOTE UNAUTHENTICATED caller gets 404 BEFORE any tool runs (asserted by the real database_execute tool's write NOT landing in a real row), using the raw socket peer; a loopback caller runs the tool.",
