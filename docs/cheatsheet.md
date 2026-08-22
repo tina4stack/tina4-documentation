@@ -90,6 +90,22 @@ Drop a handler file in `src/routes/` (auto-discovered) and register one per HTTP
 
 Always use `?` placeholders with a params array: every adapter translates `?` to the engine's native style (`$1`, `%s`, `?`). Never string-interpolate user input. A standalone write auto-commits on its own connection (durable + visible across a pooled connection); an explicit transaction stays atomic. Set `TINA4_AUTOCOMMIT=false` for strict manual-commit mode.
 
+## Graph Database
+
+> New in 3.13.111. Proven live across all four on Ultipa, Neo4j, Memgraph and ArangoDB. The engine driver is an optional, lazy-loaded dependency, so the core stays zero-dependency.
+
+| | Python | PHP | Ruby | Node |
+|---|---|---|---|---|
+| Connect | `GraphDatabase.create("neo4j://host:7687", username="u", password="p")` | `GraphDatabase::create("neo4j://host:7687", "u", "p")` | `Tina4::GraphDatabase.create("neo4j://host:7687", username: "u", password: "p")` | `await GraphDatabase.create("neo4j://host:7687", {username, password})` |
+| From env | `GraphDatabase.from_env()` | `GraphDatabase::fromEnv()` | `Tina4::GraphDatabase.from_env` | `await GraphDatabase.fromEnv()` |
+| Add node | `g.add_node("Person", {"name": "Alice"})` | `$g->addNode("Person", ["name" => "Alice"])` | `g.add_node("Person", { "name" => "Alice" })` | `await g.addNode("Person", {name: "Alice"})` |
+| Add edge | `g.add_edge(a.id, b.id, "KNOWS", {"since": 2020})` | `$g->addEdge($a->id, $b->id, "KNOWS", ["since" => 2020])` | `g.add_edge(a.id, b.id, "KNOWS", { "since" => 2020 })` | `await g.addEdge(a.id, b.id, "KNOWS", {since: 2020})` |
+| Neighbors | `g.neighbors(a.id, direction="out", edge_type="KNOWS", limit=50)` | `$g->neighbors($a->id, "out", "KNOWS", 50)` | `g.neighbors(a.id, direction: "out", edge_type: "KNOWS", limit: 50)` | `await g.neighbors(a.id, {direction: "out", edgeType: "KNOWS", limit: 50})` |
+| Traverse | `g.traverse(a.id, depth=3, direction="out", edge_type="KNOWS")` | `$g->traverse($a->id, 3, "out", "KNOWS")` | `g.traverse(a.id, depth: 3, direction: "out", edge_type: "KNOWS")` | `await g.traverse(a.id, {depth: 3, direction: "out", edgeType: "KNOWS"})` |
+| Raw query | `g.query("MATCH (n) RETURN n", params)` | `$g->query("MATCH (n) RETURN n", $params)` | `g.query("MATCH (n) RETURN n", params)` | `await g.query("MATCH (n) RETURN n", params)` |
+
+The URL scheme picks the engine: `ultipa://` (GQL), `neo4j://` / `memgraph://` / `bolt://` (Bolt/Cypher, one adapter), `arango://` (AQL). The portable core (`add_node` / `add_edge` / `get_node` / `update_node` / `delete_node` / `neighbors` / `traverse`) works identically on every engine; `query` and `execute` pass native statements straight through. Configure with `TINA4_GRAPH_URL` and `TINA4_GRAPH_CONNECT_TIMEOUT`.
+
 ## Pages: drop-in templates {#pages}
 
 > Verified by the landing-page / template-routing test suites in all four (Python 43, PHP 44, Ruby 45, Node 55, run green this release).
