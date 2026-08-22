@@ -50,19 +50,22 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.112
+## Current framework release: 3.13.113
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.112. The dev toolbar is now
-CSP-clean in every framework: its CSS and JS load from external
-`/__dev/toolbar.css` and `/__dev/toolbar.js` routes, every handler is wired with
-`addEventListener`, and the live reloader is gated on a `data-reload` attribute,
-so the toolbar renders styled and works under the framework's own strict
-`default-src 'self'` CSP instead of being silently blocked (issue #115). The
-release before it, 3.13.111, added the graph database layer at parity across all
-four frameworks: `GraphDatabase.create(url)` picks the engine from the URL scheme,
-one portable node/edge/traverse surface works everywhere, and it is proven live on
-Ultipa, Neo4j, Memgraph, and ArangoDB, shaped exactly like the relational Database
-(Feature 139 / ADR-0059).
+Python, PHP, Ruby, and Node.js are aligned on 3.13.113. AI streaming got typed:
+`Ai.chat(stream=true)` now yields a discriminated `AiEvent` union
+(`text_delta`, `tool_call`, `done`, `error`) instead of raw strings, so an
+agent loop can see tool calls and finish reasons. Tool calls arrive whole
+(the client buffers argument fragments across deltas and emits one aggregated
+event when the JSON parses), text still streams per chunk for typewriter UX,
+and mid-stream failure surfaces as one `error` event that replaces `done`.
+`message.content` accepts multimodal parts (`{type:'text',text}` and
+`{type:'image', source}`) with providers getting their native shape internally.
+Three new `Api.stream_bytes` / `stream_lines` / `stream_sse` primitives replace
+the hand-rolled HTTP-streaming boilerplate every consumer used to write;
+`Ai.chat` streaming rides on `Api.stream_sse` per language. **Breaking** for
+callers of `Ai.chat(stream=true)`; non-streaming callers are unaffected.
+Feature 140 / ADR-0060.
 
 [Read the release notes](/python/36-releases.md)
 
@@ -119,6 +122,10 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.113 (2026-08-22)** - [full notes](/python/36-releases.md)
+
+AI streaming got typed. `Ai.chat(stream=true)` yields a discriminated `AiEvent` union (`text_delta`, `tool_call`, `done`, `error`) instead of raw strings. Tool calls arrive whole (client buffers argument fragments across deltas and emits one aggregated event when the JSON parses), text still streams per chunk, and mid-stream failure surfaces as one `error` event that replaces `done`. `message.content` accepts multimodal parts (`{type:'text',text}` and `{type:'image', source}`) with providers getting their native shape internally. Three new `Api.stream_bytes` / `stream_lines` / `stream_sse` primitives replace the hand-rolled HTTP-streaming boilerplate every consumer used to write; `Ai.chat` streaming is implemented on top of `Api.stream_sse` per language, one SSE reader serves both consumers. Contract fixture at parity across all four backends. **Breaking** for `Ai.chat(stream=true)` callers; migrate `for chunk in stream:` to `for event in stream: if event.type == "text_delta": ...`. Non-streaming callers unaffected. Feature 140 / ADR-0060.
 
 **v3.13.112 (2026-08-22)** - [full notes](/python/36-releases.md)
 

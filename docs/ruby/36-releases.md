@@ -1,5 +1,32 @@
 # Release Notes
 
+
+## v3.13.113 (2026-08-22) - AI streaming events, multimodal, Api.stream primitives
+
+Streaming AI got typed. `Ai.chat(stream=true)` now yields a discriminated `AiEvent`
+union instead of raw strings, so an agent loop can see `text_delta` for live tokens,
+`tool_call` for aggregated tool invocations (client buffers argument fragments across
+deltas and emits one aggregated event when the JSON parses), `done` for the terminal
+finish reason and usage, and `error` for a mid-stream failure that replaces `done`.
+Text still arrives per chunk for typewriter UX; tool calls arrive whole so the caller
+can dispatch without a parser of its own.
+
+Multimodal input landed. `message.content` accepts a string or a list of parts:
+`{type: 'text', text}` and `{type: 'image', source}` where source is a `data:` URI or
+an `https://` URL. Providers get their native shape internally (OpenAI `image_url`,
+Anthropic content-block with `base64` or `url`). Malformed parts fail with
+`AiConfigError` before any request is sent.
+
+`Api.stream_bytes`, `Api.stream_lines`, and `Api.stream_sse` are new, layered
+primitives. `Ai.chat` is implemented on top of `Api.stream_sse` per language, so one
+SSE reader serves both consumers. Contract tests hit a real fixture server over
+real sockets - no mocks.
+
+**Breaking**: `Ai.chat(stream=true)` no longer yields strings. Migrate `for chunk in
+stream:` to `for event in stream: if event.type == "text_delta": ...`. Non-streaming
+`Ai.chat` and `Ai.complete`/`Ai.embed` are unchanged. ADR-0060.
+
+
 ## v3.13.112 (2026-08-22) - CSP-clean dev toolbar
 
 The dev toolbar renders styled and functional under the framework's own default `default-src 'self'` CSP. Its CSS and JS move out of the injected HTML into two external routes, `/__dev/toolbar.css` and `/__dev/toolbar.js`, every event is wired with `addEventListener`, and the live reloader is gated on a `data-reload` attribute that the AI port sets to `0`. Ruby's toolbar (`inject_dev_overlay`) previously emitted inline `style=`, `onclick=`, and `<script>`, which the strict default CSP silently blocked; it is now CSP-clean like the other three, locked by the shared `devadmin-toolbar-csp-clean` contract invariant. Issue #115.
