@@ -1,5 +1,25 @@
 # Release Notes
 
+## v3.13.112 (2026-08-22) - CSP-clean dev toolbar
+
+The dev toolbar renders styled and functional under the framework's own default `default-src 'self'` CSP. Its CSS and JS move out of the injected HTML into two external routes, `/__dev/toolbar.css` and `/__dev/toolbar.js`, every event is wired with `addEventListener`, and the live reloader is gated on a `data-reload` attribute that the AI port sets to `0`. Ruby's toolbar (`inject_dev_overlay`) previously emitted inline `style=`, `onclick=`, and `<script>`, which the strict default CSP silently blocked; it is now CSP-clean like the other three, locked by the shared `devadmin-toolbar-csp-clean` contract invariant. Issue #115.
+
+## v3.13.111 (2026-08-21) - Graph database layer
+
+A `Tina4::GraphDatabase` layer shaped exactly like the relational `Database`. `Tina4::GraphDatabase.create(url)` and `.from_env` pick the engine from the URL scheme, and one portable surface (`add_node`, `add_edge`, `get_node`, `update_node`, `delete_node`, `neighbors`, `traverse`) works identically on every engine, while `query` and `execute` pass native GQL, Cypher, or AQL straight through. Proven live against Ultipa (GQL), Neo4j and Memgraph (a zero-dependency pure-Ruby Bolt 4.4 client), and ArangoDB (over the stdlib `Net::HTTP` cursor endpoint). The Ultipa driver is the optional `tina4-ultipa` gem; the Bolt and Arango drivers add no gems at all. Configure with `TINA4_GRAPH_URL` and `TINA4_GRAPH_CONNECT_TIMEOUT`. Feature 139 / ADR-0059. See [Graph databases](/ruby/graph-databases).
+
+## v3.13.110 (2026-08-21) - Skills pinned to the release
+
+The Tina4 skills that teach an AI assistant the framework are pinned to the release tag, so an assistant fetches the skill version that matches the framework you run instead of drifting against `main`.
+
+## v3.13.109 (2026-08-20) - Response-cache session isolation
+
+The response cache never serves one session's authenticated response to another caller: it keys on the session, so a per-user response cannot leak across callers (#40).
+
+## v3.13.108 (2026-08-20) - Connect-timeout on the driver's own clock
+
+The database connect timeout measures against the driver's own monotonic clock, so a slow connect times out cleanly instead of hanging or firing early (#39).
+
 ## v3.13.107 (2026-08-20) - RBAC: role and permission guards
 
 Authorization arrives as two chainable methods. `role("admin")` and
