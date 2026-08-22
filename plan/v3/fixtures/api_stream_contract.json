@@ -1,0 +1,48 @@
+{
+  "_comment": "Api.stream_bytes / stream_lines / stream_sse primitives, all four backends. Ratified in ADR-0060 (2026-08-22). Shared with ai_client_contract.json because Ai.chat streaming is implemented on top of Api.stream_sse.",
+  "version": 1,
+  "decided": "2026-08-22",
+  "adr": "ADR-0060",
+  "invariants": [
+    {
+      "id": "api-stream-bytes-primitive",
+      "adr": "ADR-0060",
+      "rule": "Api.stream_bytes(url, opts) returns the language's natural iterator over the response body in the chunks the transport delivers them (never buffered whole). Iteration ends cleanly on EOF and raises on transport failure. No JSON decoding, no line splitting, no framing.",
+      "why": "The primitive that stream_lines and stream_sse build on. A caller downloading a large file or a binary event feed needs raw bytes with backpressure, not a fully-buffered response.",
+      "suites": {"python": "tests/test_api_stream_contract.py", "php": "tests/ApiStreamContractTest.php", "ruby": "spec/api_stream_contract_spec.rb", "nodejs": "test/apiStreamContract.test.ts"},
+      "cases": ["stream-bytes-yields-chunks-in-order", "stream-bytes-ends-on-eof", "stream-bytes-raises-on-transport-drop"]
+    },
+    {
+      "id": "api-stream-lines-newline-buffered",
+      "adr": "ADR-0060",
+      "rule": "Api.stream_lines(url, opts) yields one string per complete line (delimited by \\n or \\r\\n), decoded as UTF-8. A trailing line without a newline is yielded on EOF. An incomplete UTF-8 sequence at a chunk boundary buffers across chunks.",
+      "why": "NDJSON feeds and line-delimited log streams need consistent per-line delivery across whatever chunking the transport picks.",
+      "suites": {"python": "tests/test_api_stream_contract.py", "php": "tests/ApiStreamContractTest.php", "ruby": "spec/api_stream_contract_spec.rb", "nodejs": "test/apiStreamContract.test.ts"},
+      "cases": ["stream-lines-splits-on-lf", "stream-lines-splits-on-crlf", "stream-lines-yields-trailing-line-without-newline", "stream-lines-multibyte-across-chunk-boundary"]
+    },
+    {
+      "id": "api-stream-sse-framing",
+      "adr": "ADR-0060",
+      "rule": "Api.stream_sse(url, opts) yields SseEvent records with fields {data, event?, id?, retry?}. Blank line separates events. Multi-line data: fields are concatenated with \\n. event:/id:/retry: fields captured. Lines starting with ':' are comments (ignored). data:[DONE] is delivered as the last SseEvent with data='[DONE]' (the caller decides how to treat it); the iterator ends on the next EOF.",
+      "why": "Every LLM streaming endpoint speaks SSE this way. Rebuilding the framer in every consumer is what caused 40 lines of raw http.request + SSE parsing in every app.",
+      "suites": {"python": "tests/test_api_stream_contract.py", "php": "tests/ApiStreamContractTest.php", "ruby": "spec/api_stream_contract_spec.rb", "nodejs": "test/apiStreamContract.test.ts"},
+      "cases": ["stream-sse-single-event", "stream-sse-multi-line-data-concatenated", "stream-sse-named-event", "stream-sse-comment-ignored", "stream-sse-blank-line-boundary", "stream-sse-done-sentinel-delivered", "stream-sse-retry-field-captured"]
+    },
+    {
+      "id": "api-stream-timeouts-and-close",
+      "adr": "ADR-0060",
+      "rule": "TINA4_API_CONNECT_TIMEOUT bounds connection establishment and TINA4_API_TIMEOUT bounds total streaming duration. Closing the iterator before EOF closes the transport promptly. No open connections outlive iterator close.",
+      "why": "A hung stream must not hold the socket forever; a caller who breaks out of the loop must not leak connections.",
+      "suites": {"python": "tests/test_api_stream_contract.py", "php": "tests/ApiStreamContractTest.php", "ruby": "spec/api_stream_contract_spec.rb", "nodejs": "test/apiStreamContract.test.ts"},
+      "cases": ["stream-connect-timeout-honoured", "stream-total-timeout-honoured", "stream-early-close-releases-socket"]
+    },
+    {
+      "id": "api-stream-shared-with-ai-chat",
+      "adr": "ADR-0060",
+      "rule": "Ai.chat(stream=true) is implemented on Api.stream_sse; both share one SSE reader per language. No duplicate framing code lives inside the Ai module.",
+      "why": "DRY across two consumers of the same wire format; one bug fix instead of two.",
+      "suites": {"python": "tests/test_api_stream_contract.py", "php": "tests/ApiStreamContractTest.php", "ruby": "spec/api_stream_contract_spec.rb", "nodejs": "test/apiStreamContract.test.ts"},
+      "cases": ["ai-chat-uses-api-stream-sse-under-the-hood"]
+    }
+  ]
+}

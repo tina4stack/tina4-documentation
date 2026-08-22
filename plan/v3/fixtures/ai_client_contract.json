@@ -37,12 +37,21 @@
       "cases": ["ai-embedding-cardinality"]
     },
     {
-      "id": "ai-stream-is-ordered-deltas",
-      "adr": "ADR-0053",
-      "rule": "OpenAI-compatible and Anthropic streams yield only ordered text deltas; provider metadata events are ignored, malformed content raises AiParseError, and no retry occurs after the first delta is yielded.",
-      "why": "Streaming must be provider-neutral and must never duplicate already-observed output.",
+      "id": "ai-stream-yields-typed-events",
+      "adr": "ADR-0060",
+      "supersedes": "ai-stream-is-ordered-deltas",
+      "rule": "Ai.chat(stream=true) yields a typed AiEvent iterator. The union is {type:'text_delta'|'tool_call'|'done'|'error', ...}. Text deltas arrive per chunk; tool_calls are aggregated (buffered until args JSON parses and emitted as one event with id+name+args); done fires exactly once after all deltas; error fires only for mid-stream failures and replaces done. Ordering matches wire order. No retry after the first event.",
+      "why": "An agent loop cannot see tool_calls or finish_reason under the string-only shape from ADR-0053. Typed events let the caller pattern-match without hand-rolled SSE parsing per app.",
       "suites": {"python": "tests/test_ai_client_contract.py", "php": "tests/AIClientContractTest.php", "ruby": "spec/ai_client_contract_spec.rb", "nodejs": "test/aiClientContract.test.ts"},
-      "cases": ["ai-stream-is-ordered-deltas"]
+      "cases": ["ai-stream-text-deltas-order", "ai-stream-tool-call-aggregated-openai", "ai-stream-tool-call-aggregated-anthropic", "ai-stream-done-fires-once", "ai-stream-error-instead-of-done-on-midstream-failure", "ai-stream-no-retry-after-first-event"]
+    },
+    {
+      "id": "ai-multimodal-content-parts",
+      "adr": "ADR-0060",
+      "rule": "message.content accepts a string OR a list of parts {type:'text', text} | {type:'image', source} where source is a data:<media_type>;base64,<payload> URI or an https:// URL. Providers get their native shape (OpenAI/local: image_url; Anthropic: content-block with base64|url). Malformed parts raise AiConfigError before any request is sent.",
+      "why": "Multimodal LLMs (GPT-4o, Claude vision, local llava) all accept image parts. String-only content locks out this whole class of use.",
+      "suites": {"python": "tests/test_ai_client_contract.py", "php": "tests/AIClientContractTest.php", "ruby": "spec/ai_client_contract_spec.rb", "nodejs": "test/aiClientContract.test.ts"},
+      "cases": ["ai-multimodal-text-part", "ai-multimodal-image-data-uri", "ai-multimodal-image-url", "ai-multimodal-malformed-part-fails-config", "ai-multimodal-openai-body-shape", "ai-multimodal-anthropic-body-shape"]
     },
     {
       "id": "ai-configuration-precedence",
