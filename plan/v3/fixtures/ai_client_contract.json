@@ -46,6 +46,38 @@
       "cases": ["ai-stream-text-deltas-order", "ai-stream-tool-call-aggregated-openai", "ai-stream-tool-call-aggregated-anthropic", "ai-stream-done-fires-once", "ai-stream-error-instead-of-done-on-midstream-failure", "ai-stream-no-retry-after-first-event"]
     },
     {
+      "id": "ai-tool-declaration-outbound",
+      "adr": "ADR-0061",
+      "rule": "Ai.chat(tools=[...]) translates the neutral Tina4 tool shape ({name, description, parameters: JSONSchema}) to each provider's outbound body: OpenAI/local as tools=[{type:'function', function:{name, description, parameters}}]; Anthropic as tools=[{name, description, input_schema}]. Missing tools omits the field entirely.",
+      "why": "Without an outbound tools declaration, the model never emits a tool_call, so the ADR-0060 tool_call event fires only in theory.",
+      "suites": {"python": "tests/test_ai_client_contract.py", "php": "tests/AIClientContractTest.php", "ruby": "spec/ai_client_contract_spec.rb", "nodejs": "test/aiClientContract.test.ts"},
+      "cases": ["ai-tools-openai-body-shape", "ai-tools-anthropic-body-shape", "ai-tools-parameters-passthrough-jsonschema"]
+    },
+    {
+      "id": "ai-tool-choice-mode-translation",
+      "adr": "ADR-0061",
+      "rule": "Ai.chat(tool_choice='auto'|'none'|'required'|{name}) translates per provider: 'auto' -> OpenAI 'auto' / Anthropic {type:'auto'}; 'none' -> OpenAI 'none' / Anthropic omits tools; 'required' -> OpenAI 'required' / Anthropic {type:'any'}; {name:'x'} -> OpenAI {type:'function', function:{name:'x'}} / Anthropic {type:'tool', name:'x'}.",
+      "why": "The four modes span the useful cases; asymmetries between providers hide behind one Tina4 API.",
+      "suites": {"python": "tests/test_ai_client_contract.py", "php": "tests/AIClientContractTest.php", "ruby": "spec/ai_client_contract_spec.rb", "nodejs": "test/aiClientContract.test.ts"},
+      "cases": ["ai-tool-choice-auto", "ai-tool-choice-none", "ai-tool-choice-required", "ai-tool-choice-named"]
+    },
+    {
+      "id": "ai-tool-result-message-shape",
+      "adr": "ADR-0061",
+      "rule": "Ai.chat accepts a tool-result turn in either OpenAI form ({role:'tool', tool_call_id, content}) or Anthropic form ({role:'user', content:[{type:'tool_result', tool_use_id, content}]}). The client normalises to whichever the current provider expects, so the caller's loop is provider-neutral. Malformed tool-result parts raise AiConfigError before wire.",
+      "why": "The receive side (tool_call event) is useless without a way to send the result back on the next turn. Two forms because callers may have code written for either provider; either works everywhere.",
+      "suites": {"python": "tests/test_ai_client_contract.py", "php": "tests/AIClientContractTest.php", "ruby": "spec/ai_client_contract_spec.rb", "nodejs": "test/aiClientContract.test.ts"},
+      "cases": ["ai-tool-result-openai-form-passthrough", "ai-tool-result-anthropic-form-passthrough", "ai-tool-result-openai-to-anthropic-translation", "ai-tool-result-anthropic-to-openai-translation"]
+    },
+    {
+      "id": "ai-agent-loop-round-trip",
+      "adr": "ADR-0061",
+      "rule": "A caller can run a complete agent loop end-to-end against the fixture server with no raw SSE: send messages+tools, receive tool_call event, execute the tool locally, append tool_result, send the next Ai.chat call, receive text_delta and done. Provider-neutral (same caller code against openai and anthropic fixtures).",
+      "why": "The end-to-end round-trip is what proves the send + receive halves compose; either half alone is a code path nobody uses.",
+      "suites": {"python": "tests/test_ai_client_contract.py", "php": "tests/AIClientContractTest.php", "ruby": "spec/ai_client_contract_spec.rb", "nodejs": "test/aiClientContract.test.ts"},
+      "cases": ["ai-agent-loop-openai-round-trip", "ai-agent-loop-anthropic-round-trip"]
+    },
+    {
       "id": "ai-multimodal-content-parts",
       "adr": "ADR-0060",
       "rule": "message.content accepts a string OR a list of parts {type:'text', text} | {type:'image', source} where source is a data:<media_type>;base64,<payload> URI or an https:// URL. Providers get their native shape (OpenAI/local: image_url; Anthropic: content-block with base64|url). Malformed parts raise AiConfigError before any request is sent.",
