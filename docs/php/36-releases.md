@@ -1,5 +1,26 @@
 # Release Notes
 
+## v3.13.114 (2026-08-22) - AI tool loop closes
+
+The tool loop that 3.13.113 half-shipped is now round-trip complete. `Ai.chat`
+accepts a `tools` argument (a list of `{name, description, parameters}` where
+`parameters` is a JSON-Schema object) and a `tool_choice` argument
+(`'auto'`, `'none'`, `'required'`, or `{name: '...'}`). The client translates
+both to each provider's outbound shape (OpenAI's `tools=[{type:'function',
+function:{...}}]`, Anthropic's `tools=[{name, description, input_schema}]`
+with its own `tool_choice.type` mapping of `auto`/`any`/`tool`).
+
+Tool results come back the same way, provider-neutral. Both OpenAI-style
+(`{role:'tool', tool_call_id, content}`) and Anthropic-style (a user turn
+with `{type:'tool_result', tool_use_id, content}` content parts) validate,
+and the client normalises to whichever the current provider wants. The
+caller's agent loop stays one code path.
+
+End to end: send `tools`, receive a `tool_call` event with the parsed args,
+run the tool locally, append a tool_result message, call `Ai.chat` again,
+receive `text_delta` and `done`. Proven live against the fixture server in
+every framework, no raw SSE anywhere in the caller. Feature 141 / ADR-0061.
+
 
 ## v3.13.113 (2026-08-22) - AI streaming events, multimodal, Api.stream primitives
 

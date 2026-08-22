@@ -19,8 +19,8 @@
 # users reported a broken install.
 set -eu
 
-primary_url="https://raw.githubusercontent.com/tina4stack/tina4/3.13.113/install-skills.sh"
-mirror_url="https://cdn.jsdelivr.net/gh/tina4stack/tina4@3.13.113/install-skills.sh"
+primary_url="https://raw.githubusercontent.com/tina4stack/tina4/3.13.114/install-skills.sh"
+mirror_url="https://cdn.jsdelivr.net/gh/tina4stack/tina4@3.13.114/install-skills.sh"
 
 # Download to a file and CHECK it, rather than `curl ... | sh`.
 #

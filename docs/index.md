@@ -50,22 +50,23 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.113
+## Current framework release: 3.13.114
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.113. AI streaming got typed:
-`Ai.chat(stream=true)` now yields a discriminated `AiEvent` union
-(`text_delta`, `tool_call`, `done`, `error`) instead of raw strings, so an
-agent loop can see tool calls and finish reasons. Tool calls arrive whole
-(the client buffers argument fragments across deltas and emits one aggregated
-event when the JSON parses), text still streams per chunk for typewriter UX,
-and mid-stream failure surfaces as one `error` event that replaces `done`.
-`message.content` accepts multimodal parts (`{type:'text',text}` and
-`{type:'image', source}`) with providers getting their native shape internally.
-Three new `Api.stream_bytes` / `stream_lines` / `stream_sse` primitives replace
-the hand-rolled HTTP-streaming boilerplate every consumer used to write;
-`Ai.chat` streaming rides on `Api.stream_sse` per language. **Breaking** for
-callers of `Ai.chat(stream=true)`; non-streaming callers are unaffected.
-Feature 140 / ADR-0060.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.114. The AI tool loop is
+now round-trip complete. `Ai.chat` accepts a `tools` argument (a list of
+`{name, description, parameters}` where `parameters` is a JSON-Schema
+object) and a `tool_choice` argument (`auto`, `none`, `required`, or
+`{name}`). The client translates both to each provider's outbound shape.
+Tool results come back the same way: OpenAI-style `{role:'tool',
+tool_call_id, content}` and Anthropic-style user turn with `tool_result`
+content blocks both validate, and the client normalises to whichever the
+current provider wants. End to end, a caller can now run an agent loop
+against the framework: send tools, receive a `tool_call` event, run the
+tool locally, append a tool_result, call `Ai.chat` again, receive a
+`text_delta` and `done`. No raw SSE anywhere. Feature 141 / ADR-0061.
+The 3.13.113 typed streaming events (`text_delta` / `tool_call` /
+`done` / `error`) and multimodal content parts remain in place; ADR-0061
+builds on them.
 
 [Read the release notes](/python/36-releases.md)
 
@@ -122,6 +123,10 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.114 (2026-08-22)** - [full notes](/python/36-releases.md)
+
+AI tool loop closes. `Ai.chat` now accepts `tools` (a list of `{name, description, parameters: JSONSchema}`) and `tool_choice` (`auto` / `none` / `required` / `{name}`), translated to each provider's outbound shape internally. Tool results return the same way in either OpenAI form (`{role:'tool', tool_call_id, content}`) or Anthropic form (user turn with `{type:'tool_result', tool_use_id, content}` content parts); the client normalises to whichever the current provider wants. So an agent loop is now one code path: send tools, receive a `tool_call` event, run the tool, append a tool_result, call `Ai.chat` again, receive `text_delta` and `done`. No raw SSE anywhere, provider-neutral, proven end-to-end against the fixture server in all four backends. Feature 141 / ADR-0061.
 
 **v3.13.113 (2026-08-22)** - [full notes](/python/36-releases.md)
 
