@@ -50,17 +50,19 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.107
+## Current framework release: 3.13.112
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.107. Authorization arrives as
-two guards, `role(...)` and `can(...)`, that read the cryptographically verified
-`roles` and `permissions` claims from the signed token: OR within a guard, AND by
-stacking, granted-side wildcards (`posts.*`, `*`), and a legacy singular `role`
-claim coerced to a list. A guarded route implies auth: no or invalid token returns
-401, an authenticated caller missing the role or permission returns 403, and the
-handler never runs on a miss. Feature 138 / ADR-0058, at parity across all four
-frameworks. Lab-verified at 25,329 tests across all four frameworks, zero failures,
-zero skips.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.112. The dev toolbar is now
+CSP-clean in every framework: its CSS and JS load from external
+`/__dev/toolbar.css` and `/__dev/toolbar.js` routes, every handler is wired with
+`addEventListener`, and the live reloader is gated on a `data-reload` attribute,
+so the toolbar renders styled and works under the framework's own strict
+`default-src 'self'` CSP instead of being silently blocked (issue #115). The
+release before it, 3.13.111, added the graph database layer at parity across all
+four frameworks: `GraphDatabase.create(url)` picks the engine from the URL scheme,
+one portable node/edge/traverse surface works everywhere, and it is proven live on
+Ultipa, Neo4j, Memgraph, and ArangoDB, shaped exactly like the relational Database
+(Feature 139 / ADR-0059).
 
 [Read the release notes](/python/36-releases.md)
 
@@ -117,6 +119,26 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.112 (2026-08-22)** - [full notes](/python/36-releases.md)
+
+CSP-clean dev toolbar, at parity across Python, PHP, Ruby, and Node. The toolbar's CSS and JS move out of the injected HTML into external `/__dev/toolbar.css` and `/__dev/toolbar.js` routes, every event is wired with `addEventListener`, and the live reloader is gated on a `data-reload` attribute (suppressed on the AI port). So the injected toolbar renders styled and functional under the framework's default `default-src 'self'` CSP, instead of rendering unstyled with the console full of CSP violations. A shared contract invariant locks the no-inline property in all four. Issue #115.
+
+**v3.13.111 (2026-08-21)** - [full notes](/python/36-releases.md)
+
+Graph database layer, at parity across all four frameworks and proven live on Ultipa, Neo4j, Memgraph, and ArangoDB. `GraphDatabase.create(url)` and `fromEnv()` pick the engine from the URL scheme, and one portable surface (`add_node`, `add_edge`, `get_node`, `update_node`, `delete_node`, `neighbors`, `traverse`) works identically on every engine, with `query` and `execute` passing native GQL, Cypher, or AQL straight through. Neutral `GraphNode`, `GraphEdge`, and `GraphResult` shapes, modelled exactly on the relational Database layer. The engine driver is an optional, lazy-loaded dependency, so the core stays zero-dependency. Feature 139 / ADR-0059.
+
+**v3.13.110 (2026-08-21)** - [full notes](/python/36-releases.md)
+
+Skills release. The Tina4 skills that teach an AI assistant the framework are pinned to the release, so an assistant fetches the version that matches the framework you run.
+
+**v3.13.109 (2026-08-20)** - [full notes](/python/36-releases.md)
+
+Security, at parity: the response cache never serves one session's authenticated response to another caller. The isolation fix shipped for Python in 3.13.108 and lands here for PHP, Ruby, and Node.
+
+**v3.13.108 (2026-08-20)** - [full notes](/python/36-releases.md)
+
+Three fixes. The response cache keys on the session so it cannot replay one caller's response to another (#117). The database connect timeout compares against the driver's own monotonic clock, so a slow connect times out cleanly instead of hanging or firing early (#119). A class-based service's `stop` hook runs on shutdown (#118).
 
 **v3.13.107 (2026-08-20)** - [full notes](/python/36-releases.md)
 

@@ -1,5 +1,25 @@
 # Release Notes
 
+## v3.13.112 (2026-08-22) - CSP-clean dev toolbar
+
+The dev toolbar renders styled and functional under the framework's own default `default-src 'self'` CSP. Its CSS and JS move out of the injected HTML into two external routes, `/__dev/toolbar.css` and `/__dev/toolbar.js` (served with explicit content-types, never through the HTML renderer, so the toolbar is never injected into its own assets), every event is wired with `addEventListener`, and the live reloader is gated on a `data-reload` attribute that the AI port sets to `0`. Before this the injected toolbar carried inline `style=`, `onclick=`, and `<script>`, which the strict default CSP silently blocked, so the toolbar rendered unstyled and non-functional with the console full of violations. A shared contract invariant, `devadmin-toolbar-csp-clean`, locks the no-inline property in Python, PHP, Ruby, and Node. Issue #115.
+
+## v3.13.111 (2026-08-21) - Graph database layer
+
+A `GraphDatabase` layer shaped exactly like the relational `Database`. `GraphDatabase.create(url)` and `GraphDatabase.from_env()` pick the engine from the URL scheme, and one portable surface (`add_node`, `add_edge`, `get_node`, `update_node`, `delete_node`, `neighbors`, `traverse`) works identically on every engine, while `query` and `execute` pass native GQL, Cypher, or AQL straight through. Results come back as neutral `GraphNode`, `GraphEdge`, and `GraphResult` objects. Proven live against Ultipa (GQL), Neo4j and Memgraph (one Bolt/Cypher adapter), and ArangoDB (AQL). The engine driver is an optional, lazy-loaded dependency (the `neo4j`, `ultipa`, `arango`, or `graph` extra), so the core stays zero-dependency. Configure with `TINA4_GRAPH_URL` and `TINA4_GRAPH_CONNECT_TIMEOUT`. Feature 139 / ADR-0059. See [Graph databases](/python/graph-databases).
+
+## v3.13.110 (2026-08-21) - Skills pinned to the release
+
+The Tina4 skills that teach an AI assistant the framework are pinned to the release tag, so an assistant fetches the skill version that matches the framework you run instead of drifting against `main`.
+
+## v3.13.109 (2026-08-20) - Response-cache isolation across the other frameworks
+
+The response cache never serves one session's authenticated response to another caller. Python shipped the isolation fix in 3.13.108; this release lands the same fix for PHP, Ruby, and Node, so all four are at parity.
+
+## v3.13.108 (2026-08-20) - Cache isolation, connect-timeout clock, service stop
+
+Three fixes. The response cache keys on the session, so it cannot replay one caller's response to another (#117). The database connect timeout measures against the driver's own monotonic clock, so a slow connect times out cleanly instead of hanging or firing early (#119). A class-based service's `stop` hook runs on shutdown (#118).
+
 ## v3.13.107 (2026-08-20) - RBAC: role and permission guards
 
 Authorization arrives as two decorators. `@role("admin")` and `@can("posts.delete")`
