@@ -90,8 +90,8 @@ const BACKEND_GROUPS = [
   {
     text: "Foundations",
     stems: ["getting-started", "routing", "request-response", "templates",
-            "database", "orm", "query-builder", "authentication",
-            "sessions-cookies", "middleware-security"],
+            "database", "orm", "query-builder", "graph-databases",
+            "authentication", "sessions-cookies", "middleware-security"],
   },
   {
     text: "Building Apps",
