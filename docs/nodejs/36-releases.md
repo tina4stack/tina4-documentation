@@ -1,5 +1,37 @@
 # Release Notes
 
+## v3.13.115 (2026-08-24) - Bundler-renamed handler args + fullstack layout skill
+
+One targeted bug fix in the dispatch layer, plus the shared skill update.
+
+**#56 — bundler-renamed handler args mapped to the wrong object.** A route
+handler declared as `async (req2, res) =>` (or any bundler-renamed /
+minified first parameter name — `_a`, `$0`, `a`) had its first argument
+silently bound to the Response object, so every POST body read as empty.
+The arg mapper only matched the literal names `req` / `request`; anything
+else fell through to `return res`.
+
+The arg-mapping logic is now the exported `resolveHandlerArgs()` helper in
+`packages/core/src/server.ts` with a positional-fallback branch: for any
+name it does not resolve as a route param, `req`/`request`, or
+`res`/`response`, it falls back to positional binding — first unmatched
+name gets the request, the rest get the response. By-name resolution still
+wins over positional, so declared `req`/`request`/`response` continue to
+bind by name. Route params still take priority over positional.
+
+Regression test `test/bugfix-56-bundler-arg-mapping.test.ts` covers named,
+bundler-renamed, minified, route-param-priority, zero-arity, three-unmatched,
+and res-alias cases. No mocks — the helper receives real request/response
+identities and equality checks tell which one bound where. Mathematical
+gate proof documented in the commit message.
+
+**Skill: full-stack project layout.** The bundled `tina4-developer-nodejs`
+skill gains a Project layout section that codifies the full-stack paradigm
+— never pollute the root with source, split into `backend/` and `frontend/`
+with per-side `plan/` folders, and ask the backend framework before
+scaffolding. Applies to Python / PHP / Ruby / Node and the tina4-js skill.
+
+
 ## v3.13.114 (2026-08-22) - AI tool loop closes
 
 The tool loop that 3.13.113 half-shipped is now round-trip complete. `Ai.chat`
