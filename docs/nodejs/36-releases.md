@@ -1,5 +1,44 @@
 # Release Notes
 
+## v3.13.116 (2026-08-24) - Michael's ServiceRunner fix + test hardening
+
+Two bundled fixes for Node in this release.
+
+**#58 ServiceRunner.stop() cooperates with class-based services.** Port of
+tina4-python #118 by @MichaelC8E. Before this, `stop()` only flipped
+`context.running = false` on the ServiceContext. A `Tina4Service` subclass
+whose `run()` loops on `shouldStop()` never exited because `shouldStop()`
+reads a different flag on the instance, which the runner never touched.
+The registry entry already stashed the instance (via `registerService()`),
+so the fix routes through it.
+
+- `packages/core/src/service.ts`: `stop()` iterates registered services
+  and calls `instance.stop()` before flipping `context.running`. Wrapped
+  in try/catch so one misbehaving instance cannot strand its siblings.
+- `test/service.test.ts`: real subclass loops on `shouldStop()`,
+  registered via `ServiceRunner.registerService()`, then
+  `ServiceRunner.stop("name")` asserts the loop exited before the join.
+
+Merged as `ead390c76` on v3. CI on the PR: test suite (11m54s), firebird,
+image boots, snyk — all green. Parity with tina4-python #118, tina4-php,
+and tina4-ruby landing the same fix in this version.
+
+**Version-contract test hardening:**
+
+- `test/_parseCliManifest.ts`: exported helper that locates the first
+  `{` in child stdout before `JSON.parse`, and throws a descriptive
+  Error carrying a 400-char stdout slice when the payload is missing
+  or malformed. The `_` prefix is the runner's convention for helpers
+  that are not collected as suites.
+- `test/commandsManifest.test.ts`: subprocess env sets
+  `NODE_NO_WARNINGS=1` so a runtime deprecation warning cannot leak to
+  stdout; both `JSON.parse` call sites (handler and subprocess) route
+  through `parseCliManifest` so a parse failure surfaces the actual
+  stdout instead of a bare `SyntaxError`.
+- `test/parseCliManifest.test.ts`: 4 regression cases (2 positive,
+  2 negative).
+
+
 ## v3.13.115 (2026-08-24) - Bundler-renamed handler args + fullstack layout skill
 
 One targeted bug fix in the dispatch layer, plus the shared skill update.

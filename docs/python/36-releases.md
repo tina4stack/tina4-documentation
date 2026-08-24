@@ -1,5 +1,31 @@
 # Release Notes
 
+## v3.13.116 (2026-08-24) - Cooperative Service shutdown parity + test hardening
+
+Version-parity release for Python. The framework code is unchanged in this
+version — Python already shipped the cooperative Service instance shutdown
+via #118 (`ServiceRunner.stop -> instance.stop`) months ago. PHP, Ruby, and
+Node all land the same fix in this version so a class-based `Service`
+subclass whose `run()` loops on `should_stop?` (or the language equivalent)
+exits cleanly under `ServiceRunner.stop(name)` in every backend.
+
+Test hardening — `tests/test_version_contract.py`:
+
+- `_parse_cli_manifest()` locates the first `{` in child stdout before
+  `json.loads`, and raises a diagnostic `RuntimeError` with a 400-char
+  stdout slice on parse failure. Replaces the bare `json.loads` that
+  surfaced as an unhelpful `KeyError` when a stray import-time print or
+  a broken `sitecustomize.py` polluted stdout.
+- `_cli_manifest_version()` spawns the child with
+  `PYTHONWARNINGS=ignore` and the `-c` snippet calls
+  `warnings.simplefilter('ignore')` as belt-and-braces.
+- Two named regression tests: positive (polluted stdout still parses),
+  negative (no-JSON stdout raises with context).
+
+Parity with the tina4-php / tina4-ruby / tina4-nodejs hardening landing
+in this same version.
+
+
 ## v3.13.115 (2026-08-24) - Parity bump + fullstack layout skill
 
 Parity version bump across all four backends and one Node-only bug fix.

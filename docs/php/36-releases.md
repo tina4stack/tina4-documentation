@@ -1,5 +1,47 @@
 # Release Notes
 
+## v3.13.116 (2026-08-24) - Cooperative Service shutdown + test hardening
+
+Two bundled fixes for PHP in this release.
+
+**ServiceRunner::stop() calls the registered Service instance.** Before this,
+`ServiceRunner::stop($name)` only posix_killed the pid, wrote a stop file,
+and mutated `self::$status[$name]`. It never touched
+`self::$services[$name]['instance']`, so a `Service` subclass whose `run()`
+loops on `shouldStop()` never exited under cooperative shutdown — the outer
+stop-file / status path only helps the plain-callable and forked-child
+modes. Any long-lived class-based worker (queue consumer, cron loop,
+health poller) that followed the documented `class EmailQueueWorker
+extends Service` pattern wedged until SIGKILL / thread-join timeout.
+
+Fix: at the top of `stop()`, look up the registered instance and if it is
+a `Service`, call its `stop()` cooperatively — wrapped in try/catch so a
+misbehaving user override cannot block the outer signal path. Existing
+SIGTERM / stop-file / pid-file / status logic is unchanged for the
+plain-callable and forked-child modes. The docblocks in `Service.php:16-27`
+and `ServiceRunner.php:57-95` have promised this wiring since v3 arrived
+— the code was missing.
+
+Regression test `tests/ServiceRunnerStopClassInstanceTest.php` — real
+`Service` subclass, real `registerService()`, real `ServiceRunner::stop()`.
+Gate proven by mutation (positive test fails without the fix).
+
+Parity with tina4-python #118, tina4-nodejs #58, and the tina4-ruby port
+landing in the same version.
+
+**Version-contract test hardening** (`tests/VersionContractTest.php`):
+
+- Static `parseCommandsManifest()` helper locates the first `{` in the
+  child's stdout before `json_decode`, and throws `RuntimeException` with
+  a 400-char stdout slice on parse failure.
+- `cliManifestVersion()` spawns child PHP with `-d display_errors=stderr
+  -d error_reporting=E_ALL` so a broken `php.ini` (e.g. a missing
+  `grpc.so`) can never route a startup warning to stdout ahead of the
+  JSON payload.
+- Reproduces the failure that hit the 3.13.115 release cut when
+  `display_errors=stdout` printed a startup warning ahead of the JSON.
+
+
 ## v3.13.115 (2026-08-24) - Parity bump + fullstack layout skill
 
 Parity version bump across all four backends and one Node-only bug fix.
