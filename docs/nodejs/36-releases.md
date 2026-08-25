@@ -20,7 +20,7 @@ so the fix routes through it.
   `ServiceRunner.stop("name")` asserts the loop exited before the join.
 
 Merged as `ead390c76` on v3. CI on the PR: test suite (11m54s), firebird,
-image boots, snyk — all green. Parity with tina4-python #118, tina4-php,
+image boots, snyk - all green. Parity with tina4-python #118, tina4-php,
 and tina4-ruby landing the same fix in this version.
 
 **Version-contract test hardening:**
@@ -43,9 +43,9 @@ and tina4-ruby landing the same fix in this version.
 
 One targeted bug fix in the dispatch layer, plus the shared skill update.
 
-**#56 — bundler-renamed handler args mapped to the wrong object.** A route
+**#56 - bundler-renamed handler args mapped to the wrong object.** A route
 handler declared as `async (req2, res) =>` (or any bundler-renamed /
-minified first parameter name — `_a`, `$0`, `a`) had its first argument
+minified first parameter name - `_a`, `$0`, `a`) had its first argument
 silently bound to the Response object, so every POST body read as empty.
 The arg mapper only matched the literal names `req` / `request`; anything
 else fell through to `return res`.
@@ -53,20 +53,20 @@ else fell through to `return res`.
 The arg-mapping logic is now the exported `resolveHandlerArgs()` helper in
 `packages/core/src/server.ts` with a positional-fallback branch: for any
 name it does not resolve as a route param, `req`/`request`, or
-`res`/`response`, it falls back to positional binding — first unmatched
+`res`/`response`, it falls back to positional binding - first unmatched
 name gets the request, the rest get the response. By-name resolution still
 wins over positional, so declared `req`/`request`/`response` continue to
 bind by name. Route params still take priority over positional.
 
 Regression test `test/bugfix-56-bundler-arg-mapping.test.ts` covers named,
 bundler-renamed, minified, route-param-priority, zero-arity, three-unmatched,
-and res-alias cases. No mocks — the helper receives real request/response
+and res-alias cases. No mocks - the helper receives real request/response
 identities and equality checks tell which one bound where. Mathematical
 gate proof documented in the commit message.
 
 **Skill: full-stack project layout.** The bundled `tina4-developer-nodejs`
 skill gains a Project layout section that codifies the full-stack paradigm
-— never pollute the root with source, split into `backend/` and `frontend/`
+ -  never pollute the root with source, split into `backend/` and `frontend/`
 with per-side `plan/` folders, and ask the backend framework before
 scaffolding. Applies to Python / PHP / Ruby / Node and the tina4-js skill.
 

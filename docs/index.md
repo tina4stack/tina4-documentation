@@ -50,9 +50,13 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.114
+## Current framework release: 3.13.116
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.114. The AI tool loop is
+Python, PHP, Ruby, and Node.js are aligned on 3.13.116, a parity and
+test-hardening release: the cooperative Service shutdown fix lands in PHP,
+Ruby, and Node to match Python, and the version-manifest test tolerates a
+polluted child stdout. The headline of the recent cycle stays the AI tool
+loop, which is
 now round-trip complete. `Ai.chat` accepts a `tools` argument (a list of
 `{name, description, parameters}` where `parameters` is a JSON-Schema
 object) and a `tool_choice` argument (`auto`, `none`, `required`, or
@@ -123,6 +127,14 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.116 (2026-08-24)** - [full notes](/python/36-releases.md)
+
+Parity and test hardening. The cooperative Service shutdown fix - a class-based Service whose run() loops on should_stop? (or the language equivalent) exits cleanly under ServiceRunner.stop(name) - lands in PHP, Ruby, and Node to match Python's earlier #118. And the version-manifest test hardens: it locates the JSON in child stdout before parsing and ignores warnings, so a stray import-time print or a broken sitecustomize no longer surfaces as an unhelpful KeyError. No Python framework code change.
+
+**v3.13.115 (2026-08-24)** - [full notes](/python/36-releases.md)
+
+Parity bump, one Node fix, one skill. tina4-nodejs #56: a route handler with a bundler-renamed first parameter (async (req2, res) => ...) bound its first argument to the Response, so POST bodies read empty; the Node arg mapper now falls back to positional binding for any unresolved name. And the bundled tina4-developer-* skills gain a full-stack Project layout section (split backend/ and frontend/, per-side plan/ folders, ask the backend framework first). No Python framework change.
 
 **v3.13.114 (2026-08-22)** - [full notes](/python/36-releases.md)
 

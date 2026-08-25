@@ -8,21 +8,21 @@ Two bundled fixes for PHP in this release.
 `ServiceRunner::stop($name)` only posix_killed the pid, wrote a stop file,
 and mutated `self::$status[$name]`. It never touched
 `self::$services[$name]['instance']`, so a `Service` subclass whose `run()`
-loops on `shouldStop()` never exited under cooperative shutdown — the outer
+loops on `shouldStop()` never exited under cooperative shutdown - the outer
 stop-file / status path only helps the plain-callable and forked-child
 modes. Any long-lived class-based worker (queue consumer, cron loop,
 health poller) that followed the documented `class EmailQueueWorker
 extends Service` pattern wedged until SIGKILL / thread-join timeout.
 
 Fix: at the top of `stop()`, look up the registered instance and if it is
-a `Service`, call its `stop()` cooperatively — wrapped in try/catch so a
+a `Service`, call its `stop()` cooperatively - wrapped in try/catch so a
 misbehaving user override cannot block the outer signal path. Existing
 SIGTERM / stop-file / pid-file / status logic is unchanged for the
 plain-callable and forked-child modes. The docblocks in `Service.php:16-27`
 and `ServiceRunner.php:57-95` have promised this wiring since v3 arrived
-— the code was missing.
+ -  the code was missing.
 
-Regression test `tests/ServiceRunnerStopClassInstanceTest.php` — real
+Regression test `tests/ServiceRunnerStopClassInstanceTest.php` - real
 `Service` subclass, real `registerService()`, real `ServiceRunner::stop()`.
 Gate proven by mutation (positive test fails without the fix).
 
@@ -46,7 +46,7 @@ landing in the same version.
 
 Parity version bump across all four backends and one Node-only bug fix.
 
-**tina4-nodejs #56 — bundler-renamed handler args mapped to the wrong
+**tina4-nodejs #56 - bundler-renamed handler args mapped to the wrong
 object.** A route handler declared as `async (req2, res) =>` (or any bundler-
 renamed / minified first parameter name) had its first argument silently
 bound to the Response, so every POST body read as empty. The Node arg mapper
@@ -55,7 +55,7 @@ route param, `req`/`request`, or `res`/`response`. This is a Node-only fix,
 no PHP impact.
 
 **Skill: full-stack project layout.** The bundled `tina4-developer-*` skills
-gain a Project layout section that codifies the full-stack paradigm — never
+gain a Project layout section that codifies the full-stack paradigm - never
 pollute the root with source, split into `backend/` and `frontend/` with
 per-side `plan/` folders, and ask the backend framework before scaffolding.
 Applies to Python / PHP / Ruby / Node and the tina4-js skill.

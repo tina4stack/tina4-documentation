@@ -8,8 +8,8 @@ Two bundled fixes for Ruby in this release.
 this, `Tina4::ServiceRunner.stop(name)` only flipped `ctx.running = false`
 on the ServiceContext and joined the worker thread; a class-based
 `Tina4::Service` subclass whose `#run` looped on `until should_stop?`
-never exited cooperatively because `@running` — the ivar `should_stop?`
-reads — was untouched. The thread was killed by the `thread.join(5)`
+never exited cooperatively because `@running` - the ivar `should_stop?`
+reads - was untouched. The thread was killed by the `thread.join(5)`
 timeout, leaving the run loop still spinning during the join window.
 
 Fix: BEFORE `thread.join(5)`, iterate the target names and for each
@@ -18,9 +18,9 @@ call `entry[:instance].stop` cooperatively. Wrapped so a misbehaving
 user override cannot strand siblings. `ctx.running`-based block-handler
 daemons keep working unchanged (fix is additive). The docstring on
 `register_service` at `service_runner.rb:53-55` has claimed this exact
-wiring since v3 arrived — the code was missing.
+wiring since v3 arrived - the code was missing.
 
-Regression `spec/service_runner_stop_class_instance_spec.rb` — real
+Regression `spec/service_runner_stop_class_instance_spec.rb` - real
 `Tina4::Service` subclass, real `register_service`, real
 `ServiceRunner.stop`. Gate proven by mutation (positive example fails
 without the fix).
@@ -44,7 +44,7 @@ landing in the same version.
 
 Parity version bump across all four backends and one Node-only bug fix.
 
-**tina4-nodejs #56 — bundler-renamed handler args mapped to the wrong
+**tina4-nodejs #56 - bundler-renamed handler args mapped to the wrong
 object.** A route handler declared as `async (req2, res) =>` (or any bundler-
 renamed / minified first parameter name) had its first argument silently
 bound to the Response, so every POST body read as empty. The Node arg mapper
@@ -53,7 +53,7 @@ route param, `req`/`request`, or `res`/`response`. This is a Node-only fix,
 no Ruby impact.
 
 **Skill: full-stack project layout.** The bundled `tina4-developer-*` skills
-gain a Project layout section that codifies the full-stack paradigm — never
+gain a Project layout section that codifies the full-stack paradigm - never
 pollute the root with source, split into `backend/` and `frontend/` with
 per-side `plan/` folders, and ask the backend framework before scaffolding.
 Applies to Python / PHP / Ruby / Node and the tina4-js skill.

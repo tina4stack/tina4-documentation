@@ -3,13 +3,13 @@
 ## v3.13.116 (2026-08-24) - Cooperative Service shutdown parity + test hardening
 
 Version-parity release for Python. The framework code is unchanged in this
-version — Python already shipped the cooperative Service instance shutdown
+version - Python already shipped the cooperative Service instance shutdown
 via #118 (`ServiceRunner.stop -> instance.stop`) months ago. PHP, Ruby, and
 Node all land the same fix in this version so a class-based `Service`
 subclass whose `run()` loops on `should_stop?` (or the language equivalent)
 exits cleanly under `ServiceRunner.stop(name)` in every backend.
 
-Test hardening — `tests/test_version_contract.py`:
+Test hardening - `tests/test_version_contract.py`:
 
 - `_parse_cli_manifest()` locates the first `{` in child stdout before
   `json.loads`, and raises a diagnostic `RuntimeError` with a 400-char
@@ -30,17 +30,17 @@ in this same version.
 
 Parity version bump across all four backends and one Node-only bug fix.
 
-**tina4-nodejs #56 — bundler-renamed handler args mapped to the wrong
+**tina4-nodejs #56 - bundler-renamed handler args mapped to the wrong
 object.** A route handler declared as `async (req2, res) =>` (or any bundler-
 renamed / minified first parameter name) had its first argument silently
 bound to the Response, so every POST body read as empty. The Node arg mapper
 now falls back to positional binding for any name it does not resolve as a
-route param, `req`/`request`, or `res`/`response` — first unmatched name
+route param, `req`/`request`, or `res`/`response` - first unmatched name
 gets the request, the rest get the response. By-name resolution still wins
 over positional. This is a Node-only fix, no Python impact.
 
 **Skill: full-stack project layout.** The bundled `tina4-developer-*` skills
-gain a Project layout section that codifies the full-stack paradigm — never
+gain a Project layout section that codifies the full-stack paradigm - never
 pollute the root with source, split into `backend/` and `frontend/` with
 per-side `plan/` folders, and ask the backend framework before scaffolding.
 Applies to Python / PHP / Ruby / Node and the tina4-js skill.
