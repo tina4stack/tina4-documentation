@@ -1,5 +1,51 @@
 # Release Notes
 
+## v3.13.117 (2026-08-25) - Agent-experience: import-hint + generate resolution
+
+Two paired features that attack the same defect class: a framework
+silently transforming input, then failing downstream with a message
+that never names the transformation. Shipping across all four
+backends in the same version. Contract lives in
+[ADR-0062](https://github.com/tina4stack/tina4-documentation/blob/main/plan/v3/decisions/ADR-0062.md).
+
+**Import-hint fallback.** `Tina4::Routr` now raises
+`NameError: uninitialized constant Tina4::Routr. Did you mean
+Tina4::Router?`. The new `lib/tina4/import_helper.rb` has two
+hooks: `Tina4.const_missing(name)` catches `Tina4::<Anything>`
+lookups Ruby could not resolve and walks `Tina4.constants`
+recursively with `DidYouMean::SpellChecker` for the close match;
+a `Kernel#require` wrap catches `LoadError` for paths prefixed
+`tina4/` and walks `lib/tina4/*.rb`, re-raising with the
+suggestion. Bounded to the `Tina4::*` and `tina4/*` surfaces.
+Installed from `lib/tina4.rb`. Idempotent.
+
+**Generate-command resolution transparency.** Every
+`tina4ruby generate model|route|migration|middleware` invocation
+now emits its resolution.
+
+- `--json` prints a versioned `generate_v1` envelope on stdout,
+  advertised in `commands --json` under `resolution_contract`.
+- `--dry-run` composable with `--json`.
+- Bare invocation prints a human-readable resolution block to
+  stderr; files are written as before.
+- Introduced `SQL_RESERVED_TABLE_NAMES` in `lib/tina4/cli.rb`
+  mirroring the Python master. `generate model Order` surfaces
+  the auto-pluralize decision and names the `--table X --quote`
+  override flag reserved for the future quoted-identifier mode
+  (tina4-python#123).
+
+Side-fixes surfaced by the new reserved-word policy:
+
+- `generate crud/form/view` had a pre-existing `"#{table}s"` bug
+  that only appeared once reserved-word tables started
+  pluralising. Introduced `to_route_name` that always pluralises
+  from the class-name snake. `Category` was already producing
+  `categorys` (wrong); now correctly `categories`.
+- Detail-view path collision (`#{table}.twig` collided with the
+  list view for reserved-word classes). Fixed by keying detail
+  on `to_snake_case(name)`.
+
+
 ## v3.13.116 (2026-08-24) - Cooperative Service shutdown + test hardening
 
 Two bundled fixes for Ruby in this release.

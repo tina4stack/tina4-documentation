@@ -1,5 +1,47 @@
 # Release Notes
 
+## v3.13.117 (2026-08-25) - Agent-experience: import-hint + generate resolution
+
+Two paired features that attack the same defect class: a framework
+silently transforming input, then failing downstream with a message
+that never names the transformation. Shipping across all four
+backends in the same version. Contract lives in
+[ADR-0062](https://github.com/tina4stack/tina4-documentation/blob/main/plan/v3/decisions/ADR-0062.md).
+
+**Import-hint fallback.** `from tina4_python.route import get` now
+raises `ModuleNotFoundError: No module named 'tina4_python.route'.
+Did you mean 'tina4_python.core.router'?`. The new
+`tina4_python/_import_helper.py` is a last-resort `sys.meta_path`
+finder appended after Python's normal resolvers, so it fires only
+when normal resolution failed. Suggestions come from a
+`pkgutil.walk_packages` walk of the real installed tree, cached at
+install. A framework rename updates the hint automatically. No
+hand-maintained wrong-guess list. Real errors from inside modules
+that DO exist pass through untouched.
+
+**Generate-command resolution transparency.** Every
+`tina4python generate model|route|migration|middleware` invocation
+now emits its resolution.
+
+- `--json` prints a versioned `generate_v1` envelope on stdout
+  (nothing else), advertised in `commands --json` under
+  `resolution_contract`.
+- `--dry-run` computes resolution without writing files. Composable
+  with `--json`.
+- Bare invocation prints a human-readable resolution block to
+  stderr naming every transformation, path and warning; files are
+  written as before.
+- `generate model Order` surfaces the auto-pluralize decision
+  (`order` is a SQL reserved word) and names the `--table X
+  --quote` override flag reserved for the future quoted-identifier
+  mode (tina4-python#123).
+
+An agent can now inspect what the framework will do BEFORE
+generating (`--dry-run --json`), read the resolution the framework
+CHOSE afterwards, and never has to reverse-engineer a rename from
+generated file paths.
+
+
 ## v3.13.116 (2026-08-24) - Cooperative Service shutdown parity + test hardening
 
 Version-parity release for Python. The framework code is unchanged in this

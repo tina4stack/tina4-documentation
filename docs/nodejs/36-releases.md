@@ -1,5 +1,52 @@
 # Release Notes
 
+## v3.13.117 (2026-08-25) - Agent-experience: import-hint + generate resolution
+
+Two paired features that attack the same defect class: a framework
+silently transforming input, then failing downstream with a message
+that never names the transformation. Shipping across all four
+backends in the same version. Contract lives in
+[ADR-0062](https://github.com/tina4stack/tina4-documentation/blob/main/plan/v3/decisions/ADR-0062.md).
+
+**Import-hint fallback on @tina4/core (weaker parity than the other
+three, documented).** `packages/core/package.json` gains named
+subpath exports plus a wildcard tail `"./*":
+"./dist/_missing.js"` that catches any unknown subpath. The new
+`packages/core/src/_missing.ts` throws with a browsable list of
+the real subpaths from the same `package.json`. Node's ESM
+wildcard resolver does NOT pass the requested subpath to the
+target file, so the hint cannot say "did you mean 'router'?" the
+way Python, PHP and Ruby can; it lists the real subpaths so the
+caller can pick. TypeScript users get a compile-time `Cannot find
+module` from `tsc` regardless. Only `@tina4/core` carries the
+wildcard for this release; extending to `@tina4/orm`,
+`@tina4/swagger`, `@tina4/frond`, `@tina4/cli` is a follow-up.
+
+**Generate-command resolution transparency.** Every
+`tina4nodejs generate model|route|migration|middleware`
+invocation now emits its resolution.
+
+- `--json` prints a versioned `generate_v1` envelope on stdout,
+  advertised in `commands --json` under `resolution_contract`.
+- `--dry-run` composable with `--json`.
+- Bare invocation prints a human-readable resolution block to
+  stderr; files are written as before.
+- Introduced `SQL_RESERVED_TABLE_NAMES` and `pluralizeReserved`
+  in `packages/cli/src/commands/generate.ts` mirroring the Python
+  master. `generate model Order` surfaces the auto-pluralize
+  decision and names the `--table X --quote` override flag
+  reserved for the future quoted-identifier mode (tina4-python#123).
+
+Side-fix surfaced by the new reserved-word policy:
+
+- `generate auth` had two hard-coded `SELECT ... FROM user WHERE`
+  literals in the register/login templates. With `user` now on
+  the reserved list, the generated `User` model's `tableName`
+  becomes `users` and the SQL 500'd. Both literals fixed to
+  `FROM users`; the coemits generator suite catches this
+  end-to-end.
+
+
 ## v3.13.116 (2026-08-24) - Michael's ServiceRunner fix + test hardening
 
 Two bundled fixes for Node in this release.

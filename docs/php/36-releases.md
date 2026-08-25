@@ -1,5 +1,41 @@
 # Release Notes
 
+## v3.13.117 (2026-08-25) - Agent-experience: import-hint + generate resolution
+
+Two paired features that attack the same defect class: a framework
+silently transforming input, then failing downstream with a message
+that never names the transformation. Shipping across all four
+backends in the same version. Contract lives in
+[ADR-0062](https://github.com/tina4stack/tina4-documentation/blob/main/plan/v3/decisions/ADR-0062.md).
+
+**Import-hint fallback.** `new Tina4\Route()` now raises
+`Error: Class 'Tina4\Route' not found. Did you mean 'Tina4\Router'?`.
+The new `Tina4\ImportHelper` registers a last-resort
+`spl_autoload_register` callback that runs AFTER Composer's PSR-4
+loader has failed. On call it walks the real `Tina4/` directory
+(cached), computes the closest match with `levenshtein()`, throws
+`\Error` with the suggestion. Installed eagerly from
+`Tina4/Bootstrap/Constants.php` (already in Composer's `files`
+autoload map, so no composer.json change). Never masks a real
+`Class not found` where the class DOES exist but its body threw.
+
+**Generate-command resolution transparency.** Every
+`tina4php generate model|route|migration|middleware` invocation now
+emits its resolution.
+
+- `--json` prints a versioned `generate_v1` envelope on stdout,
+  advertised in `commands --json` under `resolution_contract`.
+- `--dry-run` composable with `--json`.
+- Bare invocation prints a human-readable resolution block to
+  stderr; files are written as before.
+- PHP had no reserved-word table before this release. Introduced
+  `SQL_RESERVED_TABLE_NAMES` mirroring the Python master, plus
+  `pluralizeTable()` and `toTableNameWithTransform()`. `generate
+  model Order` now surfaces the auto-pluralize decision and names
+  the `--table X --quote` override flag reserved for the future
+  quoted-identifier mode (tina4-python#123).
+
+
 ## v3.13.116 (2026-08-24) - Cooperative Service shutdown + test hardening
 
 Two bundled fixes for PHP in this release.
