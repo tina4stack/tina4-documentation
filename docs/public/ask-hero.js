@@ -154,6 +154,14 @@
     h = h.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>');
     h = h.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
 
+    // 2b) ATX headings: lift to top-level blocks (a heading inside a <p> is
+    //     invalid - the browser closes the paragraph early, the same trap the
+    //     fenced blocks avoid). RAG answers use ### for their sub-sections.
+    h = h.replace(/^[ \t]*(#{1,6})[ \t]+(.+?)[ \t]*#*[ \t]*$/gm, function (_, hashes, text) {
+      blocks.push({ heading: text.trim(), level: hashes.length });
+      return "\u0000BLOCK" + (blocks.length - 1) + "\u0000";
+    });
+
     // 3) paragraphs: a blank line starts one, a single newline is a soft break.
     //    Each chunk is split around its placeholders so a block is ALWAYS
     //    emitted at top level. A <pre> inside a <p> is invalid: the browser
@@ -173,6 +181,9 @@
     // 4) put the code back
     return out.replace(/\u0000BLOCK(\d+)\u0000/g, function (_, i) {
       var b = blocks[Number(i)];
+      if (b.heading !== undefined) {
+        return "<h" + b.level + ">" + b.heading + "</h" + b.level + ">";
+      }
       // Same shell the build emits: a .tp-code wrapper with a .tp-copy button
       // as a SIBLING of <pre>. That inherits the theme's copy styling, and the
       // handler below mirrors what client.js binds - it cannot bind these
