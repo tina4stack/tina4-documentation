@@ -1,5 +1,38 @@
 # Release Notes
 
+## v3.13.118 (2026-08-26) - Skill file repairs by @MichaelC8E (#60)
+
+@MichaelC8E's tina4-nodejs#60 (merged as 2b3f9a277) repairs three
+defects across the three skill trees this repo carries
+(`.claude/skills/`, `.agents/skills/`, `.cursor/skills/`):
+
+- The Codex and Cursor copies of `tina4-maintainer` were UTF-8-with-BOM
+  with both em dashes replaced by the cp1252 round-trip
+  `c3 a2 e2 82 ac e2 80 9d`. Corruption sat inside the `description`
+  frontmatter (the text that decides when a skill triggers), and the
+  BOM sat in front of the opening `---` (which some frontmatter
+  parsers reject outright). All eight tracked copies across the
+  language ports were byte-identical, so every diff-based check
+  reported them clean.
+- Two shared files had gone stale against canonical in tina4-python.
+  `.claude/skills/tina4-js/SKILL.md` was 88 lines behind and missing
+  the entire "Which flow? IIFE spike vs scaffold" section.
+  `.claude/skills/tina4-maintainer/references/subsystems.md` still
+  claimed `websocket` is NOT a top-level `tina4_python` export
+  (it IS; the subpackage is a callable module forwarding to
+  `core.router.websocket`).
+- The Codex and Cursor copies of `tina4-developer-nodejs` were
+  around 60 lines behind `.claude`, and shipped none of the seven
+  `references/` files their own SKILL.md cites. Every Codex and
+  Cursor user was reading a skill that pointed at documents which
+  were not there, including a broken image embed.
+
+No framework code changes in Node for this release. The version
+aligns with tina4-python 3.13.118 which carries the actual
+regression fix (@MichaelC8E's tina4-python#124 fixed a pre-import
+defect in `_import_helper.py`).
+
+
 ## v3.13.117 (2026-08-25) - Agent-experience: import-hint + generate resolution
 
 Two paired features that attack the same defect class: a framework

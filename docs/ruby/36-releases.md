@@ -1,5 +1,26 @@
 # Release Notes
 
+## v3.13.118 (2026-08-26) - Parity bump, tina4-python regression fix in same version
+
+Version-parity bump. No Ruby framework code changes; the version
+aligns with tina4-python 3.13.118 which carries an urgent
+regression fix (@MichaelC8E's tina4-python#124 fixed a pre-import
+defect in `_import_helper.py`).
+
+In flight for 3.13.119:
+
+- @MichaelC8E's tina4-ruby#44 - skill repairs across three trees.
+  Codex and Cursor copies of `tina4-maintainer` had UTF-8-with-BOM
+  + cp1252 mojibake in the `description` frontmatter (byte-identical
+  across copies, invisible to diff-based checks). Codex and Cursor
+  copies of `tina4-developer-ruby` were around 60 lines behind
+  `.claude`, missing seven `references/` files. Two shared files
+  had gone stale against canonical in tina4-python.
+
+Approved and queued behind the tina4stack Actions runner backlog.
+Ships in 3.13.119 the moment CI clears.
+
+
 ## v3.13.117 (2026-08-25) - Agent-experience: import-hint + generate resolution
 
 Two paired features that attack the same defect class: a framework

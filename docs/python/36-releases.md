@@ -1,5 +1,52 @@
 # Release Notes
 
+## v3.13.118 (2026-08-26) - Regression fix: `_import_helper` no longer pre-imports the tree
+
+Emergency patch on 3.13.117. @MichaelC8E's tina4-python#124 fixed a
+regression in the 3.13.117 import-hint finder that pre-imported every
+subpackage on bare `import tina4_python`, breaking lazy loading and
+shadowing the `realtime()` callable.
+
+The finder in 3.13.117 used `pkgutil.walk_packages(pkg.__path__,
+prefix=...)` to enumerate the suggestion set. That call IMPORTS every
+subpackage it descends into (recursion needs each subpackage's
+`__path__`, which Python populates only after import). The finder is
+installed from `tina4_python/__init__.py` at import time, so on a
+bare `import tina4_python` the finder was constructed, which walked,
+which imported every optional subsystem. Two visible effects:
+
+- Lazy loading was defeated. Every optional subsystem loaded on a
+  bare import.
+- `tina4_python.realtime` resolved to the MODULE, shadowing the
+  callable `__getattr__` was there to provide.
+  `realtime(features=[...])` raised
+  `TypeError: 'module' object is not callable`.
+
+Fix:
+
+- `_import_helper.py::_walk()` now uses `pkgutil.iter_modules` (no
+  recursion, no import) plus a filesystem walk under `pkg.__path__`
+  for depth, keyed on `.py` files. The tree is enumerated without
+  being executed.
+- New regression test `tests/test_import_helper_does_not_import_the_tree.py`
+  runs each check in a fresh interpreter subprocess and asserts both
+  that the loaded-module set stays small AND that `tina4_python.realtime`
+  is still callable.
+- Bonus in the same PR: two holes in the skill-drift gate closed
+  (`scripts/sync-tina4-skills.sh` was comparing one tree of three
+  and reporting `OK` having compared nothing), plus the stale
+  `CLAUDE.md` version footer.
+
+Result on v3: 20 test failures -> 0.
+
+Parity: tina4-nodejs 3.13.118 carries Michael's parallel skill-repair
+PR (#60). tina4-php and tina4-ruby ship 3.13.118 as version-only
+parity bumps. Michael's parallel skill-repair PRs on tina4-php (#205)
+and tina4-ruby (#44), and @cwvermaak-codeinfinity's Messenger fix
+(tina4-php#204), are queued behind the tina4stack Actions runner
+backlog and will ship in 3.13.119 the moment CI clears.
+
+
 ## v3.13.117 (2026-08-25) - Agent-experience: import-hint + generate resolution
 
 Two paired features that attack the same defect class: a framework
