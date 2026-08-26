@@ -1,5 +1,61 @@
 # Release Notes
 
+## v3.13.119 (2026-08-26) - ImportHelper non-throw + skill repair + Messenger negotiation
+
+Three real fixes ship in this release.
+
+**ImportHelper: autoload callback must not throw.** Regression from
+3.13.117. The last-resort `spl_autoload_register` callback in
+`Tina4\ImportHelper` threw `\Error` on any unknown Tina4 class name.
+That broke `class_exists('X', true)` (which is supposed to return
+`false` when the class cannot be loaded) and any snippet that expected
+a "class not found" to be catchable would fatal instead. Three tests
+went red on v3 after 3.13.118: `GraphTest::testGraphConnectTimeout`
+(references optional `Tina4\Ultipa\Client`),
+`SQLTranslatorTest::testPreRenameClassNameNoLongerExists`
+(intentionally names an old class name to prove the rename), and
+`LazyFeatureLoadingTest::testReferencingAnEagerFilesNameDoesNotFatal`
+(a snippet uses the bare-name typo `Tina4\Constants` — the real class
+lives at `Tina4\Bootstrap\Constants`).
+
+Fix: replace the `throw new \Error(...)` at both throw sites in
+`ImportHelper::handle()` with `error_log('[Tina4] ...')`. The hint is
+still visible (greppable by `[Tina4]` in logs and PHPUnit output), and
+the autoloader now behaves per PHP's own contract — silently return
+when the class isn't ours. PHP's own "Class 'X' not found" fatal fires
+cleanly afterwards IF the caller genuinely tried to `new X` or
+`extends X`. New test file
+`tests/ImportHelperDoesNotThrowFromAutoloadTest.php` pins the
+invariant, mutation-proven.
+
+**Skill repair across three trees (@MichaelC8E, tina4-php#205).**
+Three defects fixed across `.claude/skills/`, `.agents/skills/`,
+`.cursor/skills/`. The Codex and Cursor copies of `tina4-maintainer`
+were UTF-8-with-BOM with both em dashes replaced by the cp1252
+round-trip `c3 a2 e2 82 ac e2 80 9d` inside the `description`
+frontmatter (byte-identical across ports, invisible to diff-based
+checks). Codex and Cursor copies of `tina4-developer-php` were around
+60 lines behind `.claude`, missing seven `references/` files. Two
+shared files had gone stale against canonical in tina4-python.
+
+**Messenger AUTH LOGIN and STARTTLS negotiation
+(@cwvermaak-codeinfinity, tina4-php#204).** Three real Messenger bugs
+found while migrating an application off a third-party relay onto a
+local Postfix. AUTH LOGIN was ALWAYS sent because the guard tested
+`!== null` against `private string` properties defaulting to `''` —
+never null. A Messenger with no credentials sent two empty base64
+strings and the far end rejected with `454 4.7.0 Temporary
+authentication failure`. STARTTLS was gated on hardcoded `port === 587`
+instead of the EHLO capability list, so encryption asked for on 25 or
+2525 was silently not applied and credentials went out in clear.
+`testConnection()` carried the same shape and reported false success.
+
+Fix: parse the EHLO capabilities and drive STARTTLS + AUTH from the
+server response, not the port or a nullable-string check. New test
+file `tests/MessengerSmtpNegotiationTest.php` with a real fixture
+`tests/fixtures/smtp_negotiation_server.php` (real socket, no mocks).
+
+
 ## v3.13.118 (2026-08-26) - Parity bump, tina4-python regression fix in same version
 
 Version-parity bump. No PHP framework code changes; the version

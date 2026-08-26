@@ -1,5 +1,20 @@
 # Release Notes
 
+## v3.13.119 (2026-08-26) - Parity bump
+
+Version-parity bump. No Python framework code changes; the version
+aligns with tina4-php 3.13.119 (which ships @MichaelC8E's skill-repair
+PR, @cwvermaak-codeinfinity's Messenger AUTH/STARTTLS negotiation fix,
+and the ImportHelper autoload non-throw fix), tina4-ruby 3.13.119
+(which ships @MichaelC8E's skill-repair PR + a CLAUDE.md footer
+consistency bump), and tina4-nodejs 3.13.119 (parity).
+
+Python already carried the 3.13.118 regression fix
+(@MichaelC8E's tina4-python#124 fixed the `_import_helper.py`
+pre-import defect); no further Python change is required in this
+release.
+
+
 ## v3.13.118 (2026-08-26) - Regression fix: `_import_helper` no longer pre-imports the tree
 
 Emergency patch on 3.13.117. @MichaelC8E's tina4-python#124 fixed a

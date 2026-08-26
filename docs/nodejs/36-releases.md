@@ -1,5 +1,22 @@
 # Release Notes
 
+## v3.13.119 (2026-08-26) - Parity bump
+
+Version-parity bump. No Node framework code changes; the version
+aligns with tina4-php 3.13.119 (which ships @MichaelC8E's skill-repair
+PR, @cwvermaak-codeinfinity's Messenger AUTH/STARTTLS negotiation fix,
+and the ImportHelper autoload non-throw fix) and tina4-ruby 3.13.119
+(which ships @MichaelC8E's skill-repair PR + a CLAUDE.md footer
+consistency bump). Python is a parity bump too.
+
+Node has no equivalent ImportHelper autoload defect (the exports
+wildcard on `@tina4/core` throws only when the missing module is
+imported, not from a `class_exists`-style autoload path) and no
+equivalent skill-file corruption from the same cp1252 round-trip
+(the Node skill repair from @MichaelC8E landed in 3.13.118 as
+tina4-nodejs#60).
+
+
 ## v3.13.118 (2026-08-26) - Skill file repairs by @MichaelC8E (#60)
 
 @MichaelC8E's tina4-nodejs#60 (merged as 2b3f9a277) repairs three

@@ -1,5 +1,26 @@
 # Release Notes
 
+## v3.13.119 (2026-08-26) - Skill repair + CLAUDE.md footer bump
+
+Skill repair by @MichaelC8E (tina4-ruby#44) plus a small CLAUDE.md
+footer bump that the 3.13.118 release worker missed.
+
+**Skill file repairs (tina4-ruby#44).** Three defects fixed across
+the three skill trees this repo carries. The Codex and Cursor copies
+of `tina4-maintainer` were UTF-8-with-BOM with both em dashes replaced
+by the cp1252 round-trip `c3 a2 e2 82 ac e2 80 9d` inside the
+`description` frontmatter (byte-identical across ports, invisible to
+diff-based checks). Codex and Cursor copies of `tina4-developer-ruby`
+were around 60 lines behind `.claude`, missing seven `references/`
+files. Two shared files had gone stale against canonical in
+tina4-python.
+
+**CLAUDE.md footer bump.** The 3.13.118 release worker updated the
+title version but missed the footer version line. The
+version-consistency spec caught it (expected `["3.13.118"]`, found a
+stale value); this release aligns both versions to 3.13.119.
+
+
 ## v3.13.118 (2026-08-26) - Parity bump, tina4-python regression fix in same version
 
 Version-parity bump. No Ruby framework code changes; the version
