@@ -50,27 +50,31 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.116
+## Current framework release: 3.13.120
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.116, a parity and
-test-hardening release: the cooperative Service shutdown fix lands in PHP,
-Ruby, and Node to match Python, and the version-manifest test tolerates a
-polluted child stdout. The headline of the recent cycle stays the AI tool
-loop, which is
-now round-trip complete. `Ai.chat` accepts a `tools` argument (a list of
-`{name, description, parameters}` where `parameters` is a JSON-Schema
-object) and a `tool_choice` argument (`auto`, `none`, `required`, or
-`{name}`). The client translates both to each provider's outbound shape.
-Tool results come back the same way: OpenAI-style `{role:'tool',
-tool_call_id, content}` and Anthropic-style user turn with `tool_result`
-content blocks both validate, and the client normalises to whichever the
-current provider wants. End to end, a caller can now run an agent loop
-against the framework: send tools, receive a `tool_call` event, run the
-tool locally, append a tool_result, call `Ai.chat` again, receive a
-`text_delta` and `done`. No raw SSE anywhere. Feature 141 / ADR-0061.
-The 3.13.113 typed streaming events (`text_delta` / `tool_call` /
-`done` / `error`) and multimodal content parts remain in place; ADR-0061
-builds on them.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.120: the scaffolding
+envelope bumps additively to `generate_v1_1`. Every `tina4 generate` verb
+now tells the caller not just where files went but what to edit next
+and what to do after. Templates carry `tina4:edit <label>` markers at
+first-edit spots; the envelope lifts them into `resolution.edit_hints[]`
+alongside a curated `resolution.next[]` of follow-up commands, and
+surfaces the existing `test_paths[]` in the human stderr block.
+`commands --json` advertises `resolution_contract.version` `1.1` so
+agents can gate on it. Every v1 key is preserved. ADR-0063.
+
+Shipping alongside: **tina4-architect**, a new project-planning skill
+that fires at the start of a project (before any file is scaffolded)
+and walks nine architectural decisions - backend language, frontend
+approach, database, auth, cache and queue, realtime, AI, deployment,
+project layout. Records the choices in `TINA4.md` at project root and
+seeds a `plan/` folder using a sub-project `MASTER.md` hierarchy
+(top-level index, per-task `PLAN.md`, per-feature `features/<name>.md`
+reference docs). The installer now ships seven skills.
+
+The 3.13.114 AI tool loop, 3.13.113 typed streaming events
+(`text_delta` / `tool_call` / `done` / `error`), and multimodal content
+parts remain in place. ADR-0063 builds on the 3.13.117 envelope
+contract (ADR-0062).
 
 [Read the release notes](/python/36-releases.md)
 
@@ -127,6 +131,10 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.120 (2026-08-27)** - [full notes](/python/36-releases.md)
+
+Scaffolding envelope v1.1 (ADR-0063). Every `tina4 generate` verb bumps its resolution envelope additively to `generate_v1_1`: `resolution.edit_hints[]` lifts the `tina4:edit <label>` markers now baked into every generator template, `resolution.next[]` names the actionable follow-ups per verb, and `resolution.test_paths[]` (already in v1) surfaces in the human stderr block. `commands --json` advertises `resolution_contract.version 1.1`. Every v1 key preserved. Shipping alongside: **tina4-architect**, a new project-planning skill that fires at the start of a project and walks nine architectural decisions before scaffolding, seeding a `plan/MASTER.md` hierarchy with per-task `PLAN.md`s that reference `features/<name>.md` docs. Installer now ships seven skills.
 
 **v3.13.116 (2026-08-24)** - [full notes](/python/36-releases.md)
 

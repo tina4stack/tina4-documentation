@@ -1,5 +1,98 @@
 # Release Notes
 
+## v3.13.120 (2026-08-27) - Scaffolding envelope v1.1: edit-hints, next-steps, and the new tina4-architect skill
+
+Every `tina4 generate` verb now tells the caller not just WHERE files
+went, but WHAT TO EDIT next and WHAT TO DO after. The resolution
+envelope bumps additively to `generate_v1_1`, ratified by ADR-0063 in
+`tina4-documentation/plan/v3/decisions/`.
+
+Three additions:
+
+- **`resolution.edit_hints[]`** - every generator template now carries
+  `tina4:edit <label>` markers at the spots a first-time user will
+  edit. The envelope surfaces each marker's file, line, and short
+  actionable label. Example:
+
+  ```
+  Edit these lines:
+    src/orm/Order.py:14   add fields here
+    src/orm/Order.py:16   add relationships here
+  ```
+
+- **`resolution.next[]`** - a short list of actionable next steps the
+  generator names for the verb it just ran. Example:
+
+  ```
+  Next:
+    1. Edit src/orm/Order.py to add fields beyond the default 'name'
+    2. Apply the migration:  tina4 migrate
+    3. Try it:               tina4 serve  ->  curl http://localhost:7146/orders
+    4. Add CRUD scaffolding: tina4 generate crud Order --skip-model
+  ```
+
+- **`resolution.test_paths[]` surfaced.** The envelope has carried this
+  key since v1 but the human stderr block never printed it. Now the
+  block includes a `tests` line alongside `class` / `table` / `routes`
+  / `migration`.
+
+`commands --json` advertises the new envelope:
+
+```json
+{
+  "commands": [ /* ... */ ],
+  "resolution_contract": {
+    "version": "1.1",
+    "envelope": "generate_v1_1"
+  }
+}
+```
+
+Every `v1` key is preserved. Existing `--json` consumers stay valid.
+Callers that read `next[]` or `edit_hints[]` know they need envelope
+`>= 1.1`.
+
+All 15 verbs' templates carry markers (Python files scan uniformly).
+
+Marker syntax is language-native: `# tina4:edit <label>` in
+Python/Ruby, `// tina4:edit <label>` in PHP/Node. Comments have zero
+runtime effect; users strip them freely when done. A project-wide
+`grep -rn 'tina4:edit' src/` doubles as a "what still needs my
+attention" tracker.
+
+Test contract: 5 real-subprocess tests per language including a
+mutation-gate on the marker parser (strip a marker in a copy of the
+generated file; the resolution entry disappears; restore; the entry
+returns). No mocks.
+
+### New skill: tina4-architect
+
+Fires at the start of a project - before any file is scaffolded - and
+walks nine decisions: backend language, frontend approach, database,
+auth, cache and queue, realtime, AI, deployment, and project layout.
+Records the choices in a `TINA4.md` at project root and seeds a
+`plan/` folder using a sub-project `MASTER.md` hierarchy:
+
+- `plan/MASTER.md` is the top-level index. Every sub-project has its
+  own `plan/MASTER.md` that links back.
+- Each task lives in `plan/<task>/PLAN.md`. Behaviour lives in
+  `plan/<task>/features/<feature>.md`. `PLAN.md` is pointers, not
+  descriptions.
+- ADRs live under `plan/decisions/` at each level.
+
+Hands off to `tina4-developer-<language>` once `TINA4.md` is locked.
+Never runs on an already-scaffolded project unless the user explicitly
+asks to re-architect.
+
+The installer now ships seven skills:
+
+```bash
+curl -fsSL https://tina4.com/install-skills.sh | TINA4_SKILLS_TARGET=all sh
+```
+
+Parity: shipped in all four backends at the same tag.
+
+
 ## v3.13.119 (2026-08-26) - Parity bump
 
 Version-parity bump. No Python framework code changes; the version

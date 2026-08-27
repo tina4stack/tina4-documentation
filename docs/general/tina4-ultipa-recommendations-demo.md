@@ -39,29 +39,31 @@ will use. Same connection, same auth, same singleton.
 
 `src/routes/api/users/[id]/recommendations/get.py`:
 
-    from tina4_python.core.router import get, secured
-    from tina4_python.container import container
+```python
+from tina4_python.core.router import get, secured
+from tina4_python.container import container
 
-    @secured()
-    @get("/api/users/{id}/recommendations")
-    async def recommendations(request, response):
-        user_id = request.params["id"]
-        ultipa = container.get("ultipa")
+@secured()
+@get("/api/users/{id}/recommendations")
+async def recommendations(request, response):
+    user_id = request.params["id"]
+    ultipa = container.get("ultipa")
 
-        uql = f"""
-          n(u1{{_id == "{user_id}"}})
-            .re({{@follows}}).n(u2)
-            .re({{@follows}}).n(u3)
-          WHERE u3 != u1
-            AND NOT n(u1).re({{@follows}}).n(u3)
-          GROUP BY u3
-          RETURN u3.name AS name, u3.handle AS handle,
-                 COUNT(u2) AS mutual_friends
-          ORDER BY mutual_friends DESC
-          LIMIT 10
-        """
-        result = ultipa.uql(uql)
-        return response({"recommendations": result.rows})
+    uql = f"""
+      n(u1{{_id == "{user_id}"}})
+        .re({{@follows}}).n(u2)
+        .re({{@follows}}).n(u3)
+      WHERE u3 != u1
+        AND NOT n(u1).re({{@follows}}).n(u3)
+      GROUP BY u3
+      RETURN u3.name AS name, u3.handle AS handle,
+             COUNT(u2) AS mutual_friends
+      ORDER BY mutual_friends DESC
+      LIMIT 10
+    """
+    result = ultipa.uql(uql)
+    return response({"recommendations": result.rows})
+```
 
 That is the whole route. Twenty lines with the docstring. The
 framework auto-discovers it because the file lives at
