@@ -50,26 +50,26 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.120
+## Current framework release: 3.13.121
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.120: the scaffolding
-envelope bumps additively to `generate_v1_1`. Every `tina4 generate` verb
-now tells the caller not just where files went but what to edit next
-and what to do after. Templates carry `tina4:edit <label>` markers at
-first-edit spots; the envelope lifts them into `resolution.edit_hints[]`
-alongside a curated `resolution.next[]` of follow-up commands, and
-surfaces the existing `test_paths[]` in the human stderr block.
-`commands --json` advertises `resolution_contract.version` `1.1` so
-agents can gate on it. Every v1 key is preserved. ADR-0063.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.121: every way to
+create a migration now emits the same `generate_v1_1` envelope. Before
+this release only `tina4 generate migration` carried the `edit_hints[]`
+/ `next[]` guidance - the shorter `tina4 migrate:create`, the MCP
+`migration_create` tool, and Ruby's dev-admin scaffold endpoint each
+wrote a bare file. Now they all delegate to one generator, so an agent
+gets the same next-step guidance whichever surface it reaches for. The
+edit-hint scanner also widened to Twig and SQL templates (`//`, `#`,
+`--`, `{% raw %}{# ... #}{% endraw %}`), so `generate form`, `generate
+view`, and `generate migration` all report an `Edit these lines:`
+block. And a pre-tag version-consistency precheck now fails a partial
+version bump on the release worker's machine instead of on the CI
+publish gate after the tag is public. ADR-0063.
 
-Shipping alongside: **tina4-architect**, a new project-planning skill
-that fires at the start of a project (before any file is scaffolded)
-and walks nine architectural decisions - backend language, frontend
-approach, database, auth, cache and queue, realtime, AI, deployment,
-project layout. Records the choices in `TINA4.md` at project root and
-seeds a `plan/` folder using a sub-project `MASTER.md` hierarchy
-(top-level index, per-task `PLAN.md`, per-feature `features/<name>.md`
-reference docs). The installer now ships seven skills.
+The 3.13.120 scaffolding envelope `generate_v1_1` and the
+**tina4-architect** project-planning skill (nine architectural
+decisions, `plan/MASTER.md` hierarchy, seven installed skills) remain
+in place; 3.13.121 extends the envelope to every migration surface.
 
 The 3.13.114 AI tool loop, 3.13.113 typed streaming events
 (`text_delta` / `tool_call` / `done` / `error`), and multimodal content
@@ -131,6 +131,10 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.121 (2026-08-27)** - [full notes](/python/36-releases.md)
+
+Every migration surface speaks the envelope. `tina4 migrate:create`, the MCP `migration_create` tool, and Ruby's dev-admin scaffold endpoint all delegate to the same generator as `tina4 generate migration`, so each returns the `generate_v1_1` envelope with `edit_hints[]` + `next[]` instead of a bare file. The edit-hint scanner widened to Twig + SQL templates. And a pre-tag version-consistency precheck now catches a partial version bump before the tag is cut, not on the CI publish gate after. Parity across all four backends.
 
 **v3.13.120 (2026-08-27)** - [full notes](/python/36-releases.md)
 

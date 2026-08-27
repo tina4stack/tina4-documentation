@@ -1,5 +1,45 @@
 # Release Notes
 
+## v3.13.121 (2026-08-27) - Every migration surface speaks the envelope + a pre-tag release guard
+
+Every way to create a migration now emits the same ADR-0063
+`generate_v1_1` envelope - the one with `edit_hints[]`, `next[]`, and
+the surfaced `test_paths[]`. Before this release, `tina4 generate
+migration` emitted the envelope but the sibling surfaces did not: the
+CLI `tina4 migrate:create`, the MCP `migration_create` tool, and (in
+Ruby) the dev-admin scaffold endpoint each wrote a bare file with no
+guidance. An AI agent that reached for the shorter command, or drove
+the framework over MCP, got nothing to act on next.
+
+Now they converge:
+
+- **`tina4 migrate:create <desc>`** delegates to the same generator
+  as `tina4 generate migration`. Same file, same markers, same
+  envelope. Neither command is deprecated - `migrate:create` is the
+  short form, `generate migration` composes with `--fields`.
+- MCP `migration_create` returns `{created, resolution, ok}` and its filenames switched from sequential (`000001_x.sql`) to timestamp (`YYYYMMDDHHMMSS_x.sql`) so both surfaces sort together.
+
+The edit-hint scanner also widened. It now matches four comment
+styles - `//`, `#`, `--`, and Twig `{# ... #}` - so Twig and SQL
+templates surface their `tina4:edit` markers in `edit_hints[]` too,
+not just the code templates. `tina4 generate form`, `generate view`,
+and `generate migration` now all report an `Edit these lines:` block.
+
+### Pre-tag version-consistency precheck
+
+A recurring release miss - a version bump that touches some
+version-bearing files but not others - now fails on the release
+worker's own machine instead of on the CI publish gate after the tag
+is already public. Each backend ships a precheck script that takes
+the intended version and asserts every version-bearing file agrees,
+naming any file left behind. Run it before `git tag`; the recipe
+lives in each repo's `RELEASING.md`.
+
+Parity: shipped in all four backends at the same tag. The
+tina4-developer skill references were updated to document every
+migration surface.
+
+
 ## v3.13.120 (2026-08-27) - Scaffolding envelope v1.1: edit-hints, next-steps, and the new tina4-architect skill
 
 Every `tina4 generate` verb now tells the caller not just WHERE files
