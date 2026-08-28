@@ -174,13 +174,13 @@ went red on v3 after 3.13.118: `GraphTest::testGraphConnectTimeout`
 `SQLTranslatorTest::testPreRenameClassNameNoLongerExists`
 (intentionally names an old class name to prove the rename), and
 `LazyFeatureLoadingTest::testReferencingAnEagerFilesNameDoesNotFatal`
-(a snippet uses the bare-name typo `Tina4\Constants` — the real class
+(a snippet uses the bare-name typo `Tina4\Constants` - the real class
 lives at `Tina4\Bootstrap\Constants`).
 
 Fix: replace the `throw new \Error(...)` at both throw sites in
 `ImportHelper::handle()` with `error_log('[Tina4] ...')`. The hint is
 still visible (greppable by `[Tina4]` in logs and PHPUnit output), and
-the autoloader now behaves per PHP's own contract — silently return
+the autoloader now behaves per PHP's own contract - silently return
 when the class isn't ours. PHP's own "Class 'X' not found" fatal fires
 cleanly afterwards IF the caller genuinely tried to `new X` or
 `extends X`. New test file
@@ -201,7 +201,7 @@ shared files had gone stale against canonical in tina4-python.
 (@cwvermaak-codeinfinity, tina4-php#204).** Three real Messenger bugs
 found while migrating an application off a third-party relay onto a
 local Postfix. AUTH LOGIN was ALWAYS sent because the guard tested
-`!== null` against `private string` properties defaulting to `''` —
+`!== null` against `private string` properties defaulting to `''` -
 never null. A Messenger with no credentials sent two empty base64
 strings and the far end rejected with `454 4.7.0 Temporary
 authentication failure`. STARTTLS was gated on hardcoded `port === 587`
