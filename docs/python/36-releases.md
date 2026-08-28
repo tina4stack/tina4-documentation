@@ -1,5 +1,31 @@
 # Release Notes
 
+## v3.13.122 (2026-08-28) - The default CSP no longer fails silently
+
+`SecurityHeadersMiddleware` ships `Content-Security-Policy: default-src
+'self'` by default, and that default is right: it is secure-by-default
+hardening every app gets for free. But when an app leaves `TINA4_CSP`
+unset and then relies on something the policy blocks - styles injected
+from JavaScript at runtime, a font or script from a CDN, a `data:` URI,
+or a WebSocket/XHR to a different host (a separate API or a LiveKit
+server) - the browser refuses it silently. The deploy goes green, the
+health check passes, and the breakage only shows up in the browser
+console long after.
+
+This release keeps the secure default and fixes the silence. When the
+default CSP is in force because `TINA4_CSP` is unset, the framework now
+logs one warning at startup naming the header, what it can block, and
+the `TINA4_CSP` escape hatch. It warns, it never fails: logging a
+heads-up must never be the reason `tina4 serve` or a production boot
+dies, and it never blocks a request. The warning fires once per
+process, and only when `TINA4_CSP` is absent - setting it to any value
+(an explicit policy, or even empty) is treated as opting in and stays
+quiet. The CSP header itself is unchanged.
+
+Parity across Python, PHP, Ruby, and Node.js, each with a real no-mock
+test that drives the actual request path and reads the real log.
+Reported as tina4-nodejs#61.
+
 ## v3.13.121 (2026-08-27) - Every migration surface speaks the envelope + a pre-tag release guard
 
 Every way to create a migration now emits the same ADR-0063

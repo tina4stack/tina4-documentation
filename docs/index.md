@@ -50,26 +50,30 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.121
+## Current framework release: 3.13.122
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.121: every way to
-create a migration now emits the same `generate_v1_1` envelope. Before
-this release only `tina4 generate migration` carried the `edit_hints[]`
-/ `next[]` guidance - the shorter `tina4 migrate:create`, the MCP
-`migration_create` tool, and Ruby's dev-admin scaffold endpoint each
-wrote a bare file. Now they all delegate to one generator, so an agent
-gets the same next-step guidance whichever surface it reaches for. The
-edit-hint scanner also widened to Twig and SQL templates (`//`, `#`,
-`--`, `{% raw %}{# ... #}{% endraw %}`), so `generate form`, `generate
-view`, and `generate migration` all report an `Edit these lines:`
-block. And a pre-tag version-consistency precheck now fails a partial
-version bump on the release worker's machine instead of on the CI
-publish gate after the tag is public. ADR-0063.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.122: the default
+Content-Security-Policy no longer fails silently. `default-src 'self'`
+stays the secure default every app gets for free, but when `TINA4_CSP`
+is unset and the app then relies on something that policy blocks -
+styles injected from JavaScript at runtime, a CDN font or script, a
+`data:` URI, or a WebSocket/XHR to a different host (a separate API or
+a LiveKit server) - the browser used to refuse it silently: the deploy
+went green, the health check passed, and the breakage only surfaced in
+the browser console long after. Now the framework logs one warning at
+startup naming the header, what it can block, and the `TINA4_CSP`
+escape hatch. It warns, it never fails - logging a heads-up must never
+be why `tina4 serve` or a production boot dies, and it never blocks a
+request - and it fires once per process, only when `TINA4_CSP` is
+absent. Setting `TINA4_CSP` to any value opts out. The header itself is
+unchanged. Reported as tina4-nodejs#61.
 
-The 3.13.120 scaffolding envelope `generate_v1_1` and the
+The 3.13.121 migration-surface envelope (every way to create a
+migration emits the same `generate_v1_1` envelope with `edit_hints[]` /
+`next[]`), the 3.13.120 scaffolding envelope, and the
 **tina4-architect** project-planning skill (nine architectural
-decisions, `plan/MASTER.md` hierarchy, seven installed skills) remain
-in place; 3.13.121 extends the envelope to every migration surface.
+decisions, `plan/MASTER.md` hierarchy, seven installed skills) all
+remain in place.
 
 The 3.13.114 AI tool loop, 3.13.113 typed streaming events
 (`text_delta` / `tool_call` / `done` / `error`), and multimodal content
@@ -131,6 +135,10 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.122 (2026-08-28)** - [full notes](/python/36-releases.md)
+
+The default Content-Security-Policy no longer fails silently. When `TINA4_CSP` is unset, `default-src 'self'` stays the secure default, but the framework now logs one startup warning naming the header, what it blocks (runtime-injected styles, CDN fonts/scripts, `data:` URIs, cross-origin WebSocket/XHR), and the `TINA4_CSP` escape hatch. It warns once, never fails, never blocks a request; setting `TINA4_CSP` opts out. Parity across all four backends. tina4-nodejs#61.
 
 **v3.13.121 (2026-08-27)** - [full notes](/python/36-releases.md)
 
