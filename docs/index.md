@@ -50,30 +50,29 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.122
+## Current framework release: 3.13.123
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.122: the default
-Content-Security-Policy no longer fails silently. `default-src 'self'`
-stays the secure default every app gets for free, but when `TINA4_CSP`
-is unset and the app then relies on something that policy blocks -
-styles injected from JavaScript at runtime, a CDN font or script, a
-`data:` URI, or a WebSocket/XHR to a different host (a separate API or
-a LiveKit server) - the browser used to refuse it silently: the deploy
-went green, the health check passed, and the breakage only surfaced in
-the browser console long after. Now the framework logs one warning at
-startup naming the header, what it can block, and the `TINA4_CSP`
-escape hatch. It warns, it never fails - logging a heads-up must never
-be why `tina4 serve` or a production boot dies, and it never blocks a
-request - and it fires once per process, only when `TINA4_CSP` is
-absent. Setting `TINA4_CSP` to any value opts out. The header itself is
-unchanged. Reported as tina4-nodejs#61.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.123: `tina4 generate
+queue <topic>` now speaks the same `generate_v1_1` scaffolding envelope
+the model and route generators do. A scaffolded queue consumer comes
+back with `edit_hints[]` naming the exact line to fill (the job
+handler) and `next[]` naming what to run after (produce a job, start
+the worker). Before this, a logic-shaped generator dropped a file and
+went silent about what to edit next; the consumer templates already
+baked the `tina4:edit` marker, it just was never lifted into the
+envelope on two of the four frameworks. Now all four are at parity, so
+an AI agent (or a person) scaffolds a consumer and immediately knows
+what to fill and where. `service` and `seeder` follow next. Also in
+3.13.123: the secure-route session handoff (tina4-nodejs#57) is
+verified and parity-locked - a secure GET authenticated by the session
+cookie hands the handler the validated principal, the session, and the
+cookies, with a real no-mock regression test in each framework.
 
-The 3.13.121 migration-surface envelope (every way to create a
-migration emits the same `generate_v1_1` envelope with `edit_hints[]` /
-`next[]`), the 3.13.120 scaffolding envelope, and the
-**tina4-architect** project-planning skill (nine architectural
-decisions, `plan/MASTER.md` hierarchy, seven installed skills) all
-remain in place.
+The 3.13.122 secure-by-default CSP warning (the framework logs once at
+startup when `TINA4_CSP` is unset so a strict `default-src 'self'`
+never fails silently), the 3.13.121 migration-surface envelope, the
+3.13.120 scaffolding envelope, and the **tina4-architect**
+project-planning skill all remain in place.
 
 The 3.13.114 AI tool loop, 3.13.113 typed streaming events
 (`text_delta` / `tool_call` / `done` / `error`), and multimodal content
@@ -135,6 +134,10 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.123 (2026-08-28)** - [full notes](/python/36-releases.md)
+
+`tina4 generate queue` now emits the AI-fill envelope (`edit_hints[]` + `next[]`) at parity across all four backends - a scaffolded consumer names the exact line to fill and what to run next, instead of dropping a file and going silent. Plus the secure-route session handoff (tina4-nodejs#57) is verified and parity-locked with a real no-mock regression test in each framework.
 
 **v3.13.122 (2026-08-28)** - [full notes](/python/36-releases.md)
 

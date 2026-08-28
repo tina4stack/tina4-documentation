@@ -1,5 +1,26 @@
 # Release Notes
 
+## v3.13.123 (2026-08-28) - Queue scaffolding speaks the AI-fill envelope
+
+`tina4 generate queue <topic>` now returns the same `generate_v1_1`
+envelope the model and route generators do: `edit_hints[]` naming the
+exact line to fill (the job handler) and `next[]` naming what to run
+after (produce a job, start the worker). Before this, a scaffolded
+queue consumer landed with no guidance - a logic-shaped generator that
+dropped a file and went silent about what to edit next. The consumer
+templates already baked the `tina4:edit` marker; it just was never
+lifted into the envelope on two of the four frameworks. Now all four
+are at parity, so an AI agent (or a person) scaffolds a consumer and
+immediately knows what to fill and where. `service` and `seeder`
+follow next.
+
+Also in this release: the secure-route session handoff
+(tina4-nodejs#57) is verified and parity-locked. A secure GET
+authenticated by the returned session cookie hands the handler the
+validated principal, the session, and the cookies - and each framework
+now carries a real no-mock regression test (driving the real dispatcher
+and reading the real log) so the behaviour cannot silently regress.
+
 ## v3.13.122 (2026-08-28) - The default CSP no longer fails silently
 
 `SecurityHeadersMiddleware` ships `Content-Security-Policy: default-src
