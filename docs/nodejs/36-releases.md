@@ -1,5 +1,33 @@
 # Release Notes
 
+## v3.13.125 (2026-08-29) - Scaffolded migrations apply on every engine
+
+`tina4 generate migration` (and `migrate:create`, and `generate model`)
+wrote SQLite-only DDL: `TEXT`, `REAL`, and `CREATE TABLE IF NOT EXISTS`.
+The database adapters translated only the `AUTOINCREMENT` keyword on the
+way in, so those SQLite types passed straight through. Firebird has no
+`TEXT` type (`-607`) and no `REAL`, and neither Firebird nor SQL Server
+accepts `CREATE TABLE IF NOT EXISTS`, so a generated migration failed to
+apply on those engines.
+
+A new `SQLTranslator.ddl_types(sql, engine)` completes the apply-time
+translation. On Firebird it maps `TEXT` to `BLOB SUB_TYPE TEXT` and
+`REAL` to `DOUBLE PRECISION`, and strips `IF NOT EXISTS`; on SQL Server
+it strips `IF NOT EXISTS` and maps `TIMESTAMP` to `DATETIME2`; on MySQL
+it maps `TIMESTAMP` to `DATETIME`. It rewrites `CREATE TABLE` / `ALTER
+TABLE` only, so a query or insert is never touched. Because every
+statement routes through the adapter, the one fix covers migrations, the
+ORM's create-table path, and hand-written DDL.
+
+The generator now emits portable canonical types: `VARCHAR(255)` for
+strings and `TIMESTAMP` for datetimes (including `created_at`), instead
+of SQLite `TEXT`.
+
+Verified end-to-end against a live Firebird 5: a generated migration
+applies and a row round-trips (a text column through `BLOB SUB_TYPE
+TEXT`, a float through `DOUBLE PRECISION`), in all four frameworks on the
+lab.
+
 ## v3.13.124 (2026-08-29) - Database session backend works on Firebird
 
 The database session backend now works on Firebird in all four

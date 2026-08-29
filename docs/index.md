@@ -50,24 +50,30 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.124
+## Current framework release: 3.13.125
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.124: the database
-session backend now works on Firebird. Python's session handler created
-its table with a single `data TEXT` statement for every engine, and
-Firebird has no `TEXT` type, so on Firebird the CREATE failed (`-607`)
-and the backend never worked there - while PHP, Ruby and Node already
-carried a per-engine Firebird `VARCHAR(8191)` branch. Python now
-overrides only the Firebird statement; the four other engines keep the
-statement that already worked. Verified end-to-end against a live
-Firebird 5.0.4 - a session round-trips through the VARCHAR column - and
-every framework's session-engine test now exercises Firebird
-(`TINA4_TEST_FIREBIRD_URL`) so the gap cannot reopen. The one engine
-with no `TEXT` type and UPPER-folded identifiers was the one the
-coverage skipped, which is exactly how the bug hid.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.125: scaffolded
+migrations now apply on every database engine. `tina4 generate
+migration` wrote SQLite-only DDL (`TEXT`, `REAL`, `CREATE TABLE IF NOT
+EXISTS`), and the adapters translated only the `AUTOINCREMENT` keyword on
+the way in. Firebird has no `TEXT` type (`-607`) and no `REAL`, and
+neither Firebird nor SQL Server accepts `CREATE TABLE IF NOT EXISTS`, so
+a generated migration failed to apply there. A new
+`SQLTranslator.ddl_types` finishes the job at apply time, for every
+adapter and both the migration runner and `ORM.create_table`: on
+Firebird `TEXT` becomes `BLOB SUB_TYPE TEXT` and `REAL` becomes `DOUBLE
+PRECISION`, `IF NOT EXISTS` is stripped, and `TIMESTAMP` maps to each
+engine's real datetime type (`DATETIME2` on SQL Server, `DATETIME` on
+MySQL). It rewrites `CREATE`/`ALTER TABLE` only, so a query is never
+touched. The generator now emits portable types (`VARCHAR(255)` for
+strings, `TIMESTAMP` for datetimes). Verified end-to-end against a live
+Firebird 5: a generated migration applies and a row round-trips, in all
+four frameworks.
 
-The 3.13.123 queue scaffolding envelope and secure-route session
-handoff (tina4-nodejs#57) remain in place.
+The 3.13.124 database session backend on Firebird remains in place: the
+session table round-trips through a per-engine column and every
+framework's session-engine test exercises Firebird
+(`TINA4_TEST_FIREBIRD_URL`).
 
 The 3.13.122 secure-by-default CSP warning (the framework logs once at
 startup when `TINA4_CSP` is unset so a strict `default-src 'self'`
@@ -135,6 +141,10 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.125 (2026-08-29)** - [full notes](/python/36-releases.md)
+
+Scaffolded migrations now apply on every database engine. `tina4 generate migration` wrote SQLite-only DDL (`TEXT`, `REAL`, `CREATE TABLE IF NOT EXISTS`), which Firebird (`-607`) and SQL Server reject. A new `SQLTranslator.ddl_types` finishes the apply-time translation for every adapter (on Firebird `TEXT` becomes `BLOB SUB_TYPE TEXT` and `REAL` becomes `DOUBLE PRECISION`, `IF NOT EXISTS` is stripped, and `TIMESTAMP` maps per engine), and the generator emits portable types (`VARCHAR(255)`, `TIMESTAMP`). One fix covers migrations, the ORM's create-table path, and hand-written DDL. Verified against a live Firebird 5 in all four frameworks.
 
 **v3.13.124 (2026-08-29)** - [full notes](/python/36-releases.md)
 
