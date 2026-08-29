@@ -44,9 +44,10 @@ jobs:
             -X POST "$url" -H "X-Admin-Key: $RAG_ADMIN_KEY" || echo "000")
           echo "HTTP $code"
           cat /tmp/reindex.out 2>/dev/null || true
-          if [ "$code" != "200" ]; then
+          # /v1/reindex returns 202 Accepted for the async task, 200 if it ran inline.
+          if [ "$code" != "200" ] && [ "$code" != "202" ]; then
             echo "::warning title=RAG reindex::ping returned $code (host cron still reindexes within ~15 min)"
           else
-            echo "RAG reindex accepted."
+            echo "RAG reindex accepted ($code)."
           fi
           exit 0
