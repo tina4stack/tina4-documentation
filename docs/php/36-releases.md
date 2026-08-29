@@ -1,5 +1,26 @@
 # Release Notes
 
+## v3.13.127 (2026-08-29) - Booleans reach SQL Server and Firebird as 1/0
+
+A bare `TRUE` or `FALSE` needs translating for an engine that stores a boolean as
+an integer. Python did this on both SQL Server and Firebird. The others did not:
+the SQL Server adapters in Node, PHP and Ruby translated `AUTOINCREMENT` and the
+column types but skipped the boolean, and Ruby skipped it on Firebird too. So
+`WHERE active = TRUE` reached SQL Server (and Firebird) untranslated.
+
+Every adapter now wires the boolean translation into its apply-time path, in the
+same order as the Python master: auto-increment, then boolean, then column types.
+A bare `TRUE` becomes `1` and `FALSE` becomes `0`. A `TRUE` or `FALSE` inside a
+string literal is data, so `label = 'TRUE'` survives untouched.
+
+Ruby gained a `translate_sql` seam on its SQL Server and Firebird drivers, matching
+Node's `translateSql` and Python's `_translate_sql`, so the translation is one
+named method instead of three inline calls.
+
+Real tests, no mocks: each adapter's translate path turns a bare `TRUE`/`FALSE`
+into `1`/`0` and preserves a quoted `'TRUE'`. The Ruby driver refactor was
+re-verified against live SQL Server and Firebird on the lab.
+
 ## v3.13.126 (2026-08-29) - Product tables get product names
 
 The fake-data seeder gave every text column a person name. Seed a

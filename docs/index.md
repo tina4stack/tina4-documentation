@@ -50,23 +50,23 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.126
+## Current framework release: 3.13.127
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.126: the fake-data
-seeder now reads the table it fills. A `name` or `title` column on a
-product-ish table (products, items, catalog, inventory, sku, and more)
-seeds a product name like "Rugged Charger" instead of a person name, so a
-seeded `products` table reads like a catalogue, not a phone book. A new
-`product()` generator backs it, deterministic under a seed, and threads
-through every seed path: the ORM seeder, the auto field-map, the
-dev-admin seed endpoint, and the MCP seed tool. With no table in context
-the seeder still returns a person name, so existing callers keep their
-behaviour. Each framework proves it by seeding a real SQLite Product
-model and reading product names back.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.127: a bare `TRUE` or
+`FALSE` now reaches SQL Server and Firebird as `1`/`0` in every framework.
+Python already translated the boolean on both engines; the SQL Server
+adapters in Node, PHP and Ruby skipped it, and Ruby skipped it on Firebird
+too, so `WHERE active = TRUE` reached those engines untranslated. Each
+adapter now wires the boolean translation into its apply-time path, after
+auto-increment and before the column types, matching the Python master. A
+`TRUE`/`FALSE` inside a string literal is data, so `label = 'TRUE'`
+survives untouched. Verified against live SQL Server and Firebird on the
+lab.
 
-The 3.13.125 scaffolded-migration fix remains in place: a generated
-migration applies on every engine, translated at apply time for Firebird,
-SQL Server, and MySQL.
+The 3.13.126 product-name seeder remains in place: a `name` or `title`
+column on a product-ish table seeds a product name, not a person name. So
+does the 3.13.125 scaffolded-migration fix: a generated migration applies
+on every engine, translated at apply time.
 
 The 3.13.122 secure-by-default CSP warning (the framework logs once at
 startup when `TINA4_CSP` is unset so a strict `default-src 'self'`
@@ -134,6 +134,10 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.127 (2026-08-29)** - [full notes](/python/36-releases.md)
+
+A bare `TRUE`/`FALSE` now reaches SQL Server and Firebird as `1`/`0` in every framework. Python already translated the boolean on both engines; the SQL Server adapters in Node, PHP and Ruby skipped it, and Ruby skipped it on Firebird too, so `active = TRUE` reached those engines untranslated. Each adapter now wires the boolean into its apply-time translation (a `TRUE` inside a string literal is left untouched). Ruby gained a `translate_sql` seam matching Node and Python. Verified against live SQL Server and Firebird on the lab.
 
 **v3.13.126 (2026-08-29)** - [full notes](/python/36-releases.md)
 
