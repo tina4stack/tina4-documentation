@@ -71,6 +71,14 @@ Auto-started. Every route handler gets `request.session` ready, no setup for the
 | Register a task | `background(job, interval=2.0)` | `$app->background($job, 2.0)` | `Tina4::Background.register(interval: 2.0) { job }` | `background(job, 2)` |
 | Stop it | `task.stop()` | `$handle->stop()` | `Tina4::Background.stop_task(task)` | `task.stop()` |
 
+```python
+# Python: the import path is core.server, not tina4_python.background
+from tina4_python.core.server import background
+
+task = background(lambda: drain_queue(), interval=2.0)   # runs every 2 seconds
+task.stop()                                              # ends and deregisters it
+```
+
 - **Import it from `core.server`, not `tina4_python.background`.** Python: `from tina4_python.core.server import background`. Node: `import { background } from "tina4-nodejs"`. PHP and Ruby need no import: `$app->background(...)` is a method on your `App`, and Ruby calls `Tina4::Background.register`. There is no `tina4_python.background` module.
 - **The interval is seconds** (a float), and the callback takes no arguments. Use background for periodic in-process work (a health poll, a queue drain, a simulator). Never use a raw thread or a separate process; the handle stops and deregisters the task cleanly on shutdown.
 - **A background task has no request**, so it has no `request.session` and no current user. Pass it the user id or session id it needs when you register it (see Session).
