@@ -42,6 +42,25 @@ Drop a handler file in `src/routes/` (auto-discovered) and register one per HTTP
 
 ---
 
+## Session {#session}
+
+> Verified by a live cross-framework code review + the session suites in all four (Python · PHP · Ruby · Node, run green this release), including the database backend on live Firebird 5.0.4.
+
+Auto-started. Every route handler gets `request.session` ready, no setup for the default file backend.
+
+| | Python | PHP | Ruby | Node |
+|---|---|---|---|---|
+| Read a value | `request.session.get("user")` | `$request->session->get("user")` | `request.session.get("user")` | `req.session.get("user")` |
+| Write a value | `request.session.set("user", data)` | `$request->session->set("user", $data)` | `request.session.set("user", data)` | `req.session.set("user", data)` |
+| New id after login | `request.session.regenerate()` | `$request->session->regenerate()` | `request.session.regenerate` | `req.session.regenerate()` |
+| Off-request, by id | `Session().start(sid)` | `(new Session())->start($sid)` | `Tina4::Session.new({}).start(sid)` | `new Session().start(sid)` |
+
+- **There is no global session, by design.** A session is keyed to the browser's cookie, so `request.session` is always the current visitor's and never anyone else's; a process-wide session would leak one user's data into another's request. Off a request, rebuild it from a known session id (last row). A background task carries no session, so pass it the user id or session id when you enqueue it.
+- **Token-auth trap:** a client that sends an `Authorization: Bearer` token and no session cookie gets a fresh, empty session every request, so writing to it saves nothing that survives. There the token is the identity: read it with `Auth.authenticate_request(headers)` instead of storing on the session.
+- Pick the backend with `TINA4_SESSION_BACKEND` (`file` default, `redis`, `valkey`, `mongodb`, `memcached`, `database`). `save()` is auto-called after the response; call it yourself only when you write off-request. Call `regenerate()` right after login to defeat session fixation.
+
+---
+
 ## Request {#request}
 
 > Verified by a live cross-framework code review + the request test suites in all four (Python · PHP · Ruby · Node, run green this release).
@@ -211,7 +230,7 @@ From a route, `response.render("pages/x.twig", data)` (PHP `$response->render`, 
 
 ## Coming as verified
 
-These are written and being checked live across all four before they land here: ORM models & CRUD · QueryBuilder · relationships · migrations · sessions · middleware · caching · queues · websockets · swagger · graphql · events · i18n · logging · DI · fakedata · CLI.
+These are written and being checked live across all four before they land here: ORM models & CRUD · QueryBuilder · relationships · migrations · middleware · caching · queues · websockets · swagger · graphql · events · i18n · logging · DI · fakedata · CLI.
 
 ## 📕 Download the book
 
