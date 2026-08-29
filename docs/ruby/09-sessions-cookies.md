@@ -49,6 +49,57 @@ Access session data through `request.session`. It is available in every route ha
 | `request.session.flash(key)` | Read and remove flash data |
 | `request.session.all` | Get all session data as a hash |
 
+### Sessions outside a request handler
+
+Tina4 exposes no global `session` object, and that is on purpose. A session belongs to one browser. Tina4 finds the right one from the session cookie on the incoming request, so `request.session` is always the current visitor's session and never anyone else's. A process-wide session would hand one visitor's cart to the next. There is no ambient session because there cannot be one.
+
+So a helper or a service that needs session data has to be told which session. Two ways.
+
+**Pass the session in.** The clean one. The route holds `request.session`; give it to the method that needs it.
+
+```ruby
+# app/user_context.rb
+def current_user(session)
+  session.get("user")
+end
+
+# in a route
+Tina4::Router.get("/api/me") do |request, response|
+  response.call(current_user(request.session))
+end
+```
+
+**Rebuild it from a session id.** When you cannot thread the request through, construct a `Session` and start it on the id you already hold, read from the cookie or stored when the work was queued. The constructor takes a Rack env, so pass an empty hash for a standalone session.
+
+```ruby
+def load_session(session_id)
+  session = Tina4::Session.new({})
+  session.start(session_id)    # loads that user's stored data
+  session
+end
+
+session = load_session(known_session_id)
+user = session.get("user")
+session.set("last_seen", "2026-01-01")
+session.save                   # persist when you write outside a request
+```
+
+You still supply the session id. That is the whole point: "which user" is the question a global cannot answer.
+
+**Background work carries no session.** A `Tina4::Background` task serves no request and holds no cookie, so it has no current user to read. Hand the task the identity it needs when you register it, the user id or the session id, never a global lookup.
+
+**One trap with token auth.** If your clients send an `Authorization: Bearer` token and no session cookie, every request opens a fresh, empty session, so writing the user to it saves to nothing that survives to the next request. There the token is the identity. Validate it each request and pass the result on.
+
+```ruby
+Tina4::Router.get("/api/report") do |request, response|
+  user = Tina4::Auth.authenticate_request(request.headers)   # validates the Bearer JWT / API key
+  next response.call("Unauthorized", 401) if user.nil?
+  response.call(build_report(user))
+end
+```
+
+Reach for the session when the browser carries the session cookie. Reach for the token when it carries the token. Mixing the two stores data where the next request will never look.
+
 ---
 
 ## 4. File Sessions (Default)

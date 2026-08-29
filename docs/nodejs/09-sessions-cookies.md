@@ -105,6 +105,61 @@ Access session data through `req.session`. It is available in every route handle
 | `req.session.cookieHeader()` | Get Set-Cookie header value |
 | `req.session.all()` | Get all session data as an object |
 
+### Sessions outside a request handler
+
+Tina4 exposes no global `session` object, and that is on purpose. A session belongs to one browser. Tina4 finds the right one from the session cookie on the incoming request, so `req.session` is always the current visitor's session and never anyone else's. A process-wide session would hand one visitor's cart to the next. There is no ambient session because there cannot be one.
+
+So a helper or a service that needs session data has to be told which session. Two ways.
+
+**Pass the session in.** The clean one. The route holds `req.session`; give it to the function that needs it.
+
+```typescript
+// src/services/userContext.ts
+export function currentUser(session: any) {
+  return session.get("user");
+}
+
+// in a route
+import { currentUser } from "../services/userContext.js";
+
+router.get("/api/me", (req, res) => res(currentUser(req.session)));
+```
+
+**Rebuild it from a session id.** When you cannot thread the request through, construct a `Session` and start it on the id you already hold, read from the cookie or stored when the work was queued.
+
+```typescript
+import { Session } from "tina4-nodejs";
+
+function loadSession(sessionId: string) {
+  const session = new Session();
+  session.start(sessionId);    // loads that user's stored data
+  return session;
+}
+
+const session = loadSession(knownSessionId);
+const user = session.get("user");
+session.set("lastSeen", "2026-01-01");
+session.save();                // persist when you write outside a request
+```
+
+You still supply the session id. That is the whole point: "which user" is the question a global cannot answer.
+
+**Background work carries no session.** A timer task serves no request and holds no cookie, so it has no current user to read. Hand the task the identity it needs when you start it, the user id or the session id, never a global lookup.
+
+**One trap with token auth.** If your clients send an `Authorization: Bearer` token and no session cookie, every request opens a fresh, empty session, so writing the user to it saves to nothing that survives to the next request. There the token is the identity. Validate it each request and pass the result on.
+
+```typescript
+import { Auth } from "tina4-nodejs";
+
+router.get("/api/report", (req, res) => {
+  const user = Auth.authenticateRequest(req.headers);   // validates the Bearer JWT / API key
+  if (user === null) return res("Unauthorized", 401);
+  return res(buildReport(user));
+});
+```
+
+Reach for the session when the browser carries the session cookie. Reach for the token when it carries the token. Mixing the two stores data where the next request will never look.
+
 ---
 
 ## 4. Reading and Writing Session Data

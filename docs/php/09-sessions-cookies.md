@@ -49,6 +49,65 @@ Access session data through `$request->session`. It is available in every route 
 | `$request->session->getFlash(key)` | Read and remove flash data |
 | `$request->session->all()` | Get all session data as an array |
 
+### Sessions outside a request handler
+
+Tina4 exposes no global `session` object, and that is on purpose. A session belongs to one browser. Tina4 finds the right one from the session cookie on the incoming request, so `$request->session` is always the current visitor's session and never anyone else's. A process-wide session would hand one visitor's cart to the next. There is no ambient session because there cannot be one.
+
+So a helper or a service that needs session data has to be told which session. Two ways.
+
+**Pass the session in.** The clean one. The route holds `$request->session`; give it to the code that needs it.
+
+```php
+// Helpers/UserContext.php
+function current_user(\Tina4\Session $session): ?array
+{
+    return $session->get('user');
+}
+
+// in a route
+Router::get('/api/me', function (Request $request, Response $response) {
+    return $response(current_user($request->session));
+});
+```
+
+**Rebuild it from a session id.** When you cannot thread the request through, construct a `Session` and start it on the id you already hold, read from the cookie or stored when the work was queued.
+
+```php
+use Tina4\Session;
+
+function load_session(string $sessionId): Session
+{
+    $session = new Session();
+    $session->start($sessionId);   // loads that user's stored data
+    return $session;
+}
+
+$session = load_session($knownSessionId);
+$user = $session->get('user');
+$session->set('last_seen', '2026-01-01');
+$session->save();                  // persist when you write outside a request
+```
+
+You still supply the session id. That is the whole point: "which user" is the question a global cannot answer.
+
+**Background work carries no session.** A `$app->background()` task serves no request and holds no cookie, so it has no current user to read. Hand the task the identity it needs when you register it, the user id or the session id, never a global lookup.
+
+**One trap with token auth.** If your clients send an `Authorization: Bearer` token and no session cookie, every request opens a fresh, empty session, so writing the user to it saves to nothing that survives to the next request. There the token is the identity. Validate it each request and pass the result on.
+
+```php
+use Tina4\Auth;
+
+Router::get('/api/report', function (Request $request, Response $response) {
+    $user = Auth::authenticateRequest($request->headers);   // validates the Bearer JWT / API key
+    if ($user === null) {
+        return $response('Unauthorized', 401);
+    }
+    return $response(build_report($user));
+});
+```
+
+Reach for the session when the browser carries the session cookie. Reach for the token when it carries the token. Mixing the two stores data where the next request will never look.
+
 ---
 
 ## 4. File Sessions (Default)
