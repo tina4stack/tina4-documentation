@@ -50,23 +50,24 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.123
+## Current framework release: 3.13.124
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.123: `tina4 generate
-queue <topic>` now speaks the same `generate_v1_1` scaffolding envelope
-the model and route generators do. A scaffolded queue consumer comes
-back with `edit_hints[]` naming the exact line to fill (the job
-handler) and `next[]` naming what to run after (produce a job, start
-the worker). Before this, a logic-shaped generator dropped a file and
-went silent about what to edit next; the consumer templates already
-baked the `tina4:edit` marker, it just was never lifted into the
-envelope on two of the four frameworks. Now all four are at parity, so
-an AI agent (or a person) scaffolds a consumer and immediately knows
-what to fill and where. `service` and `seeder` follow next. Also in
-3.13.123: the secure-route session handoff (tina4-nodejs#57) is
-verified and parity-locked - a secure GET authenticated by the session
-cookie hands the handler the validated principal, the session, and the
-cookies, with a real no-mock regression test in each framework.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.124: the database
+session backend now works on Firebird. Python's session handler created
+its table with a single `data TEXT` statement for every engine, and
+Firebird has no `TEXT` type, so on Firebird the CREATE failed (`-607`)
+and the backend never worked there - while PHP, Ruby and Node already
+carried a per-engine Firebird `VARCHAR(8191)` branch. Python now
+overrides only the Firebird statement; the four other engines keep the
+statement that already worked. Verified end-to-end against a live
+Firebird 5.0.4 - a session round-trips through the VARCHAR column - and
+every framework's session-engine test now exercises Firebird
+(`TINA4_TEST_FIREBIRD_URL`) so the gap cannot reopen. The one engine
+with no `TEXT` type and UPPER-folded identifiers was the one the
+coverage skipped, which is exactly how the bug hid.
+
+The 3.13.123 queue scaffolding envelope and secure-route session
+handoff (tina4-nodejs#57) remain in place.
 
 The 3.13.122 secure-by-default CSP warning (the framework logs once at
 startup when `TINA4_CSP` is unset so a strict `default-src 'self'`
@@ -134,6 +135,10 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.124 (2026-08-29)** - [full notes](/python/36-releases.md)
+
+The database session backend now works on Firebird in all four frameworks. Python created its session table with a single `data TEXT` statement, but Firebird has no `TEXT` type, so the table never created there (`-607`); Python now overrides only the Firebird statement (`VARCHAR(8191)`), matching PHP/Ruby/Node. Verified end-to-end against a live Firebird 5.0.4, and every framework's session-engine test now exercises Firebird so the gap cannot reopen.
 
 **v3.13.123 (2026-08-28)** - [full notes](/python/36-releases.md)
 

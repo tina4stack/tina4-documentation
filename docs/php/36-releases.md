@@ -1,5 +1,38 @@
 # Release Notes
 
+## v3.13.124 (2026-08-29) - Database session backend works on Firebird
+
+The database session backend now works on Firebird in all four
+frameworks, and every framework's session-engine test exercises it so
+the gap cannot reopen.
+
+Python's `DatabaseSessionHandler` created its `tina4_session` table with
+a single `data TEXT` statement for every engine. Firebird has no `TEXT`
+type, so on Firebird the CREATE failed with `-607 "Specified domain or
+source column TEXT does not exist"` and the database session backend
+never worked there. Python now overrides only the Firebird statement
+(payload column `VARCHAR(8191)`), matching PHP, Ruby and Node, which
+already carried a per-engine Firebird branch. The four other engines
+keep the portable statement that already worked, so nothing else
+changes.
+
+Verified end-to-end against a live Firebird 5.0.4: a nested session
+payload written by one handler and read back by a fresh one round-trips
+intact through the VARCHAR column, the row is confirmed out of band on
+the engine itself, and the table is created with Firebird's UPPER-cased
+`SESSION_ID` / `DATA` / `EXPIRES_AT` shape. The read path already worked
+because each adapter folds Firebird's UPPER-cased identifiers back to
+lower case.
+
+The "session backend works on every engine it claims" test excluded
+Firebird in Python, PHP and Node (Ruby already covered it) - which is
+exactly how a Firebird-incompatible session DDL stayed hidden. Each now
+includes Firebird when a live server is configured
+(`TINA4_TEST_FIREBIRD_URL`), and PHP's runs in the CI Firebird job.
+
+Parity: shipped in all four backends at the same tag. No API change.
+
+
 ## v3.13.123 (2026-08-28) - Queue scaffolding speaks the AI-fill envelope
 
 `tina4 generate queue <topic>` now returns the same `generate_v1_1`
