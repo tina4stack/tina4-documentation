@@ -1,5 +1,32 @@
 # Release Notes
 
+## v3.13.126 (2026-08-29) - Product tables get product names
+
+The fake-data seeder gave every text column a person name. Seed a
+`products` table and its `name` column filled with "John Smith", never
+"Wireless Keyboard". The demo looked wrong the moment anyone opened it.
+
+The seeder now reads the table. A `name` or `title` column on a
+product-ish table (products, items, catalog, inventory, sku, listing,
+stock, ware) seeds a product name built from an adjective and a noun,
+like "Rugged Charger". Every other table still gets a person name, so
+nothing else changes. A new `product()` generator backs it, deterministic
+under a seed, so one seed produces the same catalogue every run.
+
+The table threads through every seed path: the ORM seeder, the auto
+field-map, the dev-admin seed endpoint, and the MCP seed tool all honour
+it. With no table in context the seeder falls back to a person name, so
+existing callers keep their behaviour.
+
+Real tests, no mocks: each framework seeds a real SQLite Product model
+and a real User model and reads the rows back. The product and person
+word banks share no first word, so the first token of a value proves
+which generator ran.
+
+The generator is `FakeData.product()` in Python, `product()` on the
+seeder in Node, `FakeData#product` in Ruby, and `FakeData::product()` in
+PHP.
+
 ## v3.13.125 (2026-08-29) - Scaffolded migrations apply on every engine
 
 `tina4 generate migration` (and `migrate:create`, and `generate model`)
