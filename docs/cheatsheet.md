@@ -57,6 +57,7 @@ Auto-started. Every route handler gets `request.session` ready, no setup for the
 
 - **There is no global session, by design.** A session is keyed to the browser's cookie, so `request.session` is always the current visitor's and never anyone else's; a process-wide session would leak one user's data into another's request. Off a request, rebuild it from a known session id (last row). A background task carries no session, so pass it the user id or session id when you enqueue it.
 - **Token-auth trap:** a client that sends an `Authorization: Bearer` token and no session cookie gets a fresh, empty session every request, so writing to it saves nothing that survives. There the token is the identity: read it with `Auth.authenticate_request(headers)` instead of storing on the session.
+- **The class lives at `session`, not `core.session`.** To construct one off-request, import it: `from tina4_python.session import Session` (Python), `use Tina4\Session;` (PHP), `Tina4::Session` (Ruby, no import), `import { Session } from "tina4-nodejs"` (Node). There is no `tina4_python.core.session` and no global `session` object.
 - Pick the backend with `TINA4_SESSION_BACKEND` (`file` default, `redis`, `valkey`, `mongodb`, `memcached`, `database`). `save()` is auto-called after the response; call it yourself only when you write off-request. Call `regenerate()` right after login to defeat session fixation.
 
 ---
