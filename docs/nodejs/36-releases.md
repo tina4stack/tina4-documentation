@@ -1,5 +1,38 @@
 # Release Notes
 
+## v3.13.128 (2026-08-29) - tina4 lint: one command, zero shipped linters
+
+Every framework carried a different half-answer to linting. Python and Ruby
+declared a linter in their dev manifest. PHP shipped a `composer lint` that
+pointed at a tool it never installed, so it failed on a fresh checkout. Node had
+no linter at all. And none of them had a `tina4 lint` command.
+
+Now all four do, with one contract. `tina4 lint` lints the app's own source
+(`src/` plus the entry file). It runs the project's linter -- ruff on Python,
+phpcs on PHP, rubocop on Ruby, eslint on Node -- and installs it as a dev
+dependency on demand the first time you run the command. Running the command is
+the consent: the linter lands in dev dependencies, never in the app's runtime, so
+a Tina4 app stays zero-dependency. `--no-install` skips that step (for CI or an
+offline box) and falls back to a zero-dependency syntax baseline -- `compile()`,
+`php -l`, `ruby -c`, `tsc --noEmit` -- that never executes your code. `--fix`
+applies the linter's safe autofixes. Exit 0 is clean; non-zero means findings.
+
+The framework itself now ships no linter. `ruff` left Python's dev group, `rubocop`
+left Ruby's gemspec, and PHP's broken `composer lint` now points at `tina4 lint`.
+Each framework lints its own code by dogfooding the command.
+
+Real tests, no mocks: each baseline parses real files, and the install test runs a
+real `uv add` / `composer require` / `bundle add` / `npm i` in a throwaway project,
+reads the mutated manifest back, and confirms the linter -- not the baseline -- then
+runs. On Node, eslint lints TypeScript through typescript-eslint, at parity with
+ruff on Python.
+
+This release also fixes a version drift. The PHP boot banner and Python's version
+fallback each read a hardcoded constant that the 3.13.126 and 3.13.127 bumps never
+updated, so a genuinely up-to-date install could report an older version. Both now
+track the release, and a version-consistency test in every framework guards the
+drift from returning.
+
 ## v3.13.127 (2026-08-29) - Booleans reach SQL Server and Firebird as 1/0
 
 A bare `TRUE` or `FALSE` needs translating for an engine that stores a boolean as

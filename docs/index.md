@@ -50,23 +50,25 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.127
+## Current framework release: 3.13.128
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.127: a bare `TRUE` or
-`FALSE` now reaches SQL Server and Firebird as `1`/`0` in every framework.
-Python already translated the boolean on both engines; the SQL Server
-adapters in Node, PHP and Ruby skipped it, and Ruby skipped it on Firebird
-too, so `WHERE active = TRUE` reached those engines untranslated. Each
-adapter now wires the boolean translation into its apply-time path, after
-auto-increment and before the column types, matching the Python master. A
-`TRUE`/`FALSE` inside a string literal is data, so `label = 'TRUE'`
-survives untouched. Verified against live SQL Server and Firebird on the
-lab.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.128: one `tina4 lint`
+command, and the framework ships no linter of its own. `tina4 lint` runs
+the project's linter (ruff, phpcs, rubocop, or eslint) and installs it as a
+dev dependency on demand the first time you run it, so a Tina4 app stays
+zero-dependency. `--no-install` falls back to a zero-dependency syntax
+baseline (`compile`, `php -l`, `ruby -c`, `tsc`). Only the project's own
+linter runs, never a stray global one, so linting is reproducible. Verified
+against the real package managers on the lab.
 
-The 3.13.126 product-name seeder remains in place: a `name` or `title`
-column on a product-ish table seeds a product name, not a person name. So
-does the 3.13.125 scaffolded-migration fix: a generated migration applies
-on every engine, translated at apply time.
+This release also fixes a version drift: the PHP boot banner and Python's
+version fallback read a hardcoded constant that the 3.13.126 and 3.13.127
+bumps missed, so an up-to-date install could report an older version. Both
+now track the release, guarded by a version-consistency test in every
+framework.
+
+The 3.13.127 boolean translation remains in place: a bare `TRUE`/`FALSE`
+reaches SQL Server and Firebird as `1`/`0` in every framework.
 
 The 3.13.122 secure-by-default CSP warning (the framework logs once at
 startup when `TINA4_CSP` is unset so a strict `default-src 'self'`
@@ -134,6 +136,10 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.128 (2026-08-29)** - [full notes](/python/36-releases.md)
+
+One `tina4 lint` command across all four, and the framework ships no linter of its own. It runs the project's linter (ruff, phpcs, rubocop, eslint), installs it as a dev dependency on demand the first time you run it, and falls back to a zero-dependency syntax baseline (`compile` / `php -l` / `ruby -c` / `tsc`) with `--no-install`. Only the project's own linter runs, never a stray global one. `ruff` left Python's dev group and `rubocop` left Ruby's gemspec; PHP's broken `composer lint` now points at `tina4 lint`. This release also fixes a version drift where the PHP boot banner and Python's version fallback lagged the 3.13.126/.127 bumps, now guarded by a version-consistency test in every framework.
 
 **v3.13.127 (2026-08-29)** - [full notes](/python/36-releases.md)
 

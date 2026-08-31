@@ -422,7 +422,7 @@ _CLI_NOISE = {
 # meaningful (a genuinely-unknown token is still flagged). Second-token grammar
 # for these is owned by the framework, not the CLI, so it is not validated here.
 FORWARDED_SUBCOMMANDS = {
-    "migrate", "generate", "test", "routes", "metrics", "queue", "seed", "console",
+    "migrate", "generate", "test", "routes", "metrics", "queue", "seed", "console", "lint",
 }
 
 
