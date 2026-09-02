@@ -106,8 +106,14 @@ const BACKEND_GROUPS = [
   },
   {
     text: "Advanced",
-    stems: ["di-container", "service-runner", "mcp-dev-tools",
-            "custom-mcp-servers"],
+    stems: ["di-container", "service-runner"],
+  },
+  {
+    // MCP earns its own heading rather than hiding under "Advanced": readers
+    // look for "MCP" by name (both using the built-in dev-tools server and
+    // building their own), and a generic group buried the two chapters.
+    text: "MCP",
+    stems: ["mcp-dev-tools", "custom-mcp-servers"],
   },
   { text: "Developer Tools", stems: ["dev-tools", "cli", "vibe-coding-with-ai"] },
   { text: "Operations", stems: ["environment-variables", "deployment", "complete-app"] },
@@ -143,6 +149,7 @@ export default {
     nav: [
       { text: "Home", link: "index.html" },
       { text: "Introduction", link: "general/01-what-is-tina4.html" },
+      { text: "Build with AI", link: "build-with-ai.html" },
       { text: "tina4-js", link: "js/index.html" },
       { text: "Python", link: "python/index.html" },
       { text: "Node.js", link: "nodejs/index.html" },

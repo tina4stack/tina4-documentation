@@ -254,7 +254,9 @@ From a route, `response.render("pages/x.twig", data)` (PHP `$response->render`, 
 
 ## Coming as verified
 
-These are written and being checked live across all four before they land here: ORM models & CRUD · QueryBuilder · relationships · migrations · middleware · caching · queues · websockets · swagger · graphql · events · i18n · logging · DI · fakedata · CLI.
+These are written and being checked live across all four before they land here: ORM models & CRUD · QueryBuilder · relationships · migrations · middleware · caching · queues · websockets · swagger · graphql · events · i18n · logging · DI · fakedata · CLI · MCP servers.
+
+For MCP right now, see the [Build with AI](/build-with-ai) hub, which links the MCP dev-tools and custom-server chapters for every language.
 
 ## 📕 Download the book
 

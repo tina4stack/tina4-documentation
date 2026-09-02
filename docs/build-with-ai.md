@@ -55,3 +55,23 @@ Each request runs through the same loop the framework uses by hand:
 - **Reports proof.** You get the created files, the test result, and the live
   endpoint back in the thread, the evidence that the build works, not just a
   claim that it does.
+
+## Expose your own tools over MCP
+
+The coder reaches Tina4 over MCP. Your app can speak it too. Every framework
+ships an MCP server. A built-in one exposes framework internals for AI-assisted
+development, and a small API lets you build your own to expose business logic, a
+customer lookup, an invoice query, an inventory check, straight to any AI
+assistant.
+
+Two chapters per language cover it end to end:
+
+| Language | Built-in dev tools | Build your own server |
+|---|---|---|
+| Python | [MCP Dev Tools](/python/28-mcp-dev-tools) | [Custom MCP Servers](/python/29-custom-mcp-servers) |
+| Node.js | [MCP Dev Tools](/nodejs/28-mcp-dev-tools) | [Custom MCP Servers](/nodejs/29-custom-mcp-servers) |
+| PHP | [MCP Dev Tools](/php/28-mcp-dev-tools) | [Custom MCP Servers](/php/29-custom-mcp-servers) |
+| Ruby | [MCP Dev Tools](/ruby/28-mcp-dev-tools) | [Custom MCP Servers](/ruby/29-custom-mcp-servers) |
+
+Register a tool, add the type hints, and the schema writes itself. Point Claude
+Code at the endpoint and ask in plain language. The protocol does the rest.
