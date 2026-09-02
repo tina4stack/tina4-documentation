@@ -252,11 +252,29 @@ From a route, `response.render("pages/x.twig", data)` (PHP `$response->render`, 
 
 ---
 
+## MCP servers {#mcp}
+
+> Verified by running each framework's MCP suite green on the lab this release (Python 82 · PHP 121 · Ruby 102 · Node 7 files, 0 failures) against the real `McpServer` over its real transport, no mocks: server creation, tool and resource registration, the `tools/call` JSON-RPC round-trip, and the security gate.
+
+Expose your own application logic to an AI assistant. Register tools and resources on a path, mount it, point Claude Code at the endpoint. Same concept in all four, idiomatic names per language.
+
+| | Python | PHP | Ruby | Node |
+|---|---|---|---|---|
+| Create a server | `McpServer("/crm/mcp", name="CRM")` | `new McpServer("/crm/mcp", name: "CRM")` | `Tina4::McpServer.new("/crm/mcp", name: "CRM")` | `new McpServer("/crm/mcp", "CRM")` |
+| Register a tool | `@mcp_tool("find", server=mcp)` | `#[McpTool("find", server: "crm")]` | `Tina4.mcp_tool("find", server: mcp) { \|a\| ... }` | `mcpTool("find", "desc", mcp, [params])(fn)` |
+| Register a resource | `@mcp_resource("crm://p", server=mcp)` | `#[McpResource("crm://p", server: "crm")]` | `Tina4.mcp_resource("crm://p", server: mcp) { ... }` | `mcpResource("crm://p", "desc", "application/json", mcp)(fn)` |
+| Mount the routes | `mcp.register_routes(router)` | `$mcp->registerRoutes($router)` | `mcp.register_routes` | `mcp.registerRoutes(router)` |
+
+- **The signature is the schema.** Python and PHP read the function or method type hints; Ruby and Node take an explicit params list (`{name, type, default}`). A parameter with a default is optional, every other one is required, and an assistant cannot call a tool whose types it cannot see, so type every one.
+- **Return structured data**, a dict, a row, a list, never a preformatted string. The server wraps it as MCP content and lets the assistant format it for the user.
+- **The endpoints are born with the server.** `POST /crm/mcp` speaks Streamable HTTP (send JSON-RPC, read the reply inline; `initialize` hands back an `Mcp-Session-Id`), with legacy `POST /crm/mcp/message` and `GET /crm/mcp/sse` for older clients. In PHP the `server:` argument is the server's string handle, not the object.
+- **Public by default, so secure anything past localhost.** Protect the MCP path with the same auth you use on routes (secured routes or middleware), or check the bearer token inside the tool. Keep one server per domain (`/crm/mcp`, `/accounting/mcp`) and one focused query per tool. Full guide: the Custom MCP Servers chapter for your language, linked from [Build with AI](/build-with-ai).
+
+---
+
 ## Coming as verified
 
-These are written and being checked live across all four before they land here: ORM models & CRUD · QueryBuilder · relationships · migrations · middleware · caching · queues · websockets · swagger · graphql · events · i18n · logging · DI · fakedata · CLI · MCP servers.
-
-For MCP right now, see the [Build with AI](/build-with-ai) hub, which links the MCP dev-tools and custom-server chapters for every language.
+These are written and being checked live across all four before they land here: ORM models & CRUD · QueryBuilder · relationships · migrations · middleware · caching · queues · websockets · swagger · graphql · events · i18n · logging · DI · fakedata · CLI.
 
 ## 📕 Download the book
 
