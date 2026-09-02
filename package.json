@@ -6,7 +6,8 @@
     "docs:sync": "bash scripts/sync-books.sh",
     "audit:features": "python3 scripts/audit-feature-catalog.py",
     "docs:dev": "tina4press dev .",
-    "docs:build": "tina4press build .",
+    "docs:build": "bash scripts/gen-llms-full.sh && tina4press build .",
+    "docs:llms-full": "bash scripts/gen-llms-full.sh",
     "docs:preview": "npx --yes serve docs/.vitepress/dist"
   },
   "packageManager": "pnpm@10.24.0+sha512.01ff8ae71b4419903b65c60fb2dc9d34cf8bb6e06d03bde112ef38f7a34d6904c424ba66bea5cdcf12890230bf39f9580473140ed9c946fef328b6e5238a345a"

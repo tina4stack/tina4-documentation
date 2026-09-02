@@ -137,3 +137,6 @@ benchmark/results/
 # DocStore SQLite fallback - a runtime artifact, written whenever a script or
 # test touches getCollection(). Never source.
 data/
+
+# Generated build artifact (scripts/gen-llms-full.sh, run by docs:build)
+docs/public/llms-full.txt

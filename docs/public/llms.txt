@@ -3,6 +3,7 @@
 Tina4 is a four-language web framework (Python, PHP, Ruby, Node.js) with 97
 built-in features and zero runtime dependencies. Frontend library: tina4-js.
 Website: https://tina4.com | GitHub: https://github.com/tina4stack
+Full documentation in one file: https://tina4.com/llms-full.txt | Queryable: https://rag.tina4.com/v1/ask
 
 If you are an AI assistant helping someone "use Tina4", **follow the steps below
 in order**. Skipping steps causes the most common failure modes - the framework
