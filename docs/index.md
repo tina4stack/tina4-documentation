@@ -50,22 +50,23 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.128
+## Current framework release: 3.13.129
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.128: one `tina4 lint`
-command, and the framework ships no linter of its own. `tina4 lint` runs
-the project's linter (ruff, phpcs, rubocop, or eslint) and installs it as a
-dev dependency on demand the first time you run it, so a Tina4 app stays
-zero-dependency. `--no-install` falls back to a zero-dependency syntax
-baseline (`compile`, `php -l`, `ruby -c`, `tsc`). Only the project's own
-linter runs, never a stray global one, so linting is reproducible. Verified
-against the real package managers on the lab.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.129. `tina4 generate model
+Order` used to rename the reserved-word table `order` to `orders` without a
+word, so an agent that then wrote `/order` or a raw query against `order` failed
+downstream with no clue. Now the scaffolder says so: it still pluralises the
+reserved name, the safe choice, but prints a one-line note and points at
+`--table-name <name>` to set any table name yourself. It never quotes the
+identifier for you, because quoting is a global storage invariant that flips
+per-engine case-folding and silently breaks keyed writes, so the reserved
+`--quote` path the resolution envelope used to advertise is gone and the
+agent-facing hint now points at `--table-name`. See ADR-0062 for the reasoning.
 
-This release also fixes a version drift: the PHP boot banner and Python's
-version fallback read a hardcoded constant that the 3.13.126 and 3.13.127
-bumps missed, so an up-to-date install could report an older version. Both
-now track the release, guarded by a version-consistency test in every
-framework.
+The 3.13.128 `tina4 lint` command remains in place: it runs the project's linter
+(ruff, phpcs, rubocop, or eslint), installs it as a dev dependency on demand, and
+falls back to a zero-dependency syntax baseline with `--no-install`, so a Tina4
+app stays zero-dependency.
 
 The 3.13.127 boolean translation remains in place: a bare `TRUE`/`FALSE`
 reaches SQL Server and Firebird as `1`/`0` in every framework.
@@ -136,6 +137,10 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.129 (2026-09-02)** - [full notes](/python/36-releases.md)
+
+`tina4 generate model Order` no longer renames the reserved-word table in silence. It still pluralises `order` to `orders`, the safe choice, because Tina4 interpolates table names unquoted, but now prints a one-line note that names the rename and points at `--table-name <name>` to set any table name yourself. It never quotes the identifier for you: quoting is a global storage invariant that flips per-engine case-folding and silently breaks keyed writes, so the reserved `--quote` path the resolution envelope used to advertise is gone and the agent-facing `override` hint now points at `--table-name`. See ADR-0062 for the reasoning.
 
 **v3.13.128 (2026-08-29)** - [full notes](/python/36-releases.md)
 

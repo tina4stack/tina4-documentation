@@ -1,5 +1,29 @@
 # Release Notes
 
+## v3.13.129 (2026-09-02) - generate model stops renaming your table in silence
+
+`tina4 generate model Order` has a reserved word to handle: `order` breaks
+`CREATE TABLE`, so every framework already pluralised the table to `orders`. The
+catch was the silence. An agent that then wrote a route for `/order` or a raw
+query against `order` failed downstream with no clue the table had been renamed
+under it.
+
+Now the scaffolder says so. It still pluralises the reserved name, the safe
+choice, but it prints a one-line note that names the rename and points at the
+escape hatch. `--table-name <name>` sets any table name you want. Force a reserved
+name on purpose and it warns you, once, that Tina4 interpolates table names
+unquoted, so the quoting in your raw SQL is yours to own.
+
+What it will not do is quote the identifier for you. Quoting is a global storage
+invariant, not a local fix. It flips per-engine case-folding, and quoting the
+write while the schema lookup stays unquoted returns no primary key, so a keyed
+update matches every row or none. That is data loss, not a syntax error, and it
+breaks every existing unquoted schema on upgrade. So the reserved `--quote` path
+the resolution envelope used to advertise is gone. The agent-facing `override`
+hint now points at `--table-name`, the one escape hatch that is safe.
+
+The rename was never the bug. The silence was. See ADR-0062 for the full reasoning.
+
 ## v3.13.128 (2026-08-29) - tina4 lint: one command, zero shipped linters
 
 Every framework carried a different half-answer to linting. Python and Ruby
