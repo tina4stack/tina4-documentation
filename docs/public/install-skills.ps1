@@ -8,8 +8,8 @@
 #   $env:TINA4_SKILLS_TARGET = "cursor"; irm https://tina4.com/install-skills.ps1 | iex
 $ErrorActionPreference = "Stop"
 $urls = @(
-  "https://raw.githubusercontent.com/tina4stack/tina4/3.13.130/install-skills.ps1",
-  "https://cdn.jsdelivr.net/gh/tina4stack/tina4@3.13.130/install-skills.ps1"
+  "https://raw.githubusercontent.com/tina4stack/tina4/3.13.131/install-skills.ps1",
+  "https://cdn.jsdelivr.net/gh/tina4stack/tina4@3.13.131/install-skills.ps1"
 )
 $installer = $null
 

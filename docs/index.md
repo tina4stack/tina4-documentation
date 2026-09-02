@@ -50,14 +50,22 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.130
+## Current framework release: 3.13.131
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.130, a discipline pass on the
-Tina4 AI skills. The developer and maintainer skills now stay objective on ideas
-(disagree when a design is weak, no reflexive praise), claim only what they
-verified (a blocker like "we can't deploy" is checked before it is stated, never
-guessed), and chat instead of narrate (result first, no request-echo, no filler,
-no per-step "Now:" prefix). Refresh with `curl -fsSL https://tina4.com/install-skills.sh | sh`.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.131, a second pass on the Tina4
+AI skills. Replies now read in plain English for a global team (short common words,
+short sentences, no idioms), stay short (the answer or the code first, then stop),
+match the effort to the task (a health route is a health route, not a health
+subsystem), and ask up to three short questions before guessing when the choice is
+really yours. The skills also carry a grounding fallback for tools without the coder
+server: start at https://tina4.com/llms.txt, then ask https://rag.tina4.com/v1/ask.
+Refresh with `curl -fsSL https://tina4.com/install-skills.sh | sh`.
+
+The 3.13.130 discipline pass remains in place: the developer and maintainer skills
+stay objective on ideas (disagree when a design is weak, no reflexive praise), claim
+only what they verified (a blocker like "we can't deploy" is checked before it is
+stated, never guessed), and chat instead of narrate (result first, no request-echo,
+no filler, no per-step "Now:" prefix).
 
 The 3.13.129 generate-model change remains in place: `tina4 generate model Order`
 prints a note when it pluralises a reserved-word table and offers `--table-name
@@ -137,6 +145,8 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.131 (2026-09-03)** - AI skills: plain English, ask-first, no-MCP grounding fallback. [full notes](/python/36-releases.md)
 
 **v3.13.130 (2026-09-02)** - [full notes](/python/36-releases.md)
 

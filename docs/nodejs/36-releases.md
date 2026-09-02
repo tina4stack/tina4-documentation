@@ -1,5 +1,28 @@
 # Release Notes
 
+## v3.13.131 (2026-09-03) - AI skills: plain English, ask-first, no-MCP grounding
+
+The 3.13.130 discipline pass gets a follow-up for a global team. Most Tina4
+engineers do not read English first, so the skills now write for them. Four
+additive changes; the personality stays:
+
+- **Plain English for a global team.** Short common words, short sentences, one
+  idea each. No idioms, no slang, no metaphors. An acronym is spelled out the
+  first time it appears.
+- **Keep it short.** The answer or the code comes first, then the reply stops.
+  Under about 150 words unless you asked for a document or a report.
+- **Match the effort to the task.** A health route is a health route, not a
+  health subsystem. A small task gets a small answer and a short thought.
+- **Ask before you guess.** When the choice is really yours (which backend,
+  which trade-off), the skill asks up to three short pick-one questions before
+  it writes, instead of guessing.
+
+The skills also gain a grounding path for tools without the coder server: start
+at https://tina4.com/llms.txt, then ask https://rag.tina4.com/v1/ask, and use the
+live `/__dev/mcp` tools once `tina4 serve` is running.
+
+Refresh your skills with `curl -fsSL https://tina4.com/install-skills.sh | sh`.
+
 ## v3.13.130 (2026-09-02) - Sharper AI skills: objective, verified, terse
 
 The Tina4 AI skills got a discipline pass. An eager model fills silence with
