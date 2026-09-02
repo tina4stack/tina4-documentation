@@ -1,5 +1,24 @@
 # Release Notes
 
+## v3.13.130 (2026-09-02) - Sharper AI skills: objective, verified, terse
+
+The Tina4 AI skills got a discipline pass. An eager model fills silence with
+agreement and ceremony; the developer and maintainer skills now push back on it.
+
+Three changes, all additive - the personality stays:
+
+- **Objective on ideas.** The skill assesses a design on its merits and disagrees
+  when it is weak, instead of handing back a reflexive "great idea" you cannot
+  trust.
+- **Claim only what you verified.** A blocker - "we can't deploy", "the server is
+  broken", "you're on a weak model" - is checked before it is stated, or marked
+  unverified. No guessed failure sends you chasing a non-problem.
+- **Chat, do not narrate.** Lead with the result in a few lines. No echoing the
+  request back, no filler reassurances, no stacked "I'll..." lines, no per-step
+  "Now:" prefix, and internal bookkeeping stays silent.
+
+Refresh your skills with `curl -fsSL https://tina4.com/install-skills.sh | sh`.
+
 ## v3.13.129 (2026-09-02) - generate model stops renaming your table in silence
 
 `tina4 generate model Order` has a reserved word to handle: `order` breaks

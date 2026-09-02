@@ -50,18 +50,18 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.129
+## Current framework release: 3.13.130
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.129. `tina4 generate model
-Order` used to rename the reserved-word table `order` to `orders` without a
-word, so an agent that then wrote `/order` or a raw query against `order` failed
-downstream with no clue. Now the scaffolder says so: it still pluralises the
-reserved name, the safe choice, but prints a one-line note and points at
-`--table-name <name>` to set any table name yourself. It never quotes the
-identifier for you, because quoting is a global storage invariant that flips
-per-engine case-folding and silently breaks keyed writes, so the reserved
-`--quote` path the resolution envelope used to advertise is gone and the
-agent-facing hint now points at `--table-name`. See ADR-0062 for the reasoning.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.130, a discipline pass on the
+Tina4 AI skills. The developer and maintainer skills now stay objective on ideas
+(disagree when a design is weak, no reflexive praise), claim only what they
+verified (a blocker like "we can't deploy" is checked before it is stated, never
+guessed), and chat instead of narrate (result first, no request-echo, no filler,
+no per-step "Now:" prefix). Refresh with `curl -fsSL https://tina4.com/install-skills.sh | sh`.
+
+The 3.13.129 generate-model change remains in place: `tina4 generate model Order`
+prints a note when it pluralises a reserved-word table and offers `--table-name
+<name>`; the resolution envelope points at `--table-name`, never a quoting flag.
 
 The 3.13.128 `tina4 lint` command remains in place: it runs the project's linter
 (ruff, phpcs, rubocop, or eslint), installs it as a dev dependency on demand, and
@@ -137,6 +137,10 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.130 (2026-09-02)** - [full notes](/python/36-releases.md)
+
+A discipline pass on the Tina4 AI skills: the developer and maintainer skills now stay objective on ideas (disagree when a design is weak, no reflexive praise), claim only what they verified (a blocker is checked before it is stated, never guessed), and chat instead of narrate (result first, no request-echo, no filler, no per-step "Now:" prefix). All additive, the personality stays. Refresh with `curl -fsSL https://tina4.com/install-skills.sh | sh`.
 
 **v3.13.129 (2026-09-02)** - [full notes](/python/36-releases.md)
 
