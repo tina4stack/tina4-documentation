@@ -52,16 +52,17 @@ hero:
 
 ## Current framework release: 3.13.132
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.132, a stability pass. Firebird
-is the headline. A `CREATE TABLE` or `DROP TABLE` used to read a row count the
-driver keeps no value for on DDL, so every Firebird migration failed and the run
-looked frozen; DDL now reports zero rows and moves on. A Firebird database dropped
-without `close()` no longer leaves the driver's finalizer to warn at garbage
-collection, because the adapter settles its transaction and detaches first. On PHP,
-the concurrent `getNextId` test spawns fresh worker processes instead of forking in
-place, so it survives fork-hostile extensions, and the Mongo queue backend accepts
-an existing index on the same keys. A new `lab-verify.sh` runs all four suites green
-in minutes, and `LAB-VERIFY.md` records every trap next to the script.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.132. The headline is ORM
+pagination: `where`, `select`, `find`, `all`, and `with_trashed` now return a
+ModelCollection that carries the total for the filter (ADR-0064). It is still the
+page of models - iterate, index, count, and JSON-serialise it unchanged - and
+`get_total_records()` (`getTotalRecords()` in PHP and Node) reports the whole
+matching set, ignoring limit and offset, with no second query. `to_paginate()`
+returns the same seven-key envelope in every framework. The release also binds
+dual-stack loopback so `localhost` works on Windows, settles two Firebird lifecycle
+bugs (DDL stops looking like a hang; a dropped connection no longer warns at garbage
+collection), and trims the dev-admin dashboard (the agent chat surface is gone, and
+it stops reloading itself on every edit).
 
 The 3.13.131 skills pass remains in place: replies read in plain English for a
 global team, stay short, match the effort to the task, and ask up to three short
@@ -153,7 +154,7 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 
 ## What's new
 
-**v3.13.132 (2026-09-04)** - Firebird lifecycle fixes (DDL no longer looks like a hang, clean GC teardown), fork-safe concurrency tests, and a repeatable four-suite lab recipe. [full notes](/python/36-releases.md)
+**v3.13.132 (2026-09-04)** - ORM reads return a ModelCollection carrying the query total (paginate without a second query), `localhost` on Windows via dual-stack loopback, Firebird lifecycle fixes, and a lighter dev-admin. [full notes](/python/36-releases.md)
 
 **v3.13.131 (2026-09-03)** - AI skills: plain English, ask-first, no-MCP grounding fallback. [full notes](/python/36-releases.md)
 

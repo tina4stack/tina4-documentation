@@ -414,7 +414,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 }
 ```
 
-`where()` takes a WHERE clause with `?` placeholders and an array of parameters. It returns an array of model instances. `all()` fetches all records. Both support pagination:
+`where()` takes a WHERE clause with `?` placeholders and an array of parameters. `all()` fetches all records. Both return a `ModelCollection` (see below), and both support pagination:
 
 ```typescript
 // With pagination
@@ -429,6 +429,38 @@ const notes3 = await Note.select(
   [1],
 );
 ```
+
+### ModelCollection -- the page and the total together
+
+`where`, `select`, `find` (filter form), `all`, and `withTrashed` return a
+`ModelCollection` (ADR-0064). It extends `Array`, so `Array.isArray()` stays true and
+you iterate it, index it, `.length` it, and `JSON.stringify` it exactly as before. It
+also carries the total number of rows matching the filter, independent of `limit` and
+`offset`:
+
+```typescript
+const rows = await User.where("active = ?", [1], 20);  // a page of up to 20 models
+rows.getTotalRecords();   // e.g. 250 -- the whole matching set, ignores limit/offset
+rows.toPaginate();        // { records: [...], total: 250, page: 1, ... }
+```
+
+The total costs nothing extra: it reuses the count the same query already ran, so no
+second query fires. `getTotalRecords()` is a method, not a `count` property. Single-
+record finders are unchanged: `findById`, `selectOne`, and the primary-key finders
+still return one model or `null`.
+
+`toPaginate()` returns the same seven-key envelope as `(await db.fetch(...)).toPaginate()`,
+so a route paginates the same way through the ORM or raw SQL:
+
+```typescript
+const page = await Note.where("category = ?", ["work"], 20, 40);
+return response.json(page.toPaginate());
+// { "records": [...20...], "total": 250, "page": 3, "per_page": 20,
+//   "total_pages": 13, "limit": 20, "offset": 40 }
+```
+
+The keys stay identical across all four frameworks, so `per_page` and `total_pages`
+read the same in the JSON everywhere.
 
 ### selectOne -- Fetch a Single Record by SQL
 

@@ -388,7 +388,7 @@ async def list_notes(request, response):
     })
 ```
 
-`where()` takes a WHERE clause with `?` placeholders and a list of parameters. It returns a list of model instances. `all()` fetches all records. Both support pagination:
+`where()` takes a WHERE clause with `?` placeholders and a list of parameters. `all()` fetches all records. Both return a `ModelCollection` (see below), and both support pagination:
 
 ```python
 # With pagination
@@ -403,6 +403,43 @@ notes = Note.select(
     [1], limit=20, offset=0
 )
 ```
+
+### ModelCollection -- the page and the total together
+
+`where`, `select`, `find` (filter form), `all`, and `with_trashed` return a
+`ModelCollection` (ADR-0064). It IS the page of models: iterate it, index it, slice
+it, `len()` it, and serialise it to JSON exactly as before. It also carries the
+total number of rows matching the filter, independent of `limit` and `offset`:
+
+```python
+rows = User.where("active = ?", [1], limit=20)   # a page of up to 20 models
+rows.get_total_records()   # e.g. 250 -- the whole matching set, ignores limit/offset
+rows.to_paginate()         # {records, total, page, per_page, total_pages, limit, offset}
+```
+
+The total costs nothing extra: it reuses the count the same query already ran, so no
+second query fires. `get_total_records()` is a method, not a `.count` property,
+because `list.count()` already exists. Single-record finders are unchanged:
+`find(pk)`, `find_by_id`, `find_or_fail`, `select_one`, and `load` still return one
+model or `None`.
+
+`to_paginate()` returns the same seven-key envelope as `db.fetch(...).to_paginate()`,
+so a route paginates the same way whether it went through the ORM or raw SQL:
+
+```python
+@get("/api/notes")
+async def list_notes(request, response):
+    page = Note.where("category = ?", ["work"], limit=20, offset=40)
+    return response(page.to_paginate())
+    # {"records": [...20...], "total": 250, "page": 3, "per_page": 20,
+    #  "total_pages": 13, "limit": 20, "offset": 40}
+```
+
+The concept carries the same name across the four frameworks: `get_total_records()`
+/ `to_paginate()` in Python and Ruby, `getTotalRecords()` / `toPaginate()` in PHP and
+Node. In PHP the collection is an object (not a bare `array`) that stays
+`foreach`-able, `count()`-able, and `json_encode`-able, with `->toArray()` for native
+`array_*` calls.
 
 ### select_one -- Fetch a Single Record by SQL
 

@@ -362,11 +362,11 @@ Tina4::Router.get "/api/notes" do |request, response|
 end
 ```
 
-`where` takes a WHERE clause with `?` placeholders and an array of parameters. It returns an array of model instances. `all` fetches all records. Both support pagination:
+`where` takes a WHERE clause with `?` placeholders and an array of parameters. `all` fetches all records. Both return a `ModelCollection` (see below), and both support pagination:
 
 ```ruby
 # With pagination
-notes = Note.where("category = ?", ["work"])
+notes = Note.where("category = ?", ["work"], limit: 20, offset: 40)
 
 # Fetch all with pagination and ordering
 notes = Note.all(limit: 20, offset: 0, order_by: "created_at DESC")
@@ -377,6 +377,37 @@ notes = Note.select(
   [1], limit: 20, offset: 0
 )
 ```
+
+### ModelCollection -- the page and the total together
+
+`where`, `select`, `find` (filter form), `all`, and `with_trashed` return a
+`ModelCollection` (ADR-0064). It IS an `Array` of models: iterate it, index it,
+`.length` it, and serialise it to JSON exactly as before. It also carries the total
+number of rows matching the filter, independent of `limit` and `offset`:
+
+```ruby
+rows = User.where("active = ?", [1], limit: 20)   # a page of up to 20 models
+rows.get_total_records   # e.g. 250 -- the whole matching set, ignores limit/offset
+rows.to_paginate         # { records: [...], total: 250, page: 1, ... }
+```
+
+The total costs nothing extra: it reuses the count the same query already ran, so no
+second query fires. `get_total_records` is a method, not a `count` property, because
+`Array#count` already exists. Single-record finders are unchanged: `find(pk)`,
+`find_by_id`, and `select_one` still return one model or `nil`.
+
+`to_paginate` returns the same seven-key envelope as `db.fetch(...).to_paginate`, so a
+route paginates the same way through the ORM or raw SQL:
+
+```ruby
+page = Note.where("category = ?", ["work"], limit: 20, offset: 40)
+response.json(page.to_paginate)
+# { "records" => [...20...], "total" => 250, "page" => 3, "per_page" => 20,
+#   "total_pages" => 13, "limit" => 20, "offset" => 40 }
+```
+
+The keys stay identical across all four frameworks, so `per_page` and `total_pages`
+read the same in the JSON everywhere.
 
 ### select_one -- Fetch a Single Record by SQL
 

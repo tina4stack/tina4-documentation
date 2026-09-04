@@ -1,28 +1,59 @@
 # Release Notes
 
-## v3.13.132 (2026-09-04) - Firebird holds its connection, and the tests fork clean
+## v3.13.132 (2026-09-04) - ORM reads carry the total, and Firebird holds its connection
 
-A stability pass. Two real Firebird bugs fixed, a fork-safe concurrency test, and a
-lab recipe that runs all four suites green in minutes instead of an afternoon.
+The headline is pagination. Every ORM read that returns a page now hands back the
+total count with it, so you can render "page 3 of 13" without a second query. The
+release also fixes localhost on Windows, settles two Firebird lifecycle bugs, and
+trims the dev-admin dashboard.
 
-- **Firebird DDL stops looking like a hang (Python).** `execute()` read the cursor
-  row count after every statement. The modern firebird-driver keeps no row count for
-  a `CREATE TABLE` or `DROP TABLE` and raised on the read, so every migration against
-  Firebird failed and the run looked frozen. DDL now reports zero rows and moves on.
-- **Firebird lets go cleanly on garbage collection (Python).** Drop a Firebird
-  database without calling `close()`, and the driver's own finalizer used to roll back
-  a dead transaction handle and raise a warning at collection time. The adapter now
-  settles the transaction and detaches first, so the finalizer finds a closed
-  connection and stays quiet.
-- **Concurrent `getNextId` forks without a deadlock (PHP).** The concurrency test
-  forked inside the running process, which hangs under fork-hostile extensions. It now
-  spawns fresh worker processes. The Mongo queue backend also accepts an existing index
-  on the same keys, so a shared database never trips on a leftover.
-- **One recipe, four suites, green.** `lab-verify.sh` provisions the services and runs
-  Python, PHP, Ruby, and Node the right way, so a full check takes minutes. Every trap
-  we hit lives in `LAB-VERIFY.md`, next to the script.
+**ORM reads return a ModelCollection that carries the total (ADR-0064).** `where`,
+`select`, `find` (filter form), `all`, and `with_trashed` used to return a bare list
+and throw away a total the database had already counted. They now return a
+ModelCollection. It IS the page of models - iterate it, index it, count it,
+JSON-serialise it, every existing line still works - and it also carries the full
+count for the filter, ignoring limit and offset.
 
-The version aligns all four frameworks; upgrade through your usual package manager.
+```python
+rows = User.where("active = ?", [1], limit=20)   # a page of 20 models
+rows.get_total_records()   # 250 - the whole matching set, ignores limit/offset
+rows.to_paginate()         # {records, total, page, per_page, total_pages, limit, offset}
+```
+
+The total is free: it reuses the count the query already ran, so no second query
+fires. The accessor is a method, not a `.count` property, because the list type
+already owns `count`. Python and Ruby name it `get_total_records()` / `to_paginate()`;
+PHP and Node name it `getTotalRecords()` / `toPaginate()`. Same concept, the same
+seven-key envelope, the same JSON in all four frameworks. Python's old
+`where(..., with_count=True)` tuple is gone: fetch the page, then call
+`get_total_records()`. PHP is the one framework whose return type changes, from a
+bare `array` to a ModelCollection object; it stays `foreach`-able, `count()`-able,
+and `json_encode`-able, and `->toArray()` returns the plain array for native
+`array_map` / `array_filter`.
+
+**localhost works on Windows again.** The dev server now binds dual-stack loopback.
+Windows resolves `localhost` to IPv6 `::1` first, which used to miss a server bound
+only on IPv4; the server now listens on both, so the browser connects either way.
+
+**Firebird stops looking like a hang, and lets go cleanly (Python).** `execute()`
+read the cursor row count after every statement, and the modern firebird-driver
+keeps no row count for a `CREATE TABLE` or `DROP TABLE` and raised on the read - so
+every Firebird migration failed and the run looked frozen. DDL now reports zero
+rows. And a Firebird database dropped without `close()` no longer leaves the
+driver's finalizer to warn at garbage collection: the adapter settles the
+transaction and detaches first.
+
+**A lighter dev-admin.** The in-dashboard agent chat surface is gone, out with the
+CLI agent subsystem it talked to, and the dashboard stops reloading itself on every
+edit. The editor, MCP tools, and metrics stay.
+
+Under the hood the Valkey session handler subclasses Redis instead of copying it,
+and shared fetch, execute, and Frond block loops move into one place - a few hundred
+duplicated lines gone, behaviour unchanged. On the test side, the concurrent
+`getNextId` check spawns fresh worker processes so it survives fork-hostile
+extensions (PHP), and a new `lab-verify.sh` runs all four suites green in minutes
+with every trap recorded in `LAB-VERIFY.md`.
+
 
 ## v3.13.131 (2026-09-03) - AI skills: plain English, ask-first, no-MCP grounding
 

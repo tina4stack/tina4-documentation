@@ -351,7 +351,7 @@ Router::get("/api/notes", function (Request $request, Response $response) {
 });
 ```
 
-`where()` takes a WHERE clause with `?` placeholders and an array of parameters. It returns an array of model instances. `all()` also returns an array of model instances. Both support pagination:
+`where()` takes a WHERE clause with `?` placeholders and an array of parameters. `all()` fetches all records. Both return a `ModelCollection` (see below), and both support pagination:
 
 ```php
 // With pagination
@@ -366,6 +366,40 @@ $notes = (new Note())->select(
     [1], limit: 20, offset: 0
 );
 ```
+
+### ModelCollection -- the page and the total together
+
+`where`, `select`, `find` (filter form), `all`, and `withTrashed` return a
+`ModelCollection` (ADR-0064). It stays array-compatible: `foreach` it, index it with
+`$rows[0]`, `count($rows)` it, and `json_encode($rows)` it exactly as before. It also
+carries the total number of rows matching the filter, independent of `limit` and
+`offset`:
+
+```php
+$rows = (new User())->where("active = ?", [1], limit: 20);  // a page of up to 20 models
+$rows->getTotalRecords();   // e.g. 250 -- the whole matching set, ignores limit/offset
+$rows->toPaginate();        // ["records" => [...], "total" => 250, "page" => 1, ...]
+```
+
+The total costs nothing extra: it reuses the count the same query already ran, so no
+second query fires. `getTotalRecords()` is a method, not a `count` property. PHP is
+the one framework whose return type changes, from a bare `array` to this object; where
+native `array_map` / `array_filter` / `is_array()` are needed, call `->toArray()` for
+the plain array. Single-record finders are unchanged: the primary-key finders and
+`selectOne` still return one model or `null`.
+
+`toPaginate()` returns the same seven-key envelope as `$db->fetch(...)->toPaginate()`,
+so a route paginates the same way through the ORM or raw SQL:
+
+```php
+$page = (new Note())->where("category = ?", ["work"], limit: 20, offset: 40);
+return $response->json($page->toPaginate());
+// {"records": [...20...], "total": 250, "page": 3, "per_page": 20,
+//  "total_pages": 13, "limit": 20, "offset": 40}
+```
+
+The keys are identical across all four frameworks, so `per_page` and `total_pages`
+stay snake_case in the JSON everywhere.
 
 ### selectOne -- Fetch a Single Record by SQL
 
