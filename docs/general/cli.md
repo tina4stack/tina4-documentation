@@ -42,7 +42,6 @@ tina4 --version
 | `tina4 skills` | Install current Tina4 skills for Claude, Codex, Cursor, or all three. |
 | `tina4 docs` | Download framework documentation into `.tina4-docs/`. |
 | `tina4 books` | Download the matching Tina4 book. |
-| `tina4 agent` | Start the Code With Me agent server. |
 | `tina4 update` | Update the signed client and refresh installed skills. |
 
 Run `tina4 <command> --help` for the command's current arguments and options.

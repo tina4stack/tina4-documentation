@@ -316,7 +316,6 @@ The app-facing `Ai` client and the developer dashboard share the `TINA4_AI_*` na
 | `TINA4_AI_MAX_RETRIES` | `2` | Retries before output for connection failures, HTTP 429, and HTTP 5xx. |
 | `TINA4_EMBED_URL` | _(inherits `TINA4_AI_URL`)_ | Optional embedding base URL or full endpoint. |
 | `TINA4_RAG_URL` | `http://localhost:11438` | RAG service used by the developer dashboard. |
-| `TINA4_RAG_TOPK` | `4` | Number of RAG matches returned per query. |
 | `TINA4_VISION_URL` | `http://localhost:11437/api/chat` | Vision endpoint used by developer tools, not the app-facing AI client. |
 | `TINA4_IMAGE_URL` | `http://localhost:11437/api/generate` | Image endpoint used by developer tools, not the app-facing AI client. |
 | `TINA4_SUPERVISOR_URL` | `http://localhost:9999` | Rust supervisor URL used by developer tools. |
