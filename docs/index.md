@@ -50,16 +50,23 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.131
+## Current framework release: 3.13.132
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.131, a second pass on the Tina4
-AI skills. Replies now read in plain English for a global team (short common words,
-short sentences, no idioms), stay short (the answer or the code first, then stop),
-match the effort to the task (a health route is a health route, not a health
-subsystem), and ask up to three short questions before guessing when the choice is
-really yours. The skills also carry a grounding fallback for tools without the coder
-server: start at https://tina4.com/llms.txt, then ask https://rag.tina4.com/v1/ask.
-Refresh with `curl -fsSL https://tina4.com/install-skills.sh | sh`.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.132, a stability pass. Firebird
+is the headline. A `CREATE TABLE` or `DROP TABLE` used to read a row count the
+driver keeps no value for on DDL, so every Firebird migration failed and the run
+looked frozen; DDL now reports zero rows and moves on. A Firebird database dropped
+without `close()` no longer leaves the driver's finalizer to warn at garbage
+collection, because the adapter settles its transaction and detaches first. On PHP,
+the concurrent `getNextId` test spawns fresh worker processes instead of forking in
+place, so it survives fork-hostile extensions, and the Mongo queue backend accepts
+an existing index on the same keys. A new `lab-verify.sh` runs all four suites green
+in minutes, and `LAB-VERIFY.md` records every trap next to the script.
+
+The 3.13.131 skills pass remains in place: replies read in plain English for a
+global team, stay short, match the effort to the task, and ask up to three short
+questions before guessing when the choice is really yours. Refresh with
+`curl -fsSL https://tina4.com/install-skills.sh | sh`.
 
 The 3.13.130 discipline pass remains in place: the developer and maintainer skills
 stay objective on ideas (disagree when a design is weak, no reflexive praise), claim
@@ -145,6 +152,8 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.132 (2026-09-04)** - Firebird lifecycle fixes (DDL no longer looks like a hang, clean GC teardown), fork-safe concurrency tests, and a repeatable four-suite lab recipe. [full notes](/python/36-releases.md)
 
 **v3.13.131 (2026-09-03)** - AI skills: plain English, ask-first, no-MCP grounding fallback. [full notes](/python/36-releases.md)
 

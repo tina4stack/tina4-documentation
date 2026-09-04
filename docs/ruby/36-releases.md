@@ -1,5 +1,29 @@
 # Release Notes
 
+## v3.13.132 (2026-09-04) - Firebird holds its connection, and the tests fork clean
+
+A stability pass. Two real Firebird bugs fixed, a fork-safe concurrency test, and a
+lab recipe that runs all four suites green in minutes instead of an afternoon.
+
+- **Firebird DDL stops looking like a hang (Python).** `execute()` read the cursor
+  row count after every statement. The modern firebird-driver keeps no row count for
+  a `CREATE TABLE` or `DROP TABLE` and raised on the read, so every migration against
+  Firebird failed and the run looked frozen. DDL now reports zero rows and moves on.
+- **Firebird lets go cleanly on garbage collection (Python).** Drop a Firebird
+  database without calling `close()`, and the driver's own finalizer used to roll back
+  a dead transaction handle and raise a warning at collection time. The adapter now
+  settles the transaction and detaches first, so the finalizer finds a closed
+  connection and stays quiet.
+- **Concurrent `getNextId` forks without a deadlock (PHP).** The concurrency test
+  forked inside the running process, which hangs under fork-hostile extensions. It now
+  spawns fresh worker processes. The Mongo queue backend also accepts an existing index
+  on the same keys, so a shared database never trips on a leftover.
+- **One recipe, four suites, green.** `lab-verify.sh` provisions the services and runs
+  Python, PHP, Ruby, and Node the right way, so a full check takes minutes. Every trap
+  we hit lives in `LAB-VERIFY.md`, next to the script.
+
+The version aligns all four frameworks; upgrade through your usual package manager.
+
 ## v3.13.131 (2026-09-03) - AI skills: plain English, ask-first, no-MCP grounding
 
 The 3.13.130 discipline pass gets a follow-up for a global team. Most Tina4
