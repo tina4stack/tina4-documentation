@@ -197,6 +197,7 @@ their plan and ADR, and are the first candidates to promote to Layer 2.
 | 137 GIS spatial points and queries | `features/137-gis-spatial.md` | ADR-0057 | **Baseline implementation green against real PostGIS in all four; Layer 2 ledger records 12 owed groups.** |
 | 138 RBAC role/permission guards | `features/138-rbac.md` | ADR-0058 | **Shipped 3.13.107, PROVEN all four: `rbac_contract.json` 8/8 invariants (role()/can(), OR-within/AND-by-stacking, granted-side wildcards, 401-vs-403, verified-claim-only, legacy singular role coerced).** |
 | 139 Graph databases | `features/139-graph-databases.md` | ADR-0059 | **PROVEN in all four (ships 3.13.111). URL-selected GraphDatabase adapters (Ultipa/Neo4j/Memgraph/ArangoDB), unified + raw, optional lazy drivers, standalone Ultipa drivers under tina4stack. 11 invariants proven per-engine on the lab, NO mocks.** |
+| 140 Web Push notifications | `features/140-web-push.md` | — | **Focused parity contract green in Python, PHP, Ruby, Node.js, and tina4-js. Native VAPID/RFC 8291 delivery, real local sockets, dead/retryable result envelope, and fail-closed validation. Unified client feature-manager and skills integration remain pending.** |
 
 ## Layer 0: not yet audited
 
@@ -226,7 +227,7 @@ proven/owed. A row here that disagrees with the auditor is a bug in this file.
 
 ## Snapshot (2026-08-17)
 
-- 137 contiguous catalog entries and 137 feature packets. A catalog entry is an
+- 140 contiguous catalog entries and 140 feature packets. A catalog entry is an
   inventory unit, not proof of four-language parity.
 - 58 contract fixtures, 310 invariants, **288 proven / 22 owed / 0 broken** within
   the fixture-covered contracts.

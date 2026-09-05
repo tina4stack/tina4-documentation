@@ -217,6 +217,7 @@ Historical documents remain in `archive/`; active packets use this table.
 | 137 | [GIS spatial points and queries](features/137-gis-spatial.md) | `tina4_python/orm/point.py` | `Tina4/Point.php` | `lib/tina4/point.rb` | `packages/orm/src/point.ts` | accepted for 3.13.104; shared Point/PostGIS/GeoJSON fixture and real PostGIS lab proof |
 | 138 | [RBAC (role/permission guards)](features/138-rbac.md) | `tina4_python/core/router.py` | `Tina4/Router.php` | `lib/tina4/router.rb` | `packages/core/src/router.ts` | shipped 3.13.107; role()/can() claim-first guards, OR-within/AND-by-stacking, granted-side wildcards, 401-vs-403; proven 8-invariant fixture across all four |
 | 139 | [Graph databases (Ultipa, Neo4j, Memgraph, ArangoDB)](features/139-graph-databases.md) | planned | planned | planned | planned | decision-ready (ADR-0059); URL-selected GraphDatabase adapters, unified + raw, standalone Ultipa drivers; owed contract |
+| 140 | [Provider-neutral Web Push notifications](features/140-web-push.md) | `tina4_python/push/` | `Tina4/Push.php` | `lib/tina4/push.rb` | `packages/core/src/push.ts` | focused parity contract green; VAPID, RFC 8291 `aes128gcm`, real local delivery, dead/retryable response envelope; client feature-manager integration and skills guidance remain pending |
 
 ## Developer runtime
 

@@ -29,6 +29,11 @@ CATALOG_ROW = re.compile(r"^\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|\s*$", re.MULTILINE)
 STALE_CLAIMS = (
     "97 built-in features",
     "98 built-in features",
+    "98 features",
+    "same 98 features",
+    "137 features",
+    "138 features",
+    "54 features",
     "same 97 features",
     "four identical frameworks",
     "Every feature below is present in all four",

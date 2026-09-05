@@ -1,10 +1,10 @@
 # Tina4 Production Feature Preload (lazy load + generated manifest)
 
 ## Problem
-Tina4 ships ~98 features. Python (`__init__.py`) and Ruby (`lib/tina4.rb`)
+Tina4 ships 140 cataloged features. Python (`__init__.py`) and Ruby (`lib/tina4.rb`)
 eager-load ALL of them at import/require; PHP wires optional + dev subsystems
 (DevAdmin, Swagger, MCP) at every `App::start`; Node mostly static-imports.
-A production app that uses 6 features pays the memory + boot cost of all 98,
+A production app that uses 6 features pays the memory + boot cost of all 140,
 and dev tooling (DevAdmin/MCP) loads in production. Goal: in production, load
 ONLY what the app actually uses.
 

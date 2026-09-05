@@ -22,8 +22,8 @@
 
 ## Why this feature exists
 
-Tina4 ships around 98 features. Loading all of them at import/require time makes a production app that
-uses six of them pay the memory and boot cost of all 98 - and, worse, loads the dev dashboard and MCP
+Tina4 ships 140 cataloged features. Loading all of them at import/require time makes a production app that
+uses six of them pay the memory and boot cost of all 140 - and, worse, loads the dev dashboard and MCP
 server in production. This feature makes the runtime footprint match the app: load core always, load an
 optional subsystem only when it is referenced, and never load dev tooling in production.
 

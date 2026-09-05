@@ -10,7 +10,7 @@ Four words. Each one carries weight.
 
 **Native.** Zero third-party dependencies. Every feature (the template engine, the JWT library, the SCSS compiler, the queue system, the GraphQL parser) is built from scratch using the language's standard library. No supply chain risk. No version conflicts. No surprises.
 
-**Application.** This builds real production applications. Routing, ORM, authentication, queues, WebSocket, email, GraphQL, SOAP, 138 features, all included. One package. One install. Ship today.
+**Application.** This builds real production applications. Routing, ORM, authentication, queues, WebSocket, email, GraphQL, SOAP, 140 features, all included. One package. One install. Ship today.
 
 **4ramework.** Four languages. One API. Python, PHP, Ruby, Node.js: learn the conventions once, build in any of them. The "4" is both the number and "for", a framework *for* developers who value their time.
 
