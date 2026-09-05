@@ -379,6 +379,25 @@ The redirect contract remains infrastructure-red because GreenMail is not
 available on this workstation; the local negative and capture paths are covered by
 the parity suite. Code commit: `790cefb` (`refactor(metrics): split messenger smtp send`).
 
+#### Tenth completed slice: Node.js ProjectIndex modules
+
+Project indexing now separates the public index operations from filesystem
+storage and language extractors. Search scoring is unchanged, and the extractor
+module has a direct route assertion so the module is tested independently rather
+than inferred through a transitive import.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Node core offenders | 375 | 373 |
+| `ProjectIndex.search` complexity | 22 | no longer an offender |
+| ProjectIndex error-level findings | 1 | 0 |
+| ProjectIndex tests | 18 passed | 19 passed |
+| Typecheck | passed | passed |
+
+The ProjectIndex files retain warning-level complexity signals for a later
+warning-debt pass; no error-level finding remains in this subsystem. Code commit:
+`4225e2e` (`refactor(metrics): split project index modules`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -451,5 +470,6 @@ the parity suite. Code commit: `790cefb` (`refactor(metrics): split messenger sm
 - `ebe609e` split Node AI content validation without changing its input contract.
 - `aaf242b` isolated Node AI stream event consumption from transport policy.
 - `790cefb` split Node Messenger SMTP send responsibilities and preserved capture precedence.
+- `4225e2e` split Node ProjectIndex storage and language extraction modules.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
