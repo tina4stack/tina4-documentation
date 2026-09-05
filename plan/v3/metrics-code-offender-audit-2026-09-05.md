@@ -67,6 +67,24 @@ The core scan is a debt baseline, not a release gate. It measures production
 source and records existing findings so later work can prevent regressions
 without pretending that the framework can remove all debt in one change.
 
+## Published-client lab smoke
+
+The published Linux `v3.8.82` binary was copied to the lab and run against
+`/home/andre/rel-3.13.132` with the same exclusions and `--no-history`.
+
+| Framework | Files | Functions | Avg CC | Avg MI | Findings | Duplicate blocks | Duplicate lines | Refused |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Python | 105 | 2,646 | 3.87 | 26.4 | 293 | 19 | 162 | 0 |
+| PHP | 171 | 3,056 | 3.72 | 35.6 | 389 | 76 | 796 | 0 |
+| Ruby | 123 | 4,254 | 2.74 | 28.6 | 242 | 21 | 211 | 0 |
+| Node.js | 139 | 3,495 | 3.35 | 28.0 | 367 | 62 | 688 | 0 |
+
+Python, PHP, and Ruby match the local `v3` baseline. Node.js is not a
+reproducibility failure: the lab checkout is at `e599584`, the
+`feature/release3.13.132` branch carrying later `3.13.133` maintainability
+changes, while the local comparison is `v3` at `23835dd`. The branch and
+commit must be recorded whenever metrics are compared.
+
 ## Initial priority signals
 
 The ranking is a work order, not permission to split code blindly. A single
