@@ -818,6 +818,25 @@ keeps the shared migration contract used by ORM and CLI paths.
 
 Code commit: `4bbb57a` (`refactor(metrics): split migration statement scanner`).
 
+#### Thirty-second completed slice: Node.js ORM seeder modules
+
+The ORM seeder is now separated into focused table-seeding and shared-type
+modules. `seedTable()` and `autoFieldMap()` retain their adapter-native insert,
+clear, strict-failure, and generated-field behavior, while the model seeder
+continues to own foreign-key pools, dependency ordering, and reproducible
+FakeData generation. The public ORM exports remain unchanged.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 346 | 343 |
+| Corrected error-level findings | 4 | 3 |
+| `packages/orm/src/seeder.ts` maintainability | 15.9 | cleared (responsibility split) |
+| Seeder contract | 36 passed | 36 passed |
+| FakeData contract | 103 passed | 103 passed |
+| Typecheck | passed | passed |
+
+Code commit: `56500f9` (`refactor(metrics): split orm table seeder`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -912,5 +931,6 @@ Code commit: `4bbb57a` (`refactor(metrics): split migration statement scanner`).
 - `cf4a905` split Node ORM eager loading without changing relation matching or query bounds.
 - `23e3415` split Node ORM save execution without changing validation or write semantics.
 - `4bbb57a` split Node migration scanning without changing delimiter, quote, or comment semantics.
+- `56500f9` split Node ORM table seeding from model seeding without changing public exports.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
