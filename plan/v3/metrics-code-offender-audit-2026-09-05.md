@@ -398,6 +398,23 @@ The ProjectIndex files retain warning-level complexity signals for a later
 warning-debt pass; no error-level finding remains in this subsystem. Code commit:
 `4225e2e` (`refactor(metrics): split project index modules`).
 
+#### Eleventh completed slice: Node.js CLI lint execution
+
+The lint command now separates eslint bootstrap, eslint execution, TypeScript
+baseline checking, and JavaScript syntax checking. The command selection,
+dev-only dependency installation, scaffold rules, exit codes, and summaries are
+unchanged.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Node core offenders | 373 | 372 |
+| `runLint` complexity | 29 | no longer an offender |
+| CLI lint contract tests | 28 passed | 28 passed |
+| Typecheck | passed | passed |
+
+The remaining lint warning is isolated to eslint bootstrap branching and is not
+an error-level finding. Code commit: `d7e090f` (`refactor(metrics): split cli lint execution`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -471,5 +488,6 @@ warning-debt pass; no error-level finding remains in this subsystem. Code commit
 - `aaf242b` isolated Node AI stream event consumption from transport policy.
 - `790cefb` split Node Messenger SMTP send responsibilities and preserved capture precedence.
 - `4225e2e` split Node ProjectIndex storage and language extraction modules.
+- `d7e090f` split Node CLI lint execution paths.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
