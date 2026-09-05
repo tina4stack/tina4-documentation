@@ -877,6 +877,38 @@ behavior, and graceful signal shutdown.
 
 Code commit: `14a67e9` (`refactor(metrics): split core server startup`).
 
+#### Thirty-fifth completed slice: Node.js core docs and startup helpers
+
+The live API documentation parser is now separated into parser, scanner, and
+signature modules. The server startup path also delegates ORM initialization
+and Swagger configuration to focused helpers. These changes preserve the
+document index/search contract, model discovery and auto-CRUD behaviour, live
+Swagger route generation, and the existing server boot semantics while
+removing the remaining error-severity findings from the corrected Node.js core
+scan.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 343 | 348 |
+| Corrected error-level findings | 2 | 0 |
+| `core/src/docs.ts` parser responsibility | mixed parser/scanner/signature logic | split into three focused modules |
+| `core/src/server.ts` startup responsibility | boot, ORM, Swagger, cluster helpers | orchestration plus focused helpers |
+| Docs contract | not rerun after extraction | 20 passed |
+| Secure-by-default contract | 25 passed | 25 passed |
+| Realtime contract | 36 passed | 36 passed |
+| Typecheck | passed | passed |
+| Refused files | 0 | 0 |
+
+The total findings increased because the parser and scanner are now separately
+measured files and the scan still reports warning-level complexity and
+duplication debt. The release-relevant result is zero error-level offenders;
+the remaining 348 findings are recorded for the warning-baseline phase rather
+than hidden. The exact post-change scan reports 149 files, 3,848 functions,
+average complexity 3.11, average maintainability 28.2, 57 duplicate blocks,
+and 569 duplicate lines.
+
+Code commit: `adeb149` (`refactor(metrics): split core docs and startup`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -974,5 +1006,6 @@ Code commit: `14a67e9` (`refactor(metrics): split core server startup`).
 - `56500f9` split Node ORM table seeding from model seeding without changing public exports.
 - `b14a361` split Node Frond live handling without changing transport or marker semantics.
 - `14a67e9` split Node core server startup without changing route, realtime, or shutdown behavior.
+- `adeb149` split Node core docs parsing and server ORM/Swagger startup helpers without changing their contracts.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
