@@ -341,6 +341,22 @@ unchanged, including the data-URI and HTTPS image restrictions.
 
 Code commit: `ebe609e` (`refactor(metrics): split ai content validation`).
 
+#### Eighth completed slice: Node.js AI stream event consumption
+
+The stream request path now delegates SSE framing, aggregation, and mid-stream
+parse handling to `readStream`. Retry, timeout, cleanup, and incomplete-stream
+rules remain in `streamRequest`; this keeps transport policy separate from event
+decoding.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| `Ai.streamRequest` complexity | 24 | 18 (warning, no longer an error) |
+| AI contract tests over a real HTTP socket | 35 passed | 35 passed |
+| AI retry tests | 8 passed | 8 passed |
+| Typecheck | passed | passed |
+
+Code commit: `aaf242b` (`refactor(metrics): isolate ai stream event consumption`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -411,5 +427,6 @@ Code commit: `ebe609e` (`refactor(metrics): split ai content validation`).
 - `ce9d468` removed the Node Frond macro duplication and ORM validation offender.
 - `d2eeeb4` split Node AI stream aggregation without changing its event contract.
 - `ebe609e` split Node AI content validation without changing its input contract.
+- `aaf242b` isolated Node AI stream event consumption from transport policy.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
