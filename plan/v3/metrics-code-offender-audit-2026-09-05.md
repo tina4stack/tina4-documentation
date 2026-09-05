@@ -67,6 +67,15 @@ The core scan is a debt baseline, not a release gate. It measures production
 source and records existing findings so later work can prevent regressions
 without pretending that the framework can remove all debt in one change.
 
+#### Boundary correction for incremental Node.js scans
+
+The documented Node.js core boundary includes `**/devAdmin.ts`. Several
+incremental measurements below were initially run without that exclusion, so
+their Node totals include Dev Admin and are directional only. The corrected
+current scan at `c61908b` uses the documented boundary: 357 findings, 23
+error-level findings, 60 duplicate blocks, and 611 duplicate lines. Future
+measurements must include `--exclude '**/devAdmin.ts'`.
+
 ## Published-client lab smoke
 
 The published Linux `v3.8.82` binary was copied to the lab and run against
@@ -433,6 +442,24 @@ of becoming an empty MongoDB filter.
 The Mongo contract must be rerun on the lab with a reachable MongoDB before this
 slice is release-accepted. Code commit: `ba97770` (`refactor(metrics): split mongodb sql parser`).
 
+#### Thirteenth completed slice: Node.js Plan flesh workflow
+
+`Plan.flesh` now delegates prompt construction, AI response retrieval, response
+parsing, and duplicate-safe step insertion. The nonexistent-plan fast failure,
+JSON-array contract, markdown-list fallback, and AI error response remain the
+same.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 357 | 357 |
+| Corrected error-level findings | 24 | 23 |
+| `Plan.flesh` complexity | 27 | 12 (warning, no longer an error) |
+| Plan tests | 42 passed | 42 passed |
+| Plan list tests | 25 passed | 25 passed |
+| Typecheck | passed | passed |
+
+Code commit: `c61908b` (`refactor(metrics): split plan flesh workflow`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -508,5 +535,6 @@ slice is release-accepted. Code commit: `ba97770` (`refactor(metrics): split mon
 - `4225e2e` split Node ProjectIndex storage and language extraction modules.
 - `d7e090f` split Node CLI lint execution paths.
 - `ba97770` split Node MongoDB SQL parsing by statement type.
+- `c61908b` split Node Plan flesh workflow responsibilities.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
