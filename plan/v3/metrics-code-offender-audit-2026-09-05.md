@@ -857,6 +857,26 @@ client marker output.
 
 Code commit: `b14a361` (`refactor(metrics): split frond live handler`).
 
+#### Thirty-fourth completed slice: Node.js core server startup
+
+Production cluster startup and locale-global wiring now live in focused
+helpers, keeping `startServer()` responsible for orchestration rather than
+rendering cluster banners or branching through locale discovery. The server
+contracts remain intact, including secure-by-default routes, realtime WebSocket
+behavior, and graceful signal shutdown.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 343 | 343 |
+| Corrected error-level findings | 2 | 1 |
+| `core/src/server.ts:startServer` complexity | 42 | cleared |
+| Secure-by-default contract | 25 passed | 25 passed |
+| Realtime contract | 36 passed | 36 passed |
+| Graceful-shutdown contract | 23 passed | 23 passed |
+| Typecheck | passed | passed |
+
+Code commit: `14a67e9` (`refactor(metrics): split core server startup`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -953,5 +973,6 @@ Code commit: `b14a361` (`refactor(metrics): split frond live handler`).
 - `4bbb57a` split Node migration scanning without changing delimiter, quote, or comment semantics.
 - `56500f9` split Node ORM table seeding from model seeding without changing public exports.
 - `b14a361` split Node Frond live handling without changing transport or marker semantics.
+- `14a67e9` split Node core server startup without changing route, realtime, or shutdown behavior.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
