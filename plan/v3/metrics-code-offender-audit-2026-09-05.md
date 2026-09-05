@@ -706,6 +706,29 @@ skipped because their benchmark-only packages are not installed.
 
 Code commit: `f656526` (`refactor(metrics): split benchmark runner`).
 
+#### Twenty-seventh completed slice: Node.js ORM table creation
+
+`BaseModel.createTable()` now delegates adapter field mapping, soft-delete
+column injection, fallback column-definition generation, composite-key
+definition, and fallback transaction execution to focused helpers. The
+adapter-specific DDL path and the SQLite fallback keep the same schema rules:
+callable defaults stay out of DDL, soft-delete models receive `is_deleted`,
+and composite keys emit one table-level primary-key clause.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 352 | 351 |
+| Corrected error-level findings | 9 | 9 |
+| `BaseModel.createTable` complexity | 23 | cleared |
+| ORM composite-key contract | 10 passed | 10 passed |
+| ORM scopes contract | 3 passed, 3 skipped (PostgreSQL unavailable) | 3 passed, 3 skipped (PostgreSQL unavailable) |
+| Soft-delete contract | 6 passed, 1 skipped (PostgreSQL unavailable) | 6 passed, 1 skipped (PostgreSQL unavailable) |
+| ORM lifecycle footguns | 41 passed | 41 passed |
+| ORM base contract | 6 passed | 6 passed |
+| Typecheck | passed | passed |
+
+Code commit: `24ee825` (`refactor(metrics): split orm table creation`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -795,5 +818,6 @@ Code commit: `f656526` (`refactor(metrics): split benchmark runner`).
 - `b628d1d` split Node Frond token rendering without changing output ordering.
 - `d9fe290` split Node Frond value inspection without changing dump output.
 - `f656526` split the Node benchmark runner without changing its equal-work gate or reporting.
+- `24ee825` split Node ORM table creation without changing adapter or fallback DDL semantics.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
