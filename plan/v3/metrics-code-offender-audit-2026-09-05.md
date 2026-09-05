@@ -598,6 +598,23 @@ filters, and sandbox denial behavior are unchanged.
 
 Code commit: `37f67a2` (`refactor(metrics): split frond rendered expression evaluation`).
 
+#### Twenty-first completed slice: Node.js Frond conditional branch collection
+
+Frond `if` handling now separates branch collection, trailing-whitespace
+normalization, and branch evaluation. Nested blocks, `elseif`/`elif`, `else`,
+and both whitespace-control markers retain their existing token boundaries.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 354 | 354 |
+| Corrected error-level findings | 15 | 14 |
+| `Frond.handleIf` complexity | 29 | cleared |
+| Frond core tests | 300 passed | 300 passed |
+| Frond expression parity | 130 passed | 130 passed |
+| Typecheck | passed | passed |
+
+Code commit: `b40e150` (`refactor(metrics): split frond if branch collection`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -681,5 +698,6 @@ Code commit: `37f67a2` (`refactor(metrics): split frond rendered expression eval
 - `f72eac2` split Node compression and ETag response finalization without changing HTTP semantics.
 - `5d23305` consolidated Node Frond filter dispatch without changing expression or sandbox semantics.
 - `37f67a2` split Node Frond rendered expression evaluation without changing escaping semantics.
+- `b40e150` split Node Frond conditional branch collection without changing token boundaries.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
