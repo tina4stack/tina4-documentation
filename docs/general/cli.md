@@ -111,6 +111,7 @@ the test ran, passed, or covered each branch.
 | `--fail-on error` | Exit with code 1 for error findings. |
 | `--exclude <GLOB>` | Exclude a path. Repeat the option for more paths. |
 | `--include-non-production` | Include tests, specs, and declaration files. |
+| `--no-history` | Do not read or write the run-history baseline for this scan. |
 
 Production scans ignore conventional tests, specs, generated bundles, minified
 assets, declarations, dependencies, build output, caches, and version-control
@@ -130,6 +131,24 @@ tina4 metrics --json --fail-on error > metrics.json
 
 `--top` changes presentation only. It never hides a finding from the exit gate.
 Informational `no_test_reference` findings do not fail warning or error gates.
+
+### Track change over time
+
+Every scan records a snapshot to `.tina4-metrics.json` in the scan root. The next
+scan of the same scope reads it and prints a `Since last run` block: offenders,
+duplicate lines, average maintainability, and average complexity, each marked
+better, worse, or same, followed by the files that improved or regressed.
+
+```bash
+tina4 metrics --path src        # first run: writes the baseline
+# ... you refactor ...
+tina4 metrics --path src        # second run: reports what moved
+```
+
+The snapshot is data, not source, so the engine never scans it. Commit it to gate
+regressions in review, or add it to `.gitignore` for a local-only baseline. The
+`--json` output carries the same comparison under a `delta` key. Pass
+`--no-history` to read and write nothing.
 
 ### Reading offender totals
 
