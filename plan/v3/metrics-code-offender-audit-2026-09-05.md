@@ -176,6 +176,27 @@ slices; the result is performance-neutral within run variance.
 
 Code commit: `b6b36e7` (`refactor(frond): dispatch block tags by responsibility`).
 
+#### Fourth completed slice: Node.js Frond loop handling
+
+`handleFor` now delegates token collection (including nested `for`/`if` depth),
+iterable normalization, and loop execution. The public loop contract is
+unchanged: arrays, objects, key/value loops, nested loops, `else`, loop metadata,
+and parent-context fallback remain covered by the existing fixture suite.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| `handleFor` complexity | 36 | no longer an offender |
+| Frond fixture tests | 300 passed | 300 passed |
+| Typecheck | passed | passed |
+| Local render benchmark average | 77.75 µs | 89.40 µs |
+
+The local loop benchmark showed JIT variance across repeated runs (roughly
+89–96 µs after the refactor), so this is not accepted as a performance result
+yet. The lab must repeat the fixed-shape benchmark before release acceptance;
+if the regression reproduces, optimize the loop path before continuing.
+
+Code commit: `23835dd` (`refactor(frond): separate loop collection and iteration`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
