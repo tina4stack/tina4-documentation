@@ -796,6 +796,28 @@ save failures still return `false` with a recoverable `lastError`.
 
 Code commit: `23e3415` (`refactor(metrics): split orm save path`).
 
+#### Thirty-first completed slice: Node.js migration statement scanner
+
+`splitStatements()` now uses a small scanner state plus focused helpers for
+quoted literals, stored-procedure blocks, comments, and active delimiters. The
+scanner still normalizes smart quotes, ignores comment delimiters, preserves
+embedded semicolons in strings and procedure bodies, consumes `SET TERM`, and
+keeps the shared migration contract used by ORM and CLI paths.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 346 | 346 |
+| Corrected error-level findings | 5 | 4 |
+| `migration.ts:splitStatements` complexity | 40 | cleared |
+| Migration enhancement contract | 70 passed | 70 passed |
+| Migration class contract | 32 passed | 32 passed |
+| Migration contract | 24 passed, 5 skipped (services unavailable) | 24 passed, 5 skipped (services unavailable) |
+| Migration footgun contract | 82 passed | 82 passed |
+| Migration dialect contract | 23 passed, 1 skipped (Firebird unavailable) | 23 passed, 1 skipped (Firebird unavailable) |
+| Typecheck | passed | passed |
+
+Code commit: `4bbb57a` (`refactor(metrics): split migration statement scanner`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -889,5 +911,6 @@ Code commit: `23e3415` (`refactor(metrics): split orm save path`).
 - `2472858` split Node ORM serialization without changing relationship or casing semantics.
 - `cf4a905` split Node ORM eager loading without changing relation matching or query bounds.
 - `23e3415` split Node ORM save execution without changing validation or write semantics.
+- `4bbb57a` split Node migration scanning without changing delimiter, quote, or comment semantics.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
