@@ -669,6 +669,23 @@ whitespace timing, and output ordering remain unchanged.
 
 Code commit: `b628d1d` (`refactor(metrics): split frond token rendering`).
 
+#### Twenty-fifth completed slice: Node.js Frond value inspection
+
+The Frond `dump` inspection path now separates primitive, collection, and
+object/class-instance rendering while retaining cycle detection, depth caps,
+and deterministic type labels.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 354 | 353 |
+| Corrected error-level findings | 11 | 10 |
+| `inspectValue` complexity | 26 | cleared |
+| Frond core tests | 300 passed | 300 passed |
+| Frond expression parity | 130 passed | 130 passed |
+| Typecheck | passed | passed |
+
+Code commit: `d9fe290` (`refactor(metrics): split frond value inspection`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -756,5 +773,6 @@ Code commit: `b628d1d` (`refactor(metrics): split frond token rendering`).
 - `4f469a8` split Node Frond format conversion and padding without changing output bytes.
 - `42441cf` split Node Frond literal and path resolution without changing lookup semantics.
 - `b628d1d` split Node Frond token rendering without changing output ordering.
+- `d9fe290` split Node Frond value inspection without changing dump output.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
