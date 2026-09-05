@@ -533,6 +533,27 @@ section order, and the `generate_v1_1` envelope remain unchanged.
 
 Code commit: `94fb039` (`refactor(metrics): split cli resolution output`).
 
+#### Eighteenth completed slice: Node.js compression and ETag finalization
+
+The response interceptor now separates gzip eligibility, conditional-validator
+matching, 304 header cleanup, and buffered response finalization. Compression
+thresholds, static pre-encoding protection, ETag precedence, conditional GET
+rules, and content-length handling are unchanged.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 355 | 355 |
+| Corrected error-level findings | 19 | 18 |
+| `compressionEtagIntercept` end callback complexity | 27 | cleared |
+| Compression/ETag contract | 25 passed | 25 passed |
+| HEAD conformance | 5 passed | 5 passed |
+| Dispatch pipeline contract | 9 passed | 9 passed |
+| Dispatch characterisation | 11 passed | 11 passed |
+| Dev-toolbar gzip suite | runner blocked | runner blocked (Vitest `import.meta.url` setup error) |
+| Typecheck | passed | passed |
+
+Code commit: `f72eac2` (`refactor(metrics): split compression etag response handling`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -613,5 +634,6 @@ Code commit: `94fb039` (`refactor(metrics): split cli resolution output`).
 - `9995a77` split Node logger snapshot resolution without changing configuration semantics.
 - `7577029` split Node MCP syntax verification without changing write-time validation.
 - `94fb039` split Node CLI resolution output without changing the envelope or human output contract.
+- `f72eac2` split Node compression and ETag response finalization without changing HTTP semantics.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
