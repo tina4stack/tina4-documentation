@@ -752,6 +752,27 @@ serializes `Point` values as GeoJSON, and keeps nested relation output intact.
 
 Code commit: `2472858` (`refactor(metrics): split orm serialization`).
 
+#### Twenty-ninth completed slice: Node.js ORM eager loading
+
+`BaseModel._eagerLoad()` now delegates relation-name matching, bounded related
+row queries, has-one/has-many grouping, belongs-to lookup, and warning output
+to focused helpers. The refactor preserves case-insensitive relation aliases,
+the 500-key query bound, soft-delete filtering, nested includes, and the shared
+relationship cache used by synchronous serialization.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 349 | 347 |
+| Corrected error-level findings | 7 | 6 |
+| `BaseModel._eagerLoad` complexity | 41 | cleared |
+| ORM enhancement contract | 88 passed | 88 passed |
+| Relationship contract | 6 passed, 1 skipped (PostgreSQL unavailable) | 6 passed, 1 skipped (PostgreSQL unavailable) |
+| Imperative relationship contract | 3 passed, 1 skipped (PostgreSQL unavailable) | 3 passed, 1 skipped (PostgreSQL unavailable) |
+| Instance-loading contract | 20 passed, 1 skipped (PostgreSQL unavailable) | 20 passed, 1 skipped (PostgreSQL unavailable) |
+| Typecheck | passed | passed |
+
+Code commit: `cf4a905` (`refactor(metrics): split orm eager loading`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -843,5 +864,6 @@ Code commit: `2472858` (`refactor(metrics): split orm serialization`).
 - `f656526` split the Node benchmark runner without changing its equal-work gate or reporting.
 - `24ee825` split Node ORM table creation without changing adapter or fallback DDL semantics.
 - `2472858` split Node ORM serialization without changing relationship or casing semantics.
+- `cf4a905` split Node ORM eager loading without changing relation matching or query bounds.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
