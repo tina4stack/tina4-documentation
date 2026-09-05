@@ -197,12 +197,12 @@ JSON. The full framework suites remain separate release-gate work.
 - [ ] Document `tina4 feature enable web-push` and `feature status` first.
 - [ ] Explain the Python optional capability without making it the primary
   installation instruction.
-- [ ] Update `tina4-maintainer` with the placement, parity, and metrics gate.
-- [ ] Update `tina4-architect` with the configuration-first choice.
-- [ ] Update all four backend developer skills with the native API shape and
+- [x] Update `tina4-maintainer` with the placement, parity, and metrics gate.
+- [x] Update `tina4-architect` with the configuration-first choice.
+- [x] Update all four backend developer skills with the native API shape and
   capability failure rules.
-- [ ] Update `tina4-js` with permission, service-worker, and subscription use.
-- [ ] Synchronize Claude, Codex, and Cursor skill copies.
+- [x] Update `tina4-js` with permission, service-worker, and subscription use.
+- [x] Synchronize Claude, Codex, and Cursor skill copies.
 - [ ] Run documentation truth, link, build, and skill-install checks.
 
 ## Implementation order
