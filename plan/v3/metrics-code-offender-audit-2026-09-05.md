@@ -729,6 +729,29 @@ and composite keys emit one table-level primary-key clause.
 
 Code commit: `24ee825` (`refactor(metrics): split orm table creation`).
 
+#### Twenty-eighth completed slice: Node.js ORM serialization
+
+`BaseModel.toDict()` now delegates field serialization, include grouping,
+eager-loaded relationship serialization, and legacy loaded-relationship
+serialization to focused helpers. The synchronous serializer still omits an
+uneager-loaded relation with the same warning, preserves camel/snake casing,
+serializes `Point` values as GeoJSON, and keeps nested relation output intact.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 351 | 349 |
+| Corrected error-level findings | 9 | 7 |
+| `BaseModel.toDict` complexity | 25 | cleared |
+| ORM enhancement contract | 88 passed | 88 passed |
+| Relationship contract | 6 passed, 1 skipped (PostgreSQL unavailable) | 6 passed, 1 skipped (PostgreSQL unavailable) |
+| Imperative relationship contract | 3 passed, 1 skipped (PostgreSQL unavailable) | 3 passed, 1 skipped (PostgreSQL unavailable) |
+| Instance-loading contract | 20 passed, 1 skipped (PostgreSQL unavailable) | 20 passed, 1 skipped (PostgreSQL unavailable) |
+| Parity 3.10.99 contract | 20 passed | 20 passed |
+| GIS contract | 13 passed, 1 skipped (PostGIS unavailable) | 13 passed, 1 skipped (PostGIS unavailable) |
+| Typecheck | passed | passed |
+
+Code commit: `2472858` (`refactor(metrics): split orm serialization`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -819,5 +842,6 @@ Code commit: `24ee825` (`refactor(metrics): split orm table creation`).
 - `d9fe290` split Node Frond value inspection without changing dump output.
 - `f656526` split the Node benchmark runner without changing its equal-work gate or reporting.
 - `24ee825` split Node ORM table creation without changing adapter or fallback DDL semantics.
+- `2472858` split Node ORM serialization without changing relationship or casing semantics.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
