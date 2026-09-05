@@ -43,7 +43,7 @@ application.
 | --- | --- |
 | Python | `tina4_python/push/` |
 | PHP | `Tina4/Push.php` |
-| Ruby | `lib/tina4/push/` |
+| Ruby | `lib/tina4/push.rb` |
 | Node.js | `packages/core/src/push.ts`, exported from the existing `@tina4/core` boundary |
 | tina4-js | `src/push.ts` (or the existing public client module boundary) |
 | Shared plan | `plan/v3/features/140-web-push.md` |
