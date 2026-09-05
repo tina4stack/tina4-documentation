@@ -156,6 +156,26 @@ renders as the first slice. Repeat on the lab before release acceptance.
 
 Code commit: `9dc4b21` (`refactor(frond): split path resolution responsibilities`).
 
+#### Third completed slice: Node.js Frond block dispatch
+
+`renderTokens` now owns token iteration and whitespace handling, while tag
+dispatch is isolated from the long chain of block-specific branches. Common
+`if`/`for` paths stay direct; the remaining tags use a responsibility-based
+dispatcher. This keeps sandbox gates, unknown-tag errors, whitespace control,
+and nested output unchanged.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| `renderTokens` complexity | 40 | 27 |
+| Frond fixture tests | 300 passed | 300 passed |
+| Typecheck | passed | passed |
+| Render benchmark average | 77.68 µs | 77.75 µs |
+
+The benchmark is the same 50,000 cached renders and warm-up used for the prior
+slices; the result is performance-neutral within run variance.
+
+Code commit: `b6b36e7` (`refactor(frond): dispatch block tags by responsibility`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
