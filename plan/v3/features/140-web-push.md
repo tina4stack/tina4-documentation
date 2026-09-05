@@ -12,19 +12,19 @@ signing, RFC 8291 payload encryption, delivery, and dead-subscription handling.
 
 ## Scope
 
-- [ ] Add a `push` module to all four backend frameworks.
-- [ ] Add a `push` helper to tina4-js for permission and subscription setup.
-- [ ] Generate and validate P-256 VAPID keys.
-- [ ] Sign ES256 VAPID JWTs with the correct audience and expiry.
-- [ ] Encrypt payloads with the `aes128gcm` Web Push content-encoding.
-- [ ] POST to subscription endpoints with the correct headers.
-- [ ] Return a stable result envelope for success, retryable failure, and dead
+- [x] Add a `push` module to all four backend frameworks.
+- [x] Add a `push` helper to tina4-js for permission and subscription setup.
+- [x] Generate and validate P-256 VAPID keys.
+- [x] Sign ES256 VAPID JWTs with the correct audience and expiry.
+- [x] Encrypt payloads with the `aes128gcm` Web Push content-encoding.
+- [x] POST to subscription endpoints with the correct headers.
+- [x] Return a stable result envelope for success, retryable failure, and dead
   subscriptions.
-- [ ] Treat HTTP 404 and 410 as dead subscriptions without hiding the result.
-- [ ] Read `TINA4_VAPID_PUBLIC`, `TINA4_VAPID_PRIVATE`, and
+- [x] Treat HTTP 404 and 410 as dead subscriptions without hiding the result.
+- [x] Read `TINA4_VAPID_PUBLIC`, `TINA4_VAPID_PRIVATE`, and
   `TINA4_VAPID_SUBJECT` through the normal typed environment layer.
-- [ ] Keep the feature disabled unless explicitly configured.
-- [ ] Fail loudly when Web Push is configured but the runtime crypto capability
+- [x] Keep the feature disabled unless explicitly configured.
+- [x] Fail loudly when Web Push is configured but the runtime crypto capability
   is unavailable.
 - [ ] Add `tina4 feature enable web-push` integration to the unified client.
 - [ ] Add documentation and all relevant AI-skill guidance.
@@ -41,9 +41,9 @@ application.
 | Surface | Location |
 | --- | --- |
 | Python | `tina4_python/push/` |
-| PHP | `Tina4/Push/` |
+| PHP | `Tina4/Push.php` |
 | Ruby | `lib/tina4/push/` |
-| Node.js | `packages/push/src/` with a public `@tina4/push` export |
+| Node.js | `packages/core/src/push.ts`, exported from the existing `@tina4/core` boundary |
 | tina4-js | `src/push.ts` (or the existing public client module boundary) |
 | Shared plan | `plan/v3/features/140-web-push.md` |
 | CLI enablement | Tina4 Rust client feature registry |
@@ -119,17 +119,17 @@ of `@tina4/core`.
 
 ### Shared contract cases
 
-- [ ] VAPID key generation returns a valid P-256 public/private pair.
-- [ ] Public-key encoding round-trips through the browser subscription shape.
-- [ ] VAPID JWT has the expected `aud`, `sub`, `exp`, and ES256 signature.
-- [ ] RFC 8291 encryption decrypts to the original payload.
-- [ ] Invalid subscription keys fail before network delivery.
-- [ ] Missing VAPID configuration fails with an actionable error.
-- [ ] Missing Python crypto capability fails only when Web Push is used.
-- [ ] HTTP 201 returns `ok=true`.
-- [ ] HTTP 404 and 410 return `dead=true`.
-- [ ] Other 4xx/5xx responses preserve status and classify retryability.
-- [ ] No test uses a fake crypto implementation or fake framework adapter.
+- [x] VAPID key generation returns a valid P-256 public/private pair.
+- [x] Public-key encoding round-trips through the browser subscription shape.
+- [x] VAPID JWT has the expected `aud`, `sub`, `exp`, and ES256 signature.
+- [x] RFC 8291 encryption decrypts to the original payload (Node reference test).
+- [x] Invalid subscription keys fail before network delivery.
+- [x] Missing VAPID configuration fails with an actionable error.
+- [x] Missing Python crypto capability fails only when Web Push is used.
+- [x] HTTP 201 returns `ok=true`.
+- [x] HTTP 404 and 410 return `dead=true`.
+- [x] Other 4xx/5xx responses preserve status and classify retryability.
+- [x] No test uses a fake crypto implementation or fake framework adapter.
 
 Deterministic RFC vectors use fixed ephemeral keys and salt. Live delivery
 tests do not compare ciphertext bytes because Web Push encryption is randomized;
@@ -205,6 +205,10 @@ hard-coded path inside the tool.
 
 ## Commits
 
-- (pending implementation)
+- `b4bae6e` — Node.js native backend implementation and RFC 8291 contract tests
+- `351342c` — Python optional-crypto backend implementation and contract tests
+- `e55a6da4` — PHP OpenSSL backend implementation
+- `9b62a34` — Ruby OpenSSL backend implementation
+- `2cc7625` — tina4-js browser subscription helper and package export
 
-## Status: Planned — implementation not started
+## Status: Implementation complete — feature-manager integration, docs, skills, and release gate pending
