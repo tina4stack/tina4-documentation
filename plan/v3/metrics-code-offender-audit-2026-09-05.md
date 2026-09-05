@@ -326,6 +326,21 @@ The remaining AI findings are the request/validation path and file-size warning;
 they are separate from stream aggregation and should be benchmarked or tested in
 their own slice. Code commit: `d2eeeb4` (`refactor(metrics): split ai stream aggregation`).
 
+#### Seventh completed slice: Node.js AI content validation
+
+`validateContent` now delegates text, image, and tool-result checks to focused
+validators. The accepted input shapes and fail-fast `AiConfigError` messages are
+unchanged, including the data-URI and HTTPS image restrictions.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Node core offenders | 378 | 377 |
+| `Ai.validateContent` complexity | 21 | no longer an offender |
+| AI contract tests over a real HTTP socket | 35 passed | 35 passed |
+| Typecheck | passed | passed |
+
+Code commit: `ebe609e` (`refactor(metrics): split ai content validation`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -395,5 +410,6 @@ their own slice. Code commit: `d2eeeb4` (`refactor(metrics): split ai stream agg
 - `0da4a74` recorded the published-client lab smoke and branch difference.
 - `ce9d468` removed the Node Frond macro duplication and ORM validation offender.
 - `d2eeeb4` split Node AI stream aggregation without changing its event contract.
+- `ebe609e` split Node AI content validation without changing its input contract.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
