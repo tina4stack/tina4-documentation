@@ -169,6 +169,25 @@ Metrics findings caused by generated browser bundles, tests, examples, or
 third-party dependencies remain excluded by explicit switches, never by a
 hard-coded path inside the tool.
 
+### Focused parity run
+
+The shared fixture cases were exercised against real local HTTP endpoints on
+2026-09-05:
+
+| Surface | Command | Result |
+| --- | --- | --- |
+| Python | `.venv/bin/pytest -q tests/test_push.py` | 4 passed |
+| PHP | `vendor/bin/phpunit tests/PushTest.php --colors=never` | 4 tests, 28 assertions passed |
+| Ruby | `bundle exec rspec spec/web_push_spec.rb --format progress` | 4 examples passed |
+| Node.js | `npx tsx test/push.test.ts` | 13 passed, 0 failed |
+| tina4-js | `npx vitest run tests/push.test.ts` | 2 passed |
+
+The backend suites use real local sockets, generated P-256 keys, encrypted
+payloads, VAPID headers, dead-subscription responses, retryable responses, and
+fail-closed configuration/key validation. The Node.js suite additionally
+decrypts the received `aes128gcm` payload and compares it with the original
+JSON. The full framework suites remain separate release-gate work.
+
 ## Documentation and skills
 
 - [x] Add a Web Push chapter to the Tina4 documentation site.
