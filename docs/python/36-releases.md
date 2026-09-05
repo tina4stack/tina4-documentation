@@ -1,5 +1,13 @@
 # Release Notes
 
+## v3.13.134 (2026-09-05) - Web Push and skills parity
+
+Feature 140 Web Push is now available through the provider-neutral push API. The
+runtime returns native result envelopes, fails closed when push is configured
+without a usable provider, and keeps the Python cryptography support in the
+documented optional `push` extra. The developer skills for Python, PHP, Ruby,
+Node.js, and tina4-js now include the Web Push API and configuration guidance.
+
 ## v3.13.133 (2026-09-05) - A maintainability pass: the biggest functions, decomposed
 
 No behavior changes. This release breaks the framework's most complex functions into
