@@ -476,6 +476,25 @@ token type enforcement, and four-key `CSRF_INVALID` response are unchanged.
 
 Code commit: `0512b02` (`refactor(metrics): split csrf middleware checks`).
 
+#### Fifteenth completed slice: Node.js logger snapshot resolution
+
+Logger configuration resolution now delegates level, format, output, and path
+validation to focused helpers. The explicit-over-environment precedence,
+development/prod defaults, path-target heuristic, NUL rejection, and
+transactional sink setup are unchanged.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 357 | 356 |
+| Corrected error-level findings | 22 | 21 |
+| `resolveSnapshot` complexity | 23 | cleared |
+| Logger unit tests | 62 passed | 62 passed |
+| Logger contract tests | 30 passed | 30 passed |
+| Logger fixture tests | 60 passed | 60 passed |
+| Typecheck | passed | passed |
+
+Code commit: `9995a77` (`refactor(metrics): split logger snapshot resolution`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -553,5 +572,6 @@ Code commit: `0512b02` (`refactor(metrics): split csrf middleware checks`).
 - `ba97770` split Node MongoDB SQL parsing by statement type.
 - `c61908b` split Node Plan flesh workflow responsibilities.
 - `0512b02` split Node CSRF middleware checks without changing the security contract.
+- `9995a77` split Node logger snapshot resolution without changing configuration semantics.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
