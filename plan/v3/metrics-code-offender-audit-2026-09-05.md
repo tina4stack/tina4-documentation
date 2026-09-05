@@ -633,6 +633,24 @@ unchanged.
 
 Code commit: `4f469a8` (`refactor(metrics): split frond format filter`).
 
+#### Twenty-third completed slice: Node.js Frond variable resolution
+
+Frond variable resolution now separates literal parsing, method/slice/property
+segment resolution, and path traversal. String/number/boolean/null/list
+literals, method calls, bracket expressions, slices, and missing-value behavior
+remain unchanged.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 354 | 354 |
+| Corrected error-level findings | 13 | 12 |
+| `resolveVar` complexity | 31 | cleared |
+| Frond core tests | 300 passed | 300 passed |
+| Frond expression parity | 130 passed | 130 passed |
+| Typecheck | passed | passed |
+
+Code commit: `42441cf` (`refactor(metrics): split frond variable resolution`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -718,5 +736,6 @@ Code commit: `4f469a8` (`refactor(metrics): split frond format filter`).
 - `37f67a2` split Node Frond rendered expression evaluation without changing escaping semantics.
 - `b40e150` split Node Frond conditional branch collection without changing token boundaries.
 - `4f469a8` split Node Frond format conversion and padding without changing output bytes.
+- `42441cf` split Node Frond literal and path resolution without changing lookup semantics.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
