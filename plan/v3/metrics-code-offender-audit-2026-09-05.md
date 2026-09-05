@@ -514,6 +514,25 @@ project-relative diagnostics are unchanged.
 
 Code commit: `7577029` (`refactor(metrics): split mcp syntax verification`).
 
+#### Seventeenth completed slice: Node.js CLI resolution output
+
+The human `generate` resolution block now separates summary, reserved-word
+guidance, and optional test/edit/next sections. JSON mode, stderr routing,
+section order, and the `generate_v1_1` envelope remain unchanged.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 356 | 355 |
+| Corrected error-level findings | 20 | 19 |
+| `printResolution` complexity | 21 | cleared |
+| Generator resolution tests | 48 passed | 48 passed |
+| Generator envelope v1.1 tests | 79 passed | 79 passed |
+| Co-emitted generator tests | 38 passed | 38 passed |
+| Reserved-table generator tests | 23 passed | 23 passed |
+| Typecheck | passed | passed |
+
+Code commit: `94fb039` (`refactor(metrics): split cli resolution output`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -593,5 +612,6 @@ Code commit: `7577029` (`refactor(metrics): split mcp syntax verification`).
 - `0512b02` split Node CSRF middleware checks without changing the security contract.
 - `9995a77` split Node logger snapshot resolution without changing configuration semantics.
 - `7577029` split Node MCP syntax verification without changing write-time validation.
+- `94fb039` split Node CLI resolution output without changing the envelope or human output contract.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
