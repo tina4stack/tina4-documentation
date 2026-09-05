@@ -686,6 +686,26 @@ and deterministic type labels.
 
 Code commit: `d9fe290` (`refactor(metrics): split frond value inspection`).
 
+#### Twenty-sixth completed slice: Node.js benchmark runner
+
+The framework comparison benchmark now separates framework execution,
+equal-work validation, performance-table rendering, and overhead reporting.
+The required `node:sqlite` and Tina4 runs completed against 5,000 rows with
+matching materialized counts; optional Knex/Drizzle runs were explicitly
+skipped because their benchmark-only packages are not installed.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 353 | 352 |
+| Corrected error-level findings | 10 | 9 |
+| `benchFrameworks.ts:main` complexity | 24 | cleared |
+| Equal-work gate | passed (5,000 / 5,000) | passed (5,000 / 5,000) |
+| Required benchmark runs | completed | completed |
+| Optional Knex/Drizzle runs | dependencies absent | explicitly skipped |
+| Typecheck | passed | passed |
+
+Code commit: `f656526` (`refactor(metrics): split benchmark runner`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -774,5 +794,6 @@ Code commit: `d9fe290` (`refactor(metrics): split frond value inspection`).
 - `42441cf` split Node Frond literal and path resolution without changing lookup semantics.
 - `b628d1d` split Node Frond token rendering without changing output ordering.
 - `d9fe290` split Node Frond value inspection without changing dump output.
+- `f656526` split the Node benchmark runner without changing its equal-work gate or reporting.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
