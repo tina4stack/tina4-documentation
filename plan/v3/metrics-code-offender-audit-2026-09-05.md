@@ -773,6 +773,29 @@ relationship cache used by synchronous serialization.
 
 Code commit: `cf4a905` (`refactor(metrics): split orm eager loading`).
 
+#### Thirtieth completed slice: Node.js ORM save path
+
+`BaseModel.save()` now delegates insert/update mode resolution, pre-write
+validation, update execution, insert statement construction, generated-ID
+adoption, and actionable database failure reporting to focused helpers. The
+existing contracts remain unchanged: validation still happens before any
+transaction, composite keys address the whole row, unset columns preserve
+database defaults, auto-increment IDs are adopted from adapter results, and
+save failures still return `false` with a recoverable `lastError`.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 347 | 346 |
+| Corrected error-level findings | 6 | 5 |
+| `BaseModel.save` complexity | 39 | cleared |
+| ORM enhancement contract | 88 passed | 88 passed |
+| ORM lifecycle/footguns contract | 41 passed | 41 passed |
+| ORM composite-key contract | 10 passed | 10 passed |
+| Instance-loading contract | 20 passed, 1 skipped (PostgreSQL unavailable) | 20 passed, 1 skipped (PostgreSQL unavailable) |
+| Typecheck | passed | passed |
+
+Code commit: `23e3415` (`refactor(metrics): split orm save path`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -865,5 +888,6 @@ Code commit: `cf4a905` (`refactor(metrics): split orm eager loading`).
 - `24ee825` split Node ORM table creation without changing adapter or fallback DDL semantics.
 - `2472858` split Node ORM serialization without changing relationship or casing semantics.
 - `cf4a905` split Node ORM eager loading without changing relation matching or query bounds.
+- `23e3415` split Node ORM save execution without changing validation or write semantics.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
