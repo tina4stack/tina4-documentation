@@ -115,6 +115,28 @@ parity.
   migration, routing, and server dispatch.
 - [ ] Choose the best implementation across the four languages. Record why it wins.
 
+#### First completed slice: Node.js Frond fast-filter dispatch
+
+The first behaviour-preserving slice extracted the no-argument filter dispatch
+from `Frond.evalVarInner` into a table-driven helper. This keeps filter order,
+sandbox gates, escaping, and output bytes unchanged while removing the large
+inline switch from the hot expression path.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Frond source offenders | 33 | 32 |
+| Average function complexity | 4.87 | 4.44 |
+| Frond fixture tests | 297 passed | 297 passed |
+| Typecheck | passed | passed |
+| Render benchmark average | 77.68 µs | 71.73 µs |
+
+Benchmark shape: 50,000 cached `renderString` calls over a loop/filter/escape
+template with 20 records, after a 5,000-call warm-up. The timing is directional,
+not a release performance claim; repeat it on the lab before accepting a larger
+Frond split.
+
+Code commit: `888cdaa` (`refactor(frond): isolate fast filter dispatch`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
