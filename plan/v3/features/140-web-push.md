@@ -50,11 +50,13 @@ application.
 
 ## Public contract
 
-The first implementation mirrors the existing Messenger-style object surface:
+The implementation mirrors the existing Messenger-style object surface. Each
+language reads the same environment variables in its normal constructor (with
+an explicit environment factory where that language already uses one):
 
 ```text
-Push.from_env()
-Push.generate_keys()
+Push() / Push.from_env()
+Push.generate_keys() / Push.generateVapidKeys()
 Push.send(subscription, payload)
 ```
 
@@ -210,5 +212,9 @@ hard-coded path inside the tool.
 - `e55a6da4` — PHP OpenSSL backend implementation
 - `9b62a34` — Ruby OpenSSL backend implementation
 - `2cc7625` — tina4-js browser subscription helper and package export
+- `726567a` — Node metrics-clean delivery split and history refresh
+- `96c98aa` — Python metrics-clean delivery split and history refresh
+- `010509ce` — PHP metrics-clean delivery split and history refresh
+- `fe10b68` — Ruby metrics-clean delivery split and history refresh
 
 ## Status: Implementation complete — feature-manager integration, docs, skills, and release gate pending
