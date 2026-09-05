@@ -651,6 +651,24 @@ remain unchanged.
 
 Code commit: `42441cf` (`refactor(metrics): split frond variable resolution`).
 
+#### Twenty-fourth completed slice: Node.js Frond token rendering
+
+Frond token rendering now delegates text, variable, and block tokens to focused
+handlers. Direct `if`/`for` paths, sandbox dispatch, strip-before/strip-after
+whitespace timing, and output ordering remain unchanged.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 354 | 354 |
+| Corrected error-level findings | 12 | 11 |
+| `Frond.renderTokens` complexity | 27 | cleared |
+| Frond core tests | 300 passed | 300 passed |
+| Frond sandbox contract | 22 passed | 22 passed |
+| Frond expression parity | 130 passed | 130 passed |
+| Typecheck | passed | passed |
+
+Code commit: `b628d1d` (`refactor(metrics): split frond token rendering`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -737,5 +755,6 @@ Code commit: `42441cf` (`refactor(metrics): split frond variable resolution`).
 - `b40e150` split Node Frond conditional branch collection without changing token boundaries.
 - `4f469a8` split Node Frond format conversion and padding without changing output bytes.
 - `42441cf` split Node Frond literal and path resolution without changing lookup semantics.
+- `b628d1d` split Node Frond token rendering without changing output ordering.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
