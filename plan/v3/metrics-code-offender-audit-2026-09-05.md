@@ -615,6 +615,24 @@ and both whitespace-control markers retain their existing token boundaries.
 
 Code commit: `b40e150` (`refactor(metrics): split frond if branch collection`).
 
+#### Twenty-second completed slice: Node.js Frond format filter
+
+The Frond `format` filter now separates integer conversion, decimal/scientific
+conversion, and width padding from regex match handling. String, numeric,
+radix, precision, alignment, zero-fill, and literal-percent behavior remain
+unchanged.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 354 | 353 |
+| Corrected error-level findings | 14 | 13 |
+| Frond format callback/helper complexity | 29 | cleared |
+| Frond core tests | 300 passed | 300 passed |
+| Frond expression parity | 130 passed | 130 passed |
+| Typecheck | passed | passed |
+
+Code commit: `4f469a8` (`refactor(metrics): split frond format filter`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -699,5 +717,6 @@ Code commit: `b40e150` (`refactor(metrics): split frond if branch collection`).
 - `5d23305` consolidated Node Frond filter dispatch without changing expression or sandbox semantics.
 - `37f67a2` split Node Frond rendered expression evaluation without changing escaping semantics.
 - `b40e150` split Node Frond conditional branch collection without changing token boundaries.
+- `4f469a8` split Node Frond format conversion and padding without changing output bytes.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
