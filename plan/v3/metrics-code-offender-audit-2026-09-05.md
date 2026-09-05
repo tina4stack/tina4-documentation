@@ -554,6 +554,31 @@ rules, and content-length handling are unchanged.
 
 Code commit: `f72eac2` (`refactor(metrics): split compression etag response handling`).
 
+#### Nineteenth completed slice: Node.js Frond filter dispatch
+
+Frond now shares one filter-value dispatcher for nested filter pipes and raw
+condition evaluation, while rendered output keeps its separate fast-filter and
+escaping path. Sandbox allow-list checks, first/last property tails, custom
+filters, comparison suffixes, and unknown-filter expression fallback are
+unchanged.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 355 | 355 |
+| Corrected error-level findings | 18 | 16 |
+| `Frond.applyFilters` complexity | 23 | cleared |
+| `Frond.evalVarRaw` complexity | 23 | cleared |
+| Frond core tests | 300 passed | 300 passed |
+| Frond sandbox contract | 22 passed | 22 passed |
+| Frond expression parity | 130 passed | 130 passed |
+| Typecheck | passed | passed |
+
+`Frond.evalVarInner` fell from complexity 34 to 24 but remains an error-level
+offender; it is retained for the next focused slice rather than being marked
+complete here.
+
+Code commit: `5d23305` (`refactor(metrics): consolidate frond filter dispatch`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -635,5 +660,6 @@ Code commit: `f72eac2` (`refactor(metrics): split compression etag response hand
 - `7577029` split Node MCP syntax verification without changing write-time validation.
 - `94fb039` split Node CLI resolution output without changing the envelope or human output contract.
 - `f72eac2` split Node compression and ETag response finalization without changing HTTP semantics.
+- `5d23305` consolidated Node Frond filter dispatch without changing expression or sandbox semantics.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
