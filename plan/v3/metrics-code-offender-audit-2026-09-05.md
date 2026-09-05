@@ -495,6 +495,25 @@ transactional sink setup are unchanged.
 
 Code commit: `9995a77` (`refactor(metrics): split logger snapshot resolution`).
 
+#### Sixteenth completed slice: Node.js MCP syntax verification
+
+MCP write-time syntax verification now separates target selection, command
+construction, and process-output formatting. The `src/` boundary, test-file
+exclusion, TypeScript missing-compiler fallback, five-second timeout, and
+project-relative diagnostics are unchanged.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 356 | 356 |
+| Corrected error-level findings | 21 | 20 |
+| `verifyNodeSyntax` complexity | 23 | cleared |
+| MCP protocol tests | 101 passed | 101 passed |
+| MCP dev-tool conformance | 72 passed | 72 passed |
+| MCP security tests | 30 passed | 30 passed |
+| Typecheck | passed | passed |
+
+Code commit: `7577029` (`refactor(metrics): split mcp syntax verification`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -573,5 +592,6 @@ Code commit: `9995a77` (`refactor(metrics): split logger snapshot resolution`).
 - `c61908b` split Node Plan flesh workflow responsibilities.
 - `0512b02` split Node CSRF middleware checks without changing the security contract.
 - `9995a77` split Node logger snapshot resolution without changing configuration semantics.
+- `7577029` split Node MCP syntax verification without changing write-time validation.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
