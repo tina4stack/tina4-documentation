@@ -137,6 +137,25 @@ Frond split.
 
 Code commit: `888cdaa` (`refactor(frond): isolate fast filter dispatch`).
 
+#### Second completed slice: Node.js Frond path resolution
+
+`resolveVar` was decomposed into cached path parsing, method invocation, key
+resolution, slicing, and member access. The public template contract is
+unchanged, and new characterization cases cover bracket variables, slices, and
+object methods.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| `resolveVar` complexity | 62 | 31 |
+| Frond fixture tests | 297 passed | 300 passed |
+| Typecheck | passed | passed |
+| Render benchmark average | 71.73 µs | 59.56 µs |
+
+The benchmark uses the same warm-up, template, data set, and 50,000 cached
+renders as the first slice. Repeat on the lab before release acceptance.
+
+Code commit: `9dc4b21` (`refactor(frond): split path resolution responsibilities`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
