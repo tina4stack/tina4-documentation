@@ -357,6 +357,28 @@ decoding.
 
 Code commit: `aaf242b` (`refactor(metrics): isolate ai stream event consumption`).
 
+#### Ninth completed slice: Node.js Messenger SMTP send path
+
+`Messenger.send` now owns recipient preparation and capture gating while focused
+helpers own SMTP connection/session setup, authentication, envelope delivery, and
+MIME transmission. Capture still wins before `TINA4_MAIL_REDIRECT_TO`, and SMTP
+failure messages retain their existing shapes.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Node core offenders | 377 | 375 |
+| `Messenger.send` complexity | 32 | no longer an offender |
+| Duplicate blocks | 66 | 65 |
+| Duplicate lines | 680 | 650 |
+| Messenger parity tests | 13 passed | 13 passed |
+| DevMailbox tests | 87 passed | 87 passed |
+| Redirect contract | 3 skipped (GreenMail unavailable) | 3 skipped (GreenMail unavailable) |
+| Typecheck | passed | passed |
+
+The redirect contract remains infrastructure-red because GreenMail is not
+available on this workstation; the local negative and capture paths are covered by
+the parity suite. Code commit: `790cefb` (`refactor(metrics): split messenger smtp send`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -428,5 +450,6 @@ Code commit: `aaf242b` (`refactor(metrics): isolate ai stream event consumption`
 - `d2eeeb4` split Node AI stream aggregation without changing its event contract.
 - `ebe609e` split Node AI content validation without changing its input contract.
 - `aaf242b` isolated Node AI stream event consumption from transport policy.
+- `790cefb` split Node Messenger SMTP send responsibilities and preserved capture precedence.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
