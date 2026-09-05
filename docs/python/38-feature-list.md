@@ -19,7 +19,7 @@ Do not collapse those states into one green tick. At version 3.13.101, the contr
 
 | Range | Owner | Meaning |
 |---|---|---|
-| 1-109, 126-132, 135-139 | Backend frameworks | Runtime, developer, testing, and application-facing capabilities. Availability and maturity still require per-feature evidence. |
+| 1-109, 126-132, 135-140 | Backend frameworks | Runtime, developer, testing, and application-facing capabilities. Availability and maturity still require per-feature evidence. |
 | 110-125 and 134 | Shared Rust CLI | One language-neutral client used with all four backends. These are not four separate backend implementations. |
 | 133 | Verification contract | Carbonah benchmark and report shape, not an application runtime API. |
 | Provider entries | Selected integration | Each selectable provider has its own number because another language must implement and test it separately. Providers can require an external service, driver, language extension, or extra package. |

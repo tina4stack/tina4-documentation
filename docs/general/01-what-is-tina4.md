@@ -78,9 +78,9 @@ Database drivers are the exception. You cannot talk to PostgreSQL without a Post
 
 ---
 
-## 138 Built-in Features
+## 140 Cataloged Features
 
-Tina4 ships with everything you need to build a production web application. 138 built-in features across Python, PHP, Ruby, and Node.js, sharing one API. Here is what every installation includes:
+Tina4 maintains 140 numbered catalog entries across Python, PHP, Ruby, Node.js, the shared CLI, and selected integrations. The catalog is the framework family's implementation and audit inventory. It does not claim that every entry ships in every package or has reached parity. Each feature list and audit packet records its owner and status.
 
 **Core Web**
 - HTTP router with path parameters, typed params, middleware, and auth guards
@@ -220,4 +220,4 @@ The code you don't write is the code that never breaks.
 | Discovery | Automatic (routes, models, templates) |
 | CLI | Unified Rust binary |
 | Tests | 9,311 across all four frameworks |
-| Features | 138 built-in |
+| Features | 140 cataloged entries |
