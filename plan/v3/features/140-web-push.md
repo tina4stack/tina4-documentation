@@ -27,7 +27,8 @@ signing, RFC 8291 payload encryption, delivery, and dead-subscription handling.
 - [x] Fail loudly when Web Push is configured but the runtime crypto capability
   is unavailable.
 - [ ] Add `tina4 feature enable web-push` integration to the unified client.
-- [ ] Add documentation and all relevant AI-skill guidance.
+- [x] Add the Web Push documentation chapters, feature-list entries, and tina4-js usage guidance.
+- [ ] Add all relevant AI-skill guidance.
 - [ ] Capture metrics before and after the implementation and require no new
   error-severity offenders.
 
@@ -168,10 +169,10 @@ hard-coded path inside the tool.
 
 ## Documentation and skills
 
-- [ ] Add a Web Push chapter to the Tina4 book and documentation site.
-- [ ] Add Web Push to the four backend feature lists and quick references.
-- [ ] Add the tina4-js subscription example and service-worker requirements.
-- [ ] Document VAPID environment variables and secret handling.
+- [x] Add a Web Push chapter to the Tina4 documentation site.
+- [x] Add Web Push to the four backend feature lists and navigation.
+- [x] Add the tina4-js subscription example and service-worker requirements.
+- [x] Document VAPID environment variables and secret handling.
 - [ ] Document `tina4 feature enable web-push` and `feature status` first.
 - [ ] Explain the Python optional capability without making it the primary
   installation instruction.
@@ -217,4 +218,4 @@ hard-coded path inside the tool.
 - `010509ce` — PHP metrics-clean delivery split and history refresh
 - `fe10b68` — Ruby metrics-clean delivery split and history refresh
 
-## Status: Implementation complete — feature-manager integration, docs, skills, and release gate pending
+## Status: Implementation complete — documentation is in place; feature-manager integration, skills, shared fixture, and lab release gate pending

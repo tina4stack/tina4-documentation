@@ -1,6 +1,6 @@
 # Feature Catalog
 
-Tina4 3.14 has **139 numbered catalog entries**. The number describes the framework family's implementation and audit inventory. It does not mean that 139 features have reached four-language parity, and it does not mean that every entry lives inside each backend package.
+Tina4 3.14 has **140 numbered catalog entries**. The number describes the framework family's implementation and audit inventory. It does not mean that 140 features have reached four-language parity, and it does not mean that every entry lives inside each backend package.
 
 This chapter is the map. The earlier chapters explain the public APIs available to Node.js applications. The numbered audit packets define the parity work and the clean-room formula for another language.
 
@@ -212,6 +212,7 @@ The core, Frond, and Swagger packages declare no required third-party packages. 
 | 137 | GIS spatial points and queries |
 | 138 | RBAC (role/permission guards) |
 | 139 | Graph databases (Ultipa, Neo4j, Memgraph, ArangoDB) |
+| 140 | Provider-neutral Web Push notifications |
 
 ## Enterprise authentication
 
