@@ -26,10 +26,11 @@ signing, RFC 8291 payload encryption, delivery, and dead-subscription handling.
 - [x] Keep the feature disabled unless explicitly configured.
 - [x] Fail loudly when Web Push is configured but the runtime crypto capability
   is unavailable.
+- [x] Add the shared Web Push contract fixture used by the parity audit.
 - [ ] Add `tina4 feature enable web-push` integration to the unified client.
 - [x] Add the Web Push documentation chapters, feature-list entries, and tina4-js usage guidance.
 - [ ] Add all relevant AI-skill guidance.
-- [ ] Capture metrics before and after the implementation and require no new
+- [x] Capture metrics before and after the implementation and require no new
   error-severity offenders.
 
 ## Placement
@@ -46,6 +47,7 @@ application.
 | Ruby | `lib/tina4/push.rb` |
 | Node.js | `packages/core/src/push.ts`, exported from the existing `@tina4/core` boundary |
 | tina4-js | `src/push.ts` (or the existing public client module boundary) |
+| Shared contract | `plan/v3/fixtures/web_push_contract.json` |
 | Shared plan | `plan/v3/features/140-web-push.md` |
 | CLI enablement | Tina4 Rust client feature registry |
 
@@ -161,7 +163,7 @@ audit. The gate requires:
 - [x] no increase in total warning/duplication debt after the final refactor;
 - [x] the new push modules appear in the scanned source set;
 - [x] metrics history records the before/after change;
-- [ ] the affected framework tests and the shared contract are green.
+- [x] the affected framework tests and the shared contract are green.
 
 Metrics findings caused by generated browser bundles, tests, examples, or
 third-party dependencies remain excluded by explicit switches, never by a
@@ -218,4 +220,4 @@ hard-coded path inside the tool.
 - `010509ce` — PHP metrics-clean delivery split and history refresh
 - `fe10b68` — Ruby metrics-clean delivery split and history refresh
 
-## Status: Implementation complete — documentation is in place; feature-manager integration, skills, shared fixture, and lab release gate pending
+## Status: Implementation and focused parity coverage complete — feature-manager integration, skills, and lab release gate pending

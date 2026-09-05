@@ -1,0 +1,64 @@
+{
+  "_comment": "Feature 140 Web Push contract. Each backend uses a real local HTTP endpoint; no provider or crypto mock is permitted.",
+  "version": 1,
+  "feature": 140,
+  "invariants": [
+    {
+      "id": "web-push-vapid-key-pair",
+      "rule": "Key generation returns a base64url P-256 public key (65 raw bytes, uncompressed) and private key (32 raw bytes).",
+      "suites": {
+        "python": "tests/test_push.py",
+        "php": "tests/PushTest.php",
+        "ruby": "spec/web_push_spec.rb",
+        "nodejs": "test/push.test.ts"
+      }
+    },
+    {
+      "id": "web-push-real-delivery",
+      "rule": "send(subscription, payload) POSTs an aes128gcm encrypted body with VAPID authorization and returns the normalized result envelope for HTTP 201.",
+      "suites": {
+        "python": "tests/test_push.py",
+        "php": "tests/PushTest.php",
+        "ruby": "spec/web_push_spec.rb",
+        "nodejs": "test/push.test.ts"
+      }
+    },
+    {
+      "id": "web-push-dead-subscription",
+      "rule": "HTTP 404 and 410 return ok=false, dead=true, retryable=false without hiding the endpoint or status.",
+      "suites": {
+        "python": "tests/test_push.py",
+        "php": "tests/PushTest.php",
+        "ruby": "spec/web_push_spec.rb",
+        "nodejs": "test/push.test.ts"
+      }
+    },
+    {
+      "id": "web-push-retryable-response",
+      "rule": "HTTP 408, 429, and 5xx return retryable=true while preserving the response status.",
+      "suites": {
+        "python": "tests/test_push.py",
+        "php": "tests/PushTest.php",
+        "ruby": "spec/web_push_spec.rb",
+        "nodejs": "test/push.test.ts"
+      }
+    },
+    {
+      "id": "web-push-fail-closed",
+      "rule": "Missing VAPID configuration, malformed subscription keys, and unavailable optional crypto fail loudly before delivery.",
+      "suites": {
+        "python": "tests/test_push.py",
+        "php": "tests/PushTest.php",
+        "ruby": "spec/web_push_spec.rb",
+        "nodejs": "test/push.test.ts"
+      }
+    },
+    {
+      "id": "web-push-browser-subscription",
+      "rule": "tina4-js serializes the browser-native PushSubscription shape and decodes the application server key without adding a runtime dependency.",
+      "suites": {
+        "tina4-js": "tests/push.test.ts"
+      }
+    }
+  ]
+}
