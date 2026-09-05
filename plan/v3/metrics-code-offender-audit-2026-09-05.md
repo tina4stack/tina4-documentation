@@ -85,6 +85,29 @@ reproducibility failure: the lab checkout is at `e599584`, the
 changes, while the local comparison is `v3` at `23835dd`. The branch and
 commit must be recorded whenever metrics are compared.
 
+## Lab suite gate
+
+On 2026-09-05, the Python `feature/release3.13.132` checkout at `2e956f0`
+ran on the Linux lab as root with `TINA4_REQUIRE_SERVICES=1`:
+
+```text
+4 failed, 5663 passed, 98 skipped, 189 errors
+```
+
+The affected tests do not yet prove framework defects. The focused batch-write
+run isolated two environment failures: MySQL used a root account without the
+configured password, and MSSQL rejected the configured `sa` login. The error
+set also contains unreachable or mismatched lab services: PostgreSQL was
+addressed at `192.168.88.99:55432` while the container is localhost-bound,
+MongoDB was addressed through a different bind, the PostGIS database name
+`tina4_gis` does not exist in the provisioned container, the MQTT TLS CA was
+missing or stale, and RabbitMQ/Kafka URLs were not set.
+
+Decision: do not change framework code to satisfy these failures. Repair the
+lab service matrix and rerun the affected service tests before calling the
+Python suite a code gate. The SQLite-only validation and ORM contract tests
+remain the correct targeted controls for the Node validation refactor below.
+
 ## Initial priority signals
 
 The ranking is a work order, not permission to split code blindly. A single
@@ -257,6 +280,32 @@ if the regression reproduces, optimize the loop path before continuing.
 
 Code commit: `23835dd` (`refactor(frond): separate loop collection and iteration`).
 
+#### Fifth completed slice: Node.js macro import and ORM validation paths
+
+The Frond `import ... as` and `from ... import` handlers shared the same macro
+token scan and closure construction but had two copies of the implementation.
+`collectMacroDefinitions` and `createMacro` now own that common path. The
+selected-macro context capture remains ordered, so a later imported macro can
+still call an earlier one.
+
+The ORM field validator also carried one large type switch. String, numeric,
+and remaining field rules now use small helpers while preserving error order,
+messages, update-mode handling, and pattern compilation.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Node core offenders | 386 | 385 |
+| Duplicate blocks | 68 | 66 |
+| Duplicate lines | 711 | 680 |
+| `validate` complexity | 52 | no longer an offender |
+| Frond import/macro tests | 18 passed | 18 passed |
+| ORM, validation, and contract tests | not split | 165 passed |
+| Typecheck | passed | passed |
+
+The metric count is a directional code-health measure; the targeted tests are
+the behaviour gate. Code commit: `ce9d468` (`refactor(metrics): remove node
+frond and validation offenders`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -322,6 +371,8 @@ Code commit: `23835dd` (`refactor(frond): separate loop collection and iteration
 ## Commits
 
 - `v3.8.82` shipped the metrics client used for the core baseline.
-- Pending: commit the core baseline and migration splitter triage.
+- `d575324` recorded the published-client core baseline and migration splitter triage.
+- `0da4a74` recorded the published-client lab smoke and branch difference.
+- `ce9d468` removed the Node Frond macro duplication and ORM validation offender.
 
-## Status: Audit in progress — core baseline accepted; migration splitter retained pending fixture/performance proof
+## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
