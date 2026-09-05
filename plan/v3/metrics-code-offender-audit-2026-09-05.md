@@ -7,15 +7,16 @@ engine. Exclude example applications. Classify every offender before changing
 code. Fix proven design debt at parity, then enforce the improved baseline in
 CI without forcing the existing debt to disappear in one release.
 
-This plan covers the active `v3` branches. It does not audit tina4-js, the Rust
-client, generated bundles, or example applications.
+This plan covers the active `v3` branches. The shipped Tina4 client used for
+the current baseline is `v3.8.82`. It does not audit tina4-js, the Rust client,
+generated bundles, or example applications.
 
 ## Scope
 
 - [x] Run the native Tina4 Metrics client against all four framework roots.
 - [x] Exclude `example/` and `examples/` trees with repeatable `--exclude` globs.
 - [x] Confirm zero example offenders, zero refused files, and record the baseline.
-- [ ] Re-run a core view excluding Dev Admin, galleries, generated assets, tests,
+- [x] Re-run a core view excluding Dev Admin, galleries, generated assets, tests,
   declarations, dependencies, caches, and build output.
 - [ ] Classify every error and warning as real debt, intentional complexity,
   duplicate protocol shape, generated/non-production code, or engine false positive.
@@ -29,7 +30,7 @@ client, generated bundles, or example applications.
 
 ## Baseline: full framework source, examples excluded
 
-Command shape:
+Command shape (client `v3.8.82`):
 
 ```bash
 tina4 metrics --path <framework-root> --json --top 10000 \
@@ -48,6 +49,23 @@ These totals include framework Dev Admin source because the request covers each
 framework root. They do not include the repositories' `example/` trees. The
 core view below prevents Dev Admin and generated or non-production code from
 distorting the framework comparison.
+
+## Baseline: core framework source
+
+The shipped `v3.8.82` binary repeated this scan with explicit caller-owned
+exclusions for Dev Admin, galleries, public assets, and example trees. The
+result is the accepted core baseline. `files_refused` is zero in every scan.
+
+| Framework | Files | Functions | Avg CC | Avg MI | Findings | Duplicate blocks | Duplicate lines | Refused |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Python | 105 | 2,646 | 3.87 | 26.4 | 293 | 19 | 162 | 0 |
+| PHP | 171 | 3,056 | 3.72 | 35.6 | 389 | 76 | 796 | 0 |
+| Ruby | 123 | 4,254 | 2.74 | 28.6 | 242 | 21 | 211 | 0 |
+| Node.js | 139 | 3,536 | 3.31 | 28.0 | 368 | 62 | 688 | 0 |
+
+The core scan is a debt baseline, not a release gate. It measures production
+source and records existing findings so later work can prevent regressions
+without pretending that the framework can remove all debt in one change.
 
 ## Initial priority signals
 
@@ -114,6 +132,30 @@ parity.
 - [ ] Measure Carbonah before changing a hot path: Frond render, ORM query/write,
   migration, routing, and server dispatch.
 - [ ] Choose the best implementation across the four languages. Record why it wins.
+
+#### Shared audit slice: migration SQL splitting
+
+The first cross-language review covers the SQL statement splitter because it is
+an error-severity complexity offender in every framework:
+
+| Framework | Implementation | Complexity | Existing contract coverage |
+| --- | --- | ---: | --- |
+| Python | `migration/runner.py::_split_statements` | 40 | `tests/test_sql_translation.py`, migration contract |
+| PHP | `Migration.php::splitStatements` | 41 | migration contract and footgun tests |
+| Ruby | `migration.rb::split_sql_statements` | 40 | `spec/migration_footguns_spec.rb`, migration contract |
+| Node.js | `orm/src/migration.ts::splitStatements` | 40 | `test/migrationContract.test.ts` and ORM migration tests |
+
+The four implementations already share the same contract: normalize smart
+quotes, ignore semicolons in strings and comments, preserve `$$` and `//`
+procedure blocks, and consume `SET TERM` directives. The fixture packet covers
+transaction boundaries, rollback ledger safety, CLI/ORM path identity, and
+real Firebird/MSSQL idempotency. This is intentional parser complexity, not a
+safe blind refactor target.
+
+Decision: retain the current implementations for now. Before any split, add a
+shared splitter fixture for every edge case above, run the four native suites,
+and measure migration throughput on the lab. A refactor is accepted only if it
+preserves statement bytes, delimiter state, failure semantics, and parity.
 
 #### First completed slice: Node.js Frond fast-filter dispatch
 
@@ -231,7 +273,8 @@ Code commit: `23835dd` (`refactor(frond): separate loop collection and iteration
 | Work item | Python | PHP | Ruby | Node.js |
 | --- | --- | --- | --- | --- |
 | Full examples-excluded baseline | ✅ | ✅ | ✅ | ✅ |
-| Core exclusion baseline | ❌ BUILD | ❌ BUILD | ❌ BUILD | ❌ BUILD |
+| Core exclusion baseline | ✅ | ✅ | ✅ | ✅ |
+| Shared migration splitter audit | ✅ | ✅ | ✅ | ✅ |
 | Top-offender characterisation tests | ❌ BUILD | ❌ BUILD | ❌ BUILD | ❌ BUILD |
 | Cross-language subsystem comparison | ❌ BUILD | ❌ BUILD | ❌ BUILD | ❌ BUILD |
 | Behaviour-preserving remediation | ❌ BUILD | ❌ BUILD | ❌ BUILD | ❌ BUILD |
@@ -260,6 +303,7 @@ Code commit: `23835dd` (`refactor(frond): separate loop collection and iteration
 
 ## Commits
 
-- Pending: audit plan created from the 2026-09-05 examples-excluded scan.
+- `v3.8.82` shipped the metrics client used for the core baseline.
+- Pending: commit the core baseline and migration splitter triage.
 
-## Status: Plan ready for owner review
+## Status: Audit in progress — core baseline accepted; migration splitter retained pending fixture/performance proof
