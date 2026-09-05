@@ -837,6 +837,26 @@ FakeData generation. The public ORM exports remain unchanged.
 
 Code commit: `56500f9` (`refactor(metrics): split orm table seeder`).
 
+#### Thirty-third completed slice: Node.js Frond live handler
+
+The Frond live-block handler now delegates transport validation, body-token
+collection, and marker-attribute generation to focused helpers. Poll, SSE, and
+WebSocket modes retain their existing validation, same-origin source guard,
+nested-block rejection, fragment registration, first-paint rendering, and
+client marker output.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 343 | 343 |
+| Corrected error-level findings | 3 | 2 |
+| `Frond.handleLive` complexity | 24 | cleared |
+| Frond core contract | 300 passed | 300 passed |
+| Realtime contract | 36 passed | 36 passed |
+| Secure-by-default contract | 25 passed | 25 passed |
+| Typecheck | passed | passed |
+
+Code commit: `b14a361` (`refactor(metrics): split frond live handler`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -932,5 +952,6 @@ Code commit: `56500f9` (`refactor(metrics): split orm table seeder`).
 - `23e3415` split Node ORM save execution without changing validation or write semantics.
 - `4bbb57a` split Node migration scanning without changing delimiter, quote, or comment semantics.
 - `56500f9` split Node ORM table seeding from model seeding without changing public exports.
+- `b14a361` split Node Frond live handling without changing transport or marker semantics.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
