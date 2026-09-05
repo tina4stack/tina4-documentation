@@ -460,6 +460,22 @@ same.
 
 Code commit: `c61908b` (`refactor(metrics): split plan flesh workflow`).
 
+#### Fourteenth completed slice: Node.js CSRF middleware checks
+
+CSRF request classification, bearer bypass, token extraction, and session binding
+now live in focused helpers. The fail-closed secret rule, query-token rejection,
+token type enforcement, and four-key `CSRF_INVALID` response are unchanged.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 357 | 357 |
+| Corrected error-level findings | 23 | 22 |
+| `CsrfMiddleware.beforeCsrf` complexity | 25 | 13 (warning, no longer an error) |
+| CSRF conformance tests | 46 passed | 46 passed |
+| Typecheck | passed | passed |
+
+Code commit: `0512b02` (`refactor(metrics): split csrf middleware checks`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -536,5 +552,6 @@ Code commit: `c61908b` (`refactor(metrics): split plan flesh workflow`).
 - `d7e090f` split Node CLI lint execution paths.
 - `ba97770` split Node MongoDB SQL parsing by statement type.
 - `c61908b` split Node Plan flesh workflow responsibilities.
+- `0512b02` split Node CSRF middleware checks without changing the security contract.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
