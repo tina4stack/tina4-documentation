@@ -579,6 +579,25 @@ complete here.
 
 Code commit: `5d23305` (`refactor(metrics): consolidate frond filter dispatch`).
 
+#### Twentieth completed slice: Node.js Frond rendered expression evaluation
+
+Frond rendered expressions now isolate variable allow-list checks,
+filter-aware concatenation, and the rendered filter loop from final
+auto-escaping. Safe/raw handling, escape markers, fast filters, property-tail
+filters, and sandbox denial behavior are unchanged.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Corrected Node core findings | 355 | 354 |
+| Corrected error-level findings | 16 | 15 |
+| `Frond.evalVarInner` complexity | 24 | cleared |
+| Frond core tests | 300 passed | 300 passed |
+| Frond sandbox contract | 22 passed | 22 passed |
+| Frond expression parity | 130 passed | 130 passed |
+| Typecheck | passed | passed |
+
+Code commit: `37f67a2` (`refactor(metrics): split frond rendered expression evaluation`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -661,5 +680,6 @@ Code commit: `5d23305` (`refactor(metrics): consolidate frond filter dispatch`).
 - `94fb039` split Node CLI resolution output without changing the envelope or human output contract.
 - `f72eac2` split Node compression and ETag response finalization without changing HTTP semantics.
 - `5d23305` consolidated Node Frond filter dispatch without changing expression or sandbox semantics.
+- `37f67a2` split Node Frond rendered expression evaluation without changing escaping semantics.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
