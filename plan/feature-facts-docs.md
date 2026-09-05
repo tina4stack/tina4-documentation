@@ -20,13 +20,13 @@ Outcome: The books and website describe the 3.14 feature catalog without turning
 
 | Documentation fact | Python | PHP | Ruby | Node.js |
 |---|---:|---:|---:|---:|
-| 135-entry public catalog | ✅ Aligned | ✅ Aligned | ✅ Aligned | ✅ Aligned |
+| 140-entry public catalog | ✅ Aligned | ✅ Aligned | ✅ Aligned | ✅ Aligned |
 | Entire catalog at parity | ⚠️ Not proven | ⚠️ Not proven | ⚠️ Not proven | ⚠️ Not proven |
 | Fixture-covered contracts | ✅ 282 proven | ✅ 282 proven | ✅ 282 proven | ✅ 282 proven |
 
 ## Tests
 
-- [x] Validate `FEATURE-CATALOG.json`: 135 unique, contiguous IDs and valid packet paths.
+- [x] Validate `FEATURE-CATALOG.json`: 140 unique, contiguous IDs and valid packet paths.
 - [x] Run the contract fixture auditor and use its reported counts.
 - [x] Run book synchronization, strict truth audit, strict link audit, and the tina4press build.
 - [x] Rebuild the Understanding and four backend PDFs, prove reproducibility, and inspect the corrected pages.

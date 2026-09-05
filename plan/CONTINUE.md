@@ -158,8 +158,8 @@ work since the PR was branched, but nothing else touched the two files in
 the PR (`docs/python/01-getting-started.md`, `docs/python/index.md`), so
 the rebase produced a single-hunk conflict on the intro paragraph. Resolved
 as a hybrid: kept the PR's zero-dependency emphasis AND the Chapter 38
-link, plus `main`'s careful "135-entry feature catalog; inventory, not a
-claim that every entry has reached parity" framing (the count is now 135,
+link, plus `main`'s careful "140-entry feature catalog; inventory, not a
+claim that every entry has reached parity" framing (the count is now 140,
 not 97; `docs/python/38-feature-list.md` confirms the link resolves). Also
 resolved the PR's open `assert_*` vs `expect_*` question against released
 code: `tina4_python.Testing` on 3.13.104 exports only `expect_*` -- the

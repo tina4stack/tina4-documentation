@@ -8,7 +8,7 @@ outline: deep
 
 ## 1. What Is Tina4 Ruby
 
-Tina4 Ruby is a Rack-based web framework for Ruby 3.1+. The gem declares the packages it needs for serving, SQLite, mail, XML, logging, and encoding; selected providers can add more. Tina4 Ruby contributes to the framework family's 135-entry feature catalog; the catalog is an inventory, not a claim that every entry has reached parity.
+Tina4 Ruby is a Rack-based web framework for Ruby 3.1+. The gem declares the packages it needs for serving, SQLite, mail, XML, logging, and encoding; selected providers can add more. Tina4 Ruby contributes to the framework family's 140-entry feature catalog; the catalog is an inventory, not a claim that every entry has reached parity.
 
 It belongs to the Tina4 family: four backend implementations in Python, PHP, Ruby, and Node.js. They share contracts, project structure, template syntax, CLI commands, and `.env` variables. The parity audit records where an implementation still differs.
 

@@ -1,6 +1,6 @@
 # Tina4 3.14 feature audit ledger
 
-The active audit now follows the flat 135-feature catalog in
+The active audit now follows the flat 140-feature catalog in
 `01-FEATURE-MATRIX.md`. Every capability and selectable provider has one whole
 number. The old grouped audit remains intact at
 `archive/98-feature-audit-pre-flat.md`.

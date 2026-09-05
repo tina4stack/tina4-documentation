@@ -19,7 +19,7 @@
 
 - [x] New regression audit failed against 31 categories of known stale documentation before correction.
 - [x] Canonical books and synchronized documentation pass the regression audit (12 tests).
-- [x] Existing truth, feature, contract, dispatch, health, and link audits pass (135 features, 282 proven invariants, 0 broken links).
+- [x] Existing truth, feature, contract, dispatch, health, and link audits pass (140 cataloged features, 282 proven invariants, 0 broken links).
 - [x] Documentation site builds successfully (276 pages).
 - [x] Five affected PDFs build and representative changed pages pass visual inspection.
 

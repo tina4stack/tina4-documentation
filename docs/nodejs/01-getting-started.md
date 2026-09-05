@@ -2,7 +2,7 @@
 
 ## 1. What Is Tina4 Node.js
 
-Tina4 Node.js is a TypeScript-first web framework for Node.js 22+. Its core, Frond, and Swagger packages declare no required third-party packages. The ORM and root package declare optional packages for selected providers. Tina4 Node.js contributes to the framework family's 135-entry feature catalog; the catalog is an inventory, not a claim that every entry has reached parity.
+Tina4 Node.js is a TypeScript-first web framework for Node.js 22+. Its core, Frond, and Swagger packages declare no required third-party packages. The ORM and root package declare optional packages for selected providers. Tina4 Node.js contributes to the framework family's 140-entry feature catalog; the catalog is an inventory, not a claim that every entry has reached parity.
 
 SQLite support uses Node's built-in `node:sqlite` module, so the default database path needs no extra package. Remote database, MongoDB, Redis, and S3 providers install their optional driver or SDK packages when selected.
 

@@ -32,7 +32,7 @@ Feature 63 includes browser helpers and the separate tina4-js frontend package. 
 |---|---:|---:|---:|---:|
 | Catalog membership | Inventory source | Audit in progress | Audit in progress | Audit in progress |
 | Fixture-covered contracts | Proven | Proven | Proven | Proven |
-| Entire 135-entry catalog | Not yet proven | Not yet proven | Not yet proven | Not yet proven |
+| Entire 140-entry catalog | Not yet proven | Not yet proven | Not yet proven | Not yet proven |
 
 The initial catalog followed the Python module inventory, but Python is not a permanent master. Tina4 promotes the best implementation after audit and captures that decision in an ADR and shared fixture.
 

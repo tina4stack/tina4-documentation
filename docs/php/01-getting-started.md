@@ -8,7 +8,7 @@ outline: deep
 
 ## 1. What Is Tina4 PHP
 
-Tina4 PHP is a batteries-included web framework for PHP 8.2+. The core declares no required third-party packages. PHP extensions are part of the language runtime and do not count as dependencies; selected providers can still require an extra package, such as the MongoDB library. Tina4 PHP contributes to the framework family's 135-entry feature catalog; the catalog is an inventory, not a claim that every entry has reached parity.
+Tina4 PHP is a batteries-included web framework for PHP 8.2+. The core declares no required third-party packages. PHP extensions are part of the language runtime and do not count as dependencies; selected providers can still require an extra package, such as the MongoDB library. Tina4 PHP contributes to the framework family's 140-entry feature catalog; the catalog is an inventory, not a claim that every entry has reached parity.
 
 It belongs to the Tina4 family: four backend implementations in Python, PHP, Ruby, and Node.js. They share contracts, project structure, template syntax, CLI commands, and `.env` variables. The parity audit records where an implementation still differs.
 
