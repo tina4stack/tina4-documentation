@@ -156,11 +156,11 @@ for all four repositories with the published Tina4 Metrics binary. After each
 backend lands, rerun the same command and store the JSON result in the feature
 audit. The gate requires:
 
-- [ ] zero refused files;
-- [ ] zero new error-severity offenders;
-- [ ] no increase in total warning/duplication debt without an explanation;
-- [ ] the new push modules appear in the scanned source set;
-- [ ] metrics history records the before/after change;
+- [x] zero refused files;
+- [x] zero new error-severity offenders in the new push modules;
+- [x] no increase in total warning/duplication debt after the final refactor;
+- [x] the new push modules appear in the scanned source set;
+- [x] metrics history records the before/after change;
 - [ ] the affected framework tests and the shared contract are green.
 
 Metrics findings caused by generated browser bundles, tests, examples, or
