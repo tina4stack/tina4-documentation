@@ -50,19 +50,23 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.132
+## Current framework release: 3.13.133
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.132. The headline is ORM
-pagination: `where`, `select`, `find`, `all`, and `with_trashed` now return a
-ModelCollection that carries the total for the filter (ADR-0064). It is still the
-page of models - iterate, index, count, and JSON-serialise it unchanged - and
-`get_total_records()` (`getTotalRecords()` in PHP and Node) reports the whole
-matching set, ignoring limit and offset, with no second query. `to_paginate()`
-returns the same seven-key envelope in every framework. The release also binds
-dual-stack loopback so `localhost` works on Windows, settles two Firebird lifecycle
-bugs (DDL stops looking like a hang; a dropped connection no longer warns at garbage
-collection), and trims the dev-admin dashboard (the agent chat surface is gone, and
-it stops reloading itself on every edit).
+Python, PHP, Ruby, and Node.js are aligned on 3.13.133, a maintainability pass with
+no behavior changes. The framework's most complex functions are decomposed into
+small, single-purpose helpers. `Swagger.generate` was one giant function (cyclomatic
+complexity 64 in Python, 83 in PHP, 52 in Node); it is now a flat orchestrator over
+named helpers, and the emitted OpenAPI document is byte-for-byte identical, proven by
+hashing the full spec before and after. Ruby's dev-admin `handle_request` was a
+single 138-branch dispatcher; it now hands each concern to its own method, with every
+route, response, and the localhost/auth gate unchanged. Nothing you call changes,
+same routes and same JSON; the complexity that made these functions risky to touch is
+gone.
+
+The 3.13.132 ORM pagination remains in place: `where`, `select`, `find`, `all`, and
+`with_trashed` return a ModelCollection carrying the total for the filter (ADR-0064),
+so you paginate without a second query. That release also fixed `localhost` on
+Windows and two Firebird lifecycle bugs.
 
 The 3.13.131 skills pass remains in place: replies read in plain English for a
 global team, stay short, match the effort to the task, and ask up to three short
@@ -153,6 +157,8 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.133 (2026-09-05)** - A maintainability pass, no behavior changes: `Swagger.generate` decomposed (Python/PHP/Node, OpenAPI byte-identical) and Ruby's dev-admin dispatcher split (CC 138 to 11). [full notes](/python/36-releases.md)
 
 **v3.13.132 (2026-09-04)** - ORM reads return a ModelCollection carrying the query total (paginate without a second query), `localhost` on Windows via dual-stack loopback, Firebird lifecycle fixes, and a lighter dev-admin. [full notes](/python/36-releases.md)
 

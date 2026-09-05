@@ -1,5 +1,26 @@
 # Release Notes
 
+## v3.13.133 (2026-09-05) - A maintainability pass: the biggest functions, decomposed
+
+No behavior changes. This release breaks the framework's most complex functions into
+small, single-purpose helpers, so the code is easier to read, test, and change - and
+the numbers prove nothing moved.
+
+- **Swagger generation, decomposed (Python, PHP, Node).** `Swagger.generate` was one
+  giant function (cyclomatic complexity 64 in Python, 83 in PHP, 52 in Node). It is
+  now a flat orchestrator over named helpers: build the info block, the paths, the
+  component schemas, the per-route security. The emitted OpenAPI document is
+  byte-for-byte identical, proven by hashing the full spec before and after across
+  dozens of route shapes. Ruby's generator was already lean.
+- **The dev-admin dispatcher, split (Ruby).** `handle_request` was a single
+  138-branch method routing every dev-admin path. It is now a small dispatcher that
+  hands each concern to its own method. Every route, response, and the localhost/auth
+  gate are unchanged, verified line by line.
+
+Nothing you call changes. Same routes, same JSON, same OpenAPI. The win is for the
+people who read and maintain the code: the complexity that made these functions risky
+to touch is gone.
+
 ## v3.13.132 (2026-09-04) - ORM reads carry the total, and Firebird holds its connection
 
 The headline is pagination. Every ORM read that returns a page now hands back the
