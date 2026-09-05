@@ -306,6 +306,26 @@ The metric count is a directional code-health measure; the targeted tests are
 the behaviour gate. Code commit: `ce9d468` (`refactor(metrics): remove node
 frond and validation offenders`).
 
+#### Sixth completed slice: Node.js AI stream aggregation
+
+The AI client’s OpenAI and Anthropic stream aggregators mixed provider dispatch,
+tool-call buffering, usage accounting, terminator handling, and parse errors in
+two large methods. Those responsibilities now delegate to focused handlers while
+keeping the public `Ai.chat(..., { stream: true })` event contract unchanged.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Node core offenders | 380 | 378 |
+| `AggregateState.consumeOpenAi` complexity | 26 | no longer an offender |
+| `AggregateState.consumeAnthropic` complexity | 33 | no longer an offender |
+| AI contract tests over a real HTTP socket | 35 passed | 35 passed |
+| AI installer tests | 31 passed | 31 passed |
+| Typecheck | passed | passed |
+
+The remaining AI findings are the request/validation path and file-size warning;
+they are separate from stream aggregation and should be benchmarked or tested in
+their own slice. Code commit: `d2eeeb4` (`refactor(metrics): split ai stream aggregation`).
+
 ### Phase 2 — Refactor at parity
 
 - [ ] Start with Frond expression/render complexity, ORM/database translation,
@@ -374,5 +394,6 @@ frond and validation offenders`).
 - `d575324` recorded the published-client core baseline and migration splitter triage.
 - `0da4a74` recorded the published-client lab smoke and branch difference.
 - `ce9d468` removed the Node Frond macro duplication and ORM validation offender.
+- `d2eeeb4` split Node AI stream aggregation without changing its event contract.
 
 ## Status: Audit in progress — core baseline accepted; targeted Node remediation started; lab service gate remains infrastructure-red
