@@ -50,18 +50,21 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.133
+## Current framework release: 3.13.134
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.133, a maintainability pass with
-no behavior changes. The framework's most complex functions are decomposed into
-small, single-purpose helpers. `Swagger.generate` was one giant function (cyclomatic
-complexity 64 in Python, 83 in PHP, 52 in Node); it is now a flat orchestrator over
-named helpers, and the emitted OpenAPI document is byte-for-byte identical, proven by
-hashing the full spec before and after. Ruby's dev-admin `handle_request` was a
-single 138-branch dispatcher; it now hands each concern to its own method, with every
-route, response, and the localhost/auth gate unchanged. Nothing you call changes,
-same routes and same JSON; the complexity that made these functions risky to touch is
-gone.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.134, which ships Feature 140: Web
+Push. Send a browser push notification from any of the four frameworks through one
+provider-neutral API. It speaks VAPID and the RFC 8291 message encryption the browser
+push services require, hands back a native result envelope for every send, and fails
+closed when push is configured without a usable provider, so a misconfiguration is
+loud, never silent. Web Push is optional: Python keeps the cryptography behind the
+`push` extra, and the developer skills for all four frameworks plus tina4-js now carry
+the Web Push API and configuration guidance.
+
+The 3.13.133 maintainability pass remains in place: the framework's most complex
+functions are decomposed into small, single-purpose helpers, the emitted OpenAPI
+document is byte-for-byte identical, and every dev-admin route is unchanged. Nothing
+you call changed.
 
 The 3.13.132 ORM pagination remains in place: `where`, `select`, `find`, `all`, and
 `with_trashed` return a ModelCollection carrying the total for the filter (ADR-0064),
@@ -72,12 +75,6 @@ The 3.13.131 skills pass remains in place: replies read in plain English for a
 global team, stay short, match the effort to the task, and ask up to three short
 questions before guessing when the choice is really yours. Refresh with
 `curl -fsSL https://tina4.com/install-skills.sh | sh`.
-
-The 3.13.130 discipline pass remains in place: the developer and maintainer skills
-stay objective on ideas (disagree when a design is weak, no reflexive praise), claim
-only what they verified (a blocker like "we can't deploy" is checked before it is
-stated, never guessed), and chat instead of narrate (result first, no request-echo,
-no filler, no per-step "Now:" prefix).
 
 The 3.13.129 generate-model change remains in place: `tina4 generate model Order`
 prints a note when it pluralises a reserved-word table and offers `--table-name
@@ -157,6 +154,8 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.134 (2026-09-05)** - Feature 140 Web Push: send browser push from all four frameworks through one provider-neutral API (VAPID + RFC 8291), with a native result envelope per send, fail-closed configuration, and an optional Python `push` extra. [full notes](/python/36-releases.md)
 
 **v3.13.133 (2026-09-05)** - A maintainability pass, no behavior changes: `Swagger.generate` decomposed (Python/PHP/Node, OpenAPI byte-identical) and Ruby's dev-admin dispatcher split (CC 138 to 11). [full notes](/python/36-releases.md)
 
