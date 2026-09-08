@@ -50,16 +50,21 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.134
+## Current framework release: 3.13.135
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.134, which ships Feature 140: Web
-Push. Send a browser push notification from any of the four frameworks through one
-provider-neutral API. It speaks VAPID and the RFC 8291 message encryption the browser
-push services require, hands back a native result envelope for every send, and fails
-closed when push is configured without a usable provider, so a misconfiguration is
-loud, never silent. Web Push is optional: Python keeps the cryptography behind the
-`push` extra, and the developer skills for all four frameworks plus tina4-js now carry
-the Web Push API and configuration guidance.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.135, a fix release. The dev-admin
+version check now tells the truth when it cannot reach the registry, instead of drawing a
+false "up to date". Web Push generates keys at the correct fixed width every time. PHP's
+dev server answers on `localhost` on Windows. Node serves `/swagger` again when it is
+enabled. All four frameworks pass a clean run.
+
+Feature 140 Web Push, shipped in 3.13.134, remains available: send a browser push
+notification from any of the four frameworks through one provider-neutral API. It speaks
+VAPID and the RFC 8291 message encryption the browser push services require, hands back a
+native result envelope for every send, and fails closed when push is configured without a
+usable provider. Web Push is optional: Python keeps the cryptography behind the `push`
+extra, and the developer skills for all four frameworks plus tina4-js carry the Web Push
+API and configuration guidance.
 
 The 3.13.133 maintainability pass remains in place: the framework's most complex
 functions are decomposed into small, single-purpose helpers, the emitted OpenAPI
@@ -154,6 +159,8 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.135 (2026-09-08)** - Fix release: the dev-admin version check reports "could not check" instead of a false "up to date" when the registry is unreachable (all four); Web Push generates P-256 keys at the correct fixed 32-byte width (PHP/Ruby/Node); PHP's dev server dual-stacks loopback so `localhost` works on Windows; Node serves `/swagger` again when enabled. [full notes](/python/36-releases.md)
 
 **v3.13.134 (2026-09-05)** - Feature 140 Web Push: send browser push from all four frameworks through one provider-neutral API (VAPID + RFC 8291), with a native result envelope per send, fail-closed configuration, and an optional Python `push` extra. [full notes](/python/36-releases.md)
 

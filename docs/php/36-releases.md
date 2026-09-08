@@ -1,5 +1,31 @@
 # Release Notes
 
+## v3.13.135 (2026-09-08) - An honest version check, localhost on Windows, and a Web Push key fix
+
+Three fixes you can see, plus a clean-up that puts all four frameworks back in the green.
+
+**The version check no longer claims "up to date" for a check it never made.** The dev
+toolbar asks Packagist for the latest version. On any failure - offline, a timeout, a
+blocked route - it used to fall back to reporting the running version as the latest, and
+the toolbar drew that as a green "You are up to date!". A developer several releases
+behind, on a machine with no route out, was told the opposite of the truth. The check now
+returns no version and a reason when it cannot reach the registry, and the toolbar says it
+could not check. Set `TINA4_VERSION_CHECK_URL` to point it at a mirror.
+
+**localhost reaches the dev server on Windows.** Windows resolves `localhost` to `::1`
+(IPv6) first, so a dev server bound only to `127.0.0.1` refused the browser even though it
+was serving - `ERR_CONNECTION_REFUSED` on a running app. The server now also listens on the
+sibling loopback family on the main port, so `localhost` reaches it whether the OS picks
+IPv4 or IPv6. This brings PHP in line with Python, Ruby, and Node, which already dual-stack.
+
+**Web Push keys are always the right width.** OpenSSL returns raw P-256 key material with a
+leading zero byte stripped, so roughly one VAPID key in 140 came out a byte short - a
+malformed public key a push service rejects. Every P-256 coordinate, private scalar, and
+ECDH secret is now padded to its fixed 32-byte width.
+
+The release also clears the test and CI drift that had built up since 3.13.134, so a clean
+run is green across Python, PHP, Ruby, and Node.
+
 ## v3.13.134 (2026-09-05) - Web Push and skills parity
 
 Feature 140 Web Push is now available through the provider-neutral push API. The

@@ -1,5 +1,31 @@
 # Release Notes
 
+## v3.13.135 (2026-09-08) - Swagger served again, an honest version check, and a Web Push key fix
+
+Three fixes you can see, plus a clean-up that puts all four frameworks back in the green.
+
+**Swagger is served when it is enabled.** With `TINA4_SWAGGER_ENABLED=true`, `/swagger` and
+`/swagger/openapi.json` answered 404 - the spec never got wired up at boot. The gate read a
+module flag that was still false at the point it was checked, so it always skipped route
+registration. The check now reads the value it meant to, and an enabled server serves both
+the UI and the spec.
+
+**The version check no longer claims "up to date" for a check it never made.** The dev
+toolbar asks the npm registry for the latest version. On any failure - offline, a timeout, a
+blocked route - it used to fall back to reporting the running version as the latest, and the
+toolbar drew that as a green "You are up to date!". A developer several releases behind, on a
+machine with no route out, was told the opposite of the truth. The check now returns no
+version and a reason when it cannot reach the registry, and the toolbar says it could not
+check. Set `TINA4_VERSION_CHECK_URL` to point it at a mirror.
+
+**Web Push keys are always the right width.** `createECDH().getPrivateKey()` returns raw
+P-256 material with a leading zero byte stripped, so roughly one VAPID key in 200 came out a
+byte short - a malformed private key. The VAPID private scalar is now padded to its fixed
+32-byte width; the public point and the ECDH secret were already correct.
+
+The release also clears the test and CI drift that had built up since 3.13.134, so a clean
+run is green across Python, PHP, Ruby, and Node.
+
 ## v3.13.134 (2026-09-05) - Web Push and skills parity
 
 Feature 140 Web Push is now available through the provider-neutral push API. The
