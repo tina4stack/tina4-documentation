@@ -24,7 +24,7 @@ set -eu
 # report skills currency, and scripts/bump-skills-ref.sh bumps it at release.
 # Keep this assignment the FIRST place the override name appears in the file: the
 # doctor takes the first occurrence, so a comment must not spell out the token.
-ref="${TINA4_SKILLS_REF:-3.13.135}"
+ref="${TINA4_SKILLS_REF:-3.13.136}"
 
 # Fetch the inner installer from tina4.com FIRST (Tina4's own infra, Jenkins-
 # deployed), then jsDelivr, then raw.githubusercontent as fallbacks. GitHub raw

@@ -9,7 +9,7 @@
 $ErrorActionPreference = "Stop"
 # The skills release this bootstrap installs. One pin, honoured as an override,
 # used to build all three source URLs. scripts/bump-skills-ref.sh bumps it.
-$ref = if ($env:TINA4_SKILLS_REF) { $env:TINA4_SKILLS_REF } else { "3.13.135" }
+$ref = if ($env:TINA4_SKILLS_REF) { $env:TINA4_SKILLS_REF } else { "3.13.136" }
 # Fetch the inner installer from tina4.com FIRST (Tina4's own infra, Jenkins-
 # deployed), then jsDelivr, then raw.githubusercontent as fallbacks. GitHub raw
 # 503s during incidents, so leading with tina4.com keeps the common path off
