@@ -44,7 +44,12 @@ HTML_ID_RE = re.compile(r'(?:\bid|\bname)\s*=\s*["\']([A-Za-z0-9_\-]+)["\']')
 # raw markup.
 TAG_RE = re.compile(r'<[^>]+>')
 
-EXCLUDE_DIRS = ('node_modules', '.vitepress/dist', '.vitepress/cache')
+# 'public/skills' is the deployed skills bundle (docs/public/skills/<ref>/...): a
+# verbatim, checksum-gated copy of the tina4stack/* skill files, served flat for the
+# installer. Its internal links are TEMPLATE examples (./journeys/<journey>.md,
+# product-search.md, literal ...), not docs-site pages, so they must not be
+# link-checked. audit-truth.py skips the same path via SKIP_PATH_FRAGMENTS.
+EXCLUDE_DIRS = ('node_modules', '.vitepress/dist', '.vitepress/cache', 'public/skills')
 
 # Known broken links that are accepted by --strict. Empty as of the
 # sync-books.sh cross-book path rewriter landing — every synced reference
