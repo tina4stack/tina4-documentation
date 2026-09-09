@@ -1,5 +1,56 @@
 # Release Notes
 
+## v3.13.136 (2026-09-09) - Build to the journeys, and a new design skill
+
+The headline is not a method you call. It is how the AI skills plan and build a Tina4 app.
+Complex apps rarely break inside a feature. They break in the seams between features: a goal
+no feature owns, a step with no owner, a flow that crosses three components untraced. This
+release teaches the skills to map those seams before they cut a feature, adds a skill that
+designs your brand and UI, and tightens the zero-dependency promise underneath.
+
+**The architect skill maps goals, journeys, and system flows before it scaffolds a file.**
+The stack decisions say what you build on. They say nothing about what a person is trying to
+achieve, how they move to achieve it, or how a request travels to make it happen. A new
+Phase 2 fills that gap. It names the goals, draws one user journey per goal - numbered end to
+end, with the exit at every step: abandon, refresh, no permission, error - and traces the
+system flow for each load-bearing action, marking every boundary it crosses (a queue, a
+WebSocket, an external call) as a seam that owns a test. Features are derived from journeys
+now, never invented.
+
+**A completeness net catches what complex builds forget.** The happy path is the easy fifth.
+The net walks the rest for every journey and every feature: each empty and error screen, each
+journey edge, authz on every route, the concurrency race, what the user sees when a dependency
+is down. Each item becomes a feature, an ADR, or an explicit "not needed, because X". A silent
+"we never thought about it" is the exact bug the net exists to catch.
+
+**A visible marker for invisible work.** Mapping or tracing a journey or a flow is
+load-bearing and easy to skip, so the skills mark it: the agent opens its reply with a map
+marker (`🗺️`) and labels the artifacts it touched. The marker is a promise that the journeys
+and flows are being mapped, not assumed. If a build is underway and you have not seen it, the
+seams have not been walked.
+
+**The developer skill builds to the journeys.** When `plan/` carries journeys and flows, the
+developer skill treats them as the spec: build in journey order, trace every route and model
+back to a journey step, walk the completeness net per feature, and prove the journey end to
+end against real dependencies before a task is done. It also points you to the right sibling
+skill - the new design skill for a brand and UI, tina4-js for a reactive frontend, back to the
+architect for a new architectural decision.
+
+**A new tina4-design skill.** Give it a logo or a blank page. It runs the whole chain: client
+intake, market research, the design-system decisions, then a brand guidelines document and an
+interactive UI component guide. It writes `DESIGN.md`, `brand-guidelines.html`, and
+`ui-guide.html` into a `design/` folder, so you build the UI against real tokens instead of
+hand-picked CSS. It works for any industry, any Tina4 backend, or no backend at all.
+
+Refresh the skills with `curl -fsSL https://tina4.com/install-skills.sh | sh`.
+
+Underneath the skills, one fix:
+
+**The zero-dependency promise is a test now, not a claim.** A fresh
+`composer require tina4stack/tina4-php` pulls in no third-party runtime dependency. A new
+guard test proves it, so a stray require can never quietly break the promise that core Tina4
+stands alone.
+
 ## v3.13.135 (2026-09-08) - An honest version check, localhost on Windows, and a Web Push key fix
 
 Three fixes you can see, plus a clean-up that puts all four frameworks back in the green.

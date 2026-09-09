@@ -1,5 +1,65 @@
 # Release Notes
 
+## v3.13.136 (2026-09-09) - Build to the journeys, and a new design skill
+
+The headline is not a method you call. It is how the AI skills plan and build a Tina4 app.
+Complex apps rarely break inside a feature. They break in the seams between features: a goal
+no feature owns, a step with no owner, a flow that crosses three components untraced. This
+release teaches the skills to map those seams before they cut a feature, adds a skill that
+designs your brand and UI, and ships three framework fixes underneath.
+
+**The architect skill maps goals, journeys, and system flows before it scaffolds a file.**
+The stack decisions say what you build on. They say nothing about what a person is trying to
+achieve, how they move to achieve it, or how a request travels to make it happen. A new
+Phase 2 fills that gap. It names the goals, draws one user journey per goal - numbered end to
+end, with the exit at every step: abandon, refresh, no permission, error - and traces the
+system flow for each load-bearing action, marking every boundary it crosses (a queue, a
+WebSocket, an external call) as a seam that owns a test. Features are derived from journeys
+now, never invented.
+
+**A completeness net catches what complex builds forget.** The happy path is the easy fifth.
+The net walks the rest for every journey and every feature: each empty and error screen, each
+journey edge, authz on every route, the concurrency race, what the user sees when a dependency
+is down. Each item becomes a feature, an ADR, or an explicit "not needed, because X". A silent
+"we never thought about it" is the exact bug the net exists to catch.
+
+**A visible marker for invisible work.** Mapping or tracing a journey or a flow is
+load-bearing and easy to skip, so the skills mark it: the agent opens its reply with a map
+marker (`🗺️`) and labels the artifacts it touched. The marker is a promise that the journeys
+and flows are being mapped, not assumed. If a build is underway and you have not seen it, the
+seams have not been walked.
+
+**The developer skill builds to the journeys.** When `plan/` carries journeys and flows, the
+developer skill treats them as the spec: build in journey order, trace every route and model
+back to a journey step, walk the completeness net per feature, and prove the journey end to
+end against real dependencies before a task is done. It also points you to the right sibling
+skill - the new design skill for a brand and UI, tina4-js for a reactive frontend, back to the
+architect for a new architectural decision.
+
+**A new tina4-design skill.** Give it a logo or a blank page. It runs the whole chain: client
+intake, market research, the design-system decisions, then a brand guidelines document and an
+interactive UI component guide. It writes `DESIGN.md`, `brand-guidelines.html`, and
+`ui-guide.html` into a `design/` folder, so you build the UI against real tokens instead of
+hand-picked CSS. It works for any industry, any Tina4 backend, or no backend at all.
+
+Refresh the skills with `curl -fsSL https://tina4.com/install-skills.sh | sh`.
+
+Underneath the skills, three fixes:
+
+**Swagger stops answering a route miss with a UI that cannot load.** The bundled Swagger UI
+pointed at a document that does not exist, so a request that missed every route returned a
+docs page that never finished loading. It now points at a document that exists, and a static
+gate test holds the behaviour in place.
+
+**Database drivers load only when you use them.** Tina4 registers its database adapters
+lazily. Importing the framework no longer loads a driver you never asked for, so an app on
+SQLite never pays to import the Postgres or Firebird driver. The unused driver never loads.
+
+**The zero-dependency promise is a test now, not a claim.** Importing the Tina4 feature
+surface pulls in nothing outside the standard library. A new guard test imports the surface
+and fails if a third-party runtime dependency rides along, so a stray import can never quietly
+break the promise that core Tina4 stands alone.
+
 ## v3.13.135 (2026-09-08) - An honest version check, and a Web Push key fix
 
 Two fixes you can see, plus a clean-up that puts all four frameworks back in the green.

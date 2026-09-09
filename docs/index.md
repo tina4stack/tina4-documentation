@@ -50,13 +50,17 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Current framework release: 3.13.135
+## Current framework release: 3.13.136
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.135, a fix release. The dev-admin
-version check now tells the truth when it cannot reach the registry, instead of drawing a
-false "up to date". Web Push generates keys at the correct fixed width every time. PHP's
-dev server answers on `localhost` on Windows. Node serves `/swagger` again when it is
-enabled. All four frameworks pass a clean run.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.136. The headline is how the AI skills
+plan and build. The architect skill now maps goals, user journeys, and system flows before it
+scaffolds a file, a completeness net catches the states complex builds forget, and a visible
+map marker shows when that work is happening. A new tina4-design skill runs the whole
+visual-identity chain and writes a brand guide and a UI component guide into `design/`.
+Underneath, the bundled Swagger UI no longer answers a route miss with a page that cannot load
+(Python, Ruby, Node), the zero-dependency promise is now a guard test rather than a claim (all
+four), and Python registers its database drivers lazily so an unused driver never loads.
+Refresh the skills with `curl -fsSL https://tina4.com/install-skills.sh | sh`.
 
 Feature 140 Web Push, shipped in 3.13.134, remains available: send a browser push
 notification from any of the four frameworks through one provider-neutral API. It speaks
@@ -159,6 +163,8 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 :::
 
 ## What's new
+
+**v3.13.136 (2026-09-09)** - The AI skills build to the journeys: the architect skill maps goals, user journeys, and system flows with a completeness net before it scaffolds (marked with 🗺️), and a new tina4-design skill produces brand guidelines and a UI guide. Underneath: a Swagger route-miss fix (Python/Ruby/Node), a zero-dependency guard test (all four), and lazy database-driver loading (Python). [full notes](/python/36-releases.md)
 
 **v3.13.135 (2026-09-08)** - Fix release: the dev-admin version check reports "could not check" instead of a false "up to date" when the registry is unreachable (all four); Web Push generates P-256 keys at the correct fixed 32-byte width (PHP/Ruby/Node); PHP's dev server dual-stacks loopback so `localhost` works on Windows; Node serves `/swagger` again when enabled. [full notes](/python/36-releases.md)
 
