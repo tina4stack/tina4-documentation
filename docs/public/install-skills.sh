@@ -19,8 +19,20 @@
 # users reported a broken install.
 set -eu
 
-primary_url="https://raw.githubusercontent.com/tina4stack/tina4/3.13.135/install-skills.sh"
-mirror_url="https://cdn.jsdelivr.net/gh/tina4stack/tina4@3.13.135/install-skills.sh"
+# The skills release this bootstrap installs. One pin, honoured as an override,
+# used to build all three source URLs below. `tina4 doctor` reads this default to
+# report skills currency, and scripts/bump-skills-ref.sh bumps it at release.
+# Keep this assignment the FIRST place the override name appears in the file: the
+# doctor takes the first occurrence, so a comment must not spell out the token.
+ref="${TINA4_SKILLS_REF:-3.13.135}"
+
+# Fetch the inner installer from tina4.com FIRST (Tina4's own infra, Jenkins-
+# deployed), then jsDelivr, then raw.githubusercontent as fallbacks. GitHub raw
+# 503s during incidents, so leading with tina4.com keeps the common path off
+# GitHub; the fallbacks keep the install working if tina4.com is ever down.
+tina4_url="https://tina4.com/skills/${ref}/install-skills.sh"
+jsdelivr_url="https://cdn.jsdelivr.net/gh/tina4stack/tina4@${ref}/install-skills.sh"
+raw_url="https://raw.githubusercontent.com/tina4stack/tina4/${ref}/install-skills.sh"
 
 # Download to a file and CHECK it, rather than `curl ... | sh`.
 #
@@ -32,9 +44,10 @@ mirror_url="https://cdn.jsdelivr.net/gh/tina4stack/tina4@3.13.135/install-skills
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT INT TERM
 
-if ! curl -fsSL --retry 3 --retry-delay 2 "$primary_url" -o "$tmp" &&
-   ! curl -fsSL --retry 3 --retry-delay 2 "$mirror_url" -o "$tmp"; then
-  echo "error: could not download the Tina4 skills installer from either source" >&2
+if ! curl -fsSL --retry 3 --retry-delay 2 "$tina4_url" -o "$tmp" &&
+   ! curl -fsSL --retry 3 --retry-delay 2 "$jsdelivr_url" -o "$tmp" &&
+   ! curl -fsSL --retry 3 --retry-delay 2 "$raw_url" -o "$tmp"; then
+  echo "error: could not download the Tina4 skills installer from any source" >&2
   exit 1
 fi
 

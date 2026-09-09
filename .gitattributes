@@ -1,0 +1,7 @@
+# The published skills bundle is served byte-for-byte. Its install-skills.ps1 is
+# EV-signed (Authenticode covers exact bytes) and every skill file is checksummed
+# by skills.sha256, which the installer re-verifies. Git line-ending normalization
+# would change those bytes and break BOTH the signature and the checksum gate, so
+# never normalize anything under the bundle. Mirrors tina4/.gitattributes marking
+# the canonical install-skills.ps1 `binary`.
+docs/public/skills/** binary

@@ -103,6 +103,12 @@ SKIP_PATH_FRAGMENTS: tuple[str, ...] = (
     # etc.) are accurate for that version and shouldn't be flagged
     # against the v3 CLI.
     "/docs/v2/",
+    # Published skills bundle (docs/public/skills/<ref>/...): a build artifact
+    # staged by tina4/scripts/gen-skills-bundle.sh, byte-identical to the
+    # framework repos' own .claude/skills files. It is skill-instruction markdown,
+    # not authored docs prose, so it is exempt from the CLI-drift + em-dash gate;
+    # its integrity is the sha256 manifest, not this audit.
+    "/docs/public/skills/",
 )
 
 # Framework source roots, relative to WORKSPACE_ROOT. Each is optional —
