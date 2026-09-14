@@ -1,5 +1,16 @@
 RewriteEngine On
 
+# Serve installer scripts as UTF-8 text. Without a text/* Content-Type, Windows
+# PowerShell 5.1 hands back a System.Byte[] from `irm <url>` and from
+# Invoke-WebRequest(...).Content, and Invoke-Expression then refuses it with
+# "Cannot convert 'System.Byte[]' to the type 'System.String' required by
+# parameter 'Command'". tina4.com sent no Content-Type for these, so both
+# `irm https://tina4.com/install-skills.ps1 | iex` and the shim's own inner
+# fetch broke. Forcing text/plain makes every PowerShell fetch return a String.
+<FilesMatch "\.(ps1|sh)$">
+    ForceType "text/plain; charset=utf-8"
+</FilesMatch>
+
 # Serve index.html for directory requests
 DirectoryIndex index.html
 

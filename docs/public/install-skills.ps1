@@ -24,7 +24,18 @@ $installer = $null
 foreach ($url in $urls) {
   for ($attempt = 0; $attempt -le 3; $attempt++) {
     try {
-      $installer = (Invoke-WebRequest -UseBasicParsing -Uri $url).Content
+      $content = (Invoke-WebRequest -UseBasicParsing -Uri $url).Content
+      # Invoke-WebRequest returns .Content as a [byte[]] when the server sends a
+      # non-text Content-Type: tina4.com sends none and jsDelivr sends
+      # application/octet-stream, so only raw.githubusercontent (text/plain) came
+      # back as a String. Invoke-Expression then refused the [byte[]] with
+      # "Cannot convert 'System.Byte[]' to the type 'System.String' required by
+      # parameter 'Command'". Decode to UTF-8 text so every source yields a String.
+      if ($content -is [byte[]]) {
+        $installer = [System.Text.Encoding]::UTF8.GetString($content)
+      } else {
+        $installer = [string]$content
+      }
       break
     } catch {
       if ($attempt -lt 3) { Start-Sleep -Seconds 2 }
