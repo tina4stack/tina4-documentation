@@ -14,7 +14,7 @@
 
 ## Philosophy
 
-Tina4 follows the AI framework philosophy. One package. One folder structure. Zero configuration files beyond a `.env`. You write your code, drop it in the right folder, and Tina4 discovers it.
+Tina4 follows one idea: get out of the way. One package. One folder structure. No configuration files beyond a `.env`. You write your code, drop it in the right folder, and Tina4 finds it there.
 
 ***
 

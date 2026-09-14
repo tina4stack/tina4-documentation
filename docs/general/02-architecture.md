@@ -182,7 +182,7 @@ Ten methods. JSON, HTML, text, XML, redirects, files, templates, status codes, h
 
 ### 7. Response Pipeline
 
-Your handler finishes. The response is not done yet. It passes through an automatic pipeline -- five stages that optimize every response without a single line of configuration:
+Your handler finishes. The response is not done yet. It passes through an automatic pipeline -- five stages that optimise every response without a single line of configuration:
 
 1. **Frond rendering** -- if you called `response.render()`, the template compiles and executes
 2. **HTML minification** -- in production (`TINA4_DEBUG=false`), whitespace collapses, comments vanish. 15-25% smaller output.
@@ -365,7 +365,7 @@ Environment variables are strings. Booleans do not exist in `.env` files. Tina4 
 - `yes` (any case)
 - `on` (any case)
 
-Everything else is `false`. Empty strings. Unset variables. Typos. If it is not on the list, it is `false`.
+Everything else is `false`. Empty strings. Unset variables. Typos. If it's not on the list, it's `false`.
 
 ```bash
 TINA4_DEBUG=true
