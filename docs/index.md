@@ -50,6 +50,33 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
+## Install and register
+
+::: tabs
+== macOS / Linux
+```bash
+curl -fsSL https://tina4.com/install.sh | sh
+tina4 setup
+```
+== Windows
+```powershell
+irm https://tina4.com/install.ps1 | iex
+tina4 setup
+```
+:::
+
+::: tip Save your paid tokens for the hard parts
+Let Tina4's own AI coder handle the boilerplate. Register for a free profile to get started.
+
+<a class="tp-cta" href="https://profile.tina4.com">Register Now →</a>
+:::
+
+::: tip Review your code with the Tina4 Code Viewer
+A lightweight, read-only desktop reviewer that understands your Tina4 layout, lets you leave line-anchored comments grounded against the Tina4 RAG, and exports a portable bundle any AI agent can act on. It views and comments, it never edits your code. Signed builds for macOS, Windows, and Linux.
+
+<a class="tp-cta" href="/download/code-viewer/">Download the Code Viewer →</a>
+:::
+
 ## Current framework release: 3.13.136
 
 Python, PHP, Ruby, and Node.js are aligned on 3.13.136. The headline is how the AI skills
@@ -134,33 +161,6 @@ Read https://tina4.com/llms.txt and build me a REST API with a Todo model and JW
 :::
 
 No signup, no plugin. [llms.txt](/llms.txt) is a bootstrap protocol written for machines: it tells your assistant to drive the `tina4` CLI, generate the scaffold, and use the built-ins instead of inventing them. That last part is why the output runs.
-
-## Install and register
-
-::: tabs
-== macOS / Linux
-```bash
-curl -fsSL https://tina4.com/install.sh | sh
-tina4 setup
-```
-== Windows
-```powershell
-irm https://tina4.com/install.ps1 | iex
-tina4 setup
-```
-:::
-
-::: tip Save your paid tokens for the hard parts
-Let Tina4's own AI coder handle the boilerplate. Register for a free profile to get started.
-
-<a class="tp-cta" href="https://profile.tina4.com">Register Now →</a>
-:::
-
-::: tip Review your code with the Tina4 Code Viewer
-A lightweight, read-only desktop reviewer that understands your Tina4 layout, lets you leave line-anchored comments grounded against the Tina4 RAG, and exports a portable bundle any AI agent can act on. It views and comments, it never edits your code. Signed builds for macOS, Windows, and Linux.
-
-<a class="tp-cta" href="/download/code-viewer/">Download the Code Viewer →</a>
-:::
 
 ## What's new
 
