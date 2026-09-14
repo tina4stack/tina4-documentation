@@ -4,17 +4,17 @@
 
 **TINA4: The Intelligent Native Application 4ramework.**
 
-Four words. Each one carries weight.
+Four words, and each one earns its place.
 
-**Intelligent.** The framework understands AI. Every project ships with a CLAUDE.md file that gives AI assistants complete knowledge of the framework's conventions, API, and structure. Your AI writes correct code on the first try because the framework told it how.
+**Intelligent.** The framework understands AI. Every project ships with a CLAUDE.md file that hands an AI assistant the whole of the framework's conventions, API and structure. Your assistant writes correct code on the first try, because the framework already told it how.
 
-**Native.** Zero third-party dependencies. Every feature (the template engine, the JWT library, the SCSS compiler, the queue system, the GraphQL parser) is built from scratch using the language's standard library. No supply chain risk. No version conflicts. No surprises.
+**Native.** Zero third-party dependencies. Every feature - the template engine, the JWT library, the SCSS compiler, the queue, the GraphQL parser - is built from scratch on the language's standard library. No supply chain to trust. No version conflicts. No surprises.
 
-**Application.** This builds real production applications. Routing, ORM, authentication, queues, WebSocket, email, GraphQL, SOAP, 140 features, all included. One package. One install. Ship today.
+**Application.** This builds real production applications. Routing, ORM, authentication, queues, WebSocket, email, GraphQL, SOAP, 140 features, all of it in the box. One package. One install.
 
-**4ramework.** Four languages. One API. Python, PHP, Ruby, Node.js: learn the conventions once, build in any of them. The "4" is both the number and "for", a framework *for* developers who value their time.
+**4ramework.** Four languages, one API. Python, PHP, Ruby, Node.js: learn the conventions once, build in any of them. The "4" is the number and it's "for" - a framework *for* developers who guard their time.
 
-Here is a complete API endpoint:
+Here is a whole API endpoint:
 
 ```php
 <?php
@@ -27,37 +27,35 @@ Router::get("/api/greeting/{name}", function ($request, $response) {
 });
 ```
 
-No base controller. No service provider. No bootstrapping ritual. Drop that file into `src/routes/`, start the server, and it works. Your AI assistant knows this too: it reads the same conventions you do.
+No base controller. No service provider. No bootstrapping ritual. Drop that file into `src/routes/`, start the server, and it answers. Your AI assistant knows this too, it reads the same conventions you do.
 
-The philosophy fits in one sentence: **the framework that gets out of the way, for humans AND for AI.**
+The philosophy fits in one sentence: the framework gets out of the way, for humans and for AI alike.
 
-Routes go in `src/routes/`. Templates go in `src/templates/`. Models go in `src/orm/`. Learn the convention once. Your AI learns it once. Neither of you thinks about it again.
+Routes go in `src/routes/`. Templates go in `src/templates/`. Models go in `src/orm/`. You learn the convention once, your assistant learns it once, and neither of you thinks about it again.
 
-A decade of watching developers waste afternoons on configuration files, dependency conflicts, and framework upgrades that break everything. Then AI arrived and made the problem worse: every framework's ambiguity became the AI's confusion. Tina4 was born from both frustrations. One structure. One way to do things. The AI never guesses wrong because there is only one right answer.
+Behind it sits a decade of watching developers lose afternoons to configuration files, dependency conflicts, and upgrades that break everything. Then AI arrived and made it worse: every framework's ambiguity became the assistant's confusion. Tina4 grew out of both frustrations. One structure, one way to do things, and the assistant never guesses wrong because there's only one right answer.
 
 ---
 
 ## Why Zero Dependencies Matters
 
-Tina4 v3 has **zero third-party dependencies** for its core features. The template engine, the JWT library, the SCSS compiler, the queue system, the GraphQL parser, the logger, the rate limiter: every piece is built from scratch using the language's standard library.
+Tina4 v3 carries **zero third-party dependencies** for its core. The template engine, the JWT library, the SCSS compiler, the queue, the GraphQL parser, the logger, the rate limiter: every piece is built from scratch on the language's standard library.
 
-This is a survival strategy, for you and for your AI assistant.
+It's a survival strategy, for you and for your assistant.
 
 ### Security
 
-Every dependency is an attack surface. When a package in your dependency tree gets compromised (and it will, ask the teams who trusted `event-stream`, `colors.js`, or `ua-parser-js`) your application is exposed.
+Every dependency is an attack surface. When a package in your tree is compromised, and one will be - ask the teams who trusted `event-stream`, `colors.js` or `ua-parser-js` - your application goes down with it.
 
-Tina4's attack surface is the language runtime and your code. Nothing else sits between you and your users.
+Tina4's attack surface is the language runtime and your own code. Nothing else sits between you and your users.
 
 ### Size
 
-A Laravel installation pulls in 70+ packages. A Rails app starts with 40+ gems. A Next.js project's `node_modules` folder is measured in hundreds of megabytes.
-
-Tina4 installs **one package**. The framework runs to roughly **~26,000 lines of code** per language (Python ~26,000 | PHP ~35,000 | Ruby ~24,000 | Node.js ~32,000), all of it standard-library code you can read and audit. The Docker image fits in **40-80MB**. Your production container ships with what it needs. Nothing else tags along.
+Tina4 installs **one package**. The framework runs to roughly **~26,000 lines of code** per language (Python ~26,000 | PHP ~35,000 | Ruby ~24,000 | Node.js ~32,000), and every line is standard-library code you can read in an afternoon and audit. The Docker image fits in **40-80MB**. Your production container ships with what it needs, and nothing else tags along.
 
 ### Portability
 
-Zero dependencies means zero compatibility conflicts. You will never see this with Tina4:
+Zero dependencies means zero compatibility conflicts. You'll never meet this with Tina4:
 
 ```
 Your requirements could not be resolved to an installable set of packages.
@@ -66,21 +64,21 @@ Your requirements could not be resolved to an installable set of packages.
     - package-b v1.4 requires other-package ^2.0
 ```
 
-No diamond dependency problem. No dependency tree to untangle. No Friday afternoon emergency because a transitive dependency released a breaking change.
+No diamond dependency problem. No tree to untangle. No Friday-afternoon emergency because a transitive dependency shipped a breaking change.
 
 ### Upgrades
 
-Upgrading Tina4 means upgrading one package. No cascade of breaking changes. The framework team controls every line, so when something breaks, the fix lives in one place.
+Upgrading Tina4 means upgrading one package. There's no cascade of breaking changes. The framework team owns every line, so when something breaks the fix lives in one place.
 
 ### The One Exception
 
-Database drivers are the exception. You cannot talk to PostgreSQL without a PostgreSQL driver. These are native connectors to external systems. They are optional: install only what you need. SQLite works out of the box with every language's standard library.
+Database drivers are the exception. You can't talk to PostgreSQL without a PostgreSQL driver, and these are native connectors to external systems. They're optional: install only what you need. SQLite works out of the box on every language's standard library.
 
 ---
 
-## 140 Cataloged Features
+## 140 Catalogued Features
 
-Tina4 maintains 140 numbered catalog entries across Python, PHP, Ruby, Node.js, the shared CLI, and selected integrations. The catalog is the framework family's implementation and audit inventory. It does not claim that every entry ships in every package or has reached parity. Each feature list and audit packet records its owner and status.
+Tina4 keeps 140 numbered catalogue entries across Python, PHP, Ruby, Node.js, the shared CLI, and selected integrations. The catalogue is the family's implementation and audit inventory. It doesn't claim that every entry ships in every package or has reached parity, each feature list and audit packet records its own owner and status.
 
 **Core Web**
 - HTTP router with path parameters, typed params, middleware, and auth guards
@@ -119,7 +117,7 @@ Tina4 maintains 140 numbered catalog entries across Python, PHP, Ruby, Node.js, 
 - Interactive gallery with 7 deployable examples
 - Live reload, AI tool integration
 
-Each language packages these capabilities in its native format. A dependency means an extra package that the package manager installs; a language or runtime extension does not count. Python and PHP core declare no required third-party packages. Ruby declares runtime gems, while Node's root package installs optional provider packages by default. The biggest component, the Frond template engine, runs about 1,500 lines. Most features need fewer than 200.
+Each language packages these capabilities in its native format. A dependency means an extra package the package manager installs; a language or runtime extension doesn't count. Python and PHP core declare no required third-party packages. Ruby declares runtime gems, while Node's root package installs optional provider packages by default. The biggest component, the Frond template engine, runs about 1,500 lines. Most features need fewer than 200.
 
 ---
 
@@ -145,7 +143,7 @@ my-project/
 `-- tests/                  # Test files
 ```
 
-Five rules. No exceptions:
+Five rules, no exceptions:
 
 1. **Routes** go in `src/routes/`. Name the files however you want. Tina4 reads the route definitions inside them.
 2. **Models** go in `src/orm/`. Same auto-discovery.
@@ -153,7 +151,7 @@ Five rules. No exceptions:
 4. **Static files** go in `src/public/`. A file at `src/public/css/style.css` serves at `/css/style.css`.
 5. **Configuration** goes in `.env`. One file. Key-value pairs. No YAML. No TOML. No JSON config.
 
-No routing table to maintain. No service container to wire up. No middleware stack to arrange in the right order. Drop files in the right directories. They work.
+No routing table to maintain. No service container to wire up. No middleware stack to arrange in the right order. You drop the files in the right directories, and they work.
 
 ---
 
@@ -166,7 +164,7 @@ Tina4 is one framework with four backend implementations:
 - **tina4-ruby** - Ruby 3.1+
 - **tina4-nodejs** - Node.js 22+ (TypeScript)
 
-All four target the same project structure, `.env` variables, template syntax, CLI commands, and API contracts. The audit records gaps until fixtures prove those contracts in every implementation.
+All four target the same project structure, `.env` variables, template syntax, CLI commands, and API contracts. The audit records the gaps until fixtures prove those contracts in every implementation.
 
 Each implementation follows its language's naming convention:
 
@@ -176,9 +174,9 @@ Each implementation follows its language's naming convention:
 | Fetch one row | `fetch_one()` | `fetchOne()` |
 | Soft delete | `soft_delete()` | `softDelete()` |
 
-A team can prototype in Python and deploy in PHP without relearning the framework. Frontend developers using frond.js never need to know which backend language is running. DevOps deploys the same Docker structure, the same `.env`, the same health checks, regardless of language.
+A team can prototype in Python and deploy in PHP without relearning the framework. Frontend developers on frond.js never need to know which backend language is running. DevOps deploys the same Docker structure, the same `.env`, the same health checks, whichever language runs underneath.
 
-One Rust-based CLI binary auto-detects the project language and dispatches to the correct runtime:
+One Rust-based CLI binary detects the project language and dispatches to the correct runtime:
 
 ```bash
 tina4 init python ./my-app    # Scaffold a Python project
@@ -192,17 +190,17 @@ tina4 test                    # Run the test suite
 
 ## What Tina4 Is Not
 
-Tina4 does not replace Laravel, Django, Rails, or Next.js. Those are excellent frameworks for teams that want a full-stack opinion on everything.
+Tina4 doesn't replace Laravel, Django, Rails or Next.js. Those are fine frameworks for a team that wants a full-stack opinion on everything.
 
 Tina4 is for developers who want:
 
-- **Control** - you see every line of code that runs your application
-- **Simplicity** - one package, one import, predictable behaviour
+- **Control** - you see every line that runs your application
+- **Simplicity** - one package, one import, behaviour you can predict
 - **Speed** - sub-millisecond framework overhead
 - **Portability** - switch languages without switching paradigms
-- **Security** - no supply chain risk from transitive dependencies
+- **Security** - no supply chain risk riding in on a transitive dependency
 
-If you want a batteries-included platform with an ecosystem of plugins and a marketplace of themes, Tina4 is the wrong tool. If you want a sharp, minimal toolkit that does what you tell it and nothing else, keep reading.
+If you want a platform with a library of plugins and a marketplace of themes, Tina4 is the wrong tool. If you want a sharp, minimal toolkit that does what you tell it and nothing more, you're already home.
 
 The code you don't write is the code that never breaks.
 
@@ -220,4 +218,4 @@ The code you don't write is the code that never breaks.
 | Discovery | Automatic (routes, models, templates) |
 | CLI | Unified Rust binary |
 | Tests | 9,311 across all four frameworks |
-| Features | 140 cataloged entries |
+| Features | 140 catalogued entries |

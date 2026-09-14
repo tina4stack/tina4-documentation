@@ -14,13 +14,16 @@ Documentation site for the Tina4 framework. See https://tina4.com for the live s
 
 ## Writing Style
 
-- **Always use the `content-writer` skill** when writing or editing documentation prose
-- **ASCII punctuation only — NEVER use em dashes.** No em/en dash (use a comma, colon, parentheses, or a plain hyphen), no smart/curly quotes (use straight `'` `"`), no ellipsis character (use `...`). Em dashes are a machine-wrote-this tell, and smart quotes inside code samples break copy-paste. `scripts/audit-truth.py --strict` enforces this as a CI gate.
-- Active voice, no adverbs, no buzzwords, plain English
-- Personify technology, use fragment chains, end sections strong
-- Flesch reading ease target: 50 (±5)
-- Keep subject and verb within 3 words of each other
-- Code examples stay untouched — only rewrite surrounding prose
+- **Always use the `andres-writing-voice` skill** when writing or editing documentation prose. It is the source of truth for how the Tina4 docs read. (It replaces the old content-writer rubric, which targeted a tighter, more neutral register that fought the voice.)
+- **ASCII punctuation only. NEVER use em dashes.** No em/en dash (use a comma, a colon, parentheses, or a spaced hyphen ` - `), no smart/curly quotes (use straight `'` `"`), no ellipsis character (use `...`). Smart quotes inside code samples break copy-paste. `scripts/audit-truth.py --strict` enforces this as a CI gate. The voice already fits: it uses the spaced hyphen and a plain `...` to close, never an em dash.
+- **Flesch 62-72** for ordinary prose; technical explanation may run 55-62. Measure, do not estimate.
+- **Trace, do not define.** In technical prose, narrate what the system will do to a request as it moves - future tense, conditional branches (if the path is virtual, if auth passes) - never a definition, never an analogy.
+- **Give at least one object, machine or room a will of its own** per page of prose. The router listens. The welcome page greets you. The engine turns it on by itself.
+- **Contractions on, British spelling.** isn't, doesn't, it's; colour, recognise, behaviour; no one, somebody, amongst, towards. Never the Americanism (color, behavior, catalog).
+- **Expand every acronym on first use** with the short form in brackets, then use the short form: Cross-Site Request Forgery (CSRF). Bare API/HTTP/JSON/SQL are fine.
+- **Never sell.** State what the thing does, show the evidence, stop. No call to action in body prose, no competitor comparison. Close by handing off, not concluding.
+- **Reference material stays plain.** Method tables, signature lists, env-var tables and code examples are NOT voice-passed - they take bullets and figures. The voice governs the framing and concept prose, not the API reference.
+- Code examples stay untouched. Only the surrounding prose is rewritten.
 
 ## Code Principles
 
