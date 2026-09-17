@@ -13,15 +13,25 @@ TINA4_VAPID_PUBLIC=your-base64url-public-key
 TINA4_VAPID_PRIVATE=your-base64url-private-key
 ```
 
-The Python standard library does not provide P-256 ECDH or ES256. Select the
-optional capability when the project enables Web Push:
+Python's standard library ships no P-256 or ES256, so Tina4 borrows them from the
+operating system. On a Linux server it calls the system OpenSSL (`libcrypto`)
+straight through, the same platform crypto the PHP, Ruby and Node frameworks lean
+on, so the server needs nothing installed.
+
+A development Mac or Windows box can't always reach a safe OpenSSL: macOS ships
+LibreSSL, which refuses to load this way, and Windows carries no system OpenSSL at
+all. There Tina4 falls back to the `cryptography` package, so install it while you
+develop:
 
 ```bash
 pip install tina4-python[push]
 ```
 
-The core package remains zero-dependency. If Web Push is configured without the
-capability, Tina4 fails with an actionable error when the sender is used.
+`TINA4_PUSH_BACKEND` pins the choice when you want it fixed: `libcrypto`,
+`cryptography`, or `auto` (the default, which prefers `libcrypto`). Either backend
+writes the same bytes, so a push signed on your laptop and one signed on the server
+look identical on the wire. Configure Web Push without a usable backend and the
+sender fails with an actionable error the moment it runs.
 
 ## Browser subscription
 
@@ -45,8 +55,7 @@ if result.dead:
     pass
 ```
 
-The implementation uses `cryptography` only for the selected capability and
-stdlib HTTP. It produces RFC 8291 `aes128gcm` payloads and VAPID ES256 tokens.
-The result exposes `ok`, `status`, `dead`, `retryable`, `endpoint`, and the
-response body. HTTP 404/410 are dead subscriptions; 408, 429, and 5xx are
-retryable.
+The sender speaks stdlib HTTP and hands the crypto to whichever backend loaded. It
+produces RFC 8291 `aes128gcm` payloads and VAPID ES256 tokens. The result exposes
+`ok`, `status`, `dead`, `retryable`, `endpoint`, and the response body. HTTP
+404/410 are dead subscriptions; 408, 429, and 5xx are retryable.
