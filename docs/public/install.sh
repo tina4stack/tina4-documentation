@@ -137,11 +137,17 @@ rm -f "$SUMS_TMP"
 
 chmod +x "$TMP"
 
-# Install — try without sudo first
-if [ -w "$INSTALL_DIR" ]; then
+# Install. The target directory may not exist yet: a clean macOS has no
+# /usr/local/bin (it was historically created by Homebrew), so a bare `mv` there
+# fails with "No such file or directory". Create the directory first, then move
+# without sudo when we can and escalate only when the location needs root.
+if [ -d "$INSTALL_DIR" ] && [ -w "$INSTALL_DIR" ]; then
+  mv "$TMP" "${INSTALL_DIR}/tina4"
+elif mkdir -p "$INSTALL_DIR" 2>/dev/null && [ -w "$INSTALL_DIR" ]; then
   mv "$TMP" "${INSTALL_DIR}/tina4"
 else
   echo "Need sudo to install to ${INSTALL_DIR}"
+  sudo mkdir -p "$INSTALL_DIR"
   sudo mv "$TMP" "${INSTALL_DIR}/tina4"
 fi
 
