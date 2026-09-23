@@ -77,17 +77,23 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 <a class="tp-cta" href="/download/code-viewer/">Download the Code Viewer →</a>
 :::
 
-## Current framework release: 3.13.136
+## Current framework release: 3.13.137
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.136. The headline is how the AI skills
-plan and build. The architect skill now maps goals, user journeys, and system flows before it
-scaffolds a file, a completeness net catches the states complex builds forget, and a visible
-map marker shows when that work is happening. A new tina4-design skill runs the whole
-visual-identity chain and writes a brand guide and a UI component guide into `design/`.
-Underneath, the bundled Swagger UI no longer answers a route miss with a page that cannot load
-(Python, Ruby, Node), the zero-dependency promise is now a guard test rather than a claim (all
-four), and Python registers its database drivers lazily so an unused driver never loads.
-Refresh the skills with `curl -fsSL https://tina4.com/install-skills.sh | sh`.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.137. The headline is Google Gemini as a
+first-class Ai provider: set `TINA4_AI_PROVIDER=gemini` with a `TINA4_AI_KEY` and the Ai
+client reaches Gemini through its OpenAI-compatible endpoint, with the same normalised chat,
+streaming, tool use, retries and embeddings every other provider gives and nothing new to
+install. Alongside it, Python sends Web Push on Linux with no package installed (the RFC 8291
+crypto runs through the system OpenSSL by ctypes, with cryptography as the development
+fallback), the v2 to v3 migration upgrade stops replaying old history (Python and Node fixes,
+PHP and Ruby locked in), PHP's `tina4 metrics` finds the CLI on Windows, and live reload
+connects under `tina4 serve` again.
+
+The 3.13.136 journeys-and-design work remains in place: the architect skill maps goals, user
+journeys, and system flows before it scaffolds a file, a completeness net catches the states
+complex builds forget, a visible map marker shows when that work is happening, and a new
+tina4-design skill writes a brand guide and a UI component guide into `design/`. Refresh the
+skills with `curl -fsSL https://tina4.com/install-skills.sh | sh`.
 
 Feature 140 Web Push, shipped in 3.13.134, remains available: send a browser push
 notification from any of the four frameworks through one provider-neutral API. It speaks
@@ -163,6 +169,8 @@ Read https://tina4.com/llms.txt and build me a REST API with a Todo model and JW
 No signup, no plugin. [llms.txt](/llms.txt) is a bootstrap protocol written for machines: it tells your assistant to drive the `tina4` CLI, generate the scaffold, and use the built-ins instead of inventing them. That last part is why the output runs.
 
 ## What's new
+
+**v3.13.137 (2026-09-23)** - Google Gemini joins the Ai client as a first-class provider over the OpenAI wire (all four). Python sends Web Push on Linux with nothing installed (system OpenSSL via ctypes) and keeps the dev toolbar out of 204 responses; the v2-to-v3 migration upgrade stops replaying old history (Python/Node fixes, PHP/Ruby locked in); PHP's `tina4 metrics` finds the CLI on Windows and live reload connects under `tina4 serve`. [full notes](/python/36-releases.md)
 
 **v3.13.136 (2026-09-09)** - The AI skills build to the journeys: the architect skill maps goals, user journeys, and system flows with a completeness net before it scaffolds (marked with 🗺️), and a new tina4-design skill produces brand guidelines and a UI guide. Underneath: a Swagger route-miss fix (Python/Ruby/Node), a zero-dependency guard test (all four), and lazy database-driver loading (Python). [full notes](/python/36-releases.md)
 

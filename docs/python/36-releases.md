@@ -1,5 +1,31 @@
 # Release Notes
 
+## v3.13.137 (2026-09-23) - Gemini joins the Ai client, and Web Push needs nothing on Linux
+
+Google Gemini becomes a first-class Ai provider, Web Push drops its last server dependency,
+and two smaller fixes tidy the dev toolbar and the v2 upgrade.
+
+**Gemini rides the OpenAI wire.** Set `TINA4_AI_PROVIDER=gemini` with a `TINA4_AI_KEY` and
+`Ai.chat` / `Ai.embed` reach Google Gemini through its OpenAI-compatible endpoint. Chat,
+streaming, tool use, retries and embeddings all come back in the same normalised shape every
+other provider returns, and nothing new is installed: Gemini is a thin alias over the OpenAI
+wire family, so the whole provider is a base URL, an endpoint suffix, and a Bearer key.
+
+**Web Push needs nothing installed on Linux.** The RFC 8291 crypto now runs through the
+operating system's OpenSSL (libcrypto) by ctypes, so a Linux host signs and sends a push with
+no extra package; a development Mac or Windows box falls back to the cryptography package. The
+bytes on the wire are identical either way, so a push signed on a laptop and one signed on the
+server are the same push.
+
+**The dev toolbar keeps out of an empty response.** A 204 No Content response carries no body,
+so injecting the dev toolbar into it produced a response that was no longer empty and no
+longer valid. The toolbar is skipped for a 204 now, and the response goes back untouched.
+
+**The v2 to v3 migration upgrade reads an old name correctly.** A v2 migration whose recorded
+name still carried its `.sql` extension was matched against the extensionless v3 name and
+looked unapplied, so the upgrade could try to replay it. The extension is stripped when the v2
+description is resolved, so an upgraded app leaves already-run migrations alone.
+
 ## v3.13.136 (2026-09-09) - Build to the journeys, and a new design skill
 
 The headline is not a method you call. It is how the AI skills plan and build a Tina4 app.

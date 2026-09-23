@@ -1,5 +1,29 @@
 # Release Notes
 
+## v3.13.137 (2026-09-23) - Gemini joins the Ai client, Windows metrics, and live reload under tina4 serve
+
+Google Gemini becomes a first-class Ai provider, and two fixes clear the way for the Windows
+and dev-server experience.
+
+**Gemini rides the OpenAI wire.** Set `TINA4_AI_PROVIDER=gemini` with a `TINA4_AI_KEY` and the
+Ai client reaches Google Gemini through its OpenAI-compatible endpoint. Chat, streaming, tool
+use, retries and embeddings all come back in the same normalised shape every other provider
+returns, and nothing new is installed: Gemini is a thin alias over the OpenAI wire family, so
+the whole provider is a base URL, an endpoint suffix, and a Bearer key.
+
+**`tina4 metrics` finds the CLI on Windows.** The metrics engine shells out to locate the
+`tina4` binary, and it silenced the lookup with a Unix `2>/dev/null` redirect. cmd.exe reads
+that as a redirect to a `\dev\null` path and fails before the lookup ever runs, so
+`tina4 metrics` reported the binary missing on a Windows box that had it installed. The
+redirect is OS-correct now (`2>nul` on Windows), so the lookup runs and the binary is found.
+
+**Live reload connects under `tina4 serve`.** The `--managed` flag hands file watching to the
+Rust CLI, and it was quietly doing a second job: skipping the `/__dev_reload` WebSocket the
+CLI's own reload broadcast reaches. So the dev toolbar and the dashboard dialled a socket
+nothing served, and reconnected on every close. The socket is served now whenever live reload
+is wanted; only the framework's own watcher stands down under `--managed`, so a change on disk
+reaches the browser again.
+
 ## v3.13.136 (2026-09-09) - Build to the journeys, and a new design skill
 
 The headline is not a method you call. It is how the AI skills plan and build a Tina4 app.

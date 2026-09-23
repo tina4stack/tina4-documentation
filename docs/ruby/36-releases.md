@@ -1,5 +1,21 @@
 # Release Notes
 
+## v3.13.137 (2026-09-23) - Gemini joins the Ai client
+
+Google Gemini becomes a first-class Ai provider, and the v2 upgrade is pinned against a
+replay other frameworks had to fix.
+
+**Gemini rides the OpenAI wire.** Set `TINA4_AI_PROVIDER=gemini` with a `TINA4_AI_KEY` and the
+Ai client reaches Google Gemini through its OpenAI-compatible endpoint. Chat, streaming, tool
+use, retries and embeddings all come back in the same normalised shape every other provider
+returns, and nothing new is installed: Gemini is a thin alias over the OpenAI wire family, so
+the whole provider is a base URL, an endpoint suffix, and a Bearer key.
+
+**The v2 to v3 migration upgrade is proven quiet.** When an old v2 migration table carries a
+file extension in its recorded history, the upgrade must not read those rows as unapplied and
+replay them. Ruby was already correct here, and a spec now locks that in so it stays correct,
+matching the fixes the Python and Node upgrades needed.
+
 ## v3.13.136 (2026-09-09) - Build to the journeys, and a new design skill
 
 The headline is not a method you call. It is how the AI skills plan and build a Tina4 app.
