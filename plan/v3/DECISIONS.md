@@ -71,7 +71,9 @@ Conventions:
 | ADR-0055 | [Metrics measures production code and reports evidence honestly](decisions/ADR-0055.md) (resolves Feature 121) | Accepted |
 | ADR-0056 | [Configuration-first OIDC hands identity into Tina4 sessions](decisions/ADR-0056.md) (introduces Feature 136) | Accepted |
 | ADR-0057 | [PostGIS-first Point contract with GeoJSON output](decisions/ADR-0057.md) (introduces Feature 137) | Accepted |
-| ADR-0069 | [Identifiers that reach SQL come from the model, never the request](decisions/ADR-0069.md) (AutoCrud filter/sort, ORM find(), DocStore field paths) | Accepted |
+| ADR-0067 | [Database drivers and optional servers are application dependencies, never framework runtime dependencies](decisions/ADR-0067.md) (Node optional peers, Ruby sqlite3 in the scaffold Gemfile, Puma opt-in) | Accepted |
+| ADR-0069 | [Identifiers that reach SQL come from the model, never the request](decisions/ADR-0069.md) (AutoCrud filter/sort/ids/write bodies, ORM find()/save(), DB write helpers, DocStore field paths, test gate) | Accepted |
+| ADR-0073 | [Every change follows the ISO/IEC 18974 and ISO/IEC 5230 controls](decisions/ADR-0073.md) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 

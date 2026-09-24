@@ -280,7 +280,7 @@ All three layers (and the key/value API below) share one backend set. Pick it wi
 | `redis` | Shared across instances, sub-millisecond, built-in expiry. |
 | `valkey` | Redis wire protocol -- same behaviour as redis. |
 | `memcached` | Shared, unauthenticated. |
-| `mongodb` | TTL collection. Needs the optional `mongodb` driver. |
+| `mongodb` | TTL collection. Needs the `mongodb` driver, which your app installs (`npm install mongodb`). Without it the fallback warning names that command. |
 | `database` | A `tina4_cache` table in your existing database. |
 
 ### Memory (default)

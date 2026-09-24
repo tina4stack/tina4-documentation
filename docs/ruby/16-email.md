@@ -62,6 +62,22 @@ original recipients in `X-Tina4-Original-To`. An unset or empty list leaves
 delivery unchanged. If capture and redirect are both set, capture wins and
 nothing reaches SMTP.
 
+### How Messenger Connects
+
+Messenger speaks SMTP and IMAP itself, on Ruby's own `socket` and `openssl`, so there's no mail gem to install. When you call `send`, it will first open a connection to `TINA4_MAIL_HOST`. If the port is 465, or the encryption is `ssl`, the connection will be wrapped in TLS before the server says a word. If the encryption is `tls` or `starttls`, the message will be held back until the server offers STARTTLS and the channel is upgraded, and a server that doesn't offer it will get nothing at all: `send` returns `success: false` and names the host. Only `none` will talk in clear.
+
+Once the channel is settled, the credentials will be checked with AUTH PLAIN, or AUTH LOGIN when that's all the server accepts. The message will then be streamed out line by line, with any line that starts with a dot doubled so the server can't mistake it for the end.
+
+Reading works the same way. `TINA4_MAIL_IMAP_ENCRYPTION=tls` opens an encrypted connection straight away, `starttls` upgrades a plain one before it logs in, and `none` stays plain.
+
+Every certificate will be checked against the system's trusted authorities and the host name you dialled. If your mail server uses a certificate from a private authority, point OpenSSL at it and the check will pass on its own terms:
+
+```bash
+SSL_CERT_FILE=/etc/ssl/private-ca.pem
+```
+
+A certificate that doesn't check out stops the send with "certificate verify failed" rather than handing your password to somebody who asked for it...
+
 ### Common Provider Configurations
 
 **Gmail:**

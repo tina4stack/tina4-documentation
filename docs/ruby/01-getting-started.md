@@ -627,7 +627,7 @@ bundle install
 
 ::: warning Two dependencies you must declare
 - **`webrick`** - Tina4's dev server uses WEBrick. Ruby 3.0 dropped WEBrick from the standard library, so you must list it in your `Gemfile` or `tina4 serve` fails with `LoadError: cannot load such file -- webrick`.
-- **`sqlite3`** - the default `TINA4_DATABASE_URL` points to SQLite. Without this gem the server restarts in a loop with `LoadError: cannot load such file -- sqlite3`.
+- **`sqlite3`** - the default `TINA4_DATABASE_URL` points to SQLite, and the driver belongs to your app, not to tina4ruby (the same as `pg` or `mysql2`). Without it the first SQLite connection stops the server with a `LoadError` that names the fix: add `gem "sqlite3"` to your `Gemfile`.
 
 `tina4 init ruby` adds both gems automatically. You only need to add them by hand when bootstrapping an empty project.
 :::
