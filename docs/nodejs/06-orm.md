@@ -1424,13 +1424,13 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 
 **Fix:** Build the response object manually, omitting sensitive fields: `{ id: user.id, name: user.name, email: user.email }`. Or create a helper method on your model class that returns only safe fields.
 
-### 6. Validation only runs on validate()
+### 6. save() returns false on invalid data
 
-**Problem:** You call `save()` without calling `validate()` first, and invalid data gets into the database.
+**Problem:** `await model.save()` returns `false` and the row never reaches the database, but nothing threw.
 
-**Cause:** `save()` does not validate. This is by design -- sometimes you need to save partial data or bypass validation for bulk operations.
+**Cause:** `save()` runs `validate()` first. If any field fails its rules, it refuses the write, logs the reason, and returns `false` instead of throwing. The same happens when the database rejects the write (a missing table, a `NOT NULL` column).
 
-**Fix:** Call `const errors = model.validate()` before `save()` in your route handlers. Or create a helper method that validates and saves in one step.
+**Fix:** Check the return value. `model.lastError` (or `model.getError()`) holds the reason. In a route handler, call `const errors = model.validate()` before `save()` when you want to send the field errors back to the client as a `400`.
 
 ### 7. Foreign key not enforced
 

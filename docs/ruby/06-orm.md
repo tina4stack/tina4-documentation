@@ -898,7 +898,12 @@ If validation fails (for example, a required field is missing), the endpoint ret
 
 ### Custom Routes Alongside Auto-CRUD
 
-Custom routes defined in `src/routes/` load before auto-CRUD routes. They take precedence. If you need special logic for one endpoint (custom validation, side effects, complex queries), define that route manually. Auto-CRUD handles the rest.
+If you need special logic for one endpoint (custom validation, side effects, complex queries), define that route yourself and let Auto-CRUD handle the rest. Which one answers depends on the order they register in, because the router follows two rules:
+
+- Registering the **same method and the same path string** again replaces the earlier route, so whichever registers last wins.
+- A **different pattern** for the same URL (`/api/notes/{id:int}` against Auto-CRUD's `/api/notes/{id}`) replaces nothing. Both stay registered, and the one registered first answers.
+
+Auto-CRUD routes are added when `Tina4::AutoCrud.generate_routes` runs. Call it after your route files have loaded and a generated route replaces your override on the identical path. The dependable choice is a path of its own for the custom route, or calling `generate_routes` before you define the override.
 
 ---
 
@@ -1268,9 +1273,9 @@ Two queries instead of 101.
 
 **Problem:** Custom route at `/api/notes/{id}` stops working after registering Auto-CRUD for the Note model.
 
-**Cause:** Both routes match the same path. The first registered route wins.
+**Cause:** Both routes answer the same URL. With the identical path the route registered last replaces the other, so a `generate_routes` call after your route files wins. With different patterns the route registered first answers.
 
-**Fix:** Custom routes in `src/routes/` load before Auto-CRUD routes. They take precedence. If you want different behaviour, use a different path for the custom route.
+**Fix:** Give the custom route a path of its own, or call `Tina4::AutoCrud.generate_routes` before you define the override.
 
 ### 9. Soft-deleted records appearing in queries
 
