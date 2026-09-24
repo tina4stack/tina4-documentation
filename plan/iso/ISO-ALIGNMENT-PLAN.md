@@ -3,6 +3,7 @@
 - **Status:** in progress (started 2026-09-24)
 - **Program lead:** Andre van Zuydam (Code Infinity)
 - **Scope (phase 1):** `tina4` (CLI), `tina4-python`, `tina4-php`, `tina4-ruby`, `tina4-nodejs`, `tina4-js`, `tina4-documentation`
+- **Standing rule:** ADR-0073 makes the controls below mandatory for every change.
 - **Not for marketing.** Nothing in this plan is to be claimed publicly until the matching evidence exists. The first public statement is the OpenChain conformance declaration at the end of Phase 5.
 
 ## Goal
@@ -27,16 +28,16 @@ These are the controls an assessor checks first: that every change to released c
 
 | ID | Control | How | Status |
 |---|---|---|---|
-| G1 | Release branches require a pull request and passing CI; no force-push or deletion | Rulesets `tina4-release-line` and `tina4-maintenance-lines` | Script ready; needs the repo admin (`tina4stack`) to run `--apply` |
-| G2 | Release tags cannot be moved or deleted | Ruleset `tina4-release-tags` | As G1 |
-| G3 | Private vulnerability reporting | GitHub private vulnerability reporting | As G1 |
-| G4 | Secret scanning with push protection | GitHub secret scanning | As G1 |
-| G5 | Dependabot vulnerability alerts | GitHub | As G1 |
-| G6 | A published security policy in every repository | `SECURITY.md` (supported versions, reporting channels, response targets, disclosure) | PRs open: tina4#32, tina4-python#141, tina4-php#214, tina4-ruby#48, tina4-nodejs#65, tina4-js#17, and this repository |
-| G7 | CI runs on every pull request in every in-scope repository | tina4-js had none; `ci.yml` added (tina4-js#17) | PR open |
-| G8 | Release automation works under branch protection | CLI `release-published.yml` opens a manifests PR instead of pushing to `main` (tina4#32) | PR open |
-| G9 | Two-factor authentication on every account with write access | Each collaborator confirms; enforced automatically once D2 is done | Open |
-| G10 | Static analysis runs on the active line | tina4-php CodeQL targets `main`, not `v3`; extend CodeQL to all four frameworks and tina4-js | Open |
+| G1 | Release branches require a pull request and passing CI; no force-push or deletion | Rulesets `tina4-release-line` and `tina4-maintenance-lines` | Done 2026-09-24 (`plan/iso/evidence/2026-09-24-github-controls.txt`) |
+| G2 | Release tags cannot be moved or deleted | Ruleset `tina4-release-tags` | Done 2026-09-24 |
+| G3 | Private vulnerability reporting | GitHub private vulnerability reporting | Done 2026-09-24 |
+| G4 | Secret scanning with push protection | GitHub secret scanning | Done 2026-09-24 |
+| G5 | Dependabot vulnerability alerts | GitHub | Done 2026-09-24 |
+| G6 | A published security policy in every repository | `SECURITY.md` (supported versions, reporting channels, response targets, disclosure) | Done: merged in all seven repositories |
+| G7 | CI runs on every pull request in every in-scope repository | tina4-js had none; `ci.yml` added (tina4-js#17) | Done |
+| G8 | Release automation works under branch protection | CLI `release-published.yml` opens a manifests PR instead of pushing to `main` (tina4#32) | Done |
+| G9 | Two-factor authentication on every account with write access | Each collaborator confirms; enforced automatically once D2 is done | Done 2026-09-24: access reduced to tina4stack + andrevanzuydam, both with 2FA (`plan/iso/evidence/2026-09-24-access-and-2fa.txt`) |
+| G10 | Static analysis runs on the active line | tina4-php CodeQL targets `main`, not `v3`; extend CodeQL to all four frameworks and tina4-js | Done 2026-09-24 for 6 repos (CodeQL default setup, extended); tina4-php pending tina4-php#221 (Semgrep for PHP source, then CodeQL default setup for JS/Actions) |
 
 Controls G1-G5 are declared in `scripts/governance/github-controls.json` and applied or verified by `scripts/governance/github_controls.py`:
 
@@ -132,3 +133,6 @@ This page lives under `docs/`, so the truth gate applies: a row is published onl
 ## Log
 
 - 2026-09-24: plan written. `SECURITY.md` and CI prerequisites opened as PRs in all seven repositories. Control script and configuration added; `--check` reports 46 controls missing, pending the admin `--apply`. Security audit under way.
+- 2026-09-24: G1-G8 done. The repository admin applied the rulesets, private vulnerability reporting, secret scanning with push protection and Dependabot alerts to all seven repositories; `--check` reports all controls in place (evidence file above). ADR-0073 makes the controls a standing rule.
+- 2026-09-24: G9 done. Direct access reduced to the owner (tina4stack) and the maintainer (andrevanzuydam); four write collaborators removed, now contributing through fork pull requests. Both remaining accounts confirmed with 2FA enabled.
+- 2026-09-24: G10 started. CodeQL default setup (extended suite) enabled on tina4, tina4-python, tina4-ruby, tina4-nodejs, tina4-js and tina4-documentation; it scans the default branch and every pull request. CodeQL cannot analyse PHP, so tina4-php#221 adds Semgrep for PHP source and retires the old main-only CodeQL workflow. `github_controls.py` now checks and applies default setup. First-scan alerts are triaged under Phase 1.

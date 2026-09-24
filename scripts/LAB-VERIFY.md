@@ -27,6 +27,7 @@ Inputs (override via env):
 | `TINA4_LAB_ENV` | `~/tina4-test-env-126.sh` | service credentials + `TINA4_TEST_*` vars |
 | `TINA4_REL_DIR` | `~/rel-3.13.132` | directory holding the four framework clones |
 | `TINA4_FB_CONTAINER` | `tina4-lab-firebird` | Firebird docker container name |
+| `TINA4_MAIL_INFRA_DIR` | `~/tina4-lab-mail-infra` | CA and certs for the TLS mail servers |
 
 Run as root: the session and permission tests drop `CAP_DAC_OVERRIDE`, so they
 only assert correctly under a real root process.
@@ -35,16 +36,16 @@ only assert correctly under a real root process.
 
 ### Firebird WireCrypt (the Node killer)
 
-Firebird 5 defaults to a ChaCha wire-encryption negotiation that `node-firebird`
-2.x cannot complete. Its connect then HANGS for the full connect timeout, which
-looks exactly like a dead Firebird. The native Python, PHP and Ruby clients
-negotiate the same handshake fine, so only Node breaks. The recipe sets
-`WireCrypt = Disabled` in the container's `firebird.conf` and restarts it. Every
-client then connects in plaintext (fine on a localhost lab); node-firebird
-connects in about 40 ms.
+With `WireCrypt = Disabled` in `firebird.conf`, every `node-firebird` attach fails
+with "Unavailable database", while the native Python, PHP and Ruby clients still
+connect, so only Node breaks. With `WireCrypt = Enabled` all four connect. The
+recipe checks the value and, only if it is not `Enabled`, sets it and restarts
+the container.
 
-This resets whenever the Firebird container is recreated (`fb-recreate.sh` writes
-Firebird 5 defaults), so `lab-verify.sh` reapplies it every run.
+An earlier version of this step forced `Disabled`. The lab never showed the bug
+because the lab container's env (`FIREBIRD_CONF_WireCrypt=Enabled`) re-applies
+`Enabled` on every start, so the restart the step triggered undid its own change.
+The Mac testbed, where `Disabled` stuck, exposed it.
 
 ### PostgreSQL per-framework databases
 
@@ -64,6 +65,45 @@ does not set `TINA4_TEST_FIREBIRD_URL`; the recipe sets it per framework.
 MinIO is published on host port 9100 (container 9000). The env file may still say
 `:9000`; the recipe overrides `TINA4_TEST_S3_ENDPOINT` / `_URL` to `:9100`. A
 closed 9100 means the S3 storage tests fail.
+
+### TLS + AUTH mail servers
+
+The Messenger transport specs drive real mail servers over STARTTLS, implicit TLS
+and AUTH, with certificate verification on. Under `TINA4_REQUIRE_SERVICES=1` they
+fail when the servers or the two variables are missing. The recipe ports
+tina4-ruby's `spec/support/mail-infra.sh` into `lab-verify.sh`, so it does not
+depend on any framework checkout. It uses the same images, ports, account and
+cert recipe:
+
+| Port (127.0.0.1) | Server | Used for |
+| --- | --- | --- |
+| 4025 | GreenMail SMTP, AUTH required | auth accepted and refused |
+| 4465 | GreenMail SMTPS, implicit TLS | `encryption: "ssl"` |
+| 4143 | GreenMail IMAP, LOGIN required | wrong-password negative |
+| 4993 | GreenMail IMAPS, implicit TLS | `imap_encryption: "tls"` |
+| 4587 | Mailpit SMTP, STARTTLS required + AUTH | `encryption: "starttls"` |
+| 4825 | Mailpit HTTP API | proves the STARTTLS mail arrived |
+| 4144 | Dovecot IMAP, STARTTLS | `imap_encryption: "starttls"` |
+
+The containers are `tina4-lab-mail-greenmail`, `tina4-lab-mail-mailpit` and
+`tina4-lab-mail-dovecot` (`--restart unless-stopped`). Their ports stay clear of
+the plain GreenMail (3025/3143) and the auth GreenMail (3925/3943). A throwaway CA
+and a server certificate for `localhost` and `127.0.0.1` live in
+`TINA4_MAIL_INFRA_DIR` (default `~/tina4-lab-mail-infra`), not `/tmp`, because the
+containers bind-mount them.
+
+Unlike `mail-infra.sh`, which recreates its containers on every run, the recipe
+is safe to rerun while other workers are using the servers. It only recreates a
+container that is missing, stopped, or was started with a different CA (it checks
+the `tina4.mail.ca` label). It only regenerates the certs when they are missing
+or within 30 days of expiry, and a `flock` lets one provisioner run at a time.
+`load_env` exports `TINA4_TEST_MAIL_TLS_HOST=127.0.0.1` and
+`TINA4_TEST_MAIL_TLS_CA_FILE=<dir>/certs/ca.crt`. These are the canonical names
+that Python, PHP and Node will read too.
+
+Because the specs fix the ports, only one set of these servers can run per docker
+host. Do not also run `mail-infra.sh` on the lab: it would try to bind the same
+ports.
 
 ### Fresh Mongo per run
 

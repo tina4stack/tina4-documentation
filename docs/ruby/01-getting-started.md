@@ -623,7 +623,7 @@ bundle install
 ```
 
 ::: warning The dependency you must declare
-**`sqlite3`** - the default `TINA4_DATABASE_URL` points to SQLite. Without this gem the server restarts in a loop with `LoadError: cannot load such file -- sqlite3`.
+**`sqlite3`** - the default `TINA4_DATABASE_URL` points to SQLite, and the driver belongs to your app, not to tina4ruby (the same as `pg` or `mysql2`). Without it the first SQLite connection stops the server with a `LoadError` that names the fix: add `gem "sqlite3"` to your `Gemfile`.
 
 You don't need a web server gem. Tina4 serves HTTP itself, in development and production. `tina4 init ruby` writes the `Gemfile` for you; you only add gems by hand when bootstrapping an empty project.
 :::

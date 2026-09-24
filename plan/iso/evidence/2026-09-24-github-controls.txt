@@ -1,0 +1,58 @@
+# GitHub controls check - 2026-09-24T09:27Z
+# applied by: tina4stack (repository admin) via scripts/governance/github_controls.py --apply
+
+tina4stack/tina4
+  [x] ruleset tina4-release-line
+  [x] ruleset tina4-release-tags
+  [x] private vulnerability reporting
+  [x] secret scanning
+  [x] secret scanning push protection
+  [x] Dependabot alerts
+tina4stack/tina4-python
+  [x] ruleset tina4-release-line
+  [x] ruleset tina4-maintenance-lines
+  [x] ruleset tina4-release-tags
+  [x] private vulnerability reporting
+  [x] secret scanning
+  [x] secret scanning push protection
+  [x] Dependabot alerts
+tina4stack/tina4-php
+  [x] ruleset tina4-release-line
+  [x] ruleset tina4-maintenance-lines
+  [x] ruleset tina4-release-tags
+  [x] private vulnerability reporting
+  [x] secret scanning
+  [x] secret scanning push protection
+  [x] Dependabot alerts
+tina4stack/tina4-ruby
+  [x] ruleset tina4-release-line
+  [x] ruleset tina4-maintenance-lines
+  [x] ruleset tina4-release-tags
+  [x] private vulnerability reporting
+  [x] secret scanning
+  [x] secret scanning push protection
+  [x] Dependabot alerts
+tina4stack/tina4-nodejs
+  [x] ruleset tina4-release-line
+  [x] ruleset tina4-maintenance-lines
+  [x] ruleset tina4-release-tags
+  [x] private vulnerability reporting
+  [x] secret scanning
+  [x] secret scanning push protection
+  [x] Dependabot alerts
+tina4stack/tina4-js
+  [x] ruleset tina4-release-line
+  [x] ruleset tina4-release-tags
+  [x] private vulnerability reporting
+  [x] secret scanning
+  [x] secret scanning push protection
+  [x] Dependabot alerts
+tina4stack/tina4-documentation
+  [x] ruleset tina4-release-line
+  [x] ruleset tina4-release-tags
+  [x] private vulnerability reporting
+  [x] secret scanning
+  [x] secret scanning push protection
+  [x] Dependabot alerts
+
+all controls in place

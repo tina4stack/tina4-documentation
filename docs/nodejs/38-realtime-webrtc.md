@@ -378,7 +378,13 @@ const att = await fetch("/api/files", {
 
 `selectStorage(storage?)` resolves from the `storage` argument or `TINA4_STORAGE_BACKEND` (`local` default, or `s3`). An `s3` backend that cannot be built (the **`@aws-sdk/client-s3`** driver missing, or config incomplete) **falls back to `LocalStorage`** with a warning: a real store, never a silent no-op.
 
-Node uses `@aws-sdk/client-s3` (plus `@aws-sdk/s3-request-presigner`), not boto3. They are optional peer dependencies, loaded lazily. Install them only when you set `TINA4_STORAGE_BACKEND=s3`.
+Node uses `@aws-sdk/client-s3` (plus `@aws-sdk/s3-request-presigner`), not boto3. They're optional peer dependencies, loaded lazily, and your app installs them only when it sets `TINA4_STORAGE_BACKEND=s3`:
+
+```bash
+npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
+```
+
+Without them, the fallback warning will name that exact command before `selectStorage()` hands the files to `LocalStorage`.
 
 ```bash
 # .env - local (default)
