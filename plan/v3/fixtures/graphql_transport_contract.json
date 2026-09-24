@@ -1,0 +1,56 @@
+{
+  "_comment": [
+    "September 2026 Medium security audit, findings F4 (GraphQL CSRF) and F2",
+    "(GraphQL fan-out limits), across all four frameworks. OWED: per-framework",
+    "red-first regressions landed; shared fail-closed runners pending."
+  ],
+  "version": 1,
+  "decided": "2026-09-24",
+  "status": "owed — per-framework red-first regressions landed; shared runners pending",
+  "adr": "ADR-0083",
+  "constants": {
+    "TINA4_GRAPHQL_MAX_NODES_default": 1000,
+    "TINA4_GRAPHQL_MAX_DEPTH_default": 50,
+    "post_required_content_type": "application/json",
+    "post_reject_status": 415
+  },
+  "invariants": [
+    {
+      "id": "F4-GET-mutation",
+      "when": "a mutation operation is sent over GET to the built-in route",
+      "then": "it is refused (mutations are not allowed over GET); a read query over GET still works",
+      "frameworks": ["ruby"],
+      "note": "Only Ruby registers a built-in GET handler that executes."
+    },
+    {
+      "id": "F4-POST-content-type",
+      "when": "a POST to the built-in route carries a non-application/json content-type (e.g. text/plain)",
+      "then": "it is refused with HTTP 415; an application/json POST is accepted",
+      "frameworks": ["php", "ruby"]
+    },
+    {
+      "id": "F2-fragment-bomb",
+      "when": "a query whose expanded selection tree (fragments expanded) exceeds TINA4_GRAPHQL_MAX_NODES is executed",
+      "then": "it is rejected with a complexity error before any resolver runs",
+      "frameworks": ["python", "php", "ruby", "nodejs"]
+    },
+    {
+      "id": "F2-alias-explosion",
+      "when": "a query with more aliased fields than TINA4_GRAPHQL_MAX_NODES is executed",
+      "then": "it is rejected with a complexity error",
+      "frameworks": ["python", "php", "ruby", "nodejs"]
+    },
+    {
+      "id": "F2-parser-depth",
+      "when": "a query nested deeper than TINA4_GRAPHQL_MAX_DEPTH is parsed",
+      "then": "it fails with a clean, caught depth error — never a stack overflow / SystemStackError-500 / OOM",
+      "frameworks": ["python", "php", "ruby", "nodejs"],
+      "regressions": [
+        "tina4-python/tests/test_graphql_fanout_limits.py",
+        "tina4-php/tests/GraphQLFanoutLimitsTest.php",
+        "tina4-ruby/spec/graphql_fanout_limits_spec.rb",
+        "tina4-nodejs/test/graphqlFanoutLimits.test.ts"
+      ]
+    }
+  ]
+}

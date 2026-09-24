@@ -1,0 +1,53 @@
+{
+  "_comment": [
+    "September 2026 Medium security audit, findings F5 and F6. Language-neutral",
+    "answer key for the outbound-auth same-origin rule and the X-Forwarded-Host",
+    "trusted-proxy gate, across tina4-python, tina4-php, tina4-ruby, tina4-nodejs.",
+    "OWED: the per-framework regression tests named below are green (red-first)",
+    "in each repo; the shared fail-closed contract runners are not yet wired, so",
+    "every invariant is 'owed' until they execute every case ID in all four."
+  ],
+  "version": 1,
+  "decided": "2026-09-24",
+  "status": "owed — per-framework red-first regressions landed; shared runners pending",
+  "adr": "ADR-0082",
+  "extends_adr": "ADR-0019",
+  "invariants": [
+    {
+      "id": "F5-1",
+      "given": "an Api client configured with base origin A and an Authorization header",
+      "when": "a request is made whose resolved target origin differs from A (absolute off-origin path, incl. the userinfo form base@evil/x)",
+      "then": "no Authorization and no cookie-jar Cookie header is sent to the off-origin host",
+      "regressions": [
+        "tina4-python/tests/test_api_cross_origin_token.py",
+        "tina4-php/tests/ApiCrossOriginTokenTest.php",
+        "tina4-ruby/spec/api_cross_origin_token_spec.rb",
+        "tina4-nodejs/test/apiCrossOriginToken.test.ts"
+      ]
+    },
+    {
+      "id": "F5-2",
+      "given": "the same client",
+      "when": "a same-origin request is made",
+      "then": "the configured Authorization (and cookie jar) is sent (positive twin)"
+    },
+    {
+      "id": "F6-1",
+      "given": "no TINA4_TRUSTED_PROXIES (or a peer not listed in it)",
+      "when": "a request arrives carrying X-Forwarded-Host: evil.com",
+      "then": "request.url is built from the connection's own Host, never evil.com",
+      "regressions": [
+        "tina4-python/tests/test_forwarded_host_trust.py",
+        "tina4-php/tests/ForwardedHostTrustTest.php",
+        "tina4-ruby/spec/forwarded_host_trust_spec.rb",
+        "tina4-nodejs/test/forwardedHostTrust.test.ts"
+      ]
+    },
+    {
+      "id": "F6-2",
+      "given": "the raw socket peer is listed in TINA4_TRUSTED_PROXIES",
+      "when": "a request arrives carrying X-Forwarded-Host: app.example.com",
+      "then": "request.url reflects app.example.com (positive twin)"
+    }
+  ]
+}
