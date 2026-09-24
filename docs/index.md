@@ -67,17 +67,12 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 <a class="tp-cta" href="/download/code-viewer/">Download the Code Viewer →</a>
 :::
 
-## Current framework release: 3.13.137
+## Current framework release: 3.13.138
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.137. The headline is Google Gemini as a
-first-class Ai provider: set `TINA4_AI_PROVIDER=gemini` with a `TINA4_AI_KEY` and the Ai
-client reaches Gemini through its OpenAI-compatible endpoint, with the same normalised chat,
-streaming, tool use, retries and embeddings every other provider gives and nothing new to
-install. Alongside it, Python sends Web Push on Linux with no package installed (the RFC 8291
-crypto runs through the system OpenSSL by ctypes, with cryptography as the development
-fallback), the v2 to v3 migration upgrade stops replaying old history (Python and Node fixes,
-PHP and Ruby locked in), PHP's `tina4 metrics` finds the CLI on Windows, and live reload
-connects under `tina4 serve` again.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.138. This release strengthens request and
+template boundaries, corrects database and ORM behavior, isolates pooled transactions, and
+updates the skills to estimate time from measured work. Package checksums, SPDX inventories,
+and build provenance accompany the release. [Read the release notes](/python/36-releases.md).
 
 The 3.13.136 journeys-and-design work remains in place: the architect skill maps goals, user
 journeys, and system flows before it scaffolds a file, a completeness net catches the states
@@ -159,6 +154,8 @@ Read https://tina4.com/llms.txt and build me a REST API with a Todo model and JW
 No signup, no plugin. [llms.txt](/llms.txt) is a bootstrap protocol written for machines: it tells your assistant to drive the `tina4` CLI, generate the scaffold, and use the built-ins instead of inventing them. That last part is why the output runs.
 
 ## What's new
+
+**v3.13.138 (2026-09-24)** - Request and template hardening, exclusive database connection ownership, ORM and service fixes, measured-time skills, and verifiable release artifacts. [full notes](/python/36-releases.md)
 
 **v3.13.137 (2026-09-23)** - Google Gemini joins the Ai client as a first-class provider over the OpenAI wire (all four). Python sends Web Push on Linux with nothing installed (system OpenSSL via ctypes) and keeps the dev toolbar out of 204 responses; the v2-to-v3 migration upgrade stops replaying old history (Python/Node fixes, PHP/Ruby locked in); PHP's `tina4 metrics` finds the CLI on Windows and live reload connects under `tina4 serve`. [full notes](/python/36-releases.md)
 

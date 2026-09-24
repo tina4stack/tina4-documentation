@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "reviewed": "2026-09-24",
+  "scope": "Documentation build dependency declarations; not a legal compatibility opinion or runtime bundle inventory. Published dependency versions retain their own licences.",
+  "inputs": {
+    "package.json": "004b51313f70541f019db8701177d5c3bb294d9f960a410a521e791845c7e881",
+    "pnpm-lock.yaml": "2fd906842319fda46e9d979b1f901ed31e9edd218a3eabe6e3a04cc3ad9efd4e"
+  },
+  "components": [
+    {
+      "name": "tina4press",
+      "version": "0.1.14",
+      "upstream_declaration": "MIT",
+      "evidence": "https://registry.npmjs.org/tina4press/0.1.14"
+    },
+    {
+      "name": "tina4js",
+      "version": "1.5.1",
+      "upstream_declaration": "MIT",
+      "evidence": "https://registry.npmjs.org/tina4js/1.5.1"
+    }
+  ]
+}

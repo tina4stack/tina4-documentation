@@ -31,7 +31,7 @@ When you open a pull request, the checks will run your change through the full t
 ## Licensing your contribution
 
 - **Current releases** are published under the licence in each repository's `LICENSE` file.
-- **From the next release,** Tina4 moves to the Mozilla Public License 2.0 (MPL-2.0), with a commercial licence from Code Infinity for companies that don't want the MPL terms (ADR-0075). Anybody who changes Tina4's own files and distributes the result must share those changes under MPL-2.0; applications built with Tina4 can stay closed.
+- **From 3.13.138,** Tina4 is available under the Mozilla Public License 2.0 (MPL-2.0), with a commercial licence from Code Infinity for companies that don't want the MPL terms (ADR-0075). Anybody who changes Tina4's own files and distributes the result must share those changes under MPL-2.0; applications built with Tina4 can stay closed.
 - **Contributor Licence Agreement (CLA).** Before your first pull request can merge, you'll be asked to agree to the [Tina4 Contributor Licence Agreement](contributor-licence-agreement.md). It confirms you have the right to contribute the code, and it lets Code Infinity offer your contribution under both licences.
 - **Sign-off on every commit.** Add a `Signed-off-by:` line (`git commit -s`) to each commit. It records, commit by commit, that you wrote the change or have the right to submit it. A check on each pull request will look for it.
 - **Third-party code.** Don't copy code from elsewhere unless its licence allows it under the terms above, and keep the original copyright and licence notice with it. If you're not sure, ask in the pull request before you copy.

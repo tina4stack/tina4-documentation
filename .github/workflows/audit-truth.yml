@@ -1,3 +1,9 @@
+# Copyright (c) 2026 Code Infinity
+# SPDX-License-Identifier: MPL-2.0
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 name: Doc Truth
 
 # Fails the build when the docs reference CLI commands the tina4 CLI
@@ -22,7 +28,7 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # Pull the tina4 CLI source + every framework repo as siblings of
       # this repo — the workspace layout audit-truth.py expects. The CLI
@@ -39,7 +45,7 @@ jobs:
 
       # Cache the Rust build so the CLI compiles once, not every run.
       - name: Cache tina4 CLI build
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
           workspaces: ../tina4 -> target
 
@@ -52,9 +58,15 @@ jobs:
           cargo build --release --manifest-path ../tina4/Cargo.toml
           ../tina4/target/release/tina4 --version
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
+
+      - name: Check inbound dependency licence policy
+        run: |
+          python3 scripts/check_dependency_licenses.py
+          python3 -m unittest discover -s scripts -p test_dependency_licenses.py
+          python3 -m unittest discover -s scripts/governance -p test_github_controls.py
 
       # Lock in the audit's own behavior — chiefly that the CLI check
       # derives its grammar from the built source (not a stale PATH binary)

@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Code Infinity
+# SPDX-License-Identifier: MPL-2.0
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 #
 # Tina4 lab test-suite verification — one recipe, four frameworks, green.
 #
@@ -15,6 +21,8 @@
 # Overridable via env:
 #     TINA4_LAB_ENV   service creds + TINA4_TEST_* vars   (default ~/tina4-test-env-126.sh)
 #     TINA4_REL_DIR   dir holding the four framework clones (default ~/rel-3.13.132)
+#     TINA4_PHP_INI_BASE base PHP ini directory (default /etc/php/8.3/cli/conf.d)
+#                        Use an isolated directory to select a per-run extension build.
 #     TINA4_FB_CONTAINER  Firebird docker container name   (default tina4-lab-firebird)
 #     TINA4_MAIL_INFRA_DIR  TLS mail servers' CA + certs     (default ~/tina4-lab-mail-infra)
 #
@@ -233,30 +241,40 @@ run_php() {
   # (enable_coroutine=On) breaks the fork-based worker pool. Run the main suite
   # with both disabled via a filtered conf.d, then run the openswoole test alone
   # WITH openswoole (it skips cleanly without it).
-  local base=/etc/php/8.3/cli/conf.d
-  rm -rf /tmp/confd_clean /tmp/confd_nogrpc; mkdir -p /tmp/confd_clean /tmp/confd_nogrpc
+  local base="${TINA4_PHP_INI_BASE:-/etc/php/8.3/cli/conf.d}"
+  local ini_root
+  ini_root=$(mktemp -d "${TMPDIR:-/tmp}/tina4-release-php-ini.XXXXXX") || return 1
+  mkdir -p "$ini_root/clean" "$ini_root/swoole" "$ini_root/graph"
   local f
   for f in "$base"/*.ini; do
-    case "$f" in *grpc*|*swoole*) ;; *) ln -s "$f" /tmp/confd_clean/;; esac
-    case "$f" in *grpc*) ;; *) ln -s "$f" /tmp/confd_nogrpc/;; esac
+    case "$f" in *grpc*|*swoole*) ;; *) ln -s "$f" "$ini_root/clean"/;; esac
+    case "$f" in *grpc*) ;; *) ln -s "$f" "$ini_root/swoole"/;; esac
+    case "$f" in *swoole*) ;; *) ln -s "$f" "$ini_root/graph"/;; esac
   done
   load_env; export TINA4_TEST_FIREBIRD_URL="$(fb_url tina4_php.fdb)"; drop_mongo
-  log "PHP main suite (grpc + openswoole disabled)"
-  # Ultipa needs ext-grpc, which is off here; its cases run in the graph pass below.
-  env -u TINA4_TEST_ULTIPA_URL PHP_INI_SCAN_DIR=/tmp/confd_clean ./vendor/bin/phpunit tests
-  local main=$?
-  log "PHP openswoole suite (openswoole ON, grpc OFF)"
-  PHP_INI_SCAN_DIR=/tmp/confd_nogrpc ./vendor/bin/phpunit tests/AppInvokeSwooleTest.php
-  local sw=$?
   # The graph drivers are composer "suggest" entries, not dependencies (ultipa needs
   # ext-grpc, which would break a plain `composer install` elsewhere). Install them
-  # into vendor/ for the lab only, then restore composer.json/lock so the tree the
-  # suite ran against is the committed one plus the suggested drivers.
-  log "PHP graph drivers (lab-only) + graph suite (grpc ON, openswoole OFF)"
-  COMPOSER_ALLOW_SUPERUSER=1 composer require --dev --no-interaction --no-scripts --quiet \
+  # into vendor/ before any suite. Restore composer.json/lock so the tested tree
+  # retains its committed manifests alongside the installed suggested drivers.
+  log "PHP graph driver installation (lab-only; grpc ON, openswoole OFF)"
+  PHP_INI_SCAN_DIR="$ini_root/graph" COMPOSER_ALLOW_SUPERUSER=1 composer require --dev --no-interaction --no-scripts --quiet \
     laudis/neo4j-php-client triagens/arangodb tina4stack/ultipa || return 1
   git checkout -- composer.json composer.lock 2>/dev/null
-  PHP_INI_SCAN_DIR=/tmp/confd_nogrpc ./vendor/bin/phpunit tests/GraphTest.php
+  log "PHP main suite (grpc + openswoole disabled)"
+  # The complete GraphTest class, including its SDK-only connect-timeout case, runs
+  # in the grpc-enabled pass below. Unsetting Ultipa URL alone is insufficient:
+  # the timeout case deliberately uses its own unreachable endpoint.
+  env -u TINA4_TEST_ULTIPA_URL PHP_INI_SCAN_DIR="$ini_root/clean" ./vendor/bin/phpunit \
+    --exclude-filter '/^Tina4\\GraphTest::/' tests
+  local main=$?
+  log "PHP openswoole suite (openswoole ON, grpc OFF)"
+  PHP_INI_SCAN_DIR="$ini_root/swoole" ./vendor/bin/phpunit tests/AppInvokeSwooleTest.php
+  local sw=$?
+  log "PHP graph suite (grpc ON, openswoole OFF)"
+  PHP_INI_SCAN_DIR="$ini_root/graph" php -r 'exit(extension_loaded("grpc") && !extension_loaded("openswoole") && !extension_loaded("swoole") ? 0 : 1);' || {
+    echo "ERROR: graph pass requires grpc enabled and Swoole disabled"; return 1;
+  }
+  PHP_INI_SCAN_DIR="$ini_root/graph" ./vendor/bin/phpunit tests/GraphTest.php
   local graph=$?
   return $(( main != 0 || sw != 0 || graph != 0 ))
 }

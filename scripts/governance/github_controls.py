@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Code Infinity
+# SPDX-License-Identifier: MPL-2.0
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Apply or verify the GitHub repository controls behind the ISO alignment plan.
 
     python3 scripts/governance/github_controls.py --check    # read-only report
@@ -21,7 +27,9 @@ Reads scripts/governance/github-controls.json and, for each repository, manages:
 --apply is idempotent: a ruleset that already exists (matched by name) is
 updated in place. Everything goes through the `gh` CLI, so run it while `gh`
 is logged in as the repository admin (`gh auth switch` to that account).
-Standard library only.
+Read-only verification also needs repository-admin visibility for security
+settings. Inaccessible settings are reported as unverifiable and fail the check;
+they are never inferred to be disabled. Standard library only.
 """
 
 import argparse
@@ -104,6 +112,23 @@ def rulesets_for(spec):
     return sets
 
 
+def setting_state(payload, *keys, enabled):
+    """Missing or inaccessible fields are unknown, not confirmed disabled."""
+    value = payload
+    for key in keys:
+        if not isinstance(value, dict) or key not in value:
+            return None
+        value = value[key]
+    return value == enabled
+
+
+def alerts_state(returncode):
+    # GitHub returns 404 for disabled alerts AND for a caller without permission.
+    if returncode == 0:
+        return True
+    return None
+
+
 def check(owner, repo, spec):
     base = f"repos/{owner}/{repo}"
     existing = {r["name"]: r for r in gh(f"{base}/rulesets") or []}
@@ -112,18 +137,19 @@ def check(owner, repo, spec):
         have = existing.get(rs["name"])
         ok = bool(have) and have.get("enforcement") == "active"
         rows.append((f"ruleset {rs['name']}", ok))
-    pvr = gh(f"{base}/private-vulnerability-reporting", allow_fail=True) or {}
-    rows.append(("private vulnerability reporting", bool(pvr.get("enabled"))))
-    sa = (gh(base) or {}).get("security_and_analysis") or {}
-    rows.append(("secret scanning", (sa.get("secret_scanning") or {}).get("status") == "enabled"))
+    pvr = gh(f"{base}/private-vulnerability-reporting", allow_fail=True)
+    rows.append(("private vulnerability reporting", setting_state(pvr, "enabled", enabled=True)))
+    metadata = gh(base) or {}
+    sa = metadata.get("security_and_analysis")
+    rows.append(("secret scanning", setting_state(sa, "secret_scanning", "status", enabled="enabled")))
     rows.append(("secret scanning push protection",
-                 (sa.get("secret_scanning_push_protection") or {}).get("status") == "enabled"))
+                 setting_state(sa, "secret_scanning_push_protection", "status", enabled="enabled")))
     # 204 = enabled, 404 = disabled; needs admin to read, so unknown otherwise.
     alerts = subprocess.run(["gh", "api", f"{base}/vulnerability-alerts", "--silent"],
                             capture_output=True, text=True)
-    rows.append(("Dependabot alerts", alerts.returncode == 0))
-    setup = gh(f"{base}/code-scanning/default-setup", allow_fail=True) or {}
-    rows.append(("CodeQL default setup", setup.get("state") == "configured"))
+    rows.append(("Dependabot alerts", alerts_state(alerts.returncode)))
+    setup = gh(f"{base}/code-scanning/default-setup", allow_fail=True)
+    rows.append(("CodeQL default setup", setting_state(setup, "state", enabled="configured")))
     return rows
 
 
@@ -182,13 +208,21 @@ def main():
         print()
 
     failed = 0
+    unverifiable = 0
     for repo, spec in repos.items():
         print(f"{owner}/{repo}")
         for label, ok in check(owner, repo, spec):
-            failed += not ok
-            print(f"  [{'x' if ok else ' '}] {label}")
-    print(f"\n{'all controls in place' if not failed else f'{failed} control(s) missing'}")
-    sys.exit(1 if failed else 0)
+            if ok is None:
+                unverifiable += 1
+                print(f"  [?] {label} (unverifiable: permissions or API error)")
+            else:
+                failed += not ok
+                print(f"  [{'x' if ok else ' '}] {label}")
+    if unverifiable:
+        print(f"\n{unverifiable} control(s) unverifiable. Re-run with repository-admin read visibility; check API permissions and availability. No disabled state was inferred.")
+    print(f"\n{failed} control(s) confirmed missing" if failed else
+          ("all controls in place" if not unverifiable else "No controls confirmed missing; verification incomplete."))
+    sys.exit(1 if failed or unverifiable else 0)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,45 @@
 # Release Notes
 
+## v3.13.138 (2026-09-24) - Safer requests, templates, and database operations
+
+**Licensing from this release.** Tina4 is available under MPL-2.0, with separate commercial terms available from Code Infinity. Copyright Code Infinity. Previously published releases retain their original licences.
+
+This release brings together the framework hardening work, database correctness fixes,
+measured-time guidance for the AI skills, and verifiable release artifacts.
+
+**Request and template boundaries.** Frond escapes output by default and preserves only
+explicitly trusted output. Review templates that intentionally render HTML when upgrading;
+never mark untrusted input as safe. Header validation, request-body limits, security headers,
+CORS handling, model-field validation, and diagnostic redaction follow the shared contracts.
+Explicit Content-Type headers survive response conversion and binary bodies preserve bytes.
+
+**Credentials and development access.** API clients retain credentials only for their configured
+origin, including uploads, downloads and streams. Use a separate client when authenticating to
+another service. Forwarded host and protocol require a trusted proxy. Development reads and
+writes enforce the raw-peer, Host and browser-origin boundary; remote non-MCP development
+access requires the dedicated token. The documented MCP transport API-key fallback is unchanged.
+File access checks resolved paths so symlinks cannot expose secrets or escape the project.
+
+**Database and service correctness.** Statements that return rows retain those rows, filtered
+counts and write results agree across adapters, SQL placeholders preserve literal text, and
+ORM fields mapped to database columns read back correctly. Database operations and explicit
+transactions reserve their connection; a fully occupied pool fails clearly instead of sharing
+an in-use connection. Session transports reuse MongoDB connections and handle replica-set
+replies. Mail transports verify certificates and require STARTTLS when configured. Optional
+driver errors identify the needed install, and unconfirmed broker writes fail clearly.
+
+**Skills and release evidence.** The maintainer skill estimates work from measured agent
+durations. Release packages carry checksums, an SPDX software inventory, and build provenance;
+release Actions are pinned to commits. The updated PowerShell skills installer is digitally
+signed. The ISO programme remains in progress; this release makes no certification or
+conformance claim.
+
+The accompanying CLI 3.8.91 verifies update checksums before replacing an installed binary,
+refuses missing checksum manifests, and corrects generated Node.js package imports. It also
+includes the browser-opening and CI behavior fixes. Tina4 JS 1.7.2
+ships the merged client hardening and verified browser bundle. Refresh the AI skills with
+`curl -fsSL https://tina4.com/install-skills.sh | sh` or the documented PowerShell installer.
+
 ## v3.13.137 (2026-09-23) - Gemini joins the Ai client, and Web Push needs nothing on Linux
 
 Google Gemini becomes a first-class Ai provider, Web Push drops its last server dependency,
