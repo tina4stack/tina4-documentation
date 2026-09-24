@@ -23,15 +23,16 @@
 
 set -uo pipefail
 
-LAB_ENV="${TINA4_LAB_ENV:-${SUDO_USER:+/home/$SUDO_USER}/tina4-test-env-126.sh}"
-LAB_ENV="${LAB_ENV:-$HOME/tina4-test-env-126.sh}"
-REL_DIR="${TINA4_REL_DIR:-${SUDO_USER:+/home/$SUDO_USER}/rel-3.13.132}"
-REL_DIR="${REL_DIR:-$HOME/rel-3.13.132}"
+# The invoking user's home under sudo, else $HOME. (The old two-step fallback never
+# fired without SUDO_USER: "${SUDO_USER:+...}/file" is already non-empty "/file".)
+LAB_HOME="${SUDO_USER:+/home/$SUDO_USER}"
+LAB_HOME="${LAB_HOME:-$HOME}"
+LAB_ENV="${TINA4_LAB_ENV:-$LAB_HOME/tina4-test-env-126.sh}"
+REL_DIR="${TINA4_REL_DIR:-$LAB_HOME/rel-3.13.132}"
 FB_CONTAINER="${TINA4_FB_CONTAINER:-tina4-lab-firebird}"
 FB_DATA="/var/lib/firebird/data"
 PY_VENV="$REL_DIR/tina4-python/.venv/bin/python"
-MAIL_HOME="${SUDO_USER:+/home/$SUDO_USER}"
-MAIL_DIR="${TINA4_MAIL_INFRA_DIR:-${MAIL_HOME:-$HOME}/tina4-lab-mail-infra}"
+MAIL_DIR="${TINA4_MAIL_INFRA_DIR:-$LAB_HOME/tina4-lab-mail-infra}"
 MAIL_PREFIX="tina4-lab-mail"
 
 fw="${1:-all}"
