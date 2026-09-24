@@ -28,6 +28,9 @@ set -uo pipefail
 LAB_HOME="${SUDO_USER:+/home/$SUDO_USER}"
 LAB_HOME="${LAB_HOME:-$HOME}"
 LAB_ENV="${TINA4_LAB_ENV:-$LAB_HOME/tina4-test-env-126.sh}"
+# Live graph-database coordinates (Neo4j, Memgraph, ArangoDB, Ultipa) live in their own
+# file on the lab. Sourcing it arms the graph specs; without it they skip with a tag.
+GRAPH_ENV="${TINA4_GRAPH_ENV:-$LAB_HOME/graph-test-env.sh}"
 REL_DIR="${TINA4_REL_DIR:-$LAB_HOME/rel-3.13.132}"
 FB_CONTAINER="${TINA4_FB_CONTAINER:-tina4-lab-firebird}"
 FB_DATA="/var/lib/firebird/data"
@@ -191,6 +194,8 @@ load_env() {
   set -a
   # shellcheck disable=SC1090
   [ -f "$LAB_ENV" ] && source "$LAB_ENV" || echo "  WARNING: $LAB_ENV not found (service vars missing)"
+  # shellcheck disable=SC1090
+  [ -f "$GRAPH_ENV" ] && source "$GRAPH_ENV" || echo "  WARNING: $GRAPH_ENV not found (graph specs will skip)"
   export TINA4_TEST_S3_ENDPOINT="http://localhost:9100"   # MinIO is on 9100, not the env file's 9000
   export TINA4_TEST_S3_URL="http://localhost:9100"
   # mysql2/libmysqlclient uses a UNIX socket for host "localhost"; the lab MySQL is
@@ -237,12 +242,23 @@ run_php() {
   done
   load_env; export TINA4_TEST_FIREBIRD_URL="$(fb_url tina4_php.fdb)"; drop_mongo
   log "PHP main suite (grpc + openswoole disabled)"
-  PHP_INI_SCAN_DIR=/tmp/confd_clean ./vendor/bin/phpunit tests
+  # Ultipa needs ext-grpc, which is off here; its cases run in the graph pass below.
+  env -u TINA4_TEST_ULTIPA_URL PHP_INI_SCAN_DIR=/tmp/confd_clean ./vendor/bin/phpunit tests
   local main=$?
   log "PHP openswoole suite (openswoole ON, grpc OFF)"
   PHP_INI_SCAN_DIR=/tmp/confd_nogrpc ./vendor/bin/phpunit tests/AppInvokeSwooleTest.php
   local sw=$?
-  return $(( main != 0 || sw != 0 ))
+  # The graph drivers are composer "suggest" entries, not dependencies (ultipa needs
+  # ext-grpc, which would break a plain `composer install` elsewhere). Install them
+  # into vendor/ for the lab only, then restore composer.json/lock so the tree the
+  # suite ran against is the committed one plus the suggested drivers.
+  log "PHP graph drivers (lab-only) + graph suite (grpc ON, openswoole OFF)"
+  COMPOSER_ALLOW_SUPERUSER=1 composer require --dev --no-interaction --no-scripts --quiet \
+    laudis/neo4j-php-client triagens/arangodb tina4stack/ultipa || return 1
+  git checkout -- composer.json composer.lock 2>/dev/null
+  PHP_INI_SCAN_DIR=/tmp/confd_nogrpc ./vendor/bin/phpunit tests/GraphTest.php
+  local graph=$?
+  return $(( main != 0 || sw != 0 || graph != 0 ))
 }
 
 run_ruby() {
@@ -252,7 +268,8 @@ run_ruby() {
   # .bundle/config `with` beats the BUNDLE_WITH env var, and BUNDLE_WITH must be
   # COLON-separated. Set the groups in the config (survives git reset --hard --
   # .bundle/config is untracked) so `bundle exec` actually loads them.
-  bundle config set --local with "databases:firebird:odbc" >/dev/null
+  # :graph brings tina4-ultipa (native grpc) for the live Ultipa specs.
+  bundle config set --local with "databases:firebird:odbc:graph" >/dev/null
   bundle install >/dev/null 2>&1
   load_env; export TINA4_TEST_FIREBIRD_URL="$(fb_url tina4_rb.fdb)"; drop_mongo
   bundle exec rspec

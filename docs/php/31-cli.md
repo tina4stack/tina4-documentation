@@ -111,11 +111,25 @@ tina4 serve
 
 | Flag | Description | Example |
 |------|-------------|---------|
-| `--port` | Custom port (default: 7145) | `tina4 serve --port 8080` |
+| `-p`, `--port` | Custom port (default: 7145) | `tina4 serve -p 8080` |
 | `--host` | Bind address (default: 0.0.0.0) | `tina4 serve --host 127.0.0.1` |
+| `--no-browser` | Don't open a browser tab on startup | `tina4 serve --no-browser` |
 | `--no-reload` | Disable live reload | `tina4 serve --no-reload` |
+| `--dev` | Force the dev server even if a production server is installed | `tina4 serve --dev` |
+| `--production` | Production server, debug off (see below) | `tina4 serve --production` |
 
-### Production Mode Detection
+### Serving a Project by Name
+
+You don't have to `cd` into a project first. Pass its folder name and the CLI will find it, change into it, and serve it:
+
+```bash
+tina4 serve my-app             # ./my-app, or my-app in your projects folder
+tina4 serve my-app -p 7150     # Options still apply
+```
+
+The CLI looks for `./my-app` in the current folder first, then in the projects folder `tina4 setup` recorded. If neither has it, it stops with `Project 'my-app' not found` and names the folder it searched. Run a bare `tina4 serve` outside any project and it will look in the projects folder too: one project there gets served, and several get listed so you can pick one by name.
+
+### Production Mode
 
 ```bash
 tina4 serve --production
@@ -123,11 +137,9 @@ tina4 serve --production
 
 When the `--production` flag is passed, the CLI:
 
-1. Checks for `TINA4_DEBUG=false` in `.env` (warns if debug is on)
-2. Uses FrankenPHP if available for better performance
-3. Enables response caching and template pre-compilation
-4. Disables the dev toolbar and error overlay
-5. Enables graceful shutdown handling
+1. Sets `TINA4_DEBUG=false` for the server, so the dev toolbar, the error overlay and template recompilation are off
+2. Sets `TINA4_PRODUCTION=true`, the framework's signal that you asked for production
+3. Compiles SCSS once and skips the live-reload watcher
 
 In practice, you rarely use `tina4 serve --production` directly. Instead, you use Docker or a process manager (Chapter 34). But this flag is useful for quick production testing.
 
