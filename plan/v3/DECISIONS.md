@@ -71,6 +71,13 @@ Conventions:
 | ADR-0055 | [Metrics measures production code and reports evidence honestly](decisions/ADR-0055.md) (resolves Feature 121) | Accepted |
 | ADR-0056 | [Configuration-first OIDC hands identity into Tina4 sessions](decisions/ADR-0056.md) (introduces Feature 136) | Accepted |
 | ADR-0057 | [PostGIS-first Point contract with GeoJSON output](decisions/ADR-0057.md) (introduces Feature 137) | Accepted |
+| ADR-0058 | [RBAC is one claim-first role/permission guard in every framework](decisions/ADR-0058.md) (introduces Feature 138) | Accepted |
+| ADR-0059 | [Graph databases are one URL-selected data layer, shaped exactly like Database](decisions/ADR-0059.md) (introduces Feature 139) | Accepted |
+| ADR-0060 | [Streaming events, multimodal input, and reusable Api.stream primitives](decisions/ADR-0060.md) (introduces Feature 140) | Accepted |
+| ADR-0061 | [The tool loop closes: tools sent, tool_result returned](decisions/ADR-0061.md) (introduces Feature 141) | Accepted |
+| ADR-0062 | [Agent-experience contract: import-hint fallback and generate-resolution transparency](decisions/ADR-0062.md) (agent experience) | Proposed |
+| ADR-0063 | [Scaffolding envelope v1.1: edit-hints, next-steps and surfaced test_paths](decisions/ADR-0063.md) (scaffolding) | Proposed |
+| ADR-0064 | [ORM read queries return a uniform ModelCollection carrying the total](decisions/ADR-0064.md) (ORM reads) | Proposed |
 | ADR-0067 | [Database drivers and optional servers are application dependencies, never framework runtime dependencies](decisions/ADR-0067.md) (Node optional peers, Ruby sqlite3 in the scaffold Gemfile, Puma opt-in) | Accepted |
 | ADR-0069 | [Identifiers that reach SQL come from the model, never the request](decisions/ADR-0069.md) (AutoCrud filter/sort/ids/write bodies, ORM find()/save(), DB write helpers, DocStore field paths, test gate) | Accepted |
 | ADR-0073 | [Every change follows the ISO/IEC 18974 and ISO/IEC 5230 controls](decisions/ADR-0073.md) | Accepted |
