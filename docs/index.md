@@ -27,9 +27,6 @@ hero:
     - theme: alt
       text: Ruby
       link: /ruby/index.md
-    - theme: alt
-      text: Delphi
-      link: /delphi/index.md
 
 
 ---
@@ -343,7 +340,6 @@ Pick a language. Each book stands on its own: you can read Python cover-to-cover
 - **[PHP](/php/index.md)** - PHP 8.5, `stream_select` server, zero composer deps in core.
 - **[Ruby](/ruby/index.md)** - its own HTTP server in dev and production; Puma if your app installs it.
 - **[tina4-js](/js/index.md)** - The 1.5 KB reactive frontend. Signals, Web Components, router, API client, WebSocket, PWA, SSE.
-- **[Delphi](/delphi/index.md)** - FireMonkey cross-platform, FireDAC, REST client, and Twig templates.
 
 Every book has a printable PDF with a clickable table of contents. Every chapter stays in sync with the code: release notes, version numbers, and example output are regenerated with every point release.
 
