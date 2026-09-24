@@ -52,7 +52,15 @@
     "",
     "Each invariant names a REAL suite file per framework and a list of case names;",
     "the four suites carry the SAME case names in each language's own idiom, which",
-    "scripts/audit-contract-fixtures.py normalises and matches."
+    "scripts/audit-contract-fixtures.py normalises and matches.",
+    "",
+    "ADR-0066 (2026-09-24, tina4-python #134 and #137) adds three invariants. The",
+    "default registration above covered routed responses only: static files, the",
+    "404 and 405 fallbacks and the framework's own refusals (CSRF 403, auth 401,",
+    "rate-limit 429) were written by code paths that never reached the middleware,",
+    "and Python's asgi() entry point attached none of it. Now every response the",
+    "framework writes carries the set, a header a route already set is left alone,",
+    "and every entry point builds the application through the same bootstrap."
   ],
   "version": 1,
   "decided": "2026-08-11",
@@ -88,6 +96,55 @@
       "cases": [
         "hsts is present on an https request",
         "hsts is absent on a plain http request"
+      ]
+    },
+    {
+      "id": "secheaders-on-every-response",
+      "adr": "ADR-0066",
+      "rule": "The canonical security header set is present on a static file response, on the 404 for an unknown path, on the 405 for a known path with the wrong method, and on a refusal the framework writes itself (a CSRF 403 or an auth 401), on every entry point.",
+      "why": "Issue #137: static files and the fallbacks were written before the middleware ran, so the one response most likely to be framed or sniffed - the site's own HTML and scripts - had no X-Frame-Options, no nosniff and no CSP.",
+      "suites": {
+        "python": "tests/test_security_headers_every_response_contract.py",
+        "php": "tests/SecurityHeadersEveryResponseContractTest.php",
+        "ruby": "spec/security_headers_every_response_contract_spec.rb",
+        "nodejs": "test/securityHeadersEveryResponseContract.test.ts"
+      },
+      "cases": [
+        "a static file carries the security headers",
+        "a 404 carries the security headers",
+        "a 405 carries the security headers",
+        "a refusal carries the security headers"
+      ]
+    },
+    {
+      "id": "secheaders-fill-only-missing",
+      "adr": "ADR-0066",
+      "rule": "When a route handler has already set one of the security headers (for example Content-Security-Policy or X-Frame-Options), the response keeps the route's value; only headers not already set are filled in.",
+      "why": "Headers are applied on every response now, including ones a route shaped deliberately. Overwriting would make a page that needs a relaxed CSP impossible to serve.",
+      "suites": {
+        "python": "tests/test_security_headers_every_response_contract.py",
+        "php": "tests/SecurityHeadersEveryResponseContractTest.php",
+        "ruby": "spec/security_headers_every_response_contract_spec.rb",
+        "nodejs": "test/securityHeadersEveryResponseContract.test.ts"
+      },
+      "cases": [
+        "a header the route already set is not overwritten"
+      ]
+    },
+    {
+      "id": "secheaders-every-entry-point-same-bootstrap",
+      "adr": "ADR-0066",
+      "rule": "Every supported entry point attaches the same middleware - security headers and CSRF - and mounts the configured SSO routes. The entry points proven: Python run() and asgi() (both through _bootstrap_application()); PHP App::run() in the CLI (Tina4's own socket server), App::run()/handle() under a web SAPI (php -S, PHP-FPM, Apache) and App::__invoke() (Swoole, RoadRunner, PSR-7); Ruby app.rb (Tina4.initialize! + Tina4::WebServer), Tina4.run! (Puma), config.ru under the puma executable and tina4ruby serve; Node the startServer() listener and handle() embedded in the caller's own node:http server.",
+      "why": "Issue #134: asgi() in Python skipped the middleware and the SSO mount that run() attached, so the same app deployed under uvicorn lost its security headers, its CSRF check and its login route.",
+      "suites": {
+        "python": "tests/test_security_headers_every_response_contract.py",
+        "php": "tests/SecurityHeadersEveryResponseContractTest.php",
+        "ruby": "spec/security_headers_every_response_contract_spec.rb",
+        "nodejs": "test/securityHeadersEveryResponseContract.test.ts"
+      },
+      "cases": [
+        "every entry point attaches the security headers and csrf",
+        "every entry point mounts the sso routes"
       ]
     }
   ]

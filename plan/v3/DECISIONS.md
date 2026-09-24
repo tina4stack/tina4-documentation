@@ -71,6 +71,8 @@ Conventions:
 | ADR-0055 | [Metrics measures production code and reports evidence honestly](decisions/ADR-0055.md) (resolves Feature 121) | Accepted |
 | ADR-0056 | [Configuration-first OIDC hands identity into Tina4 sessions](decisions/ADR-0056.md) (introduces Feature 136) | Accepted |
 | ADR-0057 | [PostGIS-first Point contract with GeoJSON output](decisions/ADR-0057.md) (introduces Feature 137) | Accepted |
+| ADR-0065 | [Database statement semantics: what a write is, fetch and execute of it, which ? is a placeholder](decisions/ADR-0065.md) (tina4-python #133, #138; fixture `statement_semantics_contract.json`) | Accepted |
+| ADR-0066 | [Security headers on every response and entry point; CORS same-origin clarification](decisions/ADR-0066.md) (clarifies ADR-0048; tina4-python #134-#137, #139; fixtures `securityheaders_contract.json`, `cors_contract.json`) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
