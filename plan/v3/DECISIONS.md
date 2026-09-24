@@ -71,6 +71,7 @@ Conventions:
 | ADR-0055 | [Metrics measures production code and reports evidence honestly](decisions/ADR-0055.md) (resolves Feature 121) | Accepted |
 | ADR-0056 | [Configuration-first OIDC hands identity into Tina4 sessions](decisions/ADR-0056.md) (introduces Feature 136) | Accepted |
 | ADR-0057 | [PostGIS-first Point contract with GeoJSON output](decisions/ADR-0057.md) (introduces Feature 137) | Accepted |
+| ADR-0070 | [A framework opens a browser only in development, never when TINA4_NO_BROWSER is truthy (true/1/yes/on), never when --no-browser is passed, never under CI](decisions/ADR-0070.md) (fixture `browser_open_contract.json`) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
