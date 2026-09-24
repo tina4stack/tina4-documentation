@@ -3,7 +3,7 @@
 > The living index that ties every audited feature to its machine-checked
 > contract, its decisions, and its proven-in-all-four status. This is the
 > backbone of a future formal Tina4 language specification.
-> **Last synced:** 2026-08-21 (Feature 139 graph databases promoted to PROVEN, ships 3.13.111; Feature 138 RBAC promoted to PROVEN)
+> **Last synced:** 2026-09-24 (ADR-0070 browser-open gate fixture added, native CLI proven; Feature 139 graph databases promoted to PROVEN, ships 3.13.111; Feature 138 RBAC promoted to PROVEN)
 
 > **Adversarial re-audit started 2026-08-08:** a zero-skip live-lab migration
 > baseline still omitted contradictory public paths (generated code migration
@@ -138,7 +138,8 @@ Re-run it and re-sync this table whenever a fixture changes.
 | GIS spatial points and queries | 137 | `gis_contract.json` | 12 | 0 | 12 | 0057 | implementation and focused real-PostGIS suites are green in all four; invariant promotion waits for every named case and mutation witness |
 | RBAC role/permission guards | 138 | `rbac_contract.json` | 8 | 8 | 0 | 0058 | **PROVEN all four (shipped 3.13.107).** role()/can() claim-first guards; audit-contract-fixtures.py verifies every case name across tests/test_rbac.py, tests/RbacTest.php, spec/rbac_spec.rb, test/rbac.test.ts (real tokens, real dispatch, no mocks) |
 | Graph databases (multi-engine) | 139 | `graph_contract.json` | 11 | 11 | 0 | 0059 | PROVEN in all four (ships 3.13.111). Database-shaped `GraphDatabase.create(url)`/`fromEnv()`: URL-selected adapters (`ultipa://` -> Ultipa/GQL, `neo4j://`/`bolt://`/`memgraph://` -> Bolt/Cypher one adapter, `arango://`/`arangodb://` -> Arango/AQL; default ports 60061/7687/8529), portable addNode/addEdge/getNode/updateNode/deleteNode/neighbors/traverse core plus raw `query()`/`execute()` in the native dialect, neutral GraphNode/GraphEdge/GraphResult, optional lazy-loaded drivers (tina4stack/tina4-ultipa; neo4j / neo4j-driver / laudis; python-arango / arangojs / triagens; Bolt+Arango zero-dep in Ruby), `TINA4_GRAPH_URL` + `TINA4_GRAPH_USERNAME`/`_PASSWORD` + `TINA4_GRAPH_CONNECT_TIMEOUT`. 11 invariants proven per-engine against Ultipa + Neo4j + Memgraph + ArangoDB on the lab, NO mocks; suites `tests/test_graph.py`, `tests/GraphTest.php`, `spec/graph_spec.rb`, `test/graph.test.ts`. `graph-driver-optional` runs driver-free |
-**Totals: 310 invariants, 288 proven, 22 owed** (2026-08-17), 58 fixtures. Proven
+| Browser-open gate (`tina4 serve` + framework server start) | 111 | `browser_open_contract.json` | 9 | 5 | 4 | 0070 | Native CLI proves 5 in `src/main.rs` on `fix/browser-open-gate` (tina4stack/tina4): `should_open_browser` + `resolve_serve_mode`, 11 named unit tests, 10 rule mutations each turn a named case red; every one of the fixture's 39 `decision_table` and 15 backend `mode_table` rows also driven end to end through the real binary with PATH shims for `open`/`xdg-open` (0 mismatches). Owed: the CLI's one-tab + silenced-child path has no named test yet; Python/PHP/Ruby/Node server starts, Ruby/Node `--no-browser` pass-through and Node cluster workers (`framework-server-follows-the-gate`, `framework-cli-honours-no-browser`, `cluster-worker-never-opens`). The 5 native invariants read as broken against tina4 `main` until that PR merges |
+**Totals: 355 invariants, 323 proven, 32 owed** (2026-09-24, auditor output against tina4-python/php/ruby/nodejs `origin/v3` and tina4 `fix/browser-open-gate`; 3 cases broken in `api_stream_contract.json` against Ruby `origin/v3`, pre-existing), 63 fixtures. Proven
 subsystems remain held to their contract four-way. Logger (feature 2) closed
 2026-08-13 -- all 8 invariant groups / 59 shared cases now proven four-way,
 real runners, no mocks (see row above for the framework fixes this pass found).
@@ -225,12 +226,14 @@ the matching row here in the SAME change:
 The auditor's own numbers, never a hand count, are the source of truth for
 proven/owed. A row here that disagrees with the auditor is a bug in this file.
 
-## Snapshot (2026-08-17)
+## Snapshot (2026-09-24)
 
 - 140 contiguous catalog entries and 140 feature packets. A catalog entry is an
   inventory unit, not proof of four-language parity.
-- 58 contract fixtures, 310 invariants, **288 proven / 22 owed / 0 broken** within
-  the fixture-covered contracts.
-- 56 ADR files allocated under `decisions/`, through ADR-0057.
+- 63 contract fixtures, 355 invariants, **323 proven / 32 owed** within the
+  fixture-covered contracts (auditor, 2026-09-24; 3 Ruby `api_stream` cases
+  broken against `origin/v3`, pre-existing).
+- 64 ADR files under `decisions/` on this branch, through ADR-0070 (ADR-0065..0069
+  are not on `main`).
 - The path to a formal language spec: every Layer-0 feature reaches Layer 2, the
   owed count reaches 0, and MASTER-SPEC is regenerated from the fixtures + ADRs.
