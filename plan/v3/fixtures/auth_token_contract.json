@@ -1,0 +1,159 @@
+{
+  "_comment": [
+    "The auth-token contract: ONE answer key, four frameworks. ADR-0079.",
+    "",
+    "What each framework accepts as proof of identity: a Frond form token is never",
+    "an identity, the HMAC secret is at least 32 bytes and never blank, debug is",
+    "switched on only by the operator, an unknown peer is never a local peer, and",
+    "request-scoped identity state (PHP's native session under a worker, a stored",
+    "SSO identity) does not outlive its request or its lifetime.",
+    "",
+    "Each invariant names a REAL suite file per framework and a list of case names.",
+    "The suites carry the SAME case names in each language's idiom (Python",
+    "snake_case, PHP testPascalCase, Ruby it-description, Node assert label), which",
+    "scripts/audit-contract-fixtures.py normalises and matches. Real dispatch, real",
+    "Frond tokens, real HMAC, real sessions, real child-process boots, a real",
+    "openswoole worker - NO MOCKS.",
+    "",
+    "Node has no `serve --production` flag and never defaulted debug on, so the",
+    "debug-is-explicit invariant names the three frameworks whose CLIs had the",
+    "defect. The PHP-only invariants cover PHP-only runtime paths (Swoole, PSR-7)."
+  ],
+  "version": 1,
+  "decided": "2026-09-24",
+  "feature": "Auth-token rules (security hardening)",
+  "invariants": [
+    {
+      "id": "auth-form-token-is-not-identity",
+      "adr": "ADR-0079 s1",
+      "rule": "A JWT whose type claim is \"form\" is refused by every identity gate: the route auth gate (Bearer, body formToken and session slots), the WebSocket upgrade gate, authenticate_request and the Bearer middleware helpers. A form token in one slot is skipped and the next slot is tried. The gate issues a FreshToken only after an identity token authenticated the request; refresh preserves purpose, so a refreshed form token is still a form token. The CSRF middleware keeps accepting form tokens. An auth token keeps passing every slot.",
+      "why": "Form tokens and auth tokens are signed with the same TINA4_SECRET; the identity gates checked the signature and expiry but not the purpose.",
+      "suites": {
+        "python": "tests/test_auth_token_contract.py",
+        "php": "tests/AuthTokenContractTest.php",
+        "ruby": "spec/auth_token_contract_spec.rb",
+        "nodejs": "test/authTokenContract.test.ts"
+      },
+      "cases": [
+        "a form token in the bearer header is refused by the route gate",
+        "a form token in the body is refused by the route gate",
+        "a form token in the session is refused by the route gate",
+        "a form token in the body falls through to the session token",
+        "a form token is refused on a secured websocket upgrade",
+        "a form token is refused by authenticate request",
+        "refresh never issues a fresh token from a form token",
+        "an auth token still passes the route gate",
+        "a form token still passes csrf"
+      ]
+    },
+    {
+      "id": "auth-secret-strength",
+      "adr": "ADR-0079 s2",
+      "rule": "HMAC signing raises an error naming TINA4_SECRET and `openssl rand -hex 32` when the key is shorter than 32 bytes (blank included); HMAC verification with such a key rejects the token (401, never 500) and logs the same actionable message. The rule covers an explicit secret argument too. A server refuses to boot outside dev with a blank TINA4_SECRET and in any mode with a set-but-short one.",
+      "why": "A blank key is publicly reproducible, so tokens signed or verified with it can be minted by anyone.",
+      "suites": {
+        "python": "tests/test_auth_token_contract.py",
+        "php": "tests/AuthTokenContractTest.php",
+        "ruby": "spec/auth_token_contract_spec.rb",
+        "nodejs": "test/authTokenContract.test.ts"
+      },
+      "cases": [
+        "signing with a blank secret is refused",
+        "signing with a secret shorter than 32 bytes is refused",
+        "a token forged with the empty key is rejected",
+        "a 32 byte secret signs and verifies",
+        "boot outside dev refuses a blank secret",
+        "boot outside dev refuses a short secret"
+      ]
+    },
+    {
+      "id": "empty-peer-is-not-loopback",
+      "adr": "ADR-0079 s4",
+      "rule": "is_loopback(\"\") is false: an empty or unknown peer address is a remote caller for the MCP and dev-admin loopback gates. Loopback addresses (127/8, ::1, ::ffff:127.x, localhost) still pass.",
+      "why": "A runtime path that failed to pass its socket peer read as local and opened the loopback gates.",
+      "suites": {
+        "python": "tests/test_auth_token_contract.py",
+        "php": "tests/AuthTokenContractTest.php",
+        "ruby": "spec/auth_token_contract_spec.rb",
+        "nodejs": "test/authTokenContract.test.ts"
+      },
+      "cases": [
+        "an empty peer is not loopback",
+        "a loopback peer is loopback",
+        "an empty peer is refused by the mcp gate"
+      ]
+    },
+    {
+      "id": "psr7-peer-is-real",
+      "adr": "ADR-0079 s4",
+      "rule": "PHP only: App::__invoke passes the PSR-7 request's REMOTE_ADDR server param as the request's socket peer, and an absent one as '' (unknown), never a made-up loopback address.",
+      "why": "PSR-7 runtimes (RoadRunner, FrankenPHP worker mode) run under the CLI SAPI, where $_SERVER['REMOTE_ADDR'] is never set.",
+      "suites": {
+        "php": "tests/AuthTokenContractTest.php"
+      },
+      "cases": [
+        "a psr7 request carries its real peer"
+      ]
+    },
+    {
+      "id": "swoole-worker-request-state",
+      "adr": "ADR-0079 s4, s5",
+      "rule": "PHP only, on a REAL openswoole worker: a request carries its real socket peer, and one user's native $_SESSION is never visible to the next user, while each user's own session (native and Tina4) still resumes from its own cookie.",
+      "why": "The router started the native session once per worker process and never closed it, and the Swoole branch dropped both the peer and the Cookie header.",
+      "suites": {
+        "php": "tests/AppInvokeSwooleTest.php"
+      },
+      "cases": [
+        "two users on a real swoole worker never share a native session",
+        "a swoole worker request carries its real peer"
+      ]
+    },
+    {
+      "id": "sso-identity-expires",
+      "adr": "ADR-0079 s5",
+      "rule": "A stored SSO identity authenticates only while its expires_at is in the future; expires_at 0 means the provider gave no lifetime and the identity lives as long as the session. Callback and refresh store 0 when the provider omits expires_in.",
+      "why": "The route gate trusted the stored identity without reading expires_at.",
+      "suites": {
+        "python": "tests/test_auth_token_contract.py",
+        "php": "tests/AuthTokenContractTest.php",
+        "ruby": "spec/auth_token_contract_spec.rb",
+        "nodejs": "test/authTokenContract.test.ts"
+      },
+      "cases": [
+        "an expired sso identity is refused",
+        "a live sso identity passes"
+      ]
+    },
+    {
+      "id": "form-token-lifetime",
+      "adr": "ADR-0079 s5",
+      "rule": "A Frond form token lives TINA4_TOKEN_LIMIT minutes (default 60) in every framework: exp - iat == TINA4_TOKEN_LIMIT * 60 seconds.",
+      "why": "Ruby passed minutes * 60 to an API that takes minutes, so a form token lived 60 hours.",
+      "suites": {
+        "python": "tests/test_auth_token_contract.py",
+        "php": "tests/AuthTokenContractTest.php",
+        "ruby": "spec/auth_token_contract_spec.rb",
+        "nodejs": "test/authTokenContract.test.ts"
+      },
+      "cases": [
+        "a form token lives token limit minutes"
+      ]
+    },
+    {
+      "id": "debug-is-explicit",
+      "adr": "ADR-0079 s3",
+      "rule": "The serve command honours TINA4_DEBUG from .env; --production turns debug off (the explicit flag beats the environment); a missing .env never enables debug and no framework writes TINA4_DEBUG=true or an API key into .env as a boot side effect.",
+      "why": "Python's serve set TINA4_DEBUG=true before .env loaded and never read --production; PHP's and Ruby's --production only picked a server; Ruby wrote TINA4_DEBUG=true and a clock-derived API key into a missing .env.",
+      "suites": {
+        "python": "tests/test_cli_serve_debug_env.py",
+        "php": "tests/CliServeDebugEnvTest.php",
+        "ruby": "spec/cli_serve_debug_env_spec.rb"
+      },
+      "cases": [
+        "serve honours debug false from env file",
+        "production flag turns debug off",
+        "a missing env file does not enable debug"
+      ]
+    }
+  ]
+}

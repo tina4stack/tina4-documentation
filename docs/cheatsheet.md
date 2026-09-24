@@ -37,7 +37,7 @@ Drop a handler file in `src/routes/` (auto-discovered) and register one per HTTP
 | Hash / check password | `Auth.hash_password(pw)` / `Auth.check_password(pw, h)` | `Auth::hashPassword($pw)` / `Auth::checkPassword($pw, $h)` | `Tina4::Auth.hash_password(pw)` / `Tina4::Auth.check_password(pw, h)` | `hashPassword(pw)` / `checkPassword(pw, h)` |
 
 - **JWT expiry is in minutes** (default 60) in all four. `valid_token` returns the decoded **payload** (truthy) on success, `null`/`None` on failure, not a bool.
-- A protected route accepts the token from the **`Authorization: Bearer` header, a `formToken` body field, or the session**, checked in that order.
+- A protected route accepts an auth token from the **`Authorization: Bearer` header, a `formToken` body field, or the session**, checked in that order. A Frond form token (`{{ form_token() }}`) is a CSRF token, not an identity: every auth gate skips it (ADR-0079). Open a public write route with `@noauth()`.
 - Passwords hash with **PBKDF2-SHA256** (260 000 iterations, `pbkdf2_sha256$...` format); the check is timing-safe and always takes **`(password, hash)`** in that order.
 
 ---
