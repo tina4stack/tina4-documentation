@@ -95,6 +95,8 @@ Conventions:
 | ADR-0075 | [Tina4 moves to MPL-2.0 with a Code Infinity commercial licence](decisions/ADR-0075.md) (pending legal review and contributor consent) | Accepted |
 | ADR-0072 | [A Content-Type set with header() is the one Content-Type; settings are read when they are used](decisions/ADR-0072.md) (tina4-python#143, #144) | Accepted |
 | ADR-0077 | [Frond escapes by default; trusted output is a SafeString type only](decisions/ADR-0077.md) | Accepted |
+| ADR-0080 | [The release is signed only over CI-verified bytes, and every install path verifies the published checksum](decisions/ADR-0080.md) (tina4 CLI signing pipeline, installers, `tina4 update`) | Accepted |
+| ADR-0081 | [Package/registry publishing runs only from a protected `release` environment, with per-job least privilege](decisions/ADR-0081.md) (all publish workflows) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
