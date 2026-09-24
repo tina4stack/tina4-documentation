@@ -71,6 +71,7 @@ Conventions:
 | ADR-0055 | [Metrics measures production code and reports evidence honestly](decisions/ADR-0055.md) (resolves Feature 121) | Accepted |
 | ADR-0056 | [Configuration-first OIDC hands identity into Tina4 sessions](decisions/ADR-0056.md) (introduces Feature 136) | Accepted |
 | ADR-0057 | [PostGIS-first Point contract with GeoJSON output](decisions/ADR-0057.md) (introduces Feature 137) | Accepted |
+| ADR-0068 | [Response headers refuse CR, LF and NUL; built-in servers enforce the upload cap before reading the body](decisions/ADR-0068.md) (Features 30 / 44; fixture `http_hardening_contract.json`) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
