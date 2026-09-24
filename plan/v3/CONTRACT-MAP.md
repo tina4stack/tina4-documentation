@@ -234,7 +234,7 @@ proven/owed. A row here that disagrees with the auditor is a bug in this file.
 - 64 contract fixtures, 363 invariants, **330 proven / 33 owed / 3 broken** within
   the fixture-covered contracts (the 3 broken are the pre-existing Ruby
   `api_stream_contract.json` cases noted under the Layer 2 totals).
-- 65 ADR files under `decisions/`, through ADR-0066 (ADR-0067 onwards are being
+- 66 ADR files under `decisions/`, through ADR-0073 (ADR-0067 to ADR-0072 are being
   written on their own branches).
 - The path to a formal language spec: every Layer-0 feature reaches Layer 2, the
   owed count reaches 0, and MASTER-SPEC is regenerated from the fixtures + ADRs.
