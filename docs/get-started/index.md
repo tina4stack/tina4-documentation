@@ -170,19 +170,6 @@ Access your app at `http://localhost:5173`
 
 Take a deeper dive into the [tina4-js documentation](/js/).
 
-## Delphi 10.4+
-
-Design-time components for FireMonkey. Clone the repo, build and install the packages in your IDE.
-
-```bash
-git clone https://github.com/tina4stack/tina4delphi.git
-# Open Tina4DelphiProject in the Delphi IDE
-# Build and install Tina4Delphi (runtime package)
-# Build and install Tina4DelphiDesign (design-time package)
-# Components appear in the "Tina4" tool palette
-```
-
-Take a deeper dive into the [documentation](https://github.com/tina4stack/tina4-documentation/blob/main/delphi/index.md)
 
 ## What's next: build with the AI coder
 

@@ -36,8 +36,8 @@ These are the controls an assessor checks first: that every change to released c
 | G6 | A published security policy in every repository | `SECURITY.md` (supported versions, reporting channels, response targets, disclosure) | Done: merged in all seven repositories |
 | G7 | CI runs on every pull request in every in-scope repository | tina4-js had none; `ci.yml` added (tina4-js#17) | Done |
 | G8 | Release automation works under branch protection | CLI `release-published.yml` opens a manifests PR instead of pushing to `main` (tina4#32) | Done |
-| G9 | Two-factor authentication on every account with write access | Each collaborator confirms; enforced automatically once D2 is done | Open |
-| G10 | Static analysis runs on the active line | tina4-php CodeQL targets `main`, not `v3`; extend CodeQL to all four frameworks and tina4-js | Open |
+| G9 | Two-factor authentication on every account with write access | Each collaborator confirms; enforced automatically once D2 is done | Done 2026-09-24: access reduced to tina4stack + andrevanzuydam, both with 2FA (`plan/iso/evidence/2026-09-24-access-and-2fa.txt`) |
+| G10 | Static analysis runs on the active line | tina4-php CodeQL targets `main`, not `v3`; extend CodeQL to all four frameworks and tina4-js | Done 2026-09-24 for 6 repos (CodeQL default setup, extended); tina4-php pending tina4-php#221 (Semgrep for PHP source, then CodeQL default setup for JS/Actions) |
 
 Controls G1-G5 are declared in `scripts/governance/github-controls.json` and applied or verified by `scripts/governance/github_controls.py`:
 
@@ -52,7 +52,7 @@ python3 scripts/governance/github_controls.py --apply   # repository admin only
 
 ISO/IEC 18974 asks for a documented method to detect known vulnerabilities, respond to them, and follow them up after release. ISO/IEC 29147 and 30111 describe how.
 
-1. **Process document** (`plan/iso/VULNERABILITY-HANDLING.md`): intake (the G3 channel or email), triage with CVSS v3.1, fix in all four frameworks (the parity rule), private GitHub Security Advisory, CVE request, coordinated release, public advisory, release note. The response targets are the ones in `SECURITY.md`.
+1. **Process document** (`plan/iso/VULNERABILITY-HANDLING.md`, written 2026-09-24): intake (the G3 channel or email), triage with CVSS v3.1, fix in all four frameworks (the parity rule), private GitHub Security Advisory, CVE request, coordinated release, public advisory, release note. The response targets are the ones in `SECURITY.md`.
 2. **Advisories for already-fixed issues:** publish advisories for security fixes that shipped without one, starting with the SQL injection fixed under tina4-php #209.
 3. **Security audit remediation:** the September 2026 audit covered injection, authentication and sessions, the HTTP surface, development surfaces, templates, the frontend library and the supply chain. Findings are tracked in private draft advisories and fixed through the process in step 1. They are not listed here until each is fixed and disclosed.
 4. **Security regression tests:** every fixed vulnerability gets a no-mock regression test in each affected framework, plus a shared contract fixture wherever the behaviour is cross-framework.
@@ -134,3 +134,6 @@ This page lives under `docs/`, so the truth gate applies: a row is published onl
 
 - 2026-09-24: plan written. `SECURITY.md` and CI prerequisites opened as PRs in all seven repositories. Control script and configuration added; `--check` reports 46 controls missing, pending the admin `--apply`. Security audit under way.
 - 2026-09-24: G1-G8 done. The repository admin applied the rulesets, private vulnerability reporting, secret scanning with push protection and Dependabot alerts to all seven repositories; `--check` reports all controls in place (evidence file above). ADR-0073 makes the controls a standing rule.
+- 2026-09-24: G9 done. Direct access reduced to the owner (tina4stack) and the maintainer (andrevanzuydam); four write collaborators removed, now contributing through fork pull requests. Both remaining accounts confirmed with 2FA enabled.
+- 2026-09-24: G10 started. CodeQL default setup (extended suite) enabled on tina4, tina4-python, tina4-ruby, tina4-nodejs, tina4-js and tina4-documentation; it scans the default branch and every pull request. CodeQL cannot analyse PHP, so tina4-php#221 adds Semgrep for PHP source and retires the old main-only CodeQL workflow. `github_controls.py` now checks and applies default setup. First-scan alerts are triaged under Phase 1.
+- 2026-09-24: Policies written. Public: `docs/general/contributing.md` (contributors), `docs/general/security-research.md` (investigators, with safe harbour, no bounty) and `docs/general/contributor-licence-agreement.md` (draft, pending legal review). Internal: `plan/iso/VULNERABILITY-HANDLING.md` (ISO/IEC 30111). Licence decision recorded as ADR-0075 (MPL-2.0 plus a Code Infinity commercial licence; copyright holder Code Infinity), pending legal review and outside-contributor consent; the author list is held privately.

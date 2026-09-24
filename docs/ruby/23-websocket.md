@@ -72,7 +72,7 @@ Both forms are identical. Use whichever reads better in your project.
 
 ### Starting the Server
 
-WebSocket runs alongside your HTTP server. It works with both Puma and WEBrick:
+WebSocket runs alongside your HTTP server, on the same port:
 
 ```bash
 tina4 serve
@@ -558,12 +558,14 @@ end
 
 ## 12. Server Compatibility
 
-WebSocket works with both Puma and WEBrick. Tina4 detects the available server and sets up WebSocket handling automatically:
+An upgrade needs the server to hand over the raw socket (`rack.hijack`). Tina4's built-in server does, and so does Puma if your app installs it:
 
-| Server  | Notes                                                     |
-|---------|-----------------------------------------------------------|
-| Puma    | Recommended for production. Handles concurrent connections efficiently. |
-| WEBrick | Ships with Ruby. Good for development and testing.        |
+| Server   | Notes |
+|----------|-------|
+| Built-in | The default in development and production. Upgrades on the same port as HTTP. |
+| Puma     | Used when your `Gemfile` has it. Upgrades work the same way. |
+
+Under a Rack server that can't hand over the socket, the upgrade is refused with 426.
 
 For production deployments behind Nginx, configure WebSocket proxying:
 
@@ -705,7 +707,7 @@ If `TINA4_WS_BACKPLANE` is not set (the default), Tina4 broadcasts only to local
 
 **Problem:** WebSocket connections drop immediately.
 
-**Fix:** Use `tina4 serve` which runs a persistent server. For production with Puma, configure WebSocket proxying with Nginx.
+**Fix:** Use `tina4 serve` which runs a persistent server. Behind Nginx, configure WebSocket proxying.
 
 ### 2. Events Are Symbols, Not Strings
 

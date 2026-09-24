@@ -14,6 +14,9 @@ Reads scripts/governance/github-controls.json and, for each repository, manages:
   G3  private vulnerability reporting   - on
   G4  secret scanning + push protection - on
   G5  Dependabot vulnerability alerts   - on
+  G10 CodeQL default setup              - configured, extended query suite
+                                          (tina4-php also runs Semgrep for PHP
+                                          source, see its semgrep.yml)
 
 --apply is idempotent: a ruleset that already exists (matched by name) is
 updated in place. Everything goes through the `gh` CLI, so run it while `gh`
@@ -115,6 +118,8 @@ def check(owner, repo, spec):
     alerts = subprocess.run(["gh", "api", f"{base}/vulnerability-alerts", "--silent"],
                             capture_output=True, text=True)
     rows.append(("Dependabot alerts", alerts.returncode == 0))
+    setup = gh(f"{base}/code-scanning/default-setup", allow_fail=True) or {}
+    rows.append(("CodeQL default setup", setup.get("state") == "configured"))
     return rows
 
 
@@ -137,6 +142,9 @@ def apply(owner, repo, spec):
     print("  secret scanning + push protection on")
     gh("-X", "PUT", f"{base}/vulnerability-alerts")
     print("  Dependabot alerts on")
+    gh("-X", "PATCH", f"{base}/code-scanning/default-setup",
+       body={"state": "configured", "query_suite": "extended"})
+    print("  CodeQL default setup configured (extended)")
     if spec.get("actions_can_open_prs"):
         current = gh(f"{base}/actions/permissions/workflow")
         gh("-X", "PUT", f"{base}/actions/permissions/workflow", body={
