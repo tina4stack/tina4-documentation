@@ -3,7 +3,7 @@
 > The living index that ties every audited feature to its machine-checked
 > contract, its decisions, and its proven-in-all-four status. This is the
 > backbone of a future formal Tina4 language specification.
-> **Last synced:** 2026-09-24 (combined PR contract ledger; totals pending final framework merge verification)
+> **Last synced:** 2026-09-24 (67 fixtures, 397 invariants: 357 proven, 40 owed, 0 broken; structural auditor against combined PR heads Python #157, PHP #230, Ruby #63, Node #79 and merged CLI main)
 
 > **Adversarial re-audit started 2026-08-08:** a zero-skip live-lab migration
 > baseline still omitted contradictory public paths (generated code migration
@@ -143,10 +143,10 @@ Re-run it and re-sync this table whenever a fixture changes.
 | Browser-open gate (`tina4 serve` + framework server start) | 111 | `browser_open_contract.json` | 9 | 5 | 4 | 0070 | Native CLI proves 5 in `src/main.rs` on `fix/browser-open-gate` (tina4stack/tina4): `should_open_browser` + `resolve_serve_mode` + `CI_ENV_VARS` (the fixture's 8-variable `ci_env_vars`, asserted element for element), 13 named unit tests, 13 rule mutations each turn a named case red; the fixture's first 69 `decision_table` rows and 15 backend `mode_table` rows were also driven end to end through the real binary with PATH shims for `open`/`xdg-open` (0 mismatches; 75 of 84 mismatch on tina4 `main`); the 16 rows added with the `no`/`off` amendment (`ci_not_set_values`) are covered by the unit tests. PHP `App::run()` (tina4-php#216) had seven of the eight variables and counted `no`/`off` as CI; its fix and a fixture runner are on tina4-php `fix/mongo8-sqlsrv-lastid`. Owed: the CLI's one-tab + silenced-child path has no named test yet; Python/PHP/Ruby/Node server starts, Ruby/Node `--no-browser` pass-through and Node cluster workers (`framework-server-follows-the-gate`, `framework-cli-honours-no-browser`, `cluster-worker-never-opens`). The 5 native invariants read as broken against tina4 `main` until that PR merges |
 | Identifier allow-list (AutoCrud filter/sort/ids/write bodies, ORM find/save, DB write helpers, DocStore paths, test gate) | 27, 17, 95 | `identifier_allowlist_contract.json` | 14 | 14 | 0 | 0069 | yes (real server/dispatch over real SQLite for the AutoCrud cases; ORM and write-helper cases on SQLite, PostgreSQL, MySQL, MSSQL and Firebird; DocStore parity against a real MongoDB; red on origin/v3 and mutation-proved in all four, 2026-09-24. Python has no AutoCrud filter/sort, so the four list-query invariants name PHP, Ruby and Node only.) |
 | AI client | 135 | `ai_client_contract.json` | 15 | 15 | 0 | 0041, 0053, 0060, 0061 | yes (row added 2026-09-24 from the auditor; the fixture had no row here) |
-| Api.stream primitives | - | `api_stream_contract.json` | 5 | 5 | 0 | 0060 | partial: the auditor reports 3 BROKEN - `api-stream-timeouts-and-close` names three Ruby cases (`stream-connect-timeout-honoured`, `stream-total-timeout-honoured`, `stream-early-close-releases-socket`) that `spec/api_stream_contract_spec.rb` has never carried (pre-existing on v3; row added 2026-09-24) |
-| Web Push | 140 | `web_push_contract.json` | 6 | 6 | 0 | - | yes (row added 2026-09-24 from the auditor; the fixture had no row here) |
-| HTTP hardening (header CR/LF/NUL refusal + body cap before read) | 30 / 44 | `http_hardening_contract.json` | 8 | 8 | 0 | 0068 | Python carries all 8 (real child servers over real loopback sockets, the built-in server and uvicorn, RSS read from the OS; every guard mutation-proved). PHP (tina4-php#217), Ruby (tina4-ruby#50, merged) and Node (tina4-nodejs#69) carry the six shared invariants. The duplicate-Content-Length ruling added one case, `two content length headers answer 400 even when they agree`, which the PHP, Ruby and Node suites still need: the auditor reports those 3 as broken until they add it. Keep-alive/HEAD and ASGI-path invariants are Python-only |
-**Totals pending combined auditor run.** Proven
+| Api.stream primitives | - | `api_stream_contract.json` | 5 | 5 | 0 | 0060 | Named cases present in all four; Ruby timeout/early-close cases landed in PR #56. Combined structural auditor: 0 broken, 2026-09-24. |
+| Web Push | 140 | `web_push_contract.json` | 6 | 0 | 6 | - | yes (row added 2026-09-24 from the auditor; the fixture had no row here) |
+| HTTP hardening (header CR/LF/NUL refusal + body cap before read) | 30 / 44 | `http_hardening_contract.json` | 8 | 8 | 0 | 0068 | All named cases present in the combined Python/PHP/Ruby/Node PR heads, including duplicate Content-Length rejection. Keep-alive/HEAD and ASGI-path invariants are Python-only. |
+**Totals: 397 invariants, 357 proven, 40 owed, 0 broken**, across 67 fixtures (2026-09-24, `audit-contract-fixtures.py` against the combined backend PR heads). This is structural fixture verification, not a substitute for the combined live lab run. Proven
 subsystems remain held to their contract four-way. Logger (feature 2) closed
 2026-08-13 -- all 8 invariant groups / 59 shared cases now proven four-way,
 real runners, no mocks (see row above for the framework fixes this pass found).
@@ -237,6 +237,6 @@ proven/owed. A row here that disagrees with the auditor is a bug in this file.
 
 - 140 contiguous catalog entries and 140 feature packets. A catalog entry is an
   inventory unit, not proof of four-language parity.
-- Combined fixture and invariant totals pending final auditor run against merged framework heads.
+- 67 contract fixtures, 397 invariants: **357 proven / 40 owed / 0 broken** in the structural auditor against the combined PR heads (2026-09-24).
 - The path to a formal language spec: every Layer-0 feature reaches Layer 2, the
   owed count reaches 0, and MASTER-SPEC is regenerated from the fixtures + ADRs.
