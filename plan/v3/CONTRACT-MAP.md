@@ -3,7 +3,7 @@
 > The living index that ties every audited feature to its machine-checked
 > contract, its decisions, and its proven-in-all-four status. This is the
 > backbone of a future formal Tina4 language specification.
-> **Last synced:** 2026-08-21 (Feature 139 graph databases promoted to PROVEN, ships 3.13.111; Feature 138 RBAC promoted to PROVEN)
+> **Last synced:** 2026-09-24 (ADR-0068 HTTP hardening fixture added, Python proven; Feature 139 graph databases promoted to PROVEN, ships 3.13.111; Feature 138 RBAC promoted to PROVEN)
 
 > **Adversarial re-audit started 2026-08-08:** a zero-skip live-lab migration
 > baseline still omitted contradictory public paths (generated code migration
@@ -138,7 +138,8 @@ Re-run it and re-sync this table whenever a fixture changes.
 | GIS spatial points and queries | 137 | `gis_contract.json` | 12 | 0 | 12 | 0057 | implementation and focused real-PostGIS suites are green in all four; invariant promotion waits for every named case and mutation witness |
 | RBAC role/permission guards | 138 | `rbac_contract.json` | 8 | 8 | 0 | 0058 | **PROVEN all four (shipped 3.13.107).** role()/can() claim-first guards; audit-contract-fixtures.py verifies every case name across tests/test_rbac.py, tests/RbacTest.php, spec/rbac_spec.rb, test/rbac.test.ts (real tokens, real dispatch, no mocks) |
 | Graph databases (multi-engine) | 139 | `graph_contract.json` | 11 | 11 | 0 | 0059 | PROVEN in all four (ships 3.13.111). Database-shaped `GraphDatabase.create(url)`/`fromEnv()`: URL-selected adapters (`ultipa://` -> Ultipa/GQL, `neo4j://`/`bolt://`/`memgraph://` -> Bolt/Cypher one adapter, `arango://`/`arangodb://` -> Arango/AQL; default ports 60061/7687/8529), portable addNode/addEdge/getNode/updateNode/deleteNode/neighbors/traverse core plus raw `query()`/`execute()` in the native dialect, neutral GraphNode/GraphEdge/GraphResult, optional lazy-loaded drivers (tina4stack/tina4-ultipa; neo4j / neo4j-driver / laudis; python-arango / arangojs / triagens; Bolt+Arango zero-dep in Ruby), `TINA4_GRAPH_URL` + `TINA4_GRAPH_USERNAME`/`_PASSWORD` + `TINA4_GRAPH_CONNECT_TIMEOUT`. 11 invariants proven per-engine against Ultipa + Neo4j + Memgraph + ArangoDB on the lab, NO mocks; suites `tests/test_graph.py`, `tests/GraphTest.php`, `spec/graph_spec.rb`, `test/graph.test.ts`. `graph-driver-optional` runs driver-free |
-**Totals: 310 invariants, 288 proven, 22 owed** (2026-08-17), 58 fixtures. Proven
+| HTTP hardening (header CR/LF/NUL refusal + body cap before read) | 30 / 44 | `http_hardening_contract.json` | 7 | 6 | 1 | 0068 | Python proves 6 (real child servers over real loopback sockets, the built-in server and uvicorn, RSS read from the OS; 45 of 47 cases red on the old code, every guard mutation-proved). PHP in progress on `fix/refuse-header-crlf`; Ruby and Node owed (`php-ruby-nodejs-carry-the-same-cases`) |
+**Totals: 353 invariants, 324 proven, 29 owed** (2026-09-24, auditor output; 3 cases broken in `api_stream_contract.json` against Ruby `origin/v3`, pre-existing), 63 fixtures. Proven
 subsystems remain held to their contract four-way. Logger (feature 2) closed
 2026-08-13 -- all 8 invariant groups / 59 shared cases now proven four-way,
 real runners, no mocks (see row above for the framework fixes this pass found).
@@ -229,8 +230,9 @@ proven/owed. A row here that disagrees with the auditor is a bug in this file.
 
 - 140 contiguous catalog entries and 140 feature packets. A catalog entry is an
   inventory unit, not proof of four-language parity.
-- 58 contract fixtures, 310 invariants, **288 proven / 22 owed / 0 broken** within
-  the fixture-covered contracts.
+- 63 contract fixtures, 353 invariants, **324 proven / 29 owed** within the
+  fixture-covered contracts (auditor, 2026-09-24; 3 Ruby `api_stream` cases
+  broken against `origin/v3`, pre-existing).
 - 56 ADR files allocated under `decisions/`, through ADR-0057.
 - The path to a formal language spec: every Layer-0 feature reaches Layer 2, the
   owed count reaches 0, and MASTER-SPEC is regenerated from the fixtures + ADRs.

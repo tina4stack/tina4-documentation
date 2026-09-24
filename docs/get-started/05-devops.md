@@ -325,28 +325,34 @@ host used to hang the application with no error and no ceiling. When the timeout
 expires the message names the host, the port, the seconds elapsed and the
 variable, so you can act on it without reading a stack trace.
 
-### Limits that bound a hostile request, PHP only
+### Limits that bound a hostile request, PHP and Python built-in servers
 
 ```bash
 TINA4_REQUEST_TIMEOUT=30             # seconds of client silence; 0 disables
 TINA4_MAX_REQUEST_HEADER=65536       # bytes; answers 431 past this
-TINA4_MAX_REQUEST_BODY=10485760      # bytes; answers 413 past this
+TINA4_MAX_UPLOAD_SIZE=10485760       # bytes; answers 413 past this
+TINA4_MAX_REQUEST_BODY=10485760      # PHP only: an extra ceiling on the declared length
 ```
 
-These exist in PHP because PHP's built-in server is the only one that parses
-HTTP itself, on a raw socket, with no server underneath to inherit limits from.
-The other three sit on something that already has them: Python bounds its header
-read at 30 seconds and 64KB through asyncio, Ruby inherits WEBrick's limits, and
-Node inherits `node:http` defaults of 60 seconds for headers and 16KB per header
+These apply wherever Tina4 parses HTTP itself, on a raw socket, with no server
+underneath to inherit limits from. That's PHP's built-in server, and Python's
+asyncio server, which runs whenever uvicorn and hypercorn aren't installed (the
+Docker image included). Ruby inherits WEBrick's or Puma's limits, and Node
+inherits `node:http` defaults of 60 seconds for headers and 16KB per header
 block.
 
-So Python, Ruby and Node are bounded. They are just not bounded by a Tina4
-variable you can tune. If you need a specific ceiling on those three, set it on
-the server in front of them.
+Trace an upload through one of those two servers. The header block will be
+refused with 431 the moment it passes its cap, before it's even complete. If
+the declared `Content-Length` is over `TINA4_MAX_UPLOAD_SIZE`, the answer will
+be 413 before one body byte is read. Otherwise the body will be read in small
+pieces with a running count, chunked bodies included, and the count will stop
+it at the cap however the client framed or under-declared it. A
+`Content-Length` that isn't a plain number gets 400, and a client that goes
+quiet halfway through a request gets 408. The server hands back the answer and
+closes, and the next connection won't notice a thing.
 
-The PHP header cap matches what nginx and Apache allow. The body cap refuses an
-oversized upload on its first packet, from the declared `Content-Length`, rather
-than buffering all of it and then objecting.
+The header cap matches what nginx and Apache allow. See ADR-0068 for the exact
+status codes and bodies.
 
 ### Worker pool, PHP built-in server only
 
