@@ -95,6 +95,7 @@ Conventions:
 | ADR-0075 | [Tina4 moves to MPL-2.0 with a Code Infinity commercial licence](decisions/ADR-0075.md) (pending legal review and contributor consent) | Accepted |
 | ADR-0072 | [A Content-Type set with header() is the one Content-Type; settings are read when they are used](decisions/ADR-0072.md) (tina4-python#143, #144) | Accepted |
 | ADR-0077 | [Frond escapes by default; trusted output is a SafeString type only](decisions/ADR-0077.md) | Accepted |
+| ADR-0084 | [Outbound HTTP refuses private/internal addresses by default (SSRF guard for the Api client and Web Push)](decisions/ADR-0084.md) (Feature F7; fixture `ssrf_guard_contract.json`; `TINA4_ALLOW_PRIVATE_REQUESTS`) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
