@@ -96,7 +96,10 @@
       "rule": "A response header whose name is not an HTTP token, or whose value contains CR, LF or NUL, is refused at the call site with the exact ADR-0068 message naming the header. The same holds for a redirect location (named Location), an explicit content type and a download filename. Nothing is stripped or encoded silently. Ordinary values still set normally.",
       "why": "header() and redirect() accepted CR/LF and the built-in server wrote them raw, so user input reaching a header could end it early and start another. Node's setHeader already throws ERR_INVALID_CHAR; the other three now match it. Mutation: remove the call-site check and the refusal cases go red.",
       "suites": {
-        "python": "tests/test_http_hardening_contract.py"
+        "python": "tests/test_http_hardening_contract.py",
+        "php": "tests/HttpHardeningContractTest.php",
+        "ruby": "spec/http_hardening_contract_spec.rb",
+        "nodejs": "test/httpHardeningContract.test.ts"
       },
       "cases": [
         "a header value containing cr lf or nul is refused",
@@ -111,7 +114,10 @@
       "rule": "A cookie whose name is not an HTTP token, or whose value or any attribute value contains CR, LF, NUL or ';', is refused at the call site with the exact ADR-0068 cookie message. Ordinary cookies still set, and several Set-Cookie headers on one response all reach the client. A framework that already percent-encodes the cookie value (Ruby, Node) keeps encoding it instead of refusing; attribute values are refused in all four.",
       "why": "Cookie names and values were not validated, so a ';' in a value added attributes the application never set, and CR/LF started a new header. Mutation: remove the cookie check and the refusal case goes red.",
       "suites": {
-        "python": "tests/test_http_hardening_contract.py"
+        "python": "tests/test_http_hardening_contract.py",
+        "php": "tests/HttpHardeningContractTest.php",
+        "ruby": "spec/http_hardening_contract_spec.rb",
+        "nodejs": "test/httpHardeningContract.test.ts"
       },
       "cases": [
         "a cookie name value or attribute that could inject is refused",
@@ -124,7 +130,10 @@
       "rule": "A header that reaches the built-in server's socket writer by another path (appended to the header list directly) and carries CR, LF or NUL, or a non-token name, is never written. The server answers 500 with the transport rejection shape and body {\"error\":\"Invalid response header\"} and logs the header name.",
       "why": "Defence in depth: framework internals and direct appends bypass the call-site check. Mutation: remove the writer check and the injected header appears on the wire.",
       "suites": {
-        "python": "tests/test_http_hardening_contract.py"
+        "python": "tests/test_http_hardening_contract.py",
+        "php": "tests/HttpHardeningContractTest.php",
+        "ruby": "spec/http_hardening_contract_spec.rb",
+        "nodejs": "test/httpHardeningContract.test.ts"
       },
       "cases": [
         "the built in server refuses to write an unsafe header"
@@ -136,7 +145,9 @@
       "rule": "The built-in server answers 413 to a declared Content-Length over TINA4_MAX_UPLOAD_SIZE before reading a body byte, reads every body in bounded chunks under a running count (chunked included) and answers 413 the moment the count passes the cap, so the server's memory does not grow with what a client declares or sends. A body under the cap is still served.",
       "why": "The asyncio fallback server read the whole declared body before the cap was checked; a large declared body sent slowly grew RSS without a ceiling. Chunked bodies were ignored. Mutation: go back to one read of the declared length and the memory case goes red.",
       "suites": {
-        "python": "tests/test_http_hardening_contract.py"
+        "python": "tests/test_http_hardening_contract.py",
+        "php": "tests/HttpHardeningContractTest.php",
+        "ruby": "spec/http_hardening_contract_spec.rb"
       },
       "cases": [
         "a declared content length over the cap is refused before the body is read",
@@ -152,7 +163,9 @@
       "rule": "The built-in server answers 400 to a Content-Length that is not ASCII digits or two that disagree, to Transfer-Encoding other than exactly chunked or combined with Content-Length, and to a head carrying a bare CR, LF or NUL; 431 to a head past TINA4_MAX_REQUEST_HEADER; 408 to a partial request silent for TINA4_REQUEST_TIMEOUT. Each closes cleanly and the server keeps serving.",
       "why": "A non-numeric Content-Length raised an uncaught ValueError and an oversized head an uncaught LimitOverrunError, each leaking the socket; a stalled body raised an uncaught timeout. Mutation: drop the Content-Length validation and the 400 case goes red.",
       "suites": {
-        "python": "tests/test_http_hardening_contract.py"
+        "python": "tests/test_http_hardening_contract.py",
+        "php": "tests/HttpHardeningContractTest.php",
+        "ruby": "spec/http_hardening_contract_spec.rb"
       },
       "cases": [
         "an invalid content length answers 400",
@@ -169,17 +182,45 @@
       "rule": "Every built-in server transport rejection (400, 408, 413, 431, 500) carries the exact ADR-0068 status and JSON body, Content-Type application/json, Content-Length, Connection: close (built-in server only) and the canonical security header set without Strict-Transport-Security. The ASGI path's 413 in Python carries the same status, body and headers except Connection, which stays the ASGI server's to manage.",
       "why": "One shape for every early refusal, so a client, a proxy and a test can read them the same way in all four frameworks, and a refusal is still a response that carries the security headers.",
       "suites": {
-        "python": "tests/test_http_hardening_contract.py"
+        "python": "tests/test_http_hardening_contract.py",
+        "php": "tests/HttpHardeningContractTest.php",
+        "ruby": "spec/http_hardening_contract_spec.rb"
       },
       "cases": [
         "a transport rejection carries the json body and security headers"
       ]
     },
     {
-      "id": "php-ruby-nodejs-carry-the-same-cases",
+      "id": "builtin-server-http11-persistence",
       "adr": "ADR-0068",
-      "rule": "PHP, Ruby and Node carry every case above in their own suite, and each adds itself to the invariants' suites as it lands.",
-      "why": "Owed ledger entry: the contract is written in Python first. PHP is in progress on fix/refuse-header-crlf; Ruby and Node are owed."
+      "rule": "The built-in server keeps an HTTP/1.1 connection open for the next request (sequential or pipelined) until the client sends Connection: close, the client speaks HTTP/1.0, or the answer carries no Content-Length; it then answers with Connection: close and closes. Silence between requests closes quietly after TINA4_REQUEST_TIMEOUT; silence inside a request answers 408. A HEAD answer carries the Content-Length the GET would send and no body.",
+      "why": "A wire probe found Python's built-in server served only the first request on a connection and answered HEAD with Content-Length: 0 (the recorded GET length was overwritten by the emptied body's). Mutation: return False after every answer and the keep-alive case goes red; size Content-Length from the emptied body and the HEAD case goes red.",
+      "suites": {
+        "python": "tests/test_http_hardening_contract.py"
+      },
+      "cases": [
+        "keep alive serves every request on one connection",
+        "connection close is honoured",
+        "head answers the get content length without a body"
+      ]
+    },
+    {
+      "id": "asgi-path-refuses-unsafe-header",
+      "adr": "ADR-0068",
+      "rule": "On an ASGI server (uvicorn), a header carrying CR, LF or NUL or a non-token name that reaches app() by another path is never handed to the server. The client receives the same 500 as from the built-in server: {\"error\":\"Invalid response header\"}, JSON, the security header set.",
+      "why": "h11 refused the header and uvicorn dropped the connection, so the client got no answer at all. Mutation: remove the check in app() and the client gets no response again.",
+      "suites": {
+        "python": "tests/test_http_hardening_contract.py"
+      },
+      "cases": [
+        "the asgi path refuses an unsafe header with the same answer"
+      ]
+    },
+    {
+      "id": "nodejs-carries-the-transport-cases",
+      "adr": "ADR-0068",
+      "rule": "Node carries the builtin-server-body-cap-before-read, builtin-server-malformed-framing and transport-rejection-shape cases in test/httpHardeningContract.test.ts and adds itself to those invariants' suites as they land.",
+      "why": "Owed ledger entry. Python, PHP (tina4-php#217) and Ruby (tina4-ruby#50) carry every case of the six ADR-0068 invariants; Node (tina4-nodejs#69) carries the three response-header invariants, with its transport cases in progress."
     }
   ]
 }
