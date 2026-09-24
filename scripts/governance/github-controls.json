@@ -1,0 +1,42 @@
+{
+  "owner": "tina4stack",
+  "comment": "Source of truth for the repository controls in plan/iso/ISO-ALIGNMENT-PLAN.md (controls G1-G5). Apply with scripts/governance/github_controls.py --apply as the repository admin; verify with --check.",
+  "repos": {
+    "tina4": {
+      "release_line": "main",
+      "maintenance_lines": [],
+      "required_checks": ["check", "skills-installer (ubuntu-latest, shell)", "skills-installer (windows-latest, powershell)"],
+      "actions_can_open_prs": true
+    },
+    "tina4-python": {
+      "release_line": "v3",
+      "maintenance_lines": ["v2", "main"],
+      "required_checks": ["test", "firebird", "Image boots, binds 0.0.0.0, and reports its real version"]
+    },
+    "tina4-php": {
+      "release_line": "v3",
+      "maintenance_lines": ["v2", "main"],
+      "required_checks": ["test", "firebird", "cache-driver", "swoole", "Image boots, binds 0.0.0.0, and reports its real version"]
+    },
+    "tina4-ruby": {
+      "release_line": "v3",
+      "maintenance_lines": ["main"],
+      "required_checks": ["test", "firebird", "Image boots, binds 0.0.0.0, and reports its real version"]
+    },
+    "tina4-nodejs": {
+      "release_line": "v3",
+      "maintenance_lines": ["main"],
+      "required_checks": ["test", "firebird", "Image boots, binds 0.0.0.0, and reports its real version"]
+    },
+    "tina4-js": {
+      "release_line": "master",
+      "maintenance_lines": [],
+      "required_checks": ["test"]
+    },
+    "tina4-documentation": {
+      "release_line": "main",
+      "maintenance_lines": [],
+      "required_checks": ["audit"]
+    }
+  }
+}
