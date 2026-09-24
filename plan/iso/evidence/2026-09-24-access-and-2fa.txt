@@ -1,0 +1,17 @@
+# Access review and two-factor authentication - 2026-09-24
+# Scope: tina4, tina4-python, tina4-php, tina4-ruby, tina4-nodejs, tina4-js, tina4-documentation
+
+## Direct access after review
+tina4stack      admin  (repository owner)                all 7 repositories
+andrevanzuydam  write  (maintainer, PR-only on releases)  all 7 repositories
+
+Removed 2026-09-24 at the maintainer's request (contribute through fork pull requests):
+HueSamai (write, tina4-python); kobusvanwyk, CrisHigham, JonoRabie011 (write, tina4-documentation).
+Pending invitations: none.
+
+## Two-factor authentication (GitHub Settings > Password and authentication)
+tina4stack      2FA Enabled (GitHub-required); passkey configured; password configured
+andrevanzuydam  2FA Enabled; passkey configured; password configured; Google sign-in connected
+
+Screenshots of both settings pages are held privately by the maintainer, not in this public repository.
+Note: andrevanzuydam can also sign in with a connected Google account; that Google account must have 2FA on too.
