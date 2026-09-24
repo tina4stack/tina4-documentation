@@ -105,7 +105,7 @@
     {
       "id": "cookie-refuses-injection",
       "adr": "ADR-0068",
-      "rule": "A cookie whose name is not an HTTP token, or whose value or any attribute value contains CR, LF, NUL or ';', is refused at the call site with the exact ADR-0068 cookie message. Ordinary cookies still set, and several Set-Cookie headers on one response all reach the client.",
+      "rule": "A cookie whose name is not an HTTP token, or whose value or any attribute value contains CR, LF, NUL or ';', is refused at the call site with the exact ADR-0068 cookie message. Ordinary cookies still set, and several Set-Cookie headers on one response all reach the client. A framework that already percent-encodes the cookie value (Ruby, Node) keeps encoding it instead of refusing; attribute values are refused in all four.",
       "why": "Cookie names and values were not validated, so a ';' in a value added attributes the application never set, and CR/LF started a new header. Mutation: remove the cookie check and the refusal case goes red.",
       "cases": [
         "a cookie name value or attribute that could inject is refused",
