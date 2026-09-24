@@ -13,17 +13,25 @@
     "yes",
     "on"
   ],
-  "ci_false": [
+  "ci_env_vars": [
+    "CI",
+    "CONTINUOUS_INTEGRATION",
+    "GITHUB_ACTIONS",
+    "GITLAB_CI",
+    "BUILDKITE",
+    "JENKINS_URL",
+    "TF_BUILD",
+    "TEAMCITY_VERSION"
+  ],
+  "ci_not_set_values": [
     "false",
-    "0",
-    "no",
-    "off"
+    "0"
   ],
   "rules": {
     "development": "framework: resolved debug mode on (TINA4_DEBUG truthy, unset is off, or an explicit debug argument). tina4 serve: --production -> production; else --dev -> development; else tina4-js -> development; else TINA4_DEBUG truthy -> development; else production.",
     "no_browser_variable": "TINA4_NO_BROWSER in the truthy set vetoes",
     "no_browser_flag": "--no-browser (or a programmatic no_browser=true) vetoes; no_browser=false never forces a browser open",
-    "ci": "CI set to a non-empty value (after trim) not in ci_false vetoes",
+    "ci": "Under CI when ANY variable in ci_env_vars is set to a value that, trimmed and lower-cased, is non-empty and not in ci_not_set_values (false, 0). The rule tina4-php v3 ships in App::shouldOpenBrowser. So CI=no, CI=off and CI=woodpecker are CI; CI=, CI=false and CI=0 are not.",
     "tabs": "at most one tab, the app URL; the CLI sets TINA4_NO_BROWSER=true for any framework server it spawns; only a primary process opens"
   },
   "decision_table": [
@@ -270,13 +278,300 @@
       "why": "the process environment is resolved first, like every framework's dotenv loader"
     },
     {
-      "name": "ci-true",
+      "name": "ci-var-CI-set",
       "mode": "development",
       "env": {
         "CI": "true"
       },
       "flags": [],
-      "opens": false
+      "opens": false,
+      "why": "CI as its CI system sets it"
+    },
+    {
+      "name": "ci-var-CONTINUOUS_INTEGRATION-set",
+      "mode": "development",
+      "env": {
+        "CONTINUOUS_INTEGRATION": "true"
+      },
+      "flags": [],
+      "opens": false,
+      "why": "CONTINUOUS_INTEGRATION as its CI system sets it"
+    },
+    {
+      "name": "ci-var-GITHUB_ACTIONS-set",
+      "mode": "development",
+      "env": {
+        "GITHUB_ACTIONS": "true"
+      },
+      "flags": [],
+      "opens": false,
+      "why": "GITHUB_ACTIONS as its CI system sets it"
+    },
+    {
+      "name": "ci-var-GITLAB_CI-set",
+      "mode": "development",
+      "env": {
+        "GITLAB_CI": "true"
+      },
+      "flags": [],
+      "opens": false,
+      "why": "GITLAB_CI as its CI system sets it"
+    },
+    {
+      "name": "ci-var-BUILDKITE-set",
+      "mode": "development",
+      "env": {
+        "BUILDKITE": "true"
+      },
+      "flags": [],
+      "opens": false,
+      "why": "BUILDKITE as its CI system sets it"
+    },
+    {
+      "name": "ci-var-JENKINS_URL-set",
+      "mode": "development",
+      "env": {
+        "JENKINS_URL": "http://jenkins.example:8080/"
+      },
+      "flags": [],
+      "opens": false,
+      "why": "JENKINS_URL as its CI system sets it"
+    },
+    {
+      "name": "ci-var-TF_BUILD-set",
+      "mode": "development",
+      "env": {
+        "TF_BUILD": "True"
+      },
+      "flags": [],
+      "opens": false,
+      "why": "TF_BUILD as its CI system sets it"
+    },
+    {
+      "name": "ci-var-TEAMCITY_VERSION-set",
+      "mode": "development",
+      "env": {
+        "TEAMCITY_VERSION": "2024.12"
+      },
+      "flags": [],
+      "opens": false,
+      "why": "TEAMCITY_VERSION as its CI system sets it"
+    },
+    {
+      "name": "ci-var-CI-false",
+      "mode": "development",
+      "env": {
+        "CI": "false"
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-CI-0",
+      "mode": "development",
+      "env": {
+        "CI": "0"
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-CI-empty",
+      "mode": "development",
+      "env": {
+        "CI": ""
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-CONTINUOUS_INTEGRATION-false",
+      "mode": "development",
+      "env": {
+        "CONTINUOUS_INTEGRATION": "false"
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-CONTINUOUS_INTEGRATION-0",
+      "mode": "development",
+      "env": {
+        "CONTINUOUS_INTEGRATION": "0"
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-CONTINUOUS_INTEGRATION-empty",
+      "mode": "development",
+      "env": {
+        "CONTINUOUS_INTEGRATION": ""
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-GITHUB_ACTIONS-false",
+      "mode": "development",
+      "env": {
+        "GITHUB_ACTIONS": "false"
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-GITHUB_ACTIONS-0",
+      "mode": "development",
+      "env": {
+        "GITHUB_ACTIONS": "0"
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-GITHUB_ACTIONS-empty",
+      "mode": "development",
+      "env": {
+        "GITHUB_ACTIONS": ""
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-GITLAB_CI-false",
+      "mode": "development",
+      "env": {
+        "GITLAB_CI": "false"
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-GITLAB_CI-0",
+      "mode": "development",
+      "env": {
+        "GITLAB_CI": "0"
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-GITLAB_CI-empty",
+      "mode": "development",
+      "env": {
+        "GITLAB_CI": ""
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-BUILDKITE-false",
+      "mode": "development",
+      "env": {
+        "BUILDKITE": "false"
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-BUILDKITE-0",
+      "mode": "development",
+      "env": {
+        "BUILDKITE": "0"
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-BUILDKITE-empty",
+      "mode": "development",
+      "env": {
+        "BUILDKITE": ""
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-JENKINS_URL-false",
+      "mode": "development",
+      "env": {
+        "JENKINS_URL": "false"
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-JENKINS_URL-0",
+      "mode": "development",
+      "env": {
+        "JENKINS_URL": "0"
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-JENKINS_URL-empty",
+      "mode": "development",
+      "env": {
+        "JENKINS_URL": ""
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-TF_BUILD-false",
+      "mode": "development",
+      "env": {
+        "TF_BUILD": "false"
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-TF_BUILD-0",
+      "mode": "development",
+      "env": {
+        "TF_BUILD": "0"
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-TF_BUILD-empty",
+      "mode": "development",
+      "env": {
+        "TF_BUILD": ""
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-TEAMCITY_VERSION-false",
+      "mode": "development",
+      "env": {
+        "TEAMCITY_VERSION": "false"
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-TEAMCITY_VERSION-0",
+      "mode": "development",
+      "env": {
+        "TEAMCITY_VERSION": "0"
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-var-TEAMCITY_VERSION-empty",
+      "mode": "development",
+      "env": {
+        "TEAMCITY_VERSION": ""
+      },
+      "flags": [],
+      "opens": true
     },
     {
       "name": "ci-1",
@@ -306,6 +601,26 @@
       "opens": false
     },
     {
+      "name": "ci-no",
+      "mode": "development",
+      "env": {
+        "CI": "no"
+      },
+      "flags": [],
+      "opens": false,
+      "why": "only false and 0 are 'not set'; no is a set value"
+    },
+    {
+      "name": "ci-off",
+      "mode": "development",
+      "env": {
+        "CI": "off"
+      },
+      "flags": [],
+      "opens": false,
+      "why": "only false and 0 are 'not set'; off is a set value"
+    },
+    {
       "name": "ci-woodpecker",
       "mode": "development",
       "env": {
@@ -316,55 +631,10 @@
       "why": "Woodpecker sets CI=woodpecker"
     },
     {
-      "name": "ci-not-empty",
-      "mode": "development",
-      "env": {
-        "CI": ""
-      },
-      "flags": [],
-      "opens": true
-    },
-    {
       "name": "ci-not-blank",
       "mode": "development",
       "env": {
         "CI": "  "
-      },
-      "flags": [],
-      "opens": true
-    },
-    {
-      "name": "ci-not-false",
-      "mode": "development",
-      "env": {
-        "CI": "false"
-      },
-      "flags": [],
-      "opens": true
-    },
-    {
-      "name": "ci-not-0",
-      "mode": "development",
-      "env": {
-        "CI": "0"
-      },
-      "flags": [],
-      "opens": true
-    },
-    {
-      "name": "ci-not-no",
-      "mode": "development",
-      "env": {
-        "CI": "no"
-      },
-      "flags": [],
-      "opens": true
-    },
-    {
-      "name": "ci-not-off",
-      "mode": "development",
-      "env": {
-        "CI": "off"
       },
       "flags": [],
       "opens": true
@@ -377,6 +647,26 @@
       },
       "flags": [],
       "opens": true
+    },
+    {
+      "name": "ci-not-False-padded",
+      "mode": "development",
+      "env": {
+        "CI": " False "
+      },
+      "flags": [],
+      "opens": true
+    },
+    {
+      "name": "ci-one-var-set-among-cleared",
+      "mode": "development",
+      "env": {
+        "CI": "false",
+        "GITHUB_ACTIONS": "true"
+      },
+      "flags": [],
+      "opens": false,
+      "why": "any one variable in the list is enough"
     },
     {
       "name": "every-veto-at-once",
@@ -594,14 +884,16 @@
     {
       "id": "browser-open-ci",
       "adr": "ADR-0070",
-      "rule": "Under CI (CI set to a non-empty value outside false/0/no/off, trimmed, any case) no browser opens. An empty, blank or falsy CI does not veto.",
-      "why": "CI=true is the convention, but Woodpecker sets CI=woodpecker; for a browser, not opening is the cheap mistake.",
+      "rule": "Under CI no browser opens. CI means any variable in ci_env_vars (CI, CONTINUOUS_INTEGRATION, GITHUB_ACTIONS, GITLAB_CI, BUILDKITE, JENKINS_URL, TF_BUILD, TEAMCITY_VERSION) set to a value that, trimmed and lower-cased, is non-empty and neither 'false' nor '0'. An empty, blank, false or 0 value does not veto. A runner asserts its own list equals ci_env_vars, element for element.",
+      "why": "One explicit list, the union of what tina4-php (App::CI_ENVIRONMENT_VARIABLES) and tina4-ruby (Tina4::CI_ENV_VARS) already ship, so every launcher recognises the same CI systems.",
       "suites": {
         "native": "src/main.rs"
       },
       "cases": [
         "browser_never_opens_under_ci",
-        "browser_opens_when_ci_is_empty_or_falsy"
+        "browser_opens_when_ci_is_empty_or_falsy",
+        "every_ci_variable_vetoes_on_its_own",
+        "ci_env_vars_match_the_contract_fixture"
       ]
     },
     {
