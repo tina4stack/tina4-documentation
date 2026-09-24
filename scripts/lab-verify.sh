@@ -252,6 +252,15 @@ run_php() {
     case "$f" in *swoole*) ;; *) ln -s "$f" "$ini_root/graph"/;; esac
   done
   load_env; export TINA4_TEST_FIREBIRD_URL="$(fb_url tina4_php.fdb)"; drop_mongo
+  # The graph drivers are composer "suggest" entries, not dependencies (ultipa needs
+  # ext-grpc, which would break a plain `composer install` elsewhere). Install them
+  # into vendor/ BEFORE the main suite: its Neo4j/Memgraph/Arango cases need them
+  # too. Restore composer.json/lock so the tested tree retains its committed
+  # manifests alongside the installed suggested drivers.
+  log "PHP graph driver installation (lab-only; grpc ON, openswoole OFF)"
+  PHP_INI_SCAN_DIR="$ini_root/graph" COMPOSER_ALLOW_SUPERUSER=1 composer require --dev --no-interaction --no-scripts --quiet \
+    laudis/neo4j-php-client triagens/arangodb tina4stack/ultipa || return 1
+  git checkout -- composer.json composer.lock 2>/dev/null
   log "PHP main suite (grpc + openswoole disabled)"
   # Ultipa needs ext-grpc, which is off here; its cases run in the graph pass below.
   env -u TINA4_TEST_ULTIPA_URL PHP_INI_SCAN_DIR="$ini_root/clean" ./vendor/bin/phpunit tests
@@ -259,14 +268,7 @@ run_php() {
   log "PHP openswoole suite (openswoole ON, grpc OFF)"
   PHP_INI_SCAN_DIR="$ini_root/swoole" ./vendor/bin/phpunit tests/AppInvokeSwooleTest.php
   local sw=$?
-  # The graph drivers are composer "suggest" entries, not dependencies (ultipa needs
-  # ext-grpc, which would break a plain `composer install` elsewhere). Install them
-  # into vendor/ for the lab only, then restore composer.json/lock so the tree the
-  # suite ran against is the committed one plus the suggested drivers.
-  log "PHP graph drivers (lab-only) + graph suite (grpc ON, openswoole OFF)"
-  PHP_INI_SCAN_DIR="$ini_root/graph" COMPOSER_ALLOW_SUPERUSER=1 composer require --dev --no-interaction --no-scripts --quiet \
-    laudis/neo4j-php-client triagens/arangodb tina4stack/ultipa || return 1
-  git checkout -- composer.json composer.lock 2>/dev/null
+  log "PHP graph suite (grpc ON, openswoole OFF)"
   PHP_INI_SCAN_DIR="$ini_root/graph" php -r 'exit(extension_loaded("grpc") && !extension_loaded("openswoole") && !extension_loaded("swoole") ? 0 : 1);' || {
     echo "ERROR: graph pass requires grpc enabled and Swoole disabled"; return 1;
   }
