@@ -1,3 +1,9 @@
+# Copyright (c) 2026 Code Infinity
+# SPDX-License-Identifier: MPL-2.0
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 name: Doc Truth
 
 # Fails the build when the docs reference CLI commands the tina4 CLI
@@ -55,6 +61,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Check inbound dependency licence policy
+        run: |
+          python3 scripts/check_dependency_licenses.py
+          python3 -m unittest discover -s scripts -p test_dependency_licenses.py
 
       # Lock in the audit's own behavior — chiefly that the CLI check
       # derives its grammar from the built source (not a stale PATH binary)

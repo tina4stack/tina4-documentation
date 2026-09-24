@@ -3,7 +3,7 @@
 > The living index that ties every audited feature to its machine-checked
 > contract, its decisions, and its proven-in-all-four status. This is the
 > backbone of a future formal Tina4 language specification.
-> **Last synced:** 2026-09-24 (67 fixtures, 397 invariants: 357 proven, 40 owed, 0 broken; structural auditor against combined PR heads Python #157, PHP #230, Ruby #63, Node #79 and merged CLI main)
+> **Last synced:** 2026-09-24 (68 fixtures, 400 invariants: 360 proven, 40 owed, 0 broken; structural auditor against the 3.13.138 release worktrees and CLI 3.8.90 source; full shipping-head lab verification remains pending)
 
 > **Adversarial re-audit started 2026-08-08:** a zero-skip live-lab migration
 > baseline still omitted contradictory public paths (generated code migration
@@ -146,7 +146,9 @@ Re-run it and re-sync this table whenever a fixture changes.
 | Api.stream primitives | - | `api_stream_contract.json` | 5 | 5 | 0 | 0060 | Named cases present in all four; Ruby timeout/early-close cases landed in PR #56. Combined structural auditor: 0 broken, 2026-09-24. |
 | Web Push | 140 | `web_push_contract.json` | 6 | 0 | 6 | - | yes (row added 2026-09-24 from the auditor; the fixture had no row here) |
 | HTTP hardening (header CR/LF/NUL refusal + body cap before read) | 30 / 44 | `http_hardening_contract.json` | 8 | 8 | 0 | 0068 | All named cases present in the combined Python/PHP/Ruby/Node PR heads, including duplicate Content-Length rejection. Keep-alive/HEAD and ASGI-path invariants are Python-only. |
-**Totals: 397 invariants, 357 proven, 40 owed, 0 broken**, across 67 fixtures (2026-09-24, `audit-contract-fixtures.py` against the combined backend PR heads). This is structural fixture verification, not a substitute for the combined live lab run. Proven
+| Connection pool isolation | 3 | `pool_isolation_contract.json` | 3 | 3 | 0 | 0044 | All named cases present in Python, PHP, Ruby and Node release worktrees. Real PostgreSQL regressions cover cross-context transaction isolation, fail-fast exhaustion and retained failed-commit leases. This row records structural evidence; full shipping-head lab verification remains pending. |
+
+**Totals: 400 invariants, 360 proven, 40 owed, 0 broken**, across 68 fixtures (2026-09-24, `audit-contract-fixtures.py` against the 3.13.138 release worktrees). This is structural fixture verification, not a substitute for the combined live lab run. Proven
 subsystems remain held to their contract four-way. Logger (feature 2) closed
 2026-08-13 -- all 8 invariant groups / 59 shared cases now proven four-way,
 real runners, no mocks (see row above for the framework fixes this pass found).

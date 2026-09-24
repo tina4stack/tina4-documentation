@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Code Infinity
+# SPDX-License-Identifier: MPL-2.0
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 # Generate docs/public/llms-full.txt - the whole Tina4 documentation concatenated
 # into one file, for language models and tools that ingest a single text file (the
 # llms-full.txt convention). llms.txt is the curated map; this is the full text.

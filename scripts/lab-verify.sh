@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Code Infinity
+# SPDX-License-Identifier: MPL-2.0
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 #
 # Tina4 lab test-suite verification — one recipe, four frameworks, green.
 #
@@ -234,19 +240,22 @@ run_php() {
   # with both disabled via a filtered conf.d, then run the openswoole test alone
   # WITH openswoole (it skips cleanly without it).
   local base=/etc/php/8.3/cli/conf.d
-  rm -rf /tmp/confd_clean /tmp/confd_nogrpc; mkdir -p /tmp/confd_clean /tmp/confd_nogrpc
+  local ini_root
+  ini_root=$(mktemp -d "${TMPDIR:-/tmp}/tina4-release-php-ini.XXXXXX") || return 1
+  mkdir -p "$ini_root/clean" "$ini_root/swoole" "$ini_root/graph"
   local f
   for f in "$base"/*.ini; do
-    case "$f" in *grpc*|*swoole*) ;; *) ln -s "$f" /tmp/confd_clean/;; esac
-    case "$f" in *grpc*) ;; *) ln -s "$f" /tmp/confd_nogrpc/;; esac
+    case "$f" in *grpc*|*swoole*) ;; *) ln -s "$f" "$ini_root/clean"/;; esac
+    case "$f" in *grpc*) ;; *) ln -s "$f" "$ini_root/swoole"/;; esac
+    case "$f" in *swoole*) ;; *) ln -s "$f" "$ini_root/graph"/;; esac
   done
   load_env; export TINA4_TEST_FIREBIRD_URL="$(fb_url tina4_php.fdb)"; drop_mongo
   log "PHP main suite (grpc + openswoole disabled)"
   # Ultipa needs ext-grpc, which is off here; its cases run in the graph pass below.
-  env -u TINA4_TEST_ULTIPA_URL PHP_INI_SCAN_DIR=/tmp/confd_clean ./vendor/bin/phpunit tests
+  env -u TINA4_TEST_ULTIPA_URL PHP_INI_SCAN_DIR="$ini_root/clean" ./vendor/bin/phpunit tests
   local main=$?
   log "PHP openswoole suite (openswoole ON, grpc OFF)"
-  PHP_INI_SCAN_DIR=/tmp/confd_nogrpc ./vendor/bin/phpunit tests/AppInvokeSwooleTest.php
+  PHP_INI_SCAN_DIR="$ini_root/swoole" ./vendor/bin/phpunit tests/AppInvokeSwooleTest.php
   local sw=$?
   # The graph drivers are composer "suggest" entries, not dependencies (ultipa needs
   # ext-grpc, which would break a plain `composer install` elsewhere). Install them
@@ -256,7 +265,10 @@ run_php() {
   COMPOSER_ALLOW_SUPERUSER=1 composer require --dev --no-interaction --no-scripts --quiet \
     laudis/neo4j-php-client triagens/arangodb tina4stack/ultipa || return 1
   git checkout -- composer.json composer.lock 2>/dev/null
-  PHP_INI_SCAN_DIR=/tmp/confd_nogrpc ./vendor/bin/phpunit tests/GraphTest.php
+  PHP_INI_SCAN_DIR="$ini_root/graph" php -r 'exit(extension_loaded("grpc") && !extension_loaded("openswoole") && !extension_loaded("swoole") ? 0 : 1);' || {
+    echo "ERROR: graph pass requires grpc enabled and Swoole disabled"; return 1;
+  }
+  PHP_INI_SCAN_DIR="$ini_root/graph" ./vendor/bin/phpunit tests/GraphTest.php
   local graph=$?
   return $(( main != 0 || sw != 0 || graph != 0 ))
 }

@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2026 Code Infinity
+ * SPDX-License-Identifier: MPL-2.0
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 // tina4press config for tina4.com — mirrors the VitePress themeConfig so this
 // is a copy-paste port. Sidebars are auto-generated from the folder structure;
 // override per-section here later to match the exact VitePress grouping.
@@ -193,7 +200,7 @@ export default {
       ],
     },
     search: true,
-    footer: "Simple. Fast. Human. · MIT licensed",
+    footer: "Simple. Fast. Human. · MPL-2.0 · Copyright Code Infinity",
 
     // Site-wide links. Edit SITE_LINKS at the top of this file to add one.
     //

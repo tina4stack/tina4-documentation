@@ -1,0 +1,52 @@
+{
+  "_comment": [
+    "Real PostgreSQL regression coverage for connection ownership (Python issue145). Threads, Fibers/coroutines and independent async contexts use their native execution identity. No mocks. Full suites and final shipping-head verification are recorded in the release plan."
+  ],
+  "version": 1,
+  "decided": "2026-09-24",
+  "feature": "Database connection pool isolation",
+  "invariants": [
+    {
+      "id": "pool-context-isolation",
+      "adr": "ADR-0044",
+      "rule": "An ordinary operation in another execution context cannot observe uncommitted rows or have its successful write removed by rollback of a different context. The active transaction exclusively owns its connection until completed.",
+      "suites": {
+        "python": "tests/test_pool_transaction_isolation.py",
+        "ruby": "spec/database_pool_transaction_isolation_spec.rb",
+        "php": "tests/PoolFiberTransactionIsolationTest.php",
+        "nodejs": "test/databasePoolIsolation.test.ts"
+      },
+      "cases": [
+        "pool transaction lease prevents cross context dirty reads and lost writes"
+      ]
+    },
+    {
+      "id": "pool-exhaustion-fails-closed",
+      "adr": "ADR-0044",
+      "rule": "If all pool connections are leased, a competing operation fails clearly rather than using an in-use connection. Pool exhaustion does not abort, commit, or roll back the existing owner transaction.",
+      "suites": {
+        "python": "tests/test_pool_transaction_isolation.py",
+        "ruby": "spec/database_pool_transaction_isolation_spec.rb",
+        "php": "tests/PoolFiberTransactionIsolationTest.php",
+        "nodejs": "test/databasePoolIsolation.test.ts"
+      },
+      "cases": [
+        "pool exhaustion fails without sharing a live transaction"
+      ]
+    },
+    {
+      "id": "pool-commit-failure-retains-owner",
+      "adr": "ADR-0044",
+      "rule": "A failed transaction commit retains the owner connection until rollback. Terminal rollback releases the lease; a broken driver is discarded and later operations can reconnect.",
+      "suites": {
+        "python": "tests/test_pool_transaction_isolation.py",
+        "ruby": "spec/database_pool_transaction_isolation_spec.rb",
+        "php": "tests/PoolFiberTransactionIsolationTest.php",
+        "nodejs": "test/databasePoolIsolation.test.ts"
+      },
+      "cases": [
+        "pool failed commit retains lease until rollback"
+      ]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Tina4 Contributor Licence Agreement
 
-> **Draft - pending legal review.** This agreement is not yet in force. Until Code Infinity confirms the final text, contributions are accepted under the licence in each repository's `LICENSE` file.
+> **Effective for the 3.13.138 release.** Code Infinity confirmed completed legal review and contributor consent on 2026-09-24.
 
 This agreement is between you (the "Contributor") and Code Infinity (Pty) Ltd ("Code Infinity"), the steward of the Tina4 project. It applies to every contribution you submit to a Tina4 repository under `github.com/tina4stack`. You agree to it once, and it covers all your future contributions.
 
