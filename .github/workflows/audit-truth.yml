@@ -66,6 +66,7 @@ jobs:
         run: |
           python3 scripts/check_dependency_licenses.py
           python3 -m unittest discover -s scripts -p test_dependency_licenses.py
+          python3 -m unittest discover -s scripts/governance -p test_github_controls.py
 
       # Lock in the audit's own behavior — chiefly that the CLI check
       # derives its grammar from the built source (not a stale PATH binary)
