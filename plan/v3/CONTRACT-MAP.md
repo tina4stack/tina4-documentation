@@ -3,8 +3,7 @@
 > The living index that ties every audited feature to its machine-checked
 > contract, its decisions, and its proven-in-all-four status. This is the
 > backbone of a future formal Tina4 language specification.
-> **Last synced:** 2026-09-24 (ADR-0069 identifier allow-list fixture added, 14 invariants proven; totals re-read from the auditor)
-> **Last synced:** 2026-09-24 (ADR-0068 HTTP hardening fixture added, Python proven; Feature 139 graph databases promoted to PROVEN, ships 3.13.111; Feature 138 RBAC promoted to PROVEN)
+> **Last synced:** 2026-09-24 (ADR-0068 HTTP hardening and ADR-0069 identifier allow-list fixtures added; totals re-read from the auditor)
 
 > **Adversarial re-audit started 2026-08-08:** a zero-skip live-lab migration
 > baseline still omitted contradictory public paths (generated code migration
@@ -140,9 +139,8 @@ Re-run it and re-sync this table whenever a fixture changes.
 | RBAC role/permission guards | 138 | `rbac_contract.json` | 8 | 8 | 0 | 0058 | **PROVEN all four (shipped 3.13.107).** role()/can() claim-first guards; audit-contract-fixtures.py verifies every case name across tests/test_rbac.py, tests/RbacTest.php, spec/rbac_spec.rb, test/rbac.test.ts (real tokens, real dispatch, no mocks) |
 | Graph databases (multi-engine) | 139 | `graph_contract.json` | 11 | 11 | 0 | 0059 | PROVEN in all four (ships 3.13.111). Database-shaped `GraphDatabase.create(url)`/`fromEnv()`: URL-selected adapters (`ultipa://` -> Ultipa/GQL, `neo4j://`/`bolt://`/`memgraph://` -> Bolt/Cypher one adapter, `arango://`/`arangodb://` -> Arango/AQL; default ports 60061/7687/8529), portable addNode/addEdge/getNode/updateNode/deleteNode/neighbors/traverse core plus raw `query()`/`execute()` in the native dialect, neutral GraphNode/GraphEdge/GraphResult, optional lazy-loaded drivers (tina4stack/tina4-ultipa; neo4j / neo4j-driver / laudis; python-arango / arangojs / triagens; Bolt+Arango zero-dep in Ruby), `TINA4_GRAPH_URL` + `TINA4_GRAPH_USERNAME`/`_PASSWORD` + `TINA4_GRAPH_CONNECT_TIMEOUT`. 11 invariants proven per-engine against Ultipa + Neo4j + Memgraph + ArangoDB on the lab, NO mocks; suites `tests/test_graph.py`, `tests/GraphTest.php`, `spec/graph_spec.rb`, `test/graph.test.ts`. `graph-driver-optional` runs driver-free |
 | Identifier allow-list (AutoCrud filter/sort/ids/write bodies, ORM find/save, DB write helpers, DocStore paths, test gate) | 27, 17, 95 | `identifier_allowlist_contract.json` | 14 | 14 | 0 | 0069 | yes (real server/dispatch over real SQLite for the AutoCrud cases; ORM and write-helper cases on SQLite, PostgreSQL, MySQL, MSSQL and Firebird; DocStore parity against a real MongoDB; red on origin/v3 and mutation-proved in all four, 2026-09-24. Python has no AutoCrud filter/sort, so the four list-query invariants name PHP, Ruby and Node only.) |
-**Totals: 360 invariants, 332 proven, 28 owed** (2026-09-24, from `audit-contract-fixtures.py`), 63 fixtures. Proven
 | HTTP hardening (header CR/LF/NUL refusal + body cap before read) | 30 / 44 | `http_hardening_contract.json` | 8 | 8 | 0 | 0068 | Python carries all 8 (real child servers over real loopback sockets, the built-in server and uvicorn, RSS read from the OS; every guard mutation-proved). PHP (tina4-php#217), Ruby (tina4-ruby#50, merged) and Node (tina4-nodejs#69) carry the six shared invariants. The duplicate-Content-Length ruling added one case, `two content length headers answer 400 even when they agree`, which the PHP, Ruby and Node suites still need: the auditor reports those 3 as broken until they add it. Keep-alive/HEAD and ASGI-path invariants are Python-only |
-**Totals: 354 invariants, 326 proven, 28 owed** (2026-09-24, auditor output against the ADR-0068 PR branches; 3 `http_hardening` case names pending in PHP/Ruby/Node; 3 cases broken in `api_stream_contract.json` against Ruby `origin/v3`, pre-existing), 63 fixtures. Proven
+**Totals: 371 invariants, 340 proven, 31 owed** (2026-09-24, `audit-contract-fixtures.py` run against tina4-python#150, tina4-php#217 and tina4-nodejs#69 plus tina4-ruby `v3`; it reports cases broken in three fixtures: 3 pre-existing Ruby `api_stream` cases, the new ADR-0068 duplicate-Content-Length case not yet in PHP/Ruby/Node, and `identifier_allowlist` suites not yet on these branches), 64 fixtures. Proven
 subsystems remain held to their contract four-way. Logger (feature 2) closed
 2026-08-13 -- all 8 invariant groups / 59 shared cases now proven four-way,
 real runners, no mocks (see row above for the framework fixes this pass found).
@@ -233,9 +231,9 @@ proven/owed. A row here that disagrees with the auditor is a bug in this file.
 
 - 140 contiguous catalog entries and 140 feature packets. A catalog entry is an
   inventory unit, not proof of four-language parity.
-- 63 contract fixtures, 354 invariants, **326 proven / 28 owed** within the
-  fixture-covered contracts (auditor, 2026-09-24; 3 Ruby `api_stream` cases
-  broken against `origin/v3`, pre-existing).
+- 64 contract fixtures, 371 invariants, **340 proven / 31 owed** within the
+  fixture-covered contracts (auditor, 2026-09-24; broken cases listed with the
+  Layer 2 totals).
 - 56 ADR files allocated under `decisions/`, through ADR-0057.
 - The path to a formal language spec: every Layer-0 feature reaches Layer 2, the
   owed count reaches 0, and MASTER-SPEC is regenerated from the fixtures + ADRs.
