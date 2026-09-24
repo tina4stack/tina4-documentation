@@ -216,6 +216,24 @@
       "cases": [
         "msg-capture-gate"
       ]
+    },
+    {
+      "id": "mail-encryption-transport",
+      "adr": "ADR-0071",
+      "rule": "SMTP transport: 'ssl' is implicit TLS on any port; 'tls'/'starttls' (default 'tls') is STARTTLS on any port other than 465 and is REQUIRED - a server whose EHLO does not offer STARTTLS fails the send before AUTH or MAIL FROM; 'none' never upgrades; port 465 is always implicit TLS. The value is trimmed and compared without case.",
+      "why": "MEASURED 2026-09-24: Python, PHP and Node sent mail in CLEARTEXT for 'ssl' on any port but 465; only Ruby (tina4-ruby#49) honoured it. Owed until the Python/PHP/Node follow-up PRs land with their real-server cases."
+    },
+    {
+      "id": "mail-encryption-unknown-refused",
+      "adr": "ADR-0071",
+      "rule": "An unknown or empty (after trim) SMTP encryption value raises at construction with exactly: Unknown mail encryption '<value as given>'. Valid values: ssl, tls, starttls, none. An unknown or empty IMAP value raises with: Unknown IMAP encryption '<value as given>'. Valid values: ssl, tls, starttls, none. An UNSET variable still means the default 'tls'.",
+      "why": "MEASURED 2026-09-24: all four treated a typo as plaintext."
+    },
+    {
+      "id": "mail-certificates-verified",
+      "adr": "ADR-0071",
+      "rule": "Every Messenger TLS connection (SMTP implicit TLS and STARTTLS, IMAP implicit TLS and STARTTLS) verifies the certificate chain and host name against the runtime trust store. No Tina4 switch disables it; TINA4_MAIL_TLS_INSECURE is withdrawn. A private CA is trusted with SSL_CERT_FILE (Python, Ruby), openssl.cafile (PHP) or NODE_EXTRA_CA_CERTS (Node).",
+      "why": "MEASURED 2026-09-24: Python used the unverified stdlib context, PHP set verify_peer false, Node verified unless TINA4_MAIL_TLS_INSECURE was set."
     }
   ]
 }
