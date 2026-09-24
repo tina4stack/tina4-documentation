@@ -92,9 +92,11 @@ Conventions:
 | ADR-0070 | [A framework opens a browser only in development, never when TINA4_NO_BROWSER is truthy (true/1/yes/on), never when --no-browser is passed, never under CI](decisions/ADR-0070.md) (fixture `browser_open_contract.json`) | Accepted |
 | ADR-0071 | [Mail encryption means what it says: `ssl` is TLS on any port, STARTTLS is required, certificates are verified](decisions/ADR-0071.md) | Accepted |
 | ADR-0073 | [Every change follows the ISO/IEC 18974 and ISO/IEC 5230 controls](decisions/ADR-0073.md) | Accepted |
-| ADR-0075 | [Tina4 moves to MPL-2.0 with a Code Infinity commercial licence](decisions/ADR-0075.md) (pending legal review and contributor consent) | Accepted |
+| ADR-0075 | [Tina4 moves to MPL-2.0 with a Code Infinity commercial licence](decisions/ADR-0075.md) (legal review and contributor consent confirmed for this release) | Accepted |
 | ADR-0072 | [A Content-Type set with header() is the one Content-Type; settings are read when they are used](decisions/ADR-0072.md) (tina4-python#143, #144) | Accepted |
 | ADR-0077 | [Frond escapes by default; trusted output is a SafeString type only](decisions/ADR-0077.md) | Accepted |
+
+| ADR-0082 | [Credentials and development endpoints retain explicit trust boundaries](decisions/ADR-0082.md) | Accepted; implementation verification pending |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 

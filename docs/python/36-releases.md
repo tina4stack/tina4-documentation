@@ -13,6 +13,13 @@ never mark untrusted input as safe. Header validation, request-body limits, secu
 CORS handling, model-field validation, and diagnostic redaction follow the shared contracts.
 Explicit Content-Type headers survive response conversion and binary bodies preserve bytes.
 
+**Credentials and development access.** API clients retain credentials only for their configured
+origin, including uploads, downloads and streams. Use a separate client when authenticating to
+another service. Forwarded host and protocol require a trusted proxy. Development reads and
+writes enforce the raw-peer, Host and browser-origin boundary; remote non-MCP development
+access requires the dedicated token. The documented MCP transport API-key fallback is unchanged.
+File access checks resolved paths so symlinks cannot expose secrets or escape the project.
+
 **Database and service correctness.** Statements that return rows retain those rows, filtered
 counts and write results agree across adapters, SQL placeholders preserve literal text, and
 ORM fields mapped to database columns read back correctly. Database operations and explicit
@@ -27,7 +34,9 @@ release Actions are pinned to commits. The updated PowerShell skills installer i
 signed. The ISO programme remains in progress; this release makes no certification or
 conformance claim.
 
-The accompanying CLI 3.8.90 contains the browser-opening and CI behavior fixes. Tina4 JS 1.7.2
+The accompanying CLI 3.8.91 verifies update checksums before replacing an installed binary,
+refuses missing checksum manifests, and corrects generated Node.js package imports. It also
+includes the browser-opening and CI behavior fixes. Tina4 JS 1.7.2
 ships the merged client hardening and verified browser bundle. Refresh the AI skills with
 `curl -fsSL https://tina4.com/install-skills.sh | sh` or the documented PowerShell installer.
 

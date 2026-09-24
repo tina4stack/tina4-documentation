@@ -1,0 +1,38 @@
+{
+  "_comment": "ADR-0082 release security boundaries. Named real tests are statically mapped here; execution evidence and full lab release approval remain distinct.",
+  "version": 1,
+  "decided": "2026-09-24",
+  "adr": "ADR-0082",
+  "invariants": [
+    {
+      "id": "api-final-target-credentials",
+      "adr": "ADR-0082",
+      "rule": "After all header merges, an initial off-origin target receives neither configured Authorization nor Cookie credentials, including cookie jars, upload, download and stream paths; same-origin credentials are retained.",
+      "why": "Initial absolute URLs must receive the same origin protection as redirected URLs.",
+      "suites": {
+        "python": "tests/test_api_cross_origin_token.py",
+        "php": "tests/ApiCrossOriginTokenTest.php",
+        "ruby": "spec/api_cross_origin_token_spec.rb",
+        "nodejs": "test/apiCrossOriginToken.test.ts"
+      },
+      "cases": [
+        "final target credentials on every http path"
+      ]
+    },
+    {
+      "id": "forwarded-authority-raw-peer",
+      "adr": "ADR-0082",
+      "rule": "Forwarded host and protocol share the existing trusted proxy decision based on the actual transport peer. Ignore both from untrusted peers and honor both from a configured trusted proxy.",
+      "why": "Client-controlled forwarded authority must not bypass raw-peer trust.",
+      "suites": {
+        "python": "tests/test_forwarded_host_trust.py",
+        "php": "tests/ForwardedHostTrustTest.php",
+        "ruby": "spec/forwarded_host_trust_spec.rb",
+        "nodejs": "test/forwardedHostTrust.test.ts"
+      },
+      "cases": [
+        "forwarded host and proto share raw peer trust"
+      ]
+    }
+  ]
+}
