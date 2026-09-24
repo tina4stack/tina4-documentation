@@ -74,59 +74,7 @@ template boundaries, corrects database and ORM behavior, isolates pooled transac
 updates the skills to estimate time from measured work. Package checksums, SPDX inventories,
 and build provenance accompany the release. [Read the release notes](/python/36-releases.md).
 
-The 3.13.136 journeys-and-design work remains in place: the architect skill maps goals, user
-journeys, and system flows before it scaffolds a file, a completeness net catches the states
-complex builds forget, a visible map marker shows when that work is happening, and a new
-tina4-design skill writes a brand guide and a UI component guide into `design/`. Refresh the
-skills with `curl -fsSL https://tina4.com/install-skills.sh | sh`.
 
-Feature 140 Web Push, shipped in 3.13.134, remains available: send a browser push
-notification from any of the four frameworks through one provider-neutral API. It speaks
-VAPID and the RFC 8291 message encryption the browser push services require, hands back a
-native result envelope for every send, and fails closed when push is configured without a
-usable provider. Web Push is optional: Python keeps the cryptography behind the `push`
-extra, and the developer skills for all four frameworks plus tina4-js carry the Web Push
-API and configuration guidance.
-
-The 3.13.133 maintainability pass remains in place: the framework's most complex
-functions are decomposed into small, single-purpose helpers, the emitted OpenAPI
-document is byte-for-byte identical, and every dev-admin route is unchanged. Nothing
-you call changed.
-
-The 3.13.132 ORM pagination remains in place: `where`, `select`, `find`, `all`, and
-`with_trashed` return a ModelCollection carrying the total for the filter (ADR-0064),
-so you paginate without a second query. That release also fixed `localhost` on
-Windows and two Firebird lifecycle bugs.
-
-The 3.13.131 skills pass remains in place: replies read in plain English for a
-global team, stay short, match the effort to the task, and ask up to three short
-questions before guessing when the choice is really yours. Refresh with
-`curl -fsSL https://tina4.com/install-skills.sh | sh`.
-
-The 3.13.129 generate-model change remains in place: `tina4 generate model Order`
-prints a note when it pluralises a reserved-word table and offers `--table-name
-<name>`; the resolution envelope points at `--table-name`, never a quoting flag.
-
-The 3.13.128 `tina4 lint` command remains in place: it runs the project's linter
-(ruff, phpcs, rubocop, or eslint), installs it as a dev dependency on demand, and
-falls back to a zero-dependency syntax baseline with `--no-install`, so a Tina4
-app stays zero-dependency.
-
-The 3.13.127 boolean translation remains in place: a bare `TRUE`/`FALSE`
-reaches SQL Server and Firebird as `1`/`0` in every framework.
-
-The 3.13.122 secure-by-default CSP warning (the framework logs once at
-startup when `TINA4_CSP` is unset so a strict `default-src 'self'`
-never fails silently), the 3.13.121 migration-surface envelope, the
-3.13.120 scaffolding envelope, and the **tina4-architect**
-project-planning skill all remain in place.
-
-The 3.13.114 AI tool loop, 3.13.113 typed streaming events
-(`text_delta` / `tool_call` / `done` / `error`), and multimodal content
-parts remain in place. ADR-0063 builds on the 3.13.117 envelope
-contract (ADR-0062).
-
-[Read the release notes](/python/36-releases.md)
 
 ## Your AI doesn't know Tina4 yet. Give it 30 seconds.
 
