@@ -59,7 +59,6 @@ docs/
     installation.md, basic-routing.md, database.md, orm.md,
     crud.md, rest-api.md, middleware.md, migrations.md,
     swagger.md, graphql.md, queues.md ...
-  delphi/                 # Delphi-specific (8 pages)
     installation.md, core.md, html-pages.md, html-render.md,
     json-adapter.md, rest-client.md, twig.md ...
   js/                     # JavaScript (tina4-js) — index + gallery + 16 numbered chapters

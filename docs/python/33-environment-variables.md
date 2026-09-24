@@ -29,7 +29,7 @@ This chapter lists every variable the Python framework reads, grouped by subsyst
 | `TINA4_ENV_FILE` | `.env` | Alternative `.env` path. Read at boot before any other framework config; point at `.env.staging` or `.env.production` to switch the whole config tree. |
 | `TINA4_SUPPRESS` | `false` | Suppresses the framework startup banner. Useful in CI runs or systemd units where stdout is parsed by another process. |
 | `TINA4_HEALTH_PATH` | `/__health` | URL for the built-in liveness/readiness endpoint. The legacy `/health` path is kept as an alias. |
-| `TINA4_NO_BROWSER` | `false` | Stops `tina4 serve` from opening your browser on every restart. Recommended during active development. |
+| `TINA4_NO_BROWSER` | `false` | Stops `tina4 serve` from opening your browser on every restart. Any truthy value works (`true`, `1`, `yes`, `on`). A browser only ever opens with `TINA4_DEBUG` on, without `--no-browser`, and never when a `CI` variable is set. |
 | `TINA4_OPEN_BROWSER` | `true` | Alternative flag, set to `false` to prevent the browser opening on start. |
 | `TINA4_NO_RELOAD` | `false` | Disables the dev hot-reload signal from the Rust CLI. Use when you want a stable server for debugging. |
 | `TINA4_DEV_POLL_INTERVAL` | `1.0` | Seconds between dev-mode mtime polls. Lower for faster reload, higher to reduce CPU. |

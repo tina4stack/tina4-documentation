@@ -301,7 +301,7 @@ Tina4 enforces a maximum upload size through the `TINA4_MAX_UPLOAD_SIZE` environ
 TINA4_MAX_UPLOAD_SIZE=10485760
 ```
 
-When a client sends a body larger than this limit, Tina4 raises a `PayloadTooLarge` exception and returns a `413 Payload Too Large` response. Your handler never runs. The check fires before body parsing begins.
+When a client sends a body larger than this limit, Tina4 answers `413 Content Too Large` and your handler never runs. A declared `Content-Length` over the limit is refused before a single body byte is read. Anything else is counted as it arrives, chunked bodies included, and stopped the moment it crosses the line. That holds under uvicorn and on the built-in server alike (ADR-0068).
 
 To allow 50 MB uploads, set this in your `.env` file:
 
@@ -606,6 +606,8 @@ X-Request-Id: abc-123
 {"data":[1,2,3]}
 ```
 
+A header name has to be a valid HTTP token, and a value can't contain a carriage return, a line feed or a NUL. If it does, `header()` will raise `ValueError` naming the header, for example `Invalid character in header content ["X-Custom-Header"]`. The same check runs in `redirect()` for the location. Nothing gets stripped quietly, so validate user input before it reaches a header.
+
 ### Setting Cookies
 
 Set cookies on the response:
@@ -640,6 +642,8 @@ Cookie keyword arguments:
 | `http_only` | bool | `True` | JavaScript cannot access the cookie |
 | `secure` | bool | `False` | Cookie travels over HTTPS only |
 | `same_site` | str | `"Lax"` | `"Strict"`, `"Lax"`, or `"None"` |
+
+The cookie name has to be a valid HTTP token. If the value or any attribute contains a carriage return, a line feed, a NUL or `;`, `cookie()` will raise `ValueError` with `Invalid character in cookie content ["session_id"]`. Encode structured data (base64 works) before you store it in a cookie.
 
 ---
 

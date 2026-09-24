@@ -120,7 +120,6 @@ BOOK_TO_SECTION = {
     'book-3-ruby':          'ruby',
     'book-4-nodejs':        'nodejs',
     'book-5-javascript':    'js',
-    'book-6-delphi':        'delphi',
 }
 text = sys.stdin.read()
 def repl(m):
@@ -190,7 +189,6 @@ sync_book "book-2-php"           "php"
 sync_book "book-3-ruby"          "ruby"
 sync_book "book-4-nodejs"        "nodejs"
 sync_book "book-5-javascript"    "js"
-sync_book "book-6-delphi"        "delphi"
 
 echo ""
 echo "Sync complete. Run 'pnpm docs:build' to verify."
