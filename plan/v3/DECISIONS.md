@@ -79,11 +79,8 @@ Conventions:
 | ADR-0063 | [Scaffolding envelope v1.1: edit-hints, next-steps and surfaced test_paths](decisions/ADR-0063.md) (scaffolding) | Proposed |
 | ADR-0064 | [ORM read queries return a uniform ModelCollection carrying the total](decisions/ADR-0064.md) (ORM reads) | Proposed |
 | ADR-0067 | [Database drivers and optional servers are application dependencies, never framework runtime dependencies](decisions/ADR-0067.md) (Node optional peers, Ruby sqlite3 in the scaffold Gemfile, Puma opt-in) | Accepted |
-<<<<<<< HEAD
-| ADR-0068 | [Response headers refuse CR, LF and NUL; built-in servers enforce the upload cap before reading the body](decisions/ADR-0068.md) (Features 30 / 44; fixture `http_hardening_contract.json`) | Accepted |
-=======
 | ADR-0069 | [Identifiers that reach SQL come from the model, never the request](decisions/ADR-0069.md) (AutoCrud filter/sort/ids/write bodies, ORM find()/save(), DB write helpers, DocStore field paths, test gate) | Accepted |
->>>>>>> origin/main
+| ADR-0068 | [Response headers refuse CR, LF and NUL; built-in servers enforce the upload cap before reading the body](decisions/ADR-0068.md) (Features 30 / 44; fixture `http_hardening_contract.json`) | Accepted |
 | ADR-0073 | [Every change follows the ISO/IEC 18974 and ISO/IEC 5230 controls](decisions/ADR-0073.md) | Accepted |
 | ADR-0075 | [Tina4 moves to MPL-2.0 with a Code Infinity commercial licence](decisions/ADR-0075.md) (pending legal review and contributor consent) | Accepted |
 
