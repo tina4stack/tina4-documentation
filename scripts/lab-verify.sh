@@ -21,6 +21,8 @@
 # Overridable via env:
 #     TINA4_LAB_ENV   service creds + TINA4_TEST_* vars   (default ~/tina4-test-env-126.sh)
 #     TINA4_REL_DIR   dir holding the four framework clones (default ~/rel-3.13.132)
+#     TINA4_PHP_INI_BASE base PHP ini directory (default /etc/php/8.3/cli/conf.d)
+#                        Use an isolated directory to select a per-run extension build.
 #     TINA4_FB_CONTAINER  Firebird docker container name   (default tina4-lab-firebird)
 #     TINA4_MAIL_INFRA_DIR  TLS mail servers' CA + certs     (default ~/tina4-lab-mail-infra)
 #
@@ -239,7 +241,7 @@ run_php() {
   # (enable_coroutine=On) breaks the fork-based worker pool. Run the main suite
   # with both disabled via a filtered conf.d, then run the openswoole test alone
   # WITH openswoole (it skips cleanly without it).
-  local base=/etc/php/8.3/cli/conf.d
+  local base="${TINA4_PHP_INI_BASE:-/etc/php/8.3/cli/conf.d}"
   local ini_root
   ini_root=$(mktemp -d "${TMPDIR:-/tmp}/tina4-release-php-ini.XXXXXX") || return 1
   mkdir -p "$ini_root/clean" "$ini_root/swoole" "$ini_root/graph"
@@ -262,7 +264,7 @@ run_php() {
   # into vendor/ for the lab only, then restore composer.json/lock so the tree the
   # suite ran against is the committed one plus the suggested drivers.
   log "PHP graph drivers (lab-only) + graph suite (grpc ON, openswoole OFF)"
-  COMPOSER_ALLOW_SUPERUSER=1 composer require --dev --no-interaction --no-scripts --quiet \
+  PHP_INI_SCAN_DIR="$ini_root/graph" COMPOSER_ALLOW_SUPERUSER=1 composer require --dev --no-interaction --no-scripts --quiet \
     laudis/neo4j-php-client triagens/arangodb tina4stack/ultipa || return 1
   git checkout -- composer.json composer.lock 2>/dev/null
   PHP_INI_SCAN_DIR="$ini_root/graph" php -r 'exit(extension_loaded("grpc") && !extension_loaded("openswoole") && !extension_loaded("swoole") ? 0 : 1);' || {
