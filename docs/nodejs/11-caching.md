@@ -340,13 +340,13 @@ If the configured backend's driver is missing, or the service is unreachable, or
 For custom caching logic, use the key/value functions. They are **async** -- `await` every call. A miss returns `undefined`.
 
 ```typescript
-import { cacheGet, cacheSet, cacheDelete, clearCache, cacheStats } from "@tina4/core";
+import { cacheGet, cacheSet, cacheDelete, clearCache, cacheStats } from "tina4-nodejs";
 ```
 
 ### cacheSet
 
 ```typescript
-import { cacheSet } from "@tina4/core";
+import { cacheSet } from "tina4-nodejs";
 
 // Cache a value for 300 seconds.
 await cacheSet("product:42", {
@@ -366,7 +366,7 @@ await cacheSet("app:config", { theme: "dark", lang: "en" });
 ### cacheGet
 
 ```typescript
-import { cacheGet, cacheSet } from "@tina4/core";
+import { cacheGet, cacheSet } from "tina4-nodejs";
 
 const product = await cacheGet("product:42");
 // Returns the cached value, or undefined if not found or expired.
@@ -381,7 +381,7 @@ if (product === undefined) {
 ### cacheDelete
 
 ```typescript
-import { cacheDelete } from "@tina4/core";
+import { cacheDelete } from "tina4-nodejs";
 
 await cacheDelete("product:42");
 
@@ -393,7 +393,7 @@ await cacheDelete("product:44");
 ### clearCache
 
 ```typescript
-import { clearCache } from "@tina4/core";
+import { clearCache } from "tina4-nodejs";
 
 // Wipe every entry in the active backend.
 await clearCache();
@@ -404,7 +404,7 @@ await clearCache();
 The most common pattern is cache-aside (lazy loading). Note the `=== undefined` miss check -- and that every cache call is `await`ed:
 
 ```typescript
-import { get, cacheGet, cacheSet } from "@tina4/core";
+import { get, cacheGet, cacheSet } from "tina4-nodejs";
 import { Database } from "tina4-nodejs/orm";
 
 get("/api/products/{id}", async (req, res) => {
@@ -468,7 +468,7 @@ Good for data where near-real-time accuracy is acceptable. A 10-minute delay in 
 Clear the cache when the underlying data changes:
 
 ```typescript
-import { put, cacheDelete } from "@tina4/core";
+import { put, cacheDelete } from "tina4-nodejs";
 import { Database } from "tina4-nodejs/orm";
 
 put("/api/products/{id}", async (req, res) => {
@@ -500,7 +500,7 @@ The most accurate strategy -- the cache is fresh after every write. The downside
 Update the cache at the same time as the database:
 
 ```typescript
-import { put, cacheSet } from "@tina4/core";
+import { put, cacheSet } from "tina4-nodejs";
 import { Database } from "tina4-nodejs/orm";
 
 put("/api/products/{id}", async (req, res) => {
@@ -555,7 +555,7 @@ Choosing the right TTL depends on how often the data changes and how acceptable 
 Adjust the TTL based on the data:
 
 ```typescript
-import { cacheGet, cacheSet } from "@tina4/core";
+import { cacheGet, cacheSet } from "tina4-nodejs";
 
 async function getCachedProduct(productId: number) {
     const cacheKey = `product:${productId}`;
@@ -584,10 +584,10 @@ Two `cacheStats` calls report on two different things. Get the async/await right
 
 ### Key/value backend stats (async)
 
-`cacheStats()` from `@tina4/core` reports the backend behind the key/value API, the response cache, and the persistent DB cache. It is **async**:
+`cacheStats()` from `tina4-nodejs` reports the backend behind the key/value API, the response cache, and the persistent DB cache. It is **async**:
 
 ```typescript
-import { get, cacheStats } from "@tina4/core";
+import { get, cacheStats } from "tina4-nodejs";
 
 get("/api/cache/stats", async (req, res) => {
     const stats = await cacheStats();
@@ -650,7 +650,7 @@ A key/value hit rate above 90% means your caching strategy works. Below 80% mean
 For maximum performance, stack the layers. Each backstops the one above it:
 
 ```typescript
-import { get, cacheGet, cacheSet } from "@tina4/core";
+import { get, cacheGet, cacheSet } from "tina4-nodejs";
 import { Database } from "tina4-nodejs/orm";
 
 get("/api/catalog", async (req, res) => {
@@ -753,7 +753,7 @@ curl http://localhost:7148/api/store/cache-stats
 Create `src/routes/storeCached.ts`:
 
 ```typescript
-import { get, post, cacheGet, cacheSet, cacheDelete, cacheStats } from "@tina4/core";
+import { get, post, cacheGet, cacheSet, cacheDelete, cacheStats } from "tina4-nodejs";
 import { createHash } from "crypto";
 
 function getProductStore() {

@@ -1352,7 +1352,7 @@ Router.get("/admin/products", async (req, res) => {
 Build HTML in TypeScript without string concatenation:
 
 ```typescript
-import { HtmlElement, htmlElement, addHtmlHelpers } from "@tina4/core";
+import { HtmlElement, htmlElement, addHtmlHelpers } from "tina4-nodejs";
 
 const el = new HtmlElement("div", { class: "card" }, ["Hello"]);
 el.toString(); // '<div class="card">Hello</div>'
