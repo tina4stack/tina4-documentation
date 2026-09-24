@@ -35,16 +35,16 @@ only assert correctly under a real root process.
 
 ### Firebird WireCrypt (the Node killer)
 
-Firebird 5 defaults to a ChaCha wire-encryption negotiation that `node-firebird`
-2.x cannot complete. Its connect then HANGS for the full connect timeout, which
-looks exactly like a dead Firebird. The native Python, PHP and Ruby clients
-negotiate the same handshake fine, so only Node breaks. The recipe sets
-`WireCrypt = Disabled` in the container's `firebird.conf` and restarts it. Every
-client then connects in plaintext (fine on a localhost lab); node-firebird
-connects in about 40 ms.
+With `WireCrypt = Disabled` in `firebird.conf`, every `node-firebird` attach fails
+with "Unavailable database", while the native Python, PHP and Ruby clients still
+connect, so only Node breaks. With `WireCrypt = Enabled` all four connect. The
+recipe checks the value and, only if it is not `Enabled`, sets it and restarts
+the container.
 
-This resets whenever the Firebird container is recreated (`fb-recreate.sh` writes
-Firebird 5 defaults), so `lab-verify.sh` reapplies it every run.
+An earlier version of this step forced `Disabled`. The lab never showed the bug
+because the lab container's env (`FIREBIRD_CONF_WireCrypt=Enabled`) re-applies
+`Enabled` on every start, so the restart the step triggered undid its own change.
+The Mac testbed, where `Disabled` stuck, exposed it.
 
 ### PostgreSQL per-framework databases
 

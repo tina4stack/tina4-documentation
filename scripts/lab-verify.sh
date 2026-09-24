@@ -41,24 +41,25 @@ log() { printf '\n\033[1;36m== %s ==\033[0m\n' "$*"; }
 provision_services() {
   log "provisioning lab services (idempotent)"
 
-  # 1. FIREBIRD WireCrypt.
-  #    Firebird 5 defaults to a ChaCha wire-crypt negotiation that node-firebird
-  #    2.x cannot complete -> its connect HANGS for the full timeout (looked like
-  #    a dead Firebird). The native py/php/ruby clients negotiate it fine, which
-  #    is why only Node broke. WireCrypt = Disabled makes every client connect in
-  #    plaintext (fine on a localhost lab) and node-firebird connects in ~40ms.
+  # 1. FIREBIRD WireCrypt = Enabled.
+  #    With WireCrypt = Disabled every node-firebird attach fails "Unavailable
+  #    database"; with Enabled all four clients (node-firebird and the native
+  #    py/php/ruby clients) connect. This step used to force Disabled, but the lab
+  #    container's env (FIREBIRD_CONF_WireCrypt=Enabled) re-applies Enabled on
+  #    every start, so the restart below silently undid it and masked the bug.
+  #    Set it (and restart) only when the value differs.
   local wc
   wc="$(docker exec "$FB_CONTAINER" grep -iE '^WireCrypt *=' /opt/firebird/firebird.conf 2>/dev/null | head -1)"
-  if ! printf '%s' "$wc" | grep -qi Disabled; then
-    echo "  Firebird: WireCrypt -> Disabled (+ restart)"
+  if ! printf '%s' "$wc" | grep -qiE '= *Enabled *$'; then
+    echo "  Firebird: WireCrypt -> Enabled (+ restart)"
     docker exec "$FB_CONTAINER" sh -c \
       "grep -qiE '^WireCrypt *=' /opt/firebird/firebird.conf \
-        && sed -i 's/^WireCrypt *=.*/WireCrypt = Disabled/I' /opt/firebird/firebird.conf \
-        || echo 'WireCrypt = Disabled' >> /opt/firebird/firebird.conf"
+        && sed -i 's/^WireCrypt *=.*/WireCrypt = Enabled/I' /opt/firebird/firebird.conf \
+        || echo 'WireCrypt = Enabled' >> /opt/firebird/firebird.conf"
     docker restart "$FB_CONTAINER" >/dev/null
     sleep 8
   else
-    echo "  Firebird: WireCrypt already Disabled"
+    echo "  Firebird: WireCrypt already Enabled"
   fi
 
   # 2. POSTGRES per-framework databases. The four frameworks do NOT all share one
