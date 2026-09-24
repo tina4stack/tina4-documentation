@@ -25,10 +25,13 @@ TINA4_SESSION_BACKEND=file
 | Backend | `.env` Value | Package Required | Best For |
 |---------|-------------|-----------------|---------|
 | File | `file` | None | Development, single server |
-| Redis | `redis` | `ioredis` | Production, multi-server |
-| MongoDB | `mongodb` | `mongodb` | Production, document stores |
-| Valkey | `valkey` | `iovalkey` | Production, Redis alternative |
-| Database | `database` | None | Production, using existing DB |
+| Redis | `redis` | None | Production, multi-server |
+| MongoDB | `mongodb` | None (uses `mongodb` if installed) | Production, document stores |
+| Valkey | `valkey` | None | Production, Redis alternative |
+| Memcached | `memcached` | None | Production, shared cache tier |
+| Database | `database` | Your engine's driver (`pg`, `mysql2`, `tedious`, `node-firebird`); none on SQLite | Production, using existing DB |
+
+Redis, Valkey and Memcached sessions speak the wire protocol themselves, so there's nothing to install. MongoDB sessions do the same, but if your app has installed the `mongodb` package the handler will pick it up and use it instead. A `database` session on PostgreSQL needs `pg` in your `node_modules`: without it the first session read will fail with `Install it with: npm install pg`.
 
 ### Redis Configuration
 
@@ -39,18 +42,12 @@ TINA4_SESSION_REDIS_PORT=6379
 TINA4_SESSION_REDIS_PASSWORD=
 ```
 
-Install the Redis driver:
-
-```bash
-npm install ioredis
-```
-
 ### MongoDB Configuration
 
 ```bash
 TINA4_SESSION_BACKEND=mongodb
-TINA4_SESSION_REDIS_HOST=localhost
-TINA4_SESSION_REDIS_PORT=27017
+TINA4_SESSION_MONGO_HOST=localhost
+TINA4_SESSION_MONGO_PORT=27017
 TINA4_SESSION_MONGO_DB=tina4_sessions
 ```
 
@@ -58,8 +55,8 @@ TINA4_SESSION_MONGO_DB=tina4_sessions
 
 ```bash
 TINA4_SESSION_BACKEND=valkey
-TINA4_SESSION_REDIS_HOST=localhost
-TINA4_SESSION_REDIS_PORT=6379
+TINA4_SESSION_VALKEY_HOST=localhost
+TINA4_SESSION_VALKEY_PORT=6379
 ```
 
 ### Database Sessions

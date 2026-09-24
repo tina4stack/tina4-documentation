@@ -3,6 +3,7 @@
 - **Status:** in progress (started 2026-09-24)
 - **Program lead:** Andre van Zuydam (Code Infinity)
 - **Scope (phase 1):** `tina4` (CLI), `tina4-python`, `tina4-php`, `tina4-ruby`, `tina4-nodejs`, `tina4-js`, `tina4-documentation`
+- **Standing rule:** ADR-0073 makes the controls below mandatory for every change.
 - **Not for marketing.** Nothing in this plan is to be claimed publicly until the matching evidence exists. The first public statement is the OpenChain conformance declaration at the end of Phase 5.
 
 ## Goal
