@@ -981,8 +981,6 @@ taskflow/
 ├── app.rb
 ├── Dockerfile
 ├── docker-compose.yml
-├── config/
-│   └── puma.rb
 ├── src/
 │   ├── routes/
 │   │   ├── auth.rb                # Registration, login

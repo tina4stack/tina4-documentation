@@ -22,6 +22,19 @@ TINA4_DEBUG=true
 
 No explicit `TINA4_DATABASE_URL`? Tina4 defaults to `sqlite:///data/app.db`. The health check at `/health` shows `"database": "connected"` with zero configuration.
 
+### The SQLite Driver
+
+The `sqlite3` gem is your app's dependency, just like `pg` or `mysql2`. `tina4 init ruby` writes `gem "sqlite3"` into the new `Gemfile`, and `tina4 update` adds it to an older project that lacks it. tina4ruby only loads the driver when a SQLite connection opens. If the gem is missing, that connection will stop with a message that says what to add:
+
+```
+The 'sqlite3' gem is required for SQLite connections. Add gem "sqlite3"
+to your Gemfile (tina4 init ruby does this for you), or install one of:
+    bundle add sqlite3     # if your project uses Bundler
+    gem install sqlite3    # bare driver
+```
+
+An app that only talks to PostgreSQL can leave `sqlite3` out altogether, and nothing will compile it.
+
 ### Connection Strings for Other Databases
 
 Set `TINA4_DATABASE_URL` in `.env` to use a different engine:

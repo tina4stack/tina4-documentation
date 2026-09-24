@@ -67,7 +67,18 @@ Install the driver:
 uv add pymongo
 ```
 
-The key point: your code stays the same. The `Queue` class, `push`, `pop`, and `consume` work identically whether the backend is file, RabbitMQ, Kafka, or MongoDB. The backend is configured via environment variables.
+The backend is configured through environment variables, but the providers do not pretend to support operations their brokers cannot perform. The portable core is message delivery and acknowledgement; management operations depend on the provider.
+
+| Provider | Supported contract | Explicitly unavailable |
+|---|---|---|
+| File / lite | Every queue operation | None |
+| MongoDB | Every queue operation | None |
+| RabbitMQ | Push, consume, complete, fail/reject, stable non-destructive dead letters, `retry()`, broker size (a count the broker reports, which can trail a push by a moment), close | Priority, delay, pop by ID, `purge()`, `clear()`, failed-job listing, retry failed |
+| Kafka | Delivery, acknowledge, fail, stable non-destructive dead letters; `size()` honestly returns `0` | Priority, delay, pop by ID, `purge()`, `clear()`, failed-job listing, retry failed |
+
+This capability contract is defined by ADR-0022, ADR-0023, and ADR-0024. An unsupported operation raises an error naming the backend and operation. It never succeeds as a no-op or returns a misleading empty result.
+
+Kafka has two more habits worth knowing before you test against it. It keeps no queue depth, so `size()` is always `0` there, even with messages waiting. And the very first `pop()` on a topic has to wait for the broker to assign the consumer group its partitions. Tina4 waits up to `TINA4_KAFKA_ASSIGN_TIMEOUT` seconds (default `15`) for that on the first call, so the first job can take a few seconds to arrive, and after that each poll is quick.
 
 ---
 
@@ -88,7 +99,7 @@ message_id = queue.push({
 
 The `topic` argument names the queue. The payload is any dictionary that can be serialized to JSON.
 
-> **Backend configuration:** The queue backend is selected via environment variables, not constructor parameters. Set `TINA4_QUEUE_BACKEND` to `file` (default), `rabbitmq`, `kafka`, or `mongodb`. For the file backend, the `TINA4_QUEUE_PATH` environment variable controls the storage directory (default: data/queue). See Section 2 and Section 9 for full details.
+> **Backend configuration:** Set `TINA4_QUEUE_BACKEND` to `file` (default), `rabbitmq`, `kafka`, or `mongodb`, and every `Queue` you build picks it up. For the file backend, the `TINA4_QUEUE_PATH` environment variable controls the storage directory (default: data/queue). The constructor also takes a `backend` argument, and an explicit value wins over the environment: `Queue(topic="emails", backend="file")` stays on the file backend whatever `TINA4_QUEUE_BACKEND` says. Leave it out and your code moves between environments with a `.env` change alone. See Section 2 and Section 9 for full details.
 
 ### Priority and Delay
 
@@ -169,6 +180,8 @@ for job in queue.consume("emails", job_id="specific-job-id"):
     process(job)
     job.complete()
 ```
+
+This works on the file and MongoDB backends. RabbitMQ and Kafka can't pick one message out of the middle of a queue, so there `consume(job_id=...)` (and `queue.pop_by_id()`) raises `NotImplementedError` naming the backend, rather than quietly yielding nothing.
 
 ### Manual Pop
 
@@ -320,15 +333,17 @@ queue.retry_failed()
 
 ### Counting and Purging by Status
 
-`size` and `purge` accept a status: `pending`, `failed`, or `dead`.
+`size` and `purge` accept a status. Two sets matter: the pending queue and the dead-letter store.
 
 ```python
-queue.size("pending")    # jobs waiting to be processed
+queue.size("pending")    # jobs waiting to be processed, retries included
 queue.size("dead")       # dead-letter jobs
 
 queue.purge("pending")   # drop everything still waiting
 queue.purge("dead")      # clear the dead-letter store
 ```
+
+`"failed"` is an alias for `"dead"` here. `size("failed")` counts the dead-letter store and `purge("failed")` empties it. Neither touches the jobs `failed()` lists. Those jobs are still being retried, so they sit in the pending queue, and `size("pending")` already counts them. To see them on their own, call `failed()`.
 
 ---
 
@@ -337,11 +352,12 @@ queue.purge("dead")      # clear the dead-letter store
 The most common pattern is pushing messages from route handlers:
 
 ```python
-from tina4_python.core.router import get, post
+from tina4_python.core.router import post, noauth
 from tina4_python.queue import Queue
 
 queue = Queue(topic="emails")
 
+@noauth()   # open for this walkthrough only; see the note below
 @post("/api/orders")
 async def create_order(request, response):
     body = request.body
@@ -376,6 +392,8 @@ async def create_order(request, response):
 ```
 
 The user gets an instant response. The email, invoice, and warehouse sync happen in the background.
+
+Tina4 secures every `POST`, `PUT`, `PATCH` and `DELETE` route by default. Without `@noauth()` this route answers `401` to any request that doesn't carry a valid `Authorization: Bearer <token>` header, and the queue code never runs. The decorator opens it so you can try it with a plain `curl`. A real checkout route keeps its protection and takes a token (Chapter 8).
 
 ---
 
@@ -419,7 +437,7 @@ TINA4_QUEUE_URL=mongodb://user:pass@mongo.internal:27017/tina4
 | `TINA4_QUEUE_URL` | rabbitmq, mongodb, kafka | Connection URL for the broker |
 | `TINA4_KAFKA_BROKERS` | kafka | Comma-separated broker list (overrides `TINA4_QUEUE_URL`) |
 
-Your queue code does not change at all. The same `queue.push()` and `queue.consume()` calls work with every backend.
+Switching backends is a `.env` change, not a code change, for the core of the queue: `push()`, `consume()`, `pop()`, `job.complete()`, `job.fail()` and `dead_letters()` behave the same on all four. The management calls are where brokers differ. Check the table in Section 2 before you lean on priority, delay, `consume(job_id=...)`, `purge()`, `clear()`, `failed()` or `retry_failed()` against RabbitMQ or Kafka. Those raise an error that names the backend, so you'll find out on the first call, not in production data.
 
 ---
 
@@ -435,13 +453,13 @@ queue = Queue(topic="default")
 # Produce onto a specific topic
 queue.produce("emails", {"to": "alice@example.com", "subject": "Hello"})
 
-# Consume from a specific topic
-for job in queue.consume("emails"):
+# Consume from a specific topic, then stop once it is empty
+for job in queue.consume("emails", poll_interval=0):
     process(job)
     job.complete()
 ```
 
-The `produce()` method pushes a job onto any named topic. The `consume()` method yields available jobs from a topic as a generator.
+The `produce()` method pushes a job onto any named topic. The `consume()` method yields available jobs from a topic as a generator. `poll_interval=0` makes it a single pass, as in Section 4, so a script that runs this block finishes. Leave it out and `consume()` keeps polling for new jobs forever, which is what a worker wants and what a one-off script doesn't.
 
 ---
 
@@ -491,12 +509,13 @@ curl -X POST http://localhost:7146/api/emails/retry
 Create `src/routes/email_queue.py`:
 
 ```python
-from tina4_python.core.router import get, post
+from tina4_python.core.router import get, post, noauth
 from tina4_python.queue import Queue
 
 queue = Queue(topic="emails", max_retries=3)
 
 
+@noauth()   # open so the curl tests work; protect it with a token in a real app
 @post("/api/emails/send")
 async def queue_email(request, response):
     body = request.body
@@ -543,42 +562,59 @@ async def email_dead_letters(request, response):
     return response.json({"dead_letters": items, "count": len(items)})
 
 
+@noauth()
 @post("/api/emails/retry")
 async def retry_dead_emails(request, response):
     queue.retry()
     return response.json({"message": "Dead-letter emails re-queued"})
 ```
 
-Create a separate consumer file `src/workers/email_worker.py`:
+Create the consumer as its own script in the project root, `email_worker.py`, **not** under `src/`. When `tina4 serve` starts it imports every `.py` file under `src/` to find routes and models. A worker there would be imported too, its endless `consume()` loop would start inside the server, and the server would never finish booting.
 
 ```python
+from tina4_python.dotenv import load_env
 from tina4_python.queue import Queue
 import time
 
-queue = Queue(topic="emails", max_retries=3)
 
-for job in queue.consume("emails"):
-    payload = job.payload
+def run():
+    queue = Queue(topic="emails", max_retries=3)
 
-    print(f"Sending email to {payload['to']}...")
-    print(f"  Subject: {payload['subject']}")
-    print(f"  Body: {payload['body'][:50]}...")
+    for job in queue.consume("emails"):
+        payload = job.payload
 
-    try:
-        # Simulate sending (replace with real email logic)
-        time.sleep(1)
+        print(f"Sending email to {payload['to']}...")
+        print(f"  Subject: {payload['subject']}")
+        print(f"  Body: {payload['body'][:50]}...")
 
-        # Simulate failure for a specific address
-        if payload["to"] == "bad@example.com":
-            raise Exception("SMTP connection refused")
+        try:
+            # Simulate sending (replace with real email logic)
+            time.sleep(1)
 
-        print(f"  Email sent to {payload['to']} successfully!")
-        job.complete()
+            # Simulate failure for a specific address
+            if payload["to"] == "bad@example.com":
+                raise Exception("SMTP connection refused")
 
-    except Exception as e:
-        print(f"  Failed: {e}")
-        job.fail(str(e))
+            print(f"  Email sent to {payload['to']} successfully!")
+            job.complete()
+
+        except Exception as e:
+            print(f"  Failed: {e}")
+            job.fail(str(e))
+
+
+if __name__ == "__main__":
+    load_env()   # same .env as the server, so both use the same queue backend
+    run()
 ```
+
+Run it in a second terminal, next to `tina4 serve`:
+
+```bash
+uv run python email_worker.py
+```
+
+The worker polls until you stop it with Ctrl-C. The `if __name__ == "__main__":` guard means importing the file never starts the loop, so nothing breaks if it ends up on an import path by accident.
 
 The consumer loop retries on its own. A job to `bad@example.com` fails, gets re-enqueued, and is retried. After three attempts `queue.dead_letters()` returns it and the `/api/emails/dead` endpoint shows it. You investigate, fix the address, and call `/api/emails/retry` to put it back on the queue.
 
