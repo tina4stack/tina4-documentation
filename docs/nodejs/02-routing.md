@@ -153,7 +153,7 @@ curl -sI -X PUT http://localhost:7148/products
 The automatic behaviour is enough for 95% of apps. When you need custom HEAD or OPTIONS handlers, register them explicitly:
 
 ```typescript
-import { Router } from "@tina4/core";
+import { Router } from "tina4-nodejs";
 const router = new Router();
 
 // HEAD handler that doesn't run the full GET body - useful for

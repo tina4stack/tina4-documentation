@@ -10,10 +10,10 @@ Tina4 provides an `Api` class, a small HTTP client over Node's built-in `node:ht
 
 ## 2. The Api Class
 
-Import `Api` from `@tina4/core` and construct an instance:
+Import `Api` from `tina4-nodejs` and construct an instance:
 
 ```typescript
-import { Api } from "@tina4/core";
+import { Api } from "tina4-nodejs";
 
 const api = new Api("https://api.example.com/v2");
 ```
@@ -27,7 +27,7 @@ const api = new Api("https://api.example.com/v2");
 The constructor takes the base URL, an optional `Authorization` header value, and an optional timeout **in seconds** (default 30). Auth and custom headers can also be set after construction:
 
 ```typescript
-import { Api } from "@tina4/core";
+import { Api } from "tina4-nodejs";
 
 // Positional form: (baseUrl, authHeader, timeoutSeconds)
 const api = new Api("https://api.example.com/v2", "", 10 /* seconds */);
@@ -63,7 +63,7 @@ Instance setters:
 ## 4. GET Requests
 
 ```typescript
-import { Api } from "@tina4/core";
+import { Api } from "tina4-nodejs";
 
 const api = new Api("https://api.example.com");
 const response = await api.get("/products");
@@ -94,7 +94,7 @@ Query values are strings (they go straight into the query string).
 ## 5. POST Requests
 
 ```typescript
-import { Api } from "@tina4/core";
+import { Api } from "tina4-nodejs";
 
 const api = new Api("https://api.example.com");
 const response = await api.post("/orders", {
@@ -125,7 +125,7 @@ The body is serialized as JSON automatically. The `Content-Type: application/jso
 ## 6. PUT and PATCH Requests
 
 ```typescript
-import { Api } from "@tina4/core";
+import { Api } from "tina4-nodejs";
 
 const api = new Api("https://api.example.com");
 
@@ -152,7 +152,7 @@ if (putResponse.error === null && putResponse.http_code === 200) {
 ## 7. DELETE Requests
 
 ```typescript
-import { Api } from "@tina4/core";
+import { Api } from "tina4-nodejs";
 
 const api = new Api("https://api.example.com");
 const response = await api.delete("/products/42");
@@ -208,7 +208,7 @@ return res.json(response.body);
 `post`/`put`/`patch` take an optional third argument to override the content type, and `sendRequest()` lets you issue any method:
 
 ```typescript
-import { Api } from "@tina4/core";
+import { Api } from "tina4-nodejs";
 
 const api = new Api("https://api.example.com");
 
@@ -228,8 +228,8 @@ Headers configured with `addHeaders()` / `setBearerToken()` are sent on every re
 Proxy or transform external API calls inside your routes. Construct the client once at module load and reuse it:
 
 ```typescript
-import { get } from "@tina4/core";
-import { Api } from "@tina4/core";
+import { get } from "tina4-nodejs";
+import { Api } from "tina4-nodejs";
 
 const weatherApi = new Api("https://api.openweathermap.org/data/2.5");
 weatherApi.addHeaders({ "Accept": "application/json" });
@@ -291,7 +291,7 @@ curl http://localhost:7148/api/github/this-user-does-not-exist-xyzabc
 `src/services/github.ts`:
 
 ```typescript
-import { Api } from "@tina4/core";
+import { Api } from "tina4-nodejs";
 
 export const githubApi = new Api("https://api.github.com", "", 8 /* seconds */);
 githubApi.addHeaders({
@@ -303,7 +303,7 @@ githubApi.addHeaders({
 `src/routes/github.ts`:
 
 ```typescript
-import { get } from "@tina4/core";
+import { get } from "tina4-nodejs";
 import { githubApi } from "../services/github";
 
 interface GitHubUser {

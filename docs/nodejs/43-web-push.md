@@ -43,7 +43,7 @@ A service worker must be registered before subscribing. Store the returned
 ## Server delivery
 
 ```ts
-import { Push } from '@tina4/core';
+import { Push } from 'tina4-nodejs';
 
 const sender = new Push();
 const result = await sender.send(subscription, {

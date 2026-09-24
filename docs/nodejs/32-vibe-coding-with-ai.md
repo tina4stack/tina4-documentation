@@ -149,7 +149,7 @@ TypeScript's type system is a guardrail. It prevents the AI from generating code
 
 ## Supported AI Tools
 
-Tina4 auto-detects and installs context for eight tools. The exact list lives in `@tina4/core` (the AI module):
+Tina4 auto-detects and installs context for eight tools. The exact list lives in `tina4-nodejs` (the AI module):
 
 | Tool | Detection (context file) | Context installed |
 |------|--------------------------|-------------------|

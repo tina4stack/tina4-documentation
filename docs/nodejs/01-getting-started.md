@@ -677,7 +677,7 @@ npm install tina4-nodejs typescript tsx
 This is the entry point. Create a file called `app.ts` in your project root:
 
 ```typescript
-import { startServer } from "@tina4/core";
+import { startServer } from "tina4-nodejs";
 
 const port = parseInt(process.env.PORT || "7148", 10);
 const host = process.env.HOST || "0.0.0.0";

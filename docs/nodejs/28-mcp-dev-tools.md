@@ -85,7 +85,7 @@ Older clients that speak the 2024-11-05 HTTP+SSE transport keep working:
 
 ## 4. Built-in Tools
 
-The MCP server exposes 48 tools organized by category. The exact list lives in the framework's `@tina4/core` MCP tools registration block -- that is authoritative.
+The MCP server exposes 48 tools organized by category. The exact list lives in the framework's `tina4-nodejs` MCP tools registration block -- that is authoritative.
 
 ### Database
 
