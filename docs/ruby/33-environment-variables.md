@@ -225,12 +225,12 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 | `TINA4_MAIL_PASSWORD` | _(none)_ | SMTP authentication password. |
 | `TINA4_MAIL_FROM` | `dev@localhost` | Default sender email address. |
 | `TINA4_MAIL_FROM_NAME` | _(empty)_ | Default sender display name. |
-| `TINA4_MAIL_ENCRYPTION` | `tls` | Connection encryption. Options: `tls`, `ssl`, `none`. |
+| `TINA4_MAIL_ENCRYPTION` | `tls` | SMTP encryption. `tls` and `starttls` upgrade with STARTTLS and fail if the server doesn't offer it; `ssl` (or port 465) is implicit TLS; `none` is plain. Certificates are always verified. |
 | `TINA4_MAIL_IMAP_HOST` | _(inherits mail host)_ | IMAP server for inbound mail. |
 | `TINA4_MAIL_IMAP_PORT` | `993` | IMAP server port. |
 | `TINA4_MAIL_IMAP_USERNAME` | _(inherits SMTP username)_ | IMAP authentication username. Mapped from legacy `IMAP_USER`. |
 | `TINA4_MAIL_IMAP_PASSWORD` | _(inherits SMTP password)_ | IMAP authentication password. Mapped from legacy `IMAP_PASS`. |
-| `TINA4_MAIL_IMAP_ENCRYPTION` | `tls` | IMAP connection encryption. Accepts `tls`, `starttls`, or `none`. |
+| `TINA4_MAIL_IMAP_ENCRYPTION` | `tls` | IMAP encryption. `tls` (or `ssl`) is implicit TLS, `starttls` upgrades a plain connection before login, `none` is plain. Certificates are always verified. |
 | `TINA4_MAIL_CAPTURE` | `false` | Force local DevMailbox capture and skip SMTP, even when an SMTP host exists. A missing host also captures. |
 | `TINA4_MAIL_REDIRECT_TO` | _(none)_ | Comma-separated safety recipients for real SMTP delivery. Replaces To, Cc, and Bcc. |
 | `TINA4_MAILBOX_DIR` | `data/mailbox` | Storage directory for captured mail. This setting does not enable or disable capture. |
