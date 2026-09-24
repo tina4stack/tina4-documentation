@@ -4,7 +4,7 @@
 
 The app works on `localhost:7147`. Now it needs to run around the clock on a real server. Handle thousands of concurrent users. Survive restarts. Hold steady on memory. The gap between "works on my machine" and "works in production" is where projects stumble.
 
-This chapter covers everything for a production deployment: environment configuration, Puma server setup, Docker packaging, health checks, graceful shutdown, SSL/TLS, scaling, and monitoring.
+This chapter covers everything for a production deployment: environment configuration, the production server, Docker packaging, health checks, graceful shutdown, SSL/TLS, scaling, and monitoring.
 
 When you run `tina4 init`, the framework generates a production-ready `Dockerfile` and `.dockerignore` in your project root. The Dockerfile uses a multi-stage build: the first stage installs gem dependencies and the second stage copies only the runtime artifacts into a slim image. You do not need to write a Dockerfile from scratch -- the generated one is a solid starting point.
 
@@ -60,11 +60,41 @@ railway variables set JWT_SECRET=your-secret
 
 ---
 
-## 3. Puma Configuration
+## 3. The Production Server
 
-Puma is the production server for Tina4 Ruby. It runs multiple worker processes, handles concurrent requests, and supports graceful shutdown.
+Tina4 Ruby serves HTTP itself. `tina4 serve --production` boots the same built-in server you used in development, with debug switched off, so there's no server gem to install and nothing to configure before the first deploy.
 
-Create `config/puma.rb`:
+Follow one request through it. The server will accept the connection on its own thread and read the request head. If the head grows past `TINA4_MAX_REQUEST_HEADER` bytes before the blank line turns up, the server will answer 431 and hang up. If the head declares a `Content-Length` over `TINA4_MAX_UPLOAD_SIZE`, it will answer 413 before a single body byte is read, and a chunked body will be counted as it streams in and cut off the moment it passes the cap. If the client goes quiet halfway through for `TINA4_REQUEST_TIMEOUT` seconds, it will get 408. Everything else will be handed to your routes, and the connection will stay open for the browser's next request.
+
+| Variable | Default | What it bounds |
+|----------|---------|----------------|
+| `TINA4_MAX_REQUEST_HEADER` | `65536` | Bytes in the request head |
+| `TINA4_MAX_UPLOAD_SIZE` | `10485760` | Bytes in the request body, declared or streamed |
+| `TINA4_REQUEST_TIMEOUT` | `30` | Seconds a client may stay silent mid-request (`0` switches it off) |
+| `TINA4_SHUTDOWN_TIMEOUT` | `30` | Seconds a graceful shutdown waits for requests in flight |
+
+Every refusal is a small JSON body such as `{"error":"Invalid Content-Length"}`, sent with the usual security headers and `Connection: close`. A response header carrying a carriage return, a line feed or a NUL byte is never written: `response.header` raises `ArgumentError` when you set it, and the server answers 500 rather than put it on the wire.
+
+### Running Puma Instead
+
+Puma isn't a Tina4 dependency. If you want it, add it to your own `Gemfile`:
+
+```ruby
+gem "puma"
+```
+
+After `bundle install`, `tina4 serve --production` will find it and hand the app over. `TINA4_SHUTDOWN_TIMEOUT` is wired into Puma's own shutdown, and Tina4 still closes your database connections and WebSocket clients on the way out. Set `TINA4_DEFAULT_WEBSERVER=true` to keep the built-in server even when Puma is installed.
+
+To run Puma with its own settings, such as several worker processes, give it a `config.ru`:
+
+```ruby
+# config.ru
+require "tina4"
+Tina4.initialize!(__dir__)
+run Tina4::RackApp.new(root_dir: __dir__)
+```
+
+Then create `config/puma.rb`:
 
 ```ruby
 # Port
@@ -101,10 +131,10 @@ on_worker_boot do
 end
 ```
 
-Start with Puma:
+Start it with:
 
 ```bash
-bundle exec puma -C config/puma.rb
+TINA4_OVERRIDE_CLIENT=true bundle exec puma -C config/puma.rb
 ```
 
 ### How Many Workers?
@@ -118,7 +148,7 @@ Start with `(2 * CPU cores) + 1`:
 | 4 | 9 | Medium production app |
 | 8 | 17 | High-traffic app |
 
-The built-in WEBrick server is for development only. It handles one request at a time. Always use Puma in production.
+The worker count only applies to Puma. The built-in server runs one process and serves each connection on its own thread.
 
 ---
 
@@ -153,12 +183,15 @@ RUN mkdir -p data logs secrets tmp/pids
 # Expose port
 EXPOSE 7147
 
+# No tina4 CLI supervises a container, so allow the direct start
+ENV TINA4_OVERRIDE_CLIENT=true
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
   CMD curl -f http://localhost:7147/health || exit 1
 
-# Start with Puma
-CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]
+# Production mode: Puma if the Gemfile has it, otherwise the built-in server
+CMD ["bundle", "exec", "tina4ruby", "start", "-p", "7147", "-h", "0.0.0.0", "--production"]
 ```
 
 ### .dockerignore
@@ -364,7 +397,7 @@ Create `/etc/logrotate.d/tina4`:
 }
 ```
 
-This rotates logs daily, keeps 14 days of history, and compresses old logs. The `USR1` signal tells Puma to reopen its log files after rotation.
+This rotates logs daily, keeps 14 days of history, and compresses old logs. The `USR1` signal tells Puma to reopen its log files after rotation. Tina4's built-in server logs to stdout, so under it you'd rotate whatever captures that stream instead.
 
 ### Docker Logging
 
@@ -552,10 +585,10 @@ After=network.target
 Type=simple
 User=deploy
 WorkingDirectory=/app
-ExecStart=/usr/local/bin/bundle exec puma -C config/puma.rb
+ExecStart=/usr/local/bin/bundle exec tina4ruby start -p 7147 --production
 Restart=always
 RestartSec=5
-Environment=RACK_ENV=production
+Environment=TINA4_OVERRIDE_CLIENT=true
 
 [Install]
 WantedBy=multi-user.target
@@ -595,7 +628,7 @@ A single server handles many applications. When traffic outgrows one server, you
 
 ### Multiple Workers
 
-Puma runs multiple worker processes. Configure the count in `config/puma.rb`:
+The built-in server is one process. To use more cores, run several instances behind a load balancer (below), or add Puma and configure its worker count in `config/puma.rb`:
 
 ```ruby
 workers ENV.fetch("WEB_CONCURRENCY", 4)
@@ -630,13 +663,13 @@ server {
 }
 ```
 
-Start four instances on different ports. Ruby's framework default is `7147`; use any free ports for the additional instances. Set `TINA4_OVERRIDE_CLIENT=true` so Puma can run without going through `tina4 serve`:
+Start four instances on different ports. Ruby's framework default is `7147`; use any free ports for the additional instances. Set `TINA4_OVERRIDE_CLIENT=true` so each one can start without going through `tina4 serve`:
 
 ```bash
-TINA4_OVERRIDE_CLIENT=true TINA4_PORT=7147 bundle exec puma -C config/puma.rb &
-TINA4_OVERRIDE_CLIENT=true TINA4_PORT=7247 bundle exec puma -C config/puma.rb &
-TINA4_OVERRIDE_CLIENT=true TINA4_PORT=7347 bundle exec puma -C config/puma.rb &
-TINA4_OVERRIDE_CLIENT=true TINA4_PORT=7447 bundle exec puma -C config/puma.rb &
+TINA4_OVERRIDE_CLIENT=true bundle exec tina4ruby start -p 7147 --production &
+TINA4_OVERRIDE_CLIENT=true bundle exec tina4ruby start -p 7247 --production &
+TINA4_OVERRIDE_CLIENT=true bundle exec tina4ruby start -p 7347 --production &
+TINA4_OVERRIDE_CLIENT=true bundle exec tina4ruby start -p 7447 --production &
 ```
 
 ### Docker Scaling
@@ -744,7 +777,7 @@ Deploy a Tina4 Ruby application using Docker.
    - Copies the application code
    - Exposes port 7147
    - Includes a health check
-   - Runs the app with Puma
+   - Runs the app with `tina4ruby start --production`
 
 2. Create a `docker-compose.yml` that:
    - Builds and runs the app
@@ -781,7 +814,7 @@ docker compose down
 
 ## 14. Solution
 
-The Dockerfile, docker-compose.yml, and Puma config are shown in sections 3 and 4. The health check route is shown in section 5. Combine them in your project, then:
+The server settings and the Dockerfile are shown in sections 3 and 4. The health check route is shown in section 5. Combine them in your project, then:
 
 ```bash
 docker compose up -d --build
@@ -861,13 +894,13 @@ on_worker_boot do
 end
 ```
 
-### 5. Built-in Server Used in Production
+### 5. Uploads Refused with 413
 
-**Problem:** The server handles one request at a time and performance is terrible.
+**Problem:** A large upload fails with `{"error":"Request body (... bytes) exceeds TINA4_MAX_UPLOAD_SIZE (... bytes)"}`.
 
-**Cause:** WEBrick (the built-in server) is single-threaded. It is for development only.
+**Cause:** The server checks the declared `Content-Length` against `TINA4_MAX_UPLOAD_SIZE` before it reads the body, and counts a chunked body as it arrives. The default is 10MB.
 
-**Fix:** Use Puma in production: `bundle exec puma -C config/puma.rb`.
+**Fix:** Raise `TINA4_MAX_UPLOAD_SIZE` in `.env` to the largest upload you mean to accept.
 
 ### 6. Static Files Slow
 

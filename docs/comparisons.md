@@ -234,7 +234,7 @@ Tina4 PHP packs 44 features into ~1.5 MB with zero external dependencies. Larave
 
 ## Ruby
 
-Tina4 Ruby runs on Puma. Built-in ORM, JWT, GraphQL, Swagger, and SCSS, with no gems required.
+Tina4 Ruby serves HTTP itself and runs on Puma when you install it. Built-in ORM, JWT, GraphQL, Swagger, and SCSS, with no gems required.
 
 ### At a Glance
 

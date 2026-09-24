@@ -612,9 +612,6 @@ source "https://rubygems.org"
 
 gem "tina4ruby", "~> 3.0"
 
-# Required: Ruby 3.0+ removed webrick from the standard library
-gem "webrick", "~> 1.8"
-
 # Required: the default SQLite database driver
 gem "sqlite3", "~> 2.0"
 ```
@@ -625,11 +622,10 @@ Then install:
 bundle install
 ```
 
-::: warning Two dependencies you must declare
-- **`webrick`** - Tina4's dev server uses WEBrick. Ruby 3.0 dropped WEBrick from the standard library, so you must list it in your `Gemfile` or `tina4 serve` fails with `LoadError: cannot load such file -- webrick`.
-- **`sqlite3`** - the default `TINA4_DATABASE_URL` points to SQLite. Without this gem the server restarts in a loop with `LoadError: cannot load such file -- sqlite3`.
+::: warning The dependency you must declare
+**`sqlite3`** - the default `TINA4_DATABASE_URL` points to SQLite. Without this gem the server restarts in a loop with `LoadError: cannot load such file -- sqlite3`.
 
-`tina4 init ruby` adds both gems automatically. You only need to add them by hand when bootstrapping an empty project.
+You don't need a web server gem. Tina4 serves HTTP itself, in development and production. `tina4 init ruby` writes the `Gemfile` for you; you only add gems by hand when bootstrapping an empty project.
 :::
 
 ### Step 2: Create `app.rb`
@@ -643,7 +639,7 @@ app = Tina4::RackApp.new
 Tina4::WebServer.new(app, port: 7147).start
 ```
 
-Four lines. `initialize!` sets up the project directory. `RackApp` builds the Rack application. `WebServer` starts it on the given port.
+Four lines. `initialize!` sets up the project directory. `RackApp` builds the application. `WebServer` starts Tina4's own HTTP server on the given port.
 
 ### Step 3: Create the Folder Structure
 

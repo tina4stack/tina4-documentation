@@ -348,7 +348,7 @@ Pick a language. Each book stands on its own: you can read Python cover-to-cover
 - **[Python](/python/index.md)** - The reference implementation. Every feature lands here first.
 - **[Node.js](/nodejs/index.md)** - TypeScript-first, native `node:http`, file-based routing, ESM-only.
 - **[PHP](/php/index.md)** - PHP 8.5, `stream_select` server, zero composer deps in core.
-- **[Ruby](/ruby/index.md)** - Rack 3, Puma in production, WEBrick in dev.
+- **[Ruby](/ruby/index.md)** - its own HTTP server in dev and production; Puma if your app installs it.
 - **[tina4-js](/js/index.md)** - The 1.5 KB reactive frontend. Signals, Web Components, router, API client, WebSocket, PWA, SSE.
 - **[Delphi](/delphi/index.md)** - FireMonkey cross-platform, FireDAC, REST client, and Twig templates.
 
