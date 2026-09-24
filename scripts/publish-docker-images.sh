@@ -27,9 +27,9 @@
 #   4. require /health to report a version MATCHING the tag, and refuse to
 #      publish on a mismatch. This is not hypothetical: the Node image was once
 #      about to publish as 3.13.92 while serving "0.0.0"
-#   5. only then buildx --push amd64 + arm64 as <version>, v3 and latest
+#   5. only then buildx --push amd64 + arm64 as <version>, with SBOM/provenance
 #   6. pull the arm64 image back from the PUBLISHED manifest and boot it under
-#      emulation, turning "compiled" into "executed"
+#      emulation, turning "compiled" into "executed"; promote v3/latest only on success
 #
 # Usage (on the build host, as a user who can read the Docker credential):
 #     ./publish-docker-images.sh 3.13.94 [/path/to/repos]
@@ -39,10 +39,15 @@
 #     curl -s https://hub.docker.com/v2/repositories/tina4stack/tina4-python/tags/3.13.94
 set -uo pipefail
 
+# SPDX SBOM and provenance are release artefacts (ADR-0073).
+
 VERSION="${1:?usage: publish-docker-images.sh <version> [repo-root]}"
 REPO_ROOT="${2:-/root/tina4-lab/tina4-repos}"
 WORK="/root/dockerpub-${VERSION}"
+GATE="tina4-release-gate-$$"
+ARM="tina4-release-arm-$$"
 PORT=18099          # deliberately far from the lab's service ports
+mkdir -p "$WORK"
 BUILDER="tina4"     # docker-container driver, multi-platform capable
 
 declare -A APP_PORT=([tina4-python]=7146 [tina4-php]=7145 [tina4-ruby]=7147 [tina4-nodejs]=7148)
@@ -52,12 +57,17 @@ overall=0
 
 log()  { printf '\n=== %s ===\n' "$*"; }
 fail() { printf '!! FAIL: %s\n' "$*"; }
-cleanup_container() { docker rm -f gate arm >/dev/null 2>&1 || true; }
+cleanup_container() { docker rm -f "$GATE" "$ARM" >/dev/null 2>&1 || true; }
 trap cleanup_container EXIT
 
 for repo in "${ORDER[@]}"; do
   log "$repo $VERSION"
   IMAGE="docker.io/tina4stack/${repo}"
+  # An exact release tag is immutable, including after a partial prior run.
+  if docker buildx imagetools inspect "$IMAGE:$VERSION" >/dev/null 2>&1; then
+    fail "$repo: $VERSION already exists; refusing to overwrite it"
+    RESULT[$repo]="version-already-published"; overall=1; continue
+  fi
   ap="${APP_PORT[$repo]}"
   src="$WORK/$repo"
 
@@ -88,14 +98,14 @@ for repo in "${ORDER[@]}"; do
   echo "on-disk size: $(( kb / 1024 )) MB"
 
   cleanup_container
-  docker run -d --name gate -p "$PORT:$ap" "$IMAGE:gate" >/dev/null
+  docker run -d --name "$GATE" -p "$PORT:$ap" "$IMAGE:gate" >/dev/null
   served=0
   for i in $(seq 1 45); do
     if curl -fsS -m 2 -o /dev/null "http://127.0.0.1:$PORT/health"; then
       echo "served /health after ${i}s"; served=1; break
     fi
-    if [ "$(docker inspect -f '{{.State.Running}}' gate 2>/dev/null)" != "true" ]; then
-      fail "$repo: container exited before serving"; docker logs gate 2>&1 | tail -30; break
+    if [ "$(docker inspect -f '{{.State.Running}}' "$GATE" 2>/dev/null)" != "true" ]; then
+      fail "$repo: container exited before serving"; docker logs "$GATE" 2>&1 | tail -30; break
     fi
     sleep 1
   done
@@ -103,8 +113,8 @@ for repo in "${ORDER[@]}"; do
     fail "$repo: no 200 on /health in 45s (failed to boot, or bound 127.0.0.1)"
     RESULT[$repo]="boot-gate-failed"; overall=1; cleanup_container; continue
   fi
-  if [ "$(docker inspect -f '{{.State.Running}}' gate)" != "true" ]; then
-    fail "$repo: died after serving (OOMKilled=$(docker inspect -f '{{.State.OOMKilled}}' gate))"
+  if [ "$(docker inspect -f '{{.State.Running}}' "$GATE")" != "true" ]; then
+    fail "$repo: died after serving (OOMKilled=$(docker inspect -f '{{.State.OOMKilled}}' "$GATE"))"
     RESULT[$repo]="died-after-serving"; overall=1; cleanup_container; continue
   fi
 
@@ -123,29 +133,66 @@ for repo in "${ORDER[@]}"; do
   cleanup_container
 
   if ! docker buildx build --builder "$BUILDER" \
-        --platform linux/amd64,linux/arm64 --provenance=true --push \
-        -t "$IMAGE:$VERSION" -t "$IMAGE:v3" -t "$IMAGE:latest" \
+        --platform linux/amd64,linux/arm64 --provenance=mode=max --sbom=true \
+        --metadata-file "$WORK/$repo.metadata.json" --push \
+        -t "$IMAGE:$VERSION" \
         "$src" >"$WORK/$repo.push.log" 2>&1; then
     fail "$repo: buildx push failed"; tail -30 "$WORK/$repo.push.log"
     RESULT[$repo]="push-failed"; overall=1; continue
   fi
-  echo "pushed $IMAGE:{$VERSION,v3,latest} (amd64 + arm64)"
+  digest=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["containerimage.digest"])' "$WORK/$repo.metadata.json")
+  if [ -z "$digest" ] \
+     || ! docker buildx imagetools inspect "$IMAGE@$digest" --raw >"$WORK/$repo.manifest.json" \
+     || ! docker buildx imagetools inspect "$IMAGE@$digest" --format '{{json .SBOM}}' >"$WORK/$repo.sbom.json" \
+     || ! docker buildx imagetools inspect "$IMAGE@$digest" --format '{{json .Provenance}}' >"$WORK/$repo.provenance.json"; then
+    fail "$repo: cannot retrieve published integrity evidence"
+    RESULT[$repo]="integrity-evidence-failed"; overall=1; continue
+  fi
+  if ! python3 - "$WORK/$repo" <<'PYVERIFY'
+import json, pathlib, sys
+prefix = sys.argv[1]
+for kind in ("sbom", "provenance"):
+    evidence = json.loads(pathlib.Path(prefix + "." + kind + ".json").read_text())
+    for platform in ("linux/amd64", "linux/arm64"):
+        if not evidence or not evidence.get(platform):
+            raise SystemExit(f"Missing {kind} for {platform}")
+        document = evidence[platform].get("SPDX" if kind == "sbom" else "SLSA", {})
+        if kind == "sbom":
+            if not document.get("spdxVersion", "").startswith("SPDX-2.") or not document.get("packages"):
+                raise SystemExit(f"Invalid SPDX inventory for {platform}")
+        elif not (document.get("buildDefinition") or document.get("buildType")):
+            raise SystemExit(f"Invalid build provenance for {platform}")
+PYVERIFY
+  then
+    fail "$repo: published attestations incomplete"
+    RESULT[$repo]="incomplete-attestations"; overall=1; continue
+  fi
+  printf '%s  %s:%s\n' "$digest" "$IMAGE" "$VERSION" >"$WORK/$repo.digest.txt"
+  echo "pushed $IMAGE:$VERSION (amd64 + arm64), digest $digest"
 
   # buildx cannot --load a multi-platform result, so arm64 was only COMPILED
   # before the push. Pulling it back per-arch turns that into "executed".
   # Emulation proves the image is not arch-broken; it says nothing about speed.
-  docker rm -f arm >/dev/null 2>&1 || true
+  docker rm -f "$ARM" >/dev/null 2>&1 || true
   armok=0
-  if docker run -d --name arm --platform linux/arm64 -p "$PORT:$ap" "$IMAGE:$VERSION" >/dev/null 2>&1; then
+  if docker run -d --name "$ARM" --platform linux/arm64 -p "$PORT:$ap" "$IMAGE@$digest" >/dev/null 2>&1; then
     for i in $(seq 1 90); do
       if curl -fsS -m 2 -o /dev/null "http://127.0.0.1:$PORT/health"; then
-        echo "arm64 (emulated) served /health after ${i}s"; armok=1; break
+        reported=$(curl -fsS -m 5 "http://127.0.0.1:$PORT/health" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("version",""))')
+        if [ "$reported" = "$VERSION" ] && [ "$(docker inspect -f '{{.State.Running}}' "$ARM")" = "true" ]; then
+          echo "arm64 (emulated) served version $reported after ${i}s"; armok=1
+        fi
+        break
       fi
-      [ "$(docker inspect -f '{{.State.Running}}' arm 2>/dev/null)" = "true" ] || break
+      [ "$(docker inspect -f '{{.State.Running}}' "$ARM" 2>/dev/null)" = "true" ] || break
       sleep 1
     done
   fi
-  if [ "$armok" = "1" ]; then RESULT[$repo]="PUBLISHED (amd64 gated + arm64 emulated OK)"
+  if [ "$armok" = "1" ]; then
+    # Promote the already tested, attested index without rebuilding it.
+    if docker buildx imagetools create -t "$IMAGE:v3" -t "$IMAGE:latest" "$IMAGE@$digest"; then
+      RESULT[$repo]="PUBLISHED (amd64 gated + arm64 emulated OK)"
+    else RESULT[$repo]="version published; alias promotion failed"; overall=1; fi
   else RESULT[$repo]="PUBLISHED but arm64 gate FAILED"; overall=1; fi
   cleanup_container
   docker rmi "$IMAGE:gate" >/dev/null 2>&1 || true
