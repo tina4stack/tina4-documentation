@@ -81,8 +81,10 @@ Conventions:
 | ADR-0067 | [Database drivers and optional servers are application dependencies, never framework runtime dependencies](decisions/ADR-0067.md) (Node optional peers, Ruby sqlite3 in the scaffold Gemfile, Puma opt-in) | Accepted |
 | ADR-0069 | [Identifiers that reach SQL come from the model, never the request](decisions/ADR-0069.md) (AutoCrud filter/sort/ids/write bodies, ORM find()/save(), DB write helpers, DocStore field paths, test gate) | Accepted |
 | ADR-0068 | [Response headers refuse CR, LF and NUL; built-in servers enforce the upload cap before reading the body](decisions/ADR-0068.md) (Features 30 / 44; fixture `http_hardening_contract.json`) | Accepted |
+| ADR-0070 | [A framework opens a browser only in development, never when TINA4_NO_BROWSER is truthy (true/1/yes/on), never when --no-browser is passed, never under CI](decisions/ADR-0070.md) (fixture `browser_open_contract.json`) | Accepted |
 | ADR-0073 | [Every change follows the ISO/IEC 18974 and ISO/IEC 5230 controls](decisions/ADR-0073.md) | Accepted |
 | ADR-0075 | [Tina4 moves to MPL-2.0 with a Code Infinity commercial licence](decisions/ADR-0075.md) (pending legal review and contributor consent) | Accepted |
+| ADR-0072 | [A Content-Type set with header() is the one Content-Type; settings are read when they are used](decisions/ADR-0072.md) (tina4-python#143, #144) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
