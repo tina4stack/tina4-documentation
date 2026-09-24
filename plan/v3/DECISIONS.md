@@ -97,6 +97,7 @@ Conventions:
 | ADR-0077 | [Frond escapes by default; trusted output is a SafeString type only](decisions/ADR-0077.md) | Accepted |
 
 | ADR-0082 | [Credentials and development endpoints retain explicit trust boundaries](decisions/ADR-0082.md) | Accepted; implementation verification pending |
+| ADR-0085 | [A bare zero-argument callable global is invoked and its return value is used](decisions/ADR-0085.md) (aligns Python/PHP/Ruby to Node under ADR-0004; fixture `frond_globals_contract.json`; tina4-documentation#90) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
