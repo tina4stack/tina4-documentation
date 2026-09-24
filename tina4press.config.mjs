@@ -200,6 +200,7 @@ export default {
           stems: ["what-is-tina4", "architecture", "choosing-your-language", "environment-variables"],
         },
         { text: "Developer tools", stems: ["cli"] },
+        { text: "Project policies", stems: ["contributing", "security-research", "contributor-licence-agreement"] },
       ],
     },
     search: true,
