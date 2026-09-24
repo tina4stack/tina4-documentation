@@ -27,9 +27,6 @@ hero:
     - theme: alt
       text: Ruby
       link: /ruby/index.md
-    - theme: alt
-      text: Delphi
-      link: /delphi/index.md
 
 
 ---
@@ -41,7 +38,6 @@ hero:
     <input class="tp-ask-hero-input" type="search" name="q" aria-label="Ask Tina4" placeholder="Ask Tina4: how do I define a route?">
     <button class="tp-ask-hero-go" type="submit">Ask Tina4</button>
   </form>
-  <a class="tp-cta tp-ask-hero-cta" href="https://profile.tina4.com">Register Now</a>
 </div>
 
 <div class="tp-ask-pills"></div>
@@ -50,7 +46,7 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Install and register
+## Install
 
 ::: tabs
 == macOS / Linux
@@ -63,12 +59,6 @@ tina4 setup
 irm https://tina4.com/install.ps1 | iex
 tina4 setup
 ```
-:::
-
-::: tip Save your paid tokens for the hard parts
-Let Tina4's own AI coder handle the boilerplate. Register for a free profile to get started.
-
-<a class="tp-cta" href="https://profile.tina4.com">Register Now →</a>
 :::
 
 ::: tip Review your code with the Tina4 Code Viewer
@@ -348,9 +338,8 @@ Pick a language. Each book stands on its own: you can read Python cover-to-cover
 - **[Python](/python/index.md)** - The reference implementation. Every feature lands here first.
 - **[Node.js](/nodejs/index.md)** - TypeScript-first, native `node:http`, file-based routing, ESM-only.
 - **[PHP](/php/index.md)** - PHP 8.5, `stream_select` server, zero composer deps in core.
-- **[Ruby](/ruby/index.md)** - Rack 3, Puma in production, WEBrick in dev.
+- **[Ruby](/ruby/index.md)** - its own HTTP server in dev and production; Puma if your app installs it.
 - **[tina4-js](/js/index.md)** - The 1.5 KB reactive frontend. Signals, Web Components, router, API client, WebSocket, PWA, SSE.
-- **[Delphi](/delphi/index.md)** - FireMonkey cross-platform, FireDAC, REST client, and Twig templates.
 
 Every book has a printable PDF with a clickable table of contents. Every chapter stays in sync with the code: release notes, version numbers, and example output are regenerated with every point release.
 

@@ -212,7 +212,7 @@ tina4 serve
 | **Raw speed** | Good | Very good (JIT) | Adequate | Best |
 | **Test count** | 2,112 | 2,220 | 2,333 | 2,646 |
 | **Best for** | Data/ML teams | Web agencies, existing PHP | Startups, clean code | JS/TS full-stack teams |
-| **WebSocket** | Native async | Swoole required | Rack hijack / Puma | Native |
+| **WebSocket** | Native async | Swoole required | Built-in (Rack hijack) | Native |
 | **Routing style** | Decorator-based | Static method calls | DSL blocks | File-based + decorators |
 | **Learning curve** | Low (if you know Python) | Low (if you know PHP) | Low (if you know Ruby) | Low (if you know JS/TS) |
 | **Framework LOC** | ~26,000 | ~35,000 | ~24,000 | ~32,000 |

@@ -40,7 +40,7 @@ Known missing feature surfaces remain tracked in [PHP issue 185](https://github.
 
 ## Dependency boundary
 
-The Ruby gem declares runtime gems for Rack/Puma serving, SQLite, mail, XML, logging, and encoding. Tina4 Ruby is lean, but it is not a zero-dependency gem.
+The Ruby gem declares no web server gem: it serves HTTP itself, and Puma is used only when an application installs it. It still declares runtime gems for SQLite, mail, XML, logging, and encoding, so Tina4 Ruby is lean, but it is not yet a zero-dependency gem.
 
 "Core dependency" and "provider dependency" are different facts. A local SQLite application can stay small while PostgreSQL, RabbitMQ, Kafka, Redis, MongoDB, S3, or hosted AI still requires the driver or service that speaks that protocol.
 

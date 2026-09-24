@@ -67,14 +67,6 @@
 .tp-ask-hero-go:hover { filter: brightness(1.08); }
 .tp-ask-hero-go:active { filter: brightness(.95); }
 
-/* .tp-cta carries a margin-top for prose callouts. Cancel it so the register
-   button shares a baseline with the search box instead of dropping below. */
-.tp-ask-hero-cta {
-  margin-top: 0;
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
-
 /* ---- suggestion pills --------------------------------------------------- */
 
 .tp-ask-pills {
@@ -110,7 +102,6 @@
 
 @media (max-width: 620px) {
   .tp-ask-hero-form { flex-basis: 100%; }
-  .tp-ask-hero-cta { flex: 1 1 100%; text-align: center; }
 }
 
 /* ---- inline answer ------------------------------------------------------ */

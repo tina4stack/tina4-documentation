@@ -6,96 +6,38 @@ The last chapter was raw SQL. It works. It also gets repetitive. Every insert de
 
 Tina4's ORM turns database rows into Python objects. Define a model class with fields. The ORM writes the SQL. It stays SQL-first -- you can drop to raw SQL at any moment -- but for the 90% case of CRUD operations, the ORM handles the grunt work.
 
+Configure the database before the models are used. The configuration-first path is an environment entry such as `TINA4_DATABASE_URL=sqlite:///data/app.db`. For an explicit connection, bind it once during application startup:
+
+```python
+from tina4_python import Database
+from tina4_python.orm import bind_database
+
+bind_database(Database("sqlite:///data/app.db"))
+```
+
+If neither path supplies a database, ORM operations fail with guidance to call `bind_database()` or set `TINA4_DATABASE_URL`; they do not guess a connection.
+
 Picture a blog. Authors, posts, comments. Authors own many posts. Posts own many comments. Comments belong to posts. Modeling these relationships with raw SQL means JOINs and manual foreign key management. The ORM makes this declarative.
 
 ---
 
-## ORM at a Glance: Four Languages, One Shape
+## ORM at a Glance
 
-The ORM does the same job in every Tina4 book. Define a model. Save it. Query it. Each language wears its own clothes (PHP uses typed properties, Python uses field class instances, Ruby uses a DSL, Node uses config objects) but the operations line up. If you know the API in one book, you can read the others.
+Every operation in this chapter works on the `Note` model you'll define in Section 2. Here's the short list before the long one:
 
-### Defining a Model
+| Operation | Python |
+|---|---|
+| Create the table | `Note.create_table()` |
+| Find by primary key | `Note.find_by_id(1)` |
+| Filter by attributes | `Note.find({"category": "work"})` |
+| Raw SQL where clause | `Note.where("category = ?", ["work"])` |
+| Build and save | `Note.create(title="x")` |
+| Save an instance | `note.save()` |
+| Fetch every row | `Note.all()` |
+| Delete a record | `note.delete()` |
+| Count rows | `Note.count()` |
 
-The same `Post` model with `id`, `title`, `body`, and `created_at`:
-
-**Python**: field class instances on the class body:
-
-```python
-from tina4_python.orm import ORM, IntegerField, StringField, DateTimeField
-
-class Post(ORM):
-    table_name = "posts"
-
-    id = IntegerField(primary_key=True, auto_increment=True)
-    title = StringField(required=True, max_length=200)
-    body = StringField(default="")
-    created_at = DateTimeField()
-```
-
-**PHP**: native typed properties:
-
-```php
-<?php
-use Tina4\ORM;
-
-class Post extends ORM
-{
-    public string $tableName = "posts";
-
-    public int $id;
-    public string $title;
-    public string $body = "";
-    public string $createdAt;
-}
-```
-
-**Ruby**: class-level DSL declarations:
-
-```ruby
-class Post < Tina4::ORM
-  table_name "posts"
-
-  integer_field :id, primary_key: true, auto_increment: true
-  string_field :title, nullable: false, length: 200
-  string_field :body, default: ""
-  datetime_field :created_at
-end
-```
-
-**Node.js (TypeScript)**: config objects in a `static fields` block:
-
-```typescript
-import { BaseModel } from "tina4-nodejs/orm";
-
-export default class Post extends BaseModel {
-  static tableName = "posts";
-  static fields = {
-    id:        { type: "integer" as const, primaryKey: true, autoIncrement: true },
-    title:     { type: "string"  as const, required: true, maxLength: 200 },
-    body:      { type: "string"  as const, default: "" },
-    createdAt: { type: "datetime" as const },
-  };
-}
-```
-
-### Common Query Operations
-
-Same operation, four shapes:
-
-| Operation | Python | PHP | Ruby | Node.js |
-|---|---|---|---|---|
-| Find by primary key | `Post.find_by_id(1)` | `Post::findById(1)` | `Post.find_by_id(1)` | `Post.findById(1)` |
-| Filter by attributes | `Post.find({"title": "x"})` | `Post::find(["title" => "x"])` | `Post.find(title: "x")` | `Post.find({ title: "x" })` |
-| Raw SQL where clause | `Post.where("title = ?", ["x"])` | `(new Post())->where("title = ?", ["x"])` | `Post.where("title = ?", ["x"])` | `Post.where("title = ?", ["x"])` |
-| Build and save | `Post.create(title="x")` | `Post::create(["title" => "x"])` | `Post.create(title: "x")` | `Post.create({ title: "x" })` |
-| Save an instance | `post.save()` | `$post->save()` | `post.save` | `post.save()` |
-| Fetch every row | `Post.all()` | `(new Post())->all()` | `Post.all` | `Post.all()` |
-| Delete a record | `post.delete()` | `$post->delete()` | `post.delete` | `post.delete()` |
-| Count rows | `Post.count()` | `(new Post())->count()` | `Post.count` | `Post.count()` |
-
-A few details worth noting. `find()` takes attribute names and applies the field map; `where()` takes raw SQL and skips translation. PHP needs `(new Post())` for instance methods like `where()` and `all()`; the rest are static. Ruby methods drop the parentheses by convention.
-
-For full detail on field options, relationships, eager loading, soft delete, validation, and Auto-CRUD, read the rest of this chapter; it shows the API for the language of this book.
+`find()` takes attribute names and applies the field map; `where()` takes raw SQL and skips translation. The PHP, Ruby and Node.js books run the same operations in their own syntax, so the names line up if you ever move between them.
 
 ---
 
@@ -133,13 +75,15 @@ A complete model. Here is what each piece does:
 | `IntegerField` | `int` | `INTEGER` | Whole numbers |
 | `StringField` | `str` | `VARCHAR(255)` | Text strings |
 | `NumericField` | `float` | `REAL` | Decimal numbers |
-| `BooleanField` | `bool` | `INTEGER` (0/1) | True/False |
-| `DateTimeField` | `str` | `DATETIME` | Date and time |
+| `BooleanField` | `bool` | Engine-dependent: `BOOLEAN` on PostgreSQL and MySQL, `BIT` on MSSQL, `INTEGER` (0/1) on SQLite and Firebird | True/False |
+| `DateTimeField` | `datetime` | `DATETIME` | Date and time |
 | `TextField` | `str` | `TEXT` | Long text |
 | `BlobField` | `bytes` | `BLOB` | Binary data |
 | `ForeignKeyField` | `int` | `INTEGER` | Foreign key - auto-wires `belongs_to` and `has_many` (see [Relationships](#_6-relationships)) |
 
 Verbose names (`IntegerField`, `StringField`, `BooleanField`) are the standard. Short aliases (`IntField`, `StrField`, `BoolField`) also work.
+
+When you compare a `BooleanField` column in raw SQL, pass a Python `True` or `False`, never `1` or `0`. SQLite accepts either, but PostgreSQL stores a native `BOOLEAN` and rejects `pinned = 1` with `operator does not exist: boolean = integer`. The ORM's own filters, such as `find({"pinned": True})`, convert for you.
 
 
 ### Field Options
@@ -249,19 +193,35 @@ camel_to_snake("firstName")    # "first_name"
 
 ## 3. create_table -- Schema from Models
 
-You can create the database table directly from your model definition:
+A model describes a table. It doesn't build one. The table has to exist before the first `save()` or query, and that goes for every model in this chapter - `Note` here, `Author` and `BlogPost` in Section 6, `Task` in Section 8, `Product` in Section 12, and the three blog models in the solution.
+
+You can create the table straight from the model definition:
 
 ```python
 Note.create_table()
 ```
 
-This generates and runs the CREATE TABLE SQL based on your field definitions. It is good for development and testing. For production, use migrations (Chapter 5) for version-controlled schema changes.
+This generates and runs the `CREATE TABLE` SQL for your field definitions, and skips a table that's already there. It suits development and testing. For production, use migrations (Chapter 5) so schema changes are version-controlled.
+
+A small script in the project root does the job once. A plain script doesn't read `.env` on its own, so load it first:
+
+```python
+# create_tables.py
+from tina4_python.dotenv import load_env
+load_env()
+
+from src.orm.note import Note
+
+Note.create_table()
+```
 
 ```bash
-tina4 shell
->>> from src.orm.note import Note
->>> Note.create_table()
+uv run python create_tables.py
 ```
+
+If you skip this step, nothing crashes and nothing is stored either. `save()` returns `False`, and `note.last_error` holds the database's complaint. On SQLite, PostgreSQL and MySQL it ends with the fix: `table 'notes' does not exist; call Note.create_table() or run a migration`. Check the return value of `save()` and you'll never lose a row quietly.
+
+Because `create_table()` only creates a missing table, it won't add a column to a table that already exists. Change a model after its table is built and you need a migration, or a fresh database while you're still experimenting.
 
 ---
 
@@ -285,7 +245,9 @@ async def create_note(request, response):
     return response({"message": "Note created", "note": note.to_dict()}, 201)
 ```
 
-`save()` detects whether the record is new (INSERT) or existing (UPDATE) based on whether the primary key has a value. It returns `self` on success, so you can chain calls. It returns `False` on failure.
+`save()` detects whether the record is new (INSERT) or existing (UPDATE) based on whether the primary key has a value. It runs `validate()` first (Section 12), so an invalid model never reaches the database. It returns `self` on success, so you can chain calls. It returns `False` on failure, and `note.last_error` (or `note.get_error()`) tells you why.
+
+This route is a `POST`, and Tina4 secures every `POST`, `PUT`, `PATCH` and `DELETE` route by default. Called without a valid `Authorization: Bearer <token>` header it answers `401` before the handler runs. Chapter 8 shows how to issue tokens. While you experiment locally you can put `@noauth()` (from `tina4_python.core.router`) above `@post` to open a route, then take it away again before you ship.
 
 ### create -- Build and Save in One Step
 
@@ -375,7 +337,7 @@ async def delete_note(id, request, response):
 ```python
 @get("/api/notes")
 async def list_notes(request, response):
-    category = request.params.get("category")
+    category = request.query.get("category")
 
     if category:
         notes = Note.where("category = ?", [category])
@@ -388,7 +350,7 @@ async def list_notes(request, response):
     })
 ```
 
-`where()` takes a WHERE clause with `?` placeholders and a list of parameters. `all()` fetches all records. Both return a `ModelCollection` (see below), and both support pagination:
+`where()` takes a WHERE clause with `?` placeholders and a list of parameters. It returns a `ModelCollection` (covered just below). `all()` fetches all records. Both support pagination:
 
 ```python
 # With pagination
@@ -400,31 +362,41 @@ notes = Note.all(limit=20, offset=0)
 # SQL-first query -- full control over the SQL
 notes = Note.select(
     "SELECT * FROM notes WHERE pinned = ? ORDER BY created_at DESC",
-    [1], limit=20, offset=0
+    [True], limit=20, offset=0
 )
 ```
 
-### ModelCollection -- the page and the total together
+### ModelCollection -- The Page and the Total
 
-`where`, `select`, `find` (filter form), `all`, and `with_trashed` return a
-`ModelCollection` (ADR-0064). It IS the page of models: iterate it, index it, slice
-it, `len()` it, and serialise it to JSON exactly as before. It also carries the
-total number of rows matching the filter, independent of `limit` and `offset`:
+Pagination hides an awkward gap. You ask for 20 rows and you get 20 rows, but a
+pager needs to say "page 3 of 13", and that means knowing the total number of
+matching rows, not the 20 sitting on this page. The old answer was a second
+`COUNT(*)` query with the same filter written out again by hand.
+
+Tina4 closes the gap. `where()`, `select()`, `find()` (the filter form),
+`all()`, and `with_trashed()` all return a `ModelCollection` -- a subclass of
+`list`, so nothing you already wrote changes. You iterate it, index it, slice
+it, call `len()` on it, and serialise it to JSON exactly as before. It just
+carries one extra thing: the total for the filter, independent of `limit` and
+`offset`.
 
 ```python
-rows = User.where("active = ?", [1], limit=20)   # a page of up to 20 models
-rows.get_total_records()   # e.g. 250 -- the whole matching set, ignores limit/offset
-rows.to_paginate()         # {records, total, page, per_page, total_pages, limit, offset}
+rows = Note.where("pinned = ?", [True], limit=20, offset=40)  # a page of up to 20 models
+rows.get_total_records()   # 250 -- the whole matching set, ignoring limit/offset
 ```
 
-The total costs nothing extra: it reuses the count the same query already ran, so no
-second query fires. `get_total_records()` is a method, not a `.count` property,
-because `list.count()` already exists. Single-record finders are unchanged:
-`find(pk)`, `find_by_id`, `find_or_fail`, `select_one`, and `load` still return one
-model or `None`.
+That total is free. Every one of those methods already runs a `COUNT(*)` probe
+when it fetches the page, and the ORM used to hydrate the models and throw the
+count away. `ModelCollection` keeps it instead, so `get_total_records()` fires
+no second query. It is a method, not a `.count` property, on purpose: `list`
+already has a `count()` method, so a `.count` attribute would shadow a built-in.
 
-`to_paginate()` returns the same seven-key envelope as `db.fetch(...).to_paginate()`,
-so a route paginates the same way whether it went through the ORM or raw SQL:
+The single-record finders are untouched. `find(pk)`, `find_by_id()`,
+`find_or_fail()`, `select_one()`, and `load()` still return one model or `None`.
+
+Call `to_paginate()` for a ready-made pagination envelope. It hands back the
+same seven keys as `db.fetch(...).to_paginate()`, so a route paginates the same
+way whether the data came through the ORM or through raw SQL:
 
 ```python
 @get("/api/notes")
@@ -435,18 +407,16 @@ async def list_notes(request, response):
     #  "total_pages": 13, "limit": 20, "offset": 40}
 ```
 
-The concept carries the same name across the four frameworks: `get_total_records()`
-/ `to_paginate()` in Python and Ruby, `getTotalRecords()` / `toPaginate()` in PHP and
-Node. In PHP the collection is an object (not a bare `array`) that stays
-`foreach`-able, `count()`-able, and `json_encode`-able, with `->toArray()` for native
-`array_*` calls.
+The keys (`records`, `total`, `page`, `per_page`, `total_pages`, `limit`,
+`offset`) are snake_case and identical in all four frameworks, so a client reads
+the same JSON everywhere.
 
 ### select_one -- Fetch a Single Record by SQL
 
 When you need exactly one record from a custom SQL query:
 
 ```python
-note = Note.select_one("SELECT * FROM notes WHERE slug = ?", ["my-note"])
+note = Note.select_one("SELECT * FROM notes WHERE title = ?", ["Shopping List"])
 ```
 
 Returns a model instance or `None`.
@@ -462,7 +432,7 @@ note.load()  # Loads data for id=42
 
 # Or with a filter string
 note = Note()
-note.load("slug = ?", ["my-note"])
+note.load("title = ?", ["Shopping List"])
 ```
 
 Returns `True` if a record was found, `False` otherwise.
@@ -553,7 +523,7 @@ With that single `ForeignKeyField` declaration, two accessors are auto-wired:
 - `post.author` - returns the `Author` instance (belongs_to)
 - `author.posts` - returns a list of `BlogPost` instances (has_many)
 
-No manual `has_many` or `belongs_to` calls required.
+No manual `has_many` or `belongs_to` calls required. Both tables need to exist first: `Author.create_table()`, then `BlogPost.create_table()`.
 
 ```python
 post = BlogPost.find_by_id(1)
@@ -600,6 +570,8 @@ class BlogPost(ORM):
     created_at = DateTimeField()
     updated_at = DateTimeField()
 ```
+
+This `BlogPost` maps to the same `posts` table as the short one above, with more columns. `create_table()` skips a table that already exists, so if you built the short version first, drop the `posts` table (or start a fresh database) before you create this one. The rest of the chapter uses this fuller shape.
 
 Now use `has_many` to get an author's posts:
 
@@ -701,6 +673,8 @@ async def list_authors(request, response):
 ```
 
 Without eager loading, 10 authors and their posts cost 11 queries. With eager loading: 2 queries. That is the difference between a fast page and a slow one.
+
+Each name in `include` must be a relationship the model declares, either through a `ForeignKeyField` (Section 6) or a descriptor (next). In the example above, `posts` exists because of the `ForeignKeyField(to=Author, related_name="posts")` from Section 6. A name the model doesn't declare is skipped without an error, so a typo shows up as a missing key in the output rather than a crash.
 
 ### Declarative Relationships with Descriptors
 
@@ -843,7 +817,7 @@ Standard queries (`all()`, `where()`, `find_by_id()`) exclude soft-deleted recor
 all_tasks = Task.with_trashed()
 
 # Soft-deleted tasks matching a condition
-deleted_tasks = Task.with_trashed("completed = ?", [1])
+deleted_tasks = Task.with_trashed("completed = ?", [True])
 ```
 
 `with_trashed()` accepts the same filter parameters as `where()`. The only difference: it ignores the `is_deleted` filter that standard queries apply.
@@ -854,7 +828,7 @@ The `count()` class method respects soft delete. It only counts non-deleted reco
 
 ```python
 active_count = Task.count()
-active_work = Task.count("category = ?", ["work"])
+active_done = Task.count("completed = ?", [True])
 ```
 
 ### When to Use Soft Delete
@@ -927,6 +901,12 @@ AutoCrud.register(Note, prefix="/api/v2")
 # Routes: /api/v2/notes, /api/v2/notes/{id}, etc.
 ```
 
+The generated write routes (`POST`, `PUT`, `DELETE`) follow the same secure-by-default rule as your own routes: without a valid Bearer token they answer `401`. Pass `public=True` to open them on purpose:
+
+```python
+AutoCrud.register(Note, public=True)
+```
+
 ### Auto-Discovering Models
 
 Rather than registering each model by hand, point `AutoCrud.discover()` at your models directory. It scans every `.py` file, finds ORM subclasses, and registers them all:
@@ -949,35 +929,61 @@ curl "http://localhost:7146/api/notes?limit=10&offset=0"
 
 ```json
 {
-  "data": [
+  "records": [
     {"id": 1, "title": "Shopping List", "content": "Milk, eggs", "category": "personal", "pinned": false},
     {"id": 2, "title": "Sprint Plan", "content": "Review backlog", "category": "work", "pinned": true}
   ],
   "total": 2,
+  "page": 1,
+  "per_page": 10,
+  "total_pages": 1,
   "limit": 10,
   "offset": 0
 }
 ```
 
-**POST /api/notes** validates input before saving:
+That's the same seven-key envelope `to_paginate()` returns (Section 4).
+
+**POST /api/notes** validates input before saving. It's a write route, so send a token:
 
 ```bash
 curl -X POST http://localhost:7146/api/notes \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
   -d '{"title": "New Note", "content": "Created via auto-CRUD"}'
 ```
 
-If validation fails (for example, a required field is missing), the endpoint returns a 400 with error details:
+If validation fails (for example, a required field is missing), the endpoint returns a 422 with error details:
 
 ```json
-{"error": "Validation failed", "detail": ["title: This field is required"]}
+{"error": "Validation failed", "detail": ["title is required"]}
 ```
 
 **DELETE /api/notes/1** respects soft delete. If the model has `soft_delete = True`, the record is marked deleted instead of removed.
 
 ### Custom Routes Alongside Auto-CRUD
 
-Custom routes defined in `src/routes/` load before auto-CRUD routes. They take precedence. If you need special logic for one endpoint (custom validation, side effects, complex queries), define that route manually. Auto-CRUD handles the rest.
+If you need special logic for one endpoint (custom validation, side effects, complex queries), define that route yourself and let Auto-CRUD handle the rest. How the two meet depends on the path you write.
+
+At startup the server imports `src/orm/` before `src/routes/`, so a model with `auto_crud = True` registers its five routes first. When a route file then registers the **same method and the same path string**, the later registration replaces the earlier one, and your handler wins:
+
+```python
+from tina4_python.core.router import get
+
+@get("/api/notes/{id}")          # identical to the Auto-CRUD path: replaces it
+async def get_note(id, request, response):
+    ...
+```
+
+A different pattern for the same URL does **not** replace anything. Both routes stay registered, the router takes the first match, and the Auto-CRUD route was there first:
+
+```python
+@get("/api/notes/{id:int}")      # different path string: Auto-CRUD's /api/notes/{id} still answers
+async def get_note(id, request, response):
+    ...
+```
+
+So copy the Auto-CRUD path exactly (`/api/notes/{id}`, with a plain `{id}`) when you override one of its routes, or give your route a path of its own.
 
 ### Introspection
 
@@ -1049,7 +1055,7 @@ async def published_posts(request, response):
 
 @get("/api/posts/recent")
 async def recent_posts(request, response):
-    days = int(request.params.get("days", 7))
+    days = int(request.query.get("days", 7))
     posts = BlogPost.recent(days)
     return response({"posts": [p.to_dict() for p in posts]})
 ```
@@ -1106,10 +1112,10 @@ If validation fails, `validate()` returns a list of error messages:
 ```json
 {
   "errors": [
-    "name: Must be at least 2 characters",
-    "sku: Must match pattern ^[A-Z]{2}-\\d{4}$",
-    "price: Must be at least 0.01",
-    "category: Must be one of: Electronics, Kitchen, Office, Fitness"
+    "name must be at least 2 characters",
+    "sku does not match the required format",
+    "price must be at least 0.01",
+    "category must be one of [\"Electronics\",\"Kitchen\",\"Office\",\"Fitness\"]"
   ]
 }
 ```
@@ -1196,6 +1202,21 @@ class Comment(ORM):
     author_email = StringField(required=True)
     body = StringField(required=True, min_length=5)
     created_at = DateTimeField()
+```
+
+Build the three tables before the first request. Extend `create_tables.py` from Section 3 and run it once with `uv run python create_tables.py`:
+
+```python
+# create_tables.py
+from tina4_python.dotenv import load_env
+load_env()
+
+from src.orm.author import Author
+from src.orm.blog_post import BlogPost
+from src.orm.comment import Comment
+
+for model in (Author, BlogPost, Comment):
+    model.create_table()
 ```
 
 Create `src/routes/blog.py`:
@@ -1314,6 +1335,8 @@ async def add_comment(id, request, response):
     return response({"comment": comment.to_dict()}, 201)
 ```
 
+The three `POST` routes are secured by default, so test them with an `Authorization: Bearer <token>` header (Chapter 8). The `GET` routes answer without one.
+
 ---
 
 ## 15. Gotchas
@@ -1358,13 +1381,13 @@ async def add_comment(id, request, response):
 
 **Fix:** Build the response dict manually, omitting sensitive fields: `{"id": user.id, "name": user.name, "email": user.email}`. Or create a helper method on your model class that returns only safe fields.
 
-### 6. Validation only runs on validate()
+### 6. save() returns False on invalid data
 
-**Problem:** You call `save()` without calling `validate()` first, and invalid data gets into the database.
+**Problem:** `save()` returns `False` and the row never reaches the database, but nothing raised.
 
-**Cause:** `save()` does not validate. This is by design -- sometimes you need to save partial data or bypass validation for bulk operations.
+**Cause:** `save()` runs `validate()` first. If any field fails its rules, it refuses the write, logs the reason, and returns `False` instead of raising. The same happens when the database rejects the write (a missing table, a `NOT NULL` column).
 
-**Fix:** Call `errors = model.validate()` before `save()` in your route handlers. Or create a helper method that validates and saves in one step.
+**Fix:** Check the return value. `model.last_error` (or `model.get_error()`) holds the reason. In a route handler, call `errors = model.validate()` before `save()` when you want to send the field errors back to the client as a `400`.
 
 ### 7. Foreign key not enforced
 
@@ -1396,9 +1419,9 @@ for post in all_posts:
 
 **Problem:** Custom route at `/api/notes/{id}` stops working after registering Auto-CRUD for the Note model.
 
-**Cause:** Both routes match the same path. The first registered route wins.
+**Cause:** Both routes match the same URL, and the router answers with the first match. Auto-CRUD registers while `src/orm/` loads, before your files in `src/routes/`, so its `/api/notes/{id}` is first in line. Your `/api/notes/{id:int}` is a different path string, so it doesn't replace the Auto-CRUD route. It just never gets a turn.
 
-**Fix:** Custom routes in `src/routes/` load before Auto-CRUD routes. They take precedence. If you want different behaviour, use a different path for the custom route.
+**Fix:** Declare the custom route with the exact Auto-CRUD path, `/api/notes/{id}`. Re-registering the same method and path replaces the earlier route, so yours wins. Or give the custom route a path of its own.
 
 ### 10. Soft-deleted records appearing in queries
 
