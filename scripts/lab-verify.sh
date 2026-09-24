@@ -254,16 +254,18 @@ run_php() {
   load_env; export TINA4_TEST_FIREBIRD_URL="$(fb_url tina4_php.fdb)"; drop_mongo
   # The graph drivers are composer "suggest" entries, not dependencies (ultipa needs
   # ext-grpc, which would break a plain `composer install` elsewhere). Install them
-  # into vendor/ BEFORE the main suite: its Neo4j/Memgraph/Arango cases need them
-  # too. Restore composer.json/lock so the tested tree retains its committed
-  # manifests alongside the installed suggested drivers.
+  # into vendor/ before any suite. Restore composer.json/lock so the tested tree
+  # retains its committed manifests alongside the installed suggested drivers.
   log "PHP graph driver installation (lab-only; grpc ON, openswoole OFF)"
   PHP_INI_SCAN_DIR="$ini_root/graph" COMPOSER_ALLOW_SUPERUSER=1 composer require --dev --no-interaction --no-scripts --quiet \
     laudis/neo4j-php-client triagens/arangodb tina4stack/ultipa || return 1
   git checkout -- composer.json composer.lock 2>/dev/null
   log "PHP main suite (grpc + openswoole disabled)"
-  # Ultipa needs ext-grpc, which is off here; its cases run in the graph pass below.
-  env -u TINA4_TEST_ULTIPA_URL PHP_INI_SCAN_DIR="$ini_root/clean" ./vendor/bin/phpunit tests
+  # The complete GraphTest class, including its SDK-only connect-timeout case, runs
+  # in the grpc-enabled pass below. Unsetting Ultipa URL alone is insufficient:
+  # the timeout case deliberately uses its own unreachable endpoint.
+  env -u TINA4_TEST_ULTIPA_URL PHP_INI_SCAN_DIR="$ini_root/clean" ./vendor/bin/phpunit \
+    --exclude-filter '/^Tina4\\GraphTest::/' tests
   local main=$?
   log "PHP openswoole suite (openswoole ON, grpc OFF)"
   PHP_INI_SCAN_DIR="$ini_root/swoole" ./vendor/bin/phpunit tests/AppInvokeSwooleTest.php
