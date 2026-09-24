@@ -81,7 +81,7 @@
   "transport_headers": [
     "Content-Type: application/json",
     "Content-Length",
-    "Connection: close",
+    "Connection: close (built-in server only; an ASGI server manages its own connection)",
     "X-Frame-Options",
     "X-Content-Type-Options",
     "Content-Security-Policy",
@@ -166,7 +166,7 @@
     {
       "id": "transport-rejection-shape",
       "adr": "ADR-0068",
-      "rule": "Every built-in server transport rejection (400, 408, 413, 431, 500) carries the exact ADR-0068 status and JSON body, Content-Type application/json, Content-Length, Connection: close and the canonical security header set without Strict-Transport-Security. The ASGI path's 413 in Python carries the same bytes.",
+      "rule": "Every built-in server transport rejection (400, 408, 413, 431, 500) carries the exact ADR-0068 status and JSON body, Content-Type application/json, Content-Length, Connection: close (built-in server only) and the canonical security header set without Strict-Transport-Security. The ASGI path's 413 in Python carries the same status, body and headers except Connection, which stays the ASGI server's to manage.",
       "why": "One shape for every early refusal, so a client, a proxy and a test can read them the same way in all four frameworks, and a refusal is still a response that carries the security headers.",
       "suites": {
         "python": "tests/test_http_hardening_contract.py"
