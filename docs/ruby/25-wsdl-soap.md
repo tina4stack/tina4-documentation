@@ -280,7 +280,7 @@ The remote WSDL client caches the WSDL after the first fetch. If the remote serv
 
 ### 2. Character encoding
 
-SOAP envelopes must be UTF-8. If your operation returns strings with special characters, ensure they are UTF-8 encoded before returning.
+SOAP envelopes must be UTF-8, in both directions. A request body in UTF-16, or with bytes that aren't valid UTF-8, will get a `Client` fault reading "Malformed XML" before any operation runs, and so will a body that uses an entity other than the five XML defines (`&lt;` `&gt;` `&amp;` `&quot;` `&apos;`) or declares a DOCTYPE. The Python version answers the same bodies the same way. If your operation returns strings with special characters, make sure they're UTF-8 before returning.
 
 ### 3. Namespace conflicts
 
