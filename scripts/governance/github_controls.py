@@ -59,6 +59,10 @@ def pull_request_rule():
         "require_code_owner_review": False,
         "require_last_push_approval": False,
         "required_review_thread_resolution": True,
+        # GitHub defaults this to true. Co-authored commits (the Tina4 and
+        # assistant trailers) count as unattributed, so it demands an approval
+        # nobody can give and blocks every PR despite 0 required approvals.
+        "require_extra_approval_for_unattributed_changes": False,
     }}
 
 

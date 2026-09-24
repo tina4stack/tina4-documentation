@@ -156,11 +156,10 @@ export default {
       { text: "Node.js", link: "nodejs/index.html" },
       { text: "PHP", link: "php/index.html" },
       { text: "Ruby", link: "ruby/index.html" },
-      { text: "Delphi", link: "delphi/index.html" },
       { text: "Code Viewer", link: "/download/code-viewer/" },
     ],
     sidebar: null, // auto, section-scoped; grouped below (ported from SECTION_GROUPS)
-    sectionLabels: { js: "tina4-js", python: "Python", nodejs: "Node.js", php: "PHP", ruby: "Ruby", delphi: "Delphi", general: "Understanding Tina4", v2: "v2 Docs" },
+    sectionLabels: { js: "tina4-js", python: "Python", nodejs: "Node.js", php: "PHP", ruby: "Ruby", general: "Understanding Tina4", v2: "v2 Docs" },
     // Built-in RAG chat ("Ask Tina4") — floating widget, hits the hosted RAG.
     chat: { api: "https://rag.tina4.com", label: "Ask Tina4", model: "Powered by Tina4", placeholder: "How do I define a route?" },
     // EVERY numbered section declares its groups by name below. There is no
@@ -183,16 +182,6 @@ export default {
       php: BACKEND_GROUPS,
       ruby: BACKEND_GROUPS,
       nodejs: BACKEND_GROUPS,
-      // Delphi is its own toolkit, not the backend chapter set. It was being
-      // grouped by the backend ranges, so its 15 chapters read "Foundations"
-      // and "Building Apps".
-      delphi: [
-        { text: "Getting Started", stems: ["getting-started"] },
-        { text: "Core", stems: ["rest-apis", "json-data-binding", "core-utilities"] },
-        { text: "Pages & Templates", stems: ["html-rendering", "page-navigation", "templates"] },
-        { text: "Realtime", stems: ["websockets", "socket-server"] },
-        { text: "Guides", stems: ["crud-app", "integration", "claude-code", "complete-app", "patterns", "troubleshooting"] },
-      ],
       // Four conceptual pages that were all landing under "Foundations".
       general: [
         {

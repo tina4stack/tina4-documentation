@@ -1,6 +1,6 @@
 # Framework Comparisons
 
-Tina4 ships in Python, PHP, Ruby, Node.js, JavaScript (frontend), and Delphi (FMX). Each variant targets a different language but follows the same project structure, the same routing conventions, and the same ORM API.
+Tina4 ships in Python, PHP, Ruby, Node.js and JavaScript (frontend). Each variant targets a different language but follows the same project structure, the same routing conventions, and the same ORM API.
 
 This page compares every Tina4 variant against popular frameworks in its language. The data covers performance benchmarks, a 44-capability comparison checklist, deployment size, and honest trade-offs.
 
@@ -517,117 +517,6 @@ The tina4js test suite covers signals, HTML templates, components, routing, fetc
 
 ---
 
-## Delphi (FMX)
-
-Tina4 Delphi is not a web framework. It is a design-time FMX component library that adds REST client capabilities, HTML/CSS rendering, and template support to native Delphi applications.
-
-### At a Glance
-
-| Feature | Tina4 Delphi | Raw FMX (TRESTClient) | TMS Web Core |
-|---|---|---|---|
-| **Type** | FMX component library | Built-in REST classes | Web app framework |
-| **Target** | Native desktop/mobile apps | Native desktop/mobile apps | Browser-based apps |
-| **Approach** | Design-time components | Manual code | Visual designer + Pas2JS |
-| **REST Client** | TTina4REST (auto MemTable population) | TRESTClient + TRESTRequest + TRESTResponse | TWebHttpRequest |
-| **HTML Rendering** | TTina4HTMLRender (CSS on FMX canvas) | Not available | Full browser rendering |
-| **Template Engine** | TTina4Twig | Not available | Not available |
-| **WebSocket** | TTina4WebSocketClient | Manual implementation | TWebSocketClient |
-| **JSON Handling** | TTina4JSONAdapter (auto-mapping) | Manual TJSONObject parsing | Automatic via JS interop |
-| **MCP Server** | Built-in (Claude Code integration) | Not available | Not available |
-| **License** | Open source | Included with Delphi | Commercial |
-
-### Components
-
-| Component | Purpose |
-|---|---|
-| **TTina4REST** | REST client with auto MemTable population |
-| **TTina4RESTRequest** | Individual request configuration |
-| **TTina4JSONAdapter** | Maps JSON responses to Delphi datasets |
-| **TTina4HTMLRender** | Renders HTML/CSS on the FMX canvas with native form controls |
-| **TTina4HTMLPages** | Multi-page HTML container |
-| **TTina4Twig** | Twig template engine for generating HTML |
-| **TTina4WebSocketClient** | WebSocket client for real-time communication |
-
-### Code Example: REST Client
-
-**Tina4 Delphi (design-time + minimal code):**
-```pascal
-// Drop TTina4REST and TTina4JSONAdapter on form
-// Set properties in Object Inspector:
-//   Tina4REST1.BaseURL := 'https://api.example.com';
-//   Tina4JSONAdapter1.REST := Tina4REST1;
-
-// Fetch data and populate a grid
-procedure TForm1.Button1Click(Sender: TObject);
-begin
-  Tina4REST1.Get('/users');
-  // TTina4JSONAdapter auto-populates a TFDMemTable
-  // Bind the MemTable to a TGrid and the data appears
-end;
-```
-
-**Raw FMX (manual wiring):**
-```pascal
-procedure TForm1.Button1Click(Sender: TObject);
-var
-  Client: TRESTClient;
-  Request: TRESTRequest;
-  Response: TRESTResponse;
-  JSONArray: TJSONArray;
-  I: Integer;
-begin
-  Client := TRESTClient.Create('https://api.example.com');
-  Response := TRESTResponse.Create(nil);
-  Request := TRESTRequest.Create(nil);
-  try
-    Request.Client := Client;
-    Request.Response := Response;
-    Request.Resource := '/users';
-    Request.Execute;
-    // Manual JSON parsing
-    JSONArray := Response.JSONValue as TJSONArray;
-    for I := 0 to JSONArray.Count - 1 do
-    begin
-      // Manually extract each field and populate UI
-    end;
-  finally
-    Request.Free;
-    Response.Free;
-    Client.Free;
-  end;
-end;
-```
-
-### Feature Comparison
-
-| Capability | Tina4 Delphi | Raw FMX | TMS Web Core |
-|---|---|---|---|
-| REST calls | Design-time component | Manual code (3 objects) | TWebHttpRequest |
-| JSON to dataset | Automatic (TTina4JSONAdapter) | Manual parsing | Automatic via JS |
-| HTML/CSS in native app | TTina4HTMLRender on canvas | Not possible | Full browser (Chromium) |
-| Template generation | Twig templates | Not available | Not available |
-| WebSocket | Drop-in component | Manual implementation | Component available |
-| MCP / AI integration | Built-in MCP server | Not available | Not available |
-| Learning curve | Low (design-time) | Medium (manual wiring) | Medium (Pas2JS) |
-| Cost | Free | Included with Delphi | Commercial license |
-
-### Where Each Approach Excels
-
-**Raw FMX (TRESTClient)**: Ships with Delphi, no additional dependencies. Full control over every HTTP header and response. Best when you need precise control over REST communication and do not mind manual JSON parsing.
-
-**TMS Web Core**: Generates full browser-based web applications from Delphi code using Pas2JS. Visual designer. Best for teams that want to build web UIs in Delphi/Object Pascal instead of JavaScript.
-
-**Tina4 Delphi**: Reduces REST client boilerplate with auto MemTable population. Renders HTML/CSS inside native FMX forms. Twig templates for generating dynamic content. Built-in MCP server for Claude Code integration. Best for native Delphi apps that consume REST APIs, need to display HTML content on the FMX canvas, or want AI-assisted development with Claude Code.
-
-### When to Choose What
-
-Choose Tina4 Delphi when you build native Delphi apps. It populates datasets from REST APIs, renders HTML/CSS inside FMX forms, and offers MCP integration for AI-assisted development.
-
-Choose raw FMX when you need full control over HTTP communication with no additional dependencies.
-
-Choose TMS Web Core when you want to build browser-based web applications entirely in Object Pascal.
-
----
 
 ## AI-Assisted Development
 
