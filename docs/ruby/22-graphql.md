@@ -1006,7 +1006,7 @@ SOAP (Simple Object Access Protocol) is an XML-based messaging protocol for exch
 
 A WSDL (Web Services Description Language) file describes a SOAP service: what operations are available, what parameters they accept, and what they return. Clients use the WSDL to auto-generate code for calling the service.
 
-Tina4 includes a zero-dependency SOAP 1.1 server that generates WSDL definitions from Ruby classes and type annotations. No XML authoring required. It uses REXML (part of Ruby's standard library) for XML parsing.
+Tina4 includes a zero-dependency SOAP 1.1 server that generates WSDL definitions from Ruby classes and type annotations. No XML authoring required. It reads requests with its own small XML parser, which accepts UTF-8 only and has no DTD support, so a request can't smuggle in entity expansion or an external entity.
 
 ---
 

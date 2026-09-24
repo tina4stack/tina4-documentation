@@ -982,11 +982,13 @@ When `TINA4_WS_BACKPLANE` is set, every `broadcast()` call publishes the message
 
 ### Requirements
 
-The Redis backplane requires a Redis client package as an optional dependency:
+The Redis backplane talks through the `redis` package, which your app installs, not Tina4:
 
 ```bash
-npm install ioredis
+npm install redis
 ```
+
+If `TINA4_WS_BACKPLANE=redis` is set and the package isn't there, the backplane will refuse as it's built, before a single message is lost: `The 'redis' package is required for RedisBackplane. Install it with: npm install redis`. If the package is there but the Redis server isn't, the failed connect will be logged once and every `publish()` will reject, rather than taking the whole process down.
 
 If `TINA4_WS_BACKPLANE` is not set (the default), Tina4 broadcasts only to local connections. This is fine for single-instance deployments.
 
