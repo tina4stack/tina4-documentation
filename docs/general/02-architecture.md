@@ -56,7 +56,7 @@ The server accepts TCP connections and parses raw HTTP into structured data. Eac
 |----------|--------|
 | Python | asyncio / ASGI |
 | PHP | Built-in server / Swoole |
-| Ruby | WEBrick / Puma |
+| Ruby | Built-in (stdlib socket) / Puma if installed |
 | Node.js | `node:http` |
 
 You never touch this layer. Tina4 owns it. The server starts, listens, and hands off parsed requests. Your code lives further down the chain.

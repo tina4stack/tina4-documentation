@@ -1,0 +1,237 @@
+{
+  "_comment": [
+    "ADR-0069: identifiers that reach SQL come from the model, never the request.",
+    "",
+    "Three paths wrote a request-chosen identifier into SQL text: the AutoCrud list",
+    "route's ?filter[KEY] and ?sort= (PHP, Ruby, Node - Python's AutoCrud has no",
+    "filter or sort), ORM find() with a filter map (all four), and the DocStore",
+    "SQLite fallback's JSON field paths (all four). Values were always bound; the",
+    "column names and JSON paths were not.",
+    "",
+    "The contract: a name the model does not declare is refused BEFORE any SQL is",
+    "built - HTTP 400 with the standard error envelope on the AutoCrud route, an",
+    "invalid-argument error from find() and from the DocStore fallback. A declared",
+    "field (by its name or by its mapped column) keeps working, on every engine.",
+    "",
+    "NO MOCKS. AutoCrud cases drive a real server/dispatch over real SQLite, the",
+    "same pattern as autocrud_contract.json. The find() case runs on SQLite,",
+    "PostgreSQL, MySQL, MSSQL and Firebird on the lab. The DocStore Mongo case runs",
+    "the same data and queries through the fallback and a real MongoDB."
+  ],
+  "version": 1,
+  "decided": "2026-09-24",
+  "adr": "0069",
+  "invariants": [
+    {
+      "id": "autocrud-unknown-filter-field-is-400",
+      "adr": "0069",
+      "rule": "A ?filter[KEY] whose KEY is neither a declared field nor that field's mapped column returns HTTP 400 {\"error\": true, \"code\": \"UNKNOWN_FIELD\", \"message\": \"Unknown filter field 'KEY'\", \"status\": 400} before any query runs. That includes a real column the model does not declare, and a key that is not a plain word - neither is silently ignored.",
+      "why": "Measured on current code: PHP wrote any key into the WHERE clause, Ruby and Node took any word-character column (declared or not) and dropped anything else, so an unknown key filtered on an undeclared column, returned the whole table, or raised a driver error. Python has no filter parameter.",
+      "suites": {
+        "php": "tests/IdentifierAllowListContractTest.php",
+        "ruby": "spec/identifier_allow_list_contract_spec.rb",
+        "nodejs": "test/identifierAllowListContract.test.ts"
+      },
+      "cases": [
+        "unknown_filter_field_returns_400"
+      ]
+    },
+    {
+      "id": "autocrud-unknown-sort-field-is-400",
+      "adr": "0069",
+      "rule": "Every ?sort= part (comma-separated, empty parts skipped, optional leading '-' for DESC) must resolve to a declared field or its mapped column, otherwise HTTP 400 {\"error\": true, \"code\": \"UNKNOWN_FIELD\", \"message\": \"Unknown sort field 'KEY'\", \"status\": 400} where KEY is the trimmed part without its '-'. The ORDER BY is built only from resolved columns and the literal words ASC and DESC.",
+      "why": "Measured on current code: all three wrote the sort text into ORDER BY (Node inside unescaped double quotes). PHP also ignored ?sort= when no filter was given; it now sorts either way.",
+      "suites": {
+        "php": "tests/IdentifierAllowListContractTest.php",
+        "ruby": "spec/identifier_allow_list_contract_spec.rb",
+        "nodejs": "test/identifierAllowListContract.test.ts"
+      },
+      "cases": [
+        "unknown_sort_field_returns_400"
+      ]
+    },
+    {
+      "id": "autocrud-declared-filter-and-sort-still-work",
+      "adr": "0069",
+      "rule": "A declared field filters and sorts as before - by its field name and by its mapped column name, DESC via '-', multi-field sort, and sort without a filter.",
+      "why": "The allow-list must not cost a legitimate query anything; the positive half is what stops the fix from being a blanket 400.",
+      "suites": {
+        "php": "tests/IdentifierAllowListContractTest.php",
+        "ruby": "spec/identifier_allow_list_contract_spec.rb",
+        "nodejs": "test/identifierAllowListContract.test.ts"
+      },
+      "cases": [
+        "declared_filter_and_sort_still_work"
+      ]
+    },
+    {
+      "id": "autocrud-odd-typed-query-values-are-400",
+      "adr": "0069",
+      "rule": "A sort that is not one string (?sort[]=x) and a filter value that is a list or nested map (filter[name][]=1, filter[name][x]=1) return HTTP 400 {\"error\": true, \"code\": \"INVALID_QUERY_PARAMETER\", ...} - never a 500 and never an array bound into the driver. Node's filter[KEY][OP] stays valid for a known operator; an unknown operator is the same 400.",
+      "why": "Measured on current code: PHP answered ?sort[]=x with a 500 and passed an array filter value to the driver; Node silently ignored an unknown operator and returned an unfiltered list.",
+      "suites": {
+        "php": "tests/IdentifierAllowListContractTest.php",
+        "ruby": "spec/identifier_allow_list_contract_spec.rb",
+        "nodejs": "test/identifierAllowListContract.test.ts"
+      },
+      "cases": [
+        "odd_typed_query_values_return_400"
+      ]
+    },
+    {
+      "id": "orm-find-rejects-undeclared-filter-key",
+      "adr": "0069",
+      "rule": "find() with a filter map raises the language's invalid-argument error ('Unknown filter field 'KEY' for model <Name>') for a key that is neither a declared field nor its mapped column, before any SQL. A declared or mapped key still finds its rows. where(), load(filter_sql), select(), the query builder and the raw order_by string are unchanged.",
+      "why": "Defence in depth: the AutoCrud route refuses first, and application code that passes a request's keys to find() is refused too. Run on SQLite, PostgreSQL, MySQL, MSSQL and Firebird so the resolved column is proven against each engine's case folding.",
+      "suites": {
+        "python": "tests/test_identifier_allow_list_contract.py",
+        "php": "tests/IdentifierAllowListContractTest.php",
+        "ruby": "spec/identifier_allow_list_contract_spec.rb",
+        "nodejs": "test/identifierAllowListContract.test.ts"
+      },
+      "cases": [
+        "orm_find_rejects_undeclared_filter_key"
+      ]
+    },
+    {
+      "id": "docstore-fallback-rejects-unsafe-field-path",
+      "adr": "0069",
+      "rule": "Every field path the SQLite fallback turns into SQL (filter keys at any depth incl. $or/$and, operator fields, sort keys) is split on '.' and each segment must match ^[A-Za-z0-9_-]+$, otherwise it raises 'DocStore: invalid field path 'KEY' - each dot-separated segment must match [A-Za-z0-9_-]+' before any SQL.",
+      "why": "Measured on current code: a filter or sort key was written into a single-quoted json_extract path literal in all four fallbacks. Operators were already allow-listed; keys were not.",
+      "suites": {
+        "python": "tests/test_identifier_allow_list_contract.py",
+        "php": "tests/IdentifierAllowListContractTest.php",
+        "ruby": "spec/identifier_allow_list_contract_spec.rb",
+        "nodejs": "test/identifierAllowListContract.test.ts"
+      },
+      "cases": [
+        "docstore_rejects_unsafe_field_path",
+        "docstore_accepts_safe_field_paths"
+      ]
+    },
+    {
+      "id": "docstore-accepted-paths-match-on-real-mongo",
+      "adr": "0069",
+      "rule": "Every key shape the fallback accepts (a_b, a-b, A1, nested.key, _id) returns the same documents on the fallback and on a real MongoDB for the same data and query. A key the fallback refuses raises there rather than returning a different answer (ADR-0025 corollary 4). The driver collection is not wrapped (ADR-0025).",
+      "why": "The allow-list must not break the swap DocStore sells: a query written against the fallback must keep meaning the same thing on MongoDB.",
+      "suites": {
+        "python": "tests/test_identifier_allow_list_contract.py",
+        "php": "tests/IdentifierAllowListContractTest.php",
+        "ruby": "spec/identifier_allow_list_contract_spec.rb",
+        "nodejs": "test/identifierAllowListContract.test.ts"
+      },
+      "cases": [
+        "docstore_safe_paths_match_on_real_mongo"
+      ]
+    },
+    {
+      "id": "autocrud-id-route-binds-the-primary-key",
+      "adr": "0069",
+      "rule": "GET/PUT/DELETE /api/{table}/{id} address exactly the row whose primary key equals the URL id, bound as a value; an id matching no row is 404 and changes nothing. The same holds for the id argument of a GraphQL schema generated from an ORM model (single-row query, update and delete mutations).",
+      "why": "Measured on current PHP code: the id reached ORM::load() as a raw WHERE fragment, so a PUT to one id updated a different row. Python, Ruby and Node already bound it; they carry the same case as a lock-in.",
+      "suites": {
+        "python": "tests/test_autocrud_write_keys_and_ids.py",
+        "php": "tests/IdentifierAllowListContractTest.php",
+        "ruby": "spec/identifier_allow_list_contract_spec.rb",
+        "nodejs": "test/idArgumentLockIn.test.ts"
+      },
+      "cases": [
+        "autocrud_id_route_addresses_only_that_row",
+        "graphql_id_argument_addresses_only_that_row"
+      ]
+    },
+    {
+      "adr": "0069",
+      "why": "The read path was closed first; the write path had the same shape - request or caller keys became column names in INSERT/UPDATE/DELETE text (PHP used a deny-list, Python's quote_identifier passed non-identifiers through raw, Node's double-quoting did not escape).",
+      "id": "autocrud-write-body-accepts-only-declared-fields",
+      "rule": "An AutoCrud POST/PUT body writes only declared fields, accepted by field name or mapped column; any other key is dropped (CRUD-DEC-02: writes drop, reads refuse). is_deleted and the primary-key strip rules are unchanged.",
+      "suites": {
+        "python": "tests/test_autocrud_write_keys_and_ids.py",
+        "php": "tests/IdentifierAllowListContractTest.php",
+        "ruby": "spec/identifier_allow_list_contract_spec.rb",
+        "nodejs": "test/identifierAllowListContract.test.ts"
+      },
+      "cases": [
+        "autocrud_write_body_accepts_only_declared_fields"
+      ]
+    },
+    {
+      "adr": "0069",
+      "why": "The read path was closed first; the write path had the same shape - request or caller keys became column names in INSERT/UPDATE/DELETE text (PHP used a deny-list, Python's quote_identifier passed non-identifiers through raw, Node's double-quoting did not escape).",
+      "id": "orm-save-writes-only-declared-fields",
+      "rule": "save() writes only the model's declared fields; a PHP property the model does not declare reaches the column list only when the model declares no fields and the name is a real column of its table.",
+      "suites": {
+        "python": "tests/test_identifier_allow_list_contract.py",
+        "php": "tests/IdentifierAllowListContractTest.php",
+        "ruby": "spec/identifier_allow_list_contract_spec.rb",
+        "nodejs": "test/identifierAllowListContract.test.ts"
+      },
+      "cases": [
+        "orm_save_writes_only_declared_fields"
+      ]
+    },
+    {
+      "adr": "0069",
+      "why": "The read path was closed first; the write path had the same shape - request or caller keys became column names in INSERT/UPDATE/DELETE text (PHP used a deny-list, Python's quote_identifier passed non-identifiers through raw, Node's double-quoting did not escape).",
+      "id": "db-write-helpers-reject-non-identifier-keys",
+      "rule": "The database write helpers (insert, update, delete and their batch forms) raise 'Invalid column name 'KEY'' for a data or filter-map key that is not ^[A-Za-z_][A-Za-z0-9_$]*$, before any SQL. Valid names are written exactly as before.",
+      "suites": {
+        "python": "tests/test_identifier_allow_list_contract.py",
+        "php": "tests/IdentifierAllowListContractTest.php",
+        "ruby": "spec/identifier_allow_list_contract_spec.rb",
+        "nodejs": "test/identifierAllowListContract.test.ts"
+      },
+      "cases": [
+        "db_write_helpers_reject_non_identifier_keys"
+      ]
+    },
+    {
+      "id": "autocrud-uses-the-registered-connection",
+      "adr": "0069",
+      "rule": "The AutoCrud handlers query through the connection the model or AutoCrud was registered with, never a global default.",
+      "why": "Measured on current PHP code: the list called the static find()/all() on the global database instead of the connection AutoCrud was constructed with.",
+      "suites": {
+        "python": "tests/test_autocrud_registered_connection.py",
+        "php": "tests/IdentifierAllowListContractTest.php",
+        "ruby": "spec/identifier_allow_list_contract_spec.rb",
+        "nodejs": "test/identifierAllowListContract.test.ts"
+      },
+      "cases": [
+        "autocrud_list_uses_the_registered_connection"
+      ]
+    },
+    {
+      "id": "graphql-commas-are-insignificant",
+      "adr": "0069",
+      "rule": "The GraphQL parser treats commas as insignificant (GraphQL spec 2.1.7): comma-separated arguments, fields and list values parse and resolve.",
+      "why": "Found while locking in the generated GraphQL id argument: Ruby, PHP, Python and Node each rejected comma-separated fields or list values as a parse error.",
+      "suites": {
+        "python": "tests/test_graphql_commas.py",
+        "php": "tests/GraphQLV3Test.php",
+        "ruby": "spec/graphql_spec.rb",
+        "nodejs": "test/graphqlCommas.test.ts"
+      },
+      "cases": [
+        "commas_are_insignificant_between_arguments_and_fields"
+      ]
+    },
+    {
+      "id": "require-services-gate-excuses-only-tagged-skips",
+      "adr": "0069",
+      "rule": "Under TINA4_REQUIRE_SERVICES=1 a skip passes only if its reason carries [needs:X] and X is excusable: an optional engine only while its coordinate env var is unset (firebird TINA4_TEST_FIREBIRD_URL, postgres TINA4_TEST_PG_URL only, mysql, mssql, swoole, oidc, postgis, the graph engines), an always-provisioned service (mongo, redis, valkey, memcached, rabbitmq, kafka, mqtt, smtp, imap, s3) never, any other tag (a platform limit) always. An untagged skip fails.",
+      "why": "The contract tests prove nothing if they skip. The old gates matched phrases, so a reason worded 'no reachable ...' or '... unavailable' skipped green. The first CI run with the tag rule found two ghost PostGIS suites (PHP, Ruby) that had never run in CI.",
+      "suites": {
+        "python": "tests/test_require_services_gate.py",
+        "php": "tests/RequireServicesGateTest.php",
+        "ruby": "spec/require_services_gate_spec.rb",
+        "nodejs": "test/serviceGateContract.test.ts"
+      },
+      "cases": [
+        "an_untagged_skip_fails_under_the_gate",
+        "an_optional_engine_is_excused_only_while_its_coordinate_is_unset",
+        "an_always_provisioned_service_is_never_excused",
+        "a_platform_tag_is_always_excused"
+      ]
+    }
+  ]
+}

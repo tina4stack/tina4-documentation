@@ -17,7 +17,7 @@ one fact decides most of your deployment.
 |----------|-------------|-------------|
 | Python | asyncio, plus an ASGI entry point | One event loop, or workers under uvicorn / gunicorn / granian |
 | PHP | Tina4's own accept loop, php-fpm, or openswoole | Your choice, see below |
-| Ruby | WEBrick | Threads |
+| Ruby | Tina4's own server (stdlib socket), or Puma if installed | Threads |
 | Node.js | Native `node:http` | One event loop |
 
 Python, Ruby and Node have one sensible answer each, and `tina4 deploy docker`
@@ -233,8 +233,8 @@ PHP gets its own section because you choose its process model. Node and Ruby do
 not offer that choice, but they behave differently under load and the difference
 decides how you write handlers.
 
-Ruby's WEBrick serves each request on its own thread. A slow handler occupies
-its thread and nothing else. That is the model most people expect.
+Ruby's built-in server serves each connection on its own thread. A slow handler
+occupies its thread and nothing else. That is the model most people expect.
 
 Node serves every request on ONE event loop, and that changes what "slow" means.
 A handler that awaits gives the loop back while it waits, so it blocks nobody.
@@ -325,11 +325,16 @@ host used to hang the application with no error and no ceiling. When the timeout
 expires the message names the host, the port, the seconds elapsed and the
 variable, so you can act on it without reading a stack trace.
 
+<<<<<<< HEAD
 ### Limits that bound a hostile request, PHP and Python built-in servers
+=======
+### Limits that bound a hostile request, PHP and Ruby
+>>>>>>> origin/main
 
 ```bash
 TINA4_REQUEST_TIMEOUT=30             # seconds of client silence; 0 disables
 TINA4_MAX_REQUEST_HEADER=65536       # bytes; answers 431 past this
+<<<<<<< HEAD
 TINA4_MAX_UPLOAD_SIZE=10485760       # bytes; answers 413 past this
 TINA4_MAX_REQUEST_BODY=10485760      # PHP only: an extra ceiling on the declared length
 ```
@@ -350,6 +355,21 @@ it at the cap however the client framed or under-declared it. A
 `Content-Length` that isn't a plain number gets 400, and a client that goes
 quiet halfway through a request gets 408. The server hands back the answer and
 closes, and the next connection won't notice a thing.
+=======
+TINA4_MAX_REQUEST_BODY=10485760      # bytes; answers 413 past this (PHP only)
+```
+
+These exist in PHP and Ruby because their built-in servers parse HTTP
+themselves, on a raw socket, with no server underneath to inherit limits from.
+Both refuse a declared body over `TINA4_MAX_UPLOAD_SIZE` before reading a byte
+of it (ADR-0068). Python bounds its header read at 30 seconds and 64KB through
+asyncio, and Node inherits `node:http` defaults of 60 seconds for headers and
+16KB per header block.
+
+So Python and Node are bounded too. They are just not bounded by a Tina4
+variable you can tune. If you need a specific ceiling on those two, set it on
+the server in front of them.
+>>>>>>> origin/main
 
 The header cap matches what nginx and Apache allow. See ADR-0068 for the exact
 status codes and bodies.

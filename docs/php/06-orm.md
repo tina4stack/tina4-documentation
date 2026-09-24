@@ -990,7 +990,12 @@ The `-` prefix on a sort field means descending order.
 
 ### Custom Routes Alongside Auto-CRUD
 
-Custom routes defined in `src/routes/` load before auto-CRUD routes. They take precedence. If you need special logic for one endpoint (custom validation, side effects, complex queries), define that route manually. Auto-CRUD handles the rest.
+If you need special logic for one endpoint (custom validation, side effects, complex queries), define that route yourself and let Auto-CRUD handle the rest. Don't count on load order to settle which one answers, because the router follows two rules:
+
+- Registering the **same method and the same path string** again replaces the earlier route, so whichever registers last wins.
+- A **different pattern** for the same URL (`/api/notes/{id:int}` against Auto-CRUD's `/api/notes/{id}`) replaces nothing. Both stay registered, and the one registered first answers.
+
+The dependable choice is a path of its own for the custom route, or leaving `$autoCrud` off for that model and writing its routes yourself.
 
 ### Introspection
 
@@ -1547,13 +1552,13 @@ Router::post("/api/posts/{id}/comments", function (Request $request, Response $r
 
 **Fix:** Build the response array manually, omitting sensitive fields: `["id" => $user->id, "name" => $user->name, "email" => $user->email]`. Or create a helper method on your model class that returns only safe fields.
 
-### 6. Validation only runs on validate()
+### 6. save() returns false on invalid data
 
-**Problem:** You call `save()` without calling `validate()` first, and invalid data gets into the database.
+**Problem:** `save()` returns `false` and the row never reaches the database, but nothing threw.
 
-**Cause:** `save()` does not validate. This is by design -- sometimes you need to save partial data or bypass validation for bulk operations.
+**Cause:** `save()` runs `validate()` first. If any field fails its rules, it refuses the write, logs the reason, and returns `false` instead of throwing. The same happens when the database rejects the write (a missing table, a `NOT NULL` column).
 
-**Fix:** Call `$errors = $model->validate()` before `save()` in your route handlers.
+**Fix:** Check the return value. `$model->getError()` holds the reason. In a route handler, call `$errors = $model->validate()` before `save()` when you want to send the field errors back to the client as a `400`.
 
 ### 7. Soft delete column is is_deleted, not deleted_at
 
@@ -1575,9 +1580,9 @@ Router::post("/api/posts/{id}/comments", function (Request $request, Response $r
 
 **Problem:** Custom route at `/api/notes/{id}` stops working after registering Auto-CRUD for the Note model.
 
-**Cause:** Both routes match the same path. The first registered route wins.
+**Cause:** Both routes answer the same URL. With the identical path the route registered last replaces the other. With different patterns the route registered first answers.
 
-**Fix:** Custom routes in `src/routes/` load before Auto-CRUD routes. They take precedence. If you want different behaviour, use a different path for the custom route.
+**Fix:** Give the custom route a path of its own, or leave `$autoCrud` off for that model and write all its routes yourself.
 
 ### 10. Soft-deleted records appearing in queries
 

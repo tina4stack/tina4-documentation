@@ -3,7 +3,11 @@
 > The living index that ties every audited feature to its machine-checked
 > contract, its decisions, and its proven-in-all-four status. This is the
 > backbone of a future formal Tina4 language specification.
+<<<<<<< HEAD
 > **Last synced:** 2026-09-24 (ADR-0068 HTTP hardening fixture added, Python proven; Feature 139 graph databases promoted to PROVEN, ships 3.13.111; Feature 138 RBAC promoted to PROVEN)
+=======
+> **Last synced:** 2026-09-24 (ADR-0069 identifier allow-list fixture added, 14 invariants proven; totals re-read from the auditor)
+>>>>>>> origin/main
 
 > **Adversarial re-audit started 2026-08-08:** a zero-skip live-lab migration
 > baseline still omitted contradictory public paths (generated code migration
@@ -92,7 +96,7 @@ Re-run it and re-sync this table whenever a fixture changes.
 | Swagger / OpenAPI | 45 | `swagger_contract.json` | 13 | 13 | 0 | 0004, 0041 | yes (added 2026-08-07; +3 2026-08-13: node boot-snapshot + shared /__feedback exclusion rule + gated 401/summary/tags/description shape, SWAG-DEC-01/02) |
 | DocStore | 95 | `docstore_contract.json` | 9 | 9 | 0 | 0024, 0025, 0035, 0036 | yes |
 | tina4-css | 62 | `tina4css_contract.json` | 1 | 1 | 0 | 0004 | yes |
-| Messenger | 88 | `messenger_contract.json` | 14 | 14 | 0 | 0004, 0041, 0042 | yes (real GreenMail) |
+| Messenger | 88 | `messenger_contract.json` | 17 | 14 | 3 | 0004, 0041, 0042, 0071 | yes (real GreenMail); the 3 ADR-0071 mail-encryption invariants are owed until the Python/PHP/Node follow-up PRs land |
 | Paginated results | 24 | `pagination_contract.json` | 8 | 8 | 0 | 0043, PAGE-DEC-01 | yes (real 250-row SQLite; incl. the AutoCrud REST endpoint; PAGE-DEC-01 2026-08-12: page<1 clamped to page 1 in Python/Ruby/Node - PHP already correct, verified not fixed - so offset=(page-1)*per_page is never negative (was a real PostgreSQL :55432 "OFFSET must not be negative" driver error, and a silent page:0 envelope on SQLite); an oversized ?limit=/?per_page= is capped at 100 (MAX_PER_PAGE in Python/PHP/Ruby, Node's own DEFAULT_ROW_CAP reused) in all four - re-measured while implementing, the cap gap was NOT Node-only as first suspected; Node also dropped its duplicate envelope-side limit/offset/page recomputation (buildQuery now returns the exact clamped values it used); real SQLite + real PostgreSQL :55432 tina4/tina4, mutation-proved: revert the clamp -> the postgres case reproduces the real negative-offset driver error; revert the cap -> the oversized-limit case echoes the requested value) |
 | Dev admin dashboard | 127 | `devadmin_contract.json` | 6 | 6 | 0 | DEVADMIN-DEC-01..06 | yes (real-dispatch, no mocks; 2026-08-11) |
 | Static assets | 41 | `static_contract.json` | 5 | 5 | 0 | 0050, ST-DEC-01 | yes (real symlinks + temp dirs; 2026-08-11) |
@@ -138,8 +142,13 @@ Re-run it and re-sync this table whenever a fixture changes.
 | GIS spatial points and queries | 137 | `gis_contract.json` | 12 | 0 | 12 | 0057 | implementation and focused real-PostGIS suites are green in all four; invariant promotion waits for every named case and mutation witness |
 | RBAC role/permission guards | 138 | `rbac_contract.json` | 8 | 8 | 0 | 0058 | **PROVEN all four (shipped 3.13.107).** role()/can() claim-first guards; audit-contract-fixtures.py verifies every case name across tests/test_rbac.py, tests/RbacTest.php, spec/rbac_spec.rb, test/rbac.test.ts (real tokens, real dispatch, no mocks) |
 | Graph databases (multi-engine) | 139 | `graph_contract.json` | 11 | 11 | 0 | 0059 | PROVEN in all four (ships 3.13.111). Database-shaped `GraphDatabase.create(url)`/`fromEnv()`: URL-selected adapters (`ultipa://` -> Ultipa/GQL, `neo4j://`/`bolt://`/`memgraph://` -> Bolt/Cypher one adapter, `arango://`/`arangodb://` -> Arango/AQL; default ports 60061/7687/8529), portable addNode/addEdge/getNode/updateNode/deleteNode/neighbors/traverse core plus raw `query()`/`execute()` in the native dialect, neutral GraphNode/GraphEdge/GraphResult, optional lazy-loaded drivers (tina4stack/tina4-ultipa; neo4j / neo4j-driver / laudis; python-arango / arangojs / triagens; Bolt+Arango zero-dep in Ruby), `TINA4_GRAPH_URL` + `TINA4_GRAPH_USERNAME`/`_PASSWORD` + `TINA4_GRAPH_CONNECT_TIMEOUT`. 11 invariants proven per-engine against Ultipa + Neo4j + Memgraph + ArangoDB on the lab, NO mocks; suites `tests/test_graph.py`, `tests/GraphTest.php`, `spec/graph_spec.rb`, `test/graph.test.ts`. `graph-driver-optional` runs driver-free |
+<<<<<<< HEAD
 | HTTP hardening (header CR/LF/NUL refusal + body cap before read) | 30 / 44 | `http_hardening_contract.json` | 8 | 8 | 0 | 0068 | Python carries all 8 (real child servers over real loopback sockets, the built-in server and uvicorn, RSS read from the OS; every guard mutation-proved). PHP (tina4-php#217), Ruby (tina4-ruby#50, merged) and Node (tina4-nodejs#69) carry the six shared invariants. The duplicate-Content-Length ruling added one case, `two content length headers answer 400 even when they agree`, which the PHP, Ruby and Node suites still need: the auditor reports those 3 as broken until they add it. Keep-alive/HEAD and ASGI-path invariants are Python-only |
 **Totals: 354 invariants, 326 proven, 28 owed** (2026-09-24, auditor output against the ADR-0068 PR branches; 3 `http_hardening` case names pending in PHP/Ruby/Node; 3 cases broken in `api_stream_contract.json` against Ruby `origin/v3`, pre-existing), 63 fixtures. Proven
+=======
+| Identifier allow-list (AutoCrud filter/sort/ids/write bodies, ORM find/save, DB write helpers, DocStore paths, test gate) | 27, 17, 95 | `identifier_allowlist_contract.json` | 14 | 14 | 0 | 0069 | yes (real server/dispatch over real SQLite for the AutoCrud cases; ORM and write-helper cases on SQLite, PostgreSQL, MySQL, MSSQL and Firebird; DocStore parity against a real MongoDB; red on origin/v3 and mutation-proved in all four, 2026-09-24. Python has no AutoCrud filter/sort, so the four list-query invariants name PHP, Ruby and Node only.) |
+**Totals: 360 invariants, 332 proven, 28 owed** (2026-09-24, from `audit-contract-fixtures.py`), 63 fixtures. Proven
+>>>>>>> origin/main
 subsystems remain held to their contract four-way. Logger (feature 2) closed
 2026-08-13 -- all 8 invariant groups / 59 shared cases now proven four-way,
 real runners, no mocks (see row above for the framework fixes this pass found).

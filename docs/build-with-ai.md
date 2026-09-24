@@ -17,11 +17,10 @@ you watch the endpoint go from 404 to 200 without a restart.
 2. Open the dev admin at `/__dev` on your running app, for example
    `http://localhost:7146/__dev`.
 
-3. Add your Tina4 MCP key. Click the key icon in the **Threads** panel, paste
-   your key, and press **Save**. Get a free key from your account at
-   [profile.tina4.com](https://profile.tina4.com). The key saves to your project `.env`
-   as `TINA4_MCP_TOKEN` and takes effect on the next turn, no restart. The
-   panel shows a green **Configured** status once it lands.
+3. If you have a Tina4 MCP key, add it. Click the key icon in the **Threads**
+   panel, paste your key, and press **Save**. The key saves to your project
+   `.env` as `TINA4_MCP_TOKEN` and takes effect on the next turn, no restart.
+   The panel shows a green **Configured** status once it lands.
 
    ![The Framework grounding panel: a field to paste your TINA4_MCP_TOKEN, a Save button, and a green Configured status](/images/get-started/dev-admin-grounding.png){width=340}
 
