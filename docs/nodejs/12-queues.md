@@ -374,11 +374,13 @@ TINA4_MONGO_USERNAME=              # optional
 TINA4_MONGO_PASSWORD=              # optional
 ```
 
-Install the MongoDB driver:
+Install the MongoDB driver. Tina4 doesn't bring it along, your app does:
 
 ```bash
 npm install mongodb
 ```
+
+If `TINA4_QUEUE_BACKEND=mongodb` is set without it, `new Queue()` will throw straight away with `Install it with: npm install mongodb`, so a job never gets pushed into a queue that can't hold it.
 
 Your code stays identical. Same `queue.push()` and `queue.consume()` calls. The backend is an implementation detail.
 

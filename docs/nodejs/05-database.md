@@ -45,7 +45,32 @@ TINA4_DATABASE_URL=mssql://localhost:1433/myapp
 TINA4_DATABASE_URL=firebird://localhost:3050/path/to/database.fdb
 ```
 
-The Firebird adapter requires the `node-firebird` package (`npm install node-firebird`). SQL dialect differences are handled automatically: `LIMIT`/`OFFSET` is translated to `ROWS X TO Y`, boolean values are converted to integers, and `ILIKE` is converted to `LOWER() LIKE LOWER()`.
+### Drivers
+
+`npm install tina4-nodejs` installs one package and nothing else. SQLite needs nothing more, every other engine talks through a driver your app installs for itself:
+
+| Engine | Install |
+|--------|---------|
+| PostgreSQL | `npm install pg` |
+| MySQL / MariaDB | `npm install mysql2` |
+| Microsoft SQL Server | `npm install tedious` |
+| Firebird | `npm install node-firebird` |
+| ODBC | `npm install odbc` |
+| MongoDB | `npm install mongodb` |
+
+If `TINA4_DATABASE_URL` points at PostgreSQL before `pg` is in `node_modules`, the adapter will refuse on its first connect and tell you what to run:
+
+```
+PostgreSQL adapter requires the "pg" package. Install one of:
+    npm install pg
+    yarn add pg
+    pnpm add pg
+    bun add pg
+```
+
+Install it, restart, and the same URL connects. The other engines refuse the same way, each naming its own package.
+
+Firebird SQL dialect differences are handled automatically: `LIMIT`/`OFFSET` is translated to `ROWS X TO Y`, boolean values are converted to integers, and `ILIKE` is converted to `LOWER() LIKE LOWER()`.
 
 ### Firebird URL Forms
 
