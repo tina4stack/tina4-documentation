@@ -41,7 +41,6 @@ hero:
     <input class="tp-ask-hero-input" type="search" name="q" aria-label="Ask Tina4" placeholder="Ask Tina4: how do I define a route?">
     <button class="tp-ask-hero-go" type="submit">Ask Tina4</button>
   </form>
-  <a class="tp-cta tp-ask-hero-cta" href="https://profile.tina4.com">Register Now</a>
 </div>
 
 <div class="tp-ask-pills"></div>
@@ -50,7 +49,7 @@ hero:
 
 <script src="/ask-hero.js" defer></script>
 
-## Install and register
+## Install
 
 ::: tabs
 == macOS / Linux
@@ -63,12 +62,6 @@ tina4 setup
 irm https://tina4.com/install.ps1 | iex
 tina4 setup
 ```
-:::
-
-::: tip Save your paid tokens for the hard parts
-Let Tina4's own AI coder handle the boilerplate. Register for a free profile to get started.
-
-<a class="tp-cta" href="https://profile.tina4.com">Register Now →</a>
 :::
 
 ::: tip Review your code with the Tina4 Code Viewer
