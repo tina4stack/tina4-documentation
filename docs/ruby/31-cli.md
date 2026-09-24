@@ -117,9 +117,24 @@ tina4 serve
 
 ```bash
 tina4 serve --port 8080        # Custom port
+tina4 serve -p 8080            # Same thing, short form
 tina4 serve --host 127.0.0.1   # Bind to localhost only
-tina4 serve --production       # Production mode (no live reload, debug off)
+tina4 serve --no-browser       # Don't open a browser tab on startup
+tina4 serve --no-reload        # Don't reload the browser when files change
+tina4 serve --dev              # Force the dev server even if a production server is installed
+tina4 serve --production       # Production server, debug off, no live reload
 ```
+
+### Serving a Project by Name
+
+You don't have to `cd` into a project first. Pass its folder name and the CLI will find it, change into it, and serve it:
+
+```bash
+tina4 serve my-app             # ./my-app, or my-app in your projects folder
+tina4 serve my-app -p 7150     # Options still apply
+```
+
+The CLI looks for `./my-app` in the current folder first, then in the projects folder `tina4 setup` recorded. If neither has it, it stops with `Project 'my-app' not found` and names the folder it searched. Run a bare `tina4 serve` outside any project and it will look in the projects folder too: one project there gets served, and several get listed so you can pick one by name.
 
 ### Bypassing the CLI
 
@@ -633,11 +648,15 @@ tina4 deploy:nginx                   # Generate Nginx config
 
 ## 16. Environment-Specific Commands
 
+The CLI has no `--env` flag. Tina4 Ruby picks the environment file itself when it loads, so you choose it with an environment variable in front of the command:
+
 ```bash
-tina4 serve --env production         # Use .env.production
-tina4 migrate --env test             # Run migrations on test database
-tina4 test --env test                # Run tests with test environment
+ENVIRONMENT=production tina4 serve       # Loads .env.production (falls back to .env if it's missing)
+ENVIRONMENT=test tina4 migrate           # Runs migrations against the settings in .env.test
+TINA4_ENV_FILE=.env.staging tina4 serve  # Loads exactly this file
 ```
+
+`TINA4_ENV_FILE` wins over `ENVIRONMENT`. A variable already set in the real process environment is never overwritten by any of these files.
 
 ---
 
