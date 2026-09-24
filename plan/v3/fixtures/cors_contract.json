@@ -1,0 +1,130 @@
+{
+  "_comment": [
+    "CORS. ADR-0018 (deny by default), ADR-0048 (bounded diagnostics, wildcard",
+    "with credentials), ADR-0066 (same-origin clarification, no '*' advice).",
+    "",
+    "ADR-0048 said CORS would be 'gated by cors_contract.json and four thin",
+    "runners'. That file never existed. This is it, written from the behaviour",
+    "the four frameworks ship after tina4-python #139, with the ADR-0048 clauses",
+    "that are still not built listed as OWED rather than quietly dropped.",
+    "",
+    "What a same-origin request is: the request's Origin header, normalised to",
+    "scheme://host[:port] with the default port dropped, equals the request's own",
+    "origin (its scheme - x-forwarded-proto aware, the same detector the session",
+    "cookie trusts - and its Host). Browsers send Origin on every same-origin",
+    "POST, PUT, PATCH and DELETE, so the header's presence alone never makes a",
+    "request cross-origin.",
+    "",
+    "Being same-origin only silences the warning. It never adds an",
+    "Access-Control-* header and never grants anything a cross-origin caller",
+    "would not get: the browser needs no CORS header to read its own origin's",
+    "response.",
+    "",
+    "Warnings are keyed by REASON (unconfigured, denied, wildcard_credentials),",
+    "never by origin, so a scripted probe sending a thousand invented Origin",
+    "headers produces one line per reason and grows no ledger. The first line",
+    "still names the origin that triggered it, and suggests adding THAT origin -",
+    "never '*', which would open the API to every website to silence one warning.",
+    "",
+    "Every case runs through the framework's real request pipeline with the",
+    "framework's real logger captured, no mocks: Python server.handle / TestClient,",
+    "PHP Router::dispatch / TestClient, Ruby RackApp#call / TestClient, Node a",
+    "real startServer() or TestClient over the real dispatch.",
+    "",
+    "Each proven invariant names a suite per framework and case names that the",
+    "four suites carry in their own idiom; scripts/audit-contract-fixtures.py",
+    "normalises and matches them."
+  ],
+  "version": 1,
+  "decided": "2026-09-24",
+  "feature": "34 - CORS middleware (tina4-python #139)",
+  "invariants": [
+    {
+      "id": "cors-deny-by-default",
+      "adr": "ADR-0018",
+      "rule": "With no TINA4_CORS_ORIGINS configured, a cross-origin request gets no Access-Control-Allow-Origin header. With TINA4_CORS_ORIGINS listing https://allowed.example, a request from https://other.example gets no Access-Control-Allow-Origin header, and a request from https://allowed.example gets Access-Control-Allow-Origin: https://allowed.example.",
+      "why": "Deny by default is the ADR-0018 baseline that ADR-0048 and ADR-0066 build on. Proving it in the same suite keeps a later change to the warning path from quietly opening the gate.",
+      "suites": {
+        "python": "tests/test_cors_contract.py",
+        "php": "tests/CorsContractTest.php",
+        "ruby": "spec/cors_contract_spec.rb",
+        "nodejs": "test/corsContract.test.ts"
+      },
+      "cases": [
+        "a cross origin request is denied by default",
+        "only a listed origin is granted"
+      ]
+    },
+    {
+      "id": "cors-same-origin-is-not-a-cors-event",
+      "adr": "ADR-0066",
+      "rule": "A request whose Origin equals its own origin (scheme and host, default port dropped) produces no CORS warning and no Access-Control-* header - both with no policy configured and with a policy that lists only some other origin. A request whose Origin differs only by port or scheme is cross-origin.",
+      "why": "Issue #139: the unconfigured-CORS warning fired on an app's own single-page front end saving a form, because the check was 'Origin is present' instead of 'Origin is foreign'. The fix must silence the warning without turning same-origin into a grant.",
+      "suites": {
+        "python": "tests/test_cors_contract.py",
+        "php": "tests/CorsContractTest.php",
+        "ruby": "spec/cors_contract_spec.rb",
+        "nodejs": "test/corsContract.test.ts"
+      },
+      "cases": [
+        "a same origin request is neither warned about nor granted",
+        "a different port or scheme is cross origin"
+      ]
+    },
+    {
+      "id": "cors-warning-never-advises-wildcard",
+      "adr": "ADR-0066",
+      "rule": "The warning for a refused cross-origin request (unconfigured and denied) names the refused origin, tells the operator how to add THAT origin to TINA4_CORS_ORIGINS, and contains no '*'.",
+      "why": "The old unconfigured warning ended with \"or '*' to allow any origin\". An operator silencing one warning would open the API to every website. The advice has to fit the problem: one origin, added by name.",
+      "suites": {
+        "python": "tests/test_cors_contract.py",
+        "php": "tests/CorsContractTest.php",
+        "ruby": "spec/cors_contract_spec.rb",
+        "nodejs": "test/corsContract.test.ts"
+      },
+      "cases": [
+        "a refused origin warning names the origin and never advises a wildcard"
+      ]
+    },
+    {
+      "id": "cors-diagnostics-bounded-by-reason",
+      "adr": "ADR-0048",
+      "rule": "Refusing many distinct cross-origin requests for the same reason logs exactly one warning for that reason per process, and no per-origin state is retained: the set of remembered warning keys holds reasons only, never an origin. PHP proves this in one serving process (TINA4_SERVE_FORK=false); see cors-reason-ledger-survives-php-request-forks.",
+      "why": "The warn-once ledger was keyed by origin, so every attacker-chosen Origin header added an entry that was never freed and another log line. ADR-0048 requires bounded diagnostics with no per-origin ledger.",
+      "suites": {
+        "python": "tests/test_cors_contract.py",
+        "php": "tests/CorsContractTest.php",
+        "ruby": "spec/cors_contract_spec.rb",
+        "nodejs": "test/corsContract.test.ts"
+      },
+      "cases": [
+        "many refused origins produce one warning per reason and no per origin ledger"
+      ]
+    },
+    {
+      "id": "cors-registered-by-default-in-php",
+      "adr": "ADR-0048",
+      "rule": "A default PHP app applies the CORS policy without the app calling Router::use(CorsMiddleware::class), as Python, Ruby and Node do. OWED: PHP still needs the explicit registration; the PHP runner registers it the documented way."
+    },
+    {
+      "id": "cors-reason-ledger-survives-php-request-forks",
+      "adr": "ADR-0066",
+      "rule": "Under Tina4's PHP socket server, which forks a child per request by default, one reason still logs one warning per serving process. OWED: each forked child starts with an empty ledger, so every refused request logs its line (the ledger never grows; it dies with the child). The one-warning-per-reason property is proven with TINA4_SERVE_FORK=false, the model a pool worker or PHP-FPM worker follows."
+    },
+    {
+      "id": "cors-wildcard-with-credentials-fails-startup",
+      "adr": "ADR-0048",
+      "rule": "TINA4_CORS_ORIGINS='*' together with TINA4_CORS_CREDENTIALS=true fails application startup with an error naming both settings. OWED: all four still warn once for this reason and send the response without the credentials header."
+    },
+    {
+      "id": "cors-expose-headers",
+      "adr": "ADR-0048",
+      "rule": "An allowed cross-origin response carries Access-Control-Expose-Headers, default X-Request-ID, configurable. OWED: no framework emits it yet."
+    },
+    {
+      "id": "cors-one-immutable-policy",
+      "adr": "ADR-0048",
+      "rule": "One immutable CORS policy is resolved after .env is loaded and its six typed TINA4_CORS_* keys are validated at startup; an invalid value fails startup. OWED: not proven in any framework."
+    }
+  ]
+}
