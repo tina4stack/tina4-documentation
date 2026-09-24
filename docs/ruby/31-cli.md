@@ -129,10 +129,10 @@ The framework refuses to start without the Rust CLI. For sandboxed environments 
 TINA4_OVERRIDE_CLIENT=true bundle exec ruby app.rb
 ```
 
-This bypasses SCSS compilation and live reload. For production deployments use `tina4 serve --production` (or set the override and run Puma directly):
+This bypasses SCSS compilation and live reload. For production deployments use `tina4 serve --production`, which runs the built-in server, or Puma when your `Gemfile` has it:
 
 ```bash
-TINA4_OVERRIDE_CLIENT=true bundle exec puma -C config/puma.rb
+TINA4_OVERRIDE_CLIENT=true bundle exec tina4ruby start --production
 ```
 
 ---
