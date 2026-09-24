@@ -24,19 +24,20 @@ drivers, and no background agents.
 
 ## Provenance and integrity
 
-From version 3.8.53, every release is produced and protected as follows:
+Release 3.8.91 uses the following controls:
 
 - **Signed (Windows).** `tina4-windows-amd64.exe` carries an Extended Validation
   (EV) Authenticode signature. Publisher: `Code Infinity (Pty) Ltd`, issued by
-  the Certum Extended Validation Code Signing CA. EV signatures carry immediate
-  Microsoft SmartScreen reputation.
+  the Certum Extended Validation Code Signing CA.
 - **Checksums (all platforms).** Each release publishes a `SHA256SUMS` file. The
   installer downloads it and verifies the binary against it before running
-  anything, and refuses to install on a mismatch.
+  anything. From 3.8.91, a missing or malformed manifest, a missing binary entry,
+  or a hash mismatch aborts installation and leaves an existing binary intact.
+  Earlier installers could continue when the checksum manifest was unavailable.
 - **Build provenance (Linux / macOS).** Each binary carries a signed SLSA
   build-provenance attestation that ties it to the exact workflow run and commit
   that produced it.
-- **Reproducible, audited build.** Binaries are built in GitHub Actions from a
+- **CI build with locked dependencies.** Binaries are built in GitHub Actions from a
   tagged, reviewed commit, with the dependency set locked (`cargo build
   --locked`) and screened by `cargo-deny` for known-vulnerable or yanked crates
   before the build runs. The private signing key never leaves its hardware
@@ -47,7 +48,7 @@ From version 3.8.53, every release is produced and protected as follows:
 1. Detects your operating system and CPU architecture.
 2. Reads the latest GitHub release to find the matching binary.
 3. Downloads that binary from the versioned GitHub release (not from a moving branch).
-4. Downloads `SHA256SUMS` and verifies the binary's hash against it. A mismatch aborts the install.
+4. Downloads `SHA256SUMS` and verifies the binary's hash against it. Missing or invalid verification data and mismatches abort the install before replacing an existing binary.
 5. Moves the verified binary into the install directory and makes it runnable.
 6. Prints the next command to run.
 
