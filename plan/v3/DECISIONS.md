@@ -97,6 +97,7 @@ Conventions:
 | ADR-0077 | [Frond escapes by default; trusted output is a SafeString type only](decisions/ADR-0077.md) | Accepted |
 
 | ADR-0082 | [Credentials and development endpoints retain explicit trust boundaries](decisions/ADR-0082.md) | Accepted; implementation verification pending |
+| ADR-0086 | [One SQLite database-path resolver across the four frameworks](decisions/ADR-0086.md) (fixture `sqlite_path_contract.json`; mode 0775 everywhere, drive-letter recognised on every OS, an escaping relative path is refused not silently created) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 

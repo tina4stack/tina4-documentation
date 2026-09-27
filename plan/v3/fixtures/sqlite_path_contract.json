@@ -1,0 +1,76 @@
+{
+  "_comment": [
+    "SQLite database-path resolution contract for Tina4 (ADR-0086).",
+    "The language-neutral answer key the four frameworks must agree on when they",
+    "turn a SQLite connection string into a path the driver opens. The four already",
+    "agreed on :memory: passthrough, unix-absolute passthrough, and relative-under-cwd;",
+    "they diverged on the mkdir mode, the escape guard, and the drive-letter path on a",
+    "POSIX host. This fixture pins all five cases; ADR-0086 says why.",
+    "Real resolver, real files, real mkdir in every framework - no mocks."
+  ],
+  "version": 1,
+  "feature": 3,
+  "decided": "2026-09-27",
+  "status": "proven - one invariant, five cases, real per-language resolvers (no mocks)",
+  "adr": "ADR-0086",
+  "schema": {
+    "given": "a SQLite connection string (or bare path) and the current working directory",
+    "when": "the shared resolver resolves it to a driver path",
+    "then": "the returned path, and whether a directory was created and with what mode",
+    "error": "a relative path whose parent escapes cwd raises the language's argument error"
+  },
+  "constants": {
+    "mkdir_mode": "0775",
+    "drive_letter_regex": "^[A-Za-z]:[\\\\/]",
+    "escape_behaviour": "refuse (raise), never a silent mkdir outside cwd and never a clamp"
+  },
+  "invariants": [
+    {
+      "id": "sqlite-path-resolution",
+      "rule": "One resolver, one answer per shape: :memory: and absolute (unix OR drive-letter, recognised on every OS) pass through with no mkdir; a relative path resolves under cwd and its parent is created with mode 0775 ONLY when it stays inside cwd; a relative path whose parent escapes cwd is REFUSED loudly, never a silent mkdir outside the project.",
+      "suites": {
+        "python": "tests/test_sqlite_path_contract.py",
+        "php": "tests/SqlitePathContractTest.php",
+        "ruby": "spec/sqlite_path_contract_spec.rb",
+        "nodejs": "test/sqlitePathContract.test.ts"
+      },
+      "cases": [
+        {
+          "id": "SPR-C01",
+          "name": "memory passthrough",
+          "given": { "connection": "sqlite::memory: / sqlite:///:memory:" },
+          "when": { "operation": "resolve" },
+          "then": { "path": ":memory:", "created": [] }
+        },
+        {
+          "id": "SPR-C02",
+          "name": "unix absolute passthrough no mkdir",
+          "given": { "connection": "an absolute /abs/missing/app.db whose parent does not exist" },
+          "when": { "operation": "resolve" },
+          "then": { "path": "$given.connection", "created": [] }
+        },
+        {
+          "id": "SPR-C03",
+          "name": "drive letter absolute passthrough no mkdir",
+          "given": { "connection": "C:/Users/app.db on a POSIX host" },
+          "when": { "operation": "resolve" },
+          "then": { "path": "C:/Users/app.db", "created": [] }
+        },
+        {
+          "id": "SPR-C04",
+          "name": "relative under cwd creates parent mode 0775",
+          "given": { "connection": "sub/dir/app.db, cwd is the project root, umask 0" },
+          "when": { "operation": "resolve" },
+          "then": { "path": "{cwd}/sub/dir/app.db", "created": ["{cwd}/sub/dir"], "mode": "0775" }
+        },
+        {
+          "id": "SPR-C05",
+          "name": "relative escaping cwd is refused no mkdir",
+          "given": { "connection": "../escaped/app.db, cwd is the project root" },
+          "when": { "operation": "resolve" },
+          "then": { "error": "argument error naming the escaping path and the project root", "created": [] }
+        }
+      ]
+    }
+  ]
+}
