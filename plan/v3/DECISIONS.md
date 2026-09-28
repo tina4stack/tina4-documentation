@@ -99,6 +99,7 @@ Conventions:
 
 | ADR-0082 | [Credentials and development endpoints retain explicit trust boundaries](decisions/ADR-0082.md) | Accepted; implementation verification pending |
 | ADR-0086 | [One SQLite database-path resolver across the four frameworks](decisions/ADR-0086.md) (fixture `sqlite_path_contract.json`; mode 0775 everywhere, drive-letter recognised on every OS, an escaping relative path is refused not silently created) | Accepted |
+| ADR-0087 | [WebMCP lets a running Tina4 app hand an agent its own actions as tools](decisions/ADR-0087.md) (fixture `webmcp_contract.json` owed; `webmcp.tool()` over a `navigator.modelContext` conformance layer, in-page for tina4-js SPA pages and a Frond backend bridge for SSR, tiered read/write consent, opt-in `tina4js/webmcp` module; distinct from the `/__dev/mcp` dev surface) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
