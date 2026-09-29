@@ -97,9 +97,10 @@ Conventions:
 | ADR-0072 | [A Content-Type set with header() is the one Content-Type; settings are read when they are used](decisions/ADR-0072.md) (tina4-python#143, #144) | Accepted |
 | ADR-0077 | [Frond escapes by default; trusted output is a SafeString type only](decisions/ADR-0077.md) | Accepted |
 | ADR-0084 | [Outbound HTTP refuses private/internal addresses by default (SSRF guard for the Api client and Web Push)](decisions/ADR-0084.md) (Feature F7; fixture `ssrf_guard_contract.json`; `TINA4_ALLOW_PRIVATE_REQUESTS`) | Accepted |
-
 | ADR-0082 | [Credentials and development endpoints retain explicit trust boundaries](decisions/ADR-0082.md) | Accepted; implementation verification pending |
 | ADR-0086 | [One SQLite database-path resolver across the four frameworks](decisions/ADR-0086.md) (fixture `sqlite_path_contract.json`; mode 0775 everywhere, drive-letter recognised on every OS, an escaping relative path is refused not silently created) | Accepted |
+| ADR-0080 | [The release is signed only over CI-verified bytes, and every install path verifies the published checksum](decisions/ADR-0080.md) (tina4 CLI signing pipeline, installers, `tina4 update`) | Accepted |
+| ADR-0081 | [Package/registry publishing runs only from a protected `release` environment, with per-job least privilege](decisions/ADR-0081.md) (all publish workflows) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
