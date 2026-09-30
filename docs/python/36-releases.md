@@ -15,7 +15,7 @@ splitter. Duplicated logic is now shared once - the LIMIT/OFFSET clause on the b
 the has-many paging loop, WebSocket room membership, rate-limit enforcement, and the queue
 dead-letter and retry path.
 
-**A gate that ratchets quality.** The canonical NATS test-URL joins the shared test-env set, so
+**A gate that ratchets quality.** The canonical `TINA4_TEST_NATS_URL` joins the shared test-env set, so
 the NATS URL is named the same way everywhere (ADR-0038). A new `tina4 metrics
 --fail-on-regression` gate now stands watch in continuous integration: it compares against a
 committed baseline and fails the build the moment a file grows more complex or less

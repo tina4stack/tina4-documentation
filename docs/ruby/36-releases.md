@@ -16,7 +16,7 @@ suite stops tripping over its own startup timing. Cyclomatic complexity comes do
 flagged modules, and all six cross-file duplicate blocks in `lib/tina4` are gone, each one
 characterised first so the behaviour cannot shift.
 
-**A gate that holds the line.** The canonical NATS test-URL joins the shared test-env set
+**A gate that holds the line.** The canonical `TINA4_TEST_NATS_URL` joins the shared test-env set
 (ADR-0038), and the nats-pure dependency and its transitive gems were licence-reviewed to
 unblock the release-package workflow. Continuous integration wires the `tina4 metrics
 --fail-on-regression` ratchet with a committed baseline (ADR-0002), so a new complexity

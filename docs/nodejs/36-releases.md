@@ -14,7 +14,7 @@ whole pending set. Duplicated logic across the core is pulled into shared homes,
 lazy-loading barrel ceiling raised to match, and cyclomatic complexity comes down across the
 flagged modules.
 
-**A gate that holds the line.** The canonical NATS test-URL joins the shared env set (ADR-0038),
+**A gate that holds the line.** The canonical `TINA4_TEST_NATS_URL` joins the shared env set (ADR-0038),
 and `tina4 metrics --fail-on-regression` is wired as a gate with a committed baseline, so a
 new complexity or duplication offender fails the build (ADR-0002).
 
