@@ -1,7 +1,7 @@
 ---
 name: tina4-design
 description: Use whenever a project needs a visual identity or design system — from scratch or from an existing logo. Triggers: "build me a brand", "create brand guidelines", "we need a UI guide", "design system", "I have a logo", "what should our brand look like", "design our app", "brand this project". Covers the full chain — client intake → market research → design system decisions → brand guidelines document → interactive UI component guide. Produces DESIGN.md (the living design record), brand-guidelines.html, and ui-guide.html, all saved to a top-level design/ folder. Project-agnostic: works for any industry, any Tina4 backend or frontend, or no Tina4 project at all.
-updated_for_version: 1.0.0
+updated_for_version: 1.1.0
 ---
 
 # Tina4 Design — brand identity and UI system from brief to deliverable
@@ -39,16 +39,18 @@ The correct method is to build each file section by section using the Write and 
 
 This means a complete UI guide takes 10–15 sequential edits, not one giant output. That is correct and expected. Do not try to shortcut it by combining sections.
 
-**Section order for `ui-guide.html`:**
+**Section order for `ui-guide.html`** — note the two build gates (see Phase 3 §3.1a and §3.1b). The guide is NOT built in one continuous run; it stops for developer review at two boundaries so steering happens where fixes are cheapest.
 1. Skeleton (head + CSS + layout shell)
 2. Foundation — Icon System
 3. Foundation — Design Tokens
 4. Foundation — Typography
 5. Foundation — Spacing & Grid
 6. Foundation — Responsive & Mobile
+   — **▸ GATE A — Foundation review** (§3.1a): the brand system is now concrete pixels. Stop and confirm before components inherit it.
 7. Components — Buttons
 8. Components — Form Elements
 9. Components — Cards
+   — **▸ GATE B — Pattern review** (§3.1b): buttons + forms + cards set the interaction pattern (states, focus, emphasis treatment, dark mode). Stop and confirm before the remaining components copy it.
 10. Components — Badges + Alerts + Tooltips
 11. Components — Navigation + Skeleton Loaders
 12. Components — Progress + Empty States + Toast
@@ -57,7 +59,8 @@ This means a complete UI guide takes 10–15 sequential edits, not one giant out
 15. Components — Dropdown Menu + Accordion
 16. Components — Stepper + Notification Banner
 17. Components — Date Picker + File Upload + Quantity Input
-18. Utilities section + closing `</body></html>`
+18. Product-specific components (the group confirmed at §3.0)
+19. Utilities section + closing `</body></html>`
 
 **Section order for `brand-guidelines.html`:**
 1. Skeleton (head + CSS + layout shell)
@@ -74,16 +77,49 @@ This means a complete UI guide takes 10–15 sequential edits, not one giant out
 
 ## The design workflow
 
-Six phases in order. Each phase has a defined output. No phase is skipped — if inputs are missing, surface that clearly and offer a best-effort path forward.
+Seven phases in order. **The first visual appears at the end of Phase 1** — the user sees something on screen before any deep research or decision-making is complete. Each phase ends with a checkpoint so the user can steer before the next phase begins.
 
 | Phase | Name | Output |
 |-------|------|--------|
-| 1 | Intake & Discovery | Written brief — everything known about the client |
-| 2 | Market Research | Research summary in `DESIGN.md` |
-| 3 | Design System Decisions | Token decisions locked in `DESIGN.md` |
-| 4 | Brand Guidelines | `brand-guidelines.html` in `design/` |
-| 5 | UI Guide | `ui-guide.html` in `design/` |
-| 6 | Handoff | `DESIGN.md` finalised; files verified open in browser |
+| 0 | Quick Intake | Three inputs locked — company name + industry + about us |
+| 1 | First Visual | Rough `brand-guidelines.html` on screen; research starts in background |
+| 2 | Brand Refinement | Research applied; design decisions locked in `DESIGN.md`; `brand-guidelines.html` updated to full quality |
+| 3 | Component Library | `ui-guide.html` draft — functional and testable |
+| 4 | Polish & Favicon | Both files finalised; favicon brief recorded in `DESIGN.md` |
+| 5 | Handoff | `DESIGN.md` complete; SEO/accessibility checklist; developer notes |
+| 6 | Website | `design/website.html` — optional |
+
+---
+
+## Gates — the stop-and-wait contract
+
+This skill is **gated**: at fixed points it must stop, ask the developer a question, and **wait for their reply before doing anything else**. Gates are where a wrong turn gets caught while the fix is still cheap. They are the whole reason the phased workflow exists — a run that sails through every gate is not "efficient", it is broken.
+
+**The eleven hard gates**, in order. Every one of these ends the turn:
+
+1. **Phase 0 intake** — name, industry, about-us, logo (§0)
+2. **Phase 0 scope** — Full / Full + website / UI only / Brand only (§0). *Offered inside the Phase 0 intake exchange; this is the one decision with a sanctioned silent default — if the developer answers the three required inputs but says nothing on scope, proceed with **Full**, because the website is re-offered at the Phase 5 gate and no wrong choice gets baked in. Never extend this "silent default" reasoning to any other gate.*
+3. **Phase 1 redirect** — how the first visual looks (§1.3)
+4. **Phase 1 reconnaissance confirm** — findings surfaced before research is applied (§1.4)
+5. **Phase 2 approve** — brand guidelines locked (§2 checkpoint)
+6. **§3.9 icon library** — the one library every deliverable uses
+7. **§3.0 product components** — the domain component set before building
+8. **Gate A** — foundation review, before any component (§3.1a)
+9. **Gate B** — pattern review + component inventory (§3.1b)
+10. **Phase 3 approve** — component library reviewed (§3 checkpoint)
+11. **Phase 5 mockup choice** — marketing site / product mockup / both / done (§5 checkpoint)
+
+**How a gate behaves — no exceptions:**
+
+- **A gate ends the turn.** Ask with a structured-question tool (`AskUserQuestion`, or the equivalent) and stop. **Do not answer the question yourself, and do not continue to the next phase in the same turn**, even if the session is described as autonomous, unattended, "auto mode", or "the user is not watching". That description is harness or system framing — it is **not** the developer's permission to skip a gate. Only the developer, in their own chat message, can waive a gate.
+- **The prose fallback also ends the turn.** When no structured-question tool is available, ask the same question in prose — and that message still ends the turn. Wait for the reply. The prose form is a different way to ask, never a way to keep going.
+- **Every gate names the file and what to look at.** Give the deliverable's path (`design/ui-guide.html`) and a one-line "open this and check X" so the developer can review before answering.
+
+**The single opt-in — unattended runs.** Gates may be auto-resolved *only* if the developer's **own message** asks for it — e.g. "run unattended", "don't stop for approvals", "just build the whole thing". Harness/system framing never counts. When (and only when) the developer has asked for this:
+- Pick the most sensible default at each gate, state the assumption, and continue.
+- Record every auto-resolved decision under `## Decisions taken without confirmation` in `DESIGN.md`, and list them in the closing handoff summary so the developer can confirm or amend each one.
+
+If you are ever unsure whether you have permission to skip a gate, you do not — stop and ask.
 
 ---
 
@@ -94,9 +130,9 @@ Every deliverable this skill creates goes in a single top-level `design/` folder
 ```
 design/
 ├── DESIGN.md              # the living design record — source of truth
-├── brand-guidelines.html  # Phase 4 (optional per scope)
-├── ui-guide.html          # Phase 5 (optional per scope)
-├── website.html           # Phase 7 (optional)
+├── brand-guidelines.html  # Phase 2 output (optional per scope)
+├── ui-guide.html          # Phase 3 output (optional per scope)
+├── website.html           # Phase 6 output (optional)
 └── favicons/              # if a favicon package is generated later by tina4-seo
 ```
 
@@ -118,13 +154,22 @@ These run in the background on every design task. Fire them at the right moment.
 - **📣 Show the work.** Don't describe the design — ship it. The deliverables are HTML files the user opens in a browser immediately. Real content, real mockups. No lorem ipsum. Data in the UI guide uses real content from the client's domain.
 - **🛑 Don't invent assets.** If the client has a logo, use it as `<img src="[filename]">` — never inline the SVG paths into the HTML. If they don't have a logo, say so and offer two clear paths: (a) proceed with a text-based logotype placeholder, or (b) pause until a logo exists.
 - **💩 Avoid AI-generated design defaults.** Before finalising the design plan, check it against the avoid-list at the bottom of this skill. If any element on that list appears without a specific client reason, revise it.
-- **🙊 Don't ask what you don't need to ask.** If the brief already implies the audience, tone, and industry, proceed — asking a clarifying question that restates the brief back is wasted time. Ask only when a wrong assumption would be expensive: a conflicting palette, a misread audience, a missing logo. One focused question beats a wall of them.
+- **🙊 Don't ask what you don't need to ask.** If the brief already implies the audience, tone, and industry, proceed — asking a clarifying question that restates the brief back is wasted time. Ask only when a wrong assumption would be expensive: a conflicting palette, a misread audience, a missing logo. One focused question beats a wall of them. **This reflex applies to intake facts, never to gates** — it lets you skip a redundant clarifying question, it never lets you skip one of the eleven hard gates.
 
 ---
 
-## Phase 1 — Intake & Discovery
+## Phase 0 — Quick Intake
 
-Gather five inputs before any design decision is made. If any are missing, ask for all missing ones in a single message — never one question at a time.
+Ask for the intake in **ONE message** — three required inputs, plus one optional line for developers who already have preferences. This is the only gate before the first visual appears on screen. Do not ask anything else at this stage — everything else is inferred from the about-us and from automated brand reconnaissance in Phase 1.
+
+> "To get started I need three things:
+> 1. **Company name** and **industry** (one line each)
+> 2. **About us** — paste anything: a sentence, a paragraph, your elevator pitch, your homepage intro. Longer is fine; shorter works too.
+> 3. **Logo** — if you have one, drop the file here now (SVG preferred, PNG/JPG accepted). If you don't have one yet, describe the intended colour feel in a sentence: e.g. 'dark and minimal with a blue accent', 'warm earth tones, sand and terracotta'.
+>
+> Optional — if you already have opinions, tell me now and I'll skip the later question: **deliverable scope** (brand only / UI guide / + marketing website), **icon library**, **body font**. No worries if not — I'll propose these and confirm with you at the usual points."
+
+Once the three required inputs are received, proceed immediately to Phase 1 — do not wait on the optional line, and do not ask further follow-up questions first. **Record any optional preferences the developer supplies** (scope, icon library, body font) in the plan so the later gates that cover them (§0 scope, §3.9 icon, the Phase 2 type decision) become a quick *confirm* rather than a cold ask.
 
 ### 1.1 Logo file
 
@@ -136,6 +181,23 @@ Ask the user to drop a logo file into the working directory. Accepted formats: S
 
 - Read it immediately.
 - If SVG: parse the fill and stroke values to extract exact hex colours. Note the geometry (geometric/organic/illustrative), weight (bold/light/outline), and any iconographic motif separate from the wordmark.
+- **Standalone-render check.** After parsing, verify the SVG will render VISIBLE when embedded in a fresh HTML file. Read the file and check:
+  - Root `<svg>` element: does it have `fill="none"` or no fill at all?
+  - Every `<path>`, `<rect>`, `<circle>`, `<polygon>`: do they have an inline `fill` (or `stroke`) attribute?
+  - If root is `fill="none"` AND paths carry no inline fill → **the SVG relies on external CSS to render.** WordPress-exported logos, Figma-with-external-CSS exports, and stylesheet-styled marks all fail this check. Dropping it into a fresh HTML page produces an invisible logo.
+  - If root or paths use `fill="currentColor"` (no explicit hex) → **not safe as an `<img>` on coloured grounds.** An `<img>`-referenced SVG cannot inherit `color` from a parent CSS rule — `currentColor` resolves to the SVG's own default (usually black), so the logo renders black-on-black on a dark or accent panel. This is a distinct failure from `fill="none"` and it is the exact bug that broke the Coca-Cola wordmark. `currentColor` is correct for *inline* icons (Phase 2 icon system) but NOT for an `<img>` logo that must sit on light, dark, AND accent backgrounds.
+  - Only if root/paths carry explicit hex fills (`fill="#123456"`) → the SVG is self-contained and safe as an `<img>` on any ground. Proceed normally.
+- **If the SVG fails the standalone check** (either `fill="none"` with no inline fills, OR `currentColor`-only), use a structured-question tool (`AskUserQuestion`, or the equivalent) with these options:
+  - **Recolour per background with a CSS filter** — keep the single SVG, and on dark/accent logo panels apply `filter: brightness(0) invert(1);` (white-out) or a tuned filter so the mark reads. Fastest fix for a `currentColor` or single-colour mark that just needs to flip white on dark grounds. Record the per-panel filter in DESIGN.md.
+  - **Bake explicit hex fills into the SVG** — rewrite the SVG with inline `fill="#hex"` on every path from the brand palette, producing a light-ground master; pair it with a `-white.svg` (or `-dark.svg`) variant for dark/accent grounds. Preferred when the mark is multi-colour or the filter can't produce a clean result.
+  - **Wait for a self-contained version** — halt until the designer supplies SVGs with explicit fills (light + dark variants). Records a blocking item in the plan.
+  - **Fall back to a CSS logotype** — proceed provisionally with a text logotype (Path B behaviour) until a proper variant arrives.
+  - **Bake the computed fills into the SVG** — the skill reads the intended fills from adjacent CSS or from the extracted brand palette and rewrites the SVG with inline `fill` attributes on every path. Preferred when the original palette is known.
+  - **Wait for a self-contained version** — halt the run until the designer/developer supplies an SVG with inline fills. Records this as a blocking item in the plan.
+  - **Fall back to a CSS logotype** — proceed provisionally with a text-based logotype in the display face + brand accent colour (Path B behaviour) until a self-contained SVG arrives.
+
+  Fallback prose if no structured tool available:
+  > "Your logo SVG won't render reliably as an `<img>`: [it has `fill=\"none\"` with no inline fills / it uses `fill=\"currentColor\"`, which an `<img>` can't recolour, so it renders black on dark and accent panels]. Options: (a) I recolour per background with a CSS `filter`, (b) I bake explicit hex fills in and add a white variant for dark grounds, (c) you supply self-contained light + dark variants, (d) I fall back to a CSS logotype until you do."
 - Record all extracted values in `DESIGN.md` under `## Logo`.
 - The brand palette MUST be derived FROM the logo colours. Never invent an accent colour that clashes with a supplied logo — `--accent` must be a colour present in the logo.
 - **Check the live site.** A logo file is often just one mark in isolation. If a company name or URL is known, do a quick web search or visit the site — it will frequently reveal secondary or accent colours in use, an established typeface, and tone of voice that the logo alone doesn't carry. This takes two minutes and prevents building a palette that conflicts with the company's existing presence. Skip this only if the user explicitly provides everything or asks you not to.
@@ -199,6 +261,20 @@ When a logo file is dropped into the project folder, re-run Phase 1 and Phase 3:
 3. If they match or are compatible (same hue family, close value): update `--accent` to the exact logo hex, swap the CSS logotype for `<img src="[filename]">`, remove the provisional banner, and update `DESIGN.md`.
 4. If they conflict (different hue, clashing value): flag every token that will change, list the affected components, and ask the developer to confirm before applying. Show a before/after colour diff in `DESIGN.md`.
 5. Mark `DESIGN.md` status as `FINAL` once reconciled.
+
+---
+
+**PATH C — Public brand, no file supplied**
+
+The client is an established, recognisable brand (a real company, a public institution) and no logo file was dropped in, but the official mark is publicly available on the brand's own site. This is common when designing an internal tool or a concept piece for a known brand — the reconnaissance pass already fetches the mark for **colour extraction only**, but here the developer actually wants that mark used in the deliverables. Path A assumes a supplied file and Path B assumes no mark exists, so neither fits; without a sanctioned route the builder ends up going off-script. Path C is that route.
+
+Use it **only with the developer's explicit go-ahead** (a public logo is still someone's trademark — using it is the developer's call, not a silent default). When they confirm:
+
+1. **Confirm at a gate first.** Ask: *"You're designing for [Brand], which has a public logo. Do you want me to fetch the official mark from [brand domain] and use it in the deliverables, or render a text logotype instead?"* Proceed only on a yes.
+2. **Fetch from the brand's own domain**, not a third-party logo aggregator — the official site carries the current, correct mark.
+3. **Run the Path A standalone-render check** on the fetched SVG (the `fill="none"` / `currentColor` tests). If it fails, apply the same Path A remedies (per-background filter, bake explicit fills, or fall back to a logotype).
+4. **Record the source in `DESIGN.md`** under `## Logo`: the exact source URL, the fetch date, and a one-line note that the mark is the brand's own trademark, used per the developer's instruction. Derive `--accent` and the palette from the real mark, exactly as Path A does.
+5. **From here, treat it as Path A** — the mark is now a known, self-contained file referenced with `<img src="...">`.
 
 ### 1.1b Brand reconnaissance (runs as soon as the company name is known)
 
@@ -286,74 +362,146 @@ Everything found during reconnaissance goes directly into `DESIGN.md` under `## 
 
 If a full brand manual was found: Phase 2 market research is still run for competitor context, but the design decisions in Phase 3 are anchored to the manual rather than derived from scratch. Note this explicitly in `DESIGN.md`.
 
-### 1.2 Company name and tagline
+### 0.2 What to extract from the about-us
 
-Ask for both. The tagline, when present, reveals the brand register:
-- "Quality Fasteners Since 1993" → craft, longevity, trade trust
-- "Disrupting the Future of Work" → VC ambition, early adopter audience
-- "Simple Banking for Everyone" → accessibility, anti-complexity, consumer mass market
-
-Let the language set the tone-of-voice direction before you name it.
-
-### 1.3 About us / company overview
-
-A paragraph or two. Key things to extract:
+Do not ask follow-up questions — extract these directly from the about-us text provided:
 - Industry and sub-sector (the narrower the better — "retail" is not enough; "independent hardware distribution in Southern Africa" is)
-- Founding story — family business? corporate spin-off? funded startup? The founding story shapes the warmth of the brand
-- Geographic reach — local, national, regional, global — affects the register and cultural references
-- Values or beliefs the brand should express, especially if stated by the client
-- Repeated phrases or language the company uses — these often become the tone-of-voice anchors
+- Founding story — family business? corporate spin-off? funded startup? Shapes brand warmth.
+- Geographic reach — local, national, regional, global — affects register and cultural references
+- Values or repeated phrases the company uses — these often become tone-of-voice anchors
+- Primary audience — who buys, who uses, who decides (often different people)
+- Audience sophistication — a 60-year-old hardware store owner needs a very different visual language than a 28-year-old SaaS lead
 
-### 1.4 Industry and target audience
+**Deliverable scope:** default to **Full** (DESIGN.md + brand-guidelines.html + ui-guide.html). If a structured-question tool is available (`AskUserQuestion` in Claude Code, or the equivalent), offer the choice quietly at the end of intake — one click, no friction:
 
-Extract from the about-us if explicit. If not, ask. Identify:
-- Primary industry and sub-sector
-- Primary audience — who buys, who uses, who decides (they are often different people)
-- Audience sophistication — a 60-year-old hardware store owner and a 28-year-old SaaS procurement lead need very different visual languages
-- Any secondary audiences (trade vs consumer, B2B vs B2C)
+- **Full** *(recommended)* — DESIGN.md + brand-guidelines.html + ui-guide.html
+- **Full + website** — Full plus `website.html` — a self-contained multi-page mockup the client reviews before any backend work
+- **UI only** — DESIGN.md + ui-guide.html
+- **Brand guidelines only** — DESIGN.md + brand-guidelines.html
 
-### 1.5 Deliverable scope
-
-At the end of intake — after all other inputs are gathered — ask one question:
-
-> "What deliverables do you need? Default is Full if you don't answer.
->
-> 1. **Full** — DESIGN.md + brand-guidelines.html + ui-guide.html
-> 2. **UI only** — DESIGN.md + ui-guide.html
-> 3. **Brand guidelines only** — DESIGN.md + brand-guidelines.html"
-
-Record the choice in `DESIGN.md` under `## Scope` and skip the phases that don't apply:
-
-| Choice | Phases to run |
-|--------|--------------|
-| Full (default) | 1 → 2 → 3 → 4 → 5 → 6 |
-| UI only | 1 → 2 → 3 → 5 → 6 (skip Phase 4) |
-| Brand guidelines only | 1 → 2 → 3 → 4 → 6 (skip Phase 5) |
-
-If the user doesn't answer or says "just go", proceed with **Full**.
-
-Update the plan scope checklist to reflect the chosen deliverables so the plan is accurate from the start.
-
-### 1.6 Project outline (optional)
-
-If this design will be applied to a specific product or app:
-- What the product does
-- The screens and surfaces the UI guide must cover — a marketing site, a B2B portal, and a consumer checkout flow have different component needs
-- Any existing technical constraints on the front end
+If no structured tool is available OR the user does not respond, proceed with **Full** silently — do not send a prose question that adds a round trip. The website is still offered again at the Phase 5 handoff checkpoint, so a developer who skipped it here can pick it up at the end.
 
 ---
 
-## Phase 2 — Market Research
+## Phase 1 — First Visual
 
-Do not skip this phase. A well-chosen serif for a law firm and the same serif for a children's toymaker are opposite decisions. The research is what makes one defensible and the other wrong.
+**The goal of this phase is speed.** Put something on screen as fast as possible. The user can't steer what they can't see.
+
+### 1.1 Make confident best-guess decisions
+
+Read the about-us and industry. Do not ask for more input. Make three confident decisions immediately:
+
+1. **Colour palette** — derived from industry conventions and the tone of the about-us. Pick a specific accent, dark, and ground colour with a one-line reason for each. If a logo was supplied, derive from it.
+2. **Typeface pair** — a display face and a body face. Pick a non-generic pair grounded in the industry and brand personality. One-line reason for each.
+3. **Logo treatment** — Path A: use the supplied file as `<img src="[filename]">`. Path B: render a CSS logotype (company name in the display face, brand accent colour) marked `[provisional]`.
+
+### 1.2 Write a rough `design/brand-guidelines.html`
+
+Build just enough to show the design direction. Not the full document — a skeleton with:
+- Logo at top (or logotype placeholder)
+- Colour swatches for the proposed palette (5–6 swatches, full-bleed, hex values shown)
+- Type specimen — display face at H1 scale, body face at body scale, with the company name and a sample sentence
+- A visible `[DRAFT]` label in the page title and top navigation
+
+Follow the incremental build rule — skeleton first, then swatches, then type. Three edits maximum.
+
+**If you verify the visual in an in-tool preview pane, serve the folder over HTTP first** (see the Phase 5 verify note). A preview that renders the local file as a `data:` snapshot will show the logo `<img>` broken even when the file is correct — start a static server so the first thing the developer sees at the gate isn't a false "broken logo".
+
+### 1.3 Checkpoint — show and invite redirection
+
+After the rough visual is on screen, ask the user how it looks. Use a structured-question tool if available (`AskUserQuestion` in Claude Code, or the equivalent) with:
+
+- **Continue** *(recommended if it looks right)* — proceed to research and brand refinement
+- **Change the palette** — accent, dark, or ground colour needs work
+- **Change the fonts** — display or body pair needs work
+- **Change the logo treatment** — logo placement, size, or provisional logotype needs work
+- **Multiple changes** — user describes what to adjust in free text
+
+Fallback prose version:
+> "Here's where I'm starting — [accent colour name], [display face], [body face]. Open `design/brand-guidelines.html` and look it over. Redirect me on anything before I continue. Meanwhile I'm researching your sector."
+
+Show the file first, then ask. Do not summarise every decision. Do not ask a list of questions.
+
+### 1.4 Brand reconnaissance — runs in background during Phase 1
+
+While building the rough visual (and while the user is reviewing it), run a brand reconnaissance pass. This does not block the first visual — it feeds into Phase 2 refinements.
+
+**Step 1 — Web search**
+
+Search for:
+- `"[company name]" brand guidelines`
+- `"[company name]" brand manual`
+- `"[company name]" style guide`
+- `"[company name]" site:official-domain.com`
+
+If a publicly available brand manual is found, read it — it supersedes all other decisions.
+
+**Step 2 — Visit the live site and read the source**
+
+If a website is found, extract the following in order of precision:
+
+**Fonts — read the source, do not guess visually:**
+
+1. Fetch the page source and scan `<head>` for Google Fonts `<link>` tags — the URL contains the exact family name
+2. Scan for `@import` rules in `<style>` tags loading font services
+3. Scan `<link rel="stylesheet">` hrefs — fetch and search for `font-family:` declarations
+4. Search for `font-family` in page source — the one on `body` or `:root` is the body face; headings give the display face
+5. Look for `@font-face` declarations for self-hosted fonts
+6. **Only if none of the above yields a name** — visually estimate the category and flag as "visually estimated, not confirmed"
+
+**Never record a font as confirmed if it was only visually identified.**
+
+**Colours — read the CSS:**
+
+1. Look for `:root { --color-*` or `--accent` CSS custom property blocks
+2. Look for `background-color` and `color` on `body`, `header`, `nav`, `.btn`
+3. Check for `<meta name="theme-color">` — often encodes the primary brand colour
+
+**Tone of voice:** read two or three pages of copy and note the register: formal/casual, technical/accessible, warm/corporate.
+
+**Step 2b — Attempt to fetch the logo**
+
+1. Look in `<header>` for an `<img>` tag or inline `<svg>` used as the logo
+2. If an `<img src="...svg">` found: fetch the SVG, extract hex colours from path data
+3. If an inline `<svg>` found: read fill and stroke values directly
+
+**Important constraints on the fetched logo:**
+- Use it for **colour extraction only** — never hotlink to the fetched URL in deliverables
+- After reconnaissance, tell the user what was found and ask them to drop the master logo file into the project folder
+
+**Step 3 — Report what was found**
+
+```
+Brand reconnaissance complete for [Company Name]:
+
+Site found: [URL]
+Brand manual found: [URL or "none found"]
+
+Colours detected:    #FAB033 (dominant), #292627 (dark) — source: CSS :root tokens
+Typefaces detected:  Oswald 700 (headings) — source: Google Fonts <link> confirmed
+                     Source Sans 3 (body) — source: font-family on body confirmed
+Tone detected:       Direct, trade-focused
+
+Proceeding with these findings unless you'd like to correct anything.
+```
+
+Everything found goes into `DESIGN.md` under `## Market Research` and feeds Phase 2 refinement.
+
+---
+
+## Phase 2 — Brand Refinement
+
+This phase applies the market research findings and any user feedback from Phase 1 to lock the design system. It ends with a fully updated `brand-guidelines.html` and a complete `design/DESIGN.md`.
+
+**Checkpoint before starting:** review what the user said after seeing the Phase 1 visual. Apply any redirections before running research. Research confirms or refines the Phase 1 guess — it does not restart from scratch.
 
 ### 2.1 Competitor and sector landscape
 
-Use web search to find 4–6 direct competitors or analogous brands in the same industry. For each, note:
+Complete the market research started in Phase 1's background pass. Use web search to find 4–6 direct competitors or analogous brands in the same industry. For each, note:
 - Primary colour palette (dominant hue, secondary, neutral ground)
 - Typeface category (geometric sans, humanist sans, slab serif, transitional serif, display/expressive)
 - Overall visual register: minimal / bold / warm / technical / playful / premium / utilitarian
-- Industry-wide visual conventions — patterns that repeat across most brands in the sector (these exist in almost every mature industry)
+- Industry-wide visual conventions — patterns that repeat across most brands in the sector
 
 Summarise with a single sentence:
 
@@ -414,13 +562,11 @@ Example: *"Elkanah motion is functional — transitions confirm state changes an
 
 ### 2.5 Research summary
 
-Write a compact summary covering all five points above. Store it in `DESIGN.md` under `## Market Research`. This is the "why" behind every Phase 3 decision. When someone asks "why did we choose these colours?" or "why does the UI move like this?" the answer is in this section.
+Write a compact summary covering all five points above. Store it in `DESIGN.md` under `## Market Research`. This is the "why" behind every design decision. When someone asks "why did we choose these colours?" or "why does the UI move like this?" the answer is in this section.
 
----
+### 2.6 Design System Decisions
 
-## Phase 3 — Design System Decisions
-
-Record every decision in `DESIGN.md` before writing a single line of HTML. The `DESIGN.md` is the source of truth for all deliverables. If a Phase 4 or Phase 5 file and `DESIGN.md` disagree, `DESIGN.md` wins and the file is corrected.
+Record every decision in `DESIGN.md` before updating `brand-guidelines.html` to full quality. The `DESIGN.md` is the source of truth for all deliverables. If any HTML file and `DESIGN.md` disagree, `DESIGN.md` wins and the file is corrected.
 
 ### 3.1 Colour palette
 
@@ -595,6 +741,28 @@ Three levels. Shadows must be hue-tinted — use a dark version of the brand's g
 
 **Dark mode shadows:** on a very dark ground, the warm-tint shadow loses impact and may actually increase rather than decrease legibility (a warm shadow on a warm dark ground is nearly invisible). Switching to pure `rgba(0,0,0,…)` in dark mode is an acceptable and common departure from the warm-tint rule — it increases contrast and is what most design systems do. Document the dark-mode shadow value explicitly in the token block rather than leaving it undefined.
 
+### 3.6b Emphasis & status treatment
+
+How does a card carry **emphasis** (this one is featured / selected) and **status** (this one is healthy / warning / a given category)? Most AI output reaches for the same reflex every time: a thick coloured border on the **left**. Always-left is itself a tell. Decide the treatment ONCE here, grounded in the Phase 2 brand personality, and apply it consistently across the whole system — the same discipline as radius, shadow, and motion. Record the choice and its one-line reason in `DESIGN.md`.
+
+The decision has two parts: **placement** (which edge, or no edge) and **weight** (how heavy).
+
+| Brand personality | Emphasis / status treatment | Why |
+|------------------|----------------------------|-----|
+| Utility / ops / dashboard / technical | A left (inline-start) rail, 3–4px, is *earned* here — it reads as a functional status tag, which is exactly the job in a dense ops UI | The one context where the left rail is a considered choice, not a reflex |
+| Premium / editorial / luxury | Top hairline accent (1–2px) OR a fine full border; never a chunky left rail | A heavy rail reads utilitarian and cheapens a premium surface |
+| Consumer / lifestyle / playful | Tinted header row, a coloured top band, or a corner mark | Softer, warmer than a hard edge; the colour greets rather than tags |
+| Professional / B2B services | Restraint — accent in the heading or key number; a top accent on *featured only* | Emphasis through hierarchy, not chrome |
+| Bold / expressive | A heavier treatment is on-brand, but placed deliberately — top or full, weight chosen to match the type | Boldness is fine when it's a decision, not a default |
+
+**Rules:**
+- The treatment is a single system-wide decision, not a per-card choice. Pick one placement + weight, record it, use it everywhere emphasis or status appears.
+- **Status** colour always encodes meaning (state or category) and pairs with a text label or icon — colour is never the only signal.
+- **Emphasis** (featured/selected, no semantic state) uses the *neutral* `--border-strong` or elevation in the chosen placement — NOT `--accent`. Reserve the accent colour for CTAs, links, focus, and key figures; a plain "featured" card does not need a brand-colour edge.
+- If the brand's personality doesn't call for an edge treatment at all, that is a valid decision — carry emphasis with elevation (`--shadow-md`), a heavier neutral border, or type hierarchy, and record "no accent edge — emphasis via elevation" in DESIGN.md.
+
+Whatever is chosen, the **Status card** component in the UI guide (Phase 3) uses this treatment — it does not hardcode a left border.
+
 ### 3.7 Animation tokens
 
 Define timing and easing once. Every transition in every component references these tokens — never hardcoded `200ms ease`. Wrapped in a `prefers-reduced-motion` block that sets all durations to `0ms`, eliminating animation for users who need it without touching component code.
@@ -646,19 +814,49 @@ Never use a magic number for `z-index`. Every positioned component references th
 
 ### 3.9 Icon system
 
-Decide the icon library once in Phase 3. Record it in `DESIGN.md`. Every icon in every deliverable must come from this one library — never mix libraries.
+The icon library is a locked Phase 2 decision — every icon in every deliverable must come from this one library, and libraries are never mixed. **Ask the developer to confirm the choice** using a structured-question tool (`AskUserQuestion` in Claude Code, or the equivalent). Do not pick silently.
 
-**Choose the library based on brand personality:**
+**Recommendation logic:** based on the brand personality inferred from the Phase 0 about-us and the Phase 2 competitor research, mark ONE option as *(recommended)* — but always show all seven so the developer can override.
 
-| Library | Weight | Personality fit | Integration |
-|---------|--------|----------------|-------------|
-| [Lucide](https://lucide.dev) | 1.5px stroke, clean | Modern SaaS, productivity, clean B2B | CDN script + `<i data-lucide="name">` → `lucide.createIcons()` |
-| [Heroicons](https://heroicons.com) | 1.5px or 2px stroke, minimal | Professional services, enterprise, restrained consumer | npm package or copy individual SVG files; no CDN script |
-| [Phosphor](https://phosphoricons.com) | Multiple weights, versatile | Consumer, lifestyle, playful B2B — use a single weight throughout | CDN script + `<ph-icon name="...">` web components |
-| [Tabler](https://tabler.io/icons) | 2px stroke, technical | Industrial, technical, developer tools | CDN CSS sprite or npm; SVG sprite via `<use>` |
-| [Feather](https://feathericons.com) | 2px stroke, ultra-clean | Minimal, premium, editorial | CDN script + `feather.replace()` |
-| [Material Symbols](https://fonts.google.com/icons) | Variable weight/fill | Enterprise, Google-adjacent, flexible density | Google Fonts stylesheet + `<span class="material-symbols-outlined">` |
-| [Font Awesome](https://fontawesome.com) | Multiple styles | General-purpose, widely recognized | CDN kit or npm; `<i class="fa-solid fa-...">` |
+**Weight developer familiarity as strongly as brand fit.** If the developer has a library they know well and use across projects, that's a legitimate reason to stay with it — icon-library consistency across a developer's portfolio matters as much as brand-personality fit on any single project. Lead the question with an explicit reminder:
+
+> *"If you've used a specific icon library on other Tina4 projects and want to stay consistent, pick that — developer familiarity is a valid reason to override my brand read. Otherwise, based on your brand personality, I'd suggest [X]."*
+
+This is a taste + habit decision, not a purely analytical one. The recommendation is a starting point, not a verdict.
+
+**If the developer already named an icon library in the Phase 0 optional line, this gate is a quick confirm, not a cold ask** — restate their choice and the library URL, and proceed on a nod rather than re-presenting the full menu.
+
+**Include the URL in every option's description** so the developer can open the library site in a new tab and visually confirm the stroke weight, coverage, and feel before picking. Icons are a taste decision — the description should say "open [URL] to browse" alongside the personality fit.
+
+**The options — used verbatim in the structured question:**
+
+| Library | Browse URL | Weight | Personality fit | Integration |
+|---------|-----------|--------|----------------|-------------|
+| **Lucide** | https://lucide.dev | 1.5px stroke, clean | Modern SaaS, productivity, clean B2B | CDN script + `<i data-lucide="name">` → `lucide.createIcons()` |
+| **Heroicons** | https://heroicons.com | 1.5px or 2px stroke, minimal | Professional services, enterprise, restrained consumer | npm package or copy individual SVG files; no CDN script |
+| **Phosphor** | https://phosphoricons.com | Six weights, versatile | Consumer, lifestyle, playful B2B — use one weight throughout | CDN script + `<ph-icon name="...">` web components |
+| **Tabler** | https://tabler.io/icons | 2px stroke, technical | Industrial, technical, developer tools | CDN CSS sprite or npm; SVG sprite via `<use>` |
+| **Feather** | https://feathericons.com | 2px stroke, ultra-clean | Minimal, premium, editorial | CDN script + `feather.replace()` |
+| **Material Symbols** | https://fonts.google.com/icons | Variable weight/fill | Enterprise, Google-adjacent, flexible density | Google Fonts stylesheet + `<span class="material-symbols-outlined">` |
+| **Font Awesome** | https://fontawesome.com | Multiple styles | General-purpose, widely recognised | CDN kit or npm; `<i class="fa-solid fa-...">` |
+| **Custom / already-shipped set** | (developer supplies) | — | Project already ships a custom icon system | Follow the project's existing integration |
+
+**Fallback if no structured tool is available:** send the same list as a numbered prose question — one option per line, URL on every line, one recommendation flagged:
+
+> "Which icon library? My read of your brand says **Lucide** — modern, clean, right for a SaaS product. Open [https://lucide.dev](https://lucide.dev) to browse. Other options:
+>
+>  1. Lucide *(recommended)* — https://lucide.dev
+>  2. Heroicons — https://heroicons.com
+>  3. Phosphor — https://phosphoricons.com
+>  4. Tabler — https://tabler.io/icons
+>  5. Feather — https://feathericons.com
+>  6. Material Symbols — https://fonts.google.com/icons
+>  7. Font Awesome — https://fontawesome.com
+>  8. Custom / already-shipped set — tell me what to reference
+>
+> Reply with a number or a name. I'll use Lucide silently if you don't respond."
+
+Record the chosen library and the reason in DESIGN.md under `## Icon system`. Call it out on the Phase 2 checkpoint message: *"Brand locked — palette [X], type [Y], icons [Lucide]."* If the developer overrides at the Phase 2 checkpoint, update the library everywhere (ui-guide preview, DESIGN.md, integration snippet) before proceeding to Phase 3.
 
 **Two contexts — two different rules:**
 
@@ -746,7 +944,9 @@ Record the favicon brief in `DESIGN.md` under `## Favicon Brief`. This is a desi
 
 ---
 
-## Phase 4 — Brand Guidelines (`brand-guidelines.html`)
+### 2.7 Brand Guidelines — update to full quality
+
+Once design decisions are locked in `DESIGN.md`, update `brand-guidelines.html` from the Phase 1 rough draft to the full quality deliverable. Remove the `[DRAFT]` labels. Fill every section.
 
 Build `brand-guidelines.html` and save it to the `design/` folder. This is a self-contained, browser-ready reference document. No build step. No server. It opens directly in a browser.
 
@@ -841,17 +1041,84 @@ Build `brand-guidelines.html` and save it to the `design/` folder. This is a sel
 }
 ```
 
+### Phase 2 checkpoint
+
+After `brand-guidelines.html` is updated to full quality, ask the user for a decision. Use a structured-question tool if available (`AskUserQuestion` in Claude Code, or the equivalent):
+
+- **Approve, continue to components** — brand locked, move to Phase 3
+- **Palette needs work** — one or more colours are off
+- **Type needs work** — display or body pair needs adjustment
+- **Logo treatment needs work** — sizing, positioning, provisional mark
+- **Tone / copy needs work** — the writing on the guidelines page
+- **Multiple changes** — user describes in free text
+
+Fallback prose version:
+> "Brand guidelines are updated — open `design/brand-guidelines.html` and check the palette, type, and logo. Say approve to move to components, or redirect me on anything."
+
+Wait for a response before moving to Phase 3.
+
 ---
 
-## Phase 5 — UI Guide (`ui-guide.html`)
+## Phase 3 — Component Library (`ui-guide.html`)
 
 Build `ui-guide.html` and save it to the `design/` folder. The UI guide is an **interactive** component library — every component demonstrates real hover, focus, active, and disabled states via CSS. It is not a screenshot gallery.
+
+### 3.0 Product-specific components — ask BEFORE building the generic set
+
+The standard component set (buttons, forms, cards, badges, alerts, tooltips, tabs, breadcrumbs, pagination, skeletons, progress, empty states, toast, avatars, tables, modal, drawer, dropdown, accordion, stepper, notification banner, date picker, file upload, quantity input) covers most UI — but almost every real product needs 3–6 **domain-specific** components that the generic set doesn't have. Building the generic set and stopping means the developer can't compose their actual screens from the guide.
+
+Read the Phase 0 about-us and Phase 2 research, infer the load-bearing components for THIS product's domain, and ask before building. This is also the moment to invite ANY component the developer wants that isn't in the standard set — not only domain widgets, but a variant of a standard component (a split button, a filter chip row), a composite (a search-with-filters bar), or anything they know their screens need. Use a structured-question tool (`AskUserQuestion`, or the equivalent):
+
+> "Beyond the standard component set, this [domain] product looks like it needs: [3–6 named components]. I'll build these as a **Product** group in the guide. Anything you'd add — a domain widget, a variant, or a composite I've missed? Confirm / add more / different set?"
+
+Domain examples (infer, don't hard-code — these show the *kind* of thinking):
+- **Ops / monitoring dashboard** → status card (healthy/warning/critical/offline tiers), KPI strip, map + pins, time-series chart
+- **E-commerce** → product card, price + variant selector, cart line item, star-rating summary, filter sidebar
+- **Property / travel** → listing card, availability calendar, map view, review block, booking summary
+- **Coaching / habit / wellness** → goal/streak card, progress ring, category chip system, activity timeline
+- **Research / knowledge tool** → source card, connection graph, citation chip, discovery card
+
+Emit only components the product actually uses. Record the chosen product components in `DESIGN.md` and build them as a distinct **Product** group in the sidebar, above or below the standard components. Every one uses the same tokens as the rest of the guide — they are brand-consistent, not bolt-ons.
+
+**If a component needs a map** (regional visualisation, store locator, coverage view): do NOT hand-draw the outline — a freehand blob reads as a placeholder and gets thrown away. Drop in a **public-domain outline SVG** (Wikimedia Commons country/province maps, or a source like simplemaps/amCharts world/region SVGs), inline it, and style each region by class or `id` (`fill: var(--surface-2)`, active/selected regions in a semantic or category token, `stroke: var(--border)`). Style with the guide's tokens so the map matches the system; add pins as absolutely-positioned markers over a `position: relative` wrapper. An interactive tile map (Leaflet/MapLibre) is a *dependency* — only reach for it if the product genuinely needs pan/zoom over real geodata; a static styled SVG covers most dashboard needs with zero dependencies.
+
+This step is the difference between "a generic component library that happens to use the brand colours" and "a component library the developer can actually build this product from." Skipping it is the most common gap the guide has in practice.
 
 The guide serves two audiences simultaneously:
 1. **A human developer** who opens it in a browser and sees how things look and behave
 2. **A developer's AI agent** that reads the HTML/CSS source to replicate the same patterns in the actual application — token names, `clamp()` values, class patterns, and interaction behaviour are all directly copyable
 
 Every decision made in Phase 3 must be visible and usable in this file. If a token exists in `DESIGN.md`, it appears in the guide.
+
+### Build gates — do NOT build the whole guide in one run
+
+The guide is large (~24 standard components + the product group). Building it end-to-end in one continuous stretch means the developer can't steer until everything is done — and by then a wrong token, type feel, or interaction pattern has been baked into two dozen components. Stop at two boundaries where a fix is still cheap. Each gate uses a structured-question tool (`AskUserQuestion`, or the equivalent) with a clear one-click "approve and continue" default. **A gate ends the turn: ask, then stop and wait for the reply.** Do not answer it yourself and do not continue in the same turn, even if the session is described as autonomous or unattended — only the developer's own message can waive a gate (see the **Gates — the stop-and-wait contract** section near the top of this skill).
+
+#### 3.1a Gate A — Foundation review (after the Foundation sections, before any component)
+
+Build the skeleton + all Foundation sections (Icon System, Design Tokens, Typography, Spacing & Grid, Responsive & Mobile), then STOP. The foundation layer is where the brand system becomes concrete pixels — the type scale rendered at real sizes, the spacing rhythm, the token swatches, the icon set. This is the cheapest possible moment to catch a type that feels wrong or a spacing step that's off, before ~24 components inherit it.
+
+> "Foundation layer is on screen in `design/ui-guide.html` — icons, design tokens as swatches, the type specimen, the spacing scale, responsive rules. This is what every component builds on. Options: **Approve, build components** · **Type needs work** · **Spacing/tokens need work** · **Icons need work** · **Something else**."
+
+Wait for the response. Apply any foundation fix before building a single component.
+
+#### 3.1b Gate B — Pattern review + component inventory (after Buttons + Forms + Cards, before the rest)
+
+Build the first three component sections — Buttons, Form Elements, Cards — then STOP. These three carry the most brand character and set the interaction pattern the other ~20 components copy: hover/focus/active/disabled states, the focus ring, the emphasis & status treatment from §3.6b, dark-mode behaviour, the motion feel. Catching a wrong pattern here fixes it once; catching it at the end means re-touching every component.
+
+Gate B does two things: approve the **pattern**, and confirm the **component inventory** before the bulk build. This is the natural place to add a component you need or drop one you don't — the pattern is set (so anything added inherits it cleanly) and nothing else is built yet (so nothing is wasted). List every component you are about to build — the full standard set plus the product group from §3.0 — and invite changes.
+
+> "Buttons, forms, and cards are built — reload `design/ui-guide.html`. These set the interaction pattern (states, focus ring, emphasis treatment, dark mode) the remaining components inherit.
+>
+> Here's everything I'll build next: [list the remaining standard components + the product group, grouped]. 
+>
+> Options: **Approve — build this inventory** · **Add a component** (name it — a variant, a composite, or a widget I've missed; I'll build it to the same pattern) · **Remove a component** (drop one you won't use) · **A built component needs work** (buttons/forms/cards) · **States/focus/dark mode/emphasis needs work** · **Something else**."
+
+Wait for the response. If the developer adds a component, build it to the confirmed pattern alongside the rest; if they remove one, drop it from the build and note it in DESIGN.md. Fix any pattern issue before continuing.
+
+**Adding a component is always available — not only here.** A developer can ask for a new component at §3.0 (up front), at this gate (mid-build), or at the end-of-phase checkpoint (after seeing the whole guide). Whenever one is requested, build it to the established tokens and interaction pattern, record it in DESIGN.md, and place it in the right sidebar group (standard or Product).
+
+After Gate B is approved, build the remaining standard components and the product group in the normal incremental way, then run the existing **Phase 3 checkpoint** (end of phase) as the final review.
 
 ### Required layout — responsive by design
 
@@ -875,7 +1142,25 @@ The guide's own chrome must be responsive. A developer opening it on a phone or 
 - Each section: eyebrow label (`--text-overline`), section title (`--text-h2`), optional description (`--text-body`), one or more demo boxes
 - Demo boxes: `background: var(--surface)`, `border: 1px solid var(--border)`, `border-radius: var(--radius-lg)`, inner padding `var(--space-6)`
 - Within a demo box: a small uppercase label above each group, then the live interactive component
-- Demo boxes use `overflow-x: auto` so wide content (tables, code) never causes the page to scroll horizontally
+- Demo boxes use `overflow: visible` — NOT `overflow-x: auto`. A scroll container clips absolutely-positioned children (dropdown menus, tooltips, date-picker popovers, floating labels) — the dropdown renders trapped inside its card. Instead, each wide-content component manages its OWN inner scroll: `.table-wrap { overflow-x: auto }`, and any `<pre>`/code block wraps in `<div class="code-scroll" style="overflow-x:auto">`. The demo box itself must let overlays escape.
+- **`overflow: hidden` and escaping overlays — the same conflict, at card level.** Cards commonly set `overflow: hidden` to clip a full-bleed image or media to their rounded corners. But the moment that card hosts a dropdown, tooltip, popover, or an actions menu, `overflow: hidden` clips it too — this is the exact bug that clipped the campaign hero card's Actions menu in testing. **Rule: never put `overflow: hidden` on any container that can host an overlay.** To keep rounded corners without it, round the inner media element itself (`border-radius` on the `<img>`/media, or `clip-path` on that child) and leave the card `overflow: visible`. If a card genuinely needs clipping AND an overlay, render the overlay in a portal/popover layer outside the clipped box.
+
+### Reserved class vocabulary — one name per concept, no collisions
+
+Components are described in prose in the sections below, but the **class names must come from one shared vocabulary** so two different components never claim the same selector. In testing, two silent layout bugs came directly from reusing a name: a status `.chip` collided with a colour-swatch `.chip`, and a `.card.status` modifier collided with a product `.status` chip. Both broke layout with no error until a screenshot caught them. Lock these canonical names and do not reuse them for anything else:
+
+| Concept | Class | Never reuse for |
+|---|---|---|
+| Button | `.btn` (+ `.btn-primary`, `.btn-ghost`, `.btn-danger`) | — |
+| Form control (input/select/textarea) | `.field` | — |
+| Card | `.card` (+ variants below) | any chip, badge, or pill |
+| Badge / status chip | `.badge` (+ `.badge-success`, etc.) | colour swatches |
+| Standalone status token | `.status` | a card modifier |
+| Brand/status chip in brand-guidelines | `.brand-chip` | the colour-swatch block |
+| Colour swatch block | `.swatch` / `.swatch .block` | any chip or badge |
+| Alert / banner | `.alert` (+ `.alert-success`, etc.) | — |
+
+**Modifiers on `.card` are namespaced so they cannot collide with standalone components.** Use `.card.is-*` for state (`.card.is-selected`) and `.card.banded` / `.card.card-status` for the emphasis/status treatment — never a bare `.card.status`, because `.status` is its own standalone class. When you introduce any new component, first scan the guide's CSS for the class name you intend to use; if it already exists, pick a namespaced one.
 
 ### Utility classes included in the guide's CSS
 
@@ -1037,7 +1322,9 @@ Every part of the field has a named token. The diagram shows the token name besi
 Three variants:
 - **Basic:** title (`--text-h3`) + body paragraph + footer row with a badge and a ghost button. Hover: `--shadow-md` lifts the card, `transition: box-shadow var(--duration-base)`.
 - **Stat card:** large number in display size (`--text-h1`, `font-variant-numeric: tabular-nums`) + label + optional trend indicator (up/down arrow in success/error colour). Used for KPI tiles.
-- **Accent card:** 4px left border in `--accent`; suitable for featured items, callouts, key facts.
+- **Status card:** carries a state (`--success` / `--warning` / `--error`) or a category (a project pillar, a kanban lane, a machine health tier) using the **emphasis & status treatment decided in Phase 2 (§3.6b)** — do NOT hardcode a 4px left border. If Phase 2 chose a top accent, use a top accent; if it chose a left rail (earned for ops/utility brands), use that; if it chose a tinted header, use that. The colour must be *readable as information* — a green edge/band means "healthy", a red one means "critical" — and pairs with a text label or icon so meaning survives for colour-blind users (colour is never the only signal).
+
+  **Never add a colour edge as decoration.** A `--accent`-coloured rail on an ordinary card — added just to inject brand colour or make a card feel "featured" — is a tell-tale AI pattern, and defaulting it to the left every time is the same tell twice over. If a card has no state or category to encode, it gets no colour edge. Emphasis on a plain card comes from elevation (`--shadow-md`), a heavier *neutral* border, a coloured key number or heading, or a small brand icon — following the Phase 2 emphasis decision. The brand palette lives in CTAs, links, focus rings, and key figures; ordinary cards are defined by surface, border, shadow, spacing, and type hierarchy.
 
 Cards use `min-width: 0` on flex/grid children to prevent overflow in constrained layouts.
 
@@ -1497,7 +1784,7 @@ Every interactive element — button, link, icon button, checkbox, radio, dropdo
 - Sidebar: 220px fixed on ≥ 768px, off-canvas drawer on < 768px
 - Hamburger: visible only on < 768px, positioned in the topbar; JS toggles `.open` on the sidebar and a backdrop overlay
 - Main content: full width on mobile, `margin-left: 220px` on desktop — a single CSS custom property `--sidebar-w` controls both
-- All demo boxes: `overflow-x: auto` so wide content never causes page-level horizontal scroll
+- Demo boxes: `overflow: visible` (so dropdowns/tooltips/popovers escape the card); wide content scrolls in its own inner container (`.table-wrap`, `.code-scroll`), never the demo box itself
 - Topbar: `padding: 0 var(--space-4); padding-top: env(safe-area-inset-top)` — iOS-safe
 - Toast: bottom-full-width on mobile, bottom-right on desktop
 - Never use `px` widths for layout containers inside demo boxes — use `%`, `ch`, or `fr`
@@ -1537,21 +1824,47 @@ Every interactive element — button, link, icon button, checkbox, radio, dropdo
 - `min-height: 44px; min-width: 44px` on all interactive controls — touch compliance
 - No JavaScript library dependencies — all interactivity is vanilla JS under 100 lines total
 
+### Phase 3 checkpoint
+
+After the `ui-guide.html` draft is complete, ask the user for a decision. Use a structured-question tool if available (`AskUserQuestion` in Claude Code, or the equivalent):
+
+- **Approve, move to polish** — components are good, proceed to Phase 4
+- **A specific component needs work** — user names which one in free text (button, modal, drawer, form, etc.)
+- **Add a missing component** — user names what to add
+- **States need work** — hover, focus, active, disabled behaviour on one or more components
+- **Dark mode needs work** — appearance in dark theme
+- **Multiple changes** — user describes in free text
+
+Fallback prose version:
+> "Component library is ready — open `design/ui-guide.html` and test the components. Flag anything that looks off or is missing before I polish. Say approve to move to finalising."
+
+Wait for a response before moving to Phase 4.
+
 ---
 
-## Phase 6 — Handoff
+## Phase 4 — Polish & Favicon Brief
 
-When both deliverables are built:
+Review user feedback from Phase 3's checkpoint. Refine `ui-guide.html` based on it, then lock both files.
+
+1. Apply any component corrections the user flagged at the Phase 3 checkpoint
+2. Do a final pass on both `brand-guidelines.html` and `ui-guide.html` — consistency, contrast, dark mode
+3. Record the Favicon Brief in `DESIGN.md` (see section 3.10 below for the brief format)
+4. Confirm `DESIGN.md` is complete with no placeholder sections remaining
+
+End with: *"Design system complete — both files finalised. Ready for handoff."*
+
+---
+
+## Phase 5 — Handoff
+
+When both deliverables are finalised (Phase 4 complete):
 
 1. Finalise `DESIGN.md` — fill any sections left as placeholders, complete the rationale log
 2. Update `plan/design/PLAN.md` — tick all phases `[x]`, add commit or save entries under Commits, set `## Status: Complete`
-3. Verify both files open correctly in a browser — confirm the theme toggle works, all components are interactive, the logo loads
-4. **Favicon brief check** — confirm `DESIGN.md` has a complete `## Favicon Brief` section:
-   - Icon mark described (or "none — designer to supply" noted)
-   - Light and dark background + icon colours recorded
-   - App name recorded
-   - Square-safe mark availability noted
-   - RFG package status: `pending` (tina4-seo generates the actual package — this skill's responsibility ends at the brief)
+3. Verify both files open correctly in a browser — confirm the theme toggle works, all components are interactive, the logo loads.
+   - **Serve the folder over HTTP to verify — do not rely on the in-tool preview pane for a local file.** An in-app/desktop preview commonly renders a local `file://` HTML as a static `data:` snapshot: `<img src="logo.svg">` shows broken, and hash-routed files (`website.html`, `app.html`) never navigate because `location.hash`/`hashchange` are inert. Start a tiny static server first — e.g. add a `.claude/launch.json` entry running `python -m http.server` and open the folder through it — then verify at `http://localhost:...`. (This is a *verification* requirement only; the deliverables themselves still need no build step and open fine when a real browser opens the file directly.)
+   - Prefer JS assertions over screenshots for layout checks — screenshots in the pane time out often. Read `scrollWidth` vs `innerWidth` for overflow, `aria-expanded`/`hidden` for state, and run any width check *after* a viewport resize (`innerWidth` reads 0 until one is applied).
+4. Confirm `DESIGN.md` has a complete `## Favicon Brief` section (recorded in Phase 4)
 5. **Design-level SEO and accessibility readiness check.** These are design decisions — the items below confirm the design system is ready for a developer to implement correctly. The code-level audits are handled by tina4-seo and the accessibility prompt after implementation.
 
    **Accessibility (design decisions):**
@@ -1570,15 +1883,38 @@ When both deliverables are built:
 
    **Handoff pointers (record in DESIGN.md under `## Next Steps`):**
    - SEO/AISO implementation → run **tina4-seo** (reads this DESIGN.md as its source of truth)
-   - WCAG 2.1 AA accessibility audit → use the **website-accessibility-prompt** in `plan/`
+   - WCAG 2.1 AA accessibility audit → run **tina4-a11y** (reads this DESIGN.md as its source of truth)
+   - **Marketing site re-anchor** (only when applicable) → if the Phase 1 brand reconnaissance found a marketing site whose brand values DRIFT from the tokens locked in DESIGN.md (e.g. marketing site uses `#5AB5BF`, app tokens are `#56B6C1`), note the delta and hand off the reconciliation. The design system in DESIGN.md is the anchor going forward; the marketing site is the surface that needs to move to match, not the other way round. Document which colours / typefaces / logo variants differ and propose the reconciliation path.
 
 6. Report to the user with a ✅/❌ dashboard per deliverable
 
-### tina4-css mapping note
+### tina4-css mapping note — conditional on the project's actual stack
+
+**Detect first, emit second.** Not every project uses tina4-css — some ship with their own token system (e.g. `--yc-*`, `--brand-*`, `--app-*`) and never load `tina4.min.css`. Emitting a mapping table for a project that doesn't use the framework is noise.
+
+**Detection heuristic** — check the project before writing this section:
+
+1. Grep the project for `tina4.min.css` or `tina4-css` references in HTML templates, CSS imports, or bundler config
+2. Grep the project's existing stylesheets for CSS custom property definitions with a project-specific prefix (`--yc-*`, `--app-*`, `--brand-*` beyond just `--brand` itself, or any `--[prefix]-*` pattern where the prefix is repeated across 10+ declarations)
+3. Check `package.json` / `composer.json` for a tina4-css dependency
+
+**Emit rules:**
+
+- If tina4-css is present AND no other token system detected → include the mapping table below (full version)
+- If tina4-css is present AND an existing token system detected → include the mapping table but add a note: *"Project already has a `--[prefix]-*` token system in `[file]`. Map DESIGN.md decisions to those tokens first; use the tina4-css classes below only where the existing system doesn't cover a component."*
+- If tina4-css is NOT present AND an existing token system detected → **skip the mapping table entirely.** Replace it with a short note:
+
+  > "**Token integration.** The project already uses a `--[prefix]-*` token system in `[file]`. Apply DESIGN.md decisions directly to the existing tokens — no tina4-css translation needed. Missing components (drawer, accordion, stepper, date picker, file upload, notification banner, toast, skeleton loaders, empty states, avatar, progress bar, tabs) should be implemented from `ui-guide.html` as reference, using the project's existing tokens."
+
+- If neither tina4-css nor a custom token system is detected → include the full mapping table with a note: *"Project doesn't appear to use tina4-css yet. Either add tina4-css (`<link>` in the base template) or apply the DESIGN.md tokens directly with the CSS variables shown in ui-guide.html."*
+
+Record the detection outcome in the handoff report so the developer sees what the skill decided and why.
+
+---
+
+**Mapping table (emit only when tina4-css is present or being adopted):**
 
 All Tina4 backend apps (PHP, Python, Ruby, Node) ship with `tina4.min.css` — a Bootstrap-compatible CSS framework with class-based components. The ui-guide.html uses a CSS custom property token system; the developer implements those patterns using tina4-css classes in the actual app.
-
-Include this mapping table in the closing report so the developer or AI developer agent knows exactly how to translate the design system into the framework:
 
 | Design component | tina4-css classes | Notes |
 |-----------------|-------------------|-------|
@@ -1655,15 +1991,43 @@ Logo brief written to DESIGN.md — awaiting designer handoff
 
 Call out any contrast fixes made to brand colours explicitly. Call out any logo variants that are missing. Never close with "everything looks great" — close with numbers.
 
+### Phase 5 checkpoint — offer the website mockup
+
+Before declaring the run complete, ask the developer whether to also build `website.html`. Some developers know upfront they want it (Phase 0 scope covers that); many others realise at handoff that a browser-ready client mockup would be useful.
+
+**Ask WHICH kind of mockup — do not assume.** "Website" is ambiguous for a product: it can mean the public marketing site (what a prospect sees, logged out) OR the product itself as pages (what a user sees, logged in). Building the wrong one wastes a whole phase — in testing, an app dashboard was built when a marketing site was wanted and had to be rebuilt. Resolve this at the checkpoint, before any HTML.
+
+Use a structured-question tool if available (`AskUserQuestion`, or the equivalent) with:
+
+- **Marketing website** — the public, logged-out site that pitches the product (Home / Features / Pricing / About / Contact). Saved as `website.html`.
+- **Product mockup** — the app itself as pages, logged-in (dashboard + core surfaces). Saved as `app.html`.
+- **Both** — separate, cross-linked files (`website.html` + `app.html`).
+- **No, we're done** — close the run at Phase 5.
+- **Later, keep the plan open** — mark the plan Status "Design system complete — website deferred" so a re-run picks it up.
+
+**Recommendation logic:** for a brief describing a **product/app/tool/SaaS**, recommend **Product mockup** or **Both** (the product surfaces are the interesting thing to see). For a **service/agency/brand** brief, recommend **Marketing website**. State the recommendation; let the developer override.
+
+Fallback prose:
+> "Design system is complete — DESIGN.md, brand-guidelines.html, ui-guide.html all shipped. Want a browser-ready mockup too? Two different things: a **marketing website** (public, logged-out, pitches the product → `website.html`), a **product mockup** (the app itself as pages, logged-in → `app.html`), or **both** cross-linked. For [this product], I'd suggest [X]. Or say we're done."
+
+Skip this checkpoint if the developer already picked **Full + website** at Phase 0 — but still confirm marketing-vs-product before building.
+
 ---
 
-## Phase 7 — Website (`website.html`) — Optional
+## Phase 6 — Website (`website.html`) — Optional
 
-Build a multi-page website as a single self-contained HTML file, saved to the `design/` folder. This phase is optional — only build it when the user explicitly asks for it, or when the chosen mode includes it (see Mode selection at the top of Phase 1).
+Build a multi-page mockup as a single self-contained HTML file, saved to the `design/` folder. Optional — only build when the user asks, when Phase 0 scope was **Full + website**, or when the Phase 5 checkpoint chose a mockup.
+
+**File naming follows the Phase 5 choice:**
+- **Marketing website** → `design/website.html` (public, logged-out — pitches the product)
+- **Product mockup** → `design/app.html` (the app itself as pages, logged-in)
+- **Both** → both files, cross-linked (a "See the app →" link in the marketing nav; a "← Back to site" link in the app)
+
+The two are different jobs and must not be conflated: a marketing site converts a first-time visitor; a product mockup shows the working surfaces to someone who already bought in. If the brief describes a product, the app mockup is usually the more valuable of the two.
 
 ### Purpose
 
-The website mockup is a high-fidelity, browser-ready reference that shows what the actual product website looks like — not a component library, not a brand reference, but real pages with real content. Any Tina4 developer skill (Python, PHP, Ruby, Node) reads it and implements from it. It is framework-agnostic by design.
+The mockup is a high-fidelity, browser-ready reference with real pages and real content — not a component library, not a brand reference. Any Tina4 developer skill (Python, PHP, Ruby, Node) reads it and implements from it. It is framework-agnostic by design.
 
 ### Discovery — do this before writing a single line of HTML
 
@@ -1786,7 +2150,7 @@ Build section by section using Write then Edit — never try to produce the enti
 5. (Continue for each page in the set)
 6. Final pass — verify nav links, theme toggle, mobile hamburger, all route transitions
 
-### Quality checklist before calling Phase 7 done
+### Quality checklist before calling Phase 6 done
 
 - [ ] All pages reachable via nav — browser back/forward works
 - [ ] Theme toggle works across all pages
@@ -1810,13 +2174,20 @@ Create `plan/design/PLAN.md` in the project. If `plan/` doesn't exist, create it
 **Outcome:** A complete visual identity and UI system recorded in design/DESIGN.md and shipped as design/brand-guidelines.html and design/ui-guide.html.
 
 ## Scope
-- [ ] Phase 1: Intake complete — logo, name, about us, industry, project outline gathered
-- [ ] Phase 2: Market research complete — sector landscape, colour direction, typography choice recorded in DESIGN.md
-- [ ] Phase 3: Design tokens decided — palette, form tokens, semantic colours, fluid type scale, spacing, radius, shadows, animation, z-index locked in DESIGN.md
-- [ ] Phase 4: brand-guidelines.html built and saved to design/
-- [ ] Phase 5: ui-guide.html built and saved to design/
-- [ ] Phase 6: DESIGN.md finalised; both files verified open correctly in browser
-- [ ] Phase 7: website.html built and saved to design/ (optional — skip if not requested)
+- [ ] Phase 0: Quick intake — name, industry, about-us, logo path gathered in one round trip
+- [ ] Phase 1: First visual — rough brand-guidelines.html on screen; background research started
+- [ ] Phase 1 checkpoint approved (or redirected) by developer
+- [ ] Phase 2: Brand refinement — research applied, design tokens locked in DESIGN.md, brand-guidelines.html updated to full quality
+- [ ] Phase 2 checkpoint approved by developer
+- [ ] Phase 3 §3.0: Product-specific components confirmed
+- [ ] Phase 3: Foundation sections built → Gate A (foundation review) approved
+- [ ] Phase 3: Buttons + forms + cards built → Gate B (pattern review + component inventory) approved
+- [ ] Phase 3: Remaining components + product group built — ui-guide.html complete in design/
+- [ ] Phase 3 checkpoint approved by developer
+- [ ] Phase 4: Polish & Favicon Brief — final pass on both files; favicon brief recorded in DESIGN.md
+- [ ] Phase 5: Handoff — DESIGN.md finalised; both files verified in browser; SEO/a11y readiness confirmed
+- [ ] Phase 5 checkpoint — website mockup offered (yes/no/later)
+- [ ] Phase 6: website.html built and saved to design/ (optional — skip if not requested)
 
 ## Bugs
 (none yet)
@@ -2001,8 +2372,9 @@ lg: [value]
 
 ## Next Steps
 - SEO/AISO implementation: run tina4-seo (reads this file as its source of truth)
-- WCAG 2.1 AA audit: use website-accessibility-prompt in plan/
+- WCAG 2.1 AA audit: run tina4-a11y (reads this file as its source of truth)
 - Developer implementation: read design/ui-guide.html and design/brand-guidelines.html as the spec
+- Marketing site re-anchor (only if applicable): [document any brand drift found between the app and the marketing site, and hand off the reconciliation. DESIGN.md is the anchor; the marketing site is the surface that needs to move.]
 
 ## Rationale log
 [One entry per significant design decision — what, why, date]
@@ -2024,6 +2396,8 @@ Before finalising the design plan in Phase 3, check each element against this li
 | Emoji as section markers (📌 🔑 ✨ as decorative bullets) | Reads as generated; use typographic hierarchy instead |
 | Everything centre-aligned | Centred layout reads as a lack of structural decision |
 | `border-radius: 12px` on every element | Rounds everything equally regardless of component personality |
+| Accent-coloured left border / rail on ordinary cards | The classic "designed by AI" tell — a decorative brand-colour stripe added to make a card look featured. A coloured card edge is only allowed when it *encodes state or category* (see Status card); a plain card gets emphasis from elevation, border, a key number, or a small icon — never a rail |
+| A left-edge rail as the default emphasis/status treatment, regardless of brand | Always-left is a tell even when the border is semantic. The edge placement + weight is a Phase 2 decision (§3.6b) grounded in brand personality — top/full/tinted-header/none are all valid; left is only the right call for ops/utility brands where it reads as a functional tag |
 | Pure `rgba(0,0,0,…)` shadows on a warm-toned brand | Shadows should be hue-tinted to match the palette |
 | Lorem ipsum or "Sample Text" in any deliverable | Real content or nothing; lorem is a placeholder for something that was never finished |
 
