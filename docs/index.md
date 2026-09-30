@@ -67,12 +67,14 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 <a class="tp-cta" href="/download/code-viewer/">Download the Code Viewer →</a>
 :::
 
-## Current framework release: 3.13.138
+## Current framework release: 3.13.142
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.138. This release strengthens request and
-template boundaries, corrects database and ORM behavior, isolates pooled transactions, and
-updates the skills to estimate time from measured work. Package checksums, SPDX inventories,
-and build provenance accompany the release. [Read the release notes](/python/36-releases.md).
+Python, PHP, Ruby, and Node.js are aligned on 3.13.142. A session that regenerates its id
+mid-request now re-emits its cookie, so the browser follows the rotated id; Ruby and Node.js
+also reassemble a fragmented WebSocket message before it reaches the handler. Underneath, the
+complexity comes down, duplicated logic is shared once, and a new metrics gate stands watch in
+continuous integration so a regression cannot slide back in.
+[Read the release notes](/python/36-releases.md).
 
 
 
@@ -103,7 +105,7 @@ No signup, no plugin. [llms.txt](/llms.txt) is a bootstrap protocol written for 
 
 ## What's new
 
-**v3.13.138 (2026-09-24)** - Request and template hardening, exclusive database connection ownership, ORM and service fixes, measured-time skills, and verifiable release artifacts. [full notes](/python/36-releases.md)
+**v3.13.142 (2026-09-30)** - A rotated session keeps its cookie, fragmented WebSocket messages arrive whole (Ruby and Node.js), complexity and duplication come down across the core, and a metrics ratchet gate holds the line in CI. [full notes](/python/36-releases.md)
 
 [Full changelog](/python/36-releases.md)
 
