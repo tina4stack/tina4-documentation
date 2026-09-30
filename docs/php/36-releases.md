@@ -14,7 +14,7 @@ drops from 57 to 23, `ORM::eagerLoad` from 42 to 6, and `Frond::findMathOp` from
 with the Frond hot path now allocation-free; `Migration::splitStatements` is decomposed
 alongside them. A second dedup round moves repeated blocks into shared homes.
 
-**A gate that ratchets quality.** The env-contract set gains the canonical NATS test-URL
+**A gate that ratchets quality.** The env-contract set gains the canonical `TINA4_TEST_NATS_URL`
 (ADR-0038), and `tina4 metrics --fail-on-regression` now stands watch on continuous
 integration: a new complexity offender fails the build against a committed baseline, so the
 cleanup above cannot quietly slide back (ADR-0002). The framework still has no required

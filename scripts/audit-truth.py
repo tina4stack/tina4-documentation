@@ -628,6 +628,12 @@ _ENV_NOISE = {
     "TINA4_SWOOLE_PORT",
     "TINA4_SWOOLE_WORKERS",
     "TINA4_SWOOLE_MAX_REQUEST",
+    # The canonical test-env name for a live NATS server (ADR-0038). It is a
+    # TEST-only variable: it lives in the shared test-env contract fixture and
+    # the WebSocket-backplane specs, read only by the suite, never by framework
+    # runtime source - so, like TINA4_SKILLS_REF above, it is real and
+    # documented but never appears in a scanned framework source tree.
+    "TINA4_TEST_NATS_URL",
 }
 
 
