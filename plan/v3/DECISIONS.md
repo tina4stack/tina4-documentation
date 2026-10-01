@@ -102,6 +102,7 @@ Conventions:
 | ADR-0086 | [One SQLite database-path resolver across the four frameworks](decisions/ADR-0086.md) (fixture `sqlite_path_contract.json`; mode 0775 everywhere, drive-letter recognised on every OS, an escaping relative path is refused not silently created) | Accepted |
 | ADR-0080 | [The release is signed only over CI-verified bytes, and every install path verifies the published checksum](decisions/ADR-0080.md) (tina4 CLI signing pipeline, installers, `tina4 update`) | Accepted |
 | ADR-0081 | [Package/registry publishing runs only from a protected `release` environment, with per-job least privilege](decisions/ADR-0081.md) (all publish workflows) | Accepted |
+| ADR-0087 | [A session's expiry slides on activity - a request that touched a stored session re-writes it to move the deadline forward](decisions/ADR-0087.md) (session concurrent-save fix; `fix/session-save-keeps-a-concurrent-logout`; all four frameworks; references ADR-0027) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
