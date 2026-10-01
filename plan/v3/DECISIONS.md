@@ -103,12 +103,11 @@ Conventions:
 | ADR-0080 | [The release is signed only over CI-verified bytes, and every install path verifies the published checksum](decisions/ADR-0080.md) (tina4 CLI signing pipeline, installers, `tina4 update`) | Accepted |
 | ADR-0081 | [Package/registry publishing runs only from a protected `release` environment, with per-job least privilege](decisions/ADR-0081.md) (all publish workflows) | Accepted |
 | ADR-0087 | [A session's expiry slides on activity - a request that touched a stored session re-writes it to move the deadline forward](decisions/ADR-0087.md) (session concurrent-save fix; `fix/session-save-keeps-a-concurrent-logout`; all four frameworks; references ADR-0027) | Accepted |
+| ADR-0088 | [The framework's own inline styles and scripts run under the strict default CSP via a per-response nonce](decisions/ADR-0088.md) (fixes a fresh project rendering unstyled; csp_nonce(); fixtures securityheaders_contract.json / http_hardening_contract.json; all four frameworks; Python reference #190) | Accepted |
 | ADR-0089 | [tina4-go serve/DevReload is watch -> go build -> bounce the child, not in-process re-import](decisions/ADR-0089.md) (Go-port scoping; the biggest compiled-vs-interpreted fork; `plan/go/ARCHITECTURE.md`) | Accepted |
 | ADR-0090 | [tina4-go ORM - the wire contract ports unchanged, the field API is a fresh idiomatic design](decisions/ADR-0090.md) (Go-port scoping; struct tags + reflection/generics; ADR-0008/0043/0064/0067) | Accepted |
 | ADR-0091 | [tina4-go templating - port Frond, do not wrap html/template](decisions/ADR-0091.md) (Go-port scoping; the template output + filter contract must match; ADR-0005) | Accepted |
 | ADR-0092 | [tina4-go CLI support - `tina4 init go` scaffold and a tree-sitter-go grammar for `tina4 metrics`, gated by parse health](decisions/ADR-0092.md) (Go-port scoping; the Pascal-declined precedent; ADR-0002) | Accepted |
-
-> ADR-0088 is claimed by the in-flight `adr/csp-nonce` branch (framework inline content under the strict default CSP via a per-response nonce); the Go-port stubs start at ADR-0089 to avoid that collision.
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
