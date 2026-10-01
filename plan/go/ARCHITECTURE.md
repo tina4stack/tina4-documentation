@@ -1,10 +1,11 @@
 # tina4-go: a scoping and feasibility study
 
-> Status: scoping + feasibility spike, 2026-10-01. This is NOT a build. It is the
-> honest verdict on whether a fifth Tina4 framework in Go is tractable, the real
-> forks it introduces, and a phased roadmap with measured estimates. The
-> load-bearing decisions are drafted as ADR-0089 through ADR-0092 and surfaced for
-> the maintainer at the end.
+> Status: scoping + feasibility spike COMPLETE, 2026-10-01. This is NOT a build. It
+> is the honest verdict on whether a fifth Tina4 framework in Go is tractable, the
+> real forks it introduces, and a phased roadmap with measured estimates. The five
+> load-bearing decisions (ADR-0089 through ADR-0092, plus the PBKDF2 call) are now
+> SETTLED - all Accepted - so Phase 0 is unblocked. See "Decisions (settled)" at the
+> end; the roadmap below is ready to execute on the maintainer's go-ahead to build.
 
 ## The verdict
 
@@ -309,25 +310,35 @@ focused agent-build-hours, Phase 5 is a wide parallel fan on top, and the lab
 contention between workers and the two gating decisions move the real finish more than
 any estimate inside a phase. Re-estimate after Phase 0 lands with its real duration.
 
-## Open decisions for the maintainer
+## Decisions (settled 2026-10-01)
 
-Each is a drafted ADR stub, Proposed, waiting on a call:
+All five load-bearing decisions are settled; the four ADRs are Accepted.
 
-1. **ADR-0089 - serve socket handoff.** Inherit the listener fd for a zero-drop
-   bounce, or accept a sub-second refusal on localhost and lean on the browser retry?
-   Recommendation: accept the refusal; it is far less code and almost invisible.
-2. **ADR-0090 - ORM shape and SQLite.** Tags-plus-reflection alone, or add generics
-   for typed returns? And which SQLite driver is the default dev database, given
-   stdlib has none - `modernc.org/sqlite` (pure Go) or `mattn/go-sqlite3` (cgo), under
-   ADR-0067?
-3. **ADR-0091 - confirm port-Frond over wrap-`html/template`.** Recommendation: port.
-   Wrapping cannot hold the inheritance and filter contract.
-4. **ADR-0092 - CLI timing and the Go default port.** Is the CLI work in the first
-   milestone, or does the port run on `go build` and `go test` until the core exists?
-   And confirm 7149 as the Go default port.
-5. **PBKDF2 (ADR-0090 note).** Pull `golang.org/x/crypto` for PBKDF2, or hand-write the
-   260000-iteration loop on `crypto/hmac` to keep the zero-dependency promise literally
-   true? Recommendation: hand-write it; it is a small, well-understood loop.
+1. **ADR-0089 - serve socket handoff: ACCEPT THE SUB-SECOND REFUSAL.** No listener-fd
+   inheritance. On a passing `go build` the loop kills the old child, starts the fresh
+   binary on the same port, and pushes the browser reload; a <1s refusal on localhost
+   is covered by the browser's reload retry. Builds are debounced; `tina4 serve` owns
+   the `go build`. Far less code, no platform-specific fd plumbing.
+2. **ADR-0090 - ORM shape and SQLite: TAGS+REFLECTION AND GENERICS; modernc.org/sqlite.**
+   Reflection reads the `tina4` struct tags for the column map, generics give typed
+   `Find`/`Where`/`All`. The default dev SQLite driver is `modernc.org/sqlite` (pure
+   Go) - it keeps `CGO_ENABLED=0`, static binaries and cross-compilation, where cgo
+   (`mattn/go-sqlite3`) would break all three; it is an app dependency (ADR-0067), never
+   in the framework core.
+3. **ADR-0091 - PORT Frond over wrap-`html/template`.** Confirmed; wrapping cannot hold
+   the inheritance + filter contract. The Python master leads the decomposition
+   (tokenizer / parser / evaluator / filters); `html/template`'s escaper is reused for
+   escaping only.
+4. **ADR-0092 - CLI LATE, Go default port 7149.** The port runs on plain `go build` +
+   `go test` + the Phase 0 contract runner until the core exists; `tina4 init go`, the
+   `tina4 serve` Go arm and the `tina4 metrics` grammar (gated at >= 95% parse health)
+   are wired in Phase 5. Default port 7149 confirmed.
+5. **PBKDF2: HAND-WRITE on `crypto/hmac`.** The 260000-iteration PBKDF2-SHA256 loop is
+   written directly on `crypto/hmac` + `crypto/sha256` (both core stdlib), not pulled
+   from `golang.org/x/crypto` - a small, auditable loop that keeps the zero-dependency
+   CORE promise literally true.
 
-The engine turns the key by itself once these five are settled - the fixtures already
-know what "correct" means, and the `go` column is waiting for its first green.
+The engine turns the key by itself now that these five are settled - the fixtures
+already know what "correct" means, and the `go` column is waiting for its first green.
+Phase 0 (the contract runner + the `go` suites column + the auditor's fifth column) is
+the unblocked next step whenever the maintainer gives the go-ahead to BUILD.
