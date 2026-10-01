@@ -103,6 +103,7 @@ Conventions:
 | ADR-0080 | [The release is signed only over CI-verified bytes, and every install path verifies the published checksum](decisions/ADR-0080.md) (tina4 CLI signing pipeline, installers, `tina4 update`) | Accepted |
 | ADR-0081 | [Package/registry publishing runs only from a protected `release` environment, with per-job least privilege](decisions/ADR-0081.md) (all publish workflows) | Accepted |
 | ADR-0087 | [A session's expiry slides on activity - a request that touched a stored session re-writes it to move the deadline forward](decisions/ADR-0087.md) (session concurrent-save fix; `fix/session-save-keeps-a-concurrent-logout`; all four frameworks; references ADR-0027) | Accepted |
+| ADR-0088 | [The framework's own inline styles and scripts run under the strict default CSP via a per-response nonce](decisions/ADR-0088.md) (fixes a fresh project rendering unstyled; csp_nonce(); fixtures securityheaders_contract.json / http_hardening_contract.json; all four frameworks; Python reference #190) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
