@@ -19,3 +19,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}.html -f
 RewriteRule ^(.+)$ $1.html [L]
+
+# PyConZA 2026 QR short links (printed on the A5 flyer and the business card).
+# 302, not 301, on purpose: the QR codes are permanent ink, so the destination
+# must stay changeable. QSD drops any query string a scanner app appends so the
+# UTM parameters arrive clean. Fallback pages for non-Apache hosts live at
+# docs/public/pycon/a5.html and docs/public/card.html.
+RewriteRule ^pycon/a5/?$ https://tina4.com/get-started/?utm_source=pyconza&utm_medium=qr&utm_campaign=pyconza2026&utm_content=a5 [R=302,L,QSD]
+RewriteRule ^card/?$ https://tina4.com/?utm_source=pyconza&utm_medium=qr&utm_campaign=pyconza2026&utm_content=card [R=302,L,QSD]
