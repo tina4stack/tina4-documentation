@@ -108,6 +108,7 @@ Conventions:
 | ADR-0090 | [tina4-go ORM - the wire contract ports unchanged, the field API is a fresh idiomatic design](decisions/ADR-0090.md) (Go-port scoping; struct tags + reflection/generics; ADR-0008/0043/0064/0067) | Accepted |
 | ADR-0091 | [tina4-go templating - port Frond, do not wrap html/template](decisions/ADR-0091.md) (Go-port scoping; the template output + filter contract must match; ADR-0005) | Accepted |
 | ADR-0092 | [tina4-go CLI support - `tina4 init go` scaffold and a tree-sitter-go grammar for `tina4 metrics`, gated by parse health](decisions/ADR-0092.md) (Go-port scoping; the Pascal-declined precedent; ADR-0002) | Accepted |
+| ADR-0093 | [WebMCP lets a running Tina4 app hand an agent its own actions as tools](decisions/ADR-0093.md) (fixture `webmcp_contract.json` owed; `webmcp.tool()` over a `navigator.modelContext` conformance layer, in-page for tina4-js SPA pages and a Frond backend bridge for SSR, tiered read/write consent, opt-in `tina4js/webmcp` module; distinct from the `/__dev/mcp` dev surface) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
