@@ -1,6 +1,6 @@
 # WebMCP for Tina4
 
-Governed by [ADR-0087](v3/decisions/ADR-0087.md). WebMCP lets a running Tina4
+Governed by [ADR-0093](v3/decisions/ADR-0093.md). WebMCP lets a running Tina4
 application hand an agent its own actions - `filterOrders`, `checkout` - as Model
 Context Protocol (MCP) tools the agent discovers and calls directly, instead of
 scraping the page and clicking. It is the production cousin of the `/__dev/mcp` dev
