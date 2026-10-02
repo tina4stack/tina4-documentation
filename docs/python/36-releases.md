@@ -1,5 +1,76 @@
 # Release Notes
 
+## v3.13.142 (2026-09-30) - The metrics ratchet lands, and a rotated session sticks
+
+**A regenerated session now sticks.** A session that regenerates its id in the middle of a
+request re-emits the session cookie, so the browser is handed the new id instead of quietly
+holding the old one. That is the behaviour that defeats session fixation: rotate the session
+right after a login or a privilege change and the browser follows. This brings Python into
+parity with the other three frameworks.
+
+**The complexity comes down.** The last functions scoring a cyclomatic complexity of 40 or
+higher are gone, decomposed into named helpers across the ASGI app, the ORM save and
+create-table paths, the AI message translator, Frond resolution, and the SQL statement
+splitter. Duplicated logic is now shared once - the LIMIT/OFFSET clause on the base adapter,
+the has-many paging loop, WebSocket room membership, rate-limit enforcement, and the queue
+dead-letter and retry path.
+
+**A gate that ratchets quality.** The canonical `TINA4_TEST_NATS_URL` joins the shared test-env set, so
+the NATS URL is named the same way everywhere (ADR-0038). A new `tina4 metrics
+--fail-on-regression` gate now stands watch in continuous integration: it compares against a
+committed baseline and fails the build the moment a file grows more complex or less
+maintainable, so the cleanup above cannot quietly slide back (ADR-0002). The framework still
+has no required runtime dependencies.
+
+## v3.13.141 (2026-09-29) - A committed symlink now fails the build
+
+A committed symbolic link now fails the build. Git records a symlink with mode 120000, and
+Windows extraction - 7-Zip, and so Composer on Windows - refuses those dangerous link paths,
+so a single leaked link breaks every Windows install. A new guard walks the git index,
+rejects any such file and names it, and a continuous-integration step runs it on every push
+and pull request. Its test is mutation-proof: it stages a real symlink in a real temporary
+repository and proves the guard bites. This is a small hardening release, parity with the
+tina4-php fix for the same Windows-and-Composer breakage, where a leaked container conf.d
+snapshot had shipped 134 absolute symlinks. tina4-python carries none today, and the guard
+keeps it that way. The framework still has no required runtime dependencies.
+
+## v3.13.140 (2026-09-28) - crud stops double-pluralising, and two CI gates land
+
+**The crud generator stops double-pluralising.** A `Category` resource now writes
+`categories` for its route and template names, not `categoriess`. Alongside it, SQLite path
+resolution is hardened: a relative database path that would escape the project root is
+refused, and any missing parent directories are created 0775 (ADR-0086). The async database
+layer asks for the running event loop through a supported check instead of a private call,
+and the connection-pool default is now written down (ADR-0074).
+
+**Two gates land in continuous integration.** A doc-drift audit fails the build when the
+packaged CLAUDE.md or the AI skills describe an API the code does not have, and
+generator-parity coverage keeps the crud output honest. Alongside them the CLAUDE.md CRUD
+example is corrected, the web-push skill mirrors are synced to their canonical source, and
+the http-hardening module is un-ignored so its tests actually run. The AI-skill stale-check
+resolves correctly and warns on addGlobal closures. The framework still has no required
+runtime dependencies.
+
+## v3.13.139 (2026-09-26) - SSRF guards, a protected release, and dev binds loopback
+
+**Outbound requests are guarded against SSRF.** Requests from the Api client and Web Push
+refuse private, loopback and link-local targets unless you explicitly allow them (ADR-0084).
+Server-Side Request Forgery (SSRF) is tricking the server into calling an address it should
+never reach, and this shuts that door. The development admin surface is hardened too: the
+health endpoint no longer discloses the framework version outside debug, and development
+binds loopback by default (ADR-0078).
+
+**Tokens cannot be forged, and dead-letters report honestly.** Production refuses to boot with
+a blank or short HMAC secret, so tokens cannot be forged (ADR-0079). Queue `reject()`
+dead-letters immediately and `size("dead")` reports the dead-letter depth (ADR-0022,
+ADR-0023). Session-table first use is concurrency-safe across every engine, and mail
+encryption follows the configured TLS/STARTTLS contract (ADR-0071). Log output,
+driver-install hints and WSDL and mail diagnostics redact credentials and URLs.
+
+**Publishing is gated.** Releases now run behind a protected environment with release actions
+pinned by commit SHA, and a medium-severity API token-leak path is closed. The framework
+still has no required runtime dependencies.
+
 ## v3.13.138 (2026-09-24) - Safer requests, templates, and database operations
 
 **Licensing from this release.** Tina4 is available under MPL-2.0, with separate commercial terms available from Code Infinity. Copyright Code Infinity. Previously published releases retain their original licences.

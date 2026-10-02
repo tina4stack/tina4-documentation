@@ -13,7 +13,7 @@ A CRM system exposes customer lookup. An accounting system exposes invoice queri
 Import `McpServer` and create an instance on any path:
 
 ```typescript
-import { McpServer } from "@tina4/core";
+import { McpServer } from "tina4-nodejs";
 
 const mcp = new McpServer("/api/my-tools", "My App Tools", "1.0.0");
 ```
@@ -36,7 +36,7 @@ mcp.registerRoutes(router);
 The `mcpTool` function registers a handler as an MCP tool. Parameter metadata becomes the input schema:
 
 ```typescript
-import { McpServer, mcpTool, schemaFromParams } from "@tina4/core";
+import { McpServer, mcpTool, schemaFromParams } from "tina4-nodejs";
 
 const mcp = new McpServer("/crm/mcp", "CRM Tools");
 
@@ -86,7 +86,7 @@ An AI assistant sees these tools and their schemas:
 Resources are read-only data endpoints. They expose reference data that AI assistants can browse:
 
 ```typescript
-import { mcpResource } from "@tina4/core";
+import { mcpResource } from "tina4-nodejs";
 
 mcpResource("crm://product-catalog", "All active products", "application/json", mcp)(
   () => db.fetch("SELECT id, name, price, category FROM products WHERE active = 1")
@@ -106,7 +106,7 @@ Resources are accessed via `resources/list` and `resources/read` in the MCP prot
 Group related tools into a service class. Register each method as a tool:
 
 ```typescript
-import { McpServer, schemaFromParams } from "@tina4/core";
+import { McpServer, schemaFromParams } from "tina4-nodejs";
 
 const mcp = new McpServer("/accounting/mcp", "Accounting Tools");
 
@@ -164,7 +164,7 @@ By default, developer MCP servers are public. Add authentication using Tina4 mid
 
 ```typescript
 // Secure the MCP routes via middleware
-import { secured } from "@tina4/core";
+import { secured } from "tina4-nodejs";
 
 // Apply auth middleware before registering routes
 mcp.registerRoutes(router); // then protect the path with middleware
@@ -173,7 +173,7 @@ mcp.registerRoutes(router); // then protect the path with middleware
 Or check the bearer token inside individual tools:
 
 ```typescript
-import { Auth } from "@tina4/core";
+import { Auth } from "tina4-nodejs";
 
 mcp.registerTool("sensitive_data",
   (args) => {
@@ -225,8 +225,8 @@ Here is a full working example -- a CRM system with customer, order, and product
 
 ```typescript
 // src/routes/mcp/setup.ts
-import { McpServer, mcpTool, mcpResource, schemaFromParams } from "@tina4/core";
-import { initDatabase } from "@tina4/orm";
+import { McpServer, mcpTool, mcpResource, schemaFromParams } from "tina4-nodejs";
+import { initDatabase } from "tina4-nodejs/orm";
 
 const db = await initDatabase({ url: "sqlite:///crm.db" });
 

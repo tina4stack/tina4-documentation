@@ -140,3 +140,5 @@ data/
 
 # Generated build artifact (scripts/gen-llms-full.sh, run by docs:build)
 docs/public/llms-full.txt
+__pycache__/
+*.pyc

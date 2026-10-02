@@ -96,9 +96,18 @@ Conventions:
 | ADR-0075 | [Tina4 moves to MPL-2.0 with a Code Infinity commercial licence](decisions/ADR-0075.md) (legal review and contributor consent confirmed for this release) | Accepted |
 | ADR-0072 | [A Content-Type set with header() is the one Content-Type; settings are read when they are used](decisions/ADR-0072.md) (tina4-python#143, #144) | Accepted |
 | ADR-0077 | [Frond escapes by default; trusted output is a SafeString type only](decisions/ADR-0077.md) | Accepted |
-
+| ADR-0084 | [Outbound HTTP refuses private/internal addresses by default (SSRF guard for the Api client and Web Push)](decisions/ADR-0084.md) (Feature F7; fixture `ssrf_guard_contract.json`; `TINA4_ALLOW_PRIVATE_REQUESTS`) | Accepted |
 | ADR-0082 | [Credentials and development endpoints retain explicit trust boundaries](decisions/ADR-0082.md) | Accepted; implementation verification pending |
+| ADR-0083 | [The built-in GraphQL route is CSRF-safe and its fan-out is bounded](decisions/ADR-0083.md) (Sept 2026 audit F2/F4; fixture `graphql_transport_contract.json`; `TINA4_GRAPHQL_MAX_NODES`; all four frameworks) | Accepted |
 | ADR-0086 | [One SQLite database-path resolver across the four frameworks](decisions/ADR-0086.md) (fixture `sqlite_path_contract.json`; mode 0775 everywhere, drive-letter recognised on every OS, an escaping relative path is refused not silently created) | Accepted |
+| ADR-0080 | [The release is signed only over CI-verified bytes, and every install path verifies the published checksum](decisions/ADR-0080.md) (tina4 CLI signing pipeline, installers, `tina4 update`) | Accepted |
+| ADR-0081 | [Package/registry publishing runs only from a protected `release` environment, with per-job least privilege](decisions/ADR-0081.md) (all publish workflows) | Accepted |
+| ADR-0087 | [A session's expiry slides on activity - a request that touched a stored session re-writes it to move the deadline forward](decisions/ADR-0087.md) (session concurrent-save fix; `fix/session-save-keeps-a-concurrent-logout`; all four frameworks; references ADR-0027) | Accepted |
+| ADR-0088 | [The framework's own inline styles and scripts run under the strict default CSP via a per-response nonce](decisions/ADR-0088.md) (fixes a fresh project rendering unstyled; csp_nonce(); fixtures securityheaders_contract.json / http_hardening_contract.json; all four frameworks; Python reference #190) | Accepted |
+| ADR-0089 | [tina4-go serve/DevReload is watch -> go build -> bounce the child, not in-process re-import](decisions/ADR-0089.md) (Go-port scoping; the biggest compiled-vs-interpreted fork; `plan/go/ARCHITECTURE.md`) | Accepted |
+| ADR-0090 | [tina4-go ORM - the wire contract ports unchanged, the field API is a fresh idiomatic design](decisions/ADR-0090.md) (Go-port scoping; struct tags + reflection/generics; ADR-0008/0043/0064/0067) | Accepted |
+| ADR-0091 | [tina4-go templating - port Frond, do not wrap html/template](decisions/ADR-0091.md) (Go-port scoping; the template output + filter contract must match; ADR-0005) | Accepted |
+| ADR-0092 | [tina4-go CLI support - `tina4 init go` scaffold and a tree-sitter-go grammar for `tina4 metrics`, gated by parse health](decisions/ADR-0092.md) (Go-port scoping; the Pascal-declined precedent; ADR-0002) | Accepted |
 | ADR-0093 | [WebMCP lets a running Tina4 app hand an agent its own actions as tools](decisions/ADR-0093.md) (fixture `webmcp_contract.json` owed; `webmcp.tool()` over a `navigator.modelContext` conformance layer, in-page for tina4-js SPA pages and a Frond backend bridge for SSR, tiered read/write consent, opt-in `tina4js/webmcp` module; distinct from the `/__dev/mcp` dev surface) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)

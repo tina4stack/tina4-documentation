@@ -7,7 +7,8 @@
     "docs:sync": "bash scripts/sync-books.sh",
     "audit:features": "python3 scripts/audit-feature-catalog.py",
     "docs:dev": "tina4press dev .",
-    "docs:build": "bash scripts/gen-llms-full.sh && tina4press build .",
+    "docs:skill-versions": "python3 scripts/gen-skills-version-endpoints.py",
+    "docs:build": "bash scripts/gen-llms-full.sh && python3 scripts/gen-skills-version-endpoints.py && tina4press build .",
     "docs:llms-full": "bash scripts/gen-llms-full.sh",
     "docs:preview": "npx --yes serve docs/.vitepress/dist"
   },
