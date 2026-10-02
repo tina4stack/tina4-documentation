@@ -25,7 +25,9 @@ client = Tina4::Api.new("https://api.example.com", {
 })
 ```
 
-Headers set here are sent with every request.
+Headers set here are sent with every request to the client's base URL.
+
+Headers are bound to the client's base URL: a request to a different origin, or a redirect to one, carries only `User-Agent`, `Accept`, `Accept-Encoding`, `Accept-Language`, `Content-Type` and `Content-Length`. A client with no base URL sends its headers to the URL each call names, and drops them on a redirect to another origin.
 
 ---
 
