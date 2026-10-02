@@ -1,9 +1,10 @@
 <!doctype html>
 <meta charset="utf-8">
 <title>Tina4</title>
-<!-- Fallback for the Tina4 business card QR short link. Apache serves the 302 from
-     .htaccess before this page is reached; on any other host this page does
-     the same redirect client-side. -->
+<!-- QR short link for the Tina4 business card: https://tina4.com/card
+     Apache serves this via DirectoryIndex, so it needs no .htaccess rule
+     (tina4press overwrites .htaccess on every build). The page forwards to
+     the tracked URL; change the URL below to re-point every printed code. -->
 <meta http-equiv="refresh" content="0; url=https://tina4.com/?utm_source=pyconza&utm_medium=qr&utm_campaign=pyconza2026&utm_content=card">
 <link rel="canonical" href="https://tina4.com/?utm_source=pyconza&utm_medium=qr&utm_campaign=pyconza2026&utm_content=card">
 <script>location.replace("https://tina4.com/?utm_source=pyconza&utm_medium=qr&utm_campaign=pyconza2026&utm_content=card");</script>
