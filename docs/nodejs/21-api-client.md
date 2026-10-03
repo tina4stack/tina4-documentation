@@ -53,7 +53,7 @@ Instance setters:
 
 | Method | Description |
 |--------|-------------|
-| `addHeaders(headers)` | Merge headers sent with every request |
+| `addHeaders(headers)` | Merge headers sent with every request to the base URL (not to another origin; see below) |
 | `setBearerToken(token)` | Set `Authorization: Bearer <token>` |
 | `setBasicAuth(user, pass)` | Set HTTP Basic auth |
 | `setIgnoreSsl(true)` | Skip TLS verification (dev / self-signed certs only) |
@@ -219,7 +219,9 @@ await api.post("/upload", "<xml/>", "application/xml");
 const options = await api.sendRequest("OPTIONS", "/users");
 ```
 
-Headers configured with `addHeaders()` / `setBearerToken()` are sent on every request from that instance. For different auth, construct a second `Api` instance.
+Headers configured with `addHeaders()` / `setBearerToken()` are sent on every request from that instance to its base URL. For different auth, construct a second `Api` instance.
+
+Headers are bound to the client's base URL: a request to a different origin, or a redirect to one, carries only `User-Agent`, `Accept`, `Accept-Encoding`, `Accept-Language`, `Content-Type` and `Content-Length`. A client with no base URL sends its headers to the URL each call names, and drops them on a redirect to another origin.
 
 ---
 
