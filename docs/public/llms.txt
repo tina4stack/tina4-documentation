@@ -96,15 +96,20 @@ The tina4 **skills** are the single highest-leverage thing for an AI building
 Tina4. They are the source of truth for the framework's patterns and stop the
 guessing that breaks builds. **Install them and use them.**
 
-- **What:** six skills: one developer skill for each Tina4 backend, plus
-  `tina4-js` and `tina4-maintainer`.
+- **What:** nine skills. For building apps: one developer skill per backend
+  (`tina4-developer-python` / `-php` / `-ruby` / `-nodejs`), `tina4-js` for the
+  reactive frontend, `tina4-architect` and `tina4-design` for starting a new
+  project, and `tina4-cli` for the `tina4` client itself (every command and flag).
+  For maintaining Tina4 itself: `tina4-maintainer`.
 - **Install:** `tina4 setup` installs the selected tool's skills. To install or
   refresh them later, run `tina4 skills` and choose Claude, Codex, Cursor, or
   all three. `tina4 update` also refreshes each installed Tina4 skills target.
 - **Where they live:** Claude uses `~/.claude/skills`, Codex uses
   `~/.agents/skills`, and Cursor uses `~/.cursor/skills`.
-- **Use:** follow the matching developer skill for backend work and `tina4-js`
-  for the frontend. Unsure of an API? Read the skill before guessing.
+- **Use:** follow the matching developer skill for backend work, `tina4-js` for
+  the frontend, `tina4-architect` / `tina4-design` when starting a new project,
+  and `tina4-cli` for anything about the `tina4` command. Unsure of an API? Read
+  the skill before guessing.
 
 ---
 
