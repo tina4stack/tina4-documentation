@@ -129,6 +129,25 @@ const BACKEND_GROUPS = [
   { text: "Reference", stems: ["upgrading-from-v2", "feature-list"] },
 ];
 
+// Open Graph and Twitter card tags, so a shared tina4.com link unfurls with the
+// Tina4 robot instead of a blank box. These are SITE-WIDE: the image and the
+// card type apply to every page. og:title and og:description are deliberately
+// left out here so each page's own <title> and <meta name="description"> stand
+// in - Slack and X fall back to them - which keeps the per-page title in the
+// unfurl rather than flattening all pages to one. A served tina4press release
+// can later make og:title/og:url per-page; this is the zero-dependency version.
+const OG_IMAGE = "https://tina4.com/og-image.png";
+const OG_META = [
+  ["meta", { property: "og:type", content: "website" }],
+  ["meta", { property: "og:site_name", content: "Tina4" }],
+  ["meta", { property: "og:image", content: OG_IMAGE }],
+  ["meta", { property: "og:image:width", content: "1200" }],
+  ["meta", { property: "og:image:height", content: "630" }],
+  ["meta", { property: "og:image:alt", content: "The Tina4 robot" }],
+  ["meta", { name: "twitter:card", content: "summary_large_image" }],
+  ["meta", { name: "twitter:image", content: OG_IMAGE }],
+];
+
 export default {
   title: "Tina4",
   description: "One framework, four languages, 140 features, zero runtime dependencies.",
@@ -139,7 +158,7 @@ export default {
   outDir: "docs/.vitepress/dist",
   // headHtml() reads config.head (VitePress format: [tag, attrs, innerHTML]).
   // Top level, NOT themeConfig - it is not a theme option.
-  head: [["style", { id: "tp-site-links" }, SITE_LINK_CSS]],
+  head: [["style", { id: "tp-site-links" }, SITE_LINK_CSS], ...OG_META],
   themeConfig: {
     analytics: "G-FZRRSBE9M0",
     // All theme colors as constants — tweak these to retheme the whole site.
