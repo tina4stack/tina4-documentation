@@ -5,3 +5,4 @@
 # never normalize anything under the bundle. Mirrors tina4/.gitattributes marking
 # the canonical install-skills.ps1 `binary`.
 docs/public/skills/** binary
+docs/public/install-skills.ps1 binary
