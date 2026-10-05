@@ -1,5 +1,25 @@
 # Release Notes
 
+## v3.13.147 (2026-10-05) - The dev tools answer back instead of falling over
+
+The built-in development Model Context Protocol (MCP) tools used to crash on a bad call. Hand `api_method` a missing or misspelt argument and it fell over with a raw error; ask `database_columns` about a table that isn't there and it handed back an empty list, as if the table were merely empty. Now each tool checks its arguments first and answers in plain words: a missing one reads "missing required argument 'name' (api_method takes class, name)", an unknown one reads the same way, and a table that doesn't exist says "table not found: orders" rather than nothing at all. `route_list` now shows the middleware on each route, so a guarded route reads differently from an open one, and `api_method` fills in its parameters and its return type. The fix landed across all four frameworks at once (tina4-php#271), each with real tests a mutation can still break. The framework still has no required runtime dependencies.
+
+## v3.13.146 (2026-10-04) - The skills get a map
+
+The Tina4 AI skills grew up this release. Each one opens with a contents list and a short legend that says plainly what you may never override, what is a default with a reason behind it, and what is left to your own judgement. The long single files are split by subject into nested references, so a reader fetches only the part they need, and the passages that used to repeat move into one shared home. A new tina4-cli skill covers the client, and the installer now works out for itself which files to fetch and at which version, rather than carrying a frozen list that drifts. The signing story is written down as it really is, the llms.txt pointer is fixed, and one rule sits above the rest: the Tina4 client is installed first, before any Tina4 work begins. It ships whole, across the four package registries and the tina4.com skills bundle.
+
+## v3.13.145 (2026-10-03) - The client keeps its headers, and migrate stops pretending
+
+A few sharp edges came off this release. The Api client will now keep the headers you configured attached to the origin they were set for, so a redirect off to another host no longer carries them along. On the command line, migrate used to shrug and exit clean when it could not reach the database, claiming success for work it never did; it now exits non-zero, so a broken deploy fails loudly instead of quietly. And serve prints its startup banner without marking the response headers as already sent, so the first real request can still set its own. The framework still has no required runtime dependencies.
+
+## v3.13.144 (2026-10-02) - A HEAD request owns up to its length
+
+A HEAD request asks for the headers a GET would send and nothing more, but the server used to answer one with Content-Length: 0, as if there were nothing behind it. Now a routed HEAD runs the very handler a GET would, measures the body it would have returned, and reports exactly that length while sending no body - which is what RFC 7230 asks of it. The readiness guard the test server waits on is unified across all four frameworks on the server's own startup banner, so a boot is trusted only once the right server has announced itself. The framework still has no required runtime dependencies.
+
+## v3.13.143 (2026-10-01) - Inline content runs under the strict policy, and a save stops clobbering
+
+The strict default Content-Security-Policy (CSP) and the framework's own inline content were at odds. The browser refuses any inline style or script unless it carries a nonce the policy header also names, so the dev toolbar and the error overlay went bare. Now a fresh nonce is minted for every response, written into both style-src and script-src, and handed to your templates as csp_nonce(), so the framework's own inline content runs under the strict policy with no 'unsafe-inline' anywhere (ADR-0088). The session grew more careful too: a save will now merge into the stored record rather than overwrite it, so a request that writes one key no longer wipes another's, and a session's deadline slides forward on activity rather than its last change (ADR-0087). The readiness probe the serve tests lean on now waits for the child to announce its own port before it believes /health, which cures a flake at its real cause. The framework still has no required runtime dependencies.
+
 ## v3.13.142 (2026-09-30) - Fragmented messages arrive whole, and a metrics ratchet holds the line
 
 **A fragmented message arrives whole.** A WebSocket message split across continuation frames is
