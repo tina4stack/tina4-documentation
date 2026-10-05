@@ -105,7 +105,7 @@ No signup, no plugin. [llms.txt](/llms.txt) is a bootstrap protocol written for 
 
 ## What's new
 
-**v3.13.142 (2026-09-30)** - A rotated session keeps its cookie, fragmented WebSocket messages arrive whole (Ruby and Node.js), complexity and duplication come down across the core, and a metrics ratchet gate holds the line in CI. [full notes](/python/36-releases.md)
+**v3.13.147 (2026-10-05)** - The built-in development MCP tools answer a bad call with an actionable error rather than crashing, show the middleware on each route, and fill in a method's parameters and return type - fixed across all four frameworks. [full notes](/python/36-releases.md)
 
 [Full changelog](/python/36-releases.md)
 
