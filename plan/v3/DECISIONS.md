@@ -110,6 +110,7 @@ Conventions:
 | ADR-0092 | [tina4-go CLI support - `tina4 init go` scaffold and a tree-sitter-go grammar for `tina4 metrics`, gated by parse health](decisions/ADR-0092.md) (Go-port scoping; the Pascal-declined precedent; ADR-0002) | Accepted |
 | ADR-0093 | [WebMCP lets a running Tina4 app hand an agent its own actions as tools](decisions/ADR-0093.md) (fixture `webmcp_contract.json` owed; `webmcp.tool()` over a `navigator.modelContext` conformance layer, in-page for tina4-js SPA pages and a Frond backend bridge for SSR, tiered read/write consent, opt-in `tina4js/webmcp` module; distinct from the `/__dev/mcp` dev surface) | Accepted |
 | ADR-0095 | [Startup auto-migration holds a cross-process lock, so concurrent boots apply each migration exactly once](decisions/ADR-0095.md) (tina4-php#277; per-engine advisory lock + OS file-lock fallback held for the whole run; proven by a real multi-process test per framework, not a static fixture; cross-HOST file-lock engines still want TINA4_AUTO_MIGRATE=false) | Accepted |
+| ADR-0096 | [The dev-admin peer gate exempts the static toolbar assets, gains a raw-peer opt-in, and never injects a toolbar it would refuse](decisions/ADR-0096.md) (tina4-php#279; TINA4_DEV_ALLOWED_PEERS raw-peer IP/CIDR allow-list, toolbar.css/.js ungated, no inject for a refused viewer; refines ADR-0078/0082 without relaxing the gate) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
