@@ -907,6 +907,26 @@ Auto-CRUD routes are added when `Tina4::AutoCrud.generate_routes` runs. Call it 
 
 ---
 
+### The CRUD admin page
+
+Where the `auto_crud` flag gives a model a REST API, `Tina4::Crud.to_crud` gives it a face. One call renders a complete server-rendered admin screen for a model - a searchable, sortable, paginated table with create, edit and delete forms - and registers that model's AutoCrud routes behind it:
+
+```ruby
+Tina4::Router.get("/admin/orders") do |request, response|
+  response.html(Tina4::Crud.to_crud(request, model: Order, title: "Orders"))
+end
+```
+
+`Tina4::Crud.to_crud(request, ...)` reads:
+
+- `model:` (required) - the ORM model class. It drives the columns, the primary key and every write.
+- `sql:` (optional) - a listing query that shapes only the displayed grid (a filter, join or projection); the model still owns the columns and the writes, so a custom query cannot desync them. Inferred from the model when omitted.
+- `title:` (optional) - the page title (default `"CRUD"`).
+- `prefix:` (optional) - the AutoCrud route prefix the page talks to (default `"/api"`).
+- `limit:` (optional) - records per page (default `10`).
+
+Search, column sort and pagination all ride in the query string, so a view survives a reload and a shared link. The screen is drawn from app-overridable templates under `crud/`, so adding your own under the app's template path restyles any part without forking the gem.
+
 ## 10. Scopes
 
 Scopes are reusable query filters baked into the model. Ruby supports two approaches: instance methods and the `scope` class method.

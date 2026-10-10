@@ -1,5 +1,23 @@
 # Release Notes
 
+## v3.13.149 (2026-10-10) - A CRUD screen out of the box, and the dev-server rough edges come off
+
+**A CRUD screen out of the box.** `Crud.toCrud(request, { model: Order })` renders a full admin screen for a model from a single call - a listing, plus create, edit and delete forms, wired to the AutoCrud REST endpoints behind it - so a model earns a working back office without a hand-built page (ADR-0094).
+
+**Startup migrations stop stepping on each other.** With several workers booting at once against a fresh database, the auto-migrate hook could apply the same migration more than once, and a data migration would insert its rows twice. `migrate()` now takes one run-wide lock before it reads the pending list and holds it for the whole run: the winner migrates while the rest wait, then re-read the applied set and find nothing pending (#277). PostgreSQL, MySQL and MSSQL hold a native advisory lock; SQLite and Firebird hold a file lock (an atomic exclusive-create file, since Node core has no flock), which now lives in the system temp directory rather than littering the tracked migrations folder.
+
+**The dev dashboard reaches a Docker box.** The development dashboard and toolbar answer loopback by default, but a browser hitting a published container port arrives from the container-network gateway, so the dashboard refused it (#279). Set `TINA4_DEV_ALLOWED_PEERS` to an IP or CIDR allow-list - matched against the raw socket peer, never a forwarded header - and that box is let in; the static toolbar assets always load, and a viewer the gate refuses gets no toolbar injected, the 500 overlay included.
+
+**A configurable SMTP timeout, reported as a timeout.** The mail client's timeout is configurable now - a constructor argument, else `TINA4_MAIL_TIMEOUT`, else 30 seconds - and a server that accepts the connection then never answers is surfaced as a timeout instead of hanging the request (#278).
+
+**`pgsql://` connects.** The database layer accepts the `pgsql://` scheme as an alias of `postgres`, so a connection string copied from another tool connects instead of being refused (#280).
+
+Every fix landed across all four frameworks with real, no-mock tests proven by mutation. The framework still has no required runtime dependencies.
+
+## v3.13.148 (2026-10-06) - An anonymous request stores no session
+
+A request that never signs in used to be handed a session all the same - a cookie set, a record written, an entry for the store to reap - for state it would never read back. Now a session comes into being only when something is actually put in it: an anonymous visitor who touches no session data gets no cookie and no stored record, so the store stops filling with empty sessions and a cached or crawled page carries no `Set-Cookie`. Sign in, or write a single key, and the session springs up exactly as before. The framework still has no required runtime dependencies.
+
 ## v3.13.147 (2026-10-05) - The dev tools answer back instead of falling over
 
 The built-in development Model Context Protocol (MCP) tools used to crash on a bad call. Hand `api_method` a missing or misspelt argument and it fell over with a raw error; ask `database_columns` about a table that isn't there and it handed back an empty list, as if the table were merely empty. Now each tool checks its arguments first and answers in plain words: a missing one reads "missing required argument 'name' (api_method takes class, name)", an unknown one reads the same way, and a table that doesn't exist says "table not found: orders" rather than nothing at all. `route_list` now shows the middleware on each route, so a guarded route reads differently from an open one, and `api_method` fills in its parameters and its return type. The fix landed across all four frameworks at once (tina4-php#271), each with real tests a mutation can still break. The framework still has no required runtime dependencies.
