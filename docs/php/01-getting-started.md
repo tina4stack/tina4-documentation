@@ -1,5 +1,14 @@
 ---
 outline: deep
+title: Getting Started with Tina4 PHP
+summary: Tina4 PHP is a zero-dependency web framework for PHP 8.5+, with routing, ORM, Frond templates, authentication, queues and WebSocket built in. One of the four Tina4 language implementations.
+tags:
+  - overview
+  - what is tina4
+  - getting started
+  - php
+  - web framework
+  - zero dependency
 ---
 
 <div v-pre>
