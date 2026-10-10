@@ -1,5 +1,14 @@
 ---
 outline: deep
+title: Getting Started with Tina4 Ruby
+summary: Tina4 Ruby is a zero-dependency web framework for Ruby 4.0+, with routing, ORM, Frond templates, authentication, queues and WebSocket built in. One of the four Tina4 language implementations.
+tags:
+  - overview
+  - what is tina4
+  - getting started
+  - ruby
+  - web framework
+  - zero dependency
 ---
 
 <div v-pre>

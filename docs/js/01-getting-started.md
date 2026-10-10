@@ -1,3 +1,16 @@
+---
+title: Getting Started with tina4-js
+summary: tina4-js is a tiny (under 3KB) reactive frontend framework - signals, web components and html tagged templates - for building client-rendered interfaces, standalone or on top of a Tina4 backend.
+tags:
+  - overview
+  - what is tina4-js
+  - getting started
+  - javascript
+  - frontend
+  - reactive
+  - signals
+---
+
 # Getting Started
 
 ## Your First 5 Minutes
