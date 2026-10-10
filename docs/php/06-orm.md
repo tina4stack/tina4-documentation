@@ -1010,6 +1010,28 @@ $registered = $crud->getModels();
 
 ---
 
+### The CRUD admin page
+
+Where the `autoCrud` flag gives a model a REST API, `Crud::toCrud()` gives it a face. One call renders a complete server-rendered admin screen for a model - a searchable, sortable, paginated table with create, edit and delete forms - and registers that model's AutoCrud routes behind it, so the page and the API it drives come from one line:
+
+```php
+use Tina4\Crud;
+
+Router::get("/admin/orders", function ($request, $response) {
+    return $response(Crud::toCrud($request, ["model" => Order::class, "title" => "Orders"]));
+});
+```
+
+`Crud::toCrud($request, $options)` reads:
+
+- `model` (required) - the ORM model class. It drives the columns, the primary key and every write.
+- `sql` (optional) - a listing `SELECT` that shapes only the displayed grid (a filter, join or projection); the model still owns the columns and the writes, so a custom query cannot desync them. Inferred from the model when omitted.
+- `title` (optional) - the page title (default `"CRUD"`).
+- `prefix` (optional) - the AutoCrud route prefix the page talks to (default `"/api"`).
+- `limit` (optional) - records per page (default `10`).
+
+Search, column sort and pagination all ride in the query string, so a view survives a reload and a shared link. The screen is drawn from Frond templates under `crud/` - the page, the table, the form, the modals - so dropping a `src/templates/crud/<name>.twig` of your own restyles any part without forking the framework.
+
 ## 10. Database Connection
 
 ### Binding the Database

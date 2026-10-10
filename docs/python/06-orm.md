@@ -996,6 +996,28 @@ registered = AutoCrud.models()
 
 ---
 
+### The CRUD admin page
+
+Where the `auto_crud` flag gives a model a REST API, `Crud.to_crud()` gives it a face. One call renders a complete server-rendered admin screen for a model - a searchable, sortable, paginated table with create, edit and delete forms - and registers that model's AutoCrud routes behind it:
+
+```python
+from tina4_python.crud import Crud
+
+@get("/admin/orders")
+async def orders_admin(request, response):
+    return response(Crud.to_crud(request, model=Order, title="Orders"))
+```
+
+`Crud.to_crud(request, ...)` reads:
+
+- `model` (required) - the ORM model class. It drives the columns, the primary key and every write.
+- `sql` (optional) - a listing query that shapes only the displayed grid (a filter, join or projection); the model still owns the columns and the writes, so a custom query cannot desync them. Inferred from the model when omitted.
+- `title` (optional) - the page title (default `"CRUD"`).
+- `prefix` (optional) - the AutoCrud route prefix the page talks to (default `"/api"`).
+- `limit` (optional) - records per page (default `10`).
+
+Search, column sort and pagination all ride in the query string, so a view survives a reload and a shared link. The screen is drawn from app-overridable Frond templates under `crud/` - the page, the table, the form, the modals - so dropping a `src/templates/crud/<name>.twig` of your own restyles any part without forking the framework.
+
 ## 10. Cached Queries
 
 For expensive queries that don't change often, `cached()` caches the results in memory with a TTL:
