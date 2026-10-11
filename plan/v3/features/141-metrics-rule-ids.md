@@ -29,29 +29,31 @@ on the existing bubble chart). One catalogue, two readers.
 It stays inside ADR-0002: native, rule-based, language-agnostic, no LLM, no
 running framework required.
 
+## Data path (ground truth - read before scoping)
+
+Everything that COMPUTES metrics is Rust. The `tina4` CLI is the only engine
+(ADR-0002). Each framework ships a THIN adapter (`metrics.rb` in Ruby, the
+`devAdmin`/`DevAdmin`/`dev_admin` equivalent in Node/PHP/Python, ADR-0054) whose
+whole job is to `Open3`-shell out to the `tina4` binary (`metrics --path <p>
+--json`), parse the JSON, and RESHAPE it for the dashboard. There is no
+language-side metric computation and no fallback: a missing/stale CLI is a 503
+naming the install command, never zeros that read as a healthy codebase.
+
+The reshape is lossy on purpose. Ruby's `full_analysis` forwards `summary` +
+`file_metrics` + `most_complex_functions` (first 15) + `dependency_graph`, and
+DROPS `offenders` entirely. Confirmed: no adapter forwards `offenders`, and the
+dashboard bundle never references the token - the bubbles are coloured from
+`file_metrics` (`loc`, `avg_complexity`, `has_referencing_test`, `dep_count`),
+not from infractions.
+
+Consequence: there is NO front-end-only slice. The infraction data is not in the
+dashboard payload today, so the overlay depends on the Rust engine emitting it
+AND on every thin adapter being taught to forward it. The dashboard stays a pure
+renderer; it cannot invent what the engine did not send.
+
 ## Scope
 
-### Slice 1 - dashboard infraction overlay (front-end only, ships first)
-
-- [ ] `GET /__dev/api/metrics` already returns the `offenders` array alongside
-  `file_metrics` (it is the `--json` shape), so NO endpoint or scanner change is
-  needed for this slice - it is pure rendering.
-- [ ] In the shared dev-admin bundle, group `offenders` by path and join each to
-  its bubble in `#metrics-chart` (the `jQ` renderer).
-- [ ] A bubble with offenders wears a count badge ringed by its worst severity
-  (error red, warn amber, info muted), so it announces itself before hover.
-- [ ] `#metrics-hover-info` shows the worst rule id + count on hover.
-- [ ] `#metrics-detail` lists the full set on click, each row
-  `TINA4-M003 . fat conditional . render_tokens:1156` with its remedy line.
-- [ ] A rule-id filter lights up only the bubbles carrying that rule across the
-  whole tree.
-- [ ] Do NOT double-count `no_test_reference`: the no-test term is already ~40%
-  of the bubble COLOUR (`d(L)`), so either drop it from the colour or mark its
-  badge "already shown".
-- [ ] Rebuild the bundle into all four frameworks' `public/js` (this is where
-  parity lands for this slice - the bundle is built once, copied to each).
-
-### Slice 2 - rule engine in the Rust `tina4` client (the deeper half)
+### Slice A - rule engine in the Rust `tina4` client (source of truth, first)
 
 - [ ] Compute the DISCRIMINATING sub-metrics a kind needs to fan into rules -
   for `complexity`: nesting depth, raw method length, branch/arm count,
@@ -67,6 +69,32 @@ running framework required.
   unchanged.
 - [ ] A published rule id is a contract: retire with a tombstone, never repoint
   the number.
+
+### Slice B - teach the four thin adapters to forward `offenders`
+
+- [ ] Extend each framework's dev-admin metrics adapter (`full_analysis` and the
+  Node/PHP/Python equivalents) to forward the `offenders` array the engine
+  already emits, keyed by path, with the new `rule_id`/`remedy` fields intact.
+- [ ] Add `offenders` to the key-validation the adapter enforces, so a stale CLI
+  that omits it is caught (503) rather than silently rendering no badges.
+- [ ] This is the genuine cross-framework slice: four small adapter changes at
+  parity, same reshape contract in each.
+
+### Slice C - dashboard infraction overlay (shared bundle)
+
+- [ ] In the shared dev-admin bundle, group the now-forwarded `offenders` by
+  path and join each to its bubble in `#metrics-chart` (the `jQ` renderer).
+- [ ] A bubble with offenders wears a count badge ringed by its worst severity
+  (error red, warn amber, info muted), so it announces itself before hover.
+- [ ] `#metrics-hover-info` shows the worst rule id + count on hover.
+- [ ] `#metrics-detail` lists the full set on click, each row
+  `TINA4-M003 . fat conditional . render_tokens:1156` with its remedy line.
+- [ ] A rule-id filter lights up only the bubbles carrying that rule across the
+  whole tree.
+- [ ] Do NOT double-count `no_test_reference`: the no-test term is already ~40%
+  of the bubble COLOUR (`d(L)`), so either drop it from the colour or mark its
+  badge "already shown".
+- [ ] Rebuild the bundle into all four frameworks' `public/js`.
 
 ### Cross-cutting
 
@@ -98,21 +126,23 @@ number in range.
 
 ## Placement
 
-The catalogue and the `--json`/`--suggest` surface live in the Rust `tina4`
-client (`tina4/src`, the metrics scanner) - it owns the measurement, and
-landing it there means one implementation for all four frameworks. The overlay
-lives in the shared dev-admin bundle that each framework serves from
-`public/js`. Neither half belongs in a single framework repo; both ship once and
-reach all four. The named-DESIGN-pattern suggestion deliberately does NOT live
-in the CLI - it needs intent the metric lacks and stays in the maintainer agent.
+The catalogue, the sub-metrics, and the `--json`/`--suggest` surface live in the
+Rust `tina4` client (`tina4/src`, the metrics scanner) - it is the only engine,
+so landing it there is one implementation for all four. The `offenders`
+forwarding lives in each framework's thin dev-admin adapter (`metrics.rb` and
+its Node/PHP/Python siblings) - four small parity changes. The overlay lives in
+the shared dev-admin bundle each framework serves from `public/js`. The
+named-DESIGN-pattern suggestion deliberately does NOT live in the CLI - it needs
+intent the metric lacks and stays in the maintainer agent.
 
 ## Parity
 
 | Surface | Python | PHP | Ruby | Node | Rust CLI |
 |---|---|---|---|---|---|
-| dashboard overlay (bundle) | [ ] | [ ] | [ ] | [ ] | n/a |
-| rule ids + remedies in `--json` | n/a | n/a | n/a | n/a | [ ] |
-| `--suggest` | n/a | n/a | n/a | n/a | [ ] |
+| rule ids + remedies in `--json` (Slice A) | n/a | n/a | n/a | n/a | [ ] |
+| `--suggest` (Slice A) | n/a | n/a | n/a | n/a | [ ] |
+| adapter forwards `offenders` (Slice B) | [ ] | [ ] | [ ] | [ ] | n/a |
+| dashboard overlay, shared bundle (Slice C) | [ ] | [ ] | [ ] | [ ] | n/a |
 | contract fixture proven | [ ] | [ ] | [ ] | [ ] | [ ] |
 
 ## Tests (written first, real - no mocks, positive + negative)
@@ -126,6 +156,9 @@ in the CLI - it needs intent the metric lacks and stays in the maintainer agent.
 - [ ] `--suggest` prints the remedy string keyed to the id; absent the flag the
   table is byte-identical to today.
 - [ ] A retired id is never reused (fixture asserts the tombstone).
+- [ ] Each thin adapter forwards `offenders` with `rule_id`/`remedy` intact
+  against a REAL `tina4` CLI on PATH (negative: a CLI build that omits
+  `offenders` makes the adapter 503, not render an empty overlay).
 - [ ] Dashboard: an offender on `frond.rb` renders a badge on the `frond.rb`
   bubble and lists its rule ids in `#metrics-detail`; a file with no offender
   gets no badge (negative).
