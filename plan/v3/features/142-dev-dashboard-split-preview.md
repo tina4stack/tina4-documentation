@@ -99,8 +99,8 @@ that must be ported.
 | Piece | Python | PHP | Ruby | Node |
 |---|---|---|---|---|
 | A. reload-loop fix | PR#210 | PR#292 | PR#117 | PR#129 |
-| B. split view + link | [x] (uncommitted) | [ ] | [ ] | [ ] |
-| C. device frame + controls | [x] (uncommitted) | [ ] | [ ] | [ ] |
+| B. split view + link | [x] | [x] | [x] | [x] |
+| C. device frame + controls | [x] | [x] | [x] | [x] |
 | D. editor disk-resync (shared bundle) | [x] built+deployed | shared | shared | shared |
 | E. scaffold data-driven + form | [x] (PR#211) | [ ] | [ ] | [ ] |
 | E. page/base generators | [x] (PR#211) | [ ] | [ ] | [ ] |
@@ -118,6 +118,19 @@ that must be ported.
 - [ ] `generate page X` makes `pages/X.twig` extending base + a route; a second
   page reuses the SAME base; `pages/` auto-created; base bootstrapped if absent.
 - [ ] The scaffold panel lists every generator the framework reports.
+
+## Parity achieved via a SHARED asset (2026-10, not a 4x copy)
+
+B + C were Python-only inline HTML (~200 lines). Rather than copy that into PHP,
+Ruby and Node strings, the split page is now ONE shared asset
+`tina4-dev-admin/dist/tina4-dev-admin-split.html` deployed to each framework's
+`public/js/` (exactly like the SPA bundle). The device frame + controls (C) live
+IN that page, so they land with it. Each framework serves it at `/__dev/split`
+through a thin route; Python's `split_view_html()` now READS the asset too (one
+source, no inline copy). Verified: Python live (200, `<title>Tina4 Dev - Split`);
+PHP `php -l` clean, Ruby `ruby -c` OK, Node edit type-clean - the routes mirror
+each framework's already-proven bundle-serving route. Regenerate the asset from
+Python with `split_view_html()` and redeploy if the page changes.
 
 ## Notes / decisions
 - The split page carries NO CSP (it is a `/__dev` page), so its layout CSS/JS are

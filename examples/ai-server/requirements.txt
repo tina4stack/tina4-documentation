@@ -1,0 +1,15 @@
+# Deps for the Tina4 local AI server. Tina4 does the serving; the model engine is
+# chosen for the machine by the markers (same split tina4-harness uses).
+
+tina4-python>=3.13
+huggingface_hub>=0.23
+Pillow>=10
+
+# Apple Silicon (M-series) -> MLX (Metal GPU): one vision-language model, text + images.
+mlx-vlm>=0.1 ; sys_platform == "darwin" and platform_machine == "arm64"
+
+# Everything else (Windows, Linux, Intel Mac, CPU or NVIDIA CUDA) -> PyTorch + transformers.
+torch>=2.2 ; sys_platform != "darwin" or platform_machine != "arm64"
+torchvision>=0.17 ; sys_platform != "darwin" or platform_machine != "arm64"
+transformers>=4.44 ; sys_platform != "darwin" or platform_machine != "arm64"
+psutil>=5.9 ; sys_platform != "darwin" or platform_machine != "arm64"

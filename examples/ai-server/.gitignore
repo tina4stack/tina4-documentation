@@ -1,0 +1,9 @@
+# Local runtime artefacts - never committed. (lib/ IS committed - the vendored engine.)
+.venv/
+.env.local
+logs/
+data/
+secrets/
+models/
+__pycache__/
+*.pyc

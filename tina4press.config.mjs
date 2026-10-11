@@ -214,7 +214,7 @@ export default {
           text: "Understanding Tina4",
           stems: ["what-is-tina4", "architecture", "choosing-your-language", "environment-variables"],
         },
-        { text: "Developer tools", stems: ["cli"] },
+        { text: "Developer tools", stems: ["cli", "local-ai-server"] },
         { text: "Project policies", stems: ["contributing", "security-research", "contributor-licence-agreement"] },
       ],
     },
