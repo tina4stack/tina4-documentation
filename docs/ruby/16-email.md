@@ -435,9 +435,9 @@ Tina4::Router.get("/api/inbox/search") do |request, response|
   mailer = Tina4::Messenger.new
 
   results = mailer.search(
-    subject: request.params["q"],
-    sender: request.params["from"],
-    unseen_only: request.params["unread"] == "true",
+    subject: request.query["q"],
+    sender: request.query["from"],
+    unseen_only: request.query["unread"] == "true",
     limit: 20
   )
 

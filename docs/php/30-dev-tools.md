@@ -287,8 +287,8 @@ Create a file in `src/gallery/`:
 use Tina4\Router;
 
 Router::get("/gallery/product-search", function ($request, $response) {
-    $q = $request->params["q"] ?? "";
-    $category = $request->params["category"] ?? "";
+    $q = $request->query["q"] ?? "";
+    $category = $request->query["category"] ?? "";
 
     $product = new Product();
     $conditions = [];

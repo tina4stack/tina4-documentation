@@ -1013,7 +1013,7 @@ Router::get("/catalog", function ($request, $response) {
     sort($categories);
 
     // Filter by category if specified
-    $activeCategory = $request->params["category"] ?? "";
+    $activeCategory = $request->query["category"] ?? "";
     if (!empty($activeCategory)) {
         $products = array_values(array_filter(
             $allProducts,

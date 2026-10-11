@@ -123,7 +123,7 @@ from tina4_python.i18n import I18n
 
 @get("/api/welcome")
 async def welcome(request, response):
-    lang = request.params.get("lang", "en")
+    lang = request.query.get("lang", "en")
     i18n = I18n(locale=lang, path="src/locales")
 
     return response({
@@ -292,7 +292,7 @@ Pass the locale through the template context:
 ```python
 @get("/dashboard")
 async def dashboard(request, response):
-    locale = request.params.get("lang", "en")
+    locale = request.query.get("lang", "en")
     i18n = I18n(locale=locale, path="src/locales")
 
     return response.render("dashboard.html", {
@@ -408,7 +408,7 @@ USERS = {
 SUPPORTED_LOCALES = ["en", "fr", "es"]
 
 def get_i18n(request):
-    lang = request.params.get("lang", "en")
+    lang = request.query.get("lang", "en")
     if lang not in SUPPORTED_LOCALES:
         lang = "en"
     return I18n(locale=lang, path="src/locales")

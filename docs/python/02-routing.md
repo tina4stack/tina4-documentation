@@ -298,9 +298,9 @@ from tina4_python.core.router import get
 
 @get("/search")
 async def search(request, response):
-    q = request.params.get("q", "")
-    page = int(request.params.get("page", 1))
-    limit = int(request.params.get("limit", 10))
+    q = request.query.get("q", "")
+    page = int(request.query.get("page", 1))
+    limit = int(request.query.get("limit", 10))
 
     return response.json({
         "query": q,
@@ -318,7 +318,7 @@ curl "http://localhost:7146/search?q=keyboard&page=2&limit=20"
 {"query":"keyboard","page":2,"limit":20,"offset":20}
 ```
 
-If a query parameter is missing, `request.params.get("key")` returns `None`. Use `.get()` with a default value.
+If a query parameter is missing, `request.query.get("key")` returns `None`. Use `.get()` with a default value.
 
 ---
 
@@ -827,7 +827,7 @@ next_id = 6
 # List all products, optionally filter by category
 @get("/api/products")
 async def list_products(request, response):
-    category = request.params.get("category")
+    category = request.query.get("category")
 
     if category is not None:
         filtered = [p for p in products if p["category"].lower() == category.lower()]
