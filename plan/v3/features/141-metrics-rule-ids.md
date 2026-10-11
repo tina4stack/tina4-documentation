@@ -53,22 +53,28 @@ renderer; it cannot invent what the engine did not send.
 
 ## Scope
 
-### Slice A - rule engine in the Rust `tina4` client (source of truth, first)
+### Slice A - rule engine in the Rust `tina4` client (source of truth, first) - SHIPPED
 
-- [ ] Compute the DISCRIMINATING sub-metrics a kind needs to fan into rules -
-  for `complexity`: nesting depth, raw method length, branch/arm count,
-  parameter count. Without these a rule id is a synonym for the kind and adds
-  nothing; this is the real work.
-- [ ] Freeze the rule catalogue (below) with one-line remedies; ranges reserved
-  by category so growth never renumbers.
-- [ ] Emit `rule_id` and `remedy` on each offender in `--json` (additive;
+- [x] Freeze the rule catalogue (below) with one-line remedies; ranges reserved
+  by category so growth never renumbers. (`rule_for(kind, loc)` in
+  `tina4/src/metrics.rs`, pinned by `rule_for_is_the_frozen_catalogue`.)
+- [x] Emit `rule_id` and `remedy` on each offender in `--json` (additive;
   `kind`/`severity`/`score`/`detail` stay exactly as they are).
-- [ ] Add `--suggest`: print `remedy[rule_id]` in the human table.
-- [ ] Severity becomes a per-rule property, overridable; the existing
-  `--fail-on`/`--fail-on-regression` exit codes (0 pass, 1 tripped) are
-  unchanged.
-- [ ] A published rule id is a contract: retire with a tombstone, never repoint
-  the number.
+- [x] Add `--suggest`: print the remedy under each row. Default human table
+  stays byte-identical (opt-in).
+- [x] `complexity` discriminated from EXISTING data (the function's own line
+  count): `TINA4-M001` long method vs `TINA4-M002` dense logic - neither is a
+  synonym for its kind.
+- [x] A published rule id is a contract: retire with a tombstone, never repoint
+  the number. (The frozen-catalogue test fails on any repoint.)
+- [ ] Compute the DISCRIMINATING sub-metrics for the FINER complexity rules -
+  nesting depth, branch/arm count, parameter count - so deep-nesting,
+  fat-conditional and long-parameter-list get their own NEW `M0xx` numbers
+  (additive, no repoint). Deferred: the AST walk does not produce these yet,
+  and a rule id that cannot be told apart from `TINA4-M002` would be a synonym.
+- [ ] Severity becomes a per-rule property, overridable. Deferred: severity is
+  still computed inline per kind; the `--fail-on`/`--fail-on-regression` exit
+  codes (0 pass, 1 tripped) are unchanged either way.
 
 ### Slice B - teach the four thin adapters to forward `offenders`
 
@@ -107,22 +113,35 @@ renderer; it cannot invent what the engine did not send.
 - [ ] `tina4 metrics` self-scan shows no new error-severity offender from the
   rule-engine code itself.
 
-## Proposed rule catalogue (frozen on first ship, never recycled)
+## Rule catalogue - FROZEN AND SHIPPED (slice A)
 
-| Code | kind | Discriminator | Remedy it points at |
+These are the ids the engine emits today, pinned by `rule_for_is_the_frozen_catalogue`
+in `tina4/src/metrics.rs`. They are a published contract: never repoint a number.
+
+| Code | kind | Discriminator (data today) | Remedy it points at |
 |---|---|---|---|
-| `TINA4-M001` | complexity | deep nesting | invert with guard clauses, extract the inner block |
-| `TINA4-M002` | duplication | repeated blocks (known coordinates) | unify the N copies into one helper |
-| `TINA4-M003` | complexity | fat conditional / big switch | dispatch table or polymorphism |
-| `TINA4-M004` | complexity | long method (raw length) | extract methods |
-| `TINA4-M005` | complexity | long parameter list | introduce a parameter object |
-| `TINA4-M010` | large_file | LOC over threshold | split the file by responsibility |
-| `TINA4-M011` | low_maintainability | maintainability index floor | reduce size + branching; usually a split |
-| `TINA4-M012` | too_many_functions | function count over threshold | group into cohesive units / separate module |
-| `TINA4-C101` | no_test_reference | file has no referencing test | add a referencing test (coverage, not a refactor - different range on purpose) |
+| `TINA4-M001` | complexity | function `loc` >= 50 (long method) | extract cohesive steps into named methods |
+| `TINA4-M002` | complexity | function `loc` < 50 (dense logic) | guard clauses, or a dispatch table / polymorphism |
+| `TINA4-D010` | duplication | repeated blocks (known coordinates) | unify the copies into one shared helper |
+| `TINA4-S020` | large_file | LOC over threshold | split the file by responsibility |
+| `TINA4-S021` | too_many_functions | function count over threshold | group into cohesive units / a separate module |
+| `TINA4-S022` | low_maintainability | MI floor + avg complexity gate | reduce size + branching; usually a split |
+| `TINA4-C101` | no_test_reference | file has no referencing test | add a referencing test (coverage, not a refactor) |
+| `TINA4-U901` | unparsed | engine could not read the file | update the CLI / check the file - it was NOT measured |
 
-`M0xx` = structure/refactor, `C1xx` = coverage. New detectors take the next free
-number in range.
+Ranges: `M0xx` per-function complexity/structure, `D0xx` duplication, `S0xx`
+file-level size/structure, `C1xx` coverage, `U9xx` tooling.
+
+RESERVED for the AST-sub-metric follow-up (the second Slice A checkbox), each a
+NEW number that refines the `M002` dense bucket without repointing it:
+deep-nesting, fat-conditional (switch), and long-parameter-list. They ship only
+once the walk computes nesting depth, arm count and parameter count.
+
+(The earlier draft of this table proposed different numbers - M001=deep nesting,
+an `M0xx` range for file rules - before grounding in the engine: `FunctionInfo`
+carries only `complexity` + `loc`, so only the long-method/dense split is
+honest today. The shipped table above is the authority; the code and its test
+agree with it.)
 
 ## Placement
 
@@ -139,23 +158,30 @@ intent the metric lacks and stays in the maintainer agent.
 
 | Surface | Python | PHP | Ruby | Node | Rust CLI |
 |---|---|---|---|---|---|
-| rule ids + remedies in `--json` (Slice A) | n/a | n/a | n/a | n/a | [ ] |
-| `--suggest` (Slice A) | n/a | n/a | n/a | n/a | [ ] |
+| rule ids + remedies in `--json` (Slice A) | n/a | n/a | n/a | n/a | [x] |
+| `--suggest` (Slice A) | n/a | n/a | n/a | n/a | [x] |
 | adapter forwards `offenders` (Slice B) | [ ] | [ ] | [ ] | [ ] | n/a |
 | dashboard overlay, shared bundle (Slice C) | [ ] | [ ] | [ ] | [ ] | n/a |
 | contract fixture proven | [ ] | [ ] | [ ] | [ ] | [ ] |
 
 ## Tests (written first, real - no mocks, positive + negative)
 
-- [ ] Scanner emits `TINA4-M003` (not `M004`) for a function whose score is
-  driven by a fat switch, and `M005` for one driven by parameter count - the
-  discriminator actually discriminates (negative: a plain long method is `M004`,
-  never `M003`).
-- [ ] `--json` carries `rule_id` + `remedy`; a consumer reading only
-  `kind`/`severity`/`score` still works (back-compat).
-- [ ] `--suggest` prints the remedy string keyed to the id; absent the flag the
-  table is byte-identical to today.
-- [ ] A retired id is never reused (fixture asserts the tombstone).
+- [x] `complexity` splits `TINA4-M001` (long method) vs `TINA4-M002` (dense) by
+  the function's `loc`; a long method is never `M002` and vice versa, boundary
+  pinned at 50 (`complexity_splits_into_long_method_vs_dense_logic_by_loc`).
+- [x] Each file-level kind maps to its stable id - S020/S021/S022/C101 - and
+  duplication to D010 (`each_file_level_kind_maps_to_its_stable_rule_id`,
+  `duplication_offender_carries_its_rule_id`).
+- [x] The frozen catalogue is pinned so a repoint fails
+  (`rule_for_is_the_frozen_catalogue`); mutation-proven (repoint M001 -> red).
+- [x] `--json` carries `rule_id` + `remedy`; a consumer reading only
+  `kind`/`severity`/`score` still works (back-compat - additive fields).
+- [x] `--suggest` prints the remedy under each row; absent the flag the table is
+  byte-identical (end-to-end smoke verified).
+- [ ] Finer complexity codes discriminate (deep nesting vs fat switch vs param
+  count) - deferred with the AST sub-metrics.
+- [ ] A retired id is never reused (fixture asserts the tombstone) - no retired
+  ids yet; add with the first retirement.
 - [ ] Each thin adapter forwards `offenders` with `rule_id`/`remedy` intact
   against a REAL `tina4` CLI on PATH (negative: a CLI build that omits
   `offenders` makes the adapter 503, not render an empty overlay).
@@ -170,6 +196,8 @@ intent the metric lacks and stays in the maintainer agent.
 
 ## Commits
 
-- (hash  description - one line per landed change)
+- aeea057  tina4 (CLI) feature/metrics-rule-ids-141: rule ids + remedies on every
+  offender, `--suggest`; `rule_for(kind, loc)` frozen catalogue; 5 tests,
+  mutation-proven; full cargo suite 310 passed. (PR tina4stack/tina4#66)
 
-## Status: Planned
+## Status: In Progress - Slice A shipped (PR tina4stack/tina4#66); Slice B (adapters) + Slice C (dashboard overlay) pending
