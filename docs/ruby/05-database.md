@@ -356,8 +356,8 @@ The database driver handles escaping. Your input is never part of the SQL string
 Tina4::Router.get("/api/products/search") do |request, response|
   db = Tina4.database
 
-  q = request.params["q"] || ""
-  max_price = (request.params["max_price"] || 99999).to_f
+  q = request.query["q"] || ""
+  max_price = (request.query["max_price"] || 99999).to_f
 
   if q.empty?
     return response.json({ error: "Query parameter 'q' is required" }, 400)
@@ -874,8 +874,8 @@ Create `src/routes/notes.rb`:
 Tina4::Router.get("/api/notes") do |request, response|
   db = Tina4.database
 
-  tag = request.params["tag"] || ""
-  search = request.params["search"] || ""
+  tag = request.query["tag"] || ""
+  search = request.query["search"] || ""
 
   sql = "SELECT * FROM notes"
   params = []

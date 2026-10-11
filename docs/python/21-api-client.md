@@ -363,7 +363,7 @@ def fetch_weather(city_name):
 
 @get("/api/dashboard/weather")
 async def weather_dashboard(request, response):
-    cities_param = request.params.get("cities", "")
+    cities_param = request.query.get("cities", "")
 
     if not cities_param:
         return response({"error": "Provide at least one city via ?cities=City1,City2"}, 400)

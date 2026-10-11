@@ -169,7 +169,7 @@ Default timeout is 30 seconds.
 ```ruby
 # @noauth
 Tina4::Router.get("/api/weather") do |request, response|
-  city = request.params["city"] || "London"
+  city = request.query["city"] || "London"
 
   weather_client = Tina4::Api.new("https://api.openweathermap.org", {
     "Accept" => "application/json"

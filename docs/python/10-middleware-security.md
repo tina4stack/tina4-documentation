@@ -1222,7 +1222,7 @@ The login handler reads the `redirect` parameter after successful authentication
 async def login(request, response):
     # ... validate credentials ...
 
-    redirect_url = request.params.get("redirect", "/dashboard")
+    redirect_url = request.query.get("redirect", "/dashboard")
 
     return response({
         "token": token,

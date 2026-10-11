@@ -269,8 +269,8 @@ from tina4_python.core.router import get, post, put, delete
 
 @get("/api/products")
 async def list_products(request, response):
-    page = int(request.params.get("page", 1))
-    per_page = int(request.params.get("per_page", 20))
+    page = int(request.query.get("page", 1))
+    per_page = int(request.query.get("per_page", 20))
     offset = (page - 1) * per_page
 
     products, total = Product.where("1=1", [], limit=per_page, offset=offset)

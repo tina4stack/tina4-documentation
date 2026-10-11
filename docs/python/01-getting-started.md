@@ -741,9 +741,9 @@ Query parameters are the key-value pairs after the `?` in a URL. Access them thr
 
 ```python
 # URL: /api/search?q=laptop&page=2
-request.params.get("q", "")       # "laptop"
-request.params.get("page", "1")   # "2" (always a string)
-request.params.get("sort", "name") # "name" (default -- param was not sent)
+request.query.get("q", "")       # "laptop"
+request.query.get("page", "1")   # "2" (always a string)
+request.query.get("sort", "name") # "name" (default -- param was not sent)
 ```
 
 ### Reading URL Path Parameters
@@ -842,8 +842,8 @@ books = [
 @get("/api/books")
 async def list_books(request, response):
     """List all books. Supports ?author= filter and ?sort=year."""
-    author = request.params.get("author", "")
-    sort_by = request.params.get("sort", "")
+    author = request.query.get("author", "")
+    sort_by = request.query.get("sort", "")
 
     result = books
 
@@ -993,7 +993,7 @@ from tina4_python.core.router import get
 
 @get("/api/greet")
 async def greet(request, response):
-    name = request.params.get("name", "Stranger")
+    name = request.query.get("name", "Stranger")
 
     from datetime import datetime
     hour = datetime.now().hour

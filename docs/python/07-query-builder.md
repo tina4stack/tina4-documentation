@@ -243,8 +243,8 @@ A common pattern for API endpoints:
 ```python
 @get("/api/users")
 async def list_users(request, response):
-    page = int(request.params.get("page", 1))
-    per_page = int(request.params.get("per_page", 20))
+    page = int(request.query.get("page", 1))
+    per_page = int(request.query.get("per_page", 20))
     offset = (page - 1) * per_page
 
     result = QueryBuilder.from_table("users", db) \
@@ -381,19 +381,19 @@ async def search_products(request, response):
         .select("id", "name", "price", "category")
 
     # Apply filters only if provided
-    category = request.params.get("category")
+    category = request.query.get("category")
     if category:
         qb.where("category = ?", [category])
 
-    min_price = request.params.get("min_price")
+    min_price = request.query.get("min_price")
     if min_price:
         qb.where("price >= ?", [float(min_price)])
 
-    max_price = request.params.get("max_price")
+    max_price = request.query.get("max_price")
     if max_price:
         qb.where("price <= ?", [float(max_price)])
 
-    search = request.params.get("q")
+    search = request.query.get("q")
     if search:
         qb.where("name LIKE ?", [f"%{search}%"])
 
@@ -584,8 +584,8 @@ ALLOWED_SORT_COLUMNS = {"name", "price", "created_at"}
 
 @get("/api/products")
 async def search_products(request, response):
-    page = max(int(request.params.get("page", 1)), 1)
-    per_page = min(int(request.params.get("per_page", 20)), 100)
+    page = max(int(request.query.get("page", 1)), 1)
+    per_page = min(int(request.query.get("per_page", 20)), 100)
     offset = (page - 1) * per_page
 
     # Base query with join
@@ -603,28 +603,28 @@ async def search_products(request, response):
     count_qb = QueryBuilder.from_table("products", db)
 
     # Apply filters to both queries
-    category = request.params.get("category")
+    category = request.query.get("category")
     if category:
         qb.where("categories.name = ?", [category])
         count_qb.join("categories", "categories.id = products.category_id")
         count_qb.where("categories.name = ?", [category])
 
-    min_price = request.params.get("min_price")
+    min_price = request.query.get("min_price")
     if min_price:
         qb.where("products.price >= ?", [float(min_price)])
         count_qb.where("products.price >= ?", [float(min_price)])
 
-    max_price = request.params.get("max_price")
+    max_price = request.query.get("max_price")
     if max_price:
         qb.where("products.price <= ?", [float(max_price)])
         count_qb.where("products.price <= ?", [float(max_price)])
 
     # Sorting - validate column name to prevent injection
-    sort_col = request.params.get("sort", "name")
+    sort_col = request.query.get("sort", "name")
     if sort_col not in ALLOWED_SORT_COLUMNS:
         sort_col = "name"
 
-    sort_dir = request.params.get("order", "asc").upper()
+    sort_dir = request.query.get("order", "asc").upper()
     if sort_dir not in ("ASC", "DESC"):
         sort_dir = "ASC"
 
