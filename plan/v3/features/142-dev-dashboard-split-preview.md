@@ -37,7 +37,7 @@ that must be ported.
 - PRs: tina4-python#210, tina4-php#292, tina4-ruby#117, tina4-nodejs#129,
   tina4 (CLI)#67.
 
-### B. Split view + replace-the-overlay (Python DONE on :7150, uncommitted)
+### B. Split view + replace-the-overlay (Python, PR#211)
 - [x] `GET /__dev/split` serves a plain split page: left `<iframe src="/__dev">`
   (dashboard/editor), right the live app preview. A plain page, not an app page,
   so no toolbar is injected and the container NEVER reloads.
@@ -47,7 +47,7 @@ that must be ported.
 - [x] Each pane keeps its own reload behaviour: the `/__dev` SPA refreshes
   gently; the app preview reloads itself on change. The shell stays put.
 
-### C. Preview device frame + controls (Python DONE on :7150, uncommitted)
+### C. Preview device frame + controls (Python, PR#211)
 - [x] Device emulation: `mobile` (390x844) and `tablet` (820x1180) render inside
   a rounded bezel on a LIGHT backdrop, `overflow:hidden` so content is contained
   (not chopped); `desktop` FILLS the preview block (no bezel, no scaling).
@@ -63,7 +63,7 @@ that must be ported.
   vs `.editor-main`), so hiding the editor KEEPS the file nav; the left pane
   shrinks to the nav width (250px) with no empty gap.
 
-### D. Editor disk-resync (SHARED bundle DONE on :7150, uncommitted)
+### D. Editor disk-resync (shared bundle, PR tina4-dev-admin#3)
 - [x] On a file change, an open tab with NO unsaved edits adopts the disk
   content (caret preserved); a tab WITH unsaved edits is never clobbered and the
   tab flags a `changed on disk` conflict. Fixes "files are not refreshing in my
@@ -71,17 +71,23 @@ that must be ported.
   `resyncOpenFilesFromDisk()`. Built + deployed to Python `public/js` only so far.
 - [ ] Optional: refresh the file TREE for new/deleted files (deferred).
 
-### E. Scaffold section data-driven + new generators (TODO - the Python focus now)
-- [ ] The dashboard SCAFFOLD panel renders ALL generators from the framework's
-  `/__dev/api/scaffold` list (currently 4 are hardcoded: route/model/migration/
-  middleware). Framework has 15: model, route, crud, migration, middleware, test,
-  form, view, auth, service, queue, validator, seeder, websocket, listener.
-- [ ] `generate base` - a Frond base template (`src/templates/base.twig`) + an
-  index page that extends it + the `/` route + auto-create `src/templates/pages/`.
-- [ ] `generate page <name>` - `src/templates/pages/<name>.twig` extending base +
-  a route rendering it; auto-create `pages/` and `base.twig` if missing.
-- [ ] Register `page`/`base` in GENERATORS and in the scaffold-list endpoint so
-  they appear in the data-driven panel.
+### E. Scaffold section data-driven + new generators (Python DONE, uncommitted->PR)
+- [x] The scaffold list + run endpoints are DATA-DRIVEN from the CLI GENERATORS
+  registry, so every generator appears and runs (Python had 4 hardcoded; now
+  17: model, route, base, page, crud, migration, middleware, test, form, view,
+  auth, service, queue, validator, seeder, websocket, listener).
+- [x] The dashboard panel is a DROPDOWN + name input + Generate (not a button
+  grid). The name field hides for no-name generators; each shows its summary.
+  (shared bundle)
+- [x] `generate base` - base.twig + index page (extends base) + `/` route +
+  pages/ folder. `generate page <name>` - pages/<name>.twig extends base + its
+  route; auto-creates pages/ and bootstraps base. `base` is a no-name generator.
+- [x] A newly scaffolded file is surfaced into its folder with a SURGICAL reveal
+  (expand + re-fetch just the path's folders), not a full tree refresh - fixes
+  "the scaffolded file didn't show up immediately". (shared bundle)
+- [x] Eye icon on previewable files (pages/*.twig, public/*.html): clicking
+  drives the split's preview iframe to the rendered route, else a window.
+  (shared bundle)
 
 ### F. Silent empty-SCSS compile (TODO, small, CLI-only)
 - [ ] A selector-less SCSS rule compiles to EMPTY output but reports
@@ -96,8 +102,9 @@ that must be ported.
 | B. split view + link | [x] (uncommitted) | [ ] | [ ] | [ ] |
 | C. device frame + controls | [x] (uncommitted) | [ ] | [ ] | [ ] |
 | D. editor disk-resync (shared bundle) | [x] built+deployed | shared | shared | shared |
-| E. scaffold data-driven | [ ] | [ ] | [ ] | [ ] |
-| E. page/base generators | [ ] | [ ] | [ ] | [ ] |
+| E. scaffold data-driven + form | [x] (PR#211) | [ ] | [ ] | [ ] |
+| E. page/base generators | [x] (PR#211) | [ ] | [ ] | [ ] |
+| E. eye-to-preview + reveal (shared bundle) | [x] | shared | shared | shared |
 | F. SCSS empty-warn (CLI) | n/a | n/a | n/a | n/a |
 
 ## Tests (write real, no-mock; verify on the lab)
@@ -121,9 +128,21 @@ that must be ported.
 - The reload-loop fix (A) and the editor resync (D) together are what make the
   dashboard usable while an AI agent edits code: the agent's writes refresh the
   preview and any clean open tab, and never stomp unsaved work.
+- SCAFFOLDING PER LANGUAGE (owner's note): a framework COULD expose different
+  generators later - the panel is data-driven from each framework's own
+  GENERATORS, so divergence is handled automatically. For now all four carry the
+  SAME set; parity = give PHP/Ruby/Node the identical generators (incl.
+  base/page) so their lists match Python's.
+- The eye maps a page template to its route by the pages/ convention
+  (pages/<name>.twig -> /<name>, index -> /). A page generated by `generate page`
+  always matches, since it writes both the template and that route.
 
 ## Commits
-- (reload-loop fix PRs listed under A; dashboard split/editor work still on the
-  :7150 test env - commit to a feature branch once Python is perfected)
+- A (reload loop): PRs tina4-python#210, tina4-php#292, tina4-ruby#117,
+  tina4-nodejs#129, tina4 (CLI)#67.
+- B/C/E (Python framework: split view, data-driven scaffold, page/base
+  generators): tina4-python#211 (538807a6).
+- D/E (shared SPA bundle: disk-resync, scaffold form, eye-to-preview, reveal):
+  tina4-dev-admin#3.
 
-## Status: In Progress
+## Status: In Progress - Python shipped to PR; parity (PHP/Ruby/Node) next
