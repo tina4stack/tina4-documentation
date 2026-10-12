@@ -41,7 +41,7 @@ Tina4 Python runs ASGI on uvicorn. Async by default. Zero external dependencies.
 
 Starlette leads raw JSON throughput because it carries no middleware overhead. FastAPI sits on top of Starlette and adds Pydantic validation, which costs ~30% on JSON but drops list throughput to 2,709 req/s. Tina4 lands mid-pack on JSON and holds strong on list responses (5,769), where FastAPI and Flask fall off. Django handles both endpoints at a steady ~2,200 req/s with no dramatic drops. Bottle runs single-threaded, which limits its ceiling.
 
-### Feature Comparison (44 features)
+### Feature Comparison (44 features compared)
 
 | # | Feature | Tina4 | Django | FastAPI | Flask | Starlette | Bottle |
 |---|---|---|---|---|---|---|---|
@@ -119,7 +119,7 @@ Starlette leads raw JSON throughput because it carries no middleware overhead. F
 | FastAPI | 12 | 4.8 MB |
 | Django | 20 | 25 MB |
 
-Tina4 ships 44 features in 2.4 MB with zero dependencies. Django delivers 24 features in 25 MB with 20 dependencies. FastAPI ships 10 features in 4.8 MB. The size-to-feature ratio favors Tina4.
+Of the 44 features compared here, Tina4 covers all 44 in 2.4 MB with zero dependencies - part of its 140 built-ins. Django covers 24 in 25 MB with 20 dependencies. FastAPI covers 10 in 4.8 MB. The size-to-feature ratio favours Tina4.
 
 ---
 
@@ -152,7 +152,7 @@ Tina4 PHP runs its own built-in async server using `stream_select`. No Apache, n
 
 Tina4 PHP dominates. Its built-in async server (`stream_select`) handles requests without the overhead of php-fpm process spawning. It delivers 28,158 JSON req/s, 5.5x faster than Slim and 109x faster than Laravel. The gap narrows under production setups (Nginx + php-fpm + OPcache), but Tina4's zero-config server wins out of the box.
 
-### Feature Comparison (44 features)
+### Feature Comparison (44 features compared)
 
 | # | Feature | Tina4 | Laravel | Symfony | CodeIgniter | Slim |
 |---|---|---|---|---|---|---|
@@ -228,7 +228,7 @@ Tina4 PHP dominates. Its built-in async server (`stream_select`) handles request
 | Symfony | 30+ | ~25 MB |
 | Laravel | 70+ | ~50 MB |
 
-Tina4 PHP packs 44 features into ~1.5 MB with zero external dependencies. Laravel needs 70+ packages and ~50 MB to reach 29 features. Slim stays small at ~3 MB but ships only 6 features.
+Of the 44 features compared here, Tina4 PHP covers all 44 in ~1.5 MB with zero external dependencies - part of its 140 built-ins. Laravel needs 70+ packages and ~50 MB to reach 29. Slim stays small at ~3 MB but covers only 6.
 
 ---
 
@@ -259,7 +259,7 @@ Tina4 Ruby serves HTTP itself and runs on Puma when you install it. Built-in ORM
 
 All four frameworks ran on Puma, making this a fair comparison. Tina4 Ruby leads both endpoints at 17,637 JSON req/s and 11,303 list req/s. It doubles Roda on JSON and triples Sinatra on list throughput. Rails trails at 4,918 JSON req/s, weighed down by its middleware stack.
 
-### Feature Comparison (44 features)
+### Feature Comparison (44 features compared)
 
 | # | Feature | Tina4 | Rails | Sinatra | Roda |
 |---|---|---|---|---|---|
@@ -333,7 +333,7 @@ All four frameworks ran on Puma, making this a fair comparison. Tina4 Ruby leads
 | Sinatra | 2 | ~5 MB |
 | Rails | 40+ | 40+ MB |
 
-Tina4 Ruby fits 44 features into ~900 KB. Rails needs 40+ gems and 40+ MB for 24 features. Roda stays lean at ~1 MB but ships only 3 built-in features.
+Of the 44 features compared here, Tina4 Ruby covers all 44 in ~900 KB - part of its 140 built-ins. Rails needs 40+ gems and 40+ MB for 24. Roda stays lean at ~1 MB but covers only 3.
 
 ---
 
@@ -377,7 +377,7 @@ Tina4 Node.js runs on Node.js 22+ with zero runtime dependencies. TypeScript-fir
 
 Fastify leads JSON throughput at 55,329 req/s. Tina4 trails on JSON (34,343) but dominates list responses at 50,001 req/s, a 49% lead over the next-best framework (Fastify at 33,496). That list-response strength matters: real APIs return arrays of objects, not single JSON values. All competitors run single-process; Tina4 uses cluster mode with 8 workers. Dev mode (tsx, single process) shows 11,872 JSON req/s, suitable for local development.
 
-### Feature Comparison (44 features)
+### Feature Comparison (44 features compared)
 
 | # | Feature | Tina4 | Hapi | Fastify | Express | Koa |
 |---|---|---|---|---|---|---|
@@ -569,7 +569,7 @@ Tina4 takes a different path: ship everything a modern web project needs in the 
 
 The trade-off is real. Tina4 has a smaller community, fewer third-party packages, and less production history than established frameworks. No StackOverflow tag with 200,000 questions. No registry of 300,000 community packages. When you hit an edge case, you read source code, not a blog post.
 
-For developers who want working CRUD in a few lines, the same patterns across four languages, 44 features with zero dependencies, and AI context files for seven tools, Tina4 is worth evaluating. Build something. Break something. File an issue. The framework grows with its users.
+For developers who want working CRUD in a few lines, the same patterns across four languages, 140 built-in features with zero dependencies, and AI context files for seven tools, Tina4 is worth evaluating. Build something. Break something. File an issue. The framework grows with its users.
 
 ---
 

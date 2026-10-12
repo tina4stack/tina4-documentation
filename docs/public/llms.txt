@@ -1,6 +1,6 @@
 # Tina4 Framework - AI Bootstrap Protocol
 
-Tina4 is a four-language web framework (Python, PHP, Ruby, Node.js) with 97
+Tina4 is a four-language web framework (Python, PHP, Ruby, Node.js) with 140
 built-in features and zero runtime dependencies. Frontend library: tina4-js.
 Website: https://tina4.com | GitHub: https://github.com/tina4stack
 Full documentation in one file: https://tina4.com/llms-full.txt | Queryable: https://rag.tina4.com/v1/ask
@@ -255,7 +255,7 @@ whole stack - server, router, ORM, auth, queue, sessions, templating.
 
 ## Building - use the built-ins, get the exact API (do NOT guess)
 
-Tina4 has 97 built-ins: ORM, Auth (JWT + password hashing), Queue, Sessions,
+Tina4 has 140 built-ins: ORM, Auth (JWT + password hashing), Queue, Sessions,
 Migrations, an `Api` HTTP client, WebSockets, real-time collaboration (WebRTC:
 peer calls + chat + files), GraphQL, Swagger, CRUD, i18n, caching, events, and
 more. **Use them - never hand-roll what's built in.**
