@@ -243,6 +243,8 @@ install_skill tina4-python  tina4-js          html-and-components.md signals-and
 install_skill tina4-python  tina4-maintainer  cli-and-deployment.md frond-and-frontend.md routing-and-orm.md subsystems.md checklists/pr-review.md checklists/release.md checklists/signing.md checklists/parity-sweep.md
 install_skill tina4-python  tina4-architect
 install_skill tina4-python  tina4-design         phase-1-intake.md phase-2-market-research.md design-tokens.md brand-guidelines.md ui-guide.md handoff.md website.md design-record-templates.md
+install_skill tina4-python  tina4-seo             ai-discovery.md content-audit.md discovery-audit.md entity-eeat.md favicon-package.md meta-tags.md robots-sitemap.md structured-data.md templates-and-guards.md validation-and-handoff.md
+install_skill tina4-python  tina4-a11y            aria-and-live-regions.md contrast-and-colour.md discovery-and-scope.md forms.md images-and-media.md interactive-semantics.md keyboard-and-focus.md landmarks-and-structure.md validation-and-handoff.md zoom-reflow-motion.md
 # The tina4 CLI skill is served from the tina4 (Rust CLI) repo, not tina4-python.
 install_skill tina4         tina4-cli         commands.md
 
