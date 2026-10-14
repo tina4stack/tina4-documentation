@@ -1,0 +1,15 @@
+[project]
+name = "tina4-ai-server"
+version = "0.1.0"
+description = "Local AI model server, served by Tina4 (no FastAPI, no Flask)."
+requires-python = ">=3.12"
+dependencies = [
+    "tina4-python>=3.13",
+    "huggingface_hub>=0.23",
+    "Pillow>=10",
+    "mlx-vlm>=0.1 ; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "torch>=2.2 ; sys_platform != 'darwin' or platform_machine != 'arm64'",
+    "torchvision>=0.17 ; sys_platform != 'darwin' or platform_machine != 'arm64'",
+    "transformers>=4.44 ; sys_platform != 'darwin' or platform_machine != 'arm64'",
+    "psutil>=5.9 ; sys_platform != 'darwin' or platform_machine != 'arm64'",
+]
