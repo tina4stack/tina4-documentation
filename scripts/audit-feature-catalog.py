@@ -49,11 +49,11 @@ STALE_CLAIMS = (
 
 # Public-facing surfaces that state Tina4's TOTAL built-in count in prose. The
 # catalog checks above cover the four feature-list pages; these are the map/prose
-# surfaces that drifted (llms.txt said 97, comparisons.md said 44) precisely
-# because nothing scanned them. They are gated here so the total cannot rot again.
+# surfaces that drifted (llms.txt once said 97) precisely because nothing scanned
+# them. They are gated here so the total cannot rot again. (docs/comparisons.md was
+# removed 2026-10-15 - a fresh comparisons page will be re-gated when it returns.)
 EVERGREEN_TOTAL_PAGES = (
     ROOT / "docs" / "public" / "llms.txt",
-    ROOT / "docs" / "comparisons.md",
 )
 # Counts that have been stated as the Tina4 TOTAL and were wrong. A byte size like
 # "142 B" never matches (the phrase carries "features"/"built-in"), and a curated
