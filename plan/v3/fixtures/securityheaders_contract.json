@@ -27,7 +27,8 @@
     "     (X-Frame-Options SAMEORIGIN, X-Content-Type-Options nosniff, CSP",
     "     default-src 'self', Referrer-Policy strict-origin-when-cross-origin,",
     "     X-XSS-Protection 0, Permissions-Policy camera=(), microphone=(),",
-    "     geolocation=()). HTTP header names are case-insensitive; the tests compare",
+    "     geolocation=(), Cross-Origin-Opener-Policy same-origin-allow-popups). HTTP",
+    "     header names are case-insensitive; the tests compare",
     "     names case-insensitively and values byte-exactly.",
     "",
     "MIGRATION (breaking, documented in the feature doc + commit body): registering",
@@ -69,7 +70,7 @@
     {
       "id": "secheaders-secure-by-default",
       "adr": "SECHDR-DEC-01",
-      "rule": "SecurityHeadersMiddleware is registered in the DEFAULT middleware chain at boot, unconditionally (no opt-in). A default Tina4 app response therefore carries the canonical security header set with byte-identical VALUES across the four frameworks -- X-Frame-Options: SAMEORIGIN, X-Content-Type-Options: nosniff, Content-Security-Policy: default-src 'self', Referrer-Policy: strict-origin-when-cross-origin, X-XSS-Protection: 0, Permissions-Policy: camera=(), microphone=(), geolocation=() -- with header names compared case-insensitively (HTTP is case-insensitive). CSP defaults to default-src 'self' (relax via TINA4_CSP).",
+      "rule": "SecurityHeadersMiddleware is registered in the DEFAULT middleware chain at boot, unconditionally (no opt-in). A default Tina4 app response therefore carries the canonical security header set with byte-identical VALUES across the four frameworks -- X-Frame-Options: SAMEORIGIN, X-Content-Type-Options: nosniff, Content-Security-Policy: default-src 'self', Referrer-Policy: strict-origin-when-cross-origin, X-XSS-Protection: 0, Permissions-Policy: camera=(), microphone=(), geolocation=(), Cross-Origin-Opener-Policy: same-origin-allow-popups -- with header names compared case-insensitively (HTTP is case-insensitive). CSP defaults to default-src 'self' (relax via TINA4_CSP). COOP defaults to same-origin-allow-popups: it severs the window-reference link to a cross-origin opener (closing reverse-tab-nabbing and cross-window XS-Leaks) while leaving popups the page opens able to post back, so OAuth/OIDC/payment popups keep working; set TINA4_COOP=same-origin for full isolation or unsafe-none to opt out.",
       "why": "The middleware shipped OFF in all four (never registered), so a default app had no clickjacking/MIME/CSP protection -- the exact SECHDR-OFF-BY-DEFAULT gap. Registering it at boot makes Tina4 secure-by-default. Mutation-proved: unregistering the middleware makes the default app carry none of these headers and this case goes RED.",
       "suites": {
         "ruby": "spec/security_headers_contract_spec.rb",
