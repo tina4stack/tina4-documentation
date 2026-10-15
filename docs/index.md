@@ -67,13 +67,12 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 <a class="tp-cta" href="/download/code-viewer/">Download the Code Viewer →</a>
 :::
 
-## Current framework release: 3.13.142
+## Current framework release: 3.13.151
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.142. A session that regenerates its id
-mid-request now re-emits its cookie, so the browser follows the rotated id; Ruby and Node.js
-also reassemble a fragmented WebSocket message before it reaches the handler. Underneath, the
-complexity comes down, duplicated logic is shared once, and a new metrics gate stands watch in
-continuous integration so a regression cannot slide back in.
+Python, PHP, Ruby, and Node.js are aligned on 3.13.151. A Cross-Origin-Opener-Policy header
+joins the default set, the zero-dependency S3 client fails loud on a missing credential and retries
+with capped backoff, and MongoDB keeps bound values out of the query text. Python moves session,
+WebSocket and realtime work off the event loop, so concurrent requests stop queueing behind one another.
 [Read the release notes](/python/36-releases.md).
 
 
@@ -105,7 +104,7 @@ No signup, no plugin. [llms.txt](/llms.txt) is a bootstrap protocol written for 
 
 ## What's new
 
-**v3.13.149 (2026-10-10)** - A CRUD admin screen for any model from a single `toCrud` call, and the dev-server rough edges come off: a cross-process migration lock so concurrent boots apply each migration once, a configurable SMTP timeout, the dev dashboard reachable from a Docker box via `TINA4_DEV_ALLOWED_PEERS`, and the `pgsql://` scheme accepted - across all four frameworks. [full notes](/python/36-releases.md)
+**v3.13.151 (2026-10-15)** - A Cross-Origin-Opener-Policy header in the default set, a hardened zero-dependency S3 client (fail-loud on missing credentials, capped-backoff retries, endpoint path kept), the MongoDB bound-value fix, and - in Python - the asyncio event loop freed of session, WebSocket and realtime I/O. [full notes](/python/36-releases.md)
 
 [Full changelog](/python/36-releases.md)
 
