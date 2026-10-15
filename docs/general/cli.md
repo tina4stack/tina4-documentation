@@ -44,6 +44,7 @@ tina4 --version
 | `tina4 docs` | Download framework documentation into `.tina4-docs/`. |
 | `tina4 books` | Download the matching Tina4 book. |
 | `tina4 update` | Update the signed client and refresh installed skills. |
+| `tina4 uninstall` | Remove the client, its config and credentials, and the installed skills from this machine. |
 
 Run `tina4 <command> --help` for the command's current arguments and options.
 
@@ -239,3 +240,20 @@ tina4 doctor
 
 The update command refreshes the signed binary and installed Tina4 skills. The
 doctor command then shows which runtimes and framework clients are ready.
+
+## Remove the client
+
+When you are done with Tina4 the client will take itself back off the machine.
+`tina4 uninstall` first lists everything it put there: the config and
+credentials, the installed skills across Claude, Codex and Cursor, and the
+binary itself. Then it asks before it removes a single file.
+
+```bash
+tina4 uninstall            # lists targets, asks, then removes
+tina4 uninstall --dry-run  # only reports what it would touch
+tina4 uninstall --yes      # skips the prompts, for scripts
+```
+
+The current project's own `.tina4/`, `.tina4-metrics.json` and `.tina4-docs`
+are offered as a separate, explicit opt-in. Nothing else on the filesystem is
+searched, so an uninstall never reaches into another project you forgot about.

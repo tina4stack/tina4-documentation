@@ -8,7 +8,6 @@
 >
 > **Conventional names stay un-prefixed:** `PORT`, `HOST`, `NODE_ENV`, `RACK_ENV`, `RUBY_ENV`, `ENVIRONMENT`. These are runtime/PaaS conventions, not framework config.
 
-
 Tina4 is configured through environment variables, read from `.env` at the project root. Every variable has a sensible default; most projects set three or four values and leave the rest alone.
 
 This chapter lists every variable the PHP framework reads, grouped by subsystem. Start with the minimum-config examples at the end, then come back here when you need to tune something specific.
@@ -98,6 +97,18 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 | `TINA4_FRAME_OPTIONS` | `DENY` | `X-Frame-Options` header. Set `SAMEORIGIN` if you embed your own app in an iframe. |
 | `TINA4_REFERRER_POLICY` | `strict-origin-when-cross-origin` | `Referrer-Policy` header. |
 | `TINA4_PERMISSIONS_POLICY` | _(empty)_ | `Permissions-Policy` header. Example: `geolocation=(), microphone=()`. |
+| `TINA4_COOP` | `same-origin-allow-popups` | `Cross-Origin-Opener-Policy` header. The default keeps OAuth and payment popups working; set `same-origin` for a fully isolated context (pairs with a COEP header to unlock `SharedArrayBuffer`). |
+
+---
+
+## Proxies and SSRF protection
+
+Behind a load balancer the real client IP rides in a forwarded header. Tina4 will only trust that header when the peer is a proxy you have listed in `TINA4_TRUSTED_PROXIES`. The outbound guard runs the other way: it will refuse a request aimed at a private address unless `TINA4_ALLOW_PRIVATE_REQUESTS` opts out.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_TRUSTED_PROXIES` | _(empty)_ | Comma-separated list of proxy IPs or Classless Inter-Domain Routing (CIDR) ranges whose `X-Forwarded-For` / `X-Forwarded-Proto` headers are believed. Empty means the direct peer is always treated as the client. |
+| `TINA4_ALLOW_PRIVATE_REQUESTS` | _(off)_ | Server-Side Request Forgery (SSRF) opt-out. Off by default, so outbound fetches to private, loopback and link-local addresses are refused. Set truthy only in a trusted internal deployment. |
 
 ---
 
@@ -145,6 +156,14 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 |----------|---------|-------------|
 | `TINA4_SESSION_MONGO_URL` | `mongodb://localhost:27017` | MongoDB connection string. |
 | `TINA4_SESSION_MONGO_DB` | `tina4` | MongoDB database name. |
+
+### Memcached session backend
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_SESSION_MEMCACHED_HOST` | `localhost` | Memcached host. |
+| `TINA4_SESSION_MEMCACHED_PORT` | `11211` | Memcached port. |
+| `TINA4_SESSION_MEMCACHED_PREFIX` | `tina4:session:` | Key prefix for session entries, so one Memcached instance can serve several apps. |
 
 ---
 
@@ -331,6 +350,8 @@ The app-facing `Ai` client and the developer dashboard share the `TINA4_AI_*` na
 | `TINA4_SWAGGER_ENABLED` | _(inherits `TINA4_DEBUG`)_ | Master switch for Swagger UI and the `/swagger`/`/swagger.json` routes. When unset, follows `TINA4_DEBUG` so Swagger is on in dev and off in prod automatically. Set explicitly to expose docs in production. |
 | `TINA4_SWAGGER_CONTACT_EMAIL` | _(empty)_ | Contact email written into the generated OpenAPI `info.contact` block. |
 | `TINA4_SWAGGER_LICENSE` | _(empty)_ | License name written into the generated OpenAPI `info.license` block. |
+| `TINA4_SWAGGER_CONTACT_TEAM` | _(empty)_ | Contact name rendered in the OpenAPI spec's `info.contact.name` field. |
+| `TINA4_SWAGGER_CONTACT_URL` | _(empty)_ | Contact URL rendered in the OpenAPI spec's `info.contact.url` field. |
 
 ---
 
@@ -340,6 +361,7 @@ The app-facing `Ai` client and the developer dashboard share the `TINA4_AI_*` na
 |----------|---------|-------------|
 | `TINA4_GRAPHQL_ENDPOINT` | `/graphql` | URL path the framework binds the GraphQL handler to. The same value is used when generating `__schema` links and the dev-dashboard query console URL. |
 | `TINA4_GRAPHQL_AUTO_SCHEMA` | `true` | Auto-generate the GraphQL schema from registered ORM models. Set to `false` to skip introspection scaffolding when you supply a hand-written schema. |
+| `TINA4_GRAPHQL_MAX_NODES` | `1000` | Maximum nodes a single query may request before the handler rejects it. Caps query cost against a deeply nested or aliased request. Set `0` to disable the limit. |
 
 ---
 
