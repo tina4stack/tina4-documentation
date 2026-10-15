@@ -677,7 +677,22 @@ def check_landing_page_version() -> tuple[int, list[str]]:
         ))
         return 1, lines
 
-    lines.append(green(f"  ✓ landing page leads with v{latest}"))
+    # The "Current framework release: X.Y.Z" heading and its "aligned on X.Y.Z"
+    # prose drifted silently - stuck at 3.13.142 while the What's-new block
+    # advanced to .149 - because this check only policed the **v... entries.
+    # Police the current-release block too, so the headline number cannot rot.
+    text = index.read_text()
+    block = re.findall(r"Current framework release:\s*(\d+\.\d+\.\d+)", text) \
+        + re.findall(r"aligned on (\d+\.\d+\.\d+)", text)
+    stale = [v for v in block if v != latest]
+    if stale:
+        lines.append(red(
+            f"  ✗ docs/index.md 'Current framework release' block names v{stale[0]} "
+            f"but the latest release is v{latest}"
+        ))
+        return 1, lines
+
+    lines.append(green(f"  ✓ landing page + current-release block at v{latest}"))
     return 0, lines
 
 
