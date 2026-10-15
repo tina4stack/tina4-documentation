@@ -50,7 +50,7 @@ Code written with an AI assistant follows every rule on this page, and the same 
 
 - **Who merges:** the maintainer reviews and merges pull requests. The project owner account is kept for administration.
 - **What the checks cover:** the full test suite, the Docker boot check, the Firebird suite, and code scanning (CodeQL, and Semgrep for PHP source).
-- **Releases:** merging never publishes anything. A release happens only when the maintainer tags it.
+- **Releases:** merging never publishes anything. A release happens only when the maintainer tags it. [Releasing Tina4](releasing.md) traces the whole flow - the version bumps, the gates, the signing and the tag.
 
 ## Why these rules exist
 
