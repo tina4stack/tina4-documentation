@@ -72,10 +72,17 @@ jobs:
       # derives its grammar from the built source (not a stale PATH binary)
       # and still flags genuinely-fake commands. Uses the ../tina4 build
       # from the step above for its integration case.
-      - name: Test the audit script
+      - name: Test the audit scripts
         run: |
           python3 -m pip install --quiet pytest
-          python3 -m pytest scripts/test_audit_truth.py -q
+          python3 -m pytest scripts/test_audit_truth.py scripts/test_audit_env_coverage.py -q
 
       - name: Run audit (strict — both CLI and env-var drift block the build)
         run: python3 scripts/audit-truth.py --strict --strict-env
+
+      # The reverse direction: audit-truth gates doc -> code (a documented
+      # var must exist). This gates code -> doc (a user-facing var the
+      # framework reads must be documented), so a new env knob can't ship
+      # undocumented. Same sibling checkouts as the step above.
+      - name: Run env-coverage audit (undocumented user-facing TINA4_* vars block the build)
+        run: python3 scripts/audit-env-coverage.py --strict

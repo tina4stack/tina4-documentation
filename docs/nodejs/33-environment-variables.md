@@ -8,7 +8,6 @@
 >
 > **Conventional names stay un-prefixed:** `PORT`, `HOST`, `NODE_ENV`, `RACK_ENV`, `RUBY_ENV`, `ENVIRONMENT`. These are runtime/PaaS conventions, not framework config.
 
-
 Tina4 Node.js is configured through environment variables, read from `.env` at the project root. Every variable has a sensible default; most projects set three or four values and leave the rest alone.
 
 This chapter lists every variable the Node.js framework reads, grouped by subsystem. Start with the minimum-config examples at the end, then come back here when you need to tune something specific.
@@ -59,6 +58,7 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 | `TINA4_DB_CACHE_TTL` | `30` | Query cache TTL in seconds when `TINA4_DB_CACHE=true`. |
 | `TINA4_DB_POOL` | `0` | Connection-pool size override. Applied to the database adapter's `pool` config when not set explicitly in code. `0` leaves the adapter default in place. |
 | `TINA4_ORM_PLURAL_TABLE_NAMES` | `true` | When `true`, the ORM pluralises class names into table names (`User` → `users`). |
+| `TINA4_MONGO_FORCE_RAW` | _(off)_ | Forces the zero-dependency wire-protocol Mongo path even where a native driver is installed. A truthy value selects raw mode; leave unset to use the driver when present. |
 
 ---
 
@@ -84,6 +84,18 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 | `TINA4_FRAME_OPTIONS` | `SAMEORIGIN` | `X-Frame-Options` header. |
 | `TINA4_REFERRER_POLICY` | `strict-origin-when-cross-origin` | `Referrer-Policy` header. |
 | `TINA4_PERMISSIONS_POLICY` | `camera=(), microphone=(), geolocation=()` | `Permissions-Policy` header. |
+| `TINA4_COOP` | `same-origin-allow-popups` | `Cross-Origin-Opener-Policy` header. The default keeps OAuth and payment popups working; set `same-origin` for a fully isolated context (pairs with a COEP header to unlock `SharedArrayBuffer`). |
+
+---
+
+## Proxies and SSRF protection
+
+Behind a load balancer the real client IP rides in a forwarded header. Tina4 will only trust that header when the peer is a proxy you have listed in `TINA4_TRUSTED_PROXIES`. The outbound guard runs the other way: it will refuse a request aimed at a private address unless `TINA4_ALLOW_PRIVATE_REQUESTS` opts out.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_TRUSTED_PROXIES` | _(empty)_ | Comma-separated list of proxy IPs or Classless Inter-Domain Routing (CIDR) ranges whose `X-Forwarded-For` / `X-Forwarded-Proto` headers are believed. Empty means the direct peer is always treated as the client. |
+| `TINA4_ALLOW_PRIVATE_REQUESTS` | _(off)_ | Server-Side Request Forgery (SSRF) opt-out. Off by default, so outbound fetches to private, loopback and link-local addresses are refused. Set truthy only in a trusted internal deployment. |
 
 ---
 
@@ -135,6 +147,14 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 | `TINA4_SESSION_MONGO_PASSWORD` | _(none)_ | MongoDB password. |
 | `TINA4_SESSION_MONGO_DB` | `tina4_sessions` | MongoDB database name. |
 | `TINA4_SESSION_MONGO_COLLECTION` | `sessions` | MongoDB collection name. |
+
+### Memcached session backend
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_SESSION_MEMCACHED_HOST` | `localhost` | Memcached host. |
+| `TINA4_SESSION_MEMCACHED_PORT` | `11211` | Memcached port. |
+| `TINA4_SESSION_MEMCACHED_PREFIX` | `tina4:session:` | Key prefix for session entries, so one Memcached instance can serve several apps. |
 
 ---
 
@@ -198,6 +218,7 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 | `TINA4_WS_PORT` | `8080` | Default WebSocket server port when one isn't passed to the constructor. |
 | `TINA4_WS_BACKPLANE` | _(none)_ | Backplane type for multi-instance broadcasts. Options: `redis`, `nats`. |
 | `TINA4_WS_BACKPLANE_URL` | `redis://localhost:6379` (redis) / `nats://localhost:4222` (nats) | Connection URL for the chosen backplane. |
+| `TINA4_SSE_HEARTBEAT` | `15` | Server-Sent Events (SSE) heartbeat interval in seconds. A comment frame is sent on this cadence to hold an idle connection open. Set `0` (or any non-positive value) to switch heartbeats off. |
 
 ---
 
@@ -298,6 +319,7 @@ Logs default to stdout. Set `TINA4_LOG_OUTPUT=file` plus `TINA4_LOG_FILE=app.log
 |----------|---------|-------------|
 | `TINA4_GRAPHQL_AUTO_SCHEMA` | `true` | Auto-build a schema from registered ORM models when the dev server starts. Set `false` to require an explicit schema. |
 | `TINA4_GRAPHQL_ENDPOINT` | `/graphql` | Path the GraphQL handler is mounted on. |
+| `TINA4_GRAPHQL_MAX_NODES` | `1000` | Maximum nodes a single query may request before the handler rejects it. Caps query cost against a deeply nested or aliased request. Set `0` to disable the limit. |
 
 ---
 
@@ -344,6 +366,8 @@ The app-facing `Ai` client and the developer dashboard share the `TINA4_AI_*` na
 | `TINA4_SWAGGER_CONTACT_EMAIL` | _(empty)_ | Contact email written into the generated OpenAPI `info.contact` block. |
 | `TINA4_SWAGGER_LICENSE` | _(empty)_ | License name written into the generated OpenAPI `info.license` block. |
 | `TINA4_SWAGGER_ENABLED` | _(inherits `TINA4_DEBUG`)_ | Mount the Swagger UI. Defaults to enabled when `TINA4_DEBUG=true`. Force `true`/`false` to override. |
+| `TINA4_SWAGGER_CONTACT_TEAM` | _(empty)_ | Contact name rendered in the OpenAPI spec's `info.contact.name` field. |
+| `TINA4_SWAGGER_CONTACT_URL` | _(empty)_ | Contact URL rendered in the OpenAPI spec's `info.contact.url` field. |
 
 ---
 
