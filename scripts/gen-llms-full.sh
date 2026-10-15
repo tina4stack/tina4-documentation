@@ -20,9 +20,13 @@ here="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$here"
 out="docs/public/llms-full.txt"
 
-# Every docs markdown file except the built site and the static-asset folder itself.
+# Every docs markdown file except the built site, the static-asset folder itself,
+# and the v2 docs. v2 is the previous generation, kept on the site behind its own
+# "v2 Docs" nav for humans upgrading - but in one flat file a model cannot tell a
+# v2 page from the current v3 one, and would surface superseded patterns as current.
+# llms-full.txt is the CURRENT framework in one file; v2 lives at https://tina4.com/v2.
 files="$(find docs -type f -name '*.md' \
-  -not -path 'docs/public/*' -not -path 'docs/.vitepress/*' \
+  -not -path 'docs/public/*' -not -path 'docs/.vitepress/*' -not -path 'docs/v2/*' \
   | LC_ALL=C sort)"
 
 {
@@ -37,9 +41,15 @@ files="$(find docs -type f -name '*.md' \
   printf '%s\n' "$files" | while IFS= read -r f; do
     [ -n "$f" ] || continue
     rel="${f#docs/}"
+    # Canonical page URL. The site builds with cleanUrls, so a page is served at
+    # its path minus the .md, and an index.md is served at its directory (the bare
+    # root index.md becomes the site root).
+    url="https://tina4.com/${rel%.md}"
+    url="${url%/index}"
     echo ""
     echo "================================================================================"
     echo "FILE: $rel"
+    echo "URL: $url"
     echo "================================================================================"
     echo ""
     cat "$f"
