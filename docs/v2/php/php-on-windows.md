@@ -98,7 +98,7 @@ zend_extension=xdebug
 Start a new Tina4 project instantly:
 
 ```bash
-composer create-project tina4stack/tina4-php my-awesome-site
+composer create-project tina4stack/tina4php my-awesome-site
 cd my-awesome-site
 composer start
 ```

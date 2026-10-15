@@ -80,7 +80,7 @@ source ~/.zshrc   # or source ~/.bash_profile
 You now have a clean, modern PHP environment and can start using **Tina4** immediately:
 
 ```bash
-composer create-project tina4stack/tina4-php my-project
+composer create-project tina4stack/tina4php my-project
 cd my-project
 composer start
 ```

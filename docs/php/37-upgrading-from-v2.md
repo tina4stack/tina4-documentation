@@ -10,7 +10,7 @@ Three things to know before you start:
 
 - **Methods are camelCase.** `$db->startTransaction()`, not `$db->start_transaction()`.
 - **Classes are PascalCase.** `Router`, `Database`, `ORM`, `Response`.
-- **Zero dependencies.** `composer install` pulls exactly one package: `tina4stack/tina4-php`.
+- **Zero dependencies.** `composer install` pulls exactly one package: `tina4stack/tina4php`.
 
 This chapter walks through every breaking change and gives you a step-by-step migration checklist at the end.
 
@@ -47,17 +47,17 @@ This pulled in a tree of Composer dependencies -- HTTP clients, template engines
 ### v3
 
 ```bash
-composer require tina4stack/tina4-php
+composer require tina4stack/tina4php
 ```
 
-Note the hyphen: `tina4-php`, not `tina4php`. This is the only package. It has zero Composer dependencies. Everything is built in.
+The package name is unchanged from v2: `tina4stack/tina4php`, no hyphen. This is the only package. It has zero Composer dependencies. Everything is built in.
 
 Update your `composer.json`:
 
 ```json
 {
     "require": {
-        "tina4stack/tina4-php": "^3.0"
+        "tina4stack/tina4php": "^3.0"
     }
 }
 ```
@@ -506,7 +506,7 @@ Follow these steps in order. Check each one off as you go.
 
 1. **Back up your v2 project.** Copy the entire project directory. You want a rollback point.
 
-2. **Update `composer.json`.** Replace `tina4stack/tina4php` with `tina4stack/tina4-php`. Remove any other `tina4stack/*` packages. Run `composer update`.
+2. **Update `composer.json`.** Change the `tina4stack/tina4php` constraint to `^3.0`. Remove any other `tina4stack/*` packages. Run `composer update`.
 
 3. **Restructure directories.** Move `routes/` to `src/routes/`, `orm/` to `src/orm/`, `templates/` to `src/templates/`. Create `src/app/` for utility classes.
 
