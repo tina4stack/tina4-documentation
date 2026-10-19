@@ -10,7 +10,7 @@ Four words, and each one earns its place.
 
 **Native.** Zero third-party dependencies. Every feature - the template engine, the JWT library, the SCSS compiler, the queue, the GraphQL parser - is built from scratch on the language's standard library. No supply chain to trust. No version conflicts. No surprises.
 
-**Application.** This builds real production applications. Routing, ORM, authentication, queues, WebSocket, email, GraphQL, SOAP, 140 features, all of it in the box. One package. One install.
+**Application.** This builds real production applications. Routing, ORM, authentication, queues, WebSocket, email, GraphQL, SOAP, 141 features, all of it in the box. One package. One install.
 
 **4ramework.** Four languages, one API. Python, PHP, Ruby, Node.js: learn the conventions once, build in any of them. The "4" is the number and it's "for" - a framework *for* developers who guard their time.
 
@@ -76,9 +76,9 @@ Database drivers are the exception. You can't talk to PostgreSQL without a Postg
 
 ---
 
-## 140 Catalogued Features
+## 141 Catalogued Features
 
-Tina4 keeps 140 numbered catalogue entries across Python, PHP, Ruby, Node.js, the shared CLI, and selected integrations. The catalogue is the family's implementation and audit inventory. It doesn't claim that every entry ships in every package or has reached parity, each feature list and audit packet records its own owner and status.
+Tina4 keeps 141 numbered catalogue entries across Python, PHP, Ruby, Node.js, the shared CLI, and selected integrations. The catalogue is the family's implementation and audit inventory. It doesn't claim that every entry ships in every package or has reached parity, each feature list and audit packet records its own owner and status.
 
 **Core Web**
 - HTTP router with path parameters, typed params, middleware, and auth guards
@@ -218,4 +218,4 @@ The code you don't write is the code that never breaks.
 | Discovery | Automatic (routes, models, templates) |
 | CLI | Unified Rust binary |
 | Tests | 9,311 across all four frameworks |
-| Features | 140 catalogued entries |
+| Features | 141 catalogued entries |
