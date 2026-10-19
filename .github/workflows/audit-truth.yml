@@ -75,7 +75,7 @@ jobs:
       - name: Test the audit scripts
         run: |
           python3 -m pip install --quiet pytest
-          python3 -m pytest scripts/test_audit_truth.py scripts/test_audit_env_coverage.py -q
+          python3 -m pytest scripts/test_audit_truth.py scripts/test_audit_env_coverage.py scripts/test_audit_spec_coverage.py -q
 
       - name: Run audit (strict — both CLI and env-var drift block the build)
         run: python3 scripts/audit-truth.py --strict --strict-env
@@ -86,3 +86,10 @@ jobs:
       # undocumented. Same sibling checkouts as the step above.
       - name: Run env-coverage audit (undocumented user-facing TINA4_* vars block the build)
         run: python3 scripts/audit-env-coverage.py --strict
+
+      # Spec-Driven Development (ADR-0098): every acceptance criterion in a
+      # plan/v3/specs/NNN spec maps to a real contract-fixture case, and every
+      # fixture case is claimed by an AC. Spec and executable contract can't drift.
+      # Needs only this repo (specs/ + fixtures/); passes greenfield when no spec exists.
+      - name: Run spec-coverage audit (spec AC-N <-> fixture case, ADR-0098)
+        run: python3 scripts/audit-spec-coverage.py --strict
