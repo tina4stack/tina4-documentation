@@ -1120,6 +1120,14 @@
       "phase": "Integrations and storage",
       "python_evidence": "tina4_python/push/",
       "packet": "features/140-web-push.md"
+    },
+    {
+      "id": 141,
+      "slug": "metrics-rule-ids",
+      "name": "Metrics rule IDs, remedies, and refactoring suggestions",
+      "phase": "CLI",
+      "python_evidence": "tina4/src/metrics.rs",
+      "packet": "features/141-metrics-rule-ids.md"
     }
   ]
 }

@@ -1,6 +1,6 @@
 # Feature Catalog
 
-Tina4 3.14 has **140 numbered catalog entries**. The number describes the framework family's implementation and audit inventory. It does not mean that 140 features have reached four-language parity, and it does not mean that every entry lives inside each backend package.
+Tina4 3.14 has **141 numbered catalog entries**. The number describes the framework family's implementation and audit inventory. It does not mean that 141 features have reached four-language parity, and it does not mean that every entry lives inside each backend package.
 
 This chapter is the map. The earlier chapters explain the public APIs available to PHP applications. The numbered audit packets define the parity work and the clean-room formula for another language.
 
@@ -32,7 +32,7 @@ Feature 63 includes browser helpers and the separate tina4-js frontend package. 
 |---|---:|---:|---:|---:|
 | Catalog membership | Inventory source | Audit in progress | Audit in progress | Audit in progress |
 | Fixture-covered contracts | Proven | Proven | Proven | Proven |
-| Entire 140-entry catalog | Not yet proven | Not yet proven | Not yet proven | Not yet proven |
+| Entire 141-entry catalog | Not yet proven | Not yet proven | Not yet proven | Not yet proven |
 
 The initial catalog followed the Python module inventory, but Python is not a permanent master. Tina4 promotes the best implementation after audit and captures that decision in an ADR and shared fixture.
 
@@ -213,6 +213,7 @@ The PHP core declares no required third-party packages. PHP 8.2 or newer and lan
 | 138 | RBAC (role/permission guards) |
 | 139 | Graph databases (Ultipa, Neo4j, Memgraph, ArangoDB) |
 | 140 | Provider-neutral Web Push notifications |
+| 141 | Metrics rule IDs, remedies, and refactoring suggestions |
 
 ## Enterprise authentication
 
