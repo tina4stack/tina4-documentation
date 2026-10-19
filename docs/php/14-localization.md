@@ -147,8 +147,8 @@ $i18n = new I18n('src/locales', defaultLocale: 'en');
 
 function resolveLocale($request, I18n $i18n): string {
     // 1. Query parameter: ?lang=de
-    if (!empty($request->params['lang'])) {
-        return $request->params['lang'];
+    if (!empty($request->query['lang'])) {
+        return $request->query['lang'];
     }
 
     // 2. Accept-Language header: Accept-Language: de-DE,de;q=0.9
@@ -167,7 +167,7 @@ Router::get('/api/greeting', function ($request, $response) use ($i18n) {
     $locale = resolveLocale($request, $i18n);
     $i18n->setLocale($locale);
 
-    $name = $request->params['name'] ?? 'stranger';
+    $name = $request->query['name'] ?? 'stranger';
 
     return $response->json([
         'locale'  => $locale,
@@ -291,7 +291,7 @@ use Tina4\I18n;
 $i18n = new I18n('src/locales', defaultLocale: 'en');
 
 Router::post('/api/users', function ($request, $response) use ($i18n) {
-    $lang = $request->params['lang'] ?? 'en';
+    $lang = $request->query['lang'] ?? 'en';
     $i18n->setLocale($lang);
     $body = $request->body;
 

@@ -107,7 +107,7 @@ This means 60 requests per 60 seconds per IP. Apply it:
 Tina4::Router.group("/api/public", middleware: "RateLimiter") do
 
   Tina4::Router.get("/search") do |request, response|
-    q = request.params["q"] || ""
+    q = request.query["q"] || ""
     response.json({ query: q, results: [] })
   end
 
@@ -1130,7 +1130,7 @@ The login handler reads the `redirect` parameter after successful authentication
 Tina4::Router.post("/api/login").no_auth do |request, response|
   # ... validate credentials ...
 
-  redirect_url = request.params["redirect"] || "/dashboard"
+  redirect_url = request.query["redirect"] || "/dashboard"
 
   response.call({
     token: token,

@@ -308,7 +308,7 @@ Five things, in order:
 1. You created a file in `src/routes/`. Tina4 discovered it at startup.
 2. `Router::get("/api/greeting/{name}", ...)` registered a GET route with a path parameter `{name}`.
 3. A request arrived at `/api/greeting/Alice`. The router matched the pattern. Your handler ran.
-4. `$request->params["name"]` extracted `"Alice"` from the URL.
+4. `$request->query["name"]` extracted `"Alice"` from the URL.
 5. `$response->json(...)` serialized the array to JSON, set `Content-Type: application/json`, and returned `200 OK`.
 
 No base controller. No service provider. No bootstrapping ritual.

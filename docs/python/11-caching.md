@@ -260,7 +260,7 @@ The cache key is the method plus the full URL including the query string. `/api/
 ```python
 @get("/api/products", middleware=["ResponseCache:300"])
 async def list_products(request, response):
-    page = int(request.params.get("page", 1))
+    page = int(request.query.get("page", 1))
     return response({
         "page": page,
         "products": [],
@@ -612,7 +612,7 @@ import math
 
 @get("/api/catalog", middleware=["ResponseCache:60"])
 async def get_catalog(request, response):
-    page = int(request.params.get("page", 1))
+    page = int(request.query.get("page", 1))
     cache_key = f"catalog:page:{page}"
 
     # Layer 1: key/value cache
@@ -731,9 +731,9 @@ def get_product_store():
 
 @get("/api/store/products")
 async def list_store_products(request, response):
-    category = request.params.get("category")
-    page = int(request.params.get("page", 1))
-    limit = int(request.params.get("limit", 20))
+    category = request.query.get("category")
+    page = int(request.query.get("page", 1))
+    limit = int(request.query.get("limit", 20))
 
     # Build a cache key from the query parameters
     key_data = json.dumps({"category": category, "page": page, "limit": limit})

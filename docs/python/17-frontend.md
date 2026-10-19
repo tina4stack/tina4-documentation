@@ -1146,7 +1146,7 @@ add_html_helpers(globals())
 
 @get("/api/status-badge")
 async def status_badge(request, response):
-    status = request.params.get("status", "unknown")
+    status = request.query.get("status", "unknown")
     color = "success" if status == "active" else "danger"
 
     badge = _span({"class": f"badge bg-{color}"}, status)
@@ -1203,8 +1203,8 @@ Add the product list route:
 ```python
 @get("/admin/products")
 async def admin_products(request, response):
-    search = request.params.get("search", "")
-    selected_category = request.params.get("category", "")
+    search = request.query.get("search", "")
+    selected_category = request.query.get("category", "")
 
     products = [
         {"id": 1, "name": "Wireless Keyboard", "category": "Electronics", "price": "79.99", "in_stock": True},

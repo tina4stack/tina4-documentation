@@ -8,7 +8,6 @@
 >
 > **Conventional names stay un-prefixed:** `PORT`, `HOST`, `NODE_ENV`, `RACK_ENV`, `RUBY_ENV`, `ENVIRONMENT`. These are runtime/PaaS conventions, not framework config.
 
-
 Tina4 Ruby is configured through environment variables, read from `.env` at the project root. Every variable has a sensible default, so most projects set three or four values and leave the rest alone.
 
 This chapter lists every variable the Ruby framework reads, grouped by subsystem. Start with the minimum-config examples at the end, then come back here when you need to tune something specific.
@@ -100,6 +99,18 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 | `TINA4_FRAME_OPTIONS` | `SAMEORIGIN` | `X-Frame-Options` header. |
 | `TINA4_REFERRER_POLICY` | `strict-origin-when-cross-origin` | `Referrer-Policy` header. |
 | `TINA4_PERMISSIONS_POLICY` | `camera=(), microphone=(), geolocation=()` | `Permissions-Policy` header. |
+| `TINA4_COOP` | `same-origin-allow-popups` | `Cross-Origin-Opener-Policy` header. The default keeps OAuth and payment popups working; set `same-origin` for a fully isolated context (pairs with a COEP header to unlock `SharedArrayBuffer`). |
+
+---
+
+## Proxies and SSRF protection
+
+Behind a load balancer the real client IP rides in a forwarded header. Tina4 will only trust that header when the peer is a proxy you have listed in `TINA4_TRUSTED_PROXIES`. The outbound guard runs the other way: it will refuse a request aimed at a private address unless `TINA4_ALLOW_PRIVATE_REQUESTS` opts out.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_TRUSTED_PROXIES` | _(empty)_ | Comma-separated list of proxy IPs or Classless Inter-Domain Routing (CIDR) ranges whose `X-Forwarded-For` / `X-Forwarded-Proto` headers are believed. Empty means the direct peer is always treated as the client. |
+| `TINA4_ALLOW_PRIVATE_REQUESTS` | _(off)_ | Server-Side Request Forgery (SSRF) opt-out. Off by default, so outbound fetches to private, loopback and link-local addresses are refused. Set truthy only in a trusted internal deployment. |
 
 ---
 
@@ -135,6 +146,14 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 | `TINA4_SESSION_VALKEY_PREFIX` | `tina4:session:` | Key prefix used for session entries. |
 | `TINA4_SESSION_VALKEY_TTL` | `86400` | Per-key expiry in seconds. |
 
+### Memcached session backend
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINA4_SESSION_MEMCACHED_HOST` | `localhost` | Memcached host. |
+| `TINA4_SESSION_MEMCACHED_PORT` | `11211` | Memcached port. |
+| `TINA4_SESSION_MEMCACHED_PREFIX` | `tina4:session:` | Key prefix for session entries, so one Memcached instance can serve several apps. |
+
 ---
 
 ## Cache
@@ -165,6 +184,7 @@ This chapter lists every variable the Ruby framework reads, grouped by subsystem
 |----------|---------|-------------|
 | `TINA4_GRAPHQL_AUTO_SCHEMA` | `true` | When `true`, the GraphQL module auto-generates a schema from registered ORM models. Set `false` to require an explicit schema. |
 | `TINA4_GRAPHQL_ENDPOINT` | `/graphql` | Path the GraphQL handler is mounted at when the caller doesn't pass an explicit path. |
+| `TINA4_GRAPHQL_MAX_NODES` | `1000` | Maximum nodes a single query may request before the handler rejects it. Caps query cost against a deeply nested or aliased request. Set `0` to disable the limit. |
 
 ---
 
@@ -333,6 +353,8 @@ The app-facing `Ai` client and the developer dashboard share the `TINA4_AI_*` na
 | `TINA4_SWAGGER_CONTACT_EMAIL` | _(empty)_ | Contact email rendered into the OpenAPI `info.contact` block. |
 | `TINA4_SWAGGER_LICENSE` | _(empty)_ | SPDX license name (e.g. `MIT`) rendered into the OpenAPI `info.license` block. |
 | `PROJECT_NAME` | _(none)_ | Alternative OpenAPI title source when `TINA4_SWAGGER_TITLE` is unset. |
+| `TINA4_SWAGGER_CONTACT_TEAM` | _(empty)_ | Contact name rendered in the OpenAPI spec's `info.contact.name` field. |
+| `TINA4_SWAGGER_CONTACT_URL` | _(empty)_ | Contact URL rendered in the OpenAPI spec's `info.contact.url` field. |
 
 ---
 

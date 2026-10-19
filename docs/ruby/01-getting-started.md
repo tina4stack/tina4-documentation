@@ -312,7 +312,7 @@ curl "http://localhost:7147/api/greeting/Alice?pretty=true"
 1. You created a file in `src/routes/`. Tina4 discovered it at startup.
 2. `Tina4::Router.get("/api/greeting/{name}")` registered a GET route with a path parameter `{name}`.
 3. A request to `/api/greeting/Alice` matched the pattern. The router called your handler block.
-4. `request.params["name"]` returned `"Alice"` from the URL.
+4. `request.query["name"]` returned `"Alice"` from the URL.
 5. `response.json(...)` serialized the hash to JSON, set `Content-Type: application/json`, and sent a `200 OK`.
 
 ### Adding More HTTP Methods
@@ -699,9 +699,9 @@ Query parameters are the key-value pairs after the `?` in a URL. Access them thr
 
 ```ruby
 # URL: /api/search?q=laptop&page=2
-request.params["q"]                  # "laptop"
-request.params["page"]               # "2" (always a string)
-request.params["sort"] || "name"     # "name" (default -- param was not sent)
+request.query["q"]                  # "laptop"
+request.query["page"]               # "2" (always a string)
+request.query["sort"] || "name"     # "name" (default -- param was not sent)
 ```
 
 ### Reading URL Path Parameters
@@ -792,8 +792,8 @@ books = [
 
 Tina4::Router.get("/api/books") do |request, response|
   # List all books. Supports ?author= filter and ?sort=year.
-  author = request.params["author"] || ""
-  sort_by = request.params["sort"] || ""
+  author = request.query["author"] || ""
+  sort_by = request.query["sort"] || ""
 
   result = books
 
@@ -948,7 +948,7 @@ Create `src/routes/greet.rb`:
 
 ```ruby
 Tina4::Router.get("/api/greet") do |request, response|
-  name = request.params["name"] || "Stranger"
+  name = request.query["name"] || "Stranger"
   hour = Time.now.hour
 
   time_of_day = if hour >= 5 && hour < 12

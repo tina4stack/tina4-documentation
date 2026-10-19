@@ -76,9 +76,9 @@ Query string parameters live in the same `params` hash:
 
 ```ruby
 # Request: /search?q=keyboard&page=2&sort=price
-request.params["q"]    # "keyboard"
-request.params["page"] # "2"
-request.params["sort"] # "price"
+request.query["q"]    # "keyboard"
+request.query["page"] # "2"
+request.query["sort"] # "price"
 ```
 
 ### body

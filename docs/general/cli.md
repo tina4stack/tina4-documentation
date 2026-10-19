@@ -32,17 +32,19 @@ tina4 --version
 | `tina4 init` | Create a project for Python, PHP, Ruby, Node.js, or tina4-js. |
 | `tina4 serve` | Start the detected framework with file watching and SCSS compilation. |
 | `tina4 doctor` | Report installed runtimes, package managers, and Tina4 tools. |
-| `tina4 install` | Install a supported language runtime. |
+| `tina4 install` | Install a supported language runtime, tina4-js, or CodeQL. |
 | `tina4 scss` | Compile SCSS into CSS. |
 | `tina4 build` | Build production front-end assets. |
 | `tina4 deploy` | Generate Docker, systemd, nginx, or cPanel deployment files. |
 | `tina4 env` | Inspect, migrate, and synchronize environment variables. |
 | `tina4 metrics` | Measure production source and rank code-health findings. |
+| `tina4 codeql` | Run CodeQL locally before CI and exit on any security finding. |
 | `tina4 ai` | Detect coding assistants and install Tina4 context. |
 | `tina4 skills` | Install current Tina4 skills for Claude, Codex, Cursor, or all three. |
 | `tina4 docs` | Download framework documentation into `.tina4-docs/`. |
 | `tina4 books` | Download the matching Tina4 book. |
 | `tina4 update` | Update the signed client and refresh installed skills. |
+| `tina4 uninstall` | Remove the client, its config and credentials, and the installed skills from this machine. |
 
 Run `tina4 <command> --help` for the command's current arguments and options.
 
@@ -157,6 +159,61 @@ high function complexity, excessive size, low maintainability, duplication, and
 too many functions. Count unique file names when you need the size of the
 refactoring worklist. Count findings when you need the gate pressure.
 
+## Pre-check security with CodeQL
+
+`tina4 codeql` runs the same CodeQL scan your pull request will meet in CI, on
+your own machine, before you push. It reads the checkout, decides which
+languages are present, and hands each one to CodeQL for the GitHub "default
+setup (extended)" security suite. A finding shows here first, so it never has to
+surface as a red check later.
+
+The command needs the CodeQL client on the path. Install it, with the query
+packs it depends on, in one step:
+
+```bash
+tina4 install codeql
+```
+
+Then run it from a project:
+
+```bash
+tina4 codeql
+```
+
+It detects the language from the project files. A Node.js or tina4-js tree is
+scanned as JavaScript and TypeScript, a Python tree as Python, a Ruby tree as
+Ruby, and the GitHub Actions workflows are scanned too when `.github/workflows`
+exists. For each one the command creates a throwaway database, analyses it
+against the security-extended suite, and prints every finding grouped by rule
+with its file and line. The scan is faithful to CI: it only flags a real
+source-to-sink taint flow, not a plain text match.
+
+Trace what happens to the exit code. If the scan finds nothing, the command
+exits 0; if it finds something, it exits with the finding count. That makes it a
+gate for a pre-push hook:
+
+```bash
+tina4 codeql || { echo "CodeQL found something - fix it before you push"; exit 1; }
+```
+
+PHP is skipped. CodeQL doesn't support it, and CI scans PHP with Semgrep
+instead.
+
+### CodeQL options
+
+| Option | Purpose |
+| --- | --- |
+| `--path <PATH>` | Scan a directory other than the detected project root. |
+| `--language <LANG>` | Scan one language. Repeat the option for more. Overrides detection. |
+| `--no-actions` | Skip the GitHub Actions workflow scan. |
+
+Creating the database is the slow part. The Actions, Ruby, and Python databases
+build in seconds, while a full JavaScript and TypeScript monorepo takes a few
+minutes. Run it before a push or on demand, not on every commit.
+
+`tina4 doctor` reports whether the CodeQL client is installed and, when it is
+missing, prints the install command for your operating system.
+
 ## Manage environment variables
 
 The client can list the variables that source code uses, generate
@@ -183,3 +240,20 @@ tina4 doctor
 
 The update command refreshes the signed binary and installed Tina4 skills. The
 doctor command then shows which runtimes and framework clients are ready.
+
+## Remove the client
+
+When you are done with Tina4 the client will take itself back off the machine.
+`tina4 uninstall` first lists everything it put there: the config and
+credentials, the installed skills across Claude, Codex and Cursor, and the
+binary itself. Then it asks before it removes a single file.
+
+```bash
+tina4 uninstall            # lists targets, asks, then removes
+tina4 uninstall --dry-run  # only reports what it would touch
+tina4 uninstall --yes      # skips the prompts, for scripts
+```
+
+The current project's own `.tina4/`, `.tina4-metrics.json` and `.tina4-docs`
+are offered as a separate, explicit opt-in. Nothing else on the filesystem is
+searched, so an uninstall never reaches into another project you forgot about.

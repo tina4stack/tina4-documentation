@@ -232,7 +232,7 @@ Enable with `features=["files"]`. Both routes are `auth_required` and go through
 
 ### Storage backends
 
-`select_storage(storage=None)` resolves from the `storage=` argument or `TINA4_STORAGE_BACKEND`. An `s3` backend that cannot be built (boto3 missing, or incomplete config) falls back to `LocalStorage` with a warning: a real store, never a silent no-op.
+`select_storage(storage=None)` resolves from the `storage=` argument or `TINA4_STORAGE_BACKEND`. An `s3` backend that cannot be built (for example, no `TINA4_STORAGE_BUCKET`) falls back to `LocalStorage` with a warning: a real store, never a silent no-op.
 
 ```bash
 # .env - local (default)

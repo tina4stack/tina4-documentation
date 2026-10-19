@@ -1,0 +1,36 @@
+# Contributor access and two-factor authentication: MichaelC8E - 2026-10-13
+# Scope: tina4, tina4-python, tina4-php, tina4-ruby, tina4-nodejs, tina4-js, tina4-documentation
+# Controls: G9 (two-factor authentication); access review (ISO/IEC 27001 A.5.15, A.5.17, A.8.5)
+
+## Role
+MichaelC8E is the security-remediation contributor: his remit is to work through
+the security findings across all seven in-scope repositories. His first landed
+work is the September-October 2026 cross-framework security batch - the CSRF form
+token bound to the session that rendered it, the saved upload that never writes
+through a symlink at its name, and the MCP file tools held inside the project -
+merged to v3 in tina4-python (#218, #219), tina4-php (#297, #298) and
+tina4-nodejs (#136, #137, #138).
+
+## Access after review
+MichaelC8E  read  all 7 repositories; contributes through fork pull requests.
+
+He holds no write access, so the G9 working rule is unchanged: direct write stays
+with tina4stack (admin) and andrevanzuydam (maintainer), and every change of his
+reaches a release branch only through a reviewed pull request that passes CI. A
+fork pull request runs no workflow until the maintainer approves the run, so his
+code cannot touch CI secrets unreviewed either.
+
+## Two-factor authentication (GitHub Settings > Password and authentication)
+MichaelC8E  2FA Enabled. Authenticator app configured and set as the preferred
+            method; SMS configured as a fallback (GitHub marks it less secure);
+            GitHub Mobile configured on one device. Security keys not configured.
+
+The maintainer reviewed the account's two-factor settings page on 2026-10-13 and
+confirmed the above. The screenshot is held privately by the maintainer, not in
+this public repository, as with the 2026-09-24 records.
+
+## Follow-up
+Recovery codes: the settings page warns the codes have not been downloaded or
+printed in the last year. Action on MichaelC8E - regenerate and securely store a
+fresh set, so a lost authenticator does not lock the account out. Low severity;
+it does not block the role.

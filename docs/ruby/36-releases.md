@@ -1,5 +1,26 @@
 # Release Notes
 
+## v3.13.151 (2026-10-15) - Isolation headers and a hardened S3 client
+
+**A Cross-Origin-Opener-Policy header, on by default.** The security-header set gains `Cross-Origin-Opener-Policy`, default `same-origin-allow-popups` (`TINA4_COOP`). It keeps OAuth and payment popups working out of the box, and paired with a COEP header it hands a browser app the isolated context that unlocks `SharedArrayBuffer` and WebAssembly threads.
+
+**The S3 storage client fails loud and retries.** The zero-dependency SigV4 client (no aws-sdk-s3) refuses a missing credential with a clear error instead of signing an anonymous request, retries a 429, a 5xx or a dropped connection with capped backoff and honours `Retry-After`, and keeps the endpoint's path prefix so a sub-pathed endpoint still addresses the right bucket (#229).
+
+**MongoDB keeps bound values out of the SQL text.** The Mongo provider binds its values positionally rather than resolving them into the query text, closing a SQL-text-injection path.
+
+**CodeQL core findings cleared.** CRUD attributes are de-raw'd, the 302 redirect is guarded, uploaded files are created owner-only, and the CI workflows run least-privilege with SHA-pinned actions.
+
+The README's built-in feature count is corrected to 140, and the release flow itself is now written down at [general/releasing](/general/releasing.md). Every change landed across all four frameworks with real, no-mock tests. The framework still has no required runtime dependencies.
+
+## v3.13.150 (2026-10-11) - The dev dashboard grows up
+
+**The dashboard AI talks to the gateway.** The dashboard AI speaks to the `tina4 ai serve` gateway on 11435 rather than a model directly, `/__dev/split` serves the shared split-preview asset, and the scaffold panel is driven from the CLI generators.
+
+**Code Landscape finds room, and the metrics scan stops self-reloading.** The metrics bubbles spread across a project-sized world (zoom-out and Fit frame the layout), and the dashboard's own metrics scan passes `--no-history` so it no longer triggers a reload of itself.
+
+The framework still has no required runtime dependencies.
+
+
 ## v3.13.149 (2026-10-10) - A CRUD screen out of the box, and the dev-server rough edges come off
 
 **A CRUD screen out of the box.** `Crud.to_crud(request, model: Order)` renders a full admin screen for a model from a single call - a listing, plus create, edit and delete forms, wired to the AutoCrud REST endpoints behind it - so a model earns a working back office without a hand-built page (ADR-0094).

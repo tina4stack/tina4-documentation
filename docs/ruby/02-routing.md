@@ -295,9 +295,9 @@ Query parameters are key-value pairs after the `?` in a URL. Access them through
 
 ```ruby
 Tina4::Router.get("/search") do |request, response|
-  q = request.params["q"] || ""
-  page = (request.params["page"] || 1).to_i
-  limit = (request.params["limit"] || 10).to_i
+  q = request.query["q"] || ""
+  page = (request.query["page"] || 1).to_i
+  limit = (request.query["limit"] || 10).to_i
 
   response.json({
     query: q,
@@ -316,7 +316,7 @@ curl "http://localhost:7147/search?q=keyboard&page=2&limit=20"
 {"query":"keyboard","page":2,"limit":20,"offset":20}
 ```
 
-Missing query parameter? `request.params["key"]` returns `nil`. Use `||` to provide defaults.
+Missing query parameter? `request.query["key"]` returns `nil`. Use `||` to provide defaults.
 
 ---
 
@@ -820,7 +820,7 @@ $next_id = 6
 
 # List all products, optionally filter by category
 Tina4::Router.get("/api/products") do |request, response|
-  category = request.params["category"]
+  category = request.query["category"]
 
   if category
     filtered = $products.select { |p| p[:category].downcase == category.downcase }

@@ -79,9 +79,9 @@ Query string parameters live in a dictionary. Each key holds a single value unle
 @get("/search")
 async def search(request, response):
     return response.json({
-        "q": request.params.get("q", ""),
-        "page": int(request.params.get("page", 1)),
-        "sort": request.params.get("sort", "relevance")
+        "q": request.query.get("q", ""),
+        "page": int(request.query.get("page", 1)),
+        "sort": request.query.get("sort", "relevance")
     })
 ```
 
@@ -881,7 +881,7 @@ async def submit_contact(request, response):
 
 @get("/api/contact/submissions")
 async def list_submissions(request, response):
-    status = request.params.get("status")
+    status = request.query.get("status")
 
     if status:
         filtered = [s for s in submissions if s["status"] == status]

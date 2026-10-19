@@ -47,6 +47,22 @@ STALE_CLAIMS = (
     "single package per language, with zero runtime dependencies",
 )
 
+# Public-facing surfaces that state Tina4's TOTAL built-in count in prose. The
+# catalog checks above cover the four feature-list pages; these are the map/prose
+# surfaces that drifted (llms.txt once said 97) precisely because nothing scanned
+# them. They are gated here so the total cannot rot again. (docs/comparisons.md was
+# removed 2026-10-15 - a fresh comparisons page will be re-gated when it returns.)
+EVERGREEN_TOTAL_PAGES = (
+    ROOT / "docs" / "public" / "llms.txt",
+)
+# Counts that have been stated as the Tina4 TOTAL and were wrong. A byte size like
+# "142 B" never matches (the phrase carries "features"/"built-in"), and a curated
+# comparison subset ("44 features compared") is deliberately NOT blocked.
+WRONG_TOTAL_PHRASES = (
+    "78 features", "97 features", "97 built-in", "98 features", "98 built-in",
+    "108 features", "137 features", "138 features", "142 features",
+)
+
 
 def fail(message: str) -> None:
     raise SystemExit(f"FEATURE FACT ERROR: {message}")
@@ -103,9 +119,32 @@ def main() -> None:
             if claim in text:
                 fail(f"{page.relative_to(ROOT)} contains stale claim: {claim!r}")
 
+    expected_total = str(len(features))
+    for page in EVERGREEN_TOTAL_PAGES:
+        if not page.is_file():
+            fail(f"evergreen total page is missing: {page}")
+        # Collapse whitespace so a count that wraps across a line ("140\nbuilt-in")
+        # is matched the same as the inline form - the phrases below use spaces.
+        text = re.sub(r"\s+", " ", page.read_text(encoding="utf-8"))
+        for phrase in WRONG_TOTAL_PHRASES:
+            if phrase in text:
+                fail(
+                    f"{page.relative_to(ROOT)} states a wrong feature total: "
+                    f"{phrase!r} (the catalog has {expected_total})"
+                )
+        if not any(
+            f"{expected_total} {suffix}" in text
+            for suffix in ("built-in", "built-ins", "features", "cataloged")
+        ):
+            fail(
+                f"{page.relative_to(ROOT)} never states the correct total of "
+                f"{expected_total} features"
+            )
+
     print(
         f"Feature catalog: {len(features)} contiguous entries, "
-        f"{len(packet_ids)} packets, 4 public pages aligned"
+        f"{len(packet_ids)} packets, 4 public pages aligned, "
+        f"{len(EVERGREEN_TOTAL_PAGES)} evergreen totals at {expected_total}"
     )
 
 

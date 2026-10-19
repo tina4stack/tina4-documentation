@@ -319,9 +319,9 @@ Key-value pairs after the `?` in a URL. Access them through `$request->params`:
 use Tina4\Router;
 
 Router::get("/search", function ($request, $response) {
-    $q = $request->params["q"] ?? "";
-    $page = (int) ($request->params["page"] ?? 1);
-    $limit = (int) ($request->params["limit"] ?? 10);
+    $q = $request->query["q"] ?? "";
+    $page = (int) ($request->query["page"] ?? 1);
+    $limit = (int) ($request->query["limit"] ?? 10);
 
     return $response->json([
         "query" => $q,
@@ -890,7 +890,7 @@ $nextId = 6;
 
 // List all products, optionally filter by category
 Router::get("/api/products", function ($request, $response) use (&$products) {
-    $category = $request->params["category"] ?? null;
+    $category = $request->query["category"] ?? null;
 
     if ($category !== null) {
         $filtered = array_values(array_filter(

@@ -574,7 +574,7 @@ For maximum performance, stack all three layers:
 
 ```ruby
 Tina4::Router.get("/api/catalog", middleware: ["ResponseCache:60"]) do |request, response|
-  page = (request.params["page"] || 1).to_i
+  page = (request.query["page"] || 1).to_i
   cache_key = "catalog:page:#{page}"
 
   # Layer A: application cache (direct KV API)
@@ -689,9 +689,9 @@ PRODUCT_STORE = [
 ]
 
 Tina4::Router.get("/api/store/products") do |request, response|
-  category = request.params["category"]
-  page = (request.params["page"] || 1).to_i
-  limit = (request.params["limit"] || 20).to_i
+  category = request.query["category"]
+  page = (request.query["page"] || 1).to_i
+  limit = (request.query["limit"] || 20).to_i
 
   # Build cache key from query parameters
   key_data = JSON.generate({ category: category, page: page, limit: limit })

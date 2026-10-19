@@ -269,8 +269,8 @@ The generated route file:
 
 ```ruby
 Tina4::Router.get("/api/products") do |request, response|
-  page = (request.params["page"] || 1).to_i
-  per_page = (request.params["per_page"] || 20).to_i
+  page = (request.query["page"] || 1).to_i
+  per_page = (request.query["per_page"] || 20).to_i
   offset = (page - 1) * per_page
 
   products, total = Product.where("1=1", [], limit: per_page, offset: offset)
