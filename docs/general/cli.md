@@ -6,11 +6,15 @@ measures source code without loading a framework runtime.
 
 ## Install the client
 
-macOS and Linux:
+macOS, Linux, and Android (Termux):
 
 ```bash
 curl -fsSL https://tina4.com/install.sh | sh
 ```
+
+On Termux the script installs the native Android build into `$PREFIX/bin`
+without root, and `tina4 install`, `tina4 init`, and `tina4 setup` install
+runtimes with Termux's own `pkg`.
 
 Windows PowerShell:
 

@@ -28,6 +28,14 @@ brew install tina4stack/tap/tina4
 curl -fsSL https://tina4.com/install.sh | sh
 ```
 
+**Android (Termux):**
+
+```bash
+curl -fsSL https://tina4.com/install.sh | sh
+```
+
+The same script. On Termux it installs the native Android build into `$PREFIX/bin`, with no root and no `sudo`. Install Termux from [F-Droid](https://f-droid.org/packages/com.termux/) or its [GitHub releases](https://github.com/termux/termux-app/releases).
+
 **Windows (PowerShell):**
 
 ```powershell
@@ -58,7 +66,7 @@ This shows installed languages (Python, PHP, Ruby, Node.js), their versions, and
 
 ## Set Everything Up with `tina4 setup`
 
-The fastest path, especially if you're starting from a fresh machine. `tina4 setup` reads what `doctor` found, installs whatever is missing (the language runtime and git, through the OS package manager such as Chocolatey on Windows or Homebrew on macOS), installs the AI skills, scaffolds a ready-to-run project, and points you at it.
+The fastest path, especially if you're starting from a fresh machine. `tina4 setup` reads what `doctor` found, installs whatever is missing (the language runtime and git, through the OS package manager such as Chocolatey on Windows, Homebrew on macOS, or `pkg` on Termux), installs the AI skills, scaffolds a ready-to-run project, and points you at it.
 
 ```bash
 tina4 setup
