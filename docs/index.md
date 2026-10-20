@@ -1,5 +1,8 @@
 ---
-# tina4press home layout (config: tina4press.config.mjs)
+# tina4press home layout (config: tina4press.config.mjs).
+# tina4.com/ itself is NOT this page: scripts/build-home.mjs replaces its HTML
+# with home/index.html after tina4press builds. This page still feeds the docs
+# search index, the sitemap and the RAG corpus, so keep it current.
 layout: home
 
 hero:
@@ -30,21 +33,6 @@ hero:
 
 
 ---
-
-<link rel="stylesheet" href="/ask-hero.css">
-
-<div class="tp-ask-hero">
-  <form class="tp-ask-hero-form" role="search" autocomplete="off">
-    <input class="tp-ask-hero-input" type="search" name="q" aria-label="Ask Tina4" placeholder="Ask Tina4: how do I define a route?">
-    <button class="tp-ask-hero-go" type="submit">Ask Tina4</button>
-  </form>
-</div>
-
-<div class="tp-ask-pills"></div>
-
-<div class="tp-ask-answer" hidden></div>
-
-<script src="/ask-hero.js" defer></script>
 
 ## Install
 

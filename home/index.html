@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tina4 - Zero dependencies</title>
+<meta name="description" content="One framework, four languages, 140 features, zero runtime dependencies.">
+<link rel="canonical" href="https://tina4.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tina4">
+<meta property="og:url" content="https://tina4.com/">
+<meta property="og:title" content="Tina4 - Zero dependencies">
+<meta property="og:description" content="One framework, four languages, 140 features, zero runtime dependencies.">
+<meta property="og:image" content="https://tina4.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Tina4 robot">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://tina4.com/og-image.png">
+<!-- favicons (RealFaviconGenerator set) -->
+<link rel="icon" type="image/png" href="/assets/home/favicon/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/assets/home/favicon/favicon.svg">
+<link rel="shortcut icon" href="/assets/home/favicon/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/home/favicon/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="Tina4">
+<link rel="manifest" href="/assets/home/favicon/site.webmanifest">
+<!-- fonts are served from the site itself: no third-party requests -->
+<link rel="preload" href="/assets/home/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/home/fonts/inconsolata-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/home/home.css">
+<!-- the theme before first paint, with tina4press's own attribute and key, so a
+     choice made here or on any docs page carries across the whole site -->
+<script>(function(){try{var t=localStorage.getItem('tp-theme');var d=t?t==='dark':matchMedia('(prefers-color-scheme:dark)').matches;document.documentElement.setAttribute('data-theme',d?'dark':'light');}catch(e){}})();</script>
+<script src="/assets/home/home.js" defer></script>
+</head>
+<body>
+<!-- icons: Lucide (ISC), copied in as one inline sprite; see assets/icons -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" /></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 5h16" /><path d="M4 12h16" /><path d="M4 19h16" /></symbol><symbol id="i-rotate-ccw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol><symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></symbol><symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14" /><path d="m19 12-7 7-7-7" /></symbol><symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" /></symbol><symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" /></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></symbol><symbol id="i-tina" viewBox="0 0 512 512"><path d="M438.775 512C437.358 511.956 436.007 511.433 434.939 510.518C432.105 508.272 429.554 505.7 427.287 502.866C419.439 492.708 412.398 481.917 406.251 470.625C385.323 433.98 366.772 396.05 350.706 357.029C350.51 356.527 350.27 356.048 350.009 355.568H349.638C349.507 356.462 349.398 357.356 349.289 358.25V358.468C349.006 360.756 348.657 363.394 348.156 365.901C344.82 386.698 337.866 406.731 327.599 425.13C321.8 434.634 314.563 443.201 306.127 450.482C301.614 454.886 295.685 457.524 289.407 457.981C287.706 458.156 286.05 458.526 284.458 459.137H284.262C283.281 459.485 282.278 459.791 281.275 460.03C277.221 460.924 273.079 461.382 268.915 461.382C259.651 461.208 250.538 459.246 242.037 455.583C227.082 449.131 213.545 439.866 202.122 428.269C184.508 410.96 168.987 391.646 155.886 370.719L155.494 370.196C155.297 369.934 155.079 369.672 154.84 369.28L153.03 372.899L148.3 382.207C130.403 417.326 110.26 451.267 88.0248 483.835C82.8147 491.705 76.9289 499.117 70.4545 505.983C68.9068 507.618 67.1846 509.101 65.3099 510.343C64.1109 511.259 62.6504 511.782 61.1244 511.847C58.5957 511.673 56.4158 509.994 55.5874 507.575C53.9525 503.542 53.1241 499.204 53.1459 494.844C52.8625 486.495 53.3857 478.124 54.7154 469.862C57.4404 450.657 62.1926 431.8 68.9504 413.598C72.9832 401.979 78.7165 391.014 85.9538 381.073C99.4912 363.569 114.903 347.59 131.929 333.442C133.018 332.461 133.127 331.872 132.408 330.673C131.427 328.821 130.49 326.968 129.574 325.158C128.659 323.349 127.808 321.67 126.915 319.926C126.435 319.12 126.719 318.771 127.263 318.204C136.681 308.678 147.559 300.721 159.483 294.639C177.86 284.96 197.588 278.115 218.014 274.322C218.69 274.148 219.365 273.995 220.041 273.886L221.763 273.516C221.763 273.516 221.763 273.407 221.763 273.363L218.45 272.862L217.316 272.687C215.463 272.382 213.567 272.077 211.714 271.728C168.115 264.687 128.986 240.86 102.761 205.328C87.8722 185.207 76.2531 162.863 68.3182 139.123C60.9282 117.564 55.6746 95.3283 52.6227 72.7224C50.3338 56.6346 49.113 40.3505 48.9822 24.0446C48.9386 22.7367 49.3746 21.4723 50.2466 20.5131C58.7265 10.3547 70.5199 3.53149 83.5341 1.19896C87.7632 0.392387 92.0794 0 96.3739 0C106.249 0.130796 116.015 1.91834 125.302 5.27543C128.048 6.2128 130.817 7.30276 133.433 8.43633L133.912 8.63252L134.174 8.76332L138.534 10.5509C139.733 11.0086 140.997 11.2702 142.283 11.3138L156.257 11.4228H157.87C167.788 11.4228 178.034 11.5754 188.105 11.946C202.057 12.5128 216.553 13.5156 234.974 15.1287C253.394 16.7637 272.381 18.8564 291.696 21.1235C303.009 22.3879 314.585 23.9792 326.4 25.6142L331.152 26.2681L336.101 26.9439C336.58 26.9657 337.06 26.9657 337.539 26.9439C339.283 26.8785 341.027 26.6169 342.728 26.1592C343.665 25.9194 344.428 25.7232 345.126 25.636C360.451 22.4315 376.059 20.7311 391.732 20.5567C406.905 20.0771 422.012 22.6495 436.181 28.1211C445.163 31.4564 453.119 37.0588 459.31 44.3834C463.605 49.637 463.757 49.855 461.861 56.3294C450.242 99.601 431.712 140.736 406.992 178.1C391.82 201.425 372.833 222.048 350.815 239.073C333.637 252.261 314.171 262.136 293.396 268.24L292.829 268.436L292.153 268.676C292.153 268.807 292.153 268.938 292.153 269.09C311.664 269.723 331.087 272.033 350.205 276.044C350.205 277.004 350.357 278.072 350.466 279.075C350.575 280.077 350.684 281.56 350.772 282.78C350.772 284.808 350.946 286.726 351.033 288.71C351.186 292.285 351.36 296.427 351.6 300.416C351.622 301.07 351.905 301.702 352.363 302.16C364.832 311.229 376.408 321.474 386.915 332.766C398.011 344.211 408.256 356.44 417.608 369.345C427.636 383.733 434.895 399.864 438.993 416.911C444.356 436.596 447.495 456.804 448.367 477.187C448.999 485.623 448.367 494.081 446.492 502.321C445.926 504.61 445.01 506.812 443.789 508.839C442.786 510.736 440.846 511.913 438.71 511.978L438.775 512ZM158.829 160.748L242.713 168.879V231.988L282.017 235.607V172.629L291.39 173.522V136.158L282.017 135.243V71.4363L242.713 68.7332V131.363L197.108 126.85V64.0463L158.829 59.3595V160.748Z"/></symbol><symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7" /><path d="M12 19V5" /></symbol><symbol id="i-maximize-2" viewBox="0 0 24 24"><path d="M15 3h6v6" /><path d="m21 3-7 7" /><path d="m3 21 7-7" /><path d="M9 21H3v-6" /></symbol><symbol id="i-minimize-2" viewBox="0 0 24 24"><path d="m14 10 7-7" /><path d="M20 10h-6V4" /><path d="m3 21 7-7" /><path d="M4 14h6v6" /></symbol><symbol id="i-command" viewBox="0 0 24 24"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" /></symbol></svg>
+
+<!-- ============ HEADER ============ -->
+<!-- The nav links between the home:nav markers are replaced at build time
+     (scripts/build-home.mjs) with the docs header's own links, which tina4press
+     renders from `nav` in tina4press.config.mjs. The ones here are the
+     last-known fallback. -->
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Tina4 home">
+      <img src="/assets/home/tina4-logo-correct.svg" alt="">
+      <span class="brand-name">Tina<span>4</span></span>
+    </a>
+    <nav class="site-nav" aria-label="Main">
+      <!-- home:nav -->
+      <a href="/" aria-current="page">Home</a>
+      <a href="/general/01-what-is-tina4/">Introduction</a>
+      <a href="/build-with-ai/">Build with AI</a>
+      <a href="/js/">tina4-js</a>
+      <a href="/python/">Python</a>
+      <a href="/nodejs/">Node.js</a>
+      <a href="/php/">PHP</a>
+      <a href="/ruby/">Ruby</a>
+      <a href="/download/code-viewer/">Code Viewer</a>
+      <!-- /home:nav -->
+    </nav>
+    <div class="header-actions">
+      <a class="icon-btn" href="https://github.com/tina4stack" aria-label="Tina4 on GitHub"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.05-.02-2.06-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.62-5.48 5.92.43.37.81 1.1.81 2.22 0 1.61-.01 2.9-.01 3.29 0 .32.21.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5z"/></svg></a>
+      <a class="icon-btn" href="https://discord.gg/vEXqaNcZm" aria-label="Join the Tina4 community on Discord"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg></a>
+      <!-- the infinity mark from the Code Infinity logo (assets/c8e-logo-blue.svg), framed square -->
+      <a class="icon-btn" href="https://codeinfinity.co.za" aria-label="Code Infinity, the team behind Tina4"><svg viewBox="64 -34.5 159 159" aria-hidden="true"><path d="M184.34 89.29C165.16 92.33 145 76.42 133.52 65.26C126.91 57.1 120.5 51.39 120.5 51.39C114.38 45.43 103.83 37.15 95.66 38.45C86.59 39.89 80.38 48.44 81.83 57.49C83.26 66.54 91.82 72.74 100.89 71.3C107.72 70.22 113.88 62.65 118.03 55.81C122.39 60.28 126.63 64.87 130.74 69.56C124.73 78.19 115.73 87.26 103.74 89.16C84.8 92.17 66.94 79.23 63.94 60.33C60.93 41.43 73.88 23.6 92.82 20.59C107.03 18.34 120.61 27.27 129.21 34.78C129.21 34.78 135.68 41.07 142.23 48.34C152.87 59.64 170.04 73.26 181.51 71.44C196.15 69.12 206.17 55.34 203.84 40.72C201.51 26.09 187.71 16.1 173.06 18.42C162.26 20.14 151.51 33.51 144.92 43.89C140.03 38.71 135.56 34.11 131.99 30.5C140.19 18.38 153.55 3.21 170.22 0.56C172.62 0.18 175 0 177.34 0C199.07 0 218.25 15.8 221.77 37.88C225.67 62.35 208.89 85.42 184.37 89.3H184.35L184.34 89.29Z"/></svg></a>
+      <!-- docs search lives on the docs pages (tina4press opens it from its own
+           header or Ctrl/Cmd+K), so this takes you there -->
+      <a class="search-pill" href="/general/01-what-is-tina4/" aria-label="Search the docs"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg> <span class="search-hint">Search docs</span></a>
+      <button class="icon-btn theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+        <svg class="i moon" aria-hidden="true"><use href="#i-moon"/></svg>
+        <svg class="i sun" aria-hidden="true"><use href="#i-sun"/></svg>
+      </button>
+      <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="mobile-nav"><svg class="i" aria-hidden="true"><use href="#i-menu"/></svg></button>
+    </div>
+  </div>
+  <!-- the phone and tablet menu: home.js copies the nav links in -->
+  <nav class="mobile-nav" id="mobile-nav" aria-label="Main" hidden></nav>
+</header>
+
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="hero-bg" aria-hidden="true">
+    <img class="hb-main" src="/assets/home/dep-hairball-2.jpg" alt="">
+    <img class="hb-mirror" src="/assets/home/dep-hairball-2.jpg" alt="">
+  </div>
+  <svg class="tangle" id="tangle" aria-hidden="true" preserveAspectRatio="xMidYMid slice"></svg>
+  <svg class="tangle tangle-front" id="tangle-front" aria-hidden="true" preserveAspectRatio="xMidYMid slice"></svg>
+  <div class="wrap">
+    <div class="hero-left">
+      <h1 class="slogan">Zero<br>dependencies<span class="dot">.</span></h1>
+      <p class="hero-desc">One framework, four languages, 140 features, <b>zero runtime dependencies.</b></p>
+      <p class="hero-sub">The Intelligent Native Application <b>4</b>ramework.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="/get-started/">Get started <span class="arr"><svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></span></a>
+        <a class="btn btn-ghost" href="#proof">See it in one file</a>
+      </div>
+      <!-- opens the Ask Tina4 chat at the bottom right -->
+      <button class="hero-ask" type="button" data-open-chat><svg class="tina-mark" aria-hidden="true"><use href="#i-tina"/></svg> Ask Tina4 a question</button>
+    </div>
+    <div class="hero-node">
+      <!-- static robot first; the page swaps in the live rig (/assets/home/tina4-robot.svg)
+           unless the visitor prefers reduced motion or the fetch fails -->
+      <!-- the boot: `tina4 serve` and its real start-up banner, played once per
+           session before the scene builds in (decorative, so hidden from AT) -->
+      <div class="boot" id="boot" aria-hidden="true" data-version="v3.13.151"></div>
+      <div class="hero-robot" role="img" aria-label="The Tina4 robot">
+        <img src="/assets/home/tina4-logo-correct.svg" alt="">
+      </div>    </div>
+  </div>
+</section>
+
+<!-- ============ B: WHAT YOU'RE NOT INSTALLING ============ -->
+<section class="section" id="not-installing">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Here's what you're not installing.</h2>
+      <p>Install a popular micro-framework and its dependencies come with it. Install Tina4 and you get Tina4.</p>
+    </div>
+    <div class="dep-tabs" role="tablist" aria-label="Language">
+      <button class="dep-tab active" data-lang="python" role="tab" aria-selected="true">Python</button>
+      <button class="dep-tab" data-lang="php" role="tab" aria-selected="false">PHP</button>
+      <button class="dep-tab" data-lang="ruby" role="tab" aria-selected="false">Ruby</button>
+      <button class="dep-tab" data-lang="nodejs" role="tab" aria-selected="false">Node.js</button>
+    </div>
+    <!-- two matching installs, filled from the real package lists (see the script) -->
+    <!-- the number is the claim, the install output under it is the receipt -->
+    <div class="dep-grid" id="dep-grid">
+      <div class="dep-side dep-us" data-side="us">
+        <div class="dep-count"><span class="dep-n"></span><span class="dep-l"></span></div>
+        <div class="dep-box">
+          <div class="dep-cmd"><span class="prompt">$</span> <span class="dep-cmd-t"></span></div>
+          <ul class="dep-pkgs" aria-label="Packages installed"></ul>
+        </div>
+      </div>
+      <div class="dep-side" data-side="them">
+        <div class="dep-count"><span class="dep-n"></span><span class="dep-l"></span></div>
+        <div class="dep-box">
+          <div class="dep-cmd"><span class="prompt">$</span> <span class="dep-cmd-t"></span></div>
+          <ul class="dep-pkgs" aria-label="Packages installed"></ul>
+        </div>
+      </div>
+    </div>
+    <!-- what the zero buys you -->
+    <ul class="dep-gains">
+      <li><b>Nothing to audit.</b> No third-party code in your runtime to review.</li>
+      <li><b>No inherited alerts.</b> No security advisories for packages you never chose.</li>
+      <li><b>One thing to upgrade.</b> One version to bump, one line in the lockfile.</li>
+      <li><b>Same in every language.</b> Python, PHP, Ruby and Node.js: one package each.</li>
+    </ul>
+    <p class="dep-note">Measured on 15 October 2026 with each package manager's own install, latest versions: Flask 3.1.3, Slim 4.15.3 with slim/psr7 (the PSR-7 package its hello-world needs), Express 5.3.0, Sinatra 4.2.1 (resolved from rubygems.org).</p>
+  </div>
+</section>
+
+<!-- ============ PROOF ============ -->
+<section class="section" id="proof">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>A REST route in one file.</h2>
+      <p>Scaffold with the CLI, add a route, return JSON.</p>
+    </div>
+    <div class="proof">
+      <ol class="proof-steps">
+        <li class="proof-step">
+          <div class="step-l">Create</div>
+          <div class="proof-line proof-cmds">
+            <div class="row"><span class="prompt">$</span><code id="init-cmd">tina4 init python my-app</code></div>
+            <div class="row"><span class="prompt">$</span><code id="serve-cmd">tina4 serve</code></div>
+          </div>
+        </li>
+        <li class="proof-step">
+          <div class="step-l">Add a route</div>
+          <div class="code-window">
+            <div class="code-header">
+              <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+              <div class="code-tabs" role="tablist" aria-label="Same route, four languages">
+                <button class="code-tab proof-tab active" data-lang="python" role="tab" aria-selected="true">hello.py</button>
+                <button class="code-tab proof-tab" data-lang="php" role="tab" aria-selected="false">hello.php</button>
+                <button class="code-tab proof-tab" data-lang="ruby" role="tab" aria-selected="false">hello.rb</button>
+                <button class="code-tab proof-tab" data-lang="nodejs" role="tab" aria-selected="false">hello.ts</button>
+              </div>
+            </div>
+            <div class="code-body proof-body">
+<div class="code-variant active" data-lang="python"><span class="ck">from</span> tina4_python <span class="ck">import</span> get
+
+<span class="cp">@get</span>(<span class="cs">"/api/hello/{name}"</span>)
+<span class="ck">async def</span> <span class="cf">hello</span>(request, response):
+    <span class="ck">return</span> response.<span class="cf">json</span>({<span class="cs">"hello"</span>: request.params[<span class="cs">"name"</span>]})</div><div class="code-variant" data-lang="php"><span class="cp">\Tina4\Get</span>::<span class="cf">add</span>(<span class="cs">"/api/hello/{name}"</span>, <span class="ck">function</span>(\Tina4\Response $response, $name) {
+    <span class="ck">return</span> $response-><span class="cf">json</span>([<span class="cs">"hello"</span> => $name]);
+});</div><div class="code-variant" data-lang="ruby"><span class="cp">Tina4::Router</span>.<span class="cf">get</span>(<span class="cs">"/api/hello/{name}"</span>) <span class="ck">do</span> |request, response|
+  response.<span class="cf">json</span>({ hello: request.params[<span class="cs">:name</span>] })
+<span class="ck">end</span></div><div class="code-variant" data-lang="nodejs"><span class="ck">import</span> { Router } <span class="ck">from</span> <span class="cs">"tina4-nodejs"</span>;
+
+Router.<span class="cf">get</span>(<span class="cs">"/api/hello/{name}"</span>, <span class="ck">async</span> (req, res) => {
+  <span class="ck">return</span> res.<span class="cf">json</span>({ hello: req.params.name });
+});</div></div>
+          </div>
+        </li>
+        <li class="proof-step">
+          <div class="step-l">Call it</div>
+          <div class="proof-line">
+            <span class="prompt">$</span><code id="curl-cmd">curl localhost:7146/api/hello/Ada</code>
+            <span class="arrow"><svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></span><code class="json" id="curl-json">{"hello":"Ada"}</code>
+          </div>
+        </li>
+      </ol>
+      <button class="replay" id="replay" aria-label="Replay the zero-to-API demo"><svg class="i" aria-hidden="true"><use href="#i-rotate-ccw"/></svg> Replay</button>
+      <!-- what that one file gave you; each title links to that language's docs chapter -->
+      <ul class="proof-gets">
+        <li><a class="doc-link" data-doc="02-routing" href="/python/02-routing/">Routing</a> Every HTTP method: GET, POST, PUT, PATCH and DELETE.</li>
+        <li><a class="doc-link" data-doc="02-routing" href="/python/02-routing/">Path parameters</a> <code>{name}</code> in the path arrives in your handler.</li>
+        <li><a class="doc-link" data-doc="03-request-response" href="/python/03-request-response/">JSON responses</a> Return JSON with one call, no serialiser to set up.</li>
+        <li><a class="doc-link" data-doc="20-swagger" href="/python/20-swagger/">Swagger docs</a> A Swagger UI at <code>/swagger</code> while you develop, built from your routes.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STAT STRIP ============ -->
+<section class="stat-strip" aria-label="Tina4 in numbers">
+  <div class="wrap stat-row">
+    <div class="stat"><div class="stat-n">4</div><div class="stat-l">languages: Python, PHP, Ruby, Node.js</div></div>
+    <div class="stat"><div class="stat-n">140</div><div class="stat-l">built-in features</div></div>
+    <div class="stat"><div class="stat-n is-zero">0</div><div class="stat-l">runtime dependencies</div></div>
+    <div class="stat"><div class="stat-n">29,000</div><div class="stat-l">JSON requests a second on PHP</div></div>
+  </div>
+</section>
+
+<!-- ============ GIVE YOUR AI 30 SECONDS ============ -->
+<section class="ai-band" id="ai">
+  <div class="wrap">
+    <div class="ai-head">
+      <h2>Your AI doesn't know Tina4 yet. Give it 30 seconds.</h2>
+      <p>Paste this into Claude, Cursor, Copilot or whatever you already have open. Same prompt, four languages.</p>
+    </div>
+    <div class="ai-grid">
+      <!-- the prompt is a sentence you say to your assistant, so it is set as one, not as code -->
+      <div class="ai-ask">
+        <div class="ai-tabs" role="tablist" aria-label="Prompt language">
+          <button class="ai-tab active" data-lang="python" role="tab" aria-selected="true">Python</button>
+          <button class="ai-tab" data-lang="php" role="tab" aria-selected="false">PHP</button>
+          <button class="ai-tab" data-lang="ruby" role="tab" aria-selected="false">Ruby</button>
+          <button class="ai-tab" data-lang="nodejs" role="tab" aria-selected="false">Node.js</button>
+        </div>
+        <p class="ai-quote"><span class="q" aria-hidden="true">&#8220;</span><span id="ai-prompt-text">Read https://tina4.com/llms.txt and build me a REST API with a Todo model and JWT auth in <span id="ai-lang">Python</span>.</span><span class="q" aria-hidden="true">&#8221;</span></p>
+        <button class="copy-btn ai-copy" data-copy-from="ai-prompt-text" aria-label="Copy the prompt" data-done-text=" Copied"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg> Copy prompt</button>
+      </div>
+      <div class="ai-run">
+        <div class="ai-run-label">What your assistant runs next</div>
+        <div class="ai-lines" id="ai-lines" data-reveal>
+          <div class="row"><span class="prompt">$</span><code id="ai-init">tina4 init python todo-api</code></div>
+          <div class="row"><span class="prompt">$</span><code>tina4 generate model Todo</code></div>
+          <div class="row"><span class="prompt">$</span><code>tina4 migrate</code></div>
+          <div class="row"><span class="prompt">$</span><code>tina4 serve</code></div>
+          <div class="row"><span class="arrow"><svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></span><code class="json" id="ai-swagger">Swagger at localhost:7146/swagger</code></div>
+        </div>
+        <p class="ai-note"><a href="/llms.txt">llms.txt</a> is a bootstrap protocol written for machines. It tells your assistant to drive the <code>tina4</code> CLI and use the built-ins instead of inventing them.</p>
+        <p class="ai-tag">Zero dependencies, including the AI. <a href="/build-with-ai/">Build with AI <svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LANGUAGES: one spec sheet ============ -->
+<section class="section" id="languages">
+  <div class="wrap">
+    <div class="section-head centered">
+      <h2>Learn it once. Write it in four.</h2>
+      <p>Same project shape, same CLI, same ideas. Learn it in Python, then recognise every pattern in PHP, Ruby or Node.js.</p>
+    </div>
+    <div class="spec">
+      <div class="spec-head" aria-hidden="true"><span></span><span>Language</span><span>What it is</span><span>Scaffold</span><span>Dev port</span><span></span></div>
+      <a class="spec-row" href="/python/"><span class="lang-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.25.18l.9.2.73.26.59.3.45.32.34.34.25.34.16.33.1.3.04.26.02.2-.01.13V8.5l-.05.63-.13.55-.21.46-.26.38-.3.31-.33.25-.35.19-.35.14-.33.1-.3.07-.26.04-.21.02H8.77l-.69.05-.59.14-.5.22-.41.27-.33.32-.27.35-.2.36-.15.37-.1.35-.07.32-.04.27-.02.21v3.06H3.17l-.21-.03-.28-.07-.32-.12-.35-.18-.36-.26-.36-.36-.35-.46-.32-.59-.28-.73-.21-.88-.14-1.05-.05-1.23.06-1.22.16-1.04.24-.87.32-.71.36-.57.4-.44.42-.33.42-.24.4-.16.36-.1.32-.05.24-.01h.16l.06.01h8.16v-.83H6.18l-.01-2.75-.02-.37.05-.34.11-.31.17-.28.25-.26.31-.23.38-.2.44-.18.51-.15.58-.12.64-.1.71-.06.77-.04.84-.02 1.27.05zm-6.3 1.98l-.23.33-.08.41.08.41.23.34.33.22.41.09.41-.09.33-.22.23-.34.08-.41-.08-.41-.23-.33-.33-.22-.41-.09-.41.09zm13.09 3.95l.28.06.32.12.35.18.36.27.36.35.35.47.32.59.28.73.21.88.14 1.04.05 1.23-.06 1.23-.16 1.04-.24.86-.32.71-.36.57-.4.45-.42.33-.42.24-.4.16-.36.09-.32.05-.24.02-.16-.01h-8.22v.82h5.84l.01 2.76.02.36-.05.34-.11.31-.17.29-.25.25-.31.24-.38.2-.44.17-.51.15-.58.13-.64.09-.71.07-.77.04-.84.01-1.27-.04-1.07-.14-.9-.2-.73-.25-.59-.3-.45-.33-.34-.34-.25-.34-.16-.33-.1-.3-.04-.25-.02-.2.01-.13v-5.34l.05-.64.13-.54.21-.46.26-.38.3-.32.33-.24.35-.2.35-.14.33-.1.3-.06.26-.04.21-.02.13-.01h5.84l.69-.05.59-.14.5-.21.41-.28.33-.32.27-.35.2-.36.15-.36.1-.35.07-.32.04-.28.02-.21V6.07h2.09l.14.01zm-6.47 14.25l-.23.33-.08.41.08.41.23.33.33.23.41.08.41-.08.33-.23.23-.33.08-.41-.08-.41-.23-.33-.33-.23-.41-.08-.41.08z"/></svg></span><span class="spec-name">Python</span><span class="spec-desc">The reference implementation. Every feature lands here first.</span><code class="spec-cmd">tina4 init python</code><code class="spec-port">:7146</code><span class="spec-go">Python docs <svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></span></a>
+      <a class="spec-row" href="/php/"><span class="lang-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.01 10.207h-.944l-.515 2.648h.838c.556 0 .97-.105 1.242-.314.272-.21.455-.559.55-1.049.092-.47.05-.802-.124-.995-.175-.193-.523-.29-1.047-.29zM12 5.688C5.373 5.688 0 8.514 0 12s5.373 6.313 12 6.313S24 15.486 24 12c0-3.486-5.373-6.312-12-6.312zm-3.26 7.451c-.261.25-.575.438-.917.551-.336.108-.765.164-1.285.164H5.357l-.327 1.681H3.652l1.23-6.326h2.65c.797 0 1.378.209 1.744.628.366.418.476 1.002.33 1.752a2.836 2.836 0 0 1-.305.847c-.143.255-.33.49-.561.703zm4.024.715l.543-2.799c.063-.318.039-.536-.068-.651-.107-.116-.336-.174-.687-.174H11.46l-.704 3.625H9.388l1.23-6.327h1.367l-.327 1.682h1.218c.767 0 1.295.134 1.586.401s.378.7.263 1.299l-.572 2.944h-1.389zm7.597-2.265a2.782 2.782 0 0 1-.305.847c-.143.255-.33.49-.561.703a2.44 2.44 0 0 1-.917.551c-.336.108-.765.164-1.286.164h-1.18l-.327 1.682h-1.378l1.23-6.326h2.649c.797 0 1.378.209 1.744.628.366.417.477 1.001.331 1.751zM17.766 10.207h-.943l-.516 2.648h.838c.557 0 .971-.105 1.242-.314.272-.21.455-.559.551-1.049.092-.47.049-.802-.125-.995s-.524-.29-1.047-.29z"/></svg></span><span class="spec-name">PHP</span><span class="spec-desc">PHP 8.5, a <code>stream_select</code> server, no composer deps in core.</span><code class="spec-cmd">tina4 init php</code><code class="spec-port">:7145</code><span class="spec-go">PHP docs <svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></span></a>
+      <a class="spec-row" href="/ruby/"><span class="lang-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.156.083c3.033.525 3.893 2.598 3.829 4.77L24 4.822 22.635 22.71 4.89 23.926h.016C3.433 23.864.15 23.729 0 19.139l1.645-3 2.819 6.586.503 1.172 2.805-9.144-.03.007.016-.03 9.255 2.956-1.396-5.431-.99-3.9 8.82-.569-.615-.51L16.5 2.114 20.159.073l-.003.01zM0 19.089zM5.13 5.073c3.561-3.533 8.157-5.621 9.922-3.84 1.762 1.777-.105 6.105-3.673 9.636-3.563 3.532-8.103 5.734-9.864 3.957-1.766-1.777.045-6.217 3.612-9.75l.003-.003z"/></svg></span><span class="spec-name">Ruby</span><span class="spec-desc">Ships its own HTTP server in dev and production. Puma if you add it.</span><code class="spec-cmd">tina4 init ruby</code><code class="spec-port">:7147</code><span class="spec-go">Ruby docs <svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></span></a>
+      <a class="spec-row" href="/nodejs/"><span class="lang-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.998,24c-0.321,0-0.641-0.084-0.922-0.247l-2.936-1.737c-0.438-0.245-0.224-0.332-0.08-0.383 c0.585-0.203,0.703-0.25,1.328-0.604c0.065-0.037,0.151-0.023,0.218,0.017l2.256,1.339c0.082,0.045,0.197,0.045,0.272,0l8.795-5.076 c0.082-0.047,0.134-0.141,0.134-0.238V6.921c0-0.099-0.053-0.192-0.137-0.242l-8.791-5.072c-0.081-0.047-0.189-0.047-0.271,0 L3.075,6.68C2.99,6.729,2.936,6.825,2.936,6.921v10.15c0,0.097,0.054,0.189,0.139,0.235l2.409,1.392 c1.307,0.654,2.108-0.116,2.108-0.89V7.787c0-0.142,0.114-0.253,0.256-0.253h1.115c0.139,0,0.255,0.112,0.255,0.253v10.021 c0,1.745-0.95,2.745-2.604,2.745c-0.508,0-0.909,0-2.026-0.551L2.28,18.675c-0.57-0.329-0.922-0.945-0.922-1.604V6.921 c0-0.659,0.353-1.275,0.922-1.603l8.795-5.082c0.557-0.315,1.296-0.315,1.848,0l8.794,5.082c0.57,0.329,0.924,0.944,0.924,1.603 v10.15c0,0.659-0.354,1.273-0.924,1.604l-8.794,5.078C12.643,23.916,12.324,24,11.998,24z M19.099,13.993 c0-1.9-1.284-2.406-3.987-2.763c-2.731-0.361-3.009-0.548-3.009-1.187c0-0.528,0.235-1.233,2.258-1.233 c1.807,0,2.473,0.389,2.747,1.607c0.024,0.115,0.129,0.199,0.247,0.199h1.141c0.071,0,0.138-0.031,0.186-0.081 c0.048-0.054,0.074-0.123,0.067-0.196c-0.177-2.098-1.571-3.076-4.388-3.076c-2.508,0-4.004,1.058-4.004,2.833 c0,1.925,1.488,2.457,3.895,2.695c2.88,0.282,3.103,0.703,3.103,1.269c0,0.983-0.789,1.402-2.642,1.402 c-2.327,0-2.839-0.584-3.011-1.742c-0.02-0.124-0.126-0.215-0.253-0.215h-1.137c-0.141,0-0.254,0.112-0.254,0.253 c0,1.482,0.806,3.248,4.655,3.248C17.501,17.007,19.099,15.91,19.099,13.993z"/></svg></span><span class="spec-name">Node.js</span><span class="spec-desc">TypeScript-first, native <code>node:http</code>, file-based routing, ESM-only.</span><code class="spec-cmd">tina4 init nodejs</code><code class="spec-port">:7148</code><span class="spec-go">Node.js docs <svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></span></a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WHAT'S IN THE BOX: one terminal catalogue ============ -->
+<section class="section" id="built-in">
+  <div class="wrap">
+    <!-- a catalogue, set to be read: plain headings, the keys as small code labels -->
+    <div class="box" data-reveal>
+      <div class="section-head">
+        <h2>The things you'd normally install.</h2>
+        <p>Shipped, in sync, in all four languages. Nothing to add to a requirements file.</p>
+      </div>
+      <div class="box-body">
+        <div class="box-cols">
+          <div>
+            <div class="box-group">
+              <h3 class="box-c">HTTP</h3>
+              <div class="box-row"><code class="box-k">src/routes/</code><span>Drop a file in and it's a route. Typed params like <code>{id:int}</code> and <code>{id:uuid}</code> reject bad input with a 404 before your handler runs.</span></div>
+              <div class="box-row"><code class="box-k">/swagger</code><span>Typed, grouped API docs generated from your routes.</span></div>
+              <div class="box-row"><code class="box-k">/graphql</code><span>A zero-dependency GraphQL engine, schema built from your ORM models, IDE included.</span></div>
+            </div>
+            <div class="box-group">
+              <h3 class="box-c">Data</h3>
+              <div class="box-row"><code class="box-k">sqlite:///app.db</code><span>One ORM over SQLite, PostgreSQL, MySQL, MSSQL, Firebird and MongoDB.</span></div>
+              <div class="box-row"><code class="box-k">tina4 migrate</code><span>Migrations that apply on boot, once, even when several processes start together.</span></div>
+              <div class="box-row"><code class="box-k">Frond</code><span>One Twig-compatible template engine: inheritance, macros, filters.</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="box-group">
+              <h3 class="box-c">Realtime</h3>
+              <div class="box-row"><code class="box-k">ws://</code><span>WebSocket and server-sent events, with a Redis backplane when you scale out.</span></div>
+              <div class="box-row"><code class="box-k">background()</code><span>Queues, file-backed by default. RabbitMQ, Kafka or MongoDB when you outgrow it. No threads.</span></div>
+            </div>
+            <div class="box-group">
+              <h3 class="box-c">Security</h3>
+              <div class="box-row"><code class="box-k">Bearer</code><span>POST, PUT, PATCH and DELETE need a token by default. GET stays public.</span></div>
+              <div class="box-row"><code class="box-k">JWT</code><span>HS256 and RS256, PBKDF2 password hashing, rate limiting and CSRF form tokens.</span></div>
+            </div>
+            <div class="box-group">
+              <h3 class="box-c">Tooling</h3>
+              <div class="box-row"><code class="box-k">tina4</code><span>One Rust CLI. <code>init</code>, <code>serve</code> and <code>migrate</code> behave the same in every language.</span></div>
+              <div class="box-row"><code class="box-k">/__dev</code><span>Routes, requests, SQL runner, queue monitor, mailbox, WebSocket inspector, error tracker.</span></div>
+              <div class="box-row"><code class="box-k">MCP</code><span>Built-in dev tools, so your assistant drives the real framework.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============ RECENT RELEASES ============ -->
+<!-- Filled at build time (scripts/build-home.mjs) from docs/<lang>/36-releases.md,
+     the newest four releases. What is between the home:releases markers is the
+     last-known fallback, kept if the release notes cannot be read. -->
+<section class="shipped" aria-labelledby="shipped-h">
+  <div class="wrap">
+    <div class="shipped-row">
+      <!-- home:releases -->
+      <div class="shipped-ver"><code>v3.13.151</code><span>2026-10-15</span></div>
+      <div>
+        <h2 id="shipped-h" class="shipped-h">Recent releases</h2>
+        <ol class="shipped-list">
+          <li><a class="rel-link" href="/python/36-releases/"><code>v3.13.151</code><span class="rel-date">2026-10-15</span><span class="rel-h">Isolation headers and a hardened S3 client</span></a></li>
+          <li><a class="rel-link" href="/python/36-releases/"><code>v3.13.150</code><span class="rel-date">2026-10-11</span><span class="rel-h">The dev dashboard grows up</span></a></li>
+          <li><a class="rel-link" href="/python/36-releases/"><code>v3.13.149</code><span class="rel-date">2026-10-10</span><span class="rel-h">A CRUD screen out of the box, and the dev-server rough edges come off</span></a></li>
+          <li><a class="rel-link" href="/python/36-releases/"><code>v3.13.148</code><span class="rel-date">2026-10-06</span><span class="rel-h">An anonymous request stores no session</span></a></li>
+        </ol>
+        <p class="shipped-foot">Across all four frameworks. <a class="rel-notes" href="/python/36-releases/">Release notes <svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></a></p>
+      </div>
+      <!-- /home:releases -->
+    </div>
+  </div>
+</section>
+
+<!-- ============ ALSO IN THE BOX ============ -->
+<section class="section also" id="also">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Also in the box.</h2>
+      <p>A 2.3 KB frontend for the browser, skills for your AI assistant, and a reviewer that hands it the context.</p>
+    </div>
+    <div class="also-list">
+      <div class="also-row">
+        <div class="also-text">
+          <h3 class="also-name">tina4-js <span class="also-size">2.3 KB gzip</span></h3>
+          <p class="also-desc">The reactive frontend: signals, Web Components, a router, an API client, WebSocket, PWA and SSE. Load only the modules you import.</p>
+          <a class="also-link" href="/js/">tina4-js docs <svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+        </div>
+        <!-- the signals pattern from docs/js/02-signals.md and 03-html-templates.md -->
+        <pre class="also-code"><code><span class="ck">import</span> { signal, html } <span class="ck">from</span> <span class="cs">'tina4js'</span>;
+
+<span class="ck">const</span> count = <span class="cf">signal</span>(<span class="cp">0</span>);
+
+<span class="cf">html</span>`&lt;button @click=${() =&gt; count.value++}&gt;
+  Clicked ${count} times
+&lt;/button&gt;`;</code></pre>
+      </div>
+      <div class="also-row">
+        <div class="also-text">
+          <h3 class="also-name">Skills for your AI</h3>
+          <p class="also-desc">One command installs the current Tina4 skills for Claude, Codex, Cursor, or all three.</p>
+          <a class="also-link" href="/general/cli/">The tina4 CLI <svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+        </div>
+        <div class="also-cmd"><span class="prompt">$</span> <code>tina4 skills all</code></div>
+      </div>
+      <div class="also-row">
+        <div class="also-text">
+          <h3 class="also-name">Tina4 Code Viewer</h3>
+          <p class="also-desc">A read-only desktop reviewer that understands the Tina4 layout. Leave line-anchored comments, then export a bundle any AI agent can act on. Signed builds for macOS, Windows and Linux.</p>
+          <a class="also-link" href="/download/code-viewer/">Download <svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+        </div>
+        <img class="also-shot" src="/assets/home/code-viewer.png" width="1362" height="892" loading="lazy"
+             alt="Tina4 Code Viewer: a project's files on the left, a markdown plan in the middle with a comment being added on line 6, review comments and a live audit panel on the right">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CLOSING + INSTALL ============ -->
+<section class="closing">
+  <div class="closing-rings" aria-hidden="true"></div>
+  <div class="wrap">
+    <h2>Zero dependencies. Just add coffee<span class="dot">.</span></h2>
+    <p>Two commands install it. Two more and you're serving.</p>
+    <div class="install">
+      <div class="install-os">
+        <div class="install-l">macOS and Linux</div>
+        <button class="copy-btn" data-copy="curl -fsSL https://tina4.com/install.sh | sh&#10;tina4 setup" aria-label="Copy the macOS and Linux install commands"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg></button>
+        <div class="chip col">
+          <div class="row"><span class="prompt">$</span><code>curl -fsSL https://tina4.com/install.sh | sh</code></div>
+          <div class="row"><span class="prompt">$</span><code>tina4 setup</code></div>
+        </div>
+      </div>
+      <div class="install-os">
+        <div class="install-l">Windows, in PowerShell</div>
+        <button class="copy-btn" data-copy="irm https://tina4.com/install.ps1 | iex&#10;tina4 setup" aria-label="Copy the Windows install commands"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg></button>
+        <div class="chip col">
+          <div class="row"><span class="prompt">&gt;</span><code>irm https://tina4.com/install.ps1 | iex</code></div>
+          <div class="row"><span class="prompt">&gt;</span><code>tina4 setup</code></div>
+        </div>
+      </div>
+      <div class="install-os">
+        <div class="install-l">Then</div>
+        <button class="copy-btn" data-copy="tina4 init python my-app&#10;tina4 serve" aria-label="Copy the scaffold commands"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg></button>
+        <div class="chip col">
+          <div class="row"><span class="prompt">$</span><code>tina4 init python my-app</code></div>
+          <div class="row"><span class="prompt">$</span><code>tina4 serve</code></div>
+        </div>
+      </div>
+    </div>
+    <div class="closing-cta">
+      <a class="btn btn-primary" href="/get-started/">Get started <span class="arr"><svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></span></a>
+      <a class="btn btn-ghost" href="https://github.com/tina4stack">Star it on GitHub</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="/">
+          <img src="/assets/home/tina4-logo-correct.svg" alt="Tina4">
+          <span class="brand-name">Tina<span>4</span></span>
+        </a>
+        <p class="footer-backronym">The Intelligent Native Application <b>4</b>ramework.</p>
+        <p>Zero to Hero.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Docs</h4>
+        <a href="/get-started/">Get started</a>
+        <a href="/general/">Understanding Tina4</a>
+        <a href="/build-with-ai/">Build with AI</a>
+        <a href="/llms.txt">llms.txt</a>
+      </div>
+      <div class="footer-col">
+        <h4>Languages</h4>
+        <a href="/python/">Python</a>
+        <a href="/php/">PHP</a>
+        <a href="/ruby/">Ruby</a>
+        <a href="/nodejs/">Node.js</a>
+      </div>
+      <div class="footer-col">
+        <h4>Project</h4>
+        <a href="https://github.com/tina4stack">GitHub</a>
+        <a href="https://discord.gg/vEXqaNcZm">Discord</a>
+        <a href="https://codeinfinity.co.za">Code Infinity</a>
+        <a href="/download/code-viewer/">Code Viewer</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>Simple. Fast. Human. MPL-2.0. Copyright Code Infinity.</span>
+      <span class="footer-cobrand">
+        <span>Built in South Africa by</span>
+        <img src="/assets/home/c8e-logo-blue.svg" alt="Code Infinity">
+      </span>
+    </div>
+  </div>
+</footer>
+
+
+<!-- ============ ASK TINA4 ============ -->
+<!-- tina4press's chat markup (tp-chat-*), restyled, plus the avatar and the
+     widen and close buttons. home.js asks the same hosted RAG as the docs
+     widget (themeConfig.chat in tina4press.config.mjs) -->
+<div class="tp-chat" data-api="https://rag.tina4.com" data-ask-path="/v1/ask">
+  <button class="tp-chat-btn" aria-label="Ask Tina4" aria-expanded="false" aria-controls="tp-chat-panel"><svg class="tina-mark" aria-hidden="true"><use href="#i-tina"/></svg><span class="tp-chat-label">Ask Tina4</span></button>
+  <div class="tp-chat-panel" id="tp-chat-panel" role="dialog" aria-label="Ask Tina4" hidden>
+    <div class="tp-chat-head"><span class="tp-chat-avatar"><svg class="tina-mark" aria-hidden="true"><use href="#i-tina"/></svg></span><strong>Ask Tina4</strong><span class="tp-chat-model">Powered by Tina4</span><span class="tp-chat-tools"><button class="tp-chat-tool tp-chat-expand" type="button" aria-label="Wider panel" aria-pressed="false"><svg class="i i-grow" aria-hidden="true"><use href="#i-maximize-2"/></svg><svg class="i i-shrink" aria-hidden="true"><use href="#i-minimize-2"/></svg></button><button class="tp-chat-tool tp-chat-close" type="button" aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></span></div>
+    <div class="tp-chat-log" aria-live="polite"></div>
+    <form class="tp-chat-form"><input class="tp-chat-input" placeholder="How do I define a route?" autocomplete="off" aria-label="Your question"><button type="submit" aria-label="Ask"><svg class="i" aria-hidden="true"><use href="#i-arrow-up"/></svg></button></form>
+  </div>
+</div>
+</body>
+</html>
