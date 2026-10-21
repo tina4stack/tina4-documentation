@@ -42,6 +42,14 @@ hero:
 curl -fsSL https://tina4.com/install.sh | sh
 tina4 setup
 ```
+== iOS (iSH, experimental)
+```sh
+printf '%s\n' https://dl-cdn.alpinelinux.org/alpine/latest-stable/main https://dl-cdn.alpinelinux.org/alpine/latest-stable/community > /etc/apk/repositories
+apk upgrade --available
+apk add curl
+curl -fsSL https://tina4.com/install.sh | sh
+tina4 setup
+```
 == Windows
 ```powershell
 irm https://tina4.com/install.ps1 | iex
