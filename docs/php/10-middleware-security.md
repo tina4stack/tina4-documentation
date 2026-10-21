@@ -211,9 +211,9 @@ It sets the following headers by default:
 
 | Header | Default Value |
 |--------|---------------|
-| `X-Frame-Options` | `DENY` |
-| `Content-Security-Policy` | `default-src 'self'` |
-| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` |
+| `X-Frame-Options` | `SAMEORIGIN` |
+| `Content-Security-Policy` | `default-src 'self'`, plus `style-src` and `script-src` limited to `'self'` and a per-request nonce |
+| `Strict-Transport-Security` | Not sent. With `TINA4_HSTS` set to a number of seconds: `max-age=<TINA4_HSTS>; includeSubDomains`, on HTTPS requests only |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` |
 | `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` |
 | `X-Content-Type-Options` | `nosniff` |
@@ -223,7 +223,7 @@ Override any header via environment variables in `.env`:
 ```bash
 TINA4_FRAME_OPTIONS=SAMEORIGIN
 TINA4_CSP=default-src 'self'; script-src 'self' https://cdn.example.com
-TINA4_HSTS=max-age=63072000; includeSubDomains; preload
+TINA4_HSTS=63072000
 TINA4_REFERRER_POLICY=no-referrer
 TINA4_PERMISSIONS_POLICY=camera=(), microphone=(), geolocation=(self)
 ```
