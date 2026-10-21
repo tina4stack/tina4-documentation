@@ -49,7 +49,7 @@ hero:
 ## Install
 
 ::: tabs
-== macOS / Linux
+== macOS / Linux / Android (Termux)
 ```bash
 curl -fsSL https://tina4.com/install.sh | sh
 tina4 setup
