@@ -3,7 +3,7 @@
   "reviewed": "2026-10-20",
   "scope": "Documentation build dependency declarations; not a legal compatibility opinion or runtime bundle inventory. Published dependency versions retain their own licences.",
   "inputs": {
-    "package.json": "1612c637e392d4161ce92ff69db5a15b0004485a2d0052b3a711ba12673fc208",
+    "package.json": "0e98ce30f265579f08107281f9f10c2eb5238bc8a54c5daa52b7e65b73382e48",
     "pnpm-lock.yaml": "26180a22562ef9abd452a8281b3a50625983f6d9366b16e5ec7eebff7ddc71fc"
   },
   "components": [
