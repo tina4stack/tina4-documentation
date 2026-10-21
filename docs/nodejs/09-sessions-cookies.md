@@ -347,12 +347,12 @@ Router.post("/preferences", async (req, res) => {
 
     return res
         .cookie("theme", theme, {
-            maxAge: 365 * 24 * 60 * 60 * 1000,  // 1 year in milliseconds
+            maxAge: 365 * 24 * 60 * 60,  // 1 year in seconds
             path: "/",
             sameSite: "Lax"
         })
         .cookie("language", language, {
-            maxAge: 365 * 24 * 60 * 60 * 1000,
+            maxAge: 365 * 24 * 60 * 60,
             path: "/",
             sameSite: "Lax"
         })
@@ -393,7 +393,7 @@ Router.post("/clear-preferences", async (req, res) => {
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `maxAge` | number | Lifetime in milliseconds. 0 = delete. Omit = session cookie (deleted when browser closes). |
+| `maxAge` | number | Lifetime in seconds. 0 = delete. Omit = session cookie (deleted when browser closes). |
 | `expires` | Date | Expiry date. `maxAge` is preferred -- it is simpler and more predictable. |
 | `path` | string | URL path scope. `/` means the whole site. `/admin` means only under `/admin`. |
 | `domain` | string | Domain scope. `.example.com` includes subdomains. |
@@ -451,7 +451,7 @@ Router.post("/login", async (req, res) => {
         // Store it in a cookie that lasts 30 days
         return res
             .cookie("remember_token", rememberToken, {
-                maxAge: 30 * 24 * 60 * 60 * 1000,
+                maxAge: 30 * 24 * 60 * 60,
                 httpOnly: true,
                 secure: true,
                 path: "/",
