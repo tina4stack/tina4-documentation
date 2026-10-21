@@ -15,7 +15,8 @@
 //      tina4press.config.mjs, so the hrefs match its clean-URL format exactly);
 //   2. bakes the newest releases into the page from docs/<lang>/36-releases.md,
 //      and the newest version into the hero's `tina4 serve` banner;
-//   3. writes the chat endpoint from themeConfig.chat into the page;
+//   3. writes the chat endpoint from themeConfig.chat into the page, and the
+//      docs pages' analytics tag (themeConfig.analytics) into its <head>;
 //   4. writes dist/index.html (replacing tina4press's home), copies the page's
 //      files to dist/assets/home/, and writes dist/releases/latest.json;
 //   5. fails the build if a link on the page points at nothing, or the page
@@ -71,17 +72,18 @@ let page = readFileSync(join(HOME, "index.html"), "utf8");
 // index.html; on a re-run (`pnpm docs:home`) that file is already this page, so
 // fall back to the first docs page that has the header.
 const NAV = /<nav class="tp-nav">([\s\S]*?)<\/nav>/;
-function pressNav() {
+function pressPage() {
   const candidates = [join(DIST, "index.html"),
     ...readdirSync(DIST).map((name) => join(DIST, name, "index.html")).filter((p) => existsSync(p))];
   for (const file of candidates) {
-    const m = readFileSync(file, "utf8").match(NAV);
-    if (m) return m[1];
+    const html = readFileSync(file, "utf8");
+    if (NAV.test(html)) return html;
   }
   return null;
 }
-const navHtml = pressNav();
-if (!navHtml) fail("no tina4press page in the build has <nav class=\"tp-nav\">: did its header markup change?");
+const pressHtml = pressPage();
+if (!pressHtml) fail("no tina4press page in the build has <nav class=\"tp-nav\">: did its header markup change?");
+const navHtml = pressHtml.match(NAV)[1];
 const navLinks = [...navHtml.matchAll(/<a\b[^>]*\bhref="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g)]
   .map((m) => ({ href: m[1], text: m[2].trim() }));
 if (!navLinks.length) fail("tina4press's header nav has no links");
@@ -90,6 +92,19 @@ if (!navLinks.length) fail("tina4press's header nav has no links");
   page = fillBlock(page, "nav", navLinks
     .map((l) => `${pad}<a href="${l.href}"${l.href === "/" ? ' aria-current="page"' : ""}>${l.text}</a>`)
     .join("\n"));
+}
+
+// ---- 1b. analytics: the same tag as every docs page ----
+// tina4press writes the Google Analytics tag from themeConfig.analytics into
+// every page's <head>. Copy that exact tag, so the home page is measured the
+// same way and an ID change in the config reaches it too.
+{
+  const id = (config.themeConfig || {}).analytics;
+  const GTAG = /<script async src="https:\/\/www\.googletagmanager\.com\/gtag\/js\?id=[^"]+"><\/script><script>[\s\S]*?<\/script>/;
+  const tag = (pressHtml.match(GTAG) || [])[0];
+  if (id && !tag) fail("themeConfig.analytics is set but the docs pages carry no analytics tag: did tina4press change it?");
+  if (!/<!-- home:analytics -->/.test(page)) fail("home/index.html has no <!-- home:analytics --> marker");
+  page = page.replace("<!-- home:analytics -->", tag || "");
 }
 
 // ---- 2. releases, from our own release notes ----

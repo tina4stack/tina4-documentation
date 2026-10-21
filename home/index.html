@@ -32,6 +32,9 @@
      choice made here or on any docs page carries across the whole site -->
 <script>(function(){try{var t=localStorage.getItem('tp-theme');var d=t?t==='dark':matchMedia('(prefers-color-scheme:dark)').matches;document.documentElement.setAttribute('data-theme',d?'dark':'light');}catch(e){}})();</script>
 <script src="/assets/home/home.js" defer></script>
+<!-- analytics: scripts/build-home.mjs puts the docs pages' own tag here
+     (themeConfig.analytics in tina4press.config.mjs), so the whole site is measured alike -->
+<!-- home:analytics -->
 </head>
 <body>
 <!-- icons: Lucide (ISC), copied in as one inline sprite; see assets/icons -->

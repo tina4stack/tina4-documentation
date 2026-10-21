@@ -1,6 +1,6 @@
 /* tina4.com home page. Served at /assets/home/home.js by scripts/build-home.mjs;
-   the page itself is home/index.html. No dependencies, no third-party requests
-   except the Ask Tina4 chat (rag.tina4.com, the same service as the docs widget). */
+   the page itself is home/index.html. No dependencies. This script talks to one
+   outside service: the Ask Tina4 chat (rag.tina4.com, the same as the docs widget). */
 var ASSET = "/assets/home/";
 var REDUCE = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
