@@ -1171,7 +1171,7 @@ BUILD_PATH=../my-tina4-project/src/public
 Or use CORS to run them on separate ports during development:
 
 ```bash
-CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+TINA4_CORS_ORIGINS=http://localhost:3000,http://localhost:5173
 ```
 
 ---
@@ -1335,7 +1335,7 @@ Router.get("/admin/products", async (req, res) => {
 
 ### 10. CORS Errors with Separate Frontend
 
-**Fix:** Set `CORS_ORIGINS` in `.env`.
+**Fix:** Set `TINA4_CORS_ORIGINS` in `.env`.
 
 ### 11. Large Bundle Sizes
 

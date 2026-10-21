@@ -26,7 +26,7 @@ TINA4_PORT=7147
 TINA4_DATABASE_URL=sqlite:///data/app.db
 
 # Security
-CORS_ORIGINS=https://yourdomain.com
+TINA4_CORS_ORIGINS=https://yourdomain.com
 JWT_SECRET=your-long-random-secret-at-least-32-characters
 TINA4_RATE_LIMIT=120
 
@@ -41,7 +41,7 @@ TINA4_TEMPLATE_CACHE_TTL=true
 |---------|------------|------------|-----|
 | `TINA4_DEBUG` | `true` | `false` | Hides stack traces, disables toolbar |
 | `TINA4_LOG_LEVEL` | `ALL` | `WARNING` | Reduces log noise |
-| `CORS_ORIGINS` | `*` | Your domain | Prevents cross-origin abuse |
+| `TINA4_CORS_ORIGINS` | Your dev front end (for example `http://localhost:3000`), or empty | Your domain | Only listed origins can call the API from a browser |
 
 ### Sensitive Values
 

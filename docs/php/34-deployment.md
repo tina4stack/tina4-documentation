@@ -41,7 +41,7 @@ TINA4_TEMPLATE_CACHE_TTL=true
 |---------|------------|------------|-----|
 | `TINA4_DEBUG` | `true` | `false` | Hides stack traces, disables toolbar |
 | `TINA4_LOG_LEVEL` | `ALL` | `WARNING` | Reduces log noise |
-| `CORS_ORIGINS` | `*` | Your domain | Prevents cross-origin abuse |
+| `TINA4_CORS_ORIGINS` | Your dev front end (for example `http://localhost:3000`), or empty | Your domain | Only listed origins can call the API from a browser |
 
 ### Sensitive Values
 
@@ -923,7 +923,7 @@ services:
       - TINA4_TEMPLATE_CACHE_TTL=true
       - JWT_SECRET=change-this-to-a-real-secret
       - TINA4_DATABASE_URL=sqlite:///data/app.db
-      - CORS_ORIGINS=http://localhost:7145
+      - TINA4_CORS_ORIGINS=http://localhost:7145
     volumes:
       - app-data:/app/data
     restart: unless-stopped
@@ -1051,9 +1051,9 @@ The `start-period` tells Docker to ignore health check failures during the first
 
 **Problem:** Your frontend gets "No 'Access-Control-Allow-Origin' header" errors.
 
-**Cause:** `CORS_ORIGINS` is set to `*` in development but to a specific domain in production. If your frontend is served from a different domain or port, CORS blocks the requests.
+**Cause:** `TINA4_CORS_ORIGINS` is set to `*` in development but to a specific domain in production. If your frontend is served from a different domain or port, CORS blocks the requests.
 
-**Fix:** Set `CORS_ORIGINS` to include all domains that need access:
+**Fix:** Set `TINA4_CORS_ORIGINS` to include all domains that need access:
 
 ```bash
 TINA4_CORS_ORIGINS=https://yourdomain.com,https://admin.yourdomain.com

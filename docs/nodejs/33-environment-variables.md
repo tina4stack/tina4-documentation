@@ -66,7 +66,7 @@ This chapter lists every variable the Node.js framework reads, grouped by subsys
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_CORS_ORIGINS` | `*` | Comma-separated allowed origins. Lock down to real domains in production. |
+| `TINA4_CORS_ORIGINS` | _(empty)_ | Comma-separated allowed origins. Empty denies every cross-origin request; set the origins your front end is served from. `*` allows any origin and has to be set explicitly. |
 | `TINA4_CORS_METHODS` | `GET,POST,PUT,PATCH,DELETE,OPTIONS` | Comma-separated list of allowed methods on preflight responses. |
 | `TINA4_CORS_HEADERS` | `Content-Type,Authorization` | Comma-separated list of allowed request headers on preflight responses. |
 | `TINA4_CORS_MAX_AGE` | `86400` | Preflight cache lifetime in seconds. |

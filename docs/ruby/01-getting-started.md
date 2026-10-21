@@ -535,7 +535,7 @@ The defaults that matter:
 | `TINA4_PORT` | `7147` | Server runs on port 7147 |
 | `TINA4_DATABASE_URL` | `sqlite:///data/app.db` | SQLite database in `data/` |
 | `TINA4_LOG_LEVEL` | `ALL` | All log messages output |
-| `CORS_ORIGINS` | `*` | All origins allowed (fine for dev) |
+| `TINA4_CORS_ORIGINS` | _(empty)_ | No cross-origin browser requests; list your front end's origin to allow it |
 | `TINA4_RATE_LIMIT` | `100` | 100 requests per minute per IP |
 
 **Log levels** control how much output Tina4 produces:

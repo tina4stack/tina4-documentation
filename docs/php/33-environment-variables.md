@@ -79,7 +79,7 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_CORS_ORIGINS` | `*` | Comma-separated allowed origins. Lock down to real domains in production. |
+| `TINA4_CORS_ORIGINS` | _(empty)_ | Comma-separated allowed origins. Empty denies every cross-origin request; set the origins your front end is served from. `*` allows any origin and has to be set explicitly. |
 | `TINA4_CORS_METHODS` | `GET,POST,PUT,PATCH,DELETE,OPTIONS` | Allowed request methods. |
 | `TINA4_CORS_HEADERS` | `Content-Type,Authorization,X-Requested-With` | Allowed request headers. |
 | `TINA4_CORS_CREDENTIALS` | `false` | Send `Access-Control-Allow-Credentials: true`. Required for cross-origin cookies. |

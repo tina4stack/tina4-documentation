@@ -1045,7 +1045,7 @@ Router::group("/api/partner", function () {
 
 **Cause:** No `CorsMiddleware` registered. `OPTIONS` is not handled.
 
-**Fix:** Register `Middleware::use(CorsMiddleware::class)`. It handles `OPTIONS` and returns correct CORS headers. Or set `CORS_ORIGINS` in `.env` for global handling.
+**Fix:** Register `Middleware::use(CorsMiddleware::class)`. It handles `OPTIONS` and returns correct CORS headers. Or set `TINA4_CORS_ORIGINS` in `.env` for global handling.
 
 ### 5. Rate Limiter Counts Preflight Requests
 

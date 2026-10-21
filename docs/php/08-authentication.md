@@ -927,11 +927,11 @@ Router::put("/api/profile/password", function ($request, $response) {
 
 ### 3. CORS with Authentication
 
-**Problem:** Frontend requests with `Authorization` header fail with CORS error, even with `CORS_ORIGINS=*`.
+**Problem:** Frontend requests with `Authorization` header fail with CORS error, even with `TINA4_CORS_ORIGINS=*`.
 
 **Cause:** The browser sends a preflight `OPTIONS` request. The server must respond with CORS headers including `Access-Control-Allow-Headers: Authorization`.
 
-**Fix:** Tina4 handles preflight requests. Verify `CORS_ORIGINS` is set. Check that middleware is not overriding CORS headers.
+**Fix:** Tina4 handles preflight requests. Verify `TINA4_CORS_ORIGINS` is set. Check that middleware is not overriding CORS headers.
 
 ### 4. Storing Tokens in localStorage
 

@@ -1008,11 +1008,11 @@ Router.put("/api/profile/password", async (req, res) => {
 
 ### 3. CORS with Authentication
 
-**Problem:** Frontend requests with the `Authorization` header fail with a CORS error, even though `CORS_ORIGINS=*` is set.
+**Problem:** Frontend requests with the `Authorization` header fail with a CORS error, even though `TINA4_CORS_ORIGINS=*` is set.
 
 **Cause:** When the browser sends an `Authorization` header, it first sends a preflight `OPTIONS` request. The server must respond to the OPTIONS request with the correct CORS headers, including `Access-Control-Allow-Headers: Authorization`.
 
-**Fix:** Tina4 handles preflight requests automatically. Make sure `CORS_ORIGINS` is set correctly. If it is still failing, check that you are not overriding CORS headers in middleware.
+**Fix:** Tina4 handles preflight requests automatically. Make sure `TINA4_CORS_ORIGINS` is set correctly. If it is still failing, check that you are not overriding CORS headers in middleware.
 
 ### 4. Storing Tokens in localStorage
 

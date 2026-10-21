@@ -205,7 +205,7 @@ TINA4_DATABASE_URL=mongodb://user:password@hostname:27017/database_name
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_CORS_ORIGINS` | `*` | Comma-separated allowed origins. `*` allows all. In production, list your actual domains. |
+| `TINA4_CORS_ORIGINS` | _(empty)_ | Comma-separated allowed origins. Empty denies every cross-origin request; `*` allows all and has to be set explicitly. In production, list your actual domains. |
 | `TINA4_CORS_METHODS` | `GET,POST,PUT,PATCH,DELETE,OPTIONS` | Comma-separated HTTP methods allowed in cross-origin requests. |
 | `TINA4_CORS_HEADERS` | `Content-Type,Authorization,X-Request-ID` | Comma-separated headers the client is allowed to send. |
 | `TINA4_CORS_CREDENTIALS` | `true` | Whether the browser sends cookies and auth headers in cross-origin requests. |
