@@ -24,15 +24,15 @@ locales/
 
 ```json
 {
-  "welcome": "Welcome, {{name}}!",
+  "welcome": "Welcome, {name}!",
   "errors": {
     "not_found": "The page you requested was not found.",
     "unauthorized": "You must be logged in to access this page.",
-    "validation": "{{field}} is required."
+    "validation": "{field} is required."
   },
   "orders": {
-    "placed": "Your order #{{orderId}} has been placed.",
-    "total": "Total: {{currency}}{{amount}}"
+    "placed": "Your order #{orderId} has been placed.",
+    "total": "Total: {currency}{amount}"
   },
   "nav": {
     "home": "Home",
@@ -47,15 +47,15 @@ locales/
 
 ```json
 {
-  "welcome": "Willkommen, {{name}}!",
+  "welcome": "Willkommen, {name}!",
   "errors": {
     "not_found": "Die angeforderte Seite wurde nicht gefunden.",
     "unauthorized": "Sie müssen angemeldet sein, um auf diese Seite zuzugreifen.",
-    "validation": "{{field}} ist erforderlich."
+    "validation": "{field} ist erforderlich."
   },
   "orders": {
-    "placed": "Ihre Bestellung #{{orderId}} wurde aufgegeben.",
-    "total": "Gesamt: {{currency}}{{amount}}"
+    "placed": "Ihre Bestellung #{orderId} wurde aufgegeben.",
+    "total": "Gesamt: {currency}{amount}"
   },
   "nav": {
     "home": "Startseite",
@@ -75,17 +75,13 @@ import { I18n } from "tina4-nodejs";
 
 // Loads all JSON files from ./locales/
 // Default locale is "en"
-const i18n = new I18n({
-    localesPath: "./locales",
-    defaultLocale: "en"
-});
+const i18n = new I18n("en", "./locales");
 ```
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `localesPath` | `"./locales"` | Directory containing locale JSON files |
-| `defaultLocale` | `"en"` | Fallback locale when a key is missing |
-| `fallbackLocale` | same as `defaultLocale` | Explicit fallback, if different from default |
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `locale` | `TINA4_LOCALE`, then `"en"` | Default locale; also the fallback when a key is missing |
+| `path` | `TINA4_LOCALE_DIR`, then `"src/locales"` | Directory containing locale JSON files |
 
 ---
 
@@ -94,7 +90,7 @@ const i18n = new I18n({
 The `t()` method looks up a translation key in the current locale:
 
 ```typescript
-const i18n = new I18n({ localesPath: "./locales", defaultLocale: "en" });
+const i18n = new I18n("en", "./locales");
 
 i18n.setLocale("en");
 console.log(i18n.t("nav.home"));         // "Home"
@@ -113,7 +109,7 @@ Keys use dot notation to access nested values. `"errors.not_found"` reaches `err
 
 <div v-pre>
 
-Pass variables to replace `{{placeholder}}` tokens:
+Pass variables to replace `{placeholder}` tokens:
 
 </div>
 
@@ -144,7 +140,7 @@ Detect the user's preferred locale from the `Accept-Language` header, a query pa
 ```typescript
 import { Router, I18n } from "tina4-nodejs";
 
-const i18n = new I18n({ localesPath: "./locales", defaultLocale: "en" });
+const i18n = new I18n("en", "./locales");
 
 Router.get("/api/greeting", async (req, res) => {
     // Priority: ?lang query param > Accept-Language header > default
@@ -219,7 +215,7 @@ Pass the translation function to Frond templates:
 ```typescript
 import { Router, I18n } from "tina4-nodejs";
 
-const i18n = new I18n({ localesPath: "./locales", defaultLocale: "en" });
+const i18n = new I18n("en", "./locales");
 
 Router.get("/store", async (req, res) => {
     const lang = req.query.lang ?? "en";
@@ -278,12 +274,12 @@ curl -X POST "http://localhost:7148/api/contact?lang=de" \
 ```json
 {
   "errors": {
-    "required": "{{field}} is required.",
-    "too_short": "{{field}} must be at least {{min}} characters.",
-    "invalid_email": "{{field}} must be a valid email address."
+    "required": "{field} is required.",
+    "too_short": "{field} must be at least {min} characters.",
+    "invalid_email": "{field} must be a valid email address."
   },
   "contact": {
-    "success": "Thank you, {{name}}. We will be in touch."
+    "success": "Thank you, {name}. We will be in touch."
   }
 }
 ```
@@ -293,12 +289,12 @@ curl -X POST "http://localhost:7148/api/contact?lang=de" \
 ```json
 {
   "errors": {
-    "required": "{{field}} ist erforderlich.",
-    "too_short": "{{field}} muss mindestens {{min}} Zeichen lang sein.",
-    "invalid_email": "{{field}} muss eine gültige E-Mail-Adresse sein."
+    "required": "{field} ist erforderlich.",
+    "too_short": "{field} muss mindestens {min} Zeichen lang sein.",
+    "invalid_email": "{field} muss eine gültige E-Mail-Adresse sein."
   },
   "contact": {
-    "success": "Danke, {{name}}. Wir werden uns bei Ihnen melden."
+    "success": "Danke, {name}. Wir werden uns bei Ihnen melden."
   }
 }
 ```
@@ -308,7 +304,7 @@ curl -X POST "http://localhost:7148/api/contact?lang=de" \
 ```typescript
 import { Router, I18n } from "tina4-nodejs";
 
-const i18n = new I18n({ localesPath: "./locales", defaultLocale: "en" });
+const i18n = new I18n("en", "./locales");
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -392,7 +388,7 @@ If multiple concurrent requests call `i18n.setLocale()` on the same instance, th
 
 <div v-pre>
 
-`{{Name}}` and `{{name}}` are different placeholders. A mismatch silently leaves the placeholder unreplaced.
+`{Name}` and `{name}` are different placeholders. A mismatch silently leaves the placeholder unreplaced.
 
 </div>
 
