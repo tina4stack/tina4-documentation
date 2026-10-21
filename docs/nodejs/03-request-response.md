@@ -115,7 +115,7 @@ req.cookies.preferences // "dark-mode"
 Uploaded files (covered in detail in section 7):
 
 ```typescript
-req.files.avatar // File object with name, type, size, tmpPath
+req.files.avatar // { filename, type, size, content } - content is a Buffer
 ```
 
 ### Inspecting the Full Request
@@ -346,13 +346,17 @@ return res
 
 ## 7. File Uploads
 
-Uploaded files arrive via `req.files`. Each file is an object with metadata and a temporary path.
+Uploaded files arrive via `req.files`, keyed by field name. Each file is an object with `filename`, `type`, `size` and `content`, a `Buffer` holding the bytes; several files under one field name arrive as an array. Write one to disk with `saveUpload(file, dir, name?)`, which strips directory parts from the name and refuses to write outside `dir`.
 
 ### Multiple File Uploads
 
 Handle multiple files from a single form field:
 
 ```typescript
+import { Router, saveUpload } from "tina4-nodejs";
+import { join, extname } from "path";
+import { randomUUID } from "crypto";
+
 Router.post("/api/gallery", async (req, res) => {
     const files = req.files?.photos;
 
@@ -360,17 +364,16 @@ Router.post("/api/gallery", async (req, res) => {
         return res.status(400).json({ error: "No files uploaded" });
     }
 
-    // files is a dict keyed by field name - multiple files under one name become an array
-    const fileList = Object.values(files).flat();
+    // One file arrives as an object, several under the same field name as an array
+    const fileList = [files].flat();
 
     const results = [];
     for (const file of fileList) {
-        const ext = extname(file.name);
+        const ext = extname(file.filename);
         const savedName = `gallery_${randomUUID()}${ext}`;
-        const dest = join(process.cwd(), "src/public/uploads", savedName);
-        await rename(file.tmpPath, dest);
+        saveUpload(file, join(process.cwd(), "src/public/uploads"), savedName);
         results.push({
-            original: file.name,
+            original: file.filename,
             saved: savedName,
             size: file.size,
             url: `/uploads/${savedName}`,
@@ -401,10 +404,9 @@ Router.post("/api/upload", async (req, res) => {
     const file = req.files.image;
 
     return res.json({
-        name: file.name,
+        filename: file.filename,
         type: file.type,
-        size: file.size,
-        tmp_path: file.tmpPath
+        size: file.size
     });
 });
 ```
@@ -416,19 +418,16 @@ curl -X POST http://localhost:7148/api/upload \
 
 ```json
 {
-  "name": "photo.jpg",
+  "filename": "photo.jpg",
   "type": "image/jpeg",
-  "size": 245760,
-  "tmp_path": "/tmp/tina4_upload_abc123"
+  "size": 245760
 }
 ```
 
 ### Saving the Uploaded File
 
 ```typescript
-import { Router } from "tina4-nodejs";
-import { rename, mkdir } from "fs/promises";
-import { existsSync } from "fs";
+import { Router, saveUpload } from "tina4-nodejs";
 import { join, extname } from "path";
 import { randomUUID } from "crypto";
 
@@ -452,16 +451,9 @@ Router.post("/api/upload", async (req, res) => {
     }
 
     // Generate a unique filename
-    const ext = extname(file.name);
+    const ext = extname(file.filename);
     const filename = `img_${randomUUID()}${ext}`;
-    const uploadDir = join(process.cwd(), "src/public/uploads");
-    const destination = join(uploadDir, filename);
-
-    if (!existsSync(uploadDir)) {
-        await mkdir(uploadDir, { recursive: true });
-    }
-
-    await rename(file.tmpPath, destination);
+    saveUpload(file, join(process.cwd(), "src/public/uploads"), filename);
 
     return res.status(201).json({
         message: "File uploaded successfully",
@@ -650,9 +642,7 @@ Rules:
 Create `src/routes/images.ts`:
 
 ```typescript
-import { Router } from "tina4-nodejs";
-import { rename, mkdir } from "fs/promises";
-import { existsSync } from "fs";
+import { Router, saveUpload } from "tina4-nodejs";
 import { join, extname } from "path";
 import { randomUUID } from "crypto";
 
@@ -681,20 +671,13 @@ Router.post("/api/images", async (req, res) => {
         });
     }
 
-    const ext = extname(file.name).toLowerCase();
+    const ext = extname(file.filename).toLowerCase();
     const savedName = `img_${randomUUID()}${ext}`;
-    const uploadDir = join(process.cwd(), "src/public/uploads");
-    const destination = join(uploadDir, savedName);
-
-    if (!existsSync(uploadDir)) {
-        await mkdir(uploadDir, { recursive: true });
-    }
-
-    await rename(file.tmpPath, destination);
+    saveUpload(file, join(process.cwd(), "src/public/uploads"), savedName);
 
     return res.status(201).json({
         message: "Image uploaded successfully",
-        original_name: file.name,
+        original_name: file.filename,
         saved_name: savedName,
         size_kb: Math.round(file.size / 1024 * 10) / 10,
         type: file.type,

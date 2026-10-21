@@ -123,7 +123,7 @@ request.cookies["preferences"] # "dark-mode"
 Uploaded files (section 7 covers the details):
 
 ```ruby
-request.files["avatar"] # File object with name, type, size, tmp_path
+request.files["avatar"] # hash: file["filename"], file["type"], file["size"], file["content"]
 ```
 
 ### Inspecting the Full Request
@@ -426,23 +426,22 @@ response
 
 ## 7. File Uploads
 
-Uploaded files live in `request.files`. Each file object holds metadata and a temporary path.
+Uploaded files live in `request.files`, keyed by field name. Each file is a hash: `file["filename"]`, `file["type"]`, `file["size"]` (bytes) and `file["content"]` (the raw bytes). String and symbol keys both work.
 
 ### Handling a Single File Upload
 
 ```ruby
 Tina4::Router.post("/api/upload") do |request, response|
   if request.files["image"].nil?
-    return response.json({ error: "No file uploaded" }, 400)
+    next response.json({ error: "No file uploaded" }, 400)
   end
 
   file = request.files["image"]
 
   response.json({
-    name: file.name,        # "photo.jpg"
-    type: file.type,        # "image/jpeg"
-    size: file.size,        # 245760 (bytes)
-    tmp_path: file.tmp_path # Temporary file location
+    filename: file["filename"], # "photo.jpg"
+    type: file["type"],         # "image/jpeg"
+    size: file["size"]          # 245760 (bytes)
   })
 end
 ```
@@ -456,54 +455,53 @@ curl -X POST http://localhost:7147/api/upload \
 
 ```json
 {
-  "name": "photo.jpg",
+  "filename": "photo.jpg",
   "type": "image/jpeg",
-  "size": 245760,
-  "tmp_path": "/tmp/tina4_upload_abc123"
+  "size": 245760
 }
 ```
 
 ### Saving the Uploaded File
 
-The uploaded file sits in a temporary location. Move it to a permanent path:
+Write the bytes to a permanent path:
 
 ```ruby
 Tina4::Router.post("/api/upload") do |request, response|
   if request.files["image"].nil?
-    return response.json({ error: "No file uploaded" }, 400)
+    next response.json({ error: "No file uploaded" }, 400)
   end
 
   file = request.files["image"]
 
   # Validate file type
   allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
-  unless allowed_types.include?(file.type)
-    return response.json({ error: "Invalid file type. Allowed: JPEG, PNG, GIF, WebP" }, 400)
+  unless allowed_types.include?(file["type"])
+    next response.json({ error: "Invalid file type. Allowed: JPEG, PNG, GIF, WebP" }, 400)
   end
 
   # Validate file size (max 5MB)
   max_size = 5 * 1024 * 1024
-  if file.size > max_size
-    return response.json({ error: "File too large. Maximum size: 5MB" }, 400)
+  if file["size"] > max_size
+    next response.json({ error: "File too large. Maximum size: 5MB" }, 400)
   end
 
   # Generate a unique filename
-  extension = File.extname(file.name)
+  extension = File.extname(file["filename"])
   filename = "img_#{SecureRandom.hex(8)}#{extension}"
-  upload_dir = File.join(__dir__, "../../public/uploads")
+  upload_dir = File.join(__dir__, "../public/uploads")
   destination = File.join(upload_dir, filename)
 
   # Ensure the uploads directory exists
   FileUtils.mkdir_p(upload_dir) unless Dir.exist?(upload_dir)
 
-  # Move the file
-  FileUtils.mv(file.tmp_path, destination)
+  # Write the file
+  File.binwrite(destination, file["content"])
 
   response.json({
     message: "File uploaded successfully",
     filename: filename,
     url: "/uploads/#{filename}",
-    size: file.size
+    size: file["size"]
   }, 201)
 end
 ```
@@ -533,16 +531,16 @@ Tina4::Router.post("/api/upload-many") do |request, response|
   results = []
 
   request.files.each do |key, file|
-    extension = File.extname(file.name)
+    extension = File.extname(file["filename"])
     filename = "file_#{SecureRandom.hex(8)}#{extension}"
-    upload_dir = File.join(__dir__, "../../public/uploads")
+    upload_dir = File.join(__dir__, "../public/uploads")
     destination = File.join(upload_dir, filename)
 
     FileUtils.mkdir_p(upload_dir) unless Dir.exist?(upload_dir)
-    FileUtils.mv(file.tmp_path, destination)
+    File.binwrite(destination, file["content"])
 
     results << {
-      original_name: file.name,
+      original_name: file["filename"],
       saved_as: filename,
       url: "/uploads/#{filename}"
     }
@@ -749,49 +747,49 @@ require "fileutils"
 Tina4::Router.post("/api/images") do |request, response|
   # Check if a file was uploaded
   if request.files["image"].nil?
-    return response.json({ error: "No image file provided. Use field name 'image'." }, 400)
+    next response.json({ error: "No image file provided. Use field name 'image'." }, 400)
   end
 
   file = request.files["image"]
 
   # Validate file type
   allowed_types = ["image/jpeg", "image/png", "image/webp"]
-  unless allowed_types.include?(file.type)
-    return response.json({
+  unless allowed_types.include?(file["type"])
+    next response.json({
       error: "Invalid file type",
-      received: file.type,
+      received: file["type"],
       allowed: allowed_types
     }, 400)
   end
 
   # Validate file size (max 2MB)
   max_size = 2 * 1024 * 1024
-  if file.size > max_size
-    return response.json({
+  if file["size"] > max_size
+    next response.json({
       error: "File too large",
-      size_bytes: file.size,
+      size_bytes: file["size"],
       max_bytes: max_size
     }, 400)
   end
 
   # Generate unique filename preserving extension
-  extension = File.extname(file.name).downcase
+  extension = File.extname(file["filename"]).downcase
   saved_name = "img_#{SecureRandom.hex(8)}#{extension}"
-  upload_dir = File.join(__dir__, "../../public/uploads")
+  upload_dir = File.join(__dir__, "../public/uploads")
   destination = File.join(upload_dir, saved_name)
 
   # Create uploads directory if it does not exist
   FileUtils.mkdir_p(upload_dir) unless Dir.exist?(upload_dir)
 
   # Move the uploaded file
-  FileUtils.mv(file.tmp_path, destination)
+  File.binwrite(destination, file["content"])
 
   response.json({
     message: "Image uploaded successfully",
-    original_name: file.name,
+    original_name: file["filename"],
     saved_name: saved_name,
-    size_kb: (file.size / 1024.0).round(1),
-    type: file.type,
+    size_kb: (file["size"] / 1024.0).round(1),
+    type: file["type"],
     url: "/uploads/#{saved_name}"
   }, 201)
 end
@@ -801,13 +799,13 @@ Tina4::Router.get("/api/images/{filename}") do |request, response|
 
   # Prevent directory traversal
   if filename.include?("..") || filename.include?("/")
-    return response.json({ error: "Invalid filename" }, 400)
+    next response.json({ error: "Invalid filename" }, 400)
   end
 
-  filepath = File.join(__dir__, "../../public/uploads", filename)
+  filepath = File.join(__dir__, "../public/uploads", filename)
 
   unless File.exist?(filepath)
-    return response.json({ error: "Image not found", filename: filename }, 404)
+    next response.json({ error: "Image not found", filename: filename }, 404)
   end
 
   response.file(filepath)
