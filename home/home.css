@@ -91,18 +91,29 @@ h1,h2,h3{text-wrap:balance;letter-spacing:-.02em;line-height:1.08}
   background:var(--fg);
   border-bottom:1px solid rgba(255,255,255,.08);
 }
-.site-header .wrap{display:flex;align-items:center;gap:var(--s6);height:60px}
+/* The header bar has the docs header's geometry (tina4press theme.css .tp-header-in),
+   so nothing jumps when you move between the home page and a docs page: a 1440px
+   box with 24px side padding, a 26px logo, the nav 32px after it with 24px gaps,
+   the icons pushed right. Both collapse to the menu button at 1200px (the docs
+   side through theme/docs-header.css). */
+.site-header .wrap{display:flex;align-items:center;gap:var(--s6);height:60px;max-width:1440px}
+.site-header .brand{margin-right:0;gap:9px;flex-shrink:0}
+.site-header .brand img{width:26px;height:26px}
+.site-header .brand-name{font-size:1rem;font-weight:700;letter-spacing:-.01em}
 .brand{display:flex;align-items:center;gap:var(--s3);margin-right:auto}
 .brand img{width:30px;height:30px}
 .brand-name{font-weight:800;font-size:1.15rem;color:#fff;letter-spacing:-.02em}
 .brand-name span{color:var(--brand-2)}
-.site-nav{display:flex;align-items:center;gap:var(--s4)}
+.site-nav{display:flex;align-items:center;gap:var(--s6);margin-left:var(--s2)}
 .site-nav a{
-  color:rgba(255,255,255,.72);font-weight:500;font-size:.88rem;
+  color:rgba(255,255,255,.72);font-weight:500;font-size:14px;padding:4px 0;
   transition:color var(--dur) var(--ease);
 }
 .site-nav a:hover,.site-nav a[aria-current="page"]{color:#fff}
-.header-actions{display:flex;align-items:center;gap:var(--s2)}
+.header-actions{display:flex;align-items:center;gap:var(--s2);margin-left:auto}
+/* GitHub, Discord and Code Infinity: the docs header's 38px buttons with 22px icons */
+.header-actions a.icon-btn{width:38px;height:38px}
+.header-actions a.icon-btn svg{width:22px;height:22px}
 .icon-btn{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:9px;
   color:rgba(255,255,255,.72);background:none;border:0;cursor:pointer;
   transition:color var(--dur) var(--ease),background var(--dur) var(--ease)}
@@ -121,13 +132,19 @@ h1,h2,h3{text-wrap:balance;letter-spacing:-.02em;line-height:1.08}
 .copy-btn .i{width:14px;height:14px}
 .search-pill{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.08);
   border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.6);border-radius:9px;
-  padding:7px 10px;font-size:.85rem;cursor:pointer;transition:border-color var(--dur) var(--ease)}
+  padding:6px 8px 6px 10px;font-size:13px;cursor:pointer;transition:border-color var(--dur) var(--ease)}
 .search-pill:hover{border-color:rgba(255,255,255,.3);color:#fff}
 /* the shortcut key: a centred box with the command icon and the K, so it never
    depends on a font having the command symbol */
 .search-pill kbd{display:inline-flex;align-items:center;gap:1px;height:18px;padding:0 5px;line-height:1;
   font-family:var(--mono);font-size:.72rem;background:rgba(255,255,255,.1);border-radius:4px;color:rgba(255,255,255,.7)}
 .search-pill kbd .i{width:10px;height:10px;stroke-width:2.4}
+/* the docs header's search button sizes (tina4press draws an emoji there): 126px
+   with its label and shortcut, 38px as an icon, so its edge does not move */
+.search-pill{min-width:126px}
+.search-pill > .i{width:18px;height:18px}
+.search-pill kbd{margin-left:auto}
+@media(max-width:1200px){.search-pill{min-width:38px;justify-content:center}}
 .theme-toggle .sun{display:none;fill:none}
 :root[data-theme="dark"] .theme-toggle .moon{display:none}
 :root[data-theme="dark"] .theme-toggle .sun{display:block}
@@ -138,16 +155,13 @@ h1,h2,h3{text-wrap:balance;letter-spacing:-.02em;line-height:1.08}
   transition:border-color var(--dur) var(--ease),background var(--dur) var(--ease);
 }
 .nav-cta:hover{border-color:rgba(255,255,255,.55);background:rgba(255,255,255,.06)}
-.nav-toggle{display:none;background:none;border:0;color:#fff;font-size:1.4rem;cursor:pointer}
-/* the full nav and the search label share one bar: the label goes first */
+.nav-toggle{display:none;place-items:center;width:34px;height:32px;background:none;border:0;color:#fff;font-size:1.4rem;cursor:pointer}
+/* at 1200px and below the full nav no longer fits on one line: it moves into the menu,
+   and the search button keeps only its icon (the docs header does the same) */
 .site-nav a,.search-pill{white-space:nowrap}
-@media(max-width:1180px){
-  .site-nav{gap:var(--s3)}
-  .search-pill .search-hint,.search-pill kbd{display:none}
-}
-@media(max-width:960px){
+@media(max-width:1200px){
   .site-nav{display:none}
-  .nav-toggle{display:block}
+  .nav-toggle{display:grid}
   .search-pill .search-hint,.search-pill kbd{display:none}
 }
 
@@ -158,7 +172,7 @@ h1,h2,h3{text-wrap:balance;letter-spacing:-.02em;line-height:1.08}
 .mobile-nav a{color:rgba(255,255,255,.8);font-weight:500;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06)}
 .mobile-nav a:last-child{border-bottom:0}
 .mobile-nav a:hover,.mobile-nav a[aria-current="page"]{color:#fff}
-@media(min-width:961px){.mobile-nav{display:none}}
+@media(min-width:1201px){.mobile-nav{display:none}}
 
 /* ---------- hero ---------- */
 .hero{

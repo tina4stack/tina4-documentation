@@ -180,6 +180,8 @@ export default {
   head: [["style", { id: "tp-site-links" }, SITE_LINK_CSS], ...FONT_HEAD, ...OG_META],
   themeConfig: {
     analytics: "G-FZRRSBE9M0",
+    // The header, matched to the home page (one collapse point, nav on one line).
+    customCss: ["theme/docs-header.css"],
     // Inter and Inconsolata only (DESIGN.md s0), from FONT_HEAD above.
     fonts: {
       body: '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',

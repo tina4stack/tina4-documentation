@@ -1239,7 +1239,7 @@ var T4LANG = (function(){
 })();
 
 /* ---------- the phone and tablet menu ----------
-   Below 960px the header nav hides behind the menu button; the menu panel gets a
+   At 1200px and below the header nav hides behind the menu button; the menu panel gets a
    copy of the same links, so there is one list to keep (and the build fills it) */
 (function(){
   var toggle = document.getElementById("nav-toggle"), menu = document.getElementById("mobile-nav");
@@ -1255,7 +1255,7 @@ var T4LANG = (function(){
   document.addEventListener("keydown", function(e){ if(e.key === "Escape" && !menu.hidden){ setOpen(false); toggle.focus(); } });
   /* back on a wide screen the panel has no button to close it, so close it */
   if(window.matchMedia){
-    var wide = matchMedia("(min-width: 961px)");
+    var wide = matchMedia("(min-width: 1201px)");
     var shut = function(){ if(wide.matches) setOpen(false); };
     if(wide.addEventListener) wide.addEventListener("change", shut); else if(wide.addListener) wide.addListener(shut);
   }

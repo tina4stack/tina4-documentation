@@ -1,0 +1,32 @@
+/*
+ * Copyright (c) 2026 Code Infinity
+ * SPDX-License-Identifier: MPL-2.0
+ *
+ * docs-header.css - the docs header, matched to the home page's (home/home.css).
+ * Linked after tina4press's theme.css (themeConfig.customCss in
+ * tina4press.config.mjs), so these rules win by order.
+ *
+ * tina4press keeps its full nav until 780px, but the nav no longer fits on one
+ * line at 1200px and below: links wrap onto two or three lines and the header
+ * icons stack. The home page moves its nav into the menu at 1200px, so the docs
+ * do the same here, and nothing in the header changes between the two sides.
+ * tina4press styles its menu panel only below 780px; the same panel rules are
+ * applied up to 1200px. Above 780px the sidebar is still on the page, so the
+ * panel shows only the nav, not a second copy of the sidebar.
+ */
+.tp-nav-link { white-space: nowrap; }
+.tp-brand { flex-shrink: 0; }
+
+@media (max-width: 1200px) {
+  .tp-nav { display: none; }
+  .tp-menu-toggle { display: grid; }
+  .tp-search-hint, .tp-search-btn kbd { display: none; }
+  .tp-mobile-menu:not([hidden]) {
+    display: block; position: fixed; top: var(--tp-head-h); left: 0; right: 0; bottom: 0;
+    background: var(--tp-bg); z-index: 40; overflow-y: auto; padding: var(--sp-4) var(--sp-5) var(--sp-8);
+    border-top: 1px solid var(--tp-border);
+  }
+}
+@media (min-width: 781px) and (max-width: 1200px) {
+  .tp-mobile-side { display: none; }
+}
