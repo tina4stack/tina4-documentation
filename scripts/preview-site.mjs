@@ -59,9 +59,12 @@ const TYPES = {
 };
 
 // Point the chat at this server, and drop the analytics tag unless asked.
-function adapt(html) {
-  html = html.split(`data-api="${RAG}"`).join(`data-api="${ORIGIN}"`)
-    .split(`"api":"${RAG}"`).join(`"api":"${ORIGIN}"`);
+// The chat is pointed at the address the browser used to reach this server, so
+// it works from another device too (a phone on the same network opening
+// http://<this computer's address>:<port>), not only from localhost.
+function adapt(html, origin) {
+  html = html.split(`data-api="${RAG}"`).join(`data-api="${origin}"`)
+    .split(`"api":"${RAG}"`).join(`"api":"${origin}"`);
   if (!ANALYTICS) {
     html = html.replace(/<script async src="https:\/\/www\.googletagmanager\.com\/gtag\/js\?id=[^"]+"><\/script><script>[\s\S]*?<\/script>/g, "");
   }
@@ -104,7 +107,7 @@ async function serveFile(req, res) {
   }
   const type = TYPES[extname(file).toLowerCase()] || "application/octet-stream";
   let body = await readFile(file);
-  if (type.startsWith("text/html")) body = adapt(body.toString("utf8"));
+  if (type.startsWith("text/html")) body = adapt(body.toString("utf8"), "http://" + (req.headers.host || `localhost:${PORT}`));
   res.writeHead(200, { ...headersFor(path, RAG), "Content-Type": type, "Cache-Control": "no-cache" });
   res.end(body);
 }
@@ -114,5 +117,6 @@ createServer((req, res) => {
   handler(req, res).catch((error) => { res.writeHead(500); res.end(String(error)); });
 }).listen(PORT, () => {
   console.log(`preview-site: ${ORIGIN}  (serving ${DIST})`);
+  console.log("  from another device on this network: http://<this computer's IP address>:" + PORT);
   console.log(`  chat questions go to ${RAG + ASK_PATH}; analytics ${ANALYTICS ? "on" : "off (pass --analytics to keep it)"}`);
 });
