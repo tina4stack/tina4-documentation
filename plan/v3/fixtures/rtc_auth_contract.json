@@ -1,0 +1,66 @@
+{
+  "_comment": [
+    "RTC require-auth contract, governed by ADR-0101 (tina4-python#252).",
+    "The /api/rtc/config route mints a fresh TURN credential on every call and the",
+    "/ws/rtc/{room} signalling socket relays a call. Left public, anyone can use the",
+    "operator's TURN server as a relay. Both are secured by DEFAULT; an app that",
+    "genuinely wants anonymous calling opts out with TINA4_RTC_REQUIRE_AUTH=false.",
+    "Secure-by-default: only an explicit false/0/no/off opens them - any other value",
+    "(or unset) keeps them secured. The same six cases run in all four frameworks on",
+    "a real realtime()/mount() registration, no mocks: auth_required is read straight",
+    "off the registered route (HTTP route table + WebSocket route table)."
+  ],
+  "version": 1,
+  "decided": "2026-10-23",
+  "feature": "RTC config + signalling require auth by default (tina4-python#252)",
+  "invariants": [
+    {
+      "id": "rtc-secured-by-default",
+      "adr": "ADR-0101",
+      "rule": "With no TINA4_RTC_REQUIRE_AUTH set, both the /api/rtc/config route and the /ws/rtc/{room} signalling socket require a valid token (auth_required true).",
+      "why": "The config route mints a TURN credential on every call and the signalling socket relays a call; public, they let anyone use the operator's TURN server as a relay, and a short credential TTL does not bound the abuse. Security-by-default (tina4-python#252).",
+      "suites": {
+        "python": "tests/test_rtc_require_auth_contract.py",
+        "php": "tests/RtcRequireAuthContractTest.php",
+        "ruby": "spec/rtc_require_auth_contract_spec.rb",
+        "nodejs": "test/rtcRequireAuthContract.test.ts"
+      },
+      "cases": [
+        "config route requires auth by default",
+        "signalling socket requires auth by default",
+        "require auth explicit true secures both"
+      ]
+    },
+    {
+      "id": "rtc-explicit-opt-out-opens-both",
+      "adr": "ADR-0101",
+      "rule": "TINA4_RTC_REQUIRE_AUTH=false (or 0/no/off) makes both the config route and the signalling socket public again, for apps that want anonymous calling.",
+      "why": "Anonymous calling is a real use case (the browser needs ICE before it can authenticate anywhere); the operator opts into the exposure explicitly rather than having it by default.",
+      "suites": {
+        "python": "tests/test_rtc_require_auth_contract.py",
+        "php": "tests/RtcRequireAuthContractTest.php",
+        "ruby": "spec/rtc_require_auth_contract_spec.rb",
+        "nodejs": "test/rtcRequireAuthContract.test.ts"
+      },
+      "cases": [
+        "require auth false opens the config route",
+        "require auth false opens the signalling socket"
+      ]
+    },
+    {
+      "id": "rtc-only-explicit-falsey-opens",
+      "adr": "ADR-0101",
+      "rule": "Only an explicit false/0/no/off opts out; any other value (or unset) keeps the routes secured, so a typo never silently opens the TURN relay.",
+      "why": "A whitelist-truthy parse would treat an unrecognised value as 'not true' and open the relay; secure-by-default requires the opposite - open only on a recognised opt-out.",
+      "suites": {
+        "python": "tests/test_rtc_require_auth_contract.py",
+        "php": "tests/RtcRequireAuthContractTest.php",
+        "ruby": "spec/rtc_require_auth_contract_spec.rb",
+        "nodejs": "test/rtcRequireAuthContract.test.ts"
+      },
+      "cases": [
+        "only explicit falsey opens the route"
+      ]
+    }
+  ]
+}

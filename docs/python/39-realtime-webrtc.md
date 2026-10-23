@@ -16,7 +16,7 @@ The WebSocket chapter gave you the raw `@websocket` primitive: a decorator, a ha
 
 The module gives you three surfaces, and you enable only the ones you want:
 
-- **calls** - a WebRTC signalling relay (mesh, peer to peer) plus a self-describing ICE-config endpoint. The relay forwards offer, answer, and ICE frames between peers in a room. It is public: no login to join a room.
+- **calls** - a WebRTC signalling relay (mesh, peer to peer) plus a self-describing ICE-config endpoint. The relay forwards offer, answer, and ICE frames between peers in a room. It requires auth by default (ADR-0101); set `TINA4_RTC_REQUIRE_AUTH=false` for anonymous rooms.
 - **chat** - persistent channels and messages backed by framework-owned ORM models, a secured chat WebSocket with live presence, typing, and read receipts, and a history endpoint for catch-up on reconnect.
 - **files** - permissioned upload and download through a pluggable storage backend (local filesystem by default, S3-compatible optional).
 
@@ -69,8 +69,8 @@ realtime(features=['calls', 'chat'])
 
 | Feature | Route registered | Auth |
 |---|---|---|
-| any | `GET  {p}/api/rtc/config` -> `rtc_config` | public (no auth) |
-| `calls` | `WS   {p}/ws/rtc/{room}` -> `rtc_signalling` | public (unauthenticated) |
+| any | `GET  {p}/api/rtc/config` -> `rtc_config` | secured by default (ADR-0101) |
+| `calls` | `WS   {p}/ws/rtc/{room}` -> `rtc_signalling` | secured by default (ADR-0101) |
 | `chat` | `WS   {p}/ws/chat/{channel}` -> `chat_ws` | secured (valid JWT on upgrade) |
 | `chat` | `GET  {p}/api/channels/{id}/messages` -> `chat_history` | `auth_required=True` |
 | `files` | `POST {p}/api/files` -> `files_upload` | `auth_required=True` |
@@ -82,7 +82,7 @@ If `chat` or `files` is enabled, the framework creates its chat tables at mount 
 
 ## 4. The Config Bootstrap: `GET /api/rtc/config`
 
-The client never hardcodes a URL. It fetches this one public endpoint, and everything else comes back in the response: the signalling path, the ICE servers, the chat, messages, and files paths. Move `prefix` on the server and the client follows automatically.
+The client never hardcodes a URL. It fetches this one endpoint, and everything else comes back in the response: the signalling path, the ICE servers, the chat, messages, and files paths. Move `prefix` on the server and the client follows automatically.
 
 The body is feature-gated. Only keys for enabled features appear.
 
@@ -99,7 +99,7 @@ The body is feature-gated. Only keys for enabled features appear.
 
 The `{room}`, `{channel}`, and `{id}` are literal template tokens. The client substitutes the real room name, channel id, or message id before connecting.
 
-This endpoint is public, and it returns your ICE and TURN configuration including freshly-minted ephemeral TURN credentials (section 5). That is intentional. The browser needs those before it can authenticate anywhere, which is exactly why the credentials are short-lived by design.
+This endpoint mints ephemeral TURN credentials (section 5), so it requires a valid token by default (ADR-0101). Set `TINA4_RTC_REQUIRE_AUTH=false` for anonymous calling - the case where the browser needs ICE before it can authenticate anywhere; the credentials are short-lived by design either way.
 
 ---
 
@@ -132,6 +132,7 @@ TINA4_RTC_STUN_URLS=stun:stun.l.google.com:19302
 TINA4_RTC_TURN_URL=turn:turn.example.com:3478   # enables TURN when paired with the secret
 TINA4_RTC_TURN_SECRET=your-coturn-shared-secret
 TINA4_RTC_TURN_TTL=3600                          # ephemeral credential lifetime (seconds)
+TINA4_RTC_REQUIRE_AUTH=true                     # secured by default; set false for anonymous calling
 ```
 
 | Var | Default | Effect |
@@ -141,6 +142,7 @@ TINA4_RTC_TURN_TTL=3600                          # ephemeral credential lifetime
 | `TINA4_RTC_TURN_URL` | - | Comma-separated TURN URLs; enables TURN when set together with the secret. |
 | `TINA4_RTC_TURN_SECRET` | - | coturn `use-auth-secret` shared secret (drives the ephemeral credentials). |
 | `TINA4_RTC_TURN_TTL` | `3600` | Ephemeral TURN credential lifetime, in seconds. |
+| `TINA4_RTC_REQUIRE_AUTH` | `true` | Secure-by-default (ADR-0101): the `/api/rtc/config` route and the signalling socket require a valid token. Set `false` (or `0`/`no`/`off`) to allow anonymous calling. |
 
 The media backend is a strategy object. `MeshBackend` is the default, zero-dependency backend: browsers connect peer to peer in a mesh. An explicit `media=` argument wins; otherwise the module reads `TINA4_RTC_BACKEND`, and any unknown name falls back to `MeshBackend`. It never fails boot. An SFU or LiveKit backend that returns a real join token is the documented Phase-2 drop-in, and because signalling paths are unchanged, the client keeps working.
 
@@ -148,7 +150,7 @@ The media backend is a strategy object. `MeshBackend` is the default, zero-depen
 
 ## 6. Signalling: The Mesh Relay
 
-The signalling handler is registered at `WS {p}/ws/rtc/{room}` and is public. Anyone can join any room. It follows the framework's WebSocket handler convention:
+The signalling handler is registered at `WS {p}/ws/rtc/{room}` and requires auth by default (ADR-0101). With `TINA4_RTC_REQUIRE_AUTH=false` it is open and anyone can join any room. It follows the framework's WebSocket handler convention:
 
 ```python
 async def rtc_signalling(connection, event, data):
@@ -166,7 +168,7 @@ Its behaviour is deliberately minimal, a raw relay:
 
 Tina4 never parses the SDP. Peers put a `to` field in their own frames and filter for themselves. Rooms are namespaced `rtc:<room>` so signalling rooms never collide with chat channels, which use `chat:<channel>`, on the shared WebSocket manager.
 
-Because signalling is public, the room name is your only barrier. If a call must be private, gate access at your app layer: issue unguessable room ids, or check membership before you hand the client a room name.
+When signalling is opened with `TINA4_RTC_REQUIRE_AUTH=false`, the room name is your only barrier. If a call must be private, gate access at your app layer: issue unguessable room ids, or check membership before you hand the client a room name.
 
 ---
 
@@ -331,7 +333,7 @@ The client fetches `/api/rtc/config` first and never hardcodes a path.
 // 1. Discover paths + ICE servers (public endpoint).
 const cfg = await (await fetch("/api/rtc/config")).json();
 
-// 2. Open the signalling socket for a room (public, no token).
+// 2. Open the signalling socket for a room (secured by default; open with TINA4_RTC_REQUIRE_AUTH=false).
 const room = "standup";
 const wsUrl = location.origin.replace(/^http/, "ws")
             + cfg.signalling.replace("{room}", room);
@@ -401,7 +403,7 @@ The signalling socket is public: anyone with the room name joins. The chat socke
 
 **The signalling WebSocket is public.** `/ws/rtc/{room}` is not secured. Anyone can join any room and receive the relayed frames. Only the chat WebSocket is JWT-secured. If a call must be private, gate the room name at your app layer.
 
-**The config endpoint is public.** `/api/rtc/config` returns your ICE and TURN configuration, including freshly-minted ephemeral TURN credentials. This is by design, which is exactly why the TURN credentials are time-limited (`TINA4_RTC_TURN_TTL`).
+**The config endpoint requires auth by default (ADR-0101).** `/api/rtc/config` mints ephemeral TURN credentials, so it is secured unless you set `TINA4_RTC_REQUIRE_AUTH=false` for anonymous calling. The credentials are time-limited (`TINA4_RTC_TURN_TTL`) regardless.
 
 **The WS handler signature is `(connection, event, data)`.** `event` is `"open"`, `"message"`, or `"close"`; `data` is a `str` on `"message"` and `None` otherwise. This is the framework convention, not `(connection, data, event)`.
 
