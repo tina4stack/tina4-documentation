@@ -145,6 +145,16 @@ const BACKEND_GROUPS = [
 // in - Slack and X fall back to them - which keeps the per-page title in the
 // unfurl rather than flattening all pages to one. A served tina4press release
 // can later make og:title/og:url per-page; this is the zero-dependency version.
+// Inter and Inconsolata, self-hosted in docs/public/fonts and shared with the
+// home page (home/), so the whole site loads one set of font files. fonts.css
+// declares them; themeConfig.fonts below puts them first in tina4press's font
+// stacks. The two upright files are preloaded, as the home page does.
+const FONT_HEAD = [
+  ["link", { rel: "stylesheet", href: "/fonts/fonts.css" }],
+  ["link", { rel: "preload", href: "/fonts/inter-latin-wght-normal.woff2", as: "font", type: "font/woff2", crossorigin: "anonymous" }],
+  ["link", { rel: "preload", href: "/fonts/inconsolata-latin-wght-normal.woff2", as: "font", type: "font/woff2", crossorigin: "anonymous" }],
+];
+
 const OG_IMAGE = "https://tina4.com/og-image.png";
 const OG_META = [
   ["meta", { property: "og:type", content: "website" }],
@@ -167,9 +177,14 @@ export default {
   outDir: "docs/.vitepress/dist",
   // headHtml() reads config.head (VitePress format: [tag, attrs, innerHTML]).
   // Top level, NOT themeConfig - it is not a theme option.
-  head: [["style", { id: "tp-site-links" }, SITE_LINK_CSS], ...OG_META],
+  head: [["style", { id: "tp-site-links" }, SITE_LINK_CSS], ...FONT_HEAD, ...OG_META],
   themeConfig: {
     analytics: "G-FZRRSBE9M0",
+    // Inter and Inconsolata only (DESIGN.md s0), from FONT_HEAD above.
+    fonts: {
+      body: '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+      mono: '"Inconsolata", ui-monospace, Menlo, Consolas, monospace',
+    },
     // All theme colors as constants — tweak these to retheme the whole site.
     colors: {
       light: { brand: "#2f5fe0", brand2: "#4888ff" },
