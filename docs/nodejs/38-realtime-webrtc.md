@@ -24,7 +24,7 @@ The WebSocket chapter gave you the raw primitive: `Router.websocket(path, handle
 
 The module gives you three surfaces, and you enable only the ones you want:
 
-- **calls** - a WebRTC signalling relay (mesh, peer to peer) plus a self-describing ICE-config endpoint. The relay forwards offer, answer, and ICE frames between peers in a room. It is public: no login to join a room.
+- **calls** - a WebRTC signalling relay (mesh, peer to peer) plus a self-describing ICE-config endpoint. The relay forwards offer, answer, and ICE frames between peers in a room. It requires auth by default (ADR-0101); set `TINA4_RTC_REQUIRE_AUTH=false` for anonymous rooms.
 - **chat** - persistent channels and messages backed by framework-owned ORM models, a secured chat WebSocket with live presence, typing, and read receipts, and a history endpoint for catch-up on reconnect.
 - **files** - permissioned upload and download through a pluggable storage backend (local filesystem by default, S3-compatible optional).
 
@@ -116,8 +116,8 @@ await realtime({ features: ["files"] });
 
 | Feature | Route registered | Auth |
 |---|---|---|
-| any | `GET  {p}/api/rtc/config` | **public**, no `.secure()` |
-| `calls` | `WS   {p}/ws/rtc/{room}` | **public**, unauthenticated |
+| any | `GET  {p}/api/rtc/config` | secured by default (ADR-0101) |
+| `calls` | `WS   {p}/ws/rtc/{room}` | secured by default (ADR-0101) |
 | `chat` | `WS   {p}/ws/chat/{channel}` | **secured**, `Router.websocket(..., { secured: true })`, valid JWT on upgrade |
 | `chat` | `GET  {p}/api/channels/{id}/messages` | `.secure()` |
 | `files` | `POST {p}/api/files` | auth-required (Tina4 secures write routes by default) |
@@ -129,7 +129,7 @@ When `chat` or `files` is enabled, the framework runs `ensureChatTables()` at mo
 
 ## 4. The Config Bootstrap: `GET {p}/api/rtc/config`
 
-The client never hardcodes a URL. It fetches this one public endpoint, and everything else comes back in the response: the signalling path, the ICE servers, the chat, messages, and files paths. Move `prefix` on the server and the client follows automatically.
+The client never hardcodes a URL. It fetches this one endpoint, and everything else comes back in the response: the signalling path, the ICE servers, the chat, messages, and files paths. Move `prefix` on the server and the client follows automatically.
 
 The body is feature-gated. Only keys for enabled features appear, and this is where the template tokens live.
 
@@ -155,7 +155,7 @@ const signalling = new WebSocket(
 );
 ```
 
-This endpoint is public, and it returns your ICE and TURN configuration including freshly-minted ephemeral TURN credentials (section 5). That is intentional. The browser needs those before it can authenticate anywhere, which is exactly why the credentials are short-lived by design. Be aware anyone can read it.
+This endpoint mints ephemeral TURN credentials (section 5), so it requires a valid token by default (ADR-0101). Set `TINA4_RTC_REQUIRE_AUTH=false` for anonymous calling - the case where the browser needs ICE before it can authenticate anywhere; the credentials are short-lived by design either way. Be aware anyone can read it.
 
 ---
 
@@ -189,6 +189,7 @@ TINA4_RTC_STUN_URLS=stun:stun.l.google.com:19302
 TINA4_RTC_TURN_URL=turn:turn.example.com:3478   # enables TURN when paired with the secret
 TINA4_RTC_TURN_SECRET=your-coturn-shared-secret
 TINA4_RTC_TURN_TTL=3600                          # ephemeral credential lifetime (seconds)
+TINA4_RTC_REQUIRE_AUTH=true                     # secured by default; set false for anonymous calling
 ```
 
 | Variable | Default | Effect |
@@ -197,6 +198,7 @@ TINA4_RTC_TURN_TTL=3600                          # ephemeral credential lifetime
 | `TINA4_RTC_TURN_URL` | - | Comma-separated TURN URLs; enables TURN when set together with the secret. |
 | `TINA4_RTC_TURN_SECRET` | - | coturn `use-auth-secret` shared secret (drives the ephemeral credentials). |
 | `TINA4_RTC_TURN_TTL` | `3600` | Ephemeral TURN credential lifetime, in seconds. |
+| `TINA4_RTC_REQUIRE_AUTH` | `true` | Secure-by-default (ADR-0101): the `/api/rtc/config` route and the signalling socket require a valid token. Set `false` (or `0`/`no`/`off`) to allow anonymous calling. |
 
 `TINA4_RTC_BACKEND` is **not read** in Node. The backend is always `mesh` (section 11).
 
@@ -204,7 +206,7 @@ TINA4_RTC_TURN_TTL=3600                          # ephemeral credential lifetime
 
 ## 6. Signalling: The Mesh Relay
 
-The `calls` feature registers the signalling handler at `WS {p}/ws/rtc/{room}`, and it is public. Anyone can join any room. It follows the framework's WebSocket handler convention:
+The `calls` feature registers the signalling handler at `WS {p}/ws/rtc/{room}`, and requires auth by default (ADR-0101). With `TINA4_RTC_REQUIRE_AUTH=false` anyone can join any room. It follows the framework's WebSocket handler convention:
 
 ```typescript
 (connection, event, data) => {
@@ -260,7 +262,7 @@ ws.onmessage = async (ev) => {
 };
 ```
 
-Because signalling is public, the room name is your only barrier. If a call must be private, gate access at your app layer: issue unguessable room ids, or check membership before you hand the client a room name.
+When signalling is opened with `TINA4_RTC_REQUIRE_AUTH=false`, the room name is your only barrier. If a call must be private, gate access at your app layer: issue unguessable room ids, or check membership before you hand the client a room name.
 
 ---
 
@@ -546,7 +548,7 @@ The client fetches `/api/collab/api/rtc/config` first and never hardcodes a path
   const cfg = await fetch(`${base}/api/rtc/config`).then(r => r.json());
   const wsOrigin = location.origin.replace(/^http/, "ws");
 
-  // --- calls: mesh WebRTC signalling (public, no token) ---
+  // --- calls: mesh WebRTC signalling (secured by default; TINA4_RTC_REQUIRE_AUTH=false to open) ---
   const signalling = new WebSocket(wsOrigin + cfg.signalling.replace("{room}", "room-42"));
   const pc = new RTCPeerConnection({ iceServers: cfg.iceServers });
   const local = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
@@ -578,7 +580,7 @@ The client fetches `/api/collab/api/rtc/config` first and never hardcodes a path
 </script>
 ```
 
-The signalling socket is public: anyone with the room name joins. The chat socket and the history and file endpoints require a valid JWT and channel membership. Two browser tabs, both members of channel `1` and joined to `room-42`, see each other's video peer to peer and each other's messages through the relay.
+The signalling socket requires auth by default (ADR-0101); opened with `TINA4_RTC_REQUIRE_AUTH=false`, anyone with the room name joins. The chat socket and the history and file endpoints require a valid JWT and channel membership. Two browser tabs, both members of channel `1` and joined to `room-42`, see each other's video peer to peer and each other's messages through the relay.
 
 ---
 
@@ -586,8 +588,8 @@ The signalling socket is public: anyone with the room name joins. The chat socke
 
 - **Bind a database BEFORE `realtime({ features: ["chat" | "files"] })`.** `ensureChatTables()` runs at mount, but a failure (no DB bound) is caught, logged as an ERROR, and boot continues. `realtime` still returns the full path map and registers every route, and the failure only resurfaces at query time. Call `initDatabase(url)` or `bindDatabase(db)` first, then `await realtime(...)`.
 - **`realtime()` is async, so always `await` it.** Skipping the `await` risks the first chat, history, or file request racing table creation.
-- **The signalling WebSocket (`/ws/rtc/{room}`) is PUBLIC.** It is not secured, so anyone can join any room and receive the relayed frames. Only the **chat** WebSocket is JWT-secured. Gate call access at the app layer if you need it.
-- **The config endpoint (`/api/rtc/config`) is PUBLIC** and returns your ICE and TURN config, including freshly-minted ephemeral TURN credentials. This is by design, which is exactly why the TURN credentials are time-limited (`TINA4_RTC_TURN_TTL`).
+- **The signalling WebSocket (`/ws/rtc/{room}`) requires auth by default (ADR-0101).** Set `TINA4_RTC_REQUIRE_AUTH=false` to open it; then anyone can join any room and receive the relayed frames. Keep the default, or gate call access at the app layer.
+- **The config endpoint (`/api/rtc/config`) requires auth by default (ADR-0101)**, because it mints ephemeral TURN credentials; set `TINA4_RTC_REQUIRE_AUTH=false` for anonymous calling. The credentials are time-limited (`TINA4_RTC_TURN_TTL`) regardless.
 - **The WebSocket handler signature is `(connection, event, data)`.** `event` is `"open"` / `"message"` / `"close"`, and `data` is the string frame on `"message"`. This matches the Python master. The **PHP** port fires `($connection, $data, $event)`, so the order differs there, not here.
 - **Channels are addressed by integer id.** A non-integer `{channel}` makes the chat handler return silently, with no error frame. The client sees a socket that opens and does nothing. Pass the numeric channel id, never its name.
 - **Chat authorization is re-checked on every frame,** and identity is always taken from the verified token (`connection.auth` / `req.user`), never from the message payload. A custom `authorize` must be cheap, since it runs on every inbound message.

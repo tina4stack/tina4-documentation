@@ -18,7 +18,7 @@ The WebSocket chapter gave you the raw `Tina4::Router.websocket` primitive: a pa
 
 The module gives you three surfaces, and you enable only the ones you want:
 
-- **calls** - a WebRTC signalling relay (mesh, peer to peer) plus a self-describing ICE-config endpoint. The relay forwards offer, answer, and ICE frames between peers in a room. It is public: no login to join a room.
+- **calls** - a WebRTC signalling relay (mesh, peer to peer) plus a self-describing ICE-config endpoint. The relay forwards offer, answer, and ICE frames between peers in a room. It requires auth by default (ADR-0101); set `TINA4_RTC_REQUIRE_AUTH=false` for anonymous rooms.
 - **chat** - persistent channels and messages backed by framework-owned ORM models, a secured chat WebSocket with live presence, typing, and read receipts, and a history endpoint for catch-up on reconnect.
 - **files** - permissioned upload and download through a pluggable storage backend (local filesystem by default, S3-compatible optional).
 
@@ -70,8 +70,8 @@ Tina4::Realtime.mount(features: %w[files])
 
 | Feature | Route registered | Auth |
 |---|---|---|
-| any (has `config`) | `GET  {p}/api/rtc/config` | public (no `.secure`) |
-| `calls` | `WS   {p}/ws/rtc/{room}` | public (unauthenticated) |
+| any (has `config`) | `GET  {p}/api/rtc/config` | secured by default (ADR-0101) |
+| `calls` | `WS   {p}/ws/rtc/{room}` | secured by default (ADR-0101) |
 | `chat` | `WS   {p}/ws/chat/{channel}` | secured - `.secure`, valid JWT on upgrade |
 | `chat` | `GET  {p}/api/channels/{id}/messages` | secured - `.secure` |
 | `files` | `POST {p}/api/files` (upload) | write route - default bearer-token gate |
@@ -100,7 +100,7 @@ The body is feature-gated. Only keys for enabled features appear.
 
 `{room}`, `{channel}`, and `{id}` are literal template tokens the client substitutes with a real room name, channel id, or message id before connecting.
 
-This endpoint is public. No token required, because the client needs the ICE config before it has authenticated anyone into a call. It returns your ICE and TURN configuration, including freshly-minted ephemeral TURN credentials. That is by design, and it is exactly why those credentials are short-lived.
+This endpoint requires a valid token by default (ADR-0101), because it mints ephemeral TURN credentials. Set `TINA4_RTC_REQUIRE_AUTH=false` for anonymous calling - the case where the client needs the ICE config before it has authenticated anyone into a call; the credentials are short-lived either way.
 
 ```js
 // Browser: discover everything from one fetch, then wire the sockets.
@@ -144,6 +144,7 @@ STUN and TURN URLs are comma-separated in the env and split into arrays.
 | `TINA4_RTC_TURN_URL` | - | Comma-separated TURN URLs; enables TURN when set together with the secret. |
 | `TINA4_RTC_TURN_SECRET` | - | coturn `use-auth-secret` shared secret (drives the ephemeral credentials). |
 | `TINA4_RTC_TURN_TTL` | `3600` | Ephemeral TURN credential lifetime, in seconds. |
+| `TINA4_RTC_REQUIRE_AUTH` | `true` | Secure-by-default (ADR-0101): the `/api/rtc/config` route and the signalling socket require a valid token. Set `false` (or `0`/`no`/`off`) to allow anonymous calling. |
 | `TINA4_RTC_BACKEND` | - | Read only for cross-language config parity; Ruby ignores it. The backend is always `mesh`. |
 
 ```bash
@@ -157,7 +158,7 @@ export TINA4_RTC_TURN_TTL="3600"
 
 ## 6. Signalling: The Mesh Relay
 
-This is the relay that lets two browsers negotiate a peer connection. It registers at `WS {p}/ws/rtc/{room}` with `Tina4::Router.websocket`, and it is not `.secure`, so it is public. Anyone can join any room. The Ruby WebSocket convention is `(connection, event, data)` where `event` is a **Symbol**:
+This is the relay that lets two browsers negotiate a peer connection. It registers at `WS {p}/ws/rtc/{room}` with `Tina4::Router.websocket` and requires auth by default (ADR-0101). With `TINA4_RTC_REQUIRE_AUTH=false` (no `.secure`) anyone can join any room. The Ruby WebSocket convention is `(connection, event, data)` where `event` is a **Symbol**:
 
 ```ruby
 # connection : the WebSocket connection
@@ -190,7 +191,7 @@ The behaviour is deliberately minimal:
 
 Tina4 never parses the SDP. Peers address each other by putting a `to` field in their own frames and filtering on it. Rooms are namespaced `rtc:<room>` so signalling rooms never collide with chat channels, which use `chat:<channel>`, on the shared WebSocket manager.
 
-The socket is public and the room is a URL segment, so treat the room id as a capability. Gate call access at your app layer if a call must be private: issue unguessable room ids, or check membership before you hand the client a room name.
+By default the socket requires auth (ADR-0101); opened with `TINA4_RTC_REQUIRE_AUTH=false`, the room is just a URL segment, so treat the room id as a capability. Gate call access at your app layer if a call must be private: issue unguessable room ids, or check membership before you hand the client a room name.
 
 ---
 
@@ -387,7 +388,7 @@ The client fetches `/api/rtc/config` first and never hardcodes a path.
 // 1. Discover paths + ICE servers (public endpoint).
 const cfg = await (await fetch("/api/rtc/config")).json();
 
-// 2. Open the signalling socket for a room (public, no token).
+// 2. Open the signalling socket for a room (secured by default; open with TINA4_RTC_REQUIRE_AUTH=false).
 const room = "standup";
 const wsUrl = location.origin.replace(/^http/, "ws")
             + cfg.signalling.replace("{room}", room);
@@ -454,7 +455,7 @@ Start it the usual way. The WebSockets run alongside the HTTP server:
 tina4 serve
 ```
 
-The signalling socket is public: anyone with the room name joins. The chat socket and the history and file endpoints require a valid JWT and channel membership. Two browser tabs, both members of channel `42`, joined to room `standup`, see each other's video peer to peer and each other's messages through the relay.
+The signalling socket requires auth by default (ADR-0101); opened with `TINA4_RTC_REQUIRE_AUTH=false`, anyone with the room name joins. The chat socket and the history and file endpoints require a valid JWT and channel membership. Two browser tabs, both members of channel `42`, joined to room `standup`, see each other's video peer to peer and each other's messages through the relay.
 
 ---
 
@@ -464,9 +465,9 @@ The signalling socket is public: anyone with the room name joins. The chat socke
 
 **Chat needs a bound database, but a missing one does not crash boot.** With `features:` that include `chat` or `files`, `ensure_chat_tables` runs at mount. If no DB is bound, it logs an error and continues. `mount` still returns the full path map and registers every route, so the failure surfaces only at query time. Bind a DB (`Tina4.bind_database(db)` or `TINA4_DATABASE_URL`) before calling `mount(features: [...])`, or chat, history, and files will error per request while the app looks healthy.
 
-**The signalling WebSocket is public.** `/ws/rtc/{room}` is not `.secure`, so anyone can join any room and receive relayed signalling frames. Only the chat WebSocket is JWT-secured. Gate call access at your app layer if you need it.
+**The signalling WebSocket requires auth by default (ADR-0101).** Open `/ws/rtc/{room}` with `TINA4_RTC_REQUIRE_AUTH=false` and anyone can join any room and receive relayed signalling frames. Keep the default, or gate call access at your app layer.
 
-**The config endpoint is public.** `/api/rtc/config` returns your ICE and TURN config, including freshly-minted ephemeral TURN credentials. That is by design, which is exactly why the TURN credentials are time-limited (`TINA4_RTC_TURN_TTL`).
+**The config endpoint requires auth by default (ADR-0101).** `/api/rtc/config` mints ephemeral TURN credentials; set `TINA4_RTC_REQUIRE_AUTH=false` for anonymous calling. The credentials are time-limited (`TINA4_RTC_TURN_TTL`) regardless.
 
 **The WS handler signature is `(connection, event, data)` and `event` is a Symbol** (`:open`, `:message`, `:close`); `data` is the payload String on `:message`, `nil` otherwise. This is the Ruby framework convention, not `(connection, data, event)`. The PHP port fires `($connection, $data, $event)`, so argument order differs across languages.
 
