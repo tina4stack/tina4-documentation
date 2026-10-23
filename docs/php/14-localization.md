@@ -90,7 +90,7 @@ Store translations as JSON files. One file per locale. Place them in `src/locale
 use Tina4\I18n;
 
 // Load locale files
-$i18n = new I18n('src/locales');
+$i18n = new I18n('en', 'src/locales');
 
 // Set the active locale
 $i18n->setLocale('de');
@@ -118,7 +118,7 @@ When a key exists in `en.json` but not in the active locale file, `I18n` falls b
 <?php
 use Tina4\I18n;
 
-$i18n = new I18n('src/locales', defaultLocale: 'en');
+$i18n = new I18n('en', 'src/locales');
 $i18n->setLocale('pt');
 
 // 'orders.count' missing from pt.json -- falls back to en.json
@@ -143,7 +143,7 @@ Detect the locale from the `Accept-Language` header, a query parameter, or the u
 use Tina4\Router;
 use Tina4\I18n;
 
-$i18n = new I18n('src/locales', defaultLocale: 'en');
+$i18n = new I18n('en', 'src/locales');
 
 function resolveLocale($request, I18n $i18n): string {
     // 1. Query parameter: ?lang=de
@@ -223,7 +223,7 @@ Placeholders use `{key}` syntax. Pass values as an associative array.
 <?php
 use Tina4\I18n;
 
-$i18n = new I18n('src/locales');
+$i18n = new I18n('en', 'src/locales');
 $i18n->setLocale('en');
 
 // Single value
@@ -252,7 +252,7 @@ No special escaping needed. Values are inserted as-is.
 <?php
 use Tina4\I18n;
 
-$i18n = new I18n('src/locales');
+$i18n = new I18n('en', 'src/locales');
 
 // List all loaded locales
 $locales = $i18n->getLocales();
@@ -288,7 +288,7 @@ Return validation errors in the user's language:
 use Tina4\Router;
 use Tina4\I18n;
 
-$i18n = new I18n('src/locales', defaultLocale: 'en');
+$i18n = new I18n('en', 'src/locales');
 
 Router::post('/api/users', function ($request, $response) use ($i18n) {
     $lang = $request->query['lang'] ?? 'en';
@@ -343,7 +343,7 @@ Load additional locale data programmatically (useful when translations come from
 <?php
 use Tina4\I18n;
 
-$i18n = new I18n('src/locales');
+$i18n = new I18n('en', 'src/locales');
 
 // Add or extend a locale at runtime - one key at a time
 $i18n->addTranslation('fr', 'welcome', 'Bienvenue, {name} !');
@@ -394,9 +394,9 @@ curl "http://localhost:7145/api/locales"
 
 **Problem:** The UI shows `errors.not_found` instead of a message.
 
-**Cause:** The key does not exist in the active locale, and `defaultLocale` is not set or that locale also lacks the key.
+**Cause:** The key does not exist in the active locale, and the default locale (the first constructor argument) also lacks it.
 
-**Fix:** Set `defaultLocale: 'en'` and ensure the English locale file has all keys. It is the source of truth.
+**Fix:** Pass `'en'` as the default locale (`new I18n('en', 'src/locales')`) and ensure the English locale file has all keys. It is the source of truth.
 
 ### 2. Locale files not loaded
 
