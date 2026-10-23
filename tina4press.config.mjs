@@ -57,8 +57,10 @@ const SITE_LINKS = [
     text: "Code Infinity",
     href: "https://codeinfinity.co.za",
     label: "Code Infinity, the team behind Tina4",
-    // A plain "code" glyph: angle brackets around a slash.
-    icon: `<path d="M8.7 17.3 3.4 12l5.3-5.3 1.4 1.4L6.2 12l3.9 3.9-1.4 1.4Zm6.6 0-1.4-1.4 3.9-3.9-3.9-3.9 1.4-1.4L20.6 12l-5.3 5.3Z"/>`,
+    // The infinity mark from the Code Infinity logo (the loop path of
+    // home/assets/c8e-logo-blue.svg), scaled onto the shared 24x24 viewBox:
+    // it spans the full width, centred vertically.
+    icon: `<g transform="matrix(0.15094 0 0 0.15094 -9.660 5.208)"><path d="M184.34 89.29C165.16 92.33 145 76.42 133.52 65.26C126.91 57.1 120.5 51.39 120.5 51.39C114.38 45.43 103.83 37.15 95.66 38.45C86.59 39.89 80.38 48.44 81.83 57.49C83.26 66.54 91.82 72.74 100.89 71.3C107.72 70.22 113.88 62.65 118.03 55.81C122.39 60.28 126.63 64.87 130.74 69.56C124.73 78.19 115.73 87.26 103.74 89.16C84.8 92.17 66.94 79.23 63.94 60.33C60.93 41.43 73.88 23.6 92.82 20.59C107.03 18.34 120.61 27.27 129.21 34.78C129.21 34.78 135.68 41.07 142.23 48.34C152.87 59.64 170.04 73.26 181.51 71.44C196.15 69.12 206.17 55.34 203.84 40.72C201.51 26.09 187.71 16.1 173.06 18.42C162.26 20.14 151.51 33.51 144.92 43.89C140.03 38.71 135.56 34.11 131.99 30.5C140.19 18.38 153.55 3.21 170.22 0.56C172.62 0.18 175 0 177.34 0C199.07 0 218.25 15.8 221.77 37.88C225.67 62.35 208.89 85.42 184.37 89.3H184.35L184.34 89.29Z"/></g>`,
   },
 ];
 
@@ -143,6 +145,16 @@ const BACKEND_GROUPS = [
 // in - Slack and X fall back to them - which keeps the per-page title in the
 // unfurl rather than flattening all pages to one. A served tina4press release
 // can later make og:title/og:url per-page; this is the zero-dependency version.
+// Inter and Inconsolata, self-hosted in docs/public/fonts and shared with the
+// home page (home/), so the whole site loads one set of font files. fonts.css
+// declares them; themeConfig.fonts below puts them first in tina4press's font
+// stacks. The two upright files are preloaded, as the home page does.
+const FONT_HEAD = [
+  ["link", { rel: "stylesheet", href: "/fonts/fonts.css" }],
+  ["link", { rel: "preload", href: "/fonts/inter-latin-wght-normal.woff2", as: "font", type: "font/woff2", crossorigin: "anonymous" }],
+  ["link", { rel: "preload", href: "/fonts/inconsolata-latin-wght-normal.woff2", as: "font", type: "font/woff2", crossorigin: "anonymous" }],
+];
+
 const OG_IMAGE = "https://tina4.com/og-image.png";
 const OG_META = [
   ["meta", { property: "og:type", content: "website" }],
@@ -165,18 +177,25 @@ export default {
   outDir: "docs/.vitepress/dist",
   // headHtml() reads config.head (VitePress format: [tag, attrs, innerHTML]).
   // Top level, NOT themeConfig - it is not a theme option.
-  head: [["style", { id: "tp-site-links" }, SITE_LINK_CSS], ...OG_META],
+  head: [["style", { id: "tp-site-links" }, SITE_LINK_CSS], ...FONT_HEAD, ...OG_META],
   themeConfig: {
     analytics: "G-FZRRSBE9M0",
+    // Inter and Inconsolata only (DESIGN.md s0), from FONT_HEAD above.
+    fonts: {
+      body: '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+      mono: '"Inconsolata", ui-monospace, Menlo, Consolas, monospace',
+    },
     // All theme colors as constants — tweak these to retheme the whole site.
     colors: {
       light: { brand: "#2f5fe0", brand2: "#4888ff" },
+      // The cool slate of the home page (DESIGN.md s4), so the shared theme
+      // toggle does not jump between two darks.
       dark: {
         brand: "#8db4ff", brand2: "#6b9bff",
-        bg: "#17130f", bgSoft: "#201a15", bgMute: "#2a221b",
-        border: "#352b22", border2: "#45392e",
-        fg: "#ece4da", fg2: "#b4a99a", fg3: "#8a7d6d",
-        codeBg: "#140f0b", sel: "#3a2f22",
+        bg: "#262335", bgSoft: "#2f2c3f", bgMute: "#38344a",
+        border: "#3b3650", border2: "#4a4560",
+        fg: "#efecf6", fg2: "#b9b3cb", fg3: "#9a94b2",
+        codeBg: "#1e1b2b", sel: "#3d4470",
       },
     },
     logo: "/logo.svg",
@@ -195,6 +214,15 @@ export default {
     sectionLabels: { js: "tina4-js", python: "Python", nodejs: "Node.js", php: "PHP", ruby: "Ruby", general: "Understanding Tina4", v2: "v2 Docs" },
     // Built-in RAG chat ("Ask Tina4") — floating widget, hits the hosted RAG.
     chat: { api: "https://rag.tina4.com", label: "Ask Tina4", model: "Powered by Tina4", placeholder: "How do I define a route?" },
+    // The home page (home/, scripts/build-home.mjs) reads chat.api too, and
+    // reuses these strings for its search. tina4press's defaults carry an em
+    // dash and the ellipsis character; the docs ban both.
+    messages: {
+      chatError: "Sorry, the assistant is unreachable right now.",
+      chatPlaceholder: "Ask a question...",
+      searchPlaceholder: "Search the docs...",
+      searchEmpty: "Type to search the docs...",
+    },
     // EVERY numbered section declares its groups by name below. There is no
     // numeric-range fallback any more: a section without an entry here gets a
     // flat, complete list rather than pages silently sorted into groups that

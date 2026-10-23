@@ -1,0 +1,9 @@
+/* Tina4's fonts, self-hosted for the whole of tina4.com: the home page (home/)
+   and every docs page (tina4press, through head and themeConfig.fonts in
+   tina4press.config.mjs) load this one file, so a visitor downloads the fonts
+   once. Inter for text, Inconsolata for code (DESIGN.md s0, s5); both SIL Open
+   Font License 1.1, licences beside the files. Inconsolata runs small next to
+   Inter, so it is sized up 10%. */
+@font-face{font-family:"Inter";font-style:normal;font-weight:100 900;font-display:swap;src:url("/fonts/inter-latin-wght-normal.woff2") format("woff2")}
+@font-face{font-family:"Inter";font-style:italic;font-weight:100 900;font-display:swap;src:url("/fonts/inter-latin-wght-italic.woff2") format("woff2")}
+@font-face{font-family:"Inconsolata";font-style:normal;font-weight:200 900;font-display:swap;size-adjust:110%;src:url("/fonts/inconsolata-latin-wght-normal.woff2") format("woff2")}

@@ -9,3 +9,11 @@ Source code for each release is available from its corresponding
 tina4stack repository and release tag at https://github.com/tina4stack.
 Previously published releases retain their original licences.
 Third-party components retain their own licences and notices.
+
+tina4.com (home/ and docs/public/) bundles these third-party works, each with
+its licence text or note beside it:
+
+- Inter and Inconsolata fonts, SIL Open Font License 1.1
+  (docs/public/fonts/Inter-OFL.txt, docs/public/fonts/Inconsolata-OFL.txt)
+- Lucide icons, ISC licence (home/assets/icons/LUCIDE-LICENSE.txt)
+- Simple Icons language marks, CC0-1.0 (home/assets/lang/README.md)

@@ -8,9 +8,11 @@
     "audit:features": "python3 scripts/audit-feature-catalog.py",
     "docs:dev": "tina4press dev .",
     "docs:skill-versions": "python3 scripts/gen-skills-version-endpoints.py",
-    "docs:build": "bash scripts/gen-llms-full.sh && python3 scripts/gen-skills-version-endpoints.py && tina4press build .",
+    "docs:build": "bash scripts/gen-llms-full.sh && python3 scripts/gen-skills-version-endpoints.py && tina4press build . && node scripts/build-home.mjs",
+    "docs:home": "node scripts/build-home.mjs",
     "docs:llms-full": "bash scripts/gen-llms-full.sh",
-    "docs:preview": "npx --yes serve docs/.vitepress/dist"
+    "docs:preview": "npx --yes serve docs/.vitepress/dist",
+    "docs:preview:live": "node scripts/preview-site.mjs"
   },
   "packageManager": "pnpm@10.24.0+sha512.01ff8ae71b4419903b65c60fb2dc9d34cf8bb6e06d03bde112ef38f7a34d6904c424ba66bea5cdcf12890230bf39f9580473140ed9c946fef328b6e5238a345a"
 }
