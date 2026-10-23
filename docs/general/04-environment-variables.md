@@ -132,7 +132,7 @@ TINA4_DEBUG=yes
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_SECRET` | `tina4-default-secret` | Secret key for JWT signing (HMAC-SHA256). Long, random, never committed to git. **Change this in production.** |
+| `TINA4_SECRET` | (none) | Secret key for JWT and form-token signing (HMAC). At least 32 bytes; generate one with `openssl rand -hex 32` and never commit it. There is no built-in default: a blank or shorter key is refused for signing and verifying, and the server will not start outside dev without a valid one. In dev a blank secret is generated into the gitignored `.env.local`. ADR-0079. |
 | `TINA4_API_KEY` | _(none)_ | Static API key for bearer token authentication. When set, requests with `Authorization: Bearer {TINA4_API_KEY}` are accepted. |
 | `TINA4_TOKEN_LIMIT` | `60` | Token lifetime in minutes. Tokens issued by `get_token()` / `getToken()` expire after this many minutes. |
 
