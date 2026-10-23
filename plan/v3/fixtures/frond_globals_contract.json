@@ -1,0 +1,60 @@
+{
+  "_comment": [
+    "Frond globals contract, governed by ADR-0085 (aligns Python/PHP/Ruby to Node under ADR-0004).",
+    "A bare zero-argument callable global is invoked and its RETURN VALUE is used for both",
+    "{{ g }} output and {% if g %} conditions. Explicit g() still works and never double-calls.",
+    "A non-callable global is unchanged, a global that returns a callable is called once, and an",
+    "unregistered nope() is falsy rather than an error.",
+    "The same seven pure in-memory cases run in all four frameworks without mocks: the closures are",
+    "real and each framework renders real template source. Node is the reference; its suite is a guard."
+  ],
+  "version": 1,
+  "decided": "2026-09-24",
+  "feature": "Frond globals auto-call parity (tina4-documentation#90)",
+  "invariants": [
+    {
+      "id": "frond-global-zero-arg-callable-is-invoked",
+      "adr": "ADR-0085",
+      "rule": "A bare reference to a zero-argument callable global is invoked; its return value is used for {{ g }} output and {% if g %} truthiness.",
+      "why": "Node auto-calls a bare zero-argument callable global (ADR-0004); Python/PHP/Ruby stored the callable, so {% if admin_only %} was always truthy (#90).",
+      "suites": {"python": "tests/test_frond_globals_contract.py", "php": "tests/FrondGlobalsContractTest.php", "ruby": "spec/frond_globals_contract_spec.rb", "nodejs": "test/frondGlobalsContract.test.ts"},
+      "cases": [
+        "zero arg global closure returning false is falsy in if",
+        "zero arg global closure returning true is truthy in if",
+        "zero arg global closure prints its return value"
+      ]
+    },
+    {
+      "id": "frond-global-explicit-call-still-works",
+      "adr": "ADR-0085",
+      "rule": "g() keeps working and calls the global exactly once through the function-call path.",
+      "why": "Auto-calling a bare reference must not break the explicit call form, and must not combine with it into a double call.",
+      "suites": {"python": "tests/test_frond_globals_contract.py", "php": "tests/FrondGlobalsContractTest.php", "ruby": "spec/frond_globals_contract_spec.rb", "nodejs": "test/frondGlobalsContract.test.ts"},
+      "cases": ["explicit call syntax still works"]
+    },
+    {
+      "id": "frond-global-non-callable-unchanged",
+      "adr": "ADR-0085",
+      "rule": "A non-callable global (string/number/bool) is used as-is; only callables are affected.",
+      "why": "The change is scoped to callable globals and must not touch plain values.",
+      "suites": {"python": "tests/test_frond_globals_contract.py", "php": "tests/FrondGlobalsContractTest.php", "ruby": "spec/frond_globals_contract_spec.rb", "nodejs": "test/frondGlobalsContract.test.ts"},
+      "cases": ["non callable global is unchanged"]
+    },
+    {
+      "id": "frond-global-returning-a-callable-not-double-called",
+      "adr": "ADR-0085",
+      "rule": "A global that returns a callable is called once, yielding the inner callable; the inner callable is not then called.",
+      "why": "Calling once is the contract; a bare reference must not chain into a second call of the returned value.",
+      "suites": {"python": "tests/test_frond_globals_contract.py", "php": "tests/FrondGlobalsContractTest.php", "ruby": "spec/frond_globals_contract_spec.rb", "nodejs": "test/frondGlobalsContract.test.ts"},
+      "cases": ["global returning a callable is not double called"]
+    },
+    {
+      "id": "frond-unregistered-call-is-falsy",
+      "adr": "ADR-0085",
+      "rule": "An unregistered nope() resolves to a falsy/empty value rather than raising.",
+      "why": "Existing behaviour in all four; pinned so it stays consistent alongside the auto-call rule.",
+      "suites": {"python": "tests/test_frond_globals_contract.py", "php": "tests/FrondGlobalsContractTest.php", "ruby": "spec/frond_globals_contract_spec.rb", "nodejs": "test/frondGlobalsContract.test.ts"},
+      "cases": ["unregistered function call is falsy"]
+    }
+  ]
+}
