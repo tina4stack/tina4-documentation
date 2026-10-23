@@ -81,6 +81,14 @@ h1,h2,h3{text-wrap:balance;letter-spacing:-.02em;line-height:1.08}
 
 .wrap{max-width:var(--max);margin:0 auto;padding:0 var(--s6)}
 
+/* the robot rig's blend modes (tools/build-robot-rig.js turns its style attributes
+   into these classes, so the inlined SVG obeys the page's no-inline-style CSP) */
+.rb-blend-color-dodge{mix-blend-mode:color-dodge}
+.rb-blend-multiply{mix-blend-mode:multiply}
+.rb-blend-soft-light{mix-blend-mode:soft-light}
+/* the inline icon sprite: in the page, out of the layout */
+.icon-sprite{position:absolute;width:0;height:0;overflow:hidden}
+
 /* ---------- header ---------- */
 .site-header{
   position:sticky;top:0;z-index:50;

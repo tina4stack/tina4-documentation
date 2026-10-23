@@ -18,7 +18,11 @@
 //     POST /v1/ask to the real rag.tina4.com from the server, so the answers
 //     are the live service's own;
 //   - it leaves the Google Analytics tag out unless you pass --analytics, so a
-//     local test does not count as a real visit.
+//     local test does not count as a real visit;
+//   - it sends the live site's security headers (scripts/site-headers.mjs, the
+//     same ones build-home.mjs writes into .htaccess): the home page's CSP is
+//     enforced, the docs pages' is report-only. The browser console shows what
+//     the policy blocks or would block.
 //
 // Search needs nothing: its index is a file in the build.
 //
@@ -31,6 +35,7 @@ import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { dirname, extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { headersFor } from "./site-headers.mjs";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const config = (await import(pathToFileURL(join(REPO, "tina4press.config.mjs")).href)).default;
@@ -100,7 +105,7 @@ async function serveFile(req, res) {
   const type = TYPES[extname(file).toLowerCase()] || "application/octet-stream";
   let body = await readFile(file);
   if (type.startsWith("text/html")) body = adapt(body.toString("utf8"));
-  res.writeHead(200, { "Content-Type": type, "Cache-Control": "no-cache" });
+  res.writeHead(200, { ...headersFor(path, RAG), "Content-Type": type, "Cache-Control": "no-cache" });
   res.end(body);
 }
 

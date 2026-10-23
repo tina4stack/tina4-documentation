@@ -19,8 +19,11 @@
 //      docs pages' analytics tag (themeConfig.analytics) into its <head>;
 //   4. writes dist/index.html (replacing tina4press's home), copies the page's
 //      files to dist/assets/home/, and writes dist/releases/latest.json;
-//   5. fails the build if a link on the page points at nothing, or the page
-//      carries punctuation the docs ban (DESIGN.md s0, audit-truth.py).
+//   5. appends the site's security headers (scripts/site-headers.mjs) to the
+//      .htaccess tina4press wrote: a strict CSP on the home page;
+//   6. fails the build if a link on the page points at nothing, the page has an
+//      inline script or style its CSP would block, or it carries punctuation
+//      the docs ban (DESIGN.md s0, audit-truth.py).
 //
 // It runs after tina4press re-copies docs/public and rewrites .htaccess, so
 // neither can undo it. docs/index.md stays: tina4press still builds it for the
@@ -32,6 +35,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSy
 import { createHash } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { htaccessBlock } from "./site-headers.mjs";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const HOME = join(REPO, "home");
@@ -96,15 +100,20 @@ if (!navLinks.length) fail("tina4press's header nav has no links");
 
 // ---- 1b. analytics: the same tag as every docs page ----
 // tina4press writes the Google Analytics tag from themeConfig.analytics into
-// every page's <head>. Copy that exact tag, so the home page is measured the
-// same way and an ID change in the config reaches it too.
+// every page's <head>: the gtag.js loader plus a small inline setup script.
+// Read the measurement ID from that tag, so the home page is measured the same
+// way and an ID change in the config reaches it too, but load the setup from
+// home/gtag-init.js: the home page's CSP allows no inline script.
 {
-  const id = (config.themeConfig || {}).analytics;
-  const GTAG = /<script async src="https:\/\/www\.googletagmanager\.com\/gtag\/js\?id=[^"]+"><\/script><script>[\s\S]*?<\/script>/;
-  const tag = (pressHtml.match(GTAG) || [])[0];
-  if (id && !tag) fail("themeConfig.analytics is set but the docs pages carry no analytics tag: did tina4press change it?");
+  const configured = (config.themeConfig || {}).analytics;
+  const GTAG = /<script async src="https:\/\/www\.googletagmanager\.com\/gtag\/js\?id=([A-Za-z0-9-]+)"><\/script>/;
+  const id = (pressHtml.match(GTAG) || [])[1];
+  if (configured && !id) fail("themeConfig.analytics is set but the docs pages carry no analytics tag: did tina4press change it?");
   if (!/<!-- home:analytics -->/.test(page)) fail("home/index.html has no <!-- home:analytics --> marker");
-  page = page.replace("<!-- home:analytics -->", tag || "");
+  page = page.replace("<!-- home:analytics -->", id
+    ? `<script async src="https://www.googletagmanager.com/gtag/js?id=${id}"></script>\n` +
+      `<script src="/assets/home/gtag-init.js" data-ga="${id}"></script>`
+    : "");
 }
 
 // ---- 2. releases, from our own release notes ----
@@ -200,19 +209,35 @@ function copyTree(from, to) {
     else copyFileSync(source, target);
   }
 }
-// home.css and home.js keep fixed names, so stamp each link with a hash of the
-// file: a deploy that changes them is fetched fresh instead of from cache.
-for (const name of ["home.css", "home.js"]) {
+// The page's own CSS and scripts (home/*.css, home/*.js) keep fixed names, so
+// stamp each link with a hash of the file: a deploy that changes them is
+// fetched fresh instead of from cache. Each one must be loaded by the page.
+const OWN_FILES = readdirSync(HOME).filter((name) => /\.(css|js)$/.test(name));
+for (const name of OWN_FILES) {
   const hash = createHash("sha256").update(readFileSync(join(HOME, name))).digest("hex").slice(0, 10);
-  const pattern = new RegExp(`"/assets/home/${name.replace(".", "\\.")}(\\?v=[^"]*)?"`);
-  if (!pattern.test(page)) fail(`home/index.html does not load /assets/home/${name}`);
+  const pattern = new RegExp(`"/assets/home/${name.replace(/\./g, "\\.")}(\\?v=[^"]*)?"`);
+  if (!pattern.test(page)) {
+    if (name === "gtag-init.js" && !/gtag-init/.test(page)) continue;   // analytics is off
+    fail(`home/index.html does not load /assets/home/${name}`);
+  }
   page = page.replace(pattern, `"/assets/home/${name}?v=${hash}"`);
 }
 const ASSET_OUT = join(DIST, "assets", "home");
 copyTree(join(HOME, "assets"), ASSET_OUT);
-copyFileSync(join(HOME, "home.css"), join(ASSET_OUT, "home.css"));
-copyFileSync(join(HOME, "home.js"), join(ASSET_OUT, "home.js"));
+for (const name of OWN_FILES) copyFileSync(join(HOME, name), join(ASSET_OUT, name));
 writeFileSync(join(DIST, "index.html"), page);
+
+// Security headers for the whole site (scripts/site-headers.mjs), appended to
+// the .htaccess tina4press just wrote. tina4press rewrites that file on every
+// build, so the block is added fresh each time (and replaced on a re-run).
+{
+  const htaccess = join(DIST, ".htaccess");
+  if (!existsSync(htaccess)) fail(`no ${htaccess}: tina4press writes it on every build`);
+  const MARK = "\n# Security headers (scripts/site-headers.mjs";
+  const current = readFileSync(htaccess, "utf8");
+  const base = current.includes(MARK) ? current.slice(0, current.indexOf(MARK)) : current.replace(/\n*$/, "\n");
+  writeFileSync(htaccess, base + htaccessBlock(chat.api || "https://rag.tina4.com").replace(/^\n/, "\n"));
+}
 
 if (releases.length) {
   const list = releases.map((r) => ({ version: r.version, date: r.date, headline: headlinePlain(r.headline) }));
@@ -234,8 +259,20 @@ const assetRefs = [...readFileSync(join(HOME, "home.js"), "utf8").matchAll(/ASSE
   .map((m) => `/assets/home/${m[1]}`);
 const dead = [...new Set([...refs, ...assetRefs])].filter((url) => !resolvesToFile(url));
 if (dead.length) fail(`dead link(s) on the home page:\n  ${dead.join("\n  ")}`);
-for (const [name, text] of [["index.html", page], ["home.css", readFileSync(join(HOME, "home.css"), "utf8")],
-  ["home.js", readFileSync(join(HOME, "home.js"), "utf8")]]) {
+// No inline script, no inline style, no event-handler attribute: the page's
+// CSP (scripts/site-headers.mjs) would block them on tina4.com.
+{
+  const inlineScript = [...page.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)].find((m) => !/\ssrc=/.test(m[1]) && m[2].trim());
+  const inlineStyle = page.match(/<style\b/) || page.match(/<[a-zA-Z][^>]*\sstyle="/);
+  const handler = page.match(/<[a-zA-Z][^>]*\son[a-z]+="/);
+  for (const [what, hit] of [["an inline <script>", inlineScript], ["an inline style", inlineStyle], ["an event-handler attribute", handler]]) {
+    if (hit) fail(`home/index.html has ${what} (line ${page.slice(0, hit.index).split("\n").length}); the home page's CSP blocks it: move it to a file or a class`);
+  }
+  const svg = readFileSync(join(HOME, "assets", "tina4-robot.svg"), "utf8");
+  if (/\sstyle="/.test(svg)) fail("home/assets/tina4-robot.svg has a style attribute; the page inlines the rig, so the CSP would drop it (regenerate it with tools/build-robot-rig.js)");
+}
+for (const [name, text] of [["index.html", page],
+  ...OWN_FILES.map((file) => [file, readFileSync(join(HOME, file), "utf8")])]) {
   const hit = text.match(BANNED);
   if (hit) {
     const line = text.slice(0, hit.index).split("\n").length;
