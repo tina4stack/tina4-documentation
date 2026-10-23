@@ -31,6 +31,12 @@
 <!-- the theme before first paint (tina4press's data-theme / tp-theme), blocking so nothing flashes -->
 <script src="/assets/home/theme-init.js"></script>
 <script src="/assets/home/home.js" defer></script>
+<!-- the docs search, the same code as every docs page: tina4press's settings
+     (written by scripts/build-home.mjs from a docs page), tina4-js, client.js -->
+<script src="/assets/home/press-config.js" defer></script>
+<script src="/assets/tina4js.min.js" defer></script>
+<script src="/assets/client.js" defer></script>
+<link rel="stylesheet" href="/assets/home/search.css">
 <!-- analytics: scripts/build-home.mjs writes the docs pages' own Google Analytics
      tag here (themeConfig.analytics), loaded from files so there is no inline script -->
 <!-- home:analytics -->
@@ -68,9 +74,9 @@
       <a class="icon-btn" href="https://discord.gg/vEXqaNcZm" aria-label="Join the Tina4 community on Discord"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg></a>
       <!-- the infinity mark from the Code Infinity logo (assets/c8e-logo-blue.svg), framed square -->
       <a class="icon-btn" href="https://codeinfinity.co.za" aria-label="Code Infinity, the team behind Tina4"><svg viewBox="64 -34.5 159 159" aria-hidden="true"><path d="M184.34 89.29C165.16 92.33 145 76.42 133.52 65.26C126.91 57.1 120.5 51.39 120.5 51.39C114.38 45.43 103.83 37.15 95.66 38.45C86.59 39.89 80.38 48.44 81.83 57.49C83.26 66.54 91.82 72.74 100.89 71.3C107.72 70.22 113.88 62.65 118.03 55.81C122.39 60.28 126.63 64.87 130.74 69.56C124.73 78.19 115.73 87.26 103.74 89.16C84.8 92.17 66.94 79.23 63.94 60.33C60.93 41.43 73.88 23.6 92.82 20.59C107.03 18.34 120.61 27.27 129.21 34.78C129.21 34.78 135.68 41.07 142.23 48.34C152.87 59.64 170.04 73.26 181.51 71.44C196.15 69.12 206.17 55.34 203.84 40.72C201.51 26.09 187.71 16.1 173.06 18.42C162.26 20.14 151.51 33.51 144.92 43.89C140.03 38.71 135.56 34.11 131.99 30.5C140.19 18.38 153.55 3.21 170.22 0.56C172.62 0.18 175 0 177.34 0C199.07 0 218.25 15.8 221.77 37.88C225.67 62.35 208.89 85.42 184.37 89.3H184.35L184.34 89.29Z"/></svg></a>
-      <!-- docs search lives on the docs pages (tina4press opens it from its own
-           header or Ctrl/Cmd+K), so this takes you there -->
-      <a class="search-pill" href="/general/01-what-is-tina4/" aria-label="Search the docs"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg> <span class="search-hint">Search docs</span></a>
+      <!-- the docs search itself: tina4press's own client.js wires this button
+           (id tp-search-open) and Ctrl/Cmd+K to the modal at the end of the page -->
+      <button class="search-pill" id="tp-search-open" type="button" aria-label="Search the docs"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg> <span class="search-hint">Search</span> <kbd><svg class="i" aria-hidden="true"><use href="#i-command"/></svg>K</kbd></button>
       <button class="icon-btn theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
         <svg class="i moon" aria-hidden="true"><use href="#i-moon"/></svg>
         <svg class="i sun" aria-hidden="true"><use href="#i-sun"/></svg>
@@ -497,5 +503,8 @@ Router.<span class="cf">get</span>(<span class="cs">"/api/hello/{name}"</span>, 
     <form class="tp-chat-form"><input class="tp-chat-input" placeholder="How do I define a route?" autocomplete="off" aria-label="Your question"><button type="submit" aria-label="Ask"><svg class="i" aria-hidden="true"><use href="#i-arrow-up"/></svg></button></form>
   </div>
 </div>
+<!-- ============ SEARCH ============ -->
+<!-- tina4press's search modal, copied from a docs page by scripts/build-home.mjs -->
+<!-- home:search -->
 </body>
 </html>

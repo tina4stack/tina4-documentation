@@ -199,9 +199,15 @@ export default {
     sectionLabels: { js: "tina4-js", python: "Python", nodejs: "Node.js", php: "PHP", ruby: "Ruby", general: "Understanding Tina4", v2: "v2 Docs" },
     // Built-in RAG chat ("Ask Tina4") — floating widget, hits the hosted RAG.
     chat: { api: "https://rag.tina4.com", label: "Ask Tina4", model: "Powered by Tina4", placeholder: "How do I define a route?" },
-    // The home page (home/, scripts/build-home.mjs) reads chat.api too.
-    // tina4press's default chatError carries an em dash; the docs ban it.
-    messages: { chatError: "Sorry, the assistant is unreachable right now." },
+    // The home page (home/, scripts/build-home.mjs) reads chat.api too, and
+    // reuses these strings for its search. tina4press's defaults carry an em
+    // dash and the ellipsis character; the docs ban both.
+    messages: {
+      chatError: "Sorry, the assistant is unreachable right now.",
+      chatPlaceholder: "Ask a question...",
+      searchPlaceholder: "Search the docs...",
+      searchEmpty: "Type to search the docs...",
+    },
     // EVERY numbered section declares its groups by name below. There is no
     // numeric-range fallback any more: a section without an entry here gets a
     // flat, complete list rather than pages silently sorted into groups that

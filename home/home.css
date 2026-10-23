@@ -127,6 +127,11 @@ h1,h2,h3{text-wrap:balance;letter-spacing:-.02em;line-height:1.08}
   border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.6);border-radius:9px;
   padding:7px 10px;font-size:.85rem;cursor:pointer;transition:border-color var(--dur) var(--ease)}
 .search-pill:hover{border-color:rgba(255,255,255,.3);color:#fff}
+/* the shortcut key: a centred box with the command icon and the K, so it never
+   depends on a font having the command symbol */
+.search-pill kbd{display:inline-flex;align-items:center;gap:1px;height:18px;padding:0 5px;line-height:1;
+  font-family:var(--mono);font-size:.72rem;background:rgba(255,255,255,.1);border-radius:4px;color:rgba(255,255,255,.7)}
+.search-pill kbd .i{width:10px;height:10px;stroke-width:2.4}
 .theme-toggle .sun{display:none;fill:none}
 :root[data-theme="dark"] .theme-toggle .moon{display:none}
 :root[data-theme="dark"] .theme-toggle .sun{display:block}
@@ -142,12 +147,12 @@ h1,h2,h3{text-wrap:balance;letter-spacing:-.02em;line-height:1.08}
 .site-nav a,.search-pill{white-space:nowrap}
 @media(max-width:1180px){
   .site-nav{gap:var(--s3)}
-  .search-pill .search-hint{display:none}
+  .search-pill .search-hint,.search-pill kbd{display:none}
 }
 @media(max-width:960px){
   .site-nav{display:none}
   .nav-toggle{display:block}
-  .search-pill .search-hint{display:none}
+  .search-pill .search-hint,.search-pill kbd{display:none}
 }
 
 /* the phone and tablet menu: a panel under the header bar with the same links */
@@ -881,3 +886,20 @@ h1,h2,h3{text-wrap:balance;letter-spacing:-.02em;line-height:1.08}
 /* Ask Tina4 steps aside while the hero's own buttons are on screen (the page
    script sets this class), so it never covers them; it is back once you scroll */
 body.cta-visible .tp-chat:not(.open) .tp-chat-btn{opacity:0;pointer-events:none;transform:translateY(8px)}
+
+/* ---------- docs search ----------
+   The modal is tina4press's own (markup and rules copied from the docs build into
+   search.css by scripts/build-home.mjs). Its rules read tina4press's variables;
+   here they take the page's tokens, so it follows this page's light and dark */
+.tp-search-modal{
+  --tp-bg:var(--bg); --tp-bg-soft:var(--bg-soft); --tp-bg-mute:var(--bg-mute);
+  --tp-border:var(--border); --tp-border-2:var(--border-2);
+  --tp-fg:var(--ink); --tp-fg-2:var(--fg-2); --tp-fg-3:var(--fg-2);
+  --tp-brand:var(--brand-text); --tp-sel:rgba(47,95,224,.18); --tp-shadow:260 40% 14%;
+  --tp-font:inherit; --tp-mono:var(--mono);
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px;
+}
+:root[data-theme="dark"] .tp-search-modal{--tp-sel:#3d4470;--tp-shadow:260 60% 3%}
+.tp-search-modal kbd{font-family:var(--mono);font-size:.85em;padding:1px 6px;border-radius:5px;
+  border:1px solid var(--border-2);background:var(--bg-soft);color:var(--fg-2)}
+.tp-sr{color:inherit}

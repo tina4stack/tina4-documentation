@@ -116,6 +116,59 @@ if (!navLinks.length) fail("tina4press's header nav has no links");
     : "");
 }
 
+// ---- 1c. search: tina4press's own, so it works exactly as on the docs pages ----
+// The home page loads tina4press's client.js (and tina4-js, which it uses), so
+// Ctrl/Cmd+K, the modal, the index and the results are the docs' own code. From
+// a docs page this copies the three things client.js expects to find:
+//   - the search modal markup (into <!-- home:search -->);
+//   - its settings, window.__TP_BASE__ and __TP_I18N__ (the UI strings), as
+//     press-config.js: the docs set them in an inline script, which the home
+//     page's CSP forbids. __TP_CHAT__ stays out, or client.js would add its own
+//     chat widget next to the page's;
+//   - the modal's rules from tina4press's theme.css, as search.css (the whole
+//     theme.css would restyle the page). home.css maps their colour variables.
+let searchCss = "", pressConfig = "";
+{
+  const at = pressHtml.indexOf('<div class="tp-search-modal"');
+  if (at < 0) fail("the docs pages carry no tina4press search modal: did tina4press change it?");
+  let depth = 0, end = at;
+  for (const m of pressHtml.slice(at).matchAll(/<div\b|<\/div>/g)) {
+    depth += m[0] === "</div>" ? -1 : 1;
+    if (depth === 0) { end = at + m.index + m[0].length; break; }
+  }
+  if (end === at) fail("could not find the end of tina4press's search modal");
+  if (!/<!-- home:search -->/.test(page)) fail("home/index.html has no <!-- home:search --> marker");
+  page = page.replace("<!-- home:search -->", pressHtml.slice(at, end));
+  if (!/id="tp-search-open"/.test(page)) fail("home/index.html has no #tp-search-open button for client.js to wire");
+
+  const base = (pressHtml.match(/window\.__TP_BASE__=("[^"]*");/) || [])[1];
+  const i18n = (pressHtml.match(/window\.__TP_I18N__=(\{.*?\});/) || [])[1];
+  if (!base || !i18n) fail("the docs pages do not set window.__TP_BASE__ / __TP_I18N__: did tina4press change them?");
+  JSON.parse(i18n);   // fail loudly on a shape change rather than ship a broken script
+  pressConfig = "/* tina4press's settings for its client.js, copied from a docs page by\n" +
+    "   scripts/build-home.mjs (the docs set them inline; the home page's CSP forbids that) */\n" +
+    `window.__TP_BASE__=${base};\nwindow.__TP_I18N__=${i18n};\n`;
+
+  // Top-level rules of theme.css whose selectors belong to the modal (not the
+  // docs header's search button, not @media blocks).
+  const theme = readFileSync(join(DIST, "assets", "theme.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  const SEARCH = /tp-search-(modal|box|results|foot|empty)|#tp-search-input|\.tp-sr\b/;
+  const rules = [];
+  for (let i = 0, depth = 0, start = 0; i < theme.length; i++) {
+    if (theme[i] === "{") depth++;
+    else if (theme[i] === "}" && --depth === 0) {
+      const rule = theme.slice(start, i + 1).trim(); start = i + 1;
+      if (rule.startsWith("@")) continue;
+      const brace = rule.indexOf("{");
+      const selectors = rule.slice(0, brace).split(",").map((s) => s.trim()).filter((s) => SEARCH.test(s));
+      if (selectors.length) rules.push(selectors.join(", ") + " " + rule.slice(brace));
+    }
+  }
+  if (rules.length < 8) fail(`found only ${rules.length} search rules in tina4press's theme.css: did its markup change?`);
+  searchCss = "/* tina4press's search modal rules, copied from its theme.css by scripts/build-home.mjs */\n" +
+    rules.join("\n") + "\n";
+}
+
 // ---- 2. releases, from our own release notes ----
 const HEADING = /^## v(\d+\.\d+\.\d+) \((\d{4}-\d{2}-\d{2})\) - (.+?)\s*$/gm;
 function readNotes(lang) {
@@ -222,9 +275,18 @@ for (const name of OWN_FILES) {
   }
   page = page.replace(pattern, `"/assets/home/${name}?v=${hash}"`);
 }
+// ...and the two files this build generates for the search (step 1c).
+const GENERATED = { "press-config.js": pressConfig, "search.css": searchCss };
+for (const [name, body] of Object.entries(GENERATED)) {
+  const hash = createHash("sha256").update(body).digest("hex").slice(0, 10);
+  const pattern = new RegExp(`"/assets/home/${name.replace(/\./g, "\\.")}(\\?v=[^"]*)?"`);
+  if (!pattern.test(page)) fail(`home/index.html does not load /assets/home/${name}`);
+  page = page.replace(pattern, `"/assets/home/${name}?v=${hash}"`);
+}
 const ASSET_OUT = join(DIST, "assets", "home");
 copyTree(join(HOME, "assets"), ASSET_OUT);
 for (const name of OWN_FILES) copyFileSync(join(HOME, name), join(ASSET_OUT, name));
+for (const [name, body] of Object.entries(GENERATED)) writeFileSync(join(ASSET_OUT, name), body);
 writeFileSync(join(DIST, "index.html"), page);
 
 // Security headers for the whole site (scripts/site-headers.mjs), appended to
