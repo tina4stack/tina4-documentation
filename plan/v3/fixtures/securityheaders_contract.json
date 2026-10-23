@@ -147,6 +147,26 @@
         "every entry point attaches the security headers and csrf",
         "every entry point mounts the sso routes"
       ]
+    },
+    {
+      "id": "csp-nonce-respects-unsafe-inline",
+      "adr": "ADR-0100",
+      "rule": "A script-src/style-src directive that already carries 'unsafe-inline' - present in the policy, or derived from an 'unsafe-inline' default-src - gets NO per-response nonce; the app's explicit 'unsafe-inline' wins. The strict default policy is unchanged and is still nonced.",
+      "why": "A browser ignores 'unsafe-inline' in any directive that also lists a nonce (CSP Level 2+). Since 3.13.143 (ADR-0088) the framework appended its nonce unconditionally, including to an app's own TINA4_CSP, so an app that deliberately allowed inline through 'unsafe-inline' had it silently blocked (tina4-php#330).",
+      "suites": {
+        "python": "tests/test_csp_nonce_unsafe_inline_contract.py",
+        "php": "tests/CspNonceUnsafeInlineContractTest.php",
+        "ruby": "spec/csp_nonce_unsafe_inline_contract_spec.rb",
+        "nodejs": "test/cspNonceUnsafeInlineContract.test.ts"
+      },
+      "cases": [
+        "explicit unsafe-inline script-src keeps unsafe-inline and gets no nonce",
+        "explicit unsafe-inline style-src keeps unsafe-inline and gets no nonce",
+        "unsafe-inline default-src does not spawn a nonced directive",
+        "mixed unsafe-inline script but strict style nonces only style",
+        "strict default policy still gets the nonce",
+        "explicit non-unsafe-inline directive still gets the nonce"
+      ]
     }
   ]
 }
