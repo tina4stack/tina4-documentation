@@ -729,7 +729,7 @@ async def clear_cart(request, response):
 
 **Cause:** Browsers do not send cookies cross-origin by default. You need both CORS configuration and explicit `credentials: "include"` in fetch.
 
-**Fix:** Set `CORS_CREDENTIALS=true` in `.env` and use `fetch(url, { credentials: "include" })` in JavaScript. Also set `CORS_ORIGINS` to the specific frontend origin (not `*` -- wildcard does not work with credentials).
+**Fix:** Set `CORS_CREDENTIALS=true` in `.env` and use `fetch(url, { credentials: "include" })` in JavaScript. Also set `TINA4_CORS_ORIGINS` to the specific frontend origin (not `*` -- wildcard does not work with credentials).
 
 ### 4. File-based sessions on multi-server deployments
 

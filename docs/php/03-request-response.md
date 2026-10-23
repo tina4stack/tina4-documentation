@@ -391,10 +391,10 @@ Convention: `Title-Case` for custom headers. Prefix with `X-`.
 
 ### CORS Headers
 
-Tina4 handles CORS from `CORS_ORIGINS` in `.env`. The default `*` allows all origins. Lock it down for production:
+Tina4 handles CORS from `TINA4_CORS_ORIGINS` in `.env`, once `CorsMiddleware` is registered ([Chapter 10](10-middleware-security.md)). By default it is empty, which denies every cross-origin request. List the origins your front end is served from:
 
 ```bash
-CORS_ORIGINS=https://myapp.com,https://admin.myapp.com
+TINA4_CORS_ORIGINS=https://myapp.com,https://admin.myapp.com
 ```
 
 Manual CORS headers are rarely needed. They are available when you need them:
