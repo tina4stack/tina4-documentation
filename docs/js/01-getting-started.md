@@ -74,7 +74,7 @@ The primary way to scaffold is the Tina4 Rust CLI:
 tina4 init js my-app
 ```
 
-This scaffolds a complete project with TypeScript, Vite, routing, and a sample page.
+This scaffolds a complete project with TypeScript, esbuild, routing, and a sample page.
 
 > **The `tina4` Rust CLI is the unified installer across all Tina4 frameworks**
 > (Python, PHP, Ruby, Node.js, JS). For npm-only environments where the
@@ -109,9 +109,8 @@ Look at what the CLI created:
 ```
 my-app/
   index.html              # Entry point -- loads src/main.ts
-  package.json            # Dependencies: tina4js, vite, typescript
-  tsconfig.json           # TypeScript config
-  vite.config.ts          # Vite dev server config
+  package.json            # Dependencies: tina4js; devDeps esbuild, typescript
+  tsconfig.json           # TypeScript config (the @/ alias lives here)
   src/
     main.ts               # App entry -- imports routes, starts router
     routes/
@@ -148,7 +147,7 @@ import { homePage } from '@/pages/home';
 import { user } from '@/store';
 ```
 
-It is configured in two places, and **both must agree**. TypeScript uses `tsconfig.json` for editor go-to-definition and type-checking; Vite uses `vite.config.ts` for the actual build:
+It lives in `tsconfig.json`, which TypeScript uses for editor go-to-definition and type-checking. The `tina4js` build (esbuild) reads the same alias automatically, so there is no bundler config to keep in sync:
 
 ```jsonc
 // tsconfig.json
@@ -160,14 +159,8 @@ It is configured in two places, and **both must agree**. TypeScript uses `tsconf
 }
 ```
 
-```typescript
-// vite.config.ts
-import { resolve } from 'path';
-
-export default defineConfig({
-  resolve: {
-    alias: { '@': resolve(__dirname, 'src') },
-  },
+```ignore
+(nothing else to configure - `tina4js dev` / `tina4js build` map `@` -> src/ for you)
 });
 ```
 
@@ -333,13 +326,9 @@ Development is done. Time to ship:
 npm run build
 ```
 
-Vite bundles everything into `dist/`. The tina4-js runtime adds under 6KB to your bundle. Your entire app -- framework, routes, components, everything -- will likely be smaller than React's runtime alone.
+The `tina4js` CLI bundles everything into `dist/` with esbuild. The tina4-js runtime adds under 6KB to your bundle. Your entire app -- framework, routes, components, everything -- will likely be smaller than React's runtime alone.
 
-To preview the production build:
-
-```bash
-npm run preview
-```
+The output in `dist/main.js` is a plain ES module - serve the folder with any static server, or run `npm run build:php` / `npm run build:python` to build straight into a tina4-php/python backend.
 
 ---
 
@@ -353,7 +342,7 @@ Five minutes. One command to scaffold. One command to install. One command to ru
 4. Event handling with `@click`
 5. A web component with `Tina4Element`
 6. Client-side routing with `route()` and `router.start()`
-7. A production build with Vite
+7. A production build with esbuild
 
 The rest of this book goes deep on each of these. But you already have a working app. You already have a production build. Everything from here is precision and power.
 

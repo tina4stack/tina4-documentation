@@ -59,17 +59,11 @@ api.configure({
 });
 ```
 
-During development with Vite, proxy API calls to your backend:
+In development, serve the app from the backend with the integrated build (`tina4js build --target php|python`, one origin, no CORS), or run a separate `tina4js dev` server and enable CORS on the backend while pointing `baseUrl` at it:
 
 ```typescript
-// vite.config.ts
-export default defineConfig({
-  server: {
-    proxy: {
-      '/api': 'http://localhost:7145',
-    },
-  },
-});
+// separate dev server: talk to the backend cross-origin (backend CORS allows it)
+api.configure({ baseUrl: 'http://localhost:7145/api' });
 ```
 
 ---
