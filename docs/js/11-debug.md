@@ -16,15 +16,7 @@ import 'tina4js/debug';
 
 That is the entire setup. One import. The overlay is active.
 
-For production builds, conditionally import it:
-
-```typescript
-if (import.meta.env.DEV) {
-  import('tina4js/debug');
-}
-```
-
-Vite tree-shakes the debug module away in production. Zero bytes in your final bundle.
+The build runs on esbuild, which does not define Vite's `import.meta.env.DEV`. Enable the overlay with a plain `import 'tina4js/debug'` while you develop; to keep it out of a production bundle, omit that one import. Only what you import ships, so without the import it is zero bytes in your final bundle.
 
 The dynamic import resolves after your app's modules have already run. That is fine -- signals created before the overlay loads, including module-level store signals, are buffered and show up the moment the overlay attaches. Import order does not matter.
 
@@ -154,16 +146,14 @@ const isLoading = signal(false, 'is-loading');
 
 When you open the debug panel and see 15 signals, labels are the difference between understanding your app state in seconds and spending minutes cross-referencing source files to figure out which `Signal<string>` is which.
 
-### Import Conditionally
+### Keep It Out of Production
 
 ```typescript
-// src/main.ts
-if (import.meta.env.DEV) {
-  import('tina4js/debug');
-}
+// src/main.ts - development
+import 'tina4js/debug';
 ```
 
-Never ship the debug overlay to production. It adds weight and exposes internal state to anyone who opens DevTools.
+Never ship the debug overlay to production: it adds weight and exposes internal state to anyone who opens DevTools. esbuild has no `import.meta.env.DEV` to strip it automatically, so remove the `import 'tina4js/debug'` line (or keep a separate production entry without it) before `tina4js build`.
 
 ### Use During Development, Not Just Debugging
 
@@ -176,7 +166,7 @@ Do not wait for a bug to open the debug overlay. Keep it open while you develop.
 | What | How |
 |---|---|
 | Enable | `import 'tina4js/debug'` |
-| Conditional | `if (import.meta.env.DEV) import('tina4js/debug')` |
+| Dev only | `import 'tina4js/debug'` (omit the line for production builds) |
 | Toggle | Ctrl+Shift+D |
 | Signals panel | Shows label, value, subscribers, update count |
 | Components panel | Shows mounted Tina4Element instances |

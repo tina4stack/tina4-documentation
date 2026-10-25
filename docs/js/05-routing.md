@@ -190,7 +190,7 @@ Two options:
 
 **Hash mode** is the fallback for static hosts that cannot rewrite unknown paths. URLs carry a `#` prefix, but application code still passes bare paths such as `/users/42` to links and `navigate()`. Never add the hash yourself.
 
-Vite dev server handles this automatically. For production, configure your web server:
+The `tina4js dev` server handles this automatically. For production, configure your web server:
 
 ```nginx
 # Nginx
@@ -488,49 +488,33 @@ import './checkout';
 import './admin';
 ```
 
-Forget a line and the route silently does not exist. Vite expands a wildcard for you instead. `import.meta.glob` takes a glob pattern and turns it into one import per matching file at build time:
+Forget a line and the route silently does not exist - so the barrel is the one
+place you keep current as you add features. (Vite's `import.meta.glob` can expand
+a wildcard into one import per file, but tina4-js builds on esbuild, which has no
+`import.meta.glob`; a hand-written barrel is explicit, ordered, and portable.)
+
+`route()` registers on import: calling it appends to the router's table as the
+module body runs, so importing the file *is* registering its routes. There is no
+registry to populate and no return value to collect. Add `src/routes/reports.ts`,
+add one `import './reports'` to the barrel, reload, and its routes are live.
+
+### Keep the catch-all last
+
+Section 4 said to register `route('*')` last, because the router walks its table in
+registration order and takes the first pattern that matches. Keep the catch-all
+OUT of the barrel and register it in `src/main.ts`, after the barrel, where the
+order is yours to control:
 
 ```typescript
 // src/main.ts
-import { router } from 'tina4js';
-
-// Every file under src/routes/ is imported, so every route registers.
-import.meta.glob('./routes/*.ts', { eager: true });
-
-router.start({ target: '#root', mode: 'history' });
-```
-
-This works because `route()` registers on import. Calling it appends to the router's table as the module body runs, so importing the file *is* registering its routes. There is no registry to populate and no return value to collect. Drop in `src/routes/reports.ts`, reload, and its routes are live.
-
-Use `**` to walk subdirectories: `./routes/**/*.ts` also picks up `routes/admin/users.ts`.
-
-**`{ eager: true }` is required.** Without it the glob gives you an object of loader functions and no module body has run, so nothing is registered and every path falls through:
-
-```typescript
-import.meta.glob('./routes/*.ts');                  // WRONG -- loaders, never called
-import.meta.glob('./routes/*.ts', { eager: true }); // Correct -- modules executed
-```
-
-### Keep the catch-all out of the glob
-
-Section 4 said to register `route('*')` last, because the router walks its table in registration order and takes the first pattern that matches. A glob does not respect your intent about order: it imports the files it finds, and a catch-all sitting in the globbed folder can register before the real routes and swallow all of them. Every page renders your 404.
-
-Register it explicitly, after the glob, where the order is yours to control:
-
-```typescript
-// src/main.ts
+import 'tina4js/debug';
 import { route, router, html } from 'tina4js';
-
-import.meta.glob('./routes/*.ts', { eager: true });   // no 404 file in here
+import './routes/index';   // the barrel registers every route
 
 route('*', () => html`<h1>404</h1><a href="/">Go home</a>`);
 
 router.start({ target: '#root', mode: 'history' });
 ```
-
-Renaming the file so it sorts last works too, and breaks the day someone renames it back. Keep the catch-all out of the folder.
-
-One constraint comes from the bundler rather than tina4-js: **the pattern must be a literal string.** Vite expands it while building, so it cannot be assembled from a variable at runtime.
 
 Components register the same way. See [Components](04-components.md), Section 12.
 
@@ -550,4 +534,4 @@ Components register the same way. See [Components](04-components.md), Section 12
 | Listen for changes | `router.on('change', ({ path, params, pattern, durationMs }) => ...)` |
 | Async routes | Handler returns a `Promise` |
 | Link interception | Automatic for same-origin `<a href>` |
-| Load every route file | `import.meta.glob('./routes/*.ts', { eager: true })` |
+| Load every route file | one `import './feature'` in `src/routes/index.ts` (the barrel) |

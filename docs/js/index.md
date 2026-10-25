@@ -196,7 +196,7 @@ clearPersistedKeys(['theme']);                               // remove on logout
 
 ```ts
 // Enable the dev overlay (Ctrl+Shift+D to toggle). Dev only - tree-shaken from production.
-if (import.meta.env.DEV) import('tina4js/debug');
+import 'tina4js/debug';  // dev only - omit for production builds
 ```
 
 A side-effect import that mounts an overlay tracking live signals, mounted components, route changes, and API calls. Never ship it to production. [More details](11-debug.md).
@@ -235,7 +235,7 @@ Same auto-routing: `src/templates/pages/*.twig` becomes the page tree under `/`.
 | + WebSocket + SSE                              | 5.32 KB     | 4.73 KB     |
 | **Everything** (+ Storage + PWA, **no Debug**) | **7.52 KB** | **6.68 KB** |
 
-Marginal cost per feature is small (gzip): Router **+0.8 KB**, API **+0.9 KB**, WebSocket + SSE **+1.3 KB**. **Debug is a separate dev-only entry** (`import 'tina4js/debug'`, \~5 KB gzip): guard it behind `import.meta.env.DEV` so your production bundler drops it entirely.
+Marginal cost per feature is small (gzip): Router **+0.8 KB**, API **+0.9 KB**, WebSocket + SSE **+1.3 KB**. **Debug is a separate dev-only entry** (`import 'tina4js/debug'`, \~5 KB gzip): import it only while developing and omit the line for production builds (esbuild ships only what you import).
 
 ```ts
 // Import from sub-paths to help the bundler tree-shake:

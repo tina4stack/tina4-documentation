@@ -97,10 +97,8 @@ import './components/data-table';
 import './components/stat-card';
 import './components/notification-bell';
 
-// Debug overlay in dev only
-if (import.meta.env.DEV) {
-  import('tina4js/debug');
-}
+// Debug overlay (dev); remove this import for a production build
+import 'tina4js/debug';
 
 // API configuration
 api.configure({

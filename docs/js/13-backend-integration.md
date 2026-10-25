@@ -43,26 +43,12 @@ cd my-frontend
 
 > In npm-only environments where the `tina4` Rust CLI isn't available, the fallback is `npx tina4js create my-frontend`.
 
-Configure the Vite proxy to forward API calls:
-
-```typescript
-// vite.config.ts
-import { defineConfig } from 'vite';
-
-export default defineConfig({
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': 'http://localhost:7145',
-    },
-  },
-});
-```
-
-Start the frontend through the Tina4 client:
+tina4-js builds on esbuild, whose dev server does not proxy. The simplest integration is the **integrated build**: `tina4js build --target php` (or `--target python`) bundles the frontend straight into the backend's `src/public/js/` and generates `index.twig`, so the backend serves both the app and the API from one origin - no proxy, no CORS.
 
 ```bash
-tina4 serve
+tina4 serve            # backend + built frontend, one origin
+# or, during frontend development:
+npm run dev            # tina4js dev (esbuild) on http://localhost:3000
 ```
 
 Configure the API client:
@@ -80,7 +66,7 @@ api.configure({
 router.start({ target: '#root', mode: 'history' });
 ```
 
-Now `api.get('/users')` hits `http://localhost:7145/api/users` during development. The Vite proxy handles the forwarding. The browser sees a same-origin request. No CORS headers needed.
+With the integrated build (`tina4js build --target php`) the backend serves the app, so `api.get('/users')` is a same-origin request and no CORS headers are needed. If you instead run a SEPARATE frontend dev server (`npm run dev`), point `baseUrl` at the backend (`http://localhost:7145/api`) and enable CORS there - every Tina4 backend ships a CORS middleware.
 
 ### tina4-php Routes
 
@@ -136,7 +122,7 @@ tina4 serve
 # Running on http://localhost:7146
 ```
 
-The API configuration is identical to the PHP setup. Change the Vite proxy target to `http://localhost:7146` for the Python backend.
+The API configuration is identical to the PHP setup. For the Python backend, use `tina4js build --target python` (same origin), or point `baseUrl` at `http://localhost:7146/api` and enable CORS there for a separate dev server.
 
 ### tina4-python Routes
 
@@ -267,36 +253,13 @@ When your tina4-js app is served by a tina4-php or tina4-python backend (not a s
 ### Build
 
 ```bash
+# bundle straight into the backend (recommended):
+npm run build:php        # or: npm run build:python
+# or a standalone bundle in dist/main.js:
 npm run build
 ```
 
-This creates a `dist/` folder with your bundled JavaScript and CSS.
-
-### Deploy to Backend
-
-Copy the build output to the backend's public directory:
-
-```bash
-# For tina4-php
-cp -r dist/* ../my-backend/src/public/js/
-
-# For tina4-python
-cp -r dist/* ../my-backend/src/public/js/
-```
-
-Or configure Vite to output to the backend directory:
-
-```typescript
-// vite.config.ts
-import { defineConfig } from 'vite';
-
-export default defineConfig({
-  build: {
-    outDir: '../my-backend/src/public/js',
-    emptyOutDir: true,
-  },
-});
-```
+`tina4js build --target php|python` writes the bundle to `src/public/js/` and generates `src/templates/index.twig` that loads it - no manual copy, no bundler config to point at the backend. The plain `npm run build` emits `dist/main.js` for a standalone static deploy.
 
 ### The CLI Build Command
 
@@ -461,12 +424,11 @@ my-project/
   frontend/      # tina4-js project
     src/
     package.json
-    vite.config.ts
   backend/       # tina4-php or tina4-python
     src/
 ```
 
-The frontend runs on `localhost:5173` with Vite. The backend runs on `localhost:7145`. Vite proxies API calls. Each team works in its own directory, its own repository, its own deployment pipeline.
+The frontend dev server runs on `localhost:3000` (esbuild). The backend runs on `localhost:7145`. In dev the backend's CORS middleware allows the cross-origin API calls; for production the frontend builds into the backend (one origin). Each team works in its own directory, its own repository, its own deployment pipeline.
 
 ### Embedded Frontend
 
@@ -483,10 +445,9 @@ my-project/
   frontend/        # tina4-js source
     src/
     package.json
-    vite.config.ts  # builds to ../src/public/js/
 ```
 
-One repository. One deployment. The frontend builds into the backend's public directory. The backend serves everything. For a team of one or two developers, this is the fastest path from code to production.
+One repository. One deployment. `tina4js build --target php|python` builds the frontend into the backend's public directory (`src/public/js/`). The backend serves everything. For a team of one or two developers, this is the fastest path from code to production.
 
 ---
 
@@ -494,7 +455,7 @@ One repository. One deployment. The frontend builds into the backend's public di
 
 | What | How |
 |---|---|
-| Proxy API in dev | Vite `proxy: { '/api': 'http://localhost:7145' }` |
+| Dev API access | integrated build (one origin) or CORS on the backend |
 | Configure API | `api.configure({ baseUrl: '/api', auth: true })` |
 | Auth token | Stored in localStorage, auto-sent as Bearer |
 | CSRF token | Auto-injected as `formToken` in request bodies |

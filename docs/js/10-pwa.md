@@ -285,7 +285,7 @@ When a user visits this app on a mobile browser, they see an "Add to Home Screen
 
 **Icons:** Provide at least one 512x512 PNG icon. Some browsers refuse to show the install prompt without it.
 
-**HTTPS required:** Service workers only work over HTTPS (or localhost for development). Vite's dev server handles this for you.
+**HTTPS required:** Service workers only work over HTTPS (or localhost for development). The `tina4js dev` server serves over localhost, which counts.
 
 **Testing:** In Chrome DevTools, use Application > Service Workers to see the registered service worker, and Application > Cache Storage to inspect cached assets. Use the Network panel's "Offline" checkbox to test offline behavior.
 
