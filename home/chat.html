@@ -1,0 +1,11 @@
+<!-- Ask Tina4, the site's chat (home/chat.js, home/chat.css). The home page
+     gets it from scripts/build-home.mjs, every docs page from the contentBottom
+     slot in tina4press.config.mjs (tina4press's own chat widget is off). Both
+     write the RAG endpoint (CHAT in tina4press.config.mjs) into data-api. -->
+<div class="t4-chat" data-api="https://rag.tina4.com" data-ask-path="/v1/ask">
+  <button class="t4-chat-btn" aria-label="Ask Tina4" aria-expanded="false" aria-controls="t4-chat-panel"><svg class="tina-mark" aria-hidden="true"><use href="#i-tina"/></svg><span class="t4-chat-label">Ask Tina4</span></button>
+  <div class="t4-chat-panel" id="t4-chat-panel" role="dialog" aria-label="Ask Tina4" hidden>
+    <div class="t4-chat-head"><span class="t4-chat-avatar"><svg class="tina-mark" aria-hidden="true"><use href="#i-tina"/></svg></span><strong>Ask Tina4</strong><span class="t4-chat-model">Powered by Tina4</span><span class="t4-chat-tools"><button class="t4-chat-tool t4-chat-expand" type="button" aria-label="Wider panel" aria-pressed="false"><svg class="i i-grow" aria-hidden="true"><use href="#i-maximize-2"/></svg><svg class="i i-shrink" aria-hidden="true"><use href="#i-minimize-2"/></svg></button><button class="t4-chat-tool t4-chat-close" type="button" aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></span></div>
+    <div class="t4-chat-log" aria-live="polite"></div>
+    <form class="t4-chat-form"><input class="t4-chat-input" placeholder="How do I define a route?" autocomplete="off" aria-label="Your question"><button type="submit" aria-label="Ask"><svg class="i" aria-hidden="true"><use href="#i-arrow-up"/></svg></button></form>
+  </div></div>

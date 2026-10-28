@@ -1,0 +1,96 @@
+/*
+ * Copyright (c) 2026 Code Infinity
+ * SPDX-License-Identifier: MPL-2.0
+ *
+ * docs-header.css - the docs header, matched to the home page's (home/home.css).
+ * Linked after tina4press's theme.css (themeConfig.customCss in
+ * tina4press.config.mjs), so these rules win by order.
+ *
+ * tina4press keeps its full nav until 780px, but the nav no longer fits on one
+ * line at 1200px and below: links wrap onto two or three lines and the header
+ * icons stack. The home page moves its nav into the menu at 1200px, so the docs
+ * do the same here, and nothing in the header changes between the two sides.
+ * tina4press styles its menu panel only below 780px; the same panel rules are
+ * applied up to 1200px. Above 780px the sidebar is still on the page, so the
+ * panel shows only the nav, not a second copy of the sidebar.
+ */
+.tp-nav-link { white-space: nowrap; }
+.tp-brand { flex-shrink: 0; }
+
+@media (max-width: 1200px) {
+  .tp-nav { display: none; }
+  .tp-menu-toggle { display: grid; }
+  .tp-search-hint, .tp-search-btn kbd { display: none; }
+  .tp-mobile-menu:not([hidden]) {
+    display: block; position: fixed; top: var(--tp-head-h); left: 0; right: 0; bottom: 0;
+    background: var(--tp-bg); z-index: 40; overflow-y: auto; padding: var(--sp-4) var(--sp-5) var(--sp-8);
+    border-top: 1px solid var(--tp-border);
+  }
+}
+@media (min-width: 781px) and (max-width: 1200px) {
+  .tp-mobile-side { display: none; }
+}
+
+/* ---------- icons, not emoji ----------
+   tina4press writes emoji into its header buttons (search, theme, menu); the
+   brand allows none (DESIGN.md s0). Until tina4press takes icons, the
+   emoji is hidden (font-size 0 on the button, the real text sized back up) and
+   the home page's own icons are drawn in its place: Lucide search, moon, sun and
+   menu, from the sprite in home/index.html.
+   Each is a CSS mask filled with the button's text colour, so it follows the
+   theme. Generated once; the shapes match the home header exactly. */
+.tp-search-btn::before, .tp-theme-toggle::before, .tp-menu-toggle::before {
+  content: ""; display: block; flex: none; background-color: currentColor;
+  -webkit-mask: var(--tp-icon) center / contain no-repeat; mask: var(--tp-icon) center / contain no-repeat;
+}
+/* search: the same 126px (38px as an icon) as the home header's button */
+.tp-search-btn { font-size: 0; gap: 0; min-width: 126px; }
+.tp-search-btn::before { --tp-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21 21-4.34-4.34'/%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3C/svg%3E"); width: 18px; height: 18px; margin-right: 7px; }
+.tp-search-btn .tp-search-hint { font-size: 13px; }
+.tp-search-btn kbd { font-size: 11px; margin-left: auto; }
+@media (max-width: 1200px) {
+  .tp-search-btn { min-width: 38px; justify-content: center; }
+  .tp-search-btn::before { margin-right: 0; }
+}
+.tp-theme-toggle::before { --tp-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401'/%3E%3C/svg%3E"); width: 16px; height: 16px; }
+:root[data-theme="dark"] .tp-theme-toggle::before { --tp-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3Cpath d='M12 2v2'/%3E%3Cpath d='M12 20v2'/%3E%3Cpath d='m4.93 4.93 1.41 1.41'/%3E%3Cpath d='m17.66 17.66 1.41 1.41'/%3E%3Cpath d='M2 12h2'/%3E%3Cpath d='M20 12h2'/%3E%3Cpath d='m6.34 17.66-1.41 1.41'/%3E%3Cpath d='m19.07 4.93-1.41 1.41'/%3E%3C/svg%3E"); content: ""; }
+.tp-menu-toggle { font-size: 0; }
+.tp-menu-toggle::before { --tp-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 5h16'/%3E%3Cpath d='M4 12h16'/%3E%3Cpath d='M4 19h16'/%3E%3C/svg%3E"); width: 18px; height: 18px; }
+
+/* ---------- the brand: "Tina" and a blue "4", as on the home page ----------
+   tina4press writes the name as one piece of text, so the text is hidden and
+   drawn again in two parts. The 4 takes the home page's blue (--brand-text there):
+   #2f5fe0 in light mode, #6b9bff in dark. */
+.tp-brand-name { font-size: 0; }
+.tp-brand-name::before { content: "Tina"; font-size: 16px; }
+.tp-brand-name::after { content: "4"; font-size: 16px; color: #2f5fe0; }
+:root[data-theme="dark"] .tp-brand-name::after { color: #6b9bff; }
+
+/* ---------- Ask Tina4 ----------
+   The site's chat (home/chat.css) reads the home page's design tokens; on the
+   docs pages they are mapped onto tina4press's here, scoped to the chat. The
+   blue fill is the same in both themes (DESIGN.md s4); links and the blue text
+   take the home page's #2f5fe0 / #6b9bff. */
+.t4-chat {
+  --bg: var(--tp-bg); --bg-soft: var(--tp-bg-soft); --bg-mute: var(--tp-bg-mute);
+  --border: var(--tp-border); --border-2: var(--tp-border-2);
+  --ink: var(--tp-fg); --fg-2: var(--tp-fg-2);
+  --brand: #2f5fe0; --brand-2: #4888ff; --brand-text: #2f5fe0;
+  --mono: var(--tp-mono); --code-t: #e8e6f0;
+  --dur: 200ms; --ease: cubic-bezier(.2,0,0,1);
+  font-family: var(--tp-font); font-size: 16px; line-height: 1.6;
+}
+:root[data-theme="dark"] .t4-chat { --brand-text: #6b9bff; }
+
+/* ---------- phones: nothing stretches the page sideways ----------
+   On a phone, a wide table or a long piece of inline code (a file name, an
+   error message) made the whole docs page scroll sideways, which also pushed
+   the fixed chat button up by the height of the scrollbar. Tables scroll inside
+   themselves (tina4press never emits its .tp-table-wrap), inline code wraps, and
+   a long unbroken word (staticmethod/classmethod/...) breaks where it must.
+   Code blocks already scroll on their own. */
+@media (max-width: 780px) {
+  .tp-content table { display: block; max-width: 100%; overflow-x: auto; }
+  .tp-content :not(pre) > code { white-space: normal; overflow-wrap: anywhere; }
+  .tp-content { overflow-wrap: break-word; }
+}

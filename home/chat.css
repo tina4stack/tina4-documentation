@@ -1,0 +1,127 @@
+/* Ask Tina4, the site's chat: the home page and every docs page load this file
+   (the docs through head in tina4press.config.mjs). It reads the home page's
+   design tokens (--bg, --ink, --brand ...); on the docs pages
+   theme/docs-header.css maps those names onto tina4press's. */
+
+/* The home page resets the browser's default margins and padding for every
+   element; the docs pages do not. The same reset, inside the chat only and at
+   zero specificity (:where), so any chat rule below still wins */
+:where(.t4-chat) *,:where(.t4-chat) *::before,:where(.t4-chat) *::after{margin:0;padding:0;box-sizing:border-box}
+/* ---------- Ask Tina4 chat ----------
+   The class names (t4-chat-*) started as tina4press's chat widget (tp-chat-*)
+   and were renamed: tina4press's theme.css still styles tp-chat-* on every docs
+   page, and those rules leaked into this chat there. Tina's mark is the
+   favicon's silhouette, drawn inline in currentColor. */
+.tina-mark{fill:currentColor;stroke:none;display:block}
+.t4-chat{position:fixed;right:22px;bottom:22px;z-index:60}
+/* collapsed: a brand-blue pill with Tina in white */
+.t4-chat-btn{display:inline-flex;align-items:center;gap:10px;cursor:pointer;
+  background:var(--brand);color:#fff;border:0;padding:12px 20px 12px 14px;border-radius:999px;
+  font:inherit;font-weight:600;font-size:.95rem;box-shadow:0 10px 30px rgba(47,95,224,.35);
+  transition:transform var(--dur) var(--ease),background var(--dur) var(--ease),opacity .25s var(--ease)}
+.t4-chat-btn:hover{transform:translateY(-2px);background:#3a6bf0}
+.t4-chat-btn .tina-mark{width:24px;height:24px}
+/* open: a wide panel that slides in from the right edge of the page. tina4press
+   toggles the panel's [hidden] attribute, so [hidden] means "slid away" here
+   rather than display:none; that is what lets it animate */
+/* docked: half the screen tall (420 to 680px), sharing the button's corner so the
+   button can morph into it. Closed ([hidden], which tina4press toggles), the panel
+   is clipped to the button's exact pill and covered in brand blue; opening grows
+   the clip out to the whole panel while the blue fades and the contents arrive.
+   --bw/--bh are the button's size and --gr/--gb its offset from the panel's corner
+   (the page script measures them; the fallbacks fit the desktop button) */
+.t4-chat-panel{position:fixed;right:22px;bottom:22px;width:min(480px,calc(100vw - 44px));
+  height:clamp(420px,50vh,680px);max-height:calc(100vh - 44px);
+  display:flex;flex-direction:column;overflow:hidden;background:var(--bg);color:var(--ink);
+  border:1px solid var(--border);border-radius:16px;box-shadow:0 24px 64px rgba(20,20,32,.28);
+  visibility:visible;clip-path:inset(-96px round 24px);   /* wide enough for the whole shadow (64px blur, 24px drop) */
+  transition:clip-path .42s cubic-bezier(.2,.8,.2,1),width .25s var(--ease),height .25s var(--ease),visibility 0s}
+.t4-chat-panel::after{content:"";position:absolute;inset:0;background:var(--brand);opacity:0;pointer-events:none;
+  transition:opacity .24s var(--ease) .1s}
+.t4-chat-panel > *{transition:opacity .2s var(--ease) .16s}
+.t4-chat-panel[hidden]{display:flex;visibility:hidden;
+  clip-path:inset(calc(100% - var(--gb,0px) - var(--bh,48px)) var(--gr,0px) var(--gb,0px) calc(100% - var(--gr,0px) - var(--bw,142px)) round calc(var(--bh,48px) / 2));
+  transition:clip-path .34s cubic-bezier(.4,0,.2,1),visibility 0s .34s}
+.t4-chat-panel[hidden]::after{opacity:1;transition:opacity .14s var(--ease)}
+.t4-chat-panel[hidden] > *{opacity:0;transition:opacity .08s var(--ease)}
+/* the button hands over to the panel at once, and takes back over as the panel lands */
+.t4-chat.open .t4-chat-btn{opacity:0;pointer-events:none;transition:none}
+.t4-chat:not(.open) .t4-chat-btn{transition:transform var(--dur) var(--ease),background var(--dur) var(--ease),opacity 0s .3s}
+/* widened: wider and taller */
+.t4-chat.wide .t4-chat-panel{width:min(760px,calc(100vw - 44px));height:min(85vh,calc(100vh - 44px))}
+@media(prefers-reduced-motion:reduce){.t4-chat-panel,.t4-chat-panel[hidden],.t4-chat-panel::after,.t4-chat-panel > *{transition:none}}
+/* head: Tina, the title, the model line, and the tools: widen and close (enhancements) */
+.t4-chat-head{display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto auto;
+  align-items:center;padding:12px 10px 12px 16px;border-bottom:1px solid var(--border)}
+.t4-chat-avatar{grid-column:1;grid-row:1 / span 2;margin-right:10px;width:34px;height:34px;border-radius:50%;
+  display:grid;place-items:center;background:var(--brand);color:#fff}
+.t4-chat-avatar .tina-mark{width:22px;height:22px}
+.t4-chat-head strong{grid-column:2;font-size:1rem;line-height:1.2}
+.t4-chat-model{grid-column:2;font-size:.76rem;color:var(--fg-2)}
+.t4-chat-tools{grid-column:3;grid-row:1 / span 2;display:flex;gap:2px}
+.t4-chat-tool{width:34px;height:34px;display:grid;place-items:center;background:none;border:0;
+  border-radius:8px;color:var(--fg-2);cursor:pointer}
+.t4-chat-tool:hover{color:var(--ink);background:var(--bg-mute)}
+.t4-chat-tool .i{width:17px;height:17px}
+.t4-chat-expand .i-shrink,.t4-chat.wide .t4-chat-expand .i-grow{display:none}
+.t4-chat.wide .t4-chat-expand .i-shrink{display:block}
+/* the conversation */
+.t4-chat-log{flex:1;overflow-y:auto;padding:18px 16px;display:flex;flex-direction:column;gap:12px}
+.t4-chat-msg{font-size:.93rem;line-height:1.55;max-width:86%;overflow-wrap:anywhere}
+.t4-chat-you{align-self:flex-end;background:var(--brand);color:#fff;padding:9px 14px;border-radius:16px 16px 4px 16px}
+.t4-chat-bot{align-self:flex-start;background:var(--bg-soft);color:var(--ink);border:1px solid var(--border);
+  padding:10px 14px;border-radius:16px 16px 16px 4px;animation:chatIn .2s var(--ease)}
+@keyframes chatIn{from{opacity:0;transform:translateY(6px)}}
+.t4-chat-bot code{font-family:var(--mono);font-size:.86em;background:var(--bg-mute);padding:1px 5px;border-radius:4px}
+.t4-chat-bot pre{margin:8px 0;background:#0f0f1a;color:var(--code-t);border-radius:8px;padding:10px 12px;
+  font-family:var(--mono);font-size:.82rem;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.t4-chat-bot pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.t4-chat-bot strong{font-weight:700}
+.t4-chat-bot a{color:var(--brand-text);font-weight:600}
+/* while Tina thinks: three dots (enhancement; tina4press shows a static ellipsis) */
+.t4-chat-thinking{display:inline-flex;gap:4px;padding:4px 2px}
+.t4-chat-thinking span{width:6px;height:6px;border-radius:50%;background:var(--fg-2);animation:chatDot 1s var(--ease) infinite}
+.t4-chat-thinking span:nth-child(2){animation-delay:.15s}
+.t4-chat-thinking span:nth-child(3){animation-delay:.3s}
+@keyframes chatDot{0%,60%,100%{opacity:.25;transform:none}30%{opacity:1;transform:translateY(-3px)}}
+/* sources: real links into the docs, under the answer */
+.t4-chat-sources{align-self:flex-start;max-width:86%;display:flex;flex-wrap:wrap;gap:6px}
+.t4-chat-sources-label{width:100%;font-size:.8rem;font-weight:600;color:var(--fg-2)}
+.t4-chat-src{display:inline-flex;align-items:center;font-size:.82rem;font-weight:600;color:var(--brand-text);
+  background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:4px 11px}
+.t4-chat-src:hover{border-color:var(--brand)}
+/* suggested questions (enhancement) */
+.t4-chat-suggest{align-self:flex-start;display:flex;flex-wrap:wrap;gap:6px;max-width:100%}
+.t4-chat-chip{font:inherit;font-size:.85rem;color:var(--ink);background:var(--bg);border:1px solid var(--border);
+  border-radius:999px;padding:6px 12px;cursor:pointer;transition:border-color var(--dur) var(--ease),color var(--dur) var(--ease)}
+.t4-chat-chip:hover{border-color:var(--brand);color:var(--brand-text)}
+/* the question box: a soft rounded field and a round send button */
+.t4-chat-form{display:flex;align-items:center;gap:8px;padding:12px 14px 6px;border-top:1px solid var(--border)}
+.t4-chat-input{flex:1;min-width:0;font:inherit;font-size:.95rem;color:var(--ink);background:var(--bg-soft);
+  border:1px solid var(--border);border-radius:12px;padding:11px 14px}
+.t4-chat-input:focus{outline:2px solid var(--brand);outline-offset:-1px}
+.t4-chat-form button{flex:none;width:42px;height:42px;display:grid;place-items:center;border:0;border-radius:12px;
+  background:var(--brand);color:#fff;cursor:pointer}
+.t4-chat-form button:hover{background:#3a6bf0}
+.t4-chat-form button .i{width:19px;height:19px}
+
+/* the inline icon sprite the chat's icons come from: in the page, out of the layout */
+.icon-sprite{position:absolute;width:0;height:0;overflow:hidden}
+/* Lucide icons from the sprite: outline, 1em, the colour of the text. :where()
+   keeps this as weak as the home page's own .i rule, so the chat's rules that
+   hide an icon (the widen button's second one) still win */
+:where(.t4-chat) .i{width:1em;height:1em;flex:none;display:inline-block;vertical-align:-.14em;fill:none;stroke:currentColor;
+  stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+@media(max-width:600px){
+  /* Ask Tina4 shrinks to a round icon, so it stops sitting on the content */
+  /* the chat button is a round icon, and the panel takes the whole screen */
+  .t4-chat{right:14px;bottom:14px}
+  .t4-chat-btn{padding:12px;gap:0}
+  .t4-chat-btn .t4-chat-label{display:none}
+  .t4-chat-panel,.t4-chat.wide .t4-chat-panel{inset:0;width:100%;height:auto;max-height:none;border-radius:0;border:0}
+  .t4-chat-expand{display:none}
+}
+
+/* the chat stays out of print, as tina4press hid its own */
+@media print{.t4-chat{display:none}}

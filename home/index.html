@@ -29,9 +29,11 @@
 <link rel="preload" href="/fonts/inconsolata-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/fonts/fonts.css">
 <link rel="stylesheet" href="/assets/home/home.css">
+<link rel="stylesheet" href="/assets/home/chat.css">
 <!-- the theme before first paint (tina4press's data-theme / tp-theme), blocking so nothing flashes -->
 <script src="/assets/home/theme-init.js"></script>
 <script src="/assets/home/home.js" defer></script>
+<script src="/assets/home/chat.js" defer></script>
 <!-- the docs search, the same code as every docs page: tina4press's settings
      (written by scripts/build-home.mjs from a docs page), tina4-js, client.js -->
 <script src="/assets/home/press-config.js" defer></script>
@@ -54,7 +56,7 @@
 <header class="site-header">
   <div class="wrap">
     <a class="brand" href="/" aria-label="Tina4 home">
-      <img src="/assets/home/tina4-logo-correct.svg" alt="">
+      <img src="/logo.svg" alt="">
       <span class="brand-name">Tina<span>4</span></span>
     </a>
     <nav class="site-nav" aria-label="Main">
@@ -117,7 +119,7 @@
            session before the scene builds in (decorative, so hidden from AT) -->
       <div class="boot" id="boot" aria-hidden="true" data-version="v3.13.151"></div>
       <div class="hero-robot" role="img" aria-label="The Tina4 robot">
-        <img src="/assets/home/tina4-logo-correct.svg" alt="">
+        <img src="/logo.svg" alt="">
       </div>    </div>
   </div>
 </section>
@@ -453,7 +455,7 @@ Router.<span class="cf">get</span>(<span class="cs">"/api/hello/{name}"</span>, 
     <div class="footer-grid">
       <div class="footer-brand">
         <a class="brand" href="/">
-          <img src="/assets/home/tina4-logo-correct.svg" alt="Tina4">
+          <img src="/logo.svg" alt="Tina4">
           <span class="brand-name">Tina<span>4</span></span>
         </a>
         <p class="footer-backronym">The Intelligent Native Application <b>4</b>ramework.</p>
@@ -493,17 +495,8 @@ Router.<span class="cf">get</span>(<span class="cs">"/api/hello/{name}"</span>, 
 
 
 <!-- ============ ASK TINA4 ============ -->
-<!-- tina4press's chat markup (tp-chat-*), restyled, plus the avatar and the
-     widen and close buttons. home.js asks the same hosted RAG as the docs
-     widget (themeConfig.chat in tina4press.config.mjs) -->
-<div class="tp-chat" data-api="https://rag.tina4.com" data-ask-path="/v1/ask">
-  <button class="tp-chat-btn" aria-label="Ask Tina4" aria-expanded="false" aria-controls="tp-chat-panel"><svg class="tina-mark" aria-hidden="true"><use href="#i-tina"/></svg><span class="tp-chat-label">Ask Tina4</span></button>
-  <div class="tp-chat-panel" id="tp-chat-panel" role="dialog" aria-label="Ask Tina4" hidden>
-    <div class="tp-chat-head"><span class="tp-chat-avatar"><svg class="tina-mark" aria-hidden="true"><use href="#i-tina"/></svg></span><strong>Ask Tina4</strong><span class="tp-chat-model">Powered by Tina4</span><span class="tp-chat-tools"><button class="tp-chat-tool tp-chat-expand" type="button" aria-label="Wider panel" aria-pressed="false"><svg class="i i-grow" aria-hidden="true"><use href="#i-maximize-2"/></svg><svg class="i i-shrink" aria-hidden="true"><use href="#i-minimize-2"/></svg></button><button class="tp-chat-tool tp-chat-close" type="button" aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></span></div>
-    <div class="tp-chat-log" aria-live="polite"></div>
-    <form class="tp-chat-form"><input class="tp-chat-input" placeholder="How do I define a route?" autocomplete="off" aria-label="Your question"><button type="submit" aria-label="Ask"><svg class="i" aria-hidden="true"><use href="#i-arrow-up"/></svg></button></form>
-  </div>
-</div>
+<!-- home/chat.html, the same chat as on every docs page, written in by scripts/build-home.mjs -->
+<!-- home:chat -->
 <!-- ============ SEARCH ============ -->
 <!-- tina4press's search modal, copied from a docs page by scripts/build-home.mjs -->
 <!-- home:search -->
