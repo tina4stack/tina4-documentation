@@ -140,19 +140,19 @@ TINA4_DEBUG=yes
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TINA4_CSRF` | `true` | Enable CSRF token validation on POST/PUT/PATCH/DELETE. Set to `false` to disable (e.g. for internal microservices behind a firewall). |
+| `TINA4_CSRF` | `false` | Enable CSRF token validation on POST/PUT/PATCH/DELETE. Set to `true` to turn it on; `false` turns it off again. |
 
-CSRF is **on by default**. When enabled:
+CSRF is **off by default**. When enabled:
 - POST/PUT/PATCH/DELETE requests must include a `formToken` in the request body or an `X-Form-Token` header.
 - GET/HEAD/OPTIONS requests are not checked.
 - Requests with a valid `Authorization: Bearer` token skip CSRF validation.
 - Routes marked `@noauth()` skip CSRF validation.
 - Tokens in query strings are **rejected** (security risk).
 
-To disable for internal services:
+To turn it on:
 
 ```bash
-TINA4_CSRF=false
+TINA4_CSRF=true
 ```
 
 ### Database

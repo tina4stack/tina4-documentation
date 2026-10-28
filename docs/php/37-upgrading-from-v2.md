@@ -459,7 +459,7 @@ Features that did not exist in v2. Each is covered in its own chapter:
 - **CLI tooling** -- `tina4` command for scaffolding, migrations, serving (Chapter 31).
 - **Auto-mapping in ORM** -- `$autoMap = true` eliminates manual field mappings (Chapter 6).
 - **Rate limiting** -- Per-IP rate limiting via env vars (Chapter 10).
-- **CSRF protection** -- Built-in, enabled by default (Chapter 10).
+- **CSRF protection** -- Built-in, off by default; turn it on with `TINA4_CSRF=true` (Chapter 10).
 
 ---
 

@@ -825,7 +825,7 @@ async def api_status(request, response):
 
 Every route you write is a door. Chapter 8 gave you locks. Chapter 9 gave you session keys. The first half of this chapter gave you guards. This section ties them together into a defence that works without thinking about it.
 
-Tina4 ships secure by default. POST routes require authentication. CSRF tokens protect forms. Security headers harden every response. The framework does the boring security work so you focus on building features. But you need to understand what it does, and why, so you don't accidentally undo it.
+Tina4 ships secure by default. POST routes require authentication. CSRF tokens protect forms once you turn them on. Security headers harden every response. The framework does the boring security work so you focus on building features. But you need to understand what it does, and why, so you don't accidentally undo it.
 
 ---
 
@@ -938,7 +938,7 @@ The `{{ form_token() }}` call generates a hidden input field containing a signed
 
 #### The Middleware
 
-CSRF protection is on by default. Every POST, PUT, PATCH, and DELETE request must include a valid form token. The middleware checks two places:
+CSRF protection is off by default. Set `TINA4_CSRF=true` to turn it on; from then on every POST, PUT, PATCH, and DELETE request must include a valid form token. The middleware checks two places:
 
 1. **Request body**: `request.body["formToken"]`
 2. **Request header**: `X-Form-Token`
@@ -983,15 +983,15 @@ Three scenarios skip CSRF checks automatically:
 2. **Routes with `@noauth()`** - Public write endpoints don't need CSRF (they have no session to protect).
 3. **Requests with a valid Bearer token** - API clients authenticate with tokens, not cookies. CSRF only matters for cookie-based sessions.
 
-#### Disabling CSRF Globally
+#### Turning CSRF On
 
-For internal microservices behind a firewall, where no browser ever touches the API, you can disable CSRF entirely:
+CSRF stays off until you turn it on. Turn it on for anything a browser can reach:
 
 ```bash
-TINA4_CSRF=false
+TINA4_CSRF=true
 ```
 
-Leave it enabled for anything a browser can reach. The cost is one hidden field per form. The protection is worth it.
+The cost is one hidden field per form. The protection is worth it. `TINA4_CSRF=false` turns it off again. Leave it off only for internal microservices behind a firewall, where no browser ever touches the API.
 
 ---
 
@@ -1336,7 +1336,7 @@ Before you deploy, verify:
 - [ ] `TINA4_DEBUG=false` in production.
 - [ ] `TINA4_HSTS=31536000` if serving over HTTPS.
 - [ ] `TINA4_CORS_ORIGINS` lists your actual domains, not `*`.
-- [ ] `TINA4_CSRF=true` (the default) for any browser-facing application.
+- [ ] `TINA4_CSRF=true` for any browser-facing application (CSRF is off by default).
 - [ ] Login route uses `@noauth()` and validates credentials before issuing tokens.
 - [ ] Session is regenerated after login (prevents session fixation).
 - [ ] Passwords are hashed with `Auth.hash_password()`, never stored in plain text.

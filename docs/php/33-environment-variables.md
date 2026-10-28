@@ -92,7 +92,7 @@ This chapter lists every variable the PHP framework reads, grouped by subsystem.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `TINA4_CSP` | `default-src 'self'` | `Content-Security-Policy` header. |
-| `TINA4_CSRF` | `true` | CSRF token validation on POST/PUT/PATCH/DELETE. Requires `_csrf` in the body or `X-CSRF-Token` header. |
+| `TINA4_CSRF` | `false` | CSRF token validation on POST/PUT/PATCH/DELETE. Requires `_csrf` in the body or `X-CSRF-Token` header. |
 | `TINA4_HSTS` | _(empty/off)_ | `Strict-Transport-Security` max-age in seconds. Set `31536000` in production with HTTPS. |
 | `TINA4_FRAME_OPTIONS` | `DENY` | `X-Frame-Options` header. Set `SAMEORIGIN` if you embed your own app in an iframe. |
 | `TINA4_REFERRER_POLICY` | `strict-origin-when-cross-origin` | `Referrer-Policy` header. |
