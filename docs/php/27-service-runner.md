@@ -18,7 +18,7 @@ use Tina4\Service;
 
 class EmailQueueWorker extends Service
 {
-    private bool $running = true;
+    protected bool $running = true;
     private \Tina4\Queue $queue;
 
     public function __construct()
@@ -95,7 +95,7 @@ use Tina4\Service;
 
 class ReportGenerator extends Service
 {
-    private bool $running = true;
+    protected bool $running = true;
 
     public function run(): void
     {
@@ -144,7 +144,7 @@ use function Tina4\cache_set;
 
 class CacheWarmer extends Service
 {
-    private bool $running = true;
+    protected bool $running = true;
     private int $ttl = 300;         // 5 minutes
     private int $refreshBefore = 60; // Refresh 60 seconds before expiry
 
@@ -173,7 +173,7 @@ class CacheWarmer extends Service
     {
         echo "[CacheWarmer] Warming cache...\n";
 
-        $db = new \Tina4\Database(getenv('TINA4_DATABASE_URL'));
+        $db = new \Tina4\Database\Database(getenv('TINA4_DATABASE_URL'));
 
         $categories = $db->fetchAll("SELECT * FROM categories ORDER BY name");
         cache_set('categories:all', $categories, $this->ttl);
@@ -200,7 +200,7 @@ use Tina4\Service;
 
 class RobustWorker extends Service
 {
-    private bool $running = true;
+    protected bool $running = true;
 
     public function run(): void
     {

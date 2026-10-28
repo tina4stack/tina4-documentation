@@ -276,7 +276,7 @@ Access the connection through the `Database` class.
 
 ```php
 <?php
-use Tina4\Database;
+use Tina4\Database\Database;
 
 $db = Database::getConnection();
 $result = $db->fetch("SELECT * FROM products WHERE price > ?", [50]);
@@ -609,7 +609,7 @@ Chain `->cache()` onto any route handler to store the response. Subsequent reque
 use Tina4\Router;
 
 Router::get("/api/products", function ($request, $response) {
-    $db = \Tina4\Database::getConnection();
+    $db = \Tina4\Database\Database::getConnection();
     return $response->json($db->fetch("SELECT * FROM products")->toArray());
 })->cache(300); // cache for 300 seconds
 
@@ -645,7 +645,7 @@ Add custom checks by registering a `health.check` event listener.
 use Tina4\Events;
 
 Events::on("health.check", function (array &$report): void {
-    $report["db"] = \Tina4\Database::getConnection()->ping() ? "ok" : "fail";
+    $report["db"] = \Tina4\Database\Database::getConnection()->ping() ? "ok" : "fail";
 });
 ```
 
@@ -660,7 +660,7 @@ use Tina4\Container;
 Container::register("mailer", fn() => new Mailer($_ENV["TINA4_MAIL_HOST"]));
 
 // Bind a singleton
-Container::singleton("db", fn() => \Tina4\Database::getConnection());
+Container::singleton("db", fn() => \Tina4\Database\Database::getConnection());
 
 // Resolve
 $mailer = Container::get("mailer");

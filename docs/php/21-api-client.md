@@ -26,7 +26,7 @@ The `Api` class stores the base URL and shared configuration. Individual request
 
 All requests go through `sendRequest()`. It returns an associative array with:
 
-- `status` - HTTP status code (integer)
+- `http_code` - HTTP status code (integer; `null` when no response arrived)
 - `body` - parsed response body (array if JSON, string otherwise)
 - `headers` - response headers
 - `error` - error message string on failure, `null` on success
@@ -40,7 +40,7 @@ $api = new Api('https://jsonplaceholder.typicode.com');
 // GET request
 $result = $api->sendRequest('GET', '/posts/1');
 
-echo $result['status'];        // 200
+echo $result['http_code'];        // 200
 print_r($result['body']);      // ['id' => 1, 'title' => '...', ...]
 ```
 
@@ -58,12 +58,12 @@ $api = new Api('https://jsonplaceholder.typicode.com');
 
 $result = $api->sendRequest('GET', '/users/1');
 
-if ($result['status'] === 200) {
+if ($result['http_code'] === 200) {
     $user = $result['body'];
     echo "Name: {$user['name']}\n";
     echo "Email: {$user['email']}\n";
 } else {
-    echo "Error {$result['status']}: " . ($result['error'] ?? 'Unknown error');
+    echo "Error {$result['http_code']}: " . ($result['error'] ?? 'Unknown error');
 }
 ```
 
@@ -87,7 +87,7 @@ $result = $api->sendRequest('POST', '/posts', [], [
     'userId' => 1
 ]);
 
-echo $result['status'];              // 201
+echo $result['http_code'];              // 201
 echo $result['body']['id'];          // 101 (new resource ID)
 ```
 
@@ -101,7 +101,7 @@ $result = $api->sendRequest('PUT', '/posts/1', [], [
     'userId' => 1
 ]);
 
-echo $result['status'];   // 200
+echo $result['http_code'];   // 200
 ```
 
 ### PATCH - Partial update
@@ -111,7 +111,7 @@ $result = $api->sendRequest('PATCH', '/posts/1', [], [
     'title' => 'Just the title changed'
 ]);
 
-echo $result['status'];   // 200
+echo $result['http_code'];   // 200
 ```
 
 ### DELETE - Remove a resource
@@ -119,7 +119,7 @@ echo $result['status'];   // 200
 ```php
 $result = $api->sendRequest('DELETE', '/posts/1');
 
-echo $result['status'];   // 200 or 204
+echo $result['http_code'];   // 200 or 204
 ```
 
 ---
@@ -170,7 +170,7 @@ $result = $api->sendRequest('POST', '/payment_intents', [], [
     'payment_method_types' => ['card']
 ]);
 
-echo $result['status'];          // 200
+echo $result['http_code'];          // 200
 echo $result['body']['id'];      // pi_3OWL...
 echo $result['body']['status'];  // requires_payment_method
 ```
@@ -229,7 +229,7 @@ $result = $api->sendRequest('GET', '/resources');
 
 ## 10. Error Handling
 
-Always check `status` before accessing `body`. Handle network errors via `error`:
+Always check `http_code` before accessing `body`. Handle network errors via `error`:
 
 ```php
 <?php
@@ -246,23 +246,23 @@ function fetchUser(int $id): ?array {
     }
 
     // HTTP error responses
-    if ($result['status'] === 404) {
+    if ($result['http_code'] === 404) {
         return null;   // Not found -- expected, return null
     }
 
-    if ($result['status'] === 429) {
+    if ($result['http_code'] === 429) {
         // Rate limited -- retry after delay
         sleep((int) ($result['headers']['Retry-After'] ?? 5));
         return fetchUser($id);  // Retry once
     }
 
-    if ($result['status'] >= 500) {
-        error_log("API server error {$result['status']} for user {$id}");
+    if ($result['http_code'] >= 500) {
+        error_log("API server error {$result['http_code']} for user {$id}");
         throw new \RuntimeException("External API unavailable");
     }
 
-    if ($result['status'] !== 200) {
-        error_log("Unexpected status {$result['status']}");
+    if ($result['http_code'] !== 200) {
+        error_log("Unexpected status {$result['http_code']}");
         return null;
     }
 
@@ -296,11 +296,11 @@ Router::get('/api/weather/{city}', function ($request, $response) {
         'units' => 'metric'
     ]);
 
-    if ($result['status'] === 404) {
+    if ($result['http_code'] === 404) {
         return $response->json(['error' => "City '{$city}' not found"], 404);
     }
 
-    if ($result['status'] !== 200) {
+    if ($result['http_code'] !== 200) {
         return $response->json(['error' => 'Weather service unavailable'], 502);
     }
 
@@ -377,7 +377,7 @@ curl http://localhost:7145/api/github/nobody/nonexistent-repo
 
 **Cause:** The API returned a 4xx/5xx error. The body is an error object, not the expected resource.
 
-**Fix:** Always check `$result['status']` before accessing `$result['body']`.
+**Fix:** Always check `$result['http_code']` before accessing `$result['body']`.
 
 ### 3. Credentials in source code
 
@@ -393,4 +393,4 @@ curl http://localhost:7145/api/github/nobody/nonexistent-repo
 
 **Cause:** No rate limit detection or backoff logic.
 
-**Fix:** Check for `status === 429`, read `Retry-After` from the response headers, and sleep before retrying.
+**Fix:** Check for `http_code === 429`, read `Retry-After` from the response headers, and sleep before retrying.

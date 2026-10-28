@@ -263,12 +263,12 @@ Push a file to the client:
 return $response->file("/path/to/report.pdf");
 ```
 
-Tina4 sets the correct `Content-Type` from the file extension and adds `Content-Disposition` so the browser downloads instead of displaying.
+Tina4 sets the correct `Content-Type` from the file extension. The second argument overrides that type (`null` keeps the detected one).
 
-Custom filename:
+Force a download (`Content-Disposition: attachment`, saved under the file's own name):
 
 ```php
-return $response->file("/path/to/report.pdf", "monthly-report-march-2026.pdf");
+return $response->file("/path/to/report.pdf", null, true);
 ```
 
 ---
@@ -619,7 +619,7 @@ use Tina4\Router;
 
 Router::get("/api/reports/{filename}", function ($request, $response) {
     $filename = $request->params["filename"];
-    $filepath = __DIR__ . "/../../data/reports/" . $filename;
+    $filepath = dirname(__DIR__, 2) . "/data/reports/" . $filename;
 
     if (!file_exists($filepath)) {
         return $response->json(["error" => "Report not found"], 404);
@@ -629,12 +629,12 @@ Router::get("/api/reports/{filename}", function ($request, $response) {
 });
 ```
 
-The browser downloads the file. Tina4 detects the MIME type from the extension and sets headers accordingly.
+Tina4 detects the MIME type from the extension and sets headers accordingly. A path containing a `..` segment is refused with `403`, so build it with `dirname(__DIR__, 2)` rather than `__DIR__ . "/../.."`.
 
-Force a specific download filename:
+Force a download (the browser saves it under the file's own name):
 
 ```php
-return $response->file($filepath, "Q1-2026-Sales-Report.pdf");
+return $response->file($filepath, null, true);
 ```
 
 ---
@@ -869,7 +869,7 @@ Router::get("/api/images/{filename}", function ($request, $response) {
         return $response->json(["error" => "Invalid filename"], 400);
     }
 
-    $filepath = __DIR__ . "/../../public/uploads/" . $filename;
+    $filepath = dirname(__DIR__, 2) . "/public/uploads/" . $filename;
 
     if (!file_exists($filepath)) {
         return $response->json(["error" => "Image not found", "filename" => $filename], 404);

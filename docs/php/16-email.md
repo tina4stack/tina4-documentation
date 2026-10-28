@@ -844,8 +844,8 @@ use Tina4\Messenger;
 use Tina4\Frond;
 
 Router::get("/contact", function ($request, $response) {
-    $flash = $request->session["_flash"] ?? null;
-    unset($request->session["_flash"]);
+    $flash = $request->session->get("_flash");
+    $request->session->delete("_flash");
 
     return $response->render("contact.html", [
         "flash" => $flash
@@ -863,10 +863,10 @@ Router::post("/contact", function ($request, $response) {
     if (empty($body["message"])) $errors[] = "Message is required";
 
     if (!empty($errors)) {
-        $request->session["_flash"] = [
+        $request->session->set("_flash", [
             "type" => "error",
             "message" => "Please fill in all fields: " . implode(", ", $errors)
-        ];
+        ]);
         return $response->redirect("/contact");
     }
 
@@ -896,15 +896,15 @@ Router::post("/contact", function ($request, $response) {
     );
 
     if ($result["success"]) {
-        $request->session["_flash"] = [
+        $request->session->set("_flash", [
             "type" => "success",
             "message" => "Thank you for your message! We will get back to you shortly."
-        ];
+        ]);
     } else {
-        $request->session["_flash"] = [
+        $request->session->set("_flash", [
             "type" => "error",
             "message" => "Sorry, there was a problem sending your message. Please try again later."
-        ];
+        ]);
     }
 
     return $response->redirect("/contact");
