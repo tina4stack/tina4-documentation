@@ -4,6 +4,33 @@
 var ASSET = "/assets/home/";
 var REDUCE = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+/* how much the hero animation may cost, in three levels:
+     2 full  every frame, the blurred back rings, a blurred header and stats strip
+     1 lite  30 frames a second, no blur anywhere over the hero
+     0 low   lite, plus about half the dots and no spark where a link snaps
+   Phones and other touch screens start at lite, everything else at full. The
+   hero times its own frames for its first few seconds and steps down a level
+   when they run slow (see frame() below); it never steps back up. The level is
+   on <html data-hero-quality>, so the CSS can drop the blurs.
+   ?hero=full, ?hero=lite or ?hero=low in the address forces a level (testing). */
+var HQ = (function(){
+  var NAMES = ["low", "lite", "full"];
+  var forced = (location.search.match(/[?&]hero=(full|lite|low)\b/) || [])[1];
+  var touch = !!(window.matchMedia && matchMedia("(hover: none), (pointer: coarse)").matches);
+  var level = forced ? NAMES.indexOf(forced) : (touch ? 1 : 2), subs = [];
+  function mark(){ document.documentElement.setAttribute("data-hero-quality", NAMES[level]); }
+  mark();
+  return {
+    level: function(){ return level; },
+    /* one level down; false when already at the bottom or forced */
+    down: function(){
+      if(forced || level === 0) return false;
+      level--; mark(); subs.forEach(function(f){ f(level); }); return true;
+    },
+    on: function(f){ subs.push(f); }
+  };
+})();
+
 /* one language choice for the whole page: pick Ruby in any tabbed section and every
    section follows, remembered for the next visit (per browser, a convenience only) */
 var T4LANG = (function(){
@@ -145,11 +172,59 @@ var T4LANG = (function(){
        depth reads as layers rather than a cone */
     var C_HALO = [308.7976, 308.8681];
     var RINGS = [{ spd:9, z:-1 }, { spd:-14, z:.5 }, { spd:21, z:-.4 }, { spd:-11, z:1 }, { spd:6, z:-.75 }];
-    var rings = Array.prototype.map.call(root.querySelectorAll('[data-rig="ring"]'), function(el){
+    /* Each ring leaves the robot's drawing and becomes a layer of its own behind
+       it (an <svg class="ring-layer"> in .hero-robot), turned by a CSS animation.
+       Measured on a mid-range phone (OPPO A78): with the rings inside the robot's
+       drawing, every frame that moved the eyes, head or arms repainted all five
+       detailed rings too, and the hero ran at 16 to 28 fps; as separate layers the
+       graphics chip draws each ring once and only rotates the picture: 60 fps.
+       The turn is the CSS `rotate` property (an animation), the depth a static
+       `scale`, and at full the mouse parallax and idle sway move the layer with
+       `translate`, all three composited without repainting the ring. */
+    var vb = (root.getAttribute("viewBox") || "0 0 617.7 617.6").split(/[\s,]+/).map(Number);
+    var halo = root.querySelector('[data-rig="halo"]');
+    var haloOpacity = halo && halo.getAttribute("opacity") ? +halo.getAttribute("opacity") : 1;
+    var ringOrigin = ((C_HALO[0] - vb[0])/vb[2]*100).toFixed(3) + "% " + ((C_HALO[1] - vb[1])/vb[3]*100).toFixed(3) + "%";
+    /* the defs a ring uses (its gradients, and what they refer to), with every id
+       given a per-layer prefix so the copies never clash with each other or the rig */
+    function ringMarkup(el, prefix){
+      var html = el.outerHTML, defs = [], seen = {}, queue = [html];
+      while(queue.length){
+        var refs = queue.pop().match(/url\(#[^)]+\)|href="#[^"]+"/g) || [];
+        refs.forEach(function(r){
+          var ref = r.replace(/^url\(#|\)$|^href="#|"$/g, "");
+          if(seen[ref]) return; seen[ref] = 1;
+          var def = root.querySelector('[id="' + ref + '"]');
+          if(def){ defs.push(def.outerHTML); queue.push(def.outerHTML); }
+        });
+      }
+      return ("<defs>" + defs.join("") + "</defs>" + html)
+        .replace(/\sid="([^"]+)"/g, ' id="' + prefix + '$1"')
+        .replace(/url\(#([^)]+)\)/g, "url(#" + prefix + "$1)")
+        .replace(/href="#([^"]+)"/g, 'href="#' + prefix + '$1"');
+    }
+    var rings = Array.prototype.map.call(root.querySelectorAll('[data-rig="ring"]'), function(el, i){
       var cfg = RINGS[+el.getAttribute("data-ring")] || { spd:10, z:0 };
-      el.style.opacity = (.72 + .28*(cfg.z + 1)/2).toFixed(2);
-      if(cfg.z <= -.7) el.setAttribute("filter", "url(#rb-ring-blur)");
-      return { el: el, spd: cfg.spd, z: cfg.z, a0: Math.random()*360 };
+      var a0 = Math.random()*360, turn = 360/Math.abs(cfg.spd);
+      var copy = el.cloneNode(true); copy.removeAttribute("transform"); copy.removeAttribute("filter");
+      var layer = document.createElementNS(NS, "svg");
+      layer.setAttribute("viewBox", vb.join(" ")); layer.setAttribute("class", "ring-layer");
+      layer.setAttribute("aria-hidden", "true"); layer.setAttribute("focusable", "false");
+      layer.innerHTML = ringMarkup(copy, "rl" + i + "-");
+      layer.style.opacity = (haloOpacity*(.72 + .28*(cfg.z + 1)/2)).toFixed(3);
+      layer.style.transformOrigin = ringOrigin;
+      layer.style.scale = String((1 + .035*cfg.z).toFixed(4));
+      layer.style.animationDuration = turn.toFixed(1) + "s";
+      layer.style.animationDelay = (-a0/360*turn).toFixed(2) + "s";    /* each starts at its own angle */
+      if(cfg.spd < 0) layer.style.animationDirection = "reverse";
+      /* the soft blur on the back rings: full only */
+      if(cfg.z <= -.7 && HQ.level() === 2) layer.classList.add("ring-soft");
+      robot.insertBefore(layer, root);                                   /* behind the robot, as in the rig */
+      el.parentNode.removeChild(el);
+      return { layer: layer, z: cfg.z, moved: "" };
+    });
+    HQ.on(function(level){
+      if(level < 2) rings.forEach(function(R){ R.layer.classList.remove("ring-soft"); R.layer.style.translate = ""; R.moved = ""; });
     });
     return { update: function(t, bxN, byN, free, bz){
       var dt = lastT === null ? 16 : Math.min(50, t - lastT); lastT = t;
@@ -226,17 +301,18 @@ var T4LANG = (function(){
       }
       pose("arm-l", 0, 0, 0, tl);
       pose("arm-r", 0, 0, 0, tl);
-      /* the circuit rings: each turns at its own speed (some against the others) and
-         sits at its own depth. Front rings are a touch larger and brighter, back
-         rings smaller, dimmer and softly blurred, and on mouse parallax (plus a slow
-         idle sway) the front ones slide further than the back ones */
-      var sec = t/1000;
-      for(var ri=0;ri<rings.length;ri++){
-        var R = rings[ri], z = R.z;
-        var px = (par.x*9 + Math.sin(sec*.35 + ri*1.7)*2)*z, py = (par.y*6 + Math.cos(sec*.3 + ri*2.3)*1.5)*z;
-        R.el.setAttribute("transform", "translate(" + px.toFixed(2) + "," + py.toFixed(2) + ") rotate(" +
-          ((R.a0 + sec*R.spd) % 360).toFixed(2) + " " + C_HALO[0] + " " + C_HALO[1] + ") " +
-          scaleAbout(C_HALO, 1 + .035*z, 1 + .035*z));
+      /* the circuit rings turn by themselves (CSS, on their own layers). At full,
+         on mouse parallax plus a slow idle sway, the front ones slide further than
+         the back ones: the layer moves (in screen px, from the rig's units), which
+         repaints nothing. Below full they hold still apart from the turn */
+      if(HQ.level() === 2){
+        var sec = t/1000, unit = rr.width/vb[2];
+        for(var ri=0;ri<rings.length;ri++){
+          var R = rings[ri], z = R.z;
+          var px = (par.x*9 + Math.sin(sec*.35 + ri*1.7)*2)*z*unit, py = (par.y*6 + Math.cos(sec*.3 + ri*2.3)*1.5)*z*unit;
+          var moved = px.toFixed(1) + "px " + py.toFixed(1) + "px";
+          if(moved !== R.moved){ R.layer.style.translate = moved; R.moved = moved; }
+        }
       }
       if(parts.eyes.el){
         parts.eyes.el.setAttribute("transform", "translate(" + g.ex.toFixed(2) + "," + g.ey.toFixed(2) + ") " + scaleAbout(cEyes, 1 - .14*hax, 1));
@@ -392,7 +468,7 @@ var T4LANG = (function(){
       if(!st){
         st = snaps[key] = { born: nowT };
         var tm = Math.max(0, Math.min(1, (t1 + t2)/2));
-        if(sparks.length < 40 && o > .05) sparks.push({ x: ax + dx*tm, y: ay + dy*tm, t: nowT, o: Math.min(1, o*2.4) });
+        if(HQ.level() > 0 && sparks.length < 40 && o > .05) sparks.push({ x: ax + dx*tm, y: ay + dy*tm, t: nowT, o: Math.min(1, o*2.4) });
       }
       st.h = 1; st.a = t1; st.b = t2; st.f = frameNo;
       var age = nowT - st.born, rec = Math.max(-3, 16*Math.exp(-age/240)*Math.cos(age/75))/len;   /* the twang */
@@ -481,9 +557,11 @@ var T4LANG = (function(){
     /* counts grow with the hero's area (up to ~1.8x on a big screen) so the network
        keeps its density instead of thinning out */
     var k = mob ? 1 : Math.max(1, Math.min(1.8, W*H/(1376*767)));
-    var C = mob ? { hub:4, mid:18, sat:40, dust:30, bokeh:5 }
-                : { hub:Math.round(7*k), mid:Math.round(40*k), sat:Math.round(90*k), dust:Math.round(60*k), bokeh:Math.round(10*k) };
-    var FAR = mob ? { dust:0, bokeh:0 } : { dust:Math.round(45*k), bokeh:Math.round(7*k) };
+    /* at the low level about half the dots, so about a quarter of the link checks */
+    var lowK = HQ.level() === 0 ? .55 : 1;
+    var C = mob ? { hub:4, mid:Math.round(18*lowK), sat:Math.round(40*lowK), dust:Math.round(30*lowK), bokeh:5 }
+                : { hub:Math.round(7*k), mid:Math.round(40*k*lowK), sat:Math.round(90*k*lowK), dust:Math.round(60*k*lowK), bokeh:Math.round(10*k*lowK) };
+    var FAR = mob ? { dust:0, bokeh:0 } : { dust:Math.round(45*k*lowK), bokeh:Math.round(7*k*lowK) };
     nodes = [];
     Object.keys(C).forEach(function(tier){
       var T = TIERS[tier], nFar = FAR[tier] || 0;
@@ -733,11 +811,36 @@ var T4LANG = (function(){
   /* an animation clock that only advances while frames are actually drawn
      (dt capped), so a hidden or background tab pauses the story instead of skipping it */
   var clock = 0, last = null;
+  /* Below full, frames are drawn at most 30 times a second: a 90 or 120 Hz
+     phone screen would otherwise ask for three or four times the work.
+     The first frames are timed: SAMPLE frames after WARM ones (the robot's fetch
+     and the first layouts land in those). If the script costs more than 10ms a
+     frame, or the frames arrive slower than the level aims for (the GPU drawing
+     the blurs and blends shows up there), the hero steps down a level and times
+     again, until a level runs fine. At low it rebuilds the network with fewer dots. */
+  var WARM = 20, SAMPLE = 45, seen = 0, costs = [], gaps = [], settled = false;
+  function median(a){ var s = a.slice().sort(function(x, y){ return x - y; }); return s[s.length >> 1]; }
+  function measure(gap, cost){
+    if(settled || ++seen <= WARM) return;
+    gaps.push(gap); costs.push(cost);
+    if(gaps.length < SAMPLE) return;
+    var avgCost = costs.reduce(function(a, b){ return a + b; }, 0)/costs.length;
+    var slowGap = HQ.level() === 2 ? 40 : 50;            /* under 25 fps at full, 20 fps at lite */
+    var slow = avgCost > 10 || median(gaps) > slowGap;
+    gaps = []; costs = []; seen = 0;
+    /* fine at this level: stop timing, so a later one-off stall cannot step it down */
+    if(!slow || !HQ.down()){ settled = true; return; }
+    if(HQ.level() === 0) build();
+  }
   function frame(ts){
+    if(!visible){ raf = null; last = null; return; }
+    raf = requestAnimationFrame(frame);
+    if(last !== null && HQ.level() < 2 && ts - last < 31) return;   /* 30 fps below full */
     if(last !== null) clock += Math.min(50, ts - last);
-    last = ts;
+    var t0 = performance.now();
     draw(clock);
-    if(visible){ raf = requestAnimationFrame(frame); } else { raf = null; last = null; }
+    if(last !== null) measure(ts - last, performance.now() - t0);
+    last = ts;
   }
 
   build();
@@ -974,19 +1077,20 @@ var T4LANG = (function(){
   document.body.appendChild(peek);
   var bot = peek.querySelector(".peek-bot"), ready = null;
 
-  /* her own copy of the robot at rest, rings and all (her rings stay behind her in
-     every pose, DESIGN.md s16), with every id renamed so her clip paths never pick
-     up the hero robot's live, turning ones.
+  /* her own copy of the robot at rest, without her rings (the rig's halo group;
+     decision 2026-10-26, DESIGN.md s16), with every id renamed so her clip paths
+     never pick up the hero robot's live, turning ones.
      Fetched once, quietly after the page has loaded, so she never arrives empty */
   function load(){
     if(ready) return ready;
     ready = new Promise(function(done){
-      var fall = function(){ bot.innerHTML = '<img src="' + ASSET + 'tina4-logo-correct.svg" alt="">'; done(); };
+      var fall = function(){ bot.innerHTML = '<img src="/logo.svg" alt="">'; done(); };
       if(!window.fetch || !window.DOMParser){ fall(); return; }
       fetch(ASSET + "tina4-robot.svg").then(function(r){ return r.ok ? r.text() : Promise.reject(); }).then(function(t){
         t = t.replace(/\sid="([^"]+)"/g, ' id="pk-$1"').replace(/url\(#([^)]+)\)/g, "url(#pk-$1)").replace(/href="#([^"]+)"/g, 'href="#pk-$1"');
         var doc = new DOMParser().parseFromString(t, "image/svg+xml"), svg = doc.documentElement;
         if(svg.nodeName.toLowerCase() !== "svg"){ fall(); return; }
+        var halo = svg.querySelector('[data-rig="halo"]'); if(halo) halo.parentNode.removeChild(halo);
         bot.appendChild(document.importNode(svg, true)); done();
       }).catch(fall);
     });
@@ -1000,7 +1104,7 @@ var T4LANG = (function(){
   }
   function show(){
     if(out || shown >= MAX || document.hidden || !moreBelow()) return;
-    var chat = document.querySelector(".tp-chat-panel"); if(chat && !chat.hidden) return;   /* not while the chat is open */
+    var chat = document.querySelector(".t4-chat-panel"); if(chat && !chat.hidden) return;   /* not while the chat is open */
     if(performance.now() - lastAt < GAP) return;
     if(!bot.firstChild){ load().then(function(){ arm(); }); return; }
     out = true; shown++; lastAt = performance.now();
@@ -1039,129 +1143,13 @@ var T4LANG = (function(){
 })();
 
 /* ---------- anything marked data-open-chat opens the Ask Tina4 chat ----------
-   .tp-chat-btn toggles the panel, so click it only while the panel is closed */
+   .t4-chat-btn toggles the panel, so click it only while the panel is closed */
 (function(){
   function openChat(){
-    var native = document.querySelector(".tp-chat-btn"), panel = document.querySelector(".tp-chat-panel");
-    if(native){ if(!panel || panel.hidden) native.click(); else { var i = panel.querySelector(".tp-chat-input"); if(i) i.focus(); } return; }
+    var native = document.querySelector(".t4-chat-btn"), panel = document.querySelector(".t4-chat-panel");
+    if(native){ if(!panel || panel.hidden) native.click(); else { var i = panel.querySelector(".t4-chat-input"); if(i) i.focus(); } return; }
   }
   Array.prototype.forEach.call(document.querySelectorAll("[data-open-chat]"), function(b){ b.addEventListener("click", openChat); });
-})();
-
-/* ---------- Ask Tina4 ----------
-   tina4press's chat markup, restyled, asking the same hosted RAG as the docs
-   widget. The endpoint comes from themeConfig.chat in tina4press.config.mjs:
-   scripts/build-home.mjs writes it into data-api on .tp-chat, so the two never
-   drift. The request and the reply are the ones tina4press's client.js uses:
-   POST {api}/v1/ask { query, language, k, stream:false } -> { answer, sources[] }.
-   The language is the one picked on this page (T4LANG). stream:false because
-   the streamed reply carries no sources, and the citations are the point. */
-(function(){
-  var wrap = document.querySelector(".tp-chat"); if(!wrap) return;
-  var btn = wrap.querySelector(".tp-chat-btn"), panel = wrap.querySelector(".tp-chat-panel");
-  var log = wrap.querySelector(".tp-chat-log"), form = wrap.querySelector(".tp-chat-form");
-  var input = wrap.querySelector(".tp-chat-input"), closeBtn = wrap.querySelector(".tp-chat-close");
-  var API = (wrap.getAttribute("data-api") || "https://rag.tina4.com").replace(/\/+$/, "");
-  var ASK_PATH = wrap.getAttribute("data-ask-path") || "/v1/ask";
-  var NAMES = { python: "Python", php: "PHP", ruby: "Ruby", nodejs: "Node.js" };
-  var ASK = ["How do I define a route?", "How do I connect a database?", "How do I add JWT auth?", "How do I run a background job?"];
-  var ERROR = "Sorry, the assistant is unreachable right now. The docs have the answer too: try the search on any docs page.";
-  function lang(){ return (window.T4LANG && T4LANG.get()) || "python"; }
-
-  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
-  /* a link in an answer must go somewhere ordinary: http(s), or a path on this site */
-  function safeUrl(u){
-    u = u.replace(/^(?:&lt;|<)+/, "").replace(/(?:&gt;|>)+$/, "").replace(/[.,;:!?]+$/, "");
-    return /^https?:\/\//i.test(u) || /^\/(?!\/)/.test(u) ? u : null;
-  }
-  function linkAttrs(u){ return /^https?:\/\//i.test(u) ? ' target="_blank" rel="noreferrer"' : ""; }
-  /* the same small markdown tina4press renders: fenced code, inline code, links,
-     bold, line breaks */
-  function md(t){
-    var h = esc(t);
-    h = h.replace(/```[\w-]*\n([\s\S]*?)```/g, function(_, c){ return "<pre><code>" + c.replace(/\n$/, "") + "</code></pre>"; });
-    h = h.replace(/`([^`]+)`/g, "<code>$1</code>");
-    /* answers use ### headings; a bold line reads right in a chat bubble */
-    h = h.split(/(<pre>[\s\S]*?<\/pre>)/).map(function(part){
-      return part.indexOf("<pre>") === 0 ? part : part.replace(/^#{1,6}\s+(.+)$/gm, "<strong>$1</strong>");
-    }).join("");
-    h = h.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function(all, text, url){
-      var u = safeUrl(url); return u ? '<a href="' + u + '"' + linkAttrs(u) + ">" + text + "</a>" : text;
-    });
-    h = h.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br>");
-    return h.replace(/<pre>([\s\S]*?)<\/pre>/g, function(m){ return m.replace(/<br>/g, "\n"); });
-  }
-  function add(cls, html){
-    var el = document.createElement("div"); el.className = cls; el.innerHTML = html;
-    log.appendChild(el); log.scrollTop = log.scrollHeight; return el;
-  }
-  function suggest(){
-    var box = add("tp-chat-suggest", "");
-    ASK.forEach(function(q){
-      var c = document.createElement("button"); c.type = "button"; c.className = "tp-chat-chip"; c.textContent = q;
-      c.addEventListener("click", function(){ box.parentNode && box.parentNode.removeChild(box); ask(q); }); box.appendChild(c);
-    });
-  }
-  /* the structured sources[] become citations: always real URLs, unlike a link an
-     answer might mangle. One per URL, without the "(path)" the service appends */
-  function sources(list){
-    var seen = {}, items = "";
-    (list || []).forEach(function(s){
-      var u = s && s.url && safeUrl(esc(s.url)); if(!u || seen[u]) return; seen[u] = 1;
-      items += '<a class="tp-chat-src" href="' + u + '"' + linkAttrs(u) + ">" + esc((s.title || s.url).replace(/\s*\([^)]*\)\s*$/, "")) + "</a>";
-    });
-    if(items) add("tp-chat-sources", '<div class="tp-chat-sources-label">Sources</div>' + items);
-  }
-  function ask(q){
-    q = q.trim(); if(!q) return;
-    add("tp-chat-msg tp-chat-you", esc(q));
-    var thinking = add("tp-chat-msg tp-chat-bot", '<span class="tp-chat-thinking" role="img" aria-label="Thinking"><span></span><span></span><span></span></span>');
-    var ctl = window.AbortController ? new AbortController() : null, timer = ctl && setTimeout(function(){ ctl.abort(); }, 45000);
-    fetch(API + ASK_PATH, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: q, language: lang(), k: 6, stream: false }),
-      signal: ctl ? ctl.signal : undefined
-    }).then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); }).then(function(d){
-      thinking.innerHTML = md(d.answer || d.response || d.text || "I found nothing on that in the docs. Try asking it another way.");
-      sources(d.sources);
-      log.scrollTop = log.scrollHeight;
-    }).catch(function(){
-      thinking.textContent = ERROR;
-    }).then(function(){ if(timer) clearTimeout(timer); });
-  }
-
-  var opened = false;
-  /* the morph starts from the button's exact pill: hand the CSS its size and its
-     offset from the panel's bottom-right corner (both boxes are laid out even while
-     the panel is closed, so this measures cleanly either way) */
-  function morphFromButton(){
-    var b = btn.getBoundingClientRect(), p = panel.getBoundingClientRect();
-    if(!b.width || !p.width) return;
-    panel.style.setProperty("--bw", Math.round(b.width) + "px");
-    panel.style.setProperty("--bh", Math.round(b.height) + "px");
-    panel.style.setProperty("--gr", Math.max(0, Math.round(p.right - b.right)) + "px");
-    panel.style.setProperty("--gb", Math.max(0, Math.round(p.bottom - b.bottom)) + "px");
-  }
-  window.addEventListener("resize", morphFromButton);
-  function setOpen(on){
-    morphFromButton();
-    panel.hidden = !on; wrap.classList.toggle("open", on); btn.setAttribute("aria-expanded", on ? "true" : "false");
-    if(on){
-      if(!opened){                      /* the first time: Tina says hello and offers questions */
-        opened = true;
-        add("tp-chat-msg tp-chat-bot", md("Hi, I'm Tina. Ask me how to do something in Tina4. I'll answer for **" + NAMES[lang()] + "**, the language picked on this page."));
-        suggest();
-      }
-      setTimeout(function(){ input.focus(); }, 30);
-    } else btn.focus();
-  }
-  btn.addEventListener("click", function(){ setOpen(panel.hidden); });
-  closeBtn.addEventListener("click", function(){ setOpen(false); });
-  var expand = wrap.querySelector(".tp-chat-expand");
-  if(expand) expand.addEventListener("click", function(){ var w = wrap.classList.toggle("wide"); expand.setAttribute("aria-pressed", w ? "true" : "false"); expand.setAttribute("aria-label", w ? "Narrower panel" : "Wider panel"); });
-
-  document.addEventListener("keydown", function(e){ if(e.key === "Escape" && !panel.hidden) setOpen(false); });
-  form.addEventListener("submit", function(e){ e.preventDefault(); var q = input.value; input.value = ""; ask(q); });
 })();
 
 /* ---------- copy buttons ---------- */

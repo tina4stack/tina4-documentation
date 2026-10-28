@@ -15,7 +15,7 @@
 //      tina4press.config.mjs, so the hrefs match its clean-URL format exactly);
 //   2. bakes the newest releases into the page from docs/<lang>/36-releases.md,
 //      and the newest version into the hero's `tina4 serve` banner;
-//   3. writes the chat endpoint from themeConfig.chat into the page, and the
+//   3. writes the site chat (home/chat.html) and its endpoint (CHAT) into the page, and the
 //      docs pages' analytics tag (themeConfig.analytics) into its <head>;
 //   4. writes dist/index.html (replacing tina4press's home), copies the page's
 //      files to dist/assets/home/, and writes dist/releases/latest.json;
@@ -45,7 +45,7 @@ const RELEASE_COUNT = 4;
 // multiplication sign (DESIGN.md s0).
 const BANNED = /[\u2013\u2014\u00d7\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f\u2026\u2032\u2033]/;
 
-const config = (await import(pathToFileURL(join(REPO, "tina4press.config.mjs")).href)).default;
+const { default: config, CHAT } = await import(pathToFileURL(join(REPO, "tina4press.config.mjs")).href);
 const DIST = resolve(REPO, config.outDir || "docs/.vitepress/dist");
 const DOCS = resolve(REPO, config.srcDir || "docs");
 
@@ -123,8 +123,8 @@ if (!navLinks.length) fail("tina4press's header nav has no links");
 //   - the search modal markup (into <!-- home:search -->);
 //   - its settings, window.__TP_BASE__ and __TP_I18N__ (the UI strings), as
 //     press-config.js: the docs set them in an inline script, which the home
-//     page's CSP forbids. __TP_CHAT__ stays out, or client.js would add its own
-//     chat widget next to the page's;
+//     page's CSP forbids. There is no __TP_CHAT__ to copy: tina4press's own chat
+//     is off site-wide, the site's chat (home/chat.*) is used everywhere;
 //   - the modal's rules from tina4press's theme.css, as search.css (the whole
 //     theme.css would restyle the page). home.css maps their colour variables.
 let searchCss = "", pressConfig = "";
@@ -244,14 +244,15 @@ if (releases.length) {
   warnings.push("no release headings found in docs/python/36-releases.md: kept the page's last-known releases");
 }
 
-// ---- 3. the chat endpoint, from themeConfig.chat ----
-const chat = (config.themeConfig && config.themeConfig.chat) || {};
-if (chat.api) {
-  page = page.replace(/(<div class="tp-chat"[^>]*\bdata-api=")[^"]*"/, `$1${esc(chat.api)}"`);
-  page = page.replace(/(<div class="tp-chat"[^>]*\bdata-ask-path=")[^"]*"/, `$1${esc(chat.askPath || "/v1/ask")}"`);
-} else {
-  warnings.push("themeConfig.chat.api is not set: the page keeps its own chat endpoint");
-}
+// ---- 3. the chat: the site's one chat (home/chat.html), its endpoint from CHAT ----
+// The docs pages get the same markup from the contentBottom slot in
+// tina4press.config.mjs; both write the endpoint from the config's CHAT.
+const chat = CHAT || {};
+if (!chat.api) fail("tina4press.config.mjs exports no CHAT.api for the chat");
+if (!/<!-- home:chat -->/.test(page)) fail("home/index.html has no <!-- home:chat --> marker");
+page = page.replace("<!-- home:chat -->", readFileSync(join(HOME, "chat.html"), "utf8").trimEnd());
+page = page.replace(/(<div class="t4-chat"[^>]*\bdata-api=")[^"]*"/, `$1${esc(chat.api)}"`);
+page = page.replace(/(<div class="t4-chat"[^>]*\bdata-ask-path=")[^"]*"/, `$1${esc(chat.askPath || "/v1/ask")}"`);
 
 // ---- 4. write the page, its files and the releases endpoint ----
 function copyTree(from, to) {

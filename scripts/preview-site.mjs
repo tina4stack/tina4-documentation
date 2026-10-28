@@ -13,8 +13,8 @@
 //
 //   - it serves the build the way Apache does on tina4.com: /dir/ serves
 //     dir/index.html, /dir redirects to /dir/;
-//   - in every page it serves, it points the chat (the home page's data-api
-//     and the docs widget's window.__TP_CHAT__.api) at itself, and it forwards
+//   - in every page it serves, it points the site chat (data-api on .t4-chat,
+//     on the home page and every docs page) at itself, and it forwards
 //     POST /v1/ask to the real rag.tina4.com from the server, so the answers
 //     are the live service's own;
 //   - it leaves the Google Analytics tag out unless you pass --analytics, so a
@@ -38,9 +38,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { headersFor } from "./site-headers.mjs";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const config = (await import(pathToFileURL(join(REPO, "tina4press.config.mjs")).href)).default;
+const { default: config, CHAT } = await import(pathToFileURL(join(REPO, "tina4press.config.mjs")).href);
 const DIST = resolve(REPO, config.outDir || "docs/.vitepress/dist");
-const chat = (config.themeConfig && config.themeConfig.chat) || {};
+const chat = CHAT || {};
 const RAG = (chat.api || "https://rag.tina4.com").replace(/\/+$/, "");
 const ASK_PATH = chat.askPath || "/v1/ask";
 

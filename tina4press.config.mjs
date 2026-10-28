@@ -5,7 +5,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-// tina4press config for tina4.com — mirrors the VitePress themeConfig so this
+import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+
+// tina4press config for tina4.com - mirrors the VitePress themeConfig so this
 // is a copy-paste port. Sidebars are auto-generated from the folder structure;
 // override per-section here later to match the exact VitePress grouping.
 
@@ -155,6 +158,41 @@ const FONT_HEAD = [
   ["link", { rel: "preload", href: "/fonts/inconsolata-latin-wght-normal.woff2", as: "font", type: "font/woff2", crossorigin: "anonymous" }],
 ];
 
+// ── Ask Tina4, the site's one chat ────────────────────────────────────────
+//
+// The home page and every docs page use the same chat: markup home/chat.html,
+// script home/chat.js, styles home/chat.css (scripts/build-home.mjs copies them
+// to /assets/home/). tina4press's own chat widget (themeConfig.chat) is off, so
+// it cannot draw a second, different one. CHAT is the RAG endpoint; the build
+// scripts import it for the home page, the CSP and the local preview.
+export const CHAT = { api: "https://rag.tina4.com", askPath: "/v1/ask" };
+
+const HOME_DIR = new URL("./home/", import.meta.url);
+const homeFile = (name) => readFileSync(new URL(name, HOME_DIR), "utf8");
+// a content hash on each link, so a deploy that changes the chat is fetched fresh
+const stamp = (name) => createHash("sha256").update(homeFile(name)).digest("hex").slice(0, 10);
+// The chat's icons come from a small sprite of the home page's own symbols
+// (home/index.html), drawn into each docs page beside the chat.
+const SPRITE_IDS = ["i-tina", "i-maximize-2", "i-minimize-2", "i-x", "i-arrow-up"];
+function chatSprite() {
+  const page = homeFile("index.html");
+  const symbols = SPRITE_IDS.map((id) => {
+    const m = page.match(new RegExp(`<symbol id="${id}"[\\s\\S]*?</symbol>`));
+    if (!m) throw new Error(`home/index.html has no <symbol id="${id}"> for the docs chat`);
+    return m[0];
+  });
+  return `<svg class="icon-sprite" width="0" height="0" aria-hidden="true">${symbols.join("")}</svg>`;
+}
+function chatHtml() {
+  return chatSprite() + homeFile("chat.html")
+    .replace(/data-api="[^"]*"/, `data-api="${CHAT.api}"`)
+    .replace(/data-ask-path="[^"]*"/, `data-ask-path="${CHAT.askPath}"`);
+}
+const CHAT_HEAD = [
+  ["link", { rel: "stylesheet", href: `/assets/home/chat.css?v=${stamp("chat.css")}` }],
+  ["script", { src: `/assets/home/chat.js?v=${stamp("chat.js")}`, defer: "" }],
+];
+
 const OG_IMAGE = "https://tina4.com/og-image.png";
 const OG_META = [
   ["meta", { property: "og:type", content: "website" }],
@@ -177,7 +215,7 @@ export default {
   outDir: "docs/.vitepress/dist",
   // headHtml() reads config.head (VitePress format: [tag, attrs, innerHTML]).
   // Top level, NOT themeConfig - it is not a theme option.
-  head: [["style", { id: "tp-site-links" }, SITE_LINK_CSS], ...FONT_HEAD, ...OG_META],
+  head: [["style", { id: "tp-site-links" }, SITE_LINK_CSS], ...FONT_HEAD, ...CHAT_HEAD, ...OG_META],
   themeConfig: {
     analytics: "G-FZRRSBE9M0",
     // The header, matched to the home page (one collapse point, nav on one line).
@@ -187,7 +225,7 @@ export default {
       body: '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
       mono: '"Inconsolata", ui-monospace, Menlo, Consolas, monospace',
     },
-    // All theme colors as constants — tweak these to retheme the whole site.
+    // All theme colors as constants - tweak these to retheme the whole site.
     colors: {
       light: { brand: "#2f5fe0", brand2: "#4888ff" },
       // The cool slate of the home page (DESIGN.md s4), so the shared theme
@@ -214,14 +252,10 @@ export default {
     ],
     sidebar: null, // auto, section-scoped; grouped below (ported from SECTION_GROUPS)
     sectionLabels: { js: "tina4-js", python: "Python", nodejs: "Node.js", php: "PHP", ruby: "Ruby", general: "Understanding Tina4", v2: "v2 Docs" },
-    // Built-in RAG chat ("Ask Tina4") — floating widget, hits the hosted RAG.
-    chat: { api: "https://rag.tina4.com", label: "Ask Tina4", model: "Powered by Tina4", placeholder: "How do I define a route?" },
-    // The home page (home/, scripts/build-home.mjs) reads chat.api too, and
-    // reuses these strings for its search. tina4press's defaults carry an em
-    // dash and the ellipsis character; the docs ban both.
+    // No `chat` here: the site's own chat (CHAT, above) replaces tina4press's.
+    // The search strings are reused by the home page's search. tina4press's
+    // defaults carry the ellipsis character; the docs ban it.
     messages: {
-      chatError: "Sorry, the assistant is unreachable right now.",
-      chatPlaceholder: "Ask a question...",
       searchPlaceholder: "Search the docs...",
       searchEmpty: "Type to search the docs...",
     },
@@ -270,7 +304,9 @@ export default {
     // so declaring one would look like a fix while changing nothing.
     slots: {
       headerEnd: siteLinksHtml({ compact: true }),
-      contentBottom: siteLinksHtml({ compact: false }),
+      // the site chat rides along at the end of every docs page (it is fixed
+      // to the corner, so where it sits in the page does not matter)
+      contentBottom: siteLinksHtml({ compact: false }) + chatHtml(),
     },
   },
 };

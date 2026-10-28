@@ -174,6 +174,33 @@ h1,h2,h3{text-wrap:balance;letter-spacing:-.02em;line-height:1.08}
 .mobile-nav a:hover,.mobile-nav a[aria-current="page"]{color:#fff}
 @media(min-width:1201px){.mobile-nav{display:none}}
 
+/* The header follows the theme, as the docs header does (tina4press theme.css
+   .tp-header): the page colour, a little see-through over a blur, a hairline
+   under it; white in light mode, slate in dark. Same colours, borders and
+   button styles as the docs, so the bar does not change between the two sides.
+   (Decision 2026-10-26: the header left the dark brand bands; DESIGN.md s4.) */
+.site-header{background:color-mix(in srgb,var(--bg) 82%,transparent);
+  -webkit-backdrop-filter:saturate(180%) blur(12px);backdrop-filter:saturate(180%) blur(12px);
+  border-bottom:1px solid var(--border)}
+.site-header .brand-name{color:var(--ink)}
+.site-header .brand-name span{color:var(--brand-text)}
+.site-nav a{color:var(--fg-2)}
+.site-nav a:hover,.site-nav a[aria-current="page"]{color:var(--ink)}
+.site-header .icon-btn{color:var(--ink)}
+.site-header .icon-btn:hover{color:var(--brand-text);background:var(--bg-soft)}
+/* the theme and menu buttons: tina4press's 34 x 32 outlined squares */
+.site-header .theme-toggle,.site-header .nav-toggle{width:34px;height:32px;border:1px solid var(--border);
+  border-radius:8px;color:var(--fg-2);transition:border-color var(--dur) var(--ease),background var(--dur) var(--ease)}
+.site-header .theme-toggle:hover,.site-header .nav-toggle:hover{border-color:var(--border-2);background:var(--bg-soft);color:var(--fg-2)}
+.site-header .theme-toggle svg.i{width:16px;height:16px}
+.site-header .nav-toggle .i{width:18px;height:18px}
+.search-pill{background:var(--bg-soft);border-color:var(--border);color:var(--fg-2);border-radius:8px}
+.search-pill:hover{border-color:var(--border-2);color:var(--ink)}
+.search-pill kbd{background:var(--bg-mute);border:1px solid var(--border);color:var(--fg-2)}
+.mobile-nav{background:var(--bg);border-top-color:var(--border)}
+.mobile-nav a{color:var(--fg-2);border-bottom-color:var(--border)}
+.mobile-nav a:hover,.mobile-nav a[aria-current="page"]{color:var(--ink)}
+
 /* ---------- hero ---------- */
 .hero{
   position:relative;
@@ -294,6 +321,14 @@ h1,h2,h3{text-wrap:balance;letter-spacing:-.02em;line-height:1.08}
    opened in a background tab still plays the resolve when it's first seen */
 .hero-robot.arrived{opacity:1;transform:none}
 .hero-robot > img,.hero-robot > svg{display:block;width:100%;height:100%;overflow:visible}
+/* Tina's five rings, each a layer of its own behind the robot (home.js makeRig):
+   the CSS rotate turns it, so the graphics chip spins a finished picture rather
+   than repainting the ring every frame. The robot's drawing sits above them */
+.hero-robot > svg:not(.ring-layer){position:relative;z-index:1}
+.hero-robot > .ring-layer{position:absolute;inset:0;pointer-events:none;will-change:rotate,translate;
+  animation:ringTurn linear infinite}
+.hero-robot > .ring-layer.ring-soft{filter:blur(.8px)}
+@keyframes ringTurn{to{rotate:360deg}}
 @media(prefers-reduced-motion:reduce){.hero-robot{transition:none;opacity:1;transform:none}}
 
 /* ---------- section scaffolding (light) ---------- */
@@ -433,104 +468,6 @@ h1,h2,h3{text-wrap:balance;letter-spacing:-.02em;line-height:1.08}
 .peek-say .i{width:13px;height:13px}
 .peek.in .peek-say{opacity:1;transition-delay:.5s}
 @media(max-width:600px){.peek{width:150px;height:150px}.peek-say{font-size:.78rem}}
-
-/* ---------- Ask Tina4 chat ----------
-   The markup and class names are tina4press's own chat widget (tp-chat-*,
-   tina4press 0.1.16 src/theme/client.js), so this styling ports as plain CSS.
-   Pieces tina4press does not draw yet are marked "enhancement" (see PORT-PLAN).
-   Tina's mark is the favicon's silhouette, drawn inline in currentColor. */
-.tina-mark{fill:currentColor;stroke:none;display:block}
-.tp-chat{position:fixed;right:22px;bottom:22px;z-index:60}
-/* collapsed: a brand-blue pill with Tina in white */
-.tp-chat-btn{display:inline-flex;align-items:center;gap:10px;cursor:pointer;
-  background:var(--brand);color:#fff;border:0;padding:12px 20px 12px 14px;border-radius:999px;
-  font:inherit;font-weight:600;font-size:.95rem;box-shadow:0 10px 30px rgba(47,95,224,.35);
-  transition:transform var(--dur) var(--ease),background var(--dur) var(--ease),opacity .25s var(--ease)}
-.tp-chat-btn:hover{transform:translateY(-2px);background:#3a6bf0}
-.tp-chat-btn .tina-mark{width:24px;height:24px}
-/* open: a wide panel that slides in from the right edge of the page. tina4press
-   toggles the panel's [hidden] attribute, so [hidden] means "slid away" here
-   rather than display:none; that is what lets it animate */
-/* docked: half the screen tall (420 to 680px), sharing the button's corner so the
-   button can morph into it. Closed ([hidden], which tina4press toggles), the panel
-   is clipped to the button's exact pill and covered in brand blue; opening grows
-   the clip out to the whole panel while the blue fades and the contents arrive.
-   --bw/--bh are the button's size and --gr/--gb its offset from the panel's corner
-   (the page script measures them; the fallbacks fit the desktop button) */
-.tp-chat-panel{position:fixed;right:22px;bottom:22px;width:min(480px,calc(100vw - 44px));
-  height:clamp(420px,50vh,680px);max-height:calc(100vh - 44px);
-  display:flex;flex-direction:column;overflow:hidden;background:var(--bg);color:var(--ink);
-  border:1px solid var(--border);border-radius:16px;box-shadow:0 24px 64px rgba(20,20,32,.28);
-  visibility:visible;clip-path:inset(-96px round 24px);   /* wide enough for the whole shadow (64px blur, 24px drop) */
-  transition:clip-path .42s cubic-bezier(.2,.8,.2,1),width .25s var(--ease),height .25s var(--ease),visibility 0s}
-.tp-chat-panel::after{content:"";position:absolute;inset:0;background:var(--brand);opacity:0;pointer-events:none;
-  transition:opacity .24s var(--ease) .1s}
-.tp-chat-panel > *{transition:opacity .2s var(--ease) .16s}
-.tp-chat-panel[hidden]{display:flex;visibility:hidden;
-  clip-path:inset(calc(100% - var(--gb,0px) - var(--bh,48px)) var(--gr,0px) var(--gb,0px) calc(100% - var(--gr,0px) - var(--bw,142px)) round calc(var(--bh,48px) / 2));
-  transition:clip-path .34s cubic-bezier(.4,0,.2,1),visibility 0s .34s}
-.tp-chat-panel[hidden]::after{opacity:1;transition:opacity .14s var(--ease)}
-.tp-chat-panel[hidden] > *{opacity:0;transition:opacity .08s var(--ease)}
-/* the button hands over to the panel at once, and takes back over as the panel lands */
-.tp-chat.open .tp-chat-btn{opacity:0;pointer-events:none;transition:none}
-.tp-chat:not(.open) .tp-chat-btn{transition:transform var(--dur) var(--ease),background var(--dur) var(--ease),opacity 0s .3s}
-/* widened: wider and taller */
-.tp-chat.wide .tp-chat-panel{width:min(760px,calc(100vw - 44px));height:min(85vh,calc(100vh - 44px))}
-@media(prefers-reduced-motion:reduce){.tp-chat-panel,.tp-chat-panel[hidden],.tp-chat-panel::after,.tp-chat-panel > *{transition:none}}
-/* head: Tina, the title, the model line, and the tools: widen and close (enhancements) */
-.tp-chat-head{display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto auto;
-  align-items:center;padding:12px 10px 12px 16px;border-bottom:1px solid var(--border)}
-.tp-chat-avatar{grid-column:1;grid-row:1 / span 2;margin-right:10px;width:34px;height:34px;border-radius:50%;
-  display:grid;place-items:center;background:var(--brand);color:#fff}
-.tp-chat-avatar .tina-mark{width:22px;height:22px}
-.tp-chat-head strong{grid-column:2;font-size:1rem;line-height:1.2}
-.tp-chat-model{grid-column:2;font-size:.76rem;color:var(--fg-2)}
-.tp-chat-tools{grid-column:3;grid-row:1 / span 2;display:flex;gap:2px}
-.tp-chat-tool{width:34px;height:34px;display:grid;place-items:center;background:none;border:0;
-  border-radius:8px;color:var(--fg-2);cursor:pointer}
-.tp-chat-tool:hover{color:var(--ink);background:var(--bg-mute)}
-.tp-chat-tool .i{width:17px;height:17px}
-.tp-chat-expand .i-shrink,.tp-chat.wide .tp-chat-expand .i-grow{display:none}
-.tp-chat.wide .tp-chat-expand .i-shrink{display:block}
-/* the conversation */
-.tp-chat-log{flex:1;overflow-y:auto;padding:18px 16px;display:flex;flex-direction:column;gap:12px}
-.tp-chat-msg{font-size:.93rem;line-height:1.55;max-width:86%;overflow-wrap:anywhere}
-.tp-chat-you{align-self:flex-end;background:var(--brand);color:#fff;padding:9px 14px;border-radius:16px 16px 4px 16px}
-.tp-chat-bot{align-self:flex-start;background:var(--bg-soft);color:var(--ink);border:1px solid var(--border);
-  padding:10px 14px;border-radius:16px 16px 16px 4px;animation:chatIn .2s var(--ease)}
-@keyframes chatIn{from{opacity:0;transform:translateY(6px)}}
-.tp-chat-bot code{font-family:var(--mono);font-size:.86em;background:var(--bg-mute);padding:1px 5px;border-radius:4px}
-.tp-chat-bot pre{margin:8px 0;background:#0f0f1a;color:var(--code-t);border-radius:8px;padding:10px 12px;
-  font-family:var(--mono);font-size:.82rem;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
-.tp-chat-bot pre code{background:none;padding:0;font-size:inherit;color:inherit}
-.tp-chat-bot strong{font-weight:700}
-.tp-chat-bot a{color:var(--brand-text);font-weight:600}
-/* while Tina thinks: three dots (enhancement; tina4press shows a static ellipsis) */
-.tp-chat-thinking{display:inline-flex;gap:4px;padding:4px 2px}
-.tp-chat-thinking span{width:6px;height:6px;border-radius:50%;background:var(--fg-2);animation:chatDot 1s var(--ease) infinite}
-.tp-chat-thinking span:nth-child(2){animation-delay:.15s}
-.tp-chat-thinking span:nth-child(3){animation-delay:.3s}
-@keyframes chatDot{0%,60%,100%{opacity:.25;transform:none}30%{opacity:1;transform:translateY(-3px)}}
-/* sources: real links into the docs, under the answer */
-.tp-chat-sources{align-self:flex-start;max-width:86%;display:flex;flex-wrap:wrap;gap:6px}
-.tp-chat-sources-label{width:100%;font-size:.8rem;font-weight:600;color:var(--fg-2)}
-.tp-chat-src{display:inline-flex;align-items:center;font-size:.82rem;font-weight:600;color:var(--brand-text);
-  background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:4px 11px}
-.tp-chat-src:hover{border-color:var(--brand)}
-/* suggested questions (enhancement) */
-.tp-chat-suggest{align-self:flex-start;display:flex;flex-wrap:wrap;gap:6px;max-width:100%}
-.tp-chat-chip{font:inherit;font-size:.85rem;color:var(--ink);background:var(--bg);border:1px solid var(--border);
-  border-radius:999px;padding:6px 12px;cursor:pointer;transition:border-color var(--dur) var(--ease),color var(--dur) var(--ease)}
-.tp-chat-chip:hover{border-color:var(--brand);color:var(--brand-text)}
-/* the question box: a soft rounded field and a round send button */
-.tp-chat-form{display:flex;align-items:center;gap:8px;padding:12px 14px 6px;border-top:1px solid var(--border)}
-.tp-chat-input{flex:1;min-width:0;font:inherit;font-size:.95rem;color:var(--ink);background:var(--bg-soft);
-  border:1px solid var(--border);border-radius:12px;padding:11px 14px}
-.tp-chat-input:focus{outline:2px solid var(--brand);outline-offset:-1px}
-.tp-chat-form button{flex:none;width:42px;height:42px;display:grid;place-items:center;border:0;border-radius:12px;
-  background:var(--brand);color:#fff;cursor:pointer}
-.tp-chat-form button:hover{background:#3a6bf0}
-.tp-chat-form button .i{width:19px;height:19px}
 
 /* ---------- C: self-building terminal ---------- */
 .proof{position:relative}
@@ -819,6 +756,14 @@ h1,h2,h3{text-wrap:balance;letter-spacing:-.02em;line-height:1.08}
 .hero .stat-strip .stat-n{color:#fff;font-size:clamp(2rem,1rem + 1.2vw,2.8rem)}
 .hero .stat-strip .stat-n.is-zero{color:var(--brand-2)}
 .hero .stat-strip .stat-l{color:rgba(255,255,255,.55)}
+/* in light mode the strip at the foot of the hero is a light shelf, so light mode
+   shows above the fold; dark mode keeps the dark glass above */
+:root[data-theme="light"] .hero .stat-strip{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none;
+  border-top:1px solid var(--border)}
+:root[data-theme="light"] .hero .stat-strip .stat{border-left-color:var(--border)}
+:root[data-theme="light"] .hero .stat-strip .stat-n{color:var(--ink)}
+:root[data-theme="light"] .hero .stat-strip .stat-n.is-zero{color:var(--brand-text)}
+:root[data-theme="light"] .hero .stat-strip .stat-l{color:var(--fg-2)}
 @media(max-width:480px){
   .proof-gets{grid-template-columns:1fr}
   .tiles{grid-template-columns:1fr}
@@ -853,13 +798,6 @@ h1,h2,h3{text-wrap:balance;letter-spacing:-.02em;line-height:1.08}
   .hero-robot{width:clamp(140px,27vh,220px)}
   .hero-cta{flex-wrap:nowrap;gap:var(--s2)}
   .hero-cta .btn{flex:1 1 auto;justify-content:center;padding:12px 14px;font-size:.95rem;white-space:nowrap}
-  /* Ask Tina4 shrinks to a round icon, so it stops sitting on the content */
-  /* the chat button is a round icon, and the panel takes the whole screen */
-  .tp-chat{right:14px;bottom:14px}
-  .tp-chat-btn{padding:12px;gap:0}
-  .tp-chat-btn .tp-chat-label{display:none}
-  .tp-chat-panel,.tp-chat.wide .tp-chat-panel{inset:0;width:100%;height:auto;max-height:none;border-radius:0;border:0}
-  .tp-chat-expand{display:none}
   /* install comparison: Tina4's box fits its one package instead of a tall empty box */
   .dep-us .dep-pkgs{height:auto}
   .dep-pkgs{height:128px}
@@ -895,7 +833,7 @@ h1,h2,h3{text-wrap:balance;letter-spacing:-.02em;line-height:1.08}
 }
 /* Ask Tina4 steps aside while the hero's own buttons are on screen (the page
    script sets this class), so it never covers them; it is back once you scroll */
-body.cta-visible .tp-chat:not(.open) .tp-chat-btn{opacity:0;pointer-events:none;transform:translateY(8px)}
+body.cta-visible .t4-chat:not(.open) .t4-chat-btn{opacity:0;pointer-events:none;transform:translateY(8px)}
 
 /* ---------- docs search ----------
    The modal is tina4press's own (markup and rules copied from the docs build into
@@ -913,3 +851,15 @@ body.cta-visible .tp-chat:not(.open) .tp-chat-btn{opacity:0;pointer-events:none;
 .tp-search-modal kbd{font-family:var(--mono);font-size:.85em;padding:1px 6px;border-radius:5px;
   border:1px solid var(--border-2);background:var(--bg-soft);color:var(--fg-2)}
 .tp-sr{color:inherit}
+
+/* ---------- hero quality (home.js, HQ) ----------
+   Below full, nothing over the moving hero is blurred: the header and the dark
+   stats strip at the foot of the hero would otherwise be blurred again on every
+   frame, which is the most expensive thing a phone's graphics chip does here.
+   The header turns solid (same colour); the strip a shade more opaque. */
+:root[data-hero-quality="lite"] .site-header,:root[data-hero-quality="low"] .site-header{
+  -webkit-backdrop-filter:none;backdrop-filter:none;background:var(--bg)}
+:root[data-hero-quality="lite"] .hero .stat-strip,:root[data-hero-quality="low"] .hero .stat-strip{
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+:root:not([data-theme="light"])[data-hero-quality="lite"] .hero .stat-strip,
+:root:not([data-theme="light"])[data-hero-quality="low"] .hero .stat-strip{background:rgba(15,26,58,.72)}
