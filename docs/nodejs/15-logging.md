@@ -176,7 +176,7 @@ import { Database } from "tina4-nodejs/orm";
 
 async function fetchDashboardData(userId: number) {
     const t0 = Date.now();
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
 
     const data = await db.fetchAll(
         `SELECT o.id, o.total, o.status, COUNT(oi.id) as item_count

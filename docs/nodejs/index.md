@@ -378,7 +378,7 @@ Access the connection from any route. The database speaks whichever dialect the 
 ```typescript
 import { Database } from "tina4-nodejs";
 
-const db = Database.getConnection();
+const db = await Database.getConnection();
 const result = await db.fetch("SELECT * FROM users LIMIT 10");
 ```
 
@@ -389,7 +389,7 @@ Follow the links for more on [Available Connections](05-database.md), [Core Meth
 ```typescript
 import { Database } from "tina4-nodejs";
 
-const db = Database.getConnection();
+const db = await Database.getConnection();
 const result = await db.fetch("SELECT * FROM test_record ORDER BY id", 3, 1);
 
 const array     = result.toArray();

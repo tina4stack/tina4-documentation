@@ -386,7 +386,7 @@ Router.get("/api/buggy/users", async (req, res) => {
     }
 
     // Bug 1: This query has an error
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const result = await db.fetchAll("SELCT * FROM users ORDER BY name");
 
     await cacheSet("all_users", result, 300);
@@ -431,7 +431,7 @@ Router.get("/api/buggy/users", async (req, res) => {
         return res.json({ users, source: "cache" });
     }
 
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const result = await db.fetchAll("SELECT * FROM users ORDER BY name");  // Fixed: SELCT -> SELECT
 
     await cacheSet("all_users", result, 300);

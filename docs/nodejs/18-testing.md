@@ -462,17 +462,17 @@ Each test should create its own data. Never depend on data from another test or 
 
 ```typescript
 // Good: creates its own data
-function testDeleteProduct(): boolean {
+async function testDeleteProduct(): Promise<boolean> {
     const product = new Product({ name: "Temporary", price: 1 });
-    product.save();
-    product.delete();
-    return Product.findById(product.id) === null;
+    await product.save();
+    await product.delete();
+    return (await Product.findById(product.id)) === null;
 }
 
 // Bad: depends on external state
-function testDeleteProduct(): boolean {
-    const product = Product.findById(1); // Assumes ID 1 exists
-    product.delete();
+async function testDeleteProduct(): Promise<boolean> {
+    const product = await Product.findById(1); // Assumes ID 1 exists
+    await product.delete();
     return true;
 }
 ```
@@ -482,10 +482,10 @@ function testDeleteProduct(): boolean {
 Prevent unique constraint failures by generating unique data:
 
 ```typescript
-function testCreateUser(): boolean {
+async function testCreateUser(): Promise<boolean> {
     const email = `test-${Date.now()}@example.com`;
     const user = new User({ name: "Test User", email });
-    user.save();
+    await user.save();
     return user.id > 0;
 }
 ```

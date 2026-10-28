@@ -305,7 +305,7 @@ Tina4::Frond.push_live("prices", { rows: Price.all })   # Ruby
 ```
 
 ```javascript
-Frond.pushLive("prices", { rows: Price.all() });   // Node   (PHP: Frond::pushLive)
+Frond.pushLive("prices", { rows: await Price.all() });   // Node   (PHP: Frond::pushLive)
 ```
 
 ### Rules

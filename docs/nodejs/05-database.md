@@ -151,7 +151,7 @@ import { Router } from "tina4-nodejs";
 import { Database } from "tina4-nodejs/orm";
 
 Router.get("/api/test-db", async (req, res) => {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
 
     const result = await db.fetch("SELECT 1 + 1 AS answer");
 
@@ -176,7 +176,7 @@ curl http://localhost:7148/api/test-db
 ### fetch() -- Get Multiple Rows
 
 ```typescript
-const db = Database.getConnection();
+const db = await Database.getConnection();
 
 const products = await db.fetch("SELECT * FROM products WHERE price > 50");
 ```
@@ -298,7 +298,7 @@ import { Router } from "tina4-nodejs";
 import { Database } from "tina4-nodejs/orm";
 
 Router.get("/api/products", async (req, res) => {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
 
     const products = await db.fetch("SELECT * FROM products ORDER BY name");
 
@@ -323,7 +323,7 @@ await db.fetch(`SELECT * FROM products WHERE name = '${userInput}'`);
 Instead, use parameterised queries:
 
 ```typescript
-const db = Database.getConnection();
+const db = await Database.getConnection();
 
 // Named parameters
 const product = await db.fetchOne(
@@ -345,7 +345,7 @@ import { Router } from "tina4-nodejs";
 import { Database } from "tina4-nodejs/orm";
 
 Router.get("/api/products/search", async (req, res) => {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
 
     const q = req.query.q ?? "";
     const maxPrice = parseFloat(req.query.max_price ?? "99999");
@@ -394,7 +394,7 @@ import { Router } from "tina4-nodejs";
 import { Database } from "tina4-nodejs/orm";
 
 Router.post("/api/orders", async (req, res) => {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const body = req.body;
 
     try {
@@ -442,7 +442,7 @@ Router.post("/api/orders", async (req, res) => {
 ### getTables()
 
 ```typescript
-const db = Database.getConnection();
+const db = await Database.getConnection();
 const tables = await db.getTables();
 // Returns: ["orders", "order_items", "products", "users"]
 ```
@@ -486,7 +486,7 @@ import { Router } from "tina4-nodejs";
 import { Database } from "tina4-nodejs/orm";
 
 Router.get("/api/schema", async (req, res) => {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
 
     const tables = await db.getTables();
     const schema: Record<string, any> = {};
@@ -568,7 +568,7 @@ FakeData generates consistent-looking data without external packages. Use it for
 Insert or update many rows efficiently:
 
 ```typescript
-const db = Database.getConnection();
+const db = await Database.getConnection();
 
 const products = [
     { name: "Widget A", price: 9.99 },
@@ -590,7 +590,7 @@ await db.executeMany(
 ### insert()
 
 ```typescript
-const db = Database.getConnection();
+const db = await Database.getConnection();
 
 await db.insert("products", {
     name: "Wireless Mouse",
@@ -802,7 +802,7 @@ import { Router } from "tina4-nodejs";
 import { Database } from "tina4-nodejs/orm";
 
 Router.get("/api/notes", async (req, res) => {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const tag = req.query.tag ?? "";
     const search = req.query.search ?? "";
 
@@ -832,7 +832,7 @@ Router.get("/api/notes", async (req, res) => {
 });
 
 Router.get("/api/notes/{id:int}", async (req, res) => {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const id = req.params.id;
 
     const note = await db.fetchOne("SELECT * FROM notes WHERE id = :id", { id });
@@ -845,7 +845,7 @@ Router.get("/api/notes/{id:int}", async (req, res) => {
 });
 
 Router.post("/api/notes", async (req, res) => {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const body = req.body;
 
     const errors: string[] = [];
@@ -871,7 +871,7 @@ Router.post("/api/notes", async (req, res) => {
 });
 
 Router.put("/api/notes/{id:int}", async (req, res) => {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const id = req.params.id;
     const body = req.body;
 
@@ -897,7 +897,7 @@ Router.put("/api/notes/{id:int}", async (req, res) => {
 });
 
 Router.delete("/api/notes/{id:int}", async (req, res) => {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const id = req.params.id;
 
     const existing = await db.fetchOne("SELECT * FROM notes WHERE id = :id", { id });
