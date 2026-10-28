@@ -54,52 +54,56 @@ Create a WSDL service class that inherits from `Tina4::WSDL` and defines operati
 # src/services/calculator_service.rb
 
 class CalculatorService < Tina4::WSDL
-  service_name "CalculatorService"
-  namespace    "http://example.com/calculator"
-  description  "Basic arithmetic operations"
-
-  wsdl_operation :add,
-    params: { a: :integer, b: :integer },
-    returns: :integer do |params|
-    params[:a] + params[:b]
+  wsdl_operation output: { result: :int }
+  def add(a, b)
+    { result: a.to_i + b.to_i }
   end
 
-  wsdl_operation :subtract,
-    params: { a: :integer, b: :integer },
-    returns: :integer do |params|
-    params[:a] - params[:b]
+  wsdl_operation output: { result: :int }
+  def subtract(a, b)
+    { result: a.to_i - b.to_i }
   end
 
-  wsdl_operation :multiply,
-    params: { a: :float, b: :float },
-    returns: :float do |params|
-    params[:a] * params[:b]
+  wsdl_operation output: { result: :float }
+  def multiply(a, b)
+    { result: a.to_f * b.to_f }
   end
 
-  wsdl_operation :divide,
-    params: { a: :float, b: :float },
-    returns: :float do |params|
-    raise "Division by zero" if params[:b] == 0
-    params[:a] / params[:b]
+  wsdl_operation output: { result: :float }
+  def divide(a, b)
+    raise "Division by zero" if b.to_f.zero?
+    { result: a.to_f / b.to_f }
   end
 end
 ```
+
+`wsdl_operation output:` marks the method defined next as a SOAP operation and declares the fields of its response. The operation name is the method name, and the method's parameters become the request fields, in order. Parameter values arrive as strings, so convert them before doing arithmetic. The method returns a hash whose keys match `output:`. The service is named after the class.
 
 ---
 
 ## 4. Mounting the Service
 
-Mount the WSDL service at a path using the router.
+`src/services/` is not auto-loaded, so require the service from a route file and mount it on a path:
 
 ```ruby
 # src/routes/soap.rb
-Tina4::Router.mount_wsdl("/soap/calculator", CalculatorService)
+require_relative "../services/calculator_service"
+
+Tina4::Router.get("/soap/calculator") do |request, response|
+  response.xml(CalculatorService.new(request).handle)
+end
+
+Tina4::Router.post("/soap/calculator") do |request, response|
+  response.xml(CalculatorService.new(request).handle)
+end.no_auth
 ```
 
-This creates two endpoints:
+`handle` looks at the request, so the same call answers both endpoints:
 
 - `GET /soap/calculator?wsdl` -- serves the generated WSDL XML document
 - `POST /soap/calculator` -- handles incoming SOAP requests
+
+`.no_auth` opens the `POST` route to SOAP clients, which do not send a bearer token.
 
 ---
 
@@ -116,28 +120,41 @@ Tina4 generates the full WSDL document from your operation definitions:
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <definitions name="CalculatorService"
-  targetNamespace="http://example.com/calculator"
-  xmlns="http://schemas.xmlsoap.org/wsdl/"
+  targetNamespace="urn:CalculatorService"
+  xmlns:tns="urn:CalculatorService"
   xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
-  xmlns:tns="http://example.com/calculator"
-  xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns="http://schemas.xmlsoap.org/wsdl/">
 
-  <message name="addRequest">
-    <part name="a" type="xsd:integer"/>
-    <part name="b" type="xsd:integer"/>
-  </message>
-  <message name="addResponse">
-    <part name="result" type="xsd:integer"/>
-  </message>
+  <types>
+    <xsd:schema targetNamespace="urn:CalculatorService">
+      <xsd:element name="add">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="a" type="xsd:string"/>
+            <xsd:element name="b" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="addResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="result" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <!-- ... -->
+    </xsd:schema>
+  </types>
 
   <portType name="CalculatorServicePortType">
     <operation name="add">
-      <input message="tns:addRequest"/>
-      <output message="tns:addResponse"/>
+      <input message="tns:addInput"/>
+      <output message="tns:addOutput"/>
     </operation>
     <!-- ... -->
   </portType>
-  <!-- binding and service elements follow -->
+  <!-- messages, binding and service elements follow -->
 </definitions>
 ```
 
@@ -164,12 +181,13 @@ curl -X POST http://localhost:7147/soap/calculator \
 Response:
 
 ```xml
+<?xml version="1.0" encoding="UTF-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Body>
-    <addResponse>
-      <result>42</result>
-    </addResponse>
-  </soap:Body>
+<soap:Body>
+<addResponse>
+<result>42</result>
+</addResponse>
+</soap:Body>
 </soap:Envelope>
 ```
 
@@ -208,39 +226,32 @@ For richer client features (WSDL parsing, type coercion), use a gem such as `sav
 
 ---
 
-## 8. Complex Types
+## 8. Several Fields and Lists
 
-Operations can use nested types for richer request and response shapes.
+An operation can take any number of parameters and return any number of fields. Each key of the returned hash becomes an element of the response, and an Array value repeats its element once per item.
 
 ```ruby
+# src/services/order_service.rb
+require "securerandom"
+
 class OrderService < Tina4::WSDL
-  service_name "OrderService"
-  namespace    "http://example.com/orders"
-
-  wsdl_type :Address do
-    field :street, :string
-    field :city,   :string
-    field :zip,    :string
-    field :country, :string
-  end
-
-  wsdl_type :OrderResult do
-    field :order_id,    :string
-    field :status,      :string
-    field :total,       :float
-  end
-
-  wsdl_operation :place_order,
-    params: { customer_email: :string, shipping_address: :Address, total: :float },
-    returns: :OrderResult do |params|
+  wsdl_operation output: { order_id: :string, status: :string, total: :float }
+  def place_order(customer_email, city, total)
     {
       order_id: SecureRandom.uuid,
       status:   "pending",
-      total:    params[:total]
+      total:    total.to_f
     }
+  end
+
+  wsdl_operation output: { sku: :string }
+  def list_skus(category)
+    { sku: %w[KB-001 HUB-002] }
   end
 end
 ```
+
+Fields are flat: there are no nested complex types. Send a structure such as an address as separate parameters, the way `place_order` takes `city`.
 
 ---
 
@@ -249,34 +260,42 @@ end
 Raise a standard Ruby exception to return a SOAP fault.
 
 ```ruby
-wsdl_operation :divide,
-  params: { a: :float, b: :float },
-  returns: :float do |params|
-  raise ArgumentError, "Divisor cannot be zero" if params[:b] == 0
-  params[:a] / params[:b]
+# src/services/safe_calculator_service.rb
+
+class SafeCalculatorService < Tina4::WSDL
+  wsdl_operation output: { result: :float }
+  def divide(a, b)
+    raise ArgumentError, "Divisor cannot be zero" if b.to_f.zero?
+    { result: a.to_f / b.to_f }
+  end
 end
 ```
 
 The caller receives:
 
 ```xml
+<?xml version="1.0" encoding="UTF-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
   <soap:Body>
     <soap:Fault>
-      <faultcode>soap:Server</faultcode>
-      <faultstring>Divisor cannot be zero</faultstring>
+      <faultcode>Server</faultcode>
+      <faultstring>Internal server error</faultstring>
     </soap:Fault>
   </soap:Body>
 </soap:Envelope>
 ```
 
+The exception message is written to the log. It reaches the caller as the `faultstring` only when `TINA4_DEBUG=true`, so internal details stay out of production responses.
+
 ---
 
 ## 10. Gotchas
 
-### 1. WSDL caching in production
+### 1. Parameters arrive as strings
 
-The remote WSDL client caches the WSDL after the first fetch. If the remote service updates its WSDL, restart your app or call `client.reload_wsdl` to force a refresh.
+**Problem:** `add` with `a = 14` and `b = 28` returns `1428`.
+
+**Fix:** Every request field reaches your method as a String. Convert it with `to_i` or `to_f` before using it.
 
 ### 2. Character encoding
 
@@ -284,7 +303,7 @@ SOAP envelopes must be UTF-8, in both directions. A request body in UTF-16, or w
 
 ### 3. Namespace conflicts
 
-Each WSDL service must have a unique namespace. Duplicate namespaces across mounted services cause client-side parsing errors.
+A service's namespace is `urn:` followed by its class name. Give each service class a unique name, or clients see duplicate namespaces and fail to parse them.
 
 ### 4. SOAP is not REST
 

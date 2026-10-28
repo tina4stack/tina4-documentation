@@ -6,129 +6,155 @@ SOAP is not new. It is also not gone. Banks, government agencies, ERP systems, a
 
 WSDL (Web Services Description Language) is the schema for SOAP services. It defines operations, input types, and output types in XML. You call an operation, you get XML back, you parse it.
 
-Tina4 provides a `WSDL` class that both consumes external SOAP services and publishes your own. You write normal TypeScript functions. Tina4 generates the WSDL document and handles the XML envelope plumbing.
+Tina4 provides a `WSDLService` base class that publishes your own SOAP services. You write a class with normal TypeScript methods. Tina4 generates the WSDL document and handles the XML envelope plumbing. It does not ship a SOAP client: to call an external SOAP service, you post the envelope yourself with `fetch`.
 
 ---
 
 ## 2. Consuming an External SOAP Service
 
-### Loading the WSDL
-
-```typescript
-import { WSDL } from "tina4-nodejs";
-
-const client = await WSDL.load("https://www.dataaccess.com/webservicesserver/NumberConversion.wso?WSDL");
-```
-
-`WSDL.load()` fetches the WSDL document, parses it, and returns a client object. Operations defined in the WSDL become methods on the client.
-
 ### Calling an Operation
 
 ```typescript
-const result = await client.call("NumberToWords", {
-    ubiNum: 42
-});
+const SERVICE_URL = "https://www.dataaccess.com/webservicesserver/NumberConversion.wso";
 
-console.log(result);
+async function numberToWords(ubiNum: number): Promise<string> {
+    const envelope = `<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <NumberToWords xmlns="http://www.dataaccess.com/webservicesserver/">
+      <ubiNum>${ubiNum}</ubiNum>
+    </NumberToWords>
+  </soap:Body>
+</soap:Envelope>`;
+
+    const response = await fetch(SERVICE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/xml; charset=utf-8" },
+        body: envelope
+    });
+    const xml = await response.text();
+
+    const fault = xml.match(/<faultstring>([^<]*)<\/faultstring>/);
+    if (fault) {
+        throw new Error(`SOAP fault: ${fault[1]}`);
+    }
+    return xml.match(/<m:NumberToWordsResult>([^<]*)</)?.[1] ?? "";
+}
+
+console.log(await numberToWords(42));
 // "forty two "
 ```
 
-`call(operationName, params)` builds the SOAP envelope, sends the request, parses the XML response, and returns the unwrapped value.
+You build the SOAP envelope, `POST` it with `Content-Type: text/xml`, and read the value you need out of the XML response. For richer client features (WSDL parsing, typed calls), use a dedicated npm package.
 
 ### Handling Errors
 
 ```typescript
 try {
-    const result = await client.call("NumberToWords", { ubiNum: -1 });
-    console.log(result);
+    console.log(await numberToWords(42));
 } catch (err) {
-    if (err instanceof SOAPFault) {
-        console.error("SOAP fault:", err.faultString, err.detail);
-    } else {
-        console.error("Network error:", err.message);
+    console.error((err as Error).message);
+}
+```
+
+A network failure rejects the `fetch`. A SOAP fault comes back as XML with a `<faultstring>`, which `numberToWords` turns into an `Error`.
+
+---
+
+## 3. The @WSDLOperation Decorator
+
+A SOAP service is a class that extends `WSDLService`. Mark each method you want to expose with the `@WSDLOperation` decorator and describe its input and output types:
+
+```typescript
+import { WSDLService, WSDLOperation } from "tina4-nodejs";
+
+export class PriceService extends WSDLService {
+    serviceName = "PriceService";
+    serviceUrl = "/soap/price";
+
+    @WSDLOperation({
+        description: "Returns the current price for a product by ID",
+        input: { productId: "string" },
+        output: { price: "double", currency: "string", available: "boolean" }
+    })
+    async GetProductPrice(productId: string) {
+        const price = await lookupPrice(productId);
+        return {
+            price: price.amount,
+            currency: price.currency,
+            available: price.inStock
+        };
     }
 }
 ```
 
----
-
-## 3. wsdl_operation Decorator
-
-When exposing your own functions as SOAP operations, use the `wsdl_operation` decorator to describe the input and output types:
-
-```typescript
-import { wsdl_operation } from "tina4-nodejs";
-
-@wsdl_operation({
-    name: "GetProductPrice",
-    input: {
-        productId: "string"
-    },
-    output: {
-        price: "decimal",
-        currency: "string",
-        available: "boolean"
-    },
-    description: "Returns the current price for a product by ID"
-})
-async function GetProductPrice(params: { productId: string }) {
-    const price = await lookupPrice(params.productId);
-    return {
-        price: price.amount,
-        currency: price.currency,
-        available: price.inStock
-    };
-}
-```
-
-The decorator registers the function as a SOAP operation and provides type information for WSDL generation.
+The operation name is the method name. `input` lists the parameters in the order the method takes them: each value is read from the child element of the same name and converted to its type. Each key of the object the method returns becomes an element of the response. The types are `string`, `int` / `integer`, `float`, `double` / `number` / `numeric` and `bool` / `boolean`; any other name is published as `xsd:string`.
 
 ---
 
 ## 4. Publishing a SOAP Service
 
-Register your operations and mount the SOAP endpoint:
+Define the service in `src/app/CurrencyService.ts`:
 
 ```typescript
-import { Router, WSDL, wsdl_operation } from "tina4-nodejs";
+// src/app/CurrencyService.ts
+import { WSDLService, WSDLOperation } from "tina4-nodejs";
 
-// Define operations
-@wsdl_operation({
-    name: "ConvertCurrency",
-    input: { amount: "decimal", from: "string", to: "string" },
-    output: { result: "decimal", rate: "decimal" }
-})
-async function ConvertCurrency(params: { amount: number; from: string; to: string }) {
-    // Simulate a conversion
-    const rate = params.from === "USD" && params.to === "EUR" ? 0.92 : 1.0;
-    return {
-        result: parseFloat((params.amount * rate).toFixed(2)),
-        rate
-    };
+export class CurrencyService extends WSDLService {
+    serviceName = "CurrencyService";
+    serviceUrl = "/soap/currency";
+
+    @WSDLOperation({
+        input: { amount: "double", from: "string", to: "string" },
+        output: { result: "double", rate: "double" }
+    })
+    async ConvertCurrency(amount: number, from: string, to: string) {
+        // Simulate a conversion
+        const rate = from === "USD" && to === "EUR" ? 0.92 : 1.0;
+        return {
+            result: parseFloat((amount * rate).toFixed(2)),
+            rate
+        };
+    }
+
+    @WSDLOperation({
+        input: { from: "string", to: "string" },
+        output: { rate: "double", timestamp: "string" }
+    })
+    async GetExchangeRate(from: string, to: string) {
+        return {
+            rate: from === "USD" && to === "EUR" ? 0.92 : 1.0,
+            timestamp: new Date().toISOString()
+        };
+    }
 }
 
-@wsdl_operation({
-    name: "GetExchangeRate",
-    input: { from: "string", to: "string" },
-    output: { rate: "decimal", timestamp: "string" }
-})
-async function GetExchangeRate(params: { from: string; to: string }) {
-    return {
-        rate: params.from === "USD" && params.to === "EUR" ? 0.92 : 1.0,
-        timestamp: new Date().toISOString()
-    };
-}
-
-// Mount the SOAP endpoint
-const service = new WSDL({
-    name: "CurrencyService",
-    namespace: "urn:currency-service",
-    operations: [ConvertCurrency, GetExchangeRate]
-});
-
-Router.all("/soap/currency", service.handler());
-Router.get("/soap/currency?wsdl", service.wsdlDocument());
+export const currencyService = new CurrencyService();
 ```
+
+Then mount it with two route files. `GET` serves the WSDL document, `POST` handles SOAP requests:
+
+```typescript
+// src/routes/soap/currency/get.ts
+import { currencyService } from "../../../app/CurrencyService";
+
+export default async (req, res) => {
+    return res.xml(currencyService.generateWSDL(`http://${req.headers.host}/soap/currency`));
+};
+```
+
+```typescript
+// src/routes/soap/currency/post.ts
+import { currencyService } from "../../../app/CurrencyService";
+
+export const secure = false;
+
+export default async (req, res) => {
+    return res.xml(await currencyService.handle(req.body as string));
+};
+```
+
+`export const secure = false` opens the `POST` route to SOAP clients, which do not send a bearer token.
 
 ### Auto WSDL
 
@@ -141,33 +167,44 @@ curl "http://localhost:7148/soap/currency?wsdl"
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <definitions name="CurrencyService"
-  targetNamespace="urn:currency-service"
-  xmlns="http://schemas.xmlsoap.org/wsdl/"
+  targetNamespace="urn:CurrencyService"
+  xmlns:tns="urn:CurrencyService"
   xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
-  xmlns:tns="urn:currency-service"
-  xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns="http://schemas.xmlsoap.org/wsdl/">
 
-  <message name="ConvertCurrencyRequest">
-    <part name="amount" type="xsd:decimal"/>
-    <part name="from" type="xsd:string"/>
-    <part name="to" type="xsd:string"/>
-  </message>
+  <types>
+    <xsd:schema targetNamespace="urn:CurrencyService">
+      <xsd:element name="ConvertCurrency">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="amount" type="xsd:double"/>
+            <xsd:element name="from" type="xsd:string"/>
+            <xsd:element name="to" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      ...
+  </types>
 
-  <message name="ConvertCurrencyResponse">
-    <part name="result" type="xsd:decimal"/>
-    <part name="rate" type="xsd:decimal"/>
+  <message name="ConvertCurrencyInput">
+    <part name="parameters" element="tns:ConvertCurrency"/>
   </message>
+  ...
 
   <portType name="CurrencyServicePortType">
     <operation name="ConvertCurrency">
-      <input message="tns:ConvertCurrencyRequest"/>
-      <output message="tns:ConvertCurrencyResponse"/>
+      <input message="tns:ConvertCurrencyInput"/>
+      <output message="tns:ConvertCurrencyOutput"/>
     </operation>
+    ...
   </portType>
 
   ...
 </definitions>
 ```
+
+The target namespace is `urn:` followed by `serviceName`.
 
 ---
 
@@ -181,7 +218,7 @@ curl -X POST http://localhost:7148/soap/currency \
   -H "SOAPAction: ConvertCurrency" \
   -d '<?xml version="1.0" encoding="UTF-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-               xmlns:tns="urn:currency-service">
+               xmlns:tns="urn:CurrencyService">
   <soap:Body>
     <tns:ConvertCurrency>
       <amount>100</amount>
@@ -197,12 +234,12 @@ Response:
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Body>
-    <ConvertCurrencyResponse>
-      <result>92.00</result>
-      <rate>0.92</rate>
-    </ConvertCurrencyResponse>
-  </soap:Body>
+<soap:Body>
+<ConvertCurrencyResponse>
+<result>92</result>
+<rate>0.92</rate>
+</ConvertCurrencyResponse>
+</soap:Body>
 </soap:Envelope>
 ```
 
@@ -215,7 +252,7 @@ Build a SOAP service with two operations: `GetProduct` and `ListProducts`.
 ### Requirements
 
 1. `GetProduct` - takes `productId: string`, returns `id`, `name`, `price`, `inStock`
-2. `ListProducts` - takes `category: string`, returns an array of products
+2. `ListProducts` - takes `category: string`, returns the IDs of the matching products, one `<productIds>` element each
 3. Mount at `/soap/products` with auto WSDL at `/soap/products?wsdl`
 
 ### Test with:
@@ -238,7 +275,8 @@ curl -X POST http://localhost:7148/soap/products \
 ## 7. Solution
 
 ```typescript
-import { Router, WSDL, wsdl_operation } from "tina4-nodejs";
+// src/app/ProductService.ts
+import { WSDLService, WSDLOperation } from "tina4-nodejs";
 
 const PRODUCTS = [
     { id: "1", name: "Wireless Keyboard", category: "Electronics", price: 79.99, inStock: true },
@@ -247,40 +285,58 @@ const PRODUCTS = [
     { id: "4", name: "Standing Desk", category: "Electronics", price: 549.99, inStock: true },
 ];
 
-@wsdl_operation({
-    name: "GetProduct",
-    input: { productId: "string" },
-    output: { id: "string", name: "string", price: "decimal", inStock: "boolean" }
-})
-async function GetProduct(params: { productId: string }) {
-    const product = PRODUCTS.find(p => p.id === params.productId);
-    if (!product) {
-        throw new Error(`Product ${params.productId} not found`);
+export class ProductService extends WSDLService {
+    serviceName = "ProductService";
+    serviceUrl = "/soap/products";
+
+    @WSDLOperation({
+        input: { productId: "string" },
+        output: { id: "string", name: "string", price: "double", inStock: "boolean" }
+    })
+    async GetProduct(productId: string) {
+        const product = PRODUCTS.find(p => p.id === productId);
+        if (!product) {
+            throw new Error(`Product ${productId} not found`);
+        }
+        return { id: product.id, name: product.name, price: product.price, inStock: product.inStock };
     }
-    return { id: product.id, name: product.name, price: product.price, inStock: product.inStock };
+
+    @WSDLOperation({
+        input: { category: "string" },
+        output: { productIds: "string" }
+    })
+    async ListProducts(category: string) {
+        const filtered = category
+            ? PRODUCTS.filter(p => p.category.toLowerCase() === category.toLowerCase())
+            : PRODUCTS;
+        return { productIds: filtered.map(p => p.id) };
+    }
 }
 
-@wsdl_operation({
-    name: "ListProducts",
-    input: { category: "string" },
-    output: { products: "array" }
-})
-async function ListProducts(params: { category: string }) {
-    const filtered = params.category
-        ? PRODUCTS.filter(p => p.category.toLowerCase() === params.category.toLowerCase())
-        : PRODUCTS;
-    return { products: filtered };
-}
-
-const service = new WSDL({
-    name: "ProductService",
-    namespace: "urn:product-service",
-    operations: [GetProduct, ListProducts]
-});
-
-Router.all("/soap/products", service.handler());
-Router.get("/soap/products", service.wsdlDocument());  // ?wsdl returns the schema
+export const productService = new ProductService();
 ```
+
+```typescript
+// src/routes/soap/products/get.ts
+import { productService } from "../../../app/ProductService";
+
+export default async (req, res) => {
+    return res.xml(productService.generateWSDL(`http://${req.headers.host}/soap/products`));  // ?wsdl returns the schema
+};
+```
+
+```typescript
+// src/routes/soap/products/post.ts
+import { productService } from "../../../app/ProductService";
+
+export const secure = false;
+
+export default async (req, res) => {
+    return res.xml(await productService.handle(req.body as string));
+};
+```
+
+An array value is returned as one element per item, so `ListProducts` answers with a `<productIds>` element for each match.
 
 ---
 
@@ -290,7 +346,7 @@ Router.get("/soap/products", service.wsdlDocument());  // ?wsdl returns the sche
 
 Extra whitespace inside element values can cause remote parsers to reject your response.
 
-**Fix:** Tina4's WSDL class generates clean XML without extra whitespace. Do not manually construct SOAP envelopes.
+**Fix:** `WSDLService` generates clean XML without extra whitespace. Do not manually construct SOAP envelopes.
 
 ### 2. Namespace mismatches break everything
 
@@ -298,11 +354,13 @@ SOAP parsers are strict about XML namespaces. A mismatch between the namespace i
 
 **Fix:** Always copy the namespace from the generated WSDL document into your client requests. Do not guess namespace URNs.
 
-### 3. WSDL.load() is slow on first call
+### 3. SOAP requests get a 401
 
-Fetching and parsing a remote WSDL on every request defeats the purpose of using a client.
+**Problem:** The WSDL loads, but every SOAP call returns `401 Unauthorized`.
 
-**Fix:** Call `WSDL.load()` once at startup and store the result. The client instance is stateless between calls.
+**Cause:** `POST` routes require a bearer token by default, and SOAP clients do not send one.
+
+**Fix:** Add `export const secure = false;` to the `post.ts` route file.
 
 ### 4. Decimal types lose precision in JavaScript
 
