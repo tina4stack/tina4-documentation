@@ -29,7 +29,7 @@ import { get } from "tina4-nodejs";
 import { Database } from "tina4-nodejs/orm";
 
 get("/api/report", async (req, res) => {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
 
     // First call hits the database.
     const totals = await db.fetchAll("SELECT category, COUNT(*) AS n FROM products GROUP BY category");
@@ -73,7 +73,7 @@ import { get } from "tina4-nodejs";
 import { Database } from "tina4-nodejs/orm";
 
 get("/api/categories", async (req, res) => {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
 
     // First call across all requests: runs the query.
     // Repeat calls within 30 seconds: returns the cached rows.
@@ -418,7 +418,7 @@ get("/api/products/{id}", async (req, res) => {
     }
 
     // 2. Miss - fetch from the database.
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const product = await db.fetchOne(
         "SELECT id, name, category, price, in_stock FROM products WHERE id = ?",
         [id]
@@ -474,7 +474,7 @@ import { Database } from "tina4-nodejs/orm";
 put("/api/products/{id}", async (req, res) => {
     const id = parseInt(req.params.id, 10);
     const body = req.body;
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
 
     await db.execute(
         "UPDATE products SET name = ?, price = ? WHERE id = ?",
@@ -506,7 +506,7 @@ import { Database } from "tina4-nodejs/orm";
 put("/api/products/{id}", async (req, res) => {
     const id = parseInt(req.params.id, 10);
     const body = req.body;
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
 
     await db.execute(
         "UPDATE products SET name = ?, price = ? WHERE id = ?",
@@ -617,7 +617,7 @@ The shape is exactly `{ hits, misses, size, backend }` -- four fields, nothing m
 ```typescript
 import { Database } from "tina4-nodejs/orm";
 
-const db = Database.getConnection();
+const db = await Database.getConnection();
 const stats = db.cacheStats();
 ```
 
@@ -664,7 +664,7 @@ get("/api/catalog", async (req, res) => {
     }
 
     // Layer B: database query (request + persistent caching apply here automatically).
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const limit = 20;
     const offset = (page - 1) * limit;
 

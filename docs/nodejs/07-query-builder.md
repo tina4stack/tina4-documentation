@@ -435,8 +435,8 @@ export default async function (req: Tina4Request, res: Tina4Response) {
     const allowedSorts = ["name", "price", "category", "created_at"];
     const safeSort = allowedSorts.includes(sort) ? sort : "name";
 
-    const total = qb.count();
-    const products = qb
+    const total = await qb.count();
+    const products = await qb
         .orderBy(`${safeSort} ASC`)
         .limit(perPage, (page - 1) * perPage)
         .get();
@@ -590,7 +590,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
         ]);
     }
 
-    const results = qb.orderBy("revenue DESC").get();
+    const results = await qb.orderBy("revenue DESC").get();
 
     return res.json({ categories: results });
 }

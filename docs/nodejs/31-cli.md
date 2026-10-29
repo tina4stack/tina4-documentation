@@ -669,7 +669,7 @@ Create custom seed scripts as standalone TypeScript files:
 import { Database } from "tina4-nodejs/orm";
 
 async function seedProducts() {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
 
     const products = [
         { name: "Keyboard", price: 79.99 },

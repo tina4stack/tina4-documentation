@@ -157,14 +157,14 @@ tina4 serve
 
 ```typescript
 // src/routes/api/products/index.ts
-export default function handler(request, response) {
-    const products = Product.select({ page: request.query.page || 1 });
+export default async function handler(request, response) {
+    const products = await Product.select({ page: request.query.page || 1 });
     return response.json(products);
 }
 
 // src/routes/api/products/index.post.ts
-export default function handler(request, response) {
-    const product = Product.create(request.body);
+export default async function handler(request, response) {
+    const product = await Product.create(request.body);
     return response.json(product, 201);
 }
 ```

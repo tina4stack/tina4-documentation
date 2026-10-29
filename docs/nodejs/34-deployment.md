@@ -322,7 +322,7 @@ Router.get("/health", async (req, res) => {
     let dbOk = false;
 
     try {
-        const db = Database.getConnection();
+        const db = await Database.getConnection();
         await db.fetchOne("SELECT 1");
         dbOk = true;
     } catch (e) {

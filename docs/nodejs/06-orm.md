@@ -312,7 +312,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 When you have a data object ready, `create()` builds the model and saves it in one call:
 
 ```typescript
-const note = Note.create({
+const note = await Note.create({
   title: "Quick Note",
   content: "Created in one step",
   category: "general",
@@ -573,14 +573,14 @@ With just the `foreignKey` field, both sides are accessible:
 
 ```typescript
 const post = await Post.findById(1);
-const user = post.belongsTo(User, "user_id");
+const user = await post.belongsTo(User, "user_id");
 console.log(user?.name);     // "Alice"
 
 // Or via toDict with include
 const postData = post.toDict(["user"]);
 
 const alice = await User.findById(1);
-const posts = alice.hasMany(Post, "user_id");
+const posts = await alice.hasMany(Post, "user_id");
 posts.forEach(p => console.log(p.title));
 ```
 
@@ -649,7 +649,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
     return res.json({ error: "Author not found" }, 404);
   }
 
-  const posts = author.hasMany(BlogPost, "author_id");
+  const posts = await author.hasMany(BlogPost, "author_id");
 
   const data = author.toDict();
   data.posts = posts.map((p) => p.toDict());
@@ -678,7 +678,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 A user has one profile:
 
 ```typescript
-const profile = user.hasOne(Profile, "user_id");
+const profile = await user.hasOne(Profile, "user_id");
 ```
 
 Returns a single model instance or `null`.
@@ -700,7 +700,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
     return res.json({ error: "Post not found" }, 404);
   }
 
-  const author = post.belongsTo(Author, "author_id");
+  const author = await post.belongsTo(Author, "author_id");
 
   const data = post.toDict();
   data.author = author ? author.toDict() : null;
@@ -1072,7 +1072,7 @@ import type { Tina4Request, Tina4Response } from "tina4-nodejs";
 import BlogPost from "../../../models/BlogPost.js";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
-  const posts = BlogPost.published();
+  const posts = await BlogPost.published();
   res.json({ posts: posts.map((p) => p.toDict()) });
 }
 ```
@@ -1083,10 +1083,10 @@ You can also register scopes dynamically with the `scope()` static method:
 BlogPost.scope("active", "status != ?", ["archived"]);
 
 // Now call it (cast needed since it's dynamically added):
-const activePosts = (BlogPost as any).active();
+const activePosts = await (BlogPost as any).active();
 
 // With limit and offset:
-const activePosts2 = (BlogPost as any).active(10, 5);
+const activePosts2 = await (BlogPost as any).active(10, 5);
 ```
 
 `scope()` returns void. It registers a method on the class that calls `where()` with the given filter. The registered method accepts optional `limit` and `offset` parameters.
@@ -1329,12 +1329,12 @@ import Author from "../../../models/Author.js";
 import BlogPost from "../../../models/BlogPost.js";
 
 export default async function (req: Tina4Request, res: Tina4Response) {
-  const posts = BlogPost.published();
+  const posts = await BlogPost.published();
   const data = [];
 
   for (const p of posts) {
     const postDict = p.toDict();
-    const author = p.belongsTo(Author, "author_id");
+    const author = await p.belongsTo(Author, "author_id");
     postDict.author = author ? author.toDict() : null;
     data.push(postDict);
   }
@@ -1358,8 +1358,8 @@ export default async function (req: Tina4Request, res: Tina4Response) {
     return res.json({ error: "Post not found" }, 404);
   }
 
-  const author = post.belongsTo(Author, "author_id");
-  const comments = post.hasMany(Comment, "post_id");
+  const author = await post.belongsTo(Author, "author_id");
+  const comments = await post.hasMany(Comment, "post_id");
 
   const data = post.toDict();
   data.author = author ? author.toDict() : null;

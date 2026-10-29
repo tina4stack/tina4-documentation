@@ -296,7 +296,7 @@ Router.post("/api/auth/register", async (req, res) => {
         return res.status(400).json({ error: "Password must be at least 8 characters" });
     }
 
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const existing = await db.fetchOne("SELECT id FROM users WHERE email = :email", { email });
 
     if (existing) {
@@ -328,7 +328,7 @@ Router.post("/api/auth/login", async (req, res) => {
         return res.status(400).json({ error: "Email and password are required" });
     }
 
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const user = await db.fetchOne(
         "SELECT id, name, email, password_hash, role FROM users WHERE email = :email",
         { email }
@@ -359,7 +359,7 @@ Router.post("/api/auth/login", async (req, res) => {
  * @response 200 {"id": "int", "name": "string", "email": "string", "role": "string", "created_at": "string"}
  */
 Router.get("/api/profile", async (req, res) => {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const user = await db.fetchOne(
         "SELECT id, name, email, role, created_at FROM users WHERE id = :id",
         { id: req.user.user_id }
@@ -434,7 +434,7 @@ import { pushTaskUpdate } from "./ws-tasks";
  * @query int limit Results per page
  */
 Router.get("/api/tasks", async (req, res) => {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const userId = req.user.user_id;
     const page = parseInt(req.query.page ?? "1", 10);
     const limit = parseInt(req.query.limit ?? "20", 10);
@@ -484,7 +484,7 @@ Router.get("/api/tasks", async (req, res) => {
  * @param int id Task ID
  */
 Router.get("/api/tasks/{id:int}", async (req, res) => {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const task = await db.fetchOne(
         `SELECT t.*, creator.name as creator_name, assignee.name as assignee_name
          FROM tasks t
@@ -507,7 +507,7 @@ Router.get("/api/tasks/{id:int}", async (req, res) => {
  * @body {"title": "string", "description": "string", "priority": "string", "assigned_to": "int", "due_date": "string"}
  */
 Router.post("/api/tasks", async (req, res) => {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const { title, description, priority, assigned_to, due_date } = req.body;
 
     if (!title) {
@@ -559,7 +559,7 @@ Router.post("/api/tasks", async (req, res) => {
  * @tags Tasks
  */
 Router.put("/api/tasks/{id:int}", async (req, res) => {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const id = req.params.id;
 
     const existing = await db.fetchOne("SELECT * FROM tasks WHERE id = :id", { id });
@@ -630,7 +630,7 @@ Router.put("/api/tasks/{id:int}", async (req, res) => {
  * @tags Tasks
  */
 Router.delete("/api/tasks/{id:int}", async (req, res) => {
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const id = req.params.id;
 
     const existing = await db.fetchOne("SELECT * FROM tasks WHERE id = :id", { id });
@@ -728,7 +728,7 @@ Router.get("/api/dashboard/stats", async (req, res) => {
         return res.json({ ...cached, source: "cache" });
     }
 
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
 
     const total = await db.fetchOne(
         "SELECT COUNT(*) as count FROM tasks WHERE created_by = :userId OR assigned_to = :userId",
@@ -882,7 +882,7 @@ const notifyQueue = new Queue({ topic: "task-notifications" });
 notifyQueue.process(async (job) => {
     const { type, task_title, task_id, assigned_to, assigned_by } = job.payload as any;
 
-    const db = Database.getConnection();
+    const db = await Database.getConnection();
     const user = await db.fetchOne("SELECT name, email FROM users WHERE id = :id", { id: assigned_to });
 
     if (!user) {

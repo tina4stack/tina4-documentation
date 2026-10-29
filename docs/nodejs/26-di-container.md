@@ -65,8 +65,8 @@ container.singleton("db", () => {
 });
 
 // Both calls return the exact same connection object
-const db1 = container.get("db");
-const db2 = container.get("db");
+const db1 = await container.get("db");
+const db2 = await container.get("db");
 console.log(db1 === db2);  // true
 ```
 
@@ -163,7 +163,8 @@ import { Log } from "tina4-nodejs";
 
 export const app = new Container();
 
-app.singleton("db", () => Database.getConnection());
+const db = await Database.getConnection();
+app.singleton("db", () => db);
 
 app.singleton("mailer", () => new Messenger());
 

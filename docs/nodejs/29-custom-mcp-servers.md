@@ -194,8 +194,8 @@ Test tool functions directly, or test via the MCP protocol:
 
 ```typescript
 // Test the tool function directly
-function testLookupCustomer() {
-  const result = db.fetchOne("SELECT * FROM customers WHERE email = ?", ["alice@example.com"]);
+async function testLookupCustomer() {
+  const result = await db.fetchOne("SELECT * FROM customers WHERE email = ?", ["alice@example.com"]);
   assert(result !== null);
   assert(result.email === "alice@example.com");
 }
@@ -258,8 +258,8 @@ mcpTool("customer_orders", "Get all orders for a customer", crmMcp, [
 mcpTool("create_note", "Add a note to a customer record", crmMcp, [
   { name: "customer_id", type: "integer" },
   { name: "note", type: "string" },
-])((args) => {
-  db.execute("INSERT INTO customer_notes (customer_id, note) VALUES (?, ?)",
+])(async (args) => {
+  await db.execute("INSERT INTO customer_notes (customer_id, note) VALUES (?, ?)",
     [args.customer_id, args.note]);
   return { success: true };
 });
