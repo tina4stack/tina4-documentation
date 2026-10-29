@@ -190,14 +190,13 @@ Events.on("user.registered", (payload) => {
 }, 0);
 ```
 
-Then import this file in `src/index.ts` so listeners are registered before any requests arrive:
+Then import this file in `app.ts`, the entry point at the project root, so listeners are registered before any requests arrive:
 
 ```typescript
-import "./events/index";
-import { Tina4 } from "tina4-nodejs";
+import "./src/events/index";
+import { startServer } from "tina4-nodejs";
 
-const app = new Tina4();
-app.start();
+startServer();
 ```
 
 ---
@@ -290,14 +289,13 @@ Router.get("/api/orders/events", async (req, res) => {
 });
 ```
 
-In `src/index.ts`, import the events file before starting the server:
+In `app.ts`, import the events file before starting the server:
 
 ```typescript
-import "./events/orders";
-import { Tina4 } from "tina4-nodejs";
+import "./src/events/orders";
+import { startServer } from "tina4-nodejs";
 
-const app = new Tina4();
-app.start();
+startServer();
 ```
 
 ---
@@ -326,4 +324,4 @@ Events registered at module load time persist for the lifetime of the process. R
 
 Listeners registered in a file that is never imported do not exist.
 
-**Fix:** Explicitly import your events file in `src/index.ts`. A missing import is a silent failure -- no error, no listeners, no side effects.
+**Fix:** Explicitly import your events file in `app.ts`. A missing import is a silent failure -- no error, no listeners, no side effects.
