@@ -1,5 +1,9 @@
 # Release Notes
 
+## v3.13.155 (2026-10-29) - Version parity with the Python fixes
+
+No Ruby framework changes this release. 3.13.155 carries three fixes in the Python scaffolding generator and development server - a secure generated test secret, generated handlers that no longer run the synchronous ORM on the event loop, and a dev server that survives a high port. Ruby already handled each of those cases - its routes are synchronous, its generated tests sign with RSA keys, and its test port degrades on a bad bind - so this bump keeps the one shared version across all four frameworks. The framework still has no required runtime dependencies.
+
 ## v3.13.151 (2026-10-15) - Isolation headers and a hardened S3 client
 
 **A Cross-Origin-Opener-Policy header, on by default.** The security-header set gains `Cross-Origin-Opener-Policy`, default `same-origin-allow-popups` (`TINA4_COOP`). It keeps OAuth and payment popups working out of the box, and paired with a COEP header it hands a browser app the isolated context that unlocks `SharedArrayBuffer` and WebAssembly threads.

@@ -1,5 +1,15 @@
 # Release Notes
 
+## v3.13.155 (2026-10-29) - The scaffold's own tests pass, and a high port stops felling the server
+
+**The generated tests pass as written.** Scaffold a fresh app and the tests the generator wrote used to trip on their own secret. It baked an eleven-byte `TINA4_SECRET` into each one, and the framework's auth refuses anything under thirty-two bytes, so the token test failed the moment you ran it. The generator now writes a real `secrets.token_hex(32)` in at generation time, the same way `tina4 init` seeds `.env` (#259).
+
+**Generated handlers stop talking over the event loop.** A `--model` route, the auth routes and the CRUD admin page came out as `async def` yet reached straight for the synchronous ORM, so every request logged the framework's own warning about a blocking call on the loop. They're plain `def` now, and Tina4 runs them in a worker thread, where a blocking query belongs (#261).
+
+**A high port stops felling the dev server.** In debug mode the server opens a second, stable test port at your port plus a thousand, and a main port above 64535 pushed that past the ceiling a port may reach, so the bind threw and the whole server fell over. A harness grabbing a free port hit it constantly. The out-of-range test port is skipped with a word now, and the port you asked for still serves (#260).
+
+All three were Python-only - PHP, Ruby and Node already handled each case - and each is held down by a real, no-mock test proven by mutation. The framework still has no required runtime dependencies.
+
 ## v3.13.151 (2026-10-15) - Isolation headers, a hardened S3 client, and an event loop that doesn't stall
 
 **A Cross-Origin-Opener-Policy header, on by default.** The security-header set gains `Cross-Origin-Opener-Policy`, default `same-origin-allow-popups` (`TINA4_COOP`). It keeps OAuth and payment popups working out of the box, and paired with a COEP header it hands a browser app the isolated context that unlocks `SharedArrayBuffer` and WebAssembly threads.
