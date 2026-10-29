@@ -36,6 +36,19 @@ curl -fsSL https://tina4.com/install.sh | sh
 
 The same script. On Termux it installs the native Android build into `$PREFIX/bin`, with no root and no `sudo`. Install Termux from [F-Droid](https://f-droid.org/packages/com.termux/) or its [GitHub releases](https://github.com/termux/termux-app/releases).
 
+**iOS (iSH, experimental):**
+
+[iSH](https://ish.app) runs Alpine Linux on an iPhone or iPad. Tina4 support for it is experimental. The App Store build starts on Alpine 3.14, whose Python and Ruby are too old for Tina4, so point it at a current Alpine first:
+
+```sh
+printf '%s\n' https://dl-cdn.alpinelinux.org/alpine/latest-stable/main https://dl-cdn.alpinelinux.org/alpine/latest-stable/community > /etc/apk/repositories
+apk upgrade --available
+apk add curl
+curl -fsSL https://tina4.com/install.sh | sh
+```
+
+The script installs the 32-bit static build iSH runs. `tina4 init` and `tina4 setup` install Python or Ruby with `apk`. Python projects get their own `.venv`, built with pip. PHP and Node.js projects are not available on iSH: Composer and npm cannot run in its emulator, so the CLI says so instead of installing them.
+
 **Windows (PowerShell):**
 
 ```powershell

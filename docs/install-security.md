@@ -18,6 +18,8 @@ The base installer places exactly one file: the `tina4` binary.
 
 - macOS / Linux: `/usr/local/bin/tina4` (a different directory can be set at install time).
 - Android (Termux): `$PREFIX/bin/tina4`, inside the Termux app's own storage. No root.
+- iOS (iSH, experimental): `/usr/local/bin/tina4`, inside the iSH app's own Linux filesystem. iSH's
+  root user is the app's sandbox, not the device.
 - Windows: `%LOCALAPPDATA%\tina4\tina4.exe`, and that directory is added to the user PATH.
 
 That is the whole footprint of the installer. It installs no services, no
@@ -63,8 +65,8 @@ Release 3.8.91 uses the following controls:
 ## A note on `tina4 setup`
 
 `tina4 setup` is a separate, optional, interactive step. It can install language
-runtimes (for example PHP and Composer) through Chocolatey, Homebrew, or Termux's
-`pkg` and add
+runtimes (for example PHP and Composer) through Chocolatey, Homebrew, Termux's
+`pkg`, or Alpine's `apk` inside iSH, and add
 them to PATH, to get a new machine ready for development. That is normal for a
 developer tool, but on a managed device it should run under your change-control
 process. The base install above does none of this; you choose whether to run

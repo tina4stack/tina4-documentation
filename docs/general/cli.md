@@ -16,6 +16,14 @@ On Termux the script installs the native Android build into `$PREFIX/bin`
 without root, and `tina4 install`, `tina4 init`, and `tina4 setup` install
 runtimes with Termux's own `pkg`.
 
+On iOS, inside [iSH](https://ish.app) (experimental), the same script installs the 32-bit
+static build. `tina4 install`, `tina4 init`, and `tina4 setup` install Python
+and Ruby with Alpine's `apk`, and Python projects get a `.venv` built with pip.
+PHP and Node.js are not available there, because Composer and npm cannot run
+in iSH's emulator. The App Store build of iSH starts on Alpine 3.14, which is
+too old: [Get Started](/get-started/index.md) shows how to move it to a
+current Alpine first.
+
 Windows PowerShell:
 
 ```powershell
