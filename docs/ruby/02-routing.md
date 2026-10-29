@@ -677,34 +677,6 @@ GET      /search                       -                   public
 GET      /docs/*                       -                   public
 ```
 
-Filter by method:
-
-```bash
-tina4 routes --method POST
-```
-
-```
-Method   Path                          Middleware          Auth
-------   ----                          ----------          ----
-POST     /products                     -                   secured
-POST     /api/v1/users                 -                   secured
-```
-
-Search for a path pattern:
-
-```bash
-tina4 routes --filter users
-```
-
-```
-Method   Path                          Middleware          Auth
-------   ----                          ----------          ----
-GET      /api/v1/users                 -                   public
-GET      /api/v1/users/{id:int}        -                   public
-POST     /api/v1/users                 -                   secured
-GET      /api/admin/users              require_auth        public
-```
-
 ---
 
 ## 11. Organizing Route Files

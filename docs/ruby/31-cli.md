@@ -538,14 +538,6 @@ Registered Routes:
 
 This is useful for verifying that your routes are registered and for finding the handler for a specific URL.
 
-### Filtering
-
-```bash
-tina4 routes --method POST          # Filter by HTTP method
-tina4 routes --filter products      # Filter by path pattern
-tina4 routes --middleware auth      # Filter by middleware
-```
-
 When debugging routing issues, check here first. If a route does not match, `tina4 routes` shows whether it was registered and what middleware is attached.
 
 ---
@@ -570,7 +562,7 @@ Running migrations...
 ### Rollback
 
 ```bash
-tina4 migrate --rollback
+tina4 migrate:rollback
 ```
 
 ```
@@ -601,13 +593,6 @@ Migration Status:
   Pending   20260322000400_create_orders_table.sql
 
   3 applied, 1 pending
-```
-
-### Other Migration Commands
-
-```bash
-tina4 migrate:reset        # Roll back all migrations
-tina4 migrate:fresh        # Roll back and re-run all migrations
 ```
 
 ---

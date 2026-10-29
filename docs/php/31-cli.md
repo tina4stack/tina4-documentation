@@ -549,19 +549,6 @@ GET      /admin                        -                   public
 GET      /admin/users                  -                   public
 ```
 
-### Filtering
-
-```bash
-# Filter by HTTP method
-tina4 routes --method POST
-
-# Filter by path pattern
-tina4 routes --filter orders
-
-# Filter by middleware
-tina4 routes --middleware requireAuth
-```
-
 When debugging routing issues, check here first. If a route is not matching, `tina4 routes` shows whether it was registered and what middleware is attached.
 
 ---
@@ -580,18 +567,17 @@ Running migrations...
 Migrations complete. 2 applied, 1 skipped.
 ```
 
-### Options
+### Related Commands
 
-| Flag | Description | Example |
-|------|-------------|---------|
-| `--rollback` | Undo the last migration | `tina4 migrate --rollback` |
-| `--rollback-all` | Undo all migrations | `tina4 migrate --rollback` |
-| `--status` | Show migration status | `tina4 migrate --status` |
+| Command | Description |
+|---------|-------------|
+| `tina4 migrate:rollback` | Undo the last batch of migrations |
+| `tina4 migrate:status` | Show migration status |
 
 ### Migration Status
 
 ```bash
-tina4 migrate --status
+tina4 migrate:status
 ```
 
 ```
@@ -657,7 +643,7 @@ tina4 generate route Task
 tina4 migrate
 
 # 4. Verify routes are registered
-tina4 routes --filter tasks
+tina4 routes
 
 # 5. Health check
 tina4 doctor

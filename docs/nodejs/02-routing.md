@@ -725,13 +725,6 @@ GET      /search                       -                   public
 GET      /docs/*                       -                   public
 ```
 
-Filter by method or search for a path pattern:
-
-```bash
-tina4 routes --method POST
-tina4 routes --filter users
-```
-
 ---
 
 ## 11. Organizing Route Files

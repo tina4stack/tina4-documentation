@@ -681,33 +681,6 @@ GET      /docs/*                       -                   public
 
 The `Auth` column shows whether a route is public, secured (default for non-GET methods), `@noauth`, or `@secured`.
 
-Filter by method:
-
-```bash
-tina4 routes --method POST
-```
-
-```
-Method   Path                          Middleware          Auth
-------   ----                          ----------          ----
-POST     /products                     -                   secured
-POST     /api/v1/users                 -                   secured
-```
-
-Search for a path pattern:
-
-```bash
-tina4 routes --filter users
-```
-
-```
-Method   Path                          Middleware          Auth
-------   ----                          ----------          ----
-GET      /api/v1/users                 -                   public
-GET      /api/v1/users/{id:int}        -                   public
-POST     /api/v1/users                 -                   secured
-```
-
 ---
 
 ## 11. Organizing Route Files

@@ -561,14 +561,6 @@ Registered Routes:
 
 This is useful for verifying that your routes are registered and for finding the handler function for a specific URL.
 
-### Filtering
-
-```bash
-tina4 routes --method POST          # Filter by HTTP method
-tina4 routes --filter products      # Filter by path pattern
-tina4 routes --middleware auth      # Filter by middleware
-```
-
 When debugging routing issues, check here first. If a route does not match, `tina4 routes` shows whether it was registered and what middleware is attached.
 
 ---
@@ -593,7 +585,7 @@ Running migrations...
 ### Rollback
 
 ```bash
-tina4 migrate --rollback
+tina4 migrate:rollback
 ```
 
 ```
@@ -610,7 +602,7 @@ If your project was created with an early v3 release, the `tina4_migration` trac
 ### Status
 
 ```bash
-tina4 migrate --status
+tina4 migrate:status
 ```
 
 ```
