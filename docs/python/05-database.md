@@ -573,8 +573,8 @@ tina4 generate migration create_notes_table
 This creates two files:
 
 ```
-migrations/000001_create_notes_table.sql
-migrations/000001_create_notes_table.down.sql
+migrations/20260322160000_create_notes_table.sql
+migrations/20260322160000_create_notes_table.down.sql
 ```
 
 The first is your "up" migration. The second is the matching "down" migration for rollbacks.
@@ -584,7 +584,7 @@ The first is your "up" migration. The second is the matching "down" migration fo
 Open the generated `.sql` file and add your schema changes:
 
 ```sql
--- migrations/000001_create_notes_table.sql
+-- migrations/20260322160000_create_notes_table.sql
 CREATE TABLE notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
@@ -603,7 +603,7 @@ CREATE INDEX idx_notes_created_at ON notes (created_at);
 The `.down.sql` file undoes whatever the up migration did:
 
 ```sql
--- migrations/000001_create_notes_table.down.sql
+-- migrations/20260322160000_create_notes_table.down.sql
 DROP INDEX IF EXISTS idx_notes_created_at;
 DROP INDEX IF EXISTS idx_notes_category;
 DROP TABLE IF EXISTS notes;
@@ -611,7 +611,7 @@ DROP TABLE IF EXISTS notes;
 
 Down migrations are optional. Everything works without them -- until you try to roll back. At that point Tina4 fails with a clear error about the missing file.
 
-The `.down.sql` file must share the exact same base name as the up file. If your up file is `000001_create_notes_table.sql`, the down file must be `000001_create_notes_table.down.sql`.
+The `.down.sql` file must share the exact same base name as the up file. If your up file is `20260322160000_create_notes_table.sql`, the down file must be `20260322160000_create_notes_table.down.sql`.
 
 ### Running Migrations
 
@@ -772,7 +772,7 @@ Generate the migration:
 tina4 generate migration create_notes_table
 ```
 
-Edit `migrations/000001_create_notes_table.sql`:
+Edit `migrations/20260322160000_create_notes_table.sql`:
 
 ```sql
 CREATE TABLE notes (
@@ -789,7 +789,7 @@ CREATE INDEX idx_notes_category ON notes (category);
 CREATE INDEX idx_notes_pinned ON notes (pinned);
 ```
 
-Edit `migrations/000001_create_notes_table.down.sql`:
+Edit `migrations/20260322160000_create_notes_table.down.sql`:
 
 ```sql
 DROP INDEX IF EXISTS idx_notes_pinned;
@@ -1085,7 +1085,7 @@ Every row gets `role = "member"` and `active = 1`. The field map generates the r
 
 **Cause:** Migrations run in alphabetical order. If migration B depends on the table created by migration A, migration A must sort earlier.
 
-**Fix:** Use `tina4 generate migration` which auto-generates sequential numbers. Do not mix `000001_` and `YYYYMMDDHHMMSS_` patterns in the same project -- `000001_` sorts before `20240315_`, which scrambles your intended order.
+**Fix:** Use `tina4 generate migration`, which prefixes every file with a `YYYYMMDDHHMMSS_` timestamp so new migrations sort after older ones. Do not mix `000001_` and `YYYYMMDDHHMMSS_` patterns in the same project -- `000001_` sorts before `20240315_`, which scrambles your intended order.
 
 ### 6. Missing down migration
 
