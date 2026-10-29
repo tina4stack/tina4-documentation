@@ -4,6 +4,32 @@
 
 No PHP framework changes this release. 3.13.155 carries three fixes in the Python scaffolding generator and development server - a secure generated test secret, generated handlers that no longer run the synchronous ORM on the event loop, and a dev server that survives a high port. PHP already handled each of those cases, so this bump keeps the one shared version across all four frameworks. The framework still has no required runtime dependencies.
 
+## v3.13.154 (2026-10-23) - TURN credentials close their doors, and the policy you set is the policy you get
+
+**The TURN relay stops answering strangers.** `GET /api/rtc/config`, which mints short-lived TURN credentials, and the `/ws/rtc/{room}` signalling socket now want a valid token by default (ADR-0101). They used to answer anyone, with no switch to shut them, so the relay sat open to the world. Set `TINA4_RTC_REQUIRE_AUTH=false` for anonymous calling if your app leaned on the open routes - this one is a breaking change.
+
+**A nonce stops silencing the inline content you allowed.** When an app opened inline scripts or styles through `TINA4_CSP`, the per-response nonce still joined the same directive - and a browser ignores `'unsafe-inline'` the moment a nonce lands beside it, so that content had been quietly blocked since 3.13.143. The app's own choice wins now; the strict default policy keeps its nonce (ADR-0100).
+
+**A bare global in a template calls itself.** A zero-argument callable referenced as `{{ g }}`, or tested with `{% if g %}`, is now invoked and its return value used, matching Node - it fires exactly once, and a non-callable global or one that takes parameters is untouched (ADR-0085).
+
+Every change landed across all four frameworks with real, no-mock tests. The framework still has no required runtime dependencies.
+
+## v3.13.153 (2026-10-21) - The AI skills come home
+
+**The dropped skills come back.** Earlier releases shipped a bundle missing some of the AI skills; this one restores tina4-seo and tina4-a11y (#117), and tina4-design's stop-and-wait approval gates (#128). No framework code changed - the release re-tags the restored skills so the install bundle and its CDN mirrors carry them again. The bundle generator now refuses to ship a smaller skill set than the one already published, so a skill cannot silently fall out of the bundle again.
+
+The framework still has no required runtime dependencies.
+
+## v3.13.152 (2026-10-20) - The client reads --help, and Postgres gets back up after a failover
+
+**Postgres recovers even when the first reconnect fails.** A dropped connection whose very next reconnect also failed - a failover caught before the new primary answers - used to wedge the adapter, every statement failing until a restart. It retries past that now and reconnects, at parity across PHP, Ruby and Node too (#242, #244).
+
+**Every command reads `--help`.** `--help` or `-h` on any command prints its usage and changes nothing. The handlers never looked for it before and ran for real: `generate model --help` wrote a model called `--help`, `lint --help` installed ruff, and `migrate --help` created `app.db`.
+
+**An unknown option gets a did-you-mean, not a shrug.** `--feilds` is refused with a nudge toward `--fields` instead of being dropped, a value option given no value is refused instead of crashing, and `--name=value` works beside `--name value`. `generate` refuses a name that starts with `-`, `ai --all` installs every context file as its help promises, and `generate crud --skip-model` finally does what `generate model` always suggested. (`test` still hands its arguments straight to pytest.)
+
+The framework still has no required runtime dependencies.
+
 ## v3.13.151 (2026-10-15) - Isolation headers and a hardened S3 client
 
 **A Cross-Origin-Opener-Policy header, on by default.** The security-header set gains `Cross-Origin-Opener-Policy`, default `same-origin-allow-popups` (`TINA4_COOP`). It keeps OAuth and payment popups working out of the box, and paired with a COEP header it hands a browser app the isolated context that unlocks `SharedArrayBuffer` and WebAssembly threads.
