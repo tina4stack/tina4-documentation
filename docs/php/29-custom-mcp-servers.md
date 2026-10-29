@@ -249,7 +249,7 @@ require_once "vendor/autoload.php";
 use Tina4\McpServer;
 use Tina4\McpTool;
 use Tina4\McpResource;
-use Tina4\Database;
+use Tina4\Database\Database;
 use Tina4\ORM;
 
 $db = new Database("sqlite:///crm.db");

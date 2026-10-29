@@ -987,7 +987,7 @@ TINA4_DATABASE_URL=postgres://user:pass@localhost:5432/myapp
 If you must use SQLite under load, enable WAL mode by adding this to your application startup:
 
 ```php
-$db = Tina4\Database::getConnection();
+$db = Tina4\Database\Database::getConnection();
 $db->exec("PRAGMA journal_mode=WAL");
 ```
 

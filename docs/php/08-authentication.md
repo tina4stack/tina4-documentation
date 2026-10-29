@@ -133,7 +133,7 @@ $isCorrect = Auth::checkPassword("my-secure-password", $storedHash);
 <?php
 use Tina4\Router;
 use Tina4\Auth;
-use Tina4\Database;
+use Tina4\Database\Database;
 
 Router::post("/api/register", function ($request, $response) {
     $body = $request->body;
@@ -196,7 +196,7 @@ Client sends credentials. Server validates them. Server returns a JWT.
 <?php
 use Tina4\Router;
 use Tina4\Auth;
-use Tina4\Database;
+use Tina4\Database\Database;
 
 /**
  * @noauth
@@ -598,25 +598,25 @@ use Tina4\Router;
 
 Router::post("/login-form", function ($request, $response) {
     // After validating credentials...
-    $request->session["user_id"] = 42;
-    $request->session["user_name"] = "Alice";
-    $request->session["logged_in"] = true;
+    $request->session->set("user_id", 42);
+    $request->session->set("user_name", "Alice");
+    $request->session->set("logged_in", true);
 
     return $response->redirect("/dashboard");
 });
 
 Router::get("/dashboard", function ($request, $response) {
-    if (empty($request->session["logged_in"])) {
+    if (!$request->session->get("logged_in")) {
         return $response->redirect("/login");
     }
 
     return $response->render("dashboard.html", [
-        "user_name" => $request->session["user_name"]
+        "user_name" => $request->session->get("user_name")
     ]);
 });
 
 Router::post("/logout", function ($request, $response) {
-    $request->session = [];
+    $request->session->clear();
 
     return $response->redirect("/login");
 });
@@ -749,7 +749,7 @@ Create `src/routes/auth.php`:
 <?php
 use Tina4\Router;
 use Tina4\Auth;
-use Tina4\Database;
+use Tina4\Database\Database;
 
 /**
  * @noauth

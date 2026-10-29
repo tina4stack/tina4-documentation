@@ -449,7 +449,7 @@ A long-lived cookie re-authenticates users after their session expires.
 <?php
 use Tina4\Router;
 use Tina4\Auth;
-use Tina4\Database;
+use Tina4\Database\Database;
 
 /**
  * @noauth
@@ -500,7 +500,7 @@ The middleware that checks the cookie:
 
 ```php
 <?php
-use Tina4\Database;
+use Tina4\Database\Database;
 
 function rememberMeMiddleware($request, $response, $next) {
     if ($request->session->has("user_id")) {

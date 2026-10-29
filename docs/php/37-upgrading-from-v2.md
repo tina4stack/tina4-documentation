@@ -227,7 +227,7 @@ Or in code:
 
 ```php
 <?php
-use Tina4\Database;
+use Tina4\Database\Database;
 
 $db = new Database("sqlite:///data/app.db");
 ```

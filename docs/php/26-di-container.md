@@ -46,7 +46,7 @@ $container = new Container();
 
 // Register a factory for a database connection
 $container->register('db', function () {
-    return new \Tina4\Database(getenv('TINA4_DATABASE_URL'));
+    return new \Tina4\Database\Database(getenv('TINA4_DATABASE_URL'));
 });
 
 // Register a logger
@@ -109,18 +109,18 @@ Use singletons for services that are expensive to create (database pools, HTTP c
 use Tina4\Container;
 
 $container = new Container();
-$container->singleton('db', fn() => new \Tina4\Database(getenv('TINA4_DATABASE_URL')));
+$container->singleton('db', fn() => new \Tina4\Database\Database(getenv('TINA4_DATABASE_URL')));
 
 // Check before retrieving
 if ($container->has('db')) {
     $db = $container->get('db');
 }
 
-// Throws \Tina4\ContainerException if name not registered
+// Throws \RuntimeException if name not registered
 try {
     $missing = $container->get('nonexistent');
-} catch (\Tina4\ContainerException $e) {
-    echo $e->getMessage();  // "Service 'nonexistent' is not registered"
+} catch (\RuntimeException $e) {
+    echo $e->getMessage();  // "Service not registered: nonexistent"
 }
 ```
 
@@ -141,7 +141,7 @@ $container->singleton('logger', function () {
 });
 
 $container->singleton('db', function () {
-    return new \Tina4\Database(getenv('TINA4_DATABASE_URL'));
+    return new \Tina4\Database\Database(getenv('TINA4_DATABASE_URL'));
 });
 
 // OrderService depends on db and logger
@@ -154,7 +154,7 @@ $container->singleton('order_service', function () use ($container) {
 
 class OrderService {
     public function __construct(
-        private \Tina4\Database $db,
+        private \Tina4\Database\Database $db,
         private \Tina4\Debug $logger
     ) {}
 
@@ -185,7 +185,7 @@ use Tina4\Container;
 // Bootstrap container in app.php or index.php
 $container = new Container();
 
-$container->singleton('db', fn() => new \Tina4\Database(getenv('TINA4_DATABASE_URL')));
+$container->singleton('db', fn() => new \Tina4\Database\Database(getenv('TINA4_DATABASE_URL')));
 
 $container->singleton('order_service', function () use ($container) {
     return new OrderService($container->get('db'));
@@ -256,7 +256,7 @@ $container = new Container();
 
 // Infrastructure
 $container->singleton('db', function () {
-    return new \Tina4\Database(getenv('TINA4_DATABASE_URL'));
+    return new \Tina4\Database\Database(getenv('TINA4_DATABASE_URL'));
 });
 
 $container->singleton('cache', function () {

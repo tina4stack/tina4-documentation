@@ -122,12 +122,12 @@ curl http://localhost:7145/health
 
 ## 3. Getting the Database Object
 
-Access the database through the global `Tina4\Database` class:
+Access the database through the `Tina4\Database\Database` class:
 
 ```php
 <?php
 use Tina4\Router;
-use Tina4\Database;
+use Tina4\Database\Database;
 
 Router::get("/api/test-db", function ($request, $response) {
     $db = Database::getConnection();
@@ -276,7 +276,7 @@ $db->execute("CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY, message T
 ```php
 <?php
 use Tina4\Router;
-use Tina4\Database;
+use Tina4\Database\Database;
 
 Router::get("/api/products", function ($request, $response) {
     $db = Database::getConnection();
@@ -341,7 +341,7 @@ The database driver handles escaping. Your input never touches the SQL string.
 ```php
 <?php
 use Tina4\Router;
-use Tina4\Database;
+use Tina4\Database\Database;
 
 Router::get("/api/products/search", function ($request, $response) {
     $db = Database::getConnection();
@@ -391,7 +391,7 @@ Group operations that must succeed or fail as one unit:
 ```php
 <?php
 use Tina4\Router;
-use Tina4\Database;
+use Tina4\Database\Database;
 
 Router::post("/api/orders", function ($request, $response) {
     $db = Database::getConnection();
@@ -503,7 +503,7 @@ Combine these methods to build a schema browser:
 ```php
 <?php
 use Tina4\Router;
-use Tina4\Database;
+use Tina4\Database\Database;
 
 Router::get("/api/schema", function ($request, $response) {
     $db = Database::getConnection();
@@ -891,7 +891,7 @@ Create `src/routes/notes.php`:
 ```php
 <?php
 use Tina4\Router;
-use Tina4\Database;
+use Tina4\Database\Database;
 
 // List all notes with optional filters
 Router::get("/api/notes", function ($request, $response) {
@@ -1122,7 +1122,7 @@ Deterministic data means deterministic assertions. This matters for tests.
 
 ```php
 use Tina4\FakeData;
-use Tina4\Database;
+use Tina4\Database\Database;
 use function Tina4\seedTable;
 
 $db = Database::getConnection();
