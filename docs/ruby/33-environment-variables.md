@@ -201,6 +201,7 @@ Behind a load balancer the real client IP rides in a forwarded header. Tina4 wil
 |----------|---------|-------------|
 | `TINA4_KAFKA_BROKERS` | _(none)_ | Comma-separated broker list (e.g. `localhost:9092`). |
 | `TINA4_KAFKA_GROUP_ID` | `tina4_consumer_group` | Kafka consumer group ID. |
+| `TINA4_KAFKA_AUTO_OFFSET_RESET` | `earliest` | Where a NEW Kafka consumer group (no committed offset) starts: `earliest` (replay the backlog) or `latest` (skip it). Falls back to the bare `KAFKA_AUTO_OFFSET_RESET`. |
 
 ### RabbitMQ queue backend
 
