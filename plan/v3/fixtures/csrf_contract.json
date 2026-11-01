@@ -17,8 +17,8 @@
     "the other three move to. Real HS256, real Request pipeline, real Frond token",
     "generation, real sessions - NO MOCKS."
   ],
-  "version": 1,
-  "decided": "2026-08-11",
+  "version": 2,
+  "decided": "2026-11-01",
   "feature": "37 - CSRF protection",
   "invariants": [
     {
@@ -113,10 +113,11 @@
       ]
     },
     {
-      "id": "csrf-noauth-exempt",
-      "adr": "CSRF-DEC-02",
-      "rule": "A write route marked @noauth / ->noAuth() / .noAuth / secure:false skips CSRF - a genuinely public endpoint (login, webhook) has no session to protect.",
-      "why": "CSRF binds to a session; a public endpoint has none, so the token requirement would only break legitimate public POSTs.",
+      "id": "csrf-noauth-still-gated",
+      "adr": "CSRF-DEC-03",
+      "rule": "A public write route (@noauth / ->noAuth() / .no_auth / noAuth:true) is STILL CSRF-gated: a POST with no form token is rejected 403, and the same route carrying a valid form token passes. @noauth controls IDENTITY (who), CSRF controls ORIGIN (did our own form send it) - they are orthogonal.",
+      "why": "#265: @noauth also turned CSRF off, so a public form (contact, sign-up) could not be BOTH open to anonymous visitors AND protected against cross-site posts. A form token is session-bound, signed and nonce-unique, so an anonymous visitor's rendered form validates; @noauth no longer skips the check. Supersedes csrf-noauth-exempt.",
+      "supersedes": "csrf-noauth-exempt",
       "suites": {
         "ruby": "spec/csrf_middleware_spec.rb",
         "python": "tests/test_csrf_middleware.py",
@@ -124,7 +125,23 @@
         "nodejs": "test/csrfMiddleware.test.ts"
       },
       "cases": [
-        "a noauth write route skips csrf"
+        "a noauth write route without a token is rejected",
+        "a noauth write route with a valid form token passes"
+      ]
+    },
+    {
+      "id": "csrf-no-csrf-exempt",
+      "adr": "CSRF-DEC-03",
+      "rule": "A route that explicitly opts out with @no_csrf() / ->noCsrf() / .no_csrf / noCsrf:true skips CSRF even with no token - the escape hatch for server-to-server endpoints (webhooks, callbacks) that carry no browser session and so have no cross-site-forgery surface.",
+      "why": "With @noauth no longer skipping CSRF (csrf-noauth-still-gated), a public webhook that legitimately carries no form token needs an explicit opt-out or it would regress to 403 when TINA4_CSRF=true. @no_csrf is that opt-out; pair it with @noauth for a public webhook.",
+      "suites": {
+        "ruby": "spec/csrf_middleware_spec.rb",
+        "python": "tests/test_csrf_middleware.py",
+        "php": "tests/CsrfMiddlewareTest.php",
+        "nodejs": "test/csrfMiddleware.test.ts"
+      },
+      "cases": [
+        "a no csrf write route skips csrf"
       ]
     },
     {

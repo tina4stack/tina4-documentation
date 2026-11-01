@@ -35,6 +35,20 @@ is the authoritative "what was decided", the feature docs carry the detail.
   HTTPS-guard HSTS. Rename PHP's class to `SecurityHeadersMiddleware`; add wire tests.
 - CSRF wiring (37, CSRF-DEC-02) - DECIDED: `TINA4_CSRF=true` ATTACHES the middleware (env-controllable), so
   the flag is no longer inert. (The secret FIX above is independent and mandatory.)
+- CSRF vs auth, orthogonal (37, CSRF-DEC-03, 2026-11-01, SUPERSEDES the csrf-noauth-exempt invariant of
+  CSRF-DEC-02) - DECIDED (tina4-python#265): `@noauth` / `->noAuth()` / `.no_auth` NO LONGER skips the CSRF
+  check. `@noauth` controls IDENTITY (is a bearer token required); CSRF controls ORIGIN (did our own rendered
+  form send this write). They are orthogonal. A public form (contact, sign-up) must be able to be BOTH open to
+  anonymous visitors AND protected against cross-site posts, which the old coupling made impossible: a protected
+  POST with only `{{ form_token() }}` got 401 (a form token is not an identity, ADR-0079 s1 - UNCHANGED), and
+  `@noauth` to open it also turned CSRF off. Now a public form is `@noauth` + `{{ form_token() }}`: it posts
+  (no identity required) and stays CSRF-protected (the session-bound form token is validated). A new explicit
+  opt-out - `@no_csrf()` / `->noCsrf()` / `.no_csrf` / `export const noCsrf` - skips CSRF for server-to-server
+  endpoints (webhooks, callbacks) that carry no browser session, so they do not regress to 403 when
+  `TINA4_CSRF=true`. ADR-0079 (a form token is never an identity) is reaffirmed, not reopened: this changes the
+  CSRF middleware only, never the auth gate. BREAKING only for an app that relied on `@noauth` disabling CSRF on
+  a webhook while `TINA4_CSRF=true` - add `@no_csrf()` to that route. Shipped in all four with matching
+  regressions; the `csrf-noauth-exempt` invariant is replaced by `csrf-noauth-still-gated` + `csrf-no-csrf-exempt`.
 - Request param model (29, REQ-DEC-01) - DECIDED: keep route params and query SEPARATE (the PHP/Node model) -
   `request.params` is route-only, `request.query` is client-only. Closes the param-pollution surface.
   BREAKING for Python/Ruby apps that read query values via `params` (and Ruby's body-into-params) - needs a

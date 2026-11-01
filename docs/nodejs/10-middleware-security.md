@@ -1314,8 +1314,10 @@ Use POST body or X-Form-Token header instead.
 Three scenarios skip CSRF checks automatically:
 
 1. **GET, HEAD, OPTIONS** - Safe methods don't modify state.
-2. **Routes with `noAuth: true`** - Public write endpoints don't need CSRF (they have no session to protect).
-3. **Requests with a valid Bearer token** - API clients authenticate with tokens, not cookies. CSRF only matters for cookie-based sessions.
+2. **Requests with a valid Bearer token** - API clients authenticate with tokens, not cookies. CSRF only matters for cookie-based sessions.
+3. **Routes with `.noCsrf()`** (or `export const noCsrf = true` in a route file) - the explicit opt-out for server-to-server endpoints (webhooks, payment callbacks) that carry no browser session and so have no cross-site-forgery surface.
+
+`.noAuth()` does **not** skip CSRF. It drops the identity requirement (who), not the origin check (did our own form send this). So a public contact or sign-up form marked `.noAuth()` still renders `{{ form_token() }}` and stays protected against cross-site posts - a public form can be both open to anonymous visitors and CSRF-safe. Reach for `.noCsrf()` only when there is genuinely no browser form behind the write.
 
 #### Turning CSRF On
 

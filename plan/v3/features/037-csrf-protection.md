@@ -30,7 +30,11 @@ Measured, all four:
 - A `CsrfMiddleware` (`before_csrf`/`beforeCsrf`) exists in all four: skips GET/HEAD/OPTIONS, gates
   POST/PUT/PATCH/DELETE, reads `formToken` from the body then the `X-Form-Token` header, REJECTS a
   query-string token (403), compares timing-safe, and returns 403 `CSRF_INVALID` on a missing/invalid token.
-  `@noauth`/`.noAuth` routes and a valid Bearer are exempt. Consistent + correct across the four.
+  A valid Bearer is exempt. `@noauth` routes WERE exempt too (CSRF-DEC-02), but CSRF-DEC-03 (2026-11-01,
+  tina4-python#265) changed that: `@noauth` no longer skips CSRF - a public form must be able to be both open
+  to anonymous visitors AND protected against cross-site posts. The explicit opt-out is now `@no_csrf()` /
+  `->noCsrf()` / `.no_csrf` / `export const noCsrf` (webhooks / server-to-server callbacks). Consistent across
+  the four.
 - IT IS OPT-IN (OFF) in all four: the middleware is never auto-attached; `TINA4_CSRF` is read only for the
   enabled/disabled flag AFTER attachment - NOTHING reads it to attach the middleware. So `TINA4_CSRF=true`
   alone does nothing, and a default app has NO CSRF protection unless the developer registers the middleware.
@@ -138,7 +142,8 @@ opt-in - but never claim protection that a default app does not have.
 - [x] Configuration (secret/enable), failure and SECURITY (default-secret, split, off-by-default) rules complete.
 - [x] Wire (formToken JWT, 403) and provider contracts complete.
 - [x] Four-language behaviour recorded truthfully (Python fail-closed; PHP default-secret; Node split; all off).
-- [x] Owner ambiguities decided (CSRF-DEC-01 secret security, CSRF-DEC-02 auto-wire/session-bind).
+- [x] Owner ambiguities decided (CSRF-DEC-01 secret security, CSRF-DEC-02 auto-wire/session-bind,
+  CSRF-DEC-03 @noauth no longer skips CSRF + @no_csrf opt-out, #265).
 - [x] Conformance fixture (forged-token rejection + off-by-default) complete.
 - [x] Integration map and migrations complete.
 - [x] Backlog ordered.
