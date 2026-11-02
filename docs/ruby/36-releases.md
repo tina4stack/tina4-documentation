@@ -1,5 +1,13 @@
 # Release Notes
 
+## v3.13.156 (2026-11-01) - Kafka reads where you tell it, and produces what the other side expects
+
+**A new Kafka consumer group can start at the end, not the beginning.** The consumer's `auto.offset.reset` was wired to `earliest` with no way out, so the first time a group ran it replayed every retained message - one report hit roughly 230,000 of them hammering downstream on a cold start. Set `TINA4_KAFKA_AUTO_OFFSET_RESET=latest` (or the bare `KAFKA_AUTO_OFFSET_RESET`) to skip the backlog and read only what arrives next; it still defaults to `earliest`, so nothing changes unless you ask (#263).
+
+**Kafka can produce a bare message for a non-Tina4 reader.** `queue.push(payload, raw: true)` (and `produce(..., raw: true)`) now writes the value exactly as given - no `{payload, priority, attempts}` envelope and no injected id - so a service that reads the topic expecting its own top-level schema gets that, not a wrapped job. It is Kafka-only: the file, RabbitMQ and MongoDB backends refuse it by name, because their envelope is the bookkeeping that pop, retries and dead-lettering depend on. The default stays enveloped, and the consume side already unwraps either shape (#264).
+
+This release also carries the Python-only `migrate:create` hint and `.py`-migration-discovery fix (#268) as a shared version bump. #263 and #264 landed across all four frameworks with real, no-mock tests proven by mutation. The framework still has no required runtime dependencies.
+
 ## v3.13.155 (2026-10-29) - Version parity with the Python fixes
 
 No Ruby framework changes this release. 3.13.155 carries three fixes in the Python scaffolding generator and development server - a secure generated test secret, generated handlers that no longer run the synchronous ORM on the event loop, and a dev server that survives a high port. Ruby already handled each of those cases - its routes are synchronous, its generated tests sign with RSA keys, and its test port degrades on a bad bind - so this bump keeps the one shared version across all four frameworks. The framework still has no required runtime dependencies.

@@ -1,5 +1,15 @@
 # Release Notes
 
+## v3.13.156 (2026-11-01) - Kafka reads where you tell it, produces what the other side expects, and migrate's hints point at commands that exist
+
+**A new Kafka consumer group can start at the end, not the beginning.** The consumer's `auto.offset.reset` was wired to `earliest` with no way out, so the first time a group ran it replayed every retained message - one report hit roughly 230,000 of them hammering downstream on a cold start. Set `TINA4_KAFKA_AUTO_OFFSET_RESET=latest` (or the bare `KAFKA_AUTO_OFFSET_RESET`) to skip the backlog and read only what arrives next; it still defaults to `earliest`, so nothing changes unless you ask (#263).
+
+**Kafka can produce a bare message for a non-Tina4 reader.** `queue.push(data, raw=True)` (and `produce(..., raw=True)`) now writes the value exactly as given - no `{payload, priority, attempts}` envelope and no injected id - so a service that reads the topic expecting its own top-level schema gets that, not a wrapped job. It is Kafka-only: the file, RabbitMQ and MongoDB backends refuse it by name, because their envelope is the bookkeeping that pop, retries and dead-lettering depend on. The default stays enveloped, and the consume side already unwraps either shape (#264).
+
+**`migrate:create` stops pointing at commands that don't exist.** Its closing hint named `tina4 migrate --rollback` and `tina4 migrate --status`, flags `migrate` rejects - so the first thing a person (or a model following the hint) tried errored. It now names `tina4 migrate:rollback` and `tina4 migrate:status`, the commands that are really there. The same pass closed two quieter gaps: `migrate:status` and the startup auto-migration only looked at `.sql` files while `migrate` applies `.py` migrations too, so a pending `.py` migration was invisible and never ran at boot - all four now share one discovery that sees both (#268).
+
+#263 and #264 landed across all four frameworks; #268 is Python's. Every change is held down by a real, no-mock test proven by mutation. The framework still has no required runtime dependencies.
+
 ## v3.13.155 (2026-10-29) - The scaffold's own tests pass, and a high port stops felling the server
 
 **The generated tests pass as written.** Scaffold a fresh app and the tests the generator wrote used to trip on their own secret. It baked an eleven-byte `TINA4_SECRET` into each one, and the framework's auth refuses anything under thirty-two bytes, so the token test failed the moment you ran it. The generator now writes a real `secrets.token_hex(32)` in at generation time, the same way `tina4 init` seeds `.env` (#259).
