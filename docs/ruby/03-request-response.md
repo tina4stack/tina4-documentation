@@ -247,21 +247,19 @@ response.redirect("/new-location", 301)
 
 ### file -- File Download Response
 
-Send a file for download:
+Send a file:
 
 ```ruby
 response.file("/path/to/report.pdf")
 ```
 
-Tina4 sets the right `Content-Type` from the file extension and adds `Content-Disposition` so the browser downloads instead of displaying.
+Tina4 sets the right `Content-Type` from the file extension. Pass `content_type:` to override it.
 
-Custom filename:
+Force a download (`Content-Disposition: attachment`, saved under the file's own name):
 
 ```ruby
-response.file("/path/to/report.pdf", "monthly-report-march-2026.pdf")
+response.file("/path/to/report.pdf", download: true)
 ```
-
-This sets the `Content-Disposition: attachment` header with your chosen filename.
 
 ### xml -- XML Response
 
@@ -559,22 +557,22 @@ Send files with `response.file`:
 ```ruby
 Tina4::Router.get("/api/reports/{filename}") do |request, response|
   filename = request.params["filename"]
-  filepath = File.join(__dir__, "../../data/reports", filename)
+  filepath = File.join(Dir.pwd, "data/reports", filename)
 
   unless File.exist?(filepath)
-    return response.json({ error: "Report not found" }, 404)
+    next response.json({ error: "Report not found" }, 404)
   end
 
   response.file(filepath)
 end
 ```
 
-The browser downloads the file. Tina4 detects the MIME type from the extension and sets the right headers.
+Tina4 detects the MIME type from the extension and sets the right headers. A path containing a `..` segment is refused with `403`, so build it from `Dir.pwd` (the project root) rather than `File.join(__dir__, "../..")`.
 
-Force a specific download filename:
+Force a download (the browser saves it under the file's own name):
 
 ```ruby
-response.file(filepath, "Q1-2026-Sales-Report.pdf")
+response.file(filepath, download: true)
 ```
 
 ---
@@ -802,7 +800,7 @@ Tina4::Router.get("/api/images/{filename}") do |request, response|
     next response.json({ error: "Invalid filename" }, 400)
   end
 
-  filepath = File.join(__dir__, "../public/uploads", filename)
+  filepath = File.join(Dir.pwd, "src/public/uploads", filename)
 
   unless File.exist?(filepath)
     next response.json({ error: "Image not found", filename: filename }, 404)
