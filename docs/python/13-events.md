@@ -340,14 +340,13 @@ async def deactivate_user(request, response):
     emit("user.deactivated", {"user_id": user_id})
 
     return response({"user_id": user_id, "status": "deactivated"})
-```
 
-Fire the app ready event once on startup in `src/app.py`:
 
-```python
-from tina4_python.core.events import emit
+# Runs when Tina4 imports this file at startup, after the handler above is registered
 emit("app.ready", {})
 ```
+
+The `emit("app.ready", {})` sits at the bottom of the same file, below the `@once("app.ready")` handler. Tina4 loads the `.py` files under `src/` in sorted path order, so an emit in a file that loads earlier, such as `src/app.py`, fires before the handler is registered and nothing prints. The emit must come after its handler. In development, a hot reload that re-imports this file fires it again.
 
 ---
 
@@ -367,9 +366,9 @@ emit("app.ready", {})
 
 ### 3. Forgetting once fires exactly once
 
-**Problem:** An initialisation handler registered with `@once` does not run on the second app start during hot reload.
+**Problem:** A handler registered with `@once` runs for the first `emit` of its event and never again in that process, so a second `emit("app.ready", {})` reaches nothing.
 
-**Fix:** `@once` handlers remove themselves after firing. For handlers that must run every startup, use `@on` instead.
+**Fix:** `@once` handlers remove themselves after firing. For a handler that must run on every emit, use `@on` instead.
 
 ### 4. Mutating the payload in a handler
 
