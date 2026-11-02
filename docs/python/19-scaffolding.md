@@ -326,23 +326,16 @@ Tina4 uses singular table names. The model name `Product` maps to the table `pro
 
 ## Combining Generators
 
-Sometimes you want a model with routes but no form. Or a model with a migration but no test. The `--with` flags let you compose:
+Sometimes you want a model with routes but no form. Run the individual generators one after another. Each adds one piece:
 
 ```bash
-tina4python generate model Product --fields "name:string,price:float" --with-route --with-migration
+tina4python generate model Product --fields "name:string,price:float"
+tina4python generate route products --model Product
 ```
 
-Available flags:
+`generate model` writes the migration by default. Pass `--no-migration` to leave it out. Add `generate form`, `generate view` or `generate test` for the other pieces.
 
-| Flag | Adds |
-|------|------|
-| `--with-route` | CRUD route file |
-| `--with-migration` | Migration files (included by default with model) |
-| `--with-test` | Test file |
-| `--with-form` | Form template |
-| `--with-view` | View templates |
-
-The `generate crud` command is equivalent to using all `--with` flags at once.
+The `generate crud` command builds the full set in one step.
 
 ---
 
