@@ -237,18 +237,18 @@ return res.redirect("/new-location", 301);
 
 ### file() -- File Download Response
 
-Send a file to the client for download:
+Send a file to the client:
 
 ```typescript
 return res.file("/path/to/report.pdf");
 ```
 
-Tina4 sets the appropriate `Content-Type` based on the file extension and adds a `Content-Disposition` header so the browser downloads the file.
+Tina4 sets the appropriate `Content-Type` based on the file extension. Pass `{ contentType }` to override it.
 
-Set a custom filename:
+Force a download (`Content-Disposition: attachment`, saved under the file's own name):
 
 ```typescript
-return res.file("/path/to/report.pdf", "monthly-report-march-2026.pdf");
+return res.file("/path/to/report.pdf", { download: true });
 ```
 
 ---
@@ -487,10 +487,10 @@ Router.get("/api/reports/{filename}", async (req, res) => {
 });
 ```
 
-To force a specific download filename:
+To force a download (the browser saves it under the file's own name):
 
 ```typescript
-return res.file(filepath, "Q1-2026-Sales-Report.pdf");
+return res.file(filepath, { download: true });
 ```
 
 ---
