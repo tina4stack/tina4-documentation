@@ -1,0 +1,230 @@
+{
+  "_comment": [
+    "Raw TCP service contract, governed by ADR-0102 (feature 142).",
+    "A user-facing raw TCP listener runs IN-PROCESS, folded into each runtime's",
+    "existing accept/event loop. The app registers callbacks (on_connect, on_data,",
+    "on_close, optional on_line), frames the raw byte stream itself (binary/length/",
+    "CRC - the car-tracker case), identifies a connection by an app id (the IMEI),",
+    "and pushes server->device commands through a name-keyed registry (send_to /",
+    "connection / broadcast). The framework owns the socket hard-parts: lifecycle,",
+    "max_connections refusal, an idle reaper (default OFF for long-lived device",
+    "sockets), graceful-shutdown drain, and backpressure.",
+    "",
+    "STATE: every invariant below is OWED - the rule and its executable cases are",
+    "declared, but no suite proves them yet (no framework code exists; planning",
+    "only). Each invariant therefore carries NO 'suites' block. When the Python",
+    "reference and the ports land, add the per-language 'suites' map (the intended",
+    "filenames are listed under 'planned_suites' for each), which flips the",
+    "invariant from owed to proven and makes scripts/audit-contract-fixtures.py",
+    "check that each named case exists in all four suites. NO MOCKS: every case",
+    "runs a REAL client socket against a REAL in-process listener, and each must be",
+    "proven able to FAIL by mutation before it counts.",
+    "",
+    "Python is the reference (ADR-0004). Build order: python -> php -> ruby -> node."
+  ],
+  "version": 2,
+  "decided": "2026-11-03",
+  "feature": "Raw TCP service (feature 142)",
+  "planned_suites": {
+    "python": "tests/test_raw_tcp_service_contract.py",
+    "php": "tests/RawTcpServiceContractTest.php",
+    "ruby": "spec/raw_tcp_service_contract_spec.rb",
+    "nodejs": "test/rawTcpServiceContract.test.ts"
+  },
+  "invariants": [
+    {
+      "id": "tcp-listen-accept-in-process",
+      "adr": "ADR-0102",
+      "rule": "tcp_service(port) opens a listener folded into the running framework's existing accept/event loop (not a second blocking loop, not a separate daemon by default); a real client that connects fires on_connect(conn) while the HTTP server keeps serving.",
+      "why": "D1: the whole value is one process serving both the device gateway and its HTTP dashboard. A second blocking loop or a separate daemon would defeat the shared-process reuse of config/logging/ORM/queue.",
+      "cases": [
+        {
+          "name": "client connects and on_connect fires in the server process",
+          "given": "a Tina4 app serving HTTP with a tcp_service registered on a free port",
+          "when": "a real TCP client opens a socket to that port",
+          "then": "on_connect(conn) is invoked once in the same process and an HTTP request to the app still succeeds concurrently"
+        }
+      ]
+    },
+    {
+      "id": "tcp-callbacks-raw-and-line",
+      "adr": "ADR-0102",
+      "rule": "on_data(conn, bytes) delivers the raw bytes exactly as received (never newline-split, never decoded); on_line(conn, line) delivers one newline-delimited line with the terminator stripped; on_close(conn) fires exactly once when the peer or server closes.",
+      "why": "D2/D3: tracker frames are binary/length/CRC, so the app must see raw bytes and frame them itself; on_line is a text convenience only. Per-connection coroutine handlers were rejected (do not port to Node/PHP).",
+      "cases": [
+        {
+          "name": "on_data delivers raw bytes not split on newlines",
+          "given": "a connection with an on_data handler recording every buffer it receives",
+          "when": "the client sends bytes containing embedded 0x0A and a trailing partial frame",
+          "then": "the handler sees the raw bytes (no split, no decode), and the app's own buffering reassembles frames"
+        },
+        {
+          "name": "on_line splits a newline-delimited stream",
+          "given": "a connection with an on_line handler",
+          "when": "the client sends 'a\\nb\\nc' with no trailing newline",
+          "then": "on_line fires for 'a' and 'b' (terminator stripped) and 'c' stays buffered until its newline arrives"
+        },
+        {
+          "name": "on_close fires once when the peer closes",
+          "given": "an open connection",
+          "when": "the client closes its socket",
+          "then": "on_close(conn) is invoked exactly once and the connection is removed from the registry"
+        }
+      ]
+    },
+    {
+      "id": "tcp-binary-roundtrip-ack",
+      "adr": "ADR-0102",
+      "rule": "The app can write a reply to an inbound packet with conn.send(bytes); the exact bytes are received by that client socket in order.",
+      "why": "D5: ACK-per-packet is the tracker norm (the server replies to each location packet). conn.send must put raw bytes on that specific socket.",
+      "cases": [
+        {
+          "name": "a binary frame round-trips and is ACKed",
+          "given": "an on_data handler that replies with a fixed ACK byte sequence",
+          "when": "the client sends a binary login/location frame",
+          "then": "the client reads back the exact ACK bytes, in order, on the same socket"
+        }
+      ]
+    },
+    {
+      "id": "tcp-identify-registry-push",
+      "adr": "ADR-0102",
+      "rule": "conn.identify(app_id) registers the live connection under the app id; tcp(name).send_to(app_id, bytes) writes to exactly that device's socket; tcp(name).broadcast(bytes) writes to all; send_to to an unknown or closed id is a no-op return, never a raise; a second connection identifying with the same id supersedes the first in the registry.",
+      "why": "D4: server->device commands ('set interval', 'cut fuel') are addressed by IMEI from an HTTP route. Without the registry the feature can only ingest.",
+      "cases": [
+        {
+          "name": "identify registers and send_to reaches that socket",
+          "given": "a connection that calls conn.identify('imeiA') from its login handler",
+          "when": "code elsewhere calls tcp(name).send_to('imeiA', cmd)",
+          "then": "the cmd bytes are received by that same client socket"
+        },
+        {
+          "name": "send_to is isolated to the addressed device",
+          "given": "two connections identified as 'imeiA' and 'imeiB'",
+          "when": "tcp(name).send_to('imeiA', cmd) is called",
+          "then": "the 'imeiA' socket receives cmd and the 'imeiB' socket receives nothing"
+        },
+        {
+          "name": "send_to to an unknown id is a no-op not a raise",
+          "given": "no connection identified as 'ghost'",
+          "when": "tcp(name).send_to('ghost', cmd) is called",
+          "then": "the call returns falsey/None without raising and no bytes are sent"
+        },
+        {
+          "name": "broadcast reaches every live connection",
+          "given": "three identified connections",
+          "when": "tcp(name).broadcast(msg) is called",
+          "then": "all three client sockets receive msg"
+        },
+        {
+          "name": "re-identify with the same id supersedes the first",
+          "given": "connection one identified as 'imeiA'",
+          "when": "connection two also identifies as 'imeiA'",
+          "then": "send_to('imeiA') reaches connection two (the live one), matching a device that reconnected"
+        }
+      ]
+    },
+    {
+      "id": "tcp-connection-object",
+      "adr": "ADR-0102",
+      "rule": "Every connection exposes send(bytes), close(), remote_addr (the raw socket peer, never a forwarded header), id (the registry id, null until identified), identify(app_id), and context (a per-connection mutable state bag).",
+      "why": "D5: a uniform connection object across all four is what makes the primitive portable; context holds the IMEI, auth state and parse buffer.",
+      "cases": [
+        {
+          "name": "remote_addr is the raw socket peer",
+          "given": "a client connecting from a known local address",
+          "when": "the handler reads conn.remote_addr",
+          "then": "it is the raw TCP peer address, not any forwarded/proxy header value"
+        },
+        {
+          "name": "context persists across on_data calls for one connection",
+          "given": "a handler that accumulates a parse buffer in conn.context",
+          "when": "the client sends a frame across two separate writes",
+          "then": "the second on_data sees the buffer the first left in conn.context, and a different connection has its own"
+        },
+        {
+          "name": "close() ends the connection and fires on_close",
+          "given": "an open identified connection",
+          "when": "the server calls conn.close()",
+          "then": "the client socket is closed, on_close fires once, and the registry entry is removed"
+        }
+      ]
+    },
+    {
+      "id": "tcp-max-connections-refusal",
+      "adr": "ADR-0102",
+      "rule": "With max_connections=N set, the (N+1)th connection is refused or immediately closed, never queued unbounded.",
+      "why": "A device fleet must not be able to exhaust server memory/fds; the limit is a hard refusal, not an unbounded accept backlog.",
+      "cases": [
+        {
+          "name": "the N+1th connection is refused",
+          "given": "a tcp_service with max_connections=2 and two live connections",
+          "when": "a third client attempts to connect",
+          "then": "the third connection is refused or closed promptly and the two existing connections are unaffected"
+        }
+      ]
+    },
+    {
+      "id": "tcp-idle-reaper-default-off",
+      "adr": "ADR-0102",
+      "rule": "idle_timeout defaults to 0 (OFF): a silent connection stays open indefinitely. With idle_timeout>0 a connection with no activity for that many seconds is closed and on_close fires.",
+      "why": "D1 consumer shape: tracker sockets are deliberately long-lived and mostly idle between location packets, so the reaper must default OFF or it would kill healthy devices.",
+      "cases": [
+        {
+          "name": "idle_timeout=0 keeps a silent connection open",
+          "given": "a tcp_service with idle_timeout=0 and a connected client sending nothing",
+          "when": "a span longer than any default reap interval passes",
+          "then": "the connection is still open and on_close has not fired"
+        },
+        {
+          "name": "idle_timeout>0 reaps a silent connection",
+          "given": "a tcp_service with a short idle_timeout and a connected client sending nothing",
+          "when": "the timeout elapses with no activity",
+          "then": "the connection is closed and on_close fires; a connection that kept sending is not reaped"
+        }
+      ]
+    },
+    {
+      "id": "tcp-graceful-shutdown-drain",
+      "adr": "ADR-0102",
+      "rule": "On SIGTERM/SIGINT the TCP listener drains alongside the HTTP server within the shutdown deadline: live connections are closed cleanly and the HTTP server keeps serving until the deadline.",
+      "why": "Parity with the graceful-shutdown contract (feature 025); a rolling deploy must not strand device connections or hang the grace period.",
+      "cases": [
+        {
+          "name": "live TCP connections close cleanly on SIGTERM",
+          "given": "a running app with an HTTP server and a tcp_service with a live connection",
+          "when": "the process receives SIGTERM",
+          "then": "the live connection is closed within the shutdown deadline and the process exits 0"
+        }
+      ]
+    },
+    {
+      "id": "tcp-backpressure",
+      "adr": "ADR-0102",
+      "rule": "A slow or stalled reader does not grow server memory without bound: outbound writes queue up to a bounded backlog and a client past the backlog limit is dropped rather than buffered indefinitely.",
+      "why": "D-security: an unbounded per-connection write buffer is a memory-exhaustion DoS; mirrors the WebSocket TINA4_WS_MAX_BACKLOG posture.",
+      "cases": [
+        {
+          "name": "a stalled reader is bounded, not buffered without limit",
+          "given": "a connection whose client never reads while the server sends large volumes",
+          "when": "the queued bytes exceed the backlog limit",
+          "then": "server memory stays bounded and the stalled client is dropped, while other connections keep serving"
+        }
+      ]
+    },
+    {
+      "id": "tcp-single-owner-bind",
+      "adr": "ADR-0102",
+      "rule": "Under a multi-worker HTTP deployment the TCP listener binds in exactly ONE owner (the primary worker); SO_REUSEPORT is off by default, so N workers do not each bind the port.",
+      "why": "D1 consequence (Python/PHP): N processes each binding the port is the first thing that breaks under a process manager; one owner avoids split device state and duplicate accepts.",
+      "cases": [
+        {
+          "name": "only one worker binds the TCP port",
+          "given": "the HTTP side configured with N>1 workers and a tcp_service registered",
+          "when": "the app boots",
+          "then": "exactly one worker binds and accepts on the TCP port; the others do not bind it, and no bind error is raised"
+        }
+      ]
+    }
+  ]
+}
