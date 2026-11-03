@@ -106,7 +106,17 @@ async function serveFile(req, res) {
     return;
   }
   const type = TYPES[extname(file).toLowerCase()] || "application/octet-stream";
-  let body = await readFile(file);
+  // Read directly and handle a vanished file, rather than trusting the earlier
+  // stat (a check-then-use race between stat() and readFile()).
+  let body;
+  try {
+    body = await readFile(file);
+  } catch {
+    res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end(`404: ${path} is not in the build`);
+    console.log(`404   ${path}`);
+    return;
+  }
   if (type.startsWith("text/html")) body = adapt(body.toString("utf8"), "http://" + (req.headers.host || `localhost:${PORT}`));
   res.writeHead(200, { ...headersFor(path, RAG), "Content-Type": type, "Cache-Control": "no-cache" });
   res.end(body);
