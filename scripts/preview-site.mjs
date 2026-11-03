@@ -32,7 +32,7 @@
 //
 // Zero dependencies. Never used by the build or the deploy.
 import { createServer } from "node:http";
-import { readFile, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { dirname, extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { headersFor } from "./site-headers.mjs";
@@ -94,29 +94,30 @@ async function serveFile(req, res) {
   const path = decodeURIComponent(url.pathname);
   const target = normalize(join(DIST, path));
   if (target !== DIST && !target.startsWith(DIST + sep)) { res.writeHead(403); res.end(); return; }
-  let file = target, info = await stat(file).catch(() => null);
-  if (info && info.isDirectory()) {
-    if (!path.endsWith("/")) { res.writeHead(301, { Location: path + "/" + url.search }); res.end(); return; }
-    file = join(target, "index.html"); info = await stat(file).catch(() => null);
-  }
-  if (!info) {
+  // Read the file directly and branch on the failure, instead of stat()-ing to
+  // check existence first and then reading (a check-then-use race). A directory
+  // surfaces as EISDIR; a missing file as ENOENT.
+  const notFound = () => {
     res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
     res.end(`404: ${path} is not in the build`);
     console.log(`404   ${path}`);
-    return;
-  }
-  const type = TYPES[extname(file).toLowerCase()] || "application/octet-stream";
-  // Read directly and handle a vanished file, rather than trusting the earlier
-  // stat (a check-then-use race between stat() and readFile()).
-  let body;
+  };
+  let file = target, body;
   try {
     body = await readFile(file);
-  } catch {
-    res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-    res.end(`404: ${path} is not in the build`);
-    console.log(`404   ${path}`);
-    return;
+  } catch (error) {
+    if (error.code === "EISDIR") {
+      if (!path.endsWith("/")) { res.writeHead(301, { Location: path + "/" + url.search }); res.end(); return; }
+      file = join(target, "index.html");
+      try {
+        body = await readFile(file);
+      } catch { notFound(); return; }
+    } else {
+      notFound();
+      return;
+    }
   }
+  const type = TYPES[extname(file).toLowerCase()] || "application/octet-stream";
   if (type.startsWith("text/html")) body = adapt(body.toString("utf8"), "http://" + (req.headers.host || `localhost:${PORT}`));
   res.writeHead(200, { ...headersFor(path, RAG), "Content-Type": type, "Cache-Control": "no-cache" });
   res.end(body);

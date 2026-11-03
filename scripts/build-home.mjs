@@ -332,7 +332,7 @@ if (dead.length) fail(`dead link(s) on the home page:\n  ${dead.join("\n  ")}`);
 // No inline script, no inline style, no event-handler attribute: the page's
 // CSP (scripts/site-headers.mjs) would block them on tina4.com.
 {
-  const inlineScript = [...page.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)].find((m) => !/\ssrc=/.test(m[1]) && m[2].trim());
+  const inlineScript = [...page.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\b[^>]*>/gi)].find((m) => !/\ssrc=/.test(m[1]) && m[2].trim());
   const inlineStyle = page.match(/<style\b/) || page.match(/<[a-zA-Z][^>]*\sstyle="/);
   const handler = page.match(/<[a-zA-Z][^>]*\son[a-z]+="/);
   for (const [what, hit] of [["an inline <script>", inlineScript], ["an inline style", inlineStyle], ["an event-handler attribute", handler]]) {
