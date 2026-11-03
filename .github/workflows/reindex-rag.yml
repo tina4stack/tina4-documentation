@@ -25,6 +25,10 @@ on:
   push:
     branches: [main]
 
+# Least privilege: this workflow only pings an external URL; it needs no repo write.
+permissions:
+  contents: read
+
 # Never let overlapping doc pushes stack multiple full rebuilds; the latest wins.
 concurrency:
   group: reindex-rag

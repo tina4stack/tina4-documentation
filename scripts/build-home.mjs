@@ -269,7 +269,7 @@ function copyTree(from, to) {
 const OWN_FILES = readdirSync(HOME).filter((name) => /\.(css|js)$/.test(name));
 for (const name of OWN_FILES) {
   const hash = createHash("sha256").update(readFileSync(join(HOME, name))).digest("hex").slice(0, 10);
-  const pattern = new RegExp(`"/assets/home/${name.replace(/\./g, "\\.")}(\\?v=[^"]*)?"`);
+  const pattern = new RegExp(`"/assets/home/${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\?v=[^"]*)?"`);
   if (!pattern.test(page)) {
     if (name === "gtag-init.js" && !/gtag-init/.test(page)) continue;   // analytics is off
     fail(`home/index.html does not load /assets/home/${name}`);
@@ -280,7 +280,7 @@ for (const name of OWN_FILES) {
 const GENERATED = { "press-config.js": pressConfig, "search.css": searchCss };
 for (const [name, body] of Object.entries(GENERATED)) {
   const hash = createHash("sha256").update(body).digest("hex").slice(0, 10);
-  const pattern = new RegExp(`"/assets/home/${name.replace(/\./g, "\\.")}(\\?v=[^"]*)?"`);
+  const pattern = new RegExp(`"/assets/home/${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\?v=[^"]*)?"`);
   if (!pattern.test(page)) fail(`home/index.html does not load /assets/home/${name}`);
   page = page.replace(pattern, `"/assets/home/${name}?v=${hash}"`);
 }
@@ -295,11 +295,18 @@ writeFileSync(join(DIST, "index.html"), page);
 // build, so the block is added fresh each time (and replaced on a re-run).
 {
   const htaccess = join(DIST, ".htaccess");
-  if (!existsSync(htaccess)) fail(`no ${htaccess}: tina4press writes it on every build`);
   const MARK = "\n# Security headers (scripts/site-headers.mjs";
-  const current = readFileSync(htaccess, "utf8");
+  // Read directly and handle a missing file, rather than existsSync-then-read
+  // (which has a check-then-use race).
+  let current;
+  try {
+    current = readFileSync(htaccess, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") fail(`no ${htaccess}: tina4press writes it on every build`);
+    throw error;
+  }
   const base = current.includes(MARK) ? current.slice(0, current.indexOf(MARK)) : current.replace(/\n*$/, "\n");
-  writeFileSync(htaccess, base + htaccessBlock(chat.api || "https://rag.tina4.com").replace(/^\n/, "\n"));
+  writeFileSync(htaccess, base + htaccessBlock(chat.api || "https://rag.tina4.com"));
 }
 
 if (releases.length) {
@@ -325,7 +332,7 @@ if (dead.length) fail(`dead link(s) on the home page:\n  ${dead.join("\n  ")}`);
 // No inline script, no inline style, no event-handler attribute: the page's
 // CSP (scripts/site-headers.mjs) would block them on tina4.com.
 {
-  const inlineScript = [...page.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)].find((m) => !/\ssrc=/.test(m[1]) && m[2].trim());
+  const inlineScript = [...page.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\b[^>]*>/gi)].find((m) => !/\ssrc=/.test(m[1]) && m[2].trim());
   const inlineStyle = page.match(/<style\b/) || page.match(/<[a-zA-Z][^>]*\sstyle="/);
   const handler = page.match(/<[a-zA-Z][^>]*\son[a-z]+="/);
   for (const [what, hit] of [["an inline <script>", inlineScript], ["an inline style", inlineStyle], ["an event-handler attribute", handler]]) {

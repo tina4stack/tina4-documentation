@@ -12,6 +12,10 @@ on:
   pull_request:
     branches: [main]
 
+# Least privilege: this workflow only reads the repo (checkout + run the audit).
+permissions:
+  contents: read
+
 jobs:
   audit:
     runs-on: ubuntu-latest
