@@ -1128,6 +1128,14 @@
       "phase": "CLI",
       "python_evidence": "tina4/src/metrics.rs",
       "packet": "features/141-metrics-rule-ids.md"
+    },
+    {
+      "id": 142,
+      "slug": "raw-tcp-service",
+      "name": "Raw TCP service",
+      "phase": "Realtime and transport",
+      "python_evidence": "none (implementation-ready, ADR-0102 accepted, not yet built)",
+      "packet": "features/142-raw-tcp-service.md"
     }
   ]
 }
