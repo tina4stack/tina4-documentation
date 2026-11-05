@@ -63,13 +63,14 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 <a class="tp-cta" href="/download/code-viewer/">Download the Code Viewer →</a>
 :::
 
-## Current framework release: 3.13.151
+## Current framework release: 3.13.158
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.151. A Cross-Origin-Opener-Policy header
-joins the default set, the zero-dependency S3 client fails loud on a missing credential and retries
-with capped backoff, and MongoDB keeps bound values out of the query text. Python moves session,
-WebSocket and realtime work off the event loop, so concurrent requests stop queueing behind one another.
-[Read the release notes](/python/36-releases.md).
+Python, PHP, Ruby, and Node.js are aligned on 3.13.158. The Frond front-end helper keeps the
+signed-in bearer token on the page's own origin, the dev-reload socket checks the raw caller
+before it upgrades, and the request log keeps query-string secrets out. A raw TCP service runs
+in-process for device gateways, the Kafka queue commits consumer-group offsets durably, and the
+query builder gains chainable `skip()` / `offset()` / `take()`. Every fix is held down by a real,
+no-mock test proven by mutation. [Read the release notes](/python/36-releases.md).
 
 
 
@@ -100,7 +101,7 @@ No signup, no plugin. [llms.txt](/llms.txt) is a bootstrap protocol written for 
 
 ## What's new
 
-**v3.13.151 (2026-10-15)** - A Cross-Origin-Opener-Policy header in the default set, a hardened zero-dependency S3 client (fail-loud on missing credentials, capped-backoff retries, endpoint path kept), the MongoDB bound-value fix, and - in Python - the asyncio event loop freed of session, WebSocket and realtime I/O. [full notes](/python/36-releases.md)
+**v3.13.158 (2026-11-05)** - The Frond helper keeps the bearer token on its own origin and sends a `<select multiple>` whole, the dev-reload socket checks the raw caller, request logs drop query-string secrets, and credentials stay out of stack traces. Plus a raw TCP service (feature 142), durable Kafka consumer-group offsets, Frond `date()` letters and fail-loud unclosed blocks, chainable query-builder `skip()`/`offset()`/`take()`, and CodeQL scanning. [full notes](/python/36-releases.md)
 
 [Full changelog](/python/36-releases.md)
 
