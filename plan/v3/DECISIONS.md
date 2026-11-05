@@ -118,6 +118,7 @@ Conventions:
 | ADR-0101 | [The RTC config route and signalling socket require auth by default](decisions/ADR-0101.md) (tina4-python#252; secure-by-default, opt out with TINA4_RTC_REQUIRE_AUTH=false; blacklist-falsey parse so a typo stays secured; fixture `rtc_auth_contract.json` all four, mutation-proved; BREAKING for anonymous-calling apps) | Accepted |
 | ADR-0085 | [A bare zero-argument callable global is invoked and its return value is used](decisions/ADR-0085.md) (aligns Python/PHP/Ruby to Node under ADR-0004; fixture `frond_globals_contract.json`; tina4-documentation#90) | Accepted |
 | ADR-0079 | [Auth-token rules: token purpose, secret strength, explicit debug, peer identity](decisions/ADR-0079.md) (`auth_token_contract.json`) | Accepted |
+| ADR-0105 | [The Kafka queue backend durably commits consumer-group offsets per-record and consumes externally-produced records, all four frameworks](decisions/ADR-0105.md) (conformance to ADR-0022 decisions 2/3/4/8; tina4-python#274/#276; PHP/Ruby/Node `fix/kafka-durable-offsets-274`; FindCoordinator v1 / OffsetFetch v1 / OffsetCommit v2 simple-consumer; Node lands the persistent worker-thread connection and un-refuses `backend: "kafka"`; #264 bare-wire read preserved; mutation-proved on a live broker) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
