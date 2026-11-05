@@ -49,8 +49,8 @@ frond.request("/api/users", function(data) {
 | `onError` | `function(status, xhr)` | Error callback (4xx/5xx) |
 
 **Automatic features:**
-- Sends `Authorization: Bearer <token>` when `frond.token` is set
-- Reads `FreshToken` response header and updates `frond.token` automatically
+- Sends `Authorization: Bearer <token>` when `frond.token` is set, but only to a same-origin URL, so the signed-in token never leaves your own site. To authenticate to another origin, pass `Authorization` yourself in `options.headers`.
+- Reads a `FreshToken` response header and rotates `frond.token`, but only from a same-origin response, so another site cannot replace the token
 - Detects XHR-followed redirects (3xx) and navigates the browser
 
 ---
@@ -102,7 +102,7 @@ Collect all form fields into a `FormData` object. Handles text inputs, selects, 
 var data = frond.form.collect("myForm");
 ```
 
-If `frond.token` is set and the form contains a `formToken` field, the token value is updated automatically.
+A `formToken` field is sent exactly as the server rendered it. frond never writes the Bearer token into it: the token travels in the `Authorization` header (same origin only), and the server accepts only a form token in the `formToken` slot.
 
 ### frond.form.submit(formId, url, target, callback)
 
@@ -390,7 +390,7 @@ frond.graphql("/api/graphql",
 
 ### frond.token
 
-Read or write the Bearer token. When set, every `frond.request()` call includes `Authorization: Bearer <token>`.
+Read or write the Bearer token. When set, a same-origin `frond.request()` call includes `Authorization: Bearer <token>`. A request to another origin does not: the token stays on your own site, so a page cannot hand the signed-in user's token to a third party. Pass `Authorization` in `options.headers` when you really do mean to authenticate elsewhere.
 
 ```js
 // Set after login
@@ -403,7 +403,7 @@ console.log(frond.token);
 frond.token = null;
 ```
 
-Token rotation is automatic: if a response includes a `FreshToken` header, `frond.token` updates to the new value.
+Token rotation is automatic: if a same-origin response includes a `FreshToken` header, `frond.token` updates to the new value. A `FreshToken` from another origin is ignored, so a foreign site cannot swap the token out from under the app.
 
 ---
 

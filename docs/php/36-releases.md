@@ -1,5 +1,31 @@
 # Release Notes
 
+## v3.13.158 (2026-11-05) - The bearer token stays home, the dev socket asks who is really calling, and the logs keep their secrets
+
+**The front-end helper no longer hands your token to another site.** `frond.js` used to attach the signed-in `Authorization: Bearer` to every request it made, read a replacement token back from any reply, and copy the token into a form's hidden `formToken` field - so a page that called out to another origin, on purpose or not, handed that origin the user's identity token, and a cooperating site could even swap the token out from under the app. Now the managed token rides along only when the request is going to the page's own origin, a `FreshToken` is accepted only from the page's own origin, and `form.collect()` sends the `formToken` field exactly as the server rendered it. A call that really does mean to authenticate elsewhere passes its own `Authorization` header (GHSA-q2gc-fpw5-3v3c).
+
+**The dev-reload socket checks the caller, not just the name it claims.** With debug on and the server bound past loopback, a machine on the network could open the `/__dev_reload` WebSocket by sending `Host: localhost` and then watch the path of every file you edited, even though that same machine was refused at every `/__dev` HTTP endpoint. The socket now applies the same raw-peer check the HTTP gate does, so a remote caller is turned away before the upgrade; the `TINA4_DEV_ALLOWED_PEERS` opt-in still lets a listed address in. Reported and fixed across all four frameworks.
+
+**The request log keeps query-string secrets out.** The built-in request logger wrote the full URL, so an OAuth (Open Authorization) code, a password-reset token or an API key passed as a query parameter landed in the log. It now records the path alone (Python and Node; PHP and Ruby already did).
+
+**A credential never rides a stack trace or a mistyped URL into a log.** PHP marks every database, MQTT, Messenger and Graph credential `#[\SensitiveParameter]`, so a failed connection's stack trace shows `Object(SensitiveParameterValue)` where the password used to sit; Ruby stops a scheme-less `TINA4_DATABASE_URL` (a one-character typo that drops the `:`) from logging its password in clear. Ruby's dev file-save also follows a dangling symlink to where a write would really land before it checks the project boundary, so a planted link can no longer write outside the project.
+
+**A raw TCP service you can actually write to.** Feature 142 adds a user-facing TCP listener that runs in-process, in the same loop the HTTP server already turns, with `on_connect` / `on_data` / `on_close` callbacks and a small registry so the server can push back to a connected device - the shape a GPS or GPRS tracker gateway needs (ADR-0102).
+
+**Kafka remembers where it was.** The Kafka queue backend commits consumer-group offsets durably, one per record, and now consumes records that another service produced without a Tina4 envelope, so a consumer advances and survives a restart instead of replaying the topic from the beginning (ADR-0105).
+
+**Frond reads dates both ways, and refuses to guess at a missing end.** The `date` filter accepts a strftime format or Twig/PHP `date()` letters and gives the same English output everywhere (ADR-0103); an unclosed `{% block %}` now fails loudly, naming the block, rather than quietly serving an empty page (ADR-0104); and `form.collect()` sends every selected option of a `<select multiple>`.
+
+**The query builder skips and takes.** `skip()`, `offset()` and `take()` chain on the query builder across all four frameworks.
+
+**Security scanning watches the shipped code.** CodeQL static analysis runs on Python, Ruby and Node (JavaScript and TypeScript); PHP, which CodeQL does not analyse, keeps its own syntax and style gates.
+
+Every change is held down by a real, no-mock test proven by mutation. The framework still has no required runtime dependencies, and the full advisory detail for each fix is on the project's security page.
+
+## v3.13.157 (2026-11-02) - A guard so the four stay in lockstep
+
+**Frond's malformed-`{% endblock %}` contract gets a parity regression guard.** PHP's token-bounded template parser is already immune to the hang fixed earlier in Python, and a new test locks that contract in. The version bump keeps all four frameworks on one number.
+
 ## v3.13.156 (2026-11-01) - Kafka reads where you tell it, and produces what the other side expects
 
 **A new Kafka consumer group can start at the end, not the beginning.** The consumer's `auto.offset.reset` was wired to `earliest` with no way out, so the first time a group ran it replayed every retained message - one report hit roughly 230,000 of them hammering downstream on a cold start. Set `TINA4_KAFKA_AUTO_OFFSET_RESET=latest` (or the bare `KAFKA_AUTO_OFFSET_RESET`) to skip the backlog and read only what arrives next; it still defaults to `earliest`, so nothing changes unless you ask (#263).
