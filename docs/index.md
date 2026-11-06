@@ -63,14 +63,15 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 <a class="tp-cta" href="/download/code-viewer/">Download the Code Viewer →</a>
 :::
 
-## Current framework release: 3.13.158
+## Current framework release: 3.13.159
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.158. The Frond front-end helper keeps the
-signed-in bearer token on the page's own origin, the dev-reload socket checks the raw caller
-before it upgrades, and the request log keeps query-string secrets out. A raw TCP service runs
-in-process for device gateways, the Kafka queue commits consumer-group offsets durably, and the
-query builder gains chainable `skip()` / `offset()` / `take()`. Every fix is held down by a real,
-no-mock test proven by mutation. [Read the release notes](/python/36-releases.md).
+Python, PHP, Ruby, and Node.js are aligned on 3.13.159, a round that closes the quiet traps that
+caught AI agents writing Tina4 code. A route that returns an object now answers with that object
+as JSON instead of an empty page, a generated test stays green once you fill its handler in rather
+than turning red for doing the work, and a half-written migration waits instead of recording
+itself as done and shadowing the real SQL you write next. A `create_*_view` migration scaffolds a
+view, not a table. Every fix is held down by a real, no-mock test proven by mutation.
+[Read the release notes](/python/36-releases.md).
 
 
 
@@ -100,6 +101,8 @@ Read https://tina4.com/llms.txt and build me a REST API with a Todo model and JW
 No signup, no plugin. [llms.txt](/llms.txt) is a bootstrap protocol written for machines: it tells your assistant to drive the `tina4` CLI, generate the scaffold, and use the built-ins instead of inventing them. That last part is why the output runs.
 
 ## What's new
+
+**v3.13.159 (2026-11-06)** - Developer-experience fixes for the traps AI agents kept hitting: a handler that returns a dict/list/string becomes a JSON or HTML response instead of an empty 200, `@template` accepts a plain `def` handler (Python), a generated route/service/queue test stays green once its handler is filled in, an unedited scaffold migration is kept pending instead of applying as a silent no-op, and `migrate:create create_*_view` scaffolds a `CREATE VIEW`, not a table. [full notes](/python/36-releases.md)
 
 **v3.13.158 (2026-11-05)** - The Frond helper keeps the bearer token on its own origin and sends a `<select multiple>` whole, the dev-reload socket checks the raw caller, request logs drop query-string secrets, and credentials stay out of stack traces. Plus a raw TCP service (feature 142), durable Kafka consumer-group offsets, Frond `date()` letters and fail-loud unclosed blocks, chainable query-builder `skip()`/`offset()`/`take()`, and CodeQL scanning. [full notes](/python/36-releases.md)
 

@@ -1,5 +1,17 @@
 # Release Notes
 
+## v3.13.159 (2026-11-06) - The handler you wrote is the handler that runs, and a half-finished migration waits its turn
+
+**Return an object and it becomes the response.** A route that handed back a dict, a list or a string instead of calling `response(...)` used to answer an empty 200 - no error, no log line, the value dropped on the floor. The dispatcher now runs that return value through the same `response()` it would have called for you: a dict or list leaves as JSON, a string as HTML or text, an ORM model or query result as JSON. Returning `None` still leaves whatever you wrote onto the response object alone (#289).
+
+**A plain `def` handler works under `@template`.** `@template` always awaited the handler, so a synchronous `def` that returned a dict died with "object dict can't be used in 'await' expression" and every request answered 500 - even though the route decorators have always accepted a `def`. The wrapper now awaits only when the handler really returns something awaitable, so a sync handler renders its template like any other (#287).
+
+**Doing the work the generator asked for no longer turns the suite red.** `generate route` - and service, queue, websocket, listener - wrote a test that asserted the scaffolded handler still raised `NotImplementedError`. Fill the handler in correctly and that test failed: the one test that punished you for finishing. The generated test now asserts the route is wired and callable, and it stays green whether the stub still raises or you have implemented it (#270).
+
+**An unfinished migration waits instead of recording itself as done.** `migrate:create` leaves a `tina4:edit` placeholder where your SQL goes. If the app started before you filled it in, startup auto-migrate applied the empty file, recorded it as passed, and then ignored the real SQL you wrote next - the column never appeared and nothing said why. The runner now keeps a migration pending while it still carries a `tina4:edit` marker and has no statement to run; a scaffolded `CREATE TABLE`, which is real SQL from the start, still applies (#288). And `migrate:create create_open_tickets_view` scaffolds a `CREATE VIEW` to fill in, not a runnable `CREATE TABLE` that built the wrong object behind your back (#297).
+
+Every change is held down by a real, no-mock test proven by mutation.
+
 ## v3.13.158 (2026-11-05) - The bearer token stays home, the dev socket asks who is really calling, and the logs keep their secrets
 
 **The front-end helper no longer hands your token to another site.** `frond.js` used to attach the signed-in `Authorization: Bearer` to every request it made, read a replacement token back from any reply, and copy the token into a form's hidden `formToken` field - so a page that called out to another origin, on purpose or not, handed that origin the user's identity token, and a cooperating site could even swap the token out from under the app. Now the managed token rides along only when the request is going to the page's own origin, a `FreshToken` is accepted only from the page's own origin, and `form.collect()` sends the `formToken` field exactly as the server rendered it. A call that really does mean to authenticate elsewhere passes its own `Authorization` header (GHSA-q2gc-fpw5-3v3c).
@@ -10,7 +22,7 @@
 
 **A credential never rides a stack trace or a mistyped URL into a log.** PHP marks every database, MQTT, Messenger and Graph credential `#[\SensitiveParameter]`, so a failed connection's stack trace shows `Object(SensitiveParameterValue)` where the password used to sit; Ruby stops a scheme-less `TINA4_DATABASE_URL` (a one-character typo that drops the `:`) from logging its password in clear. Ruby's dev file-save also follows a dangling symlink to where a write would really land before it checks the project boundary, so a planted link can no longer write outside the project.
 
-**A raw TCP service you can actually write to.** Feature 142 adds a user-facing TCP listener that runs in-process, in the same loop the HTTP server already turns, with `on_connect` / `on_data` / `on_close` callbacks and a small registry so the server can push back to a connected device - the shape a GPS or GPRS tracker gateway needs (ADR-0102).
+**A raw TCP service you can actually write to.** Feature 142 adds a user-facing TCP listener that runs in-process, in the same loop the HTTP server already turns, with `on_connect` / `on_data` / `on_close` callbacks and a small registry so the server can push back to a connected device - the shape a GPS or GPRS tracker gateway needs (ADR-0102). A slow reader that cannot keep up is dropped once its unsent write backlog passes `TINA4_TCP_MAX_BACKLOG` bytes (default 1 MiB, `0` for unbounded), so one stuck client never holds the loop.
 
 **Kafka remembers where it was.** The Kafka queue backend commits consumer-group offsets durably, one per record, and now consumes records that another service produced without a Tina4 envelope, so a consumer advances and survives a restart instead of replaying the topic from the beginning (ADR-0105).
 
