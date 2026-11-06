@@ -5318,13 +5318,13 @@ end
 **Route chaining.** Mark routes as authenticated or cached with chainable modifiers.
 
 ```ruby
-Tina4::Router.get("/dashboard").secure do |request, response|
+Tina4::Router.get("/dashboard") do |request, response|
   response.html("<h1>Dashboard</h1>")
-end
+end.secure
 
-Tina4::Router.get("/static-page").cache(ttl: 3600) do |request, response|
+Tina4::Router.get("/static-page") do |request, response|
   response.html("<h1>Cached for one hour</h1>")
-end
+end.cache(ttl: 3600)
 ```
 
 Other additions:
