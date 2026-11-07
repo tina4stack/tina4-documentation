@@ -1,5 +1,13 @@
 # Release Notes
 
+## v3.13.160 (2026-11-07) - The error page shows up even when you're turned away
+
+**A browser turned away at the door gets the page, not the raw JSON.** Post a form to a protected route after your session has quietly expired, and the gate used to answer a bare `401 {"error": "Unauthorized"}`, whatever the browser asked for - a wall of JSON where the sign-in page belongs. The gate now reads what the caller will take: a browser gets `errors/401.twig`, the page it was always meant to see, and an Application Programming Interface (API) client gets the `{error, code, message, status, request_id}` envelope every other framework error already speaks. A role-guarded route that refuses an authenticated user answers its `errors/403.twig` the same way (#342).
+
+**A middleware that throws owns up on the page, not in a JSON blob.** When a `before` or `after` hook raised, the worker caught it, logged it and handed back a bare `500 {"error": "Internal Server Error"}` - again, to whoever happened to be asking. It now renders `errors/500.twig` for a browser and the envelope for an API client, and the exception itself still never leaves the log for the body to carry.
+
+Every framework answer - 401, 403, 404, 405 and 500 - now negotiates on the same `Accept`, so the four frameworks reply alike to the same request. Every change is held down by a real, no-mock test proven by mutation.
+
 ## v3.13.159 (2026-11-06) - The handler you wrote is the handler that runs, and a half-finished migration waits its turn
 
 **Doing the work the generator asked for no longer turns the suite red.** `generate route` - and service, queue, websocket, listener - wrote a spec that asserted the scaffolded handler still raised `NotImplementedError`. Fill the handler in correctly and that spec failed: the one spec that punished you for finishing. The generated spec now asserts the route is wired and callable, and it stays green whether the stub still raises or you have implemented it (#270).
