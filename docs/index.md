@@ -63,15 +63,15 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 <a class="tp-cta" href="/download/code-viewer/">Download the Code Viewer →</a>
 :::
 
-## Current framework release: 3.13.159
+## Current framework release: 3.13.160
 
-Python, PHP, Ruby, and Node.js are aligned on 3.13.159, a round that closes the quiet traps that
-caught AI agents writing Tina4 code. A route that returns an object now answers with that object
-as JSON instead of an empty page, a generated test stays green once you fill its handler in rather
-than turning red for doing the work, and a half-written migration waits instead of recording
-itself as done and shadowing the real SQL you write next. A `create_*_view` migration scaffolds a
-view, not a table. Every fix is held down by a real, no-mock test proven by mutation.
-[Read the release notes](/python/36-releases.md).
+Python, PHP, Ruby and Node.js are aligned on 3.13.160. When a browser is turned away from a
+protected route - a form posted after the session quietly expired - or a middleware throws
+mid-request, the framework now answers with the error PAGE the browser asked for instead of a
+wall of raw JSON, while an Application Programming Interface (API) client still gets the
+`{error, code, message, status, request_id}` envelope it expects. Every framework error, 401
+through 500, negotiates on the same `Accept` across all four frameworks. Every fix is held down by
+a real, no-mock test proven by mutation. [Read the release notes](/python/36-releases.md).
 
 
 
@@ -101,6 +101,8 @@ Read https://tina4.com/llms.txt and build me a REST API with a Todo model and JW
 No signup, no plugin. [llms.txt](/llms.txt) is a bootstrap protocol written for machines: it tells your assistant to drive the `tina4` CLI, generate the scaffold, and use the built-ins instead of inventing them. That last part is why the output runs.
 
 ## What's new
+
+**v3.13.160 (2026-11-07)** - A browser turned away from a protected route, refused by a role guard, or hit by a throwing middleware now gets the HTML error page it asked for (`errors/401.twig` / `403` / `500`) instead of raw JSON; an API client still gets the `{error, code, message, status, request_id}` envelope. Every framework error, 401 through 500, now negotiates the same way across all four. [full notes](/python/36-releases.md)
 
 **v3.13.159 (2026-11-06)** - Developer-experience fixes for the traps AI agents kept hitting: a handler that returns a dict/list/string becomes a JSON or HTML response instead of an empty 200, `@template` accepts a plain `def` handler (Python), a generated route/service/queue test stays green once its handler is filled in, an unedited scaffold migration is kept pending instead of applying as a silent no-op, and `migrate:create create_*_view` scaffolds a `CREATE VIEW`, not a table. [full notes](/python/36-releases.md)
 
