@@ -789,10 +789,10 @@ GET routes are public by default. Anyone can read. Writing requires proof of ide
 Some endpoints need to accept unauthenticated writes, such as webhooks, registration forms, and public contact forms. Chain `.no_auth`:
 
 ```ruby
-Tina4::Router.post("/api/webhooks/stripe").no_auth do |request, response|
+Tina4::Router.post("/api/webhooks/stripe") do |request, response|
   # No token required. Stripe can POST here freely.
   response.call({ received: true })
-end
+end.no_auth
 ```
 
 #### Protecting a GET Route
@@ -800,10 +800,10 @@ end
 Admin dashboards, user profiles, account settings: some pages need protection even though they only read data. Chain `.secure`:
 
 ```ruby
-Tina4::Router.get("/api/admin/users").secure do |request, response|
+Tina4::Router.get("/api/admin/users") do |request, response|
   # Requires a valid Bearer token, even though it's a GET.
   response.call({ users: [] })
-end
+end.secure
 ```
 
 #### The Rule
@@ -992,7 +992,7 @@ Authentication, sessions, tokens, and security converge in the login flow. Here 
 #### The Login Route
 
 ```ruby
-Tina4::Router.post("/api/login").no_auth do |request, response|
+Tina4::Router.post("/api/login") do |request, response|
   email = request.body["email"].to_s.strip
   password = request.body["password"].to_s.strip
 
@@ -1027,7 +1027,7 @@ Tina4::Router.post("/api/login").no_auth do |request, response|
   request.session.save
 
   response.call({ token: token, user: { id: user["id"], email: user["email"] } })
-end
+end.no_auth
 ```
 
 The `.no_auth` chain opens this route to unauthenticated requests. The handler validates credentials and issues a token. The session stores the user identity for server-side lookups.
@@ -1090,10 +1090,10 @@ end
 #### Logout: Destroying the Session
 
 ```ruby
-Tina4::Router.post("/api/logout").no_auth do |request, response|
+Tina4::Router.post("/api/logout") do |request, response|
   request.session.destroy
   response.call({ logged_out: true })
-end
+end.no_auth
 ```
 
 ---
@@ -1129,7 +1129,7 @@ end
 The login handler reads the `redirect` parameter after successful authentication:
 
 ```ruby
-Tina4::Router.post("/api/login").no_auth do |request, response|
+Tina4::Router.post("/api/login") do |request, response|
   # ... validate credentials ...
 
   redirect_url = request.query["redirect"] || "/dashboard"
@@ -1138,7 +1138,7 @@ Tina4::Router.post("/api/login").no_auth do |request, response|
     token: token,
     redirect: redirect_url
   })
-end
+end.no_auth
 ```
 
 The login form JavaScript redirects to the saved URL:
@@ -1202,9 +1202,9 @@ class LoginRateLimit
   end
 end
 
-Tina4::Router.post("/api/login").no_auth.middleware(LoginRateLimit) do |request, response|
+Tina4::Router.post("/api/login") do |request, response|
   # ... login logic ...
-end
+end.no_auth.middleware(LoginRateLimit)
 ```
 
 ---
@@ -1316,7 +1316,7 @@ Tina4::Router.get "/contact" do |request, response|
   response.render("contact.twig", { title: "Contact Us" })
 end
 
-Tina4::Router.post("/api/contact").no_auth do |request, response|
+Tina4::Router.post("/api/contact") do |request, response|
   name = request.body["name"].to_s.strip
   email = request.body["email"].to_s.strip
   message = request.body["message"].to_s.strip
@@ -1332,7 +1332,7 @@ Tina4::Router.post("/api/contact").no_auth do |request, response|
   })
 
   response.call({ success: true, message: "Thank you for your message" })
-end
+end.no_auth
 ```
 
 ```twig
