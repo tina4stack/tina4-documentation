@@ -360,7 +360,7 @@ Tina4::Router.get("/api/products/search") do |request, response|
   max_price = (request.query["max_price"] || 99999).to_f
 
   if q.empty?
-    return response.json({ error: "Query parameter 'q' is required" }, 400)
+    next response.json({ error: "Query parameter 'q' is required" }, 400)
   end
 
   products = db.fetch(
@@ -928,7 +928,7 @@ Tina4::Router.post("/api/notes") do |request, response|
   errors << "Content is required" if body["content"].nil? || body["content"].empty?
 
   unless errors.empty?
-    return response.json({ errors: errors }, 400)
+    next response.json({ errors: errors }, 400)
   end
 
   db.execute(
@@ -950,7 +950,7 @@ Tina4::Router.put("/api/notes/{id:int}") do |request, response|
   existing = db.fetch_one("SELECT * FROM notes WHERE id = ?", [id])
 
   if existing.nil?
-    return response.json({ error: "Note not found", id: id }, 404)
+    next response.json({ error: "Note not found", id: id }, 404)
   end
 
   db.execute(
@@ -976,7 +976,7 @@ Tina4::Router.delete("/api/notes/{id:int}") do |request, response|
   existing = db.fetch_one("SELECT * FROM notes WHERE id = ?", [id])
 
   if existing.nil?
-    return response.json({ error: "Note not found", id: id }, 404)
+    next response.json({ error: "Note not found", id: id }, 404)
   end
 
   db.execute("DELETE FROM notes WHERE id = ?", [id])

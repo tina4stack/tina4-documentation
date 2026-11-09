@@ -820,7 +820,7 @@ Tina4::Router.post("/api/products") do |request, response|
   body = request.body
 
   if body["name"].nil? || body["name"].empty?
-    return response.json({ error: "Name is required" }, 400)
+    next response.json({ error: "Name is required" }, 400)
   end
 
   product = {

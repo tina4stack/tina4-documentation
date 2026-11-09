@@ -997,7 +997,7 @@ Tina4::Router.post("/api/login") do |request, response|
   password = request.body["password"].to_s.strip
 
   if email.empty? || password.empty?
-    return response.call({ error: "Email and password required" }, 400)
+    next response.call({ error: "Email and password required" }, 400)
   end
 
   # Look up user (replace with your database query)
@@ -1007,12 +1007,12 @@ Tina4::Router.post("/api/login") do |request, response|
   )
 
   if user.nil?
-    return response.call({ error: "Invalid credentials" }, 401)
+    next response.call({ error: "Invalid credentials" }, 401)
   end
 
   # Verify password
   unless Tina4::Auth.check_password(password, user["password_hash"])
-    return response.call({ error: "Invalid credentials" }, 401)
+    next response.call({ error: "Invalid credentials" }, 401)
   end
 
   # Generate token with user claims
@@ -1077,7 +1077,7 @@ Tina4::Router.get "/dashboard" do |request, response|
   user_id = request.session["user_id"]
 
   if user_id.nil?
-    return response.redirect("/login")
+    next response.redirect("/login")
   end
 
   response.render("dashboard.twig", {
@@ -1119,7 +1119,7 @@ Tina4::Router.get "/account/settings" do |request, response|
   if user_id.nil?
     # Remember where they wanted to go
     return_url = CGI.escape(request.url)
-    return response.redirect("/login?redirect=#{return_url}")
+    next response.redirect("/login?redirect=#{return_url}")
   end
 
   response.render("settings.twig", { user_id: user_id })
@@ -1322,7 +1322,7 @@ Tina4::Router.post("/api/contact") do |request, response|
   message = request.body["message"].to_s.strip
 
   if name.empty? || email.empty? || message.empty?
-    return response.call({ error: "All fields are required" }, 400)
+    next response.call({ error: "All fields are required" }, 400)
   end
 
   db.insert("contact_messages", {

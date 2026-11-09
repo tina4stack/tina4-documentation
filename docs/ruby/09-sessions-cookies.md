@@ -394,7 +394,7 @@ Tina4::Router.post("/login") do |request, response|
   )
 
   if user.nil? || !Tina4::Auth.check_password(body["password"], user["password_hash"])
-    return response.json({ error: "Invalid email or password" }, 401)
+    next response.json({ error: "Invalid email or password" }, 401)
   end
 
   request.session.set("user_id", user["id"])
@@ -550,7 +550,7 @@ Tina4::Router.post("/api/cart/add") do |request, response|
   body = request.body
 
   if body["product_id"].nil? || body["name"].nil? || body["price"].nil?
-    return response.json({ error: "product_id, name, and price are required" }, 400)
+    next response.json({ error: "product_id, name, and price are required" }, 400)
   end
 
   cart = get_cart(request.session)
@@ -590,7 +590,7 @@ Tina4::Router.put("/api/cart/{product_id:int}") do |request, response|
   index = cart.index { |item| item[:product_id] == product_id }
 
   if index.nil?
-    return response.json({ error: "Product not in cart" }, 404)
+    next response.json({ error: "Product not in cart" }, 404)
   end
 
   if quantity <= 0
@@ -612,7 +612,7 @@ Tina4::Router.delete("/api/cart/{product_id:int}") do |request, response|
   index = cart.index { |item| item[:product_id] == product_id }
 
   if index.nil?
-    return response.json({ error: "Product not in cart" }, 404)
+    next response.json({ error: "Product not in cart" }, 404)
   end
 
   cart.delete_at(index)

@@ -360,7 +360,7 @@ Create `src/routes/buggy.rb`:
 Tina4::Router.get("/api/buggy/users") do |request, response|
   users = Tina4.cache_get("all_users")
   if users
-    return response.json({ users: users, source: "cache" })
+    next response.json({ users: users, source: "cache" })
   end
 
   # Bug 1: This query has an error
@@ -404,7 +404,7 @@ end
 Tina4::Router.get("/api/buggy/users") do |request, response|
   users = Tina4.cache_get("all_users")
   if users
-    return response.json({ users: users, source: "cache" })
+    next response.json({ users: users, source: "cache" })
   end
 
   db = Tina4.database
@@ -419,7 +419,7 @@ Tina4::Router.post("/api/buggy/users") do |request, response|
 
   # Fixed: Added validation
   if body.nil? || body["name"].nil? || body["email"].nil?
-    return response.json({ error: "Name and email are required" }, 400)
+    next response.json({ error: "Name and email are required" }, 400)
   end
 
   user = User.new
