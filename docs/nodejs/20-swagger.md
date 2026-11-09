@@ -31,7 +31,7 @@ The interactive UI loads. Every annotated route appears. Click any endpoint to s
 The raw OpenAPI JSON spec lives at:
 
 ```
-http://localhost:7148/swagger/json
+http://localhost:7148/swagger/openapi.json
 ```
 
 ### Swagger in Production
@@ -411,13 +411,13 @@ These values appear in the header of the Swagger UI. Set them once. Every endpoi
 
 ## 14. Generating Client SDKs
 
-The OpenAPI spec at `/swagger/json` feeds into code generators. Generate a typed API client for your frontend:
+The OpenAPI spec at `/swagger/openapi.json` feeds into code generators. Generate a typed API client for your frontend:
 
 ```bash
 npm install -g @openapitools/openapi-generator-cli
 
 openapi-generator-cli generate \
-  -i http://localhost:7148/swagger/json \
+  -i http://localhost:7148/swagger/openapi.json \
   -g typescript-fetch \
   -o ./frontend/api-client
 ```

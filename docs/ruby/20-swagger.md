@@ -48,11 +48,11 @@ TINA4_SWAGGER_ENABLED=true
 The raw OpenAPI spec is available at:
 
 ```
-http://localhost:7147/swagger/json
+http://localhost:7147/swagger/openapi.json
 ```
 
 ```bash
-curl http://localhost:7147/swagger/json
+curl http://localhost:7147/swagger/openapi.json
 ```
 
 ```json
@@ -257,7 +257,7 @@ TINA4_SWAGGER_LICENSE=MIT
 
 ## 10. Generating Client SDKs from the Spec
 
-The OpenAPI spec at `/swagger/json` can be used with code generation tools:
+The OpenAPI spec at `/swagger/openapi.json` can be used with code generation tools:
 
 ```bash
 # Install the OpenAPI Generator CLI
@@ -265,7 +265,7 @@ npm install -g @openapitools/openapi-generator-cli
 
 # Generate a TypeScript client
 openapi-generator-cli generate \
-  -i http://localhost:7147/swagger/json \
+  -i http://localhost:7147/swagger/openapi.json \
   -g typescript-fetch \
   -o ./frontend/api-client
 ```
