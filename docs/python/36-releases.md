@@ -1,5 +1,13 @@
 # Release Notes
 
+## v3.13.161 (2026-11-09) - The test client reads your .env, and a header answers to any case
+
+**A test that never boots the app still finds your secret.** `TestClient` sends a request through the real front controller, but it never ran the one line that loads `.env`, so a test that skipped booting the app met an unset `TINA4_SECRET` and a token-signing route fell over - with the error pointing at `.env`, which was fine all along. The client now loads `.env` the way the app does, first-wins: a value you set in the real environment still wins, and `.env.local` then `.env` fill in the rest (#296).
+
+**A redirect header answers whether you ask in capitals or not.** The single-value `headers` view keeps its names in lower case, so a lookup by the header's usual name came back empty, even though the case-insensitive list accessor beside it found the very same header. HTTP header names don't care about case, and now neither does the lookup: ask by any spelling and the header replies, while the view keeps its lower-case keys and its last-value shape for every reader that already leaned on it (#300).
+
+Both fixes land in Python, PHP, Ruby and Node, each held down by a real, no-mock test proven by mutation.
+
 ## v3.13.160 (2026-11-07) - The error page shows up even when you're turned away
 
 **A browser turned away at the door gets the page, not the raw JSON.** Post a form to a protected route after your session has quietly expired, and the gate used to answer a bare `401 {"error": "Unauthorized"}`, whatever the browser asked for - a wall of JSON where the sign-in page belongs. The gate now reads what the caller will take: a browser gets `errors/401.twig`, the page it was always meant to see, and an Application Programming Interface (API) client gets the `{error, code, message, status, request_id}` envelope every other framework error already speaks. A role-guarded route that refuses an authenticated user answers its `errors/403.twig` the same way (#342).

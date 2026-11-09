@@ -63,15 +63,15 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 <a class="tp-cta" href="/download/code-viewer/">Download the Code Viewer →</a>
 :::
 
-## Current framework release: 3.13.160
+## Current framework release: 3.13.161
 
-Python, PHP, Ruby and Node.js are aligned on 3.13.160. When a browser is turned away from a
-protected route - a form posted after the session quietly expired - or a middleware throws
-mid-request, the framework now answers with the error PAGE the browser asked for instead of a
-wall of raw JSON, while an Application Programming Interface (API) client still gets the
-`{error, code, message, status, request_id}` envelope it expects. Every framework error, 401
-through 500, negotiates on the same `Accept` across all four frameworks. Every fix is held down by
-a real, no-mock test proven by mutation. [Read the release notes](/python/36-releases.md).
+Python, PHP, Ruby and Node.js are aligned on 3.13.161. The in-process test client now reads your
+`.env` the way the running app does, so a test that never boots the app still finds `TINA4_SECRET`
+instead of falling over with an error that points at a file that was fine all along. And a response
+header answers to any case: a redirect check by the header's usual name used to come back empty
+while the case-insensitive accessor beside it found the very same header. Both fixes land in all
+four frameworks, each held down by a real, no-mock test proven by mutation.
+[Read the release notes](/python/36-releases.md).
 
 
 
@@ -101,6 +101,8 @@ Read https://tina4.com/llms.txt and build me a REST API with a Todo model and JW
 No signup, no plugin. [llms.txt](/llms.txt) is a bootstrap protocol written for machines: it tells your assistant to drive the `tina4` CLI, generate the scaffold, and use the built-ins instead of inventing them. That last part is why the output runs.
 
 ## What's new
+
+**v3.13.161 (2026-11-09)** - The in-process test client now loads your `.env` the way the app does (first-wins), so a test that never boots the app still sees `TINA4_SECRET` instead of a misleading error; and a response-header lookup is now case-insensitive, so a redirect check by the header's usual name finds it instead of coming back empty. Both fixes land in all four frameworks. [full notes](/python/36-releases.md)
 
 **v3.13.160 (2026-11-07)** - A browser turned away from a protected route, refused by a role guard, or hit by a throwing middleware now gets the HTML error page it asked for (`errors/401.twig` / `403` / `500`) instead of raw JSON; an API client still gets the `{error, code, message, status, request_id}` envelope. Every framework error, 401 through 500, now negotiates the same way across all four. [full notes](/python/36-releases.md)
 
