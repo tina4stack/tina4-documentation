@@ -155,7 +155,9 @@ tina4 generate model Order
 
 ```
 Created src/orm/Order.php
-Created migrations/20260322100000_create_orders_table.sql
+Created migrations/20260322100000_create_orders.sql
+Created migrations/20260322100000_create_orders.down.sql
+Created tests/OrderModelTest.php
 ```
 
 The generated model:
@@ -199,7 +201,9 @@ tina4 generate model Order --fields "userId:int,total:float,status:string,paid:b
 
 ```
 Created src/orm/Order.php
-Created migrations/20260322100000_create_orders_table.sql
+Created migrations/20260322100000_create_orders.sql
+Created migrations/20260322100000_create_orders.down.sql
+Created tests/OrderModelTest.php
 ```
 
 The generated model now includes all the fields:
@@ -257,9 +261,10 @@ DROP TABLE IF EXISTS orders;
 | Flag | Description | Example |
 |------|-------------|---------|
 | `--fields` | Comma-separated field definitions | `--fields "name:string,price:float"` |
-| `--auto-crud` | Enable auto-CRUD on the model | `--auto-crud` |
-| `--soft-delete` | Add soft delete support | `--soft-delete` |
+| `--table-name` | Use this table name instead of the one derived from the class name | `--table-name products` |
 | `--no-migration` | Skip migration generation | `--no-migration` |
+
+Apart from these and the general `--dry-run`, `--json` and `--help`, `generate model` stops with `Unknown option` on any other flag.
 
 ---
 
@@ -272,7 +277,8 @@ tina4 generate route Order
 ```
 
 ```
-Created src/routes/orders.php
+Created src/routes/Order.php
+Created tests/OrderTest.php
 ```
 
 The generated route file:
@@ -653,13 +659,16 @@ tina4 doctor
 
 ```
 Created src/orm/Task.php
-Created migrations/20260322140000_create_tasks_table.sql
+Created migrations/20260322140000_create_task.sql
+Created migrations/20260322140000_create_task.down.sql
+Created tests/TaskModelTest.php
 ```
 
 **Command 2 output:**
 
 ```
-Created src/routes/tasks.php
+Created src/routes/Task.php
+Created tests/TaskTest.php
 ```
 
 **Command 3 output:**

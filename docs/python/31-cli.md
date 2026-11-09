@@ -157,8 +157,10 @@ tina4 generate model Product
 ```
 
 ```
-Created src/orm/product.py
-Created migrations/20260322120000_create_products_table.sql
+Created src/orm/Product.py
+Created migrations/20260322120000_create_product.sql
+Created migrations/20260322120000_create_product.down.sql
+Created tests/test_product_model.py
 ```
 
 The generated model:
@@ -243,10 +245,10 @@ DROP TABLE IF EXISTS products;
 | Flag | Description | Example |
 |------|-------------|---------|
 | `--fields` | Comma-separated field definitions | `--fields "name:string,price:float"` |
-| `--auto-crud` | Enable auto-CRUD on the model | `--auto-crud` |
-| `--soft-delete` | Add soft delete support | `--soft-delete` |
+| `--table-name` | Use this table name instead of the one derived from the class name | `--table-name products` |
 | `--no-migration` | Skip migration generation | `--no-migration` |
-| `--with-route` | Also generate a CRUD route file | `--with-route` |
+
+Apart from these and the general `--dry-run`, `--json` and `--help`, `generate model` stops with `Unknown option` on any other flag. To add CRUD routes, run `tina4 generate route` after it (section 8).
 
 ---
 
@@ -260,6 +262,7 @@ tina4 generate route products
 
 ```
 Created src/routes/products.py
+Created tests/test_products.py
 ```
 
 The generated route file:
@@ -428,21 +431,25 @@ async def protected_data(request, response):
 
 ---
 
-## 8. Generate All at Once
+## 8. Generate a Model and Its Routes
 
-Combine flags to generate multiple files in a single command:
+`generate model` has no flag that adds routes. Run `generate route` after it:
 
 ```bash
-tina4 generate model Product --with-route --with-migration
+tina4 generate model Product
+tina4 generate route products
 ```
 
 ```
-Created src/orm/product.py
+Created src/orm/Product.py
+Created migrations/20260322120000_create_product.sql
+Created migrations/20260322120000_create_product.down.sql
+Created tests/test_product_model.py
 Created src/routes/products.py
-Created migrations/20260322120000_create_products_table.sql
+Created tests/test_products.py
 ```
 
-Model. CRUD routes. Migration. All wired together. Ready to use.
+Model, migration, CRUD routes, and a test for each. For admin pages over the model as well, use `tina4 generate crud` (see the Scaffolding chapter).
 
 ---
 
@@ -622,11 +629,12 @@ Starting from an existing Tina4 Python project, run 5 commands to create:
 ### Expected Commands
 
 ```bash
-# 1. Generate the model with route and migration
-tina4 generate model Customer --with-route --with-migration
+# 1. Generate the model, its migration, and the CRUD routes
+tina4 generate model Customer
+tina4 generate route customers
 
 # 2. Edit the model to add fields (manual step)
-# Add fields to src/orm/customer.py
+# Add fields to src/orm/Customer.py
 
 # 3. Edit the migration to add columns (manual step)
 # Add columns to the migration file
@@ -640,13 +648,14 @@ tina4 doctor
 
 ### Solution
 
-**Command 1:** Generate everything:
+**Command 1:** Generate the model, its migration, and the CRUD routes:
 
 ```bash
-tina4 generate model Customer --with-route --with-migration
+tina4 generate model Customer
+tina4 generate route customers
 ```
 
-**Command 2:** Edit `src/orm/customer.py`:
+**Command 2:** Edit `src/orm/Customer.py`:
 
 ```python
 from tina4_python.orm import ORM

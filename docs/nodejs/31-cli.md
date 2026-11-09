@@ -157,8 +157,10 @@ tina4 generate model Product
 ```
 
 ```
-Created src/orm/Product.ts
-Created migrations/20260322120000_create_products_table.sql
+Created src/models/Product.ts
+Created migrations/20260322120000_create_product.sql
+Created migrations/20260322120000_create_product.down.sql
+Created tests/product_model.test.ts
 ```
 
 The generated model:
@@ -253,10 +255,10 @@ DROP TABLE IF EXISTS products;
 | Flag | Description | Example |
 |------|-------------|---------|
 | `--fields` | Comma-separated field definitions | `--fields "name:string,price:float"` |
-| `--auto-crud` | Enable auto-CRUD on the model | `--auto-crud` |
-| `--soft-delete` | Add soft delete support | `--soft-delete` |
+| `--table-name` | Use this table name instead of the one derived from the class name | `--table-name products` |
 | `--no-migration` | Skip migration generation | `--no-migration` |
-| `--with-route` | Also generate a CRUD route file | `--with-route` |
+
+Apart from these and the general `--dry-run`, `--json` and `--help`, `generate model` stops with `Unknown option` on any other flag. To add CRUD routes, run `tina4 generate route` after it (section 8).
 
 ---
 
@@ -269,7 +271,12 @@ tina4 generate route products
 ```
 
 ```
-Created src/routes/products.ts
+Created src/routes/api/products/get.ts
+Created src/routes/api/products/post.ts
+Created src/routes/api/products/[id]/get.ts
+Created src/routes/api/products/[id]/put.ts
+Created src/routes/api/products/[id]/delete.ts
+Created tests/products.test.ts
 ```
 
 The generated route file:
@@ -438,21 +445,29 @@ Router.get("/api/data", async (req, res) => {
 
 ---
 
-## 8. Generate All at Once
+## 8. Generate a Model and Its Routes
 
-Combine flags to generate multiple files in a single command:
+`generate model` has no flag that adds routes. Run `generate route` after it:
 
 ```bash
-tina4 generate model Product --with-route --with-migration
+tina4 generate model Product
+tina4 generate route products
 ```
 
 ```
-Created src/orm/Product.ts
-Created src/routes/products.ts
-Created migrations/20260322120000_create_products_table.sql
+Created src/models/Product.ts
+Created migrations/20260322120000_create_product.sql
+Created migrations/20260322120000_create_product.down.sql
+Created tests/product_model.test.ts
+Created src/routes/api/products/get.ts
+Created src/routes/api/products/post.ts
+Created src/routes/api/products/[id]/get.ts
+Created src/routes/api/products/[id]/put.ts
+Created src/routes/api/products/[id]/delete.ts
+Created tests/products.test.ts
 ```
 
-Model. CRUD routes. Migration. All wired together. Ready to use.
+Model, migration, CRUD routes, and a test for each. For admin pages over the model as well, use `tina4 generate crud` (see the Scaffolding chapter).
 
 ---
 
@@ -707,11 +722,12 @@ Starting from an existing Tina4 Node.js project, run 5 commands to create:
 ### Expected Commands
 
 ```bash
-# 1. Generate the model with route and migration
-tina4 generate model Customer --with-route --with-migration
+# 1. Generate the model, its migration, and the CRUD routes
+tina4 generate model Customer
+tina4 generate route customers
 
 # 2. Edit the model to add fields (manual step)
-# Add fields to src/orm/Customer.ts
+# Add fields to src/models/Customer.ts
 
 # 3. Edit the migration to add columns (manual step)
 # Add columns to the migration file
@@ -725,13 +741,14 @@ tina4 doctor
 
 ### Solution
 
-**Command 1:** Generate everything:
+**Command 1:** Generate the model, its migration, and the CRUD routes:
 
 ```bash
-tina4 generate model Customer --with-route --with-migration
+tina4 generate model Customer
+tina4 generate route customers
 ```
 
-**Command 2:** Edit `src/orm/Customer.ts`:
+**Command 2:** Edit `src/models/Customer.ts`:
 
 ```typescript
 import { BaseModel } from "tina4-nodejs/orm";
