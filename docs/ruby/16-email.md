@@ -407,7 +407,7 @@ Tina4::Router.get("/api/inbox/{uid}") do |request, response|
   email = mailer.read(uid, mark_read: true)
 
   if email.nil?
-    return response.json({ error: "Email not found" }, 404)
+    next response.json({ error: "Email not found" }, 404)
   end
 
   response.json({

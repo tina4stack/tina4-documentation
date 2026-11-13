@@ -229,11 +229,11 @@ Tina4::Router.post("/api/auth/register") do |request, response|
   errors << "Email is required" if body["email"].nil? || body["email"].empty?
   errors << "Password must be at least 8 characters" if body["password"].nil? || body["password"].to_s.length < 8
 
-  return response.json({ errors: errors }, 400) unless errors.empty?
+  next response.json({ errors: errors }, 400) unless errors.empty?
 
   db = Tina4.database
   existing = db.fetch_one("SELECT id FROM users WHERE email = ?", [body["email"]])
-  return response.json({ error: "Email already registered" }, 409) unless existing.nil?
+  next response.json({ error: "Email already registered" }, 409) unless existing.nil?
 
   hash = Tina4::Auth.hash_password(body["password"])
   db.execute("INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
@@ -251,7 +251,7 @@ Tina4::Router.post("/api/auth/login") do |request, response|
   user = db.fetch_one("SELECT * FROM users WHERE email = ?", [body["email"]])
 
   if user.nil? || !Tina4::Auth.check_password(body["password"] || "", user["password_hash"])
-    return response.json({ error: "Invalid email or password" }, 401)
+    next response.json({ error: "Invalid email or password" }, 401)
   end
 
   token = Tina4::Auth.get_token({
@@ -373,7 +373,7 @@ Tina4::Router.group("/api/tasks", middleware: "auth_middleware") do
     task = db.fetch_one("SELECT t.*, u1.name AS creator_name, u2.name AS assignee_name FROM tasks t LEFT JOIN users u1 ON t.created_by = u1.id LEFT JOIN users u2 ON t.assigned_to = u2.id WHERE t.id = ?", [id])
 
     if task.nil?
-      return response.json({ error: "Task not found" }, 404)
+      next response.json({ error: "Task not found" }, 404)
     end
 
     response.json(task)
@@ -385,7 +385,7 @@ Tina4::Router.group("/api/tasks", middleware: "auth_middleware") do
     user_id = request.user["user_id"]
 
     if body["title"].nil? || body["title"].empty?
-      return response.json({ error: "Title is required" }, 400)
+      next response.json({ error: "Title is required" }, 400)
     end
 
     db = Tina4.database
@@ -431,7 +431,7 @@ Tina4::Router.group("/api/tasks", middleware: "auth_middleware") do
     body = request.body
 
     existing = db.fetch_one("SELECT * FROM tasks WHERE id = ?", [id])
-    return response.json({ error: "Task not found" }, 404) if existing.nil?
+    next response.json({ error: "Task not found" }, 404) if existing.nil?
 
     completed_at = existing["completed_at"]
     if body["status"] == "done" && existing["status"] != "done"
@@ -475,7 +475,7 @@ Tina4::Router.group("/api/tasks", middleware: "auth_middleware") do
     id = request.params["id"]
 
     existing = db.fetch_one("SELECT * FROM tasks WHERE id = ?", [id])
-    return response.json({ error: "Task not found" }, 404) if existing.nil?
+    next response.json({ error: "Task not found" }, 404) if existing.nil?
 
     db.execute("DELETE FROM tasks WHERE id = ?", [id])
 

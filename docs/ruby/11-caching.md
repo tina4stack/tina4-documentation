@@ -342,7 +342,7 @@ Tina4::Router.get("/api/products/{id:int}") do |request, response|
 
   unless product.nil?
     # Cache hit -- return immediately
-    return response.json(product.merge(source: "cache"))
+    next response.json(product.merge(source: "cache"))
   end
 
   # 2. Cache miss -- fetch from database
@@ -353,7 +353,7 @@ Tina4::Router.get("/api/products/{id:int}") do |request, response|
   )
 
   if product.nil?
-    return response.json({ error: "Product not found" }, 404)
+    next response.json({ error: "Product not found" }, 404)
   end
 
   # 3. Store in cache for next time
@@ -581,7 +581,7 @@ Tina4::Router.get("/api/catalog", middleware: ["ResponseCache:60"]) do |request,
   catalog = Tina4.cache_get(cache_key)
 
   unless catalog.nil?
-    return response.json(catalog.merge(cache: "application"))
+    next response.json(catalog.merge(cache: "application"))
   end
 
   # Layer B: database queries (request-scoped + persistent DB cache apply here)
@@ -701,7 +701,7 @@ Tina4::Router.get("/api/store/products") do |request, response|
   cached = Tina4.cache_get(cache_key)
 
   unless cached.nil?
-    return response.json(cached.merge("source" => "cache"))
+    next response.json(cached.merge("source" => "cache"))
   end
 
   # Simulate expensive database query
@@ -737,7 +737,7 @@ Tina4::Router.post("/api/store/products") do |request, response|
   body = request.body
 
   if body["name"].nil? || body["name"].empty?
-    return response.json({ error: "Name is required" }, 400)
+    next response.json({ error: "Name is required" }, 400)
   end
 
   product = {

@@ -151,7 +151,7 @@ Tina4::Router.post("/api/products") do |request, response|
   body = request.body
 
   if body["name"].nil? || body["name"].empty?
-    return response.json({ error: "Name is required" }, 400)
+    next response.json({ error: "Name is required" }, 400)
   end
 
   response.json({
@@ -319,7 +319,7 @@ Tina4::Router.post("/api/users") do |request, response|
   errors << "Password is required" if body["password"].nil? || body["password"].empty?
 
   unless errors.empty?
-    return response.json({ errors: errors }, 400)
+    next response.json({ errors: errors }, 400)
   end
 
   response.json({
@@ -386,7 +386,7 @@ Tina4::Router.put("/api/users/{id:int}") do |request, response|
   body = request.body
 
   if id > 100
-    return response.json({ error: "User not found" }, 404)
+    next response.json({ error: "User not found" }, 404)
   end
 
   response.json({
@@ -414,7 +414,7 @@ Tina4::Router.get("/api/users/{id:int}/orders") do |request, response|
   page = (request.query["page"] || 1).to_i
 
   if id > 100
-    return response.json({ error: "User not found" }, 404)
+    next response.json({ error: "User not found" }, 404)
   end
 
   orders = [
@@ -442,11 +442,11 @@ Tina4::Router.post("/api/users/{id:int}/avatar") do |request, response|
   body = request.body
 
   if id > 100
-    return response.json({ error: "User not found" }, 404)
+    next response.json({ error: "User not found" }, 404)
   end
 
   if body["avatar_url"].nil? || body["avatar_url"].empty?
-    return response.json({ error: "avatar_url is required" }, 400)
+    next response.json({ error: "avatar_url is required" }, 400)
   end
 
   response.json({

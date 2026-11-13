@@ -405,7 +405,7 @@ Tina4::Router.get("/profile") do |request, response|
   session_id = request.cookies["session_id"]
 
   if session_id.nil?
-    return response.json({ error: "Not logged in" }, 401)
+    next response.json({ error: "Not logged in" }, 401)
   end
 
   response.json({ session: session_id })
@@ -646,7 +646,7 @@ Tina4::Router.post "/api/users" do |request, response|
   v.required("name").required("email").email("email").min_length("name", 2)
 
   unless v.valid?
-    return response.error("VALIDATION_FAILED", v.errors.first[:message], 400)
+    next response.error("VALIDATION_FAILED", v.errors.first[:message], 400)
   end
 
   # proceed with valid data

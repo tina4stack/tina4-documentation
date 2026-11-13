@@ -291,7 +291,7 @@ Tina4::Router.get("/api/products/{product_id:int}") do |request, response|
   product = Product.find(request.params["product_id"])
 
   if product.nil?
-    return response.json({ error: "Product not found" }, 404)
+    next response.json({ error: "Product not found" }, 404)
   end
 
   response.json(product.to_hash)
@@ -314,7 +314,7 @@ Tina4::Router.put("/api/products/{product_id:int}") do |request, response|
   product = Product.find(request.params["product_id"])
 
   if product.nil?
-    return response.json({ error: "Product not found" }, 404)
+    next response.json({ error: "Product not found" }, 404)
   end
 
   body = request.body
@@ -331,7 +331,7 @@ Tina4::Router.delete("/api/products/{product_id:int}") do |request, response|
   product = Product.find(request.params["product_id"])
 
   if product.nil?
-    return response.json({ error: "Product not found" }, 404)
+    next response.json({ error: "Product not found" }, 404)
   end
 
   product.delete

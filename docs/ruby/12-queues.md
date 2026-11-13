@@ -512,7 +512,7 @@ Tina4::Router.post("/api/emails/send") do |request, response|
   errors << "'body' is required" if body["body"].nil? || body["body"].empty?
 
   unless errors.empty?
-    return response.json({ errors: errors }, 400)
+    next response.json({ errors: errors }, 400)
   end
 
   job = queue.push({

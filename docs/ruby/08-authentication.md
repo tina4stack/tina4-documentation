@@ -138,11 +138,11 @@ Tina4::Router.post("/api/register") do |request, response|
 
   # Validate input
   if body["name"].nil? || body["email"].nil? || body["password"].nil?
-    return response.json({ error: "Name, email, and password are required" }, 400)
+    next response.json({ error: "Name, email, and password are required" }, 400)
   end
 
   if body["password"].length < 8
-    return response.json({ error: "Password must be at least 8 characters" }, 400)
+    next response.json({ error: "Password must be at least 8 characters" }, 400)
   end
 
   db = Tina4.database
@@ -150,7 +150,7 @@ Tina4::Router.post("/api/register") do |request, response|
   # Check if email already exists
   existing = db.fetch_one("SELECT id FROM users WHERE email = ?", [body["email"]])
   unless existing.nil?
-    return response.json({ error: "Email already registered" }, 409)
+    next response.json({ error: "Email already registered" }, 409)
   end
 
   # Hash the password
@@ -196,7 +196,7 @@ Tina4::Router.post("/api/login") do |request, response|
   body = request.body
 
   if body["email"].nil? || body["password"].nil?
-    return response.json({ error: "Email and password are required" }, 400)
+    next response.json({ error: "Email and password are required" }, 400)
   end
 
   db = Tina4.database
@@ -208,12 +208,12 @@ Tina4::Router.post("/api/login") do |request, response|
   )
 
   if user.nil?
-    return response.json({ error: "Invalid email or password" }, 401)
+    next response.json({ error: "Invalid email or password" }, 401)
   end
 
   # Check the password
   unless Tina4::Auth.check_password(body["password"], user["password_hash"])
-    return response.json({ error: "Invalid email or password" }, 401)
+    next response.json({ error: "Invalid email or password" }, 401)
   end
 
   # Generate a token
@@ -498,7 +498,7 @@ In your route handler, check the token:
 Tina4::Router.post("/profile/update") do |request, response|
   # Validate CSRF token (form_token() renders a signed JWT, validated like any token)
   unless Tina4::Auth.valid_token(request.body["_token"] || "")
-    return response.json({ error: "Invalid form token. Please refresh and try again." }, 403)
+    next response.json({ error: "Invalid form token. Please refresh and try again." }, 403)
   end
 
   # Process the form...
@@ -528,7 +528,7 @@ end
 
 Tina4::Router.get("/dashboard") do |request, response|
   if request.session["logged_in"].nil?
-    return response.redirect("/login")
+    next response.redirect("/login")
   end
 
   response.render("dashboard.html", {
@@ -668,14 +668,14 @@ Tina4::Router.post("/api/register") do |request, response|
   end
 
   unless errors.empty?
-    return response.json({ errors: errors }, 400)
+    next response.json({ errors: errors }, 400)
   end
 
   db = Tina4.database
 
   existing = db.fetch_one("SELECT id FROM users WHERE email = ?", [body["email"]])
   unless existing.nil?
-    return response.json({ error: "Email already registered" }, 409)
+    next response.json({ error: "Email already registered" }, 409)
   end
 
   hash = Tina4::Auth.hash_password(body["password"])
@@ -695,7 +695,7 @@ Tina4::Router.post("/api/login") do |request, response|
   body = request.body
 
   if body["email"].nil? || body["password"].nil?
-    return response.json({ error: "Email and password are required" }, 400)
+    next response.json({ error: "Email and password are required" }, 400)
   end
 
   db = Tina4.database
@@ -706,7 +706,7 @@ Tina4::Router.post("/api/login") do |request, response|
   )
 
   if user.nil? || !Tina4::Auth.check_password(body["password"], user["password_hash"])
-    return response.json({ error: "Invalid email or password" }, 401)
+    next response.json({ error: "Invalid email or password" }, 401)
   end
 
   token = Tina4::Auth.get_token({
@@ -733,7 +733,7 @@ Tina4::Router.get("/api/profile", middleware: "auth_middleware") do |request, re
   )
 
   if user.nil?
-    return response.json({ error: "User not found" }, 404)
+    next response.json({ error: "User not found" }, 404)
   end
 
   response.json(user)
@@ -751,7 +751,7 @@ Tina4::Router.put("/api/profile", middleware: "auth_middleware") do |request, re
       [body["email"], user_id]
     )
     unless existing.nil?
-      return response.json({ error: "Email already in use by another account" }, 409)
+      next response.json({ error: "Email already in use by another account" }, 409)
     end
   end
 
@@ -777,17 +777,17 @@ Tina4::Router.put("/api/profile/password", middleware: "auth_middleware") do |re
   user_id = request.user["user_id"]
 
   if body["current_password"].nil? || body["new_password"].nil?
-    return response.json({ error: "Current password and new password are required" }, 400)
+    next response.json({ error: "Current password and new password are required" }, 400)
   end
 
   if body["new_password"].length < 8
-    return response.json({ error: "New password must be at least 8 characters" }, 400)
+    next response.json({ error: "New password must be at least 8 characters" }, 400)
   end
 
   user = db.fetch_one("SELECT password_hash FROM users WHERE id = ?", [user_id])
 
   unless Tina4::Auth.check_password(body["current_password"], user["password_hash"])
-    return response.json({ error: "Current password is incorrect" }, 401)
+    next response.json({ error: "Current password is incorrect" }, 401)
   end
 
   new_hash = Tina4::Auth.hash_password(body["new_password"])
