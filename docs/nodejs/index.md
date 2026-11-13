@@ -360,7 +360,7 @@ Router.get("/api/products", async (req, res) => {
 });
 ```
 
-Swagger runs when `TINA4_DEBUG=true`. Set `TINA4_SWAGGER_ENABLED=true` in `.env` to expose it in production. The raw spec lives at `/swagger/json`, standard OpenAPI 3.0, compatible with every tool in the OpenAPI world.
+Swagger runs when `TINA4_DEBUG=true`. Set `TINA4_SWAGGER_ENABLED=true` in `.env` to expose it in production. The raw spec lives at `/swagger/openapi.json`, standard OpenAPI 3.0, compatible with every tool in the OpenAPI world.
 
 ### Databases <a href="#databases" id="databases"></a>
 

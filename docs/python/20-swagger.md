@@ -42,13 +42,13 @@ Open it in your browser. You see all registered routes, organized by tags, with 
 The underlying OpenAPI JSON spec lives at:
 
 ```
-http://localhost:7146/swagger/json
+http://localhost:7146/swagger/openapi.json
 ```
 
 This raw JSON feeds tools that import API definitions. Postman, Insomnia, and code generators all consume it.
 
 ```bash
-curl http://localhost:7146/swagger/json
+curl http://localhost:7146/swagger/openapi.json
 ```
 
 ```json
@@ -312,7 +312,7 @@ When you version your API, update `TINA4_SWAGGER_VERSION` so consumers know whic
 
 ## 9. Generating Client SDKs from the Spec
 
-The OpenAPI spec at `/swagger/json` feeds code generation tools. One spec produces client libraries in any language.
+The OpenAPI spec at `/swagger/openapi.json` feeds code generation tools. One spec produces client libraries in any language.
 
 ### Using OpenAPI Generator
 
@@ -321,13 +321,13 @@ npm install -g @openapitools/openapi-generator-cli
 
 # TypeScript client
 openapi-generator-cli generate \
-  -i http://localhost:7146/swagger/json \
+  -i http://localhost:7146/swagger/openapi.json \
   -g typescript-fetch \
   -o ./frontend/api-client
 
 # Python client
 openapi-generator-cli generate \
-  -i http://localhost:7146/swagger/json \
+  -i http://localhost:7146/swagger/openapi.json \
   -g python \
   -o ./python-client
 ```
