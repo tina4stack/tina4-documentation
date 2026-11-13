@@ -1,5 +1,17 @@
 # Release Notes
 
+## v3.13.163 (2026-11-13) - The consumer reads past a tombstone, and an async test answers for itself
+
+**A Kafka tombstone no longer stops the consumer short.** 3.13.162 stopped a tombstone crashing the Python and Ruby consumers, but it still answered one with "nothing", and that cost every framework the records behind it. A single-pass drain read the tombstone as an empty queue and went home, and the built-in clients in PHP, Node and Python never got past it at all - every pop re-read the same offset, with no error to say why. The consumer now steps over a tombstone and keeps reading, still bounded by its one-second deadline, and it stops rather than spins if the offset won't move. Acknowledging the next real record commits past the tombstones it skipped, so a restart walks straight past them too (python#309, php#357, ruby#169, nodejs#194).
+
+**An async test is judged by what it returns.** The inline test runner used to judge the coroutine or Promise an `async` test handed back, not the value inside it, so `expect_true` always passed and a failing async test showed green. Python now awaits the test and gives each one a timeout (python#307), and Node adds `runAllAsync()`, which the `tina4nodejs test` command uses (nodejs#191).
+
+**An async MCP resource or tool returns its value.** A Model Context Protocol (MCP) resource with an `async` handler read back as `{}` in Node and as the text of a coroutine object in Python, where tools had the same fault. Both now await the handler, and one that raises becomes a JSON-RPC error (nodejs#193, python#311).
+
+**Three smaller Python fixes.** A Cross-Origin Resource Sharing (CORS) policy set only in `.env` is now applied instead of quietly ignored (python#305), the dev dashboard reports memory in megabytes rather than a figure 1,024 times too small (python#306), and the route example in the AI context files passes a dict to `response()` instead of a set that raised `TypeError` (python#302).
+
+Every fix is held down by a real, no-mock test, the Kafka ones against a live broker producing real tombstones.
+
 ## v3.13.162 (2026-11-10) - A Kafka delete marker no longer takes the consumer down
 
 **A tombstone no longer kills the consumer.** A tombstone is a Kafka record with no value - the marker Debezium writes after a row is deleted, and the one a compacted topic uses to forget a key. When the Python consumer met one on the confluent-kafka client, it tried to decode a value that wasn't there, and the `AttributeError` escaped `consume()` and took the consumer thread with it. The tombstone sat at the committed offset, so every restart walked straight back into it and died again (#303). Ruby's rdkafka consumer fell over the same record with a `TypeError` that slipped past its rescue (#167). Both now step around the empty record, and a long-running worker carries on to the records behind it.
