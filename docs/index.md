@@ -63,14 +63,13 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 <a class="tp-cta" href="/download/code-viewer/">Download the Code Viewer →</a>
 :::
 
-## Current framework release: 3.13.162
+## Current framework release: 3.13.163
 
-Python, PHP, Ruby and Node.js are aligned on 3.13.162. A Kafka tombstone - the empty record
-Debezium writes after a row is deleted - used to crash the Python and Ruby consumers, and because it
-sat at the committed offset, every restart walked straight back into it and fell over again. Both
-now step around it and carry on. PHP and Node never crashed on one, so their 3.13.162 is a version
-bump. A tombstone can still stop a consumer short in all four, and the fix that reads past it is
-lined up for the next release.
+Python, PHP, Ruby and Node.js are aligned on 3.13.163. A Kafka tombstone - the empty record
+Debezium writes after a row is deleted - no longer stops a consumer short: it steps over the
+tombstone and keeps reading, in all four frameworks, so the records behind it are delivered. An
+async inline test is now judged by the value it returns rather than the coroutine or Promise that
+carries it, and an async MCP resource or tool hands back its real value instead of an empty object.
 [Read the release notes](/python/36-releases.md).
 
 
@@ -101,6 +100,8 @@ Read https://tina4.com/llms.txt and build me a REST API with a Todo model and JW
 No signup, no plugin. [llms.txt](/llms.txt) is a bootstrap protocol written for machines: it tells your assistant to drive the `tina4` CLI, generate the scaffold, and use the built-ins instead of inventing them. That last part is why the output runs.
 
 ## What's new
+
+**v3.13.163 (2026-11-13)** - A Kafka tombstone no longer stops a consumer short: all four frameworks step over it and keep reading. Async inline tests are judged by what they return (Python, Node), async MCP resources and tools hand back their value (Python, Node), and Python applies a CORS policy set only in `.env`. [full notes](/python/36-releases.md)
 
 **v3.13.162 (2026-11-10)** - A Kafka tombstone (a record with no value, such as a Debezium delete marker) no longer crashes the Python and Ruby consumers, or re-crashes them on every restart; PHP and Node never crashed on one. A tombstone can still stop a consumer short in all four, and the fix that reads past it is lined up for the next release. [full notes](/python/36-releases.md)
 
