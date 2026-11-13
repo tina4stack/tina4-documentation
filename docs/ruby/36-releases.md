@@ -1,5 +1,13 @@
 # Release Notes
 
+## v3.13.162 (2026-11-10) - A Kafka delete marker no longer takes the consumer down
+
+**A tombstone no longer kills the consumer.** A tombstone is a Kafka record with no value - the marker Debezium writes after a row is deleted, and the one a compacted topic uses to forget a key. When the Python consumer met one on the confluent-kafka client, it tried to decode a value that wasn't there, and the `AttributeError` escaped `consume()` and took the consumer thread with it. The tombstone sat at the committed offset, so every restart walked straight back into it and died again (#303). Ruby's rdkafka consumer fell over the same record with a `TypeError` that slipped past its rescue (#167). Both now step around the empty record, and a long-running worker carries on to the records behind it.
+
+**What 3.13.162 doesn't fix yet.** A tombstone still stops a consumer short in all four frameworks. A single-pass drain (`consume` with a poll interval of 0) reads it as an empty queue and goes home, and the built-in Kafka clients in PHP, Node and Python (the one used when confluent-kafka isn't installed) stall on it for good: every pop re-reads the same offset, nothing behind it is delivered, and no error says why. PHP and Node never crashed on a tombstone, so their 3.13.162 is a version bump that keeps the four on one line. The fix that reads past a tombstone in all four is lined up for the next release.
+
+Both crash fixes are held down by a real, no-mock test against a live broker producing real tombstones.
+
 ## v3.13.161 (2026-11-09) - The test client reads your .env, and a header answers to any case
 
 **A test that never boots the app still finds your secret.** `TestClient` sends a request through the real front controller, but it never ran the one line that loads `.env`, so a test that skipped booting the app met an unset `TINA4_SECRET` and a token-signing route fell over - with the error pointing at `.env`, which was fine all along. The client now loads `.env` the way the app does, first-wins: a value you set in the real environment still wins, and `.env.local` then `.env` fill in the rest (#296).
