@@ -331,7 +331,7 @@ schema.add_query("post", type: "Post",
   db = Tina4.database
   post = db.fetch_one("SELECT * FROM posts WHERE id = ?", [args["id"].to_i])
 
-  return nil if post.nil?
+  next nil if post.nil?
 
   post["author"] = db.fetch_one(
     "SELECT id, name, email FROM users WHERE id = ?",
@@ -351,7 +351,7 @@ schema.add_query("user", type: "User",
   db = Tina4.database
   user = db.fetch_one("SELECT id, name, email FROM users WHERE id = ?", [args["id"].to_i])
 
-  return nil if user.nil?
+  next nil if user.nil?
 
   user["posts"] = db.fetch(
     "SELECT id, title FROM posts WHERE user_id = ?",
@@ -642,7 +642,7 @@ schema.add_query("post", type: "Post",
   db = Tina4.database
   post = db.fetch_one("SELECT * FROM posts WHERE id = ?", [args["id"].to_i])
 
-  return nil if post.nil?
+  next nil if post.nil?
 
   post["author"] = db.fetch_one(
     "SELECT id, name, email FROM users WHERE id = ?",
@@ -665,7 +665,7 @@ schema.add_query("user", type: "User",
     [args["id"].to_i]
   )
 
-  return nil if user.nil?
+  next nil if user.nil?
 
   user["posts"] = db.fetch(
     "SELECT id, title FROM posts WHERE user_id = ?",
