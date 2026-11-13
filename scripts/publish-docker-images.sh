@@ -24,9 +24,11 @@
 #      port -- which also proves the server bound 0.0.0.0, not 127.0.0.1
 #   3. require the container to be STILL ALIVE afterwards (serving once then
 #      dying is not passing)
-#   4. require /health to report a version MATCHING the tag, and refuse to
-#      publish on a mismatch. This is not hypothetical: the Node image was once
-#      about to publish as 3.13.92 while serving "0.0.0"
+#   4. require the image's own version resolver to report a version MATCHING the
+#      tag, and refuse to publish on a mismatch. This is not hypothetical: the
+#      Node image was once about to publish as 3.13.92 while serving "0.0.0".
+#      It is read with `docker exec`, exactly as each repo's CI gate reads it,
+#      because a production /health no longer reports a version (ADR-0078)
 #   5. only then buildx --push amd64 + arm64 as <version>, with SBOM/provenance
 #   6. pull the arm64 image back from the PUBLISHED manifest and boot it under
 #      emulation, turning "compiled" into "executed"; promote v3/latest only on success
@@ -43,7 +45,13 @@ set -uo pipefail
 
 VERSION="${1:?usage: publish-docker-images.sh <version> [repo-root]}"
 REPO_ROOT="${2:-/root/tina4-lab/tina4-repos}"
-WORK="/root/dockerpub-${VERSION}"
+# Override the scratch directory on a build host where /root is not writable
+# (Docker Desktop on Windows or macOS).
+WORK="${TINA4_DOCKERPUB_WORK:-/root/dockerpub-${VERSION}}"
+# A production image refuses to boot without a TINA4_SECRET of at least 32 bytes
+# (ADR-0079). The gate boots supply a throwaway one, as each repo's CI gate does;
+# it only exists for the length of the gate and real deployments set their own.
+BOOT_SECRET="release-gate-boot-verification-secret-0123456789"
 GATE="tina4-release-gate-$$"
 ARM="tina4-release-arm-$$"
 PORT=18099          # deliberately far from the lab's service ports
@@ -58,6 +66,16 @@ overall=0
 log()  { printf '\n=== %s ===\n' "$*"; }
 fail() { printf '!! FAIL: %s\n' "$*"; }
 cleanup_container() { docker rm -f "$GATE" "$ARM" >/dev/null 2>&1 || true; }
+# The version the image's own resolver reports - the same command each repo's
+# CI gate runs, so the two gates cannot disagree about what "version" means.
+image_version() {  # $1 = running container, $2 = repo
+  case "$2" in
+    tina4-python) docker exec "$1" python -c 'import tina4_python; print(tina4_python.__version__)' ;;
+    tina4-php)    docker exec "$1" php -r 'require "vendor/autoload.php"; echo \Tina4\App::$VERSION;' ;;
+    tina4-ruby)   docker exec "$1" bundle exec ruby -e 'require "tina4/version"; puts Tina4::VERSION' ;;
+    tina4-nodejs) docker exec "$1" node -e 'import("@tina4/core").then(m=>console.log(m.TINA4_VERSION)).catch(e=>{console.error(e);process.exit(1)})' ;;
+  esac 2>/dev/null | tr -d '\r' | tail -1
+}
 trap cleanup_container EXIT
 
 for repo in "${ORDER[@]}"; do
@@ -75,8 +93,11 @@ for repo in "${ORDER[@]}"; do
   # export-ignore, and tina4-php marks /example export-ignore -- so an archive
   # is a SILENTLY THINNED tree and its Dockerfile's `COPY /build/example` fails.
   # GitHub Actions never hits this because actions/checkout is a real checkout.
+  # LF, whatever the host's git defaults to: a Windows host with core.autocrlf
+  # would otherwise put CRLF into the image's shell scripts and break them.
   rm -rf "$src"
-  if ! git clone --quiet --no-checkout "$REPO_ROOT/$repo" "$src" \
+  if ! git clone --quiet --config core.autocrlf=false --config core.eol=lf \
+       --no-checkout "$REPO_ROOT/$repo" "$src" \
      || ! git -C "$src" checkout --quiet --detach "$VERSION"; then
     fail "$repo: cannot check out $VERSION"; RESULT[$repo]="checkout-failed"; overall=1; continue
   fi
@@ -98,7 +119,7 @@ for repo in "${ORDER[@]}"; do
   echo "on-disk size: $(( kb / 1024 )) MB"
 
   cleanup_container
-  docker run -d --name "$GATE" -p "$PORT:$ap" "$IMAGE:gate" >/dev/null
+  docker run -d --name "$GATE" -e "TINA4_SECRET=$BOOT_SECRET" -p "$PORT:$ap" "$IMAGE:gate" >/dev/null
   served=0
   for i in $(seq 1 45); do
     if curl -fsS -m 2 -o /dev/null "http://127.0.0.1:$PORT/health"; then
@@ -118,8 +139,7 @@ for repo in "${ORDER[@]}"; do
     RESULT[$repo]="died-after-serving"; overall=1; cleanup_container; continue
   fi
 
-  reported=$(curl -fsS -m 5 "http://127.0.0.1:$PORT/health" \
-    | python3 -c 'import json,sys; print(json.load(sys.stdin).get("version",""))' 2>/dev/null)
+  reported=$(image_version "$GATE" "$repo")
   echo "reported version: '$reported'"
   if [ -z "$reported" ] || [ "$reported" = "0.0.0" ]; then
     fail "$repo: /health reports '$reported' -- unverifiable, refusing to publish"
@@ -140,7 +160,7 @@ for repo in "${ORDER[@]}"; do
     fail "$repo: buildx push failed"; tail -30 "$WORK/$repo.push.log"
     RESULT[$repo]="push-failed"; overall=1; continue
   fi
-  digest=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["containerimage.digest"])' "$WORK/$repo.metadata.json")
+  digest=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["containerimage.digest"])' "$WORK/$repo.metadata.json")
   if [ -z "$digest" ] \
      || ! docker buildx imagetools inspect "$IMAGE@$digest" --raw >"$WORK/$repo.manifest.json" \
      || ! docker buildx imagetools inspect "$IMAGE@$digest" --format '{{json .SBOM}}' >"$WORK/$repo.sbom.json" \
@@ -152,7 +172,10 @@ for repo in "${ORDER[@]}"; do
 import json, pathlib, sys
 prefix = sys.argv[1]
 for kind in ("sbom", "provenance"):
-    evidence = json.loads(pathlib.Path(prefix + "." + kind + ".json").read_text())
+    # UTF-8 explicitly: an SBOM carries non-ASCII package metadata, and a host
+    # whose default encoding is not UTF-8 (Windows) would otherwise fail to read
+    # a perfectly valid inventory and report it as incomplete.
+    evidence = json.loads(pathlib.Path(prefix + "." + kind + ".json").read_text(encoding="utf-8"))
     for platform in ("linux/amd64", "linux/arm64"):
         if not evidence or not evidence.get(platform):
             raise SystemExit(f"Missing {kind} for {platform}")
@@ -175,10 +198,10 @@ PYVERIFY
   # Emulation proves the image is not arch-broken; it says nothing about speed.
   docker rm -f "$ARM" >/dev/null 2>&1 || true
   armok=0
-  if docker run -d --name "$ARM" --platform linux/arm64 -p "$PORT:$ap" "$IMAGE@$digest" >/dev/null 2>&1; then
+  if docker run -d --name "$ARM" --platform linux/arm64 -e "TINA4_SECRET=$BOOT_SECRET" -p "$PORT:$ap" "$IMAGE@$digest" >/dev/null 2>&1; then
     for i in $(seq 1 90); do
       if curl -fsS -m 2 -o /dev/null "http://127.0.0.1:$PORT/health"; then
-        reported=$(curl -fsS -m 5 "http://127.0.0.1:$PORT/health" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("version",""))')
+        reported=$(image_version "$ARM" "$repo")
         if [ "$reported" = "$VERSION" ] && [ "$(docker inspect -f '{{.State.Running}}' "$ARM")" = "true" ]; then
           echo "arm64 (emulated) served version $reported after ${i}s"; armok=1
         fi
