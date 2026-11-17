@@ -102,7 +102,7 @@ Prefer to do it by hand? Skip to **Create a Project** below.
 
 Tina4 ships twelve AI **skills**. For building apps: one developer skill per backend (`tina4-developer-python`, `-php`, `-ruby`, `-nodejs`), `tina4-js` for the reactive frontend, `tina4-architect` and `tina4-design` for starting a project, `tina4-a11y` and `tina4-seo` for accessibility and search audits, `tina4-test-plan` for test plans, and `tina4-cli` for the `tina4` client itself. For maintaining Tina4: `tina4-maintainer`. They are the source of truth for the framework's patterns, so your assistant builds correctly instead of guessing.
 
-`tina4 setup` installs them for you. To install them by hand, name the tool they are for:
+`tina4 setup` installs them for you, and `tina4 skills <target>` installs or refreshes them later (`claude`, `codex`, `deepseek`, `cursor`, `hermes` or `all`; Hermes and DeepSeek need client 3.8.115 or later). Without the client, run an install script and name the tool the skills are for:
 
 ```bash
 curl -fsSL https://tina4.com/install-skills.sh | TINA4_SKILLS_TARGET=claude sh   # macOS / Linux

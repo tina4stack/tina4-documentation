@@ -52,7 +52,7 @@ tina4 --version
 | `tina4 metrics` | Measure production source and rank code-health findings. |
 | `tina4 codeql` | Run CodeQL locally before CI and exit on any security finding. |
 | `tina4 ai` | Detect coding assistants and install Tina4 context. |
-| `tina4 skills` | Install current Tina4 skills for Claude, Codex, Cursor, or all three. |
+| `tina4 skills` | Install current Tina4 skills for Claude, Codex, Cursor, Hermes Agent, DeepSeek Deep Code, or all of them. |
 | `tina4 docs` | Download framework documentation into `.tina4-docs/`. |
 | `tina4 books` | Download the matching Tina4 book. |
 | `tina4 update` | Update the signed client and refresh installed skills. |
@@ -257,7 +257,7 @@ doctor command then shows which runtimes and framework clients are ready.
 
 When you are done with Tina4 the client will take itself back off the machine.
 `tina4 uninstall` first lists everything it put there: the config and
-credentials, the installed skills across Claude, Codex and Cursor, and the
+credentials, the installed skills across Claude, Codex, DeepSeek, Cursor and Hermes, and the
 binary itself. Then it asks before it removes a single file.
 
 ```bash
