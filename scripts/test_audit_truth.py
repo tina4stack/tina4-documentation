@@ -104,6 +104,27 @@ def _fake_cli_repo(root: Path, version: str, built_binary: Path | None) -> Path:
     return root
 
 
+def _cli_repo_with_js_port(root: Path, port: int) -> Path:
+    """A sibling-style ../tina4 whose src/detect.rs has the real shape of
+    ProjectInfo::default_port, with ``port`` for tina4js."""
+    src = root / "src"
+    src.mkdir(parents=True, exist_ok=True)
+    (src / "detect.rs").write_text(
+        "    pub fn default_port(&self) -> u16 {\n"
+        "        match self.language.as_str() {\n"
+        '            "python" => 7146,\n'
+        '            "php" => 7145,\n'
+        '            "ruby" => 7147,\n'
+        '            "nodejs" => 7148,\n'
+        f'            "tina4js" => {port},\n'
+        "            _ => 7145,\n"
+        "        }\n"
+        "    }\n",
+        encoding="utf-8",
+    )
+    return root
+
+
 # ── Helper unit tests ─────────────────────────────────────────────────
 
 def test_semver_parsing():
@@ -170,7 +191,7 @@ def test_onboarding_flags_wrong_packages_legacy_commands_links_and_js_port(
     )
     monkeypatch.setattr(at, "find_doc_files", lambda: [page])
     monkeypatch.setattr(at, "REPO_ROOT", tmp_path)
-    monkeypatch.setattr(at, "_tina4js_scaffold_port", lambda: 5173)
+    monkeypatch.setattr(at, "CLI_REPO", _cli_repo_with_js_port(tmp_path / "tina4", 3000))
 
     drift, lines = at.check_onboarding()
     assert drift == 5, "\n".join(lines)
@@ -180,15 +201,42 @@ def test_onboarding_accepts_unified_current_workflow(tmp_path, monkeypatch):
     page = tmp_path / "docs" / "js" / "01-getting-started.md"
     page.parent.mkdir(parents=True)
     page.write_text(
-        "tina4 init js my-app\ntina4 serve\nhttp://localhost:5173\n",
+        "tina4 init js my-app\ntina4 serve\nhttp://localhost:3000\n",
         encoding="utf-8",
     )
     monkeypatch.setattr(at, "find_doc_files", lambda: [page])
     monkeypatch.setattr(at, "REPO_ROOT", tmp_path)
-    monkeypatch.setattr(at, "_tina4js_scaffold_port", lambda: 5173)
+    monkeypatch.setattr(at, "CLI_REPO", _cli_repo_with_js_port(tmp_path / "tina4", 3000))
 
     drift, lines = at.check_onboarding()
     assert drift == 0, "\n".join(lines)
+
+
+def test_tina4js_port_is_read_from_the_cli_detect_source(tmp_path, monkeypatch):
+    # The scaffold has no vite.config.ts any more; the port `tina4 serve` hands
+    # `tina4js dev` lives in ProjectInfo::default_port (src/detect.rs).
+    monkeypatch.setattr(at, "CLI_REPO", _cli_repo_with_js_port(tmp_path / "tina4", 3000))
+    assert at._tina4js_scaffold_port() == 3000
+
+    monkeypatch.setattr(at, "CLI_REPO", tmp_path / "no-cli-here")
+    assert at._tina4js_scaffold_port() is None
+
+
+def test_onboarding_flags_a_stale_vite_port_in_js_getting_started(tmp_path, monkeypatch):
+    page = tmp_path / "docs" / "js" / "01-getting-started.md"
+    page.parent.mkdir(parents=True)
+    page.write_text(
+        "tina4 init js my-app\ntina4 serve\nOpen http://localhost:5173\n"
+        "Clean URLs such as http://localhost:3000/about\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(at, "find_doc_files", lambda: [page])
+    monkeypatch.setattr(at, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(at, "CLI_REPO", _cli_repo_with_js_port(tmp_path / "tina4", 3000))
+
+    drift, lines = at.check_onboarding()
+    assert drift == 1, "\n".join(lines)
+    assert "scaffold port 3000" in "\n".join(lines)
 
 
 # ── The core regression: resolver must not trust a stale PATH binary ──

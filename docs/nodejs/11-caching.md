@@ -750,7 +750,7 @@ curl http://localhost:7148/api/store/cache-stats
 
 ## 12. Solution
 
-Create `src/routes/storeCached.ts`:
+Create `src/routes/storeCached.ts` and register it by adding `import "./src/routes/storeCached.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { get, post, cacheGet, cacheSet, cacheDelete, cacheStats } from "tina4-nodejs";

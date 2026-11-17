@@ -250,7 +250,7 @@ my-store/
 
 **Key directories:**
 
-- **`src/routes/`** -- Every `.ts` file here is auto-loaded at startup. Drop your route definitions here. Organize into subdirectories if you want. Tina4 also supports file-based routing: a file at `src/routes/api/users/get.ts` maps to `GET /api/users` with zero configuration.
+- **`src/routes/`** -- File-based routes. At startup Tina4 loads only files named after an HTTP method (`get.ts`, `post.ts`, `put.ts`, `patch.ts`, `delete.ts`); the directory path is the URL. A file at `src/routes/api/users/get.ts` maps to `GET /api/users` with zero configuration. Any other file here (say `src/routes/hello.ts`) is not loaded unless `app.ts` imports it (section 4 shows how).
 - **`src/orm/`** -- Every `.ts` file here is auto-loaded. ORM model classes live here.
 - **`src/templates/`** -- Frond (Tina4's built-in template engine -- see [Chapter 4: Templates](04-templates.md)) looks here when you call `res.html()` with a template.
 - **`src/public/`** -- Files served directly. `src/public/images/logo.png` becomes `/images/logo.png`.
@@ -278,7 +278,16 @@ Router.get("/api/greeting/{name}", async (req, res) => {
 });
 ```
 
-Save the file. The dev server picks up the change. If live reload is off, restart with `tina4 serve`.
+Route discovery only loads method-named files (`get.ts`, `post.ts`, ...), so a plain module like `greeting.ts` runs only when something imports it. `Router.get(...)` calls must run in `app.ts`, or in a module `app.ts` imports, before `startServer()`. Register the file in `app.ts`:
+
+```typescript
+import "./src/routes/greeting.js";
+import { startServer } from "tina4-nodejs";
+
+startServer();
+```
+
+Restart `tina4 serve` to pick it up. Every later example in this book that creates a plain `src/routes/<name>.ts` module with `Router` calls registers it the same way.
 
 > **Cross-language note.** Node, PHP, and Ruby read path parameters from `req.params` / `$request->params` / `request.params`. Python passes them as function arguments instead. Same concept, two shapes; pick the chapter that matches your runtime.
 
@@ -327,7 +336,7 @@ curl http://localhost:7148/api/greeting/Alice
 
 ### Understanding What Happened
 
-1. You created a file in `src/routes/`. Tina4 discovered it at startup.
+1. `app.ts` imported `src/routes/greeting.ts` before `startServer()`.
 2. `Router.get("/api/greeting/{name}", ...)` registered a GET route with a path parameter `{name}`.
 3. A request to `/api/greeting/Alice` hit the router. Pattern matched. Handler fired.
 4. `req.params.name` delivered the value `"Alice"` from the URL.
@@ -463,7 +472,7 @@ Create `src/templates/products.html`:
 
 ### Create the Route That Renders the Template
 
-Create `src/routes/pages.ts`:
+Create `src/routes/pages.ts` and register it by adding `import "./src/routes/pages.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router } from "tina4-nodejs";
@@ -651,7 +660,7 @@ import { startServer } from "tina4-nodejs";
 startServer();
 ```
 
-That is the entire file. Tina4 discovers routes, models, and templates from the `src/` directory. You register nothing manually.
+That is the entire file. Tina4 discovers method-named route files (`src/routes/**/get.ts`, `post.ts`, ...), models, and templates from the `src/` directory. The one thing you register yourself is a module that calls `Router.get(...)` and friends: import it here, above `startServer()`.
 
 The standard way to start the server is with the CLI:
 
@@ -848,7 +857,7 @@ The most common status codes you will use:
 
 Here is a full route file that ties everything together. It builds a small book lookup API with query parameters, path parameters, JSON responses, and proper status codes. Read through it before attempting the exercises -- it is your reference.
 
-Create `src/routes/books.ts`:
+Create `src/routes/books.ts` and register it by adding `import "./src/routes/books.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router } from "tina4-nodejs";
@@ -1012,7 +1021,7 @@ const products = [
 
 ### Solution A: Greeting API
 
-Create `src/routes/greet.ts`:
+Create `src/routes/greet.ts` and register it by adding `import "./src/routes/greet.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router } from "tina4-nodejs";
@@ -1124,7 +1133,7 @@ Create `src/templates/store.html`:
 {% endblock %}
 ```
 
-Create `src/routes/store.ts`:
+Create `src/routes/store.ts` and register it by adding `import "./src/routes/store.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router } from "tina4-nodejs";
@@ -1164,9 +1173,9 @@ Router.get("/store", async (req, res) => {
 
 **Problem:** You created a route file but nothing happens when you visit the URL.
 
-**Cause:** The file is not in `src/routes/`. It must be inside `src/routes/` (or a subdirectory of it), and the file must end with `.ts`.
+**Cause:** Route discovery only loads files under `src/routes/` that are named after an HTTP method: `get.ts`, `post.ts`, `put.ts`, `patch.ts` or `delete.ts` (`.js` also works). The directory path becomes the URL. A file such as `src/routes/your-file.ts` is skipped, even if it calls `Router.get(...)`.
 
-**Fix:** Move the file to `src/routes/your-file.ts` and restart the server.
+**Fix:** Either move the handler to a method file (`src/routes/your-path/get.ts` exporting a default handler), or keep the module and import it from `app.ts` above `startServer()`: `import "./src/routes/your-file.js";`. Then restart the server.
 
 ### 2. "Module not found" errors
 

@@ -156,13 +156,13 @@ tina4 serve
 **Best for:** JavaScript/TypeScript teams, file-based routing, real-time applications, highest raw throughput.
 
 ```typescript
-// src/routes/api/products/index.ts
+// src/routes/api/products/get.ts
 export default async function handler(request, response) {
     const products = await Product.select({ page: request.query.page || 1 });
     return response.json(products);
 }
 
-// src/routes/api/products/index.post.ts
+// src/routes/api/products/post.ts
 export default async function handler(request, response) {
     const product = await Product.create(request.body);
     return response.json(product, 201);
@@ -173,7 +173,7 @@ export default async function handler(request, response) {
 
 **One language everywhere.** Frontend and backend. Same developers. Same language. Same tooling. No context switching. A React component and its API endpoint live in one mental model. JavaScript runs on both sides of the wire.
 
-**File-based routing.** Tina4 Node.js maps file paths to URL paths. A file at `src/routes/api/products/[id].ts` handles `/api/products/42`. The filesystem is the routing table. If you've used Next.js, it's already muscle memory.
+**File-based routing.** Tina4 Node.js maps file paths to URL paths. The file name is the HTTP method: `src/routes/api/products/[id]/get.ts` handles `GET /api/products/42`. The filesystem is the routing table. If you've used Next.js, it's already muscle memory.
 
 **Highest raw throughput.** Node.js on V8 handles the most requests a second of the four. For APIs that serve JSON and move data, Node.js sets the highest ceiling. The event loop was built for I/O.
 

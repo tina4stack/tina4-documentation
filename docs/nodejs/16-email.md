@@ -853,7 +853,7 @@ Create `src/templates/contact.html`:
 {% endblock %}
 ```
 
-Create `src/routes/contact.ts`:
+Create `src/routes/contact.ts` and register it by adding `import "./src/routes/contact.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router, Messenger } from "tina4-nodejs";

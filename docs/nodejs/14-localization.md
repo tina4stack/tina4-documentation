@@ -299,7 +299,7 @@ curl -X POST "http://localhost:7148/api/contact?lang=de" \
 }
 ```
 
-`src/routes/contact.ts`:
+`src/routes/contact.ts` (registered by `import "./src/routes/contact.js";` in `app.ts`):
 
 ```typescript
 import { Router, I18n } from "tina4-nodejs";

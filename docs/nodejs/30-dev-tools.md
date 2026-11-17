@@ -372,7 +372,7 @@ Your colleague wrote a route that fails. Use the dev tools to find and fix the b
 
 ### Setup
 
-Create `src/routes/buggy.ts`:
+Create `src/routes/buggy.ts` and register it by adding `import "./src/routes/buggy.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router } from "tina4-nodejs";

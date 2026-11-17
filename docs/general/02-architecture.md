@@ -109,7 +109,7 @@ end
 ```
 
 ```typescript
-// Node.js (file-based routing: src/routes/api/products/[id].ts)
+// Node.js (file-based routing: src/routes/api/products/[id]/get.ts)
 export default function handler(request, response) {
     // id available via request.params.id
 }
@@ -544,6 +544,8 @@ Startup
 The scan happens once at startup. In dev mode with live reload, the scan re-runs when files change. New route file saved? The router rebuilds. No restart needed.
 
 **The file name and path within `src/routes/` do not determine the URL.** Only the route definition inside the file matters. Put all your routes in one file called `everything.php` and it works. Spread them across fifty files in nested folders and it works. The directory structure is for your organization. The framework ignores it.
+
+**Node.js is the exception.** Tina4 Node.js discovers only files named after an HTTP method (`get.ts`, `post.ts`, `put.ts`, `patch.ts`, `delete.ts`), and there the directory path is the URL: `src/routes/api/products/[id]/get.ts` serves `GET /api/products/{id}`. A plain file such as `src/routes/products.ts` is skipped even if it calls `get()`. Registration calls (`get()`, `post()`, `Router.get(...)`) must run in `app.ts`, or in a module `app.ts` imports, before `startServer()`.
 
 ### Models
 

@@ -318,7 +318,7 @@ export class DailySalesReport extends Service {
 }
 ```
 
-`src/routes/reports.ts`:
+`src/routes/reports.ts` (registered by `import "./src/routes/reports.js";` in `app.ts`):
 
 ```typescript
 import { Router } from "tina4-nodejs";

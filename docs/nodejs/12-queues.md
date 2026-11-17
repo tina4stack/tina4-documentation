@@ -444,7 +444,7 @@ curl -X POST http://localhost:7148/api/emails/retry
 
 ## 11. Solution
 
-Create `src/routes/emailQueue.ts`:
+Create `src/routes/emailQueue.ts` and register it by adding `import "./src/routes/emailQueue.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router, Queue } from "tina4-nodejs";

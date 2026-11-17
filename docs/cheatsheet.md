@@ -16,6 +16,7 @@ Drop a handler file in `src/routes/` (auto-discovered) and register one per HTTP
 | Path param | `@get("/users/{id}")` | `Router::get("/users/{id}", $fn)` | `Tina4::Router.get("/users/{id}")` | `get("/users/{id}", h)` |
 | Typed param | `{id:int}` · `{p:float}` | `{id:int}` · `{p:float}` | `{id:int}` · `{p:float}` | `{id:int}` · `{p:float}` |
 
+- **Node loads route files by method name.** Discovery loads only `get.ts`, `post.ts`, `put.ts`, `patch.ts` and `delete.ts` under `src/routes/`, and the directory path is the URL (`src/routes/p/get.ts` serves `GET /p`). The `get("/p", h)` calls above must run in `app.ts`, or a module `app.ts` imports, before `startServer()`.
 - **`{id}` is the param syntax everywhere**, never `:id`. Read it with `request.param("id")` (PHP `$request->params["id"]`, Ruby `params[:id]`, Node `req.params.id`).
 - **Typed params arrive coerced:** `{id:int}`/`{id:integer}` → a native integer, `{p:float}`/`{p:number}` → a native float; `string`/`alpha`/`alnum`/`slug`/`uuid`/`path` and an untyped `{id}` stay strings. The type also constrains matching: `/users/abc` → 404 for `{id:int}`. An unknown type name is rejected at registration.
 - **Returning data:** `return response(obj)` (Node: `return res.json(obj)`): objects/dicts/arrays → JSON, strings → HTML; ORM models, lists of models, and `DatabaseResult`s auto-serialize to JSON.

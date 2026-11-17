@@ -652,7 +652,7 @@ curl -X POST http://localhost:7148/cart/clear -c cookies.txt -b cookies.txt
 
 ## 10. Solution
 
-Create `src/routes/cart.ts`:
+Create `src/routes/cart.ts` and register it by adding `import "./src/routes/cart.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router } from "tina4-nodejs";

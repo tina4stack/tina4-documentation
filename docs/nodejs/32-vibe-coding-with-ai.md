@@ -71,7 +71,7 @@ AI thrives on convention. Every Tina4 project follows the same structure. The AI
 
 ```
 src/
-  routes/hello.ts       → AI knows: this is a route file
+  routes/hello/get.ts   → AI knows: this is the GET /hello route
   orm/Product.ts        → AI knows: this is an ORM model
   templates/home.twig   → AI knows: this is a template
 ```
@@ -90,9 +90,9 @@ Here is an actual conversation with Claude Code in a Tina4 Node.js project:
 
 1. `src/orm/Post.ts` -- Model with belongsTo User, hasMany Comments
 2. `src/orm/Comment.ts` -- Model with belongsTo Post
-3. `src/routes/api/posts.ts` -- Full CRUD API
-4. `src/routes/api/comments.ts` -- Nested comments API
-5. `src/routes/blog.ts` -- Template route for the blog page
+3. `src/routes/api/posts/get.ts`, `post.ts` and `[id]/get.ts`, `put.ts`, `delete.ts` -- Full CRUD API
+4. `src/routes/api/posts/[id]/comments/get.ts` and `post.ts` -- Nested comments API
+5. `src/routes/blog/get.ts` -- Template route for the blog page
 6. `src/templates/blog.twig` -- Page with tina4css cards for each post
 7. `migrations/20260322_create_posts_and_comments.sql` -- Database schema
 

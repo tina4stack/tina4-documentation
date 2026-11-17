@@ -4,9 +4,11 @@
 
 Every web application maps URLs to code. A browser requests `/products`. The framework finds the handler for `/products`. Runs it. Sends back the result. That mapping is routing.
 
-In Tina4 Node.js, you define routes in TypeScript files inside `src/routes/`. Every `.ts` file in that directory -- and its subdirectories -- is auto-loaded when the server starts. No registration files. No central config. Drop a file in. It works.
+In Tina4 Node.js, you define routes in TypeScript files. Tina4 supports two routing styles: **file-based routing**, where the file path becomes the URL, and **explicit registration** with the `Router` class.
 
-Tina4 supports two routing styles: **explicit registration** with the `Router` class, and **file-based routing** where the file path becomes the URL.
+At startup Tina4 scans `src/routes/` and its subdirectories, but it loads only files named after an HTTP method: `get.ts`, `post.ts`, `put.ts`, `patch.ts` and `delete.ts` (`.js` works too). The directory path is the URL path, so `src/routes/hello/get.ts` serves `GET /hello`. Any other file name is skipped. A plain `src/routes/hello.ts` that calls `Router.get(...)` is never loaded on its own.
+
+`Router.get(...)` and the other registration calls must run in `app.ts`, or in a module that `app.ts` imports, before `startServer()`. `startServer()` copies those routes into the server's router, then adds the discovered files.
 
 The simplest possible route using explicit registration:
 
@@ -18,13 +20,23 @@ Router.get("/hello", async (req, res) => {
 });
 ```
 
-Save that as `src/routes/hello.ts`, start the server with `tina4 serve`, and visit `http://localhost:7148/hello`:
+Save that as `src/routes/hello.ts` and import it from `app.ts` so it runs before the server starts:
+
+```typescript
+// app.ts
+import "./src/routes/hello.js";
+import { startServer } from "tina4-nodejs";
+
+startServer();
+```
+
+Start the server with `tina4 serve` and visit `http://localhost:7148/hello`:
 
 ```json
 {"message":"Hello, World!"}
 ```
 
-The same thing using file-based routing. Create `src/routes/hello/get.ts`:
+The same thing using file-based routing. Create `src/routes/hello/get.ts`. No import is needed; discovery finds it:
 
 ```typescript
 export default async (req, res) => {
@@ -729,7 +741,7 @@ GET      /docs/*                       -                   public
 
 ## 11. Organizing Route Files
 
-Organize route files however you want. Tina4 loads every `.ts` file in `src/routes/` recursively. Two common patterns:
+Tina4 discovers only method-named files (`get.ts`, `post.ts`, `put.ts`, `patch.ts`, `delete.ts`) in `src/routes/`, recursively. Modules with other names hold `Router` calls and load only when `app.ts` imports them. Two common patterns:
 
 ### Pattern 1: One File Per Resource
 
@@ -739,6 +751,18 @@ src/routes/
 ├── users.ts        # All user routes
 ├── orders.ts       # All order routes
 └── pages.ts        # HTML page routes
+```
+
+None of these names is a method name, so discovery skips them. Import each one from `app.ts`:
+
+```typescript
+import "./src/routes/products.js";
+import "./src/routes/users.js";
+import "./src/routes/orders.js";
+import "./src/routes/pages.js";
+import { startServer } from "tina4-nodejs";
+
+startServer();
 ```
 
 ### Pattern 2: File-Based Routing by Feature
@@ -774,7 +798,7 @@ Build a complete REST API for managing products. All data lives in a TypeScript 
 
 ### Requirements
 
-Create a file `src/routes/product-api.ts` with the following routes:
+Create a file `src/routes/product-api.ts` with the following routes and register it by adding `import "./src/routes/product-api.js";` to `app.ts` above `startServer()`:
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -831,7 +855,7 @@ curl http://localhost:7148/api/products/999
 
 ## 13. Solution
 
-Create `src/routes/product-api.ts`:
+Create `src/routes/product-api.ts` and register it by adding `import "./src/routes/product-api.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router } from "tina4-nodejs";

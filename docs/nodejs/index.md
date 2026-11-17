@@ -488,7 +488,7 @@ The CLI generates a full CRUD route file from your model. One command wires up a
 tina4 generate crud User
 ```
 
-This creates `src/routes/users.ts` with GET, POST, PUT, PATCH, and DELETE routes. Model, routes, and migration, all connected, ready to serve.
+This creates the model and migration plus an admin page route at `src/routes/admin/users/get.ts` (`user` is a SQL reserved word, so the table is `users`), which registers the AutoCrud REST routes for the model. Route discovery loads files named after an HTTP method (`get.ts`, `post.ts`, ...), so the generated file needs no import. Model, routes, and migration, all connected, ready to serve.
 
 ```typescript
 Router.get("/users/dashboard", async (req, res) => {

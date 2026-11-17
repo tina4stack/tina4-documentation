@@ -415,7 +415,7 @@ Here is a complete chat application with usernames, typing indicators, and onlin
 
 ### WebSocket Handler
 
-Create `src/routes/chat-ws.ts`:
+Create `src/routes/chat-ws.ts` and register it by adding `import "./src/routes/chat-ws.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router } from "tina4-nodejs";
@@ -819,7 +819,7 @@ Build a WebSocket chat room with the following features:
 
 ## 13. Solution
 
-Create `src/routes/chat-room.ts`:
+Create `src/routes/chat-room.ts` and register it by adding `import "./src/routes/chat-room.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router } from "tina4-nodejs";
