@@ -11,6 +11,8 @@
 #   curl -fsSL https://tina4.com/install-skills.sh | TINA4_SKILLS_TARGET=claude sh
 #   curl -fsSL https://tina4.com/install-skills.sh | TINA4_SKILLS_TARGET=codex sh
 #   curl -fsSL https://tina4.com/install-skills.sh | TINA4_SKILLS_TARGET=cursor sh
+#   curl -fsSL https://tina4.com/install-skills.sh | TINA4_SKILLS_TARGET=hermes sh
+#   curl -fsSL https://tina4.com/install-skills.sh | TINA4_SKILLS_TARGET=deepseek sh
 # Use TINA4_SKILLS_TARGET=all only when every supported tool should receive the skills.
 #
 # POSIX sh ONLY -- no bashisms. Every example above pipes into `sh`, and on
@@ -26,7 +28,7 @@ set -eu
 
 # Pin skills to a released tag, not a moving branch, so an install is reproducible.
 # Bump this when the skills change in a new release. Override with TINA4_SKILLS_REF.
-ref="${TINA4_SKILLS_REF:-3.13.156}"
+ref="${TINA4_SKILLS_REF:-3.13.164}"
 target="${TINA4_SKILLS_TARGET:-}"
 skill_home="${TINA4_SKILLS_HOME:-$HOME}"
 # Three sources, tried in this order per file: tina4.com (Tina4's own infra),
@@ -43,15 +45,20 @@ raw_root="${TINA4_SKILLS_RAW_ROOT:-https://raw.githubusercontent.com/tina4stack}
 retry_count="${TINA4_SKILLS_RETRY_COUNT:-3}"
 retry_delay="${TINA4_SKILLS_RETRY_DELAY:-2}"
 
-# Space separated, not an array: dash has no arrays. Neither path can contain a
-# space, because both are literals under $HOME.
+# Space separated, not an array: dash has no arrays. No path can contain a
+# space, because each is a literal under $HOME.
+#
+# DeepSeek's Deep Code CLI reads user-level skills from ~/.agents/skills -- the
+# same directory Codex reads -- so deepseek and codex are one destination, and
+# `all` lists that directory ONCE. Hermes Agent reads ~/.hermes/skills only.
 case "$target" in
-  claude) destinations="$skill_home/.claude/skills" ;;
-  codex)  destinations="$skill_home/.agents/skills" ;;
-  cursor) destinations="$skill_home/.cursor/skills" ;;
-  all)    destinations="$skill_home/.claude/skills $skill_home/.agents/skills $skill_home/.cursor/skills" ;;
+  claude)         destinations="$skill_home/.claude/skills" ;;
+  codex|deepseek) destinations="$skill_home/.agents/skills" ;;
+  cursor)         destinations="$skill_home/.cursor/skills" ;;
+  hermes)         destinations="$skill_home/.hermes/skills" ;;
+  all)            destinations="$skill_home/.claude/skills $skill_home/.agents/skills $skill_home/.cursor/skills $skill_home/.hermes/skills" ;;
   *)
-    echo "error: set TINA4_SKILLS_TARGET to claude, codex, cursor, or all" >&2
+    echo "error: set TINA4_SKILLS_TARGET to claude, codex, cursor, hermes, deepseek, or all" >&2
     exit 2
     ;;
 esac
@@ -154,9 +161,11 @@ skill_urls() {
   echo "${raw_root}/$1/${ref}/.claude/skills/$2/$3"
 }
 
+skill_count=0
 # install_skill <repo> <skill> <reference.md ...>
 install_skill() {
   repo="$1"; skill="$2"; shift 2
+  skill_count=$((skill_count + 1))
   mkdir -p "$stage/$skill/references"
   download_file "$stage/$skill/SKILL.md" $(skill_urls "$repo" "$skill" "SKILL.md")
   for reference in "$@"; do
@@ -240,11 +249,12 @@ install_skill tina4-ruby    tina4-developer-ruby    $DEV_REFS
 install_skill tina4-nodejs  tina4-developer-nodejs  $DEV_REFS
 # Shared skills (canonical copy served from tina4-python).
 install_skill tina4-python  tina4-js          html-and-components.md signals-and-reactivity.md persistence.md rtc.md
-install_skill tina4-python  tina4-maintainer  cli-and-deployment.md frond-and-frontend.md routing-and-orm.md subsystems.md checklists/pr-review.md checklists/release.md checklists/signing.md checklists/parity-sweep.md
+install_skill tina4-python  tina4-maintainer  cli-and-deployment.md frond-and-frontend.md routing-and-orm.md subsystems.md checklists/pr-review.md checklists/release.md checklists/signing.md checklists/parity-sweep.md debugging.md verification.md grounding-and-decisions.md principles-and-languages.md code-quality-and-green.md workflow-and-release.md communication.md
 install_skill tina4-python  tina4-architect
 install_skill tina4-python  tina4-design         phase-1-intake.md phase-2-market-research.md design-tokens.md brand-guidelines.md ui-guide.md handoff.md website.md design-record-templates.md
-install_skill tina4-python  tina4-seo             ai-discovery.md content-audit.md discovery-audit.md entity-eeat.md favicon-package.md meta-tags.md robots-sitemap.md structured-data.md templates-and-guards.md validation-and-handoff.md
-install_skill tina4-python  tina4-a11y            aria-and-live-regions.md contrast-and-colour.md discovery-and-scope.md forms.md images-and-media.md interactive-semantics.md keyboard-and-focus.md landmarks-and-structure.md validation-and-handoff.md zoom-reflow-motion.md
+install_skill tina4-python  tina4-seo            ai-discovery.md content-audit.md discovery-audit.md entity-eeat.md favicon-package.md meta-tags.md robots-sitemap.md structured-data.md templates-and-guards.md validation-and-handoff.md
+install_skill tina4-python  tina4-a11y           aria-and-live-regions.md contrast-and-colour.md discovery-and-scope.md forms.md images-and-media.md interactive-semantics.md keyboard-and-focus.md landmarks-and-structure.md validation-and-handoff.md zoom-reflow-motion.md
+install_skill tina4-python  tina4-test-plan      agent-prompt.md build_test_plan.py coverage-checklist.md example-spec.json _pdf.py _xlsx.py selftest.py
 # The tina4 CLI skill is served from the tina4 (Rust CLI) repo, not tina4-python.
 install_skill tina4         tina4-cli         commands.md
 
@@ -252,4 +262,4 @@ verify_checksums
 publish_skills
 
 echo ""
-echo "  Done - nine skills installed for $target (ref $ref). Restart your coding tool to pick them up."
+echo "  Done - $skill_count skills installed for $target (ref $ref). Restart your coding tool to pick them up."
