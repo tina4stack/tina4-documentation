@@ -63,13 +63,13 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 <a class="tp-cta" href="/download/code-viewer/">Download the Code Viewer →</a>
 :::
 
-## Current framework release: 3.13.163
+## Current framework release: 3.13.164
 
-Python, PHP, Ruby and Node.js are aligned on 3.13.163. A Kafka tombstone - the empty record
-Debezium writes after a row is deleted - no longer stops a consumer short: it steps over the
-tombstone and keeps reading, in all four frameworks, so the records behind it are delivered. An
-async inline test is now judged by the value it returns rather than the coroutine or Promise that
-carries it, and an async MCP resource or tool hands back its real value instead of an empty object.
+Python, PHP, Ruby and Node.js are aligned on 3.13.164. A template global, filter or test you
+register on the class now reaches every page `render` produces, in all four frameworks, whenever
+you register it. `serve` no longer calls a free port "in use", the PHP worker pool no longer grows
+when it reaps a stranger's child, and the dev dashboard reports the memory the process is actually
+using. The AI skills install for Hermes Agent and DeepSeek Deep Code too.
 [Read the release notes](/python/36-releases.md).
 
 
@@ -100,6 +100,8 @@ Read https://tina4.com/llms.txt and build me a REST API with a Todo model and JW
 No signup, no plugin. [llms.txt](/llms.txt) is a bootstrap protocol written for machines: it tells your assistant to drive the `tina4` CLI, generate the scaffold, and use the built-ins instead of inventing them. That last part is why the output runs.
 
 ## What's new
+
+**v3.13.164 (2026-11-17)** - Template globals, filters and tests registered on the class reach every rendered page in all four frameworks, and `t()` takes a params map. `serve` stays quiet about a free port, the PHP worker pool keeps its size, the dev dashboard reports real memory, and an unreachable database says so. Python tightens its optional-extra floors and patches dnspython. The skills install for Hermes and DeepSeek. [full notes](/python/36-releases.md)
 
 **v3.13.163 (2026-11-13)** - A Kafka tombstone no longer stops a consumer short: all four frameworks step over it and keep reading. Async inline tests are judged by what they return (Python, Node), async MCP resources and tools hand back their value (Python, Node), and Python applies a CORS policy set only in `.env`. [full notes](/python/36-releases.md)
 
