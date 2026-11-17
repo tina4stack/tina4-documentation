@@ -5,7 +5,8 @@
     "The same four pure in-memory cases run in all four frameworks without mocks.",
     "ADR-0106: class GLOBALS are read live at render time, so a class global reaches an engine that",
     "already exists (response.render's), and the auto-wired i18n t() is a class global taking a params map.",
-    "Those cases render a real template through a real route and the real request path in each framework."
+    "Those cases render a real template through a real route and the real request path in each framework.",
+    "ADR-0107: class FILTERS and TESTS likewise reach an engine that already exists; instance ones stay local."
   ],
   "version": 1,
   "decided": "2026-08-14",
@@ -78,6 +79,31 @@
         "auto wired t accepts a params map",
         "auto wired t reaches every engine",
         "auto wired t registered after first render reaches render"
+      ]
+    },
+    {
+      "id": "frond-class-filter-and-test-reach-existing-engines",
+      "adr": "ADR-0107",
+      "rule": "A class filter or test reaches every template response.render renders afterwards, whether it was registered before or after the response engine was built.",
+      "why": "Engines drained class filters/tests at construction, so a registration after the first render never reached a page (all four).",
+      "suites": {"python": "tests/test_frond_globals_reach_render.py", "php": "tests/FrondGlobalsReachRenderTest.php", "ruby": "spec/frond_globals_reach_render_spec.rb", "nodejs": "test/frondGlobalsReachRender.test.ts"},
+      "cases": [
+        "class filter registered before first render reaches render",
+        "class filter registered after first render reaches render",
+        "class test registered before first render reaches render",
+        "class test registered after first render reaches render"
+      ]
+    },
+    {
+      "id": "frond-instance-filter-and-test-stay-local-under-live-lookup",
+      "adr": "ADR-0107",
+      "rule": "An instance filter or test never leaks into another engine, and an instance filter overrides a class filter of the same name on its own engine only, including after a later class change.",
+      "why": "The merged class layer must not weaken ADR-0052's instance isolation or let a class re-registration clobber an instance one.",
+      "suites": {"python": "tests/test_frond_globals_reach_render.py", "php": "tests/FrondGlobalsReachRenderTest.php", "ruby": "spec/frond_globals_reach_render_spec.rb", "nodejs": "test/frondGlobalsReachRender.test.ts"},
+      "cases": [
+        "instance filter on another engine does not leak into render",
+        "instance test on another engine does not leak into render",
+        "instance filter overrides class filter"
       ]
     }
   ]
