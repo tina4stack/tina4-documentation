@@ -19,7 +19,17 @@
 # LATEST such bundle, lifts each skill's `updated_for_version`, and writes:
 #
 #   docs/public/skills/tina4-developer-<lang>/version   (one per language)
-#   docs/public/skills/latest/version                   (highest across all)
+#   docs/public/skills/latest/version                   (the newest bundle's ref)
+#
+# The two endpoints carry DIFFERENT quantities, on purpose. A per-language
+# endpoint is a skill's `updated_for_version`, which the skill compares with its
+# own frontmatter. `latest/version` is the newest published bundle REF (the
+# <ref> directory name, e.g. 3.13.164): tina4/scripts/gen-skills-bundle.sh and
+# check-skills-manifest-regression.sh use it as the baseline a new bundle must
+# not shrink against, and no skill reads it. It used to carry the highest
+# `updated_for_version`, so every deploy overwrote the bundle ref the release
+# had committed (it served 3.13.147 while 3.13.164 was live), and the CI
+# regression check compared new bundles against an old one.
 #
 # VitePress serves docs/public/ at the site root, so these resolve at
 # https://tina4.com/skills/tina4-developer-<lang>/version and .../skills/latest/version.
@@ -53,13 +63,13 @@ def updated_for_version(ref: str, lang: str):
     skill = SKILLS / ref / f"tina4-developer-{lang}" / "SKILL.md"
     if not skill.is_file():
         return None
-    m = FRONT.search(skill.read_text())
+    m = FRONT.search(skill.read_text(encoding="utf-8"))
     return m.group(1) if m else None
 
 
 def write_version(path: pathlib.Path, value: str):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(value + "\n")
+    path.write_text(value + "\n", encoding="utf-8", newline="\n")
     print(f"  wrote {path.relative_to(REPO)}  ->  {value}")
 
 
@@ -83,8 +93,8 @@ def main():
         wrote += 1
         if latest_seen is None or semver_key(val) > semver_key(latest_seen):
             latest_seen = val
-    write_version(SKILLS / "latest" / "version", latest_seen)
-    print(f"OK: {wrote} per-language endpoints + latest ({latest_seen}) from bundle {refs[0]}")
+    write_version(SKILLS / "latest" / "version", refs[0])
+    print(f"OK: {wrote} per-language endpoints (highest {latest_seen}) + latest bundle ref {refs[0]}")
     return 0
 
 
