@@ -122,6 +122,7 @@ Conventions:
 | ADR-0085 | [A bare zero-argument callable global is invoked and its return value is used](decisions/ADR-0085.md) (aligns Python/PHP/Ruby to Node under ADR-0004; fixture `frond_globals_contract.json`; tina4-documentation#90) | Accepted |
 | ADR-0079 | [Auth-token rules: token purpose, secret strength, explicit debug, peer identity](decisions/ADR-0079.md) (`auth_token_contract.json`) | Accepted |
 | ADR-0105 | [The Kafka queue backend durably commits consumer-group offsets per-record and consumes externally-produced records, all four frameworks](decisions/ADR-0105.md) (conformance to ADR-0022 decisions 2/3/4/8; tina4-python#274/#276; PHP/Ruby/Node `fix/kafka-durable-offsets-274`; FindCoordinator v1 / OffsetFetch v1 / OffsetCommit v2 simple-consumer; Node lands the persistent worker-thread connection and un-refuses `backend: "kafka"`; #264 bare-wire read preserved; mutation-proved on a live broker) | Accepted |
+| ADR-0106 | [Class-level Frond globals are read live at render time, and the auto-wired i18n `t()` is one of them](decisions/ADR-0106.md) (supersedes ADR-0052's flattened-at-construction clause for globals only; a class global reaches the existing response.render engine whatever the registration order; instance globals stay local; `t("key")` and `t("key", {params})` in all four; Ruby `Tina4.template_global` reaches Frond; real route + real request path, mutation-proved) | Accepted |
 
 ### 3.14 re-audit supersessions (Proposed, pending build-phase acceptance)
 
