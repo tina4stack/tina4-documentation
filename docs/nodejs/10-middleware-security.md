@@ -890,7 +890,7 @@ DROP TABLE IF EXISTS api_keys;
 
 ### Routes
 
-Create `src/routes/apiKeys.ts`:
+Create `src/routes/apiKeys.ts` and register it by adding `import "./src/routes/apiKeys.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router, Auth, Database } from "tina4-nodejs";
@@ -1112,9 +1112,9 @@ function safeMiddleware(req, res, next) {
 
 **Problem:** You defined middleware in a file, but Tina4 does not recognize it.
 
-**Cause:** The file is not inside the auto-loaded directory.
+**Cause:** Nothing imports the file. Tina4 Node.js auto-loads only method-named route files (`get.ts`, `post.ts`, `put.ts`, `patch.ts`, `delete.ts`) under `src/routes/`; any other module, wherever it lives, runs only when something imports it.
 
-**Fix:** Put middleware files inside `src/routes/`. Tina4 auto-loads all files in that directory. If you place middleware in a separate folder, import it in a file inside `src/routes/`.
+**Fix:** Import the middleware from the route file that uses it (`import { authMiddleware } from "../middleware.js";`). If the file registers middleware globally, import it from `app.ts` above `startServer()`.
 
 ### 11. Short-Circuiting Skips Cleanup
 
@@ -1199,7 +1199,7 @@ export default async function (req: Tina4Request, res: Tina4Response) {
 Admin dashboards, user profiles, account settings: some pages need protection even though they only read data. The framework only enforces the Bearer-token gate on routes whose `secure` flag is set, and that flag is set by registering the route programmatically and chaining `.secure()` (there is no `meta`/`secured` export that file-discovery reads):
 
 ```typescript
-// src/routes/admin.ts
+// src/routes/admin.ts -- register it from app.ts: import "./src/routes/admin.js";
 import { get } from "tina4-nodejs";
 
 // .secure() flips the framework's auth gate on for this GET route.

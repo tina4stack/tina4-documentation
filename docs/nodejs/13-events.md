@@ -249,7 +249,7 @@ Events.on("order.placed", (payload) => {
 }, 0);
 ```
 
-Create `src/routes/orders.ts`:
+Create `src/routes/orders.ts` and register it by adding `import "./src/routes/orders.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router, Events } from "tina4-nodejs";

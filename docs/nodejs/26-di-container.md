@@ -179,7 +179,7 @@ app.register("orderService", (c) => {
 });
 ```
 
-`src/routes/orders.ts`:
+`src/routes/orders.ts` (registered by `import "./src/routes/orders.js";` in `app.ts`):
 
 ```typescript
 import { Router } from "tina4-nodejs";
@@ -302,7 +302,7 @@ function createProductRepo() { return {} as any; }
 function createPriceService() { return {} as any; }
 ```
 
-`src/routes/store.ts`:
+`src/routes/store.ts` (registered by `import "./src/routes/store.js";` in `app.ts`):
 
 ```typescript
 import { Router } from "tina4-nodejs";

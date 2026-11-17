@@ -795,7 +795,7 @@ tina4 migrate
 
 ### Routes
 
-Create `src/routes/notes.ts`:
+Create `src/routes/notes.ts` and register it by adding `import "./src/routes/notes.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router } from "tina4-nodejs";

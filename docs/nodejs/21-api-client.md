@@ -302,7 +302,7 @@ githubApi.addHeaders({
 });
 ```
 
-`src/routes/github.ts`:
+`src/routes/github.ts` (registered by `import "./src/routes/github.js";` in `app.ts`):
 
 ```typescript
 import { get } from "tina4-nodejs";

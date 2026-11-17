@@ -823,7 +823,7 @@ Create `src/templates/dashboard.html`:
 
 ### Dashboard Route
 
-Create `src/routes/admin.ts`:
+Create `src/routes/admin.ts` and register it by adding `import "./src/routes/admin.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router } from "tina4-nodejs";

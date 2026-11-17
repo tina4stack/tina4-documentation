@@ -863,7 +863,7 @@ source ~/.zshrc
 
 **Cause:** The generate command creates files at fixed paths. If the file exists, it is overwritten.
 
-**Fix:** The CLI warns you before overwriting. Check if the file exists first. If you need to regenerate, rename the existing file: `mv src/routes/products.ts src/routes/products_backup.ts`.
+**Fix:** The CLI warns you before overwriting. Check if the file exists first. If you need to regenerate, move the existing route directory out of `src/routes/` first: `mv src/routes/api/products products_backup`. A copy left inside `src/routes/` would still be discovered, because discovery loads every `get.ts`, `post.ts`, `put.ts`, `patch.ts` and `delete.ts` it finds there.
 
 ### 4. Migration Order Issues
 

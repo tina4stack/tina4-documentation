@@ -784,7 +784,7 @@ tina4 migrate
 
 ### Routes
 
-Create `src/routes/auth.ts`:
+Create `src/routes/auth.ts` and register it by adding `import "./src/routes/auth.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router, Auth } from "tina4-nodejs";

@@ -907,7 +907,7 @@ Create `src/templates/catalog.twig`:
 {% endblock %}
 ```
 
-Create `src/routes/catalog.ts`:
+Create `src/routes/catalog.ts` and register it by adding `import "./src/routes/catalog.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router } from "tina4-nodejs";

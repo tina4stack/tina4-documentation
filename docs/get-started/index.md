@@ -199,7 +199,7 @@ cd my-app
 tina4 serve
 ```
 
-Access your app at `http://localhost:5173`
+Access your app at `http://localhost:3000`
 
 Take a deeper dive into the [tina4-js documentation](/js/).
 

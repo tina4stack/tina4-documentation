@@ -974,12 +974,17 @@ def _display_path(path: Path) -> str:
 
 
 def _tina4js_scaffold_port() -> int | None:
-    source = CLI_REPO / "src" / "init.rs"
+    """The port ``tina4 serve`` gives a tina4-js project.
+
+    The CLI owns it: ``ProjectInfo::default_port`` in ``src/detect.rs`` maps
+    ``"tina4js"`` to the port it hands ``tina4js dev`` as ``PORT``. The scaffold
+    no longer ships a ``vite.config.ts``, so that is the only source of truth.
+    """
+    source = CLI_REPO / "src" / "detect.rs"
     if not source.exists():
         return None
-    match = re.search(r"vite\.config\.ts.*?port:\s*(\d+)",
-                      source.read_text(encoding="utf-8", errors="replace"),
-                      re.DOTALL)
+    match = re.search(r'"tina4js"\s*=>\s*(\d+)',
+                      source.read_text(encoding="utf-8", errors="replace"))
     return int(match.group(1)) if match else None
 
 
@@ -1000,7 +1005,7 @@ def check_onboarding() -> tuple[int, list[str]]:
         if path.name == "36-releases.md":
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
-        rel = _display_path(path)
+        rel = _display_path(path).replace(os.sep, "/")  # endswith() checks use "/"
 
         for label, pattern in _BAD_PACKAGE_COMMANDS:
             if pattern.search(text):
@@ -1016,7 +1021,8 @@ def check_onboarding() -> tuple[int, list[str]]:
             if "port: 3000" in text:
                 bad.add((rel, "old Vite scaffold port: 3000"))
         if js_port and rel.endswith("docs/js/01-getting-started.md"):
-            if f"localhost:{js_port}" not in text or "localhost:3000" in text:
+            ports = {int(p) for p in re.findall(r"localhost:(\d+)", text)}
+            if js_port not in ports or ports - {js_port}:
                 bad.add((rel, f"tina4-js URL does not match scaffold port {js_port}"))
 
     if not bad:

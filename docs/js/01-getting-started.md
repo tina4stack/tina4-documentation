@@ -98,7 +98,7 @@ cd my-app
 tina4 serve
 ```
 
-Open `http://localhost:5173`. A welcome page appears with a counter. Click the minus button. Click the plus button. The number updates. No page reload. No visible delay. That is signals at work -- reactive state flowing from data to DOM without you writing a single line of update logic.
+Open `http://localhost:3000`. `tina4 serve` runs the project's esbuild dev server (`tina4js dev`) on port 3000. A welcome page appears with a counter. Click the minus button. Click the plus button. The number updates. No page reload. No visible delay. That is signals at work -- reactive state flowing from data to DOM without you writing a single line of update logic.
 
 ---
 
@@ -189,7 +189,7 @@ Three things happen here:
 2. **Import your routes.** The route file calls `route()` to register paths and handlers.
 3. **Start the router.** It finds `#root` in the DOM and renders matched routes into it.
 
-History mode is canonical and gives clean URLs such as `http://localhost:5173/about`. Your production server must return `index.html` for unknown application paths. Use `mode: 'hash'` only when a static host cannot provide that fallback. In either mode, links and `navigate()` use a bare path such as `/about`; never add the hash yourself.
+History mode is canonical and gives clean URLs such as `http://localhost:3000/about`. Your production server must return `index.html` for unknown application paths. Use `mode: 'hash'` only when a static host cannot provide that fallback. In either mode, links and `navigate()` use a bare path such as `/about`; never add the hash yourself.
 
 ---
 

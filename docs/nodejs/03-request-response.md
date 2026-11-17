@@ -639,7 +639,7 @@ Rules:
 
 ## 13. Solution
 
-Create `src/routes/images.ts`:
+Create `src/routes/images.ts` and register it by adding `import "./src/routes/images.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router, saveUpload } from "tina4-nodejs";

@@ -224,7 +224,7 @@ function testMcpToolCall() {
 Here is a full working example -- a CRM system with customer, order, and product tools:
 
 ```typescript
-// src/routes/mcp/setup.ts
+// src/routes/mcp/setup.ts -- register it from app.ts: import "./src/routes/mcp/setup.js";
 import { McpServer, mcpTool, mcpResource, schemaFromParams } from "tina4-nodejs";
 import { initDatabase } from "tina4-nodejs/orm";
 

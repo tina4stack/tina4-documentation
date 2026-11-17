@@ -21,7 +21,7 @@ That single command creates six files:
 | 1 | `src/orm/Product.ts` | ORM model with typed fields |
 | 2 | `migrations/20260401_create_product.sql` | UP migration (CREATE TABLE) |
 | 3 | `migrations/20260401_create_product.down.sql` | DOWN migration (DROP TABLE) |
-| 4 | `src/routes/products.ts` | CRUD routes with Swagger annotations |
+| 4 | `src/routes/admin/product/get.ts` | Admin page at `/admin/product`; registers the AutoCrud REST routes under `/api/product` |
 | 5 | `src/templates/products/form.html` | Form template with typed inputs and `form_token` |
 | 6 | `src/templates/products/view.html` | List and detail templates |
 | 7 | `test/products.test.ts` | Test stubs for all CRUD operations |
@@ -184,7 +184,7 @@ Creates three files: the ORM model (`src/orm/Product.ts`), the UP migration, and
 tina4 generate route products --model Product
 ```
 
-Creates one file: `src/routes/products.ts` with CRUD endpoints and Swagger annotations. The model must exist first.
+Creates method-named route files under `src/routes/api/products/`: `get.ts` and `post.ts` for `/api/products`, and `[id]/get.ts`, `[id]/put.ts` and `[id]/delete.ts` for `/api/products/{id}`, plus a test. Route discovery loads them by name, so nothing needs importing. The model must exist first.
 
 ### Migration
 
@@ -292,7 +292,7 @@ tina4 generate auth
 | 1 | `src/orm/User.ts` | User model with hashed password field |
 | 2 | `migrations/20260401_create_user.sql` | UP migration |
 | 3 | `migrations/20260401_create_user.down.sql` | DOWN migration |
-| 4 | `src/routes/auth.ts` | Login, register, logout routes |
+| 4 | `src/routes/api/auth/register/post.ts`, `src/routes/api/auth/login/post.ts`, `src/routes/api/auth/me/get.ts` | Register, login and current-user routes (method-named files, auto-discovered) |
 | 5 | `src/templates/auth/login.html` | Login form |
 | 6 | `src/templates/auth/register.html` | Registration form |
 | 7 | `test/auth.test.ts` | Auth flow tests |

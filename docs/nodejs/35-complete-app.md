@@ -271,7 +271,7 @@ The middleware stands guard. No token, no access.
 
 ## 6. Step 4: Auth Routes
 
-Create `src/routes/auth.ts`:
+Create `src/routes/auth.ts` and register it by adding `import "./src/routes/auth.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router, Auth } from "tina4-nodejs";
@@ -414,7 +414,7 @@ export TOKEN="eyJhbGciOiJIUzI1NiIs..."
 
 ## 7. Step 5: Task Routes
 
-Create `src/routes/tasks.ts`:
+Create `src/routes/tasks.ts` and register it by adding `import "./src/routes/tasks.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router, Queue } from "tina4-nodejs";
@@ -707,7 +707,7 @@ Every endpoint responds. Create. Read. Update. Delete. The CRUD cycle works.
 
 ## 8. Step 6: Dashboard Stats with Caching
 
-Create `src/routes/dashboard.ts`:
+Create `src/routes/dashboard.ts` and register it by adding `import "./src/routes/dashboard.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Router, cacheGet, cacheSet } from "tina4-nodejs";
@@ -871,7 +871,7 @@ Any user creates, updates, or deletes a task. All connected dashboard users see 
 
 ## 10. Step 8: Email Notifications via Queue
 
-Create `src/routes/queue-consumers.ts`:
+Create `src/routes/queue-consumers.ts` and register it by adding `import "./src/routes/queue-consumers.js";` to `app.ts` above `startServer()`:
 
 ```typescript
 import { Queue, Messenger } from "tina4-nodejs";
@@ -1327,7 +1327,7 @@ taskflow/
 ├── package.json
 ├── package-lock.json
 ├── tsconfig.json
-├── app.ts
+├── app.ts                         # Imports auth, tasks, dashboard, queue-consumers
 ├── Dockerfile
 ├── docker-compose.yml
 ├── src/
